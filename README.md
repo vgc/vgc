@@ -1,6 +1,6 @@
 ![VGC](https://github.com/vgc-io/vgc/blob/master/logo.png)
 
-# About me
+# About Me
 
 My name is [Boris Dalstein](http://www.borisdalstein.com/), I am a French
 mathematician, computer scientist, and software engineer, but most importantly,
@@ -12,7 +12,7 @@ Animation Studios](https://www.pixar.com/).
 
 # About VGC
 
-VGC is a startup founded by  in October 2017 to develop commercial (yet
+VGC is a startup I founded in October 2017 to develop commercial (yet
 open-source!) next-generation tools for graphic design and 2D animation. Visit
 [www.vgc.io](https://www.vgc.io) for more details. Currently, this project is
 entirely funded by voluntary donations from awesome people like yourself, many
@@ -56,19 +56,21 @@ if you want to use newer versions. The cost of the upgrade from one year to the
 next will be **$19** for VGC Illustration, and **$39** for VGC Animation.
 
 Despite being distributed commercially, both apps will in fact be open-source
-and publicly developed here on this Git repository under the [Apache
+and publicly developed here on this git repository under the [Apache
 2.0](https://github.com/vgc-io/vgc/blob/master/README.md) license. Also, no
 license key will be required to use the software on Linux, that is, the software
 will be completely **free of charge for Linux users**. This is my way to say thank
 you and give back the open-source community (my work relies heavily on
 open-source software), and also a way to encourage more users to try Linux.
 
-If you wish, you can obtain early license keys by supporting me on Tipeee or
-Patreon, starting at $3 per month. You can stop your donations at any time and
-keep your license keys, although the idea behind Tipeee/Patreon is to have a
-stable monthly revenue, which is critical in this early development stage.
+If you wish, you can obtain early license keys by supporting me on
+[Tipeee](https://www.tipeee.com/borisdalstein) or
+[Patreon](https://www.patreon.com/borisdalstein), starting at $3 per month. You
+can stop your donations at any time and keep your license keys, although the
+idea behind Tipeee/Patreon is to have a stable monthly revenue, which is
+critical in this early development stage.
 
-# About this Git repository
+# About this Git Repository
 
 This is the main git repository where all software development happens. At the
 moment, development is at a very early planning stage with no consideration for
