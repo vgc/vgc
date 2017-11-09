@@ -1,0 +1,11 @@
+vgc_add_library(core
+    THIRD_DEPENDENCIES
+
+    VGC_DEPENDENCIES
+
+    CPP_FILES
+        python.cpp
+
+    COMPILE_DEFINITIONS
+        -DVGC_CORE_PYTHON_PATH_="${VGC_PYTHON_OUTPUT_DIRECTORY}"
+)

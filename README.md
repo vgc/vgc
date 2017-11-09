@@ -82,3 +82,74 @@ happen to be an expert in relevant areas, just submit an "issue" here.
 
 External contributions will be more than welcome starting January 2019, when the
 software architecture is expected to be more stable.
+
+# Dependencies
+
+- C++11
+- CMake 3.1.0+
+- Qt 5.6+
+- Python 3.5+
+
+It is recommended to use Qt 5.6 instead of newer version due to PySide2
+not properly supporting Qt 5.7+ at the moment. Currently, C++14 support is
+not required, but it is likely to be required in the near future.
+
+VGC loosely follows the [VFX Reference Platform](http://www.vfxplatform.com/)
+recommendations for library versions, but since VGC apps are only to be
+released in 2020, we already jumped ahead to Python 3.x.
+
+VGC also depends on the following third-party library, but these are shipped
+and installed alongside this repository so you don't need to have them on
+your system already:
+- pybind11
+- Eigen
+
+# Build Instructions
+
+Tested platform: Ubuntu 16.04 LTS
+
+(Instructions for other platforms coming December 2017)
+
+Install GCC, CMake, and Python:
+
+```
+~$ sudo apt-get install build-essential
+~$ sudo apt-get install python3-dev
+```
+
+Install Qt if you don't have it yet:
+
+1. Download [Qt 5.6.3](http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-linux-x64-5.6.3.run).
+
+2. Execute the binary and follow the instructions to install Qt at the desired
+   location (e.g., ~/Qt5.6.3). You only need to install the components
+   "Desktop gcc 64-bit", "Qt Source Package", and "Tools", but these are the
+   largest components anyway (2.02GiB), so I suggest just installing
+   everything (2.31GiB).
+
+3. Tell cmake where to find Qt5. You can either do it once and for all by adding the path to CMAKE_PREFIX_PATH:
+   ```
+   echo 'export CMAKE_PREFIX_PATH="$HOME/Qt5.6.3/5.6.3/gcc_64/lib/cmake/Qt5:$CMAKE_PREFIX_PATH"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+   Or you can pass the argument `-DQt5_DIR=~/Qt5.6.3/5.6.3/gcc_64/lib/cmake/Qt5`
+   when you run cmake for the first time in a given directory.
+
+Get VGC:
+
+```
+git clone https://github.com/vgc-io/vgc.git
+```
+
+Build VGC:
+```
+mkdir build-vgc
+cd build-vgc
+cmake ../vgc          # Optional: -DQt5_DIR=~/Qt5.6.3/5.6.3/gcc_64/lib/cmake/Qt5
+make
+```
+
+Run VGC:
+```
+./bin/vgcillustration
+```
