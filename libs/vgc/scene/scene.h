@@ -36,6 +36,7 @@ public:
 
     void addPoint();
     void addPoint(const geometry::Point& point);
+    void addPoint(double x, double y);
 
     const std::vector<geometry::Point>& points() const { return points_; }
     void setPoints(const std::vector<geometry::Point>& points);

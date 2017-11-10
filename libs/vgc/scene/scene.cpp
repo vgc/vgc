@@ -35,6 +35,11 @@ void Scene::addPoint(const geometry::Point& point)
     Q_EMIT changed();
 }
 
+void Scene::addPoint(double x, double y)
+{
+    addPoint(geometry::Point(x, y));
+}
+
 void Scene::setPoints(const std::vector<geometry::Point>& points)
 {
     points_ = points;
