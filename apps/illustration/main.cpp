@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     //
     interpreter.run("import vgc.scene");
     py::module main = py::module::import("__main__");
-    main.attr("m_scene") = scene;
+    main.attr("scene") = scene;
 
     // Create and show the widget
     vgc::widgets::Widget w(scene.get(), &interpreter);
