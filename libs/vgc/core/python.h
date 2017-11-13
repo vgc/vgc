@@ -18,6 +18,7 @@
 #define VGC_CORE_PYTHON_H
 
 #include <string>
+#include <pybind11/pybind11.h>
 #include <vgc/core/api.h>
 
 namespace vgc {
@@ -46,13 +47,36 @@ public:
     ///
     ~PythonInterpreter();
 
-    /// Interprets the given string. This calls Py_RunSimpleString().
+    /// Interprets the given string. This calls PyRun_String().
     ///
     void run(const std::string& str);
 
-    /// Interprets the given string. This calls Py_RunSimpleString().
+    /// Interprets the given string. This calls PyRun_String().
     ///
     void run(const char* str);
+
+    /// Set the given \p value to a variable called \p name.
+    ///
+    template <typename T>
+    void setVariableValue(const char* name, const T& value) {
+        main_.attr(name) = value;
+    }
+
+private:
+    // Note: the guard must be constructed first, and destructed last,
+    // thus order of declaration of member variables matters.
+
+    // XXX use pybind11::scoped_interpreter instead (need to update to latest
+    // version of pybind11)
+    struct ScopedInterpreter_ {
+        ScopedInterpreter_();
+        ~ScopedInterpreter_();
+    };
+    ScopedInterpreter_ guard_;
+
+    pybind11::module main_;
+    pybind11::object locals_;
+    pybind11::object globals_;
 };
 
 } // namespace core

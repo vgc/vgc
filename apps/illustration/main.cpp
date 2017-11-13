@@ -14,9 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
 #include <QApplication>
-#include <pybind11/pybind11.h>
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/widget.h>
@@ -41,9 +39,9 @@ int main(int argc, char *argv[])
     // example, to add a new point by typing this in the console:
     //
     //   from vgc.geometry import Point
-    //   m_scene.addPoint(Point(300,100))
+    //   scene.addPoint(Point(300,100))
     //
-    // XXX In practice, we won't expose "m_scene" directly. Instead:
+    // XXX In practice, we won't expose "scene" directly. Instead:
     // 1. Have a class VgcIllustrationApp: public QApplication.
     // 2. Have an instance 'VgcIllustrationApp app'.
     // 3. Pass the app to python.
@@ -54,12 +52,11 @@ int main(int argc, char *argv[])
     //      etc.
     //
     // One advantage is that the calls above can be made read-only.
-    // Currently, users can do m_scene = Scene() and then are not able
+    // Currently, users can do scene = Scene() and then are not able
     // to affect the actual scene anymore...
     //
     pythonInterpreter.run("import vgc.scene");
-    py::module main = py::module::import("__main__");
-    main.attr("scene") = scene;
+    pythonInterpreter.setVariableValue("scene", scene);
 
     // Create and show the widget
     vgc::widgets::Widget w(scene.get(), &pythonInterpreter);

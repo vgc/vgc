@@ -18,6 +18,29 @@
 #include <vgc/widgets/console.h>
 #include <QKeyEvent>
 
+// Notes:
+//
+// [1]
+//
+// Handling of dead keys (e.g., '^' + 'e' => ê) or more complex input methods
+// (Chinese, etc.) is tricky. The current method seems to work for dead keys
+// and compose, but may not work for more complex input method. See:
+//   https://stackoverflow.com/questions/28793356/qt-and-dead-keys-in-a-custom-widget
+//   http://www.kdab.com/qt-input-method-depth/
+//
+
+namespace {
+bool isTextInsertionOrDeletion_(QKeyEvent* e) {
+    return !e->text().isEmpty();
+}
+}
+
+namespace {
+int lineNumber_(const QTextCursor& cursor) {
+    return cursor.blockNumber();
+}
+}
+
 namespace vgc {
 namespace widgets {
 
@@ -27,8 +50,11 @@ Console::Console(
 
     QTextEdit(parent),
     interpreter_(interpreter)
-{
+{    
+    codeBlocks_.push_back(0);
 
+    // Handling of dead keys. See [1].
+    setAttribute(Qt::WA_InputMethodEnabled, true);
 }
 
 Console::~Console()
@@ -36,30 +62,105 @@ Console::~Console()
 
 }
 
+// Handling of dead keys. See [1].
+void Console::inputMethodEvent(QInputMethodEvent* event)
+{
+    if (!event->commitString().isEmpty()) {
+        QKeyEvent keyEvent(
+            QEvent::KeyPress, 0, Qt::NoModifier, event->commitString());
+        keyPressEvent(&keyEvent);
+    }
+    event->accept();
+}
+
+// Handling of dead keys. See [1].
+QVariant Console::inputMethodQuery(Qt::InputMethodQuery) const
+{
+    return QVariant();
+}
+
+// XXX TODO ignore backspace if beginning of code block
+//
+// XXX TODO ignore deletion if selection or part of selection
+// is out of code block.
+
 void Console::keyPressEvent(QKeyEvent* e)
 {
-    switch (e->key())
-    {
-    case Qt::Key_Enter:
-    case Qt::Key_Return:
-        onEnterKeyPress_();
+    if (isTextInsertionOrDeletion_(e)) {
+
+        // Prevent inserting or deleting text before last code block
+        // XXX This seems to also prevent copying via Ctrl+C, which
+        // generates e->text() == "\u0003".
+        if (currentLineNumber_() < codeBlocks_.back()) {
+            e->accept();
+        }
+
+        // Process last code block on Ctrl + Enter
+        else if ((e->text() == "\r") &&
+                 (e->modifiers() & Qt::CTRL))
+        {
+            // Move cursor's anchor+position to beginning of code block
+            QTextCursor cursor = textCursor();
+            cursor.movePosition(QTextCursor::StartOfLine);
+            while (lineNumber_(cursor) > codeBlocks_.back()) {
+                cursor.movePosition(QTextCursor::Up);
+            }
+
+            // Move cursor's position to end of code block, which
+            // happens to be the end of the document
+            cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+
+            // Get code block as string. We need to replace all paragraph
+            // separators by line breaks otherwise it's not legal python code
+            // and PyRun_String errors out.
+            //
+            // From Qt doc:
+            // "If the selection obtained from an editor spans a line break,
+            // the text will contain a Unicode U+2029 paragraph separator
+            // character instead of a newline \n character. Use
+            // QString::replace() to replace these characters with newlines."
+            //
+            QString codeBlock = cursor.selectedText();
+            codeBlock.replace("\u2029", "\n");
+
+            // Deselect
+            cursor.movePosition(QTextCursor::NoMove, QTextCursor::MoveAnchor);
+
+            // Clear selection and set text cursor to end of document
+            cursor.clearSelection();
+            setTextCursor(cursor);
+
+            // Insert a new line by processing Ctrl+Enter as if it was a
+            // regular Enter (at least under my Linux environment, Ctrl+Enter
+            // does not insert anything in a QTextEdit, reason why we clear the
+            // modifiers)
+            e->setModifiers(Qt::NoModifier);
+            QTextEdit::keyPressEvent(e);
+
+            // Interpret python code
+            interpreter()->run(qUtf8Printable(codeBlock));
+
+            // Update code blocks
+            codeBlocks_.push_back(currentLineNumber_());
+        }
+
+        // Normal insertion/deletion of character, including newlines
+        else {
+            QTextEdit::keyPressEvent(e);
+        }
     }
-
-    QTextEdit::keyPressEvent(e);
+    else {
+        // Anything which is not an insertion or deletion, such as:
+        // - Key modifiers
+        // - Navigation (arrows, home, end, page up/down, etc.)
+        // - Complex input methods (dead key, Chinese character composition, etc.)
+        QTextEdit::keyPressEvent(e);
+    }
 }
 
-QString Console::currentLine_() const
+int Console::currentLineNumber_() const
 {
-    QTextCursor cursor = textCursor();
-    cursor.movePosition(QTextCursor::StartOfLine);
-    cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
-    return cursor.selectedText();
-}
-
-void Console::onEnterKeyPress_()
-{
-    QString command = currentLine_();
-    interpreter()->run(qPrintable(command));
+    return lineNumber_(textCursor());
 }
 
 } // namespace widgets

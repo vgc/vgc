@@ -52,10 +52,15 @@ public:
 private:
     core::PythonInterpreter* interpreter_;
 
+    // Handling key presses
+    void inputMethodEvent(QInputMethodEvent*);
+    QVariant inputMethodQuery(Qt::InputMethodQuery) const;
     void keyPressEvent(QKeyEvent* e) override;
-    void onEnterKeyPress_();
 
-    QString currentLine_() const;
+    int currentLineNumber_() const;
+
+    // Sorted list of 0-indexed line numbers where code block starts.
+    std::vector<int> codeBlocks_;
 };
 
 } // namespace widgets
