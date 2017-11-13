@@ -28,6 +28,33 @@ namespace core {
 ///
 VGC_CORE_API std::string pythonPath();
 
+/// \class vgc::core::PythonInterpreter
+/// \brief A thin C++ wrapper of the CPython interpreter
+///
+class VGC_CORE_API PythonInterpreter
+{
+public:
+    /// Constructs a PythonInterpreter. This calls Py_Initialize(),
+    /// and should be called no more than once (that is, we only
+    /// support a single python interpreter at the moment).
+    ///
+    /// Useful info here: https://docs.python.org/3.6/c-api/init.html
+    ///
+    PythonInterpreter();
+
+    /// Destructs the PythonInterpreter. This calls Py_Finalize().
+    ///
+    ~PythonInterpreter();
+
+    /// Interprets the given string. This calls Py_RunSimpleString().
+    ///
+    void run(const std::string& str);
+
+    /// Interprets the given string. This calls Py_RunSimpleString().
+    ///
+    void run(const char* str);
+};
+
 } // namespace core
 } // namespace vgc
 

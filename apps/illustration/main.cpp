@@ -14,13 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <iostream>
 #include <QApplication>
 #include <pybind11/pybind11.h>
-#include <vgc/interpreter/interpreter.h>
+#include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/widget.h>
-#include <vgc/core/python.h>
-#include <iostream>
 
 namespace py = pybind11;
 
@@ -29,9 +28,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     // Create the python interpreter
-    vgc::interpreter::Interpreter interpreter;
-    interpreter.run("import sys");
-    interpreter.run("sys.path.append('" + vgc::core::pythonPath() + "')");
+    vgc::core::PythonInterpreter pythonInterpreter;
 
     // Create the scene (and add a few points for testing purposes)
     vgc::scene::ScenePtr scene = std::make_shared<vgc::scene::Scene>();
@@ -60,12 +57,12 @@ int main(int argc, char *argv[])
     // Currently, users can do m_scene = Scene() and then are not able
     // to affect the actual scene anymore...
     //
-    interpreter.run("import vgc.scene");
+    pythonInterpreter.run("import vgc.scene");
     py::module main = py::module::import("__main__");
     main.attr("scene") = scene;
 
     // Create and show the widget
-    vgc::widgets::Widget w(scene.get(), &interpreter);
+    vgc::widgets::Widget w(scene.get(), &pythonInterpreter);
     w.show();
 
     return a.exec();

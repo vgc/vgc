@@ -28,7 +28,7 @@ namespace widgets {
 
 Widget::Widget(
     scene::Scene* scene,
-    interpreter::Interpreter* interpreter,
+    core::PythonInterpreter* interpreter,
     QWidget* parent) :
 
     QWidget(parent),

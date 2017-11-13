@@ -14,15 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/core/python.h>
 #include <vgc/widgets/console.h>
-#include <vgc/interpreter/interpreter.h>
 #include <QKeyEvent>
 
 namespace vgc {
 namespace widgets {
 
 Console::Console(
-    interpreter::Interpreter* interpreter,
+    core::PythonInterpreter* interpreter,
     QWidget* parent) :
 
     QTextEdit(parent),

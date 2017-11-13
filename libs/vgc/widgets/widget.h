@@ -22,7 +22,7 @@
 
 namespace vgc {
 
-namespace interpreter { class Interpreter; }
+namespace core { class PythonInterpreter; }
 namespace scene { class Scene; }
 
 namespace widgets {
@@ -33,7 +33,7 @@ class VGC_WIDGETS_API Widget : public QWidget
 
 public:
     Widget(scene::Scene* scene,
-           interpreter::Interpreter* interpreter,
+           core::PythonInterpreter* interpreter,
            QWidget* parent = nullptr);
 
     ~Widget();

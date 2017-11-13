@@ -3,7 +3,7 @@ vgc_add_library(widgets
         Qt5::Widgets
 
     VGC_DEPENDENCIES
-        interpreter
+        core
         scene
 
     CPP_FILES

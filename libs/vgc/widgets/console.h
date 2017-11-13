@@ -22,7 +22,7 @@
 
 namespace vgc {
 
-namespace interpreter { class Interpreter; }
+namespace core { class PythonInterpreter; }
 
 namespace widgets {
 
@@ -31,12 +31,12 @@ class VGC_WIDGETS_API Console : public QTextEdit
     Q_OBJECT
 
 public:
-    Console(interpreter::Interpreter* interpreter,
+    Console(core::PythonInterpreter* interpreter,
             QWidget* parent = nullptr);
 
     ~Console();
 
-    interpreter::Interpreter* interpreter() const {
+    core::PythonInterpreter* interpreter() const {
         return interpreter_;
     }
 
@@ -44,7 +44,7 @@ protected:
     void keyPressEvent(QKeyEvent* e) override;
 
 private:
-    interpreter::Interpreter* interpreter_;
+    core::PythonInterpreter* interpreter_;
 
     void onEnterKeyPress_();
     QString currentLine_() const;

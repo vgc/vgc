@@ -1,5 +1,6 @@
 vgc_add_library(core
     THIRD_DEPENDENCIES
+        ${PYTHON_LIBRARIES}
 
     VGC_DEPENDENCIES
 

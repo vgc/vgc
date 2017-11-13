@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/python.h>
+#include <Python.h>
 
 namespace vgc {
 namespace core {
@@ -24,6 +25,32 @@ std::string pythonPath()
     // This macro is defined by the build system.
     // See vgc/core/CMakeFiles.txt
     return VGC_CORE_PYTHON_PATH_;
+}
+
+PythonInterpreter::PythonInterpreter()
+{
+    // Initialize the python interpreter
+    Py_Initialize();
+    //Py_SetProgramName(argv[0]);  /* XXX todo? */
+
+    // Add the VGC Python libraries to the path
+    run("import sys");
+    run("sys.path.append('" + vgc::core::pythonPath() + "')");
+}
+
+PythonInterpreter::~PythonInterpreter()
+{
+    Py_Finalize();
+}
+
+void PythonInterpreter::run(const std::string& str)
+{
+    run(str.c_str());
+}
+
+void PythonInterpreter::run(const char* str)
+{
+    PyRun_SimpleString(str);
 }
 
 } // namespace core
