@@ -26,27 +26,35 @@ namespace core { class PythonInterpreter; }
 
 namespace widgets {
 
+/// \class vgc::core::Console
+/// \brief GUI around the Python interpreter
+///
 class VGC_WIDGETS_API Console : public QTextEdit
 {
     Q_OBJECT
 
 public:
+    /// Constructs a Console.
+    ///
     Console(core::PythonInterpreter* interpreter,
             QWidget* parent = nullptr);
 
+    /// Destructs a Console.
+    ///
     ~Console();
 
+    /// Returns the underlying PythonInterpreter.
+    ///
     core::PythonInterpreter* interpreter() const {
         return interpreter_;
     }
 
-protected:
-    void keyPressEvent(QKeyEvent* e) override;
-
 private:
     core::PythonInterpreter* interpreter_;
 
+    void keyPressEvent(QKeyEvent* e) override;
     void onEnterKeyPress_();
+
     QString currentLine_() const;
 };
 
