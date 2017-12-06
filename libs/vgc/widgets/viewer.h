@@ -48,4 +48,4 @@ private:
 } // namespace widgets
 } // namespace vgc
 
-#endif // VGC_VIEWER_H
+#endif // VGC_WIDGETS_VIEWER_H
