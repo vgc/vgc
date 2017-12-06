@@ -24,7 +24,7 @@
 namespace vgc {
 namespace core {
 
-/// Returns the absolute path were the python wrappers of
+/// Returns the absolute path where the python wrappers of
 /// the VGC libraries live.
 ///
 VGC_CORE_API std::string pythonPath();
