@@ -172,3 +172,35 @@ function(vgc_add_app APP_NAME)
     )
 
 endfunction()
+
+# Add runtime resources to the 'resources' folder.
+# Example of resources: GLSL shaders, icons, color schemes, etc.
+#
+# Unlike the Qt resources system, we do not store resources
+# within the executable. The idea is to make them easily "hackable":
+# users may want to modify the shaders or icons themselves, and since
+# it's technically easy to do, why not allow them? VGC is open-source
+# anyway, there's nothing to hide.
+#
+# Usage:
+# vgc_add_resources(icons
+#     copy.png
+#     cut.png
+#     paste.png
+# )
+#
+function(vgc_add_resources DIRECTORY_NAME)
+    message("-- VGC Resources: ${DIRECTORY_NAME}")
+
+    set(options "")
+    set(oneValueArgs "")
+    set(multiValueArgs "")
+    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    set(VGC_RESOURCES_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
+    set(DIRECTORY ${VGC_RESOURCES_DIRECTORY}/${DIRECTORY_NAME})
+
+    file(MAKE_DIRECTORY ${DIRECTORY})
+    file(COPY ${ARG_UNPARSED_ARGUMENTS} DESTINATION ${DIRECTORY})
+
+endfunction()
