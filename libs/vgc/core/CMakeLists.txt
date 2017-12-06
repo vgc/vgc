@@ -6,7 +6,9 @@ vgc_add_library(core
 
     CPP_FILES
         python.cpp
+        resources.cpp
 
     COMPILE_DEFINITIONS
         -DVGC_CORE_PYTHON_PATH_="${VGC_PYTHON_OUTPUT_DIRECTORY}"
+        -DVGC_CORE_RESOURCES_PATH_="${VGC_RESOURCES_OUTPUT_DIRECTORY}"
 )

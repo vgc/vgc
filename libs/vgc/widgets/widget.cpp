@@ -21,7 +21,8 @@
 #include <QHBoxLayout>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/console.h>
-#include <vgc/widgets/viewer.h>
+//#include <vgc/widgets/viewer.h>
+#include <vgc/widgets/openglviewer.h>
 
 namespace vgc {
 namespace widgets {
@@ -34,8 +35,12 @@ Widget::Widget(
     QWidget(parent),
     scene_(scene)
 {
+    // Initialize OpenGLViewer. Must be called before creating first OpenGLViewer.
+    OpenGLViewer::init();
+
     QSplitter* splitter = new QSplitter(Qt::Vertical);
-    splitter->addWidget(new Viewer(scene));
+    //splitter->addWidget(new Viewer(scene));
+    splitter->addWidget(new OpenGLViewer());
     splitter->addWidget(new Console(interpreter));
 
     QHBoxLayout* layout = new QHBoxLayout();
@@ -44,8 +49,8 @@ Widget::Widget(
     setLayout(layout);
     setMinimumSize(800, 600);
 
-    connect(scene, &scene::Scene::changed,
-            this, (void (Widget::*)()) &Widget::update);
+//    connect(scene, &scene::Scene::changed,
+//            this, (void (Widget::*)()) &Widget::update);
 }
 
 Widget::~Widget()

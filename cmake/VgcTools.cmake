@@ -1,8 +1,9 @@
 # Specify where to write final build output
-set(VGC_LIB_OUTPUT_DIRECTORY    ${CMAKE_BINARY_DIR}/lib)
-set(VGC_PYTHON_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/python)
-set(VGC_WRAP_OUTPUT_DIRECTORY   ${CMAKE_BINARY_DIR}/python/vgc)
-set(VGC_APP_OUTPUT_DIRECTORY    ${CMAKE_BINARY_DIR}/bin)
+set(VGC_LIB_OUTPUT_DIRECTORY       ${CMAKE_BINARY_DIR}/lib)
+set(VGC_PYTHON_OUTPUT_DIRECTORY    ${CMAKE_BINARY_DIR}/python)
+set(VGC_WRAP_OUTPUT_DIRECTORY      ${CMAKE_BINARY_DIR}/python/vgc)
+set(VGC_APP_OUTPUT_DIRECTORY       ${CMAKE_BINARY_DIR}/bin)
+set(VGC_RESOURCES_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
 
 # Note: we could do the following to set default output directories
 # However, we normally don't need this since our helper functions
@@ -197,8 +198,7 @@ function(vgc_add_resources DIRECTORY_NAME)
     set(multiValueArgs "")
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set(VGC_RESOURCES_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
-    set(DIRECTORY ${VGC_RESOURCES_DIRECTORY}/${DIRECTORY_NAME})
+    set(DIRECTORY ${VGC_RESOURCES_OUTPUT_DIRECTORY}/${DIRECTORY_NAME})
 
     file(MAKE_DIRECTORY ${DIRECTORY})
     file(COPY ${ARG_UNPARSED_ARGUMENTS} DESTINATION ${DIRECTORY})
