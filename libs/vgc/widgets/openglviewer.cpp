@@ -63,16 +63,17 @@ OpenGLViewer::~OpenGLViewer()
 
 void OpenGLViewer::mousePressEvent(QMouseEvent * /*event*/)
 {
-    // Clear input samples and redraw
-    inputSamples_.clear();
-    repaint();
+    // Create new curve
+    curves_.push_back(Curve());
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent * event)
 {
-    // Add input sample and redraw
-    inputSamples_.push_back(event->pos());
-    repaint();
+    // Append new point to last curve
+    if (curves_.size() > 0) {
+        curves_.back().push_back(event->pos());
+        repaint();
+    }
 }
 
 void OpenGLViewer::mouseReleaseEvent(QMouseEvent * /*event*/)
@@ -165,9 +166,15 @@ void OpenGLViewer::paintGL()
 
     // Draw triangles
     vao_.bind();
-    f->glDrawArrays(GL_TRIANGLE_STRIP,   // mode
-                    0,                   // first index
-                    glVertices_.size()); // number of indices
+    int firstIndex = 0;
+    for (const Curve& curve: curves_) {
+        size_t n = curve.size();
+        if (n >= 2) {
+            int nIndices = 2 * n;
+            f->glDrawArrays(GL_TRIANGLE_STRIP, firstIndex, nIndices);
+            firstIndex += nIndices;
+        }
+    }
     vao_.release();
 
     // Release shader program
@@ -202,36 +209,33 @@ QPointF OpenGLViewer::computeNormal_(const QPoint & p, const QPoint & q)
 void OpenGLViewer::computeGLVertices_()
 {
     glVertices_.clear();
-
-    const float halfwidth = 3.0;
-    const size_t n = inputSamples_.size();
-
-    if (n < 2)
+    float halfwidth = 3.0;
+    for (const Curve& curve: curves_)
     {
-        // nothing to do
-    }
-    else
-    {
-        for (unsigned int i=0; i<n; ++i)
+        size_t n = curve.size();
+        if (n >= 2)
         {
-            // Compute normal for sample
-            QPointF normal;
-            if (i==0)
-                normal = computeNormal_(inputSamples_[0], inputSamples_[1]);
-            else if (i == n-1)
-                normal = computeNormal_(inputSamples_[n-2], inputSamples_[n-1]);
-            else
-                normal = computeNormal_(inputSamples_[i-1], inputSamples_[i+1]);
+            for (unsigned int i=0; i<n; ++i)
+            {
+                // Compute normal for sample
+                QPointF normal;
+                if (i==0)
+                    normal = computeNormal_(curve[0], curve[1]);
+                else if (i == n-1)
+                    normal = computeNormal_(curve[n-2], curve[n-1]);
+                else
+                    normal = computeNormal_(curve[i-1], curve[i+1]);
 
-            // Compute left and right GL vertices from centerline + normal + width
-            QPointF leftPos  = inputSamples_[i] + halfwidth * normal;
-            QPointF rightPos = inputSamples_[i] - halfwidth * normal;
-            GLVertex leftVertex(leftPos.x(), leftPos.y());
-            GLVertex rightVertex(rightPos.x(), rightPos.y());
+                // Compute left and right GL vertices from centerline + normal + width
+                QPointF leftPos  = curve[i] + halfwidth * normal;
+                QPointF rightPos = curve[i] - halfwidth * normal;
+                GLVertex leftVertex(leftPos.x(), leftPos.y());
+                GLVertex rightVertex(rightPos.x(), rightPos.y());
 
-            // Add vertices to list of vertices
-            glVertices_.push_back(leftVertex);
-            glVertices_.push_back(rightVertex);
+                // Add vertices to list of vertices
+                glVertices_.push_back(leftVertex);
+                glVertices_.push_back(rightVertex);
+            }
         }
     }
 }

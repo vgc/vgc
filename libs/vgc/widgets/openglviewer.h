@@ -68,7 +68,8 @@ private:
     QMatrix4x4 viewMatrix_;
 
     // Input mouse data
-    std::vector<QPoint> inputSamples_;
+    using Curve = std::vector<QPoint>;
+    std::vector<Curve> curves_;
 
     // RAM resources synced with GL resources
     struct GLVertex {
