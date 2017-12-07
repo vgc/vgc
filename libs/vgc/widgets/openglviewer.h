@@ -45,13 +45,13 @@ public:
     ~OpenGLViewer();
 
 private:
-    void mousePressEvent(QMouseEvent * event);
-    void mouseMoveEvent(QMouseEvent * event);
-    void mouseReleaseEvent(QMouseEvent * event);
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
 
 private:
     using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
-    OpenGLFunctions * openGLFunctions() const;
+    OpenGLFunctions* openGLFunctions() const;
 
     void initializeGL();
     void resizeGL(int w, int h);
@@ -59,7 +59,7 @@ private:
     void cleanupGL();
 
 private:
-    QPointF computeNormal_(const QPoint & p, const QPoint & q);
+    QPointF computeNormal_(const QPoint& p, const QPoint& q);
     void computeGLVertices_();
 
 private:

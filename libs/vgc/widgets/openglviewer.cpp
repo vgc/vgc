@@ -61,13 +61,13 @@ OpenGLViewer::~OpenGLViewer()
     doneCurrent();
 }
 
-void OpenGLViewer::mousePressEvent(QMouseEvent * /*event*/)
+void OpenGLViewer::mousePressEvent(QMouseEvent* /*event*/)
 {
     // Create new curve
     curves_.push_back(Curve());
 }
 
-void OpenGLViewer::mouseMoveEvent(QMouseEvent * event)
+void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
     // Append new point to last curve
     if (curves_.size() > 0) {
@@ -76,19 +76,19 @@ void OpenGLViewer::mouseMoveEvent(QMouseEvent * event)
     }
 }
 
-void OpenGLViewer::mouseReleaseEvent(QMouseEvent * /*event*/)
+void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
 {
     // Nothing to do
 }
 
-OpenGLViewer::OpenGLFunctions * OpenGLViewer::openGLFunctions() const
+OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const
 {
     return context()->versionFunctions<OpenGLFunctions>();
 }
 
 void OpenGLViewer::initializeGL()
 {
-    OpenGLFunctions * f = openGLFunctions();
+    OpenGLFunctions* f = openGLFunctions();
 
     // Initialize shader program
     shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("shader.v.glsl"));
@@ -108,7 +108,7 @@ void OpenGLViewer::initializeGL()
     // Create VAO
     vao_.create();
     GLsizei  stride  = sizeof(GLVertex);
-    GLvoid * pointer = reinterpret_cast<void*>(offsetof(GLVertex, x));
+    GLvoid* pointer = reinterpret_cast<void*>(offsetof(GLVertex, x));
     vao_.bind();
     vbo_.bind();
     f->glEnableVertexAttribArray(vertexLoc_);
@@ -144,7 +144,7 @@ void OpenGLViewer::resizeGL(int w, int h)
 
 void OpenGLViewer::paintGL()
 {
-    OpenGLFunctions * f = openGLFunctions();
+    OpenGLFunctions* f = openGLFunctions();
 
     // Update VBO
     // Note: for simplicity, we perform this at each paintGL. In an actual app,
@@ -190,7 +190,7 @@ void OpenGLViewer::cleanupGL()
     vbo_.destroy();
 }
 
-QPointF OpenGLViewer::computeNormal_(const QPoint & p, const QPoint & q)
+QPointF OpenGLViewer::computeNormal_(const QPoint& p, const QPoint& q)
 {
     // Get difference
     QPointF d = q-p;
