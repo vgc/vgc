@@ -32,7 +32,7 @@ add_subdirectory(third)
 include_directories("${PYTHON_INCLUDE_DIRS}")
 
 # Include third-party shipped libs
-include_directories("${CMAKE_CURRENT_LIST_DIR}/third")
+include_directories("${CMAKE_CURRENT_LIST_DIR}/third/Eigen/include")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/third/pybind11/include")
 
 # Include internal libs
