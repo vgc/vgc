@@ -209,7 +209,7 @@ QPointF OpenGLViewer::computeNormal_(const QPoint& p, const QPoint& q)
 void OpenGLViewer::computeGLVertices_()
 {
     glVertices_.clear();
-    float halfwidth = 3.0;
+    float halfwidth = 6.0;
     for (const Curve& curve: curves_)
     {
         size_t n = curve.size();
