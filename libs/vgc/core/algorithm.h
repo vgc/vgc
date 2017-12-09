@@ -30,7 +30,7 @@ namespace core {
 /// The behavior is undefined if \p min is greater than \p max.
 /// This is the same as C++17 std::clamp.
 ///
-template<typename T, typename Compare>
+template<typename T>
 constexpr const T& clamp(const T& v, const T& min, const T& max)
 {
     assert(!(max < min));
