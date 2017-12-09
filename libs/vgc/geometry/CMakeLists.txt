@@ -7,6 +7,7 @@ vgc_add_library(geometry
     CPP_FILES
         point.cpp
         vector2d.h
+        bezierspline.h
 )
 
 add_subdirectory(wraps)

@@ -5,6 +5,8 @@ vgc_add_library(core
     VGC_DEPENDENCIES
 
     CPP_FILES
+        algorithm.cpp
+        math.cpp
         python.cpp
         resources.cpp
 
