@@ -123,7 +123,7 @@ public:
         u *= n;
 
         // Get which segment to evaluate in [0 .. n-1]
-        int segmentIndex = core::clamp((int) std::floor(t), 0, n-1);
+        int segmentIndex = core::clamp((int) std::floor(u), 0, n-1);
 
         // Get local parameterization
         Scalar t  = u - segmentIndex;
