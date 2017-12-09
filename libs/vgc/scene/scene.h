@@ -20,7 +20,9 @@
 #include <memory>
 #include <vector>
 #include <QObject>
+#include <vgc/geometry/bezierspline2d.h>
 #include <vgc/geometry/point.h>
+#include <vgc/geometry/vector2d.h>
 #include <vgc/scene/api.h>
 
 namespace vgc {
@@ -34,6 +36,10 @@ class VGC_SCENE_API Scene: public QObject
 public:
     Scene();
 
+    // XXX This is a temporary test. Final API will be different
+    void startCurve(const geometry::Vector2d& p);
+    void continueCurve(const geometry::Vector2d& p);
+
     void addPoint();
     void addPoint(const geometry::Point& point);
     void addPoint(double x, double y);
@@ -41,11 +47,16 @@ public:
     const std::vector<geometry::Point>& points() const { return points_; }
     void setPoints(const std::vector<geometry::Point>& points);
 
+    const std::vector<geometry::BezierSpline2d>& splines() const {
+        return splines_;
+    }
+
 Q_SIGNALS:
     void changed();
 
 private:
     std::vector<geometry::Point> points_;
+    std::vector<geometry::BezierSpline2d> splines_;
 };
 
 using ScenePtr = std::shared_ptr<Scene>;

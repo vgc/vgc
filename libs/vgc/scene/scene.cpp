@@ -24,6 +24,32 @@ Scene::Scene()
 
 }
 
+void Scene::startCurve(const geometry::Vector2d& p)
+{
+    splines_.push_back(geometry::BezierSpline2d());
+    continueCurve(p);
+}
+
+void Scene::continueCurve(const geometry::Vector2d& p)
+{
+    if (splines_.size() == 0) {
+        return;
+    }
+
+    std::vector<geometry::Vector2d> d = splines_.back().data();
+    if (d.size() == 0) {
+        d.push_back(p);
+    }
+    else {
+        const geometry::Vector2d& q = d.back();
+        d.push_back(1.0 / 3.0 * (p-q));
+        d.push_back(2.0 / 3.0 * (p-q));
+        d.push_back(3.0 / 3.0 * (p-q));
+    }
+
+    Q_EMIT changed();
+}
+
 void Scene::addPoint()
 {
     addPoint(geometry::Point());
