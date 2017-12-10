@@ -16,6 +16,8 @@
 
 #include <vgc/scene/scene.h>
 
+#include <iostream>
+
 namespace vgc {
 namespace scene {
 
@@ -36,15 +38,16 @@ void Scene::continueCurve(const geometry::Vector2d& p)
         return;
     }
 
-    std::vector<geometry::Vector2d> d = splines_.back().data();
+    std::vector<geometry::Vector2d>& d = splines_.back().data();
     if (d.size() == 0) {
         d.push_back(p);
     }
     else {
-        const geometry::Vector2d& q = d.back();
-        d.push_back(1.0 / 3.0 * (p-q));
-        d.push_back(2.0 / 3.0 * (p-q));
-        d.push_back(3.0 / 3.0 * (p-q));
+        // Note: copy of q required because push_back may invalidate ref
+        geometry::Vector2d q = d.back();
+        d.push_back(q + 0.33 * (p-q));
+        d.push_back(q + 0.67 * (p-q));
+        d.push_back(p);
     }
 
     Q_EMIT changed();
