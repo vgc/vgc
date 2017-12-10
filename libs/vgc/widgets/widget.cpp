@@ -40,7 +40,7 @@ Widget::Widget(
 
     QSplitter* splitter = new QSplitter(Qt::Vertical);
     //splitter->addWidget(new Viewer(scene));
-    splitter->addWidget(new OpenGLViewer());
+    splitter->addWidget(new OpenGLViewer(scene));
     splitter->addWidget(new Console(interpreter));
 
     QHBoxLayout* layout = new QHBoxLayout();
@@ -49,8 +49,8 @@ Widget::Widget(
     setLayout(layout);
     setMinimumSize(800, 600);
 
-//    connect(scene, &scene::Scene::changed,
-//            this, (void (Widget::*)()) &Widget::update);
+    connect(scene, &scene::Scene::changed,
+            this, (void (Widget::*)()) &Widget::update);
 }
 
 Widget::~Widget()

@@ -25,8 +25,12 @@
 #include <QOpenGLVertexArrayObject>
 
 #include <vector>
+#include <vgc/geometry/vector2d.h>
 
 namespace vgc {
+
+namespace scene { class Scene; }
+
 namespace widgets {
 
 class OpenGLViewer : public QOpenGLWidget
@@ -41,8 +45,12 @@ public:
     ///
     static void init();
 
-    OpenGLViewer(QWidget * parent = nullptr);
+    OpenGLViewer(scene::Scene* scene, QWidget * parent = nullptr);
     ~OpenGLViewer();
+
+    scene::Scene* scene() const {
+        return scene_;
+    }
 
 private:
     void mousePressEvent(QMouseEvent* event);
@@ -59,7 +67,9 @@ private:
     void cleanupGL();
 
 private:
-    QPointF computeNormal_(const QPoint& p, const QPoint& q);
+    geometry::Vector2d computeNormal_(
+            const geometry::Vector2d& p,
+            const geometry::Vector2d& q);
     void computeGLVertices_();
 
 private:
@@ -68,8 +78,7 @@ private:
     QMatrix4x4 viewMatrix_;
 
     // Input mouse data
-    using Curve = std::vector<QPoint>;
-    std::vector<Curve> curves_;
+    scene::Scene* scene_;
 
     // RAM resources synced with GL resources
     struct GLVertex {

@@ -19,6 +19,7 @@
 #include <cmath>
 #include <QMouseEvent>
 #include <vgc/core/resources.h>
+#include <vgc/scene/scene.h>
 
 namespace vgc {
 namespace widgets {
@@ -31,7 +32,11 @@ QString shaderPath_(const std::string& name) {
     return QString::fromStdString(path);
 }
 
-} // end namespace
+geometry::Vector2d toVector2d_(QMouseEvent* event) {
+    return geometry::Vector2d(event->x(), event->y());
+}
+
+} // namespace
 
 void OpenGLViewer::init()
 {
@@ -46,8 +51,9 @@ void OpenGLViewer::init()
     QSurfaceFormat::setDefaultFormat(format);
 }
 
-OpenGLViewer::OpenGLViewer(QWidget *parent) :
-    QOpenGLWidget(parent)
+OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget *parent) :
+    QOpenGLWidget(parent),
+    scene_(scene)
 {
     // Set view matrix
     viewMatrix_.setToIdentity();
@@ -61,19 +67,15 @@ OpenGLViewer::~OpenGLViewer()
     doneCurrent();
 }
 
-void OpenGLViewer::mousePressEvent(QMouseEvent* /*event*/)
+void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    // Create new curve
-    curves_.push_back(Curve());
+    scene_->startCurve(toVector2d_(event));
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
-    // Append new point to last curve
-    if (curves_.size() > 0) {
-        curves_.back().push_back(event->pos());
-        repaint();
-    }
+    scene_->continueCurve(toVector2d_(event));
+    repaint(); // XXX why is this needed?
 }
 
 void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
@@ -144,6 +146,9 @@ void OpenGLViewer::resizeGL(int w, int h)
 
 void OpenGLViewer::paintGL()
 {
+    using Vec2d = geometry::Vector2d;
+    using Bez2d = geometry::BezierSpline2d;
+
     OpenGLFunctions* f = openGLFunctions();
 
     // Update VBO
@@ -167,8 +172,9 @@ void OpenGLViewer::paintGL()
     // Draw triangles
     vao_.bind();
     int firstIndex = 0;
-    for (const Curve& curve: curves_) {
-        size_t n = curve.size();
+    for (const Bez2d& spline: scene_->splines()) {
+        const std::vector<Vec2d>& data = spline.data();
+        size_t n = data.size();
         if (n >= 2) {
             int nIndices = 2 * n;
             f->glDrawArrays(GL_TRIANGLE_STRIP, firstIndex, nIndices);
@@ -190,47 +196,53 @@ void OpenGLViewer::cleanupGL()
     vbo_.destroy();
 }
 
-QPointF OpenGLViewer::computeNormal_(const QPoint& p, const QPoint& q)
+geometry::Vector2d OpenGLViewer::computeNormal_(
+        const geometry::Vector2d& p,
+        const geometry::Vector2d& q)
 {
     // Get difference
-    QPointF d = q-p;
+    geometry::Vector2d d = q-p;
 
     // Normalize difference to get tangent
-    const double length = std::sqrt(d.x()*d.x() + d.y() * d.y());
+    const double length = d.norm();
     if (length > 1e-6)
         d /= length;
     else
-        d = QPointF(1.0, 0.0);
+        d = geometry::Vector2d(1.0, 0.0);
 
     // Return vector orthogonal to tangent
-    return QPointF(-d.y(), d.x());
+    return geometry::Vector2d(-d[1], d[0]);
 }
 
 void OpenGLViewer::computeGLVertices_()
 {
+    using Vec2d = geometry::Vector2d;
+    using Bez2d = geometry::BezierSpline2d;
+
     glVertices_.clear();
     float halfwidth = 6.0;
-    for (const Curve& curve: curves_)
+    for (const Bez2d& spline: scene_->splines())
     {
-        size_t n = curve.size();
+        const std::vector<Vec2d>& data = spline.data();
+        size_t n = data.size();
         if (n >= 2)
         {
             for (unsigned int i=0; i<n; ++i)
             {
                 // Compute normal for sample
-                QPointF normal;
+                Vec2d normal;
                 if (i==0)
-                    normal = computeNormal_(curve[0], curve[1]);
+                    normal = computeNormal_(data[0], data[1]);
                 else if (i == n-1)
-                    normal = computeNormal_(curve[n-2], curve[n-1]);
+                    normal = computeNormal_(data[n-2], data[n-1]);
                 else
-                    normal = computeNormal_(curve[i-1], curve[i+1]);
+                    normal = computeNormal_(data[i-1], data[i+1]);
 
                 // Compute left and right GL vertices from centerline + normal + width
-                QPointF leftPos  = curve[i] + halfwidth * normal;
-                QPointF rightPos = curve[i] - halfwidth * normal;
-                GLVertex leftVertex(leftPos.x(), leftPos.y());
-                GLVertex rightVertex(rightPos.x(), rightPos.y());
+                Vec2d leftPos  = data[i] + halfwidth * normal;
+                Vec2d rightPos = data[i] - halfwidth * normal;
+                GLVertex leftVertex(leftPos[0], leftPos[1]);
+                GLVertex rightVertex(rightPos[0], rightPos[1]);
 
                 // Add vertices to list of vertices
                 glVertices_.push_back(leftVertex);
