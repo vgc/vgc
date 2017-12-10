@@ -31,7 +31,7 @@ namespace core {
 /// This is the same as C++17 std::clamp.
 ///
 template<typename T>
-constexpr const T& clamp(const T& v, const T& min, const T& max)
+const T& clamp(const T& v, const T& min, const T& max)
 {
     assert(!(max < min));
     return (v < min) ? min : (max < v) ? max : v;
