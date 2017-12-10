@@ -16,8 +16,6 @@
 
 #include <vgc/scene/scene.h>
 
-#include <iostream>
-
 namespace vgc {
 namespace scene {
 
