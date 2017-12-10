@@ -24,6 +24,12 @@ Scene::Scene()
 
 }
 
+void Scene::clear()
+{
+    splines_.clear();
+    Q_EMIT changed();
+}
+
 void Scene::startCurve(const geometry::Vector2d& p)
 {
     splines_.push_back(geometry::BezierSpline2d());

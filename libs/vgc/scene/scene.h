@@ -36,6 +36,10 @@ class VGC_SCENE_API Scene: public QObject
 public:
     Scene();
 
+    /// Clears the scene.
+    ///
+    void clear();
+
     // XXX This is a temporary test. Final API will be different
     void startCurve(const geometry::Vector2d& p);
     void continueCurve(const geometry::Vector2d& p);

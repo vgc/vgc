@@ -27,6 +27,7 @@ void wrap_scene(py::module& m)
 {
     py::class_<Scene, ScenePtr>(m, "Scene")
         .def(py::init<>())
+        .def("clear", &Scene::clear, "Clears the scene.")
         .def("addPoint", (void (Scene::*)()) &Scene::addPoint, "Adds the point (0,0) to the scene.")
         .def("addPoint", (void (Scene::*)(const Point&)) &Scene::addPoint, "Adds the given point to the scene.")
         .def("addPoint", (void (Scene::*)(double, double)) &Scene::addPoint, "Adds the point (x,y) to the scene.")
