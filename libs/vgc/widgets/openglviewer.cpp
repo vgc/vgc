@@ -75,7 +75,6 @@ void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
     scene_->continueCurve(toVector2d_(event));
-    repaint(); // XXX why is this needed?
 }
 
 void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
