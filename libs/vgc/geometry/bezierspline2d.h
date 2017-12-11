@@ -19,12 +19,12 @@
 
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/bezierspline.h>
-#include <vgc/geometry/vector2d.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 namespace geometry {
 
-using BezierSpline2d = BezierSpline<Vector2d>;
+using BezierSpline2d = BezierSpline<Vec2d>;
 
 } // namespace geometry
 } // namespace vgc

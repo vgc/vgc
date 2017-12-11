@@ -32,8 +32,8 @@ QString shaderPath_(const std::string& name) {
     return QString::fromStdString(path);
 }
 
-geometry::Vector2d toVector2d_(QMouseEvent* event) {
-    return geometry::Vector2d(event->x(), event->y());
+geometry::Vec2d toVec2d_(QMouseEvent* event) {
+    return geometry::Vec2d(event->x(), event->y());
 }
 
 } // namespace
@@ -69,12 +69,12 @@ OpenGLViewer::~OpenGLViewer()
 
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    scene_->startCurve(toVector2d_(event));
+    scene_->startCurve(toVec2d_(event));
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
-    scene_->continueCurve(toVector2d_(event));
+    scene_->continueCurve(toVec2d_(event));
 }
 
 void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
@@ -145,7 +145,7 @@ void OpenGLViewer::resizeGL(int w, int h)
 
 void OpenGLViewer::paintGL()
 {
-    using Vec2d = geometry::Vector2d;
+    using Vec2d = geometry::Vec2d;
     using Bez2d = geometry::BezierSpline2d;
 
     OpenGLFunctions* f = openGLFunctions();
@@ -195,31 +195,31 @@ void OpenGLViewer::cleanupGL()
     vbo_.destroy();
 }
 
-geometry::Vector2d OpenGLViewer::computeNormal_(
-        const geometry::Vector2d& p,
-        const geometry::Vector2d& q)
+geometry::Vec2d OpenGLViewer::computeNormal_(
+        const geometry::Vec2d& p,
+        const geometry::Vec2d& q)
 {
     // Get difference
-    geometry::Vector2d d = q-p;
+    geometry::Vec2d d = q-p;
 
     // Normalize difference to get tangent
-    const double length = d.norm();
+    const double length = d.length();
     if (length > 1e-6)
-        d /= length;
+        d *= 1.0 / length;
     else
-        d = geometry::Vector2d(1.0, 0.0);
+        d = geometry::Vec2d(1.0, 0.0);
 
     // Return vector orthogonal to tangent
-    return geometry::Vector2d(-d[1], d[0]);
+    return geometry::Vec2d(-d[1], d[0]);
 }
 
 void OpenGLViewer::computeGLVertices_()
 {
-    using Vec2d = geometry::Vector2d;
+    using Vec2d = geometry::Vec2d;
     using Bez2d = geometry::BezierSpline2d;
 
     glVertices_.clear();
-    float halfwidth = 6.0;
+    double halfwidth = 6.0;
     for (const Bez2d& spline: scene_->splines())
     {
         const std::vector<Vec2d>& data = spline.data();

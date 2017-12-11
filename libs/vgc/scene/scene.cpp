@@ -30,52 +30,30 @@ void Scene::clear()
     Q_EMIT changed();
 }
 
-void Scene::startCurve(const geometry::Vector2d& p)
+void Scene::startCurve(const geometry::Vec2d& p)
 {
     splines_.push_back(geometry::BezierSpline2d());
     continueCurve(p);
 }
 
-void Scene::continueCurve(const geometry::Vector2d& p)
+void Scene::continueCurve(const geometry::Vec2d& p)
 {
     if (splines_.size() == 0) {
         return;
     }
 
-    std::vector<geometry::Vector2d>& d = splines_.back().data();
+    std::vector<geometry::Vec2d>& d = splines_.back().data();
     if (d.size() == 0) {
         d.push_back(p);
     }
     else {
         // Note: copy of q required because push_back may invalidate ref
-        geometry::Vector2d q = d.back();
+        geometry::Vec2d q = d.back();
         d.push_back(q + 0.33 * (p-q));
         d.push_back(q + 0.67 * (p-q));
         d.push_back(p);
     }
 
-    Q_EMIT changed();
-}
-
-void Scene::addPoint()
-{
-    addPoint(geometry::Point());
-}
-
-void Scene::addPoint(const geometry::Point& point)
-{
-    points_.push_back(point);
-    Q_EMIT changed();
-}
-
-void Scene::addPoint(double x, double y)
-{
-    addPoint(geometry::Point(x, y));
-}
-
-void Scene::setPoints(const std::vector<geometry::Point>& points)
-{
-    points_ = points;
     Q_EMIT changed();
 }
 

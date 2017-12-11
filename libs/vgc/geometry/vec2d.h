@@ -17,6 +17,7 @@
 #ifndef VGC_GEOMETRY_VEC2D_H
 #define VGC_GEOMETRY_VEC2D_H
 
+#include <cmath>
 #include <vgc/geometry/api.h>
 
 namespace vgc {
@@ -58,6 +59,20 @@ public:
         return Vec2d(v1) += v2;
     }
 
+    /// Substracts in-place the \p other Vec2d to this Vec2d.
+    ///
+    Vec2d& operator-=(const Vec2d& other) {
+        data_[0] -= other[0];
+        data_[1] -= other[1];
+        return *this;
+    }
+
+    /// Returns the substraction of the Vec2d \p v1 and the Vec2d \p v2.
+    ///
+    friend Vec2d operator-(const Vec2d& v1, const Vec2d& v2) {
+        return Vec2d(v1) -= v2;
+    }
+
     /// Multiplies in-place this Vec2d by the given scalar \p s.
     ///
     Vec2d& operator*=(double s) {
@@ -76,6 +91,18 @@ public:
     ///
     friend Vec2d operator*(double s, const Vec2d& v) {
         return v * s;
+    }
+
+    /// Returns the Euclidean length of the vector.
+    ///
+    double length() const {
+        return std::sqrt(squaredLength());
+    }
+
+    /// Returns the Euclidean length of the vector.
+    ///
+    double squaredLength() const {
+        return data_[0] * data_[0] + data_[1] * data_[1];
     }
 
 private:

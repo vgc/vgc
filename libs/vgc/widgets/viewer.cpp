@@ -36,13 +36,6 @@ Viewer::~Viewer()
 
 void Viewer::paintEvent(QPaintEvent*)
 {
-    QPainter painter(this);
-    painter.setPen(Qt::red);
-    painter.setBrush(Qt::red);
-    double pointRadius = 10.0;
-    for (const geometry::Point& p: scene()->points()) {
-        painter.drawEllipse(QPointF(p.x(), p.y()), pointRadius, pointRadius);
-    }
 }
 
 } // namespace widgets

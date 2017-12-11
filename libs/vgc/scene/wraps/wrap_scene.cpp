@@ -28,13 +28,9 @@ void wrap_scene(py::module& m)
     py::class_<Scene, ScenePtr>(m, "Scene")
         .def(py::init<>())
         .def("clear", &Scene::clear, "Clears the scene.")
-        .def("addPoint", (void (Scene::*)()) &Scene::addPoint, "Adds the point (0,0) to the scene.")
-        .def("addPoint", (void (Scene::*)(const Point&)) &Scene::addPoint, "Adds the given point to the scene.")
-        .def("addPoint", (void (Scene::*)(double, double)) &Scene::addPoint, "Adds the point (x,y) to the scene.")
-        .def_property("points", &Scene::points, &Scene::setPoints, "List of points in the scene.")
         .def("__repr__", [](const Scene& s) {
                 return "<Scene containing "
-                       + std::to_string(s.points().size())
-                       + " points>"; })
+                       + std::to_string(s.splines().size())
+                       + " curves>"; })
     ;
 }

@@ -30,10 +30,6 @@ int main(int argc, char *argv[])
 
     // Create the scene (and add a few points for testing purposes)
     vgc::scene::ScenePtr scene = std::make_shared<vgc::scene::Scene>();
-    scene->addPoint(vgc::geometry::Point(10, 10));
-    scene->addPoint(vgc::geometry::Point(100, 10));
-    scene->addPoint(vgc::geometry::Point(100, 50));
-    scene->addPoint(vgc::geometry::Point(200, 100));
 
     // Expose the above Scene instance to Python console. This allows, for
     // example, to add a new point by typing this in the console:

@@ -25,7 +25,7 @@
 #include <QOpenGLVertexArrayObject>
 
 #include <vector>
-#include <vgc/geometry/vector2d.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 
@@ -67,9 +67,9 @@ private:
     void cleanupGL();
 
 private:
-    geometry::Vector2d computeNormal_(
-            const geometry::Vector2d& p,
-            const geometry::Vector2d& q);
+    geometry::Vec2d computeNormal_(
+            const geometry::Vec2d& p,
+            const geometry::Vec2d& q);
     void computeGLVertices_();
 
 private:

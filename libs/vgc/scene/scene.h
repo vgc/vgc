@@ -22,7 +22,7 @@
 #include <QObject>
 #include <vgc/geometry/bezierspline2d.h>
 #include <vgc/geometry/point.h>
-#include <vgc/geometry/vector2d.h>
+#include <vgc/geometry/vec2d.h>
 #include <vgc/scene/api.h>
 
 namespace vgc {
@@ -41,16 +41,8 @@ public:
     void clear();
 
     // XXX This is a temporary test. Final API will be different
-    void startCurve(const geometry::Vector2d& p);
-    void continueCurve(const geometry::Vector2d& p);
-
-    void addPoint();
-    void addPoint(const geometry::Point& point);
-    void addPoint(double x, double y);
-
-    const std::vector<geometry::Point>& points() const { return points_; }
-    void setPoints(const std::vector<geometry::Point>& points);
-
+    void startCurve(const geometry::Vec2d& p);
+    void continueCurve(const geometry::Vec2d& p);
     const std::vector<geometry::BezierSpline2d>& splines() const {
         return splines_;
     }
@@ -59,7 +51,6 @@ Q_SIGNALS:
     void changed();
 
 private:
-    std::vector<geometry::Point> points_;
     std::vector<geometry::BezierSpline2d> splines_;
 };
 

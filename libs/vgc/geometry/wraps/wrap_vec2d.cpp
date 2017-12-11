@@ -41,6 +41,9 @@ void wrap_vec2d(py::module& m)
         .def(double() * py::self)
         .def(py::self * double())
 
+        .def("length", &Vec2d::length)
+        .def("squaredLength", &Vec2d::squaredLength)
+
         .def("__repr__", [](const Vec2d& v) {
             return "("
                    + std::to_string(v[0]) + ", "
