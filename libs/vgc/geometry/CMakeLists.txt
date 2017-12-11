@@ -5,9 +5,7 @@ vgc_add_library(geometry
         core
 
     CPP_FILES
-        point.cpp
         vec2d.h
-        vector2d.h
         bezierspline.h
 )
 

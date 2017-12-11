@@ -21,7 +21,6 @@
 namespace py = pybind11;
 using vgc::scene::Scene;
 using vgc::scene::ScenePtr;
-using vgc::geometry::Point;
 
 void wrap_scene(py::module& m)
 {

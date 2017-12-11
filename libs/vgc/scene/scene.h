@@ -21,7 +21,6 @@
 #include <vector>
 #include <QObject>
 #include <vgc/geometry/bezierspline2d.h>
-#include <vgc/geometry/point.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/scene/api.h>
 

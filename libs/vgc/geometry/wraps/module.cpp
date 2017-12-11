@@ -18,13 +18,11 @@
 
 namespace py = pybind11;
 
-void wrap_point(py::module& m);
 void wrap_vec2d(py::module& m);
 
 PYBIND11_PLUGIN(geometry)
 {
     py::module m("geometry", "Documentation of the 'geometry' module");
-    wrap_point(m);
     wrap_vec2d(m);
     return m.ptr();
 }

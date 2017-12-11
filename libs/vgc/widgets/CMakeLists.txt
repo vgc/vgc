@@ -9,6 +9,5 @@ vgc_add_library(widgets
     CPP_FILES
         console.cpp
         openglviewer.cpp
-        viewer.cpp
         widget.cpp
 )
