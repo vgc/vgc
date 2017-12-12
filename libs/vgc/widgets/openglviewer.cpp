@@ -21,7 +21,7 @@
 #include <vgc/core/resources.h>
 #include <vgc/scene/scene.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <iostream>
 #include <QtDebug>
@@ -93,6 +93,10 @@ void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
+    // Test on Asus Zenbook UX31A, Kubuntu 16.04, not calling paintGL.
+    // Using Touchpad: ~12ms
+    // Using Logitech M510 mouse: ~8ms
+    // Using Wacom Intuos3 6" x 8" tablet: alternates between ~12ms and ~8ms
 #if DEBUG
     std::cout << "move: " << timerMouseMoveEvent_.restart() << "s\n";
 #endif
