@@ -18,11 +18,23 @@
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/widget.h>
+#include <vgc/widgets/openglviewer.h>
 
 namespace py = pybind11;
 
 int main(int argc, char *argv[])
 {
+    // Init OpenGL. Must be called before QApplication creation. See Qt doc:
+    //
+    // Calling QSurfaceFormat::setDefaultFormat() before constructing the
+    // QApplication instance is mandatory on some platforms (for example,
+    // macOS) when an OpenGL core profile context is requested. This is to
+    // ensure that resource sharing between contexts stays functional as all
+    // internal contexts are created using the correct version and profile.
+    //
+    vgc::widgets::OpenGLViewer::init();
+
+    // Creates the QApplication
     QApplication a(argc, argv);
 
     // Create the python interpreter

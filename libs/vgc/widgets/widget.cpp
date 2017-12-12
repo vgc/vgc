@@ -35,7 +35,6 @@ Widget::Widget(
     scene_(scene)
 {
     // Create OpenGLViewer
-    OpenGLViewer::init();
     OpenGLViewer* viewer = new OpenGLViewer(scene);
 
     // Create console

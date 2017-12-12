@@ -21,7 +21,7 @@
 #include <vgc/core/resources.h>
 #include <vgc/scene/scene.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <iostream>
 #include <QtDebug>
