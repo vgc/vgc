@@ -21,12 +21,15 @@ namespace core {
 
 Timer::Timer()
 {
-    restart();
+    t_ = Clock_::now();
 }
 
-void Timer::restart()
+double Timer::restart()
 {
-    t_ = Clock_::now();
+    Time_ t2 = Clock_::now();
+    std::chrono::duration<double> seconds = t2 - t_;
+    t_ = t2;
+    return seconds.count();
 }
 
 double Timer::elapsed() const

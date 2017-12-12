@@ -39,12 +39,13 @@ public:
     ///
     Timer();
 
-    /// Restarts the Timer.
+    /// Restarts this Timer and returns the elapsed time, in seconds,
+    /// since this Timer was created or last restarted.
     ///
-    void restart();
+    double restart();
 
     /// Returns the elapsed time, in seconds, since this Timer was created or
-    /// since the last call of restart().
+    /// last restarted.
     ///
     double elapsed() const;
 
