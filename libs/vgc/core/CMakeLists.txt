@@ -9,6 +9,7 @@ vgc_add_library(core
         math.cpp
         python.cpp
         resources.cpp
+        timer.cpp
 
     COMPILE_DEFINITIONS
         -DVGC_CORE_PYTHON_PATH_="${VGC_PYTHON_OUTPUT_DIRECTORY}"
