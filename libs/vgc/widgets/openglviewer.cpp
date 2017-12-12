@@ -21,6 +21,12 @@
 #include <vgc/core/resources.h>
 #include <vgc/scene/scene.h>
 
+#define DEBUG 0
+#if DEBUG
+#include <iostream>
+#include <QtDebug>
+#endif
+
 namespace vgc {
 namespace widgets {
 
@@ -40,13 +46,22 @@ geometry::Vec2d toVec2d_(QMouseEvent* event) {
 
 void OpenGLViewer::init()
 {
+    // Note:
+    //
+    // Performance is impacted by format.setSamples(). Below are
+    // tests on Asus Zenbook UX31A, Kubuntu 16.04, fullscreen window
+    //
+    // samples = 1    paint = 16ms
+    // samples = 4    paint = 20ms (?)
+    // samples = 16   paint = 33ms
+
     // Set OpenGL 3.2, core profile
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     format.setVersion(3, 2);
     format.setProfile(QSurfaceFormat::CoreProfile);
-    format.setSamples(16);
+    format.setSamples(1);
     format.setSwapInterval(0);
     QSurfaceFormat::setDefaultFormat(format);
 }
@@ -57,6 +72,10 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget *parent) :
 {
     // Set view matrix
     viewMatrix_.setToIdentity();
+
+#if DEBUG
+    qDebug() << format();
+#endif
 }
 
 OpenGLViewer::~OpenGLViewer()
@@ -74,6 +93,10 @@ void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
+#if DEBUG
+    std::cout << "move: " << timerMouseMoveEvent_.restart() << "s\n";
+#endif
+
     scene_->continueCurve(toVec2d_(event));
 }
 
@@ -145,6 +168,10 @@ void OpenGLViewer::resizeGL(int w, int h)
 
 void OpenGLViewer::paintGL()
 {
+#if DEBUG
+    std::cout << "paint: " << timerPaintGL_.restart() << "s\n";
+#endif
+
     using Vec2d = geometry::Vec2d;
     using Bez2d = geometry::BezierSpline2d;
 

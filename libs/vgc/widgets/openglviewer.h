@@ -25,6 +25,7 @@
 #include <QOpenGLVertexArrayObject>
 
 #include <vector>
+#include <vgc/core/timer.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc {
@@ -72,7 +73,11 @@ private:
             const geometry::Vec2d& q);
     void computeGLVertices_();
 
-private:
+private:    
+    // Measure time
+    core::Timer timerMouseMoveEvent_;
+    core::Timer timerPaintGL_;
+
     // Projection and view matrix
     QMatrix4x4 projMatrix_;
     QMatrix4x4 viewMatrix_;
