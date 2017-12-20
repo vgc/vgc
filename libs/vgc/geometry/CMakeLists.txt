@@ -5,8 +5,11 @@ vgc_add_library(geometry
         core
 
     CPP_FILES
-        vec2d.h
         bezierspline.h
+        bezierspline1d.h
+        bezierspline2d.h
+        curve.cpp
+        vec2d.h
 )
 
 add_subdirectory(wraps)
