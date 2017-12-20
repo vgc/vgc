@@ -35,6 +35,9 @@ void wrap_vec2d(py::module& m)
             if (i < 0 || i >= 2) throw py::index_error();
             v[i] = x; })
 
+        .def_property("x", &Vec2d::x, &Vec2d::setX)
+        .def_property("y", &Vec2d::y, &Vec2d::setY)
+
         .def(py::self += py::self)
         .def(py::self + py::self)
         .def(py::self *= float())

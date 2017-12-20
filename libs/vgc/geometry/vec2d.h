@@ -37,13 +37,29 @@ public:
     ///
     Vec2d(double x, double y) : data_{x, y} {}
 
-    /// Accesses the components of the Vec2d.
+    /// Accesses the i-th component of the Vec2d.
     ///
     const double& operator[](int i) const { return data_[i]; }
 
-    /// Mutates the components of the Vec2d.
+    /// Mutates the i-th component of the Vec2d.
     ///
     double& operator[](int i) { return data_[i]; }
+
+    /// Accesses the first component of the Vec2d.
+    ///
+    double x() const { return data_[0]; }
+
+    /// Accesses the second component of the Vec2d.
+    ///
+    double y() const { return data_[1]; }
+
+    /// Mutates the first component of the Vec2d.
+    ///
+    void setX(double x) { data_[0] = x; }
+
+    /// Mutates the second component of the Vec2d.
+    ///
+    void setY(double y) { data_[1] = y; }
 
     /// Adds in-place the \p other Vec2d to this Vec2d.
     ///
