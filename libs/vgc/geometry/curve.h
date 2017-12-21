@@ -95,9 +95,22 @@ public:
     ///
     Type type() const { return type_; }
 
+    /// Returns the position data of the curve.
+    ///
+    const std::vector<double>& positionData() const { return positionData_; }
+
     /// Returns the AttributeVariability of the width attribute.
     ///
     AttributeVariability widthVariability() const { return widthVariability_; }
+
+    /// Returns the width data of the curve.
+    ///
+    const std::vector<double>& widthData() const { return widthData_; }
+
+    /// Returns the width of the curve. If width is varying, then returns
+    /// the average width;
+    ///
+    double width() const;
 
     /// Convenient function to add a sample to the curve. This overload is
     /// intended to be used when widthVariability() == Constant.

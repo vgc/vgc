@@ -15,6 +15,8 @@
 // limitations under the License.
 
 #include <vgc/geometry/curve.h>
+
+#include <vgc/core/algorithm.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc {
@@ -36,6 +38,11 @@ Curve::Curve(double constantWidth, Type type) :
     widthData_(1, constantWidth) // = vector containing a single element
 {
 
+}
+
+double Curve::width() const
+{
+    return core::average(widthData_);
 }
 
 void Curve::addSample(double x, double y)
