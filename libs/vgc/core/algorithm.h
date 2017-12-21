@@ -20,6 +20,7 @@
 #ifndef VGC_CORE_ALGORITHM_H
 #define VGC_CORE_ALGORITHM_H
 
+#include <algorithm>
 #include <cassert>
 #include <vgc/core/api.h>
 
@@ -35,6 +36,78 @@ const T& clamp(const T& v, const T& min, const T& max)
 {
     assert(!(max < min));
     return (v < min) ? min : (max < v) ? max : v;
+}
+
+/// Returns what "zero" means for the given type. When this generic function is
+/// not specialized, it uses the default constructor.
+///
+/// It is important to specialize vgc::core::zero for your own arithmetic types
+/// when their default constructors do not perform zero-initialization (See
+/// vgc::geometry::Vec2d for an example).
+///
+/// Below is an example of how to specialize vgc::core::zero for your own types:
+///
+/// \code
+/// namespace MyNamespace {
+/// class MyClass {
+///     double x_;
+/// public:
+///     MyClass() {} // default constructor leaves x_ uninitialized
+///     MyClass(double x) : x_(x) {} // custom constructor initializes x_
+/// };
+/// }
+///
+/// namespace vgc {
+/// namespace core {
+/// constexpr MyNamespace::MyClass zero<MyNamespace::MyClass>() {
+///     return MyNamespace::MyClass(0.0);
+/// }
+/// }
+/// }
+///
+/// void f() {
+///     MyNamespace::MyClass c1;                                           // uninitialized
+///     MyNamespace::MyClass c2 = vgc::core::zero<MyNamespace::MyClass>(); // zero-initialized
+/// }
+/// \endcode
+///
+/// This function is intended to be used for generic code. If you know the type,
+/// prefer to use more readable ways to zero-initialize:
+///
+/// \code
+/// double x = 0.0;
+/// Vec2d v(0.0, 0.0);
+/// \endcode
+///
+template<typename T>
+constexpr T zero()
+{
+    return T();
+}
+
+/// Returns the sum of all values in the given vector.
+/// Returns zero<T>() if the vector is empty.
+///
+template<typename T>
+T sum(const std::vector<T>& v)
+{
+    return std::accumulate(v.begin(), v.end(), zero<T>());
+}
+
+/// Returns the average value of the given vector of values.
+/// Returns zero<T>() if the vector is empty.
+///
+template<typename T>
+T average(const std::vector<T>& v)
+{
+    const size_t n = v.size();
+
+    if (n > 0) {
+        return (1.0 / static_cast<double>(n)) * sum(v);
+    }
+    else {
+        return zero<T>();
+    }
 }
 
 } // namespace core
