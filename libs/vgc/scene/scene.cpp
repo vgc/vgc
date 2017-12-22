@@ -26,34 +26,22 @@ Scene::Scene()
 
 void Scene::clear()
 {
-    splines_.clear();
+    curves_.clear();
     Q_EMIT changed();
 }
 
-void Scene::startCurve(const geometry::Vec2d& p)
+void Scene::startCurve(const geometry::Vec2d& p, double width)
 {
-    splines_.push_back(geometry::BezierSpline2d());
-    continueCurve(p);
+    curves_.push_back(geometry::Curve());
+    continueCurve(p, width);
 }
 
-void Scene::continueCurve(const geometry::Vec2d& p)
+void Scene::continueCurve(const geometry::Vec2d& p, double width)
 {
-    if (splines_.size() == 0) {
+    if (curves_.size() == 0) {
         return;
     }
-
-    std::vector<geometry::Vec2d>& d = splines_.back().data();
-    if (d.size() == 0) {
-        d.push_back(p);
-    }
-    else {
-        // Note: copy of q required because push_back may invalidate ref
-        geometry::Vec2d q = d.back();
-        d.push_back(q + 0.33 * (p-q));
-        d.push_back(q + 0.67 * (p-q));
-        d.push_back(p);
-    }
-
+    curves_.back().addSample(p, width);
     Q_EMIT changed();
 }
 

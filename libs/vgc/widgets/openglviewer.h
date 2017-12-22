@@ -17,15 +17,13 @@
 #ifndef VGC_WIDGETS_OPENGLVIEWER_H
 #define VGC_WIDGETS_OPENGLVIEWER_H
 
+#include <vector>
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions_3_2_Core>
 #include <QMatrix4x4>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
-
-#include <vector>
-#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 
@@ -67,9 +65,6 @@ private:
     void cleanupGL();
 
 private:
-    geometry::Vec2d computeNormal_(
-            const geometry::Vec2d& p,
-            const geometry::Vec2d& q);
     void computeGLVertices_();
 
 private:
@@ -86,6 +81,7 @@ private:
         GLVertex(float x, float y) : x(x), y(y) {}
     };
     std::vector<GLVertex> glVertices_;
+    std::vector<int> glVerticesChunkSizes_;
 
     // GL resources
     QOpenGLShaderProgram shaderProgram_;

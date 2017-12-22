@@ -149,9 +149,6 @@ void OpenGLViewer::resizeGL(int w, int h)
 
 void OpenGLViewer::paintGL()
 {
-    using Vec2d = geometry::Vec2d;
-    using Bez2d = geometry::BezierSpline2d;
-
     OpenGLFunctions* f = openGLFunctions();
 
     // Update VBO
@@ -175,14 +172,9 @@ void OpenGLViewer::paintGL()
     // Draw triangles
     vao_.bind();
     int firstIndex = 0;
-    for (const Bez2d& spline: scene_->splines()) {
-        const std::vector<Vec2d>& data = spline.data();
-        size_t n = data.size();
-        if (n >= 2) {
-            int nIndices = 2 * n;
-            f->glDrawArrays(GL_TRIANGLE_STRIP, firstIndex, nIndices);
-            firstIndex += nIndices;
-        }
+    for (int n: glVerticesChunkSizes_) {
+        f->glDrawArrays(GL_TRIANGLE_STRIP, firstIndex, n);
+        firstIndex += n;
     }
     vao_.release();
 
@@ -199,58 +191,18 @@ void OpenGLViewer::cleanupGL()
     vbo_.destroy();
 }
 
-geometry::Vec2d OpenGLViewer::computeNormal_(
-        const geometry::Vec2d& p,
-        const geometry::Vec2d& q)
-{
-    // Get difference
-    geometry::Vec2d d = q-p;
-
-    // Normalize difference to get tangent
-    const double length = d.length();
-    if (length > 1e-6)
-        d *= 1.0 / length;
-    else
-        d = geometry::Vec2d(1.0, 0.0);
-
-    // Return vector orthogonal to tangent
-    return geometry::Vec2d(-d[1], d[0]);
-}
-
 void OpenGLViewer::computeGLVertices_()
 {
-    using Vec2d = geometry::Vec2d;
-    using Bez2d = geometry::BezierSpline2d;
-
     glVertices_.clear();
-    double halfwidth = 6.0;
-    for (const Bez2d& spline: scene_->splines())
-    {
-        const std::vector<Vec2d>& data = spline.data();
-        size_t n = data.size();
-        if (n >= 2)
-        {
-            for (unsigned int i=0; i<n; ++i)
-            {
-                // Compute normal for sample
-                Vec2d normal;
-                if (i==0)
-                    normal = computeNormal_(data[0], data[1]);
-                else if (i == n-1)
-                    normal = computeNormal_(data[n-2], data[n-1]);
-                else
-                    normal = computeNormal_(data[i-1], data[i+1]);
-
-                // Compute left and right GL vertices from centerline + normal + width
-                Vec2d leftPos  = data[i] + halfwidth * normal;
-                Vec2d rightPos = data[i] - halfwidth * normal;
-                GLVertex leftVertex(leftPos[0], leftPos[1]);
-                GLVertex rightVertex(rightPos[0], rightPos[1]);
-
-                // Add vertices to list of vertices
-                glVertices_.push_back(leftVertex);
-                glVertices_.push_back(rightVertex);
+    glVerticesChunkSizes_.clear();
+    for (const geometry::Curve& curve: scene_->curves()) {
+        std::vector<geometry::Vec2d> triangulation = curve.triangulate();
+        int n = triangulation.size();
+        if (n > 2) {
+            for(const geometry::Vec2d& v: triangulation) {
+                glVertices_.emplace_back((float)v[0], (float)v[1]);
             }
+            glVerticesChunkSizes_.push_back(n);
         }
     }
 }

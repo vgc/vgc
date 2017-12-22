@@ -29,7 +29,7 @@ void wrap_scene(py::module& m)
         .def("clear", &Scene::clear, "Clears the scene.")
         .def("__repr__", [](const Scene& s) {
                 return "<Scene containing "
-                       + std::to_string(s.splines().size())
+                       + std::to_string(s.curves().size())
                        + " curves>"; })
     ;
 }

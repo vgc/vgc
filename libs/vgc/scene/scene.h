@@ -20,7 +20,7 @@
 #include <memory>
 #include <vector>
 #include <QObject>
-#include <vgc/geometry/bezierspline2d.h>
+#include <vgc/geometry/curve.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/scene/api.h>
 
@@ -40,17 +40,17 @@ public:
     void clear();
 
     // XXX This is a temporary test. Final API will be different
-    void startCurve(const geometry::Vec2d& p);
-    void continueCurve(const geometry::Vec2d& p);
-    const std::vector<geometry::BezierSpline2d>& splines() const {
-        return splines_;
+    void startCurve(const geometry::Vec2d& p, double width = 1.0);
+    void continueCurve(const geometry::Vec2d& p, double width = 1.0);
+    const std::vector<geometry::Curve>& curves() const {
+        return curves_;
     }
 
 Q_SIGNALS:
     void changed();
 
 private:
-    std::vector<geometry::BezierSpline2d> splines_;
+    std::vector<geometry::Curve> curves_;
 };
 
 using ScenePtr = std::shared_ptr<Scene>;
