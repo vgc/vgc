@@ -57,7 +57,9 @@ void OpenGLViewer::init()
 
 OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget *parent) :
     QOpenGLWidget(parent),
-    scene_(scene)
+    scene_(scene),
+    isTabletEvent_(false),
+    tabletPressure_(0.0)
 {
     // Set view matrix
     viewMatrix_.setToIdentity();
@@ -71,19 +73,64 @@ OpenGLViewer::~OpenGLViewer()
     doneCurrent();
 }
 
+double OpenGLViewer::width_() const
+{
+    const double defaultWidth = 3.0;
+    return isTabletEvent_
+           ? 2 * tabletPressure_ * defaultWidth
+           : defaultWidth;
+}
+
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    scene_->startCurve(toVec2d_(event));
+    scene_->startCurve(toVec2d_(event), width_());
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
-    scene_->continueCurve(toVec2d_(event));
+    scene_->continueCurve(toVec2d_(event), width_());
 }
 
 void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
 {
-    // Nothing to do
+    // nothing
+}
+
+void OpenGLViewer::tabletEvent(QTabletEvent * event)
+{
+    // We store the pressure, and handle the event in:
+    // - mousePressEvent()
+    // - mouseMoveEvent()
+    // - mouseReleaseEvent()
+    //
+    // This is because Qt 5.6, at least on some plateform, generates
+    // the mouse event anyway even if we accept the tablet event, causing
+    // duplicates. The implementation here is the most reliable way I found to
+    // properly handle tablet events.
+    //
+    // Relevant: https://bugreports.qt.io/browse/QTBUG-47007
+
+    // Remember state
+    tabletPressure_ = event->pressure();
+    switch(event->type()) {
+    case QEvent::TabletPress:
+        isTabletEvent_ = true;
+        break;
+    case QEvent::TabletMove:
+        // nothing
+        break;
+    case QEvent::TabletRelease:
+        isTabletEvent_ = false;
+        break;
+    default:
+        // nothing
+        break;
+    }
+
+    // Ignore event to ensure that Qt generates a mouse event.
+    // Note: on some (but not all) systems, Qt generate the mouse event even
+    // when this event is accepted.
+    event->ignore();
 }
 
 OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const

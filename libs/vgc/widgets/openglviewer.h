@@ -54,6 +54,7 @@ private:
     void mousePressEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
     void mouseReleaseEvent(QMouseEvent* event);
+    void tabletEvent(QTabletEvent * event);
 
 private:
     using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
@@ -72,7 +73,7 @@ private:
     QMatrix4x4 projMatrix_;
     QMatrix4x4 viewMatrix_;
 
-    // Input mouse data
+    // Scene
     scene::Scene* scene_;
 
     // RAM resources synced with GL resources
@@ -92,6 +93,11 @@ private:
     int vertexLoc_;
     int projMatrixLoc_;
     int viewMatrixLoc_;
+
+    // Handle mouse/tablet events
+    double width_() const;
+    bool isTabletEvent_;
+    double tabletPressure_;
 };
 
 } // namespace widgets
