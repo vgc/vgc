@@ -98,9 +98,9 @@ VGC loosely follows the [VFX Reference Platform](http://www.vfxplatform.com/)
 recommendations for library versions, but since VGC apps are only to be
 released in 2020, we already jumped ahead to Python 3.x.
 
-VGC also depends on the following third-party library, but these are shipped
-and installed alongside this repository so you don't need to have them on
-your system already:
+VGC also depends on the following third-party libraries, but these are shipped
+and installed alongside this repository (="vendored") so you don't need to have
+them already installed your system:
 - pybind11
 - Eigen
 
