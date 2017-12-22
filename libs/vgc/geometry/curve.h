@@ -136,6 +136,29 @@ public:
     ///
     void addSample(const Vec2d& position, double width);
 
+    /// Computes and returns a triangulation of this curve as a quad strip
+    /// [ p0, p1, ..., p_{2n}, p_{2n+1} ]. The even indices are on the "left"
+    /// of the centerline, while the odd indices are on the "right", assuming a
+    /// right-handed 2D coordinate system.
+    ///
+    /// \verbatim
+    /// Y ^
+    ///   |
+    ///   o---> X
+    ///
+    /// p0  p2                                p_{2n}
+    /// o---o-- ............................ --o
+    /// |   |                                  |
+    /// |   |    --- curve direction --->      |
+    /// |   |                                  |
+    /// o---o-- ............................ --o
+    /// p1  p3                                p_{2n+1}
+    /// \endverbatim
+    ///
+    std::vector<Vec2d> triangulate() const;
+    // XXX TODO: figure out the input params. For now it's very basic
+    // just for testing the architecture.
+
 private:
     // Representation of the centerline of the curve
     Type type_;

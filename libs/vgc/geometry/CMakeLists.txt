@@ -9,6 +9,7 @@ vgc_add_library(geometry
         bezierspline1d.h
         bezierspline2d.h
         curve.cpp
+        epsilon.h
         vec2d.h
 )
 

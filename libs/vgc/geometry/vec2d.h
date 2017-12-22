@@ -19,6 +19,7 @@
 
 #include <cmath>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/epsilon.h>
 
 namespace vgc {
 namespace geometry {
@@ -109,16 +110,49 @@ public:
         return v * s;
     }
 
-    /// Returns the Euclidean length of the vector.
+    /// Divides in-place this Vec2d by the given scalar \p s.
+    ///
+    Vec2d& operator/=(double s) {
+        data_[0] /= s;
+        data_[1] /= s;
+        return *this;
+    }
+
+    /// Returns the division of this Vec2d by the given scalar \p s.
+    ///
+    Vec2d operator/(double s) const {
+        return Vec2d(*this) /= s;
+    }
+
+    /// Returns the Euclidean length of the Vec2d.
     ///
     double length() const {
         return std::sqrt(squaredLength());
     }
 
-    /// Returns the Euclidean length of the vector.
+    /// Returns the Euclidean length of the Vec2d.
     ///
     double squaredLength() const {
         return data_[0] * data_[0] + data_[1] * data_[1];
+    }
+
+    /// Makes this Vec2d a unit vector by dividing it by length().
+    /// If length() < epsilon, this Vec2d is set to (1.0, 0.0).
+    ///
+    Vec2d& normalize() {
+        double l = length();
+        if (l > epsilon) {
+            *this /= l;
+        }
+        else {
+            *this = Vec2d(1.0, 0.0);
+        }
+    }
+
+    /// Returns a normalized copy of this Vec2d.
+    ///
+    Vec2d normalized() const {
+        return Vec2d(*this).normalize();
     }
 
 private:
