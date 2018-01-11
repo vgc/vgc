@@ -22,68 +22,95 @@
 namespace vgc {
 namespace geometry {
 
-/// Returns the position \p pos and (non-normalized) derivative \p der at
-/// coordinate \p u of the cubic Bézier curve defined by the four control
-/// points \p p0, \p p1, \p p2, and \p p3.
+/// Returns the position at coordinate \p u of the cubic Bézier curve defined
+/// by the four control points \p p0, \p p1, \p p2, and \p p3.
 ///
 /// When u = 0, then the returned position is equal to p0. When u = 1, then the
 /// returned position is equal to p3. In the general case, the curve does not
 /// pass though p1 and p2.
 ///
-/// The coordinate \p u is typically between [0, 1], but any real number is valid
-/// input, extrapolating the control points if u s outside the range [0, 1].
+/// The coordinate \p u is typically between [0, 1], but this is not required.
+/// Values of u outside the range [0, 1] extrapolate the control points.
 ///
-/// The optional output parameters \p pos and \p der are not evaluated if null,
-/// saving computation time if you don't need them. However, if you do need both,
-/// then it is slightly faster to evaluate them in one call.
+/// \sa cubicBezierDer(), cubicBezierPosAndDer()
 ///
 template <typename Scalar, typename T>
-void evalCubicBezier(
-    const T& p0, const T& p1,  const T& p2,  const T& p3, Scalar u,
-    T* pos = nullptr, T* der = nullptr)
+T cubicBezier(
+        const T& p0,
+        const T& p1,
+        const T& p2,
+        const T& p3,
+        Scalar u)
 {
-    // Get local parameterization
+    Scalar v  = 1 - u;
+    Scalar u2 = u * u;
+    Scalar v2 = v * v;
+    Scalar u3 = u2 * u;
+    Scalar v3 = v2 * v;
+
+    return       v3      * p0
+           + 3 * v2 * u  * p1
+           + 3 * v  * u2 * p2
+           +          u3 * p3;
+}
+
+/// Returns the (non-normalized) derivative at coordinate \p u of the cubic
+/// Bézier curve defined by the four control points \p p0, \p p1, \p p2, and \p
+/// p3.
+///
+/// \sa cubicBezier(), cubicBezierPosAndDer()
+///
+template <typename Scalar, typename T>
+T cubicBezierDer(
+        const T& p0,
+        const T& p1,
+        const T& p2,
+        const T& p3,
+        Scalar u)
+{
     Scalar v  = 1 - u;
     Scalar u2 = u * u;
     Scalar v2 = v * v;
 
-    // Evaluate position
-    if (pos) {
-        Scalar u3 = u2 * u;
-        Scalar v3 = v2 * v;
-
-        *pos =   (1 * v3 * 1 ) * p0
-               + (3 * v2 * u ) * p1
-               + (3 * v  * u2) * p2
-               + (1 * 1  * u3) * p3;
-    }
-
-    // Evaluate derivative
-    if (der) {
-        *der =   (3 * v2 * 1 ) * (p1 - p0)
-               + (6 * v  * u ) * (p2 - p1)
-               + (3 * 1  * u2) * (p3 - p2);
-    }
+    return   3 * v2      * (p1 - p0)
+           + 6 * v  * u  * (p2 - p1)
+           + 3      * u2 * (p3 - p2);
 }
 
-/// Convenient wrapper around evalCubicBezier() returning only the position.
+/// Returns both the position \p pos and derivative \p der at coordinate \p u
+/// of the cubic Bézier curve defined by the four control points \p p0, \p p1,
+/// \p p2, and \p p3.
+///
+/// This function is only very marginally faster than calling cubicBezier() and
+/// cubicBezierDer() separately. Therefore, for readability and consistency, we
+/// recommend to reserve its usage for cases where performance is critical.
+///
+/// \sa cubicBezier(), cubicBezierDer()
 ///
 template <typename Scalar, typename T>
-T evalCubicBezierPosition(
-    const T& p0, const T& p1,  const T& p2,  const T& p3, Scalar u)
+T cubicBezierPosAndDer(
+        const T& p0,
+        const T& p1,
+        const T& p2,
+        const T& p3,
+        Scalar u,
+        T& pos,
+        T& der)
 {
-    T res;
-    evalCubicBezier(p0, p1, p2, p3, u, &res, nullptr);
-}
+    Scalar v  = 1 - u;
+    Scalar u2 = u * u;
+    Scalar v2 = v * v;
+    Scalar u3 = u2 * u;
+    Scalar v3 = v2 * v;
 
-/// Convenient wrapper around evalCubicBezier() returning only the derivative.
-///
-template <typename Scalar, typename T>
-T evalCubicBezierDerivative(
-    const T& p0, const T& p1,  const T& p2,  const T& p3, Scalar u)
-{
-    T res;
-    evalCubicBezier(p0, p1, p2, p3, u, nullptr, &res);
+    pos =        v3      * p0
+           + 3 * v2 * u  * p1
+           + 3 * v  * u2 * p2
+           +          u3 * p3;
+
+    der =    3 * v2      * (p1 - p0)
+           + 6 * v  * u  * (p2 - p1)
+           + 3      * u2 * (p3 - p2);
 }
 
 } // namespace geometry
