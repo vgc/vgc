@@ -17,6 +17,7 @@
 #include <vgc/geometry/curve.h>
 
 #include <vgc/core/algorithm.h>
+#include <vgc/geometry/bezier.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc {
@@ -30,27 +31,6 @@ int numSamples_(const std::vector<double>& data) {
 
 Vec2d position_(const std::vector<double>& data, int i) {
     return Vec2d(data[2*i], data[2*i+1]);
-}
-
-Vec2d tangent_(const std::vector<double>& data, int i) {
-    int n = numSamples_(data);
-    assert(n > 1);
-
-    Vec2d res;
-    if (i==0)
-        res = position_(data, 1) - position_(data, 0);
-    else if (i == n-1)
-        res = position_(data, n-1) - position_(data, n-2);
-    else
-        res = position_(data, i+1) - position_(data, i-1);
-    res.normalize();
-
-    return res;
-}
-
-Vec2d normal_(const std::vector<double>& data, int i) {
-    Vec2d t = tangent_(data, i);
-    return Vec2d(-t[1], t[0]);
 }
 
 } // namespace
@@ -121,38 +101,97 @@ std::vector<Vec2d> Curve::triangulate() const
     // XXX Stupid implementation for now.
     // TODO adaptive sampling, etc.
 
+    // XXX For now, we simply evaluate a fixed number
+    // of times per sample. Later, we'll do adaptive sampling.
+    const int numEvalsPerSample = 10; // must be >= 1
+
     std::vector<Vec2d> res; // XXX Should we allow to pass this as output param to reuse capacity?
 
-    const int n = numSamples_(positionData_);
-    if (n < 2) {
+    // Early return if not enough segments
+    const int numSamples = numSamples_(positionData_);
+    const int numSegments = numSamples - 1;
+    if (numSegments < 1) {
         return res;
     }
 
-    for (int i = 0; i < n; ++i)
+    // Iterates over all segments
+    for (int i = 0; i < numSegments; ++i)
     {
-        // Get position and normal
-        Vec2d normal = normal_(positionData_, i);
-        Vec2d position = position_(positionData_, i);
+        // Get indices of Catmull-Rom control points for current segment
+        int i0 = core::clamp(i-1, 0, numSamples-1);
+        int i1 = core::clamp(i  , 0, numSamples-1);
+        int i2 = core::clamp(i+1, 0, numSamples-1);
+        int i3 = core::clamp(i+2, 0, numSamples-1);
 
-        // Get width for this sample
-        double w;
-        switch(widthVariability()) {
-        case AttributeVariability::Constant:
-            w = widthData()[0];
-            break;
-        case AttributeVariability::PerSample:
-            w = widthData()[i];
-            break;
+        // Get Catmull-Rom positions
+        Vec2d p0 = position_(positionData_, i0);
+        Vec2d p1 = position_(positionData_, i1);
+        Vec2d p2 = position_(positionData_, i2);
+        Vec2d p3 = position_(positionData_, i3);
+
+        // Convert Catmull-Rom positions to Bézier positions.
+        //
+        // Note: we choose a tension parameter k = 1/6 to ensure that if the
+        // Catmull-Rom control points are aligned and uniformly spaced, then
+        // the resulting curve is uniformly parameterized.
+        //
+        const double k = 0.166666666666666667; // 18 digits because doubles hold up to 17 decimal digits
+        Vec2d q0 = p1;
+        Vec2d q1 = p1 + k * (p2 - p0);
+        Vec2d q2 = p2 - k * (p3 - p1);
+        Vec2d q3 = p2;
+
+        // Get cubic Bézier control points for current segment width
+        double w0 = 0;
+        double w1 = 0;
+        double w2 = 0;
+        double w3 = 0;
+        if (widthVariability() == AttributeVariability::PerSample)
+        {
+            // Catmull-Rom control points
+            double v0 = widthData()[i0];
+            double v1 = widthData()[i1];
+            double v2 = widthData()[i2];
+            double v3 = widthData()[i3];
+
+            // Bezier control points
+            w0 = v1;
+            w1 = v1 + k * (v2 - v0);
+            w2 = v2 - k * (v3 - v1);
+            w3 = v2;
         }
 
-        // Get left and right points of triangle strip
-        double halfwidth = 0.5 * w;
-        Vec2d leftPos  = position + halfwidth * normal;
-        Vec2d rightPos = position - halfwidth * normal;
+        // Iterates over all evals. Note: first segment has one more eval than
+        // the others. Total: numEvals = 1 + (numSamples - 1) * numEvalsPerSample.
+        const int j1 = (i == 0) ? 0 : 1;
+        for (int j = j1; j <= numEvalsPerSample; ++j)
+        {
+            const double u = (double) j / (double) numEvalsPerSample;
 
-        // Add vertices to list of vertices
-        res.push_back(leftPos);
-        res.push_back(rightPos);
+            Vec2d position = cubicBezier(q0, q1, q2, q3, u);
+            Vec2d tangent = cubicBezierDer(q0, q1, q2, q3, u);
+            Vec2d normal = tangent.normalized().orthogonalized();
+
+            // Get width for this eval
+            double w;
+            switch(widthVariability()) {
+            case AttributeVariability::Constant:
+                w = widthData()[0];
+                break;
+            case AttributeVariability::PerSample:
+                w = cubicBezier(w0, w1, w2, w3, u);
+                break;
+            }
+
+            // Get left and right points of triangle strip
+            double halfwidth = 0.5 * w;
+            Vec2d leftPos  = position + halfwidth * normal;
+            Vec2d rightPos = position - halfwidth * normal;
+
+            // Add vertices to list of vertices
+            res.push_back(leftPos);
+            res.push_back(rightPos);
+        }
     }
 
     return res;
