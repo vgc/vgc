@@ -147,12 +147,30 @@ public:
         else {
             *this = Vec2d(1.0, 0.0);
         }
+        return *this;
     }
 
     /// Returns a normalized copy of this Vec2d.
     ///
     Vec2d normalized() const {
         return Vec2d(*this).normalize();
+    }
+
+    /// Rotates this Vec2d by 90° counter-clockwise, assuming a left-handed
+    /// coordinate system.
+    ///
+    Vec2d& orthogonalize() {
+        double tmp = data_[0];
+        data_[0] = - data_[1];
+        data_[1] = tmp;
+        return *this;
+    }
+
+    /// Returns a copy of this Vec2d rotated 90° counter-clockwise, assuming a
+    /// left-handed coordinate system.
+    ///
+    Vec2d orthogonalized() const {
+        return Vec2d(*this).orthogonalize();
     }
 
 private:
