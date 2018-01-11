@@ -75,7 +75,7 @@ OpenGLViewer::~OpenGLViewer()
 
 double OpenGLViewer::width_() const
 {
-    const double defaultWidth = 3.0;
+    const double defaultWidth = 6.0;
     return isTabletEvent_
            ? 2 * tabletPressure_ * defaultWidth
            : defaultWidth;
