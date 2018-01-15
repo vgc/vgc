@@ -18,12 +18,12 @@
 #define VGC_WIDGETS_OPENGLVIEWER_H
 
 #include <vector>
-#include <QOpenGLWidget>
-#include <QOpenGLFunctions_3_2_Core>
 #include <QMatrix4x4>
-#include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
+#include <QOpenGLFunctions_3_2_Core>
+#include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
+#include <QOpenGLWidget>
 
 namespace vgc {
 
@@ -43,7 +43,7 @@ public:
     ///
     static void init();
 
-    OpenGLViewer(scene::Scene* scene, QWidget * parent = nullptr);
+    OpenGLViewer(scene::Scene* scene, QWidget* parent = nullptr);
     ~OpenGLViewer();
 
     scene::Scene* scene() const {
@@ -51,20 +51,19 @@ public:
     }
 
 private:
-    void mousePressEvent(QMouseEvent* event);
-    void mouseMoveEvent(QMouseEvent* event);
-    void mouseReleaseEvent(QMouseEvent* event);
-    void tabletEvent(QTabletEvent * event);
-
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void tabletEvent(QTabletEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
     using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
     OpenGLFunctions* openGLFunctions() const;
 
-    void initializeGL();
-    void resizeGL(int w, int h);
-    void paintGL();
+    void initializeGL() override;
+    void resizeGL(int w, int h) override;
+    void paintGL() override;
     void cleanupGL();
 
 private:

@@ -55,7 +55,7 @@ void OpenGLViewer::init()
     QSurfaceFormat::setDefaultFormat(format);
 }
 
-OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget *parent) :
+OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     QOpenGLWidget(parent),
     scene_(scene),
     isTabletEvent_(false),
@@ -101,7 +101,7 @@ void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
     // nothing
 }
 
-void OpenGLViewer::tabletEvent(QTabletEvent * event)
+void OpenGLViewer::tabletEvent(QTabletEvent* event)
 {
     // We store the pressure, and handle the event in:
     // - mousePressEvent()
