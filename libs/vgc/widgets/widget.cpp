@@ -49,7 +49,11 @@ Widget::Widget(
     QHBoxLayout* layout = new QHBoxLayout();
     layout->addWidget(splitter);
     setLayout(layout);
-    setMinimumSize(800, 600);
+    setMinimumSize(200, 200);
+
+    // Show maximized at startup
+    // XXX This should be a user preference
+    showMaximized();
 
     // Refresh viewer when scene changes
     connect(scene, &scene::Scene::changed,
