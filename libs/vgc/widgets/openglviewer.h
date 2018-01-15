@@ -56,6 +56,8 @@ private:
     void mouseReleaseEvent(QMouseEvent* event);
     void tabletEvent(QTabletEvent * event);
 
+    void keyPressEvent(QKeyEvent* event) override;
+
 private:
     using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
     OpenGLFunctions* openGLFunctions() const;
@@ -98,6 +100,11 @@ private:
     double width_() const;
     bool isTabletEvent_;
     double tabletPressure_;
+
+    // Show triangulation. This is toggled with the "t" key.
+    // XXX This is a temporary quick method to switch between
+    // render modes. A more engineered method will come later.
+    bool showTriangulation_;
 };
 
 } // namespace widgets

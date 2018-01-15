@@ -59,10 +59,15 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget *parent) :
     QOpenGLWidget(parent),
     scene_(scene),
     isTabletEvent_(false),
-    tabletPressure_(0.0)
+    tabletPressure_(0.0),
+    showTriangulation_(false)
 {
     // Set view matrix
     viewMatrix_.setToIdentity();
+
+    // Set ClickFocus policy to be able to accept keyboard events (default
+    // policy is NoFocus).
+    setFocusPolicy(Qt::ClickFocus);
 }
 
 OpenGLViewer::~OpenGLViewer()
@@ -131,6 +136,19 @@ void OpenGLViewer::tabletEvent(QTabletEvent * event)
     // Note: on some (but not all) systems, Qt generate the mouse event even
     // when this event is accepted.
     event->ignore();
+}
+
+void OpenGLViewer::keyPressEvent(QKeyEvent* event)
+{
+    switch (event->key()) {
+    case Qt::Key_T:
+        showTriangulation_ = !showTriangulation_;
+        break;
+    default:
+        break;
+    }
+
+    update();
 }
 
 OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const
@@ -217,6 +235,7 @@ void OpenGLViewer::paintGL()
     shaderProgram_.setUniformValue(viewMatrixLoc_, viewMatrix_);
 
     // Draw triangles
+    glPolygonMode(GL_FRONT_AND_BACK, showTriangulation_ ? GL_LINE : GL_FILL);
     vao_.bind();
     int firstIndex = 0;
     for (int n: glVerticesChunkSizes_) {
