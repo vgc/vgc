@@ -18,6 +18,7 @@
 #define VGC_GEOMETRY_MAT4D_H
 
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 namespace geometry {
@@ -27,8 +28,7 @@ namespace geometry {
 ///
 /// A class that stores a 4x4 matrix in column-major format. This ensures
 /// direct compatibility with OpenGL. The memory size a Mat4d is exactly 16 *
-/// sizeof(double), and it can safely be reinterpret_cast'ed to a double[16] or
-/// a double[4][4]. This will never change in any future version, as this
+/// sizeof(double). This will never change in any future version, as this
 /// allows to conveniently use this class for data transfer to OpenGL.
 ///
 class VGC_GEOMETRY_API Mat4d
@@ -176,6 +176,21 @@ public:
     Mat4d operator/(double s) const {
         return Mat4d(*this) /= s;
     }
+
+    /// Returns the multiplication of this Mat4d by the given Vec2d \p v.
+    /// This assumes that the Vec2d represents the Vec4d(x, y, 0, 1) in
+    /// homogeneous coordinates, and then only returns the x and y coordinates
+    /// of the result.
+    ///
+    Vec2d operator*(const Vec2d& v) const {
+        return Vec2d(
+            data_[0][0]*v[0] + data_[1][0]*v[1] +  data_[3][0],
+            data_[0][1]*v[0] + data_[1][1]*v[1] +  data_[3][1]);
+    }
+
+    /// Returns the inverse of this Mat4d.
+    ///
+    Mat4d inverse() const;
 
 private:
     double data_[4][4];

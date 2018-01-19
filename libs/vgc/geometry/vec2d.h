@@ -27,10 +27,9 @@ namespace geometry {
 /// \class vgc::geometry::Vec2d
 /// \brief 2D vector using double-precision floating points.
 ///
-/// The memory size a Vec2d is exactly 2 * sizeof(double), and it can safely
-/// be reinterpret_cast'ed to a double[2]. This will never change in any future
-/// version, as this allows to conveniently use this class for data transfer to
-/// OpenGL.
+/// The memory size a Vec2d is exactly 2 * sizeof(double). This will never
+/// change in any future version, as this allows to conveniently use this class
+/// for data transfer to OpenGL.
 ///
 class VGC_GEOMETRY_API Vec2d
 {
