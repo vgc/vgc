@@ -66,6 +66,8 @@ void OpenGLViewer::init()
 OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     QOpenGLWidget(parent),
     scene_(scene),
+    isSketching_(false),
+    isPanning_(false),
     isTabletEvent_(false),
     tabletPressure_(0.0),
     showTriangulation_(false)
@@ -93,25 +95,56 @@ double OpenGLViewer::width_() const
 
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
-    // and should be cached), but let's keep it like this for now for testing.
-    geometry::Vec2d viewCoords = toVec2d_(event);
-    geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
-    scene_->startCurve(worldCoords, width_());
+    if (isSketching_ || isPanning_) {
+        return;
+    }
+
+    if (event->button() == Qt::LeftButton) {
+        isSketching_ = true;
+        // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
+        // and should be cached), but let's keep it like this for now for testing.
+        geometry::Vec2d viewCoords = toVec2d_(event);
+        geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+        scene_->startCurve(worldCoords, width_());
+    }
+    else if (event->button() == Qt::MidButton) {
+        isPanning_ = true;
+        mousePosAtPress_ = toVec2d_(event);
+        cameraAtPress_ = camera_;
+    }
+
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
-    // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
-    // and should be cached), but let's keep it like this for now for testing.
-    geometry::Vec2d viewCoords = toVec2d_(event);
-    geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
-    scene_->continueCurve(worldCoords, width_());
+    // Note: event-button() is always NoButton for mouseMoveEvent. This is why
+    // we use the variable isPanning_ and isSketching_ to remember the current
+    // mouse action. In the future, we'll abstract this mechanism in a separate
+    // class.
+
+    if (isSketching_) {
+        // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
+        // and should be cached), but let's keep it like this for now for testing.
+        geometry::Vec2d viewCoords = toVec2d_(event);
+        geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+        scene_->continueCurve(worldCoords, width_());
+    }
+    else if (isPanning_) {
+        geometry::Vec2d mousePos = toVec2d_(event);
+        geometry::Vec2d delta = mousePosAtPress_ - mousePos;
+        camera_.setCenter(cameraAtPress_.center() + delta);
+        update();
+    }
 }
 
-void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
+void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
 {
-    // nothing
+    if (isSketching_ && event->button() == Qt::LeftButton) {
+        isSketching_ = false;
+    }
+    else if (isPanning_ && event->button() == Qt::MidButton) {
+        isPanning_ = false;
+    }
 }
 
 void OpenGLViewer::tabletEvent(QTabletEvent* event)

@@ -25,6 +25,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 #include <vgc/geometry/camera2d.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 
@@ -76,6 +77,12 @@ private:
 
     // Scene
     scene::Scene* scene_;
+
+    // Moving camera
+    bool isSketching_;
+    bool isPanning_;
+    geometry::Vec2d mousePosAtPress_;
+    geometry::Camera2d cameraAtPress_;
 
     // RAM resources synced with GL resources
     struct GLVertex {
