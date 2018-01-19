@@ -25,7 +25,12 @@ namespace vgc {
 namespace geometry {
 
 /// \class vgc::geometry::Vec2d
-/// \brief 2D vector with double-precision floating point arithmetic.
+/// \brief 2D vector using double-precision floating points.
+///
+/// The memory size a Vec2d is exactly 2 * sizeof(double), and it can safely
+/// be reinterpret_cast'ed to a double[2]. This will never change in any future
+/// version, as this allows to conveniently use this class for data transfer to
+/// OpenGL.
 ///
 class VGC_GEOMETRY_API Vec2d
 {
@@ -130,7 +135,12 @@ public:
         return std::sqrt(squaredLength());
     }
 
-    /// Returns the Euclidean length of the Vec2d.
+    /// Returns the square of the Euclidean length of the Vec2d.
+    ///
+    /// This function is faster than length(), therefore it is a good idea to
+    /// use it whenever you don't need the actual length. For example, if you
+    /// need to know which vector has greater length, you can use
+    /// v1.squaredLength() < v2.squaredLength().
     ///
     double squaredLength() const {
         return data_[0] * data_[0] + data_[1] * data_[1];
