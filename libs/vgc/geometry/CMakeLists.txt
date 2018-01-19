@@ -12,6 +12,7 @@ vgc_add_library(geometry
         camera2d.cpp
         curve.cpp
         epsilon.h
+        mat4d.cpp
         vec2d.h
 )
 
