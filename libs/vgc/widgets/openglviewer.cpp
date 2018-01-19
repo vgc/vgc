@@ -36,6 +36,14 @@ geometry::Vec2d toVec2d_(QMouseEvent* event) {
     return geometry::Vec2d(event->x(), event->y());
 }
 
+QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {
+    return QMatrix4x4(
+               (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
+               (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
+               (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
+               (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
+}
+
 } // namespace
 
 void OpenGLViewer::init()
@@ -62,9 +70,6 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     tabletPressure_(0.0),
     showTriangulation_(false)
 {
-    // Set view matrix
-    viewMatrix_.setToIdentity();
-
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
     setFocusPolicy(Qt::ClickFocus);
@@ -88,12 +93,20 @@ double OpenGLViewer::width_() const
 
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    scene_->startCurve(toVec2d_(event), width_());
+    // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
+    // and should be cached), but let's keep it like this for now for testing.
+    geometry::Vec2d viewCoords = toVec2d_(event);
+    geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+    scene_->startCurve(worldCoords, width_());
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
-    scene_->continueCurve(toVec2d_(event), width_());
+    // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
+    // and should be cached), but let's keep it like this for now for testing.
+    geometry::Vec2d viewCoords = toVec2d_(event);
+    geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+    scene_->continueCurve(worldCoords, width_());
 }
 
 void OpenGLViewer::mouseReleaseEvent(QMouseEvent* /*event*/)
@@ -201,15 +214,7 @@ void OpenGLViewer::initializeGL()
 
 void OpenGLViewer::resizeGL(int w, int h)
 {
-    // Set projection matrix
-    float left   = 0.0f;
-    float right  = w;
-    float bottom = h;
-    float top    = 0.0f;
-    float near   = -1.0f;
-    float far    = 1.0f;
-    projMatrix_.setToIdentity();
-    projMatrix_.ortho(left, right, bottom, top, near, far);
+    camera_.setViewportSize(w, h);
 }
 
 void OpenGLViewer::paintGL()
@@ -231,8 +236,8 @@ void OpenGLViewer::paintGL()
     shaderProgram_.bind();
 
     // Set uniform values
-    shaderProgram_.setUniformValue(projMatrixLoc_, projMatrix_);
-    shaderProgram_.setUniformValue(viewMatrixLoc_, viewMatrix_);
+    shaderProgram_.setUniformValue(projMatrixLoc_, toQtMatrix(camera_.projectionMatrix()));
+    shaderProgram_.setUniformValue(viewMatrixLoc_, toQtMatrix(camera_.viewMatrix()));
 
     // Draw triangles
     glPolygonMode(GL_FRONT_AND_BACK, showTriangulation_ ? GL_LINE : GL_FILL);

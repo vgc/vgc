@@ -24,6 +24,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
+#include <vgc/geometry/camera2d.h>
 
 namespace vgc {
 
@@ -70,9 +71,8 @@ private:
     void computeGLVertices_();
 
 private:
-    // Projection and view matrix
-    QMatrix4x4 projMatrix_;
-    QMatrix4x4 viewMatrix_;
+    // Camera (provides view matrix + projection matrix)
+    geometry::Camera2d camera_;
 
     // Scene
     scene::Scene* scene_;
