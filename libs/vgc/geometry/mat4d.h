@@ -45,11 +45,54 @@ public:
           double m31, double m32, double m33, double m34,
           double m41, double m42, double m43, double m44)
     {
+        setTo(m11, m12, m13, m14,
+              m21, m22, m23, m24,
+              m31, m32, m33, m34,
+              m41, m42, m43, m44);
+    }
+
+    /// Creates a diagonal matrix with diagonal elements equal to the given
+    /// value. As specific cases, the null matrix is Mat4d(0), and the identity
+    /// matrix is Mat4d(1).
+    ///
+    Mat4d(double d) { setToDiagonal(d); }
+
+    /// Defines explicitely all the elements of the matrix
+    ///
+    Mat4d& setTo(double m11, double m12, double m13, double m14,
+                 double m21, double m22, double m23, double m24,
+                 double m31, double m32, double m33, double m34,
+                 double m41, double m42, double m43, double m44)
+    {
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31; data_[0][3] = m41;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32; data_[1][3] = m42;
         data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33; data_[2][3] = m43;
         data_[3][0] = m14; data_[3][1] = m24; data_[3][2] = m34; data_[3][3] = m44;
+        return *this;
     }
+
+    /// Sets this Mat4d to a diagonal matrix with all diagonal elements equal to
+    /// the given value.
+    ///
+    Mat4d& setToDiagonal(double d)
+    {
+        return setTo(d, 0, 0, 0,
+                     0, d, 0, 0,
+                     0, 0, d, 0,
+                     0, 0, 0, d);
+    }
+
+    /// Sets this Mat4d to the zero matrix.
+    ///
+    Mat4d& setToZero() { return setToDiagonal(0); }
+
+    /// Sets this Mat4d to the identity matrix.
+    ///
+    Mat4d& setToIdentity() { return setToDiagonal(1); }
+
+    /// Returns the identity matrix Mat4d(1).
+    ///
+    static Mat4d identity() { return Mat4d(1); }
 
     /// Accesses the component of the Mat4d the the i-th row and j-th column.
     ///
@@ -59,7 +102,7 @@ public:
     ///
     double& operator()(int i, int j) { return data_[j][i]; }
 
-    /// Adds in-place the \p other Vec2d to this Vec2d.
+    /// Adds in-place the \p other Mat4d to this Mat4d.
     ///
     Mat4d& operator+=(const Mat4d& other) {
         data_[0][0] += other.data_[0][0];
@@ -113,6 +156,36 @@ public:
     ///
     friend Mat4d operator-(const Mat4d& m1, const Mat4d& m2) {
         return Mat4d(m1) -= m2;
+    }
+
+    /// Multiplies in-place the \p other Mat4d to this Mat4d.
+    ///
+    Mat4d& operator*=(const Mat4d& other) {
+        *this = (*this) * other;
+        return *this;
+    }
+
+    /// Returns the multiplication of the Mat4d \p m1 and the Mat4d \p m2.
+    ///
+    friend Mat4d operator*(const Mat4d& m1, const Mat4d& m2) {
+        Mat4d res;
+        res(0,0) = m1(0,0)*m2(0,0) + m1(0,1)*m2(1,0) + m1(0,2)*m2(2,0) + m1(0,3)*m2(3,0);
+        res(0,1) = m1(0,0)*m2(0,1) + m1(0,1)*m2(1,1) + m1(0,2)*m2(2,1) + m1(0,3)*m2(3,1);
+        res(0,2) = m1(0,0)*m2(0,2) + m1(0,1)*m2(1,2) + m1(0,2)*m2(2,2) + m1(0,3)*m2(3,2);
+        res(0,3) = m1(0,0)*m2(0,3) + m1(0,1)*m2(1,3) + m1(0,2)*m2(2,3) + m1(0,3)*m2(3,3);
+        res(1,0) = m1(1,0)*m2(0,0) + m1(1,1)*m2(1,0) + m1(1,2)*m2(2,0) + m1(1,3)*m2(3,0);
+        res(1,1) = m1(1,0)*m2(0,1) + m1(1,1)*m2(1,1) + m1(1,2)*m2(2,1) + m1(1,3)*m2(3,1);
+        res(1,2) = m1(1,0)*m2(0,2) + m1(1,1)*m2(1,2) + m1(1,2)*m2(2,2) + m1(1,3)*m2(3,2);
+        res(1,3) = m1(1,0)*m2(0,3) + m1(1,1)*m2(1,3) + m1(1,2)*m2(2,3) + m1(1,3)*m2(3,3);
+        res(2,0) = m1(2,0)*m2(0,0) + m1(2,1)*m2(1,0) + m1(2,2)*m2(2,0) + m1(2,3)*m2(3,0);
+        res(2,1) = m1(2,0)*m2(0,1) + m1(2,1)*m2(1,1) + m1(2,2)*m2(2,1) + m1(2,3)*m2(3,1);
+        res(2,2) = m1(2,0)*m2(0,2) + m1(2,1)*m2(1,2) + m1(2,2)*m2(2,2) + m1(2,3)*m2(3,2);
+        res(2,3) = m1(2,0)*m2(0,3) + m1(2,1)*m2(1,3) + m1(2,2)*m2(2,3) + m1(2,3)*m2(3,3);
+        res(3,0) = m1(3,0)*m2(0,0) + m1(3,1)*m2(1,0) + m1(3,2)*m2(2,0) + m1(3,3)*m2(3,0);
+        res(3,1) = m1(3,0)*m2(0,1) + m1(3,1)*m2(1,1) + m1(3,2)*m2(2,1) + m1(3,3)*m2(3,1);
+        res(3,2) = m1(3,0)*m2(0,2) + m1(3,1)*m2(1,2) + m1(3,2)*m2(2,2) + m1(3,3)*m2(3,2);
+        res(3,3) = m1(3,0)*m2(0,3) + m1(3,1)*m2(1,3) + m1(3,2)*m2(2,3) + m1(3,3)*m2(3,3);
+        return res;
     }
 
     /// Multiplies in-place this Mat4d by the given scalar \p s.
@@ -191,6 +264,24 @@ public:
     /// Returns the inverse of this Mat4d.
     ///
     Mat4d inverse() const;
+
+    /// Right-multiplies this matrix by the translation matrix given
+    /// by vx, vy, and vy, that is:
+    ///
+    /// \verbatim
+    /// | 1 0 0 vx |
+    /// | 0 1 0 vy |
+    /// | 0 0 1 vz |
+    /// | 0 0 0 1  |
+    /// \endverbatim
+    ///
+    Mat4d& translate(double vx, double vy = 0, double vz = 0) {
+        Mat4d t(1, 0, 0, vx,
+                0, 1, 0, vy,
+                0, 0, 1, vz,
+                0, 0, 0, 1);
+        return (*this) *= t;
+    }
 
 private:
     double data_[4][4];

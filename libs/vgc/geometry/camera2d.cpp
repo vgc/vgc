@@ -41,10 +41,10 @@ Mat4d Camera2d::viewMatrix() const
     const double w = viewportWidth_;
     const double h = viewportHeight_;
 
-    return Mat4d(1, 0, 0, w/2 - cx,
-                 0, 1, 0, h/2 - cy,
-                 0, 0, 1, 0,
-                 0, 0, 0, 1);
+    Mat4d res;
+    res.setToIdentity();
+    res.translate(0.5 * w - cx, 0.5 * h - cy);
+    return res;
 }
 
 Mat4d Camera2d::projectionMatrix() const
