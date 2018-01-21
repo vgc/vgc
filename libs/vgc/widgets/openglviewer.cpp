@@ -69,6 +69,7 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     isSketching_(false),
     isPanning_(false),
     isRotating_(false),
+    isZooming_(false),
     isTabletEvent_(false),
     tabletPressure_(0.0),
     showTriangulation_(false)
@@ -96,11 +97,13 @@ double OpenGLViewer::width_() const
 
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    if (isSketching_ || isPanning_ || isRotating_) {
+    if (isSketching_ || isPanning_ || isRotating_ || isZooming_) {
         return;
     }
 
-    if (event->button() == Qt::LeftButton) {
+    if (event->modifiers() == Qt::NoModifier &&
+        event->button() == Qt::LeftButton)
+    {
         isSketching_ = true;
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
@@ -108,17 +111,27 @@ void OpenGLViewer::mousePressEvent(QMouseEvent* event)
         geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
         scene_->startCurve(worldCoords, width_());
     }
-    else if (event->button() == Qt::MidButton) {
-        isPanning_ = true;
-        mousePosAtPress_ = toVec2d_(event);
-        cameraAtPress_ = camera_;
-    }
-    else if (event->button() == Qt::RightButton) {
+    else if (event->modifiers() == Qt::AltModifier &&
+             event->button() == Qt::LeftButton)
+    {
         isRotating_ = true;
         mousePosAtPress_ = toVec2d_(event);
         cameraAtPress_ = camera_;
     }
-
+    else if (event->modifiers() == Qt::AltModifier &&
+             event->button() == Qt::MidButton)
+    {
+        isPanning_ = true;
+        mousePosAtPress_ = toVec2d_(event);
+        cameraAtPress_ = camera_;
+    }
+    else if (event->modifiers() == Qt::AltModifier &&
+             event->button() == Qt::RightButton)
+    {
+        isZooming_ = true;
+        mousePosAtPress_ = toVec2d_(event);
+        cameraAtPress_ = camera_;
+    }
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
@@ -143,12 +156,33 @@ void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
     }
     else if (isRotating_) {
         // Set new camera rotation
+        // XXX rotateViewSensitivity should be a user preference
+        //     (the signs in front of dx and dy too)
+        const double rotateViewSensitivity = 0.01;
         geometry::Vec2d mousePos = toVec2d_(event);
         geometry::Vec2d deltaPos = mousePosAtPress_ - mousePos;
-        double deltaRotation = 0.01 * (deltaPos.x() - deltaPos.y());
+        double deltaRotation = rotateViewSensitivity * (deltaPos.x() - deltaPos.y());
         camera_.setRotation(cameraAtPress_.rotation() + deltaRotation);
 
         // Set new camera center so that rotation center = mouse pos at press
+        geometry::Vec2d pivotViewCoords = mousePosAtPress_;
+        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
+        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
+
+        update();
+    }
+    else if (isZooming_) {
+        // Set new camera zoom
+        // XXX zoomViewSensitivity should be a user preference
+        //     (the signs in front of dx and dy too)
+        const double zoomViewSensitivity = 0.005;
+        geometry::Vec2d mousePos = toVec2d_(event);
+        geometry::Vec2d deltaPos = mousePosAtPress_ - mousePos;
+        const double s = std::exp(zoomViewSensitivity * (deltaPos.y() - deltaPos.x()));
+        camera_.setZoom(cameraAtPress_.zoom() * s);
+
+        // Set new camera center so that zoom center = mouse pos at press
         geometry::Vec2d pivotViewCoords = mousePosAtPress_;
         geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
         geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
@@ -163,11 +197,14 @@ void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
     if (isSketching_ && event->button() == Qt::LeftButton) {
         isSketching_ = false;
     }
+    if (isRotating_ && event->button() == Qt::LeftButton) {
+        isRotating_ = false;
+    }
     else if (isPanning_ && event->button() == Qt::MidButton) {
         isPanning_ = false;
     }
-    else if (isRotating_ && event->button() == Qt::RightButton) {
-        isRotating_ = false;
+    else if (isZooming_ && event->button() == Qt::RightButton) {
+        isZooming_ = false;
     }
 }
 

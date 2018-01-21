@@ -32,6 +32,13 @@ namespace geometry {
 /// sizeof(double). This will never change in any future version, as this
 /// allows to conveniently use this class for data transfer to OpenGL.
 ///
+/// Unlike in the Eigen library, VGC has chosen not to distinguish between 4x4
+/// matrices and 3D affine transformations in homogeneous coordinates. In other
+/// words, if you wish to represent a 3D affine transformation, simply use a
+/// Mat4d. Also, you can even use a Mat4d to represent a 2D affine
+/// transformation. For example, you can multiply a Mat4d with a Vec2d, which
+/// returns the same as multiplying the matrix with the 4D vector [x, y, 0, 1].
+///
 class VGC_GEOMETRY_API Mat4d
 {
 public:
@@ -46,10 +53,10 @@ public:
           double m31, double m32, double m33, double m34,
           double m41, double m42, double m43, double m44)
     {
-        setTo(m11, m12, m13, m14,
-              m21, m22, m23, m24,
-              m31, m32, m33, m34,
-              m41, m42, m43, m44);
+        setElements(m11, m12, m13, m14,
+                    m21, m22, m23, m24,
+                    m31, m32, m33, m34,
+                    m41, m42, m43, m44);
     }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
@@ -60,10 +67,10 @@ public:
 
     /// Defines explicitely all the elements of the matrix
     ///
-    Mat4d& setTo(double m11, double m12, double m13, double m14,
-                 double m21, double m22, double m23, double m24,
-                 double m31, double m32, double m33, double m34,
-                 double m41, double m42, double m43, double m44)
+    Mat4d& setElements(double m11, double m12, double m13, double m14,
+                       double m21, double m22, double m23, double m24,
+                       double m31, double m32, double m33, double m34,
+                       double m41, double m42, double m43, double m44)
     {
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31; data_[0][3] = m41;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32; data_[1][3] = m42;
@@ -77,10 +84,10 @@ public:
     ///
     Mat4d& setToDiagonal(double d)
     {
-        return setTo(d, 0, 0, 0,
-                     0, d, 0, 0,
-                     0, 0, d, 0,
-                     0, 0, 0, d);
+        return setElements(d, 0, 0, 0,
+                           0, d, 0, 0,
+                           0, 0, d, 0,
+                           0, 0, 0, d);
     }
 
     /// Sets this Mat4d to the zero matrix.
@@ -279,11 +286,11 @@ public:
     /// Returns a reference to this Mat4d.
     ///
     Mat4d& translate(double vx, double vy = 0, double vz = 0) {
-        Mat4d t(1, 0, 0, vx,
+        Mat4d m(1, 0, 0, vx,
                 0, 1, 0, vy,
                 0, 0, 1, vz,
                 0, 0, 0, 1);
-        return (*this) *= t;
+        return (*this) *= m;
     }
 
     /// Right-multiplies this matrix by the rotation matrix around
@@ -301,11 +308,59 @@ public:
     Mat4d& rotate(double t) {
         double s = std::sin(t);
         double c = std::cos(t);
-        Mat4d r(c,-s, 0, 0,
+        Mat4d m(c,-s, 0, 0,
                 s, c, 0, 0,
                 0, 0, 1, 0,
                 0, 0, 0, 1);
-        return (*this) *= r;
+        return (*this) *= m;
+    }
+
+    /// Right-multiplies this matrix by the uniform scaling matrix
+    /// given by s, that is:
+    ///
+    /// \verbatim
+    /// | s 0 0 0 |
+    /// | 0 s 0 0 |
+    /// | 0 0 s 0 |
+    /// | 0 0 0 1 |
+    /// \endverbatim
+    ///
+    /// Returns a reference to this Mat4d.
+    ///
+    /// Note: if your 4x4 matrix is not meant to represent a 3D affine
+    /// transformation, simply use the following code instead (multiplication
+    /// by scalar), which also multiplies the last row and column:
+    ///
+    /// \code
+    /// m *= s;
+    /// \endcode
+    ///
+    Mat4d& scale(double s) {
+        Mat4d m(s, 0, 0, 0,
+                0, s, 0, 0,
+                0, 0, s, 0,
+                0, 0, 0, 1);
+        return (*this) *= m;
+    }
+
+    /// Right-multiplies this matrix by the non-uniform scaling matrix
+    /// given by sx, sy, and sz, that is:
+    ///
+    /// \verbatim
+    /// | sx 0  0  0 |
+    /// | 0  sy 0  0 |
+    /// | 0  0  sz 0 |
+    /// | 0  0  0  1 |
+    /// \endverbatim
+    ///
+    /// Returns a reference to this Mat4d.
+    ///
+    Mat4d& scale(double sx, double sy, double sz = 1) {
+        Mat4d m(sx, 0,  0,  0,
+                0,  sy, 0,  0,
+                0,  0,  sz, 0,
+                0,  0,  0,  1);
+        return (*this) *= m;
     }
 
 private:

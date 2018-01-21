@@ -31,6 +31,9 @@ namespace geometry {
 /// change in any future version, as this allows to conveniently use this class
 /// for data transfer to OpenGL.
 ///
+/// Like in the Eigen library, VGC has chosen not to distinguish between points
+/// and vectors. In other words, if you wish to represent a 2D point, simply use a Vec2d.
+///
 class VGC_GEOMETRY_API Vec2d
 {
 public:

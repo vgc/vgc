@@ -34,8 +34,6 @@ Camera2d::Camera2d() :
 
 Mat4d Camera2d::viewMatrix() const
 {
-    // XXX For now, only support translation for quick testing
-
     const double cx = center().x();
     const double cy = center().y();
     const double w = viewportWidth();
@@ -45,6 +43,7 @@ Mat4d Camera2d::viewMatrix() const
     res.setToIdentity();
     res.translate(0.5 * w - cx, 0.5 * h - cy);
     res.rotate(rotation());
+    res.scale(zoom(), zoom(), 1); // don't scale the Z coordinate
     return res;
 }
 
