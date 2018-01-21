@@ -17,6 +17,7 @@
 #ifndef VGC_GEOMETRY_MAT4D_H
 #define VGC_GEOMETRY_MAT4D_H
 
+#include <cmath>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/vec2d.h>
 
@@ -275,12 +276,36 @@ public:
     /// | 0 0 0 1  |
     /// \endverbatim
     ///
+    /// Returns a reference to this Mat4d.
+    ///
     Mat4d& translate(double vx, double vy = 0, double vz = 0) {
         Mat4d t(1, 0, 0, vx,
                 0, 1, 0, vy,
                 0, 0, 1, vz,
                 0, 0, 0, 1);
         return (*this) *= t;
+    }
+
+    /// Right-multiplies this matrix by the rotation matrix around
+    /// the z-axis by \p t radians, that is:
+    ///
+    /// \verbatim
+    /// | cos(t) -sin(t)  0       0 |
+    /// | sin(t)  cos(t)  0       0 |
+    /// | 0       0       1       0 |
+    /// | 0       0       0       1 |
+    /// \endverbatim
+    ///
+    /// Returns a reference to this Mat4d.
+    ///
+    Mat4d& rotate(double t) {
+        double s = std::sin(t);
+        double c = std::cos(t);
+        Mat4d r(c,-s, 0, 0,
+                s, c, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
+        return (*this) *= r;
     }
 
 private:

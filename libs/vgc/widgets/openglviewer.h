@@ -81,6 +81,7 @@ private:
     // Moving camera
     bool isSketching_;
     bool isPanning_;
+    bool isRotating_;
     geometry::Vec2d mousePosAtPress_;
     geometry::Camera2d cameraAtPress_;
 

@@ -36,14 +36,15 @@ Mat4d Camera2d::viewMatrix() const
 {
     // XXX For now, only support translation for quick testing
 
-    const double cx = center_.x();
-    const double cy = center_.y();
-    const double w = viewportWidth_;
-    const double h = viewportHeight_;
+    const double cx = center().x();
+    const double cy = center().y();
+    const double w = viewportWidth();
+    const double h = viewportHeight();
 
     Mat4d res;
     res.setToIdentity();
     res.translate(0.5 * w - cx, 0.5 * h - cy);
+    res.rotate(rotation());
     return res;
 }
 

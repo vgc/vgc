@@ -68,6 +68,7 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     scene_(scene),
     isSketching_(false),
     isPanning_(false),
+    isRotating_(false),
     isTabletEvent_(false),
     tabletPressure_(0.0),
     showTriangulation_(false)
@@ -95,7 +96,7 @@ double OpenGLViewer::width_() const
 
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    if (isSketching_ || isPanning_) {
+    if (isSketching_ || isPanning_ || isRotating_) {
         return;
     }
 
@@ -109,6 +110,11 @@ void OpenGLViewer::mousePressEvent(QMouseEvent* event)
     }
     else if (event->button() == Qt::MidButton) {
         isPanning_ = true;
+        mousePosAtPress_ = toVec2d_(event);
+        cameraAtPress_ = camera_;
+    }
+    else if (event->button() == Qt::RightButton) {
+        isRotating_ = true;
         mousePosAtPress_ = toVec2d_(event);
         cameraAtPress_ = camera_;
     }
@@ -135,6 +141,21 @@ void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
         camera_.setCenter(cameraAtPress_.center() + delta);
         update();
     }
+    else if (isRotating_) {
+        // Set new camera rotation
+        geometry::Vec2d mousePos = toVec2d_(event);
+        geometry::Vec2d deltaPos = mousePosAtPress_ - mousePos;
+        double deltaRotation = 0.01 * (deltaPos.x() - deltaPos.y());
+        camera_.setRotation(cameraAtPress_.rotation() + deltaRotation);
+
+        // Set new camera center so that rotation center = mouse pos at press
+        geometry::Vec2d pivotViewCoords = mousePosAtPress_;
+        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
+        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
+
+        update();
+    }
 }
 
 void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
@@ -144,6 +165,9 @@ void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
     }
     else if (isPanning_ && event->button() == Qt::MidButton) {
         isPanning_ = false;
+    }
+    else if (isRotating_ && event->button() == Qt::RightButton) {
+        isRotating_ = false;
     }
 }
 
