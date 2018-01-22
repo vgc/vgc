@@ -131,11 +131,38 @@ std::vector<Vec2d> Curve::triangulate() const
 
         // Convert Catmull-Rom positions to Bézier positions.
         //
-        // Note: we choose a tension parameter k = 1/6 to ensure that if the
+        // We choose a tension parameter k = 1/6 which ensures that if the
         // Catmull-Rom control points are aligned and uniformly spaced, then
-        // the resulting curve is uniformly parameterized.
+        // the resulting curve is uniformly parameterized. This in fact
+        // corresponds to a "uniform" Catmull-Rom. Indeed, a Catmull-Rom curve
+        // is generally defined as a sequence of (t[i], p[i]) pairs, and the
+        // derivative at p[i] is defined by:
         //
-        const double k = 0.166666666666666667; // 18 digits because doubles hold up to 17 decimal digits
+        //            p[i+1] - p[i-1]
+        //     m[i] = ---------------
+        //            t[i+1] - t[i-1]
+        //
+        // A *uniform* Catmull-Rom assumes that the "times" or "knot values"
+        // t[i] are uniformly spaced, e.g.: [0, 1, 2, 3, 4, ... ]. In this
+        // case, we have t[i+1] - t[i-1] = 2, so m[i] = (p[i+1] - p[i-1]) / 2.
+        //
+        // Now, recalling that for a cubic bezier B(t) defined for t in [0, 1]
+        // by the control points q0, q1, q2, q3, we have:
+        //
+        //     dB/dt = 3(1-t)^2(q1-q0) + 6(1-t)t(q2-q1) + 3t^2(q3-q2),
+        //
+        // we can deduce that
+        //
+        //     q1 = q0 + (1/3) * dB/dt
+        //
+        // Therefore, if B(t) corresponds to the uniform Catmull-Rom subcurve
+        // between p[i] and p[i+1], we have:
+        //
+        //    q1 = q0 + (1/3) * m[i]
+        //       = q0 + (1/6) * (p[i+1] - p[i-1])
+        //       = q0 + (1/6) * (p2 - p0)
+        //
+        const double k = 0.166666666666666667; // = 1/6 up to double precision
         Vec2d q0 = p1;
         Vec2d q1 = p1 + k * (p2 - p0);
         Vec2d q2 = p2 - k * (p3 - p1);
