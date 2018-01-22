@@ -72,7 +72,8 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     isZooming_(false),
     isTabletEvent_(false),
     tabletPressure_(0.0),
-    showTriangulation_(false)
+    showTriangulation_(false),
+    showControlPoints_(false)
 {
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
@@ -250,12 +251,18 @@ void OpenGLViewer::keyPressEvent(QKeyEvent* event)
     switch (event->key()) {
     case Qt::Key_T:
         showTriangulation_ = !showTriangulation_;
+        update();
+        break;
+    case Qt::Key_C:
+        showControlPoints_ = !showControlPoints_;
+        update();
         break;
     default:
         break;
     }
 
-    update();
+    // Don't factor out "update()" here, to avoid unnecessary redraws for keys
+    // not handled here, including modifiers.
 }
 
 OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const
@@ -299,6 +306,22 @@ void OpenGLViewer::initializeGL()
     vbo_.release();
     vao_.release();
 
+    // Setup VBO/VAO for displaying control points
+    controlPointsVbo_.create();
+    controlPointsVao_.create();
+    controlPointsVao_.bind();
+    controlPointsVbo_.bind();
+    f->glEnableVertexAttribArray(vertexLoc_);
+    f->glVertexAttribPointer(
+                vertexLoc_, // index of the generic vertex attribute
+                2,          // number of components   (x and y components)
+                GL_FLOAT,   // type of each component
+                GL_FALSE,   // should it be normalized
+                stride,     // byte offset between consecutive vertex attributes
+                pointer);   // byte offset between the first attribute and the pointer given to allocate()
+    controlPointsVbo_.release();
+    controlPointsVao_.release();
+
     // Set clear color
     f->glClearColor(1, 1, 1, 1);
 }
@@ -315,13 +338,21 @@ void OpenGLViewer::paintGL()
 {
     OpenGLFunctions* f = openGLFunctions();
 
-    // Update VBO
+    // Update VBO of curves geometry
     // Note: for simplicity, we perform this at each paintGL. In an actual app,
     // it would be much better to do this only once after each mouse event.
     computeGLVertices_();
     vbo_.bind();
     vbo_.allocate(glVertices_.data(), glVertices_.size() * sizeof(GLVertex));
     vbo_.release();
+
+    // Update VBO of control points geometry
+    if (showControlPoints_) {
+        computeControlPointsGLVertices_();
+        controlPointsVbo_.bind();
+        controlPointsVbo_.allocate(controlPointsGlVertices_.data(), controlPointsGlVertices_.size() * sizeof(GLVertex));
+        controlPointsVbo_.release();
+    }
 
     // Clear color and depth buffer
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -343,17 +374,27 @@ void OpenGLViewer::paintGL()
     }
     vao_.release();
 
+    // Draw control points
+    if (showControlPoints_) {
+        glPointSize(10.0);
+        controlPointsVao_.bind();
+        f->glDrawArrays(GL_POINTS, 0, controlPointsGlVertices_.size());
+        controlPointsVao_.release();
+    }
+
     // Release shader program
     shaderProgram_.release();
 }
 
 void OpenGLViewer::cleanupGL()
 {
-    // Destroy VAO
+    // Destroy VAOs
     vao_.destroy();
+    controlPointsVao_.destroy();
 
-    // Destroy VBO
+    // Destroy VBOs
     vbo_.destroy();
+    controlPointsVbo_.destroy();
 }
 
 void OpenGLViewer::computeGLVertices_()
@@ -368,6 +409,19 @@ void OpenGLViewer::computeGLVertices_()
                 glVertices_.emplace_back((float)v[0], (float)v[1]);
             }
             glVerticesChunkSizes_.push_back(n);
+        }
+    }
+}
+
+void OpenGLViewer::computeControlPointsGLVertices_()
+{
+    controlPointsGlVertices_.clear();
+    for (const geometry::Curve& curve: scene_->curves()) {
+        const auto& d = curve.positionData();
+        int n = d.size() / 2;
+        for (int i = 0; i < n; ++i) {
+            controlPointsGlVertices_.emplace_back(
+                        (float)d[2*i], (float)d[2*i+1]);
         }
     }
 }

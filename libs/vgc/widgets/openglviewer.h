@@ -113,6 +113,15 @@ private:
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
     bool showTriangulation_;
+
+    // Show control points. This is toggled with the "c" key.
+    // XXX This is a temporary quick method to switch between
+    // render modes. A more engineered method will come later.
+    bool showControlPoints_;
+    std::vector<GLVertex> controlPointsGlVertices_;
+    QOpenGLBuffer controlPointsVbo_;
+    QOpenGLVertexArrayObject controlPointsVao_;
+    void computeControlPointsGLVertices_();
 };
 
 } // namespace widgets
