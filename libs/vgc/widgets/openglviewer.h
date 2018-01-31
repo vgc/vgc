@@ -109,10 +109,10 @@ private:
     bool isTabletEvent_;
     double tabletPressure_;
 
-    // Show triangulation. This is toggled with the "t" key.
+    // Polygon mode. This is selected with the n/t/f keys.
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
-    bool showTriangulation_;
+    int polygonMode_; // 0: none; 1: lines; 2: fill (i.e., not exactly like OpenGL)
 
     // Show control points. This is toggled with the "c" key.
     // XXX This is a temporary quick method to switch between
@@ -122,6 +122,12 @@ private:
     QOpenGLBuffer controlPointsVbo_;
     QOpenGLVertexArrayObject controlPointsVao_;
     void computeControlPointsGLVertices_();
+
+    // Tesselation mode. This is selected with the i/u/a keys.
+    // XXX This is a temporary quick method to switch between
+    // tesselation modes. A more engineered method will come later.
+    int tesselationMode_; // 0: none; 1: uniform; 2: adaptive
+
 };
 
 } // namespace widgets

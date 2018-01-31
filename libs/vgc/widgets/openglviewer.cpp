@@ -72,8 +72,9 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     isZooming_(false),
     isTabletEvent_(false),
     tabletPressure_(0.0),
-    showTriangulation_(false),
-    showControlPoints_(false)
+    polygonMode_(2),
+    showControlPoints_(false),
+    tesselationMode_(2)
 {
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
@@ -249,8 +250,28 @@ void OpenGLViewer::tabletEvent(QTabletEvent* event)
 void OpenGLViewer::keyPressEvent(QKeyEvent* event)
 {
     switch (event->key()) {
+    case Qt::Key_N:
+        polygonMode_ = 0;
+        update();
+        break;
     case Qt::Key_T:
-        showTriangulation_ = !showTriangulation_;
+        polygonMode_ = 1;
+        update();
+        break;
+    case Qt::Key_F:
+        polygonMode_ = 2;
+        update();
+        break;
+    case Qt::Key_I:
+        tesselationMode_ = 0;
+        update();
+        break;
+    case Qt::Key_U:
+        tesselationMode_ = 1;
+        update();
+        break;
+    case Qt::Key_A:
+        tesselationMode_ = 2;
         update();
         break;
     case Qt::Key_C:
@@ -365,14 +386,16 @@ void OpenGLViewer::paintGL()
     shaderProgram_.setUniformValue(viewMatrixLoc_, toQtMatrix(camera_.viewMatrix()));
 
     // Draw triangles
-    glPolygonMode(GL_FRONT_AND_BACK, showTriangulation_ ? GL_LINE : GL_FILL);
-    vao_.bind();
-    int firstIndex = 0;
-    for (int n: glVerticesChunkSizes_) {
-        f->glDrawArrays(GL_TRIANGLE_STRIP, firstIndex, n);
-        firstIndex += n;
+    if (polygonMode_ > 0) {
+        glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
+        vao_.bind();
+        int firstIndex = 0;
+        for (int n: glVerticesChunkSizes_) {
+            f->glDrawArrays(GL_TRIANGLE_STRIP, firstIndex, n);
+            firstIndex += n;
+        }
+        vao_.release();
     }
-    vao_.release();
 
     // Draw control points
     if (showControlPoints_) {
@@ -402,7 +425,17 @@ void OpenGLViewer::computeGLVertices_()
     glVertices_.clear();
     glVerticesChunkSizes_.clear();
     for (const geometry::Curve& curve: scene_->curves()) {
-        std::vector<geometry::Vec2d> triangulation = curve.triangulate();
+        double maxAngle = 0.05;
+        int minQuads = 1;
+        int maxQuads = 64;
+        if (tesselationMode_ == 0) {
+            maxQuads = 1;
+        }
+        else if (tesselationMode_ == 1) {
+            minQuads = 10;
+            maxQuads = 10;
+        }
+        std::vector<geometry::Vec2d> triangulation = curve.triangulate(maxAngle, minQuads, maxQuads);
         int n = triangulation.size();
         if (n > 2) {
             for(const geometry::Vec2d& v: triangulation) {
