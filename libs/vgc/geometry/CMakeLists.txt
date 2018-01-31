@@ -10,6 +10,7 @@ vgc_add_library(geometry
         bezierspline1d.h
         bezierspline2d.h
         camera2d.cpp
+        catmullrom.h
         curve.cpp
         epsilon.h
         mat4d.cpp

@@ -18,6 +18,7 @@
 
 #include <vgc/core/algorithm.h>
 #include <vgc/geometry/bezier.h>
+#include <vgc/geometry/catmullrom.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc {
@@ -25,12 +26,36 @@ namespace geometry {
 
 namespace {
 
-int numSamples_(const std::vector<double>& data) {
-    return data.size() / 2;
+template <typename T>
+void removeAllExceptLastElement(std::vector<T>& v) {
+    v.front() = v.back();
+    v.resize(1);
 }
 
-Vec2d position_(const std::vector<double>& data, int i) {
-    return Vec2d(data[2*i], data[2*i+1]);
+template <typename T>
+void appendUninitializedElement(std::vector<T>& v) {
+    v.emplace_back();
+}
+
+void computeSample(
+        const Vec2d& q0, const Vec2d& q1, const Vec2d& q2, const Vec2d& q3,
+        double w0, double w1, double w2, double w3,
+        double u,
+        Vec2d& leftPosition,
+        Vec2d& rightPosition,
+        Vec2d& normal)
+{
+    // Compute position and normal
+    Vec2d position = cubicBezier(q0, q1, q2, q3, u);
+    Vec2d tangent = cubicBezierDer(q0, q1, q2, q3, u);
+    normal = tangent.normalized().orthogonalized();
+
+    // Compute half-width
+    double halfwidth = 0.5 * cubicBezier(w0, w1, w2, w3, u);
+
+    // Compute left and right positions
+    leftPosition  = position + halfwidth * normal;
+    rightPosition = position - halfwidth * normal;
 }
 
 } // namespace
@@ -38,7 +63,7 @@ Vec2d position_(const std::vector<double>& data, int i) {
 Curve::Curve(Type type) :
     type_(type),
     positionData_(),
-    widthVariability_(AttributeVariability::PerSample),
+    widthVariability_(AttributeVariability::PerControlPoint),
     widthData_()
 {
 
@@ -58,14 +83,14 @@ double Curve::width() const
     return core::average(widthData_);
 }
 
-void Curve::addSample(double x, double y)
+void Curve::addControlPoint(double x, double y)
 {
     // Set position
     positionData_.push_back(x);
     positionData_.push_back(y);
 
     // Set width
-    if (widthVariability() == AttributeVariability::PerSample) {
+    if (widthVariability() == AttributeVariability::PerControlPoint) {
         double width = 1.0;
         if (widthData_.size() > 0) {
             width = widthData_.back();
@@ -74,150 +99,243 @@ void Curve::addSample(double x, double y)
     }
 }
 
-void Curve::addSample(const Vec2d& position)
+void Curve::addControlPoint(const Vec2d& position)
 {
-    addSample(position.x(), position.y());
+    addControlPoint(position.x(), position.y());
 }
 
-void Curve::addSample(double x, double y, double width)
+void Curve::addControlPoint(double x, double y, double width)
 {
     // Set position
     positionData_.push_back(x);
     positionData_.push_back(y);
 
     // Set width
-    if (widthVariability() == AttributeVariability::PerSample) {
+    if (widthVariability() == AttributeVariability::PerControlPoint) {
         widthData_.push_back(width);
     }
 }
 
-void Curve::addSample(const Vec2d& position, double width)
+void Curve::addControlPoint(const Vec2d& position, double width)
 {
-    addSample(position.x(), position.y(), width);
+    addControlPoint(position.x(), position.y(), width);
 }
 
-std::vector<Vec2d> Curve::triangulate() const
+std::vector<Vec2d> Curve::triangulate(
+        double maxAngle,
+        int minQuads,
+        int maxQuads) const
 {
-    // XXX Stupid implementation for now.
-    // TODO adaptive sampling, etc.
+    // Result of this computation.
+    // Final size = 2 * nSamples
+    //   where nSamples = nQuads + 1
+    //
+    std::vector<Vec2d> res;
 
-    // XXX For now, we simply evaluate a fixed number
-    // of times per sample. Later, we'll do adaptive sampling.
-    const int numEvalsPerSample = 10; // must be >= 1
+    // For adaptive sampling, we need to remember a few things about all the
+    // samples in the currently processed segment ("segment" means "part of the
+    // curve between two control points").
+    //
+    // These vectors could be declared in an inner loop but we declare them
+    // here for performance (reuse vector capacity). All these vectors have
+    // the same size.
+    //
+    std::vector<Vec2d> leftPositions;
+    std::vector<Vec2d> rightPositions;
+    std::vector<Vec2d> normals;
+    std::vector<double> uParams;
 
-    std::vector<Vec2d> res; // XXX Should we allow to pass this as output param to reuse capacity?
+    // Remember which quads do not pass the angle test. The index is relative
+    // to the vectors above (e.g., leftPositions).
+    //
+    std::vector<int> failedQuads;
+
+    // Factor out computation of cos(maxAngle)
+    double cosMaxAngle = std::cos(maxAngle);
 
     // Early return if not enough segments
-    const int numSamples = numSamples_(positionData_);
-    const int numSegments = numSamples - 1;
+    int numControlPoints = positionData_.size() / 2;
+    int numSegments = numControlPoints - 1;
     if (numSegments < 1) {
         return res;
     }
 
-    // Iterates over all segments
+    // Iterate over all segments
     for (int i = 0; i < numSegments; ++i)
     {
         // Get indices of Catmull-Rom control points for current segment
-        int i0 = core::clamp(i-1, 0, numSamples-1);
-        int i1 = core::clamp(i  , 0, numSamples-1);
-        int i2 = core::clamp(i+1, 0, numSamples-1);
-        int i3 = core::clamp(i+2, 0, numSamples-1);
+        int i0 = core::clamp(i-1, 0, numControlPoints-1);
+        int i1 = core::clamp(i  , 0, numControlPoints-1);
+        int i2 = core::clamp(i+1, 0, numControlPoints-1);
+        int i3 = core::clamp(i+2, 0, numControlPoints-1);
 
-        // Get Catmull-Rom positions
-        Vec2d p0 = position_(positionData_, i0);
-        Vec2d p1 = position_(positionData_, i1);
-        Vec2d p2 = position_(positionData_, i2);
-        Vec2d p3 = position_(positionData_, i3);
+        // Get positions of Catmull-Rom control points
+        Vec2d p0(positionData_[2*i0], positionData_[2*i0+1]);
+        Vec2d p1(positionData_[2*i1], positionData_[2*i1+1]);
+        Vec2d p2(positionData_[2*i2], positionData_[2*i2+1]);
+        Vec2d p3(positionData_[2*i3], positionData_[2*i3+1]);
 
-        // Convert Catmull-Rom positions to Bézier positions.
-        //
-        // We choose a tension parameter k = 1/6 which ensures that if the
-        // Catmull-Rom control points are aligned and uniformly spaced, then
-        // the resulting curve is uniformly parameterized. This in fact
-        // corresponds to a "uniform" Catmull-Rom. Indeed, a Catmull-Rom curve
-        // is generally defined as a sequence of (t[i], p[i]) pairs, and the
-        // derivative at p[i] is defined by:
-        //
-        //            p[i+1] - p[i-1]
-        //     m[i] = ---------------
-        //            t[i+1] - t[i-1]
-        //
-        // A *uniform* Catmull-Rom assumes that the "times" or "knot values"
-        // t[i] are uniformly spaced, e.g.: [0, 1, 2, 3, 4, ... ]. In this
-        // case, we have t[i+1] - t[i-1] = 2, so m[i] = (p[i+1] - p[i-1]) / 2.
-        //
-        // Now, recalling that for a cubic bezier B(t) defined for t in [0, 1]
-        // by the control points q0, q1, q2, q3, we have:
-        //
-        //     dB/dt = 3(1-t)^2(q1-q0) + 6(1-t)t(q2-q1) + 3t^2(q3-q2),
-        //
-        // we can deduce that
-        //
-        //     q1 = q0 + (1/3) * dB/dt
-        //
-        // Therefore, if B(t) corresponds to the uniform Catmull-Rom subcurve
-        // between p[i] and p[i+1], we have:
-        //
-        //    q1 = q0 + (1/3) * m[i]
-        //       = q0 + (1/6) * (p[i+1] - p[i-1])
-        //       = q0 + (1/6) * (p2 - p0)
-        //
-        const double k = 0.166666666666666667; // = 1/6 up to double precision
-        Vec2d q0 = p1;
-        Vec2d q1 = p1 + k * (p2 - p0);
-        Vec2d q2 = p2 - k * (p3 - p1);
-        Vec2d q3 = p2;
+        // Convert positions from Catmull-Rom to Bézier
+        Vec2d q0, q1, q2, q3;
+        uniformCatmullRomToBezier(p0, p1, p2, p3,
+                                  q0, q1, q2, q3);
 
-        // Get cubic Bézier control points for current segment width
-        double w0 = 0;
-        double w1 = 0;
-        double w2 = 0;
-        double w3 = 0;
-        if (widthVariability() == AttributeVariability::PerSample)
+        // Convert widths from Constant or Catmull-Rom to Bézier. Note: we
+        // could handle the 'Constant' case more efficiently, but we chose code
+        // simplicity over performance here, over the assumption that it's unlikely
+        // that width computation is a performance bottleneck.
+        double w0, w1, w2, w3;
+        if (widthVariability() == AttributeVariability::PerControlPoint)
         {
-            // Catmull-Rom control points
             double v0 = widthData()[i0];
             double v1 = widthData()[i1];
             double v2 = widthData()[i2];
             double v3 = widthData()[i3];
-
-            // Bezier control points
-            w0 = v1;
-            w1 = v1 + k * (v2 - v0);
-            w2 = v2 - k * (v3 - v1);
-            w3 = v2;
+            uniformCatmullRomToBezier(v0, v1, v2, v3,
+                                      w0, w1, w2, w3);
+        }
+        else // if (widthVariability() == AttributeVariability::Constant)
+        {
+            w0 = widthData()[0];
+            w1 = w0;
+            w2 = w0;
+            w3 = w0;
         }
 
-        // Iterates over all evals. Note: first segment has one more eval than
-        // the others. Total: numEvals = 1 + (numSamples - 1) * numEvalsPerSample.
-        const int j1 = (i == 0) ? 0 : 1;
-        for (int j = j1; j <= numEvalsPerSample; ++j)
+        // Compute first sample of segment
+        if (i == 0) {
+            // Compute first sample of first segment
+            double u = 0;
+            appendUninitializedElement(leftPositions);
+            appendUninitializedElement(rightPositions);
+            appendUninitializedElement(normals);
+            computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
+                          leftPositions.back(),
+                          rightPositions.back(),
+                          normals.back());
+
+            // Add this sample to res right now. For all the other samples, we
+            // need to wait until adaptive sampling is complete.
+            res.push_back(leftPositions.back());
+            res.push_back(rightPositions.back());
+        }
+        else {
+            // re-use last sample of previous segment
+            removeAllExceptLastElement(leftPositions);
+            removeAllExceptLastElement(rightPositions);
+            removeAllExceptLastElement(normals);
+        }
+        uParams.clear();
+        uParams.push_back(0);
+
+        // Compute uniform samples for this segment
+        int numQuads = 0;
+        for (int j = 1; j <= minQuads; ++j)
         {
-            const double u = (double) j / (double) numEvalsPerSample;
+            double u = (double) j / (double) minQuads;
+            appendUninitializedElement(leftPositions);
+            appendUninitializedElement(rightPositions);
+            appendUninitializedElement(normals);
+            computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
+                          leftPositions.back(),
+                          rightPositions.back(),
+                          normals.back());
 
-            Vec2d position = cubicBezier(q0, q1, q2, q3, u);
-            Vec2d tangent = cubicBezierDer(q0, q1, q2, q3, u);
-            Vec2d normal = tangent.normalized().orthogonalized();
+            uParams.push_back(u);
+            ++numQuads;
+        }
 
-            // Get width for this eval
-            double w;
-            switch(widthVariability()) {
-            case AttributeVariability::Constant:
-                w = widthData()[0];
-                break;
-            case AttributeVariability::PerSample:
-                w = cubicBezier(w0, w1, w2, w3, u);
+        // Compute adaptive samples for this segment
+        while (numQuads < maxQuads)
+        {
+            // Find quads that don't pass the angle test.
+            //
+            // Quads are indexed from 0 to numQuads-1. A quad of index i is
+            // defined by leftPositions[i], rightPositions[i],
+            // leftPositions[i+1], and rightPositions[i+1].
+            //
+            failedQuads.clear();
+            for (int i = 0; i < numQuads; ++i) {
+                if (dot(normals[i], normals[i+1]) < cosMaxAngle) {
+                    failedQuads.push_back(i);
+                }
+            }
+
+            // All angles are < maxAngle => adaptive sampling is complete :)
+            if (failedQuads.empty()) {
                 break;
             }
 
-            // Get left and right points of triangle strip
-            double halfwidth = 0.5 * w;
-            Vec2d leftPos  = position + halfwidth * normal;
-            Vec2d rightPos = position - halfwidth * normal;
+            // We reached max number of quads :(
+            numQuads += failedQuads.size();
+            if (numQuads > maxQuads) {
+                break;
+            }
 
-            // Add vertices to list of vertices
-            res.push_back(leftPos);
-            res.push_back(rightPos);
+            // For each failed quad, we will recompute a sample at the
+            // mid-u-parameter. We do this in-place in decreasing index
+            // order so that we never overwrite samples.
+            //
+            // It's easier to understand the code by unrolling the loops
+            // manually with the following example:
+            //
+            // uParams before = [ 0.0   0.2   0.4   0.6   0.8   1.0 ]
+            // failedQuads    = [           1           3           ]
+            // uParams after  = [ 0.0   0.2  *0.3*  0.4   0.6  *0.7*  0.8   1.0 ]
+            //
+            // The asterisks emphasize the two new samples.
+            //
+            int numSamplesBefore = uParams.size(); // 6
+            int numSamplesAfter = uParams.size() + failedQuads.size(); // 8
+            leftPositions.resize(numSamplesAfter);
+            rightPositions.resize(numSamplesAfter);
+            normals.resize(numSamplesAfter);
+            uParams.resize(numSamplesAfter);
+            int i = numSamplesBefore - 1; // 5
+            for (int j = failedQuads.size() - 1; j >= 0; --j) { // j = 1, then j = 0
+                int k = failedQuads[j];                         // k = 3, then k = 1
+
+                // First, offset index of all samples after the failed quad
+                int offset = j + 1;                   // offset = 2, then offset = 1
+                while (i > k) {                       // i = [5, 4], then i = [3, 2]
+                    leftPositions[i + offset] = leftPositions[i];
+                    rightPositions[i + offset] = rightPositions[i];
+                    normals[i + offset] = normals[i];
+                    uParams[i + offset] = uParams[i]; // u[7] = 1.0, u[6] = 0.8, then
+                                                      // u[4] = 0.6, u[3] = 0.4
+                    --i;
+                }
+
+                // Then, for i == k, we compute the new sample.
+                //
+                // Note to maintainer: if you change this code, be very careful
+                // to ensure that new values are always computed from old
+                // values, not from already overwritten new values.
+                //
+                double u = 0.5 * (uParams[i] + uParams[i+1]); // u = 0.7, then u = 0.3
+                computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
+                              leftPositions[i + offset],
+                              rightPositions[i + offset],
+                              normals[i + offset]);
+                uParams[i + offset] = u;
+            }
+        }
+        // Here are the different states of uParams for the given example:
+        //
+        // before:         [ 0.0   0.2   0.4   0.6   0.8   1.0 ]
+        // resize:         [ 0.0   0.2   0.4   0.6   0.8   1.0   0.0   0.0 ]
+        // offset j=1 i=5: [ 0.0   0.2   0.4   0.6   0.8   1.0   0.0   1.0 ]
+        // offset j=1 i=4: [ 0.0   0.2   0.4   0.6   0.8   1.0   0.8   1.0 ]
+        // new    j=1 i=3: [ 0.0   0.2   0.4   0.6   0.8   0.7   0.8   1.0 ]
+        // offset j=0 i=3: [ 0.0   0.2   0.4   0.6   0.6   0.7   0.8   1.0 ]
+        // offset j=0 i=2: [ 0.0   0.2   0.4   0.4   0.6   0.7   0.8   1.0 ]
+        // new    j=0 i=1: [ 0.0   0.2   0.3   0.4   0.6   0.7   0.8   1.0 ]
+
+        // Transfer local leftPositions and rightPositions into res
+        int numSamples = leftPositions.size();
+        for (int i = 1; i < numSamples; ++i) {
+            res.push_back(leftPositions[i]);
+            res.push_back(rightPositions[i]);
         }
     }
 
@@ -226,3 +344,31 @@ std::vector<Vec2d> Curve::triangulate() const
 
 } // namespace geometry
 } // namespace vgc
+
+/*
+############################# Implementation notes #############################
+
+[1]
+
+In the future, we may want to extend the Curve class with:
+    - more curve type (e.g., bezier, bspline, nurbs, ellipticalarc. etc.)
+    - variable color
+    - variable custom attributes (e.g., that can be passed to shaders)
+    - dimension other than 2? Probably not: That may be a separate type of
+      curve
+
+Supporting other types of curves in the future is why we use a
+std::vector<double> of size 2*n instead of a std::vector<Vec2d> of size n.
+Indeed, other types of curve may need additional data, such as knot values,
+homogeneous coordinates, etc.
+
+A "cleaner" approach with more type-safety would be to have different
+classes for different types of curves. Unfortunately, this has other
+drawbacks, in particular, switching from one curve type to the other
+dynamically would be harder. Also, it is quite useful to have a continuous
+array of doubles that can directly be passed to C-style functions, such as
+OpenGL, etc.
+
+[2] Should the "Curve" class be called Curve2d?
+
+*/

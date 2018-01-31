@@ -41,7 +41,7 @@ void Scene::continueCurve(const geometry::Vec2d& p, double width)
     if (curves_.size() == 0) {
         return;
     }
-    curves_.back().addSample(p, width);
+    curves_.back().addControlPoint(p, width);
     Q_EMIT changed();
 }
 
