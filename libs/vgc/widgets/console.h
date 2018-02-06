@@ -49,6 +49,9 @@ public:
         return interpreter_;
     }
 
+protected:
+    void paintEvent(QPaintEvent*) override;
+
 private:
     core::PythonInterpreter* interpreter_;
 

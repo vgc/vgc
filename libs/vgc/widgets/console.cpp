@@ -17,6 +17,8 @@
 #include <vgc/core/python.h>
 #include <vgc/widgets/console.h>
 #include <QKeyEvent>
+#include <QPainter>
+#include <QTextBlock>
 
 // Notes:
 //
@@ -28,6 +30,16 @@
 //   https://stackoverflow.com/questions/28793356/qt-and-dead-keys-in-a-custom-widget
 //   http://www.kdab.com/qt-input-method-depth/
 //
+// [2]
+//
+// Here is a simple code editor example we took inspiration from:
+//
+//   http://doc.qt.io/qt-5.6/qtwidgets-widgets-codeeditor-example.html
+//
+// We also used inpiration from QtCreator text editor, which is based on the
+// same idea:
+//
+//   https://github.com/qt-creator/qt-creator/blob/master/src/plugins/texteditor/texteditor.h
 
 namespace {
 bool isTextInsertionOrDeletion_(QKeyEvent* e) {
@@ -60,6 +72,40 @@ Console::Console(
 Console::~Console()
 {
 
+}
+
+void Console::paintEvent(QPaintEvent* event)
+{
+    QPainter painter(viewport());
+
+    // Draw background
+    QColor backgroundColor(255, 255, 255);
+    painter.fillRect(event->rect(), backgroundColor);
+
+    // Loop through all visible lines.
+    //
+    // Note: in a QPlainTextEdit, each QTextDocument line consists of one
+    // QTextBlock. However, due to text wrapping, one QTextDocument line may
+    // be displayed as several rows.
+    //
+    QPointF offset = contentOffset();
+    QTextBlock block = firstVisibleBlock();
+    int blockNumber = block.blockNumber();
+    int top = (int) blockBoundingGeometry(block).translated(offset).top();
+    int height = (int) blockBoundingRect(block).height();
+    int bottom = top + height;
+    QVector<QTextLayout::FormatRange> selections;
+    while (block.isValid() && top <= event->rect().bottom()) {
+        if (block.isVisible() && bottom >= event->rect().top()) {
+            block.layout()->draw(&painter, offset,  selections, event->rect());
+        }
+        offset.ry() += height;
+        block = block.next();
+        top = bottom;
+        height = (int) blockBoundingRect(block).height();
+        bottom = top + height;
+        ++blockNumber;
+    }
 }
 
 // Handling of dead keys. See [1].
