@@ -48,7 +48,7 @@ Console::Console(
     core::PythonInterpreter* interpreter,
     QWidget* parent) :
 
-    QTextEdit(parent),
+    QPlainTextEdit(parent),
     interpreter_(interpreter)
 {    
     codeBlocks_.push_back(0);
@@ -135,7 +135,7 @@ void Console::keyPressEvent(QKeyEvent* e)
             // does not insert anything in a QTextEdit, reason why we clear the
             // modifiers)
             e->setModifiers(Qt::NoModifier);
-            QTextEdit::keyPressEvent(e);
+            QPlainTextEdit::keyPressEvent(e);
 
             // Interpret python code
             interpreter()->run(qUtf8Printable(codeBlock));
@@ -146,7 +146,7 @@ void Console::keyPressEvent(QKeyEvent* e)
 
         // Normal insertion/deletion of character, including newlines
         else {
-            QTextEdit::keyPressEvent(e);
+            QPlainTextEdit::keyPressEvent(e);
         }
     }
     else {
@@ -154,7 +154,7 @@ void Console::keyPressEvent(QKeyEvent* e)
         // - Key modifiers
         // - Navigation (arrows, home, end, page up/down, etc.)
         // - Complex input methods (dead key, Chinese character composition, etc.)
-        QTextEdit::keyPressEvent(e);
+        QPlainTextEdit::keyPressEvent(e);
     }
 }
 

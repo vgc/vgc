@@ -18,7 +18,7 @@
 #define VGC_WIDGETS_CONSOLE_H
 
 #include <vgc/widgets/api.h>
-#include <QTextEdit>
+#include <QPlainTextEdit>
 
 namespace vgc {
 
@@ -29,7 +29,7 @@ namespace widgets {
 /// \class vgc::core::Console
 /// \brief GUI around the Python interpreter
 ///
-class VGC_WIDGETS_API Console : public QTextEdit
+class VGC_WIDGETS_API Console : public QPlainTextEdit
 {
     Q_OBJECT
 
