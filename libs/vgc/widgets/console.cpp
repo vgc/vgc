@@ -90,8 +90,9 @@ void Console::paintEvent(QPaintEvent* event)
     painter.fillRect(eventRect, backgroundColor);
 
     // Whether to draw the cursor.
-    bool editable = !isReadOnly();
-    bool drawCursor = editable || (textInteractionFlags() & Qt::TextSelectableByKeyboard);
+    bool isEditable = !isReadOnly();
+    bool isTextSelectableByKeyboard = textInteractionFlags() & Qt::TextSelectableByKeyboard;
+    bool drawCursor = isEditable || isTextSelectableByKeyboard;
     int cursorPosition = context.cursorPosition;
 
     // Loop through all visible lines.
