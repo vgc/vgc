@@ -74,21 +74,25 @@ Console::~Console()
 
 }
 
-// This implementation is inspired from:
+// The following implementation is inspired from:
 // 1. Qt's implementation of QPlainTextEdit::paintEvent()
 // 2. QtCreator's implementation of TextEditor::paintEvent()
 // 3. Code Editor Example in Qt documentation
-
+//
 void Console::paintEvent(QPaintEvent* event)
 {
     QPainter painter(viewport());
-
-    // Get copy of event rect
+    QAbstractTextDocumentLayout::PaintContext context = getPaintContext();
     QRect eventRect = event->rect();
 
     // Paint background
     QColor backgroundColor(255, 255, 255);
     painter.fillRect(eventRect, backgroundColor);
+
+    // Whether to draw the cursor.
+    bool editable = !isReadOnly();
+    bool drawCursor = editable || (textInteractionFlags() & Qt::TextSelectableByKeyboard);
+    int cursorPosition = context.cursorPosition;
 
     // Loop through all visible lines.
     //
@@ -98,11 +102,9 @@ void Console::paintEvent(QPaintEvent* event)
     //
     QPointF offset = contentOffset();
     QTextBlock block = firstVisibleBlock();
-    int blockNumber = block.blockNumber();
     int top = (int) blockBoundingGeometry(block).translated(offset).top();
     int height = (int) blockBoundingRect(block).height();
     int bottom = top + height;
-    QAbstractTextDocumentLayout::PaintContext context = getPaintContext();
     while (block.isValid() && top <= eventRect.bottom()) {
 
         // Determine per-block selection from global document selection
@@ -128,9 +130,43 @@ void Console::paintEvent(QPaintEvent* event)
             // QTextFormat::FullWidthSelection, which we don't support.
         }
 
+        // Determine whether the cursor belong to this block
+        bool isCursorInBlock = cursorPosition >= blockPosition
+                               && cursorPosition < blockPosition + blockLength;
+
+        // Determine whether we should draw the cursor in the current loop
+        // iteration, and whether to draw it as selection or as line
+        bool drawCursorNow = drawCursor && isCursorInBlock;
+        bool drawCursorAsSelection = drawCursorNow
+                                     && overwriteMode()
+                                     && cursorPosition < blockPosition + blockLength - 1;
+        bool drawCursorAsLine = drawCursorNow && !drawCursorAsSelection;
+
+        // Add cursor as selection
+        if (drawCursorAsSelection) {
+            QTextLayout::FormatRange formatRange;
+            formatRange.start = cursorPosition - blockPosition;
+            formatRange.length = 1;
+            formatRange.format.setForeground(palette().base());
+            formatRange.format.setBackground(palette().text());
+            selections.append(formatRange);
+        }
+
         // Paint selection + text
+        QTextLayout* layout = block.layout();
         if (block.isVisible() && bottom >= eventRect.top()) {
-            block.layout()->draw(&painter, offset,  selections, eventRect);
+            layout->draw(&painter, offset, selections, eventRect);
+        }
+
+        // Paint cursor
+        if (drawCursorAsLine) {
+            int cursorPositionInBlock = cursorPosition - blockPosition;
+            layout->drawCursor(&painter, offset, cursorPositionInBlock, cursorWidth());
+            // Note: in Qt 5.6 implementation of QPlainTextEdit::paintEvent(),
+            // there is additional code here to do something different when
+            // cursorPosition < -1 && !layout->preeditAreaText().isEmpty().
+            // I didn't understand what this code was for, therefore I chose
+            // to omit this part of the implementation.
         }
 
         // Iterate
@@ -139,7 +175,6 @@ void Console::paintEvent(QPaintEvent* event)
         top = bottom;
         height = (int) blockBoundingRect(block).height();
         bottom = top + height;
-        ++blockNumber;
     }
 }
 
