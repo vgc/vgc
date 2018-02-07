@@ -49,6 +49,30 @@ public:
         return interpreter_;
     }
 
+    /// Returns whether to show code block separators.
+    ///
+    bool showCodeBlockSeparators() const {
+        return showCodeBlockSeparators_;
+    }
+
+    /// Sets whether to show code block separators.
+    ///
+    void showCodeBlockSeparators(bool value) {
+        showCodeBlockSeparators_ = value;
+    }
+
+    /// Returns the color of code block separators.
+    ///
+    QColor codeBlockSeparatorsColor() const {
+        return codeBlockSeparatorsColor_;
+    }
+
+    /// Sets whether to show code block separators.
+    ///
+    void setCodeBlockSeparatorsColor(const QColor& color) {
+        codeBlockSeparatorsColor_ = color;
+    }
+
 protected:
     void paintEvent(QPaintEvent*) override;
 
@@ -64,6 +88,8 @@ private:
 
     // Sorted list of 0-indexed line numbers where code block starts.
     std::vector<int> codeBlocks_;
+    bool showCodeBlockSeparators_ = true;
+    QColor codeBlockSeparatorsColor_ = QColor(190, 190, 190);
 };
 
 } // namespace widgets

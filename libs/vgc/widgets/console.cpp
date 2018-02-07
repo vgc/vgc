@@ -20,6 +20,7 @@
 #include <QPainter>
 #include <QTextBlock>
 
+#include <vgc/core/algorithm.h>
 #include <vgc/core/math.h>
 #include <vgc/core/python.h>
 
@@ -109,6 +110,9 @@ void Console::paintEvent(QPaintEvent* event)
     double backgroundMaxWidth = document()->documentLayout()->documentSize().width();
     painter.fillRect(eventRect, palette().base());
 
+    // Whether to draw code block separators and their pen style
+    QPen codeBlockSeparatorsPen(codeBlockSeparatorsColor_);
+
     // Whether to draw the cursor.
     bool isEditable = !isReadOnly();
     bool isTextSelectableByKeyboard = textInteractionFlags() & Qt::TextSelectableByKeyboard;
@@ -123,6 +127,8 @@ void Console::paintEvent(QPaintEvent* event)
     //
     QPointF offset = contentOffset();
     QTextBlock block = firstVisibleBlock();
+    int lineNumber = block.blockNumber();
+    int codeBlockIndex = -1;
     while (block.isValid()) {
 
         // Get basic block geometry
@@ -131,16 +137,20 @@ void Console::paintEvent(QPaintEvent* event)
         double blockHeight = blockRect.height();
         double blockBottom = blockTop + blockHeight;
         double blockWidth = blockRect.width();
+        double blockLeft = blockRect.left();
 
         // Ignore block if it is invisible
         if (!block.isVisible()) {
             offset.ry() += blockHeight;
             block = block.next();
+            ++lineNumber;
             continue;
         }
 
-        // Paint block if it is within area to be repainted
-        if (blockBottom >= eventTop && blockTop <= eventBottom) {
+        // Paint block if it is within area to be repainted.
+        // We use "blockTop - 1" instead of simply "blockTop" to account for
+        // the code block separators which are drawn 1px higher than the block.
+        if (blockBottom >= eventTop && blockTop - 1 <= eventBottom) {
 
             // Paint block background. This is for the rare case where a block
             // have a different background than the general console background.
@@ -150,6 +160,40 @@ void Console::paintEvent(QPaintEvent* event)
                 QRectF backgroundRect = blockRect;
                 backgroundRect.setWidth(std::max(blockWidth, backgroundMaxWidth));
                 painter.fillRect(backgroundRect, backgroundBrush);
+            }
+
+            // Paint separation between code blocks. We simply draw a line on
+            // top of the first QTextBlock of the code block, except for the
+            // very first QTextBlock.
+            if (showCodeBlockSeparators_ && lineNumber > 0) {
+
+                // Find code block corresponding to this line number. More specifically,
+                // we are looking for the value codeBlockIndex such that:
+                // codeBlocks_[codeBlockIndex] <= lineNumber < codeBlocks_[codeBlockIndex + 1]
+                if (codeBlockIndex == -1) {
+                    // The first time, we use a binary search
+                    codeBlockIndex = core::upper_bound(codeBlocks_, lineNumber) - 1;
+                }
+                else {
+                    // The subsequent times, we simply advance one by one
+                    while ((int) codeBlocks_.size() > codeBlockIndex + 1
+                           && codeBlocks_[codeBlockIndex + 1] <= lineNumber)
+                    {
+                        ++codeBlockIndex;
+                    }
+                }
+
+                // Draw if text block is the first text block of its code block
+                if (codeBlocks_[codeBlockIndex] == lineNumber) {
+                    double y = blockTop - 1;
+                    double x1 = blockLeft;
+                    double x2 = x1 + std::max(blockWidth, backgroundMaxWidth);
+                    QLineF line(x1, y, x2, y);
+                    painter.save();
+                    painter.setPen(codeBlockSeparatorsPen);
+                    painter.drawLine(line);
+                    painter.restore();
+                }
             }
 
             // Determine per-block selection from global document selection
@@ -220,6 +264,7 @@ void Console::paintEvent(QPaintEvent* event)
         if (offset.y() > viewportHeight)
             break;
         block = block.next();
+        ++lineNumber;
     }
 }
 
