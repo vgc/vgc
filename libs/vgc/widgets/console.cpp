@@ -115,10 +115,9 @@ void Console::paintEvent(QPaintEvent* event)
         QVector<QTextLayout::FormatRange> selections;
         int blockPosition = block.position();
         int blockLength = block.length();
-        for (int i = 0; i < context.selections.size(); ++i) {
-            const QAbstractTextDocumentLayout::Selection& selection = context.selections.at(i);
-            const int selectionStart = selection.cursor.selectionStart() - blockPosition;
-            const int selectionEnd = selection.cursor.selectionEnd() - blockPosition;
+        for (const QAbstractTextDocumentLayout::Selection& selection: context.selections) {
+            int selectionStart = selection.cursor.selectionStart() - blockPosition;
+            int selectionEnd = selection.cursor.selectionEnd() - blockPosition;
             if (selectionStart < blockLength
                 && selectionEnd > 0
                 && selectionEnd > selectionStart)
