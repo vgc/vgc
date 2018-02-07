@@ -14,11 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/python.h>
 #include <vgc/widgets/console.h>
+
 #include <QKeyEvent>
 #include <QPainter>
 #include <QTextBlock>
+
+#include <vgc/core/math.h>
+#include <vgc/core/python.h>
 
 // Notes:
 //
@@ -103,8 +106,8 @@ void Console::paintEvent(QPaintEvent* event)
     //
     QPointF offset = contentOffset();
     QTextBlock block = firstVisibleBlock();
-    int top = (int) blockBoundingGeometry(block).translated(offset).top();
-    int height = (int) blockBoundingRect(block).height();
+    int top = core::ifloor(blockBoundingGeometry(block).translated(offset).top());
+    int height = core::ifloor(blockBoundingRect(block).height());
     int bottom = top + height;
     while (block.isValid() && top <= eventRect.bottom()) {
 

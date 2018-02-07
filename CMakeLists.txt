@@ -9,7 +9,19 @@ include(VgcTools)
 set(CMAKE_CXX_STANDARD 11)
 
 # Find, configure, and include Qt.
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+#
+# Note: The Qt documentation also recommends to set the following CMake
+# variable:
+#
+#   set(CMAKE_INCLUDE_CURRENT_DIR ON)
+#
+# However, this has proven to lead to naming conflicts. More specifically, the
+# header file vgc/core/math.h includes <cmath> which includes <math.h>. If
+# CMAKE_INCLUDE_CURRENT_DIR is ON, then <math.h> resolves to vgc/core/math.h
+# instead of the C standard library header, leading to compilation errors.
+# Therefore, we do not set CMAKE_INCLUDE_CURRENT_DIR to ON, forcing libraries
+# to use absolute paths, which is better practice anyway.
+#
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
