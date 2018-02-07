@@ -176,7 +176,7 @@ void Console::paintEvent(QPaintEvent* event)
         offset.ry() += height;
         block = block.next();
         top = bottom;
-        height = (int) blockBoundingRect(block).height();
+        height = core::ifloor(blockBoundingRect(block).height());
         bottom = top + height;
     }
 }
