@@ -74,13 +74,21 @@ Console::~Console()
 
 }
 
+// This implementation is inspired from:
+// 1. Qt's implementation of QPlainTextEdit::paintEvent()
+// 2. QtCreator's implementation of TextEditor::paintEvent()
+// 3. Code Editor Example in Qt documentation
+
 void Console::paintEvent(QPaintEvent* event)
 {
     QPainter painter(viewport());
 
-    // Draw background
+    // Get copy of event rect
+    QRect eventRect = event->rect();
+
+    // Paint background
     QColor backgroundColor(255, 255, 255);
-    painter.fillRect(event->rect(), backgroundColor);
+    painter.fillRect(eventRect, backgroundColor);
 
     // Loop through all visible lines.
     //
@@ -94,11 +102,38 @@ void Console::paintEvent(QPaintEvent* event)
     int top = (int) blockBoundingGeometry(block).translated(offset).top();
     int height = (int) blockBoundingRect(block).height();
     int bottom = top + height;
-    QVector<QTextLayout::FormatRange> selections;
-    while (block.isValid() && top <= event->rect().bottom()) {
-        if (block.isVisible() && bottom >= event->rect().top()) {
-            block.layout()->draw(&painter, offset,  selections, event->rect());
+    QAbstractTextDocumentLayout::PaintContext context = getPaintContext();
+    while (block.isValid() && top <= eventRect.bottom()) {
+
+        // Determine per-block selection from global document selection
+        QVector<QTextLayout::FormatRange> selections;
+        int blockPosition = block.position();
+        int blockLength = block.length();
+        for (int i = 0; i < context.selections.size(); ++i) {
+            const QAbstractTextDocumentLayout::Selection& selection = context.selections.at(i);
+            const int selectionStart = selection.cursor.selectionStart() - blockPosition;
+            const int selectionEnd = selection.cursor.selectionEnd() - blockPosition;
+            if (selectionStart < blockLength
+                && selectionEnd > 0
+                && selectionEnd > selectionStart)
+            {
+                QTextLayout::FormatRange formatRange;
+                formatRange.start = selectionStart;
+                formatRange.length = selectionEnd - selectionStart;
+                formatRange.format = selection.format;
+                selections.append(formatRange);
+            }
+            // Note: in Qt 5.6 implementation of QPlainTextEdit::paintEvent(),
+            // there is additional code here to support
+            // QTextFormat::FullWidthSelection, which we don't support.
         }
+
+        // Paint selection + text
+        if (block.isVisible() && bottom >= eventRect.top()) {
+            block.layout()->draw(&painter, offset,  selections, eventRect);
+        }
+
+        // Iterate
         offset.ry() += height;
         block = block.next();
         top = bottom;
