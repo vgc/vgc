@@ -26,6 +26,9 @@ namespace core { class PythonInterpreter; }
 
 namespace widgets {
 
+namespace internal {
+class ConsoleLeftMargin;
+}
 /// \class vgc::core::Console
 /// \brief GUI around the Python interpreter
 ///
@@ -74,7 +77,11 @@ public:
     }
 
 protected:
-    void paintEvent(QPaintEvent*) override;
+    void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+
+private Q_SLOTS:
+    void updateLeftMargin_(const QRect&, int);
 
 private:
     core::PythonInterpreter* interpreter_;
@@ -90,6 +97,12 @@ private:
     std::vector<int> codeBlocks_;
     bool showCodeBlockSeparators_ = true;
     QColor codeBlockSeparatorsColor_ = QColor(190, 190, 190);
+
+    // left margin implementation
+    friend class internal::ConsoleLeftMargin;
+    QWidget* leftMargin_;
+    void leftMarginPaintEvent_(QPaintEvent* event);
+    int leftMarginWidth_();
 };
 
 } // namespace widgets

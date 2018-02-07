@@ -49,16 +49,105 @@ namespace {
 bool isTextInsertionOrDeletion_(QKeyEvent* e) {
     return !e->text().isEmpty();
 }
-}
+} // namespace
 
 namespace {
 int lineNumber_(const QTextCursor& cursor) {
     return cursor.blockNumber();
 }
+} // namespace
+
+// Finds the code block corresponding to this line number. More specifically,
+// we are looking for the value codeBlockIndex such that:
+//
+//   codeBlocks_[codeBlockIndex] <= lineNumber < codeBlocks_[codeBlockIndex + 1]
+//
+// The codeBlockIndex is modified in-place. If the previous value is -1, then
+// no assumption is made and the code block is found from scratch.
+//
+// If the previous value is >= 0, then it is assumed that the new code block
+// is either the same or after the previous value, and that it is "closeby".
+//
+namespace {
+void updateCodeBlockIndex_(int lineNumber, const std::vector<int>& codeBlocks, int& codeBlockIndex)
+{
+    if (codeBlockIndex == -1) {
+        // The first time, we use a binary search
+        codeBlockIndex = vgc::core::upper_bound(codeBlocks, lineNumber) - 1;
+    }
+    else {
+        // The subsequent times, we simply advance one by one
+        while ((int) codeBlocks.size() > codeBlockIndex + 1
+               && codeBlocks[codeBlockIndex + 1] <= lineNumber)
+        {
+            ++codeBlockIndex;
+        }
+    }
 }
+} // namespace
+
+
+// Returns whether the line number is the first line of its code block.
+//
+// The codeBlockIndexHint helps find which code block this line number
+// corresponds to. Pass -1 if you don't know.
+//
+namespace {
+bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks, int& codeBlockIndexHint)
+{
+    updateCodeBlockIndex_(lineNumber, codeBlocks, codeBlockIndexHint);
+    return codeBlocks[codeBlockIndexHint] == lineNumber;
+}
+} // namespace
+
+// Returns whether the line number is the first line of its code block.
+//
+// If you need to call this repetitively and know what you are doing, you can
+// use the overload taking the extra parameter codeBlockIndexHint for better
+// performance.
+//
+namespace {
+bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks)
+{
+    int codeBlockIndexHint = -1;
+    return isFirstLineOfCodeBlock_(lineNumber, codeBlocks, codeBlockIndexHint);
+}
+} // namespace
 
 namespace vgc {
 namespace widgets {
+
+namespace internal {
+
+// Area on the left of the console where the command prompt is drawn.
+class ConsoleLeftMargin : public QWidget
+{
+public:
+    ConsoleLeftMargin(vgc::widgets::Console* console) :
+        QWidget(console), console_(console) {
+    }
+
+    ~ConsoleLeftMargin();
+
+    QSize sizeHint() const Q_DECL_OVERRIDE {
+        return QSize(console_->leftMarginWidth_(), 0);
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) Q_DECL_OVERRIDE {
+        console_->leftMarginPaintEvent_(event);
+    }
+
+private:
+    vgc::widgets::Console* console_;
+};
+
+// We define the destructor out-of-line to suppress clang warning:
+// warning: 'A' has no out-of-line virtual method definitions; its vtable will
+// be emitted in every translation unit [-Wweak-vtables]
+ConsoleLeftMargin::~ConsoleLeftMargin() {}
+
+} // namespace internal
 
 Console::Console(
     core::PythonInterpreter* interpreter,
@@ -78,6 +167,11 @@ Console::Console(
     QPalette p = palette();
     p.setColor(QPalette::Base, backgroundColor);
     setPalette(p);
+
+    // Setup left margin (where the command prompt is drawn)
+    leftMargin_= new internal::ConsoleLeftMargin(this);
+    connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLeftMargin_(QRect,int)));
+    setViewportMargins(leftMarginWidth_(), 0, 0, 0);
 }
 
 Console::~Console()
@@ -128,7 +222,7 @@ void Console::paintEvent(QPaintEvent* event)
     QPointF offset = contentOffset();
     QTextBlock block = firstVisibleBlock();
     int lineNumber = block.blockNumber();
-    int codeBlockIndex = -1;
+    int codeBlockIndexHint = -1;
     while (block.isValid()) {
 
         // Get basic block geometry
@@ -165,35 +259,18 @@ void Console::paintEvent(QPaintEvent* event)
             // Paint separation between code blocks. We simply draw a line on
             // top of the first QTextBlock of the code block, except for the
             // very first QTextBlock.
-            if (showCodeBlockSeparators_ && lineNumber > 0) {
-
-                // Find code block corresponding to this line number. More specifically,
-                // we are looking for the value codeBlockIndex such that:
-                // codeBlocks_[codeBlockIndex] <= lineNumber < codeBlocks_[codeBlockIndex + 1]
-                if (codeBlockIndex == -1) {
-                    // The first time, we use a binary search
-                    codeBlockIndex = core::upper_bound(codeBlocks_, lineNumber) - 1;
-                }
-                else {
-                    // The subsequent times, we simply advance one by one
-                    while ((int) codeBlocks_.size() > codeBlockIndex + 1
-                           && codeBlocks_[codeBlockIndex + 1] <= lineNumber)
-                    {
-                        ++codeBlockIndex;
-                    }
-                }
-
-                // Draw if text block is the first text block of its code block
-                if (codeBlocks_[codeBlockIndex] == lineNumber) {
-                    double y = blockTop - 1;
-                    double x1 = blockLeft;
-                    double x2 = x1 + std::max(blockWidth, backgroundMaxWidth);
-                    QLineF line(x1, y, x2, y);
-                    painter.save();
-                    painter.setPen(codeBlockSeparatorsPen);
-                    painter.drawLine(line);
-                    painter.restore();
-                }
+            if (showCodeBlockSeparators_
+                && lineNumber > 0
+                && isFirstLineOfCodeBlock_(lineNumber, codeBlocks_, codeBlockIndexHint))
+            {
+                double y = blockTop - 1;
+                double x1 = blockLeft;
+                double x2 = x1 + std::max(blockWidth, backgroundMaxWidth);
+                QLineF line(x1, y, x2, y);
+                painter.save();
+                painter.setPen(codeBlockSeparatorsPen);
+                painter.drawLine(line);
+                painter.restore();
             }
 
             // Determine per-block selection from global document selection
@@ -266,6 +343,15 @@ void Console::paintEvent(QPaintEvent* event)
         block = block.next();
         ++lineNumber;
     }
+}
+
+void Console::resizeEvent(QResizeEvent* event)
+{
+    QPlainTextEdit::resizeEvent(event);
+
+    QRect cr = contentsRect();
+    leftMargin_->setGeometry(QRect(
+        cr.left(), cr.top(), leftMarginWidth_(), cr.height()));
 }
 
 // Handling of dead keys. See [1].
@@ -367,6 +453,52 @@ void Console::keyPressEvent(QKeyEvent* e)
 int Console::currentLineNumber_() const
 {
     return lineNumber_(textCursor());
+}
+
+void Console::updateLeftMargin_(const QRect& rect, int dy)
+{
+    if (dy)
+        leftMargin_->scroll(0, dy);
+    else
+        leftMargin_->update(0, rect.y(), leftMargin_->width(), rect.height());
+}
+
+void Console::leftMarginPaintEvent_(QPaintEvent* event)
+{
+    const QString primaryPromptString(">>>");
+    const QString secondaryPromptString("...");
+
+    QPainter painter(leftMargin_);
+    painter.fillRect(event->rect(), Qt::lightGray);
+
+    QTextBlock block = firstVisibleBlock();
+    int lineNumber = block.blockNumber();
+    int codeBlockIndexHint = -1;
+    int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
+    int bottom = top + (int) blockBoundingRect(block).height();
+    while (block.isValid() && top <= event->rect().bottom()) {
+        if (block.isVisible() && bottom >= event->rect().top()) {
+            const QString& promptString =
+                isFirstLineOfCodeBlock_(lineNumber, codeBlocks_, codeBlockIndexHint)
+                ? primaryPromptString
+                : secondaryPromptString;
+            painter.setPen(Qt::black);
+            painter.drawText(0, top, leftMargin_->width(), fontMetrics().height(),
+                             Qt::AlignRight, promptString);
+        }
+
+        block = block.next();
+        top = bottom;
+        bottom = top + (int) blockBoundingRect(block).height();
+        ++lineNumber;
+    }
+}
+
+int Console::leftMarginWidth_()
+{
+    int numChars = 5;
+    int space = 3 + fontMetrics().width(QLatin1Char('>')) * numChars;
+    return space;
 }
 
 } // namespace widgets
