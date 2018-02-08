@@ -108,8 +108,6 @@ them already installed your system:
 
 Tested platform: Ubuntu 16.04 LTS
 
-(Instructions for other platforms coming December 2017)
-
 Install GCC, CMake, and Python:
 
 ```
