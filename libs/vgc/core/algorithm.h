@@ -110,6 +110,43 @@ T average(const std::vector<T>& v)
     }
 }
 
+/// Returns whether the given vector contains the given value.
+///
+template<typename T>
+bool contains(const std::vector<T>& v, const T& x)
+{
+    return std::find(v.begin(), v.end(), x) != v.end();
+}
+
+/// Returns the index of the first element in the vector that is (strictly) greater than
+/// value, or the size of the vector if no such element is found.
+///
+/// The vector must be at least partially ordered, that is it must satisfy:
+/// v[i] < v[j] => i < j.
+///
+/// This is a convenient wrapper around std::upper_bound.
+///
+/// Example:
+/// \code
+/// std::vector<int> data = {2, 4, 6, 6, 8};
+/// int i1 = vgc::core::upper_bound(data, 1); // = 0
+/// int i2 = vgc::core::upper_bound(data, 2); // = 1
+/// int i3 = vgc::core::upper_bound(data, 3); // = 1
+/// int i4 = vgc::core::upper_bound(data, 4); // = 2
+/// int i5 = vgc::core::upper_bound(data, 5); // = 2
+/// int i6 = vgc::core::upper_bound(data, 6); // = 4
+/// int i7 = vgc::core::upper_bound(data, 7); // = 4
+/// int i8 = vgc::core::upper_bound(data, 8); // = 5
+/// int i9 = vgc::core::upper_bound(data, 9); // = 5
+/// \endcode
+///
+template<typename T>
+int upper_bound(const std::vector<T>& v, const T& x)
+{
+    auto it = std::upper_bound(v.cbegin(), v.cend(), x);
+    return std::distance(v.cbegin(), it);
+}
+
 } // namespace core
 } // namespace vgc
 

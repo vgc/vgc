@@ -9,5 +9,8 @@ vgc_add_library(widgets
     CPP_FILES
         console.cpp
         openglviewer.cpp
+        qtutil.cpp
         widget.cpp
 )
+
+add_subdirectory(fonts)

@@ -18,7 +18,7 @@
 #define VGC_WIDGETS_CONSOLE_H
 
 #include <vgc/widgets/api.h>
-#include <QTextEdit>
+#include <QPlainTextEdit>
 
 namespace vgc {
 
@@ -26,10 +26,14 @@ namespace core { class PythonInterpreter; }
 
 namespace widgets {
 
+namespace internal {
+class ConsoleLeftMargin;
+}
+
 /// \class vgc::core::Console
 /// \brief GUI around the Python interpreter
 ///
-class VGC_WIDGETS_API Console : public QTextEdit
+class VGC_WIDGETS_API Console : public QPlainTextEdit
 {
     Q_OBJECT
 
@@ -49,6 +53,37 @@ public:
         return interpreter_;
     }
 
+    /// Returns whether to show code block separators.
+    ///
+    bool showCodeBlockSeparators() const {
+        return showCodeBlockSeparators_;
+    }
+
+    /// Sets whether to show code block separators.
+    ///
+    void showCodeBlockSeparators(bool value) {
+        showCodeBlockSeparators_ = value;
+    }
+
+    /// Returns the color of code block separators.
+    ///
+    QColor codeBlockSeparatorsColor() const {
+        return codeBlockSeparatorsColor_;
+    }
+
+    /// Sets whether to show code block separators.
+    ///
+    void setCodeBlockSeparatorsColor(const QColor& color) {
+        codeBlockSeparatorsColor_ = color;
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+
+private Q_SLOTS:
+    void updateLeftMargin_(const QRect&, int);
+
 private:
     core::PythonInterpreter* interpreter_;
 
@@ -59,8 +94,33 @@ private:
 
     int currentLineNumber_() const;
 
-    // Sorted list of 0-indexed line numbers where code block starts.
+    // Code blocks. This is a sorted list of 0-indexed
+    // line numbers where code blocks start.
     std::vector<int> codeBlocks_;
+
+    // left margin
+    friend class internal::ConsoleLeftMargin;
+    QWidget* leftMargin_;
+    int leftMarginWidth_;
+    void setupLeftMargin_();
+    void leftMarginPaintEvent_(QPaintEvent* event);
+    void computeLeftMarginWidth_();
+
+    // Code block separators
+    bool showCodeBlockSeparators_ = false;
+    QColor codeBlockSeparatorsColor_ = QColor(190, 190, 190);
+
+    // Interpreter prompt
+    QString primaryPromptString_ = QString(">>>");
+    QString secondaryPromptString_ = QString("...");
+
+    // Color scheme
+    QColor backgroundColor_ = QColor(46, 47, 48);
+    QColor marginBackgroundColor_ = QColor(64, 66, 68);
+    QColor textColor_ = QColor(214, 208, 157);
+    QColor promptColor_ = QColor(190, 192, 194);
+    QColor selectionForegroundColor_ = QColor(190, 192, 194);
+    QColor selectionBackgroundColor_ = QColor(29, 84, 92);
 };
 
 } // namespace widgets

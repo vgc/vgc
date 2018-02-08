@@ -14,9 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/python.h>
 #include <vgc/widgets/console.h>
+
 #include <QKeyEvent>
+#include <QPainter>
+#include <QTextBlock>
+
+#include <vgc/core/algorithm.h>
+#include <vgc/core/math.h>
+#include <vgc/core/python.h>
+#include <vgc/core/resources.h>
+#include <vgc/widgets/qtutil.h>
 
 // Notes:
 //
@@ -28,38 +36,331 @@
 //   https://stackoverflow.com/questions/28793356/qt-and-dead-keys-in-a-custom-widget
 //   http://www.kdab.com/qt-input-method-depth/
 //
+// [2]
+//
+// Here is a simple code editor example we took inspiration from:
+//
+//   http://doc.qt.io/qt-5.6/qtwidgets-widgets-codeeditor-example.html
+//
+// We also used inpiration from QtCreator text editor, which is based on the
+// same idea:
+//
+//   https://github.com/qt-creator/qt-creator/blob/master/src/plugins/texteditor/texteditor.h
 
 namespace {
 bool isTextInsertionOrDeletion_(QKeyEvent* e) {
     return !e->text().isEmpty();
 }
-}
+} // namespace
 
 namespace {
 int lineNumber_(const QTextCursor& cursor) {
     return cursor.blockNumber();
 }
+} // namespace
+
+// Finds the code block corresponding to this line number. More specifically,
+// we are looking for the value codeBlockIndex such that:
+//
+//   codeBlocks_[codeBlockIndex] <= lineNumber < codeBlocks_[codeBlockIndex + 1]
+//
+// The codeBlockIndex is modified in-place. If the previous value is -1, then
+// no assumption is made and the code block is found from scratch.
+//
+// If the previous value is >= 0, then it is assumed that the new code block
+// is either the same or after the previous value, and that it is "closeby".
+//
+namespace {
+void updateCodeBlockIndex_(int lineNumber, const std::vector<int>& codeBlocks, int& codeBlockIndex)
+{
+    if (codeBlockIndex == -1) {
+        // The first time, we use a binary search
+        codeBlockIndex = vgc::core::upper_bound(codeBlocks, lineNumber) - 1;
+    }
+    else {
+        // The subsequent times, we simply advance one by one
+        while ((int) codeBlocks.size() > codeBlockIndex + 1
+               && codeBlocks[codeBlockIndex + 1] <= lineNumber)
+        {
+            ++codeBlockIndex;
+        }
+    }
 }
+} // namespace
+
+
+// Returns whether the line number is the first line of its code block.
+//
+// The codeBlockIndexHint helps find which code block this line number
+// corresponds to. Pass -1 if you don't know.
+//
+namespace {
+bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks, int& codeBlockIndexHint)
+{
+    updateCodeBlockIndex_(lineNumber, codeBlocks, codeBlockIndexHint);
+    return codeBlocks[codeBlockIndexHint] == lineNumber;
+}
+} // namespace
+
+// Returns whether the line number is the first line of its code block.
+//
+// If you need to call this repetitively and know what you are doing, you can
+// use the overload taking the extra parameter codeBlockIndexHint for better
+// performance.
+//
+namespace {
+bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks)
+{
+    int codeBlockIndexHint = -1;
+    return isFirstLineOfCodeBlock_(lineNumber, codeBlocks, codeBlockIndexHint);
+}
+} // namespace
 
 namespace vgc {
 namespace widgets {
+
+namespace internal {
+
+// Area on the left of the console where the command prompt is drawn.
+class ConsoleLeftMargin : public QWidget
+{
+public:
+    ConsoleLeftMargin(vgc::widgets::Console* console) :
+        QWidget(console), console_(console) {
+    }
+
+    ~ConsoleLeftMargin();
+
+    QSize sizeHint() const Q_DECL_OVERRIDE {
+        return QSize(console_->leftMarginWidth_, 0);
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) Q_DECL_OVERRIDE {
+        console_->leftMarginPaintEvent_(event);
+    }
+
+private:
+    vgc::widgets::Console* console_;
+};
+
+// We define the destructor out-of-line to suppress clang warning:
+// warning: 'A' has no out-of-line virtual method definitions; its vtable will
+// be emitted in every translation unit [-Wweak-vtables]
+ConsoleLeftMargin::~ConsoleLeftMargin() {}
+
+} // namespace internal
 
 Console::Console(
     core::PythonInterpreter* interpreter,
     QWidget* parent) :
 
-    QTextEdit(parent),
+    QPlainTextEdit(parent),
     interpreter_(interpreter)
 {    
     codeBlocks_.push_back(0);
 
     // Handling of dead keys. See [1].
     setAttribute(Qt::WA_InputMethodEnabled, true);
+
+    // Set colors. See Qt doc for the meaning of QPalette Color roles.
+    QPalette p = palette();
+    p.setColor(QPalette::Base, backgroundColor_);
+    p.setColor(QPalette::Text, textColor_);
+    p.setColor(QPalette::Highlight, selectionBackgroundColor_);
+    p.setColor(QPalette::HighlightedText, selectionForegroundColor_);
+    setPalette(p);
+
+    // Set font
+    QFontDatabase fontDB;
+    std::string fontPath = core::resourcePath("fonts/SourceCodePro-Regular.ttf");
+    fontDB.addApplicationFont(toQt(fontPath));
+    QFont f("Source Code Pro", 12, QFont::Normal);
+    setFont(f);
+
+    // Setup left margin (where the command prompt is drawn)
+    // This must be done after the font is set to compute its width correctly.
+    setupLeftMargin_();
 }
 
 Console::~Console()
 {
 
+}
+
+// The following implementation is inspired from:
+// 1. Qt's implementation of QPlainTextEdit::paintEvent()
+// 2. QtCreator's implementation of TextEditor::paintEvent()
+// 3. Code Editor Example in Qt documentation
+//
+void Console::paintEvent(QPaintEvent* event)
+{
+    QPainter painter(viewport());
+
+    // Get paint context. This provides cursor position and selections
+    QAbstractTextDocumentLayout::PaintContext context = getPaintContext();
+
+    // Get area to be repainted
+    QRect eventRect = event->rect();
+    int eventTop = eventRect.top();
+    int eventBottom = eventRect.bottom();
+
+    // Get viewport rectangle, to avoid painting anything outside of it
+    QRect viewportRect = viewport()->rect();
+    int viewportHeight = viewportRect.height();
+
+    // Paint console background
+    double backgroundMaxWidth = document()->documentLayout()->documentSize().width();
+    painter.fillRect(eventRect, palette().base());
+
+    // Whether to draw code block separators and their pen style
+    QPen codeBlockSeparatorsPen(codeBlockSeparatorsColor_);
+
+    // Whether to draw the cursor.
+    bool isEditable = !isReadOnly();
+    bool isTextSelectableByKeyboard = textInteractionFlags() & Qt::TextSelectableByKeyboard;
+    bool drawCursor = isEditable || isTextSelectableByKeyboard;
+    int cursorPosition = context.cursorPosition;
+
+    // Loop through all visible lines.
+    //
+    // Note: in a QPlainTextEdit, each QTextDocument line consists of one
+    // QTextBlock. However, due to text wrapping, one QTextDocument line may
+    // be displayed as several rows.
+    //
+    QPointF offset = contentOffset();
+    QTextBlock block = firstVisibleBlock();
+    int lineNumber = block.blockNumber();
+    int codeBlockIndexHint = -1;
+    while (block.isValid()) {
+
+        // Get basic block geometry
+        QRectF blockRect = blockBoundingRect(block).translated(offset);
+        double blockTop = blockRect.top();
+        double blockHeight = blockRect.height();
+        double blockBottom = blockTop + blockHeight;
+        double blockWidth = blockRect.width();
+        double blockLeft = blockRect.left();
+
+        // Ignore block if it is invisible
+        if (!block.isVisible()) {
+            offset.ry() += blockHeight;
+            block = block.next();
+            ++lineNumber;
+            continue;
+        }
+
+        // Paint block if it is within area to be repainted.
+        // We use "blockTop - 1" instead of simply "blockTop" to account for
+        // the code block separators which are drawn 1px higher than the block.
+        if (blockBottom >= eventTop && blockTop - 1 <= eventBottom) {
+
+            // Paint block background. This is for the rare case where a block
+            // have a different background than the general console background.
+            QTextBlockFormat blockFormat = block.blockFormat();
+            QBrush backgroundBrush = blockFormat.background();
+            if (backgroundBrush != Qt::NoBrush) {
+                QRectF backgroundRect = blockRect;
+                backgroundRect.setWidth(std::max(blockWidth, backgroundMaxWidth));
+                painter.fillRect(backgroundRect, backgroundBrush);
+            }
+
+            // Paint separation between code blocks. We simply draw a line on
+            // top of the first QTextBlock of the code block, except for the
+            // very first QTextBlock.
+            if (showCodeBlockSeparators_
+                && lineNumber > 0
+                && isFirstLineOfCodeBlock_(lineNumber, codeBlocks_, codeBlockIndexHint))
+            {
+                double y = blockTop - 1;
+                double x1 = blockLeft;
+                double x2 = x1 + std::max(blockWidth, backgroundMaxWidth);
+                QLineF line(x1, y, x2, y);
+                painter.save();
+                painter.setPen(codeBlockSeparatorsPen);
+                painter.drawLine(line);
+                painter.restore();
+            }
+
+            // Determine per-block selection from global document selection
+            QVector<QTextLayout::FormatRange> selections;
+            int blockPosition = block.position();
+            int blockLength = block.length();
+            Q_FOREACH (const QAbstractTextDocumentLayout::Selection& selection, context.selections) {
+                int selectionStart = selection.cursor.selectionStart() - blockPosition;
+                int selectionEnd = selection.cursor.selectionEnd() - blockPosition;
+                if (selectionStart < blockLength
+                    && selectionEnd > 0
+                    && selectionEnd > selectionStart)
+                {
+                    QTextLayout::FormatRange formatRange;
+                    formatRange.start = selectionStart;
+                    formatRange.length = selectionEnd - selectionStart;
+                    formatRange.format = selection.format;
+                    selections.append(formatRange);
+                }
+                // Note: in Qt 5.6 implementation of QPlainTextEdit::paintEvent(),
+                // there is additional code here to support
+                // QTextFormat::FullWidthSelection, which we don't support.
+            }
+
+            // Determine whether the cursor belong to this block
+            bool isCursorInBlock = cursorPosition >= blockPosition
+                                   && cursorPosition < blockPosition + blockLength;
+
+            // Determine whether we should draw the cursor in the current loop
+            // iteration, and whether to draw it as selection or as line
+            bool drawCursorNow = drawCursor && isCursorInBlock;
+            bool drawCursorAsSelection = drawCursorNow
+                                         && overwriteMode()
+                                         && cursorPosition < blockPosition + blockLength - 1;
+            bool drawCursorAsLine = drawCursorNow && !drawCursorAsSelection;
+
+            // Add cursor as selection
+            if (drawCursorAsSelection) {
+                QTextLayout::FormatRange formatRange;
+                formatRange.start = cursorPosition - blockPosition;
+                formatRange.length = 1;
+                formatRange.format.setForeground(palette().base());
+                formatRange.format.setBackground(palette().text());
+                selections.append(formatRange);
+            }
+
+            // Paint selection + text
+            QTextLayout* layout = block.layout();
+            if (block.isVisible() && blockBottom >= eventTop) {
+                layout->draw(&painter, offset, selections, eventRect);
+            }
+
+            // Paint cursor
+            if (drawCursorAsLine) {
+                int cursorPositionInBlock = cursorPosition - blockPosition;
+                layout->drawCursor(&painter, offset, cursorPositionInBlock, cursorWidth());
+                // Note: in Qt 5.6 implementation of QPlainTextEdit::paintEvent(),
+                // there is additional code here to do something different when
+                // cursorPosition < -1 && !layout->preeditAreaText().isEmpty().
+                // I didn't understand what this code was for, therefore I chose
+                // to omit this part of the implementation.
+            }
+
+        }
+
+        // Iterate, stopping at last visible block
+        offset.ry() += blockHeight;
+        if (offset.y() > viewportHeight)
+            break;
+        block = block.next();
+        ++lineNumber;
+    }
+}
+
+void Console::resizeEvent(QResizeEvent* event)
+{
+    QPlainTextEdit::resizeEvent(event);
+
+    QRect cr = contentsRect();
+    leftMargin_->setGeometry(QRect(
+        cr.left(), cr.top(), leftMarginWidth_, cr.height()));
 }
 
 // Handling of dead keys. See [1].
@@ -135,7 +436,7 @@ void Console::keyPressEvent(QKeyEvent* e)
             // does not insert anything in a QTextEdit, reason why we clear the
             // modifiers)
             e->setModifiers(Qt::NoModifier);
-            QTextEdit::keyPressEvent(e);
+            QPlainTextEdit::keyPressEvent(e);
 
             // Interpret python code
             interpreter()->run(qUtf8Printable(codeBlock));
@@ -146,7 +447,7 @@ void Console::keyPressEvent(QKeyEvent* e)
 
         // Normal insertion/deletion of character, including newlines
         else {
-            QTextEdit::keyPressEvent(e);
+            QPlainTextEdit::keyPressEvent(e);
         }
     }
     else {
@@ -154,13 +455,70 @@ void Console::keyPressEvent(QKeyEvent* e)
         // - Key modifiers
         // - Navigation (arrows, home, end, page up/down, etc.)
         // - Complex input methods (dead key, Chinese character composition, etc.)
-        QTextEdit::keyPressEvent(e);
+        QPlainTextEdit::keyPressEvent(e);
     }
 }
 
 int Console::currentLineNumber_() const
 {
     return lineNumber_(textCursor());
+}
+
+void Console::updateLeftMargin_(const QRect& rect, int dy)
+{
+    if (dy)
+        leftMargin_->scroll(0, dy);
+    else
+        leftMargin_->update(0, rect.y(), leftMargin_->width(), rect.height());
+}
+
+void Console::setupLeftMargin_()
+{
+    leftMargin_= new internal::ConsoleLeftMargin(this);
+    computeLeftMarginWidth_();
+    connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLeftMargin_(QRect,int)));
+    setViewportMargins(leftMarginWidth_, 0, 0, 0);
+}
+
+void Console::leftMarginPaintEvent_(QPaintEvent* event)
+{
+    int marginWidth = leftMargin_->width();
+    int fontHeight = fontMetrics().height();
+
+    QPainter painter(leftMargin_);
+    painter.setPen(QPen(promptColor_));
+
+    painter.fillRect(event->rect(), marginBackgroundColor_);
+
+    QTextBlock block = firstVisibleBlock();
+    int lineNumber = block.blockNumber();
+    int codeBlockIndexHint = -1;
+    int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
+    int bottom = top + (int) blockBoundingRect(block).height();
+    while (block.isValid() && top <= event->rect().bottom()) {
+        if (block.isVisible() && bottom >= event->rect().top()) {
+            const QString& promptString =
+                isFirstLineOfCodeBlock_(lineNumber, codeBlocks_, codeBlockIndexHint)
+                ? primaryPromptString_
+                : secondaryPromptString_;
+            painter.drawText(0, top, marginWidth, fontHeight,
+                             Qt::AlignCenter, promptString);
+        }
+
+        block = block.next();
+        top = bottom;
+        bottom = top + (int) blockBoundingRect(block).height();
+        ++lineNumber;
+    }
+}
+
+void Console::computeLeftMarginWidth_()
+{
+    int padding = 4;
+    int promptWidth = std::max(
+                fontMetrics().width(primaryPromptString_),
+                fontMetrics().width(secondaryPromptString_));
+    leftMarginWidth_ = promptWidth + 2 * padding;
 }
 
 } // namespace widgets
