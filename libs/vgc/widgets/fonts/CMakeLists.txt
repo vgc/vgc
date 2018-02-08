@@ -1,0 +1,10 @@
+vgc_add_resources(fonts
+    SourceCodePro-Black.ttf
+    SourceCodePro-Bold.ttf
+    SourceCodePro-ExtraLight.ttf
+    SourceCodePro-Light.ttf
+    SourceCodePro-Medium.ttf
+    SourceCodePro-OFL.txt
+    SourceCodePro-Regular.ttf
+    SourceCodePro-Semibold.ttf
+)
