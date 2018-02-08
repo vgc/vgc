@@ -20,6 +20,7 @@
 #include <QMouseEvent>
 #include <vgc/core/resources.h>
 #include <vgc/scene/scene.h>
+#include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -29,7 +30,7 @@ namespace {
 // Returns the file path of a shader file as a QString
 QString shaderPath_(const std::string& name) {
     std::string path = core::resourcePath("shaders/" + name);
-    return QString::fromStdString(path);
+    return toQt(path);
 }
 
 geometry::Vec2d toVec2d_(QMouseEvent* event) {
