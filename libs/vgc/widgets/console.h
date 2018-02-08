@@ -29,6 +29,7 @@ namespace widgets {
 namespace internal {
 class ConsoleLeftMargin;
 }
+
 /// \class vgc::core::Console
 /// \brief GUI around the Python interpreter
 ///
@@ -93,16 +94,33 @@ private:
 
     int currentLineNumber_() const;
 
-    // Sorted list of 0-indexed line numbers where code block starts.
+    // Code blocks. This is a sorted list of 0-indexed
+    // line numbers where code blocks start.
     std::vector<int> codeBlocks_;
-    bool showCodeBlockSeparators_ = true;
-    QColor codeBlockSeparatorsColor_ = QColor(190, 190, 190);
 
-    // left margin implementation
+    // left margin
     friend class internal::ConsoleLeftMargin;
     QWidget* leftMargin_;
+    int leftMarginWidth_;
+    void setupLeftMargin_();
     void leftMarginPaintEvent_(QPaintEvent* event);
-    int leftMarginWidth_();
+    void computeLeftMarginWidth_();
+
+    // Code block separators
+    bool showCodeBlockSeparators_ = false;
+    QColor codeBlockSeparatorsColor_ = QColor(190, 190, 190);
+
+    // Interpreter prompt
+    QString primaryPromptString_ = QString(">>>");
+    QString secondaryPromptString_ = QString("...");
+
+    // Color scheme
+    QColor backgroundColor_ = QColor(46, 47, 48);
+    QColor marginBackgroundColor_ = QColor(64, 66, 68);
+    QColor textColor_ = QColor(214, 208, 157);
+    QColor promptColor_ = QColor(190, 192, 194);
+    QColor selectionForegroundColor_ = QColor(190, 192, 194);
+    QColor selectionBackgroundColor_ = QColor(29, 84, 92);
 };
 
 } // namespace widgets

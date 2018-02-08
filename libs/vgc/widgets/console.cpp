@@ -23,6 +23,8 @@
 #include <vgc/core/algorithm.h>
 #include <vgc/core/math.h>
 #include <vgc/core/python.h>
+#include <vgc/core/resources.h>
+#include <vgc/widgets/qtutil.h>
 
 // Notes:
 //
@@ -130,7 +132,7 @@ public:
     ~ConsoleLeftMargin();
 
     QSize sizeHint() const Q_DECL_OVERRIDE {
-        return QSize(console_->leftMarginWidth_(), 0);
+        return QSize(console_->leftMarginWidth_, 0);
     }
 
 protected:
@@ -161,17 +163,24 @@ Console::Console(
     // Handling of dead keys. See [1].
     setAttribute(Qt::WA_InputMethodEnabled, true);
 
-    // Set background color.
-    // Note: In Qt, the background color in text edits is called "Base".
-    QColor backgroundColor(255, 255, 255);
+    // Set colors. See Qt doc for the meaning of QPalette Color roles.
     QPalette p = palette();
-    p.setColor(QPalette::Base, backgroundColor);
+    p.setColor(QPalette::Base, backgroundColor_);
+    p.setColor(QPalette::Text, textColor_);
+    p.setColor(QPalette::Highlight, selectionBackgroundColor_);
+    p.setColor(QPalette::HighlightedText, selectionForegroundColor_);
     setPalette(p);
 
+    // Set font
+    QFontDatabase fontDB;
+    std::string fontPath = core::resourcePath("fonts/SourceCodePro-Regular.ttf");
+    fontDB.addApplicationFont(toQt(fontPath));
+    QFont f("Source Code Pro", 12, QFont::Normal);
+    setFont(f);
+
     // Setup left margin (where the command prompt is drawn)
-    leftMargin_= new internal::ConsoleLeftMargin(this);
-    connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLeftMargin_(QRect,int)));
-    setViewportMargins(leftMarginWidth_(), 0, 0, 0);
+    // This must be done after the font is set to compute its width correctly.
+    setupLeftMargin_();
 }
 
 Console::~Console()
@@ -351,7 +360,7 @@ void Console::resizeEvent(QResizeEvent* event)
 
     QRect cr = contentsRect();
     leftMargin_->setGeometry(QRect(
-        cr.left(), cr.top(), leftMarginWidth_(), cr.height()));
+        cr.left(), cr.top(), leftMarginWidth_, cr.height()));
 }
 
 // Handling of dead keys. See [1].
@@ -463,13 +472,23 @@ void Console::updateLeftMargin_(const QRect& rect, int dy)
         leftMargin_->update(0, rect.y(), leftMargin_->width(), rect.height());
 }
 
+void Console::setupLeftMargin_()
+{
+    leftMargin_= new internal::ConsoleLeftMargin(this);
+    computeLeftMarginWidth_();
+    connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLeftMargin_(QRect,int)));
+    setViewportMargins(leftMarginWidth_, 0, 0, 0);
+}
+
 void Console::leftMarginPaintEvent_(QPaintEvent* event)
 {
-    const QString primaryPromptString(">>>");
-    const QString secondaryPromptString("...");
+    int marginWidth = leftMargin_->width();
+    int fontHeight = fontMetrics().height();
 
     QPainter painter(leftMargin_);
-    painter.fillRect(event->rect(), Qt::lightGray);
+    painter.setPen(QPen(promptColor_));
+
+    painter.fillRect(event->rect(), marginBackgroundColor_);
 
     QTextBlock block = firstVisibleBlock();
     int lineNumber = block.blockNumber();
@@ -480,11 +499,10 @@ void Console::leftMarginPaintEvent_(QPaintEvent* event)
         if (block.isVisible() && bottom >= event->rect().top()) {
             const QString& promptString =
                 isFirstLineOfCodeBlock_(lineNumber, codeBlocks_, codeBlockIndexHint)
-                ? primaryPromptString
-                : secondaryPromptString;
-            painter.setPen(Qt::black);
-            painter.drawText(0, top, leftMargin_->width(), fontMetrics().height(),
-                             Qt::AlignRight, promptString);
+                ? primaryPromptString_
+                : secondaryPromptString_;
+            painter.drawText(0, top, marginWidth, fontHeight,
+                             Qt::AlignCenter, promptString);
         }
 
         block = block.next();
@@ -494,11 +512,13 @@ void Console::leftMarginPaintEvent_(QPaintEvent* event)
     }
 }
 
-int Console::leftMarginWidth_()
+void Console::computeLeftMarginWidth_()
 {
-    int numChars = 5;
-    int space = 3 + fontMetrics().width(QLatin1Char('>')) * numChars;
-    return space;
+    int padding = 4;
+    int promptWidth = std::max(
+                fontMetrics().width(primaryPromptString_),
+                fontMetrics().width(secondaryPromptString_));
+    leftMarginWidth_ = promptWidth + 2 * padding;
 }
 
 } // namespace widgets
