@@ -40,16 +40,13 @@ int main(int argc, char *argv[])
     // Create the python interpreter
     vgc::core::PythonInterpreter pythonInterpreter;
 
-    // Create the scene (and add a few points for testing purposes)
+    // Create the scene
     vgc::scene::ScenePtr scene = std::make_shared<vgc::scene::Scene>();
 
-    // Expose the above Scene instance to Python console. This allows, for
-    // example, to add a new point by typing this in the console:
+    // Expose the above Scene instance to the Python console as a local Python
+    // variable 'scene'.
     //
-    //   from vgc.geometry import Point
-    //   scene.addPoint(Point(300,100))
-    //
-    // XXX In practice, we won't expose "scene" directly. Instead:
+    // XXX In the long term, we may not want to expose "scene" directly, but:
     // 1. Have a class VgcIllustrationApp: public QApplication.
     // 2. Have an instance 'VgcIllustrationApp app'.
     // 3. Pass the app to python.
