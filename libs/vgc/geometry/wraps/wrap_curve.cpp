@@ -15,16 +15,21 @@
 // limitations under the License.
 
 #include <pybind11/pybind11.h>
+#include <vgc/geometry/curve.h>
 
 namespace py = pybind11;
+using vgc::geometry::Curve;
+using vgc::geometry::CurveSharedPtr;
 
-void wrap_vec2d(py::module& m);
-void wrap_curve(py::module& m);
-
-PYBIND11_PLUGIN(geometry)
+void wrap_curve(py::module& m)
 {
-    py::module m("geometry", "Documentation of the 'geometry' module");
-    wrap_vec2d(m);
-    wrap_curve(m);
-    return m.ptr();
+    py::class_<Curve, CurveSharedPtr>(m, "Curve")
+
+        .def(py::init<>())
+
+        .def("__repr__", [](const Curve& c) {
+            return "<Curve containing "
+                    + std::to_string(c.positionData().size() / 2)
+                           + " control points>"; })
+    ;
 }
