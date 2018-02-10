@@ -19,7 +19,6 @@
 
 #include <memory>
 #include <vector>
-#include <QObject>
 #include <vgc/core/object.h>
 #include <vgc/core/signal.h>
 #include <vgc/geometry/curve.h>
@@ -31,11 +30,8 @@ namespace scene {
 
 VGC_CORE_DECLARE_PTRS(Scene);
 
-class VGC_SCENE_API Scene: public QObject, public core::Object<Scene>
+class VGC_SCENE_API Scene: public core::Object<Scene>
 {
-    Q_OBJECT
-    Q_DISABLE_COPY(Scene)
-
 public:
     Scene();
 
