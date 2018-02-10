@@ -27,6 +27,9 @@ void wrap_curve(py::module& m)
 
         .def(py::init<>())
 
+        .def("addControlPoint", [](Curve& c, double x, double y, double w) {
+            c.addControlPoint(x, y, w); })
+
         .def("__repr__", [](const Curve& c) {
             return "<Curve containing "
                     + std::to_string(c.positionData().size() / 2)
