@@ -45,6 +45,9 @@ public:
     const std::vector<geometry::CurveSharedPtr>& curves() const {
         return curves_;
     }
+    void addCurve(const geometry::CurveSharedPtr& curve) {
+        curves_.push_back(curve);
+    }
 
     /// This signal is emitted when the scene has changed.
     ///
