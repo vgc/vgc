@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     vgc::core::PythonInterpreter pythonInterpreter;
 
     // Create the scene
-    vgc::scene::ScenePtr scene = std::make_shared<vgc::scene::Scene>();
+    vgc::scene::SceneSharedPtr scene = vgc::scene::Scene::make();
 
     // Expose the above Scene instance to the Python console as a local Python
     // variable 'scene'.

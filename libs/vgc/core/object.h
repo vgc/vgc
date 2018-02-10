@@ -23,7 +23,7 @@
 #define VGC_CORE_DECLARE_PTRS(T)             \
     class T;                                 \
     using T##SharedPtr = std::shared_ptr<T>; \
-    using T##WeakPtr = std::weak_ptr<T>;
+    using T##WeakPtr = std::weak_ptr<T>
 
 namespace vgc {
 namespace core {
@@ -39,6 +39,17 @@ template <typename T>
 class Object: public std::enable_shared_from_this<T>
 {
 public:
+    /// Returns an std::shared_ptr to a newly created object.
+    /// This method is a convenient wrapper around std::make_shared.
+    ///
+    template <typename... Args>
+    static std::shared_ptr<T> make(Args... args) {
+        return std::make_shared<T>(args...);
+    }
+
+    /// Returns an std::shared_ptr to this object.
+    /// This method is a convenient wrapper around shared_from_this.
+    ///
     std::shared_ptr<T> ptr() {
         return this->shared_from_this();
     }

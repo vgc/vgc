@@ -20,11 +20,11 @@
 
 namespace py = pybind11;
 using vgc::scene::Scene;
-using vgc::scene::ScenePtr;
+using vgc::scene::SceneSharedPtr;
 
 void wrap_scene(py::module& m)
 {
-    py::class_<Scene, ScenePtr>(m, "Scene")
+    py::class_<Scene, SceneSharedPtr>(m, "Scene")
         .def(py::init<>())
         .def("clear", &Scene::clear, "Clears the scene.")
         .def("__repr__", [](const Scene& s) {

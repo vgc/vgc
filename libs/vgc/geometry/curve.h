@@ -18,12 +18,15 @@
 #define VGC_GEOMETRY_CURVE_H
 
 #include <vector>
+#include <vgc/core/object.h>
 #include <vgc/geometry/api.h>
 
 namespace vgc {
 namespace geometry {
 
 class Vec2d;
+
+VGC_CORE_DECLARE_PTRS(Curve);
 
 /// \class vgc::geometry::Curve
 /// \brief Represents a 2D curve with variable width.
@@ -54,7 +57,7 @@ class Vec2d;
 /// In order to render the curve, you can call triangulate(), then render
 /// the triangles using OpenGL.
 ///
-class VGC_GEOMETRY_API Curve
+class VGC_GEOMETRY_API Curve: public core::Object<Curve>
 {
 public:
     /// Specifies the type of the curve, that is, how the

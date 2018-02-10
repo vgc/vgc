@@ -425,7 +425,8 @@ void OpenGLViewer::computeGLVertices_()
 {
     glVertices_.clear();
     glVerticesChunkSizes_.clear();
-    for (const geometry::Curve& curve: scene_->curves()) {
+    for (const geometry::CurveSharedPtr& curvePtr: scene_->curves()) {
+        const geometry::Curve& curve = *curvePtr;
         double maxAngle = 0.05;
         int minQuads = 1;
         int maxQuads = 64;
@@ -450,7 +451,8 @@ void OpenGLViewer::computeGLVertices_()
 void OpenGLViewer::computeControlPointsGLVertices_()
 {
     controlPointsGlVertices_.clear();
-    for (const geometry::Curve& curve: scene_->curves()) {
+    for (const geometry::CurveSharedPtr& curvePtr: scene_->curves()) {
+        const geometry::Curve& curve = *curvePtr;
         const auto& d = curve.positionData();
         int n = d.size() / 2;
         for (int i = 0; i < n; ++i) {
