@@ -56,8 +56,8 @@ Widget::Widget(
     showMaximized();
 
     // Refresh viewer when scene changes
-    connect(scene, &scene::Scene::changed,
-            viewer, (void (OpenGLViewer::*)()) &OpenGLViewer::update);
+    scene->changed.connect(std::bind(
+        (void (OpenGLViewer::*)()) &OpenGLViewer::update, viewer));
 }
 
 Widget::~Widget()

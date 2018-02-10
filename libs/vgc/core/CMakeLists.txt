@@ -10,6 +10,7 @@ vgc_add_library(core
         object.cpp
         python.cpp
         resources.cpp
+        signal.cpp
         timer.cpp
 
     COMPILE_DEFINITIONS

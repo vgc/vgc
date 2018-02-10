@@ -21,6 +21,7 @@
 #include <vector>
 #include <QObject>
 #include <vgc/core/object.h>
+#include <vgc/core/signal.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/scene/api.h>
@@ -49,8 +50,9 @@ public:
         return curves_;
     }
 
-Q_SIGNALS:
-    void changed();
+    /// This signal is emitted when the scene has changed.
+    ///
+    const core::Signal<> changed;
 
 private:
     std::vector<geometry::CurveSharedPtr> curves_;

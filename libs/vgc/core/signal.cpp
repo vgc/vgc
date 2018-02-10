@@ -14,36 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/scene/scene.h>
+#include <vgc/core/signal.h>
 
 namespace vgc {
-namespace scene {
+namespace core {
 
-Scene::Scene()
-{
-
-}
-
-void Scene::clear()
-{
-    curves_.clear();
-    changed();
-}
-
-void Scene::startCurve(const geometry::Vec2d& p, double width)
-{
-    curves_.push_back(geometry::Curve::make());
-    continueCurve(p, width);
-}
-
-void Scene::continueCurve(const geometry::Vec2d& p, double width)
-{
-    if (curves_.size() == 0) {
-        return;
-    }
-    curves_.back()->addControlPoint(p, width);
-    changed();
-}
-
-} // namespace scene
+} // namespace core
 } // namespace vgc
