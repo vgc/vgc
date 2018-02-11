@@ -40,16 +40,26 @@ void wrap_vec2d(py::module& m)
 
         .def(py::self += py::self)
         .def(py::self + py::self)
-        .def(py::self *= float())
+        .def(py::self -= py::self)
+        .def(py::self - py::self)
+        .def(py::self *= double())
         .def(double() * py::self)
         .def(py::self * double())
+        .def(py::self /= double())
+        .def(py::self / double())
 
         .def("length", &Vec2d::length)
-        .def("squaredLength", &Vec2d::squaredLength)
+        .def("squaredLength", &Vec2d::squaredLength)            
+        .def("normalize", &Vec2d::normalize)
+        .def("normalized", &Vec2d::normalized)
+        .def("orthogonalize", &Vec2d::orthogonalize)
+        .def("orthogonalized", &Vec2d::orthogonalized)
 
         .def("__repr__", [](const Vec2d& v) {
             return "("
                    + std::to_string(v[0]) + ", "
                    + std::to_string(v[1]) + ")"; })
     ;
+
+    m.def("dot", &vgc::geometry::dot);
 }
