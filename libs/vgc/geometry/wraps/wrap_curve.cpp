@@ -27,8 +27,11 @@ void wrap_curve(py::module& m)
 
         .def(py::init<>())
 
-        .def("addControlPoint", [](Curve& c, double x, double y, double w) {
-            c.addControlPoint(x, y, w); })
+        // Note: there's a more readable syntax to disambiguate function
+        // overloads if we use C++14. See:
+        // http://pybind11.readthedocs.io/en/latest/classes.html#overloaded-methods
+
+        .def("addControlPoint", (void (Curve::*)(double, double, double)) &Curve::addControlPoint)
 
         .def("__repr__", [](const Curve& c) {
             return "<Curve containing "
