@@ -45,5 +45,11 @@ void Scene::continueCurve(const geometry::Vec2d& p, double width)
     changed();
 }
 
+void Scene::addCurve(const geometry::CurveSharedPtr& curve)
+{
+    curves_.push_back(curve);
+    changed();
+}
+
 } // namespace scene
 } // namespace vgc
