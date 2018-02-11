@@ -16,10 +16,12 @@
 
 #include <pybind11/pybind11.h>
 #include <vgc/geometry/curve.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace py = pybind11;
 using vgc::geometry::Curve;
 using vgc::geometry::CurveSharedPtr;
+using vgc::geometry::Vec2d;
 
 void wrap_curve(py::module& m)
 {
@@ -32,6 +34,7 @@ void wrap_curve(py::module& m)
         // http://pybind11.readthedocs.io/en/latest/classes.html#overloaded-methods
 
         .def("addControlPoint", (void (Curve::*)(double, double, double)) &Curve::addControlPoint)
+        .def("addControlPoint", (void (Curve::*)(const Vec2d&, double)) &Curve::addControlPoint)
 
         .def("__repr__", [](const Curve& c) {
             return "<Curve containing "
