@@ -68,11 +68,11 @@ void Scene::resumeSignals(bool aggregate)
         }
     }
 
-    // Note: For now, there is nothing to aggregate since the only signal is a
-    // global "changed". Later, signals will be more specific than this, such
-    // as layerChanged(), or, cellChanged(), etc. In this case, we want to be
+    // Note: For now, aggregation is trivial since the only signal is a global
+    // "changed". Later, signals will be more specific than this, such as
+    // layerChanged(), or, cellChanged(), etc. In this case, we want to be
     // smart about aggregation to make sure that observers take into account
-    // what changed without blowing out their whole cache.
+    // what changed without having to blow out their whole cache.
 }
 
 void Scene::emitChanged_()
