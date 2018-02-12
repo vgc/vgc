@@ -19,7 +19,8 @@
 namespace vgc {
 namespace scene {
 
-Scene::Scene()
+Scene::Scene() :
+    areSignalPaused_(false)
 {
 
 }
@@ -27,7 +28,7 @@ Scene::Scene()
 void Scene::clear()
 {
     curves_.clear();
-    changed();
+    emitChanged_();
 }
 
 void Scene::startCurve(const geometry::Vec2d& p, double width)
@@ -42,13 +43,46 @@ void Scene::continueCurve(const geometry::Vec2d& p, double width)
         return;
     }
     curves_.back()->addControlPoint(p, width);
-    changed();
+    emitChanged_();
 }
 
 void Scene::addCurve(const geometry::CurveSharedPtr& curve)
 {
     curves_.push_back(curve);
-    changed();
+    emitChanged_();
+}
+
+void Scene::pauseSignals()
+{
+    areSignalPaused_ = true;
+    numChangedEmittedDuringPause_ = 0;
+}
+
+void Scene::resumeSignals(bool aggregate)
+{
+    areSignalPaused_ = false;
+    if (numChangedEmittedDuringPause_ > 0) {
+        int n = aggregate ? 1 : numChangedEmittedDuringPause_;
+        for (int i = 0; i < n; ++i) {
+            emitChanged_();
+        }
+    }
+
+    // Note: For now, there is nothing to aggregate since the only signal is a
+    // global "changed". Later, signals will be more specific than this, such
+    // as layerChanged(), or, cellChanged(), etc. In this case, we want to be
+    // smart about aggregation to make sure that observers take into account
+    // what changed without blowing out their whole cache.
+}
+
+void Scene::emitChanged_()
+{
+    if (areSignalPaused_) {
+        ++numChangedEmittedDuringPause_;
+    }
+    else {
+        changed();
+    }
 }
 
 } // namespace scene

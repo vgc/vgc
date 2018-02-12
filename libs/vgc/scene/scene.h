@@ -54,8 +54,43 @@ public:
     ///
     const core::Signal<> changed;
 
+    /// Temporarily postpones the Scene::changed signals from being emitted.
+    /// This may improve performance if you are planning to modify the scene
+    /// many times but only need to notify the observers at the end.
+    ///
+    /// Note that unlike QObject::blockSignals(), the signals are buffered and
+    /// still emitted when resumeSignals() is called, possibly aggregated. This
+    /// means that the performance gain comes from aggretating the signals, not
+    /// because they are not sent.
+    ///
+    /// Example:
+    ///
+    /// \code
+    /// scene->pauseSignals();
+    /// for (int i = 0; i < 10000; ++i)
+    ///     scene->addCurve(makeCurve(i));
+    /// scene->resumeSignals();
+    /// \endcode
+    ///
+    /// \sa resumeSignals()
+    ///
+    void pauseSignals();
+
+    /// Emits the signals that have been postponed since pauseSignals() has
+    /// been called. If \p aggregate is true, then the signals are aggregated
+    /// for performance. Then, resumes normal emission of signals.
+    ///
+    /// \sa pauseSignals()
+    ///
+    void resumeSignals(bool aggregate = true);
+
 private:
     std::vector<geometry::CurveSharedPtr> curves_;
+
+    // Signal pausing
+    void emitChanged_();
+    bool areSignalPaused_;
+    int numChangedEmittedDuringPause_;
 };
 
 } // namespace scene
