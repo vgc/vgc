@@ -90,6 +90,7 @@ public:
 
     /// Triggers the signal, that is, calls all connected functions.
     ///
+    // XXX should this be non-const to prevent outsiders from emitting the signal?
     void operator()(Args... args) const {
         for(const auto& f : slots_) {
             f(args...);
