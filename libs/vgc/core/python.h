@@ -20,6 +20,7 @@
 #include <string>
 #include <pybind11/pybind11.h>
 #include <vgc/core/api.h>
+#include <vgc/core/signal.h>
 
 namespace vgc {
 namespace core {
@@ -62,6 +63,15 @@ public:
         main_.attr(name) = value;
     }
 
+    /// This signal is emitted when the interpreter is about to run some Python
+    /// code.
+    ///
+    const core::Signal<> runStarted;
+
+    /// This signal is emitted when the interpreter has finished to run.
+    ///
+    const core::Signal<> runFinished;
+
 private:
     // Note: the guard must be constructed first, and destructed last,
     // thus order of declaration of member variables matters.
@@ -73,6 +83,14 @@ private:
         ~ScopedInterpreter_();
     };
     ScopedInterpreter_ guard_;
+
+    // Exception-safe emission of runStarted and runFinished
+    class ScopedRunSignalsEmitter_ {
+        PythonInterpreter* p_;
+    public:
+        ScopedRunSignalsEmitter_(PythonInterpreter* p) : p_(p) { p_->runStarted(); }
+        ~ScopedRunSignalsEmitter_() { p_->runFinished(); }
+    };
 
     pybind11::module main_;
     pybind11::object locals_;

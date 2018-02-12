@@ -59,6 +59,8 @@ PythonInterpreter::~PythonInterpreter()
 
 void PythonInterpreter::run(const std::string& str)
 {
+    ScopedRunSignalsEmitter_ emitter(this);
+
     try {
         pybind11::eval<pybind11::eval_statements>(str, globals_, locals_);
     }
