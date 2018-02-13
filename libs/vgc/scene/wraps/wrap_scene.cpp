@@ -1,6 +1,6 @@
 // Copyright 2017 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
-// and at https://github.com/vgc.io/vgc/blob/master/COPYRIGHT
+// and at https://github.com/vgc-io/vgc/blob/master/COPYRIGHT
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
