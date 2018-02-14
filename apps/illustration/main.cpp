@@ -17,7 +17,7 @@
 #include <QApplication>
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
-#include <vgc/widgets/widget.h>
+#include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
 
 namespace py = pybind11;
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     pythonInterpreter.setVariableValue("scene", scene);
 
     // Create and show the widget
-    vgc::widgets::Widget w(scene.get(), &pythonInterpreter);
+    vgc::widgets::MainWindow w(scene.get(), &pythonInterpreter);
     w.show();
 
     return a.exec();

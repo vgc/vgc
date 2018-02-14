@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/widgets/widget.h>
+#include <vgc/widgets/mainwindow.h>
 
 #include <QPainter>
 #include <QSplitter>
@@ -27,7 +27,7 @@
 namespace vgc {
 namespace widgets {
 
-Widget::Widget(
+MainWindow::MainWindow(
     scene::Scene* scene,
     core::PythonInterpreter* interpreter,
     QWidget* parent) :
@@ -94,7 +94,7 @@ Widget::Widget(
         &scene::Scene::resumeSignals, scene, true));
 }
 
-Widget::~Widget()
+MainWindow::~MainWindow()
 {
 
 }

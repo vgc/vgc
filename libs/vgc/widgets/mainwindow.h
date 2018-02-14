@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_WIDGETS_WIDGET_H
-#define VGC_WIDGETS_WIDGET_H
+#ifndef VGC_WIDGETS_MAINWINDOW_H
+#define VGC_WIDGETS_MAINWINDOW_H
 
 #include <vgc/widgets/api.h>
 #include <QWidget>
@@ -27,16 +27,16 @@ namespace scene { class Scene; }
 
 namespace widgets {
 
-class VGC_WIDGETS_API Widget : public QWidget
+class VGC_WIDGETS_API MainWindow : public QWidget
 {
     Q_OBJECT
 
 public:
-    Widget(scene::Scene* scene,
-           core::PythonInterpreter* interpreter,
-           QWidget* parent = nullptr);
+    MainWindow(scene::Scene* scene,
+               core::PythonInterpreter* interpreter,
+               QWidget* parent = nullptr);
 
-    ~Widget();
+    ~MainWindow();
 
     scene::Scene* scene() const {
         return scene_;
@@ -49,4 +49,4 @@ private:
 } // namespace widgets
 } // namespace vgc
 
-#endif // VGC_WIDGETS_WIDGET_H
+#endif // VGC_WIDGETS_MAINWINDOW_H
