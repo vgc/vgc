@@ -1,4 +1,4 @@
-![VGC](https://github.com/vgc-io/vgc/blob/master/logo.png)
+![VGC](https://github.com/vgc/vgc/blob/master/logo.png)
 
 # About Me
 
@@ -14,7 +14,7 @@ Animation Studios](https://www.pixar.com/).
 
 VGC is a startup I founded in October 2017 to develop commercial (yet
 open-source!) next-generation tools for graphic design and 2D animation. Visit
-[www.vgc.io](https://www.vgc.io) for more details. Currently, this project is
+[www.vgc](https://www.vgc) for more details. Currently, this project is
 entirely funded by voluntary donations from awesome people like yourself, many
 of whom are open-source software enthusiasts. The best way to help this project
 reach maturity is to support me on
@@ -25,7 +25,7 @@ reach maturity is to support me on
 
 I am planning to release two products in July 2020:
 
-![VGC](https://github.com/vgc-io/vgc/blob/master/products.png)
+![VGC](https://github.com/vgc/vgc/blob/master/products.png)
 
 VGC Illustration will be a vector graphics editor, that is, a competitor of
 products such as Adobe Illustrator, Autodesk Graphic, CorelDRAW, or Inkscape.
@@ -57,7 +57,7 @@ next will be **$19** for VGC Illustration, and **$39** for VGC Animation.
 
 Despite being distributed commercially, both apps will in fact be open-source
 and publicly developed here on this git repository under the [Apache
-2.0](https://github.com/vgc-io/vgc/blob/master/README.md) license. Also, no
+2.0](https://github.com/vgc/vgc/blob/master/README.md) license. Also, no
 license key will be required to use the software on Linux, that is, the software
 will be completely **free of charge for Linux users**. This is my way to say thank
 you and give back the open-source community (my work relies heavily on
@@ -136,7 +136,7 @@ Install Qt if you don't have it yet:
 Get VGC:
 
 ```
-git clone https://github.com/vgc-io/vgc.git
+git clone https://github.com/vgc/vgc.git
 ```
 
 Build VGC:
