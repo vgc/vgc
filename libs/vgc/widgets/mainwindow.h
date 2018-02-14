@@ -44,6 +44,16 @@ public:
 
 private:
     scene::Scene* scene_;
+
+    // XXX move what's below out of MainWindow to keep it generic.
+    // Specific content within the MainWindow should be in a
+    // class such as "VgcIllustrationMainWindow".
+
+    void createActions_();
+    QAction* actionQuit_;
+
+    void createMenus_();
+    QMenu* menuFile_;
 };
 
 } // namespace widgets

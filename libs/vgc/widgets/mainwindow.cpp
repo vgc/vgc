@@ -16,6 +16,8 @@
 
 #include <vgc/widgets/mainwindow.h>
 
+#include <QMenu>
+#include <QMenuBar>
 #include <QSplitter>
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
@@ -85,11 +87,29 @@ MainWindow::MainWindow(
         &scene::Scene::pauseSignals, scene));
     interpreter->runFinished.connect(std::bind(
         &scene::Scene::resumeSignals, scene, true));
+
+    createActions_();
+    createMenus_();
 }
 
 MainWindow::~MainWindow()
 {
 
+}
+
+void MainWindow::createActions_()
+{
+    actionQuit_ = new QAction(tr("&Quit"), this);
+    actionQuit_->setStatusTip(tr("Quit VGC Illustration."));
+    actionQuit_->setShortcut(QKeySequence::Quit);
+    connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
+}
+
+void MainWindow::createMenus_()
+{
+    menuFile_ = new QMenu(tr("&File"));
+    menuFile_->addAction(actionQuit_);
+    menuBar()->addMenu(menuFile_);
 }
 
 } // namespace widgets
