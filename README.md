@@ -14,7 +14,7 @@ Animation Studios](https://www.pixar.com/).
 
 VGC is a startup I founded in October 2017 to develop commercial (yet
 open-source!) next-generation tools for graphic design and 2D animation. Visit
-[www.vgc](https://www.vgc) for more details. Currently, this project is
+[www.vgc.io](https://www.vgc.io) for more details. Currently, this project is
 entirely funded by voluntary donations from awesome people like yourself, many
 of whom are open-source software enthusiasts. The best way to help this project
 reach maturity is to support me on
