@@ -18,7 +18,6 @@
 
 #include <QPainter>
 #include <QSplitter>
-#include <QHBoxLayout>
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/console.h>
@@ -32,7 +31,7 @@ MainWindow::MainWindow(
     core::PythonInterpreter* interpreter,
     QWidget* parent) :
 
-    QWidget(parent),
+    QMainWindow(parent),
     scene_(scene)
 {
     // Create OpenGLViewer
@@ -45,12 +44,7 @@ MainWindow::MainWindow(
     QSplitter* splitter = new QSplitter(Qt::Vertical);
     splitter->addWidget(viewer);
     splitter->addWidget(console);
-
-    // Set widget layout
-    QHBoxLayout* layout = new QHBoxLayout();
-    layout->addWidget(splitter);
-    setLayout(layout);
-    setMinimumSize(200, 200);
+    setCentralWidget(splitter);
 
     // Show maximized at startup
     // XXX This should be a user preference

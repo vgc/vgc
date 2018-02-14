@@ -18,7 +18,7 @@
 #define VGC_WIDGETS_MAINWINDOW_H
 
 #include <vgc/widgets/api.h>
-#include <QWidget>
+#include <QMainWindow>
 
 namespace vgc {
 
@@ -27,7 +27,7 @@ namespace scene { class Scene; }
 
 namespace widgets {
 
-class VGC_WIDGETS_API MainWindow : public QWidget
+class VGC_WIDGETS_API MainWindow : public QMainWindow
 {
     Q_OBJECT
 
