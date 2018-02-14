@@ -16,7 +16,6 @@
 
 #include <vgc/widgets/mainwindow.h>
 
-#include <QPainter>
 #include <QSplitter>
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
