@@ -22,7 +22,7 @@
 
 namespace py = pybind11;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // Init OpenGL. Must be called before QApplication creation. See Qt doc:
     //
