@@ -30,7 +30,7 @@ In cpp files, include corresponding header first, then all other header files as
 
 Within each "group" (e.g., Qt includes), order alphabetically.
 
-Don't rely on other includes from other headers. For example, if you need both 
+Don't rely on includes from other headers. For example, if you need both 
 `vgc::geometry::Curve` and `vgc::geometry::Vec2d`, include both 
 `<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`
 
