@@ -1,7 +1,7 @@
 # VGC C++ Style Guide
 
 Try to follow these guidelines as much as reasonable. Don't overthink it (too much). 
-If something is not addressed here, use the 
+If something is not addressed here, follow the 
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
 If something is not addressed there, favour readability.
 In case of doubt, follow your heart :)
@@ -17,10 +17,10 @@ Headers should be guarded with:
 
 ...
 
-#endif  // VGC_LIBNAME_HEADERNAME_H
+#endif // VGC_LIBNAME_HEADERNAME_H
 ```
 
-Try to avoid forward declaration as much as possible.
+Try to avoid forward declarations as much as possible.
 
 Always use angle brackets and the full path for header includes: `#include <vgc/libname/headername.h>`
 
@@ -30,7 +30,7 @@ In `vgc/mylib/foo.cpp`, include `<vgc/mylib/foo.h>` first, then all other header
 
 Within each "group" (e.g., Qt includes), order alphabetically.
 
-Don't rely on other headers includes. That is, if you need both 
+Don't rely on other includes from other headers. For example, if you need both 
 `vgc::geometry::Curve` and `vgc::geometry::Vec2d`, include both 
 `<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`
 
@@ -40,34 +40,59 @@ and I hate it too. Please blame C++, not me.
 
 ## Scoping
 
-Always scope under two namespaces: `vgc::mylib::MyClass`.
+Always scope public API under two namespaces, and comment closing bracket for readability. Do not indent within the namespaces:
 
-Use unnamed namespaces in .cpp files for defining anything that isn't visible to other translation units.
+```
+namespace vgc {
+namespace mylib {
+
+class MyClass
+{
+    ...
+};
+
+void myFreeFunction();
+
+} // namespace mylib
+} // namespace vgc
+```
+
+In .cpp files, prefer using unnamed namespaces rather than static functions
+for defining things that aren't visible to other translation units:
+
+```
+namespace { void helperFunction_() {
+    doSomething();
+}}
+
+namespace { struct HelperStruct_ {
+    int x;
+    int y;
+};}
+```
 
 Prefer `enum class` rather than C-style `enum`.
 
 ## Naming
 
-Prefer long descriptive names than abbreviation, but use common sense: 
-if a name is expected to be used a lot (e.g., Vec2d), then shortening makes sense.
+Prefer long descriptive names than abbreviations, but use common sense: 
+if a name is expected to be used extremely often (e.g., Vec2d), then shortening makes sense.
 
-Capitalization convention:
+Don't overthink naming for anything which is private. However, expect a discussion during
+a pull request for all names which are added to the public API.
 
-`libraryname`
-
-`headerfilename.h`
-
-`cppfilename.cpp`
-
-`ClassName`
-
-`publicFunctionName()`
-
-`privateFunctionName_()`
-
-`privateMemberVariableName_`.
-
+Capitalization:
 ```
+libraryname
+headerfilename.h
+cppfilename.cpp
+ClassName
+publicFunctionName()
+privateFunctionName_()
+privateMemberVariableName_
+localVariable
+VGC_MYLIB_PUBLICMACRO
+VGC_MYLIB_PRIVATEMACRO
 enum class EnumName {
     EnumValue1,
     EnumValue2
@@ -85,40 +110,50 @@ Bad: `Foo *foo`, `Foo const& foo`
 Curly brackets:
 
 ```
-if (justOneLine)
-    thisIsOkay();
-```
-
-```
-if (oneShortLine1) thisIsEvenOkay();
-if (oneShortLine2) especially();
-if (oneShortLine3) ifMoreReadable();
-if (oneShortLine4) andThereAre();
-if (oneShortLine5) manyOfThem();
-```
-
-```
-if (typicalCase) {
-    useThis();
-    likeThat();
+if (condition) {
+    thisIs();
+    thePreferredStyle();
 }
 else {
-    andThis();
-    andThat();
+    forConditional();
+    blocks();
 }
 ```
+
+```
+switch (value) {
+case Enum::Value1:
+    thisIs();
+    thePreferredStyle();
+    break;
+case Enum::Value2:
+    forSwitch();
+    blocks();
+    break;
+default:
+   break;
+}
+```
+
+```
+if (justOneStatement)
+    thisIsOkayToo();
+```
+
+```
+if (veryShortOneLiner1) evenThisIsOkay();
+if (veryShortOneLiner2) whenMoreReadable();
+if (veryShortOneLiner3) inRareCases();
+if (veryShortOneLiner4) whereYouHave();
+if (veryShortOneLiner5) manyOfThem();
+```
+
 
 ```
 if (longBody ||
     multilineCondition)
 {
-     putBracketOnItsOwnLine();
-}
-```
-
-```
-class ShortClassOrStruct {
-    ThisIs fine;
+    putBracketOnItsOwnLine();
 }
 ```
 
@@ -135,9 +170,15 @@ private:
 ```
 
 ```
+class ShortClassOrStruct {
+    ThisIs fine;
+}
+```
+
+```
 void functionDefinition()
 {
-    preferThis();
+    thisIsPreferred();
 }
 ```
 
@@ -148,7 +189,7 @@ void butForShortInlineFunctions() {
 ```
 
 ```
-// Or even a one liner for obvious inline getters
+// Or even a one liner for short one-liners
 int getX() { return x_; }
 ```
 
