@@ -26,7 +26,7 @@ Always use angle brackets and the full path for header includes: `#include <vgc/
 
 In header files, include other header files in this order: std, Qt, otherthirdlibs, vgc
 
-In `vgc/mylib/foo.cpp`, include `<vgc/mylib/foo.h>` first, then all other header files as specified above.
+In cpp files, include corresponding header first, then all other header files as specified above.
 
 Within each "group" (e.g., Qt includes), order alphabetically.
 
