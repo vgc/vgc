@@ -108,9 +108,11 @@ them already installed your system:
 
 Tested platform: Ubuntu 16.04 LTS
 
-Install GCC, CMake, and Python:
+Install Git, CMake, GCC, and Python:
 
 ```
+~$ sudo apt-get install git
+~$ sudo apt-get install cmake
 ~$ sudo apt-get install build-essential
 ~$ sudo apt-get install python3-dev
 ```
