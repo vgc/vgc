@@ -19,15 +19,15 @@
 
 #include <QDockWidget>
 #include <QMainWindow>
+#include <QMenu>
 
+#include <vgc/core/python.h>
+#include <vgc/scene/scene.h>
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/console.h>
+#include <vgc/widgets/openglviewer.h>
 
 namespace vgc {
-
-namespace core { class PythonInterpreter; }
-namespace scene { class Scene; }
-
 namespace widgets {
 
 class VGC_WIDGETS_API MainWindow : public QMainWindow
@@ -47,21 +47,30 @@ public:
 
 private:
     scene::Scene* scene_;
-    Console* console_;
+    core::PythonInterpreter* interpreter_;
 
     // XXX move what's below out of MainWindow to keep it generic.
     // Specific content within the MainWindow should be in a
     // class such as "VgcIllustrationMainWindow".
 
-    void createActions_();
-    QAction* actionQuit_;
+    void setupWidgets_();
+    OpenGLViewer* viewer_;
+    Console* console_;
 
-    void createDocks_();
+    void setupCentralWidget_();
+
+    void setupDocks_();
     QDockWidget* dockConsole_;
 
-    void createMenus_();
+    void setupActions_();
+    QAction* actionQuit_;
+    QAction* actionToggleConsoleView_;
+
+    void setupMenus_();
     QMenu* menuFile_;
     QMenu* menuView_;
+
+    void setupConnections_();
 };
 
 } // namespace widgets

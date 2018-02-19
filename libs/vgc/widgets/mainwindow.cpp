@@ -16,12 +16,7 @@
 
 #include <vgc/widgets/mainwindow.h>
 
-#include <QMenu>
 #include <QMenuBar>
-#include <vgc/core/python.h>
-#include <vgc/scene/scene.h>
-#include <vgc/widgets/console.h>
-#include <vgc/widgets/openglviewer.h>
 
 namespace vgc {
 namespace widgets {
@@ -32,26 +27,77 @@ MainWindow::MainWindow(
     QWidget* parent) :
 
     QMainWindow(parent),
-    scene_(scene)
+    scene_(scene),
+    interpreter_(interpreter)
 {
-    // Create OpenGLViewer
-    OpenGLViewer* viewer = new OpenGLViewer(scene);
-
-    // Create console
-    console_ = new Console(interpreter);
-
-    // Set viewer as the central widget
-    setCentralWidget(viewer);
+    setupWidgets_();
+    setupCentralWidget_();
+    setupDocks_();
+    setupActions_();
+    setupMenus_();
+    setupConnections_();
 
     // Show maximized at startup
     // XXX This should be a user preference
     showMaximized();
+}
 
-    // Refresh viewer when scene changes
-    scene->changed.connect(std::bind(
-        (void (OpenGLViewer::*)()) &OpenGLViewer::update, viewer));
+MainWindow::~MainWindow()
+{
 
-    // Don't refresh the view while the Python interpreter is running.
+}
+
+void MainWindow::setupWidgets_()
+{
+    viewer_ = new OpenGLViewer(scene_);
+    console_ = new Console(interpreter_);
+}
+
+void MainWindow::setupCentralWidget_()
+{
+    setCentralWidget(viewer_);
+}
+
+void MainWindow::setupDocks_()
+{
+    dockConsole_ = new QDockWidget(tr("Python Console"));
+    dockConsole_->setWidget(console_);
+    dockConsole_->setFeatures(QDockWidget::DockWidgetClosable);
+    dockConsole_->setTitleBarWidget(new QWidget());
+    addDockWidget(Qt::BottomDockWidgetArea, dockConsole_);
+    dockConsole_->hide();
+}
+
+void MainWindow::setupActions_()
+{
+    actionQuit_ = new QAction(tr("&Quit"), this);
+    actionQuit_->setStatusTip(tr("Quit VGC Illustration."));
+    actionQuit_->setShortcut(QKeySequence::Quit);
+    connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
+
+    actionToggleConsoleView_ = dockConsole_->toggleViewAction();
+    actionToggleConsoleView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_P));
+}
+
+
+void MainWindow::setupMenus_()
+{
+    menuFile_ = new QMenu(tr("&File"));
+    menuFile_->addAction(actionQuit_);
+    menuBar()->addMenu(menuFile_);
+
+    menuView_ = new QMenu(tr("&View"));
+    menuView_->addAction(actionToggleConsoleView_);
+    menuBar()->addMenu(menuView_);
+}
+
+void MainWindow::setupConnections_()
+{
+    // Refresh the viewer when the scene changes
+    scene_->changed.connect(std::bind(
+        (void (OpenGLViewer::*)()) &OpenGLViewer::update, viewer_));
+
+    // Prevent refreshing the viewer when the Python interpreter is running.
     //
     // Note 1:
     //
@@ -79,51 +125,10 @@ MainWindow::MainWindow(
     // but only when the *console* asks the interpreter to run something. It is
     // yet unclear at this point which is preferable.
     //
-    interpreter->runStarted.connect(std::bind(
-        &scene::Scene::pauseSignals, scene));
-    interpreter->runFinished.connect(std::bind(
-        &scene::Scene::resumeSignals, scene, true));
-
-    createActions_();
-    createDocks_();
-    createMenus_();
-}
-
-MainWindow::~MainWindow()
-{
-
-}
-
-void MainWindow::createActions_()
-{
-    actionQuit_ = new QAction(tr("&Quit"), this);
-    actionQuit_->setStatusTip(tr("Quit VGC Illustration."));
-    actionQuit_->setShortcut(QKeySequence::Quit);
-    connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
-}
-
-void MainWindow::createDocks_()
-{
-    dockConsole_ = new QDockWidget(tr("Python Console"));
-    dockConsole_->setWidget(console_);
-    dockConsole_->setFeatures(QDockWidget::DockWidgetClosable);
-    dockConsole_->setTitleBarWidget(new QWidget());
-    addDockWidget(Qt::BottomDockWidgetArea, dockConsole_);
-    dockConsole_->hide();
-
-
-}
-
-void MainWindow::createMenus_()
-{
-    menuFile_ = new QMenu(tr("&File"));
-    menuFile_->addAction(actionQuit_);
-    menuBar()->addMenu(menuFile_);
-
-    menuView_ = new QMenu(tr("&View"));
-    menuView_->addAction(dockConsole_->toggleViewAction());
-    dockConsole_->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_P));
-    menuBar()->addMenu(menuView_);
+    interpreter_->runStarted.connect(std::bind(
+        &scene::Scene::pauseSignals, scene_));
+    interpreter_->runFinished.connect(std::bind(
+        &scene::Scene::resumeSignals, scene_, true));
 }
 
 } // namespace widgets
