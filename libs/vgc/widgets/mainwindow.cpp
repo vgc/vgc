@@ -109,6 +109,7 @@ void MainWindow::createDocks_()
     dockConsole_->setFeatures(QDockWidget::DockWidgetClosable);
     dockConsole_->setTitleBarWidget(new QWidget());
     addDockWidget(Qt::BottomDockWidgetArea, dockConsole_);
+    dockConsole_->hide();
 }
 
 void MainWindow::createMenus_()
