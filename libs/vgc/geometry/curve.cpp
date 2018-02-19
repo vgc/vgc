@@ -17,6 +17,7 @@
 #include <vgc/geometry/curve.h>
 
 #include <vgc/core/algorithm.h>
+#include <vgc/core/colors.h>
 #include <vgc/geometry/bezier.h>
 #include <vgc/geometry/catmullrom.h>
 #include <vgc/geometry/vec2d.h>
@@ -64,7 +65,8 @@ Curve::Curve(Type type) :
     type_(type),
     positionData_(),
     widthVariability_(AttributeVariability::PerControlPoint),
-    widthData_()
+    widthData_(),
+    color_(core::colors::black)
 {
 
 }
@@ -73,7 +75,8 @@ Curve::Curve(double constantWidth, Type type) :
     type_(type),
     positionData_(),
     widthVariability_(AttributeVariability::Constant),
-    widthData_(1, constantWidth) // = vector containing a single element
+    widthData_(1, constantWidth), // = vector containing a single element
+    color_(core::colors::black)
 {
 
 }

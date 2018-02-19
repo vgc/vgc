@@ -18,6 +18,7 @@
 #define VGC_GEOMETRY_CURVE_H
 
 #include <vector>
+#include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/geometry/api.h>
 
@@ -217,6 +218,22 @@ public:
             int minQuads = 1,
             int maxQuads = 64) const;
 
+    /// Sets the color of the curve.
+    ///
+    // XXX Think aboutvariability for colors too. Does it make sense
+    // to also have PerControlPoint variability? or only "SpatialLinear"?
+    // Does it make sense to allow SpatialLinear for width too? and Circular?
+    // It is a tradeoff between flexibility, supporting typical use case,
+    // performance, and cognitive complexity (don't confuse users...). It
+    // makes it complex for implementers too if too many features are supported.
+    // For now, we only support constant colors, and postpone this discussion.
+    //
+    void setColor(const core::Color& color) { color_ = color; }
+
+    /// Returns the color of the curve.
+    ///
+    core::Color color() const { return color_; }
+
 private:
     // Representation of the centerline of the curve
     Type type_;
@@ -225,6 +242,9 @@ private:
     // Representation of the width of the curve
     AttributeVariability widthVariability_;
     std::vector<double> widthData_;
+
+    // Color of the curve
+    core::Color color_;
 };
 
 } // namespace geometry
