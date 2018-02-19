@@ -103,6 +103,7 @@ private:
     int vertexLoc_;
     int projMatrixLoc_;
     int viewMatrixLoc_;
+    int colorLoc_;
 
     // Handle mouse/tablet events
     double width_() const;

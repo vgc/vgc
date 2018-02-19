@@ -306,6 +306,7 @@ void OpenGLViewer::initializeGL()
     vertexLoc_     = shaderProgram_.attributeLocation("vertex");
     projMatrixLoc_ = shaderProgram_.uniformLocation("projMatrix");
     viewMatrixLoc_ = shaderProgram_.uniformLocation("viewMatrix");
+    colorLoc_      = shaderProgram_.uniformLocation("ucolor");
     shaderProgram_.release();
 
     // Create VBO
@@ -388,6 +389,7 @@ void OpenGLViewer::paintGL()
 
     // Draw triangles
     if (polygonMode_ > 0) {
+        shaderProgram_.setUniformValue(colorLoc_, 0.0f, 0.0f, 0.0f, 1.0f);
         glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
         vao_.bind();
         int firstIndex = 0;
@@ -400,6 +402,7 @@ void OpenGLViewer::paintGL()
 
     // Draw control points
     if (showControlPoints_) {
+        shaderProgram_.setUniformValue(colorLoc_, 1.0f, 0.0f, 0.0f, 1.0f);
         glPointSize(10.0);
         controlPointsVao_.bind();
         f->glDrawArrays(GL_POINTS, 0, controlPointsGlVertices_.size());
