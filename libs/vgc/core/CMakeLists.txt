@@ -6,6 +6,7 @@ vgc_add_library(core
 
     CPP_FILES
         algorithm.cpp
+        color.cpp
         math.cpp
         object.cpp
         python.cpp
