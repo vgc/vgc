@@ -17,8 +17,11 @@
 #ifndef VGC_WIDGETS_MAINWINDOW_H
 #define VGC_WIDGETS_MAINWINDOW_H
 
-#include <vgc/widgets/api.h>
+#include <QDockWidget>
 #include <QMainWindow>
+
+#include <vgc/widgets/api.h>
+#include <vgc/widgets/console.h>
 
 namespace vgc {
 
@@ -44,6 +47,7 @@ public:
 
 private:
     scene::Scene* scene_;
+    Console* console_;
 
     // XXX move what's below out of MainWindow to keep it generic.
     // Specific content within the MainWindow should be in a
@@ -52,8 +56,12 @@ private:
     void createActions_();
     QAction* actionQuit_;
 
+    void createDocks_();
+    QDockWidget* dockConsole_;
+
     void createMenus_();
     QMenu* menuFile_;
+    QMenu* menuView_;
 };
 
 } // namespace widgets

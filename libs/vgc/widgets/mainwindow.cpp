@@ -18,7 +18,6 @@
 
 #include <QMenu>
 #include <QMenuBar>
-#include <QSplitter>
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/console.h>
@@ -39,13 +38,10 @@ MainWindow::MainWindow(
     OpenGLViewer* viewer = new OpenGLViewer(scene);
 
     // Create console
-    Console* console = new Console(interpreter);
+    console_ = new Console(interpreter);
 
-    // Create splitter and populate widget
-    QSplitter* splitter = new QSplitter(Qt::Vertical);
-    splitter->addWidget(viewer);
-    splitter->addWidget(console);
-    setCentralWidget(splitter);
+    // Set viewer as the central widget
+    setCentralWidget(viewer);
 
     // Show maximized at startup
     // XXX This should be a user preference
@@ -89,6 +85,7 @@ MainWindow::MainWindow(
         &scene::Scene::resumeSignals, scene, true));
 
     createActions_();
+    createDocks_();
     createMenus_();
 }
 
@@ -105,11 +102,24 @@ void MainWindow::createActions_()
     connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
 }
 
+void MainWindow::createDocks_()
+{
+    dockConsole_ = new QDockWidget(tr("Python Console"));
+    dockConsole_->setWidget(console_);
+    dockConsole_->setFeatures(QDockWidget::DockWidgetClosable);
+    dockConsole_->setTitleBarWidget(new QWidget());
+    addDockWidget(Qt::BottomDockWidgetArea, dockConsole_);
+}
+
 void MainWindow::createMenus_()
 {
     menuFile_ = new QMenu(tr("&File"));
     menuFile_->addAction(actionQuit_);
     menuBar()->addMenu(menuFile_);
+
+    menuView_ = new QMenu(tr("&View"));
+    menuView_->addAction(dockConsole_->toggleViewAction());
+    menuBar()->addMenu(menuView_);
 }
 
 } // namespace widgets
