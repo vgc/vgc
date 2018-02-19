@@ -110,6 +110,8 @@ void MainWindow::createDocks_()
     dockConsole_->setTitleBarWidget(new QWidget());
     addDockWidget(Qt::BottomDockWidgetArea, dockConsole_);
     dockConsole_->hide();
+
+
 }
 
 void MainWindow::createMenus_()
@@ -120,6 +122,7 @@ void MainWindow::createMenus_()
 
     menuView_ = new QMenu(tr("&View"));
     menuView_->addAction(dockConsole_->toggleViewAction());
+    dockConsole_->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_P));
     menuBar()->addMenu(menuView_);
 }
 
