@@ -46,6 +46,9 @@ public:
         return scene_;
     }
 
+private Q_SLOTS:
+    void onColorChanged(const core::Color& newColor);
+
 private:
     scene::Scene* scene_;
     core::PythonInterpreter* interpreter_;

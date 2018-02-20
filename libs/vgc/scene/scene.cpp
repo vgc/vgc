@@ -15,11 +15,13 @@
 // limitations under the License.
 
 #include <vgc/scene/scene.h>
+#include <vgc/core/colors.h>
 
 namespace vgc {
 namespace scene {
 
 Scene::Scene() :
+    newCurveColor_(core::colors::black),
     areSignalPaused_(false)
 {
 
@@ -34,6 +36,7 @@ void Scene::clear()
 void Scene::startCurve(const geometry::Vec2d& p, double width)
 {
     curves_.push_back(geometry::Curve::make());
+    curves_.back()->setColor(newCurveColor_);
     continueCurve(p, width);
 }
 

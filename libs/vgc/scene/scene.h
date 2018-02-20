@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <vector>
+#include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/core/signal.h>
 #include <vgc/geometry/curve.h>
@@ -44,6 +45,9 @@ public:
     void continueCurve(const geometry::Vec2d& p, double width = 1.0);
     const std::vector<geometry::CurveSharedPtr>& curves() const {
         return curves_;
+    }
+    void setNewCurveColor(const core::Color& color) {
+        newCurveColor_ = color;
     }
 
     /// Adds a curve to the Scene.
@@ -85,6 +89,7 @@ public:
     void resumeSignals(bool aggregate = true);
 
 private:
+    core::Color newCurveColor_;
     std::vector<geometry::CurveSharedPtr> curves_;
 
     // Signal pausing

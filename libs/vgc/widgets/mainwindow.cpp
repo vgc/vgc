@@ -49,6 +49,11 @@ MainWindow::~MainWindow()
 
 }
 
+void MainWindow::onColorChanged(const core::Color& newColor)
+{
+    scene_->setNewCurveColor(newColor);
+}
+
 void MainWindow::setupWidgets_()
 {
     viewer_ = new OpenGLViewer(scene_);
@@ -116,7 +121,9 @@ void MainWindow::setupToolBars_()
     colorSelectorAction_->setStatusTip(tr("Click to open the color selector"));
     colorSelectorAction_->setShortcut(QKeySequence(Qt::Key_C));
     colorSelectorAction_->setShortcutContext(Qt::ApplicationShortcut);
+
     connect(colorSelectorAction_, SIGNAL(triggered()), colorSelector_, SLOT(click()));
+    connect(colorSelector_, &ColorSelector::colorChanged, this, &MainWindow::onColorChanged);
 }
 
 void MainWindow::setupConnections_()
