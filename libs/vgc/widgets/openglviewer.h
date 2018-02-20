@@ -18,19 +18,19 @@
 #define VGC_WIDGETS_OPENGLVIEWER_H
 
 #include <vector>
-#include <QMatrix4x4>
+
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions_3_2_Core>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
+
+#include <vgc/core/color.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
+#include <vgc/scene/scene.h>
 
 namespace vgc {
-
-namespace scene { class Scene; }
-
 namespace widgets {
 
 class OpenGLViewer : public QOpenGLWidget
@@ -41,7 +41,7 @@ private:
 
 public:
     /// This function must be called before creating the first
-    /// OpenGLViewer. Its sets the appropriate Qt OpenGLFormat.
+    /// OpenGLViewer. It sets the appropriate Qt OpenGLFormat.
     ///
     static void init();
 
@@ -86,24 +86,31 @@ private:
     geometry::Vec2d mousePosAtPress_;
     geometry::Camera2d cameraAtPress_;
 
-    // RAM resources synced with GL resources
-    struct GLVertex {
-        float x, y;
-        GLVertex(float x, float y) : x(x), y(y) {}
-    };
-    std::vector<GLVertex> glVertices_;
-    std::vector<int> glVerticesChunkSizes_;
-
-    // GL resources
+    // Shader program
     QOpenGLShaderProgram shaderProgram_;
-    QOpenGLBuffer vbo_;
-    QOpenGLVertexArrayObject vao_;
-
-    // Shader locations
     int vertexLoc_;
     int projMatrixLoc_;
     int viewMatrixLoc_;
     int colorLoc_;
+
+    // OpenGL resources
+    struct CurveGLResources {
+        // Drawing triangles
+        QOpenGLBuffer vboTriangles;
+        QOpenGLVertexArrayObject* vaoTriangles; // Pointer because copy of QOpenGLVertexArrayObject is disabled
+        int numVerticesTriangles;
+        core::Color trianglesColor;
+
+        // Drawing control points
+        QOpenGLBuffer vboControlPoints;
+        QOpenGLVertexArrayObject* vaoControlPoints; // Pointer because copy of QOpenGLVertexArrayObject is disabled
+        int numVerticesControlPoints;
+    };
+    std::vector<CurveGLResources> curveGLResources_;
+    void updateGLResources_();
+    void createCurveGLResources_(int i);
+    void updateCurveGLResources_(int i);
+    void destroyCurveGLResources_(int i);
 
     // Handle mouse/tablet events
     double width_() const;
@@ -119,16 +126,12 @@ private:
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
     bool showControlPoints_;
-    std::vector<GLVertex> controlPointsGlVertices_;
-    QOpenGLBuffer controlPointsVbo_;
-    QOpenGLVertexArrayObject controlPointsVao_;
-    void computeControlPointsGLVertices_();
 
     // Tesselation mode. This is selected with the i/u/a keys.
     // XXX This is a temporary quick method to switch between
     // tesselation modes. A more engineered method will come later.
-    int tesselationMode_; // 0: none; 1: uniform; 2: adaptive
-
+    int requestedTesselationMode_; // 0: none; 1: uniform; 2: adaptive
+    int currentTesselationMode_;
 };
 
 } // namespace widgets

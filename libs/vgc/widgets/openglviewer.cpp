@@ -16,10 +16,12 @@
 
 #include <vgc/widgets/openglviewer.h>
 
+#include <cassert>
 #include <cmath>
+
 #include <QMouseEvent>
+
 #include <vgc/core/resources.h>
-#include <vgc/scene/scene.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
@@ -44,6 +46,12 @@ QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {
                (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
                (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
 }
+
+// XXX TODO implement and use core::Vec2f instead.
+struct GLVertex {
+    float x, y;
+    GLVertex(float x, float y) : x(x), y(y) {}
+};
 
 } // namespace
 
@@ -75,7 +83,8 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     tabletPressure_(0.0),
     polygonMode_(2),
     showControlPoints_(false),
-    tesselationMode_(2)
+    requestedTesselationMode_(2),
+    currentTesselationMode_(2)
 {
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
@@ -264,15 +273,15 @@ void OpenGLViewer::keyPressEvent(QKeyEvent* event)
         update();
         break;
     case Qt::Key_I:
-        tesselationMode_ = 0;
+        requestedTesselationMode_ = 0;
         update();
         break;
     case Qt::Key_U:
-        tesselationMode_ = 1;
+        requestedTesselationMode_ = 1;
         update();
         break;
     case Qt::Key_A:
-        tesselationMode_ = 2;
+        requestedTesselationMode_ = 2;
         update();
         break;
     case Qt::Key_C:
@@ -309,42 +318,6 @@ void OpenGLViewer::initializeGL()
     colorLoc_      = shaderProgram_.uniformLocation("color");
     shaderProgram_.release();
 
-    // Create VBO
-    vbo_.create();
-
-    // Create VAO
-    vao_.create();
-    GLsizei  stride  = sizeof(GLVertex);
-    GLvoid* pointer = reinterpret_cast<void*>(offsetof(GLVertex, x));
-    vao_.bind();
-    vbo_.bind();
-    f->glEnableVertexAttribArray(vertexLoc_);
-    f->glVertexAttribPointer(
-                vertexLoc_, // index of the generic vertex attribute
-                2,          // number of components   (x and y components)
-                GL_FLOAT,   // type of each component
-                GL_FALSE,   // should it be normalized
-                stride,     // byte offset between consecutive vertex attributes
-                pointer);   // byte offset between the first attribute and the pointer given to allocate()
-    vbo_.release();
-    vao_.release();
-
-    // Setup VBO/VAO for displaying control points
-    controlPointsVbo_.create();
-    controlPointsVao_.create();
-    controlPointsVao_.bind();
-    controlPointsVbo_.bind();
-    f->glEnableVertexAttribArray(vertexLoc_);
-    f->glVertexAttribPointer(
-                vertexLoc_, // index of the generic vertex attribute
-                2,          // number of components   (x and y components)
-                GL_FLOAT,   // type of each component
-                GL_FALSE,   // should it be normalized
-                stride,     // byte offset between consecutive vertex attributes
-                pointer);   // byte offset between the first attribute and the pointer given to allocate()
-    controlPointsVbo_.release();
-    controlPointsVao_.release();
-
     // Set clear color
     f->glClearColor(1, 1, 1, 1);
 }
@@ -361,21 +334,8 @@ void OpenGLViewer::paintGL()
 {
     OpenGLFunctions* f = openGLFunctions();
 
-    // Update VBO of curves geometry
-    // Note: for simplicity, we perform this at each paintGL. In an actual app,
-    // it would be much better to do this only once after each mouse event.
-    computeGLVertices_();
-    vbo_.bind();
-    vbo_.allocate(glVertices_.data(), glVertices_.size() * sizeof(GLVertex));
-    vbo_.release();
-
-    // Update VBO of control points geometry
-    if (showControlPoints_) {
-        computeControlPointsGLVertices_();
-        controlPointsVbo_.bind();
-        controlPointsVbo_.allocate(controlPointsGlVertices_.data(), controlPointsGlVertices_.size() * sizeof(GLVertex));
-        controlPointsVbo_.release();
-    }
+    // Transfer to GPU any data out-of-sync with CPU
+    updateGLResources_();
 
     // Clear color and depth buffer
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -391,22 +351,22 @@ void OpenGLViewer::paintGL()
     if (polygonMode_ > 0) {
         shaderProgram_.setUniformValue(colorLoc_, 0.0f, 0.0f, 0.0f, 1.0f);
         glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
-        vao_.bind();
-        int firstIndex = 0;
-        for (int n: glVerticesChunkSizes_) {
-            f->glDrawArrays(GL_TRIANGLE_STRIP, firstIndex, n);
-            firstIndex += n;
+        for (CurveGLResources& r: curveGLResources_) {
+            r.vaoTriangles->bind();
+            f->glDrawArrays(GL_TRIANGLE_STRIP, 0, r.numVerticesTriangles);
+            r.vaoTriangles->release();
         }
-        vao_.release();
     }
 
     // Draw control points
     if (showControlPoints_) {
         shaderProgram_.setUniformValue(colorLoc_, 1.0f, 0.0f, 0.0f, 1.0f);
         glPointSize(10.0);
-        controlPointsVao_.bind();
-        f->glDrawArrays(GL_POINTS, 0, controlPointsGlVertices_.size());
-        controlPointsVao_.release();
+        for (CurveGLResources& r: curveGLResources_) {
+            r.vaoControlPoints->bind();
+            f->glDrawArrays(GL_POINTS, 0, r.numVerticesControlPoints);
+            r.vaoControlPoints->release();
+        }
     }
 
     // Release shader program
@@ -415,54 +375,146 @@ void OpenGLViewer::paintGL()
 
 void OpenGLViewer::cleanupGL()
 {
-    // Destroy VAOs
-    vao_.destroy();
-    controlPointsVao_.destroy();
-
-    // Destroy VBOs
-    vbo_.destroy();
-    controlPointsVbo_.destroy();
+    int nCurvesInGpu = curveGLResources_.size();
+    for (int i = nCurvesInGpu - 1; i >= 0; --i) {
+        destroyCurveGLResources_(i);
+    }
 }
 
-void OpenGLViewer::computeGLVertices_()
+void OpenGLViewer::updateGLResources_()
 {
-    glVertices_.clear();
-    glVerticesChunkSizes_.clear();
-    for (const geometry::CurveSharedPtr& curvePtr: scene_->curves()) {
-        const geometry::Curve& curve = *curvePtr;
-        double maxAngle = 0.05;
-        int minQuads = 1;
-        int maxQuads = 64;
-        if (tesselationMode_ == 0) {
-            maxQuads = 1;
-        }
-        else if (tesselationMode_ == 1) {
-            minQuads = 10;
-            maxQuads = 10;
-        }
-        std::vector<geometry::Vec2d> triangulation = curve.triangulate(maxAngle, minQuads, maxQuads);
-        int n = triangulation.size();
-        if (n > 2) {
-            for(const geometry::Vec2d& v: triangulation) {
-                glVertices_.emplace_back((float)v[0], (float)v[1]);
-            }
-            glVerticesChunkSizes_.push_back(n);
+    // Create new GPU resources for new curves
+    int nCurvesInCpu = scene_->curves().size();
+    int nCurvesInGpu = curveGLResources_.size();
+    for (int i = nCurvesInGpu; i < nCurvesInCpu; ++i) {
+        createCurveGLResources_(i);
+    }
+
+    // Destroy GPU resources for deleted curves
+    for (int i = nCurvesInGpu - 1; i >= nCurvesInCpu; --i) {
+        destroyCurveGLResources_(i);
+    }
+
+    // Now the number of curve in GPU and CPU is the same
+    nCurvesInGpu = nCurvesInCpu;
+
+    // Retesselate all existing curves. This is overkill but safe.
+    //
+    // XXX TODO Avoid retesselating unchanged curves by querying the scene
+    // about which curves have changed.
+    //
+    bool dontKnowWhichCurvesHaveChanged = true;
+    bool tesselationModeChanged = requestedTesselationMode_ != currentTesselationMode_;
+    if (dontKnowWhichCurvesHaveChanged || tesselationModeChanged) {
+        currentTesselationMode_ = requestedTesselationMode_;
+        for (int i = 0; i < nCurvesInGpu; ++i) {
+            updateCurveGLResources_(i);
         }
     }
 }
 
-void OpenGLViewer::computeControlPointsGLVertices_()
+void OpenGLViewer::createCurveGLResources_(int)
 {
-    controlPointsGlVertices_.clear();
-    for (const geometry::CurveSharedPtr& curvePtr: scene_->curves()) {
-        const geometry::Curve& curve = *curvePtr;
-        const auto& d = curve.positionData();
-        int n = d.size() / 2;
-        for (int i = 0; i < n; ++i) {
-            controlPointsGlVertices_.emplace_back(
-                        (float)d[2*i], (float)d[2*i+1]);
-        }
+    curveGLResources_.push_back(CurveGLResources());
+    CurveGLResources& r = curveGLResources_.back();
+
+    OpenGLFunctions* f = openGLFunctions();
+
+    // Create VBO/VAO for rendering triangles
+    r.vboTriangles.create();
+    r.vaoTriangles = new QOpenGLVertexArrayObject();
+    r.vaoTriangles->create();
+    GLsizei stride  = sizeof(GLVertex);
+    GLvoid* pointer = reinterpret_cast<void*>(offsetof(GLVertex, x));
+    r.vaoTriangles->bind();
+    r.vboTriangles.bind();
+    f->glEnableVertexAttribArray(vertexLoc_);
+    f->glVertexAttribPointer(
+                vertexLoc_, // index of the generic vertex attribute
+                2,          // number of components (x and y components)
+                GL_FLOAT,   // type of each component
+                GL_FALSE,   // should it be normalized
+                stride,     // byte offset between consecutive vertex attributes
+                pointer);   // byte offset between the first attribute and the pointer given to allocate()
+    r.vboTriangles.release();
+    r.vaoTriangles->release();
+
+    // Setup VBO/VAO for rendering control points
+    r.vboControlPoints.create();
+    r.vaoControlPoints = new QOpenGLVertexArrayObject();
+    r.vaoControlPoints->create();
+    r.vaoControlPoints->bind();
+    r.vboControlPoints.bind();
+    f->glEnableVertexAttribArray(vertexLoc_);
+    f->glVertexAttribPointer(
+                vertexLoc_, // index of the generic vertex attribute
+                2,          // number of components   (x and y components)
+                GL_FLOAT,   // type of each component
+                GL_FALSE,   // should it be normalized
+                stride,     // byte offset between consecutive vertex attributes
+                pointer);   // byte offset between the first attribute and the pointer given to allocate()
+    r.vboControlPoints.release();
+    r.vaoControlPoints->release();
+}
+
+void OpenGLViewer::updateCurveGLResources_(int i)
+{
+    assert(i >= 0);
+    assert(i < curveGLResources_.size());
+    assert(i < scene_->curves().size());
+    CurveGLResources& r = curveGLResources_[i];
+    const geometry::Curve& curve = *scene_->curves()[i];
+
+    // Triangulate the curve
+    double maxAngle = 0.05;
+    int minQuads = 1;
+    int maxQuads = 64;
+    if (requestedTesselationMode_ == 0) {
+        maxQuads = 1;
     }
+    else if (requestedTesselationMode_ == 1) {
+        minQuads = 10;
+        maxQuads = 10;
+    }
+    std::vector<geometry::Vec2d> triangulation =
+            curve.triangulate(maxAngle, minQuads, maxQuads);
+
+    // Convert triangles to single-precision and transfer to GPU
+    r.numVerticesTriangles = triangulation.size();
+    std::vector<GLVertex> glVerticesTriangles;
+    for(const geometry::Vec2d& v: triangulation) {
+        glVerticesTriangles.emplace_back((float)v[0], (float)v[1]);
+    }
+    r.vboTriangles.bind();
+    r.vboTriangles.allocate(glVerticesTriangles.data(), r.numVerticesTriangles * sizeof(GLVertex));
+    r.vboTriangles.release();
+
+    // Transfer control points vertex data to GPU
+    std::vector<GLVertex> glVerticesControlPoints;
+    const auto& d = curve.positionData();
+    r.numVerticesControlPoints = d.size() / 2;
+    for (int i = 0; i < r.numVerticesControlPoints; ++i) {
+        glVerticesControlPoints.emplace_back((float)d[2*i], (float)d[2*i+1]);
+    }
+    r.vboControlPoints.bind();
+    r.vboControlPoints.allocate(glVerticesControlPoints.data(), r.numVerticesControlPoints * sizeof(GLVertex));
+    r.vboControlPoints.release();
+}
+
+void OpenGLViewer::destroyCurveGLResources_(int)
+{
+    assert(curveGLResources_.size() > 0);
+    CurveGLResources& r = curveGLResources_.back();
+
+    r.vaoTriangles->destroy();
+    delete r.vaoTriangles;
+    r.vboTriangles.destroy();
+
+    r.vaoControlPoints->destroy();
+    delete r.vaoControlPoints;
+    r.vboControlPoints.destroy();
+
+    curveGLResources_.pop_back();
 }
 
 } // namespace widgets
