@@ -306,7 +306,7 @@ void OpenGLViewer::initializeGL()
     vertexLoc_     = shaderProgram_.attributeLocation("vertex");
     projMatrixLoc_ = shaderProgram_.uniformLocation("projMatrix");
     viewMatrixLoc_ = shaderProgram_.uniformLocation("viewMatrix");
-    colorLoc_      = shaderProgram_.uniformLocation("ucolor");
+    colorLoc_      = shaderProgram_.uniformLocation("color");
     shaderProgram_.release();
 
     // Create VBO
