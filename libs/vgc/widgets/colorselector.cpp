@@ -58,8 +58,15 @@ void ColorSelector::onClicked_()
 
 void ColorSelector::updateIcon()
 {
-    // Create icon
+    // Icon size
     QSize pixmapSize = iconSize();
+
+    // Disk size
+    int margin = 1;
+    QPoint diskTopLeft(margin, margin);
+    QSize diskSize = pixmapSize - QSize(2 * margin, 2 * margin);
+
+    // Draw disk in QPixmap
     QPixmap pixmap(pixmapSize);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
@@ -67,8 +74,7 @@ void ColorSelector::updateIcon()
     painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
     painter.setPen(QPen(Qt::black));
     painter.setBrush(QBrush(toQt(color())));
-    QRect rect(QPoint(0, 0), pixmapSize);
-    painter.drawEllipse(rect);
+    painter.drawEllipse(QRect(diskTopLeft, diskSize));
 
     // Set pixmap as tool icon
     setIcon(pixmap);
