@@ -24,6 +24,7 @@
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/api.h>
+#include <vgc/widgets/colorselector.h>
 #include <vgc/widgets/console.h>
 #include <vgc/widgets/openglviewer.h>
 
@@ -69,6 +70,11 @@ private:
     void setupMenus_();
     QMenu* menuFile_;
     QMenu* menuView_;
+
+    void setupToolBars_();
+    QToolBar* toolBar_;
+    ColorSelector* colorSelector_;
+    QAction* colorSelectorAction_;
 
     void setupConnections_();
 };

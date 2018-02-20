@@ -17,6 +17,7 @@
 #include <vgc/widgets/mainwindow.h>
 
 #include <QMenuBar>
+#include <QToolBar>
 
 namespace vgc {
 namespace widgets {
@@ -35,6 +36,7 @@ MainWindow::MainWindow(
     setupDocks_();
     setupActions_();
     setupMenus_();
+    setupToolBars_();
     setupConnections_();
 
     // Show maximized at startup
@@ -89,6 +91,32 @@ void MainWindow::setupMenus_()
     menuView_ = new QMenu(tr("&View"));
     menuView_->addAction(actionToggleConsoleView_);
     menuBar()->addMenu(menuView_);
+}
+
+void MainWindow::setupToolBars_()
+{
+    int iconWidth = 32;
+    QSize iconSize(iconWidth,iconWidth);
+
+    toolBar_ = addToolBar(tr("Toolbar"));
+    toolBar_->setOrientation(Qt::Vertical);
+    toolBar_->setMovable(false);
+    toolBar_->setIconSize(iconSize);
+    addToolBar(Qt::LeftToolBarArea, toolBar_);
+
+    colorSelector_ = new ColorSelector();
+    colorSelector_->setToolTip(tr("Current color (C)"));
+    colorSelector_->setStatusTip(tr("Click to open the color selector"));
+    colorSelector_->setIconSize(iconSize);
+    colorSelector_->updateIcon();
+
+    colorSelectorAction_ = toolBar_->addWidget(colorSelector_);
+    colorSelectorAction_->setText(tr("Color"));
+    colorSelectorAction_->setToolTip(tr("Color (C)"));
+    colorSelectorAction_->setStatusTip(tr("Click to open the color selector"));
+    colorSelectorAction_->setShortcut(QKeySequence(Qt::Key_C));
+    colorSelectorAction_->setShortcutContext(Qt::ApplicationShortcut);
+    connect(colorSelectorAction_, SIGNAL(triggered()), colorSelector_, SLOT(click()));
 }
 
 void MainWindow::setupConnections_()
