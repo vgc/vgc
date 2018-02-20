@@ -100,7 +100,7 @@ void MainWindow::setupMenus_()
 
 void MainWindow::setupToolBars_()
 {
-    int iconWidth = 32;
+    int iconWidth = 48;
     QSize iconSize(iconWidth,iconWidth);
 
     toolBar_ = addToolBar(tr("Toolbar"));
