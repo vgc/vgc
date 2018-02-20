@@ -23,8 +23,10 @@
 #define VGC_WIDGETS_QTUTIL_H
 
 #include <string>
+#include <QColor>
 #include <QString>
 #include <vgc/widgets/api.h>
+#include <vgc/core/color.h>
 
 namespace vgc {
 namespace widgets {
@@ -36,6 +38,14 @@ QString toQt(const std::string& s);
 /// Converts the given QString \p s into a UTF-8 encoded std::string.
 ///
 std::string fromQt(const QString& s);
+
+/// Converts the given vgc::core::Color \p c into a QColor.
+///
+QColor toQt(const core::Color& c);
+
+/// Converts the given QColor \p c into a vgc::core::Color.
+///
+core::Color fromQt(const QColor& c);
 
 } // namespace widgets
 } // namespace vgc

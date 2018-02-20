@@ -16,6 +16,16 @@
 
 #include <vgc/widgets/qtutil.h>
 
+#include <cmath>
+#include <vgc/core/algorithm.h>
+
+namespace {
+int to256(double x) {
+    int i = static_cast<int>(std::round(x * 256));
+    return vgc::core::clamp(i, 0, 255);
+}
+} // namespace
+
 namespace vgc {
 namespace widgets {
 
@@ -28,6 +38,22 @@ std::string fromQt(const QString& s)
 {
     QByteArray a = s.toUtf8();
     return std::string(a.data(), a.size());
+}
+
+QColor toQt(const core::Color& c)
+{
+    return QColor(to256(c.r()),
+                  to256(c.g()),
+                  to256(c.b()),
+                  to256(c.a()));
+}
+
+core::Color fromQt(const QColor& c)
+{
+    return core::Color(c.redF(),
+                       c.greenF(),
+                       c.blueF(),
+                       c.alphaF());
 }
 
 } // namespace widgets

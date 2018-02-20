@@ -8,12 +8,14 @@ vgc_add_library(widgets
 
     HEADER_FILES
         api.h
+        colorselector.h
         console.h
         mainwindow.h
         openglviewer.h
         qtutil.h
 
     CPP_FILES
+        colorselector.cpp
         console.cpp
         mainwindow.cpp
         openglviewer.cpp
