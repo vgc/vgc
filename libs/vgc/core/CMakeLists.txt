@@ -13,6 +13,7 @@ vgc_add_library(core
         math.h
         object.h
         python.h
+        random.h
         resources.h
         signal.h
         timer.h
@@ -23,6 +24,7 @@ vgc_add_library(core
         math.cpp
         object.cpp
         python.cpp
+        random.cpp
         resources.cpp
         signal.cpp
         timer.cpp
