@@ -4,10 +4,22 @@ vgc_add_library(core
 
     VGC_DEPENDENCIES
 
+    HEADER_FILES
+        algorithm.h
+        api.h
+        color.h
+        colors.h
+        export.h
+        math.h
+        object.h
+        python.h
+        resources.h
+        signal.h
+        timer.h
+
     CPP_FILES
         algorithm.cpp
         color.cpp
-        colors.h
         math.cpp
         object.cpp
         python.cpp

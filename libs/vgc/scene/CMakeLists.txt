@@ -4,6 +4,10 @@ vgc_add_library(scene
     VGC_DEPENDENCIES
         geometry
 
+    HEADER_FILES
+        api.h
+        scene.h
+
     CPP_FILES
         scene.cpp
 )

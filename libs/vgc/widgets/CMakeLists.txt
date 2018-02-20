@@ -6,6 +6,13 @@ vgc_add_library(widgets
         core
         scene
 
+    HEADER_FILES
+        api.h
+        console.h
+        mainwindow.h
+        openglviewer.h
+        qtutil.h
+
     CPP_FILES
         console.cpp
         mainwindow.cpp

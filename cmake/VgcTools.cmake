@@ -39,9 +39,14 @@ endfunction()
 #     VGC_DEPENDENCIES
 #         myvgclib2
 #
+#     HEADER_FILES
+#         class1.h
+#         class2.h
+#         headeronlyclass.h
+#
 #     CPP_FILES
-#         file1.cpp
-#         file2.cpp
+#         class1.cpp
+#         class2.cpp
 #
 #     RESOURCE_FILES
 #         resource1.png
@@ -53,7 +58,7 @@ function(vgc_add_library LIB_NAME)
 
     set(options "")
     set(oneValueArgs "")
-    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
+    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES HEADER_FILES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Add custom target 'vgc_lib_resources_mylib' that copy all resource files
@@ -79,7 +84,7 @@ function(vgc_add_library LIB_NAME)
 
     # Add library using target name "vgc_lib_mylib"
     vgc_prepend_(TARGET_NAME "vgc_lib_" ${LIB_NAME})
-    add_library(${TARGET_NAME} SHARED ${ARG_CPP_FILES})
+    add_library(${TARGET_NAME} SHARED ${ARG_HEADER_FILES} ${ARG_CPP_FILES})
 
     # Add dependency to resource files
     add_dependencies(${TARGET_NAME} ${RESOURCES_TARGET_NAME})
