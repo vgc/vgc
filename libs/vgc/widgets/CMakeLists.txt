@@ -11,6 +11,14 @@ vgc_add_library(widgets
         mainwindow.cpp
         openglviewer.cpp
         qtutil.cpp
-)
 
-add_subdirectory(fonts)
+    RESOURCE_FILES
+        fonts/SourceCodePro-Black.ttf
+        fonts/SourceCodePro-Bold.ttf
+        fonts/SourceCodePro-ExtraLight.ttf
+        fonts/SourceCodePro-Light.ttf
+        fonts/SourceCodePro-Medium.ttf
+        fonts/SourceCodePro-OFL.txt
+        fonts/SourceCodePro-Regular.ttf
+        fonts/SourceCodePro-Semibold.ttf
+)

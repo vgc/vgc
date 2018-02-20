@@ -42,6 +42,10 @@ endfunction()
 #     CPP_FILES
 #         file1.cpp
 #         file2.cpp
+#
+#     RESOURCE_FILES
+#         resource1.png
+#         resource2.ttf
 # )
 #
 function(vgc_add_library LIB_NAME)
@@ -49,23 +53,45 @@ function(vgc_add_library LIB_NAME)
 
     set(options "")
     set(oneValueArgs "")
-    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_FILES COMPILE_DEFINITIONS)
+    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    # Prepend LIB_NAME with "vgc_lib_" to get target name.
-    vgc_prepend_(TARGET_NAME "vgc_lib_" ${LIB_NAME})
+    # Add custom target 'vgc_lib_resources_mylib' that copy all resource files
+    # from <src>/libs/vgc/mylib to <bin>/resources/mylib
+    set(LIB_RESOURCES_OUTPUT_DIRECTORY ${VGC_RESOURCES_OUTPUT_DIRECTORY}/${LIB_NAME})
+    file(MAKE_DIRECTORY ${LIB_RESOURCES_OUTPUT_DIRECTORY})
+    set(OUTPUT_RESOURCE_PATHS "")
+    foreach(RELATIVE_RESOURCE_PATH ${ARG_RESOURCE_FILES})
+        set(INPUT_RESOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${RELATIVE_RESOURCE_PATH})
+        set(OUTPUT_RESOURCE_PATH ${LIB_RESOURCES_OUTPUT_DIRECTORY}/${RELATIVE_RESOURCE_PATH})
+        list(APPEND OUTPUT_RESOURCE_PATHS ${OUTPUT_RESOURCE_PATH})
+        add_custom_command(
+            COMMENT "Copying resource file ${RELATIVE_RESOURCE_PATH}"
+            OUTPUT ${OUTPUT_RESOURCE_PATH}
+            DEPENDS ${INPUT_RESOURCE_PATH}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${INPUT_RESOURCE_PATH}
+            ${OUTPUT_RESOURCE_PATH}
+        )
+    endforeach()
+    vgc_prepend_(RESOURCES_TARGET_NAME "vgc_lib_resources_" ${LIB_NAME})
+    add_custom_target(${RESOURCES_TARGET_NAME} ALL DEPENDS ${OUTPUT_RESOURCE_PATHS})
 
-    # Add library
+    # Add library using target name "vgc_lib_mylib"
+    vgc_prepend_(TARGET_NAME "vgc_lib_" ${LIB_NAME})
     add_library(${TARGET_NAME} SHARED ${ARG_CPP_FILES})
 
-    # VGC dependencies
+    # Add dependency to resource files
+    add_dependencies(${TARGET_NAME} ${RESOURCES_TARGET_NAME})
+
+    # Add dependencies to other VGC libraries
     vgc_prepend_(VGC_DEPENDENCIES "vgc_lib_" ${ARG_VGC_DEPENDENCIES})
     target_link_libraries(${TARGET_NAME} ${VGC_DEPENDENCIES})
 
-    # Third-party dependencies
+    # Add dependencies to third-party dependencies
     target_link_libraries(${TARGET_NAME} ${ARG_THIRD_DEPENDENCIES})
 
-    # Compile definitions, that is, values given to preprocessor variables
+    # Set compile definitions, that is, values given to preprocessor variables
     target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_COMPILE_DEFINITIONS})
 
     # Set output name. Prefixes are automatically added from:
@@ -171,36 +197,5 @@ function(vgc_add_app APP_NAME)
         OUTPUT_NAME "${APP_OUTPUT_NAME}"
         RUNTIME_OUTPUT_DIRECTORY "${VGC_APP_OUTPUT_DIRECTORY}"
     )
-
-endfunction()
-
-# Add runtime resources to the 'resources' folder.
-# Example of resources: GLSL shaders, icons, color schemes, etc.
-#
-# Unlike the Qt resources system, we do not store resources
-# within the executable. The idea is to make them easily "hackable":
-# users may want to modify the shaders or icons themselves, and since
-# it's technically easy to do, why not allow them? VGC is open-source
-# anyway, there's nothing to hide.
-#
-# Usage:
-# vgc_add_resources(icons
-#     copy.png
-#     cut.png
-#     paste.png
-# )
-#
-function(vgc_add_resources DIRECTORY_NAME)
-    message("-- VGC Resources: ${DIRECTORY_NAME}")
-
-    set(options "")
-    set(oneValueArgs "")
-    set(multiValueArgs "")
-    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-
-    set(DIRECTORY ${VGC_RESOURCES_OUTPUT_DIRECTORY}/${DIRECTORY_NAME})
-
-    file(MAKE_DIRECTORY ${DIRECTORY})
-    file(COPY ${ARG_UNPARSED_ARGUMENTS} DESTINATION ${DIRECTORY})
 
 endfunction()

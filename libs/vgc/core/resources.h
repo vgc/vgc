@@ -32,8 +32,8 @@ VGC_CORE_API std::string resourcesPath();
 ///
 /// Example:
 /// \code
-/// std::string vertPath = core::resourcePath("shaders/shader.v.glsl");
-/// std::string fragPath = core::resourcePath("shaders/shader.f.glsl");
+/// std::string vertPath = core::resourcePath("opengl/shaders/shader.v.glsl");
+/// std::string fragPath = core::resourcePath("opengl/shaders/shader.f.glsl");
 /// \endcode
 ///
 VGC_CORE_API std::string resourcePath(const std::string& resourceName);

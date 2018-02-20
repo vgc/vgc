@@ -173,7 +173,7 @@ Console::Console(
 
     // Set font
     QFontDatabase fontDB;
-    std::string fontPath = core::resourcePath("fonts/SourceCodePro-Regular.ttf");
+    std::string fontPath = core::resourcePath("widgets/fonts/SourceCodePro-Regular.ttf");
     fontDB.addApplicationFont(toQt(fontPath));
     QFont f("Source Code Pro", 12, QFont::Normal);
     setFont(f);
