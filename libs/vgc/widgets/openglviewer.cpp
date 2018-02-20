@@ -349,9 +349,14 @@ void OpenGLViewer::paintGL()
 
     // Draw triangles
     if (polygonMode_ > 0) {
-        shaderProgram_.setUniformValue(colorLoc_, 0.0f, 0.0f, 0.0f, 1.0f);
         glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
         for (CurveGLResources& r: curveGLResources_) {
+            shaderProgram_.setUniformValue(
+                        colorLoc_,
+                        (float)r.trianglesColor.r(),
+                        (float)r.trianglesColor.g(),
+                        (float)r.trianglesColor.b(),
+                        (float)r.trianglesColor.a());
             r.vaoTriangles->bind();
             f->glDrawArrays(GL_TRIANGLE_STRIP, 0, r.numVerticesTriangles);
             r.vaoTriangles->release();
@@ -499,6 +504,9 @@ void OpenGLViewer::updateCurveGLResources_(int i)
     r.vboControlPoints.bind();
     r.vboControlPoints.allocate(glVerticesControlPoints.data(), r.numVerticesControlPoints * sizeof(GLVertex));
     r.vboControlPoints.release();
+
+    // Set color
+    r.trianglesColor = curve.color();
 }
 
 void OpenGLViewer::destroyCurveGLResources_(int)
