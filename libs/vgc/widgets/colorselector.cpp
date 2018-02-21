@@ -20,12 +20,26 @@
 #include <QPainter>
 #include <vgc/widgets/qtutil.h>
 
+// Note for later, on how to preserve dialog position: From Qt doc on QDialog:
+//
+// If you invoke the show() function after hiding a dialog, the dialog will be
+// displayed in its original position. This is because the window manager
+// decides the position for windows that have not been explicitly placed by the
+// programmer. To preserve the position of a dialog that has been moved by the
+// user, save its position in your closeEvent() handler and then move the
+// dialog to that position, before showing it again.
+
 namespace vgc {
 namespace widgets {
 
-ColorSelector::ColorSelector(const core::Color& initialColor, QWidget* parent) :
+ColorSelector::ColorSelector(
+        const core::Color& initialColor,
+        QWidget* parent,
+        ColorDialog* colorDialog) :
+
     QToolButton(parent),
-    color_(initialColor)
+    color_(initialColor),
+    colorDialog_(colorDialog)
 {
     connect(this, SIGNAL(clicked()), this, SLOT(onClicked_()));
     updateIcon();
@@ -42,18 +56,6 @@ void ColorSelector::setColor(const core::Color& color)
     color_ = color;
     updateIcon();
     Q_EMIT colorChanged(color_);
-}
-
-void ColorSelector::onClicked_()
-{
-    QColor initialColor = toQt(color_);
-    QColor c = QColorDialog::getColor(
-                initialColor,
-                0,
-                tr("select the color"),
-                QColorDialog::ShowAlphaChannel);
-
-    setColor(fromQt(c));
 }
 
 void ColorSelector::updateIcon()
@@ -78,6 +80,68 @@ void ColorSelector::updateIcon()
 
     // Set pixmap as tool icon
     setIcon(pixmap);
+}
+
+ColorDialog* ColorSelector::colorDialog()
+{
+    if (colorDialog_ == nullptr) {
+        colorDialog_ = new ColorDialog(this);
+        connect(colorDialog_, &ColorDialog::destroyed,
+                this, &ColorSelector::onClicked_);
+        connect(colorDialog_, &ColorDialog::currentColorChanged,
+                this, &ColorSelector::onColorDialogCurrentColorChanged_);
+        connect(colorDialog_, &ColorDialog::finished,
+                this, &ColorSelector::onColorDialogFinished_);
+
+        // XXX is listening to finished enough? What if users closes the window
+        // instead of pressing Ok/Cancel? See doc for QDialog::finished. Note
+        // 1: there is no signal for "isHidden()". Maybe I need to reimplement
+        // methods in ColorDialog for further customization. Note 2: On KDE, it
+        // behaves as expected even when user press the quit icon, or hit the
+        // "Esc" key. So maybe there's no need to do anything else than the
+        // above.
+    }
+
+    return colorDialog_;
+}
+
+void ColorSelector::onClicked_()
+{
+    previousColor_ = color_;
+    colorDialog()->setCurrentColor(toQt(color_));
+    colorDialog()->show();
+    colorDialog()->raise();
+    colorDialog()->activateWindow();
+
+    // At least on KDE, we also need this. Indeed, users have the option to
+    // "minimize" the dialog, which causes it to disapear with no trace on the
+    // taskbar. Without the code below, clicking on the color tool button again
+    // would not make it reappear. The only thing that would make it reappear
+    // is to minimize the whole app, and deminimizing it.
+    //
+    // XXX Should we forbid minimization of the ColorDialog? (in any case, I
+    // think we should keep the code below for more safety)
+    //
+    if (colorDialog()->isMinimized()) {
+        colorDialog()->showNormal();
+    }
+}
+
+void ColorSelector::onColorDialogDestroyed_()
+{
+    colorDialog_ = nullptr;
+}
+
+void ColorSelector::onColorDialogCurrentColorChanged_(const QColor& color)
+{
+    setColor(fromQt(color));
+}
+
+void ColorSelector::onColorDialogFinished_(int result)
+{
+    if (result == QDialog::Rejected) {
+        setColor(previousColor_);
+    }
 }
 
 } // namespace widgets

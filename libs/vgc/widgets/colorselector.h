@@ -21,22 +21,33 @@
 #include <vgc/core/color.h>
 #include <vgc/core/colors.h>
 #include <vgc/widgets/api.h>
+#include <vgc/widgets/colordialog.h>
 
 namespace vgc {
 namespace widgets {
 
+// XXX rename to ColorToolButton?
+
 /// \class vgc::core::ColorSelector
 /// \brief Subclass of QToolButton to select a current color
+///
+/// A ColorSelector is a QToolButton that opens a ColorDialog when clicked. The
+/// ColorDialog can be either owned by the ColorSelector, or owned by another
+/// widget and passed to the ColorSelector (for example, the same ColorDialog
+/// might be used by several ColorSelector).
 ///
 class VGC_WIDGETS_API ColorSelector : public QToolButton
 {
     Q_OBJECT
 
 public:
-    /// Constructs a ColorSelector.
+    /// Constructs a ColorSelector. If \p colorDialog is null, then the
+    /// ColorSelector will create and own a ColorDialog automatically.
     ///
-    ColorSelector(const core::Color& initialColor = core::colors::black,
-                  QWidget* parent = nullptr);
+    ColorSelector(
+            const core::Color& initialColor = core::colors::black,
+            QWidget* parent = nullptr,
+            ColorDialog* colorDialog = nullptr);
 
     /// Returns the current color.
     ///
@@ -55,14 +66,23 @@ public:
     ///
     void updateIcon();
 
+    /// Returns the ColorDialog associated with this ColorSelector.
+    ///
+    ColorDialog* colorDialog();
+
 Q_SIGNALS:
     void colorChanged(const core::Color& newColor);
 
 private Q_SLOTS:
     void onClicked_();
+    void onColorDialogDestroyed_();
+    void onColorDialogCurrentColorChanged_(const QColor& color);
+    void onColorDialogFinished_(int result);
 
 private:
     core::Color color_;
+    core::Color previousColor_;
+    ColorDialog* colorDialog_;
 };
 
 } // namespace widgets
