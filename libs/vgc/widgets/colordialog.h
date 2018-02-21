@@ -31,7 +31,26 @@ class VGC_WIDGETS_API ColorDialog : public QColorDialog
     Q_OBJECT
 
 public:
+    /// Creates a ColorDialog.
+    ///
     ColorDialog(QWidget* parent = nullptr);
+
+protected:
+    // We reimplement these to preserve the position
+    // of the dialog after hiding and re-showing it.
+    // XXX Move this logic to a generic vgc::widgets::Dialog
+    void closeEvent(QCloseEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+
+private Q_SLOTS:
+    void onFinished_(int result);
+
+private:
+    void saveGeometry_();
+    void restoreGeometry_();
+    bool isGeometrySaved_;
+    QRect savedGeometry_;
 };
 
 } // namespace widgets

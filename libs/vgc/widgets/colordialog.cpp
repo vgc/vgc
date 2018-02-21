@@ -38,7 +38,8 @@ namespace vgc {
 namespace widgets {
 
 ColorDialog::ColorDialog(QWidget* parent) :
-    QColorDialog(parent)
+    QColorDialog(parent),
+    isGeometrySaved_(false)
 {
     // On KDE, The ColorDialog has a minimize button that I'd wish to see gone.
     // The line below was an attempt to remove it, but in fact, the
@@ -51,6 +52,43 @@ ColorDialog::ColorDialog(QWidget* parent) :
     // on this issue for now.
     //
     setWindowFlag(this, Qt::WindowMinimizeButtonHint, false);
+
+    connect(this, &ColorDialog::finished, this, &ColorDialog::onFinished_);
+}
+
+void ColorDialog::closeEvent(QCloseEvent* event)
+{
+    saveGeometry_();
+    QDialog::closeEvent(event);
+}
+
+void ColorDialog::hideEvent(QHideEvent* event)
+{
+    saveGeometry_();
+    QDialog::hideEvent(event);
+}
+
+void ColorDialog::showEvent(QShowEvent* event)
+{
+    restoreGeometry_();
+    QDialog::showEvent(event);
+}
+
+void ColorDialog::onFinished_(int)
+{
+    saveGeometry_();
+}
+
+void ColorDialog::saveGeometry_()
+{
+    isGeometrySaved_ = true;
+    savedGeometry_ = geometry();
+}
+
+void ColorDialog::restoreGeometry_()
+{
+    if (isGeometrySaved_)
+        setGeometry(savedGeometry_);
 }
 
 } // namespace widgets
