@@ -20,15 +20,6 @@
 #include <QPainter>
 #include <vgc/widgets/qtutil.h>
 
-// Note for later, on how to preserve dialog position: From Qt doc on QDialog:
-//
-// If you invoke the show() function after hiding a dialog, the dialog will be
-// displayed in its original position. This is because the window manager
-// decides the position for windows that have not been explicitly placed by the
-// programmer. To preserve the position of a dialog that has been moved by the
-// user, save its position in your closeEvent() handler and then move the
-// dialog to that position, before showing it again.
-
 namespace vgc {
 namespace widgets {
 

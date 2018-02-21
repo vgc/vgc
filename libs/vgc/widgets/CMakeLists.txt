@@ -11,6 +11,7 @@ vgc_add_library(widgets
         colordialog.h
         colorselector.h
         console.h
+        dialog.h
         mainwindow.h
         openglviewer.h
         qtutil.h
@@ -19,6 +20,7 @@ vgc_add_library(widgets
         colordialog.cpp
         colorselector.cpp
         console.cpp
+        dialog.cpp
         mainwindow.cpp
         openglviewer.cpp
         qtutil.cpp

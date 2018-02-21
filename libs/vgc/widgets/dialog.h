@@ -14,30 +14,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_WIDGETS_COLORDIALOG_H
-#define VGC_WIDGETS_COLORDIALOG_H
+#ifndef VGC_WIDGETS_DIALOG_H
+#define VGC_WIDGETS_DIALOG_H
 
-#include <QColorDialog>
+#include <QDialog>
 #include <vgc/widgets/api.h>
 
 namespace vgc {
 namespace widgets {
 
-/// \class vgc::widgets::ColorDialog
-/// \brief Dialog widget for selecting colors.
+/// \class vgc::widgets::Dialog
+/// \brief Subclass of QDialog specialized for VGC software
 ///
-class VGC_WIDGETS_API ColorDialog : public QColorDialog
+/// Unlike with QDialog, if you invoke the show() function after hiding a
+/// vgc::widgets::Dialog, the position of the dialog will be preserve, even
+/// after being moved by the user.
+///
+class Dialog : public QDialog
 {
     Q_OBJECT
 
 public:
     /// Creates a ColorDialog.
     ///
-    ColorDialog(QWidget* parent = nullptr);
+    Dialog(QWidget* parent = nullptr);
 
 protected:
-    // We reimplement these to preserve dialog position on hide/show.
-    // See vgc::widgets::Dialog for more info.
+    // We reimplement these to preserve dialog position on hide/show
     void closeEvent(QCloseEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void showEvent(QShowEvent* event) override;
@@ -55,4 +58,4 @@ private:
 } // namespace widgets
 } // namespace vgc
 
-#endif // VGC_WIDGETS_COLORDIALOG_H
+#endif // VGC_WIDGETS_DIALOG_H
