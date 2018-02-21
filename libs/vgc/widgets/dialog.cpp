@@ -20,10 +20,10 @@ namespace vgc {
 namespace widgets {
 
 Dialog::Dialog(QWidget* parent) :
-    Dialog(parent),
+    QDialog(parent),
     isGeometrySaved_(false)
 {
-    connect(this, &ColorDialog::finished, this, &ColorDialog::onFinished_);
+    connect(this, &QDialog::finished, this, &Dialog::onFinished_);
 }
 
 void Dialog::closeEvent(QCloseEvent* event)
