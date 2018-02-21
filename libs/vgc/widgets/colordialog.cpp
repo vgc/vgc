@@ -16,13 +16,41 @@
 
 #include <vgc/widgets/colordialog.h>
 
+namespace {
+void setWindowFlag(QWidget* w, Qt::WindowType flag, bool on)
+{
+    // Note: Since Qt 5.9, there is a method QWidget::setWindowFlag(), but at
+    // the time of this writing we target Qt 5.6, reason why we use this.
+    //
+    // Note 2: Qt 5.7 also introduces QFlags::setFlag(), which would make
+    // the code below easier as well.
+
+    Qt::WindowFlags flags = w->windowFlags();
+    if (on)
+        flags |= flag;
+    else
+        flags &= ~flag;
+    w->setWindowFlags(flags);
+}
+} // namespace
+
 namespace vgc {
 namespace widgets {
 
 ColorDialog::ColorDialog(QWidget* parent) :
     QColorDialog(parent)
 {
-
+    // On KDE, The ColorDialog has a minimize button that I'd wish to see gone.
+    // The line below was an attempt to remove it, but in fact, the
+    // Qt::WindowMinimizeButtonHint was already set to false. Therefore, I
+    // believe that the line below is useless, but I leave it here for
+    // documentation and for robustness in case the behaviour is
+    // platform-dependent. My current position is to give up and leave the
+    // minimize button since it is a very minor issue. I've already spent 1h
+    // trying to fix this, which is the maximum time I am willing to allocate
+    // on this issue for now.
+    //
+    setWindowFlag(this, Qt::WindowMinimizeButtonHint, false);
 }
 
 } // namespace widgets

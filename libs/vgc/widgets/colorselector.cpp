@@ -92,14 +92,6 @@ ColorDialog* ColorSelector::colorDialog()
                 this, &ColorSelector::onColorDialogCurrentColorChanged_);
         connect(colorDialog_, &ColorDialog::finished,
                 this, &ColorSelector::onColorDialogFinished_);
-
-        // XXX is listening to finished enough? What if users closes the window
-        // instead of pressing Ok/Cancel? See doc for QDialog::finished. Note
-        // 1: there is no signal for "isHidden()". Maybe I need to reimplement
-        // methods in ColorDialog for further customization. Note 2: On KDE, it
-        // behaves as expected even when user press the quit icon, or hit the
-        // "Esc" key. So maybe there's no need to do anything else than the
-        // above.
     }
 
     return colorDialog_;
@@ -117,10 +109,9 @@ void ColorSelector::onClicked_()
     // "minimize" the dialog, which causes it to disapear with no trace on the
     // taskbar. Without the code below, clicking on the color tool button again
     // would not make it reappear. The only thing that would make it reappear
-    // is to minimize the whole app, and deminimizing it.
-    //
-    // XXX Should we forbid minimization of the ColorDialog? (in any case, I
-    // think we should keep the code below for more safety)
+    // is to minimize the whole app, and deminimizing it. Ideally, I would like
+    // to make the dialog non-minimizable, but it doesn't seem possible on all
+    // platforms, see also the comment in the constructor of ColorDialog.
     //
     if (colorDialog()->isMinimized()) {
         colorDialog()->showNormal();
