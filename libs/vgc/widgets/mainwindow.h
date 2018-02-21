@@ -24,7 +24,7 @@
 #include <vgc/core/python.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/api.h>
-#include <vgc/widgets/colorselector.h>
+#include <vgc/widgets/colortoolbutton.h>
 #include <vgc/widgets/console.h>
 #include <vgc/widgets/openglviewer.h>
 
@@ -76,8 +76,8 @@ private:
 
     void setupToolBars_();
     QToolBar* toolBar_;
-    ColorSelector* colorSelector_;
-    QAction* colorSelectorAction_;
+    ColorToolButton* colorToolButton_;
+    QAction* colorToolButtonAction_;
 
     void setupConnections_();
 };

@@ -9,7 +9,7 @@ vgc_add_library(widgets
     HEADER_FILES
         api.h
         colordialog.h
-        colorselector.h
+        colortoolbutton.h
         console.h
         dialog.h
         mainwindow.h
@@ -18,7 +18,7 @@ vgc_add_library(widgets
 
     CPP_FILES
         colordialog.cpp
-        colorselector.cpp
+        colortoolbutton.cpp
         console.cpp
         dialog.cpp
         mainwindow.cpp

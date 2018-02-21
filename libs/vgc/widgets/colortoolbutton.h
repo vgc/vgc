@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_WIDGETS_COLORSELECTOR_H
-#define VGC_WIDGETS_COLORSELECTOR_H
+#ifndef VGC_WIDGETS_COLORTOOLBUTTON_H
+#define VGC_WIDGETS_COLORTOOLBUTTON_H
 
 #include <QToolButton>
 #include <vgc/core/color.h>
@@ -26,25 +26,23 @@
 namespace vgc {
 namespace widgets {
 
-// XXX rename to ColorToolButton?
-
-/// \class vgc::core::ColorSelector
+/// \class vgc::core::ColorToolButton
 /// \brief Subclass of QToolButton to select a current color
 ///
-/// A ColorSelector is a QToolButton that opens a ColorDialog when clicked. The
-/// ColorDialog can be either owned by the ColorSelector, or owned by another
-/// widget and passed to the ColorSelector (for example, the same ColorDialog
-/// might be used by several ColorSelector).
+/// A ColorToolButton is a QToolButton that opens a ColorDialog when clicked.
+/// The ColorDialog can be either owned by the ColorToolButton, or owned by
+/// another widget and passed to the ColorToolButton (for example, the same
+/// ColorDialog might be used by several ColorToolButton).
 ///
-class VGC_WIDGETS_API ColorSelector : public QToolButton
+class VGC_WIDGETS_API ColorToolButton : public QToolButton
 {
     Q_OBJECT
 
 public:
-    /// Constructs a ColorSelector. If \p colorDialog is null, then the
-    /// ColorSelector will create and own a ColorDialog automatically.
+    /// Constructs a ColorToolButton. If \p colorDialog is null, then the
+    /// ColorToolButton will create and own a ColorDialog automatically.
     ///
-    ColorSelector(
+    ColorToolButton(
             const core::Color& initialColor = core::colors::black,
             QWidget* parent = nullptr,
             ColorDialog* colorDialog = nullptr);
@@ -66,7 +64,7 @@ public:
     ///
     void updateIcon();
 
-    /// Returns the ColorDialog associated with this ColorSelector.
+    /// Returns the ColorDialog associated with this ColorToolButton.
     ///
     ColorDialog* colorDialog();
 
@@ -88,4 +86,4 @@ private:
 } // namespace widgets
 } // namespace vgc
 
-#endif // VGC_WIDGETS_COLORSELECTOR_H
+#endif // VGC_WIDGETS_COLORTOOLBUTTON_H

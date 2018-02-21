@@ -109,21 +109,21 @@ void MainWindow::setupToolBars_()
     toolBar_->setIconSize(iconSize);
     addToolBar(Qt::LeftToolBarArea, toolBar_);
 
-    colorSelector_ = new ColorSelector();
-    colorSelector_->setToolTip(tr("Current color (C)"));
-    colorSelector_->setStatusTip(tr("Click to open the color selector"));
-    colorSelector_->setIconSize(iconSize);
-    colorSelector_->updateIcon();
+    colorToolButton_ = new ColorToolButton();
+    colorToolButton_->setToolTip(tr("Current color (C)"));
+    colorToolButton_->setStatusTip(tr("Click to open the color selector"));
+    colorToolButton_->setIconSize(iconSize);
+    colorToolButton_->updateIcon();
 
-    colorSelectorAction_ = toolBar_->addWidget(colorSelector_);
-    colorSelectorAction_->setText(tr("Color"));
-    colorSelectorAction_->setToolTip(tr("Color (C)"));
-    colorSelectorAction_->setStatusTip(tr("Click to open the color selector"));
-    colorSelectorAction_->setShortcut(QKeySequence(Qt::Key_C));
-    colorSelectorAction_->setShortcutContext(Qt::ApplicationShortcut);
+    colorToolButtonAction_ = toolBar_->addWidget(colorToolButton_);
+    colorToolButtonAction_->setText(tr("Color"));
+    colorToolButtonAction_->setToolTip(tr("Color (C)"));
+    colorToolButtonAction_->setStatusTip(tr("Click to open the color selector"));
+    colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
+    colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
 
-    connect(colorSelectorAction_, SIGNAL(triggered()), colorSelector_, SLOT(click()));
-    connect(colorSelector_, &ColorSelector::colorChanged, this, &MainWindow::onColorChanged);
+    connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
+    connect(colorToolButton_, &ColorToolButton::colorChanged, this, &MainWindow::onColorChanged);
 }
 
 void MainWindow::setupConnections_()

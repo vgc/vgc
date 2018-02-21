@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/widgets/colorselector.h>
+#include <vgc/widgets/colortoolbutton.h>
 
 #include <QColorDialog>
 #include <QPainter>
@@ -23,7 +23,7 @@
 namespace vgc {
 namespace widgets {
 
-ColorSelector::ColorSelector(
+ColorToolButton::ColorToolButton(
         const core::Color& initialColor,
         QWidget* parent,
         ColorDialog* colorDialog) :
@@ -37,19 +37,19 @@ ColorSelector::ColorSelector(
     setFocusPolicy(Qt::NoFocus);
 }
 
-core::Color ColorSelector::color() const
+core::Color ColorToolButton::color() const
 {
     return color_;
 }
 
-void ColorSelector::setColor(const core::Color& color)
+void ColorToolButton::setColor(const core::Color& color)
 {
     color_ = color;
     updateIcon();
     Q_EMIT colorChanged(color_);
 }
 
-void ColorSelector::updateIcon()
+void ColorToolButton::updateIcon()
 {
     // Icon size
     QSize pixmapSize = iconSize();
@@ -73,22 +73,22 @@ void ColorSelector::updateIcon()
     setIcon(pixmap);
 }
 
-ColorDialog* ColorSelector::colorDialog()
+ColorDialog* ColorToolButton::colorDialog()
 {
     if (colorDialog_ == nullptr) {
         colorDialog_ = new ColorDialog(this);
         connect(colorDialog_, &ColorDialog::destroyed,
-                this, &ColorSelector::onClicked_);
+                this, &ColorToolButton::onClicked_);
         connect(colorDialog_, &ColorDialog::currentColorChanged,
-                this, &ColorSelector::onColorDialogCurrentColorChanged_);
+                this, &ColorToolButton::onColorDialogCurrentColorChanged_);
         connect(colorDialog_, &ColorDialog::finished,
-                this, &ColorSelector::onColorDialogFinished_);
+                this, &ColorToolButton::onColorDialogFinished_);
     }
 
     return colorDialog_;
 }
 
-void ColorSelector::onClicked_()
+void ColorToolButton::onClicked_()
 {
     previousColor_ = color_;
     colorDialog()->setCurrentColor(toQt(color_));
@@ -109,17 +109,17 @@ void ColorSelector::onClicked_()
     }
 }
 
-void ColorSelector::onColorDialogDestroyed_()
+void ColorToolButton::onColorDialogDestroyed_()
 {
     colorDialog_ = nullptr;
 }
 
-void ColorSelector::onColorDialogCurrentColorChanged_(const QColor& color)
+void ColorToolButton::onColorDialogCurrentColorChanged_(const QColor& color)
 {
     setColor(fromQt(color));
 }
 
-void ColorSelector::onColorDialogFinished_(int result)
+void ColorToolButton::onColorDialogFinished_(int result)
 {
     if (result == QDialog::Rejected) {
         setColor(previousColor_);
