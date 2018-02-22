@@ -1,3 +1,13 @@
+
+/* Removes all default border, margin, and padding, to ensure that
+ * any border, margin, or padding was explicitly styled.
+ */
+ QDockWidget, QLabel, QLineEdit, QMenu, QMenuBar, QPushButton, QSpinBox, QToolBar, QToolButton {
+    border: 0px;
+    margin: 0px;
+    padding: 0px;
+}
+
 /* Set application-wide font
  *
  * Please do not use the universal selector "*" instead of listing explicitly
@@ -7,4 +17,97 @@
  QLabel, QLineEdit, QMenu, QMenuBar, QPushButton, QSpinBox {
     font-family: "Source Sans Pro";
     font-size: 12pt;
+}
+
+/* Dark color palette guidelines:
+ * We use 7 shades of gray.
+ *
+ * Menu text is the lightest color
+ * Menu borders is the darkest color
+ *
+ * white
+ * #bec0c2   gray1   menu text
+ * #4d4f52   gray2   grayed text
+ * #404244   gray3   menubar, toolbar, console margin
+ * #313234   gray4   menu
+ *           gray5   text edit
+ *           gray6   selected text edit
+ * #212222   gray7   menu borders
+ * black
+ *
+ * When highlighting: -1 (=> lighter)
+ * When selecting:    +1 (=> darker);
+ */
+
+/******************************** Menu Bar ***********************************/
+
+QMenuBar {
+    background: #404244;              /* gray3 */
+    color: #bec0c2;                   /* gray1 */
+    border-bottom: 1px solid #212222; /* gray7 */
+}
+
+QMenuBar::item {
+    background: #404244;              /* gray3 */
+    border-bottom: 1px solid #212222; /* gray7 */
+    padding: 5px;
+}
+
+QMenuBar::item:hover {
+    background: #4d4f52; /* gray2 */
+}
+
+QMenuBar::item:selected {
+    background: #4d4f52; /* gray2 */
+}
+
+QMenuBar::item:pressed {
+    background: #4d4f52; /* gray2 */
+}
+
+/********************************* Menu **************************************/
+
+QMenu {
+    background: #313234;       /* gray4 */
+    border: 1px solid #212222; /* gray7 */
+    color: #bec0c2;            /* gray1 */
+}
+
+/* menu items */
+
+QMenu::item {
+    background: #313234;     /* gray4 */
+}
+
+QMenu::item:hover {
+    background: #404244; /* gray3 */
+}
+
+QMenu::item:selected {
+    background: #404244; /* gray3 */
+}
+
+QMenu::item:pressed {
+    background: #404244; /* gray3 */
+}
+
+/********************************* Toolbar ***********************************/
+
+QToolBar {
+    background: #404244;
+}
+
+/* toolbar buttons */
+
+QToolButton {
+    background: #404244;
+    padding: 10px;
+}
+
+QToolButton:hover {
+    background: #4d4f52;
+}
+
+QToolButton:pressed {
+    background: #313234;
 }
