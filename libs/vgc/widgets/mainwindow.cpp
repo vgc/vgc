@@ -18,6 +18,7 @@
 
 #include <QMenuBar>
 #include <QToolBar>
+#include <vgc/widgets/font.h>
 
 namespace vgc {
 namespace widgets {
@@ -38,6 +39,7 @@ MainWindow::MainWindow(
     setupMenus_();
     setupToolBars_();
     setupConnections_();
+    setupTheme_();
 
     // Show maximized at startup
     // XXX This should be a user preference
@@ -52,6 +54,21 @@ MainWindow::~MainWindow()
 void MainWindow::onColorChanged(const core::Color& newColor)
 {
     scene_->setNewCurveColor(newColor);
+}
+
+void MainWindow::setupTheme_()
+{
+    // Set font of menu headers
+    // XXX Check if that's okay for the system-wide menu bar of MacOS and
+    // Ubuntu Unity. See QMenubar doc for details.
+    setDefaultFont(this);
+
+    // Set font of menu items
+    // XXX Check if that's okay for the system-wide menu bar of MacOS and
+    // Ubuntu Unity. See QMenubar doc for details.
+    for (QMenu* m : menus_) {
+        setDefaultFont(m);
+    }
 }
 
 void MainWindow::setupWidgets_()
@@ -90,10 +107,12 @@ void MainWindow::setupActions_()
 void MainWindow::setupMenus_()
 {
     menuFile_ = new QMenu(tr("&File"));
+    menus_.push_back(menuFile_);
     menuFile_->addAction(actionQuit_);
     menuBar()->addMenu(menuFile_);
 
     menuView_ = new QMenu(tr("&View"));
+    menus_.push_back(menuView_);
     menuView_->addAction(actionToggleConsoleView_);
     menuBar()->addMenu(menuView_);
 }

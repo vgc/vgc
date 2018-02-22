@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/widgets/colordialog.h>
+#include <vgc/widgets/font.h>
 
 namespace {
 void setWindowFlag(QWidget* w, Qt::WindowType flag, bool on)
@@ -53,6 +54,7 @@ ColorDialog::ColorDialog(QWidget* parent) :
     //
     setWindowFlag(this, Qt::WindowMinimizeButtonHint, false);
 
+    setDefaultFont(this);
     connect(this, &ColorDialog::finished, this, &ColorDialog::onFinished_);
 }
 
