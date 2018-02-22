@@ -71,7 +71,7 @@ function(vgc_add_library LIB_NAME)
         set(OUTPUT_RESOURCE_PATH ${LIB_RESOURCES_OUTPUT_DIRECTORY}/${RELATIVE_RESOURCE_PATH})
         list(APPEND OUTPUT_RESOURCE_PATHS ${OUTPUT_RESOURCE_PATH})
         add_custom_command(
-            COMMENT "Copying resource file ${RELATIVE_RESOURCE_PATH}"
+            COMMENT "Copying resource file ${LIB_NAME}/${RELATIVE_RESOURCE_PATH}"
             OUTPUT ${OUTPUT_RESOURCE_PATH}
             DEPENDS ${INPUT_RESOURCE_PATH}
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
