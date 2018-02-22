@@ -10,6 +10,7 @@ vgc_add_library(core
         color.h
         colors.h
         export.h
+        io.h
         math.h
         object.h
         python.h
@@ -21,6 +22,7 @@ vgc_add_library(core
     CPP_FILES
         algorithm.cpp
         color.cpp
+        io.cpp
         math.cpp
         object.cpp
         python.cpp
