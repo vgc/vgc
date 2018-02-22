@@ -26,12 +26,12 @@ std::string resourcesPath()
     return VGC_CORE_RESOURCES_PATH_;
 }
 
-std::string resourcePath(const std::string& resourceName)
+std::string resourcePath(const std::string& name)
 {
     // XXX use generic code to concatenate filepath, e.g.:
     //       core/fileutils.h::concatenateFilePath()
     //     or abstract this further with a core::Dir class similar to QDir.
-    return resourcesPath() + "/" + resourceName;
+    return resourcesPath() + "/" + name;
 }
 
 } // namespace core
