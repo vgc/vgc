@@ -34,4 +34,17 @@ vgc_add_library(widgets
         fonts/SourceCodePro-OFL.txt
         fonts/SourceCodePro-Regular.ttf
         fonts/SourceCodePro-Semibold.ttf
+        fonts/SourceSansPro-BlackItalic.ttf
+        fonts/SourceSansPro-Black.ttf
+        fonts/SourceSansPro-BoldItalic.ttf
+        fonts/SourceSansPro-Bold.ttf
+        fonts/SourceSansPro-ExtraLightItalic.ttf
+        fonts/SourceSansPro-ExtraLight.ttf
+        fonts/SourceSansPro-Italic.ttf
+        fonts/SourceSansPro-LightItalic.ttf
+        fonts/SourceSansPro-Light.ttf
+        fonts/SourceSansPro-OFL.txt
+        fonts/SourceSansPro-Regular.ttf
+        fonts/SourceSansPro-SemiBoldItalic.ttf
+        fonts/SourceSansPro-SemiBold.ttf
 )
