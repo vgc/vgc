@@ -54,7 +54,6 @@ ColorDialog::ColorDialog(QWidget* parent) :
     //
     setWindowFlag(this, Qt::WindowMinimizeButtonHint, false);
 
-    setDefaultFont(this);
     connect(this, &ColorDialog::finished, this, &ColorDialog::onFinished_);
 }
 

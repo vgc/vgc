@@ -17,17 +17,24 @@
 #ifndef VGC_WIDGETS_FONT_H
 #define VGC_WIDGETS_FONT_H
 
+#include <string>
 #include <vgc/widgets/api.h>
-
-class QWidget;
 
 namespace vgc {
 namespace widgets {
 
-/// Sets the default font family and point size shared by
-/// all VGC widgets.
+/// Loads the font from the resource file specified by its \p name, and makes
+/// it available to the application.
 ///
-void setDefaultFont(QWidget* widget);
+/// This is a convenient wrapper around QFontDatabase::addApplicationFont().
+///
+/// Example:
+/// \code
+/// addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf")
+/// \endcode
+///
+VGC_WIDGETS_API
+void addApplicationFont(const std::string& name);
 
 } // namespace widgets
 } // namespace vgc

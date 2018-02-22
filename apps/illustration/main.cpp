@@ -15,10 +15,14 @@
 // limitations under the License.
 
 #include <QApplication>
+#include <vgc/core/io.h>
 #include <vgc/core/python.h>
+#include <vgc/core/resources.h>
 #include <vgc/scene/scene.h>
+#include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
+#include <vgc/widgets/qtutil.h>
 
 namespace py = pybind11;
 
@@ -67,5 +71,15 @@ int main(int argc, char* argv[])
     vgc::widgets::MainWindow w(scene.get(), &pythonInterpreter);
     w.show();
 
+    // Set style
+    // XXX Create widgets::Application class with:
+    // Application::addFont(resourceName)
+    // Application::setStyleSheet(resourceName)
+    vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf");
+    std::string styleSheetPath = vgc::core::resourcePath("widgets/stylesheets/dark.qss");
+    std::string styleSheetString = vgc::core::readFile(styleSheetPath);
+    a.setStyleSheet(vgc::widgets::toQt(styleSheetString));
+
+    // Start event loop
     return a.exec();
 }

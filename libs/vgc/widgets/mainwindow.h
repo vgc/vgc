@@ -53,8 +53,6 @@ private:
     scene::Scene* scene_;
     core::PythonInterpreter* interpreter_;
 
-    void setupTheme_();
-
     // XXX move what's below out of MainWindow to keep it generic.
     // Specific content within the MainWindow should be in a
     // class such as "VgcIllustrationMainWindow".
@@ -73,7 +71,6 @@ private:
     QAction* actionToggleConsoleView_;
 
     void setupMenus_();
-    std::vector<QMenu*> menus_;
     QMenu* menuFile_;
     QMenu* menuView_;
 

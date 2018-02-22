@@ -17,26 +17,16 @@
 #include <vgc/widgets/font.h>
 
 #include <QFontDatabase>
-#include <QWidget>
 #include <vgc/core/resources.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
 
-void setDefaultFont(QWidget* widget)
+void addApplicationFont(const std::string& name)
 {
-    // NOT_THREAD_SAFE
-    static bool firstCall = true;
-    if (firstCall) {
-        std::string fontPath = core::resourcePath("widgets/fonts/SourceSansPro-Regular.ttf");
-        QFontDatabase::addApplicationFont(toQt(fontPath));
-    }
-
-    QFont font = widget->font();
-    font.setFamily("Source Sans Pro");
-    font.setPointSize(12);
-    widget->setFont(font);
+    std::string fontPath = core::resourcePath(name);
+    QFontDatabase::addApplicationFont(toQt(fontPath));
 }
 
 } // namespace widgets

@@ -49,4 +49,5 @@ vgc_add_library(widgets
         fonts/SourceSansPro-Regular.ttf
         fonts/SourceSansPro-SemiBoldItalic.ttf
         fonts/SourceSansPro-SemiBold.ttf
+        stylesheets/dark.qss
 )

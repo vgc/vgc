@@ -1,0 +1,10 @@
+/* Set application-wide font
+ *
+ * Please do not use the universal selector "*" instead of listing explicitly
+ * all widgets, otherwise custom widgets with custom fonts (e.g., vgc::widgets::Console),
+ * will also use this font instead of their more appropriate font.
+ */
+ QLabel, QLineEdit, QMenu, QMenuBar, QPushButton, QSpinBox {
+    font-family: "Source Sans Pro";
+    font-size: 12pt;
+}
