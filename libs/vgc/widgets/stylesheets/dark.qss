@@ -71,11 +71,13 @@ QMenu {
     background: #313234;       /* gray4 */
     border: 1px solid #212222; /* gray7 */
     color: #bec0c2;            /* gray1 */
+    margin-top: -1px; /* overlap QMenuBar bottom border */
 }
 
 /* menu items */
 
 QMenu::item {
+    padding: 5px 20px 5px 20px;
     background: #313234;     /* gray4 */
 }
 
