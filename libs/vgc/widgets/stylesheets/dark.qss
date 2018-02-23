@@ -106,7 +106,7 @@ QMenu::item:pressed {
 }
 
 /* XXX: In order to allow styling checkboxes using an image, we could parse the
-   qss file in C++ and replace url(":/myimage.png") by the absolute path on
+   qss file in C++ and replace url("vgc:/myimage.png") by the absolute path on
    disk before calling setStyleSheet(). Using url(":/myimage.png") as is won't
    work because we use our own resource system instead of the one Qt provides.
 */
