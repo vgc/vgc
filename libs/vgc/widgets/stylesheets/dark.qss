@@ -15,6 +15,10 @@
  QPlainTextEdit,
  QPushButton,
  QSpinBox,
+ QSpinBox::up-button,
+ QSpinBox::down-button,
+ QSpinBox::up-arrow,
+ QSpinBox::down-arrow,
  QTextEdit,
  QToolBar,
  QToolButton
@@ -184,8 +188,9 @@ QLabel {
 /***************************** Push buttons **********************************/
 
 QPushButton {
+    height: 24px;
     color: #bec0c2;
-    padding: 5px 20px;
+    padding: 0px 20px;
     border-radius: 2px;
     border: 1px solid #212222;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -208,6 +213,19 @@ QPushButton:pressed {
 /***************************** QLineEdit **********************************/
 
 QLineEdit {
+    height: 24px;
+    color: #bec0c2;
+    selection-color: #bec0c2;
+    selection-background-color: #1d545c;
+    border-radius: 2px;
+    border: 1px solid #212222;
+    background: #2e2f30;
+}
+
+/***************************** QSPinBox **********************************/
+
+QSpinBox {
+    height: 24px;
     color: #bec0c2;
     selection-color: #bec0c2;
     selection-background-color: #1d545c;
@@ -215,4 +233,44 @@ QLineEdit {
     border-radius: 2px;
     border: 1px solid #212222;
     background: #2e2f30;
+}
+
+QSpinBox::up-button {
+    border-left: 1px solid #212222;
+    height: 12px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #3e4044,
+                stop:1 #272829);
+}
+
+QSpinBox::up-button:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #484a4f,
+                stop:1 #2e3031);
+}
+
+QSpinBox::up-button:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #393b3f,
+                stop:1 #232425);
+}
+
+QSpinBox::down-button {
+    border-left: 1px solid #212222;
+    height: 12px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #3e4044,
+                stop:1 #272829);
+}
+
+QSpinBox::down-button:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #484a4f,
+                stop:1 #2e3031);
+}
+
+QSpinBox::down-button:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #393b3f,
+                stop:1 #232425);
 }
