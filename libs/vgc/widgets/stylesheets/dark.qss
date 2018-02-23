@@ -170,3 +170,37 @@ QMainWindow::separator {
     width: 1px; /* when vertical */
     height: 1px; /* when horizontal */
 }
+
+/******************** Dialogs (e.g., ColorSelector) ****************************/
+
+QDialog {
+    background: #404244; /* gray3 */
+}
+
+QLabel {
+    color: #bec0c2; /* gray1 */
+}
+
+/***************************** Push buttons **********************************/
+
+QPushButton {
+    color: #bec0c2;
+    padding: 5px 20px;
+    border-radius: 2px;
+    border: 1px solid #212222;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #3e4044,
+                stop:1 #272829);
+}
+
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #484a4f,
+                stop:1 #2e3031);
+}
+
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #393b3f,
+                stop:1 #232425);
+}
