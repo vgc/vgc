@@ -5,6 +5,8 @@
  QDockWidget,
  QLabel,
  QLineEdit,
+ QMainWindow,
+ QMainWindow::separator,
  QMenu,
  QMenu::item,
  QMenu::indicator,
@@ -46,7 +48,7 @@
  * #313234   gray4   menu
  *           gray5   text edit
  *           gray6   selected text edit
- * #212222   gray7   menu borders
+ * #212222   gray7   menu and dock borders
  * black
  *
  * When highlighting: -1 (=> lighter)
@@ -92,7 +94,7 @@ QMenu {
 
 QMenu::item {
     padding: 5px 20px 5px 40px;
-    background: #313234;     /* gray4 */
+    background: #313234; /* gray4 */
 }
 
 QMenu::item:hover {
@@ -134,22 +136,22 @@ QMenu::indicator:non-exclusive:checked {
 /********************************* Toolbar ***********************************/
 
 QToolBar {
-    background: #404244;
+    background: #404244; /* gray3 */
 }
 
 /* toolbar buttons */
 
 QToolButton {
-    background: #404244;
+    background: #404244; /* gray3 */
     padding: 10px;
 }
 
 QToolButton:hover {
-    background: #4d4f52;
+    background: #4d4f52; /* gray2 */
 }
 
 QToolButton:pressed {
-    background: #313234;
+    background: #313234; /* gray4 */
 }
 
 /********************* Plain text edits (e.g., Console) **********************/
@@ -157,4 +159,14 @@ QToolButton:pressed {
 QPlainTextEdit {
     border: 1px solid #212222; /* gray7 */
 
+}
+
+/****************************** Docks ****************************************/
+
+/* Dock widget resize handle */
+
+QMainWindow::separator {
+    background: #212222; /* gray7 */
+    width: 1px; /* when vertical */
+    height: 1px; /* when horizontal */
 }
