@@ -151,3 +151,10 @@ QToolButton:hover {
 QToolButton:pressed {
     background: #313234;
 }
+
+/********************* Plain text edits (e.g., Console) **********************/
+
+QPlainTextEdit {
+    border: 1px solid #212222; /* gray7 */
+
+}
