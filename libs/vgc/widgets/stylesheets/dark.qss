@@ -46,7 +46,7 @@
  * #4d4f52   gray2   grayed text
  * #404244   gray3   menubar, toolbar, console margin
  * #313234   gray4   menu
- *           gray5   text edit
+ * #2e2f30   gray5   text edit
  *           gray6   selected text edit
  * #212222   gray7   menu and dock borders
  * black
@@ -203,4 +203,16 @@ QPushButton:pressed {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #393b3f,
                 stop:1 #232425);
+}
+
+/***************************** QLineEdit **********************************/
+
+QLineEdit {
+    color: #bec0c2;
+    selection-color: #bec0c2;
+    selection-background-color: #1d545c;
+    padding: 0px 0px;
+    border-radius: 2px;
+    border: 1px solid #212222;
+    background: #2e2f30;
 }
