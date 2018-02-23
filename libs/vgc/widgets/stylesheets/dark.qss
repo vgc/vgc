@@ -10,8 +10,10 @@
  QMenu::indicator,
  QMenuBar,
  QMenuBar::item,
+ QPlainTextEdit,
  QPushButton,
  QSpinBox,
+ QTextEdit,
  QToolBar,
  QToolButton
  {
