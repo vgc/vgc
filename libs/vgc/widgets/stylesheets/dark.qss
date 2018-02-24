@@ -139,11 +139,28 @@ QPlainTextEdit {
 
 QMainWindow::separator {
     background: #212222; /* gray7 */
-    width: 1px; /* when vertical */
-    height: 1px; /* when horizontal */
+    width: 2px; /* when vertical */
+    height: 2px; /* when horizontal */
 }
 
-/***************************** Push buttons **********************************/
+/* Note: we'd prefer width and height to be 1px instead of 2px, but when we
+ * set them to one pixel the separator's color becomes QWidget { background }
+ * instead of QMainWindow::separator { background }. I assume this is a bug.
+ *
+ * One workaround would be not to use a generic 'QWidget' selector, but
+ * unfortunately the ColorSelector becomes ugly if we do this, due to some
+ * private widgets (e.g., QColorLuminancePicker) that get painted with a
+ * default color instead of Dialog { background }.
+ *
+ * Our options are:
+ * 1. Set a 2px-wide separator, as we currently do
+ * 2. Instead of setting QWidget { background }, explicitly list all classes
+ *    which we want to affect, including private Qt classes such as
+ *    QColorLuminancePicker
+ * 3. Leave the 1px-wide separator with QWidget { background } color.
+ */
+
+ /***************************** Push buttons **********************************/
 
 QPushButton {
     height: 24px;
