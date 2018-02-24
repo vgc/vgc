@@ -43,25 +43,16 @@ QWidget {
 /******************************** Menu Bar ***********************************/
 
 QMenuBar {
-    background: #404244;              /* gray3 */
-    color: #bec0c2;                   /* gray1 */
     border-bottom: 1px solid #212222; /* gray7 */
 }
 
 QMenuBar::item {
-    background: #404244;              /* gray3 */
     border-bottom: 1px solid #212222; /* gray7 */
     padding: 5px;
 }
 
-QMenuBar::item:hover {
-    background: #4d4f52; /* gray2 */
-}
-
-QMenuBar::item:selected {
-    background: #4d4f52; /* gray2 */
-}
-
+QMenuBar::item:hover,
+QMenuBar::item:selected,
 QMenuBar::item:pressed {
     background: #4d4f52; /* gray2 */
 }
@@ -71,25 +62,16 @@ QMenuBar::item:pressed {
 QMenu {
     background: #313234;       /* gray4 */
     border: 1px solid #212222; /* gray7 */
-    color: #bec0c2;            /* gray1 */
     margin-top: -1px; /* overlap QMenuBar bottom border */
 }
-
-/* menu items */
 
 QMenu::item {
     padding: 5px 20px 5px 40px;
     background: #313234; /* gray4 */
 }
 
-QMenu::item:hover {
-    background: #404244; /* gray3 */
-}
-
-QMenu::item:selected {
-    background: #404244; /* gray3 */
-}
-
+QMenu::item:hover,
+QMenu::item:selected,
 QMenu::item:pressed {
     background: #404244; /* gray3 */
 }
