@@ -1,46 +1,7 @@
 
-/* Removes all default border, margin, and padding, to ensure that
- * any border, margin, or padding was explicitly styled.
- */
- QDockWidget,
- QLabel,
- QLineEdit,
- QMainWindow,
- QMainWindow::separator,
- QMenu,
- QMenu::item,
- QMenu::indicator,
- QMenuBar,
- QMenuBar::item,
- QPlainTextEdit,
- QPushButton,
- QSpinBox,
- QSpinBox::up-button,
- QSpinBox::down-button,
- QSpinBox::up-arrow,
- QSpinBox::down-arrow,
- QTextEdit,
- QToolBar,
- QToolButton
- {
-    border: 0px;
-    margin: 0px;
-    padding: 0px;
-}
+/***************************** Color Scheme **********************************/
 
-/* Set application-wide font
- *
- * Please do not use the universal selector "*" instead of listing explicitly
- * all widgets, otherwise custom widgets with custom fonts (e.g., vgc::widgets::Console),
- * will also use this font instead of their more appropriate font.
- */
- QLabel, QLineEdit, QMenu, QMenuBar, QPushButton, QSpinBox {
-    font-family: "Source Sans Pro";
-    font-size: 12pt;
-}
-
-/* Dark color palette guidelines:
- * We use 7 shades of gray.
+/* We use 7 shades of gray.
  *
  * Menu text is the lightest color
  * Menu borders is the darkest color
@@ -50,14 +11,34 @@
  * #4d4f52   gray2   grayed text
  * #404244   gray3   menubar, toolbar, console margin
  * #313234   gray4   menu
- * #2e2f30   gray5   text edit
- *           gray6   selected text edit
+ * #2e2f30   gray5   text edit background
+ *           gray6   selected text edit background
  * #212222   gray7   menu and dock borders
  * black
  *
  * When highlighting: -1 (=> lighter)
  * When selecting:    +1 (=> darker);
  */
+
+/******************************** Default ************************************/
+
+/* Be aware that in terms of qss selector specificity (see 'Conflict
+ * Resolution' in http://doc.qt.io/qt-5/stylesheet-syntax.html), C++ class
+ * inheritance is irrelevant. This means that "QWidget" and "QPushButton" have
+ * the same specificity, and whichever appears last in this file takes
+ * precedence. Therefore, it is important that these generic styles appear
+ * at the beginning of this file.
+ */
+
+QWidget {
+    border: 0px;
+    margin: 0px;
+    padding: 0px;
+    background: #404244; /* gray3 */
+    font-family: "Source Sans Pro";
+    font-size: 12pt;
+    color: #bec0c2; /* gray1 */
+}
 
 /******************************** Menu Bar ***********************************/
 
@@ -158,11 +139,16 @@ QToolButton:pressed {
     background: #313234; /* gray4 */
 }
 
-/********************* Plain text edits (e.g., Console) **********************/
+/********************************* Text Edits ********************************/
+
+/* Note: This includes Console, which inherits QPlainTextEdit
+ */
 
 QPlainTextEdit {
+    background: #2e2f30;       /* gray5 */
     border: 1px solid #212222; /* gray7 */
-
+    selection-color: #bec0c2;
+    selection-background-color: #1d545c;
 }
 
 /****************************** Docks ****************************************/
@@ -173,16 +159,6 @@ QMainWindow::separator {
     background: #212222; /* gray7 */
     width: 1px; /* when vertical */
     height: 1px; /* when horizontal */
-}
-
-/******************** Dialogs (e.g., ColorSelector) ****************************/
-
-QDialog {
-    background: #404244; /* gray3 */
-}
-
-QLabel {
-    color: #bec0c2; /* gray1 */
 }
 
 /***************************** Push buttons **********************************/
@@ -273,4 +249,15 @@ QSpinBox::down-button:pressed {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #393b3f,
                 stop:1 #232425);
+}
+
+/********************************* Console ********************************/
+
+vgc--widgets--Console,
+vgc--widgets--ConsoleMargin {
+    font-family: "Source Code Pro";
+}
+
+vgc--widgets--Console {
+    color: #d6d09d;
 }

@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
     // Application::addFont(resourceName)
     // Application::setStyleSheet(resourceName)
     vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf");
+    vgc::widgets::addApplicationFont("widgets/fonts/SourceCodePro-Regular.ttf");
     std::string styleSheetPath = vgc::core::resourcePath("widgets/stylesheets/dark.qss");
     std::string styleSheetString = vgc::core::readFile(styleSheetPath);
     a.setStyleSheet(vgc::widgets::toQt(styleSheetString));

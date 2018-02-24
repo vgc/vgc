@@ -119,38 +119,6 @@ bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks)
 namespace vgc {
 namespace widgets {
 
-namespace internal {
-
-// Area on the left of the console where the command prompt is drawn.
-class ConsoleLeftMargin : public QWidget
-{
-public:
-    ConsoleLeftMargin(vgc::widgets::Console* console) :
-        QWidget(console), console_(console) {
-    }
-
-    ~ConsoleLeftMargin();
-
-    QSize sizeHint() const Q_DECL_OVERRIDE {
-        return QSize(console_->leftMarginWidth_, 0);
-    }
-
-protected:
-    void paintEvent(QPaintEvent* event) Q_DECL_OVERRIDE {
-        console_->leftMarginPaintEvent_(event);
-    }
-
-private:
-    vgc::widgets::Console* console_;
-};
-
-// We define the destructor out-of-line to suppress clang warning:
-// warning: 'A' has no out-of-line virtual method definitions; its vtable will
-// be emitted in every translation unit [-Wweak-vtables]
-ConsoleLeftMargin::~ConsoleLeftMargin() {}
-
-} // namespace internal
-
 Console::Console(
     core::PythonInterpreter* interpreter,
     QWidget* parent) :
@@ -163,24 +131,9 @@ Console::Console(
     // Handling of dead keys. See [1].
     setAttribute(Qt::WA_InputMethodEnabled, true);
 
-    // Set colors. See Qt doc for the meaning of QPalette Color roles.
-    QPalette p = palette();
-    p.setColor(QPalette::Base, backgroundColor_);
-    p.setColor(QPalette::Text, textColor_);
-    p.setColor(QPalette::Highlight, selectionBackgroundColor_);
-    p.setColor(QPalette::HighlightedText, selectionForegroundColor_);
-    setPalette(p);
-
-    // Set font
-    QFontDatabase fontDB;
-    std::string fontPath = core::resourcePath("widgets/fonts/SourceCodePro-Regular.ttf");
-    fontDB.addApplicationFont(toQt(fontPath));
-    QFont f("Source Code Pro", 12, QFont::Normal);
-    setFont(f);
-
-    // Setup left margin (where the command prompt is drawn)
+    // Setup console margin (where the command prompt is drawn)
     // This must be done after the font is set to compute its width correctly.
-    setupLeftMargin_();
+    setupConsoleMargin_();
 }
 
 Console::~Console()
@@ -359,8 +312,8 @@ void Console::resizeEvent(QResizeEvent* event)
     QPlainTextEdit::resizeEvent(event);
 
     QRect cr = contentsRect();
-    leftMargin_->setGeometry(QRect(
-        cr.left(), cr.top(), leftMarginWidth_, cr.height()));
+    consoleMargin_->setGeometry(QRect(
+        cr.left(), cr.top(), consoleMarginWidth_, cr.height()));
 }
 
 // Handling of dead keys. See [1].
@@ -464,31 +417,29 @@ int Console::currentLineNumber_() const
     return lineNumber_(textCursor());
 }
 
-void Console::updateLeftMargin_(const QRect& rect, int dy)
+void Console::updateConsoleMargin_(const QRect& rect, int dy)
 {
     if (dy)
-        leftMargin_->scroll(0, dy);
+        consoleMargin_->scroll(0, dy);
     else
-        leftMargin_->update(0, rect.y(), leftMargin_->width(), rect.height());
+        consoleMargin_->update(0, rect.y(), consoleMargin_->width(), rect.height());
 }
 
-void Console::setupLeftMargin_()
+void Console::setupConsoleMargin_()
 {
-    leftMargin_= new internal::ConsoleLeftMargin(this);
-    computeLeftMarginWidth_();
-    connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLeftMargin_(QRect,int)));
-    setViewportMargins(leftMarginWidth_, 0, 0, 0);
+    consoleMargin_= new ConsoleMargin(this);
+    computeConsoleMarginWidth_();
+    connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateConsoleMargin_(QRect,int)));
+    setViewportMargins(consoleMarginWidth_, 0, 0, 0);
 }
 
-void Console::leftMarginPaintEvent_(QPaintEvent* event)
+void Console::consoleMarginPaintEvent_(QPaintEvent* event)
 {
-    int marginWidth = leftMargin_->width();
+    int marginWidth = consoleMargin_->width();
     int fontHeight = fontMetrics().height();
 
-    QPainter painter(leftMargin_);
-    painter.setPen(QPen(promptColor_));
-
-    painter.fillRect(event->rect(), marginBackgroundColor_);
+    QPainter painter(consoleMargin_);
+    painter.fillRect(event->rect(), consoleMargin_->palette().base());
 
     QTextBlock block = firstVisibleBlock();
     int lineNumber = block.blockNumber();
@@ -512,13 +463,35 @@ void Console::leftMarginPaintEvent_(QPaintEvent* event)
     }
 }
 
-void Console::computeLeftMarginWidth_()
+void Console::computeConsoleMarginWidth_()
 {
     int padding = 4;
     int promptWidth = std::max(
                 fontMetrics().width(primaryPromptString_),
                 fontMetrics().width(secondaryPromptString_));
-    leftMarginWidth_ = promptWidth + 2 * padding;
+    consoleMarginWidth_ = promptWidth + 2 * padding;
+}
+
+ConsoleMargin::ConsoleMargin(Console* console) :
+    QWidget(console),
+    console_(console)
+{
+
+}
+
+ConsoleMargin::~ConsoleMargin()
+{
+
+}
+
+QSize ConsoleMargin::sizeHint() const
+{
+    return QSize(console_->consoleMarginWidth_, 0);
+}
+
+void ConsoleMargin::paintEvent(QPaintEvent* event)
+{
+    console_->consoleMarginPaintEvent_(event);
 }
 
 } // namespace widgets

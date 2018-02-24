@@ -17,18 +17,14 @@
 #ifndef VGC_WIDGETS_CONSOLE_H
 #define VGC_WIDGETS_CONSOLE_H
 
-#include <vgc/widgets/api.h>
 #include <QPlainTextEdit>
+#include <vgc/core/python.h>
+#include <vgc/widgets/api.h>
 
 namespace vgc {
-
-namespace core { class PythonInterpreter; }
-
 namespace widgets {
 
-namespace internal {
-class ConsoleLeftMargin;
-}
+class ConsoleMargin;
 
 /// \class vgc::core::Console
 /// \brief GUI around the Python interpreter
@@ -82,7 +78,7 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
 
 private Q_SLOTS:
-    void updateLeftMargin_(const QRect&, int);
+    void updateConsoleMargin_(const QRect&, int);
 
 private:
     core::PythonInterpreter* interpreter_;
@@ -98,13 +94,13 @@ private:
     // line numbers where code blocks start.
     std::vector<int> codeBlocks_;
 
-    // left margin
-    friend class internal::ConsoleLeftMargin;
-    QWidget* leftMargin_;
-    int leftMarginWidth_;
-    void setupLeftMargin_();
-    void leftMarginPaintEvent_(QPaintEvent* event);
-    void computeLeftMarginWidth_();
+    // Console margin
+    friend class ConsoleMargin;
+    ConsoleMargin* consoleMargin_;
+    int consoleMarginWidth_;
+    void setupConsoleMargin_();
+    void consoleMarginPaintEvent_(QPaintEvent* event);
+    void computeConsoleMarginWidth_();
 
     // Code block separators
     bool showCodeBlockSeparators_ = false;
@@ -113,14 +109,45 @@ private:
     // Interpreter prompt
     QString primaryPromptString_ = QString(">>>");
     QString secondaryPromptString_ = QString("...");
+};
 
-    // Color scheme
-    QColor backgroundColor_ = QColor(46, 47, 48);
-    QColor marginBackgroundColor_ = QColor(64, 66, 68);
-    QColor textColor_ = QColor(214, 208, 157);
-    QColor promptColor_ = QColor(190, 192, 194);
-    QColor selectionForegroundColor_ = QColor(190, 192, 194);
-    QColor selectionBackgroundColor_ = QColor(29, 84, 92);
+/// \class ConsoleMargin
+/// \brief The margin area of a Console
+///
+/// This widget represents the margin area of a Console, typically drawn on the
+/// left of the Console, and displaying the interpreter prompt.
+///
+/// Normally, you should not create a ConsoleMargin yourself, since it is
+/// automatically created and managed by its associated Console. The reason
+/// this class is public is to allow users to style it using Qt stylesheets.
+/// Ideally, we would be better to keep this class internal, and allow styling
+/// via Console::margin. However, it was unclear how to achieve this in the
+/// given time constraints, which is why we adopted this simpler solution.
+///
+class ConsoleMargin : public QWidget
+{
+    Q_OBJECT
+
+public:
+    /// Constructs a ConsoleMargin.
+    ///
+    ConsoleMargin(vgc::widgets::Console* console);
+
+    /// Destructs this ConsoleMargin.
+    ///
+    ~ConsoleMargin();
+
+    /// Reimplements sizeHint().
+    ///
+    QSize sizeHint() const override;
+
+protected:
+    /// Reimplements paintEvent().
+    ///
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    Console* console_;
 };
 
 } // namespace widgets
