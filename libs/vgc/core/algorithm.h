@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <string>
 #include <vgc/core/api.h>
 
 namespace vgc {
@@ -146,6 +147,14 @@ int upper_bound(const std::vector<T>& v, const T& x)
     auto it = std::upper_bound(v.cbegin(), v.cend(), x);
     return std::distance(v.cbegin(), it);
 }
+
+/// Returns a copy of the string \p s where all occurences of
+/// \p from are replaced by \p to.
+///
+VGC_CORE_API
+std::string replace(const std::string& s,
+                    const std::string& from,
+                    const std::string& to);
 
 } // namespace core
 } // namespace vgc
