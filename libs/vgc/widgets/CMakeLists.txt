@@ -16,6 +16,7 @@ vgc_add_library(widgets
         mainwindow.h
         openglviewer.h
         qtutil.h
+        stylesheets.h
 
     CPP_FILES
         colordialog.cpp
@@ -26,6 +27,7 @@ vgc_add_library(widgets
         mainwindow.cpp
         openglviewer.cpp
         qtutil.cpp
+        stylesheets.cpp
 
     RESOURCE_FILES
         fonts/SourceCodePro-Black.ttf
