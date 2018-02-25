@@ -210,56 +210,48 @@ QSpinBox {
     background: #2e2f30;
 }
 
-QSpinBox::up-button {
-    border-left: 1px solid #212222;
-    height: 12px;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #3e4044,
-                stop:1 #272829);
-}
 
-QSpinBox::up-button:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #484a4f,
-                stop:1 #2e3031);
-}
-
-QSpinBox::up-button:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #393b3f,
-                stop:1 #232425);
-}
-
+QSpinBox::up-button,
 QSpinBox::down-button {
     border-left: 1px solid #212222;
     height: 12px;
+    width: 12px;
+}
+
+QSpinBox::up-button {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #3e4044,
+                stop:1 #323336);
+}
+
+QSpinBox::down-button {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #323336,
                 stop:1 #272829);
 }
 
+QSpinBox::up-button:hover,
 QSpinBox::down-button:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #484a4f,
-                stop:1 #2e3031);
+    background: #484a4f;
 }
 
+QSpinBox::up-button:pressed,
 QSpinBox::down-button:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #393b3f,
-                stop:1 #232425);
+    background: #2e2f30;
+}
+
+QSpinBox::up-arrow,
+QSpinBox::down-arrow {
+    width: 12px;
+    height: 12px;
 }
 
 QSpinBox::up-arrow {
     image: url(vgc:/widgets/images/spinboxup.png);
-    width: 8px;
-    height: 8px;
 }
 
 QSpinBox::down-arrow {
     image: url(vgc:/widgets/images/spinboxdown.png);
-    width: 8px;
-    height: 8px;
 }
 
 /********************************* Console ********************************/
