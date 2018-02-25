@@ -250,6 +250,18 @@ QSpinBox::down-button:pressed {
                 stop:1 #232425);
 }
 
+QSpinBox::up-arrow {
+    image: url(vgc:/widgets/images/spinboxup.png);
+    width: 8px;
+    height: 8px;
+}
+
+QSpinBox::down-arrow {
+    image: url(vgc:/widgets/images/spinboxdown.png);
+    width: 8px;
+    height: 8px;
+}
+
 /********************************* Console ********************************/
 
 vgc--widgets--Console,
