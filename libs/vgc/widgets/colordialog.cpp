@@ -55,6 +55,22 @@ ColorDialog::ColorDialog(QWidget* parent) :
     setWindowFlag(this, Qt::WindowMinimizeButtonHint, false);
 
     connect(this, &ColorDialog::finished, this, &ColorDialog::onFinished_);
+
+    // Remove the border color of the luminance picker. We'd prefer to do this
+    // in qss, but it does not seem possible. By default, it is a "sunken"
+    // frame explicitly drawn using qDrawShadePanel(). See:
+    // qtbase/src/widgets/dialogs/qcolordialog.cpp/QColorLuminancePicker::paintEvent
+    //
+    Q_FOREACH(QObject* obj, children()) {
+        QWidget* w = qobject_cast<QWidget*>(obj);
+        const QMetaObject* mobj = obj->metaObject();
+        if (w && mobj && mobj->className() == QString("QColorLuminancePicker")) {
+            QPalette p = palette();
+            p.setColor(QPalette::Dark, QColor(Qt::transparent));
+            p.setColor(QPalette::Light, QColor(Qt::transparent));
+            w->setPalette(p);
+        }
+    }
 }
 
 void ColorDialog::closeEvent(QCloseEvent* event)

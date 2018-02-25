@@ -264,3 +264,10 @@ vgc--widgets--ConsoleMargin {
 vgc--widgets--Console {
     color: #d6d09d;
 }
+
+/********************************* ColorDialog ********************************/
+
+QColorDialog QColorLuminancePicker {
+  background-color: transparent; /* right margin background */
+  color: black;                  /* right margin foreground (little triangle) */
+}
