@@ -114,8 +114,18 @@ private:
 
     // Handle mouse/tablet events
     double width_() const;
-    bool isTabletEvent_;
     double tabletPressure_;
+
+    // Make sure to disallow concurrent usage of the mouse and the
+    // tablet to avoid conflicts. This is also a workaround the
+    // problem around Qt bugs:
+    //   1. At least in Linus/X11, mouseEvents are generated even
+    //      when tabletEvents are accepted.
+    //   2. At least in Linux/X11, sometimes a TabletRelease is
+    //      followed by both a MouseMove and a MouseRelease, see
+    //      https://github.com/vgc/vgc/issues/9
+    bool mouseEventInProgress_;
+    bool tabletEventInProgress_;
 
     // Polygon mode. This is selected with the n/t/f keys.
     // XXX This is a temporary quick method to switch between

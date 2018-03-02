@@ -79,8 +79,9 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     isPanning_(false),
     isRotating_(false),
     isZooming_(false),
-    isTabletEvent_(false),
     tabletPressure_(0.0),
+    mouseEventInProgress_(false),
+    tabletEventInProgress_(false),
     polygonMode_(2),
     showControlPoints_(false),
     requestedTesselationMode_(2),
@@ -102,13 +103,25 @@ OpenGLViewer::~OpenGLViewer()
 double OpenGLViewer::width_() const
 {
     const double defaultWidth = 6.0;
-    return isTabletEvent_
-           ? 2 * tabletPressure_ * defaultWidth
-           : defaultWidth;
+    return mouseEventInProgress_
+           ? defaultWidth
+           : 2 * tabletPressure_ * defaultWidth;
+
+    // Note: when drawing with a Wacom tablet, this may be called
+    // in a MouseMove just after TabletRelease. In which case,
+    // we have mouseEventInProgress_ = false but also tabletEventInProgress = false
+    // The one we should trust is mouseEventInProgress. See bug #9.
 }
 
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
+    if (tabletEventInProgress_) {
+        mouseEventInProgress_ = false;
+    }
+    else {
+        mouseEventInProgress_ = true;
+    }
+
     if (isSketching_ || isPanning_ || isRotating_ || isZooming_) {
         return;
     }
@@ -218,6 +231,8 @@ void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
     else if (isZooming_ && event->button() == Qt::RightButton) {
         isZooming_ = false;
     }
+
+    mouseEventInProgress_ = false;
 }
 
 void OpenGLViewer::tabletEvent(QTabletEvent* event)
@@ -238,13 +253,13 @@ void OpenGLViewer::tabletEvent(QTabletEvent* event)
     tabletPressure_ = event->pressure();
     switch(event->type()) {
     case QEvent::TabletPress:
-        isTabletEvent_ = true;
+        tabletEventInProgress_ = true;
         break;
     case QEvent::TabletMove:
         // nothing
         break;
     case QEvent::TabletRelease:
-        isTabletEvent_ = false;
+        tabletEventInProgress_ = false;
         break;
     default:
         // nothing
