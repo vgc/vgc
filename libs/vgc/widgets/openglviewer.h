@@ -122,7 +122,7 @@ private:
     // render modes. A more engineered method will come later.
     int polygonMode_; // 0: none; 1: lines; 2: fill (i.e., not exactly like OpenGL)
 
-    // Show control points. This is toggled with the "c" key.
+    // Show control points. This is toggled with the "p" key.
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
     bool showControlPoints_;

@@ -284,7 +284,7 @@ void OpenGLViewer::keyPressEvent(QKeyEvent* event)
         requestedTesselationMode_ = 2;
         update();
         break;
-    case Qt::Key_C:
+    case Qt::Key_P:
         showControlPoints_ = !showControlPoints_;
         update();
         break;
