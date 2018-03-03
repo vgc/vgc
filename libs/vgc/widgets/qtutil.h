@@ -24,9 +24,11 @@
 
 #include <string>
 #include <QColor>
+#include <QPointF>
 #include <QString>
-#include <vgc/widgets/api.h>
 #include <vgc/core/color.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/widgets/api.h>
 
 namespace vgc {
 namespace widgets {
@@ -46,6 +48,14 @@ QColor toQt(const core::Color& c);
 /// Converts the given QColor \p c into a vgc::core::Color.
 ///
 core::Color fromQt(const QColor& c);
+
+/// Converts the given vgc::geometry::Vec2d \p v into a QPointF.
+///
+QPointF toQt(const geometry::Vec2d& v);
+
+/// Converts the given QPointF \p v into a vgc::geometry::Vec2d.
+///
+geometry::Vec2d fromQt(const QPointF& v);
 
 } // namespace widgets
 } // namespace vgc
