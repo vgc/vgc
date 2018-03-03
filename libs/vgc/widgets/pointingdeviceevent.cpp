@@ -16,6 +16,7 @@
 
 #include <vgc/widgets/pointingdeviceevent.h>
 
+#include <QGuiApplication>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
@@ -36,7 +37,10 @@ PointingDeviceEvent::PointingDeviceEvent(QMouseEvent* event) :
 
 PointingDeviceEvent::PointingDeviceEvent(QTabletEvent* event) :
     type_(event->type()),
-    modifiers_(event->modifiers()),
+    modifiers_(QGuiApplication::queryKeyboardModifiers()),
+    // Note: we don't use event->modifiers() or QGuiApplication::keyboardModifiers()
+    // because they're broken for tablet events; at least in Qt 5.6 and Linux/X11,
+    // they always returns NoModifier.
     timestamp_(event->timestamp()),
     button_(event->button()),
     buttons_(event->buttons()),

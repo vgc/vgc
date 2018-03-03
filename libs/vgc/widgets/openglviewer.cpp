@@ -35,10 +35,6 @@ QString shaderPath_(const std::string& name) {
     return toQt(path);
 }
 
-geometry::Vec2d toVec2d_(QMouseEvent* event) {
-    return geometry::Vec2d(event->x(), event->y());
-}
-
 QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {
     return QMatrix4x4(
                (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
@@ -52,6 +48,13 @@ struct GLVertex {
     float x, y;
     GLVertex(float x, float y) : x(x), y(y) {}
 };
+
+double width_(const PointingDeviceEvent& event) {
+    const double defaultWidth = 6.0;
+    return event.hasPressure() ?
+               2 * event.pressure() * defaultWidth :
+               defaultWidth;
+}
 
 } // namespace
 
@@ -79,9 +82,8 @@ OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
     isPanning_(false),
     isRotating_(false),
     isZooming_(false),
-    tabletPressure_(0.0),
-    mouseEventInProgress_(false),
-    tabletEventInProgress_(false),
+    mousePressed_(false),
+    tabletPressed_(false),
     polygonMode_(2),
     showControlPoints_(false),
     requestedTesselationMode_(2),
@@ -100,68 +102,108 @@ OpenGLViewer::~OpenGLViewer()
     doneCurrent();
 }
 
-double OpenGLViewer::width_() const
-{
-    const double defaultWidth = 6.0;
-    return mouseEventInProgress_
-           ? defaultWidth
-           : 2 * tabletPressure_ * defaultWidth;
-
-    // Note: when drawing with a Wacom tablet, this may be called
-    // in a MouseMove just after TabletRelease. In which case,
-    // we have mouseEventInProgress_ = false but also tabletEventInProgress = false
-    // The one we should trust is mouseEventInProgress. See bug #9.
-}
-
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
 {
-    if (tabletEventInProgress_) {
-        mouseEventInProgress_ = false;
-    }
-    else {
-        mouseEventInProgress_ = true;
-    }
-
-    if (isSketching_ || isPanning_ || isRotating_ || isZooming_) {
+    if (mousePressed_ || tabletPressed_) {
         return;
     }
-
-    if (event->modifiers() == Qt::NoModifier &&
-        event->button() == Qt::LeftButton)
-    {
-        isSketching_ = true;
-        // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
-        // and should be cached), but let's keep it like this for now for testing.
-        geometry::Vec2d viewCoords = toVec2d_(event);
-        geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
-        scene_->startCurve(worldCoords, width_());
-    }
-    else if (event->modifiers() == Qt::AltModifier &&
-             event->button() == Qt::LeftButton)
-    {
-        isRotating_ = true;
-        mousePosAtPress_ = toVec2d_(event);
-        cameraAtPress_ = camera_;
-    }
-    else if (event->modifiers() == Qt::AltModifier &&
-             event->button() == Qt::MidButton)
-    {
-        isPanning_ = true;
-        mousePosAtPress_ = toVec2d_(event);
-        cameraAtPress_ = camera_;
-    }
-    else if (event->modifiers() == Qt::AltModifier &&
-             event->button() == Qt::RightButton)
-    {
-        isZooming_ = true;
-        mousePosAtPress_ = toVec2d_(event);
-        cameraAtPress_ = camera_;
-    }
+    mousePressed_ = true;
+    pointingDeviceButtonAtPress_ = event->button();
+    pointingDevicePress(PointingDeviceEvent(event));
 }
 
 void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
 {
-    // Note: event-button() is always NoButton for mouseMoveEvent. This is why
+    if (!mousePressed_) {
+        return;
+    }
+    pointingDeviceMove(PointingDeviceEvent(event));
+}
+
+void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (!mousePressed_ || pointingDeviceButtonAtPress_ != event->button()) {
+        return;
+    }
+    pointingDeviceRelease(PointingDeviceEvent(event));
+    mousePressed_ = false;
+}
+
+void OpenGLViewer::tabletEvent(QTabletEvent* event)
+{
+    switch(event->type()) {
+    case QEvent::TabletPress:
+        if (mousePressed_ || tabletPressed_) {
+            return;
+        }
+        tabletPressed_ = true;
+        pointingDeviceButtonAtPress_ = event->button();
+        pointingDevicePress(PointingDeviceEvent(event));
+        break;
+
+    case QEvent::TabletMove:
+        if (!tabletPressed_) {
+            return;
+        }
+        pointingDeviceMove(PointingDeviceEvent(event));
+        break;
+
+    case QEvent::TabletRelease:
+        if (!tabletPressed_ || pointingDeviceButtonAtPress_ != event->button()) {
+            return;
+        }
+        pointingDeviceRelease(PointingDeviceEvent(event));
+        tabletPressed_ = false;
+        break;
+
+    default:
+        // nothing
+        break;
+    }
+}
+
+void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
+{
+    if (isSketching_ || isPanning_ || isRotating_ || isZooming_) {
+        return;
+    }
+
+    if (event.modifiers() == Qt::NoModifier &&
+        event.button() == Qt::LeftButton)
+    {
+        isSketching_ = true;
+        // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
+        // and should be cached), but let's keep it like this for now for testing.
+        geometry::Vec2d viewCoords = event.pos();
+        geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+        scene_->startCurve(worldCoords, width_(event));
+    }
+    else if (event.modifiers() == Qt::AltModifier &&
+             event.button() == Qt::LeftButton)
+    {
+        isRotating_ = true;
+        pointingDevicePosAtPress_ = event.pos();
+        cameraAtPress_ = camera_;
+    }
+    else if (event.modifiers() == Qt::AltModifier &&
+             event.button() == Qt::MidButton)
+    {
+        isPanning_ = true;
+        pointingDevicePosAtPress_ = event.pos();
+        cameraAtPress_ = camera_;
+    }
+    else if (event.modifiers() == Qt::AltModifier &&
+             event.button() == Qt::RightButton)
+    {
+        isZooming_ = true;
+        pointingDevicePosAtPress_ = event.pos();
+        cameraAtPress_ = camera_;
+    }
+}
+
+void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
+{
+    // Note: event.button() is always NoButton for move events. This is why
     // we use the variable isPanning_ and isSketching_ to remember the current
     // mouse action. In the future, we'll abstract this mechanism in a separate
     // class.
@@ -169,13 +211,13 @@ void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
     if (isSketching_) {
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
-        geometry::Vec2d viewCoords = toVec2d_(event);
+        geometry::Vec2d viewCoords = event.pos();
         geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
-        scene_->continueCurve(worldCoords, width_());
+        scene_->continueCurve(worldCoords, width_(event));
     }
     else if (isPanning_) {
-        geometry::Vec2d mousePos = toVec2d_(event);
-        geometry::Vec2d delta = mousePosAtPress_ - mousePos;
+        geometry::Vec2d mousePos = event.pos();
+        geometry::Vec2d delta = pointingDevicePosAtPress_ - mousePos;
         camera_.setCenter(cameraAtPress_.center() + delta);
         update();
     }
@@ -184,13 +226,13 @@ void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
         // XXX rotateViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double rotateViewSensitivity = 0.01;
-        geometry::Vec2d mousePos = toVec2d_(event);
-        geometry::Vec2d deltaPos = mousePosAtPress_ - mousePos;
+        geometry::Vec2d mousePos = event.pos();
+        geometry::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
         double deltaRotation = rotateViewSensitivity * (deltaPos.x() - deltaPos.y());
         camera_.setRotation(cameraAtPress_.rotation() + deltaRotation);
 
         // Set new camera center so that rotation center = mouse pos at press
-        geometry::Vec2d pivotViewCoords = mousePosAtPress_;
+        geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
         geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
         geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
@@ -202,13 +244,13 @@ void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
         // XXX zoomViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double zoomViewSensitivity = 0.005;
-        geometry::Vec2d mousePos = toVec2d_(event);
-        geometry::Vec2d deltaPos = mousePosAtPress_ - mousePos;
+        geometry::Vec2d mousePos = event.pos();
+        geometry::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
         const double s = std::exp(zoomViewSensitivity * (deltaPos.y() - deltaPos.x()));
         camera_.setZoom(cameraAtPress_.zoom() * s);
 
         // Set new camera center so that zoom center = mouse pos at press
-        geometry::Vec2d pivotViewCoords = mousePosAtPress_;
+        geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
         geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
         geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
@@ -217,59 +259,12 @@ void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
     }
 }
 
-void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
+void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&)
 {
-    if (isSketching_ && event->button() == Qt::LeftButton) {
-        isSketching_ = false;
-    }
-    if (isRotating_ && event->button() == Qt::LeftButton) {
-        isRotating_ = false;
-    }
-    else if (isPanning_ && event->button() == Qt::MidButton) {
-        isPanning_ = false;
-    }
-    else if (isZooming_ && event->button() == Qt::RightButton) {
-        isZooming_ = false;
-    }
-
-    mouseEventInProgress_ = false;
-}
-
-void OpenGLViewer::tabletEvent(QTabletEvent* event)
-{
-    // We store the pressure, and handle the event in:
-    // - mousePressEvent()
-    // - mouseMoveEvent()
-    // - mouseReleaseEvent()
-    //
-    // This is because Qt 5.6, at least on some plateform, generates
-    // the mouse event anyway even if we accept the tablet event, causing
-    // duplicates. The implementation here is the most reliable way I found to
-    // properly handle tablet events.
-    //
-    // Relevant: https://bugreports.qt.io/browse/QTBUG-47007
-
-    // Remember state
-    tabletPressure_ = event->pressure();
-    switch(event->type()) {
-    case QEvent::TabletPress:
-        tabletEventInProgress_ = true;
-        break;
-    case QEvent::TabletMove:
-        // nothing
-        break;
-    case QEvent::TabletRelease:
-        tabletEventInProgress_ = false;
-        break;
-    default:
-        // nothing
-        break;
-    }
-
-    // Ignore event to ensure that Qt generates a mouse event.
-    // Note: on some (but not all) systems, Qt generate the mouse event even
-    // when this event is accepted.
-    event->ignore();
+    isSketching_ = false;
+    isRotating_ = false;
+    isPanning_ = false;
+    isZooming_ = false;
 }
 
 void OpenGLViewer::keyPressEvent(QKeyEvent* event)

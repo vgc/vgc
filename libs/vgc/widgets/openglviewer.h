@@ -29,6 +29,7 @@
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/scene/scene.h>
+#include <vgc/widgets/pointingdeviceevent.h>
 
 namespace vgc {
 namespace widgets {
@@ -59,6 +60,10 @@ private:
     void tabletEvent(QTabletEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 
+    void pointingDevicePress(const PointingDeviceEvent& event);
+    void pointingDeviceMove(const PointingDeviceEvent& event);
+    void pointingDeviceRelease(const PointingDeviceEvent& event);
+
 private:
     using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
     OpenGLFunctions* openGLFunctions() const;
@@ -83,7 +88,7 @@ private:
     bool isPanning_;
     bool isRotating_;
     bool isZooming_;
-    geometry::Vec2d mousePosAtPress_;
+    geometry::Vec2d pointingDevicePosAtPress_;
     geometry::Camera2d cameraAtPress_;
 
     // Shader program
@@ -112,20 +117,24 @@ private:
     void updateCurveGLResources_(int i);
     void destroyCurveGLResources_(int i);
 
-    // Handle mouse/tablet events
-    double width_() const;
-    double tabletPressure_;
-
-    // Make sure to disallow concurrent usage of the mouse and the
-    // tablet to avoid conflicts. This is also a workaround the
-    // problem around Qt bugs:
-    //   1. At least in Linus/X11, mouseEvents are generated even
-    //      when tabletEvents are accepted.
-    //   2. At least in Linux/X11, sometimes a TabletRelease is
-    //      followed by both a MouseMove and a MouseRelease, see
-    //      https://github.com/vgc/vgc/issues/9
-    bool mouseEventInProgress_;
-    bool tabletEventInProgress_;
+    // Make sure to disallow concurrent usage of the mouse and the tablet to
+    // avoid conflicts. This also acts as a work around the following Qt bugs:
+    // 1. At least in Linus/X11, mouse events are generated even when tablet
+    //    events are accepted.
+    // 2. At least in Linux/X11, a TabletRelease is sometimes followed by both a
+    //    MouseMove and a MouseRelease, see https://github.com/vgc/vgc/issues/9.
+    //
+    // We also disallow concurrent usage of different mouse buttons, in
+    // particular:
+    // 1. We ignore mousePressEvent() if there has already been a
+    //    mousePressEvent() with another event->button() and no matching
+    //    mouseReleaseEvent().
+    // 2. We ignore mouseReleaseEvent() if the value of event->button() is
+    //    different from its value in mousePressEvent().
+    //
+    bool mousePressed_; // whether there's been a mouse press event with no matching mouse release event.
+    bool tabletPressed_; // whether there's been a tablet press event with no matching tablet release event.
+    Qt::MouseButton pointingDeviceButtonAtPress_; // value of event->button at press
 
     // Polygon mode. This is selected with the n/t/f keys.
     // XXX This is a temporary quick method to switch between
