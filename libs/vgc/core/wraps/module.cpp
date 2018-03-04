@@ -22,7 +22,7 @@ void wrap_timer(py::module& m);
 
 PYBIND11_PLUGIN(core)
 {
-    py::module m("cire", "Documentation of the 'core' module");
+    py::module m("core", "Documentation of the 'core' module");
     wrap_timer(m);
     return m.ptr();
 }
