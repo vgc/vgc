@@ -19,5 +19,10 @@
 namespace vgc {
 namespace dom {
 
+Node::Node()
+{
+
+}
+
 } // namespace dom
 } // namespace vgc

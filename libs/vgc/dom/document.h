@@ -19,6 +19,7 @@
 
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/node.h>
 
 namespace vgc {
 namespace dom {
@@ -31,7 +32,7 @@ VGC_CORE_DECLARE_PTRS(Document);
 /// VGC documents are written to disk as XML files, and represented in memory
 /// similarly to the DOM structures typically used in web browsers.
 ///
-class VGC_DOM_API Document: public core::Object<Document>
+class VGC_DOM_API Document: public Node
 {
 public:
     /// Creates a document.

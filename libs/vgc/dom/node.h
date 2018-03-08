@@ -17,10 +17,41 @@
 #ifndef VGC_DOM_NODE_H
 #define VGC_DOM_NODE_H
 
+#include <vgc/core/object.h>
 #include <vgc/dom/api.h>
 
 namespace vgc {
 namespace dom {
+
+VGC_CORE_DECLARE_PTRS(Node);
+
+/// \class vgc::dom::Node
+/// \brief Represents a node of the DOM. All dom classes derive from Node.
+///
+/// This is the base class for all classes in the DOM. For example, the
+/// Document is a node, each Element is a Node, and even each Attribute is a
+/// Node.
+///
+/// Each Node is solely responsible for the lifetime of its childrenNodes(), and
+/// stores shared pointers to its children. Observers should not normally hold
+/// shared pointers to nodes (this would prevent their destruction despite
+/// no meaningful existence possible), but instead hold either weak pointers
+/// or raw pointers (when the lifetime of the object is guaranteed via other
+/// means).
+///
+/// Typically, a Document is loaded from an XML file, and Nodes remember the
+/// location in the file where the data was initially loaded. However, to
+/// preserve memory, the corresponding string is typically not hold by Nodes,
+/// unless otherwise stated (for example, when users directly edit the string
+/// in an XML node editor).
+///
+class VGC_DOM_API Node: public core::Object<Node>
+{
+public:
+    /// Creates a Node.
+    ///
+    Node();
+};
 
 } // namespace dom
 } // namespace vgc
