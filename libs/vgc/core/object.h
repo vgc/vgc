@@ -53,6 +53,27 @@ public:
     std::shared_ptr<T> ptr() {
         return this->shared_from_this();
     }
+
+    /// Destructs the object. Since this destructor is virtual, there is no
+    /// need to explicitly declare a (virtual) destructor in derived classes.
+    /// In many (most?) cases, the default destructor is the most appropriate.
+    /// In general, derived classes should strive for "the rule of zero": no
+    /// custom destructor, copy constructor, move constructor, assignment
+    /// operator, and move assignment operator. If you declare any of these,
+    /// please declare all of these. See also:
+    ///
+    /// http://en.cppreference.com/w/cpp/language/rule_of_three
+    /// https://blog.rmf.io/cxx11/rule-of-zero
+    /// http://scottmeyers.blogspot.fr/2014/03/a-concern-about-rule-of-zero.html
+    ///
+    virtual ~Object() = default;
+
+    // Declare other special member functions as defaults.
+    Object() = default;
+    Object(const Object&) = default;
+    Object(Object&&) = default;
+    Object& operator=(const Object&) = default;
+    Object& operator=(Object&&) = default;
 };
 
 } // namespace core
