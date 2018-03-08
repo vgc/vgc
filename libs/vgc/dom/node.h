@@ -17,6 +17,7 @@
 #ifndef VGC_DOM_NODE_H
 #define VGC_DOM_NODE_H
 
+#include <vector>
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
 
@@ -32,12 +33,12 @@ VGC_CORE_DECLARE_PTRS(Node);
 /// Document is a node, each Element is a Node, and even each Attribute is a
 /// Node.
 ///
-/// Each Node is solely responsible for the lifetime of its childrenNodes(), and
-/// stores shared pointers to its children. Observers should not normally hold
-/// shared pointers to nodes (this would prevent their destruction despite
-/// no meaningful existence possible), but instead hold either weak pointers
-/// or raw pointers (when the lifetime of the object is guaranteed via other
-/// means).
+/// Each Node is solely responsible for the lifetime of its children() nodes,
+/// by storing shared pointers to these nodes. Observers should not normally
+/// hold shared pointers to nodes (this would prevent their destruction despite
+/// no meaningful existence possible), but instead hold either weak pointers or
+/// raw pointers, depending on whether they have guarantee on these nodes'
+/// lifetime.
 ///
 /// Typically, a Document is loaded from an XML file, and Nodes remember the
 /// location in the file where the data was initially loaded. However, to
@@ -51,6 +52,15 @@ public:
     /// Creates a Node.
     ///
     Node();
+
+    /// Returns the children of this Node.
+    ///
+    const std::vector<NodeSharedPtr>& children() {
+        return children_;
+    }
+
+private:
+    std::vector<NodeSharedPtr> children_;
 };
 
 } // namespace dom
