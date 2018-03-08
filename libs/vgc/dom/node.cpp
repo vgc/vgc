@@ -19,7 +19,8 @@
 namespace vgc {
 namespace dom {
 
-Node::Node()
+Node::Node() :
+    parent_(nullptr)
 {
 
 }

@@ -49,18 +49,51 @@ VGC_CORE_DECLARE_PTRS(Node);
 class VGC_DOM_API Node: public core::Object<Node>
 {
 public:
-    /// Creates a Node.
+    /// Constructs a root Node, that is, a Node with no parent.
+    ///
+    /// \sa isRootNode().
     ///
     Node();
 
+    /// Returns the parent of this Node.
+    ///
+    /// \sa children() and isRootNode().
+    ///
+    Node* parent() const {
+        return parent_;
+    }
+
+    /// Returns whether this node is a root node, that is, whether it has no
+    /// parent. For example, a dom::Document is always a root node. However,
+    /// note that a dom::Element is never a root node, even the rootElement.
+    /// Indeed, the parent of the rootElement is the Document it belongs to.
+    ///
+    /// \sa parent().
+    ///
+    bool isRootNode() const {
+        return !parent();
+    }
+
     /// Returns the children of this Node.
     ///
-    const std::vector<NodeSharedPtr>& children() {
+    /// \sa parent().
+    ///
+    const std::vector<NodeSharedPtr>& children() const {
         return children_;
     }
 
 private:
+    Node* parent_;
     std::vector<NodeSharedPtr> children_;
+
+    // Allow each type of node to set children/parent, since they have
+    // different constraints that Node does not know about (for example, an
+    // Attribute cannot have a child Element). However, note that subclasses of
+    // these are not befriended, that is, a PathElement cannot directly
+    // manipulate its children_.
+    friend class Attribute;
+    friend class Document;
+    friend class Element;
 };
 
 } // namespace dom
