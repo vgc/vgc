@@ -25,6 +25,7 @@ namespace vgc {
 namespace dom {
 
 VGC_CORE_DECLARE_PTRS(Document);
+VGC_CORE_DECLARE_PTRS(Element);
 
 /// \class vgc::dom::Document
 /// \brief Represents a VGC document.
@@ -38,6 +39,15 @@ public:
     /// Creates a document.
     ///
     Document();
+
+    /// Sets the root element of this Document.
+    /// This takes ownership of the element.
+    /// XXX what if existing?
+    ///
+    void setRootElement(ElementSharedPtr element);
+
+private:
+    Element* rootElement_;
 
 };
 

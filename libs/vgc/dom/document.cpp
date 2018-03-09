@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/dom/document.h>
+#include <vgc/dom/element.h>
 
 namespace vgc {
 namespace dom {
@@ -22,6 +23,15 @@ namespace dom {
 Document::Document()
 {
 
+}
+
+void Document::setRootElement(ElementSharedPtr element)
+{
+    // XXX TODO check whether:
+    // 1. element already has a parent
+    // 2. this parent is already this document
+
+    children_.push_back(element);
 }
 
 } // namespace dom
