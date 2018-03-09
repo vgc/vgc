@@ -20,9 +20,6 @@ namespace py = pybind11;
 
 void wrap_timer(py::module& m);
 
-PYBIND11_PLUGIN(core)
-{
-    py::module m("core", "Documentation of the 'core' module");
+PYBIND11_MODULE(core, m) {
     wrap_timer(m);
-    return m.ptr();
 }

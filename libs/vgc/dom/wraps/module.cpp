@@ -20,9 +20,6 @@ namespace py = pybind11;
 
 void wrap_document(py::module& m);
 
-PYBIND11_PLUGIN(dom)
-{
-    py::module m("dom", "Documentation of the 'dom' module");
+PYBIND11_MODULE(dom, m) {
     wrap_document(m);
-    return m.ptr();
 }

@@ -20,9 +20,6 @@ namespace py = pybind11;
 
 void wrap_scene(py::module &m);
 
-PYBIND11_PLUGIN(scene)
-{
-    py::module m("scene", "Documentation of the 'scene' module");
+PYBIND11_MODULE(scene, m) {
     wrap_scene(m);
-    return m.ptr();
 }
