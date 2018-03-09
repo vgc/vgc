@@ -31,6 +31,8 @@ VGC_CORE_DECLARE_PTRS(Element);
 class VGC_DOM_API Element: public Node
 {
 public:
+    VGC_CORE_OBJECT_DEFINE_MAKE(Element)
+
     Element();
 };
 

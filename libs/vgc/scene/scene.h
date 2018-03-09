@@ -31,9 +31,11 @@ namespace scene {
 
 VGC_CORE_DECLARE_PTRS(Scene);
 
-class VGC_SCENE_API Scene: public core::Object<Scene>
+class VGC_SCENE_API Scene: public core::Object
 {
 public:
+    VGC_CORE_OBJECT_DEFINE_MAKE(Scene)
+
     Scene();
 
     /// Clears the scene.

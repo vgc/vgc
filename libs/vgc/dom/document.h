@@ -36,6 +36,8 @@ VGC_CORE_DECLARE_PTRS(Element);
 class VGC_DOM_API Document: public Node
 {
 public:
+    VGC_CORE_OBJECT_DEFINE_MAKE(Document)
+
     /// Creates a document.
     ///
     Document();

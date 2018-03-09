@@ -58,9 +58,11 @@ VGC_CORE_DECLARE_PTRS(Curve);
 /// In order to render the curve, you can call triangulate(), then render
 /// the triangles using OpenGL.
 ///
-class VGC_GEOMETRY_API Curve: public core::Object<Curve>
+class VGC_GEOMETRY_API Curve: public core::Object
 {
 public:
+    VGC_CORE_OBJECT_DEFINE_MAKE(Curve)
+
     /// Specifies the type of the curve, that is, how the
     /// position of its centerline is represented.
     ///

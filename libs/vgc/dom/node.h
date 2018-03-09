@@ -42,9 +42,11 @@ VGC_CORE_DECLARE_PTRS(Node);
 /// unless otherwise stated (for example, when users directly edit the string
 /// in an XML node editor).
 ///
-class VGC_DOM_API Node: public core::Object<Node>
+class VGC_DOM_API Node: public core::Object
 {
 public:
+    VGC_CORE_OBJECT_DEFINE_MAKE(Node)
+
     /// Constructs a root Node, that is, a Node with no parent.
     ///
     /// \sa isRootNode().

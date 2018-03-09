@@ -16,6 +16,7 @@
 
 #include <QApplication>
 #include <vgc/core/python.h>
+#include <vgc/dom/document.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
@@ -77,6 +78,10 @@ int main(int argc, char* argv[])
     vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf");
     vgc::widgets::addApplicationFont("widgets/fonts/SourceCodePro-Regular.ttf");
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
+
+    // Test dom
+    // XXX This is temporary
+    vgc::dom::DocumentSharedPtr doc = vgc::dom::Document::make();
 
     // Start event loop
     return a.exec();
