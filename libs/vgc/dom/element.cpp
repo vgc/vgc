@@ -19,5 +19,10 @@
 namespace vgc {
 namespace dom {
 
+Element::Element()
+{
+
+}
+
 } // namespace dom
 } // namespace vgc

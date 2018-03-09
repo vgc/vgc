@@ -18,9 +18,21 @@
 #define VGC_DOM_ELEMENT_H
 
 #include <vgc/dom/api.h>
+#include <vgc/dom/node.h>
 
 namespace vgc {
 namespace dom {
+
+VGC_CORE_DECLARE_PTRS(Element);
+
+/// \class vgc::dom::Element
+/// \brief Represents an element of the DOM.
+///
+class VGC_DOM_API Element: public Node
+{
+public:
+    Element();
+};
 
 } // namespace dom
 } // namespace vgc
