@@ -33,12 +33,8 @@ VGC_CORE_DECLARE_PTRS(Node);
 /// Document is a node, each Element is a Node, and even each Attribute is a
 /// Node.
 ///
-/// Each Node is solely responsible for the lifetime of its children() nodes,
-/// by storing shared pointers to these nodes. Observers should not normally
-/// hold shared pointers to nodes (this would prevent their destruction despite
-/// no meaningful existence possible), but instead hold either weak pointers or
-/// raw pointers, depending on whether they have guarantee on these nodes'
-/// lifetime.
+/// Each Node has children() nodes and is responsible for the lifetime of
+/// these children.
 ///
 /// Typically, a Document is loaded from an XML file, and Nodes remember the
 /// location in the file where the data was initially loaded. However, to
