@@ -9,6 +9,7 @@ vgc_add_library(core
         api.h
         color.h
         colors.h
+        compiler.h
         export.h
         io.h
         math.h
