@@ -11,7 +11,6 @@ vgc_add_library(core
         colors.h
         compiler.h
         dll.h
-        export.h
         io.h
         math.h
         object.h
