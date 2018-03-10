@@ -14,6 +14,7 @@ vgc_add_library(core
         io.h
         math.h
         object.h
+        os.h
         python.h
         random.h
         resources.h

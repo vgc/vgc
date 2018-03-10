@@ -193,20 +193,7 @@
 /// if FOO_LOCAL is supported.  If not then the symbol will remain in the API.
 
 #include <vgc/core/compiler.h>
-
-#if defined(__linux__)
-#define VGC_CORE_OS_LINUX
-#elif defined(__APPLE__)
-#include "TargetConditionals.h"
-#define VGC_CORE_OS_DARWIN
-#if TARGET_OS_IPHONE
-#define VGC_CORE_OS_IOS
-#else
-#define VGC_CORE_OS_OSX
-#endif
-#elif defined(_WIN32) || defined(_WIN64)
-#define VGC_CORE_OS_WINDOWS
-#endif
+#include <vgc/core/os.h>
 
 #if defined(VGC_CORE_OS_WINDOWS)
 #   if defined(VGC_CORE_COMPILER_GCC) && VGC_CORE_COMPILER_GCC_MAJOR >= 4 || defined(VGC_CORE_COMPILER_CLANG)
