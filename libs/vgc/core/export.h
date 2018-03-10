@@ -192,6 +192,8 @@
 /// Clients of the library will fail to link if they use _DoSomethingPrivate()
 /// if FOO_LOCAL is supported.  If not then the symbol will remain in the API.
 
+#include <vgc/core/compiler.h>
+
 #if defined(__linux__)
 #define VGC_CORE_OS_LINUX
 #elif defined(__APPLE__)
@@ -204,23 +206,6 @@
 #endif
 #elif defined(_WIN32) || defined(_WIN64)
 #define VGC_CORE_OS_WINDOWS
-#endif
-
-#if defined(__clang__)
-#define VGC_CORE_COMPILER_CLANG
-#define VGC_CORE_COMPILER_CLANG_MAJOR __clang_major__
-#define VGC_CORE_COMPILER_CLANG_MINOR __clang_minor__
-#define VGC_CORE_COMPILER_CLANG_PATCHLEVEL __clang_patchlevel__
-#elif defined(__GNUC__)
-#define VGC_CORE_COMPILER_GCC
-#define VGC_CORE_COMPILER_GCC_MAJOR __GNUC__
-#define VGC_CORE_COMPILER_GCC_MINOR __GNUC_MINOR__
-#define VGC_CORE_COMPILER_GCC_PATCHLEVEL __GNUC_PATCHLEVEL__
-#elif defined(__ICC)
-#define VGC_CORE_COMPILER_ICC
-#elif defined(_MSC_VER)
-#define VGC_CORE_COMPILER_MSVC
-#define VGC_CORE_COMPILER_MSVC_VERSION _MSC_VER
 #endif
 
 #if defined(VGC_CORE_OS_WINDOWS)
