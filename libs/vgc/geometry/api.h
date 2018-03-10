@@ -17,7 +17,7 @@
 #ifndef VGC_GEOMETRY_API_H
 #define VGC_GEOMETRY_API_H
 
-/// \file vgc/core/api.h
+/// \file vgc/geometry/api.h
 /// \brief Defines symbol visibility macros for defining shared library API.
 ///
 /// See https://gcc.gnu.org/wiki/Visibility
