@@ -17,24 +17,24 @@
 #ifndef VGC_CORE_API_H
 #define VGC_CORE_API_H
 
-#include <vgc/core/export.h>
+/// \file vgc/core/api.h
+/// \brief Defines symbol visibility macros for defining shared library API.
+///
+/// See https://gcc.gnu.org/wiki/Visibility
+///
 
-#if defined(VGC_CORE_STATIC)
-#   define VGC_CORE_API
-#   define VGC_CORE_API_TEMPLATE_CLASS(...)
-#   define VGC_CORE_API_TEMPLATE_STRUCT(...)
-#   define VGC_CORE_LOCAL
+#include <vgc/core/dll.h>
+
+#if defined(VGC_CORE_DLL)
+#    if defined(VGC_CORE_DLL_EXPORTS)
+#        define VGC_CORE_API VGC_CORE_DLL_EXPORT
+#    else
+#        define VGC_CORE_API VGC_CORE_DLL_IMPORT
+#    endif
+#    define VGC_CORE_API_HIDDEN VGC_CORE_DLL_HIDDEN
 #else
-#   if defined(VGC_CORE_EXPORTS)
-#       define VGC_CORE_API VGC_CORE_EXPORT
-#       define VGC_CORE_API_TEMPLATE_CLASS(...) VGC_CORE_EXPORT_TEMPLATE(class, __VA_ARGS__)
-#       define VGC_CORE_API_TEMPLATE_STRUCT(...) VGC_CORE_EXPORT_TEMPLATE(struct, __VA_ARGS__)
-#   else
-#       define VGC_CORE_API VGC_CORE_IMPORT
-#       define VGC_CORE_API_TEMPLATE_CLASS(...) VGC_CORE_IMPORT_TEMPLATE(class, __VA_ARGS__)
-#       define VGC_CORE_API_TEMPLATE_STRUCT(...) VGC_CORE_IMPORT_TEMPLATE(struct, __VA_ARGS__)
-#   endif
-#   define VGC_CORE_LOCAL VGC_CORE_HIDDEN
+#    define VGC_CORE_API
+#    define VGC_CORE_API_HIDDEN
 #endif
 
 #endif // VGC_CORE_API_H
