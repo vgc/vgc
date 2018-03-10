@@ -17,8 +17,6 @@
 #ifndef VGC_CORE_OS_H
 #define VGC_CORE_OS_H
 
-#include <vgc/core/api.h>
-
 /// \file vgc/core/os.h
 /// \brief Defines macros indicating which operating system is being used.
 ///
