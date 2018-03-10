@@ -17,24 +17,24 @@
 #ifndef VGC_GEOMETRY_API_H
 #define VGC_GEOMETRY_API_H
 
-#include <vgc/core/export.h>
+/// \file vgc/core/api.h
+/// \brief Defines symbol visibility macros for defining shared library API.
+///
+/// See https://gcc.gnu.org/wiki/Visibility
+///
 
-#if defined(VGC_GEOMETRY_STATIC)
-#   define VGC_GEOMETRY_API
-#   define VGC_GEOMETRY_API_TEMPLATE_CLASS(...)
-#   define VGC_GEOMETRY_API_TEMPLATE_STRUCT(...)
-#   define VGC_GEOMETRY_LOCAL
+#include <vgc/core/dll.h>
+
+#if defined(VGC_GEOMETRY_DLL)
+#    if defined(VGC_GEOMETRY_DLL_EXPORTS)
+#        define VGC_GEOMETRY_API VGC_CORE_DLL_EXPORT
+#    else
+#        define VGC_GEOMETRY_API VGC_CORE_DLL_IMPORT
+#    endif
+#    define VGC_GEOMETRY_API_HIDDEN VGC_CORE_DLL_HIDDEN
 #else
-#   if defined(VGC_GEOMETRY_EXPORTS)
-#       define VGC_GEOMETRY_API VGC_CORE_EXPORT
-#       define VGC_GEOMETRY_API_TEMPLATE_CLASS(...) VGC_CORE_EXPORT_TEMPLATE(class, __VA_ARGS__)
-#       define VGC_GEOMETRY_API_TEMPLATE_STRUCT(...) VGC_CORE_EXPORT_TEMPLATE(struct, __VA_ARGS__)
-#   else
-#       define VGC_GEOMETRY_API VGC_CORE_IMPORT
-#       define VGC_GEOMETRY_API_TEMPLATE_CLASS(...) VGC_CORE_IMPORT_TEMPLATE(class, __VA_ARGS__)
-#       define VGC_GEOMETRY_API_TEMPLATE_STRUCT(...) VGC_CORE_IMPORT_TEMPLATE(struct, __VA_ARGS__)
-#   endif
-#   define VGC_GEOMETRY_LOCAL VGC_CORE_HIDDEN
+#    define VGC_GEOMETRY_API
+#    define VGC_GEOMETRY_API_HIDDEN
 #endif
 
 #endif // VGC_GEOMETRY_API_H
