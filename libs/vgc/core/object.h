@@ -101,7 +101,7 @@ namespace core {
 /// myFunction(FooSharedPtr foo);
 /// \endcode
 ///
-class Object: public std::enable_shared_from_this<Object>
+class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
 {
 public:
     VGC_CORE_OBJECT_DEFINE_MAKE(Object)

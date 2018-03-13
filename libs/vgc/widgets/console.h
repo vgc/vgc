@@ -124,7 +124,7 @@ private:
 /// via Console::margin. However, it was unclear how to achieve this in the
 /// given time constraints, which is why we adopted this simpler solution.
 ///
-class ConsoleMargin : public QWidget
+class VGC_WIDGETS_API ConsoleMargin : public QWidget
 {
     Q_OBJECT
 

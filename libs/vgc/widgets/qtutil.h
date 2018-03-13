@@ -35,26 +35,32 @@ namespace widgets {
 
 /// Converts the given UTF-8 encoded std::string \p s into a QString.
 ///
+VGC_WIDGETS_API
 QString toQt(const std::string& s);
 
 /// Converts the given QString \p s into a UTF-8 encoded std::string.
 ///
+VGC_WIDGETS_API
 std::string fromQt(const QString& s);
 
 /// Converts the given vgc::core::Color \p c into a QColor.
 ///
+VGC_WIDGETS_API
 QColor toQt(const core::Color& c);
 
 /// Converts the given QColor \p c into a vgc::core::Color.
 ///
+VGC_WIDGETS_API
 core::Color fromQt(const QColor& c);
 
 /// Converts the given vgc::geometry::Vec2d \p v into a QPointF.
 ///
+VGC_WIDGETS_API
 QPointF toQt(const geometry::Vec2d& v);
 
 /// Converts the given QPointF \p v into a vgc::geometry::Vec2d.
 ///
+VGC_WIDGETS_API
 geometry::Vec2d fromQt(const QPointF& v);
 
 } // namespace widgets

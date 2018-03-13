@@ -29,12 +29,13 @@
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/scene/scene.h>
+#include <vgc/widgets/api.h>
 #include <vgc/widgets/pointingdeviceevent.h>
 
 namespace vgc {
 namespace widgets {
 
-class OpenGLViewer : public QOpenGLWidget
+class VGC_WIDGETS_API OpenGLViewer : public QOpenGLWidget
 {
 private:
     Q_OBJECT

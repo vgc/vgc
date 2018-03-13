@@ -25,7 +25,8 @@ namespace core {
 
 /// Returns the absolute path of the directory where runtime resources live.
 ///
-VGC_CORE_API std::string resourcesPath();
+VGC_CORE_API
+std::string resourcesPath();
 
 /// Returns the absolute path of the runtime resource specified by its \p name.
 ///
@@ -35,7 +36,8 @@ VGC_CORE_API std::string resourcesPath();
 /// std::string fragPath = core::resourcePath("opengl/shaders/shader.f.glsl");
 /// \endcode
 ///
-VGC_CORE_API std::string resourcePath(const std::string& name);
+VGC_CORE_API
+std::string resourcePath(const std::string& name);
 
 } // namespace core
 } // namespace vgc

@@ -103,6 +103,10 @@ function(vgc_add_library LIB_NAME)
     string(TOUPPER VGC_${LIB_NAME}_EXPORTS EXPORTS_COMPILE_DEFINITION)
     target_compile_definitions(${TARGET_NAME} PRIVATE ${EXPORTS_COMPILE_DEFINITION})
 
+    # Add -fvisibility=hidden when compiling on Linux/MacOS.
+    # Note: This is already the default on Windows.
+    set_target_properties(${TARGET_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+
     # Set output name. Prefixes are automatically added from:
     # ${CMAKE_SHARED_LIBRARY_PREFIX} and ${CMAKE_SHARED_LIBRARY_SUFFIX}
     # Example:

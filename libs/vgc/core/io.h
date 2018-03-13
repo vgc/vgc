@@ -23,7 +23,10 @@
 namespace vgc {
 namespace core {
 
-VGC_CORE_API std::string readFile(const std::string& filePath);
+/// Returns as a std::string the content of the file given by its \p filePath.
+///
+VGC_CORE_API
+std::string readFile(const std::string& filePath);
 
 } // namespace core
 } // namespace vgc
