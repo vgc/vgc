@@ -20,7 +20,7 @@
 /// \file vgc/dom/api.h
 /// \brief Defines symbol visibility macros for defining shared library API.
 ///
-/// See https://gcc.gnu.org/wiki/Visibility
+/// Please read vgc/core/dll.h for details.
 ///
 
 #include <vgc/core/dll.h>
