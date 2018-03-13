@@ -97,7 +97,11 @@ function(vgc_add_library LIB_NAME)
     target_link_libraries(${TARGET_NAME} ${ARG_THIRD_DEPENDENCIES})
 
     # Set compile definitions, that is, values given to preprocessor variables
+    # In addition to those provided to vgc_add_library, we add -DVGC_FOO_EXPORTS
+    # to properly export DLL symbols (see libs/vgc/core/dll.h for details)
     target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_COMPILE_DEFINITIONS})
+    string(TOUPPER VGC_${LIB_NAME}_EXPORTS EXPORTS_COMPILE_DEFINITION)
+    target_compile_definitions(${TARGET_NAME} PRIVATE ${EXPORTS_COMPILE_DEFINITION})
 
     # Set output name. Prefixes are automatically added from:
     # ${CMAKE_SHARED_LIBRARY_PREFIX} and ${CMAKE_SHARED_LIBRARY_SUFFIX}

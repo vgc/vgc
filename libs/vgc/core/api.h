@@ -25,16 +25,16 @@
 
 #include <vgc/core/dll.h>
 
-#if defined(VGC_CORE_DLL)
-#    if defined(VGC_CORE_DLL_EXPORTS)
+#if defined(VGC_CORE_STATIC)
+#    define VGC_CORE_API
+#    define VGC_CORE_API_HIDDEN
+#else
+#    if defined(VGC_CORE_EXPORTS)
 #        define VGC_CORE_API VGC_CORE_DLL_EXPORT
 #    else
 #        define VGC_CORE_API VGC_CORE_DLL_IMPORT
 #    endif
 #    define VGC_CORE_API_HIDDEN VGC_CORE_DLL_HIDDEN
-#else
-#    define VGC_CORE_API
-#    define VGC_CORE_API_HIDDEN
 #endif
 
 #endif // VGC_CORE_API_H

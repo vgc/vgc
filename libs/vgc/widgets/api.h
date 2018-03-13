@@ -25,16 +25,16 @@
 
 #include <vgc/core/dll.h>
 
-#if defined(VGC_WIDGETS_DLL)
-#    if defined(VGC_WIDGETS_DLL_EXPORTS)
+#if defined(VGC_WIDGETS_STATIC)
+#    define VGC_WIDGETS_API
+#    define VGC_WIDGETS_API_HIDDEN
+#else
+#    if defined(VGC_WIDGETS_EXPORTS)
 #        define VGC_WIDGETS_API VGC_CORE_DLL_EXPORT
 #    else
 #        define VGC_WIDGETS_API VGC_CORE_DLL_IMPORT
 #    endif
 #    define VGC_WIDGETS_API_HIDDEN VGC_CORE_DLL_HIDDEN
-#else
-#    define VGC_WIDGETS_API
-#    define VGC_WIDGETS_API_HIDDEN
 #endif
 
 #endif // VGC_WIDGETS_API_H

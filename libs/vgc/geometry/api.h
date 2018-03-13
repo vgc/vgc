@@ -25,16 +25,16 @@
 
 #include <vgc/core/dll.h>
 
-#if defined(VGC_GEOMETRY_DLL)
-#    if defined(VGC_GEOMETRY_DLL_EXPORTS)
+#if defined(VGC_GEOMETRY_STATIC)
+#    define VGC_GEOMETRY_API
+#    define VGC_GEOMETRY_API_HIDDEN
+#else
+#    if defined(VGC_GEOMETRY_EXPORTS)
 #        define VGC_GEOMETRY_API VGC_CORE_DLL_EXPORT
 #    else
 #        define VGC_GEOMETRY_API VGC_CORE_DLL_IMPORT
 #    endif
 #    define VGC_GEOMETRY_API_HIDDEN VGC_CORE_DLL_HIDDEN
-#else
-#    define VGC_GEOMETRY_API
-#    define VGC_GEOMETRY_API_HIDDEN
 #endif
 
 #endif // VGC_GEOMETRY_API_H

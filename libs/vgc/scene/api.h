@@ -25,16 +25,16 @@
 
 #include <vgc/core/dll.h>
 
-#if defined(VGC_SCENE_DLL)
-#    if defined(VGC_SCENE_DLL_EXPORTS)
+#if defined(VGC_SCENE_STATIC)
+#    define VGC_SCENE_API
+#    define VGC_SCENE_API_HIDDEN
+#else
+#    if defined(VGC_SCENE_EXPORTS)
 #        define VGC_SCENE_API VGC_CORE_DLL_EXPORT
 #    else
 #        define VGC_SCENE_API VGC_CORE_DLL_IMPORT
 #    endif
 #    define VGC_SCENE_API_HIDDEN VGC_CORE_DLL_HIDDEN
-#else
-#    define VGC_SCENE_API
-#    define VGC_SCENE_API_HIDDEN
 #endif
 
 #endif // VGC_SCENE_API_H
