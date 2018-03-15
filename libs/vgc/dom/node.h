@@ -45,6 +45,8 @@ VGC_CORE_DECLARE_PTRS(Node);
 class VGC_DOM_API Node: public core::Object
 {
 public:
+    VGC_CORE_OBJECT(Node)
+
     /// Returns the parent of this Node.
     ///
     /// \sa children() and isRootNode().
@@ -73,7 +75,9 @@ public:
     }
 
 protected:
-    /// Constructs a root Node, that is, a Node with no parent.
+    /// Creates a new Node with no parent. You cannot call this function
+    /// directly, instead, you must create a Document, an Element, or an
+    /// Attribute.
     ///
     /// \sa isRootNode().
     ///

@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     vgc::core::PythonInterpreter pythonInterpreter;
 
     // Create the scene
-    vgc::scene::SceneSharedPtr scene = std::make_shared<vgc::scene::Scene>();
+    vgc::scene::SceneSharedPtr scene = vgc::scene::Scene::make();
 
     // Expose the above Scene instance to the Python console as a local Python
     // variable 'scene'.
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 
     // Test dom
     // XXX This is temporary
-    vgc::dom::DocumentSharedPtr doc = vgc::dom::Document::create();
+    vgc::dom::DocumentSharedPtr doc = vgc::dom::Document::make();
 
     // Start event loop
     return a.exec();

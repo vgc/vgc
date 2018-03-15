@@ -27,6 +27,48 @@
     using T##ConstSharedPtr = std::shared_ptr<const T>; \
     using T##ConstWeakPtr   = std::weak_ptr<const T>
 
+#define VGC_CORE_OBJECT_MAKE_(T)                                      \
+    /** Constructs an object of type T managed by a shared pointer */ \
+    template <typename... Args>                                       \
+    static std::shared_ptr<T> make(Args... args) {                    \
+        return std::make_shared<T>(args...);                          \
+    }
+
+#define VGC_CORE_OBJECT_SHARED_PTR_(T)                                   \
+    /** Returns a shared_ptr managing this object. Assumes the object */ \
+    /** was created via the make() statid method.                     */ \
+    std::shared_ptr<T> sharedPtr() {                                     \
+        return std::static_pointer_cast<T>(this->shared_from_this());    \
+    }
+
+#define VGC_CORE_OBJECT_WEAK_PTR_(T)                             \
+    /** Returns a weak_ptr to this object. Assumes the object */ \
+    /** was created via the make() statid method.             */ \
+    std::weak_ptr<T> weakPtr() {                                 \
+        return sharedPtr();                                      \
+    }
+
+#define VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                                \
+    /** Returns a shared_ptr managing this object. Assumes the object */    \
+    /** was created via the make() statid method.                     */    \
+    std::shared_ptr<const T> sharedPtr() const {                            \
+        return std::static_pointer_cast<const T>(this->shared_from_this()); \
+    }
+
+#define VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)                       \
+    /** Returns a weak_ptr to this object. Assumes the object */ \
+    /** was created via the make() statid method.             */ \
+    std::weak_ptr<const T> weakPtr() const {                     \
+        return sharedPtr();                                      \
+    }
+
+#define VGC_CORE_OBJECT(T)               \
+    VGC_CORE_OBJECT_MAKE_(T)             \
+    VGC_CORE_OBJECT_SHARED_PTR_(T)       \
+    VGC_CORE_OBJECT_WEAK_PTR_(T)         \
+    VGC_CORE_OBJECT_CONST_SHARED_PTR_(T) \
+    VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)
+
 namespace vgc {
 namespace core {
 
@@ -35,56 +77,84 @@ namespace core {
 ///
 /// This base class allows the VGC codebase to be more readable, consistent,
 /// maintainable, thread-safe, and Python-binding-friendly at only a very small
-/// performance cost. Classes deriving from Object should be declared as
-/// follows:
+/// performance cost. It is strongly recommended that most classes derive from
+/// Object. In particular any class that contains a `std::vector`, a
+/// `std::string`, any other container, or performs some sort of memory
+/// allocation (e.g., pimpl idiom) should either inherit from Object or
+/// document clearly why they do not. Notable exceptions include small
+/// struct-like classes such as `Vec2d`. Indeed, these do not perform any
+/// dynamic allocation, are expected to be potentially instanciated more than a
+/// million times in a session, and are expected or measured to be a bottleneck
+/// if they would derive from Object.
+///
+/// Classes deriving from Object should be declared as follows:
 ///
 /// \code
 /// class Foo: public vgc::core::Object
 /// {
 /// public:
+///     VGC_CORE_OBJECT(Foo)
 ///
+///     Foo();      // some public constructor
+///     Foo(int x); // some other public constructor
 /// //...
 /// };
 /// \endcode
 ///
-/// It is strongly recommended that new classes derive from
-/// Object. In particular any class that contains a std::vector, a std::string,
-/// any other container, or performs some sort of memory allocation (e.g.,
-/// pimpl idiom) should inherit Object or document clearly why they do not.
-/// Notable exceptions include small struct-like classes that do not perform
-/// any dynamic allocation, are expected to be potentially instanciated more
-/// than a million times in a session, and are expected or measured to be a
-/// bottleneck if they would derive from Object (example: Vec2d).
+/// In the example above, the macro VGC_CORE_OBJECT(Foo) defines the following
+/// member methods:
 ///
-/// Typically, objects whose class derives from Object should be instanciated
-/// via their make() static method, which return a std::shared_ptr. In most
-/// cases, ownership is not actually "shared", but still we always use
-/// shared_ptr instead of unique_ptr in order to allow observers to hold
-/// weak_ptr to these object, which requires reference counting.
+/// \code
+/// static FooSharedPtr make();
+/// static FooSharedPtr make(int x);
+/// FooSharedPtr sharedPtr();
+/// FooWeakPtr weakPtr();
+/// FooConstSharedPtr sharedPtr() const;
+/// FooConstWeakPtr weakPtr() const;
+/// \endcode
 ///
-/// Even though object owners hold shared_ptrs, prefer passing these objects by
-/// raw pointers. This is simpler, more efficient, more readable, and more
-/// flexible. Unless stated otherwise, all functions taking Objects by pointers
-/// make the following assumptions:
+/// Despite having public constructors, objects should always be instanciated
+/// via their make() static method, like so:
 ///
-/// 1. The pointer is non-null
+/// \code
+/// FooSharedPtr foo1 = Foo::make();
+/// FooSharedPtr foo2 = Foo::make(42);
+/// \endcode
+///
+/// This is equivalent to `std::make_shared<Foo>(...)`, and ensures that the
+/// object is dynamically allocated and managed by a `std::shared_ptr`. In most
+/// cases, ownership is not actually "shared", and one may think that using
+/// `unique_ptr` or simply allocating on the stack would be preferred. However,
+/// always using `shared_ptr` provides consistency, and always allow observers
+/// to hold `weak_ptr` to these objects if they need to, by calling
+/// `foo->weakPtr()`.
+///
+/// Despite being managed by a `shared_ptr`, objects should typically be passed
+/// by raw pointers. Indeed, this makes the code more performant, flexible, and
+/// readable. Unless stated otherwise, any function that takes an Object* as
+/// parameter assumes that the following is true:
+///
+/// 1. The pointer is non-null.
 ///
 /// 2. The object was created via make(), that is, the function can called
-///    obj->ptr() to retrieve a shared pointer from the raw pointer.
+///    obj->weakPtr() whithout checking for exceptions.
 ///
 /// 3. The lifetime of the object exceeds the lifetime of the function.
 ///
 /// This follows the "keep it simple" advice from Herb Sutter, and I strongly
-/// encourage any VGC developer to watch this talk before contributing:
+/// encourage any VGC developer to watch the following talk before
+/// contributing, which basically states that there's nothing wrong with raw
+/// pointers:
 ///
 /// https://www.youtube.com/watch?v=xnqTKD8uD64
 ///
 /// If a function desires to keep a pointer to the passed object for
-/// observation purposes, then it should hold a weak_ptr to this object. This
-/// way, the lifetime of the observed object is not extended (as it would if
-/// the function would hold a shared_ptr instead), and the function can check
-/// later if the object still exists (which coudn't be done if the function
-/// would hold a raw pointer instead).
+/// observation purposes, then it should hold a `weak_ptr` to this object.
+/// Indeed, holding the raw pointer is unsafe (the object might be deleted
+/// later), and holding a `shared_ptr` would extend the lifetime of the
+/// observed object, which is usually not desired. Instead, by using a
+/// `weak_ptr` the function does not extend the lifetime of the object, but can
+/// still check later whether the object still exists.
 ///
 /// If an object is passed to a function by shared_ptr, this typically indicates
 /// that the function takes ownership of the object. In this case, pass the
@@ -94,42 +164,71 @@ namespace core {
 /// myFunction(FooSharedPtr foo);
 /// \endcode
 ///
+/// In some very rare cases, typically for performance, you may still want to
+/// allocate Object instances on the stack, by directly using the public
+/// constructors instead of make(). It's okay to do so, but then do not pass
+/// these objects to generic functions taking objects by raw pointers.
+/// Remember: unless stated otherwise, functions assume that it is safe to call
+/// obj->weakPtr(). Therefore, if you take the risk of creating objects on the
+/// stack, only call functions which you control, and which provide weaker
+/// assumptions.
+///
+/// Note that since the destructor of Object is virtual, there is no need to
+/// explicitly declare a (virtual) destructor in derived classes. In many
+/// (most?) cases, the default destructor is the most appropriate. In general,
+/// derived classes should strive for "the rule of zero": no custom destructor,
+/// copy constructor, move constructor, assignment operator, and move
+/// assignment operator. If you declare any of these, please declare all of
+/// these. See also:
+///
+/// http://en.cppreference.com/w/cpp/language/rule_of_three
+/// https://blog.rmf.io/cxx11/rule-of-zero
+/// http://scottmeyers.blogspot.fr/2014/03/a-concern-about-rule-of-zero.html
+///
 class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
 {
 public:
-    /// Returns an std::shared_ptr to this object.
-    /// This method is a convenient wrapper around shared_from_this.
-    ///
-    std::shared_ptr<Object> sharedPtr() {
-        return this->shared_from_this();
-    }
+    VGC_CORE_OBJECT(Object)
 
-    /// Returns an std::weak_ptr to this object.
-    /// This method is a convenient wrapper around shared_from_this.
-    ///
-    std::weak_ptr<Object> weakPtr() {
-        return this->shared_from_this();
-    }
-
-    /// Destructs the object. Since this destructor is virtual, there is no
-    /// need to explicitly declare a (virtual) destructor in derived classes.
-    /// In many (most?) cases, the default destructor is the most appropriate.
-    /// In general, derived classes should strive for "the rule of zero": no
-    /// custom destructor, copy constructor, move constructor, assignment
-    /// operator, and move assignment operator. If you declare any of these,
-    /// please declare all of these. See also:
-    ///
-    /// http://en.cppreference.com/w/cpp/language/rule_of_three
-    /// https://blog.rmf.io/cxx11/rule-of-zero
-    /// http://scottmeyers.blogspot.fr/2014/03/a-concern-about-rule-of-zero.html
+    /// Destruct the Object.
     ///
     virtual ~Object() = default;
 
-    // Declare other special member functions as defaults.
+    // Note from Scott Meyers:
+    // http://scottmeyers.blogspot.fr/2014/03/a-concern-about-rule-of-zero.html
+    //
+    //   The addition of the destructor has the side effect of disabling
+    //   generation of the move functions, but because Widget is copyable, all
+    //   the code that used to generate moves will now generate copies. In other
+    //   words, adding a destructor to the class has caused presumably-efficient
+    //   moves to be silently replaced with presumably-less-efficient copies.
+    //
+    // This is why, since we explicitly declare a desctuctor (in order to make
+    // it virtual), we also explicitly declare all other special member
+    // functions.
+    //
+    // Also, explicitly having them here allows to add them to the
+    // documentation, which is a nice side-effect.
+    //
+
+    /// Constructs an Object.
+    ///
     Object() = default;
+
+    /// Copy-constructs an Object.
+    ///
     Object(const Object&) = default;
+
+    /// Move-constructs an Object.
+    ///
     Object(Object&&) = default;
+
+    /// Copy-assigns the given Object to this Object.
+    ///
     Object& operator=(const Object&) = default;
+
+    /// Move-assigns the given Object to this Object.
+    ///
     Object& operator=(Object&&) = default;
 };
 

@@ -36,12 +36,13 @@ VGC_CORE_DECLARE_PTRS(Element);
 class VGC_DOM_API Document: public Node
 {
 public:
-    /// Creates a new document with a `vgc` root element. This is equivalent to
-    /// Document::create("vgc"). Note that it is not possible to create a
-    /// Document with no root element, since a valid Document always has a root
-    /// element.
+    VGC_CORE_OBJECT(Document)
+
+    /// Creates a new document with a `vgc` root element. This is equivalent
+    /// to Document("vgc"). Note that it is not possible to create a Document
+    /// with no root element, since a valid Document always has a root element.
     ///
-    static DocumentSharedPtr create();
+    Document();
 
     /// Sets the root element of this Document.
     /// This takes ownership of the element.
@@ -54,11 +55,6 @@ public:
     Element* rootElement() const {
         return rootElement_;
     }
-
-protected:
-    /// Constructs a document.
-    ///
-    Document();
 
 private:
     Element* rootElement_;
