@@ -45,14 +45,6 @@ VGC_CORE_DECLARE_PTRS(Node);
 class VGC_DOM_API Node: public core::Object
 {
 public:
-    VGC_CORE_OBJECT_DEFINE_MAKE(Node)
-
-    /// Constructs a root Node, that is, a Node with no parent.
-    ///
-    /// \sa isRootNode().
-    ///
-    Node();
-
     /// Returns the parent of this Node.
     ///
     /// \sa children() and isRootNode().
@@ -80,9 +72,18 @@ public:
         return children_;
     }
 
+protected:
+    /// Constructs a root Node, that is, a Node with no parent.
+    ///
+    /// \sa isRootNode().
+    ///
+    Node();
+
 private:
     Node* parent_;
     std::vector<NodeSharedPtr> children_;
+    void addChild_(NodeSharedPtr node);
+    void removeAllChildren_();
 
     // Allow each type of node to set children/parent, since they have
     // different constraints that Node does not know about (for example, an

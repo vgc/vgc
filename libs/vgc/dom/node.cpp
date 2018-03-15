@@ -16,6 +16,8 @@
 
 #include <vgc/dom/node.h>
 
+#include <vgc/core/algorithm.h>
+
 namespace vgc {
 namespace dom {
 
@@ -23,6 +25,24 @@ Node::Node() :
     parent_(nullptr)
 {
 
+}
+
+void Node::addChild_(NodeSharedPtr node)
+{
+    assert(node->parent_ == nullptr); // XXX TODO: issue an error instead of crashing.
+
+    if (!core::contains(children_, node)) {
+        children_.push_back(node);
+        node->parent_ = this;
+    }
+}
+
+void Node::removeAllChildren_()
+{
+    for (const NodeSharedPtr& node : children_) {
+        node->parent_ = nullptr;
+    }
+    children_.clear();
 }
 
 } // namespace dom

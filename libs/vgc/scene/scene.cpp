@@ -35,7 +35,7 @@ void Scene::clear()
 
 void Scene::startCurve(const geometry::Vec2d& p, double width)
 {
-    curves_.push_back(geometry::Curve::make());
+    curves_.push_back(std::make_shared<geometry::Curve>());
     curves_.back()->setColor(newCurveColor_);
     continueCurve(p, width);
 }

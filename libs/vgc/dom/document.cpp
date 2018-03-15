@@ -20,18 +20,27 @@
 namespace vgc {
 namespace dom {
 
-Document::Document()
+Document::Document() :
+    Node()
 {
 
 }
 
+DocumentSharedPtr Document::create()
+{
+    return std::shared_ptr<Document>(new Document());
+
+    // Note: I can't use make_shared<> because constructor is protected. I may
+    // want to define a private template method "template <Args...>
+    // MyObject::make_shared_(...)" via a macro VGC_CORE_OBJECT(Document) to
+    // make it more convenient for all objects to define their create() factory
+    // functions.
+}
+
 void Document::setRootElement(ElementSharedPtr element)
 {
-    // XXX TODO check whether:
-    // 1. element already has a parent
-    // 2. this parent is already this document
-
-    children_.push_back(element);
+    Node::removeAllChildren_();
+    Node::addChild_(element);
 }
 
 } // namespace dom

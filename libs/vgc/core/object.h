@@ -27,13 +27,6 @@
     using T##ConstSharedPtr = std::shared_ptr<const T>; \
     using T##ConstWeakPtr   = std::weak_ptr<const T>
 
-#define VGC_CORE_OBJECT_DEFINE_MAKE(T)                                     \
-    /** Constructs an object of type T and wraps it in a shared pointer */ \
-    template <typename... Args>                                            \
-    static std::shared_ptr<T> make(Args... args) {                         \
-        return std::make_shared<T>(args...);                               \
-    }
-
 namespace vgc {
 namespace core {
 
@@ -104,12 +97,17 @@ namespace core {
 class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
 {
 public:
-    VGC_CORE_OBJECT_DEFINE_MAKE(Object)
-
     /// Returns an std::shared_ptr to this object.
     /// This method is a convenient wrapper around shared_from_this.
     ///
-    std::shared_ptr<Object> ptr() {
+    std::shared_ptr<Object> sharedPtr() {
+        return this->shared_from_this();
+    }
+
+    /// Returns an std::weak_ptr to this object.
+    /// This method is a convenient wrapper around shared_from_this.
+    ///
+    std::weak_ptr<Object> weakPtr() {
         return this->shared_from_this();
     }
 

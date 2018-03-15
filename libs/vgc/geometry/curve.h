@@ -61,8 +61,6 @@ VGC_CORE_DECLARE_PTRS(Curve);
 class VGC_GEOMETRY_API Curve: public core::Object
 {
 public:
-    VGC_CORE_OBJECT_DEFINE_MAKE(Curve)
-
     /// Specifies the type of the curve, that is, how the
     /// position of its centerline is represented.
     ///

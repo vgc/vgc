@@ -24,6 +24,6 @@ using vgc::dom::DocumentSharedPtr;
 void wrap_document(py::module& m)
 {
     py::class_<Document, DocumentSharedPtr>(m, "Document")
-        .def(py::init<>())
+        .def(py::init(&Document::create))
     ;
 }
