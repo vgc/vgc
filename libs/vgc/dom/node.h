@@ -24,6 +24,40 @@
 namespace vgc {
 namespace dom {
 
+/// \enum vgc::dom::NodeType
+/// \brief Specifies the type of a Node.
+///
+/// Only a subset of XML is currently supported. Full support
+/// will be implemented later.
+///
+/// Note that the value corresponding to each node type is conformant with
+/// the W3C DOM Specification. However, not all W3C node types have a
+/// corresponding vgc::dom::Node::Type, for example one reason is that our
+/// Attributes are not nodes.
+///
+enum class NodeType {
+    /// An Element node.
+    ///
+    Element = 1, ///< An Element node.
+
+    /* // Attribute = 2, // Note: we are not planning to implement this: Attributes aren't will never implement this.
+     * Text = 3, // Or TextNode? We reserve the class name "Text" for a <text> element, and plan to use TextNode for text nodes.
+     * CDATA = 4, // Or CharacterData?
+     * EntityReference = 5,
+     * Entity = 6,
+     * ProcessingInstruction = 7,
+     * Comment */
+
+     /// A Document node.
+     ///
+     Document = 9,
+
+     /* DocumentType = 10,
+      * DocumentFragment = 11,
+      * Notation = 12 */
+};
+
+VGC_CORE_DECLARE_PTRS(Document);
 VGC_CORE_DECLARE_PTRS(Node);
 
 /// \class vgc::dom::Node
@@ -42,79 +76,82 @@ class VGC_DOM_API Node: public core::Object
 public:
     VGC_CORE_OBJECT(Node)
 
-    /// \enum vgc::dom::Node::Type
-    /// \brief Specifies the type of a node.
+    /// Returns the Type of this Node.
     ///
-    /// Currently, only
-    /// Note that the value corresponding to each node type is conformant with
-    /// the W3C DOM Specification. However, not all W3C node types have a
-    /// corresponding vgc::dom::Node::Type, for example one reason is that our
-    /// Attributes are not nodes.
-    ///
-    enum class Type {
-        Element = 1, ///< An Element node.
-        /* Attribute = 2,
-         * TextNode = 3, // Note: We reserve "Text" for a <text> element
-         * CDATA = 4,
-         * EntityReference = 5,
-         * Entity = 6,
-         * ProcessingInstruction = 7,
-         * Comment = 8, */
-         Document = 9, ///< A Document node.
-         /* DocumentType = 10,
-          * DocumentFragment = 11,
-          * Notation = 12 */
-         XmlDeclaration = 13 ///< An XmlDeclaration node
-    };
-
-    /// Returns the parent of this Node.
-    ///
-    /// \sa children() and isRootNode().
-    ///
-    Node* parent() const {
-        return parent_;
+    NodeType nodeType() const {
+        return nodeType_;
     }
 
-    /// Returns whether this node is a root node, that is, whether it has no
-    /// parent. For example, a dom::Document is always a root node. However,
-    /// note that a dom::Element is never a root node, even the rootElement.
-    /// Indeed, the parent of the rootElement is the Document it belongs to.
+    /// Returns the parent Node of this Node.
     ///
-    /// \sa parent().
+    /// Note that a Node may have a null parent Node for the following reasons:
     ///
-    bool isRootNode() const {
-        return !parent();
+    /// 1. This Node is a Document.
+    ///
+    /// 2. This Node is the root of a Node tree which does not belong to
+    ///    any Document (for instance, as a temporary state while moving nodes from
+    ///    one Document to another).
+    ///
+    /// In all other cases, this function returns a non-null pointer.
+    ///
+    /// \sa childNodes()
+    ///
+    Node* parentNode() const {
+        return parentNode_;
     }
 
-    /// Returns the children of this Node.
+    /// Returns the child nodes of this Node.
     ///
-    /// \sa parent().
+    /// If this Node is a Document, then its childNodes include:
+    /// - XmlDeclaration nodes (at most one, appears first)
+    /// - Comment nodes
+    /// - Element nodes (at most one, called the
+    /// Child nodes of a Do
     ///
-    const std::vector<NodeSharedPtr>& children() const {
-        return children_;
+    /// \sa parentNode().
+    ///
+    const std::vector<NodeSharedPtr>& childNodes() const {
+        // XXX use iterators instead.
+        return childNodes_;
+    }
+
+    /// Returns the owner Document of this Node.
+    ///
+    /// If this Node is a Document, then this function always returns this
+    /// Node.
+    ///
+    /// This function may return a null pointer if this node is not part of any
+    /// Document, for instance, as a temporary state while moving nodes from
+    /// one Document to another.
+    ///
+    Document* document() const {
+        return document_;
     }
 
 protected:
     /// Creates a new Node with no parent. You cannot call this function
-    /// directly, instead, you must create a Document, an Element, or an
-    /// Attribute.
+    /// directly, instead, please create a Document or an Element.
     ///
-    /// \sa isRootNode().
-    ///
-    Node();
+    Node(NodeType type);
 
 private:
-    Node* parent_;
-    std::vector<NodeSharedPtr> children_;
+    // Node type
+    NodeType nodeType_;
+
+    // parent-child relationship
+    Node* parentNode_;
+    std::vector<NodeSharedPtr> childNodes_;
     void addChild_(NodeSharedPtr node);
     void removeAllChildren_();
+
+    // Owner document
+    Document* document_;
 
     // Allow each type of node to set children/parent, since they have
     // different constraints that Node does not know about (for example, an
     // Attribute cannot have a child Element). However, note that subclasses of
     // these are not befriended, that is, a PathElement cannot directly
     // manipulate its children_.
-    friend class Attribute;
     friend class Document;
     friend class Element;
 };

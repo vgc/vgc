@@ -19,7 +19,8 @@
 namespace vgc {
 namespace dom {
 
-Element::Element()
+Element::Element() :
+    Node(NodeType::Element)
 {
 
 }

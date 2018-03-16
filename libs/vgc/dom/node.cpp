@@ -21,28 +21,30 @@
 namespace vgc {
 namespace dom {
 
-Node::Node() :
-    parent_(nullptr)
+Node::Node(NodeType type) :
+    nodeType_(type),
+    parentNode_(nullptr),
+    document_(nullptr)
 {
 
 }
 
 void Node::addChild_(NodeSharedPtr node)
 {
-    assert(node->parent_ == nullptr); // XXX TODO: issue an error instead of crashing.
+    assert(node->parentNode_ == nullptr); // XXX TODO: issue an error instead of crashing.
 
-    if (!core::contains(children_, node)) {
-        children_.push_back(node);
-        node->parent_ = this;
+    if (!core::contains(childNodes_, node)) {
+        childNodes_.push_back(node);
+        node->parentNode_ = this;
     }
 }
 
 void Node::removeAllChildren_()
 {
-    for (const NodeSharedPtr& node : children_) {
-        node->parent_ = nullptr;
+    for (const NodeSharedPtr& node : childNodes_) {
+        node->parentNode_ = nullptr;
     }
-    children_.clear();
+    childNodes_.clear();
 }
 
 } // namespace dom

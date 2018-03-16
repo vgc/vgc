@@ -25,6 +25,29 @@ namespace dom {
 
 VGC_CORE_DECLARE_PTRS(Element);
 
+/// \enum vgc::dom::ElementType
+/// \brief Specifies the type of an Element.
+///
+/// XXX TODO: implement this. It should allow to register new types with
+/// associated factory, get the typename, etc.
+///
+/// In a nutshell, there should be global variable:
+///
+/// elementTypes: int -> (string, Factory)
+///               string -> (int, Factory)
+///
+/// And ElementType only stores the int: we don't want to store
+///
+class ElementType {
+public:
+    std::string name() const {
+        return ""; // XXX TODO
+    }
+
+private:
+    int type_;
+};
+
 /// \class vgc::dom::Element
 /// \brief Represents an element of the DOM.
 ///
@@ -37,9 +60,21 @@ public:
     ///
     Element();
 
-    /// Returns the name of the element.
+    /// Returns the type of the element.
     ///
-    virtual std::string name() const = 0;
+    ElementType elementType() const {
+        return elementType_;
+    }
+
+    /// Returns the name of the element. This is equivalent to tagName()
+    /// in the W3C DOM Specification.
+    ///
+    std::string name() const {
+        return elementType().name();
+    }
+
+private:
+    ElementType elementType_;
 };
 
 } // namespace dom
