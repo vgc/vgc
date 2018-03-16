@@ -36,6 +36,10 @@ public:
     /// Creates a new Element.
     ///
     Element();
+
+    /// Returns the name of the element.
+    ///
+    virtual std::string name() const = 0;
 };
 
 } // namespace dom

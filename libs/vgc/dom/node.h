@@ -27,25 +27,45 @@ namespace dom {
 VGC_CORE_DECLARE_PTRS(Node);
 
 /// \class vgc::dom::Node
-/// \brief Represents a node of the DOM. All dom classes derive from Node.
+/// \brief Represents a node of the DOM. Most dom classes derive from Node.
 ///
-/// This is the base class for all classes in the DOM. For example, the
-/// Document is a node, each Element is a Node, and even each Attribute is a
-/// Node.
+/// This is the base class for most classes in the DOM tree. For example, the
+/// Document is a node and each Element is a Node. As a notable exception, note
+/// that an Attribute is not a Node.
 ///
-/// Each Node has children() nodes and is responsible for the lifetime of
-/// these children.
-///
-/// Typically, a Document is loaded from an XML file, and Nodes remember the
-/// location in the file where the data was initially loaded. However, to
-/// preserve memory, the corresponding string is typically not hold by Nodes,
-/// unless otherwise stated (for example, when users directly edit the string
-/// in an XML node editor).
+/// Each Node has childNodes() and is responsible for the lifetime of
+/// these children. Child nodes are ordered, which correspond to the order of
+/// appearance in the XML file.
 ///
 class VGC_DOM_API Node: public core::Object
 {
 public:
     VGC_CORE_OBJECT(Node)
+
+    /// \enum vgc::dom::Node::Type
+    /// \brief Specifies the type of a node.
+    ///
+    /// Currently, only
+    /// Note that the value corresponding to each node type is conformant with
+    /// the W3C DOM Specification. However, not all W3C node types have a
+    /// corresponding vgc::dom::Node::Type, for example one reason is that our
+    /// Attributes are not nodes.
+    ///
+    enum class Type {
+        Element = 1, ///< An Element node.
+        /* Attribute = 2,
+         * TextNode = 3, // Note: We reserve "Text" for a <text> element
+         * CDATA = 4,
+         * EntityReference = 5,
+         * Entity = 6,
+         * ProcessingInstruction = 7,
+         * Comment = 8, */
+         Document = 9, ///< A Document node.
+         /* DocumentType = 10,
+          * DocumentFragment = 11,
+          * Notation = 12 */
+         XmlDeclaration = 13 ///< An XmlDeclaration node
+    };
 
     /// Returns the parent of this Node.
     ///

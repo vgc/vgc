@@ -11,9 +11,9 @@ vgc_add_library(dom
         document.h
         element.h
         node.h
-        pathelement.h
+        path.h
         positionsattribute.h
-        vgcelement.h
+        vgc.h
         widthsattribute.h
 
     CPP_FILES
@@ -22,9 +22,9 @@ vgc_add_library(dom
         document.cpp
         element.cpp
         node.cpp
-        pathelement.cpp
+        path.cpp
         positionsattribute.cpp
-        vgcelement.cpp
+        vgc.cpp
         widthsattribute.cpp
 
     COMPILE_DEFINITIONS

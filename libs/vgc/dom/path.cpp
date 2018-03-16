@@ -14,15 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_DOM_VGCELEMENT_H
-#define VGC_DOM_VGCELEMENT_H
-
-#include <vgc/dom/api.h>
+#include <vgc/dom/path.h>
 
 namespace vgc {
 namespace dom {
 
 } // namespace dom
 } // namespace vgc
-
-#endif // VGC_DOM_VGCELEMENT_H

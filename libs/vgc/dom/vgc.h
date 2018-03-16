@@ -14,10 +14,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/pathelement.h>
+#ifndef VGC_DOM_VGC_H
+#define VGC_DOM_VGC_H
+
+#include <vgc/dom/api.h>
+#include <vgc/dom/element.h>
 
 namespace vgc {
 namespace dom {
 
+/// \class vgc::dom::Vgc
+/// \brief A <vgc> element of the Document.
+///
+class VGC_DOM_API Vgc: public Element
+{
+public:
+    VGC_CORE_OBJECT(Vgc)
+
+    /// Creates a new Element.
+    ///
+    Vgc();
+
+    /// Returns the name of the element.
+    ///
+    std::string name() const {
+        return "vgc";
+    }
+};
+
 } // namespace dom
 } // namespace vgc
+
+#endif // VGC_DOM_VGC_H

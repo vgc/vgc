@@ -14,10 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/vgcelement.h>
+#include <vgc/dom/vgc.h>
 
 namespace vgc {
 namespace dom {
+
+Vgc::Vgc()
+{
+
+}
 
 } // namespace dom
 } // namespace vgc
