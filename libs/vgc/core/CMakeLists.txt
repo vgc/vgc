@@ -19,6 +19,7 @@ vgc_add_library(core
         random.h
         resources.h
         signal.h
+        stringid.h
         timer.h
 
     CPP_FILES
@@ -31,6 +32,7 @@ vgc_add_library(core
         random.cpp
         resources.cpp
         signal.cpp
+        stringid.cpp
         timer.cpp
 
     COMPILE_DEFINITIONS
