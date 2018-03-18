@@ -86,14 +86,15 @@ namespace core {
 /// StringId someString();
 ///
 /// // foo.cpp
-/// StringId myString() {
-///     static StringId s("my string");
+/// StringId someString() {
+///     static StringId s("some string");
 ///     return s;
 /// }
 /// \endcode
 ///
 /// Note that StringId is trivially destructible, therefore there is no need to
-/// worry about static destruction order. See the following for details:
+/// worry about static destruction order, which is why the above code is safe,
+/// and even thread-safe since C++11. See the following for details:
 /// - https://isocpp.org/wiki/faq/ctors#construct-on-first-use-v2
 /// - https://google.github.io/styleguide/cppguide.html#Static_and_Global_Variables
 ///
