@@ -111,11 +111,25 @@ public:
         return *stringPtr_;
     }
 
+    /// Allows implicit conversion from StringId to std::string.
+    ///
+    operator std::string() const {
+        return string();
+    }
+
 private:
     const std::string* stringPtr_;
 };
 
 } // namespace core
 } // namespace vgc
+
+/// Allows implicit conversion from StringId to std::string for all output
+/// stream operations.
+///
+template <typename Stream>
+Stream& operator<<(Stream& outputStream, vgc::core::StringId stringId) {
+    return outputStream << stringId.string();
+}
 
 #endif // VGC_CORE_STRINGID_H
