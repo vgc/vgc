@@ -26,8 +26,8 @@
 #include <QOpenGLWidget>
 
 #include <vgc/core/color.h>
+#include <vgc/core/vec2d.h>
 #include <vgc/geometry/camera2d.h>
-#include <vgc/geometry/vec2d.h>
 #include <vgc/scene/scene.h>
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/pointingdeviceevent.h>
@@ -89,7 +89,7 @@ private:
     bool isPanning_;
     bool isRotating_;
     bool isZooming_;
-    geometry::Vec2d pointingDevicePosAtPress_;
+    core::Vec2d pointingDevicePosAtPress_;
     geometry::Camera2d cameraAtPress_;
 
     // Shader program

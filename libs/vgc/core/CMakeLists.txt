@@ -11,7 +11,9 @@ vgc_add_library(core
         colors.h
         compiler.h
         dll.h
+        epsilon.h
         io.h
+        mat4d.h
         math.h
         object.h
         os.h
@@ -21,11 +23,13 @@ vgc_add_library(core
         signal.h
         stringid.h
         timer.h
+        vec2d.h
 
     CPP_FILES
         algorithm.cpp
         color.cpp
         io.cpp
+        mat4d.cpp
         math.cpp
         object.cpp
         python.cpp

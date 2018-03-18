@@ -17,9 +17,9 @@
 #ifndef VGC_GEOMETRY_CAMERA2D_H
 #define VGC_GEOMETRY_CAMERA2D_H
 
+#include <vgc/core/mat4d.h>
+#include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>
-#include <vgc/geometry/mat4d.h>
-#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 namespace geometry {
@@ -137,13 +137,13 @@ public:
     ///
     /// \sa setCenter()
     ///
-    const Vec2d& center() const { return center_; }
+    const core::Vec2d& center() const { return center_; }
 
     /// Sets the center of the camera.
     ///
     /// \sa center()
     ///
-    void setCenter(const Vec2d& center) { center_ = center; }
+    void setCenter(const core::Vec2d& center) { center_ = center; }
 
     /// Returns the zoom of the camera. This is the ratio between the size of
     /// an object in view coordinates (i.e., in pixels), and its size in world
@@ -235,16 +235,16 @@ public:
 
     /// Returns the 4x4 view matrix corresponding to the camera.
     ///
-    Mat4d viewMatrix() const;
+    core::Mat4d viewMatrix() const;
 
     /// Returns the 4x4 projection matrix corresponding to the camera.
     ///
-    Mat4d projectionMatrix() const;
+    core::Mat4d projectionMatrix() const;
 
     /// Returns the scene coordinate that corresponds to the given
 
 private:
-    Vec2d center_;
+    core::Vec2d center_;
     double zoom_;
     double rotation_;
     double viewportWidth_;

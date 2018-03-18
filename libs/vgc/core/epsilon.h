@@ -14,20 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_GEOMETRY_EPSILON_H
-#define VGC_GEOMETRY_EPSILON_H
+#ifndef VGC_CORE_EPSILON_H
+#define VGC_CORE_EPSILON_H
 
-#include <vgc/geometry/api.h>
+#include <vgc/core/api.h>
 
 namespace vgc {
-namespace geometry {
+namespace core {
 
-/// Small epsilon value under which two doubles are considered indistinguishable
-/// for all computations with the vgc::geometry library.
+/// Small epsilon value under which two doubles are considered
+/// indistinguishable.
 ///
 const double epsilon = 1e-10;
 
-} // namespace geometry
+} // namespace core
 } // namespace vgc
 
-#endif // VGC_GEOMETRY_EPSILON_H
+#endif // VGC_CORE_EPSILON_H

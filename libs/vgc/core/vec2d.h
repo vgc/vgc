@@ -14,17 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_GEOMETRY_VEC2D_H
-#define VGC_GEOMETRY_VEC2D_H
+#ifndef VGC_CORE_VEC2D_H
+#define VGC_CORE_VEC2D_H
 
 #include <cmath>
-#include <vgc/geometry/api.h>
-#include <vgc/geometry/epsilon.h>
+#include <vgc/core/api.h>
+#include <vgc/core/epsilon.h>
 
 namespace vgc {
-namespace geometry {
+namespace core {
 
-/// \class vgc::geometry::Vec2d
+/// \class vgc::core::Vec2d
 /// \brief 2D vector using double-precision floating points.
 ///
 /// The memory size a Vec2d is exactly 2 * sizeof(double). This will never
@@ -34,7 +34,7 @@ namespace geometry {
 /// Like in the Eigen library, VGC has chosen not to distinguish between points
 /// and vectors. In other words, if you wish to represent a 2D point, simply use a Vec2d.
 ///
-class VGC_GEOMETRY_API Vec2d
+class VGC_CORE_API Vec2d
 {
 public:
     /// Creates an uninitialized Vec2d.
@@ -195,7 +195,7 @@ inline double dot(const Vec2d& v1, const Vec2d& v2) {
     return v1[0]*v2[0] + v1[1]*v2[1];
 }
 
-} // namespace geometry
+} // namespace core
 } // namespace vgc
 
-#endif // VGC_GEOMETRY_VEC2D_H
+#endif // VGC_CORE_VEC2D_H

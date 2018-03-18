@@ -19,7 +19,9 @@
 namespace py = pybind11;
 
 void wrap_timer(py::module& m);
+void wrap_vec2d(py::module& m);
 
 PYBIND11_MODULE(core, m) {
     wrap_timer(m);
+    wrap_vec2d(m);
 }

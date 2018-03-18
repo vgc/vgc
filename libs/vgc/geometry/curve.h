@@ -23,9 +23,12 @@
 #include <vgc/geometry/api.h>
 
 namespace vgc {
-namespace geometry {
 
+namespace core {
 class Vec2d;
+}
+
+namespace geometry {
 
 VGC_CORE_DECLARE_PTRS(Curve);
 
@@ -148,7 +151,7 @@ public:
 
     /// \overload addControlPoint(double x, double y)
     ///
-    void addControlPoint(const Vec2d& position);
+    void addControlPoint(const core::Vec2d& position);
 
     /// Convenient function to add a sample to the curve. This overload is
     /// intended to be used when widthVariability() == PerControlPoint.
@@ -159,7 +162,7 @@ public:
 
     /// \overload addControlPoint(double x, double y, double width)
     ///
-    void addControlPoint(const Vec2d& position, double width);
+    void addControlPoint(const core::Vec2d& position, double width);
 
     /// Computes and returns a triangulation of this curve as a triangle strip
     /// [ p0, p1, ..., p_{2n}, p_{2n+1} ]. The even indices are on the "left"
@@ -213,7 +216,7 @@ public:
     /// control points, simply set maxAngle to any value, and set minQuads =
     /// maxQuads = number of desired quads.
     ///
-    std::vector<Vec2d> triangulate(
+    std::vector<core::Vec2d> triangulate(
             double maxAngle = 0.05,
             int minQuads = 1,
             int maxQuads = 64) const;

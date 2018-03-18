@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/geometry/mat4d.h>
+#include <vgc/core/mat4d.h>
 
 // Note: The 4x4 matrix inversion is lifted from __gluInvertMatrixd, which can
 // be found in the file src/libutil/project.c of the MESA implementation of
@@ -102,7 +102,7 @@ static bool gluInvertMatrixd_(const double* m, double* invOut)
     return true;
 }
 namespace vgc {
-namespace geometry {
+namespace core {
 
 Mat4d Mat4d::inverse() const
 {
@@ -113,5 +113,5 @@ Mat4d Mat4d::inverse() const
     return inv;
 }
 
-} // namespace geometry
+} // namespace core
 } // namespace vgc

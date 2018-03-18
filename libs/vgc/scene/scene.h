@@ -22,8 +22,8 @@
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/core/signal.h>
+#include <vgc/core/vec2d.h>
 #include <vgc/geometry/curve.h>
-#include <vgc/geometry/vec2d.h>
 #include <vgc/scene/api.h>
 
 namespace vgc {
@@ -45,8 +45,8 @@ public:
     void clear();
 
     // XXX This is a temporary test. Final API will be different
-    void startCurve(const geometry::Vec2d& p, double width = 1.0);
-    void continueCurve(const geometry::Vec2d& p, double width = 1.0);
+    void startCurve(const core::Vec2d& p, double width = 1.0);
+    void continueCurve(const core::Vec2d& p, double width = 1.0);
     const std::vector<geometry::CurveSharedPtr>& curves() const {
         return curves_;
     }

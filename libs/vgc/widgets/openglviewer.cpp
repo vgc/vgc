@@ -35,7 +35,7 @@ QString shaderPath_(const std::string& name) {
     return toQt(path);
 }
 
-QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {
+QMatrix4x4 toQtMatrix(const core::Mat4d& m) {
     return QMatrix4x4(
                (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
                (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
@@ -174,8 +174,8 @@ void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
         isSketching_ = true;
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
-        geometry::Vec2d viewCoords = event.pos();
-        geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+        core::Vec2d viewCoords = event.pos();
+        core::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
         scene_->startCurve(worldCoords, width_(event));
     }
     else if (event.modifiers() == Qt::AltModifier &&
@@ -211,13 +211,13 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
     if (isSketching_) {
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
-        geometry::Vec2d viewCoords = event.pos();
-        geometry::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+        core::Vec2d viewCoords = event.pos();
+        core::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
         scene_->continueCurve(worldCoords, width_(event));
     }
     else if (isPanning_) {
-        geometry::Vec2d mousePos = event.pos();
-        geometry::Vec2d delta = pointingDevicePosAtPress_ - mousePos;
+        core::Vec2d mousePos = event.pos();
+        core::Vec2d delta = pointingDevicePosAtPress_ - mousePos;
         camera_.setCenter(cameraAtPress_.center() + delta);
         update();
     }
@@ -226,15 +226,15 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // XXX rotateViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double rotateViewSensitivity = 0.01;
-        geometry::Vec2d mousePos = event.pos();
-        geometry::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
+        core::Vec2d mousePos = event.pos();
+        core::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
         double deltaRotation = rotateViewSensitivity * (deltaPos.x() - deltaPos.y());
         camera_.setRotation(cameraAtPress_.rotation() + deltaRotation);
 
         // Set new camera center so that rotation center = mouse pos at press
-        geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
-        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        core::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
+        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
+        core::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();
@@ -244,15 +244,15 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // XXX zoomViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double zoomViewSensitivity = 0.005;
-        geometry::Vec2d mousePos = event.pos();
-        geometry::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
+        core::Vec2d mousePos = event.pos();
+        core::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
         const double s = std::exp(zoomViewSensitivity * (deltaPos.y() - deltaPos.x()));
         camera_.setZoom(cameraAtPress_.zoom() * s);
 
         // Set new camera center so that zoom center = mouse pos at press
-        geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
-        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        core::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
+        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
+        core::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();
@@ -491,13 +491,13 @@ void OpenGLViewer::updateCurveGLResources_(int i)
         minQuads = 10;
         maxQuads = 10;
     }
-    std::vector<geometry::Vec2d> triangulation =
+    std::vector<core::Vec2d> triangulation =
             curve.triangulate(maxAngle, minQuads, maxQuads);
 
     // Convert triangles to single-precision and transfer to GPU
     r.numVerticesTriangles = triangulation.size();
     std::vector<GLVertex> glVerticesTriangles;
-    for(const geometry::Vec2d& v: triangulation) {
+    for(const core::Vec2d& v: triangulation) {
         glVerticesTriangles.emplace_back((float)v[0], (float)v[1]);
     }
     r.vboTriangles.bind();

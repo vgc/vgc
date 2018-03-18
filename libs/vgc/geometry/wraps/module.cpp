@@ -18,10 +18,8 @@
 
 namespace py = pybind11;
 
-void wrap_vec2d(py::module& m);
 void wrap_curve(py::module& m);
 
 PYBIND11_MODULE(geometry, m) {
-    wrap_vec2d(m);
     wrap_curve(m);
 }

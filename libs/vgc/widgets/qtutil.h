@@ -27,7 +27,7 @@
 #include <QPointF>
 #include <QString>
 #include <vgc/core/color.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/core/vec2d.h>
 #include <vgc/widgets/api.h>
 
 namespace vgc {
@@ -53,15 +53,15 @@ QColor toQt(const core::Color& c);
 VGC_WIDGETS_API
 core::Color fromQt(const QColor& c);
 
-/// Converts the given vgc::geometry::Vec2d \p v into a QPointF.
+/// Converts the given vgc::core::Vec2d \p v into a QPointF.
 ///
 VGC_WIDGETS_API
-QPointF toQt(const geometry::Vec2d& v);
+QPointF toQt(const core::Vec2d& v);
 
-/// Converts the given QPointF \p v into a vgc::geometry::Vec2d.
+/// Converts the given QPointF \p v into a vgc::core::Vec2d.
 ///
 VGC_WIDGETS_API
-geometry::Vec2d fromQt(const QPointF& v);
+core::Vec2d fromQt(const QPointF& v);
 
 } // namespace widgets
 } // namespace vgc

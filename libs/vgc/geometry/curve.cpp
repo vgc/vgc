@@ -18,9 +18,9 @@
 
 #include <vgc/core/algorithm.h>
 #include <vgc/core/colors.h>
+#include <vgc/core/vec2d.h>
 #include <vgc/geometry/bezier.h>
 #include <vgc/geometry/catmullrom.h>
-#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 namespace geometry {
@@ -39,16 +39,16 @@ void appendUninitializedElement(std::vector<T>& v) {
 }
 
 void computeSample(
-        const Vec2d& q0, const Vec2d& q1, const Vec2d& q2, const Vec2d& q3,
+        const core::Vec2d& q0, const core::Vec2d& q1, const core::Vec2d& q2, const core::Vec2d& q3,
         double w0, double w1, double w2, double w3,
         double u,
-        Vec2d& leftPosition,
-        Vec2d& rightPosition,
-        Vec2d& normal)
+        core::Vec2d& leftPosition,
+        core::Vec2d& rightPosition,
+        core::Vec2d& normal)
 {
     // Compute position and normal
-    Vec2d position = cubicBezier(q0, q1, q2, q3, u);
-    Vec2d tangent = cubicBezierDer(q0, q1, q2, q3, u);
+    core::Vec2d position = cubicBezier(q0, q1, q2, q3, u);
+    core::Vec2d tangent = cubicBezierDer(q0, q1, q2, q3, u);
     normal = tangent.normalized().orthogonalized();
 
     // Compute half-width
@@ -102,7 +102,7 @@ void Curve::addControlPoint(double x, double y)
     }
 }
 
-void Curve::addControlPoint(const Vec2d& position)
+void Curve::addControlPoint(const core::Vec2d& position)
 {
     addControlPoint(position.x(), position.y());
 }
@@ -119,12 +119,12 @@ void Curve::addControlPoint(double x, double y, double width)
     }
 }
 
-void Curve::addControlPoint(const Vec2d& position, double width)
+void Curve::addControlPoint(const core::Vec2d& position, double width)
 {
     addControlPoint(position.x(), position.y(), width);
 }
 
-std::vector<Vec2d> Curve::triangulate(
+std::vector<core::Vec2d> Curve::triangulate(
         double maxAngle,
         int minQuads,
         int maxQuads) const
@@ -133,7 +133,7 @@ std::vector<Vec2d> Curve::triangulate(
     // Final size = 2 * nSamples
     //   where nSamples = nQuads + 1
     //
-    std::vector<Vec2d> res;
+    std::vector<core::Vec2d> res;
 
     // For adaptive sampling, we need to remember a few things about all the
     // samples in the currently processed segment ("segment" means "part of the
@@ -143,9 +143,9 @@ std::vector<Vec2d> Curve::triangulate(
     // here for performance (reuse vector capacity). All these vectors have
     // the same size.
     //
-    std::vector<Vec2d> leftPositions;
-    std::vector<Vec2d> rightPositions;
-    std::vector<Vec2d> normals;
+    std::vector<core::Vec2d> leftPositions;
+    std::vector<core::Vec2d> rightPositions;
+    std::vector<core::Vec2d> normals;
     std::vector<double> uParams;
 
     // Remember which quads do not pass the angle test. The index is relative
@@ -173,13 +173,13 @@ std::vector<Vec2d> Curve::triangulate(
         int i3 = core::clamp(i+2, 0, numControlPoints-1);
 
         // Get positions of Catmull-Rom control points
-        Vec2d p0(positionData_[2*i0], positionData_[2*i0+1]);
-        Vec2d p1(positionData_[2*i1], positionData_[2*i1+1]);
-        Vec2d p2(positionData_[2*i2], positionData_[2*i2+1]);
-        Vec2d p3(positionData_[2*i3], positionData_[2*i3+1]);
+        core::Vec2d p0(positionData_[2*i0], positionData_[2*i0+1]);
+        core::Vec2d p1(positionData_[2*i1], positionData_[2*i1+1]);
+        core::Vec2d p2(positionData_[2*i2], positionData_[2*i2+1]);
+        core::Vec2d p3(positionData_[2*i3], positionData_[2*i3+1]);
 
         // Convert positions from Catmull-Rom to Bézier
-        Vec2d q0, q1, q2, q3;
+        core::Vec2d q0, q1, q2, q3;
         uniformCatmullRomToBezier(p0, p1, p2, p3,
                                   q0, q1, q2, q3);
 
@@ -361,7 +361,7 @@ In the future, we may want to extend the Curve class with:
       curve
 
 Supporting other types of curves in the future is why we use a
-std::vector<double> of size 2*n instead of a std::vector<Vec2d> of size n.
+std::vector<double> of size 2*n instead of a std::vector<core::Vec2d> of size n.
 Indeed, other types of curve may need additional data, such as knot values,
 homogeneous coordinates, etc.
 

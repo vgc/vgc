@@ -32,14 +32,14 @@ Camera2d::Camera2d() :
 
 }
 
-Mat4d Camera2d::viewMatrix() const
+core::Mat4d Camera2d::viewMatrix() const
 {
     const double cx = center().x();
     const double cy = center().y();
     const double w = viewportWidth();
     const double h = viewportHeight();
 
-    Mat4d res;
+    core::Mat4d res;
     res.setToIdentity();
     res.translate(0.5 * w - cx, 0.5 * h - cy);
     res.rotate(rotation());
@@ -47,19 +47,17 @@ Mat4d Camera2d::viewMatrix() const
     return res;
 }
 
-Mat4d Camera2d::projectionMatrix() const
+core::Mat4d Camera2d::projectionMatrix() const
 {
     const double w = viewportWidth_;
     const double h = viewportHeight_;
     const double n = near_;
     const double f = far_;
 
-    return Mat4d(2/w , 0    , 0       , -1          ,
-                 0   , -2/h , 0       , 1           ,  // Inversion of Y axis (SVG -> OpenGL conventions)
-                 0   , 0    , 2/(n-f) , (n+f)/(n-f) ,  // XXX I'm not 100% sure of the signs on this row. Try later: an object at (0, 0, 0.5) should obsure one at (0, 0, -0.5)
-                 0   , 0    , 0       , 1           );
-
-
+    return core::Mat4d(2/w , 0    , 0       , -1          ,
+                       0   , -2/h , 0       , 1           ,  // Inversion of Y axis (SVG -> OpenGL conventions)
+                       0   , 0    , 2/(n-f) , (n+f)/(n-f) ,  // XXX I'm not 100% sure of the signs on this row. Try later: an object at (0, 0, 0.5) should obsure one at (0, 0, -0.5)
+                       0   , 0    , 0       , 1           );
 }
 
 } // namespace geometry

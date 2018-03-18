@@ -14,17 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_GEOMETRY_MAT4D_H
-#define VGC_GEOMETRY_MAT4D_H
+#ifndef VGC_CORE_MAT4D_H
+#define VGC_CORE_MAT4D_H
 
 #include <cmath>
-#include <vgc/geometry/api.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/core/api.h>
+#include <vgc/core/vec2d.h>
 
 namespace vgc {
-namespace geometry {
+namespace core {
 
-/// \class vgc::geometry::Mat4d
+/// \class vgc::core::Mat4d
 /// \brief 4x4 matrix using double-precision floating points.
 ///
 /// A class that stores a 4x4 matrix in column-major format. This ensures
@@ -39,7 +39,7 @@ namespace geometry {
 /// transformation. For example, you can multiply a Mat4d with a Vec2d, which
 /// returns the same as multiplying the matrix with the 4D vector [x, y, 0, 1].
 ///
-class VGC_GEOMETRY_API Mat4d
+class VGC_CORE_API Mat4d
 {
 public:
     /// Creates an uninitialized Mat4d.
@@ -367,7 +367,7 @@ private:
     double data_[4][4];
 };
 
-} // namespace geometry
+} // namespace core
 } // namespace vgc
 
-#endif // VGC_GEOMETRY_MAT4D_H
+#endif // VGC_CORE_MAT4D_H

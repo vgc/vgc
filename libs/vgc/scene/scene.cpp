@@ -33,14 +33,14 @@ void Scene::clear()
     emitChanged_();
 }
 
-void Scene::startCurve(const geometry::Vec2d& p, double width)
+void Scene::startCurve(const core::Vec2d& p, double width)
 {
     curves_.push_back(std::make_shared<geometry::Curve>());
     curves_.back()->setColor(newCurveColor_);
     continueCurve(p, width);
 }
 
-void Scene::continueCurve(const geometry::Vec2d& p, double width)
+void Scene::continueCurve(const core::Vec2d& p, double width)
 {
     if (curves_.size() == 0) {
         return;

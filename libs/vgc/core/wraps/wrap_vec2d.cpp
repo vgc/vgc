@@ -16,10 +16,10 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/core/vec2d.h>
 
 namespace py = pybind11;
-using vgc::geometry::Vec2d;
+using vgc::core::Vec2d;
 
 void wrap_vec2d(py::module& m)
 {
@@ -61,5 +61,5 @@ void wrap_vec2d(py::module& m)
                    + std::to_string(v[1]) + ")"; })
     ;
 
-    m.def("dot", &vgc::geometry::dot);
+    m.def("dot", &vgc::core::dot);
 }

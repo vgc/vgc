@@ -44,7 +44,7 @@ const T& clamp(const T& v, const T& min, const T& max)
 ///
 /// It is important to specialize vgc::core::zero for your own arithmetic types
 /// when their default constructors do not perform zero-initialization (See
-/// vgc::geometry::Vec2d for an example).
+/// vgc::core::Vec2d for an example).
 ///
 /// Below is an example of how to specialize vgc::core::zero for your own types:
 ///
