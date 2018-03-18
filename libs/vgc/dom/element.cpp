@@ -19,8 +19,9 @@
 namespace vgc {
 namespace dom {
 
-Element::Element() :
-    Node(NodeType::Element)
+Element::Element(core::StringId name) :
+    Node(NodeType::Element),
+    name_(name)
 {
 
 }

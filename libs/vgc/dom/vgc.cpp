@@ -16,10 +16,13 @@
 
 #include <vgc/dom/vgc.h>
 
+VGC_DOM_ELEMENT_DEFINE_NAME(vgc, "vgc")
+
 namespace vgc {
 namespace dom {
 
-Vgc::Vgc()
+Vgc::Vgc() :
+    Element(VGC_DOM_ELEMENT_GET_NAME(vgc))
 {
 
 }

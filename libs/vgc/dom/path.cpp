@@ -16,8 +16,16 @@
 
 #include <vgc/dom/path.h>
 
+VGC_DOM_ELEMENT_DEFINE_NAME(path, "path")
+
 namespace vgc {
 namespace dom {
+
+Path::Path() :
+    Element(VGC_DOM_ELEMENT_GET_NAME(path))
+{
+
+}
 
 } // namespace dom
 } // namespace vgc

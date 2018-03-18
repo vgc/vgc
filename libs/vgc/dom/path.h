@@ -31,15 +31,9 @@ class VGC_DOM_API Path: public Element
 public:
     VGC_CORE_OBJECT(Path)
 
-    /// Creates a new Element.
+    /// Creates a new Path element.
     ///
     Path();
-
-    /// Returns the name of the element.
-    ///
-    std::string name() const {
-        return "path";
-    }
 };
 
 } // namespace dom

@@ -40,7 +40,7 @@ enum class NodeType {
     ///
     Element = 1, ///< An Element node.
 
-    /* // Attribute = 2, // Note: we are not planning to implement this: Attributes aren't will never implement this.
+    /* // Attribute = 2, // Note: we are not planning to implement this (attributes aren't nodes in our design)
      * Text = 3, // Or TextNode? We reserve the class name "Text" for a <text> element, and plan to use TextNode for text nodes.
      * CDATA = 4, // Or CharacterData?
      * EntityReference = 5,

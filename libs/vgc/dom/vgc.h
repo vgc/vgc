@@ -31,15 +31,9 @@ class VGC_DOM_API Vgc: public Element
 public:
     VGC_CORE_OBJECT(Vgc)
 
-    /// Creates a new Element.
+    /// Creates a new Vgc element.
     ///
     Vgc();
-
-    /// Returns the name of the element.
-    ///
-    std::string name() const {
-        return "vgc";
-    }
 };
 
 } // namespace dom
