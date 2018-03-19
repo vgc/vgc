@@ -24,6 +24,7 @@ vgc_add_library(core
         stringid.h
         timer.h
         vec2d.h
+        vec2darray.h
 
     CPP_FILES
         algorithm.cpp
