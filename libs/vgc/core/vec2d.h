@@ -131,6 +131,51 @@ public:
         return Vec2d(*this) /= s;
     }
 
+    /// Returns whether the two given Vec2d \p v1 and \p v2 are equal.
+    ///
+    friend bool operator==(const Vec2d& v1, const Vec2d& v2) {
+        return v1.data_[0] == v2.data_[0] &&
+               v1.data_[1] == v2.data_[1];
+    }
+
+    /// Returns whether the two given Vec2d \p v1 and \p v2 are different,
+    /// that is, whether they have different size or `v1[i] == v2[i]` for some
+    /// valid i index.
+    ///
+    friend bool operator!=(const Vec2d& v1, const Vec2d& v2) {
+        return v1.data_[0] != v2.data_[0] ||
+               v1.data_[1] != v2.data_[1];
+    }
+
+    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator<(const Vec2d& v1, const Vec2d& v2) {
+        return (v1.data_[0] < v2.data_[0]) ||
+               (!(v2.data_[0] < v1.data_[0]) && (v1.data_[1] < v2.data_[1]));
+    }
+
+    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator<=(const Vec2d& v1, const Vec2d& v2) {
+        return !(v2 < v1);
+    }
+
+    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator>(const Vec2d& v1, const Vec2d& v2) {
+        return v2 < v1;
+    }
+
+    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator>=(const Vec2d& v1, const Vec2d& v2) {
+        return !(v1 < v2);
+    }
+
     /// Returns the Euclidean length of the Vec2d.
     ///
     double length() const {
