@@ -22,6 +22,7 @@ vgc_add_library(core
         resources.h
         signal.h
         stringid.h
+        stringutil.h
         timer.h
         vec2d.h
         vec2darray.h
@@ -38,7 +39,10 @@ vgc_add_library(core
         resources.cpp
         signal.cpp
         stringid.cpp
+        stringutil.cpp
         timer.cpp
+        vec2d.cpp
+        vec2darray.cpp
 
     COMPILE_DEFINITIONS
         -DVGC_CORE_PYTHON_PATH_="${VGC_PYTHON_OUTPUT_DIRECTORY}"

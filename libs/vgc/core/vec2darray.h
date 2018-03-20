@@ -18,6 +18,7 @@
 #define VGC_CORE_VEC2DARRAY_H
 
 #include <cassert>
+#include <string>
 #include <vector>
 #include <vgc/core/api.h>
 #include <vgc/core/vec2d.h>
@@ -785,6 +786,11 @@ private:
 void swap(Vec2dArray& a1, Vec2dArray& a2) {
     a1.swap(a2);
 };
+
+/// Returns a string representation of the given Vec2dArray.
+///
+VGC_CORE_API
+std::string toString(const Vec2dArray& a);
 
 } // namespace core
 } // namespace vgc

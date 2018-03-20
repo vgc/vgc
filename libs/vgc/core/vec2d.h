@@ -18,6 +18,7 @@
 #define VGC_CORE_VEC2D_H
 
 #include <cmath>
+#include <string>
 #include <vgc/core/api.h>
 #include <vgc/core/epsilon.h>
 
@@ -239,6 +240,11 @@ private:
 inline double dot(const Vec2d& v1, const Vec2d& v2) {
     return v1[0]*v2[0] + v1[1]*v2[1];
 }
+
+/// Returns a string representation of the given Vec2d.
+///
+VGC_CORE_API
+std::string toString(const Vec2d& v);
 
 } // namespace core
 } // namespace vgc
