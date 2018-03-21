@@ -23,6 +23,19 @@ std::string toString(double x)
 {
     // XXX TODO Use something that provides more control on
     // precision, formatting, trailing zeros, etc.
+    //
+    // Example:
+    // std::stringstream ss;
+    // ss << std::fixed << std::setprecision(4) << 1988.42;
+    // return ss.str();
+    //
+    // returns "1988.4200".
+    //
+    // This is basically what we want (fixed number of decimals, no scientific
+    // notation), but we want it faster (not using stringstream) and with no
+    // trailing zeros (should return 1988.42).
+    //
+
     return std::to_string(x);
 }
 
