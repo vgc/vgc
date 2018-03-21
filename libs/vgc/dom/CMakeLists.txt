@@ -11,6 +11,7 @@ vgc_add_library(dom
         element.h
         node.h
         path.h
+        value.h
         vgc.h
 
     CPP_FILES
@@ -19,6 +20,7 @@ vgc_add_library(dom
         element.cpp
         node.cpp
         path.cpp
+        value.cpp
         vgc.cpp
 
     COMPILE_DEFINITIONS
