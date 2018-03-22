@@ -783,7 +783,7 @@ private:
 
 /// Exchanges the content of \p lhs with the content of \p rhs.
 ///
-void swap(Vec2dArray& a1, Vec2dArray& a2) {
+inline void swap(Vec2dArray& a1, Vec2dArray& a2) {
     a1.swap(a2);
 };
 
