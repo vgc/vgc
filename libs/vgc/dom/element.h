@@ -19,7 +19,9 @@
 
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/attribute.h>
 #include <vgc/dom/node.h>
+#include <vgc/dom/value.h>
 
 namespace vgc {
 namespace dom {
@@ -41,12 +43,29 @@ public:
     /// Returns the name of the element. This is equivalent to tagName()
     /// in the W3C DOM Specification.
     ///
+    /// XXX Should this be elementType() instead? or typeName()? or simply
+    /// type() ? We've chosen name() for now for consistency with W3C DOM, but
+    /// I personally don't like this terminology. For example, it makes more
+    /// sense to say "let's define a new element type" than "let's define a new
+    /// element name". I'd rather use "name" as being a built-in attribute name
+    /// of all Elements, similar to "id" but without requiring them to be
+    /// unique as long as they have different parent, like filenames, or
+    /// Pixar's USD prim names.
+    ///
     core::StringId name() const {
         return name_;
     }
 
+    /// Returns all built-in attributes of this element. Note that this
+    /// function does not let you access the current values of these
+    /// attributes, only their names and their default value.
+    ///
+    virtual const std::vector<BuiltInAttribute>& getBuiltInAttributes() const;
+
+
 private:
     core::StringId name_;
+    std::vector<detail::AuthoredAttributeSharedPtr> authoredAttributes_;
 };
 
 /// Defines the name of an element, retrievable via the

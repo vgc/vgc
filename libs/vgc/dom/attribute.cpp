@@ -19,5 +19,10 @@
 namespace vgc {
 namespace dom {
 
+void Attribute::setValue(const Value& value)
+{
+    // XXX TODO
+}
+
 } // namespace dom
 } // namespace vgc

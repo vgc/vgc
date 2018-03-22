@@ -26,5 +26,10 @@ Element::Element(core::StringId name) :
 
 }
 
+const std::vector<BuiltInAttribute>& Element::getBuiltInAttributes() const
+{
+    // XXX TODO
+}
+
 } // namespace dom
 } // namespace vgc
