@@ -23,6 +23,8 @@
 namespace vgc {
 namespace core {
 
+// XXX How about calling this class "Name"?
+
 /// \class vgc::core::StringId
 /// \brief Represents a fast-to-compare and cheap-to-copy immutable string.
 ///
