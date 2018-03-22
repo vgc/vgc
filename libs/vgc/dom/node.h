@@ -76,7 +76,7 @@ class VGC_DOM_API Node: public core::Object
 public:
     VGC_CORE_OBJECT(Node)
 
-    /// Returns the Type of this Node.
+    /// Returns the NodeType of this Node.
     ///
     NodeType nodeType() const {
         return nodeType_;
