@@ -13,6 +13,7 @@ vgc_add_library(core
         dll.h
         epsilon.h
         io.h
+        logging.h
         mat4d.h
         math.h
         object.h
@@ -31,6 +32,7 @@ vgc_add_library(core
         algorithm.cpp
         color.cpp
         io.cpp
+        logging.cpp
         mat4d.cpp
         math.cpp
         object.cpp
