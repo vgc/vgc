@@ -78,6 +78,11 @@ namespace dom {
 /// the type-hint, the parser wouldn't be able to determine whether the
 /// attribute has the type Vec2dArray or Vec2iArray.
 ///
+/// XXX What if it's an empty array? data-d-myData="[]"? How to determine the
+/// type from the type-hint? -> maybe we should forget about this "type-hint"
+/// idea altogether, and just have authors always give the full type:
+/// data-Vec2dArray-myCoords="[]"
+///
 enum class ValueType {
     // XXX TODO: complete the list of types
     Invalid,
