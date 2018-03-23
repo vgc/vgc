@@ -24,6 +24,11 @@
 #include <vgc/widgets/qtutil.h>
 #include <vgc/widgets/stylesheets.h>
 
+#include <iostream>
+#include <vgc/core/vec2darray.h>
+#include <vgc/dom/vgc.h>
+#include <vgc/dom/path.h>
+
 namespace py = pybind11;
 
 int main(int argc, char* argv[])
@@ -39,7 +44,7 @@ int main(int argc, char* argv[])
     vgc::widgets::OpenGLViewer::init();
 
     // Creates the QApplication
-    QApplication a(argc, argv);
+    QApplication application(argc, argv);
 
     // Create the python interpreter
     vgc::core::PythonInterpreter pythonInterpreter;
@@ -79,10 +84,23 @@ int main(int argc, char* argv[])
     vgc::widgets::addApplicationFont("widgets/fonts/SourceCodePro-Regular.ttf");
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
 
-    // Test dom
-    // XXX This is temporary
+    // ---- Test dom ----
+
+    // Create a document
     vgc::dom::DocumentSharedPtr doc = vgc::dom::Document::make();
 
+    // Create the root element of the document
+    vgc::dom::VgcSharedPtr root = vgc::dom::Vgc::make();
+    doc->setRootElement(root);
+
+    // Create two children elements
+    vgc::dom::PathSharedPtr p1 = vgc::dom::Path::make();
+    vgc::dom::PathSharedPtr p2 = vgc::dom::Path::make();
+    root->appendChild(p1);
+    root->appendChild(p2);
+
+    doc->save("test.vgc");
+
     // Start event loop
-    return a.exec();
+    return application.exec();
 }
