@@ -75,6 +75,10 @@ public:
     ///
     virtual const std::vector<BuiltInAttribute>& builtInAttributes() const;
 
+    /// Returns the attribute given by its \p name.
+    ///
+    Attribute attr(core::StringId name);
+
 private:
     core::StringId name_;
     std::vector<detail::AuthoredAttributeSharedPtr> authoredAttributes_;
