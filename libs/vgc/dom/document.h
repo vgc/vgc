@@ -24,8 +24,9 @@
 namespace vgc {
 namespace dom {
 
-VGC_CORE_DECLARE_PTRS(Document);
 VGC_CORE_DECLARE_PTRS(Element);
+
+VGC_CORE_DECLARE_PTRS(Document);
 
 /// \class vgc::dom::Document
 /// \brief Represents a VGC document.
@@ -38,23 +39,38 @@ class VGC_DOM_API Document: public Node
 public:
     VGC_CORE_OBJECT(Document)
 
-    /// Creates a new document with a `vgc` root element. This is equivalent
-    /// to Document("vgc"). Note that it is not possible to create a Document
-    /// with no root element, since a valid Document always has a root element.
+    /// Creates a new document with no root element.
     ///
     Document();
 
-    /// Sets the root element of this Document.
-    /// This takes ownership of the element.
-    /// XXX what if existing?
+    /// Casts the given \p node to a Document. Returns nullptr if node is
+    /// nullptr or if node->nodeType() != NodeType::Document.
     ///
-    void setRootElement(ElementSharedPtr element);
+    /// This is functionaly equivalent to dynamic_cast<Document*>, while being
+    /// as fast as static_cast<Document*>. Therefore, always prefer using this
+    /// method over static_cast<Document*> or dynamic_cast<Document*>.
+    ///
+    static Document* cast(Node* node) {
+        return (node && node->nodeType() == NodeType::Document) ?
+               static_cast<Document*>(node) :
+               nullptr;
+    }
+
+    /// Sets \p element as the root element of this Document.
+    ///
+    /// If \p element is already the root element of this document, nothing is
+    /// done. If this document already a root element, this root element is
+    /// first removed from this document. If \p element already has a parent,
+    /// \p element is first removed from the children of its parent.
+    ///
+    /// Returns a pointer to \p element if it has become (or already was) the
+    /// root element of this Document. Returns nullptr otherwise.
+    ///
+    Element* setRootElement(ElementSharedPtr element);
 
     /// Returns the root element of this Document.
     ///
-    Element* rootElement() const {
-        return rootElement_;
-    }
+    Element* rootElement() const;
 
     /// Returns the XML declaration of this document.
     ///
@@ -211,9 +227,11 @@ public:
     ///
     void setNoXmlStandalone();
 
-private:
-    Element* rootElement_;
+    /// Saves the document to the file given by its \p filePath.
+    ///
+    void save(const std::string& filePath);
 
+private:
     // XML declaration
     bool hasXmlDeclaration_;
     bool hasXmlEncoding_;

@@ -40,6 +40,19 @@ public:
     ///
     Element(core::StringId name);
 
+    /// Casts the given \p node to an Element. Returns nullptr if node is
+    /// nullptr or if node->nodeType() != NodeType::Element.
+    ///
+    /// This is functionaly equivalent to dynamic_cast<Element*>, while being
+    /// as fast as static_cast<Element*>. Therefore, always prefer using this
+    /// method over static_cast<Element*> or dynamic_cast<Element*>.
+    ///
+    static Element* cast(Node* node) {
+        return (node && node->nodeType() == NodeType::Element) ?
+               static_cast<Element*>(node) :
+               nullptr;
+    }
+
     /// Returns the name of the element. This is equivalent to tagName()
     /// in the W3C DOM Specification.
     ///
@@ -61,7 +74,6 @@ public:
     /// attributes, only their names and their default value.
     ///
     virtual const std::vector<BuiltInAttribute>& getBuiltInAttributes() const;
-
 
 private:
     core::StringId name_;

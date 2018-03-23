@@ -24,6 +24,8 @@
 namespace vgc {
 namespace dom {
 
+class Document;
+
 /// \enum vgc::dom::NodeType
 /// \brief Specifies the type of a Node.
 ///
@@ -36,28 +38,24 @@ namespace dom {
 /// Attributes are not nodes.
 ///
 enum class NodeType {
-    /// An Element node.
-    ///
-    Element = 1, ///< An Element node.
+    Element = 1,  ///< An Element node.
+    Document = 9, ///< A Document node.
 
-    /* // Attribute = 2, // Note: we are not planning to implement this (attributes aren't nodes in our design)
-     * Text = 3, // Or TextNode? We reserve the class name "Text" for a <text> element, and plan to use TextNode for text nodes.
-     * CDATA = 4, // Or CharacterData?
+    /* Other W3C DOM node types, for reference:
+     *
+     * Attribute = 2,       // Note: we won't add this in VGC DOM (attributes aren't nodes in the VGC DOM)
+     * Text = 3,            // Note: rename to TextNode in VGC DOM? We may want to reserve "Text" for <text> elements
+     * CDATA = 4,           // Note: rename to CharacterData in VGC DOM?
      * EntityReference = 5,
      * Entity = 6,
      * ProcessingInstruction = 7,
-     * Comment */
-
-     /// A Document node.
-     ///
-     Document = 9,
-
-     /* DocumentType = 10,
-      * DocumentFragment = 11,
-      * Notation = 12 */
+     * Comment = 8,
+     * DocumentType = 10,
+     * DocumentFragment = 11,
+     * Notation = 12
+     */
 };
 
-VGC_CORE_DECLARE_PTRS(Document);
 VGC_CORE_DECLARE_PTRS(Node);
 
 /// \class vgc::dom::Node
@@ -75,6 +73,22 @@ class VGC_DOM_API Node: public core::Object
 {
 public:
     VGC_CORE_OBJECT(Node)
+
+    /// Returns the given \p node. This no-op function is provided for use in
+    /// generic templated code where T might be Node or one of its direct
+    /// subclass:
+    ///
+    /// \code
+    /// T* castedNode = T::cast(node);
+    /// \endcode
+    ///
+    /// Obviously, don't use this function in non-templated code, that would be
+    /// silly. However, do use the cast() functions provided by all direct
+    /// subclasses, say, Element::cast().
+    ///
+    static Node* cast(Node* node) {
+        return node;
+    }
 
     /// Returns the NodeType of this Node.
     ///
@@ -96,8 +110,8 @@ public:
     ///
     /// \sa childNodes()
     ///
-    Node* parentNode() const {
-        return parentNode_;
+    Node* parent() const {
+        return parent_;
     }
 
     /// Returns the child nodes of this Node.
@@ -110,9 +124,9 @@ public:
     ///
     /// \sa parentNode().
     ///
-    const std::vector<NodeSharedPtr>& childNodes() const {
-        // XXX use iterators instead.
-        return childNodes_;
+    const std::vector<NodeSharedPtr>& children() const {
+        // XXX use iterators instead: we'd prefer accessing raw pointers here.
+        return children_;
     }
 
     /// Returns the owner Document of this Node.
@@ -128,6 +142,49 @@ public:
         return document_;
     }
 
+    /// Returns whether the given \p node can be appended as the last child of
+    /// this Node. Here is the exhaustive list of reasons why a node might not
+    /// be appendable:
+    ///
+    /// 1. You're trying to append a Document node.
+    ///
+    /// 2. You're trying to append an Element node to a Document node that
+    ///    already has a rootElement.
+    ///
+    /// If \p reason is not null, then the reason preventing insertion (if
+    /// any), is appended to the string.
+    ///
+    bool canAppendChild(Node* node, std::string* reason = nullptr);
+
+    /// Appends the given \p node as the last child of this Node. If \p node
+    /// already has a parent, then it is first removed from the children of
+    /// this anterior parent. If this Node is already the parent of \p node,
+    /// then it is moved as the last child of this Node.
+    ///
+    /// If the node cannot be appended (see canAppendChild()), a warning is
+    /// emitted and the node is not appended.
+    ///
+    /// Returns a pointer to the appended node. This is equal to node.get() if
+    /// the node was appended; nullptr otherwise.
+    ///
+    /// \sa canAppendChild().
+    ///
+    Node* appendChild(NodeSharedPtr node);
+
+    /// Removes the given \p node from the children of this Node.
+    ///
+    /// If the node is not a child of this Node (which can be checked via
+    /// `node->parent() == this`), a warning is emitted and the node is not
+    /// removed.
+    ///
+    /// Returns a shared pointer to the removed node, or a null shared pointer
+    /// if no node was removed. The node will be deleted unless you hold on to
+    /// the return shared pointer, or another object already hold on to it.
+    ///
+    /// \sa appendChild(), children(), parent().
+    ///
+    NodeSharedPtr removeChild(Node* node);
+
 protected:
     /// Creates a new Node with no parent. You cannot call this function
     /// directly, instead, please create a Document or an Element.
@@ -139,21 +196,13 @@ private:
     NodeType nodeType_;
 
     // parent-child relationship
-    Node* parentNode_;
-    std::vector<NodeSharedPtr> childNodes_;
-    void addChild_(NodeSharedPtr node);
-    void removeAllChildren_();
+    Node* parent_;
+    std::vector<NodeSharedPtr> children_;
+    NodeSharedPtr removeChild_(Node* node, bool nullifyDocument = true);
 
     // Owner document
+    void setDocument_(Document* document);
     Document* document_;
-
-    // Allow each type of node to set children/parent, since they have
-    // different constraints that Node does not know about (for example, an
-    // Attribute cannot have a child Element). However, note that subclasses of
-    // these are not befriended, that is, a PathElement cannot directly
-    // manipulate its children_.
-    friend class Document;
-    friend class Element;
 };
 
 } // namespace dom

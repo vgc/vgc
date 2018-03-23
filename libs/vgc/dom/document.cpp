@@ -45,15 +45,32 @@ Document::Document() :
     xmlStandalone_(false),
     xmlDeclaration_(generateXmlDeclaration_(this))
 {
-    document_ = this;
+
 }
 
-void Document::setRootElement(ElementSharedPtr element)
+Element* Document::setRootElement(ElementSharedPtr element)
 {
-    Node::removeAllChildren_();
-    Node::addChild_(element);
+    // Nothing to do if this element is already the root
+    if (element->parent() == this) {
+        return element.get();
+    }
 
-    // XXX TODO: set document_ for element and all its descendants.
+    // Remove exising root element if any
+    if (Element* existingRootElement = rootElement()) {
+        removeChild(existingRootElement);
+    }
+
+    return Element::cast(appendChild(element));
+}
+
+Element* Document::rootElement() const
+{
+    for (NodeSharedPtr node : children()) {
+        if (node->nodeType() == NodeType::Element) {
+            return Element::cast(node.get());
+        }
+    }
+    return nullptr;
 }
 
 std::string Document::xmlDeclaration() const
@@ -147,6 +164,11 @@ void Document::setNoXmlStandalone()
     if (hasXmlDeclaration_) {
         xmlDeclaration_ = generateXmlDeclaration_(this);
     }
+}
+
+void Document::save(const std::string& filePath)
+{
+    // XXX TODO
 }
 
 } // namespace dom

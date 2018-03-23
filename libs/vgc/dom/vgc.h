@@ -23,6 +23,8 @@
 namespace vgc {
 namespace dom {
 
+VGC_CORE_DECLARE_PTRS(Vgc);
+
 /// \class vgc::dom::Vgc
 /// \brief A <vgc> element of the Document.
 ///

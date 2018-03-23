@@ -23,6 +23,8 @@
 namespace vgc {
 namespace dom {
 
+VGC_CORE_DECLARE_PTRS(Path);
+
 /// \class vgc::dom::Path
 /// \brief A <path> element of the Document.
 ///
