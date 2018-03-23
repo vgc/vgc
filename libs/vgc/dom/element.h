@@ -73,7 +73,7 @@ public:
     /// function does not let you access the current values of these
     /// attributes, only their names and their default value.
     ///
-    virtual const std::vector<BuiltInAttribute>& getBuiltInAttributes() const;
+    virtual const std::vector<BuiltInAttribute>& builtInAttributes() const;
 
 private:
     core::StringId name_;

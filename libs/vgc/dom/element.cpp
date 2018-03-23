@@ -26,7 +26,7 @@ Element::Element(core::StringId name) :
 
 }
 
-const std::vector<BuiltInAttribute>& Element::getBuiltInAttributes() const
+const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
 {
     // XXX TODO
 }
