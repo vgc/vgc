@@ -33,17 +33,8 @@ const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
 
 Attribute Element::attr(core::StringId name)
 {
-    // XXX For now, let's assume we only author attributes that are not built-in.
-
-    // Return attribute that is already authored
-    for (const detail::AuthoredAttributeSharedPtr& a : authoredAttributes_) {
-        if (a->name() == name) {
-            return Attribute(this, name, nullptr, a.get());
-        }
-    }
-
-    // Return attribute that is not yet authored
-    return Attribute(this, name, nullptr, nullptr);
+    // XXX TODO
+    return Attribute(this, name);
 }
 
 } // namespace dom

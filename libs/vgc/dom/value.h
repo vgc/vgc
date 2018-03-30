@@ -103,6 +103,11 @@ public:
 
     }
 
+    /// Returns a const reference to an invalid value. This is useful for error
+    /// handling in methods that must return a Value by const reference.
+    ///
+    static const Value& invalid();
+
     /// Constructs a Value holding a Color.
     ///
     Value(const core::Color& color) :

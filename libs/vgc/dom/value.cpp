@@ -19,6 +19,13 @@
 namespace vgc {
 namespace dom {
 
+const Value& Value::invalid()
+{
+    // trusty leaky singleton
+    static const Value* v = new Value();
+    return *v;
+}
+
 void Value::unset()
 {
     switch (type()) {

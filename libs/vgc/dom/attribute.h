@@ -50,22 +50,18 @@ class Element;
 /// number of built-in attributes of each element may be potentially large,
 /// while in practice only very few, if any, are actually authored in the
 /// document (that is, appear in the XML file). In other words, in a given
-/// document, a large majority of built-in attributes keep their default value,
-/// and it would be extremely wasteful to allocate memory for each built-in
-/// attribute of each element instance.
+/// document, we expect that most built-in attributes keep their default value,
+/// and it would be wasteful to allocate memory for each built-in attribute of
+/// each element instance.
 ///
 /// Therefore, only authored attributes are actually allocated in memory on a
 /// per-element basis, as an instance of an internal class
 /// vgc::dom::detail::AuthoredAttribute, managed by their owner Element. This
-/// internal object not exposed in the public API is the one actually holding
-/// the value of an authored attribute. The public class Attribute does not
-/// actually holds the attribute value. Instead, it holds a pointer to its
-/// owner Element, a pointer to its corresponding global BuiltInAttribute
-/// (unless it's a custom attribute), and if authored, a pointer to the
-/// corresponding AuthoredAttribute. Modifying the attribute value via
-/// Attribute's public API automatically takes care of creating a new
-/// AuthoredAttribute instance when the attribute is authored for the first
-/// time.
+/// internal object is not exposed in the public API, but is the one actually
+/// holding the value of an authored attribute. The public class Attribute does
+/// not actually holds the attribute value. Instead, it simply acts as an
+/// interface that automatically finds this AuthoredAttribute* if any, and
+/// takes care of creating when you author a value for the first time.
 ///
 class VGC_DOM_API BuiltInAttribute {
 public:
@@ -147,9 +143,7 @@ class VGC_DOM_API Attribute
 public:
     /// Returns the value hold by this Attribute.
     ///
-    const Value& value() const {
-        return isAuthored() ? authored_->value() : builtIn_->defaultValue();
-    }
+    const Value& value() const;
 
     /// Sets the value hold by this Attribute.
     ///
@@ -170,50 +164,33 @@ public:
     /// Returns whether this Attribute has an authored value.
     ///
     bool isAuthored() const {
-        return static_cast<bool>(authored_);
+        return static_cast<bool>(authored_());
     }
 
-    /// If this attribute is a built-in attribute, returns its corresponding
-    /// BuiltInAttribute*. Otherwise, returns nullptr.
+    /// Returns whether this Attribute is a built-in attribute.
     ///
-    /// Use this method whenever you need to check whether this attribute is a built-in
-    /// attribute or a custom attribute, even if you don't need access to the
-    /// underlying BuiltInAttribute object.
-    ///
-    /// Example:
-    ///
-    /// \code
-    /// Attribute attr = element->attribute(attrName);
-    /// if (attr.builtIn()) {
-    ///     // attr is a built-in attribute
-    /// }
-    /// else {
-    ///     // attr is a custom attribute
-    /// }
-    /// \endcode
-    ///
-    BuiltInAttribute* builtIn() const {
-        return builtIn_;
+    bool isBuiltIn() const {
+        return static_cast<bool>(builtIn_());
     }
 
 private:
     friend class Element;
 
+    // Creates an Attribute. For performance reasons, we defer finding its
+    // corresponding AuthoredAttribute* (if any) and BuiltInAttribute (if any)
+    // until actually needed.
     Attribute(Element* element,
-              core::StringId name,
-              BuiltInAttribute* builtIn,
-              detail::AuthoredAttribute* authored) :
+              core::StringId name) :
         element_(element),
-        name_(name),
-        builtIn_(builtIn),
-        authored_(authored) {
+        name_(name) {
 
     }
 
     Element* element_;
     core::StringId name_;
-    BuiltInAttribute* builtIn_;
-    detail::AuthoredAttribute* authored_;
+
+    detail::AuthoredAttribute* authored_() const;
+    BuiltInAttribute* builtIn_() const;
 };
 
 } // namespace dom
