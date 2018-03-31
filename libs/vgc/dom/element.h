@@ -75,15 +75,27 @@ public:
     ///
     virtual const std::vector<BuiltInAttribute>& builtInAttributes() const;
 
-    /// Returns the attribute given by its \p name.
+    /// Gets the value of the given attribute. Emits a warning and returns an
+    /// invalid value if the attribute does not exist.
     ///
-    Attribute attr(core::StringId name);
+    const Value& getAttribute(core::StringId name) const;
+
+    /// Sets the value of the given attribute.
+    ///
+    void setAttribute(core::StringId name, const Value& value);
 
 private:
-    friend class Attribute;
+    struct AuthoredAttribute_ {
+        core::StringId name;
+        Value value;
+    };
 
     core::StringId name_;
-    std::vector<detail::AuthoredAttributeSharedPtr> authoredAttributes_;
+    std::vector<std::unique_ptr<AuthoredAttribute_>> authoredAttributes_;
+
+    // Helper functions to find attributes. Return nullptr if not found.
+    AuthoredAttribute_* findAuthoredAttribute_(core::StringId name) const;
+    BuiltInAttribute* findBuiltInAttribute_(core::StringId name) const;
 };
 
 /// Defines the name of an element, retrievable via the

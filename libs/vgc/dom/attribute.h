@@ -25,7 +25,6 @@
 namespace vgc {
 namespace dom {
 
-class Attribute;
 class Element;
 
 /// \class vgc::dom::BuiltInAttribute
@@ -57,12 +56,10 @@ class Element;
 ///
 /// Therefore, only authored attributes are actually allocated in memory on a
 /// per-element basis, as an instance of an internal class
-/// vgc::dom::detail::AuthoredAttribute, managed by their owner Element. This
-/// internal object is not exposed in the public API, but is the one actually
-/// holding the value of an authored attribute. The public class Attribute does
-/// not actually holds the attribute value. Instead, it simply acts as an
-/// interface that automatically finds this AuthoredAttribute* if any, and
-/// takes care of creating when you author a value for the first time.
+/// vgc::dom::Element::AuthoredAttribute_, managed by their owner Element. When
+/// accessing an attribute value via element->getAttribute(name), the returned
+/// const reference either points to the default value of a built-in attribute,
+/// or the value of an authored attribute.
 ///
 class VGC_DOM_API BuiltInAttribute {
 public:
@@ -95,103 +92,6 @@ public:
 private:
     core::StringId name_;
     Value defaultValue_;
-};
-
-namespace detail {
-
-VGC_CORE_DECLARE_PTRS(AuthoredAttribute);
-
-// Holds the current authored value of a given attribute of a given element.
-// See documentation of BuiltInAttribute and Element for more details.
-//
-class AuthoredAttribute: public core::Object
-{
-public:
-    VGC_CORE_OBJECT(AuthoredAttribute)
-
-    AuthoredAttribute(Element* element,
-                      core::StringId name,
-                      const Value& value = Value(),
-                      BuiltInAttribute* builtIn = nullptr) :
-        element_(element),
-        name_(name),
-        value_(value),
-        builtIn_(builtIn) {
-
-    }
-
-    Element*          element() const { return element_; }
-    core::StringId    name()    const { return name_; }
-    const Value&      value()   const { return value_; }
-    BuiltInAttribute* builtIn() const { return builtIn_; }
-
-private:
-    friend class dom::Attribute;
-
-    Element* element_;
-    core::StringId name_;
-    Value value_;
-    BuiltInAttribute* builtIn_; //< nullptr if custom attribute
-};
-
-} // namespace detail
-
-/// \class vgc::dom::Attribute
-/// \brief Represents an attribute of a given Element.
-///
-class VGC_DOM_API Attribute
-{
-public:
-    /// Returns the value hold by this Attribute.
-    ///
-    const Value& value() const;
-
-    /// Sets the value hold by this Attribute.
-    ///
-    void setValue(const Value& value);
-
-    /// Returns the name of this Attribute.
-    ///
-    core::StringId name() const {
-        return name_;
-    }
-
-    /// Returns the Element this Attribute belongs to.
-    ///
-    Element* element() const {
-        return element_;
-    }
-
-    /// Returns whether this Attribute has an authored value.
-    ///
-    bool isAuthored() const {
-        return static_cast<bool>(authored_());
-    }
-
-    /// Returns whether this Attribute is a built-in attribute.
-    ///
-    bool isBuiltIn() const {
-        return static_cast<bool>(builtIn_());
-    }
-
-private:
-    friend class Element;
-
-    // Creates an Attribute. For performance reasons, we defer finding its
-    // corresponding AuthoredAttribute* (if any) and BuiltInAttribute (if any)
-    // until actually needed.
-    Attribute(Element* element,
-              core::StringId name) :
-        element_(element),
-        name_(name) {
-
-    }
-
-    Element* element_;
-    core::StringId name_;
-
-    detail::AuthoredAttribute* authored_() const;
-    BuiltInAttribute* builtIn_() const;
 };
 
 } // namespace dom

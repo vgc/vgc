@@ -22,49 +22,6 @@
 namespace vgc {
 namespace dom {
 
-const Value& Attribute::value() const
-{
-    if (detail::AuthoredAttribute* authored = authored_()) {
-        return authored->value();
-    }
-    else if (BuiltInAttribute* builtIn = builtIn_()) {
-        return builtIn->defaultValue();
-    }
-    else {
-        core::warning() << "Attribute is neither authored not built-in.";
-        return Value::invalid();
-    }
-}
-
-void Attribute::setValue(const Value& value)
-{
-    // If already authored, update the authored value
-    if (detail::AuthoredAttribute* authored = authored_()) {
-        authored->value_ = value;
-    }
-
-    // Otherwise, allocate a new AuthoredAttribute
-    element()->authoredAttributes_.push_back(
-                detail::AuthoredAttribute::make(
-                    element(), name(), value, builtIn_()));
-}
-
-detail::AuthoredAttribute* Attribute::authored_() const
-{
-    for (const detail::AuthoredAttributeSharedPtr& authored : element()->authoredAttributes_) {
-        if (authored->name() == name()) {
-            return authored.get();
-        }
-    }
-    return nullptr;
-}
-
-BuiltInAttribute* Attribute::builtIn_() const
-{
-    // XXX TODO
-    return nullptr;
-}
-
 } // namespace dom
 } // namespace vgc
 
@@ -72,8 +29,8 @@ BuiltInAttribute* Attribute::builtIn_() const
 
 Implementation notes:
 
-I am still a bit undecided on the C++ API and implementation to manipulate the
-dom. Here are some alternatives:
+I am still a bit undecided on the C++ API and implementation to manipulate
+ attributes in the dom. Here are some alternatives:
 
 #1 all dynamic
 --------------
@@ -92,10 +49,13 @@ might not be very cache-friendly.
 #2 private authored dynamic
 ---------------------------
 
-Only dynamically allocate authored attributes. Have "Attribute" only store
-its owner Element* and the attribute's name. The API of Attribute is merely
-syntactic sugar for methods that could be directly part of Element's API (e.g.,
-element->setAttributeValue(attributeName, newValue))
+Only dynamically allocate AuthoredAttributes, but do not expose this type.
+Attributes access and authoring is done via element->getAttribute(name) and
+element->setAttribute(name, value).
+
+Optionally, we can have a public "Attribute" class that only stores its owner
+Element* and the attribute's name, and is merely syntactic sugar for invoking
+element API.
 
 Advantages: This saves a lot of memory: only what's authored is actually
 allocated.

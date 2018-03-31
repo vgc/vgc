@@ -16,6 +16,8 @@
 
 #include <vgc/dom/element.h>
 
+#include <vgc/core/logging.h>
+
 namespace vgc {
 namespace dom {
 
@@ -31,10 +33,46 @@ const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
     // XXX TODO
 }
 
-Attribute Element::attr(core::StringId name)
+const Value& Element::getAttribute(core::StringId name) const
+{
+    if (AuthoredAttribute_* authored = findAuthoredAttribute_(name)) {
+        return authored->value;
+    }
+    else if (BuiltInAttribute* builtIn = findBuiltInAttribute_(name)) {
+        return builtIn->defaultValue();
+    }
+    else {
+        core::warning() << "Attribute is neither authored not built-in.";
+        return Value::invalid();
+    }
+}
+
+void Element::setAttribute(core::StringId name, const Value& value)
+{
+    // If already authored, update the authored value
+    if (AuthoredAttribute_* authored = findAuthoredAttribute_(name)) {
+        authored->value = value;
+    }
+
+    // Otherwise, allocate a new AuthoredAttribute
+    authoredAttributes_.emplace_back(new AuthoredAttribute_ {name, value});
+
+}
+
+Element::AuthoredAttribute_* Element::findAuthoredAttribute_(core::StringId name) const
+{
+    for (const auto& a : authoredAttributes_) {
+        if (a->name == name) {
+            return a.get();
+        }
+    }
+    return nullptr;
+}
+
+BuiltInAttribute* Element::findBuiltInAttribute_(core::StringId /*name*/) const
 {
     // XXX TODO
-    return Attribute(this, name);
+    return nullptr;
 }
 
 } // namespace dom
