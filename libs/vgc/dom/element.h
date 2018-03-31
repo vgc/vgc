@@ -80,6 +80,8 @@ public:
     Attribute attr(core::StringId name);
 
 private:
+    friend class Attribute;
+
     core::StringId name_;
     std::vector<detail::AuthoredAttributeSharedPtr> authoredAttributes_;
 };

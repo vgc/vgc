@@ -17,6 +17,7 @@
 #include <vgc/dom/attribute.h>
 
 #include <vgc/core/logging.h>
+#include <vgc/dom/element.h>
 
 namespace vgc {
 namespace dom {
@@ -37,12 +38,24 @@ const Value& Attribute::value() const
 
 void Attribute::setValue(const Value& value)
 {
-    // XXX TODO
+    // If already authored, update the authored value
+    if (detail::AuthoredAttribute* authored = authored_()) {
+        authored->value_ = value;
+    }
+
+    // Otherwise, allocate a new AuthoredAttribute
+    element()->authoredAttributes_.push_back(
+                detail::AuthoredAttribute::make(
+                    element(), name(), value, builtIn_()));
 }
 
 detail::AuthoredAttribute* Attribute::authored_() const
 {
-    // XXX TODO
+    for (const detail::AuthoredAttributeSharedPtr& authored : element()->authoredAttributes_) {
+        if (authored->name() == name()) {
+            return authored.get();
+        }
+    }
     return nullptr;
 }
 

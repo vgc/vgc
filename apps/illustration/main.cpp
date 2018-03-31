@@ -99,6 +99,19 @@ int main(int argc, char* argv[])
     root->appendChild(p1);
     root->appendChild(p2);
 
+    // Author 'position' attributes
+    vgc::core::StringId positions("positions");
+    vgc::core::Vec2dArray pos = {
+        vgc::core::Vec2d(1, 2),
+        vgc::core::Vec2d(12, 42)
+    };
+    p1->attr(positions).setValue(pos);
+    pos.append(vgc::core::Vec2d(5, 6));
+    p2->attr(vgc::core::StringId("positions")).setValue(pos);
+
+    std::cout << "p1.positions = " << toString(p1->attr(positions).value().getVec2dArray()) << std::endl;
+    std::cout << "p2.positions = " << toString(p2->attr(positions).value().getVec2dArray()) << std::endl;
+
     doc->save("test.vgc");
 
     // Start event loop

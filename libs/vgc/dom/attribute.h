@@ -25,6 +25,7 @@
 namespace vgc {
 namespace dom {
 
+class Attribute;
 class Element;
 
 /// \class vgc::dom::BuiltInAttribute
@@ -108,14 +109,6 @@ class AuthoredAttribute: public core::Object
 public:
     VGC_CORE_OBJECT(AuthoredAttribute)
 
-    Element*          element() const { return element_; }
-    core::StringId    name()    const { return name_; }
-    const Value&      value()   const { return value_; }
-    BuiltInAttribute* builtIn() const { return builtIn_; }
-
-private:
-    friend class Element;
-
     AuthoredAttribute(Element* element,
                       core::StringId name,
                       const Value& value = Value(),
@@ -126,6 +119,14 @@ private:
         builtIn_(builtIn) {
 
     }
+
+    Element*          element() const { return element_; }
+    core::StringId    name()    const { return name_; }
+    const Value&      value()   const { return value_; }
+    BuiltInAttribute* builtIn() const { return builtIn_; }
+
+private:
+    friend class dom::Attribute;
 
     Element* element_;
     core::StringId name_;
