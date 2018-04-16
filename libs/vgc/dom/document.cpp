@@ -15,21 +15,12 @@
 // limitations under the License.
 
 #include <vgc/dom/document.h>
+
+#include <fstream>
+#include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
 
 namespace {
-std::string generateXmlDeclaration_(const vgc::dom::Document* doc)
-{
-    std::string res = "<?xml version=\"" + doc->xmlVersion() + "\"";
-    if (doc->hasXmlEncoding()) {
-        res += " \"" + doc->xmlEncoding() + "\"";
-    }
-    if (doc->hasXmlStandalone()) {
-        res += " \"" + doc->xmlStandaloneString() + "\"";
-    }
-    res += "?>";
-    return res;
-}
 } // namespace
 
 namespace vgc {
@@ -42,10 +33,9 @@ Document::Document() :
     hasXmlStandalone_(true),
     xmlVersion_("1.0"),
     xmlEncoding_("UTF-8"),
-    xmlStandalone_(false),
-    xmlDeclaration_(generateXmlDeclaration_(this))
+    xmlStandalone_(false)
 {
-
+    generateXmlDeclaration_();
 }
 
 Element* Document::setRootElement(ElementSharedPtr element)
@@ -86,13 +76,13 @@ bool Document::hasXmlDeclaration() const
 void Document::setXmlDeclaration()
 {
     hasXmlDeclaration_ = true;
-    xmlDeclaration_ = generateXmlDeclaration_(this);
+    generateXmlDeclaration_();
 }
 
 void Document::setNoXmlDeclaration()
 {
     hasXmlDeclaration_ = false;
-    xmlDeclaration_ = "";
+    generateXmlDeclaration_();
 }
 
 std::string Document::xmlVersion() const
@@ -104,7 +94,7 @@ void Document::setXmlVersion(const std::string& version)
 {
     xmlVersion_ = version;
     hasXmlDeclaration_ = true;
-    xmlDeclaration_ = generateXmlDeclaration_(this);
+    generateXmlDeclaration_();
 }
 
 std::string Document::xmlEncoding() const
@@ -122,26 +112,19 @@ void Document::setXmlEncoding(const std::string& encoding)
     xmlEncoding_ = encoding;
     hasXmlEncoding_ = true;
     hasXmlDeclaration_ = true;
-    xmlDeclaration_ = generateXmlDeclaration_(this);
+    generateXmlDeclaration_();
 }
 
 void Document::setNoXmlEncoding()
 {
     xmlEncoding_ = "UTF-8";
     hasXmlEncoding_ = false;
-    if (hasXmlDeclaration_) {
-        xmlDeclaration_ = generateXmlDeclaration_(this);
-    }
+    generateXmlDeclaration_();
 }
 
 bool Document::xmlStandalone() const
 {
     return xmlStandalone_;
-}
-
-std::string Document::xmlStandaloneString() const
-{
-    return xmlStandalone() ? "yes" : "no";
 }
 
 bool Document::hasXmlStandalone() const
@@ -154,21 +137,50 @@ void Document::setXmlStandalone(bool standalone)
     xmlStandalone_ = standalone;
     hasXmlStandalone_ = true;
     hasXmlDeclaration_ = true;
-    xmlDeclaration_ = generateXmlDeclaration_(this);
+    generateXmlDeclaration_();
 }
 
 void Document::setNoXmlStandalone()
 {
     xmlStandalone_ = false;
     hasXmlStandalone_ = false;
+    generateXmlDeclaration_();
+}
+
+void Document::generateXmlDeclaration_()
+{
+    xmlDeclaration_.clear();
     if (hasXmlDeclaration_) {
-        xmlDeclaration_ = generateXmlDeclaration_(this);
+        xmlDeclaration_.append("<?xml version=\"");
+        xmlDeclaration_.append(xmlVersion_);
+        xmlDeclaration_.append("\"");
+        if (hasXmlEncoding_) {
+            xmlDeclaration_.append(" encoding=\"");
+            xmlDeclaration_.append(xmlEncoding_);
+            xmlDeclaration_.append("\"");
+        }
+        if (hasXmlStandalone_) {
+            xmlDeclaration_.append(" standalone=\"");
+            xmlDeclaration_.append(xmlStandalone_ ? "yes" : "no");
+            xmlDeclaration_.append("\"");
+        }
+        xmlDeclaration_.append("?>");
     }
 }
 
-void Document::save(const std::string& filePath)
+bool Document::save(const std::string& filePath)
 {
+    std::ofstream out(filePath);
+    if (!out.is_open()) {
+        vgc::core::warning() << "Could not write file " << filePath << std::endl;
+        return false;
+    }
+
+    out << xmlDeclaration_ << std::endl;
+
     // XXX TODO
+
+    return true;
 }
 
 } // namespace dom

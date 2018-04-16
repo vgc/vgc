@@ -189,47 +189,41 @@ public:
     ///
     /// If hasXmlStandalone() is false, then this returns false.
     ///
-    /// \sa xmlDeclaration(), xmlStandaloneString(), hasXmlStandalone(),
-    /// setXmlStandalone(), and setNoXmlStandalone().
+    /// \sa xmlDeclaration(), hasXmlStandalone(), setXmlStandalone(), and
+    /// setNoXmlStandalone().
     ///
     bool xmlStandalone() const;
-
-    /// Returns "yes" if xmlStandalone() is true; otherwise returns "no".
-    ///
-    /// \sa xmlDeclaration(), xmlStandalone(), hasXmlStandalone(),
-    /// setXmlStandalone(), and setNoXmlStandalone().
-    ///
-    std::string xmlStandaloneString() const;
 
     /// Returns whether the 'standalone' attribute of the XML declaration is
     /// specified.
     ///
     /// The default value is true.
     ///
-    /// \sa xmlDeclaration(), xmlStandalone(), xmlStandaloneString(),
-    /// setXmlStandalone(), and setNoXmlStandalone().
+    /// \sa xmlDeclaration(), xmlStandalone(), setXmlStandalone(), and
+    /// setNoXmlStandalone().
     ///
     bool hasXmlStandalone() const;
 
     /// Sets the 'standalone' value of the XML declaration. This automatically
     /// changes hasXmlDeclaration() and hasXmlStandalone() to true.
     ///
-    /// \sa xmlDeclaration(), xmlStandalone(), xmlStandaloneString(),
-    /// hasXmlStandalone(), and setNoXmlStandalone().
+    /// \sa xmlDeclaration(), xmlStandalone(), hasXmlStandalone(), and
+    /// setNoXmlStandalone().
     ///
     void setXmlStandalone(bool standalone);
 
     /// Removes the 'standalone' attribute of the XML declaration. After calling
     /// this function, hasXmlStandalone() = false and xmlStandalone() = false.
     ///
-    /// \sa xmlDeclaration(), xmlStandalone(), xmlStandaloneString(),
-    /// hasXmlStandalone(), and setXmlStandalone().
+    /// \sa xmlDeclaration(), xmlStandalone(), hasXmlStandalone(), and
+    /// setXmlStandalone().
     ///
     void setNoXmlStandalone();
 
     /// Saves the document to the file given by its \p filePath.
+    /// Returns whether the file was successfully saved.
     ///
-    void save(const std::string& filePath);
+    bool save(const std::string& filePath);
 
 private:
     // XML declaration
@@ -239,6 +233,7 @@ private:
     std::string xmlVersion_;
     std::string xmlEncoding_;
     bool xmlStandalone_;
+    void generateXmlDeclaration_();
     std::string xmlDeclaration_;
 };
 
