@@ -105,7 +105,13 @@ class VGC_CORE_API StringId
 public:
     /// Constructs a StringId representing the given string \p s.
     ///
-    StringId(const std::string& s = "");
+    /// This constructor is explicit in order to avoid interning strings by
+    /// mistake, and resolve ambiguity of overloaded operator<<. This means
+    /// that if you define a function foo(StringId), and wish to allow clients
+    /// to call foo(std::string) without explicit cast, you need to explicitly
+    /// define foo(std::string) and explicitly perform the cast there.
+    ///
+    explicit StringId(const std::string& s = "");
 
     /// Returns the string represented by this StringId.
     ///
