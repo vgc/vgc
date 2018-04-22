@@ -13,6 +13,7 @@ vgc_add_library(dom
         path.h
         value.h
         vgc.h
+        xmlformattingstyle.h
 
     CPP_FILES
         attribute.cpp
@@ -22,6 +23,7 @@ vgc_add_library(dom
         path.cpp
         value.cpp
         vgc.cpp
+        xmlformattingstyle.cpp
 
     COMPILE_DEFINITIONS
 )
