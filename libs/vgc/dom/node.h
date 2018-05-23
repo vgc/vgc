@@ -34,10 +34,11 @@ class Document;
 /// Only a subset of XML is currently supported. Full support
 /// will be implemented later.
 ///
-/// Note that the value corresponding to each node type is conformant with
-/// the W3C DOM Specification. However, not all W3C node types have a
-/// corresponding vgc::dom::Node::Type, for example one reason is that our
-/// Attributes are not nodes.
+/// Note that the enum value of each NodeType is not arbitrary, but follows the
+/// W3C DOM Specification (e.g., NodeType::Document == 9). However, please be
+/// aware that not all W3C node types have a corresponding vgc::dom::NodeType,
+/// for example, in vgc::dom, an attribute is not considered to be a Node, and
+/// therefore NodeType::Attribute is not defined.
 ///
 enum class NodeType {
     Element = 1,  ///< An Element node.
