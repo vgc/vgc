@@ -168,18 +168,19 @@ void Document::generateXmlDeclaration_()
     }
 }
 
-bool Document::save(const std::string& filePath)
+bool Document::save(const std::string& filePath,
+                    const XmlFormattingStyle& style) const
 {
+    /*
     std::ofstream out(filePath);
     if (!out.is_open()) {
         vgc::core::warning() << "Could not write file " << filePath << std::endl;
         return false;
     }
 
-    out << xmlDeclaration_ << std::endl;
-
-    // XXX TODO
-
+    out << xmlDeclaration_ << std::endl;    
+    writeChildren_(out, style, 0);
+    */
     return true;
 }
 

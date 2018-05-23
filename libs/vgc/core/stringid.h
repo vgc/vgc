@@ -150,9 +150,11 @@ private:
 /// Allows implicit conversion from StringId to std::string for all output
 /// stream operations.
 ///
+/*
 template <typename Stream>
 Stream& operator<<(Stream& outputStream, vgc::core::StringId stringId) {
     return outputStream << stringId.string();
 }
+*/
 
 #endif // VGC_CORE_STRINGID_H

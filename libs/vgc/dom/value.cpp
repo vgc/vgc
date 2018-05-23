@@ -54,5 +54,17 @@ void Value::shrinkToFit()
     vec2dArray_.shrinkToFit();
 }
 
+std::string toString(const Value& v)
+{
+    switch (v.type()) {
+    case ValueType::Invalid:
+        return "invalid_value";
+    case ValueType::Color:
+        return "color"; // XXX TODO
+    case ValueType::Vec2dArray:
+        return toString(v.getVec2dArray());
+    }
+}
+
 } // namespace dom
 } // namespace vgc

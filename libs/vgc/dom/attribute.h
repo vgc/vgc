@@ -94,6 +94,48 @@ private:
     Value defaultValue_;
 };
 
+/// \class vgc::dom::AuthoredAttribute
+/// \brief Holds the data of an authored attribute.
+///
+class VGC_DOM_API AuthoredAttribute {
+public:
+    /// Creates an authored attribute.
+    ///
+    AuthoredAttribute(core::StringId name, const Value& value) :
+        name_(name),
+        value_(value) {
+
+    }
+
+    /// Returns the name of this authored attribute.
+    ///
+    core::StringId name() const {
+        return name_;
+    }
+
+    /// Returns the value of this authored attribute.
+    ///
+    const Value& value() const {
+        return value_;
+    }
+
+    /// Sets the value of this authored attribute.
+    ///
+    void setValue(const Value& value) {
+        value_ = value;
+    }
+
+    /// Returns the ValueType of this authored attribute.
+    ///
+    ValueType valueType() const {
+        return value_.type();
+    }
+
+private:
+    core::StringId name_;
+    Value value_;
+};
+
 } // namespace dom
 } // namespace vgc
 

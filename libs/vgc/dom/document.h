@@ -20,6 +20,7 @@
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/node.h>
+#include <vgc/dom/xmlformattingstyle.h>
 
 namespace vgc {
 namespace dom {
@@ -223,7 +224,8 @@ public:
     /// Saves the document to the file given by its \p filePath.
     /// Returns whether the file was successfully saved.
     ///
-    bool save(const std::string& filePath);
+    bool save(const std::string& filePath,
+              const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
 private:
     // XML declaration

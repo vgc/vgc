@@ -17,9 +17,11 @@
 #ifndef VGC_DOM_NODE_H
 #define VGC_DOM_NODE_H
 
+#include <fstream>
 #include <vector>
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/xmlformattingstyle.h>
 
 namespace vgc {
 namespace dom {
@@ -108,7 +110,7 @@ public:
     ///
     /// In all other cases, this function returns a non-null pointer.
     ///
-    /// \sa childNodes()
+    /// \sa children()
     ///
     Node* parent() const {
         return parent_;
@@ -116,13 +118,7 @@ public:
 
     /// Returns the child nodes of this Node.
     ///
-    /// If this Node is a Document, then its childNodes include:
-    /// - XmlDeclaration nodes (at most one, appears first)
-    /// - Comment nodes
-    /// - Element nodes (at most one, called the
-    /// Child nodes of a Do
-    ///
-    /// \sa parentNode().
+    /// \sa parents().
     ///
     const std::vector<NodeSharedPtr>& children() const {
         // XXX use iterators instead: we'd prefer accessing raw pointers here.
@@ -203,6 +199,11 @@ private:
     // Owner document
     void setDocument_(Document* document);
     Document* document_;
+
+    // Helper method for Document::save()
+    void writeChildren_(std::ofstream& out,
+                        const XmlFormattingStyle& style,
+                        int indentLevel) const;
 };
 
 } // namespace dom

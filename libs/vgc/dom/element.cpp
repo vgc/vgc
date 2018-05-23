@@ -31,14 +31,16 @@ Element::Element(core::StringId name) :
 const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
 {
     // XXX TODO
+    static std::vector<BuiltInAttribute> dummy;
+    return dummy;
 }
 
 const Value& Element::getAttribute(core::StringId name) const
 {
-    if (AuthoredAttribute_* authored = findAuthoredAttribute_(name)) {
-        return authored->value;
+    if (const AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+        return authored->value();
     }
-    else if (BuiltInAttribute* builtIn = findBuiltInAttribute_(name)) {
+    else if (const BuiltInAttribute* builtIn = findBuiltInAttribute_(name)) {
         return builtIn->defaultValue();
     }
     else {
@@ -50,26 +52,36 @@ const Value& Element::getAttribute(core::StringId name) const
 void Element::setAttribute(core::StringId name, const Value& value)
 {
     // If already authored, update the authored value
-    if (AuthoredAttribute_* authored = findAuthoredAttribute_(name)) {
-        authored->value = value;
+    if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+        authored->setValue(value);
     }
 
     // Otherwise, allocate a new AuthoredAttribute
-    authoredAttributes_.emplace_back(new AuthoredAttribute_ {name, value});
+    authoredAttributes_.emplace_back(name, value);
 
 }
 
-Element::AuthoredAttribute_* Element::findAuthoredAttribute_(core::StringId name) const
+AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name)
 {
-    for (const auto& a : authoredAttributes_) {
-        if (a->name == name) {
-            return a.get();
+    for (AuthoredAttribute& a : authoredAttributes_) {
+        if (a.name() == name) {
+            return &a;
         }
     }
     return nullptr;
 }
 
-BuiltInAttribute* Element::findBuiltInAttribute_(core::StringId /*name*/) const
+const AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) const
+{
+    for (const AuthoredAttribute& a : authoredAttributes_) {
+        if (a.name() == name) {
+            return &a;
+        }
+    }
+    return nullptr;
+}
+
+const BuiltInAttribute* Element::findBuiltInAttribute_(core::StringId /*name*/) const
 {
     // XXX TODO
     return nullptr;

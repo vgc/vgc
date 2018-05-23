@@ -75,6 +75,12 @@ public:
     ///
     virtual const std::vector<BuiltInAttribute>& builtInAttributes() const;
 
+    /// Returns the authored attributes of this element.
+    ///
+    const std::vector<AuthoredAttribute>& authoredAttributes() const {
+        return authoredAttributes_;
+    }
+
     /// Gets the value of the given attribute. Emits a warning and returns an
     /// invalid value if the attribute does not exist.
     ///
@@ -82,20 +88,24 @@ public:
 
     /// Sets the value of the given attribute.
     ///
-    void setAttribute(core::StringId name, const Value& value);
+    void setAttribute(core::StringId name, const Value& value); // XXX Should we provide Value&& overload?
 
 private:
-    struct AuthoredAttribute_ {
-        core::StringId name;
-        Value value;
-    };
-
+    // Name of this element.
     core::StringId name_;
-    std::vector<std::unique_ptr<AuthoredAttribute_>> authoredAttributes_;
+
+    // Authored attributes of this element. Note: copying AuthoredAttribute
+    // instances is expensive, but fortunately there shouldn't be any copy with
+    // the implementation below, even when the vector grows. Indeed, on modern
+    // compilers, move semantics should be used instead, since
+    // AuthoredAttribute has a non-throwing move constructor and destructor.
+    //
+    std::vector<AuthoredAttribute> authoredAttributes_;
 
     // Helper functions to find attributes. Return nullptr if not found.
-    AuthoredAttribute_* findAuthoredAttribute_(core::StringId name) const;
-    BuiltInAttribute* findBuiltInAttribute_(core::StringId name) const;
+    AuthoredAttribute* findAuthoredAttribute_(core::StringId name);
+    const AuthoredAttribute* findAuthoredAttribute_(core::StringId name) const;
+    const BuiltInAttribute* findBuiltInAttribute_(core::StringId name) const;
 };
 
 /// Defines the name of an element, retrievable via the

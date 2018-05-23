@@ -171,7 +171,7 @@ public:
     /// Returns the Vec2dArray hold by this Value. The behavior is undefined if
     /// type() != ValueType::Vec2dArray.
     ///
-    core::Vec2dArray getVec2dArray() const {
+    const core::Vec2dArray& getVec2dArray() const {
         return vec2dArray_;
     }
 
@@ -200,6 +200,11 @@ private:
     core::Color color_;
     core::Vec2dArray vec2dArray_;
 };
+
+/// Returns a string representation of the given Value.
+///
+VGC_DOM_API
+std::string toString(const Value& v);
 
 } // namespace dom
 } // namespace vgc

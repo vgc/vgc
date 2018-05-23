@@ -19,6 +19,7 @@
 #include <vgc/core/algorithm.h>
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
+#include <vgc/dom/element.h>
 
 namespace vgc {
 namespace dom {
@@ -113,6 +114,49 @@ void Node::setDocument_(Document* document)
     for (const NodeSharedPtr& node : children_) {
         node->setDocument_(document);
     }
+}
+
+namespace {
+
+void writeIndent_(std::ofstream& out,
+                  const XmlFormattingStyle& style,
+                  int indentLevel)
+{
+    char c = (style.indentStyle == XmlIndentStyle::Spaces) ? ' ' : '\t';
+    out << std::string(indentLevel * style.indentSize, c);
+}
+
+void writeAttributeIndent_(std::ofstream& out,
+                           const XmlFormattingStyle& style,
+                           int indentLevel)
+{
+    char c = (style.indentStyle == XmlIndentStyle::Spaces) ? ' ' : '\t';
+    out << std::string(indentLevel * style.indentSize + style.attributeIndentSize, c);
+}
+
+}
+
+void Node::writeChildren_(std::ofstream& out,
+                          const XmlFormattingStyle& style,
+                          int indentLevel) const
+{
+    /*
+    for (NodeSharedPtr node : children()) {
+        if (Element* element = Element::cast(node.get())) {
+            writeIndent_(out, style, indentLevel);
+            out << '<' << element->name();
+            for (const AuthoredAttribute& a : element->authoredAttributes()) {
+                out << '\n';
+                writeAttributeIndent_(out, style, indentLevel);
+                out << a.name() << "=\"" << toString(a.value()) << "\"";
+            }
+            out << ">\n";
+            writeChildren_(out, style, indentLevel + 1);
+            writeIndent_(out, style, indentLevel);
+            out << '<' << element->name() << "/>\n";
+        }
+    }
+    */
 }
 
 } // namespace dom
