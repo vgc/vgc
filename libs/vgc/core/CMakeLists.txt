@@ -7,6 +7,7 @@ vgc_add_library(core
     HEADER_FILES
         algorithm.h
         api.h
+        assert.h
         color.h
         colors.h
         compiler.h
