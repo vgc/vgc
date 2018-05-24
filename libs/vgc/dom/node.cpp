@@ -16,7 +16,7 @@
 
 #include <vgc/dom/node.h>
 
-#include <vgc/core/algorithm.h>
+#include <vgc/core/assert.h>
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
@@ -27,6 +27,10 @@ namespace dom {
 Node::Node(NodeType type) :
     nodeType_(type),
     parent_(nullptr),
+    firstChild_(),
+    lastChild_(nullptr),
+    previousSibling_(nullptr),
+    nextSibling_(),
     document_(nullptr)
 {
     if (type == NodeType::Document) {
@@ -54,6 +58,14 @@ bool Node::canAppendChild(Node* node, std::string* reason)
     }
 
     return true;
+
+    // XXX how about if this == node?
+    // or node is an ancestor of this?
+
+    // XXX how about if node == Document::cast(this)->rootElement() ? This
+    // should just move the root element as the last child and be allowed. For
+    // example, one should be able to call doc->appendChild(doc->rootElement())
+    // with no warnings.
 }
 
 Node* Node::appendChild(NodeSharedPtr node)
@@ -71,7 +83,18 @@ Node* Node::appendChild(NodeSharedPtr node)
         node->parent_->removeChild_(node.get(), nullifyDocument);
     }
 
-    children_.push_back(node);
+    // Append to the end of the doubly linked-list of siblings.
+    // This takes ownership of the node.
+    if (this->lastChild_) {
+        this->lastChild_->nextSibling_ = node;
+        node->previousSibling_ = this->lastChild_;
+    }
+    else {
+        this->firstChild_ = node;
+    }
+
+    // Set parent-child relationship
+    this->lastChild_ = node.get();
     node->parent_ = this;
     node->setDocument_(document());
 
@@ -80,26 +103,52 @@ Node* Node::appendChild(NodeSharedPtr node)
 
 NodeSharedPtr Node::removeChild(Node* node)
 {
+    if (node->parent_ != this) {
+        core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
+        return NodeSharedPtr();
+    };
+
     return removeChild_(node);
 }
 
 NodeSharedPtr Node::removeChild_(Node* node, bool nullifyDocument)
 {
-    NodeSharedPtr nodePtr = node->sharedPtr();
-    bool removed = core::removeOne(children_, nodePtr);
+    VGC_CORE_ASSERT(node->parent_);
 
-    if (!removed) {
-        core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
-        return NodeSharedPtr();
-    };
+    // Take ownership of node
+    NodeSharedPtr nodePtr = node->sharedPtr();
+
+    // Update who points to node->nextSibling_
+    // (this would delete the node if we hadn't taken ownership)
+    if (node->previousSibling_) {
+        node->previousSibling_->nextSibling_ = node->nextSibling_;
+    }
+    else {
+        node->parent_->firstChild_ = node->nextSibling_;
+    }
+
+    // Update who points to node->previousSibling_
+    if (node->nextSibling_) {
+        node->nextSibling_->previousSibling_ = node->previousSibling_;
+    }
+    else {
+        node->parent_->lastChild_ = node->previousSibling_;
+    }
+
+    // Set as root of new Node tree
+    node->parent_ = nullptr;
+    node->previousSibling_ = nullptr;
+    node->nextSibling_.reset();
 
     // The node doesn't have any owner document anymore, so we should set
     // document_ to nullptr. As an optimization, we omit this operation if the
     // caller knows that document_ will be overidden just after anyway.
+    // Note: node can't be a Document node since it had a parent.
     if (nullifyDocument) {
         node->setDocument_(nullptr);
     }
 
+    // Pass ownership
     return nodePtr;
 }
 
@@ -111,8 +160,8 @@ void Node::setDocument_(Document* document)
     }
 
     document_ = document;
-    for (const NodeSharedPtr& node : children_) {
-        node->setDocument_(document);
+    for (Node* child = firstChild(); child != nullptr; child = child->nextSibling()) {
+        child->setDocument_(document);
     }
 }
 
@@ -141,8 +190,8 @@ void Node::writeChildren_(std::ofstream& out,
                           int indentLevel) const
 {
     /*
-    for (NodeSharedPtr node : children()) {
-        if (Element* element = Element::cast(node.get())) {
+    for (Node* node = firstChild(); node != nullptr; node = node->nextSibling()) {
+        if (Element* element = Element::cast(node)) {
             writeIndent_(out, style, indentLevel);
             out << '<' << element->name();
             for (const AuthoredAttribute& a : element->authoredAttributes()) {

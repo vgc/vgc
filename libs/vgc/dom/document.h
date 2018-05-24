@@ -60,14 +60,11 @@ public:
     /// Sets \p element as the root element of this Document.
     ///
     /// If \p element is already the root element of this document, nothing is
-    /// done. If this document already a root element, this root element is
+    /// done. If this document already has a root element, this root element is
     /// first removed from this document. If \p element already has a parent,
     /// \p element is first removed from the children of its parent.
     ///
-    /// Returns a pointer to \p element if it has become (or already was) the
-    /// root element of this Document. Returns nullptr otherwise.
-    ///
-    Element* setRootElement(ElementSharedPtr element);
+    void setRootElement(ElementSharedPtr element);
 
     /// Returns the root element of this Document.
     ///

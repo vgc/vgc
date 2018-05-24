@@ -111,19 +111,46 @@ public:
     ///
     /// In all other cases, this function returns a non-null pointer.
     ///
-    /// \sa children()
+    /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
     Node* parent() const {
         return parent_;
     }
 
-    /// Returns the child nodes of this Node.
+    /// Returns the first child Node of this Node. Returns nullptr if this Node
+    /// has no children.
     ///
-    /// \sa parents().
+    /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
-    const std::vector<NodeSharedPtr>& children() const {
-        // XXX use iterators instead: we'd prefer accessing raw pointers here.
-        return children_;
+    Node* firstChild() const {
+        return firstChild_.get();
+    }
+
+    /// Returns the last child Node of this Node. Returns nullptr if this Node
+    /// has no children.
+    ///
+    /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
+    ///
+    Node* lastChild() const {
+        return lastChild_;
+    }
+
+    /// Returns the previous sibling of this Node. Returns nullptr if this Node
+    /// has a null parent(), or if it is the first child of its parent.
+    ///
+    /// \sa nextSibling(), parent(), firstChild(), and lastChild().
+    ///
+    Node* previousSibling() const {
+        return previousSibling_;
+    }
+
+    /// Returns the next sibling of this Node. Returns nullptr if this Node
+    /// has a null parent(), or if it is the last child of its parent.
+    ///
+    /// \sa previousSibling(), parent(), firstChild(), and lastChild().
+    ///
+    Node* nextSibling() const {
+        return nextSibling_.get();
     }
 
     /// Returns the owner Document of this Node.
@@ -194,7 +221,12 @@ private:
 
     // parent-child relationship
     Node* parent_;
-    std::vector<NodeSharedPtr> children_;
+    NodeSharedPtr firstChild_;
+    Node* lastChild_;
+    Node* previousSibling_;
+    NodeSharedPtr nextSibling_;
+
+    // Helper method for removeChild() and appendChild()
     NodeSharedPtr removeChild_(Node* node, bool nullifyDocument = true);
 
     // Owner document

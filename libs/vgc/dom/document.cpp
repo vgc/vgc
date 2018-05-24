@@ -20,9 +20,6 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
 
-namespace {
-} // namespace
-
 namespace vgc {
 namespace dom {
 
@@ -38,11 +35,11 @@ Document::Document() :
     generateXmlDeclaration_();
 }
 
-Element* Document::setRootElement(ElementSharedPtr element)
+void Document::setRootElement(ElementSharedPtr element)
 {
-    // Nothing to do if this element is already the root
+    // Nothing to do if this element is already the root element
     if (element->parent() == this) {
-        return element.get();
+        return;
     }
 
     // Remove exising root element if any
@@ -50,14 +47,15 @@ Element* Document::setRootElement(ElementSharedPtr element)
         removeChild(existingRootElement);
     }
 
-    return Element::cast(appendChild(element));
+    // Append element
+    appendChild(element);
 }
 
 Element* Document::rootElement() const
 {
-    for (NodeSharedPtr node : children()) {
+    for (Node* node = firstChild(); node != nullptr; node = node->nextSibling()) {
         if (node->nodeType() == NodeType::Element) {
-            return Element::cast(node.get());
+            return Element::cast(node);
         }
     }
     return nullptr;
