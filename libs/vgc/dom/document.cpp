@@ -53,7 +53,7 @@ void Document::setRootElement(ElementSharedPtr element)
 
 Element* Document::rootElement() const
 {
-    for (Node* node = firstChild(); node != nullptr; node = node->nextSibling()) {
+    for (Node* node : children()) {
         if (node->nodeType() == NodeType::Element) {
             return Element::cast(node);
         }

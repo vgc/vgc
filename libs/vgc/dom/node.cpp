@@ -160,7 +160,7 @@ void Node::setDocument_(Document* document)
     }
 
     document_ = document;
-    for (Node* child = firstChild(); child != nullptr; child = child->nextSibling()) {
+    for (Node* child : children()) {
         child->setDocument_(document);
     }
 }
@@ -190,7 +190,7 @@ void Node::writeChildren_(std::ofstream& out,
                           int indentLevel) const
 {
     /*
-    for (Node* node = firstChild(); node != nullptr; node = node->nextSibling()) {
+    for (Node* node : children()) {
         if (Element* element = Element::cast(node)) {
             writeIndent_(out, style, indentLevel);
             out << '<' << element->name();

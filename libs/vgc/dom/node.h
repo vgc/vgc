@@ -61,6 +61,153 @@ enum class NodeType {
 
 VGC_CORE_DECLARE_PTRS(Node);
 
+/// \class vgc::dom::SiblingsIterator
+/// \brief Iterates over a range of Node siblings.
+///
+/// This iterator class is a thin wrapper around Node*, where `operator++` is
+/// implemented as `node->nextSibling()`. Together with SiblingsRange, this
+/// class enables range-based loops like the following:
+///
+/// \code
+/// for (Node* child : node->children()) {
+///     // ...
+/// }
+/// \endcode
+///
+/// Typically, you never have to manipulate SiblingsIterators directly, but
+/// keep them as an implementation detail for range-based loops. If you need
+/// more fine-grain traversal, we recommend to directly use `Node*` as your
+/// "iterator type", and use the methods Node::previousSibling() and
+/// Node::nextSibling() to access neighbor nodes.
+///
+/// \sa SiblingsRange and Node.
+///
+/// Past-last-child Iterator
+/// ------------------------
+///
+/// There is a special sentinel value which we call the "past-last-child"
+/// iterator, which is constructed by passing nullptr to the constructor of
+/// SiblingsIterator.
+///
+/// Be aware that all node->children() share the same past-last-child iterator.
+/// In other words:
+///
+///     node1->children().end() == node2->children().end()
+///
+/// Intuitively, this is because this past-last-child iterator is simply
+/// implemented by storing a nullptr, that is, the iterator does not know what
+/// is its "parent". This allows for a more intuitive API, stronger guarantees
+/// on iterator validity (see next section), and slightly more efficient
+/// implementation.
+///
+/// However, we note that this design choice is why our SiblingsIterator is not
+/// bidirectional: we wouldn't be able to decrement the past-last-child
+/// iterator. We decided that this was a minor concern since in the rare cases
+/// where you'd need bidirectionality, you can simply use the Node API
+/// directly.
+///
+/// Iterator Validity
+/// -----------------
+///
+/// SiblingsIterators are always valid as long as the underlying Node* stays
+/// valid. If the iterator is a past-last-child iterator, then it is always
+/// valid.
+///
+/// In particular, deleting or inserting siblings of a given iterator keeps
+/// this iterator valid. Reparenting or moving the location of a Node among its
+/// sibling keeps the iterator valid. However, be careful to keep the end of a
+/// range reachable! This is never a problem if the end of the range is the
+/// past-last-child iterator, but can be in other cases.
+///
+/// Despite all of these guarantees, we recommend that whenever you're doing
+/// anything else than a simple iteration over all children, you should simply
+/// use the Node API (node->nextSibling(), etc.) instead of iterators. This is
+/// even safer and more readable anyway.
+///
+class VGC_DOM_API SiblingsIterator
+{
+public:
+    typedef Node* value_type;
+    typedef Node*& reference;
+    typedef Node** pointer;
+    typedef std::input_iterator_tag iterator_category;
+
+    /// Constructs an iterator pointing to the given Node.
+    ///
+    SiblingsIterator(Node* node) : node_(node) {}
+
+    // XXX remove the lines before if it works with defaults
+    // SiblingsIterator(const SiblingsIterator&);
+    // SiblingsIterator& operator=(const SiblingsIterator&);
+    //friend void swap(SiblingsIterator& lhs, SiblingsIterator& rhs);
+
+    /// Prefix-increments this iterator.
+    ///
+    SiblingsIterator& operator++();
+
+    /// Postfix-increments this iterator.
+    ///
+    SiblingsIterator operator++(int);
+
+    /// Dereferences this iterator with the star operator.
+    ///
+    const value_type& operator*() const { return node_; }
+
+    /// Dereferences this iterator with the arrow operator.
+    ///
+    const value_type* operator->() const { return &node_; }
+
+    /// Returns whether the two iterators are equals.
+    ///
+    friend bool operator==(const SiblingsIterator&, const SiblingsIterator&);
+
+    /// Returns whether the two iterators are differents.
+    ///
+    friend bool operator!=(const SiblingsIterator&, const SiblingsIterator&);
+
+private:
+    Node* node_;
+};
+
+/// \class vgc::dom::SiblingsRange
+/// \brief Enable range-based loops for sibling Nodes.
+///
+/// This range class is used together with SiblingsIterator to
+/// enables range-based loops like the following:
+///
+/// \code
+/// for (Node* child : node->children()) {
+///     // ...
+/// }
+/// \endcode
+///
+/// \sa SiblingsIterator and Node.
+///
+class VGC_DOM_API SiblingsRange
+{
+public:
+    /// Constructs a range of sibling nodes from \p begin to \p end. The
+    /// range includes \p begin but excludes \p end. The behavior is undefined
+    /// is \p begin and \p end do not have the same parent. If \p end is null,
+    /// then the range includes all siblings after \p begin. If both \p start
+    /// and \p end are null, then the range is empty. The behavior is undefined
+    /// if \p begin is null but \p end is not.
+    ///
+    SiblingsRange(Node* begin, Node* end) : begin_(begin), end_(end) {}
+
+    /// Returns the begin of the range.
+    ///
+    const SiblingsIterator& begin() { return begin_; }
+
+    /// Returns the end of the range.
+    ///
+    const SiblingsIterator& end() { return end_; }
+
+private:
+    SiblingsIterator begin_;
+    SiblingsIterator end_;
+};
+
 /// \class vgc::dom::Node
 /// \brief Represents a node of the DOM. Most dom classes derive from Node.
 ///
@@ -133,6 +280,20 @@ public:
     ///
     Node* lastChild() const {
         return lastChild_;
+    }
+
+    /// Returns all children of this Node as an iterable range.
+    ///
+    /// Example:
+    ///
+    /// \code
+    /// for (Node* child : node->children()) {
+    ///     // ...
+    /// }
+    /// \endcode
+    ///
+    SiblingsRange children() const {
+        return SiblingsRange(firstChild(), lastChild());
     }
 
     /// Returns the previous sibling of this Node. Returns nullptr if this Node
@@ -237,6 +398,25 @@ private:
     void writeChildren_(std::ofstream& out,
                         const XmlFormattingStyle& style,
                         int indentLevel) const;
+};
+
+inline SiblingsIterator& SiblingsIterator::operator++() {
+    node_ = node_->nextSibling();
+    return *this;
+}
+
+inline SiblingsIterator SiblingsIterator::operator++(int) {
+    SiblingsIterator res(*this);
+    operator++();
+    return res;
+}
+
+inline bool operator==(const SiblingsIterator& it1, const SiblingsIterator& it2) {
+    return it1.node_ == it2.node_;
+}
+
+inline bool operator!=(const SiblingsIterator& it1, const SiblingsIterator& it2) {
+    return !(it1 == it2);
 };
 
 } // namespace dom
