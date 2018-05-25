@@ -25,6 +25,7 @@
 #include <vgc/widgets/stylesheets.h>
 
 #include <iostream>
+#include <vgc/core/color.h>
 #include <vgc/core/doublearray.h>
 #include <vgc/core/vec2darray.h>
 #include <vgc/dom/vgc.h>
@@ -116,6 +117,13 @@ int main(int argc, char* argv[])
     vgc::core::DoubleArray ws2 = { 5, 10, 15 };
     p1->setAttribute(widths, ws1);
     p2->setAttribute(widths, ws2);
+
+    // Author 'color' attributes
+    vgc::core::StringId color("color");
+    vgc::core::Color c1(1, 0, 0);
+    vgc::core::Color c2(0, 1, 0);
+    p1->setAttribute(color, c1);
+    p2->setAttribute(color, c2);
 
     // Save to XML file
     doc->save("test.vgc");

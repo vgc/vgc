@@ -15,9 +15,19 @@
 // limitations under the License.
 
 #include <vgc/core/color.h>
+#include <vgc/core/stringutil.h>
 
 namespace vgc {
 namespace core {
+
+std::string toString(const Color& c)
+{
+    return "rgba("
+            + toString(c.r()) + ", "
+            + toString(c.g()) + ", "
+            + toString(c.b()) + ", "
+            + toString(c.a()) + ")";
+}
 
 } // namespace core
 } // namespace vgc

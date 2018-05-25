@@ -17,6 +17,7 @@
 #ifndef VGC_CORE_COLOR_H
 #define VGC_CORE_COLOR_H
 
+#include <string>
 #include <vgc/core/api.h>
 
 namespace vgc {
@@ -167,6 +168,11 @@ public:
 private:
     double data_[4];
 };
+
+/// Returns a string representation of the given Vec2dArray.
+///
+VGC_CORE_API
+std::string toString(const Color& c);
 
 } // namespace core
 } // namespace vgc

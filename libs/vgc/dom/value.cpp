@@ -64,7 +64,7 @@ std::string toString(const Value& v)
     case ValueType::Invalid:
         return "invalid_value";
     case ValueType::Color:
-        return "color"; // XXX TODO
+        return toString(v.getColor());
     case ValueType::DoubleArray:
         return toString(v.getDoubleArray());
     case ValueType::Vec2dArray:
