@@ -55,10 +55,10 @@ void Element::setAttribute(core::StringId name, const Value& value)
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         authored->setValue(value);
     }
-
-    // Otherwise, allocate a new AuthoredAttribute
-    authoredAttributes_.emplace_back(name, value);
-
+    else {
+        // Otherwise, allocate a new AuthoredAttribute
+        authoredAttributes_.emplace_back(name, value);
+    }
 }
 
 AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name)
