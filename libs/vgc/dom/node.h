@@ -209,15 +209,15 @@ private:
 };
 
 /// \class vgc::dom::Node
-/// \brief Represents a node of the DOM. Most dom classes derive from Node.
+/// \brief Represents a node of the document Node tree.
 ///
-/// This is the base class for most classes in the DOM tree. For example, the
-/// Document is a node and each Element is a Node. As a notable exception, note
-/// that an Attribute is not a Node.
+/// See Document for details.
 ///
-/// Each Node has childNodes() and is responsible for the lifetime of
-/// these children. Child nodes are ordered, which correspond to the order of
-/// appearance in the XML file.
+/// Constness
+/// ---------
+///
+/// XXX Give details on what "constness" mean for nodes.
+///
 ///
 class VGC_DOM_API Node: public core::Object
 {

@@ -33,7 +33,108 @@ VGC_CORE_DECLARE_PTRS(Document);
 /// \brief Represents a VGC document.
 ///
 /// VGC documents are written to disk as XML files, and represented in memory
-/// similarly to the DOM structures typically used in web browsers.
+/// as instances of vgc::dom::Document, closely matching the XML structure.
+///
+/// Here is an example VGC document:
+///
+/// \code
+/// <vgc>
+///   <!-- A nice red path shaped like the letter L -->
+///   <path
+///     positions = "[(0, 0), (200, 0), (200, 100)]"
+///     width = "5"
+///     color = "rgb(255, 0, 0)" />
+///
+///   <!-- The same path but green and translated by (300, 0) -->
+///   <path
+///     positions = "[(300, 0), (500, 0), (500, 100)]"
+///     width = "5"
+///     color = "rgb(0, 255, 0)" />
+/// </vgc>
+/// \endcode
+///
+/// Main Concepts
+/// -------------
+///
+/// A Document is a tree of nodes, where each Node can be either the Document
+/// node, an Element node, a Comment node, or other types of nodes (see
+/// NodeType for details).
+///
+/// In the example provided, the node structure is the
+/// following:
+///
+/// \verbatim
+/// Document
+///  |
+///  * - Element "vgc"
+///       |
+///       * - Comment
+///       |
+///       * - Element "path"
+///       |
+///       * - Comment
+///       |
+///       * - Element "path"
+/// \endverbatim
+///
+/// The root of the Node tree is the Document itself. The Document may have
+/// several children nodes (including comments), but at most one of these
+/// children may be of NodeType::Element. This Element is called the "root
+/// element" of the Document (accessible via Document::rootElement()). Despite
+/// the terminology, keep in mind that the root element is NOT the root of the
+/// Node tree, since the root element has a parent Node: the Document itself.
+///
+/// However, the root element is the root of the subtree of the Node tree
+/// consisting only of Element nodes. We call this subtree the "Element tree":
+///
+/// \verbatim
+/// Element "vgc"
+///  |
+///  * - Element "path"
+///  |
+///  * - Element "path"
+/// \endverbatim
+///
+/// XXX Implement the Element tree embedded in the Node tree. It's probably
+/// best to not have dedicated data member such as nextElementSibling_, etc.,
+/// but simply to implement nextElementSibling() in terms of
+/// nextNodeSilbling().
+///
+/// XXX It may make sense to either rename them nextNode/nextElement, or maybe
+/// to only have "nextSibling" but with filters: nextSibling(filter). The same
+/// way, we may either have dedicated iterator class
+/// ElementSiblingsIterator/NodeSiblingsIterator, or just a single
+/// SiblingsIterator with a filter data member. These are not exclusive, we
+/// could have both: childNodes/childElements/children(filter). The advantage
+/// of separate functions and iterator classes is that the Element version can
+/// automatically cast to Element which make it more convenient to use.
+///
+/// XML Declaration
+/// ---------------
+///
+/// By "XML declaration", we mean the following line that may
+/// appear at the beginning of XML files:
+///
+///     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+///
+/// The XML declaration is optional, and is not considered a
+/// Node of the tree.
+///
+/// Comparison with W3C XML DOM
+/// ---------------------------
+///
+/// The classes in the vgc::dom library follow the same spirit as the W3C XML
+/// DOM specifications, but there are a few differences.
+///
+/// For example, in vgc::dom, element attributes are not considered to be
+/// nodes of the tree. This allows to keep a clear separation between
+/// the node hierarchy and its data, and we believe results in a cleaner
+/// API. For example, in the W3C XML DOM, the API for Node contains
+/// functions which make no sense when the Node is in fact an attribute,
+/// such as 'childNodes' (an attribute has no child nodes). Also, our
+/// nodes are all separately dynamically allocated C++ objects (this allows
+/// observers to track Node changes), and we wouldn't want to dynamically
+/// allocate all attributes, especially default attributes.
 ///
 class VGC_DOM_API Document: public Node
 {
