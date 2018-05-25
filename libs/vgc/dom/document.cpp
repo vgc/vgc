@@ -19,6 +19,7 @@
 #include <fstream>
 #include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
+#include <vgc/dom/io.h>
 
 namespace vgc {
 namespace dom {
@@ -169,7 +170,6 @@ void Document::generateXmlDeclaration_()
 bool Document::save(const std::string& filePath,
                     const XmlFormattingStyle& style) const
 {
-    /*
     std::ofstream out(filePath);
     if (!out.is_open()) {
         vgc::core::warning() << "Could not write file " << filePath << std::endl;
@@ -177,8 +177,8 @@ bool Document::save(const std::string& filePath,
     }
 
     out << xmlDeclaration_ << std::endl;    
-    writeChildren_(out, style, 0);
-    */
+    writeChildren(out, style, 0, this);
+
     return true;
 }
 

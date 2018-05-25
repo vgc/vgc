@@ -9,6 +9,7 @@ vgc_add_library(dom
         attribute.h
         document.h
         element.h
+        io.h
         node.h
         path.h
         value.h
@@ -19,6 +20,7 @@ vgc_add_library(dom
         attribute.cpp
         document.cpp
         element.cpp
+        io.cpp
         node.cpp
         path.cpp
         value.cpp

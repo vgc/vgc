@@ -109,9 +109,7 @@ int main(int argc, char* argv[])
     pos.append(vgc::core::Vec2d(5, 6));
     p2->setAttribute(positions, pos);
 
-    std::cout << "p1.positions = " << toString(p1->getAttribute(positions).getVec2dArray()) << std::endl;
-    std::cout << "p2.positions = " << toString(p2->getAttribute(positions).getVec2dArray()) << std::endl;
-
+    // Save to XML file
     doc->save("test.vgc");
 
     // Start event loop

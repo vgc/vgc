@@ -17,11 +17,8 @@
 #ifndef VGC_DOM_NODE_H
 #define VGC_DOM_NODE_H
 
-#include <fstream>
-#include <vector>
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
-#include <vgc/dom/xmlformattingstyle.h>
 
 namespace vgc {
 namespace dom {
@@ -393,11 +390,6 @@ private:
     // Owner document
     void setDocument_(Document* document);
     Document* document_;
-
-    // Helper method for Document::save()
-    void writeChildren_(std::ofstream& out,
-                        const XmlFormattingStyle& style,
-                        int indentLevel) const;
 };
 
 inline SiblingsIterator& SiblingsIterator::operator++() {

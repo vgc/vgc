@@ -147,14 +147,13 @@ private:
 } // namespace core
 } // namespace vgc
 
-/// Allows implicit conversion from StringId to std::string for all output
-/// stream operations.
+/// Writes the underlying string of the given \p stringId to the given output
+/// stream \p out.
 ///
-/*
-template <typename Stream>
-Stream& operator<<(Stream& outputStream, vgc::core::StringId stringId) {
-    return outputStream << stringId.string();
+template <typename OutputStream>
+OutputStream& operator<<(OutputStream& out, vgc::core::StringId stringId) {
+    out << stringId.string();
+    return out;
 }
-*/
 
 #endif // VGC_CORE_STRINGID_H
