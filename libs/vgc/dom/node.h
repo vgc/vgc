@@ -293,7 +293,7 @@ public:
     /// \endcode
     ///
     SiblingsRange children() const {
-        return SiblingsRange(firstChild(), lastChild());
+        return SiblingsRange(firstChild(), nullptr);
     }
 
     /// Returns the previous sibling of this Node. Returns nullptr if this Node

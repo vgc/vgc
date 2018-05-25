@@ -92,9 +92,6 @@ int main(int argc, char* argv[])
     // Create the root element of the document
     vgc::dom::VgcSharedPtr root = vgc::dom::Vgc::make();
     doc->setRootElement(root);
-    if (doc->rootElement()) {
-        std::cout << "yeay!"; // XXX This is not printed... bug?
-    }
 
     // Create two children elements
     vgc::dom::PathSharedPtr p1 = vgc::dom::Path::make();
