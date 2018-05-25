@@ -18,6 +18,7 @@
 #define VGC_DOM_VALUE_H
 
 #include <vgc/core/color.h>
+#include <vgc/core/doublearray.h>
 #include <vgc/core/vec2d.h>
 #include <vgc/core/vec2darray.h>
 #include <vgc/dom/api.h>
@@ -87,6 +88,7 @@ enum class ValueType {
     // XXX TODO: complete the list of types
     Invalid,
     Color,
+    DoubleArray,
     Vec2dArray
 };
 
@@ -113,6 +115,14 @@ public:
     Value(const core::Color& color) :
         type_(ValueType::Color),
         color_(color) {
+
+    }
+
+    /// Constructs a Value holding a DoubleArray.
+    ///
+    Value(const core::DoubleArray& doubleArray) :
+        type_(ValueType::DoubleArray),
+        doubleArray_(doubleArray) {
 
     }
 
@@ -190,6 +200,28 @@ public:
         vec2dArray_ = vec2dArray;
     }
 
+    /// Returns the DoubleArray hold by this Value. The behavior is undefined if
+    /// type() != ValueType::DoubleArray.
+    ///
+    const core::DoubleArray& getDoubleArray() const {
+        return doubleArray_;
+    }
+
+    /// Returns the DoubleArray hold by this Value. The behavior is undefined if
+    /// type() != ValueType::DoubleArray.
+    ///
+    void get(core::DoubleArray& doubleArray) const {
+        doubleArray = doubleArray_;
+    }
+
+    /// Sets this value to the given \p vec2dArray.
+    ///
+    void set(const core::DoubleArray& doubleArray) {
+        unset();
+        type_ = ValueType::DoubleArray;
+        doubleArray_ = doubleArray;
+    }
+
 private:
     // XXX This is just a memory-wasteful temporary implementation to test the
     // rest of the architecture first. Later we'll probably use boost::variant
@@ -198,6 +230,7 @@ private:
     //
     ValueType type_;
     core::Color color_;
+    core::DoubleArray doubleArray_;
     core::Vec2dArray vec2dArray_;
 };
 

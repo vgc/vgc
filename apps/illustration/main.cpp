@@ -25,6 +25,7 @@
 #include <vgc/widgets/stylesheets.h>
 
 #include <iostream>
+#include <vgc/core/doublearray.h>
 #include <vgc/core/vec2darray.h>
 #include <vgc/dom/vgc.h>
 #include <vgc/dom/path.h>
@@ -99,7 +100,7 @@ int main(int argc, char* argv[])
     root->appendChild(p1);
     root->appendChild(p2);
 
-    // Author 'position' attributes
+    // Author 'positions' attributes
     vgc::core::StringId positions("positions");
     vgc::core::Vec2dArray pos = {
         vgc::core::Vec2d(1, 2),
@@ -108,6 +109,13 @@ int main(int argc, char* argv[])
     p1->setAttribute(positions, pos);
     pos.append(vgc::core::Vec2d(5, 6));
     p2->setAttribute(positions, pos);
+
+    // Author 'widths' attributes
+    vgc::core::StringId widths("widths");
+    vgc::core::DoubleArray ws1 = { 5, 5 };
+    vgc::core::DoubleArray ws2 = { 5, 10, 15 };
+    p1->setAttribute(widths, ws1);
+    p2->setAttribute(widths, ws2);
 
     // Save to XML file
     doc->save("test.vgc");

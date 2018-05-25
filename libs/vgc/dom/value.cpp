@@ -29,6 +29,9 @@ const Value& Value::invalid()
 void Value::unset()
 {
     switch (type()) {
+    case ValueType::DoubleArray:
+        doubleArray_.clear();
+        break;
     case ValueType::Vec2dArray:
         vec2dArray_.clear();
         break;
@@ -41,17 +44,18 @@ void Value::unset()
 
 void Value::shrinkToFit()
 {
-    // Note: it is possible than several vectors have unused capacity, which is
+    // Note: it is possible that several vectors have unused capacity, which is
     // why we can't just shrinkToFit the current type(), but have to shrinkToFit
     // all of them.
     //
     // Example:
     // Value v;
     // v.set(Vec2dArray({{12, 10}, {23, 42}}));
-    // v.set(DoubleArray({{12, 10}, {23, 42}})); // doesn't shrink vec2dArray_;
+    // v.set(DoubleArray({1, 2, 3})); // doesn't shrink vec2dArray_;
     //
 
     vec2dArray_.shrinkToFit();
+    doubleArray_.shrinkToFit();
 }
 
 std::string toString(const Value& v)
@@ -61,6 +65,8 @@ std::string toString(const Value& v)
         return "invalid_value";
     case ValueType::Color:
         return "color"; // XXX TODO
+    case ValueType::DoubleArray:
+        return toString(v.getDoubleArray());
     case ValueType::Vec2dArray:
         return toString(v.getVec2dArray());
     }
