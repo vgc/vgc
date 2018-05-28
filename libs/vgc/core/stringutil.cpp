@@ -16,27 +16,53 @@
 
 #include <vgc/core/stringutil.h>
 
+#include <sstream>
+#include <iomanip>
+
 namespace vgc {
 namespace core {
 
 std::string toString(double x)
 {
-    // XXX TODO Use something that provides more control on
-    // precision, formatting, trailing zeros, etc.
-    //
-    // Example:
-    // std::stringstream ss;
-    // ss << std::fixed << std::setprecision(4) << 1988.42;
-    // return ss.str();
-    //
-    // returns "1988.4200".
-    //
-    // This is basically what we want (fixed number of decimals, no scientific
-    // notation), but we want it faster (not using stringstream) and with no
-    // trailing zeros (should return 1988.42).
-    //
+    // Convert to string with fixed precision, no scientifica notation.
+    // Example: 1988.42 -> "1988.420000000000"
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(12) << x;
+    std::string res = ss.str();
 
-    return std::to_string(x);
+    // Remove trailing zeros
+    int commaIndex = -1;
+    int n = res.size();
+    for (int i = 0; i < n; ++i) {
+        if (res[i] == '.') {
+            commaIndex = i;
+            break;
+        }
+    }
+    if (commaIndex > -1) {
+        for (int i = n-1; i > commaIndex; --i) {
+            if (res[i] == '0') {
+                n = i;
+            }
+            else {
+                break;
+            }
+        }
+    }
+    if (commaIndex == n-1) {
+        n -= 1;
+    }
+    res.resize(n);
+
+    return res;
+
+    // Note: the above is presumably quite slow, but seems the only way to get
+    // the desired behavior in less than 10 lines of code. In the future, we'd
+    // probably want to implement our own double to string algorithm to make it
+    // faster and provide user preferences.
+
+    // XXX check that the above is always using '.' as decimal point even when
+    // the locale is for instance fr_FR where ',' is commonly used.
 }
 
 } // namespace core
