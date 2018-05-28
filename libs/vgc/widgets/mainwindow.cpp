@@ -16,8 +16,11 @@
 
 #include <vgc/widgets/mainwindow.h>
 
+#include <QFileDialog>
 #include <QMenuBar>
 #include <QToolBar>
+
+#include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -54,6 +57,29 @@ void MainWindow::onColorChanged(const core::Color& newColor)
     viewer_->setCurrentColor(newColor);
 }
 
+void MainWindow::save()
+{
+    if (saveFilename_.isEmpty()) {
+        saveAs();
+    }
+    else {
+        save_();
+    }
+}
+
+void MainWindow::saveAs()
+{
+    saveFilename_ = QFileDialog::getSaveFileName(
+        this, tr("Save Document"), saveFilename_,
+        tr("VGC Illustration Files (*.vgci)"));
+    save_();
+}
+
+void MainWindow::save_()
+{
+    document_->save(fromQt(saveFilename_));
+}
+
 void MainWindow::setupWidgets_()
 {
     viewer_ = new OpenGLViewer(document_);
@@ -77,6 +103,16 @@ void MainWindow::setupDocks_()
 
 void MainWindow::setupActions_()
 {
+    actionSave_ = new QAction(tr("&Save"), this);
+    actionSave_->setStatusTip(tr("Save the current document."));
+    actionSave_->setShortcut(QKeySequence::Save);
+    connect(actionSave_, SIGNAL(triggered()), this, SLOT(save()));
+
+    actionSaveAs_ = new QAction(tr("Save As..."), this);
+    actionSaveAs_->setStatusTip(tr("Save the current document under a new name."));
+    actionSaveAs_->setShortcut(QKeySequence::SaveAs);
+    connect(actionSaveAs_, SIGNAL(triggered()), this, SLOT(saveAs()));
+
     actionQuit_ = new QAction(tr("&Quit"), this);
     actionQuit_->setStatusTip(tr("Quit VGC Illustration."));
     actionQuit_->setShortcut(QKeySequence::Quit);
@@ -90,6 +126,9 @@ void MainWindow::setupActions_()
 void MainWindow::setupMenus_()
 {
     menuFile_ = new QMenu(tr("&File"));
+    menuFile_->addAction(actionSave_);
+    menuFile_->addAction(actionSaveAs_);
+    menuFile_->addSeparator();
     menuFile_->addAction(actionQuit_);
     menuBar()->addMenu(menuFile_);
 

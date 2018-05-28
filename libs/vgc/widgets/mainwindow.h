@@ -20,6 +20,7 @@
 #include <QDockWidget>
 #include <QMainWindow>
 #include <QMenu>
+#include <QString>
 
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
@@ -48,6 +49,8 @@ public:
 
 private Q_SLOTS:
     void onColorChanged(const core::Color& newColor);
+    void save();
+    void saveAs();
 
 private:
     dom::Document* document_;
@@ -67,6 +70,8 @@ private:
     QDockWidget* dockConsole_;
 
     void setupActions_();
+    QAction* actionSave_;
+    QAction* actionSaveAs_;
     QAction* actionQuit_;
     QAction* actionToggleConsoleView_;
 
@@ -80,6 +85,10 @@ private:
     QAction* colorToolButtonAction_;
 
     void setupConnections_();
+
+    // Saves the document at the given filename
+    void save_();
+    QString saveFilename_;
 };
 
 } // namespace widgets
