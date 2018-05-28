@@ -22,7 +22,7 @@
 #include <QMenu>
 
 #include <vgc/core/python.h>
-#include <vgc/scene/scene.h>
+#include <vgc/dom/document.h>
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/colortoolbutton.h>
 #include <vgc/widgets/console.h>
@@ -36,21 +36,21 @@ class VGC_WIDGETS_API MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(scene::Scene* scene,
+    MainWindow(dom::Document* document,
                core::PythonInterpreter* interpreter,
                QWidget* parent = nullptr);
 
     ~MainWindow();
 
-    scene::Scene* scene() const {
-        return scene_;
+    dom::Document* document() const {
+        return document_;
     }
 
 private Q_SLOTS:
     void onColorChanged(const core::Color& newColor);
 
 private:
-    scene::Scene* scene_;
+    dom::Document* document_;
     core::PythonInterpreter* interpreter_;
 
     // XXX move what's below out of MainWindow to keep it generic.

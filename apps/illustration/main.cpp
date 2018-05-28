@@ -52,7 +52,9 @@ int main(int argc, char* argv[])
     vgc::core::PythonInterpreter pythonInterpreter;
 
     // Create the scene
-    vgc::scene::SceneSharedPtr scene = vgc::scene::Scene::make();
+    //vgc::scene::SceneSharedPtr scene = vgc::scene::Scene::make();
+    vgc::dom::DocumentSharedPtr document = vgc::dom::Document::make();
+    document->setRootElement(vgc::dom::Vgc::make());
 
     // Expose the above Scene instance to the Python console as a local Python
     // variable 'scene'.
@@ -71,11 +73,11 @@ int main(int argc, char* argv[])
     // Currently, users can do scene = Scene() and then are not able
     // to affect the actual scene anymore...
     //
-    pythonInterpreter.run("import vgc.scene");
-    pythonInterpreter.setVariableValue("scene", scene);
+    //pythonInterpreter.run("import vgc.scene");
+    //pythonInterpreter.setVariableValue("scene", scene);
 
     // Create and show the widget
-    vgc::widgets::MainWindow w(scene.get(), &pythonInterpreter);
+    vgc::widgets::MainWindow w(document.get(), &pythonInterpreter);
     w.show();
 
     // Set style
@@ -88,6 +90,7 @@ int main(int argc, char* argv[])
 
     // ---- Test dom ----
 
+    /*
     // Create a document
     vgc::dom::DocumentSharedPtr doc = vgc::dom::Document::make();
 
@@ -127,6 +130,7 @@ int main(int argc, char* argv[])
 
     // Save to XML file
     doc->save("test.vgc");
+    */
 
     // Start event loop
     return application.exec();

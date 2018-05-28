@@ -113,6 +113,10 @@ public:
     ///
     explicit StringId(const std::string& s = "");
 
+    /// Constructs a StringId representing the given string \p s.
+    ///
+    explicit StringId(const char s[]) : StringId(std::string(s)) {}
+
     /// Returns the string represented by this StringId.
     ///
     std::string string() const {

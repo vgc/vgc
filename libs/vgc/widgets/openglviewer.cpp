@@ -21,7 +21,10 @@
 
 #include <QMouseEvent>
 
+#include <vgc/core/assert.h>
 #include <vgc/core/resources.h>
+#include <vgc/dom/path.h>
+#include <vgc/geometry/curve.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
@@ -56,6 +59,10 @@ double width_(const PointingDeviceEvent& event) {
                defaultWidth;
 }
 
+core::StringId POSITIONS("positions");
+core::StringId WIDTHS("widths");
+core::StringId COLOR("color");
+
 } // namespace
 
 void OpenGLViewer::init()
@@ -75,9 +82,9 @@ void OpenGLViewer::init()
     QSurfaceFormat::setDefaultFormat(format);
 }
 
-OpenGLViewer::OpenGLViewer(scene::Scene* scene, QWidget* parent) :
+OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     QOpenGLWidget(parent),
-    scene_(scene),
+    document_(document),
     isSketching_(false),
     isPanning_(false),
     isRotating_(false),
@@ -176,7 +183,7 @@ void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
         // and should be cached), but let's keep it like this for now for testing.
         core::Vec2d viewCoords = event.pos();
         core::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
-        scene_->startCurve(worldCoords, width_(event));
+        startCurve_(worldCoords, width_(event));
     }
     else if (event.modifiers() == Qt::AltModifier &&
              event.button() == Qt::LeftButton)
@@ -213,7 +220,7 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // and should be cached), but let's keep it like this for now for testing.
         core::Vec2d viewCoords = event.pos();
         core::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
-        scene_->continueCurve(worldCoords, width_(event));
+        continueCurve_(worldCoords, width_(event));
     }
     else if (isPanning_) {
         core::Vec2d mousePos = event.pos();
@@ -399,13 +406,30 @@ void OpenGLViewer::cleanupGL()
 void OpenGLViewer::updateGLResources_()
 {
     // Create new GPU resources for new curves
-    int nCurvesInCpu = scene_->curves().size();
+    // XXX CLEAN + don't assume all elements are paths
+    // + make constant-time complexity
+    dom::Element* root = document_->rootElement();
+    int nCurvesInCpu = 0;
+    for (dom::Node* node : root->children()) {
+        if (dom::Element::cast(node)) {
+            ++nCurvesInCpu;
+        }
+    }
+    paths_.resize(nCurvesInCpu);
+    int i = 0;
+    for (dom::Node* node : root->children()) {
+        if (dom::Element* path = dom::Element::cast(node)) {
+            paths_[i] = path;
+            ++i;
+        }
+    }
     int nCurvesInGpu = curveGLResources_.size();
     for (int i = nCurvesInGpu; i < nCurvesInCpu; ++i) {
         createCurveGLResources_(i);
     }
 
     // Destroy GPU resources for deleted curves
+    // XXX why the decreasing loop index?
     for (int i = nCurvesInGpu - 1; i >= nCurvesInCpu; --i) {
         destroyCurveGLResources_(i);
     }
@@ -474,11 +498,24 @@ void OpenGLViewer::createCurveGLResources_(int)
 
 void OpenGLViewer::updateCurveGLResources_(int i)
 {
-    assert(i >= 0);
+    assert(i >= 0); // TODO convert all asserts to VGC_CORE_ASSERT
     assert(i < curveGLResources_.size());
-    assert(i < scene_->curves().size());
+    //assert(i < scene_->curves().size());
     CurveGLResources& r = curveGLResources_[i];
-    const geometry::Curve& curve = *scene_->curves()[i];
+
+    // Convert the dom::Path to a geometry::Curve
+    // XXX move this logic to dom::Path
+    dom::Element* path = paths_[i];
+    core::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
+    core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
+    core::Color color = path->getAttribute(COLOR).getColor();
+    VGC_CORE_ASSERT(positions.size() == widths.size());
+    int nControlPoints = positions.size();
+    geometry::Curve curve;
+    curve.setColor(color);
+    for (int i = 0; i < nControlPoints; ++i) {
+        curve.addControlPoint(positions[i], widths[i]);
+    }
 
     // Triangulate the curve
     double maxAngle = 0.05;
@@ -534,6 +571,51 @@ void OpenGLViewer::destroyCurveGLResources_(int)
 
     curveGLResources_.pop_back();
 }
+
+void OpenGLViewer::startCurve_(const core::Vec2d& p, double width)
+{
+    // XXX CLEAN
+
+    dom::Element* root = document_->rootElement();
+    dom::PathSharedPtr path = dom::Path::make();
+    root->appendChild(path);
+
+    path->setAttribute(POSITIONS, core::Vec2dArray());
+    path->setAttribute(WIDTHS, core::DoubleArray());
+    path->setAttribute(COLOR, currentColor_);
+
+    continueCurve_(p, width);
+}
+
+void OpenGLViewer::continueCurve_(const core::Vec2d& p, double width)
+{
+    // XXX CLEAN
+
+    dom::Element* root = document_->rootElement();
+    dom::Element* path = dom::Element::cast(root->lastChild()); // I really need the casted version like lastChildElement()
+
+    if (path) {
+        // Should I make this more efficient? If so, we have a few choices:
+        // duplicate the API of arrays within value and provide fine-grain
+        // "changed" signals. And/or allow to pass a lambda that modifies the
+        // underlying value. The dom::Value will call the lambda to mutate the
+        // value, then emit a generic changed signal. I could also let clients
+        // freely mutate the value and trusteing them in sending a changed
+        // signal themselves.
+
+        core::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
+        core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
+
+        positions.append(p);
+        widths.append(width);
+
+        path->setAttribute(POSITIONS, positions);
+        path->setAttribute(WIDTHS, widths);
+
+        update();
+    }
+}
+
 
 } // namespace widgets
 } // namespace vgc

@@ -4,7 +4,8 @@ vgc_add_library(widgets
 
     VGC_DEPENDENCIES
         core
-        scene
+        dom
+        geometry
 
     HEADER_FILES
         api.h

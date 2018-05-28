@@ -23,12 +23,12 @@ namespace vgc {
 namespace widgets {
 
 MainWindow::MainWindow(
-    scene::Scene* scene,
+    dom::Document* document,
     core::PythonInterpreter* interpreter,
     QWidget* parent) :
 
     QMainWindow(parent),
-    scene_(scene),
+    document_(document),
     interpreter_(interpreter)
 {
     setupWidgets_();
@@ -51,12 +51,12 @@ MainWindow::~MainWindow()
 
 void MainWindow::onColorChanged(const core::Color& newColor)
 {
-    scene_->setNewCurveColor(newColor);
+    viewer_->setCurrentColor(newColor);
 }
 
 void MainWindow::setupWidgets_()
 {
-    viewer_ = new OpenGLViewer(scene_);
+    viewer_ = new OpenGLViewer(document_);
     console_ = new Console(interpreter_);
 }
 
@@ -128,6 +128,9 @@ void MainWindow::setupToolBars_()
 
 void MainWindow::setupConnections_()
 {
+    // XXX TODO
+
+    /*
     // Refresh the viewer when the scene changes
     scene_->changed.connect(std::bind(
         (void (OpenGLViewer::*)()) &OpenGLViewer::update, viewer_));
@@ -164,6 +167,7 @@ void MainWindow::setupConnections_()
         &scene::Scene::pauseSignals, scene_));
     interpreter_->runFinished.connect(std::bind(
         &scene::Scene::resumeSignals, scene_, true));
+        */
 }
 
 } // namespace widgets

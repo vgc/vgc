@@ -27,10 +27,12 @@
 
 #include <vgc/core/color.h>
 #include <vgc/core/vec2d.h>
+#include <vgc/dom/document.h>
 #include <vgc/geometry/camera2d.h>
-#include <vgc/scene/scene.h>
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/pointingdeviceevent.h>
+
+namespace vgc { namespace dom { class Element; }}
 
 namespace vgc {
 namespace widgets {
@@ -47,12 +49,18 @@ public:
     ///
     static void init();
 
-    OpenGLViewer(scene::Scene* scene, QWidget* parent = nullptr);
+    OpenGLViewer(dom::Document* document, QWidget* parent = nullptr);
     ~OpenGLViewer();
 
-    scene::Scene* scene() const {
-        return scene_;
+    dom::Document* document() const {
+        return document_;
     }
+
+    // XXX temporary. WIll be deferred to separate class.
+    void setCurrentColor(const core::Color& color) {
+        currentColor_ = color;
+    }
+
 
 private:
     void mousePressEvent(QMouseEvent* event) override;
@@ -82,7 +90,7 @@ private:
     geometry::Camera2d camera_;
 
     // Scene
-    scene::Scene* scene_;
+    dom::Document* document_;
 
     // Moving camera
     bool isSketching_;
@@ -113,6 +121,7 @@ private:
         int numVerticesControlPoints;
     };
     std::vector<CurveGLResources> curveGLResources_;
+    std::vector<dom::Element*> paths_;
     void updateGLResources_();
     void createCurveGLResources_(int i);
     void updateCurveGLResources_(int i);
@@ -152,6 +161,19 @@ private:
     // tesselation modes. A more engineered method will come later.
     int requestedTesselationMode_; // 0: none; 1: uniform; 2: adaptive
     int currentTesselationMode_;
+
+
+    // XXX This is a temporary test, will be deferred to separate classes. Here
+    // is an example of how responsibilities could be separated:
+    //
+    // Widget: Creates an OpenGL context, receive graphical user input.
+    // Renderer: Renders the document to the given OpenGL context.
+    // Controller: Modifies the document based on user input (could be in the
+    // form of "Action" instances).
+    //
+    void startCurve_(const core::Vec2d& p, double width = 1.0);
+    void continueCurve_(const core::Vec2d& p, double width = 1.0);
+    core::Color currentColor_;
 };
 
 } // namespace widgets
