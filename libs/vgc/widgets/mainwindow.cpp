@@ -17,9 +17,12 @@
 #include <vgc/widgets/mainwindow.h>
 
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QMenuBar>
+#include <QStandardPaths>
 #include <QToolBar>
 
+#include <vgc/core/logging.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
@@ -69,10 +72,51 @@ void MainWindow::save()
 
 void MainWindow::saveAs()
 {
-    saveFilename_ = QFileDialog::getSaveFileName(
-        this, tr("Save Document"), saveFilename_,
-        tr("VGC Illustration Files (*.vgci)"));
-    save_();
+    // Get which directory the dialog should display first
+    QString dir =
+        saveFilename_.isEmpty() ?
+        QStandardPaths::writableLocation(QStandardPaths::HomeLocation) :
+        QFileInfo(saveFilename_).dir().path();
+
+    // Set which existing files to show in the dialog
+    QString filters = tr("VGC Illustration Files (*.vgci)");
+
+    // Create the dialog
+    QFileDialog dialog(this, tr("Save As..."), dir, filters);
+
+    // Allow to select non-existing files
+    dialog.setFileMode(QFileDialog::AnyFile);
+
+    // Set acceptMode to "Save" (as opposed to "Open")
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    // Exec the dialog as modal
+    int result = dialog.exec();
+
+    // Actually save the file
+    if (result == QDialog::Accepted) {
+        QStringList selectedFiles = dialog.selectedFiles();
+        if (selectedFiles.size() == 0) {
+            core::warning() << "No file selected; file not saved";
+        }
+        if (selectedFiles.size() == 1) {
+            QString selectedFile = selectedFiles.first();
+            if (!selectedFile.isEmpty()) {
+                saveFilename_ = selectedFile;
+                save_();
+            }
+            else {
+                core::warning() << "Empty file path selected; file not saved";
+            }
+        }
+        else {
+            core::warning() << "More than one file selected; file not saved";
+        }
+    }
+    else {
+        // User willfully cancelled the operation
+        // => nothing to do, not even a warning.
+    }
 }
 
 void MainWindow::save_()
