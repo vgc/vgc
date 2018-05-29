@@ -117,6 +117,11 @@ void MainWindow::saveAs()
         // User willfully cancelled the operation
         // => nothing to do, not even a warning.
     }
+
+    // Note: On some window managers, modal dialogs such as this Save As dialog
+    // causes "QXcbConnection: XCB error: 3 (BadWindow)" errors. See:
+    //   https://github.com/vgc/vgc/issues/6
+    //   https://bugreports.qt.io/browse/QTBUG-56893
 }
 
 void MainWindow::save_()
