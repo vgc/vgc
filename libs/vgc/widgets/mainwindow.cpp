@@ -159,8 +159,11 @@ void MainWindow::setupActions_()
 
     actionSaveAs_ = new QAction(tr("Save As..."), this);
     actionSaveAs_->setStatusTip(tr("Save the current document under a new name."));
-    actionSaveAs_->setShortcut(QKeySequence::SaveAs);
+    actionSaveAs_->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_S));
     connect(actionSaveAs_, SIGNAL(triggered()), this, SLOT(saveAs()));
+    // Note: we don't use QKeySequence::SaveAs because it is undefined on
+    // Windows and KDE. XXX TODO: Have a proper Shortcut manager. Might be
+    // best to not use any of Qt default shortcuts.
 
     actionQuit_ = new QAction(tr("&Quit"), this);
     actionQuit_->setStatusTip(tr("Quit VGC Illustration."));
