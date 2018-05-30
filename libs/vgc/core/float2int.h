@@ -17,6 +17,8 @@
 #ifndef VGC_CORE_FLOAT2INT_H
 #define VGC_CORE_FLOAT2INT_H
 
+#include <cmath>
+#include <vgc/core/algorithm.h>
 #include <vgc/core/api.h>
 
 /// \file vgc/core/float2int.h
@@ -31,9 +33,9 @@ namespace core {
 /// [0..255] which is closest to 255*x.
 ///
 VGC_CORE_API
-char double01ToUint8(double x) {
+unsigned char double01ToUint8(double x) {
     double y = std::round(vgc::core::clamp(x, 0.0, 1.0) * 255.0);
-    return static_cast<char>(y);
+    return static_cast<unsigned char>(y);
 }
 
 } // namespace core
