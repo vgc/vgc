@@ -34,7 +34,7 @@ std::string toString(int x)
 
 std::string toString(double x)
 {
-    // Convert to string with fixed precision, no scientifica notation.
+    // Convert to string with fixed precision, no scientific notation.
     // Example: 1988.42 -> "1988.420000000000"
     std::stringstream ss;
     ss << std::fixed << std::setprecision(12) << x;
