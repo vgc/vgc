@@ -22,6 +22,16 @@
 namespace vgc {
 namespace core {
 
+std::string toString(unsigned char x)
+{
+    return std::to_string(static_cast<int>(x));
+}
+
+std::string toString(int x)
+{
+    return std::to_string(x);
+}
+
 std::string toString(double x)
 {
     // Convert to string with fixed precision, no scientifica notation.

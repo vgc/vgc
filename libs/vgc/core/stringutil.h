@@ -24,6 +24,23 @@
 namespace vgc {
 namespace core {
 
+/// Converts the given 8-bit unsigned integer to a string.
+///
+/// Example:
+/// \code
+/// char c = 65;
+/// std::cout << toString(c); // writes out "65"
+/// std::cout << c;           // writes out "A" (ASCII code for 'A' is 65)
+/// \endcode
+///
+VGC_CORE_API
+std::string toString(unsigned char x);
+
+/// Converts the given integer to a string.
+///
+VGC_CORE_API
+std::string toString(int x);
+
 /// Converts the given double to a string.
 ///
 VGC_CORE_API

@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/color.h>
+#include <vgc/core/float2int.h>
 #include <vgc/core/stringutil.h>
 
 namespace vgc {
@@ -22,11 +23,34 @@ namespace core {
 
 std::string toString(const Color& c)
 {
-    return "rgba("
-            + toString(c.r()) + ", "
-            + toString(c.g()) + ", "
-            + toString(c.b()) + ", "
-            + toString(c.a()) + ")";
+    // Whether to use rgb() or rgba()
+    bool writeAlpha = (c.a() != 1.0);
+
+    // Allocate string with enough capacity.
+    // Notes:
+    //   18 = length of "rgb(255, 255, 255)"
+    //   17 = 1 + length of ", 0.123456789012" (toString uses fixed precision of 12)
+    std::string res;
+    res.reserve(18 + writeAlpha * 17);
+
+    // Write string
+    res.append(writeAlpha ? "rgba(" : "rgb(");
+    res.append(toString(double01ToUint8(c.r())));
+    res.append(", ");
+    res.append(toString(double01ToUint8(c.g())));
+    res.append(", ");
+    res.append(toString(double01ToUint8(c.b())));
+    if (writeAlpha) {
+        res.append(", ");
+        res.append(toString(c.a()));
+    }
+    res.append(")");
+
+    // Return
+    return res;
+
+    // XXX We could/should avoid all string allocations altogether by passing
+    // res as an output parameter of toString.
 }
 
 } // namespace core

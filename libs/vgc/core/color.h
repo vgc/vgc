@@ -169,7 +169,18 @@ private:
     double data_[4];
 };
 
-/// Returns a string representation of the given Vec2dArray.
+/// Returns a string representation of the given Color. The returned string is
+/// a valid CSS Color Module Level 3, see:
+///
+/// https://www.w3.org/TR/2018/PR-css-color-3-20180315/
+///
+/// Example:
+/// \code
+/// Color red(1, 0, 0);
+/// Color halfGreen(0, 1, 0, 0.5);
+/// std::cout << toString(red);       // writes "rgb(255, 0, 0)"
+/// std::cout << toString(halfGreen); // writes "rgba(0, 255, 0, 0.5)"
+/// \endcode
 ///
 VGC_CORE_API
 std::string toString(const Color& c);
