@@ -215,6 +215,9 @@ void MainWindow::setupToolBars_()
 
     connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
     connect(colorToolButton_, &ColorToolButton::colorChanged, this, &MainWindow::onColorChanged);
+
+    // Update current color of widgets created before the color selector
+    onColorChanged(colorToolButton_->color());
 }
 
 void MainWindow::setupConnections_()
