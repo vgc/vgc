@@ -14,6 +14,7 @@ vgc_add_library(core
         dll.h
         doublearray.h
         epsilon.h
+        float2int.h
         io.h
         logging.h
         mat4d.h
