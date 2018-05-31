@@ -34,10 +34,10 @@ QWidget {
     border: 0px;
     margin: 0px;
     padding: 0px;
-    background: #404244; /* gray3 */
+    background: #404244;
     font-family: "Source Sans Pro";
     font-size: 12pt;
-    color: #bec0c2; /* gray1 */
+    color: #bec0c2;
 }
 
 /******************************** Menu Bar ***********************************/
@@ -76,11 +76,6 @@ QMenu::item:pressed {
     background: #404244; /* gray3 */
 }
 
-/* XXX: In order to allow styling checkboxes using an image, we could parse the
-   qss file in C++ and replace url("vgc:/myimage.png") by the absolute path on
-   disk before calling setStyleSheet(). Using url(":/myimage.png") as is won't
-   work because we use our own resource system instead of the one Qt provides.
-*/
 QMenu::indicator {
     width: 10px;
     height: 10px;
@@ -252,6 +247,51 @@ QSpinBox::up-arrow {
 
 QSpinBox::down-arrow {
     image: url(vgc:/widgets/images/spinboxdown.png);
+}
+
+/***************************** QComboBox **********************************/
+
+QComboBox {
+    height: 24px;
+    color: #bec0c2;
+    padding: 0px 0px 0px 6px;
+    border-radius: 2px;
+    border: 1px solid #212222;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #3e4044,
+                stop:1 #272829);
+    selection-background-color: #404244;
+}
+
+QComboBox:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #484a4f,
+                stop:1 #2e3031);  
+}
+
+QComboBox:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #393b3f,
+                stop:1 #232425);
+}
+
+QComboBox::drop-down {
+    border-left: 1px solid #212222;
+    height: 24px;
+    width: 12px;
+    background: transparent;
+}
+
+QComboBox::down-arrow {
+    width: 12px;
+    height: 24px;
+    image: url(vgc:/widgets/images/spinboxdown.png);
+}
+
+/* popup frame */
+QComboBox QFrame {
+    background: #313234;
+    border: 1px solid #212222; 
 }
 
 /********************************* Console ********************************/
