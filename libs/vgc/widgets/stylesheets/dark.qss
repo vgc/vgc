@@ -10,7 +10,7 @@
  * #bec0c2   gray1   menu text
  * #4d4f52   gray2   grayed text
  * #404244   gray3   menubar, toolbar, console margin
- * #313234   gray4   menu
+ * #313234   gray4   menu, list-view, tree-view, combobox popup
  * #2e2f30   gray5   text edit background
  *           gray6   selected text edit background
  * #212222   gray7   menu and dock borders
@@ -292,6 +292,23 @@ QComboBox::down-arrow {
 QComboBox QFrame {
     background: #313234;
     border: 1px solid #212222; 
+}
+
+/***************************** QListView **********************************/
+
+QListView {
+    background: #313234;
+    border: 1px solid #212222;
+}
+
+/***************************** QTreeView **********************************/
+
+QAbstractScrollArea {
+    background: #313234;
+}
+
+QTreeView {
+    border: 1px solid #212222;
 }
 
 /********************************* Console ********************************/
