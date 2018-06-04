@@ -31,7 +31,11 @@
  */
 
 QWidget {
-    border: 0px;
+    /* XXX The style below is commented because otherwise it messes up the icon
+       size of QToolButtons in QFileDialog. When a better fix is found, we'd
+       want to uncomment it to make the Console look better. */
+    /*border: 0px;*/
+
     margin: 0px;
     padding: 0px;
     background: #404244;
