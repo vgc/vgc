@@ -79,7 +79,8 @@ void MainWindow::saveAs()
         QFileInfo(saveFilename_).dir().path();
 
     // Set which existing files to show in the dialog
-    QString filters = tr("VGC Illustration Files (*.vgci)");
+    QString extension = ".vgci";
+    QString filters = tr("VGC Illustration Files (*%1)").arg(extension);
 
     // Create the dialog
     QFileDialog dialog(this, tr("Save As..."), dir, filters);
@@ -102,6 +103,18 @@ void MainWindow::saveAs()
         if (selectedFiles.size() == 1) {
             QString selectedFile = selectedFiles.first();
             if (!selectedFile.isEmpty()) {
+                // Append file extension if missing. Examples:
+                //   drawing.vgci -> drawing.vgci
+                //   drawing      -> drawing.vgci
+                //   drawing.     -> drawing..vgci
+                //   drawing.vgc  -> drawing.vgc.vgci
+                //   drawingvgci  -> drawingvgci.vgci
+                //   .vgci        -> .vgci
+                if (!selectedFile.endsWith(extension)) {
+                    selectedFile.append(extension);
+                }
+
+                // Save
                 saveFilename_ = selectedFile;
                 save_();
             }
