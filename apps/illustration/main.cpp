@@ -51,30 +51,29 @@ int main(int argc, char* argv[])
     // Create the python interpreter
     vgc::core::PythonInterpreter pythonInterpreter;
 
-    // Create the scene
-    //vgc::scene::SceneSharedPtr scene = vgc::scene::Scene::make();
+    // Create the document
     vgc::dom::DocumentSharedPtr document = vgc::dom::Document::make();
     document->setRootElement(vgc::dom::Vgc::make());
 
-    // Expose the above Scene instance to the Python console as a local Python
-    // variable 'scene'.
+    // Expose the Docuement instance to the Python console as a local Python
+    // variable 'document'.
     //
-    // XXX In the long term, we may not want to expose "scene" directly, but:
+    // XXX In the long term, we may not want to expose "document" directly, but:
     // 1. Have a class VgcIllustrationApp: public QApplication.
     // 2. Have an instance 'VgcIllustrationApp app'.
     // 3. Pass the app to python.
     // 4. Users can call things like:
-    //      app.scene() (or just app.scene, which is more pythonic)
-    //      app.currentScene()
-    //      app.scenes()
+    //      app.document() (or just app.document, which is more pythonic)
+    //      app.currentDocument()
+    //      app.documents()
     //      etc.
     //
     // One advantage is that the calls above can be made read-only.
-    // Currently, users can do scene = Scene() and then are not able
-    // to affect the actual scene anymore...
+    // Currently, users can do document = Document() and then are not able
+    // to affect the actual document anymore...
     //
-    //pythonInterpreter.run("import vgc.scene");
-    //pythonInterpreter.setVariableValue("scene", scene);
+    //pythonInterpreter.run("import vgc.dom");
+    //pythonInterpreter.setVariableValue("document", document);
 
     // Create and show the widget
     vgc::widgets::MainWindow w(document.get(), &pythonInterpreter);
@@ -87,50 +86,6 @@ int main(int argc, char* argv[])
     vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf");
     vgc::widgets::addApplicationFont("widgets/fonts/SourceCodePro-Regular.ttf");
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
-
-    // ---- Test dom ----
-
-    /*
-    // Create a document
-    vgc::dom::DocumentSharedPtr doc = vgc::dom::Document::make();
-
-    // Create the root element of the document
-    vgc::dom::VgcSharedPtr root = vgc::dom::Vgc::make();
-    doc->setRootElement(root);
-
-    // Create two children elements
-    vgc::dom::PathSharedPtr p1 = vgc::dom::Path::make();
-    vgc::dom::PathSharedPtr p2 = vgc::dom::Path::make();
-    root->appendChild(p1);
-    root->appendChild(p2);
-
-    // Author 'positions' attributes
-    vgc::core::StringId positions("positions");
-    vgc::core::Vec2dArray pos = {
-        vgc::core::Vec2d(1, 2),
-        vgc::core::Vec2d(12, 42)
-    };
-    p1->setAttribute(positions, pos);
-    pos.append(vgc::core::Vec2d(5, 6));
-    p2->setAttribute(positions, pos);
-
-    // Author 'widths' attributes
-    vgc::core::StringId widths("widths");
-    vgc::core::DoubleArray ws1 = { 5, 5 };
-    vgc::core::DoubleArray ws2 = { 5, 10, 15 };
-    p1->setAttribute(widths, ws1);
-    p2->setAttribute(widths, ws2);
-
-    // Author 'color' attributes
-    vgc::core::StringId color("color");
-    vgc::core::Color c1(1, 0, 0);
-    vgc::core::Color c2(0, 1, 0);
-    p1->setAttribute(color, c1);
-    p2->setAttribute(color, c2);
-
-    // Save to XML file
-    doc->save("test.vgc");
-    */
 
     // Start event loop
     return application.exec();
