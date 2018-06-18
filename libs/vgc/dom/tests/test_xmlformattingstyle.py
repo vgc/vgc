@@ -6,14 +6,21 @@
 #     cd <vgc-build-dir>
 #     PYTHONPATH=python python3 <vgc-source-dir>/libs/vgc/dom/tests/test_xmlformattingstyle.py
 
+import unittest
+
 from vgc.dom import XmlIndentStyle
 
-style1 = XmlIndentStyle.Spaces
-style2 = XmlIndentStyle.Tabs
-style3 = XmlIndentStyle.Spaces
+class Test_xmlformattingstyle(unittest.TestCase):
 
-if not (style1 != style2):
-    print("Assertion Failed: style1 != style2")
+    def test_equal_indent_styles(self):
+        style1 = XmlIndentStyle.Spaces
+        style2 = XmlIndentStyle.Spaces
+        self.assertEqual(style1, style2)
 
-if not (style1 == style3):
-    print("Assertion Failed: style1 == style3")
+    def test_different_indent_styles(self):
+        style1 = XmlIndentStyle.Spaces
+        style2 = XmlIndentStyle.Tabs
+        self.assertTrue(style1 != style2)
+
+if __name__ == '__main__':
+    unittest.main()
