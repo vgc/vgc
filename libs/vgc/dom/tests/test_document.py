@@ -4,7 +4,7 @@
 # In the meantime, just run the test manually via:
 #
 #     cd <vgc-build-dir>
-#     PYTHONPATH=python python3 <vgc-source-dir>/libs/vgc/dom/tests/testDocument.py
+#     PYTHONPATH=python python3 <vgc-source-dir>/libs/vgc/dom/tests/test_document.py
 
 from vgc.dom import Document
 
