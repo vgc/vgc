@@ -15,13 +15,15 @@
 // limitations under the License.
 
 #include <pybind11/pybind11.h>
+#include <vgc/dom/xmlformattingstyle.h>
 
 namespace py = pybind11;
+using vgc::dom::XmlIndentStyle;
 
-void wrap_document(py::module& m);
-void wrap_xmlformattingstyle(py::module& m);
-
-PYBIND11_MODULE(dom, m) {
-    wrap_document(m);
-    wrap_xmlformattingstyle(m);
+void wrap_xmlformattingstyle(py::module& m)
+{
+    py::enum_<XmlIndentStyle>(m, "XmlIndentStyle")
+        .value("Spaces", XmlIndentStyle::Spaces)
+        .value("Tabs", XmlIndentStyle::Tabs)
+    ;
 }
