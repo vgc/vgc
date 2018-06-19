@@ -1,6 +1,5 @@
-language: cpp
+language: generic
 dist: trusty
-compiler: gcc
 
 before_install:
   # g++ 6
@@ -17,7 +16,7 @@ install:
   - sudo apt-get install -qq g++-6
 
   # Qt 5.6.3
-  - sudo apt-get install -y qt56-meta-full
+  - sudo apt-get install -y qt56base
 
 before_script:
   - QTDIR="/opt/qt56"
