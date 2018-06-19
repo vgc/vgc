@@ -20,7 +20,7 @@ install:
   - export CXX="g++-6"
 
   # Qt 5.6.3
-  - sudo apt-get install -y qt56base
+  - sudo apt-get install qt56base
 
 before_script:
   - QTDIR="/opt/qt56"
