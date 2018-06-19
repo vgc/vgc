@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.1.0)
 project(vgc)
 
+# Always generate unit tests
+enable_testing()
+
+# Have "make check" run the unit tests in --verbose mode.
+# This is more useful than the built-in "make test" which would run ctest
+# without --output-on-failure or --verbose, that is, with no indications
+# of why a test failed, or details from the Python's unittest module about
+# which tests were run.
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+
 # Import our helper functions defined in cmake/VgcTools.cmake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(VgcTools)

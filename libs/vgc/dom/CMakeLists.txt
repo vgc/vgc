@@ -31,3 +31,4 @@ vgc_add_library(dom
 )
 
 add_subdirectory(wraps)
+add_subdirectory(tests)
