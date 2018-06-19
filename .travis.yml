@@ -15,12 +15,9 @@ before_install:
 
 install:
   # g++ 6
-  - sudo apt-get remove g++
-  - sudo apt-get install -qq g++-6
+  - sudo apt-get install g++-6
   - export CC="gcc-6"
   - export CXX="g++-6"
-  - gcc-6 --version
-  - g++-6 --version
 
   # Qt 5.6.3
   - sudo apt-get install -y qt56base
