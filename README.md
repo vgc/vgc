@@ -1,5 +1,7 @@
 ![VGC](https://github.com/vgc/vgc/blob/master/logo.png)
 
+[![Build Status](https://travis-ci.org/vgc/vgc.svg?branch=master)](https://travis-ci.org/vgc/vgc)
+
 # About Me
 
 My name is [Boris Dalstein](http://www.borisdalstein.com/), I am a French
