@@ -10,6 +10,9 @@ before_install:
   - sudo apt-add-repository --yes ppa:beineri/opt-qt563-trusty
   - sudo apt-get -qq update
 
+  # Python 3.6
+  - pyenv global 3.6
+
 install:
   # g++ 6
   - sudo apt-get remove g++
