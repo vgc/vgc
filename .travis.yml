@@ -17,7 +17,7 @@ install:
   - sudo apt-get install -qq g++-6
 
   # Qt 5.6.3
-  - sudo apt-get install -qq qt56-meta-full
+  - sudo apt-get install -y qt56-meta-full
 
 before_script:
   - QTDIR="/opt/qt56"
