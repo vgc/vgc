@@ -162,6 +162,61 @@ function(vgc_wrap_library LIB_NAME)
 
 endfunction()
 
+# Defines a set of unit tests to be run when calling 'make test'. Under the
+# hood, this calls add_test() for each test.
+#
+# For now, only Python tests are supported, but we are planning to support C++
+# tests in the future.
+#
+# Usage:
+# vgc_test_library(mylib
+#     PYTHON_TESTS
+#         test_file1.py
+#         test_file2.py
+# )
+#
+# Python Tests
+# ------------
+#
+# The Python tests are run from the following directory:
+#
+#   <vgc-build-dir>/libs/vgc/mylib/tests/
+#
+# By calling the command
+#
+#   ${PYTHON_EXECUTABLE} <vgc-source-dir>/libs/vgc/mylib/tests/test_mytest.py -v'
+#
+# with the following folder added to PYTHONPATH:
+#
+#   <vgc-build-dir>/python
+#
+# Currently, the CMake variable ${PYTHON_EXECUTABLE} is set by FindPythonLibsNew
+# shipped with third/pybind11.
+#
+function(vgc_test_library LIB_NAME)
+    message("-- VGC Library: ${LIB_NAME} (tests)")
+
+    set(options "")
+    set(oneValueArgs "")
+    set(multiValueArgs PYTHON_TESTS)
+    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    # Add python tests
+    foreach(PYTHON_TEST_FILENAME ${ARG_PYTHON_TESTS})
+        set(PYTHON_TEST_TARGET_NAME "vgc_${LIB_NAME}_${PYTHON_TEST_FILENAME}")
+        add_test(
+            NAME ${PYTHON_TEST_TARGET_NAME}
+            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        )
+        set_tests_properties(${PYTHON_TEST_TARGET_NAME}
+            PROPERTIES
+            ENVIRONMENT PYTHONPATH=${VGC_PYTHON_OUTPUT_DIRECTORY}:$ENV{PYTHONPATH}
+        )
+    endforeach()
+
+endfunction()
+
 # Defines a new VGC app. This calls add_executable under the hood.
 #
 # Usage:
