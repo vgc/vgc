@@ -19,11 +19,19 @@
 
 namespace py = pybind11;
 using vgc::dom::XmlIndentStyle;
+using vgc::dom::XmlFormattingStyle;
 
 void wrap_xmlformattingstyle(py::module& m)
 {
     py::enum_<XmlIndentStyle>(m, "XmlIndentStyle")
         .value("Spaces", XmlIndentStyle::Spaces)
         .value("Tabs", XmlIndentStyle::Tabs)
+    ;
+
+    py::class_<XmlFormattingStyle>(m, "XmlFormattingStyle")
+        .def(py::init<>())
+        .def_readwrite("indentStyle", &XmlFormattingStyle::indentStyle)
+        .def_readwrite("indentSize", &XmlFormattingStyle::indentSize)
+        .def_readwrite("attributeIndentSize", &XmlFormattingStyle::attributeIndentSize)
     ;
 }
