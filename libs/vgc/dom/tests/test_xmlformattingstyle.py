@@ -12,17 +12,11 @@ from vgc.dom import XmlIndentStyle, XmlFormattingStyle
 
 class Test_xmlformattingstyle(unittest.TestCase):
 
-    def test_equal_indent_styles(self):
-        style1 = XmlIndentStyle.Spaces
-        style2 = XmlIndentStyle.Spaces
-        self.assertEqual(style1, style2)
+    def testXmlIndentStyleValues(self):
+        XmlIndentStyle.Spaces
+        XmlIndentStyle.Tabs
 
-    def test_different_indent_styles(self):
-        style1 = XmlIndentStyle.Spaces
-        style2 = XmlIndentStyle.Tabs
-        self.assertTrue(style1 != style2)
-
-    def testCreateXmlFormatingStyle(self):
+    def testXmlFormatingStyleConstructor(self):
         style = XmlFormattingStyle()
 
     def testXmlFormatingStyleDefaultValues(self):
