@@ -23,28 +23,28 @@ namespace vgc {
 namespace dom {
 
 /// \enum vgc::dom::XmlIndentStyle
-/// \brief Whether to use tabs or spaces for indentation.
+/// \brief Whether tabs or spaces are used for indentation.
 ///
-/// This enum class specifies whether to use tabs or spaces for indentation
+/// This enum class specifies whether tabs or spaces are used for indentation
 /// of an XML file. The two possible values are XmlIndentStyle::Tabs and
 /// XmlIndentStyle::Spaces.
 ///
 /// \sa XmlFormattingStyle
 ///
-// Note: this is only meant for indentation purposes, not alignment. For now,
-// this is irrelevant because we do not support any formatting style requiring
-// alignment, but in the future, spaces may still be used for alignement
-// even when indentStyle = Tabs. For example:
-//
-// \code
-// <a>
-// ---><b>
-// --->---><c attr1="value1"
-// --->--->...attr2="value2"/>
-// ---></b>
-// </c>
-// \endcode
-//
+/// Note that this is only meant for indentation purposes, not alignment.
+/// Currently, this is irrelevant because we do not support any formatting
+/// style requiring alignment, but in the future, spaces may still be used for
+/// alignement even when indentStyle = Tabs. For example:
+///
+/// \code
+/// <a>
+/// ---><b>
+/// --->---><c attr1="value1"
+/// --->--->...attr2="value2"/>
+/// ---></b>
+/// </c>
+/// \endcode
+///
 enum class XmlIndentStyle {
     Spaces, ///< Use spaces for indentation.
     Tabs    ///< Use tabs for indentation.
@@ -53,13 +53,13 @@ enum class XmlIndentStyle {
 /// \class vgc::dom::XmlFormattingStyle
 /// \brief Specifies how XML documents should be formatted (indentation, etc.)
 ///
-/// This struct-like class allows you to specifies how XML outpul files look
-/// like. For example, use indentStyle to specify whether to use tabs or spaces,
-/// and indentSize to specify how many of them to use at each indent level. Finally,
-/// use attributeIndentSize to specify how many tabs or spaces to use to indent
-/// attributes.
+/// This struct-like class allows you to specifies how output XML files are
+/// formatted. For example, indentStyle specifies whether tabs or spaces are
+/// used for indentation, and indentSize specifies how many of them are used
+/// for each indent level. Finally, attributeIndentSize specifies how many tabs
+/// or spaces are used to indent attributes.
 ///
-/// For now, attributes are always placed on a separate line, like so:
+/// Currently, attributes are always placed on a separate line, like this:
 ///
 /// \code
 /// <sometag
@@ -70,8 +70,8 @@ enum class XmlIndentStyle {
 /// </sometag>
 /// \endcode
 ///
-/// However, in the future, we are planning to extend this class in order to let
-/// you place attributes on a single line, such as:
+/// However, in the future, we are planning to extend this class in order to
+/// allow having attributes on a single line, like this:
 ///
 /// \code
 /// <sometag attr1="value1" attr2="value2">
@@ -85,8 +85,8 @@ enum class XmlIndentStyle {
 //
 struct XmlFormattingStyle
 {
-    /// Whether to use tabs or spaces for indentation of XML nodes. The default
-    /// value is XmlIndentStyle::Spaces.
+    /// Whether tabs or spaces are used for indentation of XML nodes. The
+    /// default value is XmlIndentStyle::Spaces.
     ///
     /// Example with indentStyle = XmlIndentStyle::Spaces and indentSize = 2:
     ///
@@ -116,14 +116,14 @@ struct XmlFormattingStyle
     ///
     XmlIndentStyle indentStyle = XmlIndentStyle::Spaces;
 
-    /// Number of tabs or spaces to use for each indent level of XML nodes. The
+    /// Number of tabs or spaces used for each indent level of XML nodes. The
     /// default value is 2.
     ///
     /// \sa indentStyle
     ///
     int indentSize = 2;
 
-    /// Number of tabs or spaces to use for indenting attributes. The default
+    /// Number of tabs or spaces used for indenting attributes. The default
     /// value is 4.
     ///
     /// It is useful to have different values for indentSize and
