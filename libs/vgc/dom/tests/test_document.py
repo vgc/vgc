@@ -20,9 +20,9 @@ import unittest
 
 from vgc.dom import Document
 
-class Test_document(unittest.TestCase):
+class TestDocument(unittest.TestCase):
 
-    def testDocumentConstructor(self):
+    def testConstructor(self):
         document = Document()
 
 if __name__ == '__main__':

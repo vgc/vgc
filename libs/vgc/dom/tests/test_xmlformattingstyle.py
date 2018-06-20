@@ -20,16 +20,18 @@ import unittest
 
 from vgc.dom import XmlIndentStyle, XmlFormattingStyle
 
-class Test_xmlformattingstyle(unittest.TestCase):
+class TestXmlIndentStyle(unittest.TestCase):
 
-    def testXmlIndentStyleValues(self):
+    def testValues(self):
         XmlIndentStyle.Spaces
         XmlIndentStyle.Tabs
 
-    def testXmlFormatingStyleConstructor(self):
+class TestXmlFormattingStyle(unittest.TestCase):
+
+    def testConstructor(self):
         style = XmlFormattingStyle()
 
-    def testXmlFormatingStyleDefaultValues(self):
+    def testDefaultValues(self):
         style = XmlFormattingStyle()
         self.assertEqual(style.indentStyle, XmlIndentStyle.Spaces)
         self.assertEqual(style.indentSize, 2)
