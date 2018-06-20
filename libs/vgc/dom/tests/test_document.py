@@ -12,9 +12,8 @@ from vgc.dom import Document
 
 class Test_document(unittest.TestCase):
 
-    def test_create_document(self):
+    def testDocumentConstructor(self):
         document = Document()
-        self.assertTrue(document)
 
 if __name__ == '__main__':
     unittest.main()
