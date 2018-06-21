@@ -119,10 +119,10 @@ document why:
 
 ```
 PYBIND11_MODULE(foobar, m) {
-    # Used as default arguments
+    // Used as default arguments. See pythonwrappersguide.md#default-arguments.
     wrap_foo(m);
 
-    # Never used as default arguments
+    // Never used as default arguments
     wrap_bar(m);
 }
 ```
