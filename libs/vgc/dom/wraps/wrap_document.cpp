@@ -18,12 +18,16 @@
 #include <vgc/dom/document.h>
 
 namespace py = pybind11;
+using namespace py::literals;
+
 using vgc::dom::Document;
 using vgc::dom::DocumentSharedPtr;
+using vgc::dom::XmlFormattingStyle;
 
 void wrap_document(py::module& m)
 {
     py::class_<Document, DocumentSharedPtr>(m, "Document")
         .def(py::init([]() { return Document::make(); } ))
+        .def("save", &Document::save, "filePath"_a, "style"_a = XmlFormattingStyle())
     ;
 }

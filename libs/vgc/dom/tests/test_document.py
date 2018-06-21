@@ -25,5 +25,9 @@ class TestDocument(unittest.TestCase):
     def testConstructor(self):
         document = Document()
 
+    def testSave(self):
+        document = Document()
+        document.save("testSave.vgc")
+
 if __name__ == '__main__':
     unittest.main()

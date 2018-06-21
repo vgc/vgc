@@ -22,6 +22,9 @@ void wrap_document(py::module& m);
 void wrap_xmlformattingstyle(py::module& m);
 
 PYBIND11_MODULE(dom, m) {
-    wrap_document(m);
+    // Used as default arguments. See pythonwrappersguide.md#default-arguments.
     wrap_xmlformattingstyle(m);
+
+    // Never used as default arguments
+    wrap_document(m);
 }
