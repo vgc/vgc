@@ -105,8 +105,8 @@ PYBIND11_MODULE(foobar, m) {
 This is a bit unfortunate as we would prefer to keep the list alphabetical and
 not worry about dependency issues. The alternative is not to use default
 arguments for the wrappers, and instead use [function overloads or generic
-py::args arguments](https://github.com/pybind/pybind11/issues/1218#issuecomment-
-353700297). An even strongly opinionated alternative is not to use default
+py::args arguments](https://github.com/pybind/pybind11/issues/1218#issuecomment-353700297).
+An even strongly opinionated alternative is not to use default
 arguments even in the C++ API, and use overloads instead, as discussed in the
 [Google C++ Style
 Guide](https://google.github.io/styleguide/cppguide.html#Default_Arguments).
@@ -119,10 +119,10 @@ document why:
 
 ```
 PYBIND11_MODULE(foobar, m) {
-    # Used as default parameters
+    # Used as default arguments
     wrap_foo(m);
 
-    # Never used as default parameters
+    # Never used as default arguments
     wrap_bar(m);
 }
 ```
