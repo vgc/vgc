@@ -1,7 +1,7 @@
 # VGC C++ Style Guide
 
-Try to follow these guidelines as much as reasonable. Don't overthink it (too much). 
-If something is not addressed here, follow the 
+Try to follow these guidelines as much as reasonable. Don't overthink it (too much).
+If something is not addressed here, follow the
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
 If something is not addressed there, favour readability.
 In case of doubt, follow your heart :)
@@ -30,12 +30,12 @@ In cpp files, include corresponding header first, then all other header files as
 
 Within each "group" (e.g., Qt includes), order alphabetically.
 
-Don't rely on includes from other headers. For example, if you need both 
-`vgc::geometry::Curve` and `vgc::geometry::Vec2d`, include both 
+Don't rely on includes from other headers. For example, if you need both
+`vgc::geometry::Curve` and `vgc::geometry::Vec2d`, include both
 `<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`
 
 Never use `using somenamespace::SomeClass;` in a header file, and more
-importantly never use `using somenamespace` in a header file. Yes, this is annoying, 
+importantly never use `using somenamespace` in a header file. Yes, this is annoying,
 and I hate it too. Please blame C++, not me.
 
 ## Scoping
@@ -75,7 +75,7 @@ Prefer `enum class` rather than C-style `enum`.
 
 ## Naming
 
-Prefer long descriptive names than abbreviations, but use common sense: 
+Prefer long descriptive names than abbreviations, but use common sense:
 if a name is expected to be used extremely often (e.g., Vec2d), then shortening makes sense.
 
 Don't overthink naming for anything which is private. However, expect a discussion during
@@ -92,7 +92,7 @@ privateFunctionName_()
 privateMemberVariableName_
 localVariable
 VGC_MYLIB_PUBLICMACRO
-VGC_MYLIB_PRIVATEMACRO
+VGC_MYLIB_PRIVATEMACRO_
 enum class EnumName {
     EnumValue1,
     EnumValue2
@@ -162,7 +162,7 @@ class TypicalClass
 {
 public:
     void thisIsPreferred();
-    
+
 private:
     int becauseOneMoreLines_;
     int doesntChangeMuch_;
