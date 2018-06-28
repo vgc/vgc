@@ -18,12 +18,17 @@
 
 import unittest
 
-from vgc.dom import Document
+from vgc.dom import Document, Vgc
 
 class TestDocument(unittest.TestCase):
 
     def testConstructor(self):
         document = Document()
+
+    def testRootElement(self):
+        document = Document()
+        document.rootElement = Vgc()
+        self.assertEqual(document.rootElement.name, "vgc")
 
     def testSave(self):
         document = Document()
