@@ -15,18 +15,17 @@
 // limitations under the License.
 
 #include <pybind11/pybind11.h>
+#include <vgc/dom/vgc.h>
 
 namespace py = pybind11;
+using namespace py::literals;
 
-void wrap_document(py::module& m);
-void wrap_vgc(py::module& m);
-void wrap_xmlformattingstyle(py::module& m);
+using vgc::dom::Vgc;
+using vgc::dom::VgcSharedPtr;
 
-PYBIND11_MODULE(dom, m) {
-    // Used as default arguments. See pythonwrappersguide.md#default-arguments.
-    wrap_xmlformattingstyle(m);
-
-    // Never used as default arguments
-    wrap_document(m);
-    wrap_vgc(m);
+void wrap_vgc(py::module& m)
+{
+    py::class_<Vgc, VgcSharedPtr>(m, "Vgc")
+        .def(py::init([]() { return Vgc::make(); } ))
+    ;
 }
