@@ -22,10 +22,11 @@ using namespace py::literals;
 
 using vgc::dom::Vgc;
 using vgc::dom::VgcSharedPtr;
+using vgc::dom::Element;
 
 void wrap_vgc(py::module& m)
 {
-    py::class_<Vgc, VgcSharedPtr>(m, "Vgc")
+    py::class_<Vgc, VgcSharedPtr, Element>(m, "Vgc")
         .def(py::init([]() { return Vgc::make(); } ))
     ;
 }

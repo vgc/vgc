@@ -24,6 +24,7 @@ class TestVgc(unittest.TestCase):
 
     def testConstructor(self):
         vgc = Vgc()
+        self.assertEqual(vgc.name, "vgc")
 
 if __name__ == '__main__':
     unittest.main()
