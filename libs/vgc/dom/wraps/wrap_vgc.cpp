@@ -20,13 +20,13 @@
 namespace py = pybind11;
 using namespace py::literals;
 
-using vgc::dom::Vgc;
-using vgc::dom::VgcSharedPtr;
-using vgc::dom::Element;
+using This = vgc::dom::Vgc;
+using Holder = vgc::dom::VgcSharedPtr;
+using Parent = vgc::dom::Element;
 
 void wrap_vgc(py::module& m)
 {
-    py::class_<Vgc, VgcSharedPtr, Element>(m, "Vgc")
-        .def(py::init([]() { return Vgc::make(); } ))
+    py::class_<This, Holder, Parent>(m, "Vgc")
+        .def(py::init([]() { return This::make(); } ))
     ;
 }

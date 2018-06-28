@@ -20,13 +20,13 @@
 namespace py = pybind11;
 using namespace py::literals;
 
-using vgc::dom::Element;
-using vgc::dom::ElementSharedPtr;
+using This = vgc::dom::Element;
+using Holder = vgc::dom::ElementSharedPtr;
 
 void wrap_element(py::module& m)
 {
-    py::class_<Element, ElementSharedPtr>(m, "Element")
-        .def(py::init([](const std::string& name) { return Element::make(name); } ))
-        .def_property_readonly("name", [](const Element& element) { return element.name().string(); } )
+    py::class_<This, Holder>(m, "Element")
+        .def(py::init([](const std::string& name) { return This::make(name); } ))
+        .def_property_readonly("name", [](const This& self) { return self.name().string(); } )
     ;
 }
