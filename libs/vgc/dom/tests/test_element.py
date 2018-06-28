@@ -25,5 +25,9 @@ class TestElement(unittest.TestCase):
     def testConstructor(self):
         element = Element("foo")
 
+    def testName(self):
+        element = Element("foo")
+        self.assertEqual(element.name, "foo")
+
 if __name__ == '__main__':
     unittest.main()

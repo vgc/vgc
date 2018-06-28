@@ -27,5 +27,6 @@ void wrap_element(py::module& m)
 {
     py::class_<Element, ElementSharedPtr>(m, "Element")
         .def(py::init([](const std::string& name) { return Element::make(name); } ))
+        .def_property_readonly("name", [](const Element& element) { return element.name().string(); } )
     ;
 }
