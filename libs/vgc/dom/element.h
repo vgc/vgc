@@ -40,6 +40,10 @@ public:
     ///
     Element(core::StringId name);
 
+    /// Creates a new Element with the given \p name.
+    ///
+    Element(const std::string& name);
+
     /// Casts the given \p node to an Element. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Element.
     ///

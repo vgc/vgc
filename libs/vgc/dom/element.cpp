@@ -28,6 +28,13 @@ Element::Element(core::StringId name) :
 
 }
 
+Element::Element(const std::string& name) :
+    Node(NodeType::Element),
+    name_(name)
+{
+
+}
+
 const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
 {
     // XXX TODO
