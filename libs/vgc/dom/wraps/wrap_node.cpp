@@ -15,23 +15,25 @@
 // limitations under the License.
 
 #include <pybind11/pybind11.h>
-#include <vgc/dom/document.h>
-#include <vgc/dom/element.h>
+#include <vgc/dom/node.h>
 
 namespace py = pybind11;
 using namespace py::literals;
 
-using This = vgc::dom::Document;
-using Holder = vgc::dom::DocumentSharedPtr;
-using Parent = vgc::dom::Node;
+using This = vgc::dom::Node;
+using Holder = vgc::dom::NodeSharedPtr;
 
-using vgc::dom::XmlFormattingStyle;
+using vgc::dom::NodeType;
 
-void wrap_document(py::module& m)
+void wrap_node(py::module& m)
 {
-    py::class_<This, Holder, Parent>(m, "Document")
-        .def(py::init([]() { return This::make(); } ))
-        .def_property("rootElement", &This::rootElement, &This::setRootElement)
-        .def("save", &This::save, "filePath"_a, "style"_a = XmlFormattingStyle())
+    py::enum_<NodeType>(m, "NodeType")
+        .value("Element", NodeType::Element)
+        .value("Document", NodeType::Document)
+    ;
+
+    py::class_<This, Holder>(m, "Node")
+        // Note: Node has no public constructor
+        .def_property_readonly("nodeType", &This::nodeType)
     ;
 }

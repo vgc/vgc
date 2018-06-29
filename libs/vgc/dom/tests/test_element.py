@@ -18,12 +18,13 @@
 
 import unittest
 
-from vgc.dom import Element
+from vgc.dom import Element, NodeType
 
 class TestElement(unittest.TestCase):
 
     def testConstructor(self):
         element = Element("foo")
+        self.assertEqual(element.nodeType, NodeType.Element)
 
     def testName(self):
         element = Element("foo")

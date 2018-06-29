@@ -22,10 +22,11 @@ using namespace py::literals;
 
 using This = vgc::dom::Element;
 using Holder = vgc::dom::ElementSharedPtr;
+using Parent = vgc::dom::Node;
 
 void wrap_element(py::module& m)
 {
-    py::class_<This, Holder>(m, "Element")
+    py::class_<This, Holder, Parent>(m, "Element")
         .def(py::init([](const std::string& name) { return This::make(name); } ))
         .def_property_readonly("name", [](const This& self) { return self.name().string(); } )
     ;

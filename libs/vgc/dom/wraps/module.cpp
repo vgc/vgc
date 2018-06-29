@@ -20,15 +20,16 @@ namespace py = pybind11;
 
 void wrap_document(py::module& m);
 void wrap_element(py::module& m);
+void wrap_node(py::module& m);
 void wrap_vgc(py::module& m);
 void wrap_xmlformattingstyle(py::module& m);
 
 PYBIND11_MODULE(dom, m) {
-    // Used as default arguments. See pythonwrappersguide.md#default-arguments.
+    wrap_node(m);
     wrap_xmlformattingstyle(m);
 
-    // Never used as default arguments
-    wrap_document(m);
-    wrap_element(m);
-    wrap_vgc(m);
+    wrap_document(m); // dependencies: node, xmlformattingstyle
+    wrap_element(m); // dependencies: node
+
+    wrap_vgc(m); // dependencies: element
 }
