@@ -69,6 +69,136 @@ library symbols as `from vgc.foobar import Foo, Bar`. Note that the Python
 interpreter embedded in VGC apps automatically adds `<vgc-build-dir>/python` to
 `sys.path`.
 
+## Wrapping C++ Classes with Value Semantics
+
+In C++, it is usually a good practice to design classes to be used with *value
+semantics*. For example, a vgc::core::Vec2d can be allocated on the stack, and
+writing `a = b` creates a copy of your `b` into `a`:
+
+```
+using vgc::core::Vec2d;
+Vec2d v1(0, 0);
+Vec2d v2 = v1;
+v2[0] = 42;
+std::cout << v1[0]; // -> 0
+```
+
+By contrast, in Python, all objects are used with *pointer semantics*. For
+example, when writing `a = b`, `a` does not become a copy of `b`, but another
+name for the object referenced by `b`:
+
+```
+from vgc.core import Vec2d
+v1 = Vec2d(0, 0)
+v2 = v1
+v2[0] = 42;
+print(v1[0]); // -> 42
+```
+
+This divergence of semantics between the C++ code and its Python "equivalent"
+may seem confusing or even error-prone. But in fact, it makes sense and follows
+the philosophy of each language: Python programmers won't be surprised by the
+Python behavior, and C++ programmers won't be surprised by the C++ behavior.
+
+Such behavior is obtained by wrapping `Vec2d` using `py::class_<Vec2d>` with no
+template options:
+
+```
+py::class_<Vec2d>(m, "Vec2d")
+    .def(py::init<>())
+    // ...
+;
+```
+
+## Wrapping C++ Classes with Pointer Semantics
+
+Despite value semantics being generally preferrable in C++, many node-based data
+structures (for example: linked-lists, trees, scene graphs, hierarchies of GUI
+widgets, etc.) are well represented in C++ by allocating `Node` objects
+dynamically. Doing so, the address of each `Node` object can be conveniently
+used as its "identity": it is guaranteed to be unique and never change.
+
+The lifetime of the nodes is typically controlled by a manager class
+(say, `Graph`), for example using `std::unique_ptr<Node>`,
+`std::shared_ptr<Node>`, or other mechanisms. Clients of the API refer to nodes
+using raw pointers `Node*`, non-owning smart pointers such as
+`std::weak_ptr<Node>`, or any other [handle
+mechanism](https://isocpp.org/wiki/faq/references#what-is-a-handle) such as
+`std::list<T>::iterator` or [CGAL
+handles](https://doc.cgal.org/latest/Circulator/classHandle.html).
+
+One important aspect of such data structures is that it is generally desired
+that "observers" do NOT extend the lifetime of nodes. For example, when erasing
+an element in a `std::list`, the element is immediately deleted even if some
+clients hold iterators to the elements (in which case the iterators become
+invalid). This is why observers should generally not hold `shared_ptr`, but
+rather non-owning pointers/references/handles.
+
+In the VGC codebase, we choose to consistently use
+`std::shared_ptr<Node>` to express owning pointers (even for unique ownership),
+and `Node*` to express non-owning pointers. Such class `Node` meant to be used with
+pointer semantics should derive (directly or indirectly) from
+`vgc::core::Object`, for example:
+
+```
+#include <vgc/core/object.h>
+#include <vgc/mylib/api.h>
+
+namespace vgc {
+namespace mylib {
+
+VGC_CORE_DECLARE_PTRS(Node);
+
+class VGC_MYLIB_API Node: public core::Object // or any class inheriting Object
+{
+public:
+    VGC_CORE_OBJECT(Node)
+
+    Node* otherNode() { return otherNode_.get(); }
+
+private:
+    NodeSharedPtr otherNode_;
+};
+
+} // namespace mylib
+} // namespace vgc
+```
+
+And they should be wrapped like so:
+
+```
+using This = vgc::mylib::Node;
+using Holder = vgc::mylib::NodeSharedPtr
+using Parent = vgc::core::Object; // or any class inheriting Object
+
+py::class_<This, Holder, Parent>(m, "Node")
+    .def(py::init<>())
+    .def_property_readonly("otherNode", &This::otherNode, py::return_value_policy::reference)
+    // ...
+;
+```
+
+The [return value
+policy](https://pybind11.readthedocs.io/en/stable/advanced/functions.html#return-value-policies)
+makes sure that Python does not take ownership of the returned `Node*` which
+would extend its lifetime. Also, note that `vgc::core::Object` derives from
+`std::enable_shared_from_this`, which makes it possible for Python to properly
+share ownership if necessary, as suggested by the [pybind11 documentation about
+shared
+pointers](https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html#std-shared-ptr).
+Also, it allows C++ observers to promote the raw pointer to a `std::weak_ptr` if
+necessary.
+
+## Parent Class
+
+The parent class of any given class can be specified as a [template parameter of
+py::class_](
+http://pybind11.readthedocs.io/en/stable/classes.html#inheritance-and-automatic-upcasting).
+However, for this to work, this requires pybind11 to already know about the
+parent class. Therefore, in `module.cpp`, the python wrappers of parent classes
+must appear before the derived classes. We recommend to document these
+dependencies using comments for better maintainability.
+
 ## Default Arguments
 
 Consider the following C++ method with a default argument:
