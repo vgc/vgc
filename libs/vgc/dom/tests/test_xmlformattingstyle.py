@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.dom import XmlIndentStyle, XmlFormattingStyle
+from vgc.dom import XmlFormattingStyle, XmlIndentStyle
 
 class TestXmlIndentStyle(unittest.TestCase):
 

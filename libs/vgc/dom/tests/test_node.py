@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.dom import NodeType, Node, Element, Document
+from vgc.dom import Document, Element, Node, NodeType
 
 class TestNodeType(unittest.TestCase):
 
