@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.dom import NodeType, Node, Element
+from vgc.dom import NodeType, Node, Element, Document
 
 class TestNodeType(unittest.TestCase):
 
@@ -35,6 +35,24 @@ class TestNode(unittest.TestCase):
     def testNodeType(self):
         node = Element("foo")
         self.assertEqual(node.nodeType, NodeType.Element)
+
+    def testAppendChild(self):
+        node1 = Element("foo")
+        node2 = Element("bar")
+        self.assertEqual(node1.appendChild(node2), node2)
+
+    def testAppendChildDocument(self):
+        element = Element("foo")
+        document = Document()
+        self.assertFalse(element.appendChild(document))
+
+    def testAppendChildRootElement(self):
+        document = Document()
+        element1 = Element("foo")
+        element2 = Element("bar")
+        document.appendChild(element1)
+        self.assertEqual(document.rootElement, element1)
+        self.assertFalse(document.appendChild(element2))
 
 if __name__ == '__main__':
     unittest.main()

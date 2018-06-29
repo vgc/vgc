@@ -35,5 +35,6 @@ void wrap_node(py::module& m)
     py::class_<This, Holder>(m, "Node")
         // Note: Node has no public constructor
         .def_property_readonly("nodeType", &This::nodeType)
+        .def("appendChild", &This::appendChild, py::return_value_policy::reference)
     ;
 }

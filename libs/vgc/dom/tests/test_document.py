@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.dom import Document, Vgc, NodeType
+from vgc.dom import Document, Vgc, NodeType, Element
 
 class TestDocument(unittest.TestCase):
 
@@ -33,6 +33,8 @@ class TestDocument(unittest.TestCase):
 
     def testSave(self):
         document = Document()
+        root = document.appendChild(Vgc())
+        root.appendChild(Element("path"))
         document.save("testSave.vgc")
 
 if __name__ == '__main__':
