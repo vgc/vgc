@@ -56,3 +56,4 @@ vgc_add_library(core
 )
 
 add_subdirectory(wraps)
+add_subdirectory(tests)
