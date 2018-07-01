@@ -25,7 +25,8 @@ void wrap_vec2d(py::module& m)
 {
     py::class_<Vec2d>(m, "Vec2d")
 
-        .def(py::init<>())
+        // Note: in Python, Vec2d() does zero-initialization, unlike in C++
+        .def(py::init([]() { return Vec2d(0, 0); } ))
         .def(py::init<double, double>())
         .def(py::init<Vec2d>())
 

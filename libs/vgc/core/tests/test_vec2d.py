@@ -23,10 +23,10 @@ from vgc.core import Vec2d
 class TestVec2d(unittest.TestCase):
 
     def testDefaultConstructor(self):
+        # Note: in Python, Vec2d() does zero-initialization, unlike in C++
         v = Vec2d()
-        # Note: no zero-initialization happening.
-        # XXX Should Python bindings do zero-initialization, unlike
-        # the C++ version?
+        self.assertEqual(v.x, 0)
+        self.assertEqual(v.y, 0)
 
     def testInitializingConstructor(self):
         v = Vec2d(12.5, 42)
