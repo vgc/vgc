@@ -47,7 +47,7 @@ class TestVec2d(unittest.TestCase):
 
     def testCopyByValue(self):
         v1 = Vec2d(12.5, 42)
-        v2 = Vec2d(v1.x, v1.y) # XXX TODO Wrap copy-constructor
+        v2 = Vec2d(v1)
         self.assertEqual(v2.x, 12.5)
         self.assertEqual(v2.y, 42)
         #self.assertEqual(v2, v1) # XXX Fail for now TODO Wrap equality operator

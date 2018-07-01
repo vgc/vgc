@@ -27,6 +27,7 @@ void wrap_vec2d(py::module& m)
 
         .def(py::init<>())
         .def(py::init<double, double>())
+        .def(py::init<Vec2d>())
 
         .def("__getitem__", [](const Vec2d& v, int i) {
             if (i < 0 || i >= 2) throw py::index_error();
