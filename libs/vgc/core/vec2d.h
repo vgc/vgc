@@ -139,9 +139,7 @@ public:
                v1.data_[1] == v2.data_[1];
     }
 
-    /// Returns whether the two given Vec2d \p v1 and \p v2 are different,
-    /// that is, whether they have different size or `v1[i] == v2[i]` for some
-    /// valid i index.
+    /// Returns whether the two given Vec2d \p v1 and \p v2 are different.
     ///
     friend bool operator!=(const Vec2d& v1, const Vec2d& v2) {
         return v1.data_[0] != v2.data_[0] ||
