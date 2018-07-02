@@ -185,18 +185,12 @@ public:
     ///
     friend bool operator<(const Color& c1, const Color& c2) {
         return ( (c1.data_[0] < c2.data_[0]) ||
-                 (!(c2.data_[0] < c1.data_[0]) &&
-                   ( (c1.data_[1] < c2.data_[1]) ||
-                     (!(c2.data_[1] < c1.data_[1]) &&
-                       ( (c1.data_[2] < c2.data_[2]) ||
-                         (!(c2.data_[2] < c1.data_[2]) &&
-                             (c1.data_[3] < c2.data_[3])
-                         )
-                       )
-                     )
-                   )
-                 )
-               );
+               (!(c2.data_[0] < c1.data_[0]) &&
+               ( (c1.data_[1] < c2.data_[1]) ||
+               (!(c2.data_[1] < c1.data_[1]) &&
+               ( (c1.data_[2] < c2.data_[2]) ||
+               (!(c2.data_[2] < c1.data_[2]) &&
+               ( (c1.data_[3] < c2.data_[3]))))))));
     }
 
     /// Compares the two Color \p c1 and \p c2 using the lexicographic

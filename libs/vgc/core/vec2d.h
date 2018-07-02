@@ -150,8 +150,9 @@ public:
     /// order.
     ///
     friend bool operator<(const Vec2d& v1, const Vec2d& v2) {
-        return (v1.data_[0] < v2.data_[0]) ||
-               (!(v2.data_[0] < v1.data_[0]) && (v1.data_[1] < v2.data_[1]));
+        return ( (v1.data_[0] < v2.data_[0]) ||
+               (!(v2.data_[0] < v1.data_[0]) &&
+               ( (v1.data_[1] < v2.data_[1]))));
     }
 
     /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
