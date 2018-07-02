@@ -165,6 +165,61 @@ public:
         return Color(*this) /= s;
     }
 
+    /// Returns whether the two given Color \p c1 and \p c2 are equal.
+    ///
+    friend bool operator==(const Color& c1, const Color& c2) {
+        return c1.data_[0] == c2.data_[0] &&
+               c1.data_[1] == c2.data_[1] &&
+               c1.data_[2] == c2.data_[2] &&
+               c1.data_[3] == c2.data_[3];
+    }
+
+    /// Returns whether the two given Color \p c1 and \p c2 are different.
+    ///
+    friend bool operator!=(const Color& c1, const Color& c2) {
+        return !(c1 == c2);
+    }
+
+    /// Compares the two Color \p c1 and \p c2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator<(const Color& c1, const Color& c2) {
+        return ( (c1.data_[0] < c2.data_[0]) ||
+                 (!(c2.data_[0] < c1.data_[0]) &&
+                   ( (c1.data_[1] < c2.data_[1]) ||
+                     (!(c2.data_[1] < c1.data_[1]) &&
+                       ( (c1.data_[2] < c2.data_[2]) ||
+                         (!(c2.data_[2] < c1.data_[2]) &&
+                             (c1.data_[3] < c2.data_[3])
+                         )
+                       )
+                     )
+                   )
+                 )
+               );
+    }
+
+    /// Compares the two Color \p c1 and \p c2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator<=(const Color& c1, const Color& c2) {
+        return !(c2 < c1);
+    }
+
+    /// Compares the two Color \p c1 and \p c2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator>(const Color& c1, const Color& c2) {
+        return c2 < c1;
+    }
+
+    /// Compares the two Color \p c1 and \p c2 using the lexicographic
+    /// order.
+    ///
+    friend bool operator>=(const Color& c1, const Color& c2) {
+        return !(c1 < c2);
+    }
+
 private:
     double data_[4];
 };
