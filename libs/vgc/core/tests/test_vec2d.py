@@ -33,6 +33,16 @@ class TestVec2d(unittest.TestCase):
         self.assertEqual(v.x, 12.5)
         self.assertEqual(v.y, 42)
 
+    def testFromTuple(self):
+        t = (12.5, 42)
+        v = Vec2d(t)
+        self.assertEqual(v.x, 12.5)
+        self.assertEqual(v.y, 42)
+
+        t2 = (12.5, 42, 12)
+        with self.assertRaises(ValueError):
+            v = Vec2d(t2)
+
     def testCopyByReference(self):
         v1 = Vec2d(12.5, 42)
         v2 = v1

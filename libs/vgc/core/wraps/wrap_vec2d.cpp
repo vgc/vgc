@@ -28,6 +28,9 @@ void wrap_vec2d(py::module& m)
         // Note: in Python, Vec2d() does zero-initialization, unlike in C++
         .def(py::init([]() { return Vec2d(0, 0); } ))
         .def(py::init<double, double>())
+        .def(py::init([](py::tuple t) {
+            if (t.size() != 2) throw py::value_error("size of tuple must be 2 for conversion to Vec2d");
+            return Vec2d(t[0].cast<double>(), t[1].cast<double>()); } ))
         .def(py::init<Vec2d>())
 
         .def("__getitem__", [](const Vec2d& v, int i) {
