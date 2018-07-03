@@ -125,4 +125,7 @@ std::string toString(const Vec2dArray& a)
 // better to stick with std::vector in C++. In any case, it is still probably a
 // good idea to keep using a typedef (using Vec2dArray = std::vector<Vec2d>) so
 // that in the documentation, the signature of functions take Vec2dArray, which
-// is consistent between C++ and Python.
+// is consistent between C++ and Python. Or alternatively, like in NumPy, we
+// may want to support uninitialized arrays. In this case, we would have to
+// implement from scratch a vector type and not rely on std::vector at all.
+//
