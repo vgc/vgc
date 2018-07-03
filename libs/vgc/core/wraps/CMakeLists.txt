@@ -4,4 +4,5 @@ vgc_wrap_library(core
     wrap_doublearray.cpp
     wrap_timer.cpp
     wrap_vec2d.cpp
+    wrap_vec2darray.cpp
 )
