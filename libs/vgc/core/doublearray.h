@@ -25,6 +25,36 @@
 namespace vgc {
 namespace core {
 
+// XXX Currently, in a lot (most?) of places, the doc of DoubleArray (and
+// Vec2dArray, etc.) says that the memory is "uninitialized", while it is in
+// fact zero-initialized due to std::vector not really allowing us to have an
+// uninitialized vector of a given size. Our options are:
+//
+// 1. Actually ensure initialization and say so in the doc.
+//    Pros: closer to std::vector API
+//    Cons: we might have to sacrifice performance in some cases, see below.
+//
+// 2. Change implementation from std::vector to custom allocations allowing
+//    to have an uninitialized size-n vector
+//    Const: might have to give up on the DoubleArray::stdVector() method
+//
+// 3. Keep it as is. We can mention (or not) in the doc of DoubleArray that
+//    "currently, the memory is zero-initialized, but clients
+//    shouldn't rely on it as this may change in the future."
+//
+// Action item:
+//
+// Defer decision to when the software is more finished and we have better data
+// to decide which option is best. For now, we keep the zero-initialization but
+// say "uninitialized" in the doc, and then we'll measure whether it is ever a
+// problem. In most performance-critical code, it is possible to use reserve()
+// + emplace_back() and have nearly (XXX how nearly?) the same performance as
+// using a "double* a = new double[size]". However, a potential issue is that
+// some algorithms may be required to fill the vector in "random" order, but
+// still are guaranteed to fill all values. In these cases, you can't use the
+// reserve() + push_back() idiom. In many other cases, using the idiom is
+// possible, but less readable.
+
 /// \class vgc::core::DoubleArray
 /// \brief Sequence of double elements stored contiguously in memory.
 ///
