@@ -116,3 +116,13 @@ std::string toString(const Vec2dArray& a)
 // which solution is "better". But anyway, this is the rationale why we are
 // using Vec2dArray instead of std::vector. It was a hard decision.
 //
+
+// XXX Actually, I just realize now that in the specific case of basic
+// containers, it may not really a good idea to make the interface similar
+// between python and C++, since Python have better syntax for sequences
+// (slicing, __len__ function, etc.) with no C++ equivalent. Therefore, if the
+// API for Vec2dArray diverges between Python and C++ anyway, maybe it is
+// better to stick with std::vector in C++. In any case, it is still probably a
+// good idea to keep using a typedef (using Vec2dArray = std::vector<Vec2d>) so
+// that in the documentation, the signature of functions take Vec2dArray, which
+// is consistent between C++ and Python.
