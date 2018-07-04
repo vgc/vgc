@@ -20,6 +20,18 @@
 #include <memory>
 #include <vgc/core/api.h>
 
+/// \def VGC_CORE_OBJECT_DEBUG
+/// If defined, then all constructions, assignments, and destructions of
+/// vgc::core::Object instances are printed to the console.
+///
+#ifdef VGC_CORE_OBJECT_DEBUG
+    #include <cstdio>
+    #define VGC_CORE_OBJECT_DEFAULT_(s) \
+        { printf("Object %p " s "\n", (void*) this); }
+#else
+    #define VGC_CORE_OBJECT_DEFAULT_(s) = default;
+#endif
+
 #define VGC_CORE_DECLARE_PTRS(T)                        \
     class T;                                            \
     using T##SharedPtr      = std::shared_ptr<T>;       \
@@ -45,7 +57,7 @@
     /** Returns a weak_ptr to this object. Assumes the object */ \
     /** was created via the make() statid method.             */ \
     std::weak_ptr<T> weakPtr() {                                 \
-        return sharedPtr();                                      \
+        return sharedPtr(); /* Note: C++17 has weak_from_this */ \
     }
 
 #define VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                                \
@@ -59,7 +71,7 @@
     /** Returns a weak_ptr to this object. Assumes the object */ \
     /** was created via the make() statid method.             */ \
     std::weak_ptr<const T> weakPtr() const {                     \
-        return sharedPtr();                                      \
+        return sharedPtr(); /* Note: C++17 has weak_from_this */ \
     }
 
 #define VGC_CORE_OBJECT(T)               \
@@ -190,46 +202,29 @@ class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
 public:
     VGC_CORE_OBJECT(Object)
 
-    /// Destruct the Object.
+    /// Destructs an Object.
     ///
-    virtual ~Object() = default;
-
-    // Note from Scott Meyers:
-    // http://scottmeyers.blogspot.fr/2014/03/a-concern-about-rule-of-zero.html
-    //
-    //   The addition of the destructor has the side effect of disabling
-    //   generation of the move functions, but because Widget is copyable, all
-    //   the code that used to generate moves will now generate copies. In other
-    //   words, adding a destructor to the class has caused presumably-efficient
-    //   moves to be silently replaced with presumably-less-efficient copies.
-    //
-    // This is why, since we explicitly declare a desctuctor (in order to make
-    // it virtual), we also explicitly declare all other special member
-    // functions.
-    //
-    // Also, explicitly having them here allows to add them to the
-    // documentation, which is a nice side-effect.
-    //
+    virtual ~Object() VGC_CORE_OBJECT_DEFAULT_("destructed")
 
     /// Constructs an Object.
     ///
-    Object() = default;
+    Object() VGC_CORE_OBJECT_DEFAULT_("constructed")
 
     /// Copy-constructs an Object.
     ///
-    Object(const Object&) = default;
+    Object(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-constructed")
 
     /// Move-constructs an Object.
     ///
-    Object(Object&&) = default;
+    Object(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-constructed")
 
     /// Copy-assigns the given Object to this Object.
     ///
-    Object& operator=(const Object&) = default;
+    Object& operator=(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-assigned")
 
     /// Move-assigns the given Object to this Object.
     ///
-    Object& operator=(Object&&) = default;
+    Object& operator=(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-assigned")
 };
 
 } // namespace core
