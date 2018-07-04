@@ -16,6 +16,7 @@
 
 #include <pybind11/pybind11.h>
 #include <vgc/dom/node.h>
+#include <vgc/dom/wraps/common.h>
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -35,6 +36,6 @@ void wrap_node(py::module& m)
     py::class_<This, Holder>(m, "Node")
         // Note: Node has no public constructor
         .def_property_readonly("nodeType", &This::nodeType)
-        .def("appendChild", &This::appendChild, py::return_value_policy::reference)
+        .def("appendChild", &This::appendChild, node_ptr_policy)
     ;
 }
