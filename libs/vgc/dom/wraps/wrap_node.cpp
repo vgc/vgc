@@ -37,6 +37,7 @@ void wrap_node(py::module& m)
     py::class_<This, Holder, Parent>(m, "Node")
         // Note: Node has no public constructor
         .def_property_readonly("nodeType", &This::nodeType)
+        .def_property_readonly("parentNode", &This::parentNode, vgc::core::object_ptr_policy)
         .def("appendChild", &This::appendChild, vgc::core::object_ptr_policy)
     ;
 }
