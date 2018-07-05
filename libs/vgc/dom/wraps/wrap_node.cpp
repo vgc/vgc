@@ -22,12 +22,36 @@ using Holder = vgc::dom::NodeSharedPtr;
 using Parent = vgc::core::Object;
 
 using vgc::dom::NodeType;
+using vgc::dom::NodeIterator;
+using vgc::dom::NodeList;
+
+namespace {
+// Unlike C++ iterators, Python iterators need to be self-aware of when to stop
+struct PyNodeIterator_ {
+    NodeIterator current;
+    NodeIterator end;
+    PyNodeIterator_(const NodeList& list) :
+        current(list.begin()), end(list.end()) {}
+};
+} // namespace
 
 void wrap_node(py::module& m)
 {
     py::enum_<NodeType>(m, "NodeType")
         .value("Element", NodeType::Element)
         .value("Document", NodeType::Document)
+    ;
+
+    py::class_<PyNodeIterator_>(m, "NodeIterator")
+        .def("__iter__", [](PyNodeIterator_& self) -> PyNodeIterator_& { return self; })
+        .def("__next__", [](PyNodeIterator_& self) -> This* {
+            if (self.current == self.end) throw py::stop_iteration();
+            return *(self.current++); },
+            py::return_value_policy::reference_internal)
+    ;
+
+    py::class_<NodeList>(m, "NodeList")
+        .def("__iter__", [](NodeList& self) { return PyNodeIterator_(self); }, py::return_value_policy::reference_internal)
     ;
 
     // Necessary to define inheritance across modules. See:
@@ -42,6 +66,7 @@ void wrap_node(py::module& m)
         .def_property_readonly("lastChild", &This::lastChild, vgc::core::object_ptr_policy)
         .def_property_readonly("previousSibling", &This::previousSibling, vgc::core::object_ptr_policy)
         .def_property_readonly("nextSibling", &This::nextSibling, vgc::core::object_ptr_policy)
+        .def_property_readonly("children", &This::children, py::return_value_policy::reference_internal)
         .def("appendChild", &This::appendChild, vgc::core::object_ptr_policy)
     ;
 }

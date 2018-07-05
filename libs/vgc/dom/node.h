@@ -194,11 +194,11 @@ public:
 
     /// Returns the begin of the range.
     ///
-    const NodeIterator& begin() { return begin_; }
+    const NodeIterator& begin() const { return begin_; }
 
     /// Returns the end of the range.
     ///
-    const NodeIterator& end() { return end_; }
+    const NodeIterator& end() const { return end_; }
 
 private:
     NodeIterator begin_;

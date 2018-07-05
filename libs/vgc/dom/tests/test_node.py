@@ -75,6 +75,23 @@ class TestNode(unittest.TestCase):
         self.assertEqual(n4.previousSibling, n3)
         self.assertEqual(n4.nextSibling,     None)
 
+    def testChildren(self):
+        n1 = Element("foo")
+        n2 = Element("bar1")
+        n3 = Element("bar2")
+        n4 = Element("bar3")
+        n1.appendChild(n2)
+        n1.appendChild(n3)
+        n1.appendChild(n4)
+
+        numChildren = 0
+        childNames = []
+        for child in n1.children:
+            numChildren += 1
+            childNames.append(child.name)
+        self.assertEqual(numChildren, 3)
+        self.assertEqual(childNames, ["bar1", "bar2", "bar3"])
+
     def testAppendChild(self):
         node1 = Element("foo")
         node2 = Element("bar")
