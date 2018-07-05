@@ -279,20 +279,6 @@ public:
         return lastChild_;
     }
 
-    /// Returns all children of this Node as an iterable range.
-    ///
-    /// Example:
-    ///
-    /// \code
-    /// for (Node* child : node->children()) {
-    ///     // ...
-    /// }
-    /// \endcode
-    ///
-    SiblingsRange children() const {
-        return SiblingsRange(firstChild(), nullptr);
-    }
-
     /// Returns the previous sibling of this Node. Returns nullptr if this Node
     /// has a null parent(), or if it is the first child of its parent.
     ///
@@ -309,6 +295,20 @@ public:
     ///
     Node* nextSibling() const {
         return nextSibling_.get();
+    }
+
+    /// Returns all children of this Node as an iterable range.
+    ///
+    /// Example:
+    ///
+    /// \code
+    /// for (Node* child : node->children()) {
+    ///     // ...
+    /// }
+    /// \endcode
+    ///
+    SiblingsRange children() const {
+        return SiblingsRange(firstChild(), nullptr);
     }
 
     /// Returns the owner Document of this Node.
