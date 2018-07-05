@@ -41,8 +41,6 @@ namespace core {
 // >>> child.doSomething()
 // ExpiredObjectError: the given element does not exist anymore
 //
-// Current behaviour: ?
-//
 // Scenario 2:
 //
 // >>> root = Document().createChildElement("vgc")
@@ -51,7 +49,28 @@ namespace core {
 // >>> print(root.parent)
 // <vgc.dom.Document object at 0x7f45ba8d4ab0>
 //
-// Current behaviour: ?
+// Current behaviour:
+//
+// Python 3.6.5 (default, Apr  1 2018, 05:46:30)
+// [GCC 7.3.0] on linux
+// Type "help", "copyright", "credits" or "license" for more information.
+// >>> from vgc.dom import *
+// >>> doc = Document()
+// Object 0x11cfe50 constructed
+// >>> foo = doc.appendChild(Element("foo"))
+// Object 0x1153080 constructed
+// >>> foo.parent
+// <vgc.dom.Document object at 0x7fa3a1d311b8>
+// >>> bar = Document().appendChild(Element("bar"))
+// Object 0x11dd160 constructed
+// Object 0x11dd2c0 constructed
+// Object 0x11dd160 destructed
+// >>> bar.parent
+// <vgc.core.Object object at 0x7fa3a1d3d068>
+// >>> exit()
+// Object 0x11cfe50 destructed
+// Object 0x1153080 destructed
+// Object 0x11dd2c0 destructed
 //
 const auto object_ptr_policy = py::return_value_policy::reference_internal;
 
