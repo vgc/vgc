@@ -257,14 +257,14 @@ public:
     ///
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
-    Node* parent() const {
+    Node* parentNode() const {
         return parent_;
     }
 
     /// Returns the first child Node of this Node. Returns nullptr if this Node
     /// has no children.
     ///
-    /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
+    /// \sa lastChild(), previousSibling(), nextSibling(), and parentNode().
     ///
     Node* firstChild() const {
         return firstChild_.get();
@@ -273,7 +273,7 @@ public:
     /// Returns the last child Node of this Node. Returns nullptr if this Node
     /// has no children.
     ///
-    /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
+    /// \sa firstChild(), previousSibling(), nextSibling(), and parentNode().
     ///
     Node* lastChild() const {
         return lastChild_;
@@ -294,18 +294,18 @@ public:
     }
 
     /// Returns the previous sibling of this Node. Returns nullptr if this Node
-    /// has a null parent(), or if it is the first child of its parent.
+    /// has a null parentNode(), or if it is the first child of its parent.
     ///
-    /// \sa nextSibling(), parent(), firstChild(), and lastChild().
+    /// \sa nextSibling(), parentNode(), firstChild(), and lastChild().
     ///
     Node* previousSibling() const {
         return previousSibling_;
     }
 
     /// Returns the next sibling of this Node. Returns nullptr if this Node
-    /// has a null parent(), or if it is the last child of its parent.
+    /// has a null parentNode(), or if it is the last child of its parent.
     ///
-    /// \sa previousSibling(), parent(), firstChild(), and lastChild().
+    /// \sa previousSibling(), parentNode(), firstChild(), and lastChild().
     ///
     Node* nextSibling() const {
         return nextSibling_.get();
@@ -356,14 +356,14 @@ public:
     /// Removes the given \p node from the children of this Node.
     ///
     /// If the node is not a child of this Node (which can be checked via
-    /// `node->parent() == this`), a warning is emitted and the node is not
+    /// `node->parentNode() == this`), a warning is emitted and the node is not
     /// removed.
     ///
     /// Returns a shared pointer to the removed node, or a null shared pointer
     /// if no node was removed. The node will be deleted unless you hold on to
     /// the return shared pointer, or another object already hold on to it.
     ///
-    /// \sa appendChild(), children(), parent().
+    /// \sa appendChild(), children(), parentNode().
     ///
     NodeSharedPtr removeChild(Node* node);
 
