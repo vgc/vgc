@@ -14,20 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_DOM_WRAPS_COMMON_H
-#define VGC_DOM_WRAPS_COMMON_H
+#ifndef VGC_CORE_WRAPS_COMMON_H
+#define VGC_CORE_WRAPS_COMMON_H
 
 #include <pybind11/pybind11.h>
-
 namespace py = pybind11;
 
-// Return value policy to use for methods returning raw pointers to
-// vgc::dom::Node instances. These pointers are non-owning and we desire that
-// Python references to such nodes do NOT extend the lifetime of the node.
-//
-// XXX Should we use py::return_value_policy::reference_internal, or
-// py::return_value_policy::reference, or something else? Below are
-// examples of the behaviour we would like, if at all possible.
+namespace vgc {
+namespace core {
+
+/// Return value policy to use for methods returning raw pointers to
+/// vgc::core::Object instances. These pointers are non-owning and we desire
+/// that Python references to such objects do NOT extend the lifetime of the
+/// object.
+///
+// XXX At this point, we haven't yet determined whether we should use
+// py::return_value_policy::reference_internal, or
+// py::return_value_policy::reference, or something else to achieve our goals.
+// Below are examples of the behaviour we would like, if at all possible.
 //
 // Scenario 1:
 //
@@ -49,6 +53,9 @@ namespace py = pybind11;
 //
 // Current behaviour: ?
 //
-auto node_ptr_policy = py::return_value_policy::reference_internal;
+const auto object_ptr_policy = py::return_value_policy::reference_internal;
 
-#endif // VGC_DOM_WRAPS_COMMON_H
+} // namespace core
+} // namespace vgc
+
+#endif // VGC_CORE_WRAPS_COMMON_H

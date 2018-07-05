@@ -15,28 +15,14 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
-#include <vgc/dom/node.h>
+#include <vgc/core/object.h>
 
-using This = vgc::dom::Node;
-using Holder = vgc::dom::NodeSharedPtr;
-using Parent = vgc::core::Object;
+using This = vgc::core::Object;
+using Holder = vgc::core::ObjectSharedPtr;
 
-using vgc::dom::NodeType;
-
-void wrap_node(py::module& m)
+void wrap_object(py::module& m)
 {
-    py::enum_<NodeType>(m, "NodeType")
-        .value("Element", NodeType::Element)
-        .value("Document", NodeType::Document)
-    ;
-
-    // Necessary to define inheritance across modules. See:
-    // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
-    py::module::import("vgc.core");
-
-    py::class_<This, Holder, Parent>(m, "Node")
-        // Note: Node has no public constructor
-        .def_property_readonly("nodeType", &This::nodeType)
-        .def("appendChild", &This::appendChild, vgc::core::object_ptr_policy)
+    py::class_<This, Holder>(m, "Object")
+        .def(py::init<>())
     ;
 }

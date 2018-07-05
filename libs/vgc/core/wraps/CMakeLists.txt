@@ -1,7 +1,9 @@
 vgc_wrap_library(core
+    common.h
     module.cpp
     wrap_color.cpp
     wrap_doublearray.cpp
+    wrap_object.cpp
     wrap_timer.cpp
     wrap_vec2d.cpp
     wrap_vec2darray.cpp
