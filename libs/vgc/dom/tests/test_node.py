@@ -111,12 +111,14 @@ class TestNode(unittest.TestCase):
     def testAppendChild(self):
         node1 = Element("foo")
         node2 = Element("bar")
+        self.assertTrue(node1.canAppendChild(node2))
         self.assertEqual(node1.appendChild(node2), node2)
 
     def testAppendChildDocument(self):
         element = Element("foo")
         document = Document()
-        self.assertFalse(element.appendChild(document))
+        self.assertFalse(element.canAppendChild(document))
+        self.assertIsNone(element.appendChild(document))
 
     def testAppendChildRootElement(self):
         document = Document()
@@ -124,7 +126,8 @@ class TestNode(unittest.TestCase):
         element2 = Element("bar")
         document.appendChild(element1)
         self.assertEqual(document.rootElement, element1)
-        self.assertFalse(document.appendChild(element2))
+        self.assertFalse(document.canAppendChild(element2))
+        self.assertIsNone(document.appendChild(element2))
 
 if __name__ == '__main__':
     unittest.main()

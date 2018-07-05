@@ -22,6 +22,7 @@ using This = vgc::dom::Node;
 using Holder = vgc::dom::NodeSharedPtr;
 using Parent = vgc::core::Object;
 
+using vgc::dom::Node;
 using vgc::dom::NodeType;
 using vgc::dom::NodeIterator;
 using vgc::dom::NodeList;
@@ -45,7 +46,7 @@ void wrap_node(py::module& m)
 
     py::class_<PyNodeIterator_>(m, "NodeIterator")
         .def("__iter__", [](PyNodeIterator_& self) -> PyNodeIterator_& { return self; })
-        .def("__next__", [](PyNodeIterator_& self) -> This* {
+        .def("__next__", [](PyNodeIterator_& self) -> Node* {
             if (self.current == self.end) throw py::stop_iteration();
             return *(self.current++); },
             py::return_value_policy::reference_internal)
@@ -69,6 +70,7 @@ void wrap_node(py::module& m)
         .def_property_readonly("nextSibling", &This::nextSibling, vgc::core::object_ptr_policy)
         .def_property_readonly("children", &This::children, py::return_value_policy::reference_internal)
         .def_property_readonly("document", &This::document, vgc::core::object_ptr_policy)
+        .def("canAppendChild", [](This& self, Node* node) { return self.canAppendChild(node); }) // don't wrap the optional arg "reason"
         .def("appendChild", &This::appendChild, vgc::core::object_ptr_policy)
     ;
 }
