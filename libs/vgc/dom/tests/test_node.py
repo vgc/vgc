@@ -36,13 +36,44 @@ class TestNode(unittest.TestCase):
         node = Element("foo")
         self.assertEqual(node.nodeType, NodeType.Element)
 
-    def testParent(self):
+    def testParentChildRelationships(self):
         n1 = Element("foo")
         self.assertIsNone(n1.parent)
+        self.assertIsNone(n1.firstChild)
+        self.assertIsNone(n1.lastChild)
+        self.assertIsNone(n1.previousSibling)
+        self.assertIsNone(n1.nextSibling)
 
         n2 = Element("bar")
+        n3 = Element("bar")
+        n4 = Element("bar")
         n1.appendChild(n2)
-        self.assertEqual(n2.parent, n1)
+        n1.appendChild(n3)
+        n1.appendChild(n4)
+
+        self.assertEqual(n1.parent,          None)
+        self.assertEqual(n1.firstChild,      n2)
+        self.assertEqual(n1.lastChild,       n4)
+        self.assertEqual(n1.previousSibling, None)
+        self.assertEqual(n1.nextSibling,     None)
+
+        self.assertEqual(n2.parent,          n1)
+        self.assertEqual(n2.firstChild,      None)
+        self.assertEqual(n2.lastChild,       None)
+        self.assertEqual(n2.previousSibling, None)
+        self.assertEqual(n2.nextSibling,     n3)
+
+        self.assertEqual(n3.parent,          n1)
+        self.assertEqual(n3.firstChild,      None)
+        self.assertEqual(n3.lastChild,       None)
+        self.assertEqual(n3.previousSibling, n2)
+        self.assertEqual(n3.nextSibling,     n4)
+
+        self.assertEqual(n4.parent,          n1)
+        self.assertEqual(n4.firstChild,      None)
+        self.assertEqual(n4.lastChild,       None)
+        self.assertEqual(n4.previousSibling, n3)
+        self.assertEqual(n4.nextSibling,     None)
 
     def testAppendChild(self):
         node1 = Element("foo")

@@ -38,6 +38,10 @@ void wrap_node(py::module& m)
         // Note: Node has no public constructor
         .def_property_readonly("nodeType", &This::nodeType)
         .def_property_readonly("parent", &This::parent, vgc::core::object_ptr_policy)
+        .def_property_readonly("firstChild", &This::firstChild, vgc::core::object_ptr_policy)
+        .def_property_readonly("lastChild", &This::lastChild, vgc::core::object_ptr_policy)
+        .def_property_readonly("previousSibling", &This::previousSibling, vgc::core::object_ptr_policy)
+        .def_property_readonly("nextSibling", &This::nextSibling, vgc::core::object_ptr_policy)
         .def("appendChild", &This::appendChild, vgc::core::object_ptr_policy)
     ;
 }
