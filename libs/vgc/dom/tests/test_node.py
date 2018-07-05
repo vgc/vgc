@@ -20,6 +20,9 @@ import unittest
 
 from vgc.dom import Document, Element, Node, NodeType
 
+def getChildNames(node):
+    return [child.name for child in node.children]
+
 class TestNodeType(unittest.TestCase):
 
     def testValues(self):
@@ -83,14 +86,7 @@ class TestNode(unittest.TestCase):
         n1.appendChild(n2)
         n1.appendChild(n3)
         n1.appendChild(n4)
-
-        numChildren = 0
-        childNames = []
-        for child in n1.children:
-            numChildren += 1
-            childNames.append(child.name)
-        self.assertEqual(numChildren, 3)
-        self.assertEqual(childNames, ["bar1", "bar2", "bar3"])
+        self.assertEqual(getChildNames(n1), ["bar1", "bar2", "bar3"])
 
     def testDocument(self):
         doc = Document()
@@ -128,6 +124,38 @@ class TestNode(unittest.TestCase):
         self.assertEqual(document.rootElement, element1)
         self.assertFalse(document.canAppendChild(element2))
         self.assertIsNone(document.appendChild(element2))
+
+    def testRemoveChild(self):
+        n = Element("foo")
+        n1 = Element("n1")
+        n2 = Element("n2")
+        n3 = Element("n3")
+        n4 = Element("n4")
+
+        n.appendChild(n1)
+        n.appendChild(n2)
+        n.appendChild(n3)
+        n.appendChild(n4)
+        self.assertEqual(getChildNames(n), ["n1", "n2", "n3", "n4"])
+
+        n.removeChild(n3)
+        self.assertEqual(getChildNames(n), ["n1", "n2", "n4"])
+
+        n.removeChild(n4)
+        self.assertEqual(getChildNames(n), ["n1", "n2"])
+
+        self.assertIsNone(n.removeChild(n4))
+        self.assertEqual(getChildNames(n), ["n1", "n2"])
+
+        n5 = Element("n5")
+        self.assertIsNone(n.removeChild(n5))
+        self.assertEqual(getChildNames(n), ["n1", "n2"])
+
+        n.removeChild(n1)
+        self.assertEqual(getChildNames(n), ["n2"])
+
+        n.removeChild(n2)
+        self.assertEqual(getChildNames(n), [])
 
 if __name__ == '__main__':
     unittest.main()
