@@ -39,7 +39,7 @@ Document::Document() :
 void Document::setRootElement(ElementSharedPtr element)
 {
     // Nothing to do if this element is already the root element
-    if (element->parentNode() == this) {
+    if (element->parent() == this) {
         return;
     }
 

@@ -36,13 +36,13 @@ class TestNode(unittest.TestCase):
         node = Element("foo")
         self.assertEqual(node.nodeType, NodeType.Element)
 
-    def testParentNode(self):
+    def testParent(self):
         n1 = Element("foo")
-        self.assertIsNone(n1.parentNode)
+        self.assertIsNone(n1.parent)
 
         n2 = Element("bar")
         n1.appendChild(n2)
-        self.assertEqual(n2.parentNode, n1)
+        self.assertEqual(n2.parent, n1)
 
     def testAppendChild(self):
         node1 = Element("foo")
