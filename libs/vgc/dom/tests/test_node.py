@@ -92,6 +92,22 @@ class TestNode(unittest.TestCase):
         self.assertEqual(numChildren, 3)
         self.assertEqual(childNames, ["bar1", "bar2", "bar3"])
 
+    def testDocument(self):
+        doc = Document()
+        self.assertEqual(doc.document, doc)
+
+        n1 = Element("foo")
+        self.assertIsNone(n1.document)
+
+        n2 = Element("bar")
+        n1.appendChild(n2)
+        self.assertIsNone(n1.document)
+        self.assertIsNone(n2.document)
+
+        doc.appendChild(n1)
+        self.assertEqual(n1.document, doc)
+        self.assertEqual(n2.document, doc)
+
     def testAppendChild(self):
         node1 = Element("foo")
         node2 = Element("bar")

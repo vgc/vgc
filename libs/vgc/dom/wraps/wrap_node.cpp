@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/dom/document.h>
 #include <vgc/dom/node.h>
 
 using This = vgc::dom::Node;
@@ -67,6 +68,7 @@ void wrap_node(py::module& m)
         .def_property_readonly("previousSibling", &This::previousSibling, vgc::core::object_ptr_policy)
         .def_property_readonly("nextSibling", &This::nextSibling, vgc::core::object_ptr_policy)
         .def_property_readonly("children", &This::children, py::return_value_policy::reference_internal)
+        .def_property_readonly("document", &This::document, vgc::core::object_ptr_policy)
         .def("appendChild", &This::appendChild, vgc::core::object_ptr_policy)
     ;
 }
