@@ -52,10 +52,10 @@ int main(int argc, char* argv[])
     vgc::core::PythonInterpreter pythonInterpreter;
 
     // Create the document
-    vgc::dom::DocumentSharedPtr document = vgc::dom::Document::make();
-    document->setRootElement(vgc::dom::Vgc::make());
+    vgc::dom::DocumentSharedPtr document = vgc::dom::Document::create();
+    document->setRootElement(vgc::dom::Vgc::create());
 
-    // Expose the Docuement instance to the Python console as a local Python
+    // Expose the Document instance to the Python console as a local Python
     // variable 'document'.
     //
     // XXX In the long term, we may not want to expose "document" directly, but:

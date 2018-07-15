@@ -577,7 +577,7 @@ void OpenGLViewer::startCurve_(const core::Vec2d& p, double width)
     // XXX CLEAN
 
     dom::Element* root = document_->rootElement();
-    dom::PathSharedPtr path = dom::Path::make();
+    dom::PathSharedPtr path = dom::Path::create();
     root->appendChild(path);
 
     path->setAttribute(POSITIONS, core::Vec2dArray());

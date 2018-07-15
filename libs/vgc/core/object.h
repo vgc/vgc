@@ -39,43 +39,43 @@
     using T##ConstSharedPtr = std::shared_ptr<const T>; \
     using T##ConstWeakPtr   = std::weak_ptr<const T>
 
-#define VGC_CORE_OBJECT_MAKE_(T)                                      \
-    /** Constructs an object of type T managed by a shared pointer */ \
-    template <typename... Args>                                       \
-    static std::shared_ptr<T> make(Args... args) {                    \
-        return std::make_shared<T>(args...);                          \
+#define VGC_CORE_OBJECT_CREATE_(T)                                \
+    /** Constructs an object of type T managed by a shared_ptr */ \
+    template <typename... Args>                                   \
+    static std::shared_ptr<T> create(Args... args) {              \
+        return std::make_shared<T>(args...);                      \
     }
 
 #define VGC_CORE_OBJECT_SHARED_PTR_(T)                                   \
     /** Returns a shared_ptr managing this object. Assumes the object */ \
-    /** was created via the make() statid method.                     */ \
+    /** was created via the create() static method.                   */ \
     std::shared_ptr<T> sharedPtr() {                                     \
         return std::static_pointer_cast<T>(this->shared_from_this());    \
     }
 
 #define VGC_CORE_OBJECT_WEAK_PTR_(T)                             \
     /** Returns a weak_ptr to this object. Assumes the object */ \
-    /** was created via the make() statid method.             */ \
+    /** was created via the create() static method.           */ \
     std::weak_ptr<T> weakPtr() {                                 \
         return sharedPtr(); /* Note: C++17 has weak_from_this */ \
     }
 
 #define VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                                \
     /** Returns a shared_ptr managing this object. Assumes the object */    \
-    /** was created via the make() statid method.                     */    \
+    /** was created via the create() static method.                   */    \
     std::shared_ptr<const T> sharedPtr() const {                            \
         return std::static_pointer_cast<const T>(this->shared_from_this()); \
     }
 
 #define VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)                       \
     /** Returns a weak_ptr to this object. Assumes the object */ \
-    /** was created via the make() statid method.             */ \
+    /** was created via the create() static method.           */ \
     std::weak_ptr<const T> weakPtr() const {                     \
         return sharedPtr(); /* Note: C++17 has weak_from_this */ \
     }
 
 #define VGC_CORE_OBJECT(T)               \
-    VGC_CORE_OBJECT_MAKE_(T)             \
+    VGC_CORE_OBJECT_CREATE_(T)           \
     VGC_CORE_OBJECT_SHARED_PTR_(T)       \
     VGC_CORE_OBJECT_WEAK_PTR_(T)         \
     VGC_CORE_OBJECT_CONST_SHARED_PTR_(T) \
@@ -95,11 +95,11 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// directly or indirectly, from Object. In particular any class that contains
 /// a `std::vector`, a `std::string`, any other container, or performs any sort
 /// of memory allocation should typically inherit from Object, since the
-/// overhead cost (see below) is unlikely to be significant compared to the
-/// existing cost. Notable exceptions include small struct-like classes such as
-/// `Vec2d`: these do not perform any dynamic allocation, are expected to be
-/// potentially instanciated more than a million times in a session, and are
-/// expected or measured to be a bottleneck if they would derive from Object.
+/// overhead cost is unlikely to be significant compared to the existing cost.
+/// Notable exceptions include small struct-like classes such as `Vec2d`: these
+/// do not perform any dynamic allocation, are expected to be potentially
+/// instanciated more than a million times in a session, and are expected or
+/// measured to be a bottleneck if they would derive from Object.
 ///
 /// Classes deriving from Object should be declared as follows:
 ///
@@ -115,14 +115,10 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// };
 /// \endcode
 ///
-/// XXX Add a private key argument to constructors to only allow construction
-/// via "make"? See:
-/// http://seanmiddleditch.com/enabling-make_unique-with-private-constructors/
-///
 /// The macro VGC_CORE_OBJECT(Foo) defines the following member methods:
 ///
 /// \code
-/// template <typename... Args> static FooSharedPtr make(Args... args);
+/// template <typename... Args> static FooSharedPtr create(Args... args);
 /// FooSharedPtr sharedPtr();
 /// FooWeakPtr weakPtr();
 /// FooConstSharedPtr sharedPtr() const;
@@ -132,8 +128,8 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// The first method should be used to construct your objects, for example:
 ///
 /// \code
-/// FooSharedPtr foo1 = Foo::make();
-/// FooSharedPtr foo2 = Foo::make(42);
+/// FooSharedPtr foo1 = Foo::create();
+/// FooSharedPtr foo2 = Foo::create(42);
 /// \endcode
 ///
 /// This is equivalent to `std::make_shared<Foo>(...)`, and ensures that the
@@ -149,7 +145,7 @@ VGC_CORE_DECLARE_PTRS(Object);
 ///
 /// Despite being managed by shared pointers, objects should typically have a
 /// clearly identified unique owner. This unique owner creates the object via
-/// Foo::make(), stores the shared pointer as a member variable `FooSharedPtr
+/// Foo::create(), stores the shared pointer as a member variable `FooSharedPtr
 /// foo_`, but then always passes the raw pointer foo_.get() to other methods
 /// and clients (= "observers").
 ///

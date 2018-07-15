@@ -27,7 +27,7 @@ using Parent = vgc::dom::Node;
 void wrap_element(py::module& m)
 {
     py::class_<This, Holder, Parent>(m, "Element")
-        .def(py::init([](const std::string& name) { return This::make(name); } ))
+        .def(py::init([](const std::string& name) { return This::create(name); } ))
         .def_property_readonly("name", [](const This& self) { return self.name().string(); } )
     ;
 }

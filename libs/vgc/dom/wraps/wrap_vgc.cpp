@@ -27,6 +27,6 @@ using Parent = vgc::dom::Element;
 void wrap_vgc(py::module& m)
 {
     py::class_<This, Holder, Parent>(m, "Vgc")
-        .def(py::init([]() { return This::make(); } ))
+        .def(py::init([]() { return This::create(); } ))
     ;
 }

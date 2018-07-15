@@ -30,7 +30,7 @@ using vgc::dom::XmlFormattingStyle;
 void wrap_document(py::module& m)
 {
     py::class_<This, Holder, Parent>(m, "Document")
-        .def(py::init([]() { return This::make(); } ))
+        .def(py::init([]() { return This::create(); } ))
         .def_property("rootElement", &This::rootElement, &This::setRootElement)
         .def("save", &This::save, "filePath"_a, "style"_a = XmlFormattingStyle())
     ;
