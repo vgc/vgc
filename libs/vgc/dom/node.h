@@ -218,8 +218,33 @@ private:
 ///
 class VGC_DOM_API Node: public core::Object
 {
-public:
     VGC_CORE_OBJECT(Node)
+
+protected:
+    /// Prevents anyone but direct subclasses of Node from calling Node::Node().
+    ///
+    class ConstructorKey {
+        friend class Element;
+        friend class Document;
+        NodeType type_;
+        ConstructorKey(NodeType type) : type_(type) {}
+    public:
+        NodeType type() const { return type_; }
+    };
+
+    /// Constructs a Node of the given type with no parent. This constructor is
+    /// an implementation detail and cannot be called directly. Instead, use
+    /// one of the following approaches to create nodes:
+    ///
+    /// \code
+    /// DocumentSharedPtr document = Document::create()
+    /// ElementSharedPtr element = Element::create(document, name)
+    /// // ...
+    /// \endcode
+    ///
+    Node(ConstructorKey key);
+
+public:
 
     /// Returns the given \p node. This no-op function is provided for use in
     /// generic templated code where T might be Node or one of its direct
@@ -368,10 +393,6 @@ public:
     NodeSharedPtr removeChild(Node* node);
 
 protected:
-    /// Creates a new Node with no parent. You cannot call this function
-    /// directly, instead, please create a Document or an Element.
-    ///
-    Node(NodeType type);
 
 private:
     // Node type

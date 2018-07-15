@@ -138,13 +138,14 @@ VGC_CORE_DECLARE_PTRS(Document);
 ///
 class VGC_DOM_API Document: public Node
 {
-public:
     VGC_CORE_OBJECT(Document)
 
+protected:
     /// Creates a new document with no root element.
     ///
     Document();
 
+public:
     /// Casts the given \p node to a Document. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Document.
     ///

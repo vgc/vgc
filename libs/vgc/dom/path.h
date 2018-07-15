@@ -30,9 +30,9 @@ VGC_CORE_DECLARE_PTRS(Path);
 ///
 class VGC_DOM_API Path: public Element
 {
-public:
     VGC_CORE_OBJECT(Path)
 
+protected:
     /// Creates a new Path element.
     ///
     Path();

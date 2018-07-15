@@ -30,9 +30,9 @@ VGC_CORE_DECLARE_PTRS(Vgc);
 ///
 class VGC_DOM_API Vgc: public Element
 {
-public:
     VGC_CORE_OBJECT(Vgc)
 
+protected:
     /// Creates a new Vgc element.
     ///
     Vgc();

@@ -23,8 +23,8 @@
 namespace vgc {
 namespace dom {
 
-Node::Node(NodeType type) :
-    nodeType_(type),
+Node::Node(Node::ConstructorKey key) :
+    nodeType_(key.type()),
     parent_(nullptr),
     firstChild_(),
     lastChild_(nullptr),
@@ -32,7 +32,7 @@ Node::Node(NodeType type) :
     nextSibling_(),
     document_(nullptr)
 {
-    if (type == NodeType::Document) {
+    if (nodeType_ == NodeType::Document) {
         document_ = Document::cast(this);
     }
 }

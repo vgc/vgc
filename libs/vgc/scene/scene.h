@@ -33,13 +33,14 @@ VGC_CORE_DECLARE_PTRS(Scene);
 
 class VGC_SCENE_API Scene: public core::Object
 {
-public:
     VGC_CORE_OBJECT(Scene)
 
+protected:
     /// Creates a new Scene.
     ///
     Scene();
 
+public:
     /// Clears the scene.
     ///
     void clear();

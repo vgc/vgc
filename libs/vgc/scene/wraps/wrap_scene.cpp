@@ -25,7 +25,7 @@ using vgc::scene::SceneSharedPtr;
 void wrap_scene(py::module& m)
 {
     py::class_<Scene, SceneSharedPtr>(m, "Scene")
-        .def(py::init<>())
+        .def(py::init([](){ return Scene::create(); }))
         .def("clear", &Scene::clear, "Clears the scene.")
         .def("addCurve", &Scene::addCurve, "Adds a curve to the scene.")
         .def("__repr__", [](const Scene& s) {

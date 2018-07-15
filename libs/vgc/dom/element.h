@@ -33,9 +33,9 @@ VGC_CORE_DECLARE_PTRS(Element);
 ///
 class VGC_DOM_API Element: public Node
 {
-public:
     VGC_CORE_OBJECT(Element)
 
+protected:
     /// Creates a new Element with the given \p name.
     ///
     Element(core::StringId name);
@@ -44,6 +44,7 @@ public:
     ///
     Element(const std::string& name);
 
+public:
     /// Casts the given \p node to an Element. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Element.
     ///

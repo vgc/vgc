@@ -39,11 +39,18 @@
     using T##ConstSharedPtr = std::shared_ptr<const T>; \
     using T##ConstWeakPtr   = std::weak_ptr<const T>
 
-#define VGC_CORE_OBJECT_CREATE_(T)                                \
-    /** Constructs an object of type T managed by a shared_ptr */ \
-    template <typename... Args>                                   \
-    static std::shared_ptr<T> create(Args... args) {              \
-        return std::make_shared<T>(args...);                      \
+#define VGC_CORE_OBJECT_CREATE_(T)                                        \
+    /** Constructs an object of type T managed by a shared_ptr */         \
+    template <typename... Args>                                           \
+    static std::shared_ptr<T> create(Args&&... args) {                    \
+        /* variant of https://stackoverflow.com/a/11344174/1951907 */     \
+        struct A : std::allocator<T> {                                    \
+            void construct(void* p, Args&&... args) {                     \
+                ::new(p) T(std::forward<Args>(args)...);                  \
+            }                                                             \
+            void destroy(T* p) { p->~T(); }                               \
+        };                                                                \
+        return std::allocate_shared<T>(A(), std::forward<Args>(args)...); \
     }
 
 #define VGC_CORE_OBJECT_SHARED_PTR_(T)                                   \
@@ -75,11 +82,13 @@
     }
 
 #define VGC_CORE_OBJECT(T)               \
+    public:                              \
     VGC_CORE_OBJECT_CREATE_(T)           \
     VGC_CORE_OBJECT_SHARED_PTR_(T)       \
     VGC_CORE_OBJECT_WEAK_PTR_(T)         \
     VGC_CORE_OBJECT_CONST_SHARED_PTR_(T) \
-    VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)
+    VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)   \
+    private:
 
 namespace vgc {
 namespace core {
@@ -101,21 +110,24 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// instanciated more than a million times in a session, and are expected or
 /// measured to be a bottleneck if they would derive from Object.
 ///
-/// Classes deriving from Object should be declared as follows:
+/// Classes deriving directly or indirectly from Object should be declared as
+/// follows, where Bar is either Object or one of its subclasses:
 ///
 /// \code
-/// class Foo: public vgc::core::Object
+/// class Foo: public Bar
 /// {
-/// public:
 ///     VGC_CORE_OBJECT(Foo)
 ///
-///     Foo();      // some public constructor
-///     Foo(int x); // some other public constructor
-/// //...
+/// protected:
+///     Foo();      // some constructor
+///     Foo(int x); // some other constructor
+///
+/// public:
+///     //...
 /// };
 /// \endcode
 ///
-/// The macro VGC_CORE_OBJECT(Foo) defines the following member methods:
+/// The macro VGC_CORE_OBJECT(Foo) defines the following public methods:
 ///
 /// \code
 /// template <typename... Args> static FooSharedPtr create(Args... args);
@@ -244,32 +256,22 @@ VGC_CORE_DECLARE_PTRS(Object);
 ///
 class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
 {
-public:
     VGC_CORE_OBJECT(Object)
+    Object(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-constructed")
+    Object(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-constructed")
+    Object& operator=(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-assigned")
+    Object& operator=(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-assigned")
 
-    /// Destructs an Object.
-    ///
-    virtual ~Object() VGC_CORE_OBJECT_DEFAULT_("destructed")
-
+protected:
     /// Constructs an Object.
     ///
     Object() VGC_CORE_OBJECT_DEFAULT_("constructed")
 
-    /// Copy-constructs an Object.
+public:
+    /// Destructs an Object. This ought to be a protected method to avoid accidental misuse, but is currently
+    /// kept public due to pybind11's limitations (see https://github.com/pybind/pybind11/issues/114)
     ///
-    Object(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-constructed")
-
-    /// Move-constructs an Object.
-    ///
-    Object(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-constructed")
-
-    /// Copy-assigns the given Object to this Object.
-    ///
-    Object& operator=(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-assigned")
-
-    /// Move-assigns the given Object to this Object.
-    ///
-    Object& operator=(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-assigned")
+    virtual ~Object() VGC_CORE_OBJECT_DEFAULT_("destructed")
 };
 
 } // namespace core

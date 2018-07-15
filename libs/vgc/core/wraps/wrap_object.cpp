@@ -23,6 +23,6 @@ using Holder = vgc::core::ObjectSharedPtr;
 void wrap_object(py::module& m)
 {
     py::class_<This, Holder>(m, "Object")
-        .def(py::init<>())
+        .def(py::init([](){ return This::create(); }))
     ;
 }
