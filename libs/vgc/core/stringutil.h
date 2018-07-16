@@ -46,6 +46,18 @@ std::string toString(int x);
 VGC_CORE_API
 std::string toString(double x);
 
+/// Converts the given address to a string.
+///
+VGC_CORE_API
+std::string toString(const void* x);
+
+/// Converts the given address to a string.
+///
+template <typename T>
+std::string toString(const T* x) {
+    return toString(static_cast<const void*>(x));
+}
+
 /// Converts the given vector to a string.
 ///
 template <typename T>

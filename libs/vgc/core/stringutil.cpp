@@ -75,5 +75,14 @@ std::string toString(double x)
     // the locale is for instance fr_FR where ',' is commonly used.
 }
 
+std::string toString(const void* x)
+{
+    // This is presumably slow and platform-dependent, but
+    // should be okay in most cases.
+    std::stringstream ss;
+    ss << x;
+    return ss.str();
+}
+
 } // namespace core
 } // namespace vgc
