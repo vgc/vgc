@@ -63,15 +63,15 @@ void wrap_node(py::module& m)
     py::class_<This, Holder, Parent>(m, "Node")
         // Note: Node has no public constructor
         .def_property_readonly("nodeType", &This::nodeType)
-        .def_property_readonly("parent", &This::parent, vgc::core::object_ptr_policy)
-        .def_property_readonly("firstChild", &This::firstChild, vgc::core::object_ptr_policy)
-        .def_property_readonly("lastChild", &This::lastChild, vgc::core::object_ptr_policy)
-        .def_property_readonly("previousSibling", &This::previousSibling, vgc::core::object_ptr_policy)
-        .def_property_readonly("nextSibling", &This::nextSibling, vgc::core::object_ptr_policy)
-        .def_property_readonly("children", &This::children, py::return_value_policy::reference_internal)
-        .def_property_readonly("document", &This::document, vgc::core::object_ptr_policy)
+        .def_property_readonly("parent", &This::parent)
+        .def_property_readonly("firstChild", &This::firstChild)
+        .def_property_readonly("lastChild", &This::lastChild)
+        .def_property_readonly("previousSibling", &This::previousSibling)
+        .def_property_readonly("nextSibling", &This::nextSibling)
+        .def_property_readonly("children", &This::children)
+        .def_property_readonly("document", &This::document)
         .def("canAppendChild", [](This& self, Node* node) { return self.canAppendChild(node); }) // don't wrap the optional arg "reason"
-        .def("appendChild", &This::appendChild, vgc::core::object_ptr_policy)
+        .def("appendChild", &This::appendChild)
         .def("removeChild", &This::removeChild)
     ;
 }
