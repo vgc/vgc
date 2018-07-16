@@ -11,6 +11,7 @@ vgc_add_library(dom
         element.h
         io.h
         node.h
+        notaliveexception.h
         path.h
         value.h
         vgc.h
@@ -22,6 +23,7 @@ vgc_add_library(dom
         element.cpp
         io.cpp
         node.cpp
+        notaliveexception.cpp
         path.cpp
         value.cpp
         vgc.cpp
