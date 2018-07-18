@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <pybind11/pybind11.h>
+#include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 
 namespace py = pybind11;
@@ -24,10 +25,14 @@ using This = vgc::dom::Element;
 using Holder = vgc::dom::ElementSharedPtr;
 using Parent = vgc::dom::Node;
 
+using vgc::dom::Document;
+using vgc::dom::Element;
+
 void wrap_element(py::module& m)
 {
     py::class_<This, Holder, Parent>(m, "Element")
-        .def(py::init([](const std::string& name) { return This::create(name); } ))
+        .def(py::init([](Document* parent, const std::string& name) { return This::create(parent, name); } ))
+        .def(py::init([](Element* parent, const std::string& name) { return This::create(parent, name); } ))
         .def_property_readonly("name", [](const This& self) { return self.name().string(); } )
     ;
 }

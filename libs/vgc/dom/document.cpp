@@ -25,7 +25,7 @@ namespace vgc {
 namespace dom {
 
 Document::Document() :
-    Node(NodeType::Document),
+    Node(this, NodeType::Document),
     hasXmlDeclaration_(true),
     hasXmlEncoding_(true),
     hasXmlStandalone_(true),
@@ -36,7 +36,7 @@ Document::Document() :
     generateXmlDeclaration_();
 }
 
-void Document::setRootElement(ElementSharedPtr element)
+void Document::setRootElement(Element* element)
 {
     // Nothing to do if this element is already the root element
     if (element->parent() == this) {

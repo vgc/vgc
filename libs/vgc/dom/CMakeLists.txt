@@ -12,9 +12,7 @@ vgc_add_library(dom
         io.h
         node.h
         notaliveexception.h
-        path.h
         value.h
-        vgc.h
         xmlformattingstyle.h
 
     CPP_FILES
@@ -24,9 +22,7 @@ vgc_add_library(dom
         io.cpp
         node.cpp
         notaliveexception.cpp
-        path.cpp
         value.cpp
-        vgc.cpp
         xmlformattingstyle.cpp
 
     COMPILE_DEFINITIONS

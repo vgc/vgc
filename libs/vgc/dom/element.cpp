@@ -17,22 +17,49 @@
 #include <vgc/dom/element.h>
 
 #include <vgc/core/logging.h>
+#include <vgc/dom/document.h>
 
 namespace vgc {
 namespace dom {
 
-Element::Element(core::StringId name) :
-    Node(NodeType::Element),
+Element::Element(Document* document, core::StringId name) :
+    Node(document, NodeType::Element),
     name_(name)
 {
 
 }
 
-Element::Element(const std::string& name) :
-    Node(NodeType::Element),
-    name_(name)
+/* static */
+Element* Element::create_(Node* parent, core::StringId name)
 {
+    struct A : std::allocator<Element> {
+        void construct(void* p, Document* document, core::StringId name) {
+            ::new(p) Element(document, name); }
+        void destroy(Element* p) { p->~Element(); }
+    };
+    auto res = std::allocate_shared<Element>(A(), parent->document(), name);
+    parent->appendChild(res.get());
+    return res.get();
+}
 
+/* static */
+Element* Element::create(Document* parent, core::StringId name) {
+    create_(parent, name);
+}
+
+/* static */
+Element* Element::create(Document* parent, const std::string& name) {
+    create_(parent, core::StringId(name));
+}
+
+/* static */
+Element* Element::create(Element* parent, core::StringId name) {
+    create_(parent, name);
+}
+
+/* static */
+Element* Element::create(Element* parent, const std::string& name) {
+    create_(parent, core::StringId(name));
 }
 
 const std::vector<BuiltInAttribute>& Element::builtInAttributes() const

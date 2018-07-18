@@ -36,25 +36,26 @@ class TestNode(unittest.TestCase):
             node = Node()
 
     def testNodeType(self):
-        node = Element("foo")
-        self.assertEqual(node.nodeType, NodeType.Element)
+        doc = Document()
+        element = Element(doc, "foo")
+        self.assertEqual(doc.nodeType, NodeType.Document)
+        self.assertEqual(element.nodeType, NodeType.Element)
 
     def testParentChildRelationships(self):
-        n1 = Element("foo")
-        self.assertIsNone(n1.parent)
-        self.assertIsNone(n1.firstChild)
-        self.assertIsNone(n1.lastChild)
-        self.assertIsNone(n1.previousSibling)
-        self.assertIsNone(n1.nextSibling)
+        doc = Document()
+        n1 = Element(doc, "foo")
 
-        n2 = Element("bar")
-        n3 = Element("bar")
-        n4 = Element("bar")
-        n1.appendChild(n2)
-        n1.appendChild(n3)
-        n1.appendChild(n4)
+        self.assertEqual(n1.parent,          doc)
+        self.assertEqual(n1.firstChild,      None)
+        self.assertEqual(n1.lastChild,       None)
+        self.assertEqual(n1.previousSibling, None)
+        self.assertEqual(n1.nextSibling,     None)
 
-        self.assertEqual(n1.parent,          None)
+        n2 = Element(n1, "bar")
+        n3 = Element(n1, "bar")
+        n4 = Element(n1, "bar")
+
+        self.assertEqual(n1.parent,          doc)
         self.assertEqual(n1.firstChild,      n2)
         self.assertEqual(n1.lastChild,       n4)
         self.assertEqual(n1.previousSibling, None)
@@ -79,83 +80,74 @@ class TestNode(unittest.TestCase):
         self.assertEqual(n4.nextSibling,     None)
 
     def testChildren(self):
-        n1 = Element("foo")
-        n2 = Element("bar1")
-        n3 = Element("bar2")
-        n4 = Element("bar3")
-        n1.appendChild(n2)
-        n1.appendChild(n3)
-        n1.appendChild(n4)
+        doc = Document()
+        n1 = Element(doc, "foo")
+        n2 = Element(n1, "bar1")
+        n3 = Element(n1, "bar2")
+        n4 = Element(n1, "bar3")
         self.assertEqual(getChildNames(n1), ["bar1", "bar2", "bar3"])
 
     def testDocument(self):
         doc = Document()
         self.assertEqual(doc.document, doc)
 
-        n1 = Element("foo")
-        self.assertIsNone(n1.document)
-
-        n2 = Element("bar")
-        n1.appendChild(n2)
-        self.assertIsNone(n1.document)
-        self.assertIsNone(n2.document)
-
-        doc.appendChild(n1)
+        n1 = Element(doc, "foo")
+        n2 = Element(n1, "bar")
         self.assertEqual(n1.document, doc)
         self.assertEqual(n2.document, doc)
 
+    # TODO Add tests for thrown exceptions when trying invalid operations
+
     def testAppendChild(self):
-        node1 = Element("foo")
-        node2 = Element("bar")
-        self.assertTrue(node1.canAppendChild(node2))
-        self.assertEqual(node1.appendChild(node2), node2)
+        doc = Document()
+        n1 = Element(doc, "n1")
+        n2 = Element(n1, "n2")
+        n3 = Element(n2, "n3")
+        self.assertEqual(getChildNames(doc), ["n1"])
+        self.assertEqual(getChildNames(n1),  ["n2"])
+        self.assertEqual(getChildNames(n2),  ["n3"])
+        self.assertEqual(getChildNames(n3),  [])
+        n1.appendChild(n3)
+        self.assertEqual(getChildNames(doc), ["n1"])
+        self.assertEqual(getChildNames(n1),  ["n2", "n3"])
+        self.assertEqual(getChildNames(n2),  [])
+        self.assertEqual(getChildNames(n3),  [])
 
     def testAppendChildDocument(self):
-        element = Element("foo")
-        document = Document()
-        self.assertFalse(element.canAppendChild(document))
-        self.assertIsNone(element.appendChild(document))
+        doc1 = Document()
+        n1 = Element(doc1, "foo")
+        doc2 = Document()
+        self.assertFalse(doc1.canAppendChild(doc2))
+        self.assertFalse(n1.canAppendChild(doc1))
+        self.assertFalse(n1.canAppendChild(doc2))
 
     def testAppendChildRootElement(self):
-        document = Document()
-        element1 = Element("foo")
-        element2 = Element("bar")
-        document.appendChild(element1)
-        self.assertEqual(document.rootElement, element1)
-        self.assertFalse(document.canAppendChild(element2))
-        self.assertIsNone(document.appendChild(element2))
+        doc = Document()
+        n1 = Element(doc, "foo")
+        n2 = Element(n1, "bar")
+        self.assertEqual(doc.rootElement, n1)
+        self.assertFalse(doc.canAppendChild(n2))
 
     def testRemoveChild(self):
-        n = Element("foo")
-        n1 = Element("n1")
-        n2 = Element("n2")
-        n3 = Element("n3")
-        n4 = Element("n4")
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n3 = Element(root, "n3")
+        n4 = Element(root, "n4")
+        self.assertEqual(getChildNames(root), ["n1", "n2", "n3", "n4"])
 
-        n.appendChild(n1)
-        n.appendChild(n2)
-        n.appendChild(n3)
-        n.appendChild(n4)
-        self.assertEqual(getChildNames(n), ["n1", "n2", "n3", "n4"])
+        root.removeChild(n3)
+        self.assertEqual(getChildNames(root), ["n1", "n2", "n4"])
 
-        n.removeChild(n3)
-        self.assertEqual(getChildNames(n), ["n1", "n2", "n4"])
+        root.removeChild(n4)
+        self.assertEqual(getChildNames(root), ["n1", "n2"])
 
-        n.removeChild(n4)
-        self.assertEqual(getChildNames(n), ["n1", "n2"])
+        root.removeChild(n1)
+        self.assertEqual(getChildNames(root), ["n2"])
 
-        self.assertIsNone(n.removeChild(n4))
-        self.assertEqual(getChildNames(n), ["n1", "n2"])
-
-        n5 = Element("n5")
-        self.assertIsNone(n.removeChild(n5))
-        self.assertEqual(getChildNames(n), ["n1", "n2"])
-
-        n.removeChild(n1)
-        self.assertEqual(getChildNames(n), ["n2"])
-
-        n.removeChild(n2)
-        self.assertEqual(getChildNames(n), [])
+        root.removeChild(n2)
+        self.assertEqual(getChildNames(root), [])
 
 if __name__ == '__main__':
     unittest.main()

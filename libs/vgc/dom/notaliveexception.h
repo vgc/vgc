@@ -32,17 +32,7 @@ class Node;
 /// This exception is thrown by most member methods of Node when `this` node is
 /// not "alive", that is, if it has already been destroyed.
 ///
-/// More precisely, the lifetime of a Node goes through three stages:
-///
-/// 1. Node::create() has been called: the node is "alive".
-///
-/// 2. Node::destroy() has been called: the node is not "alive" anymore, but all
-///    pointers to the node are still valid non-dangling pointers. Dereferencing
-///    the pointer is safe, and calling node->isAlive() is safe, but calling
-///    most other member methods will cause NotAliveException to be thrown.
-///
-/// 3. Node::~Node() has been called: all raw pointers to the node are now
-///    dangling pointers, and all weak pointers to the node are now expired.
+/// \sa Node::destroy()
 ///
 class VGC_DOM_API NotAliveException : public std::exception {
     std::string what_;

@@ -14,6 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// XXX This whole 'scene' library will be soon deleted; it is temporarily kept
+// here for documentation of the signal mechanism which yet has to be ported to
+// 'dom'
+
 #ifndef VGC_SCENE_SCENE_H
 #define VGC_SCENE_SCENE_H
 

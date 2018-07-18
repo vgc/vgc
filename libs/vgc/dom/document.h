@@ -141,11 +141,27 @@ class VGC_DOM_API Document: public Node
     VGC_CORE_OBJECT(Document)
 
 protected:
-    /// Creates a new document with no root element.
+    /// Creates a new document with no root element. This constructor is an
+    /// implementation detail only available to derived classes. In order to
+    /// create a Document, please use the following:
+    ///
+    /// \code
+    /// DocumentSharedPtr document = Document::create();
+    /// \endcode
     ///
     Document();
 
 public:
+    /// Creates a new document with no root element.
+    ///
+    static std::shared_ptr<Document> create() {
+        struct A : std::allocator<Document> {
+            void construct(void* p) { ::new(p) Document(); }
+            void destroy(Document* p) { p->~Object(); }
+        };
+        return std::allocate_shared<Document>(A());
+    }
+
     /// Casts the given \p node to a Document. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Document.
     ///
@@ -166,7 +182,7 @@ public:
     /// first removed from this document. If \p element already has a parent,
     /// \p element is first removed from the children of its parent.
     ///
-    void setRootElement(ElementSharedPtr element);
+    void setRootElement(Element* element);
 
     /// Returns the root element of this Document.
     ///

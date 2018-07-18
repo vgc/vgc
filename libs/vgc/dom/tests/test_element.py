@@ -18,17 +18,15 @@
 
 import unittest
 
-from vgc.dom import Element, NodeType
+from vgc.dom import Document, Element, NodeType
 
 class TestElement(unittest.TestCase):
 
     def testConstructor(self):
-        element = Element("foo")
-        self.assertEqual(element.nodeType, NodeType.Element)
-
-    def testName(self):
-        element = Element("foo")
-        self.assertEqual(element.name, "foo")
+        doc = Document()
+        foo = Element(doc, "foo")
+        self.assertEqual(foo.nodeType, NodeType.Element)
+        self.assertEqual(foo.name, "foo")
 
 if __name__ == '__main__':
     unittest.main()
