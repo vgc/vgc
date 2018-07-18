@@ -17,19 +17,10 @@
 #include <QApplication>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
-#include <vgc/scene/scene.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
-#include <vgc/widgets/qtutil.h>
 #include <vgc/widgets/stylesheets.h>
-
-#include <iostream>
-#include <vgc/core/color.h>
-#include <vgc/core/doublearray.h>
-#include <vgc/core/vec2darray.h>
-#include <vgc/dom/vgc.h>
-#include <vgc/dom/path.h>
 
 namespace py = pybind11;
 
@@ -51,9 +42,11 @@ int main(int argc, char* argv[])
     // Create the python interpreter
     vgc::core::PythonInterpreter pythonInterpreter;
 
-    // Create the document
-    vgc::dom::DocumentSharedPtr document = vgc::dom::Document::create();
-    document->setRootElement(vgc::dom::Vgc::create());
+    // Create the document + root element
+    auto doc = vgc::dom::Document::create();
+    vgc::dom::Element::create(doc.get(), "vgc");
+
+    //document->setRootElement(root);
 
     // Expose the Document instance to the Python console as a local Python
     // variable 'document'.
@@ -76,7 +69,7 @@ int main(int argc, char* argv[])
     //pythonInterpreter.setVariableValue("document", document);
 
     // Create and show the widget
-    vgc::widgets::MainWindow w(document.get(), &pythonInterpreter);
+    vgc::widgets::MainWindow w(doc.get(), &pythonInterpreter);
     w.show();
 
     // Set style

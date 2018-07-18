@@ -19,5 +19,18 @@
 namespace vgc {
 namespace core {
 
+/* static */
+ObjectSharedPtr Object::create()
+{
+    // Provide access to protected constructor. See:
+    // - https://stackoverflow.com/a/11344174/1951907
+    // - https://groups.google.com/a/isocpp.org/forum/#!topic/std-proposals/YXyGFUq7Wa4
+    struct A : std::allocator<Object> {
+        void construct(void* p) { ::new(p) Object(); }
+        void destroy(Object* p) { p->~Object(); }
+    };
+    return std::allocate_shared<Object>(A());
+}
+
 } // namespace core
 } // namespace vgc

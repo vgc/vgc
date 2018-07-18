@@ -133,11 +133,6 @@ public:
     ///
     NodeIterator(Node* node) : node_(node) {}
 
-    // XXX remove the lines before if it works with defaults
-    // NodeIterator(const NodeIterator&);
-    // NodeIterator& operator=(const NodeIterator&);
-    //friend void swap(NodeIterator& lhs, NodeIterator& rhs);
-
     /// Prefix-increments this iterator.
     ///
     NodeIterator& operator++();
@@ -170,7 +165,7 @@ private:
 /// \brief Enable range-based loops for sibling Nodes.
 ///
 /// This range class is used together with NodeIterator to
-/// enables range-based loops like the following:
+/// enable range-based loops like the following:
 ///
 /// \code
 /// for (Node* child : node->children()) {
@@ -185,7 +180,7 @@ class VGC_DOM_API NodeList
 public:
     /// Constructs a range of sibling nodes from \p begin to \p end. The
     /// range includes \p begin but excludes \p end. The behavior is undefined
-    /// is \p begin and \p end do not have the same parent. If \p end is null,
+    /// if \p begin and \p end do not have the same parent. If \p end is null,
     /// then the range includes all siblings after \p begin. If both \p start
     /// and \p end are null, then the range is empty. The behavior is undefined
     /// if \p begin is null but \p end is not.
@@ -210,6 +205,21 @@ private:
 ///
 /// See Document for details.
 ///
+/// Owner Document
+/// --------------
+///
+/// Every alive node is owned by exactly one Document which you can query via
+/// document(). This method is always guaranteed to return a valid non-null
+/// Document*. This document is determined when the node is created, and never
+/// changes in the lifetime of the node.
+///
+/// In particular, we intentionally disallow to move a node from one Document
+/// to another. This is a design decision which was taken in order to make many
+/// other more common operations faster, and to remove a lot of burden on
+/// client code. For example, if a GUI widget stores a pointer to a Node, then
+/// it never has to worry about the node moving from one Document to another,
+/// and how to handle this appropriately.
+///
 /// Constness
 /// ---------
 ///
@@ -221,31 +231,19 @@ class VGC_DOM_API Node: public core::Object
     VGC_CORE_OBJECT(Node)
 
 protected:
-    /// Prevents anyone but direct subclasses of Node from calling Node::Node().
-    ///
-    class ConstructorKey {
-        friend class Element;
-        friend class Document;
-        NodeType type_;
-        ConstructorKey(NodeType type) : type_(type) {}
-    public:
-        NodeType type() const { return type_; }
-    };
-
-    /// Constructs a Node of the given type with no parent. This constructor is
-    /// an implementation detail and cannot be called directly. Instead, use
-    /// one of the following approaches to create nodes:
+    /// Constructs a parent-less Node of the given \p nodeType, owned by the
+    /// given \p document. This constructor is an implementation detail only
+    /// available to derived classes. In order to create nodes, please use one
+    /// of the following:
     ///
     /// \code
-    /// DocumentSharedPtr document = Document::create()
-    /// ElementSharedPtr element = Element::create(document, name)
-    /// // ...
+    /// DocumentSharedPtr document = Document::create();
+    /// ElementSharedPtr element = Element::create(parent, name);
     /// \endcode
     ///
-    Node(ConstructorKey key);
+    Node(Document* document, NodeType nodeType);
 
 public:
-
     /// Returns the given \p node. This no-op function is provided for use in
     /// generic templated code where T might be Node or one of its direct
     /// subclass:
@@ -262,23 +260,43 @@ public:
         return node;
     }
 
+    /// Returns whether this Node is "alive".
+    ///
+    /// More precisely, the lifetime of a Node goes through three stages:
+    ///
+    /// 1. This node is created via Document::create() or
+    ///    Element::create(parent, name): the node is alive, and Node::isAlive()
+    ///    returns true.
+    ///
+    /// 2. Node::destroy() has been called: the node is not alive anymore, but
+    ///    all pointers to the node are still valid non-dangling pointers.
+    ///    Dereferencing the pointer is safe. Calling node->isAlive() is safe
+    ///    and returns false. But calling most other member methods will cause
+    ///    NotAliveException to be thrown.
+    ///
+    /// 3. Node::~Node() has been called: all raw pointers to the node are now
+    ///    dangling pointers, and all weak pointers to the node are now expired.
+    ///
+    /// \sa destroy().
+    ///
+    bool isAlive() const noexcept {
+        return document_ != nullptr;
+    }
+
+    /// Destroys this Node.
+    ///
+    /// \sa isAlive().
+    ///
+    void destroy();
+
     /// Returns the NodeType of this Node.
     ///
     NodeType nodeType() const {
         return nodeType_;
     }
 
-    /// Returns the parent Node of this Node.
-    ///
-    /// Note that a Node may have a null parent Node for the following reasons:
-    ///
-    /// 1. This Node is a Document.
-    ///
-    /// 2. This Node is the root of a Node tree which does not belong to
-    ///    any Document (for instance, as a temporary state while moving nodes from
-    ///    one Document to another).
-    ///
-    /// In all other cases, this function returns a non-null pointer.
+    /// Returns the parent Node of this Node. This is always nullptr for
+    /// Document nodes, and always a non-null valid Node otherwise.
     ///
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
@@ -305,7 +323,7 @@ public:
     }
 
     /// Returns the previous sibling of this Node. Returns nullptr if this Node
-    /// has a null parent(), or if it is the first child of its parent.
+    /// is a Document node, or if it is the first child of its parent.
     ///
     /// \sa nextSibling(), parent(), firstChild(), and lastChild().
     ///
@@ -314,7 +332,7 @@ public:
     }
 
     /// Returns the next sibling of this Node. Returns nullptr if this Node
-    /// has a null parent(), or if it is the last child of its parent.
+    /// is a Document node, or if it is the last child of its parent.
     ///
     /// \sa previousSibling(), parent(), firstChild(), and lastChild().
     ///
@@ -336,14 +354,8 @@ public:
         return NodeList(firstChild(), nullptr);
     }
 
-    /// Returns the owner Document of this Node.
-    ///
-    /// If this Node is a Document, then this function always returns this
-    /// Node.
-    ///
-    /// This function may return a null pointer if this node is not part of any
-    /// Document, for instance, as a temporary state while moving nodes from
-    /// one Document to another.
+    /// Returns the owner Document of this Node. This is always guaranteed to
+    /// be a non-null valid Document.
     ///
     Document* document() const {
         return document_;
@@ -358,43 +370,54 @@ public:
     /// 2. You're trying to append an Element node to a Document node that
     ///    already has a rootElement.
     ///
+    /// 3. You're trying to append a Node which is owned by another Document.
+    ///
     /// If \p reason is not null, then the reason preventing insertion (if
     /// any), is appended to the string.
     ///
+    /// XXX Add "node is an ancestor of this node" as another reason. See
+    /// https://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/core.html#ID-184E7107
+    /// for reference: we choose to have the same restrictions.
+    ///
     bool canAppendChild(Node* node, std::string* reason = nullptr);
 
-    /// Appends the given \p node as the last child of this Node. If \p node
-    /// already has a parent, then it is first removed from the children of
-    /// this anterior parent. If this Node is already the parent of \p node,
-    /// then it is moved as the last child of this Node.
+    /// Appends the given \p node as the last child of this Node. The \p node
+    /// is first removed from the children of its anterior parent. If this Node
+    /// is already the parent of \p node, then \p node is moved as the last
+    /// child of this Node.
     ///
     /// If the node cannot be appended (see canAppendChild()), a warning is
     /// emitted and the node is not appended.
     ///
-    /// Returns a pointer to the appended node. This is equal to node.get() if
-    /// the node was appended; nullptr otherwise.
+    /// XXX Throw an exception instead?
+    ///
+    /// Returns whether the node was successfully appended.
     ///
     /// \sa canAppendChild().
     ///
-    Node* appendChild(NodeSharedPtr node);
+    bool appendChild(Node* node);
 
     /// Removes the given \p node from the children of this Node.
     ///
-    /// If the node is not a child of this Node (which can be checked via
+    /// If \p node is indeed a child of this Node, then this is equivalent
+    /// to node->destroy().
+    ///
+    /// If \p node is not a child of this Node (which can be checked via
     /// `node->parent() == this`), a warning is emitted and the node is not
     /// removed.
     ///
-    /// Returns a shared pointer to the removed node, or a null shared pointer
-    /// if no node was removed. The node will be deleted unless you hold on to
-    /// the return shared pointer, or another object already hold on to it.
+    /// XXX Throw an exception instead?
+    ///
+    /// Returns whether the node was successfully removed.
     ///
     /// \sa appendChild(), children(), parent().
     ///
-    NodeSharedPtr removeChild(Node* node);
-
-protected:
+    bool removeChild(Node* node);
 
 private:
+    // Owner document (also used as an 'isAlive_' flag)
+    Document* document_;
+
     // Node type
     NodeType nodeType_;
 
@@ -405,12 +428,8 @@ private:
     Node* previousSibling_;
     NodeSharedPtr nextSibling_;
 
-    // Helper method for removeChild() and appendChild()
-    NodeSharedPtr removeChild_(Node* node, bool nullifyDocument = true);
-
-    // Owner document
-    void setDocument_(Document* document);
-    Document* document_;
+    // Helper method for removeChild(), appendChild(), and destroy()
+    void removeChild_(Node* node);
 };
 
 inline NodeIterator& NodeIterator::operator++() {
@@ -430,7 +449,7 @@ inline bool operator==(const NodeIterator& it1, const NodeIterator& it2) {
 
 inline bool operator!=(const NodeIterator& it1, const NodeIterator& it2) {
     return !(it1 == it2);
-};
+}
 
 } // namespace dom
 } // namespace vgc

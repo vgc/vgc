@@ -22,7 +22,7 @@
 
 /// \def VGC_CORE_OBJECT_DEBUG
 /// If defined, then all constructions, assignments, and destructions of
-/// vgc::core::Object instances are printed to the console.
+/// vgc::core::Object instances are logged to the console.
 ///
 #ifdef VGC_CORE_OBJECT_DEBUG
     #include <cstdio>
@@ -39,56 +39,41 @@
     using T##ConstSharedPtr = std::shared_ptr<const T>; \
     using T##ConstWeakPtr   = std::weak_ptr<const T>
 
-#define VGC_CORE_OBJECT_CREATE_(T)                                        \
-    /** Constructs an object of type T managed by a shared_ptr */         \
-    template <typename... Args>                                           \
-    static std::shared_ptr<T> create(Args&&... args) {                    \
-        /* variant of https://stackoverflow.com/a/11344174/1951907 */     \
-        struct A : std::allocator<T> {                                    \
-            void construct(void* p, Args&&... args) {                     \
-                ::new(p) T(std::forward<Args>(args)...);                  \
-            }                                                             \
-            void destroy(T* p) { p->~T(); }                               \
-        };                                                                \
-        return std::allocate_shared<T>(A(), std::forward<Args>(args)...); \
+#define VGC_CORE_OBJECT_SHARED_PTR_(T)                                  \
+    /** Returns a shared_ptr to this object. Assumes that the object */ \
+    /** is indeed managed via shared_ptr.                            */ \
+    std::shared_ptr<T> sharedPtr() {                                    \
+        return std::static_pointer_cast<T>(this->shared_from_this());   \
     }
 
-#define VGC_CORE_OBJECT_SHARED_PTR_(T)                                   \
-    /** Returns a shared_ptr managing this object. Assumes the object */ \
-    /** was created via the create() static method.                   */ \
-    std::shared_ptr<T> sharedPtr() {                                     \
-        return std::static_pointer_cast<T>(this->shared_from_this());    \
+#define VGC_CORE_OBJECT_WEAK_PTR_(T)                                  \
+    /** Returns a weak_ptr to this object. Assumes that the object */ \
+    /** is indeed managed via shared_ptr.                          */ \
+    std::weak_ptr<T> weakPtr() {                                      \
+        return sharedPtr(); /* Note: C++17 has weak_from_this */      \
     }
 
-#define VGC_CORE_OBJECT_WEAK_PTR_(T)                             \
-    /** Returns a weak_ptr to this object. Assumes the object */ \
-    /** was created via the create() static method.           */ \
-    std::weak_ptr<T> weakPtr() {                                 \
-        return sharedPtr(); /* Note: C++17 has weak_from_this */ \
+#define VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                                  \
+    /** Returns a const shared_ptr to this object. Assumes that the object */ \
+    /** is indeed managed via shared_ptr.                                  */ \
+    std::shared_ptr<const T> sharedPtr() const {                              \
+        return std::static_pointer_cast<const T>(this->shared_from_this());   \
     }
 
-#define VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                                \
-    /** Returns a shared_ptr managing this object. Assumes the object */    \
-    /** was created via the create() static method.                   */    \
-    std::shared_ptr<const T> sharedPtr() const {                            \
-        return std::static_pointer_cast<const T>(this->shared_from_this()); \
-    }
-
-#define VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)                       \
-    /** Returns a weak_ptr to this object. Assumes the object */ \
-    /** was created via the create() static method.           */ \
-    std::weak_ptr<const T> weakPtr() const {                     \
-        return sharedPtr(); /* Note: C++17 has weak_from_this */ \
+#define VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)                                  \
+    /** Returns a const weak_ptr to this object. Assumes that the object */ \
+    /** is indeed managed via shared_ptr.                                */ \
+    std::weak_ptr<const T> weakPtr() const {                                \
+        return sharedPtr(); /* Note: C++17 has weak_from_this */            \
     }
 
 #define VGC_CORE_OBJECT(T)               \
-    public:                              \
-    VGC_CORE_OBJECT_CREATE_(T)           \
+public:                                  \
     VGC_CORE_OBJECT_SHARED_PTR_(T)       \
     VGC_CORE_OBJECT_WEAK_PTR_(T)         \
     VGC_CORE_OBJECT_CONST_SHARED_PTR_(T) \
     VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)   \
-    private:
+private:
 
 namespace vgc {
 namespace core {
@@ -110,8 +95,8 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// instanciated more than a million times in a session, and are expected or
 /// measured to be a bottleneck if they would derive from Object.
 ///
-/// Classes deriving directly or indirectly from Object should be declared as
-/// follows, where Bar is either Object or one of its subclasses:
+/// Classes deriving directly or indirectly from Object should typically be
+/// declared as follows, where Bar is either Object or one of its subclasses:
 ///
 /// \code
 /// class Foo: public Bar
@@ -123,33 +108,22 @@ VGC_CORE_DECLARE_PTRS(Object);
 ///     Foo(int x); // some other constructor
 ///
 /// public:
-///     //...
+///     static ObjectSharedPtr create();      // Use make_shared or allocate_shared
+///     static ObjectSharedPtr create(int x); // Use make_shared or allocate_shared
 /// };
 /// \endcode
 ///
 /// The macro VGC_CORE_OBJECT(Foo) defines the following public methods:
 ///
 /// \code
-/// template <typename... Args> static FooSharedPtr create(Args... args);
 /// FooSharedPtr sharedPtr();
 /// FooWeakPtr weakPtr();
 /// FooConstSharedPtr sharedPtr() const;
 /// FooConstWeakPtr weakPtr() const;
 /// \endcode
 ///
-/// The first method should be used to construct your objects, for example:
-///
-/// \code
-/// FooSharedPtr foo1 = Foo::create();
-/// FooSharedPtr foo2 = Foo::create(42);
-/// \endcode
-///
-/// This is equivalent to `std::make_shared<Foo>(...)`, and ensures that the
-/// object is dynamically allocated and managed by a `std::shared_ptr`.
-///
-/// The other two methods sharedPtr() and weakPtr() can be used to convert a
-/// raw pointer of the object to a `std::shared_ptr` and `std::weak_ptr`,
-/// respectively. This is possible because vgc::core::Object inherits from
+/// These methods can be used to convert a raw pointer into a smart pointer.
+/// This is possible since vgc::core::Object inherits from
 /// `std::enable_shared_from_this`.
 ///
 /// Ownership Conventions
@@ -194,8 +168,14 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// pointer and hold this shared pointer as a member variable (that is, unless
 /// you actually desire to share ownership, which is rare). Indeed, holding
 /// such shared pointer would defer the destruction of the object, and goes
-/// against good RAII design. And of course, never call `new` or `delete` to
-/// manage the lifetime of vgc::core::Object instances.
+/// against good RAII design. A notable exception are Python bindings: many
+/// Python bindings of C++ classes internally hold a shared_ptr, because the
+/// concept of weak reference is not very pythonic. Indeed, most Python
+/// developers expect that objects stay alive as long as at least one Python
+/// variable references the object.
+///
+/// Of course, never call `new` or `delete` to manually manage the lifetime of
+/// vgc::core::Object instances.
 ///
 /// Calling Conventions
 /// -------------------
@@ -209,7 +189,7 @@ VGC_CORE_DECLARE_PTRS(Object);
 ///
 /// 2. The lifetime of the object exceeds the lifetime of the function.
 ///
-/// 3. Converting to a weak pointer via obj->weakPtr() does not throw.
+/// 3. Converting to smart pointers is safe.
 ///
 /// Please watch the first 30min of following talk by Herb Sutter for a
 /// rationale (or consult the C++ Core Guidelines):
@@ -229,22 +209,16 @@ VGC_CORE_DECLARE_PTRS(Object);
 ///
 /// Since the destructor of Object is virtual, there is no need to explicitly
 /// declare a (virtual) destructor in derived classes. In most cases, the
-/// default destructor is the most appropriate. In general, derived classes
-/// should strive for "the rule of zero": no custom destructor, copy
-/// constructor, move constructor, assignment operator, and move assignment
-/// operator. See:
+/// default destructor is the most appropriate.
 ///
 /// http://en.cppreference.com/w/cpp/language/rule_of_three
 /// https://blog.rmf.io/cxx11/rule-of-zero
 /// http://scottmeyers.blogspot.fr/2014/03/a-concern-about-rule-of-zero.html
 ///
-/// In many cases, "copying" objects does not make sense, in which case you may
-/// "delete" the copy-constructor and copy-assignement operator:
-///
-/// \code
-/// Object(const Object&) = delete;
-/// Object& operator=(const Object&) = delete;
-/// \endcode
+/// Note that the copy constructor, move constructor, assignement operator, and
+/// move assignement operators of Object are all declared private. This means
+/// that objects cannot be copied. If you desire to introduce copy-semantics to
+/// a specific subclass of Object, you must manually define a clone() method.
 ///
 /// In some cases, destructions of objects with deeply nested ownership of
 /// other pointers may run into stack overflow issues. In these cases, it may
@@ -268,10 +242,19 @@ protected:
     Object() VGC_CORE_OBJECT_DEFAULT_("constructed")
 
 public:
-    /// Destructs an Object. This ought to be a protected method to avoid accidental misuse, but is currently
-    /// kept public due to pybind11's limitations (see https://github.com/pybind/pybind11/issues/114)
+    /// Destructs an Object. Never call this manually, and instead let the
+    /// shared pointers do the work for you.
+    ///
+    /// This ought to be a protected method to avoid accidental misuse, but it
+    /// is currently kept public due to a limitation of pybind11 (see
+    /// https://github.com/pybind/pybind11/issues/114), and possibly other
+    /// related issues.
     ///
     virtual ~Object() VGC_CORE_OBJECT_DEFAULT_("destructed")
+
+    /// Creates an object.
+    ///
+    static ObjectSharedPtr create();
 };
 
 } // namespace core

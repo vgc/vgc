@@ -28,6 +28,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/vec2d.h>
 #include <vgc/dom/document.h>
+#include <vgc/dom/element.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/pointingdeviceevent.h>

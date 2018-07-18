@@ -18,24 +18,24 @@
 
 import unittest
 
-from vgc.dom import Document, Element, NodeType, Vgc
+from vgc.dom import Document, Element, NodeType
 
 class TestDocument(unittest.TestCase):
 
     def testConstructor(self):
-        document = Document()
-        self.assertEqual(document.nodeType, NodeType.Document)
+        doc = Document()
+        self.assertEqual(doc.nodeType, NodeType.Document)
 
     def testRootElement(self):
-        document = Document()
-        document.rootElement = Vgc()
-        self.assertEqual(document.rootElement.name, "vgc")
+        doc = Document()
+        root = Element(doc, "vgc")
+        self.assertEqual(doc.rootElement.name, "vgc")
 
     def testSave(self):
-        document = Document()
-        root = document.appendChild(Vgc())
-        root.appendChild(Element("path"))
-        document.save("testSave.vgc")
+        doc = Document()
+        root = Element(doc, "vgc")
+        path = Element(root, "path")
+        doc.save("testSave.vgc")
 
 if __name__ == '__main__':
     unittest.main()

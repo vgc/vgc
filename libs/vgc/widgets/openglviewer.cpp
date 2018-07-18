@@ -23,7 +23,6 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/core/resources.h>
-#include <vgc/dom/path.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/widgets/qtutil.h>
 
@@ -59,6 +58,7 @@ double width_(const PointingDeviceEvent& event) {
                defaultWidth;
 }
 
+core::StringId PATH("path");
 core::StringId POSITIONS("positions");
 core::StringId WIDTHS("widths");
 core::StringId COLOR("color");
@@ -577,8 +577,7 @@ void OpenGLViewer::startCurve_(const core::Vec2d& p, double width)
     // XXX CLEAN
 
     dom::Element* root = document_->rootElement();
-    dom::PathSharedPtr path = dom::Path::create();
-    root->appendChild(path);
+    dom::Element* path = dom::Element::create(root, PATH);
 
     path->setAttribute(POSITIONS, core::Vec2dArray());
     path->setAttribute(WIDTHS, core::DoubleArray());

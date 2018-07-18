@@ -23,29 +23,41 @@
 namespace vgc {
 namespace dom {
 
-Node::Node(Node::ConstructorKey key) :
-    nodeType_(key.type()),
+Node::Node(Document* document, NodeType nodeType) :
+    document_(document),
+    nodeType_(nodeType),
     parent_(nullptr),
     firstChild_(),
     lastChild_(nullptr),
     previousSibling_(nullptr),
-    nextSibling_(),
-    document_(nullptr)
+    nextSibling_()
 {
-    if (nodeType_ == NodeType::Document) {
-        document_ = Document::cast(this);
-    }
+
 }
 
 bool Node::canAppendChild(Node* node, std::string* reason)
 {
+    // Warning! Be careful when modifying this function: it is possible that
+    // node is an Element with no parent. Normally, elements are guaranteed to
+    // have a parent, but this function is also called within Element::create()
+    // to set its initial parent.
+
+    if (this->document() != node->document())
+    {
+        if (reason) {
+            *reason += "The node to append must belong to the same document as this node";
+        }
+        return false;
+    }
+
     if (node->nodeType() == NodeType::Document) {
         if (reason) {
             *reason += "nodes can't have Document children";
         }
         return false;
     }
-    else if (this->nodeType() == NodeType::Document &&
+
+    if (this->nodeType() == NodeType::Document &&
              node->nodeType() == NodeType::Element)
     {
         if (Document::cast(this)->rootElement()) {
@@ -67,54 +79,97 @@ bool Node::canAppendChild(Node* node, std::string* reason)
     // with no warnings.
 }
 
-Node* Node::appendChild(NodeSharedPtr node)
+bool Node::appendChild(Node* node)
 {
+    // Warning! Be careful when modifying this function: it is possible that
+    // node is an Element with no parent. Normally, elements are guaranteed to
+    // have a parent, but this function is also called within Element::create()
+    // to set its initial parent.
+
     std::string reason;
-    if (!canAppendChild(node.get(), &reason)) {
+    if (!canAppendChild(node, &reason)) {
         core::warning() << "Can't append child: " << reason << std::endl;
-        return nullptr;
+        return false;
     }
 
-    // Remove from existing parent if any, but don't nullify node->document_
-    // since we override this just after anyway.
+    // Remove from existing parent, if any.
+    NodeSharedPtr nodePtr = node->sharedPtr();
     if (node->parent_) {
-        bool nullifyDocument = false;
-        node->parent_->removeChild_(node.get(), nullifyDocument);
+        node->parent_->removeChild_(node);
     }
 
     // Append to the end of the doubly linked-list of siblings.
-    // This takes ownership of the node.
     if (this->lastChild_) {
-        this->lastChild_->nextSibling_ = node;
+        this->lastChild_->nextSibling_ = std::move(nodePtr);
         node->previousSibling_ = this->lastChild_;
     }
     else {
-        this->firstChild_ = node;
+        this->firstChild_ = std::move(nodePtr);
     }
 
     // Set parent-child relationship
-    this->lastChild_ = node.get();
+    this->lastChild_ = node;
     node->parent_ = this;
-    node->setDocument_(document());
 
-    return node.get();
+    return true;
 }
 
-NodeSharedPtr Node::removeChild(Node* node)
+bool Node::removeChild(Node* node)
 {
     if (node->parent_ != this) {
         core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
-        return NodeSharedPtr();
+        return false;
     };
 
-    return removeChild_(node);
+    node->destroy();
+
+    return true;
 }
 
-NodeSharedPtr Node::removeChild_(Node* node, bool nullifyDocument)
+void Node::destroy()
+{
+    // Recursively destroy descendants. Note: we can't use a range loop here
+    // since we're modifying the range while iterating.
+    while (Node* child = lastChild()) {
+        child->destroy();
+    }
+
+    // Don't destruct this C++ object until the end of this function.
+    NodeSharedPtr nodePtr = sharedPtr();
+
+    // Remove from parent if any.
+    if (parent_) {
+        parent_->removeChild_(this);
+    }
+
+    // Clear data
+    //
+    // XXX todo: call virtual method overriden by Element and Document
+    // which clear() and shrink_to_fit() the authored attributes
+    //
+    // Note: we intentionally don't change nodeType_ here to something like
+    // "NotAliveNode", since it would not save any memory and preserving the
+    // nodeType() might be useful to provide debug info for dead nodes.
+
+    // Nullify document_ and set node as not alive.
+    //
+    // Note: it is important to nullify document_ in this destroy() method
+    // (otherwise it might dangle), and since we have to nullify it anyway we
+    // use it as a synonym for isAlive_ to save a few bits.
+    //
+    document_ = nullptr;
+
+    // Destruct the C++ object now, unless other shared pointers point to this
+    // node. This line of code is redundant with closing the scope, but it is
+    // kept for clarifying intent.
+    nodePtr.reset();
+}
+
+void Node::removeChild_(Node* node)
 {
     VGC_CORE_ASSERT(node->parent_);
 
-    // Take ownership of node
+    // Don't destruct the node until the end of this function.
     NodeSharedPtr nodePtr = node->sharedPtr();
 
     // Update who points to node->nextSibling_
@@ -139,29 +194,10 @@ NodeSharedPtr Node::removeChild_(Node* node, bool nullifyDocument)
     node->previousSibling_ = nullptr;
     node->nextSibling_.reset();
 
-    // The node doesn't have any owner document anymore, so we should set
-    // document_ to nullptr. As an optimization, we omit this operation if the
-    // caller knows that document_ will be overidden just after anyway.
-    // Note: node can't be a Document node since it had a parent.
-    if (nullifyDocument) {
-        node->setDocument_(nullptr);
-    }
-
-    // Pass ownership
-    return nodePtr;
-}
-
-void Node::setDocument_(Document* document)
-{
-    // Nothing to do if it's already done
-    if (document_ == document) {
-        return;
-    }
-
-    document_ = document;
-    for (Node* child : children()) {
-        child->setDocument_(document);
-    }
+    // Destruct the C++ object now, unless other shared pointers point to this
+    // node. This line of code is redundant with closing the scope, but it is
+    // kept for clarifying intent.
+    nodePtr.reset();
 }
 
 } // namespace dom

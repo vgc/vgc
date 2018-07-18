@@ -35,16 +35,41 @@ class VGC_DOM_API Element: public Node
 {
     VGC_CORE_OBJECT(Element)
 
+    // Helper method for the other create methods
+    static Element* create_(Node* parent, core::StringId name);
+
 protected:
-    /// Creates a new Element with the given \p name.
+    /// Constructs a parent-less Element with the given \p name, owned by the
+    /// given \p document. This constructor is an implementation detail only
+    /// available to derived classes. In order to create an Element, please use
+    /// the following:
     ///
-    Element(core::StringId name);
-
-    /// Creates a new Element with the given \p name.
+    /// \code
+    /// ElementSharedPtr element = Element::create(parent, name);
+    /// \endcode
     ///
-    Element(const std::string& name);
+    Element(Document* document, core::StringId name);
 
-public:
+public:    
+    /// Creates an element with the given \p name as the root element of the
+    /// given \p parent Document. An error will be raised if the given \p
+    /// parent already has a root element.
+    ///
+    static Element* create(Document* parent, core::StringId name);
+
+    /// \overload create(Document* parent, core::StringId name)
+    ///
+    static Element* create(Document* parent, const std::string& name);
+
+    /// Creates an element with the given \p name as the last child of the
+    /// given \p parent Element.
+    ///
+    static Element* create(Element* parent, core::StringId name);
+
+    /// \overload create(Element* parent, core::StringId name)
+    ///
+    static Element* create(Element* parent, const std::string& name);
+
     /// Casts the given \p node to an Element. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Element.
     ///

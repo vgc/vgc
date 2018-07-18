@@ -11,5 +11,3 @@ vgc_add_library(scene
     CPP_FILES
         scene.cpp
 )
-
-add_subdirectory(wraps)
