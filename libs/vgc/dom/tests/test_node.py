@@ -33,7 +33,22 @@ class TestNode(unittest.TestCase):
 
     def testConstructor(self):
         with self.assertRaises(TypeError):
-            node = Node()
+            node = Node()            
+
+    def testDocument(self):
+        doc = Document()
+        self.assertEqual(doc.document, doc)
+
+        n1 = Element(doc, "foo")
+        n2 = Element(n1, "bar")
+        self.assertEqual(n1.document, doc)
+        self.assertEqual(n2.document, doc)
+
+    def testNodeType(self):
+        doc = Document()
+        element = Element(doc, "foo")
+        self.assertEqual(doc.nodeType, NodeType.Document)
+        self.assertEqual(element.nodeType, NodeType.Element)
 
     def testIsAlive(self):
         doc = Document()
@@ -109,12 +124,6 @@ class TestNode(unittest.TestCase):
         del doc
         self.assertFalse(n1.isAlive())
 
-    def testNodeType(self):
-        doc = Document()
-        element = Element(doc, "foo")
-        self.assertEqual(doc.nodeType, NodeType.Document)
-        self.assertEqual(element.nodeType, NodeType.Element)
-
     def testParentChildRelationships(self):
         doc = Document()
         n1 = Element(doc, "foo")
@@ -160,15 +169,6 @@ class TestNode(unittest.TestCase):
         n3 = Element(n1, "bar2")
         n4 = Element(n1, "bar3")
         self.assertEqual(getChildNames(n1), ["bar1", "bar2", "bar3"])
-
-    def testDocument(self):
-        doc = Document()
-        self.assertEqual(doc.document, doc)
-
-        n1 = Element(doc, "foo")
-        n2 = Element(n1, "bar")
-        self.assertEqual(n1.document, doc)
-        self.assertEqual(n2.document, doc)
 
     # TODO Add tests for thrown exceptions when trying invalid operations
 
