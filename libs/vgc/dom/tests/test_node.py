@@ -41,6 +41,14 @@ class TestNode(unittest.TestCase):
         self.assertTrue(doc.isAlive())
         self.assertTrue(n1.isAlive())
 
+    def testCheckAlive(self):
+        doc = Document()
+        n1 = Element(doc, "n1")
+        n1.checkAlive()
+        n1.destroy()
+        with self.assertRaises(RuntimeError):
+            n1.checkAlive()
+
     def testDestroy(self):
         doc = Document()
         n1 = Element(doc, "n1")

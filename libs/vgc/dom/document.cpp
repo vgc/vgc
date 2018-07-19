@@ -38,7 +38,7 @@ Document::Document() :
 
 bool Document::setRootElement(Element* element)
 {
-    checkAlive_();
+    checkAlive();
 
     if (this != element->document()) {
         core::warning() << "Can't set root element: it is owned by another Document." << std::endl;
@@ -61,7 +61,7 @@ bool Document::setRootElement(Element* element)
 
 Element* Document::rootElement() const
 {
-    checkAlive_();
+    checkAlive();
 
     for (Node* node : children()) {
         if (node->nodeType() == NodeType::Element) {
@@ -73,21 +73,21 @@ Element* Document::rootElement() const
 
 std::string Document::xmlDeclaration() const
 {
-    checkAlive_();
+    checkAlive();
 
     return xmlDeclaration_;
 }
 
 bool Document::hasXmlDeclaration() const
 {
-    checkAlive_();
+    checkAlive();
 
     return hasXmlDeclaration_;
 }
 
 void Document::setXmlDeclaration()
 {
-    checkAlive_();
+    checkAlive();
 
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
@@ -95,7 +95,7 @@ void Document::setXmlDeclaration()
 
 void Document::setNoXmlDeclaration()
 {
-    checkAlive_();
+    checkAlive();
 
     hasXmlDeclaration_ = false;
     generateXmlDeclaration_();
@@ -103,14 +103,14 @@ void Document::setNoXmlDeclaration()
 
 std::string Document::xmlVersion() const
 {
-    checkAlive_();
+    checkAlive();
 
     return xmlVersion_;
 }
 
 void Document::setXmlVersion(const std::string& version)
 {
-    checkAlive_();
+    checkAlive();
 
     xmlVersion_ = version;
     hasXmlDeclaration_ = true;
@@ -119,21 +119,21 @@ void Document::setXmlVersion(const std::string& version)
 
 std::string Document::xmlEncoding() const
 {
-    checkAlive_();
+    checkAlive();
 
     return xmlEncoding_;
 }
 
 bool Document::hasXmlEncoding() const
 {
-    checkAlive_();
+    checkAlive();
 
     return hasXmlEncoding_;
 }
 
 void Document::setXmlEncoding(const std::string& encoding)
 {
-    checkAlive_();
+    checkAlive();
 
     xmlEncoding_ = encoding;
     hasXmlEncoding_ = true;
@@ -143,7 +143,7 @@ void Document::setXmlEncoding(const std::string& encoding)
 
 void Document::setNoXmlEncoding()
 {
-    checkAlive_();
+    checkAlive();
 
     xmlEncoding_ = "UTF-8";
     hasXmlEncoding_ = false;
@@ -152,21 +152,21 @@ void Document::setNoXmlEncoding()
 
 bool Document::xmlStandalone() const
 {
-    checkAlive_();
+    checkAlive();
 
     return xmlStandalone_;
 }
 
 bool Document::hasXmlStandalone() const
 {
-    checkAlive_();
+    checkAlive();
 
     return hasXmlStandalone_;
 }
 
 void Document::setXmlStandalone(bool standalone)
 {
-    checkAlive_();
+    checkAlive();
 
     xmlStandalone_ = standalone;
     hasXmlStandalone_ = true;
@@ -176,7 +176,7 @@ void Document::setXmlStandalone(bool standalone)
 
 void Document::setNoXmlStandalone()
 {
-    checkAlive_();
+    checkAlive();
 
     xmlStandalone_ = false;
     hasXmlStandalone_ = false;
@@ -207,7 +207,7 @@ void Document::generateXmlDeclaration_()
 bool Document::save(const std::string& filePath,
                     const XmlFormattingStyle& style) const
 {
-    checkAlive_();
+    checkAlive();
 
     std::ofstream out(filePath);
     if (!out.is_open()) {

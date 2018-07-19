@@ -47,14 +47,14 @@ Node::~Node()
 
 void Node::destroy()
 {
-    checkAlive_();
+    checkAlive();
     const bool calledFromDestructor = false;
     destroy_(calledFromDestructor);
 }
 
 bool Node::canAppendChild(Node* node, std::string* reason)
 {
-    checkAlive_();
+    checkAlive();
 
     // Warning! Be careful when modifying this function: it is possible that
     // node is an Element with no parent. Normally, elements are guaranteed to
@@ -100,7 +100,7 @@ bool Node::canAppendChild(Node* node, std::string* reason)
 
 bool Node::appendChild(Node* node)
 {
-    checkAlive_();
+    checkAlive();
 
     // Warning! Be careful when modifying this function: it is possible that
     // node is an Element with no parent. Normally, elements are guaranteed to
@@ -138,7 +138,7 @@ bool Node::appendChild(Node* node)
 
 bool Node::removeChild(Node* node)
 {
-    checkAlive_();
+    checkAlive();
 
     if (node->parent_ != this) {
         core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
@@ -152,7 +152,7 @@ bool Node::removeChild(Node* node)
 
 bool Node::replaceChild(Node* newChild, Node* oldChild)
 {
-    checkAlive_();
+    checkAlive();
 
     if (oldChild->parent() != this) {
         core::warning() << "Can't replace child: oldChild is not a child of this Node" << std::endl;

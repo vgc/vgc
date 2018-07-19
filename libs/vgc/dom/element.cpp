@@ -64,7 +64,7 @@ Element* Element::create(Element* parent, const std::string& name) {
 
 const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
 {
-    checkAlive_();
+    checkAlive();
 
     // XXX TODO
     static std::vector<BuiltInAttribute> dummy;
@@ -73,7 +73,7 @@ const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
 
 const Value& Element::getAttribute(core::StringId name) const
 {
-    checkAlive_();
+    checkAlive();
 
     if (const AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         return authored->value();
@@ -89,7 +89,7 @@ const Value& Element::getAttribute(core::StringId name) const
 
 void Element::setAttribute(core::StringId name, const Value& value)
 {
-    checkAlive_();
+    checkAlive();
 
     // If already authored, update the authored value
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {

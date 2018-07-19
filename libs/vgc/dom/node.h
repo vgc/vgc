@@ -259,7 +259,7 @@ public:
     /// be a non-null valid Document.
     ///
     Document* document() const {
-        checkAlive_();
+        checkAlive();
         return document_;
     }
 
@@ -317,6 +317,15 @@ public:
         return document_ != nullptr;
     }
 
+    /// Throws a NotAliveException if this Node is not alive. Does nothing
+    /// otherwise.
+    ///
+    void checkAlive() const {
+        if (!isAlive()) {
+            throw NotAliveException(this);
+        }
+    }
+
     /// Destroys this Node.
     ///
     /// \sa isAlive().
@@ -329,7 +338,7 @@ public:
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
     Node* parent() const {
-        checkAlive_();
+        checkAlive();
         return parent_;
     }
 
@@ -339,7 +348,7 @@ public:
     /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
     Node* firstChild() const {
-        checkAlive_();
+        checkAlive();
         return firstChild_.get();
     }
 
@@ -349,7 +358,7 @@ public:
     /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
     ///
     Node* lastChild() const {
-        checkAlive_();
+        checkAlive();
         return lastChild_;
     }
 
@@ -359,7 +368,7 @@ public:
     /// \sa nextSibling(), parent(), firstChild(), and lastChild().
     ///
     Node* previousSibling() const {
-        checkAlive_();
+        checkAlive();
         return previousSibling_;
     }
 
@@ -369,7 +378,7 @@ public:
     /// \sa previousSibling(), parent(), firstChild(), and lastChild().
     ///
     Node* nextSibling() const {
-        checkAlive_();
+        checkAlive();
         return nextSibling_.get();
     }
 
@@ -384,7 +393,7 @@ public:
     /// \endcode
     ///
     NodeList children() const {
-        checkAlive_();
+        checkAlive();
         return NodeList(firstChild(), nullptr);
     }
 
@@ -461,16 +470,6 @@ public:
     /// Returns whether the child was successfully replaced.
     ///
     bool replaceChild(Node* newChild, Node* oldChild);
-
-protected:
-    /// Checks whether this node is alive, and throw a NotAliveException if
-    /// not.
-    ///
-    void checkAlive_() const {
-        if (!isAlive()) {
-            throw NotAliveException(this);
-        }
-    }
 
 private:
     // Owner document (also used as an 'isAlive_' flag)
