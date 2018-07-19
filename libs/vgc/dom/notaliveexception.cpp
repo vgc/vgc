@@ -22,7 +22,7 @@
 namespace vgc {
 namespace dom {
 
-NotAliveException::NotAliveException(Node* node)
+NotAliveException::NotAliveException(const Node* node)
 {
     what_.reserve(36); // = size("Node 0x1234567812345678 is not alive")
     what_.append("Node ");

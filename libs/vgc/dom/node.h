@@ -19,6 +19,7 @@
 
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/notaliveexception.h>
 
 namespace vgc {
 namespace dom {
@@ -243,7 +244,26 @@ protected:
     ///
     Node(Document* document, NodeType nodeType);
 
+    /// Checks whether this node is alive, and throw a NotAliveException if
+    /// not.
+    ///
+    void checkAlive_() const {
+        if (!isAlive()) {
+            throw NotAliveException(this);
+        }
+    }
+
 public:
+    /// Destructs the Node. Never call this manually, and instead let the
+    /// shared pointers do the work for you.
+    ///
+    /// This ought to be a protected method to avoid accidental misuse, but it
+    /// is currently kept public due to a limitation of pybind11 (see
+    /// https://github.com/pybind/pybind11/issues/114), and possibly other
+    /// related issues.
+    ///
+    virtual ~Node();
+
     /// Returns the given \p node. This no-op function is provided for use in
     /// generic templated code where T might be Node or one of its direct
     /// subclass:
@@ -255,6 +275,8 @@ public:
     /// Obviously, don't use this function in non-templated code, that would be
     /// silly. However, do use the cast() functions provided by all direct
     /// subclasses, say, Element::cast().
+    ///
+    /// This function is safe to call even when the node is not alive.
     ///
     static Node* cast(Node* node) {
         return node;
@@ -277,9 +299,14 @@ public:
     /// 3. Node::~Node() has been called: all raw pointers to the node are now
     ///    dangling pointers, and all weak pointers to the node are now expired.
     ///
+    /// Quite obviously, this function is safe to call even when the node is
+    /// not alive.
+    ///
     /// \sa destroy().
     ///
     bool isAlive() const noexcept {
+        // Note: don't be tempted to use document() here instead of document_,
+        // since the former throws when the node is not alive.
         return document_ != nullptr;
     }
 
@@ -291,6 +318,8 @@ public:
 
     /// Returns the NodeType of this Node.
     ///
+    /// This function is safe to call even when the node is not alive.
+    ///
     NodeType nodeType() const {
         return nodeType_;
     }
@@ -301,6 +330,7 @@ public:
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
     Node* parent() const {
+        checkAlive_();
         return parent_;
     }
 
@@ -310,6 +340,7 @@ public:
     /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
     Node* firstChild() const {
+        checkAlive_();
         return firstChild_.get();
     }
 
@@ -319,6 +350,7 @@ public:
     /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
     ///
     Node* lastChild() const {
+        checkAlive_();
         return lastChild_;
     }
 
@@ -328,6 +360,7 @@ public:
     /// \sa nextSibling(), parent(), firstChild(), and lastChild().
     ///
     Node* previousSibling() const {
+        checkAlive_();
         return previousSibling_;
     }
 
@@ -337,6 +370,7 @@ public:
     /// \sa previousSibling(), parent(), firstChild(), and lastChild().
     ///
     Node* nextSibling() const {
+        checkAlive_();
         return nextSibling_.get();
     }
 
@@ -351,6 +385,7 @@ public:
     /// \endcode
     ///
     NodeList children() const {
+        checkAlive_();
         return NodeList(firstChild(), nullptr);
     }
 
@@ -358,6 +393,7 @@ public:
     /// be a non-null valid Document.
     ///
     Document* document() const {
+        checkAlive_();
         return document_;
     }
 
@@ -429,7 +465,10 @@ private:
     NodeSharedPtr nextSibling_;
 
     // Helper method for removeChild(), appendChild(), and destroy()
-    void removeChild_(Node* node);
+    void removeChild_(Node* node, bool calledFromNodeDestructor);
+
+    // Helper method for ~Node and destroy()
+    void destroy_(bool calledFromDestructor);
 };
 
 inline NodeIterator& NodeIterator::operator++() {

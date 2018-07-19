@@ -38,7 +38,7 @@ class VGC_DOM_API NotAliveException : public std::exception {
     std::string what_;
 
 public:
-    NotAliveException(Node* node);
+    NotAliveException(const Node* node);
     const char* what() const throw() {
       return what_.c_str();
     }

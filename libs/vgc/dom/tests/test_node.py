@@ -35,6 +35,72 @@ class TestNode(unittest.TestCase):
         with self.assertRaises(TypeError):
             node = Node()
 
+    def testIsAlive(self):
+        doc = Document()
+        n1 = Element(doc, "n1")
+        self.assertTrue(doc.isAlive())
+        self.assertTrue(n1.isAlive())
+
+    def testDestroy(self):
+        doc = Document()
+        n1 = Element(doc, "n1")
+        n3 = Element(n1, "n2") # not a typo
+        n3 = Element(n3, "n3")
+        self.assertTrue(doc.isAlive())
+        self.assertTrue(n1.isAlive())
+        self.assertTrue(n3.parent.isAlive())
+        self.assertTrue(n3.isAlive())
+        self.assertTrue(doc.rootElement, n1)
+
+        n1.destroy()
+        self.assertTrue(doc.isAlive())
+        self.assertFalse(n1.isAlive())
+        self.assertFalse(n3.isAlive())
+        self.assertTrue(doc.rootElement == None)
+        with self.assertRaises(RuntimeError):
+            n2 = n3.parent
+
+        doc.destroy()
+        self.assertFalse(doc.isAlive())
+        with self.assertRaises(RuntimeError):
+            n1 = doc.rootElement
+
+        n1 = None
+        with self.assertRaises(AttributeError):
+            doc = n1.parent
+
+        del n3
+        with self.assertRaises(UnboundLocalError):
+            n2 = n3.parent
+
+        doc = Document()
+        n1 = Element(doc, "n1")
+        n2 = Element(n1, "n2")
+        n3 = Element(n1, "n3")
+        self.assertTrue(doc.isAlive())
+        self.assertTrue(n1.isAlive())
+        self.assertTrue(n2.isAlive())
+        self.assertTrue(n3.isAlive())
+        self.assertTrue(doc.rootElement == n1)
+        self.assertTrue(n1.firstChild == n2)
+        self.assertTrue(n1.lastChild == n3)
+
+        del n2
+        self.assertTrue(n1.firstChild.isAlive())
+
+        n1 = None
+        self.assertTrue(doc.rootElement.isAlive())
+        self.assertTrue(doc.rootElement.firstChild.isAlive())
+        self.assertTrue(n3.isAlive())
+
+        doc = None
+        self.assertFalse(n3.isAlive())
+
+        doc = Document()
+        n1 = Element(doc, "n1")
+        del doc
+        self.assertFalse(n1.isAlive())
+
     def testNodeType(self):
         doc = Document()
         element = Element(doc, "foo")

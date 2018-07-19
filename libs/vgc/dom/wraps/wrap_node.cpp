@@ -62,6 +62,8 @@ void wrap_node(py::module& m)
 
     py::class_<This, Holder, Parent>(m, "Node")
         // Note: Node has no public constructor
+        .def("isAlive", &This::isAlive)
+        .def("destroy", &This::destroy)
         .def_property_readonly("nodeType", &This::nodeType)
         .def_property_readonly("parent", &This::parent)
         .def_property_readonly("firstChild", &This::firstChild)

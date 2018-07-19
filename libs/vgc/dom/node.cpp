@@ -35,8 +35,20 @@ Node::Node(Document* document, NodeType nodeType) :
 
 }
 
+Node::~Node()
+{
+    if (isAlive()) {
+        // We can be here if `this` is a Document, or if an exception was
+        // thrown in one of Node's methods.
+        const bool calledFromDestructor = true;
+        destroy_(calledFromDestructor);
+    }
+}
+
 bool Node::canAppendChild(Node* node, std::string* reason)
 {
+    checkAlive_();
+
     // Warning! Be careful when modifying this function: it is possible that
     // node is an Element with no parent. Normally, elements are guaranteed to
     // have a parent, but this function is also called within Element::create()
@@ -81,6 +93,8 @@ bool Node::canAppendChild(Node* node, std::string* reason)
 
 bool Node::appendChild(Node* node)
 {
+    checkAlive_();
+
     // Warning! Be careful when modifying this function: it is possible that
     // node is an Element with no parent. Normally, elements are guaranteed to
     // have a parent, but this function is also called within Element::create()
@@ -95,7 +109,8 @@ bool Node::appendChild(Node* node)
     // Remove from existing parent, if any.
     NodeSharedPtr nodePtr = node->sharedPtr();
     if (node->parent_) {
-        node->parent_->removeChild_(node);
+        const bool calledFromNodeDestructor = false;
+        node->parent_->removeChild_(node, calledFromNodeDestructor);
     }
 
     // Append to the end of the doubly linked-list of siblings.
@@ -116,6 +131,8 @@ bool Node::appendChild(Node* node)
 
 bool Node::removeChild(Node* node)
 {
+    checkAlive_();
+
     if (node->parent_ != this) {
         core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
         return false;
@@ -128,6 +145,13 @@ bool Node::removeChild(Node* node)
 
 void Node::destroy()
 {
+    checkAlive_();
+    const bool calledFromDestructor = false;
+    destroy_(calledFromDestructor);
+}
+
+void Node::destroy_(bool calledFromDestructor)
+{
     // Recursively destroy descendants. Note: we can't use a range loop here
     // since we're modifying the range while iterating.
     while (Node* child = lastChild()) {
@@ -135,11 +159,14 @@ void Node::destroy()
     }
 
     // Don't destruct this C++ object until the end of this function.
-    NodeSharedPtr nodePtr = sharedPtr();
+    NodeSharedPtr nodePtr;
+    if (!calledFromDestructor) {
+        nodePtr = sharedPtr();
+    }
 
     // Remove from parent if any.
     if (parent_) {
-        parent_->removeChild_(this);
+        parent_->removeChild_(this, calledFromDestructor);
     }
 
     // Clear data
@@ -165,12 +192,15 @@ void Node::destroy()
     nodePtr.reset();
 }
 
-void Node::removeChild_(Node* node)
+void Node::removeChild_(Node* node, bool calledFromNodeDestructor)
 {
     VGC_CORE_ASSERT(node->parent_);
 
     // Don't destruct the node until the end of this function.
-    NodeSharedPtr nodePtr = node->sharedPtr();
+    NodeSharedPtr nodePtr;
+    if (!calledFromNodeDestructor) {
+         nodePtr = node->sharedPtr();
+    }
 
     // Update who points to node->nextSibling_
     // (this would delete the node if we hadn't taken ownership)

@@ -38,6 +38,8 @@ Document::Document() :
 
 void Document::setRootElement(Element* element)
 {
+    checkAlive_();
+
     // Nothing to do if this element is already the root element
     if (element->parent() == this) {
         return;
@@ -54,6 +56,8 @@ void Document::setRootElement(Element* element)
 
 Element* Document::rootElement() const
 {
+    checkAlive_();
+
     for (Node* node : children()) {
         if (node->nodeType() == NodeType::Element) {
             return Element::cast(node);
@@ -64,33 +68,45 @@ Element* Document::rootElement() const
 
 std::string Document::xmlDeclaration() const
 {
+    checkAlive_();
+
     return xmlDeclaration_;
 }
 
 bool Document::hasXmlDeclaration() const
 {
+    checkAlive_();
+
     return hasXmlDeclaration_;
 }
 
 void Document::setXmlDeclaration()
 {
+    checkAlive_();
+
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
 }
 
 void Document::setNoXmlDeclaration()
 {
+    checkAlive_();
+
     hasXmlDeclaration_ = false;
     generateXmlDeclaration_();
 }
 
 std::string Document::xmlVersion() const
 {
+    checkAlive_();
+
     return xmlVersion_;
 }
 
 void Document::setXmlVersion(const std::string& version)
 {
+    checkAlive_();
+
     xmlVersion_ = version;
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
@@ -98,16 +114,22 @@ void Document::setXmlVersion(const std::string& version)
 
 std::string Document::xmlEncoding() const
 {
+    checkAlive_();
+
     return xmlEncoding_;
 }
 
 bool Document::hasXmlEncoding() const
 {
+    checkAlive_();
+
     return hasXmlEncoding_;
 }
 
 void Document::setXmlEncoding(const std::string& encoding)
 {
+    checkAlive_();
+
     xmlEncoding_ = encoding;
     hasXmlEncoding_ = true;
     hasXmlDeclaration_ = true;
@@ -116,6 +138,8 @@ void Document::setXmlEncoding(const std::string& encoding)
 
 void Document::setNoXmlEncoding()
 {
+    checkAlive_();
+
     xmlEncoding_ = "UTF-8";
     hasXmlEncoding_ = false;
     generateXmlDeclaration_();
@@ -123,16 +147,22 @@ void Document::setNoXmlEncoding()
 
 bool Document::xmlStandalone() const
 {
+    checkAlive_();
+
     return xmlStandalone_;
 }
 
 bool Document::hasXmlStandalone() const
 {
+    checkAlive_();
+
     return hasXmlStandalone_;
 }
 
 void Document::setXmlStandalone(bool standalone)
 {
+    checkAlive_();
+
     xmlStandalone_ = standalone;
     hasXmlStandalone_ = true;
     hasXmlDeclaration_ = true;
@@ -141,6 +171,8 @@ void Document::setXmlStandalone(bool standalone)
 
 void Document::setNoXmlStandalone()
 {
+    checkAlive_();
+
     xmlStandalone_ = false;
     hasXmlStandalone_ = false;
     generateXmlDeclaration_();
@@ -170,6 +202,8 @@ void Document::generateXmlDeclaration_()
 bool Document::save(const std::string& filePath,
                     const XmlFormattingStyle& style) const
 {
+    checkAlive_();
+
     std::ofstream out(filePath);
     if (!out.is_open()) {
         vgc::core::warning() << "Could not write file " << filePath << std::endl;

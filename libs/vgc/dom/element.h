@@ -86,6 +86,8 @@ public:
     /// Returns the name of the element. This is equivalent to tagName()
     /// in the W3C DOM Specification.
     ///
+    /// This function is safe to call even when the node is not alive.
+    ///
     /// XXX Should this be elementType() instead? or typeName()? or simply
     /// type() ? We've chosen name() for now for consistency with W3C DOM, but
     /// I personally don't like this terminology. For example, it makes more
