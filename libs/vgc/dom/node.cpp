@@ -45,6 +45,13 @@ Node::~Node()
     }
 }
 
+void Node::destroy()
+{
+    checkAlive_();
+    const bool calledFromDestructor = false;
+    destroy_(calledFromDestructor);
+}
+
 bool Node::canAppendChild(Node* node, std::string* reason)
 {
     checkAlive_();
@@ -129,6 +136,20 @@ bool Node::appendChild(Node* node)
     return true;
 }
 
+bool Node::removeChild(Node* node)
+{
+    checkAlive_();
+
+    if (node->parent_ != this) {
+        core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
+        return false;
+    };
+
+    node->destroy();
+
+    return true;
+}
+
 bool Node::replaceChild(Node* newChild, Node* oldChild)
 {
     checkAlive_();
@@ -197,27 +218,6 @@ bool Node::replaceChild(Node* newChild, Node* oldChild)
     return true;
 }
 
-bool Node::removeChild(Node* node)
-{
-    checkAlive_();
-
-    if (node->parent_ != this) {
-        core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
-        return false;
-    };
-
-    node->destroy();
-
-    return true;
-}
-
-void Node::destroy()
-{
-    checkAlive_();
-    const bool calledFromDestructor = false;
-    destroy_(calledFromDestructor);
-}
-
 NodeSharedPtr Node::detachFromParent_()
 {
     NodeSharedPtr res = sharedPtr();
@@ -226,6 +226,44 @@ NodeSharedPtr Node::detachFromParent_()
         parent()->removeChild_(this, calledFromNodeDestructor);
     }
     return res;
+}
+
+void Node::removeChild_(Node* node, bool calledFromNodeDestructor)
+{
+    VGC_CORE_ASSERT(node->parent_);
+
+    // Don't destruct the node until the end of this function.
+    NodeSharedPtr nodePtr;
+    if (!calledFromNodeDestructor) {
+         nodePtr = node->sharedPtr();
+    }
+
+    // Update who points to node->nextSibling_
+    // (this would delete the node if we hadn't taken ownership)
+    if (node->previousSibling_) {
+        node->previousSibling_->nextSibling_ = node->nextSibling_;
+    }
+    else {
+        node->parent_->firstChild_ = node->nextSibling_;
+    }
+
+    // Update who points to node->previousSibling_
+    if (node->nextSibling_) {
+        node->nextSibling_->previousSibling_ = node->previousSibling_;
+    }
+    else {
+        node->parent_->lastChild_ = node->previousSibling_;
+    }
+
+    // Set as root of new Node tree
+    node->parent_ = nullptr;
+    node->previousSibling_ = nullptr;
+    node->nextSibling_.reset();
+
+    // Destruct the C++ object now, unless other shared pointers point to this
+    // node. This line of code is redundant with closing the scope, but it is
+    // kept for clarifying intent.
+    nodePtr.reset();
 }
 
 void Node::destroy_(bool calledFromDestructor)
@@ -263,44 +301,6 @@ void Node::destroy_(bool calledFromDestructor)
     // use it as a synonym for isAlive_ to save a few bits.
     //
     document_ = nullptr;
-
-    // Destruct the C++ object now, unless other shared pointers point to this
-    // node. This line of code is redundant with closing the scope, but it is
-    // kept for clarifying intent.
-    nodePtr.reset();
-}
-
-void Node::removeChild_(Node* node, bool calledFromNodeDestructor)
-{
-    VGC_CORE_ASSERT(node->parent_);
-
-    // Don't destruct the node until the end of this function.
-    NodeSharedPtr nodePtr;
-    if (!calledFromNodeDestructor) {
-         nodePtr = node->sharedPtr();
-    }
-
-    // Update who points to node->nextSibling_
-    // (this would delete the node if we hadn't taken ownership)
-    if (node->previousSibling_) {
-        node->previousSibling_->nextSibling_ = node->nextSibling_;
-    }
-    else {
-        node->parent_->firstChild_ = node->nextSibling_;
-    }
-
-    // Update who points to node->previousSibling_
-    if (node->nextSibling_) {
-        node->nextSibling_->previousSibling_ = node->previousSibling_;
-    }
-    else {
-        node->parent_->lastChild_ = node->previousSibling_;
-    }
-
-    // Set as root of new Node tree
-    node->parent_ = nullptr;
-    node->previousSibling_ = nullptr;
-    node->nextSibling_.reset();
 
     // Destruct the C++ object now, unless other shared pointers point to this
     // node. This line of code is redundant with closing the scope, but it is

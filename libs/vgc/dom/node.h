@@ -244,15 +244,6 @@ protected:
     ///
     Node(Document* document, NodeType nodeType);
 
-    /// Checks whether this node is alive, and throw a NotAliveException if
-    /// not.
-    ///
-    void checkAlive_() const {
-        if (!isAlive()) {
-            throw NotAliveException(this);
-        }
-    }
-
 public:
     /// Destructs the Node. Never call this manually, and instead let the
     /// shared pointers do the work for you.
@@ -263,6 +254,22 @@ public:
     /// related issues.
     ///
     virtual ~Node();
+
+    /// Returns the owner Document of this Node. This is always guaranteed to
+    /// be a non-null valid Document.
+    ///
+    Document* document() const {
+        checkAlive_();
+        return document_;
+    }
+
+    /// Returns the NodeType of this Node.
+    ///
+    /// This function is safe to call even when the node is not alive.
+    ///
+    NodeType nodeType() const {
+        return nodeType_;
+    }
 
     /// Returns the given \p node. This no-op function is provided for use in
     /// generic templated code where T might be Node or one of its direct
@@ -315,14 +322,6 @@ public:
     /// \sa isAlive().
     ///
     void destroy();
-
-    /// Returns the NodeType of this Node.
-    ///
-    /// This function is safe to call even when the node is not alive.
-    ///
-    NodeType nodeType() const {
-        return nodeType_;
-    }
 
     /// Returns the parent Node of this Node. This is always nullptr for
     /// Document nodes, and always a non-null valid Node otherwise.
@@ -387,14 +386,6 @@ public:
     NodeList children() const {
         checkAlive_();
         return NodeList(firstChild(), nullptr);
-    }
-
-    /// Returns the owner Document of this Node. This is always guaranteed to
-    /// be a non-null valid Document.
-    ///
-    Document* document() const {
-        checkAlive_();
-        return document_;
     }
 
     /// Returns whether the given \p node can be appended as the last child of
@@ -470,6 +461,16 @@ public:
     /// Returns whether the child was successfully replaced.
     ///
     bool replaceChild(Node* newChild, Node* oldChild);
+
+protected:
+    /// Checks whether this node is alive, and throw a NotAliveException if
+    /// not.
+    ///
+    void checkAlive_() const {
+        if (!isAlive()) {
+            throw NotAliveException(this);
+        }
+    }
 
 private:
     // Owner document (also used as an 'isAlive_' flag)
