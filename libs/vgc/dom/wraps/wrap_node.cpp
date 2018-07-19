@@ -75,5 +75,6 @@ void wrap_node(py::module& m)
         .def("canAppendChild", [](This& self, Node* node) { return self.canAppendChild(node); }) // don't wrap the optional arg "reason"
         .def("appendChild", &This::appendChild)
         .def("removeChild", &This::removeChild)
+        .def("replaceChild", &This::replaceChild)
     ;
 }

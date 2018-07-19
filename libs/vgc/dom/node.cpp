@@ -129,6 +129,74 @@ bool Node::appendChild(Node* node)
     return true;
 }
 
+bool Node::replaceChild(Node* newChild, Node* oldChild)
+{
+    checkAlive_();
+
+    if (oldChild->parent() != this) {
+        core::warning() << "Can't replace child: oldChild is not a child of this Node" << std::endl;
+        return false;
+    }
+
+    if (this->document() != newChild->document()) {
+        core::warning() << "Can't replace child: newChild is owned by another Document" << std::endl;
+        return false;
+    }
+
+    if (newChild->nodeType() == NodeType::Document) {
+        core::warning() << "Can't replace child: newChild is a Document node" << std::endl;
+        return false;
+    }
+
+    if (nodeType() == NodeType::Document &&
+        newChild->nodeType() == NodeType::Element &&
+        newChild->nodeType() != NodeType::Element)
+    {
+        core::warning() << "Can't replace child: would add a second root element of this Document" << std::endl;
+        return false;
+    }
+
+    // XXX TODO: raise warning if newChild is an ancestor of this Node (including this Node itself).
+
+    if (oldChild == newChild) {
+        // nothing to do
+        return true;
+    }
+
+    // Detach newChild from current parent
+    NodeSharedPtr newChildPtr = newChild->detachFromParent_();
+
+    // Keep oldChild alive
+    NodeSharedPtr oldChildPtr = oldChild->sharedPtr();
+
+    // Update pointers
+    if (oldChild->previousSibling_) {
+        oldChild->previousSibling_->nextSibling_ = newChildPtr;
+    }
+    else {
+        firstChild_ = newChildPtr;
+    }
+    if (oldChild->nextSibling_) {
+        oldChild->nextSibling_->previousSibling_ = newChild;
+    }
+    else {
+        lastChild_ = newChild;
+    }
+    std::swap(oldChild->previousSibling_, newChild->previousSibling_);
+    std::swap(oldChild->nextSibling_, newChild->nextSibling_);
+    std::swap(oldChild->parent_, newChild->parent_);
+
+    // Destroy oldChild
+    oldChild->destroy();
+
+    // Destruct oldChild now, unless other shared pointers point to oldChild.
+    // This line of code is redundant with closing the scope, but it is kept
+    // for clarifying intent.
+    oldChildPtr.reset();
+
+    return true;
+}
+
 bool Node::removeChild(Node* node)
 {
     checkAlive_();
@@ -148,6 +216,16 @@ void Node::destroy()
     checkAlive_();
     const bool calledFromDestructor = false;
     destroy_(calledFromDestructor);
+}
+
+NodeSharedPtr Node::detachFromParent_()
+{
+    NodeSharedPtr res = sharedPtr();
+    if (parent()) {
+        const bool calledFromNodeDestructor = false;
+        parent()->removeChild_(this, calledFromNodeDestructor);
+    }
+    return res;
 }
 
 void Node::destroy_(bool calledFromDestructor)

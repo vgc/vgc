@@ -215,5 +215,53 @@ class TestNode(unittest.TestCase):
         root.removeChild(n2)
         self.assertEqual(getChildNames(root), [])
 
+    def testReplaceChild(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n3 = Element(root, "n3")
+        n4 = Element(root, "n4")
+        n21 = Element(n2, "n21")
+        n22 = Element(n2, "n22")
+        n23 = Element(n2, "n23")
+        n31 = Element(n3, "n31")
+        n211 = Element(n21, "n211")
+        n212 = Element(n21, "n212")
+
+        root.replaceChild(n21, n3)
+        self.assertEqual(getChildNames(root), ["n1", "n2", "n21", "n4"])
+        self.assertEqual(getChildNames(n2), ["n22", "n23"])
+        self.assertTrue(n21.isAlive())
+        self.assertFalse(n3.isAlive())
+        self.assertFalse(n31.isAlive())
+
+        root.replaceChild(n2, n2)
+        self.assertEqual(getChildNames(root), ["n1", "n2", "n21", "n4"])
+        self.assertEqual(getChildNames(n2), ["n22", "n23"])
+
+        root.replaceChild(n22, n2)
+        self.assertEqual(getChildNames(root), ["n1", "n22", "n21", "n4"])
+        self.assertTrue(n22.isAlive())
+        self.assertFalse(n2.isAlive())
+        self.assertFalse(n23.isAlive())
+
+        root.replaceChild(n21, n1)
+        self.assertEqual(getChildNames(root), ["n21", "n22", "n4"])
+        self.assertTrue(n21.isAlive())
+        self.assertFalse(n1.isAlive())
+
+        root.replaceChild(n22, n4)
+        self.assertEqual(getChildNames(root), ["n21", "n22"])
+        self.assertTrue(n22.isAlive())
+        self.assertFalse(n4.isAlive())
+
+        doc.replaceChild(n21, root)
+        self.assertEqual(getChildNames(doc), ["n21"])
+        self.assertEqual(getChildNames(n21), ["n211", "n212"])
+        self.assertTrue(n21.isAlive())
+        self.assertFalse(root.isAlive())
+        self.assertFalse(n22.isAlive())
+
 if __name__ == '__main__':
     unittest.main()
