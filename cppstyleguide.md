@@ -199,13 +199,13 @@ public:
 private:
     int becauseOneMoreLines_;
     int doesntChangeMuch_;
-}
+};
 ```
 
 ```
 class ShortClassOrStruct {
     ThisIs fine;
-}
+};
 ```
 
 ## Other
