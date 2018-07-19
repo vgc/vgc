@@ -242,7 +242,7 @@ protected:
     Object() VGC_CORE_OBJECT_DEFAULT_("constructed")
 
 public:
-    /// Destructs an Object. Never call this manually, and instead let the
+    /// Destructs the Object. Never call this manually, and instead let the
     /// shared pointers do the work for you.
     ///
     /// This ought to be a protected method to avoid accidental misuse, but it
