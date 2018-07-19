@@ -1,14 +1,13 @@
 # VGC C++ Style Guide
 
-Try to follow these guidelines as much as reasonable. Don't overthink it (too much).
 If something is not addressed here, follow the
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
-If something is not addressed there, favour readability.
-In case of doubt, follow your heart :)
+If something is not addressed there, favor readability.
 
 ## Header Files
 
-Headers should be self-contained.
+Headers should be self-contained (i.e., they must be compilable by themselves). 
+This is enforced by including each header first in their corresponding cpp file.
 
 Headers should be guarded with:
 ```
@@ -35,8 +34,7 @@ Don't rely on includes from other headers. For example, if you need both
 `<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`
 
 Never use `using somenamespace::SomeClass;` in a header file, and more
-importantly never use `using somenamespace` in a header file. Yes, this is annoying,
-and I hate it too. Please blame C++, not me.
+importantly never use `using somenamespace` in a header file.
 
 ## Scoping
 
@@ -75,11 +73,10 @@ Prefer `enum class` rather than C-style `enum`.
 
 ## Naming
 
+Naming matters: if you add functions/classes to the public API, expect a discussion about their names.
+
 Prefer long descriptive names than abbreviations, but use common sense:
 if a name is expected to be used extremely often (e.g., Vec2d), then shortening makes sense.
-
-Don't overthink naming for anything which is private. However, expect a discussion during
-a pull request for all names which are added to the public API.
 
 Capitalization:
 ```
@@ -103,11 +100,34 @@ enum class EnumName {
 
 Indent with 4 spaces. No tabs.
 
-Good: `Foo* foo` , `Foo& foo`, `const Foo* foo` , `const Foo& foo`,
+Function declarations and definitions:
 
-Bad: `Foo *foo`, `Foo const& foo`
+```
+void byPtr(Foo* foo);
+void byRef(Foo* foo);
+void byConstPtr(const Foo* foo);
+void byConstRef(const Foo& foo);
+```
 
-Curly brackets:
+```
+void functionDefinition()
+{
+    thisIsPreferred();
+}
+```
+
+```
+void butForShortInlineFunctions() {
+    thisIsOkayToo();
+}
+```
+
+```
+// Or even a one liner if fits within 80 characters
+int getX() { return x_; }
+```
+
+Conditional blocks:
 
 ```
 if (condition) {
@@ -117,6 +137,18 @@ if (condition) {
 else {
     forConditional();
     blocks();
+}
+```
+
+```
+for (int i = 0; i < n; ++i) {
+    doSomething(i);
+}
+```
+
+```
+for (Node* child : node->children()) {
+    doSomething(child);
 }
 ```
 
@@ -148,7 +180,6 @@ if (veryShortOneLiner4) whereYouHave();
 if (veryShortOneLiner5) manyOfThem();
 ```
 
-
 ```
 if (longBody ||
     multilineCondition)
@@ -157,8 +188,10 @@ if (longBody ||
 }
 ```
 
+Class definitions:
+
 ```
-class TypicalClass
+class TypicalClass : public BaseClass
 {
 public:
     void thisIsPreferred();
@@ -173,24 +206,6 @@ private:
 class ShortClassOrStruct {
     ThisIs fine;
 }
-```
-
-```
-void functionDefinition()
-{
-    thisIsPreferred();
-}
-```
-
-```
-void butForShortInlineFunctions() {
-    thisIsOkayToo();
-}
-```
-
-```
-// Or even a one liner for short one-liners
-int getX() { return x_; }
 ```
 
 ## Other
