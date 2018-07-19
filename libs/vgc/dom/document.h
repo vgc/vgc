@@ -175,14 +175,19 @@ public:
                nullptr;
     }
 
-    /// Sets \p element as the root element of this Document.
+    /// Sets the given \p element as the root element of this Document. This
+    /// destroys the current root element and all its descendants, except the
+    /// given \p element and its descendants.
     ///
     /// If \p element is already the root element of this document, nothing is
-    /// done. If this document already has a root element, this root element is
-    /// first removed from this document. If \p element already has a parent,
-    /// \p element is first removed from the children of its parent.
+    /// done. If the given \p element is not own by this Document, then a
+    /// warning is emitted and the operation is not performed.
     ///
-    void setRootElement(Element* element);
+    /// XXX Throw an exception instead?
+    ///
+    /// Returns whether the element was successfully set as the root element.
+    ///
+    bool setRootElement(Element* element);
 
     /// Returns the root element of this Document.
     ///

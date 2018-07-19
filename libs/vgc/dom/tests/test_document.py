@@ -28,8 +28,16 @@ class TestDocument(unittest.TestCase):
 
     def testRootElement(self):
         doc = Document()
-        root = Element(doc, "vgc")
-        self.assertEqual(doc.rootElement.name, "vgc")
+        self.assertIsNone(doc.rootElement)
+
+        n1 = Element(doc, "n1")
+        self.assertEqual(doc.rootElement, n1)
+
+        n2 = Element(n1, "n2")
+        doc.rootElement = n2
+        self.assertEqual(doc.rootElement, n2)
+        self.assertFalse(n1.isAlive())
+        self.assertTrue(n2.isAlive())
 
     def testSave(self):
         doc = Document()

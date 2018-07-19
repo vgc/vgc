@@ -36,22 +36,27 @@ Document::Document() :
     generateXmlDeclaration_();
 }
 
-void Document::setRootElement(Element* element)
+bool Document::setRootElement(Element* element)
 {
     checkAlive_();
 
+    if (this != element->document()) {
+        core::warning() << "Can't set root element: it is owned by another Document." << std::endl;
+        return false;
+    }
+
     // Nothing to do if this element is already the root element
     if (element->parent() == this) {
-        return;
+        return true;
     }
 
-    // Remove exising root element if any
-    if (Element* existingRootElement = rootElement()) {
-        removeChild(existingRootElement);
+    // Append new root element or replace existing one
+    if (rootElement()) {
+        return replaceChild(element, rootElement());
     }
-
-    // Append element
-    appendChild(element);
+    else {
+        return appendChild(element);
+    }
 }
 
 Element* Document::rootElement() const
