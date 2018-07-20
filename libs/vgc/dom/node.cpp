@@ -209,24 +209,17 @@ NodeSharedPtr Node::detachFromParent_()
 {
     NodeSharedPtr res;
 
-    if (parent()) {
-        res = sharedPtr();
+    if (parent_) {
+        // Update owning pointers
+        NodeSharedPtr& owning = previousSibling_ ? previousSibling_->nextSibling_ : parent_->firstChild_;
+        std::swap(res, owning);
+        std::swap(owning, nextSibling_);
 
-        if (previousSibling()) {
-            previousSibling()->nextSibling_ = nextSibling_;
-        }
-        else {
-            parent()->firstChild_ = nextSibling_;
-        }
-        if (nextSibling()) {
-            nextSibling()->previousSibling_ = previousSibling_;
-        }
-        else {
-            parent()->lastChild_ = previousSibling_;
-        }
+        // Update non-owning pointers
+        Node*& nonowning = owning ? owning->previousSibling_ : parent_->lastChild_;
+        nonowning = previousSibling_;
         parent_ = nullptr;
         previousSibling_ = nullptr;
-        nextSibling_.reset();
     }
 
     return res;
