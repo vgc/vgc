@@ -38,28 +38,25 @@ Element* Element::create_(Node* parent, core::StringId name)
         void destroy(Element* p) { p->~Element(); }
     };
     auto res = std::allocate_shared<Element>(A(), parent->document(), name);
-    parent->appendChild(res.get());
-    return res.get();
+    return init_(std::move(res), parent);
 }
 
 /* static */
-Element* Element::create(Document* parent, core::StringId name) {
+Element* Element::create(Document* parent, core::StringId name)
+{
+    if (parent->rootElement()) {
+        core::warning() << "Can't create Element: the given parent Document already has a root element" << std::endl;
+        return nullptr;
+    }
+    else {
+        return create_(parent, name);
+    }
+}
+
+/* static */
+Element* Element::create(Element* parent, core::StringId name)
+{
     create_(parent, name);
-}
-
-/* static */
-Element* Element::create(Document* parent, const std::string& name) {
-    create_(parent, core::StringId(name));
-}
-
-/* static */
-Element* Element::create(Element* parent, core::StringId name) {
-    create_(parent, name);
-}
-
-/* static */
-Element* Element::create(Element* parent, const std::string& name) {
-    create_(parent, core::StringId(name));
 }
 
 const std::vector<BuiltInAttribute>& Element::builtInAttributes() const

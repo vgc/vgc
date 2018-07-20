@@ -35,9 +35,6 @@ class VGC_DOM_API Element: public Node
 {
     VGC_CORE_OBJECT(Element)
 
-    // Helper method for the other create methods
-    static Element* create_(Node* parent, core::StringId name);
-
 protected:
     /// Constructs a parent-less Element with the given \p name, owned by the
     /// given \p document. This constructor is an implementation detail only
@@ -50,25 +47,26 @@ protected:
     ///
     Element(Document* document, core::StringId name);
 
-public:    
+public:
     /// Creates an element with the given \p name as the root element of the
-    /// given \p parent Document. An error will be raised if the given \p
-    /// parent already has a root element.
+    /// given \p parent Document. If the given \p parent Document already has a
+    /// root element, an error is raised and nullptr is returned. Otherwise,
+    /// returns a valid non-null Element.
     ///
     static Element* create(Document* parent, core::StringId name);
-
-    /// \overload create(Document* parent, core::StringId name)
-    ///
-    static Element* create(Document* parent, const std::string& name);
+    /// \overload
+    static Element* create(Document* parent, const std::string& name) {
+        create(parent, core::StringId(name));
+    }
 
     /// Creates an element with the given \p name as the last child of the
-    /// given \p parent Element.
+    /// given \p parent Element. Always returns a valid non-null Element.
     ///
     static Element* create(Element* parent, core::StringId name);
-
-    /// \overload create(Element* parent, core::StringId name)
-    ///
-    static Element* create(Element* parent, const std::string& name);
+    /// \overload
+    static Element* create(Element* parent, const std::string& name) {
+        create(parent, core::StringId(name));
+    }
 
     /// Casts the given \p node to an Element. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Element.
@@ -125,6 +123,11 @@ public:
 private:
     // Name of this element.
     core::StringId name_;
+
+    // Helper method for create(). Assumes that a new Element can indeed be
+    // appended to parent.
+    //
+    static Element* create_(Node* parent, core::StringId name);
 
     // Authored attributes of this element. Note: copying AuthoredAttribute
     // instances is expensive, but fortunately there shouldn't be any copy with

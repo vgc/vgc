@@ -37,29 +37,20 @@ Node::Node(Document* document, NodeType nodeType) :
 
 Node::~Node()
 {
-    if (isAlive()) {
-        // We can be here if `this` is a Document, or if an exception was
-        // thrown in one of Node's methods.
-        const bool calledFromDestructor = true;
-        destroy_(calledFromDestructor);
+    if (isAlive()) { // => this Node is a Document, or an exception was thrown
+        destroy_();
     }
 }
 
 void Node::destroy()
 {
     checkAlive();
-    const bool calledFromDestructor = false;
-    destroy_(calledFromDestructor);
+    destroy_();
 }
 
 bool Node::canAppendChild(Node* node, std::string* reason)
 {
     checkAlive();
-
-    // Warning! Be careful when modifying this function: it is possible that
-    // node is an Element with no parent. Normally, elements are guaranteed to
-    // have a parent, but this function is also called within Element::create()
-    // to set its initial parent.
 
     if (this->document() != node->document())
     {
@@ -102,34 +93,14 @@ bool Node::appendChild(Node* node)
 {
     checkAlive();
 
-    // Warning! Be careful when modifying this function: it is possible that
-    // node is an Element with no parent. Normally, elements are guaranteed to
-    // have a parent, but this function is also called within Element::create()
-    // to set its initial parent.
-
     std::string reason;
     if (!canAppendChild(node, &reason)) {
         core::warning() << "Can't append child: " << reason << std::endl;
         return false;
     }
 
-    // Detach node from current parent
     NodeSharedPtr nodePtr = node->detachFromParent_();
-
-    // Append to the end of the doubly linked-list of siblings.
-    if (this->lastChild_) {
-        this->lastChild_->nextSibling_ = std::move(nodePtr);
-        node->previousSibling_ = this->lastChild_;
-    }
-    else {
-        this->firstChild_ = std::move(nodePtr);
-    }
-
-    // Set parent-child relationship
-    this->lastChild_ = node;
-    node->parent_ = this;
-
-    return true;
+    return appendChild_(std::move(nodePtr));
 }
 
 bool Node::removeChild(Node* node)
@@ -214,17 +185,33 @@ bool Node::replaceChild(Node* newChild, Node* oldChild)
     return true;
 }
 
-NodeSharedPtr Node::detachFromParent_(bool calledFromNodeDestructor)
+Node* Node::appendChild_(NodeSharedPtr nodePtr)
 {
-    // Keep alive
-    NodeSharedPtr res;
+    Node* node = nodePtr.get();
 
-    if (!calledFromNodeDestructor) {
-        res = sharedPtr();
+    // Append to the end of the doubly linked-list of siblings.
+    if (this->lastChild_) {
+        this->lastChild_->nextSibling_ = std::move(nodePtr);
+        node->previousSibling_ = this->lastChild_;
+    }
+    else {
+        this->firstChild_ = std::move(nodePtr);
     }
 
-    // Update pointers
+    // Set parent-child relationship
+    this->lastChild_ = node;
+    node->parent_ = this;
+
+    return node;
+}
+
+NodeSharedPtr Node::detachFromParent_()
+{
+    NodeSharedPtr res;
+
     if (parent()) {
+        res = sharedPtr();
+
         if (previousSibling()) {
             previousSibling()->nextSibling_ = nextSibling_;
         }
@@ -245,7 +232,7 @@ NodeSharedPtr Node::detachFromParent_(bool calledFromNodeDestructor)
     return res;
 }
 
-void Node::destroy_(bool calledFromDestructor)
+void Node::destroy_()
 {
     // Recursively destroy descendants. Note: we can't use a range loop here
     // since we're modifying the range while iterating.
@@ -253,8 +240,10 @@ void Node::destroy_(bool calledFromDestructor)
         child->destroy();
     }
 
-    // Detach this Node from current parent
-    NodeSharedPtr thisPtr = detachFromParent_(calledFromDestructor);
+    // Detach this Node from current parent if any. Note: if we are already
+    // part of this Node's destructor call stack, then this node is guaranteed
+    // to have no parent.
+    NodeSharedPtr thisPtr = detachFromParent_();
 
     // Clear data
     //
@@ -273,9 +262,13 @@ void Node::destroy_(bool calledFromDestructor)
     //
     document_ = nullptr;
 
-    // Destruct this Node now, unless other shared pointers point to this Node.
+    // Destruct this Node now, unless:
+    // - other shared pointers also point to this Node (= observers), or
+    // - we are already part of this Node's destructor call stack.
+    //
     // This line of code is redundant with closing the scope, but it is kept
     // for clarifying intent.
+    //
     thisPtr.reset();
 }
 

@@ -418,7 +418,7 @@ public:
     bool canAppendChild(Node* node, std::string* reason = nullptr);
 
     /// Appends the given \p node as the last child of this Node. The \p node
-    /// is first removed from the children of its anterior parent. If this Node
+    /// is first removed from the children of its current parent. If this Node
     /// is already the parent of \p node, then \p node is moved as the last
     /// child of this Node.
     ///
@@ -448,6 +448,10 @@ public:
     ///
     /// \sa appendChild(), children(), parent().
     ///
+    /// XXX Remove this method from API? Is it any useful?
+    /// Zen of Python:
+    /// "There should be one-- and preferably only one --obvious way to do it."
+    ///
     bool removeChild(Node* node);
 
     /// Replaces the child node \p oldChild with \p newChild. Does nothing if
@@ -471,6 +475,16 @@ public:
     ///
     bool replaceChild(Node* newChild, Node* oldChild);
 
+protected:
+    // Helper method for Derived::create_. Assumes the node is alive, is fully
+    // constructed, has no parent, and can indeed be appended.
+    //
+    template <typename T>
+    static T* init_(std::shared_ptr<T> node, Node* parent) {
+        Node* res = parent->appendChild_(std::move(node));
+        return T::cast(res);
+    }
+
 private:
     // Owner document (also used as an 'isAlive_' flag)
     Document* document_;
@@ -485,20 +499,19 @@ private:
     Node* previousSibling_;
     NodeSharedPtr nextSibling_;
 
-    // Removes this Node from its parent's children, but without destroying it,
-    // and returns the now parent-less Node as a shared pointer. This function
-    // cannot be called in the constructor of this Node. If this function is
-    // called from the destructor of \p node, you must set \p
-    // calledFromNodeDestructor to true, otherwise keep it to false (the
-    // default). If \p calledFromNodeDestructor is true, then a null shared
-    // pointer is returned. It is the caller's responsability to either give a
-    // new parent to this Node or destroy this Node in order to preserve the
-    // invariant that all nodes (except Document nodes) have a parent.
+    // Helper method for appendChild() and init_(). Assumes that the node is
+    // alive, is fully constructed, has no parent, and can indeed be appended.
     //
-    NodeSharedPtr detachFromParent_(bool calledFromNodeDestructor = false);
+    Node* appendChild_(NodeSharedPtr node);
+
+    // Removes this Node from its parent's children, but without destroying it,
+    // and returns the now parent-less Node as a shared pointer. Returns a null
+    // pointer if the node had no parent already.
+    //
+    NodeSharedPtr detachFromParent_();
 
     // Helper method for ~Node and destroy()
-    void destroy_(bool calledFromDestructor);
+    void destroy_();
 };
 
 inline NodeIterator& NodeIterator::operator++() {
