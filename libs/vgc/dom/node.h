@@ -487,25 +487,15 @@ private:
 
     // Removes this Node from its parent's children, but without destroying it,
     // and returns the now parent-less Node as a shared pointer. This function
-    // cannot be called in the constructor or the destructor of this Node. It
-    // is the caller's responsability to give a new parent to this node in
-    // order to preserve the invariant that all nodes (except Document nodes)
-    // have a parent.
+    // cannot be called in the constructor of this Node. If this function is
+    // called from the destructor of \p node, you must set \p
+    // calledFromNodeDestructor to true, otherwise keep it to false (the
+    // default). If \p calledFromNodeDestructor is true, then a null shared
+    // pointer is returned. It is the caller's responsability to either give a
+    // new parent to this Node or destroy this Node in order to preserve the
+    // invariant that all nodes (except Document nodes) have a parent.
     //
-    NodeSharedPtr detachFromParent_();
-
-    // Removes the given \p node from the children of this Node, but without
-    // destroying it. Assumes that \p node is indeed a child of this Node. This
-    // function cannot be called in the constructor of \p node. If this
-    // function is called from the destructor of \p node, you must set \p
-    // calledFromNodeDestructor to true, otherwise, set it to false. // It is
-    // the caller's responsability to give a new parent to the node in order to
-    // preserve the invariant that all nodes (except Document nodes) have a
-    // parent.
-    //
-    // XXX rename to detachChild_
-    //
-    void removeChild_(Node* node, bool calledFromNodeDestructor);
+    NodeSharedPtr detachFromParent_(bool calledFromNodeDestructor = false);
 
     // Helper method for ~Node and destroy()
     void destroy_(bool calledFromDestructor);

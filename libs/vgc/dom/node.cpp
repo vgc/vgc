@@ -113,12 +113,8 @@ bool Node::appendChild(Node* node)
         return false;
     }
 
-    // Remove from existing parent, if any.
-    NodeSharedPtr nodePtr = node->sharedPtr();
-    if (node->parent_) {
-        const bool calledFromNodeDestructor = false;
-        node->parent_->removeChild_(node, calledFromNodeDestructor);
-    }
+    // Detach node from current parent
+    NodeSharedPtr nodePtr = node->detachFromParent_();
 
     // Append to the end of the doubly linked-list of siblings.
     if (this->lastChild_) {
@@ -218,52 +214,35 @@ bool Node::replaceChild(Node* newChild, Node* oldChild)
     return true;
 }
 
-NodeSharedPtr Node::detachFromParent_()
+NodeSharedPtr Node::detachFromParent_(bool calledFromNodeDestructor)
 {
-    NodeSharedPtr res = sharedPtr();
-    if (parent()) {
-        const bool calledFromNodeDestructor = false;
-        parent()->removeChild_(this, calledFromNodeDestructor);
-    }
-    return res;
-}
+    // Keep alive
+    NodeSharedPtr res;
 
-void Node::removeChild_(Node* node, bool calledFromNodeDestructor)
-{
-    VGC_CORE_ASSERT(node->parent_);
-
-    // Don't destruct the node until the end of this function.
-    NodeSharedPtr nodePtr;
     if (!calledFromNodeDestructor) {
-         nodePtr = node->sharedPtr();
+        res = sharedPtr();
     }
 
-    // Update who points to node->nextSibling_
-    // (this would delete the node if we hadn't taken ownership)
-    if (node->previousSibling_) {
-        node->previousSibling_->nextSibling_ = node->nextSibling_;
-    }
-    else {
-        node->parent_->firstChild_ = node->nextSibling_;
+    // Update pointers
+    if (parent()) {
+        if (previousSibling()) {
+            previousSibling()->nextSibling_ = nextSibling_;
+        }
+        else {
+            parent()->firstChild_ = nextSibling_;
+        }
+        if (nextSibling()) {
+            nextSibling()->previousSibling_ = previousSibling_;
+        }
+        else {
+            parent()->lastChild_ = previousSibling_;
+        }
+        parent_ = nullptr;
+        previousSibling_ = nullptr;
+        nextSibling_.reset();
     }
 
-    // Update who points to node->previousSibling_
-    if (node->nextSibling_) {
-        node->nextSibling_->previousSibling_ = node->previousSibling_;
-    }
-    else {
-        node->parent_->lastChild_ = node->previousSibling_;
-    }
-
-    // Set as root of new Node tree
-    node->parent_ = nullptr;
-    node->previousSibling_ = nullptr;
-    node->nextSibling_.reset();
-
-    // Destruct the C++ object now, unless other shared pointers point to this
-    // node. This line of code is redundant with closing the scope, but it is
-    // kept for clarifying intent.
-    nodePtr.reset();
+    return res;
 }
 
 void Node::destroy_(bool calledFromDestructor)
@@ -274,38 +253,30 @@ void Node::destroy_(bool calledFromDestructor)
         child->destroy();
     }
 
-    // Don't destruct this C++ object until the end of this function.
-    NodeSharedPtr nodePtr;
-    if (!calledFromDestructor) {
-        nodePtr = sharedPtr();
-    }
-
-    // Remove from parent if any.
-    if (parent_) {
-        parent_->removeChild_(this, calledFromDestructor);
-    }
+    // Detach this Node from current parent
+    NodeSharedPtr thisPtr = detachFromParent_(calledFromDestructor);
 
     // Clear data
     //
-    // XXX todo: call virtual method overriden by Element and Document
+    // Note: we intentionally don't clear nodeType_ since it is useful
+    // debug info and clearing it wouldn't save memory
+    //
+    // XXX TODO: call virtual method overriden by Element and Document
     // which clear() and shrink_to_fit() the authored attributes
     //
-    // Note: we intentionally don't change nodeType_ here to something like
-    // "NotAliveNode", since it would not save any memory and preserving the
-    // nodeType() might be useful to provide debug info for dead nodes.
 
-    // Nullify document_ and set node as not alive.
+    // Set this Node as not alive.
     //
-    // Note: it is important to nullify document_ in this destroy() method
-    // (otherwise it might dangle), and since we have to nullify it anyway we
-    // use it as a synonym for isAlive_ to save a few bits.
+    // Note: the raw pointer document_ might be dangling after this node is
+    // destroyed, which is why we must set it to nullptr, and thus we use it as
+    // an otherwise redundant "isAlive_" member variable.
     //
     document_ = nullptr;
 
-    // Destruct the C++ object now, unless other shared pointers point to this
-    // node. This line of code is redundant with closing the scope, but it is
-    // kept for clarifying intent.
-    nodePtr.reset();
+    // Destruct this Node now, unless other shared pointers point to this Node.
+    // This line of code is redundant with closing the scope, but it is kept
+    // for clarifying intent.
+    thisPtr.reset();
 }
 
 } // namespace dom
