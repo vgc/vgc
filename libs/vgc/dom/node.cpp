@@ -151,27 +151,20 @@ bool Node::replaceChild(Node* newChild, Node* oldChild)
         return true;
     }
 
-    // Detach newChild from current parent
-    NodeSharedPtr newChildPtr = newChild->detachFromParent_();
+    // Detach newChild from current parent.
+    // Note: After this, sh points to newChild.
+    NodeSharedPtr sh = newChild->detachFromParent_();
 
-    // Keep oldChild alive
-    NodeSharedPtr oldChildPtr = oldChild->sharedPtr();
-
-    // Update pointers
-    if (oldChild->previousSibling_) {
-        oldChild->previousSibling_->nextSibling_ = newChildPtr;
-    }
-    else {
-        firstChild_ = newChildPtr;
-    }
-    if (oldChild->nextSibling_) {
-        oldChild->nextSibling_->previousSibling_ = newChild;
-    }
-    else {
-        lastChild_ = newChild;
-    }
-    std::swap(oldChild->previousSibling_, newChild->previousSibling_);
+    // Update owning pointers.
+    // Note: After this, sh points to oldChild.
+    NodeSharedPtr& owning = oldChild->previousSibling_ ? oldChild->previousSibling_->nextSibling_ : this->firstChild_;
+    std::swap(owning, sh);
     std::swap(oldChild->nextSibling_, newChild->nextSibling_);
+
+    // Update non-owning pointers.
+    Node*& nonowning = newChild->nextSibling_ ? newChild->nextSibling_->previousSibling_ : this->lastChild_;
+    nonowning = newChild;
+    std::swap(oldChild->previousSibling_, newChild->previousSibling_);
     std::swap(oldChild->parent_, newChild->parent_);
 
     // Destroy oldChild
@@ -180,7 +173,7 @@ bool Node::replaceChild(Node* newChild, Node* oldChild)
     // Destruct oldChild now, unless other shared pointers point to oldChild.
     // This line of code is redundant with closing the scope, but it is kept
     // for clarifying intent.
-    oldChildPtr.reset();
+    sh.reset();
 
     return true;
 }
