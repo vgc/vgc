@@ -14,31 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_DOM_EXCEPTIONS_H
-#define VGC_DOM_EXCEPTIONS_H
-
 #include <vgc/core/exception.h>
-#include <vgc/dom/api.h>
 
 namespace vgc {
-namespace dom {
+namespace core {
 
-class Node;
-
-/// \class vgc::dom::NotAliveException
-/// \brief Exception thrown when accessing a node which is not alive.
-///
-/// This exception is thrown by most member methods of Node when `this` node is
-/// not "alive", that is, if it has already been destroyed.
-///
-/// \sa Node::destroy()
-///
-class VGC_DOM_API NotAliveException : public core::Exception {
-public:
-    NotAliveException(const Node* node);
-};
-
-} // namespace dom
+} // namespace core
 } // namespace vgc
-
-#endif // VGC_DOM_EXCEPTIONS_H

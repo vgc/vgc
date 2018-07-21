@@ -22,12 +22,22 @@
 namespace vgc {
 namespace dom {
 
-NotAliveException::NotAliveException(const Node* node)
+namespace {
+std::string what_(const Node* node)
 {
-    what_.reserve(36); // = size("Node 0x1234567812345678 is not alive")
-    what_.append("Node ");
-    what_.append(core::toString(node));
-    what_.append(" is not alive");
+    std::string res;
+    res.reserve(36); // = size("Node 0x1234567812345678 is not alive")
+    res.append("Node ");
+    res.append(core::toString(node));
+    res.append(" is not alive");
+    return res;
+}
+} // namespace
+
+NotAliveException::NotAliveException(const Node* node) :
+    core::Exception(what_(node))
+{
+
 }
 
 } // namespace dom
