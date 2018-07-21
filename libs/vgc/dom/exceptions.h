@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_DOM_NOTALIVEEXCEPTION_H
-#define VGC_DOM_NOTALIVEEXCEPTION_H
+#ifndef VGC_DOM_EXCEPTIONS_H
+#define VGC_DOM_EXCEPTIONS_H
 
 #include <exception>
 #include <string>
@@ -47,4 +47,4 @@ public:
 } // namespace dom
 } // namespace vgc
 
-#endif // VGC_DOM_NOTALIVEEXCEPTION_H
+#endif // VGC_DOM_EXCEPTIONS_H

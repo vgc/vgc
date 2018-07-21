@@ -19,7 +19,7 @@
 
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
-#include <vgc/dom/notaliveexception.h>
+#include <vgc/dom/exceptions.h>
 
 namespace vgc {
 namespace dom {

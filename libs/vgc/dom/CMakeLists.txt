@@ -9,9 +9,9 @@ vgc_add_library(dom
         attribute.h
         document.h
         element.h
+        exceptions.h
         io.h
         node.h
-        notaliveexception.h
         value.h
         xmlformattingstyle.h
 
@@ -19,9 +19,9 @@ vgc_add_library(dom
         attribute.cpp
         document.cpp
         element.cpp
+        exceptions.cpp
         io.cpp
         node.cpp
-        notaliveexception.cpp
         value.cpp
         xmlformattingstyle.cpp
 

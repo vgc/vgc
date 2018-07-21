@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/notaliveexception.h>
+#include <vgc/dom/exceptions.h>
 
 #include <vgc/core/stringutil.h>
 #include <vgc/dom/node.h>
