@@ -14,6 +14,7 @@ vgc_add_library(core
         dll.h
         doublearray.h
         epsilon.h
+        exceptions.h
         float2int.h
         io.h
         logging.h
@@ -35,6 +36,7 @@ vgc_add_library(core
         algorithm.cpp
         color.cpp
         doublearray.cpp
+        exceptions.cpp
         io.cpp
         logging.cpp
         mat4d.cpp

@@ -17,7 +17,7 @@
 #ifndef VGC_DOM_EXCEPTIONS_H
 #define VGC_DOM_EXCEPTIONS_H
 
-#include <vgc/core/exception.h>
+#include <vgc/core/exceptions.h>
 #include <vgc/dom/api.h>
 
 namespace vgc {
