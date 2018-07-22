@@ -34,8 +34,8 @@ std::string notAliveWhat_(const Node* node)
 }
 } // namespace
 
-NotAliveException::NotAliveException(const Node* node) :
-    dom::Exception(notAliveWhat_(node))
+NotAliveError::NotAliveError(const Node* node) :
+    LogicError(notAliveWhat_(node))
 {
 
 }

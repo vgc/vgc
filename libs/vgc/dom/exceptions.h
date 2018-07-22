@@ -25,25 +25,25 @@ namespace dom {
 
 class Node;
 
-/// \class vgc::dom::Exception
-/// \brief Base class for all vgc::dom exceptions
+/// \class vgc::dom::LogicError
+/// \brief Base class for all vgc::dom logic errors
 ///
-class VGC_DOM_API Exception : public core::Exception {
+class VGC_DOM_API LogicError : public core::LogicError {
 public:
-    explicit Exception(const std::string& what) : core::Exception(what) {}
+    explicit LogicError(const std::string& what) : core::LogicError(what) {}
 };
 
-/// \class vgc::dom::NotAliveException
-/// \brief Exception thrown when accessing a node which is not alive.
+/// \class vgc::dom::NotAliveError
+/// \brief Raised when attempting to access a node which is not alive.
 ///
-/// This exception is thrown whenever trying to perform an operation
+/// This exception is raised whenever trying to perform an operation
 /// involving a node that has already been destroyed.
 ///
-/// \sa Node::destroy()
+/// \sa Node::isAlive() and Node::destroy()
 ///
-class VGC_DOM_API NotAliveException : public dom::Exception {
+class VGC_DOM_API NotAliveError : public LogicError {
 public:
-    NotAliveException(const Node* node);
+    NotAliveError(const Node* node);
 };
 
 } // namespace dom

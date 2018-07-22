@@ -23,17 +23,18 @@
 namespace vgc {
 namespace core {
 
-/// \class vgc::core::Exception
-/// \brief Base class for all VGC exceptions
+/// \class vgc::core::LogicError
+/// \brief Base class for all logic errors
 ///
-/// VGC exceptions are used to report logic errors that are a consequence of
-/// incorrect usage of downstream API. For example, a given method may choose
-/// to throw an exception if its preconditions are not met.
+/// This class should be used to report all logic errors detected by VGC code,
+/// that are typically a consequence of incorrect usage of public API. For
+/// example, a given method may choose to raise a LogicError if its
+/// preconditions are not met.
 ///
 /// The recommended programming practice when calling a method with
 /// preconditions is to ensure that the preconditions are met before calling
 /// the method, then call the method without checking for exceptions. Normally,
-/// you should never write a try/catch block yourself to catch VGC exceptions,
+/// you should never write a try/catch block yourself to catch LogicErrors,
 /// but instead let them be handled at a higher-level.
 ///
 /// Keep in mind that function input may come from various sources:
@@ -113,10 +114,10 @@ namespace core {
 /// but in many other cases it is not, and more importantly it shouldn't be the
 /// responsibility of the low-level library to decide.
 ///
-class VGC_CORE_API Exception : public std::logic_error {
+class VGC_CORE_API LogicError : public std::logic_error {
 public:
-    explicit Exception(const std::string& what) : std::logic_error(what) {}
-    explicit Exception(const char* what) : std::logic_error(what) {}
+    explicit LogicError(const std::string& what) : std::logic_error(what) {}
+    explicit LogicError(const char* what) : std::logic_error(what) {}
 };
 
 } // namespace core

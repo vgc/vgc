@@ -322,7 +322,7 @@ public:
     ///
     void checkAlive() const {
         if (!isAlive()) {
-            throw NotAliveException(this);
+            throw NotAliveError(this);
         }
     }
 
