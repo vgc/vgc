@@ -64,6 +64,55 @@ namespace core {
 ///    the user input. Graphical users should never be expected to enter "valid"
 ///    input satisfying some preconditions.
 ///
+/// # Why are we using exceptions for logic errors?
+///
+/// There is a commonly advocated guideline that using exceptions in C++ should
+/// only be for runtime errors (e.g., out of memory, file permission issues,
+/// etc.), and that using assert() instead should be preferred for logic errors
+/// (e.g., calling mySqrt(x) where x is negative, dereferencing a null handle,
+/// attempting to make a non-sensical topological operation, etc.). The
+/// rationale is that these errors are in fact bugs in the code (while runtime
+/// errors are not), and these should be catched and fixed in unit tests or
+/// beta tests. If not fixed, it is anyway unclear how we could recover from a
+/// bug we didn't know about, and thus we might as well terminate the program
+/// and avoid potentially corrupting more data. However, this guideline is
+/// quite ill-advised in our case, because the low-level API is directly
+/// available to users of the software via the Python console. Therefore, it is
+/// impossible for C++ developers to fix logic errors coming from Python user
+/// code, and it is a much better behavior to report the error to them as a
+/// Python exception rather than crashing the application. Only them can decide
+/// whether they prefer to fix the root cause of the error in their code, or
+/// use a try/except/finally as a quick fix to get the work done. In fact, in
+/// Python, it is much more common to use exceptions for logic errors as well
+/// as runtime errors, exactly because the distinction between developer and
+/// user is not always clear, and also because a script is often written for a
+/// one-time task with no unit testing. Therefore, we prefer to use C++
+/// exceptions in a consistent way with how they are used in Python, which
+/// makes creating bindings more straightforward.
+///
+/// In addition, it is quite pretentious to believe that we can catch and fix
+/// all possible logic errors before shipping, and therefore throwing an
+/// exception is much better: we can for example decide to catch it and send a
+/// bug report automatically, so that we are aware of the problem and fix it in
+/// future versions. One may argue that this is possible without using
+/// exceptions: when the low-level library detect the error, it could itself
+/// send the bug report just before calling abort(). However, this is in fact
+/// not a good idea: first, there would be dependency issues (e.g., why should
+/// vgc::dom depend on an internet protocol?), and second, the bug report
+/// should only be sent if all the upstream code is VGC code and not user code,
+/// and if the user agrees to do so, etc... which is information that the
+/// low-level library detecting the error doesn't know about. And imagine a
+/// third-party using the library for something entirely different: we
+/// definitly do not want to receive bug reports for logic errors coming from
+/// their code, nor they which to use a library doing so, for many obvious
+/// reasons! In a nutshell, throwing an exception is infinitly more flexible
+/// and useful than crashing the app, even if it is a logic error. It defers
+/// the decision of how to handle the exception to upstream code, which
+/// generally has way more information to know what is the best behavior. In
+/// some cases, terminating the application might indeed be the best decision,
+/// but in many other cases it is not, and more importantly it shouldn't be the
+/// responsibility of the low-level library to decide.
+///
 class VGC_CORE_API Exception : public std::logic_error {
 public:
     explicit Exception(const std::string& what) : std::logic_error(what) {}
