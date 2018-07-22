@@ -25,15 +25,23 @@ namespace dom {
 
 class Node;
 
+/// \class vgc::dom::Exception
+/// \brief Base class for all vgc::dom exceptions
+///
+class VGC_DOM_API Exception : public core::Exception {
+public:
+    explicit Exception(const std::string& what) : core::Exception(what) {}
+};
+
 /// \class vgc::dom::NotAliveException
 /// \brief Exception thrown when accessing a node which is not alive.
 ///
-/// This exception is thrown by most member methods of Node when `this` node is
-/// not "alive", that is, if it has already been destroyed.
+/// This exception is thrown whenever trying to perform an operation
+/// involving a node that has already been destroyed.
 ///
 /// \sa Node::destroy()
 ///
-class VGC_DOM_API NotAliveException : public core::Exception {
+class VGC_DOM_API NotAliveException : public dom::Exception {
 public:
     NotAliveException(const Node* node);
 };

@@ -23,7 +23,7 @@ namespace vgc {
 namespace dom {
 
 namespace {
-std::string what_(const Node* node)
+std::string notAliveWhat_(const Node* node)
 {
     std::string res;
     res.reserve(36); // = size("Node 0x1234567812345678 is not alive")
@@ -35,7 +35,7 @@ std::string what_(const Node* node)
 } // namespace
 
 NotAliveException::NotAliveException(const Node* node) :
-    core::Exception(what_(node))
+    dom::Exception(notAliveWhat_(node))
 {
 
 }
