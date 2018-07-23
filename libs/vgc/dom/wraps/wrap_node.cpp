@@ -73,7 +73,7 @@ void wrap_node(py::module& m)
         .def_property_readonly("previousSibling", &This::previousSibling)
         .def_property_readonly("nextSibling", &This::nextSibling)
         .def_property_readonly("children", &This::children)
-        .def("canAppendChild", [](This& self, Node* node) { return self.canAppendChild(node); }) // don't wrap the optional arg "reason"
+        .def("canAppendChild", &This::canAppendChild)
         .def("appendChild", &This::appendChild)
         .def("removeChild", &This::removeChild)
         .def("replaceChild", &This::replaceChild)

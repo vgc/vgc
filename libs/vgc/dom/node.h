@@ -57,6 +57,17 @@ enum class NodeType {
      */
 };
 
+/// Converts the given NodeType to a string.
+///
+VGC_CORE_API
+inline std::string toString(NodeType type) {
+    switch (type) {
+    case NodeType::Element: return "Element";
+    case NodeType::Document: return "Document";
+    default: return "UnknownType";
+    }
+}
+
 VGC_CORE_DECLARE_PTRS(Node);
 
 /// \class vgc::dom::NodeIterator
@@ -397,9 +408,17 @@ public:
         return NodeList(firstChild(), nullptr);
     }
 
-    /// Returns whether the given \p node can be appended as the last child of
-    /// this Node. Here is the exhaustive list of reasons why a node might not
-    /// be appendable:
+    /// Returns whether the given \p node can be inserted as the last child of
+    /// this Node. See appendChild() for details.
+    ///
+    bool canAppendChild(Node* node);
+
+    /// Appends the given \p node as the last child of this Node. The \p node
+    /// is first removed from the children of its current parent. If this Node
+    /// is already the parent of \p node, then \p node is moved as the last
+    /// child of this Node.
+    ///
+    /// An exception is raised in the following cases:
     ///
     /// 1. You're trying to append a Document node.
     ///
@@ -408,30 +427,11 @@ public:
     ///
     /// 3. You're trying to append a Node which is owned by another Document.
     ///
-    /// If \p reason is not null, then the reason preventing insertion (if
-    /// any), is appended to the string.
-    ///
     /// XXX Add "node is an ancestor of this node" as another reason. See
     /// https://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/core.html#ID-184E7107
     /// for reference: we choose to have the same restrictions.
     ///
-    bool canAppendChild(Node* node, std::string* reason = nullptr);
-
-    /// Appends the given \p node as the last child of this Node. The \p node
-    /// is first removed from the children of its current parent. If this Node
-    /// is already the parent of \p node, then \p node is moved as the last
-    /// child of this Node.
-    ///
-    /// If the node cannot be appended (see canAppendChild()), a warning is
-    /// emitted and the node is not appended.
-    ///
-    /// XXX Throw an exception instead?
-    ///
-    /// Returns whether the node was successfully appended.
-    ///
-    /// \sa canAppendChild().
-    ///
-    bool appendChild(Node* node);
+    void appendChild(Node* node);
 
     /// Removes the given \p node from the children of this Node.
     ///

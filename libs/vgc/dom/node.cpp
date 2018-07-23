@@ -18,6 +18,7 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/core/logging.h>
+#include <vgc/core/stringutil.h>
 #include <vgc/dom/document.h>
 
 namespace vgc {
@@ -48,34 +49,28 @@ void Node::destroy()
     destroy_();
 }
 
-bool Node::canAppendChild(Node* node, std::string* reason)
+namespace {
+bool checkCanAppendChild_(Node* parent, Node* child, bool simulate = false)
 {
-    checkAlive();
+    parent->checkAlive();
+    child->checkAlive();
 
-    if (this->document() != node->document())
-    {
-        if (reason) {
-            *reason += "The node to append must belong to the same document as this node";
-        }
-        return false;
+    if (parent->document() != child->document()) {
+        if (simulate) return false;
+        else throw WrongDocumentError(parent, child);
     }
 
-    if (node->nodeType() == NodeType::Document) {
-        if (reason) {
-            *reason += "nodes can't have Document children";
-        }
-        return false;
+    if (child->nodeType() == NodeType::Document) {
+        if (simulate) return false;
+        else throw WrongChildTypeError(parent, child);
     }
 
-    if (this->nodeType() == NodeType::Document &&
-             node->nodeType() == NodeType::Element)
+    if (parent->nodeType() == NodeType::Document &&
+        child->nodeType() == NodeType::Element &&
+        Document::cast(parent)->rootElement())
     {
-        if (Document::cast(this)->rootElement()) {
-            if (reason) {
-                *reason += "Document nodes can't have more than one Element child";
-            }
-            return false;
-        }
+        if (simulate) return false;
+        else throw SecondRootElementError(Document::cast(parent));
     }
 
     return true;
@@ -88,19 +83,19 @@ bool Node::canAppendChild(Node* node, std::string* reason)
     // example, one should be able to call doc->appendChild(doc->rootElement())
     // with no warnings.
 }
+} // namespace
 
-bool Node::appendChild(Node* node)
+bool Node::canAppendChild(Node* node)
 {
-    checkAlive();
+    const bool simulate = true;
+    return checkCanAppendChild_(this, node, simulate);
+}
 
-    std::string reason;
-    if (!canAppendChild(node, &reason)) {
-        core::warning() << "Can't append child: " << reason << std::endl;
-        return false;
-    }
-
+void Node::appendChild(Node* node)
+{
+    checkCanAppendChild_(this, node);
     NodeSharedPtr nodePtr = node->detachFromParent_();
-    return appendChild_(std::move(nodePtr));
+    appendChild_(std::move(nodePtr));
 }
 
 bool Node::removeChild(Node* node)

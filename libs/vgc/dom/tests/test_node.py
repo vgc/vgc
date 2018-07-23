@@ -187,20 +187,41 @@ class TestNode(unittest.TestCase):
         self.assertEqual(getChildNames(n2),  [])
         self.assertEqual(getChildNames(n3),  [])
 
+    def testWrongDocumentError(self):
+        doc1 = Document()
+        n1 = Element(doc1, "n1")
+        doc2 = Document()
+        n2 = Element(doc2, "n2")
+        self.assertFalse(n1.canAppendChild(n2))
+        with self.assertRaises(RuntimeError):
+            n1.appendChild(n2)
+
     def testAppendChildDocument(self):
         doc1 = Document()
         n1 = Element(doc1, "foo")
         doc2 = Document()
+
         self.assertFalse(doc1.canAppendChild(doc2))
+        with self.assertRaises(RuntimeError):
+            doc1.appendChild(doc2)
+
         self.assertFalse(n1.canAppendChild(doc1))
+        with self.assertRaises(RuntimeError):
+            n1.appendChild(doc1)
+
         self.assertFalse(n1.canAppendChild(doc2))
+        with self.assertRaises(RuntimeError):
+            n1.appendChild(doc2)
 
     def testAppendChildRootElement(self):
         doc = Document()
         n1 = Element(doc, "foo")
         n2 = Element(n1, "bar")
         self.assertEqual(doc.rootElement, n1)
+
         self.assertFalse(doc.canAppendChild(n2))
+        with self.assertRaises(RuntimeError):
+            doc.appendChild(n2)
 
     def testRemoveChild(self):
         doc = Document()

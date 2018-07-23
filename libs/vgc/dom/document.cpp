@@ -55,7 +55,8 @@ bool Document::setRootElement(Element* element)
         return replaceChild(element, rootElement());
     }
     else {
-        return appendChild(element);
+        appendChild(element);
+        return true;
     }
 }
 
