@@ -301,7 +301,7 @@ public:
     ///    all pointers to the node are still valid non-dangling pointers.
     ///    Dereferencing the pointer is safe. Calling node->isAlive() is safe
     ///    and returns false. But calling most other member methods will cause
-    ///    NotAliveException to be thrown.
+    ///    NotAliveError to be thrown.
     ///
     /// 3. Node::~Node() has been called: all raw pointers to the node are now
     ///    dangling pointers, and all weak pointers to the node are now expired.
@@ -317,7 +317,7 @@ public:
         return document_ != nullptr;
     }
 
-    /// Throws a NotAliveException if this Node is not alive. Does nothing
+    /// Throws a NotAliveError if this Node is not alive. Does nothing
     /// otherwise.
     ///
     void checkAlive() const {
