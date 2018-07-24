@@ -14,21 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/pybind11.h>
+#include <vgc/core/wraps/common.h>
+#include <vgc/dom/exceptions.h>
 
-namespace py = pybind11;
-
-void wrap_document(py::module& m);
-void wrap_element(py::module& m);
-void wrap_exceptions(py::module& m);
-void wrap_node(py::module& m);
-void wrap_xmlformattingstyle(py::module& m);
-
-PYBIND11_MODULE(dom, m) {
-    wrap_exceptions(m);
-    wrap_node(m);
-    wrap_xmlformattingstyle(m);
-
-    wrap_document(m); // dependencies: node, xmlformattingstyle
-    wrap_element(m); // dependencies: node
+void wrap_exceptions(py::module& m)
+{
+    py::register_exception<vgc::dom::LogicError>(m, "LogicError");
 }
