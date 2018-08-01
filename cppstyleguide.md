@@ -208,7 +208,7 @@ class ShortClassOrStruct {
 };
 ```
 
-# Polymorphic Classes
+## Polymorphic Classes
 
 A class is said *polymorphic* if it declares or inherits at least one virtual method.
 
