@@ -228,6 +228,7 @@ class VGC_CORE_API LogicError : public std::logic_error {
 public:
     explicit LogicError(const std::string& what) : std::logic_error(what) {}
     explicit LogicError(const char* what) : std::logic_error(what) {}
+    virtual ~LogicError();
 };
 
 } // namespace core

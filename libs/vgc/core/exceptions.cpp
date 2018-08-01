@@ -19,5 +19,10 @@
 namespace vgc {
 namespace core {
 
+LogicError::~LogicError()
+{
+
+}
+
 } // namespace core
 } // namespace vgc

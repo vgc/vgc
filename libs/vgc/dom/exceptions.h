@@ -49,6 +49,10 @@ public:
     /// Constructs a LogicError with the given \p reason.
     ///
     explicit LogicError(const std::string& reason) : core::LogicError(reason) {}
+
+    /// Destructs the LogicError
+    ///
+    ~LogicError();
 };
 
 /// \class vgc::dom::NotAliveError
@@ -64,6 +68,10 @@ public:
     /// Constructs a NotAliveError informing that the Node \p node is not alive.
     ///
     NotAliveError(const Node* node);
+
+    /// Destructs the NotAliveError
+    ///
+    ~NotAliveError();
 };
 
 /// \class vgc::dom::WrongDocumentError
@@ -82,6 +90,10 @@ public:
     /// Node \p n2 do not belong to the same Document.
     ///
     WrongDocumentError(const Node* n1, const Node* n2);
+
+    /// Destructs the WrongDocumentError
+    ///
+    ~WrongDocumentError();
 };
 
 /// \class vgc::dom::HierarchyRequestError
@@ -111,6 +123,10 @@ public:
     /// Constructs a HierarchyRequestError with the given \p reason.
     ///
     HierarchyRequestError(const std::string& reason) : LogicError(reason) {}
+
+    /// Destructs the HierarchyRequestError
+    ///
+    ~HierarchyRequestError();
 };
 
 /// \class vgc::dom::WrongChildTypeError
@@ -131,6 +147,10 @@ public:
     /// have \p child as its child due to incompatible node types.
     ///
     WrongChildTypeError(const Node* parent, const Node* child);
+
+    /// Destructs the WrongChildTypeError
+    ///
+    ~WrongChildTypeError();
 };
 
 /// \class vgc::dom::SecondRootElementError
@@ -147,6 +167,10 @@ public:
     /// cannot have a second root element.
     ///
     SecondRootElementError(const Document* document);
+
+    /// Destructs the SecondRootElementError
+    ///
+    ~SecondRootElementError();
 };
 
 } // namespace dom

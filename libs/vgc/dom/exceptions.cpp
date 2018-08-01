@@ -23,6 +23,11 @@
 namespace vgc {
 namespace dom {
 
+LogicError::~LogicError()
+{
+
+}
+
 // Note: in all the res.reserve() calls below, we assume that:
 // - Addresses of nodes take at most 14 chars (AMD64 architecture is defined to
 //   have only 48bit of virtual address space, thus 12 hex chars + leading "0x")
@@ -42,6 +47,11 @@ std::string notAliveReason_(const Node* node)
 
 NotAliveError::NotAliveError(const Node* node) :
     LogicError(notAliveReason_(node))
+{
+
+}
+
+NotAliveError::~NotAliveError()
 {
 
 }
@@ -70,6 +80,16 @@ WrongDocumentError::WrongDocumentError(const Node* n1, const Node* n2) :
 
 }
 
+WrongDocumentError::~WrongDocumentError()
+{
+
+}
+
+HierarchyRequestError::~HierarchyRequestError()
+{
+
+}
+
 namespace {
 std::string wrongChildTypeReason_(const Node* parent, const Node* child)
 {
@@ -94,6 +114,11 @@ WrongChildTypeError::WrongChildTypeError(const Node* parent, const Node* child) 
 
 }
 
+WrongChildTypeError::~WrongChildTypeError()
+{
+
+}
+
 namespace {
 std::string secondRootElementReason_(const Document* document)
 {
@@ -110,6 +135,11 @@ std::string secondRootElementReason_(const Document* document)
 
 SecondRootElementError::SecondRootElementError(const Document* document) :
     HierarchyRequestError(secondRootElementReason_(document))
+{
+
+}
+
+SecondRootElementError::~SecondRootElementError()
 {
 
 }
