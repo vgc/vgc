@@ -50,7 +50,7 @@ public:
     ///
     explicit LogicError(const std::string& reason) : core::LogicError(reason) {}
 
-    /// Destructs the LogicError
+    /// Destructs the LogicError.
     ///
     ~LogicError();
 };
@@ -69,7 +69,7 @@ public:
     ///
     NotAliveError(const Node* node);
 
-    /// Destructs the NotAliveError
+    /// Destructs the NotAliveError.
     ///
     ~NotAliveError();
 };
@@ -91,7 +91,7 @@ public:
     ///
     WrongDocumentError(const Node* n1, const Node* n2);
 
-    /// Destructs the WrongDocumentError
+    /// Destructs the WrongDocumentError.
     ///
     ~WrongDocumentError();
 };
@@ -124,7 +124,7 @@ public:
     ///
     HierarchyRequestError(const std::string& reason) : LogicError(reason) {}
 
-    /// Destructs the HierarchyRequestError
+    /// Destructs the HierarchyRequestError.
     ///
     ~HierarchyRequestError();
 };
@@ -148,7 +148,7 @@ public:
     ///
     WrongChildTypeError(const Node* parent, const Node* child);
 
-    /// Destructs the WrongChildTypeError
+    /// Destructs the WrongChildTypeError.
     ///
     ~WrongChildTypeError();
 };
@@ -168,7 +168,7 @@ public:
     ///
     SecondRootElementError(const Document* document);
 
-    /// Destructs the SecondRootElementError
+    /// Destructs the SecondRootElementError.
     ///
     ~SecondRootElementError();
 };
