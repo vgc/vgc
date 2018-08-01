@@ -98,20 +98,6 @@ void Node::appendChild(Node* node)
     appendChild_(std::move(nodePtr));
 }
 
-bool Node::removeChild(Node* node)
-{
-    checkAlive();
-
-    if (node->parent_ != this) {
-        core::warning() << "Can't remove child: the given node is not a child of this node" << std::endl;
-        return false;
-    };
-
-    node->destroy();
-
-    return true;
-}
-
 bool Node::replaceChild(Node* newChild, Node* oldChild)
 {
     checkAlive();

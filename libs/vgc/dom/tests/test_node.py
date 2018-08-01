@@ -134,6 +134,26 @@ class TestNode(unittest.TestCase):
         del doc
         self.assertFalse(n1.isAlive())
 
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n3 = Element(root, "n3")
+        n4 = Element(root, "n4")
+        self.assertEqual(getChildNames(root), ["n1", "n2", "n3", "n4"])
+
+        n3.destroy()
+        self.assertEqual(getChildNames(root), ["n1", "n2", "n4"])
+
+        n4.destroy()
+        self.assertEqual(getChildNames(root), ["n1", "n2"])
+
+        n1.destroy()
+        self.assertEqual(getChildNames(root), ["n2"])
+
+        n2.destroy()
+        self.assertEqual(getChildNames(root), [])
+
     def testParentChildRelationships(self):
         doc = Document()
         n1 = Element(doc, "foo")
@@ -251,27 +271,6 @@ class TestNode(unittest.TestCase):
         self.assertFalse(n2.canAppendChild(n1))
         with self.assertRaises(ChildCycleError):
             n2.appendChild(n1)
-
-    def testRemoveChild(self):
-        doc = Document()
-        root = Element(doc, "root")
-        n1 = Element(root, "n1")
-        n2 = Element(root, "n2")
-        n3 = Element(root, "n3")
-        n4 = Element(root, "n4")
-        self.assertEqual(getChildNames(root), ["n1", "n2", "n3", "n4"])
-
-        root.removeChild(n3)
-        self.assertEqual(getChildNames(root), ["n1", "n2", "n4"])
-
-        root.removeChild(n4)
-        self.assertEqual(getChildNames(root), ["n1", "n2"])
-
-        root.removeChild(n1)
-        self.assertEqual(getChildNames(root), ["n2"])
-
-        root.removeChild(n2)
-        self.assertEqual(getChildNames(root), [])
 
     def testReplaceChild(self):
         doc = Document()

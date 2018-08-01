@@ -437,27 +437,6 @@ public:
     ///
     void appendChild(Node* node);
 
-    /// Removes the given \p node from the children of this Node.
-    ///
-    /// If \p node is indeed a child of this Node, then this is equivalent
-    /// to node->destroy().
-    ///
-    /// If \p node is not a child of this Node (which can be checked via
-    /// `node->parent() == this`), a warning is emitted and the node is not
-    /// removed.
-    ///
-    /// XXX Throw an exception instead?
-    ///
-    /// Returns whether the node was successfully removed.
-    ///
-    /// \sa appendChild(), children(), parent().
-    ///
-    /// XXX Remove this method from API? Is it any useful?
-    /// Zen of Python:
-    /// "There should be one-- and preferably only one --obvious way to do it."
-    ///
-    bool removeChild(Node* node);
-
     /// Replaces the child node \p oldChild with \p newChild. Does nothing if
     /// newChild == oldChild.
     ///
