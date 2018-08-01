@@ -180,8 +180,6 @@ class TestNode(unittest.TestCase):
         n4 = Element(n1, "bar3")
         self.assertEqual(getChildNames(n1), ["bar1", "bar2", "bar3"])
 
-    # TODO Add tests for thrown exceptions when trying invalid operations
-
     def testAppendChild(self):
         doc = Document()
         n1 = Element(doc, "n1")
@@ -196,6 +194,14 @@ class TestNode(unittest.TestCase):
         self.assertEqual(getChildNames(n1),  ["n2", "n3"])
         self.assertEqual(getChildNames(n2),  [])
         self.assertEqual(getChildNames(n3),  [])
+
+        # Special case 1: move last
+        n1.appendChild(n2)
+        self.assertEqual(getChildNames(n1),  ["n3", "n2"])
+
+        # Special case 2: append root element again (= do nothing, or move last in case of comments)
+        doc.appendChild(n1)
+        self.assertEqual(getChildNames(doc), ["n1"])
 
     def testWrongDocumentError(self):
         doc1 = Document()
