@@ -19,5 +19,6 @@
 
 void wrap_exceptions(py::module& m)
 {
-    py::register_exception<vgc::dom::LogicError>(m, "LogicError");
+    py::object base = py::module::import("vgc.core").attr("LogicError");
+    py::register_exception<vgc::dom::LogicError>(m, "LogicError", base.ptr());
 }
