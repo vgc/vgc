@@ -208,6 +208,22 @@ class ShortClassOrStruct {
 };
 ```
 
+# Polymorphic Classes
+
+A class is said *polymorphic* if it declares or inherits at least one virtual method.
+
+The destructor of any polymorphic class must be either public and virtual, or protected and
+non-virtual, in order to ensure that deleting derived objects through pointers to base
+is well-defined. Always define this destructor out-of-line (= in a *.cpp file), in order
+to satisfy the following
+[Clang's Coding Standard](http://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers):
+
+> **Provide a Virtual Method Anchor for Classes in Headers**
+> If a class is defined in a header file and has a vtable (either it has virtual methods 
+> or it derives from classes with virtual methods), it must always have at least one out-of-line
+> virtual method in the class. Without this, the compiler will copy the vtable and RTTI into
+> every .o file that #includes the header, bloating .o file sizes and increasing link times.
+
 ## Other
 
 Use UTF-8 encoding for all std::strings.
