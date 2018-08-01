@@ -20,6 +20,7 @@
 #include <vgc/core/logging.h>
 #include <vgc/core/stringutil.h>
 #include <vgc/dom/document.h>
+#include <vgc/dom/element.h>
 
 namespace vgc {
 namespace dom {
@@ -66,22 +67,21 @@ bool checkCanAppendChild_(Node* parent, Node* child, bool simulate = false)
     }
 
     if (parent->nodeType() == NodeType::Document &&
-        child->nodeType() == NodeType::Element &&
-        Document::cast(parent)->rootElement())
+        child->nodeType() == NodeType::Element)
     {
+        Element* rootElement = Document::cast(parent)->rootElement();
+        if (rootElement && rootElement != child) {
+            if (simulate) return false;
+            else throw SecondRootElementError(Document::cast(parent));
+        }
+    }
+
+    if (parent->isDescendant(child)) {
         if (simulate) return false;
-        else throw SecondRootElementError(Document::cast(parent));
+        else throw ChildCycleError(parent, child);
     }
 
     return true;
-
-    // XXX how about if this == node?
-    // or node is an ancestor of this?
-
-    // XXX how about if node == Document::cast(this)->rootElement() ? This
-    // should just move the root element as the last child and be allowed. For
-    // example, one should be able to call doc->appendChild(doc->rootElement())
-    // with no warnings.
 }
 } // namespace
 
@@ -171,6 +171,19 @@ bool Node::replaceChild(Node* newChild, Node* oldChild)
     sh.reset();
 
     return true;
+}
+
+bool Node::isDescendant(const Node* other) const
+{
+    // Go up from this node to the root; check if we encounter the other node
+    const Node* node = this;
+    while (node != nullptr) {
+        if (node == other) {
+            return true;
+        }
+        node = node->parent();
+    }
+    return false;
 }
 
 Node* Node::appendChild_(NodeSharedPtr nodePtr)

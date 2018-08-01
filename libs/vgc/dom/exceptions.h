@@ -114,8 +114,6 @@ public:
 /// SecondRootElementError is raised, while in the second case the exception
 /// ChildCycleError is raised, all of which derive from HierarchyRequestError.
 ///
-/// XXX TODO: Implement ChildCycleError
-///
 /// \sa Node::appendChild() and Node::replaceChild().
 ///
 class VGC_DOM_API HierarchyRequestError : public LogicError {
@@ -171,6 +169,27 @@ public:
     /// Destructs the SecondRootElementError.
     ///
     ~SecondRootElementError();
+};
+
+/// \class vgc::dom::ChildCycleError
+/// \brief Raised when requested to make a Node a child of itself or of one of
+///        its descendants
+///
+/// The DOM tree is not allowed to have cycles. Therefore, this exception is
+/// raised whenever a requested operation would result in a cycle, that is,
+/// when attempting to insert a Node as a child of itself or of one of its
+/// descendants.
+///
+class VGC_DOM_API ChildCycleError : public HierarchyRequestError {
+public:
+    /// Constructs a ChildCycleError informing that \p parent cannot have \p
+    /// child as its child because \p parent is a descendant of \p child.
+    ///
+    ChildCycleError(const Node* parent, const Node* child);
+
+    /// Destructs the ChildCycleError.
+    ///
+    ~ChildCycleError();
 };
 
 } // namespace dom

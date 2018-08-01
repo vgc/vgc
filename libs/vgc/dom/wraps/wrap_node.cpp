@@ -77,5 +77,6 @@ void wrap_node(py::module& m)
         .def("appendChild", &This::appendChild)
         .def("removeChild", &This::removeChild)
         .def("replaceChild", &This::replaceChild)
+        .def("isDescendant", &This::isDescendant)
     ;
 }

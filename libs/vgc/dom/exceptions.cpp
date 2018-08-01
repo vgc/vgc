@@ -144,5 +144,30 @@ SecondRootElementError::~SecondRootElementError()
 
 }
 
+namespace {
+std::string childCycleReason_(const Node* parent, const Node* child)
+{
+    std::string res;
+    res.reserve(109);
+    res.append("Node ");
+    res.append(core::toString(child));
+    res.append(" cannot be a child of Node ");
+    res.append(core::toString(parent));
+    res.append(" because the latter is a descendant of the former");
+    return res;
+}
+} // namespace
+
+ChildCycleError::ChildCycleError(const Node* parent, const Node* child) :
+    HierarchyRequestError(childCycleReason_(parent, child))
+{
+
+}
+
+ChildCycleError::~ChildCycleError()
+{
+
+}
+
 } // namespace dom
 } // namespace vgc

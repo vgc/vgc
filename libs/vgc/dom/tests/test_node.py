@@ -19,6 +19,7 @@
 import unittest
 
 from vgc.dom import (
+    ChildCycleError,
     Document,
     Element,
     Node,
@@ -232,6 +233,19 @@ class TestNode(unittest.TestCase):
         with self.assertRaises(SecondRootElementError):
             doc.appendChild(n2)
 
+    def testAppendChildCycle(self):
+        doc = Document()
+        n1 = Element(doc, "foo")
+        n2 = Element(n1, "bar")
+
+        self.assertFalse(n2.canAppendChild(n2))
+        with self.assertRaises(ChildCycleError):
+            n2.appendChild(n2)
+
+        self.assertFalse(n2.canAppendChild(n1))
+        with self.assertRaises(ChildCycleError):
+            n2.appendChild(n1)
+
     def testRemoveChild(self):
         doc = Document()
         root = Element(doc, "root")
@@ -300,6 +314,65 @@ class TestNode(unittest.TestCase):
         self.assertTrue(n21.isAlive())
         self.assertFalse(root.isAlive())
         self.assertFalse(n22.isAlive())
+
+    def testIsDescendant(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n3 = Element(root, "n3")
+        n4 = Element(root, "n4")
+        n21 = Element(n2, "n21")
+        n22 = Element(n2, "n22")
+        n23 = Element(n2, "n23")
+        n31 = Element(n3, "n31")
+        n211 = Element(n21, "n211")
+        n212 = Element(n21, "n212")
+        # Test all pairs: 12*12=144 tests
+        for n in [doc, root, n1, n2, n3, n4, n21, n22, n23, n31, n211, n212]:
+            self.assertTrue(n.isDescendant(n))
+        for n in [root, n1, n2, n3, n4, n21, n22, n23, n31, n211, n212]:
+            self.assertTrue(n.isDescendant(doc))
+            self.assertFalse(doc.isDescendant(n))
+        for n in [n1, n2, n3, n4, n21, n22, n23, n31, n211, n212]:
+            self.assertTrue(n.isDescendant(root))
+            self.assertFalse(root.isDescendant(n))
+        for n in [n21, n22, n23, n211, n212]:
+            self.assertTrue(n.isDescendant(n2))
+            self.assertFalse(n2.isDescendant(n))
+        for n in [n31]:
+            self.assertTrue(n.isDescendant(n3))
+            self.assertFalse(n3.isDescendant(n))
+        for n in [n211, n212]:
+            self.assertTrue(n.isDescendant(n21))
+            self.assertFalse(n21.isDescendant(n))
+        for n in [n2, n3, n4, n21, n22, n23, n31, n211, n212]:
+            self.assertFalse(n.isDescendant(n1))
+            self.assertFalse(n1.isDescendant(n))
+        for n in [n3, n4, n31]:
+            self.assertFalse(n.isDescendant(n2))
+            self.assertFalse(n2.isDescendant(n))
+        for n in [n4, n21, n22, n23, n211, n212]:
+            self.assertFalse(n.isDescendant(n3))
+            self.assertFalse(n3.isDescendant(n))
+        for n in [n21, n22, n23, n31, n211, n212]:
+            self.assertFalse(n.isDescendant(n4))
+            self.assertFalse(n4.isDescendant(n))
+        for n in [n22, n23, n31]:
+            self.assertFalse(n.isDescendant(n21))
+            self.assertFalse(n21.isDescendant(n))
+        for n in [n23, n31, n211, n212]:
+            self.assertFalse(n.isDescendant(n22))
+            self.assertFalse(n22.isDescendant(n))
+        for n in [n31, n211, n212]:
+            self.assertFalse(n.isDescendant(n23))
+            self.assertFalse(n23.isDescendant(n))
+        for n in [n211, n212]:
+            self.assertFalse(n.isDescendant(n31))
+            self.assertFalse(n31.isDescendant(n))
+        for n in [n212]:
+            self.assertFalse(n.isDescendant(n211))
+            self.assertFalse(n211.isDescendant(n))
 
 if __name__ == '__main__':
     unittest.main()

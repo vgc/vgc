@@ -420,16 +420,20 @@ public:
     ///
     /// An exception is raised in the following cases:
     ///
-    /// 1. You're trying to append a Document node.
+    /// 1. WrongDocumentError: You're trying to append a Node which is owned by
+    ///    another Document.
     ///
-    /// 2. You're trying to append an Element node to a Document node that
-    ///    already has a rootElement.
+    /// 2. WrongChildTypeError: You're trying to append a Node whose type is
+    ///    not compatible with its parent type.
     ///
-    /// 3. You're trying to append a Node which is owned by another Document.
+    /// 3. SecondRootElementError: You're trying to append a second child
+    ///    Element node to a Document node.
     ///
-    /// XXX Add "node is an ancestor of this node" as another reason. See
-    /// https://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/core.html#ID-184E7107
-    /// for reference: we choose to have the same restrictions.
+    /// 4. ChildCycleError: You're trying to append a Node as a child of itself
+    ///    or one of its descendants.
+    ///
+    /// If several exceptions apply, the one appearing first in the list above is
+    /// raised.
     ///
     void appendChild(Node* node);
 
@@ -474,6 +478,11 @@ public:
     /// Returns whether the child was successfully replaced.
     ///
     bool replaceChild(Node* newChild, Node* oldChild);
+
+    /// Returns whether this node is a descendant of the given \p other node.
+    /// Returns true if this node is equal to the \p other node.
+    ///
+    bool isDescendant(const Node* other) const;
 
 protected:
     // Helper method for Derived::create_. Assumes the node is alive, is fully

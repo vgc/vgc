@@ -26,4 +26,5 @@ void wrap_exceptions(py::module& m)
     auto hierarchyRequestError = py::register_exception<vgc::dom::HierarchyRequestError>(m, "HierarchyRequestError", logicError.ptr());
     auto wrongChildTypeError = py::register_exception<vgc::dom::WrongChildTypeError>(m, "WrongChildTypeError", hierarchyRequestError.ptr());
     auto secondRootElementError = py::register_exception<vgc::dom::SecondRootElementError>(m, "SecondRootElementError", hierarchyRequestError.ptr());
+    auto childCycleError = py::register_exception<vgc::dom::ChildCycleError>(m, "ChildCycleError", hierarchyRequestError.ptr());
 }
