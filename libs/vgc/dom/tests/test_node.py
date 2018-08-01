@@ -18,7 +18,16 @@
 
 import unittest
 
-from vgc.dom import Document, Element, Node, NodeType, LogicError
+from vgc.dom import (
+    Document,
+    Element,
+    Node,
+    NodeType,
+    NotAliveError,
+    SecondRootElementError,
+    WrongChildTypeError,
+    WrongDocumentError
+)
 
 def getChildNames(node):
     return [child.name for child in node.children]
@@ -61,7 +70,7 @@ class TestNode(unittest.TestCase):
         n1 = Element(doc, "n1")
         n1.checkAlive()
         n1.destroy()
-        with self.assertRaises(LogicError):
+        with self.assertRaises(NotAliveError):
             n1.checkAlive()
 
     def testDestroy(self):
@@ -80,12 +89,12 @@ class TestNode(unittest.TestCase):
         self.assertFalse(n1.isAlive())
         self.assertFalse(n3.isAlive())
         self.assertTrue(doc.rootElement == None)
-        with self.assertRaises(LogicError):
+        with self.assertRaises(NotAliveError):
             n2 = n3.parent
 
         doc.destroy()
         self.assertFalse(doc.isAlive())
-        with self.assertRaises(LogicError):
+        with self.assertRaises(NotAliveError):
             n1 = doc.rootElement
 
         n1 = None
@@ -193,7 +202,7 @@ class TestNode(unittest.TestCase):
         doc2 = Document()
         n2 = Element(doc2, "n2")
         self.assertFalse(n1.canAppendChild(n2))
-        with self.assertRaises(LogicError):
+        with self.assertRaises(WrongDocumentError):
             n1.appendChild(n2)
 
     def testAppendChildDocument(self):
@@ -202,15 +211,15 @@ class TestNode(unittest.TestCase):
         doc2 = Document()
 
         self.assertFalse(doc1.canAppendChild(doc2))
-        with self.assertRaises(LogicError):
+        with self.assertRaises(WrongDocumentError): # takes precedence over WrongChildTypeError
             doc1.appendChild(doc2)
 
         self.assertFalse(n1.canAppendChild(doc1))
-        with self.assertRaises(LogicError):
+        with self.assertRaises(WrongChildTypeError): # takes precedence over ChildCycleError
             n1.appendChild(doc1)
 
         self.assertFalse(n1.canAppendChild(doc2))
-        with self.assertRaises(LogicError):
+        with self.assertRaises(WrongDocumentError): # takes precedence over WrongChildTypeError
             n1.appendChild(doc2)
 
     def testAppendChildRootElement(self):
@@ -220,7 +229,7 @@ class TestNode(unittest.TestCase):
         self.assertEqual(doc.rootElement, n1)
 
         self.assertFalse(doc.canAppendChild(n2))
-        with self.assertRaises(LogicError):
+        with self.assertRaises(SecondRootElementError):
             doc.appendChild(n2)
 
     def testRemoveChild(self):

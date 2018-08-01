@@ -20,5 +20,10 @@
 void wrap_exceptions(py::module& m)
 {
     py::object base = py::module::import("vgc.core").attr("LogicError");
-    py::register_exception<vgc::dom::LogicError>(m, "LogicError", base.ptr());
+    auto logicError = py::register_exception<vgc::dom::LogicError>(m, "LogicError", base.ptr());
+    auto notAliveError = py::register_exception<vgc::dom::NotAliveError>(m, "NotAliveError", logicError.ptr());
+    auto wrongDocumentError = py::register_exception<vgc::dom::WrongDocumentError>(m, "WrongDocumentError", logicError.ptr());
+    auto hierarchyRequestError = py::register_exception<vgc::dom::HierarchyRequestError>(m, "HierarchyRequestError", logicError.ptr());
+    auto wrongChildTypeError = py::register_exception<vgc::dom::WrongChildTypeError>(m, "WrongChildTypeError", hierarchyRequestError.ptr());
+    auto secondRootElementError = py::register_exception<vgc::dom::SecondRootElementError>(m, "SecondRootElementError", hierarchyRequestError.ptr());
 }
