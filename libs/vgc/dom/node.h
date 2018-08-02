@@ -64,7 +64,6 @@ inline std::string toString(NodeType type) {
     switch (type) {
     case NodeType::Element: return "Element";
     case NodeType::Document: return "Document";
-    default: return "UnknownType";
     }
 }
 
