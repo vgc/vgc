@@ -75,7 +75,7 @@ void wrap_node(py::module& m)
         .def_property_readonly("children", &This::children)
         .def("canReparent", &This::canReparent)
         .def("reparent", &This::reparent)
-        .def("replaceChild", &This::replaceChild)
+        .def("replace", &This::replace)
         .def("isDescendant", &This::isDescendant)
     ;
 }

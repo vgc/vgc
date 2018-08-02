@@ -98,60 +98,55 @@ void Node::reparent(Node* newParent)
     newParent->attachChild_(std::move(nodePtr));
 }
 
-bool Node::replaceChild(Node* newChild, Node* oldChild)
+bool Node::replace(Node* oldNode)
 {
     checkAlive();
 
-    if (oldChild->parent() != this) {
-        core::warning() << "Can't replace child: oldChild is not a child of this Node" << std::endl;
-        return false;
-    }
-
-    if (this->document() != newChild->document()) {
-        core::warning() << "Can't replace child: newChild is owned by another Document" << std::endl;
-        return false;
-    }
-
-    if (newChild->nodeType() == NodeType::Document) {
-        core::warning() << "Can't replace child: newChild is a Document node" << std::endl;
-        return false;
-    }
-
-    if (nodeType() == NodeType::Document &&
-        newChild->nodeType() == NodeType::Element &&
-        newChild->nodeType() != NodeType::Element)
-    {
-        core::warning() << "Can't replace child: would add a second root element of this Document" << std::endl;
-        return false;
-    }
-
-    // XXX TODO: raise warning if newChild is an ancestor of this Node (including this Node itself).
-
-    if (oldChild == newChild) {
+    if (this == oldNode) {
         // nothing to do
         return true;
     }
 
-    // Detach newChild from current parent.
-    // Note: After this, sh points to newChild.
-    NodeSharedPtr sh = newChild->detachFromParent_();
+    if (document() != oldNode->document()) {
+        core::warning() << "Can't replace: oldNode is owned by another Document" << std::endl;
+        return false;
+    }
+
+    if (nodeType() == NodeType::Document) {
+        core::warning() << "Can't replace: this Node is a Document node" << std::endl;
+        return false;
+    }
+
+    if (parent()->nodeType() == NodeType::Document &&
+        nodeType() == NodeType::Element &&
+        oldNode->nodeType() != NodeType::Element)
+    {
+        core::warning() << "Can't replace: would add a second root element of this Document" << std::endl;
+        return false;
+    }
+
+    // XXX TODO: handle child cycles
+
+    // Detach from current parent.
+    // Note: After this line of code, sh points to this.
+    NodeSharedPtr sh = detachFromParent_();
 
     // Update owning pointers.
-    // Note: After this, sh points to oldChild.
-    NodeSharedPtr& owning = oldChild->previousSibling_ ? oldChild->previousSibling_->nextSibling_ : this->firstChild_;
+    // Note: After these lines of code, sh points to oldNode.
+    NodeSharedPtr& owning = oldNode->previousSibling_ ? oldNode->previousSibling_->nextSibling_ : oldNode->parent_->firstChild_;
     std::swap(owning, sh);
-    std::swap(oldChild->nextSibling_, newChild->nextSibling_);
+    std::swap(oldNode->nextSibling_, nextSibling_);
 
     // Update non-owning pointers.
-    Node*& nonowning = newChild->nextSibling_ ? newChild->nextSibling_->previousSibling_ : this->lastChild_;
-    nonowning = newChild;
-    std::swap(oldChild->previousSibling_, newChild->previousSibling_);
-    std::swap(oldChild->parent_, newChild->parent_);
+    Node*& nonowning = nextSibling_ ? nextSibling_->previousSibling_ : oldNode->parent_->lastChild_;
+    nonowning = this;
+    std::swap(oldNode->previousSibling_, previousSibling_);
+    std::swap(oldNode->parent_, parent_);
 
-    // Destroy oldChild
-    oldChild->destroy();
+    // Destroy oldNode
+    oldNode->destroy();
 
-    // Destruct oldChild now, unless other shared pointers point to oldChild.
+    // Destruct oldNode now, unless other shared pointers point to oldNode.
     // This line of code is redundant with closing the scope, but it is kept
     // for clarifying intent.
     sh.reset();

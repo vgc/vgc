@@ -78,11 +78,11 @@ public:
 /// \brief Raised when two nodes do not belong to the same document
 ///        but are supposed to.
 ///
-/// This exception is raised in Node::reparent() and Node::replaceChild() if
-/// the node that you are trying to reparent or replace with belongs to a
-/// different Document that its new parent.
+/// This exception is raised in Node::reparent() and Node::replace() if
+/// the node that you are trying to reparent or replace belongs to a
+/// different Document.
 ///
-/// \sa Node::reparent() and Node::replaceChild().
+/// \sa Node::reparent() and Node::replace().
 ///
 class VGC_DOM_API WrongDocumentError : public LogicError {
 public:
@@ -114,7 +114,7 @@ public:
 /// SecondRootElementError is raised, while in the second case the exception
 /// ChildCycleError is raised, all of which derive from HierarchyRequestError.
 ///
-/// \sa Node::reparent() and Node::replaceChild().
+/// \sa Node::reparent() and Node::replace().
 ///
 class VGC_DOM_API HierarchyRequestError : public LogicError {
 public:
@@ -137,7 +137,7 @@ public:
 /// - Document: allowed children are Element (at most one)
 /// - Element: allowed children are Element
 ///
-/// \sa Node::reparent() and Node::replaceChild().
+/// \sa Node::reparent() and Node::replace().
 ///
 class VGC_DOM_API WrongChildTypeError : public HierarchyRequestError {
 public:

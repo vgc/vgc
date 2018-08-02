@@ -52,7 +52,7 @@ bool Document::setRootElement(Element* element)
 
     // Append new root element or replace existing one
     if (rootElement()) {
-        return replaceChild(element, rootElement());
+        return element->replace(rootElement());
     }
     else {
         // XXX Isn't this case impossible, since \p element must be a descendant of rootElement()?

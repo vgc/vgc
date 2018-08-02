@@ -439,26 +439,27 @@ public:
     ///
     void reparent(Node* newParent);
 
-    /// Replaces the child node \p oldChild with \p newChild. Does nothing if
-    /// newChild == oldChild.
+    /// Replaces the given \p oldNode with this Node. Does nothing if \p
+    /// oldNode is this Node itself. Note that this operation destroys \p
+    /// oldNode, unless \p oldNode is this Node itself.
     ///
     /// The operation is not performed and a warning is raised in all of the
     /// following cases:
     ///
-    /// 1. oldChild is not a child of this Node
+    /// 1. oldNode is owned by another Document
     ///
-    /// 2. newChild is owned by another Document
+    /// 2. this Node is a Document node and \p oldNode != this
     ///
-    /// 3. newChild is a Document node
-    ///
-    /// 4. this Node is a Document node and replacing oldChild with newChild
-    ///    would add a second root element.
+    /// 3. the parent of oldNode is a Document node and replacing oldNode with
+    ///    this Node would add a second root element.
     ///
     /// XXX Throw an exception instead?
     ///
-    /// Returns whether the child was successfully replaced.
+    /// XXX How about child cycles?
     ///
-    bool replaceChild(Node* newChild, Node* oldChild);
+    /// Returns whether \p oldNode was successfully replaced.
+    ///
+    bool replace(Node* oldNode);
 
     /// Returns whether this node is a descendant of the given \p other node.
     /// Returns true if this node is equal to the \p other node.
