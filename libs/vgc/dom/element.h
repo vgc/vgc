@@ -56,7 +56,7 @@ public:
     static Element* create(Document* parent, core::StringId name);
     /// \overload
     static Element* create(Document* parent, const std::string& name) {
-        create(parent, core::StringId(name));
+        return create(parent, core::StringId(name));
     }
 
     /// Creates an element with the given \p name as the last child of the
@@ -65,7 +65,7 @@ public:
     static Element* create(Element* parent, core::StringId name);
     /// \overload
     static Element* create(Element* parent, const std::string& name) {
-        create(parent, core::StringId(name));
+        return create(parent, core::StringId(name));
     }
 
     /// Casts the given \p node to an Element. Returns nullptr if node is

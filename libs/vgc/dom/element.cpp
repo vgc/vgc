@@ -56,7 +56,7 @@ Element* Element::create(Document* parent, core::StringId name)
 /* static */
 Element* Element::create(Element* parent, core::StringId name)
 {
-    create_(parent, name);
+    return create_(parent, name);
 }
 
 const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
