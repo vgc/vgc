@@ -231,10 +231,10 @@ VGC_CORE_DECLARE_PTRS(Object);
 class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
 {
     VGC_CORE_OBJECT(Object)
-    Object(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-constructed")
-    Object(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-constructed")
-    Object& operator=(const Object&) VGC_CORE_OBJECT_DEFAULT_("copy-assigned")
-    Object& operator=(Object&&) VGC_CORE_OBJECT_DEFAULT_("move-assigned")
+    Object(const Object&) = default;
+    Object(Object&&) = default;
+    Object& operator=(const Object&) = default;
+    Object& operator=(Object&&) = default;
 
 protected:
     /// Constructs an Object.
