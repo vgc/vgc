@@ -439,9 +439,9 @@ public:
     ///
     void reparent(Node* newParent);
 
-    /// Replaces the given \p oldNode with this Node. Does nothing if \p
-    /// oldNode is this Node itself. Note that this operation destroys \p
-    /// oldNode, unless \p oldNode is this Node itself.
+    /// Replaces the given \p oldNode with this Node. This destroys \p oldNode
+    /// and all its descendants, except this Node and all its descendants. Does
+    /// nothing if \p oldNode is this Node itself.
     ///
     /// The operation is not performed and a warning is raised in all of the
     /// following cases:
