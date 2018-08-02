@@ -36,31 +36,6 @@ Document::Document() :
     generateXmlDeclaration_();
 }
 
-bool Document::setRootElement(Element* element)
-{
-    checkAlive();
-
-    if (this != element->document()) {
-        core::warning() << "Can't set root element: it is owned by another Document." << std::endl;
-        return false;
-    }
-
-    // Nothing to do if this element is already the root element
-    if (element->parent() == this) {
-        return true;
-    }
-
-    // Append new root element or replace existing one
-    if (rootElement()) {
-        return element->replace(rootElement());
-    }
-    else {
-        // XXX Isn't this case impossible, since \p element must be a descendant of rootElement()?
-        element->reparent(this);
-        return true;
-    }
-}
-
 Element* Document::rootElement() const
 {
     checkAlive();

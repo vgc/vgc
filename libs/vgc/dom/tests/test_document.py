@@ -34,7 +34,7 @@ class TestDocument(unittest.TestCase):
         self.assertEqual(doc.rootElement, n1)
 
         n2 = Element(n1, "n2")
-        doc.rootElement = n2
+        n2.replace(doc.rootElement)
         self.assertEqual(doc.rootElement, n2)
         self.assertFalse(n1.isAlive())
         self.assertTrue(n2.isAlive())

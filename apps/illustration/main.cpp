@@ -46,8 +46,6 @@ int main(int argc, char* argv[])
     auto doc = vgc::dom::Document::create();
     vgc::dom::Element::create(doc.get(), "vgc");
 
-    //document->setRootElement(root);
-
     // Expose the Document instance to the Python console as a local Python
     // variable 'document'.
     //
