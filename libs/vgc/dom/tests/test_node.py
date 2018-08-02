@@ -378,7 +378,6 @@ class TestNode(unittest.TestCase):
         with self.assertRaises(ChildCycleError):
             root.replace(n1)
 
-
     def testIsDescendant(self):
         doc = Document()
         root = Element(doc, "root")
