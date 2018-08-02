@@ -18,15 +18,29 @@
 
 import unittest
 
-from vgc.dom import Document, Element, NodeType
+from vgc.dom import Document, Element, NodeType, SecondRootElementError
 
 class TestElement(unittest.TestCase):
 
     def testConstructor(self):
         doc = Document()
-        foo = Element(doc, "foo")
-        self.assertEqual(foo.nodeType, NodeType.Element)
-        self.assertEqual(foo.name, "foo")
+        n1 = Element(doc, "n1")
+        self.assertEqual(n1.nodeType, NodeType.Element)
+        self.assertEqual(n1.parent, doc)
+        self.assertEqual(n1.name, "n1")
+
+        n2 = Element(n1, "n2")
+        self.assertEqual(n2.nodeType, NodeType.Element)
+        self.assertEqual(n2.parent, n1)
+        self.assertEqual(n2.name, "n2")
+
+        n3 = Element(n1, "n3")
+        self.assertEqual(n3.nodeType, NodeType.Element)
+        self.assertEqual(n3.parent, n1)
+        self.assertEqual(n3.name, "n3")
+
+        with self.assertRaises(SecondRootElementError):
+            n4 = Element(doc, "n4")
 
 if __name__ == '__main__':
     unittest.main()

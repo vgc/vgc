@@ -51,7 +51,7 @@ void Node::destroy()
 }
 
 namespace {
-bool checkCanReparent_(Node* parent, Node* child, bool simulate = false)
+bool checkCanReparent_(Node* parent, Node* child, bool simulate = false, bool checkSecondRootElement = true)
 {
     parent->checkAlive();
     child->checkAlive();
@@ -66,7 +66,8 @@ bool checkCanReparent_(Node* parent, Node* child, bool simulate = false)
         else throw WrongChildTypeError(parent, child);
     }
 
-    if (parent->nodeType() == NodeType::Document &&
+    if (checkSecondRootElement &&
+        parent->nodeType() == NodeType::Document &&
         child->nodeType() == NodeType::Element)
     {
         Element* rootElement = Document::cast(parent)->rootElement();
@@ -98,34 +99,45 @@ void Node::reparent(Node* newParent)
     newParent->attachChild_(std::move(nodePtr));
 }
 
-bool Node::replace(Node* oldNode)
+namespace {
+bool checkCanReplace_(Node* oldNode, Node* newNode, bool simulate = false)
 {
-    checkAlive();
+    oldNode->checkAlive();
+    newNode->checkAlive();
 
-    if (this == oldNode) {
-        // nothing to do
+    // Avoid raising ReplaceDocumentError if oldNode == newNode (= Document node)
+    if (oldNode == newNode) {
         return true;
     }
 
-    if (document() != oldNode->document()) {
-        core::warning() << "Can't replace: oldNode is owned by another Document" << std::endl;
-        return false;
+    if (oldNode->nodeType() == NodeType::Document) {
+        if (simulate) return false;
+        else throw ReplaceDocumentError(Document::cast(oldNode), newNode);
     }
+    Node* oldNodeParent = oldNode->parent(); // guaranteed non-null
 
-    if (nodeType() == NodeType::Document) {
-        core::warning() << "Can't replace: this Node is a Document node" << std::endl;
-        return false;
+    // Avoid raising SecondRootElementError if oldNode is the root element
+    bool checkSecondRootElement = (oldNode->nodeType() != NodeType::Element);
+
+    // All other checks are the same as for reparent(), so we delate.
+    return checkCanReparent_(oldNodeParent, newNode, simulate, checkSecondRootElement);
+}
+} // namespace
+
+bool Node::canReplace(Node* oldNode)
+{
+    const bool simulate = true;
+    return checkCanReplace_(oldNode, this, simulate);
+}
+
+void Node::replace(Node* oldNode)
+{
+    checkCanReplace_(oldNode, this);
+
+    if (this == oldNode) {
+        // nothing to do
+        return;
     }
-
-    if (parent()->nodeType() == NodeType::Document &&
-        nodeType() == NodeType::Element &&
-        oldNode->nodeType() != NodeType::Element)
-    {
-        core::warning() << "Can't replace: would add a second root element of this Document" << std::endl;
-        return false;
-    }
-
-    // XXX TODO: handle child cycles
 
     // Detach from current parent.
     // Note: After this line of code, sh points to this.
@@ -150,8 +162,6 @@ bool Node::replace(Node* oldNode)
     // This line of code is redundant with closing the scope, but it is kept
     // for clarifying intent.
     sh.reset();
-
-    return true;
 }
 
 bool Node::isDescendant(const Node* other) const

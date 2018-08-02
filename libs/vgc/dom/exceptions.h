@@ -114,6 +114,9 @@ public:
 /// SecondRootElementError is raised, while in the second case the exception
 /// ChildCycleError is raised, all of which derive from HierarchyRequestError.
 ///
+/// Also, this exception is raised when trying to replace the Document node,
+/// see ReplaceDocumentError.
+///
 /// \sa Node::reparent() and Node::replace().
 ///
 class VGC_DOM_API HierarchyRequestError : public LogicError {
@@ -190,6 +193,26 @@ public:
     /// Destructs the ChildCycleError.
     ///
     ~ChildCycleError();
+};
+
+/// \class vgc::dom::ReplaceDocumentError
+/// \brief Raised when requested to replace the Document node.
+///
+/// The Document node can never be replaced by another node, and this exception
+/// is raised whenever newNode->replace(oldNode) is called and oldNode is the
+/// Document node (unless newNode is also the Document node, in which case
+/// replace() does nothing).
+///
+class VGC_DOM_API ReplaceDocumentError : public HierarchyRequestError {
+public:
+    /// Constructs a ReplaceDocumentError informing that \p newNode cannot
+    /// replace \p oldNode because \p oldNode is the Document node.
+    ///
+    ReplaceDocumentError(const Document* oldNode, const Node* newNode);
+
+    /// Destructs the ReplaceDocumentError.
+    ///
+    ~ReplaceDocumentError();
 };
 
 } // namespace dom

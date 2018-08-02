@@ -45,12 +45,9 @@ Element* Element::create_(Node* parent, core::StringId name)
 Element* Element::create(Document* parent, core::StringId name)
 {
     if (parent->rootElement()) {
-        core::warning() << "Can't create Element: the given parent Document already has a root element" << std::endl;
-        return nullptr;
+        throw SecondRootElementError(parent);
     }
-    else {
-        return create_(parent, name);
-    }
+    return create_(parent, name);
 }
 
 /* static */

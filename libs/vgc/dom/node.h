@@ -439,27 +439,37 @@ public:
     ///
     void reparent(Node* newParent);
 
+    /// Returns whether \p oldNode can be replaced by this Node. See replace()
+    /// for details.
+    ///
+    bool canReplace(Node* oldNode);
+
     /// Replaces the given \p oldNode with this Node. This destroys \p oldNode
     /// and all its descendants, except this Node and all its descendants. Does
     /// nothing if \p oldNode is this Node itself.
     ///
-    /// The operation is not performed and a warning is raised in all of the
-    /// following cases:
+    /// An exception is raised in the following cases:
     ///
-    /// 1. oldNode is owned by another Document
+    /// 1. ReplaceDocumentError: oldNode is the Document node and is not this
+    ///    Node itself.
     ///
-    /// 2. this Node is a Document node and \p oldNode != this
+    /// 2. WrongDocumentError: oldNode is owned by another Document
     ///
-    /// 3. the parent of oldNode is a Document node and replacing oldNode with
-    ///    this Node would add a second root element.
+    /// 3. WrongChildTypeError: the type of this Node is not allowed as a child
+    ///    of \p oldNode's parent. Here is the list of allowed child types:
+    ///    - Document: allowed child types are Element (at most one)
+    ///    - Element: allowed child types are Element
     ///
-    /// XXX Throw an exception instead?
+    /// 4. SecondRootElementError: this Node is an Element node, the parent of
+    ///    \p oldNode is the Document node, and replacing would result in a
+    ///    second root element.
     ///
-    /// XXX How about child cycles?
+    /// 5. ChildCycleError: \p oldNode is a (strict) descendant this Node
     ///
-    /// Returns whether \p oldNode was successfully replaced.
+    /// If several exceptions apply, the one appearing first in the list above is
+    /// raised.
     ///
-    bool replace(Node* oldNode);
+    void replace(Node* oldNode);
 
     /// Returns whether this node is a descendant of the given \p other node.
     /// Returns true if this node is equal to the \p other node.

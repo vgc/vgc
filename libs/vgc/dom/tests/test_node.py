@@ -25,6 +25,7 @@ from vgc.dom import (
     Node,
     NodeType,
     NotAliveError,
+    ReplaceDocumentError,
     SecondRootElementError,
     WrongChildTypeError,
     WrongDocumentError
@@ -209,6 +210,8 @@ class TestNode(unittest.TestCase):
         self.assertEqual(getChildNames(n1),  ["n2"])
         self.assertEqual(getChildNames(n2),  ["n3"])
         self.assertEqual(getChildNames(n3),  [])
+
+        self.assertTrue(n3.canReparent(n1))
         n3.reparent(n1)
         self.assertEqual(getChildNames(doc), ["n1"])
         self.assertEqual(getChildNames(n1),  ["n2", "n3"])
@@ -216,10 +219,12 @@ class TestNode(unittest.TestCase):
         self.assertEqual(getChildNames(n3),  [])
 
         # Special case 1: move last
+        self.assertTrue(n2.canReparent(n1))
         n2.reparent(n1)
         self.assertEqual(getChildNames(n1),  ["n3", "n2"])
 
         # Special case 2: append root element again (= do nothing, or move last in case of comments)
+        self.assertTrue(n1.canReparent(doc))
         n1.reparent(doc)
         self.assertEqual(getChildNames(doc), ["n1"])
 
@@ -286,6 +291,7 @@ class TestNode(unittest.TestCase):
         n211 = Element(n21, "n211")
         n212 = Element(n21, "n212")
 
+        self.assertTrue(n21.canReplace(n3))
         n21.replace(n3)
         self.assertEqual(getChildNames(root), ["n1", "n2", "n21", "n4"])
         self.assertEqual(getChildNames(n2), ["n22", "n23"])
@@ -293,32 +299,85 @@ class TestNode(unittest.TestCase):
         self.assertFalse(n3.isAlive())
         self.assertFalse(n31.isAlive())
 
+        self.assertTrue(n2.canReplace(n2))
         n2.replace(n2)
         self.assertEqual(getChildNames(root), ["n1", "n2", "n21", "n4"])
         self.assertEqual(getChildNames(n2), ["n22", "n23"])
 
+        self.assertTrue(n22.canReplace(n2))
         n22.replace(n2)
         self.assertEqual(getChildNames(root), ["n1", "n22", "n21", "n4"])
         self.assertTrue(n22.isAlive())
         self.assertFalse(n2.isAlive())
         self.assertFalse(n23.isAlive())
 
+        self.assertTrue(n21.canReplace(n1))
         n21.replace(n1)
         self.assertEqual(getChildNames(root), ["n21", "n22", "n4"])
         self.assertTrue(n21.isAlive())
         self.assertFalse(n1.isAlive())
 
+        self.assertTrue(n22.canReplace(n4))
         n22.replace(n4)
         self.assertEqual(getChildNames(root), ["n21", "n22"])
         self.assertTrue(n22.isAlive())
         self.assertFalse(n4.isAlive())
 
+        self.assertTrue(root.canReplace(root))
+        root.replace(root)
+        self.assertEqual(getChildNames(doc), ["root"])
+        self.assertEqual(getChildNames(root), ["n21", "n22"])
+        self.assertTrue(root.isAlive())
+
+        self.assertTrue(n21.canReplace(root))
         n21.replace(root)
         self.assertEqual(getChildNames(doc), ["n21"])
         self.assertEqual(getChildNames(n21), ["n211", "n212"])
         self.assertTrue(n21.isAlive())
         self.assertFalse(root.isAlive())
         self.assertFalse(n22.isAlive())
+
+        self.assertTrue(doc.canReplace(doc))
+        doc.replace(doc)
+        self.assertTrue(doc.isAlive())
+        self.assertEqual(getChildNames(doc), ["n21"])
+        self.assertTrue(n21.isAlive())
+
+    def testReplaceExceptions(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+
+        doc2 = Document()
+        root2 = Element(doc2, "root2")
+
+        self.assertFalse(n1.canReplace(doc))
+        with self.assertRaises(ReplaceDocumentError):
+            n1.replace(doc)
+
+        self.assertFalse(doc.canReplace(doc2))
+        with self.assertRaises(ReplaceDocumentError):
+            doc.replace(doc2)
+
+        self.assertFalse(root.canReplace(root2))
+        with self.assertRaises(WrongDocumentError):
+            root.replace(root2)
+
+        self.assertFalse(doc.canReplace(n1))
+        with self.assertRaises(WrongChildTypeError):
+            doc.replace(n1)
+
+        # XXX Once NodeType::Comment is implemented, uncomment the following test.
+        #     until then, replace() can never raise SecondRootElementError
+        # c1 = Comment(doc, "comment")
+        # self.assertFalse(n1.canReplace(c1))
+        # with self.assertRaises(SecondRootElementError):
+        #     n1.replace(c1)
+
+        self.assertFalse(root.canReplace(n1))
+        with self.assertRaises(ChildCycleError):
+            root.replace(n1)
+
 
     def testIsDescendant(self):
         doc = Document()

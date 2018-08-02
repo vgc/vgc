@@ -49,9 +49,10 @@ protected:
 
 public:
     /// Creates an element with the given \p name as the root element of the
-    /// given \p parent Document. If the given \p parent Document already has a
-    /// root element, an error is raised and nullptr is returned. Otherwise,
-    /// returns a valid non-null Element.
+    /// given \p parent Document. Returns a valid non-null Element.
+    ///
+    /// A SecondRootElementError exception is raised if the given \p parent
+    /// Document already has a root element.
     ///
     static Element* create(Document* parent, core::StringId name);
     /// \overload

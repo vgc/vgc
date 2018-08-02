@@ -169,5 +169,29 @@ ChildCycleError::~ChildCycleError()
 
 }
 
+namespace {
+std::string replaceDocumentReason_(const Document* oldNode, const Node* newNode)
+{
+    std::string res;
+    res.reserve(63);
+    res.append("Node ");
+    res.append(core::toString(newNode));
+    res.append(" cannot replace Document node ");
+    res.append(core::toString(oldNode));
+    return res;
+}
+} // namespace
+
+ReplaceDocumentError::ReplaceDocumentError(const Document* oldNode, const Node* newNode) :
+    HierarchyRequestError(replaceDocumentReason_(oldNode, newNode))
+{
+
+}
+
+ReplaceDocumentError::~ReplaceDocumentError()
+{
+
+}
+
 } // namespace dom
 } // namespace vgc
