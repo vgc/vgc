@@ -200,7 +200,7 @@ class TestNode(unittest.TestCase):
         n4 = Element(n1, "bar3")
         self.assertEqual(getChildNames(n1), ["bar1", "bar2", "bar3"])
 
-    def testAppendChild(self):
+    def testReparent(self):
         doc = Document()
         n1 = Element(doc, "n1")
         n2 = Element(n1, "n2")
@@ -209,18 +209,18 @@ class TestNode(unittest.TestCase):
         self.assertEqual(getChildNames(n1),  ["n2"])
         self.assertEqual(getChildNames(n2),  ["n3"])
         self.assertEqual(getChildNames(n3),  [])
-        n1.appendChild(n3)
+        n3.reparent(n1)
         self.assertEqual(getChildNames(doc), ["n1"])
         self.assertEqual(getChildNames(n1),  ["n2", "n3"])
         self.assertEqual(getChildNames(n2),  [])
         self.assertEqual(getChildNames(n3),  [])
 
         # Special case 1: move last
-        n1.appendChild(n2)
+        n2.reparent(n1)
         self.assertEqual(getChildNames(n1),  ["n3", "n2"])
 
         # Special case 2: append root element again (= do nothing, or move last in case of comments)
-        doc.appendChild(n1)
+        n1.reparent(doc)
         self.assertEqual(getChildNames(doc), ["n1"])
 
     def testWrongDocumentError(self):
@@ -228,49 +228,49 @@ class TestNode(unittest.TestCase):
         n1 = Element(doc1, "n1")
         doc2 = Document()
         n2 = Element(doc2, "n2")
-        self.assertFalse(n1.canAppendChild(n2))
+        self.assertFalse(n2.canReparent(n1))
         with self.assertRaises(WrongDocumentError):
-            n1.appendChild(n2)
+            n2.reparent(n1)
 
-    def testAppendChildDocument(self):
+    def testReparentDocument(self):
         doc1 = Document()
         n1 = Element(doc1, "foo")
         doc2 = Document()
 
-        self.assertFalse(doc1.canAppendChild(doc2))
+        self.assertFalse(doc2.canReparent(doc1))
         with self.assertRaises(WrongDocumentError): # takes precedence over WrongChildTypeError
-            doc1.appendChild(doc2)
+            doc2.reparent(doc1)
 
-        self.assertFalse(n1.canAppendChild(doc1))
+        self.assertFalse(doc1.canReparent(n1))
         with self.assertRaises(WrongChildTypeError): # takes precedence over ChildCycleError
-            n1.appendChild(doc1)
+            doc1.reparent(n1)
 
-        self.assertFalse(n1.canAppendChild(doc2))
+        self.assertFalse(doc2.canReparent(n1))
         with self.assertRaises(WrongDocumentError): # takes precedence over WrongChildTypeError
-            n1.appendChild(doc2)
+            doc2.reparent(n1)
 
-    def testAppendChildRootElement(self):
+    def testReparentRootElement(self):
         doc = Document()
         n1 = Element(doc, "foo")
         n2 = Element(n1, "bar")
         self.assertEqual(doc.rootElement, n1)
 
-        self.assertFalse(doc.canAppendChild(n2))
+        self.assertFalse(n2.canReparent(doc))
         with self.assertRaises(SecondRootElementError):
-            doc.appendChild(n2)
+            n2.reparent(doc)
 
-    def testAppendChildCycle(self):
+    def testReparentCycle(self):
         doc = Document()
         n1 = Element(doc, "foo")
         n2 = Element(n1, "bar")
 
-        self.assertFalse(n2.canAppendChild(n2))
+        self.assertFalse(n2.canReparent(n2))
         with self.assertRaises(ChildCycleError):
-            n2.appendChild(n2)
+            n2.reparent(n2)
 
-        self.assertFalse(n2.canAppendChild(n1))
+        self.assertFalse(n1.canReparent(n2))
         with self.assertRaises(ChildCycleError):
-            n2.appendChild(n1)
+            n1.reparent(n2)
 
     def testReplaceChild(self):
         doc = Document()

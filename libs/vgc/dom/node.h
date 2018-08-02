@@ -407,34 +407,37 @@ public:
         return NodeList(firstChild(), nullptr);
     }
 
-    /// Returns whether the given \p node can be inserted as the last child of
-    /// this Node. See appendChild() for details.
+    /// Returns whether this Node can be reparented with the given \p newParent.
+    /// See reparent() for details.
     ///
-    bool canAppendChild(Node* node);
+    bool canReparent(Node* newParent);
 
-    /// Appends the given \p node as the last child of this Node. The \p node
-    /// is first removed from the children of its current parent. If this Node
-    /// is already the parent of \p node, then \p node is moved as the last
-    /// child of this Node.
+    /// Moves this Node from its current position in the DOM tree to the last
+    /// child of the given \p newParent. If \p newParent is already the current
+    /// parent of this node, then this Node is simply moved last without
+    /// changing its parent.
     ///
     /// An exception is raised in the following cases:
     ///
-    /// 1. WrongDocumentError: You're trying to append a Node which is owned by
-    ///    another Document.
+    /// 1. WrongDocumentError: this Node and \p newParent belong to different
+    ///    documents.
     ///
-    /// 2. WrongChildTypeError: You're trying to append a Node whose type is
-    ///    not compatible with its parent type.
+    /// 2. WrongChildTypeError: the type of this Node is not allowed as a child
+    ///    of \p newParent. Here is the list of allowed child types:
+    ///    - Document: allowed child types are Element (at most one)
+    ///    - Element: allowed child types are Element
     ///
-    /// 3. SecondRootElementError: You're trying to append a second child
-    ///    Element node to a Document node.
+    /// 3. SecondRootElementError: this Node is an Element node, \p newParent
+    ///    is the Document node, and reparenting would result in a second root
+    ///    element.
     ///
-    /// 4. ChildCycleError: You're trying to append a Node as a child of itself
-    ///    or one of its descendants.
+    /// 4. ChildCycleError: \p newParent is this Node itself or one of its
+    ///    descendant.
     ///
     /// If several exceptions apply, the one appearing first in the list above is
     /// raised.
     ///
-    void appendChild(Node* node);
+    void reparent(Node* newParent);
 
     /// Replaces the child node \p oldChild with \p newChild. Does nothing if
     /// newChild == oldChild.
@@ -468,7 +471,7 @@ protected:
     //
     template <typename T>
     static T* init_(std::shared_ptr<T> node, Node* parent) {
-        Node* res = parent->appendChild_(std::move(node));
+        Node* res = parent->attachChild_(std::move(node));
         return T::cast(res);
     }
 
@@ -486,10 +489,11 @@ private:
     Node* previousSibling_;
     NodeSharedPtr nextSibling_;
 
-    // Helper method for appendChild() and init_(). Assumes that the node is
-    // alive, is fully constructed, has no parent, and can indeed be appended.
+    // Insert \p child as the last child of this Node. Assumes that the child
+    // is alive, is fully constructed, has no parent, and is allowed to become
+    // a children of this Node. Returns a raw pointer to the child.
     //
-    Node* appendChild_(NodeSharedPtr node);
+    Node* attachChild_(NodeSharedPtr child);
 
     // Removes this Node from its parent's children, but without destroying it,
     // and returns the now parent-less Node as a shared pointer. Returns a null

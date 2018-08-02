@@ -51,7 +51,7 @@ void Node::destroy()
 }
 
 namespace {
-bool checkCanAppendChild_(Node* parent, Node* child, bool simulate = false)
+bool checkCanReparent_(Node* parent, Node* child, bool simulate = false)
 {
     parent->checkAlive();
     child->checkAlive();
@@ -85,17 +85,17 @@ bool checkCanAppendChild_(Node* parent, Node* child, bool simulate = false)
 }
 } // namespace
 
-bool Node::canAppendChild(Node* node)
+bool Node::canReparent(Node* newParent)
 {
     const bool simulate = true;
-    return checkCanAppendChild_(this, node, simulate);
+    return checkCanReparent_(newParent, this, simulate);
 }
 
-void Node::appendChild(Node* node)
+void Node::reparent(Node* newParent)
 {
-    checkCanAppendChild_(this, node);
-    NodeSharedPtr nodePtr = node->detachFromParent_();
-    appendChild_(std::move(nodePtr));
+    checkCanReparent_(newParent, this);
+    NodeSharedPtr nodePtr = detachFromParent_();
+    newParent->attachChild_(std::move(nodePtr));
 }
 
 bool Node::replaceChild(Node* newChild, Node* oldChild)
@@ -172,17 +172,17 @@ bool Node::isDescendant(const Node* other) const
     return false;
 }
 
-Node* Node::appendChild_(NodeSharedPtr nodePtr)
+Node* Node::attachChild_(NodeSharedPtr child)
 {
-    Node* node = nodePtr.get();
+    Node* node = child.get();
 
     // Append to the end of the doubly linked-list of siblings.
     if (this->lastChild_) {
-        this->lastChild_->nextSibling_ = std::move(nodePtr);
+        this->lastChild_->nextSibling_ = std::move(child);
         node->previousSibling_ = this->lastChild_;
     }
     else {
-        this->firstChild_ = std::move(nodePtr);
+        this->firstChild_ = std::move(child);
     }
 
     // Set parent-child relationship

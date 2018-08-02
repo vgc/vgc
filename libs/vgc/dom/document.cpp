@@ -55,7 +55,8 @@ bool Document::setRootElement(Element* element)
         return replaceChild(element, rootElement());
     }
     else {
-        appendChild(element);
+        // XXX Isn't this case impossible, since \p element must be a descendant of rootElement()?
+        element->reparent(this);
         return true;
     }
 }
