@@ -157,7 +157,7 @@ public:
     static std::shared_ptr<Document> create() {
         struct A : std::allocator<Document> {
             void construct(void* p) { ::new(p) Document(); }
-            void destroy(Document* p) { p->~Object(); }
+            void destroy(Document* p) { p->~Document(); }
         };
         return std::allocate_shared<Document>(A());
     }
