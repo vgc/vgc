@@ -16,8 +16,39 @@
 
 #include <vgc/core/object.h>
 
+#ifdef VGC_CORE_OBJECT_DEBUG
+    #include <iostream>
+    #include <vgc/core/stringutil.h>
+#endif
+
 namespace vgc {
 namespace core {
+
+namespace {
+void printDebugInfo_(Object* obj, const char* s)
+{
+#ifdef VGC_CORE_OBJECT_DEBUG
+    std::string info;
+    info.reserve();
+    info.append("Object ");
+    info.append(toString(obj));
+    info.append(" ");
+    info.append(s);
+    info.append(" \n");
+    std::cout << info;
+#endif
+}
+} // namespace
+
+Object::Object()
+{
+    printDebugInfo_(this, "constructed");
+}
+
+Object::~Object()
+{
+    printDebugInfo_(this, "constructed");
+}
 
 /* static */
 ObjectSharedPtr Object::create()

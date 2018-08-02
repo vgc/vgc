@@ -20,18 +20,6 @@
 #include <memory>
 #include <vgc/core/api.h>
 
-/// \def VGC_CORE_OBJECT_DEBUG
-/// If defined, then all constructions, assignments, and destructions of
-/// vgc::core::Object instances are logged to the console.
-///
-#ifdef VGC_CORE_OBJECT_DEBUG
-    #include <cstdio>
-    #define VGC_CORE_OBJECT_DEFAULT_(s) \
-        { printf("Object %p " s "\n", static_cast<void*>(this)); }
-#else
-    #define VGC_CORE_OBJECT_DEFAULT_(s) = default;
-#endif
-
 #define VGC_CORE_DECLARE_PTRS(T)                        \
     class T;                                            \
     using T##SharedPtr      = std::shared_ptr<T>;       \
@@ -239,7 +227,7 @@ class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
 protected:
     /// Constructs an Object.
     ///
-    Object() VGC_CORE_OBJECT_DEFAULT_("constructed")
+    Object();
 
 public:
     /// Destructs the Object. Never call this manually, and instead let the
@@ -250,7 +238,7 @@ public:
     /// https://github.com/pybind/pybind11/issues/114), and possibly other
     /// related issues.
     ///
-    virtual ~Object() VGC_CORE_OBJECT_DEFAULT_("destructed")
+    virtual ~Object();
 
     /// Creates an object.
     ///
