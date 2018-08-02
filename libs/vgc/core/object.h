@@ -27,7 +27,7 @@
 #ifdef VGC_CORE_OBJECT_DEBUG
     #include <cstdio>
     #define VGC_CORE_OBJECT_DEFAULT_(s) \
-        { printf("Object %p " s "\n", (void*) this); }
+        { printf("Object %p " s "\n", static_cast<void*>(this)); }
 #else
     #define VGC_CORE_OBJECT_DEFAULT_(s) = default;
 #endif
