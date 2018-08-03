@@ -41,6 +41,238 @@ Document::~Document()
 
 }
 
+namespace {
+
+bool isWhitespace_(char c)
+{
+    // XXX Any other possible whitespace characters?
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
+
+// Returns null if cannot create (i.e., if illegal XML).
+Element* createElement_(Node* parent, const std::string& tagName)
+{
+    // TODO: check that natagNameme is a valid tag name
+
+    if (parent->nodeType() == NodeType::Document) {
+        Document* doc = Document::cast(parent);
+        if (doc->rootElement()) {
+            // Input XML file has two root elements!
+            return nullptr;
+        }
+        else {
+            return Element::create(doc, tagName);
+        }
+    }
+    else if (parent->nodeType() == NodeType::Element) {
+        Element* element = Element::cast(parent);
+         return Element::create(element, tagName);
+    }
+    else {
+        // Elements can't be children of anything else than the
+        // Document node or another Element node.
+        return nullptr;
+    }
+}
+
+} // namespace
+
+/* static */
+DocumentSharedPtr Document::open(const std::string& filePath)
+{
+    // Note: in the future, we want to be able to detect formatting style of
+    // input XML files, and preserve this style, as well as existing
+    // non-significant whitespaces, etc. This is why we write our own parser,
+    // since XML parsers typically discard all non-significant data. For
+    // example, <foo name="hello"> and <foo    name="hello"> would typically
+    // generate the same XmlStream events and we wouldn't be able to preserve
+    // the formatting when saving back.
+
+    DocumentSharedPtr res;
+
+    std::ifstream in(filePath);
+    if (!in.is_open()) {
+        vgc::core::warning() << "Could not open file " << filePath << std::endl;
+        return res;
+    }
+
+    // Create new document
+    res = create();
+
+    // State
+    enum State {
+        NO_STATE,
+        MARKUP,
+        PROCESSING_INSTRUCTION,
+        START_TAG,
+        END_TAG
+    };
+    enum SubState {
+        NO_SUB_STATE,
+        TAG_NAME,
+        ATTRIBUTE_NAME,
+        ATTRIBUTE_VALUE,
+    };
+    State state = NO_STATE;
+    SubState subState = NO_SUB_STATE;
+    bool aborted = false;
+    Node* currentNode = res.get();
+
+    // Buffers
+    std::string tagName;
+    std::string attributeName;
+    std::string attributeValue;
+
+    // Read character by character
+    char c;
+    while (!aborted && in >> c)
+    {
+        if (subState != NO_SUB_STATE)
+        {
+            switch (subState) {
+
+            case NO_SUB_STATE:
+                break;
+
+            case TAG_NAME:
+                if ( isWhitespace_(c) || c == '>') { // TODO handle '/' case too
+                    if (state == START_TAG) {
+                        currentNode = createElement_(currentNode, tagName);
+                        if (!currentNode) {
+                            aborted = true;
+                            state = NO_STATE;
+                            subState = NO_SUB_STATE;
+                        }
+                    }
+                    else { // state == READING_END_TAG
+                        if (!currentNode || currentNode->nodeType() != NodeType::Element) {
+                            // End tag with no corresponding start tag!
+                            aborted = true;
+                            state = NO_STATE;
+                            subState = NO_SUB_STATE;
+                        }
+                        else if (tagName != Element::cast(currentNode)->name().string()) {
+                            // End tagName doesn't match corresponding start tagName!
+                            aborted = true;
+                            state = NO_STATE;
+                            subState = NO_SUB_STATE;
+                        }
+                        else {
+                            currentNode = currentNode->parent();
+                        }
+                    }
+                    subState = NO_SUB_STATE;
+
+                    // Additional steps if closing the tag now
+                    if (c == '>') {
+                        state = NO_STATE;
+                    }
+                }
+                else {
+                    tagName += c;
+                }
+                break;
+
+            case ATTRIBUTE_NAME:
+                // TODO
+                break;
+
+            case ATTRIBUTE_VALUE:
+                // TODO
+                break;
+            }
+        }
+        else
+        {
+            switch (state) {
+
+            // For now, we ignore the content of all text nodes.
+            //
+            case NO_STATE:
+                if (c == '<') {
+                    state = MARKUP;
+                    subState = NO_SUB_STATE;
+                }
+                break;
+
+            case MARKUP:
+                if (c == '?') {
+                    state = PROCESSING_INSTRUCTION;
+                    subState = NO_SUB_STATE;
+                }
+                else if (c == '!') {
+                    // Note: we don't yet support comments, CDATA section,
+                    // and doctype declarations.
+                    aborted = true;
+                    state = NO_STATE;
+                    subState = NO_SUB_STATE;
+                }
+                else if (c == '/') {
+                    // Note: white spaces between '</' and the tag name are
+                    // illegal, so we can safely assume that the next character
+                    // is the first character of the tag name.
+                    state = END_TAG;
+                    subState = TAG_NAME;
+                    tagName.clear();
+                }
+                else {
+                    // Note: white spaces between '<' and the tag name are
+                    // illegal, so we can safely assume that c is the first
+                    // character of the tag name.
+                    state = START_TAG;
+                    subState = TAG_NAME;
+                    tagName.clear();
+                    tagName += c;
+                }
+                break;
+
+            // For now, we ignore all processing instructions.
+            //
+            // Note: '>' is only allowed as the closing character of the
+            // processing instruction, therefore the code below is correct for
+            // any well-formed XML files. In practice, many parsers do accept
+            // '>' within attribute values (even though this is illegal XML)
+            // and in the future we may want to do the same (possibly, only in
+            // a "non-strict" mode, and emitting a warning, and auto-fixing
+            // when saving back, etc.)
+            //
+            case PROCESSING_INSTRUCTION:
+                if (c == '>') {
+                    state = NO_STATE;
+                    subState = NO_SUB_STATE;
+                }
+                break;
+
+            case START_TAG:
+                // Note: we know that tagName has already been read because
+                // subState = NO_SUB_STATE
+                //
+                // TODO: parse attributes (for now, we ignore them)
+                //
+                if (c == '>') {
+                    state = NO_STATE;
+                }
+                break;
+                // TODO: handle self-closing start tags
+
+            case END_TAG:
+                // Note: we know that tagName has already been read because
+                // subState = NO_SUB_STATE
+                if (c == '>') {
+                    state = NO_STATE;
+                }
+                break;
+            }
+        }
+    }
+
+    if (aborted) {
+        res.reset();
+    }
+
+    return res;
+}
+
 Element* Document::rootElement() const
 {
     checkAlive();

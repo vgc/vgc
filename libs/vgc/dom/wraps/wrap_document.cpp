@@ -31,6 +31,7 @@ void wrap_document(py::module& m)
 {
     py::class_<This, Holder, Parent>(m, "Document")
         .def(py::init([]() { return This::create(); } ))
+        .def_static("open", &This::open)
         .def_property_readonly("rootElement", &This::rootElement)
         .def("save", &This::save, "filePath"_a, "style"_a = XmlFormattingStyle())
     ;

@@ -166,6 +166,11 @@ public:
         return std::allocate_shared<Document>(A());
     }
 
+    /// Opens the file given by its \p filePath.
+    /// Returns a null pointer in case of failure.
+    ///
+    static DocumentSharedPtr open(const std::string& filePath);
+
     /// Casts the given \p node to a Document. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Document.
     ///

@@ -39,11 +39,18 @@ class TestDocument(unittest.TestCase):
         self.assertFalse(n1.isAlive())
         self.assertTrue(n2.isAlive())
 
-    def testSave(self):
+    def testSaveAndOpen(self):
+        filePath = "testSave.vgc"
+
         doc = Document()
         root = Element(doc, "vgc")
         path = Element(root, "path")
-        doc.save("testSave.vgc")
+        doc.save(filePath)
+        doc = None
+
+        doc = Document.open(filePath)
+        self.assertEqual(doc.rootElement.name, "vgc")
+        self.assertEqual(doc.rootElement.firstChild.name, "path")
 
 if __name__ == '__main__':
     unittest.main()
