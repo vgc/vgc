@@ -48,6 +48,11 @@ protected:
     Element(Document* document, core::StringId name);
 
 public:
+    /// Destructs the Element. Never call this manually, and instead let the
+    /// shared pointers do the work for you. See vgc::core::~Object for details.
+    ///
+    virtual ~Element();
+
     /// Creates an element with the given \p name as the root element of the
     /// given \p parent Document. Returns a valid non-null Element.
     ///

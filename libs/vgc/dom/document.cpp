@@ -36,6 +36,11 @@ Document::Document() :
     generateXmlDeclaration_();
 }
 
+Document::~Document()
+{
+
+}
+
 Element* Document::rootElement() const
 {
     checkAlive();

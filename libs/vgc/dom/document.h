@@ -151,6 +151,11 @@ protected:
     Document();
 
 public:
+    /// Destructs the Document. Never call this manually, and instead let the
+    /// shared pointers do the work for you. See vgc::core::~Object for details.
+    ///
+    virtual ~Document();
+
     /// Creates a new document with no root element.
     ///
     static DocumentSharedPtr create() {

@@ -29,6 +29,11 @@ Element::Element(Document* document, core::StringId name) :
 
 }
 
+Element::~Element()
+{
+
+}
+
 /* static */
 Element* Element::create_(Node* parent, core::StringId name)
 {

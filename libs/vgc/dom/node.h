@@ -256,12 +256,7 @@ protected:
 
 public:
     /// Destructs the Node. Never call this manually, and instead let the
-    /// shared pointers do the work for you.
-    ///
-    /// This ought to be a protected method to avoid accidental misuse, but it
-    /// is currently kept public due to a limitation of pybind11 (see
-    /// https://github.com/pybind/pybind11/issues/114), and possibly other
-    /// related issues.
+    /// shared pointers do the work for you. See vgc::core::~Object for details.
     ///
     virtual ~Node();
 
