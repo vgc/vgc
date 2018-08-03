@@ -25,9 +25,8 @@
 namespace vgc {
 namespace dom {
 
-VGC_CORE_DECLARE_PTRS(Element);
-
 VGC_CORE_DECLARE_PTRS(Document);
+VGC_CORE_DECLARE_PTRS(Element);
 
 /// \class vgc::dom::Document
 /// \brief Represents a VGC document.
