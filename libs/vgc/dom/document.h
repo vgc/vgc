@@ -153,7 +153,7 @@ protected:
 public:
     /// Creates a new document with no root element.
     ///
-    static std::shared_ptr<Document> create() {
+    static DocumentSharedPtr create() {
         struct A : std::allocator<Document> {
             void construct(void* p) { ::new(p) Document(); }
             void destroy(Document* p) { p->~Document(); }
