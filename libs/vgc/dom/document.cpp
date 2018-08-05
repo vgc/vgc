@@ -45,8 +45,23 @@ namespace {
 
 bool isWhitespace_(char c)
 {
-    // XXX Any other possible whitespace characters?
-    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+    // Reference: https://www.w3.org/TR/REC-xml/#NT-S
+    //
+    //   S ::= (#x20 | #x9 | #xD | #xA)+  [= (' ' | '\n' | '\r' | '\t')+]
+    //
+    //   Note:
+    //
+    //   The presence of #xD [= carriage return '\r'] in the above production
+    //   is maintained purely for backward compatibility with the First
+    //   Edition. As explained in 2.11 End-of-Line Handling, all #xD characters
+    //   literally present in an XML document are either removed or replaced by
+    //   #xA characters before any other processing is done. The only way to
+    //   get a #xD character to match this production is to use a character
+    //   reference in an entity value literal.
+    //
+    return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+
+    // TODO: remove '\r' characters or replace them with '\n' if encountered
 }
 
 // Returns null if cannot create (i.e., if illegal XML).
