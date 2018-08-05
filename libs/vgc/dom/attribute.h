@@ -41,6 +41,8 @@ class Element;
 /// inspecting the list of all built-in attributes of a given Element, which
 /// you can do via Element::builtInAttributes().
 ///
+/// \sa Schema
+///
 /// Below, we provide more technical info for implementers of new Element types.
 ///
 /// We recall that each type of Element (e.g., "path") have built-in attributes

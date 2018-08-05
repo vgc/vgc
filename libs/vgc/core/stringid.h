@@ -129,6 +129,14 @@ public:
         return string();
     }
 
+    /// Compares the two StringId. This doesn't have any meaning and is
+    /// typically only useful for storing StringId instances in a map. This is
+    /// NOT the alphabetical order.
+    ///
+    bool operator<(const StringId& other) const {
+        return stringPtr_ < other.stringPtr_;
+    }
+
     /// Returns whether the two StringId are equal. This is equivalent to
     /// whether their underlying strings are equals.
     ///

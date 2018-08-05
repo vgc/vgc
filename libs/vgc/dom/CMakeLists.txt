@@ -12,6 +12,7 @@ vgc_add_library(dom
         exceptions.h
         io.h
         node.h
+        schema.h
         value.h
         xmlformattingstyle.h
 
@@ -22,6 +23,7 @@ vgc_add_library(dom
         exceptions.cpp
         io.cpp
         node.cpp
+        schema.cpp
         value.cpp
         xmlformattingstyle.cpp
 
