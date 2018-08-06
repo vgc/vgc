@@ -105,12 +105,6 @@ public:
         return name_;
     }
 
-    /// Returns all built-in attributes of this element. Note that this
-    /// function does not let you access the current values of these
-    /// attributes, only their names and their default value.
-    ///
-    virtual const std::vector<BuiltInAttribute>& builtInAttributes() const;
-
     /// Returns the authored attributes of this element.
     ///
     const std::vector<AuthoredAttribute>& authoredAttributes() const {
@@ -146,7 +140,6 @@ private:
     // Helper functions to find attributes. Return nullptr if not found.
     AuthoredAttribute* findAuthoredAttribute_(core::StringId name);
     const AuthoredAttribute* findAuthoredAttribute_(core::StringId name) const;
-    const BuiltInAttribute* findBuiltInAttribute_(core::StringId name) const;
 };
 
 /// Defines the name of an element, retrievable via the

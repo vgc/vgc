@@ -61,15 +61,6 @@ Element* Element::create(Element* parent, core::StringId name)
     return create_(parent, name);
 }
 
-const std::vector<BuiltInAttribute>& Element::builtInAttributes() const
-{
-    checkAlive();
-
-    // XXX TODO
-    static std::vector<BuiltInAttribute> dummy;
-    return dummy;
-}
-
 const Value& Element::getAttribute(core::StringId name) const
 {
     checkAlive();
@@ -77,11 +68,14 @@ const Value& Element::getAttribute(core::StringId name) const
     if (const AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         return authored->value();
     }
-    else if (const BuiltInAttribute* builtIn = findBuiltInAttribute_(name)) {
+    /*
+     * TODO: find default value from schema.
+    else if (const AttributeSpec* builtIn = findBuiltInAttribute_(name)) {
         return builtIn->defaultValue();
     }
+    */
     else {
-        core::warning() << "Attribute is neither authored not built-in.";
+        core::warning() << "Attribute is neither authored nor have a default value.";
         return Value::invalid();
     }
 }
@@ -117,12 +111,6 @@ const AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) co
             return &a;
         }
     }
-    return nullptr;
-}
-
-const BuiltInAttribute* Element::findBuiltInAttribute_(core::StringId /*name*/) const
-{
-    // XXX TODO
     return nullptr;
 }
 

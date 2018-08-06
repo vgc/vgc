@@ -19,32 +19,53 @@
 namespace vgc {
 namespace dom {
 
-Schema::Schema(core::StringId name,
-               const std::map<core::StringId, BuiltInAttribute>& attributes) :
+namespace {
+template <typename T>
+const T* find_(const std::map<core::StringId, T>& map, core::StringId name) {
+    auto search = map.find(name);
+    if (search != map.end()) {
+        return &search->second;
+    } else {
+        return nullptr;
+    }
+}
+} // namespace
+
+ElementSpec::ElementSpec(
+        core::StringId name,
+        const std::map<core::StringId, AttributeSpec>& attributes) :
     name_(name),
     attributes_(attributes)
 {
 
 }
 
-const Value& Schema::defaultValue(core::StringId name) const
+const AttributeSpec* ElementSpec::findAttributeSpec(core::StringId name) const
 {
-    auto search = attributes_.find(name);
-    if (search != attributes_.end()) {
-        return search->second.defaultValue();
-    } else {
-        Value::invalid();
-    }
+    return find_(attributes_, name);
 }
 
-ValueType Schema::valueType(core::StringId name) const
+const Value& ElementSpec::defaultValue(core::StringId name) const
 {
-    auto search = attributes_.find(name);
-    if (search != attributes_.end()) {
-        return search->second.valueType();
-    } else {
-        ValueType::Invalid;
-    }
+    const AttributeSpec* attr = findAttributeSpec(name);
+    return attr ? attr->defaultValue() : Value::invalid();
+}
+
+ValueType ElementSpec::valueType(core::StringId name) const
+{
+    const AttributeSpec* attr = findAttributeSpec(name);
+    return attr ? attr->valueType() : ValueType::Invalid;
+}
+
+Schema::Schema(const std::map<core::StringId, ElementSpec>& elements) :
+    elements_(elements)
+{
+
+}
+
+const ElementSpec* Schema::findElementSpec(core::StringId name) const
+{
+    return find_(elements_, name);
 }
 
 } // namespace dom
