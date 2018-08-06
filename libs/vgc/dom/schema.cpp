@@ -16,6 +16,10 @@
 
 #include <vgc/dom/schema.h>
 
+#include <vgc/core/colors.h>
+#include <vgc/core/doublearray.h>
+#include <vgc/core/vec2darray.h>
+
 namespace vgc {
 namespace dom {
 
@@ -31,13 +35,15 @@ const T* find_(const std::map<core::StringId, T>& map, core::StringId name) {
 }
 } // namespace
 
-ElementSpec::ElementSpec(
-        core::StringId name,
-        const std::map<core::StringId, AttributeSpec>& attributes) :
-    name_(name),
-    attributes_(attributes)
+ElementSpec::ElementSpec(const std::string& name,
+                         const std::vector<AttributeSpec>& attributes) :
+    name_(core::StringId(name)),
+    attributes_()
 {
-
+    for (const AttributeSpec& attr : attributes) {
+        attributes_.emplace(attr.name(), attr);
+    }
+    // TODO: use move semantics for performance
 }
 
 const AttributeSpec* ElementSpec::findAttributeSpec(core::StringId name) const
@@ -57,15 +63,34 @@ ValueType ElementSpec::valueType(core::StringId name) const
     return attr ? attr->valueType() : ValueType::Invalid;
 }
 
-Schema::Schema(const std::map<core::StringId, ElementSpec>& elements) :
-    elements_(elements)
+Schema::Schema(const std::vector<ElementSpec>& elements) :
+    elements_()
 {
-
+    for (const ElementSpec& element : elements) {
+        elements_.emplace(element.name(), element);
+    }
+    // TODO: use move semantics for performance
 }
 
 const ElementSpec* Schema::findElementSpec(core::StringId name) const
 {
     return find_(elements_, name);
+}
+
+const Schema& schema()
+{
+    // trusty leaky singleton
+    static const Schema* instance = new Schema {{
+        { "path", {
+            {"color", core::colors::black},
+            {"positions", core::Vec2dArray()},
+            {"widths", core::DoubleArray()}
+        }},
+        { "vgc", {
+            // No attributes
+        }}
+    }};
+    return *instance;
 }
 
 } // namespace dom

@@ -39,8 +39,8 @@ class VGC_DOM_API AttributeSpec {
 public:
     /// Creates a built-in attribute.
     ///
-    AttributeSpec(core::StringId name, const Value& defaultValue) :
-        name_(name),
+    AttributeSpec(const std::string& name, const Value& defaultValue) :
+        name_(core::StringId(name)),
         defaultValue_(defaultValue) {
 
     }
@@ -79,12 +79,12 @@ private:
 ///
 class ElementSpec
 {
-public:    
+public:
     /// Creates an ElementSpec for the given Element \p name, with the given
     /// built-in \p attributes.
     ///
-    ElementSpec(core::StringId name,
-           const std::map<core::StringId, AttributeSpec>& attributes);
+    ElementSpec(const std::string& name,
+                const std::vector<AttributeSpec>& attributes);
 
     /// Returns the name of the Element specified by this ElementSpec.
     ///
@@ -155,7 +155,7 @@ class Schema
 public:
     /// Creates a Schema with the given \p element specifications.
     ///
-    Schema(const std::map<core::StringId, ElementSpec>& elements);
+    Schema(const std::vector<ElementSpec>& elements);
 
     /// Finds the ElementSpec for the given Element \p name. Returns nullptr
     /// if the given \p name is not defined in the Schema.
@@ -165,6 +165,10 @@ public:
 private:
     std::map<core::StringId, ElementSpec> elements_;
 };
+
+/// Returns the VGC Schema singleton.
+///
+const Schema& schema();
 
 } // namespace dom
 } // namespace vgc
