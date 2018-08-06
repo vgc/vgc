@@ -373,7 +373,6 @@ private:
 
         return isClosed;
     }
-
 };
 
 } // namespace
