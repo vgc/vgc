@@ -64,31 +64,317 @@ bool isWhitespace_(char c)
     // TODO: remove '\r' characters or replace them with '\n' if encountered
 }
 
-// Returns null if cannot create (i.e., if illegal XML).
-Element* createElement_(Node* parent, const std::string& tagName)
+bool isNameStartChar_(char c)
 {
-    // TODO: check that natagNameme is a valid tag name
+    // Reference: https://www.w3.org/TR/xml/#NT-NameStartChar
+    //
+    //   NameStartChar ::= ":" | [A-Z] | "_" | [a-z] |
+    //                     [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] |
+    //                     [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] |
+    //                     [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
+    //
+    // XML files are allowed to have quite fancy characters in names.
+    // However, we disallow those in VGC files.
+    //
+    return ('a' <= c && c <= 'z' ) || ('A' <= c && c <= 'Z' ) || c == ':'  || c == '_';
+}
 
-    if (parent->nodeType() == NodeType::Document) {
-        Document* doc = Document::cast(parent);
-        if (doc->rootElement()) {
-            // Input XML file has two root elements!
-            return nullptr;
+bool isNameChar_(char c)
+{
+    // Reference: https://www.w3.org/TR/xml/#NT-NameChar
+    //
+    //   NameChar ::= NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
+    //
+    // Note: #xB7 is the middle-dot. It's allow in XML but we don't.
+    //
+    // XML files are allowed to have quite fancy characters in names.
+    // However, we disallow those in VGC files.
+    //
+    return isNameStartChar_(c) || c == '-' || c == '.' || ('a' <= c && c <= 'z' );
+}
+
+class Parser {
+public:
+    enum class Error {
+        None,
+        EofInMarkup,       // Encountered EOF while reading markup
+        UnsupportedMarkup, // For now, we don't support comments, CDATA section,and doctype declarations.
+        InvalidTagName,    // Tag name was invalid
+        InvalidStartTag,   // Start tag was invalid
+        InvalidEndTag,     // End tag was invalid
+        SecondRootElement, // Second root element (see SecondRootElementError)
+        WrongChildType     // Wrong child type (see WrongChildType)
+    };
+
+    Parser(std::ifstream& in, Document* document) :
+        in_(in),
+        error_(Error::None),
+        currentNode_(document)
+    {
+        readAll_();
+    }
+
+    Error error() const {
+        return error_;
+    }
+
+    // Returns a relevant tag name if and error occured
+    const std::string& tagName() const {
+        return tagName_;
+    }
+
+private:
+    std::ifstream& in_;
+    Error error_;
+    Node* currentNode_;
+    std::string tagName_;
+
+    void readAll_()
+    {
+        char c;
+        while (error_ == Error::None && in_ >> c) {
+            if (c == '<') {
+                readMarkup_();
+            }
+            else {
+                // For now, we ignore everything that is not markup.
+            }
+        }
+    }
+
+    void readMarkup_()
+    {
+        char c;
+        if (in_ >> c) {
+            if (c == '?') {
+                readProcessingInstruction_();
+            }
+            else if (c == '/') {
+                readEndTag_();
+            }
+            else if (c == '!') {
+                error_ = Error::UnsupportedMarkup;
+                return;
+            }
+            else {
+                readStartTag_(c);
+            }
         }
         else {
-            return Element::create(doc, tagName);
+            error_ = Error::EofInMarkup;
+            return;
         }
     }
-    else if (parent->nodeType() == NodeType::Element) {
-        Element* element = Element::cast(parent);
-         return Element::create(element, tagName);
+
+    void readProcessingInstruction_()
+    {
+        // Note: '<?' already read.
+        // For now, we just ignore the whole PI
+        bool isClosed = false;
+        char c;
+        while (!isClosed && in_ >> c) {
+            if (c == '>') { // TODO: what if it is within quotes?
+                isClosed = true;
+            }
+            else {
+                // Keep reading
+            }
+        }
+        if (!isClosed) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
     }
-    else {
-        // Elements can't be children of anything else than the
-        // Document node or another Element node.
-        return nullptr;
+
+    void readStartTag_(char c)
+    {
+        bool isEmpty = false;
+        bool isClosed = readTagName_(c, &isEmpty);
+        if (error_ != Error::None) {
+            return;
+        }
+
+        onStartTag_();
+        if (error_ != Error::None) {
+            return;
+        }
+
+        while (!isClosed && in_ >> c) {
+            // Reading attributes or whitespaces until closed
+            // For now, ignore attributes, just read and ignore everything.
+            if (c == '>') { // TODO: what if it is within quotes?
+                isClosed = true;
+            }
+            else {
+                // Keep reading
+            }
+        }
+        if (!isClosed) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
+
+        if (isEmpty) {
+            onEndTag_();
+        }
     }
-}
+
+    void readEndTag_()
+    {
+        char c;
+        if (!(in_ >> c)) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
+
+        bool isClosed = readTagName_(c);
+        if (error_ != Error::None) {
+            return;
+        }
+
+        while (!isClosed && in_ >> c) {
+            if (isWhitespace_(c)) {
+                // Keep reading whitespaces
+            }
+            else if (c == '>') {
+                isClosed = true;
+            }
+            else {
+                error_ = Error::InvalidEndTag;
+                return;
+            }
+        }
+
+        if (!isClosed) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
+
+        onEndTag_();
+        if (error_ != Error::None) {
+            return;
+        }
+    }
+
+    void onStartTag_()
+    {
+        if (currentNode_->nodeType() == NodeType::Document) {
+            Document* doc = Document::cast(currentNode_);
+            if (doc->rootElement()) {
+                error_ = Error::SecondRootElement;
+                return;
+            }
+            else {
+                currentNode_ = Element::create(doc, tagName_);
+            }
+        }
+        else if (currentNode_->nodeType() == NodeType::Element) {
+            Element* element = Element::cast(currentNode_);
+            currentNode_ = Element::create(element, tagName_);
+        }
+        else {
+            error_ = Error::WrongChildType;
+            return;
+        }
+    }
+
+    void onEndTag_()
+    {
+        if (!currentNode_ || currentNode_->nodeType() != NodeType::Element) {
+            // End tag with no corresponding start tag!
+            error_ = Error::InvalidEndTag;
+        }
+        else if (tagName_ != Element::cast(currentNode_)->name().string()) {
+            // End tagName doesn't match corresponding start tagName!
+            error_ = Error::InvalidEndTag;
+        }
+        else {
+            currentNode_ = currentNode_->parent();
+            if (currentNode_->nodeType() == NodeType::Element) {
+                tagName_ = Element::cast(currentNode_)->name().string();
+            }
+            else {
+                tagName_.clear();
+            }
+        }
+    }
+
+    // Use empty = nullptr when reading the name of an end tag, and a non-null
+    // pointer to a bool when reading a start tag. If non-null, it is used as
+    // an output param to indicate whether the start tag was in was an empty
+    // element tag (e.g., <tagname/>).
+    //
+    // Returned whether the tag was closed. Exhaustive cases below.
+    //
+    // If empty == nullptr:
+    //     "</tagname " => returns false
+    //     "</tagname>" => returns true
+    //
+    // If empty != nullptr:
+    // 1. "<tagname " => returns false, don't set *empty
+    // 1. "<tagname>" => returns true, set *empty = false
+    // 1. "<tagname/>" => returns true, set *empty = true
+    //
+    // Return value is undefined on error. Check error_.
+    //
+    bool readTagName_(char c, bool* empty = nullptr)
+    {
+        bool isClosed = false;
+
+        tagName_.clear();
+        tagName_ += c;
+
+        if (!isNameStartChar_(c)) {
+            error_ = Error::InvalidTagName;
+            return false;
+        }
+
+        bool done = false;
+        while (!done && in_ >> c) {
+            if (isNameChar_(c)) {
+                tagName_ += c;
+            }
+            else if (isWhitespace_(c)) {
+                done = true;
+                isClosed = false;
+            }
+            else if (c == '>') {
+                done = true;
+                isClosed = true;
+                if (empty) {
+                    *empty = false;
+                }
+            }
+            else if (c == '/') {
+                if (!empty) {
+                    // The following is not a valid end tag: </tagname/>
+                    error_ = Error::InvalidEndTag;
+                    return false;
+                }
+                if (!(in_ >> c)) {
+                    error_ = Error::EofInMarkup;
+                    return false;
+                }
+                if (c != '>') {
+                    // Character '/' must be immediately followed by '>' in start tag
+                    error_ = Error::InvalidStartTag;
+                    return false;
+                }
+                // => c = '>'
+                done = true;
+                isClosed = true;
+                *empty = true;
+            }
+            else {
+                error_ = Error::InvalidTagName;
+                return false;
+            }
+        }
+
+        return isClosed;
+    }
+
+};
 
 } // namespace
 
@@ -114,174 +400,21 @@ DocumentSharedPtr Document::open(const std::string& filePath)
     // Create new document
     res = create();
 
-    // State
-    enum State {
-        NO_STATE,
-        MARKUP,
-        PROCESSING_INSTRUCTION,
-        START_TAG,
-        END_TAG
-    };
-    enum SubState {
-        NO_SUB_STATE,
-        TAG_NAME,
-        ATTRIBUTE_NAME,
-        ATTRIBUTE_VALUE,
-    };
-    State state = NO_STATE;
-    SubState subState = NO_SUB_STATE;
-    bool aborted = false;
-    Node* currentNode = res.get();
-
-    // Buffers
-    std::string tagName;
-    std::string attributeName;
-    std::string attributeValue;
-
-    // Read character by character
-    char c;
-    while (!aborted && in >> c)
-    {
-        if (subState != NO_SUB_STATE)
-        {
-            switch (subState) {
-
-            case NO_SUB_STATE:
-                break;
-
-            case TAG_NAME:
-                if ( isWhitespace_(c) || c == '>') { // TODO handle '/' case too
-                    if (state == START_TAG) {
-                        currentNode = createElement_(currentNode, tagName);
-                        if (!currentNode) {
-                            aborted = true;
-                            state = NO_STATE;
-                            subState = NO_SUB_STATE;
-                        }
-                    }
-                    else { // state == READING_END_TAG
-                        if (!currentNode || currentNode->nodeType() != NodeType::Element) {
-                            // End tag with no corresponding start tag!
-                            aborted = true;
-                            state = NO_STATE;
-                            subState = NO_SUB_STATE;
-                        }
-                        else if (tagName != Element::cast(currentNode)->name().string()) {
-                            // End tagName doesn't match corresponding start tagName!
-                            aborted = true;
-                            state = NO_STATE;
-                            subState = NO_SUB_STATE;
-                        }
-                        else {
-                            currentNode = currentNode->parent();
-                        }
-                    }
-                    subState = NO_SUB_STATE;
-
-                    // Additional steps if closing the tag now
-                    if (c == '>') {
-                        state = NO_STATE;
-                    }
-                }
-                else {
-                    tagName += c;
-                }
-                break;
-
-            case ATTRIBUTE_NAME:
-                // TODO
-                break;
-
-            case ATTRIBUTE_VALUE:
-                // TODO
-                break;
-            }
+    // Parse file and populate document
+    Parser parser(in, res.get());
+    if (parser.error() != Parser::Error::None) {
+        std::string errorString;
+        switch (parser.error()) {
+        case Parser::Error::None: errorString = "Unknown error"; break;
+        case Parser::Error::EofInMarkup: errorString = "End-of-file encountered while reading markup"; break;
+        case Parser::Error::UnsupportedMarkup: errorString = "Unsupported markup encountered (example: comment, CDATA, DOCTYPE)"; break;
+        case Parser::Error::InvalidTagName: errorString = "Tag name " + parser.tagName() + " not valid"; break;
+        case Parser::Error::InvalidStartTag: errorString = "Start tag " + parser.tagName() + " not valid"; break;
+        case Parser::Error::InvalidEndTag: errorString = "End tag " + parser.tagName() + " not valid"; break;
+        case Parser::Error::SecondRootElement: errorString = "Second root element"; break;
+        case Parser::Error::WrongChildType: errorString = "Wrong child type"; break;
         }
-        else
-        {
-            switch (state) {
-
-            // For now, we ignore the content of all text nodes.
-            //
-            case NO_STATE:
-                if (c == '<') {
-                    state = MARKUP;
-                    subState = NO_SUB_STATE;
-                }
-                break;
-
-            case MARKUP:
-                if (c == '?') {
-                    state = PROCESSING_INSTRUCTION;
-                    subState = NO_SUB_STATE;
-                }
-                else if (c == '!') {
-                    // Note: we don't yet support comments, CDATA section,
-                    // and doctype declarations.
-                    aborted = true;
-                    state = NO_STATE;
-                    subState = NO_SUB_STATE;
-                }
-                else if (c == '/') {
-                    // Note: white spaces between '</' and the tag name are
-                    // illegal, so we can safely assume that the next character
-                    // is the first character of the tag name.
-                    state = END_TAG;
-                    subState = TAG_NAME;
-                    tagName.clear();
-                }
-                else {
-                    // Note: white spaces between '<' and the tag name are
-                    // illegal, so we can safely assume that c is the first
-                    // character of the tag name.
-                    state = START_TAG;
-                    subState = TAG_NAME;
-                    tagName.clear();
-                    tagName += c;
-                }
-                break;
-
-            // For now, we ignore all processing instructions.
-            //
-            // Note: '>' is only allowed as the closing character of the
-            // processing instruction, therefore the code below is correct for
-            // any well-formed XML files. In practice, many parsers do accept
-            // '>' within attribute values (even though this is illegal XML)
-            // and in the future we may want to do the same (possibly, only in
-            // a "non-strict" mode, and emitting a warning, and auto-fixing
-            // when saving back, etc.)
-            //
-            case PROCESSING_INSTRUCTION:
-                if (c == '>') {
-                    state = NO_STATE;
-                    subState = NO_SUB_STATE;
-                }
-                break;
-
-            case START_TAG:
-                // Note: we know that tagName has already been read because
-                // subState = NO_SUB_STATE
-                //
-                // TODO: parse attributes (for now, we ignore them)
-                //
-                if (c == '>') {
-                    state = NO_STATE;
-                }
-                break;
-                // TODO: handle self-closing start tags
-
-            case END_TAG:
-                // Note: we know that tagName has already been read because
-                // subState = NO_SUB_STATE
-                if (c == '>') {
-                    state = NO_STATE;
-                }
-                break;
-            }
-        }
-    }
-
-    if (aborted) {
+        vgc::core::warning() << "File " << filePath << "is not a well-formed VGC file: " << errorString << std::endl;
         res.reset();
     }
 
