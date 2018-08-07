@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_EXCEPTION_H
-#define VGC_CORE_EXCEPTION_H
+#ifndef VGC_CORE_EXCEPTIONS_H
+#define VGC_CORE_EXCEPTIONS_H
 
 #include <stdexcept>
 #include <vgc/core/api.h>
@@ -300,4 +300,4 @@ public:
 } // namespace core
 } // namespace vgc
 
-#endif // VGC_CORE_EXCEPTION_H
+#endif // VGC_CORE_EXCEPTIONS_H
