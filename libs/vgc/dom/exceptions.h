@@ -33,7 +33,7 @@ class Document;
 /// vgc::dom. This is the base class for all logic error exception classes in
 /// vgc::dom.
 ///
-/// The class hierarchy for vgc::dom exceptions is:
+/// The class hierarchy for vgc::dom::LogicError exceptions is:
 ///
 /// \verbatim
 /// LogicError
@@ -42,6 +42,8 @@ class Document;
 ///  +-- HierarchyRequestError
 ///       +-- WrongChildTypeError
 ///       +-- SecondRootElementError
+///       +-- ChildCycleError
+///       +-- ReplaceDocumentError
 /// \endverbatim
 ///
 class VGC_DOM_API LogicError : public core::LogicError {
@@ -213,6 +215,112 @@ public:
     /// Destructs the ReplaceDocumentError.
     ///
     ~ReplaceDocumentError();
+};
+
+/// \class vgc::dom::RuntimeError
+/// \brief Raised when there is a runtime error detected in vgc::dom.
+///
+/// This exception is raised whenever there is a runtime error detected in
+/// vgc::dom. This is the base class for all runtime error exception classes in
+/// vgc::dom.
+///
+/// The class hierarchy for vgc::dom::RuntimeError exceptions is:
+///
+/// \verbatim
+/// RuntimeError
+///  +-- ParseError
+///       +-- XmlSyntaxError
+///       +-- VgcSyntaxError
+///  +-- FileError
+/// \endverbatim
+///
+class VGC_DOM_API RuntimeError : public core::RuntimeError {
+public:
+    /// Constructs a LogicError with the given \p reason.
+    ///
+    explicit RuntimeError(const std::string& reason) : core::RuntimeError(reason) {}
+
+    /// Destructs the LogicError.
+    ///
+    ~RuntimeError();
+};
+
+/// \class vgc::dom::ParseError
+/// \brief Raised when parsing an input file or string failed.
+///
+/// This exception is raised by Document::open() if the input file is not a
+/// well-formed VGC Document, either due to an XML syntax error, or a VGC
+/// syntax error (An XML attribute does not have the expected VGC syntax for
+/// attributes)
+///
+/// \sa XmlSyntaxError, VgcSyntaxError
+///
+class VGC_DOM_API ParseError : public RuntimeError {
+public:
+    /// Constructs a ParseError with the given \p reason.
+    ///
+    ParseError(const std::string& reason) : RuntimeError(reason) {}
+
+    /// Destructs the ParseError.
+    ///
+    ~ParseError();
+};
+
+/// \class vgc::dom::XmlSyntaxError
+/// \brief Raised when an input file or string is not a valid XML document.
+///
+/// This exception is raised when an input file or string is not a valid XML
+/// document. For example, <path></vertex> is not a valid XML fragment because
+/// the end tag does not match the start tag.
+///
+class VGC_DOM_API XmlSyntaxError : public ParseError {
+public:
+    /// Constructs a XmlSyntaxError with the given \p reason.
+    ///
+    XmlSyntaxError(const std::string& reason) : ParseError(reason) {}
+
+    /// Destructs the XmlSyntaxError.
+    ///
+    ~XmlSyntaxError();
+};
+
+/// \class vgc::dom::VgcSyntaxError
+/// \brief Raised when an input file or string is not a valid VGC document.
+///
+/// This exception is raised when an input file or string is a valid XML
+/// document, but not a valid VGC document. For example, <path positions=""> is
+/// a valid XML start tag, butit is not a valid VGC start tag:, because
+/// positions is an attribute of ValueType::Vec2dArray and "" is not a valid
+/// Vec2dArray. A correct start tag would be for example <path positions="[]">.
+///
+class VGC_DOM_API VgcSyntaxError : public ParseError {
+public:
+    /// Constructs a VgcSyntaxError with the given \p reason.
+    ///
+    VgcSyntaxError(const std::string& reason) : ParseError(reason) {}
+
+    /// Destructs the VgcSyntaxError.
+    ///
+    ~VgcSyntaxError();
+};
+
+/// \class vgc::dom::FileError
+/// \brief Raised when failed to open a file or save to a file.
+///
+/// This exception is raised by Document::open() if the input file cannot be
+/// opened (for example, due to file permissions, or because the file does not
+/// exist), and raised by Document::save() if the file cannot be written to
+/// (most likely due to file permissions).
+///
+class VGC_DOM_API FileError : public RuntimeError {
+public:
+    /// Constructs a FileError with the given \p reason.
+    ///
+    FileError(const std::string& reason) : RuntimeError(reason) {}
+
+    /// Destructs the ParseError.
+    ///
+    ~FileError();
 };
 
 } // namespace dom

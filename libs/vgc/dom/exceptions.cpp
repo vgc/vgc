@@ -193,5 +193,30 @@ ReplaceDocumentError::~ReplaceDocumentError()
 
 }
 
+RuntimeError::~RuntimeError()
+{
+
+}
+
+ParseError::~ParseError()
+{
+
+}
+
+XmlSyntaxError::~XmlSyntaxError()
+{
+
+}
+
+VgcSyntaxError::~VgcSyntaxError()
+{
+
+}
+
+FileError::~FileError()
+{
+
+}
+
 } // namespace dom
 } // namespace vgc

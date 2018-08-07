@@ -19,13 +19,22 @@
 
 void wrap_exceptions(py::module& m)
 {
-    py::object base = py::module::import("vgc.core").attr("LogicError");
-    auto logicError = py::register_exception<vgc::dom::LogicError>(m, "LogicError", base.ptr());
+    py::module core = py::module::import("vgc.core");
+    py::object coreLogicError = core.attr("LogicError");
+    py::object coreRuntimeError = core.attr("RuntimeError");
+
+    auto logicError = py::register_exception<vgc::dom::LogicError>(m, "LogicError", coreLogicError.ptr());
     auto notAliveError = py::register_exception<vgc::dom::NotAliveError>(m, "NotAliveError", logicError.ptr());
     auto wrongDocumentError = py::register_exception<vgc::dom::WrongDocumentError>(m, "WrongDocumentError", logicError.ptr());
     auto hierarchyRequestError = py::register_exception<vgc::dom::HierarchyRequestError>(m, "HierarchyRequestError", logicError.ptr());
     auto wrongChildTypeError = py::register_exception<vgc::dom::WrongChildTypeError>(m, "WrongChildTypeError", hierarchyRequestError.ptr());
     auto secondRootElementError = py::register_exception<vgc::dom::SecondRootElementError>(m, "SecondRootElementError", hierarchyRequestError.ptr());
     auto childCycleError = py::register_exception<vgc::dom::ChildCycleError>(m, "ChildCycleError", hierarchyRequestError.ptr());
-    auto replaceDocumentError = py::register_exception<vgc::dom::ReplaceDocumentError>(m, "ReplaceDocumentError", hierarchyRequestError.ptr());
+    auto replaceDocumentError = py::register_exception<vgc::dom::ReplaceDocumentError>(m, "ReplaceDocumentError", hierarchyRequestError.ptr()); 
+
+    auto runtimeError = py::register_exception<vgc::dom::RuntimeError>(m, "RuntimeError", coreRuntimeError.ptr());
+    auto parseError = py::register_exception<vgc::dom::ParseError>(m, "ParseError", runtimeError.ptr());
+    auto xmlSyntaxError = py::register_exception<vgc::dom::XmlSyntaxError>(m, "XmlSyntaxError", parseError.ptr());
+    auto vgcSyntaxError = py::register_exception<vgc::dom::VgcSyntaxError>(m, "VgcSyntaxError", parseError.ptr());
+    auto fileError = py::register_exception<vgc::dom::FileError>(m, "FileError", runtimeError.ptr());
 }
