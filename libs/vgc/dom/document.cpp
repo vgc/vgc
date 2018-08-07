@@ -94,16 +94,22 @@ bool isNameChar_(char c)
 }
 
 class Parser {
-public:
+public:    
+    // XXX Wouldn't it be easier to simply return a string? We could in fact
+    // just raise a ParserError exception with the detailed reason.
     enum class Error {
         None,
-        EofInMarkup,       // Encountered EOF while reading markup
-        UnsupportedMarkup, // For now, we don't support comments, CDATA section,and doctype declarations.
-        InvalidTagName,    // Tag name was invalid
-        InvalidStartTag,   // Start tag was invalid
-        InvalidEndTag,     // End tag was invalid
-        SecondRootElement, // Second root element (see SecondRootElementError)
-        WrongChildType     // Wrong child type (see WrongChildType)
+        EofInMarkup,           // Encountered EOF while reading markup
+        UnsupportedMarkup,     // For now, we don't support comments, CDATA section,and doctype declarations.
+        InvalidTagName,        // Tag name was invalid
+        InvalidStartTag,       // Start tag was invalid
+        InvalidEndTag,         // End tag was invalid
+        SecondRootElement,     // Second root element (see SecondRootElementError)
+        WrongChildType,        // Wrong child type (see WrongChildType)
+        InvalidAttributeName,  // Invalid attribute name
+        InvalidAttributeValue, // Invalid attribute value
+        InvalidReferenceName,  // Invalid Reference name
+        UnknownEntityReference // Unknown entity reference
     };
 
     Parser(std::ifstream& in, Document* document) :
@@ -128,11 +134,15 @@ private:
     Error error_;
     Node* currentNode_;
     std::string tagName_;
+    std::string attributeName_;
+    std::string attributeValue_;
+    std::string referenceName_;
 
+    // Main function. Nothing read yet.
     void readAll_()
     {
         char c;
-        while (error_ == Error::None && in_ >> c) {
+        while (error_ == Error::None && in_.get(c)) {
             if (c == '<') {
                 readMarkup_();
             }
@@ -142,10 +152,11 @@ private:
         }
     }
 
+    // Read from '<' (not included) to matching '>' (included)
     void readMarkup_()
     {
         char c;
-        if (in_ >> c) {
+        if (in_.get(c)) {
             if (c == '?') {
                 readProcessingInstruction_();
             }
@@ -166,18 +177,34 @@ private:
         }
     }
 
+    // Read from '<?' (not included) to matching '?>' (included). For now, we
+    // also use this function to read the XML declaration, even though it is
+    // technically not a PI. In the future, we may want to actually read the
+    // content of the XML declaration, and check that it is valid and that
+    // encoding is UTF-8 (the only encoding supported in VGC files).
     void readProcessingInstruction_()
     {
-        // Note: '<?' already read.
-        // For now, we just ignore the whole PI
+        // PI       ::= '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
+        // PITarget ::= Name - (('X' | 'x') ('M' | 'm') ('L' | 'l'))
+
+        // For now, for simplicity, we accept PIs even if they don't start with a valid name
         bool isClosed = false;
         char c;
-        while (!isClosed && in_ >> c) {
-            if (c == '>') { // TODO: what if it is within quotes?
-                isClosed = true;
+        while (!isClosed && in_.get(c)) {
+            if (c == '?') {
+                if (!in_.get(c)) {
+                    error_ = Error::EofInMarkup;
+                    return;
+                }
+                else if (c == '>') {
+                    isClosed = true;
+                }
+                else {
+                    // Keep reading PI
+                }
             }
             else {
-                // Keep reading
+                // Keep reading PI
             }
         }
         if (!isClosed) {
@@ -186,6 +213,7 @@ private:
         }
     }
 
+    // Read from '<c' (not included) to matching '>' or '/>' (included)
     void readStartTag_(char c)
     {
         bool isEmpty = false;
@@ -199,14 +227,35 @@ private:
             return;
         }
 
-        while (!isClosed && in_ >> c) {
-            // Reading attributes or whitespaces until closed
-            // For now, ignore attributes, just read and ignore everything.
-            if (c == '>') { // TODO: what if it is within quotes?
+        // Reading attributes or whitespaces until closed
+        while (!isClosed && in_.get(c)) {
+            if (c == '>') {
                 isClosed = true;
+                isEmpty = false;
+            }
+            else if (c == '/') {
+                // '/' must be immediately followed by '>'
+                if (!(in_.get(c))) {
+                    error_ = Error::EofInMarkup;
+                    return;
+                }
+                else if (c == '>') {
+                    isClosed = true;
+                    isEmpty = true;
+                }
+                else {
+                    error_ = Error::InvalidStartTag;
+                    return;
+                }
+            }
+            else if (isWhitespace_(c)) {
+                // Keep reading
             }
             else {
-                // Keep reading
+                readAttribute_(c);
+                if (error_ != Error::None) {
+                    return;
+                }
             }
         }
         if (!isClosed) {
@@ -219,10 +268,11 @@ private:
         }
     }
 
+    // Read from '</' (not included) to matching '>' (included)
     void readEndTag_()
     {
         char c;
-        if (!(in_ >> c)) {
+        if (!(in_.get(c))) {
             error_ = Error::EofInMarkup;
             return;
         }
@@ -232,7 +282,7 @@ private:
             return;
         }
 
-        while (!isClosed && in_ >> c) {
+        while (!isClosed && in_.get(c)) {
             if (isWhitespace_(c)) {
                 // Keep reading whitespaces
             }
@@ -244,7 +294,6 @@ private:
                 return;
             }
         }
-
         if (!isClosed) {
             error_ = Error::EofInMarkup;
             return;
@@ -256,6 +305,8 @@ private:
         }
     }
 
+    // Action to be performed when a start tag is encountered.
+    // The name of the tag is available in tagName_.
     void onStartTag_()
     {
         if (currentNode_->nodeType() == NodeType::Document) {
@@ -278,6 +329,9 @@ private:
         }
     }
 
+    // Action to be performed when an end tag (or the closing '/>' of an empty
+    // element tag) is encountered. The name of the tag is available in
+    // tagName_.
     void onEndTag_()
     {
         if (!currentNode_ || currentNode_->nodeType() != NodeType::Element) {
@@ -299,12 +353,17 @@ private:
         }
     }
 
-    // Use empty = nullptr when reading the name of an end tag, and a non-null
-    // pointer to a bool when reading a start tag. If non-null, it is used as
-    // an output param to indicate whether the start tag was in was an empty
-    // element tag (e.g., <tagname/>).
+    // Read from given first character \p c (not included) to first whitespace
+    // character (included), or to '>' or '/>' (included) if it follows
+    // immediately the tag name with no whitespaces.
     //
-    // Returned whether the tag was closed. Exhaustive cases below.
+    // You must pass empty = nullptr (the default) when reading the name of an
+    // end tag, and you must pass a non-null pointer to a bool when reading a
+    // start tag. If non-null, it is used as an output parameter to indicate
+    // whether the start tag was in fact an empty element tag (e.g.,
+    // <tagname/>).
+    //
+    // Returns whether the tag was closed. Exhaustive cases below.
     //
     // If empty == nullptr:
     //     "</tagname " => returns false
@@ -315,7 +374,11 @@ private:
     // 1. "<tagname>" => returns true, set *empty = false
     // 1. "<tagname/>" => returns true, set *empty = true
     //
-    // Return value is undefined on error. Check error_.
+    // Returned value is undefined on error. Check error_.
+    //
+    // XXX Wouldn't it be a better design to simply call this readName(c),
+    // return the first character after the tag name, and let the caller handle
+    // this character?
     //
     bool readTagName_(char c, bool* empty = nullptr)
     {
@@ -330,7 +393,7 @@ private:
         }
 
         bool done = false;
-        while (!done && in_ >> c) {
+        while (!done && in_.get(c)) {
             if (isNameChar_(c)) {
                 tagName_ += c;
             }
@@ -348,15 +411,18 @@ private:
             else if (c == '/') {
                 if (!empty) {
                     // The following is not a valid end tag: </tagname/>
+                    tagName_ += c;
                     error_ = Error::InvalidEndTag;
                     return false;
                 }
-                if (!(in_ >> c)) {
+                if (!(in_.get(c))) {
                     error_ = Error::EofInMarkup;
                     return false;
                 }
                 if (c != '>') {
                     // Character '/' must be immediately followed by '>' in start tag
+                    tagName_ += '/';
+                    tagName_ += c;
                     error_ = Error::InvalidStartTag;
                     return false;
                 }
@@ -366,12 +432,225 @@ private:
                 *empty = true;
             }
             else {
+                tagName_ += c;
                 error_ = Error::InvalidTagName;
                 return false;
             }
         }
+        if (!done) {
+            error_ = Error::EofInMarkup;
+            return false;
+        }
 
         return isClosed;
+    }
+
+    // Read from given first character \p c (not included) to '=' (included)
+    void readAttribute_(char c)
+    {
+        // Attribute ::= Name Eq AttValue
+        // Eq        ::= S? '=' S?
+        // AttValue  ::= '"' ([^<&"] | Reference)* '"'
+        //            |  "'" ([^<&'] | Reference)* "'"
+
+        readAttributeName_(c);
+        if (error_ != Error::None) {
+            return;
+        }
+
+        readAttributeValue_();
+        if (error_ != Error::None) {
+            return;
+        }
+
+        onAttribute_();
+    }
+
+    // Read from given first character \p c (not included) to '=' (included)
+    void readAttributeName_(char c)
+    {
+        attributeName_.clear();
+        attributeName_ += c;
+
+        if (!isNameStartChar_(c)) {
+            error_ = Error::InvalidAttributeName;
+            return;
+        }
+
+        bool isNameRead = false;
+        bool isEqRead = false;
+        while (!isNameRead && in_.get(c)) {
+            if (isNameChar_(c)) {
+                attributeName_ += c;
+            }
+            else if (c == '=') {
+                isNameRead = true;
+                isEqRead = true;
+            }
+            else if (isWhitespace_(c)) {
+                isNameRead = true;
+            }
+            else {
+                attributeName_ += c;
+                error_ = Error::InvalidAttributeName;
+                return;
+            }
+        }
+        if (!isNameRead) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
+
+        while (!isEqRead && in_.get(c)) {
+            if (c == '=') {
+                isEqRead = true;
+            }
+            else if (isWhitespace_(c)) {
+                // Keep reading
+            }
+            else {
+                // Invalid character encountered between name and '='
+                attributeName_ += c;
+                error_ = Error::InvalidAttributeName;
+                return;
+            }
+        }
+        if (!isEqRead) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
+    }
+
+    // Read from '=' (not included) to closing '\'' or '\"' (included)
+    void readAttributeValue_()
+    {
+        attributeValue_.clear();
+
+        char c;
+        char quoteSign = 0;
+        while (!quoteSign && in_.get(c)) {
+            if (c == '\"' || c == '\'') {
+                quoteSign = c;
+            }
+            else if (isWhitespace_(c)) {
+                // Keep reading
+            }
+            else {
+                error_ = Error::InvalidAttributeValue;
+                return;
+            }
+        }
+        if (!quoteSign) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
+
+        bool isClosed = false;
+        while (!isClosed && in_.get(c)) {
+            if (c == quoteSign) {
+                isClosed = true;
+            }
+            else if (c == '&') {
+                char replacementChar = readReference_();
+                if (error_ != Error::None) {
+                    return;
+                }
+                attributeValue_ += replacementChar;
+            }
+            else if (c == '<') {
+                // This is illegal XML, so we reject it. In the future, we may
+                // want to accept it with a warning, and auto-convert it to
+                // &lt; when saving back the file. It is quite unclear why did the
+                // W3C decide that '<' was illegal in attribute values.
+                attributeValue_ += c;
+                error_ = Error::InvalidAttributeValue;
+                return;
+            }
+            else {
+                attributeValue_ += c;
+            }
+        }
+        if (!isClosed) {
+            error_ = Error::EofInMarkup;
+            return;
+        }
+    }
+
+    // Action to be performed when an element attribute is encountered. The
+    // attribute name and string value are available in attributeName_ and
+    // attributeValue_.
+    void onAttribute_()
+    {
+        // XXX TODO
+        std::cout << "Found attribute \n  name = " << attributeName_ << "\n  value = " << attributeValue_ << std::endl;
+    }
+
+    // Read from '&' (not included) to ';' (included). Returns the character
+    // represented by the character entity. Supported entities are:
+    //   &amp;   -->  &
+    //   &lt;    -->  <
+    //   &gt;    -->  >
+    //   &apos;  -->  '
+    //   &quot;  -->  "
+    // XXX We do not yet support character references, that is, unicode
+    // codes such as '&#...;'
+    // TODO support them
+    char readReference_()
+    {
+        // Reference ::= EntityRef | CharRef
+        // EntityRef ::= '&' Name ';'
+        // CharRef   ::= '&#' [0-9]+ ';'
+        //            |  '&#x' [0-9a-fA-F]+ ';'
+
+        referenceName_.clear();
+
+        char c;
+        if (in_.get(c)) {
+            referenceName_ += c;
+            if (!isNameStartChar_(c)) {
+                error_ = Error::InvalidReferenceName;
+                return ' ';
+            }
+        }
+        else {
+            error_ = Error::EofInMarkup;
+            return ' ';
+        }
+
+        bool isSemicolonRead = false;
+        while (!isSemicolonRead && in_.get(c)) {
+            if (isNameChar_(c)) {
+                referenceName_ += c;
+            }
+            else if (c == ';') {
+                isSemicolonRead = true;
+            }
+            else {
+                error_ = Error::InvalidReferenceName;
+                return ' ';
+            }
+        }
+        if (!isSemicolonRead) {
+            error_ = Error::EofInMarkup;
+            return ' ';
+        }
+
+        const std::vector<std::pair<const char*, char>> table = {
+            {"amp", '&'},
+            {"lt", '<'},
+            {"gt", '>'},
+            {"apos", '\''},
+            {"quot", '\"'},
+        };
+
+        for (const auto& pair: table) {
+            if (referenceName_ == pair.first) {
+                return pair.second;
+            }
+        }
+
+        error_ = Error::UnknownEntityReference;
+        return ' ';
     }
 };
 
@@ -412,8 +691,12 @@ DocumentSharedPtr Document::open(const std::string& filePath)
         case Parser::Error::InvalidEndTag: errorString = "End tag " + parser.tagName() + " not valid"; break;
         case Parser::Error::SecondRootElement: errorString = "Second root element"; break;
         case Parser::Error::WrongChildType: errorString = "Wrong child type"; break;
+        case Parser::Error::InvalidAttributeName: errorString = "Invalid attribute name"; break;
+        case Parser::Error::InvalidAttributeValue: errorString = "Invalid attribute value"; break;
+        case Parser::Error::InvalidReferenceName: errorString = "Invalid Reference name"; break;
+        case Parser::Error::UnknownEntityReference: errorString = "Unknown entity reference"; break;
         }
-        vgc::core::warning() << "File " << filePath << "is not a well-formed VGC file: " << errorString << std::endl;
+        vgc::core::warning() << "File " << filePath << " is not a well-formed VGC file: " << errorString << std::endl;
         res.reset();
     }
 
