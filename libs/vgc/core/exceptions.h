@@ -239,6 +239,64 @@ public:
     virtual ~LogicError();
 };
 
+/// \class vgc::core::RuntimeError
+/// \brief Base class for all runtime errors
+///
+/// This exception is raised whenever there is a runtime error detected by VGC,
+/// that is, whenever a function cannot complete its task due to events that
+/// could not be easily predicted.
+///
+/// For example, the function vgc::dom::Document::open() raises
+/// vgc::dom::ParseError if the input file is not a well-formed XML file. In
+/// theory, passing a well-formed XML file could be seen as a precondition of
+/// the function, but in practice, it would be hard and inefficient to ask
+/// client code to check this beforehand, which is why it is not considered a
+/// logic error.
+///
+/// How to handle VGC runtime errors?
+/// ---------------------------------
+///
+/// Function calls that may throw a RuntimeError should typically be directly
+/// surrounded by a try/catch block in C++ (or a try/except block in Python),
+/// and the error should be handled immediately. In a nutshell, RuntimeError
+/// exceptions should be treated as if the error was reported via an error
+/// code, with the advantages that exceptions cannot be ignored, and that
+/// exceptions are the preferred error handling mechanism in Python.
+///
+/// If client code can guarantee that the conditions leading to a runtime error
+/// are not possible (for example, by calling open() on a file that we know is
+/// a valid file), then it is not required to surround the call by a try block.
+///
+/// When to raise VGC runtime errors?
+/// ---------------------------------
+///
+/// Whenever you are implementing a function which cannot complete its task for
+/// a reason that could not have been easily predicted by client code, you may
+/// raise a RuntimeError exception. For example, well-formedness of an XML file
+/// cannot be easily predicted, therefore these types of syntax errors should
+/// be reported as runtime errors. However, checking that an index is within
+/// [0, size) can easily be done by client code, therefore these types of
+/// out-of-range errors should be reported as logic errors.
+///
+/// If you are calling a function that may itself raise a RuntimeError, and you
+/// are unable to handle this error yourself, then let it propagate upstream
+/// and document that your function may raise this unhandled exception.
+///
+class VGC_CORE_API RuntimeError : public std::runtime_error {
+public:
+    /// Constructs a RuntimeError with the given \p reason.
+    ///
+    explicit RuntimeError(const std::string& reason) : std::runtime_error(reason) {}
+
+    /// Constructs a RuntimeError with the given \p reason.
+    ///
+    explicit RuntimeError(const char* reason) : std::runtime_error(reason) {}
+
+    /// Destructs the RuntimeError.
+    ///
+    virtual ~RuntimeError();
+};
+
 } // namespace core
 } // namespace vgc
 

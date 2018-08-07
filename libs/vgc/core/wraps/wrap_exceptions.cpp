@@ -20,4 +20,5 @@
 void wrap_exceptions(py::module& m)
 {
     py::register_exception<vgc::core::LogicError>(m, "LogicError");
+    py::register_exception<vgc::core::RuntimeError>(m, "RuntimeError");
 }

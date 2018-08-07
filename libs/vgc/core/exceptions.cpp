@@ -24,5 +24,10 @@ LogicError::~LogicError()
 
 }
 
+RuntimeError::~RuntimeError()
+{
+
+}
+
 } // namespace core
 } // namespace vgc
