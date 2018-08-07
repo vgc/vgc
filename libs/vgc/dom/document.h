@@ -337,9 +337,10 @@ public:
     void setNoXmlStandalone();
 
     /// Saves the document to the file given by its \p filePath.
-    /// Returns whether the file was successfully saved.
     ///
-    bool save(const std::string& filePath,
+    /// Raises a FileError exception if the document cannot be saved.
+    ///
+    void save(const std::string& filePath,
               const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
 private:

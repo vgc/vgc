@@ -19,6 +19,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QStandardPaths>
 #include <QToolBar>
 
@@ -139,7 +140,12 @@ void MainWindow::saveAs()
 
 void MainWindow::save_()
 {
-    document_->save(fromQt(saveFilename_));
+    try {
+        document_->save(fromQt(saveFilename_));
+    }
+    catch (const dom::FileError& e) {
+        QMessageBox::critical(this, "Error Saving File", e.what());
+    }
 }
 
 void MainWindow::setupWidgets_()

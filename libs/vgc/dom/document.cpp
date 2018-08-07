@@ -16,6 +16,8 @@
 
 #include <vgc/dom/document.h>
 
+#include <cerrno>
+#include <cstring>
 #include <fstream>
 #include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
@@ -848,21 +850,18 @@ void Document::generateXmlDeclaration_()
     }
 }
 
-bool Document::save(const std::string& filePath,
+void Document::save(const std::string& filePath,
                     const XmlFormattingStyle& style) const
 {
     checkAlive();
 
     std::ofstream out(filePath);
     if (!out.is_open()) {
-        vgc::core::warning() << "Could not write file " << filePath << std::endl;
-        return false;
+        throw FileError("Cannot save file " + filePath + ": " +  std::strerror(errno));
     }
 
     out << xmlDeclaration_ << std::endl;    
     writeChildren(out, style, 0, this);
-
-    return true;
 }
 
 } // namespace dom
