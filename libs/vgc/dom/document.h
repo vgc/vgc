@@ -167,7 +167,10 @@ public:
     }
 
     /// Opens the file given by its \p filePath.
-    /// Returns a null pointer in case of failure.
+    ///
+    /// Exceptions:
+    /// - Raises FileError if the document cannot be opened due to system errors.
+    /// - Raises ParseError if the document cannot be opened due to syntax errors.
     ///
     static DocumentSharedPtr open(const std::string& filePath);
 
