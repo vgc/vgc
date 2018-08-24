@@ -297,6 +297,33 @@ public:
     virtual ~RuntimeError();
 };
 
+/// \class vgc::core::ParseError
+/// \brief Raised when one of the read() function fails due to incorrect input.
+///
+/// This exception is raised whenever one of the read() function is called and
+/// the input stream does not actually store characters that can be interpreted
+/// as the string representation of the requested type.
+///
+/// Example:
+///
+/// \code
+/// std::string str = "Hello, world!";
+/// std::stringstream in(str);
+/// double x;
+/// read(in, x); // --> Raise ParseError!
+/// \endcode
+///
+class VGC_CORE_API ParseError : public RuntimeError {
+public:
+    /// Constructs a ParseError with the given \p reason.
+    ///
+    ParseError(const std::string& reason) : RuntimeError(reason) {}
+
+    /// Destructs the ParseError.
+    ///
+    ~ParseError();
+};
+
 } // namespace core
 } // namespace vgc
 

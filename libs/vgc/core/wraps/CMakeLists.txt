@@ -4,6 +4,7 @@ vgc_wrap_library(core
     wrap_color.cpp
     wrap_doublearray.cpp
     wrap_exceptions.cpp
+    wrap_io.cpp
     wrap_object.cpp
     wrap_timer.cpp
     wrap_vec2d.cpp

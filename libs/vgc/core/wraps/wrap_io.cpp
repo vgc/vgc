@@ -14,25 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/exceptions.h>
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/io.h>
 
-namespace vgc {
-namespace core {
-
-LogicError::~LogicError()
+void wrap_io(py::module& m)
 {
-
+    m.def("readDouble", &vgc::core::readDouble);
 }
-
-RuntimeError::~RuntimeError()
-{
-
-}
-
-ParseError::~ParseError()
-{
-
-}
-
-} // namespace core
-} // namespace vgc
