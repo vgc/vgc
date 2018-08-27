@@ -324,6 +324,34 @@ public:
     ~ParseError();
 };
 
+/// \class vgc::core::RangeError
+/// \brief Raised when the input of a conversion is outside the range of the
+/// output type.
+///
+/// This exception is raised whenever a conversion fails because the input
+/// (typically, a number) is outside the representable range of the output
+/// type.
+///
+/// Example:
+///
+/// \code
+/// std::string str = "1e400";
+/// std::stringstream in(str);
+/// double x;
+/// read(in, x); // --> Raise RangeError! (1e400 is too big to be stored as a double)
+/// \endcode
+///
+class VGC_CORE_API RangeError : public RuntimeError {
+public:
+    /// Constructs a ParseError with the given \p reason.
+    ///
+    RangeError(const std::string& reason) : RuntimeError(reason) {}
+
+    /// Destructs the ParseError.
+    ///
+    ~RangeError();
+};
+
 } // namespace core
 } // namespace vgc
 

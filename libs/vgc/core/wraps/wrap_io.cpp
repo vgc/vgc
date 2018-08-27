@@ -19,5 +19,5 @@
 
 void wrap_io(py::module& m)
 {
-    m.def("readDouble", &vgc::core::readDouble);
+    m.def("toDoubleApprox", &vgc::core::toDoubleApprox);
 }

@@ -22,4 +22,5 @@ void wrap_exceptions(py::module& m)
     auto logicError = py::register_exception<vgc::core::LogicError>(m, "LogicError");
     auto runtimeError = py::register_exception<vgc::core::RuntimeError>(m, "RuntimeError");
     auto parseError = py::register_exception<vgc::core::ParseError>(m, "ParseError", runtimeError.ptr());
+    auto rangeError = py::register_exception<vgc::core::RangeError>(m, "RangeError", runtimeError.ptr());
 }

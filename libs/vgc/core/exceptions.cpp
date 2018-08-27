@@ -34,5 +34,10 @@ ParseError::~ParseError()
 
 }
 
+RangeError::~RangeError()
+{
+
+}
+
 } // namespace core
 } // namespace vgc
