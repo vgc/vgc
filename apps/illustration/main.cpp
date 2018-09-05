@@ -43,8 +43,11 @@ int main(int argc, char* argv[])
     vgc::core::PythonInterpreter pythonInterpreter;
 
     // Create the document + root element
-    auto doc = vgc::dom::Document::create();
-    vgc::dom::Element::create(doc.get(), "vgc");
+    // -> Let's have the MainWindow be the owner of the document for now.
+    //    Later, it should be the VgcIllustrationApp, accessible from the
+    //    MainWindow so that it could call app->setDocument(doc) on open.
+    //auto doc = vgc::dom::Document::create();
+    //vgc::dom::Element::create(doc.get(), "vgc");
 
     // Expose the Document instance to the Python console as a local Python
     // variable 'document'.
@@ -67,7 +70,8 @@ int main(int argc, char* argv[])
     //pythonInterpreter.setVariableValue("document", document);
 
     // Create and show the widget
-    vgc::widgets::MainWindow w(doc.get(), &pythonInterpreter);
+    //vgc::widgets::MainWindow w(doc.get(), &pythonInterpreter);
+    vgc::widgets::MainWindow w(&pythonInterpreter);
     w.show();
 
     // Set style

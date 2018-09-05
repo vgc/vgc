@@ -57,6 +57,9 @@ public:
         return document_;
     }
 
+    // Changes the observed document
+    void setDocument(dom::Document* document);
+
     // XXX temporary. WIll be deferred to separate class.
     void setCurrentColor(const core::Color& color) {
         currentColor_ = color;

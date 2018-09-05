@@ -101,6 +101,16 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     setFocusPolicy(Qt::ClickFocus);
 }
 
+void OpenGLViewer::setDocument(dom::Document* document)
+{
+    makeCurrent();
+    cleanupGL();
+    doneCurrent();
+
+    document_ = document;
+    update();
+}
+
 OpenGLViewer::~OpenGLViewer()
 {
     // Make OpenGL context current and call cleanupGL()

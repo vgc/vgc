@@ -37,23 +37,24 @@ class VGC_WIDGETS_API MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(dom::Document* document,
+    MainWindow(/*dom::Document* document,*/
                core::PythonInterpreter* interpreter,
                QWidget* parent = nullptr);
 
     ~MainWindow();
 
     dom::Document* document() const {
-        return document_;
+        return document_.get();
     }
 
 private Q_SLOTS:
     void onColorChanged(const core::Color& newColor);
+    void open();
     void save();
     void saveAs();
 
 private:
-    dom::Document* document_;
+    dom::DocumentSharedPtr document_;
     core::PythonInterpreter* interpreter_;
 
     // XXX move what's below out of MainWindow to keep it generic.
@@ -70,6 +71,7 @@ private:
     QDockWidget* dockConsole_;
 
     void setupActions_();
+    QAction* actionOpen_;
     QAction* actionSave_;
     QAction* actionSaveAs_;
     QAction* actionQuit_;
@@ -86,9 +88,10 @@ private:
 
     void setupConnections_();
 
-    // Saves the document at the given filename
+    // Saves or opens the document at the given filename
+    void open_();
     void save_();
-    QString saveFilename_;
+    QString filename_;
 };
 
 } // namespace widgets

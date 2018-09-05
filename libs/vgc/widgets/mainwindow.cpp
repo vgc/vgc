@@ -30,14 +30,17 @@ namespace vgc {
 namespace widgets {
 
 MainWindow::MainWindow(
-    dom::Document* document,
+    /*dom::Document* document,*/
     core::PythonInterpreter* interpreter,
     QWidget* parent) :
 
     QMainWindow(parent),
-    document_(document),
+    /*document_(document),*/
     interpreter_(interpreter)
 {
+    document_ = vgc::dom::Document::create();
+    vgc::dom::Element::create(document_.get(), "vgc");
+
     setupWidgets_();
     setupCentralWidget_();
     setupDocks_();
@@ -61,9 +64,60 @@ void MainWindow::onColorChanged(const core::Color& newColor)
     viewer_->setCurrentColor(newColor);
 }
 
+void MainWindow::open()
+{
+    // Get which directory the dialog should display first
+    QString dir =
+        filename_.isEmpty() ?
+        QStandardPaths::writableLocation(QStandardPaths::HomeLocation) :
+        QFileInfo(filename_).dir().path();
+
+    // Set which existing files to show in the dialog
+    QString extension = ".vgci";
+    QString filters = tr("VGC Illustration Files (*%1)").arg(extension);
+
+    // Create the dialog
+    QFileDialog dialog(this, tr("Open..."), dir, filters);
+
+    // Allow to select existing files only
+    dialog.setFileMode(QFileDialog::ExistingFile);
+
+    // Set acceptMode to "Open" (as opposed to "Save")
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+
+    // Exec the dialog as modal
+    int result = dialog.exec();
+
+    // Actually open the file
+    if (result == QDialog::Accepted) {
+        QStringList selectedFiles = dialog.selectedFiles();
+        if (selectedFiles.size() == 0) {
+            core::warning() << "No file selected; file not opened";
+        }
+        if (selectedFiles.size() == 1) {
+            QString selectedFile = selectedFiles.first();
+            if (!selectedFile.isEmpty()) {
+                // Open
+                filename_ = selectedFile;
+                open_();
+            }
+            else {
+                core::warning() << "Empty file path selected; file not opened";
+            }
+        }
+        else {
+            core::warning() << "More than one file selected; file not opened";
+        }
+    }
+    else {
+        // User willfully cancelled the operation
+        // => nothing to do, not even a warning.
+    }
+}
+
 void MainWindow::save()
 {
-    if (saveFilename_.isEmpty()) {
+    if (filename_.isEmpty()) {
         saveAs();
     }
     else {
@@ -75,9 +129,9 @@ void MainWindow::saveAs()
 {
     // Get which directory the dialog should display first
     QString dir =
-        saveFilename_.isEmpty() ?
+        filename_.isEmpty() ?
         QStandardPaths::writableLocation(QStandardPaths::HomeLocation) :
-        QFileInfo(saveFilename_).dir().path();
+        QFileInfo(filename_).dir().path();
 
     // Set which existing files to show in the dialog
     QString extension = ".vgci";
@@ -116,7 +170,7 @@ void MainWindow::saveAs()
                 }
 
                 // Save
-                saveFilename_ = selectedFile;
+                filename_ = selectedFile;
                 save_();
             }
             else {
@@ -138,10 +192,23 @@ void MainWindow::saveAs()
     //   https://bugreports.qt.io/browse/QTBUG-56893
 }
 
+void MainWindow::open_()
+{
+    // XXX TODO ask save current document
+
+    try {
+        document_ = dom::Document::open(fromQt(filename_));
+        viewer_->setDocument(document());
+    }
+    catch (const dom::FileError& e) {
+        QMessageBox::critical(this, "Error Opening File", e.what());
+    }
+}
+
 void MainWindow::save_()
 {
     try {
-        document_->save(fromQt(saveFilename_));
+        document_->save(fromQt(filename_));
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Saving File", e.what());
@@ -150,7 +217,7 @@ void MainWindow::save_()
 
 void MainWindow::setupWidgets_()
 {
-    viewer_ = new OpenGLViewer(document_);
+    viewer_ = new OpenGLViewer(document());
     console_ = new Console(interpreter_);
 }
 
@@ -171,6 +238,11 @@ void MainWindow::setupDocks_()
 
 void MainWindow::setupActions_()
 {
+    actionOpen_ = new QAction(tr("&Open"), this);
+    actionOpen_->setStatusTip(tr("Open an existing document."));
+    actionOpen_->setShortcut(QKeySequence::Open);
+    connect(actionOpen_, SIGNAL(triggered()), this, SLOT(open()));
+
     actionSave_ = new QAction(tr("&Save"), this);
     actionSave_->setStatusTip(tr("Save the current document."));
     actionSave_->setShortcut(QKeySequence::Save);
@@ -197,6 +269,7 @@ void MainWindow::setupActions_()
 void MainWindow::setupMenus_()
 {
     menuFile_ = new QMenu(tr("&File"));
+    menuFile_->addAction(actionOpen_);
     menuFile_->addAction(actionSave_);
     menuFile_->addAction(actionSaveAs_);
     menuFile_->addSeparator();
