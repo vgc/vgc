@@ -97,18 +97,30 @@ public:
     /// Element type.
     ///
     const AttributeSpec* findAttributeSpec(core::StringId name) const;
+    /// \overload
+    const AttributeSpec* findAttributeSpec(const std::string& name) const {
+        return findAttributeSpec(core::StringId(name));
+    }
 
     /// Returns the default value of the built-in attribute given by its \p
     /// name. Returns an invalid value if the given \p name is not a built-in
     /// attribute of this Element type.
     ///
     const Value& defaultValue(core::StringId name) const;
+    /// \overload
+    const Value& defaultValue(const std::string& name) const {
+        return defaultValue(core::StringId(name));
+    }
 
     /// Returns the ValueType of the built-in attribute given by its \p name.
     /// Returns ValueType::Invalid if the given \p name is not a built-in
     /// attribute of this Element type.
     ///
     ValueType valueType(core::StringId name) const;
+    /// \overload
+    ValueType valueType(const std::string& name) const {
+        return valueType(core::StringId(name));
+    }
 
 private:
     core::StringId name_;
@@ -161,6 +173,10 @@ public:
     /// if the given \p name is not defined in the Schema.
     ///
     const ElementSpec* findElementSpec(core::StringId name) const;
+    /// \overload
+    const ElementSpec* findElementSpec(const std::string& name) const {
+        return findElementSpec(core::StringId(name));
+    }
 
 private:
     std::map<core::StringId, ElementSpec> elements_;

@@ -19,6 +19,20 @@
 namespace vgc {
 namespace dom {
 
+std::string toString(ValueType v)
+{
+    switch (v) {
+    case ValueType::Invalid:
+        return "ValueType::Invalid";
+    case ValueType::Color:
+        return "ValueType::Color";
+    case ValueType::DoubleArray:
+        return "ValueType::DoubleArray";
+    case ValueType::Vec2dArray:
+        return "ValueType::Vec2dArray";
+    }
+}
+
 const Value& Value::invalid()
 {
     // trusty leaky singleton

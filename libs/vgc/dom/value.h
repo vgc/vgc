@@ -92,6 +92,11 @@ enum class ValueType {
     Vec2dArray
 };
 
+/// Returns a string representation of the given ValueType.
+///
+VGC_DOM_API
+std::string toString(ValueType v);
+
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
 ///

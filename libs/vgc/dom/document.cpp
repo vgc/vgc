@@ -22,6 +22,7 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/io.h>
+#include <vgc/dom/schema.h>
 
 namespace vgc {
 namespace dom {
@@ -110,6 +111,7 @@ private:
     std::ifstream& in_;
     Node* currentNode_;
     std::string tagName_;
+    const ElementSpec* elementSpec_;
     std::string attributeName_;
     std::string attributeValue_;
     std::string referenceName_;
@@ -117,7 +119,8 @@ private:
     // Create the parser object
     Parser(std::ifstream& in, Document* document) :
         in_(in),
-        currentNode_(document)
+        currentNode_(document),
+        elementSpec_(nullptr)
     {
         readAll_();
     }
@@ -291,6 +294,13 @@ private:
     // The name of the tag is available in tagName_.
     void onStartTag_()
     {
+        elementSpec_ = schema().findElementSpec(tagName_);
+        if (!elementSpec_) {
+            throw VgcSyntaxError(
+                "Unknown element name '" + tagName_ + "'. Excepted an element "
+                "name defined in the VGC schema.");
+        }
+
         if (currentNode_->nodeType() == NodeType::Document) {
             Document* doc = Document::cast(currentNode_);
             if (doc->rootElement()) {
@@ -339,9 +349,11 @@ private:
             currentNode_ = currentNode_->parent();
             if (currentNode_->nodeType() == NodeType::Element) {
                 tagName_ = Element::cast(currentNode_)->name().string();
+                elementSpec_ = schema().findElementSpec(tagName_);
             }
             else {
                 tagName_.clear();
+                elementSpec_ = nullptr;
             }
         }
     }
@@ -592,8 +604,20 @@ private:
     // attributeValue_.
     void onAttribute_()
     {
+        const AttributeSpec* attributeSpec = elementSpec_->findAttributeSpec(attributeName_);
+        if (!attributeSpec) {
+            throw VgcSyntaxError(
+                "Unknown attribute '" + attributeName_ + "' for element '" +
+                tagName_ + "'. Excepted an attribute name defined in the VGC "
+                "schema.");
+        }
+
         // XXX TODO
-        std::cout << "Found attribute \n  name = " << attributeName_ << "\n  value = " << attributeValue_ << std::endl;
+        std::cout << "Found attribute "
+                  << "\n  name = " << attributeName_
+                  << "\n  value = " << attributeValue_
+                  << "\n  type = " << toString(attributeSpec->valueType())
+                  << std::endl;
     }
 
     // Read from '&' (not included) to ';' (included). Returns the character
