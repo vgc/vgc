@@ -234,6 +234,12 @@ private:
 VGC_CORE_API
 std::string toString(const Color& c);
 
+/// Converts the given string into a Color. Raises ParseError if the given
+/// string does not represent a Color.
+///
+VGC_CORE_API
+Color toColor(const std::string& s);
+
 } // namespace core
 } // namespace vgc
 

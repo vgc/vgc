@@ -25,6 +25,12 @@ std::string toString(const Vec2dArray& a)
     return toString(a.stdVector());
 }
 
+Vec2dArray toVec2dArray(const std::string& s)
+{
+    // XXX TODO
+    return Vec2dArray();
+}
+
 } // namespace core
 } // namespace vgc
 

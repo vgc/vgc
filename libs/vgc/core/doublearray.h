@@ -820,6 +820,12 @@ inline void swap(DoubleArray& a1, DoubleArray& a2) {
 VGC_CORE_API
 std::string toString(const DoubleArray& a);
 
+/// Converts the given string into a DoubleArray. Raises ParseError if the given
+/// string does not represent a DoubleArray.
+///
+VGC_CORE_API
+DoubleArray toDoubleArray(const std::string& s);
+
 } // namespace core
 } // namespace vgc
 

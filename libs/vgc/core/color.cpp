@@ -53,6 +53,12 @@ std::string toString(const Color& c)
     // res as an output parameter of toString.
 }
 
+Color toColor(const std::string& s)
+{
+    // XXX TODO
+    return Color();
+}
+
 } // namespace core
 } // namespace vgc
 

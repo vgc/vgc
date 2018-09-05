@@ -792,6 +792,12 @@ inline void swap(Vec2dArray& a1, Vec2dArray& a2) {
 VGC_CORE_API
 std::string toString(const Vec2dArray& a);
 
+/// Converts the given string into a Vec2dArray. Raises ParseError if the given
+/// string does not represent a Vec2dArray.
+///
+VGC_CORE_API
+Vec2dArray toVec2dArray(const std::string& s);
+
 } // namespace core
 } // namespace vgc
 

@@ -244,6 +244,12 @@ private:
 VGC_DOM_API
 std::string toString(const Value& v);
 
+/// Converts the given string into a Value. Raises vgc::dom::VgcSyntaxError if
+/// the given string does not represent a Value of the given ValueType.
+///
+VGC_DOM_API
+Value toValue(const std::string& s, ValueType t);
+
 } // namespace dom
 } // namespace vgc
 

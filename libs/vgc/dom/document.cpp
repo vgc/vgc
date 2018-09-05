@@ -604,20 +604,18 @@ private:
     // attributeValue_.
     void onAttribute_()
     {
-        const AttributeSpec* attributeSpec = elementSpec_->findAttributeSpec(attributeName_);
-        if (!attributeSpec) {
+        core::StringId name(attributeName_);
+
+        const AttributeSpec* spec = elementSpec_->findAttributeSpec(name);
+        if (!spec) {
             throw VgcSyntaxError(
                 "Unknown attribute '" + attributeName_ + "' for element '" +
                 tagName_ + "'. Excepted an attribute name defined in the VGC "
                 "schema.");
         }
 
-        // XXX TODO
-        std::cout << "Found attribute "
-                  << "\n  name = " << attributeName_
-                  << "\n  value = " << attributeValue_
-                  << "\n  type = " << toString(attributeSpec->valueType())
-                  << std::endl;
+        Value value = toValue(attributeValue_, spec->valueType());
+        Element::cast(currentNode_)->setAttribute(name, value);
     }
 
     // Read from '&' (not included) to ';' (included). Returns the character

@@ -16,6 +16,8 @@
 
 #include <vgc/dom/value.h>
 
+#include <vgc/dom/exceptions.h>
+
 namespace vgc {
 namespace dom {
 
@@ -83,6 +85,27 @@ std::string toString(const Value& v)
         return toString(v.getDoubleArray());
     case ValueType::Vec2dArray:
         return toString(v.getVec2dArray());
+    }
+}
+
+Value toValue(const std::string& s, ValueType t)
+{
+    try {
+        switch (t) {
+        case ValueType::Invalid:
+            return Value::invalid();
+        case ValueType::Color:
+            return Value(core::toColor(s));
+        case ValueType::DoubleArray:
+            return Value(core::toDoubleArray(s));
+        case ValueType::Vec2dArray:
+            return Value(core::toVec2dArray(s));
+        }
+    }
+    catch (const core::ParseError& e) {
+        throw VgcSyntaxError(
+            "Failed to convert '" + s + "' into a Value of type " +
+             toString(t) + " for the following reason: " + e.what());
     }
 }
 
