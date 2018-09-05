@@ -69,4 +69,6 @@ void wrap_doublearray(py::module& m)
 
         .def("__repr__", [](const This& a) { return toString(a); })
     ;
+
+    m.def("toDoubleArray", &vgc::core::toDoubleArray);
 }

@@ -15,6 +15,8 @@
 // limitations under the License.
 
 #include <vgc/core/vec2d.h>
+
+#include <sstream>
 #include <vgc/core/stringutil.h>
 
 namespace vgc {
@@ -23,6 +25,18 @@ namespace core {
 std::string toString(const Vec2d& v)
 {
     return "(" + toString(v[0]) + ", " + toString(v[1]) + ")";
+}
+
+Vec2d toVec2d(const std::string& s)
+{
+    // XXX TODO Use custom StringStream
+    std::stringstream in(s);
+
+    Vec2d res = readVec2d(in);
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+
+    return res;
 }
 
 } // namespace core

@@ -73,4 +73,5 @@ void wrap_vec2d(py::module& m)
     ;
 
     m.def("dot", &vgc::core::dot);
+    m.def("toVec2d", &vgc::core::toVec2d);
 }

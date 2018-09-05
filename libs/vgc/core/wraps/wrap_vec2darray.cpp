@@ -52,4 +52,6 @@ void wrap_vec2darray(py::module& m)
 
         .def("__repr__", [](const This& a) { return toString(a); })
     ;
+
+    m.def("toVec2dArray", &vgc::core::toVec2dArray);
 }

@@ -15,6 +15,8 @@
 // limitations under the License.
 
 #include <vgc/core/vec2darray.h>
+
+#include <sstream>
 #include <vgc/core/stringutil.h>
 
 namespace vgc {
@@ -27,8 +29,23 @@ std::string toString(const Vec2dArray& a)
 
 Vec2dArray toVec2dArray(const std::string& s)
 {
-    // XXX TODO
-    return Vec2dArray();
+    // XXX TODO Use custom StringStream
+    std::stringstream in(s);
+
+    Vec2dArray res;
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, '[');
+    char separator = -1;
+    do {
+        res.append(readVec2d(in));
+        skipWhitespaceCharacters(in);
+        separator = readExpectedCharacter(in, {',', ']'});
+    }
+    while (separator != ']');
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+
+    return res;
 }
 
 } // namespace core

@@ -21,6 +21,7 @@
 #include <string>
 #include <vgc/core/api.h>
 #include <vgc/core/epsilon.h>
+#include <vgc/core/streamutil.h>
 
 namespace vgc {
 namespace core {
@@ -244,6 +245,30 @@ inline double dot(const Vec2d& v1, const Vec2d& v2) {
 ///
 VGC_CORE_API
 std::string toString(const Vec2d& v);
+
+/// Converts the given string into a Vec2d. Raises ParseError if the given
+/// string does not represent a Vec2d.
+///
+VGC_CORE_API
+Vec2d toVec2d(const std::string& s);
+
+/// Reads a Vec2d from the input stream \p in. Leading whitespaces are allowed.
+/// Raises ParseError if the stream does not actually start with a Vec2d.
+///
+template <typename IStream>
+Vec2d readVec2d(IStream& in)
+{
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, '(');
+    double x = readDoubleApprox(in);
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, ',');
+    double y = readDoubleApprox(in);
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, ')');
+
+    return Vec2d(x, y);
+}
 
 } // namespace core
 } // namespace vgc
