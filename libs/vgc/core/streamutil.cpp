@@ -14,21 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_IO_H
-#define VGC_CORE_IO_H
+#include <vgc/core/streamutil.h>
 
-#include <string>
-#include <vgc/core/api.h>
+#include <cmath>
+#include <vgc/core/stringutil.h>
 
 namespace vgc {
 namespace core {
 
-/// Returns as a std::string the content of the file given by its \p filePath.
-///
-VGC_CORE_API
-std::string readFile(const std::string& filePath);
+namespace impl_ {
+
+double computeDouble(bool isPositive, double a, int b, int n)
+{
+    if (b+n-1 > 307) {
+        throw RangeError(
+            std::string("The number ") + (isPositive ? "" : "-") + toString(a) +
+            "e" + toString(b) + " is too big to be represented as a double.");
+    }
+
+    if (b+n-1 < -307) {
+        return isPositive ? 0.0 : -0.0;
+    }
+
+    if (b < -250) {
+        // Avoid subnormal numbers by keeping a large margin.
+        a *= std::pow(10.0, -20);
+        b += 20;
+    }
+
+    return isPositive ? a * std::pow(10.0, b) : -a * std::pow(10.0, b);
+
+    // TODO use precomputed powers of tens for better performance and higher accuracy.
+}
+
+} // namespace impl_
 
 } // namespace core
 } // namespace vgc
-
-#endif // VGC_CORE_IO_H

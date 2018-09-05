@@ -14,21 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_IO_H
-#define VGC_CORE_IO_H
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/stringutil.h>
 
-#include <string>
-#include <vgc/core/api.h>
-
-namespace vgc {
-namespace core {
-
-/// Returns as a std::string the content of the file given by its \p filePath.
-///
-VGC_CORE_API
-std::string readFile(const std::string& filePath);
-
-} // namespace core
-} // namespace vgc
-
-#endif // VGC_CORE_IO_H
+void wrap_stringutil(py::module& m)
+{
+    m.def("toDoubleApprox", &vgc::core::toDoubleApprox);
+}

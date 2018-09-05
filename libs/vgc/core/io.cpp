@@ -18,7 +18,6 @@
 
 #include <fstream>
 #include <ios>
-#include <iostream>
 
 namespace vgc {
 namespace core {
@@ -26,6 +25,7 @@ namespace core {
 std::string readFile(const std::string& filePath)
 {
     // Open file
+    // XXX What if failure?
     std::ifstream file(filePath);
 
     // Get upper limit of number of characters in the returned std::string.
@@ -33,14 +33,20 @@ std::string readFile(const std::string& filePath)
     // conventions: on Windows, "\r\n" in the file becomes "\n" in the
     // std::string
     file.seekg(0, std::ios::end);
-    int n = file.tellg();
+    long long int n = file.tellg();
 
-    // Allocate memory
-    std::string res(n, ' ');
+    std::string res;
+    if (n >= 0) {
+        // Allocate memory
+        res.assign(static_cast<size_t>(n), ' ');
 
-    // Read file content and store in std::string
-    file.seekg(0);
-    file.read(&res[0], n);
+        // Read file content and store in std::string
+        file.seekg(0);
+        file.read(&res[0], n);
+    }
+    else {
+        // XXX This is a failure case of tellg; raise exception?
+    }
 
     // Return
     return res;

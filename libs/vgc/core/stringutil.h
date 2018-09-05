@@ -72,6 +72,13 @@ std::string toString(const std::vector<T>& v) {
     return res;
 }
 
+/// Approximately converts a base-10 text representation of a number into a
+/// double stored in \p x, with a guaranteed precision of 15 significant
+/// digits. See readDoubleApprox() for details.
+///
+VGC_CORE_API
+double toDoubleApprox(const std::string& s);
+
 } // namespace core
 } // namespace vgc
 
