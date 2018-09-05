@@ -14,31 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_FLOAT2INT_H
-#define VGC_CORE_FLOAT2INT_H
+#ifndef VGC_CORE_INT2FLOAT_H
+#define VGC_CORE_INT2FLOAT_H
 
 #include <cmath>
 #include <vgc/core/algorithm.h>
 #include <vgc/core/api.h>
 
-/// \file vgc/core/float2int.h
-/// \brief Defines conversions from floating-point types to integral types.
+/// \file vgc/core/int2float.h
+/// \brief Defines conversions from integral types to floating-point types.
 ///
 
 namespace vgc {
 namespace core {
 
-/// Maps a double \p x in the range [0, 1] to an 8-bit unsigned integer in
-/// the range [0..255]. More precisely, the returned value is the integer in
-/// [0..255] which is closest to 255*x.
+/// Maps an integer \p x in the range [0..255] to a double in the range [0, 1].
+/// If the integer is not initially in the range [0..255], then it is first
+/// clamped to this range.
 ///
 VGC_CORE_API
-inline unsigned char double01ToUint8(double x) {
-    double y = std::round(vgc::core::clamp(x, 0.0, 1.0) * 255.0);
-    return static_cast<unsigned char>(y);
+inline double uint8ToDouble01(int x) {
+    return vgc::core::clamp(x, 0, 255) / 255.0;
 }
 
 } // namespace core
 } // namespace vgc
 
-#endif // VGC_CORE_FLOAT2INT_H
+#endif // VGC_CORE_INT2FLOAT_H

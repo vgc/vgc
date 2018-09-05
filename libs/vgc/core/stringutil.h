@@ -41,6 +41,11 @@ std::string toString(unsigned char x);
 VGC_CORE_API
 std::string toString(int x);
 
+/// Converts the given integer to a string.
+///
+VGC_CORE_API
+std::string toString(long long int x);
+
 /// Converts the given double to a string.
 ///
 VGC_CORE_API

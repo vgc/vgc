@@ -62,4 +62,6 @@ void wrap_color(py::module& m)
         .def("__repr__", [](const Color& c) { return vgc::core::toString(c); })
 
     ;
+
+    m.def("toColor", &vgc::core::toColor);
 }

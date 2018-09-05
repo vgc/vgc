@@ -35,6 +35,7 @@
 /// \endcode
 ///
 
+#include <limits>
 #include <vgc/core/api.h>
 #include <vgc/core/charutil.h>
 #include <vgc/core/exceptions.h>
@@ -65,6 +66,94 @@ char readNonWhitespaceCharacter(IStream& in)
     return c;
 }
 
+/// Extracts all leading whitespace characters from the input stream.
+///
+template <typename IStream>
+void skipWhitespaceCharacters(IStream& in)
+{
+    bool foundNonWhitespaceCharacter = false;
+    char c = -1; // dummy-initialization in order to silence warning
+    while (!foundNonWhitespaceCharacter && in.get(c)) {
+        if (!isWhitespace(c)) {
+            foundNonWhitespaceCharacter = true;
+        }
+    }
+    if (foundNonWhitespaceCharacter) {
+        in.unget();
+    }
+}
+
+/// Extracts the next character from the input stream. Raises
+/// ParseError if the stream ends.
+///
+template <typename IStream>
+char readCharacter(IStream& in)
+{
+    char c = -1; // dummy-initialization in order to silence warning
+    if (!in.get(c)) {
+        throw ParseError(
+            "Unexpected end of stream. Expected a character.");
+    }
+    return c;
+}
+
+/// Extracts and returns the next character from the input stream. Raises
+/// ParseError if this character does not belong to \p allowedCharacters or if
+/// the stream ends.
+///
+template <typename IStream, std::size_t N>
+char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
+{
+    char c = readCharacter(in);
+    bool allowed = false;
+    for (int i = 0; i < N; ++i) {
+        allowed = allowed || (c == allowedCharacters[i]);
+    }
+    if (!allowed)  {
+        std::string allowedCharactersString;
+        if (N > 0) {
+            allowedCharactersString += "'";
+            allowedCharactersString += allowedCharacters[0];
+            allowedCharactersString += "'";
+        }
+        for (int i = 1; i < N; ++i) {
+            allowedCharactersString += ", '";
+            allowedCharactersString += allowedCharacters[i];
+            allowedCharactersString += "'";
+        }
+        throw ParseError(
+            std::string("Unexpected '") + c + "'. Expected one of the "
+            "following characters: " + allowedCharactersString + "'.");
+    }
+    return c;
+}
+
+/// Extracts the next character from the input stream, and raises ParseError if
+/// this character is not the given character, or if the stream ends.
+///
+template <typename IStream>
+void skipExpectedCharacter(IStream& in, char c)
+{
+    char d = readCharacter(in);
+    if (d != c)  {
+        throw ParseError(
+            std::string("Unexpected '") + d + "'. Expected '" + c + "'.");
+    }
+}
+
+/// Extracts the next character from the input stream, excepting that there is
+/// none. Raises ParseError if the stream actually didn't end.
+///
+template <typename IStream>
+void skipExpectedEof(IStream& in)
+{
+    char c = -1; // dummy-initialization in order to silence warning
+    if (in.get(c)) {
+        throw ParseError(
+            std::string("Unexpected character '") + c +
+            "'. Expected end of stream.");
+    }
+}
 
 namespace impl_ {
 
@@ -76,13 +165,26 @@ double computeDouble(bool isPositive, double a, int b, int n);
 // Computes (-1)^s * a
 inline double computeDouble(bool isPositive, double a) { return isPositive ? a : -a; }
 
+// Raises a RangeError exception. We can't implement this inline due to cyclic
+// dependency with stringutil.
+[[ noreturn ]] void throwNotWithin32BitSignedIntegerRange(long long int x);
+
+// Checks that the given 64-bit signed integer can safely be casted to a 32-bit signed integer.
+// Raises RangeError otherwise.
+inline void checkIsWithin32BitSignedIntegerRange(long long int x)
+{
+    if (x < std::numeric_limits<int>::lowest() || x > std::numeric_limits<int>::max()) {
+        throwNotWithin32BitSignedIntegerRange(x);
+    }
+}
+
 } // namespace impl_
 
 /// Reads a base-10 text representation of a number from the input stream \p
-/// in, and converts it approximately to a double stored in \p x, with a
-/// guaranteed precision of 15 significant digits. This is an optimization to
-/// make the conversion from base-10 to base-2 faster when accuracy above 15
-/// significant digits is not required. If in doubt, use readDouble() instead.
+/// in, and converts it approximately to a double, with a guaranteed precision
+/// of 15 significant digits. This is an optimization to make the conversion
+/// from base-10 to base-2 faster when accuracy above 15 significant digits is
+/// not required. If in doubt, use readDouble() instead.
 ///
 /// Leading whitespaces are allowed. After leading whistespaces are skipped,
 /// the text representation must match the following pattern:
@@ -137,8 +239,7 @@ inline double computeDouble(bool isPositive, double a) { return isPositive ? a :
 ///
 /// If the text representation does not match the required pattern, then
 /// ParseError is raised. In such cases, the stream is read up to (and
-/// including) the first non-matching character, and the value of \p x is
-/// unchanged.
+/// including) the first non-matching character.
 ///
 /// If the text representation matches the pattern, then the longest matching
 /// sequence is considered. The stream is read up to (but excluding) the first
@@ -148,20 +249,17 @@ inline double computeDouble(bool isPositive, double a) { return isPositive ? a :
 ///
 /// Unlike many built-in C++ utilities performing similar tasks (e.g., sscanf,
 /// strtod, atof, istream::operator>>), this function does not depend on
-/// locale, that is, the decimal point is always assumed to be ".". This is
-/// similar to std::from_chars (introduced
-/// in C++17), with similar rationale (see P0067R5), but unlike
-/// std::from_chars, this function throws an exception on error, and uses a
-/// templated stream-based interface for better flexibility.
+/// locale, that is, the decimal point is always assumed to be ".". Instead,
+/// this function is similar to std::from_chars (introduced in C++17), but
+/// unlike std::from_chars, this function throws an exception on error, and
+/// takes as input a templated input stream.
 ///
 template <typename IStream>
-void readDoubleApprox(IStream& in, double& x)
+double readDoubleApprox(IStream& in)
 {
     // TODO?
     // - Also define a non-throwing version, taking an error
     // code/string/struct as output argument.
-    // - Also define a version where unget() is not called, but instead the
-    // last read character is returned as an output parameter.
 
     // Overview of the algorithm, with the example input "   -0012.3456e+2"
     //
@@ -255,8 +353,7 @@ void readDoubleApprox(IStream& in, double& x)
         hasLeadingZeros = true;
         if (!in.get(c)) {
             // End of stream; 0 or -0 was read, e.g., "00"
-            x = impl_::computeDouble(isPositive, 0.0);
-            return;
+            return impl_::computeDouble(isPositive, 0.0);
         }
     }
 
@@ -275,8 +372,7 @@ void readDoubleApprox(IStream& in, double& x)
         }
         if (!in.get(c)) {
             // End of stream; a non-zero integer was read, e.g., "042"
-            x = impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
-            return;
+            return impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
         }
     }
 
@@ -285,13 +381,11 @@ void readDoubleApprox(IStream& in, double& x)
         if (!in.get(c)) {
             if (numDigits > 0) {
                 // End of stream; a non-zero integer was read, e.g., "042."
-                x = impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
-                return;
+                return impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
             }
             else if (hasLeadingZeros)  {
                 // End of stream; 0 or -0 was read, e.g.,  "00."
-                x = impl_::computeDouble(isPositive, 0.0);
-                return;
+                return impl_::computeDouble(isPositive, 0.0);
             }
             else {
                  // End of stream; we've only read "."
@@ -310,8 +404,7 @@ void readDoubleApprox(IStream& in, double& x)
             dotPosition += 1;
             if (!in.get(c)) {
                 // End of stream; 0 or -0 was read, e.g., "00.00" or ".00"
-                x = impl_::computeDouble(isPositive, 0.0);
-                return;
+                return impl_::computeDouble(isPositive, 0.0);
             }
         }
     }
@@ -329,8 +422,7 @@ void readDoubleApprox(IStream& in, double& x)
         }
         if (!in.get(c)) {
             // End of stream; a non-zero integer was read, e.g., "042.0140"
-            x = impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
-            return;
+            return impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
         }
     }
 
@@ -380,13 +472,11 @@ void readDoubleApprox(IStream& in, double& x)
             if (!in.get(c)) {
                 if (numDigits > 0) {
                     // End of stream; a non-zero number was read, e.g., "042.0140e050" or "042.0140e0"
-                    x = impl_::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
-                    return;
+                    return impl_::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
                 }
                 else {
                     // End of stream; 0 or -0 was read, e.g., "00.e050"
-                    x = impl_::computeDouble(isPositive, 0.0);
-                    return;
+                    return impl_::computeDouble(isPositive, 0.0);
                 }
             }
         }
@@ -404,12 +494,61 @@ void readDoubleApprox(IStream& in, double& x)
     // Compute the result
     if (numDigits > 0) {
         // A non-zero number was read, e.g., "042.0140e050" or "042.0140e0"
-        x = impl_::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
+        return impl_::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
     }
     else {
         // 0 or -0 was read, e.g., "00.e050"
-        x = impl_::computeDouble(isPositive, 0.0);
+        return impl_::computeDouble(isPositive, 0.0);
     }
+}
+
+/// Reads a base-10 text representation of an integer from the input stream \p
+/// in. Leading whitespaces are allowed. Raises ParseError if the stream does not
+/// contain an integer.
+///
+template <typename IStream>
+int readInt(IStream& in)
+{
+    // Skip leading whitespaces; get the first non-whitespace character
+    char c = readNonWhitespaceCharacter(in);
+
+    // Read sign
+    bool isPositive = true;
+    if (c == '-' || c == '+') {
+        isPositive = (c == '+');
+        if (!in.get(c)) {
+            throw ParseError(
+                "Unexpected end of stream while attempting to read the first "
+                "character following the sign of an integer. Expected a "
+                "digit [0-9] or '.'.");
+        }
+    }
+
+    // Read digits
+    long long int res = 0;
+    bool hasDigits = false;
+    while (isDigit(c)) {
+        hasDigits = true;
+        res *= 10;
+        if (isPositive) res += digitToIntNoRangeCheck(c);
+        else            res -= digitToIntNoRangeCheck(c);
+        impl_::checkIsWithin32BitSignedIntegerRange(res);
+        if (!in.get(c)) {
+            // End of stream; a valid integer was read
+            return static_cast<int>(res);
+        }
+    }
+    if (!hasDigits) {
+        throw ParseError(
+            std::string("Unexpected '") + c + " before any digit of the "
+            "integer was read. Expected a digit [0-9], or a sign [+-].");
+    }
+
+    // Un-extract the last character read, which is not part of the number.
+    in.unget();
+
+    // Compute the result
+    return static_cast<int>(res);
 }
 
 } // namespace core

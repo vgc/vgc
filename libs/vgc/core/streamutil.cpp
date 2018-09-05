@@ -47,6 +47,13 @@ double computeDouble(bool isPositive, double a, int b, int n)
     // TODO use precomputed powers of tens for better performance and higher accuracy.
 }
 
+void throwNotWithin32BitSignedIntegerRange(long long int x)
+{
+    throw RangeError(
+        std::string("The integer ") + toString(x) +
+        " is too big to be represented as a 32-bit signed integer.");
+}
+
 } // namespace impl_
 
 } // namespace core

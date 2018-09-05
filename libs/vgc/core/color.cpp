@@ -15,7 +15,11 @@
 // limitations under the License.
 
 #include <vgc/core/color.h>
+
+#include <sstream>
 #include <vgc/core/float2int.h>
+#include <vgc/core/int2float.h>
+#include <vgc/core/streamutil.h>
 #include <vgc/core/stringutil.h>
 
 namespace vgc {
@@ -55,8 +59,44 @@ std::string toString(const Color& c)
 
 Color toColor(const std::string& s)
 {
-    // XXX TODO
-    return Color();
+    // XXX TODO Use custom StringStream
+    std::stringstream in(s);
+
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, 'r');
+    skipExpectedCharacter(in, 'g');
+    skipExpectedCharacter(in, 'b');
+    char c = readExpectedCharacter(in, {'a', '('});
+
+    bool hasAlpha = false;
+    if (c == 'a') {
+        hasAlpha = true;
+        skipExpectedCharacter(in, '(');
+    }
+
+    double r = uint8ToDouble01(readInt(in));
+    skipWhitespaceCharacters(in);
+
+    skipExpectedCharacter(in, ',');
+    double g = uint8ToDouble01(readInt(in));
+    skipWhitespaceCharacters(in);
+
+    skipExpectedCharacter(in, ',');
+    double b = uint8ToDouble01(readInt(in));
+    skipWhitespaceCharacters(in);
+
+    double a = 1.0;
+    if (hasAlpha) {
+        skipExpectedCharacter(in, ',');
+        a = readDoubleApprox(in);
+        skipWhitespaceCharacters(in);
+    }
+
+    skipExpectedCharacter(in, ')');
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+
+    return Color(r, g, b, a);
 }
 
 } // namespace core

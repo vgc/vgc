@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.core import Color
+from vgc.core import Color, toColor
 
 class TestColor(unittest.TestCase):
 
@@ -133,6 +133,12 @@ class TestColor(unittest.TestCase):
         self.assertTrue(c2 >= c2)
         self.assertTrue(c2 >= c1)
         self.assertTrue(c2 >= Color(2, 100, 0))
+
+    def testToColor(self):
+        c1 = toColor("rgb(1, 2, 3)")
+        c2 = toColor("rgba(1, 2, 3, 0.5)")
+        self.assertTrue(c1 == Color(1.0 / 255.0, 2.0 / 255.0, 3.0 / 255.0))
+        self.assertTrue(c2 == Color(1.0 / 255.0, 2.0 / 255.0, 3.0 / 255.0, 0.5))
 
 if __name__ == '__main__':
     unittest.main()

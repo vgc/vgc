@@ -33,6 +33,11 @@ std::string toString(int x)
     return std::to_string(x);
 }
 
+std::string toString(long long int x)
+{
+    return std::to_string(x);
+}
+
 std::string toString(double x)
 {
     // Convert to string with fixed precision, no scientific notation.
@@ -87,10 +92,8 @@ std::string toString(const void* x)
 
 double toDoubleApprox(const std::string& s)
 {
-    double res;
     std::stringstream in(s);
-    readDoubleApprox(in, res);
-    return res;
+    return readDoubleApprox(in);
 
     // TODO: Use a custom StringViewStream class instead of std::stringstream
     // to avoid copying the data.
