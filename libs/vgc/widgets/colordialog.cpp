@@ -18,7 +18,7 @@
 #include <vgc/widgets/font.h>
 
 namespace {
-void setWindowFlag(QWidget* w, Qt::WindowType flag, bool on)
+void setWindowFlag_(QWidget* w, Qt::WindowType flag, bool on)
 {
     // Note: Since Qt 5.9, there is a method QWidget::setWindowFlag(), but at
     // the time of this writing we target Qt 5.6, reason why we use this.
@@ -52,7 +52,7 @@ ColorDialog::ColorDialog(QWidget* parent) :
     // trying to fix this, which is the maximum time I am willing to allocate
     // on this issue for now.
     //
-    setWindowFlag(this, Qt::WindowMinimizeButtonHint, false);
+    setWindowFlag_(this, Qt::WindowMinimizeButtonHint, false);
 
     connect(this, &ColorDialog::finished, this, &ColorDialog::onFinished_);
 
