@@ -60,12 +60,7 @@ enum class NodeType {
 /// Converts the given NodeType to a string.
 ///
 VGC_CORE_API
-inline std::string toString(NodeType type) {
-    switch (type) {
-    case NodeType::Element: return "Element";
-    case NodeType::Document: return "Document";
-    }
-}
+std::string toString(NodeType type);
 
 VGC_CORE_DECLARE_PTRS(Node);
 

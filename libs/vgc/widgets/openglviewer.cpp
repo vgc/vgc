@@ -376,7 +376,7 @@ void OpenGLViewer::paintGL()
 
     // Draw triangles
     if (polygonMode_ > 0) {
-        glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
+        f->glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
         for (CurveGLResources& r: curveGLResources_) {
             shaderProgram_.setUniformValue(
                         colorLoc_,
@@ -393,7 +393,7 @@ void OpenGLViewer::paintGL()
     // Draw control points
     if (showControlPoints_) {
         shaderProgram_.setUniformValue(colorLoc_, 1.0f, 0.0f, 0.0f, 1.0f);
-        glPointSize(10.0);
+        f->glPointSize(10.0);
         for (CurveGLResources& r: curveGLResources_) {
             r.vaoControlPoints->bind();
             f->glDrawArrays(GL_POINTS, 0, r.numVerticesControlPoints);
