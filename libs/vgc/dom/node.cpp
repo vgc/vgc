@@ -26,6 +26,7 @@ namespace vgc {
 namespace dom {
 
 Node::Node(Document* document, NodeType nodeType) :
+    Object(core::Object::ConstructorKey()),
     document_(document),
     nodeType_(nodeType),
     parent_(nullptr),

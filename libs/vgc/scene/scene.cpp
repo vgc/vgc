@@ -21,6 +21,7 @@ namespace vgc {
 namespace scene {
 
 Scene::Scene() :
+    Object(core::Object::ConstructorKey()),
     newCurveColor_(core::colors::black),
     areSignalPaused_(false)
 {

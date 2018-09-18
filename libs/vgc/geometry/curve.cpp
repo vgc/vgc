@@ -62,6 +62,7 @@ void computeSample(
 } // namespace
 
 Curve::Curve(Type type) :
+    Object(core::Object::ConstructorKey()),
     type_(type),
     positionData_(),
     widthVariability_(AttributeVariability::PerControlPoint),
@@ -72,6 +73,7 @@ Curve::Curve(Type type) :
 }
 
 Curve::Curve(double constantWidth, Type type) :
+    Object(core::Object::ConstructorKey()),
     type_(type),
     positionData_(),
     widthVariability_(AttributeVariability::Constant),

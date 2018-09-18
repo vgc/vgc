@@ -27,7 +27,7 @@
 namespace vgc {
 namespace dom {
 
-Document::Document() :
+Document::Document(const ConstructorKey&) :
     Node(this, NodeType::Document),
     hasXmlDeclaration_(true),
     hasXmlEncoding_(true),
@@ -42,6 +42,12 @@ Document::Document() :
 Document::~Document()
 {
 
+}
+
+/* static */
+DocumentSharedPtr Document::create()
+{
+    return std::make_shared<Document>(ConstructorKey());
 }
 
 namespace {

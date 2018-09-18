@@ -139,7 +139,7 @@ class VGC_DOM_API Document: public Node
 {
     VGC_CORE_OBJECT(Document)
 
-protected:
+public:
     /// Creates a new document with no root element. This constructor is an
     /// implementation detail only available to derived classes. In order to
     /// create a Document, please use the following:
@@ -148,7 +148,7 @@ protected:
     /// DocumentSharedPtr document = Document::create();
     /// \endcode
     ///
-    Document();
+    Document(const ConstructorKey&);
 
 public:
     /// Destructs the Document. Never call this manually, and instead let the
@@ -158,13 +158,7 @@ public:
 
     /// Creates a new document with no root element.
     ///
-    static DocumentSharedPtr create() {
-        struct A : std::allocator<Document> {
-            void construct(void* p) { ::new(p) Document(); }
-            void destroy(Document* p) { p->~Document(); }
-        };
-        return std::allocate_shared<Document>(A());
-    }
+    static DocumentSharedPtr create();
 
     /// Opens the file given by its \p filePath.
     ///

@@ -22,7 +22,7 @@
 namespace vgc {
 namespace dom {
 
-Element::Element(Document* document, core::StringId name) :
+Element::Element(const ConstructorKey&, Document* document, core::StringId name) :
     Node(document, NodeType::Element),
     name_(name)
 {
@@ -37,12 +37,7 @@ Element::~Element()
 /* static */
 Element* Element::create_(Node* parent, core::StringId name)
 {
-    struct A : std::allocator<Element> {
-        void construct(void* p, Document* document, core::StringId name) {
-            ::new(p) Element(document, name); }
-        void destroy(Element* p) { p->~Element(); }
-    };
-    auto res = std::allocate_shared<Element>(A(), parent->document(), name);
+    auto res = std::make_shared<Element>(ConstructorKey(), parent->document(), name);
     return init_(std::move(res), parent);
 }
 

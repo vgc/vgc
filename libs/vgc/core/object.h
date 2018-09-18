@@ -55,12 +55,14 @@
         return sharedPtr(); /* Note: C++17 has weak_from_this */            \
     }
 
-#define VGC_CORE_OBJECT(T)               \
-public:                                  \
-    VGC_CORE_OBJECT_SHARED_PTR_(T)       \
-    VGC_CORE_OBJECT_WEAK_PTR_(T)         \
-    VGC_CORE_OBJECT_CONST_SHARED_PTR_(T) \
-    VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)   \
+#define VGC_CORE_OBJECT(T)                                  \
+public:                                                     \
+    VGC_CORE_OBJECT_SHARED_PTR_(T)                          \
+    VGC_CORE_OBJECT_WEAK_PTR_(T)                            \
+    VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                    \
+    VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)                      \
+protected:                                                  \
+    struct ConstructorKey { explicit ConstructorKey() {} }; \
 private:
 
 namespace vgc {
@@ -91,13 +93,14 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// {
 ///     VGC_CORE_OBJECT(Foo)
 ///
-/// protected:
-///     Foo();      // some constructor
-///     Foo(int x); // some other constructor
-///
 /// public:
-///     static ObjectSharedPtr create();      // Use make_shared or allocate_shared
-///     static ObjectSharedPtr create(int x); // Use make_shared or allocate_shared
+///     // Effectively protected constructors
+///     Foo(const ConstructorKey&);
+///     Foo(const ConstructorKey&, int x);
+///
+///     // Factory methods
+///     static ObjectSharedPtr create();
+///     static ObjectSharedPtr create(int x);
 /// };
 /// \endcode
 ///
@@ -113,6 +116,14 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// These methods can be used to convert a raw pointer into a smart pointer.
 /// This is possible since vgc::core::Object inherits from
 /// `std::enable_shared_from_this`.
+///
+/// In addition, VGC_CORE_OBJECT(Foo) defines a protected inner struct called
+/// ConstructorKey. This allows to keep the constructors public (so that
+/// std::make_shared has access to them), while still making them effectively
+/// protected. For more details on this technique, see
+/// https://stackoverflow.com/q/8147027/1951907. The other techniques that we
+/// have tried (e.g., inheritance trick, custom allocator) either did not play
+/// nice with pybind11, or failed to compile on some compilers.
 ///
 /// Ownership Conventions
 /// ---------------------
@@ -224,12 +235,10 @@ class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
     Object& operator=(const Object&) = default;
     Object& operator=(Object&&) = default;
 
-protected:
-    /// Constructs an Object.
-    ///
-    Object();
-
 public:
+    // Effectively protected constructors.
+    Object(const ConstructorKey&);
+
     /// Destructs the Object. Never call this manually, and instead let the
     /// shared pointers do the work for you.
     ///

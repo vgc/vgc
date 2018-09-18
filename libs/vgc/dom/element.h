@@ -35,7 +35,7 @@ class VGC_DOM_API Element: public Node
 {
     VGC_CORE_OBJECT(Element)
 
-protected:
+public:
     /// Constructs a parent-less Element with the given \p name, owned by the
     /// given \p document. This constructor is an implementation detail only
     /// available to derived classes. In order to create an Element, please use
@@ -45,7 +45,7 @@ protected:
     /// ElementSharedPtr element = Element::create(parent, name);
     /// \endcode
     ///
-    Element(Document* document, core::StringId name);
+    Element(const ConstructorKey&, Document* document, core::StringId name);
 
 public:
     /// Destructs the Element. Never call this manually, and instead let the
