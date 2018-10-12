@@ -119,6 +119,14 @@ Install Git, CMake, GCC, and Python:
 ~$ sudo apt-get install python3-dev
 ```
 
+On some Linux distributions, and especially if you have not already installed
+proprietary NVIDIA/AMD drivers, then you may also need to install the following
+OpenGL dependency:
+
+```
+~$ sudo apt-get install libgl1-mesa-dev
+```
+
 Install Qt if you don't have it yet:
 
 1. Download [Qt 5.6.3](http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-linux-x64-5.6.3.run).
