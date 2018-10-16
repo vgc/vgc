@@ -28,10 +28,10 @@ vgc_add_library(core
         random.h
         resources.h
         signal.h
+        stopwatch.h
         streamutil.h
         stringid.h
         stringutil.h
-        timer.h
         vec2d.h
         vec2darray.h
 
@@ -50,10 +50,10 @@ vgc_add_library(core
         random.cpp
         resources.cpp
         signal.cpp
+        stopwatch.cpp
         streamutil.cpp
         stringid.cpp
         stringutil.cpp
-        timer.cpp
         vec2d.cpp
         vec2darray.cpp
 

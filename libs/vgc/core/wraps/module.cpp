@@ -22,8 +22,8 @@ void wrap_doublearray(py::module& m);
 void wrap_exceptions(py::module& m);
 void wrap_io(py::module& m);
 void wrap_object(py::module& m);
+void wrap_stopwatch(py::module& m);
 void wrap_stringutil(py::module& m);
-void wrap_timer(py::module& m);
 void wrap_vec2d(py::module& m);
 void wrap_vec2darray(py::module& m);
 
@@ -34,8 +34,8 @@ PYBIND11_MODULE(core, m) {
     wrap_exceptions(m);
     wrap_io(m);
     wrap_object(m);
+    wrap_stopwatch(m);
     wrap_stringutil(m);
-    wrap_timer(m);
     wrap_vec2d(m);
     wrap_vec2darray(m);
 }

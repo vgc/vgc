@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_TIMER_H
-#define VGC_CORE_TIMER_H
+#ifndef VGC_CORE_STOPWATCH_H
+#define VGC_CORE_STOPWATCH_H
 
 #include <chrono>
 #include <vgc/core/api.h>
@@ -23,29 +23,29 @@
 namespace vgc {
 namespace core {
 
-/// \class vgc::core::Timer
+/// \class vgc::core::Stopwatch
 /// \brief A class to measure elapsed time.
 ///
 /// Usage:
 /// \code
-/// Timer t;
+/// Stopwatch t;
 /// doSomething();
 /// std::cout << "elpased time: " << t.elapsed() << "s\n";
 /// \endcode
 ///
-class VGC_CORE_API Timer {
+class VGC_CORE_API Stopwatch {
 public:
-    /// Creates a Timer.
+    /// Creates a Stopwatch.
     ///
-    Timer();
+    Stopwatch();
 
-    /// Restarts this Timer and returns the elapsed time, in seconds,
-    /// since this Timer was created or last restarted.
+    /// Restarts this Stopwatch and returns the elapsed time, in seconds, since
+    /// this Stopwatch was created or last restarted.
     ///
     double restart();
 
-    /// Returns the elapsed time, in seconds, since this Timer was created or
-    /// last restarted.
+    /// Returns the elapsed time, in seconds, since this Stopwatch was created
+    /// or last restarted.
     ///
     double elapsed() const;
 
@@ -59,4 +59,4 @@ private:
 } // namespace core
 } // namespace vgc
 
-#endif // VGC_CORE_TIMER_H
+#endif // VGC_CORE_STOPWATCH_H

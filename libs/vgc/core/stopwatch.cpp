@@ -14,17 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/pybind11.h>
-#include <vgc/core/timer.h>
+#include <vgc/core/stopwatch.h>
 
-namespace py = pybind11;
-using vgc::core::Timer;
+namespace vgc {
+namespace core {
 
-void wrap_timer(py::module& m)
+Stopwatch::Stopwatch()
 {
-    py::class_<Timer>(m, "Timer")
-        .def(py::init<>())
-        .def("restart", &Timer::restart)
-        .def("elapsed", &Timer::elapsed)
-    ;
+    t_ = Clock_::now();
 }
+
+double Stopwatch::restart()
+{
+    Time_ t2 = Clock_::now();
+    std::chrono::duration<double> seconds = t2 - t_;
+    t_ = t2;
+    return seconds.count();
+}
+
+double Stopwatch::elapsed() const
+{
+    Time_ t2 = Clock_::now();
+    std::chrono::duration<double> seconds = t2 - t_;
+    return seconds.count();
+}
+
+} // namespace core
+} // namespace vgc
