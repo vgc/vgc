@@ -23,6 +23,7 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/core/resources.h>
+#include <vgc/core/stopwatch.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/widgets/qtutil.h>
 
@@ -359,6 +360,9 @@ void OpenGLViewer::resizeGL(int w, int h)
 
 void OpenGLViewer::paintGL()
 {
+    // Measure rendering time
+    core::Stopwatch stopwatch;
+
     OpenGLFunctions* f = openGLFunctions();
 
     // Transfer to GPU any data out-of-sync with CPU
@@ -403,6 +407,12 @@ void OpenGLViewer::paintGL()
 
     // Release shader program
     shaderProgram_.release();
+
+    // Complete measure of rendering time
+    renderingTime_ = stopwatch.elapsed();
+
+    // Inform that the render is completed
+    Q_EMIT renderCompleted();
 }
 
 void OpenGLViewer::cleanupGL()

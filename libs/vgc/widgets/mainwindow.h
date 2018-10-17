@@ -28,6 +28,7 @@
 #include <vgc/widgets/colortoolbutton.h>
 #include <vgc/widgets/console.h>
 #include <vgc/widgets/openglviewer.h>
+#include <vgc/widgets/performancemonitor.h>
 
 namespace vgc {
 namespace widgets {
@@ -49,6 +50,7 @@ public:
 
 private Q_SLOTS:
     void onColorChanged(const core::Color& newColor);
+    void onRenderCompleted_();
     void open();
     void save();
     void saveAs();
@@ -64,11 +66,13 @@ private:
     void setupWidgets_();
     OpenGLViewer* viewer_;
     Console* console_;
+    PerformanceMonitor* performanceMonitor_;
 
     void setupCentralWidget_();
 
     void setupDocks_();
     QDockWidget* dockConsole_;
+    QDockWidget* dockPerformanceMonitor_;
 
     void setupActions_();
     QAction* actionOpen_;
@@ -76,6 +80,7 @@ private:
     QAction* actionSaveAs_;
     QAction* actionQuit_;
     QAction* actionToggleConsoleView_;
+    QAction* actionTogglePerformanceMonitorView_;
 
     void setupMenus_();
     QMenu* menuFile_;

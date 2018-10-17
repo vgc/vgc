@@ -65,6 +65,16 @@ public:
         currentColor_ = color;
     }
 
+    /// Returns the last rendering time, in seconds.
+    ///
+    double renderingTime() const {
+        return renderingTime_;
+    }
+
+Q_SIGNALS:
+    /// This signal is emitted when a render is completed.
+    ///
+    void renderCompleted();
 
 private:
     void mousePressEvent(QMouseEvent* event) override;
@@ -178,6 +188,10 @@ private:
     void startCurve_(const core::Vec2d& p, double width = 1.0);
     void continueCurve_(const core::Vec2d& p, double width = 1.0);
     core::Color currentColor_;
+
+    // XXX Quick implementation for performance monitor
+    // All times are in seconds.
+    double renderingTime_;
 };
 
 } // namespace widgets

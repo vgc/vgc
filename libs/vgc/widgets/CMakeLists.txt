@@ -16,6 +16,7 @@ vgc_add_library(widgets
         font.h
         mainwindow.h
         openglviewer.h
+        performancemonitor.h
         pointingdeviceevent.h
         qtutil.h
         stylesheets.h
@@ -28,6 +29,7 @@ vgc_add_library(widgets
         font.cpp
         mainwindow.cpp
         openglviewer.cpp
+        performancemonitor.cpp
         pointingdeviceevent.cpp
         qtutil.cpp
         stylesheets.cpp

@@ -64,6 +64,11 @@ void MainWindow::onColorChanged(const core::Color& newColor)
     viewer_->setCurrentColor(newColor);
 }
 
+void MainWindow::onRenderCompleted_()
+{
+    performanceMonitor_->setRenderingTime(viewer_->renderingTime());
+}
+
 void MainWindow::open()
 {
     // Get which directory the dialog should display first
@@ -219,6 +224,7 @@ void MainWindow::setupWidgets_()
 {
     viewer_ = new OpenGLViewer(document());
     console_ = new Console(interpreter_);
+    performanceMonitor_ = new PerformanceMonitor();
 }
 
 void MainWindow::setupCentralWidget_()
@@ -228,12 +234,27 @@ void MainWindow::setupCentralWidget_()
 
 void MainWindow::setupDocks_()
 {
+    dockPerformanceMonitor_ = new QDockWidget(tr("Performance Monitor"));
+    dockPerformanceMonitor_->setWidget(performanceMonitor_);
+    dockPerformanceMonitor_->setFeatures(QDockWidget::DockWidgetClosable);
+    addDockWidget(Qt::RightDockWidgetArea, dockPerformanceMonitor_);
+    dockPerformanceMonitor_->hide();
+
     dockConsole_ = new QDockWidget(tr("Python Console"));
     dockConsole_->setWidget(console_);
     dockConsole_->setFeatures(QDockWidget::DockWidgetClosable);
     dockConsole_->setTitleBarWidget(new QWidget());
     addDockWidget(Qt::BottomDockWidgetArea, dockConsole_);
     dockConsole_->hide();
+
+    // Workaround to prevent docks from being automatically resized when
+    // the centralWidget is updated(), caused by the following bug:
+    //   https://bugreports.qt.io/browse/QTBUG-65592
+    //   https://forum.qt.io/topic/94473/qdockwidget-resize-issue/16
+    //   https://forum.qt.io/topic/92294/qdockwidget-sizing-before-and-after-moving
+    QList<QDockWidget*> docksToFix;
+    docksToFix.append(dockPerformanceMonitor_);
+    resizeDocks(docksToFix, {1}, Qt::Horizontal);
 }
 
 void MainWindow::setupActions_()
@@ -261,6 +282,9 @@ void MainWindow::setupActions_()
     actionQuit_->setShortcut(QKeySequence::Quit);
     connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
 
+    actionTogglePerformanceMonitorView_ = dockPerformanceMonitor_->toggleViewAction();
+    actionTogglePerformanceMonitorView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_M));
+
     actionToggleConsoleView_ = dockConsole_->toggleViewAction();
     actionToggleConsoleView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_P));
 }
@@ -277,6 +301,7 @@ void MainWindow::setupMenus_()
     menuBar()->addMenu(menuFile_);
 
     menuView_ = new QMenu(tr("&View"));
+    menuView_->addAction(actionTogglePerformanceMonitorView_);
     menuView_->addAction(actionToggleConsoleView_);
     menuBar()->addMenu(menuView_);
 }
@@ -314,6 +339,9 @@ void MainWindow::setupToolBars_()
 
 void MainWindow::setupConnections_()
 {
+    connect(viewer_, &OpenGLViewer::renderCompleted,
+            this, &MainWindow::onRenderCompleted_);
+
     // XXX TODO
 
     /*
