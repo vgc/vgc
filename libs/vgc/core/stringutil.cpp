@@ -113,5 +113,43 @@ double toDoubleApprox(const std::string& s)
     // actual math.
 }
 
+std::string secondsToString(double t, TimeUnit unit, int decimals)
+{
+    switch (unit) {
+    case TimeUnit::Seconds:
+        break;
+    case TimeUnit::Milliseconds:
+        t *= 1e3;
+        break;
+    case TimeUnit::Microseconds:
+        t *= 1e6;
+        break;
+    case TimeUnit::Nanoseconds:
+        t *= 1e9;
+        break;
+    }
+
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(decimals) << t;
+    std::string res = ss.str();
+
+    switch (unit) {
+    case TimeUnit::Seconds:
+        res += "s";
+        break;
+    case TimeUnit::Milliseconds:
+        res += "ms";
+        break;
+    case TimeUnit::Microseconds:
+        res += "µs";
+        break;
+    case TimeUnit::Nanoseconds:
+        res += "ns";
+        break;
+    }
+
+    return res;
+}
+
 } // namespace core
 } // namespace vgc

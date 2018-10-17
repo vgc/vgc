@@ -18,7 +18,13 @@
 
 import unittest
 
-from vgc.core import toDoubleApprox, ParseError, RangeError
+from vgc.core import (
+    ParseError,
+    RangeError,
+    TimeUnit,
+    secondsToString,
+    toDoubleApprox
+)
 
 class TestRead(unittest.TestCase):
 
@@ -111,6 +117,29 @@ class TestRead(unittest.TestCase):
         # Note: we round subnormals to zero, so that we never generate subnormals
         for s in ["1e-308"]:
             self.assertEqual(toDoubleApprox(s), 0.0)
+
+    def testTimeUnit(self):
+        TimeUnit.Seconds
+        TimeUnit.Milliseconds
+        TimeUnit.Microseconds
+        TimeUnit.Nanoseconds
+
+    def testSecondsToString(self):
+        self.assertEqual(secondsToString(1), "1s")
+        self.assertEqual(secondsToString(12), "12s")
+
+        self.assertEqual(secondsToString(12, TimeUnit.Seconds), "12s")
+        self.assertEqual(secondsToString(12, TimeUnit.Milliseconds), "12000ms")
+        self.assertEqual(secondsToString(12, TimeUnit.Microseconds), "12000000µs")
+        self.assertEqual(secondsToString(12, TimeUnit.Nanoseconds), "12000000000ns")
+
+        self.assertEqual(secondsToString(12, TimeUnit.Seconds, 2), "12.00s")
+        self.assertEqual(secondsToString(12, TimeUnit.Milliseconds, 2), "12000.00ms")
+        self.assertEqual(secondsToString(12, TimeUnit.Microseconds, 2), "12000000.00µs")
+        self.assertEqual(secondsToString(12, TimeUnit.Nanoseconds, 2), "12000000000.00ns")
+
+        self.assertEqual(secondsToString(0.0123456, TimeUnit.Seconds, 2), "0.01s")
+        self.assertEqual(secondsToString(0.0123456, TimeUnit.Milliseconds, 2), "12.35ms")
 
 if __name__ == '__main__':
     unittest.main()

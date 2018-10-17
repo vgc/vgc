@@ -84,6 +84,23 @@ std::string toString(const std::vector<T>& v) {
 VGC_CORE_API
 double toDoubleApprox(const std::string& s);
 
+/// \enum vgc::core::TimeUnit
+/// \brief Enumeration of all possible time units
+///
+enum class TimeUnit {
+    Seconds,
+    Milliseconds,
+    Microseconds,
+    Nanoseconds
+};
+
+/// Converts a floating-point number representing a duration in seconds
+/// into a human-readable string in the given TimeUnit with the given
+/// number of decimal points.
+///
+VGC_CORE_API
+std::string secondsToString(double t, TimeUnit unit = TimeUnit::Seconds, int decimals = 0);
+
 } // namespace core
 } // namespace vgc
 

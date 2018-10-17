@@ -20,4 +20,17 @@
 void wrap_stringutil(py::module& m)
 {
     m.def("toDoubleApprox", &vgc::core::toDoubleApprox);
+
+    py::enum_<vgc::core::TimeUnit>(m, "TimeUnit")
+        .value("Seconds", vgc::core::TimeUnit::Seconds)
+        .value("Milliseconds", vgc::core::TimeUnit::Milliseconds)
+        .value("Microseconds", vgc::core::TimeUnit::Microseconds)
+        .value("Nanoseconds", vgc::core::TimeUnit::Nanoseconds)
+    ;
+
+    m.def("secondsToString",
+          &vgc::core::secondsToString,
+          "t"_a,
+          "unit"_a = vgc::core::TimeUnit::Seconds,
+          "decimals"_a = 0);
 }
