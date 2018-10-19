@@ -14,30 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
+#ifndef VGC_CORE_LIMITS_H
+#define VGC_CORE_LIMITS_H
 
-void wrap_charutil(py::module& m);
-void wrap_color(py::module& m);
-void wrap_doublearray(py::module& m);
-void wrap_exceptions(py::module& m);
-void wrap_io(py::module& m);
-void wrap_limits(py::module& m);
-void wrap_object(py::module& m);
-void wrap_stopwatch(py::module& m);
-void wrap_stringutil(py::module& m);
-void wrap_vec2d(py::module& m);
-void wrap_vec2darray(py::module& m);
+/// \file vgc/core/limits.h
+/// \brief Provides limit values for numeric types, such as maxInt(), etc.
+///
+/// This header provides the same functionality as found in the C++ standard
+/// header <limits>, but with a more concise and user-friendly API.
+///
 
-PYBIND11_MODULE(core, m) {
-    wrap_charutil(m);
-    wrap_color(m);
-    wrap_doublearray(m);
-    wrap_exceptions(m);
-    wrap_io(m);
-    wrap_limits(m);
-    wrap_object(m);
-    wrap_stopwatch(m);
-    wrap_stringutil(m);
-    wrap_vec2d(m);
-    wrap_vec2darray(m);
+#include <limits>
+#include <vgc/core/api.h>
+
+namespace vgc {
+namespace core {
+
+/// Returns the maximum value that an 'int' can hold.
+///
+VGC_CORE_API
+inline constexpr int maxInt() {
+    return std::numeric_limits<int>::max();
 }
+
+} // namespace core
+} // namespace vgc
+
+#endif // VGC_CORE_LIMITS_H

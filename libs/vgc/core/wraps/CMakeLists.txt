@@ -6,6 +6,7 @@ vgc_wrap_library(core
     wrap_doublearray.cpp
     wrap_exceptions.cpp
     wrap_io.cpp
+    wrap_limits.cpp
     wrap_object.cpp
     wrap_stopwatch.cpp
     wrap_stringutil.cpp

@@ -19,6 +19,7 @@ vgc_add_library(core
         float2int.h
         int2float.h
         io.h
+        limits.h
         logging.h
         mat4d.h
         math.h
