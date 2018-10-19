@@ -25,6 +25,7 @@ vgc_add_library(core
         math.h
         object.h
         os.h
+        performancelog.h
         python.h
         random.h
         resources.h
@@ -47,6 +48,7 @@ vgc_add_library(core
         mat4d.cpp
         math.cpp
         object.cpp
+        performancelog.cpp
         python.cpp
         random.cpp
         resources.cpp
