@@ -18,8 +18,10 @@
 #define VGC_WIDGETS_PERFORMANCEMONITOR_H
 
 #include <QWidget>
+#include <vgc/core/performancelog.h>
 #include <vgc/widgets/api.h>
 
+class QGridLayout;
 class QLabel;
 
 namespace vgc {
@@ -43,12 +45,26 @@ public:
     ///
     ~PerformanceMonitor() override;
 
-    /// Sets the last rendering time.
+    /// Updates the displayed values from the log.
     ///
-    void setRenderingTime(double t);
+    void refresh();
+
+    /// Returns the performance log managed and displayed by this performance
+    /// monitor.
+    ///
+    core::PerformanceLog* log() const;
 
 private:
-    QLabel* renderingTime_;
+    core::PerformanceLogSharedPtr log_;
+    QGridLayout* layout_;
+
+    struct DisplayedLog_ {
+        core::PerformanceLog* log;
+        QLabel* caption;
+        QLabel* value;
+    };
+
+    std::vector<DisplayedLog_> displayedLogs_;
 };
 
 } // namespace widgets

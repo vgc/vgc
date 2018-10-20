@@ -19,6 +19,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QVBoxLayout>
+#include <vgc/core/limits.h>
 #include <vgc/core/stringutil.h>
 #include <vgc/widgets/qtutil.h>
 
@@ -26,18 +27,15 @@ namespace vgc {
 namespace widgets {
 
 PerformanceMonitor::PerformanceMonitor(QWidget* parent) :
-    QWidget(parent)
+    QWidget(parent),
+    log_(core::PerformanceLog::create())
 {
-    QGridLayout* layout = new QGridLayout();
+    // Grid layout for displaying the logs' values
+    layout_ = new QGridLayout();
 
-    renderingTime_ = new QLabel("N/A");
-    layout->addWidget(new QLabel("Rendering: "), 0, 0);
-    layout->addWidget(renderingTime_, 0, 1);
-
-    // Set layout. We first wrap the grid layout in a vbox layout to
-    // add strecthing below the grid, to make it top-aligned
+    // Wrapper around the grid layout to keep it top-aligned
     QVBoxLayout* wrapper = new QVBoxLayout();
-    wrapper->addLayout(layout);
+    wrapper->addLayout(layout_);
     wrapper->addStretch();
     setLayout(wrapper);
 
@@ -50,12 +48,107 @@ PerformanceMonitor::~PerformanceMonitor()
 
 }
 
-void PerformanceMonitor::setRenderingTime(double t)
+namespace {
+
+// Add some indentation to the log's name, and convert to a QString.
+QString captionText_(core::PerformanceLog* log, int indentLevel)
+{
+    QString res;
+    for (int i = 0; i < indentLevel; ++i) {
+        res += "  ";
+    }
+    res += toQt(log->name());
+    return  res;
+}
+
+} // namespace
+
+void PerformanceMonitor::refresh()
 {
     const auto unit = core::TimeUnit::Milliseconds;
     const int decimals = 2;
 
-    renderingTime_->setText(toQt(core::secondsToString(t, unit, decimals)));
+    // Iterative depth-first traversal using a stack of (depth, log) pairs
+    using TraversalData = std::pair<int, core::PerformanceLog*>;
+    int index = 0;
+    size_t index_ = 0;
+    std::vector<TraversalData> stack;
+    stack.push_back(std::make_pair(0, log_.get()));
+    while (!stack.empty()) {
+        // Pop last log in the stack
+        auto pair = stack.back();
+        stack.pop_back();
+        int depth = pair.first;
+        core::PerformanceLog* log = pair.second;
+
+        // Display the log (unless it's the root; we don't display the root)
+        if (log != log_.get()) {
+
+            QString valueText = toQt(core::secondsToString(log->lastTime(), unit, decimals));
+
+            // If there was already something displayed for this index,
+            // update the text of the QLabels
+            if (index_ < displayedLogs_.size()) {
+
+                // Update the "value" QLabel
+                displayedLogs_[index_].value->setText(valueText);
+
+                // If the previously displayed entry was a different entry,
+                // also update the "caption" QLabel
+                if (displayedLogs_[index_].log != log) {
+                    displayedLogs_[index_].log = log;
+                    displayedLogs_[index_].caption->setText(captionText_(log, depth));
+                }
+
+                // Make sure the labels are visible (they may have been hidden
+                // if unused, see the end of this function)
+                displayedLogs_[index_].caption->show();
+                displayedLogs_[index_].value->show();
+            }
+            // If there was no QLabels already for this index, create them
+            else {
+                DisplayedLog_ d;
+                d.log = log;
+                d.caption = new QLabel(captionText_(log, depth));
+                d.value = new QLabel(valueText);
+                displayedLogs_.push_back(d);
+
+                layout_->addWidget(d.caption, index, 0);
+                layout_->addWidget(d.value, index, 1);
+            }
+
+
+            // Increment index
+            ++index;
+            ++index_;
+
+            // Stop recursion if there are more elements to display
+            // than layout_->addWidget() supports. Unlikely.
+            if (index == core::maxInt()) {
+                break;
+            }
+        }
+
+        // Recurse on children
+        for (core::PerformanceLog* child = log->lastChild();
+             child != nullptr;
+             child = child->previousSibling())
+        {
+            stack.push_back(std::make_pair(depth + 1, child));
+        }
+    }
+
+    // Hide the remaining existing QLabels, if any
+    for (size_t i = index_; i < displayedLogs_.size(); ++i) {
+        displayedLogs_[i].log = nullptr;
+        displayedLogs_[i].caption->hide();
+        displayedLogs_[i].value->hide();
+    }
+}
+
+core::PerformanceLog* PerformanceMonitor::log() const
+{
+    return log_.get();
 }
 
 } // namespace widgets

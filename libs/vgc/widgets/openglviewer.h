@@ -26,6 +26,7 @@
 #include <QOpenGLWidget>
 
 #include <vgc/core/color.h>
+#include <vgc/core/performancelog.h>
 #include <vgc/core/vec2d.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
@@ -65,11 +66,15 @@ public:
         currentColor_ = color;
     }
 
-    /// Returns the last rendering time, in seconds.
+    /// Creates and manages new performance logs as children of the given \p
+    /// parent.
     ///
-    double renderingTime() const {
-        return renderingTime_;
-    }
+    void startLoggingUnder(core::PerformanceLog* parent);
+
+    /// Destroys the currently managed logs whose parent is the given \p
+    /// parent, if any.
+    ///
+    void stopLoggingUnder(core::PerformanceLog* parent);
 
 Q_SIGNALS:
     /// This signal is emitted when a render is completed.
@@ -189,9 +194,10 @@ private:
     void continueCurve_(const core::Vec2d& p, double width = 1.0);
     core::Color currentColor_;
 
-    // XXX Quick implementation for performance monitor
-    // All times are in seconds.
-    double renderingTime_;
+    // Performance logging
+    core::PerformanceLogTask renderTask_;
+    core::PerformanceLogTask   updateTask_;
+    core::PerformanceLogTask   drawTask_;
 };
 
 } // namespace widgets

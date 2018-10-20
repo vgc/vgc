@@ -95,7 +95,10 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     polygonMode_(2),
     showControlPoints_(false),
     requestedTesselationMode_(2),
-    currentTesselationMode_(2)
+    currentTesselationMode_(2),
+    renderTask_("Render"),
+    updateTask_("Update"),
+    drawTask_("Draw")
 {
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
@@ -118,6 +121,20 @@ OpenGLViewer::~OpenGLViewer()
     makeCurrent();
     cleanupGL();
     doneCurrent();
+}
+
+void OpenGLViewer::startLoggingUnder(core::PerformanceLog* parent)
+{
+    core::PerformanceLog* renderLog = renderTask_.startLoggingUnder(parent);
+    updateTask_.startLoggingUnder(renderLog);
+    drawTask_.startLoggingUnder(renderLog);
+}
+
+void OpenGLViewer::stopLoggingUnder(core::PerformanceLog* parent)
+{
+    core::PerformanceLogSharedPtr renderLog = renderTask_.stopLoggingUnder(parent);
+    updateTask_.stopLoggingUnder(renderLog.get());
+    drawTask_.stopLoggingUnder(renderLog.get());
 }
 
 void OpenGLViewer::mousePressEvent(QMouseEvent* event)
@@ -361,12 +378,16 @@ void OpenGLViewer::resizeGL(int w, int h)
 void OpenGLViewer::paintGL()
 {
     // Measure rendering time
-    core::Stopwatch stopwatch;
+    renderTask_.start();
 
     OpenGLFunctions* f = openGLFunctions();
 
     // Transfer to GPU any data out-of-sync with CPU
+    updateTask_.start();
     updateGLResources_();
+    updateTask_.stop();
+
+    drawTask_.start();
 
     // Clear color and depth buffer
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -407,9 +428,10 @@ void OpenGLViewer::paintGL()
 
     // Release shader program
     shaderProgram_.release();
+    drawTask_.stop();
 
     // Complete measure of rendering time
-    renderingTime_ = stopwatch.elapsed();
+    renderTask_.stop();
 
     // Inform that the render is completed
     Q_EMIT renderCompleted();

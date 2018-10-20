@@ -52,11 +52,13 @@ MainWindow::MainWindow(
     // Show maximized at startup
     // XXX This should be a user preference
     showMaximized();
+
+    viewer_->startLoggingUnder(performanceMonitor_->log());
 }
 
 MainWindow::~MainWindow()
 {
-
+    viewer_->stopLoggingUnder(performanceMonitor_->log());
 }
 
 void MainWindow::onColorChanged(const core::Color& newColor)
@@ -66,7 +68,7 @@ void MainWindow::onColorChanged(const core::Color& newColor)
 
 void MainWindow::onRenderCompleted_()
 {
-    performanceMonitor_->setRenderingTime(viewer_->renderingTime());
+    performanceMonitor_->refresh();
 }
 
 void MainWindow::open()
