@@ -17,6 +17,7 @@ vgc_add_library(core
         epsilon.h
         exceptions.h
         float2int.h
+        int.h
         int2float.h
         io.h
         limits.h
