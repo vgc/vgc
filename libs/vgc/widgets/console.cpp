@@ -62,7 +62,13 @@ int lineNumber_(const QTextCursor& cursor) {
 // Finds the code block corresponding to this line number. More specifically,
 // we are looking for the value codeBlockIndex such that:
 //
-//   codeBlocks_[codeBlockIndex] <= lineNumber < codeBlocks_[codeBlockIndex + 1]
+//   (A) codeBlocks_[codeBlockIndex] <= lineNumber < codeBlocks_[codeBlockIndex + 1]
+//
+// or simply:
+//
+//   (B) codeBlockIndex = codeBlocks_.size() - 1
+//
+// in case lineNumber is greater or equal to all elements in codeBlocks.
 //
 // The codeBlockIndex is modified in-place. If the previous value is -1, then
 // no assumption is made and the code block is found from scratch.
@@ -74,8 +80,17 @@ namespace {
 void updateCodeBlockIndex_(int lineNumber, const std::vector<int>& codeBlocks, int& codeBlockIndex)
 {
     if (codeBlockIndex == -1) {
-        // The first time, we use a binary search
-        codeBlockIndex = vgc::core::upper_bound(codeBlocks, lineNumber) - 1;
+        // The first time, we use a binary search.
+        // 1. Find index i such that lineNumber < codeBlocks_[i]
+        int i = vgc::core::upper_bound(codeBlocks, lineNumber);
+        // 2. If found, then we are in case (A)
+        if (i != -1) {
+            codeBlockIndex = i - 1;
+        }
+        // 3. Otherwise, we are in case (B)
+        else {
+            codeBlockIndex = codeBlocks.size() - 1;
+        }
     }
     else {
         // The subsequent times, we simply advance one by one
