@@ -413,6 +413,20 @@ void Console::keyPressEvent(QKeyEvent* e)
             codeBlocks_.push_back(currentLineNumber_());
         }
 
+        // On 'Shift + Enter', remove the Shift modifier to prevent inserting a line-break `\r`
+        // with no corresponding line-feed `\n`, messing up the console line numbering.
+        else if ((e->text() == "\r") &&
+                 (e->modifiers() & Qt::SHIFT))
+        {
+            // Using bit flag manipulation to remove shift modifier
+            // QFlags::setFlag does not exists in all Qt versions
+            Qt::KeyboardModifiers m = e->modifiers();
+            m &= ~Qt::ShiftModifier;
+            e->setModifiers(m);
+
+            Console::keyPressEvent(e);
+        }
+
         // Normal insertion/deletion of character, including newlines
         else {
             QPlainTextEdit::keyPressEvent(e);
