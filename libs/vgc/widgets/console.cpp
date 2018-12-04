@@ -357,6 +357,8 @@ void Console::keyPressEvent(QKeyEvent* e)
 {
     if (isTextInsertionOrDeletion_(e)) {
 
+        QTextCursor cursor = textCursor();
+
         // Prevent inserting or deleting text before last code block
         // XXX This seems to also prevent copying via Ctrl+C, which
         // generates e->text() == "\u0003".
@@ -369,7 +371,6 @@ void Console::keyPressEvent(QKeyEvent* e)
                  (e->modifiers() & Qt::CTRL))
         {
             // Move cursor's anchor+position to beginning of code block
-            QTextCursor cursor = textCursor();
             cursor.movePosition(QTextCursor::StartOfLine);
             while (lineNumber_(cursor) > codeBlocks_.back()) {
                 cursor.movePosition(QTextCursor::Up);
@@ -425,6 +426,21 @@ void Console::keyPressEvent(QKeyEvent* e)
             e->setModifiers(m);
 
             Console::keyPressEvent(e);
+        }
+
+        // Prevent backspace from deleting last code block
+        // checking:
+        //  1. backspace
+        //  2. last code block
+        //  3. start of the block
+        //  4. not selection, so you can still select
+        //         everything inside code block and delete it
+        else if ((e->key() == Qt::Key_Backspace) &&
+                 (cursor.blockNumber() == codeBlocks_.back()) &&
+                 (cursor.atBlockStart()) &&
+                 (!cursor.hasSelection()))
+        {
+            e->accept();
         }
 
         // Normal insertion/deletion of character, including newlines
