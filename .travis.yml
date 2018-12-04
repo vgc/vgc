@@ -42,8 +42,9 @@ script:
   - cd build
   - python-config --prefix
   - ls -al $(python-config --prefix)
+  - ls -al $(python-config --prefix)/bin
   - ls -al $(python-config --prefix)/lib
   - ls -al $(python-config --prefix)/include
-  - cmake -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.6m ..
+  - cmake -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.6  -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.6m.so -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.6m ..
   - make
   - make test
