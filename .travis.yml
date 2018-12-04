@@ -41,9 +41,10 @@ script:
   - mkdir build
   - cd build
   - python-config --prefix
-  - ls $(python-config --prefix)
-  - ls $(python-config --prefix)/lib
-  - ls $(python-config --prefix)/include
-  - cmake -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.6.dylib -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.6 ..
+  - ls -al $(python-config --prefix)
+  - ls -al $(python-config --prefix)/lib
+  - ls -al $(python-config --prefix)/include
+  - ls -al $(python-config --prefix)/include/python3.6m
+  - cmake -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.6.so -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.6m ..
   - make
   - make test
