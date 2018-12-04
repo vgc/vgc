@@ -18,7 +18,7 @@ install:
   - sudo apt-get install -y g++-6
 
   # OpenGL
-  apt-get install libgl1-mesa-dev
+  - sudo apt-get install libgl1-mesa-dev
 
   # Qt 5.11.2
   - sudo apt-get install -y qt511base
