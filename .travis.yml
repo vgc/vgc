@@ -1,12 +1,12 @@
 language: generic
-dist: trusty
+dist: xenial
 
 before_install:
   # g++ 6
   - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 
-  # Qt 5.6.3
-  - sudo add-apt-repository -y ppa:beineri/opt-qt563-trusty
+  # Qt 5.11.2
+  - sudo add-apt-repository -y ppa:beineri/opt-qt-5.11.2-xenial
 
   # Update
   - sudo apt-get -y update
@@ -15,25 +15,35 @@ install:
   # g++ 6
   - sudo apt-get install -y g++-6
 
-  # Qt 5.6.3
-  - sudo apt-get install -y qt56base
+  # OpenGL
+  - sudo apt-get install libgl1-mesa-dev
+
+  # Qt 5.11.2
+  - sudo apt-get install -y qt511base
 
 before_script:
   # g++ 6
   - export CC="gcc-6"
   - export CXX="g++-6"
 
-  # Qt 5.6.3
-  - QTDIR="/opt/qt56"
+  # Qt 5.11.2
+  - QTDIR="/opt/qt511"
   - PATH="$QTDIR/bin:$PATH"
-  - source /opt/qt56/bin/qt56-env.sh
+  - source /opt/qt511/bin/qt511-env.sh
 
   # Python 3.6
-  - pyenv global 3.6
+  - pyenv versions
+  - pyenv global 3.6.7
+  - ls -al $(python-config --prefix)/bin $(python-config --prefix)/lib $(python-config --prefix)/include
 
 script:
   - mkdir build
   - cd build
-  - cmake ..
+  - |
+    cmake \
+      -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.6 \
+      -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.6m.so \
+      -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.6m \
+      ..
   - make
   - make test
