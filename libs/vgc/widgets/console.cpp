@@ -356,18 +356,14 @@ QVariant Console::inputMethodQuery(Qt::InputMethodQuery) const
 void Console::keyPressEvent(QKeyEvent* e)
 {
     if (isTextInsertionOrDeletion_(e)) {
+        // Prevent inserting or deleting text before last code block
+        // because here are no navigation, we can call it before everything
+        protectPreviousCodeBlock(e);
 
         QTextCursor cursor = textCursor();
 
-        // Prevent inserting or deleting text before last code block
-        // XXX This seems to also prevent copying via Ctrl+C, which
-        // generates e->text() == "\u0003".
-        if (currentLineNumber_() < codeBlocks_.back()) {
-            e->accept();
-        }
-
         // Process last code block on Ctrl + Enter
-        else if ((e->text() == "\r") &&
+        if ((e->text() == "\r") &&
                  (e->modifiers() & Qt::CTRL))
         {
             // Move cursor's anchor+position to beginning of code block
@@ -454,7 +450,35 @@ void Console::keyPressEvent(QKeyEvent* e)
         // - Navigation (arrows, home, end, page up/down, etc.)
         // - Complex input methods (dead key, Chinese character composition, etc.)
         QPlainTextEdit::keyPressEvent(e);
+
+        // This has to be called after any navigation of the cursor
+        protectPreviousCodeBlock(e);
     }
+}
+
+void Console::mousePressEvent(QMouseEvent* e)
+{
+    // On mouse event, we have to move the cursor to the correct position first
+    // But without executing any pasting events
+    setTextCursor(cursorForPosition(e->pos()));
+    protectPreviousCodeBlock(e);
+
+    QPlainTextEdit::mousePressEvent(e);
+}
+
+// Preventing write on already interpreted python code
+// by checking the position of the cursor / selection start
+// thus cursor movement has to be executed before calling this function
+void Console::protectPreviousCodeBlock(QEvent* e)
+{
+    // Using selection start line number instead of currentLineNumber
+    // to prevent case where selection ends inside last code block
+    QTextCursor cursor = textCursor();
+    cursor.setPosition(cursor.selectionStart());
+
+    // Setting readonly instead of just accepting or ignoring event
+    // because context menu paste cannot be detected
+    setReadOnly(lineNumber_(cursor) < codeBlocks_.back());
 }
 
 int Console::currentLineNumber_() const
