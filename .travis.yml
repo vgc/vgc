@@ -40,6 +40,10 @@ before_script:
 script:
   - mkdir build
   - cd build
-  - cmake ..
+  - python-config --prefix
+  - ls $(python-config --prefix)
+  - ls $(python-config --prefix)/lib
+  - ls $(python-config --prefix)/include
+  - cmake -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.6.dylib -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.6 ..
   - make
   - make test
