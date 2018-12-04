@@ -1,7 +1,5 @@
 language: generic
 dist: xenial
-python:
-  - "3.6"
 
 before_install:
   # g++ 6
@@ -33,18 +31,14 @@ before_script:
   - PATH="$QTDIR/bin:$PATH"
   - source /opt/qt511/bin/qt511-env.sh
 
-  # Python
+  # Python 3.6
   - pyenv versions
   - pyenv global 3.6.7
+  - ls -al $(python-config --prefix)/bin $(python-config --prefix)/lib $(python-config --prefix)/include
 
 script:
   - mkdir build
   - cd build
-  - |
-    ls \
-      $(python-config --prefix)/bin \
-      $(python-config --prefix)/lib \
-      $(python-config --prefix)/include \
   - |
     cmake \
       -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.6 \
