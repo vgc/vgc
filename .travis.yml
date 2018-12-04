@@ -1,5 +1,7 @@
 language: generic
 dist: xenial
+python:
+  - "3.6"
 
 before_install:
   # g++ 6
@@ -27,9 +29,6 @@ before_script:
   - QTDIR="/opt/qt511"
   - PATH="$QTDIR/bin:$PATH"
   - source /opt/qt511/bin/qt511-env.sh
-
-  # Python 3.6
-  - pyenv global 3.6
 
 script:
   - mkdir build
