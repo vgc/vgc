@@ -33,6 +33,10 @@ before_script:
   - PATH="$QTDIR/bin:$PATH"
   - source /opt/qt511/bin/qt511-env.sh
 
+  # Python
+  - pyenv versions
+  - pyenv global 3.6
+
 script:
   - mkdir build
   - cd build
