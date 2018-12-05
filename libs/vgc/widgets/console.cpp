@@ -464,17 +464,34 @@ void Console::mousePressEvent(QMouseEvent* e)
     // On mouse event, we have to move the cursor to the correct position first
     // But without executing any pasting events
     // Exclude selection to allow copy with right-click menu
-    if(!textCursor().hasSelection()){
-        setTextCursor(cursorForPosition(e->pos()));
-    }
+    moveCursorOnMouseEvent_(e);
     protectPreviousCodeBlocks_();
 
     QPlainTextEdit::mousePressEvent(e);
+}
 
-    // Readonly cannot be removed for context menu here
-    // otherwise paste option will be available
-    if(e->button() != Qt::RightButton){
-        setReadOnly(false);
+void Console::mouseDoubleClickEvent(QMouseEvent* e)
+{
+    // Same as mouse press event, just for double click
+    moveCursorOnMouseEvent_(e);
+    protectPreviousCodeBlocks_();
+
+    QPlainTextEdit::mouseDoubleClickEvent(e);
+}
+
+// Removes readonly after mouse release
+// otherwise middle mouse button paste will not be filtered
+void Console::mouseReleaseEvent(QMouseEvent* e)
+{
+    QPlainTextEdit::mouseReleaseEvent(e);
+    setReadOnly(false);
+}
+
+// Moves cursor to mouse position if is not a selection
+void Console::moveCursorOnMouseEvent_(QMouseEvent* e)
+{
+    if (!textCursor().hasSelection()) {
+        setTextCursor(cursorForPosition(e->pos()));
     }
 }
 
