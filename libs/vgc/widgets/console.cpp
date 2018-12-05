@@ -463,7 +463,6 @@ void Console::mousePressEvent(QMouseEvent* e)
 {
     // On mouse event, we have to move the cursor to the correct position first
     // But without executing any pasting events
-    // Exclude selection to allow copy with right-click menu
     moveCursorOnMouseEvent_(e);
     protectPreviousCodeBlocks_();
 
@@ -487,10 +486,10 @@ void Console::mouseReleaseEvent(QMouseEvent* e)
     setReadOnly(false);
 }
 
-// Moves cursor to mouse position if is not a selection
+// Moves cursor to mouse position if is not right mouse click
 void Console::moveCursorOnMouseEvent_(QMouseEvent* e)
 {
-    if (!textCursor().hasSelection()) {
+    if (e->button() != Qt::RightButton) {
         setTextCursor(cursorForPosition(e->pos()));
     }
 }
