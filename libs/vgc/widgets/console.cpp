@@ -443,6 +443,8 @@ void Console::keyPressEvent(QKeyEvent* e)
         else {
             QPlainTextEdit::keyPressEvent(e);
         }
+
+        setReadOnly(false);
     }
     else {
         // Anything which is not an insertion or deletion, such as:
@@ -453,6 +455,7 @@ void Console::keyPressEvent(QKeyEvent* e)
 
         // This has to be called after any navigation of the cursor
         protectPreviousCodeBlocks_();
+        setReadOnly(false);
     }
 }
 
@@ -467,6 +470,19 @@ void Console::mousePressEvent(QMouseEvent* e)
     protectPreviousCodeBlocks_();
 
     QPlainTextEdit::mousePressEvent(e);
+
+    // Readonly cannot be removed for context menu here
+    // otherwise paste option will be available
+    if(e->button() != Qt::RightButton){
+        setReadOnly(false);
+    }
+}
+
+// Removes readonly after opening context menu
+void Console::contextMenuEvent(QContextMenuEvent* e)
+{
+    QPlainTextEdit::contextMenuEvent(e);
+    setReadOnly(false);
 }
 
 // Prevents write on already interpreted python code
