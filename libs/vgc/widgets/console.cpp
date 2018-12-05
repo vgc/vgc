@@ -460,7 +460,10 @@ void Console::mousePressEvent(QMouseEvent* e)
 {
     // On mouse event, we have to move the cursor to the correct position first
     // But without executing any pasting events
-    setTextCursor(cursorForPosition(e->pos()));
+    // Exclude selection to allow copy with right-click menu
+    if(!textCursor().hasSelection()){
+        setTextCursor(cursorForPosition(e->pos()));
+    }
     protectPreviousCodeBlocks_();
 
     QPlainTextEdit::mousePressEvent(e);
