@@ -89,7 +89,7 @@ private:
     void keyPressEvent(QKeyEvent* e) override;
     void mousePressEvent(QMouseEvent* e) override;
 
-    void protectPreviousCodeBlock(QEvent* e);
+    void protectPreviousCodeBlocks_();
     int currentLineNumber_() const;
 
     // Code blocks. This is a sorted list of 0-indexed
