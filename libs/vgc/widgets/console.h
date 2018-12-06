@@ -91,6 +91,7 @@ private:
     void mouseReleaseEvent(QMouseEvent* e) override;
     void mouseDoubleClickEvent(QMouseEvent* e) override;
     void contextMenuEvent(QContextMenuEvent* e) override;
+    void dropEvent(QDropEvent* e) override;
 
     void handleMousePresses_(QMouseEvent* e);
     void protectPreviousCodeBlocks_(QTextCursor);

@@ -536,6 +536,20 @@ void Console::protectPreviousCodeBlocks_(QTextCursor cursor)
     setReadOnly(lineNumber_(cursor) < codeBlocks_.back());
 }
 
+void Console::dropEvent(QDropEvent* e)
+{
+    QTextCursor cursor = cursorForPosition(e->pos());
+    protectPreviousCodeBlocks_(cursor);
+
+    QPlainTextEdit::dropEvent(e);
+
+    // We have to move cursor to drop position
+    // because of a graphical glitch that still shows
+    // drop position after the event
+    setTextCursor(cursor);
+    setReadOnly(false);
+}
+
 int Console::currentLineNumber_() const
 {
     return lineNumber_(textCursor());
