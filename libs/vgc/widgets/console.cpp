@@ -412,6 +412,9 @@ void Console::keyPressEvent(QKeyEvent* e)
 
             // Update code blocks
             codeBlocks_.push_back(currentLineNumber_());
+
+            // Clear Undo/Redo Stack to prevent going back to previous block
+            document()->clearUndoRedoStacks();
         }
 
         // On 'Shift + Enter', remove the Shift modifier to prevent inserting a line-break `\r`
