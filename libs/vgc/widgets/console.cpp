@@ -449,9 +449,6 @@ void Console::keyPressEvent(QKeyEvent* e)
         // - Navigation (arrows, home, end, page up/down, etc.)
         // - Complex input methods (dead key, Chinese character composition, etc.)
         QPlainTextEdit::keyPressEvent(e);
-
-        // The text cursor has to be retrieved after any movement
-        protectPreviousCodeBlocks_(textCursor());
     }
 
     setReadOnly(false);
@@ -487,10 +484,12 @@ void Console::handleMousePresses_(QMouseEvent* e)
 
             QTextCursor tempCursor = realCursor;
 
-            tempCursor.setPosition(tempCursor.selectionStart());
+            // We have to use real cursor selection position because the temp cursor
+            // will be moved with setPosition() and remove the selection
+            tempCursor.setPosition(realCursor.selectionStart());
             int selectionStart = lineNumber_(tempCursor);
 
-            tempCursor.setPosition(tempCursor.selectionEnd());
+            tempCursor.setPosition(realCursor.selectionEnd());
             int selectionEnd = lineNumber_(tempCursor);
 
             // Check if selection is partially inside both blocks
@@ -518,7 +517,24 @@ void Console::handleMousePresses_(QMouseEvent* e)
 // otherwise middle mouse button paste will not be filtered
 void Console::mouseReleaseEvent(QMouseEvent* e)
 {
-    QPlainTextEdit::mouseReleaseEvent(e);
+    handleMousePresses_(e);
+
+    // If we remove selection with left button then we have to set readonly twice
+    // to fix the bug where the first character is not interpreted as chinese input
+    // see PR #46 - first code comment
+    if (e->button() == Qt::LeftButton) {
+        bool hadSelection = textCursor().hasSelection();
+        QPlainTextEdit::mouseReleaseEvent(e);
+
+        if (hadSelection && !textCursor().hasSelection()) {
+            setReadOnly(false);
+        }
+    }
+    
+    else {
+        QPlainTextEdit::mouseReleaseEvent(e);
+    }
+
     setReadOnly(false);
 }
 
