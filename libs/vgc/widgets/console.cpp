@@ -466,31 +466,6 @@ void Console::mouseDoubleClickEvent(QMouseEvent* e)
     QPlainTextEdit::mouseDoubleClickEvent(e);
 }
 
-void Console::handleMousePresses_(QMouseEvent* e)
-{
-    // On mouse event, we have to check where the cursor would be
-    QTextCursor cursor = cursorForPosition(e->pos());
-
-    // If there is a selection, we should always use the real cursor
-    // Except on middle mouse click to allow copy on Linux
-    QTextCursor realCursor = textCursor();
-
-    if ((realCursor.hasSelection()) &&
-        (e->button() != Qt::MiddleButton))
-    {
-        cursor = realCursor;
-    }
-
-    protectPreviousCodeBlocks_(cursor);
-
-    // Right Mouse Click does not move cursor
-    // We have to move it ourselves to prevent pasting inside previous code blocks 
-    // And when there is no selection so we can still copy selections
-    if (e->button() == Qt::RightButton && !realCursor.hasSelection()) {
-        setTextCursor(cursor);
-    }
-}
-
 // Removes readonly after mouse release
 // otherwise middle mouse button paste will not be filtered
 void Console::mouseReleaseEvent(QMouseEvent* e)
@@ -523,19 +498,6 @@ void Console::contextMenuEvent(QContextMenuEvent* e)
     setReadOnly(false);
 }
 
-// Prevents write on already interpreted python code
-// by checking the position of the cursor / selection start
-void Console::protectPreviousCodeBlocks_(QTextCursor cursor)
-{
-    // Use selection start line number instead of currentLineNumber
-    // to prevent case where selection ends inside last code block
-    cursor.setPosition(cursor.selectionStart());
-
-    // Set readonly instead of just accepting or ignoring event
-    // because context menu paste cannot be detected
-    setReadOnly(lineNumber_(cursor) < codeBlocks_.back());
-}
-
 void Console::dropEvent(QDropEvent* e)
 {
     QTextCursor cursor = cursorForPosition(e->pos());
@@ -548,6 +510,44 @@ void Console::dropEvent(QDropEvent* e)
     // drop position after the event
     setTextCursor(cursor);
     setReadOnly(false);
+}
+
+void Console::handleMousePresses_(QMouseEvent* e)
+{
+    // On mouse event, we have to check where the cursor would be
+    QTextCursor cursor = cursorForPosition(e->pos());
+
+    // If there is a selection, we should always use the real cursor
+    // Except on middle mouse click to allow copy on Linux
+    QTextCursor realCursor = textCursor();
+
+    if ((realCursor.hasSelection()) &&
+        (e->button() != Qt::MiddleButton))
+    {
+        cursor = realCursor;
+    }
+
+    protectPreviousCodeBlocks_(cursor);
+
+    // Right Mouse Click does not move cursor
+    // We have to move it ourselves to prevent pasting inside previous code blocks 
+    // And when there is no selection so we can still copy selections
+    if (e->button() == Qt::RightButton && !realCursor.hasSelection()) {
+        setTextCursor(cursor);
+    }
+}
+
+// Prevents write on already interpreted python code
+// by checking the position of the cursor / selection start
+void Console::protectPreviousCodeBlocks_(QTextCursor cursor)
+{
+    // Use selection start line number instead of currentLineNumber
+    // to prevent case where selection ends inside last code block
+    cursor.setPosition(cursor.selectionStart());
+
+    // Set readonly instead of just accepting or ignoring event
+    // because context menu paste cannot be detected
+    setReadOnly(lineNumber_(cursor) < codeBlocks_.back());
 }
 
 int Console::currentLineNumber_() const

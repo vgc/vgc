@@ -88,8 +88,8 @@ private:
     QVariant inputMethodQuery(Qt::InputMethodQuery) const;
     void keyPressEvent(QKeyEvent* e) override;
     void mousePressEvent(QMouseEvent* e) override;
-    void mouseReleaseEvent(QMouseEvent* e) override;
     void mouseDoubleClickEvent(QMouseEvent* e) override;
+    void mouseReleaseEvent(QMouseEvent* e) override;
     void contextMenuEvent(QContextMenuEvent* e) override;
     void dropEvent(QDropEvent* e) override;
 
