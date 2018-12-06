@@ -442,6 +442,8 @@ void Console::keyPressEvent(QKeyEvent* e)
         else {
             QPlainTextEdit::keyPressEvent(e);
         }
+
+        endProtectPreviousBlocks_();
     }
     else {
         // Anything which is not an insertion or deletion, such as:
@@ -450,8 +452,6 @@ void Console::keyPressEvent(QKeyEvent* e)
         // - Complex input methods (dead key, Chinese character composition, etc.)
         QPlainTextEdit::keyPressEvent(e);
     }
-
-    endProtectPreviousBlocks_();
 }
 
 void Console::mousePressEvent(QMouseEvent* e)
