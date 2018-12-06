@@ -359,7 +359,7 @@ void Console::keyPressEvent(QKeyEvent* e)
         // Prevent inserting or deleting text before last code block
         // because here are no navigation, we can call it before everything
         QTextCursor cursor = textCursor();
-        protectPreviousCodeBlocks_(cursor);
+        beginProtectPreviousBlocks_(cursor);
 
         // Process last code block on Ctrl + Enter
         if ((e->text() == "\r") &&
@@ -451,18 +451,18 @@ void Console::keyPressEvent(QKeyEvent* e)
         QPlainTextEdit::keyPressEvent(e);
     }
 
-    setReadOnly(false);
+    endProtectPreviousBlocks_();
 }
 
 void Console::mousePressEvent(QMouseEvent* e)
 {
-    handleMousePresses_(e);
+    beginProtectPreviousBlocks_(e);
     QPlainTextEdit::mousePressEvent(e);
 }
 
 void Console::mouseDoubleClickEvent(QMouseEvent* e)
 {
-    handleMousePresses_(e);
+    beginProtectPreviousBlocks_(e);
     QPlainTextEdit::mouseDoubleClickEvent(e);
 }
 
@@ -470,7 +470,7 @@ void Console::mouseDoubleClickEvent(QMouseEvent* e)
 // otherwise middle mouse button paste will not be filtered
 void Console::mouseReleaseEvent(QMouseEvent* e)
 {
-    handleMousePresses_(e);
+    beginProtectPreviousBlocks_(e);
 
     // If we remove selection with left button then we have to set readonly twice
     // to fix the bug where the first character is not interpreted as chinese input
@@ -480,7 +480,7 @@ void Console::mouseReleaseEvent(QMouseEvent* e)
         QPlainTextEdit::mouseReleaseEvent(e);
 
         if (hadSelection && !textCursor().hasSelection()) {
-            setReadOnly(false);
+            endProtectPreviousBlocks_();
         }
     }
     
@@ -488,20 +488,20 @@ void Console::mouseReleaseEvent(QMouseEvent* e)
         QPlainTextEdit::mouseReleaseEvent(e);
     }
 
-    setReadOnly(false);
+    endProtectPreviousBlocks_();
 }
 
 // Removes readonly after opening context menu
 void Console::contextMenuEvent(QContextMenuEvent* e)
 {
     QPlainTextEdit::contextMenuEvent(e);
-    setReadOnly(false);
+    endProtectPreviousBlocks_();
 }
 
 void Console::dropEvent(QDropEvent* e)
 {
     QTextCursor cursor = cursorForPosition(e->pos());
-    protectPreviousCodeBlocks_(cursor);
+    beginProtectPreviousBlocks_(cursor);
 
     QPlainTextEdit::dropEvent(e);
 
@@ -509,10 +509,10 @@ void Console::dropEvent(QDropEvent* e)
     // because of a graphical glitch that still shows
     // drop position after the event
     setTextCursor(cursor);
-    setReadOnly(false);
+    endProtectPreviousBlocks_();
 }
 
-void Console::handleMousePresses_(QMouseEvent* e)
+void Console::beginProtectPreviousBlocks_(QMouseEvent* e)
 {
     // On mouse event, we have to check where the cursor would be
     QTextCursor cursor = cursorForPosition(e->pos());
@@ -527,7 +527,7 @@ void Console::handleMousePresses_(QMouseEvent* e)
         cursor = realCursor;
     }
 
-    protectPreviousCodeBlocks_(cursor);
+    beginProtectPreviousBlocks_(cursor);
 
     // Right Mouse Click does not move cursor
     // We have to move it ourselves to prevent pasting inside previous code blocks 
@@ -539,15 +539,21 @@ void Console::handleMousePresses_(QMouseEvent* e)
 
 // Prevents write on already interpreted python code
 // by checking the position of the cursor / selection start
-void Console::protectPreviousCodeBlocks_(QTextCursor cursor)
+void Console::beginProtectPreviousBlocks_(const QTextCursor& cursor)
 {
     // Use selection start line number instead of currentLineNumber
     // to prevent case where selection ends inside last code block
-    cursor.setPosition(cursor.selectionStart());
+    QTextCursor c2 = cursor;
+    c2.setPosition(cursor.selectionStart());
 
     // Set readonly instead of just accepting or ignoring event
     // because context menu paste cannot be detected
-    setReadOnly(lineNumber_(cursor) < codeBlocks_.back());
+    setReadOnly(lineNumber_(c2) < codeBlocks_.back());
+}
+
+void Console::endProtectPreviousBlocks_()
+{
+    setReadOnly(false);
 }
 
 int Console::currentLineNumber_() const

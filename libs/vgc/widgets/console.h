@@ -93,8 +93,9 @@ private:
     void contextMenuEvent(QContextMenuEvent* e) override;
     void dropEvent(QDropEvent* e) override;
 
-    void handleMousePresses_(QMouseEvent* e);
-    void protectPreviousCodeBlocks_(QTextCursor);
+    void beginProtectPreviousBlocks_(QMouseEvent* e);
+    void beginProtectPreviousBlocks_(const QTextCursor&);
+    void endProtectPreviousBlocks_();
     int currentLineNumber_() const;
 
     // Code blocks. This is a sorted list of 0-indexed
