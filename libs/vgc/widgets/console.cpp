@@ -472,35 +472,13 @@ void Console::handleMousePresses_(QMouseEvent* e)
     QTextCursor cursor = cursorForPosition(e->pos());
 
     // If there is a selection, we should always use the real cursor
+    // Except on middle mouse click to allow copy on Linux
     QTextCursor realCursor = textCursor();
 
-    if (realCursor.hasSelection()) {
-
-        // Except for middle mouse button
-        // Here we have to distinguish between:
-        //  - completely inside previous / current block ( for copy in Linux )
-        //  - partially inside both
-        if (e->button() == Qt::MiddleButton) {
-
-            QTextCursor tempCursor = realCursor;
-
-            // We have to use real cursor selection position because the temp cursor
-            // will be moved with setPosition() and remove the selection
-            tempCursor.setPosition(realCursor.selectionStart());
-            int selectionStart = lineNumber_(tempCursor);
-
-            tempCursor.setPosition(realCursor.selectionEnd());
-            int selectionEnd = lineNumber_(tempCursor);
-
-            // Check if selection is partially inside both blocks
-            if (selectionStart < codeBlocks_.back() != selectionEnd < codeBlocks_.back()) {
-                cursor = realCursor;
-            }
-        }
-
-        else {
-            cursor = realCursor;
-        }
+    if ((realCursor.hasSelection()) &&
+        (e->button() != Qt::MiddleButton))
+    {
+        cursor = realCursor;
     }
 
     protectPreviousCodeBlocks_(cursor);
