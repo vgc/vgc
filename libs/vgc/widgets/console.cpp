@@ -348,16 +348,10 @@ QVariant Console::inputMethodQuery(Qt::InputMethodQuery) const
     return QVariant();
 }
 
-// XXX TODO ignore backspace if beginning of code block
-//
-// XXX TODO ignore deletion if selection or part of selection
-// is out of code block.
-
 void Console::keyPressEvent(QKeyEvent* e)
 {
     if (isTextInsertionOrDeletion_(e)) {
         // Prevent inserting or deleting text before last code block
-        // because here are no navigation, we can call it before everything
         QTextCursor cursor = textCursor();
         beginProtectPreviousBlocks_(cursor);
 
@@ -466,10 +460,10 @@ void Console::mouseDoubleClickEvent(QMouseEvent* e)
     QPlainTextEdit::mouseDoubleClickEvent(e);
 }
 
-// Removes readonly after mouse release
-// otherwise middle mouse button paste will not be filtered
 void Console::mouseReleaseEvent(QMouseEvent* e)
 {
+    // We have to protect here again to prevent chinese dialog
+    // to show up when we are selection from current to previous block
     beginProtectPreviousBlocks_(e);
 
     // If we remove selection with left button then we have to set readonly twice
@@ -488,6 +482,8 @@ void Console::mouseReleaseEvent(QMouseEvent* e)
         QPlainTextEdit::mouseReleaseEvent(e);
     }
 
+    // Removes readonly after mouse release
+    // otherwise middle mouse button paste will not be filtered
     endProtectPreviousBlocks_();
 }
 
@@ -538,16 +534,13 @@ void Console::beginProtectPreviousBlocks_(QMouseEvent* e)
 }
 
 // Prevents write on already interpreted python code
-// by checking the position of the cursor / selection start
 void Console::beginProtectPreviousBlocks_(const QTextCursor& cursor)
 {
-    // Use selection start line number instead of currentLineNumber
-    // to prevent case where selection ends inside last code block
+    // Allow edits if and only if:
+    // - Selection is empty and cursor is in last (= non-interpreted) code block , or
+    // - Selection is non-empty and is fully contained in last code block
     QTextCursor c2 = cursor;
     c2.setPosition(cursor.selectionStart());
-
-    // Set readonly instead of just accepting or ignoring event
-    // because context menu paste cannot be detected
     setReadOnly(lineNumber_(c2) < codeBlocks_.back());
 }
 
