@@ -353,7 +353,7 @@ void Console::keyPressEvent(QKeyEvent* e)
     if (isTextInsertionOrDeletion_(e)) {
         // Prevent inserting or deleting text before last code block
         QTextCursor cursor = textCursor();
-        beginProtectPreviousBlocks_(cursor);
+        beginReadOnlyProtection_(cursor);
 
         // Process last code block on Ctrl + Enter
         if ((e->text() == "\r") &&
@@ -442,6 +442,12 @@ void Console::keyPressEvent(QKeyEvent* e)
         // - Key modifiers
         // - Navigation (arrows, home, end, page up/down, etc.)
         // - Complex input methods (dead key, Chinese character composition, etc.)
+        //
+        // Note: we do not call beginReadOnlyProtection_() in this code
+        // path, because otherwise keyboard navigation would not work in
+        // already-interpreted code blocks (= cursor would not move when
+        // pressing navigation keys).
+        //
         QPlainTextEdit::keyPressEvent(e);
     }
 }
@@ -454,13 +460,13 @@ void Console::keyReleaseEvent(QKeyEvent* e)
 
 void Console::mousePressEvent(QMouseEvent* e)
 {
-    beginProtectPreviousBlocks_(e);
+    beginReadOnlyProtection_(e);
     QPlainTextEdit::mousePressEvent(e);
 }
 
 void Console::mouseDoubleClickEvent(QMouseEvent* e)
 {
-    beginProtectPreviousBlocks_(e);
+    beginReadOnlyProtection_(e);
     QPlainTextEdit::mouseDoubleClickEvent(e);
 }
 
@@ -468,7 +474,7 @@ void Console::mouseReleaseEvent(QMouseEvent* e)
 {
     // We have to protect here again to prevent chinese dialog
     // to show up when we are selection from current to previous block
-    beginProtectPreviousBlocks_(e);
+    beginReadOnlyProtection_(e);
 
     // If we remove selection with left button then we have to set readonly twice
     // to fix the bug where the first character is not interpreted as chinese input
@@ -486,8 +492,6 @@ void Console::mouseReleaseEvent(QMouseEvent* e)
         QPlainTextEdit::mouseReleaseEvent(e);
     }
 
-    // Removes readonly after mouse release
-    // otherwise middle mouse button paste will not be filtered
     endProtectPreviousBlocks_();
 }
 
@@ -501,7 +505,7 @@ void Console::contextMenuEvent(QContextMenuEvent* e)
 void Console::dropEvent(QDropEvent* e)
 {
     QTextCursor cursor = cursorForPosition(e->pos());
-    beginProtectPreviousBlocks_(cursor);
+    beginReadOnlyProtection_(cursor);
 
     QPlainTextEdit::dropEvent(e);
 
@@ -512,7 +516,7 @@ void Console::dropEvent(QDropEvent* e)
     endProtectPreviousBlocks_();
 }
 
-void Console::beginProtectPreviousBlocks_(QMouseEvent* e)
+void Console::beginReadOnlyProtection_(QMouseEvent* e)
 {
     // On mouse event, we have to check where the cursor would be
     QTextCursor cursor = cursorForPosition(e->pos());
@@ -527,7 +531,7 @@ void Console::beginProtectPreviousBlocks_(QMouseEvent* e)
         cursor = realCursor;
     }
 
-    beginProtectPreviousBlocks_(cursor);
+    beginReadOnlyProtection_(cursor);
 
     // Right Mouse Click does not move cursor
     // We have to move it ourselves to prevent pasting inside previous code blocks 
@@ -538,7 +542,7 @@ void Console::beginProtectPreviousBlocks_(QMouseEvent* e)
 }
 
 // Prevents write on already interpreted python code
-void Console::beginProtectPreviousBlocks_(const QTextCursor& cursor)
+void Console::beginReadOnlyProtection_(const QTextCursor& cursor)
 {
     // Allow edits if and only if:
     // - Selection is empty and cursor is in last (= non-interpreted) code block , or

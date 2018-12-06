@@ -94,8 +94,8 @@ private:
     void contextMenuEvent(QContextMenuEvent* e) override;
     void dropEvent(QDropEvent* e) override;
 
-    void beginProtectPreviousBlocks_(QMouseEvent* e);
-    void beginProtectPreviousBlocks_(const QTextCursor&);
+    void beginReadOnlyProtection_(QMouseEvent* e);
+    void beginReadOnlyProtection_(const QTextCursor&);
     void endProtectPreviousBlocks_();
     int currentLineNumber_() const;
 
