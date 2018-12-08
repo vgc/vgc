@@ -87,7 +87,16 @@ private:
     void inputMethodEvent(QInputMethodEvent*);
     QVariant inputMethodQuery(Qt::InputMethodQuery) const;
     void keyPressEvent(QKeyEvent* e) override;
+    void keyReleaseEvent(QKeyEvent* e) override;
+    void mousePressEvent(QMouseEvent* e) override;
+    void mouseDoubleClickEvent(QMouseEvent* e) override;
+    void mouseReleaseEvent(QMouseEvent* e) override;
+    void contextMenuEvent(QContextMenuEvent* e) override;
+    void dropEvent(QDropEvent* e) override;
 
+    void beginReadOnlyProtection_(QMouseEvent* e);
+    void beginReadOnlyProtection_(const QTextCursor&);
+    void endProtectPreviousBlocks_();
     int currentLineNumber_() const;
 
     // Code blocks. This is a sorted list of 0-indexed

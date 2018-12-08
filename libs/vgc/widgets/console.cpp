@@ -348,27 +348,16 @@ QVariant Console::inputMethodQuery(Qt::InputMethodQuery) const
     return QVariant();
 }
 
-// XXX TODO ignore backspace if beginning of code block
-//
-// XXX TODO ignore deletion if selection or part of selection
-// is out of code block.
-
 void Console::keyPressEvent(QKeyEvent* e)
 {
     if (isTextInsertionOrDeletion_(e)) {
-
-        QTextCursor cursor = textCursor();
-
         // Prevent inserting or deleting text before last code block
-        // XXX This seems to also prevent copying via Ctrl+C, which
-        // generates e->text() == "\u0003".
-        if (currentLineNumber_() < codeBlocks_.back()) {
-            e->accept();
-        }
+        QTextCursor cursor = textCursor();
+        beginReadOnlyProtection_(cursor);
 
         // Process last code block on Ctrl + Enter
-        else if ((e->text() == "\r") &&
-                 (e->modifiers() & Qt::CTRL))
+        if ((e->text() == "\r") &&
+            (e->modifiers() & Qt::CTRL))
         {
             // Move cursor's anchor+position to beginning of code block
             cursor.movePosition(QTextCursor::StartOfLine);
@@ -456,8 +445,119 @@ void Console::keyPressEvent(QKeyEvent* e)
         // - Key modifiers
         // - Navigation (arrows, home, end, page up/down, etc.)
         // - Complex input methods (dead key, Chinese character composition, etc.)
+        //
+        // Note: we do not call beginReadOnlyProtection_() in this code
+        // path, because otherwise keyboard navigation would not work in
+        // already-interpreted code blocks (= cursor would not move when
+        // pressing navigation keys).
+        //
         QPlainTextEdit::keyPressEvent(e);
     }
+}
+
+void Console::keyReleaseEvent(QKeyEvent* e)
+{
+    QPlainTextEdit::keyReleaseEvent(e);
+    endProtectPreviousBlocks_();
+}
+
+void Console::mousePressEvent(QMouseEvent* e)
+{
+    beginReadOnlyProtection_(e);
+    QPlainTextEdit::mousePressEvent(e);
+}
+
+void Console::mouseDoubleClickEvent(QMouseEvent* e)
+{
+    beginReadOnlyProtection_(e);
+    QPlainTextEdit::mouseDoubleClickEvent(e);
+}
+
+void Console::mouseReleaseEvent(QMouseEvent* e)
+{
+    // We have to protect here again to prevent chinese dialog
+    // to show up when we are selection from current to previous block
+    beginReadOnlyProtection_(e);
+
+    // If we remove selection with left button then we have to set readonly twice
+    // to fix the bug where the first character is not interpreted as chinese input
+    // see PR #46 - first code comment
+    if (e->button() == Qt::LeftButton) {
+        bool hadSelection = textCursor().hasSelection();
+        QPlainTextEdit::mouseReleaseEvent(e);
+
+        if (hadSelection && !textCursor().hasSelection()) {
+            endProtectPreviousBlocks_();
+        }
+    }
+    
+    else {
+        QPlainTextEdit::mouseReleaseEvent(e);
+    }
+
+    endProtectPreviousBlocks_();
+}
+
+// Removes readonly after opening context menu
+void Console::contextMenuEvent(QContextMenuEvent* e)
+{
+    QPlainTextEdit::contextMenuEvent(e);
+    endProtectPreviousBlocks_();
+}
+
+void Console::dropEvent(QDropEvent* e)
+{
+    QTextCursor cursor = cursorForPosition(e->pos());
+    beginReadOnlyProtection_(cursor);
+
+    QPlainTextEdit::dropEvent(e);
+
+    // We have to move cursor to drop position
+    // because of a graphical glitch that still shows
+    // drop position after the event
+    setTextCursor(cursor);
+    endProtectPreviousBlocks_();
+}
+
+void Console::beginReadOnlyProtection_(QMouseEvent* e)
+{
+    // On mouse event, we have to check where the cursor would be
+    QTextCursor cursor = cursorForPosition(e->pos());
+
+    // If there is a selection, we should always use the real cursor
+    // Except on middle mouse click to allow copy on Linux
+    QTextCursor realCursor = textCursor();
+
+    if ((realCursor.hasSelection()) &&
+        (e->button() != Qt::MiddleButton))
+    {
+        cursor = realCursor;
+    }
+
+    beginReadOnlyProtection_(cursor);
+
+    // Right Mouse Click does not move cursor
+    // We have to move it ourselves to prevent pasting inside previous code blocks 
+    // And when there is no selection so we can still copy selections
+    if (e->button() == Qt::RightButton && !realCursor.hasSelection()) {
+        setTextCursor(cursor);
+    }
+}
+
+// Prevents write on already interpreted python code
+void Console::beginReadOnlyProtection_(const QTextCursor& cursor)
+{
+    // Allow edits if and only if:
+    // - Selection is empty and cursor is in last (= non-interpreted) code block , or
+    // - Selection is non-empty and is fully contained in last code block
+    QTextCursor c2 = cursor;
+    c2.setPosition(cursor.selectionStart());
+    setReadOnly(lineNumber_(c2) < codeBlocks_.back());
+}
+
+void Console::endProtectPreviousBlocks_()
+{
+    setReadOnly(false);
 }
 
 int Console::currentLineNumber_() const
