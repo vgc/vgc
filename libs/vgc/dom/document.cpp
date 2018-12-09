@@ -877,7 +877,7 @@ void Document::save(const std::string& filePath,
         throw FileError("Cannot save file " + filePath + ": " +  std::strerror(errno));
     }
 
-    out << xmlDeclaration_ << std::endl;    
+    out << xmlDeclaration_ << std::endl;
     writeChildren(out, style, 0, this);
 }
 
