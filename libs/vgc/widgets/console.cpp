@@ -440,6 +440,25 @@ void Console::keyPressEvent(QKeyEvent* e)
             QPlainTextEdit::keyPressEvent(e);
         }
     }
+
+    else if (e->key() == Qt::Key_Insert) {
+
+        if (overwriteMode()) {
+            setOverwriteMode(false);
+            setCursorWidth(1);
+        }
+        
+        else {
+            setOverwriteMode(true);
+
+            // Increase cursor width on overwrite mode
+            // because at the end of line it would still
+            // show a normal vertical line cursor
+            setCursorWidth(9);
+        }
+
+    }
+
     else {
         // Anything which is not an insertion or deletion, such as:
         // - Key modifiers
