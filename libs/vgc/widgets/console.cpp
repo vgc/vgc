@@ -441,22 +441,12 @@ void Console::keyPressEvent(QKeyEvent* e)
         }
     }
 
-    else if (e->key() == Qt::Key_Insert) {
-
-        if (overwriteMode()) {
-            setOverwriteMode(false);
-            setCursorWidth(1);
-        }
-        
-        else {
-            setOverwriteMode(true);
-
-            // Increase cursor width on overwrite mode
-            // because at the end of line it would still
-            // show a normal vertical line cursor
-            setCursorWidth(9);
-        }
-
+    // Toggle overwrite mode on 'insert' key without any modifiers
+    else if ((e->key() == Qt::Key_Insert) &&
+             (e->modifiers() == Qt::NoModifier))
+    {
+        setOverwriteMode(!overwriteMode());
+        e->accept();
     }
 
     else {
