@@ -277,25 +277,58 @@ void Console::paintEvent(QPaintEvent* event)
                                    && cursorPosition < blockPosition + blockLength;
 
             // Determine whether we should draw the cursor in the current loop
-            // iteration, and whether to draw it as selection or as line
+            // iteration, and whether to draw it as block or as line
             bool drawCursorNow = drawCursor && isCursorInBlock;
-            bool drawCursorAsSelection = drawCursorNow
-                                         && overwriteMode()
-                                         && cursorPosition < blockPosition + blockLength - 1;
-            bool drawCursorAsLine = drawCursorNow && !drawCursorAsSelection;
+            bool drawCursorAsBlock = drawCursorNow && overwriteMode();
+            bool drawCursorAsLine = drawCursorNow && !drawCursorAsBlock;
 
-            // Add cursor as selection
-            if (drawCursorAsSelection) {
-                QTextLayout::FormatRange formatRange;
-                formatRange.start = cursorPosition - blockPosition;
-                formatRange.length = 1;
-                formatRange.format.setForeground(palette().base());
-                formatRange.format.setBackground(palette().text());
-                selections.append(formatRange);
+            QTextLayout* layout = block.layout();
+
+            if (drawCursorAsBlock) {
+                int relativePos = cursorPosition - blockPosition;
+
+                // When cursor is not at the line end and the selected character is not a tab
+                // then we can use selections to display the block cursor
+                if ((cursorPosition < blockPosition + blockLength - 1) &&
+                    (document()->characterAt(cursorPosition) != QLatin1Char('\t')))
+                {
+                    QTextLayout::FormatRange formatRange;
+                    formatRange.start = relativePos;
+                    formatRange.length = 1;
+                    formatRange.format.setForeground(palette().base());
+                    formatRange.format.setBackground(palette().text());
+                    selections.append(formatRange);
+                }
+
+                // Cursor is at line end or character is a tab
+                // Selection with fore- and background is not needed here
+                // Because there are no characters below the cursor
+                else {
+                    QTextLine line = layout->lineForTextPosition(relativePos);
+                    qreal currentPosX = line.cursorToX(relativePos);
+                    qreal charWidth = layout->font().pointSizeF();
+
+                    // If character is a tab, we move block to the end of the tab
+                    qreal nextCharWidth = line.cursorToX(relativePos + 1) - currentPosX;
+                    if (nextCharWidth != 0) {
+
+                        // If tab is smaller than a normal character width
+                        // Then we do not move the cursor and use the tab width
+                        if (charWidth < nextCharWidth) {
+                            currentPosX += nextCharWidth - charWidth;
+                        }
+                        charWidth = qMin(charWidth, nextCharWidth);
+                    }
+
+                    QRectF lineRect = line.rect();
+                    lineRect.moveTop(lineRect.top() + blockRect.top());
+                    lineRect.moveLeft(blockRect.left() + currentPosX);
+                    lineRect.setWidth(charWidth);
+                    painter.fillRect(lineRect, palette().text());
+                }
             }
 
             // Paint selection + text
-            QTextLayout* layout = block.layout();
             if (block.isVisible() && blockBottom >= eventTop) {
                 layout->draw(&painter, offset, selections, eventRect);
             }
