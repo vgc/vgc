@@ -287,11 +287,9 @@ void Console::paintEvent(QPaintEvent* event)
             if (drawCursorAsBlock) {
                 int relativePos = cursorPosition - blockPosition;
 
-                // When cursor is not at the line end and the selected character is not a tab
+                // When cursor is not at the line end
                 // then we can use selections to display the block cursor
-                if ((cursorPosition < blockPosition + blockLength - 1) &&
-                    (document()->characterAt(cursorPosition) != QLatin1Char('\t')))
-                {
+                if (cursorPosition < blockPosition + blockLength - 1) {
                     QTextLayout::FormatRange formatRange;
                     formatRange.start = relativePos;
                     formatRange.length = 1;
@@ -300,30 +298,16 @@ void Console::paintEvent(QPaintEvent* event)
                     selections.append(formatRange);
                 }
 
-                // Cursor is at line end or character is a tab
+                // Cursor is at line end, we have to draw cursor block manually
                 // Selection with fore- and background is not needed here
                 // Because there are no characters below the cursor
                 else {
                     QTextLine line = layout->lineForTextPosition(relativePos);
-                    qreal currentPosX = line.cursorToX(relativePos);
-                    qreal charWidth = layout->font().pointSizeF();
-
-                    // If character is a tab, we move block to the end of the tab
-                    qreal nextCharWidth = line.cursorToX(relativePos + 1) - currentPosX;
-                    if (nextCharWidth != 0) {
-
-                        // If tab is smaller than a normal character width
-                        // Then we do not move the cursor and use the tab width
-                        if (charWidth < nextCharWidth) {
-                            currentPosX += nextCharWidth - charWidth;
-                        }
-                        charWidth = qMin(charWidth, nextCharWidth);
-                    }
 
                     QRectF lineRect = line.rect();
                     lineRect.moveTop(lineRect.top() + blockRect.top());
-                    lineRect.moveLeft(blockRect.left() + currentPosX);
-                    lineRect.setWidth(charWidth);
+                    lineRect.moveLeft(blockRect.left() + line.cursorToX(relativePos));
+                    lineRect.setWidth(layout->font().pointSizeF());
                     painter.fillRect(lineRect, palette().text());
                 }
             }
