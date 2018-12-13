@@ -17,7 +17,7 @@
 #include <vgc/widgets/font.h>
 
 #include <QFontDatabase>
-#include <vgc/core/resources.h>
+#include <vgc/core/paths.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {

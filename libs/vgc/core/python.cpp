@@ -14,20 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
 #include <vgc/core/python.h>
+
+#include <iostream>
 #include <Python.h>
 #include <pybind11/eval.h>
 
+#include <vgc/core/paths.h>
+
 namespace vgc {
 namespace core {
-
-std::string pythonPath()
-{
-    // This macro is defined by the build system.
-    // See vgc/core/CMakeFiles.txt
-    return VGC_CORE_PYTHON_PATH_;
-}
 
 PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_()
 {

@@ -26,10 +26,10 @@ vgc_add_library(core
         math.h
         object.h
         os.h
+        paths.h
         performancelog.h
         python.h
         random.h
-        resources.h
         signal.h
         stopwatch.h
         streamutil.h
@@ -49,10 +49,10 @@ vgc_add_library(core
         mat4d.cpp
         math.cpp
         object.cpp
+        paths.cpp
         performancelog.cpp
         python.cpp
         random.cpp
-        resources.cpp
         signal.cpp
         stopwatch.cpp
         streamutil.cpp
@@ -62,8 +62,6 @@ vgc_add_library(core
         vec2darray.cpp
 
     COMPILE_DEFINITIONS
-        -DVGC_CORE_PYTHON_PATH_="${VGC_PYTHON_OUTPUT_DIRECTORY}"
-        -DVGC_CORE_RESOURCES_PATH_="${VGC_RESOURCES_OUTPUT_DIRECTORY}"
 )
 
 add_subdirectory(wraps)

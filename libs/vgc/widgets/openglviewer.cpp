@@ -22,7 +22,7 @@
 #include <QMouseEvent>
 
 #include <vgc/core/assert.h>
-#include <vgc/core/resources.h>
+#include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/widgets/qtutil.h>

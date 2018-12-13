@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <QApplication>
+#include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
 #include <vgc/widgets/font.h>
@@ -38,6 +39,11 @@ int main(int argc, char* argv[])
 
     // Creates the QApplication
     QApplication application(argc, argv);
+
+    // Set base path by removing "/bin" from the application dir path
+    QString binPath = QCoreApplication::applicationDirPath();
+    QString basePath = binPath.chopped(4);
+    vgc::core::setBasePath(basePath.toStdString());
 
     // Create the python interpreter
     vgc::core::PythonInterpreter pythonInterpreter;

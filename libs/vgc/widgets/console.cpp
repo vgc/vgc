@@ -23,7 +23,6 @@
 #include <vgc/core/algorithm.h>
 #include <vgc/core/math.h>
 #include <vgc/core/python.h>
-#include <vgc/core/resources.h>
 #include <vgc/widgets/qtutil.h>
 
 // Notes:
