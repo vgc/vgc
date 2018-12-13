@@ -481,11 +481,11 @@ void Console::keyPressEvent(QKeyEvent* e)
     }
 
     // Manually call update to repaint the whole text edit. Otherwise, rendering
-    // artefacts can occur when a too small area of the text-edit is repainted.
+    // artefacts can occur when a too small area of the text edit is repainted.
     //
     // See: https://github.com/vgc/vgc/issues/55
     //
-    // We could be less consertive and only call update in the known cases causing
+    // We could be less conservative and only call update in the known cases causing
     // artefacts (e.g., switching to non-overwrite mode), but we decided to be on
     // the safe side, as there is really no reasons to save a few ms here, if any.
     //
