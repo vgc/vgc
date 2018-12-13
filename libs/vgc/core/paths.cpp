@@ -14,16 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/resources.h>
+#include <vgc/core/paths.h>
 
 namespace vgc {
 namespace core {
 
+namespace
+{
+std::string basePath_;
+} // end namespace
+
+void setBasePath(const std::string& path)
+{
+    basePath_ = path;
+}
+
+std::string basePath()
+{
+    return basePath_;
+}
+
+std::string pythonPath()
+{
+    // XXX use generic code to concatenate filepath, e.g.:
+    //       core/fileutils.h::concatenateFilePath()
+    //     or abstract this further with a core::Dir class similar to QDir.
+    return basePath() + "/python";
+}
+
 std::string resourcesPath()
 {
-    // This macro is defined by the build system.
-    // See vgc/core/CMakeFiles.txt
-    return VGC_CORE_RESOURCES_PATH_;
+    // XXX use generic code to concatenate filepath, e.g.:
+    //       core/fileutils.h::concatenateFilePath()
+    //     or abstract this further with a core::Dir class similar to QDir.
+    return basePath() + "/resources";
 }
 
 std::string resourcePath(const std::string& name)

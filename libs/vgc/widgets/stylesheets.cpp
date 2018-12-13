@@ -18,8 +18,8 @@
 
 #include <QApplication>
 #include <vgc/core/algorithm.h>
-#include <vgc/core/resources.h>
 #include <vgc/core/io.h>
+#include <vgc/core/paths.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
