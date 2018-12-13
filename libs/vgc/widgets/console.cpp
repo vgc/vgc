@@ -277,25 +277,42 @@ void Console::paintEvent(QPaintEvent* event)
                                    && cursorPosition < blockPosition + blockLength;
 
             // Determine whether we should draw the cursor in the current loop
-            // iteration, and whether to draw it as selection or as line
+            // iteration, and whether to draw it as block or as line
             bool drawCursorNow = drawCursor && isCursorInBlock;
-            bool drawCursorAsSelection = drawCursorNow
-                                         && overwriteMode()
-                                         && cursorPosition < blockPosition + blockLength - 1;
-            bool drawCursorAsLine = drawCursorNow && !drawCursorAsSelection;
+            bool drawCursorAsBlock = drawCursorNow && overwriteMode();
+            bool drawCursorAsLine = drawCursorNow && !drawCursorAsBlock;
 
-            // Add cursor as selection
-            if (drawCursorAsSelection) {
-                QTextLayout::FormatRange formatRange;
-                formatRange.start = cursorPosition - blockPosition;
-                formatRange.length = 1;
-                formatRange.format.setForeground(palette().base());
-                formatRange.format.setBackground(palette().text());
-                selections.append(formatRange);
+            QTextLayout* layout = block.layout();
+
+            if (drawCursorAsBlock) {
+                int relativePos = cursorPosition - blockPosition;
+
+                // When cursor is not at the line end
+                // then we can use selections to display the block cursor
+                if (cursorPosition < blockPosition + blockLength - 1) {
+                    QTextLayout::FormatRange formatRange;
+                    formatRange.start = relativePos;
+                    formatRange.length = 1;
+                    formatRange.format.setForeground(palette().base());
+                    formatRange.format.setBackground(palette().text());
+                    selections.append(formatRange);
+                }
+
+                // Cursor is at line end, we have to draw cursor block manually
+                // Selection with fore- and background is not needed here
+                // Because there are no characters below the cursor
+                else {
+                    QTextLine line = layout->lineForTextPosition(relativePos);
+
+                    QRectF lineRect = line.rect();
+                    lineRect.moveTop(lineRect.top() + blockRect.top());
+                    lineRect.moveLeft(blockRect.left() + line.cursorToX(relativePos));
+                    lineRect.setWidth(layout->font().pointSizeF());
+                    painter.fillRect(lineRect, palette().text());
+                }
             }
 
             // Paint selection + text
-            QTextLayout* layout = block.layout();
             if (block.isVisible() && blockBottom >= eventTop) {
                 layout->draw(&painter, offset, selections, eventRect);
             }
@@ -440,6 +457,15 @@ void Console::keyPressEvent(QKeyEvent* e)
             QPlainTextEdit::keyPressEvent(e);
         }
     }
+
+    // Toggle overwrite mode on 'insert' key without any modifiers
+    else if ((e->key() == Qt::Key_Insert) &&
+             (e->modifiers() == Qt::NoModifier))
+    {
+        setOverwriteMode(!overwriteMode());
+        e->accept();
+    }
+
     else {
         // Anything which is not an insertion or deletion, such as:
         // - Key modifiers
