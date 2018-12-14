@@ -55,6 +55,17 @@ set(CMAKE_CXX_STANDARD 11)
 # Therefore, we do not set CMAKE_INCLUDE_CURRENT_DIR to ON, forcing libraries
 # to use absolute paths, which is better practice anyway.
 #
+# Here are useful cmake variables that can be queried (with example value):
+#   QT_MOC_EXECUTABLE=/home/user/Qt/5.12.0/gcc_64/bin/moc
+#   QT_QMAKE_EXECUTABLE=/home/user/Qt/5.12.0/gcc_64/bin/qmake
+#   Qt5_DIR=/home/user/Qt/5.12.0/gcc_64/lib/cmake/Qt5
+#   Qt5_VERSION=5.12.0
+#   Qt5_VERSION_COUNT=3
+#   Qt5_VERSION_MAJOR=5
+#   Qt5_VERSION_MINOR=12
+#   Qt5_VERSION_PATCH=0
+#   Qt5_VERSION_TWEAK=0
+#
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
@@ -86,3 +97,14 @@ include_directories("${CMAKE_CURRENT_LIST_DIR}/libs")
 # Add internal libs and apps
 add_subdirectory(libs)
 add_subdirectory(apps)
+
+# Run "make linuxdeploy" to create an AppImage
+add_custom_target(linuxdeploy
+    COMMAND
+        "${CMAKE_CURRENT_LIST_DIR}/tools/linuxdeploy.sh"
+        "${CMAKE_BINARY_DIR}"
+        "${CMAKE_CURRENT_LIST_DIR}"
+        "${QT_QMAKE_EXECUTABLE}"
+    WORKING_DIRECTORY
+        "${CMAKE_BINARY_DIR}"
+)

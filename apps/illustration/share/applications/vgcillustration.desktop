@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=VGC Illustration
+Comment=Vector-Based Image Editor
+Exec=vgcillustration
+Icon=vgcillustration
+Terminal=false
+Type=Application
+Categories=Graphics;
