@@ -76,9 +76,6 @@ std::string toString(double x)
     // the desired behavior in less than 10 lines of code. In the future, we'd
     // probably want to implement our own double to string algorithm to make it
     // faster and provide user preferences.
-
-    // XXX check that the above is always using '.' as decimal point even when
-    // the locale is for instance fr_FR where ',' is commonly used.
 }
 
 std::string toString(const void* x)

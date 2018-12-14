@@ -17,6 +17,7 @@
 # limitations under the License.
 
 import unittest
+import locale
 
 from vgc.core import Vec2d, toVec2d
 
@@ -153,6 +154,11 @@ class TestVec2d(unittest.TestCase):
     def testToVec2d(self):
         v = toVec2d("(1, 2.5)")
         self.assertTrue(v == Vec2d(1, 2.5))
+
+    def testToString(self):
+        locale.setlocale(locale.LC_ALL, 'fr_FR.UTF8')
+        v = Vec2d(1, 2.5)
+        self.assertEqual(str(v), "(1, 2.5)")
 
 if __name__ == '__main__':
     unittest.main()

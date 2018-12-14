@@ -66,10 +66,7 @@ void wrap_vec2d(py::module& m)
         .def("orthogonalize", &Vec2d::orthogonalize)
         .def("orthogonalized", &Vec2d::orthogonalized)
 
-        .def("__repr__", [](const Vec2d& v) {
-            return "("
-                   + std::to_string(v[0]) + ", "
-                   + std::to_string(v[1]) + ")"; })
+        .def("__repr__", [](const Vec2d& v) { return toString(v); })
     ;
 
     m.def("dot", &vgc::core::dot);
