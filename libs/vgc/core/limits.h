@@ -32,7 +32,6 @@ namespace core {
 
 /// Returns the maximum value that an 'int' can hold.
 ///
-VGC_CORE_API
 inline constexpr int maxInt() {
     return std::numeric_limits<int>::max();
 }
