@@ -64,6 +64,7 @@ function(vgc_add_library LIB_NAME)
     # Add custom target 'vgc_lib_resources_mylib' that copy all resource files
     # from <src>/libs/vgc/mylib to <bin>/resources/mylib
     set(LIB_RESOURCES_OUTPUT_DIRECTORY ${VGC_RESOURCES_OUTPUT_DIRECTORY}/${LIB_NAME})
+    file(REMOVE_RECURSE ${LIB_RESOURCES_OUTPUT_DIRECTORY})
     file(MAKE_DIRECTORY ${LIB_RESOURCES_OUTPUT_DIRECTORY})
     set(OUTPUT_RESOURCE_PATHS "")
     foreach(RELATIVE_RESOURCE_PATH ${ARG_RESOURCE_FILES})
