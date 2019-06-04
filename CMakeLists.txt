@@ -41,7 +41,10 @@ endif()
 # Use C++11
 set(CMAKE_CXX_STANDARD 11)
 
-# Find, configure, and include Qt.
+# Find, configure, and include Qt. The recommended way to make sure that the
+# desired version of Qt is found is to pass -DQt to cmake, e.g.:
+#
+#   cmake -DQt="C:/Qt5.12.3/5.12.3/msvc2017_64"
 #
 # Note: The Qt documentation also recommends to set the following CMake
 # variable:
@@ -66,6 +69,9 @@ set(CMAKE_CXX_STANDARD 11)
 #   Qt5_VERSION_PATCH=0
 #   Qt5_VERSION_TWEAK=0
 #
+if (Qt)
+    set(Qt5_DIR "${Qt}/lib/cmake/Qt5")
+endif()
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
@@ -98,13 +104,57 @@ include_directories("${CMAKE_CURRENT_LIST_DIR}/libs")
 add_subdirectory(libs)
 add_subdirectory(apps)
 
-# Run "make linuxdeploy" to create an AppImage
-add_custom_target(linuxdeploy
-    COMMAND
-        "${CMAKE_CURRENT_LIST_DIR}/tools/linuxdeploy.sh"
-        "${CMAKE_BINARY_DIR}"
-        "${CMAKE_CURRENT_LIST_DIR}"
-        "${QT_QMAKE_EXECUTABLE}"
-    WORKING_DIRECTORY
-        "${CMAKE_BINARY_DIR}"
-)
+# Add deploy target
+#
+if(WIN32)
+    # Example usage:
+    #
+    #   git clone https://github.com/vgc/vgc.git
+    #   mkdir vgc-build
+    #   cd vgc-build
+    #   cmake ../vgc
+    #       -G "Visual Studio 15 2017 Win64"
+    #       -DQt="C:/Qt/5.12.3/msvc2017_64"
+    #       -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
+    #   msbuild vgc.sln /p:Configuration=Release
+    #   msbuild deploy.vcxproj /p:Configuration=Release
+    #
+    # Output: vgc-build/vgcillustration.msi
+    #
+    set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windeploy.py)
+    set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/windeploy.py)
+    set(SOURCE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
+    set(TARGET_ICON ${CMAKE_BINARY_DIR}/vgcillustration.ico)
+    set(TARGET_MSI ${CMAKE_BINARY_DIR}/vgcillustration.msi)
+    add_custom_command(
+        OUTPUT ${TARGET_MSI}
+        DEPENDS
+            ${SOURCE_DEPLOY_SCRIPT}
+            ${SOURCE_ICON}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
+        COMMAND ${PYTHON_EXECUTABLE} -c
+            "import windeploy; windeploy.deploy('${WiX}', '${Qt}')"
+    )
+    add_custom_target(deploy DEPENDS ${TARGET_MSI})
+else()
+    # Example usage:
+    #
+    #   git clone https://github.com/vgc/vgc.git
+    #   mkdir vgc-build
+    #   cd vgc-build
+    #   cmake ../vgc
+    #       -DQt="~/Qt/5.12.3/gcc_64"
+    #   make
+    #   make deploy
+    #
+    add_custom_target(deploy
+        COMMAND
+            "${CMAKE_CURRENT_LIST_DIR}/tools/linuxdeploy.sh"
+            "${CMAKE_BINARY_DIR}"
+            "${CMAKE_CURRENT_LIST_DIR}"
+            "${QT_QMAKE_EXECUTABLE}"
+        WORKING_DIRECTORY
+            "${CMAKE_BINARY_DIR}"
+    )
+endif()

@@ -64,8 +64,8 @@ function(vgc_add_library LIB_NAME)
     # Add custom target 'vgc_lib_resources_mylib' that copy all resource files
     # from <src>/libs/vgc/mylib to <bin>/resources/mylib
     set(LIB_RESOURCES_OUTPUT_DIRECTORY ${VGC_RESOURCES_OUTPUT_DIRECTORY}/${LIB_NAME})
-    file(REMOVE_RECURSE ${LIB_RESOURCES_OUTPUT_DIRECTORY})
-    file(MAKE_DIRECTORY ${LIB_RESOURCES_OUTPUT_DIRECTORY})
+    #file(REMOVE_RECURSE ${LIB_RESOURCES_OUTPUT_DIRECTORY})
+    #file(MAKE_DIRECTORY ${LIB_RESOURCES_OUTPUT_DIRECTORY})
     set(OUTPUT_RESOURCE_PATHS "")
     foreach(RELATIVE_RESOURCE_PATH ${ARG_RESOURCE_FILES})
         set(INPUT_RESOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${RELATIVE_RESOURCE_PATH})
@@ -82,6 +82,16 @@ function(vgc_add_library LIB_NAME)
     endforeach()
     vgc_prepend_(RESOURCES_TARGET_NAME "vgc_lib_resources_" ${LIB_NAME})
     add_custom_target(${RESOURCES_TARGET_NAME} ALL DEPENDS ${OUTPUT_RESOURCE_PATHS})
+
+    # Write the list of all current resources to a file. We need this because
+    # some resources in the build directory may be left-overs from a previous
+    # build, but have been deleted in the source directory. We could generalize
+    # this method to most of our cmake files, for example if we delete a library
+    # such as libs/vgc/foo/ (or simply remove it from the CMakeLists), then we
+    # shouldn't deploy libs/vgc/foo/Release/vgcfoo.dll even though the file
+    # exist.
+    #
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/resources.txt "${ARG_RESOURCE_FILES}")
 
     # Add library using target name "vgc_lib_mylib"
     vgc_prepend_(TARGET_NAME "vgc_lib_" ${LIB_NAME})
