@@ -5,13 +5,13 @@ import uuid
 import subprocess
 import hashlib
 import os
+import pathlib
 
-# Helper function to turn any string into a valid Id by "escaping" forbidden
-# characters. Indeed, identifiers may only contain ASCII characters A-Z, a-z,
-# digits, underscores, or periods. Every identifier must begin with either a
-# letter or an underscore. Identifiers must be 72 characters or less.
-#
-# Note: icon Ids cannot be more than than 57 characters long.
+# Converts any string identifier into a valid WiX Id, that is:
+# - only contain ASCII characters A-Z, a-z, digits, underscores, or period,
+# - begin with either a letter or an underscore
+# - is 72 characters or less
+# - is 57 characters or less if it is an Icon Id.
 #
 def encodeId(s):
     return "_" + hashlib.md5(s.encode('utf-8')).hexdigest()
@@ -55,10 +55,11 @@ class Wix:
     # - wix.startupMenuDirectory:  Windows' startup menu
     # - wix.desktopDirectory:      Windows' desktop
     #
-    def __init__(self, name, version, manufacturer):
+    def __init__(self, name, version, manufacturer, sourceDir):
         self.name = name
         self.version = version
         self.manufacturer = manufacturer
+        self.sourceDir = sourceDir
 
         # Create XML document.
         #
@@ -264,26 +265,31 @@ class WixElement:
             ("Id", encodeId("File" + componentId)),
             ("Name", name),
             ("DiskId", "1"),
-            ("Source", "SourceDir\\" + sourcePath),
+            ("Source", self.wix.sourceDir + sourcePath),
             ("KeyPath", "yes")])
         feature.createChild("ComponentRef", [("Id", componentId)])
         return file
 
 # Generates an MSI file from the build
 #
-def deploy(wixDir, qtDir):
+def deploy(config, wixDir, qtDir):
+
+    # Create deploy directory
+    deployDir = config + "/deploy"
+    pathlib.Path(deployDir).mkdir(parents = True, exist_ok = True)
 
     # general configuration
     productName = "VGC Illustration Daily Beta"
     version = "19.5.27.1"
     manufacturer = "VGC Software"
-    wix = Wix(productName, version, manufacturer)
+    sourceDir = "..\\..\\"
+    wix = Wix(productName, version, manufacturer, sourceDir)
     feature = wix.createFeature("Complete")
 
     # Add executable
     binDirectory = wix.installDirectory.createDirectory("bin")
     exeFilename = "vgcillustration.exe"
-    exeSourcePath = "bin\\Release\\" + exeFilename
+    exeSourcePath = config + "\\bin\\" + exeFilename
     exeFile = binDirectory.createFile(exeSourcePath, exeFilename, feature)
 
     # Add shortcuts to executable
@@ -298,7 +304,7 @@ def deploy(wixDir, qtDir):
         libPath = libsDir + '/' + libName
         if os.path.isdir(libPath) and libName != "CMakeFiles":
             dllFilename = "vgc" + libName + ".dll"
-            sourcePath = libPath.replace("/", "\\") + "\\Release\\" + dllFilename
+            sourcePath = config + "\\bin\\" + dllFilename
             binDirectory.createFile(sourcePath, dllFilename, feature)
 
     # Add resources
@@ -332,7 +338,6 @@ def deploy(wixDir, qtDir):
                     resourceDir.createFile(sourcePath, filename, feature)
 
     # Run windeployqt.exe to generate Qt dependencies
-    print("qtDir = " + qtDir)
     subprocess.run(qtDir + "/bin/windeployqt.exe " + exeSourcePath)
 
     # TODO: install in 'Program Files' instead of in 'Program Files (x86)'
@@ -343,14 +348,15 @@ def deploy(wixDir, qtDir):
 
     # Write to file
     basename = "vgcillustration"
-    wxsFilename = basename + ".wxs"
-    wix.write(wxsFilename)
+    wxsFilepath = deployDir + "/" + basename + ".wxs"
+    wix.write(wxsFilepath)
 
     # Compile into an MSI with WiX
     #
     # - Why -sice:ICE07? Because otherwise I have warnings regarding font files, same as:
     #   https://stackoverflow.com/questions/13052258/installing-a-font-with-wix-not-to-the-local-font-folder
     #
-    wixobjFilename = basename + ".wixobj"
-    subprocess.run(wixDir + "/bin/candle.exe " + wxsFilename)
-    subprocess.run(wixDir + "/bin/light.exe -sice:ICE07 -sice:ICE60 " + wixobjFilename)
+    wixobjFilepath = deployDir + "/" + basename + ".wixobj"
+    msiFilepath = deployDir + "/" + basename + ".msi"
+    subprocess.run(wixDir + "/bin/candle.exe " + wxsFilepath + " -out " + wixobjFilepath)
+    subprocess.run(wixDir + "/bin/light.exe -sice:ICE07 -sice:ICE60 " + wixobjFilepath + " -out " + msiFilepath)

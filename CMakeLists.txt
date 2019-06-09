@@ -12,7 +12,7 @@ enable_testing()
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
 
 # Import our helper functions defined in cmake/VgcTools.cmake
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 include(VgcTools)
 
 # Configure VGC
@@ -70,7 +70,7 @@ set(CMAKE_CXX_STANDARD 11)
 #   Qt5_VERSION_TWEAK=0
 #
 if (Qt)
-    set(Qt5_DIR "${Qt}/lib/cmake/Qt5")
+    set(Qt5_DIR ${Qt}/lib/cmake/Qt5)
 endif()
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
@@ -91,14 +91,14 @@ include_directories(${Qt5Widgets_INCLUDE_DIRS})
 add_subdirectory(third)
 
 # Include Python
-include_directories("${PYTHON_INCLUDE_DIRS}")
+include_directories(${PYTHON_INCLUDE_DIRS})
 
 # Include third-party shipped libs
-include_directories("${CMAKE_CURRENT_LIST_DIR}/third/Eigen/include")
-include_directories("${CMAKE_CURRENT_LIST_DIR}/third/pybind11/include")
+include_directories(${CMAKE_CURRENT_LIST_DIR}/third/Eigen/include)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/third/pybind11/include)
 
 # Include internal libs
-include_directories("${CMAKE_CURRENT_LIST_DIR}/libs")
+include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
 
 # Add internal libs and apps
 add_subdirectory(libs)
@@ -107,21 +107,35 @@ add_subdirectory(apps)
 # Add deploy target
 #
 if(WIN32)
+
+    # Set which configuration (Debug, Release, MinSizeRel, or RelWithDebInfo)
+    # should be used when calling make.bat
+    #
+    set(DefaultConfig Release)
+
+    # Create make.bat, a convenient batch script that automatically setups
+    # the proper Visual Studio environment and call msbuild with the default
+    # config
+    #
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/make.in.bat
+        ${CMAKE_BINARY_DIR}/make.bat)
+
     # Example usage:
     #
     #   git clone https://github.com/vgc/vgc.git
     #   mkdir vgc-build
     #   cd vgc-build
     #   cmake ../vgc
-    #       -G "Visual Studio 15 2017 Win64"
+    #       -G "Visual Studio 15 2017" -A x64
     #       -DQt="C:/Qt/5.12.3/msvc2017_64"
     #       -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
-    #   msbuild vgc.sln /p:Configuration=Release
-    #   msbuild deploy.vcxproj /p:Configuration=Release
+    #   make.bat
+    #   make.bat deploy
     #
     # Output: vgc-build/vgcillustration.msi
     #
-    set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windeploy.py)
+    set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/windeploy.py)
     set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/windeploy.py)
     set(SOURCE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
     set(TARGET_ICON ${CMAKE_BINARY_DIR}/vgcillustration.ico)
@@ -133,8 +147,12 @@ if(WIN32)
             ${SOURCE_ICON}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
+        COMMAND ${CMAKE_COMMAND} -E echo "import windeploy; windeploy.deploy('$<CONFIG>', '${WiX}', '${Qt}')"
         COMMAND ${PYTHON_EXECUTABLE} -c
-            "import windeploy; windeploy.deploy('${WiX}', '${Qt}')"
+            "import windeploy; windeploy.deploy('$<CONFIG>', '${WiX}', '${Qt}')"
+        WORKING_DIRECTORY
+            ${CMAKE_BINARY_DIR}
+        VERBATIM
     )
     add_custom_target(deploy DEPENDS ${TARGET_MSI})
 else()
@@ -150,11 +168,12 @@ else()
     #
     add_custom_target(deploy
         COMMAND
-            "${CMAKE_CURRENT_LIST_DIR}/tools/linuxdeploy.sh"
-            "${CMAKE_BINARY_DIR}"
-            "${CMAKE_CURRENT_LIST_DIR}"
-            "${QT_QMAKE_EXECUTABLE}"
+            ${CMAKE_CURRENT_LIST_DIR}/tools/linuxdeploy.sh
+            ${CMAKE_BINARY_DIR}
+            ${CMAKE_CURRENT_LIST_DIR}
+            ${QT_QMAKE_EXECUTABLE}
         WORKING_DIRECTORY
-            "${CMAKE_BINARY_DIR}"
+            ${CMAKE_BINARY_DIR}
+        VERBATIM
     )
 endif()

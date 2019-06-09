@@ -1,18 +1,3 @@
-# Specify where to write final build output
-set(VGC_LIB_OUTPUT_DIRECTORY       ${CMAKE_BINARY_DIR}/lib)
-set(VGC_PYTHON_OUTPUT_DIRECTORY    ${CMAKE_BINARY_DIR}/python)
-set(VGC_WRAP_OUTPUT_DIRECTORY      ${CMAKE_BINARY_DIR}/python/vgc)
-set(VGC_APP_OUTPUT_DIRECTORY       ${CMAKE_BINARY_DIR}/bin)
-set(VGC_RESOURCES_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
-
-# Note: we could do the following to set default output directories
-# However, we normally don't need this since our helper functions
-# explicitly set the output directories using the variables above
-#
-#   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-#   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-#   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
 # Prefixes all strings of a comma-separated list of string with a common
 # string, and stores the result in a new variable.
 #
@@ -61,27 +46,29 @@ function(vgc_add_library LIB_NAME)
     set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES HEADER_FILES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    # Add custom target 'vgc_lib_resources_mylib' that copy all resource files
-    # from <src>/libs/vgc/mylib to <bin>/resources/mylib
-    set(LIB_RESOURCES_OUTPUT_DIRECTORY ${VGC_RESOURCES_OUTPUT_DIRECTORY}/${LIB_NAME})
-    #file(REMOVE_RECURSE ${LIB_RESOURCES_OUTPUT_DIRECTORY})
-    #file(MAKE_DIRECTORY ${LIB_RESOURCES_OUTPUT_DIRECTORY})
+    # Add a custom target 'vgc_lib_resources_foo' to copy all resource files
+    # from <src>/libs/vgc/foo to <build>/resources/foo. Note that the resources
+    # are not nested under <build>/<config>/resources, which means that on
+    # multi-configuration generators (VS, Xcode), resources are shared between
+    # configurations.
+    #
     set(OUTPUT_RESOURCE_PATHS "")
     foreach(RELATIVE_RESOURCE_PATH ${ARG_RESOURCE_FILES})
         set(INPUT_RESOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${RELATIVE_RESOURCE_PATH})
-        set(OUTPUT_RESOURCE_PATH ${LIB_RESOURCES_OUTPUT_DIRECTORY}/${RELATIVE_RESOURCE_PATH})
+        set(OUTPUT_RESOURCE_PATH ${CMAKE_BINARY_DIR}/resources/${LIB_NAME}/${RELATIVE_RESOURCE_PATH})
         list(APPEND OUTPUT_RESOURCE_PATHS ${OUTPUT_RESOURCE_PATH})
         add_custom_command(
             COMMENT "Copying resource file ${LIB_NAME}/${RELATIVE_RESOURCE_PATH}"
             OUTPUT ${OUTPUT_RESOURCE_PATH}
             DEPENDS ${INPUT_RESOURCE_PATH}
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${INPUT_RESOURCE_PATH}
-            ${OUTPUT_RESOURCE_PATH}
+                ${INPUT_RESOURCE_PATH}
+                ${OUTPUT_RESOURCE_PATH}
+            VERBATIM
         )
     endforeach()
-    vgc_prepend_(RESOURCES_TARGET_NAME "vgc_lib_resources_" ${LIB_NAME})
-    add_custom_target(${RESOURCES_TARGET_NAME} ALL DEPENDS ${OUTPUT_RESOURCE_PATHS})
+    vgc_prepend_(RESOURCES_TARGET_NAME vgc_lib_resources_ ${LIB_NAME})
+    add_custom_target(${RESOURCES_TARGET_NAME} DEPENDS ${OUTPUT_RESOURCE_PATHS})
 
     # Write the list of all current resources to a file. We need this because
     # some resources in the build directory may be left-overs from a previous
@@ -94,14 +81,51 @@ function(vgc_add_library LIB_NAME)
     file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/resources.txt "${ARG_RESOURCE_FILES}")
 
     # Add library using target name "vgc_lib_mylib"
-    vgc_prepend_(TARGET_NAME "vgc_lib_" ${LIB_NAME})
+    vgc_prepend_(TARGET_NAME vgc_lib_ ${LIB_NAME})
     add_library(${TARGET_NAME} SHARED ${ARG_HEADER_FILES} ${ARG_CPP_FILES})
+
+    # Set library output directory and filenames.
+    #
+    # Note that on non-DLL platforms (macOS, Linux), the output directory is
+    # specified by LIBRARY_OUTPUT_DIRECTORY, while on DLL platforms (Windows),
+    # the output directory is specified by RUNTIME_OUTPUT_DIRECTORY. See:
+    #
+    # https://cmake.org/cmake/help/latest/manual/cmake-buildsystem.7.html#output-artifacts
+    #
+    # Also, note that on multi-configuration generators (VS, Xcode), a
+    # per-configuration subdirectory ("Release", "Debug", etc.) is automatically
+    # appended unless a generator expression is used. For example, with a Visual
+    # Studio generator, the property `RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin`
+    # would output a file such as `<build>/bin/Release/vgccore.dll`. See:
+    #
+    # https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
+    #
+    # In our case, we prefer to have the per-configuration subdirectory
+    # prepended rather than appended, such as `<build>/Release/bin/vgccore.dll`,
+    # so that the directory structure within the per-configuration subdirectory
+    # is identitical than those of single-configuration. Therefore, we use
+    # the generator expression $<Config> to achieve this.
+    #
+    # Finally, note that prefixes and suffixes are automatically added based
+    # on ${CMAKE_SHARED_LIBRARY_PREFIX} and ${CMAKE_SHARED_LIBRARY_SUFFIX}.
+    #
+    # Examples:
+    #   LIB_NAME:                            core
+    #   Output on Linux with Make generator: <build>/lib/libvgccore.so
+    #   Output on Windows with VS generator: <build>/<Config>/bin/vgccore.dll
+    #
+    set_target_properties(${TARGET_NAME}
+        PROPERTIES
+            OUTPUT_NAME vgc${LIB_NAME}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/lib
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin
+    )
 
     # Add dependency to resource files
     add_dependencies(${TARGET_NAME} ${RESOURCES_TARGET_NAME})
 
     # Add dependencies to other VGC libraries
-    vgc_prepend_(VGC_DEPENDENCIES "vgc_lib_" ${ARG_VGC_DEPENDENCIES})
+    vgc_prepend_(VGC_DEPENDENCIES vgc_lib_ ${ARG_VGC_DEPENDENCIES})
     target_link_libraries(${TARGET_NAME} ${VGC_DEPENDENCIES})
 
     # Add dependencies to third-party dependencies
@@ -114,22 +138,9 @@ function(vgc_add_library LIB_NAME)
     string(TOUPPER VGC_${LIB_NAME}_EXPORTS EXPORTS_COMPILE_DEFINITION)
     target_compile_definitions(${TARGET_NAME} PRIVATE ${EXPORTS_COMPILE_DEFINITION})
 
-    # Add -fvisibility=hidden when compiling on Linux/MacOS.
+    # Add -fvisibility=hidden when compiling on Linux/macOS.
     # Note: This is already the default on Windows.
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
-
-    # Set output name. Prefixes are automatically added from:
-    # ${CMAKE_SHARED_LIBRARY_PREFIX} and ${CMAKE_SHARED_LIBRARY_SUFFIX}
-    # Example:
-    #   LIB_NAME               = geometry
-    #   LIB_OUTPUT_NAME        = vgcgeometry
-    #   actual output on Linux = libvgcgeometry.so
-    set(LIB_OUTPUT_NAME "vgc${LIB_NAME}")
-    set_target_properties(${TARGET_NAME}
-        PROPERTIES
-        OUTPUT_NAME ${LIB_OUTPUT_NAME}
-        LIBRARY_OUTPUT_DIRECTORY "${VGC_LIB_OUTPUT_DIRECTORY}"
-    )
 
 endfunction()
 
@@ -153,8 +164,8 @@ function(vgc_wrap_library LIB_NAME)
     #   LIB_NAME = geometry
     #   LIB_TARGET_NAME = vgc_lib_geometry
     #   MODULE_TARGET_NAME = vgc_wrap_geometry
-    vgc_prepend_(LIB_TARGET_NAME "vgc_lib_" ${LIB_NAME})
-    vgc_prepend_(WRAP_TARGET_NAME "vgc_wrap_" ${LIB_NAME})
+    vgc_prepend_(LIB_TARGET_NAME vgc_lib_ ${LIB_NAME})
+    vgc_prepend_(WRAP_TARGET_NAME vgc_wrap_ ${LIB_NAME})
 
     # Use pybind11 helper function. This calls add_library(${TARGET_NAME} ...)
     # and sets all required include dirs and libs to link.
@@ -164,8 +175,9 @@ function(vgc_wrap_library LIB_NAME)
     # import the library, e.g., "from vgc.geometry import Point"
     set_target_properties(${WRAP_TARGET_NAME}
         PROPERTIES
-        OUTPUT_NAME "${LIB_NAME}"
-        LIBRARY_OUTPUT_DIRECTORY "${VGC_WRAP_OUTPUT_DIRECTORY}"
+            OUTPUT_NAME ${LIB_NAME}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc/${LIB_NAME}
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc/${LIB_NAME}
     )
 
     # Link to the C++ library this Python module is wrapping
@@ -199,7 +211,7 @@ endfunction()
 #
 # with the following folder added to PYTHONPATH:
 #
-#   <vgc-build-dir>/python
+#   <vgc-build-dir>/<config>/python
 #
 # Currently, the CMake variable ${PYTHON_EXECUTABLE} is set by FindPythonLibsNew
 # shipped with third/pybind11.
@@ -214,7 +226,7 @@ function(vgc_test_library LIB_NAME)
 
     # Add python tests
     foreach(PYTHON_TEST_FILENAME ${ARG_PYTHON_TESTS})
-        set(PYTHON_TEST_TARGET_NAME "vgc_${LIB_NAME}_${PYTHON_TEST_FILENAME}")
+        set(PYTHON_TEST_TARGET_NAME vgc_${LIB_NAME}_${PYTHON_TEST_FILENAME})
         add_test(
             NAME ${PYTHON_TEST_TARGET_NAME}
             COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
@@ -222,7 +234,7 @@ function(vgc_test_library LIB_NAME)
         )
         set_tests_properties(${PYTHON_TEST_TARGET_NAME}
             PROPERTIES
-            ENVIRONMENT PYTHONPATH=${VGC_PYTHON_OUTPUT_DIRECTORY}:$ENV{PYTHONPATH}
+                ENVIRONMENT PYTHONPATH=${CMAKE_BINARY_DIR}/$<CONFIG>/python:$ENV{PYTHONPATH}
         )
     endforeach()
 
@@ -252,13 +264,13 @@ function(vgc_add_app APP_NAME)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Prepend LIB_NAME with "vgc_lib_" to get target name.
-    vgc_prepend_(TARGET_NAME "vgc_app_" ${APP_NAME})
+    vgc_prepend_(TARGET_NAME vgc_app_ ${APP_NAME})
 
     # Add library
     add_executable(${TARGET_NAME} ${ARG_CPP_FILES})
 
     # VGC dependencies
-    vgc_prepend_(VGC_DEPENDENCIES "vgc_lib_" ${ARG_VGC_DEPENDENCIES})
+    vgc_prepend_(VGC_DEPENDENCIES vgc_lib_ ${ARG_VGC_DEPENDENCIES})
     target_link_libraries(${TARGET_NAME} ${VGC_DEPENDENCIES})
 
     # Third-party dependencies
@@ -270,11 +282,10 @@ function(vgc_add_app APP_NAME)
     # Set the output name. Example (for now): vgcillustration
     # Under Windows, we may want to call it "VGC_Illustration_2020.exe"
     # Under Linux, we may want to call it vgc-illustration-2020
-    vgc_prepend_(APP_OUTPUT_NAME "vgc" ${APP_NAME})
     set_target_properties(${TARGET_NAME}
         PROPERTIES
-        OUTPUT_NAME "${APP_OUTPUT_NAME}"
-        RUNTIME_OUTPUT_DIRECTORY "${VGC_APP_OUTPUT_DIRECTORY}"
+            OUTPUT_NAME vgc${APP_NAME}
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin
     )
 
 endfunction()
