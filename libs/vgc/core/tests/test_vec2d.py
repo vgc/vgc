@@ -156,7 +156,14 @@ class TestVec2d(unittest.TestCase):
         self.assertTrue(v == Vec2d(1, 2.5))
 
     def testToString(self):
-        locale.setlocale(locale.LC_ALL, 'fr_FR.UTF8')
+        # Setup a French locale (if available on this system) to check that even
+        # when the decimal point is ',' according to the locale, numbers are
+        # still printed with '.' as decimal point.
+        #
+        try:
+            locale.setlocale(locale.LC_ALL, 'fr_FR.UTF8')
+        except:
+            pass
         v = Vec2d(1, 2.5)
         self.assertEqual(str(v), "(1, 2.5)")
 
