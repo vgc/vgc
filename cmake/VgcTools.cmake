@@ -176,8 +176,8 @@ function(vgc_wrap_library LIB_NAME)
     set_target_properties(${WRAP_TARGET_NAME}
         PROPERTIES
             OUTPUT_NAME ${LIB_NAME}
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc/${LIB_NAME}
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc/${LIB_NAME}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc
     )
 
     # Link to the C++ library this Python module is wrapping
