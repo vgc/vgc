@@ -74,6 +74,8 @@ if (Qt)
 endif()
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+get_filename_component(Qt ${Qt5_DIR}/../../.. ABSOLUTE)
+message("-- Found Qt ${Qt5_VERSION}: ${Qt}")
 
 # Disable usage of emit/signals/slots because they collide with <Python.h>.
 # Instead, we use the more explicit Q_EMIT/Q_SIGNALS/Q_SLOTS.
