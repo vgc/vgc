@@ -272,7 +272,7 @@ class WixElement:
 
 # Generates an MSI file from the build
 #
-def deploy(config, wixDir, qtDir):
+def deploy(config, wixDir):
 
     # Create deploy directory
     deployDir = config + "/deploy"
@@ -336,9 +336,6 @@ def deploy(config, wixDir, qtDir):
                     sourcePath = "resources/" + libName + "/" + resource
                     sourcePath = sourcePath.replace("/", "\\")
                     resourceDir.createFile(sourcePath, filename, feature)
-
-    # Run windeployqt.exe to generate Qt dependencies
-    subprocess.run(qtDir + "/bin/windeployqt.exe " + exeSourcePath)
 
     # TODO: install in 'Program Files' instead of in 'Program Files (x86)'
     # TODO: add Qt dependencies to WiX

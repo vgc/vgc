@@ -1,3 +1,32 @@
+# Build instructions
+#
+# On Windows
+# ----------
+#
+# git clone https://github.com/vgc/vgc.git
+# mkdir build
+# cd build
+# cmake ../vgc
+#     -G "Visual Studio 15 2017" -A x64
+#     -DQt="C:/Qt/5.12.3/msvc2017_64"
+#    [-DWiX="C:/Program Files (x86)/WiX Toolset v3.11"]
+# make.bat
+# [make.bat deploy]
+#
+# Note: Wix is only necessary if you plan to deploy the application, that is,
+# create a Windows installer.
+#
+# On Linux
+# --------
+#
+# git clone https://github.com/vgc/vgc.git
+# mkdir build
+# cd build
+# cmake ../vgc
+#     -DQt="~/Qt/5.12.3/gcc_64"
+# make
+# [make deploy]
+#
 cmake_minimum_required(VERSION 3.1.0)
 project(vgc)
 
@@ -106,37 +135,36 @@ include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
 add_subdirectory(libs)
 add_subdirectory(apps)
 
-# Add deploy target
+# On Windows, create a convenient batch script called 'make.bat' in the build
+# folder, which allows you to run the following command in cmd.exe:
+#
+# make.bat [targetname]
+#
+# as syntactic sugar for running the following command in the appropriate Visual
+# Studio command prompt:
+#
+# cmake --build . --target [targetname] --config Release
+#
+# Note: the reason we automatically setup a Visual Studio environment is that
+# windeployqt requires it to find the appropriate dependencies.
 #
 if(WIN32)
 
     # Set which configuration (Debug, Release, MinSizeRel, or RelWithDebInfo)
-    # should be used when calling make.bat
+    # should be used when calling make.bat.
     #
     set(DefaultConfig Release)
 
-    # Create make.bat, a convenient batch script that automatically setups
-    # the proper Visual Studio environment and call msbuild with the default
-    # config
+    # Create make.bat.
     #
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/make.in.bat
         ${CMAKE_BINARY_DIR}/make.bat)
+endif()
 
-    # Example usage:
-    #
-    #   git clone https://github.com/vgc/vgc.git
-    #   mkdir vgc-build
-    #   cd vgc-build
-    #   cmake ../vgc
-    #       -G "Visual Studio 15 2017" -A x64
-    #       -DQt="C:/Qt/5.12.3/msvc2017_64"
-    #       -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
-    #   make.bat
-    #   make.bat deploy
-    #
-    # Output: vgc-build/vgcillustration.msi
-    #
+# Add deploy target
+#
+if(WIN32)
     set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/windeploy.py)
     set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/windeploy.py)
     set(SOURCE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
@@ -149,25 +177,14 @@ if(WIN32)
             ${SOURCE_ICON}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
-        COMMAND ${CMAKE_COMMAND} -E echo "import windeploy; windeploy.deploy('$<CONFIG>', '${WiX}', '${Qt}')"
         COMMAND ${PYTHON_EXECUTABLE} -c
-            "import windeploy; windeploy.deploy('$<CONFIG>', '${WiX}', '${Qt}')"
+            "import windeploy; windeploy.deploy('$<CONFIG>', '${WiX}')"
         WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR}
         VERBATIM
     )
     add_custom_target(deploy DEPENDS ${TARGET_MSI})
 else()
-    # Example usage:
-    #
-    #   git clone https://github.com/vgc/vgc.git
-    #   mkdir vgc-build
-    #   cd vgc-build
-    #   cmake ../vgc
-    #       -DQt="~/Qt/5.12.3/gcc_64"
-    #   make
-    #   make deploy
-    #
     add_custom_target(deploy
         COMMAND
             ${CMAKE_CURRENT_LIST_DIR}/tools/linuxdeploy.sh
