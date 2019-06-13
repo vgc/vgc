@@ -57,7 +57,7 @@ class Wix:
     # - wix.programFilesDirectory: "Program Files" directory
     # - wix.manufacturerDirectory: "Program Files\[Manufacturer]"
     # - wix.installDirectory:      "Program Files\[Manufacturer]\[ProductName]"
-    # - wix.startupMenuDirectory:  Windows' startup menu
+    # - wix.startMenuDirectory:    Windows' Start Menu
     # - wix.desktopDirectory:      Windows' desktop
     #
     def __init__(self, name, version, manufacturer):
@@ -123,7 +123,7 @@ class Wix:
         self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", "ProgramFilesFolder")
         self.manufacturerDirectory = self.programFilesDirectory.createDirectory(manufacturer)
         self.installDirectory = self.manufacturerDirectory.createDirectory(name, "INSTALLDIR")
-        self.startupMenuDirectory = self.targetDirectory.createDirectory("Programs", "ProgramMenuFolder")
+        self.startMenuDirectory = self.targetDirectory.createDirectory("Programs", "ProgramMenuFolder")
         self.desktopDirectory = self.targetDirectory.createDirectory("Desktop", "DesktopFolder")
 
 
@@ -315,10 +315,10 @@ def run(buildDir, config, wixDir):
     wix.installDirectory.addDirectory(configDir / "python", feature)
     wix.installDirectory.addDirectory(configDir / "resources", feature)
 
-    # Create Desktop and Startup Menu shortcuts
+    # Create Desktop and Start Menu shortcuts
     executable = wixBinDir.getFile("vgcillustration.exe")
     icon = wix.createIcon(buildDir / "vgcillustration.ico")
-    executable.createShortcut(wix.startupMenuDirectory, productName, icon)
+    executable.createShortcut(wix.startMenuDirectory, productName, icon)
     executable.createShortcut(wix.desktopDirectory, productName, icon)
 
     # TODO: install in 'Program Files' instead of in 'Program Files (x86)'
