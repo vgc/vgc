@@ -183,8 +183,8 @@ endif()
 # Add deploy target
 #
 if(WIN32)
-    set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/windeploy.py)
-    set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/windeploy.py)
+    set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py)
+    set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/wix.py)
     set(SOURCE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
     set(TARGET_ICON ${CMAKE_BINARY_DIR}/vgcillustration.ico)
     set(TARGET_MSI ${CMAKE_BINARY_DIR}/vgcillustration.msi)
@@ -196,7 +196,7 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
         COMMAND ${PYTHON_EXECUTABLE} -c
-            "import windeploy; windeploy.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
+            "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
         WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR}
         VERBATIM
