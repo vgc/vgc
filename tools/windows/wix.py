@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Useful WiX resources:
+# - https://stackoverflow.com/questions/471424/wix-tricks-and-tips
+#
 
 from xml.dom.minidom import getDOMImplementation
 import uuid
@@ -60,10 +64,20 @@ class Wix:
     # - wix.startMenuDirectory:    Windows' Start Menu
     # - wix.desktopDirectory:      Windows' desktop
     #
-    def __init__(self, name, version, manufacturer):
+    def __init__(self, name, version, manufacturer, wixDir, win64 = True):
         self.name = name
         self.version = version
         self.manufacturer = manufacturer
+        self.wixDir = wixDir
+        self.win64 = win64
+        if self.win64:
+            self.win64yesno = "yes"
+            self.platform = "x64"
+            programFilesFolder = "ProgramFiles64Folder"
+        else:
+            self.win64yesno = "no"
+            self.platform = "x86"
+            programFilesFolder = "ProgramFilesFolder"
 
         # Create XML document.
         #
@@ -100,6 +114,9 @@ class Wix:
         # Note: candle.exe emits a warning if we manually assigns an Id (e.g.,
         # wix.dynamicGuid("Package/Id")), which is why we use "*" here.
         #
+        # Note 2: manual specification of "Platform" is discouraged in favour
+        # of using the candle.exe -arch x64/x86 switch, but we use both anyway.
+        #
         self.package = self.product.createChild("Package", [
             ("Id", "*"),
             ("Keywords", "Installer"),
@@ -108,7 +125,8 @@ class Wix:
             ("InstallerVersion", "500"),
             ("Languages", "1033"),
             ("Compressed", "yes"),
-            ("SummaryCodepage", "1252")])
+            ("SummaryCodepage", "1252"),
+            ("Platform", self.platform)])
 
         # Add media
         self.media = self.product.createChild("Media", [
@@ -120,12 +138,11 @@ class Wix:
         # Name and Id attribute are "magic names" recognized by either WiX or
         # Windows Installer, and can't be changed.
         self.targetDirectory = self.product.createDirectory("SourceDir", "TARGETDIR")
-        self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", "ProgramFilesFolder")
+        self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", programFilesFolder)
         self.manufacturerDirectory = self.programFilesDirectory.createDirectory(manufacturer)
         self.installDirectory = self.manufacturerDirectory.createDirectory(name, "INSTALLDIR")
         self.startMenuDirectory = self.targetDirectory.createDirectory("Programs", "ProgramMenuFolder")
         self.desktopDirectory = self.targetDirectory.createDirectory("Desktop", "DesktopFolder")
-
 
     # Generates a deterministic GUID based on the current productName,
     # productVersion, and given string identifier "sid". This GUID
@@ -151,12 +168,30 @@ class Wix:
                   "/" + sid)
         return str(u).upper()
 
-    # Writes XML document to file.
+    # Generates the MSI file
     #
-    def write(self, filename):
-        f = open(filename, "wb+")
-        f.write(self.domDocument.toprettyxml(encoding='windows-1252'))
-        f.close()
+    def makeMsi(self, msiPath):
+        wxs = msiPath.with_suffix(".wxs")
+        wixobj = msiPath.with_suffix(".wixobj")
+        msi = msiPath.with_suffix(".msi")
+        binDir = self.wixDir / "bin"
+
+        # Generate the .wxs file
+        wxs.write_bytes(self.domDocument.toprettyxml(encoding='windows-1252'))
+
+        # Generate the .wxsobj file
+        subprocess.run([
+            str(binDir / "candle.exe"), str(wxs),
+            "-arch", self.platform,
+            "-out", str(wixobj)])
+
+        # Generate the .msi file
+        # ICE07/ICE60: Remove warnings about font files. See:
+        # https://stackoverflow.com/questions/13052258/installing-a-font-with-wix-not-to-the-local-font-folder
+        subprocess.run([
+            str(binDir / "light.exe"), str(wixobj),
+            "-sice:ICE07", "-sice:ICE60",
+            "-out", str(msi)])
 
     # Creates a new feature. Note: feature names cannot be longer than 38 characters in length.
     #
@@ -267,7 +302,8 @@ class WixElement:
         componentId = encodeId("FileComponent" + self.dirId + "/" + name)
         fileComponent = self.createChild("Component", [
             ("Id", componentId),
-            ("Guid", self.wix.staticGuid(componentId))])
+            ("Guid", self.wix.staticGuid(componentId)),
+            ("Win64", self.wix.win64yesno)])
         file = fileComponent.createChild("File", [
             ("Id", encodeId("File" + componentId)),
             ("Name", name),
@@ -299,6 +335,7 @@ class WixElement:
 #
 def run(buildDir, config, wixDir):
     buildDir = Path(buildDir)
+    wixDir = Path(wixDir)
     configDir = buildDir / config
     deployDir = configDir / "deploy"
     deployDir.mkdir(parents=True, exist_ok=True)
@@ -307,7 +344,7 @@ def run(buildDir, config, wixDir):
     productName = "VGC Illustration Daily Beta"
     version = "19.5.27.1"
     manufacturer = "VGC Software"
-    wix = Wix(productName, version, manufacturer)
+    wix = Wix(productName, version, manufacturer, wixDir)
     feature = wix.createFeature("Complete")
 
     # Add 'bin', 'python', and 'resources' directories
@@ -321,21 +358,8 @@ def run(buildDir, config, wixDir):
     executable.createShortcut(wix.startMenuDirectory, productName, icon)
     executable.createShortcut(wix.desktopDirectory, productName, icon)
 
-    # TODO: install in 'Program Files' instead of in 'Program Files (x86)'
+    # Generate the MSI file
+    wix.makeMsi(deployDir / "vgcillustration.msi")
+
     # TODO: implement Gui
     # TODO: bundle in a .exe that runs vs_redist.x64.exe if required
-
-    # Write to file
-    basename = "vgcillustration"
-    wxs = deployDir / (basename + ".wxs")
-    wix.write(str(wxs))
-
-    # Compile into an MSI with WiX
-    #
-    # - Why -sice:ICE07? Because otherwise I have warnings regarding font files, same as:
-    #   https://stackoverflow.com/questions/13052258/installing-a-font-with-wix-not-to-the-local-font-folder
-    #
-    wixobj = deployDir / (basename + ".wixobj")
-    msi = deployDir / (basename + ".msi")
-    subprocess.run(wixDir + "/bin/candle.exe " + str(wxs) + " -o " + str(wixobj))
-    subprocess.run(wixDir + "/bin/light.exe -sice:ICE07 -sice:ICE60 " + str(wixobj) + " -o " + str(msi))
