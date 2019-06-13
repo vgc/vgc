@@ -318,8 +318,7 @@ def run(buildDir, config, wixDir):
     # Create Desktop and Startup Menu shortcuts
     executable = wixBinDir.getFile("vgcillustration.exe")
     icon = wix.createIcon(buildDir / "vgcillustration.ico")
-    vgcMenuDirectory = wix.startupMenuDirectory.createSubMenu(productName, feature)
-    executable.createShortcut(vgcMenuDirectory, productName, icon)
+    executable.createShortcut(wix.startupMenuDirectory, productName, icon)
     executable.createShortcut(wix.desktopDirectory, productName, icon)
 
     # TODO: install in 'Program Files' instead of in 'Program Files (x86)'
