@@ -5,13 +5,18 @@ import uuid
 import subprocess
 import hashlib
 import os
-import pathlib
+from pathlib import Path
 
 # Converts any string identifier into a valid WiX Id, that is:
 # - only contain ASCII characters A-Z, a-z, digits, underscores, or period,
 # - begin with either a letter or an underscore
 # - is 72 characters or less
 # - is 57 characters or less if it is an Icon Id.
+#
+# For now we do this by computing a md5 hash (prepended with an underscore
+# otherwise the hash may start with a digit which is forbidden). In the
+# future, to make the ID more human friendly, we may use a combination
+# of hash (for uniqueness), but still with the input ID as intact as possible.
 #
 def encodeId(s):
     return "_" + hashlib.md5(s.encode('utf-8')).hexdigest()
@@ -55,11 +60,10 @@ class Wix:
     # - wix.startupMenuDirectory:  Windows' startup menu
     # - wix.desktopDirectory:      Windows' desktop
     #
-    def __init__(self, name, version, manufacturer, sourceDir):
+    def __init__(self, name, version, manufacturer):
         self.name = name
         self.version = version
         self.manufacturer = manufacturer
-        self.sourceDir = sourceDir
 
         # Create XML document.
         #
@@ -163,13 +167,15 @@ class Wix:
 
     # Creates a new icon.
     #
-    def createIcon(self, filename):
+    def createIcon(self, srcFile):
         # Note: icon Ids must end with either .ico or .exe
         # and match the extension of the filename.
-        iconId = encodeId("Icon" + filename) + filename[-4:]
+        basename = srcFile.with_suffix("").name
+        suffix = srcFile.suffix
+        iconId = encodeId("Icon" + basename) + suffix
         icon = self.product.createChild("Icon", [
             ("Id", iconId),
-            ("SourceFile", filename)])
+            ("SourceFile", str(srcFile))])
         icon.iconId = iconId
         return icon
 
@@ -216,6 +222,7 @@ class WixElement:
             dirId = encodeId(self.dirId + '/' + name)
         child = self.createChild("Directory", [("Id", dirId), ("Name", name)])
         child.dirId = dirId
+        child.files = {}
         return child
 
     # Creates a shortcut to this file using the given icon
@@ -256,7 +263,7 @@ class WixElement:
 
     # Creates a file.
     #
-    def createFile(self, sourcePath, name, feature):
+    def createFile(self, srcFile, name, feature):
         componentId = encodeId("FileComponent" + self.dirId + "/" + name)
         fileComponent = self.createChild("Component", [
             ("Id", componentId),
@@ -265,95 +272,71 @@ class WixElement:
             ("Id", encodeId("File" + componentId)),
             ("Name", name),
             ("DiskId", "1"),
-            ("Source", self.wix.sourceDir + sourcePath),
+            ("Source", str(srcFile)),
             ("KeyPath", "yes")])
+        self.files[name] = file
         feature.createChild("ComponentRef", [("Id", componentId)])
         return file
 
+    # Returns a previously created file
+    #
+    def getFile(self, name):
+        return self.files[name]
+
+    # Recursively add the given directory and all its files to this directory
+    # for the given feature
+    #
+    def addDirectory(self, srcDir, feature):
+        destDir = self.createDirectory(srcDir.name)
+        for child in srcDir.iterdir():
+            if child.is_file():
+                destDir.createFile(str(child), child.name, feature)
+            elif child.is_dir():
+                destDir.addDirectory(child, feature)
+        return destDir
+
 # Generates an MSI file from the build
 #
-def deploy(config, wixDir):
+def run(buildDir, config, wixDir):
+    buildDir = Path(buildDir)
+    configDir = buildDir / config
+    deployDir = configDir / "deploy"
+    deployDir.mkdir(parents=True, exist_ok=True)
 
-    # Create deploy directory
-    deployDir = config + "/deploy"
-    pathlib.Path(deployDir).mkdir(parents = True, exist_ok = True)
-
-    # general configuration
+    # General configuration
     productName = "VGC Illustration Daily Beta"
     version = "19.5.27.1"
     manufacturer = "VGC Software"
-    sourceDir = "..\\..\\"
-    wix = Wix(productName, version, manufacturer, sourceDir)
+    wix = Wix(productName, version, manufacturer)
     feature = wix.createFeature("Complete")
 
-    # Add executable
-    binDirectory = wix.installDirectory.createDirectory("bin")
-    exeFilename = "vgcillustration.exe"
-    exeSourcePath = config + "\\bin\\" + exeFilename
-    exeFile = binDirectory.createFile(exeSourcePath, exeFilename, feature)
+    # Add 'bin', 'python', and 'resources' directories
+    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", feature)
+    wix.installDirectory.addDirectory(configDir / "python", feature)
+    wix.installDirectory.addDirectory(configDir / "resources", feature)
 
-    # Add shortcuts to executable
-    icon = wix.createIcon("vgcillustration.ico")
+    # Create Desktop and Startup Menu shortcuts
+    executable = wixBinDir.getFile("vgcillustration.exe")
+    icon = wix.createIcon(buildDir / "vgcillustration.ico")
     vgcMenuDirectory = wix.startupMenuDirectory.createSubMenu(productName, feature)
-    exeFile.createShortcut(vgcMenuDirectory, productName, icon)
-    exeFile.createShortcut(wix.desktopDirectory, productName, icon)
-
-    # Add DLLs
-    libsDir = 'libs/vgc'
-    for libName in os.listdir(libsDir):
-        libPath = libsDir + '/' + libName
-        if os.path.isdir(libPath) and libName != "CMakeFiles":
-            dllFilename = "vgc" + libName + ".dll"
-            sourcePath = config + "\\bin\\" + dllFilename
-            binDirectory.createFile(sourcePath, dllFilename, feature)
-
-    # Add resources
-    libsDir = 'libs/vgc'
-    resourcesDirectory = wix.installDirectory.createDirectory("resources")
-    for libName in os.listdir(libsDir):
-        libPath = libsDir + '/' + libName
-        if os.path.isdir(libPath) and libName != "CMakeFiles":
-            file = open(libPath + "/resources.txt", "r")
-            resources = file.read()
-            file.close()
-            if resources != "":
-                libResourcesDirectory = resourcesDirectory.createDirectory(libName)
-                allSubdirs = {}
-                resources = resources.split(";")
-                for resource in resources:
-                    subdirs = resource.split("/")
-                    filename = subdirs[len(subdirs)-1]
-                    subdirs = subdirs[:-1]
-                    resourceDir = libResourcesDirectory
-                    relPath = ""
-                    for subdir in subdirs:
-                        relPath += "/" + subdir
-                        if relPath in allSubdirs:
-                            resourceDir = allSubdirs[relPath]
-                        else:
-                            resourceDir = resourceDir.createDirectory(subdir)
-                            allSubdirs[relPath] = resourceDir
-                    sourcePath = "resources/" + libName + "/" + resource
-                    sourcePath = sourcePath.replace("/", "\\")
-                    resourceDir.createFile(sourcePath, filename, feature)
+    executable.createShortcut(vgcMenuDirectory, productName, icon)
+    executable.createShortcut(wix.desktopDirectory, productName, icon)
 
     # TODO: install in 'Program Files' instead of in 'Program Files (x86)'
-    # TODO: add Qt dependencies to WiX
-    # TODO: add Python to WiX
     # TODO: implement Gui
     # TODO: bundle in a .exe that runs vs_redist.x64.exe if required
 
     # Write to file
     basename = "vgcillustration"
-    wxsFilepath = deployDir + "/" + basename + ".wxs"
-    wix.write(wxsFilepath)
+    wxs = deployDir / (basename + ".wxs")
+    wix.write(str(wxs))
 
     # Compile into an MSI with WiX
     #
     # - Why -sice:ICE07? Because otherwise I have warnings regarding font files, same as:
     #   https://stackoverflow.com/questions/13052258/installing-a-font-with-wix-not-to-the-local-font-folder
     #
-    wixobjFilepath = deployDir + "/" + basename + ".wixobj"
-    msiFilepath = deployDir + "/" + basename + ".msi"
-    subprocess.run(wixDir + "/bin/candle.exe " + wxsFilepath + " -out " + wixobjFilepath)
-    subprocess.run(wixDir + "/bin/light.exe -sice:ICE07 -sice:ICE60 " + wixobjFilepath + " -out " + msiFilepath)
+    wixobj = deployDir / (basename + ".wixobj")
+    msi = deployDir / (basename + ".msi")
+    subprocess.run(wixDir + "/bin/candle.exe " + str(wxs) + " -o " + str(wixobj))
+    subprocess.run(wixDir + "/bin/light.exe -sice:ICE07 -sice:ICE60 " + str(wixobj) + " -o " + str(msi))

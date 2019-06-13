@@ -196,7 +196,7 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
         COMMAND ${PYTHON_EXECUTABLE} -c
-            "import windeploy; windeploy.deploy('$<CONFIG>', '${WiX}')"
+            "import windeploy; windeploy.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
         WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR}
         VERBATIM
