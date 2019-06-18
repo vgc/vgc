@@ -8,8 +8,9 @@
 # cd build
 # cmake ../vgc
 #     -G "Visual Studio 15 2017" -A x64
+#     -DPython="C:/Users/Boris/AppData/Local/Programs/Python/Python37"
 #     -DQt="C:/Qt/5.12.3/msvc2017_64"
-#    [-DWiX="C:/Program Files (x86)/WiX Toolset v3.11"]
+#     -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
 # make.bat
 # [make.bat deploy]
 #
@@ -70,6 +71,103 @@ endif()
 # Use C++11
 set(CMAKE_CXX_STANDARD 11)
 
+# Find Python. The following variables are defined (with example value):
+#
+# PYTHONINTERP_FOUND         TRUE
+# PYTHON_EXECUTABLE          C:/Users/Boris/AppData/Local/Programs/Python/Python37/python.exe
+# PYTHON_VERSION_STRING      3.7.3
+# PYTHON_VERSION_MAJOR       3
+# PYTHON_VERSION_MINOR       7
+# PYTHON_VERSION_PATCH       3
+# PYTHONLIBS_FOUND           TRUE
+# PYTHON_LIBRARIES           C:/Users/Boris/AppData/Local/Programs/Python/Python37/libs/python37.lib
+# PYTHON_INCLUDE_DIRS        C:/Users/Boris/AppData/Local/Programs/Python/Python37/include
+# PYTHONLIBS_VERSION_STRING  3.7.3
+#
+# Note 1: since CMake 3.12, there is a new FindPython module and the separate
+# FindPythonInterp and FindPythonLibs modules are deprecated. For now, we keep
+# using the deprecated modules since requiring CMake 3.12 is a bit too
+# constraining (e.g., Ubuntu 18.04 ships with CMake 3.10 only). More info:
+#
+# https://cmake.org/cmake/help/latest/module/FindPython.html
+# https://cmake.org/cmake/help/latest/module/FindPythonInterp.html
+# https://cmake.org/cmake/help/latest/module/FindPythonLibs.html
+#
+# Note 2: pybind11 will also search for Python using its own custom module
+# called FindPythonLibsNew. It will properly detect that PYTHON_EXECUTABLE
+# is already defined and not attempt to search for another Python installation.
+# It will define additional PYTHON_* variables useful to pybind11, but these
+# variables are not available in this CMakeLists due to CMake scoping rules.
+#
+if(Python)
+    if(WIN32)
+        # Explicitly set the path to the Python executable.
+        #
+        # Note 1: It is important to set it as a CACHE variable otherwise
+        # pybind11 fails with:
+        #
+        #   CMake Error at C:/Program Files/CMake/share/cmake-3.12/Modules/FindPackageHandleStandardArgs.cmake:137 (message):
+        #     Could NOT find PythonInterp (missing: PYTHON_EXECUTABLE) (found suitable
+        #     version "3.7.3", minimum required is "3.7.3")
+        #   Call Stack (most recent call first):
+        #     C:/Program Files/CMake/share/cmake-3.12/Modules/FindPackageHandleStandardArgs.cmake:378 (_FPHSA_FAILURE_MESSAGE)
+        #     C:/Program Files/CMake/share/cmake-3.12/Modules/FindPythonInterp.cmake:159 (FIND_PACKAGE_HANDLE_STANDARD_ARGS)
+        #     third/pybind11/tools/FindPythonLibsNew.cmake:60 (find_package)
+        #     third/pybind11/tools/pybind11Tools.cmake:16 (find_package)
+        #     third/pybind11/CMakeLists.txt:33 (include)
+        #
+        # (our own earlier call to find_package(PythonInterp) does work, though)
+        #
+        # We believe the reason is that find_package(PythonInterp) calls
+        # find_program(PYTHON_EXECUTABLE) under the hood [1], which sets
+        # PYTHON_EXECUTABLE as a CACHE FILEPATH variable [2, 3] if it doesn't
+        # exist yet. It seems that FindPackageHandleStandardArgs is confused if
+        # PYTHON_EXECUTABLE does indeed exist, but isn't a CACHE variable as
+        # expected. For some reason, it seems less confused if it isn't a CACHE
+        # variable but is at least defined in the current scope.
+        #
+        # [1] https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/FindPythonInterp.cmake
+        # [2] https://cmake.org/cmake/help/latest/command/find_program.html
+        # [3] https://gitlab.kitware.com/cmake/cmake/blob/master/Source/cmFindProgramCommand.cxx
+        #
+        # Note 2: We also experimented with using PythonInterp_ROOT instead of
+        # the more explicit PYTHON_EXECUTABLE. This is a new feature of
+        # find_program() since CMake 3.12, which requires to enable the
+        # CMP0074 policy, like so:
+        #
+        #   if (POLICY CMP0074)
+        #       cmake_policy(SET CMP0074 NEW)
+        #       set(PythonInterp_ROOT ${Python})
+        #   endif()
+        #
+        # Unfortunately, for some reason, the policy does not propagate to
+        # pybind11 (like I think it should [4]), and causes the following
+        # warning in pybind11:
+        #
+        # [4] https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Policies#policy-stack
+        #
+        #   CMake Warning (dev) at third/pybind11/tools/FindPythonLibsNew.cmake:60 (find_package):
+        #     Policy CMP0074 is not set: find_package uses <PackageName>_ROOT variables.
+        #     Run "cmake --help-policy CMP0074" for policy details.  Use the cmake_policy
+        #     command to set the policy and suppress this warning.
+        #     CMake variable PythonInterp_ROOT is set to:
+        #       C:/Users/Boris/AppData/Local/Programs/Python/Python37
+        #     For compatibility, CMake is ignoring the variable.
+        #   Call Stack (most recent call first):
+        #     third/pybind11/tools/pybind11Tools.cmake:16 (find_package)
+        #     third/pybind11/CMakeLists.txt:33 (include)
+        #   This warning is for project developers.  Use -Wno-dev to suppress it.
+        #
+        # In order to avoid this warning, and since <PackageName>_ROOT is only
+        # available since CMake 3.12, we prefer using the PYTHON_EXECUTABLE
+        # approach.
+        #
+        set(PYTHON_EXECUTABLE ${Python}/python.exe CACHE FILEPATH "Path to the Python executable")
+    endif()
+endif()
+find_package(PythonInterp REQUIRED)
+find_package(PythonLibs REQUIRED)
+
 # Find, configure, and include Qt. The recommended way to make sure that the
 # desired version of Qt is found is to pass -DQt to cmake, e.g.:
 #
@@ -117,8 +215,7 @@ include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Gui_INCLUDE_DIRS})
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 
-# Add third-party shipped libraries. In particular, this adds pybind11 which
-# takes care of finding and configuring Python.
+# Add third-party shipped libraries.
 add_subdirectory(third)
 
 # Include Python
