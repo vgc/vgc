@@ -295,6 +295,7 @@ if(WIN32)
             ${SOURCE_DEPLOY_SCRIPT}
             ${SOURCE_ICON}
             ${SOURCE_LOGO}
+            ${SOURCE_BUNDLE}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_LOGO} ${TARGET_LOGO}
