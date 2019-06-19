@@ -64,11 +64,14 @@ class Wix:
     # - wix.startMenuDirectory:    Windows' Start Menu
     # - wix.desktopDirectory:      Windows' desktop
     #
-    def __init__(self, name, version, manufacturer, wixDir, win64 = True):
+    def __init__(self, name, longName, version, manufacturer, wixDir, setupIcon, logoIcon, win64 = True):
         self.name = name
+        self.longName = longName
         self.version = version
         self.manufacturer = manufacturer
         self.wixDir = wixDir
+        self.setupIcon = setupIcon
+        self.logoIcon = logoIcon
         self.win64 = win64
         if self.win64:
             self.win64yesno = "yes"
@@ -101,7 +104,7 @@ class Wix:
         #   VGC Illustration Daily Beta 2019-05-27 R2
         #
         self.product = self.root.createChild("Product", [
-            ("Name", name + " " + version),
+            ("Name", longName),
             ("Id", self.dynamicGuid("Product/ProductCode")),
             ("UpgradeCode", self.staticGuid("Product/UpgradeCode")),
             ("Language", "1033"),
@@ -123,6 +126,8 @@ class Wix:
             ("Description", "Installer of " + name + " " + version),
             ("Manufacturer", manufacturer),
             ("InstallerVersion", "500"),
+            ("InstallPrivileges", "elevated"),
+            ("InstallScope", "perMachine"),
             ("Languages", "1033"),
             ("Compressed", "yes"),
             ("SummaryCodepage", "1252"),
@@ -168,30 +173,77 @@ class Wix:
                   "/" + sid)
         return str(u).upper()
 
-    # Generates the MSI file
+    # Generates the setup file
     #
-    def makeMsi(self, msiPath):
-        wxs = msiPath.with_suffix(".wxs")
-        wixobj = msiPath.with_suffix(".wixobj")
-        msi = msiPath.with_suffix(".msi")
+    def makeSetup(self, deployDir):
+        basename = self.longName.lower().replace(" ", "-")
+        msi_wxs      = deployDir / (basename + ".wxs")
+        msi_wixobj   = deployDir / (basename + ".wixobj")
+        msi          = deployDir / (basename + ".msi")
+        setup_wxs    = deployDir / (basename + "-setup.wxs")
+        setup_wixobj = deployDir / (basename + "-setup.wixobj")
+        setup        = deployDir / (basename + "-setup.exe")
         binDir = self.wixDir / "bin"
 
         # Generate the .wxs file
-        wxs.write_bytes(self.domDocument.toprettyxml(encoding='windows-1252'))
+        msi_wxs.write_bytes(self.domDocument.toprettyxml(encoding='windows-1252'))
 
         # Generate the .wxsobj file
         subprocess.run([
-            str(binDir / "candle.exe"), str(wxs),
+            str(binDir / "candle.exe"), str(msi_wxs),
             "-arch", self.platform,
-            "-out", str(wixobj)])
+            "-out", str(msi_wixobj)])
 
         # Generate the .msi file
         # ICE07/ICE60: Remove warnings about font files. See:
         # https://stackoverflow.com/questions/13052258/installing-a-font-with-wix-not-to-the-local-font-folder
         subprocess.run([
-            str(binDir / "light.exe"), str(wixobj),
+            str(binDir / "light.exe"), str(msi_wixobj),
             "-sice:ICE07", "-sice:ICE60",
             "-out", str(msi)])
+
+        # Generate the wxs for the setup bundle
+        # TODO: run vs_redist.x64.exe if required
+        #
+        setup_wxs.write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n' +
+            '<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:bal="http://schemas.microsoft.com/wix/BalExtension" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">\n' +
+            '  <Bundle' +
+                 ' Name="' + self.longName + '"' +
+                 ' Manufacturer="' + self.manufacturer + '"' +
+                 ' UpgradeCode="' + self.staticGuid("Bundle/UpgradeCode") + '"' +
+                 ' Version="' + self.version + '"' +
+                 ' IconSourceFile="' + str(self.setupIcon) + '">\n' +
+            '    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">\n' +
+            '      <bal:WixStandardBootstrapperApplication' +
+                     ' LicenseUrl=""' +
+                     ' LogoFile="' + str(self.logoIcon) + '"' +
+                     ' ShowVersion="yes"' +
+                     ' SuppressOptionsUI="yes"' +
+                     ' SuppressRepair="yes"/>\n' +
+            '    </BootstrapperApplicationRef>\n' +
+            '    <Chain>\n' +
+            '      <MsiPackage' +
+                     ' DisplayName="' + self.longName + '"' +
+                     ' SourceFile="' + str(msi) + '"' +
+                     ' Compressed="yes"' +
+                     ' Vital="yes"/>\n' +
+            '    </Chain>\n' +
+            '  </Bundle>\n' +
+            '</Wix>\n')
+
+        # Generate the .wxsobj file
+        subprocess.run([
+            str(binDir / "candle.exe"), str(setup_wxs),
+            "-ext", "WixBalExtension",
+            "-arch", self.platform,
+            "-out", str(setup_wixobj)])
+
+        # Generate the .exe file
+        subprocess.run([
+            str(binDir / "light.exe"), str(setup_wixobj),
+            "-ext", "WixBalExtension",
+            "-out", str(setup)])
 
     # Creates a new feature. Note: feature names cannot be longer than 38 characters in length.
     #
@@ -341,10 +393,14 @@ def run(buildDir, config, wixDir):
     deployDir.mkdir(parents=True, exist_ok=True)
 
     # General configuration
-    productName = "VGC Illustration Daily Beta"
+    # Note: keep the same productName to have consistent ugradeCode across version.
+    productName = "VGC Illustration Dev"
+    longName =  "VGC Illustration Dev 2019-05-27"
     version = "19.5.27.1"
     manufacturer = "VGC Software"
-    wix = Wix(productName, version, manufacturer, wixDir)
+    setupIcon = buildDir / "vgcillustration.ico"
+    logoIcon = buildDir / "vgcillustration.png"
+    wix = Wix(productName, longName, version, manufacturer, wixDir, setupIcon, logoIcon)
     feature = wix.createFeature("Complete")
 
     # Add 'bin', 'python', and 'resources' directories
@@ -354,12 +410,9 @@ def run(buildDir, config, wixDir):
 
     # Create Desktop and Start Menu shortcuts
     executable = wixBinDir.getFile("vgcillustration.exe")
-    icon = wix.createIcon(buildDir / "vgcillustration.ico")
-    executable.createShortcut(wix.startMenuDirectory, productName, icon)
-    executable.createShortcut(wix.desktopDirectory, productName, icon)
+    icon = wix.createIcon(setupIcon)
+    executable.createShortcut(wix.startMenuDirectory, longName, icon)
+    executable.createShortcut(wix.desktopDirectory, longName, icon)
 
-    # Generate the MSI file
-    wix.makeMsi(deployDir / "vgcillustration.msi")
-
-    # TODO: implement Gui
-    # TODO: bundle in a .exe that runs vs_redist.x64.exe if required
+    # Generate the Setup file
+    wix.makeSetup(deployDir)

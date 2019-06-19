@@ -284,21 +284,26 @@ if(WIN32)
     set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/wix.py)
     set(SOURCE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
     set(TARGET_ICON ${CMAKE_BINARY_DIR}/vgcillustration.ico)
-    set(TARGET_MSI ${CMAKE_BINARY_DIR}/vgcillustration.msi)
+    set(SOURCE_LOGO ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.png)
+    set(TARGET_LOGO ${CMAKE_BINARY_DIR}/vgcillustration.png)
+    set(DEPLOY_TIMESTAMP ${CMAKE_BINARY_DIR}/deploy.stamp)
     add_custom_command(
-        OUTPUT ${TARGET_MSI}
+        OUTPUT ${DEPLOY_TIMESTAMP}
         DEPENDS
             ${SOURCE_DEPLOY_SCRIPT}
             ${SOURCE_ICON}
+            ${SOURCE_LOGO}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_LOGO} ${TARGET_LOGO}
         COMMAND ${PYTHON_EXECUTABLE} -c
             "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
+        COMMAND ${CMAKE_COMMAND} -E touch ${DEPLOY_TIMESTAMP}
         WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR}
         VERBATIM
     )
-    add_custom_target(deploy DEPENDS ${TARGET_MSI})
+    add_custom_target(deploy DEPENDS ${DEPLOY_TIMESTAMP})
 else()
     add_custom_target(deploy
         COMMAND
