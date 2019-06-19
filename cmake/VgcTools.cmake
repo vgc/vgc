@@ -329,7 +329,9 @@ function(vgc_add_app APP_NAME)
         # windeployqt when a CMake file changes.
         #
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-            COMMAND if not exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/Qt*.dll \(${Qt}/bin/windeployqt.exe ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vgc${APP_NAME}.exe\)
+            COMMAND if not exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/Qt*.dll
+                ${Qt}/bin/windeployqt.exe
+                ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vgc${APP_NAME}.exe
             VERBATIM
         )
     endif()
