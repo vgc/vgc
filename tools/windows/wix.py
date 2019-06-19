@@ -195,18 +195,20 @@ class Wix:
         setup_wxs          = deployDir / (basename + "-setup.wxs")
         setup_wixobj       = deployDir / (basename + "-setup.wixobj")
         setup              = deployDir / (basename + "-setup.exe")
+        vcredist           = deployDir / "vc_redist.x64.exe"
+        vcredistVersion    = (deployDir / "vc_redist.x64.exe.version").read_text().strip()
         binDir = self.wixDir / "bin"
 
-        # Generate the .wxs file
+        # Generate the .wxs file of the MsiPackage
         msi_wxs.write_bytes(self.domDocument.toprettyxml(encoding='windows-1252'))
 
-        # Generate the .wxsobj file
+        # Generate the .wxsobj file of the MsiPackage
         subprocess.run([
             str(binDir / "candle.exe"), str(msi_wxs),
             "-arch", self.platform,
             "-out", str(msi_wixobj)])
 
-        # Generate the .msi file
+        # Generate the .msi file of the MsiPackage
         # ICE07/ICE60: Remove warnings about font files. See:
         # https://stackoverflow.com/questions/13052258/installing-a-font-with-wix-not-to-the-local-font-folder
         subprocess.run([
@@ -214,30 +216,32 @@ class Wix:
             "-sice:ICE07", "-sice:ICE60",
             "-out", str(msi)])
 
-        # Generate the wxs for the setup bundle
-        # TODO: run vs_redist.x64.exe if required
-        #
+        # Generate the .wxs file of the Bundle
         setup_text = bundle_wxc.read_text()
         setup_wxs.write_text(replace_all(setup_text, {
-            "$(var.name)":         self.longName,
-            "$(var.manufacturer)": self.manufacturer,
-            "$(var.upgradeCode)":  self.staticGuid("Bundle/UpgradeCode"),
-            "$(var.version)":      self.version,
-            "$(var.icon)":         str(icon),
-            "$(var.logo)":         str(logo),
-            "$(var.msi)":          str(msi)}))
+            "$(var.name)":            self.longName,
+            "$(var.manufacturer)":    self.manufacturer,
+            "$(var.upgradeCode)":     self.staticGuid("Bundle/UpgradeCode"),
+            "$(var.version)":         self.version,
+            "$(var.icon)":            str(icon),
+            "$(var.logo)":            str(logo),
+            "$(var.msi)":             str(msi),
+            "$(var.vcredist)":        str(vcredist),
+            "$(var.vcredistVersion)": vcredistVersion}))
 
-        # Generate the .wxsobj file
+        # Generate the .wxsobj file of the Bundle
         subprocess.run([
             str(binDir / "candle.exe"), str(setup_wxs),
             "-ext", "WixBalExtension",
+            "-ext", "WixUtilExtension",
             "-arch", self.platform,
             "-out", str(setup_wixobj)])
 
-        # Generate the .exe file
+        # Generate the .exe file of the Bundle
         subprocess.run([
             str(binDir / "light.exe"), str(setup_wixobj),
             "-ext", "WixBalExtension",
+            "-ext", "WixUtilExtension",
             "-out", str(setup)])
 
     # Creates a new feature. Note: feature names cannot be longer than 38 characters in length.

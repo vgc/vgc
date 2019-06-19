@@ -279,6 +279,11 @@ endif()
 
 # Add deploy target
 #
+# For now, this assumes that windeployqt has already been run, and that the
+# bin/vc_redist.x64.exe output was moved from bin/ to deploy/. In the future, we
+# may want to directly find the vc_redist without relying on windeployqt, which
+# may be useful for deploying a subset of VGC that does not depend on Qt.
+#
 if(WIN32)
     set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py)
     set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/wix.py)
@@ -300,6 +305,10 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_LOGO} ${TARGET_LOGO}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_BUNDLE} ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/bundle.wxs
+        COMMAND powershell -NoLogo -NoProfile -Command \(
+            Get-Item ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe
+            \).VersionInfo.FileVersion
+            > ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe.version
         COMMAND ${PYTHON_EXECUTABLE} -c
             "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
         COMMAND ${CMAKE_COMMAND} -E touch ${DEPLOY_TIMESTAMP}
