@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix
+    xmlns="http://schemas.microsoft.com/wix/2006/wi"
+    xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  <Bundle
+      Name="$(var.name)"
+      Manufacturer="$(var.manufacturer)"
+      UpgradeCode="$(var.upgradeCode)"
+      Version="$(var.version)"
+      IconSourceFile="$(var.icon)">
+    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
+      <bal:WixStandardBootstrapperApplication
+          LicenseUrl=""
+          LogoFile="$(var.logo)"
+          ShowVersion="yes"
+          SuppressOptionsUI="yes"
+          SuppressRepair="yes"/>
+    </BootstrapperApplicationRef>
+    <Chain>
+      <MsiPackage
+          DisplayName="$(var.name)"
+          SourceFile="$(var.msi)"
+          Compressed="yes"
+          Vital="yes"/>
+    </Chain>
+  </Bundle>
+</Wix>

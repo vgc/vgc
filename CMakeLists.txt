@@ -286,8 +286,10 @@ if(WIN32)
     set(TARGET_ICON ${CMAKE_BINARY_DIR}/vgcillustration.ico)
     set(SOURCE_LOGO ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.png)
     set(TARGET_LOGO ${CMAKE_BINARY_DIR}/vgcillustration.png)
+    set(SOURCE_BUNDLE ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/bundle.wxs)
     set(DEPLOY_TIMESTAMP ${CMAKE_BINARY_DIR}/deploy.stamp)
     add_custom_command(
+        COMMENT ""
         OUTPUT ${DEPLOY_TIMESTAMP}
         DEPENDS
             ${SOURCE_DEPLOY_SCRIPT}
@@ -296,6 +298,7 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_LOGO} ${TARGET_LOGO}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_BUNDLE} ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/bundle.wxs
         COMMAND ${PYTHON_EXECUTABLE} -c
             "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
         COMMAND ${CMAKE_COMMAND} -E touch ${DEPLOY_TIMESTAMP}
