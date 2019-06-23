@@ -31,6 +31,26 @@
 cmake_minimum_required(VERSION 3.1.0)
 project(vgc)
 
+# Setup version type
+set(VGC_VERSION_TYPE "Dev" CACHE STRING "Possible values: Dev, Alpha, Beta, RC, or Stable.")
+
+# Get info from Git if any
+find_package(Git)
+if(Git_FOUND)
+    set(GIT_INFO_TXT ${CMAKE_BINARY_DIR}/git_info.txt)
+    add_custom_target(make_git_info_txt ALL
+        COMMAND ${CMAKE_COMMAND} -E echo_append "branch: " > ${GIT_INFO_TXT}
+        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD >> ${GIT_INFO_TXT}
+        COMMAND ${CMAKE_COMMAND} -E echo_append "commit: " >> ${GIT_INFO_TXT}
+        COMMAND ${GIT_EXECUTABLE} rev-parse HEAD >> ${GIT_INFO_TXT}
+        COMMAND ${CMAKE_COMMAND} -E echo "latest-commit-dates: " >> ${GIT_INFO_TXT}
+        COMMAND ${GIT_EXECUTABLE} --no-pager log -100 --pretty=format:%ci >> ${GIT_INFO_TXT}
+        WORKING_DIRECTORY
+            ${CMAKE_CURRENT_LIST_DIR}
+        VERBATIM
+    )
+endif()
+
 # Always generate unit tests
 enable_testing()
 
@@ -310,7 +330,7 @@ if(WIN32)
             \).VersionInfo.FileVersion
             > ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe.version
         COMMAND ${PYTHON_EXECUTABLE} -c
-            "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
+            "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}', '${VGC_VERSION_TYPE}')"
         COMMAND ${CMAKE_COMMAND} -E touch ${DEPLOY_TIMESTAMP}
         WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR}

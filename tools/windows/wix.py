@@ -186,13 +186,14 @@
 # at what Open Office does, which is a similar use case as ours.
 #
 
+from pathlib import Path
 from xml.dom.minidom import getDOMImplementation
-import uuid
-import subprocess
+import datetime
 import hashlib
 import os
-from pathlib import Path
 import re
+import subprocess
+import uuid
 
 # Converts any string identifier into a valid WiX Id, that is:
 # - only contain ASCII characters A-Z, a-z, digits, underscores, or period,
@@ -629,9 +630,22 @@ def makeAppSetup(
     setupLogo = setupIcon.with_suffix(".png")
     wix.makeSetup(deployDir, setupIcon, setupLogo)
 
+# Converts the given "datetime with UTC offset" to the date it was in the
+# UTC timezone at that exact moment.
+#
+# Example:
+# format = '%Y-%m-%d %H:%M:%S %z'
+# utcdate('2019-06-23 18:00:45 -0800', format)
+#
+# Output: '2019-06-24'
+#
+def utcdate(dateString, format):
+    d = datetime.datetime.strptime(dateString, format)
+    return d.astimezone(datetime.timezone.utc).date().isoformat()
+
 # Generates an MSI file from the build
 #
-def run(buildDir, config, wixDir):
+def run(buildDir, config, wixDir, versionType):
 
     # Get and create useful directories
     buildDir = Path(buildDir)
@@ -645,10 +659,18 @@ def run(buildDir, config, wixDir):
     suiteName = "VGC"
     appNames = [ "Illustration" ]
     architecture = "x64"
-    versionType = "Dev"         # TODO should be a CMake cache variable
-    commitBranch = "master"     # TODO should be automatically retrieved from git log
-    commitDate = "2019-05-27"   # TODO should be automatically retrieved from git log
-    commitNumber = 0            # TODO should be automatically retrieved from git log
+
+    # Get git branch
+    gitInfo = (buildDir / "git_info.txt").read_text()
+    commitBranch = "master"
+    branch = re.search(r"^branch: (.*)$", gitInfo, flags = re.MULTILINE).group(1)
+
+    # Get git latest commit dates
+    format = '%Y-%m-%d %H:%M:%S %z'
+    dates = re.search(r"^latest-commit-dates: (.*)", gitInfo, flags = re.MULTILINE | re.DOTALL).group(1).splitlines()
+    dates = [utcdate(date, format) for date in dates if date]
+    commitDate = dates[0]
+    commitNumber = dates.count(commitDate) - 1
 
     # Create an .msi and a setup.exe for each app.
     # TODO: also create a "Suite" .msi and setup.exe installing all the apps.
