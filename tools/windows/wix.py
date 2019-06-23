@@ -1,7 +1,189 @@
 #!/usr/bin/env python3
 #
-# Useful WiX resources:
+# WiX resources
+# -------------
+#
 # - https://stackoverflow.com/questions/471424/wix-tricks-and-tips
+#
+# Version naming scheme and install location
+# -----------------------------------------
+#
+# Our release cycle uses the following "version type": Dev, Alpha, Beta, Release
+# Candidate (RC), and Stable. Each of these version types have independent
+# upgrade codes and are seen as completely different applications, which means
+# that you cannot upgrade from Beta to Stable, for example.
+#
+# Each of these version types also have independent version numbering scheme,
+# which are designed to work with the following constraints:
+#
+#   https://docs.microsoft.com/en-us/windows/desktop/Msi/productversion
+#
+#   « The format of the string is as follows:
+#
+#       major.minor.build
+#
+#     The first field is the major version and has a maximum value of 255.
+#     The second field is the minor version and has a maximum value of 255.
+#     The third field is called the build version or the update version and
+#     has a maximum value of 65,535. »
+#
+# Note: For now, only the Dev version type is implemented.
+#
+# Here are the full details for each version type:
+#
+# - Dev:
+#     CI builds from the master branch.
+#     Most unstable, untested.
+#     Version scheme: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
+#     Example 1:
+#       commit: first commit of 2019-06-21 in the master branch
+#       version: 19.6.21000
+#       install: Program Files/VGC/Dev 2019-06-21/bin/vgcillustration.exe
+#     Example 2:
+#       commit: second commit of 2019-06-21 in the master branch
+#       version: 19.6.21001
+#       install: Program Files/VGC/Dev 2019-06-21.1/bin/vgcillustration.exe
+#
+# - Alpha:
+#     CI builds from a release branch, that is, after a feature freeze.
+#     Barely tested, but only bug fixes allowed on a release branch, so more stable than Dev builds.
+#     Version scheme: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
+#     Example:
+#       commit: second commit of 2019-06-21 in the 2020 release branch
+#       version: 19.6.21001
+#       install: Program Files/VGC/2020 Alpha 2019-06-21.1/bin/vgcillustration.exe
+#
+# - Beta:
+#     Manually selected version on a release branch. ~3-5 before each stable version.
+#     More tested, should be quite stable.
+#     Version scheme: release.minor.revision
+#     Example 1:
+#       commit: second selected beta in the 2020 release branch, before any stable version
+#       version: 20.0.2
+#       install: Program Files/VGC/2020 Beta 2/bin/vgcillustration.exe
+#     Example 2:
+#       commit: first selected beta in the 2020 release branch, after the first stable version
+#       version: 20.1.1
+#       install: Program Files/VGC/2020.1 Beta 1/bin/vgcillustration.exe
+#
+# - RC:
+#     Manually selected version on a release branch, between beta and stable. ~1 before each stable version.
+#     Most tested. We hope that no modification is required before stable version.
+#     Version scheme: release.minor.revision
+#     Example 1:
+#       commit: second selected RC in the 2020 release branch, before any stable version
+#       version: 20.0.2
+#       install: Program Files/VGC/2020 RC 2/bin/vgcillustration.exe
+#     Example 2:
+#       commit: first selected RC in the 2020 release branch, after the first stable version
+#       version: 20.1.1
+#       install: Program Files/VGC/2020.1 RC 1/bin/vgcillustration.exe
+#
+# - Stable
+#     Manually selected version on a release branch. ~1-2 per release branch
+#     This is what you get when clicking the big "download VGC" button
+#     Version scheme: release.minor.0
+#     Example 1:
+#       commit: first stable version on the 2020 release branch
+#       version: 20.0.0
+#       install: Program Files/VGC/2020/bin/vgcillustration.exe
+#     Example 2:
+#       commit: first stable version on the 2020 release branch
+#       version: 20.1.0
+#       install: Program Files/VGC/2020.1/bin/vgcillustration.exe
+#
+# We may also want to consider the following:
+#
+# - Nightly:
+#     Like Dev but only the last commit of the day. This is useful because often
+#     in the same day, there is a broken commit immediately followed by a fix.
+#     So Nightly versions may be slightly more reliable than Dev versions.
+#     Version scheme: commitYear.commitMonth.commitDay
+#     Example:
+#       commit: last commit of 2019-06-21 in the master branch
+#       version: 19.6.21
+#       install: Program Files/VGC/Nightly 2019-06-21/bin/vgcillustration.exe
+#
+# - Branch XYZ:
+#     A commit from any branch which is neither the master branch nor a release
+#     branch. It may be a feature branch or a fix branch, and we may want users
+#     to test the fix before merging with master, for example.
+#     Version scheme: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
+#     Example:
+#       commit: second commit of 2019-06-21 in the gh62 branch
+#       version: 19.6.21001
+#       install: Program Files/VGC/Branch-gh62 2019-06-21.1/bin/vgcillustration.exe
+#
+# - Debug/MinSizeRel/RelWithDebInfo:
+#     Same as the others but using a different config.
+#     Example:
+#       commit: second commit of 2019-06-21 in the gh62 branch
+#       version: 19.6.21001
+#       install: Program Files/VGC/Branch-gh62 RelWithDebInfo 2019-06-21.1/bin/vgcillustration.exe
+#
+# - Uncommited
+#     Built from a change which hasn't been commited yet.
+#     It would be nice to include the diff within the UI in the About page.
+#     It's not clear whether the ability to create installers from those is useful.
+#     It might be simpler to distribute a zip file with the standalone binaries in it.
+#     Example:
+#       source: change from second commit of 2019-06-21 in the gh62 branch, with md5 hash of diff = abcdef123456
+#       version:19.6.21001
+#       install: Program Files/VGC/Branch-gh62 2019-06-21.1.abcdef123456/bin/vgcillustration.exe
+#       Version scheme: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
+#
+# Product code
+# ------------
+#
+# Changing any of the following changes the product code:
+# - Commit from which the build is based
+# - Release type
+# - Architecture (x86 vs x64)
+# - Version of Qt, Python, etc.
+#
+# See:
+#
+# https://docs.microsoft.com/en-us/windows/desktop/msi/changing-the-product-code
+#
+#   The product code must be changed if any of the following are true for the
+#   update:
+#
+#   - Coexisting installations of both original and updated products on the same
+#     system must be possible.
+#   - The name of the .msi file has been changed.
+#   - The component code of an existing component has changed.
+#   - A component is removed from an existing feature.
+#   - An existing feature has been made into a child of an existing feature.
+#   - An existing child feature has been removed from its parent feature.
+#
+# Note: VGC Illustration, VGC Animation, and VGC Suite (= both) have different
+# product codes, but they share components.
+#
+# Component GUID
+# --------------
+#
+# We change component GUIDs the same way that we change product codes.
+#
+# However, note that we use the same component GUID across several .msi files
+# for shared components. For example, the two following .msi files:
+#
+# - vgc-illustration-2020-x64.msi
+# - vgc-animation-2020-x64.msi
+#
+# have different product codes. However, they are from the same build with
+# exactly the same version type and config. Therefore, they both have the exact
+# same component vgccore.dll, with the same GUID, which is installed at the same
+# location:
+#
+#   Program Files/VGC/2020/bin/vgccore.dll
+#
+# The equivalent for this type of sharing on macOS would be to use frameworks:
+#
+# https://www.bignerdranch.com/blog/it-looks-like-you-are-trying-to-use-a-framework
+#
+# but it is unclear whether all of this is worth it on macOS, where users are
+# used to simply drag and drop the bundle in the Application folder. TODO: Look
+# at what Open Office does, which is a similar use case as ours.
 #
 
 from xml.dom.minidom import getDOMImplementation
@@ -46,23 +228,6 @@ def replace_all(text, replacements):
 # as 'heat', but we prefer the flexibility of a real programming language
 # such as Python for this.
 #
-# Note that this is just a first iteration, and the API isn't that
-# nice for now. In the future, we might want to have a more user
-# friendly API with more classes, in order to do things like:
-#
-#   cmp = dir.createComponent("MyComponent")
-#
-# instead of:
-#
-#   cmp = wix.createChild(dir, "Component", [
-#       ("Id", "MyComponent"),
-#       ("Guid", wix.staticGuid("Component/MyComponent"))])
-#
-# Note on "Id" identifiers: for the most part, we automatically generate
-# them from the other arguments we have. We convert special characters into
-# underscore, due to the following constraints:
-#
-#
 class Wix:
 
     # Creates a new Wix XML document with the following automatically
@@ -80,21 +245,64 @@ class Wix:
     # - wix.startMenuDirectory:    Windows' Start Menu
     # - wix.desktopDirectory:      Windows' desktop
     #
-    def __init__(self, name, longName, version, manufacturer, wixDir, win64 = True):
-        self.name = name
-        self.longName = longName
-        self.version = version
-        self.manufacturer = manufacturer
+    def __init__(
+            self, wixDir,
+            manufacturer, suiteName, appName, architecture,
+            versionType, commitBranch, commitDate, commitNumber):
+
         self.wixDir = wixDir
-        self.win64 = win64
-        if self.win64:
+        self.manufacturer = manufacturer
+        self.suiteName = suiteName
+        self.appName = appName
+        self.architecture = architecture
+        self.versionType = versionType
+        self.commitDate = commitDate
+        self.commitNumber = commitNumber
+
+        # Versioning.
+        #
+        # The short version is a standard MSI-compliant version in the form
+        # "major.minor.build". It is used for formal versionning of products
+        # sharing the same upgrade code. Since builds with different version
+        # types do not share the same upgrade code, the version type is not part
+        # of the short version.
+        #
+        # The full version is a human-readable version including the version
+        # type, such as "Dev 2019-06-21.1". Together with the suiteName and
+        # architecture, it uniquely identifies this suite build. It is used
+        # in product names and install directories, as well as for generating
+        # static and dynamic GUIDs.
+        #
+        if self.versionType == "Dev":
+            # Example:
+            #   shortVersion = "19.6.21001"
+            #   fullVersion = "Dev 2019-06-21.1"
+            year = int(self.commitDate[2:4])
+            month = int(self.commitDate[5:7])
+            day = int(self.commitDate[8:10])
+            build = 1000*day + self.commitNumber
+            if self.commitNumber == 0:
+                subDate = ""
+            else:
+                subDate = ".{}".format(self.commitNumber)
+            self.shortVersion = "{}.{}.{}".format(year, month, build)
+            self.fullVersion = "{} {}{}".format(self.versionType, self.commitDate, subDate)
+        else:
+            # TODO: implement version numbering scheme for version types other than Dev
+            raise ValueError('Currently, "Dev" is the only supported versionType ("' + self.versionType + '" provided)')
+
+        # Architecture
+        if self.architecture == "x64":
             self.win64yesno = "yes"
-            self.platform = "x64"
-            programFilesFolder = "ProgramFiles64Folder"
+            self.programFilesFolder = "ProgramFiles64Folder"
         else:
             self.win64yesno = "no"
-            self.platform = "x86"
-            programFilesFolder = "ProgramFilesFolder"
+            self.programFilesFolder = "ProgramFilesFolder"
+
+        # Human-readable app name as should appear in shortcut and list of installed programs
+        self.appFullName = "{} {} {}".format(self.suiteName, self.appName, self.fullVersion)
+        if self.architecture == "x86":
+            self.appFullName += " (32-bit)"
 
         # Create XML document.
         #
@@ -115,34 +323,31 @@ class Wix:
         # keep the same MSI filename during a "Minor Upgrade" or "Small Uprade".
         #
         self.product = self.root.createChild("Product", [
-            ("Name", longName),
-            ("Id", self.dynamicGuid("Product/ProductCode")),
-            ("UpgradeCode", self.staticGuid("Product/UpgradeCode")),
+            ("Name", self.appFullName),
+            ("Id", self.dynamicGuid("Product/ProductCode/" + self.appName)),
+            ("UpgradeCode", self.staticGuid("Product/UpgradeCode/" + self.appName)),
             ("Language", "1033"),
             ("Codepage", "1252"),
-            ("Version", version),
-            ("Manufacturer", manufacturer)])
+            ("Version", self.shortVersion),
+            ("Manufacturer", self.manufacturer)])
 
         # Add package
         #
-        # Note: candle.exe emits a warning if we manually assigns an Id (e.g.,
-        # wix.dynamicGuid("Package/Id")), which is why we use "*" here.
-        #
-        # Note 2: manual specification of "Platform" is discouraged in favour
+        # Note: manual specification of "Platform" is discouraged in favour
         # of using the candle.exe -arch x64/x86 switch, but we use both anyway.
         #
         self.package = self.product.createChild("Package", [
-            ("Id", "*"),
+            ("Id", self.dynamicGuid("Package/Id/" + self.appName)),
             ("Keywords", "Installer"),
-            ("Description", "Installer of " + name + " " + version),
-            ("Manufacturer", manufacturer),
+            ("Description", "Installer of " + self.appFullName),
+            ("Manufacturer", self.manufacturer),
             ("InstallerVersion", "500"),
             ("InstallPrivileges", "elevated"),
             ("InstallScope", "perMachine"),
             ("Languages", "1033"),
             ("Compressed", "yes"),
             ("SummaryCodepage", "1252"),
-            ("Platform", self.platform)])
+            ("Platform", self.architecture)])
 
         # Add media
         self.media = self.product.createChild("Media", [
@@ -154,58 +359,67 @@ class Wix:
         # Name and Id attribute are "magic names" recognized by either WiX or
         # Windows Installer, and can't be changed.
         self.targetDirectory = self.product.createDirectory("SourceDir", "TARGETDIR")
-        self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", programFilesFolder)
-        self.manufacturerDirectory = self.programFilesDirectory.createDirectory(manufacturer)
-        self.installDirectory = self.manufacturerDirectory.createDirectory(name, "INSTALLDIR")
+        self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", self.programFilesFolder)
+        self.manufacturerDirectory = self.programFilesDirectory.createDirectory(self.suiteName)
+        self.installDirectory = self.manufacturerDirectory.createDirectory(self.fullVersion, "INSTALLDIR")
         self.startMenuDirectory = self.targetDirectory.createDirectory("Programs", "ProgramMenuFolder")
         self.desktopDirectory = self.targetDirectory.createDirectory("Desktop", "DesktopFolder")
 
-    # Generates a deterministic GUID based on the current productName,
-    # productVersion, and given string identifier "sid". This GUID
-    # changes from version to version even if the productName and sid
-    # don't change.
+    # Generates a deterministic GUID based on the architecture, suiteName,
+    # fullVersion, and the given string identifier "sid". This GUID changes
+    # from version to version but doesn't depend on the appName, which makes
+    # it suitable for shared components. You must manually include the appName
+    # in the sid if you wish this GUID to depend on the appName.
     #
     def dynamicGuid(self, sid):
         u = uuid.uuid5(uuid.NAMESPACE_URL,
-                  "http://dynamicguid.wix.vgc.io" +
-                  "/" + self.name +
-                  "/" + self.version +
-                  "/" + sid)
+                    "http://dynamicguid.wix.vgc.io" +
+                    "/" + self.architecture +
+                    "/" + self.suiteName +
+                    "/" + self.fullVersion +
+                    "/" + sid)
         return str(u).upper()
 
-    # Generates a deterministic GUID based on the current productName and
-    # given string identifier "sid". This GUID is unchanged from version to
-    # version as long as the productName and sid don't change.
+    # Generates a deterministic GUID based on the architecture, suiteName,
+    # versionType, and the given string identifier "sid". This GUID doesn't
+    # change from version to version (of the same versionType), and doesn't
+    # depend on the appName.
     #
     def staticGuid(self, sid):
         u = uuid.uuid5(uuid.NAMESPACE_URL,
-                  "http://staticguid.wix.vgc.io" +
-                  "/" + self.name +
-                  "/" + sid)
+                    "http://dynamicguid.wix.vgc.io" +
+                    "/" + self.architecture +
+                    "/" + self.suiteName +
+                    "/" + self.versionType +
+                    "/" + sid)
         return str(u).upper()
 
     # Generates the setup file
     #
     def makeSetup(self, deployDir, icon, logo):
-        basename = self.longName.lower().replace(" ", "-")
-        msi_wxs            = deployDir / (basename + ".wxs")
-        msi_wixobj         = deployDir / (basename + ".wixobj")
-        msi                = deployDir / (basename + ".msi")
-        bundle_wxc         = deployDir / "bundle.wxs"
-        setup_wxs          = deployDir / (basename + "-setup.wxs")
-        setup_wixobj       = deployDir / (basename + "-setup.wixobj")
-        setup              = deployDir / (basename + "-setup.exe")
-        vcredist           = deployDir / "vc_redist.x64.exe"
-        vcredistVersion    = (deployDir / "vc_redist.x64.exe.version").read_text().strip()
+        basename = "{} {} {}".format(self.suiteName, self.appName, self.fullVersion)
+        if self.architecture != "x64":
+            basename += "-" + self.architecture
+        msi_wxs             = deployDir / (basename + ".wxs")
+        msi_wixobj          = deployDir / (basename + ".wixobj")
+        msi                 = deployDir / (basename + ".msi")
+        bundle_template_wxs = deployDir / "bundle.wxs"
+        bundle_wxs          = deployDir / (basename + " Bundle.wxs")
+        bundle_wixobj       = deployDir / (basename + " Bundle.wixobj")
+        setup_exe           = deployDir / (basename + " Setup.exe")
+        vcredist            = deployDir / "vc_redist.x64.exe"
+        vcredistVersion     = (deployDir / "vc_redist.x64.exe.version").read_text().strip()
         binDir = self.wixDir / "bin"
 
         # Generate the .wxs file of the MsiPackage
         msi_wxs.write_bytes(self.domDocument.toprettyxml(encoding='windows-1252'))
 
         # Generate the .wxsobj file of the MsiPackage
+        # -sw1091: Silence warning CNDL1091: The Package/@Id attribute has been set.
         subprocess.run([
             str(binDir / "candle.exe"), str(msi_wxs),
-            "-arch", self.platform,
+            "-sw1091",
+            "-arch", self.architecture,
             "-out", str(msi_wixobj)])
 
         # Generate the .msi file of the MsiPackage
@@ -217,12 +431,12 @@ class Wix:
             "-out", str(msi)])
 
         # Generate the .wxs file of the Bundle
-        setup_text = bundle_wxc.read_text()
-        setup_wxs.write_text(replace_all(setup_text, {
-            "$(var.name)":            self.longName,
+        setup_text = bundle_template_wxs.read_text()
+        bundle_wxs.write_text(replace_all(setup_text, {
+            "$(var.name)":            self.appFullName,
             "$(var.manufacturer)":    self.manufacturer,
-            "$(var.upgradeCode)":     self.staticGuid("Bundle/UpgradeCode"),
-            "$(var.version)":         self.version,
+            "$(var.upgradeCode)":     self.staticGuid("Bundle/UpgradeCode/" + self.appName),
+            "$(var.version)":         self.shortVersion,
             "$(var.icon)":            str(icon),
             "$(var.logo)":            str(logo),
             "$(var.msi)":             str(msi),
@@ -231,18 +445,18 @@ class Wix:
 
         # Generate the .wxsobj file of the Bundle
         subprocess.run([
-            str(binDir / "candle.exe"), str(setup_wxs),
+            str(binDir / "candle.exe"), str(bundle_wxs),
             "-ext", "WixBalExtension",
             "-ext", "WixUtilExtension",
-            "-arch", self.platform,
-            "-out", str(setup_wixobj)])
+            "-arch", self.architecture,
+            "-out", str(bundle_wixobj)])
 
         # Generate the .exe file of the Bundle
         subprocess.run([
-            str(binDir / "light.exe"), str(setup_wixobj),
+            str(binDir / "light.exe"), str(bundle_wixobj),
             "-ext", "WixBalExtension",
             "-ext", "WixUtilExtension",
-            "-out", str(setup)])
+            "-out", str(setup_exe)])
 
     # Creates a new feature. Note: feature names cannot be longer than 38 characters in length.
     #
@@ -334,7 +548,7 @@ class WixElement:
         componentId = encodeId("SubMenuComponent" + subMenuDirectory.dirId)
         subMenuComponent = subMenuDirectory.createChild("Component", [
             ("Id", componentId),
-            ("Guid", self.wix.staticGuid(componentId))])
+            ("Guid", self.wix.dynamicGuid(componentId))])
         subMenuComponent.createChild("RemoveFolder", [
             ("Id", encodeId("RemoveFolder" + componentId)),
             ("On", "uninstall")])
@@ -353,7 +567,7 @@ class WixElement:
         componentId = encodeId("FileComponent" + self.dirId + "/" + name)
         fileComponent = self.createChild("Component", [
             ("Id", componentId),
-            ("Guid", self.wix.staticGuid(componentId)),
+            ("Guid", self.wix.dynamicGuid(componentId)),
             ("Win64", self.wix.win64yesno)])
         file = fileComponent.createChild("File", [
             ("Id", encodeId("File" + componentId)),
@@ -382,37 +596,65 @@ class WixElement:
                 destDir.addDirectory(child, feature)
         return destDir
 
+# Generates an MSI file for the given application
+#
+def makeAppSetup(
+        buildDir, configDir, deployDir, wixDir,
+        manufacturer, suiteName, appName, architecture,
+        versionType, commitBranch, commitDate, commitNumber):
+
+    # General configuration
+    wix = Wix(
+        wixDir,
+        manufacturer, suiteName, appName, architecture,
+        versionType, commitBranch, commitDate, commitNumber)
+    appFeature = wix.createFeature(appName)
+
+    # Add 'bin', 'python', and 'resources' directories
+    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", appFeature)
+    wix.installDirectory.addDirectory(configDir / "python", appFeature)
+    wix.installDirectory.addDirectory(configDir / "resources", appFeature)
+
+    # Create Desktop and Start Menu shortcuts
+    appExecutableBasename = "vgc" + appName.lower()
+    appExecutableName = appExecutableBasename + ".exe"
+    appExecutable = wixBinDir.getFile(appExecutableName)
+    appIconPath = buildDir / (appExecutableBasename + ".ico")
+    appIcon = wix.createIcon(appIconPath)
+    appExecutable.createShortcut(wix.startMenuDirectory, wix.appFullName, appIcon)
+    appExecutable.createShortcut(wix.desktopDirectory, wix.appFullName, appIcon)
+
+    # Generate the Setup file
+    setupIcon = appIconPath
+    setupLogo = setupIcon.with_suffix(".png")
+    wix.makeSetup(deployDir, setupIcon, setupLogo)
+
 # Generates an MSI file from the build
 #
 def run(buildDir, config, wixDir):
+
+    # Get and create useful directories
     buildDir = Path(buildDir)
-    wixDir = Path(wixDir)
     configDir = buildDir / config
     deployDir = configDir / "deploy"
     deployDir.mkdir(parents=True, exist_ok=True)
+    wixDir = Path(wixDir)
 
     # General configuration
-    # Note: keep the same productName to have consistent ugradeCode across version.
-    productName = "VGC Illustration Dev"
-    longName =  "VGC Illustration Dev 2019-05-27"
-    version = "19.5.27.1"
     manufacturer = "VGC Software"
-    wix = Wix(productName, longName, version, manufacturer, wixDir)
-    feature = wix.createFeature("Complete")
+    suiteName = "VGC"
+    appNames = [ "Illustration" ]
+    architecture = "x64"
+    versionType = "Dev"         # TODO should be a CMake cache variable
+    commitBranch = "master"     # TODO should be automatically retrieved from git log
+    commitDate = "2019-05-27"   # TODO should be automatically retrieved from git log
+    commitNumber = 0            # TODO should be automatically retrieved from git log
 
-    # Add 'bin', 'python', and 'resources' directories
-    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", feature)
-    wix.installDirectory.addDirectory(configDir / "python", feature)
-    wix.installDirectory.addDirectory(configDir / "resources", feature)
-
-    # Create Desktop and Start Menu shortcuts
-    executable = wixBinDir.getFile("vgcillustration.exe")
-    iconPath = buildDir / "vgcillustration.ico"
-    icon = wix.createIcon(iconPath)
-    executable.createShortcut(wix.startMenuDirectory, longName, icon)
-    executable.createShortcut(wix.desktopDirectory, longName, icon)
-
-    # Generate the Setup file
-    setupIcon = iconPath
-    setupLogo = buildDir / "vgcillustration.png"
-    wix.makeSetup(deployDir, setupIcon, setupLogo)
+    # Create an .msi and a setup.exe for each app.
+    # TODO: also create a "Suite" .msi and setup.exe installing all the apps.
+    appNames = [ "Illustration" ]
+    for appName in appNames:
+        makeAppSetup(
+            buildDir, configDir, deployDir, wixDir,
+            manufacturer, suiteName, appName, architecture,
+            versionType, commitBranch, commitDate, commitNumber)
