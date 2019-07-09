@@ -31,8 +31,13 @@
 cmake_minimum_required(VERSION 3.1.0)
 project(vgc)
 
-# Setup version type
-set(VGC_VERSION_TYPE "Dev" CACHE STRING "Possible values: Dev, Alpha, Beta, RC, or Stable.")
+# Set the version type. See tools/windows/wix.py for details.
+#
+# If set to "Auto" (the default), the version type will be automatically
+# determined based on information from git (such as which branch is checked out),
+# or set to "Local" if no git information is found.
+#
+set(VGC_VERSION_TYPE "Auto" CACHE STRING "Possible values: Auto, Stable, Beta, Alpha, Branch, or Local.")
 
 # Get info from Git if any
 find_package(Git)
