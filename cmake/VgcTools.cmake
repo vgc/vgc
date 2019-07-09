@@ -1,18 +1,3 @@
-# Specify where to write final build output
-set(VGC_LIB_OUTPUT_DIRECTORY       ${CMAKE_BINARY_DIR}/lib)
-set(VGC_PYTHON_OUTPUT_DIRECTORY    ${CMAKE_BINARY_DIR}/python)
-set(VGC_WRAP_OUTPUT_DIRECTORY      ${CMAKE_BINARY_DIR}/python/vgc)
-set(VGC_APP_OUTPUT_DIRECTORY       ${CMAKE_BINARY_DIR}/bin)
-set(VGC_RESOURCES_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
-
-# Note: we could do the following to set default output directories
-# However, we normally don't need this since our helper functions
-# explicitly set the output directories using the variables above
-#
-#   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-#   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-#   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
 # Prefixes all strings of a comma-separated list of string with a common
 # string, and stores the result in a new variable.
 #
@@ -26,6 +11,18 @@ function(vgc_prepend_ var prefix)
       list(APPEND listVar "${prefix}${f}")
    endforeach()
    set(${var} "${listVar}" PARENT_SCOPE)
+endfunction()
+
+# Defines a command that copies a file from src to dest.
+#
+function(vgc_add_copy_command src dest)
+    add_custom_command(
+        COMMENT ""
+        OUTPUT ${dest}
+        DEPENDS ${src}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dest}
+        VERBATIM
+    )
 endfunction()
 
 # Defines a new VGC library. This calls add_library under the hood.
@@ -61,37 +58,49 @@ function(vgc_add_library LIB_NAME)
     set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES HEADER_FILES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    # Add custom target 'vgc_lib_resources_mylib' that copy all resource files
-    # from <src>/libs/vgc/mylib to <bin>/resources/mylib
-    set(LIB_RESOURCES_OUTPUT_DIRECTORY ${VGC_RESOURCES_OUTPUT_DIRECTORY}/${LIB_NAME})
-    file(REMOVE_RECURSE ${LIB_RESOURCES_OUTPUT_DIRECTORY})
-    file(MAKE_DIRECTORY ${LIB_RESOURCES_OUTPUT_DIRECTORY})
-    set(OUTPUT_RESOURCE_PATHS "")
-    foreach(RELATIVE_RESOURCE_PATH ${ARG_RESOURCE_FILES})
-        set(INPUT_RESOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${RELATIVE_RESOURCE_PATH})
-        set(OUTPUT_RESOURCE_PATH ${LIB_RESOURCES_OUTPUT_DIRECTORY}/${RELATIVE_RESOURCE_PATH})
-        list(APPEND OUTPUT_RESOURCE_PATHS ${OUTPUT_RESOURCE_PATH})
-        add_custom_command(
-            COMMENT "Copying resource file ${LIB_NAME}/${RELATIVE_RESOURCE_PATH}"
-            OUTPUT ${OUTPUT_RESOURCE_PATH}
-            DEPENDS ${INPUT_RESOURCE_PATH}
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${INPUT_RESOURCE_PATH}
-            ${OUTPUT_RESOURCE_PATH}
-        )
-    endforeach()
-    vgc_prepend_(RESOURCES_TARGET_NAME "vgc_lib_resources_" ${LIB_NAME})
-    add_custom_target(${RESOURCES_TARGET_NAME} ALL DEPENDS ${OUTPUT_RESOURCE_PATHS})
-
     # Add library using target name "vgc_lib_mylib"
-    vgc_prepend_(TARGET_NAME "vgc_lib_" ${LIB_NAME})
+    set(TARGET_NAME vgc_lib_${LIB_NAME})
     add_library(${TARGET_NAME} SHARED ${ARG_HEADER_FILES} ${ARG_CPP_FILES})
 
-    # Add dependency to resource files
-    add_dependencies(${TARGET_NAME} ${RESOURCES_TARGET_NAME})
+    # Set library output directory and filenames.
+    #
+    # Note that on non-DLL platforms (macOS, Linux), the output directory is
+    # specified by LIBRARY_OUTPUT_DIRECTORY, while on DLL platforms (Windows),
+    # the output directory is specified by RUNTIME_OUTPUT_DIRECTORY. See:
+    #
+    # https://cmake.org/cmake/help/latest/manual/cmake-buildsystem.7.html#output-artifacts
+    #
+    # Also, note that on multi-configuration generators (VS, Xcode), a
+    # per-configuration subdirectory ("Release", "Debug", etc.) is automatically
+    # appended unless a generator expression is used. For example, with a Visual
+    # Studio generator, the property `RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin`
+    # would output a file such as `<build>/bin/Release/vgccore.dll`. See:
+    #
+    # https://cmake.org/cmake/help/latest/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
+    #
+    # In our case, we prefer to have the per-configuration subdirectory
+    # prepended rather than appended, such as `<build>/Release/bin/vgccore.dll`,
+    # so that the directory structure within the per-configuration subdirectory
+    # is identitical than those of single-configuration. Therefore, we use
+    # the generator expression $<Config> to achieve this.
+    #
+    # Finally, note that prefixes and suffixes are automatically added based
+    # on ${CMAKE_SHARED_LIBRARY_PREFIX} and ${CMAKE_SHARED_LIBRARY_SUFFIX}.
+    #
+    # Examples:
+    #   LIB_NAME:                            core
+    #   Output on Linux with Make generator: <build>/lib/libvgccore.so
+    #   Output on Windows with VS generator: <build>/<Config>/bin/vgccore.dll
+    #
+    set_target_properties(${TARGET_NAME}
+        PROPERTIES
+            OUTPUT_NAME vgc${LIB_NAME}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/lib
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin
+    )
 
     # Add dependencies to other VGC libraries
-    vgc_prepend_(VGC_DEPENDENCIES "vgc_lib_" ${ARG_VGC_DEPENDENCIES})
+    vgc_prepend_(VGC_DEPENDENCIES vgc_lib_ ${ARG_VGC_DEPENDENCIES})
     target_link_libraries(${TARGET_NAME} ${VGC_DEPENDENCIES})
 
     # Add dependencies to third-party dependencies
@@ -104,21 +113,47 @@ function(vgc_add_library LIB_NAME)
     string(TOUPPER VGC_${LIB_NAME}_EXPORTS EXPORTS_COMPILE_DEFINITION)
     target_compile_definitions(${TARGET_NAME} PRIVATE ${EXPORTS_COMPILE_DEFINITION})
 
-    # Add -fvisibility=hidden when compiling on Linux/MacOS.
+    # Add -fvisibility=hidden when compiling on Linux/macOS.
     # Note: This is already the default on Windows.
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
-    # Set output name. Prefixes are automatically added from:
-    # ${CMAKE_SHARED_LIBRARY_PREFIX} and ${CMAKE_SHARED_LIBRARY_SUFFIX}
-    # Example:
-    #   LIB_NAME               = geometry
-    #   LIB_OUTPUT_NAME        = vgcgeometry
-    #   actual output on Linux = libvgcgeometry.so
-    set(LIB_OUTPUT_NAME "vgc${LIB_NAME}")
-    set_target_properties(${TARGET_NAME}
-        PROPERTIES
-        OUTPUT_NAME ${LIB_OUTPUT_NAME}
-        LIBRARY_OUTPUT_DIRECTORY "${VGC_LIB_OUTPUT_DIRECTORY}"
+    # Copy the 'copy_resources.py' script to the current build directory.
+    #
+    # Why making a copy instead of running directly from source dir? Because we
+    # prefer to run scripts from the build directory to avoid polluting the
+    # source directory with output (e.g., __pycache__).
+    #
+    # Why not creating only ony copy in ${CMAKE_BINARY_DIR}, instead of one copy
+    # per library in ${CMAKE_CURRENT_BINARY_DIR}? Because add_custom_target only
+    # allows to define dependencies generated by the same CMakeLists.txt.
+    # Besides, this makes it an implementation detail of vgc_add_library hidden
+    # to the parent directory scope, which increases maintainability.
+    #
+    set(COPY_RESOURCES_PY ${CMAKE_CURRENT_BINARY_DIR}/copy_resources.py)
+    vgc_add_copy_command(
+        ${CMAKE_SOURCE_DIR}/tools/copy_resources.py
+        ${COPY_RESOURCES_PY}
+    )
+
+    # Write list of resources as comma-separated string
+    set(RESOURCES_TXT ${CMAKE_CURRENT_BINARY_DIR}/resources.txt)
+    vgc_prepend_(RESOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ ${ARG_RESOURCE_FILES})
+    add_custom_command(
+        COMMENT ""
+        OUTPUT ${RESOURCES_TXT}
+        DEPENDS ${RESOURCE_FILES}
+        COMMAND ${CMAKE_COMMAND} -E echo "${ARG_RESOURCE_FILES}" > ${RESOURCES_TXT}
+        VERBATIM
+    )
+
+    # Update build copy of resources whenever necessary
+    add_custom_target(${TARGET_NAME}_resources ALL
+        DEPENDS ${RESOURCES_TXT} ${COPY_RESOURCES_PY}
+        COMMAND ${PYTHON_EXECUTABLE} -c
+            "import copy_resources; copy_resources.run('${CMAKE_SOURCE_DIR}', '${CMAKE_BINARY_DIR}', '$<CONFIG>', '${LIB_NAME}')"
+        WORKING_DIRECTORY
+            ${CMAKE_CURRENT_BINARY_DIR}
+        VERBATIM
     )
 
 endfunction()
@@ -143,8 +178,8 @@ function(vgc_wrap_library LIB_NAME)
     #   LIB_NAME = geometry
     #   LIB_TARGET_NAME = vgc_lib_geometry
     #   MODULE_TARGET_NAME = vgc_wrap_geometry
-    vgc_prepend_(LIB_TARGET_NAME "vgc_lib_" ${LIB_NAME})
-    vgc_prepend_(WRAP_TARGET_NAME "vgc_wrap_" ${LIB_NAME})
+    vgc_prepend_(LIB_TARGET_NAME vgc_lib_ ${LIB_NAME})
+    vgc_prepend_(WRAP_TARGET_NAME vgc_wrap_ ${LIB_NAME})
 
     # Use pybind11 helper function. This calls add_library(${TARGET_NAME} ...)
     # and sets all required include dirs and libs to link.
@@ -154,8 +189,9 @@ function(vgc_wrap_library LIB_NAME)
     # import the library, e.g., "from vgc.geometry import Point"
     set_target_properties(${WRAP_TARGET_NAME}
         PROPERTIES
-        OUTPUT_NAME "${LIB_NAME}"
-        LIBRARY_OUTPUT_DIRECTORY "${VGC_WRAP_OUTPUT_DIRECTORY}"
+            OUTPUT_NAME ${LIB_NAME}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc
     )
 
     # Link to the C++ library this Python module is wrapping
@@ -189,7 +225,7 @@ endfunction()
 #
 # with the following folder added to PYTHONPATH:
 #
-#   <vgc-build-dir>/python
+#   <vgc-build-dir>/<config>/python
 #
 # Currently, the CMake variable ${PYTHON_EXECUTABLE} is set by FindPythonLibsNew
 # shipped with third/pybind11.
@@ -204,7 +240,7 @@ function(vgc_test_library LIB_NAME)
 
     # Add python tests
     foreach(PYTHON_TEST_FILENAME ${ARG_PYTHON_TESTS})
-        set(PYTHON_TEST_TARGET_NAME "vgc_${LIB_NAME}_${PYTHON_TEST_FILENAME}")
+        set(PYTHON_TEST_TARGET_NAME vgc_${LIB_NAME}_${PYTHON_TEST_FILENAME})
         add_test(
             NAME ${PYTHON_TEST_TARGET_NAME}
             COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
@@ -212,7 +248,7 @@ function(vgc_test_library LIB_NAME)
         )
         set_tests_properties(${PYTHON_TEST_TARGET_NAME}
             PROPERTIES
-            ENVIRONMENT PYTHONPATH=${VGC_PYTHON_OUTPUT_DIRECTORY}:$ENV{PYTHONPATH}
+                ENVIRONMENT PYTHONPATH=${CMAKE_BINARY_DIR}/$<CONFIG>/python:$ENV{PYTHONPATH}
         )
     endforeach()
 
@@ -242,13 +278,13 @@ function(vgc_add_app APP_NAME)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Prepend LIB_NAME with "vgc_lib_" to get target name.
-    vgc_prepend_(TARGET_NAME "vgc_app_" ${APP_NAME})
+    vgc_prepend_(TARGET_NAME vgc_app_ ${APP_NAME})
 
     # Add library
     add_executable(${TARGET_NAME} ${ARG_CPP_FILES})
 
     # VGC dependencies
-    vgc_prepend_(VGC_DEPENDENCIES "vgc_lib_" ${ARG_VGC_DEPENDENCIES})
+    vgc_prepend_(VGC_DEPENDENCIES vgc_lib_ ${ARG_VGC_DEPENDENCIES})
     target_link_libraries(${TARGET_NAME} ${VGC_DEPENDENCIES})
 
     # Third-party dependencies
@@ -260,11 +296,49 @@ function(vgc_add_app APP_NAME)
     # Set the output name. Example (for now): vgcillustration
     # Under Windows, we may want to call it "VGC_Illustration_2020.exe"
     # Under Linux, we may want to call it vgc-illustration-2020
-    vgc_prepend_(APP_OUTPUT_NAME "vgc" ${APP_NAME})
     set_target_properties(${TARGET_NAME}
         PROPERTIES
-        OUTPUT_NAME "${APP_OUTPUT_NAME}"
-        RUNTIME_OUTPUT_DIRECTORY "${VGC_APP_OUTPUT_DIRECTORY}"
+            OUTPUT_NAME vgc${APP_NAME}
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin
     )
+
+    if(WIN32)
+        # Run windeployqt to copy all required Qt dependencies in the bin
+        # folder.
+        #
+        # Note: in theory, a POST_BUILD command will only be executed if the
+        # target is rebuilt. However, there a specific bug when using msbuild:
+        # POST_BUILD commands are always run regardless of whether the target
+        # is rebuilt or not. See:
+        #
+        # https://gitlab.kitware.com/cmake/cmake/issues/18530
+        #
+        # In addition, we may not even want to run windeployqt each time the
+        # target is rebuilt, since it is extremely rare that new Qt dependencies
+        # are added between two builds.
+        #
+        # Therefore, to avoid running windeployqt unnecessarily, we first check
+        # for the existence of *any* Qt DLL in the bin folder, then run
+        # windeployqt only if there are none. This would fail to add any newly
+        # required Qt dependency, but this should be very rare. If one needs
+        # windeployqt to be re-run, simply delete all Qt DLLs from the bin
+        # folder and rebuild.
+        #
+        # In the future, we may want to be a little more conservative, for
+        # example we could implement a way to at least automatically re-run
+        # windeployqt when a CMake file changes.
+        #
+        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND if not exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/Qt*.dll
+                ${Qt}/bin/windeployqt.exe
+                ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vgc${APP_NAME}.exe
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy
+            COMMAND if exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vc_redist.x64.exe
+                ${CMAKE_COMMAND} -E rename
+                    ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vc_redist.x64.exe
+                    ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe
+            VERBATIM
+        )
+    endif()
 
 endfunction()
