@@ -965,18 +965,17 @@ def utcdate(dateString, format):
     return d.astimezone(timezone.utc).date().isoformat()
 
 # Returns whether the string is the name of a release branch,
-# that is, starts with a four-digit integer, like 2020. For
-# stable versions, we also create a new branch, like 2020.0.
+# that is, a four-digit integer, like 2020.
 #
 def isReleaseBranch(branchName):
-    if re.fullmatch(r"[0-9]{4}(\.[0-9]+)?", branchName):
+    if re.fullmatch(r"[0-9]{4}", branchName):
         return True
     else:
         return False
 
 # Generates an MSI file from the build
 #
-def run(buildDir, config, wixDir, versionType):
+def run(buildDir, config, wixDir):
 
     # Get and create useful directories
     buildDir = Path(buildDir)
@@ -1006,34 +1005,25 @@ def run(buildDir, config, wixDir, versionType):
         commitNumber = None
 
     # Deduct version type from git info
-    if versionType == "Auto":
-        if commitBranch:
-            if commitBranch == "master":
-                versionType = "Alpha"
-            elif isReleaseBranch(commitBranch):
-                versionType = "Beta"
-            else:
-                versionType = "Branch"
+    # TODO: deduct "Stable" version type based on either branch or tag name.
+    if commitBranch:
+        if commitBranch == "master":
+            versionType = "Alpha"
+        elif isReleaseBranch(commitBranch):
+            versionType = "Beta"
         else:
-            versionType = "Local"
-    elif versionType == "Stable":
-        if not isReleaseBranch(commitBranch):
-            raise ValueError('You must have a release branch checked out for versionType = "Stable"')
-    elif versionType == "Beta":
-        if not isReleaseBranch(commitBranch):
-            raise ValueError('You must have a release branch checked out for versionType = "Beta"')
-    elif versionType == "Alpha":
-        if commitBranch != "master":
-            raise ValueError('You must be on the master branch for versionType = "Alpha"')
-    elif versionType == "Branch":
-        if not commitBranch:
-            raise ValueError('You must have a branch checked out for versionType = "Branch"')
+            versionType = "Branch"
+    else:
+        versionType = "Local"
 
-    # Set upgrade policy. For now, only upgradePolicy = "all" is implemented.
-    upgradePolicy = "all"
+    # Set upgrade policy. For now, it is hard-coded to be the the most
+    # upradable policy.
+    if versionType == "Local":
+        upgradePolicy = "none"
+    else:
+        upgradePolicy = "all"
 
     # Create an installer for the suite, containing all apps.
-    # for
     makeSuiteInstaller(
         buildDir, configDir, deployDir, wixDir,
         manufacturer, suiteName, appNames, architecture,
