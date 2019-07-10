@@ -31,14 +31,6 @@
 cmake_minimum_required(VERSION 3.1.0)
 project(vgc)
 
-# Set the version type. See tools/windows/wix.py for details.
-#
-# If set to "Auto" (the default), the version type will be automatically
-# determined based on information from git (such as which branch is checked out),
-# or set to "Local" if no git information is found.
-#
-set(VGC_VERSION_TYPE "Auto" CACHE STRING "Possible values: Auto, Stable, Beta, Alpha, Branch, or Local.")
-
 # Get info from Git if any
 find_package(Git)
 if(Git_FOUND)
@@ -335,7 +327,7 @@ if(WIN32)
             \).VersionInfo.FileVersion
             > ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe.version
         COMMAND ${PYTHON_EXECUTABLE} -c
-            "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}', '${VGC_VERSION_TYPE}')"
+            "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
         COMMAND ${CMAKE_COMMAND} -E touch ${DEPLOY_TIMESTAMP}
         WORKING_DIRECTORY
             ${CMAKE_BINARY_DIR}
