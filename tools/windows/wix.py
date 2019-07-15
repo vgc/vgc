@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 #
+# This script creates windows installers from a given build. Please also read
+# the documentation of vgc/tools/version.py for a definition of some of the
+# versioning terms we use in this script.
+#
 # Useful resources on Windows Installer and WiX
 # ---------------------------------------------
 #
@@ -12,60 +16,13 @@
 #
 # - https://wiki.qt.io/Branch_Guidelines
 #
-# Suite
-# -----
-#
-# We call a "suite" a group of related apps which are designed to be installed
-# together and share resources, such as DLLs, images, fonts, etc.
-#
-# For example, "Adobe CC" and "Open Office" are suites. In our case, we are
-# developing a suite named "VGC".
-#
-# Version type
-# ------------
-#
-# We call "version type" one of the following:
-#
-# - Stable:
-#     Build based on a specific, hand-picked commit on a release branch, deemed
-#     sufficiently stable for production use.
-#
-# - Beta:
-#     Build based on a commit in a release branch, for example the "2020"
-#     branch. Release branches are created after a feature freeze, therefore
-#     only bug fixes go to such branches, which means that beta versions
-#     stabilize over time.
-#
-# - Alpha:
-#     Build based on a commit in the "master" branch.
-#
-# - Branch:
-#     Any build based on a commit in neither of the previous branches.
-#
-# - Local:
-#     Any build which is neither of the previous types, for example because the
-#     version control system is not available.
-#
-# Builds of VGC with different version types are always considered to be
-# different programs, and are installed side-by-side in different folders.
-# For example, with upgradePolicy = "all" (see next section), the default
-# install folders for stable, beta, alpha, branch, and local versions are:
-#
-# - C:/Program Files/VGC/
-# - C:/Program Files/VGC Beta/
-# - C:/Program Files/VGC Alpha/
-# - C:/Program Files/VGC Branch <branch-name>/
-# - C:/Program Files/VGC Local <build-date>.<random-id>/
-#
-# Where <random-id> is a random sequence of alphanumeric characters long enough
-# to make collisions unlikely.
-#
 # Upgrade policy
 # --------------
 #
 # The "upgrade policy" determines whether installing a newer version of VGC
-# suite replaces the existing version, or if instead both versions are installed
-# side-by-side. There are three possible upgrade policies:
+# replaces the existing version, or if instead both versions are installed
+# side-by-side. For stable versions, there are three possible upgrade
+# policies:
 # - "all": Always replaces the existing installation.
 # - "minor": Replaces the existing installation only for minor updates.
 # - "none": Never replaces the existing installation.
@@ -76,145 +33,170 @@
 # after installation. This is because the upgrade policy is determined by the
 # MSI upgrade code which is hard-coded in the MSI package.
 #
-# The upgrade policy also affects which name is given to the install folder, so
-# it makes sense that it cannot be changed after installation. For example, any
-# "stable" version with the "all" upgrade policy is installed (by default) to:
+# The upgrade policy also affects which name is given to the install folder,
+# so it makes sense that it cannot be changed after installation. For example,
+# with the "all" upgrade policy, stable versions are by default installed to:
 #
 #   C:/Program Files/VGC/
 #
-# But "stable" versions with the "minor" upgrade policy are installed to a folder
-# indicating its major version, in order to allow different major versions to be
-# installed side-by-side, for example:
+# While with the "minor", their are installed to a more specific folder to
+# allow side-by-side installation:
 #
 #   C:/Program Files/VGC 2020/
 #   C:/Program Files/VGC 2021/
-#   ...
 #
-# Below is a table giving examples of what the default install folder name
-# looks like based on the version type and the upgrade policy:
+# Below is a table documenting:
+# - which upgrade policies are supported for each version type
+# - what the default install folder looks like
 #
-#            |    "all"          |     "minor"     |          "none"
-# -----------+-------------------+-----------------+------------------------------
-# "Stable"   |  VGC              |  VGC 2020       |  VGC 2020.0
-# "Beta"     |  VGC Beta         |  VGC 2020 Beta  |  VGC 2020 Beta 2019-06-28.3
-# "Alpha"    |  VGC Alpha        |  N/A            |  VGC Alpha 2019-06-28.3
-# "Branch"   |  VGC Branch gh62  |  N/A            |  VGC Branch gh62 2019-07-06.2
-# "Local"    |  N/A              |  N/A            |  VGC Local 2019-07-06.s9wj3g
+# -----------------------------------------------------------------
+# Version type   Upgrade policy   Default install folder
+# -----------------------------------------------------------------
+# "stable"       "all"            VGC
+#                "minor"          VGC 2020
+#                "none"           VGC 2020.0
+# -----------------------------------------------------------------
+# "beta"         "minor"          VGC 2020 Beta[-gh62]
+#                "none"           VGC 2020 Beta[-gh62] 2019-07-14.1
+# -----------------------------------------------------------------
+# "alpha"        "minor"          VGC Alpha[-gh62]
+#                "none"           VGC Alpha[-gh62] 2019-07-14.1
+# -----------------------------------------------------------------
 #
-# We note that the "minor" upgrade policy doesn't make sense for alpha and
-# branch versions, since the concept of minor vs. major versions doesn't exist
-# for these version types. Also, builds which aren't version controlled are
-# non-upgradable so only the "none" upgrade policy is possible.
+# The optional branch name (e.g., "gh62") is only appended if the commitBranch
+# is not "master" for alpha versions, or "{versionMajor}" (e.g., "2020") for
+# beta versions. The commitBranch is ignored for stable versions, since we
+# already have all the info we need for versioning (major.minor), and we want
+# to support creating installers for stable versions without access to git.
 #
-# In order to help the user choose the desired upgrade policy, the Download page
-# may look like the following:
+# For alpha versions, the concept of "minor" vs "major" updates doesn't make
+# sense, so there's just one type of possible update, which we call "minor".
+#
+# For beta versions, the concept of "minor" vs "major" updates does make some
+# sense, and we could envision an "all" upgrade policy that would install "VGC
+# Beta" and would allow both minor and major updates. Unfortunately, such
+# installations would suffer from a sudden decrease of stability when updating
+# from the last commit of the 2020 branch (= stable quality) to the first
+# commit of the 2021 branch (= alpha quality), so we decided not to support
+# it. The UI may still invite users of VGC 2020 Beta to try out VGC 2021 Beta,
+# but it would install it side-by-side, to keep the more stable version
+# available. This decision also makes the offer much less confusing: alpha
+# versions are for trying the very latest just-implemented features, while
+# beta versions are for testing a specific upcoming major version.
+#
+# Note that alpha and beta versions require a valid commitBranch, commitDate,
+# and commitIndex in order to be able to create installers, since we need this
+# info for versioning (unlike stable versions, their "minor version number" is
+# not hard-coded in the source code).
+#
+# In order to help the user choose the desired upgrade policy, the Download
+# page may look like the following:
 #
 # [Download VGC 2020]      <-- link to VGC 2020 Installer.exe
 #
 # + More options           <-- dropdown menu revealing more options on click
 # |
 # |- VGC 2020 Installer.exe:
-# |    This is the default and most recommended option, which includes a built-in
-# |    system to easily update to any newer version if/when desired. By default,
-# |    it installs VGC 2020 and subsequent minor and major updates to:
-# |        C:/Program Files/VGC/
+# |    This is our recommended installer, which allows to easily update to any
+# |    newer version. By default, this installs VGC 2020 to:
+# |        C:\Program Files\VGC\
 # |
-# |- VGC 2020 Installer (minor updates only).exe:
-# |    This is for advanced users who would like the possibility to install
-# |    different major versions of VGC side-by-side (example: VGC 2020 and
-# |    VGC 2021), while still keeping the ability to easily update to newer
-# |    minor versions, if any (example: VGC 2020 to VGC 2020.1). By default,
-# |    it installs VGC 2020 and subsequent minor updates to:
-# |        C:/Program Files/VGC 2020/
+# |- VGC 2020 LTS Installer.exe:
+# |    This is for users who prefer to only apply minor updates to their VGC
+# |    installation. Using LTS installers, major updates are installed
+# |    side-by-side rather than replacing the older version. By default, this
+# |    installs VGC 2020 to:
+# |        C:\Program Files\VGC 2020\
 # |
-# |- VGC 2020 Installer (no updates).exe:
-# |    This is for advanced users who would like the possibility to install
-# |    any versions of VGC side-by-side, including different minor versions.
-# |    However, it doesn't include any system to easily update to newer
-# |    versions. By default, it installs VGC 2020 to:
-# |        C:/Program Files/VGC 2020.0/
+# |- VGC 2020 Frozen Installer.exe:
+# |    This is for users who really don't like updates at all! Using the frozen
+# |    installers, both minor and major updates are installed side-by-side
+# |    rather than replacing the older version. By default, this installs
+# |    VGC 2020 to:
+# |        C:\Program Files\VGC 2020.0\
 # |
 # |- VGC 2020.zip:
 #      This is a portable installation which you can unzip and run from
-#      anywhere. However, it doesn't include any system to easily update
+#      anywhere. However, it doesn't include any mechanism to easily update
 #      to newer versions, and it doesn't create convenient shortcuts in your
 #      Start Menu or Desktop (you'll have to do this manually if desired).
 #      You may need to manually run the included vc_redist.x64.exe installer
 #      if your system doesn't already have the appropriate Visual Studio
 #      redistributables installed.
 #
-# MSI family
-# ----------
+# Install family
+# --------------
 #
-# We call "MSI family" a set of installers which can be upgraded from
-# one another or share MSI components. Two installers belongs to the same
-# MSI family if and only if all the following are true:
+# We call "install family" a set of installers which can be upgraded from
+# one another or share components. Two installers belong to the same
+# install family if and only if all the following are true:
+# - they are from the same manufacturer
 # - they are from the same suite
-# - they have the same version type, and:
-#   - if versionType = "Branch", they are from the same branch
-#   - if versionType = "Local", they are from the same build
-# - they have the same upgrade policy, and:
-#   - if upgradePolicy = "minor", they have the same major version
-#   - if upgradePolicy = "none", they are built from the same commit
+# - they have the same version type ("vt" for short)
+# - they have the same upgrade policy ("up" for short)
 # - they are targeting the same architecture (x86 or x64)
+# - if vt = "stable" and up = "minor": they have the same major version
+# - if vt = "stable" and up = "none": they have the same minor and major version
+# - if vt = "alpha" or "beta", they are from the same branch
+# - if vt = "alpha" or "beta", and up = "none": they are from the same commit
 #
 # We conveniently use the name of the default install folder as an identifier
 # for the family.
 #
-# For example, all installers of "Stable" versions of VGC with the "all"
-# upgrade policy are part of the same MSI family called "VGC". They
-# all get installed by default to "C:/Program Files/VGC/". Below are
-# examples of a few installers belonging to this MSI family:
+# For example, all installers of "stable" versions of VGC with the "all"
+# upgrade policy are part of the same install family called "VGC". They all
+# get installed by default to "C:/Program Files/VGC/". Below are examples of a
+# few installers belonging to this install family:
 #
 # - "VGC 2020 Installer.exe"
-# - "VGC 2021 Installer.exe"
 # - "VGC Illustration 2020 Installer.exe"
+# - "VGC 2020.1 Installer.exe"
+# - "VGC 2021 Installer.exe"
 #
-# Examples of installers belonging to the "VGC Beta" MSI family, i.e.,
-# versionType = "Beta" and upgradePolicy = "all":
+# Examples of installers belonging to the "VGC 2020" install family, i.e.,
+# versionType = "stable", upgradePolicy = "minor", and majorVersion = 2020:
+#
+# - "VGC 2020 LTS Installer.exe"
+# - "VGC Illustration 2020 LTS Installer.exe"
+# - "VGC 2020.1 LTS Installer.exe"
+#
+# Examples of installers belonging to the "VGC 2020.0" install family, i.e.,
+# versionType = "stable", upgradePolicy = "none", and version = 2020.0:
+#
+# - "VGC 2020 Frozen Installer.exe"
+# - "VGC Illustration 2020 Frozen Installer.exe"
+#
+# Examples of installers belonging to the "VGC 2020 Beta" install family, i.e.,
+# versionType = "beta", majorVersion = "2020", and upgradePolicy = "minor",
 #
 # - "VGC 2020 Beta 2019-06-28.3 Installer.exe"
-# - "VGC 2020 Beta 2019-06-29 Installer.exe"
-# - "VGC 2021 Beta 2020-02-01 Installer.exe"
-# - "VGC Illustration 2020 Beta 2020-06-29 Installer.exe"
+# - "VGC Illustration 2020 Beta 2019-06-28.3 Installer.exe"
+# - "VGC 2020 Beta 2019-06-29.0 Installer.exe"
 #
-# Examples of installers belonging to the "VGC Beta 2020" MSI family, i.e.,
-# versionType = "Beta", upgradePolicy = "minor", and majorVersion = 2020:
+# Examples of installers belonging to the "VGC 2020 Beta 2019-06-28.3" install family, i.e.,
+# versionType = "beta", majorVersion = "2020", upgradePolicy = "none", and commitDateAndIndex = "2019-06-28.3":
 #
-# - "VGC 2020 Beta 2019-06-28.3 Installer (minor updates only).exe"
-# - "VGC 2020 Beta 2019-06-29 Installer (minor updates only).exe"
-# - "VGC Illustration 2020 Beta 2020-06-29 Installer (minor updates only).exe"
+# - "VGC 2020 Beta 2019-06-28.3 Frozen Installer.exe"
+# - "VGC Illustration 2020 Beta 2019-06-28.3 Frozen Installer.exe"
 #
-# Examples of installers belonging to the "VGC Alpha 2019-06-28.3" MSI
-# family, i.e., versionType = "Alpha", upgradePolicy = "none", and built
-# from the fourth commit of 2019-06-28:
+# Examples of installers belonging to the "VGC Alpha" install family, i.e.,
+# versionType = "alpha", upgradePolicy = "minor"
 #
-# - "VGC Alpha 2019-06-28.3 Installer (no updates).exe"
-# - "VGC Illustration Alpha 2019-06-28.3 Installer (no updates).exe"
+# - "VGC Alpha 2019-06-28.3 Installer.exe"
+# - "VGC Illustration Alpha 2019-06-28.3 Installer.exe"
+# - "VGC Alpha 2019-06-29.0 Installer.exe"
 #
-# Suite installers vs app installers
-# ----------------------------------
+# Examples of installers belonging to the "VGC Alpha 2019-06-28.3" install family, i.e.,
+# versionType = "alpha", upgradePolicy = "none", and commitDateAndIndex = "2019-06-28.3":
 #
-# Within each MSI family, there are two "installer types":
-# - suite installers: they install all VGC apps
-# - app installers: they only install a specific VGC app
+# - "VGC Alpha 2019-06-28.3 Frozen Installer.exe"
+# - "VGC Illustration Alpha 2019-06-28.3 Frozen Installer.exe"
 #
-# Suite installers and app installers do not share the same MSI upgradeCode, but
-# they do share components and are installed in the same folder.
+# Install version
+# ---------------
 #
-# All the suite installers of a given MSI family share the same upgradeCode.
-#
-# All the app installers of a given MSI family share the same upgradeCode if
-# and only if the are installers for the same app. For example, "VGC Illustration
-# 2020.exe" and "VGC Animation 2020.exe" have a different upgradeCode, but "VGC
-# Illustration 2020.exe" and "VGC Illustration 2021.exe" have the same
-# upgradeCode.
-#
-# MSI Version
-# -----------
-#
-# Within each MSI family, we use a version numbering scheme designed to work
-# with the following constraints:
+# Within each install family, we use a MSI version numbering scheme designed
+# to work with the following MSI constraints:
 #
 #   https://docs.microsoft.com/en-us/windows/desktop/Msi/productversion
 #
@@ -229,127 +211,71 @@
 #
 # The versionning scheme used depends on the version type:
 #
-# - Stable: releaseYear.minor.0
+# - stable: releaseYear.minor.0
 #     Example 1:
-#       commit: first stable version on the 2020 release branch
-#       msiVersion: 20.0.0
-#       msiFamily:
+#       versionMajor = 2020
+#       versionMinor = 0
+#       installVersion: 20.0.0
+#       installFamily:
 #         if upgradePolicy = "all":   VGC
 #         if upgradePolicy = "minor": VGC 2020
 #         if upgradePolicy = "none":  VGC 2020.0
 #     Example 2:
-#       commit: second stable version on the 2020 release branch
-#       msiVersion: 20.1.0
-#       msiFamily:
+#       versionMajor = 2020
+#       versionMinor = 1
+#       installVersion: 20.1.0
+#       installFamily:
 #         if upgradePolicy = "all":   VGC
 #         if upgradePolicy = "minor": VGC 2020
 #         if upgradePolicy = "none":  VGC 2020.1
 #
-# - Beta: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
+# - beta: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
 #     Example 1:
-#       commit: first commit of 2019-06-21 in the 2020 release branch
-#       msiVersion: 19.6.21000
-#       msiFamily:
-#         if upgradePolicy = "all":   VGC Beta
+#       versionMajor = 2020
+#       commit: first commit of 2019-06-21 in the "2020" branch
+#       installVersion: 19.6.21000
+#       installFamily:
 #         if upgradePolicy = "minor": VGC 2020 Beta
 #         if upgradePolicy = "none":  VGC 2020 Beta 2019-06-21
 #     Example 2:
-#       commit: second commit of 2019-06-21 in the 2020 release branch
-#       msiVersion: 19.6.21001
-#       msiFamily:
-#         if upgradePolicy = "all":   VGC Beta
-#         if upgradePolicy = "minor": VGC 2020 Beta
-#         if upgradePolicy = "none":  VGC 2020 Beta 2019-06-21.1
+#       versionMajor = 2020
+#       commit: second commit of 2019-06-21 in the "gh62" branch
+#       installVersion: 19.6.21001
+#       installFamily:
+#         if upgradePolicy = "minor": VGC 2020 Beta-gh62
+#         if upgradePolicy = "none":  VGC 2020 Beta-gh62 2019-06-21.1
 #
-# - Alpha/Branch: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
+# - alpha: commitYear.commitMonth.(commitDay * 1000 + numCommitForThisDay)
 #     Example 1:
-#       commit: first commit of 2019-06-21 in the master branch
-#       msiVersion: 19.6.21000
-#       msiFamily:
+#       commit: first commit of 2019-06-21 in the "master" branch
+#       installVersion: 19.6.21000
+#       installFamily:
 #         if upgradePolicy = "all": VGC Alpha
 #         if upgradePolicy = "none": VGC Alpha 2019-06-21
 #     Example 2:
-#       commit: second commit of 2019-06-21 in the gh62 branch
-#       msiVersion: 19.6.21001
-#       msiFamily:
-#         if upgradePolicy = "all":  VGC Branch gh62
-#         if upgradePolicy = "none": VGC Branch gh62 2019-06-21.1
+#       commit: second commit of 2019-06-21 in the "gh62" branch
+#       installVersion: 19.6.21001
+#       installFamily:
+#         if upgradePolicy = "all":  VGC Alpha-gh62 gh62
+#         if upgradePolicy = "none": VGC Alpha-gh62 gh62 2019-06-21.1
 #
-# - Local: 1.0.0
-#     Example:
-#       msiVersion: 1.0.0
-#       msiFamily:
-#         if upgradePolicy = "none": VGC Local 2019-07-06 s9wj3g
+# Suite installers vs app installers
+# ----------------------------------
 #
-# Additional version types
-# ------------------------
+# Within each install family, there are two kinds of installers:
+# - suite installers: they install all VGC apps
+# - app installers: they only install a specific VGC app
 #
-# In the future, we may also want to consider implementing the following version
-# types, although most are probably noth worth the added complexity:
+# Suite installers and app installers do not share the same MSI upgradeCode,
+# but they do share components and are installed in the same folder.
 #
-# - RC (Release Candidate):
-#     Manually selected version on a release branch, between beta and stable.
-#     Version scheme: releaseYear.minor.revision
-#     Example 1:
-#       commit: first RC version before the 2020.0 release
-#       msiVersion: 20.0.0
-#       msiFamily:
-#         if upgradePolicy = "all":   VGC RC
-#         if upgradePolicy = "minor": VGC 2020 RC
-#         if upgradePolicy = "none":  VGC 2020.0 RC
-#     Example 1:
-#       commit: second RC version before the 2020.0 release
-#       msiVersion: 20.0.1
-#       msiFamily:
-#         if upgradePolicy = "all":   VGC RC
-#         if upgradePolicy = "minor": VGC 2020 RC
-#         if upgradePolicy = "none":  VGC 2020.0 RC 2
-#     Example 2:
-#       commit: first RC version before the 2020.1 release
-#       msiVersion: 20.1.0
-#       msiFamily:
-#         if upgradePolicy = "all":   VGC RC
-#         if upgradePolicy = "minor": VGC 2020 RC
-#         if upgradePolicy = "none":  VGC 2020.1 RC
+# All the suite installers of a given install family share the same upgradeCode.
 #
-# - Nightly:
-#     Like Alpha but only the last commit of the day. This may be useful because
-#     often in the same day, there is a broken commit immediately followed by a
-#     fix. So Nightly versions may be slightly more reliable than Alpha versions.
-#     Version scheme: commitYear.commitMonth.commitDay
-#     Example:
-#       commit: last commit of 2019-06-21 in the master branch
-#       msiVersion: 19.6.21
-#       msiFamily:
-#         if upgradePolicy = "all": VGC Nightly
-#         if upgradePolicy = "none": VGC Nightly 2019-06-21
-#
-# - Debug/MinSizeRel/RelWithDebInfo:
-#     Same as the others but using a different config.
-#     Example:
-#       commit: second commit of 2019-06-21 in the gh62 branch
-#       config: RelWithDebInfo
-#       msiVersion: 19.6.21001
-#       msiFamily:
-#         if upgradePolicy = "all":  VGC Branch gh62 RelWithDebInfo
-#         if upgradePolicy = "none": VGC Branch gh62 2019-06-21.1 RelWithDebInfo
-#     Note:
-#       It might be simpler to simply choose a different suite name for handling
-#       this case, such as "VGCd" for debug builds. This method could be applied
-#       for other variations such as choosing different compile options, or
-#       using different versions of third-party libraries.
-#
-# - Uncommited
-#     Build based on an uncommited change from a given commit. Similar to
-#     "Local" but adds more info since we know which commit this is a change
-#     from. We could even include the diff in the About dialog.
-#     Version scheme: 1.0.0
-#     Example:
-#       source: uncommited change from second commit of 2019-06-21 in the gh62
-#               branch, with md5 hash of diff = abcdef123456
-#       msiVersion: 1.0.0
-#       msiFamily:
-#         if upgradePolicy = "none": VGC Uncommited gh62 2019-06-21.1.abcdef123456
+# All the app installers of a given install family share the same upgradeCode
+# if and only if the are installers for the same app. For example, "VGC
+# Illustration 2020.exe" and "VGC Animation 2020.exe" have a different
+# upgradeCode, but "VGC Illustration 2020.exe" and "VGC Illustration 2021.exe"
+# have the same upgradeCode.
 #
 # Product code
 # ------------
@@ -368,7 +294,7 @@
 #   - An existing child feature has been removed from its parent feature. »
 #
 # In other words, all installers must have a unique product code, even if they
-# are part of the MSI family or even the same build.
+# are part of the install family or even the same build.
 #
 # Component GUID
 # --------------
@@ -377,8 +303,8 @@
 # that we use the same component GUID across several .msi files for shared
 # components on the same build. For example, the two following .msi files:
 #
-# - vgc-illustration-2020.msi
-# - vgc-animation-2020.msi
+# - VGC Illustration 2020.msi
+# - VGC Animation 2020.msi
 #
 # have different product codes. However, they are from the same build with
 # exactly the same version type and config. Therefore, they both have the exact
@@ -398,23 +324,10 @@
 
 from pathlib import Path
 from xml.dom.minidom import getDOMImplementation
-from datetime import datetime, timezone
 import hashlib
-import os
 import re
 import subprocess
 import uuid
-import string
-import random
-
-# Returns a random alphanumeric string. The string may contain uppercase and
-# lowercase letters of the latin alphabet, as well as digits (i.e., it uses
-# a 62-char alphabet).
-#
-def randomAlphanumString(size):
-    urandom = random.SystemRandom()
-    alphabet = string.ascii_lowercase + string.ascii_uppercase + string.digits
-    return ''.join(urandom.choice(alphabet) for _ in range(size))
 
 # Converts any string identifier into a valid WiX Id, that is:
 # - only contain ASCII characters A-Z, a-z, digits, underscores, or period,
@@ -468,21 +381,11 @@ class Wix:
     #
     # Use appName = None for a "Suite" installer.
     #
-    # Example:
-    #     suiteName     = "VGC"
-    #     appName       = "Illustration"
-    #     architecture  = "x86"
-    #     versionType   = "Beta"
-    #     upgradePolicy = "minor"
-    #     commitBranch  = "2020"
-    #     commitDate    = "2019-07-08"
-    #     commitNumber  = 1
-    #
     def __init__(
             self, wixDir,
             manufacturer, suiteName, appName, architecture,
-            versionType, upgradePolicy,
-            commitBranch, commitDate, commitNumber):
+            versionType, versionMajor, versionMinor, upgradePolicy,
+            commitBranch, commitDate, commitIndex):
 
         self.wixDir = wixDir
         self.manufacturer = manufacturer
@@ -490,40 +393,42 @@ class Wix:
         self.appName = appName
         self.architecture = architecture
         self.versionType = versionType
+        self.versionMajor = versionMajor
+        self.versionMinor = versionMinor
         self.upgradePolicy = upgradePolicy
         self.commitBranch = commitBranch
         self.commitDate = commitDate
-        self.commitNumber = commitNumber
-
-        # Set appOrSuiteName. Examples:
-        # - for suite installers: "VGC"
-        # - for app installers: "VGC Illustration", "VGC Animation", etc.
-        #
-        self.appOrSuiteName = self.suiteName
-        if self.appName:
-            self.appOrSuiteName += " " + self.appName
+        self.commitIndex = commitIndex
 
         # Check versionType
-        allowedVersionTypes = ["Stable", "Beta", "Alpha", "Branch", "Local"]
+        allowedVersionTypes = ["stable", "beta", "alpha"]
         if not self.versionType in allowedVersionTypes:
             raise ValueError(
                 'Unknown versionType: "' + self.versionType + '".' +
                 ' Allowed values are: "' + '", "'.join(allowedVersionTypes) + '".')
 
+        # Check commit information
+        if versionType in ["beta", "alpha"]:
+            hasCommitInfo = (self.commitBranch and
+                             self.commitDate and
+                             self.commitIndex)
+            if not hasCommitInfo:
+                raise ValueError(
+                    'Commit info not found while required to deploy when' +
+                    ' versionType = "' + versionType + '.' +
+                    ' Please compile from a git repository.')
+
         # Check upgradePolicy
         allowedUpgradePolicies = {
-            "Stable": ["all", "minor", "none"],
-            "Beta":   ["all", "minor", "none"],
-            "Alpha":  ["all", "none"],
-            "Branch": ["all", "none"],
-            "Local":  ["none"],
+            "stable": ["all", "minor", "none"],
+            "beta":   ["minor", "none"],
+            "alpha":  ["minor", "none"]
         }
-        allowedUpgradePolicies_ = allowedUpgradePolicies[self.versionType]
-        if not self.upgradePolicy in allowedUpgradePolicies_:
+        if not self.upgradePolicy in allowedUpgradePolicies[self.versionType]:
             raise ValueError(
                 'Unknown upgradePolicy: "' + self.upgradePolicy + '".' +
                 ' Allowed values when versionType = "' + self.versionType + '"'
-                ' are: ' + '", "'.join(allowedUpgradePolicies_) + '".')
+                ' are: ' + '", "'.join(allowedUpgradePolicies[self.versionType]) + '".')
 
         # Check architecture
         allowedArchitectures = ["x86", "x64"]
@@ -532,102 +437,88 @@ class Wix:
                 'Unknown architecture: "' + self.versionType + '".' +
                 ' Allowed values are: "' + '", "'.join(allowedArchitectures) + '".')
 
-        # Set release year
-        # Example: "2020"
-        if self.versionType in ["Stable", "Beta"]:
-            releaseYear = self.commitBranch[0:4]
+        # Set appOrSuiteName. Examples:
+        # - for suite installers: "VGC"
+        # - for app installers: "VGC Illustration", "VGC Animation", etc.
+        self.appOrSuiteName = self.suiteName
+        if self.appName:
+            self.appOrSuiteName += " " + self.appName
 
-        # Set commitDateAndNumber
+        # Set commitDateAndIndex
         # Example: "2019-07-08.1"
-        if self.versionType in ["Beta", "Alpha", "Branch"]:
-            commitDateAndNumber = self.commitDate
-            if self.commitNumber > 0:
-                commitDateAndNumber += ".{}".format(self.commitNumber)
+        if self.versionType in ["beta", "alpha"]:
+            commitDateAndIndex = self.commitDate + "." + self.commitIndex
 
-        # Set msiVersion
+        # Set branchSuffix
+        # Example: "-gh62"
+        branchSuffix = ""
+        if ((self.versionType == "beta" and self.commitBranch != self.versionMajor) or
+            (self.versionType == "alpha" and self.commitBranch != "master")):
+            branchSuffix = "-" + self.commitBranch
+
+        # Set installVersion
         # Example: "19.7.08001"
-        if self.versionType == "Stable":
-            major = int(self.commitBranch[2:4])
-            minor = int(self.commitBranch[5:])
-            build = 0
-        elif self.versionType in ["Beta", "Alpha", "Branch"]:
+        if self.versionType == "stable":
+            major = int(self.versionMajor[2:4])
+            minor = int(self.versionMinor)
+            self.installVersion = "{}.{}".format(major, minor)
+        elif self.versionType in ["beta", "alpha"]:
             major = int(self.commitDate[2:4])
             minor = int(self.commitDate[5:7])
-            build = int(self.commitDate[8:10]) * 1000 + self.commitNumber
-        elif self.versionType == "Local":
-            major = 1
-            minor = 0
-            build = 0
-        self.msiVersion = "{}.{}.{}".format(major, minor, build)
+            build = int(self.commitDate[8:10]) * 1000 + int(self.commitIndex)
+            self.installVersion = "{}.{}.{}".format(major, minor, build)
 
-        # Set msiFamilySuffix and fullVersion (architecture added just after)
+        # Set installFamilySuffix and fullVersion (except the architecture suffix)
         # Example:
-        #   msiFamilySuffix = " 2020 Beta 32-bit"
-        #   fullVersion     = "2020 Beta 2019-07-08.1 32-bit"
-
-        vt = self.versionType
-        up = self.upgradePolicy
-        datenowutc = datetime.now(timezone.utc).date().isoformat()
-        randomid = randomAlphanumString(6)
-
-        if vt == "Stable":
-            if   up == "all":   p = ""
-            elif up == "minor": p = " {}"
-            elif up == "none":  p = " {}.{}"
-            self.msiFamilySuffix = p.format(releaseYear, minor)
-            self.fullVersion = releaseYear
+        #   installFamilySuffix = " 2020 Beta"
+        #   fullVersion     = "2020 Beta 2019-07-08.1"
+        if self.versionType == "stable":
+            if   self.upgradePolicy == "all":   p = ""
+            elif self.upgradePolicy == "minor": p = " {}"
+            elif self.upgradePolicy == "none":  p = " {}.{}"
+            self.installFamilySuffix = p.format(self.versionMajor, self.versionMinor)
+            self.fullVersion = self.versionMajor
             if minor > 0:
-                self.fullVersion += "." + str(minor)
+                self.fullVersion += "." + self.versionMinor
+        elif self.versionType == "beta":
+            if   self.upgradePolicy == "minor": p = " {} Beta{}"
+            elif self.upgradePolicy == "none":  p = " {} Beta{} {}"
+            q                     =  "{} Beta{} {}"
+            self.installFamilySuffix = p.format(self.versionMajor, branchSuffix, commitDateAndIndex)
+            self.fullVersion         = q.format(self.versionMajor, branchSuffix, commitDateAndIndex)
+        elif self.versionType == "alpha":
+            if   self.upgradePolicy == "minor": p = " Alpha{}"
+            elif self.upgradePolicy == "none":  p = " Alpha{} {}"
+            q                     =  "Alpha{} {}"
+            self.installFamilySuffix = p.format(branchSuffix, commitDateAndIndex)
+            self.fullVersion         = q.format(branchSuffix, commitDateAndIndex)
 
-        elif vt == "Beta":
-            if   up == "all":   p = " Beta"
-            elif up == "minor": p = " {} Beta"
-            elif up == "none":  p = " {} Beta {}"
-            q                     =  "{} Beta {}"
-            self.msiFamilySuffix = p.format(releaseYear, commitDateAndNumber)
-            self.fullVersion     = q.format(releaseYear, commitDateAndNumber)
-
-        elif vt == "Alpha":
-            if   up == "all":   p = " Alpha"
-            elif up == "none":  p = " Alpha {}"
-            q                     =  "Alpha {}"
-            self.msiFamilySuffix = p.format(commitDateAndNumber)
-            self.fullVersion     = q.format(commitDateAndNumber)
-
-        elif vt == "Branch":
-            if   up == "all":   p = " Branch {}"
-            elif up == "none":  p = " Branch {} {}"
-            q                     =  "Branch {} {}"
-            self.msiFamilySuffix = p.format(self.commitBranch, commitDateAndNumber)
-            self.fullVersion     = q.format(self.commitBranch, commitDateAndNumber)
-
-        elif vt == "Local":
-            if   up == "none":  p = " Local {}.{}"
-            q                     =  "Local {}.{}"
-            self.msiFamilySuffix = p.format(datenowutc, randomid)
-            self.fullVersion     = q.format(datenowutc, randomid)
-
-        # Set architecture
+        # Set architecture and add it as suffix to installFamily and fullVersion
+        # Example:
+        #   installFamilySuffix = " 2020 Beta 32-bit"
+        #   fullVersion     = "2020 Beta 2019-07-08.1 32-bit"
         if self.architecture == "x64":
             self.win64yesno = "yes"
             self.programFilesFolder = "ProgramFiles64Folder"
         elif self.architecture == "x86":
             self.win64yesno = "no"
             self.programFilesFolder = "ProgramFilesFolder"
-            self.msiFamilySuffix += " 32-bit"
+            self.installFamilySuffix += " 32-bit"
             self.fullVersion     += " 32-bit"
 
-        # Set msiFamily
+        # Set installFamily
         # Example: "VGC 2020 Beta 32-bit"
-        self.msiFamily = self.suiteName + self.msiFamilySuffix
+        self.installFamily = self.suiteName + self.installFamilySuffix
 
         # Set installerName and msiName
-        #
-        if up == "all":   up_ = ""
-        if up == "minor": up_ = " (minor updates only)"
-        if up == "none":  up_ = " (no updates)"
-        self.msiName       = self.appOrSuiteName + " " + self.fullVersion + up_
-        self.installerName = self.appOrSuiteName + " " + self.fullVersion + " Installer" + up_
+        if self.versionType == "stable" and self.upgradePolicy == "minor":
+            installerTypePrefix = " LTS"
+        elif self.upgradePolicy == "none":
+            installerTypePrefix = " Frozen"
+        else:
+            installerTypePrefix = ""
+        self.msiName       = self.appOrSuiteName + " " + self.fullVersion + installerTypePrefix
+        self.installerName = self.msiName + " Installer"
 
         # Create XML document.
         #
@@ -648,12 +539,12 @@ class Wix:
         # keep the same MSI filename during a "Minor Upgrade" or "Small Upgrade".
         #
         self.product = self.root.createChild("Product", [
-            ("Name", self.appOrSuiteName + self.msiFamilySuffix),
+            ("Name", self.appOrSuiteName + self.installFamilySuffix),
             ("Id", self.dynamicGuid("Product/ProductCode/" + self.appOrSuiteName)),
             ("UpgradeCode", self.staticGuid("Product/UpgradeCode/" + self.appOrSuiteName)),
             ("Language", "1033"),
             ("Codepage", "1252"),
-            ("Version", self.msiVersion),
+            ("Version", self.installVersion),
             ("Manufacturer", self.manufacturer)])
 
         # Add package
@@ -683,34 +574,36 @@ class Wix:
         # Add basic directory structure.
         self.targetDirectory = self.product.createDirectory("SourceDir", "TARGETDIR")
         self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", self.programFilesFolder)
-        self.installDirectory = self.programFilesDirectory.createDirectory(self.msiFamily, "INSTALLDIR")
+        self.installDirectory = self.programFilesDirectory.createDirectory(self.installFamily, "INSTALLDIR")
         self.startMenuDirectory = self.targetDirectory.createDirectory("Programs", "ProgramMenuFolder")
         self.desktopDirectory = self.targetDirectory.createDirectory("Desktop", "DesktopFolder")
 
-    # Generates a deterministic GUID based on the msiFamily, the msiVersion, and
-    # the given string identifier "sid". This GUID changes from version to
-    # version but doesn't depend on the appName, which makes it suitable for
-    # shared components. You must manually include the appName in the sid if you
-    # wish this GUID to depend on the appName.
+    # Generates a deterministic GUID based on the installFamily, the
+    # installVersion, and the given string identifier "sid". This GUID changes
+    # from version to version but doesn't depend on the appName, which makes
+    # it suitable for shared components. You must manually include the appName
+    # in the sid if you wish this GUID to depend on the appName.
     #
     def dynamicGuid(self, sid):
         u = uuid.uuid5(uuid.NAMESPACE_URL,
                     "http://dynamicguid.wix.vgc.io" +
-                    "/" + self.msiFamily +
-                    "/" + self.msiVersion +
+                    "/" + self.manufacturer +
+                    "/" + self.installFamily +
+                    "/" + self.installVersion +
                     "/" + sid)
         return str(u).upper()
 
-    # Generates a deterministic GUID based on the msiFamily and the given string
-    # identifier "sid". This GUID doesn't change from version to version (as
-    # long at it belongs to the same msiFamily) neither to the appName. You must
-    # manually include the appName in the sid if you wish this GUID to depend on
-    # the appName, e.g., for the upgradeCode.
+    # Generates a deterministic GUID based on the installFamily and the given
+    # string identifier "sid". This GUID doesn't change from version to
+    # version (as long at it belongs to the same installFamily) neither to the
+    # appName. You must manually include the appName in the sid if you wish
+    # this GUID to depend on the appName, e.g., for the upgradeCode.
     #
     def staticGuid(self, sid):
         u = uuid.uuid5(uuid.NAMESPACE_URL,
                     "http://staticguid.wix.vgc.io" +
-                    "/" + self.msiFamily +
+                    "/" + self.manufacturer +
+                    "/" + self.installFamily +
                     "/" + sid)
         return str(u).upper()
 
@@ -750,10 +643,10 @@ class Wix:
         # Generate the .wxs file of the Bundle
         bundle_text = bundle_template_wxs.read_text()
         bundle_wxs.write_text(replace_all(bundle_text, {
-            "$(var.name)":            self.msiFamily,
+            "$(var.name)":            self.installFamily,
             "$(var.manufacturer)":    self.manufacturer,
             "$(var.upgradeCode)":     self.staticGuid("Bundle/UpgradeCode/" + self.appOrSuiteName),
-            "$(var.version)":         self.msiVersion,
+            "$(var.version)":         self.installVersion,
             "$(var.icon)":            str(icon),
             "$(var.logo)":            str(logo),
             "$(var.msi)":             str(msi),
@@ -856,7 +749,7 @@ class WixElement:
             ("IconIndex", "0"),
             ("Advertise", "yes")])
 
-    # Creates a submenu of the startup menu.
+    # Creates a submenu of the start menu.
     # It has to be associated with a feature so that it is deleted when the
     # feature is uninstalled.
     #
@@ -918,16 +811,16 @@ class WixElement:
 def makeSuiteInstaller(
         buildDir, configDir, deployDir, wixDir,
         manufacturer, suiteName, appNames, architecture,
-        versionType, upgradePolicy,
-        commitBranch, commitDate, commitNumber):
+        versionType, versionMajor, versionMinor, upgradePolicy,
+        commitBranch, commitDate, commitIndex):
 
     # General configuration
     appName = None
     wix = Wix(
         wixDir,
         manufacturer, suiteName, appName, architecture,
-        versionType, upgradePolicy,
-        commitBranch, commitDate, commitNumber)
+        versionType, versionMajor, versionMinor, upgradePolicy,
+        commitBranch, commitDate, commitIndex)
     appFeature = wix.createFeature("Complete")
 
     # Add 'bin', 'python', and 'resources' directories
@@ -941,7 +834,7 @@ def makeSuiteInstaller(
         appExecutableName = appExecutableBasename + ".exe"
         appExecutable = wixBinDir.getFile(appExecutableName)
         appIconPath = buildDir / (appExecutableBasename + ".ico")
-        appShortcutName = suiteName + " " + appName + wix.msiFamilySuffix
+        appShortcutName = suiteName + " " + appName + wix.installFamilySuffix
         appIcon = wix.createIcon(appIconPath)
         appExecutable.createShortcut(wix.startMenuDirectory, appShortcutName, appIcon)
         appExecutable.createShortcut(wix.desktopDirectory, appShortcutName, appIcon)
@@ -951,27 +844,15 @@ def makeSuiteInstaller(
     setupLogo = setupIcon.with_suffix(".png")
     wix.makeSetup(deployDir, setupIcon, setupLogo)
 
-# Converts the given "datetime with UTC offset" to the date it was in the
-# UTC timezone at that exact moment.
+# Returns a value from an INI-formatted file. Does not support comments, nor
+# spaces surrounding the equal size.
 #
 # Example:
-# format = '%Y-%m-%d %H:%M:%S %z'
-# utcdate('2019-06-23 18:00:45 -0800', format)
+# s = "a=Hello\nb=World"
+# getIniValue(s, "b")      # -> "World"
 #
-# Output: '2019-06-24'
-#
-def utcdate(dateString, format):
-    d = datetime.strptime(dateString, format)
-    return d.astimezone(timezone.utc).date().isoformat()
-
-# Returns whether the string is the name of a release branch,
-# that is, a four-digit integer, like 2020.
-#
-def isReleaseBranch(branchName):
-    if re.fullmatch(r"[0-9]{4}", branchName):
-        return True
-    else:
-        return False
+def getIniValue(ini, key):
+    return re.search("^" + key + "=(.*)$", ini, flags = re.MULTILINE).group(1)
 
 # Generates an MSI file from the build
 #
@@ -984,51 +865,36 @@ def run(buildDir, config, wixDir):
     deployDir.mkdir(parents=True, exist_ok=True)
     wixDir = Path(wixDir)
 
-    # General configuration
-    manufacturer = "VGC Software"
-    suiteName = "VGC"
+    # Get version info
+    versionFile = configDir / "resources" / "core" / "version.txt"
+    version = versionFile.read_text()
+    manufacturer = getIniValue(version, "manufacturer")
+    suiteName = getIniValue(version, "suite")
+    versionType = getIniValue(version, "versionType")
+    versionMajor = getIniValue(version, "versionMajor")
+    versionMinor = getIniValue(version, "versionMinor")
+    commitBranch = getIniValue(version, "commitBranch")
+    commitDate = getIniValue(version, "commitDate")
+    commitIndex = getIniValue(version, "commitIndex")
+    architecture = getIniValue(version, "buildArchitecture")
+
+    # List of all apps of the suite to install
     appNames = [ "Illustration" ]
-    architecture = "x64"
 
-    # Get git info
-    try:
-        gitInfo = (buildDir / "git_info.txt").read_text()
-        commitBranch = re.search(r"^branch: (.*)$", gitInfo, flags = re.MULTILINE).group(1)
-        format = '%Y-%m-%d %H:%M:%S %z'
-        dates = re.search(r"^latest-commit-dates: (.*)", gitInfo, flags = re.MULTILINE | re.DOTALL).group(1).splitlines()
-        dates = [utcdate(date, format) for date in dates if date]
-        commitDate = dates[0]
-        commitNumber = dates.count(commitDate) - 1
-    except:
-        commitBranch = None
-        commitDate = None
-        commitNumber = None
-
-    # Deduct version type from git info
-    # TODO: deduct "Stable" version type based on either branch or tag name.
-    if commitBranch:
-        if commitBranch == "master":
-            versionType = "Alpha"
-        elif isReleaseBranch(commitBranch):
-            versionType = "Beta"
-        else:
-            versionType = "Branch"
+    # List all possible upgrade policies for the given version type.
+    if versionType == "stable":
+        upgradePolicies = ["all", "minor", "none"]
     else:
-        versionType = "Local"
+        upgradePolicies = ["minor", "none"]
 
-    # Set upgrade policy. For now, it is hard-coded to be the the most
-    # upradable policy.
-    if versionType == "Local":
-        upgradePolicy = "none"
-    else:
-        upgradePolicy = "all"
-
-    # Create an installer for the suite, containing all apps.
-    makeSuiteInstaller(
-        buildDir, configDir, deployDir, wixDir,
-        manufacturer, suiteName, appNames, architecture,
-        versionType, upgradePolicy,
-        commitBranch, commitDate, commitNumber)
+    # Create one suite installer for each upgrade policy.
+    # For now, we don't create app installers.
+    for upgradePolicy in upgradePolicies:
+        makeSuiteInstaller(
+            buildDir, configDir, deployDir, wixDir,
+            manufacturer, suiteName, appNames, architecture,
+            versionType, versionMajor, versionMinor, upgradePolicy,
+            commitBranch, commitDate, commitIndex)
 
     # TODO: also create a ZIP for portable installation (like Blender
-    # does), with updates disabled .
+    # does), with updates disabled.
