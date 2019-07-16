@@ -429,38 +429,32 @@ endif()
 # may be useful for deploying a subset of VGC that does not depend on Qt.
 #
 if(WIN32)
-    set(SOURCE_DEPLOY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py)
-    set(TARGET_DEPLOY_SCRIPT ${CMAKE_BINARY_DIR}/wix.py)
-    set(SOURCE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
-    set(TARGET_ICON ${CMAKE_BINARY_DIR}/vgcillustration.ico)
-    set(SOURCE_LOGO ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.png)
-    set(TARGET_LOGO ${CMAKE_BINARY_DIR}/vgcillustration.png)
-    set(SOURCE_BUNDLE ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/bundle.wxs)
-    set(DEPLOY_TIMESTAMP ${CMAKE_BINARY_DIR}/deploy.stamp)
-    add_custom_command(
-        COMMENT ""
-        OUTPUT ${DEPLOY_TIMESTAMP}
-        DEPENDS
-            ${SOURCE_DEPLOY_SCRIPT}
-            ${SOURCE_ICON}
-            ${SOURCE_LOGO}
-            ${SOURCE_BUNDLE}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DEPLOY_SCRIPT} ${TARGET_DEPLOY_SCRIPT}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_ICON} ${TARGET_ICON}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_LOGO} ${TARGET_LOGO}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_BUNDLE} ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/bundle.wxs
+    set(WIX_PY_ ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py)
+    set(WIX_PY  ${CMAKE_CURRENT_BINARY_DIR}/wix.py)
+    vgc_add_copy_command(${WIX_PY_} ${WIX_PY})
+
+    set(ICON_ ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
+    set(ICON  ${CMAKE_CURRENT_BINARY_DIR}/vgcillustration.ico)
+    vgc_add_copy_command(${ICON_} ${ICON})
+
+    set(LOGO_ ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.png)
+    set(LOGO  ${CMAKE_CURRENT_BINARY_DIR}/vgcillustration.png)
+    vgc_add_copy_command(${LOGO_} ${LOGO})
+
+    add_custom_target(deploy
+        VERBATIM
+        DEPENDS ${WIX_PY} ${ICON} ${LOGO}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/bundle.wxs
+            ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/deploy/bundle.wxs
         COMMAND powershell -NoLogo -NoProfile -Command \(
             Get-Item ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe
             \).VersionInfo.FileVersion
             > ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe.version
         COMMAND ${PYTHON_EXECUTABLE} -c
             "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
-        COMMAND ${CMAKE_COMMAND} -E touch ${DEPLOY_TIMESTAMP}
-        WORKING_DIRECTORY
-            ${CMAKE_BINARY_DIR}
-        VERBATIM
     )
-    add_custom_target(deploy DEPENDS ${DEPLOY_TIMESTAMP})
 else()
     add_custom_target(deploy
         COMMAND
