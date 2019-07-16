@@ -668,7 +668,7 @@ class Wix:
         # Generate the .wxs file of the Bundle
         bundle_text = bundle_template_wxs.read_text()
         bundle_wxs.write_text(replace_all(bundle_text, {
-            "$(var.name)":            self.installFamily,
+            "$(var.name)":            self.msiName,
             "$(var.manufacturer)":    self.manufacturer,
             "$(var.upgradeCode)":     self.staticGuid("Bundle/UpgradeCode/" + self.appOrSuiteName),
             "$(var.version)":         self.installVersion,
