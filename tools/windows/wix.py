@@ -580,6 +580,11 @@ class Wix:
             ("Cabinet", "Cabinet.cab"),
             ("EmbedCab", "yes")])
 
+        # See: https://stackoverflow.com/questions/2058230/wix-create-non-advertised-shortcut-for-all-users-per-machine
+        self.product.createChild("Property", [
+            ("Id", "DISABLEADVTSHORTCUTS"),
+            ("Value", "1")])
+
         # Allow major upgrades and prevent downgrades.
         #
         # We use the afterInstallExecute schedule in order not to break user
@@ -702,7 +707,7 @@ class Wix:
         # and match the extension of the filename.
         basename = srcFile.with_suffix("").name
         suffix = srcFile.suffix
-        iconId = encodeId("Icon" + basename) + suffix
+        iconId = encodeId("Icon/" + basename) + suffix
         icon = self.product.createChild("Icon", [
             ("Id", iconId),
             ("SourceFile", str(srcFile))])
@@ -749,25 +754,32 @@ class WixElement:
     #
     def createDirectory(self, name, dirId = None):
         if dirId is None:
-            dirId = encodeId(self.dirId + '/' + name)
+            dirId = encodeId("Directory/" + self.dirId + '/' + name)
         child = self.createChild("Directory", [("Id", dirId), ("Name", name)])
         child.dirId = dirId
         child.files = {}
         return child
 
-    # Creates a shortcut to this file using the given icon
+    # Creates a shortcut.
     #
-    def createShortcut(self, directory, name, icon, workingDirectory = None):
-        if workingDirectory is None:
-            workingDirectory = self.wix.installDirectory
-        return self.createChild("Shortcut", [
-            ("Id", encodeId("Shortcut" + directory.dirId + "/" + name)),
+    # Note: We need to create a registry value because for some reason, a
+    # shortcut cannot be used as KeyPath. References:
+    # https://wixtoolset.org/documentation/manual/v3/xsd/wix/shortcut.html
+    # https://wixtoolset.org/documentation/manual/v3/howtos/files_and_registry/create_start_menu_shortcut.html
+    # http://windows-installer-xml-wix-toolset.687559.n2.nabble.com/desktop-shortcut-guidance-td7463861.html
+    # https://stackoverflow.com/questions/11868499/create-shortcut-to-desktop-using-wix
+    #
+    def createShortcut(self, directory, name, workingDirectory, icon):
+        shortcutId = encodeId("Shortcut/" + directory.dirId + "/" + name)
+        shortcut = self.createChild("Shortcut", [
+            ("Id", shortcutId),
             ("Directory", directory.dirId),
             ("Name", name),
             ("WorkingDirectory", workingDirectory.dirId),
             ("Icon", icon.iconId),
             ("IconIndex", "0"),
             ("Advertise", "yes")])
+        return shortcut
 
     # Creates a submenu of the start menu.
     # It has to be associated with a feature so that it is deleted when the
@@ -775,12 +787,12 @@ class WixElement:
     #
     def createSubMenu(self, name, feature):
         subMenuDirectory = self.createDirectory(name)
-        componentId = encodeId("SubMenuComponent" + subMenuDirectory.dirId)
+        componentId = encodeId("SubMenuComponent/" + subMenuDirectory.dirId)
         subMenuComponent = subMenuDirectory.createChild("Component", [
             ("Id", componentId),
             ("Guid", self.wix.dynamicGuid(componentId))])
         subMenuComponent.createChild("RemoveFolder", [
-            ("Id", encodeId("RemoveFolder" + componentId)),
+            ("Id", encodeId("RemoveFolder/" + componentId)),
             ("On", "uninstall")])
         subMenuComponent.createChild("RegistryValue", [
             ("Root", "HKCU"),
@@ -794,19 +806,22 @@ class WixElement:
     # Creates a file.
     #
     def createFile(self, srcFile, name, feature):
-        componentId = encodeId("FileComponent" + self.dirId + "/" + name)
+        componentId = encodeId("FileComponent/" + self.dirId + "/" + name)
+        fileId = encodeId("File/" + componentId)
         fileComponent = self.createChild("Component", [
             ("Id", componentId),
             ("Guid", self.wix.staticGuid("Component/Guid/" + componentId)),
             ("Win64", self.wix.win64yesno)])
         file = fileComponent.createChild("File", [
-            ("Id", encodeId("File" + componentId)),
+            ("Id", fileId),
             ("Name", name),
             ("DiskId", "1"),
             ("Source", str(srcFile)),
             ("KeyPath", "yes")])
-        self.files[name] = file
         feature.createChild("ComponentRef", [("Id", componentId)])
+        file.fileId = fileId
+        file.fileName = name
+        self.files[name] = file
         return file
 
     # Returns a previously created file
@@ -856,8 +871,8 @@ def makeSuiteInstaller(
         appIconPath = buildDir / (appExecutableBasename + ".ico")
         appShortcutName = suiteName + " " + appName + wix.installFamilySuffix
         appIcon = wix.createIcon(appIconPath)
-        appExecutable.createShortcut(wix.startMenuDirectory, appShortcutName, appIcon)
-        appExecutable.createShortcut(wix.desktopDirectory, appShortcutName, appIcon)
+        appExecutable.createShortcut(wix.startMenuDirectory, appShortcutName, wixBinDir, appIcon)
+        appExecutable.createShortcut(wix.desktopDirectory, appShortcutName, wixBinDir, appIcon)
 
     # Generate the Setup file
     setupIcon = appIconPath
