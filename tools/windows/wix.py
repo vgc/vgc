@@ -299,21 +299,30 @@
 # Component GUID
 # --------------
 #
-# We change component GUIDs the same way that we change product codes, except
-# that we use the same component GUID across several .msi files for shared
-# components on the same build. For example, the two following .msi files:
+# Component GUIDs should be unique for each file and for each install family.
+# However, it is shared across app/suite installers, and doesn't change from
+# version to version. For example, the file "bin/vgcillustration.exe" has the
+# same GUID in all those .msi files:
 #
+# - VGC 2020.msi
 # - VGC Illustration 2020.msi
-# - VGC Animation 2020.msi
+# - VGC 2020.1.msi
+# - VGC 2021.msi
 #
-# have different product codes. However, they are from the same build with
-# exactly the same version type and config. Therefore, they both have the exact
-# same component vgccore.dll, with the same GUID, which is installed at the same
-# location:
+# If we would change the GUID from version to version, the file would not be
+# properly updated during an upgrade. For example, if the upgrade is scheduled
+# late (e.g., Schedule="afterInstallExecute"), then this is what would happen:
+# - Install v2:
+#     Component myfile.txt (v2) is installed. This overrides myfile.txt on disk.
+# - Uninstall v1:
+#     Component myfile.txt (v1) is uninstalled, since Windows Installer believes
+#     that this component only exists in v1 and not v2, since they don't have
+#     the same GUID. This deletes myfile.txt on disk.
+# - End result:
+#     The file myfile.txt is deleted instead of being updated.
 #
-#   C:/Program Files/VGC/2020/bin/vgccore.dll
-#
-# The equivalent for this type of sharing on macOS would be to use frameworks:
+# Note: On macOS, the equivalent of sharing component GUIDs across different
+# apps would be to use frameworks:
 #
 # https://www.bignerdranch.com/blog/it-looks-like-you-are-trying-to-use-a-framework
 #
@@ -571,6 +580,17 @@ class Wix:
             ("Cabinet", "Cabinet.cab"),
             ("EmbedCab", "yes")])
 
+        # Allow major upgrades and prevent downgrades.
+        #
+        # We use the afterInstallExecute schedule in order not to break user
+        # shortcuts in the Desktop or Task Bar, see:
+        #     http://windows-installer-xml-wix-toolset.687559.n2.nabble.com/Keep-Desktop-Shortcuts-and-Pinned-Task-Bar-Icons-with-Upgrades-td7599707.html
+        #     https://stackoverflow.com/questions/32318662/user-pinned-taskbar-shortcuts-and-major-upgrades
+        #
+        self.majorUpgrades = self.product.createChild("MajorUpgrade", [
+            ("Schedule", "afterInstallExecute"),
+            ("DowngradeErrorMessage", "A newer version of [ProductName] is already installed.")])
+
         # Add basic directory structure.
         self.targetDirectory = self.product.createDirectory("SourceDir", "TARGETDIR")
         self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", self.programFilesFolder)
@@ -777,7 +797,7 @@ class WixElement:
         componentId = encodeId("FileComponent" + self.dirId + "/" + name)
         fileComponent = self.createChild("Component", [
             ("Id", componentId),
-            ("Guid", self.wix.dynamicGuid(componentId)),
+            ("Guid", self.wix.staticGuid("Component/Guid/" + componentId)),
             ("Win64", self.wix.win64yesno)])
         file = fileComponent.createChild("File", [
             ("Id", encodeId("File" + componentId)),
