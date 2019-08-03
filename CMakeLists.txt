@@ -433,21 +433,31 @@ if(WIN32)
     set(WIX_PY  ${CMAKE_CURRENT_BINARY_DIR}/wix.py)
     vgc_add_copy_command(${WIX_PY_} ${WIX_PY})
 
+    set(SETUP_LOGO_ ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/setuplogo.png)
+    set(SETUP_LOGO  ${CMAKE_CURRENT_BINARY_DIR}/setuplogo.png)
+    vgc_add_copy_command(${SETUP_LOGO_} ${SETUP_LOGO})
+
+    set(SETUP_LOGOSIDE_ ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/setuplogoside.png)
+    set(SETUP_LOGOSIDE  ${CMAKE_CURRENT_BINARY_DIR}/setuplogoside.png)
+    vgc_add_copy_command(${SETUP_LOGOSIDE_} ${SETUP_LOGOSIDE})
+
     set(ICON_ ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
     set(ICON  ${CMAKE_CURRENT_BINARY_DIR}/vgcillustration.ico)
     vgc_add_copy_command(${ICON_} ${ICON})
 
-    set(LOGO_ ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.png)
-    set(LOGO  ${CMAKE_CURRENT_BINARY_DIR}/vgcillustration.png)
-    vgc_add_copy_command(${LOGO_} ${LOGO})
-
     add_custom_target(deploy
         VERBATIM
-        DEPENDS ${WIX_PY} ${ICON} ${LOGO}
+        DEPENDS ${WIX_PY} ${SETUP_LOGO} ${SETUP_LOGOSIDE} ${ICON}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/bundle.wxs
             ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/deploy/bundle.wxs
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/VgcTheme.xml
+            ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/deploy/VgcTheme.xml
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/VgcTheme.wxl
+            ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/deploy/VgcTheme.wxl
         COMMAND powershell -NoLogo -NoProfile -Command \(
             Get-Item ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe
             \).VersionInfo.FileVersion

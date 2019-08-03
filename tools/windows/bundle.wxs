@@ -20,13 +20,16 @@
     <util:FileSearch Id="GetVC14X86onX86Exists" Condition="NOT VersionNT64" Variable="vc14x86Exists" Path="[SystemFolder]vcruntime140.dll" Result="exists"/>
     <util:FileSearch Id="GetVC14X86onX86Version" Condition="NOT VersionNT64" Variable="vc14x86Version" Path="[SystemFolder]vcruntime140.dll" Result="version"/>
 
-    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
+    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkSidebarLicense">
       <bal:WixStandardBootstrapperApplication
           LicenseUrl=""
           LogoFile="$(var.logo)"
+          LogoSideFile="$(var.logoside)"
           ShowVersion="yes"
           SuppressOptionsUI="yes"
-          SuppressRepair="yes"/>
+          SuppressRepair="yes"
+          ThemeFile="$(var.themeFile)"
+          LocalizationFile="$(var.localizationFile)" />
     </BootstrapperApplicationRef>
 
     <Chain>

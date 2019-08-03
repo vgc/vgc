@@ -9,6 +9,7 @@
 #
 # - https://docs.microsoft.com/en-us/windows/desktop/Msi/windows-installer-portal
 # - https://www.firegiant.com/wix/tutorial/
+# - https://wixtoolset.org/documentation/manual/v3/wixui/wixui_customizations.html
 # - https://stackoverflow.com/questions/471424/wix-tricks-and-tips
 #
 # Other useful resources or inspiration sources
@@ -634,7 +635,7 @@ class Wix:
 
     # Generates the setup file
     #
-    def makeSetup(self, deployDir, icon, logo):
+    def makeSetup(self, deployDir, icon, logo, logoside):
         msi_wxs             = deployDir / (self.msiName + ".wxs")
         msi_wixobj          = deployDir / (self.msiName + ".wixobj")
         msi                 = deployDir / (self.msiName + ".msi")
@@ -668,15 +669,18 @@ class Wix:
         # Generate the .wxs file of the Bundle
         bundle_text = bundle_template_wxs.read_text()
         bundle_wxs.write_text(replace_all(bundle_text, {
-            "$(var.name)":            self.msiName,
-            "$(var.manufacturer)":    self.manufacturer,
-            "$(var.upgradeCode)":     self.staticGuid("Bundle/UpgradeCode/" + self.appOrSuiteName),
-            "$(var.version)":         self.installVersion,
-            "$(var.icon)":            str(icon),
-            "$(var.logo)":            str(logo),
-            "$(var.msi)":             str(msi),
-            "$(var.vcredist)":        str(vcredist),
-            "$(var.vcredistVersion)": vcredistVersion}))
+            "$(var.name)":             self.msiName,
+            "$(var.manufacturer)":     self.manufacturer,
+            "$(var.upgradeCode)":      self.staticGuid("Bundle/UpgradeCode/" + self.appOrSuiteName),
+            "$(var.version)":          self.installVersion,
+            "$(var.icon)":             str(icon),
+            "$(var.logo)":             str(logo),
+            "$(var.logoside)":         str(logoside),
+            "$(var.themeFile)":        str(deployDir / "VgcTheme.xml"),
+            "$(var.localizationFile)": str(deployDir / "VgcTheme.wxl"),
+            "$(var.msi)":              str(msi),
+            "$(var.vcredist)":         str(vcredist),
+            "$(var.vcredistVersion)":  vcredistVersion}))
 
         # Generate the .wxsobj file of the Bundle
         subprocess.run([
@@ -875,9 +879,10 @@ def makeSuiteInstaller(
         appExecutable.createShortcut(wix.desktopDirectory, appShortcutName, wixBinDir, appIcon)
 
     # Generate the Setup file
-    setupIcon = appIconPath
-    setupLogo = setupIcon.with_suffix(".png")
-    wix.makeSetup(deployDir, setupIcon, setupLogo)
+    setupIcon = buildDir / "vgcillustration.ico" # TODO: use non-app-specific VGC icon instead
+    setupLogo = buildDir / "setuplogo.png"
+    setupLogoSide = buildDir / "setuplogoside.png"
+    wix.makeSetup(deployDir, setupIcon, setupLogo, setupLogoSide)
 
 # Returns a value from an INI-formatted file. Does not support comments, nor
 # spaces surrounding the equal size.
