@@ -26,11 +26,15 @@
           LogoFile="$(var.logo)"
           LogoSideFile="$(var.logoside)"
           ShowVersion="yes"
-          SuppressOptionsUI="yes"
+          SuppressOptionsUI="no"
           SuppressRepair="yes"
           ThemeFile="$(var.themeFile)"
           LocalizationFile="$(var.localizationFile)" />
     </BootstrapperApplicationRef>
+
+    <Variable Name="InstallFamily" Type="string" Value="$(var.installFamily)" />
+    <Variable Name="InstallHumanVersion" Type="string" Value="$(var.installHumanVersion)" />
+    <Variable Name="InstallFolder" Type="string" Value="[ProgramFilesFolder]$(var.installFamily)"/>
 
     <Chain>
       <ExePackage
@@ -51,7 +55,9 @@
           DisplayName="$(var.name)"
           SourceFile="$(var.msi)"
           Compressed="yes"
-          Vital="yes"/>
+          Vital="yes">
+        <MsiProperty Name="INSTALLFOLDER" Value="[InstallFolder]" />
+      </MsiPackage>
     </Chain>
   </Bundle>
 </Wix>
