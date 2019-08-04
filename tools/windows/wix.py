@@ -466,17 +466,19 @@ class Wix:
             (self.versionType == "alpha" and self.commitBranch != "master")):
             branchSuffix = "-" + self.commitBranch
 
-        # Set installVersion
-        # Example: "19.7.08001"
+        # Set installVersion and installHumanVersion
+        # Example: "19.7.08001" / "2019-07-08.1"
         if self.versionType == "stable":
             major = int(self.versionMajor[2:4])
             minor = int(self.versionMinor)
             self.installVersion = "{}.{}".format(major, minor)
+            self.installHumanVersion = "{}.{}".format(self.versionMajor, minor)
         elif self.versionType in ["beta", "alpha"]:
             major = int(self.commitDate[2:4])
             minor = int(self.commitDate[5:7])
             build = int(self.commitDate[8:10]) * 1000 + int(self.commitIndex)
             self.installVersion = "{}.{}.{}".format(major, minor, build)
+            self.installHumanVersion = commitDateAndIndex
 
         # Set installFamilySuffix and fullVersion (except the architecture suffix)
         # Example:
@@ -600,7 +602,7 @@ class Wix:
         # Add basic directory structure.
         self.targetDirectory = self.product.createDirectory("SourceDir", "TARGETDIR")
         self.programFilesDirectory = self.targetDirectory.createDirectory("PFiles", self.programFilesFolder)
-        self.installDirectory = self.programFilesDirectory.createDirectory(self.installFamily, "INSTALLDIR")
+        self.installDirectory = self.programFilesDirectory.createDirectory(self.installFamily, "INSTALLFOLDER")
         self.startMenuDirectory = self.targetDirectory.createDirectory("Programs", "ProgramMenuFolder")
         self.desktopDirectory = self.targetDirectory.createDirectory("Desktop", "DesktopFolder")
 
@@ -669,18 +671,20 @@ class Wix:
         # Generate the .wxs file of the Bundle
         bundle_text = bundle_template_wxs.read_text()
         bundle_wxs.write_text(replace_all(bundle_text, {
-            "$(var.name)":             self.msiName,
-            "$(var.manufacturer)":     self.manufacturer,
-            "$(var.upgradeCode)":      self.staticGuid("Bundle/UpgradeCode/" + self.appOrSuiteName),
-            "$(var.version)":          self.installVersion,
-            "$(var.icon)":             str(icon),
-            "$(var.logo)":             str(logo),
-            "$(var.logoside)":         str(logoside),
-            "$(var.themeFile)":        str(deployDir / "VgcTheme.xml"),
-            "$(var.localizationFile)": str(deployDir / "VgcTheme.wxl"),
-            "$(var.msi)":              str(msi),
-            "$(var.vcredist)":         str(vcredist),
-            "$(var.vcredistVersion)":  vcredistVersion}))
+            "$(var.name)":                self.msiName,
+            "$(var.manufacturer)":        self.manufacturer,
+            "$(var.upgradeCode)":         self.staticGuid("Bundle/UpgradeCode/" + self.appOrSuiteName),
+            "$(var.version)":             self.installVersion,
+            "$(var.icon)":                str(icon),
+            "$(var.logo)":                str(logo),
+            "$(var.logoside)":            str(logoside),
+            "$(var.themeFile)":           str(deployDir / "VgcTheme.xml"),
+            "$(var.localizationFile)":    str(deployDir / "VgcTheme.wxl"),
+            "$(var.installFamily)":       self.installFamily,
+            "$(var.installHumanVersion)": self.installHumanVersion,
+            "$(var.msi)":                 str(msi),
+            "$(var.vcredist)":            str(vcredist),
+            "$(var.vcredistVersion)":     vcredistVersion}))
 
         # Generate the .wxsobj file of the Bundle
         subprocess.run([

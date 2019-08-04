@@ -29,10 +29,15 @@
 -->
 <WixLocalization Culture="en-us" Language="1033" xmlns="http://schemas.microsoft.com/wix/2006/localization">
   <String Id="Caption">[WixBundleName] Installer</String>
-  <String Id="Title">[WixBundleName]</String>
+  <String Id="Title">[InstallFamily]</String>
+  <String Id="Subtitle">Version: [InstallHumanVersion]</String>
   <String Id="InstallHeader">Welcome!</String>
-  <String Id="InstallMessage">This wizard will install [WixBundleName] on your computer. Click Install to continue, or Close to exit.</String>
-  <String Id="InstallVersion">Version [WixBundleVersion]</String>
+  <String Id="InstallMessage">This installer will install [InstallFamily] on your computer.</String>
+  <String Id="InstallVersionLabel">Version:</String>
+  <String Id="InstallVersion">[VgcInstallVersion]</String>
+  <String Id="InstallLocationLabel">Install folder:</String>
+  <String Id="InstallLocation">[InstallFolder]</String>
+  <String Id="InstallMessage2">Click Install to continue, Options to change the install folder, or Close to exit.</String>
   <String Id="ConfirmCancelMessage">Are you sure you want to cancel?</String>
   <String Id="ExecuteUpgradeRelatedBundleMessage">Previous version</String>
   <String Id="HelpHeader">Installer Help</String>
@@ -51,15 +56,16 @@
   <String Id="InstallInstallButton">&amp;Install</String>
   <String Id="InstallCloseButton">&amp;Close</String>
   <String Id="OptionsHeader">Options</String>
-  <String Id="OptionsLocationLabel">Install location:</String>
+  <String Id="OptionsInstallLocationLabel">Install folder:</String>
   <String Id="OptionsBrowseButton">&amp;Browse</String>
   <String Id="OptionsOkButton">&amp;OK</String>
   <String Id="OptionsCancelButton">&amp;Cancel</String>
-  <String Id="ProgressHeader"></String>
+  <String Id="ProgressHeader">Progress</String>
   <String Id="ProgressLabel">Processing:</String>
   <String Id="OverallProgressPackageText">Initializing...</String>
   <String Id="ProgressCancelButton">&amp;Cancel</String>
-  <String Id="ModifyHeader">Modify your Installation</String>
+  <String Id="ModifyHeader">Uninstall</String>
+  <String Id="ModifyMessage">Click Uninstall to continue, or Close to exit.</String>
   <String Id="ModifyRepairButton">&amp;Repair</String>
   <String Id="ModifyUninstallButton">&amp;Uninstall</String>
   <String Id="ModifyCloseButton">&amp;Close</String>
@@ -75,7 +81,7 @@
   <String Id="FailureInstallHeader">Installation Failed</String>
   <String Id="FailureUninstallHeader">Uninstall Failed</String>
   <String Id="FailureRepairHeader">Repair Failed</String>
-  <String Id="FailureHyperlinkLogText">One or more issues caused the operation to fail. Please fix the issues and then try again. For more information see the &lt;a href="#"&gt;log file&lt;/a&gt;.</String>
+  <String Id="FailureHyperlinkLogText">Oops... something wrong happened, we're very sorry about that. Maybe you can fix the problems indicated below and try again. Otherwise, you can contact us at &lt;a href="support@vgc.io"&gt;support@vgc.io&lt;/a&gt; for assistance. If you do, please copy-paste the content of the &lt;a href="#"&gt;log file&lt;/a&gt; in your email.</String>
   <String Id="FailureRestartText">You must restart your computer to complete the rollback of the software.</String>
   <String Id="FailureRestartButton">&amp;Restart</String>
   <String Id="FailureCloseButton">&amp;Close</String>

@@ -284,6 +284,10 @@ def run(srcDir, buildDir, gitExecutable,
             versionName += " " + commitDate + "." + commitIndex
     res += "versionName=" + versionName + "\n"
 
+    # Note: installFamily, installVersion, and installHumanVersion are not in
+    # the version.txt file since they depend on the upgradePolicy, which we
+    # cannot know at this time. See vgc/tools/windows/wix.py for details.
+
     # Write commit info
     res += "commitRepository=" + commitRepository + "\n"
     res += "commitBranch=" + commitBranch + "\n"
