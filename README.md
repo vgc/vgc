@@ -1,7 +1,6 @@
 ![VGC](https://github.com/vgc/vgc/blob/master/logo.png)
 
 [![TravisCI Build Status](https://travis-ci.org/vgc/vgc.svg?branch=master)](https://travis-ci.org/vgc/vgc)
-https://ci.appveyor.com/api/projects/status/rpl7292begqh3pfq?svg=true
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/rpl7292begqh3pfq?svg=true)](https://ci.appveyor.com/project/dalboris/vgc)
 
 # About Me
