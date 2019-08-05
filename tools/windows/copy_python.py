@@ -26,6 +26,7 @@ import sys
 from pathlib import Path
 import shutil
 import zipfile
+import urllib.request
 
 # Copies a file from the given src Path to the given dest Path, creating
 # directories as necessary.
@@ -42,13 +43,29 @@ def run(buildDir, config):
     embedDir = pythonDir / "embed"
     binDir = buildDir / config / "bin"
 
-    if not embedDir.exists():
-        return
-        # TODO: download https://www.python.org/ftp/python/3.7.0/python-3.7.0-embed-amd64.zip and extract
-
-    # Get version-dependent python name, e.g., "python37"
+    # Get version-dependent python name, e.g.:
+    #   pythonXY   = "python37"
+    #   versionXYZ = "3.7.4"
     version = sys.version_info
     pythonXY = "python{}{}".format(version.major, version.minor)
+    versionXYZ = "{}.{}.{}".format(version.major, version.minor, version.micro)
+
+    # We first look inside the python installation to see if the embed folder is
+    # there. If not, we download the embed folder directly in the build dir.
+    if not embedDir.exists():
+        embedDir = buildDir / "embed"
+        if not embedDir.exists():
+            embedZipFileName = "python-{}-embed-amd64.zip".format(versionXYZ)
+            embedZipUrl = "https://www.python.org/ftp/python/{}/{}".format(versionXYZ, embedZipFileName)
+            embedZipPath = buildDir / embedZipFileName
+            if not embedZipPath.exists():
+                print("Downloading {}".format(embedZipUrl))
+                print("         to {}".format(str(embedZipPath)))
+                urllib.request.urlretrieve(embedZipUrl, str(embedZipPath))
+                print("Done.")
+            embedZipFile = zipfile.ZipFile(str(embedZipPath), 'r')
+            embedZipFile.extractall(str(embedDir))
+            embedZipFile.close()
 
     # Extract Python built-in libraries to <build>/<config>/python
     # We don't keep them zipped for runtime performance
