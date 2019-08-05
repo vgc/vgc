@@ -255,15 +255,27 @@ function(vgc_test_library LIB_NAME)
     # Add python tests
     foreach(PYTHON_TEST_FILENAME ${ARG_PYTHON_TESTS})
         set(PYTHON_TEST_TARGET_NAME vgc_${LIB_NAME}_${PYTHON_TEST_FILENAME})
-        add_test(
-            NAME ${PYTHON_TEST_TARGET_NAME}
-            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        )
-        set_tests_properties(${PYTHON_TEST_TARGET_NAME}
-            PROPERTIES
-                ENVIRONMENT PYTHONPATH=${CMAKE_BINARY_DIR}/$<CONFIG>/python:$ENV{PYTHONPATH}
-        )
+        if(WIN32)
+            add_test(
+                NAME ${PYTHON_TEST_TARGET_NAME}
+                COMMAND ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/python.exe ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            )
+            set_tests_properties(${PYTHON_TEST_TARGET_NAME}
+                PROPERTIES
+                    ENVIRONMENT "PATH=%PATH%\;${CMAKE_BINARY_DIR}/$<CONFIG>/bin"
+            )
+        else()
+            add_test(
+                NAME ${PYTHON_TEST_TARGET_NAME}
+                COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            )
+            set_tests_properties(${PYTHON_TEST_TARGET_NAME}
+                PROPERTIES
+                    ENVIRONMENT PYTHONPATH=${CMAKE_BINARY_DIR}/$<CONFIG>/python:$ENV{PYTHONPATH}
+            )
+        endif()
     endforeach()
 
 endfunction()
