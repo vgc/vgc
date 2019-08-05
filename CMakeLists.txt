@@ -414,19 +414,19 @@ endif()
 # Copy Python dependencies
 #
 if(WIN32)
-    #set(COPY_PYTHON_PY ${CMAKE_CURRENT_BINARY_DIR}/copy_python.py)
-    #vgc_add_copy_command(
-    #    ${CMAKE_SOURCE_DIR}/tools/windows/copy_python.py
-    #    ${COPY_PYTHON_PY}
-    #)
-    #add_custom_target(copy_python ALL
-    #    DEPENDS ${COPY_PYTHON_PY}
-    #    COMMAND ${PYTHON_EXECUTABLE} -c
-    #        "import copy_python; copy_python.run('${CMAKE_BINARY_DIR}', '$<CONFIG>')"
-    #    WORKING_DIRECTORY
-    #        ${CMAKE_CURRENT_BINARY_DIR}
-    #    VERBATIM
-    #)
+    set(COPY_PYTHON_PY ${CMAKE_CURRENT_BINARY_DIR}/copy_python.py)
+    vgc_add_copy_command(
+        ${CMAKE_SOURCE_DIR}/tools/windows/copy_python.py
+        ${COPY_PYTHON_PY}
+    )
+    add_custom_target(copy_python ALL
+        DEPENDS ${COPY_PYTHON_PY}
+        COMMAND ${PYTHON_EXECUTABLE} -c
+            "import copy_python; copy_python.run('${CMAKE_BINARY_DIR}', '$<CONFIG>')"
+        WORKING_DIRECTORY
+            ${CMAKE_CURRENT_BINARY_DIR}
+        VERBATIM
+    )
 endif()
 
 # Add deploy target

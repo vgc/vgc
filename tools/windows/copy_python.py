@@ -42,6 +42,10 @@ def run(buildDir, config):
     embedDir = pythonDir / "embed"
     binDir = buildDir / config / "bin"
 
+    if not embedDir.exists():
+        return
+        # TODO: download https://www.python.org/ftp/python/3.7.0/python-3.7.0-embed-amd64.zip and extract
+
     # Get version-dependent python name, e.g., "python37"
     version = sys.version_info
     pythonXY = "python{}{}".format(version.major, version.minor)
