@@ -13,6 +13,7 @@
 #     -DQt="C:/Qt/5.12.3/msvc2017_64"
 #     -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
 # make.bat
+# test.bat [-VV]
 # [make.bat deploy]
 #
 # Note: Wix is only necessary if you plan to deploy the application, that is,
@@ -26,6 +27,7 @@
 # cmake ../vgc
 #     -DQt="~/Qt/5.12.3/gcc_64"
 # make
+# ctest [-VV]
 # [make deploy]
 #
 # Branching model
@@ -401,6 +403,12 @@ if(WIN32)
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/make.in.bat
         ${CMAKE_BINARY_DIR}/make.bat)
+
+    # Create test.bat.
+    #
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/test.in.bat
+        ${CMAKE_BINARY_DIR}/test.bat)
 endif()
 
 # Copy Python dependencies
