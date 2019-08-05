@@ -4,7 +4,7 @@
 version: 1.0.{build}
 image: Visual Studio 2017
 clone_folder: C:/dev/vgc
-shallow_clone: true
+shallow_clone: false
 clone_depth: 50
 platform: x64
 configuration: Release
