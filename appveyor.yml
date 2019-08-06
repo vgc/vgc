@@ -22,3 +22,7 @@ build_script:
 test_script:
   - cd C:/dev/build
   - test.bat -VV
+
+deploy_script:
+  - cd C:/dev/build
+  - make.bat deploy
