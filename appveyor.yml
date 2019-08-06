@@ -18,6 +18,7 @@ before_build:
 build_script:
   - cd C:/dev/build
   - make.bat
+  - make.bat deploy
 
 test_script:
   - cd C:/dev/build
