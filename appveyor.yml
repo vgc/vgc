@@ -18,3 +18,7 @@ before_build:
 build_script:
   - cd C:/dev/build
   - make.bat
+
+test_script:
+  - cd C:/dev/build
+  - test.bat -VV
