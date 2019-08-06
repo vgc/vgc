@@ -15,7 +15,6 @@ before_build:
   - cd build
   - cmake ../vgc -G "Visual Studio 15 2017" -A x64 -DPython="C:/Python37-x64" -DQt="C:/Qt/5.12.4/msvc2017_64" -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
 
-build:
-  parallel: true
-  project: C:/dev/build/ALL_BUILD.vcxproj
-  verbosity: minimal
+build_script:
+  - cd C:/dev/build
+  - make.bat
