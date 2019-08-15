@@ -358,11 +358,11 @@ function(vgc_add_app APP_NAME)
             COMMAND if not exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/Qt*.dll
                 ${Qt}/bin/windeployqt.exe
                 ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vgc${APP_NAME}.exe
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>
             COMMAND if exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vc_redist.x64.exe
                 ${CMAKE_COMMAND} -E rename
                     ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vc_redist.x64.exe
-                    ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe
+                    ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe
             VERBATIM
         )
     endif()
