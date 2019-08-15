@@ -334,9 +334,11 @@
 
 from pathlib import Path
 from xml.dom.minidom import getDOMImplementation
+import argparse
 import hashlib
 import re
 import subprocess
+import sys
 import uuid
 
 # Converts any string identifier into a valid WiX Id, that is:
@@ -637,11 +639,11 @@ class Wix:
 
     # Generates the setup file
     #
-    def makeSetup(self, deployDir, icon, logo, logoside):
+    def makeSetup(self, srcDir, deployDir, icon, logo, logoside):
         msi_wxs             = deployDir / (self.msiName + ".wxs")
         msi_wixobj          = deployDir / (self.msiName + ".wixobj")
         msi                 = deployDir / (self.msiName + ".msi")
-        bundle_template_wxs = deployDir / "bundle.wxs"
+        bundle_template_wxs = srcDir / "tools" / "windows" / "bundle.wxs"
         bundle_wxs          = deployDir / (self.installerName + ".wxs")
         bundle_wixobj       = deployDir / (self.installerName + ".wixobj")
         installer_exe       = deployDir / (self.installerName + ".exe")
@@ -678,8 +680,8 @@ class Wix:
             "$(var.icon)":                str(icon),
             "$(var.logo)":                str(logo),
             "$(var.logoside)":            str(logoside),
-            "$(var.themeFile)":           str(deployDir / "VgcTheme.xml"),
-            "$(var.localizationFile)":    str(deployDir / "VgcTheme.wxl"),
+            "$(var.themeFile)":           str(srcDir / "tools" / "windows" / "VgcTheme.xml"),
+            "$(var.localizationFile)":    str(srcDir / "tools" / "windows" / "VgcTheme.wxl"),
             "$(var.installFamily)":       self.installFamily,
             "$(var.installHumanVersion)": self.installHumanVersion,
             "$(var.msi)":                 str(msi),
@@ -852,7 +854,7 @@ class WixElement:
 # Generates an MSI file for the given suite
 #
 def makeSuiteInstaller(
-        buildDir, configDir, deployDir, wixDir,
+        srcDir, buildDir, configDir, deployDir, wixDir,
         manufacturer, suiteName, appNames, architecture,
         versionType, versionMajor, versionMinor, upgradePolicy,
         commitBranch, commitDate, commitIndex):
@@ -873,20 +875,22 @@ def makeSuiteInstaller(
 
     # Create Desktop and Start Menu shortcuts
     for appName in appNames:
-        appExecutableBasename = "vgc" + appName.lower()
+        appNameLower = appName.lower()
+        appExecutableBasename = "vgc" + appNameLower
         appExecutableName = appExecutableBasename + ".exe"
         appExecutable = wixBinDir.getFile(appExecutableName)
-        appIconPath = buildDir / (appExecutableBasename + ".ico")
         appShortcutName = suiteName + " " + appName + wix.installFamilySuffix
+        workingDirectory = wixBinDir
+        appIconPath = srcDir / "apps" / appNameLower / (appExecutableBasename + ".ico")
         appIcon = wix.createIcon(appIconPath)
-        appExecutable.createShortcut(wix.startMenuDirectory, appShortcutName, wixBinDir, appIcon)
-        appExecutable.createShortcut(wix.desktopDirectory, appShortcutName, wixBinDir, appIcon)
+        appExecutable.createShortcut(wix.startMenuDirectory, appShortcutName, workingDirectory, appIcon)
+        appExecutable.createShortcut(wix.desktopDirectory, appShortcutName, workingDirectory, appIcon)
 
     # Generate the Setup file
-    setupIcon = buildDir / "vgcillustration.ico" # TODO: use non-app-specific VGC icon instead
-    setupLogo = buildDir / "setuplogo.png"
-    setupLogoSide = buildDir / "setuplogoside.png"
-    wix.makeSetup(deployDir, setupIcon, setupLogo, setupLogoSide)
+    setupIcon = appIconPath # TODO: use non-app-specific VGC icon instead
+    setupLogo = srcDir / "tools" / "windows" / "setuplogo.png"
+    setupLogoSide = srcDir / "tools" / "windows" / "setuplogoside.png"
+    wix.makeSetup(srcDir, deployDir, setupIcon, setupLogo, setupLogoSide)
 
 # Returns a value from an INI-formatted file. Does not support comments, nor
 # spaces surrounding the equal size.
@@ -898,11 +902,10 @@ def makeSuiteInstaller(
 def getIniValue(ini, key):
     return re.search("^" + key + "=(.*)$", ini, flags = re.MULTILINE).group(1)
 
-# Generates an MSI file from the build
-#
-def run(buildDir, config, wixDir):
+def run(srcDir, buildDir, config, wixDir):
 
     # Get and create useful directories
+    srcDir = Path(srcDir)
     buildDir = Path(buildDir)
     configDir = buildDir / config
     deployDir = buildDir / "deploy" / config
@@ -935,10 +938,21 @@ def run(buildDir, config, wixDir):
     # For now, we don't create app installers.
     for upgradePolicy in upgradePolicies:
         makeSuiteInstaller(
-            buildDir, configDir, deployDir, wixDir,
+            srcDir, buildDir, configDir, deployDir, wixDir,
             manufacturer, suiteName, appNames, architecture,
             versionType, versionMajor, versionMinor, upgradePolicy,
             commitBranch, commitDate, commitIndex)
 
     # TODO: also create a ZIP for portable installation (like Blender
     # does), with updates disabled.
+
+# Parse arguments and call run() if this file is read as a script
+#
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("srcDir", help="path to the source directory")
+    parser.add_argument("buildDir", help="path to the build directory")
+    parser.add_argument("config", help="build configuration (e.g.: 'Release', 'Debug')")
+    parser.add_argument("wixDir", help="path to the directory where WiX is installed")
+    args = parser.parse_args()
+    run(args.srcDir, args.buildDir, args.config, args.wixDir)
