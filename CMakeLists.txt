@@ -439,41 +439,16 @@ endif()
 # may be useful for deploying a subset of VGC that does not depend on Qt.
 #
 if(WIN32)
-    set(WIX_PY_ ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py)
-    set(WIX_PY  ${CMAKE_CURRENT_BINARY_DIR}/wix.py)
-    vgc_add_copy_command(${WIX_PY_} ${WIX_PY})
-
-    set(SETUP_LOGO_ ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/setuplogo.png)
-    set(SETUP_LOGO  ${CMAKE_CURRENT_BINARY_DIR}/setuplogo.png)
-    vgc_add_copy_command(${SETUP_LOGO_} ${SETUP_LOGO})
-
-    set(SETUP_LOGOSIDE_ ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/setuplogoside.png)
-    set(SETUP_LOGOSIDE  ${CMAKE_CURRENT_BINARY_DIR}/setuplogoside.png)
-    vgc_add_copy_command(${SETUP_LOGOSIDE_} ${SETUP_LOGOSIDE})
-
-    set(ICON_ ${CMAKE_CURRENT_SOURCE_DIR}/apps/illustration/vgcillustration.ico)
-    set(ICON  ${CMAKE_CURRENT_BINARY_DIR}/vgcillustration.ico)
-    vgc_add_copy_command(${ICON_} ${ICON})
-
     add_custom_target(deploy
         VERBATIM
-        DEPENDS ${WIX_PY} ${SETUP_LOGO} ${SETUP_LOGOSIDE} ${ICON}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/bundle.wxs
-            ${CMAKE_CURRENT_BINARY_DIR}/deploy/$<CONFIG>/bundle.wxs
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/VgcTheme.xml
-            ${CMAKE_CURRENT_BINARY_DIR}/deploy/$<CONFIG>/VgcTheme.xml
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/VgcTheme.wxl
-            ${CMAKE_CURRENT_BINARY_DIR}/deploy/$<CONFIG>/VgcTheme.wxl
         COMMAND powershell -NoLogo -NoProfile -Command \(
             Get-Item ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe
             \).VersionInfo.FileVersion
             > ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe.version
-        COMMAND ${PYTHON_EXECUTABLE} -c
-            "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py
+            ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} $<CONFIG> ${WiX}
     )
 else()
     add_custom_target(deploy
