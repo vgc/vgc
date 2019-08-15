@@ -2,21 +2,24 @@
 #
 # Usage:
 #
-#     ./linuxdeploy.sh <build-dir> <src-dir> <qmake-executable>
+#     ./deploy.sh <build-dir> <src-dir> <qmake-executable>
 #
 # While you can run this script manually, the intended usage is to call:
 #
-#     make linuxdeploy
+#     make deploy
 #
 # which calls this script with the appropriate arguments.
 #
+# Note: it may be useful to look at how LibreOffice handles Linux packaging:
+# - https://github.com/AppImage/AppImageKit/wiki/Bundling-LibreOffice
+# - https://www.libreoffice.org/download/appimage/
 
 # Get input arguments
 BUILD_DIR="$1"
 SRC_DIR="$2"
 QMAKE_EXECUTABLE="$3"
 
-echo "Running vgc/tools/linuxdeploy.sh with:"
+echo "Running vgc/tools/linux/deploy.sh with:"
 echo "  BUILD_DIR = $BUILD_DIR"
 echo "  SRC_DIR = $SRC_DIR"
 echo "  QMAKE_EXECUTABLE = $QMAKE_EXECUTABLE"

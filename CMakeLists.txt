@@ -158,9 +158,9 @@ enable_testing()
 # which tests were run.
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
 
-# Import our helper functions defined in cmake/VgcTools.cmake
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-include(VgcTools)
+# Import helper CMake functions
+#list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/tools)
+include(tools/VgcTools.cmake)
 
 # Configure VGC
 #
@@ -459,24 +459,24 @@ if(WIN32)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/bundle.wxs
-            ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/deploy/bundle.wxs
+            ${CMAKE_CURRENT_BINARY_DIR}/deploy/$<CONFIG>/bundle.wxs
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/VgcTheme.xml
-            ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/deploy/VgcTheme.xml
+            ${CMAKE_CURRENT_BINARY_DIR}/deploy/$<CONFIG>/VgcTheme.xml
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/VgcTheme.wxl
-            ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/deploy/VgcTheme.wxl
+            ${CMAKE_CURRENT_BINARY_DIR}/deploy/$<CONFIG>/VgcTheme.wxl
         COMMAND powershell -NoLogo -NoProfile -Command \(
-            Get-Item ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe
+            Get-Item ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe
             \).VersionInfo.FileVersion
-            > ${CMAKE_BINARY_DIR}/$<CONFIG>/deploy/vc_redist.x64.exe.version
+            > ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe.version
         COMMAND ${PYTHON_EXECUTABLE} -c
             "import wix; wix.run('${CMAKE_BINARY_DIR}', '$<CONFIG>', '${WiX}')"
     )
 else()
     add_custom_target(deploy
         COMMAND
-            ${CMAKE_CURRENT_LIST_DIR}/tools/linuxdeploy.sh
+            ${CMAKE_CURRENT_LIST_DIR}/tools/linux/deploy.sh
             ${CMAKE_BINARY_DIR}
             ${CMAKE_CURRENT_LIST_DIR}
             ${QT_QMAKE_EXECUTABLE}

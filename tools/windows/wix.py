@@ -905,7 +905,7 @@ def run(buildDir, config, wixDir):
     # Get and create useful directories
     buildDir = Path(buildDir)
     configDir = buildDir / config
-    deployDir = configDir / "deploy"
+    deployDir = buildDir / "deploy" / config
     deployDir.mkdir(parents=True, exist_ok=True)
     wixDir = Path(wixDir)
 
