@@ -159,7 +159,6 @@ enable_testing()
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
 
 # Import helper CMake functions
-#list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/tools)
 include(tools/VgcTools.cmake)
 
 # Configure VGC
