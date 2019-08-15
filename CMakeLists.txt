@@ -12,12 +12,15 @@
 #     -DPython="C:/Users/Boris/AppData/Local/Programs/Python/Python37"
 #     -DQt="C:/Qt/5.12.3/msvc2017_64"
 #     -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
-# make.bat
-# test.bat [-VV]
-# [make.bat deploy]
+# make
+# test [-VV]
+# [make deploy]
 #
 # Note: Wix is only necessary if you plan to deploy the application, that is,
 # create a Windows installer.
+#
+# Note 2: `make` and `test` refer to batch scripts `make.bat` and `test.bat`,
+# which CMake copies from tools/windows to the build directory.
 #
 # ## On Linux
 #
@@ -380,7 +383,7 @@ add_custom_target(version ALL
 # On Windows, create a convenient batch script called 'make.bat' in the build
 # folder, which allows you to run the following command in cmd.exe:
 #
-# make.bat [targetname]
+# make [targetname]
 #
 # as syntactic sugar for running the following command in the appropriate Visual
 # Studio command prompt:
