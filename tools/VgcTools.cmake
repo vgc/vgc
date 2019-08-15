@@ -303,7 +303,7 @@ function(vgc_add_app APP_NAME)
     set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_FILES COMPILE_DEFINITIONS)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    # Prepend LIB_NAME with "vgc_lib_" to get target name.
+    # Prepend APP_NAME with "vgc_app_" to get target name.
     vgc_prepend_(TARGET_NAME vgc_app_ ${APP_NAME})
 
     # Add library
