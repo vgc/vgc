@@ -902,7 +902,21 @@ def makeSuiteInstaller(
 def getIniValue(ini, key):
     return re.search("^" + key + "=(.*)$", ini, flags = re.MULTILINE).group(1)
 
-def run(srcDir, buildDir, config, wixDir):
+# Script entry point.
+#
+if __name__ == "__main__":
+
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("srcDir", help="path to the source directory")
+    parser.add_argument("buildDir", help="path to the build directory")
+    parser.add_argument("config", help="build configuration (e.g.: 'Release', 'Debug')")
+    parser.add_argument("wixDir", help="path to the directory where WiX is installed")
+    args = parser.parse_args()
+
+    # Import arguments into the global namespace.
+    # This allows to more simply write `foo` instead of `args.foo`.
+    globals().update(vars(args))
 
     # Get and create useful directories
     srcDir = Path(srcDir)
@@ -945,14 +959,3 @@ def run(srcDir, buildDir, config, wixDir):
 
     # TODO: also create a ZIP for portable installation (like Blender
     # does), with updates disabled.
-
-# Parse arguments and call run() if this file is read as a script
-#
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("srcDir", help="path to the source directory")
-    parser.add_argument("buildDir", help="path to the build directory")
-    parser.add_argument("config", help="build configuration (e.g.: 'Release', 'Debug')")
-    parser.add_argument("wixDir", help="path to the directory where WiX is installed")
-    args = parser.parse_args()
-    run(args.srcDir, args.buildDir, args.config, args.wixDir)
