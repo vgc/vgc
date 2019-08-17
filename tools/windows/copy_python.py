@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
 #
-# This script assumes that an "embedded" version of Python is installed in the
-# "embed" subdirectory of the current Python installation. This is not the case
-# by default: you must manually download the embedded version and extract the
-# ZIP. In the future, we may want to automatically download it. For example, the
-# address for Python 3.7.3 is the following:
-#
-# https://www.python.org/ftp/python/3.7.3/python-3.7.3-embed-amd64.zip
-#
 # Note that we do not deploy pip as part of the installation, since it does take
 # quite a bit of space (> 8 MB), and using pip together with an "embedded Python"
 # isn't officially supported. If we do want to ship pip in a future version,
@@ -22,11 +14,12 @@
 #   import site
 #
 
-import sys
 from pathlib import Path
+import argparse
 import shutil
-import zipfile
+import sys
 import urllib.request
+import zipfile
 
 # Copies a file from the given src Path to the given dest Path, creating
 # directories as necessary.
@@ -35,9 +28,21 @@ def copyFile(src, dest):
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(str(src), str(dest))
 
-# Updates the build tree by copying all outdated resources.
+# Script entry point.
 #
-def run(buildDir, config):
+if __name__ == "__main__":
+
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("buildDir", help="path to the build directory")
+    parser.add_argument("config", help="build configuration (e.g.: 'Release', 'Debug')")
+    args = parser.parse_args()
+
+    # Import arguments into the global namespace.
+    # This allows to more simply write `foo` instead of `args.foo`.
+    globals().update(vars(args))
+
+    # Get useful paths
     buildDir = Path(buildDir)
     pythonDir = Path(sys.executable).parent
     embedDir = pythonDir / "embed"
