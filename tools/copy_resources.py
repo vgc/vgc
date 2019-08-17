@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
+import argparse
 import shutil
 
 # Returns the last modification time of the given Path.
@@ -54,9 +55,24 @@ def updateResource(srcPath, destPath, r):
         copyFile(src, dest)
         print("Updated " + r)
 
-# Updates the build tree by copying all outdated resources.
+# Script entry point.
 #
-def run(srcDir, buildDir, config, libName):
+if __name__ == "__main__":
+
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("srcDir", help="path to the source directory")
+    parser.add_argument("buildDir", help="path to the build directory")
+    parser.add_argument("config", help="build configuration (e.g., 'Release')")
+    parser.add_argument("libName", help="the name of this VGC library (e.g., 'core')")
+    args = parser.parse_args()
+
+    # Import arguments into the global namespace.
+    # This allows to more simply write `foo` instead of `args.foo`.
+    globals().update(vars(args))
+
+    # Update the build tree by copying all outdated resources.
+    #
     libBuildPath = Path(buildDir) / "libs" / "vgc" / libName
     ref = libBuildPath / "resources.txt"
     stamp = libBuildPath / ("resources_" + config + ".txt")
