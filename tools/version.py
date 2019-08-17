@@ -189,8 +189,9 @@
 # does not entirely replace the commit hash.
 #
 
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
+import argparse
 import subprocess
 
 # Converts a date given as a string in a given format as a UTC datetime
@@ -205,14 +206,31 @@ import subprocess
 def utcdatetime(datestring, dateformat):
     return datetime.strptime(datestring, dateformat).astimezone(timezone.utc)
 
-# Runs the script
+# Script entry point.
 #
-def run(srcDir, buildDir, gitExecutable,
-        manufacturer, suite, versionType, versionMajor, versionMinor,
-        commitRepository, commitBranch,
-        buildCompiler, buildCompilerVersion, buildArchitecture, buildConfig):
+if __name__ == "__main__":
 
-    # Get and create useful directories
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("srcDir")
+    parser.add_argument("buildDir")
+    parser.add_argument("gitExecutable")
+    parser.add_argument("manufacturer")
+    parser.add_argument("suite")
+    parser.add_argument("versionType")
+    parser.add_argument("versionMajor")
+    parser.add_argument("versionMinor")
+    parser.add_argument("commitRepository")
+    parser.add_argument("commitBranch")
+    parser.add_argument("buildCompiler")
+    parser.add_argument("buildCompilerVersion")
+    parser.add_argument("buildArchitecture")
+    parser.add_argument("buildConfig")
+    args = parser.parse_args()
+
+    # Import arguments into the global namespace.
+    # This allows to more simply write `foo` instead of `args.foo`.
+    globals().update(vars(args))
 
     # The resulting string to write to version.txt
     res = ""
