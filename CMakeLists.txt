@@ -355,29 +355,24 @@ add_subdirectory(apps)
 # See vgc/tools/version.py for details.
 #
 find_package(Git)
-set(VERSION_PY_ ${CMAKE_CURRENT_SOURCE_DIR}/tools/version.py)
-set(VERSION_PY  ${CMAKE_CURRENT_BINARY_DIR}/version.py)
-vgc_add_copy_command(${VERSION_PY_} ${VERSION_PY})
 add_custom_target(version ALL
     VERBATIM
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${VERSION_PY}
-    COMMAND ${PYTHON_EXECUTABLE} -c
-        "import version; version.run(\
-            '${CMAKE_CURRENT_SOURCE_DIR}',\
-            '${CMAKE_CURRENT_BINARY_DIR}',\
-            '${GIT_EXECUTABLE}',\
-            '${VGC_MANUFACTURER}',\
-            '${VGC_SUITE}',\
-            '${VGC_VERSION_TYPE}',\
-            '${VGC_VERSION_MAJOR}',\
-            '${VGC_VERSION_MINOR}',\
-            '${VGC_COMMIT_REPOSITORY}',\
-            '${VGC_COMMIT_BRANCH}',\
-            '${CMAKE_CXX_COMPILER_ID}',\
-            '${CMAKE_CXX_COMPILER_VERSION}',\
-            '${CMAKE_GENERATOR_PLATFORM}',\
-            '$<CONFIG>')"
+    COMMAND ${PYTHON_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/version.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${GIT_EXECUTABLE}"
+        "${VGC_MANUFACTURER}"
+        "${VGC_SUITE}"
+        "${VGC_VERSION_TYPE}"
+        "${VGC_VERSION_MAJOR}"
+        "${VGC_VERSION_MINOR}"
+        "${VGC_COMMIT_REPOSITORY}"
+        "${VGC_COMMIT_BRANCH}"
+        "${CMAKE_CXX_COMPILER_ID}"
+        "${CMAKE_CXX_COMPILER_VERSION}"
+        "${CMAKE_GENERATOR_PLATFORM}"
+        "$<CONFIG>"
 )
 
 # On Windows, create a convenient batch script called 'make.bat' in the build
