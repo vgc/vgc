@@ -13,32 +13,6 @@ function(vgc_prepend_ var prefix)
    set(${var} "${listVar}" PARENT_SCOPE)
 endfunction()
 
-# Defines a command that copies a file from src to dest.
-#
-# Use of generator expressions
-# ----------------------------
-#
-# Unfortunately, the destination cannot use generator expressions (e.g.,
-# $<Config>), because it is used as OUTPUT of add_custom_command, which does
-# not support generator expressions.
-#
-# If you need to generate a file whose path depends on a generator expression,
-# then your only possible workaround is to generate it within a COMMAND of an
-# add_custom_target(). The drawback is that the COMMAND will *always* be
-# called, which may not be efficient, unless the COMMAND is smart enough and
-# includes logic to avoid regenerating the file if it knows somehow that it
-# isn't out of date (e.g., rolling out its own timestamp-based mechanism).
-#
-function(vgc_add_copy_command src dest)
-    add_custom_command(
-        COMMENT ""
-        OUTPUT ${dest}
-        DEPENDS ${src}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dest}
-        VERBATIM
-    )
-endfunction()
-
 # Defines a new VGC library. This calls add_library under the hood.
 #
 # Usage:
