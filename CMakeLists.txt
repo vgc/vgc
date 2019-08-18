@@ -439,7 +439,8 @@ if(WIN32)
             "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py"
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
-            "$<CONFIG> ${WiX}"
+            "$<CONFIG>"
+            "${WiX}"
     )
 else()
     add_custom_target(deploy
