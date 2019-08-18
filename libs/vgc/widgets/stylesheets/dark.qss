@@ -1,23 +1,16 @@
 
 /***************************** Color Scheme **********************************/
 
-/* We use 7 shades of gray.
- *
- * Menu text is the lightest color
- * Menu borders is the darkest color
- *
- * white
- * #bec0c2   gray1   menu text
- * #4d4f52   gray2   grayed text
- * #404244   gray3   menubar, toolbar, console margin
- * #313234   gray4   menu, list-view, tree-view, combobox popup
- * #2e2f30   gray5   text edit background
- *           gray6   selected text edit background
- * #212222   gray7   menu and dock borders
+/* white
+ * #bec0c2  Default text color
+ * #4d4f52  Highlighted backgrounds for: QMenuBar::item, QToolButton
+ * #404244  Background for: QWidget, QToolBar, QToolButton, QScrollbar
+ * #313234  Background for: QListView, QAbstractScrollArea (inherited: QTreeView)
+ * #2e2f30  Background for: QMenuBar, QMenu, QComboBox's popup, QPlainTextEdit, Console, QMainWindow::separator, QLineEdit, QSpinBoxtext
+ * #212222  Borders for: QMenu, QPushButton, QLineEdit, QSpinBox, QComboBox, QListView, QTreeView, QScrollbar
  * black
  *
- * When highlighting: -1 (=> lighter)
- * When selecting:    +1 (=> darker);
+ * For highlighting/selecting, we either choose a lighter or darker existing tone.
  */
 
 /******************************** Default ************************************/
@@ -30,50 +23,81 @@
  * at the beginning of this file.
  */
 
+/* The font size is chosen such that, on a 1080p screen (i.e., not high-DPI),
+ * the actual height of "OK" and "1.0" is 10px. Such text made of capital
+ * letters or digits should be perfectly centered in buttons, spin boxes, etc.:
+ *
+ *  .---------------------------.
+ *  |  1px:  top border         |
+ *  |---------------------------|
+ *  |  7px:  spacing            |
+ *  |  10px: height of text     |   Total widget height: 26px
+ *  |  7px:  spacing            |
+ *  |---------------------------|
+ *  |  1px:  bottom border      |
+ *  '---------------------------'
+ *
+ * On high-DPI screens, it matters less to have the height of capital letters
+ * and digits be an even number of pixels, since an offset of 1px from perfect
+ * centering is less noticeable, especially since it depends on the actual
+ * text.
+ */
+
 QWidget {
     /* border: 0px; */ /* See #13 and #14 for why this is commented out */
     margin: 0px;
     padding: 0px;
-    background: #404244;
     font-family: "Source Sans Pro";
-    font-size: 12pt;
+    font-size: 15px;
+    background: #404244;
     color: #bec0c2;
 }
 
 /******************************** Menu Bar ***********************************/
 
 QMenuBar {
-    border-bottom: 1px solid #212222; /* gray7 */
+    background: #2e2f30;
+    color: #bec0c2;
+    border: 0px;
+    padding: 0px;
 }
 
 QMenuBar::item {
-    border-bottom: 1px solid #212222; /* gray7 */
-    padding: 5px;
+    spacing: 0px;
+    border: 0px;
+    padding: 7px 12px;
 }
 
 QMenuBar::item:hover,
 QMenuBar::item:selected,
 QMenuBar::item:pressed {
-    background: #4d4f52; /* gray2 */
+    background: #212222;
 }
 
 /********************************* Menu **************************************/
 
 QMenu {
-    background: #313234;       /* gray4 */
-    border: 1px solid #212222; /* gray7 */
-    margin-top: -1px; /* overlap QMenuBar bottom border */
+    background: #2e2f30;
+    border: 1px solid #212222;
+    padding: 3px 0px;
 }
 
 QMenu::item {
     padding: 5px 20px 5px 40px;
-    background: #313234; /* gray4 */
+    background: #2e2f30;
 }
 
 QMenu::item:hover,
 QMenu::item:selected,
 QMenu::item:pressed {
-    background: #404244; /* gray3 */
+    background: #212222;
+}
+
+QMenu::separator {
+    height: 1px;
+    /*background: #252525;*/
+    background: #212222;
+    margin: 3px 10px;
 }
 
 QMenu::indicator {
@@ -83,7 +107,7 @@ QMenu::indicator {
 
 QMenu::indicator:non-exclusive {
     margin-left: 10px;
-    border: 1px solid #bec0c2; /* gray1 */
+    border: 1px solid #bec0c2;
     border-radius: 2px;
 }
 
@@ -92,28 +116,31 @@ QMenu::indicator:non-exclusive:unchecked {
 }
 
 QMenu::indicator:non-exclusive:checked {
-    background-color: #bec0c2; /* gray1 */
+    background-color: #bec0c2;
 }
 
 /********************************* Toolbar ***********************************/
 
 QToolBar {
-    background: #404244; /* gray3 */
+    border: 0px;
+    padding: 0px;
+    background: #404244;
 }
 
 /* toolbar buttons */
 
 QToolButton {
-    background: #404244; /* gray3 */
+    border: 0px;
     padding: 10px;
+    background: #404244;
 }
 
 QToolButton:hover {
-    background: #4d4f52; /* gray2 */
+    background: #4d4f52;
 }
 
 QToolButton:pressed {
-    background: #313234; /* gray4 */
+    background: #313234;
 }
 
 /********************************* Text Edits ********************************/
@@ -122,25 +149,33 @@ QToolButton:pressed {
  */
 
 QPlainTextEdit {
-    background: #2e2f30;       /* gray5 */
-    border: 1px solid #212222; /* gray7 */
+    background: #2e2f30;
+    border: 0px;
     selection-color: #bec0c2;
     selection-background-color: #1d545c;
 }
 
 /****************************** Docks ****************************************/
 
-/* Dock widget resize handle */
-
-QMainWindow::separator {
-    background: #212222; /* gray7 */
-    width: 2px; /* when vertical */
-    height: 2px; /* when horizontal */
-}
-
-/* Note: we'd prefer width and height to be 1px instead of 2px, but when we
- * set them to one pixel the separator's color becomes QWidget { background }
- * instead of QMainWindow::separator { background }. I assume this is a bug.
+/* Separator between QDockWidgets, for resizing purposes.
+ *
+ * We would prefer the size of the separator to be 0px for a more modern flat
+ * design, unfortunately, at least on Windows, the size of the separator
+ * determines the area where the resize handle would appear. Therefore, if we
+ * set a size of 0px, we actually can't resize the dock.
+ *
+ * As a workaround, we currently set the size to be 5px to make it reasonably
+ * easy to resize even when using a pen tablet, but we make its color to be
+ * the background color of the Console so that it doesn't look ugly with the
+ * Console opened (but it does look ugly with other docks open)
+ *
+ * TODO: Fix this once and for all by ensuring that the resize handle show up
+ * within a certain distance of the separator, and set the separator size to
+ * 0px.
+ *
+ * Note: when we set the size to be 1px, the separator's color becomes QWidget
+ * { background } instead of QMainWindow::separator { background }. I assume
+ * this is a bug.
  *
  * One workaround would be not to use a generic 'QWidget' selector, but
  * unfortunately the ColorSelector becomes ugly if we do this, due to some
@@ -148,21 +183,44 @@ QMainWindow::separator {
  * default color instead of Dialog { background }.
  *
  * Our options are:
- * 1. Set a 2px-wide separator, as we currently do
+ * 1. Set a > 1px separator, as we currently do
  * 2. Instead of setting QWidget { background }, explicitly list all classes
  *    which we want to affect, including private Qt classes such as
  *    QColorLuminancePicker
  * 3. Leave the 1px-wide separator with QWidget { background } color.
  */
 
- /***************************** Push buttons **********************************/
+QMainWindow::separator {
+    background: #2e2f30;
+    width: 5px; /* when vertical */
+    height: 5px; /* when horizontal */
+}
 
-QPushButton {
-    height: 24px;
+/***************************** Labels **********************************/
+
+/* The intent height is 26px.
+ * Both border and padding is added to total height = 25px + 1 = 26px.
+ * We use 1px of padding-bottom for fine-tunnig centering.
+ */
+QLabel {
+    height: 25px;
+    padding-bottom: 1px;
     color: #bec0c2;
-    padding: 0px 20px;
-    border-radius: 2px;
+}
+
+/***************************** Push buttons **********************************/
+
+/* The intent height is 26px.
+ * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
+ * We use 1px of padding-bottom for fine-tunnig centering.
+ */
+QPushButton {
+    height: 23px;
     border: 1px solid #212222;
+    border-radius: 2px;
+    padding: 0px 20px;
+    padding-bottom: 1px;
+    color: #bec0c2;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #3e4044,
                 stop:1 #272829);
@@ -182,26 +240,36 @@ QPushButton:pressed {
 
 /***************************** QLineEdit **********************************/
 
+/* The intent height is 26px.
+ * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
+ * We use 1px of padding-bottom for fine-tunnig centering.
+ */
 QLineEdit {
-    height: 24px;
+    height: 23px;
+    border: 1px solid #212222;
+    border-radius: 2px;
+    padding-bottom: 1px;
     color: #bec0c2;
     selection-color: #bec0c2;
     selection-background-color: #1d545c;
-    border-radius: 2px;
-    border: 1px solid #212222;
     background: #2e2f30;
 }
 
 /***************************** QSPinBox **********************************/
 
+/* The intent height is 26px.
+ * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
+ * We use 1px of padding-bottom for fine-tunnig centering.
+ */
 QSpinBox {
-    height: 24px;
+    height: 23px;
+    border: 1px solid #212222;
+    border-radius: 2px;
+    padding: 0px;
+    padding-bottom: 1px;
     color: #bec0c2;
     selection-color: #bec0c2;
     selection-background-color: #1d545c;
-    padding: 0px 0px;
-    border-radius: 2px;
-    border: 1px solid #212222;
     background: #2e2f30;
 }
 
@@ -251,12 +319,17 @@ QSpinBox::down-arrow {
 
 /***************************** QComboBox **********************************/
 
+/* The intent height is 26px.
+ * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
+ * We use 1px of padding-bottom for fine-tunnig centering.
+ */
 QComboBox {
     height: 24px;
-    color: #bec0c2;
-    padding: 0px 0px 0px 6px;
-    border-radius: 2px;
     border: 1px solid #212222;
+    border-radius: 2px;
+    padding: 0px 0px 0px 6px;
+    padding-bottom: 1px;
+    color: #bec0c2;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #3e4044,
                 stop:1 #272829);
@@ -266,7 +339,7 @@ QComboBox {
 QComboBox:hover {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #484a4f,
-                stop:1 #2e3031);  
+                stop:1 #2e3031);
 }
 
 QComboBox:pressed {
@@ -290,8 +363,8 @@ QComboBox::down-arrow {
 
 /* popup frame */
 QComboBox QFrame {
-    background: #313234;
-    border: 1px solid #212222; 
+    background: #2e2f30;
+    border: 1px solid #212222;
 }
 
 /***************************** QListView **********************************/
@@ -315,7 +388,7 @@ QTreeView {
 
 QScrollBar {
     border: 1px solid #212222;
-    background: #404244; /*313234;*/
+    background: #404244;
 }
 
 QScrollBar:horizontal {
@@ -401,10 +474,8 @@ QScrollBar::sub-line:vertical {
 vgc--widgets--Console,
 vgc--widgets--ConsoleMargin {
     font-family: "Source Code Pro";
-}
-
-vgc--widgets--Console {
-    color: #d6d09d;
+    border: 0px;
+    background: #2e2f30;
 }
 
 /********************************* ColorDialog ********************************/
