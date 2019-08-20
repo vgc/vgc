@@ -21,6 +21,7 @@
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
+#include <vgc/widgets/qtutil.h>
 #include <vgc/widgets/stylesheets.h>
 
 namespace py = pybind11;
@@ -88,6 +89,10 @@ int main(int argc, char* argv[])
     vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf");
     vgc::widgets::addApplicationFont("widgets/fonts/SourceCodePro-Regular.ttf");
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
+
+    // Set window icon
+    std::string iconPath = vgc::core::resourcePath("apps/illustration/icons/512.png");
+    application.setWindowIcon(QIcon(vgc::widgets::toQt(iconPath)));
 
     // Start event loop
     return application.exec();
