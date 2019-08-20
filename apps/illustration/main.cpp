@@ -78,6 +78,7 @@ int main(int argc, char* argv[])
     // Create and show the widget
     //vgc::widgets::MainWindow w(doc.get(), &pythonInterpreter);
     vgc::widgets::MainWindow w(&pythonInterpreter);
+    w.setWindowTitle("VGC Illustration");
     w.show();
 
     // Set style
