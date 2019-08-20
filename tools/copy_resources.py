@@ -64,21 +64,32 @@ if __name__ == "__main__":
     parser.add_argument("srcDir", help="path to the source directory")
     parser.add_argument("buildDir", help="path to the build directory")
     parser.add_argument("config", help="build configuration (e.g., 'Release')")
-    parser.add_argument("libName", help="the name of this VGC library (e.g., 'core')")
+    parser.add_argument("targetType", help="either 'lib' or 'app'")
+    parser.add_argument("targetName", help="the name of this VGC target (e.g., 'core', 'illustration')")
     args = parser.parse_args()
 
     # Import arguments into the global namespace.
     # This allows to more simply write `foo` instead of `args.foo`.
     globals().update(vars(args))
 
+    # Get directory paths
+    if targetType == "lib":
+        targetBuildPath = Path(buildDir) / "libs" / "vgc" / targetName
+        srcPath = Path(srcDir) / "libs" / "vgc" / targetName
+        destPath = Path(buildDir) / config / "resources" / targetName
+    elif targetType == "app":
+        targetBuildPath = Path(buildDir) / "apps" / targetName
+        srcPath = Path(srcDir) / "apps" / targetName
+        destPath = Path(buildDir) / config / "resources" / "apps" / targetName
+    else:
+        raise ValueError(
+            'Unknown targetType: "' + targetType + '".' +
+            ' Allowed values are "lib" and "app".')
+
     # Update the build tree by copying all outdated resources.
-    #
-    libBuildPath = Path(buildDir) / "libs" / "vgc" / libName
-    ref = libBuildPath / "resources.txt"
-    stamp = libBuildPath / ("resources_" + config + ".txt")
+    ref = targetBuildPath / "resources.txt"
+    stamp = targetBuildPath / ("resources_" + config + ".txt")
     if not stamp.is_file() or mtime(stamp) < mtime(ref):
-        srcPath = Path(srcDir) / "libs" / "vgc" / libName
-        destPath = Path(buildDir) / config / "resources" / libName
         r1 = getResources(ref)
         r2 = getResources(stamp)
         for r in r2 - r1:

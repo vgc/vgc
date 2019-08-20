@@ -5,4 +5,7 @@ vgc_add_app(illustration
 
     CPP_FILES
         main.cpp
+
+    RESOURCE_FILES
+        icons/512.png
 )

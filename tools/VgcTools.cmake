@@ -125,6 +125,7 @@ function(vgc_add_library LIB_NAME)
             "${CMAKE_SOURCE_DIR}"
             "${CMAKE_BINARY_DIR}"
             "$<CONFIG>"
+            "lib"
             "${LIB_NAME}"
     )
 
@@ -255,7 +256,7 @@ function(vgc_add_app APP_NAME)
 
     set(options "")
     set(oneValueArgs "")
-    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_FILES COMPILE_DEFINITIONS)
+    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Prepend APP_NAME with "vgc_app_" to get target name.
@@ -281,6 +282,30 @@ function(vgc_add_app APP_NAME)
         PROPERTIES
             OUTPUT_NAME vgc${APP_NAME}
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin
+    )
+
+    # Write list of resources as comma-separated string
+    set(RESOURCES_TXT ${CMAKE_CURRENT_BINARY_DIR}/resources.txt)
+    vgc_prepend_(RESOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ ${ARG_RESOURCE_FILES})
+    add_custom_command(
+        COMMENT ""
+        OUTPUT ${RESOURCES_TXT}
+        DEPENDS ${RESOURCE_FILES}
+        COMMAND ${CMAKE_COMMAND} -E echo "${ARG_RESOURCE_FILES}" > ${RESOURCES_TXT}
+        VERBATIM
+    )
+
+    # Update build copy of resources whenever necessary
+    add_custom_target(${TARGET_NAME}_resources ALL
+        VERBATIM
+        DEPENDS ${RESOURCES_TXT}
+        COMMAND ${PYTHON_EXECUTABLE}
+            "${CMAKE_SOURCE_DIR}/tools/copy_resources.py"
+            "${CMAKE_SOURCE_DIR}"
+            "${CMAKE_BINARY_DIR}"
+            "$<CONFIG>"
+            "app"
+            "${APP_NAME}"
     )
 
     if(WIN32)
