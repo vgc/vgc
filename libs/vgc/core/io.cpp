@@ -22,34 +22,76 @@
 namespace vgc {
 namespace core {
 
+FileError::~FileError()
+{
+
+}
+
 std::string readFile(const std::string& filePath)
 {
-    // Open file
-    // XXX What if failure?
-    std::ifstream file(filePath);
-
-    // Get upper limit of number of characters in the returned std::string.
-    // Actual number of characters could be smaller due to end-of-line
-    // conventions: on Windows, "\r\n" in the file becomes "\n" in the
-    // std::string
-    file.seekg(0, std::ios::end);
-    long long int n = file.tellg();
-
-    std::string res;
-    if (n >= 0) {
-        // Allocate memory
-        res.assign(static_cast<size_t>(n), ' ');
-
-        // Read file content and store in std::string
-        file.seekg(0);
-        file.read(&res[0], n);
-    }
-    else {
-        // XXX This is a failure case of tellg; raise exception?
+    // Open an input file stream that throws on badbit, and check that the
+    // file stream was successfully opened.
+    //
+    std::ifstream in(filePath);
+    in.exceptions(std::ifstream::badbit);
+    if (!in) {
+        throw FileError("Cannot open file " + filePath);
     }
 
-    // Return
-    return res;
+    try {
+        // Get upper bound of number of characters to be extracted. This is
+        // expected not to be exact on Windows due to `\r\n` being translated
+        // to `\n`.
+        //
+        // Note: seekg() and/or tellg() may set badbit and throw if an error
+        // occurs, for example if the file does not exist or if we don't have
+        // the permission to read that file.
+        //
+        // See:
+        // - https://en.cppreference.com/w/cpp/io/basic_istream/seekg
+        // - https://en.cppreference.com/w/cpp/io/basic_istream/tellg
+        //
+        in.seekg(0, std::ios::end);
+        size_t n = in.tellg();
+        in.seekg(0);
+
+        // Construct a string long enough to hold the entire file.
+        //
+        std::string res(n, ' ');
+
+        // Attempt to extract n characters from the file to the string.
+        //
+        // Note: read() will call `setstate(failbit|eofbit)` if the
+        // end-of-file condition occurs before n characters could be
+        // extracted. This is expected on Windows since each occurence of
+        // `\r\n` is only extracted as a single character `\n`.
+        //
+        // See:
+        // - https://en.cppreference.com/w/cpp/io/basic_istream/read
+        // - https://en.cppreference.com/w/cpp/io/ios_base/iostate
+        //
+        in.read(&res[0], n);
+        std::ifstream::iostate state = in.rdstate();
+        std::ifstream::iostate ok1 = std::ifstream::goodbit;
+        std::ifstream::iostate ok2 = std::ifstream::failbit | std::ifstream::eofbit;
+        if (state != ok1 && state != ok2) {
+            throw FileError("Cannot read file " + filePath);
+        }
+
+        // Query the number of successfully extracted characters, and shrink the
+        // output string accordingly. Note that we have the following relation:
+        //
+        //     gcount = n - (number of occurences of `\r\n` in the file)
+        //
+        std::streamsize gcount = in.gcount();
+        res.resize(gcount);
+
+        // Return the string
+        return res;
+    }
+    catch (std::ios_base::failure& fail) {
+        throw FileError("Cannot read file " + filePath + ": " + fail.what());
+    }
 }
 
 } // namespace core
