@@ -318,7 +318,7 @@ public:
     ///
     FileError(const std::string& reason) : RuntimeError(reason) {}
 
-    /// Destructs the ParseError.
+    /// Destructs the FileError.
     ///
     ~FileError();
 };
