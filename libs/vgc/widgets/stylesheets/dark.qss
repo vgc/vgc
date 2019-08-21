@@ -52,7 +52,14 @@ QWidget {
     font-weight: normal;
     font-size: 10pt;
     background: #404244;
-    color: #bec0c2;
+    color: #dddddd;
+}
+
+QPlainTextEdit,
+QLineEdit,
+QSpinBox {
+    selection-color: #dddddd;
+    selection-background-color: #1d545c;
 }
 
 /******************************** Menu Bar ***********************************/
@@ -108,7 +115,7 @@ QMenu::indicator {
 
 QMenu::indicator:non-exclusive {
     margin-left: 10px;
-    border: 1px solid #bec0c2;
+    border: 1px solid #dddddd;
     border-radius: 2px;
 }
 
@@ -117,7 +124,7 @@ QMenu::indicator:non-exclusive:unchecked {
 }
 
 QMenu::indicator:non-exclusive:checked {
-    background-color: #bec0c2;
+    background-color: #dddddd;
 }
 
 /********************************* Toolbar ***********************************/
@@ -152,8 +159,6 @@ QToolButton:pressed {
 QPlainTextEdit {
     background: #2e2f30;
     border: 0px;
-    selection-color: #bec0c2;
-    selection-background-color: #1d545c;
 }
 
 /****************************** Docks ****************************************/
@@ -248,8 +253,6 @@ QLineEdit {
     border: 1px solid #212222;
     border-radius: 2px;
     padding-bottom: 1px;
-    selection-color: #bec0c2;
-    selection-background-color: #1d545c;
     background: #2e2f30;
 }
 
@@ -265,8 +268,6 @@ QSpinBox {
     border-radius: 2px;
     padding: 0px;
     padding-bottom: 1px;
-    selection-color: #bec0c2;
-    selection-background-color: #1d545c;
     background: #2e2f30;
 }
 
