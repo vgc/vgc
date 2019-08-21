@@ -57,7 +57,6 @@ QWidget {
 
 QMenuBar {
     background: #2e2f30;
-    color: #bec0c2;
     border: 0px;
     padding: 0px;
 }
@@ -205,7 +204,6 @@ QMainWindow::separator {
 QLabel {
     height: 25px;
     padding-bottom: 1px;
-    color: #bec0c2;
 }
 
 /***************************** Push buttons **********************************/
@@ -220,7 +218,6 @@ QPushButton {
     border-radius: 2px;
     padding: 0px 20px;
     padding-bottom: 1px;
-    color: #bec0c2;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #3e4044,
                 stop:1 #272829);
@@ -249,7 +246,6 @@ QLineEdit {
     border: 1px solid #212222;
     border-radius: 2px;
     padding-bottom: 1px;
-    color: #bec0c2;
     selection-color: #bec0c2;
     selection-background-color: #1d545c;
     background: #2e2f30;
@@ -267,7 +263,6 @@ QSpinBox {
     border-radius: 2px;
     padding: 0px;
     padding-bottom: 1px;
-    color: #bec0c2;
     selection-color: #bec0c2;
     selection-background-color: #1d545c;
     background: #2e2f30;
@@ -329,7 +324,6 @@ QComboBox {
     border-radius: 2px;
     padding: 0px 0px 0px 6px;
     padding-bottom: 1px;
-    color: #bec0c2;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #3e4044,
                 stop:1 #272829);
