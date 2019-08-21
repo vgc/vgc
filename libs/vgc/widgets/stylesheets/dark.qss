@@ -477,15 +477,15 @@ vgc--widgets--ConsoleMargin {
 /********************************* ColorDialog ********************************/
 
 QColorDialog QColorLuminancePicker {
-  background-color: transparent; /* right margin background */
-  color: black;                  /* right margin foreground (little triangle) */
+    background-color: transparent; /* right margin background */
+    color: black;                  /* right margin foreground (little triangle) */
 }
 
 /********************************* FileDialog ********************************/
 
 /* remove bottom-right size-right (was overlapping the Cancel button) */
 QFileDialog QSizeGrip {
-  background-color: transparent;
-  width: 0px;
-  height: 0px;
+    background-color: transparent;
+    width: 0px;
+    height: 0px;
 }
