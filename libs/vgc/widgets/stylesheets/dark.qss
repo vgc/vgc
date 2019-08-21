@@ -24,15 +24,15 @@
  */
 
 /* The font size is chosen such that, on a 1080p screen (i.e., not high-DPI),
- * the actual height of "OK" and "1.0" is 10px. Such text made of capital
+ * the actual height of "OK" and "1.0" is 8px. Such text made of capital
  * letters or digits should be perfectly centered in buttons, spin boxes, etc.:
  *
  *  .---------------------------.
  *  |  1px:  top border         |
  *  |---------------------------|
- *  |  7px:  spacing            |
- *  |  10px: height of text     |   Total widget height: 26px
- *  |  7px:  spacing            |
+ *  |  8px:  spacing            |
+ *  |  8px:  height of text     |   Total widget height: 26px
+ *  |  8px:  spacing            |
  *  |---------------------------|
  *  |  1px:  bottom border      |
  *  '---------------------------'
@@ -48,7 +48,7 @@ QWidget {
     margin: 0px;
     padding: 0px;
     font-family: "Source Sans Pro";
-    font-size: 15px;
+    font-size: 10pt;
     background: #404244;
     color: #bec0c2;
 }
