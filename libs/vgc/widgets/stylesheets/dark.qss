@@ -48,6 +48,8 @@ QWidget {
     margin: 0px;
     padding: 0px;
     font-family: "Source Sans Pro";
+    font-style: normal;
+    font-weight: normal;
     font-size: 10pt;
     background: #404244;
     color: #bec0c2;
