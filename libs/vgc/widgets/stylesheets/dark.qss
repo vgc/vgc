@@ -59,7 +59,7 @@ QPlainTextEdit,
 QLineEdit,
 QSpinBox {
     selection-color: #dddddd;
-    selection-background-color: #1d545c;
+    selection-background-color: #0b52ac;
 }
 
 /******************************** Menu Bar ***********************************/
