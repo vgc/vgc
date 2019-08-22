@@ -445,7 +445,7 @@ QColorDialog QColorLuminancePicker {
 
 /********************************* FileDialog ********************************/
 
-/* remove bottom-right size-right (was overlapping the Cancel button) */
+/* remove bottom-right size grip (was overlapping the Cancel button) */
 QFileDialog QSizeGrip {
     background-color: transparent;
     width: 0px;
