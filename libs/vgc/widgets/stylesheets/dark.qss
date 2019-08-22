@@ -84,7 +84,8 @@ QMenuBar::item:pressed {
 
 /********************************* Menu **************************************/
 
-QMenu {
+QMenu,
+QComboBox QFrame {
     background: #2e2f30;
     border: 1px solid #212222;
     padding: 3px 0px;
@@ -103,7 +104,6 @@ QMenu::item:pressed {
 
 QMenu::separator {
     height: 1px;
-    /*background: #252525;*/
     background: #212222;
     margin: 3px 10px;
 }
@@ -134,8 +134,6 @@ QToolBar {
     padding: 0px;
     background: #404244;
 }
-
-/* toolbar buttons */
 
 QToolButton {
     border: 0px;
@@ -202,81 +200,80 @@ QMainWindow::separator {
     height: 5px; /* when horizontal */
 }
 
-/***************************** Labels **********************************/
+/*********************** One-line Input Widgets ***************************/
 
-/* The intent height is 26px.
- * Both border and padding is added to total height = 25px + 1 = 26px.
- * We use 1px of padding-bottom for fine-tunnig centering.
- */
-QLabel {
-    height: 25px;
-    padding-bottom: 1px;
+QLabel,
+QPushButton,
+QLineEdit,
+QSpinBox,
+QSpinBox::up-button,
+QSpinBox::down-button,
+QSpinBox::up-arrow,
+QSpinBox::down-arrow,
+QComboBox,
+QComboBox::drop-down,
+QComboBox::down-arrow {
+    margin: 0px;
+    padding: 0px;
+    border: 0px;
 }
 
-/***************************** Push buttons **********************************/
+QLabel {
+    height: 25px;           /* Intended height with padding = 26px */
+    padding-bottom: 1px;    /* Fine-tune vertical alignment */
+}
 
-/* The intent height is 26px.
- * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
- * We use 1px of padding-bottom for fine-tunnig centering.
- */
-QPushButton {
-    height: 23px;
+QPushButton,
+QLineEdit,
+QSpinBox,
+QComboBox {
+    height: 23px;           /* Intended height with border + padding = 26px */
+    padding-bottom: 1px;    /* Fine-tune vertical alignment */
     border: 1px solid #212222;
     border-radius: 2px;
-    padding: 0px 20px;
-    padding-bottom: 1px;
+}
+
+QPushButton {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+QComboBox {
+    padding-left: 6px;
+    selection-background-color: #404244;
+}
+
+QPushButton,
+QComboBox {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #3e4044,
                 stop:1 #272829);
 }
 
-QPushButton:hover {
+QPushButton:hover,
+QComboBox:hover {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #484a4f,
                 stop:1 #2e3031);
 }
 
-QPushButton:pressed {
+QPushButton:pressed,
+QComboBox:pressed {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #393b3f,
                 stop:1 #232425);
 }
 
-/***************************** QLineEdit **********************************/
-
-/* The intent height is 26px.
- * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
- * We use 1px of padding-bottom for fine-tunnig centering.
- */
-QLineEdit {
-    height: 23px;
-    border: 1px solid #212222;
-    border-radius: 2px;
-    padding-bottom: 1px;
-    background: #2e2f30;
-}
-
-/***************************** QSPinBox **********************************/
-
-/* The intent height is 26px.
- * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
- * We use 1px of padding-bottom for fine-tunnig centering.
- */
+QLineEdit,
 QSpinBox {
-    height: 23px;
-    border: 1px solid #212222;
-    border-radius: 2px;
-    padding: 0px;
-    padding-bottom: 1px;
     background: #2e2f30;
 }
-
 
 QSpinBox::up-button,
 QSpinBox::down-button {
-    border-left: 1px solid #212222;
-    height: 12px;
     width: 12px;
+    height: 12px;
+    border-left: 1px solid #212222;
 }
 
 QSpinBox::up-button {
@@ -301,6 +298,13 @@ QSpinBox::down-button:pressed {
     background: #2e2f30;
 }
 
+QComboBox::drop-down {
+    width: 12px;
+    height: 24px;
+    border-left: 1px solid #212222;
+    background: transparent;
+}
+
 QSpinBox::up-arrow,
 QSpinBox::down-arrow {
     width: 12px;
@@ -315,53 +319,10 @@ QSpinBox::down-arrow {
     image: url(vgc:/widgets/images/spinboxdown.png);
 }
 
-/***************************** QComboBox **********************************/
-
-/* The intent height is 26px.
- * Both border and padding is added to total height = 23px + 2 + 1 = 26px.
- * We use 1px of padding-bottom for fine-tunnig centering.
- */
-QComboBox {
-    height: 24px;
-    border: 1px solid #212222;
-    border-radius: 2px;
-    padding: 0px 0px 0px 6px;
-    padding-bottom: 1px;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #3e4044,
-                stop:1 #272829);
-    selection-background-color: #404244;
-}
-
-QComboBox:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #484a4f,
-                stop:1 #2e3031);
-}
-
-QComboBox:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #393b3f,
-                stop:1 #232425);
-}
-
-QComboBox::drop-down {
-    border-left: 1px solid #212222;
-    height: 24px;
-    width: 12px;
-    background: transparent;
-}
-
 QComboBox::down-arrow {
     width: 12px;
     height: 24px;
     image: url(vgc:/widgets/images/spinboxdown.png);
-}
-
-/* popup frame */
-QComboBox QFrame {
-    background: #2e2f30;
-    border: 1px solid #212222;
 }
 
 /***************************** QListView **********************************/
