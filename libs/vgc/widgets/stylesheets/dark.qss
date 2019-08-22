@@ -436,11 +436,33 @@ vgc--widgets--ConsoleMargin {
     background: #2e2f30;
 }
 
-/********************************* ColorDialog ********************************/
+/****************************** QColorDialog ******************************/
 
-QColorDialog QColorLuminancePicker {
-    background-color: transparent; /* right margin background */
-    color: black;                  /* right margin foreground (little triangle) */
+/* Relevant classes:
+ *
+ *   QColorDialog              the whole color dialog              (inherits QDialog)
+ *   QColorPicker              2D hue-saturation gradient          (inherits QFrame)
+ *   QColorLuminancePicker     vertical luminance gradient         (inherits QWidget)
+ *   QWellArray                array of colored rectangles         (inherits QWidget)
+ *   QColorWell                "Basic colors" and "Custom colors"  (inherits QWellArray)
+ *   QColorShower              current color and RGB/HSV/HTML      (inherits QWidget)
+ *   QColorShowLabel           current color                       (inherits QFrame)
+ *
+ * See: https://github.com/qt/qtbase/blob/5.12/src/widgets/dialogs/qcolordialog.cpp
+ */
+
+QColorPicker {
+    border: 0px;
+}
+
+QColorLuminancePicker {
+    color: black;                  /* color of the small triangle indicating current luminance */
+    background-color: transparent; /* color of the right margin (background of small triangle) */
+}
+
+QWellArray,
+QColorShowLabel {
+    border: 1px solid #212222;
 }
 
 /********************************* FileDialog ********************************/
