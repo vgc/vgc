@@ -56,10 +56,6 @@ vgc_add_library(widgets
         fonts/SourceSansPro-Regular.ttf
         fonts/SourceSansPro-SemiBoldItalic.ttf
         fonts/SourceSansPro-SemiBold.ttf
-        images/scrollbardown.png
-        images/scrollbarleft.png
-        images/scrollbarright.png
-        images/scrollbarup.png
         images/spinboxdown.png
         images/spinboxup.png
         stylesheets/dark.qss

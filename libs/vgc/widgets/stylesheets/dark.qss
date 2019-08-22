@@ -44,9 +44,6 @@
  */
 
 QWidget {
-    /* border: 0px; */ /* See #13 and #14 for why this is commented out */
-    margin: 0px;
-    padding: 0px;
     font-family: "Source Sans Pro";
     font-style: normal;
     font-weight: normal;
@@ -342,89 +339,73 @@ QTreeView {
     border: 1px solid #212222;
 }
 
-/*************************** Scroll Bars ***********************************/
+/*************************** QScrollBar ***********************************/
 
-QScrollBar {
-    border: 1px solid #212222;
-    background: #404244;
+/* Note: aesthetically, it would look better to give a small margin at the right
+ * of vertical scrollbars (like in Sublime Text). However, we also want users
+ * to have the ability to manipulate the scrollbar when their mouse is at the
+ * right-most pixel of the screen (assuming the app is maximized or in
+ * fullscreen). This behavior is unfortunately not compatible with having a
+ * right margin, at least not without non-trivial modifications. Therefore, we
+ * don't use a right margin, since we favor usability over aesthetics.
+ */
+
+/* Prevent drawing a background below QScrollBar:vertical|horizontal. The intent
+ * is the following code (which doesn't work for mysterious reasons):
+ *
+ *   QScrollBar {
+ *       background: transparent;
+ *   }
+ */
+QPlainTextEdit > QWidget {
+    background: transparent;
+}
+
+QScrollBar:horizontal,
+QScrollBar:vertical {
+    margin: 10px;
+    border-radius: 5px;
+    background-color: #404244;
 }
 
 QScrollBar:horizontal {
-    border-bottom: 0px;
-    height: 14px;
-    padding: 0px 13px; /* 14 - 1 for border collapsing */
-}
-
-QScrollBar::handle:horizontal {
-    border-left: 1px solid #212222;
-    border-right: 1px solid #212222;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #3e4044,
-                stop:1 #272829);
-    min-width: 20px;
-}
-
-QScrollBar::add-line:horizontal {
-    width: 14px;
-    subcontrol-position: right;
-    subcontrol-origin: margin;
-    border-top: 1px solid #212222;
-    border-left: 1px solid #212222;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #3e4044,
-                stop:1 #272829);
-    image: url(vgc:/widgets/images/scrollbarright.png);
-}
-
-QScrollBar::sub-line:horizontal {
-    width: 14px;
-    subcontrol-position: left;
-    subcontrol-origin: margin;
-    border-top: 1px solid #212222;
-    border-right: 1px solid #212222;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #3e4044,
-                stop:1 #272829);
-    image: url(vgc:/widgets/images/scrollbarleft.png);
+    height: 10px;
+    margin-top: 0px;    /* See note above */
+    margin-bottom: 0px; /* See note above */
 }
 
 QScrollBar:vertical {
-    border-right: 0px;
-    width: 14px;
-    padding: 13px 0px; /* 14 - 1 for border collapsing */
+    width: 10px;
+    margin-left: 0px;  /* See note above */
+    margin-right: 0px; /* See note above */
+}
+
+QScrollBar::handle:horizontal,
+QScrollBar::handle:vertical {
+    border-radius: 5px;
+    background-color: #5d6060;
+}
+
+QScrollBar::handle:horizontal {
+    min-width: 20px;
 }
 
 QScrollBar::handle:vertical {
-    border-top: 1px solid #212222;
-    border-bottom: 1px solid #212222;
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #3e4044,
-                stop:1 #272829);
     min-height: 20px;
 }
 
-QScrollBar::add-line:vertical {
-    height: 14px;
-    subcontrol-position: bottom;
-    subcontrol-origin: margin;
-    border-left: 1px solid #212222;
-    border-top: 1px solid #212222;
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #3e4044,
-                stop:1 #272829);
-    image: url(vgc:/widgets/images/scrollbardown.png);
+QScrollBar::add-line:horizontal,
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:horizontal,
+QScrollBar::sub-line:vertical {
+    height: 0px;
 }
 
-QScrollBar::sub-line:vertical {
-    height: 14px;
-    subcontrol-position: top;
-    subcontrol-origin: margin;
-    border-left: 1px solid #212222;
-    border-bottom: 1px solid #212222;
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #3e4044,
-                stop:1 #272829);
-    image: url(vgc:/widgets/images/scrollbarup.png);
+QScrollBar::add-page:horizontal,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:horizontal,
+QScrollBar::sub-page:vertical {
+    background: none;
 }
 
 /********************************* Console ********************************/
