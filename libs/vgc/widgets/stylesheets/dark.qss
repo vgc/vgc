@@ -6,7 +6,7 @@
  * #4d4f52  Highlighted backgrounds for: QMenuBar::item, QToolButton
  * #404244  Background for: QWidget, QToolBar, QToolButton, QScrollbar
  * #313234  Background for: QListView, QAbstractScrollArea (inherited: QTreeView)
- * #2e2f30  Background for: QMenuBar, QMenu, QComboBox's popup, QPlainTextEdit, Console, QMainWindow::separator, QLineEdit, QSpinBoxtext
+ * #2e2f30  Background for: QMenuBar, QMenu, QComboBox's popup, QPlainTextEdit, Console, QLineEdit, QSpinBoxtext
  * #212222  Borders for: QMenu, QPushButton, QLineEdit, QSpinBox, QComboBox, QListView, QTreeView, QScrollbar
  * black
  *
@@ -195,6 +195,14 @@ QMainWindow::separator {
     background: #2e2f30;
     width: 5px; /* when vertical */
     height: 5px; /* when horizontal */
+}
+
+QMainWindow::separator:horizontal {
+    background: #2e2f30;
+}
+
+QMainWindow::separator:vertical {
+    background-color: #404244;
 }
 
 /*********************** One-line Input Widgets ***************************/
