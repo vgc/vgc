@@ -61,7 +61,7 @@ QSpinBox {
     selection-background-color: #0b52ac;
 }
 
-/******************************** Menu Bar ***********************************/
+/******************************** Menus ***********************************/
 
 QMenuBar {
     background: #2e2f30;
@@ -72,16 +72,16 @@ QMenuBar {
 QMenuBar::item {
     spacing: 0px;
     border: 0px;
-    padding: 7px 12px;
+    padding: 4px 12px 7px 10px;
+    border-top: 3px solid transparent;
 }
 
 QMenuBar::item:hover,
 QMenuBar::item:selected,
 QMenuBar::item:pressed {
+    border-color: #0b52ac;
     background: #212222;
 }
-
-/********************************* Menu **************************************/
 
 QMenu,
 QComboBox QFrame {
@@ -91,13 +91,15 @@ QComboBox QFrame {
 }
 
 QMenu::item {
-    padding: 5px 20px 5px 40px;
+    padding: 5px 20px 5px 38px;
+    border-left: 2px solid transparent;
     background: #2e2f30;
 }
 
 QMenu::item:hover,
 QMenu::item:selected,
 QMenu::item:pressed {
+    border-color: #0b52ac;
     background: #212222;
 }
 
