@@ -11,6 +11,8 @@
  * black
  *
  * For highlighting/selecting, we either choose a lighter or darker existing tone.
+ *
+ * #0b52ac  VGC blue. Used for highlighting and text selection background.
  */
 
 /******************************** Default ************************************/
@@ -192,7 +194,6 @@ QPlainTextEdit {
  */
 
 QMainWindow::separator {
-    background: #2e2f30;
     width: 5px; /* when vertical */
     height: 5px; /* when horizontal */
 }
@@ -202,7 +203,11 @@ QMainWindow::separator:horizontal {
 }
 
 QMainWindow::separator:vertical {
-    background-color: #404244;
+    background: #404244;
+}
+
+QMainWindow::separator:hover {
+    background: #0b52ac;
 }
 
 /*********************** One-line Input Widgets ***************************/
