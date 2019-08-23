@@ -91,16 +91,14 @@ QComboBox QFrame {
 }
 
 QMenu::item {
-    padding: 5px 20px 5px 38px;
-    border-left: 2px solid transparent;
+    padding: 5px 20px 5px 40px;
     background: #2e2f30;
 }
 
 QMenu::item:hover,
 QMenu::item:selected,
 QMenu::item:pressed {
-    border-color: #0b52ac;
-    background: #212222;
+    background: #0b52ac;
 }
 
 QMenu::separator {
