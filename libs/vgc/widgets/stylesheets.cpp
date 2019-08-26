@@ -19,6 +19,7 @@
 #include <QApplication>
 #include <vgc/core/algorithm.h>
 #include <vgc/core/io.h>
+#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/widgets/qtutil.h>
 
@@ -30,7 +31,19 @@ void setApplicationStyleSheet(const std::string& name)
     if (qApp) {
         std::string path = core::resourcePath(name);
         std::string s = core::readFile(path);
+
+        // Convert resource paths to absolute paths
         s = core::replace(s, "vgc:/", core::resourcesPath() + "/");
+
+        // Set platform dependent font size
+        #if defined(VGC_CORE_OS_WINDOWS)
+            std::string fontSize = "10.5pt";
+        #else
+            std::string fontSize = "11pt";
+        #endif
+        s = core::replace(s, "@font-size", fontSize);
+
+        // Set stylesheet
         qApp->setStyleSheet(toQt(s));
     }
 }
