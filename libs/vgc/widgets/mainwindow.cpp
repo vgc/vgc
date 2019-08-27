@@ -24,6 +24,7 @@
 #include <QToolBar>
 
 #include <vgc/core/logging.h>
+#include <vgc/widgets/menubar.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
@@ -294,18 +295,22 @@ void MainWindow::setupActions_()
 
 void MainWindow::setupMenus_()
 {
+    MenuBar* menuBar_ = new MenuBar();
+
     menuFile_ = new QMenu(tr("&File"));
     menuFile_->addAction(actionOpen_);
     menuFile_->addAction(actionSave_);
     menuFile_->addAction(actionSaveAs_);
     menuFile_->addSeparator();
     menuFile_->addAction(actionQuit_);
-    menuBar()->addMenu(menuFile_);
+    menuBar_->addMenu(menuFile_);
 
     menuView_ = new QMenu(tr("&View"));
     menuView_->addAction(actionTogglePerformanceMonitorView_);
     menuView_->addAction(actionToggleConsoleView_);
-    menuBar()->addMenu(menuView_);
+    menuBar_->addMenu(menuView_);
+
+    setMenuBar(menuBar_);
 }
 
 void MainWindow::setupToolBars_()

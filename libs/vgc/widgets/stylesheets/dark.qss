@@ -45,23 +45,24 @@ QSpinBox {
 
 QMenuBar {
     background: #2e2f30;
-    border: 0px;
-    padding: 0px;
-    margin-bottom: 1px;
+    border-bottom: 1px solid #212222;
 }
 
 QMenuBar::item {
     spacing: 0px;
-    border: 0px;
-    padding: 7px 12px 4px 10px;
-    border-bottom: 3px solid transparent;
+    border-width: 0px 0px 2px 0px;
+    padding: 7px 12px 5px 12px;
+    border-style: solid;
+    border-color: transparent;
 }
 
-QMenuBar::item:hover,
 QMenuBar::item:selected,
 QMenuBar::item:pressed {
     border-color: #0b52ac;
-    background: transparent;
+}
+
+vgc--widgets--MenuBar {
+    qproperty-activeBorderBottomColor: #0b52ac;
 }
 
 QMenu,
