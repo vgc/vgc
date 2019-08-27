@@ -49,10 +49,6 @@ MainWindow::MainWindow(
     setupToolBars_();
     setupConnections_();
 
-    // Show maximized at startup
-    // XXX This should be a user preference
-    showMaximized();
-
     viewer_->startLoggingUnder(performanceMonitor_->log());
 }
 

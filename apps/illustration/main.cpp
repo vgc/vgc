@@ -15,6 +15,8 @@
 // limitations under the License.
 
 #include <QApplication>
+#include <QTimer>
+
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
@@ -76,11 +78,10 @@ int main(int argc, char* argv[])
     //pythonInterpreter.run("import vgc.dom");
     //pythonInterpreter.setVariableValue("document", document);
 
-    // Create and show the widget
+    // Create the main window
     //vgc::widgets::MainWindow w(doc.get(), &pythonInterpreter);
     vgc::widgets::MainWindow w(&pythonInterpreter);
     w.setWindowTitle("VGC Illustration");
-    w.show();
 
     // Set style
     // XXX Create widgets::Application class with:
@@ -93,6 +94,19 @@ int main(int argc, char* argv[])
     // Set window icon
     std::string iconPath = vgc::core::resourcePath("apps/illustration/icons/512.png");
     application.setWindowIcon(QIcon(vgc::widgets::toQt(iconPath)));
+
+    // Show maximized.
+    //
+    // We must call showMaximized() after the event loop has started,
+    // otherwise the QMenuBar's background won't extend to the full length of
+    // the window. This is a known Qt bug:
+    //
+    //   https://bugreports.qt.io/browse/QTBUG-55690
+    //
+    QTimer timer;
+    timer.setSingleShot(true);
+    QObject::connect(&timer, SIGNAL(timeout()), &w, SLOT(showMaximized()));
+    timer.start(10);
 
     // Start event loop
     return application.exec();
