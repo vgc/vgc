@@ -17,7 +17,10 @@
 #ifndef VGC_WIDGETS_PERFORMANCEMONITOR_H
 #define VGC_WIDGETS_PERFORMANCEMONITOR_H
 
+#include <QGridLayout>
+#include <QVBoxLayout>
 #include <QWidget>
+
 #include <vgc/core/performancelog.h>
 #include <vgc/widgets/api.h>
 
@@ -57,6 +60,7 @@ public:
 private:
     core::PerformanceLogSharedPtr log_;
     QGridLayout* layout_;
+    QVBoxLayout* wrapper_;
 
     struct DisplayedLog_ {
         core::PerformanceLog* log;

@@ -69,6 +69,8 @@ public:
     ColorDialog* colorDialog();
 
 Q_SIGNALS:
+    /// This signal is emitted when the color changed.
+    ///
     void colorChanged(const core::Color& newColor);
 
 private Q_SLOTS:

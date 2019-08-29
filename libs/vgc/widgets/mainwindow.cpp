@@ -18,10 +18,8 @@
 
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QMenuBar>
 #include <QMessageBox>
 #include <QStandardPaths>
-#include <QToolBar>
 
 #include <vgc/core/logging.h>
 #include <vgc/widgets/menubar.h>
@@ -43,11 +41,8 @@ MainWindow::MainWindow(
     vgc::dom::Element::create(document_.get(), "vgc");
 
     setupWidgets_();
-    setupCentralWidget_();
-    setupDocks_();
     setupActions_();
     setupMenus_();
-    setupToolBars_();
     setupConnections_();
 
     viewer_->startLoggingUnder(performanceMonitor_->log());
@@ -223,37 +218,18 @@ void MainWindow::setupWidgets_()
 {
     viewer_ = new OpenGLViewer(document());
     console_ = new Console(interpreter_);
+    console_->hide();
     performanceMonitor_ = new PerformanceMonitor();
-}
+    performanceMonitor_->hide();
+    toolbar_ = new Toolbar();
 
-void MainWindow::setupCentralWidget_()
-{
-    setCentralWidget(viewer_);
-}
+    // Initialize and keep current color synced between widgets
+    onColorChanged(toolbar_->color());
+    connect(toolbar_, &Toolbar::colorChanged, this, &MainWindow::onColorChanged);
 
-void MainWindow::setupDocks_()
-{
-    dockPerformanceMonitor_ = new QDockWidget(tr("Performance Monitor"));
-    dockPerformanceMonitor_->setWidget(performanceMonitor_);
-    dockPerformanceMonitor_->setFeatures(QDockWidget::DockWidgetClosable);
-    addDockWidget(Qt::RightDockWidgetArea, dockPerformanceMonitor_);
-    dockPerformanceMonitor_->hide();
-
-    dockConsole_ = new QDockWidget(tr("Python Console"));
-    dockConsole_->setWidget(console_);
-    dockConsole_->setFeatures(QDockWidget::DockWidgetClosable);
-    dockConsole_->setTitleBarWidget(new QWidget());
-    addDockWidget(Qt::BottomDockWidgetArea, dockConsole_);
-    dockConsole_->hide();
-
-    // Workaround to prevent docks from being automatically resized when
-    // the centralWidget is updated(), caused by the following bug:
-    //   https://bugreports.qt.io/browse/QTBUG-65592
-    //   https://forum.qt.io/topic/94473/qdockwidget-resize-issue/16
-    //   https://forum.qt.io/topic/92294/qdockwidget-sizing-before-and-after-moving
-    QList<QDockWidget*> docksToFix;
-    docksToFix.append(dockPerformanceMonitor_);
-    resizeDocks(docksToFix, {1}, Qt::Horizontal);
+    // Layout
+    centralWidget_ = new CentralWidget(viewer_, toolbar_, console_, performanceMonitor_);
+    setCentralWidget(centralWidget_);
 }
 
 void MainWindow::setupActions_()
@@ -281,10 +257,12 @@ void MainWindow::setupActions_()
     actionQuit_->setShortcut(QKeySequence::Quit);
     connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
 
-    actionTogglePerformanceMonitorView_ = dockPerformanceMonitor_->toggleViewAction();
+    actionTogglePerformanceMonitorView_ = centralWidget_->panelToggleViewAction();
+    actionTogglePerformanceMonitorView_->setText(tr("Performance Monitor"));
     actionTogglePerformanceMonitorView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_M));
 
-    actionToggleConsoleView_ = dockConsole_->toggleViewAction();
+    actionToggleConsoleView_ = centralWidget_->consoleToggleViewAction();
+    actionToggleConsoleView_->setText(tr("Python Console"));
     actionToggleConsoleView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_P));
 }
 
@@ -307,37 +285,6 @@ void MainWindow::setupMenus_()
     menuBar_->addMenu(menuView_);
 
     setMenuBar(menuBar_);
-}
-
-void MainWindow::setupToolBars_()
-{
-    int iconWidth = 48;
-    QSize iconSize(iconWidth,iconWidth);
-
-    toolBar_ = addToolBar(tr("Toolbar"));
-    toolBar_->setOrientation(Qt::Vertical);
-    toolBar_->setMovable(false);
-    toolBar_->setIconSize(iconSize);
-    addToolBar(Qt::LeftToolBarArea, toolBar_);
-
-    colorToolButton_ = new ColorToolButton();
-    colorToolButton_->setToolTip(tr("Current color (C)"));
-    colorToolButton_->setStatusTip(tr("Click to open the color selector"));
-    colorToolButton_->setIconSize(iconSize);
-    colorToolButton_->updateIcon();
-
-    colorToolButtonAction_ = toolBar_->addWidget(colorToolButton_);
-    colorToolButtonAction_->setText(tr("Color"));
-    colorToolButtonAction_->setToolTip(tr("Color (C)"));
-    colorToolButtonAction_->setStatusTip(tr("Click to open the color selector"));
-    colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
-    colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
-
-    connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
-    connect(colorToolButton_, &ColorToolButton::colorChanged, this, &MainWindow::onColorChanged);
-
-    // Update current color of widgets created before the color selector
-    onColorChanged(colorToolButton_->color());
 }
 
 void MainWindow::setupConnections_()

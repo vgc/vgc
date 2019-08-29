@@ -9,6 +9,7 @@ vgc_add_library(widgets
 
     HEADER_FILES
         api.h
+        centralwidget.h
         colordialog.h
         colortoolbutton.h
         console.h
@@ -21,8 +22,11 @@ vgc_add_library(widgets
         pointingdeviceevent.h
         qtutil.h
         stylesheets.h
+        toggleviewaction.h
+        toolbar.h
 
     CPP_FILES
+        centralwidget.cpp
         colordialog.cpp
         colortoolbutton.cpp
         console.cpp
@@ -35,6 +39,8 @@ vgc_add_library(widgets
         pointingdeviceevent.cpp
         qtutil.cpp
         stylesheets.cpp
+        toggleviewaction.cpp
+        toolbar.cpp
 
     RESOURCE_FILES
         fonts/SourceCodePro-Black.ttf
