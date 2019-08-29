@@ -99,8 +99,8 @@ VGC_CORE_DECLARE_PTRS(Object);
 ///     Foo(const ConstructorKey&, int x);
 ///
 ///     // Factory methods
-///     static ObjectSharedPtr create();
-///     static ObjectSharedPtr create(int x);
+///     static FooSharedPtr create();
+///     static FooSharedPtr create(int x);
 /// };
 /// \endcode
 ///
