@@ -68,12 +68,12 @@ QSize CentralWidget::sizeHint() const
     return QSize(1920, 1080);
 }
 
-void CentralWidget::paintEvent(QPaintEvent* e)
+void CentralWidget::paintEvent(QPaintEvent*)
 {
 
 }
 
-void CentralWidget::resizeEvent(QResizeEvent *event)
+void CentralWidget::resizeEvent(QResizeEvent*)
 {
     updateGeometries_();
 }
