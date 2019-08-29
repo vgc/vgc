@@ -66,11 +66,11 @@ public:
 protected:
     /// Reimplements QWidget::paintEvent().
     ///
-    void paintEvent(QPaintEvent*) override;
+    void paintEvent(QPaintEvent* event) override;
 
     /// Reimplements QWidget::resizeEvent().
     ///
-    void resizeEvent(QResizeEvent *event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private Q_SLOTS:
     void updateGeometries_();
