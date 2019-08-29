@@ -16,9 +16,8 @@
 
 #include <vgc/widgets/performancemonitor.h>
 
-#include <QGridLayout>
 #include <QLabel>
-#include <QVBoxLayout>
+
 #include <vgc/core/limits.h>
 #include <vgc/core/stringutil.h>
 #include <vgc/widgets/qtutil.h>
@@ -32,15 +31,13 @@ PerformanceMonitor::PerformanceMonitor(QWidget* parent) :
 {
     // Grid layout for displaying the logs' values
     layout_ = new QGridLayout();
+    layout_->setHorizontalSpacing(30);
 
     // Wrapper around the grid layout to keep it top-aligned
-    QVBoxLayout* wrapper = new QVBoxLayout();
-    wrapper->addLayout(layout_);
-    wrapper->addStretch();
-    setLayout(wrapper);
-
-    // Set minimum width
-    setMinimumWidth(200);
+    wrapper_ = new QVBoxLayout();
+    wrapper_->addLayout(layout_);
+    wrapper_->addStretch();
+    setLayout(wrapper_);
 }
 
 PerformanceMonitor::~PerformanceMonitor()

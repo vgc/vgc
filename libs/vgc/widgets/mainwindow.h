@@ -25,10 +25,11 @@
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
 #include <vgc/widgets/api.h>
-#include <vgc/widgets/colortoolbutton.h>
+#include <vgc/widgets/centralwidget.h>
 #include <vgc/widgets/console.h>
 #include <vgc/widgets/openglviewer.h>
 #include <vgc/widgets/performancemonitor.h>
+#include <vgc/widgets/toolbar.h>
 
 namespace vgc {
 namespace widgets {
@@ -64,15 +65,11 @@ private:
     // class such as "VgcIllustrationMainWindow".
 
     void setupWidgets_();
+    CentralWidget* centralWidget_;
+    Toolbar* toolbar_;
     OpenGLViewer* viewer_;
     Console* console_;
     PerformanceMonitor* performanceMonitor_;
-
-    void setupCentralWidget_();
-
-    void setupDocks_();
-    QDockWidget* dockConsole_;
-    QDockWidget* dockPerformanceMonitor_;
 
     void setupActions_();
     QAction* actionOpen_;
@@ -85,11 +82,6 @@ private:
     void setupMenus_();
     QMenu* menuFile_;
     QMenu* menuView_;
-
-    void setupToolBars_();
-    QToolBar* toolBar_;
-    ColorToolButton* colorToolButton_;
-    QAction* colorToolButtonAction_;
 
     void setupConnections_();
 
