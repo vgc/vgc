@@ -70,7 +70,7 @@ QSize CentralWidget::sizeHint() const
 
 void CentralWidget::paintEvent(QPaintEvent* e)
 {
-    QWidget::paintEvent(e);
+
 }
 
 void CentralWidget::resizeEvent(QResizeEvent *event)
