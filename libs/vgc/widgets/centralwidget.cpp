@@ -363,17 +363,26 @@ void CentralWidget::updateGeometries_()
         s2->hide();
     }
 
-    // Set maximum sizes
+    // Set maximum sizes. We need to run the setMaximumLength() functions two
+    // times to converge to a solution. If we don't, we end up in an incorrect
+    // state when making the right sidepanel visible while the window was at
+    // its then-minimum size.
     QSize vMinSize = viewer_->minimumSizeHint();
-    s0->setMaximumLength(x3-x1-2*M-vMinSize.width());
-    s1->setMaximumLength(x4-x2-2*M-vMinSize.width());
-    s2->setMaximumLength(y3-y1-2*M-vMinSize.height());
+    for (int i = 0; i < 2; ++i) {
+        s0->setMaximumLength(x3-x1-2*M-vMinSize.width());
+        s1->setMaximumLength(x4-x2-2*M-vMinSize.width());
+        s2->setMaximumLength(y3-y1-2*M-vMinSize.height());
+    }
 
     // Set geometry of actual useful widgets
     toolbar_ -> setGeometry(x1+m2, y1+m2, x2-x1-M, y3-y1-M);
     viewer_  -> setGeometry(x2+m2, y1+m2, x3-x2-M, y2-y1-M);
     console_ -> setGeometry(x2+m2, y2+m2, x3-x2-M, y3-y2-M);
     panel_   -> setGeometry(x3+m2, y1+m2, x4-x3-M, y3-y1-M);
+
+    // Make sure that the window minimum size is increased
+    // when making a new panel visible.
+    updateGeometry();
 }
 
 } // namespace widgets

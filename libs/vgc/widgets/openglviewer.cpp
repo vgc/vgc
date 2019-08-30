@@ -125,7 +125,7 @@ OpenGLViewer::~OpenGLViewer()
 
 QSize OpenGLViewer::minimumSizeHint() const
 {
-    return QSize(50, 50);
+    return QSize(160, 120);
 }
 
 void OpenGLViewer::startLoggingUnder(core::PerformanceLog* parent)
