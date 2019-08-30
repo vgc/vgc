@@ -140,56 +140,12 @@ QPlainTextEdit {
     border: 0px;
 }
 
-/****************************** Docks ****************************************/
+/******************************* Panels **************************************/
 
-/* Separator between QDockWidgets, for resizing purposes.
- *
- * We would prefer the size of the separator to be 0px for a more modern flat
- * design, unfortunately, at least on Windows, the size of the separator
- * determines the area where the resize handle would appear. Therefore, if we
- * set a size of 0px, we actually can't resize the dock.
- *
- * As a workaround, we currently set the size to be 5px to make it reasonably
- * easy to resize even when using a pen tablet, but we make its color to be
- * the background color of the Console so that it doesn't look ugly with the
- * Console opened (but it does look ugly with other docks open)
- *
- * TODO: Fix this once and for all by ensuring that the resize handle show up
- * within a certain distance of the separator, and set the separator size to
- * 0px.
- *
- * Note: when we set the size to be 1px, the separator's color becomes QWidget
- * { background } instead of QMainWindow::separator { background }. I assume
- * this is a bug.
- *
- * One workaround would be not to use a generic 'QWidget' selector, but
- * unfortunately the ColorSelector becomes ugly if we do this, due to some
- * private widgets (e.g., QColorLuminancePicker) that get painted with a
- * default color instead of Dialog { background }.
- *
- * Our options are:
- * 1. Set a > 1px separator, as we currently do
- * 2. Instead of setting QWidget { background }, explicitly list all classes
- *    which we want to affect, including private Qt classes such as
- *    QColorLuminancePicker
- * 3. Leave the 1px-wide separator with QWidget { background } color.
- */
-
-QMainWindow::separator {
-    width: 5px; /* when vertical */
-    height: 5px; /* when horizontal */
-}
-
-QMainWindow::separator:horizontal {
-    background: #2e2f30;
-}
-
-QMainWindow::separator:vertical {
-    background: #404244;
-}
-
-QMainWindow::separator:hover {
-    background: #0b52ac;
+vgc--widgets--Splitter {
+    qproperty-grabWidth: 10;
+    qproperty-highlightWidth: 4;
+    qproperty-highlightColor: #0b52ac;
 }
 
 /*********************** One-line Input Widgets ***************************/
@@ -336,15 +292,6 @@ QTreeView {
 
 /*************************** QScrollBar ***********************************/
 
-/* Note: aesthetically, it would look better to give a small margin at the right
- * of vertical scrollbars (like in Sublime Text). However, we also want users
- * to have the ability to manipulate the scrollbar when their mouse is at the
- * right-most pixel of the screen (assuming the app is maximized or in
- * fullscreen). This behavior is unfortunately not compatible with having a
- * right margin, at least not without non-trivial modifications. Therefore, we
- * don't use a right margin, since we favor usability over aesthetics.
- */
-
 /* Prevent drawing a background below QScrollBar:vertical|horizontal. The intent
  * is the following code (which doesn't work for mysterious reasons):
  *
@@ -358,21 +305,17 @@ QPlainTextEdit > QWidget {
 
 QScrollBar:horizontal,
 QScrollBar:vertical {
-    margin: 10px;
+    margin: 5px;
     border-radius: 5px;
     background-color: transparent;
 }
 
 QScrollBar:horizontal {
-    height: 10px;
-    margin-top: 0px;    /* See note above */
-    margin-bottom: 0px; /* See note above */
+    height: 20px;
 }
 
 QScrollBar:vertical {
-    width: 10px;
-    margin-left: 0px;  /* See note above */
-    margin-right: 0px; /* See note above */
+    width: 20px;
 }
 
 QScrollBar::handle:horizontal,

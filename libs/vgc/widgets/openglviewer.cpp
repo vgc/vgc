@@ -123,6 +123,11 @@ OpenGLViewer::~OpenGLViewer()
     doneCurrent();
 }
 
+QSize OpenGLViewer::minimumSizeHint() const
+{
+    return QSize(50, 50);
+}
+
 void OpenGLViewer::startLoggingUnder(core::PerformanceLog* parent)
 {
     core::PerformanceLog* renderLog = renderTask_.startLoggingUnder(parent);
