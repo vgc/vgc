@@ -54,6 +54,10 @@ public:
     OpenGLViewer(dom::Document* document, QWidget* parent = nullptr);
     ~OpenGLViewer();
 
+    /// Reimplements QWidget::minimumSizeHint().
+    ///
+    QSize minimumSizeHint() const override;
+
     dom::Document* document() const {
         return document_;
     }
