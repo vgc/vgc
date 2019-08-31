@@ -201,15 +201,15 @@ QComboBox {
 QPushButton:hover,
 QComboBox:hover {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #484a4f,
-                stop:1 #2e3031);
+                stop:0 #265eba,
+                stop:1 #003d93);
 }
 
 QPushButton:pressed,
 QComboBox:pressed {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #393b3f,
-                stop:1 #232425);
+                stop:0 #004ca5,
+                stop:1 #003184);
 }
 
 QLineEdit,
@@ -236,14 +236,19 @@ QSpinBox::down-button {
                 stop:1 #272829);
 }
 
+/* Note: we don't use a gradient here to ensure that the up-button have the
+ * same appearance as the down-button when highlighted. Using a gradient makes
+ * the down button look "less highlighted" than the up-button, which doesn't
+ * look good at all when hovering back and forth between the up/down-buttons.
+ */
 QSpinBox::up-button:hover,
 QSpinBox::down-button:hover {
-    background: #484a4f;
+    background: #0b52ac;
 }
 
 QSpinBox::up-button:pressed,
 QSpinBox::down-button:pressed {
-    background: #2e2f30;
+    background: #004197;
 }
 
 QComboBox::drop-down {
