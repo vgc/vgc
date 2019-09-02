@@ -19,9 +19,12 @@
 #include <cassert>
 #include <cmath>
 
+#include <QBitmap>
 #include <QMouseEvent>
+#include <QPainter>
 
 #include <vgc/core/assert.h>
+#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/geometry/curve.h>
@@ -64,6 +67,38 @@ core::StringId POSITIONS("positions");
 core::StringId WIDTHS("widths");
 core::StringId COLOR("color");
 
+void drawCrossCursor(QPainter& painter) {
+    painter.setPen(QPen(Qt::color1, 1.0));
+    painter.drawLine(16, 0, 16, 10);
+    painter.drawLine(16, 22, 16, 32);
+    painter.drawLine(0, 16, 10, 16);
+    painter.drawLine(22, 16, 32, 16);
+    painter.drawPoint(16, 16);
+}
+
+QCursor crossCursor() {
+
+    // Draw bitmap
+    QBitmap bitmap(32, 32);
+    QPainter bitmapPainter(&bitmap);
+    bitmapPainter.fillRect(0, 0, 32, 32, QBrush(Qt::color0));
+    drawCrossCursor(bitmapPainter);
+
+    // Draw mask
+    QBitmap mask(32, 32);
+    QPainter maskPainter(&mask);
+    maskPainter.fillRect(0, 0, 32, 32, QBrush(Qt::color0));
+#ifndef VGC_CORE_OS_WINDOWS
+    // Make the cursor color XOR'd on Windows, black on other platforms. Ideally,
+    // we'd prefer XOR'd on all platforms, but it's only supported on Windows.
+    // See Qt doc for QCursor(const QBitmap &bitmap, const QBitmap &mask).
+    drawCrossCursor(maskPainter);
+#endif
+
+    // Create and return cursor
+    return QCursor(bitmap, mask);
+}
+
 } // namespace
 
 void OpenGLViewer::init()
@@ -103,6 +138,11 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
     setFocusPolicy(Qt::ClickFocus);
+
+    // Set cursor. For now we assume that we are in a drawing tool, and
+    // therefore use a cross cursor. In the future, each tool should specify
+    // which cursor should be drawn in the viewer.
+    setCursor(crossCursor());
 }
 
 void OpenGLViewer::setDocument(dom::Document* document)
