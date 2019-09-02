@@ -274,6 +274,23 @@ CentralWidget::CentralWidget(
     //
     // The current implementation is similar to how QSplitterHandle does it.
     //
+    // Besides, even if we did manage to capture the mouse events without
+    // creating an additional widget, another problem is that a parent widget
+    // cannot draw over its child widgets (it can only draw below it). See:
+    //
+    // https://www.qtcentre.org/threads/232-Drawing-over-content-widgets-(overlay)
+    // https://forum.qt.io/topic/67555/qwidget-paint-event-draw-over-children
+    //
+    // Therefore, we couldn't draw the splitter highlight color. This is quite
+    // a serious limitation, which I believe is a design decision made by Qt
+    // for performance reasons: no need to redraw the parent widget when a
+    // child widget changes. However, in an app heavily GPU-accelerated anyway,
+    // I think it makes more sense to just redraw the whole interface all the
+    // time anyway (possibly rendering expected-not-to-change-often things in
+    // framebuffers), which make it much more flexible to draw overlays.
+    // Overlays could be especially useful for a "Tutorial" mode, or other
+    // shadow/highlight effects.
+    //
     splitters_.push_back(new Splitter(this, Splitter::Direction::Right, false, 68, 68));
     splitters_.push_back(new Splitter(this, Splitter::Direction::Left, true, 200, 200));
     splitters_.push_back(new Splitter(this, Splitter::Direction::Top, true, 200, 50));
