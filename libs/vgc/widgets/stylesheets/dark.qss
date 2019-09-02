@@ -98,14 +98,11 @@ QMenu::indicator:non-exclusive {
     margin-left: 10px;
     border: 1px solid #dddddd;
     border-radius: 2px;
-}
-
-QMenu::indicator:non-exclusive:unchecked {
     background-color: transparent;
 }
 
 QMenu::indicator:non-exclusive:checked {
-    background-color: #dddddd;
+    image: url(vgc:/widgets/images/checkbox-checked.svg);
 }
 
 /********************************* Toolbar ***********************************/
