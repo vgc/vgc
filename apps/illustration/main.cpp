@@ -87,9 +87,25 @@ int main(int argc, char* argv[])
     // XXX Create widgets::Application class with:
     // Application::addFont(resourceName)
     // Application::setStyleSheet(resourceName)
-    vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf");
-    vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Bold.ttf");
-    vgc::widgets::addApplicationFont("widgets/fonts/SourceCodePro-Regular.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Black.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Bold.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceCodePro-ExtraLight.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Light.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Medium.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Regular.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Semibold.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-BlackItalic.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Black.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-BoldItalic.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Bold.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-ExtraLightItalic.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-ExtraLight.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Italic.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-LightItalic.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Light.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Regular.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-SemiBoldItalic.ttf");
+    vgc::widgets::addApplicationFont("fonts/SourceSansPro-SemiBold.ttf");
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
 
     // Set window icon

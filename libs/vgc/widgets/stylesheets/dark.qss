@@ -41,17 +41,26 @@ QSpinBox {
     selection-background-color: #0b52ac;
 }
 
-/******************************** Menus ***********************************/
+/**************************** Menus, panels, and toolbar ***********************************/
 
-QMenuBar {
-    background: #2e2f30;
+QMenuBar,
+vgc--widgets--PanelTitleBar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #3e4044,
+                stop:1 #272829);
     border-bottom: 1px solid #212222;
+}
+
+QMenuBar,
+vgc--widgets--PanelTitleBar QLabel {
+    font-weight: 500;
+    color: #e3e3e3;
 }
 
 QMenuBar::item {
     spacing: 0px;
     border-width: 0px 0px 2px 0px;
-    padding: 7px 12px 5px 12px;
+    padding: 7px 15px 5px 15px;
     border-style: solid;
     border-color: transparent;
 }
@@ -105,18 +114,34 @@ QMenu::indicator:non-exclusive:checked {
     image: url(vgc:/widgets/images/checkbox-checked.svg);
 }
 
-/********************************* Toolbar ***********************************/
+vgc--widgets--PanelArea,
+QToolBar,
+QToolButton {
+    background: #56585a;
+}
+
+vgc--widgets--Panel {
+    border: 1px solid #323335;
+    border-radius: 2px;
+    background: #404244;
+}
+
+vgc--widgets--PanelTitleBar {
+    padding: 5px 10px;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
 
 QToolBar {
     border: 0px;
     padding: 0px;
-    background: #56585a;
 }
 
 QToolButton {
     border: 0px;
     padding: 10px;
-    background: #56585a;
 }
 
 QToolButton:hover {
@@ -138,34 +163,6 @@ QPlainTextEdit {
 }
 
 /******************************* Panels **************************************/
-
-vgc--widgets--PanelArea {
-    background: #56585a;
-}
-
-vgc--widgets--Panel {
-    border: 1px solid #323335;
-    border-radius: 2px;
-    background: #404244;
-}
-
-vgc--widgets--PanelTitleBar {
-    padding: 5px;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #3e4044,
-                stop:1 #272829);
-    border-bottom: 1px solid #323335;
-    border-top-left-radius: 2px;
-    border-top-right-radius: 2px;
-    border-bottom-left-radius: 0px;
-    border-bottom-right-radius: 0px;
-}
-
-vgc--widgets--PanelTitleBar QLabel {
-    font-size: 10pt;
-    font-weight: 700;
-    font-color: #e3e3e3;
-}
 
 /******************************* Splitters **************************************/
 
