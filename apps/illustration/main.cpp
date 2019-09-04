@@ -88,6 +88,7 @@ int main(int argc, char* argv[])
     // Application::addFont(resourceName)
     // Application::setStyleSheet(resourceName)
     vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Regular.ttf");
+    vgc::widgets::addApplicationFont("widgets/fonts/SourceSansPro-Bold.ttf");
     vgc::widgets::addApplicationFont("widgets/fonts/SourceCodePro-Regular.ttf");
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
 

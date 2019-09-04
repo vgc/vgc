@@ -31,13 +31,9 @@ PerformanceMonitor::PerformanceMonitor(QWidget* parent) :
 {
     // Grid layout for displaying the logs' values
     layout_ = new QGridLayout();
+    layout_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     layout_->setHorizontalSpacing(30);
-
-    // Wrapper around the grid layout to keep it top-aligned
-    wrapper_ = new QVBoxLayout();
-    wrapper_->addLayout(layout_);
-    wrapper_->addStretch();
-    setLayout(wrapper_);
+    setLayout(layout_);
 }
 
 PerformanceMonitor::~PerformanceMonitor()

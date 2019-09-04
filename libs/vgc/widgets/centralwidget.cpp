@@ -234,25 +234,22 @@ CentralWidget::CentralWidget(
         QWidget* viewer,
         QWidget* toolbar,
         QWidget* console,
-        QWidget* panel,
         QWidget* parent) :
     QWidget(parent),
     viewer_(viewer),
     toolbar_(toolbar),
     console_(console),
-    panel_(panel),
+    panelArea_(new PanelArea(this)),
     margin_(0)
 {
     viewer_->setParent(this);
     toolbar->setParent(this);
     console->setParent(this);
-    panel->setParent(this);
 
-    consoleToggleViewAction_ = new ToggleViewAction(tr("Console"), console_, this);
+    consoleToggleViewAction_ = new ToggleViewAction(tr("Python Console"), console_, this); // TODO: set "Python Console" text somewhere else
     connect(consoleToggleViewAction_, SIGNAL(toggled(bool)), this, SLOT(updateGeometries_()));
 
-    panelToggleViewAction_ = new ToggleViewAction(tr("Panel"), panel_, this);
-    connect(panelToggleViewAction_, SIGNAL(toggled(bool)), this, SLOT(updateGeometries_()));
+    connect(panelArea_, &PanelArea::visibleToParentChanged, this, &CentralWidget::updateGeometries_);
 
     // Create splitters, which handle resize mouse events.
     //
@@ -264,7 +261,7 @@ CentralWidget::CentralWidget(
     //
     // A possible workaround not involving the creation of splitter widgets
     // would be to enable mouse tracking and install an event filter on all the
-    // descendent widgets of the CentralWidget. Unfortunately, this is
+    // descendant widgets of the CentralWidget. Unfortunately, this is
     // error-prone since new widgets may be created dynamically: how to ensure
     // that those widgets have the event filter installed? Possibly, we could
     // create a global event filter, checking if the event is a MouseMove, then
@@ -316,13 +313,24 @@ QSize CentralWidget::minimumSizeHint() const
     if (toolbar_->isVisibleTo(this)) {
         res += QSize(margin_ + splitters_[0]->minimumLength(), 0);
     }
-    if (panel_->isVisibleTo(this)) {
+    if (panelArea_->isVisibleTo(this)) {
         res += QSize(margin_ + splitters_[1]->minimumLength(), 0);
     }
     if (console_->isVisibleTo(this)) {
         res += QSize(0, margin_ + splitters_[2]->minimumLength());
     }
     return res;
+}
+
+Panel* CentralWidget::addPanel(const QString& title, QWidget* widget)
+{
+    Panel* panel = panelArea_->addPanel(title, widget);
+    return panel;
+}
+
+Panel* CentralWidget::panel(QWidget* widget)
+{
+    return panelArea_->panel(widget);
 }
 
 void CentralWidget::resizeEvent(QResizeEvent*)
@@ -357,9 +365,9 @@ void CentralWidget::updateGeometries_()
     }
 
     // Splitter between viewer/console and panels
-    int x3 = x4;    
+    int x3 = x4;
     Splitter* s1 = splitters_[1];
-    if (panel_->isVisibleTo(this)) {
+    if (panelArea_->isVisibleTo(this)) {
         x3 -= M + s1->length();
         s1->setGeometryFromCenterline(x3, y1+m2, y3-y1-M);
         s1->show();
@@ -392,10 +400,10 @@ void CentralWidget::updateGeometries_()
     }
 
     // Set geometry of actual useful widgets
-    toolbar_ -> setGeometry(x1+m2, y1+m2, x2-x1-M, y3-y1-M);
-    viewer_  -> setGeometry(x2+m2, y1+m2, x3-x2-M, y2-y1-M);
-    console_ -> setGeometry(x2+m2, y2+m2, x3-x2-M, y3-y2-M);
-    panel_   -> setGeometry(x3+m2, y1+m2, x4-x3-M, y3-y1-M);
+    toolbar_   -> setGeometry(x1+m2, y1+m2, x2-x1-M, y3-y1-M);
+    viewer_    -> setGeometry(x2+m2, y1+m2, x3-x2-M, y2-y1-M);
+    console_   -> setGeometry(x2+m2, y2+m2, x3-x2-M, y3-y2-M);
+    panelArea_ -> setGeometry(x3+m2, y1+m2, x4-x3-M, y3-y1-M);
 
     // Make sure that the window minimum size is increased
     // when making a new panel visible.

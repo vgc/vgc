@@ -22,6 +22,8 @@
 #include <QWidget>
 
 #include <vgc/widgets/api.h>
+#include <vgc/widgets/panel.h>
+#include <vgc/widgets/panelarea.h>
 
 namespace vgc {
 namespace widgets {
@@ -216,7 +218,6 @@ public:
         QWidget* viewer,
         QWidget* toolbar,
         QWidget* console,
-        QWidget* panel,
         QWidget* parent = nullptr);
 
     /// Destructs the CentralWidget.
@@ -237,11 +238,13 @@ public:
         return consoleToggleViewAction_;
     }
 
-    /// Returns the toggle view action for the panel.
+    /// Adds a Panel wrapping the given widget.
     ///
-    QAction* panelToggleViewAction() const {
-        return panelToggleViewAction_;
-    }
+    Panel* addPanel(const QString& title, QWidget* widget);
+
+    /// Returns the panel wrapping the given widget, or nullptr if not found.
+    ///
+    Panel* panel(QWidget* widget);
 
 protected:
     /// Reimplements QWidget::resizeEvent().
@@ -257,9 +260,8 @@ private:
     QWidget* viewer_;
     QWidget* toolbar_;
     QWidget* console_;
-    QWidget* panel_;
+    PanelArea* panelArea_;
     QAction* consoleToggleViewAction_;
-    QAction* panelToggleViewAction_;
 
     // Splitters
     int margin_;

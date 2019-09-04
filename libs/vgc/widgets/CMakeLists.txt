@@ -18,6 +18,9 @@ vgc_add_library(widgets
         mainwindow.h
         menubar.h
         openglviewer.h
+        panel.h
+        panelarea.h
+        paneltitlebar.h
         performancemonitor.h
         pointingdeviceevent.h
         qtutil.h
@@ -35,6 +38,9 @@ vgc_add_library(widgets
         mainwindow.cpp
         menubar.cpp
         openglviewer.cpp
+        panel.cpp
+        panelarea.cpp
+        paneltitlebar.cpp
         performancemonitor.cpp
         pointingdeviceevent.cpp
         qtutil.cpp
