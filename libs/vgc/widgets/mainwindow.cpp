@@ -216,19 +216,27 @@ void MainWindow::save_()
 
 void MainWindow::setupWidgets_()
 {
+    // OpenGLViewer
     viewer_ = new OpenGLViewer(document());
-    console_ = new Console(interpreter_);
-    console_->hide();
-    performanceMonitor_ = new PerformanceMonitor();
-    performanceMonitor_->hide();
-    toolbar_ = new Toolbar();
 
-    // Initialize and keep current color synced between widgets
+    // Toolbar (must be created after viewer; see onColorChanged())
+    toolbar_ = new Toolbar();
     onColorChanged(toolbar_->color());
     connect(toolbar_, &Toolbar::colorChanged, this, &MainWindow::onColorChanged);
 
-    // Layout
-    centralWidget_ = new CentralWidget(viewer_, toolbar_, console_, performanceMonitor_);
+    // Console
+    console_ = new Console(interpreter_);
+    console_->hide();
+
+    // CentralWidget
+    centralWidget_ = new CentralWidget(viewer_, toolbar_, console_);
+
+    // Performance Monitor
+    performanceMonitor_ = new PerformanceMonitor();
+    performanceMonitorPanel_ = centralWidget_->addPanel(tr("Performance Monitor"), performanceMonitor_);
+    performanceMonitorPanel_->toggleViewAction()->setChecked(false);
+
+    // Set central widget
     setCentralWidget(centralWidget_);
 }
 
@@ -257,12 +265,10 @@ void MainWindow::setupActions_()
     actionQuit_->setShortcut(QKeySequence::Quit);
     connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
 
-    actionTogglePerformanceMonitorView_ = centralWidget_->panelToggleViewAction();
-    actionTogglePerformanceMonitorView_->setText(tr("Performance Monitor"));
+    actionTogglePerformanceMonitorView_ = performanceMonitorPanel_->toggleViewAction();
     actionTogglePerformanceMonitorView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_M));
 
     actionToggleConsoleView_ = centralWidget_->consoleToggleViewAction();
-    actionToggleConsoleView_->setText(tr("Python Console"));
     actionToggleConsoleView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_P));
 }
 

@@ -22,13 +22,23 @@ namespace widgets {
 ToggleViewAction::ToggleViewAction(
         const QString& text,
         QWidget* widget,
-        QObject *parent) :
+        QObject* parent) :
     QAction(text, parent),
     widget_(widget)
 {
     setCheckable(true);
     setChecked(widget->isVisibleTo(widget->parentWidget()));
     connect(this, &QAction::toggled, this, &ToggleViewAction::onToggled_);
+
+    // TODO we should add an eventFilter that listens to the ShowToParent and
+    // HideToParent events of widget, so that we can react accordingly when the
+    // value of `widget->isVisibleTo(widget->parentWidget())` changes due to
+    // some code calling `widget->show()` or `widget->hide()` directly, without
+    // using this ToggleViewAction.
+
+    // TODO We should also probably listen to ParentChange and/or
+    // ParentAboutToChange. See comment in the implementation of
+    // PanelArea::addPanel().
 }
 
 void ToggleViewAction::onToggled_(bool checked)

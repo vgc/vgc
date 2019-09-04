@@ -60,7 +60,6 @@ public:
 private:
     core::PerformanceLogSharedPtr log_;
     QGridLayout* layout_;
-    QVBoxLayout* wrapper_;
 
     struct DisplayedLog_ {
         core::PerformanceLog* log;

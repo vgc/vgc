@@ -28,6 +28,7 @@
 #include <vgc/widgets/centralwidget.h>
 #include <vgc/widgets/console.h>
 #include <vgc/widgets/openglviewer.h>
+#include <vgc/widgets/panel.h>
 #include <vgc/widgets/performancemonitor.h>
 #include <vgc/widgets/toolbar.h>
 
@@ -70,6 +71,7 @@ private:
     OpenGLViewer* viewer_;
     Console* console_;
     PerformanceMonitor* performanceMonitor_;
+    Panel* performanceMonitorPanel_;
 
     void setupActions_();
     QAction* actionOpen_;

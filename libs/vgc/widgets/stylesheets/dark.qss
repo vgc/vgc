@@ -110,13 +110,13 @@ QMenu::indicator:non-exclusive:checked {
 QToolBar {
     border: 0px;
     padding: 0px;
-    background: #404244;
+    background: #56585a;
 }
 
 QToolButton {
     border: 0px;
     padding: 10px;
-    background: #404244;
+    background: #56585a;
 }
 
 QToolButton:hover {
@@ -124,7 +124,7 @@ QToolButton:hover {
 }
 
 QToolButton:pressed {
-    background: #313234;
+    background: #404244;
 }
 
 /********************************* Text Edits ********************************/
@@ -138,6 +138,36 @@ QPlainTextEdit {
 }
 
 /******************************* Panels **************************************/
+
+vgc--widgets--PanelArea {
+    background: #56585a;
+}
+
+vgc--widgets--Panel {
+    border: 1px solid #323335;
+    border-radius: 2px;
+    background: #404244;
+}
+
+vgc--widgets--PanelTitleBar {
+    padding: 5px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #3e4044,
+                stop:1 #272829);
+    border-bottom: 1px solid #323335;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+vgc--widgets--PanelTitleBar QLabel {
+    font-size: 10pt;
+    font-weight: 700;
+    font-color: #e3e3e3;
+}
+
+/******************************* Splitters **************************************/
 
 vgc--widgets--Splitter {
     qproperty-grabWidth: 10;
@@ -166,6 +196,7 @@ QComboBox::down-arrow {
 QLabel {
     height: 25px;           /* Intended height with padding = 26px */
     padding-bottom: 1px;    /* Fine-tune vertical alignment */
+    background: transparent;
 }
 
 QPushButton,
