@@ -73,6 +73,7 @@ private Q_SLOTS:
 private:
     QLayout* layout_;
     std::vector<widgets::Panel*> panels_;
+    void updateVisibility_();
 };
 
 } // namespace widgets

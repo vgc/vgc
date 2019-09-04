@@ -38,6 +38,7 @@ PanelArea::PanelArea(QWidget* parent) :
     layout_ = new QVBoxLayout();
     layout_->setAlignment(Qt::AlignTop);
     setLayout(layout_);
+    updateVisibility_();
 }
 
 PanelArea::~PanelArea()
@@ -60,6 +61,7 @@ widgets::Panel* PanelArea::addPanel(const QString& title, QWidget* widget)
 
     // Add to layout and return
     layout_->addWidget(panel);
+    updateVisibility_();
     return panel;
 }
 
@@ -85,6 +87,11 @@ bool PanelArea::event(QEvent* event)
 }
 
 void PanelArea::onPanelVisibleToParentChanged_()
+{
+    updateVisibility_();
+}
+
+void PanelArea::updateVisibility_()
 {
     // Check whether any of the panels is visible
     bool hasVisibleChildren = false;
