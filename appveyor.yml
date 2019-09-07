@@ -10,6 +10,16 @@ platform: x64
 configuration: Release
 
 before_build:
+  - echo %APPVEYOR_PULL_REQUEST_NUMBER%
+  - echo %APPVEYOR_PULL_REQUEST_TITLE%
+  - echo %APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%
+  - echo %APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%
+  - echo %APPVEYOR_PULL_REQUEST_HEAD_COMMIT%
+  - echo %APPVEYOR_REPO_NAME%
+  - echo %APPVEYOR_REPO_BRANCH%
+  - echo %APPVEYOR_REPO_COMMIT%
+  - echo %APPVEYOR_REPO_COMMIT_MESSAGE%
+  - echo %APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED%
   - cd C:/dev
   - mkdir build
   - cd build
