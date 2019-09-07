@@ -35,3 +35,6 @@ build_script:
 test_script:
   - cd C:/dev/build
   - test -VV
+
+artifacts:
+  - path: 'C:/dev/build/deploy/Release/VGC*.exe'
