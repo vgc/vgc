@@ -3,7 +3,7 @@
 
 version: 1.0.{build}
 image: Visual Studio 2017
-clone_folder: C:/dev/vgc
+clone_folder: C:\dev\vgc
 shallow_clone: false
 clone_depth: 50
 platform: x64
@@ -22,19 +22,19 @@ before_build:
   - echo %APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED%
   - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set VGC_COMMIT_BRANCH=%APPVEYOR_REPO_BRANCH%) else (set VGC_COMMIT_BRANCH=%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%)
   - echo %VGC_COMMIT_BRANCH%
-  - cd C:/dev
+  - cd C:\dev\vgc
   - mkdir build
   - cd build
-  - cmake ../vgc -G "Visual Studio 15 2017" -A x64 -DPython="C:/Python37-x64" -DQt="C:/Qt/5.12.4/msvc2017_64" -DWiX="C:/Program Files (x86)/WiX Toolset v3.11" -DVGC_COMMIT_BRANCH=%VGC_COMMIT_BRANCH%
+  - cmake .. -G "Visual Studio 15 2017" -A x64 -DPython="C:/Python37-x64" -DQt="C:/Qt/5.12.4/msvc2017_64" -DWiX="C:/Program Files (x86)/WiX Toolset v3.11" -DVGC_COMMIT_BRANCH=%VGC_COMMIT_BRANCH%
 
 build_script:
-  - cd C:/dev/build
+  - cd C:\dev\vgc\build
   - make
   - make deploy
 
 test_script:
-  - cd C:/dev/build
+  - cd C:\dev\vgc\build
   - test -VV
 
 artifacts:
-  - path: 'C:/dev/build/deploy/Release/VGC*.exe'
+  - path: 'build\deploy\Release\VGC*.exe'
