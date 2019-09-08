@@ -17,6 +17,7 @@
 #include <QApplication>
 #include <QTimer>
 
+#include <vgc/core/logging.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
@@ -87,25 +88,49 @@ int main(int argc, char* argv[])
     // XXX Create widgets::Application class with:
     // Application::addFont(resourceName)
     // Application::setStyleSheet(resourceName)
-    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Black.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Bold.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceCodePro-ExtraLight.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Light.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Medium.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Regular.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceCodePro-Semibold.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-BlackItalic.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Black.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-BoldItalic.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Bold.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-ExtraLightItalic.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-ExtraLight.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Italic.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-LightItalic.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Light.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-Regular.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-SemiBoldItalic.ttf");
-    vgc::widgets::addApplicationFont("fonts/SourceSansPro-SemiBold.ttf");
+    const bool printFontInfo = false;
+    std::vector<std::string> fontNames {
+        "SourceCodePro-Black.ttf",
+        "SourceCodePro-Bold.ttf",
+        "SourceCodePro-ExtraLight.ttf",
+        "SourceCodePro-Light.ttf",
+        "SourceCodePro-Medium.ttf",
+        "SourceCodePro-Regular.ttf",
+        "SourceCodePro-Semibold.ttf",
+        "SourceSansPro-BlackItalic.ttf",
+        "SourceSansPro-Black.ttf",
+        "SourceSansPro-BoldItalic.ttf",
+        "SourceSansPro-Bold.ttf",
+        "SourceSansPro-ExtraLightItalic.ttf",
+        "SourceSansPro-ExtraLight.ttf",
+        "SourceSansPro-Italic.ttf",
+        "SourceSansPro-LightItalic.ttf",
+        "SourceSansPro-Light.ttf",
+        "SourceSansPro-Regular.ttf",
+        "SourceSansPro-SemiBoldItalic.ttf",
+        "SourceSansPro-SemiBold.ttf"
+    };
+    for (const std::string& name : fontNames) {
+        int id = vgc::widgets::addApplicationFont("widgets/fonts/" + name);
+        if (id == -1) {
+            vgc::core::warning() << "Failed to add font \"" + name + "\".\n";
+        }
+        else {
+            if (printFontInfo) {
+                std::cout << "Added font file: " + name + "\n";
+                QFontDatabase fd;
+                QStringList families = QFontDatabase::applicationFontFamilies(id);
+                Q_FOREACH (const QString& family, families) {
+                    vgc::widgets::printFontFamilyInfo(vgc::widgets::fromQt(family));
+                }
+                std::cout << "\n";
+            }
+        }
+    }
+    if (printFontInfo) {
+        vgc::widgets::printFontFamilyInfo("Source Sans Pro");
+        vgc::widgets::printFontFamilyInfo("Source Code Pro");
+    }
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
 
     // Set window icon

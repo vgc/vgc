@@ -24,9 +24,12 @@ namespace vgc {
 namespace widgets {
 
 /// Loads the font from the resource file specified by its \p name, and makes
-/// it available to the application.
+/// it available to the application. An ID is returned that can be used to
+/// remove the font again with QFontDatabase::removeApplicationFont() or to
+/// retrieve the list of family names contained in the font.
 ///
-/// This is a convenient wrapper around QFontDatabase::addApplicationFont().
+/// This is a convenient wrapper around QFontDatabase::addApplicationFont() to
+/// use a relative resource file.
 ///
 /// Example:
 /// \code
@@ -34,7 +37,12 @@ namespace widgets {
 /// \endcode
 ///
 VGC_WIDGETS_API
-void addApplicationFont(const std::string& name);
+int addApplicationFont(const std::string& name);
+
+/// Prints info about a given font family.
+///
+VGC_WIDGETS_API
+void printFontFamilyInfo(const std::string& family);
 
 } // namespace widgets
 } // namespace vgc
