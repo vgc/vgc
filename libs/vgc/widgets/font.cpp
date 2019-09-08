@@ -16,6 +16,7 @@
 
 #include <vgc/widgets/font.h>
 
+#include <iostream>
 #include <QFontDatabase>
 #include <vgc/core/paths.h>
 #include <vgc/widgets/qtutil.h>
@@ -23,10 +24,22 @@
 namespace vgc {
 namespace widgets {
 
-void addApplicationFont(const std::string& name)
+int addApplicationFont(const std::string& name)
 {
     std::string fontPath = core::resourcePath(name);
-    QFontDatabase::addApplicationFont(toQt(fontPath));
+    int id = QFontDatabase::addApplicationFont(toQt(fontPath));
+    return id;
+}
+
+void printFontFamilyInfo(const std::string& family)
+{
+    QFontDatabase fd;
+    std::cout << "Font Family: " +family + "\n";
+    std::cout << "  Styles:\n";
+    QStringList styles = fd.styles(toQt(family));
+    Q_FOREACH (const QString& style, styles) {
+        std::cout << "    " + fromQt(style) + "\n";
+    }
 }
 
 } // namespace widgets
