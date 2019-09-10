@@ -8,6 +8,9 @@ shallow_clone: false
 clone_depth: 50
 platform: x64
 configuration: Release
+environment:
+  VGC_APPVEYOR_KEY:
+    secure: vLHev4kZ+RH2R2Q0pcTYBICpkzBYSkUjRsj+Q/ZPapg=
 
 before_build:
   - echo %APPVEYOR_PULL_REQUEST_NUMBER%
@@ -38,3 +41,7 @@ test_script:
 
 artifacts:
   - path: 'build\deploy\Release\VGC*.exe'
+
+deploy:
+  provider: Webhook
+  url: https://webhooks.vgc.io/appveyor
