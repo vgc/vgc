@@ -102,16 +102,16 @@
 # |    newer version. By default, this installs VGC 2020 to:
 # |        C:\Program Files\VGC\
 # |
-# |- VGC 2020 LTS Installer.exe:
+# |- VGC 2020 Installer - Minor Updates Only.exe:
 # |    This is for users who prefer to only apply minor updates to their VGC
-# |    installation. Using LTS installers, major updates are installed
+# |    installation. Using this installer, major updates will be installed
 # |    side-by-side rather than replacing the older version. By default, this
 # |    installs VGC 2020 to:
 # |        C:\Program Files\VGC 2020\
 # |
-# |- VGC 2020 Frozen Installer.exe:
-# |    This is for users who really don't like updates at all! Using the frozen
-# |    installers, both minor and major updates are installed side-by-side
+# |- VGC 2020 Installer - No Updates.exe:
+# |    This is for users who really don't like updates at all! Using this
+# |    installer, both minor and major updates are installed side-by-side
 # |    rather than replacing the older version. By default, this installs
 # |    VGC 2020 to:
 # |        C:\Program Files\VGC 2020.0\
@@ -157,15 +157,15 @@
 # Examples of installers belonging to the "VGC 2020" install family, i.e.,
 # versionType = "stable", upgradePolicy = "minor", and majorVersion = 2020:
 #
-# - "VGC 2020 LTS Installer.exe"
-# - "VGC Illustration 2020 LTS Installer.exe"
-# - "VGC 2020.1 LTS Installer.exe"
+# - "VGC 2020 Installer - Minor Updates Only.exe"
+# - "VGC Illustration 2020 Installer - Minor Updates Only.exe"
+# - "VGC 2020.1 Installer - Minor Updates Only.exe"
 #
 # Examples of installers belonging to the "VGC 2020.0" install family, i.e.,
 # versionType = "stable", upgradePolicy = "none", and version = 2020.0:
 #
-# - "VGC 2020 Frozen Installer.exe"
-# - "VGC Illustration 2020 Frozen Installer.exe"
+# - "VGC 2020 Installer - No Updates.exe"
+# - "VGC Illustration 2020 Installer - No Updates.exe"
 #
 # Examples of installers belonging to the "VGC 2020 Beta" install family, i.e.,
 # versionType = "beta", majorVersion = "2020", and upgradePolicy = "minor",
@@ -177,8 +177,8 @@
 # Examples of installers belonging to the "VGC 2020 Beta 2019-06-28.3" install family, i.e.,
 # versionType = "beta", majorVersion = "2020", upgradePolicy = "none", and commitDateAndIndex = "2019-06-28.3":
 #
-# - "VGC 2020 Beta 2019-06-28.3 Frozen Installer.exe"
-# - "VGC Illustration 2020 Beta 2019-06-28.3 Frozen Installer.exe"
+# - "VGC 2020 Beta 2019-06-28.3 Installer - No Updates.exe"
+# - "VGC Illustration 2020 Beta 2019-06-28.3 Installer - No Updates.exe"
 #
 # Examples of installers belonging to the "VGC Alpha" install family, i.e.,
 # versionType = "alpha", upgradePolicy = "minor"
@@ -190,8 +190,8 @@
 # Examples of installers belonging to the "VGC Alpha 2019-06-28.3" install family, i.e.,
 # versionType = "alpha", upgradePolicy = "none", and commitDateAndIndex = "2019-06-28.3":
 #
-# - "VGC Alpha 2019-06-28.3 Frozen Installer.exe"
-# - "VGC Illustration Alpha 2019-06-28.3 Frozen Installer.exe"
+# - "VGC Alpha 2019-06-28.3 Installer - No Updates.exe"
+# - "VGC Illustration Alpha 2019-06-28.3 Installer - No Updates.exe"
 #
 # Install version
 # ---------------
@@ -526,13 +526,13 @@ class Wix:
 
         # Set installerName and msiName
         if self.versionType == "stable" and self.upgradePolicy == "minor":
-            installerTypePrefix = " LTS"
+            installerTypeSuffix = " - Minor Updates Only"
         elif self.upgradePolicy == "none":
-            installerTypePrefix = " Frozen"
+            installerTypeSuffix = " - No Updates"
         else:
-            installerTypePrefix = ""
-        self.msiName       = self.appOrSuiteName + " " + self.fullVersion + installerTypePrefix
-        self.installerName = self.msiName + " Installer"
+            installerTypeSuffix = ""
+        self.msiName       = self.appOrSuiteName + " " + self.fullVersion + installerTypeSuffix
+        self.installerName = self.appOrSuiteName + " " + self.fullVersion + " Installer" + installerTypeSuffixself.msiName
 
         # Create XML document.
         #
