@@ -532,7 +532,7 @@ class Wix:
         else:
             installerTypeSuffix = ""
         self.msiName       = self.appOrSuiteName + " " + self.fullVersion + installerTypeSuffix
-        self.installerName = self.appOrSuiteName + " " + self.fullVersion + " Installer" + installerTypeSuffixself.msiName
+        self.installerName = self.appOrSuiteName + " " + self.fullVersion + " Installer" + installerTypeSuffix
 
         # Create XML document.
         #
