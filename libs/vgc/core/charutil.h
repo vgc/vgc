@@ -17,6 +17,8 @@
 #ifndef VGC_CORE_CHARUTIL_H
 #define VGC_CORE_CHARUTIL_H
 
+#include <string>
+
 #include <vgc/core/api.h>
 #include <vgc/core/exceptions.h>
 

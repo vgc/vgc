@@ -18,6 +18,8 @@
 #define VGC_CORE_EXCEPTIONS_H
 
 #include <stdexcept>
+#include <string>
+
 #include <vgc/core/api.h>
 
 namespace vgc {
