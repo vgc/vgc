@@ -11,6 +11,8 @@ configuration: Release
 environment:
   VGC_APPVEYOR_KEY:
     secure: vLHev4kZ+RH2R2Q0pcTYBICpkzBYSkUjRsj+Q/ZPapg=
+  VGC_CODESIGN_URL:
+    secure: 3hIJG/4X/vL+fmmUqTqTVYZkMJ1VG4o9Uh6Dq0hu6dE=
 
 before_build:
   - echo %APPVEYOR_PULL_REQUEST_NUMBER%
