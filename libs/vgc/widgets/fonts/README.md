@@ -6,11 +6,11 @@ We use the following fonts:
 - Source Sans Pro, TTF, 2.021-ro-1.076-it
   https://fonts.google.com/specimen/Source+Sans+Pro?selection.family=Source+Code+Pro:200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,900,900i
 
-- Source Code Pro, OTF + TTF, 2.030-ro-1.050-it
+- Source Code Pro, OTF, 2.030-ro-1.050-it
   https://github.com/adobe-fonts/source-code-pro/releases/tag/2.030R-ro%2F1.050R-it
 
 - Source Code Pro, TTF, 2.030-ro-1.050-it
-  https://github.com/adobe-fonts/source-code-pro/releases/tag/2.030R-ro%2F1.050R-it
+  https://fonts.google.com/specimen/Source+Code+Pro?selection.family=Source+Code+Pro:200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,900,900i
 
 We currently use the TTF fonts on all platforms, but keep the OTF for
 now, until we've tested on all desktop and mobile platforms.
