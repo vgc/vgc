@@ -58,13 +58,8 @@ void addDefaultApplicationFonts()
     };
 
     for (const auto& name : fontNames) {
-        #if defined(VGC_CORE_OS_WINDOWS)
-            std::string fontExtension = ".ttf";
-            std::string fontSubFolder = "/TTF/";
-        #else
-            std::string fontExtension = ".otf";
-            std::string fontSubFolder = "/OTF/";
-        #endif
+        std::string fontExtension = ".ttf";
+        std::string fontSubFolder = "/TTF/";
         std::string filename = name.first + "-" + name.second + fontExtension;
         std::string filepath = "widgets/fonts/" + name.first + fontSubFolder + filename;
         int id = widgets::addApplicationFont(filepath);

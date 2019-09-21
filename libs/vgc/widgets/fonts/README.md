@@ -9,7 +9,11 @@ We use the following fonts:
 - Source Code Pro, OTF + TTF, 2.030-ro-1.050-it
   https://github.com/adobe-fonts/source-code-pro/releases/tag/2.030R-ro%2F1.050R-it
 
-We use TTF fonts on Windows, and OTF fonts on other platforms.
+- Source Code Pro, TTF, 2.030-ro-1.050-it
+  https://github.com/adobe-fonts/source-code-pro/releases/tag/2.030R-ro%2F1.050R-it
+
+We currently use the TTF fonts on all platforms, but keep the OTF for
+now, until we've tested on all desktop and mobile platforms.
 
 In the case of Source Sans Pro, we use older TTF versions hosted on Google
 Fonts because the TTF versions hosted on the Adobe GitHub seem not to be
@@ -19,4 +23,10 @@ seem hinted properly either (tested with 2.020-ro-1.075-it).
 
 Source Code Pro seems properly hinted both using the Adobe version and the
 Google version, which are actually based on the same version at the time of
-writing (2.030-ro-1.050-it)
+writing (2.030-ro-1.050-it). However, the Adobe version, both the OTF and
+the TTF, doesn't render properly on macOS: the font stays black instead
+of the intended color. This is why we use the Google version.
+
+For more info on tests between TTF, OTF, Google, and Adobe versions, see:
+
+https://github.com/vgc/vgc/issues/173
