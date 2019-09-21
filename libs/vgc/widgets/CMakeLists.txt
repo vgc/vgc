@@ -49,27 +49,34 @@ vgc_add_library(widgets
         toolbar.cpp
 
     RESOURCE_FILES
-        fonts/SourceCodePro-Black.ttf
-        fonts/SourceCodePro-Bold.ttf
-        fonts/SourceCodePro-ExtraLight.ttf
-        fonts/SourceCodePro-Light.ttf
-        fonts/SourceCodePro-Medium.ttf
-        fonts/SourceCodePro-OFL.txt
-        fonts/SourceCodePro-Regular.ttf
-        fonts/SourceCodePro-Semibold.ttf
-        fonts/SourceSansPro-BlackItalic.ttf
-        fonts/SourceSansPro-Black.ttf
-        fonts/SourceSansPro-BoldItalic.ttf
-        fonts/SourceSansPro-Bold.ttf
-        fonts/SourceSansPro-ExtraLightItalic.ttf
-        fonts/SourceSansPro-ExtraLight.ttf
-        fonts/SourceSansPro-Italic.ttf
-        fonts/SourceSansPro-LightItalic.ttf
-        fonts/SourceSansPro-Light.ttf
-        fonts/SourceSansPro-OFL.txt
-        fonts/SourceSansPro-Regular.ttf
-        fonts/SourceSansPro-SemiBoldItalic.ttf
-        fonts/SourceSansPro-SemiBold.ttf
+        fonts/SourceCodePro-BlackIt.otf
+        fonts/SourceCodePro-Black.otf
+        fonts/SourceCodePro-BoldIt.otf
+        fonts/SourceCodePro-Bold.otf
+        fonts/SourceCodePro-ExtraLightIt.otf
+        fonts/SourceCodePro-ExtraLight.otf
+        fonts/SourceCodePro-It.otf
+        fonts/SourceCodePro-LICENSE.txt
+        fonts/SourceCodePro-LightIt.otf
+        fonts/SourceCodePro-Light.otf
+        fonts/SourceCodePro-MediumIt.otf
+        fonts/SourceCodePro-Medium.otf
+        fonts/SourceCodePro-Regular.otf
+        fonts/SourceCodePro-SemiboldIt.otf
+        fonts/SourceCodePro-Semibold.otf
+        fonts/SourceSansPro-BlackIt.otf
+        fonts/SourceSansPro-Black.otf
+        fonts/SourceSansPro-BoldIt.otf
+        fonts/SourceSansPro-Bold.otf
+        fonts/SourceSansPro-ExtraLightIt.otf
+        fonts/SourceSansPro-ExtraLight.otf
+        fonts/SourceSansPro-It.otf
+        fonts/SourceSansPro-LICENSE.md
+        fonts/SourceSansPro-LightIt.otf
+        fonts/SourceSansPro-Light.otf
+        fonts/SourceSansPro-Regular.otf
+        fonts/SourceSansPro-SemiboldIt.otf
+        fonts/SourceSansPro-Semibold.otf
         images/checkbox-checked.svg
         images/spinboxdown.png
         images/spinboxup.png
