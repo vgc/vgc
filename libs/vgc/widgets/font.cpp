@@ -18,11 +18,71 @@
 
 #include <iostream>
 #include <QFontDatabase>
+#include <vgc/core/logging.h>
 #include <vgc/core/paths.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
+
+void addDefaultApplicationFonts()
+{
+    const bool printFontInfo = false;
+    std::vector<std::pair<std::string, std::string>> fontNames {
+        {"SourceCodePro", "Black"},
+        {"SourceCodePro", "BlackIt"},
+        {"SourceCodePro", "Bold"},
+        {"SourceCodePro", "BoldIt"},
+        {"SourceCodePro", "ExtraLight"},
+        {"SourceCodePro", "ExtraLightIt"},
+        {"SourceCodePro", "It"},
+        {"SourceCodePro", "Light"},
+        {"SourceCodePro", "LightIt"},
+        {"SourceCodePro", "Medium"},
+        {"SourceCodePro", "MediumIt"},
+        {"SourceCodePro", "Regular"},
+        {"SourceCodePro", "Semibold"},
+        {"SourceCodePro", "SemiboldIt"},
+        {"SourceSansPro", "Black"},
+        {"SourceSansPro", "BlackIt"},
+        {"SourceSansPro", "Bold"},
+        {"SourceSansPro", "BoldIt"},
+        {"SourceSansPro", "ExtraLight"},
+        {"SourceSansPro", "ExtraLightIt"},
+        {"SourceSansPro", "It"},
+        {"SourceSansPro", "Light"},
+        {"SourceSansPro", "LightIt"},
+        {"SourceSansPro", "Regular"},
+        {"SourceSansPro", "Semibold"},
+        {"SourceSansPro", "SemiboldIt"},
+    };
+
+    for (const auto& name : fontNames) {
+        #if defined(VGC_CORE_OS_WINDOWS)
+            std::string fontExtension = ".ttf";
+            std::string fontSubFolder = "/TTF/";
+        #else
+            std::string fontExtension = ".otf";
+            std::string fontSubFolder = "/OTF/";
+        #endif
+        std::string filename = name.first + "-" + name.second + fontExtension;
+        std::string filepath = "widgets/fonts/" + name.first + fontSubFolder + filename;
+        int id = widgets::addApplicationFont(filepath);
+        if (id == -1) {
+            core::warning() << "Failed to add font \"" + filepath + "\".\n";
+        }
+        else {
+            if (printFontInfo) {
+                std::cout << "Added font file: " + filepath + "\n";
+            }
+        }
+    }
+
+    if (printFontInfo) {
+        widgets::printFontFamilyInfo("Source Sans Pro");
+        widgets::printFontFamilyInfo("Source Code Pro");
+    }
+}
 
 int addApplicationFont(const std::string& name)
 {
@@ -34,11 +94,35 @@ int addApplicationFont(const std::string& name)
 void printFontFamilyInfo(const std::string& family)
 {
     QFontDatabase fd;
-    std::cout << "Font Family: " +family + "\n";
+    std::cout << "Font Family: " << family << "\n";
     std::cout << "  Styles:\n";
-    QStringList styles = fd.styles(toQt(family));
-    Q_FOREACH (const QString& style, styles) {
-        std::cout << "    " + fromQt(style) + "\n";
+    QString f = toQt(family);
+    QStringList styles = fd.styles(f);
+    Q_FOREACH (const QString& s, styles) {
+        std::cout << "    " << fromQt(s) << ":\n";
+        std::cout << "        weight:             " << fd.weight(f, s) << "\n";
+        std::cout << "        bold:               " << (fd.bold(f, s)               ? "true" : "false") << "\n";
+        std::cout << "        italic:             " << (fd.italic(f, s)             ? "true" : "false") << "\n";
+        std::cout << "        isBitmapScalable:   " << (fd.isBitmapScalable(f, s)   ? "true" : "false") << "\n";
+        std::cout << "        isFixedPitch:       " << (fd.isFixedPitch(f, s)       ? "true" : "false") << "\n";
+        std::cout << "        isScalable:         " << (fd.isScalable(f, s)         ? "true" : "false") << "\n";
+        std::cout << "        isSmoothlyScalable: " << (fd.isSmoothlyScalable(f, s) ? "true" : "false") << "\n";
+        QList<int> pointSizes = fd.pointSizes(f, s);
+        std::cout << "        pointSizes:         [";
+        std::string delimiter = "";
+        Q_FOREACH (int ps, pointSizes) {
+            std::cout << delimiter << ps;
+            delimiter = ", ";
+        }
+        std::cout << "]\n";
+        QList<int> smoothSizes = fd.smoothSizes(f, s);
+        std::cout << "        smoothSizes:        [";
+        delimiter = "";
+        Q_FOREACH (int ss, smoothSizes) {
+            std::cout << delimiter << ss;
+            delimiter = ", ";
+        }
+        std::cout << "]\n";
     }
 }
 

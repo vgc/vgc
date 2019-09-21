@@ -23,6 +23,11 @@
 namespace vgc {
 namespace widgets {
 
+/// Loads all the default fonts built-in the vgc::widgets library.
+///
+VGC_WIDGETS_API
+void addDefaultApplicationFonts();
+
 /// Loads the font from the resource file specified by its \p name, and makes
 /// it available to the application. An ID is returned that can be used to
 /// remove the font again with QFontDatabase::removeApplicationFont() or to
