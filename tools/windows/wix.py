@@ -688,7 +688,7 @@ class Wix:
     #
     def dynamicGuid(self, sid):
         u = uuid.uuid5(uuid.NAMESPACE_URL,
-                    "http://dynamicguid.wix.vgc.io" +
+                    "http://dynamicguid.msi.vgc.io" +
                     "/" + self.manufacturer +
                     "/" + self.installFamily +
                     "/" + self.installVersion +
@@ -703,7 +703,7 @@ class Wix:
     #
     def staticGuid(self, sid):
         u = uuid.uuid5(uuid.NAMESPACE_URL,
-                    "http://staticguid.wix.vgc.io" +
+                    "http://staticguid.msi.vgc.io" +
                     "/" + self.manufacturer +
                     "/" + self.installFamily +
                     "/" + sid)

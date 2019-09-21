@@ -34,7 +34,7 @@
 
     <Variable Name="InstallFamily" Type="string" Value="$(var.installFamily)" />
     <Variable Name="InstallHumanVersion" Type="string" Value="$(var.installHumanVersion)" />
-    <Variable Name="InstallFolder" Type="string" Value="[ProgramFilesFolder]$(var.installFamily)"/>
+    <Variable Name="InstallFolder" Type="string" Value="[ProgramFiles64Folder]$(var.installFamily)"/>
 
     <Chain>
       <ExePackage
