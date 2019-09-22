@@ -20,9 +20,10 @@
 /// \file vgc/core/os.h
 /// \brief Defines macros indicating which operating system is being used.
 ///
-/// On Windows, we define VGC_CORE_OS_WINDOWS, on MacOS 10, we define
-/// VGC_CORE_OS_MAC, and on Linux, we define VGC_CORE_OS_LINUX. Other platforms
-/// are currently not supported and a compilation error will be raised.
+/// On Windows, we define VGC_CORE_OS_WINDOWS, on macOS, we define
+/// VGC_CORE_OS_MACOS, and on Linux, we define VGC_CORE_OS_LINUX. Other
+/// platforms are currently not supported and a compilation error will be
+/// raised.
 ///
 
 #if defined(_WIN32)
@@ -34,7 +35,7 @@
 #    elif TARGET_OS_IPHONE
 #        error "Unsupported platform: iPhone"
 #    elif TARGET_OS_MAC
-#        define VGC_CORE_OS_MAC
+#        define VGC_CORE_OS_MACOS
 #    else
 #        error "Unsupported platform: unknown Apple platform"
 #    endif
