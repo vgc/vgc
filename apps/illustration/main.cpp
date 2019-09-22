@@ -17,7 +17,6 @@
 #include <QApplication>
 #include <QTimer>
 
-#include <vgc/core/logging.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
@@ -42,6 +41,8 @@ int main(int argc, char* argv[])
     vgc::widgets::OpenGLViewer::init();
 
     // Creates the QApplication
+    // XXX We should create a vgc::???::Application class for code sharing
+    // between the different VGC apps.
     QApplication application(argc, argv);
 
     // Set base path by removing "/bin" from the application dir path
@@ -85,52 +86,7 @@ int main(int argc, char* argv[])
     w.setWindowTitle("VGC Illustration");
 
     // Set style
-    // XXX Create widgets::Application class with:
-    // Application::addFont(resourceName)
-    // Application::setStyleSheet(resourceName)
-    const bool printFontInfo = false;
-    std::vector<std::string> fontNames {
-        "SourceCodePro-Black.ttf",
-        "SourceCodePro-Bold.ttf",
-        "SourceCodePro-ExtraLight.ttf",
-        "SourceCodePro-Light.ttf",
-        "SourceCodePro-Medium.ttf",
-        "SourceCodePro-Regular.ttf",
-        "SourceCodePro-Semibold.ttf",
-        "SourceSansPro-BlackItalic.ttf",
-        "SourceSansPro-Black.ttf",
-        "SourceSansPro-BoldItalic.ttf",
-        "SourceSansPro-Bold.ttf",
-        "SourceSansPro-ExtraLightItalic.ttf",
-        "SourceSansPro-ExtraLight.ttf",
-        "SourceSansPro-Italic.ttf",
-        "SourceSansPro-LightItalic.ttf",
-        "SourceSansPro-Light.ttf",
-        "SourceSansPro-Regular.ttf",
-        "SourceSansPro-SemiBoldItalic.ttf",
-        "SourceSansPro-SemiBold.ttf"
-    };
-    for (const std::string& name : fontNames) {
-        int id = vgc::widgets::addApplicationFont("widgets/fonts/" + name);
-        if (id == -1) {
-            vgc::core::warning() << "Failed to add font \"" + name + "\".\n";
-        }
-        else {
-            if (printFontInfo) {
-                std::cout << "Added font file: " + name + "\n";
-                QFontDatabase fd;
-                QStringList families = QFontDatabase::applicationFontFamilies(id);
-                Q_FOREACH (const QString& family, families) {
-                    vgc::widgets::printFontFamilyInfo(vgc::widgets::fromQt(family));
-                }
-                std::cout << "\n";
-            }
-        }
-    }
-    if (printFontInfo) {
-        vgc::widgets::printFontFamilyInfo("Source Sans Pro");
-        vgc::widgets::printFontFamilyInfo("Source Code Pro");
-    }
+    vgc::widgets::addDefaultApplicationFonts();
     vgc::widgets::setApplicationStyleSheet("widgets/stylesheets/dark.qss");
 
     // Set window icon
