@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <vgc/core/api.h>
+#include <vgc/core/logging.h>
 
 namespace vgc {
 namespace core {
@@ -37,8 +38,13 @@ namespace core {
 template<typename T>
 const T& clamp(const T& v, const T& min, const T& max)
 {
-    assert(!(max < min));
-    return (v < min) ? min : (max < v) ? max : v;
+    if (max < min) {
+        warning() << "Warning: vgc::core::clamp(v, min, max) called with max < min (" << max << " < " << min << ")\n";
+        return (v < max) ? max : (min < v) ? min : v;
+    }
+    else {
+        return (v < min) ? min : (max < v) ? max : v;
+    }
 }
 
 /// Returns what "zero" means for the given type. When this generic function is
