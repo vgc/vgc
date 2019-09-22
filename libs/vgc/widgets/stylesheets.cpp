@@ -38,6 +38,8 @@ void setApplicationStyleSheet(const std::string& name)
         // Set platform dependent font size
         #if defined(VGC_CORE_OS_WINDOWS)
             std::string fontSize = "10.5pt";
+        #elif defined(VGC_CORE_OS_MACOS)
+            std::string fontSize = "13pt";
         #else
             std::string fontSize = "11pt";
         #endif
