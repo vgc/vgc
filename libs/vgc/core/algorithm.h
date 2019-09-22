@@ -31,19 +31,21 @@
 namespace vgc {
 namespace core {
 
-/// Clamps the given value \p v between \p min and \p max.
-/// The behavior is undefined if \p min is greater than \p max.
-/// This is the same as C++17 std::clamp.
+/// Returns the given value clamped to the interval [min, max]. If max < min,
+/// then a warning is issued and the value is clamped to [max, min] instead.
 ///
 template<typename T>
-const T& clamp(const T& v, const T& min, const T& max)
+const T& clamp(const T& value, const T& min, const T& max)
 {
     if (max < min) {
-        warning() << "Warning: vgc::core::clamp(v, min, max) called with max < min (" << max << " < " << min << ")\n";
-        return (v < max) ? max : (min < v) ? min : v;
+        warning()
+            << "Warning: vgc::core::clamp("
+            << "value=" << value << ", min=" << min << ", max=" << max << ") "
+            << "called with max < min\n";
+        return (value < max) ? max : (min < value) ? min : value;
     }
     else {
-        return (v < min) ? min : (max < v) ? max : v;
+        return (value < min) ? min : (max < value) ? max : value;
     }
 }
 
