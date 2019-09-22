@@ -26,19 +26,27 @@
 #include <string>
 #include <vector>
 #include <vgc/core/api.h>
+#include <vgc/core/logging.h>
 
 namespace vgc {
 namespace core {
 
-/// Clamps the given value \p v between \p min and \p max.
-/// The behavior is undefined if \p min is greater than \p max.
-/// This is the same as C++17 std::clamp.
+/// Returns the given value clamped to the interval [min, max]. If max < min,
+/// then a warning is issued and the value is clamped to [max, min] instead.
 ///
 template<typename T>
-const T& clamp(const T& v, const T& min, const T& max)
+const T& clamp(const T& value, const T& min, const T& max)
 {
-    assert(!(max < min));
-    return (v < min) ? min : (max < v) ? max : v;
+    if (max < min) {
+        warning()
+            << "Warning: vgc::core::clamp("
+            << "value=" << value << ", min=" << min << ", max=" << max << ") "
+            << "called with max < min\n";
+        return (value < max) ? max : (min < value) ? min : value;
+    }
+    else {
+        return (value < min) ? min : (max < value) ? max : value;
+    }
 }
 
 /// Returns what "zero" means for the given type. When this generic function is
