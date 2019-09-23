@@ -20,6 +20,8 @@
 #include <QPainter>
 
 #include <vgc/core/algorithm.h>
+#include <vgc/core/limits.h>
+#include <vgc/core/logging.h>
 #include <vgc/widgets/toggleviewaction.h>
 
 namespace vgc {
@@ -32,7 +34,7 @@ Splitter::Splitter(
     parent_(parent),
     direction_(direction),
     isResizable_(isResizable),
-    length_(vgc::core::clamp(length, minimumLength, maximumLength)),
+    length_(length),
     minimumLength_(minimumLength),
     maximumLength_(maximumLength),
     centerlineStartPos_(0, 0),
@@ -45,7 +47,19 @@ Splitter::Splitter(
 {
     setAttribute(Qt::WA_Hover);
     setCursor_();
-    updateGeometry_();
+
+    // Ensure that we have 0 <= min <= max.
+    //
+    // As a side effect, this calls setLength(length_), which ensures that
+    // length_ is in the range [min, max], and calls updateGeometry_() if it
+    // wasn't.
+    //
+    setLengthRange(minimumLength, maximumLength);
+
+    // Compute initial geometry, if not already done by the code above.
+    if (length_ == length) {
+        updateGeometry_();
+    }
 }
 
 void Splitter::setResizable(bool isResizable)
@@ -59,7 +73,7 @@ void Splitter::setResizable(bool isResizable)
 
 void Splitter::setLength(int length)
 {
-    length = vgc::core::clamp(length, minimumLength_, maximumLength_);
+    length = core::clamp(length, minimumLength_, maximumLength_);
     if (length_ != length) {
         length_ = length;
         updateGeometry_();
@@ -68,20 +82,65 @@ void Splitter::setLength(int length)
 
 void Splitter::setMinimumLength(int min)
 {
+    int max = maximumLength();
+    if (min < 0) {
+        core::warning()
+            << "Warning: vgc::widgets::Splitter::setMinimumLength("
+            << "min=" << min << ") "
+            << "called with min < 0\n";
+        min = 0;
+    }
+    else if (min > max) {
+        core::warning()
+            << "Warning: vgc::widgets::Splitter::setMinimumLength("
+            << "min=" << min << ") "
+            << "called with min > maximumLength() (=" << max << ")\n";
+        min = max;
+    }
     minimumLength_ = min;
     setLength(length_);
 }
 
 void Splitter::setMaximumLength(int max)
 {
+    int min = minimumLength();
+    if (max < min) {
+        core::warning()
+            << "Warning: vgc::widgets::Splitter::setMaximumLength("
+            << "max=" << max << ") "
+            << "called with max < minimumLength() (=" << min << ")\n";
+        max = min;
+    }
     maximumLength_ = max;
     setLength(length_);
 }
 
 void Splitter::setLengthRange(int min, int max)
 {
-    setMinimumLength(min);
-    setMaximumLength(max);
+    minimumLength_ = min;
+    maximumLength_ = max;
+    if (min < 0) {
+        core::warning()
+            << "Warning: vgc::widgets::Splitter::setLengthRange("
+            << "min=" << min << ", max=" << max << ") "
+            << "called with min < 0\n";
+        minimumLength_ = 0;
+    }
+    if (max < 0) {
+        core::warning()
+            << "Warning: vgc::widgets::Splitter::setLengthRange("
+            << "min=" << min << ", max=" << max << ") "
+            << "called with max < 0\n";
+        maximumLength_ = 0;
+    }
+    if (min > max) {
+        core::warning()
+            << "Warning: vgc::widgets::Splitter::setLengthRange("
+            << "min=" << min << ", max=" << max << ") "
+            << "called with min > max\n";
+        std::swap(minimumLength_, maximumLength_);
+    }
+    setLength(length_);
 }
 
 void Splitter::setGrabWidth(int width)
@@ -394,9 +453,21 @@ void CentralWidget::updateGeometries_()
     // its then-minimum size.
     QSize vMinSize = viewer_->minimumSizeHint();
     for (int i = 0; i < 2; ++i) {
-        s0->setMaximumLength(x3-x1-2*M-vMinSize.width());
-        s1->setMaximumLength(x4-x2-2*M-vMinSize.width());
-        s2->setMaximumLength(y3-y1-2*M-vMinSize.height());
+        if (toolbar_->isVisibleTo(this)) {
+            int max = x3-x1-2*M-vMinSize.width();
+            max = core::clamp(max, s0->minimumLength(), core::maxInt());
+            s0->setMaximumLength(max);
+        }
+        if (panelArea_->isVisibleTo(this)) {
+            int max = x4-x2-2*M-vMinSize.width();
+            max = core::clamp(max, s1->minimumLength(), core::maxInt());
+            s1->setMaximumLength(max);
+        }
+        if (console_->isVisibleTo(this)) {
+            int max = y3-y1-2*M-vMinSize.height();
+            max = core::clamp(max, s2->minimumLength(), core::maxInt());
+            s2->setMaximumLength(max);
+        }
     }
 
     // Set geometry of actual useful widgets
