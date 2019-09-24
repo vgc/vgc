@@ -139,7 +139,7 @@ Console::Console(
 
     QPlainTextEdit(parent),
     interpreter_(interpreter)
-{    
+{
     codeBlocks_.push_back(0);
 
     // Handling of dead keys. See [1].
@@ -348,6 +348,12 @@ void Console::resizeEvent(QResizeEvent* event)
 }
 
 // Handling of dead keys. See [1].
+QVariant Console::inputMethodQuery(Qt::InputMethodQuery) const
+{
+    return QVariant();
+}
+
+// Handling of dead keys. See [1].
 void Console::inputMethodEvent(QInputMethodEvent* event)
 {
     if (!event->commitString().isEmpty()) {
@@ -356,12 +362,6 @@ void Console::inputMethodEvent(QInputMethodEvent* event)
         keyPressEvent(&keyEvent);
     }
     event->accept();
-}
-
-// Handling of dead keys. See [1].
-QVariant Console::inputMethodQuery(Qt::InputMethodQuery) const
-{
-    return QVariant();
 }
 
 void Console::keyPressEvent(QKeyEvent* e)
@@ -528,7 +528,7 @@ void Console::mouseReleaseEvent(QMouseEvent* e)
             endProtectPreviousBlocks_();
         }
     }
-    
+
     else {
         QPlainTextEdit::mouseReleaseEvent(e);
     }
@@ -575,7 +575,7 @@ void Console::beginReadOnlyProtection_(QMouseEvent* e)
     beginReadOnlyProtection_(cursor);
 
     // Right Mouse Click does not move cursor
-    // We have to move it ourselves to prevent pasting inside previous code blocks 
+    // We have to move it ourselves to prevent pasting inside previous code blocks
     // And when there is no selection so we can still copy selections
     if (e->button() == Qt::RightButton && !realCursor.hasSelection()) {
         setTextCursor(cursor);

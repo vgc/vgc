@@ -84,8 +84,8 @@ private:
     core::PythonInterpreter* interpreter_;
 
     // Handling key presses
-    void inputMethodEvent(QInputMethodEvent*);
-    QVariant inputMethodQuery(Qt::InputMethodQuery) const;
+    QVariant inputMethodQuery(Qt::InputMethodQuery) const override;
+    void inputMethodEvent(QInputMethodEvent*) override;
     void keyPressEvent(QKeyEvent* e) override;
     void keyReleaseEvent(QKeyEvent* e) override;
     void mousePressEvent(QMouseEvent* e) override;
