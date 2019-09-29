@@ -409,7 +409,7 @@ void Console::keyPressEvent(QKeyEvent* e)
             // QString::replace() to replace these characters with newlines."
             //
             QString codeBlock = cursor.selectedText();
-            codeBlock.replace("\u2029", "\n");
+            codeBlock.replace(QChar(QChar::ParagraphSeparator), QChar(QChar::LineFeed));
 
             // Deselect
             cursor.movePosition(QTextCursor::NoMove, QTextCursor::MoveAnchor);
