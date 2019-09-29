@@ -25,6 +25,19 @@
 #include <vgc/core/python.h>
 #include <vgc/widgets/qtutil.h>
 
+// Returns whether this key event is about pressing the Enter or Return key.
+//
+namespace {
+bool isEnterKey_(const QKeyEvent* event)
+{
+    return event->key() == Qt::Key_Enter ||
+           event->key() == Qt::Key_Return ||
+           event->text() == "\n" ||
+           event->text() == "\r" ||
+           event->text() == "\r\n";
+}
+} // namespace
+
 // Notes:
 //
 // [1]
@@ -47,8 +60,8 @@
 //   https://github.com/qt-creator/qt-creator/blob/master/src/plugins/texteditor/texteditor.h
 
 namespace {
-bool isTextInsertionOrDeletion_(QKeyEvent* e) {
-    return !e->text().isEmpty();
+bool isTextInsertionOrDeletion_(QKeyEvent* event) {
+    return isEnterKey_(event) || !event->text().isEmpty();
 }
 } // namespace
 
@@ -116,7 +129,7 @@ bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks,
 }
 } // namespace
 
-// Returns whether the line number is the first line of its code block.
+// Returns whether the enter key was pressed in the last  number is the first line of its code block.
 //
 // If you need to call this repetitively and know what you are doing, you can
 // use the overload taking the extra parameter codeBlockIndexHint for better
@@ -372,9 +385,9 @@ void Console::keyPressEvent(QKeyEvent* e)
         beginReadOnlyProtection_(cursor);
 
         // Process last code block on Ctrl + Enter
-        if ((e->text() == "\r") &&
-            (e->modifiers() & Qt::CTRL))
-        {
+        bool isEnterKey = isEnterKey_(e);
+        if (isEnterKey && (e->modifiers() & Qt::CTRL)) {
+
             // Move cursor's anchor+position to beginning of code block
             cursor.movePosition(QTextCursor::StartOfLine);
             while (lineNumber_(cursor) > codeBlocks_.back()) {
@@ -406,9 +419,7 @@ void Console::keyPressEvent(QKeyEvent* e)
             setTextCursor(cursor);
 
             // Insert a new line by processing Ctrl+Enter as if it was a
-            // regular Enter (at least under my Linux environment, Ctrl+Enter
-            // does not insert anything in a QTextEdit, reason why we clear the
-            // modifiers)
+            // regular Enter with no modifier.
             e->setModifiers(Qt::NoModifier);
             QPlainTextEdit::keyPressEvent(e);
 
@@ -422,18 +433,13 @@ void Console::keyPressEvent(QKeyEvent* e)
             document()->clearUndoRedoStacks();
         }
 
-        // On 'Shift + Enter', remove the Shift modifier to prevent inserting a line-break `\r`
-        // with no corresponding line-feed `\n`, messing up the console line numbering.
-        else if ((e->text() == "\r") &&
-                 (e->modifiers() & Qt::SHIFT))
-        {
-            // Using bit flag manipulation to remove shift modifier
-            // QFlags::setFlag does not exists in all Qt versions
-            Qt::KeyboardModifiers m = e->modifiers();
-            m &= ~Qt::ShiftModifier;
-            e->setModifiers(m);
-
-            Console::keyPressEvent(e);
+        // If Ctrl isn't down, then Enter should be processed as a regular
+        // Enter with no modifiers. Indeed, on some platforms, some
+        // combinations of modifiers may insert a line-break `\r` with no
+        // corresponding line-feed `\n`, messing up the console line numbering.
+        else if (isEnterKey) {
+            e->setModifiers(Qt::NoModifier);
+            QPlainTextEdit::keyPressEvent(e);
         }
 
         // Prevent backspace from deleting last code block
@@ -451,7 +457,7 @@ void Console::keyPressEvent(QKeyEvent* e)
             e->accept();
         }
 
-        // Normal insertion/deletion of character, including newlines
+        // Normal insertion/deletion of character
         else {
             QPlainTextEdit::keyPressEvent(e);
         }
