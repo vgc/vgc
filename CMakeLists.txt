@@ -442,6 +442,17 @@ if(WIN32)
             "$<CONFIG>"
             "${WiX}"
     )
+elseif(APPLE)
+    add_custom_target(deploy
+        VERBATIM
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${PYTHON_EXECUTABLE}
+            "${CMAKE_CURRENT_SOURCE_DIR}/tools/macos/deploy.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_BINARY_DIR}"
+            "$<CONFIG>"
+            "${Qt}"
+    )
 else()
     add_custom_target(deploy
         COMMAND
