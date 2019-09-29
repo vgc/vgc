@@ -262,7 +262,7 @@ function(vgc_add_app APP_NAME)
     # Prepend APP_NAME with "vgc_app_" to get target name.
     vgc_prepend_(TARGET_NAME vgc_app_ ${APP_NAME})
 
-    # Add library
+    # Add executable
     add_executable(${TARGET_NAME} ${ARG_CPP_FILES})
 
     # VGC dependencies
