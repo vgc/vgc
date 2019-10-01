@@ -282,6 +282,7 @@ if __name__ == "__main__":
         bundleDir = deployDir / bundleDirName
         bundleContentsDir = bundleDir / "Contents"
         bundleMacOSDir = bundleContentsDir / "MacOS"
+        bundleResourcesDir = bundleContentsDir / "Resources"
         infoFile = bundleContentsDir / "Info.plist"
 
         # Start fresh
@@ -294,6 +295,10 @@ if __name__ == "__main__":
 
         # Copy resources
         copy(buildDir / "resources", bundleMacOSDir / "resources")
+
+        # Copy bundle icons
+        appIcnsName = appExecutableBasename + ".icns"
+        copy(srcDir / "apps" / appNameLower / appIcnsName, bundleResourcesDir / appIcnsName)
 
         # XXX Shouldn't we get rid of the bin folder?
         # XXX Shouldn't the resources be in <name>.app/Contents/Resources?
@@ -322,7 +327,7 @@ if __name__ == "__main__":
                 }
             ],
             "CFBundleExecutable": bundleExecutable,
-            "CFBundleIconFile": appExecutableBasename + ".icns",
+            "CFBundleIconFile": appIcnsName,
             "CFBundleIdentifier": appIdBase + appNameLower,
             "CFBundleInfoDictionaryVersion": "6.0",
             "CFBundleName": suiteAppName,
@@ -341,7 +346,7 @@ if __name__ == "__main__":
                     "UTTypeConformsTo": [
                         "public.xml"
                     ],
-                    "UTTypeIconFile": "vgci.icns",
+                    "UTTypeIconFile": fileExtension + ".icns",
                     "UTTypeDescription": suiteAppName + " file",
                     "UTTypeReferenceUrl": baseUrl, # TODO: have a more specific url where the file type is described
                 }
