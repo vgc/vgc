@@ -298,7 +298,9 @@ if __name__ == "__main__":
 
         # Copy bundle icons
         appIcnsName = appExecutableBasename + ".icns"
+        fileExtensionIcnsName = fileExtension + ".icns"
         copy(srcDir / "apps" / appNameLower / appIcnsName, bundleResourcesDir / appIcnsName)
+        copy(srcDir / "apps" / appNameLower / fileExtensionIcnsName, bundleResourcesDir / fileExtensionIcnsName)
 
         # XXX Shouldn't we get rid of the bin folder?
         # XXX Shouldn't the resources be in <name>.app/Contents/Resources?
@@ -317,7 +319,7 @@ if __name__ == "__main__":
                     "CFBundleTypeExtensions": [
                         fileExtension
                     ],
-                    "CFBundleTypeIconFile": fileExtension + ".icns",
+                    "CFBundleTypeIconFile": fileExtensionIcnsName,
                     "CFBundleTypeName": suiteAppName + " file",
                     "CFBundleTypeRole": "Editor",
                     "LSItemContentTypes": [
@@ -346,7 +348,7 @@ if __name__ == "__main__":
                     "UTTypeConformsTo": [
                         "public.xml"
                     ],
-                    "UTTypeIconFile": fileExtension + ".icns",
+                    "UTTypeIconFile": fileExtensionIcnsName,
                     "UTTypeDescription": suiteAppName + " file",
                     "UTTypeReferenceUrl": baseUrl, # TODO: have a more specific url where the file type is described
                 }
