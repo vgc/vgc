@@ -39,6 +39,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 
 # We use dmgbuild (and its dependencies ds_store, mac_alias, and biplist) to
 # generate our DMG files. These are non-standard packages all shipped alongside
@@ -65,13 +66,21 @@ def getIniValue(ini, key):
 # If path is another type of file (e.g.: socket, mount point, FIFO, block device, char device), an error is raised.
 # If path doesn't exist, nothing happens.
 #
-def delete(path):
-    if path.is_symlink() or path.is_file():
+def delete(path, *, verbose=False):
+    if path.is_symlink():
+        if verbose:
+            print("             Deleting symlink " + str(path) + "\n")
+        path.unlink()
+    elif path.is_file():
+        if verbose:
+            print("        Deleting regular file " + str(path) + "\n")
         path.unlink()
     elif path.is_dir():
+        if verbose:
+            print("Recusively deleting directory " + str(path) + "\n")
         shutil.rmtree(str(path))
     elif path.exists():
-        raise OSError('Cannot delete file: unsupported file type (e.g.: socket, mount point, FIFO, block device, char device)')
+        raise OSError("Cannot delete file " + str(path) + ": unsupported file type (e.g.: socket, mount point, FIFO, block device, char device)")
 
 # Creates a directory at the given path.
 # If path is already a directory, or a symlink to a directory, nothing happens.
@@ -79,14 +88,16 @@ def delete(path):
 # unless you specify force=True, in which case the symlink or file is deleted instead.
 # Missing parent directories are automatically created.
 #
-def make_dir(path, *, force=False):
+def make_dir(path, *, force=False, verbose=False):
     if not path.is_dir():
         if path.is_symlink() or path.exists():
             if force:
-                delete(path)
+                delete(path, verbose=verbose)
             else:
-                raise FileExistsError('Cannot create directory: another file type already exists at the given path. Use force=True if you want to overwrite.')
-        path.mkdir(parents=True, exist_ok=True)
+                raise FileExistsError("Cannot create directory " + str(path) + ": another file type already exists at the given path. Use force=True if you want to overwrite.")
+        if verbose:
+            print("           Creating directory " + str(path) + "\n")
+        path.mkdir(parents=True)
 
 # Return an integer representing whether the given path:
 #  0: doesn't exist at all
@@ -132,7 +143,9 @@ def path_type(path):
 #
 def copy(src, dst, *,
          overwrite="SameType",  # None | SameType | All
-         dirpolicy="Merge"):    # Merge | Replace
+         dirpolicy="Merge",     # Merge | Replace
+         verbose=False,
+         recursiveVerbose=False):
 
     srcType = path_type(src)
     dstType = path_type(dst)
@@ -151,17 +164,44 @@ def copy(src, dst, *,
             raise FileExistsError('Cannot copy as ' + str(dst) + ': file or directory already exists. Use overwrite="SameType" to overwrite.')
 
         if dstType != 2 or srcType != dstType or dirpolicy == "Replace":
-            delete(dst)
+            delete(dst, verbose=verbose)
 
     if srcType == 2:
-        make_dir(dst)
+        if verbose and not recursiveVerbose:
+            print("          Recursively copying " + str(src) + "\n" +
+                  "                           to " + str(dst) + "\n")
+        newVerbose = verbose and recursiveVerbose
+        make_dir(dst, verbose=newVerbose)
         for item in os.listdir(src):
             s = src / item
             d = dst / item
-            copy(s, d, overwrite=overwrite, dirpolicy=dirpolicy)
+            copy(s, d, overwrite=overwrite, dirpolicy=dirpolicy, verbose=newVerbose, recursiveVerbose=recursiveVerbose)
     else:
-        make_dir(dst.parent)
-        shutil.copy2(str(src), str(dst))
+        # Notes:
+        # - Like ditto, copy2 copies over file permissions.
+        # - Unlike ditto, copy2 does not copy owner/group, which is better for
+        #   example when copying the Python framework, because it may have
+        #   an undesirable "admin" group and unusual permissions, preventing
+        #   altering the rpaths and lib paths
+        # - While preserving permissions to some extent, we manually add user
+        #   write, and remove group/other write, for similar reasons as above.
+        make_dir(dst.parent, verbose=verbose)
+        if verbose:
+            print("                      Copying " + str(src) + "\n" +
+                  "                           to " + str(dst)) # no final new line (see below)
+        shutil.copy2(str(src), str(dst), follow_symlinks=False)
+        oldPermissions = os.stat(dst, follow_symlinks=False).st_mode & 0o777
+        newPermissions = oldPermissions
+        newPermissions |= 0o200
+        newPermissions &= ~0o022
+        if newPermissions != oldPermissions:
+            if verbose:
+                print("                              " +
+                      "(changed permissions from " + oct(oldPermissions)[2:] +
+                      " to " + oct(newPermissions)[2:] + ")") # no final new line (see below)
+            os.chmod(dst, newPermissions, follow_symlinks=False)
+        if verbose:
+            print("") # final newline
 
 # Writes the given text in the given file.
 # Missing parent directories are automatically created.
@@ -206,9 +246,172 @@ def write_plist(plist, file):
     text += '</plist>\n'
     write_text(text, file)
 
+# One entry of an `otool -l` output.
+# You shouldn't typically create a LibEntry yourself: use LibInfo info instead.
+#
+class LibEntry:
+
+    def __init__(self, title):
+        self.raw_data = ""
+        self.title = title
+        if re.match("Mach header", self.title):
+            self.type = "mach_header"
+        elif re.match("Sdection", self.title):
+            self.type = "section"
+        elif re.match("Load command", self.title):
+            self.type = "load_command"
+        else:
+            self.type = "unknown"
+
+    def add_data_line(self, line):
+        self.raw_data += line + "\n"
+        if self.type == "load_command":
+            line_ = line.split()
+            if line_[0] == "time" and line_[1] == "stamp":
+                line_ = ["timestamp"] + line_[2:]
+            attrname = line_[0]
+            attrvalue = " ".join(line_[1:])
+            hasoffset = re.match(r"(.*) \(offset (\d+)\)", attrvalue)
+            if hasoffset:
+                attrvalue = hasoffset.group(1)
+                self.offset = hasoffset.group(2)
+            setattr(self, attrname, attrvalue)
+
+# Get information about a given executable or shared library.
+#
+# Under the hood, this calls `otool -l` and splits the output into a list of
+# "entries" (accessible via libinfo.entries), some of which are "load commands"
+# (accessible via libinfo.load_commands).
+#
+# The load commands are those containing info about dependent shared libraries
+# and rpaths. Each load command lc has an attribute lc.cmd describing which type
+# of command it is, as well as other attributes, based on the command type. Note
+# that unlike in the raw `otool -l` output, the offset of the 'name' or 'path'
+# attribute is stored as a separate attribute called 'offset'.
+#
+# Here are two typical examples of load commands:
+#
+#   cmd             LC_LOAD_DYLIB
+#   cmdsize         72
+#   name            @rpath/QtCore.framework/Versions/5/QtCore
+#   offset          24
+#   timestamp       2 Thu Jan  1 01:00:02 1970
+#   current         version 5.12.5
+#   compatibility   version 5.12.0
+#
+#   cmd      LC_RPATH
+#   cmdsize  48
+#   path     /Users/boris/Qt/5.12.5/clang_64/lib
+#   offset   12
+#
+class LibInfo:
+
+    def __init__(self, filename):
+        self.filename = filename
+        self.raw_info = subprocess.check_output(["otool", "-l", str(self.filename)]).decode('utf-8')
+        lines = self.raw_info.splitlines()
+        self.name = lines[0][:-1]
+        self.entries = []
+        self.load_commands = []
+        entry = None
+        for line in lines[1:]:
+            if re.match("(Mach header)|(Section)|(Load command)", line):
+                entry = LibEntry(line)
+                self.entries.append(entry)
+                if entry.type == "load_command":
+                    self.load_commands.append(entry)
+            elif entry:
+                entry.add_data_line(line)
+            else:
+                # This can occur for *.a files which have more headers.
+                # We just ignore these headers.
+                pass
+
+# Returns the list of rpaths of given executable.
+#
+def get_rpaths(filename):
+    info = LibInfo(filename)
+    res = []
+    for lc in info.load_commands:
+        if lc.cmd == "LC_RPATH":
+            res.append(lc.path)
+    return res
+
+# Changes a given rpath to another.
+#
+def change_rpath(filename, old, new, *, verbose=False):
+    if verbose:
+        print("            Changing rpath in " + str(filename) + "\n" +
+              "                         from " + str(old) + "\n" +
+              "                           to " + str(new) + "\n")
+    subprocess.run(["install_name_tool", "-rpath", str(old), str(new), str(filename)])
+
+# Adds the given rpath.
+#
+def add_rpath(filename, new, *, verbose=False):
+    if str(new) not in get_rpaths(filename):
+        if verbose:
+            print("                 Adding rpath " + str(new) + "\n" +
+                  "                           in " + str(filename) + "\n")
+        subprocess.run(["install_name_tool", "-add_rpath", str(new), str(filename)])
+
+# Changes the given rpath to another.
+#
+def delete_rpath(filename, old, *, verbose=False):
+    if str(old) in get_rpaths(filename):
+        if verbose:
+            print("               Deleting rpath " + str(old) + "\n" +
+                  "                           in " + str(filename) + "\n")
+        subprocess.run(["install_name_tool", "-delete_rpath", str(old), str(filename)])
+
+# Get the shared libraries referenced by a given binary file.
+#
+def get_libs(filename):
+    info = LibInfo(filename)
+    res = []
+    for lc in info.load_commands:
+        if lc.cmd == "LC_LOAD_DYLIB":
+            res.append(lc.name)
+    return res
+
+# Change the path of a referenced shared libraries.
+#
+def change_lib(filename, old, new, *, verbose=False):
+    if verbose:
+        print("     Changing library path in " + str(filename) + "\n" +
+              "                         from " + str(old) + "\n" +
+              "                           to " + str(new) + "\n")
+    subprocess.run(["install_name_tool", "-change", str(old), str(new), str(filename)])
+
+# Get the ID of this shared library.
+# Returns an empty string if this file has no library ID.
+#
+def get_lib_id(filename):
+    info = LibInfo(filename)
+    res = ""
+    for lc in info.load_commands:
+        if lc.cmd == "LC_ID_DYLIB":
+            if len(res) > 0:
+                print("Warning: file " + str(filename) + " has more than one LC_ID_DYLIB load command. All IDs after the first are ignored.")
+                break
+            else:
+                res = lc.name
+    return res
+
+# Change the id of the shared library
+#
+def set_lib_id(filename, id, *, verbose=False):
+    if verbose:
+        print("        Setting library ID of " + str(filename) + "\n" +
+              "                           to " + str(id) + "\n")
+    subprocess.run(["install_name_tool", "-id", str(id), str(filename)])
+
 # Script entry point.
 #
 if __name__ == "__main__":
+
+    # Set verbosity
+    verbose = True
 
     # Parse arguments, and import them into the global namespace
     parser = argparse.ArgumentParser()
@@ -291,24 +494,85 @@ if __name__ == "__main__":
         bundleContentsDir = bundleDir / "Contents"
         bundleMacOSDir = bundleContentsDir / "MacOS"
         bundleResourcesDir = bundleContentsDir / "Resources"
+        bundleFrameworksDir = bundleContentsDir / "Frameworks"
         infoFile = bundleContentsDir / "Info.plist"
 
         # Start fresh
-        delete(bundleDir)
+        delete(bundleDir, verbose=verbose)
 
         # Copy executable
         appExecutableBasename = "vgc" + appNameLower
-        bundleExecutable = "bin/" + appExecutableBasename
-        copy(buildDir / bundleExecutable, bundleMacOSDir / bundleExecutable)
+        executableRelPath = "bin/" + appExecutableBasename
+        bundleExecutableRelPath = executableRelPath
+        executable = buildDir / executableRelPath
+        bundleExecutable = bundleMacOSDir / bundleExecutableRelPath
+        copy(executable, bundleExecutable, verbose=verbose)
 
-        # Copy resources
-        copy(buildDir / "resources", bundleMacOSDir / "resources")
+        # Copy VGC shared libraries
+        vgcLibDir = buildDir / "lib"
+        bundleVgcLibDir = bundleFrameworksDir
+        vgcLibs = [ lib for lib in vgcLibDir.iterdir() ]
+        bundleVgcLibs = [ (bundleVgcLibDir / lib.name) for lib in vgcLibs ]
+        for lib, bundleLib in zip(vgcLibs, bundleVgcLibs):
+            copy(lib, bundleLib, verbose=verbose)
+
+        # Set executable rpath
+        change_rpath(bundleExecutable, vgcLibDir, "@executable_path/../../Frameworks", verbose=verbose)
+
+        # Find Python framework and determine new location
+        pythonFrameworkName = "Python.framework"
+        for lib in get_libs(bundleExecutable):
+            i = lib.find(pythonFrameworkName)
+            if i != -1:
+                pythonOldRef = lib                         # Example: /usr/local/opt/python/Frameworks/Python.framework/Versions/3.7/Python
+                pythonFrameworkOldParent = Path(lib[:i-1]) # Example: /usr/local/opt/python/Frameworks
+                pythonLibRelPath = Path(lib[i:])           # Example: Python.framework/Versions/3.7/Python
+                print("                Found library " + lib + "\n" +
+                      "                referenced in " + str(bundleExecutable) + "\n")
+                break
+
+        # Copy Python framework to our bundle
+        pythonFrameworkOldPath = pythonFrameworkOldParent / pythonFrameworkName
+        pythonFrameworkPath = bundleFrameworksDir / pythonFrameworkName
+        copy(pythonFrameworkOldPath, pythonFrameworkPath, verbose=verbose)
+
+        # Delete Python stuff we don't need.
+        # Sizes are given for the official 64bit-only installation of Python 3.7.4 from www.python.org.
+        # We don't keep __pycache__ folders for two reasons:
+        # 1. They contain non-relocatable file paths which I don't know how to change
+        # 2. The take a lot of space
+        # 3. They can be generated at runtime anyway (either preemptively at install time,
+        #    or automatically when importing a module at runtime)
+        pythonLibPath = bundleFrameworksDir / pythonLibRelPath
+        pythonLibParent = pythonLibPath.parent
+        pythonVersionInfo = sys.version_info
+        pythonLibDir = pythonLibParent / "lib"
+        pythonXdotY = "python{}.{}".format(pythonVersionInfo.major, pythonVersionInfo.minor)
+        pythonXdotYDir = pythonLibDir / pythonXdotY
+        delete(pythonFrameworkPath / "Python", verbose=verbose)    # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Python ? QtCore, QtGui, etc. do this)
+        delete(pythonFrameworkPath / "Resources", verbose=verbose) # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Resources ?)
+        delete(pythonFrameworkPath / "Headers", verbose=verbose)   # broken symlink: points to itself + we delete header files anyway
+        delete(pythonLibParent / "bin", verbose=verbose)           # 2to3, easy_install, idle, pip, pydoc, python, pyvenv (56 kB)
+        delete(pythonLibParent / "Headers", verbose=verbose)       # symlink to include/pythonX.Ym
+        delete(pythonLibParent / "include", verbose=verbose)       # *.h files (0.9 MB)
+        delete(pythonLibParent / "share", verbose=verbose)         # doc and examples (2.3 MB)
+        for x in (pythonLibParent / "Resources").glob('*.lproj'):  # documentation (46 MB)
+            delete(x, verbose=verbose)
+        delete(pythonXdotYDir / "test")                            # tests (23 MB) (+ 25 MB of __pycache__)
+        for x in pythonXdotYDir.glob("**/__pycache__"):            # Python bytecode (58.5 MB) (including tests)
+            delete(x, verbose=verbose)
+
+        # Copy VGC Python modules to the Python framework
+        copy(buildDir / "python/vgc", pythonXdotYDir / "vgc", verbose=verbose)
+
+        # Copy vgc resources
+        copy(buildDir / "resources", bundleMacOSDir / "resources", verbose=verbose)
 
         # Copy bundle icons
         appIcnsName = appExecutableBasename + ".icns"
         fileExtensionIcnsName = fileExtension + ".icns"
-        copy(srcDir / "apps" / appNameLower / appIcnsName, bundleResourcesDir / appIcnsName)
-        copy(srcDir / "apps" / appNameLower / fileExtensionIcnsName, bundleResourcesDir / fileExtensionIcnsName)
+        copy(srcDir / "apps" / appNameLower / appIcnsName, bundleResourcesDir / appIcnsName, verbose=verbose)
+        copy(srcDir / "apps" / appNameLower / fileExtensionIcnsName, bundleResourcesDir / fileExtensionIcnsName, verbose=verbose)
 
         # XXX Shouldn't we get rid of the bin folder?
         # XXX Shouldn't the resources be in <name>.app/Contents/Resources?
@@ -336,7 +600,7 @@ if __name__ == "__main__":
                     "LSHandlerRank": "Owner",
                 }
             ],
-            "CFBundleExecutable": bundleExecutable,
+            "CFBundleExecutable": bundleExecutableRelPath,
             "CFBundleIconFile": appIcnsName,
             "CFBundleIdentifier": appIdBase + appNameLower,
             "CFBundleInfoDictionaryVersion": "6.0",
@@ -364,43 +628,40 @@ if __name__ == "__main__":
         }
         write_plist(info, infoFile)
 
-        # Execute macdeployqt
-        #
-        # Note: for now, in my personal machine, there is the following error:
-        #
-        #   ERROR: no file at "/usr/local/opt/python/lib/Python.framework/Versions/3.7/Python"
-        #
-        # Indeed, Python is at:
-        #   /usr/local/Frameworks/Python.framework/Versions/3.7/Python,
-        # Or equivalently at (symlink):
-        #   /usr/local/opt/python/Frameworks/Python.framework/Versions/3.7
-        # not at the path above.
-        #
-        # This seems to be an issue with macdeployqt which doesn't corresctly identitfy
-        # the correct path for python.
-        #
-        # See the following for potential solutions or workarounds:
-        #   https://forum.qt.io/topic/76932/unable-to-shipping-with-python/12
-        #   https://stackoverflow.com/questions/2809930/macdeployqt-and-third-party-libraries
-        #   https://stackoverflow.com/questions/35612687/cmake-macos-x-bundle-with-bundleutiliies-for-qt-application
-        #   https://github.com/bvschaik/julius/issues/100
-        #   https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/platform_dependent_issues/Bundles-And-Frameworks
-        #   https://github.com/Homebrew/homebrew-core/issues/3219
+        # Execute macdeployqt.
+        # We need to do this after the Info.plist file is generated, so that it can find the executable.
+        # We need to do this before updating python paths, otherwise macdeployqt will mess them up again.
         #
         subprocess.run([
             str(qtDir / "bin" / "macdeployqt"),
-            str(bundleDir),
-            "-always-overwrite"])
+            str(bundleDir), "-always-overwrite", "-verbose=1"])
+        print("Note: the errors above about Python are expected, it's macdeployqt not being smart enough. We fix them manually below.")
 
-        # Add correct rpath to the executable.
-        # By default, macdeployqt adds @executable_path/../Frameworks, but it is incorrect since
-        # our executable is nested one folder deeper. You can run "otool -l <executable>" and look
-        # for "LC_RPATH" in order to find all the paths added to the rpath.
-        #
-        subprocess.run([
-            "install_name_tool", "-add_rpath",
-            "@executable_path/../../Frameworks",
-            str(bundleMacOSDir / bundleExecutable)])
+        # Update python path in all binaries
+        pythonOldRefPrefix = str(pythonFrameworkOldParent)
+        pythonNewRefPrefix = "@rpath"
+        pythonInterpreter = pythonLibParent / "Resources/Python.app/Contents/MacOS/Python"
+        binaries = (
+            [bundleExecutable] +
+            bundleVgcLibs +
+            [pythonLibParent / "Python"] +
+            [pythonInterpreter] +
+            [x for x in pythonLibDir.glob("**/*.dylib")] +
+            [x for x in pythonLibDir.glob("**/*.so")] +
+            [x for x in pythonLibDir.glob("**/*.a")])
+        for x in binaries:
+            if not x.is_symlink():
+                for lib in get_libs(x):
+                    if lib.startswith(pythonOldRefPrefix):
+                        newRef = pythonNewRefPrefix + lib[len(pythonOldRefPrefix):]
+                        change_lib(x, lib, newRef, verbose=verbose)
+                lib_id = get_lib_id(x)
+                if lib_id.startswith(pythonOldRefPrefix):
+                    new_id = pythonNewRefPrefix + lib_id[len(pythonOldRefPrefix):]
+                    set_lib_id(x, new_id, verbose=verbose)
+
+        # Add rpath to Python embedded interpreter app
+        add_rpath(pythonInterpreter, "@executable_path/../../../../../../../../Frameworks", verbose=verbose)
 
         # Generate the DMG file.
         #
