@@ -4,7 +4,6 @@ matrix:
     - name: "Ubuntu 16.04"
       os: linux
       dist: xenial
-      python: 3.7
       before_install:
       - sudo add-apt-repository -y ppa:beineri/opt-qt-5.12.3-xenial
       - sudo apt-get -y update
@@ -12,6 +11,7 @@ matrix:
       - sudo apt-get install -y libgl1-mesa-dev
       - sudo apt-get install -y qt512base
       - source /opt/qt512/bin/qt512-env.sh
+      - pyenv global 3.7
 
 script:
   - mkdir build
