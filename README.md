@@ -90,16 +90,14 @@ software architecture is expected to be more stable.
 
 - C++11
 - CMake 3.1.0+
-- Qt 5.6+
+- Qt 5.12+
 - Python 3.5+
 
-It is recommended to use Qt 5.6 instead of newer version due to PySide2
-not properly supporting Qt 5.7+ at the moment. Currently, C++14 support is
-not required, but it is likely to be required in the near future.
+Currently, C++14 support is not required, but it will be required in the
+near future.
 
-VGC loosely follows the [VFX Reference Platform](http://www.vfxplatform.com/)
-recommendations for library versions, but since VGC apps are only to be
-released in 2020, we already jumped ahead to Python 3.x.
+VGC follows the [VFX Reference Platform](http://www.vfxplatform.com/)
+recommendations for library versions.
 
 VGC also depends on the following third-party libraries, but these are shipped
 and installed alongside this repository (="vendored") so you don't need to have
@@ -107,9 +105,13 @@ them already installed your system:
 - pybind11
 - Eigen
 
-# Build Instructions
+# Linux Build Instructions
 
-Tested platform: Ubuntu 16.04 LTS
+(Instructions for macOS and Windows coming soon)
+
+Tested on:
+- Ubuntu 16.04 LTS
+- Ubuntu 18.04 LTS
 
 Install Git, CMake, GCC, and Python:
 
@@ -128,26 +130,12 @@ OpenGL dependency:
 ~$ sudo apt-get install libgl1-mesa-dev
 ```
 
-Install Qt if you don't have it yet:
-
-1. Download [Qt 5.6.3](http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-linux-x64-5.6.3.run).
-
-2. Execute the binary and follow the instructions to install Qt at the desired
-   location (e.g., ~/Qt5.6.3). You only need to install the components
-   "Desktop gcc 64-bit", "Qt Source Package", and "Tools", but these are the
-   largest components anyway (2.02GiB), so I suggest just installing
-   everything (2.31GiB).
-
-3. Tell cmake where to find Qt5. You can either do it once and for all by adding the path to CMAKE_PREFIX_PATH:
-   ```
-   echo 'export CMAKE_PREFIX_PATH="$HOME/Qt5.6.3/5.6.3/gcc_64/lib/cmake/Qt5:$CMAKE_PREFIX_PATH"' >> ~/.bashrc
-   source ~/.bashrc
-   ```
-   Or you can pass the argument `-DQt5_DIR=~/Qt5.6.3/5.6.3/gcc_64/lib/cmake/Qt5`
-   when you run cmake for the first time in a given directory.
+Download and install the latest version of Qt 5.12 from https://www.qt.io/download.
+Make sure to select the open source edition, and to install the "Desktop gcc 64-bit"
+and "Tools" components. For the rest of these instructions, we'll assume that you've
+installed Qt to `~/Qt/5.12.5`.
 
 Get VGC:
-
 ```
 git clone https://github.com/vgc/vgc.git
 ```
@@ -156,7 +144,7 @@ Build VGC:
 ```
 mkdir build-vgc
 cd build-vgc
-cmake ../vgc          # Optional: -DQt5_DIR=~/Qt5.6.3/5.6.3/gcc_64/lib/cmake/Qt5
+cmake ../vgc -DQt="~/Qt/5.12.5/gcc_64"
 make
 ```
 
