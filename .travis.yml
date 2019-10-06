@@ -12,8 +12,9 @@ matrix:
       - sudo apt-get install -y qt512base
       - source /opt/qt512/bin/qt512-env.sh
       - pyenv global 3.7
-      - which python
-      - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(which python)"
+      - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.7"
+      - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.7m.so"
+      - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.7m"
 
 script:
   - mkdir build
