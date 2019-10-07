@@ -21,9 +21,10 @@ matrix:
       addons:
         homebrew:
           packages:
-          - qt
-      before_install:
-        - export CXX=clang++ CC=clang;
+            - qt
+      before_script:
+        - export CXX=clang++ CC=clang
+        - CMAKE_EXTRA_ARGS+=" -DQt=/usr/local/opt/qt"
 
 script:
   - mkdir build
