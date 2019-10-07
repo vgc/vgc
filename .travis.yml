@@ -15,6 +15,9 @@ matrix:
       - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.7"
       - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.7m.so"
       - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.7m"
+    - name: "macOS 10.14.4"
+      os: osx
+      osx_image: xcode10.3
 
 script:
   - mkdir build
