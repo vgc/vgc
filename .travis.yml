@@ -5,16 +5,27 @@ matrix:
       os: linux
       dist: xenial
       before_install:
-      - sudo add-apt-repository -y ppa:beineri/opt-qt-5.12.3-xenial
-      - sudo apt-get -y update
+        - sudo add-apt-repository -y ppa:beineri/opt-qt-5.12.3-xenial
+        - sudo apt-get -y update
       install:
-      - sudo apt-get install -y libgl1-mesa-dev
-      - sudo apt-get install -y qt512base
-      - source /opt/qt512/bin/qt512-env.sh
-      - pyenv global 3.7
-      - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.7"
-      - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.7m.so"
-      - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.7m"
+        - sudo apt-get install -y libgl1-mesa-dev
+        - sudo apt-get install -y qt512base
+      before_script:
+        - source /opt/qt512/bin/qt512-env.sh
+        - pyenv global 3.7
+        - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.7"
+        - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.7m.so"
+        - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.7m"
+    - name: "macOS 10.14.4"
+      os: osx
+      osx_image: xcode10.3
+      addons:
+        homebrew:
+          packages:
+            - qt
+      before_script:
+        - export CXX=clang++ CC=clang
+        - CMAKE_EXTRA_ARGS+=" -DQt=/usr/local/opt/qt"
 
 script:
   - mkdir build
