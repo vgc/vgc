@@ -455,13 +455,13 @@ elseif(APPLE)
     )
 else()
     add_custom_target(deploy
-        COMMAND
-            ${CMAKE_CURRENT_LIST_DIR}/tools/linux/deploy.sh
-            ${CMAKE_BINARY_DIR}
-            ${CMAKE_CURRENT_LIST_DIR}
-            ${QT_QMAKE_EXECUTABLE}
-        WORKING_DIRECTORY
-            ${CMAKE_BINARY_DIR}
         VERBATIM
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${PYTHON_EXECUTABLE}
+            "${CMAKE_CURRENT_SOURCE_DIR}/tools/linux/deploy.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_BINARY_DIR}"
+            "$<CONFIG>"
+            "${Qt}"
     )
 endif()
