@@ -28,8 +28,18 @@ matrix:
         - CMAKE_EXTRA_ARGS+=" -DQt=/usr/local/opt/qt"
 
 script:
+  - echo $TRAVIS_PULL_REQUEST
+  - echo $TRAVIS_PULL_REQUEST_BRANCH
+  - echo $TRAVIS_PULL_REQUEST_SHA
+  - echo $TRAVIS_PULL_REQUEST_SLUG
+  - echo $TRAVIS_REPO_SLUG
+  - echo $TRAVIS_BRANCH
+  - echo $TRAVIS_COMMIT
+  - echo $TRAVIS_COMMIT_MESSAGE
+  - if [ $TRAVIS_PULL_REQUEST == false ]; then export VGC_COMMIT_BRANCH=$TRAVIS_BRANCH; else VGC_COMMIT_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; fi
+  - echo $VGC_COMMIT_BRANCH
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release ${CMAKE_EXTRA_ARGS}
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DVGC_COMMIT_BRANCH=$VGC_COMMIT_BRANCH ${CMAKE_EXTRA_ARGS}
   - make
   - make test
