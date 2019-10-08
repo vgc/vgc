@@ -632,10 +632,12 @@ if __name__ == "__main__":
         # We need to do this after the Info.plist file is generated, so that it can find the executable.
         # We need to do this before updating python paths, otherwise macdeployqt will mess them up again.
         #
+        print("Executing macdeployqt...")
+        print("(note: an error about Python is expected, it's macdeployqt not being smart enough. We fix it afterwards.)")
         subprocess.run([
             str(qtDir / "bin" / "macdeployqt"),
             str(bundleDir), "-always-overwrite", "-verbose=1"])
-        print("Note: the errors above about Python are expected, it's macdeployqt not being smart enough. We fix them manually below.")
+        print("Done.")
 
         # Update python path in all binaries
         pythonOldRefPrefix = str(pythonFrameworkOldParent)
@@ -733,4 +735,6 @@ if __name__ == "__main__":
                 'comments': 'ascending',
                 }
         }
+        print("Creating image " + dmgFilename + "...")
         dmgbuild.build_dmg(dmgFilename, dmgVolumeName, settings=dmgSettings)
+        print("Done.")
