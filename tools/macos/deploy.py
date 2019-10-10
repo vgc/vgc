@@ -35,11 +35,17 @@
 
 from pathlib import Path
 import argparse
+import io
+import json
+import mimetypes
 import os
 import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
+import urllib.request
+import uuid
 
 # We use dmgbuild (and its dependencies ds_store, mac_alias, and biplist) to
 # generate our DMG files. These are non-standard packages all shipped alongside
@@ -406,6 +412,84 @@ def set_lib_id(filename, id, *, verbose=False):
               "                           to " + str(id) + "\n")
     subprocess.run(["install_name_tool", "-id", str(id), str(filename)])
 
+# Makes a POST request to the given URL with the given data.
+# The given data should be a Python dictionary, which this function
+# automatically encodes as JSON. Finally, the JSON response is decoded
+# and returned as a python dictionary.
+#
+def post_json(url, data):
+    databytes = json.dumps(data).encode('utf-8')
+    request = urllib.request.Request(url)
+    request.method = 'POST'
+    request.add_header('Content-Type', 'application/json; charset=utf-8')
+    response = urllib.request.urlopen(request, databytes)
+    encoding = response.info().get_param('charset') or 'utf-8'
+    return json.loads(response.read().decode(encoding))
+
+# Makes a multipart POST request to the given URL with the given
+# fields and files. The JSON response is decoded
+# and returned as a python dictionary.
+#
+# fields should be a dictionary of the form:
+# {
+#     "name1": "value1",
+#     "name2": "value2"
+# }
+#
+# and files should be a dictionary of the form:
+# {
+#     "name3": filepath3,
+#     "name4": filepath4
+# }
+#
+# where filepaths are of type pathlib.Path.
+#
+def post_multipart(url, fields, files):
+    boundary = uuid.uuid4().hex
+    bBoundary = boundary.encode('utf-8')
+    data = io.BytesIO()
+    for name, value in fields.items():
+        bName = name.encode('utf-8')
+        bValue = value.encode('utf-8')
+        data.write(b'--' + bBoundary + b'\r\n')
+        data.write(b'Content-Disposition: form-data; name="' + bName + b'"\r\n')
+        data.write(b'\r\n')
+        data.write(bValue)
+        data.write(b'\r\n')
+    for name, filepath in files.items():
+        filename = filepath.name
+        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        bName = name.encode('utf-8')
+        bFilename = filename.encode('utf-8')
+        bMimetype = mimetype.encode('utf-8')
+        data.write(b'--' + bBoundary + b'\r\n')
+        data.write(b'Content-Disposition: form-data; name="' + bName + b'"; filename="' + bFilename + b'"\r\n')
+        data.write(b'Content-Type: ' + bMimetype + b'\r\n')
+        data.write(b'\r\n')
+        data.write(filepath.read_bytes())
+        data.write(b'\r\n')
+    data.write(b'--' + bBoundary + b'--\r\n')
+    databytes = data.getvalue()
+    request = urllib.request.Request(url)
+    request.method = 'POST'
+    request.add_header('Content-Type', 'multipart/form-data; boundary=' + boundary)
+    request.add_header('Content-Length', len(databytes))
+    response = urllib.request.urlopen(request, databytes)
+    encoding = response.info().get_param('charset') or 'utf-8'
+    return json.loads(response.read().decode(encoding))
+
+# Contructs a URL by concatenating the given base url with
+# the given query parameters.
+#
+# Example:
+# urlencode("http://www.example.com", {"key": "hello", "password": "world"})
+#
+# Output:
+# "http://www.example.com?key=hello&password=world"
+#
+def urlencode(url, data):
+    return url + "?" + urllib.parse.urlencode(data)
+
 # Script entry point.
 #
 if __name__ == "__main__":
@@ -438,8 +522,11 @@ if __name__ == "__main__":
     versionMajor = getIniValue(version, "versionMajor")
     versionMinor = getIniValue(version, "versionMinor")
     versionName = getIniValue(version, "versionName")
+    commitRepository = getIniValue(version, "commitRepository")
     commitBranch = getIniValue(version, "commitBranch")
+    commitHash = getIniValue(version, "commitHash")
     commitDate = getIniValue(version, "commitDate")
+    commitTime = getIniValue(version, "commitTime")
     commitIndex = getIniValue(version, "commitIndex")
     architecture = getIniValue(version, "buildArchitecture")
 
@@ -478,7 +565,8 @@ if __name__ == "__main__":
     # List of all apps of the suite to install
     appNames = [ "Illustration" ]
 
-    # Create Desktop and Start Menu shortcuts
+    # Create macOS app bundles and dmg images
+    dmgFiles = []
     for appName in appNames:
 
         # Various names and version strings
@@ -667,7 +755,8 @@ if __name__ == "__main__":
 
         # Generate the DMG file.
         #
-        dmgFilename = str(deployDir / (bundleDirBasename + ".dmg"))
+        dmgFile = deployDir / (bundleDirBasename + ".dmg")
+        dmgFilename = str(dmgFile)
         dmgVolumeName = bundleDirBasename
         dmgSettings = {
             'filename': dmgFilename,
@@ -738,3 +827,39 @@ if __name__ == "__main__":
         print("Creating image " + dmgFilename + "...")
         dmgbuild.build_dmg(dmgFilename, dmgVolumeName, settings=dmgSettings)
         print("Done.")
+        dmgFiles.append(dmgFile)
+
+    # Upload artifacts if this is an "official" Travis build. Indeed, the
+    # environment variable VGC_TRAVIS_KEY isn't defined for pull requests.
+    travisKey = os.getenv("VGC_TRAVIS_KEY")
+    if travisKey is not None and travisKey != "":
+        url = "https://webhooks.vgc.io/travis"
+        print("Uploading commit metadata...", end="")
+        response = post_json(
+            urlencode(url, {
+                "key": travisKey
+            }), {
+            'versionType': versionType,
+            'versionMajor': versionMajor,
+            'versionMinor': versionMinor,
+            'versionName': versionName,
+            'commitRepository': commitRepository,
+            'commitBranch': commitBranch,
+            'commitHash': commitHash,
+            'commitDate': commitDate,
+            'commitTime': commitTime,
+            'commitIndex': commitIndex,
+            'commitMessage': os.getenv("TRAVIS_COMMIT_MESSAGE")
+        })
+        print(" Done.")
+        releaseId = response['releaseId']
+        for dmgFile in dmgFiles:
+            print("Uploading " + str(dmgFile) + "...", end="")
+            response = post_multipart(
+                urlencode(url, {
+                    "key": travisKey,
+                    "releaseId": releaseId
+                }), {}, {
+                'file': dmgFile
+            })
+            print(" Done.")
