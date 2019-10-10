@@ -75,15 +75,15 @@ def getIniValue(ini, key):
 def delete(path, *, verbose=False):
     if path.is_symlink():
         if verbose:
-            print("             Deleting symlink " + str(path) + "\n")
+            print("             Deleting symlink " + str(path) + "\n", flush=True)
         path.unlink()
     elif path.is_file():
         if verbose:
-            print("        Deleting regular file " + str(path) + "\n")
+            print("        Deleting regular file " + str(path) + "\n", flush=True)
         path.unlink()
     elif path.is_dir():
         if verbose:
-            print("Recusively deleting directory " + str(path) + "\n")
+            print("Recusively deleting directory " + str(path) + "\n", flush=True)
         shutil.rmtree(str(path))
     elif path.exists():
         raise OSError("Cannot delete file " + str(path) + ": unsupported file type (e.g.: socket, mount point, FIFO, block device, char device)")
@@ -102,7 +102,7 @@ def make_dir(path, *, force=False, verbose=False):
             else:
                 raise FileExistsError("Cannot create directory " + str(path) + ": another file type already exists at the given path. Use force=True if you want to overwrite.")
         if verbose:
-            print("           Creating directory " + str(path) + "\n")
+            print("           Creating directory " + str(path) + "\n", flush=True)
         path.mkdir(parents=True)
 
 # Return an integer representing whether the given path:
@@ -175,7 +175,7 @@ def copy(src, dst, *,
     if srcType == 2:
         if verbose and not recursiveVerbose:
             print("          Recursively copying " + str(src) + "\n" +
-                  "                           to " + str(dst) + "\n")
+                  "                           to " + str(dst) + "\n", flush=True)
         newVerbose = verbose and recursiveVerbose
         make_dir(dst, verbose=newVerbose)
         for item in os.listdir(src):
@@ -194,7 +194,7 @@ def copy(src, dst, *,
         make_dir(dst.parent, verbose=verbose)
         if verbose:
             print("                      Copying " + str(src) + "\n" +
-                  "                           to " + str(dst)) # no final new line (see below)
+                  "                           to " + str(dst), flush=True) # no final new line (see below)
         shutil.copy2(str(src), str(dst), follow_symlinks=False)
         oldPermissions = os.stat(dst, follow_symlinks=False).st_mode & 0o777
         newPermissions = oldPermissions
@@ -204,10 +204,10 @@ def copy(src, dst, *,
             if verbose:
                 print("                              " +
                       "(changed permissions from " + oct(oldPermissions)[2:] +
-                      " to " + oct(newPermissions)[2:] + ")") # no final new line (see below)
+                      " to " + oct(newPermissions)[2:] + ")", flush=True) # no final new line (see below)
             os.chmod(dst, newPermissions, follow_symlinks=False)
         if verbose:
-            print("") # final newline
+            print("", flush=True) # final newline
 
 # Writes the given text in the given file.
 # Missing parent directories are automatically created.
@@ -349,7 +349,7 @@ def change_rpath(filename, old, new, *, verbose=False):
     if verbose:
         print("            Changing rpath in " + str(filename) + "\n" +
               "                         from " + str(old) + "\n" +
-              "                           to " + str(new) + "\n")
+              "                           to " + str(new) + "\n", flush=True)
     subprocess.run(["install_name_tool", "-rpath", str(old), str(new), str(filename)])
 
 # Adds the given rpath.
@@ -358,7 +358,7 @@ def add_rpath(filename, new, *, verbose=False):
     if str(new) not in get_rpaths(filename):
         if verbose:
             print("                 Adding rpath " + str(new) + "\n" +
-                  "                           in " + str(filename) + "\n")
+                  "                           in " + str(filename) + "\n", flush=True)
         subprocess.run(["install_name_tool", "-add_rpath", str(new), str(filename)])
 
 # Changes the given rpath to another.
@@ -367,7 +367,7 @@ def delete_rpath(filename, old, *, verbose=False):
     if str(old) in get_rpaths(filename):
         if verbose:
             print("               Deleting rpath " + str(old) + "\n" +
-                  "                           in " + str(filename) + "\n")
+                  "                           in " + str(filename) + "\n", flush=True)
         subprocess.run(["install_name_tool", "-delete_rpath", str(old), str(filename)])
 
 # Get the shared libraries referenced by a given binary file.
@@ -386,7 +386,7 @@ def change_lib(filename, old, new, *, verbose=False):
     if verbose:
         print("     Changing library path in " + str(filename) + "\n" +
               "                         from " + str(old) + "\n" +
-              "                           to " + str(new) + "\n")
+              "                           to " + str(new) + "\n", flush=True)
     subprocess.run(["install_name_tool", "-change", str(old), str(new), str(filename)])
 
 # Get the ID of this shared library.
@@ -398,7 +398,7 @@ def get_lib_id(filename):
     for lc in info.load_commands:
         if lc.cmd == "LC_ID_DYLIB":
             if len(res) > 0:
-                print("Warning: file " + str(filename) + " has more than one LC_ID_DYLIB load command. All IDs after the first are ignored.")
+                print("Warning: file " + str(filename) + " has more than one LC_ID_DYLIB load command. All IDs after the first are ignored.", flush=True)
                 break
             else:
                 res = lc.name
@@ -409,7 +409,7 @@ def get_lib_id(filename):
 def set_lib_id(filename, id, *, verbose=False):
     if verbose:
         print("        Setting library ID of " + str(filename) + "\n" +
-              "                           to " + str(id) + "\n")
+              "                           to " + str(id) + "\n", flush=True)
     subprocess.run(["install_name_tool", "-id", str(id), str(filename)])
 
 # Makes a POST request to the given URL with the given data.
@@ -616,7 +616,7 @@ if __name__ == "__main__":
                 pythonFrameworkOldParent = Path(lib[:i-1]) # Example: /usr/local/opt/python/Frameworks
                 pythonLibRelPath = Path(lib[i:])           # Example: Python.framework/Versions/3.7/Python
                 print("                Found library " + lib + "\n" +
-                      "                referenced in " + str(bundleExecutable) + "\n")
+                      "                referenced in " + str(bundleExecutable) + "\n", flush=True)
                 break
 
         # Copy Python framework to our bundle
@@ -720,12 +720,12 @@ if __name__ == "__main__":
         # We need to do this after the Info.plist file is generated, so that it can find the executable.
         # We need to do this before updating python paths, otherwise macdeployqt will mess them up again.
         #
-        print("Executing macdeployqt...")
-        print("(note: an error about Python is expected, it's macdeployqt not being smart enough. We fix it afterwards.)")
+        print("Executing macdeployqt...", flush=True)
+        print("(note: an error about Python is expected, it's macdeployqt not being smart enough. We fix it afterwards.)", flush=True)
         subprocess.run([
             str(qtDir / "bin" / "macdeployqt"),
             str(bundleDir), "-always-overwrite", "-verbose=1"])
-        print("Done.")
+        print("Done.", flush=True)
 
         # Update python path in all binaries
         pythonOldRefPrefix = str(pythonFrameworkOldParent)
@@ -824,9 +824,9 @@ if __name__ == "__main__":
                 'comments': 'ascending',
                 }
         }
-        print("Creating image " + dmgFilename + "...")
+        print("Creating image " + dmgFilename + "...", flush=True)
         dmgbuild.build_dmg(dmgFilename, dmgVolumeName, settings=dmgSettings)
-        print("Done.")
+        print("Done.", flush=True)
         dmgFiles.append(dmgFile)
 
     # Upload artifacts if this is an "official" Travis build. Indeed, the
@@ -834,7 +834,7 @@ if __name__ == "__main__":
     travisKey = os.getenv("VGC_TRAVIS_KEY")
     if travisKey is not None and travisKey != "":
         url = "https://webhooks.vgc.io/travis"
-        print("Uploading commit metadata...", end="")
+        print("Uploading commit metadata...", end="", flush=True)
         response = post_json(
             urlencode(url, {
                 "key": travisKey
@@ -851,10 +851,10 @@ if __name__ == "__main__":
             'commitIndex': commitIndex,
             'commitMessage': os.getenv("TRAVIS_COMMIT_MESSAGE")
         })
-        print(" Done.")
+        print(" Done.", flush=True)
         releaseId = response['releaseId']
         for dmgFile in dmgFiles:
-            print("Uploading " + str(dmgFile) + "...", end="")
+            print("Uploading " + str(dmgFile) + "...", end="", flush=True)
             response = post_multipart(
                 urlencode(url, {
                     "key": travisKey,
@@ -862,4 +862,4 @@ if __name__ == "__main__":
                 }), {}, {
                 'file': dmgFile
             })
-            print(" Done.")
+            print(" Done.", flush=True)
