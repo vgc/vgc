@@ -412,6 +412,130 @@ def set_lib_id(filename, id, *, verbose=False):
               "                           to " + str(id) + "\n", flush=True)
     subprocess.run(["install_name_tool", "-id", str(id), str(filename)])
 
+# Computes new path for the given lib.
+#
+def compute_lib_replacement(lib):
+    newlib = lib
+    if not lib.startswith("/System"):
+        i = lib.find(".framework")
+        if i == -1:
+            i = lib.find("libvgc")
+        if i != -1:
+            while lib[i] != "/":
+                i -= 1
+            newlib = "@rpath" + lib[i:]
+    if newlib != lib:
+        n = len(lib)
+        padding = ""
+        if n < 50:
+            padding = (50 - n) * " "
+        print("  " + lib + padding + " -> " + newlib, flush=True)
+    return newlib
+
+# Returns all the binaries in the app bundle
+#
+def get_binaries(bundle):
+
+    # Find all libraries
+    tmp = []
+    tmp.extend(bundle.glob("**/*.dylib"))
+    tmp.extend(bundle.glob("**/*.so"))
+    tmp.extend(bundle.glob("**/*.a"))
+    for framework in bundle.glob("**/*.framework"):
+        name = framework.stem
+        tmp.extend(framework.glob("**/" + name))
+        # Note: the above also finds "*/Python.framework/*/Python.app/*/Python"
+
+    # Find all executables
+    tmp.extend((bundle / "Contents/MacOS/bin").glob("vgc*"))
+    for app in bundle.glob("**/*.app"):
+        name = app.stem
+        tmp.extend(app.glob("**/" + name))
+
+    # Remove duplicates and sort
+    res = set()
+    for path in tmp:
+        if not path.is_symlink() and not path.is_dir():
+            res.add(path)
+    return sorted(res)
+
+# Returns all the executables in the app bundle
+#
+def get_executables(bundle):
+
+    # Find all executables
+    tmp = []
+    tmp.extend((bundle / "Contents/MacOS/bin").glob("vgc*"))
+    for app in bundle.glob("**/*.app"):
+        name = app.stem
+        tmp.extend(app.glob("**/" + name))
+    res = []
+
+    # Remove duplicates and sort
+    res = set()
+    for path in tmp:
+        if not path.is_symlink() and not path.is_dir():
+            res.add(path)
+    return sorted(res)
+
+# Prints the lib ID, rpaths, and lib paths of the given binary.
+#
+def print_binary_info(filename):
+    print(str(filename) + ":", flush=True)
+    print("  LC_ID_DYLIB:", flush=True)
+    print("    " + get_lib_id(filename), flush=True)
+    print("  LC_LOAD_DYLIB:", flush=True)
+    for libs in get_libs(filename):
+        print("    " + libs, flush=True)
+    print("  LC_RPATH:", flush=True)
+    for rpaths in get_rpaths(filename):
+        print("    " + rpaths, flush=True)
+    print("", flush=True)
+
+# Prints the lib IDs, rpaths, and lib paths of all the binaries in the given
+# app bundle.
+#
+def print_binaries_info(bundle):
+    for path in get_binaries(bundle):
+        print_lib_info(path)
+
+# Prints a summary of the lib IDs, rpaths, and lib paths of all the binaries
+# in the given app bundle.
+#
+def print_binaries_summary(bundle):
+
+    binaries = get_binaries(bundle)
+
+    # Print libraries
+    print("Dynamically linked libraries:", flush=True)
+    libs = set()
+    for path in binaries:
+        for lib in get_libs(path):
+            libs.add(lib)
+    for lib in sorted(libs):
+        print("  " + lib, flush=True)
+
+    # Print IDs
+    print("Library IDs:", flush=True)
+    for path in binaries:
+        id = get_lib_id(path)
+        if id != "":
+            n = len(id)
+            padding = ""
+            if n < 30:
+                padding = (30 - n) * " "
+            print("  " + id + padding + " (for " + str(path.relative_to(bundle)) + ")", flush=True)
+
+    # Print rpaths
+    print("Per-binary library relative paths (=rpaths):", flush=True)
+    for path in binaries:
+        for rpath in get_rpaths(path):
+            n = len(rpath)
+            padding = ""
+            if n < 30:
+                padding = (30 - n) * " "
+            print("  " + rpath + padding + " (for " + str(path.relative_to(bundle)) + ")", flush=True)
+
 # Makes a POST request to the given URL with the given data.
 # The given data should be a Python dictionary, which this function
 # automatically encodes as JSON. Finally, the JSON response is decoded
@@ -604,9 +728,6 @@ if __name__ == "__main__":
         for lib, bundleLib in zip(vgcLibs, bundleVgcLibs):
             copy(lib, bundleLib, verbose=verbose)
 
-        # Set executable rpath
-        change_rpath(bundleExecutable, vgcLibDir, "@executable_path/../../Frameworks", verbose=verbose)
-
         # Find Python framework and determine new location
         pythonFrameworkName = "Python.framework"
         for lib in get_libs(bundleExecutable):
@@ -727,31 +848,41 @@ if __name__ == "__main__":
             str(bundleDir), "-always-overwrite", "-verbose=1"])
         print("Done.", flush=True)
 
-        # Update python path in all binaries
-        pythonOldRefPrefix = str(pythonFrameworkOldParent)
-        pythonNewRefPrefix = "@rpath"
-        pythonInterpreter = pythonLibParent / "Resources/Python.app/Contents/MacOS/Python"
-        binaries = (
-            [bundleExecutable] +
-            bundleVgcLibs +
-            [pythonLibParent / "Python"] +
-            [pythonInterpreter] +
-            [x for x in pythonLibDir.glob("**/*.dylib")] +
-            [x for x in pythonLibDir.glob("**/*.so")] +
-            [x for x in pythonLibDir.glob("**/*.a")])
+        # Update rpaths, lib paths, and id of all binaries
+        print("Fixing library paths...", flush=True)
+        binaries = get_binaries(bundleDir)
+        executables = get_executables(bundleDir)
+        replacements = {}
         for x in binaries:
-            if not x.is_symlink():
-                for lib in get_libs(x):
-                    if lib.startswith(pythonOldRefPrefix):
-                        newRef = pythonNewRefPrefix + lib[len(pythonOldRefPrefix):]
-                        change_lib(x, lib, newRef, verbose=verbose)
-                lib_id = get_lib_id(x)
-                if lib_id.startswith(pythonOldRefPrefix):
-                    new_id = pythonNewRefPrefix + lib_id[len(pythonOldRefPrefix):]
-                    set_lib_id(x, new_id, verbose=verbose)
-
-        # Add rpath to Python embedded interpreter app
-        add_rpath(pythonInterpreter, "@executable_path/../../../../../../../../Frameworks", verbose=verbose)
+            # Delete rpaths
+            for rpath in get_rpaths(x):
+                delete_rpath(x, rpath)
+            # Update lib paths
+            for lib in get_libs(x):
+                if lib not in replacements:
+                    newlib = compute_lib_replacement(lib)
+                    replacements[lib] = newlib
+                newlib = replacements[lib]
+                if newlib != lib:
+                    change_lib(x, lib, newlib)
+        # Add rpaths
+        for x in executables:
+            y = x.relative_to(bundleContentsDir)
+            n = str(y).count("/")
+            rpath = "@executable/" + (n * "../") + "Frameworks"
+            add_rpath(x, rpath)
+        # Update lib IDs
+        for x in binaries:
+            id = get_lib_id(x)
+            if id != "":
+                if id not in replacements:
+                    newid = compute_lib_replacement(id)
+                    replacements[id] = newid
+                newid = replacements[id]
+                if newid != id:
+                    set_lib_id(x, newid)
+        print("Done.", flush=True)
+        print_binaries_summary(bundleDir)
 
         # Generate the DMG file.
         #
