@@ -506,6 +506,18 @@ def print_binaries_summary(bundle):
 
     binaries = get_binaries(bundle)
 
+    # Print binaries
+    print("Shipped binaries:", flush=True)
+    for path in binaries:
+        print("  " + str(path.relative_to(bundle)), flush=True)
+        id = get_lib_id(path)
+        if id != "":
+            print('\033[90m' + "          ID = " + id + '\033[0m', flush=True)
+        rpathPrefix = "      RPATHS = "
+        for rpath in get_rpaths(path):
+            print('\033[90m' + rpathPrefix + rpath + '\033[0m', flush=True)
+            rpathPrefix = "               "
+
     # Print libraries
     print("Dynamically linked libraries:", flush=True)
     libs = set()
@@ -514,27 +526,6 @@ def print_binaries_summary(bundle):
             libs.add(lib)
     for lib in sorted(libs):
         print("  " + lib, flush=True)
-
-    # Print IDs
-    print("Library IDs:", flush=True)
-    for path in binaries:
-        id = get_lib_id(path)
-        if id != "":
-            n = len(id)
-            padding = ""
-            if n < 30:
-                padding = (30 - n) * " "
-            print("  " + id + padding + " (for " + str(path.relative_to(bundle)) + ")", flush=True)
-
-    # Print rpaths
-    print("Per-binary library relative paths (=rpaths):", flush=True)
-    for path in binaries:
-        for rpath in get_rpaths(path):
-            n = len(rpath)
-            padding = ""
-            if n < 30:
-                padding = (30 - n) * " "
-            print("  " + rpath + padding + " (for " + str(path.relative_to(bundle)) + ")", flush=True)
 
 # Makes a POST request to the given URL with the given data.
 # The given data should be a Python dictionary, which this function
@@ -869,7 +860,7 @@ if __name__ == "__main__":
         for x in executables:
             y = x.relative_to(bundleContentsDir)
             n = str(y).count("/")
-            rpath = "@executable/" + (n * "../") + "Frameworks"
+            rpath = "@executable_path/" + (n * "../") + "Frameworks"
             add_rpath(x, rpath)
         # Update lib IDs
         for x in binaries:
