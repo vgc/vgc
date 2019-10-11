@@ -839,6 +839,15 @@ if __name__ == "__main__":
             str(bundleDir), "-always-overwrite", "-verbose=1"])
         print("Done.", flush=True)
 
+        # Create qt.conf file alongside executable.
+        # See https://github.com/vgc/vgc/issues/218
+        #
+        qtconf = bundleExecutable.parent / "qt.conf"
+        bundleExecutableDepth = str(bundleExecutable.relative_to(bundleContentsDir)).count("/")
+        qtconf.write_text(
+            "[Paths]\n" +
+            "Plugins = " + "../" * bundleExecutableDepth + "PlugIns\n")
+
         # Update rpaths, lib paths, and id of all binaries
         print("Fixing library paths...", flush=True)
         binaries = get_binaries(bundleDir)
