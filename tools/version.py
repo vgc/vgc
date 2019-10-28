@@ -328,3 +328,6 @@ if __name__ == "__main__":
     versionDir.mkdir(parents=True, exist_ok=True)
     versionPath = versionDir / "version.txt"
     versionPath.write_text(res)
+
+    # Print version info to console
+    print(res, flush=True)

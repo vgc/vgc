@@ -106,7 +106,8 @@ set(VGC_SUITE "VGC" CACHE STRING "Customize this if you distribute modified vers
 set(VGC_COMMIT_REPOSITORY "https://github.com/vgc/vgc" CACHE STRING "Customize this if you distribute modified versions of VGC.")
 
 # Commit branch. By default, the current commit branch is automatically
-# detected at build time and written to version.txt via the following command:
+# detected at build time and written to resources/core/version.txt via the
+# following command:
 #
 #   git rev-parse --abbrev-ref HEAD
 #
@@ -123,9 +124,10 @@ set(VGC_COMMIT_REPOSITORY "https://github.com/vgc/vgc" CACHE STRING "Customize t
 # This means that you can't know the automatically detected branch in this
 # CMakeLists. In particular, the CMake variable VGC_COMMIT_BRANCH stays empty
 # unless you manually specify it. If you need to known the automatically
-# detected branch, you must read and parse version.txt at build time.
+# detected branch, you must read and parse resources/core/version.txt at build
+# time.
 #
-# See vgc/tools/version.py for more info.
+# See ./tools/version.py for more info.
 #
 set(VGC_COMMIT_BRANCH "" CACHE STRING "Commit branch. Leave empty for automatic detection.")
 
@@ -149,6 +151,16 @@ elseif(VGC_VERSION_MINOR STREQUAL "")
     set(VGC_VERSION_TYPE "beta")
 else()
     set(VGC_VERSION_TYPE "stable")
+endif()
+
+# Target architecture. Currently, we only support x86_64.
+# On Windows, this must be set by passing "-A x64" to the CMake command.
+# On other platforms, it is automatically set to x86_64.
+#
+if(WIN32)
+    set(VGC_ARCHITECTURE ${CMAKE_GENERATOR_PLATFORM} CACHE STRING "Target architecture. Note: you MUST explicitly pass -A x64 to CMake.")
+else()
+    set(VGC_ARCHITECTURE x86_64 CACHE STRING "Target architecture. We only support x86_64 for now.")
 endif()
 
 # Always generate unit tests
@@ -371,7 +383,7 @@ add_custom_target(version ALL
         "${VGC_COMMIT_BRANCH}"
         "${CMAKE_CXX_COMPILER_ID}"
         "${CMAKE_CXX_COMPILER_VERSION}"
-        "${CMAKE_GENERATOR_PLATFORM}"
+        "${VGC_ARCHITECTURE}"
         "$<CONFIG>"
 )
 
@@ -420,14 +432,16 @@ if(WIN32)
     )
 endif()
 
-# Add deploy target
-#
-# For now, this assumes that windeployqt has already been run, and that the
-# bin/vc_redist.x64.exe output was moved from bin/ to deploy/. In the future, we
-# may want to directly find the vc_redist without relying on windeployqt, which
-# may be useful for deploying a subset of VGC that does not depend on Qt.
+# Add deploy target.
 #
 if(WIN32)
+    # On Windows, we assume that windeployqt has already been run (since we need
+    # this for running the app, even without deploying it), and that the
+    # bin/vc_redist.x64.exe output was moved from bin/ to deploy/. In the
+    # future, we may want to directly find the vc_redist without relying on
+    # windeployqt, which may be useful for deploying a subset of VGC that does
+    # not depend on Qt.
+    #
     add_custom_target(deploy
         VERBATIM
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
