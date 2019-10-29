@@ -330,4 +330,4 @@ if __name__ == "__main__":
     versionPath.write_text(res)
 
     # Print version info to console
-    print(res, flush=True)
+    print(f"\n{versionPath}:\n{res}", flush=True)
