@@ -453,15 +453,27 @@ if __name__ == "__main__":
         # Add to list of files to upload
         filesToUpload.append(desiredOutput)
 
-    # Upload artifacts if this is an "official" Travis build. Indeed, the
-    # environment variable VGC_TRAVIS_KEY isn't defined for pull requests.
-    travisKey = os.getenv("VGC_TRAVIS_KEY")
-    if travisKey is not None and travisKey != "":
+    # Upload artifacts if this is a Travis build.
+    #
+    # We check for TRAVIS_REPO_SLUG rather than simply TRAVIS to prevent users
+    # from mistakenly attempting to upload artifacts to our VGC servers if they
+    # fork VGC and setup their own Travis builds.
+    #
+    # We have other security measures in place to prevent intentional harm from
+    # malicious users.
+    #
+    # Note that VGC_TRAVIS_KEY is a secure environment variable not defined
+    # for pull requests.
+    #
+    if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
+        key = os.getenv("VGC_TRAVIS_KEY", default="")
+        pr = os.getenv("TRAVIS_PULL_REQUEST", default="false")
         url = "https://webhooks.vgc.io/travis"
         print_("Uploading commit metadata...", end="")
         response = post_json(
             urlencode(url, {
-                "key": travisKey
+                "key": key,
+                "pr": pr
             }), {
             "versionType": versionType,
             "versionMajor": versionMajor,
@@ -481,7 +493,8 @@ if __name__ == "__main__":
             print_(f"Uploading {file}...", end="")
             response = post_multipart(
                 urlencode(url, {
-                    "key": travisKey,
+                    "key": key,
+                    "pr": pr,
                     "releaseId": releaseId
                 }), {}, {
                 "file": file
