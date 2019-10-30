@@ -65,6 +65,13 @@ import dmgbuild
 def getIniValue(ini, key):
     return re.search("^" + key + "=(.*)$", ini, flags = re.MULTILINE).group(1)
 
+# Prints with flush=True by default. Using flush=True tends to behave better and
+# prevent truncating and ordering issues in TravisCI and perhaps other systems
+# which process and redirect the output.
+#
+def print_(*objects, sep=' ', end='\n', file=sys.stdout, flush=True):
+    print(*objects, sep=sep, end=end, file=file, flush=flush)
+
 # Deletes the symlink, regular file, or directory at the given path.
 # If path is a symlink, the symlink itself is deleted (not whatever it points to).
 # If path is a regular file, it is deleted.
@@ -681,7 +688,7 @@ if __name__ == "__main__":
     appNames = [ "Illustration" ]
 
     # Create macOS app bundles and dmg images
-    dmgFiles = []
+    filesToUpload = []
     for appName in appNames:
 
         # Various names and version strings
@@ -958,39 +965,53 @@ if __name__ == "__main__":
         print("Creating image " + dmgFilename + "...", flush=True)
         dmgbuild.build_dmg(dmgFilename, dmgVolumeName, settings=dmgSettings)
         print("Done.", flush=True)
-        dmgFiles.append(dmgFile)
+        filesToUpload.append(dmgFile)
 
-    # Upload artifacts if this is an "official" Travis build. Indeed, the
-    # environment variable VGC_TRAVIS_KEY isn't defined for pull requests.
-    travisKey = os.getenv("VGC_TRAVIS_KEY")
-    if travisKey is not None and travisKey != "":
+
+    # Upload artifacts if this is a Travis build.
+    #
+    # We check for TRAVIS_REPO_SLUG rather than simply TRAVIS to prevent users
+    # from mistakenly attempting to upload artifacts to our VGC servers if they
+    # fork VGC and setup their own Travis builds.
+    #
+    # We have other security measures in place to prevent intentional harm from
+    # malicious users.
+    #
+    # Note that VGC_TRAVIS_KEY is a secure environment variable not defined
+    # for pull requests.
+    #
+    if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
+        key = os.getenv("VGC_TRAVIS_KEY", default="")
+        pr = os.getenv("TRAVIS_PULL_REQUEST", default="false")
         url = "https://webhooks.vgc.io/travis"
-        print("Uploading commit metadata...", end="", flush=True)
+        print_("Uploading commit metadata...", end="")
         response = post_json(
             urlencode(url, {
-                "key": travisKey
+                "key": key,
+                "pr": pr
             }), {
-            'versionType': versionType,
-            'versionMajor': versionMajor,
-            'versionMinor': versionMinor,
-            'versionName': versionName,
-            'commitRepository': commitRepository,
-            'commitBranch': commitBranch,
-            'commitHash': commitHash,
-            'commitDate': commitDate,
-            'commitTime': commitTime,
-            'commitIndex': commitIndex,
-            'commitMessage': os.getenv("TRAVIS_COMMIT_MESSAGE")
+            "versionType": versionType,
+            "versionMajor": versionMajor,
+            "versionMinor": versionMinor,
+            "versionName": versionName,
+            "commitRepository": commitRepository,
+            "commitBranch": commitBranch,
+            "commitHash": commitHash,
+            "commitDate": commitDate,
+            "commitTime": commitTime,
+            "commitIndex": commitIndex,
+            "commitMessage": os.getenv("TRAVIS_COMMIT_MESSAGE")
         })
-        print(" Done.", flush=True)
-        releaseId = response['releaseId']
-        for dmgFile in dmgFiles:
-            print("Uploading " + str(dmgFile) + "...", end="", flush=True)
+        print_(" Done.")
+        releaseId = response["releaseId"]
+        for file in filesToUpload:
+            print_(f"Uploading {file}...", end="")
             response = post_multipart(
                 urlencode(url, {
-                    "key": travisKey,
+                    "key": key,
+                    "pr": pr,
                     "releaseId": releaseId
                 }), {}, {
-                'file': dmgFile
+                "file": file
             })
-            print(" Done.", flush=True)
+            print_(" Done.")
