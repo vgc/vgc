@@ -931,12 +931,15 @@ class WixElement:
         return self.files[name]
 
     # Recursively add the given directory and all its files to this directory
-    # for the given feature
+    # for the given feature. Files or directories whose names appear in the
+    # `exclude` list are ignored.
     #
-    def addDirectory(self, srcDir, feature):
+    def addDirectory(self, srcDir, feature, *, exclude=[]):
         destDir = self.createDirectory(srcDir.name)
         for child in srcDir.iterdir():
-            if child.is_file():
+            if child.name in exclude:
+                pass
+            elif child.is_file():
                 destDir.createFile(str(child), child.name, feature)
             elif child.is_dir():
                 destDir.addDirectory(child, feature)
@@ -961,7 +964,7 @@ def makeSuiteInstaller(
     appFeature = wix.createFeature("Complete")
 
     # Add 'bin', 'python', and 'resources' directories
-    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", appFeature)
+    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", appFeature, exclude=["vgc.conf"])
     wix.installDirectory.addDirectory(configDir / "python", appFeature)
     wix.installDirectory.addDirectory(configDir / "resources", appFeature)
 
