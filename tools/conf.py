@@ -43,6 +43,8 @@ if __name__ == "__main__":
     #   API for reading or writing such entries.
     #
     res = ""
+    buildDir = buildDir.replace("\\", "/");
+    pythonHome = pythonHome.replace("\\", "/");
     res += f"basePath = {buildDir}/{buildConfig}\n"
     res += f"pythonHome = {pythonHome}\n"
 
