@@ -15,6 +15,8 @@
 // limitations under the License.
 
 #include <QApplication>
+#include <QDir>
+#include <QSettings>
 #include <QTimer>
 
 #include <vgc/core/paths.h>
@@ -30,6 +32,10 @@ namespace py = pybind11;
 
 int main(int argc, char* argv[])
 {
+    // Conversion between QString and std::string.
+    using vgc::widgets::fromQt;
+    using vgc::widgets::toQt;
+
     // Init OpenGL. Must be called before QApplication creation. See Qt doc:
     //
     // Calling QSurfaceFormat::setDefaultFormat() before constructing the
@@ -45,13 +51,57 @@ int main(int argc, char* argv[])
     // between the different VGC apps.
     QApplication application(argc, argv);
 
-    // Set base path by removing "/bin" from the application dir path
+    // Set runtime paths from vgc.conf, an optional configuration file to be
+    // placed in the same folder as the executable.
+    //
+    // If vgc.conf exists, then the specified paths can be either absolute or
+    // relative to the directory where vgc.conf lives (that is, relative to the
+    // application dir path).
+    //
+    // If vgc.conf does not exist, or BasePath isn't specified, then BasePath
+    // is assumed to be ".." (that is, one directory above the application dir
+    // path).
+    //
+    // If vgc.conf does not exist, or PythonHome isn't specified, then
+    // PythonHome is assumed to be equal to BasePath.
+    //
+    // Note: in the future, we would probably want this to be handled directly
+    // by vgc::core, for example via a function vgc::core::init(argc, argv).
+    // For now, we keep it here for the convenience of being able to use Qt's
+    // applicationDirPath(), QDir, and QSettings. We don't want vgc::core to
+    // depend on Qt.
+    //
     QString binPath = QCoreApplication::applicationDirPath();
-    QString basePath = binPath.chopped(4);
-    vgc::core::setBasePath(basePath.toStdString());
+    QDir binDir(binPath);
+    binDir.makeAbsolute();
+    binDir.setPath(binDir.canonicalPath()); // resolve symlinks
+    QDir baseDir = binDir;
+    baseDir.cdUp();
+    std::string basePath = fromQt(baseDir.path());
+    std::string pythonHome = basePath;
+    if (binDir.exists("vgc.conf")) {
+        QSettings conf(binDir.filePath("vgc.conf"), QSettings::IniFormat);
+        if (conf.contains("BasePath")) {
+            QString v = conf.value("BasePath").toString();
+            if (!v.isEmpty()) {
+                v = QDir::cleanPath(binDir.filePath(v));
+                basePath = fromQt(v);
+                pythonHome = fromQt(v);
+            }
+        }
+        if (conf.contains("PythonHome")) {
+            QString v = conf.value("PythonHome").toString();
+            if (!v.isEmpty()) {
+                v = QDir::cleanPath(binDir.filePath(v));
+                pythonHome = fromQt(v);
+            }
+        }
+    }
+    vgc::core::setBasePath(basePath);
 
     // Create the python interpreter
-    vgc::core::PythonInterpreter pythonInterpreter;
+    std::string programName(argv[0]);
+    vgc::core::PythonInterpreter pythonInterpreter(programName, pythonHome);
 
     // Create the document + root element
     // -> Let's have the MainWindow be the owner of the document for now.
@@ -91,7 +141,7 @@ int main(int argc, char* argv[])
 
     // Set window icon
     std::string iconPath = vgc::core::resourcePath("apps/illustration/icons/512.png");
-    application.setWindowIcon(QIcon(vgc::widgets::toQt(iconPath)));
+    application.setWindowIcon(QIcon(toQt(iconPath)));
 
     // Show maximized.
     //

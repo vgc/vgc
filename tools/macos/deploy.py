@@ -751,19 +751,19 @@ if __name__ == "__main__":
         # 3. They can be generated at runtime anyway (either preemptively at install time,
         #    or automatically when importing a module at runtime)
         pythonLibPath = bundleFrameworksDir / pythonLibRelPath
-        pythonLibParent = pythonLibPath.parent
+        pythonHome = pythonLibPath.parent
         pythonVersionInfo = sys.version_info
-        pythonLibDir = pythonLibParent / "lib"
+        pythonLibDir = pythonHome / "lib"
         pythonXdotY = "python{}.{}".format(pythonVersionInfo.major, pythonVersionInfo.minor)
         pythonXdotYDir = pythonLibDir / pythonXdotY
         delete(pythonFrameworkPath / "Python", verbose=verbose)    # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Python ? QtCore, QtGui, etc. do this)
         delete(pythonFrameworkPath / "Resources", verbose=verbose) # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Resources ?)
         delete(pythonFrameworkPath / "Headers", verbose=verbose)   # broken symlink: points to itself + we delete header files anyway
-        delete(pythonLibParent / "bin", verbose=verbose)           # 2to3, easy_install, idle, pip, pydoc, python, pyvenv (56 kB)
-        delete(pythonLibParent / "Headers", verbose=verbose)       # symlink to include/pythonX.Ym
-        delete(pythonLibParent / "include", verbose=verbose)       # *.h files (0.9 MB)
-        delete(pythonLibParent / "share", verbose=verbose)         # doc and examples (2.3 MB)
-        for x in (pythonLibParent / "Resources").glob('*.lproj'):  # documentation (46 MB)
+        delete(pythonHome / "bin", verbose=verbose)                # 2to3, easy_install, idle, pip, pydoc, python, pyvenv (56 kB)
+        delete(pythonHome / "Headers", verbose=verbose)            # symlink to include/pythonX.Ym
+        delete(pythonHome / "include", verbose=verbose)            # *.h files (0.9 MB)
+        delete(pythonHome / "share", verbose=verbose)              # doc and examples (2.3 MB)
+        for x in (pythonHome / "Resources").glob('*.lproj'):       # documentation (46 MB)
             delete(x, verbose=verbose)
         delete(pythonXdotYDir / "test")                            # tests (23 MB) (+ 25 MB of __pycache__)
         for x in pythonXdotYDir.glob("**/__pycache__"):            # Python bytecode (58.5 MB) (including tests)
@@ -850,10 +850,22 @@ if __name__ == "__main__":
         # See https://github.com/vgc/vgc/issues/218
         #
         qtconf = bundleExecutable.parent / "qt.conf"
-        bundleExecutableDepth = str(bundleExecutable.relative_to(bundleContentsDir)).count("/")
-        qtconf.write_text(
-            "[Paths]\n" +
-            "Plugins = " + "../" * bundleExecutableDepth + "PlugIns\n")
+        executable_ = str(bundleExecutable.relative_to(bundleContentsDir))
+        plugins_ = "PlugIns"
+        up_ = "../" * executable_.count("/")
+        qtconfText = "[Paths]\n"
+        qtconfText += f"Plugins = {up_}{plugins_}\n"
+        qtconf.write_text(qtconfText)
+        print(f"\n{qtconf}:\n{qtconfText}", flush=True)
+
+        # Create vgc.conf file alongside executable.
+        #
+        vgcconf = bundleExecutable.parent / "vgc.conf"
+        pythonHome_ = str(pythonHome.relative_to(bundleContentsDir))
+        vgcconfText = "BasePath = ..\n"
+        vgcconfText += f"PythonHome = {up_}{pythonHome_}\n"
+        vgcconf.write_text(vgcconfText)
+        print(f"\n{vgcconf}:\n{vgcconfText}", flush=True)
 
         # Update rpaths, lib paths, and id of all binaries
         print("Fixing library paths...", flush=True)

@@ -18,7 +18,9 @@
 #define VGC_CORE_PYTHON_H
 
 #include <string>
+
 #include <pybind11/pybind11.h>
+
 #include <vgc/core/api.h>
 #include <vgc/core/signal.h>
 
@@ -26,28 +28,45 @@ namespace vgc {
 namespace core {
 
 /// \class vgc::core::PythonInterpreter
-/// \brief A thin C++ wrapper of the CPython interpreter
+/// \brief A thin C++ wrapper around the CPython interpreter.
 ///
 class VGC_CORE_API PythonInterpreter
 {
 public:
-    /// Constructs a PythonInterpreter. This calls Py_Initialize(),
-    /// and should be called no more than once (that is, we only
-    /// support a single python interpreter at the moment).
+    /// Constructs a PythonInterpreter, with the following settings:
     ///
-    /// Useful info here: https://docs.python.org/3.6/c-api/init.html
+    /// - program name is set as \p programName.
     ///
-    PythonInterpreter();
+    ///   See: https://docs.python.org/3/c-api/init.html#c.Py_SetProgramName
+    ///
+    /// - sys.path is determined from the given \p pythonHome, which must be a
+    ///   string of the form prefix[:exec_prefix].
+    ///
+    ///   See: https://docs.python.org/3/c-api/init.html#c.Py_SetPythonHome
+    ///
+    /// - sys.argv is set as [""], which is the expected value when running a
+    ///   Python interpreter in interactive mode.
+    ///
+    ///   See: https://docs.python.org/3/c-api/init.html#c.PySys_SetArgvEx
+    ///
+    /// Due to limitations of CPython, only one PythonInterpreter can be
+    /// constructed at any given time. For simplicity, this is not enforced via
+    /// a singleton pattern, so just be careful. You typically want to create
+    /// the interpreter early in your main() functions, then pass it around to
+    /// objects that need it.
+    ///
+    PythonInterpreter(const std::string& programName,
+                      const std::string& pythonHome);
 
-    /// Destructs the PythonInterpreter. This calls Py_Finalize().
+    /// Destructs the PythonInterpreter.
     ///
     ~PythonInterpreter();
 
-    /// Interprets the given string. This calls PyRun_String().
+    /// Interprets the given string.
     ///
     void run(const std::string& str);
 
-    /// Interprets the given string. This calls PyRun_String().
+    /// Interprets the given string.
     ///
     void run(const char* str);
 
@@ -68,16 +87,18 @@ public:
     const core::Signal<> runFinished;
 
 private:
-    // Note: the guard must be constructed first, and destructed last,
-    // thus order of declaration of member variables matters.
-
-    // XXX use pybind11::scoped_interpreter instead (need to update to latest
-    // version of pybind11)
+    // Note: the scoped interpreter must be constructed first, and destructed
+    // last, thus order of declaration of member variables matters.
     struct ScopedInterpreter_ {
-        ScopedInterpreter_();
+        ScopedInterpreter_(const std::string& programName,
+                           const std::string& pythonHome);
         ~ScopedInterpreter_();
+        wchar_t* programName_;
+        wchar_t* pythonHome_;
+        int argc_;
+        wchar_t** argv_;
     };
-    ScopedInterpreter_ guard_;
+    ScopedInterpreter_ scopedInterpreter_;
 
     // Exception-safe emission of runStarted and runFinished
     class ScopedRunSignalsEmitter_ {

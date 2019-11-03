@@ -298,6 +298,31 @@ if(Python)
 endif()
 find_package(PythonInterp 3.6 REQUIRED)
 find_package(PythonLibs 3.6 REQUIRED)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print(sys.prefix, end='')" OUTPUT_VARIABLE PYTHON_PREFIX)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print(sys.exec_prefix, end='')" OUTPUT_VARIABLE PYTHON_EXEC_PREFIX)
+set(PYTHON_PREFIX ${PYTHON_PREFIX} CACHE INTERNAL "")
+set(PYTHON_EXEC_PREFIX ${PYTHON_EXEC_PREFIX} CACHE INTERNAL "")
+if(PYTHON_PREFIX STREQUAL PYTHON_EXEC_PREFIX)
+    set(PYTHON_HOME ${PYTHON_PREFIX} CACHE INTERNAL "")
+else()
+    set(PYTHON_HOME ${PYTHON_PREFIX}:${PYTHON_EXEC_PREFIX} CACHE INTERNAL "")
+endif()
+message("-- PYTHON_PREFIX: ${PYTHON_PREFIX}")
+message("-- PYTHON_EXEC_PREFIX: ${PYTHON_EXEC_PREFIX}")
+message("-- PYTHON_HOME: ${PYTHON_HOME}")
+
+# Generate the vgc.conf file, telling VGC executables about the location
+# of various runtime resources.
+#
+add_custom_target(conf ALL
+    VERBATIM
+    COMMAND ${PYTHON_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/conf.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "$<CONFIG>"
+        "${PYTHON_HOME}"
+)
 
 # Find, configure, and include Qt. The recommended way to make sure that the
 # desired version of Qt is found is to pass -DQt to cmake, e.g.:
