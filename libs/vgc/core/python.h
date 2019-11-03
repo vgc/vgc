@@ -35,7 +35,7 @@ class VGC_CORE_API PythonInterpreter
 public:
     /// Constructs a PythonInterpreter, with the following settings:
     ///
-    /// - sys.executable is set as the given \p programName.
+    /// - program name is set as \p programName.
     ///
     ///   See: https://docs.python.org/3/c-api/init.html#c.Py_SetProgramName
     ///
