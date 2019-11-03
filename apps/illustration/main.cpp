@@ -51,16 +51,25 @@ int main(int argc, char* argv[])
     // between the different VGC apps.
     QApplication application(argc, argv);
 
-    // Set basePath and pythonHome from vgc.conf.
+    // Set runtime paths from vgc.conf, an optional configuration file to be
+    // placed in the same folder as the executable.
     //
-    // If vgc.conf does not exist, or does not contain the basePath or
-    // pythonHome entries, it assumes that both are "../" relative to the
-    // executable.
+    // If vgc.conf exists, then the specified paths can be either absolute or
+    // relative to the directory where vgc.conf lives (that is, relative to the
+    // application dir path).
+    //
+    // If vgc.conf does not exist, or basePath isn't specified, then basePath
+    // is assumed to be ".." (that is, one directory above the application dir
+    // path).
+    //
+    // If vgc.conf does not exist, or pythonHome isn't specified, then
+    // pythonHome is assumed to be equal to basePath.
     //
     // Note: in the future, we would probably want this to be handled directly
     // by vgc::core, for example via a function vgc::core::init(argc, argv).
-    // For now, we keep it here for the convenience of being able to use Qt
-    // utility classes.
+    // For now, we keep it here for the convenience of being able to use Qt's
+    // applicationDirPath(), QDir, and QSettings. We don't want vgc::core to
+    // depend on Qt.
     //
     QString binPath = QCoreApplication::applicationDirPath();
     QDir binDir(binPath);
@@ -75,6 +84,7 @@ int main(int argc, char* argv[])
         if (conf.contains("basePath")) {
             QString v = conf.value("basePath").toString();
             if (!v.isEmpty()) {
+                v = QDir::cleanPath(binDir.filePath(v));
                 basePath = fromQt(v);
                 pythonHome = fromQt(v);
             }
@@ -82,6 +92,7 @@ int main(int argc, char* argv[])
         if (conf.contains("pythonHome")) {
             QString v = conf.value("pythonHome").toString();
             if (!v.isEmpty()) {
+                v = QDir::cleanPath(binDir.filePath(v));
                 pythonHome = fromQt(v);
             }
         }
