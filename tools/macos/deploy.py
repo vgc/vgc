@@ -862,8 +862,8 @@ if __name__ == "__main__":
         #
         vgcconf = bundleExecutable.parent / "vgc.conf"
         pythonHome_ = str(pythonHome.relative_to(bundleContentsDir))
-        vgcconfText = "basePath = ..\n"
-        vgcconfText += f"pythonHome = {up_}{pythonHome_}\n"
+        vgcconfText = "BasePath = ..\n"
+        vgcconfText += f"PythonHome = {up_}{pythonHome_}\n"
         vgcconf.write_text(vgcconfText)
         print(f"\n{vgcconf}:\n{vgcconfText}", flush=True)
 

@@ -11,8 +11,8 @@
 # inspect and change), or use obscure and complex heuristic to try to
 # automatically guess these paths at runtime (error-prone and non-generic).
 #
-# Zen of Python:
 # "Explicit is better than implicit."
+#                    -- Zen of Python
 #
 
 from pathlib import Path
@@ -45,8 +45,8 @@ if __name__ == "__main__":
     res = ""
     buildDir = buildDir.replace("\\", "/");
     pythonHome = pythonHome.replace("\\", "/");
-    res += f"basePath = {buildDir}/{buildConfig}\n"
-    res += f"pythonHome = {pythonHome}\n"
+    res += f"BasePath = {buildDir}/{buildConfig}\n"
+    res += f"PythonHome = {pythonHome}\n"
 
     # Write to file
     binDir = Path(buildDir) / buildConfig / "bin"

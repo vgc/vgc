@@ -58,12 +58,12 @@ int main(int argc, char* argv[])
     // relative to the directory where vgc.conf lives (that is, relative to the
     // application dir path).
     //
-    // If vgc.conf does not exist, or basePath isn't specified, then basePath
+    // If vgc.conf does not exist, or BasePath isn't specified, then BasePath
     // is assumed to be ".." (that is, one directory above the application dir
     // path).
     //
-    // If vgc.conf does not exist, or pythonHome isn't specified, then
-    // pythonHome is assumed to be equal to basePath.
+    // If vgc.conf does not exist, or PythonHome isn't specified, then
+    // PythonHome is assumed to be equal to BasePath.
     //
     // Note: in the future, we would probably want this to be handled directly
     // by vgc::core, for example via a function vgc::core::init(argc, argv).
@@ -81,16 +81,16 @@ int main(int argc, char* argv[])
     std::string pythonHome = basePath;
     if (binDir.exists("vgc.conf")) {
         QSettings conf(binDir.filePath("vgc.conf"), QSettings::IniFormat);
-        if (conf.contains("basePath")) {
-            QString v = conf.value("basePath").toString();
+        if (conf.contains("BasePath")) {
+            QString v = conf.value("BasePath").toString();
             if (!v.isEmpty()) {
                 v = QDir::cleanPath(binDir.filePath(v));
                 basePath = fromQt(v);
                 pythonHome = fromQt(v);
             }
         }
-        if (conf.contains("pythonHome")) {
-            QString v = conf.value("pythonHome").toString();
+        if (conf.contains("PythonHome")) {
+            QString v = conf.value("PythonHome").toString();
             if (!v.isEmpty()) {
                 v = QDir::cleanPath(binDir.filePath(v));
                 pythonHome = fromQt(v);
