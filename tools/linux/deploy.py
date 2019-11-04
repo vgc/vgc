@@ -36,6 +36,7 @@ import json
 import mimetypes
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -285,6 +286,43 @@ def post_multipart(url, fields, files):
 def urlencode(url, data):
     return url + "?" + urllib.parse.urlencode(data)
 
+# Convenient wrapper around subprocess.check_output(), taking a string as input
+# rather than a list, and returning the output as a decoded UTF-8 string.
+#
+def check_output(cmd, **kwargs):
+    return subprocess.check_output(shlex.split(cmd), **kwargs).decode('utf-8')
+
+# Prints the file path, rpaths, runpaths, and dependent shared libraries of the
+# given binary file. If relative_to is not None, then the file path is printed
+# relative to the given path. If the given file is not an ELF file, then the
+# file is silently ignored (nothing is printed, no error raised).
+#
+def print_binary_info(file, *, relative_to):
+    filetype = check_output(f"file {file}")
+    if "ELF" in filetype:
+        if relative_to:
+            path = "./" + str(file.relative_to(relative_to))
+        else:
+            path = str(file)
+        print_(f"\n{path}:")
+        dump = check_output(f"objdump -x {file}")
+        for line in dump.splitlines():
+            if (("NEEDED" in line) or
+                ("RPATH" in line) or
+                ("RUNPATH" in line)):
+                print_(line)
+
+# Prints the file paths, rpaths, runpaths, and dependent shared libraries of all
+# the binaries in the given appdir.
+#
+def print_binaries_info(appdir):
+    print_(f"\nBinary files in {appdir}:")
+    for file in sorted(appdir.glob("**/bin/*"), key=lambda v: str(v).upper()):
+        print_binary_info(file, relative_to=appdir)
+    for file in sorted(appdir.glob("**/*.so*"), key=lambda v: str(v).upper()):
+        print_binary_info(file, relative_to=appdir)
+    print_("") # newline
+
 # Script entry point.
 #
 if __name__ == "__main__":
@@ -383,23 +421,44 @@ if __name__ == "__main__":
              appdir / "usr" / "bin" / exeName,
              verbose=verbose)
 
+        # Create vgc.conf file
+        vgcconf = appdir / "usr" / "bin" / "vgc.conf"
+        vgcconfText = (
+            "BasePath = ..\n" +
+            "PythonHome = ..\n")
+        vgcconf.write_text(vgcconfText)
+        print_(f"\n{vgcconf}:\n{vgcconfText}")
+
         # Copy VGC shared libraries
         copy(buildDir / "lib",
              appdir / "usr" / "lib",
              verbose=verbose)
 
+        # Copy the Python standard library.
+        #
+        # Note: the following shared libraries are automatically copied by
+        # linuxdeployqt into appdir/usr/lib/:
+        #
+        # - Python itself (e.g., libpython3.6m.so.1.0).
+        #
+        # - The shared libraries that libpythonX.Y.so.Z depends on.
+        #
+        # - The shared libraries that pythonX.Y/**/*.so depends on,
+        #   for all *.so files in the Python standard library.
+        #
+        print_(f"sys.prefix = {sys.prefix}")
+        print_(f"sys.exec_prefix = {sys.exec_prefix}")
+        pythonHome = Path(sys.prefix)
+        pythonXdotY = f"python{sys.version_info.major}.{sys.version_info.minor}"
+        copy(pythonHome / "lib" / pythonXdotY,
+             appdir / "usr" / "lib" / pythonXdotY,
+             verbose=verbose)
+
         # Copy VGC python bindings
         #
-        # Note: The shared library of Python itself (e.g., libpython3.6m.so.1.0) is
-        # automatically copied by linuxdeployqt into appdir/lib/. However, we
-        # also need to manually copy the Python standard library to access built-in modules.
-        #
-        # XXX TODO copy the Python standard library.
-        #
         copy(buildDir / "python",
-             appdir / "usr" / "python",
+             appdir / "usr" / "lib" / pythonXdotY,
              verbose=verbose)
-        print_(f"TODO: copy python library. For info, sys.path = {sys.path}.")
 
         # Copy VGC resources
         copy(buildDir / "resources",
@@ -410,6 +469,10 @@ if __name__ == "__main__":
         copy(srcDir / "apps" / appNameLower / "share",
              appdir / "usr" / "share",
              verbose=verbose)
+
+        # Print binaries info
+        #
+        print_binaries_info(appdir)
 
         # Create AppImage by calling linuxdeployqt.
         #
@@ -433,12 +496,17 @@ if __name__ == "__main__":
         #
         env = os.environ.copy()
         env["VERSION"] = dashVersion
+        env["LD_LIBRARY_PATH"] = f":{pythonHome}/lib"
         subprocess.run([
             f"{linuxdeployqtPath}",
             f"{appdir}/usr/share/applications/{exeName}.desktop",
             f"-qmake={qtDir}/bin/qmake",
             f"-appimage"],
             env=env)
+
+        # Print binaries info
+        #
+        print_binaries_info(appdir)
 
         # Move and rename AppImage output to desired location and name. Note:
         # we'd rather tell linuxdeployqt where to generate this output, but at
