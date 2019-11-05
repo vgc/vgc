@@ -10,7 +10,6 @@ matrix:
         - QT_VERSION=5.12.5
         - wget https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
         - sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C /opt
-        - ldd /opt/qt/5.12.5/gcc_64/plugins/platforms/libqxcb.so # temp test to see unfound dependencies
       before_script:
         - pyenv global 3.7
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.7"
