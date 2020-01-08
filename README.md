@@ -1,154 +1,80 @@
-![VGC](https://github.com/vgc/vgc/blob/master/logo.png)
+![VGC](https://github.com/vgc/vgc/blob/master/hero.png)
 
 [![TravisCI Build Status](https://travis-ci.org/vgc/vgc.svg?branch=master)](https://travis-ci.org/vgc/vgc)
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/3tasnhbrlucfltp5?svg=true)](https://ci.appveyor.com/project/vgc/vgc)
 
-# About Me
+VGC is an upcoming suite of applications for graphic design and 2D animation,
+in which the lines and shapes you draw are connected to each others both in
+space and time, allowing for faster editing and inbetweening.
 
-My name is [Boris Dalstein](http://www.borisdalstein.com/), I am a French
-mathematician, computer scientist, and software engineer, but most importantly,
-I am an *animation lover*. I hold a PhD in Computer Science from
-[UBC](https://www.ubc.ca/), and I have worked at various companies and research
-institutes such as [Inria](https://www.inria.fr/), [Disney
-Research](https://www.disneyresearch.com/labs/), and more recently [Pixar
-Animation Studios](https://www.pixar.com/).
+VGC is licensed under the **[Apache 2.0 License](https://github.com/vgc/vgc/blob/master/LICENSE)**.
 
-# About VGC
+More info: **[www.vgc.io](https://www.vgc.io)**
 
-VGC is a startup I founded in October 2017 to develop commercial (yet
-open-source!) next-generation tools for graphic design and 2D animation. Visit
-[www.vgc.io](https://www.vgc.io) for more details. Currently, this project is
-entirely funded by voluntary donations from awesome people like yourself, many
-of whom are open-source software enthusiasts. The best way to help this project
-reach maturity is to support me on
-[Tipeee](https://www.tipeee.com/borisdalstein) (preferred), or
-[Patreon](https://www.patreon.com/borisdalstein) (preferred for US residents only).
+## Disclaimer
 
-# Products
+This project is still in very early development (pre-alpha) and doesn't yet
+have any of the innovative features which make VGC unique. If you are curious,
+you can try our earlier research prototype [VPaint](https://www.vpaint.org).
 
-I am planning to release two products in July 2020:
+## Build Instructions
 
-![VGC](https://github.com/vgc/vgc/blob/master/products.png)
+Prerequisites:
+- **CMake 3.1+**: We recommend the latest version of CMake.
+- **C++11**: We recommend Visual Studio 2017 on Windows, and any recent version of Clang/GCC on macOS/Linux.
+- **Python 3.6+**: We recommend the latest Python 3.7.x version via the [official installer](https://www.python.org/downloads/).
+- **Qt 5.12+**: We recommend the latest Qt 5.12.x version via the [official installer](https://www.qt.io/download-qt-installer).
+- **OpenGL Dev Tools**: Already installed on Windows, macOS, and many Linux distributions. On Ubuntu, you need `sudo apt install libglu1-mesa-dev`.
 
-VGC Illustration will be a vector graphics editor, that is, a competitor of
-products such as Adobe Illustrator, Autodesk Graphic, CorelDRAW, or Inkscape.
-The difference is that unlike these existing programs, VGC Illustration will be
-based on vector graphics complexes, a technology that we developed and presented
-at SIGGRAPH 2014.
-
-VGC Animation will be a vector-based 2D animation system, that is, a competitor
-of products such as Adobe Animate (formerly Adobe/Macromedia Flash), ToonBoom
-Harmony, CACANi, Synfig, or OpenToonz. To some extent, VGC Animation will also
-be a competitor to raster-based 2D animation systems such as TVPaint or Krita.
-VGC Animation will be based on vector animation complexes, an extension of
-vector graphics complexes that supports animation, presented at SIGGRAPH 2015.
-
-# Licensing
-
-Starting July 2020, VGC Illustration and VGC Animation will be released yearly
-(example: VGC Animation 2020, VGC Animation 2021, etc.), under a commercial
-open-source model.
-
-A license key for VGC Illustration 2020 will cost **$39**, while a license key for
-VGC Animation 2020 will cost **$79**. Each license key allows a single user to use
-the software on any number of devices, on any number of platforms (Windows,
-MacOS X, and Linux). License keys are perpetual, that is, they never expire.
-This means that you will still be able to use VGC Illustration 2020 five years
-later without paying any extra fee. However, you will need to pay for an upgrade
-if you want to use newer versions. The cost of the upgrade from one year to the
-next will be **$19** for VGC Illustration, and **$39** for VGC Animation.
-
-Despite being distributed commercially, both apps will in fact be open-source
-and publicly developed here on this git repository under the [Apache
-2.0](https://github.com/vgc/vgc/blob/master/README.md) license. Also, no
-license key will be required to use the software on Linux, that is, the software
-will be completely **free of charge for Linux users**. This is my way to say thank
-you and give back the open-source community (my work relies heavily on
-open-source software), and also a way to encourage more users to try Linux.
-
-If you wish, you can obtain early license keys by supporting me on
-[Tipeee](https://www.tipeee.com/borisdalstein) or
-[Patreon](https://www.patreon.com/borisdalstein), starting at $3 per month. You
-can stop your donations at any time and keep your license keys, although the
-idea behind Tipeee/Patreon is to have a stable monthly revenue, which is
-critical in this early development stage.
-
-# About this Git Repository
-
-This is the main git repository where all software development happens. At the
-moment, development is at a very early planning stage with no consideration for
-backward compatibility and subject to frequent and significant refactoring
-without notice. For this reason, I do not really recommend contributing code,
-but of course any contribution may be discussed and considered on a case-by-case
-basis. I'm more than happy to hear any advice or comments you may have, if you
-happen to be an expert in relevant areas, just submit an "issue" here.
-
-External contributions will be more than welcome starting January 2019, when the
-software architecture is expected to be more stable.
-
-# Dependencies
-
-- C++11
-- CMake 3.1.0+
-- Qt 5.12+
-- Python 3.5+
-
-Currently, C++14 support is not required, but it will be required in the
-near future.
+Other third-party dependencies which are included in the `third` folder and
+don't need to be pre-installed:
+- **pybind11**
+- **Eigen**
 
 VGC follows the [VFX Reference Platform](http://www.vfxplatform.com/)
 recommendations for library versions.
 
-VGC also depends on the following third-party libraries, but these are shipped
-and installed alongside this repository (="vendored") so you don't need to have
-them already installed your system:
-- pybind11
-- Eigen
+#### Windows 7/8/10, Visual Studio 2017 64bit, Python 3.7, Qt 5.12.6
 
-# Linux Build Instructions
+(Manually installed: Git, CMake, Visual Studio, Python, Qt)
 
-(Instructions for macOS and Windows coming soon)
-
-Tested on:
-- Ubuntu 16.04 LTS
-- Ubuntu 18.04 LTS
-
-Install Git, CMake, GCC, and Python:
-
-```
-~$ sudo apt-get install git
-~$ sudo apt-get install cmake
-~$ sudo apt-get install build-essential
-~$ sudo apt-get install python3-dev
-```
-
-On some Linux distributions, and especially if you have not already installed
-proprietary NVIDIA/AMD drivers, then you may also need to install the following
-OpenGL dependency:
-
-```
-~$ sudo apt-get install libgl1-mesa-dev
-```
-
-Download and install the latest version of Qt 5.12 from https://www.qt.io/download.
-Make sure to select the open source edition, and to install the "Desktop gcc 64-bit"
-and "Tools" components. For the rest of these instructions, we'll assume that you've
-installed Qt to `~/Qt/5.12.5`.
-
-Get VGC:
 ```
 git clone https://github.com/vgc/vgc.git
-```
-
-Build VGC:
-```
-mkdir build-vgc
-cd build-vgc
-cmake ../vgc -DQt="~/Qt/5.12.5/gcc_64"
+mkdir build && cd build
+cmake ..\vgc ^
+    -G "Visual Studio 15 2017" -A x64 ^
+    -DPython="%UserProfile%\AppData\Local\Programs\Python\Python37" ^
+    -DQt="C:\Qt\5.12.6\msvc2017_64"
 make
+\Release\bin\vgcillustration.exe
 ```
 
-Run VGC:
+#### macOS 10.14, Xcode 10.3 (=> Clang 10.0.1), Python 3.7, Qt 5.12.6
+
+(Manually installed: Xcode, Python, Qt)
+
 ```
-./bin/vgcillustration
+git clone https://github.com/vgc/vgc.git
+mkdir build && cd build
+cmake ../vgc \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DPython="/Library/Frameworks/Python.framework/Versions/3.7" \
+    -DQt="~/Qt/5.12.6/clang_64"
+make
+./Release/bin/vgcillustration
+```
+
+#### Ubuntu 18.04 (=> GCC 7.4, Python 3.6), Qt 5.12.6
+
+(Manually installed: Qt)
+
+```
+sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev
+git clone https://github.com/vgc/vgc.git
+mkdir build && cd build
+cmake ../vgc \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DQt="~/Qt/5.12.6/gcc_64"
+make
+./Release/bin/vgcillustration
 ```
