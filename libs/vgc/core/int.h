@@ -1,4 +1,4 @@
-// Copyright 2017 The VGC Developers
+// Copyright 2020 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
