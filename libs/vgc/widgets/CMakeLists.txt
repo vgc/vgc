@@ -6,6 +6,7 @@ vgc_add_library(widgets
         core
         dom
         geometry
+        ui
 
     HEADER_FILES
         api.h
@@ -27,6 +28,7 @@ vgc_add_library(widgets
         stylesheets.h
         toggleviewaction.h
         toolbar.h
+        uiwidget.h
 
     CPP_FILES
         centralwidget.cpp
@@ -47,6 +49,7 @@ vgc_add_library(widgets
         stylesheets.cpp
         toggleviewaction.cpp
         toolbar.cpp
+        uiwidget.cpp
 
     RESOURCE_FILES
         fonts/SourceCodePro/LICENSE.txt

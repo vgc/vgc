@@ -45,6 +45,30 @@ public:
     /// Creates a widget.
     ///
     static WidgetSharedPtr create();
+
+    /// This virtual function is called once before the first call to paint()
+    /// or resize(), and should be reimplemented to allocate required GPU
+    /// resources.
+    ///
+    virtual void initialize();
+
+    /// This virtual function is called whenever the widget has been resized
+    /// (the new size is given as w and h). Subclasses should reimplement this,
+    /// typically by adapting GPU resources to the new size.
+    ///
+    virtual void resize(int w, int h);
+
+    /// This virtual function is called whenever the widget needs to be
+    /// repainted. Subclasses should reimplement this, typically by issuing
+    /// draw calls.
+    ///
+    virtual void paint();
+
+    /// This virtual function is called once after the last call to paint(),
+    /// for example before the widget is destructed, and should be reimplemented
+    /// to release the allocated GPU resources.
+    ///
+    virtual void cleanup();
 };
 
 } // namespace ui
