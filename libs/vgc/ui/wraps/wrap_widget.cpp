@@ -23,6 +23,10 @@ using Parent = vgc::core::Object;
 
 void wrap_widget(py::module& m)
 {
+    // Necessary to define inheritance across modules. See:
+    // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
+    py::module::import("vgc.core");
+
     py::class_<This, Holder, Parent>(m, "Widget")
         .def(py::init([]() { return This::create(); } ))
     ;
