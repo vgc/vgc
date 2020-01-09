@@ -14,42 +14,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/widget.h>
+#include <vgc/widgets/uiwidget.h>
 
 namespace vgc {
-namespace ui {
+namespace widgets {
 
-Widget::Widget(const ConstructorKey&) :
-    Object(core::Object::ConstructorKey())
+UiWidget::UiWidget(ui::WidgetSharedPtr widget, QWidget* parent) :
+    QOpenGLWidget(parent),
+    widget_(widget)
 {
 
 }
 
-/* static */
-WidgetSharedPtr Widget::create()
+UiWidget::~UiWidget()
 {
-    return std::make_shared<Widget>(ConstructorKey());
+    makeCurrent();
+    cleanupGL();
+    doneCurrent();
 }
 
-void Widget::initialize()
+void UiWidget::initializeGL()
 {
-
+    widget_->initialize();
 }
 
-void Widget::resize(int /*w*/, int /*h*/)
+void UiWidget::resizeGL(int w, int h)
 {
-
+    widget_->resize(w, h);
 }
 
-void Widget::paint()
+void UiWidget::paintGL()
 {
-
+    widget_->paint();
 }
 
-void Widget::cleanup()
+void UiWidget::cleanupGL()
 {
-
+    widget_->cleanup();
 }
 
-} // namespace ui
+} // namespace widgets
 } // namespace vgc
