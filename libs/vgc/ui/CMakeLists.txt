@@ -8,6 +8,7 @@ vgc_add_library(ui
         api.h
 
     CPP_FILES
+        dummy.cpp
 
     RESOURCE_FILES
 )
