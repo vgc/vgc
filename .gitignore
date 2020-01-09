@@ -2,3 +2,4 @@ CMakeLists.txt.user*
 build
 build-*
 .DS_Store
+.directory
