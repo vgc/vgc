@@ -55,7 +55,7 @@ void setBasePath(const std::string& path);
 /// <base>/bin        Contains VGC executables       (example: <base>/bin/vgcillustration)
 /// <base>/lib        Contains VGC shared libraries  (example: <base>/lib/libvgccore.so)
 /// <base>/python     Contains VGC python bindings   (example: <base>/python/vgc/core.cpython-36m-x86_64-linux-gnu.so)
-/// <base>/resources  Contains VGC runtime resources (example: <base>/resources/opengl/shaders/shader.f.glsl)
+/// <base>/resources  Contains VGC runtime resources (example: <base>/resources/graphics/opengl/shader.f.glsl)
 /// \endverbatim
 ///
 VGC_CORE_API
@@ -75,8 +75,8 @@ std::string resourcesPath();
 ///
 /// Example:
 /// \code
-/// std::string vertPath = core::resourcePath("opengl/shaders/shader.v.glsl");
-/// std::string fragPath = core::resourcePath("opengl/shaders/shader.f.glsl");
+/// std::string vertPath = core::resourcePath("graphics/opengl/shader.v.glsl");
+/// std::string fragPath = core::resourcePath("graphics/opengl/shader.f.glsl");
 /// \endcode
 ///
 VGC_CORE_API
