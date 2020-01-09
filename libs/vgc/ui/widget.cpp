@@ -14,10 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
+#include <vgc/ui/widget.h>
 
-void wrap_widget(py::module& m);
+namespace vgc {
+namespace ui {
 
-PYBIND11_MODULE(ui, m) {
-    wrap_widget(m);
+Widget::Widget(const ConstructorKey&) :
+    Object(core::Object::ConstructorKey())
+{
+
 }
+
+/* static */
+WidgetSharedPtr Widget::create()
+{
+    return std::make_shared<Widget>(ConstructorKey());
+}
+
+} // namespace ui
+} // namespace vgc

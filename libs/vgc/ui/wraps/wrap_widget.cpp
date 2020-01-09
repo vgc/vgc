@@ -15,9 +15,15 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/ui/widget.h>
 
-void wrap_widget(py::module& m);
+using This = vgc::ui::Widget;
+using Holder = vgc::ui::WidgetSharedPtr;
+using Parent = vgc::core::Object;
 
-PYBIND11_MODULE(ui, m) {
-    wrap_widget(m);
+void wrap_widget(py::module& m)
+{
+    py::class_<This, Holder, Parent>(m, "Widget")
+        .def(py::init([]() { return This::create(); } ))
+    ;
 }
