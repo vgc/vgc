@@ -37,7 +37,7 @@ namespace {
 
 // Returns the file path of a shader file as a QString
 QString shaderPath_(const std::string& name) {
-    std::string path = core::resourcePath("opengl/shaders/" + name);
+    std::string path = core::resourcePath("graphics/opengl/" + name);
     return toQt(path);
 }
 
