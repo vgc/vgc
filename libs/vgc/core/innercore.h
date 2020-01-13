@@ -22,10 +22,12 @@
 ///
 /// This is a convenient header file which includes the most fundamental parts
 /// of vgc::core, which are typically needed by any compilation unit using the
-/// VGC C++ API, such as the VGC integer types and logging.
+/// VGC C++ API, such as the VGC integer types, the Object class, and the
+/// logging mechanism.
 ///
 
 #include <vgc/core/int.h>
 #include <vgc/core/logging.h>
+#include <vgc/core/object.h>
 
 #endif // VGC_CORE_INNERCORE_H
