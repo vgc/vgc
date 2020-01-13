@@ -18,17 +18,42 @@
 #define VGC_CORE_STRINGUTIL_H
 
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <vgc/core/api.h>
 
 namespace vgc {
 namespace core {
 
-/// Converts the given 8-bit unsigned integer to a string.
+/// Converts the given character to a string.
 ///
 /// Example:
 /// \code
 /// char c = 65;
+/// std::cout << toString(c); // writes out "A" (ASCII code for 'A' is 65)
+/// std::cout << c;           // writes out "A"
+/// \endcode
+///
+VGC_CORE_API
+std::string toString(char x);
+
+/// Converts the given 8-bit signed integer to a string.
+///
+/// Example:
+/// \code
+/// signed char c = 65;
+/// std::cout << toString(c); // writes out "65"
+/// std::cout << c;           // writes out "A" (ASCII code for 'A' is 65)
+/// \endcode
+///
+VGC_CORE_API
+std::string toString(signed char x);
+
+/// Converts the given 8-bit unsigned integer to a string.
+///
+/// Example:
+/// \code
+/// unsigned char c = 65;
 /// std::cout << toString(c); // writes out "65"
 /// std::cout << c;           // writes out "A" (ASCII code for 'A' is 65)
 /// \endcode
@@ -38,13 +63,17 @@ std::string toString(unsigned char x);
 
 /// Converts the given integer to a string.
 ///
-VGC_CORE_API
-std::string toString(int x);
-
-/// Converts the given integer to a string.
+/// Example:
+/// \code
+/// Int x = 65;
+/// std::cout << toString(x); // writes out "65"
+/// \endcode
 ///
-VGC_CORE_API
-std::string toString(long long int x);
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value, std::string>::type
+toString(T x) {
+    return std::to_string(x);
+}
 
 /// Converts the given double to a string.
 ///
