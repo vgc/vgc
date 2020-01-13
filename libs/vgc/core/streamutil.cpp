@@ -22,7 +22,7 @@
 namespace vgc {
 namespace core {
 
-namespace impl_ {
+namespace internal {
 
 double computeDouble(bool isPositive, double a, int b, int n)
 {
@@ -54,7 +54,7 @@ void throwNotWithin32BitSignedIntegerRange(long long int x)
         " is too big to be represented as a 32-bit signed integer.");
 }
 
-} // namespace impl_
+} // namespace internal
 
 } // namespace core
 } // namespace vgc
