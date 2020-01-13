@@ -155,7 +155,7 @@ void skipExpectedEof(IStream& in)
     }
 }
 
-namespace impl_ {
+namespace internal {
 
 // Computes (-1)^s * a * 10^b, where a must be a double representing an integer
 // with n digits. This latter argument is used to guard against underflow and
@@ -178,7 +178,7 @@ inline void checkIsWithin32BitSignedIntegerRange(long long int x)
     }
 }
 
-} // namespace impl_
+} // namespace internal
 
 /// Reads a base-10 text representation of a number from the input stream \p
 /// in, and converts it approximately to a double, with a guaranteed precision
@@ -353,7 +353,7 @@ double readDoubleApprox(IStream& in)
         hasLeadingZeros = true;
         if (!in.get(c)) {
             // End of stream; 0 or -0 was read, e.g., "00"
-            return impl_::computeDouble(isPositive, 0.0);
+            return internal::computeDouble(isPositive, 0.0);
         }
     }
 
@@ -372,7 +372,7 @@ double readDoubleApprox(IStream& in)
         }
         if (!in.get(c)) {
             // End of stream; a non-zero integer was read, e.g., "042"
-            return impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
+            return internal::computeDouble(isPositive, a, -dotPosition, numDigits);
         }
     }
 
@@ -381,11 +381,11 @@ double readDoubleApprox(IStream& in)
         if (!in.get(c)) {
             if (numDigits > 0) {
                 // End of stream; a non-zero integer was read, e.g., "042."
-                return impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
+                return internal::computeDouble(isPositive, a, -dotPosition, numDigits);
             }
             else if (hasLeadingZeros)  {
                 // End of stream; 0 or -0 was read, e.g.,  "00."
-                return impl_::computeDouble(isPositive, 0.0);
+                return internal::computeDouble(isPositive, 0.0);
             }
             else {
                  // End of stream; we've only read "."
@@ -404,7 +404,7 @@ double readDoubleApprox(IStream& in)
             dotPosition += 1;
             if (!in.get(c)) {
                 // End of stream; 0 or -0 was read, e.g., "00.00" or ".00"
-                return impl_::computeDouble(isPositive, 0.0);
+                return internal::computeDouble(isPositive, 0.0);
             }
         }
     }
@@ -422,7 +422,7 @@ double readDoubleApprox(IStream& in)
         }
         if (!in.get(c)) {
             // End of stream; a non-zero integer was read, e.g., "042.0140"
-            return impl_::computeDouble(isPositive, a, -dotPosition, numDigits);
+            return internal::computeDouble(isPositive, a, -dotPosition, numDigits);
         }
     }
 
@@ -472,11 +472,11 @@ double readDoubleApprox(IStream& in)
             if (!in.get(c)) {
                 if (numDigits > 0) {
                     // End of stream; a non-zero number was read, e.g., "042.0140e050" or "042.0140e0"
-                    return impl_::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
+                    return internal::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
                 }
                 else {
                     // End of stream; 0 or -0 was read, e.g., "00.e050"
-                    return impl_::computeDouble(isPositive, 0.0);
+                    return internal::computeDouble(isPositive, 0.0);
                 }
             }
         }
@@ -494,11 +494,11 @@ double readDoubleApprox(IStream& in)
     // Compute the result
     if (numDigits > 0) {
         // A non-zero number was read, e.g., "042.0140e050" or "042.0140e0"
-        return impl_::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
+        return internal::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
     }
     else {
         // 0 or -0 was read, e.g., "00.e050"
-        return impl_::computeDouble(isPositive, 0.0);
+        return internal::computeDouble(isPositive, 0.0);
     }
 }
 
@@ -532,7 +532,7 @@ int readInt(IStream& in)
         res *= 10;
         if (isPositive) res += digitToIntNoRangeCheck(c);
         else            res -= digitToIntNoRangeCheck(c);
-        impl_::checkIsWithin32BitSignedIntegerRange(res);
+        internal::checkIsWithin32BitSignedIntegerRange(res);
         if (!in.get(c)) {
             // End of stream; a valid integer was read
             return static_cast<int>(res);
