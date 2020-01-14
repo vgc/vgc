@@ -17,7 +17,7 @@
 #ifndef VGC_UI_WIDGET_H
 #define VGC_UI_WIDGET_H
 
-#include <vgc/core/object.h>
+#include <vgc/core/innercore.h>
 #include <vgc/ui/api.h>
 
 namespace vgc {
@@ -56,7 +56,7 @@ public:
     /// (the new size is given as w and h). Subclasses should reimplement this,
     /// typically by adapting GPU resources to the new size.
     ///
-    virtual void resize(int w, int h);
+    virtual void resize(Int w, Int h);
 
     /// This virtual function is called whenever the widget needs to be
     /// repainted. Subclasses should reimplement this, typically by issuing

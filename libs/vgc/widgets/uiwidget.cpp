@@ -40,7 +40,7 @@ void UiWidget::initializeGL()
 
 void UiWidget::resizeGL(int w, int h)
 {
-    widget_->resize(w, h);
+    widget_->resize(int_cast<Int>(w), int_cast<Int>(h));
 }
 
 void UiWidget::paintGL()
