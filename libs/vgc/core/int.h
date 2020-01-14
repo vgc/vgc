@@ -80,8 +80,41 @@
 /// wrapped in Python anyway (we want all Python types to be defined within
 /// submodules, e.g., vgc.core.Vec2d).
 ///
+/// # Integer type casting
+///
+/// We define a function template vgc::int_cast<T>(U value) which performs safe
+/// type casting from an integer type U to another integer type T. This
+/// function raises a vgc::core::RangeError exception if the output type cannot
+/// hold the runtime value of the input type. It is the preferred way to cast
+/// between integers types in the VGC codebase:
+///
+/// \code
+/// Int a = 42;
+/// UInt b = int_cast<UInt>(a); // OK
+/// int c = int_cast<int>(a); // OK
+/// a = -1;
+/// b = int_cast<UInt>(a); // => RangeError exception
+/// Int16 d = 128;
+/// Int8 e = int_cast<Int8>(d); // => RangeError exception
+/// \endcode
+///
+/// Note that int_cast has zero overhead when the range of T includes the range
+/// of U (e.g., from Int8 to Int16). In these cases, the function template
+/// resolves to be nothing else but a direct static_cast.
+///
+/// Finally, be aware that int_cast is only for converting between two integer
+/// types (= std::is_integral_v<T> is true). If you want to convert a float to
+/// an integer, or vice-versa, you must use another method, such as a
+/// static_cast. We may implement our own cast for this in the future, but
+/// haven't done it yet.
+///
 
 #include <cstdint>
+#include <limits>
+#include <type_traits>
+
+#include <vgc/core/exceptions.h>
+#include <vgc/core/stringutil.h>
 
 namespace vgc {
 
@@ -140,6 +173,160 @@ using UInt64 = std::uint64_t;
 #else
     using UInt = UInt64;
 #endif
+
+/// Returns a human-readable name for integer types.
+///
+/// Examples:
+///
+/// \code
+/// std::cout << vgc::int_typename<vgc::Int8>()     << std::end; // => "Int8"
+/// std::cout << vgc::int_typename<vgc::UInt16>()   << std::end; // => "UInt16"
+/// std::cout << vgc::int_typename<vgc::Int>()      << std::end; // => "Int64" (or "Int32" if VGC_CORE_USE_32BIT_INT is defined)
+/// std::cout << vgc::int_typename<bool>()          << std::end; // => "Bool"
+/// std::cout << vgc::int_typename<char>()          << std::end; // => "Char"
+/// std::cout << vgc::int_typename<signed char>()   << std::end; // => "Int8"
+/// std::cout << vgc::int_typename<unsigned char>() << std::end; // => "UInt8"
+/// std::cout << vgc::int_typename<short>()         << std::end; // => "Int16" (on most platforms)
+/// std::cout << vgc::int_typename<int>()           << std::end; // => "Int32" (on most platforms)
+/// std::cout << vgc::int_typename<long>()          << std::end; // => "Int32" or "Int64" (on most platforms)
+/// std::cout << vgc::int_typename<long long>()     << std::end; // => "Int64" (on most platforms)
+/// \endcode
+///
+/// Note how "char" is a separate type from both "signed char" (= Int8) and
+/// "unsigned char" (= UInt8).
+///
+template <typename T>
+typename std::enable_if<
+    std::is_integral<T>::value,
+    std::string>::type int_typename() { return "UnknownInt"; }
+template<> inline std::string int_typename<bool>() { return "Bool"; }
+template<> inline std::string int_typename<char>() { return "Char"; }
+template<> inline std::string int_typename<Int8>() { return "Int8"; }
+template<> inline std::string int_typename<Int16>() { return "Int16"; }
+template<> inline std::string int_typename<Int32>() { return "Int32"; }
+template<> inline std::string int_typename<Int64>() { return "Int64"; }
+template<> inline std::string int_typename<UInt8>() { return "UInt8"; }
+template<> inline std::string int_typename<UInt16>() { return "UInt16"; }
+template<> inline std::string int_typename<UInt32>() { return "UInt32"; }
+template<> inline std::string int_typename<UInt64>() { return "UInt64"; }
+
+// int_cast from from U to T when:
+// - U and T are both signed or both unsigned
+// - The range of T includes the range of U.
+//
+// The same-signedness condition is important for the comparison operators to
+// be reliable.
+//
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_integral<T>::value &&
+    std::is_integral<U>::value &&
+    std::is_signed<T>::value == std::is_signed<U>::value &&
+    std::numeric_limits<T>::max() >= std::numeric_limits<U>::max(),
+    T>::type
+int_cast(U value) {
+    return static_cast<T>(value);
+}
+
+// int_cast from from U to T when:
+// - U and T are both signed
+// - The range of T does not include the range of U.
+//
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_integral<T>::value &&
+    std::is_integral<U>::value &&
+    std::is_signed<T>::value &&
+    std::is_signed<U>::value &&
+    std::numeric_limits<T>::max() < std::numeric_limits<U>::max(),
+    T>::type
+int_cast(U value) {
+    if (value < std::numeric_limits<T>::min() ||
+        value > std::numeric_limits<T>::max()) {
+        throw core::RangeError(
+            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
+            core::toString(value) + ") to type " + int_typename<T>());
+    }
+    return static_cast<T>(value);
+}
+
+// int_cast from from U to T when:
+// - U and T are both unsigned
+// - The range of T does not include the range of U.
+//
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_integral<T>::value &&
+    std::is_integral<U>::value &&
+    std::is_unsigned<T>::value &&
+    std::is_unsigned<U>::value &&
+    std::numeric_limits<T>::max() < std::numeric_limits<U>::max(),
+    T>::type
+int_cast(U value) {
+    if (value > std::numeric_limits<T>::max()) {
+        throw core::RangeError(
+            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
+            core::toString(value) + ") to type " + int_typename<T>());
+    }
+    return static_cast<T>(value);
+}
+
+// int_cast from from U to T when:
+// - U is unsigned and T is signed
+// - The range of T includes the range of U
+//
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_integral<T>::value &&
+    std::is_integral<U>::value &&
+    std::is_signed<T>::value &&
+    std::is_unsigned<U>::value &&
+    std::numeric_limits<T>::max() >= std::numeric_limits<U>::max(),
+    T>::type
+int_cast(U value) {
+    return static_cast<T>(value);
+}
+
+// int_cast from from U to T when:
+// - U is unsigned and T is signed
+// - The range of T does not include the range of U
+//
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_integral<T>::value &&
+    std::is_integral<U>::value &&
+    std::is_signed<T>::value &&
+    std::is_unsigned<U>::value &&
+    std::numeric_limits<T>::max() < std::numeric_limits<U>::max(),
+    T>::type
+int_cast(U value) {
+    if (value > std::numeric_limits<T>::max()) {
+        throw core::RangeError(
+            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
+            core::toString(value) + ") to type " + int_typename<T>());
+    }
+    return static_cast<T>(value);
+}
+
+// int_cast from from U to T when:
+// - U is signed and T is unsigned
+//
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_integral<T>::value &&
+    std::is_integral<U>::value &&
+    std::is_unsigned<T>::value &&
+    std::is_signed<U>::value,
+    T>::type
+int_cast(U value) {
+    if (value < 0 ||
+        value > std::numeric_limits<T>::max()) {
+        throw core::RangeError(
+            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
+            core::toString(value) + ") to type " + int_typename<T>());
+    }
+    return static_cast<T>(value);
+}
 
 } // namespace vgc
 
