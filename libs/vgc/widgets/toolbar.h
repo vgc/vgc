@@ -22,6 +22,7 @@
 
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/colortoolbutton.h>
+#include <vgc/widgets/uiwidget.h>
 
 namespace vgc {
 namespace widgets {
@@ -54,6 +55,7 @@ Q_SIGNALS:
 private:
     ColorToolButton* colorToolButton_;
     QAction* colorToolButtonAction_;
+    UiWidget* colorPalette_;
 };
 
 } // namespace widgets

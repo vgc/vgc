@@ -26,6 +26,8 @@
 
 #include <vgc/widgets/toolbar.h>
 
+#include <vgc/ui/colorpalette.h>
+
 namespace vgc {
 namespace widgets {
 
@@ -51,6 +53,16 @@ Toolbar::Toolbar(QWidget* parent) :
      colorToolButtonAction_->setStatusTip(tr("Click to open the color selector"));
      colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
      colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
+
+     // XXX This is temporary code to test the unfinished color palette.
+     // Eventually, we'll move the whole Toolbar class to vgc::ui.
+     // For now, just set showColorPalette to true for testing.
+     bool showColorPalette = false;
+     if (showColorPalette) {
+         colorPalette_ = new UiWidget(ui::ColorPalette::create(), this);
+         colorPalette_->setMinimumSize(iconWidth, 300);
+         addWidget(colorPalette_);
+     }
 
      connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
      connect(colorToolButton_, &ColorToolButton::colorChanged, this, &Toolbar::colorChanged);
