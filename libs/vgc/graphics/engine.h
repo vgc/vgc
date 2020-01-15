@@ -37,11 +37,11 @@ class VGC_GRAPHICS_API Engine : public core::Object
 {
     VGC_CORE_OBJECT(Engine)
 
-public:
+protected:
     /// Constructs an Engine. This constructor is an implementation detail only
     /// available to derived classes.
     ///
-    Engine(const ConstructorKey&);
+    Engine();
 
 public:
     /// Clears the whole render area with the given color.

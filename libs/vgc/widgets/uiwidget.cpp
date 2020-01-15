@@ -21,7 +21,8 @@ namespace widgets {
 
 UiWidget::UiWidget(ui::WidgetSharedPtr widget, QWidget* parent) :
     QOpenGLWidget(parent),
-    widget_(widget)
+    widget_(widget),
+    engine_(UiWidgetEngine::create())
 {
 
 }
@@ -33,24 +34,52 @@ UiWidget::~UiWidget()
     doneCurrent();
 }
 
+UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const
+{
+    return context()->versionFunctions<OpenGLFunctions>();
+}
+
 void UiWidget::initializeGL()
 {
-    widget_->initialize();
+    engine_->setOpenGLFunctions(openGLFunctions());
+    widget_->initialize(engine_.get());
 }
 
 void UiWidget::resizeGL(int w, int h)
 {
-    widget_->resize(int_cast<Int>(w), int_cast<Int>(h));
+    widget_->resize(engine_.get(), int_cast<Int>(w), int_cast<Int>(h));
 }
 
 void UiWidget::paintGL()
 {
-    widget_->paint();
+    widget_->paint(engine_.get());
 }
 
 void UiWidget::cleanupGL()
 {
-    widget_->cleanup();
+    widget_->cleanup(engine_.get());
+}
+
+UiWidgetEngine::UiWidgetEngine(const ConstructorKey&) :
+    graphics::Engine()
+{
+
+}
+
+/* static */
+UiWidgetEngineSharedPtr UiWidgetEngine::create()
+{
+    return std::make_shared<UiWidgetEngine>(ConstructorKey());
+}
+
+void UiWidgetEngine::clear(const core::Color& color)
+{
+    openGLFunctions_->glClearColor(
+        static_cast<float>(color.r()),
+        static_cast<float>(color.g()),
+        static_cast<float>(color.b()),
+        static_cast<float>(color.a()));
+    openGLFunctions_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 } // namespace widgets

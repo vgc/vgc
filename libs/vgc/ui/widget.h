@@ -18,6 +18,7 @@
 #define VGC_UI_WIDGET_H
 
 #include <vgc/core/innercore.h>
+#include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
 
 namespace vgc {
@@ -52,25 +53,25 @@ public:
     /// or resize(), and should be reimplemented to allocate required GPU
     /// resources.
     ///
-    virtual void initialize();
+    virtual void initialize(graphics::Engine* engine);
 
     /// This virtual function is called whenever the widget has been resized
     /// (the new size is given as w and h). Subclasses should reimplement this,
     /// typically by adapting GPU resources to the new size.
     ///
-    virtual void resize(Int w, Int h);
+    virtual void resize(graphics::Engine* engine, Int w, Int h);
 
     /// This virtual function is called whenever the widget needs to be
     /// repainted. Subclasses should reimplement this, typically by issuing
     /// draw calls.
     ///
-    virtual void paint();
+    virtual void paint(graphics::Engine* engine);
 
     /// This virtual function is called once after the last call to paint(),
     /// for example before the widget is destructed, and should be reimplemented
     /// to release the allocated GPU resources.
     ///
-    virtual void cleanup();
+    virtual void cleanup(graphics::Engine* engine);
 };
 
 } // namespace ui

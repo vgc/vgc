@@ -19,7 +19,7 @@
 namespace vgc {
 namespace graphics {
 
-Engine::Engine(const ConstructorKey&) :
+Engine::Engine() :
     Object(core::Object::ConstructorKey())
 {
 
