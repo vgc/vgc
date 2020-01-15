@@ -210,6 +210,34 @@ template<> inline std::string int_typename<UInt16>() { return "UInt16"; }
 template<> inline std::string int_typename<UInt32>() { return "UInt32"; }
 template<> inline std::string int_typename<UInt64>() { return "UInt64"; }
 
+namespace internal {
+
+// We need this additional level of indirection to workaround a bug in MSVC.
+// See: https://stackoverflow.com/questions/59743372
+//
+// Once we require C++14, we could use a more elegant solution based on
+// variable templates:
+//
+//   template<typename T>
+//   constexpr T type_max = (std::numeric_limits<T>::max)();
+//
+// Once we require C++17, we could use an even more elegant solution based on
+// "if constexpr" rather than SFINAE.
+//
+// Note: The extra parentheses around std::numeric_limits<T>::min/max avoid
+// potential problems with min/max macros in WinDef.h.
+//
+template<typename T>
+struct type_max {
+    static constexpr T value = (std::numeric_limits<T>::max)();
+};
+template<typename T>
+struct type_min {
+    static constexpr T value = (std::numeric_limits<T>::min)();
+};
+
+} // namespace internal
+
 // int_cast from from U to T when:
 // - U and T are both signed or both unsigned
 // - The range of T includes the range of U.
@@ -222,7 +250,7 @@ typename std::enable_if<
     std::is_integral<T>::value &&
     std::is_integral<U>::value &&
     std::is_signed<T>::value == std::is_signed<U>::value &&
-    std::numeric_limits<T>::max() >= std::numeric_limits<U>::max(),
+    internal::type_max<T>::value >= internal::type_max<T>::value,
     T>::type
 int_cast(U value) {
     return static_cast<T>(value);
@@ -238,11 +266,11 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_signed<U>::value &&
-    std::numeric_limits<T>::max() < std::numeric_limits<U>::max(),
+    internal::type_max<T>::value < internal::type_max<T>::value,
     T>::type
 int_cast(U value) {
-    if (value < std::numeric_limits<T>::min() ||
-        value > std::numeric_limits<T>::max()) {
+    if (value < internal::type_min<T>::value ||
+        value > internal::type_max<T>::value) {
         throw core::RangeError(
             "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
             core::toString(value) + ") to type " + int_typename<T>());
@@ -260,10 +288,10 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_unsigned<T>::value &&
     std::is_unsigned<U>::value &&
-    std::numeric_limits<T>::max() < std::numeric_limits<U>::max(),
+    internal::type_max<T>::value < internal::type_max<T>::value,
     T>::type
 int_cast(U value) {
-    if (value > std::numeric_limits<T>::max()) {
+    if (value > internal::type_max<T>::value) {
         throw core::RangeError(
             "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
             core::toString(value) + ") to type " + int_typename<T>());
@@ -281,7 +309,7 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_unsigned<U>::value &&
-    std::numeric_limits<T>::max() >= std::numeric_limits<U>::max(),
+    internal::type_max<T>::value >= internal::type_max<T>::value,
     T>::type
 int_cast(U value) {
     return static_cast<T>(value);
@@ -297,10 +325,10 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_unsigned<U>::value &&
-    std::numeric_limits<T>::max() < std::numeric_limits<U>::max(),
+    internal::type_max<T>::value < internal::type_max<T>::value,
     T>::type
 int_cast(U value) {
-    if (value > std::numeric_limits<T>::max()) {
+    if (value > internal::type_max<T>::value) {
         throw core::RangeError(
             "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
             core::toString(value) + ") to type " + int_typename<T>());
@@ -320,7 +348,7 @@ typename std::enable_if<
     T>::type
 int_cast(U value) {
     if (value < 0 ||
-        value > std::numeric_limits<T>::max()) {
+        value > internal::type_max<T>::value) {
         throw core::RangeError(
             "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
             core::toString(value) + ") to type " + int_typename<T>());
