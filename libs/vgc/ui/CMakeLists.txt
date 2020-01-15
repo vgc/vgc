@@ -1,6 +1,7 @@
 vgc_add_library(ui
     VGC_DEPENDENCIES
         core
+        graphics
 
     HEADER_FILES
         api.h

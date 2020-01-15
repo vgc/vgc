@@ -17,6 +17,7 @@
 #ifndef VGC_WIDGETS_UIWIDGET_H
 #define VGC_WIDGETS_UIWIDGET_H
 
+#include <QOpenGLFunctions_3_2_Core>
 #include <QOpenGLWidget>
 
 #include <vgc/ui/widget.h>
@@ -25,8 +26,11 @@
 namespace vgc {
 namespace widgets {
 
+VGC_CORE_DECLARE_PTRS(UiWidget);
+VGC_CORE_DECLARE_PTRS(UiWidgetEngine);
+
 /// \class vgc::widget::UiWidget
-/// \brief A QWidget based on a vgc::ui::widget
+/// \brief A QWidget based on a vgc::ui::widget.
 ///
 /// This class is temporary glue code between QtWidgets and vgc::ui,
 /// which we will use while we haven't yet completely removed the dependency
@@ -37,6 +41,8 @@ class VGC_WIDGETS_API UiWidget : public QOpenGLWidget
     Q_OBJECT
 
 public:
+    using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
+
     /// Constructs a UiWidget wrapping the given vgc::ui::Widget.
     ///
     UiWidget(ui::WidgetSharedPtr widget, QWidget* parent = nullptr);
@@ -50,12 +56,54 @@ public:
     ui::Widget* widget() { return widget_.get(); }
 
 private:
+    OpenGLFunctions* openGLFunctions() const;
+
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
     void cleanupGL();
 
     ui::WidgetSharedPtr widget_;
+    widgets::UiWidgetEngineSharedPtr engine_;
+};
+
+/// \class vgc::widget::UiWidgetEngine
+/// \brief The graphics::Engine used by UiWidget.
+///
+/// This class is an implementation of graphics::Engine using QPainter and
+/// OpenGL calls, with the assumption to be used in a QOpenGLWidget.
+///
+class VGC_WIDGETS_API UiWidgetEngine: public graphics::Engine
+{
+    VGC_CORE_OBJECT(UiWidgetEngine)
+
+public:
+    /// Creates a new UiWidgetEngine. This constructor is an implementation
+    /// detail. In order to create a UiWidgetEngine, please use the following:
+    ///
+    /// \code
+    /// UiWidgetEngineSharedPtr engine = UiWidgetEngine::create();
+    /// \endcode
+    ///
+    UiWidgetEngine(const ConstructorKey&);
+
+    /// Creates a new document with no root element.
+    ///
+    static UiWidgetEngineSharedPtr create();
+
+    /// Sets the OpenGLFunctions to be used by this UiWidgetEngine. This must
+    /// be set before any of abstract API from graphics::Engine are called.
+    ///
+    void setOpenGLFunctions(UiWidget::OpenGLFunctions* functions) {
+        openGLFunctions_ = functions;
+    }
+
+    /// Implements graphics::Engine::clear().
+    ///
+    void clear(const core::Color& color) override;
+
+private:
+    UiWidget::OpenGLFunctions* openGLFunctions_;
 };
 
 } // namespace widgets

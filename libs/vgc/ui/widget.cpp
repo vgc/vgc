@@ -31,22 +31,22 @@ WidgetSharedPtr Widget::create()
     return std::make_shared<Widget>(ConstructorKey());
 }
 
-void Widget::initialize()
+void Widget::initialize(graphics::Engine* /*engine*/)
 {
 
 }
 
-void Widget::resize(Int /*w*/, Int /*h*/)
+void Widget::resize(graphics::Engine* /*engine*/, Int /*w*/, Int /*h*/)
 {
 
 }
 
-void Widget::paint()
+void Widget::paint(graphics::Engine* /*engine*/)
 {
 
 }
 
-void Widget::cleanup()
+void Widget::cleanup(graphics::Engine* /*engine*/)
 {
 
 }
