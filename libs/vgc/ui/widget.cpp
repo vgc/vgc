@@ -36,7 +36,7 @@ void Widget::initialize()
 
 }
 
-void Widget::resize(int /*w*/, int /*h*/)
+void Widget::resize(Int /*w*/, Int /*h*/)
 {
 
 }
