@@ -30,6 +30,8 @@ VGC_CORE_DECLARE_PTRS(Widget);
 ///
 class VGC_UI_API Widget : public core::Object
 {  
+    VGC_CORE_OBJECT(Widget)
+
 public:
     /// Constructs a Widget. This constructor is an implementation detail only
     /// available to derived classes. In order to create a Widget, please use
