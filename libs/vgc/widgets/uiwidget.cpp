@@ -26,7 +26,8 @@ UiWidget::UiWidget(ui::WidgetSharedPtr widget, QWidget* parent) :
     widget_(widget),
     engine_(UiWidgetEngine::create())
 {
-
+    widget_->repaintRequested.connect(std::bind(
+        &UiWidget::onRepaintRequested, this));
 }
 
 UiWidget::~UiWidget()
@@ -87,6 +88,11 @@ void UiWidget::paintGL()
 void UiWidget::cleanupGL()
 {
     widget_->cleanup(engine_.get());
+}
+
+void UiWidget::onRepaintRequested()
+{
+    update();
 }
 
 UiWidgetEngine::UiWidgetEngine(const ConstructorKey&) :
