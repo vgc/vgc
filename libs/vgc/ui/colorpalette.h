@@ -59,7 +59,7 @@ public:
     void resize(graphics::Engine* engine, Int w, Int h) override;
     void paint(graphics::Engine* engine) override;
     void cleanup(graphics::Engine* engine) override;
-    bool mousePressEvent(MouseEvent* event) override;
+    bool onMousePress(MouseEvent* event) override;
 
 private:
     core::Color currentColor_;
