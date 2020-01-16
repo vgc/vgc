@@ -77,17 +77,35 @@ public:
     /// This function is called whenever a MouseMove event occurs. Reimplement
     /// it in subclasses if you wish to handle the event.
     ///
-    virtual void mouseMoveEvent(MouseEvent* event);
+    /// You must return true if you accept the event, that is, if you do not
+    /// want it propagated to the parent widget. The default implementation
+    /// returns false, which means that if you do not reimplement this
+    /// function, the event will automatically be propagated to the parent
+    /// widget.
+    ///
+    virtual bool mouseMoveEvent(MouseEvent* event);
 
     /// This function is called whenever a MousePress event occurs. Reimplement
     /// it in subclasses if you wish to handle the event.
     ///
-    virtual void mousePressEvent(MouseEvent* event);
+    /// You must return true if you accept the event, that is, if you do not
+    /// want it propagated to the parent widget. The default implementation
+    /// returns false, which means that if you do not reimplement this
+    /// function, the event will automatically be propagated to the parent
+    /// widget.
+    ///
+    virtual bool mousePressEvent(MouseEvent* event);
 
     /// This function is called whenever a MouseRelease event occurs.
     /// Reimplement it in subclasses if you wish to handle the event.
     ///
-    virtual void mouseReleaseEvent(MouseEvent* event);
+    /// You must return true if you accept the event, that is, if you do not
+    /// want it propagated to the parent widget. The default implementation
+    /// returns false, which means that if you do not reimplement this
+    /// function, the event will automatically be propagated to the parent
+    /// widget.
+    ///
+    virtual bool mouseReleaseEvent(MouseEvent* event);
 };
 
 } // namespace ui

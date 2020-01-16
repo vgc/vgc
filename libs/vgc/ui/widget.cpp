@@ -51,19 +51,19 @@ void Widget::cleanup(graphics::Engine* /*engine*/)
 
 }
 
-void mouseMoveEvent(MouseEvent* /*event*/)
+bool Widget::mouseMoveEvent(MouseEvent* /*event*/)
 {
-
+    return false;
 }
 
-void mousePressEvent(MouseEvent* /*event*/)
+bool Widget::mousePressEvent(MouseEvent* /*event*/)
 {
-
+    return false;
 }
 
-void mouseReleaseEvent(MouseEvent* /*event*/)
+bool Widget::mouseReleaseEvent(MouseEvent* /*event*/)
 {
-
+    return false;
 }
 
 } // namespace ui
