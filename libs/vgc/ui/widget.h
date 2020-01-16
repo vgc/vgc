@@ -101,38 +101,20 @@ public:
     ///
     virtual void cleanup(graphics::Engine* engine);
 
-    /// This function is called whenever a MouseMove event occurs. Reimplement
-    /// it in subclasses if you wish to handle the event.
+    /// Override this function if you wish to handle MouseMove events. You must
+    /// return true if the event was handled, false otherwise.
     ///
-    /// You must return true if you accept the event, that is, if you do not
-    /// want it propagated to the parent widget. The default implementation
-    /// returns false, which means that if you do not reimplement this
-    /// function, the event will automatically be propagated to the parent
-    /// widget.
-    ///
-    virtual bool mouseMoveEvent(MouseEvent* event);
+    virtual bool onMouseMove(MouseEvent* event);
 
-    /// This function is called whenever a MousePress event occurs. Reimplement
-    /// it in subclasses if you wish to handle the event.
+    /// Override this function if you wish to handle MousePress events. You
+    /// must return true if the event was handled, false otherwise.
     ///
-    /// You must return true if you accept the event, that is, if you do not
-    /// want it propagated to the parent widget. The default implementation
-    /// returns false, which means that if you do not reimplement this
-    /// function, the event will automatically be propagated to the parent
-    /// widget.
-    ///
-    virtual bool mousePressEvent(MouseEvent* event);
+    virtual bool onMousePress(MouseEvent* event);
 
-    /// This function is called whenever a MouseRelease event occurs.
-    /// Reimplement it in subclasses if you wish to handle the event.
+    /// Override this function if you wish to handle MouseRelease events. You
+    /// must return true if the event was handled, false otherwise.
     ///
-    /// You must return true if you accept the event, that is, if you do not
-    /// want it propagated to the parent widget. The default implementation
-    /// returns false, which means that if you do not reimplement this
-    /// function, the event will automatically be propagated to the parent
-    /// widget.
-    ///
-    virtual bool mouseReleaseEvent(MouseEvent* event);
+    virtual bool onMouseRelease(MouseEvent* event);
 };
 
 } // namespace ui

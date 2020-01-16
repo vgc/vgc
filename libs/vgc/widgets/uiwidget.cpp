@@ -49,19 +49,19 @@ ui::MouseEventSharedPtr convertEvent(QMouseEvent* /*event*/)
 void UiWidget::mouseMoveEvent(QMouseEvent *event)
 {
     ui::MouseEventSharedPtr e = convertEvent(event);
-    event->setAccepted(widget_->mouseMoveEvent(e.get()));
+    event->setAccepted(widget_->onMouseMove(e.get()));
 }
 
 void UiWidget::mousePressEvent(QMouseEvent *event)
 {
     ui::MouseEventSharedPtr e = convertEvent(event);
-    event->setAccepted(widget_->mousePressEvent(e.get()));
+    event->setAccepted(widget_->onMousePress(e.get()));
 }
 
 void UiWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     ui::MouseEventSharedPtr e = convertEvent(event);
-    event->setAccepted(widget_->mouseReleaseEvent(e.get()));
+    event->setAccepted(widget_->onMouseRelease(e.get()));
 }
 
 UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const

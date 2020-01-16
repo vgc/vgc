@@ -54,7 +54,7 @@ void ColorPalette::cleanup(graphics::Engine* /*engine*/)
 
 }
 
-bool ColorPalette::mousePressEvent(MouseEvent* /*event*/)
+bool ColorPalette::onMousePress(MouseEvent* /*event*/)
 {
     setCurrentColor(
         currentColor() == core::colors::blue ?

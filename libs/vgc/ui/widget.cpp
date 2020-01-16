@@ -56,17 +56,17 @@ void Widget::cleanup(graphics::Engine* /*engine*/)
 
 }
 
-bool Widget::mouseMoveEvent(MouseEvent* /*event*/)
+bool Widget::onMouseMove(MouseEvent* /*event*/)
 {
     return false;
 }
 
-bool Widget::mousePressEvent(MouseEvent* /*event*/)
+bool Widget::onMousePress(MouseEvent* /*event*/)
 {
     return false;
 }
 
-bool Widget::mouseReleaseEvent(MouseEvent* /*event*/)
+bool Widget::onMouseRelease(MouseEvent* /*event*/)
 {
     return false;
 }
