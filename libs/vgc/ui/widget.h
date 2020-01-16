@@ -20,6 +20,7 @@
 #include <vgc/core/innercore.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/mouseevent.h>
 
 namespace vgc {
 namespace ui {
@@ -72,6 +73,21 @@ public:
     /// to release the allocated GPU resources.
     ///
     virtual void cleanup(graphics::Engine* engine);
+
+    /// This function is called whenever a MouseMove event occurs. Reimplement
+    /// it in subclasses if you wish to handle the event.
+    ///
+    virtual void mouseMoveEvent(MouseEvent* event);
+
+    /// This function is called whenever a MousePress event occurs. Reimplement
+    /// it in subclasses if you wish to handle the event.
+    ///
+    virtual void mousePressEvent(MouseEvent* event);
+
+    /// This function is called whenever a MouseRelease event occurs.
+    /// Reimplement it in subclasses if you wish to handle the event.
+    ///
+    virtual void mouseReleaseEvent(MouseEvent* event);
 };
 
 } // namespace ui
