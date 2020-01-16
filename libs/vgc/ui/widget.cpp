@@ -31,6 +31,11 @@ WidgetSharedPtr Widget::create()
     return std::make_shared<Widget>(ConstructorKey());
 }
 
+void Widget::repaint()
+{
+    repaintRequested();
+}
+
 void Widget::initialize(graphics::Engine* /*engine*/)
 {
 

@@ -50,6 +50,33 @@ public:
     ///
     static WidgetSharedPtr create();
 
+    /// Requests this widget to be repainted, for example because the data
+    /// displayed by this widget has changed. The widget is not immediately
+    /// repainted: it is only scheduled for repaint. The actual moment when the
+    /// widget is repainted depends on the graphics::Engine and other
+    /// platform-dependent factors.
+    ///
+    /// You should typically call this function in your event handlers (e.g.,
+    /// mousePressEvent()), to notify that the appearance of this widget has
+    /// changed as a result of the event. Such call can be indirect, below is a
+    /// example scenario:
+    ///
+    /// 1. The user clicks on a "Add Circle" button.
+    /// 2. The event handler of the button emits the "clicked" signal.
+    /// 3. A listener of this signal calls scene->addCircle().
+    /// 4. This modifies the scene, which emits a "changed" signal.
+    /// 5. A view of the scene detects the change, and calls this->repaint().
+    ///
+    /// Note how in this scenario, the repainted view is unrelated to the
+    /// button which initially handled the event.
+    ///
+    void repaint();
+
+    /// This signal is emitted when someone requested this widget, or one of
+    /// its descendent widgets, to be repainted.
+    ///
+    const core::Signal<> repaintRequested;
+
     /// This virtual function is called once before the first call to paint()
     /// or resize(), and should be reimplemented to allocate required GPU
     /// resources.
