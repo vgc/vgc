@@ -68,6 +68,8 @@ private:
     void paintGL() override;
     void cleanupGL();
 
+    void onRepaintRequested();
+
     ui::WidgetSharedPtr widget_;
     widgets::UiWidgetEngineSharedPtr engine_;
 };
