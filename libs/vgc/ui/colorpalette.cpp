@@ -54,5 +54,15 @@ void ColorPalette::cleanup(graphics::Engine* /*engine*/)
 
 }
 
+bool ColorPalette::mousePressEvent(MouseEvent* /*event*/)
+{
+    setCurrentColor(
+        currentColor() == core::colors::blue ?
+        core::colors::red :
+        core::colors::blue);
+    repaint();
+    return true;
+}
+
 } // namespace ui
 } // namespace vgc
