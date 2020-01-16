@@ -51,5 +51,20 @@ void Widget::cleanup(graphics::Engine* /*engine*/)
 
 }
 
+bool Widget::mouseMoveEvent(MouseEvent* /*event*/)
+{
+    return false;
+}
+
+bool Widget::mousePressEvent(MouseEvent* /*event*/)
+{
+    return false;
+}
+
+bool Widget::mouseReleaseEvent(MouseEvent* /*event*/)
+{
+    return false;
+}
+
 } // namespace ui
 } // namespace vgc

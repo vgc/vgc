@@ -20,6 +20,7 @@
 #include <vgc/core/innercore.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/mouseevent.h>
 
 namespace vgc {
 namespace ui {
@@ -72,6 +73,39 @@ public:
     /// to release the allocated GPU resources.
     ///
     virtual void cleanup(graphics::Engine* engine);
+
+    /// This function is called whenever a MouseMove event occurs. Reimplement
+    /// it in subclasses if you wish to handle the event.
+    ///
+    /// You must return true if you accept the event, that is, if you do not
+    /// want it propagated to the parent widget. The default implementation
+    /// returns false, which means that if you do not reimplement this
+    /// function, the event will automatically be propagated to the parent
+    /// widget.
+    ///
+    virtual bool mouseMoveEvent(MouseEvent* event);
+
+    /// This function is called whenever a MousePress event occurs. Reimplement
+    /// it in subclasses if you wish to handle the event.
+    ///
+    /// You must return true if you accept the event, that is, if you do not
+    /// want it propagated to the parent widget. The default implementation
+    /// returns false, which means that if you do not reimplement this
+    /// function, the event will automatically be propagated to the parent
+    /// widget.
+    ///
+    virtual bool mousePressEvent(MouseEvent* event);
+
+    /// This function is called whenever a MouseRelease event occurs.
+    /// Reimplement it in subclasses if you wish to handle the event.
+    ///
+    /// You must return true if you accept the event, that is, if you do not
+    /// want it propagated to the parent widget. The default implementation
+    /// returns false, which means that if you do not reimplement this
+    /// function, the event will automatically be propagated to the parent
+    /// widget.
+    ///
+    virtual bool mouseReleaseEvent(MouseEvent* event);
 };
 
 } // namespace ui
