@@ -16,6 +16,8 @@
 
 #include <vgc/widgets/uiwidget.h>
 
+#include <QMouseEvent>
+
 namespace vgc {
 namespace widgets {
 
@@ -32,6 +34,33 @@ UiWidget::~UiWidget()
     makeCurrent();
     cleanupGL();
     doneCurrent();
+}
+
+namespace {
+
+ui::MouseEventSharedPtr convertEvent(QMouseEvent* /*event*/)
+{
+    return ui::MouseEvent::create();
+}
+
+} // namespace
+
+void UiWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    ui::MouseEventSharedPtr e = convertEvent(event);
+    event->setAccepted(widget_->mouseMoveEvent(e.get()));
+}
+
+void UiWidget::mousePressEvent(QMouseEvent *event)
+{
+    ui::MouseEventSharedPtr e = convertEvent(event);
+    event->setAccepted(widget_->mousePressEvent(e.get()));
+}
+
+void UiWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    ui::MouseEventSharedPtr e = convertEvent(event);
+    event->setAccepted(widget_->mouseReleaseEvent(e.get()));
 }
 
 UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const
