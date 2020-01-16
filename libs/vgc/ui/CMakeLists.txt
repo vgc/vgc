@@ -6,10 +6,14 @@ vgc_add_library(ui
     HEADER_FILES
         api.h
         colorpalette.h
+        event.h
+        mouseevent.h
         widget.h
 
     CPP_FILES
         colorpalette.cpp
+        event.cpp
+        mouseevent.cpp
         widget.cpp
 )
 
