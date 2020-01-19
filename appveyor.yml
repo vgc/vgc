@@ -30,7 +30,7 @@ before_build:
   - cd C:\dev\vgc
   - mkdir build
   - cd build
-  - cmake .. -G "Visual Studio 15 2017" -A x64 -DPython="C:/Python37-x64" -DQt="C:/Qt/5.12.6/msvc2017_64" -DWiX="C:/Program Files (x86)/WiX Toolset v3.11" -DVGC_COMMIT_BRANCH=%VGC_COMMIT_BRANCH%
+  - cmake .. -G "Visual Studio 15 2017" -A x64 -DPython="C:/Python37-x64" -DQt="C:/Qt/5.12/msvc2017_64" -DWiX="C:/Program Files (x86)/WiX Toolset v3.11" -DVGC_COMMIT_BRANCH=%VGC_COMMIT_BRANCH%
 
 build_script:
   - cd C:\dev\vgc\build
