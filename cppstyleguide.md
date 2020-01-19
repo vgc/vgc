@@ -6,7 +6,7 @@ If something is not addressed there, favor readability.
 
 ## Header Files
 
-Headers should be self-contained (i.e., they must be compilable by themselves). 
+Headers should be self-contained (i.e., they must be compilable by themselves).
 This is enforced by including each header first in their corresponding cpp file.
 
 Headers should be guarded with:
@@ -23,18 +23,28 @@ Try to avoid forward declarations as much as possible.
 
 Always use angle brackets and the full path for header includes: `#include <vgc/libname/headername.h>`
 
-In header files, include other header files in this order: std, Qt, otherthirdlibs, vgc
+In header files, include other header files in this order:
+- Standard library headers
+- Headers from third-party libraries
+- VGC headers
+- VGC internal headers
 
-In cpp files, include corresponding header first, then all other header files as specified above.
+In a .cpp file, include its corresponding .h first, then follow the same order as above.
 
-Within each "group" (e.g., Qt includes), order alphabetically.
+Within each category of includes (e.g., "VGC headers"), order alphabetically.
 
 Don't rely on includes from other headers. For example, if you need both
 `vgc::geometry::Curve` and `vgc::geometry::Vec2d`, include both
-`<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`
+`<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`. Exception: there is no
+need to explicitly include headers which are already in
+`<vgc/core/innercore.h>`.
 
-Never use `using somenamespace::SomeClass;` in a header file, and more
-importantly never use `using somenamespace` in a header file.
+Never use `using lib::foo;` or `using namespace lib;` in a header file at
+global or namespace scope (where `lib` is any namespace, including `std`,
+`vgc`, `vgc::core`, `Eigen`, etc.). In rare cases, you may use such statements
+at function scope, or in a .cpp file, but always preferring the more specific
+`using lib::foo;`. An important use case is to take advantage of ADL (=
+argument-dependent lookup), such as in `using std::swap;`.
 
 ## Scoping
 
@@ -59,15 +69,37 @@ In .cpp files, prefer using unnamed namespaces rather than static functions
 for defining things that aren't visible to other translation units:
 
 ```
-namespace { void helperFunction_() {
-    doSomething();
-}}
+namespace {
 
-namespace { struct HelperStruct_ {
+void helperFunction_() {
+    doSomething();
+}
+
+struct HelperStruct_ {
     int x;
     int y;
-};}
+};
+
+} // namespace
 ```
+
+In .h files, encapsulate implementation details in an `internal` namespace.
+There is no need to use the `_` suffix for names in the `internal` namespace:
+
+```
+namespace internal {
+
+struct HelperStruct {
+    int x;
+    int y;
+};
+
+} // namespace internal
+```
+
+Internal .h files may be placed in a separate `internal` folder:
+`<vgc/mylib/internal/foo.h>`.
+
 
 Prefer `enum class` rather than C-style `enum`.
 
@@ -168,12 +200,7 @@ default:
 ```
 
 ```
-if (justOneStatement)
-    thisIsOkayToo();
-```
-
-```
-if (veryShortOneLiner1) evenThisIsOkay();
+if (veryShortOneLiner1) thisIsOkay();
 if (veryShortOneLiner2) whenMoreReadable();
 if (veryShortOneLiner3) inRareCases();
 if (veryShortOneLiner4) whereYouHave();
@@ -208,6 +235,19 @@ class ShortClassOrStruct {
 };
 ```
 
+## Templates
+
+Use "typename" rather than "class" for template parameters. Format angle
+brackets `<>` as you would parenthesis in a function declaration.
+
+```
+template<typename T>
+T add(const T& x, const T& y)
+{
+    return x + y;
+}
+```
+
 ## Polymorphic Classes
 
 A class is said *polymorphic* if it declares or inherits at least one virtual method.
@@ -219,7 +259,7 @@ to satisfy the following
 [Clang's Coding Standard](http://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers):
 
 > **Provide a Virtual Method Anchor for Classes in Headers**
-> If a class is defined in a header file and has a vtable (either it has virtual methods 
+> If a class is defined in a header file and has a vtable (either it has virtual methods
 > or it derives from classes with virtual methods), it must always have at least one out-of-line
 > virtual method in the class. Without this, the compiler will copy the vtable and RTTI into
 > every .o file that #includes the header, bloating .o file sizes and increasing link times.
