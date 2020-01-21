@@ -225,6 +225,12 @@ function(vgc_test_library LIB_NAME)
             COMMAND ${CPP_TEST_TARGET_NAME_OUT}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         )
+        if(WIN32)
+            set_tests_properties(${CPP_TEST_TARGET_NAME}
+                PROPERTIES
+                    ENVIRONMENT "PATH=%PATH%\;${CMAKE_BINARY_DIR}/$<CONFIG>/bin"
+            )
+        endif()
     endforeach()
 
     # Add python tests
