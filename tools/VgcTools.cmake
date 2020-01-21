@@ -205,8 +205,27 @@ function(vgc_test_library LIB_NAME)
 
     set(options "")
     set(oneValueArgs "")
-    set(multiValueArgs PYTHON_TESTS)
+    set(multiValueArgs CPP_TESTS PYTHON_TESTS)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    # Add C++ tests
+    vgc_prepend_(LIB_TARGET_NAME vgc_lib_ ${LIB_NAME})
+    foreach(CPP_TEST_FILENAME ${ARG_CPP_TESTS})
+        set(CPP_TEST_TARGET_NAME vgc_${LIB_NAME}_${CPP_TEST_FILENAME})
+        set(CPP_TEST_TARGET_NAME_OUT ${CPP_TEST_TARGET_NAME}.out)
+        add_executable(${CPP_TEST_TARGET_NAME_OUT} ${CPP_TEST_FILENAME})
+        target_link_libraries(${CPP_TEST_TARGET_NAME_OUT} ${LIB_TARGET_NAME})
+        set_target_properties(${CPP_TEST_TARGET_NAME_OUT}
+            PROPERTIES
+                OUTPUT_NAME ${CPP_TEST_FILENAME}.out
+                RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        )
+        add_test(
+            NAME ${CPP_TEST_TARGET_NAME}
+            COMMAND ${CPP_TEST_TARGET_NAME_OUT}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        )
+    endforeach()
 
     # Add python tests
     foreach(PYTHON_TEST_FILENAME ${ARG_PYTHON_TESTS})
