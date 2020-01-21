@@ -241,6 +241,54 @@ public:
     virtual ~LogicError();
 };
 
+/// \class vgc::core::NegativeIntegerError
+/// \brief Raised when an integer is negative but shouldn't.
+///
+/// This exception is raised when attempting to create a container of a
+/// negative size, or casting a negative integer to an unsigned integer type.
+///
+/// Examples:
+///
+/// \code
+/// core::DoubleArray a(-1, 42); // --> Raise NegativeIntegerError!
+/// UInt x = int_cast<UInt>(-1); // --> Raise NegativeIntegerError!
+/// \endcode
+///
+class VGC_CORE_API NegativeIntegerError : public LogicError {
+public:
+    /// Constructs a NegativeIntegerError with the given \p reason.
+    ///
+    NegativeIntegerError(const std::string& reason) : LogicError(reason) {}
+
+    /// Destructs the NegativeIntegerError.
+    ///
+    ~NegativeIntegerError();
+};
+
+/// \class vgc::core::IndexError
+/// \brief Raised when the given index is out of range.
+///
+/// This exception is raised whenever attempting to access an element of a
+/// container with an index out of the container's range.
+///
+/// Example:
+///
+/// \code
+/// core::DoubleArray  a = {10, 42};
+/// double x = a[2]; // --> Raise IndexError!
+/// \endcode
+///
+class VGC_CORE_API IndexError : public LogicError {
+public:
+    /// Constructs an IndexError with the given \p reason.
+    ///
+    IndexError(const std::string& reason) : LogicError(reason) {}
+
+    /// Destructs the IndexError.
+    ///
+    ~IndexError();
+};
+
 /// \class vgc::core::RuntimeError
 /// \brief Base class for all runtime errors
 ///
@@ -345,13 +393,53 @@ public:
 ///
 class VGC_CORE_API RangeError : public RuntimeError {
 public:
-    /// Constructs a ParseError with the given \p reason.
+    /// Constructs a RangeError with the given \p reason.
     ///
     RangeError(const std::string& reason) : RuntimeError(reason) {}
 
-    /// Destructs the ParseError.
+    /// Destructs the RangeError.
     ///
     ~RangeError();
+};
+
+/// \class vgc::core::IntegerOverflowError
+/// \brief Raised when int_cast fails due to an integer overflow.
+///
+/// This exception is raised whenever a conversion fails because the input
+/// (typically, a number) is outside the representable range of the output
+/// type.
+///
+/// Example:
+///
+/// \code
+/// Int x = 128;
+/// vgc::int_cast<Int8>(x); // --> Raise IntegerOverflowError!
+///                         //     (128 is too big to be stored as an Int8)
+/// \endcode
+///
+/// \sa NegativeIntegerError
+///
+/// Note how NegativeIntegerError is considered a LogicError, while
+/// IntegerOverflowError isn't. Indeed, while IntegerOverflowError may also in
+/// theory be considered a logic error (= didn't check the maximum int range
+/// before casting), it is often impractical to always perform such checks, and
+/// can simply be considered a "limitation" of the program (akin to a crash
+/// because you ran out of memory).
+///
+/// Some IntegerOverflowError may of course be caused by actual bugs, and
+/// should be fixed. Some others may be common enough to warrant a custom user
+/// message (or prevent the user from performing the action) rather than the
+/// generic crash handler.
+///
+class VGC_CORE_API IntegerOverflowError : public RangeError {
+public:
+    /// Constructs a IntegerOverflowError with the given \p reason.
+    ///
+    IntegerOverflowError(const std::string& reason) : RangeError(reason) {}
+
+    /// Destructs the ParseError.
+    ///
+    ~IntegerOverflowError();
 };
 
 } // namespace core

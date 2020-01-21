@@ -24,6 +24,16 @@ LogicError::~LogicError()
 
 }
 
+NegativeIntegerError::~NegativeIntegerError()
+{
+
+}
+
+IndexError::~IndexError()
+{
+
+}
+
 RuntimeError::~RuntimeError()
 {
 
@@ -35,6 +45,11 @@ ParseError::~ParseError()
 }
 
 RangeError::~RangeError()
+{
+
+}
+
+IntegerOverflowError::~IntegerOverflowError()
 {
 
 }
