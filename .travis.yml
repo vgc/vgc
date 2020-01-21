@@ -42,5 +42,5 @@ script:
   - cd build
   - cmake .. -DCMAKE_BUILD_TYPE=Release -DVGC_COMMIT_BRANCH=$VGC_COMMIT_BRANCH ${CMAKE_EXTRA_ARGS}
   - make
-  - make test
+  - make check
   - make deploy

@@ -39,7 +39,7 @@ build_script:
 
 test_script:
   - cd C:\dev\vgc\build
-  - test -VV
+  - make check
 
 artifacts:
   - path: build\Release\resources\core\version.txt
