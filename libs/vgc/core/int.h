@@ -236,21 +236,84 @@ struct type_min {
     static constexpr T value = (std::numeric_limits<T>::min)();
 };
 
+template <typename T, typename U>
+std::string intErrorReason(U value) {
+    return "Cannot convert " + int_typename<U>() + "(" +
+            core::toString(value) + ") to type " + int_typename<T>();
+}
+
+template <typename T, typename U>
+void throwIntegerOverflowError(U value) {
+    throw core::IntegerOverflowError(intErrorReason<T>(value));
+}
+
+template <typename T, typename U>
+void throwNegativeIntegerError(U value) {
+    throw core::NegativeIntegerError(intErrorReason<T>(value));
+}
+
 } // namespace internal
+
+// Implicit promotion/conversion rules between integer types are tricky:
+//
+// https://stackoverflow.com/q/46073295
+//
+// This makes comparing two integers of different types in general unreliable
+// (= give surprising or unexpected results). In order to guarantee correctness
+// of our int_cast implementation, we only perform one of the following types
+// of comparisons, which all provide the expected result:
+//
+// (1) Comparison between types of same signedness: the type of smaller rank
+//     if implicitly converted to the type or greater rank.
+//
+// (2) Comparison between a non-negative signed integer T and an unsigned
+//     integer U:
+//
+//     (a) If rank(U) >= rank(T): T -> U
+//
+//         => OK because t > 0 and range(U) includes positive_range(T)
+//
+//     (b) otherwise, if range(T) includes range(U): U -> T
+//
+//         => OK because range(T) includes range(U)
+//
+//     (c) otherwise: U -> V and T -> V, with V = make_unsigned<T>
+//
+//         => OK for the following reasons:
+//
+//            (i)  We have rank(T) > rank(U)                (otherwise case (a))
+//            (ii) We have range(T) not including range(U)  (otherwise case (b))
+//
+//            Note: (i) + (ii) can occur for example if:
+//              LLP64:   T = long        U = unsigned int       (both are 32bit)
+//              LP64:    T = long long   U = unsigned long      (both are 64bit)
+//
+//            (iii) We have rank(T) = rank(V)              (cf. definition of V)
+//
+//            With (i) + (iii) we can conclude that rank(V) > rank(U), which
+//            means that range(V) includes range(U) since U and V are both
+//            unsigned. So the first conversion U -> V is OK.
+//
+//            Finally, since V is the unsigned version of T, and T is non-negative,
+//            then the second conversion T -> V is also OK.
+//
+//            QED
+//
+//            Note: we didn't use (ii) for the proof, but it is informative
+//            regardless, as clarification of when can (c) occur, and as
+//            concrete examples of T and U to help follow the proof.
+//
 
 // int_cast from from U to T when:
 // - U and T are both signed or both unsigned
 // - The range of T includes the range of U.
-//
-// The same-signedness condition is important for the comparison operators to
-// be reliable.
 //
 template <typename T, typename U>
 typename std::enable_if<
     std::is_integral<T>::value &&
     std::is_integral<U>::value &&
     std::is_signed<T>::value == std::is_signed<U>::value &&
-    internal::type_max<T>::value >= internal::type_max<T>::value,
+    internal::type_max<T>::value >= internal::type_max<U>::value, // (1)
     T>::type
 int_cast(U value) {
     return static_cast<T>(value);
@@ -266,14 +329,12 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_signed<U>::value &&
-    internal::type_max<T>::value < internal::type_max<T>::value,
+    internal::type_max<T>::value < internal::type_max<U>::value, // (1)
     T>::type
 int_cast(U value) {
-    if (value < internal::type_min<T>::value ||
-        value > internal::type_max<T>::value) {
-        throw core::RangeError(
-            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
-            core::toString(value) + ") to type " + int_typename<T>());
+    if (value < internal::type_min<T>::value || // (1)
+        value > internal::type_max<T>::value) { // (1)
+        internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
@@ -288,13 +349,11 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_unsigned<T>::value &&
     std::is_unsigned<U>::value &&
-    internal::type_max<T>::value < internal::type_max<T>::value,
+    internal::type_max<T>::value < internal::type_max<U>::value, // (1)
     T>::type
 int_cast(U value) {
-    if (value > internal::type_max<T>::value) {
-        throw core::RangeError(
-            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
-            core::toString(value) + ") to type " + int_typename<T>());
+    if (value > internal::type_max<T>::value) { // (1)
+        internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
@@ -309,7 +368,7 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_unsigned<U>::value &&
-    internal::type_max<T>::value >= internal::type_max<T>::value,
+    internal::type_max<T>::value >= internal::type_max<U>::value, // (2)
     T>::type
 int_cast(U value) {
     return static_cast<T>(value);
@@ -325,33 +384,52 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_unsigned<U>::value &&
-    internal::type_max<T>::value < internal::type_max<T>::value,
+    internal::type_max<T>::value < internal::type_max<U>::value, // (2)
     T>::type
 int_cast(U value) {
-    if (value > internal::type_max<T>::value) {
-        throw core::RangeError(
-            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
-            core::toString(value) + ") to type " + int_typename<T>());
+    if (value > internal::type_max<T>::value) { // (2)
+        internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
 
 // int_cast from from U to T when:
 // - U is signed and T is unsigned
+// - The range of T includes the positive range of U
 //
 template <typename T, typename U>
 typename std::enable_if<
     std::is_integral<T>::value &&
     std::is_integral<U>::value &&
     std::is_unsigned<T>::value &&
-    std::is_signed<U>::value,
+    std::is_signed<U>::value &&
+    internal::type_max<T>::value >= internal::type_max<U>::value, // (2)
     T>::type
 int_cast(U value) {
-    if (value < 0 ||
-        value > internal::type_max<T>::value) {
-        throw core::RangeError(
-            "Integer Overflow: Cannot convert " + int_typename<U>() + "(" +
-            core::toString(value) + ") to type " + int_typename<T>());
+    if (value < 0) { // 0 is promoted to int => (1)
+        internal::throwNegativeIntegerError<T>(value);
+    }
+    return static_cast<T>(value);
+}
+
+// int_cast from from U to T when:
+// - U is signed and T is unsigned
+// - The range of T does not include the positive range of U
+//
+template <typename T, typename U>
+typename std::enable_if<
+    std::is_integral<T>::value &&
+    std::is_integral<U>::value &&
+    std::is_unsigned<T>::value &&
+    std::is_signed<U>::value &&
+    internal::type_max<T>::value < internal::type_max<U>::value, // (2)
+    T>::type
+int_cast(U value) {
+    if (value < 0) { // 0 is promoted to int => (1)
+        internal::throwNegativeIntegerError<T>(value);
+    }
+    else if (value > internal::type_max<T>::value) { // (2)
+        internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
