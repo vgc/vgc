@@ -166,12 +166,27 @@ endif()
 # Always generate unit tests
 enable_testing()
 
-# Have "make check" run the unit tests in --verbose mode.
-# This is more useful than the built-in "make test" which would run ctest
-# without --output-on-failure or --verbose, that is, with no indications
-# of why a test failed, or details from the Python's unittest module about
-# which tests were run.
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+# Define `make check` to run the unit tests in --output-on-failure mode. This
+# is more useful than the built-in `make test` which would run without printing
+# what went wrong when a test fails. We also use the --force-new-ctest-process
+# option as this is what `make test` uses too. Note that while you can run
+# `make test` in any subfolder, you can only run `make check` at the root of
+# the build folder.
+#
+# Implementation inspired from: https://stackoverflow.com/q/16158091
+#
+if (CMAKE_CONFIGURATION_TYPES)
+    add_custom_target(check
+        COMMAND ${CMAKE_CTEST_COMMAND}
+            --force-new-ctest-process --output-on-failure
+            --build-config "$<CONFIGURATION>"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+else()
+    add_custom_target(check
+        COMMAND ${CMAKE_CTEST_COMMAND}
+            --force-new-ctest-process --output-on-failure
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
 
 # Import helper CMake functions
 include(tools/VgcTools.cmake)
