@@ -213,8 +213,9 @@ function(vgc_test_library LIB_NAME)
     foreach(CPP_TEST_FILENAME ${ARG_CPP_TESTS})
         set(CPP_TEST_TARGET_NAME vgc_${LIB_NAME}_${CPP_TEST_FILENAME})
         set(CPP_TEST_TARGET_NAME_OUT ${CPP_TEST_TARGET_NAME}.out)
-        add_executable(${CPP_TEST_TARGET_NAME_OUT} ${CPP_TEST_FILENAME})
+        add_executable(${CPP_TEST_TARGET_NAME_OUT} EXCLUDE_FROM_ALL ${CPP_TEST_FILENAME})
         target_link_libraries(${CPP_TEST_TARGET_NAME_OUT} ${LIB_TARGET_NAME})
+        add_dependencies(tests ${CPP_TEST_TARGET_NAME_OUT})
         set_target_properties(${CPP_TEST_TARGET_NAME_OUT}
             PROPERTIES
                 OUTPUT_NAME ${CPP_TEST_FILENAME}.out

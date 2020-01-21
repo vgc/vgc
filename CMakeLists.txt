@@ -166,6 +166,13 @@ endif()
 # Always generate unit tests
 enable_testing()
 
+# Define `make tests` to build the C++ tests. Indeed, we do not build tests by
+# default when running `make`. However, note that the "tests" target is a
+# dependency of the "check" target, so there is no need to call `make tests`
+# explicitly before running `make check`.
+#
+add_custom_target(tests)
+
 # Define `make check` to run the unit tests in --output-on-failure mode. This
 # is more useful than the built-in `make test` which would run without printing
 # what went wrong when a test fails. We also use the --force-new-ctest-process
@@ -187,6 +194,7 @@ else()
             --force-new-ctest-process --output-on-failure
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
+add_dependencies(check tests)
 
 # Import helper CMake functions
 include(tools/VgcTools.cmake)
