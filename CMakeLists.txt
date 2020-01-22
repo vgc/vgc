@@ -401,6 +401,14 @@ add_subdirectory(third)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
 # Include third-party shipped libs
+#
+# Note: GoogleTest headers are automatically included by targets who add
+# gtest in their target_link_libraries, thanks to googletest defining
+# target_include_directories(gtest ...). This is in fact the modern way
+# to do this, and we should do the same for all other targets. See:
+#
+# https://github.com/vgc/vgc/issues/90
+#
 include_directories(${CMAKE_CURRENT_LIST_DIR}/third/Eigen/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/third/pybind11/include)
 
