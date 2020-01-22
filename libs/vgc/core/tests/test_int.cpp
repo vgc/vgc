@@ -3,58 +3,247 @@
 // executed, they are just added to the repository for future use, when C++
 // tests will actually be implemented.
 
+#include <gtest/gtest.h>
 #include <vgc/core/int.h>
 
 using namespace vgc;
 using core::NegativeIntegerError;
 using core::IntegerOverflowError;
 
-int main()
-{
-    // Trivial casts from type T to T.
-    // TODO: also test with the minimum value and the max value.
-    int_cast<bool>(bool(0));
-    int_cast<char>(char(0));
-    int_cast<signed char>((signed char)(0));
-    int_cast<unsigned char>((unsigned char)(0));
-    int_cast<short>(short(0));
-    int_cast<int>(int(0));
-    int_cast<long>(long(0));
-    int_cast<long long>((long long)(0));
-    int_cast<unsigned short>((unsigned short)(0));
-    int_cast<unsigned int>((unsigned int)(0));
-    int_cast<unsigned long>((unsigned long)(0));
-    int_cast<unsigned long long>((unsigned long long)(0));
-    int_cast<Int>(Int(0));
-    int_cast<Int8>(Int8(0));
-    int_cast<Int16>(Int16(0));
-    int_cast<Int32>(Int32(0));
-    int_cast<Int64>(Int64(0));
-    int_cast<UInt>(UInt(0));
-    int_cast<UInt8>(UInt8(0));
-    int_cast<UInt16>(UInt16(0));
-    int_cast<UInt32>(UInt32(0));
-    int_cast<UInt64>(UInt64(0));
+using schar = signed char;
+using llong = long long;
+using uchar = unsigned char;
+using ushort = unsigned short;
+using uint = unsigned int;
+using ulong = unsigned long;
+using ullong = unsigned long long;
 
-    // Casts between separate types that should work.
-    // TODO: be more exhaustive than that.
-    int_cast<UInt8>(Int8(127));
-    int_cast<UInt8>(Int16(255));
-    int_cast<UInt32>(Int32(2147483647));
-    int_cast<UInt32>(Int64(4294967295));
-    int_cast<Int8>(UInt8(127));
-    int_cast<Int8>(Int16(127));
-    int_cast<UInt8>(UInt16(255));
+// Note: the fundamental integral types are:
+//
+// bool
+//
+// short
+// int
+// long
+// long long
+//
+// unsigned short
+// unsigned int
+// unsigned long
+// unsigned long long
+//
+// char
+// signed char
+// unsigned char
+// wchar_t
+// char8_t  (since C++20)
+// char16_t (since C++11)
+// char32_t (since C++11)
+//
+// There might also in theory be "extended integer types", but there are no
+// such arcane things in the platforms/compilers we support:
+//
+// https://stackoverflow.com/q/13403600/what-are-extended-integer-types
+//
+// All the types listed above as distinct types, and all other integral types
+// (e.g., size_t, int64_t) are required to be a typedef for one of those types.
+// For example, size_t is typically a typedef for unsigned long or unsigned
+// long long.
+//
+// Therefore, in our tests, we don't test, say, size_t specifically.
+//
+// However, we do test our custom-made typedefs, to verify that they exist (the
+// fixed-width integer types are in theory optional), and that they cover the
+// required range.
+//
+// Note that std::is_signed<bool>::value is false, that is, bool is considered
+// an unsigned integer.
+//
 
-    // Casts between separate types that should raise an exception.
-    // TODO: be more exhaustive than that.
-    try { int_cast<UInt8>(Int8(-1)); abort(); } catch (NegativeIntegerError&) {}
-    try { int_cast<UInt8>(Int16(256)); abort(); } catch (IntegerOverflowError&) {}
-    try { int_cast<UInt32>(Int32(-1)); abort(); } catch (NegativeIntegerError&) {}
-    try { int_cast<UInt32>(Int64(4294967296)); abort(); } catch (IntegerOverflowError&) {}
-    try { int_cast<Int8>(UInt8(128)); abort(); } catch (IntegerOverflowError&) {}
-    try { int_cast<Int8>(Int16(128)); abort(); } catch (IntegerOverflowError&) {}
-    try { int_cast<UInt8>(UInt16(256)); abort(); } catch (IntegerOverflowError&) {}
+TEST(TestInt, DefineZero) {
 
-    return 0;
+    EXPECT_EQ(bool(0),     0);
+    EXPECT_EQ(short(0),    0);
+    EXPECT_EQ(int(0),      0);
+    EXPECT_EQ(long(0),     0);
+    EXPECT_EQ(llong(0),    0);
+    EXPECT_EQ(ushort(0),   0);
+    EXPECT_EQ(uint(0),     0);
+    EXPECT_EQ(ulong(0),    0);
+    EXPECT_EQ(ullong(0),   0);
+    EXPECT_EQ(char(0),     0);
+    EXPECT_EQ(schar(0),    0);
+    EXPECT_EQ(uchar(0),    0);
+    EXPECT_EQ(wchar_t(0),  0);
+    EXPECT_EQ(char16_t(0), 0);
+    EXPECT_EQ(char32_t(0), 0);
+    EXPECT_EQ(Int(0),      0);
+    EXPECT_EQ(Int8(0),     0);
+    EXPECT_EQ(Int16(0),    0);
+    EXPECT_EQ(Int32(0),    0);
+    EXPECT_EQ(Int64(0),    0);
+    EXPECT_EQ(UInt(0),     0);
+    EXPECT_EQ(UInt8(0),    0);
+    EXPECT_EQ(UInt16(0),   0);
+    EXPECT_EQ(UInt32(0),   0);
+    EXPECT_EQ(UInt64(0),   0);
+
+    EXPECT_EQ(int_cast<bool>(0),     0);
+    EXPECT_EQ(int_cast<short>(0),    0);
+    EXPECT_EQ(int_cast<int>(0),      0);
+    EXPECT_EQ(int_cast<long>(0),     0);
+    EXPECT_EQ(int_cast<llong>(0),    0);
+    EXPECT_EQ(int_cast<ushort>(0),   0);
+    EXPECT_EQ(int_cast<uint>(0),     0);
+    EXPECT_EQ(int_cast<ulong>(0),    0);
+    EXPECT_EQ(int_cast<ullong>(0),   0);
+    EXPECT_EQ(int_cast<char>(0),     0);
+    EXPECT_EQ(int_cast<schar>(0),    0);
+    EXPECT_EQ(int_cast<uchar>(0),    0);
+    EXPECT_EQ(int_cast<wchar_t>(0),  0);
+    EXPECT_EQ(int_cast<char16_t>(0), 0);
+    EXPECT_EQ(int_cast<char32_t>(0), 0);
+    EXPECT_EQ(int_cast<Int>(0),      0);
+    EXPECT_EQ(int_cast<Int8>(0),     0);
+    EXPECT_EQ(int_cast<Int16>(0),    0);
+    EXPECT_EQ(int_cast<Int32>(0),    0);
+    EXPECT_EQ(int_cast<Int64>(0),    0);
+    EXPECT_EQ(int_cast<UInt>(0),     0);
+    EXPECT_EQ(int_cast<UInt8>(0),    0);
+    EXPECT_EQ(int_cast<UInt16>(0),   0);
+    EXPECT_EQ(int_cast<UInt32>(0),   0);
+    EXPECT_EQ(int_cast<UInt64>(0),   0);
+
+    EXPECT_EQ(int_cast<bool>(0),     bool(0));
+    EXPECT_EQ(int_cast<short>(0),    short(0));
+    EXPECT_EQ(int_cast<int>(0),      int(0));
+    EXPECT_EQ(int_cast<long>(0),     long(0));
+    EXPECT_EQ(int_cast<llong>(0),    llong(0));
+    EXPECT_EQ(int_cast<ushort>(0),   ushort(0));
+    EXPECT_EQ(int_cast<uint>(0),     uint(0));
+    EXPECT_EQ(int_cast<ulong>(0),    ulong(0));
+    EXPECT_EQ(int_cast<ullong>(0),   ullong(0));
+    EXPECT_EQ(int_cast<char>(0),     char(0));
+    EXPECT_EQ(int_cast<schar>(0),    schar(0));
+    EXPECT_EQ(int_cast<uchar>(0),    uchar(0));
+    EXPECT_EQ(int_cast<wchar_t>(0),  wchar_t(0));
+    EXPECT_EQ(int_cast<char16_t>(0), char16_t(0));
+    EXPECT_EQ(int_cast<char32_t>(0), char32_t(0));
+    EXPECT_EQ(int_cast<Int>(0),      Int(0));
+    EXPECT_EQ(int_cast<Int8>(0),     Int8(0));
+    EXPECT_EQ(int_cast<Int16>(0),    Int16(0));
+    EXPECT_EQ(int_cast<Int32>(0),    Int32(0));
+    EXPECT_EQ(int_cast<Int64>(0),    Int64(0));
+    EXPECT_EQ(int_cast<UInt>(0),     UInt(0));
+    EXPECT_EQ(int_cast<UInt8>(0),    UInt8(0));
+    EXPECT_EQ(int_cast<UInt16>(0),   UInt16(0));
+    EXPECT_EQ(int_cast<UInt32>(0),   UInt32(0));
+    EXPECT_EQ(int_cast<UInt64>(0),   UInt64(0));
+}
+
+// TODO: DefineMin/DefineMax
+
+// Note: "upcast" (resp. "downcast") in this context means int-casting to an
+// integer type of greater (resp. lesser) rank. It is obviously unrelated to
+// inheritance. "eqcast" means casting to the same type, which should be a
+// no-op.
+
+TEST(TestInt, EqCastZero) {
+
+    EXPECT_EQ(int_cast<bool>     (bool(0)),     bool(0));
+    EXPECT_EQ(int_cast<short>    (short(0)),    short(0));
+    EXPECT_EQ(int_cast<int>      (int(0)),      int(0));
+    EXPECT_EQ(int_cast<long>     (long(0)),     long(0));
+    EXPECT_EQ(int_cast<llong>    (llong(0)),    llong(0));
+    EXPECT_EQ(int_cast<ushort>   (ushort(0)),   ushort(0));
+    EXPECT_EQ(int_cast<uint>     (uint(0)),     uint(0));
+    EXPECT_EQ(int_cast<ulong>    (ulong(0)),    ulong(0));
+    EXPECT_EQ(int_cast<ullong>   (ullong(0)),   ullong(0));
+    EXPECT_EQ(int_cast<char>     (char(0)),     char(0));
+    EXPECT_EQ(int_cast<schar>    (schar(0)),    schar(0));
+    EXPECT_EQ(int_cast<uchar>    (uchar(0)),    uchar(0));
+    EXPECT_EQ(int_cast<wchar_t>  (wchar_t(0)),  wchar_t(0));
+    EXPECT_EQ(int_cast<char16_t> (char16_t(0)), char16_t(0));
+    EXPECT_EQ(int_cast<char32_t> (char32_t(0)), char32_t(0));
+    EXPECT_EQ(int_cast<Int>      (Int(0)),      Int(0));
+    EXPECT_EQ(int_cast<Int8>     (Int8(0)),     Int8(0));
+    EXPECT_EQ(int_cast<Int16>    (Int16(0)),    Int16(0));
+    EXPECT_EQ(int_cast<Int32>    (Int32(0)),    Int32(0));
+    EXPECT_EQ(int_cast<Int64>    (Int64(0)),    Int64(0));
+    EXPECT_EQ(int_cast<UInt>     (UInt(0)),     UInt(0));
+    EXPECT_EQ(int_cast<UInt8>    (UInt8(0)),    UInt8(0));
+    EXPECT_EQ(int_cast<UInt16>   (UInt16(0)),   UInt16(0));
+    EXPECT_EQ(int_cast<UInt32>   (UInt32(0)),   UInt32(0));
+    EXPECT_EQ(int_cast<UInt64>   (UInt64(0)),   UInt64(0));
+}
+
+TEST(TestInt, UpCastZero) {
+
+    // TODO: complete this
+    EXPECT_EQ(int_cast<Int16>(Int8(0)), Int16(0));
+}
+
+TEST(TestInt, UpCastMax) {
+
+    // TODO: complete this, use vgc::IntMin / vgc::IntMax constants
+    EXPECT_EQ(int_cast<Int16>(Int8(127)), Int16(127));
+}
+
+TEST(TestInt, UpCastMin) {
+
+    // TODO: complete this, use vgc::IntMin / vgc::IntMax constants
+    EXPECT_EQ(int_cast<Int16>(Int8(-128)), Int16(-128));
+}
+
+TEST(TestInt, DownCastZero) {
+
+    // TODO: complete this
+    EXPECT_EQ(int_cast<Int8>(Int16(0)), Int8(0));
+}
+
+TEST(TestInt, DownCastMax) {
+
+    // TODO: complete this, use vgc::IntMin / vgc::IntMax constants
+    EXPECT_THROW(int_cast<Int8>(Int16(32767)), IntegerOverflowError);
+}
+
+TEST(TestInt, DownCastMinSigned) {
+
+    // TODO: complete this, use vgc::IntMin / vgc::IntMax constants
+    EXPECT_THROW(int_cast<Int8>(Int16(-32768)), IntegerOverflowError);
+}
+
+TEST(TestInt, DownCastMinUnsigned) {
+
+    // TODO: complete this
+    EXPECT_EQ(int_cast<Int8>(Int16(0)), 0);
+}
+
+TEST(TestInt, MiscNoThrow) {
+
+    // TODO: classify and complete
+    EXPECT_EQ(int_cast<UInt8>(Int8(127)),          UInt8(127));
+    EXPECT_EQ(int_cast<UInt8>(Int16(255)),         UInt8(255));
+    EXPECT_EQ(int_cast<UInt32>(Int32(2147483647)), UInt32(2147483647));
+    EXPECT_EQ(int_cast<UInt32>(Int64(4294967295)), UInt32(4294967295));
+    EXPECT_EQ(int_cast<Int8>(UInt8(127)),          Int8(127));
+    EXPECT_EQ(int_cast<Int8>(Int16(127)),          Int8(127));
+    EXPECT_EQ(int_cast<UInt8>(UInt16(255)),        UInt8(255));
+}
+
+TEST(TestInt, MiscThrow) {
+
+    // TODO: classify and complete
+    EXPECT_THROW(int_cast<UInt8>(Int8(-1))          , NegativeIntegerError);
+    EXPECT_THROW(int_cast<UInt8>(Int16(256))        , IntegerOverflowError);
+    EXPECT_THROW(int_cast<UInt32>(Int32(-1))        , NegativeIntegerError);
+    EXPECT_THROW(int_cast<UInt32>(Int64(4294967296)), IntegerOverflowError);
+    EXPECT_THROW(int_cast<Int8>(UInt8(128))         , IntegerOverflowError);
+    EXPECT_THROW(int_cast<Int8>(Int16(128))         , IntegerOverflowError);
+    EXPECT_THROW(int_cast<UInt8>(UInt16(256))       , IntegerOverflowError);
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
