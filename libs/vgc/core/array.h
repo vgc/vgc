@@ -26,8 +26,6 @@
 
 #include <vgc/core/internal/containerutil.h>
 
-#include <iostream>
-
 namespace vgc {
 namespace core {
 
