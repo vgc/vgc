@@ -1,5 +1,6 @@
 vgc_test_library(core
     CPP_TESTS
+        test_array.cpp
         test_int.cpp
 
     PYTHON_TESTS
