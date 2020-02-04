@@ -236,7 +236,7 @@ namespace core {
 /// ---cpp---
 ///
 template<typename T>
-class VGC_CORE_API Array
+class Array
 {
 public:
     // Define all typedefs necessary to meet the requirements of
