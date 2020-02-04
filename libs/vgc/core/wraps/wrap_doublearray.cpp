@@ -47,9 +47,15 @@ using This = vgc::core::DoubleArray;
 // Note 3: Automatic conversion of STL containers by pybind11 always create
 //   copies. Read this before including <pybind11/stl.h>:
 //   http://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#making-opaque-types
+//
+// Note 4: we're mimicking many of the things done in pybind11/stl_bind.h. See there for
+// additional implementation notes.
 
 void wrap_doublearray(py::module& m)
 {
+    using T = typename This::value_type;
+    using It = typename This::iterator;
+
     py::class_<This>(m, "DoubleArray")
 
         .def(py::init<>())
@@ -58,11 +64,18 @@ void wrap_doublearray(py::module& m)
         .def(py::init([](py::sequence s) { This res; for (auto x : s) res.append(x.cast<double>()); return res; } ))
         .def(py::init<const This&>())
 
-        .def("__getitem__", [](const This& a, int i) { return a.at(i); })
-        .def("__setitem__", [](This& a, int i, double value) { a.at(i) = value; })
+        // TODO: Use Python semantics: a[i] OK for i in [-n, n-1]
+        .def("__getitem__", [](const This& a, int i) { return a[i]; })
+        .def("__setitem__", [](This& a, int i, double value) { a[i] = value; })
         .def("__len__", &This::size)
+        .def("__iter__",
+            [](This& a) {
+                return py::make_iterator<py::return_value_policy::reference_internal, It, It, T&>(a.begin(), a.end());
+            },
+            py::keep_alive<0, 1>()
+        )
 
-        .def("append", &This::append)
+        .def("append", [](This& a, double value) { a.append(value); })
 
         .def(py::self == py::self)
         .def(py::self != py::self)

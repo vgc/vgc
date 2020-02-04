@@ -23,11 +23,6 @@
 namespace vgc {
 namespace core {
 
-std::string toString(const DoubleArray& a)
-{
-    return toString(a.stdVector());
-}
-
 DoubleArray toDoubleArray(const std::string& s)
 {
     // XXX TODO Use custom StringStream
