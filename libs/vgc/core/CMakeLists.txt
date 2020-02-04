@@ -7,6 +7,7 @@ vgc_add_library(core
     HEADER_FILES
         algorithm.h
         api.h
+        array.h
         assert.h
         charutil.h
         color.h
@@ -38,6 +39,8 @@ vgc_add_library(core
         stringutil.h
         vec2d.h
         vec2darray.h
+
+        internal/containerutil.h
 
     CPP_FILES
         algorithm.cpp
