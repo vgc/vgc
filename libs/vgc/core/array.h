@@ -17,6 +17,7 @@
 #ifndef VGC_CORE_ARRAY_H
 #define VGC_CORE_ARRAY_H
 
+#include <cstddef> // for ptrdiff_t
 #include <vector>
 
 #include <vgc/core/api.h>
