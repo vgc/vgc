@@ -26,11 +26,14 @@ using vgc::core::Vec2d;
 
 void wrap_vec2darray(py::module& m)
 {
+    using T = typename This::value_type;
+    using It = typename This::iterator;
+
     py::class_<This>(m, "Vec2dArray")
 
         .def(py::init<>())
-        .def(py::init([](int size) { return This(size, Vec2d(0, 0)); } ))
-        .def(py::init([](int size, const Vec2d& value) { return This(size, value); } ))
+        .def(py::init([](int size) { return This(size, Vec2d(0, 0)); } )) // Important: Vec2d(0, 0), otherwise uninitialized
+        .def(py::init([](int size, const T& value) { return This(size, value); } ))
         .def(py::init([](py::sequence s) {
             This res;
             for (auto it : s) {
@@ -41,11 +44,18 @@ void wrap_vec2darray(py::module& m)
             return res; } ))
         .def(py::init<const This&>())
 
-        .def("__getitem__", [](const This& a, int i) { return a.at(i); })
-        .def("__setitem__", [](This& a, int i, const Vec2d& value) { a.at(i) = value; })
+        // TODO: Use Python semantics: a[i] OK for i in [-n, n-1]
+        .def("__getitem__", [](const This& a, int i) { return a[i]; })
+        .def("__setitem__", [](This& a, int i, const T& value) { a[i] = value; })
         .def("__len__", &This::size)
+        .def("__iter__",
+            [](This& a) {
+                return py::make_iterator<py::return_value_policy::reference_internal, It, It, T&>(a.begin(), a.end());
+            },
+            py::keep_alive<0, 1>()
+        )
 
-        .def("append", &This::append)
+        .def("append", [](This& a, const T& value) { a.append(value); })
 
         .def(py::self == py::self)
         .def(py::self != py::self)
