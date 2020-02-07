@@ -1,7 +1,6 @@
 vgc_wrap_library(core
     common.h
     module.cpp
-    wrap_charutil.cpp
     wrap_color.cpp
     wrap_doublearray.cpp
     wrap_exceptions.cpp
