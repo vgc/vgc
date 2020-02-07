@@ -21,7 +21,7 @@
 #include <string>
 #include <vgc/core/api.h>
 #include <vgc/core/epsilon.h>
-#include <vgc/core/streamutil.h>
+#include <vgc/core/stringutil.h>
 
 namespace vgc {
 namespace core {

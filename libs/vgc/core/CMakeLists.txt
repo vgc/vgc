@@ -9,7 +9,6 @@ vgc_add_library(core
         api.h
         array.h
         assert.h
-        charutil.h
         color.h
         colors.h
         compiler.h
@@ -34,7 +33,6 @@ vgc_add_library(core
         random.h
         signal.h
         stopwatch.h
-        streamutil.h
         stringid.h
         stringutil.h
         vec2d.h
@@ -44,7 +42,6 @@ vgc_add_library(core
 
     CPP_FILES
         algorithm.cpp
-        charutil.h
         color.cpp
         doublearray.cpp
         exceptions.cpp
@@ -59,7 +56,6 @@ vgc_add_library(core
         random.cpp
         signal.cpp
         stopwatch.cpp
-        streamutil.cpp
         stringid.cpp
         stringutil.cpp
         vec2d.cpp

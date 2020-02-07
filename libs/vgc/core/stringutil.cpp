@@ -16,9 +16,9 @@
 
 #include <vgc/core/stringutil.h>
 
-#include <sstream>
+#include <cmath>
 #include <iomanip>
-#include <vgc/core/streamutil.h>
+#include <sstream>
 
 namespace vgc {
 namespace core {
@@ -147,6 +147,40 @@ std::string secondsToString(double t, TimeUnit unit, int decimals)
 
     return res;
 }
+
+namespace internal {
+
+double computeDouble(bool isPositive, double a, int b, int n)
+{
+    if (b+n-1 > 307) {
+        throw RangeError(
+            std::string("The number ") + (isPositive ? "" : "-") + toString(a) +
+            "e" + toString(b) + " is too big to be represented as a double.");
+    }
+
+    if (b+n-1 < -307) {
+        return isPositive ? 0.0 : -0.0;
+    }
+
+    if (b < -250) {
+        // Avoid subnormal numbers by keeping a large margin.
+        a *= std::pow(10.0, -20);
+        b += 20;
+    }
+
+    return isPositive ? a * std::pow(10.0, b) : -a * std::pow(10.0, b);
+
+    // TODO use precomputed powers of tens for better performance and higher accuracy.
+}
+
+void throwNotWithin32BitSignedIntegerRange(long long int x)
+{
+    throw RangeError(
+        std::string("The integer ") + toString(x) +
+        " is too big to be represented as a 32-bit signed integer.");
+}
+
+} // namespace internal
 
 } // namespace core
 } // namespace vgc

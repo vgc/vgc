@@ -19,7 +19,6 @@
 #include <sstream>
 #include <vgc/core/float2int.h>
 #include <vgc/core/int2float.h>
-#include <vgc/core/streamutil.h>
 #include <vgc/core/stringutil.h>
 
 namespace vgc {
