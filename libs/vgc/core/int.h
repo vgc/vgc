@@ -18,7 +18,7 @@
 #define VGC_CORE_INT_H
 
 /// \file vgc/core/int.h
-/// \brief Defines integer types used in VGC.
+/// \brief Defines integer types and integer-related utilities.
 ///
 /// In this header, we define various integer types used throughout the C++ VGC
 /// API and implementation, such as vgc::Int, vgc::UInt, vgc::Int64, etc.
@@ -109,70 +109,25 @@
 /// haven't done it yet.
 ///
 
-#include <cstdint>
-#include <limits>
+// Note: the actual definitions of integer types and their limits are in a
+// separate header to prevent a circular dependency with stringutil.h:
+//
+//         int.h
+//           |
+//           v
+//      stringutil.h
+//           |
+//           v
+//       inttypes.h
+//
+
 #include <type_traits>
 
 #include <vgc/core/exceptions.h>
+#include <vgc/core/inttypes.h>
 #include <vgc/core/stringutil.h>
 
 namespace vgc {
-
-/// The 8-bit signed integer type.
-///
-using Int8 = std::int8_t;
-
-/// The 16-bit signed integer type.
-///
-using Int16 = std::int16_t;
-
-/// The 32-bit signed integer type.
-///
-using Int32 = std::int32_t;
-
-/// The 64-bit signed integer type.
-///
-using Int64 = std::int64_t;
-
-/// The 8-bit unsigned integer type.
-///
-using UInt8 = std::uint8_t;
-
-/// The 16-bit unsigned integer type.
-///
-using UInt16 = std::uint16_t;
-
-/// The 32-bit unsigned integer type.
-///
-using UInt32 = std::uint32_t;
-
-/// The 64-bit unsigned integer type.
-///
-using UInt64 = std::uint64_t;
-
-/// A signed integer type of unspecified width (at least 32bit).
-///
-/// This is the preferred integer type to use in the VGC C++ API and
-/// implementation, including for values which are not supposed to be negative
-/// such as array sizes and indices.
-///
-#ifdef VGC_CORE_USE_32BIT_INT
-    using Int = Int32;
-#else
-    using Int = Int64;
-#endif
-
-/// An unsigned integer type of same width as vgc::Int (at least 32bit).
-///
-/// Use this type with moderation: we recommend using vgc::Int in most cases,
-/// even for values which are not supposed to be negative, such as array sizes
-/// and indices.
-///
-#ifdef VGC_CORE_USE_32BIT_INT
-    using UInt = UInt32;
-#else
-    using UInt = UInt64;
-#endif
 
 /// Returns a human-readable name for integer types.
 ///
@@ -211,30 +166,6 @@ template<> inline std::string int_typename<UInt32>() { return "UInt32"; }
 template<> inline std::string int_typename<UInt64>() { return "UInt64"; }
 
 namespace internal {
-
-// We need this additional level of indirection to workaround a bug in MSVC.
-// See: https://stackoverflow.com/questions/59743372
-//
-// Once we require C++14, we could use a more elegant solution based on
-// variable templates:
-//
-//   template<typename T>
-//   constexpr T type_max = (std::numeric_limits<T>::max)();
-//
-// Once we require C++17, we could use an even more elegant solution based on
-// "if constexpr" rather than SFINAE.
-//
-// Note: The extra parentheses around std::numeric_limits<T>::min/max avoid
-// potential problems with min/max macros in WinDef.h.
-//
-template<typename T>
-struct type_max {
-    static constexpr T value = (std::numeric_limits<T>::max)();
-};
-template<typename T>
-struct type_min {
-    static constexpr T value = (std::numeric_limits<T>::min)();
-};
 
 template <typename T, typename U>
 std::string intErrorReason(U value) {

@@ -20,6 +20,7 @@ vgc_add_library(core
         innercore.h
         int.h
         int2float.h
+        inttypes.h
         io.h
         limits.h
         logging.h
