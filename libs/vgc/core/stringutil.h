@@ -45,7 +45,8 @@
 /// \endcode
 ///
 
-#include <cstring>
+#include <cstring> // strlen
+#include <ios> // streamsize
 #include <limits>
 #include <string>
 #include <type_traits>
