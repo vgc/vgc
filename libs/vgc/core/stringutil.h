@@ -26,8 +26,8 @@
 /// - Find the type of a given character (e.g., isWhitespace(c))
 /// - Define convenient ways to work with character streams or string iterators
 ///
-/// The template argument IStream can be any type implementing the following
-/// functions, with the same semantics as std::istream:
+/// The template parameter type IStream can be any type implementing the
+/// following functions, with the same semantics as std::istream:
 ///
 /// \code
 /// IStream& get(char& c);
@@ -35,7 +35,18 @@
 /// explicit operator bool() const;
 /// \endcode
 ///
+/// The template parameter type OStream can be any type implementing the
+/// following functions, with the same semantics as std::ostream:
+///
+/// \code
+/// OStream& put(char c);
+/// OStream& write(const char* s, std::streamsize count);
+/// explicit operator bool() const;
+/// \endcode
+///
 
+#include <cstring> // strlen
+#include <ios> // streamsize
 #include <limits>
 #include <string>
 #include <type_traits>
@@ -43,6 +54,7 @@
 
 #include <vgc/core/api.h>
 #include <vgc/core/exceptions.h>
+#include <vgc/core/inttypes.h>
 
 namespace vgc {
 namespace core {
@@ -113,54 +125,310 @@ inline int digitToInt(char c) {
     }
 }
 
-/// Converts the given character to a string.
+/// Writes the given `char` to the given output stream.
 ///
-/// Example:
-/// \code
-/// char c = 65;
-/// std::cout << toString(c); // writes out "A" (ASCII code for 'A' is 65)
-/// std::cout << c;           // writes out "A"
-/// \endcode
+/// ```cpp
+/// char c1 = 'a';
+/// char c2 = 65; // = ASCII code for 'A'
+/// vgc::core::write(out, c1); // write "a"
+/// vgc::core::write(out, c2); // write "A"
+/// ```
 ///
-VGC_CORE_API
-std::string toString(char x);
+/// Note that in VGC, we use the type `char` to mean "one byte of a UTF-8
+/// encoded string", and the template parameter type `OStream` to mean "a UTF-8
+/// encoded output stream". Therefore, calling this function writes the given
+/// byte as is, without further encoding.
+///
+/// ```cpp
+/// // Write the UTF-8 encoded character "é" (U+00E9)
+/// char c1 = 0xC3;
+/// char c2 = 0xA9;
+/// vgc::core::write(out, c1);
+/// vgc::core::write(out, c2);
+/// ```
+///
+/// Note that unlike when using std::ostream::operator<<, the types `signed
+/// char` and `unsigned char` aren't writen as is, but instead converted to
+/// their decimal representation. See `write(OStream& out, IntType x)` for more
+/// info.
+///
+template<typename OStream>
+void write(OStream& out, char x)
+{
+    out.put(x);
+}
 
-/// Converts the given 8-bit signed integer to a string.
+/// Writes the given null-terminated C-style string to the given output stream.
+/// The behavior is undefined if the given C-style string isn't
+/// null-terminated.
 ///
-/// Example:
-/// \code
-/// signed char c = 65;
-/// std::cout << toString(c); // writes out "65"
-/// std::cout << c;           // writes out "A" (ASCII code for 'A' is 65)
-/// \endcode
+/// ```cpp
+/// vgc::core::write(out, "Hello World!");
+/// ```
 ///
-VGC_CORE_API
-std::string toString(signed char x);
+template<typename OStream>
+void write(OStream& out, const char* s)
+{
+    size_t n = std::strlen(s);
+    out.write(s, static_cast<std::streamsize>(n));
+}
 
-/// Converts the given 8-bit unsigned integer to a string.
+/// Writes the given string to the given output stream.
 ///
-/// Example:
-/// \code
-/// unsigned char c = 65;
-/// std::cout << toString(c); // writes out "65"
-/// std::cout << c;           // writes out "A" (ASCII code for 'A' is 65)
-/// \endcode
+/// ```cpp
+/// std::string s = "Hello World!";
+/// vgc::core::write(out, s);
+/// ```
 ///
-VGC_CORE_API
-std::string toString(unsigned char x);
+template<typename OStream>
+void write(OStream& out, const std::string& s)
+{
+    size_t n = s.size();
+    out.write(s.data(), static_cast<std::streamsize>(n));
+}
 
-/// Converts the given integer to a string.
+namespace internal {
+
+// Integer to decimal string conversion. This implementation is inspired by the
+// implementation found in {fmt}, by Victor Zverovich (MIT License):
+//
+// https://github.com/fmtlib/fmt
+// http://www.zverovich.net/2013/09/07/integer-to-string-conversion-in-cplusplus.html
+//
+// The differences are:
+// - We don't use the "divide by 100" trick (we might want to do it in the
+//   future, after more benchmarking).
+// - We use a range-friendly begin/end interface.
+// - We never null-terminate.
+//
+// ```cpp
+// Itoa i(42);
+// std::string s(i.begin(), i.end());
+// assert(s == "42");
+// ```
+//
+class Itoa {
+public:
+    explicit Itoa(int i) { itoa_(i); }
+    explicit Itoa(long i) { itoa_(i); }
+    explicit Itoa(long long i) { itoa_(i); }
+    explicit Itoa(unsigned i) { utoa_(i); }
+    explicit Itoa(unsigned long i) { utoa_(i); }
+    explicit Itoa(unsigned long long i) { utoa_(i); }
+    const char* begin() const { return begin_; }
+    const char* end() const { return end_; }
+
+private:
+    static constexpr int n = std::numeric_limits<unsigned long long>::digits10 + 2;
+    char buf_[n];
+    char* begin_;
+    char* end_;
+    void utoa_(unsigned long long i) {
+        end_ = buf_ + n;
+        begin_ = end_;
+        do {
+            *--begin_ = static_cast<char>('0' + i % 10);
+            i /= 10;
+        } while (i);
+    }
+    void itoa_(long long i) {
+        auto u = static_cast<unsigned long long>(i);
+        bool negative = i < 0;
+        if (negative) {
+            u = 0 - u;
+        }
+        utoa_(u);
+        if (negative) {
+            *--begin_ = '-';
+        }
+    }
+};
+
+} // namespace internal
+
+/// Writes the decimal representation of the given integer to the given output
+/// stream.
 ///
-/// Example:
-/// \code
-/// Int x = 65;
+/// ```cpp
+/// vgc::Int x = 65;
+/// vgc::core::write(out, x); // write "65"
+/// ```
+///
+/// Note that unlike when using std::ostream::operator<<, the types `signed
+/// char`, `unsigned char`, `Int8`, and `UInt8` are also converted to their
+/// decimal representation:
+///
+/// ```cpp
+/// signed char c = 'A';
+/// unsigned char d = 'A';
+/// vgc::Int8 i = 65;
+/// vgc::UInt8 j = 65;
+/// std::cout << c;           // write "A"
+/// std::cout << d;           // write "A"
+/// std::cout << i;           // write "A"
+/// std::cout << j;           // write "A"
+/// vgc::core::write(out, c); // write "65"
+/// vgc::core::write(out, d); // write "65"
+/// vgc::core::write(out, i); // write "65"
+/// vgc::core::write(out, j); // write "65"
+/// ```
+///
+/// Ideally, we would prefer to write the `signed char` and `unsigned char` as
+/// "A", and the `Int8` and `UInt8` as "65". Unfortunately, this isn't possible
+/// due to the annoying fact that `int8_t` (resp. `uint8_t`) is typically a
+/// typedef for `signed char` (resp. `unsigned char`), rather than a separate
+/// type.
+///
+/// For this reason, in VGC, we never directly use the types `signed char` or
+/// `unsigned char`. Instead, we always use `Int8` or `UInt8`, and mean them to
+/// actually represent an 8-bit integer, not an ASCII character.
+///
+template<typename OStream, typename IntType>
+typename std::enable_if<std::is_integral<IntType>::value>::type
+write(OStream& out, IntType x)
+{
+    internal::Itoa i(x);
+    out.write(i.begin(), i.end() - i.begin());
+}
+
+/// \class vgc::core::StringWriter
+/// \brief An output stream which appends characters to an existing string.
+///
+/// A StringWriter is a thin wrapper around a given string that allows you to
+/// append formatted values to the string.
+///
+/// ```cpp
+/// std::string s;
+/// vgc::core::StringWriter sw(s);
+/// sw << "The answer is " << 42;   // Equivalent to s += "The answer is 42"
+/// ```
+///
+/// Note that the StringWriter holds a non-owning mutable reference to its
+/// underlying string. This means that it is important that whoever creates a
+/// StringWriter ensures that its underlying string outlives the StringWriter
+/// itself, otherwise the behavior is undefined. For this reason, StringWriters
+/// should typically be used in a very short, local scope. In particular,
+/// StringWriters are non-copyable, and should typically not be stored as
+/// member variables.
+///
+/// StringWriters are extremely lightweight and fast. For typical usage, it is
+/// on average twice as fast as using std::ostringstream, due to better use of
+/// cache, optimized int-to-string conversions, avoidance of the final string
+/// copy, and not having any of the heavy machinery brought by std::ios and
+/// std::streambuf (virtual function calls, locale, sentry, etc.).
+///
+/// ```cpp
+/// // This is slower
+/// std::ostringstream oss;
+/// oss << "The answer is " << 42;
+/// std::string s = oss.str();
+/// ```
+///
+/// Using a StringWriter is also typically faster than using the `+` or `+=`
+/// string operators directly, since it can avoid allocation of temporary
+/// strings. However, in many cases, the difference isn't significant thanks to
+/// the so-called "small string optimization".
+///
+/// ```cpp
+/// // This is slower
+/// std::string s = "The answer is " + vgc::core::toString(42);
+/// ```
+///
+class StringWriter {
+public:
+    using string_type = std::string;
+    using size_type = string_type::size_type;
+
+    /// Constructs a StringWriter operating on the given string.
+    /// The string must outlive this StringWriter.
+    ///
+    StringWriter(std::string& s) : s_(s) {
+
+    }
+
+    /// Appends a character to the underlying string.
+    ///
+    StringWriter& put(char c) {
+        s_.push_back(c);
+        return *this;
+    }
+
+    /// Appends multiple characters to the underlying string.
+    /// The behavior is undefined if count < 0.
+    ///
+    StringWriter& write(const char* s, std::streamsize count) {
+        s_.append(s, static_cast<size_type>(count));
+        return *this;
+    }
+
+    /// Returns whether the stream has no errors. This always returns true,
+    /// since a StringWriter can never be in error: it is always possible to
+    /// add more characters to a string, unless we run out of memory which will
+    /// cause other errors anyway.
+    ///
+    explicit operator bool() {
+        return true;
+    }
+
+private:
+    std::string& s_;
+};
+
+/// Appends the given value to the underlying string of the given StringWriter.
+///
+/// ```cpp
+/// std::string s;
+/// vgc::core::StringWriter sw(s);
+/// sw << 42; // append "42" to s
+/// ```
+///
+template<typename T>
+inline StringWriter& operator<<(StringWriter& sw, const T& x)
+{
+    using vgc::core::write;
+    write(sw, x);
+    return sw;
+}
+
+/// Converts the given character or integer to a string.
+///
+/// ```cpp
+/// char c = 'A';
+/// vgc::Int x = 42;
+/// std::cout << toString(c); // writes out "A"
+/// std::cout << toString(x); // writes out "42"
+/// ```
+///
+/// Note that a `signed char` or an `unsigned char` is considered to be an
+/// 8-bit integers, and converted to its decimal representation. However, a
+/// `char` is considered to indeed be a character, and converted to the
+/// one-character string where s[0] = c.
+///
+/// ```cpp
+/// char c = 'A';
+/// vgc::Int8 x = 65;
+/// vgc::Int y = 65;
+///
+/// std::cout << toString(c); // writes out "A"
 /// std::cout << toString(x); // writes out "65"
-/// \endcode
+/// std::cout << toString(y); // writes out "65"
+///
+/// std::cout << c; // writes out "A"
+/// std::cout << x; // writes out "A"
+/// std::cout << y; // writes out "65"
+///
+/// std::cout << std::to_string(c); // writes out "65"
+/// std::cout << std::to_string(x); // writes out "65"
+/// std::cout << std::to_string(y); // writes out "65"
+/// ```
 ///
 template <typename T>
 typename std::enable_if<std::is_integral<T>::value, std::string>::type
-toString(T x) {
-    return std::to_string(x);
+toString(T x){
+    std::string s;
+    StringWriter sw(s);
+    sw << x;
+    return s;
 }
 
 /// Converts the given double to a string.
