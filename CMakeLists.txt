@@ -196,6 +196,12 @@ else()
 endif()
 add_dependencies(check tests)
 
+# Google Test. We need gtest_force_shared_crt ON, see:
+# https://github.com/vgc/vgc/pull/295
+set(gtest_force_shared_crt ON CACHE BOOL
+  "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third/googletest)
+
 # Import helper CMake functions
 include(tools/VgcTools.cmake)
 
@@ -330,6 +336,7 @@ if(PYTHON_PREFIX STREQUAL PYTHON_EXEC_PREFIX)
 else()
     set(PYTHON_HOME ${PYTHON_PREFIX}:${PYTHON_EXEC_PREFIX} CACHE INTERNAL "")
 endif()
+include_directories(${PYTHON_INCLUDE_DIRS}) # TODO: avoid global `include_directories`
 message("-- PYTHON_PREFIX: ${PYTHON_PREFIX}")
 message("-- PYTHON_EXEC_PREFIX: ${PYTHON_EXEC_PREFIX}")
 message("-- PYTHON_HOME: ${PYTHON_HOME}")
@@ -394,25 +401,18 @@ include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Gui_INCLUDE_DIRS})
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 
-# Add third-party shipped libraries.
-add_subdirectory(third)
-
-# Include Python
-include_directories(${PYTHON_INCLUDE_DIRS})
-
-# Include third-party shipped libs
-#
-# Note: GoogleTest headers are automatically included by targets who add
-# gtest in their target_link_libraries, thanks to googletest defining
-# target_include_directories(gtest ...). This is in fact the modern way
-# to do this, and we should do the same for all other targets. See:
-#
-# https://github.com/vgc/vgc/issues/90
-#
-include_directories(${CMAKE_CURRENT_LIST_DIR}/third/Eigen/include)
+# pybind11
+# TODO: avoid global `include_directories`
+set(PYBIND11_CPP_STANDARD -std=c++11)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third/pybind11)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/third/pybind11/include)
 
+# Eigen
+# TODO: avoid global `include_directories`
+include_directories(${CMAKE_CURRENT_LIST_DIR}/third/Eigen/include)
+
 # Include internal libs
+# TODO: avoid global `include_directories`
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
 
 # Add internal libs and apps
