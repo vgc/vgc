@@ -163,45 +163,6 @@ else()
     set(VGC_ARCHITECTURE x86_64 CACHE STRING "Target architecture. We only support x86_64 for now.")
 endif()
 
-# Always generate unit tests
-enable_testing()
-
-# Define `make tests` to build the C++ tests. Indeed, we do not build tests by
-# default when running `make`. However, note that the "tests" target is a
-# dependency of the "check" target, so there is no need to call `make tests`
-# explicitly before running `make check`.
-#
-add_custom_target(tests)
-
-# Define `make check` to run the unit tests in --output-on-failure mode. This
-# is more useful than the built-in `make test` which would run without printing
-# what went wrong when a test fails. We also use the --force-new-ctest-process
-# option as this is what `make test` uses too. Note that while you can run
-# `make test` in any subfolder, you can only run `make check` at the root of
-# the build folder.
-#
-# Implementation inspired from: https://stackoverflow.com/q/16158091
-#
-if (CMAKE_CONFIGURATION_TYPES)
-    add_custom_target(check
-        COMMAND ${CMAKE_CTEST_COMMAND}
-            --force-new-ctest-process --output-on-failure
-            --build-config "$<CONFIGURATION>"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-else()
-    add_custom_target(check
-        COMMAND ${CMAKE_CTEST_COMMAND}
-            --force-new-ctest-process --output-on-failure
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-endif()
-add_dependencies(check tests)
-
-# Google Test. We need gtest_force_shared_crt ON, see:
-# https://github.com/vgc/vgc/pull/295
-set(gtest_force_shared_crt ON CACHE BOOL
-  "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third/googletest)
-
 # Import helper CMake functions
 include(tools/VgcTools.cmake)
 
@@ -353,6 +314,51 @@ add_custom_target(conf ALL
         "$<CONFIG>"
         "${PYTHON_HOME}"
 )
+
+# Always generate unit tests
+enable_testing()
+
+# Define `make tests` to build the C++ tests. Indeed, we do not build tests by
+# default when running `make`. However, note that the "tests" target is a
+# dependency of the "check" target, so there is no need to call `make tests`
+# explicitly before running `make check`.
+#
+add_custom_target(tests)
+
+# Define `make check` to run the unit tests in --output-on-failure mode. This
+# is more useful than the built-in `make test` which would run without printing
+# what went wrong when a test fails. We also use the --force-new-ctest-process
+# option as this is what `make test` uses too. Note that while you can run
+# `make test` in any subfolder, you can only run `make check` at the root of
+# the build folder.
+#
+# Implementation inspired from: https://stackoverflow.com/q/16158091
+#
+if (CMAKE_CONFIGURATION_TYPES)
+    add_custom_target(check
+        COMMAND ${CMAKE_CTEST_COMMAND}
+            --force-new-ctest-process --output-on-failure
+            --build-config "$<CONFIGURATION>"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+else()
+    add_custom_target(check
+        COMMAND ${CMAKE_CTEST_COMMAND}
+            --force-new-ctest-process --output-on-failure
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+add_dependencies(check tests)
+
+# Google Test.
+#
+# Note: this is why we need gtest_force_shared_crt ON:
+# https://github.com/vgc/vgc/pull/295
+#
+# Note: it is important to add Google Test after Python, because Google test
+# also adds Python but may find the wrong version.
+#
+set(gtest_force_shared_crt ON CACHE BOOL
+  "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third/googletest)
 
 # Find, configure, and include Qt. The recommended way to make sure that the
 # desired version of Qt is found is to pass -DQt to cmake, e.g.:
