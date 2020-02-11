@@ -220,6 +220,8 @@ set(CMAKE_CXX_STANDARD 11)
 # It will define additional PYTHON_* variables useful to pybind11, but these
 # variables are not available in this CMakeLists due to CMake scoping rules.
 #
+message(STATUS "") # newline
+message(STATUS "[Python]")
 if(Python)
     if(WIN32)
         # Explicitly set the path to the Python executable.
@@ -298,9 +300,11 @@ else()
     set(PYTHON_HOME ${PYTHON_PREFIX}:${PYTHON_EXEC_PREFIX} CACHE INTERNAL "")
 endif()
 include_directories(${PYTHON_INCLUDE_DIRS}) # TODO: avoid global `include_directories`
-message("-- PYTHON_PREFIX: ${PYTHON_PREFIX}")
-message("-- PYTHON_EXEC_PREFIX: ${PYTHON_EXEC_PREFIX}")
-message("-- PYTHON_HOME: ${PYTHON_HOME}")
+message(STATUS "Version: ${PYTHON_VERSION_STRING}")
+message(STATUS "PYTHON_PREFIX: ${PYTHON_PREFIX}")
+message(STATUS "PYTHON_EXEC_PREFIX: ${PYTHON_EXEC_PREFIX}")
+message(STATUS "PYTHON_HOME: ${PYTHON_HOME}")
+message(STATUS "") # newline
 
 # Generate the vgc.conf file, telling VGC executables about the location
 # of various runtime resources.
@@ -356,9 +360,23 @@ add_dependencies(check tests)
 # Note: it is important to add Google Test after Python, because Google test
 # also adds Python but may find the wrong version.
 #
-set(gtest_force_shared_crt ON CACHE BOOL
-  "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third/googletest)
+message(STATUS "[Google Test]")
+set(GoogleTest ${CMAKE_CURRENT_LIST_DIR}/third/googletest CACHE FILEPATH "Path to the root of the Google Test distribution")
+if (EXISTS ${GoogleTest})
+    message(STATUS "Found Google Test: ${GoogleTest}")
+    file(READ ${GoogleTest}/CMakeLists.txt gtestLists)
+    if (gtestLists MATCHES "GOOGLETEST_VERSION ([0-9]+\.[0-9]+\.[0-9]+)")
+        message(STATUS "Version: ${CMAKE_MATCH_1}")
+    else()
+       message(STATUS "Version: Unknown")
+    endif()
+    set(gtest_force_shared_crt ON CACHE BOOL
+      "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
+    add_subdirectory(${GoogleTest})
+else()
+    message(WARNING "Can't find Google Test")
+endif()
+message(STATUS "") # newline
 
 # Find, configure, and include Qt. The recommended way to make sure that the
 # desired version of Qt is found is to pass -DQt to cmake, e.g.:
@@ -388,13 +406,15 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third/googletest)
 #   Qt5_VERSION_PATCH=0
 #   Qt5_VERSION_TWEAK=0
 #
+message(STATUS "[Qt]")
 if (Qt)
     set(Qt5_DIR ${Qt}/lib/cmake/Qt5)
 endif()
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 get_filename_component(Qt ${Qt5_DIR}/../../.. ABSOLUTE)
-message("-- Found Qt ${Qt5_VERSION}: ${Qt}")
+message(STATUS "Found Qt: ${Qt}")
+message(STATUS "Version: ${Qt5_VERSION}")
 
 # Disable usage of emit/signals/slots because they collide with <Python.h>.
 # Instead, we use the more explicit Q_EMIT/Q_SIGNALS/Q_SLOTS.
@@ -406,29 +426,64 @@ add_definitions(-DQT_NO_KEYWORDS)
 include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Gui_INCLUDE_DIRS})
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
+message(STATUS "") # newline
 
 # pybind11
 # TODO: avoid global `include_directories`
-set(PYBIND11_CPP_STANDARD -std=c++11)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third/pybind11)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/third/pybind11/include)
+message(STATUS "[pybind11]")
+set(pybind11 ${CMAKE_CURRENT_LIST_DIR}/third/pybind11 CACHE FILEPATH "Path to the root of the pybind11 distribution")
+if (EXISTS ${pybind11})
+    message(STATUS "Found pybind11: ${pybind11}")
+    set(PYBIND11_CPP_STANDARD -std=c++11)
+    add_subdirectory(${pybind11})
+    include_directories(${pybind11}/include)
+else()
+    message(SEND_ERROR "Can't find pybind11")
+endif()
+message(STATUS "") # newline
 
 # Eigen
 # TODO: avoid global `include_directories`
-include_directories(${CMAKE_CURRENT_LIST_DIR}/third/Eigen/include)
+message(STATUS "[Eigen]")
+set(Eigen ${CMAKE_CURRENT_LIST_DIR}/third/Eigen CACHE FILEPATH "Path to the root of the Eigen distribution")
+if (EXISTS ${Eigen})
+    message(STATUS "Found Eigen: ${Eigen}")
+    file(READ "${Eigen}/include/Eigen/src/Core/util/Macros.h" _eigen_version_header)
+    string(REGEX MATCH "define[ \t]+EIGEN_WORLD_VERSION[ \t]+([0-9]+)" _eigen_world_version_match "${_eigen_version_header}")
+    set(EIGEN_WORLD_VERSION "${CMAKE_MATCH_1}")
+    string(REGEX MATCH "define[ \t]+EIGEN_MAJOR_VERSION[ \t]+([0-9]+)" _eigen_major_version_match "${_eigen_version_header}")
+    set(EIGEN_MAJOR_VERSION "${CMAKE_MATCH_1}")
+    string(REGEX MATCH "define[ \t]+EIGEN_MINOR_VERSION[ \t]+([0-9]+)" _eigen_minor_version_match "${_eigen_version_header}")
+    set(EIGEN_MINOR_VERSION "${CMAKE_MATCH_1}")
+    set(EIGEN_VERSION_NUMBER )
+    message(STATUS "Version: ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION}")
+    include_directories(${Eigen}/include)
+else()
+    message(SEND_ERROR "Can't find Eigen")
+endif()
+message(STATUS "") # newline
 
-# Include internal libs
-# TODO: avoid global `include_directories`
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
+# Git
+message(STATUS "[Git]")
+if (GIT_EXECUTABLE)
+    # find_package won't reprint this on subsequent CMake calls, so we do it ourselves.
+    message(STATUS "Found Git: ${GIT_EXECUTABLE}")
+endif()
+find_package(Git REQUIRED)
+message(STATUS "Version: ${GIT_VERSION_STRING}")
+message(STATUS "") # newline
 
 # Add internal libs and apps
+# TODO: avoid global `include_directories`
+message(STATUS "[VGC]")
+include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
 add_subdirectory(libs)
 add_subdirectory(apps)
+message(STATUS "") # newline
 
 # Generate the file resources/core/version.txt with versioning info.
 # See vgc/tools/version.py for details.
 #
-find_package(Git)
 add_custom_target(version ALL
     VERBATIM
     COMMAND ${PYTHON_EXECUTABLE}
