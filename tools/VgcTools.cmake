@@ -39,7 +39,7 @@ endfunction()
 # )
 #
 function(vgc_add_library LIB_NAME)
-    message("-- VGC Library: ${LIB_NAME}")
+    message(STATUS "vgc::${LIB_NAME}")
 
     set(options "")
     set(oneValueArgs "")
@@ -142,7 +142,7 @@ endfunction()
 # )
 #
 function(vgc_wrap_library LIB_NAME)
-    message("-- VGC Library: ${LIB_NAME} (python wrappers)")
+    message(STATUS "vgc::${LIB_NAME} wraps")
 
     cmake_parse_arguments(ARG "" "" "" ${ARGN})
 
@@ -201,7 +201,7 @@ endfunction()
 #   <vgc-build-dir>/<config>/python
 #
 function(vgc_test_library LIB_NAME)
-    message("-- VGC Library: ${LIB_NAME} (tests)")
+    message(STATUS "vgc::${LIB_NAME} tests")
 
     set(options "")
     set(oneValueArgs "")
@@ -278,7 +278,7 @@ endfunction()
 # )
 #
 function(vgc_add_app APP_NAME)
-    message("-- VGC App: ${APP_NAME}")
+    message(STATUS "vgc${APP_NAME}")
 
     set(options "")
     set(oneValueArgs "")
