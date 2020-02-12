@@ -52,6 +52,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include <vgc/core/api.h>
 #include <vgc/core/exceptions.h>
 #include <vgc/core/inttypes.h>
@@ -187,65 +189,6 @@ void write(OStream& out, const std::string& s)
     out.write(s.data(), static_cast<std::streamsize>(n));
 }
 
-namespace internal {
-
-// Integer to decimal string conversion. This implementation is inspired by the
-// implementation found in {fmt}, by Victor Zverovich (MIT License):
-//
-// https://github.com/fmtlib/fmt
-// http://www.zverovich.net/2013/09/07/integer-to-string-conversion-in-cplusplus.html
-//
-// The differences are:
-// - We don't use the "divide by 100" trick (we might want to do it in the
-//   future, after more benchmarking).
-// - We use a range-friendly begin/end interface.
-// - We never null-terminate.
-//
-// ```cpp
-// Itoa i(42);
-// std::string s(i.begin(), i.end());
-// assert(s == "42");
-// ```
-//
-class Itoa {
-public:
-    explicit Itoa(int i) { itoa_(i); }
-    explicit Itoa(long i) { itoa_(i); }
-    explicit Itoa(long long i) { itoa_(i); }
-    explicit Itoa(unsigned i) { utoa_(i); }
-    explicit Itoa(unsigned long i) { utoa_(i); }
-    explicit Itoa(unsigned long long i) { utoa_(i); }
-    const char* begin() const { return begin_; }
-    const char* end() const { return end_; }
-
-private:
-    static constexpr int n = std::numeric_limits<unsigned long long>::digits10 + 2;
-    char buf_[n];
-    char* begin_;
-    char* end_;
-    void utoa_(unsigned long long i) {
-        end_ = buf_ + n;
-        begin_ = end_;
-        do {
-            *--begin_ = static_cast<char>('0' + i % 10);
-            i /= 10;
-        } while (i);
-    }
-    void itoa_(long long i) {
-        auto u = static_cast<unsigned long long>(i);
-        bool negative = i < 0;
-        if (negative) {
-            u = 0 - u;
-        }
-        utoa_(u);
-        if (negative) {
-            *--begin_ = '-';
-        }
-    }
-};
-
-} // namespace internal
-
 /// Writes the decimal representation of the given integer to the given output
 /// stream.
 ///
@@ -287,8 +230,8 @@ template<typename OStream, typename IntType>
 typename std::enable_if<std::is_integral<IntType>::value>::type
 write(OStream& out, IntType x)
 {
-    internal::Itoa i(x);
-    out.write(i.begin(), i.end() - i.begin());
+    fmt::format_int f(x);
+    out.write(f.data(), f.size());
 }
 
 /// \class vgc::core::StringWriter
