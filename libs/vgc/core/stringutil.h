@@ -53,6 +53,9 @@
 #include <vector>
 
 #include <fmt/format.h>
+#undef far
+#undef near
+// XXX find cleaner solution than undef. See: https://github.com/vgc/vgc/pull/309
 
 #include <vgc/core/api.h>
 #include <vgc/core/exceptions.h>
