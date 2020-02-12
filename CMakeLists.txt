@@ -442,6 +442,74 @@ else()
 endif()
 message(STATUS "") # newline
 
+# {fmt}
+#
+# The CMakeLists of {fmt} provides two targets:
+# - fmt::fmt              Static lib by default, or shared lib if BUILD_SHARED_LIBS=ON
+# - fmt::fmt-header-only  Header-only version
+#
+# Which method we use can be configured with the following CMake variable:
+#
+#     VGC_FMT_LIB_TYPE = header-only | shared | static
+#
+# We measured no significant performance difference with either method. As of
+# 2020-02-12, total code size (vgc libs + libfmt.so if shared) was smaller when
+# using header-only, so we decided to use this method as default, which also
+# simplifies deployment. However, as we start using {fmt} more, total code size
+# may become smaller by compiling {fmt} as a shared library, so we may switch
+# to this method at a later time. Compile time may also be affected: higher
+# with header-only, and lower with static or shared.
+#
+# Note that by default, CMake builds static libs without -fPIC. This makes
+# sense for libs which are later linked into a final application, but doesn't
+# work in our case where we need to link them into our shared libs (which are
+# themselves built with -fPIC, as usual for shared libs). So if we want to use
+# {fmt} as a static lib, we need to explictly tell CMake to use -fPIC. See:
+#
+# https://cmake.org/cmake/help/latest/command/add_library.html
+# https://cmake.org/cmake/help/v3.0/variable/BUILD_SHARED_LIBS.html
+#
+message(STATUS "[{fmt}]")
+set(VGC_FMT_LIB_TYPE header-only CACHE STRING "How should we build/use fmt? Options: 'header-only', 'shared', 'static'")
+set(FMT_DIR ${CMAKE_CURRENT_LIST_DIR}/third/fmt CACHE FILEPATH "Path to the root of the {fmt} distribution")
+if(EXISTS ${FMT_DIR})
+    message(STATUS "Found {fmt}: ${FMT_DIR}")
+    message(STATUS "Library type: ${VGC_FMT_LIB_TYPE}")
+    set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
+    if(VGC_FMT_LIB_TYPE STREQUAL "header-only")
+        set(VGC_FMT fmt::fmt-header-only)
+    else()
+        set(VGC_FMT fmt::fmt)
+        if(VGC_FMT_LIB_TYPE STREQUAL "shared")
+            set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+        elseif(VGC_FMT_LIB_TYPE STREQUAL "static")
+            if(DEFINED BUILD_SHARED_LIBS)
+                set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+            endif()
+        else()
+            message(SEND_ERROR "Unknown library type for {fmt}.")
+        endif()
+    endif()
+    add_subdirectory(${FMT_DIR})
+    if(VGC_FMT_LIB_TYPE STREQUAL "static")
+        set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    elseif(VGC_FMT_LIB_TYPE STREQUAL "shared")
+        set_target_properties(fmt PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/lib
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin)
+    endif()
+    if(BUILD_SHARED_LIBS_OLD STREQUAL "")
+        if(DEFINED BUILD_SHARED_LIBS)
+            unset(BUILD_SHARED_LIBS CACHE)
+        endif()
+    else()
+        set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE BOOL "" FORCE)
+    endif()
+else()
+    message(SEND_ERROR "Can't find {fmt}")
+endif()
+message(STATUS "") # newline
+
 # Eigen
 # TODO: avoid global `include_directories`
 message(STATUS "[Eigen]")
