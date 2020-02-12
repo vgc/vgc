@@ -175,13 +175,13 @@ TEST(TestStringUtil, Benchmark) {
 
     // Example output (Intel i7-7700K, 32GM RAM, Ubuntu 18.04, gcc 7.4.0 with -O3 -DNDEBUG):
     //
-    // StringWriter (reserved) ...........   12641µs
-    // StringWriter (not reserved) .......   15050µs
-    // std::ostringstream (N/A) ..........   30515µs
-    // toString(x) (reserved) ............   15723µs
-    // toString(x) (not reserved) ........   16751µs
-    // std::to_string(x) (reserved) ......   57299µs
-    // std::to_string(x) (not reserved) ..   59928µs
+    // StringWriter (reserved) ...........   11085µs
+    // StringWriter (not reserved) .......   13456µs
+    // std::ostringstream (N/A) ..........   30572µs
+    // toString(x) (reserved) ............   14672µs
+    // toString(x) (not reserved) ........   16127µs
+    // std::to_string(x) (reserved) ......   56987µs
+    // std::to_string(x) (not reserved) ..   60112µs
 }
 
 int main(int argc, char **argv) {
