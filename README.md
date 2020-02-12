@@ -26,10 +26,12 @@ Prerequisites:
 - **Qt 5.12+**: We recommend the latest Qt 5.12.x version via the [official installer](https://www.qt.io/download-qt-installer).
 - **OpenGL Dev Tools**: Already installed on Windows, macOS, and many Linux distributions. On Ubuntu, you need `sudo apt install libglu1-mesa-dev`.
 
-Other third-party dependencies which are included in the `third` folder and
-don't need to be pre-installed:
-- **pybind11**
+VGC also depends on the following libraries, but these are already included in
+the `third` folder, so there is no need to pre-install them:
 - **Eigen**
+- **{fmt}**
+- **Google Test**
+- **pybind11**
 
 VGC follows the [VFX Reference Platform](http://www.vfxplatform.com/)
 recommendations for library versions.
