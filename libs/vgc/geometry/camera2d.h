@@ -17,10 +17,6 @@
 #ifndef VGC_GEOMETRY_CAMERA2D_H
 #define VGC_GEOMETRY_CAMERA2D_H
 
-// Undefine macros defined by <windows.h>
-#undef far
-#undef near
-
 #include <vgc/core/mat4d.h>
 #include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>

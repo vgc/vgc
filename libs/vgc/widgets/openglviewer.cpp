@@ -412,9 +412,6 @@ void OpenGLViewer::initializeGL()
     f->glClearColor(1, 1, 1, 1);
 }
 
-#undef near
-#undef far
-
 void OpenGLViewer::resizeGL(int w, int h)
 {
     camera_.setViewportSize(w, h);
