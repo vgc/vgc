@@ -26,8 +26,8 @@ Camera2d::Camera2d() :
     rotation_(0),
     viewportWidth_(1),
     viewportHeight_(1),
-    near_(-1),
-    far_(1)
+    nearPlane_(-1),
+    farPlane_(1)
 {
 
 }
@@ -51,8 +51,8 @@ core::Mat4d Camera2d::projectionMatrix() const
 {
     const double w = viewportWidth_;
     const double h = viewportHeight_;
-    const double n = near_;
-    const double f = far_;
+    const double n = nearPlane_;
+    const double f = farPlane_;
 
     return core::Mat4d(2/w , 0    , 0       , -1          ,
                        0   , -2/h , 0       , 1           ,  // Inversion of Y axis (SVG -> OpenGL conventions)

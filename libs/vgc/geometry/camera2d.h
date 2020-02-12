@@ -52,9 +52,9 @@ namespace geometry {
 ///
 /// - viewportHeight: the height of the viewport, in pixels.
 ///
-/// - near: value under which z-coordinates are clipped. Default is -1.0.
+/// - nearPlane: value under which z-coordinates are clipped. Default is -1.0.
 ///
-/// - far: value above which z-coordinates are clipped. Default is 1.0.
+/// - farPlane: value above which z-coordinates are clipped. Default is 1.0.
 ///
 /// Where:
 ///
@@ -211,31 +211,31 @@ public:
         viewportHeight_ = height;
     }
 
-    /// Returns the near value of the camera. This is the value under which
+    /// Returns the near plane of the camera. This is the value under which
     /// z-coordinates are clipped. Default is -1.0.
     ///
-    /// \sa setNear()
+    /// \sa setNearPlane()
     ///
-    double near() const { return near_; }
+    double nearPlane() const { return nearPlane_; }
 
-    /// Sets the near value of the camera.
+    /// Sets the near plane of the camera.
     ///
-    /// \sa near()
+    /// \sa nearPlane()
     ///
-    void setNear(double near) { near_ = near; }
+    void setNearPlane(double nearPlane) { nearPlane_ = nearPlane; }
 
-    /// Returns the far value of the camera. This is the value above which
+    /// Returns the far plane of the camera. This is the value above which
     /// z-coordinates are clipped. Default is 1.0.
     ///
-    /// \sa setFar()
+    /// \sa setFarPlane()
     ///
-    double far() const { return far_; }
+    double farPlane() const { return farPlane_; }
 
-    /// Sets the far value of the camera.
+    /// Sets the far plane of the camera.
     ///
-    /// \sa far()
+    /// \sa farPlane()
     ///
-    void setFar(double far) { far_ = far; }
+    void setFarPlane(double farPlane) { farPlane_ = farPlane; }
 
     /// Returns the 4x4 view matrix corresponding to the camera.
     ///
@@ -245,16 +245,14 @@ public:
     ///
     core::Mat4d projectionMatrix() const;
 
-    /// Returns the scene coordinate that corresponds to the given
-
 private:
     core::Vec2d center_;
     double zoom_;
     double rotation_;
     double viewportWidth_;
     double viewportHeight_;
-    double near_;
-    double far_;
+    double nearPlane_;
+    double farPlane_;
 };
 
 } // namespace geometry
