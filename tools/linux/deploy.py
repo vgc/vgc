@@ -120,13 +120,18 @@ def path_type(path):
     else:
         return 4
 
-# In our copy() function, we desire to use follow_symlinks=False whenever the
-# platform supports it. The following lines of code precompute ahead of time,
-# for each relevant function in the `os` module, whether to use
-# follow_symlinks=False or follow_symlinks=True based on platform availability.
+# Determine whether follow_symlinks=False is supported for stat and chmod.
 #
-_chmod_follow_symlinks = not (os.chmod in os.supports_follow_symlinks)
-_stat_follow_symlinks = not (os.stat in os.supports_follow_symlinks)
+# Note that follow_symlinks=True is always supported, that is, it is always
+# possible to get/set permissions of the targeted file. However, it is not
+# always possible to get/set permissions of the symlink itself, since different
+# platforms support different symlink features. In particular, Linux doesn't
+# support setting permissions for symlinks, while macOS does. See:
+#
+# https://superuser.com/questions/303040/how-do-file-permissions-apply-to-symlinks
+#
+_stat_supports_symlinks = os.stat in os.supports_follow_symlinks
+_chmod_supports_symlinks = os.chmod in os.supports_follow_symlinks
 
 # Copy a symlink, regular file, or directory from src to dst.
 #
@@ -189,24 +194,31 @@ def copy(src, dst, *,
     else:
         # Notes:
         # - Does not preserve owner/group
-        # - Applies u+w,go-w to file permissions
+        # - Applies u+w,go-w to file permissions (unless we can't, e.g., symlinks on Linux)
         make_dir(dst.parent, verbose=verbose)
         if verbose:
             print_(f"                      Copying {src}\n" +
                    f"                           to {dst}")
         shutil.copy2(str(src), str(dst), follow_symlinks=False)
-        oldPermissions = os.stat(dst, follow_symlinks=_stat_follow_symlinks).st_mode & 0o777
-        newPermissions = oldPermissions
-        newPermissions |= 0o200  # u+w
-        newPermissions &= ~0o022 # go-w
-        if newPermissions != oldPermissions:
+
+        # Change permissions (unless we're copying a symlink, in which case we
+        # only set permissions if supported)
+        notSymlink = (srcType != 1)
+        symlinksSupportPermissions = (_stat_supports_symlinks and _chmod_supports_symlinks)
+        follow_symlinks = not symlinksSupportPermissions
+        if notSymlink or symlinksSupportPermissions:
+            oldPermissions = os.stat(dst, follow_symlinks=follow_symlinks).st_mode & 0o777
+            newPermissions = oldPermissions
+            newPermissions |= 0o200  # u+w
+            newPermissions &= ~0o022 # go-w
+            if newPermissions != oldPermissions:
+                if verbose:
+                    old = oct(oldPermissions)[2:]
+                    new = oct(newPermissions)[2:]
+                    print_(f"                              (changing permissions from {old} to {new})")
+                os.chmod(dst, newPermissions, follow_symlinks=follow_symlinks)
             if verbose:
-                old = oct(oldPermissions)[2:]
-                new = oct(newPermissions)[2:]
-                print_(f"                              (changing permissions from {old} to {new})")
-            os.chmod(dst, newPermissions, follow_symlinks=_chmod_follow_symlinks)
-        if verbose:
-            print_("") # final newline
+                print_("") # final newline
 
 # Makes a POST request to the given URL with the given data.
 # The given data should be a Python dictionary, which this function

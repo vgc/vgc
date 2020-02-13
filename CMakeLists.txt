@@ -453,24 +453,36 @@ message(STATUS "") # newline
 #     VGC_FMT_LIB_TYPE = header-only | shared | static
 #
 # We measured no significant performance difference with either method. As of
-# 2020-02-12, total code size (vgc libs + libfmt.so if shared) was smaller when
-# using header-only, so we decided to use this method as default, which also
-# simplifies deployment. However, as we start using {fmt} more, total code size
-# may become smaller by compiling {fmt} as a shared library, so we may switch
-# to this method at a later time. Compile time may also be affected: higher
-# with header-only, and lower with static or shared.
+# 2020-02-12, total code size (vgc libs + libfmt.so if shared) was smaller
+# when using header-only, so it would make sense to use this method, as it
+# also simplifies deployment. However, as we start using {fmt} more, total
+# code size is expected to become smaller by compiling {fmt} as a shared
+# library. Also, using a shared library will almost certainly decrease compile
+# time, and on Windows it avoids having <windows.h> included in all
+# translation units (there is a configurable FMT_USE_WINDOWS_H flag which we
+# can set to 0, but keeping the Windows-specific features could be useful, and
+# besides the flag doesn't seem properly supported in future versions of
+# {fmt}, see: https://github.com/fmtlib/fmt/issues/1508). Therefore, we use
+# shared lib as the default.
 #
-# Note that by default, CMake builds static libs without -fPIC. This makes
-# sense for libs which are later linked into a final application, but doesn't
-# work in our case where we need to link them into our shared libs (which are
-# themselves built with -fPIC, as usual for shared libs). So if we want to use
-# {fmt} as a static lib, we need to explictly tell CMake to use -fPIC. See:
+# Note that the lead author of {fmt} recommends in fact compiling it as a
+# static lib, but since in our case we have multiple shared libs depending on
+# it, it makes more sense for {fmt} to be a shared lib too. Another option
+# might be to directly copy the code and compile it as part of vgc::core, but
+# it would make updating the lib more complicated.
+#
+# Finally, note that by default, CMake builds static libs without -fPIC. This
+# makes sense for libs which are later linked into a final application, but
+# doesn't work in our case where we need to link them into our shared libs,
+# which are themselves built with -fPIC (as usual for shared libs). This is
+# why in the configuration step below, we explicitly tell CMake to use -fPIC
+# when compiling {fmt} as a static lib. See:
 #
 # https://cmake.org/cmake/help/latest/command/add_library.html
 # https://cmake.org/cmake/help/v3.0/variable/BUILD_SHARED_LIBS.html
 #
 message(STATUS "[{fmt}]")
-set(VGC_FMT_LIB_TYPE header-only CACHE STRING "How should we build/use fmt? Options: 'header-only', 'shared', 'static'")
+set(VGC_FMT_LIB_TYPE shared CACHE STRING "How should we build/use fmt? Options: 'header-only', 'shared', 'static'")
 set(FMT_DIR ${CMAKE_CURRENT_LIST_DIR}/third/fmt CACHE FILEPATH "Path to the root of the {fmt} distribution")
 if(EXISTS ${FMT_DIR})
     message(STATUS "Found {fmt}: ${FMT_DIR}")
