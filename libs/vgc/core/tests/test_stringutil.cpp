@@ -82,6 +82,146 @@ TEST(TestStringUtil, WriteIntegers) {
     testWriteIntegers<vgc::UInt64>();
 }
 
+template<typename T>
+typename std::enable_if<std::is_floating_point<T>::value>::type
+writeFloat(T x, const char* expected) {
+    std::string s;
+    vgc::core::StringWriter sw(s);
+    sw << x;
+    EXPECT_EQ(s, expected);
+}
+
+template<typename T>
+void writeFloats() {
+    T zero = static_cast<T>(0);
+    T one = static_cast<T>(1);
+    T inf = std::numeric_limits<T>::infinity();
+    writeFloat(zero, "0");
+    writeFloat(-zero, "0");
+    writeFloat(inf, "inf");
+    writeFloat(-inf, "-inf");
+    writeFloat(one / zero, "inf");
+    writeFloat(-one / zero, "-inf");
+    writeFloat(zero / zero, "nan");
+    writeFloat(-zero / zero, "nan");
+    writeFloat(static_cast<T>( 42.0),               "42");
+    writeFloat(static_cast<T>( 420.0),              "420");
+    writeFloat(static_cast<T>( 1988.42),            "1988.42");
+    writeFloat(static_cast<T>( 0.000010),           "0.00001");
+    writeFloat(static_cast<T>( 0.0000000000004),    "0");
+    writeFloat(static_cast<T>( 0.0000000000006),    "0.000000000001");
+    writeFloat(static_cast<T>( 41.99999999999999),  "42");
+    writeFloat(static_cast<T>(-42.0),              "-42");
+    writeFloat(static_cast<T>(-420.0),             "-420");
+    writeFloat(static_cast<T>(-1988.42),           "-1988.42");
+    writeFloat(static_cast<T>(-0.000010),          "-0.00001");
+    writeFloat(static_cast<T>(-0.0000000000004),    "0");
+    writeFloat(static_cast<T>(-0.0000000000006),   "-0.000000000001");
+    writeFloat(static_cast<T>(-41.99999999999999), "-42");
+}
+
+TEST(TestStringUtil, WriteFloats) {
+    writeFloats<float>();
+
+    writeFloat(0.1234567890123456f, "0.123457");
+    writeFloat(0.012345601f, "0.0123456");
+    writeFloat(0.012345641f, "0.0123456");
+//  writeFloat(0.012345651f, unspecified);
+    writeFloat(0.012345661f, "0.0123457");
+    writeFloat(0.012345691f, "0.0123457");
+    writeFloat(0.012345991f, "0.012346");
+    writeFloat(0.012349991f, "0.01235");
+    writeFloat(0.012399991f, "0.0124");
+    writeFloat(0.012999991f, "0.013");
+    writeFloat(0.019999991f, "0.02");
+    writeFloat(0.099999991f, "0.1");
+    writeFloat(0.999999991f, "1");
+    writeFloat(12345601.f,  "12345600");
+    writeFloat(12345641.f,  "12345600");
+//  writeFloat(12345651.f,  unspecified);
+    writeFloat(12345661.f,  "12345700");
+    writeFloat(12345691.f,  "12345700");
+    writeFloat(12345991.f,  "12346000");
+    writeFloat(12349991.f,  "12350000");
+    writeFloat(12399991.f,  "12400000");
+    writeFloat(12999991.f,  "13000000");
+    writeFloat(19999991.f,  "20000000");
+    writeFloat(99999991.f, "100000000");
+    writeFloat(1234.5601f,  "1234.56");
+    writeFloat(1234.5641f,  "1234.56");
+//  writeFloat(1234.5651f,  unspecified);
+    writeFloat(1234.5661f,  "1234.57");
+    writeFloat(1234.5691f,  "1234.57");
+    writeFloat(1234.5991f,  "1234.6");
+    writeFloat(1234.9991f,  "1235");
+    writeFloat(1239.9991f,  "1240");
+    writeFloat(1299.9991f,  "1300");
+    writeFloat(1999.9991f,  "2000");
+    writeFloat(9999.9991f, "10000");
+
+    writeFloat(-0.1234567890123456f, "-0.123457");
+    writeFloat(-0.012345601f, "-0.0123456");
+    writeFloat(-0.012345641f, "-0.0123456");
+//  writeFloat(-0.012345651f, unspecified);
+    writeFloat(-0.012345661f, "-0.0123457");
+    writeFloat(-0.012345691f, "-0.0123457");
+    writeFloat(-0.012345991f, "-0.012346");
+    writeFloat(-0.012349991f, "-0.01235");
+    writeFloat(-0.012399991f, "-0.0124");
+    writeFloat(-0.012999991f, "-0.013");
+    writeFloat(-0.019999991f, "-0.02");
+    writeFloat(-0.099999991f, "-0.1");
+    writeFloat(-0.999999991f, "-1");
+    writeFloat(-12345601.f,  "-12345600");
+    writeFloat(-12345641.f,  "-12345600");
+//  writeFloat(-12345651.f,  unspecified);
+    writeFloat(-12345661.f,  "-12345700");
+    writeFloat(-12345691.f,  "-12345700");
+    writeFloat(-12345991.f,  "-12346000");
+    writeFloat(-12349991.f,  "-12350000");
+    writeFloat(-12399991.f,  "-12400000");
+    writeFloat(-12999991.f,  "-13000000");
+    writeFloat(-19999991.f,  "-20000000");
+    writeFloat(-99999991.f, "-100000000");
+    writeFloat(-1234.5601f,  "-1234.56");
+    writeFloat(-1234.5641f,  "-1234.56");
+//  writeFloat(-1234.5651f,  unspecified);
+    writeFloat(-1234.5661f,  "-1234.57");
+    writeFloat(-1234.5691f,  "-1234.57");
+    writeFloat(-1234.5991f,  "-1234.6");
+    writeFloat(-1234.9991f,  "-1235");
+    writeFloat(-1239.9991f,  "-1240");
+    writeFloat(-1299.9991f,  "-1300");
+    writeFloat(-1999.9991f,  "-2000");
+    writeFloat(-9999.9991f, "-10000");
+}
+
+TEST(TestStringUtil, WriteDoubles) {
+    writeFloats<double>();
+
+    writeFloat(0.1234567890123456,   "0.123456789012");
+    writeFloat(0.1234567890124,      "0.123456789012");
+//  writeFloat(0.1234567890125,      unspecified);
+    writeFloat(0.1234567890126,      "0.123456789013");
+    writeFloat(0.9999999999994,      "0.999999999999");
+    writeFloat(0.9999999999996,      "1");
+    writeFloat(1234567890.123456789, "1234567890.12346");
+    writeFloat(999999999999999.,     "999999999999999");
+    writeFloat(9999999999999994.,    "9999999999999990");
+    writeFloat(9999999999999996.,    "10000000000000000");
+
+    writeFloat(-0.1234567890123456,   "-0.123456789012");
+    writeFloat(-0.1234567890124,      "-0.123456789012");
+//  writeFloat(-0.1234567890125,      unspecified);
+    writeFloat(-0.1234567890126,      "-0.123456789013");
+    writeFloat(-0.9999999999994,      "-0.999999999999");
+    writeFloat(-0.9999999999996,      "-1");
+    writeFloat(-1234567890.123456789, "-1234567890.12346");
+    writeFloat(-999999999999999.,     "-999999999999999");
+    writeFloat(-9999999999999994.,    "-9999999999999990");
+    writeFloat(-9999999999999996.,    "-10000000000000000");
+}
+
 TEST(TestStringUtil, WriteMixed) {
     vgc::Int x = 42;
     std::string s;

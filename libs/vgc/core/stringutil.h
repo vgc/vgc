@@ -234,6 +234,146 @@ write(OStream& out, IntType x)
     out.write(f.data(), f.size());
 }
 
+/// Writes the decimal representation of the given floating-point number to the
+/// given output stream. It never uses the scientific notation. It rounds to
+/// the 12th digit after the decimal point, and rounds to 6 significant digits
+/// for floats, and 15 significant digits for doubles.
+///
+/// ```cpp
+/// vgc::core::write(out, 42.0);             // write "42"
+/// vgc::core::write(out, -42.0);            // write "-42"
+/// vgc::core::write(out, 1988.42);          // write "1988.42"
+/// vgc::core::write(out, 0.0);              // write "0"
+/// vgc::core::write(out, -0.0);             // write "0"
+/// vgc::core::write(out, 0.000000000004);   // write "0.000000000004"
+/// vgc::core::write(out, 0.0000000000004);  // write "0"
+/// vgc::core::write(out, 0.0000000000006);  // write "0.000000000001"
+/// vgc::core::write(out, -0.0000000000004); // write "0"
+/// vgc::core::write(out, -0.0000000000006); // write "-0.000000000001"
+/// vgc::core::write(out, 41.9999999999999); // write "42"
+/// vgc::core::write(out, 1.0 / 0.0);        // write "inf"
+/// vgc::core::write(out, -1.0 / 0.0);       // write "-inf"
+/// vgc::core::write(out, 0.0 / 0.0);        // write "nan"
+/// vgc::core::write(out, -0.0 / 0.0);       // write "nan"
+/// ```
+///
+/// Note that all the examples above give the same result for floats and
+/// doubles, due to their number of significant digits (after the input is
+/// rounded to the 12th digit after the decimal point) being less or equal than
+/// 6.
+///
+/// Below are examples where this function prints something different depending
+/// on whether the input is a float or a double, due to the number of
+/// significant digits being more than the precision of a float or double.
+///
+/// ```cpp
+/// vgc::core::write(out, 0.01234567890123456);  // write "0.012345678901"
+/// vgc::core::write(out, 0.01234567890123456f); // write "0.0123457"
+/// vgc::core::write(out, 1234567890123456.0);   // write "1234567890120000"
+/// vgc::core::write(out, 1234567890123456.0f);  // write "1234570000000000"
+/// ```
+///
+template<typename OStream, typename FloatType>
+typename std::enable_if<std::is_floating_point<FloatType>::value>::type
+write(OStream& out, FloatType x)
+{
+    // Shortcut for zero:
+    //   0.0000000000004 -> "0"
+    //   0.0000000000006 -> "0.000000000001"
+    constexpr FloatType eps = static_cast<FloatType>(5e-13);
+    if (-eps < x && x < eps) {
+        out.put('0');
+        return;
+    }
+
+    // Convert to string, rounding to 12th digit after the decimal point.
+    // Examples:
+    //   1988.42  -> " 1988.420000000000"
+    //   1988.42f -> " 1988.420043945312"
+    // We use a leading whitespace to make room for carrying:
+    //   9999999.f -> " 9999999.000000000000" (after calling fmt::format_to)
+    //             -> "10000000             " (after our post-processing)
+    fmt::memory_buffer b;
+    fmt::format_to(b, " {:.12f}", x);
+    auto begin = b.begin() + 1;
+    auto end = b.end();
+
+    // Handle "nan", "inf", "-nan", and "-inf".
+    // Note: we always convert "-nan" to "nan".
+    if (b[1] == 'n' || b[1] == 'i' || (b[1] == '-' && (b[2] == 'n' || b[2] == 'i'))) {
+        if (b[3] == 'a') { ++begin; } // Convert "-nan" to "nan"
+        out.write(begin, end - begin);
+        return;
+    }
+
+    // Read up to first significant digit.
+    auto p = begin;
+    int numSigDigits = 0;
+    bool hasDecimalPoint = false;
+    if (p != end && *p == '-') { ++p; } // skip negative sign
+    while (numSigDigits == 0 && p != end) {
+        if      (*p == '.') { hasDecimalPoint = true; }
+        else if (*p != '0') { ++numSigDigits; }
+        else                { } // keep reading leading zeroes: 0.000...
+        ++p;
+    }
+
+    // Read up to (max + 1) number of significant digit.
+    constexpr int maxSigDigits = std::numeric_limits<FloatType>::digits10;
+    while (numSigDigits <= maxSigDigits && p != end) {
+        if (*p == '.') { hasDecimalPoint = true; }
+        else           { ++numSigDigits; }
+        ++p;
+    }
+
+    // Round up if necessary. Note that we round half away from zero:
+    //   1000005.f  ->  "1000010"
+    //   -1000005.f -> "-1000010"
+    if (numSigDigits == maxSigDigits + 1) {
+        --p;
+        bool roundUp = (*p > '4');
+        auto q = p;
+        while (roundUp) {
+            --p;
+            if      (*p == '.') { }                                      // skip decimal point
+            else if (*p == '9') { *p = '0'; }                            // carry over
+            else {
+                roundUp = false;                                         // stop carrying over
+                if      (*p == ' ') { *p = '1'; begin = p; }             // handle leading space
+                else if (*p == '-') { *p = '1'; *--p = '-'; begin = p; } // handle negative sign
+                else                { *p += 1; }                         // handle normal case
+            }
+        }
+        p = q;
+    }
+
+    // Change all digits after max significant digits to '0'.
+    while (p != end) {
+        if (*p == '.') { hasDecimalPoint = true; }
+        else           { *p = '0'; }
+        ++p;
+    }
+
+    // Remove trailing zeros and trailing decimal point, if any.
+    if (hasDecimalPoint) {
+        --p;
+        while (*p == '0') { --p; } // remove trailing zeros
+        if (*p == '.')    { --p; } // remove trailing decimal point
+        ++p;
+    }
+
+    // Convert "-0" to "0". This is unlikely due the "shortcut for zero" at the
+    // beginning of this function, but proving that it can never happen is
+    // hard, so we take conservative measures.
+    //
+    if (begin[0] == '-' && begin[1] == '0' && p - begin == 2) {
+        ++begin;
+    }
+
+    // Write out result.
+    out.write(begin, p - begin);
+}
+
 /// \class vgc::core::StringWriter
 /// \brief An output stream which appends characters to an existing string.
 ///
@@ -367,17 +507,25 @@ inline StringWriter& operator<<(StringWriter& sw, const T& x)
 ///
 template <typename T>
 typename std::enable_if<std::is_integral<T>::value, std::string>::type
-toString(T x){
+toString(T x)
+{
     std::string s;
     StringWriter sw(s);
     sw << x;
     return s;
 }
 
-/// Converts the given double to a string.
+/// Converts the given floating-point number to a string.
 ///
-VGC_CORE_API
-std::string toString(double x);
+template <typename T>
+typename std::enable_if<std::is_floating_point<T>::value, std::string>::type
+toString(T x)
+{
+    std::string s;
+    StringWriter sw(s);
+    sw << x;
+    return s;
+}
 
 /// Converts the given address to a string.
 ///

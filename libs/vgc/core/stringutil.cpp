@@ -23,46 +23,6 @@
 namespace vgc {
 namespace core {
 
-std::string toString(double x)
-{
-    // Convert to string with fixed precision, no scientific notation.
-    // Example: 1988.42 -> "1988.420000000000"
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(12) << x;
-    std::string res = ss.str();
-
-    // Remove trailing zeros
-    int commaIndex = -1;
-    int n = res.size();
-    for (int i = 0; i < n; ++i) {
-        if (res[i] == '.') {
-            commaIndex = i;
-            break;
-        }
-    }
-    if (commaIndex > -1) {
-        for (int i = n-1; i > commaIndex; --i) {
-            if (res[i] == '0') {
-                n = i;
-            }
-            else {
-                break;
-            }
-        }
-    }
-    if (commaIndex == n-1) {
-        n -= 1;
-    }
-    res.resize(n);
-
-    return res;
-
-    // Note: the above is presumably quite slow, but seems the only way to get
-    // the desired behavior in less than 10 lines of code. In the future, we'd
-    // probably want to implement our own double to string algorithm to make it
-    // faster and provide user preferences.
-}
-
 std::string toString(const void* x)
 {
     // This is presumably slow and platform-dependent, but
