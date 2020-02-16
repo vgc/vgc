@@ -106,6 +106,86 @@ struct type_min {
 
 } // namespace internal
 
+/// Maximum value of an Int.
+///
+constexpr Int IntMax = internal::type_max<Int>::value;
+
+/// Maximum value of an Int8.
+///
+constexpr Int8 Int8Max = internal::type_max<Int8>::value;
+
+/// Maximum value of an Int16.
+///
+constexpr Int16 Int16Max = internal::type_max<Int16>::value;
+
+/// Maximum value of an Int32.
+///
+constexpr Int32 Int32Max = internal::type_max<Int32>::value;
+
+/// Maximum value of an Int64.
+///
+constexpr Int64 Int64Max = internal::type_max<Int64>::value;
+
+/// Maximum value of a UInt.
+///
+constexpr UInt UIntMax = internal::type_max<UInt>::value;
+
+/// Maximum value of a UInt8.
+///
+constexpr UInt8 UInt8Max = internal::type_max<UInt8>::value;
+
+/// Maximum value of a UInt16.
+///
+constexpr UInt16 UInt16Max = internal::type_max<UInt16>::value;
+
+/// Maximum value of a UInt32.
+///
+constexpr UInt32 UInt32Max = internal::type_max<UInt32>::value;
+
+/// Maximum value of a UInt64.
+///
+constexpr UInt64 UInt64Max = internal::type_max<UInt64>::value;
+
+/// Minimum value of an Int.
+///
+constexpr Int IntMin = internal::type_min<Int>::value;
+
+/// Minimum value of an Int8.
+///
+constexpr Int8 Int8Min = internal::type_min<Int8>::value;
+
+/// Minimum value of an Int16.
+///
+constexpr Int16 Int16Min = internal::type_min<Int16>::value;
+
+/// Minimum value of an Int32.
+///
+constexpr Int32 Int32Min = internal::type_min<Int32>::value;
+
+/// Minimum value of an Int64.
+///
+constexpr Int64 Int64Min = internal::type_min<Int64>::value;
+
+/// Minimum value of a UInt.
+///
+constexpr UInt UIntMin = internal::type_min<UInt>::value;
+
+/// Minimum value of a UInt8.
+///
+constexpr UInt8 UInt8Min = internal::type_min<UInt8>::value;
+
+/// Minimum value of a UInt16.
+///
+constexpr UInt16 UInt16Min = internal::type_min<UInt16>::value;
+
+/// Minimum value of a UInt32.
+///
+constexpr UInt32 UInt32Min = internal::type_min<UInt32>::value;
+
+/// Minimum value of a UInt64.
+///
+constexpr UInt64 UInt64Min = internal::type_min<UInt64>::value;
+
 } // namespace vgc
 
 #endif // VGC_CORE_INTTYPES_H
