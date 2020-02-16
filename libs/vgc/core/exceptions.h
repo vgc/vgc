@@ -32,8 +32,7 @@ namespace core {
 /// either because of a bug in a VGC function, or because the preconditions of
 /// a VGC function are not met.
 ///
-/// How to handle VGC logic errors?
-/// -------------------------------
+/// # How to handle VGC logic errors?
 ///
 /// The recommended programming practice when calling a VGC function with
 /// preconditions is to ensure that the preconditions are met, then call the
@@ -63,10 +62,9 @@ namespace core {
 /// 4. If catching the exception is a known workaround for a bug in VGC which
 ///    is still not fixed, and which you cannot fix yourself. Make sure to
 ///    report all suspected bugs to https://github.com/vgc/vgc/issues to ensure
-///    that they will get fixed in future version of VGC.
+///    that they will get fixed in future versions of VGC.
 ///
-/// When to raise VGC logic errors?
-/// -------------------------------
+/// # When to raise VGC logic errors?
 ///
 /// If you are a developer of one of the VGC libraries, then if possible, it is
 /// best to design your classes such that your public API has no preconditions,
@@ -104,47 +102,48 @@ namespace core {
 /// errors in case of failure is appropriate in this case, and is preferred
 /// over the use of assert(). However, checking invariants and post-conditions
 /// is a double-edged sword: be mindful of false-negative! You definitely do
-/// not want to upset users by incorrectly raising an exception caused by a bug
-/// in the code that checks the invariant! Also, be mindful of performance:
-/// avoid checking for invariants if this is an expensive operation. Here are
-/// some examples to provide some guidance:
+/// not want to upset users by incorrectly raising an exception (e.g., a
+/// precondition is met, but the code checking for the precondition has a
+/// bug).Also, be mindful of performance: avoid checking for invariants if this
+/// is an expensive operation. Here are some examples to provide guidance:
 ///
-/// \code
-/// // Good: fast and simple checks for complex, non-obvious algorithms
+/// ```cpp
+/// // Good: fast and simple checks for complex algorithms
 /// Foo* foo = nullptr;
-/// int i = -1;
+/// vgc::Int i = -1;
 /// for (...) {
-///   // ... many lines of code, more bug-prone than average code
+///     // Many lines of code, more bug-prone than average, which is supposed
+///     // to guarantee that at the end, foo != nullptr and i >= 0.
 /// }
 /// if (!foo) {
-///     throw LogicError("Foo not found! This is not supposed to be possible!");
+///     throw vgc::core::LogicError("Foo not found!");
 /// }
 /// if (i < 0) {
-///     throw LogicError("i is negative! This is not supposed to be possible!");
+///     throw vgc::core::LogicError("i is negative!");
 /// }
 ///
-/// // Best avoided: complex and/or expensive checks for complex, non-obvious algorithms
-/// int n = graph->numConnectedComponents();
+/// // Best avoided: complex and/or expensive checks for complex algorithms
+/// vgc::Int n = graph->numConnectedComponents();
 /// for (const Node& node : findNodesToRemove_(graph)) {
 ///     connectNeighborNodes_(node);
 ///     removeNode_(node);
 /// }
 /// if (n != graph->numConnectedComponents()) {
-///     throw LogicError("The number of connected components changed! This is not supposed to be possible!");
+///     throw vgc::core::LogicError("The number of connected components changed!");
 /// }
 ///
 /// // Bad: fast and simple checks for simple algorithms
-/// int j = i+1;
+/// vgc::Int j = i + 1;
 /// if (j < i) {
-///     throw LogicError("j smaller than i! This is not supposed to be possible!");
+///     throw vgc::core::LogicError("j smaller than i!");
 /// }
 ///
 /// // Very Bad: complex and/or expensive checks for simple algorithms
-/// int j = i+1;
+/// vgc::Int j = i + 1;
 /// if (std::sqrt(j) > std::sqrt(i)) {
-///     throw LogicError("sqrt(j) smaller than sqrt(i)! This is not supposed to be possible!");
+///     throw vgc::core::LogicError("sqrt(j) smaller than sqrt(i)!");
 /// }
-/// \endcode
+/// ```
 ///
 /// Finally, keep in mind that function input may come from various sources:
 ///
@@ -172,10 +171,14 @@ namespace core {
 ///
 /// 4. Graphical user input: This should always be sanitized by code handling
 ///    the user input. Graphical users should never be expected to enter "valid"
-///    input satisfying some preconditions.
+///    input satisfying some preconditions. In other words, invalid input coming
+///    from a non-programming user should never result in a raised logic error,
+///    but instead the user should be notified in a friendly way of the invalid
+///    input (e.g., popup), or better yet, the interface should make entering
+///    such invalid input impossible, or auto-correct it (e.g., typing a
+///    non-digit character in a spinbox is silently ignored).
 ///
-/// Why are we using exceptions for logic errors?
-/// ---------------------------------------------
+/// # Why are we using exceptions for logic errors?
 ///
 /// There is a commonly advocated guideline that using exceptions in C++ should
 /// only be for runtime errors (e.g., out of memory, file permission issues,
@@ -245,14 +248,25 @@ public:
 /// \brief Raised when an integer is negative but shouldn't.
 ///
 /// This exception is raised when attempting to create a container of a
-/// negative size, or casting a negative integer to an unsigned integer type.
+/// negative size, when casting a negative integer to an unsigned integer type,
+/// or whenerver a function requires a non-negative integer as a precondition.
 ///
-/// Examples:
+/// ```cpp
+/// vgc::core::DoubleArray a(-42, 1.0); // => NegativeIntegerError!
+/// vgc::int_cast<vgc::UInt>(-42);      // => NegativeIntegerError!
+/// ```
 ///
-/// \code
-/// core::DoubleArray a(-1, 42); // --> Raise NegativeIntegerError!
-/// UInt x = int_cast<UInt>(-1); // --> Raise NegativeIntegerError!
-/// \endcode
+/// Note that attempting to parse an unsigned integer from a string containing
+/// a negative sign does not raise a NegativeIntegerError, but instead raises a
+/// ParseError. This is because such error is fundamentally a runtime syntax
+/// error, not a logic error. In fact, even the presence of a positive sign
+/// raises a ParseError in this case.
+///
+/// ```cpp
+/// vgc::core::parse<vgc::UInt>("42");  // => ok
+/// vgc::core::parse<vgc::UInt>("-42"); // => ParseError!
+/// vgc::core::parse<vgc::UInt>("+42"); // => ParseError!
+/// ```
 ///
 class VGC_CORE_API NegativeIntegerError : public LogicError {
 public:
@@ -271,12 +285,10 @@ public:
 /// This exception is raised whenever attempting to access an element of a
 /// container with an index out of the container's range.
 ///
-/// Example:
-///
-/// \code
-/// core::DoubleArray  a = {10, 42};
-/// double x = a[2]; // --> Raise IndexError!
-/// \endcode
+/// ```cpp
+/// vgc::core::DoubleArray a = {10, 42};
+/// double x = a[2]; // => IndexError!
+/// ```
 ///
 class VGC_CORE_API IndexError : public LogicError {
 public:
@@ -303,8 +315,7 @@ public:
 /// client code to check this beforehand, which is why it is not considered a
 /// logic error.
 ///
-/// How to handle VGC runtime errors?
-/// ---------------------------------
+/// # How to handle VGC runtime errors?
 ///
 /// Function calls that may throw a RuntimeError should typically be directly
 /// surrounded by a try/catch block in C++ (or a try/except block in Python),
@@ -317,8 +328,7 @@ public:
 /// are not possible (for example, by calling open() on a file that we know is
 /// a valid file), then it is not required to surround the call by a try block.
 ///
-/// When to raise VGC runtime errors?
-/// ---------------------------------
+/// # When to raise VGC runtime errors?
 ///
 /// Whenever you are implementing a function which cannot complete its task for
 /// a reason that could not have been easily predicted by client code, you may
@@ -348,20 +358,15 @@ public:
 };
 
 /// \class vgc::core::ParseError
-/// \brief Raised when one of the read() function fails due to incorrect input.
+/// \brief Raised whenever invalid input is found when parsing a string or stream.
 ///
-/// This exception is raised whenever one of the read() function is called and
-/// the input stream does not actually store characters that can be interpreted
-/// as the string representation of the requested type.
+/// This exception is raised whenever one of the skip(), read(), readTo(), or
+/// parse() functions is called and the input string or stream does not contain
+/// a valid sequence of characters for the requested operation.
 ///
-/// Example:
-///
-/// \code
-/// std::string str = "Hello, world!";
-/// std::stringstream in(str);
-/// double x;
-/// read(in, x); // --> Raise ParseError!
-/// \endcode
+/// ```cpp
+/// vgc::core::parse<double>("Hello, world!"); // => ParseError!
+/// ```
 ///
 class VGC_CORE_API ParseError : public RuntimeError {
 public:
@@ -382,14 +387,9 @@ public:
 /// (typically, a number) is outside the representable range of the output
 /// type.
 ///
-/// Example:
-///
-/// \code
-/// std::string str = "1e400";
-/// std::stringstream in(str);
-/// double x;
-/// read(in, x); // --> Raise RangeError! (1e400 is too big to be stored as a double)
-/// \endcode
+/// ```cpp
+/// vgc::core::parse<double>("1e400"); // => RangeError! (1e400 exceeds double limits)
+/// ```
 ///
 class VGC_CORE_API RangeError : public RuntimeError {
 public:
@@ -403,30 +403,28 @@ public:
 };
 
 /// \class vgc::core::IntegerOverflowError
-/// \brief Raised when int_cast fails due to an integer overflow.
+/// \brief Raised when int_cast or parsing fails due to an integer overflow.
 ///
 /// This exception is raised whenever a conversion fails because the input
 /// (typically, a number) is outside the representable range of the output
 /// type.
 ///
-/// Example:
-///
-/// \code
-/// Int x = 128;
-/// vgc::int_cast<Int8>(x); // --> Raise IntegerOverflowError!
-///                         //     (128 is too big to be stored as an Int8)
-/// \endcode
+/// ```cpp
+/// vgc::int_cast<vgc::Int8>(128);      // => IntegerOverflowError! (128 exceeds Int8 limits)
+/// vgc::core::parse<vgc::Int8)("128"); // => IntegerOverflowError! (128 exceeds Int8 limits)
+/// ```
 ///
 /// \sa NegativeIntegerError
 ///
-/// Note how NegativeIntegerError is considered a LogicError, while
-/// IntegerOverflowError isn't. Indeed, while IntegerOverflowError may also in
-/// theory be considered a logic error (= didn't check the maximum int range
-/// before casting), it is often impractical to always perform such checks, and
-/// can simply be considered a "limitation" of the program (akin to a crash
-/// because you ran out of memory).
+/// Note that NegativeIntegerError is a LogicError, while IntegerOverflowError
+/// is a RuntimeError. Indeed, while IntegerOverflowError may also in theory be
+/// considered a logic error (= didn't check the maximum int range before
+/// casting), it is often impractical to always perform such checks, and can
+/// simply be considered a "limitation" of the program (akin to a crash because
+/// you ran out of memory). Also, RangeError may occur while parsing integers
+/// and floats of an input file, in which case it is indeed a runtime error.
 ///
-/// Some IntegerOverflowError may of course be caused by actual bugs, and
+/// Some IntegerOverflowErrors may of course be caused by actual bugs, and
 /// should be fixed. Some others may be common enough to warrant a custom user
 /// message (or prevent the user from performing the action) rather than the
 /// generic crash handler.
