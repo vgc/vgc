@@ -17,7 +17,8 @@
 #include <vgc/core/vec2d.h>
 
 #include <sstream>
-#include <vgc/core/stringutil.h>
+#include <vgc/core/format.h>
+#include <vgc/core/parse.h>
 
 namespace vgc {
 namespace core {

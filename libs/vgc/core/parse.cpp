@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/stringutil.h>
+#include <vgc/core/parse.h>
 
 #include <cmath>
 #include <iomanip>
@@ -22,15 +22,6 @@
 
 namespace vgc {
 namespace core {
-
-std::string toString(const void* x)
-{
-    // This is presumably slow and platform-dependent, but
-    // should be okay in most cases.
-    std::stringstream ss;
-    ss << x;
-    return ss.str();
-}
 
 double toDoubleApprox(const std::string& s)
 {
@@ -53,44 +44,6 @@ double toDoubleApprox(const std::string& s)
     // raised exceptions and allowed pattern), but then if valid, pass the
     // string (potentially cleaned up) to the third-party function for the
     // actual math.
-}
-
-std::string secondsToString(double t, TimeUnit unit, int decimals)
-{
-    switch (unit) {
-    case TimeUnit::Seconds:
-        break;
-    case TimeUnit::Milliseconds:
-        t *= 1e3;
-        break;
-    case TimeUnit::Microseconds:
-        t *= 1e6;
-        break;
-    case TimeUnit::Nanoseconds:
-        t *= 1e9;
-        break;
-    }
-
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(decimals) << t;
-    std::string res = ss.str();
-
-    switch (unit) {
-    case TimeUnit::Seconds:
-        res += "s";
-        break;
-    case TimeUnit::Milliseconds:
-        res += "ms";
-        break;
-    case TimeUnit::Microseconds:
-        res += "µs";
-        break;
-    case TimeUnit::Nanoseconds:
-        res += "ns";
-        break;
-    }
-
-    return res;
 }
 
 namespace internal {
@@ -116,13 +69,6 @@ double computeDouble(bool isPositive, double a, int b, int n)
     return isPositive ? a * std::pow(10.0, b) : -a * std::pow(10.0, b);
 
     // TODO use precomputed powers of tens for better performance and higher accuracy.
-}
-
-void throwNotWithin32BitSignedIntegerRange(long long int x)
-{
-    throw RangeError(
-        std::string("The integer ") + toString(x) +
-        " is too big to be represented as a 32-bit signed integer.");
 }
 
 } // namespace internal

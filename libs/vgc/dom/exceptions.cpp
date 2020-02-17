@@ -16,7 +16,7 @@
 
 #include <vgc/dom/exceptions.h>
 
-#include <vgc/core/stringutil.h>
+#include <vgc/core/format.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/node.h>
 
@@ -39,7 +39,7 @@ std::string notAliveReason_(const Node* node)
     std::string res;
     res.reserve(32);
     res.append("Node ");
-    res.append(core::toString(node));
+    res.append(core::toAddressString(node));
     res.append(" is not alive");
     return res;
 }
@@ -62,13 +62,13 @@ std::string wrongDocumentReason_(const Node* n1, const Node* n2)
     std::string res;
     res.reserve(133);
     res.append("Node ");
-    res.append(core::toString(n1));
+    res.append(core::toAddressString(n1));
     res.append(" and Node ");
-    res.append(core::toString(n2));
+    res.append(core::toAddressString(n2));
     res.append("belong to different documents (resp. Document ");
-    res.append(core::toString(n1->document()));
+    res.append(core::toAddressString(n1->document()));
     res.append(" and Document ");
-    res.append(core::toString(n2->document()));
+    res.append(core::toAddressString(n2->document()));
     res.append(")");
     return res;
 }
@@ -96,11 +96,11 @@ std::string wrongChildTypeReason_(const Node* parent, const Node* child)
     std::string res;
     res.reserve(96);
     res.append("Node ");
-    res.append(core::toString(child));
+    res.append(core::toAddressString(child));
     res.append(" (type = ");
     res.append(toString(child->nodeType()));
     res.append(") cannot be a child of Node ");
-    res.append(core::toString(parent));
+    res.append(core::toAddressString(parent));
     res.append(" (type = ");
     res.append(toString(parent->nodeType()));
     res.append(")");
@@ -125,9 +125,9 @@ std::string secondRootElementReason_(const Document* document)
     std::string res;
     res.reserve(94);
     res.append("Document ");
-    res.append(core::toString(document));
+    res.append(core::toAddressString(document));
     res.append(" cannot have a second root element (existing Element is ");
-    res.append(core::toString(document->rootElement()));
+    res.append(core::toAddressString(document->rootElement()));
     res.append(")");
     return res;
 }
@@ -150,9 +150,9 @@ std::string childCycleReason_(const Node* parent, const Node* child)
     std::string res;
     res.reserve(109);
     res.append("Node ");
-    res.append(core::toString(child));
+    res.append(core::toAddressString(child));
     res.append(" cannot be a child of Node ");
-    res.append(core::toString(parent));
+    res.append(core::toAddressString(parent));
     res.append(" because the latter is a descendant of the former");
     return res;
 }
@@ -175,9 +175,9 @@ std::string replaceDocumentReason_(const Document* oldNode, const Node* newNode)
     std::string res;
     res.reserve(63);
     res.append("Node ");
-    res.append(core::toString(newNode));
+    res.append(core::toAddressString(newNode));
     res.append(" cannot replace Document node ");
-    res.append(core::toString(oldNode));
+    res.append(core::toAddressString(oldNode));
     return res;
 }
 } // namespace

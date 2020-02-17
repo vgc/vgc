@@ -20,6 +20,7 @@
 #include <cmath>
 #include <vgc/core/algorithm.h>
 #include <vgc/core/api.h>
+#include <vgc/core/inttypes.h>
 
 /// \file vgc/core/int2float.h
 /// \brief Defines conversions from integral types to floating-point types.
@@ -33,8 +34,8 @@ namespace core {
 /// clamped to this range.
 ///
 VGC_CORE_API
-inline double uint8ToDouble01(int x) {
-    return vgc::core::clamp(x, 0, 255) / 255.0;
+inline double uint8ToDouble01(Int x) {
+    return vgc::core::clamp(x, Int(0), Int(255)) / 255.0;
 }
 
 } // namespace core

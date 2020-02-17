@@ -18,6 +18,7 @@ vgc_add_library(core
         epsilon.h
         exceptions.h
         float2int.h
+        format.h
         innercore.h
         int.h
         int2float.h
@@ -29,6 +30,7 @@ vgc_add_library(core
         math.h
         object.h
         os.h
+        parse.h
         paths.h
         performancelog.h
         python.h
@@ -36,7 +38,6 @@ vgc_add_library(core
         signal.h
         stopwatch.h
         stringid.h
-        stringutil.h
         vec2d.h
         vec2darray.h
 
@@ -47,11 +48,13 @@ vgc_add_library(core
         color.cpp
         doublearray.cpp
         exceptions.cpp
+        format.cpp
         io.cpp
         logging.cpp
         mat4d.cpp
         math.cpp
         object.cpp
+        parse.cpp
         paths.cpp
         performancelog.cpp
         python.cpp
@@ -59,7 +62,6 @@ vgc_add_library(core
         signal.cpp
         stopwatch.cpp
         stringid.cpp
-        stringutil.cpp
         vec2d.cpp
         vec2darray.cpp
 

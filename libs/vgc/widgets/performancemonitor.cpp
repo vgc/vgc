@@ -18,8 +18,8 @@
 
 #include <QLabel>
 
+#include <vgc/core/format.h>
 #include <vgc/core/limits.h>
-#include <vgc/core/stringutil.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {

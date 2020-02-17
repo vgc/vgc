@@ -15,29 +15,20 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/format.h>
 
-void wrap_color(py::module& m);
-void wrap_doublearray(py::module& m);
-void wrap_exceptions(py::module& m);
-void wrap_format(py::module& m);
-void wrap_io(py::module& m);
-void wrap_limits(py::module& m);
-void wrap_object(py::module& m);
-void wrap_parse(py::module& m);
-void wrap_stopwatch(py::module& m);
-void wrap_vec2d(py::module& m);
-void wrap_vec2darray(py::module& m);
+void wrap_format(py::module& m)
+{
+    py::enum_<vgc::core::TimeUnit>(m, "TimeUnit")
+        .value("Seconds", vgc::core::TimeUnit::Seconds)
+        .value("Milliseconds", vgc::core::TimeUnit::Milliseconds)
+        .value("Microseconds", vgc::core::TimeUnit::Microseconds)
+        .value("Nanoseconds", vgc::core::TimeUnit::Nanoseconds)
+    ;
 
-PYBIND11_MODULE(core, m) {
-    wrap_color(m);
-    wrap_doublearray(m);
-    wrap_exceptions(m);
-    wrap_format(m);
-    wrap_io(m);
-    wrap_limits(m);
-    wrap_object(m);
-    wrap_parse(m);
-    wrap_stopwatch(m);
-    wrap_vec2d(m);
-    wrap_vec2darray(m);
+    m.def("secondsToString",
+          &vgc::core::secondsToString,
+          "t"_a,
+          "unit"_a = vgc::core::TimeUnit::Seconds,
+          "decimals"_a = 0);
 }

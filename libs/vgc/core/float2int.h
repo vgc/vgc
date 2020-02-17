@@ -20,6 +20,7 @@
 #include <cmath>
 #include <vgc/core/algorithm.h>
 #include <vgc/core/api.h>
+#include <vgc/core/inttypes.h>
 
 /// \file vgc/core/float2int.h
 /// \brief Defines conversions from floating-point types to integral types.
@@ -33,9 +34,9 @@ namespace core {
 /// [0..255] which is closest to 255*x.
 ///
 VGC_CORE_API
-inline unsigned char double01ToUint8(double x) {
+inline UInt8 double01ToUint8(double x) {
     double y = std::round(vgc::core::clamp(x, 0.0, 1.0) * 255.0);
-    return static_cast<unsigned char>(y);
+    return static_cast<UInt8>(y);
 }
 
 } // namespace core

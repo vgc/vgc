@@ -18,7 +18,7 @@
 
 #ifdef VGC_CORE_OBJECT_DEBUG
     #include <iostream>
-    #include <vgc/core/stringutil.h>
+    #include <vgc/core/format.h>
 #endif
 
 namespace vgc {
@@ -31,7 +31,7 @@ void printDebugInfo_(Object* obj, const char* s)
     std::string info;
     info.reserve();
     info.append("Object ");
-    info.append(toString(obj));
+    info.append(toAddressString(obj));
     info.append(" ");
     info.append(s);
     info.append(" \n");

@@ -14,23 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
-#include <vgc/core/stringutil.h>
+#include <gtest/gtest.h>
+#include <sstream>
+#include <vgc/core/parse.h>
 
-void wrap_stringutil(py::module& m)
-{
-    m.def("toDoubleApprox", &vgc::core::toDoubleApprox);
+// TODO: write plenty of tests
 
-    py::enum_<vgc::core::TimeUnit>(m, "TimeUnit")
-        .value("Seconds", vgc::core::TimeUnit::Seconds)
-        .value("Milliseconds", vgc::core::TimeUnit::Milliseconds)
-        .value("Microseconds", vgc::core::TimeUnit::Microseconds)
-        .value("Nanoseconds", vgc::core::TimeUnit::Nanoseconds)
-    ;
+TEST(TestParse, ReadChar) {
+    std::string s = "hello";
+    std::istringstream in(s);
+    char c = vgc::core::readCharacter(in);
+    EXPECT_EQ(c, 'h');
+}
 
-    m.def("secondsToString",
-          &vgc::core::secondsToString,
-          "t"_a,
-          "unit"_a = vgc::core::TimeUnit::Seconds,
-          "decimals"_a = 0);
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

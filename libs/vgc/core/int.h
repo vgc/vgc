@@ -120,12 +120,30 @@
 //           v
 //       inttypes.h
 //
+// XXX Now that we've split stringutil.h into format.h and parse.h, the above
+// is not true anymore, and we could have a single int.h header again. Or more
+// generally, a "numeric.h" header, with both int and float functionality,
+// e.g., also merging int2float.h, float2int.h, limits.h, and epsilon.h.
+//
+// The dependency graph would be:
+//
+//         parse.h
+//           |
+//           v
+//        numeric.h
+//           |
+//           v
+//       exceptions.h
+//           |
+//           v
+//        format.h
+//
 
 #include <type_traits>
 
 #include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
 #include <vgc/core/inttypes.h>
-#include <vgc/core/stringutil.h>
 
 namespace vgc {
 
@@ -169,8 +187,7 @@ namespace internal {
 
 template <typename T, typename U>
 std::string intErrorReason(U value) {
-    return "Cannot convert " + int_typename<U>() + "(" +
-            core::toString(value) + ") to type " + int_typename<T>();
+    return core::format("Cannot convert {}({}) to type {}", int_typename<U>(), value, int_typename<T>());
 }
 
 template <typename T, typename U>

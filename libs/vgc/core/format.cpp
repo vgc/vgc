@@ -14,30 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
+#include <vgc/core/format.h>
 
-void wrap_color(py::module& m);
-void wrap_doublearray(py::module& m);
-void wrap_exceptions(py::module& m);
-void wrap_format(py::module& m);
-void wrap_io(py::module& m);
-void wrap_limits(py::module& m);
-void wrap_object(py::module& m);
-void wrap_parse(py::module& m);
-void wrap_stopwatch(py::module& m);
-void wrap_vec2d(py::module& m);
-void wrap_vec2darray(py::module& m);
+namespace vgc {
+namespace core {
 
-PYBIND11_MODULE(core, m) {
-    wrap_color(m);
-    wrap_doublearray(m);
-    wrap_exceptions(m);
-    wrap_format(m);
-    wrap_io(m);
-    wrap_limits(m);
-    wrap_object(m);
-    wrap_parse(m);
-    wrap_stopwatch(m);
-    wrap_vec2d(m);
-    wrap_vec2darray(m);
+std::string secondsToString(double t, TimeUnit unit, int decimals)
+{
+    std::string u;
+    switch (unit) {
+    case TimeUnit::Seconds:                u = "s";  break;
+    case TimeUnit::Milliseconds: t *= 1e3; u = "ms"; break;
+    case TimeUnit::Microseconds: t *= 1e6; u = "µs"; break;
+    case TimeUnit::Nanoseconds:  t *= 1e9; u = "ns"; break;
+    }    
+    return core::format("{:.{}f}{}", t, decimals, u);
 }
+
+} // namespace core
+} // namespace vgc
