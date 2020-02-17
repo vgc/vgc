@@ -695,13 +695,6 @@ double readDoubleApprox(IStream& in)
     }
 }
 
-/// Approximately converts a base-10 text representation of a number into a
-/// double stored in \p x, with a guaranteed precision of 15 significant
-/// digits. See readDoubleApprox() for details.
-///
-VGC_CORE_API
-double toDoubleApprox(const std::string& s);
-
 /// Reads the next character from the input stream, and store it in the output
 /// parameter. Raises ParseError if no character can be read from the stream
 /// (e.g., we've already reached the end).

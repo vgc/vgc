@@ -17,7 +17,7 @@
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/parse.h>
 
-void wrap_parse(py::module& m)
+void wrap_parse(py::module& /*m*/)
 {
-    m.def("toDoubleApprox", &vgc::core::toDoubleApprox);
+
 }

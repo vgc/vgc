@@ -23,29 +23,6 @@
 namespace vgc {
 namespace core {
 
-double toDoubleApprox(const std::string& s)
-{
-    std::stringstream in(s);
-    return readDoubleApprox(in);
-
-    // TODO: Use a custom StringViewStream class instead of std::stringstream
-    // to avoid copying the data.
-
-    // TODO: implement versions taking as input a custom StringView class (or
-    // C++17 string_view)
-
-    // TODO: Allow trailing whitespace but disallow trailing garbage.
-    // Currently, our toDoubleApprox("1.0garbage") returns 1.0, while Python's
-    // float("1.0garbage") raises ValueError.
-
-    // TODO: Write the accurate version "toDouble()" using built-in C++
-    // functions or Gay's dtoa.c (Python's modified version is probably even
-    // better.). We should still do our own parsing (for precise control of
-    // raised exceptions and allowed pattern), but then if valid, pass the
-    // string (potentially cleaned up) to the third-party function for the
-    // actual math.
-}
-
 namespace internal {
 
 double computeDouble(bool isPositive, double a, int b, int n)
