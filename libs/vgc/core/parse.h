@@ -63,59 +63,6 @@ inline bool isDigit(char c)
    return ('0' <= c && c <= '9' );
 }
 
-/// Returns the double represented by the given digit character \p c, assuming
-/// that \p c is indeed a digit (that is, isDigit(c) must return true).
-/// Otherwise, the behaviour is undefined.
-///
-VGC_CORE_API
-inline double digitToDoubleNoRangeCheck(char c)
-{
-    const double t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    return t[c - '0'];
-}
-
-/// Returns the int represented by the given digit character \p c, assuming
-/// that \p c is indeed a digit (that is, isDigit(c) must return true).
-/// Otherwise, the behaviour is undefined.
-///
-VGC_CORE_API
-inline int digitToIntNoRangeCheck(char c)
-{
-    return static_cast<int>(c - '0');
-}
-
-/// Returns the double represented by the given digit character \p c. If \p c
-/// is not a digit (that is, isDigit(c) returns false), then ParseError is
-/// raised.
-///
-VGC_CORE_API
-inline double digitToDouble(char c)
-{
-    if (isDigit(c)) {
-        return digitToDoubleNoRangeCheck(c);
-    }
-    else {
-        throw ParseError(
-            std::string("Unexpected '") + c + "'. Expected a digit [0-9].");
-    }
-}
-
-/// Returns the int represented by the given digit character \p c. If \p c
-/// is not a digit (that is, isDigit(c) returns false), then ParseError is
-/// raised.
-///
-VGC_CORE_API
-inline int digitToInt(char c)
-{
-    if (isDigit(c)) {
-        return digitToIntNoRangeCheck(c);
-    }
-    else {
-        throw ParseError(
-            std::string("Unexpected '") + c + "'. Expected a digit [0-9].");
-    }
-}
-
 /// Extracts the next character from the input stream. Raises
 /// ParseError if the stream ends.
 ///
@@ -557,7 +504,7 @@ double readDoubleApprox(IStream& in)
     while (isDigit(c)) {
         if (numDigits < 17) {
             a *= 10;
-            a += digitToDoubleNoRangeCheck(c);
+            a += static_cast<double>(c - '0');
             numDigits += 1;
         }
         else {
@@ -606,7 +553,7 @@ double readDoubleApprox(IStream& in)
     while (isDigit(c)) {
         if (numDigits < 17) {
             a *= 10;
-            a += digitToDoubleNoRangeCheck(c);
+            a += static_cast<double>(c - '0');
             numDigits += 1;
             dotPosition += 1;
         }
@@ -659,7 +606,8 @@ double readDoubleApprox(IStream& in)
                     //  just yet: we still want to advance the stream until the
                     //  end of the number.
                     exponent *= 10;
-                    exponent += isExponentPositive ? digitToIntNoRangeCheck(c) : -digitToIntNoRangeCheck(c);
+                    int digit = static_cast<int>(c - '0');
+                    exponent += isExponentPositive ? digit : -digit;
                 }
             }
             if (!in.get(c)) {
