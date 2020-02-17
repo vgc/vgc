@@ -161,7 +161,8 @@ TEST(TestParse, ReadDoubleApprox)
     readDoubleApproxExpectZero({"1e-308"});
 }
 
-TEST(TestParse, ReadMixed) {
+TEST(TestParse, ReadMixed)
+{
     std::string s = "42 10.0hi";
     vgc::core::StringReader in(s);
     int x;
@@ -174,6 +175,14 @@ TEST(TestParse, ReadMixed) {
     EXPECT_EQ(c, 'h');
     EXPECT_EQ(d, 'i');
     EXPECT_FALSE(in.get(c));
+}
+
+TEST(TestParse, Parse)
+{
+    EXPECT_EQ(vgc::core::parse<int>("42"), 42);
+    EXPECT_EQ(vgc::core::parse<int>(" 42"), 42);
+    EXPECT_EQ(vgc::core::parse<int>(" 42 \n"), 42);
+    EXPECT_THROW(vgc::core::parse<int>("42 hello"), vgc::core::ParseError);
 }
 
 int main(int argc, char **argv)
