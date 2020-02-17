@@ -116,6 +116,74 @@ inline int digitToInt(char c)
     }
 }
 
+/// Extracts the next character from the input stream. Raises
+/// ParseError if the stream ends.
+///
+template<typename IStream>
+char readCharacter(IStream& in)
+{
+    char c = -1; // dummy-initialization in order to silence warning
+    if (!in.get(c)) {
+        throw ParseError(
+            "Unexpected end of stream. Expected a character.");
+    }
+    return c;
+}
+
+/// Extracts characters from the input stream one by one until a non-whitespace
+/// character is extracted, and returns this non-whitespace character. Raises
+/// ParseError if the stream ends before a non-whitespace character is found.
+///
+template<typename IStream>
+char readFirstNonWhitespaceCharacter(IStream& in)
+{
+    bool found = false;
+    char c = -1; // dummy-initialization in order to silence warning
+    while (!found && in.get(c)) {
+        if (!isWhitespace(c)) {
+            found = true;
+        }
+    }
+    if (!found) {
+        throw ParseError(
+            "Unexpected end of stream while searching for a non-whitespace "
+            "character. Expected either a whitespace character (to be "
+            " skipped), or a non-whitespace character (to be returned).");
+    }
+    return c;
+}
+
+/// Extracts and returns the next character from the input stream. Raises
+/// ParseError if this character does not belong to \p allowedCharacters or if
+/// the stream ends.
+///
+template<typename IStream, std::size_t N>
+char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
+{
+    char c = readCharacter(in);
+    bool allowed = false;
+    for (int i = 0; i < N; ++i) {
+        allowed = allowed || (c == allowedCharacters[i]);
+    }
+    if (!allowed)  {
+        std::string allowedCharactersString;
+        if (N > 0) {
+            allowedCharactersString += "'";
+            allowedCharactersString += allowedCharacters[0];
+            allowedCharactersString += "'";
+        }
+        for (int i = 1; i < N; ++i) {
+            allowedCharactersString += ", '";
+            allowedCharactersString += allowedCharacters[i];
+            allowedCharactersString += "'";
+        }
+        throw ParseError(
+            std::string("Unexpected '") + c + "'. Expected one of the "
+            "following characters: " + allowedCharactersString + "'.");
+    }
+    return c;
+}
+
 /// Extracts all leading whitespace characters from the input stream.
 ///
 template<typename IStream>
@@ -160,74 +228,6 @@ void skipExpectedEof(IStream& in)
     }
 }
 
-/// Extracts characters from the input stream one by one until a non-whitespace
-/// character is extracted, and returns this non-whitespace character. Raises
-/// ParseError if the stream ends before a non-whitespace character is found.
-///
-template<typename IStream>
-char readNonWhitespaceCharacter(IStream& in)
-{
-    bool found = false;
-    char c = -1; // dummy-initialization in order to silence warning
-    while (!found && in.get(c)) {
-        if (!isWhitespace(c)) {
-            found = true;
-        }
-    }
-    if (!found) {
-        throw ParseError(
-            "Unexpected end of stream while searching for a non-whitespace "
-            "character. Expected either a whitespace character (to be "
-            " skipped), or a non-whitespace character (to be returned).");
-    }
-    return c;
-}
-
-/// Extracts the next character from the input stream. Raises
-/// ParseError if the stream ends.
-///
-template<typename IStream>
-char readCharacter(IStream& in)
-{
-    char c = -1; // dummy-initialization in order to silence warning
-    if (!in.get(c)) {
-        throw ParseError(
-            "Unexpected end of stream. Expected a character.");
-    }
-    return c;
-}
-
-/// Extracts and returns the next character from the input stream. Raises
-/// ParseError if this character does not belong to \p allowedCharacters or if
-/// the stream ends.
-///
-template<typename IStream, std::size_t N>
-char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
-{
-    char c = readCharacter(in);
-    bool allowed = false;
-    for (int i = 0; i < N; ++i) {
-        allowed = allowed || (c == allowedCharacters[i]);
-    }
-    if (!allowed)  {
-        std::string allowedCharactersString;
-        if (N > 0) {
-            allowedCharactersString += "'";
-            allowedCharactersString += allowedCharacters[0];
-            allowedCharactersString += "'";
-        }
-        for (int i = 1; i < N; ++i) {
-            allowedCharactersString += ", '";
-            allowedCharactersString += allowedCharacters[i];
-            allowedCharactersString += "'";
-        }
-        throw ParseError(
-            std::string("Unexpected '") + c + "'. Expected one of the "
-            "following characters: " + allowedCharactersString + "'.");
-    }
-    return c;
-}
-
 /// Reads a base-10 text representation of an unsigned integer from the input
 /// stream \p in. Leading whitespaces are allowed. No leading positive or
 /// negative sign is allowed. Raises ParseError if the stream does not contain
@@ -244,7 +244,7 @@ readUnsignedInteger(IStream& in)
     constexpr IntType n = vgc::internal::type_max<IntType>::value;
     constexpr IntType m = n / 10;
     constexpr IntType k = n % 10;
-    char c = readNonWhitespaceCharacter(in);
+    char c = readFirstNonWhitespaceCharacter(in);
     IntType i = 0;
     bool hasDigits = false;
     while (isDigit(c)) {
@@ -284,7 +284,7 @@ typename std::enable_if<
     std::is_signed<SIntType>::value, SIntType>::type
 readSignedIntegerImpl(IStream& in)
 {
-    char c = readNonWhitespaceCharacter(in);
+    char c = readFirstNonWhitespaceCharacter(in);
     bool isPositive = true;
     if (c == '-' || c == '+') {
         isPositive = (c == '+');
@@ -321,7 +321,7 @@ typename std::enable_if<
     std::is_unsigned<UIntType>::value, UIntType>::type
 readSignedIntegerImpl(IStream& in)
 {
-    char c = readNonWhitespaceCharacter(in);
+    char c = readFirstNonWhitespaceCharacter(in);
     bool isPositive = true;
     if (c == '-' || c == '+') {
         isPositive = (c == '+');
@@ -525,7 +525,7 @@ double readDoubleApprox(IStream& in)
     //      -> This is the implementation used by the V8 JavaScript engine of Google Chrome
 
     // Skip leading whitespaces; get the first non-whitespace character
-    char c = readNonWhitespaceCharacter(in);
+    char c = readFirstNonWhitespaceCharacter(in);
 
     // Read sign
     bool isPositive = true;
