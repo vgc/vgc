@@ -17,7 +17,7 @@
 #include <vgc/core/doublearray.h>
 
 #include <sstream>
-#include <vgc/core/stringutil.h>
+#include <vgc/core/parse.h>
 
 namespace vgc {
 namespace core {

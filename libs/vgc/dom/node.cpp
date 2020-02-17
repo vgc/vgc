@@ -18,7 +18,6 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/core/logging.h>
-#include <vgc/core/stringutil.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 

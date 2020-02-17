@@ -22,8 +22,8 @@
 
 #include <vgc/core/api.h>
 #include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
 #include <vgc/core/int.h>
-#include <vgc/core/stringutil.h>
 
 #include <vgc/core/internal/containerutil.h>
 

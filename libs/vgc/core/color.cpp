@@ -18,8 +18,9 @@
 
 #include <sstream>
 #include <vgc/core/float2int.h>
+#include <vgc/core/format.h>
 #include <vgc/core/int2float.h>
-#include <vgc/core/stringutil.h>
+#include <vgc/core/parse.h>
 
 namespace vgc {
 namespace core {
@@ -73,15 +74,15 @@ Color toColor(const std::string& s)
         skipExpectedCharacter(in, '(');
     }
 
-    double r = uint8ToDouble01(readInt(in));
+    double r = uint8ToDouble01(read<Int>(in));
     skipWhitespaceCharacters(in);
 
     skipExpectedCharacter(in, ',');
-    double g = uint8ToDouble01(readInt(in));
+    double g = uint8ToDouble01(read<Int>(in));
     skipWhitespaceCharacters(in);
 
     skipExpectedCharacter(in, ',');
-    double b = uint8ToDouble01(readInt(in));
+    double b = uint8ToDouble01(read<Int>(in));
     skipWhitespaceCharacters(in);
 
     double a = 1.0;

@@ -16,13 +16,14 @@
 
 #include <gtest/gtest.h>
 #include <sstream>
-#include <vgc/core/stringutil.h>
+#include <vgc/core/format.h>
+#include <vgc/core/inttypes.h>
 
 // For benchmarking
 // TODO: Use Google Benchmark and separate benchmarks from unit tests
 #include <vgc/core/stopwatch.h>
 
-TEST(TestStringUtil, WriteChar) {
+TEST(TestFormat, WriteChar) {
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << 'a';
@@ -30,7 +31,7 @@ TEST(TestStringUtil, WriteChar) {
     EXPECT_EQ(s, "ab");
 }
 
-TEST(TestStringUtil, WriteCString) {
+TEST(TestFormat, WriteCString) {
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << "Hello";
@@ -38,7 +39,7 @@ TEST(TestStringUtil, WriteCString) {
     EXPECT_EQ(s, "Hello World!");
 }
 
-TEST(TestStringUtil, WriteInt8) {
+TEST(TestFormat, WriteInt8) {
     signed char   c = 'A';
     unsigned char d = 'A';
     vgc::Int8     i = 65;
@@ -69,7 +70,7 @@ void testWriteIntegers() {
     testWriteInteger<T>(vgc::internal::type_max<T>::value);
 }
 
-TEST(TestStringUtil, WriteIntegers) {
+TEST(TestFormat, WriteIntegers) {
     testWriteIntegers<vgc::Int>();
     testWriteIntegers<vgc::Int8>();
     testWriteIntegers<vgc::Int16>();
@@ -120,7 +121,7 @@ void writeFloats() {
     writeFloat(static_cast<T>(-41.99999999999999), "-42");
 }
 
-TEST(TestStringUtil, WriteFloats) {
+TEST(TestFormat, WriteFloats) {
     writeFloats<float>();
 
     writeFloat(0.1234567890123456f, "0.123457");
@@ -196,7 +197,7 @@ TEST(TestStringUtil, WriteFloats) {
     writeFloat(-9999.9991f, "-10000");
 }
 
-TEST(TestStringUtil, WriteDoubles) {
+TEST(TestFormat, WriteDoubles) {
     writeFloats<double>();
 
     writeFloat(0.1234567890123456,   "0.123456789012");
@@ -222,7 +223,7 @@ TEST(TestStringUtil, WriteDoubles) {
     writeFloat(-9999999999999996.,    "-10000000000000000");
 }
 
-TEST(TestStringUtil, WriteMixed) {
+TEST(TestFormat, WriteMixed) {
     vgc::Int x = 42;
     std::string s;
     vgc::core::StringWriter sw(s);
@@ -230,7 +231,7 @@ TEST(TestStringUtil, WriteMixed) {
     EXPECT_EQ(s, "The value of x is: 42\n");
 }
 
-TEST(TestStringUtil, Benchmark) {
+TEST(TestFormat, Benchmark) {
     vgc::core::Stopwatch t;
     int n = 1000000;
     std::vector<int> v;

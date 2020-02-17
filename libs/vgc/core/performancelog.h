@@ -62,7 +62,7 @@ VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
 /// to measure with start() and stop().
 ///
 /// Times are stored as double-precision floating points expressed in seconds.
-/// You can use vgc::core::secondsToString() from vgc/core/stringutil.h if you
+/// You can use vgc::core::secondsToString() from vgc/core/format.h if you
 /// need to pretty-print them.
 ///
 /// Tree Hierarchy
