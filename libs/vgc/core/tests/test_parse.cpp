@@ -20,12 +20,11 @@
 #include <vgc/core/parse.h>
 
 // TODO: write more tests
-// TODO: use vgc::core::StringReader or vgc::core::parse() functions
 
 TEST(TestParse, ReadChar)
 {
     std::string s = "hello";
-    std::istringstream in(s);
+    vgc::core::StringReader in(s);
     char c = vgc::core::readCharacter(in);
     EXPECT_EQ(c, 'h');
 }
@@ -40,7 +39,7 @@ void readDoubleApproxExpectEq(const std::vector<std::string>& v)
 {
     setCLocale();
     for (const std::string& s : v) {
-        std::istringstream in(s);
+        vgc::core::StringReader in(s);
         double parsed = vgc::core::readDoubleApprox(in);
         double expected = std::stod(s);
         EXPECT_EQ(parsed, expected) << "Tested string: \"" << s << "\"";
@@ -51,7 +50,7 @@ void readDoubleApproxExpectNear(const std::vector<std::string>& v)
 {
     setCLocale();
     for (const std::string& s : v) {
-        std::istringstream in(s);
+        vgc::core::StringReader in(s);
         double parsed = vgc::core::readDoubleApprox(in);
         double expected = std::stod(s);
         double m = (std::min)(std::abs(parsed), std::abs(expected));
@@ -75,7 +74,7 @@ void readDoubleApproxExpectNear(const std::vector<std::string>& v)
 void readDoubleApproxExpectParseError(const std::vector<std::string>& v)
 {
     for (const std::string& s : v) {
-        std::istringstream in(s);
+        vgc::core::StringReader in(s);
         EXPECT_THROW(vgc::core::readDoubleApprox(in), vgc::core::ParseError) << "Tested string: \"" << s << "\"";
     }
 }
@@ -83,7 +82,7 @@ void readDoubleApproxExpectParseError(const std::vector<std::string>& v)
 void readDoubleApproxExpectRangeError(const std::vector<std::string>& v)
 {
     for (const std::string& s : v) {
-        std::istringstream in(s);
+        vgc::core::StringReader in(s);
         EXPECT_THROW(vgc::core::readDoubleApprox(in), vgc::core::RangeError) << "Tested string: \"" << s << "\"";
     }
 }
@@ -91,7 +90,7 @@ void readDoubleApproxExpectRangeError(const std::vector<std::string>& v)
 void readDoubleApproxExpectZero(const std::vector<std::string>& v)
 {
     for (const std::string& s : v) {
-        std::istringstream in(s);
+        vgc::core::StringReader in(s);
         double parsed = vgc::core::readDoubleApprox(in);
         EXPECT_EQ(parsed, 0.0) << "Tested string: \"" << s << "\"";
     }
@@ -160,6 +159,21 @@ TEST(TestParse, ReadDoubleApprox)
     // Test underflow: These are silently rounded to zero, no error is emitted.
     // Note: we round subnormals to zero, so that we never generate subnormals
     readDoubleApproxExpectZero({"1e-308"});
+}
+
+TEST(TestParse, ReadMixed) {
+    std::string s = "42 10.0hi";
+    vgc::core::StringReader in(s);
+    int x;
+    double y;
+    char c;
+    char d;
+    in >> x >> y >> c >> d;
+    EXPECT_EQ(x, 42);
+    EXPECT_EQ(y, 10.0);
+    EXPECT_EQ(c, 'h');
+    EXPECT_EQ(d, 'i');
+    EXPECT_FALSE(in.get(c));
 }
 
 int main(int argc, char **argv)
