@@ -364,6 +364,7 @@ namespace internal {
 // Computes (-1)^s * a * 10^b, where a must be a double representing an integer
 // with n digits. This latter argument is used to guard against underflow and
 // overflow.
+VGC_CORE_API
 double computeDouble(bool isPositive, double a, int b, int n);
 
 // Computes (-1)^s * a
