@@ -722,6 +722,117 @@ T read(IStream& in)
     return x;
 }
 
+/// \class vgc::core::StringReader
+/// \brief An input stream which reads characters from an existing string.
+///
+/// A StringReader is a thin wrapper around a given string that allows you to
+/// read formatted values from the string.
+///
+/// ```cpp
+/// std::string s = "42 10";
+/// vgc::core::StringReader in(s);
+/// int x, y;
+/// in >> x >> y; // set x to 42 and y to 10
+/// ```
+///
+/// Note that the StringReader holds a non-owning mutable reference to its
+/// underlying string. This means that it is important that whoever creates a
+/// StringReader ensures that its underlying string outlives the StringReader
+/// itself, otherwise the behavior is undefined. For this reason, StringReaders
+/// should typically be used in a very short, local scope. In particular,
+/// StringReaders are non-copyable, and should typically not be stored as
+/// member variables.
+///
+/// StringReaders are extremely lightweight and fast. It is usually at least
+/// twice as fast as using std::istringstream, due to better use of cache,
+/// optimized string to number conversions, avoidance of the initial string
+/// copy, and not having any of the heavy machinery brought by std::ios and
+/// std::streambuf (virtual function calls, locale, sentry, etc.).
+///
+/// ```cpp
+/// // This is much slower
+/// std::string s = "42 10";
+/// std::istringstream in(s);
+/// int x, y;
+/// in >> x >> y;
+/// ```
+///
+class StringReader {
+public:
+    using string_type = std::string;
+    using size_type = string_type::size_type;
+
+    /// Constructs a StringReader operating on the given string.
+    /// The string must outlive this StringReader.
+    ///
+    StringReader(const std::string& s) : s_(s), it_(s.begin()), fail_(false)
+    {
+
+    }
+
+    /// Reads one character from the underlying string and stores it to \p c if
+    /// available. Otherwise, leaves \p c unchanged and sets a fail flag
+    /// causing the bool() operator to return false.
+    ///
+    StringReader& get(char& c)
+    {
+        if (it_ != s_.end()) {
+            c = *it_;
+            ++it_;
+        } else {
+            fail_ = true;
+        }
+        return *this;
+    }
+
+    /// Makes the most recently read character available again. If the fail
+    /// flag was set, it is unset first (therefore the bool() operator always
+    /// returns true after calling unget()). If the get() function was never
+    /// called, nothing happens.
+    ///
+    StringReader& unget()
+    {
+        fail_ = false;
+        if (it_ != s_.begin()) {
+            --it_;
+        }
+        return *this;
+    }
+
+    /// Returns false if the last call to get() was unsucessful (and unget()
+    /// hasn't been called since).
+    ///
+    /// Returns true in all other situations, that is, if no character has been
+    /// read yet, if the last call to get() was successful, or if unget() was
+    /// called more recently than get().
+    ///
+    explicit operator bool()
+    {
+        return !fail_;
+    }
+
+private:
+    const std::string& s_;
+    std::string::const_iterator it_;
+    bool fail_;
+};
+
+/// Reads the next formatted value from the given StringReader.
+///
+/// ```cpp
+/// std::string s = "42 10";
+/// vgc::core::StringReader in(s);
+/// int x, y;
+/// in >> x >> y; // set x to 42 and y to 10
+/// ```
+///
+template<typename T>
+inline StringReader& operator>>(StringReader& in, T& x)
+{
+    readTo(x, in);
+    return in;
+}
+
 } // namespace core
 } // namespace vgc
 
