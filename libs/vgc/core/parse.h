@@ -711,8 +711,13 @@ void readTo(double& x, IStream& in)
 /// details.
 ///
 /// ```cpp
-/// double x = read<double>(in);
+/// std::string s = "42 10.0";
+/// vgc::core::StringReader in(s);
+/// int i = vgc::core::read<int>(in);       // set i to 42
+/// double x = vgc::core::read<double>(in); // set x to 10.0
 /// ```
+///
+/// \sa StringReader::operator>>(), parse<T>()
 ///
 template<typename T, typename IStream>
 T read(IStream& in)
@@ -729,10 +734,11 @@ T read(IStream& in)
 /// read formatted values from the string.
 ///
 /// ```cpp
-/// std::string s = "42 10";
+/// std::string s = "42 10.0";
 /// vgc::core::StringReader in(s);
-/// int x, y;
-/// in >> x >> y; // set x to 42 and y to 10
+/// int i;
+/// double x;
+/// in >> i >> x; // set i to 42 and x to 10.0
 /// ```
 ///
 /// Note that the StringReader holds a non-owning mutable reference to its
@@ -751,10 +757,11 @@ T read(IStream& in)
 ///
 /// ```cpp
 /// // This is much slower
-/// std::string s = "42 10";
+/// std::string s = "42 10.0";
 /// std::istringstream in(s);
-/// int x, y;
-/// in >> x >> y;
+/// int i;
+/// double x;
+/// in >> i >> x;
 /// ```
 ///
 class StringReader {
@@ -820,17 +827,56 @@ private:
 /// Reads the next formatted value from the given StringReader.
 ///
 /// ```cpp
-/// std::string s = "42 10";
+/// std::string s = "42 10.0";
 /// vgc::core::StringReader in(s);
-/// int x, y;
-/// in >> x >> y; // set x to 42 and y to 10
+/// int i;
+/// double x;
+/// in >> i >> x; // set i to 42 and x to 10.0
 /// ```
+///
+/// \sa read(), parse<T>()
 ///
 template<typename T>
 inline StringReader& operator>>(StringReader& in, T& x)
 {
     readTo(x, in);
     return in;
+}
+
+/// Parses the given string and returns a value of the given type T. This
+/// function may raise ParseError or RangeError, please refer to the
+/// documentation of readTo(T& x, IStream& in) for the given type T for more
+/// details.
+///
+/// ```cpp
+/// std::string s1 = "42";
+/// std::string s2 = "10.0";
+/// int i = parse<int>(s1);       // set i to 42
+/// double x = parse<double>(s2); // set x to 10.0
+/// ```
+///
+/// Leading whitespaces are allowed if and only if the corresponding readTo()
+/// function allows them. Trailing whitespaces are always allowed, but no
+/// non-whitespace trailing character is allowed.
+///
+/// ```cpp
+/// std::string s1 = " 42 \n";
+/// std::string s2 = "42 hello";
+/// int x1 = parse<int>(s1); // => ok, set x1 to 42
+/// int x2 = parse<int>(s2); // => ParseError!
+/// ```
+///
+/// \sa read(), StringReader::operator<<()
+///
+template <typename T>
+T parse(const std::string& s)
+{
+    T res;
+    StringReader in(s);
+    readTo(res, in);
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+    return res;
 }
 
 } // namespace core
