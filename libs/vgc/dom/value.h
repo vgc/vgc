@@ -248,7 +248,7 @@ std::string toString(const Value& v);
 /// the given string does not represent a Value of the given ValueType.
 ///
 VGC_DOM_API
-Value toValue(const std::string& s, ValueType t);
+Value parseValue(const std::string& s, ValueType t);
 
 } // namespace dom
 } // namespace vgc
