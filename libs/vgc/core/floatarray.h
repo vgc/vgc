@@ -14,10 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/vec2darray.h>
+#ifndef VGC_CORE_FLOATARRAY_H
+#define VGC_CORE_FLOATARRAY_H
+
+#include <string>
+
+#include <vgc/core/api.h>
+#include <vgc/core/array.h>
 
 namespace vgc {
 namespace core {
 
+using FloatArray = Array<float>;
+
 } // namespace core
 } // namespace vgc
+
+#endif // VGC_CORE_FLOATARRAY_H

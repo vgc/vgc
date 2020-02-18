@@ -14,10 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/doublearray.h>
+#ifndef VGC_CORE_INTARRAY_H
+#define VGC_CORE_INTARRAY_H
+
+#include <string>
+
+#include <vgc/core/api.h>
+#include <vgc/core/array.h>
 
 namespace vgc {
 namespace core {
 
+using IntArray = Array<Int>;
+
 } // namespace core
 } // namespace vgc
+
+#endif // VGC_CORE_INTARRAY_H
