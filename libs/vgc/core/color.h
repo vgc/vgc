@@ -295,18 +295,6 @@ inline std::string toString(const Color& c)
     return s;
 }
 
-// TODO: Delete this, use parse<Color>(s) instead
-VGC_CORE_API
-inline Color toColor(const std::string& s)
-{
-    Color res;
-    StringReader in(s);
-    readTo(res, in);
-    skipWhitespaceCharacters(in);
-    skipExpectedEof(in);
-    return res;
-}
-
 } // namespace core
 } // namespace vgc
 

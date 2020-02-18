@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.core import DoubleArray, toDoubleArray
+from vgc.core import DoubleArray
 
 class TestDoubleArray(unittest.TestCase):
 
@@ -51,15 +51,15 @@ class TestDoubleArray(unittest.TestCase):
         a.append(42)
         self.assertEqual(a, DoubleArray([3.14, 42]))
 
-    def testToDoubleArray(self):
-        a = toDoubleArray("[3.5, 42]")
-        self.assertTrue(a == DoubleArray([3.5, 42]))
-        a = toDoubleArray("  [  3.5 \n,  42 ]   ")
-        self.assertTrue(a == DoubleArray([3.5, 42]))
-        a = toDoubleArray("[]")
-        self.assertTrue(a == DoubleArray())
-        a = toDoubleArray("  [ \n]   ")
-        self.assertTrue(a == DoubleArray())
+    def testParse(self):
+        a = DoubleArray("[3.5, 42]")
+        self.assertEqual(a, DoubleArray([3.5, 42]))
+        a = DoubleArray("  [  3.5 \n,  42 ]   ")
+        self.assertEqual(a, DoubleArray([3.5, 42]))
+        a = DoubleArray("[]")
+        self.assertEqual(a, DoubleArray())
+        a = DoubleArray("  [ \n]   ")
+        self.assertEqual(a, DoubleArray())
 
 if __name__ == '__main__':
     unittest.main()

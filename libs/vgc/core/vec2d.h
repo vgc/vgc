@@ -288,18 +288,6 @@ Vec2d readVec2d(IStream& in)
     return v;
 }
 
-// TODO: Delete this, use parse<Vec2d>(s) instead
-VGC_CORE_API
-inline Vec2d toVec2d(const std::string& s)
-{
-    Vec2d res;
-    StringReader in(s);
-    readTo(res, in);
-    skipWhitespaceCharacters(in);
-    skipExpectedEof(in);
-    return res;
-}
-
 } // namespace core
 } // namespace vgc
 

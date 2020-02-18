@@ -19,7 +19,7 @@
 import unittest
 import locale
 
-from vgc.core import Vec2d, toVec2d
+from vgc.core import Vec2d
 
 class TestVec2d(unittest.TestCase):
 
@@ -151,8 +151,8 @@ class TestVec2d(unittest.TestCase):
         self.assertEqual(v1, Vec2d(3, 4))
         self.assertEqual(v2, Vec2d(-4, 3))
 
-    def testToVec2d(self):
-        v = toVec2d("(1, 2.5)")
+    def testParse(self):
+        v = Vec2d("(1, 2.5)")
         self.assertTrue(v == Vec2d(1, 2.5))
 
     def testToString(self):
