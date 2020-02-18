@@ -88,7 +88,7 @@ std::string toString(const Value& v)
     }
 }
 
-Value toValue(const std::string& s, ValueType t)
+Value parseValue(const std::string& s, ValueType t)
 {
     try {
         switch (t) {

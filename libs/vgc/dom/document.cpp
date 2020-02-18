@@ -620,7 +620,7 @@ private:
                 "schema.");
         }
 
-        Value value = toValue(attributeValue_, spec->valueType());
+        Value value = parseValue(attributeValue_, spec->valueType());
         Element::cast(currentNode_)->setAttribute(name, value);
     }
 
