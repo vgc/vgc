@@ -1383,16 +1383,6 @@ void readTo(Array<T>& a, IStream& in)
     }
 }
 
-// TODO: Delete this, use templated toString(const T& x) instead
-template <typename T>
-std::string toString(const Array<T>& a)
-{
-    std::string s;
-    StringWriter out(s);
-    out << a;
-    return s;
-}
-
 } // namespace core
 } // namespace vgc
 

@@ -98,11 +98,11 @@ std::string wrongChildTypeReason_(const Node* parent, const Node* child)
     res.append("Node ");
     res.append(core::toAddressString(child));
     res.append(" (type = ");
-    res.append(toString(child->nodeType()));
+    res.append(core::toString(child->nodeType()));
     res.append(") cannot be a child of Node ");
     res.append(core::toAddressString(parent));
     res.append(" (type = ");
-    res.append(toString(parent->nodeType()));
+    res.append(core::toString(parent->nodeType()));
     res.append(")");
     return res;
 }

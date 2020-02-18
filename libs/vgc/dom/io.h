@@ -69,7 +69,7 @@ void writeChildren(OutputStream& out,
             for (const AuthoredAttribute& a : element->authoredAttributes()) {
                 out << '\n';
                 writeAttributeIndent(out, style, indentLevel);
-                out << a.name() << "=\"" << toString(a.value()) << "\"";
+                out << a.name() << "=\"" << core::toString(a.value()) << "\"";
             }
             out << ">\n";
             writeChildren(out, style, indentLevel + 1, child);
