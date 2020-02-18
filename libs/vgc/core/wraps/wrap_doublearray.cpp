@@ -58,9 +58,14 @@ void wrap_doublearray(py::module& m)
 
     py::class_<This>(m, "DoubleArray")
 
+        // Note: the std::string constructor must appear before the
+        // py::sequence constructor, otherwise a py::str argument would
+        // implicitly be converted to a py::sequence, calling the wrong
+        // constructor and raising a runtime error (c.cast<T> fails).
         .def(py::init<>())
         .def(py::init([](int size) { return This(size, 0); } ))
         .def(py::init([](int size, double value) { return This(size, value); } ))
+        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
         .def(py::init([](py::sequence s) { This res; for (auto x : s) res.append(x.cast<double>()); return res; } ))
         .def(py::init<const This&>())
 
@@ -82,6 +87,4 @@ void wrap_doublearray(py::module& m)
 
         .def("__repr__", [](const This& a) { return toString(a); })
     ;
-
-    m.def("toDoubleArray", &vgc::core::toDoubleArray);
 }

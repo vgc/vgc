@@ -95,11 +95,11 @@ Value toValue(const std::string& s, ValueType t)
         case ValueType::Invalid:
             return Value::invalid();
         case ValueType::Color:
-            return Value(core::toColor(s));
+            return Value(core::parse<core::Color>(s));
         case ValueType::DoubleArray:
-            return Value(core::toDoubleArray(s));
+            return Value(core::parse<core::DoubleArray>(s));
         case ValueType::Vec2dArray:
-            return Value(core::toVec2dArray(s));
+            return Value(core::parse<core::Vec2dArray>(s));
         }
     }
     catch (const core::ParseError& e) {

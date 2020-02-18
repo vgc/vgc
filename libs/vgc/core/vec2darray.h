@@ -28,18 +28,6 @@ namespace core {
 
 using Vec2dArray = Array<Vec2d>;
 
-// TODO: Delete this, use parse<DoubleArray>(s) instead
-VGC_CORE_API
-inline Vec2dArray toVec2dArray(const std::string& s)
-{
-    Vec2dArray res;
-    StringReader in(s);
-    readTo(res, in);
-    skipWhitespaceCharacters(in);
-    skipExpectedEof(in);
-    return res;
-}
-
 } // namespace core
 } // namespace vgc
 

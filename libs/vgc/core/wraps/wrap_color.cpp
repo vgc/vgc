@@ -19,6 +19,7 @@
 #include <vgc/core/color.h>
 
 namespace py = pybind11;
+using This = vgc::core::Color;
 using vgc::core::Color;
 
 void wrap_color(py::module& m)
@@ -29,6 +30,7 @@ void wrap_color(py::module& m)
         .def(py::init([]() { return Color(0, 0, 0); } ))
         .def(py::init<double, double, double>())
         .def(py::init<double, double, double, double>())
+        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
         .def(py::init<Color>())
 
         .def("__getitem__", [](const Color& v, int i) {
@@ -62,6 +64,4 @@ void wrap_color(py::module& m)
         .def("__repr__", [](const Color& c) { return vgc::core::toString(c); })
 
     ;
-
-    m.def("toColor", &vgc::core::toColor);
 }

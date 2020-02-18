@@ -34,6 +34,7 @@ void wrap_vec2darray(py::module& m)
         .def(py::init<>())
         .def(py::init([](int size) { return This(size, Vec2d(0, 0)); } )) // Important: Vec2d(0, 0), otherwise uninitialized
         .def(py::init([](int size, const T& value) { return This(size, value); } ))
+        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
         .def(py::init([](py::sequence s) {
             This res;
             for (auto it : s) {
@@ -62,6 +63,4 @@ void wrap_vec2darray(py::module& m)
 
         .def("__repr__", [](const This& a) { return toString(a); })
     ;
-
-    m.def("toVec2dArray", &vgc::core::toVec2dArray);
 }

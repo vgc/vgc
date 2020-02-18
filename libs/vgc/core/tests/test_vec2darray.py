@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.core import Vec2d, Vec2dArray, toVec2dArray
+from vgc.core import Vec2d, Vec2dArray
 
 class TestVec2dArray(unittest.TestCase):
 
@@ -51,9 +51,11 @@ class TestVec2dArray(unittest.TestCase):
         a.append(Vec2d(3, 4))
         self.assertEqual(a, Vec2dArray([(1, 2), (3, 4)]))
 
-    def testToVec2dArray(self):
-        a = toVec2dArray("[(1, 2), (3, 4.5)]")
+    def testParse(self):
+        a = Vec2dArray("[(1, 2), (3, 4.5)]")
         self.assertTrue(a == Vec2dArray([(1, 2), (3, 4.5)]))
+        a = Vec2dArray("[]")
+        self.assertTrue(a == Vec2dArray())
 
 if __name__ == '__main__':
     unittest.main()
