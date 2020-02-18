@@ -18,6 +18,7 @@
 #define VGC_DOM_NODE_H
 
 #include <vgc/core/object.h>
+#include <vgc/core/format.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/exceptions.h>
 
@@ -57,10 +58,26 @@ enum class NodeType {
      */
 };
 
-/// Converts the given NodeType to a string.
+/// Writes the given NodeType to the output stream.
 ///
-VGC_CORE_API
-std::string toString(NodeType type);
+template<typename OStream>
+void write(OStream& out, NodeType type)
+{
+    switch (type) {
+    case NodeType::Element: write(out, "Element");
+    case NodeType::Document: write(out, "Document");
+    }
+}
+
+// TODO: Delete this, use templated toString() instead
+VGC_DOM_API
+inline std::string toString(NodeType type)
+{
+    std::string s;
+    core::StringWriter out(s);
+    out << type;
+    return s;
+}
 
 VGC_CORE_DECLARE_PTRS(Node);
 

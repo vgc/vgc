@@ -92,10 +92,32 @@ enum class ValueType {
     Vec2dArray
 };
 
-/// Returns a string representation of the given ValueType.
+/// Writes the given ValueType to the output stream.
 ///
+template<typename OStream>
+void write(OStream& out, ValueType v)
+{
+    switch (v) {
+    case ValueType::Invalid:
+        write(out, "ValueType::Invalid");
+    case ValueType::Color:
+        write(out, "ValueType::Color");
+    case ValueType::DoubleArray:
+        write(out, "ValueType::DoubleArray");
+    case ValueType::Vec2dArray:
+        write(out, "ValueType::Vec2dArray");
+    }
+}
+
+// TODO: Delete this, use templated toString() instead
 VGC_DOM_API
-std::string toString(ValueType v);
+inline std::string toString(ValueType v)
+{
+    std::string s;
+    core::StringWriter out(s);
+    out << v;
+    return s;
+}
 
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
@@ -239,10 +261,32 @@ private:
     core::Vec2dArray vec2dArray_;
 };
 
-/// Returns a string representation of the given Value.
+/// Writes the given Value to the output stream.
 ///
+template<typename OStream>
+void write(OStream& out, const Value& v)
+{
+    switch (v.type()) {
+    case ValueType::Invalid:
+        write(out, "invalid_value");
+    case ValueType::Color:
+        return write(out, v.getColor());
+    case ValueType::DoubleArray:
+        return write(out, v.getDoubleArray());
+    case ValueType::Vec2dArray:
+        return write(out, v.getVec2dArray());
+    }
+}
+
+// TODO: Delete this, use templated toString() instead
 VGC_DOM_API
-std::string toString(const Value& v);
+inline std::string toString(const Value& v)
+{
+    std::string s;
+    core::StringWriter out(s);
+    out << v;
+    return s;
+}
 
 /// Converts the given string into a Value. Raises vgc::dom::VgcSyntaxError if
 /// the given string does not represent a Value of the given ValueType.

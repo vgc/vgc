@@ -23,13 +23,6 @@
 
 namespace vgc {
 namespace dom {
-	
-std::string toString(NodeType type) {
-    switch (type) {
-    case NodeType::Element: return "Element";
-    case NodeType::Document: return "Document";
-    }
-}
 
 Node::Node(Document* document, NodeType nodeType) :
     Object(core::Object::ConstructorKey()),
