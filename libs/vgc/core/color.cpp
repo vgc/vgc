@@ -16,88 +16,8 @@
 
 #include <vgc/core/color.h>
 
-#include <sstream>
-#include <vgc/core/float2int.h>
-#include <vgc/core/format.h>
-#include <vgc/core/int2float.h>
-#include <vgc/core/parse.h>
-
 namespace vgc {
 namespace core {
-
-std::string toString(const Color& c)
-{
-    // Whether to use rgb() or rgba()
-    bool writeAlpha = (c.a() != 1.0);
-
-    // Allocate string with enough capacity.
-    // Notes:
-    //   18 = length of "rgb(255, 255, 255)"
-    //   17 = 1 + length of ", 0.123456789012" (toString uses fixed precision of 12)
-    std::string res;
-    res.reserve(18 + writeAlpha * 17);
-
-    // Write string
-    res.append(writeAlpha ? "rgba(" : "rgb(");
-    res.append(toString(double01ToUint8(c.r())));
-    res.append(", ");
-    res.append(toString(double01ToUint8(c.g())));
-    res.append(", ");
-    res.append(toString(double01ToUint8(c.b())));
-    if (writeAlpha) {
-        res.append(", ");
-        res.append(toString(c.a()));
-    }
-    res.append(")");
-
-    // Return
-    return res;
-
-    // XXX We could/should avoid all string allocations altogether by passing
-    // res as an output parameter of toString.
-}
-
-Color toColor(const std::string& s)
-{
-    // XXX TODO Use custom StringStream
-    std::stringstream in(s);
-
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, 'r');
-    skipExpectedCharacter(in, 'g');
-    skipExpectedCharacter(in, 'b');
-    char c = readExpectedCharacter(in, {'a', '('});
-
-    bool hasAlpha = false;
-    if (c == 'a') {
-        hasAlpha = true;
-        skipExpectedCharacter(in, '(');
-    }
-
-    double r = uint8ToDouble01(read<Int>(in));
-    skipWhitespaceCharacters(in);
-
-    skipExpectedCharacter(in, ',');
-    double g = uint8ToDouble01(read<Int>(in));
-    skipWhitespaceCharacters(in);
-
-    skipExpectedCharacter(in, ',');
-    double b = uint8ToDouble01(read<Int>(in));
-    skipWhitespaceCharacters(in);
-
-    double a = 1.0;
-    if (hasAlpha) {
-        skipExpectedCharacter(in, ',');
-        a = readDoubleApprox(in);
-        skipWhitespaceCharacters(in);
-    }
-
-    skipExpectedCharacter(in, ')');
-    skipWhitespaceCharacters(in);
-    skipExpectedEof(in);
-
-    return Color(r, g, b, a);
-}
 
 } // namespace core
 } // namespace vgc

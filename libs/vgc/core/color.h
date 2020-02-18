@@ -17,8 +17,11 @@
 #ifndef VGC_CORE_COLOR_H
 #define VGC_CORE_COLOR_H
 
-#include <string>
 #include <vgc/core/api.h>
+#include <vgc/core/float2int.h>
+#include <vgc/core/format.h>
+#include <vgc/core/int2float.h>
+#include <vgc/core/parse.h>
 
 namespace vgc {
 namespace core {
@@ -218,27 +221,91 @@ private:
     double data_[4];
 };
 
-/// Returns a string representation of the given Color. The returned string is
-/// a valid CSS Color Module Level 3, see:
+/// Writes the given Color to the output stream.
+///
+/// The written string is a valid CSS Color Module Level 3, see:
 ///
 /// https://www.w3.org/TR/2018/PR-css-color-3-20180315/
 ///
-/// Example:
-/// \code
+/// ```cpp
 /// Color red(1, 0, 0);
 /// Color halfGreen(0, 1, 0, 0.5);
-/// std::cout << toString(red);       // writes "rgb(255, 0, 0)"
-/// std::cout << toString(halfGreen); // writes "rgba(0, 255, 0, 0.5)"
-/// \endcode
+/// vgc::core::write(out, red);       // writes "rgb(255, 0, 0)"
+/// vgc::core::write(out, halfGreen); // writes "rgba(0, 255, 0, 0.5)"
+/// ```
 ///
-VGC_CORE_API
-std::string toString(const Color& c);
+template<typename OStream>
+void write(OStream& out, const Color& c)
+{
+    bool writeAlpha = (c.a() != 1.0);
+    write(out, writeAlpha ? "rgba(" : "rgb(");
+    write(out, double01ToUint8(c.r()), ", ",
+               double01ToUint8(c.g()), ", ",
+               double01ToUint8(c.b()));
+    if (writeAlpha) {
+        write(out, ", ", c.a());
+    }
+    write(out, ')');
+}
 
-/// Converts the given string into a Color. Raises ParseError if the given
-/// string does not represent a Color.
+/// Reads a Color from the input stream, and stores it in the given output
+/// parameter. Leading whitespaces are allowed. Raises ParseError if the stream
+/// does not start with a Color. Raises RangeError if one of its coordinate is
+/// outside the representable range of an int or double.
 ///
+template <typename IStream>
+void readTo(Color& c, IStream& in)
+{
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, 'r');
+    skipExpectedCharacter(in, 'g');
+    skipExpectedCharacter(in, 'b');
+    char d = readExpectedCharacter(in, {'a', '('});
+    bool hasAlpha = false;
+    if (d == 'a') {
+        hasAlpha = true;
+        skipExpectedCharacter(in, '(');
+    }
+    c[0] = uint8ToDouble01(read<Int>(in));
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, ',');
+    c[1] = uint8ToDouble01(read<Int>(in));
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, ',');
+    c[2] = uint8ToDouble01(read<Int>(in));
+    skipWhitespaceCharacters(in);
+    if (hasAlpha) {
+        skipExpectedCharacter(in, ',');
+        readTo(c[3], in);
+        skipWhitespaceCharacters(in);
+    }
+    else {
+        c[3] = 1.0;
+    }
+    skipExpectedCharacter(in, ')');
+}
+
+// TODO: Delete this, use templated toString() instead
 VGC_CORE_API
-Color toColor(const std::string& s);
+inline std::string toString(const Color& c)
+{
+    std::string s;
+    StringWriter out(s);
+    out << c;
+    return s;
+}
+
+// TODO: Delete this, use parse<Color>(s) instead
+VGC_CORE_API
+inline Color toColor(const std::string& s)
+{
+    Color res;
+    StringReader in(s);
+    readTo(res, in);
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+    return res;
+}
 
 } // namespace core
 } // namespace vgc
