@@ -21,20 +21,6 @@
 namespace vgc {
 namespace dom {
 
-std::string toString(ValueType v)
-{
-    switch (v) {
-    case ValueType::Invalid:
-        return "ValueType::Invalid";
-    case ValueType::Color:
-        return "ValueType::Color";
-    case ValueType::DoubleArray:
-        return "ValueType::DoubleArray";
-    case ValueType::Vec2dArray:
-        return "ValueType::Vec2dArray";
-    }
-}
-
 const Value& Value::invalid()
 {
     // trusty leaky singleton
@@ -72,20 +58,6 @@ void Value::shrinkToFit()
 
     vec2dArray_.shrinkToFit();
     doubleArray_.shrinkToFit();
-}
-
-std::string toString(const Value& v)
-{
-    switch (v.type()) {
-    case ValueType::Invalid:
-        return "invalid_value";
-    case ValueType::Color:
-        return toString(v.getColor());
-    case ValueType::DoubleArray:
-        return toString(v.getDoubleArray());
-    case ValueType::Vec2dArray:
-        return toString(v.getVec2dArray());
-    }
 }
 
 Value parseValue(const std::string& s, ValueType t)
