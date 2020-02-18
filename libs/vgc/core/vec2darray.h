@@ -28,11 +28,17 @@ namespace core {
 
 using Vec2dArray = Array<Vec2d>;
 
-/// Converts the given string into a Vec2dArray. Raises ParseError if the given
-/// string does not represent a Vec2dArray.
-///
+// TODO: Delete this, use parse<DoubleArray>(s) instead
 VGC_CORE_API
-Vec2dArray toVec2dArray(const std::string& s);
+inline Vec2dArray toVec2dArray(const std::string& s)
+{
+    Vec2dArray res;
+    StringReader in(s);
+    readTo(res, in);
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+    return res;
+}
 
 } // namespace core
 } // namespace vgc

@@ -27,11 +27,17 @@ namespace core {
 
 using DoubleArray = Array<double>;
 
-/// Converts the given string into a DoubleArray. Raises ParseError if the given
-/// string does not represent a DoubleArray.
-///
+// TODO: Delete this, use parse<DoubleArray>(s) instead
 VGC_CORE_API
-DoubleArray toDoubleArray(const std::string& s);
+inline DoubleArray toDoubleArray(const std::string& s)
+{
+    DoubleArray res;
+    StringReader in(s);
+    readTo(res, in);
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+    return res;
+}
 
 } // namespace core
 } // namespace vgc
