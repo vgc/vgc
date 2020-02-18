@@ -307,6 +307,21 @@ write(OStream& out, FloatType x)
     out.write(begin, p - begin);
 }
 
+/// Writes two or more formatted values, one after the other, to the output stream.
+///
+/// ```cpp
+/// int x = 42;
+/// double y = 1.5;
+/// vgc::core::write(out, '(', x, ", ", y, ')');  // write "(42, 1.5)"
+/// ```
+///
+template<typename OStream, typename T1, typename T2, typename... Args>
+void write(OStream& out, T1 x1, T2 x2, Args... args)
+{
+    write(out, x1);
+    write(out, x2, args...);
+}
+
 /// \class vgc::core::StringWriter
 /// \brief An output stream which appends characters to an existing string.
 ///

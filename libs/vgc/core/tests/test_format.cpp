@@ -23,7 +23,8 @@
 // TODO: Use Google Benchmark and separate benchmarks from unit tests
 #include <vgc/core/stopwatch.h>
 
-TEST(TestFormat, WriteChar) {
+TEST(TestFormat, WriteChar)
+{
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << 'a';
@@ -31,7 +32,8 @@ TEST(TestFormat, WriteChar) {
     EXPECT_EQ(s, "ab");
 }
 
-TEST(TestFormat, WriteCString) {
+TEST(TestFormat, WriteCString)
+{
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << "Hello";
@@ -39,7 +41,8 @@ TEST(TestFormat, WriteCString) {
     EXPECT_EQ(s, "Hello World!");
 }
 
-TEST(TestFormat, WriteInt8) {
+TEST(TestFormat, WriteInt8)
+{
     signed char   c = 'A';
     unsigned char d = 'A';
     vgc::Int8     i = 65;
@@ -56,7 +59,8 @@ TEST(TestFormat, WriteInt8) {
 }
 
 template<typename T>
-void testWriteInteger(T x) {
+void testWriteInteger(T x)
+{
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << x;
@@ -64,13 +68,15 @@ void testWriteInteger(T x) {
 }
 
 template<typename T>
-void testWriteIntegers() {
+void testWriteIntegers()
+{
     testWriteInteger<T>(0);
     testWriteInteger<T>(vgc::internal::type_min<T>::value);
     testWriteInteger<T>(vgc::internal::type_max<T>::value);
 }
 
-TEST(TestFormat, WriteIntegers) {
+TEST(TestFormat, WriteIntegers)
+{
     testWriteIntegers<vgc::Int>();
     testWriteIntegers<vgc::Int8>();
     testWriteIntegers<vgc::Int16>();
@@ -85,7 +91,8 @@ TEST(TestFormat, WriteIntegers) {
 
 template<typename T>
 typename std::enable_if<std::is_floating_point<T>::value>::type
-writeFloat(T x, const char* expected) {
+writeFloat(T x, const char* expected)
+{
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << x;
@@ -93,7 +100,8 @@ writeFloat(T x, const char* expected) {
 }
 
 template<typename T>
-void writeFloats() {
+void writeFloats()
+{
     T zero = static_cast<T>(0);
     T one = static_cast<T>(1);
     T inf = std::numeric_limits<T>::infinity();
@@ -121,7 +129,8 @@ void writeFloats() {
     writeFloat(static_cast<T>(-41.99999999999999), "-42");
 }
 
-TEST(TestFormat, WriteFloats) {
+TEST(TestFormat, WriteFloats)
+{
     writeFloats<float>();
 
     writeFloat(0.1234567890123456f, "0.123457");
@@ -197,7 +206,8 @@ TEST(TestFormat, WriteFloats) {
     writeFloat(-9999.9991f, "-10000");
 }
 
-TEST(TestFormat, WriteDoubles) {
+TEST(TestFormat, WriteDoubles)
+{
     writeFloats<double>();
 
     writeFloat(0.1234567890123456,   "0.123456789012");
@@ -223,7 +233,8 @@ TEST(TestFormat, WriteDoubles) {
     writeFloat(-9999999999999996.,    "-10000000000000000");
 }
 
-TEST(TestFormat, WriteMixed) {
+TEST(TestFormat, WriteMixed)
+{
     vgc::Int x = 42;
     std::string s;
     vgc::core::StringWriter sw(s);
@@ -231,7 +242,18 @@ TEST(TestFormat, WriteMixed) {
     EXPECT_EQ(s, "The value of x is: 42\n");
 }
 
-TEST(TestFormat, Benchmark) {
+TEST(TestFormat, WriteVariadic)
+{
+    int x = 42;
+    double y = 1.5;
+    std::string s;
+    vgc::core::StringWriter out(s);
+    vgc::core::write(out, '(', x, ", ", y, ')');
+    EXPECT_EQ(s, "(42, 1.5)");
+}
+
+TEST(TestFormat, Benchmark)
+{
     vgc::core::Stopwatch t;
     int n = 1000000;
     std::vector<int> v;
@@ -325,7 +347,8 @@ TEST(TestFormat, Benchmark) {
     // std::to_string(x) (not reserved) ..   60112µs
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
