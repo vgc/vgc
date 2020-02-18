@@ -19,8 +19,10 @@
 
 #include <cmath>
 #include <string>
+
 #include <vgc/core/api.h>
 #include <vgc/core/epsilon.h>
+#include <vgc/core/format.h>
 #include <vgc/core/parse.h>
 
 namespace vgc {
@@ -241,33 +243,61 @@ inline double dot(const Vec2d& v1, const Vec2d& v2) {
     return v1[0]*v2[0] + v1[1]*v2[1];
 }
 
-/// Returns a string representation of the given Vec2d.
+/// Writes the given Vec2d to the output stream.
 ///
-VGC_CORE_API
-std::string toString(const Vec2d& v);
+template<typename OStream>
+void write(OStream& out, const Vec2d& v)
+{
+    write(out, '(', v[0], ", ", v[1], ')');
+}
 
-/// Converts the given string into a Vec2d. Raises ParseError if the given
-/// string does not represent a Vec2d.
-///
-VGC_CORE_API
-Vec2d toVec2d(const std::string& s);
-
-/// Reads a Vec2d from the input stream \p in. Leading whitespaces are allowed.
-/// Raises ParseError if the stream does not actually start with a Vec2d.
+/// Reads a Vec2d from the input stream, and stores it in the given output
+/// parameter. Leading whitespaces are allowed. Raises ParseError if the stream
+/// does not start with a Vec2d. Raises RangeError if one of its coordinate is
+/// outside the representable range of a double.
 ///
 template <typename IStream>
-Vec2d readVec2d(IStream& in)
+void readTo(Vec2d& v, IStream& in)
 {
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, '(');
-    double x = readDoubleApprox(in);
+    readTo(v[0], in);
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, ',');
-    double y = readDoubleApprox(in);
+    readTo(v[1], in);
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, ')');
+}
 
-    return Vec2d(x, y);
+// TODO: Delete this, use templated toString() instead
+VGC_CORE_API
+inline std::string toString(const Vec2d& v)
+{
+    std::string s;
+    StringWriter out(s);
+    out << v;
+    return s;
+}
+
+// TODO: Delete this, use read<Vec2d>() instead
+template <typename IStream>
+Vec2d readVec2d(IStream& in)
+{
+    Vec2d v;
+    readTo(v, in);
+    return v;
+}
+
+// TODO: Delete this, use parse<Vec2d>(s) instead
+VGC_CORE_API
+inline Vec2d toVec2d(const std::string& s)
+{
+    Vec2d res;
+    StringReader in(s);
+    readTo(res, in);
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+    return res;
 }
 
 } // namespace core
