@@ -77,7 +77,7 @@ Value parseValue(const std::string& s, ValueType t)
     catch (const core::ParseError& e) {
         throw VgcSyntaxError(
             "Failed to convert '" + s + "' into a Value of type " +
-             toString(t) + " for the following reason: " + e.what());
+             core::toString(t) + " for the following reason: " + e.what());
     }
 }
 

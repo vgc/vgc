@@ -109,16 +109,6 @@ void write(OStream& out, ValueType v)
     }
 }
 
-// TODO: Delete this, use templated toString() instead
-VGC_DOM_API
-inline std::string toString(ValueType v)
-{
-    std::string s;
-    core::StringWriter out(s);
-    out << v;
-    return s;
-}
-
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
 ///
@@ -276,16 +266,6 @@ void write(OStream& out, const Value& v)
     case ValueType::Vec2dArray:
         return write(out, v.getVec2dArray());
     }
-}
-
-// TODO: Delete this, use templated toString() instead
-VGC_DOM_API
-inline std::string toString(const Value& v)
-{
-    std::string s;
-    core::StringWriter out(s);
-    out << v;
-    return s;
 }
 
 /// Converts the given string into a Value. Raises vgc::dom::VgcSyntaxError if

@@ -69,16 +69,6 @@ void write(OStream& out, NodeType type)
     }
 }
 
-// TODO: Delete this, use templated toString() instead
-VGC_DOM_API
-inline std::string toString(NodeType type)
-{
-    std::string s;
-    core::StringWriter out(s);
-    out << type;
-    return s;
-}
-
 VGC_CORE_DECLARE_PTRS(Node);
 
 /// \class vgc::dom::NodeIterator

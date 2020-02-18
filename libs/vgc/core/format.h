@@ -424,57 +424,36 @@ inline StringWriter& operator<<(StringWriter& sw, const T& x)
     return sw;
 }
 
-/// Converts the given character or integer to a string.
+/// Returns a string representation of the given value.
 ///
 /// ```cpp
 /// char c = 'A';
-/// vgc::Int x = 42;
+/// vgc::Int i = 42;
+/// double x = 1.5;
 /// std::cout << toString(c); // writes out "A"
-/// std::cout << toString(x); // writes out "42"
+/// std::cout << toString(i); // writes out "42"
+/// std::cout << toString(x); // writes out "1.5"
 /// ```
 ///
-/// Note that a `signed char` or an `unsigned char` is considered to be an
-/// 8-bit integers, and converted to its decimal representation. However, a
-/// `char` is considered to indeed be a character, and converted to the
-/// one-character string where s[0] = c.
+/// Note that calling `s = toString(x)` is equivalent to the following:
 ///
 /// ```cpp
-/// char c = 'A';
-/// vgc::Int8 x = 65;
-/// vgc::Int y = 65;
-///
-/// std::cout << toString(c); // writes out "A"
-/// std::cout << toString(x); // writes out "65"
-/// std::cout << toString(y); // writes out "65"
-///
-/// std::cout << c; // writes out "A"
-/// std::cout << x; // writes out "A"
-/// std::cout << y; // writes out "65"
-///
-/// std::cout << std::to_string(c); // writes out "65"
-/// std::cout << std::to_string(x); // writes out "65"
-/// std::cout << std::to_string(y); // writes out "65"
+/// using vgc::core::write;
+/// std::string s;
+/// StringWriter sw(s);
+/// write(out, x)
 /// ```
 ///
-template <typename IntType>
-typename std::enable_if<std::is_integral<IntType>::value, std::string>::type
-toString(IntType x)
-{
-    std::string s;
-    StringWriter sw(s);
-    sw << x;
-    return s;
-}
-
-/// Converts the given floating-point number to a string.
+/// Therefore, for more details on how the given value is formatted, please
+/// refer to the documentation of write(OStream& out, T& x) corresponding to
+/// the given type T of the given value.
 ///
-template <typename FloatType>
-typename std::enable_if<std::is_floating_point<FloatType>::value, std::string>::type
-toString(FloatType x)
+template<typename T>
+std::string toString(const T& x)
 {
     std::string s;
-    StringWriter sw(s);
-    sw << x;
+    StringWriter out(s);
+    write(out, x);
     return s;
 }
 
@@ -494,21 +473,6 @@ template <typename T>
 std::string toAddressString(const T* x)
 {
     return core::format("{}", static_cast<const void*>(x));
-}
-
-/// Converts the given vector to a string.
-///
-template <typename T>
-std::string toString(const std::vector<T>& v)
-{
-    std::string res = "[";
-    std::string sep = "";
-    for (const T& x : v) {
-        res += sep + toString(x);
-        sep = ", ";
-    }
-    res += "]";
-    return res;
 }
 
 /// \enum vgc::core::TimeUnit

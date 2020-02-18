@@ -269,16 +269,6 @@ void readTo(Vec2d& v, IStream& in)
     skipExpectedCharacter(in, ')');
 }
 
-// TODO: Delete this, use templated toString() instead
-VGC_CORE_API
-inline std::string toString(const Vec2d& v)
-{
-    std::string s;
-    StringWriter out(s);
-    out << v;
-    return s;
-}
-
 // TODO: Delete this, use read<Vec2d>() instead
 template <typename IStream>
 Vec2d readVec2d(IStream& in)

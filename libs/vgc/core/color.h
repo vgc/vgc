@@ -285,16 +285,6 @@ void readTo(Color& c, IStream& in)
     skipExpectedCharacter(in, ')');
 }
 
-// TODO: Delete this, use templated toString() instead
-VGC_CORE_API
-inline std::string toString(const Color& c)
-{
-    std::string s;
-    StringWriter out(s);
-    out << c;
-    return s;
-}
-
 } // namespace core
 } // namespace vgc
 

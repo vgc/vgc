@@ -331,7 +331,7 @@ private:
             throw XmlSyntaxError(
                 "Unexpected element '" + tagName_ + "'. Elements of this type "
                 "are not allowed as children of the current node type '" +
-                toString(currentNode_->nodeType()) + "'.");
+                core::toString(currentNode_->nodeType()) + "'.");
         }
     }
 
