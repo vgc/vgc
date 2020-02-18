@@ -14,12 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/core/wraps/common.h>
 #include <pybind11/operators.h>
-#include <pybind11/pybind11.h>
+
 #include <vgc/core/doublearray.h>
 
 namespace py = pybind11;
-using This = vgc::core::DoubleArray;
 
 // Note: the python wrappers for the VGC array types are designed to provide an
 // interface as consistent as possible with Python lists, not with their C++
@@ -51,27 +51,24 @@ using This = vgc::core::DoubleArray;
 // Note 4: we're mimicking many of the things done in pybind11/stl_bind.h. See there for
 // additional implementation notes.
 
-void wrap_doublearray(py::module& m)
+template<typename This>
+void wrap_1darray(py::module& m, const char* className)
 {
-    using T = typename This::value_type;
     using It = typename This::iterator;
+    using T = typename This::value_type;
 
-    py::class_<This>(m, "DoubleArray")
+    py::class_<This>(m, className)
 
-        // Note: the std::string constructor must appear before the
-        // py::sequence constructor, otherwise a py::str argument would
-        // implicitly be converted to a py::sequence, calling the wrong
-        // constructor and raising a runtime error (c.cast<T> fails).
         .def(py::init<>())
         .def(py::init([](int size) { return This(size, 0); } ))
-        .def(py::init([](int size, double value) { return This(size, value); } ))
+        .def(py::init([](int size, const T& value) { return This(size, value); } ))
         .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
-        .def(py::init([](py::sequence s) { This res; for (auto x : s) res.append(x.cast<double>()); return res; } ))
+        .def(py::init([](py::sequence s) { This res; for (auto x : s) res.append(x.cast<T>()); return res; } ))
         .def(py::init<const This&>())
 
-        // TODO: Use Python semantics: a[i] OK for i in [-n, n-1]
+        // TODO: Use Python semantics: a[i] shouldn't not throw for i in [-n, n-1]
         .def("__getitem__", [](const This& a, int i) { return a[i]; })
-        .def("__setitem__", [](This& a, int i, double value) { a[i] = value; })
+        .def("__setitem__", [](This& a, int i, const T& value) { a[i] = value; })
         .def("__len__", &This::size)
         .def("__iter__",
             [](This& a) {
@@ -80,11 +77,16 @@ void wrap_doublearray(py::module& m)
             py::keep_alive<0, 1>()
         )
 
-        .def("append", [](This& a, double value) { a.append(value); })
+        .def("append", [](This& a, const T& value) { a.append(value); })
 
         .def(py::self == py::self)
         .def(py::self != py::self)
 
         .def("__repr__", [](const This& a) { return toString(a); })
     ;
+}
+
+void wrap_arrays(py::module& m)
+{
+    wrap_1darray<vgc::core::DoubleArray>(m, "DoubleArray");
 }

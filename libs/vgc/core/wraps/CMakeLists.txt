@@ -1,8 +1,8 @@
 vgc_wrap_library(core
     common.h
     module.cpp
+    wrap_arrays.cpp
     wrap_color.cpp
-    wrap_doublearray.cpp
     wrap_exceptions.cpp
     wrap_format.cpp
     wrap_io.cpp
