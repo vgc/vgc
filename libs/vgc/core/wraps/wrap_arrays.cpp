@@ -18,6 +18,8 @@
 #include <pybind11/operators.h>
 
 #include <vgc/core/doublearray.h>
+#include <vgc/core/floatarray.h>
+#include <vgc/core/intarray.h>
 
 namespace py = pybind11;
 
@@ -89,4 +91,6 @@ void wrap_1darray(py::module& m, const char* className)
 void wrap_arrays(py::module& m)
 {
     wrap_1darray<vgc::core::DoubleArray>(m, "DoubleArray");
+    wrap_1darray<vgc::core::FloatArray>(m, "FloatArray");
+    wrap_1darray<vgc::core::IntArray>(m, "IntArray");
 }

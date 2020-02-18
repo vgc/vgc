@@ -18,10 +18,12 @@ vgc_add_library(core
         epsilon.h
         exceptions.h
         float2int.h
+        floatarray.h
         format.h
         innercore.h
         int.h
         int2float.h
+        intarray.h
         inttypes.h
         io.h
         limits.h
@@ -46,7 +48,6 @@ vgc_add_library(core
     CPP_FILES
         algorithm.cpp
         color.cpp
-        doublearray.cpp
         exceptions.cpp
         format.cpp
         io.cpp
@@ -63,7 +64,6 @@ vgc_add_library(core
         stopwatch.cpp
         stringid.cpp
         vec2d.cpp
-        vec2darray.cpp
 
     COMPILE_DEFINITIONS
 )
