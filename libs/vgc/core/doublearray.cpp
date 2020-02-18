@@ -16,32 +16,8 @@
 
 #include <vgc/core/doublearray.h>
 
-#include <sstream>
-#include <vgc/core/parse.h>
-
 namespace vgc {
 namespace core {
-
-DoubleArray toDoubleArray(const std::string& s)
-{
-    // XXX TODO Use custom StringStream
-    std::stringstream in(s);
-
-    DoubleArray res;
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, '[');
-    char separator = -1;
-    do {
-        res.append(readDoubleApprox(in));
-        skipWhitespaceCharacters(in);
-        separator = readExpectedCharacter(in, {',', ']'});
-    }
-    while (separator != ']');
-    skipWhitespaceCharacters(in);
-    skipExpectedEof(in);
-
-    return res;
-}
 
 } // namespace core
 } // namespace vgc

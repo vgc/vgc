@@ -24,6 +24,7 @@
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/int.h>
+#include <vgc/core/parse.h>
 
 #include <vgc/core/internal/containerutil.h>
 
@@ -1337,19 +1338,59 @@ void swap(Array<T>& a1, Array<T>& a2) {
     a1.swap(a2);
 };
 
-/// Returns a string representation of the given Array.
+/// Writes the given Array<T> to the output stream.
 ///
-template <typename T>
-std::string toString(const Array<T>& v) {
-    std::string res = "[";
-    std::string sep = "";
-    for (const T& x : v) {
-        res += sep;
-        res += toString(x);
-        sep = ", ";
+template<typename OStream, typename T>
+void write(OStream& out, const Array<T>& a)
+{
+    if (a.isEmpty()) {
+        write(out, "[]");
     }
-    res += "]";
-    return res;
+    else {
+        write(out, '[');
+        auto it = a.cbegin();
+        auto last = --a.cend();
+        write(out, *it);
+        while (it != last) {
+            write(out, ", ", *++it);
+        }
+        write(out, ']');
+    }
+}
+
+/// Reads the given Array<T> from the input stream, and stores it in the given
+/// output parameter. Leading whitespaces are allowed. Raises ParseError if the
+/// stream does not start with an Array<T>. Raises RangeError if one of the
+/// numbers in the array is outside of the representable range of its type.
+///
+template <typename IStream, typename T>
+void readTo(Array<T>& a, IStream& in)
+{
+    a.clear();
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, '[');
+    skipWhitespaceCharacters(in);
+    char c = readCharacter(in);
+    if (c != ']') {
+        in.unget();
+        c = ',';
+        while (c == ',') {
+            skipWhitespaceCharacters(in);
+            a.append(read<T>(in));
+            skipWhitespaceCharacters(in);
+            c = readExpectedCharacter(in, {',', ']'});
+        }
+    }
+}
+
+// TODO: Delete this, use templated toString(const T& x) instead
+template <typename T>
+std::string toString(const Array<T>& a)
+{
+    std::string s;
+    StringWriter out(s);
+    out << a;
+    return s;
 }
 
 } // namespace core

@@ -54,6 +54,12 @@ class TestDoubleArray(unittest.TestCase):
     def testToDoubleArray(self):
         a = toDoubleArray("[3.5, 42]")
         self.assertTrue(a == DoubleArray([3.5, 42]))
+        a = toDoubleArray("  [  3.5 \n,  42 ]   ")
+        self.assertTrue(a == DoubleArray([3.5, 42]))
+        a = toDoubleArray("[]")
+        self.assertTrue(a == DoubleArray())
+        a = toDoubleArray("  [ \n]   ")
+        self.assertTrue(a == DoubleArray())
 
 if __name__ == '__main__':
     unittest.main()

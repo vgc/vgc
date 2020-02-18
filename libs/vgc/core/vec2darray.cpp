@@ -16,32 +16,8 @@
 
 #include <vgc/core/vec2darray.h>
 
-#include <sstream>
-#include <vgc/core/parse.h>
-
 namespace vgc {
 namespace core {
-
-Vec2dArray toVec2dArray(const std::string& s)
-{
-    // XXX TODO Use custom StringStream
-    std::stringstream in(s);
-
-    Vec2dArray res;
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, '[');
-    char separator = -1;
-    do {
-        res.append(readVec2d(in));
-        skipWhitespaceCharacters(in);
-        separator = readExpectedCharacter(in, {',', ']'});
-    }
-    while (separator != ']');
-    skipWhitespaceCharacters(in);
-    skipExpectedEof(in);
-
-    return res;
-}
 
 } // namespace core
 } // namespace vgc
