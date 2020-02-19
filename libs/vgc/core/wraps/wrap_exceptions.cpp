@@ -15,12 +15,17 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/exceptions.h>
 #include <vgc/core/exceptions.h>
 
 void wrap_exceptions(py::module& m)
 {
-    auto logicError = py::register_exception<vgc::core::LogicError>(m, "LogicError");
-    auto runtimeError = py::register_exception<vgc::core::RuntimeError>(m, "RuntimeError");
-    auto parseError = py::register_exception<vgc::core::ParseError>(m, "ParseError", runtimeError.ptr());
-    auto rangeError = py::register_exception<vgc::core::RangeError>(m, "RangeError", runtimeError.ptr());
+    VGC_CORE_WRAP_BASE_EXCEPTION(core, LogicError);
+    VGC_CORE_WRAP_EXCEPTION(core, NegativeIntegerError, m, LogicError);
+    VGC_CORE_WRAP_EXCEPTION(core, IndexError, m, LogicError);
+
+    VGC_CORE_WRAP_BASE_EXCEPTION(core, RuntimeError);
+    VGC_CORE_WRAP_EXCEPTION(core, ParseError, m, RuntimeError);
+    VGC_CORE_WRAP_EXCEPTION(core, RangeError, m, RuntimeError);
+    VGC_CORE_WRAP_EXCEPTION(core, IntegerOverflowError, m, RangeError);
 }
