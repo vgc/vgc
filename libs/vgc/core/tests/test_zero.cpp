@@ -41,7 +41,7 @@ void setZero(F& x) { x.m = 0; }
 // We use this macro to fill stack memory with something else than 0.
 // Subsequent calls to EXPECT_NE(a.m, 0) are undefined behavior in theory, but
 // pass in practice, and help illustrate that `a.m` is indeed not initialized
-// to zero. Note that we initalially try the more aggressive test
+// to zero. Note that we initially tried the more aggressive test
 // EXPECT_EQ(a.m, 42), but it didn't pass on all compilers (a.m wasn't equal to
 // 42, but was still equal to some garbage value, not zero).
 //
@@ -96,12 +96,12 @@ TEST(TestZero, StackExplicitZero)
 
 TEST(TestZero, HeapDefaultInitialization)
 {
-    { FILLH(b); foo::A* a = new (b) foo::A; EXPECT_EQ(a->m, 42); }
-    { FILLH(b); foo::B* a = new (b) foo::B; EXPECT_EQ(a->m, 42); }
+    { FILLH(b); foo::A* a = new (b) foo::A; EXPECT_EQ(a->m, 42); } // ~UB
+    { FILLH(b); foo::B* a = new (b) foo::B; EXPECT_EQ(a->m, 42); } // ~UB
     { FILLH(b); foo::C* a = new (b) foo::C; EXPECT_EQ(a->m, 0);  }
-    { FILLH(b); foo::D* a = new (b) foo::D; EXPECT_EQ(a->m, 42); }
-    { FILLH(b); foo::E* a = new (b) foo::E; EXPECT_EQ(a->m, 42); }
-    { FILLH(b); foo::F* a = new (b) foo::F; EXPECT_EQ(a->m, 42); }
+    { FILLH(b); foo::D* a = new (b) foo::D; EXPECT_EQ(a->m, 42); } // ~UB
+    { FILLH(b); foo::E* a = new (b) foo::E; EXPECT_EQ(a->m, 42); } // ~UB
+    { FILLH(b); foo::F* a = new (b) foo::F; EXPECT_EQ(a->m, 42); } // ~UB
 }
 
 TEST(TestZero, HeapValueInitialization)
@@ -109,9 +109,9 @@ TEST(TestZero, HeapValueInitialization)
     { FILLH(b); foo::A* a = new (b) foo::A(); EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::B* a = new (b) foo::B(); EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::C* a = new (b) foo::C(); EXPECT_EQ(a->m, 0);  }
-    { FILLH(b); foo::D* a = new (b) foo::D(); EXPECT_EQ(a->m, 42); }
+    { FILLH(b); foo::D* a = new (b) foo::D(); EXPECT_EQ(a->m, 42); } // ~UB
     { FILLH(b); foo::E* a = new (b) foo::E(); EXPECT_EQ(a->m, 0);  }
-    { FILLH(b); foo::F* a = new (b) foo::F(); EXPECT_EQ(a->m, 42); }
+    { FILLH(b); foo::F* a = new (b) foo::F(); EXPECT_EQ(a->m, 42); } // ~UB
 }
 
 TEST(TestZero, HeapListInitialization)
@@ -119,9 +119,9 @@ TEST(TestZero, HeapListInitialization)
     { FILLH(b); foo::A* a = new (b) foo::A{}; EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::B* a = new (b) foo::B{}; EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::C* a = new (b) foo::C{}; EXPECT_EQ(a->m, 0);  }
-    { FILLH(b); foo::D* a = new (b) foo::D{}; EXPECT_EQ(a->m, 42); }
+    { FILLH(b); foo::D* a = new (b) foo::D{}; EXPECT_EQ(a->m, 42); } // ~UB
     { FILLH(b); foo::E* a = new (b) foo::E{}; EXPECT_EQ(a->m, 0);  }
-    { FILLH(b); foo::F* a = new (b) foo::F{}; EXPECT_EQ(a->m, 42); }
+    { FILLH(b); foo::F* a = new (b) foo::F{}; EXPECT_EQ(a->m, 42); } // ~UB
 }
 
 TEST(TestZero, HeapExplicitZero)
