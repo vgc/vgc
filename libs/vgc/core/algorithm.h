@@ -27,6 +27,7 @@
 #include <vector>
 #include <vgc/core/api.h>
 #include <vgc/core/logging.h>
+#include <vgc/core/zero.h>
 
 namespace vgc {
 namespace core {
@@ -47,53 +48,6 @@ const T& clamp(const T& value, const T& min, const T& max)
     else {
         return (value < min) ? min : (max < value) ? max : value;
     }
-}
-
-/// Returns what "zero" means for the given type. When this generic function is
-/// not specialized, it uses the default constructor.
-///
-/// It is important to specialize vgc::core::zero for your own arithmetic types
-/// when their default constructors do not perform zero-initialization (See
-/// vgc::core::Vec2d for an example).
-///
-/// Below is an example of how to specialize vgc::core::zero for your own types:
-///
-/// \code
-/// namespace MyNamespace {
-/// class MyClass {
-///     double x_;
-/// public:
-///     MyClass() {} // default constructor leaves x_ uninitialized
-///     MyClass(double x) : x_(x) {} // custom constructor initializes x_
-/// };
-/// }
-///
-/// namespace vgc {
-/// namespace core {
-/// constexpr MyNamespace::MyClass zero<MyNamespace::MyClass>() {
-///     return MyNamespace::MyClass(0.0);
-/// }
-/// }
-/// }
-///
-/// void f() {
-///     MyNamespace::MyClass c1;                                           // uninitialized
-///     MyNamespace::MyClass c2 = vgc::core::zero<MyNamespace::MyClass>(); // zero-initialized
-/// }
-/// \endcode
-///
-/// This function is intended to be used for generic code. If you know the type,
-/// prefer to use more readable ways to zero-initialize:
-///
-/// \code
-/// double x = 0.0;
-/// Vec2d v(0.0, 0.0);
-/// \endcode
-///
-template<typename T>
-constexpr T zero()
-{
-    return T();
 }
 
 /// Returns the sum of all values in the given vector.

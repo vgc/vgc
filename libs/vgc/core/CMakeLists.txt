@@ -42,6 +42,7 @@ vgc_add_library(core
         stringid.h
         vec2d.h
         vec2darray.h
+        zero.h
 
         internal/containerutil.h
 
