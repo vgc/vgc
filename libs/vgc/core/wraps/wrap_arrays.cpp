@@ -53,6 +53,30 @@ namespace py = pybind11;
 // Note 4: we're mimicking many of the things done in pybind11/stl_bind.h. See there for
 // additional implementation notes.
 
+namespace  {
+
+template<typename This>
+vgc::Int pyWrapped(This& a, vgc::Int i)
+{
+    if (a.isEmpty()) {
+        throw vgc::core::IndexError(vgc::core::format(
+            "Array index {} out of range (the array is empty)", i));
+    }
+    else if (i < - a.length() || i > a.length() - 1) {
+        throw vgc::core::IndexError(vgc::core::format(
+            "Array index {} out of range [{}, {}] (array length is {})",
+            i, - a.length(), a.length() - 1, a.length()));
+    }
+    else {
+        if (i < 0) {
+            i += a.length();
+        }
+        return i;
+    }
+}
+
+} // namespace
+
 template<typename This>
 void wrap_1darray(py::module& m, const char* className)
 {
@@ -68,9 +92,8 @@ void wrap_1darray(py::module& m, const char* className)
         .def(py::init([](py::sequence s) { This res; for (auto x : s) res.append(x.cast<T>()); return res; } ))
         .def(py::init<const This&>())
 
-        // TODO: Use Python semantics: a[i] shouldn't not throw for i in [-n, n-1]
-        .def("__getitem__", [](const This& a, int i) { return a[i]; })
-        .def("__setitem__", [](This& a, int i, const T& value) { a[i] = value; })
+        .def("__getitem__", [](const This& a, int i) { vgc::Int j = pyWrapped(a, i); return a.getUnchecked(j); })
+        .def("__setitem__", [](This& a, int i, const T& value) { vgc::Int j = pyWrapped(a, i); a.getUnchecked(j) = value; })
         .def("__len__", &This::size)
         .def("__iter__",
             [](This& a) {
@@ -80,6 +103,8 @@ void wrap_1darray(py::module& m, const char* className)
         )
 
         .def("append", [](This& a, const T& value) { a.append(value); })
+        .def("pop", [](This& a) { return a.pop(); })
+        .def("pop", [](This& a, vgc::Int i) { vgc::Int j = pyWrapped(a, i); return a.pop(j); })
 
         .def(py::self == py::self)
         .def(py::self != py::self)

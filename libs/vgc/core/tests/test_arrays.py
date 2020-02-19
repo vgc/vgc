@@ -19,6 +19,7 @@
 import unittest
 
 from vgc.core import (
+    IndexError,
     DoubleArray,
     FloatArray,
     IntArray,
@@ -28,6 +29,16 @@ from vgc.core import (
 
 def get1DArrayClasses():
     return [DoubleArray, FloatArray, IntArray]
+
+# Note: we use exactly representable floating-point values (e.g: 1.5 = 1 + 1/2)
+# to avoid comparison errors when converting from Python's float (64bit) to
+# vgc.core.FloatArray (32bit), back to Python's float for the comparison.
+
+def get1DValues():
+    return [0.5, 0.5, 42]
+
+def get1DValuess():
+    return [[1.5, 0.5, 2.5], [1.5, 0.5, 2.5], [42, 43, 41]]
 
 def testDefaultConstructor_(self, Array):
     a = Array()
@@ -47,19 +58,79 @@ def testValueInitializingConstructor_(self, Array, value):
     for x in a:
         self.assertEqual(x, value)
 
+def assertArrayEqualToList_(self, a, l):
+    self.assertEqual(len(a), len(l))
+    for i in range(len(a)):
+        self.assertEqual(a[i], l[i])
+
 def testListInitializingConstructor_(self, Array, values):
     a = Array(values)
-    self.assertEqual(len(a), len(values))
-    for i in range(len(a)):
-        self.assertEqual(a[i], values[i])
+    assertArrayEqualToList_(self, a, values)
 
 def testAppend_(self, Array, values):
     a = Array()
     for v in values:
         a.append(v)
-    self.assertEqual(len(a), len(values))
-    for i in range(len(a)):
-        self.assertEqual(a[i], values[i])
+    assertArrayEqualToList_(self, a, values)
+
+def testPop_(self, Array, values):
+    a = Array(values)
+    b = list(values)
+    x = a.pop()
+    y = b.pop()
+    self.assertEqual(x, y)
+    assertArrayEqualToList_(self, a, b)
+
+    a = Array(values)
+    b = list(values)
+    x = a.pop(0)
+    y = b.pop(0)
+    self.assertEqual(x, y)
+    assertArrayEqualToList_(self, a, b)
+
+    a = Array(values)
+    b = list(values)
+    x = a.pop(1)
+    y = b.pop(1)
+    self.assertEqual(x, y)
+    assertArrayEqualToList_(self, a, b)
+
+    a = Array(values)
+    b = list(values)
+    x = a.pop(-1)
+    y = b.pop(-1)
+    self.assertEqual(x, y)
+    assertArrayEqualToList_(self, a, b)
+
+    a = Array(values)
+    b = list(values)
+    x = a.pop(len(a)-1)
+    y = b.pop(len(b)-1)
+    self.assertEqual(x, y)
+    assertArrayEqualToList_(self, a, b)
+
+    a = Array(values)
+    b = list(values)
+    x = a.pop(-len(a))
+    y = b.pop(-len(b))
+    self.assertEqual(x, y)
+    assertArrayEqualToList_(self, a, b)
+
+    a = Array(values)
+    b = list(values)
+    x = a.pop(-1)
+    y = b.pop(-1)
+    self.assertEqual(x, y)
+    assertArrayEqualToList_(self, a, b)
+
+    a = Array(values)
+    with self.assertRaises(IndexError):
+        a.pop(-len(a)-1)
+    with self.assertRaises(IndexError):
+        a.pop(len(a))
+    a = Array()
+    with self.assertRaises(IndexError):
+        a.pop()
 
 class Test1DArrays(unittest.TestCase):
 
@@ -75,21 +146,27 @@ class Test1DArrays(unittest.TestCase):
 
     def testValueInitializingConstructors(self):
         Arrays = get1DArrayClasses()
-        values = [0.5, 0.5, 42]
+        values = get1DValues()
         for Array, value in zip(Arrays, values):
            testValueInitializingConstructor_(self, Array, value)
 
     def testListInitializingConstructors(self):
         Arrays = get1DArrayClasses()
-        valuess = [[1.5, 0.5], [1.5, 0.5], [42, 43]]
+        valuess = get1DValuess()
         for Array, values in zip(Arrays, valuess):
            testListInitializingConstructor_(self, Array, values)
 
     def testAppend(self):
         Arrays = get1DArrayClasses()
-        valuess = [[1.5, 0.5], [1.5, 0.5], [42, 43]]
+        valuess = get1DValuess()
         for Array, values in zip(Arrays, valuess):
            testAppend_(self, Array, values)
+
+    def testPop(self):
+        Arrays = get1DArrayClasses()
+        valuess = get1DValuess()
+        for Array, values in zip(Arrays, valuess):
+           testPop_(self, Array, values)
 
     def testParse(self):
         a = DoubleArray("[3.5, 42]")
