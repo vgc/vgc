@@ -1107,6 +1107,10 @@ public:
     /// a.removeFirst();       // => [10, 42, 12]
     /// ```
     ///
+    /// Throws IndexError if this Array is empty.
+    ///
+    /// \sa pop(0)
+    ///
     void removeFirst() {
         if (isEmpty()) {
             throw IndexError(
@@ -1123,12 +1127,42 @@ public:
     /// a.removeLast();        // => [10, 42, 12]
     /// ```
     ///
+    /// Throws IndexError if this Array is empty.
+    ///
+    /// \sa pop()
+    ///
     void removeLast() {
         if (isEmpty()) {
             throw IndexError(
                 "Attempting to remove the last element of an empty Array");
         }
         erase(end()-1);
+    }
+
+    /// Removes and returns the last element of this Array. This is fast: O(1).
+    ///
+    /// Throws IndexError if this Array is empty.
+    ///
+    /// \sa removeLast(), pop(i)
+    ///
+    T pop() {
+        T res = last();
+        removeLast();
+        return res;
+    }
+
+    /// Removes and returns the element at index \p i, shifting all subsequent
+    /// elements one index to the left.
+    ///
+    /// Throws IndexError if this Array is empty or if \p i does not belong to
+    /// [0, length() - 1].
+    ///
+    /// \sa removeAt(i), pop()
+    ///
+    T pop(Int i) {
+        T res = (*this)[i];
+        removeAt(i);
+        return res;
     }
 
     /// Resizes this Array so that it contains \p count elements instead of its

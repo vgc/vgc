@@ -57,6 +57,8 @@ void wrap_vec2darray(py::module& m)
         )
 
         .def("append", [](This& a, const T& value) { a.append(value); })
+        .def("pop", [](This& a) { return a.pop(); })
+        .def("pop", [](This& a, vgc::Int i) { return a.pop(i); }) // TODO: wrap for i in [-n, -1]
 
         .def(py::self == py::self)
         .def(py::self != py::self)
