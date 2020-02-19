@@ -20,6 +20,8 @@
 #include <vgc/core/doublearray.h>
 #include <vgc/core/floatarray.h>
 #include <vgc/core/intarray.h>
+#include <vgc/core/vec2darray.h>
+#include <vgc/core/zero.h>
 
 namespace py = pybind11;
 
@@ -75,47 +77,95 @@ vgc::Int pyWrapped(This& a, vgc::Int i)
     }
 }
 
-} // namespace
-
 template<typename This>
-void wrap_1darray(py::module& m, const char* className)
+void defineCommonMethods(py::class_<This>& c)
 {
     using It = typename This::iterator;
     using T = typename This::value_type;
 
-    py::class_<This>(m, className)
+    c.def(py::init<>());
+    c.def(py::init([](int size) { return This(size, vgc::core::zero<T>()); } ));
+    c.def(py::init([](int size, const T& value) { return This(size, value); } ));
+    c.def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ));
+    c.def(py::init<const This&>());
 
-        .def(py::init<>())
-        .def(py::init([](int size) { return This(size, 0); } ))
-        .def(py::init([](int size, const T& value) { return This(size, value); } ))
-        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
-        .def(py::init([](py::sequence s) { This res; for (auto x : s) res.append(x.cast<T>()); return res; } ))
-        .def(py::init<const This&>())
+    c.def("__getitem__", [](const This& a, int i) {
+        vgc::Int j = pyWrapped(a, i);
+        return a.getUnchecked(j);
+    });
 
-        .def("__getitem__", [](const This& a, int i) { vgc::Int j = pyWrapped(a, i); return a.getUnchecked(j); })
-        .def("__setitem__", [](This& a, int i, const T& value) { vgc::Int j = pyWrapped(a, i); a.getUnchecked(j) = value; })
-        .def("__len__", &This::size)
-        .def("__iter__",
-            [](This& a) {
-                return py::make_iterator<py::return_value_policy::reference_internal, It, It, T&>(a.begin(), a.end());
-            },
-            py::keep_alive<0, 1>()
-        )
+    c.def("__setitem__", [](This& a, int i, const T& value) {
+        vgc::Int j = pyWrapped(a, i);
+        a.getUnchecked(j) = value;
+    });
 
-        .def("append", [](This& a, const T& value) { a.append(value); })
-        .def("pop", [](This& a) { return a.pop(); })
-        .def("pop", [](This& a, vgc::Int i) { vgc::Int j = pyWrapped(a, i); return a.pop(j); })
+    c.def("__len__", &This::size);
 
-        .def(py::self == py::self)
-        .def(py::self != py::self)
+    c.def("__iter__",
+        [](This& a) {
+            return py::make_iterator
+                <py::return_value_policy::reference_internal,It, It, T&>
+                (a.begin(), a.end());
+        },
+        py::keep_alive<0, 1>()
+    );
 
-        .def("__repr__", [](const This& a) { return toString(a); })
-    ;
+    c.def("append", [](This& a, const T& value) { a.append(value); });
+    c.def("pop", [](This& a) { return a.pop(); });
+    c.def("pop", [](This& a, vgc::Int i) {
+        vgc::Int j = pyWrapped(a, i);
+        return a.pop(j);
+    });
+
+    c.def(py::self == py::self);
+    c.def(py::self != py::self);
+
+    c.def("__repr__", [](const This& a) { return toString(a); });
 }
+
+template<typename This>
+void wrap_1darray(py::module& m, const std::string& valueTypeName)
+{
+    using T = typename This::value_type;
+    std::string thisTypeName = valueTypeName + "Array";
+    py::class_<This> c(m, thisTypeName.c_str());
+    defineCommonMethods(c);
+    c.def(py::init([](py::sequence s) {
+        This res;
+        for (auto x : s) {
+            res.append(x.cast<T>());
+        }
+        return res;
+    }));
+}
+
+template<typename This>
+void wrap_2darray(py::module& m, const std::string& valueTypeName)
+{
+    using T = typename This::value_type; // Example: Vec2d
+    using U = typename T::value_type;    // Example: double
+    std::string thisTypeName = valueTypeName + "Array";
+    py::class_<This> c(m, thisTypeName.c_str());
+    defineCommonMethods(c);
+    c.def(py::init([valueTypeName](py::sequence s) {
+        This res;
+        for (auto it : s) {
+            auto t = py::reinterpret_borrow<py::tuple>(it);
+            if (t.size() != 2) {
+                throw py::value_error("Tuple length must be 2 for conversion to " + valueTypeName);
+            }
+            res.append(T(t[0].cast<U>(), t[1].cast<U>()));
+        }
+        return res;
+    }));
+}
+
+} // namespace
 
 void wrap_arrays(py::module& m)
 {
-    wrap_1darray<vgc::core::DoubleArray>(m, "DoubleArray");
-    wrap_1darray<vgc::core::FloatArray>(m, "FloatArray");
-    wrap_1darray<vgc::core::IntArray>(m, "IntArray");
+    wrap_1darray<vgc::core::DoubleArray>(m, "Double");
+    wrap_1darray<vgc::core::FloatArray>(m, "Float");
+    wrap_1darray<vgc::core::IntArray>(m, "Int");
+    wrap_2darray<vgc::core::Vec2dArray>(m, "Vec2d");
 }

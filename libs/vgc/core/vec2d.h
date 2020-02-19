@@ -41,6 +41,8 @@ namespace core {
 class VGC_CORE_API Vec2d
 {
 public:
+    using value_type = double;
+
     /// Creates an uninitialized Vec2d.
     ///
     Vec2d() {}

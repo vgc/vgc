@@ -12,5 +12,4 @@ vgc_wrap_library(core
     wrap_parse.cpp
     wrap_stopwatch.cpp
     wrap_vec2d.cpp
-    wrap_vec2darray.cpp
 )
