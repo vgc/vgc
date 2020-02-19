@@ -237,6 +237,16 @@ private:
     double data_[2];
 };
 
+/// Overloads setZero(T& x).
+///
+/// \sa vgc::core::zero<T>()
+///
+inline void setZero(Vec2d& v)
+{
+    v[0] = 0.0;
+    v[1] = 0.0;
+}
+
 /// Returns the dot product between the two given Vec2d.
 ///
 inline double dot(const Vec2d& v1, const Vec2d& v2) {
