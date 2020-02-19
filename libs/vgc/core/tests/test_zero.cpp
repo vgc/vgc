@@ -39,9 +39,11 @@ void setZero(F& x) { x.m = 0; }
 } // namespace foo
 
 // We use this macro to fill stack memory with something else than 0.
-// Subsequent calls to EXPECT_EQ(a.m, 42) are undefined behavior in theory, but
+// Subsequent calls to EXPECT_NE(a.m, 0) are undefined behavior in theory, but
 // pass in practice, and help illustrate that `a.m` is indeed not initialized
-// to zero.
+// to zero. Note that we initalially try the more aggressive test
+// EXPECT_EQ(a.m, 42), but it didn't pass on all compilers (a.m wasn't equal to
+// 42, but was still equal to some garbage value, not zero).
 //
 #define FILL { int m = 42; EXPECT_EQ(m, 42); }
 
@@ -54,32 +56,32 @@ void setZero(F& x) { x.m = 0; }
 
 TEST(TestZero, StackDefaultInitialization)
 {
-    { FILL; foo::A a; EXPECT_EQ(a.m, 42); }
-    { FILL; foo::B a; EXPECT_EQ(a.m, 42); }
-    { FILL; foo::C a; EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::D a; EXPECT_EQ(a.m, 42); }
-    { FILL; foo::E a; EXPECT_EQ(a.m, 42); }
-    { FILL; foo::F a; EXPECT_EQ(a.m, 42); }
+    { FILL; foo::A a; EXPECT_NE(a.m, 0); } // UB!
+    { FILL; foo::B a; EXPECT_NE(a.m, 0); } // UB!
+    { FILL; foo::C a; EXPECT_EQ(a.m, 0); }
+    { FILL; foo::D a; EXPECT_NE(a.m, 0); } // UB!
+    { FILL; foo::E a; EXPECT_NE(a.m, 0); } // UB!
+    { FILL; foo::F a; EXPECT_NE(a.m, 0); } // UB!
 }
 
 TEST(TestZero, StackValueInitialization)
 {
-    { FILL; foo::A a = foo::A(); EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::B a = foo::B(); EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::C a = foo::C(); EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::D a = foo::D(); EXPECT_EQ(a.m, 42); }
-    { FILL; foo::E a = foo::E(); EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::F a = foo::F(); EXPECT_EQ(a.m, 42); }
+    { FILL; foo::A a = foo::A(); EXPECT_EQ(a.m, 0); }
+    { FILL; foo::B a = foo::B(); EXPECT_EQ(a.m, 0); }
+    { FILL; foo::C a = foo::C(); EXPECT_EQ(a.m, 0); }
+    { FILL; foo::D a = foo::D(); EXPECT_NE(a.m, 0); } // UB!
+    { FILL; foo::E a = foo::E(); EXPECT_EQ(a.m, 0); }
+    { FILL; foo::F a = foo::F(); EXPECT_NE(a.m, 0); } // UB!
 }
 
 TEST(TestZero, StackListInitialization)
 {
-    { FILL; foo::A a{}; EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::B a{}; EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::C a{}; EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::D a{}; EXPECT_EQ(a.m, 42); }
-    { FILL; foo::E a{}; EXPECT_EQ(a.m, 0);  }
-    { FILL; foo::F a{}; EXPECT_EQ(a.m, 42); }
+    { FILL; foo::A a{}; EXPECT_EQ(a.m, 0); }
+    { FILL; foo::B a{}; EXPECT_EQ(a.m, 0); }
+    { FILL; foo::C a{}; EXPECT_EQ(a.m, 0); }
+    { FILL; foo::D a{}; EXPECT_NE(a.m, 0); } // UB!
+    { FILL; foo::E a{}; EXPECT_EQ(a.m, 0); }
+    { FILL; foo::F a{}; EXPECT_NE(a.m, 0); } // UB!
 }
 
 TEST(TestZero, StackExplicitZero)
