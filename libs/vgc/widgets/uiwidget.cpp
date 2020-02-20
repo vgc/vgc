@@ -231,6 +231,7 @@ void UiWidgetEngine::destroyTriangles(Int id)
     r.vaoTriangles->destroy();
     delete r.vaoTriangles;
     r.vboTriangles.destroy();
+    trianglesIdGenerator_.release(id);
 }
 
 } // namespace widgets
