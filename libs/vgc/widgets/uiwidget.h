@@ -17,9 +17,15 @@
 #ifndef VGC_WIDGETS_UIWIDGET_H
 #define VGC_WIDGETS_UIWIDGET_H
 
+#include <QOpenGLBuffer>
 #include <QOpenGLFunctions_3_2_Core>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 
+#include <vgc/core/array.h>
+#include <vgc/geometry/camera2d.h>
+#include <vgc/graphics/idgenerator.h>
 #include <vgc/ui/widget.h>
 #include <vgc/widgets/api.h>
 
@@ -72,6 +78,16 @@ private:
 
     ui::WidgetSharedPtr widget_;
     widgets::UiWidgetEngineSharedPtr engine_;
+
+    // Camera (provides view matrix + projection matrix)
+    geometry::Camera2d camera_;
+
+    // Shader program
+    QOpenGLShaderProgram shaderProgram_;
+    int posLoc_;
+    int colLoc_;
+    int projLoc_;
+    int viewLoc_;
 };
 
 /// \class vgc::widget::UiWidgetEngine
@@ -98,19 +114,31 @@ public:
     ///
     static UiWidgetEngineSharedPtr create();
 
-    /// Sets the OpenGLFunctions to be used by this UiWidgetEngine. This must
-    /// be set before any of abstract API from graphics::Engine are called.
+    /// Initializes the engine with the given OpenGL parameters required to
+    /// perform its OpenGL calls.
     ///
-    void setOpenGLFunctions(UiWidget::OpenGLFunctions* functions) {
-        openGLFunctions_ = functions;
-    }
+    void initialize(UiWidget::OpenGLFunctions* functions, int posLoc, int colLoc);
 
-    /// Implements graphics::Engine::clear().
-    ///
+    // Implementation of graphics::Engine API
     void clear(const core::Color& color) override;
+    Int createTriangles() override;
+    void loadTriangles(Int id, const float* data, Int length) override;
+    void drawTriangles(Int id) override;
+    void destroyTriangles(Int id) override;
 
 private:
     UiWidget::OpenGLFunctions* openGLFunctions_;
+    int posLoc_;
+    int colLoc_;
+    graphics::IdGenerator trianglesIdGenerator_;
+    struct TrianglesBuffer {
+        // Note: we use a pointer for the VAO because copying
+        // QOpenGLVertexArrayObject is disabled
+        QOpenGLBuffer vboTriangles;
+        QOpenGLVertexArrayObject* vaoTriangles;
+        int numVertices;
+    };
+    core::Array<TrianglesBuffer> trianglesBuffers_;
 };
 
 } // namespace widgets
