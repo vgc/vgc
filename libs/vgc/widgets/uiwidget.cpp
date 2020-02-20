@@ -18,8 +18,33 @@
 
 #include <QMouseEvent>
 
+#include <vgc/core/paths.h>
+#include <vgc/widgets/qtutil.h>
+
 namespace vgc {
 namespace widgets {
+
+namespace {
+
+// Returns the file path of a shader file as a QString
+QString shaderPath_(const std::string& name) {
+    std::string path = core::resourcePath("graphics/opengl/" + name);
+    return toQt(path);
+}
+
+QMatrix4x4 toQtMatrix(const core::Mat4d& m) {
+    return QMatrix4x4(
+               (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
+               (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
+               (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
+               (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
+}
+
+struct XYRGBVertex {
+    float x, y, r, g, b;
+};
+
+} // namespace
 
 UiWidget::UiWidget(ui::WidgetSharedPtr widget, QWidget* parent) :
     QOpenGLWidget(parent),
@@ -71,18 +96,40 @@ UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const
 
 void UiWidget::initializeGL()
 {
-    engine_->setOpenGLFunctions(openGLFunctions());
+    // Initialize shader program
+    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
+    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
+    shaderProgram_.link();
+
+    // Get shader locations
+    shaderProgram_.bind();
+    posLoc_  = shaderProgram_.attributeLocation("pos");
+    colLoc_  = shaderProgram_.attributeLocation("col");
+    projLoc_ = shaderProgram_.uniformLocation("proj");
+    viewLoc_ = shaderProgram_.uniformLocation("view");
+    shaderProgram_.release();
+
+    // Initialize engine
+    OpenGLFunctions* f = openGLFunctions();
+    engine_->initialize(f, posLoc_, colLoc_);
+
+    // Initialize widget
     widget_->initialize(engine_.get());
 }
 
 void UiWidget::resizeGL(int w, int h)
 {
+    camera_.setViewportSize(w, h);
     widget_->resize(engine_.get(), int_cast<Int>(w), int_cast<Int>(h));
 }
 
 void UiWidget::paintGL()
 {
+    shaderProgram_.bind();
+    shaderProgram_.setUniformValue(projLoc_, toQtMatrix(camera_.projectionMatrix()));
+    shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(camera_.viewMatrix()));
     widget_->paint(engine_.get());
+    shaderProgram_.release();
 }
 
 void UiWidget::cleanupGL()
@@ -107,6 +154,13 @@ UiWidgetEngineSharedPtr UiWidgetEngine::create()
     return std::make_shared<UiWidgetEngine>(ConstructorKey());
 }
 
+void UiWidgetEngine::initialize(UiWidget::OpenGLFunctions* functions, int posLoc, int colLoc)
+{
+    openGLFunctions_ = functions;
+    posLoc_ = posLoc;
+    colLoc_ = colLoc;
+}
+
 void UiWidgetEngine::clear(const core::Color& color)
 {
     openGLFunctions_->glClearColor(
@@ -115,6 +169,69 @@ void UiWidgetEngine::clear(const core::Color& color)
         static_cast<float>(color.b()),
         static_cast<float>(color.a()));
     openGLFunctions_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+Int UiWidgetEngine::createTriangles()
+{
+    // Get or create TrianglesBuffer
+    Int id = trianglesIdGenerator_.generate();
+    if (id >= trianglesBuffers_.length()) {
+        trianglesBuffers_.append(TrianglesBuffer()); // use Array growth policy
+    }
+    if (id >= trianglesBuffers_.length()) {
+        trianglesBuffers_.resize(id+1);              // bypass Array growth policy
+    }
+    TrianglesBuffer& r = trianglesBuffers_[id];
+
+    // Create VBO/VAO for rendering triangles
+    r.vboTriangles.create();
+    r.vaoTriangles = new QOpenGLVertexArrayObject();
+    r.vaoTriangles->create();
+    GLsizei stride  = sizeof(XYRGBVertex);
+    GLvoid* posPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, x));
+    GLvoid* colPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, r));
+    GLboolean normalized = GL_FALSE;
+    r.vaoTriangles->bind();
+    r.vboTriangles.bind();
+    openGLFunctions_->glEnableVertexAttribArray(posLoc_);
+    openGLFunctions_->glEnableVertexAttribArray(colLoc_);
+    openGLFunctions_->glVertexAttribPointer(posLoc_, 2, GL_FLOAT, normalized, stride, posPointer);
+    openGLFunctions_->glVertexAttribPointer(colLoc_, 3, GL_FLOAT, normalized, stride, colPointer);
+    r.vboTriangles.release();
+    r.vaoTriangles->release();
+
+    return id;
+}
+
+void UiWidgetEngine::loadTriangles(Int id, const float* data, Int length)
+{
+    if (length < 0) {
+        throw core::NegativeIntegerError(core::format(
+            "Negative length ({}) provided to loadTriangles()", length));
+    }
+    TrianglesBuffer& r = trianglesBuffers_[id];
+    r.numVertices = length / 5;
+    r.vboTriangles.bind();
+    r.vboTriangles.allocate(data, r.numVertices * sizeof(XYRGBVertex));
+    r.vboTriangles.release();
+}
+
+void UiWidgetEngine::drawTriangles(Int id)
+{
+    TrianglesBuffer& r = trianglesBuffers_[id];
+    openGLFunctions_->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    r.vaoTriangles->bind();
+    openGLFunctions_->glDrawArrays(GL_TRIANGLES, 0, r.numVertices);
+    r.vaoTriangles->release();
+}
+
+void UiWidgetEngine::destroyTriangles(Int id)
+{
+    TrianglesBuffer& r = trianglesBuffers_[id];
+    r.vaoTriangles->destroy();
+    delete r.vaoTriangles;
+    r.vboTriangles.destroy();
+    trianglesIdGenerator_.release(id);
 }
 
 } // namespace widgets
