@@ -9,6 +9,7 @@ vgc_add_library(graphics
 
     CPP_FILES
         engine.cpp
+        idgenerator.cpp
 
     RESOURCE_FILES
         opengl/iv4fcol.f.glsl
