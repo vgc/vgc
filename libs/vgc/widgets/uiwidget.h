@@ -24,7 +24,6 @@
 #include <QOpenGLWidget>
 
 #include <vgc/core/array.h>
-#include <vgc/geometry/camera2d.h>
 #include <vgc/graphics/idgenerator.h>
 #include <vgc/ui/widget.h>
 #include <vgc/widgets/api.h>
@@ -79,8 +78,9 @@ private:
     ui::WidgetSharedPtr widget_;
     widgets::UiWidgetEngineSharedPtr engine_;
 
-    // Camera (provides view matrix + projection matrix)
-    geometry::Camera2d camera_;
+    // Projection and view matrices
+    QMatrix4x4 proj_;
+    QMatrix4x4 view_;
 
     // Shader program
     QOpenGLShaderProgram shaderProgram_;

@@ -19,6 +19,7 @@
 #include <QMouseEvent>
 
 #include <vgc/core/paths.h>
+#include <vgc/geometry/camera2d.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
@@ -119,15 +120,18 @@ void UiWidget::initializeGL()
 
 void UiWidget::resizeGL(int w, int h)
 {
-    camera_.setViewportSize(w, h);
+    geometry::Camera2d c;
+    c.setViewportSize(w, h);
+    proj_ = toQtMatrix(c.projectionMatrix());
+    view_ = QMatrix4x4(); // identity
     widget_->resize(engine_.get(), int_cast<Int>(w), int_cast<Int>(h));
 }
 
 void UiWidget::paintGL()
 {
     shaderProgram_.bind();
-    shaderProgram_.setUniformValue(projLoc_, toQtMatrix(camera_.projectionMatrix()));
-    shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(camera_.viewMatrix()));
+    shaderProgram_.setUniformValue(projLoc_, proj_);
+    shaderProgram_.setUniformValue(viewLoc_, view_);
     widget_->paint(engine_.get());
     shaderProgram_.release();
 }
