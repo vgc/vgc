@@ -26,7 +26,9 @@
 /// logging mechanism.
 ///
 
-#include <vgc/core/int.h>
+#include <vgc/core/arithmetic.h>
+#include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
 #include <vgc/core/logging.h>
 #include <vgc/core/object.h>
 #include <vgc/core/signal.h>

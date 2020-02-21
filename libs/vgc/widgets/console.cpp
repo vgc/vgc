@@ -21,7 +21,7 @@
 #include <QTextBlock>
 
 #include <vgc/core/algorithm.h>
-#include <vgc/core/math.h>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/python.h>
 #include <vgc/widgets/qtutil.h>
 

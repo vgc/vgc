@@ -18,8 +18,8 @@
 
 #include <QLabel>
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/format.h>
-#include <vgc/core/limits.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
@@ -117,7 +117,7 @@ void PerformanceMonitor::refresh()
 
             // Stop recursion if there are more elements to display
             // than layout_->addWidget() supports. Unlikely.
-            if (index == core::maxInt()) {
+            if (index == (std::numeric_limits<int>::max)()) {
                 break;
             }
         }

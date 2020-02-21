@@ -17,11 +17,11 @@
 #include <vgc/core/wraps/common.h>
 #include <pybind11/operators.h>
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/doublearray.h>
 #include <vgc/core/floatarray.h>
 #include <vgc/core/intarray.h>
 #include <vgc/core/vec2darray.h>
-#include <vgc/core/zero.h>
 
 namespace py = pybind11;
 

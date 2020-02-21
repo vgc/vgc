@@ -16,8 +16,8 @@
 
 #include <gtest/gtest.h>
 #include <sstream>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/format.h>
-#include <vgc/core/inttypes.h>
 
 // For benchmarking
 // TODO: Use Google Benchmark and separate benchmarks from unit tests

@@ -14,16 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_INT_H
-#define VGC_CORE_INT_H
+#ifndef VGC_CORE_ARITHMETIC_H
+#define VGC_CORE_ARITHMETIC_H
 
-/// \file vgc/core/int.h
-/// \brief Defines integer types and integer-related utilities.
+/// \file vgc/core/arithmetic.h
+/// \brief Utilities for arithmetic types (bool, char, int, float)
 ///
-/// In this header, we define various integer types used throughout the C++ VGC
-/// API and implementation, such as vgc::Int, vgc::UInt, vgc::Int64, etc.
+/// # Integer types
 ///
-/// # Rationale
+/// For convenience, VGC defines the following fixed width integer types:
+/// - `vgc::Int8` (typedef for `std::int8_t`)
+/// - `vgc::Int16` (typedef for `std::int16_t`)
+/// - `vgc::Int32` (typedef for `std::int32_t`)
+/// - `vgc::Int64` (typedef for `std::int64_t`)
+/// - `vgc::Int8` (typedef for `std::int8_t`)
+/// - `vgc::UInt8` (typedef for `std::uint8_t`)
+/// - `vgc::UInt16` (typedef for `std::uint16_t`)
+/// - `vgc::UInt32` (typedef for `std::uint32_t`)
+/// - `vgc::UInt64` (typedef for `std::uint64_t`)
+///
+/// In addition, VGC defines the following compiler-flag dependent integer types:
+/// - `vgc::Int` (typedef for either `vgc::Int32` or `vgc::Int64`)
+/// - `vgc::UInt` (typedef for either `vgc::UInt32` or `vgc::UInt64`)
+///
+/// By default, the `vgc::Int` and `vgc::UInt` types are 64-bit, unless
+/// `VGC_CORE_USE_32BIT_INT` is defined, in which case they are 32-bit.
+///
+/// Note that these integer types and other integer-related utilities (e.g.,
+/// `vgc::IntMax`, `vgc::int_cast<T>`) are defined directly in the `vgc`
+/// namespace, not in `vgc::core`. This is a rare exception to our namespace
+/// conventions, justified by the widespread use of integer types, and the fact
+/// that they are not wrapped in Python anyway (i.e., there is no need to be
+/// consistent with our Python module conventions).
+///
+/// ## Rationale
 ///
 /// In C++, the default integer types (int, unsigned int, long, unsigned long,
 /// etc.) have an unspecified width (32-bit, 64-bit, etc.), which is chosen by
@@ -37,50 +61,33 @@
 /// wider 64-bit default integer when performance is not impacted, reducing the
 /// risk of integer overflow.
 ///
-/// For convenience and consistency, we also specify typedefs (e.g.,
-/// vgc::Int32) for the fixed width integer types provided in the standard
-/// <cstdint> header (e.g., std::int32_t).
+/// ## Signed integers vs. unsigned integers
 ///
-/// # vgc::Int vs vgc::UInt
-///
-/// Throughout VGC, we use and recommend using the signed integer vgc::Int for
-/// most purposes, including array sizes and indices. We recognize that this is
-/// somewhat non-idiomatic C++, given that the STL uses unsigned int for sizes
-/// and indices. However, many authors of the STL themselves acknowledge that
-/// using unsigned integers was a mistake, see:
+/// VGC uses and recommends using the signed integer vgc::Int for most
+/// purposes, including array sizes and indices. We recognize that this is
+/// somewhat non-idiomatic C++, given that the STL uses unsigned integers for
+/// sizes and indices. However, many authors of the STL themselves acknowledge
+/// that using unsigned integers was a mistake, see:
 ///
 /// http://channel9.msdn.com/Events/GoingNative/2013/Interactive-Panel-Ask-Us-Anything
 /// (at 12min, 42min, and 63min)
 ///
-/// In particular, type casting between signed and unsigned integers is
-/// error-prone and produces less-readable code. Therefore, we prefer using
-/// only one integer type, and since we can't avoid signed integers (index
-/// offsets), using signed integers is the most obvious choice.
+/// A common problem with unsigned integers in C++ is that they always use
+/// modulo arithmetic (unlike in Rust for example, where an overflow causes a
+/// "panic" in debug mode), which may lead to subtle and hard to detect bugs,
+/// for example in loops with decreasing indices or in expressions involving
+/// substractions.
 ///
-/// Also, note that unsigned integers use modulo arithmetic which may lead to
-/// subtle and hard to detect bugs, for example in loops with decreasing
-/// indices or in expressions involving substractions.
+/// Another issue in C++ is that the rules for implicit promotions and
+/// conversions between integer types are very error-prone. Therefore, it is
+/// safer not mixing the two, and since we can't avoid signed integers (index
+/// offsets or pointer/iterator difference), using signed integers everywhere
+/// makes the most sense.
 ///
 /// Finally, using signed integers makes the C++ API more consistent with the
-/// Python API, since Python integers are always signed.
+/// Python API, since Python does not have unsigned integers at all.
 ///
-/// In order to alleviate the fact that the STL does use unsigned integers, we
-/// provide our own containers which wrap the STL containers and perform the
-/// type casts for you, along with additional bound checks.
-///
-/// # Why not vgc::core::Int?
-///
-/// You may have noticed that the VGC integer types are defined directly in the
-/// vgc namespace (e.g., vgc::Int), rather than in the nested vgc::core
-/// namespace where they more naturally belong, since they are defined in
-/// <vgc/core/int.h>.
-///
-/// This is the only exception of our namespace rules, justified by the
-/// extremely widespread use of these types, and the fact that they are not
-/// wrapped in Python anyway (we want all Python types to be defined within
-/// submodules, e.g., vgc.core.Vec2d).
-///
-/// # Integer type casting
+/// ## Integer type casting
 ///
 /// We define a function template vgc::int_cast<T>(U value) which performs safe
 /// type casting from an integer type U to another integer type T. This
@@ -109,43 +116,178 @@
 /// haven't done it yet.
 ///
 
-// Note: the actual definitions of integer types and their limits are in a
-// separate header to prevent a circular dependency with stringutil.h:
-//
-//         int.h
-//           |
-//           v
-//      stringutil.h
-//           |
-//           v
-//       inttypes.h
-//
-// XXX Now that we've split stringutil.h into format.h and parse.h, the above
-// is not true anymore, and we could have a single int.h header again. Or more
-// generally, a "numeric.h" header, with both int and float functionality,
-// e.g., also merging int2float.h, float2int.h, limits.h, and epsilon.h.
-//
-// The dependency graph would be:
-//
-//         parse.h
-//           |
-//           v
-//        numeric.h
-//           |
-//           v
-//       exceptions.h
-//           |
-//           v
-//        format.h
-//
-
+#include <limits>
 #include <type_traits>
 
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
-#include <vgc/core/inttypes.h>
+#include <vgc/core/logging.h>
 
 namespace vgc {
+
+/// The 8-bit signed integer type.
+///
+using Int8 = std::int8_t;
+
+/// The 16-bit signed integer type.
+///
+using Int16 = std::int16_t;
+
+/// The 32-bit signed integer type.
+///
+using Int32 = std::int32_t;
+
+/// The 64-bit signed integer type.
+///
+using Int64 = std::int64_t;
+
+/// The 8-bit unsigned integer type.
+///
+using UInt8 = std::uint8_t;
+
+/// The 16-bit unsigned integer type.
+///
+using UInt16 = std::uint16_t;
+
+/// The 32-bit unsigned integer type.
+///
+using UInt32 = std::uint32_t;
+
+/// The 64-bit unsigned integer type.
+///
+using UInt64 = std::uint64_t;
+
+/// A signed integer type of unspecified width (at least 32bit).
+///
+/// This is the preferred integer type to use in the VGC C++ API and
+/// implementation, including for values which are not supposed to be negative
+/// such as array sizes and indices.
+///
+#ifdef VGC_CORE_USE_32BIT_INT
+    using Int = Int32;
+#else
+    using Int = Int64;
+#endif
+
+/// An unsigned integer type of same width as vgc::Int (at least 32bit).
+///
+/// Use this type with moderation: we recommend using vgc::Int in most cases,
+/// even for values which are not supposed to be negative, such as array sizes
+/// and indices.
+///
+#ifdef VGC_CORE_USE_32BIT_INT
+    using UInt = UInt32;
+#else
+    using UInt = UInt64;
+#endif
+
+namespace internal {
+
+// We need this additional level of indirection to workaround a bug in MSVC.
+// See: https://stackoverflow.com/questions/59743372
+//
+// Once we require C++14, we could use a more elegant solution based on
+// variable templates:
+//
+//   template<typename T>
+//   constexpr T type_max = (std::numeric_limits<T>::max)();
+//
+// Once we require C++17, we could use an even more elegant solution based on
+// "if constexpr" rather than SFINAE.
+//
+// Note: The extra parentheses around std::numeric_limits<T>::min/max avoid
+// potential problems with min/max macros in WinDef.h.
+//
+template<typename T>
+struct type_max {
+    static constexpr T value = (std::numeric_limits<T>::max)();
+};
+template<typename T>
+struct type_min {
+    static constexpr T value = (std::numeric_limits<T>::min)();
+};
+
+} // namespace internal
+
+/// Maximum value of an Int.
+///
+constexpr Int IntMax = internal::type_max<Int>::value;
+
+/// Maximum value of an Int8.
+///
+constexpr Int8 Int8Max = internal::type_max<Int8>::value;
+
+/// Maximum value of an Int16.
+///
+constexpr Int16 Int16Max = internal::type_max<Int16>::value;
+
+/// Maximum value of an Int32.
+///
+constexpr Int32 Int32Max = internal::type_max<Int32>::value;
+
+/// Maximum value of an Int64.
+///
+constexpr Int64 Int64Max = internal::type_max<Int64>::value;
+
+/// Maximum value of a UInt.
+///
+constexpr UInt UIntMax = internal::type_max<UInt>::value;
+
+/// Maximum value of a UInt8.
+///
+constexpr UInt8 UInt8Max = internal::type_max<UInt8>::value;
+
+/// Maximum value of a UInt16.
+///
+constexpr UInt16 UInt16Max = internal::type_max<UInt16>::value;
+
+/// Maximum value of a UInt32.
+///
+constexpr UInt32 UInt32Max = internal::type_max<UInt32>::value;
+
+/// Maximum value of a UInt64.
+///
+constexpr UInt64 UInt64Max = internal::type_max<UInt64>::value;
+
+/// Minimum value of an Int.
+///
+constexpr Int IntMin = internal::type_min<Int>::value;
+
+/// Minimum value of an Int8.
+///
+constexpr Int8 Int8Min = internal::type_min<Int8>::value;
+
+/// Minimum value of an Int16.
+///
+constexpr Int16 Int16Min = internal::type_min<Int16>::value;
+
+/// Minimum value of an Int32.
+///
+constexpr Int32 Int32Min = internal::type_min<Int32>::value;
+
+/// Minimum value of an Int64.
+///
+constexpr Int64 Int64Min = internal::type_min<Int64>::value;
+
+/// Minimum value of a UInt.
+///
+constexpr UInt UIntMin = internal::type_min<UInt>::value;
+
+/// Minimum value of a UInt8.
+///
+constexpr UInt8 UInt8Min = internal::type_min<UInt8>::value;
+
+/// Minimum value of a UInt16.
+///
+constexpr UInt16 UInt16Min = internal::type_min<UInt16>::value;
+
+/// Minimum value of a UInt32.
+///
+constexpr UInt32 UInt32Min = internal::type_min<UInt32>::value;
+
+/// Minimum value of a UInt64.
+///
+constexpr UInt64 UInt64Min = internal::type_min<UInt64>::value;
 
 /// Returns a human-readable name for integer types.
 ///
@@ -382,6 +524,135 @@ int_cast(U value) {
     return static_cast<T>(value);
 }
 
+namespace core {
+
+/// Sets the given bool, character, integer or floating-point number to zero.
+///
+/// This function is called by vgc::core::zero<T>(), and can be overloaded for
+/// custom types.
+///
+/// \sa zero<T>()
+///
+template<typename T>
+typename std::enable_if<std::is_arithmetic<T>::value>::type
+setZero(T& x)
+{
+    x = T();
+}
+
+/// Returns a zero-initialized value for the given type.
+///
+/// ```cpp
+/// int x = vgc::core::zero();            // 0
+/// double y = vgc::core::zero<double>(); // 0.0
+/// Vec2d v = vgc::core::zero<Vec2d>();   // (0.0, 0.0)
+/// ```
+///
+/// This function relies on ADL (= argument-dependent lookup), calling the
+/// unqualified setZero(x) function under the hood. Therefore, you can
+/// specialize zero() by overloading the setZero(x) function in the same
+/// namespace of your custom type:
+///
+/// ```cpp
+/// namespace foo {
+///
+/// struct A {
+///     int m;
+///     A() {}
+/// };
+///
+/// void setZero(A& a)
+/// {
+///     a.m = 0;
+/// }
+///
+/// } // namespace foo
+///
+/// A a1;                        // a1.m == uninitialized
+/// A a2 = A();                  // a2.m == uninitialized
+/// A a3 = vgc::core::zero<A>(); // a3.m == 0
+/// ```
+///
+/// This function is primarily intended to be used in template functions. If
+/// you know the type, prefer to use more readable ways to zero-initialize:
+///
+/// ```cpp
+/// double x = 0.0;
+/// Vec2d v(0.0, 0.0);
+/// ```
+///
+/// \sa setZero(T& x)
+///
+/// More info on default/value/zero-initialization:
+/// - https://en.cppreference.com/w/cpp/language/default_initialization
+/// - https://en.cppreference.com/w/cpp/language/value_initialization
+/// - https://stackoverflow.com/questions/29765961/default-value-and-zero-initialization-mess
+/// - vgc/core/tests/test_zero.cpp
+///
+template<typename T>
+T zero()
+{
+    T res;
+    setZero(res);
+    return res;
+}
+
+/// Returns the given value clamped to the interval [min, max]. If max < min,
+/// then a warning is issued and the value is clamped to [max, min] instead.
+///
+template<typename T>
+const T& clamp(const T& value, const T& min, const T& max)
+{
+    if (max < min) {
+        warning()
+            << "Warning: vgc::core::clamp("
+            << "value=" << value << ", min=" << min << ", max=" << max << ") "
+            << "called with max < min\n";
+        return (value < max) ? max : (min < value) ? min : value;
+    }
+    else {
+        return (value < min) ? min : (max < value) ? max : value;
+    }
+}
+
+/// Computes the largest integer value not greater than \p x then casts the
+/// result to an int. This function is equivalent to:
+///
+/// \code
+/// static_cast<int>(std::floor(x))
+/// \endcode
+///
+template <typename T>
+int ifloor(T x) {
+    return static_cast<int>(std::floor(x));
+}
+
+/// Maps a double \p x in the range [0, 1] to an 8-bit unsigned integer in
+/// the range [0..255]. More precisely, the returned value is the integer in
+/// [0..255] which is closest to 255*x.
+///
+VGC_CORE_API
+inline UInt8 double01ToUint8(double x) {
+    double y = std::round(vgc::core::clamp(x, 0.0, 1.0) * 255.0);
+    return static_cast<UInt8>(y);
+}
+
+/// Maps an integer \p x in the range [0..255] to a double in the range [0, 1].
+/// If the integer is not initially in the range [0..255], then it is first
+/// clamped to this range.
+///
+VGC_CORE_API
+inline double uint8ToDouble01(Int x) {
+    return vgc::core::clamp(x, Int(0), Int(255)) / 255.0;
+}
+
+/// Small epsilon value under which two doubles are considered
+/// indistinguishable.
+///
+const double epsilon = 1e-10;
+
+} // namespace core
+
 } // namespace vgc
 
-#endif // VGC_CORE_INT_H
+#endif // VGC_CORE_ARITHMETIC_H

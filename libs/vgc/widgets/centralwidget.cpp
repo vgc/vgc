@@ -19,8 +19,8 @@
 #include <QMouseEvent>
 #include <QPainter>
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/algorithm.h>
-#include <vgc/core/limits.h>
 #include <vgc/core/logging.h>
 #include <vgc/widgets/toggleviewaction.h>
 
@@ -455,17 +455,17 @@ void CentralWidget::updateGeometries_()
     for (int i = 0; i < 2; ++i) {
         if (toolbar_->isVisibleTo(this)) {
             int max = x3-x1-2*M-vMinSize.width();
-            max = core::clamp(max, s0->minimumLength(), core::maxInt());
+            max = core::clamp(max, s0->minimumLength(), (std::numeric_limits<int>::max)());
             s0->setMaximumLength(max);
         }
         if (panelArea_->isVisibleTo(this)) {
             int max = x4-x2-2*M-vMinSize.width();
-            max = core::clamp(max, s1->minimumLength(), core::maxInt());
+            max = core::clamp(max, s1->minimumLength(), (std::numeric_limits<int>::max)());
             s1->setMaximumLength(max);
         }
         if (console_->isVisibleTo(this)) {
             int max = y3-y1-2*M-vMinSize.height();
-            max = core::clamp(max, s2->minimumLength(), core::maxInt());
+            max = core::clamp(max, s2->minimumLength(), (std::numeric_limits<int>::max)());
             s2->setMaximumLength(max);
         }
     }

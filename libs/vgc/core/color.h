@@ -18,9 +18,8 @@
 #define VGC_CORE_COLOR_H
 
 #include <vgc/core/api.h>
-#include <vgc/core/float2int.h>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/format.h>
-#include <vgc/core/int2float.h>
 #include <vgc/core/parse.h>
 
 namespace vgc {

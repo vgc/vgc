@@ -39,9 +39,9 @@
 #include <type_traits>
 
 #include <vgc/core/api.h>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
-#include <vgc/core/int.h>
 
 namespace vgc {
 namespace core {

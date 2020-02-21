@@ -21,7 +21,7 @@
 #include <string>
 
 #include <vgc/core/api.h>
-#include <vgc/core/epsilon.h>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
 

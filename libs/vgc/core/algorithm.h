@@ -27,28 +27,15 @@
 #include <vector>
 #include <vgc/core/api.h>
 #include <vgc/core/logging.h>
-#include <vgc/core/zero.h>
+
+// The following is not a dependency, but included for convenience: it defines
+// vgc::core::clamp, which some people may expect in <vgc/core/algorithm.h>,
+// since std::clamp is in <algorithm>
+//
+#include <vgc/core/arithmetic.h>
 
 namespace vgc {
 namespace core {
-
-/// Returns the given value clamped to the interval [min, max]. If max < min,
-/// then a warning is issued and the value is clamped to [max, min] instead.
-///
-template<typename T>
-const T& clamp(const T& value, const T& min, const T& max)
-{
-    if (max < min) {
-        warning()
-            << "Warning: vgc::core::clamp("
-            << "value=" << value << ", min=" << min << ", max=" << max << ") "
-            << "called with max < min\n";
-        return (value < max) ? max : (min < value) ? min : value;
-    }
-    else {
-        return (value < min) ? min : (max < value) ? max : value;
-    }
-}
 
 /// Returns the sum of all values in the given vector.
 /// Returns zero<T>() if the vector is empty.

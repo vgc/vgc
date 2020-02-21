@@ -15,7 +15,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <vgc/core/int.h>
+#include <vgc/core/arithmetic.h>
 
 using namespace vgc;
 using core::NegativeIntegerError;
