@@ -17,7 +17,7 @@
 #ifndef VGC_GRAPHICS_IDGENERATOR_H
 #define VGC_GRAPHICS_IDGENERATOR_H
 
-#include <vgc/core/int.h>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/intarray.h>
 #include <vgc/graphics/api.h>
 

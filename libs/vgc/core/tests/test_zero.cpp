@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <memory>
-#include <vgc/core/zero.h>
+#include <vgc/core/arithmetic.h>
 
 namespace foo {
 

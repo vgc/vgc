@@ -8,6 +8,7 @@ vgc_add_library(core
     HEADER_FILES
         algorithm.h
         api.h
+        arithmetic.h
         array.h
         assert.h
         color.h
@@ -15,21 +16,14 @@ vgc_add_library(core
         compiler.h
         dll.h
         doublearray.h
-        epsilon.h
         exceptions.h
-        float2int.h
         floatarray.h
         format.h
         innercore.h
-        int.h
-        int2float.h
         intarray.h
-        inttypes.h
         io.h
-        limits.h
         logging.h
         mat4d.h
-        math.h
         object.h
         os.h
         parse.h
@@ -42,7 +36,6 @@ vgc_add_library(core
         stringid.h
         vec2d.h
         vec2darray.h
-        zero.h
 
         internal/containerutil.h
 
@@ -54,7 +47,6 @@ vgc_add_library(core
         io.cpp
         logging.cpp
         mat4d.cpp
-        math.cpp
         object.cpp
         parse.cpp
         paths.cpp

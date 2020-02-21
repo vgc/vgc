@@ -388,12 +388,14 @@ message(STATUS "") # newline
 #
 #   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 #
-# However, this has proven to lead to naming conflicts. More specifically, the
-# header file vgc/core/math.h includes <cmath> which includes <math.h>. If
-# CMAKE_INCLUDE_CURRENT_DIR is ON, then <math.h> resolves to vgc/core/math.h
-# instead of the C standard library header, leading to compilation errors.
-# Therefore, we do not set CMAKE_INCLUDE_CURRENT_DIR to ON, forcing libraries
-# to use absolute paths, which is better practice anyway.
+# However, this has proven to lead to naming conflicts. More specifically, we
+# used to have a header file vgc/core/math.h, which included <cmath> which
+# includes <math.h>. If CMAKE_INCLUDE_CURRENT_DIR was ON, then <math.h>
+# resolved to vgc/core/math.h instead of the C standard library header, leading
+# to compilation errors. Therefore, we do not set CMAKE_INCLUDE_CURRENT_DIR to
+# ON, forcing libraries to use absolute paths, which is better practice anyway.
+# Now, we don't have the vgc/core/math.h header anymore, but we still don't set
+# it to ON due to potential similar problems.
 #
 # Here are useful cmake variables that can be queried (with example value):
 #   QT_MOC_EXECUTABLE=/home/user/Qt/5.12.0/gcc_64/bin/moc
