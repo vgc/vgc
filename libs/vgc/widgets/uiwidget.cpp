@@ -124,6 +124,12 @@ void UiWidget::resizeGL(int w, int h)
     c.setViewportSize(w, h);
     proj_ = toQtMatrix(c.projectionMatrix());
     view_ = QMatrix4x4(); // identity
+
+    // Resize widget. Note: if w or h is > 16777216 (=2^24), then static_cast
+    // silently rounds to the nearest integer representable as a float. See:
+    //   https://stackoverflow.com/a/60339495/1951907
+    // Should we issue a warning in these cases?
+    widget()->resize(static_cast<float>(w), static_cast<float>(h));
 }
 
 void UiWidget::paintGL()

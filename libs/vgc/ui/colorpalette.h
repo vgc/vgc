@@ -63,6 +63,8 @@ public:
 private:
     core::Color currentColor_;
     Int trianglesId_;
+    float oldWidth_;
+    float oldHeight_;
 };
 
 } // namespace ui
