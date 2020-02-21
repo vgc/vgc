@@ -50,6 +50,24 @@ public:
     ///
     static WidgetSharedPtr create();
 
+    /// Returns the width of the widget.
+    ///
+    float width() const
+    {
+        return width_;
+    }
+
+    /// Returns the height of the widget.
+    ///
+    float height() const
+    {
+        return height_;
+    }
+
+    /// Resizes the widget to the given width and height.
+    ///
+    void resize(float width, float height);
+
     /// Requests this widget to be repainted, for example because the data
     /// displayed by this widget has changed. The widget is not immediately
     /// repainted: it is only scheduled for repaint. The actual moment when the
@@ -110,6 +128,10 @@ public:
     /// must return true if the event was handled, false otherwise.
     ///
     virtual bool onMouseRelease(MouseEvent* event);
+
+private:
+    float width_;
+    float height_;
 };
 
 } // namespace ui
