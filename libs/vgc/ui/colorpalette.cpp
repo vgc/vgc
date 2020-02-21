@@ -16,6 +16,8 @@
 
 #include <vgc/ui/colorpalette.h>
 
+#include <cstdlib> // abs
+
 #include <vgc/core/colors.h>
 #include <vgc/core/floatarray.h>
 
@@ -24,7 +26,9 @@ namespace ui {
 
 ColorPalette::ColorPalette(const ConstructorKey&) :
     Widget(Widget::ConstructorKey()),
-    currentColor_(core::colors::blue) // tmp color for testing. TODO: black
+    currentColor_(core::colors::blue), // tmp color for testing. TODO: black
+    oldWidth_(0),
+    oldHeight_(0)
 {
 
 }
@@ -37,39 +41,45 @@ ColorPaletteSharedPtr ColorPalette::create()
 
 void ColorPalette::onPaintCreate(graphics::Engine* engine)
 {
-    core::FloatArray a;
-    float x0 = 0.0;
-    float y0 = 0.0;
-    float w = 50;
-    float h = 50;
-    Int k = 8;
-    float dx = w / k;
-    float dy = h / k;
-    float dr = 1.0 / k;
-    float dg = 1.0 / k;
-    float b = 0.0;
-    for (Int i = 0; i < k; ++i) {
-        float x = x0 + i*dx;
-        float r = i*dr;
-        for (Int j = 0; j < k; ++j) {
-            float y = y0 + j*dy;
-            float g = j*dg;
-            // TODO: implement a.extend()
-            a.insert(a.end(), {
-                x,    y,    r, g, b,
-                x+dx, y,    r, g, b,
-                x,    y+dy, r, g, b,
-                x+dx, y,    r, g, b,
-                x+dx, y+dy, r, g, b,
-                x,    y+dy, r, g, b});
-        }
-    }
     trianglesId_ = engine->createTriangles();
-    engine->loadTriangles(trianglesId_, a.data(), a.length());
 }
 
 void ColorPalette::onPaintDraw(graphics::Engine* engine)
 {
+    float eps = 1e-6;
+    if (std::abs(oldWidth_ - width()) > eps || std::abs(oldHeight_ - height()) > eps) {
+        oldWidth_ = width();
+        oldHeight_ = height();
+        core::FloatArray a;
+        float margin = 10;
+        float x0 = margin;
+        float y0 = margin;
+        float w = width() - 2*margin;
+        float h = w;
+        Int k = 8;
+        float dx = w / k;
+        float dy = h / k;
+        float dr = 1.0f / k;
+        float dg = 1.0f / k;
+        float b = 0.0;
+        for (Int i = 0; i < k; ++i) {
+            float x = x0 + i*dx;
+            float r = i*dr;
+            for (Int j = 0; j < k; ++j) {
+                float y = y0 + j*dy;
+                float g = j*dg;
+                // TODO: implement a.extend()
+                a.insert(a.end(), {
+                    x,    y,    r, g, b,
+                    x+dx, y,    r, g, b,
+                    x,    y+dy, r, g, b,
+                    x+dx, y,    r, g, b,
+                    x+dx, y+dy, r, g, b,
+                    x,    y+dy, r, g, b});
+            }
+        }
+        engine->loadTriangles(trianglesId_, a.data(), a.length());
+    }
     engine->clear(currentColor());
     engine->drawTriangles(trianglesId_);
 }
