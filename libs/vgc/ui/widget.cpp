@@ -36,22 +36,17 @@ void Widget::repaint()
     repaintRequested();
 }
 
-void Widget::initialize(graphics::Engine* /*engine*/)
+void Widget::onPaintCreate(graphics::Engine* /*engine*/)
 {
 
 }
 
-void Widget::resize(graphics::Engine* /*engine*/, Int /*w*/, Int /*h*/)
+void Widget::onPaintDraw(graphics::Engine* /*engine*/)
 {
 
 }
 
-void Widget::paint(graphics::Engine* /*engine*/)
-{
-
-}
-
-void Widget::cleanup(graphics::Engine* /*engine*/)
+void Widget::onPaintDestroy(graphics::Engine* /*engine*/)
 {
 
 }

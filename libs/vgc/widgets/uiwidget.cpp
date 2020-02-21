@@ -114,8 +114,8 @@ void UiWidget::initializeGL()
     OpenGLFunctions* f = openGLFunctions();
     engine_->initialize(f, posLoc_, colLoc_);
 
-    // Initialize widget
-    widget_->initialize(engine_.get());
+    // Initialize widget for painting
+    widget_->onPaintCreate(engine_.get());
 }
 
 void UiWidget::resizeGL(int w, int h)
@@ -124,7 +124,6 @@ void UiWidget::resizeGL(int w, int h)
     c.setViewportSize(w, h);
     proj_ = toQtMatrix(c.projectionMatrix());
     view_ = QMatrix4x4(); // identity
-    widget_->resize(engine_.get(), int_cast<Int>(w), int_cast<Int>(h));
 }
 
 void UiWidget::paintGL()
@@ -132,13 +131,13 @@ void UiWidget::paintGL()
     shaderProgram_.bind();
     shaderProgram_.setUniformValue(projLoc_, proj_);
     shaderProgram_.setUniformValue(viewLoc_, view_);
-    widget_->paint(engine_.get());
+    widget_->onPaintDraw(engine_.get());
     shaderProgram_.release();
 }
 
 void UiWidget::cleanupGL()
 {
-    widget_->cleanup(engine_.get());
+    widget_->onPaintDestroy(engine_.get());
 }
 
 void UiWidget::onRepaintRequested()

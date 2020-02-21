@@ -55,10 +55,9 @@ public:
     }
 
     // reimpl
-    void initialize(graphics::Engine* engine) override;
-    void resize(graphics::Engine* engine, Int w, Int h) override;
-    void paint(graphics::Engine* engine) override;
-    void cleanup(graphics::Engine* engine) override;
+    void onPaintCreate(graphics::Engine* engine) override;
+    void onPaintDraw(graphics::Engine* engine) override;
+    void onPaintDestroy(graphics::Engine* engine) override;
     bool onMousePress(MouseEvent* event) override;
 
 private:

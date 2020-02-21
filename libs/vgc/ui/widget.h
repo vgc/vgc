@@ -77,29 +77,24 @@ public:
     ///
     const core::Signal<> repaintRequested;
 
-    /// This virtual function is called once before the first call to paint()
-    /// or resize(), and should be reimplemented to allocate required GPU
+    /// This virtual function is called once before the first call to
+    /// onPaintDraw(), and should be reimplemented to create required GPU
     /// resources.
     ///
-    virtual void initialize(graphics::Engine* engine);
-
-    /// This virtual function is called whenever the widget has been resized
-    /// (the new size is given as w and h). Subclasses should reimplement this,
-    /// typically by adapting GPU resources to the new size.
-    ///
-    virtual void resize(graphics::Engine* engine, Int w, Int h);
+    virtual void onPaintCreate(graphics::Engine* engine);
 
     /// This virtual function is called whenever the widget needs to be
     /// repainted. Subclasses should reimplement this, typically by issuing
     /// draw calls.
     ///
-    virtual void paint(graphics::Engine* engine);
+    virtual void onPaintDraw(graphics::Engine* engine);
 
-    /// This virtual function is called once after the last call to paint(),
-    /// for example before the widget is destructed, and should be reimplemented
-    /// to release the allocated GPU resources.
+    /// This virtual function is called once after the last call to
+    /// onPaintDraw(), for example before the widget is destructed, or if
+    /// switching graphics engine. It should be reimplemented to destroy the
+    /// created GPU resources.
     ///
-    virtual void cleanup(graphics::Engine* engine);
+    virtual void onPaintDestroy(graphics::Engine* engine);
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.

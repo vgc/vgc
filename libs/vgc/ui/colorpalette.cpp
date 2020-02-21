@@ -35,7 +35,7 @@ ColorPaletteSharedPtr ColorPalette::create()
     return std::make_shared<ColorPalette>(ConstructorKey());
 }
 
-void ColorPalette::initialize(graphics::Engine* engine)
+void ColorPalette::onPaintCreate(graphics::Engine* engine)
 {
     core::FloatArray a;
     float x0 = 0.0;
@@ -68,18 +68,13 @@ void ColorPalette::initialize(graphics::Engine* engine)
     engine->loadTriangles(trianglesId_, a.data(), a.length());
 }
 
-void ColorPalette::resize(graphics::Engine* /*engine*/, Int /*w*/, Int /*h*/)
-{
-
-}
-
-void ColorPalette::paint(graphics::Engine* engine)
+void ColorPalette::onPaintDraw(graphics::Engine* engine)
 {
     engine->clear(currentColor());
     engine->drawTriangles(trianglesId_);
 }
 
-void ColorPalette::cleanup(graphics::Engine* engine)
+void ColorPalette::onPaintDestroy(graphics::Engine* engine)
 {
     engine->destroyTriangles(trianglesId_);
 }
