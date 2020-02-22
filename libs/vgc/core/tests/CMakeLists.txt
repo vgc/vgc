@@ -7,6 +7,7 @@ vgc_test_library(core
         test_zero.cpp
 
     PYTHON_TESTS
+        test_arithmetic.py
         test_arrays.py
         test_color.py
         test_format.py
