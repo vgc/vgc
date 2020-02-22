@@ -15,27 +15,18 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/arithmetic.h>
 
-void wrap_arithmetic(py::module& m);
-void wrap_arrays(py::module& m);
-void wrap_color(py::module& m);
-void wrap_exceptions(py::module& m);
-void wrap_format(py::module& m);
-void wrap_io(py::module& m);
-void wrap_object(py::module& m);
-void wrap_parse(py::module& m);
-void wrap_stopwatch(py::module& m);
-void wrap_vec2d(py::module& m);
+void wrap_arithmetic(py::module& m)
+{
+    // Note: we do wrap isClose despite the existence of Python's math.isclose,
+    // for consistency with isNear and the fact that we define it for Vec too.
 
-PYBIND11_MODULE(core, m) {
-    wrap_arithmetic(m);
-    wrap_arrays(m);
-    wrap_color(m);
-    wrap_exceptions(m);
-    wrap_format(m);
-    wrap_io(m);
-    wrap_object(m);
-    wrap_parse(m);
-    wrap_stopwatch(m);
-    wrap_vec2d(m);
+    m.def("isClose", [](double a, double b, double relTol, double absTol) {
+        return vgc::core::isClose(a, b, relTol, absTol); },
+        "a"_a, "b"_a, "relTol"_a = 1e-9 ,"absTol"_a = 0.0);
+
+    m.def("isNear", [](double a, double b, double relTol) {
+        return vgc::core::isNear(a, b, relTol); },
+        "a"_a, "b"_a, "relTol"_a);
 }

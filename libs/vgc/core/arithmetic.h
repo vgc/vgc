@@ -116,6 +116,7 @@
 /// haven't done it yet.
 ///
 
+#include <cmath> // isinf, fabs
 #include <limits>
 #include <type_traits>
 
@@ -595,6 +596,167 @@ T zero()
     T res;
     setZero(res);
     return res;
+}
+
+namespace internal {
+
+template<typename T>
+typename std::enable_if<std::is_floating_point<T>::value, bool>::type
+isClose(T a, T b, T relTol, T absTol)
+{
+    // Note: this implementation is inspired from Python math.isclose, but
+    // without error checking for negative tolerances. See:
+    // https://github.com/python/cpython/blob/master/Modules/mathmodule.c
+    if (a == b) {
+        // handle two equal infinities, and maybe speedup exact equality
+        return true;
+    }
+    if (std::isinf(a) || std::isinf(b)) {
+        // handle two opposite infinities, and finite/infinite comparisons
+        return false;
+    }
+    T diff = std::fabs(b - a);
+    return diff <= std::fabs(relTol * b) ||
+           diff <= std::fabs(relTol * a) ||
+           diff <= absTol;
+}
+
+template<typename T>
+typename std::enable_if<std::is_floating_point<T>::value, bool>::type
+isNear(T a, T b, T absTol)
+{
+    if (a == b) {
+        // handle two equal infinities, and maybe speedup exact equality
+        return true;
+    }
+    if (std::isinf(a) || std::isinf(b)) {
+        // handle two opposite infinities, and finite/infinite comparisons
+        return false;
+    }
+    T diff = std::fabs(b - a);
+    return diff <= absTol;
+}
+
+}
+
+/// Returns whether two float values are almost equal within some relative
+/// tolerance. For example, set `relTol` to 0.05 for testing if two values are
+/// almost equal within a 5% tolerance.
+///
+/// ```cpp
+/// float relTol = 0.05f;
+/// vgc::core::isClose(101.0f,  103.0f,  relTol); // true
+/// vgc::core::isClose(1.01f,   1.03f,   relTol); // true
+/// vgc::core::isClose(0.0101f, 0.0103f, relTol); // true
+///
+/// vgc::core::isClose(101.0f,  108.0f,  relTol); // false
+/// vgc::core::isClose(1.01f,   1.08f,   relTol); // false
+/// vgc::core::isClose(0.0101f, 0.0108f, relTol); // false
+/// ```
+///
+/// If given, `relTol` must be > 0. Its default value is `1e-5f`, which tests
+/// whether the two values are equal within about 5 decimal significant digits
+/// (floats have a precision of approximately 7 decimal digits). The behavior
+/// is undefined if `relTol` is negative or exactly equal to zero.
+///
+/// This function is appropriate for comparing whether non-zero values have
+/// similar magnitude and most significant digits (including for very small and
+/// very large non-zero values), but it is often not appropriate when one of
+/// the value could be exactly zero.
+///
+/// ```cpp
+/// vgc::core::isClose(1e-100f, 0.0f); // false
+/// ```
+///
+/// If one of the compared values could be exactly zero, we recommend using
+/// `isNear()` instead, which uses an absolute tolerance. Alternately, if you
+/// need both an absolute and relative tolerance, you can use the fourth
+/// argument of `isClose()`. If given, `absTol` must be >= 0, and its default
+/// value is exactly `0.0f`. The behavior is undefined if `absTol` is negative.
+///
+/// This function returns true when comparing two infinities of the same sign,
+/// but returns false when comparing two infinities of opposite sign, or
+/// comparing infinity with any finite value. This function also returns false
+/// if any of the arguments is NaN, including when both `a` and `b` are NaN.
+///
+/// If all values are finite, and the tolerances are positive (as they should),
+/// this function is equivalent to:
+///
+/// ```cpp
+/// abs(b-a) <= max(relTol * max(abs(a), abs(b)), absTol)
+/// ```
+///
+/// This function was inspired by the Python function `math.isclose()`, and has
+/// the same behavior, except that the default value for `relTol` was adjusted
+/// for single-precision floating point numbers.
+///
+VGC_CORE_API
+inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f)
+{
+    return internal::isClose(a, b, relTol, absTol);
+}
+
+/// Returns whether two double values are almost equal within some relative
+/// tolerance. Please see the documentation of the `float` overload for
+/// details.
+///
+/// Note that this overload has a default `relTol` of `1e-9`, which tests
+/// whether the two values are equal within about 9 decimal significant digits
+/// (doubles have a precision of approximately 15 decimal digits).
+///
+VGC_CORE_API
+inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.0)
+{
+    return internal::isClose(a, b, relTol, absTol);
+}
+
+/// Returns whether the absolute difference between two float values is within
+/// the given tolerance.
+///
+/// ```cpp
+/// float absTol = 0.05f;
+/// vgc::core::isNear(101.0f,  103.0f,  absTol); // false
+/// vgc::core::isNear(1.01f,   1.03f,   absTol); // true
+/// vgc::core::isNear(0.0101f, 0.0103f, absTol); // true
+///
+/// vgc::core::isNear(101.0f,  108.0f,  absTol); // false
+/// vgc::core::isNear(1.01f,   1.08f,   absTol); // false
+/// vgc::core::isNear(0.0101f, 0.0108f, absTol); // true
+///
+/// vgc::core::isNear(0.06f, 0.0f, absTol); // false
+/// vgc::core::isNear(0.04f, 0.0f, absTol); // true
+/// ```
+///
+/// The given `absTol` must be >= 0. The behavior is undefined if `absTol` is
+/// negative. Unlike `isClose()`, the tolerance has no default value, since the
+/// appropriate tolerance is specific to each use case, and independent from
+/// the floating point representation used.
+///
+/// This function returns true when comparing two infinities of the same sign,
+/// but returns false when comparing two infinities of opposite sign, or
+/// comparing infinity with any finite value. This function also returns false
+/// if any of the arguments is NaN, including when both `a` and `b` are NaN.
+///
+/// If all values are finite, this function is equivalent to:
+///
+/// ```cpp
+/// abs(a-b) <= absTol;
+/// ```
+///
+VGC_CORE_API
+inline bool isNear(float a, float b, float absTol)
+{
+    return internal::isNear(a, b, absTol);
+}
+
+/// Returns whether the absolute difference between two double values is within
+/// the given tolerance. Please see the documentation of the `float` overload
+/// for details.
+///
+VGC_CORE_API
+inline bool isNear(double a, double b, double absTol)
+{
+    return internal::isNear(a, b, absTol);
 }
 
 /// Returns the given value clamped to the interval [min, max]. If max < min,
