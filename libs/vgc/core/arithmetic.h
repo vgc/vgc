@@ -116,8 +116,8 @@
 /// haven't done it yet.
 ///
 
-#include <cmath> // isinf, fabs
-#include <limits>
+#include <cmath> // fabs
+#include <limits> // min, max, infinity
 #include <type_traits>
 
 #include <vgc/core/exceptions.h>
@@ -600,95 +600,137 @@ T zero()
 
 namespace internal {
 
+// Computes the difference `a - b`, but where two infinities of the same sign
+// are considered exactly equal, so their difference is zero.
+//
+// ```cpp
+// double inf = std::numeric_limits<double>::infinity();
+// std::cout << inf - inf << std::endl;         // "nan"
+// std::cout << infdiff(inf, inf) << std::endl; // "0"
+// }
+// ```
+//
+template<typename T>
+typename std::enable_if<std::is_floating_point<T>::value, T>::type
+infdiff(T a, T b)
+{
+    return (a == b) ? zero<T>() : (a - b);
+}
+
 template<typename T>
 typename std::enable_if<std::is_floating_point<T>::value, bool>::type
 isClose(T a, T b, T relTol, T absTol)
 {
-    // Note: this implementation is inspired from Python math.isclose, but
-    // without error checking for negative tolerances. See:
-    // https://github.com/python/cpython/blob/master/Modules/mathmodule.c
-    if (a == b) {
-        // handle two equal infinities, and maybe speedup exact equality
-        return true;
+    T diff = std::fabs(infdiff(a, b));
+    if (diff == std::numeric_limits<T>::infinity()) {
+        return false; // opposite infinities or finite/infinite mismatch
     }
-    if (std::isinf(a) || std::isinf(b)) {
-        // handle two opposite infinities, and finite/infinite comparisons
-        return false;
+    else {
+        return diff <= std::fabs(relTol * b) ||
+               diff <= std::fabs(relTol * a) ||
+               diff <= absTol;
     }
-    T diff = std::fabs(b - a);
-    return diff <= std::fabs(relTol * b) ||
-           diff <= std::fabs(relTol * a) ||
-           diff <= absTol;
 }
 
 template<typename T>
 typename std::enable_if<std::is_floating_point<T>::value, bool>::type
 isNear(T a, T b, T absTol)
 {
-    if (a == b) {
-        // handle two equal infinities, and maybe speedup exact equality
-        return true;
+    T diff = std::fabs(infdiff(a, b));
+    if (diff == std::numeric_limits<T>::infinity()) {
+        return false; // opposite infinities or finite/infinite mismatch
     }
-    if (std::isinf(a) || std::isinf(b)) {
-        // handle two opposite infinities, and finite/infinite comparisons
-        return false;
+    else {
+        return diff <= absTol;
     }
-    T diff = std::fabs(b - a);
-    return diff <= absTol;
 }
 
 }
 
 /// Returns whether two float values are almost equal within some relative
-/// tolerance. For example, set `relTol` to 0.05 for testing if two values are
-/// almost equal within a 5% tolerance.
+/// tolerance. For example, set `relTol` to `0.05f` for testing if two values
+/// are almost equal within a 5% tolerance.
 ///
 /// ```cpp
 /// float relTol = 0.05f;
-/// vgc::core::isClose(101.0f,  103.0f,  relTol); // true
-/// vgc::core::isClose(1.01f,   1.03f,   relTol); // true
-/// vgc::core::isClose(0.0101f, 0.0103f, relTol); // true
 ///
-/// vgc::core::isClose(101.0f,  108.0f,  relTol); // false
-/// vgc::core::isClose(1.01f,   1.08f,   relTol); // false
-/// vgc::core::isClose(0.0101f, 0.0108f, relTol); // false
+/// vgc::core::isClose(101.0f,  103.0f,  relTol); // true: 103.0  <= 101.0  + 5%
+/// vgc::core::isClose(1.01f,   1.03f,   relTol); // true: 1.03   <= 1.01   + 5%
+/// vgc::core::isClose(0.0101f, 0.0103f, relTol); // true: 0.0103 <= 0.0101 + 5%
+///
+/// vgc::core::isClose(101.0f,  108.0f,  relTol); // false: 108.0  > 101.0  + 5%
+/// vgc::core::isClose(1.01f,   1.08f,   relTol); // false: 1.08   > 1.01   + 5%
+/// vgc::core::isClose(0.0101f, 0.0108f, relTol); // false: 0.0108 > 0.0101 + 5%
+///
+/// vgc::core::isClose(1e-50f, 0.0f, relTol); // false: 1e-50f > 0.0 + 5%
 /// ```
 ///
-/// If given, `relTol` must be > 0. Its default value is `1e-5f`, which tests
-/// whether the two values are equal within about 5 decimal significant digits
-/// (floats have a precision of approximately 7 decimal digits). The behavior
-/// is undefined if `relTol` is negative or exactly equal to zero.
-///
-/// This function is appropriate for comparing whether non-zero values have
-/// similar magnitude and most significant digits (including for very small and
-/// very large non-zero values), but it is often not appropriate when one of
-/// the value could be exactly zero.
+/// If you need an absolute tolerance (which is especially important if one the
+/// given values could be exactly zero), you should typically use `isNear()`
+/// instead:
 ///
 /// ```cpp
-/// vgc::core::isClose(1e-100f, 0.0f); // false
+/// float absTol = 0.05f;
+///
+/// vgc::core::isNear(101.0f,  103.0f,  absTol); // false: 103.0  - 101.0  >  0.05
+/// vgc::core::isNear(1.01f,   1.03f,   absTol); // true:  1.03   - 1.01   <= 0.05
+/// vgc::core::isNear(0.0101f, 0.0103f, absTol); // true:  0.0103 - 0.0101 <= 0.05
+///
+/// vgc::core::isNear(101.0f,  108.0f,  absTol); // false: 108.0  - 101.0  >  0.05
+/// vgc::core::isNear(1.01f,   1.08f,   absTol); // false: 1.08   - 1.01   >  0.05
+/// vgc::core::isNear(0.0101f, 0.0108f, absTol); // true:  0.0108 - 0.0101 <= 0.05
+///
+/// vgc::core::isNear(1e-50f, 0.0f, relTol); // true:  1e-50 - 0.0 <= 0.05
 /// ```
 ///
-/// If one of the compared values could be exactly zero, we recommend using
-/// `isNear()` instead, which uses an absolute tolerance. Alternately, if you
-/// need both an absolute and relative tolerance, you can use the fourth
-/// argument of `isClose()`. If given, `absTol` must be >= 0, and its default
-/// value is exactly `0.0f`. The behavior is undefined if `absTol` is negative.
+/// If you need both a relative and an absolute tolerance (which should rarely
+/// be the case), then you can use the fourth argument of `isClose()`, which is
+/// `0.0f` by default:
 ///
-/// This function returns true when comparing two infinities of the same sign,
-/// but returns false when comparing two infinities of opposite sign, or
-/// comparing infinity with any finite value. This function also returns false
-/// if any of the arguments is NaN, including when both `a` and `b` are NaN.
+/// ```cpp
+/// float relTol = 0.05f;
+/// float absTol = 0.05f;
 ///
-/// If all values are finite, and the tolerances are positive (as they should),
-/// this function is equivalent to:
+/// vgc::core::isClose(101.0f,  103.0f,  relTol, absTol); // true: 103.0  <= 101.0  + 5%
+/// vgc::core::isClose(1.01f,   1.03f,   relTol, absTol); // true: 1.03   <= 1.01   + 5%
+/// vgc::core::isClose(0.0101f, 0.0103f, relTol, absTol); // true: 0.0103 <= 0.0101 + 5%
+///
+/// vgc::core::isClose(101.0f,  108.0f,  relTol, absTol); // false: difference is > 5% and > 0.05
+/// vgc::core::isClose(1.01f,   1.08f,   relTol, absTol); // false: difference is > 5% and > 0.05
+/// vgc::core::isClose(0.0101f, 0.0108f, relTol, absTol); // true:  0.0108 - 0.0101 <= 0.05
+///
+/// vgc::core::isClose(1e-50f, 0.0f, relTol, absTol); // true:  1e-50 - 0.0 <= 0.05
+/// ```
+///
+/// The default `relTol` is `1e-5f`, which tests whether the two values are
+/// equal within about 5 decimal significant digits (floats have a precision of
+/// approximately 7 decimal digits). If you provide your own `relTol`, it must
+/// be strictly positive, otherwise the behavior is undefined.
+///
+/// If you need to test for exact equality, you can use `isNear(a, b, 0.0f)`,
+/// which safely accepts a tolerance of exactly zero.
+///
+/// Note how `isClose()` is appropriate for comparing whether non-zero values
+/// have the same magnitude and share several most significant digits. It works
+/// well for either very small or very large non-zero values. However, it is
+/// not suitable to use when one of the compared value could be exactly zero,
+/// in which case you probably should be using `isNear()` instead.
+///
+/// Both the `isClose()` and `isNear()` functions return true when comparing
+/// two infinities of the same sign, return false when comparing two infinities
+/// of opposite sign, return false when comparing an infinite value with a
+/// finite value, and return false if any of the compared value is NaN,
+/// including when both `a` and `b` are NaN.
+///
+/// If all values are finite, and the tolerances are positive (as they should,
+/// otherwise the behavior is undefined), this function is equivalent to:
 ///
 /// ```cpp
 /// abs(b-a) <= max(relTol * max(abs(a), abs(b)), absTol)
 /// ```
 ///
-/// This function was inspired by the Python function `math.isclose()`, and has
-/// the same behavior, except that the default value for `relTol` was adjusted
-/// for single-precision floating point numbers.
+/// This function has the same behavior as the builtin Python function
+/// `math.isclose()`.
 ///
 VGC_CORE_API
 inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f)
@@ -715,29 +757,29 @@ inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.
 ///
 /// ```cpp
 /// float absTol = 0.05f;
-/// vgc::core::isNear(101.0f,  103.0f,  absTol); // false
-/// vgc::core::isNear(1.01f,   1.03f,   absTol); // true
-/// vgc::core::isNear(0.0101f, 0.0103f, absTol); // true
-///
-/// vgc::core::isNear(101.0f,  108.0f,  absTol); // false
-/// vgc::core::isNear(1.01f,   1.08f,   absTol); // false
-/// vgc::core::isNear(0.0101f, 0.0108f, absTol); // true
-///
-/// vgc::core::isNear(0.06f, 0.0f, absTol); // false
-/// vgc::core::isNear(0.04f, 0.0f, absTol); // true
+/// vgc::core::isNear(42.00f, 42.04f,  absTol); // true
+/// vgc::core::isNear(42.00f, 42.06f,  absTol); // false
 /// ```
 ///
-/// The given `absTol` must be >= 0. The behavior is undefined if `absTol` is
-/// negative. Unlike `isClose()`, the tolerance has no default value, since the
-/// appropriate tolerance is specific to each use case, and independent from
-/// the floating point representation used.
+/// The given `absTol` must be positive, otherwise the behavior is undefined.
+/// If you need to test for exact equality, you can use `isNear(a, b, 0.0f)`.
 ///
-/// This function returns true when comparing two infinities of the same sign,
-/// but returns false when comparing two infinities of opposite sign, or
-/// comparing infinity with any finite value. This function also returns false
-/// if any of the arguments is NaN, including when both `a` and `b` are NaN.
+/// There is no default value for `absTol`, because the appropriate tolerance
+/// is specific to each use case, and there is no "one size fits all" value.
+/// For example, if you are comparing whether two widgets have nearly the same
+/// size in virtual pixels, a tolerance of 0.1 is probably enough. But if you
+/// are comparing whether two opacity values in the range [0, 1] are nearly
+/// equal, you probably want a tolerance less than 0.01.
 ///
-/// If all values are finite, this function is equivalent to:
+/// If you need a relative tolerance rather than an absolute tolerance, you
+/// should use `isClose()` instead. Please refer to the documentation of
+/// `isClose()` for a detailed comparison of when you need `isClose()` and when
+/// you need `isNear()`, and a detailed description of how both functions
+/// handle infinite and NaN values.
+///
+/// If all values are finite, and the given tolerance is positive (as it
+/// should, otherwise the behavior is undefined), this function is equivalent
+/// to:
 ///
 /// ```cpp
 /// abs(a-b) <= absTol;

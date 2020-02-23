@@ -26,6 +26,10 @@ class TestArithmetic(unittest.TestCase):
     def testIsClose(self):
         relTol = 0.05
         absTol = 0.05
+        self.assertTrue(isClose(0.0, 0.0, relTol))
+        self.assertTrue(isClose(42.0, 42.0, relTol))
+        self.assertTrue(isClose(0.0, 0.0, 0.0))
+        self.assertTrue(isClose(42.0, 42.0, 0.0))
         self.assertTrue(isClose(101.0,  103.0,  relTol))
         self.assertTrue(isClose(1.01,   1.03,   relTol))
         self.assertTrue(isClose(0.0101, 0.0103, relTol))
@@ -60,6 +64,10 @@ class TestArithmetic(unittest.TestCase):
 
     def testIsNear(self):
         absTol = 0.05
+        self.assertTrue(isNear(0.0, 0.0, absTol))
+        self.assertTrue(isNear(42.0, 42.0, absTol))
+        self.assertTrue(isNear(0.0, 0.0, 0.0))
+        self.assertTrue(isNear(42.0, 42.0, 0.0))
         self.assertFalse(isNear(101.0,  103.0,  absTol))
         self.assertTrue(isNear(1.01,   1.03,   absTol))
         self.assertTrue(isNear(0.0101, 0.0103, absTol))
@@ -69,6 +77,8 @@ class TestArithmetic(unittest.TestCase):
         self.assertTrue(isNear(1e-100, 0.0, absTol))
         self.assertTrue(isNear(math.inf, math.inf, absTol))
         self.assertTrue(isNear(-math.inf, -math.inf, absTol))
+        self.assertTrue(isNear(math.inf, math.inf, 0.0))
+        self.assertTrue(isNear(-math.inf, -math.inf, 0.0))
         self.assertFalse(isNear(math.inf, -math.inf, absTol))
         self.assertFalse(isNear(-math.inf, math.inf, absTol))
         self.assertFalse(isNear(math.inf, 1.0, absTol))
