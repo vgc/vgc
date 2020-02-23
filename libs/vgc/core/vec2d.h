@@ -235,8 +235,226 @@ public:
         return Vec2d(*this).orthogonalize();
     }
 
+    /// Returns whether this Vec2d `a` and the given Vec2d `b` are almost equal
+    /// within some relative tolerance. If all values are finite, this function
+    /// is equivalent to:
+    ///
+    /// ```cpp
+    /// (b-a).length() <= max(relTol * max(a.length(), b.length()), absTol)
+    /// ```
+    ///
+    /// If you need a per-coordinate comparison rather than using the euclidean
+    /// distance, you should use `allClose()` instead.
+    ///
+    /// If you need an absolute tolerance (which is especially important if one
+    /// of the given vectors could be exactly zero), you should use `isNear()`
+    /// or `allNear()` instead. Please refer to the documentation of
+    /// `isClose(float, float)` for a general discussion about the differences
+    /// between `isClose()` and `isNear()`.
+    ///
+    /// If any coordinate is NaN, this function returns false. Two coordinates
+    /// equal to infinity with the same sign are considered close. Two
+    /// coordinates equal to infinity with opposite signs are (obviously) not
+    /// considered close.
+    ///
+    /// ```cpp
+    /// double inf = std::numeric_limits<double>::infinity();
+    /// Vec2d(inf, inf).isClose(Vec2d(inf, inf));  // true
+    /// Vec2d(inf, inf).isClose(Vec2d(inf, -inf)); // false
+    /// ```
+    ///
+    /// If some coordinates are infinite and some others are finite, the
+    /// behavior can in some cases be surprising, but actually makes sense:
+    ///
+    /// ```cpp
+    /// Vec2d(inf, inf).isClose(Vec2d(inf, 42)); // false
+    /// Vec2d(inf, 42).isClose(Vec2d(inf, 42));  // true
+    /// Vec2d(inf, 42).isClose(Vec2d(inf, 43));  // true (yes!)
+    /// ```
+    ///
+    /// Notice how the last one returns true even though `isClose(42, 43)`
+    /// returns false. This is because for a sufficiently large x, the distance
+    /// between `Vec2d(x, 42)` and `Vec2d(x, 43)`, which is always equal to 1,
+    /// is indeed negligible compared to their respective length, which
+    /// approaches infinity as x approaches infinity. For example, the
+    /// following also returns true:
+    ///
+    /// ```cpp
+    /// Vec2d(1e20, 42).isClose(Vec2d(1e20, 43)); // true
+    /// ```
+    ///
+    /// Note that `allClose()` returns false in these cases, which may or may
+    /// not be what you need depending on your situation. In case of doubt,
+    /// `isClose` is typically the better choice.
+    ///
+    /// ```cpp
+    /// Vec2d(inf, 42).allClose(Vec2d(inf, 43));   // false
+    /// Vec2d(1e20, 42).allClose(Vec2d(1e20, 43)); // false
+    /// ```
+    ///
+    bool isClose(const Vec2d& b, double relTol = 1e-9, double absTol = 0.0) const
+    {
+        const Vec2d& a = *this;
+        double diff2 = a.infdiff_(b).squaredLength();
+        if (diff2 == std::numeric_limits<double>::infinity()) {
+            return false; // opposite infinities or finite/infinite mismatch
+        }
+        else {
+            double relTol2 = relTol * relTol;
+            double absTol2 = absTol * absTol;
+            return diff2 <= relTol2 * b.squaredLength() ||
+                   diff2 <= relTol2 * a.squaredLength() ||
+                   diff2 <= absTol2;
+        }
+    }
+
+    /// Returns whether all coordinates in this Vec2d `a` are almost equal to
+    /// their corresponding coordinate in the given Vec2d `b`, within some
+    /// relative tolerance. this function is equivalent to:
+    ///
+    /// ```cpp
+    /// isClose(a[0], b[0], relTol, absTol) && isClose(a[1], b[1], relTol, absTol)
+    /// ```
+    ///
+    /// This is similar to `a.isClose(b)`, but completely decorellates the X
+    /// and Y coordinates, which may be preferrable if the two given Vec2d do
+    /// not represent points/vectors in the euclidean plane, but more abstract
+    /// parameters.
+    ///
+    /// If you need an absolute tolerance (which is especially important if one
+    /// of the given vectors could be exactly zero), you should use `isNear()`
+    /// or `allNear()` instead.
+    ///
+    /// Please refer to `isClose(float, float)` for more details on
+    /// NaN/infinity handling, and a general discussion about the differences
+    /// between `isClose()` and `isNear()`.
+    ///
+    /// Using `allClose()` is typically faster than `isClose()` since it
+    /// doesn't have to compute (squared) distances, but beware that
+    /// `allClose()` isn't a true "euclidean proximity" test, and in particular
+    /// it is not invariant to rotation of the coordinate system, and will
+    /// behave very differently if one of the coordinates is exactly or near
+    /// zero:
+    ///
+    /// ```cpp
+    /// vgc::core::Vec2d a(1.0, 0.0);
+    /// vgc::core::Vec2d b(1.0, 1e-10);
+    /// a.isClose(b);  // true because (b-a).length() <= relTol * a.length()
+    /// a.allClose(b); // false because isClose(0.0, 1e-10) == false
+    /// ```
+    ///
+    /// In other words, `a` and `b` are relatively close to each others as 2D
+    /// points, even though their Y coordinates are not relatively close to
+    /// each others.
+    ///
+    bool allClose(const Vec2d& b, double relTol = 1e-9, double absTol = 0.0) const
+    {
+        const Vec2d& a = *this;
+        return core::isClose(a[0], b[0], relTol, absTol) &&
+               core::isClose(a[1], b[1], relTol, absTol);
+    }
+
+    /// Returns whether the euclidean distance between this Vec2d `a` and the
+    /// given Vec2d `b` is smaller or equal than the given absolute tolerance.
+    /// In other words, this returns whether `b` is contained in the disk of
+    /// center `a` and radius `absTol`. If all values are finite, this function
+    /// is equivalent to:
+    ///
+    /// ```cpp
+    /// (b-a).length() <= absTol
+    /// ```
+    ///
+    /// If you need a per-coordinate comparison rather than using the euclidean
+    /// distance, you should use `allNear()` instead.
+    ///
+    /// If you need a relative tolerance rather than an absolute tolerance, you
+    /// should use `isClose()` instead. Please refer to the documentation of
+    /// isClose(float, float) for a general discussion about the differences
+    /// between isClose() and isNear().
+    ///
+    /// If any coordinate is NaN, this function returns false. Two coordinates
+    /// equal to infinity with the same sign are considered near. Two
+    /// coordinates equal to infinity with opposite signs are (obviously) not
+    /// considered near. If some coordinates are infinite and some others are
+    /// finite, the behavior is as per intuition:
+    ///
+    /// ```cpp
+    /// double inf = std::numeric_limits<double>::infinity();
+    /// double relTol = 0.5;
+    /// Vec2d(inf, inf).isNear(Vec2d(inf, inf), relTol);  // true
+    /// Vec2d(inf, inf).isNear(Vec2d(inf, -inf), relTol); // false
+    /// Vec2d(inf, inf).isNear(Vec2d(inf, 42), relTol);   // false
+    /// Vec2d(inf, 42).isNear(Vec2d(inf, 42), relTol);    // true
+    /// Vec2d(inf, 42).isNear(Vec2d(inf, 42.4), relTol);  // true
+    /// Vec2d(inf, 42).isNear(Vec2d(inf, 42.6), relTol);  // false
+    /// ```
+    ///
+    bool isNear(const Vec2d& b, double absTol) const
+    {
+        const Vec2d& a = *this;
+        double diff2 = a.infdiff_(b).squaredLength();
+        if (diff2 == std::numeric_limits<double>::infinity()) {
+            return false; // opposite infinities or finite/infinite mismatch
+        }
+        else {
+            double absTol2 = absTol * absTol;
+            return diff2 <= absTol2;
+        }
+    }
+
+    /// Returns whether all coordinates in this Vec2d `a` are within some
+    /// absolute tolerance of their corresponding coordinate in the given Vec2d
+    /// `b`. this function is equivalent to:
+    ///
+    /// ```cpp
+    /// isNear(a[0], b[0], absTol) && isNear(a[1], b[1], absTol)
+    /// ```
+    ///
+    /// Which, if all coordinates are finite, is equivalent to:
+    ///
+    /// ```cpp
+    /// abs(a[0]-b[0]) <= absTol && abs(a[1]-b[1]) <= absTol
+    /// ```
+    ///
+    /// This is similar to `a.isNear(b)`, but completely decorellates the X and
+    /// Y coordinates, which may be preferrable if the two given Vec2d do not
+    /// represent points/vectors in the euclidean plane, but more abstract
+    /// parameters.
+    ///
+    /// If you need a relative tolerance rather than an absolute tolerance, you
+    /// should use `isClose()` or `allClose()` instead.
+    ///
+    /// Please refer to `isClose(float, float)` for more details on NaN/infinity
+    /// handling, and a discussion about the differences between `isClose()` and
+    /// `isNear()`.
+    ///
+    /// Using `allNear()` is typically faster than `isNear()`, since it doesn't
+    /// have to compute (squared) distances. However, beware that `allNear()`
+    /// isn't a true euclidean proximity test, and in particular it isn't
+    /// invariant to rotation of the coordinate system, which may or not matter
+    /// depending on the situation.
+    ///
+    /// A good use case for `allNear()` is to determine whether the size of a
+    /// rectangle (e.g., the size of a widget) has changed, in which case a
+    /// true euclidean test isn't really meaningful anyway, and the performance
+    /// gain of using `allNear()` can be useful.
+    ///
+    bool allNear(const Vec2d& b, double absTol) const
+    {
+        const Vec2d& a = *this;
+        return core::isNear(a[0], b[0], absTol) &&
+               core::isNear(a[1], b[1], absTol);
+    }
+
 private:
     double data_[2];
+
+    Vec2d infdiff_(const Vec2d& b) const
+    {
+        const Vec2d& a = *this;
+        return Vec2d(internal::infdiff(a[0], b[0]),
+                     internal::infdiff(a[1], b[1]));
+    }
 };
 
 /// Overloads setZero(T& x).

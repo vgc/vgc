@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/pybind11.h>
+#include <vgc/core/wraps/common.h>
 #include <pybind11/operators.h>
 #include <vgc/core/vec2d.h>
 
@@ -67,6 +67,11 @@ void wrap_vec2d(py::module& m)
         .def("normalized", &Vec2d::normalized)
         .def("orthogonalize", &Vec2d::orthogonalize)
         .def("orthogonalized", &Vec2d::orthogonalized)
+
+        .def("isClose",  &Vec2d::isClose,  "b"_a, "relTol"_a = 1e-9, "absTol"_a = 0.0)
+        .def("allClose", &Vec2d::allClose, "b"_a, "relTol"_a = 1e-9, "absTol"_a = 0.0)
+        .def("isNear",   &Vec2d::isNear,   "b"_a, "absTol"_a)
+        .def("allNear",  &Vec2d::allNear,  "b"_a, "absTol"_a)
 
         .def("__repr__", [](const Vec2d& v) { return toString(v); })
     ;
