@@ -68,9 +68,7 @@ wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
         .def("normalized", &This::normalized)
         .def("orthogonalize", &This::orthogonalize)
         .def("orthogonalized", &This::orthogonalized)
-
-        //.def("dot", &vgc::core::dot); // TODO
-
+        .def("dot", &This::dot)
         .def("isClose",  &This::isClose,  "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("allClose", &This::allClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("isNear",   &This::isNear,   "b"_a, "absTol"_a)

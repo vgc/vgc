@@ -240,6 +240,17 @@ public:
         return Vec2f(*this).orthogonalize();
     }
 
+    /// Returns the dot product between this Vec2f `a` and the given Vec2f `b`.
+    ///
+    /// ```cpp
+    /// float d = a.dot(b); // equivalent to a[0]*b[0] + a[1]*b[1]
+    /// ```
+    ///
+    float dot(const Vec2f& b) {
+        const Vec2f& a = *this;
+        return a[0]*b[0] + a[1]*b[1];
+    }
+
     /// Returns whether this Vec2f `a` and the given Vec2f `b` are almost equal
     /// within some relative tolerance. If all values are finite, this function
     /// is equivalent to:
@@ -470,12 +481,6 @@ inline void setZero(Vec2f& v)
 {
     v[0] = 0.0f;
     v[1] = 0.0f;
-}
-
-/// Returns the dot product between the two given Vec2f.
-///
-inline float dot(const Vec2f& v1, const Vec2f& v2) {
-    return v1[0]*v2[0] + v1[1]*v2[1];
 }
 
 /// Writes the given Vec2f to the output stream.
