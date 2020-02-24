@@ -36,6 +36,7 @@ vgc_add_library(core
         stringid.h
         vec2d.h
         vec2darray.h
+        vec2f.h
 
         internal/containerutil.h
 
@@ -57,6 +58,7 @@ vgc_add_library(core
         stopwatch.cpp
         stringid.cpp
         vec2d.cpp
+        vec2f.cpp
 
     COMPILE_DEFINITIONS
 )
