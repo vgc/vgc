@@ -261,7 +261,7 @@ std::vector<core::Vec2d> Curve::triangulate(
             //
             failedQuads.clear();
             for (int i = 0; i < numQuads; ++i) {
-                if (dot(normals[i], normals[i+1]) < cosMaxAngle) {
+                if (normals[i].dot(normals[i+1]) < cosMaxAngle) {
                     failedQuads.push_back(i);
                 }
             }
