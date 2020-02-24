@@ -17,7 +17,7 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit ./tools/vec2.cpp, and re-run ./tools/vec2.py.
 
-#include <vgc/core/vec2d.h>
+#include <vgc/core/vec2f.h>
 
 namespace vgc {
 namespace core {
