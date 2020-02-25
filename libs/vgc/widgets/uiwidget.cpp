@@ -65,9 +65,10 @@ UiWidget::~UiWidget()
 
 namespace {
 
-ui::MouseEventSharedPtr convertEvent(QMouseEvent* /*event*/)
+ui::MouseEventSharedPtr convertEvent(QMouseEvent* event)
 {
-    return ui::MouseEvent::create();
+    const QPointF& p = event->localPos();
+    return ui::MouseEvent::create(fromQtf(p));
 }
 
 } // namespace

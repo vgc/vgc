@@ -19,16 +19,17 @@
 namespace vgc {
 namespace ui {
 
-MouseEvent::MouseEvent(const ConstructorKey&) :
-    Event(Event::ConstructorKey())
+MouseEvent::MouseEvent(const ConstructorKey&, const core::Vec2f& pos) :
+    Event(Event::ConstructorKey()),
+    pos_(pos)
 {
 
 }
 
 /* static */
-MouseEventSharedPtr MouseEvent::create()
+MouseEventSharedPtr MouseEvent::create(const core::Vec2f& pos)
 {
-    return std::make_shared<MouseEvent>(ConstructorKey());
+    return std::make_shared<MouseEvent>(ConstructorKey(), pos);
 }
 
 } // namespace ui

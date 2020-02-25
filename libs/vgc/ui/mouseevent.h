@@ -17,6 +17,7 @@
 #ifndef VGC_UI_MOUSEEVENT_H
 #define VGC_UI_MOUSEEVENT_H
 
+#include <vgc/core/vec2f.h>
 #include <vgc/ui/event.h>
 
 namespace vgc {
@@ -35,12 +36,39 @@ public:
     /// This is an implementation details. Please use
     /// MouseEvent::create() instead.
     ///
-    MouseEvent(const ConstructorKey&);
+    MouseEvent(const ConstructorKey&, const core::Vec2f& pos);
 
 public:
     /// Creates a MouseEvent.
     ///
-    static MouseEventSharedPtr create();
+    static MouseEventSharedPtr create(const core::Vec2f& pos);
+
+    /// Returns the position of the mouse cursor, in local coordinates, when
+    /// the event occurs.
+    ///
+    const core::Vec2f& pos() const
+    {
+        return pos_;
+    }
+
+    /// Returns the X-coordinate of the position of the mouse cursor, in local
+    /// coordinates, when the event occurs. This is equivalent to `pos()[0]`.
+    ///
+    float x() const
+    {
+        return pos_[0];
+    }
+
+    /// Returns the Y-coordinate of the position of the mouse cursor, in local
+    /// coordinates, when the event occurs. This is equivalent to `pos()[1]`.
+    ///
+    float y() const
+    {
+        return pos_[1];
+    }
+
+private:
+    core::Vec2f pos_;
 };
 
 } // namespace ui
