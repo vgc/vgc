@@ -71,8 +71,8 @@ template<typename T>
 void testWriteIntegers()
 {
     testWriteInteger<T>(0);
-    testWriteInteger<T>(vgc::internal::type_min<T>::value);
-    testWriteInteger<T>(vgc::internal::type_max<T>::value);
+    testWriteInteger<T>(vgc::core::tmin_<T>::value);
+    testWriteInteger<T>(vgc::core::tmax_<T>::value);
 }
 
 TEST(TestFormat, WriteIntegers)

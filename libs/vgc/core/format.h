@@ -59,6 +59,7 @@ namespace core {
 // this to later.
 //
 using fmt::format;
+using fmt::print;
 
 /// Writes the given `char` to the given output stream.
 ///

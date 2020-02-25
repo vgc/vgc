@@ -188,7 +188,7 @@ template<typename IntType, typename IStream>
 typename std::enable_if<std::is_integral<IntType>::value, IntType>::type
 readUnsignedInteger(IStream& in)
 {
-    constexpr IntType n = vgc::internal::type_max<IntType>::value;
+    constexpr IntType n = core::tmax_<IntType>::value;
     constexpr IntType m = n / 10;
     constexpr IntType k = n % 10;
     char c = readFirstNonWhitespaceCharacter(in);
@@ -245,7 +245,7 @@ readSignedIntegerImpl(IStream& in)
     else {
         // We parse as a UIntType to ensure it handles IntMin correctly
         using UIntType = typename std::make_unsigned<SIntType>::type;
-        constexpr SIntType imin = vgc::internal::type_min<SIntType>::value;
+        constexpr SIntType imin = vgc::core::tmin_<SIntType>::value;
         constexpr UIntType umin = static_cast<UIntType>(imin);
         UIntType u = readUnsignedInteger<UIntType>(in);
         if (u < umin) {
