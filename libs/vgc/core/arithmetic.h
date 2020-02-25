@@ -879,6 +879,8 @@ typename std::enable_if<
     std::is_integral<IntType>::value, IntType>::type
 ifloor(FloatType x)
 {
+    constexpr IntType tmini = tmin_<IntType>::value;
+    constexpr IntType tmaxi = tmax_<IntType>::value;
     constexpr FloatType tminf = static_cast<FloatType>(tmin_<IntType>::value);
     constexpr FloatType tmaxf = static_cast<FloatType>(tmax_<IntType>::value);
     // Note: the outer "if" should be optimized out at compile time based on FloatType and IntType
@@ -886,12 +888,12 @@ ifloor(FloatType x)
         if (x < tminf) {
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Min = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmin_<IntType>::value));
+                int_typename<IntType>(), x, int_typename<IntType>(), tmini));
         }
         else if (x >= 1 + tmaxf) {
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Max = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmax_<IntType>::value));
+                int_typename<IntType>(), x, int_typename<IntType>(), tmaxi));
         }
         else {
             return static_cast<IntType>(std::floor(x));
@@ -901,12 +903,12 @@ ifloor(FloatType x)
         if (x < tminf) {
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Min = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmin_<IntType>::value));
+                int_typename<IntType>(), x, int_typename<IntType>(), tmini));
         }
         else if (x >= tmaxf) { // See test_arithmetic.cpp for why "+1" is unnecessary
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Max = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmax_<IntType>::value));
+                int_typename<IntType>(), x, int_typename<IntType>(), tmaxi));
         }
         else {
             return static_cast<IntType>(std::floor(x));
