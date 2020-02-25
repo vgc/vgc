@@ -61,9 +61,19 @@ QPointF toQt(const core::Vec2d& v)
     return QPointF(v[0], v[1]);
 }
 
-core::Vec2d fromQt(const QPointF& v)
+QPointF toQt(const core::Vec2f& v)
+{
+    return QPointF(v[0], v[1]);
+}
+
+core::Vec2d fromQtd(const QPointF& v)
 {
     return core::Vec2d(v.x(), v.y());
+}
+
+core::Vec2f fromQtf(const QPointF& v)
+{
+    return core::Vec2f(v.x(), v.y());
 }
 
 } // namespace widgets
