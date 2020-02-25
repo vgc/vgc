@@ -782,7 +782,7 @@ public:
     Int maxLength() const noexcept {
         // TODO: enforce length() <= maxLength.
         // See comment in length().
-        return vgc::internal::type_max<Int>::value;
+        return vgc::core::tmax_<Int>::value;
     }
 
     /// Increases the resevedLength() of this Array, that is, the maximum

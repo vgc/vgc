@@ -40,12 +40,11 @@
 /// By default, the `vgc::Int` and `vgc::UInt` types are 64-bit, unless
 /// `VGC_CORE_USE_32BIT_INT` is defined, in which case they are 32-bit.
 ///
-/// Note that these integer types and other integer-related utilities (e.g.,
-/// `vgc::IntMax`, `vgc::int_cast<T>`) are defined directly in the `vgc`
-/// namespace, not in `vgc::core`. This is a rare exception to our namespace
-/// conventions, justified by the widespread use of integer types, and the fact
-/// that they are not wrapped in Python anyway (i.e., there is no need to be
-/// consistent with our Python module conventions).
+/// Note that these integer types are defined directly in the `vgc` namespace,
+/// not in `vgc::core`. This is a rare exception to our namespace conventions,
+/// justified by the widespread use of integer types, and the fact that they
+/// are not wrapped in Python anyway (i.e., there is no need to be consistent
+/// with our Python module conventions).
 ///
 /// ## Rationale
 ///
@@ -116,7 +115,7 @@
 /// haven't done it yet.
 ///
 
-#include <cmath> // fabs
+#include <cmath> // fabs, nextafter
 #include <limits> // min, max, infinity
 #include <type_traits>
 
@@ -182,130 +181,140 @@ using UInt64 = std::uint64_t;
     using UInt = UInt64;
 #endif
 
-namespace internal {
+namespace core {
 
-// We need this additional level of indirection to workaround a bug in MSVC.
-// See: https://stackoverflow.com/questions/59743372
-//
-// Once we require C++14, we could use a more elegant solution based on
-// variable templates:
-//
-//   template<typename T>
-//   constexpr T type_max = (std::numeric_limits<T>::max)();
-//
-// Once we require C++17, we could use an even more elegant solution based on
-// "if constexpr" rather than SFINAE.
-//
-// Note: The extra parentheses around std::numeric_limits<T>::min/max avoid
-// potential problems with min/max macros in WinDef.h.
-//
+/// Returns the maximum value representable by the given type.
+///
+/// ```cpp
+/// int m = vgc::core::tmax_<Int8>::value; // 127
+/// ```
+///
+/// This is equivalent to `(std::numeric_limits<T>::max)()`, but avoids the
+/// naming conflicts caused by the min/max macros in `<Windows.h>`.
+///
+/// Once we require C++14, we will define the variable template
+/// `vgc::core::tmax<T>`, and deprecate the use of
+/// `vgc::core::tmax_<T>::value`.
+///
 template<typename T>
-struct type_max {
+struct tmax_ {
     static constexpr T value = (std::numeric_limits<T>::max)();
 };
+
+/// Returns the minimum value representable by the given type.
+///
+/// ```cpp
+/// int m = vgc::core::tmin_<Int8>::value; // -128
+/// ```
+///
+/// This is equivalent to `(std::numeric_limits<T>::min)()`, but avoids the
+/// naming conflicts caused by the min/max macros in `<Windows.h>`.
+///
+/// Once we require C++14, we will define the variable template
+/// `vgc::core::tmin<T>`, and deprecate the use of
+/// `vgc::core::tmin_<T>::value`.
+///
 template<typename T>
-struct type_min {
+struct tmin_ {
     static constexpr T value = (std::numeric_limits<T>::min)();
 };
 
-} // namespace internal
-
 /// Maximum value of an Int.
 ///
-constexpr Int IntMax = internal::type_max<Int>::value;
+constexpr Int IntMax = tmax_<Int>::value;
 
 /// Maximum value of an Int8.
 ///
-constexpr Int8 Int8Max = internal::type_max<Int8>::value;
+constexpr Int8 Int8Max = tmax_<Int8>::value;
 
 /// Maximum value of an Int16.
 ///
-constexpr Int16 Int16Max = internal::type_max<Int16>::value;
+constexpr Int16 Int16Max = tmax_<Int16>::value;
 
 /// Maximum value of an Int32.
 ///
-constexpr Int32 Int32Max = internal::type_max<Int32>::value;
+constexpr Int32 Int32Max = tmax_<Int32>::value;
 
 /// Maximum value of an Int64.
 ///
-constexpr Int64 Int64Max = internal::type_max<Int64>::value;
+constexpr Int64 Int64Max = tmax_<Int64>::value;
 
 /// Maximum value of a UInt.
 ///
-constexpr UInt UIntMax = internal::type_max<UInt>::value;
+constexpr UInt UIntMax = tmax_<UInt>::value;
 
 /// Maximum value of a UInt8.
 ///
-constexpr UInt8 UInt8Max = internal::type_max<UInt8>::value;
+constexpr UInt8 UInt8Max = tmax_<UInt8>::value;
 
 /// Maximum value of a UInt16.
 ///
-constexpr UInt16 UInt16Max = internal::type_max<UInt16>::value;
+constexpr UInt16 UInt16Max = tmax_<UInt16>::value;
 
 /// Maximum value of a UInt32.
 ///
-constexpr UInt32 UInt32Max = internal::type_max<UInt32>::value;
+constexpr UInt32 UInt32Max = tmax_<UInt32>::value;
 
 /// Maximum value of a UInt64.
 ///
-constexpr UInt64 UInt64Max = internal::type_max<UInt64>::value;
+constexpr UInt64 UInt64Max = tmax_<UInt64>::value;
 
 /// Minimum value of an Int.
 ///
-constexpr Int IntMin = internal::type_min<Int>::value;
+constexpr Int IntMin = tmin_<Int>::value;
 
 /// Minimum value of an Int8.
 ///
-constexpr Int8 Int8Min = internal::type_min<Int8>::value;
+constexpr Int8 Int8Min = tmin_<Int8>::value;
 
 /// Minimum value of an Int16.
 ///
-constexpr Int16 Int16Min = internal::type_min<Int16>::value;
+constexpr Int16 Int16Min = tmin_<Int16>::value;
 
 /// Minimum value of an Int32.
 ///
-constexpr Int32 Int32Min = internal::type_min<Int32>::value;
+constexpr Int32 Int32Min = tmin_<Int32>::value;
 
 /// Minimum value of an Int64.
 ///
-constexpr Int64 Int64Min = internal::type_min<Int64>::value;
+constexpr Int64 Int64Min = tmin_<Int64>::value;
 
 /// Minimum value of a UInt.
 ///
-constexpr UInt UIntMin = internal::type_min<UInt>::value;
+constexpr UInt UIntMin = tmin_<UInt>::value;
 
 /// Minimum value of a UInt8.
 ///
-constexpr UInt8 UInt8Min = internal::type_min<UInt8>::value;
+constexpr UInt8 UInt8Min = tmin_<UInt8>::value;
 
 /// Minimum value of a UInt16.
 ///
-constexpr UInt16 UInt16Min = internal::type_min<UInt16>::value;
+constexpr UInt16 UInt16Min = tmin_<UInt16>::value;
 
 /// Minimum value of a UInt32.
 ///
-constexpr UInt32 UInt32Min = internal::type_min<UInt32>::value;
+constexpr UInt32 UInt32Min = tmin_<UInt32>::value;
 
 /// Minimum value of a UInt64.
 ///
-constexpr UInt64 UInt64Min = internal::type_min<UInt64>::value;
+constexpr UInt64 UInt64Min = tmin_<UInt64>::value;
 
 /// Returns a human-readable name for integer types.
 ///
 /// Examples:
 ///
 /// \code
-/// std::cout << vgc::int_typename<vgc::Int8>()     << std::end; // => "Int8"
-/// std::cout << vgc::int_typename<vgc::UInt16>()   << std::end; // => "UInt16"
-/// std::cout << vgc::int_typename<vgc::Int>()      << std::end; // => "Int64" (or "Int32" if VGC_CORE_USE_32BIT_INT is defined)
-/// std::cout << vgc::int_typename<bool>()          << std::end; // => "Bool"
-/// std::cout << vgc::int_typename<char>()          << std::end; // => "Char"
-/// std::cout << vgc::int_typename<signed char>()   << std::end; // => "Int8"
-/// std::cout << vgc::int_typename<unsigned char>() << std::end; // => "UInt8"
-/// std::cout << vgc::int_typename<short>()         << std::end; // => "Int16" (on most platforms)
-/// std::cout << vgc::int_typename<int>()           << std::end; // => "Int32" (on most platforms)
-/// std::cout << vgc::int_typename<long>()          << std::end; // => "Int32" or "Int64" (on most platforms)
-/// std::cout << vgc::int_typename<long long>()     << std::end; // => "Int64" (on most platforms)
+/// std::cout << vgc::core::int_typename<vgc::Int8>()     << std::end; // => "Int8"
+/// std::cout << vgc::core::int_typename<vgc::UInt16>()   << std::end; // => "UInt16"
+/// std::cout << vgc::core::int_typename<vgc::Int>()      << std::end; // => "Int64" (or "Int32" if VGC_CORE_USE_32BIT_INT is defined)
+/// std::cout << vgc::core::int_typename<bool>()          << std::end; // => "Bool"
+/// std::cout << vgc::core::int_typename<char>()          << std::end; // => "Char"
+/// std::cout << vgc::core::int_typename<signed char>()   << std::end; // => "Int8"
+/// std::cout << vgc::core::int_typename<unsigned char>() << std::end; // => "UInt8"
+/// std::cout << vgc::core::int_typename<short>()         << std::end; // => "Int16" (on most platforms)
+/// std::cout << vgc::core::int_typename<int>()           << std::end; // => "Int32" (on most platforms)
+/// std::cout << vgc::core::int_typename<long>()          << std::end; // => "Int32" or "Int64" (on most platforms)
+/// std::cout << vgc::core::int_typename<long long>()     << std::end; // => "Int64" (on most platforms)
 /// \endcode
 ///
 /// Note how "char" is a separate type from both "signed char" (= Int8) and
@@ -404,7 +413,7 @@ typename std::enable_if<
     std::is_integral<T>::value &&
     std::is_integral<U>::value &&
     std::is_signed<T>::value == std::is_signed<U>::value &&
-    internal::type_max<T>::value >= internal::type_max<U>::value, // (1)
+    tmax_<T>::value >= tmax_<U>::value, // (1)
     T>::type
 int_cast(U value) {
     return static_cast<T>(value);
@@ -420,11 +429,11 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_signed<U>::value &&
-    internal::type_max<T>::value < internal::type_max<U>::value, // (1)
+    tmax_<T>::value < tmax_<U>::value, // (1)
     T>::type
 int_cast(U value) {
-    if (value < internal::type_min<T>::value || // (1)
-        value > internal::type_max<T>::value) { // (1)
+    if (value < tmin_<T>::value || // (1)
+        value > tmax_<T>::value) { // (1)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
@@ -440,10 +449,10 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_unsigned<T>::value &&
     std::is_unsigned<U>::value &&
-    internal::type_max<T>::value < internal::type_max<U>::value, // (1)
+    tmax_<T>::value < tmax_<U>::value, // (1)
     T>::type
 int_cast(U value) {
-    if (value > internal::type_max<T>::value) { // (1)
+    if (value > tmax_<T>::value) { // (1)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
@@ -459,7 +468,7 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_unsigned<U>::value &&
-    internal::type_max<T>::value >= internal::type_max<U>::value, // (2)
+    tmax_<T>::value >= tmax_<U>::value, // (2)
     T>::type
 int_cast(U value) {
     return static_cast<T>(value);
@@ -475,10 +484,10 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_signed<T>::value &&
     std::is_unsigned<U>::value &&
-    internal::type_max<T>::value < internal::type_max<U>::value, // (2)
+    tmax_<T>::value < tmax_<U>::value, // (2)
     T>::type
 int_cast(U value) {
-    if (value > internal::type_max<T>::value) { // (2)
+    if (value > tmax_<T>::value) { // (2)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
@@ -494,7 +503,7 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_unsigned<T>::value &&
     std::is_signed<U>::value &&
-    internal::type_max<T>::value >= internal::type_max<U>::value, // (2)
+    tmax_<T>::value >= tmax_<U>::value, // (2)
     T>::type
 int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
@@ -513,19 +522,17 @@ typename std::enable_if<
     std::is_integral<U>::value &&
     std::is_unsigned<T>::value &&
     std::is_signed<U>::value &&
-    internal::type_max<T>::value < internal::type_max<U>::value, // (2)
+    tmax_<T>::value < tmax_<U>::value, // (2)
     T>::type
 int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
         internal::throwNegativeIntegerError<T>(value);
     }
-    else if (value > internal::type_max<T>::value) { // (2)
+    else if (value > tmax_<T>::value) { // (2)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
-
-namespace core {
 
 /// Sets the given bool, character, integer or floating-point number to zero.
 ///
@@ -645,7 +652,7 @@ isNear(T a, T b, T absTol)
     }
 }
 
-}
+} // namespace internal
 
 /// Returns whether two float values are almost equal within some relative
 /// tolerance. For example, set `relTol` to `0.05f` for testing if two values
@@ -819,16 +826,94 @@ const T& clamp(const T& value, const T& min, const T& max)
     }
 }
 
-/// Computes the largest integer value not greater than \p x then casts the
-/// result to an int. This function is equivalent to:
+/// Returns the next representable floating point. This is equivalent to:
+///
+/// ```cpp
+/// std::nextafter(x, vgc::core::tmax_<FloatType>::value);
+/// ```
+///
+template <typename FloatType>
+typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type
+nextafter(FloatType x)
+{
+    return std::nextafter(x, vgc::core::tmax_<FloatType>::value);
+}
+
+/// Returns the previous representable floating point. This is equivalent to:
+///
+/// ```cpp
+/// std::nextafter(x, -vgc::core::tmax_<FloatType>::value);
+/// ```
+///
+template <typename FloatType>
+typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type
+nextbefore(FloatType x)
+{
+    return std::nextafter(x, -vgc::core::tmax_<FloatType>::value);
+}
+
+/// Converts the given floating point `x` to an integer type using floor.
+///
+/// If the given `x` is larger (resp. smaller) than the maximum (resp. minimum)
+/// integer representable by the output type, then IntegerOverflowError is
+/// raised.
+///
+/// Otherwise, this function is equivalent to:
 ///
 /// \code
-/// static_cast<int>(std::floor(x))
+/// static_cast<T>(std::floor(x))
 /// \endcode
 ///
-template <typename T>
-int ifloor(T x) {
-    return static_cast<int>(std::floor(x));
+/// Note that this function never raises NegativeIntegerError, even when
+/// calling, say, `ifloor<unsigned int>(-1.0)`. In this case, the function
+/// still raises IntegerOverflowError. The reason is that NegativeIntegerError
+/// is categorized as a logic error, and is reserved for when a signed integer
+/// type holds a negative integer, but shouldn't. IntegerOverflowError,
+/// however, is categorized as a runtime error, which is more appropriate for
+/// floating point to integer conversions, since floating points are subject to
+/// rounding errors which are less predictible than arithmetic on integers.
+///
+template <typename IntType, typename FloatType>
+typename std::enable_if<
+    std::is_floating_point<FloatType>::value &&
+    std::is_integral<IntType>::value, IntType>::type
+ifloor(FloatType x)
+{
+    constexpr IntType tmini = tmin_<IntType>::value;
+    constexpr IntType tmaxi = tmax_<IntType>::value;
+    constexpr FloatType tminf = static_cast<FloatType>(tmin_<IntType>::value);
+    constexpr FloatType tmaxf = static_cast<FloatType>(tmax_<IntType>::value);
+    // Note: the outer "if" should be optimized out at compile time based on FloatType and IntType
+    if (tmaxf < 1 + tmaxf) { // all IntType integers representable as FloatType
+        if (x < tminf) {
+            throw IntegerOverflowError(core::format(
+                "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Min = {})",
+                int_typename<IntType>(), x, int_typename<IntType>(), tmini));
+        }
+        else if (x >= 1 + tmaxf) {
+            throw IntegerOverflowError(core::format(
+                "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Max = {})",
+                int_typename<IntType>(), x, int_typename<IntType>(), tmaxi));
+        }
+        else {
+            return static_cast<IntType>(std::floor(x));
+        }
+    }
+    else { // nextafter(tmaxf) - tmaxf > 1
+        if (x < tminf) {
+            throw IntegerOverflowError(core::format(
+                "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Min = {})",
+                int_typename<IntType>(), x, int_typename<IntType>(), tmini));
+        }
+        else if (x >= tmaxf) { // See test_arithmetic.cpp for why "+1" is unnecessary
+            throw IntegerOverflowError(core::format(
+                "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Max = {})",
+                int_typename<IntType>(), x, int_typename<IntType>(), tmaxi));
+        }
+        else {
+            return static_cast<IntType>(std::floor(x));
+        }
+    }
 }
 
 /// Maps a double \p x in the range [0, 1] to an 8-bit unsigned integer in
