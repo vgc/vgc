@@ -35,6 +35,19 @@ public:
     ///
     Color() {}
 
+    /// Creates a Color from the given HSL values.
+    ///
+    /// ```cpp
+    /// core::Color c = core::Color::hsl(270, 0.6, 0.7);
+    /// ```
+    ///
+    /// The hue should be given in degrees and implicitly wraps around (e.g.,
+    /// adding or substrating any multiple of 360 doesn't change the returned
+    /// color), and the saturation and lightness should be given in [0, 1] and
+    /// are implicitly clamped to this range.
+    ///
+    static Color hsl(double h, double s,  double l);
+
     /// Creates a Color initialized with the given r, g, b in [0, 1]. The alpha
     /// channel is set to 1.0.
     ///

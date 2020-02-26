@@ -65,15 +65,19 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
         float h = w;
         float dx = w / numColumns_;
         float dy = h / numRows_;
-        float dr = 1.0f / numColumns_;
-        float dg = 1.0f / numRows_;
-        float b = 0.0f;
+        double hue = 330;
+        double dl = 1.0 / numColumns_;
+        double ds = 1.0 / numRows_;
         for (Int i = 0; i < numColumns_; ++i) {
             float x = x0 + i*dx;
-            float r = i*dr;
+            double l = i*dl;
             for (Int j = 0; j < numRows_; ++j) {
                 float y = y0 + j*dy;
-                float g = j*dg;
+                double s = j*ds;
+                auto c = core::Color::hsl(hue, s, l);
+                float r = static_cast<float>(c[0]);
+                float g = static_cast<float>(c[1]);
+                float b = static_cast<float>(c[2]);
                 // TODO: implement a.extend()
                 a.insert(a.end(), {
                     x,    y,    r, g, b,
@@ -91,8 +95,12 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
             float bo = 0.0f;
             float x = x0 + hoveredColumn_*dx;
             float y = x0 + hoveredRow_*dy;
-            float r = hoveredColumn_*dr;
-            float g = hoveredRow_*dg;
+            double l = hoveredColumn_*dl;
+            double s = hoveredRow_*ds;
+            auto c = core::Color::hsl(hue, s, l);
+            float r = static_cast<float>(c[0]);
+            float g = static_cast<float>(c[1]);
+            float b = static_cast<float>(c[2]);
             a.insert(a.end(), {
                  x-o,    y-o,    ro, go, bo,
                  x+dx+o, y-o,    ro, go, bo,
