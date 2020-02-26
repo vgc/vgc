@@ -37,7 +37,10 @@ ColorPalette::ColorPalette(const ConstructorKey&) :
     numLightnessSteps_(7),
     hoveredHueIndex_(-1),
     hoveredSaturationIndex_(-1),
-    hoveredLightnessIndex_(-1)
+    hoveredLightnessIndex_(-1),
+    selectedHueIndex_(0),
+    selectedSaturationIndex_(0),
+    selectedLightnessIndex_(0)
 {
 
 }
@@ -52,6 +55,44 @@ void ColorPalette::onPaintCreate(graphics::Engine* engine)
 {
     trianglesId_ = engine->createTriangles();
 }
+
+namespace {
+
+void highlightCell(
+        core::FloatArray& a,
+        const core::Color& cellColor,
+        float x1, float y1, float x2, float y2)
+{
+    float r = static_cast<float>(cellColor[0]);
+    float g = static_cast<float>(cellColor[1]);
+    float b = static_cast<float>(cellColor[2]);
+    float x1h = x1 - 2;
+    float y1h = y1 - 2;
+    float x2h = x2 + 2;
+    float y2h = y2 + 2;
+    x1 += 1;
+    y1 += 1;
+    x2 -= 1;
+    y2 -= 1;
+    float rh = 0.043; //
+    float gh = 0.322; // VGC Blue
+    float bh = 0.714; //
+    a.insert(a.end(), {
+        x1h, y1h, rh, gh, bh,
+        x2h, y1h, rh, gh, bh,
+        x1h, y2h, rh, gh, bh,
+        x2h, y1h, rh, gh, bh,
+        x2h, y2h, rh, gh, bh,
+        x1h, y2h, rh, gh, bh,
+        x1, y1, r, g, b,
+        x2, y1, r, g, b,
+        x1, y2, r, g, b,
+        x2, y1, r, g, b,
+        x2, y2, r, g, b,
+        x1, y2, r, g, b});
+}
+
+} // namespace
 
 void ColorPalette::onPaintDraw(graphics::Engine* engine)
 {
@@ -79,7 +120,8 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
             x+w, y,   r, g, b,
             x+w, y+h, r, g, b,
             x,   y+h, r, g, b});
-        double hue = 210;
+        double dhue = 360.0 / numHueSteps_;
+        double hue = selectedHueIndex_ * dhue;
         double dl = 1.0 / (numLightnessSteps_ - 1);
         double ds = 1.0 / (numSaturationSteps_ - 1);
         for (Int i = 0; i < numLightnessSteps_; ++i) {
@@ -104,6 +146,18 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                     x1, y2, r, g, b});
             }
         }
+        if (selectedLightnessIndex_ != -1) {
+            Int i = selectedLightnessIndex_;
+            Int j = selectedSaturationIndex_;
+            float x1 = std::round(x0 + 1 + i*dx);
+            float x2 = std::round(x0 + (i+1)*dx);
+            float y1 = y0 + 1 + j*dy;
+            float y2 = y1 + dy - 1;
+            double l = i*dl;
+            double s = j*ds;
+            auto c = core::Color::hsl(hue, s, l);
+            highlightCell(a, c, x1, y1, x2, y2);
+        }
         if (hoveredLightnessIndex_ != -1) {
             Int i = hoveredLightnessIndex_;
             Int j = hoveredSaturationIndex_;
@@ -114,29 +168,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
             double l = i*dl;
             double s = j*ds;
             auto c = core::Color::hsl(hue, s, l);
-            float r = static_cast<float>(c[0]);
-            float g = static_cast<float>(c[1]);
-            float b = static_cast<float>(c[2]);
-            float x1h = x1 - 3;
-            float x2h = x2 + 3;
-            float y1h = y1 - 3;
-            float y2h = y2 + 3;
-            float rh = 0.043; //
-            float gh = 0.322; // VGC Blue
-            float bh = 0.714; //
-            a.insert(a.end(), {
-                x1h, y1h, rh, gh, bh,
-                x2h, y1h, rh, gh, bh,
-                x1h, y2h, rh, gh, bh,
-                x2h, y1h, rh, gh, bh,
-                x2h, y2h, rh, gh, bh,
-                x1h, y2h, rh, gh, bh,
-                x1, y1, r, g, b,
-                x2, y1, r, g, b,
-                x1, y2, r, g, b,
-                x2, y1, r, g, b,
-                x2, y2, r, g, b,
-                x1, y2, r, g, b});
+            highlightCell(a, c, x1, y1, x2, y2);
         }
 
         // Draw hue selector
@@ -154,7 +186,6 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
             x+w, y,   r, g, b,
             x+w, y+h, r, g, b,
             x,   y+h, r, g, b});
-        double dhue = 360.0 / numHueSteps_;
         float y01 = y0 + 1;
         float y02 = y01 + dy;
         float y03 = y02 + dy;
@@ -184,7 +215,26 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                 x2, y1, r, g, b,
                 x2, y2, r, g, b,
                 x1, y2, r, g, b});
-        }        
+        }
+        if (selectedHueIndex_ != -1) {
+            Int i = selectedHueIndex_;
+            float x1, y1, x2, y2;
+            if (i < halfNumHueSteps) {
+                x1 = std::round(x0 + 1 + i*dx);
+                x2 = std::round(x0 + (i+1)*dx);
+                y1 = y01;
+                y2 = y02 - 1;
+            }
+            else {
+                x1 = std::round(x0 + 1 + (numHueSteps_ - i - 1)*dx);
+                x2 = std::round(x0 + (numHueSteps_ - i)*dx);
+                y1 = y02;
+                y2 = y03 - 1;
+            }
+            double hue = i*dhue;
+            auto c = core::Color::hsl(hue, 1.0, 0.5);
+            highlightCell(a, c, x1, y1, x2, y2);
+        }
         if (hoveredHueIndex_ != -1) {
             Int i = hoveredHueIndex_;
             float x1, y1, x2, y2;
@@ -202,29 +252,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
             }
             double hue = i*dhue;
             auto c = core::Color::hsl(hue, 1.0, 0.5);
-            float r = static_cast<float>(c[0]);
-            float g = static_cast<float>(c[1]);
-            float b = static_cast<float>(c[2]);
-            float x1h = x1 - 3;
-            float x2h = x2 + 3;
-            float y1h = y1 - 3;
-            float y2h = y2 + 3;
-            float rh = 0.043; //
-            float gh = 0.322; // VGC Blue
-            float bh = 0.714; //
-            a.insert(a.end(), {
-                x1h, y1h, rh, gh, bh,
-                x2h, y1h, rh, gh, bh,
-                x1h, y2h, rh, gh, bh,
-                x2h, y1h, rh, gh, bh,
-                x2h, y2h, rh, gh, bh,
-                x1h, y2h, rh, gh, bh,
-                x1, y1, r, g, b,
-                x2, y1, r, g, b,
-                x1, y2, r, g, b,
-                x2, y1, r, g, b,
-                x2, y2, r, g, b,
-                x1, y2, r, g, b});
+            highlightCell(a, c, x1, y1, x2, y2);
         }
 
         // Load triangles
@@ -290,11 +318,39 @@ bool ColorPalette::onMouseMove(MouseEvent* event)
 
 bool ColorPalette::onMousePress(MouseEvent* /*event*/)
 {
-    setCurrentColor(
-        currentColor() == core::colors::blue ?
-        core::colors::red :
-        core::colors::blue);
-    repaint();
+    Int oldSelectedLightnessIndex = selectedLightnessIndex_;
+    Int oldSelectedSaturationIndex = selectedSaturationIndex_;
+    Int oldSelectedHueIndex = selectedHueIndex_;
+    if (hoveredLightnessIndex_ != -1) {
+        selectedLightnessIndex_ = hoveredLightnessIndex_;
+        selectedSaturationIndex_ = hoveredSaturationIndex_;
+    }
+    else if (hoveredHueIndex_ != -1) {
+        selectedHueIndex_ = hoveredHueIndex_;
+        if (selectedLightnessIndex_ == 0 ||
+            selectedLightnessIndex_ == numLightnessSteps_ -1)
+        {
+            // Change from white/black to full-satured hue. We do this since if
+            // a user change hue, it's obviously to set a non-black/white
+            // color. This is especially important for first time users, who
+            // would be confused not to see their clicked color selected.
+            // However, it might be slighly disturbing/inconsistent that
+            // changing hue sometimes changes L/S too, and sometimes not. This
+            // problem could be solved by not having the first/last columns at
+            // all in the L/S grid (they take unnecessary space anyway), and
+            // instead have dedicated white/black cells, at the left of the hue
+            // selector, for example.
+            selectedLightnessIndex_ = numLightnessSteps_ / 2;
+            selectedSaturationIndex_ = numSaturationSteps_ - 1;
+        }
+    }
+    if (selectedLightnessIndex_ != oldSelectedLightnessIndex ||
+        selectedSaturationIndex_ != oldSelectedSaturationIndex ||
+        selectedHueIndex_ != oldSelectedHueIndex)
+    {
+        reload_ = true;
+        repaint();
+    }
     return true;
 }
 
