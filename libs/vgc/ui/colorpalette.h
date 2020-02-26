@@ -74,6 +74,9 @@ private:
     Int hoveredHueIndex_;
     Int hoveredSaturationIndex_;
     Int hoveredLightnessIndex_;
+    Int selectedHueIndex_;
+    Int selectedSaturationIndex_;
+    Int selectedLightnessIndex_;
 };
 
 } // namespace ui
