@@ -52,6 +52,7 @@ UiWidget::UiWidget(ui::WidgetSharedPtr widget, QWidget* parent) :
     widget_(widget),
     engine_(UiWidgetEngine::create())
 {
+    setMouseTracking(true);
     widget_->repaintRequested.connect(std::bind(
         &UiWidget::onRepaintRequested, this));
 }

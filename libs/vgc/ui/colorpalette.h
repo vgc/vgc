@@ -58,6 +58,7 @@ public:
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine) override;
     void onPaintDestroy(graphics::Engine* engine) override;
+    bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
 
 private:
@@ -65,6 +66,12 @@ private:
     Int trianglesId_;
     float oldWidth_;
     float oldHeight_;
+    bool reload_;
+    float margin_;
+    Int numColumns_;
+    Int numRows_;
+    Int hoveredColumn_;
+    Int hoveredRow_;
 };
 
 } // namespace ui
