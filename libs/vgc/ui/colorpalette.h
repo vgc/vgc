@@ -68,10 +68,12 @@ private:
     float oldHeight_;
     bool reload_;
     float margin_;
-    Int numColumns_;
-    Int numRows_;
-    Int hoveredColumn_;
-    Int hoveredRow_;
+    Int numHueSteps_;        // >= 2 and even
+    Int numSaturationSteps_; // >= 2
+    Int numLightnessSteps_;  // >= 2
+    Int hoveredHueIndex_;
+    Int hoveredSaturationIndex_;
+    Int hoveredLightnessIndex_;
 };
 
 } // namespace ui
