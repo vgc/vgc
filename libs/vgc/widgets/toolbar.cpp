@@ -26,16 +26,14 @@
 
 #include <vgc/widgets/toolbar.h>
 
-#include <vgc/ui/colorpalette.h>
-
 namespace vgc {
 namespace widgets {
 
 Toolbar::Toolbar(QWidget* parent) :
     QToolBar(parent)
-{     
-     int iconWidth = 48;
-     QSize iconSize(iconWidth,iconWidth);
+{
+     int iconWidth = 150;
+     QSize iconSize(iconWidth, iconWidth);
 
      setOrientation(Qt::Vertical);
      setMovable(false);
@@ -54,18 +52,18 @@ Toolbar::Toolbar(QWidget* parent) :
      colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
      colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
 
-     // XXX This is temporary code to test the unfinished color palette.
-     // Eventually, we'll move the whole Toolbar class to vgc::ui.
-     // For now, just set showColorPalette to true for testing.
-     bool showColorPalette = false;
-     if (showColorPalette) {
-         colorPalette_ = new UiWidget(ui::ColorPalette::create(), this);
-         colorPalette_->setMinimumSize(iconWidth, 300);
-         addWidget(colorPalette_);
-     }
+     auto colorPaletteSharedPtr = ui::ColorPalette::create();
+     colorPalette_ = colorPaletteSharedPtr.get();
+     colorPaletteq_ = new UiWidget(colorPaletteSharedPtr, this);
+     // Note: it would be nice to std::move() the shared ptr instead of the
+     // above copy. This requires implementing UiWidget(WidgetSharedPtr&&),
+     // but probably not worth it as this is temporary code anyway.
+     colorPaletteq_->setMinimumSize(iconWidth, 300);
+     addWidget(colorPaletteq_);
 
      connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
-     connect(colorToolButton_, &ColorToolButton::colorChanged, this, &Toolbar::colorChanged);
+     connect(colorToolButton_, &ColorToolButton::colorChanged, this, &Toolbar::onColorToolButtonColorChanged_);
+     colorPalette_->colorSelected.connect(std::bind(&Toolbar::onColorPaletteColorSelected_, this));
 }
 
 Toolbar::~Toolbar()
@@ -75,7 +73,20 @@ Toolbar::~Toolbar()
 
 core::Color Toolbar::color() const
 {
-    return colorToolButton_->color();
+    return colorPalette_->selectedColor();
+}
+
+void Toolbar::onColorToolButtonColorChanged_()
+{
+    colorPalette_->setSelectedColor(colorToolButton_->color());
+    Q_EMIT colorChanged(color());
+    // Note: setSelectedColor does not emit colorSelected.
+}
+
+void Toolbar::onColorPaletteColorSelected_()
+{
+    colorToolButton_->setColor(colorPalette_->selectedColor());
+    // Note: setColor emits colorChanged()
 }
 
 } // namespace widgets

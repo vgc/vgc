@@ -42,17 +42,21 @@ public:
     ///
     static ColorPaletteSharedPtr create();
 
-    /// Returns the current color.
+    /// Returns the selected color.
     ///
-    core::Color currentColor() const {
-        return currentColor_;
+    core::Color selectedColor() const {
+        return selectedColor_;
     }
 
-    /// Sets the current color.
+    /// Sets the selected color.
     ///
-    void setCurrentColor(const core::Color& color) {
-        currentColor_ = color;
-    }
+    void setSelectedColor(const core::Color& color);
+
+    /// This signal is emitted whenever the selected color changed as a result
+    /// of user interaction with the color palette. The signal isn't emitted
+    /// when the selected color is set programatically via setSelectedColor().
+    ///
+    const core::Signal<> colorSelected;
 
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;
@@ -62,7 +66,7 @@ public:
     bool onMousePress(MouseEvent* event) override;
 
 private:
-    core::Color currentColor_;
+    core::Color selectedColor_;
     Int trianglesId_;
     float oldWidth_;
     float oldHeight_;
@@ -74,6 +78,7 @@ private:
     Int hoveredHueIndex_;
     Int hoveredSaturationIndex_;
     Int hoveredLightnessIndex_;
+    bool isSelectedColorExact_; // whether selected color was computed from indices below
     Int selectedHueIndex_;
     Int selectedSaturationIndex_;
     Int selectedLightnessIndex_;

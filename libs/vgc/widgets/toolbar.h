@@ -20,6 +20,7 @@
 #include <QAction>
 #include <QToolBar>
 
+#include <vgc/ui/colorpalette.h>
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/colortoolbutton.h>
 #include <vgc/widgets/uiwidget.h>
@@ -52,10 +53,15 @@ Q_SIGNALS:
     ///
     void colorChanged(const core::Color& newColor);
 
+private Q_SLOTS:
+    void onColorToolButtonColorChanged_();
+    void onColorPaletteColorSelected_();
+
 private:
     ColorToolButton* colorToolButton_;
     QAction* colorToolButtonAction_;
-    UiWidget* colorPalette_;
+    ui::ColorPalette* colorPalette_;
+    UiWidget* colorPaletteq_;
 };
 
 } // namespace widgets

@@ -347,7 +347,7 @@ CentralWidget::CentralWidget(
     // Overlays could be especially useful for a "Tutorial" mode, or other
     // shadow/highlight effects.
     //
-    splitters_.push_back(new Splitter(this, Splitter::Direction::Right, false, 68, 68));
+    splitters_.push_back(new Splitter(this, Splitter::Direction::Right, false, 150, 150));
     splitters_.push_back(new Splitter(this, Splitter::Direction::Left, true, 200, 200));
     splitters_.push_back(new Splitter(this, Splitter::Direction::Top, true, 200, 50));
 
