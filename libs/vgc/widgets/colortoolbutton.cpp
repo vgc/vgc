@@ -44,9 +44,11 @@ core::Color ColorToolButton::color() const
 
 void ColorToolButton::setColor(const core::Color& color)
 {
-    color_ = color;
-    updateIcon();
-    Q_EMIT colorChanged(color_);
+    if (color_ != color) {
+        color_ = color;
+        updateIcon();
+        Q_EMIT colorChanged(color_);
+    }
 }
 
 void ColorToolButton::updateIcon()

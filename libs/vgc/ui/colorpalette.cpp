@@ -26,7 +26,7 @@ namespace ui {
 
 ColorPalette::ColorPalette(const ConstructorKey&) :
     Widget(Widget::ConstructorKey()),
-    currentColor_(core::colors::blue), // tmp color for testing. TODO: black
+    selectedColor_(core::colors::black),
     trianglesId_(-1),
     oldWidth_(0),
     oldHeight_(0),
@@ -38,6 +38,7 @@ ColorPalette::ColorPalette(const ConstructorKey&) :
     hoveredHueIndex_(-1),
     hoveredSaturationIndex_(-1),
     hoveredLightnessIndex_(-1),
+    isSelectedColorExact_(true),
     selectedHueIndex_(0),
     selectedSaturationIndex_(0),
     selectedLightnessIndex_(0)
@@ -49,6 +50,62 @@ ColorPalette::ColorPalette(const ConstructorKey&) :
 ColorPaletteSharedPtr ColorPalette::create()
 {
     return std::make_shared<ColorPalette>(ConstructorKey());
+}
+
+namespace {
+
+core::Color colorFromHslIndices(
+        Int numHueSteps,
+        Int numSaturationSteps,
+        Int numLightnessSteps,
+        Int hueIndex,
+        Int saturationIndex,
+        Int lightnessIndex)
+{
+    double dh = 360.0 / numHueSteps;
+    double ds = 1.0 / (numSaturationSteps - 1);
+    double dl = 1.0 / (numLightnessSteps - 1);
+    return core::Color::hsl(
+                hueIndex * dh,
+                saturationIndex * ds,
+                lightnessIndex * dl);
+}
+
+} // namespace
+
+void ColorPalette::setSelectedColor(const core::Color& color)
+{
+    if (selectedColor_ != color) {
+        // Note: ColorPalette currently allows selecting, say:
+        //
+        //   hsl(30deg, 50%, 100%) = pure orange = rgb(100%, 50%, 0%)
+        //
+        // If we then click on the ColorToolButton, this calls:
+        //
+        //   QColorDialog::setCurrentColor(toQt(color_))
+        //
+        // Which converts the color to rgb(255, 128, 0), which isn't the same
+        // color, because 50% = 127.5 on a [0, 255] scale:
+        //
+        //   rgb(255, 128, 0) = rgb(100%, ~50.196%, 0%)
+        //
+        // So we enter this `if` statement, and the color is de-highlighted in
+        // the color palette, despite the user haven't really yet "changed" the
+        // color, in his point of view. We may want to fix this either by
+        // changing toQt()/fromQt(), or perhaps having this ColorPalette only
+        // select colors which are an exact integer in [0, 255] scale.
+        //
+        // More info: https://github.com/vgc/vgc/issues/270#issuecomment-592041186
+        //
+        selectedColor_ = color;
+        isSelectedColorExact_ = (selectedColor_ == colorFromHslIndices(
+            numHueSteps_, numSaturationSteps_, numLightnessSteps_,
+            selectedHueIndex_, selectedSaturationIndex_, selectedLightnessIndex_));
+        reload_ = true;
+        repaint();
+        // TODO: find other indices if an exact match exist
+        // TODO: emit selectedColorChanged (but not colorSelected)
+    }
 }
 
 void ColorPalette::onPaintCreate(graphics::Engine* engine)
@@ -146,7 +203,9 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                     x1, y2, r, g, b});
             }
         }
-        if (selectedLightnessIndex_ != -1) {
+        // TODO: draw small disk indicating continuous current
+        // color if selected color isn't an exact index.
+        if (isSelectedColorExact_) {
             Int i = selectedLightnessIndex_;
             Int j = selectedSaturationIndex_;
             float x1 = std::round(x0 + 1 + i*dx);
@@ -216,7 +275,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                 x2, y2, r, g, b,
                 x1, y2, r, g, b});
         }
-        if (selectedHueIndex_ != -1) {
+        if (isSelectedColorExact_) {
             Int i = selectedHueIndex_;
             float x1, y1, x2, y2;
             if (i < halfNumHueSteps) {
@@ -318,12 +377,11 @@ bool ColorPalette::onMouseMove(MouseEvent* event)
 
 bool ColorPalette::onMousePress(MouseEvent* /*event*/)
 {
-    Int oldSelectedLightnessIndex = selectedLightnessIndex_;
-    Int oldSelectedSaturationIndex = selectedSaturationIndex_;
-    Int oldSelectedHueIndex = selectedHueIndex_;
+    bool accepted = false;
     if (hoveredLightnessIndex_ != -1) {
         selectedLightnessIndex_ = hoveredLightnessIndex_;
         selectedSaturationIndex_ = hoveredSaturationIndex_;
+        accepted = true;
     }
     else if (hoveredHueIndex_ != -1) {
         selectedHueIndex_ = hoveredHueIndex_;
@@ -343,15 +401,19 @@ bool ColorPalette::onMousePress(MouseEvent* /*event*/)
             selectedLightnessIndex_ = numLightnessSteps_ / 2;
             selectedSaturationIndex_ = numSaturationSteps_ - 1;
         }
+        accepted = true;
     }
-    if (selectedLightnessIndex_ != oldSelectedLightnessIndex ||
-        selectedSaturationIndex_ != oldSelectedSaturationIndex ||
-        selectedHueIndex_ != oldSelectedHueIndex)
-    {
+
+    if (accepted) {
         reload_ = true;
+        isSelectedColorExact_ = true;
+        selectedColor_ = colorFromHslIndices(
+            numHueSteps_, numSaturationSteps_, numLightnessSteps_,
+            selectedHueIndex_, selectedSaturationIndex_, selectedLightnessIndex_);
+        colorSelected();
         repaint();
     }
-    return true;
+    return accepted;
 }
 
 } // namespace ui
