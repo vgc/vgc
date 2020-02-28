@@ -82,6 +82,8 @@ private:
     Int selectedHueIndex_;
     Int selectedSaturationIndex_;
     Int selectedLightnessIndex_;
+    Int oldSaturationIndex_; // "old" = last chromatic color selected
+    Int oldLightnessIndex_;
 };
 
 } // namespace ui
