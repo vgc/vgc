@@ -41,7 +41,9 @@ ColorPalette::ColorPalette(const ConstructorKey&) :
     isSelectedColorExact_(true),
     selectedHueIndex_(0),
     selectedSaturationIndex_(0),
-    selectedLightnessIndex_(0)
+    selectedLightnessIndex_(0),
+    oldSaturationIndex_(numSaturationSteps_ - 1),
+    oldLightnessIndex_(numLightnessSteps_ / 2)
 {
 
 }
@@ -248,6 +250,8 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
         float y01 = y0 + 1;
         float y02 = y01 + dy;
         float y03 = y02 + dy;
+        double l = oldLightnessIndex_*dl;
+        double s = oldSaturationIndex_*ds;
         for (Int i = 0; i < numHueSteps_; ++i) {
             float x1, y1, x2, y2;
             if (i < halfNumHueSteps) {
@@ -263,7 +267,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                 y2 = y03 - 1;
             }
             double hue = i*dhue;
-            auto c = core::Color::hsl(hue, 1.0, 0.5);
+            auto c = core::Color::hsl(hue, s, l);
             float r = static_cast<float>(c[0]);
             float g = static_cast<float>(c[1]);
             float b = static_cast<float>(c[2]);
@@ -291,7 +295,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                 y2 = y03 - 1;
             }
             double hue = i*dhue;
-            auto c = core::Color::hsl(hue, 1.0, 0.5);
+            auto c = core::Color::hsl(hue, s, l);
             highlightCell(a, c, x1, y1, x2, y2);
         }
         if (hoveredHueIndex_ != -1) {
@@ -310,7 +314,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                 y2 = y03 - 1;
             }
             double hue = i*dhue;
-            auto c = core::Color::hsl(hue, 1.0, 0.5);
+            auto c = core::Color::hsl(hue, s, l);
             highlightCell(a, c, x1, y1, x2, y2);
         }
 
@@ -381,25 +385,29 @@ bool ColorPalette::onMousePress(MouseEvent* /*event*/)
     if (hoveredLightnessIndex_ != -1) {
         selectedLightnessIndex_ = hoveredLightnessIndex_;
         selectedSaturationIndex_ = hoveredSaturationIndex_;
+        if (selectedSaturationIndex_ != 0 &&
+            selectedLightnessIndex_ != 0 &&
+            selectedLightnessIndex_ != numLightnessSteps_ -1)
+        {
+            // Remember L/S of last chromatic color selected
+            oldSaturationIndex_ = selectedSaturationIndex_;
+            oldLightnessIndex_ = selectedLightnessIndex_;
+        }
         accepted = true;
     }
     else if (hoveredHueIndex_ != -1) {
         selectedHueIndex_ = hoveredHueIndex_;
-        if (selectedLightnessIndex_ == 0 ||
+        if (selectedSaturationIndex_ == 0 ||
+            selectedLightnessIndex_ == 0 ||
             selectedLightnessIndex_ == numLightnessSteps_ -1)
         {
-            // Change from white/black to full-satured hue. We do this since if
-            // a user change hue, it's obviously to set a non-black/white
-            // color. This is especially important for first time users, who
-            // would be confused not to see their clicked color selected.
-            // However, it might be slighly disturbing/inconsistent that
-            // changing hue sometimes changes L/S too, and sometimes not. This
-            // problem could be solved by not having the first/last columns at
-            // all in the L/S grid (they take unnecessary space anyway), and
-            // instead have dedicated white/black cells, at the left of the hue
-            // selector, for example.
-            selectedLightnessIndex_ = numLightnessSteps_ / 2;
-            selectedSaturationIndex_ = numSaturationSteps_ - 1;
+            // When users click on the hue selector while the current color is
+            // non-chromatic (black, white, greys), it's obviously to change to
+            // a chromatic color. So we restore the saturation/lightness of the
+            // last chromatic color selected, which gives the color currently
+            // displayed by the hue selector
+            selectedSaturationIndex_ = oldSaturationIndex_;
+            selectedLightnessIndex_ = oldLightnessIndex_;
         }
         accepted = true;
     }
