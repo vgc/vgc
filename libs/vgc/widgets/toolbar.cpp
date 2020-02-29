@@ -32,38 +32,46 @@ namespace widgets {
 Toolbar::Toolbar(QWidget* parent) :
     QToolBar(parent)
 {
-     int iconWidth = 150;
-     QSize iconSize(iconWidth, iconWidth);
+    int toolbarWidth = 150;
+    int iconWidth = 64;
+    int margin = 15;
+    QSize iconSize(iconWidth, iconWidth);
 
-     setOrientation(Qt::Vertical);
-     setMovable(false);
-     setIconSize(iconSize);
+    setOrientation(Qt::Vertical);
+    setMovable(false);
+    setIconSize(iconSize);
 
-     colorToolButton_ = new ColorToolButton();
-     colorToolButton_->setToolTip(tr("Current color (C)"));
-     colorToolButton_->setStatusTip(tr("Click to open the color selector"));
-     colorToolButton_->setIconSize(iconSize);
-     colorToolButton_->updateIcon();
+    QWidget* topMargin = new QWidget();
+    topMargin->setMinimumSize(toolbarWidth, margin);
+    topMargin->setStyleSheet("background-color: none");
+    addWidget(topMargin);
 
-     colorToolButtonAction_ = addWidget(colorToolButton_);
-     colorToolButtonAction_->setText(tr("Color"));
-     colorToolButtonAction_->setToolTip(tr("Color (C)"));
-     colorToolButtonAction_->setStatusTip(tr("Click to open the color selector"));
-     colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
-     colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
+    colorToolButton_ = new ColorToolButton();
+    colorToolButton_->setToolTip(tr("Current color (C)"));
+    colorToolButton_->setStatusTip(tr("Click to open the color selector"));
+    colorToolButton_->setIconSize(iconSize);
+    colorToolButton_->setMinimumSize(toolbarWidth, iconWidth);
+    colorToolButton_->updateIcon();
 
-     auto colorPaletteSharedPtr = ui::ColorPalette::create();
-     colorPalette_ = colorPaletteSharedPtr.get();
-     colorPaletteq_ = new UiWidget(colorPaletteSharedPtr, this);
-     // Note: it would be nice to std::move() the shared ptr instead of the
-     // above copy. This requires implementing UiWidget(WidgetSharedPtr&&),
-     // but probably not worth it as this is temporary code anyway.
-     colorPaletteq_->setMinimumSize(iconWidth, 300);
-     addWidget(colorPaletteq_);
+    colorToolButtonAction_ = addWidget(colorToolButton_);
+    colorToolButtonAction_->setText(tr("Color"));
+    colorToolButtonAction_->setToolTip(tr("Color (C)"));
+    colorToolButtonAction_->setStatusTip(tr("Click to open the color selector"));
+    colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
+    colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
 
-     connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
-     connect(colorToolButton_, &ColorToolButton::colorChanged, this, &Toolbar::onColorToolButtonColorChanged_);
-     colorPalette_->colorSelected.connect(std::bind(&Toolbar::onColorPaletteColorSelected_, this));
+    auto colorPaletteSharedPtr = ui::ColorPalette::create();
+    colorPalette_ = colorPaletteSharedPtr.get();
+    colorPaletteq_ = new UiWidget(colorPaletteSharedPtr, this);
+    // Note: it would be nice to std::move() the shared ptr instead of the
+    // above copy. This requires implementing UiWidget(WidgetSharedPtr&&),
+    // but probably not worth it as this is temporary code anyway.
+    colorPaletteq_->setMinimumSize(toolbarWidth, 300);
+    addWidget(colorPaletteq_);
+
+    connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
+    connect(colorToolButton_, &ColorToolButton::colorChanged, this, &Toolbar::onColorToolButtonColorChanged_);
+    colorPalette_->colorSelected.connect(std::bind(&Toolbar::onColorPaletteColorSelected_, this));
 }
 
 Toolbar::~Toolbar()
