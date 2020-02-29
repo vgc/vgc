@@ -407,6 +407,29 @@ bool ColorPalette::onMouseRelease(MouseEvent* /*event*/)
     return true;
 }
 
+bool ColorPalette::onMouseEnter()
+{
+    return true;
+}
+
+bool ColorPalette::onMouseLeave()
+{
+    Int i = -1;
+    Int j = -1;
+    Int k = -1;
+    if (hoveredLightnessIndex_ != i ||
+        hoveredSaturationIndex_ != j ||
+        hoveredHueIndex_ != k)
+    {
+        hoveredLightnessIndex_ = i;
+        hoveredSaturationIndex_ = j;
+        hoveredHueIndex_ = k;
+        reload_ = true;
+        repaint();
+    }
+    return true;
+}
+
 ColorPalette::SelectorType ColorPalette::hoveredSelector_(const core::Vec2f& p)
 {
     float x0 = margin_;
