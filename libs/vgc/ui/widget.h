@@ -129,6 +129,16 @@ public:
     ///
     virtual bool onMouseRelease(MouseEvent* event);
 
+    /// Override this function if you wish to handle MouseEnter events. You
+    /// must return true if the event was handled, false otherwise.
+    ///
+    virtual bool onMouseEnter();
+
+    /// Override this function if you wish to handle MouseLeave events. You
+    /// must return true if the event was handled, false otherwise.
+    ///
+    virtual bool onMouseLeave();
+
 private:
     float width_;
     float height_;

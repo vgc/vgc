@@ -92,6 +92,16 @@ void UiWidget::mouseReleaseEvent(QMouseEvent *event)
     event->setAccepted(widget_->onMouseRelease(e.get()));
 }
 
+void UiWidget::enterEvent(QEvent* event)
+{
+    event->setAccepted(widget_->onMouseEnter());
+}
+
+void UiWidget::leaveEvent(QEvent* event)
+{
+    event->setAccepted(widget_->onMouseLeave());
+}
+
 UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const
 {
     return context()->versionFunctions<OpenGLFunctions>();
