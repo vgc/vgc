@@ -64,8 +64,18 @@ public:
     void onPaintDestroy(graphics::Engine* engine) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
+    bool onMouseRelease(MouseEvent* event) override;
 
 private:
+    enum class SelectorType {
+        None,
+        Hue,
+        SaturationLightness
+    };
+    SelectorType hoveredSelector_(const core::Vec2f& p);
+    std::pair<Int, Int> hoveredSaturationLightness_(const core::Vec2f& p);
+    Int hoveredHue_(const core::Vec2f& p);
+    bool selectColorFromHovered_();
     core::Color selectedColor_;
     Int trianglesId_;
     float oldWidth_;
@@ -82,6 +92,7 @@ private:
     Int hoveredHueIndex_;
     Int hoveredSaturationIndex_;
     Int hoveredLightnessIndex_;
+    SelectorType scrubbedSelector_;
     bool isSelectedColorExact_; // whether selected color was computed from indices below
     Int selectedHueIndex_;
     Int selectedSaturationIndex_;
