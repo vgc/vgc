@@ -32,6 +32,10 @@ ColorPalette::ColorPalette(const ConstructorKey&) :
     oldHeight_(0),
     reload_(true),
     margin_(15),
+    isContinuous_(false),
+    selectorBorderWidth_(2.0),
+    cellBorderWidth_(1.0),
+    borderColor_(core::colors::black),
     numHueSteps_(12),
     numSaturationSteps_(5),
     numLightnessSteps_(7),
@@ -117,38 +121,59 @@ void ColorPalette::onPaintCreate(graphics::Engine* engine)
 
 namespace {
 
-void highlightCell(
+void insertRect(
         core::FloatArray& a,
-        const core::Color& cellColor,
+        const core::Color& c,
         float x1, float y1, float x2, float y2)
 {
-    float r = static_cast<float>(cellColor[0]);
-    float g = static_cast<float>(cellColor[1]);
-    float b = static_cast<float>(cellColor[2]);
-    float x1h = x1 - 2;
-    float y1h = y1 - 2;
-    float x2h = x2 + 2;
-    float y2h = y2 + 2;
-    x1 += 1;
-    y1 += 1;
-    x2 -= 1;
-    y2 -= 1;
-    float rh = 0.043; //
-    float gh = 0.322; // VGC Blue
-    float bh = 0.714; //
+    float r = static_cast<float>(c[0]);
+    float g = static_cast<float>(c[1]);
+    float b = static_cast<float>(c[2]);
     a.insert(a.end(), {
-        x1h, y1h, rh, gh, bh,
-        x2h, y1h, rh, gh, bh,
-        x1h, y2h, rh, gh, bh,
-        x2h, y1h, rh, gh, bh,
-        x2h, y2h, rh, gh, bh,
-        x1h, y2h, rh, gh, bh,
         x1, y1, r, g, b,
         x2, y1, r, g, b,
         x1, y2, r, g, b,
         x2, y1, r, g, b,
         x2, y2, r, g, b,
         x1, y2, r, g, b});
+}
+
+void insertSmoothRect(
+        core::FloatArray& a,
+        const core::Color& cTopLeft, const core::Color& cTopRight,
+        const core::Color& cBottomLeft, const core::Color& cBottomRight,
+        float x1, float y1, float x2, float y2)
+{
+    float r1 = static_cast<float>(cTopLeft[0]);
+    float g1 = static_cast<float>(cTopLeft[1]);
+    float b1 = static_cast<float>(cTopLeft[2]);
+    float r2 = static_cast<float>(cTopRight[0]);
+    float g2 = static_cast<float>(cTopRight[1]);
+    float b2 = static_cast<float>(cTopRight[2]);
+    float r3 = static_cast<float>(cBottomLeft[0]);
+    float g3 = static_cast<float>(cBottomLeft[1]);
+    float b3 = static_cast<float>(cBottomLeft[2]);
+    float r4 = static_cast<float>(cBottomRight[0]);
+    float g4 = static_cast<float>(cBottomRight[1]);
+    float b4 = static_cast<float>(cBottomRight[2]);
+    a.insert(a.end(), {
+        x1, y1, r1, g1, b1,
+        x2, y1, r2, g2, b2,
+        x1, y2, r3, g3, b3,
+        x2, y1, r2, g2, b2,
+        x2, y2, r4, g4, b4,
+        x1, y2, r3, g3, b3});
+}
+
+void insertCellHighlight(
+        core::FloatArray& a,
+        const core::Color& cellColor,
+        float x1, float y1, float x2, float y2)
+{
+    // TODO: draw 4 lines (= thin rectangles) rather than 2 big rects?
+    auto ch = core::Color(0.043, 0.322, 0.714); // VGC Blue
+    insertRect(a, ch, x1-2, y1-2, x2+2, y2+2);
+    insertRect(a, cellColor, x1+1, y1+1, x2-1, y2-1);
 }
 
 } // namespace
@@ -163,159 +188,152 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
         core::FloatArray a;
 
         // Draw saturation/lightness selector
+        // Terminology:
+        // - x0: position of selector including border
+        // - w: width of selector including border
+        // - startOffset: distance between x0 and x of first color cell
+        // - endOffset: distance between (x0 + startOffset + N*dx) and (x0 + w)
+        // - cellOffset: distance between color cells
         float x0 = margin_;
         float y0 = margin_;
         float w = width() - 2*margin_;
-        float dx = (w - 1) / numLightnessSteps_;
+        float startOffset = selectorBorderWidth_;
+        float endOffset = selectorBorderWidth_ - cellBorderWidth_;
+        float cellOffset = cellBorderWidth_;
+        float dx = (w - startOffset - endOffset) / numLightnessSteps_;
         float dy = std::round(dx);
-        float h = 1 + dy * numSaturationSteps_;
-        float x, y, r, g, b;
-        x = x0; y = y0;
-        r = 0.0; g = 0.0; b = 0.0;
-        a.insert(a.end(), {
-            x,   y,   r, g, b,
-            x+w, y,   r, g, b,
-            x,   y+h, r, g, b,
-            x+w, y,   r, g, b,
-            x+w, y+h, r, g, b,
-            x,   y+h, r, g, b});
+        float h = startOffset + endOffset + dy * numSaturationSteps_;
+        if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
+            insertRect(a, borderColor_, x0, y0, x0+w, y0+h);
+        }
         double dhue = 360.0 / numHueSteps_;
         double hue = selectedHueIndex_ * dhue;
         double dl = 1.0 / (numLightnessSteps_ - 1);
         double ds = 1.0 / (numSaturationSteps_ - 1);
         for (Int i = 0; i < numLightnessSteps_; ++i) {
-            float x1 = std::round(x0 + 1 + i*dx);
-            float x2 = std::round(x0 + (i+1)*dx);
+            float x1 = std::round(x0 + startOffset + i*dx);
+            float x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
             double l = i*dl;
             for (Int j = 0; j < numSaturationSteps_; ++j) {
-                float y1 = y0 + 1 + j*dy;
-                float y2 = y1 + dy - 1;
+                float y1 = y0 + startOffset + j*dy;
+                float y2 = y1 + dy - cellOffset;
                 double s = j*ds;
-                auto c = core::Color::hsl(hue, s, l);
-                float r = static_cast<float>(c[0]);
-                float g = static_cast<float>(c[1]);
-                float b = static_cast<float>(c[2]);
-                // TODO: implement a.extend()
-                a.insert(a.end(), {
-                    x1, y1, r, g, b,
-                    x2, y1, r, g, b,
-                    x1, y2, r, g, b,
-                    x2, y1, r, g, b,
-                    x2, y2, r, g, b,
-                    x1, y2, r, g, b});
+                if (isContinuous_) {
+                    auto c1 = core::Color::hsl(hue, s, l);
+                    auto c2 = core::Color::hsl(hue, s, l+dl);
+                    auto c3 = core::Color::hsl(hue, s+ds, l);
+                    auto c4 = core::Color::hsl(hue, s+ds, l+dl);
+                    insertSmoothRect(a, c1, c2, c3, c4, x1, y1, x2, y2);
+                }
+                else {
+                    auto c = core::Color::hsl(hue, s, l);
+                    insertRect(a, c, x1, y1, x2, y2);
+                }
             }
         }
         // TODO: draw small disk indicating continuous current
         // color if selected color isn't an exact index.
         if (isSelectedColorExact_) {
             Int i = selectedLightnessIndex_;
-            Int j = selectedSaturationIndex_;
-            float x1 = std::round(x0 + 1 + i*dx);
-            float x2 = std::round(x0 + (i+1)*dx);
-            float y1 = y0 + 1 + j*dy;
-            float y2 = y1 + dy - 1;
+            Int j = selectedSaturationIndex_;            
+            float x1 = std::round(x0 + startOffset + i*dx);
+            float x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+            float y1 = y0 + startOffset + j*dy;
+            float y2 = y1 + dy - cellOffset;
             double l = i*dl;
             double s = j*ds;
             auto c = core::Color::hsl(hue, s, l);
-            highlightCell(a, c, x1, y1, x2, y2);
+            insertCellHighlight(a, c, x1, y1, x2, y2);
         }
         if (hoveredLightnessIndex_ != -1) {
             Int i = hoveredLightnessIndex_;
             Int j = hoveredSaturationIndex_;
-            float x1 = std::round(x0 + 1 + i*dx);
-            float x2 = std::round(x0 + (i+1)*dx);
-            float y1 = y0 + 1 + j*dy;
-            float y2 = y1 + dy - 1;
+            float x1 = std::round(x0 + startOffset + i*dx);
+            float x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+            float y1 = y0 + startOffset + j*dy;
+            float y2 = y1 + dy - cellOffset;
             double l = i*dl;
             double s = j*ds;
             auto c = core::Color::hsl(hue, s, l);
-            highlightCell(a, c, x1, y1, x2, y2);
+            insertCellHighlight(a, c, x1, y1, x2, y2);
         }
 
         // Draw hue selector
-        y0 += h + margin_;
         Int halfNumHueSteps = numHueSteps_ / 2;
-        dx = (w - 1) / halfNumHueSteps;
+        y0 += h + margin_;
+        dx = (w - startOffset - endOffset) / halfNumHueSteps;
         dy = std::round(dx);
-        h = 1 + dy * 2;
-        x = x0; y = y0;
-        r = 0.0; g = 0.0; b = 0.0;
-        a.insert(a.end(), {
-            x,   y,   r, g, b,
-            x+w, y,   r, g, b,
-            x,   y+h, r, g, b,
-            x+w, y,   r, g, b,
-            x+w, y+h, r, g, b,
-            x,   y+h, r, g, b});
-        float y01 = y0 + 1;
-        float y02 = y01 + dy;
-        float y03 = y02 + dy;
+        h = startOffset + endOffset + dy * 2;
+        if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
+            insertRect(a, borderColor_, x0, y0, x0+w, y0+h);
+        }
         double l = oldLightnessIndex_*dl;
         double s = oldSaturationIndex_*ds;
         for (Int i = 0; i < numHueSteps_; ++i) {
             float x1, y1, x2, y2;
+            double hue1 = i*dhue;
+            double hue2; // for continuous mode
             if (i < halfNumHueSteps) {
-                x1 = std::round(x0 + 1 + i*dx);
-                x2 = std::round(x0 + (i+1)*dx);
-                y1 = y01;
-                y2 = y02 - 1;
+                x1 = std::round(x0 + startOffset + i*dx);
+                x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+                y1 = y0 + startOffset;
+                y2 = y1 + dy - cellOffset;
+                hue2 = hue1 + dhue;
             }
             else {
-                x1 = std::round(x0 + 1 + (numHueSteps_ - i - 1)*dx);
-                x2 = std::round(x0 + (numHueSteps_ - i)*dx);
-                y1 = y02;
-                y2 = y03 - 1;
+                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1)*dx);
+                x2 = std::round(x0 + startOffset + (numHueSteps_ - i)*dx) - cellOffset;
+                y1 = y0 + startOffset + dy;
+                y2 = y1 + dy - cellOffset;
+                hue2 = hue1 - dhue;
             }
-            double hue = i*dhue;
-            auto c = core::Color::hsl(hue, s, l);
-            float r = static_cast<float>(c[0]);
-            float g = static_cast<float>(c[1]);
-            float b = static_cast<float>(c[2]);
-            a.insert(a.end(), {
-                x1, y1, r, g, b,
-                x2, y1, r, g, b,
-                x1, y2, r, g, b,
-                x2, y1, r, g, b,
-                x2, y2, r, g, b,
-                x1, y2, r, g, b});
+            if (isContinuous_) {
+                auto c1 = core::Color::hsl(hue1, s, l);
+                auto c2 = core::Color::hsl(hue2, s, l);
+                insertSmoothRect(a, c1, c2, c1, c2, x1, y1, x2, y2);
+            }
+            else {
+                auto c = core::Color::hsl(hue1, s, l);
+                insertRect(a, c, x1, y1, x2, y2);
+            }
         }
         if (isSelectedColorExact_) {
             Int i = selectedHueIndex_;
             float x1, y1, x2, y2;
+            double hue = i*dhue;
             if (i < halfNumHueSteps) {
-                x1 = std::round(x0 + 1 + i*dx);
-                x2 = std::round(x0 + (i+1)*dx);
-                y1 = y01;
-                y2 = y02 - 1;
+                x1 = std::round(x0 + startOffset + i*dx);
+                x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+                y1 = y0 + startOffset;
+                y2 = y1 + dy - cellOffset;
             }
             else {
-                x1 = std::round(x0 + 1 + (numHueSteps_ - i - 1)*dx);
-                x2 = std::round(x0 + (numHueSteps_ - i)*dx);
-                y1 = y02;
-                y2 = y03 - 1;
+                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1)*dx);
+                x2 = std::round(x0 + startOffset + (numHueSteps_ - i)*dx) - cellOffset;
+                y1 = y0 + startOffset + dy;
+                y2 = y1 + dy - cellOffset;
             }
-            double hue = i*dhue;
             auto c = core::Color::hsl(hue, s, l);
-            highlightCell(a, c, x1, y1, x2, y2);
+            insertCellHighlight(a, c, x1, y1, x2, y2);
         }
         if (hoveredHueIndex_ != -1) {
             Int i = hoveredHueIndex_;
             float x1, y1, x2, y2;
+            double hue = i*dhue;
             if (i < halfNumHueSteps) {
-                x1 = std::round(x0 + 1 + i*dx);
-                x2 = std::round(x0 + (i+1)*dx);
-                y1 = y01;
-                y2 = y02 - 1;
+                x1 = std::round(x0 + startOffset + i*dx);
+                x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+                y1 = y0 + startOffset;
+                y2 = y1 + dy - cellOffset;
             }
             else {
-                x1 = std::round(x0 + 1 + (numHueSteps_ - i - 1)*dx);
-                x2 = std::round(x0 + (numHueSteps_ - i)*dx);
-                y1 = y02;
-                y2 = y03 - 1;
+                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1)*dx);
+                x2 = std::round(x0 + startOffset + (numHueSteps_ - i)*dx) - cellOffset;
+                y1 = y0 + startOffset + dy;
+                y2 = y1 + dy - cellOffset;
             }
-            double hue = i*dhue;
             auto c = core::Color::hsl(hue, s, l);
-            highlightCell(a, c, x1, y1, x2, y2);
+            insertCellHighlight(a, c, x1, y1, x2, y2);
         }
 
         // Load triangles
