@@ -42,6 +42,7 @@ ColorPalette::ColorPalette(const ConstructorKey&) :
     hoveredHueIndex_(-1),
     hoveredSaturationIndex_(-1),
     hoveredLightnessIndex_(-1),
+    scrubbedSelector_(SelectorType::None),
     isSelectedColorExact_(true),
     selectedHueIndex_(0),
     selectedSaturationIndex_(0),
@@ -350,23 +351,73 @@ void ColorPalette::onPaintDestroy(graphics::Engine* engine)
 
 bool ColorPalette::onMouseMove(MouseEvent* event)
 {
+    // Determine relevant selector
+    const core::Vec2f& p = event->pos();
+    SelectorType selector = scrubbedSelector_;
+    if (selector == SelectorType::None) {
+        selector = hoveredSelector_(p);
+    }
+
+    // Determine hovered cell
     Int i = -1;
     Int j = -1;
     Int k = -1;
+    if (selector == SelectorType::SaturationLightness) {
+        auto sl = hoveredSaturationLightness_(p);
+        i = sl.first;
+        j = sl.second;
+    }
+    else if (selector == SelectorType::Hue) {
+        k = hoveredHue_(p);
+    }
+
+    // Update
+    if (hoveredLightnessIndex_ != i ||
+        hoveredSaturationIndex_ != j ||
+        hoveredHueIndex_ != k)
+    {
+        hoveredLightnessIndex_ = i;
+        hoveredSaturationIndex_ = j;
+        hoveredHueIndex_ = k;
+        if (scrubbedSelector_ != SelectorType::None) {
+            selectColorFromHovered_(); // -> already emit repaint()
+        }
+        else {
+            reload_ = true;
+            repaint();
+        }
+    }
+    return true;
+}
+
+bool ColorPalette::onMousePress(MouseEvent* /*event*/)
+{
+    if (hoveredLightnessIndex_ != -1) {
+        scrubbedSelector_ = SelectorType::SaturationLightness;
+    }
+    else if (hoveredHueIndex_ != -1) {
+        scrubbedSelector_ = SelectorType::Hue;
+    }
+    return selectColorFromHovered_();
+}
+
+bool ColorPalette::onMouseRelease(MouseEvent* /*event*/)
+{
+    scrubbedSelector_ = SelectorType::None;
+    return true;
+}
+
+ColorPalette::SelectorType ColorPalette::hoveredSelector_(const core::Vec2f& p)
+{
     float x0 = margin_;
     float y0 = margin_;
     float w = width() - 2*margin_;
-    const core::Vec2f& p = event->pos();
     if (p[0] > x0 && p[0] < x0+w) {
         float dx = (w - 1) / numLightnessSteps_;
         float dy = std::round(dx);
         float h = 1 + dy * numSaturationSteps_;
         if (p[1] > y0 && p[1] < y0+h) {
-            // Mouse is in Saturation/Lightness selector
-            float i_ = numLightnessSteps_ * (p[0]-x0) / w;
-            float j_ = numSaturationSteps_ * (p[1]-y0) / h;
-            i = core::clamp(core::ifloor<Int>(i_), Int(0), numLightnessSteps_ - 1);
-            j = core::clamp(core::ifloor<Int>(j_), Int(0), numSaturationSteps_ - 1);
+            return SelectorType::SaturationLightness;
         }
         else {
             y0 += h + margin_;
@@ -375,29 +426,54 @@ bool ColorPalette::onMouseMove(MouseEvent* event)
             dy = std::round(dx);
             h = 1 + dy * 2;
             if (p[1] > y0 && p[1] < y0+h) {
-                // Mouse is in Hue selector
-                float k_ = halfNumHueSteps * (p[0]-x0) / w;
-                k = core::clamp(core::ifloor<Int>(k_), Int(0), halfNumHueSteps - 1);
-                if (p[1] > y0+dy) {
-                    k = numHueSteps_ - k - 1;
-                }
+                return SelectorType::Hue;
             }
         }
     }
-    if (hoveredLightnessIndex_ != i ||
-        hoveredSaturationIndex_ != j ||
-        hoveredHueIndex_ != k)
-    {
-        hoveredLightnessIndex_ = i;
-        hoveredSaturationIndex_ = j;
-        hoveredHueIndex_ = k;
-        reload_ = true;
-        repaint();
-    }
-    return true;
+    return SelectorType::None;
 }
 
-bool ColorPalette::onMousePress(MouseEvent* /*event*/)
+std::pair<Int, Int> ColorPalette::hoveredSaturationLightness_(const core::Vec2f& p)
+{
+    float x0 = margin_;
+    float y0 = margin_;
+    float w = width() - 2*margin_;
+    float dx = (w - 1) / numLightnessSteps_;
+    float dy = std::round(dx);
+    float h = 1 + dy * numSaturationSteps_;
+    float x = core::clamp(p[0], x0, x0 + w);
+    float y = core::clamp(p[1], y0, y0 + h);
+    float i_ = numLightnessSteps_ * (x - x0) / w;
+    float j_ = numSaturationSteps_ * (y - y0) / h;
+    Int i = core::clamp(core::ifloor<Int>(i_), Int(0), numLightnessSteps_ - 1);
+    Int j = core::clamp(core::ifloor<Int>(j_), Int(0), numSaturationSteps_ - 1);
+    return {i, j};
+}
+
+Int ColorPalette::hoveredHue_(const core::Vec2f& p)
+{
+    float x0 = margin_;
+    float y0 = margin_;
+    float w = width() - 2*margin_;
+    float dx = (w - 1) / numLightnessSteps_;
+    float dy = std::round(dx);
+    float h = 1 + dy * numSaturationSteps_;
+    y0 += h + margin_;
+    Int halfNumHueSteps = numHueSteps_ / 2;
+    dx = (w - 1) / halfNumHueSteps;
+    dy = std::round(dx);
+    h = 1 + dy * 2;
+    float x = core::clamp(p[0], x0, x0 + w);
+    float y = core::clamp(p[1], y0, y0 + h);
+    float k_ = halfNumHueSteps * (x - x0) / w;
+    Int k = core::clamp(core::ifloor<Int>(k_), Int(0), halfNumHueSteps - 1);
+    if (y > y0 + dy) {
+        k = numHueSteps_ - k - 1;
+    }
+    return k;
+}
+
+bool ColorPalette::selectColorFromHovered_()
 {
     bool accepted = false;
     if (hoveredLightnessIndex_ != -1) {
