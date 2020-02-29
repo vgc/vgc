@@ -75,5 +75,15 @@ bool Widget::onMouseRelease(MouseEvent* /*event*/)
     return false;
 }
 
+bool Widget::onMouseEnter()
+{
+    return false;
+}
+
+bool Widget::onMouseLeave()
+{
+    return false;
+}
+
 } // namespace ui
 } // namespace vgc
