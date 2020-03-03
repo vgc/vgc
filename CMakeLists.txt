@@ -545,6 +545,24 @@ else()
 endif()
 message(STATUS "") # newline
 
+# zlib
+message(STATUS "[zlib]")
+set(VGC_ZLIB_DIR ${CMAKE_CURRENT_LIST_DIR}/third/zlib CACHE FILEPATH "Path to the root of the zlib distribution")
+if (EXISTS ${VGC_ZLIB_DIR})
+    message(STATUS "Found zlib: ${VGC_ZLIB_DIR}")
+    file(READ "${VGC_ZLIB_DIR}/zlib.h" _zlib_h_contents)
+    string(REGEX REPLACE ".*#define[ \t]+ZLIB_VERSION[ \t]+\"([-0-9A-Za-z.]+)\".*"
+        "\\1" VGC_ZLIB_FULL_VERSION ${_zlib_h_contents})
+    message(STATUS "Version: ${VGC_ZLIB_FULL_VERSION}")
+    add_subdirectory(${VGC_ZLIB_DIR})
+    set_target_properties(zlib PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/lib
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin)
+else()
+    message(SEND_ERROR "Can't find zlib")
+endif()
+message(STATUS "") # newline
+
 # Git
 message(STATUS "[Git]")
 if (GIT_EXECUTABLE)
