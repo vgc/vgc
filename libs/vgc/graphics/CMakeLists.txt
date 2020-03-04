@@ -1,4 +1,7 @@
 vgc_add_library(graphics
+    THIRD_DEPENDENCIES
+        ${FREETYPE_LIBRARIES}
+
     VGC_DEPENDENCIES
         core
 

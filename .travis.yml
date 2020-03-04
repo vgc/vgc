@@ -7,6 +7,7 @@ matrix:
       install:
         - sudo apt-get install -y libgl1-mesa-dev
         - sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
+        - sudo apt-get install -y libfreetype6-dev
         - QT_VERSION=5.12.5
         - wget https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
         - sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C /opt
@@ -23,6 +24,7 @@ matrix:
         homebrew:
           packages:
             - qt
+            - freetype
       before_script:
         - export CXX=clang++ CC=clang
         - CMAKE_EXTRA_ARGS+=" -DQt=/usr/local/opt/qt"

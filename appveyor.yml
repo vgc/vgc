@@ -14,7 +14,10 @@ environment:
   VGC_CODESIGN_URL:
     secure: 3hIJG/4X/vL+fmmUqTqTVYZkMJ1VG4o9Uh6Dq0hu6dE=
 
-before_build:
+cache:
+  - c:\tools\vcpkg\installed\
+
+install:
   - echo %APPVEYOR_PULL_REQUEST_NUMBER%
   - echo %APPVEYOR_PULL_REQUEST_TITLE%
   - echo %APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%
@@ -27,10 +30,15 @@ before_build:
   - echo %APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED%
   - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set VGC_COMMIT_BRANCH=%APPVEYOR_REPO_BRANCH%) else (set VGC_COMMIT_BRANCH=%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%)
   - echo %VGC_COMMIT_BRANCH%
+  - cd C:\Tools\vcpkg
+  - vcpkg integrate install
+  - vcpkg install freetype:x64-windows
+
+before_build:
   - cd C:\dev\vgc
   - mkdir build
   - cd build
-  - cmake .. -G "Visual Studio 15 2017" -A x64 -DPython="C:/Python37-x64" -DQt="C:/Qt/5.12/msvc2017_64" -DWiX="C:/Program Files (x86)/WiX Toolset v3.11" -DVGC_COMMIT_BRANCH=%VGC_COMMIT_BRANCH%
+  - cmake .. -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 15 2017" -A x64 -DPython="C:/Python37-x64" -DQt="C:/Qt/5.12/msvc2017_64" -DWiX="C:/Program Files (x86)/WiX Toolset v3.11" -DVGC_COMMIT_BRANCH=%VGC_COMMIT_BRANCH%
 
 build_script:
   - cd C:\dev\vgc\build
