@@ -16,13 +16,23 @@
 
 #include <vgc/graphics/engine.h>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 namespace vgc {
 namespace graphics {
 
 Engine::Engine() :
     Object(core::Object::ConstructorKey())
 {
-
+	FT_Library library;
+	FT_Error error = FT_Init_FreeType(&library);
+	if (error) {
+		core::print("Initializing FreeType: ERROR\n");
+	}
+	else {
+		core::print("Initializing FreeType: OK\n");
+	}
 }
 
 } // namespace graphics

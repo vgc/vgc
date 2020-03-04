@@ -555,6 +555,35 @@ find_package(Git REQUIRED)
 message(STATUS "Version: ${GIT_VERSION_STRING}")
 message(STATUS "") # newline
 
+# Freetype
+# Note: on Windows, if using vcpkg, all required DLLs are automatically
+# moved to the bin/ folder so it is ready for deployment without having
+# to copy those ourselves
+message(STATUS "[FreeType]")
+if(DEFINED VCPKG_TARGET_TRIPLET)
+    find_package(freetype CONFIG REQUIRED)
+    set(FREETYPE_LIBRARIES freetype)
+    set(FREETYPE_INCLUDE_DIRS "")
+    get_target_property(_FREETYPE_INCLUDE_DIRS freetype INTERFACE_INCLUDE_DIRECTORIES)
+    foreach(h ${_FREETYPE_INCLUDE_DIRS})
+        if(EXISTS "${h}/freetype.h")
+            file(READ "${h}/freetype.h" _FREETYPE_H)
+            string(REGEX MATCH "define[ \t]+FREETYPE_MAJOR[ \t]+([0-9]+)" _FREETYPE_MAJOR_MATCH "${_FREETYPE_H}")
+            set(FREETYPE_VERSION_MAJOR "${CMAKE_MATCH_1}")
+            string(REGEX MATCH "define[ \t]+FREETYPE_MINOR[ \t]+([0-9]+)" _FREETYPE_MINOR_MATCH "${_FREETYPE_H}")
+            set(FREETYPE_VERSION_MINOR "${CMAKE_MATCH_1}")
+            string(REGEX MATCH "define[ \t]+FREETYPE_PATCH[ \t]+([0-9]+)" _FREETYPE_PATCH_MATCH "${_FREETYPE_H}")
+            set(FREETYPE_VERSION_PATCH "${CMAKE_MATCH_1}")
+            set(FREETYPE_VERSION_STRING "${FREETYPE_VERSION_MAJOR}.${FREETYPE_VERSION_MINOR}.${FREETYPE_VERSION_PATCH}")
+        endif()
+    endforeach()
+else()
+    find_package(Freetype REQUIRED)
+endif()
+message(STATUS "Version: ${FREETYPE_VERSION_STRING}")
+include_directories(${FREETYPE_INCLUDE_DIRS})
+message(STATUS "") # newline
+
 # Add internal libs and apps
 # TODO: avoid global `include_directories`
 message(STATUS "[VGC]")

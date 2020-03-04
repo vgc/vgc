@@ -24,6 +24,7 @@ Prerequisites:
 - **C++11**: We recommend Visual Studio 2017 on Windows, and any recent version of Clang/GCC on macOS/Linux.
 - **Python 3.6+**: We recommend the latest Python 3.7.x version via the [official installer](https://www.python.org/downloads/).
 - **Qt 5.12+**: We recommend the latest Qt 5.12.x version via the [official installer](https://www.qt.io/download-qt-installer).
+- **FreeType**: We recommend the latest FreeType 2.x.
 - **OpenGL Dev Tools**: Already installed on Windows, macOS, and many Linux distributions. On Ubuntu, you need `sudo apt install libglu1-mesa-dev`.
 
 VGC also depends on the following libraries, but these are already included in
@@ -38,12 +39,22 @@ recommendations for library versions.
 
 #### Windows 7/8/10, Visual Studio 2017 64bit, Python 3.7, Qt 5.12.6
 
-(Manually installed: Git, CMake, Visual Studio, Python, Qt)
+Manually install Git, CMake, Visual Studio, Python, Qt, then:
 
 ```
+# Download and build FreeType via vcpkg
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+.\vcpkg integrate install
+.\vcpkg install freetype:x64-windows
+cd ..
+
+# Download, build, and run VGC
 git clone https://github.com/vgc/vgc.git
 mkdir build && cd build
 cmake ..\vgc ^
+    -DCMAKE_TOOLCHAIN_FILE="%UserProfile%\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
     -G "Visual Studio 15 2017" -A x64 ^
     -DPython="%UserProfile%\AppData\Local\Programs\Python\Python37" ^
     -DQt="C:\Qt\5.12.6\msvc2017_64"
@@ -53,9 +64,14 @@ make
 
 #### macOS 10.14, Xcode 10.3 (=> Clang 10.0.1), Python 3.7, Qt 5.12.6
 
-(Manually installed: Xcode, Python, Qt)
+Manually install Xcode, Python, Qt, then:
 
 ```
+# Download and install FreeType via homebrew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+brew install freetype
+
+# Download, build, and run VGC
 git clone https://github.com/vgc/vgc.git
 mkdir build && cd build
 cmake ../vgc \
@@ -68,10 +84,13 @@ make
 
 #### Ubuntu 18.04 (=> GCC 7.4, Python 3.6), Qt 5.12.6
 
-(Manually installed: Qt)
+Manually install Qt, then:
 
 ```
-sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev
+# Install remaining dependencies
+sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev libfreetype6-dev
+
+# Download, build, and run VGC
 git clone https://github.com/vgc/vgc.git
 mkdir build && cd build
 cmake ../vgc \
