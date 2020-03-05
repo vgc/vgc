@@ -112,7 +112,7 @@ public:
     ///
     UiWidgetEngine(const ConstructorKey&);
 
-    /// Creates a new document with no root element.
+    /// Creates a new UiWidgetEngine.
     ///
     static UiWidgetEngineSharedPtr create();
 
