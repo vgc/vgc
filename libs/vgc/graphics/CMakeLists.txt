@@ -8,10 +8,13 @@ vgc_add_library(graphics
     HEADER_FILES
         api.h
         engine.h
+        exceptions.h
+        font.h
         idgenerator.h
 
     CPP_FILES
         engine.cpp
+        font.cpp
         idgenerator.cpp
 
     RESOURCE_FILES
@@ -20,3 +23,6 @@ vgc_add_library(graphics
         opengl/shader.f.glsl
         opengl/shader.v.glsl
 )
+
+add_subdirectory(wraps)
+add_subdirectory(tests)
