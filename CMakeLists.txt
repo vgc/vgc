@@ -505,6 +505,12 @@ if(EXISTS ${FMT_DIR})
         endif()
     endif()
     add_subdirectory(${FMT_DIR})
+    if(MSVC)
+        # disable warning C4275: non dll-interface class
+        # 'std::runtime_error' used as base for dll-interface class
+        # 'fmt::v6::format_error' / 'fmt::v6::system_error'
+        target_compile_options(fmt PRIVATE /wd4275)
+    endif()
     if(VGC_FMT_LIB_TYPE STREQUAL "static")
         set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
     elseif(VGC_FMT_LIB_TYPE STREQUAL "shared")
