@@ -23,200 +23,75 @@
 namespace vgc {
 namespace dom {
 
-LogicError::~LogicError()
-{
+namespace internal {
 
+std::string notAliveMsg(const Node* node)
+{
+    return core::format(
+        "Node {} is not alive", core::toAddressString(node));
 }
 
-// Note: in all the res.reserve() calls below, we assume that:
-// - Addresses of nodes take at most 14 chars (AMD64 architecture is defined to
-//   have only 48bit of virtual address space, thus 12 hex chars + leading "0x")
-// - node types have at most 8 chars (currently, the longest is "Document")
-
-namespace {
-std::string notAliveReason_(const Node* node)
+std::string wrongDocumentMsg(const Node* n1, const Node* n2)
 {
-    std::string res;
-    res.reserve(32);
-    res.append("Node ");
-    res.append(core::toAddressString(node));
-    res.append(" is not alive");
-    return res;
-}
-} // namespace
-
-NotAliveError::NotAliveError(const Node* node) :
-    LogicError(notAliveReason_(node))
-{
-
+    return core::format(
+        "Node {} and Node {} belong to different documents"
+        " (resp. Document {} and Document {})",
+        core::toAddressString(n1),
+        core::toAddressString(n1),
+        core::toAddressString(n1->document()),
+        core::toAddressString(n2->document()));
 }
 
-NotAliveError::~NotAliveError()
+std::string wrongChildTypeMsg(const Node* parent, const Node* child)
 {
-
+    return core::format(
+        "Node {} (type = {}) cannot be a child of Node {} (type = {})",
+        core::toAddressString(child),
+        core::toString(child->nodeType()),
+        core::toAddressString(parent),
+        core::toString(parent->nodeType()));
 }
 
-namespace {
-std::string wrongDocumentReason_(const Node* n1, const Node* n2)
+std::string secondRootElementMsg(const Document* document)
 {
-    std::string res;
-    res.reserve(133);
-    res.append("Node ");
-    res.append(core::toAddressString(n1));
-    res.append(" and Node ");
-    res.append(core::toAddressString(n2));
-    res.append("belong to different documents (resp. Document ");
-    res.append(core::toAddressString(n1->document()));
-    res.append(" and Document ");
-    res.append(core::toAddressString(n2->document()));
-    res.append(")");
-    return res;
-}
-} // namespace
-
-WrongDocumentError::WrongDocumentError(const Node* n1, const Node* n2) :
-    LogicError(wrongDocumentReason_(n1, n2))
-{
-
+    return core::format(
+        "Document {} cannot have a second root element (existing Element is {})",
+        core::toAddressString(document),
+        core::toAddressString(document->rootElement()));
 }
 
-WrongDocumentError::~WrongDocumentError()
+std::string childCycleMsg(const Node* parent, const Node* child)
 {
-
+    return core::format(
+        "Node {} cannot be a child of Node {}"
+        " because the latter is a descendant of the former",
+        core::toAddressString(child),
+        core::toAddressString(parent));
 }
 
-HierarchyRequestError::~HierarchyRequestError()
+std::string replaceDocumentMsg(const Document* oldNode, const Node* newNode)
 {
-
+    return core::format(
+        "Node {} cannot replace Document node {}",
+        core::toAddressString(newNode),
+        core::toAddressString(oldNode));
 }
 
-namespace {
-std::string wrongChildTypeReason_(const Node* parent, const Node* child)
-{
-    std::string res;
-    res.reserve(96);
-    res.append("Node ");
-    res.append(core::toAddressString(child));
-    res.append(" (type = ");
-    res.append(core::toString(child->nodeType()));
-    res.append(") cannot be a child of Node ");
-    res.append(core::toAddressString(parent));
-    res.append(" (type = ");
-    res.append(core::toString(parent->nodeType()));
-    res.append(")");
-    return res;
-}
-} // namespace
+} // namespace internal
 
-WrongChildTypeError::WrongChildTypeError(const Node* parent, const Node* child) :
-    HierarchyRequestError(wrongChildTypeReason_(parent, child))
-{
-
-}
-
-WrongChildTypeError::~WrongChildTypeError()
-{
-
-}
-
-namespace {
-std::string secondRootElementReason_(const Document* document)
-{
-    std::string res;
-    res.reserve(94);
-    res.append("Document ");
-    res.append(core::toAddressString(document));
-    res.append(" cannot have a second root element (existing Element is ");
-    res.append(core::toAddressString(document->rootElement()));
-    res.append(")");
-    return res;
-}
-} // namespace
-
-SecondRootElementError::SecondRootElementError(const Document* document) :
-    HierarchyRequestError(secondRootElementReason_(document))
-{
-
-}
-
-SecondRootElementError::~SecondRootElementError()
-{
-
-}
-
-namespace {
-std::string childCycleReason_(const Node* parent, const Node* child)
-{
-    std::string res;
-    res.reserve(109);
-    res.append("Node ");
-    res.append(core::toAddressString(child));
-    res.append(" cannot be a child of Node ");
-    res.append(core::toAddressString(parent));
-    res.append(" because the latter is a descendant of the former");
-    return res;
-}
-} // namespace
-
-ChildCycleError::ChildCycleError(const Node* parent, const Node* child) :
-    HierarchyRequestError(childCycleReason_(parent, child))
-{
-
-}
-
-ChildCycleError::~ChildCycleError()
-{
-
-}
-
-namespace {
-std::string replaceDocumentReason_(const Document* oldNode, const Node* newNode)
-{
-    std::string res;
-    res.reserve(63);
-    res.append("Node ");
-    res.append(core::toAddressString(newNode));
-    res.append(" cannot replace Document node ");
-    res.append(core::toAddressString(oldNode));
-    return res;
-}
-} // namespace
-
-ReplaceDocumentError::ReplaceDocumentError(const Document* oldNode, const Node* newNode) :
-    HierarchyRequestError(replaceDocumentReason_(oldNode, newNode))
-{
-
-}
-
-ReplaceDocumentError::~ReplaceDocumentError()
-{
-
-}
-
-RuntimeError::~RuntimeError()
-{
-
-}
-
-ParseError::~ParseError()
-{
-
-}
-
-XmlSyntaxError::~XmlSyntaxError()
-{
-
-}
-
-VgcSyntaxError::~VgcSyntaxError()
-{
-
-}
-
-FileError::~FileError()
-{
-
-}
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NotAliveError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(WrongDocumentError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(HierarchyRequestError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(WrongChildTypeError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(SecondRootElementError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ChildCycleError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ReplaceDocumentError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RuntimeError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ParseError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(XmlSyntaxError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(VgcSyntaxError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(FileError)
 
 } // namespace dom
 } // namespace vgc

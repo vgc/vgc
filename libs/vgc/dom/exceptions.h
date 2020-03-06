@@ -26,6 +26,17 @@ namespace dom {
 class Node;
 class Document;
 
+namespace internal {
+
+VGC_DOM_API std::string notAliveMsg(const Node* node);
+VGC_DOM_API std::string wrongDocumentMsg(const Node* n1, const Node* n2);
+VGC_DOM_API std::string wrongChildTypeMsg(const Node* parent, const Node* child);
+VGC_DOM_API std::string secondRootElementMsg(const Document* document);
+VGC_DOM_API std::string childCycleMsg(const Node* parent, const Node* child);
+VGC_DOM_API std::string replaceDocumentMsg(const Document* oldNode, const Node* newNode);
+
+} // namespace internal
+
 /// \class vgc::dom::LogicError
 /// \brief Raised when there is a logic error detected in vgc::dom.
 ///
@@ -46,15 +57,15 @@ class Document;
 ///       +-- ReplaceDocumentError
 /// \endverbatim
 ///
-class VGC_DOM_API LogicError : public core::LogicError {
+class VGC_DOM_API_EXCEPTION LogicError : public core::LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a LogicError with the given \p reason.
     ///
-    explicit LogicError(const std::string& reason) : core::LogicError(reason) {}
-
-    /// Destructs the LogicError.
-    ///
-    ~LogicError();
+    explicit LogicError(const std::string& reason) :
+        core::LogicError(reason) {}
 };
 
 /// \class vgc::dom::NotAliveError
@@ -65,15 +76,15 @@ public:
 ///
 /// \sa Node::isAlive() and Node::destroy().
 ///
-class VGC_DOM_API NotAliveError : public LogicError {
+class VGC_DOM_API_EXCEPTION NotAliveError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a NotAliveError informing that the Node \p node is not alive.
     ///
-    NotAliveError(const Node* node);
-
-    /// Destructs the NotAliveError.
-    ///
-    ~NotAliveError();
+    NotAliveError(const Node* node) :
+        LogicError(internal::notAliveMsg(node)) {}
 };
 
 /// \class vgc::dom::WrongDocumentError
@@ -86,16 +97,16 @@ public:
 ///
 /// \sa Node::reparent() and Node::replace().
 ///
-class VGC_DOM_API WrongDocumentError : public LogicError {
+class VGC_DOM_API_EXCEPTION WrongDocumentError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a WrongDocumentError informing that the Node \p n1 and the
     /// Node \p n2 do not belong to the same Document.
     ///
-    WrongDocumentError(const Node* n1, const Node* n2);
-
-    /// Destructs the WrongDocumentError.
-    ///
-    ~WrongDocumentError();
+    WrongDocumentError(const Node* n1, const Node* n2) :
+        LogicError(internal::wrongDocumentMsg(n1, n2)) {}
 };
 
 /// \class vgc::dom::HierarchyRequestError
@@ -121,15 +132,14 @@ public:
 ///
 /// \sa Node::reparent() and Node::replace().
 ///
-class VGC_DOM_API HierarchyRequestError : public LogicError {
+class VGC_DOM_API_EXCEPTION HierarchyRequestError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a HierarchyRequestError with the given \p reason.
     ///
     HierarchyRequestError(const std::string& reason) : LogicError(reason) {}
-
-    /// Destructs the HierarchyRequestError.
-    ///
-    ~HierarchyRequestError();
 };
 
 /// \class vgc::dom::WrongChildTypeError
@@ -144,16 +154,16 @@ public:
 ///
 /// \sa Node::reparent() and Node::replace().
 ///
-class VGC_DOM_API WrongChildTypeError : public HierarchyRequestError {
+class VGC_DOM_API_EXCEPTION WrongChildTypeError : public HierarchyRequestError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a WrongChildTypeError informing that \p parent cannot
     /// have \p child as its child due to incompatible node types.
     ///
-    WrongChildTypeError(const Node* parent, const Node* child);
-
-    /// Destructs the WrongChildTypeError.
-    ///
-    ~WrongChildTypeError();
+    WrongChildTypeError(const Node* parent, const Node* child) :
+        HierarchyRequestError(internal::wrongChildTypeMsg(parent, child)) {}
 };
 
 /// \class vgc::dom::SecondRootElementError
@@ -164,16 +174,16 @@ public:
 /// whenever a requested operation would result in a second root element be
 /// inserted as a child of the Document node.
 ///
-class VGC_DOM_API SecondRootElementError : public HierarchyRequestError {
+class VGC_DOM_API_EXCEPTION SecondRootElementError : public HierarchyRequestError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a SecondRootElementError informing that the Document \p node
     /// cannot have a second root element.
     ///
-    SecondRootElementError(const Document* document);
-
-    /// Destructs the SecondRootElementError.
-    ///
-    ~SecondRootElementError();
+    SecondRootElementError(const Document* document) :
+        HierarchyRequestError(internal::secondRootElementMsg(document)) {}
 };
 
 /// \class vgc::dom::ChildCycleError
@@ -185,16 +195,16 @@ public:
 /// when attempting to insert a Node as a child of itself or of one of its
 /// descendants.
 ///
-class VGC_DOM_API ChildCycleError : public HierarchyRequestError {
+class VGC_DOM_API_EXCEPTION ChildCycleError : public HierarchyRequestError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a ChildCycleError informing that \p parent cannot have \p
     /// child as its child because \p parent is a descendant of \p child.
     ///
-    ChildCycleError(const Node* parent, const Node* child);
-
-    /// Destructs the ChildCycleError.
-    ///
-    ~ChildCycleError();
+    ChildCycleError(const Node* parent, const Node* child) :
+        HierarchyRequestError(internal::childCycleMsg(parent, child)) {}
 };
 
 /// \class vgc::dom::ReplaceDocumentError
@@ -205,16 +215,16 @@ public:
 /// Document node (unless newNode is also the Document node, in which case
 /// replace() does nothing).
 ///
-class VGC_DOM_API ReplaceDocumentError : public HierarchyRequestError {
+class VGC_DOM_API_EXCEPTION ReplaceDocumentError : public HierarchyRequestError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a ReplaceDocumentError informing that \p newNode cannot
     /// replace \p oldNode because \p oldNode is the Document node.
     ///
-    ReplaceDocumentError(const Document* oldNode, const Node* newNode);
-
-    /// Destructs the ReplaceDocumentError.
-    ///
-    ~ReplaceDocumentError();
+    ReplaceDocumentError(const Document* oldNode, const Node* newNode) :
+        HierarchyRequestError(internal::replaceDocumentMsg(oldNode, newNode)) {}
 };
 
 /// \class vgc::dom::RuntimeError
@@ -234,15 +244,15 @@ public:
 ///  +-- FileError
 /// \endverbatim
 ///
-class VGC_DOM_API RuntimeError : public core::RuntimeError {
+class VGC_DOM_API_EXCEPTION RuntimeError : public core::RuntimeError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a LogicError with the given \p reason.
     ///
-    explicit RuntimeError(const std::string& reason) : core::RuntimeError(reason) {}
-
-    /// Destructs the LogicError.
-    ///
-    ~RuntimeError();
+    explicit RuntimeError(const std::string& reason) :
+        core::RuntimeError(reason) {}
 };
 
 /// \class vgc::dom::ParseError
@@ -255,15 +265,14 @@ public:
 ///
 /// \sa XmlSyntaxError, VgcSyntaxError
 ///
-class VGC_DOM_API ParseError : public RuntimeError {
+class VGC_DOM_API_EXCEPTION ParseError : public RuntimeError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a ParseError with the given \p reason.
     ///
     ParseError(const std::string& reason) : RuntimeError(reason) {}
-
-    /// Destructs the ParseError.
-    ///
-    ~ParseError();
 };
 
 /// \class vgc::dom::XmlSyntaxError
@@ -273,15 +282,14 @@ public:
 /// document. For example, <path></vertex> is not a valid XML fragment because
 /// the end tag does not match the start tag.
 ///
-class VGC_DOM_API XmlSyntaxError : public ParseError {
+class VGC_DOM_API_EXCEPTION XmlSyntaxError : public ParseError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a XmlSyntaxError with the given \p reason.
     ///
     XmlSyntaxError(const std::string& reason) : ParseError(reason) {}
-
-    /// Destructs the XmlSyntaxError.
-    ///
-    ~XmlSyntaxError();
 };
 
 /// \class vgc::dom::VgcSyntaxError
@@ -293,15 +301,14 @@ public:
 /// positions is an attribute of ValueType::Vec2dArray and "" is not a valid
 /// Vec2dArray. A correct start tag would be for example <path positions="[]">.
 ///
-class VGC_DOM_API VgcSyntaxError : public ParseError {
+class VGC_DOM_API_EXCEPTION VgcSyntaxError : public ParseError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a VgcSyntaxError with the given \p reason.
     ///
     VgcSyntaxError(const std::string& reason) : ParseError(reason) {}
-
-    /// Destructs the VgcSyntaxError.
-    ///
-    ~VgcSyntaxError();
 };
 
 /// \class vgc::dom::FileError
@@ -312,15 +319,14 @@ public:
 /// exist), and raised by Document::save() if the file cannot be written to
 /// (most likely due to file permissions).
 ///
-class VGC_DOM_API FileError : public RuntimeError {
+class VGC_DOM_API_EXCEPTION FileError : public RuntimeError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a FileError with the given \p reason.
     ///
     FileError(const std::string& reason) : RuntimeError(reason) {}
-
-    /// Destructs the FileError.
-    ///
-    ~FileError();
 };
 
 } // namespace dom

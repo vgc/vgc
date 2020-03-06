@@ -28,11 +28,14 @@
 #if defined(VGC_DOM_STATIC)
 #    define VGC_DOM_API
 #    define VGC_DOM_API_HIDDEN
+#    define VGC_DOM_API_EXCEPTION
 #else
 #    if defined(VGC_DOM_EXPORTS)
-#        define VGC_DOM_API VGC_CORE_DLL_EXPORT
+#        define VGC_DOM_API           VGC_CORE_DLL_EXPORT
+#        define VGC_DOM_API_EXCEPTION VGC_CORE_DLL_EXPORT_EXCEPTION
 #    else
-#        define VGC_DOM_API VGC_CORE_DLL_IMPORT
+#        define VGC_DOM_API           VGC_CORE_DLL_IMPORT
+#        define VGC_DOM_API_EXCEPTION VGC_CORE_DLL_IMPORT_EXCEPTION
 #    endif
 #    define VGC_DOM_API_HIDDEN VGC_CORE_DLL_HIDDEN
 #endif

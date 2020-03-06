@@ -22,6 +22,107 @@
 
 #include <vgc/core/api.h>
 
+// # About VGC_FOO_API_EXCEPTION
+//
+// When compiling a DLL using MSVC on Windows, we don't export exception
+// classes, and instead fully inline them. Otherwise, we get errors such as the
+// following, due to std::logic_error (and other STL exceptions) not being
+// exported themselves:
+//
+//   warning C4275: non dll-interface class 'std::logic_error' used as base
+//   for dll-interface class 'vgc::core::LogicError'
+//
+// See: https://stackoverflow.com/questions/24511376/how-to-dllexport-a-class-derived-from-stdruntime-error
+//
+// However, when compiling with Clang on macOS, we do need to export the class,
+// otherwise RTTI information isn't properly propagated across shared
+// libraries. For example, in any VGC library other than vgc.core, pybind11
+// would fail to dynamic cast our C++ exceptions and raise the proper Python
+// exception. For example, in vgc/dom/tests/test_node.py:
+//
+//   def testReparentCycle(self):
+//       doc = Document()
+//       n1 = Element(doc, "foo")
+//       n2 = Element(n1, "bar")
+//       with self.assertRaises(ChildCycleError):
+//           n2.reparent(n2)
+//
+//   => When compiling with Clang on macOS, with exported exceptions, the test
+//      succeeds.
+//
+//   => When compiling with Clang on macOS, without exported exceptions, the
+//      test fails, because the Python built-in exception RuntimeError is raised
+//      instead of our custom vgc.dom.ChildCycleError.
+//
+// This is why we use the macro VGC_FOO_API_EXCEPTION: it enables conditional
+// export of the class based on the given compiler/platform.
+//
+// Note that using GCC on Linux, it seems that exceptions work as excepted
+// without warnings regardless of exporting the class or not.
+//
+
+/// \def VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+///
+/// When compiling with Clang on macOS, if a virtual class is fully inline then
+/// we get the following warnings:
+///
+///   warning: <classname> has no out-of-line virtual method definitions; its
+///   vtable will be emitted in every translation unit [-Wweak-vtables]
+///
+/// Therefore, since our exception classes are indeed virtual and must be fully
+/// inline (in order to work without warnings on Windows), we need to "anchor"
+/// the vtable, which we do by declaring and defining a private method:
+///
+/// ```cpp
+/// // vgc/foo/exceptions.h
+/// class VGC_FOO_API_EXCEPTION FooError : public vgc::core::LogicError {
+/// private:
+///     virtual void anchor();
+/// ...
+/// };
+///
+/// // vgc/foo/exceptions.cpp
+/// void FooError::anchor() {}
+/// ```
+///
+/// VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR and VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR
+/// are macros that declare and define such anchor functions, but
+/// only on some platforms/compilers. They must be used like so:
+///
+/// ```cpp
+/// // vgc/foo/exceptions.h
+/// class VGC_FOO_API_EXCEPTION FooError : public vgc::core::LogicError {
+/// private:
+///     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+/// ...
+/// };
+///
+/// // vgc/foo/exceptions.cpp
+/// VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(FooError)
+/// ```
+///
+/// References:
+/// https://github.com/vgc/vgc/issues/24
+/// https://github.com/vgc/vgc/issues/84
+/// https://github.com/pybind/pybind11/pull/1769
+/// https://github.com/facebook/folly/issues/834 (they choose to ignore the warning)
+/// https://stackoverflow.com/questions/23746941/what-is-the-meaning-of-clangs-wweak-vtables
+/// https://stackoverflow.com/questions/28786473/clang-no-out-of-line-virtual-method-definitions-pure-abstract-c-class
+/// https://reviews.llvm.org/D2068
+/// https://gitlab.tu-berlin.de/daniel-schuermann/clang/commit/f4a5e8f33e88cd065c3ac93b5304cba83fe36ef7
+///
+/// \def VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR
+///
+/// See VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR.
+///
+#if defined(VGC_CORE_COMPILER_CLANG)
+#    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR virtual void anchor();
+#    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T) void T::anchor() {}
+#else
+#    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+#    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)
+#endif
+
 namespace vgc {
 namespace core {
 
@@ -229,7 +330,10 @@ namespace core {
 /// other cases it is not, and more importantly it shouldn't be the
 /// responsibility of the low-level library to decide.
 ///
-class VGC_CORE_API LogicError : public std::logic_error {
+class VGC_CORE_API_EXCEPTION LogicError : public std::logic_error {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a LogicError with the given \p reason.
     ///
@@ -238,10 +342,6 @@ public:
     /// Constructs a LogicError with the given \p reason.
     ///
     explicit LogicError(const char* reason) : std::logic_error(reason) {}
-
-    /// Destructs the LogicError.
-    ///
-    virtual ~LogicError();
 };
 
 /// \class vgc::core::NegativeIntegerError
@@ -268,15 +368,14 @@ public:
 /// vgc::core::parse<vgc::UInt>("+42"); // => ParseError!
 /// ```
 ///
-class VGC_CORE_API NegativeIntegerError : public LogicError {
+class VGC_CORE_API_EXCEPTION NegativeIntegerError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a NegativeIntegerError with the given \p reason.
     ///
     NegativeIntegerError(const std::string& reason) : LogicError(reason) {}
-
-    /// Destructs the NegativeIntegerError.
-    ///
-    ~NegativeIntegerError();
 };
 
 /// \class vgc::core::IndexError
@@ -290,15 +389,14 @@ public:
 /// double x = a[2]; // => IndexError!
 /// ```
 ///
-class VGC_CORE_API IndexError : public LogicError {
+class VGC_CORE_API_EXCEPTION IndexError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs an IndexError with the given \p reason.
     ///
     IndexError(const std::string& reason) : LogicError(reason) {}
-
-    /// Destructs the IndexError.
-    ///
-    ~IndexError();
 };
 
 /// \class vgc::core::RuntimeError
@@ -342,7 +440,10 @@ public:
 /// are unable to handle this error yourself, then let it propagate upstream
 /// and document that your function may raise this unhandled exception.
 ///
-class VGC_CORE_API RuntimeError : public std::runtime_error {
+class VGC_CORE_API_EXCEPTION RuntimeError : public std::runtime_error {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a RuntimeError with the given \p reason.
     ///
@@ -351,10 +452,6 @@ public:
     /// Constructs a RuntimeError with the given \p reason.
     ///
     explicit RuntimeError(const char* reason) : std::runtime_error(reason) {}
-
-    /// Destructs the RuntimeError.
-    ///
-    virtual ~RuntimeError();
 };
 
 /// \class vgc::core::ParseError
@@ -368,15 +465,14 @@ public:
 /// vgc::core::parse<double>("Hello, world!"); // => ParseError!
 /// ```
 ///
-class VGC_CORE_API ParseError : public RuntimeError {
+class VGC_CORE_API_EXCEPTION ParseError : public RuntimeError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a ParseError with the given \p reason.
     ///
     ParseError(const std::string& reason) : RuntimeError(reason) {}
-
-    /// Destructs the ParseError.
-    ///
-    ~ParseError();
 };
 
 /// \class vgc::core::RangeError
@@ -391,15 +487,14 @@ public:
 /// vgc::core::parse<double>("1e400"); // => RangeError! (1e400 exceeds double limits)
 /// ```
 ///
-class VGC_CORE_API RangeError : public RuntimeError {
+class VGC_CORE_API_EXCEPTION RangeError : public RuntimeError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a RangeError with the given \p reason.
     ///
     RangeError(const std::string& reason) : RuntimeError(reason) {}
-
-    /// Destructs the RangeError.
-    ///
-    ~RangeError();
 };
 
 /// \class vgc::core::IntegerOverflowError
@@ -429,15 +524,31 @@ public:
 /// message (or prevent the user from performing the action) rather than the
 /// generic crash handler.
 ///
-class VGC_CORE_API IntegerOverflowError : public RangeError {
+class VGC_CORE_API_EXCEPTION IntegerOverflowError : public RangeError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
 public:
     /// Constructs a IntegerOverflowError with the given \p reason.
     ///
     IntegerOverflowError(const std::string& reason) : RangeError(reason) {}
+};
 
-    /// Destructs the ParseError.
+/// \class vgc::core::FileError
+/// \brief Raised when failed to read a file.
+///
+/// This exception is raised by vgc::core::readFile() if the input file cannot
+/// be read (for example, due to file permissions, or because the file does
+/// not exist).
+///
+class VGC_CORE_API_EXCEPTION FileError : public RuntimeError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs a FileError with the given \p reason.
     ///
-    ~IntegerOverflowError();
+    FileError(const std::string& reason) : RuntimeError(reason) {}
 };
 
 } // namespace core

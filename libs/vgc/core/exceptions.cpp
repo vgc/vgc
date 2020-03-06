@@ -19,40 +19,14 @@
 namespace vgc {
 namespace core {
 
-LogicError::~LogicError()
-{
-
-}
-
-NegativeIntegerError::~NegativeIntegerError()
-{
-
-}
-
-IndexError::~IndexError()
-{
-
-}
-
-RuntimeError::~RuntimeError()
-{
-
-}
-
-ParseError::~ParseError()
-{
-
-}
-
-RangeError::~RangeError()
-{
-
-}
-
-IntegerOverflowError::~IntegerOverflowError()
-{
-
-}
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NegativeIntegerError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(IndexError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RuntimeError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ParseError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RangeError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(IntegerOverflowError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(FileError)
 
 } // namespace core
 } // namespace vgc

@@ -182,14 +182,20 @@
 #       define VGC_CORE_DLL_IMPORT __declspec(dllimport)
 #       define VGC_CORE_DLL_HIDDEN
 #   endif
+#   define VGC_CORE_DLL_EXPORT_EXCEPTION
+#   define VGC_CORE_DLL_IMPORT_EXCEPTION
 #elif defined(VGC_CORE_COMPILER_GCC) && VGC_CORE_COMPILER_GCC_MAJOR >= 4 || defined(VGC_CORE_COMPILER_CLANG)
 #   define VGC_CORE_DLL_EXPORT __attribute__((visibility("default")))
 #   define VGC_CORE_DLL_IMPORT __attribute__((visibility("default")))
 #   define VGC_CORE_DLL_HIDDEN __attribute__((visibility("hidden")))
+#   define VGC_CORE_DLL_EXPORT_EXCEPTION VGC_CORE_DLL_EXPORT
+#   define VGC_CORE_DLL_IMPORT_EXCEPTION VGC_CORE_DLL_IMPORT
 #else
 #   define VGC_CORE_DLL_EXPORT
 #   define VGC_CORE_DLL_IMPORT
 #   define VGC_CORE_DLL_HIDDEN
+#   define VGC_CORE_DLL_EXPORT_EXCEPTION
+#   define VGC_CORE_DLL_IMPORT_EXCEPTION
 #endif
 
 #endif // VGC_CORE_DLL_H
