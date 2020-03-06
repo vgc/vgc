@@ -26,11 +26,15 @@ namespace graphics {
 /// \class vgc::graphics::FontError
 /// \brief Raised when there is an error related to fonts.
 ///
-class FontError : public core::RuntimeError {
+class VGC_GRAPHICS_API FontError : public core::RuntimeError {
 public:
     /// Constructs a FontError with the given \p reason.
     ///
     explicit FontError(const std::string& reason) : core::RuntimeError(reason) {}
+
+    /// Destructs the FontError.
+    ///
+    ~FontError();
 };
 
 } // namespace graphics

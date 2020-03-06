@@ -70,7 +70,7 @@ FontLibrary::FontLibrary(const ConstructorKey&) :
     Object(core::Object::ConstructorKey()),
     impl_(new internal::FontLibraryImpl()) // TODO: use make_unique (C++14)
 {
-    throw FontError(errorMsg(FT_Error()));
+
 }
 
 // static

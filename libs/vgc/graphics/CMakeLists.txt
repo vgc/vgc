@@ -14,6 +14,7 @@ vgc_add_library(graphics
 
     CPP_FILES
         engine.cpp
+        exceptions.cpp
         font.cpp
         idgenerator.cpp
 

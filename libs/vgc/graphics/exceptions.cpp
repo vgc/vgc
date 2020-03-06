@@ -14,17 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
-#include <vgc/core/wraps/exceptions.h>
 #include <vgc/graphics/exceptions.h>
 
 namespace vgc {
 namespace graphics {
 
-void wrap_exceptions(py::module& m)
+FontError::~FontError()
 {
-    py::module core = py::module::import("vgc.core");
-    VGC_CORE_WRAP_EXCEPTION(graphics, FontError, core, RuntimeError);
+
 }
 
 } // namespace graphics
