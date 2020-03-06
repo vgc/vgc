@@ -28,4 +28,5 @@ void wrap_exceptions(py::module& m)
     VGC_CORE_WRAP_EXCEPTION(core, ParseError, m, RuntimeError);
     VGC_CORE_WRAP_EXCEPTION(core, RangeError, m, RuntimeError);
     VGC_CORE_WRAP_EXCEPTION(core, IntegerOverflowError, m, RangeError);
+    VGC_CORE_WRAP_EXCEPTION(core, FileError, m, RuntimeError);
 }

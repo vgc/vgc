@@ -19,10 +19,7 @@
 namespace vgc {
 namespace graphics {
 
-FontError::~FontError()
-{
-
-}
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(FontError)
 
 } // namespace graphics
 } // namespace vgc

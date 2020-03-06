@@ -19,13 +19,10 @@
 #include <fstream>
 #include <ios>
 
+#include <vgc/core/exceptions.h>
+
 namespace vgc {
 namespace core {
-
-FileError::~FileError()
-{
-
-}
 
 std::string readFile(const std::string& filePath)
 {
