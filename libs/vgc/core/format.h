@@ -42,9 +42,15 @@
 #include <type_traits>
 #include <vector>
 
+// Include <fmt/format.h>, suppressing the following two warnings:
+//
+//   warning C4275: non dll-interface class 'std::runtime_error' used as base
+//   for dll-interface class 'fmt::v6::format_error' / 'fmt::v6::system_error'
+//
+#include <vgc/core/compiler.h>
 #if defined(VGC_CORE_COMPILER_MSVC)
 #  pragma warning(push)
-#  pragma warning(disable: 4275) // warning C4275: non dll-interface class 'std::runtime_error' used as base for dll-interface class 'fmt::v6::format_error'/'fmt::v6::system_error'
+#  pragma warning(disable: 4275)
 #endif
 #include <fmt/format.h>
 #if defined(VGC_CORE_COMPILER_MSVC)
