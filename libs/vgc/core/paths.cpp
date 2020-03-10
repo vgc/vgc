@@ -16,6 +16,8 @@
 
 #include <vgc/core/paths.h>
 
+#include <cstdlib> // getenv
+
 namespace vgc {
 namespace core {
 
@@ -31,6 +33,15 @@ void setBasePath(const std::string& path)
 
 std::string basePath()
 {
+    if (basePath_.length() == 0) {
+        char* path = std::getenv("VGCBASEPATH");
+        if (path) {
+            basePath_ = path;
+        }
+        else {
+            basePath_ = ".";
+        }
+    }
     return basePath_;
 }
 
