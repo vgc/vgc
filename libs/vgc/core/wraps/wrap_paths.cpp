@@ -15,29 +15,13 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/paths.h>
 
-void wrap_arithmetic(py::module& m);
-void wrap_arrays(py::module& m);
-void wrap_color(py::module& m);
-void wrap_exceptions(py::module& m);
-void wrap_format(py::module& m);
-void wrap_io(py::module& m);
-void wrap_object(py::module& m);
-void wrap_parse(py::module& m);
-void wrap_paths(py::module& m);
-void wrap_stopwatch(py::module& m);
-void wrap_vec2(py::module& m);
-
-PYBIND11_MODULE(core, m) {
-    wrap_arithmetic(m);
-    wrap_arrays(m);
-    wrap_color(m);
-    wrap_exceptions(m);
-    wrap_format(m);
-    wrap_io(m);
-    wrap_object(m);
-    wrap_parse(m);
-    wrap_paths(m);
-    wrap_stopwatch(m);
-    wrap_vec2(m);
+void wrap_paths(py::module& m)
+{
+    m.def("setBasePath", &vgc::core::setBasePath);
+    m.def("basePath", &vgc::core::basePath);
+    m.def("pythonPath", &vgc::core::pythonPath);
+    m.def("resourcesPath", &vgc::core::resourcesPath);
+    m.def("resourcePath", &vgc::core::resourcePath);
 }

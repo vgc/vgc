@@ -14,5 +14,6 @@ vgc_test_library(core
         test_format.py
         test_object.py
         test_parse.py
+        test_paths.py
         test_vec2.py
 )
