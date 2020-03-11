@@ -26,10 +26,12 @@ namespace graphics {
 namespace internal {
 
 class FontLibraryImpl;
+class FontFaceImpl;
 
 } // namespace internal
 
 VGC_CORE_DECLARE_PTRS(FontLibrary);
+VGC_CORE_DECLARE_PTRS(FontFace);
 
 /// \class vgc::graphics::FontLibrary
 /// \brief Manages a set of available fonts.
@@ -61,8 +63,57 @@ public:
     ///
     static FontLibrarySharedPtr create();
 
+    /// Adds the face from the given filename to this library.
+    ///
+    /// ```cpp
+    /// FontFace* fontFace = fontLibrary->addFace("fonts/DejaVuSerif.ttf");
+    /// ```
+    ///
+    FontFace* addFace(const std::string& filename);
+
 private:
     std::unique_ptr<internal::FontLibraryImpl> impl_;
+};
+
+/// \class vgc::graphics::FontFace
+/// \brief A given typeface, in a given style.
+///
+/// A font face represents the data contains in one TTF or OTF file, for
+/// example, "SourceSansPro-Bold.otf". A given font family is typically made of
+/// several font faces, for example, the "Source Sans Pro" font family has
+/// several faces to represent all its variations: light, regular, bold, light
+/// italic, italic, bold italic, etc.
+///
+class VGC_GRAPHICS_API FontFace : public core::Object {
+
+    VGC_CORE_OBJECT(FontFace)
+
+public:
+    /// Creates a new FontFace. This constructor is an implementation
+    /// detail. In order to create a FontFace, please use the following:
+    ///
+    /// \code
+    /// FontFace* fontFace = fontLibrary->addFace();
+    /// \endcode
+    ///
+    FontFace(const ConstructorKey&);
+
+    /// Destructs the FontFace.
+    ///
+    ~FontFace();
+
+    /// Returns whether the FontFace is alive. The reason it might
+    /// not be alive is if the library it belongs to has already been
+    /// deleted.
+    ///
+    // TODO: use new Object ownership mechanism to prevent python from
+    // extending the lifetime of objects.
+    bool isAlive();
+
+private:
+    std::unique_ptr<internal::FontFaceImpl> impl_;
+    friend class FontLibrary;
+    friend class internal::FontLibraryImpl;
 };
 
 } // namespace graphics

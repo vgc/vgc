@@ -18,14 +18,36 @@
 
 import unittest
 
+from vgc.core import resourcePath
 from vgc.graphics import (
-    FontLibrary
+    FontLibrary,
+    FontFace
 )
 
 class TestFontLibrary(unittest.TestCase):
 
     def testConstructor(self):
         library = FontLibrary()
+
+    def testAddFont(self):
+        library = FontLibrary()
+        fontPath = resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
+        face = library.addFace(fontPath)
+        self.assertTrue(face.isAlive())
+
+class TestFace(unittest.TestCase):
+
+    def testConstructor(self):
+        with self.assertRaises(TypeError):
+            face = FontFace()
+
+    def testIsAlive(self):
+        library = FontLibrary()
+        fontPath = resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
+        face = library.addFace(fontPath)
+        self.assertTrue(face.isAlive())
+        del library
+        self.assertFalse(face.isAlive())
 
 if __name__ == '__main__':
     unittest.main()
