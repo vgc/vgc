@@ -29,7 +29,17 @@ void wrapFontLibrary(py::module& m)
     using Parent = core::Object;
     py::class_<This, Holder, Parent>(m, "FontLibrary")
         .def(py::init([]() { return This::create(); } ))
+        .def("addFace", &FontLibrary::addFace)
     ;
+}
+
+void wrapFontFace(py::module& m)
+{
+    using This = FontFace;
+    using Holder = FontFaceSharedPtr;
+    using Parent = core::Object;
+    py::class_<This, Holder, Parent>(m, "FontFace")
+        .def("isAlive", &FontFace::isAlive);
 }
 
 } // namespace
@@ -41,6 +51,7 @@ void wrap_font(py::module& m)
     py::module::import("vgc.core");
 
     wrapFontLibrary(m);
+    wrapFontFace(m);
 }
 
 } // namespace graphics

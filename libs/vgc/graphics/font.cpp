@@ -19,6 +19,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <vgc/core/array.h>
 #include <vgc/graphics/exceptions.h>
 
 namespace vgc {
@@ -44,6 +45,7 @@ namespace internal {
 class FontLibraryImpl {
 public:
     FT_Library library;
+    core::Array<FontFaceSharedPtr> faces;
 
     FontLibraryImpl()
     {
@@ -55,7 +57,97 @@ public:
 
     ~FontLibraryImpl()
     {
+        // Release loaded faces. Note that FT_Done_FreeType(library) would
+        // already call FT_Done_Face() for us. However, we need to do it first,
+        // otherwise they would be double-freed, since ~FontFaceImpl would also
+        // automatically call FT_Done_Face().
+        //
+        // In addition, this code sets each FontFace as invalid, which is
+        // important if Python extends the lifetime of some FontFace. This
+        // design is clumsy and should be improved with a better Object
+        // ownership mechanism.
+        //
+        for (const FontFaceSharedPtr& face : faces) {
+            face->impl_.reset();
+        }
+        faces.clear();
+
+        // Release library.
         FT_Error error = FT_Done_FreeType(library);
+        if (error) {
+            // Note: we print a warning rather than throwing, because throwing
+            // in destructors is a bad idea.
+            core::warning() << errorMsg(error) << std::endl;
+        }
+    }
+};
+
+class FontFaceImpl {
+public:
+    FT_Face face;
+
+    FontFaceImpl(FT_Library library, const std::string& filename)
+    {
+        // Select the index of the face in the font file. For now, we only use
+        // index = 0, which should work for many fonts, and is the index we must
+        // use for files which only have one face.
+        //
+        // See:
+        // https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_open_face
+        //
+        FT_Long index = 0;
+
+        // Load the face.
+        //
+        FT_Error error = FT_New_Face(library, filename.c_str(), index, &face);
+        if (error) {
+            throw FontError(core::format(
+                "Error loading font file {}: {}", filename, errorMsg(error)));
+        }
+
+        // Select a given charmap for character code to glyph index mapping.
+        //
+        // For now, we always use the UCS-2 charmap, which all fonts we are willing
+        // to support should provide. However, this only gives access to characters
+        // in the Basic Multilingual Plane (BMP). In the future, we should also
+        // determine whether the font provides UCS-4 or UTF-8 charmaps, in which
+        // case we should use these.
+        //
+        // See:
+        // https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_set_charmap
+        // https://en.wikipedia.org/wiki/Universal_Coded_Character_Set
+        // https://docs.microsoft.com/en-us/typography/opentype/spec/name
+        //
+        // TODO: Instead of FT_Set_Charmap, we may want to use "FT_Select_CharMap" instead:
+        // https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_select_charmap
+        //
+        bool isCharmapSet = false;
+        for(FT_Int i = 0; i < face->num_charmaps; ++i) {
+            FT_CharMap c = face->charmaps[i];
+            if ((c->platform_id == 0 && c->encoding_id == 3) ||
+                (c->platform_id == 3 && c->encoding_id == 1))
+            {
+                FT_Error error = FT_Set_Charmap(face, c);
+                if (error) {
+                    throw FontError(core::format(
+                        "Error setting charmap for font file {}: {}",
+                        filename, errorMsg(error)));
+                }
+                isCharmapSet = true;
+            }
+        }
+        if (!isCharmapSet) {
+            throw FontError(core::format(
+                "Error setting charmap for font file {}: {}",
+                filename, "USC-2 charmap not found"));
+        }
+
+        // TODO: FT_Set_Char_Size?
+    }
+
+    ~FontFaceImpl()
+    {
+        FT_Error error = FT_Done_Face(face);
         if (error) {
             // Note: we print a warning rather than throwing, because throwing
             // in destructors is a bad idea.
@@ -81,7 +173,37 @@ FontLibrarySharedPtr FontLibrary::create()
 
 // We need the destructor implementation in the *.cpp file, see:
 // https://stackoverflow.com/questions/9954518/stdunique-ptr-with-an-incomplete-type-wont-compile
-FontLibrary::~FontLibrary() = default;
+FontLibrary::~FontLibrary()
+{
+
+}
+
+FontFace* FontLibrary::addFace(const std::string& filename)
+{
+    auto fontFace = std::make_shared<FontFace>(FontFace::ConstructorKey());
+    FontFace* res = fontFace.get();
+    fontFace->impl_.reset(new internal::FontFaceImpl(impl_->library, filename));
+    impl_->faces.append(std::move(fontFace));
+    return res;
+}
+
+FontFace::FontFace(
+        const ConstructorKey&) :
+    Object(core::Object::ConstructorKey()),
+    impl_()
+{
+
+}
+
+FontFace::~FontFace()
+{
+
+}
+
+bool FontFace::isAlive()
+{
+    return impl_.get() != nullptr;
+}
 
 } // namespace graphics
 } // namespace vgc
