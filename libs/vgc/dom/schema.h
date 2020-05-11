@@ -71,9 +71,9 @@ private:
 /// \class vgc::dom::ElementSpec
 /// \brief Specifies all built-in attributes for a given Element type.
 ///
-/// This immutable class is essentially a dictionary of ElementSpec, specifying
-/// the name, type, and default value of all built-in attributes of a given
-/// Element type.
+/// This immutable class is essentially a dictionary of AttributeSpec,
+/// specifying the name, type, and default value of all built-in attributes of
+/// a given Element type.
 ///
 /// This is one of the building blocks that define a Schema.
 ///
