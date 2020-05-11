@@ -1,6 +1,6 @@
 ![VGC](https://github.com/vgc/vgc/blob/master/hero.png)
 
-[![TravisCI Build Status](https://travis-ci.org/vgc/vgc.svg?branch=master)](https://travis-ci.org/vgc/vgc)
+[![TravisCI Build Status](https://travis-ci.com/vgc/vgc.svg?branch=master)](https://travis-ci.com/vgc/vgc)
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/3tasnhbrlucfltp5?svg=true)](https://ci.appveyor.com/project/vgc/vgc)
 
 VGC is an upcoming suite of applications for graphic design and 2D animation,
