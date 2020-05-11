@@ -17,12 +17,37 @@
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/object.h>
 
-using This = vgc::core::Object;
-using Holder = vgc::core::ObjectSharedPtr;
-
 void wrap_object(py::module& m)
 {
+    using This = vgc::core::Object;
+    using Holder = vgc::core::ObjectPtr;
+
+    auto getattribute = py::module::import("builtins").attr("object").attr("__getattribute__");
+
     py::class_<This, Holder>(m, "Object")
-        .def(py::init([](){ return This::create(); }))
+        .def("isAlive", &This::isAlive)
+        .def("refCount", &This::refCount)
+        .def("__getattribute__", [getattribute](py::object self, py::str name) {
+            This* obj = self.cast<This*>();
+            if (obj->isAlive()) {
+                return getattribute(self, name);
+            }
+            else {
+                std::string name_(name);
+                if (name_ == "isAlive" || name_ == "refCount") {
+                    return getattribute(self, name);
+                }
+                else {
+                    throw vgc::core::NotAliveError(obj);
+                }
+            }
+        })
+        .def("parentObject", &This::parentObject)
+        .def("firstChildObject", &This::firstChildObject)
+        .def("lastChildObject", &This::lastChildObject)
+        .def("previousSiblingObject", &This::previousSiblingObject)
+        .def("nextSiblingObject", &This::nextSiblingObject)
+        .def("isDescendantObject", &This::isDescendantObject)
+        .def("dumpObjectTree", &This::dumpObjectTree)
     ;
 }

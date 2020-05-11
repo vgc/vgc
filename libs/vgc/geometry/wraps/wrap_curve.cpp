@@ -14,18 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/pybind11.h>
+#include <vgc/core/wraps/common.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/core/vec2d.h>
 
-namespace py = pybind11;
 using vgc::geometry::Curve;
-using vgc::geometry::CurveSharedPtr;
 using vgc::core::Vec2d;
 
 void wrap_curve(py::module& m)
 {
-    py::class_<Curve, CurveSharedPtr>(m, "Curve")
+    py::class_<Curve>(m, "Curve")
 
         .def(py::init<>())
 

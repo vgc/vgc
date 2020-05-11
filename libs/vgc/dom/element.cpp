@@ -22,14 +22,9 @@
 namespace vgc {
 namespace dom {
 
-Element::Element(const ConstructorKey&, Document* document, core::StringId name) :
+Element::Element(Document* document, core::StringId name) :
     Node(document, NodeType::Element),
     name_(name)
-{
-
-}
-
-Element::~Element()
 {
 
 }
@@ -37,8 +32,9 @@ Element::~Element()
 /* static */
 Element* Element::create_(Node* parent, core::StringId name)
 {
-    auto res = std::make_shared<Element>(ConstructorKey(), parent->document(), name);
-    return init_(std::move(res), parent);
+    Element* res = new Element(parent->document(), name);
+    res->appendObjectToParent_(parent);
+    return res;
 }
 
 /* static */
@@ -58,8 +54,6 @@ Element* Element::create(Element* parent, core::StringId name)
 
 const Value& Element::getAttribute(core::StringId name) const
 {
-    checkAlive();
-
     if (const AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         return authored->value();
     }
@@ -77,8 +71,6 @@ const Value& Element::getAttribute(core::StringId name) const
 
 void Element::setAttribute(core::StringId name, const Value& value)
 {
-    checkAlive();
-
     // If already authored, update the authored value
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         authored->setValue(value);

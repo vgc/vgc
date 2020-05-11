@@ -46,8 +46,6 @@ class TestFace(unittest.TestCase):
         fontPath = resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
         face = library.addFace(fontPath)
         self.assertTrue(face.isAlive())
-        del library
-        self.assertFalse(face.isAlive())
 
 if __name__ == '__main__':
     unittest.main()

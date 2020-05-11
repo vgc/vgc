@@ -18,12 +18,18 @@
 
 import unittest
 
-from vgc.core import Object
+from vgc.core import Object, NotAliveError
 
+# Note: the C++ Object class can't be instantiated since the constructor is
+# protected and there's not factory function. Therefore, there is nothing to
+# test. In the future, we may want to define a PyObject class or other
+# mechanism to allow defining Object subclass in Python.
+#
 class TestObject(unittest.TestCase):
 
     def testConstructor(self):
-        obj = Object()
+        with self.assertRaises(TypeError):
+            obj = Object()
 
 if __name__ == '__main__':
     unittest.main()

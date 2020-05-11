@@ -45,7 +45,6 @@ namespace internal {
 class FontLibraryImpl {
 public:
     FT_Library library;
-    core::Array<FontFaceSharedPtr> faces;
 
     FontLibraryImpl()
     {
@@ -57,22 +56,6 @@ public:
 
     ~FontLibraryImpl()
     {
-        // Release loaded faces. Note that FT_Done_FreeType(library) would
-        // already call FT_Done_Face() for us. However, we need to do it first,
-        // otherwise they would be double-freed, since ~FontFaceImpl would also
-        // automatically call FT_Done_Face().
-        //
-        // In addition, this code sets each FontFace as invalid, which is
-        // important if Python extends the lifetime of some FontFace. This
-        // design is clumsy and should be improved with a better Object
-        // ownership mechanism.
-        //
-        for (const FontFaceSharedPtr& face : faces) {
-            face->impl_.reset();
-        }
-        faces.clear();
-
-        // Release library.
         FT_Error error = FT_Done_FreeType(library);
         if (error) {
             // Note: we print a warning rather than throwing, because throwing
@@ -156,53 +139,53 @@ public:
     }
 };
 
+void FontLibraryImplDeleter::operator()(FontLibraryImpl* p)
+{
+    delete p;
+}
+
+void FontFaceImplDeleter::operator()(FontFaceImpl* p)
+{
+    delete p;
+}
+
 } // namespace internal
 
-FontLibrary::FontLibrary(const ConstructorKey&) :
-    Object(core::Object::ConstructorKey()),
-    impl_(new internal::FontLibraryImpl()) // TODO: use make_unique (C++14)
+FontLibrary::FontLibrary() :
+    Object(),
+    impl_(new internal::FontLibraryImpl())
 {
 
 }
 
 // static
-FontLibrarySharedPtr FontLibrary::create()
+FontLibraryPtr FontLibrary::create()
 {
-    return std::make_shared<FontLibrary>(ConstructorKey());
-}
-
-// We need the destructor implementation in the *.cpp file, see:
-// https://stackoverflow.com/questions/9954518/stdunique-ptr-with-an-incomplete-type-wont-compile
-FontLibrary::~FontLibrary()
-{
-
+    return FontLibraryPtr(new FontLibrary());
 }
 
 FontFace* FontLibrary::addFace(const std::string& filename)
 {
-    auto fontFace = std::make_shared<FontFace>(FontFace::ConstructorKey());
-    FontFace* res = fontFace.get();
-    fontFace->impl_.reset(new internal::FontFaceImpl(impl_->library, filename));
-    impl_->faces.append(std::move(fontFace));
+    FontFace* res = new FontFace(this);
+    res->impl_.reset(new internal::FontFaceImpl(impl_->library, filename));
     return res;
 }
 
-FontFace::FontFace(
-        const ConstructorKey&) :
-    Object(core::Object::ConstructorKey()),
+void FontLibrary::onDestroyed()
+{
+    impl_.reset();
+}
+
+FontFace::FontFace(FontLibrary* library) :
+    Object(),
     impl_()
 {
-
+    appendObjectToParent_(library);
 }
 
-FontFace::~FontFace()
+void FontFace::onDestroyed()
 {
-
-}
-
-bool FontFace::isAlive()
-{
-    return impl_.get() != nullptr;
+    impl_.reset();
 }
 
 } // namespace graphics

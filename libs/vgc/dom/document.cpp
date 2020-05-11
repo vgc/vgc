@@ -27,7 +27,7 @@
 namespace vgc {
 namespace dom {
 
-Document::Document(const ConstructorKey&) :
+Document::Document() :
     Node(this, NodeType::Document),
     hasXmlDeclaration_(true),
     hasXmlEncoding_(true),
@@ -39,15 +39,10 @@ Document::Document(const ConstructorKey&) :
     generateXmlDeclaration_();
 }
 
-Document::~Document()
-{
-
-}
-
 /* static */
-DocumentSharedPtr Document::create()
+DocumentPtr Document::create()
 {
-    return std::make_shared<Document>(ConstructorKey());
+    return DocumentPtr(new Document());
 }
 
 namespace {
@@ -105,9 +100,9 @@ bool isNameChar_(char c)
 class Parser
 {
 public:
-    static DocumentSharedPtr parse(std::ifstream& in)
+    static DocumentPtr parse(std::ifstream& in)
     {
-        DocumentSharedPtr res = Document::create();
+        DocumentPtr res = Document::create();
         Parser parser(in, res.get());
         parser.readAll_();
         return res;
@@ -704,7 +699,7 @@ private:
 } // namespace
 
 /* static */
-DocumentSharedPtr Document::open(const std::string& filePath)
+DocumentPtr Document::open(const std::string& filePath)
 {
     // Note: in the future, we want to be able to detect formatting style of
     // input XML files, and preserve this style, as well as existing
@@ -724,8 +719,6 @@ DocumentSharedPtr Document::open(const std::string& filePath)
 
 Element* Document::rootElement() const
 {
-    checkAlive();
-
     for (Node* node : children()) {
         if (node->nodeType() == NodeType::Element) {
             return Element::cast(node);
@@ -736,45 +729,33 @@ Element* Document::rootElement() const
 
 std::string Document::xmlDeclaration() const
 {
-    checkAlive();
-
     return xmlDeclaration_;
 }
 
 bool Document::hasXmlDeclaration() const
 {
-    checkAlive();
-
     return hasXmlDeclaration_;
 }
 
 void Document::setXmlDeclaration()
 {
-    checkAlive();
-
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
 }
 
 void Document::setNoXmlDeclaration()
 {
-    checkAlive();
-
     hasXmlDeclaration_ = false;
     generateXmlDeclaration_();
 }
 
 std::string Document::xmlVersion() const
 {
-    checkAlive();
-
     return xmlVersion_;
 }
 
 void Document::setXmlVersion(const std::string& version)
 {
-    checkAlive();
-
     xmlVersion_ = version;
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
@@ -782,22 +763,16 @@ void Document::setXmlVersion(const std::string& version)
 
 std::string Document::xmlEncoding() const
 {
-    checkAlive();
-
     return xmlEncoding_;
 }
 
 bool Document::hasXmlEncoding() const
 {
-    checkAlive();
-
     return hasXmlEncoding_;
 }
 
 void Document::setXmlEncoding(const std::string& encoding)
 {
-    checkAlive();
-
     xmlEncoding_ = encoding;
     hasXmlEncoding_ = true;
     hasXmlDeclaration_ = true;
@@ -806,8 +781,6 @@ void Document::setXmlEncoding(const std::string& encoding)
 
 void Document::setNoXmlEncoding()
 {
-    checkAlive();
-
     xmlEncoding_ = "UTF-8";
     hasXmlEncoding_ = false;
     generateXmlDeclaration_();
@@ -815,22 +788,16 @@ void Document::setNoXmlEncoding()
 
 bool Document::xmlStandalone() const
 {
-    checkAlive();
-
     return xmlStandalone_;
 }
 
 bool Document::hasXmlStandalone() const
 {
-    checkAlive();
-
     return hasXmlStandalone_;
 }
 
 void Document::setXmlStandalone(bool standalone)
 {
-    checkAlive();
-
     xmlStandalone_ = standalone;
     hasXmlStandalone_ = true;
     hasXmlDeclaration_ = true;
@@ -839,8 +806,6 @@ void Document::setXmlStandalone(bool standalone)
 
 void Document::setNoXmlStandalone()
 {
-    checkAlive();
-
     xmlStandalone_ = false;
     hasXmlStandalone_ = false;
     generateXmlDeclaration_();
@@ -870,8 +835,6 @@ void Document::generateXmlDeclaration_()
 void Document::save(const std::string& filePath,
                     const XmlFormattingStyle& style) const
 {
-    checkAlive();
-
     std::ofstream out(filePath);
     if (!out.is_open()) {
         throw FileError("Cannot save file " + filePath + ": " +  std::strerror(errno));

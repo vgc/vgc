@@ -23,24 +23,25 @@
 namespace vgc {
 namespace ui {
 
-VGC_CORE_DECLARE_PTRS(Event);
+VGC_DECLARE_OBJECT(Event);
 
 /// \class vgc::ui::Event
 /// \brief Base class of all events handled in the user interface.
 ///
-class VGC_UI_API Event : public core::Object
-{  
-    VGC_CORE_OBJECT(Event)
+class VGC_UI_API Event : public core::Object {
+private:
+    VGC_OBJECT(Event)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-public:
+protected:
     /// This is an implementation detail. please use Event::create() instead.
     ///
-    Event(const ConstructorKey&);
+    Event();
 
 public:
     /// Creates an Event.
     ///
-    static EventSharedPtr create();
+    static EventPtr create();
 };
 
 } // namespace ui

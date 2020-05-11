@@ -23,7 +23,7 @@ namespace vgc {
 namespace graphics {
 
 Engine::Engine() :
-    Object(core::Object::ConstructorKey())
+    Object()
 {
 	FT_Library library;
 	FT_Error error = FT_Init_FreeType(&library);

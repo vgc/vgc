@@ -19,16 +19,16 @@
 namespace vgc {
 namespace ui {
 
-Event::Event(const ConstructorKey&) :
-    Object(core::Object::ConstructorKey())
+Event::Event() :
+    Object()
 {
 
 }
 
 /* static */
-EventSharedPtr Event::create()
+EventPtr Event::create()
 {
-    return std::make_shared<Event>(ConstructorKey());
+    return EventPtr(new Event());
 }
 
 } // namespace ui

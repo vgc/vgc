@@ -17,190 +17,467 @@
 #ifndef VGC_CORE_OBJECT_H
 #define VGC_CORE_OBJECT_H
 
-#include <memory>
+#include <type_traits>
+
 #include <vgc/core/api.h>
-
-#define VGC_CORE_DECLARE_PTRS(T)                        \
-    class T;                                            \
-    using T##SharedPtr      = std::shared_ptr<T>;       \
-    using T##WeakPtr        = std::weak_ptr<T>;         \
-    using T##ConstSharedPtr = std::shared_ptr<const T>; \
-    using T##ConstWeakPtr   = std::weak_ptr<const T>
-
-#define VGC_CORE_OBJECT_SHARED_PTR_(T)                                  \
-    /** Returns a shared_ptr to this object. Assumes that the object */ \
-    /** is indeed managed via shared_ptr.                            */ \
-    std::shared_ptr<T> sharedPtr() {                                    \
-        return std::static_pointer_cast<T>(this->shared_from_this());   \
-    }
-
-#define VGC_CORE_OBJECT_WEAK_PTR_(T)                                  \
-    /** Returns a weak_ptr to this object. Assumes that the object */ \
-    /** is indeed managed via shared_ptr.                          */ \
-    std::weak_ptr<T> weakPtr() {                                      \
-        return sharedPtr(); /* Note: C++17 has weak_from_this */      \
-    }
-
-#define VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                                  \
-    /** Returns a const shared_ptr to this object. Assumes that the object */ \
-    /** is indeed managed via shared_ptr.                                  */ \
-    std::shared_ptr<const T> sharedPtr() const {                              \
-        return std::static_pointer_cast<const T>(this->shared_from_this());   \
-    }
-
-#define VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)                                  \
-    /** Returns a const weak_ptr to this object. Assumes that the object */ \
-    /** is indeed managed via shared_ptr.                                */ \
-    std::weak_ptr<const T> weakPtr() const {                                \
-        return sharedPtr(); /* Note: C++17 has weak_from_this */            \
-    }
-
-#define VGC_CORE_OBJECT(T)                                  \
-public:                                                     \
-    VGC_CORE_OBJECT_SHARED_PTR_(T)                          \
-    VGC_CORE_OBJECT_WEAK_PTR_(T)                            \
-    VGC_CORE_OBJECT_CONST_SHARED_PTR_(T)                    \
-    VGC_CORE_OBJECT_CONST_WEAK_PTR_(T)                      \
-protected:                                                  \
-    struct ConstructorKey { explicit ConstructorKey() {} }; \
-private:
+#include <vgc/core/arithmetic.h>
+#include <vgc/core/exceptions.h>
 
 namespace vgc {
 namespace core {
 
-VGC_CORE_DECLARE_PTRS(Object);
+class Object;
+
+namespace internal {
+
+// This class is befriended by Object to allow ObjPtr<T> to access and modify
+// the refCount, and destruct the object. Please do not use unless in the
+// implementation of ObjPtr<T>.
+//
+class ObjPtrAccess {
+public:
+    // Increments by k the refCount of the given obj and of all its ancestors.
+    // Does nothing if obj == nullptr.
+    //
+    static void incref(const Object* obj, Int64 k = 1);
+
+    // Decrements by k the refCount of the given obj and of all its ancestors.
+    // Destroys the root of the given obj if its refcount reaches zero. Does
+    // nothing if obj == nullptr.
+    //
+    static void decref(const Object* obj, Int64 k = 1);
+};
+
+} // namespace internal
+
+/// \class ObjPtr<T>
+/// \brief Smart pointer for managing the lifetime of Object instances.
+///
+/// See documentation of Object for more details.
+///
+// TODO: casting from ObjPtr<U> to ObjPtr<T> when U derives from T, and casting
+// from ObjPtr<const T> to ObjPtr<T>.
+//
+template<typename T>
+class ObjPtr {
+private:
+    template<typename Y>
+    using Compatible_ = typename std::enable_if<
+        std::is_convertible<Y*, T*>::value>::type;
+
+public:
+    /// Creates a null ObjPtr<T>, that is, an ObjPtr<T> which doesn't manage any
+    /// Object.
+    ///
+    ObjPtr() noexcept : obj_(nullptr)
+    {
+
+    }
+
+    /// Creates an ObjPtr<T> managing the given Object.
+    ///
+    /// Note that in the current implementation, we use intrusive reference
+    /// counting and therefore this constructor never throws and could be
+    /// marked noexept. However, you shouldn't rely on this: a future
+    /// implementation may implement referencing counting via
+    /// separately-allocated counter blocks, whose memory allocation may throw.
+    ///
+    ObjPtr(T* obj) : obj_(obj)
+    {
+        internal::ObjPtrAccess::incref(obj_);
+    }
+
+    /// Creates a copy of the given ObjPtr<T>.
+    ///
+    ObjPtr(const ObjPtr& other) noexcept :
+        obj_(other.obj_)
+    {
+        internal::ObjPtrAccess::incref(obj_);
+    }
+
+    /// Creates a copy of the given ObjPtr<Y>. This template overload doesn't
+    /// participate in overload resolution if Y* is not implicitly convertible
+    /// to T*.
+    ///
+    template<typename Y, typename = Compatible_<Y>>
+    ObjPtr(const ObjPtr<Y>& other) noexcept :
+        obj_(other.obj_)
+    {
+        internal::ObjPtrAccess::incref(obj_);
+    }
+
+    /// Assigns the given ObjPtr<T> to this ObjPtr<T>.
+    ///
+    ObjPtr& operator=(const ObjPtr& other) noexcept
+    {
+        if(obj_ != other.obj_) {
+            internal::ObjPtrAccess::decref(obj_);
+            obj_ = other.obj_;
+            internal::ObjPtrAccess::incref(obj_);
+        }
+        return *this;
+    }
+
+    /// Assigns the given ObjPtr<Y> to this ObjPtr<T>. This template overload
+    /// doesn't participate in overload resolution if Y* is not implicitly
+    /// convertible to T*.
+    ///
+    template<typename Y, typename = Compatible_<Y>>
+    ObjPtr& operator=(const ObjPtr<Y>& other) noexcept
+    {
+        if(obj_ != other.obj_) {
+            internal::ObjPtrAccess::decref(obj_);
+            obj_ = other.obj_;
+            internal::ObjPtrAccess::incref(obj_);
+        }
+        return *this;
+    }
+
+    /// Moves the given ObjPtr<T> to a new ObjPtr<T>.
+    ///
+    ObjPtr(ObjPtr&& other) noexcept : obj_(other.obj_)
+    {
+        other.obj_ = nullptr;
+    }
+
+    /// Moves the given ObjPtr<Y> to a new ObjPtr<T>. This template overload
+    /// doesn't participate in overload resolution if Y* is not implicitly
+    /// convertible to T*.
+    ///
+    template<typename Y, typename = Compatible_<Y>>
+    ObjPtr(ObjPtr<Y>&& other) noexcept : obj_(other.obj_)
+    {
+        other.obj_ = nullptr;
+    }
+
+    /// Moves the given ObjPtr<T> to this ObjPtr<T>.
+    ///
+    ObjPtr& operator=(ObjPtr&& other) noexcept
+    {
+        if (*this != other) {
+            internal::ObjPtrAccess::decref(obj_);
+            obj_ = other.obj_;
+            other.obj_ = nullptr;
+        }
+        return *this;
+    }
+
+    /// Moves the given ObjPtr<Y> to this ObjPtr<T>. This template overload
+    /// doesn't participate in overload resolution if Y* is not implicitly
+    /// convertible to T*.
+    ///
+    template<typename Y, typename = Compatible_<Y>>
+    ObjPtr& operator=(ObjPtr<Y>&& other) noexcept
+    {
+        if (*this != other) {
+            internal::ObjPtrAccess::decref(obj_);
+            obj_ = other.obj_;
+            other.obj_ = nullptr;
+        }
+        return *this;
+    }
+
+    /// Destroys this ObjPtr<T>, destroying the managed object if its reference
+    /// count reaches zero.
+    ///
+    ~ObjPtr()
+    {
+        internal::ObjPtrAccess::decref(obj_);
+    }
+
+    /// Accesses a member of the object managed by this ObjPtr<T>. Throws
+    /// NotAliveError if this ObjPtr is null or references a not-alive Object.
+    ///
+    T* operator->() const
+    {
+        return getAlive_();
+    }
+
+    /// Returns a reference to the object managed by this ObjPtr<T>. Throws
+    /// NotAliveError if this ObjPtr is null or references a not-alive Object.
+    ///
+    T& operator*() const
+    {
+        return *getAlive_();
+    }
+
+    /// Returns a pointer to the object managed by this ObjPtr<T>. This method
+    /// doesn't throw, buy may return a null pointer or a not-alive object.
+    ///
+    T* get() const noexcept
+    {
+        return obj_;
+    }
+
+    /// Returns whether the object managed by this ObjPtr<T> is a non-null and
+    /// alive object. This method doesn't throw.
+    ///
+    bool isAlive() const noexcept
+    {
+        return obj_ && obj_->isAlive();
+    }
+
+    /// Returns whether the object managed by this ObjPtr<T> is a non-null and
+    /// alive object. This is equivalent to isAlive(), and is provided for
+    /// convenience for use in boolean expression. This method doesn't throw.
+    ///
+    operator bool() const noexcept
+    {
+        return obj_ && obj_->isAlive();
+    }
+
+    /// Returns the refCount of the object managed by this ObjPtr<T>. Returns
+    /// -1 if this ObjPtr<T> is null. This method doesn't throw.
+    ///
+    Int64 refCount() const noexcept
+    {
+        return obj_ ? obj_->refCount() : -1;
+    }
+
+private:
+    T* obj_;
+
+    // Returns a pointer to the object managed by this ObjPtr<T>.
+    // Throws NotAliveError if this ObjPtr is null or references
+    // a not-alive Object.
+    //
+    T* getAlive_() const
+    {
+        if (isAlive()) {
+            return obj_;
+        }
+        else {
+            throw vgc::core::NotAliveError(obj_);
+        }
+    }
+
+    template<typename Y>
+    friend class ObjPtr;
+};
+
+/// Returns whether the two given ObjPtrs manage the same object.
+///
+template<typename T, typename U>
+inline bool operator==(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
+{
+    return a.get() == b.get();
+}
+
+/// Returns whether the two given ObjPtrs manage a different object.
+///
+template<typename T, typename U>
+inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
+{
+    return a.get() != b.get();
+}
+
+} // namespace core
+} // namespace vgc
+
+/// Forward-declares the given object subclass and its related smart pointers.
+/// More specifically, the following code:
+///
+/// ```cpp
+/// VGC_DECLARE_OBJECT(Foo);
+/// ```
+///
+/// expands to:
+///
+/// ```cpp
+/// class Foo;
+/// using FooPtr = vgc::core::ObjPtr<Foo>;
+/// using FooConstPtr = vgc::core::ObjPtr<const Foo>;
+/// ```
+///
+/// This macro should typically be called in the header file `foo.h` just
+/// before declaring the `Foo` class, or in other header files when you need to
+/// use the `Foo` and/or `FooPtr` types but cannot include "foo.h" due to cylic
+/// dependencies.
+///
+/// Like when using traditional forward-declarations, you should call this
+/// macro in the same namespace as Foo, for example:
+///
+/// ```cpp
+/// namespace vgc {
+/// namespace ui {
+/// VGC_DECLARE_OBJECT(Widget);
+/// }
+/// }
+/// ```
+///
+#define VGC_DECLARE_OBJECT(T)                      \
+    class T;                                       \
+    using T##Ptr      = vgc::core::ObjPtr<T>;      \
+    using T##ConstPtr = vgc::core::ObjPtr<const T>
+
+/// This macro should appear within a private section of the class declaration
+/// of any Object subclass.
+///
+/// ```cpp
+/// class Foo : public Object {
+/// private:
+///     VGC_OBJECT(Foo)
+/// // ...
+/// };
+/// ```
+///
+/// For now, it simply ensures that the destructor is protected. In the future,
+/// it may also provide some introspection features.
+///
+#define VGC_OBJECT(T)                                      \
+    protected:                                             \
+        ~T() override = default;                           \
+    private:
+
+/// This macro ensures that unsafe base protected methods are not accessible in
+/// subclasses. This macro should typically be added to a private section of
+/// direct sublasses of Object, but not to indirect subclasses.
+///
+#define VGC_PRIVATIZE_OBJECT_TREE_MUTATORS                 \
+    private:                                               \
+        using Object::destroyObject_;                      \
+        using Object::destroyChildObject_;                 \
+        using Object::appendChildObject_;                  \
+        using Object::prependChildObject_;                 \
+        using Object::insertChildObject_;                  \
+        using Object::removeChildObject_;                  \
+        using Object::appendObjectToParent_;               \
+        using Object::prependObjectToParent_;              \
+        using Object::insertObjectToParent_;               \
+        using Object::removeObjectFromParent_;
+
+namespace vgc {
+namespace core {
+
+VGC_DECLARE_OBJECT(Object);
 
 /// \class vgc::core::Object
-/// \brief Base class of most classes in the VGC codebase.
+/// \brief Provides a common API for object-based tree hierarchies.
 ///
-/// This base class allows the VGC codebase to be more readable, consistent,
-/// maintainable, thread-safe, and Python-binding-friendly at only a very small
-/// performance cost. It is strongly recommended that most classes derive,
-/// directly or indirectly, from Object. In particular any class that contains
-/// a `std::vector`, a `std::string`, any other container, or performs any sort
-/// of memory allocation should typically inherit from Object, since the
-/// overhead cost is unlikely to be significant compared to the existing cost.
-/// Notable exceptions include small struct-like classes such as `Vec2d`: these
-/// do not perform any dynamic allocation, are expected to be potentially
-/// instanciated more than a million times in a session, and are expected or
-/// measured to be a bottleneck if they would derive from Object.
+/// Object is the base class of some of the most important classes in the VGC
+/// codebase, such as ui::Widget and dom::Node. The Object class helps
+/// implementing tree hierarchies where the destruction of an Object
+/// automatically destruct its children.
 ///
-/// Classes deriving directly or indirectly from Object should typically be
-/// declared as follows, where Bar is either Object or one of its subclasses:
+/// Defining an Object subclass
+/// ---------------------------
 ///
-/// \code
-/// class Foo: public Bar
-/// {
-///     VGC_CORE_OBJECT(Foo)
+/// Object subclasses should typically be declared as follows:
 ///
-/// public:
-///     // Effectively protected constructors
-///     Foo(const ConstructorKey&);
-///     Foo(const ConstructorKey&, int x);
+/// ```cpp
+/// VGC_DECLARE_OBJECT(Foo);
 ///
-///     // Factory methods
-///     static FooSharedPtr create();
-///     static FooSharedPtr create(int x);
-/// };
-/// \endcode
+/// class Foo : public Object {
+/// private:
+///     VGC_OBJECT(Foo)
 ///
-/// The macro VGC_CORE_OBJECT(Foo) defines the following public methods:
-///
-/// \code
-/// FooSharedPtr sharedPtr();
-/// FooWeakPtr weakPtr();
-/// FooConstSharedPtr sharedPtr() const;
-/// FooConstWeakPtr weakPtr() const;
-/// \endcode
-///
-/// These methods can be used to convert a raw pointer into a smart pointer.
-/// This is possible since vgc::core::Object inherits from
-/// `std::enable_shared_from_this`.
-///
-/// In addition, VGC_CORE_OBJECT(Foo) defines a protected inner struct called
-/// ConstructorKey. This allows to keep the constructors public (so that
-/// std::make_shared has access to them), while still making them effectively
-/// protected. For more details on this technique, see
-/// https://stackoverflow.com/q/8147027/1951907. The other techniques that we
-/// have tried (e.g., inheritance trick, custom allocator) either did not play
-/// nice with pybind11, or failed to compile on some compilers.
-///
-/// Ownership Conventions
-/// ---------------------
-///
-/// Despite being managed by shared pointers, objects should typically have a
-/// clearly identified unique owner. This unique owner creates the object via
-/// Foo::create(), stores the shared pointer as a member variable `FooSharedPtr
-/// foo_`, but then always passes the raw pointer foo_.get() to other methods
-/// and clients (= "observers").
-///
-/// Observers should typically access and manipulate observed objects via
-/// raw pointers. If they desire to "remember" an object, the recommended
-/// way is to simply store the raw pointer as a member variable, and register
-/// for signals to be notified in case the object is destructed. If the
-/// observed object is guaranteed to outlive the observer via other contracts,
-/// just store the raw pointer without registering for signals. At a last
-/// resort, if it isn't possible or practical to register for signals, and if
-/// you do not have guarantees on the lifetime of the observed object, then you
-/// may call obj->weakPtr() and store the weak pointer as a member variable,
-/// which allows you to check for expiration at a later point:
-///
-/// \code
-/// class Bar {
-///     FooWeakPtr foo_;
+/// protected:
+///     Foo();
+///     Foo(Foo* parent);
 ///
 /// public:
-///     void Bar::setFoo(foo* foo) { foo_ = foo->weakPtr(); }
-///
-///     void Bar::bar() {
-///         if (Foo* foo = foo_.lock()) {
-///             /* do something */
-///         }
-///         else {
-///             foo_.reset();
-///         }
-///     }
+///     static FooPtr create();
+///     // and/or
+///     static Foo* create(Foo* parent);
+///     // and/or
+///     Foo* createChild();
 /// };
-/// \endcode
+/// ```
 ///
-/// Under almost no circumstances you should convert a raw pointer to a shared
-/// pointer and hold this shared pointer as a member variable (that is, unless
-/// you actually desire to share ownership, which is rare). Indeed, holding
-/// such shared pointer would defer the destruction of the object, and goes
-/// against good RAII design. A notable exception are Python bindings: many
-/// Python bindings of C++ classes internally hold a shared_ptr, because the
-/// concept of weak reference is not very pythonic. Indeed, most Python
-/// developers expect that objects stay alive as long as at least one Python
-/// variable references the object.
+/// These VGC_DECLARE_OBJECT and VGC_OBJECT macros may seem strange, so let's
+/// provide some explanations below as to what they do.
 ///
-/// Of course, never call `new` or `delete` to manually manage the lifetime of
-/// vgc::core::Object instances.
+/// The `VGC_DECLARE_OBJECT(Foo);` line simply expands to the following:
+///
+/// ```cpp
+/// class Foo;
+/// using FooPtr = vgc::core::ObjPtr<Foo>;
+/// using FooConstPtr = vgc::core::ObjPtr<const Foo>;
+/// ```
+///
+/// In other words, it forward-declares `Foo`, and declares `FooPtr` as an
+/// alias for `vgc::core::ObjPtr<Foo>` (as well as a const variant).
+///
+/// The class template `ObjPtr<T>` is a smart pointer that should be used to
+/// manage the lifetime of objects without a parent, which are called "root
+/// objects". Objects which do have a parent are called "child objects", and
+/// are automatically destroyed by their parents, so they shouldn't be managed
+/// by an `ObjPtr<T>`. In most cases, you should just use a raw pointer `T*`,
+/// such as in function parameters and return values, except in the rare cases
+/// where ownership is involved, such as creating a new root object, or
+/// detaching a child object from its parent.
+///
+/// The `VGC_OBJECT(Foo)` macro adds a few definitions common to all objects,
+/// for example, it makes the destructor protected.
+///
+/// The constructors should always be protected, and sublasses should instead
+/// provide either static functions like `Foo::create()` or
+/// `Foo::create(parent)`, or member functions like `parent->createChild()`.
+/// This ensures proper use of smart pointers: functions creating root objects
+/// should return ObjPtrs, and functions returning child objects should return
+/// raw pointers. Note that some Object subclasses may only allow to create
+/// root objects, for example a `dom::Document` is always a root. Other may
+/// only allow to create child objects, for example a `dom::Element` is always
+/// a child object. The decision depends on the situation, and usually comes
+/// from which invariants an Object subclass desires to enforce. For example, a
+/// `dom::Element` always has a valid parent, and the root is always a
+/// `dom::Document`.
+///
+///
+/// Ownership model
+/// ---------------
+///
+/// The ownership model of Object instances is a little peculiar: child objects
+/// are uniquely owned by their parent, but the ownership or root objects is
+/// shared among all ObjPtrs referencing them or any of their descendants.
+///
+/// One of the main reasons behind this design is to improve interoperability
+/// between C++ (which doesn't have a garbage collector), and Python (which
+/// does have a garbage collector).
+///
+/// In Python, all variables bound to VGC objects are using ObjPtrs under the
+/// hood. This ensures that a root object isn't destroyed as long as at least
+/// one of its descendant (including itself) is still referenced:
+///
+/// ```python
+/// root = vgc.ui.Widget()
+/// child = vgc.ui.Widget(root)
+/// root = None     # Both root and child are kept alive
+/// child = None    # Destroys child, then destroys root
+/// ```
+///
+/// However, note that an ObjPtr referencing a child object doesn't guarantee
+/// that the child object itself is kept alive: it only guarantees that its
+/// root is kept alive. This is because parents have unique ownership of their
+/// children, which means that they have full power to destroy any of their
+/// children if they want to.
+///
+/// When trying to dereference an ObjPtr whose underlying object has already
+/// been destroyed by its parent, a NotAliveError is raised.
 ///
 /// Calling Conventions
 /// -------------------
 ///
-/// Functions manipuling instances of vgc::core::Object should be passed these
-/// objects by raw pointers (that is, unless they participate in ownership,
-/// which is rare). Unless stated otherwise, any function that takes an Object*
-/// as argument assumes that the following is true:
+/// Functions manipulating instances of vgc::core::Object should be passed
+/// these objects by raw pointers (that is, unless they participate in
+/// ownership, which is rare). Unless stated otherwise, any function that takes
+/// an Object* as argument assumes that the following is true:
 ///
 /// 1. The pointer is non-null.
 ///
 /// 2. The lifetime of the object exceeds the lifetime of the function.
-///
-/// 3. Converting to smart pointers is safe.
 ///
 /// Please watch the first 30min of following talk by Herb Sutter for a
 /// rationale (or consult the C++ Core Guidelines):
 ///
 /// https://www.youtube.com/watch?v=xnqTKD8uD64
 ///
-/// If an object is passed to a function by shared pointer, this typically
+/// If an object is passed to a function by ObjPtr, this typically
 /// indicates that the function takes ownership of the object. In this case,
 /// pass the shared pointer directly by value, like so:
 ///
 /// \code
-/// myFunction(FooSharedPtr foo);
+/// myFunction(FooPtr foo);
 /// \endcode
 ///
 /// Miscellaneous Notes
@@ -219,40 +496,435 @@ VGC_CORE_DECLARE_PTRS(Object);
 /// that objects cannot be copied. If you desire to introduce copy-semantics to
 /// a specific subclass of Object, you must manually define a clone() method.
 ///
-/// In some cases, destructions of objects with deeply nested ownership of
-/// other pointers may run into stack overflow issues. In these cases, it may
-/// be appropriate to implement a custom destructor in order to derecursify the
-/// destructions. See the following example by Herb Sutter in the case
-/// `unique_ptr`, but the advice applies equally well to `shared_ptr`:
-///
-/// https://youtu.be/JfmTagWcqoE?t=12m20s
-///
-class VGC_CORE_API Object: public std::enable_shared_from_this<Object>
-{
-    VGC_CORE_OBJECT(Object)
+class VGC_CORE_API Object {
+private:
+    // Disable move and copy
     Object(const Object&) = default;
     Object(Object&&) = default;
     Object& operator=(const Object&) = default;
     Object& operator=(Object&&) = default;
 
 public:
-    // Effectively protected constructors.
-    Object(const ConstructorKey&);
-
-    /// Destructs the Object. Never call this manually, and instead let the
-    /// shared pointers do the work for you.
+    /// Returns how many ObjPtrs are currently referencing this Object or any
+    /// of its descendants.
     ///
-    /// This ought to be a protected method to avoid accidental misuse, but it
-    /// is currently kept public due to a limitation of pybind11 (see
-    /// https://github.com/pybind/pybind11/issues/114), and possibly other
-    /// related issues.
+    /// Below is an example of an Object tree consisting of 8 Objects, where 6
+    /// ObjPtrs are referencing some Object in the tree. Each `[i]` represents
+    /// an Object whose refCount is `i`.
+    ///
+    /// ```
+    /// [6]         <- ObjPtr
+    ///  ├─[3]
+    ///  │  ├─[1]   <- ObjPtr
+    ///  │  ├─[2]   <- ObjPtr <- ObjPtr
+    ///  │  └─[0]
+    ///  ├─[0]
+    ///  └─[2]      <- ObjPtr
+    ///     └─[1]   <- ObjPtr
+    /// ```
+    ///
+    /// The refCount of an Object is always equal to the number of ObjPtrs
+    /// referencing this Object, plus the sum of the refCounts of all of its
+    /// direct children.
+    ///
+    /// Note that the role of ObjPtrs is two-fold:
+    /// 1. Keep root Objects alive.
+    /// 2. Throw an exception when trying to access a non-alive Object.
+    ///
+    /// However, the role of ObjPtrs is NOT to keep child Objects alive.
+    /// Instead, child Objects are uniquely owned by their parent. This means
+    /// that parent Objects can decide to destroy their children regardless of
+    /// their refCount, and child Objects aren't automatically destroyed when
+    /// their refCount reaches zero.
+    ///
+    /// One way to think about this ownership model is:
+    /// - An ObjPtr is acting like an std::shared_ptr for root Objects.
+    /// - An ObjPtr is acting like an std::weak_ptr for child Objects.
+    /// - A parent Object is acting like an std::unique_ptr for its children.
+    ///
+    /// This may seem a little complicated, but is quite simple to use in
+    /// practice:
+    ///
+    /// - In C++, just use raw pointers everywhere, except for root Objects
+    /// where you should use an ObjPtr. You must avoid cyclic references of
+    /// ObjPtr, otherwise it will cause memory leaks.
+    ///
+    /// - In Python, all Objects are under the hood wrapped in an ObjPtr. This
+    /// is likely to cause cyclic references, but it's okay since the garbage
+    /// collector of Python will detect those and prevent memory leaks.
+    ///
+    Int64 refCount() const
+    {
+        if (refCount_ >= 0) {
+            return refCount_;
+        }
+        else {
+            return refCount_ - Int64Min;
+        }
+    }
+
+    /// Returns whether this Object is alive. An Object becomes non-alive
+    /// either when it is has no parent and its refCount reaches zero, it when
+    /// it is explicitly destroyed (for example, via `node->destroy()` in the
+    /// case of dom::Node, but not all Object subclasses provide such API).
+    ///
+    /// Note that it is possible and even common for child Objects to be alive
+    /// and have a refCount of zero.
+    ///
+    bool isAlive() const
+    {
+        return refCount_ >= 0;
+    }
+
+    /// Returns the parent of this Object, or nullptr if this object has no
+    /// parent. An Object without parent is called a "root Object". An Object
+    /// with a parent is called a "child Object".
+    ///
+    Object* parentObject() const
+    {
+        return parentObject_;
+    }
+
+    /// Returns the first child of this Object, of nullptr if this object has
+    /// no children.
+    ///
+    Object* firstChildObject() const
+    {
+        return firstChildObject_;
+    }
+
+    /// Returns the last child of this Object, of nullptr if this object has
+    /// no children.
+    ///
+    Object* lastChildObject() const
+    {
+        return lastChildObject_;
+    }
+
+    /// Returns the next sibling of this Object, of nullptr if this Object has
+    /// no parent or is the last child of its parent.
+    ///
+    Object* nextSiblingObject() const
+    {
+        return nextSiblingObject_;
+    }
+
+    /// Returns the previous sibling of this Object, of nullptr if this Object has
+    /// no parent or is the first child of its parent.
+    ///
+    Object* previousSiblingObject() const
+    {
+        return previousSiblingObject_;
+    }
+
+    /// Returns whether this Object is a descendant of the given \p other
+    /// Object. Returns true in the special case where `this == other`.
+    ///
+    bool isDescendantObject(const Object* other) const;
+
+    // When this callback function is called, all children of this Object have
+    // already been destroyed, but this Object is still a child of its parent,
+    // if any.
+    //
+    virtual void onDestroyed();
+
+    /// Prints this object tree to stdout, typically for debugging purposes.
+    ///
+    void dumpObjectTree() const;
+
+protected:
+    /// Constructs an Object.
+    ///
+    Object();
+
+    /// Calls the Object's destructor. Note that you should never call this
+    /// method or `delete` directly. Under normal usage, the objects should be
+    /// automatically destroyed for you: child objects are automatically
+    /// destroyed by their parent, and root objects are automatically destroyed
+    /// by the smart pointers managing them.
+    ///
+    /// Note that some Object subclasses may choose to expose a safe
+    /// `destroy()` method in their public API, but it is optional.
+    ///
+    /// \sa destroyObject()
     ///
     virtual ~Object();
 
-    /// Creates an object.
+    /// Destroys this Object.
     ///
-    static ObjectSharedPtr create();
+    /// This is a low-level method which should only be used by direct
+    /// subclasses as a helper method to implement their API. This method is
+    /// automatically made private by the VGC_OBJECT macro. This design allows
+    /// subclasses to decide whether they wish to expose a destroy() method or
+    /// not. For example, a Foo subclass may, or may not, choose to define:
+    ///
+    /// ```cpp
+    /// void Foo::destroy()
+    /// {
+    ///     Object::destroyObject_();
+    /// }
+    /// ```
+    ///
+    /// This method performs the following, in this order:
+    ///
+    /// 1. Recursively destroy the children of this Object.
+    ///
+    /// 2. Call the onDestroyed() callback method. At this stage, isAlive() is
+    ///    still true, and parentObject() is still accessible.
+    ///
+    /// 3. Remove from parent. Just after removal, a side effect might be to
+    ///    destroy the root of the parent, in case its refCount() becomes zero.
+    ///
+    /// 4. Set isAlive() to false.
+    ///
+    /// 5. Deallocate memory, in case the refCount() of this Object is zero.
+    ///
+    void destroyObject_();
+
+    /// Destroys a child of this Object. If child isn't a child of this Object,
+    /// then NotAChildError is raised. See destroyObject_() for details.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses as a helper method to implement their API. This method is
+    /// automatically made private by the VGC_OBJECT macro.
+    ///
+    void destroyChildObject_(Object* child);
+
+    /// Inserts the given Object as the last child of this Object.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses as a helper method to implement their API. This method is
+    /// automatically made private by the VGC_OBJECT macro. This design allows
+    /// subclasses to add additional restrictions on which types of children
+    /// are allowed. For example, a Foo subclass which only allows Foo children
+    /// may define:
+    ///
+    /// ```cpp
+    /// void Foo::appendChild(Foo* child)
+    /// {
+    ///     Object::appendChildObject_(child);
+    /// }
+    /// ```
+    ///
+    /// Very importantly, you must NOT use this method to append an Object
+    /// whose subclass isn't your own or closely related (= friend classes, or
+    /// classes developed in the same cpp file or perhaps module). Indeed, each
+    /// Object subclass defines its own invariants regarding which Object
+    /// subclasses they allow as children or parent. For example the children
+    /// of a vgc::dom::Node are always other vgc::dom::Nodes, and a
+    /// vgc::dom::Document is guaranteed to always be a root object. Therefore,
+    /// using appendChildObject_() in Foo to modify a hierachies of dom::Nodes
+    /// would break these invariants.
+    ///
+    void appendChildObject_(Object* child);
+
+    /// Inserts the given Object as the first child of this Object.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses as a helper method to implement their API. This method is
+    /// automatically made private by the VGC_OBJECT macro. This design allows
+    /// subclasses to add additional restrictions on which types of children
+    /// are allowed. For example, a Foo subclass which only allows Foo children
+    /// may define:
+    ///
+    /// ```cpp
+    /// void Foo::prependChild(Foo* child)
+    /// {
+    ///     Object::prependChildObject_(child);
+    /// }
+    /// ```
+    ///
+    /// Very importantly, you must NOT use this method to prepend an Object
+    /// whose subclass isn't your own or closely related (= friend classes, or
+    /// classes developed in the same cpp file or perhaps module). Indeed, each
+    /// Object subclass defines its own invariants regarding which Object
+    /// subclasses they allow as children or parent. For example the children
+    /// of a vgc::dom::Node are always other vgc::dom::Nodes, and a
+    /// vgc::dom::Document is guaranteed to always be a root object. Therefore,
+    /// using appendChildObject_() in Foo to modify a hierachies of dom::Nodes
+    /// would break these invariants.
+    ///
+    void prependChildObject_(Object* child);
+
+    /// Inserts the given Object as a child of this Object, just before
+    /// nextSibling. If nextSibling is null, then it is inserted last. If
+    /// nextSibling is non-null but isn't a child of this Object, then
+    /// NotAChildError is raised.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses as a helper method to implement their API. This method is
+    /// automatically made private by the VGC_OBJECT macro. This design allows
+    /// subclasses to add additional restrictions on which types of children
+    /// are allowed. For example, a Foo subclass which only allows Foo children
+    /// may define:
+    ///
+    /// ```cpp
+    /// void Foo::insertChild(Foo* child, Foo* nextSibling)
+    /// {
+    ///     Object::insertChildObject_(child, nextSibling);
+    /// }
+    /// ```
+    ///
+    /// Very importantly, you must NOT use this method to insert an Object
+    /// whose subclass isn't your own or closely related (= friend classes, or
+    /// classes developed in the same cpp file or perhaps module). Indeed, each
+    /// Object subclass defines its own invariants regarding which Object
+    /// subclasses they allow as children or parent. For example the children
+    /// of a vgc::dom::Node are always other vgc::dom::Nodes, and a
+    /// vgc::dom::Document is guaranteed to always be a root object. Therefore,
+    /// using appendChildObject_() in Foo to modify a hierachies of dom::Nodes
+    /// would break these invariants.
+    ///
+    void insertChildObject_(Object* child, Object* nextSibling = nullptr);
+
+    /// Removes the given Object from the list of children of this Object.
+    /// Returns an ObjPtr<Object> managing the given Object which is now a root
+    /// Object and therefore not uniquely owned by its parent. If child isn't a
+    /// child of this Object, then NotAChildError is raised.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses to implement their API. This method is automatically made
+    /// private by the VGC_OBJECT macro. This design allows subclasses to add
+    /// additional restrictions on which types of children are allowed, and
+    /// whether removing children is allowed for this subclass of Object. For
+    /// example, a Foo subclass which only allows Foo children may define:
+    ///
+    /// ```cpp
+    /// void Foo::removeChild(Foo* child)
+    /// {
+    ///     Object::removeChildObject_(child);
+    /// }
+    /// ```
+    ///
+    /// Very importantly, you must NOT use this method to remove an Object
+    /// whose subclass isn't your own or closely related (= friend classes, or
+    /// classes developed in the same cpp file or perhaps module). Indeed, each
+    /// Object subclass defines its own invariants regarding which Object
+    /// subclasses they allow as children or parent. For example the children
+    /// of a vgc::dom::Node are always other vgc::dom::Nodes, and a
+    /// vgc::dom::Document is guaranteed to always be a root object. Therefore,
+    /// using removeChildObject_() in Foo to modify a hierachies of dom::Nodes
+    /// would break these invariants.
+    ///
+    ObjectPtr removeChildObject_(Object* child);
+
+    /// Inserts this Object as the last child of the given parent Object. The
+    /// behavior is undefined if parent is nullptr.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses to implement their API. This method is automatically made
+    /// private by the VGC_OBJECT macro.
+    ///
+    /// Very importantly, you must NOT use this method to append an Object
+    /// whose subclass isn't your own or closely related (= friend classes, or
+    /// classes developed in the same cpp file or perhaps module). Indeed, each
+    /// Object subclass defines its own invariants regarding which Object
+    /// subclasses they allow as children or parent. For example the children
+    /// of a vgc::dom::Node are always other vgc::dom::Nodes, and a
+    /// vgc::dom::Document is guaranteed to always be a root object. Therefore,
+    /// using appendObjectToParent_() in Foo to modify a hierachies of
+    /// dom::Nodes would break these invariants.
+    ///
+    void appendObjectToParent_(Object* parent);
+
+    /// Inserts this Object as the first child of the given parent Object. The
+    /// behavior is undefined if parent is nullptr.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses to implement their API. This method is automatically made
+    /// private by the VGC_OBJECT macro.
+    ///
+    /// Very importantly, you must NOT use this method to prepend an Object
+    /// whose subclass isn't your own or closely related (= friend classes, or
+    /// classes developed in the same cpp file or perhaps module). Indeed, each
+    /// Object subclass defines its own invariants regarding which Object
+    /// subclasses they allow as children or parent. For example the children
+    /// of a vgc::dom::Node are always other vgc::dom::Nodes, and a
+    /// vgc::dom::Document is guaranteed to always be a root object. Therefore,
+    /// using prependObjectToParent_() in Foo to modify a hierachies of
+    /// dom::Nodes would break these invariants.
+    ///
+    void prependObjectToParent_(Object* parent);
+
+    /// Inserts this Object as a child of the given parent Object, just before
+    /// nextSibling. If nextSibling is null, then it is inserted last. If
+    /// nextSibling is non-null but isn't a child of the given parent, then
+    /// NotAChildError is raised. The behavior is undefined if parent is nullptr.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses to implement their API. This method is automatically made
+    /// private by the VGC_OBJECT macro.
+    ///
+    /// Very importantly, you must NOT use this method to insert an Object
+    /// whose subclass isn't your own or closely related (= friend classes, or
+    /// classes developed in the same cpp file or perhaps module). Indeed, each
+    /// Object subclass defines its own invariants regarding which Object
+    /// subclasses they allow as children or parent. For example the children
+    /// of a vgc::dom::Node are always other vgc::dom::Nodes, and a
+    /// vgc::dom::Document is guaranteed to always be a root object. Therefore,
+    /// using insertObjectToParent_() in Foo to modify a hierachies of
+    /// dom::Nodes would break these invariants.
+    ///
+    void insertObjectToParent_(Object* parent, Object* nextSibling);
+
+    /// Removes this Object from the list of children of its parent.
+    /// Returns an ObjPtr<Object> managing this Object which is now a root
+    /// Object and therefore not uniquely owned by its parent. Nothing happens
+    /// if this Object is already a root Object.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses to implement their API. This method is automatically made
+    /// private by the VGC_OBJECT macro.
+    ///
+    ObjectPtr removeObjectFromParent_();
+
+private:
+    friend class internal::ObjPtrAccess;
+    mutable Int64 refCount_; // If >= 0: isAlive = true, refCount = refCount_
+                             // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
+    Object* parentObject_;
+    Object* firstChildObject_;
+    Object* lastChildObject_;
+    Object* previousSiblingObject_;
+    Object* nextSiblingObject_;
+
+    void destroyObjectImpl_();
 };
+
+namespace internal {
+
+inline void ObjPtrAccess::incref(const Object* obj, Int64 k)
+{
+    while (obj) {
+        obj->refCount_ += k;
+        obj = obj->parentObject_;
+    }
+}
+
+inline void ObjPtrAccess::decref(const Object* obj, Int64 k)
+{
+    const Object* root = nullptr;
+    while (obj) {
+        root = obj;
+        obj->refCount_ -= k;
+        obj = obj->parentObject_;
+    }
+    if (root) {
+        if (root->refCount_ == 0) {
+            // Here, isAlive() == true and refCount() == 0.
+            // See implementation of destroyObjectImpl_() for details on the
+            // const-cast and other subtleties of the following two lines.
+            Object* root_ = const_cast<Object*>(root);
+            root_->destroyObjectImpl_();
+        }
+        else if (root->refCount_ == Int64Min) {
+            // Here, isAlive() == false and refCount() == 0.
+            delete root;
+        }
+    }
+}
+
+} // namespace internal
 
 } // namespace core
 } // namespace vgc

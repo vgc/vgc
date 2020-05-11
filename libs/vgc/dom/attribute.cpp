@@ -105,9 +105,9 @@ Implementations may vary, but one option is:
 
 class Element {
     // ...
-    std::vector<AuthoredAttributeSharedPtr> authored_;
-    std::vector<OnDemandAttributeSharedPtr> onDemand_;
-    static std::vector<BuiltInAttributeSharedPtr> builtIn_;
+    std::vector<AuthoredAttributePtr> authored_;
+    std::vector<OnDemandAttributePtr> onDemand_;
+    static std::vector<BuiltInAttributePtr> builtIn_;
 };
 
 class Attribute {

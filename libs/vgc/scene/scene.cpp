@@ -21,7 +21,7 @@ namespace vgc {
 namespace scene {
 
 Scene::Scene() :
-    Object(core::Object::ConstructorKey()),
+    Object(),
     newCurveColor_(core::colors::black),
     areSignalPaused_(false)
 {
@@ -36,8 +36,8 @@ void Scene::clear()
 
 void Scene::startCurve(const core::Vec2d& p, double width)
 {
-    curves_.push_back(std::make_shared<geometry::Curve>());
-    curves_.back()->setColor(newCurveColor_);
+    curves_.push_back(geometry::Curve());
+    curves_.back().setColor(newCurveColor_);
     continueCurve(p, width);
 }
 
@@ -46,11 +46,11 @@ void Scene::continueCurve(const core::Vec2d& p, double width)
     if (curves_.size() == 0) {
         return;
     }
-    curves_.back()->addControlPoint(p, width);
+    curves_.back().addControlPoint(p, width);
     emitChanged_();
 }
 
-void Scene::addCurve(const geometry::CurveSharedPtr& curve)
+void Scene::addCurve(const geometry::Curve& curve)
 {
     curves_.push_back(curve);
     emitChanged_();

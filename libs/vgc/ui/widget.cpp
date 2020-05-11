@@ -19,8 +19,8 @@
 namespace vgc {
 namespace ui {
 
-Widget::Widget(const ConstructorKey&) :
-    Object(core::Object::ConstructorKey()),
+Widget::Widget() :
+    Object(),
     width_(0.0f),
     height_(0.0f)
 {
@@ -28,9 +28,9 @@ Widget::Widget(const ConstructorKey&) :
 }
 
 /* static */
-WidgetSharedPtr Widget::create()
+WidgetPtr Widget::create()
 {
-    return std::make_shared<Widget>(ConstructorKey());
+    return WidgetPtr(new Widget());
 }
 
 void Widget::resize(float width, float height)

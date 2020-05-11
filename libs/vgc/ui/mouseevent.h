@@ -23,25 +23,25 @@
 namespace vgc {
 namespace ui {
 
-VGC_CORE_DECLARE_PTRS(MouseEvent);
+VGC_DECLARE_OBJECT(MouseEvent);
 
 /// \class vgc::ui::MouseEvent
 /// \brief Class to handle mouse move, clicks, etc.
 ///
-class VGC_UI_API MouseEvent : public Event
-{  
-    VGC_CORE_OBJECT(MouseEvent)
+class VGC_UI_API MouseEvent : public Event {
+private:
+    VGC_OBJECT(MouseEvent)
 
-public:
+protected:
     /// This is an implementation details. Please use
     /// MouseEvent::create() instead.
     ///
-    MouseEvent(const ConstructorKey&, const core::Vec2f& pos);
+    MouseEvent(const core::Vec2f& pos);
 
 public:
     /// Creates a MouseEvent.
     ///
-    static MouseEventSharedPtr create(const core::Vec2f& pos);
+    static MouseEventPtr create(const core::Vec2f& pos);
 
     /// Returns the position of the mouse cursor, in local coordinates, when
     /// the event occurs.

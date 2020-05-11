@@ -58,7 +58,7 @@ public:
     core::PerformanceLog* log() const;
 
 private:
-    core::PerformanceLogSharedPtr log_;
+    core::PerformanceLogPtr log_;
     QGridLayout* layout_;
 
     struct DisplayedLog_ {

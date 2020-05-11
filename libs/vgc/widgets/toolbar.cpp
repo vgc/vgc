@@ -60,11 +60,11 @@ Toolbar::Toolbar(QWidget* parent) :
     colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
     colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
 
-    auto colorPaletteSharedPtr = ui::ColorPalette::create();
-    colorPalette_ = colorPaletteSharedPtr.get();
-    colorPaletteq_ = new UiWidget(colorPaletteSharedPtr, this);
+    auto colorPalettePtr = ui::ColorPalette::create();
+    colorPalette_ = colorPalettePtr.get();
+    colorPaletteq_ = new UiWidget(colorPalettePtr, this);
     // Note: it would be nice to std::move() the shared ptr instead of the
-    // above copy. This requires implementing UiWidget(WidgetSharedPtr&&),
+    // above copy. This requires implementing UiWidget(WidgetPtr&&),
     // but probably not worth it as this is temporary code anyway.
     colorPaletteq_->setMinimumSize(toolbarWidth, 300);
     addWidget(colorPaletteq_);

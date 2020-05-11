@@ -19,7 +19,7 @@
 #include <vgc/dom/node.h>
 
 using This = vgc::dom::Node;
-using Holder = vgc::dom::NodeSharedPtr;
+using Holder = vgc::dom::NodePtr;
 using Parent = vgc::core::Object;
 
 using vgc::dom::Node;
@@ -64,8 +64,6 @@ void wrap_node(py::module& m)
         // Note: Node has no public constructor
         .def_property_readonly("document", &This::document)
         .def_property_readonly("nodeType", &This::nodeType)
-        .def("isAlive", &This::isAlive)
-        .def("checkAlive", &This::checkAlive)
         .def("destroy", &This::destroy)
         .def_property_readonly("parent", &This::parent)
         .def_property_readonly("firstChild", &This::firstChild)

@@ -22,89 +22,29 @@ namespace vgc {
 namespace core {
 
 PerformanceLog::PerformanceLog(
-        const ConstructorKey&,
+        PerformanceLog* parent,
         const std::string& name) :
 
-    Object(core::Object::ConstructorKey()),
+    Object(),
 
     params_(nullptr),
     name_(name),
-    time_(0.0),
-
-    parent_(nullptr),
-    firstChild_(nullptr),
-    lastChild_(nullptr),
-    previousSibling_(nullptr),
-    nextSibling_(nullptr)
+    time_(0.0)
 {
-
-}
-
-PerformanceLog::~PerformanceLog()
-{
-    // Detach all children
-    PerformanceLog* child = firstChild();
-    while(child) {
-        PerformanceLog* nextSibling = child->nextSibling_;
-
-        child->parent_ = nullptr;
-        child->previousSibling_ = nullptr;
-        child->nextSibling_ = nullptr;
-
-        child = nextSibling;
-    }
-    firstChild_ = nullptr; // for documentation
-    lastChild_ = nullptr;  // for documentation
-
-    // Detach from parent
-    if (parent_) {
-        PerformanceLog*& forwardPtr = previousSibling_ ?
-                    previousSibling_->nextSibling_ :
-                    parent_->firstChild_;
-        PerformanceLog*& backwardPtr = nextSibling_ ?
-                    nextSibling_->previousSibling_ :
-                    parent_->lastChild_;
-
-        forwardPtr = nextSibling_;
-        backwardPtr = previousSibling_;
-
-        previousSibling_ = nullptr; // for documentation
-        nextSibling_ = nullptr;     // for documentation
-        parent_ = nullptr;          // for documentation
+    if (parent) {
+        appendObjectToParent_(parent);
     }
 }
 
 /* static */
-PerformanceLogSharedPtr PerformanceLog::create(const std::string& name)
+PerformanceLogPtr PerformanceLog::create(const std::string& name)
 {
-    auto res = std::make_shared<PerformanceLog>(ConstructorKey(), name);
-    res->params_ = PerformanceLogParams::create();
-    return res;
+    return PerformanceLogPtr(new PerformanceLog(nullptr, name));
 }
 
-/* static */
-PerformanceLogSharedPtr PerformanceLog::create(PerformanceLog* parent, const std::string& name)
+PerformanceLog* PerformanceLog::createChild(const std::string& name)
 {
-    auto res = std::make_shared<PerformanceLog>(ConstructorKey(), name);
-    res->params_ = PerformanceLogParams::create();
-
-    // Set as last child of parent
-    PerformanceLog* e2 = res.get();
-    if (PerformanceLog* e1 = parent->lastChild()) {
-        e1->nextSibling_ = e2;
-        e2->previousSibling_ = e1;
-    }
-    else {
-        parent->firstChild_ = e2;
-    }
-    parent->lastChild_ = e2;
-
-    return res;
-}
-
-PerformanceLogSharedPtr PerformanceLog::createChild(const std::string& name)
-{
-    return PerformanceLog::create(this, name);
+    return new PerformanceLog(this, name);
 }
 
 PerformanceLogParams* PerformanceLog::params() const
@@ -137,43 +77,17 @@ double PerformanceLog::lastTime() const
     return time_;
 }
 
-PerformanceLog* PerformanceLog::parent() const
-{
-    return parent_;
-}
+PerformanceLogParams::PerformanceLogParams() :
 
-PerformanceLog* PerformanceLog::firstChild() const
-{
-    return firstChild_;
-}
-
-PerformanceLog* PerformanceLog::lastChild() const
-{
-    return lastChild_;
-}
-
-PerformanceLog* PerformanceLog::previousSibling() const
-{
-    return previousSibling_;
-}
-
-PerformanceLog* PerformanceLog::nextSibling() const
-{
-    return nextSibling_;
-}
-
-PerformanceLogParams::PerformanceLogParams(
-        const ConstructorKey&) :
-
-    Object(core::Object::ConstructorKey())
+    Object()
 {
 
 }
 
 /* static */
-PerformanceLogParamsSharedPtr PerformanceLogParams::create()
+PerformanceLogParamsPtr PerformanceLogParams::create()
 {
-    return std::make_shared<PerformanceLogParams>(ConstructorKey());
+    return PerformanceLogParamsPtr(new PerformanceLogParams());
 }
 
 PerformanceLogTask::PerformanceLogTask(const std::string& name) :
@@ -197,11 +111,11 @@ PerformanceLog* PerformanceLogTask::startLoggingUnder(PerformanceLog* parent)
     return log;
 }
 
-PerformanceLogSharedPtr PerformanceLogTask::stopLoggingUnder(PerformanceLog* parent)
+PerformanceLogPtr PerformanceLogTask::stopLoggingUnder(PerformanceLog* parent)
 {
     using std::swap;
 
-    PerformanceLogSharedPtr res;
+    PerformanceLogPtr res;
     for (size_t i = 0; i < logs_.size(); ++i) {
         PerformanceLog* log = logs_[i].get();
         if (log->parent() == parent) {

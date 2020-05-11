@@ -25,30 +25,31 @@
 namespace vgc {
 namespace ui {
 
-VGC_CORE_DECLARE_PTRS(Widget);
+VGC_DECLARE_OBJECT(Widget);
 
 /// \class vgc::ui::Widget
 /// \brief Base class of all elements in the user interface.
 ///
-class VGC_UI_API Widget : public core::Object
-{  
-    VGC_CORE_OBJECT(Widget)
+class VGC_UI_API Widget : public core::Object {
+private:
+    VGC_OBJECT(Widget)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-public:
+protected :
     /// Constructs a Widget. This constructor is an implementation detail only
     /// available to derived classes. In order to create a Widget, please use
     /// the following:
     ///
-    /// \code
-    /// WidgetSharedPtr widget = Widget::create();
-    /// \endcode
+    /// ```cpp
+    /// WidgetPtr widget = Widget::create();
+    /// ```
     ///
-    Widget(const ConstructorKey&);
+    Widget();
 
 public:
     /// Creates a widget.
     ///
-    static WidgetSharedPtr create();
+    static WidgetPtr create();
 
     /// Returns the width of the widget.
     ///

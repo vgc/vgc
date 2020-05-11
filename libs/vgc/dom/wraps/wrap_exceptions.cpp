@@ -23,7 +23,6 @@ void wrap_exceptions(py::module& m)
     py::module core = py::module::import("vgc.core");
 
     VGC_CORE_WRAP_EXCEPTION(dom, LogicError, core, LogicError);
-    VGC_CORE_WRAP_EXCEPTION(dom, NotAliveError, m, LogicError);
     VGC_CORE_WRAP_EXCEPTION(dom, WrongDocumentError, m, LogicError);
     VGC_CORE_WRAP_EXCEPTION(dom, HierarchyRequestError, m, LogicError);
     VGC_CORE_WRAP_EXCEPTION(dom, WrongChildTypeError, m, HierarchyRequestError);

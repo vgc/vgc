@@ -31,8 +31,8 @@
 namespace vgc {
 namespace widgets {
 
-VGC_CORE_DECLARE_PTRS(UiWidget);
-VGC_CORE_DECLARE_PTRS(UiWidgetEngine);
+VGC_DECLARE_OBJECT(UiWidget);
+VGC_DECLARE_OBJECT(UiWidgetEngine);
 
 /// \class vgc::widget::UiWidget
 /// \brief A QWidget based on a vgc::ui::widget.
@@ -50,7 +50,7 @@ public:
 
     /// Constructs a UiWidget wrapping the given vgc::ui::Widget.
     ///
-    UiWidget(ui::WidgetSharedPtr widget, QWidget* parent = nullptr);
+    UiWidget(ui::WidgetPtr widget, QWidget* parent = nullptr);
 
     /// Destructs the UiWidget.
     ///
@@ -77,8 +77,8 @@ private:
 
     void onRepaintRequested();
 
-    ui::WidgetSharedPtr widget_;
-    widgets::UiWidgetEngineSharedPtr engine_;
+    ui::WidgetPtr widget_;
+    widgets::UiWidgetEnginePtr engine_;
 
     // Projection and view matrices
     QMatrix4x4 proj_;
@@ -98,23 +98,24 @@ private:
 /// This class is an implementation of graphics::Engine using QPainter and
 /// OpenGL calls, with the assumption to be used in a QOpenGLWidget.
 ///
-class VGC_WIDGETS_API UiWidgetEngine: public graphics::Engine
-{
-    VGC_CORE_OBJECT(UiWidgetEngine)
+class VGC_WIDGETS_API UiWidgetEngine : public graphics::Engine {
+private:
+    VGC_OBJECT(UiWidgetEngine)
 
-public:
+protected:
     /// Creates a new UiWidgetEngine. This constructor is an implementation
     /// detail. In order to create a UiWidgetEngine, please use the following:
     ///
     /// \code
-    /// UiWidgetEngineSharedPtr engine = UiWidgetEngine::create();
+    /// UiWidgetEnginePtr engine = UiWidgetEngine::create();
     /// \endcode
     ///
-    UiWidgetEngine(const ConstructorKey&);
+    UiWidgetEngine();
 
+public:
     /// Creates a new UiWidgetEngine.
     ///
-    static UiWidgetEngineSharedPtr create();
+    static UiWidgetEnginePtr create();
 
     /// Initializes the engine with the given OpenGL parameters required to
     /// perform its OpenGL calls.

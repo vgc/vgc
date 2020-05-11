@@ -18,7 +18,7 @@
 #include <vgc/ui/widget.h>
 
 using This = vgc::ui::Widget;
-using Holder = vgc::ui::WidgetSharedPtr;
+using Holder = vgc::ui::WidgetPtr;
 using Parent = vgc::core::Object;
 
 void wrap_widget(py::module& m)
