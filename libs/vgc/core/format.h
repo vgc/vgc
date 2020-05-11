@@ -471,6 +471,17 @@ std::string toString(const T& x)
     return s;
 }
 
+/// Casts the given pointer to a `const void*`, which ensures
+/// that it is printed as an address string.
+///
+/// \sa toAddressString(const T* x)
+///
+template <typename T>
+const void* asAddress(const T* x)
+{
+    return static_cast<const void*>(x);
+}
+
 /// Converts the given pointer to its address string.
 ///
 /// Note that we use a specific function name for this (rather than overloading
@@ -486,7 +497,7 @@ std::string toString(const T& x)
 template <typename T>
 std::string toAddressString(const T* x)
 {
-    return core::format("{}", static_cast<const void*>(x));
+    return core::format("{}", asAddress(x));
 }
 
 /// \enum vgc::core::TimeUnit
