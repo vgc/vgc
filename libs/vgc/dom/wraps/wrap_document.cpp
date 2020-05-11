@@ -14,15 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/pybind11.h>
+#include <vgc/core/wraps/common.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 
-namespace py = pybind11;
-using namespace py::literals;
-
 using This = vgc::dom::Document;
-using Holder = vgc::dom::DocumentSharedPtr;
+using Holder = vgc::dom::DocumentPtr;
 using Parent = vgc::dom::Node;
 
 using vgc::dom::XmlFormattingStyle;

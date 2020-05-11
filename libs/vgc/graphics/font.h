@@ -28,10 +28,21 @@ namespace internal {
 class FontLibraryImpl;
 class FontFaceImpl;
 
+// See: https://stackoverflow.com/questions/9954518/stdunique-ptr-with-an-incomplete-type-wont-compile
+// TODO: vgc/core/pimpl.h for helper macros.
+struct FontLibraryImplDeleter {
+    void operator()(FontLibraryImpl* p);
+};
+struct FontFaceImplDeleter {
+    void operator()(FontFaceImpl* p);
+};
+using FontFacePimpl = std::unique_ptr<FontFaceImpl, FontFaceImplDeleter>;
+using FontLibraryPimpl = std::unique_ptr<FontLibraryImpl, FontLibraryImplDeleter>;
+
 } // namespace internal
 
-VGC_CORE_DECLARE_PTRS(FontLibrary);
-VGC_CORE_DECLARE_PTRS(FontFace);
+VGC_DECLARE_OBJECT(FontLibrary);
+VGC_DECLARE_OBJECT(FontFace);
 
 /// \class vgc::graphics::FontLibrary
 /// \brief Manages a set of available fonts.
@@ -41,27 +52,25 @@ VGC_CORE_DECLARE_PTRS(FontFace);
 /// which fonts are available in the library.
 ///
 class VGC_GRAPHICS_API FontLibrary : public core::Object {
+private:
+    VGC_OBJECT(FontLibrary)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-    VGC_CORE_OBJECT(FontLibrary)
-
-public:    
+protected:
     /// Creates a new FontLibrary. This constructor is an implementation
     /// detail. In order to create a FontLibrary, please use the following:
     ///
-    /// \code
-    /// FontLibrarySharedPtr fontLibrary = FontLibrary::create();
-    /// \endcode
+    /// ```cpp
+    /// FontLibraryPtr fontLibrary = FontLibrary::create();
+    /// ```
     ///
-    FontLibrary(const ConstructorKey&);
+    FontLibrary();
 
-    /// Destructs the FontLibrary.
-    ///
-    ~FontLibrary();
-
+public:
     /// Creates an empty FontLibrary, that is, a font library which doesn't
     /// have any available fonts yet.
     ///
-    static FontLibrarySharedPtr create();
+    static FontLibraryPtr create();
 
     /// Adds the face from the given filename to this library.
     ///
@@ -71,8 +80,12 @@ public:
     ///
     FontFace* addFace(const std::string& filename);
 
+protected:
+    /// \reimp
+    void onDestroyed() override;
+
 private:
-    std::unique_ptr<internal::FontLibraryImpl> impl_;
+    internal::FontLibraryPimpl impl_;
 };
 
 /// \class vgc::graphics::FontFace
@@ -85,33 +98,26 @@ private:
 /// italic, italic, bold italic, etc.
 ///
 class VGC_GRAPHICS_API FontFace : public core::Object {
+private:
+    VGC_OBJECT(FontFace)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-    VGC_CORE_OBJECT(FontFace)
-
-public:
+protected:
     /// Creates a new FontFace. This constructor is an implementation
     /// detail. In order to create a FontFace, please use the following:
     ///
-    /// \code
+    /// ```cpp
     /// FontFace* fontFace = fontLibrary->addFace();
-    /// \endcode
+    /// ```
     ///
-    FontFace(const ConstructorKey&);
+    FontFace(FontLibrary* library);
 
-    /// Destructs the FontFace.
-    ///
-    ~FontFace();
-
-    /// Returns whether the FontFace is alive. The reason it might
-    /// not be alive is if the library it belongs to has already been
-    /// deleted.
-    ///
-    // TODO: use new Object ownership mechanism to prevent python from
-    // extending the lifetime of objects.
-    bool isAlive();
+protected:
+    /// \reimp
+    void onDestroyed() override;
 
 private:
-    std::unique_ptr<internal::FontFaceImpl> impl_;
+    internal::FontFacePimpl impl_;
     friend class FontLibrary;
     friend class internal::FontLibraryImpl;
 };

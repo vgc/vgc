@@ -177,7 +177,7 @@ void OpenGLViewer::startLoggingUnder(core::PerformanceLog* parent)
 
 void OpenGLViewer::stopLoggingUnder(core::PerformanceLog* parent)
 {
-    core::PerformanceLogSharedPtr renderLog = renderTask_.stopLoggingUnder(parent);
+    core::PerformanceLogPtr renderLog = renderTask_.stopLoggingUnder(parent);
     updateTask_.stopLoggingUnder(renderLog.get());
     drawTask_.stopLoggingUnder(renderLog.get());
 }

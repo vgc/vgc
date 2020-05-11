@@ -25,37 +25,16 @@ namespace vgc {
 namespace dom {
 
 Node::Node(Document* document, NodeType nodeType) :
-    Object(core::Object::ConstructorKey()),
+    Object(),
     document_(document),
-    nodeType_(nodeType),
-    parent_(nullptr),
-    firstChild_(),
-    lastChild_(nullptr),
-    previousSibling_(nullptr),
-    nextSibling_()
+    nodeType_(nodeType)
 {
 
-}
-
-Node::~Node()
-{
-    if (isAlive()) { // => this Node is a Document, or an exception was thrown
-        destroy_();
-    }
-}
-
-void Node::destroy()
-{
-    checkAlive();
-    destroy_();
 }
 
 namespace {
 bool checkCanReparent_(Node* parent, Node* child, bool simulate = false, bool checkSecondRootElement = true)
 {
-    parent->checkAlive();
-    child->checkAlive();
-
     if (parent->document() != child->document()) {
         if (simulate) return false;
         else throw WrongDocumentError(parent, child);
@@ -77,7 +56,7 @@ bool checkCanReparent_(Node* parent, Node* child, bool simulate = false, bool ch
         }
     }
 
-    if (parent->isDescendant(child)) {
+    if (parent->isDescendantObject(child)) {
         if (simulate) return false;
         else throw ChildCycleError(parent, child);
     }
@@ -95,16 +74,12 @@ bool Node::canReparent(Node* newParent)
 void Node::reparent(Node* newParent)
 {
     checkCanReparent_(newParent, this);
-    NodeSharedPtr nodePtr = detachFromParent_();
-    newParent->attachChild_(std::move(nodePtr));
+    appendObjectToParent_(newParent);
 }
 
 namespace {
 bool checkCanReplace_(Node* oldNode, Node* newNode, bool simulate = false)
 {
-    oldNode->checkAlive();
-    newNode->checkAlive();
-
     // Avoid raising ReplaceDocumentError if oldNode == newNode (= Document node)
     if (oldNode == newNode) {
         return true;
@@ -133,128 +108,17 @@ bool Node::canReplace(Node* oldNode)
 void Node::replace(Node* oldNode)
 {
     checkCanReplace_(oldNode, this);
-
     if (this == oldNode) {
         // nothing to do
         return;
     }
-
-    // Detach from current parent.
-    // Note: After this line of code, sh points to this.
-    NodeSharedPtr sh = detachFromParent_();
-
-    // Update owning pointers.
-    // Note: After these lines of code, sh points to oldNode.
-    NodeSharedPtr& owning = oldNode->previousSibling_ ? oldNode->previousSibling_->nextSibling_ : oldNode->parent_->firstChild_;
-    std::swap(owning, sh);
-    std::swap(oldNode->nextSibling_, nextSibling_);
-
-    // Update non-owning pointers.
-    Node*& nonowning = nextSibling_ ? nextSibling_->previousSibling_ : oldNode->parent_->lastChild_;
-    nonowning = this;
-    std::swap(oldNode->previousSibling_, previousSibling_);
-    std::swap(oldNode->parent_, parent_);
-
-    // Destroy oldNode
-    oldNode->destroy();
-
-    // Destruct oldNode now, unless other shared pointers point to oldNode.
-    // This line of code is redundant with closing the scope, but it is kept
-    // for clarifying intent.
-    sh.reset();
-}
-
-bool Node::isDescendant(const Node* other) const
-{
-    // Go up from this node to the root; check if we encounter the other node
-    const Node* node = this;
-    while (node != nullptr) {
-        if (node == other) {
-            return true;
-        }
-        node = node->parent();
-    }
-    return false;
-}
-
-Node* Node::attachChild_(NodeSharedPtr child)
-{
-    Node* node = child.get();
-
-    // Append to the end of the doubly linked-list of siblings.
-    if (this->lastChild_) {
-        this->lastChild_->nextSibling_ = std::move(child);
-        node->previousSibling_ = this->lastChild_;
-    }
-    else {
-        this->firstChild_ = std::move(child);
-    }
-
-    // Set parent-child relationship
-    this->lastChild_ = node;
-    node->parent_ = this;
-
-    return node;
-}
-
-NodeSharedPtr Node::detachFromParent_()
-{
-    NodeSharedPtr res;
-
-    if (parent_) {
-        // Update owning pointers
-        NodeSharedPtr& owning = previousSibling_ ? previousSibling_->nextSibling_ : parent_->firstChild_;
-        std::swap(res, owning);
-        std::swap(owning, nextSibling_);
-
-        // Update non-owning pointers
-        Node*& nonowning = owning ? owning->previousSibling_ : parent_->lastChild_;
-        nonowning = previousSibling_;
-        parent_ = nullptr;
-        previousSibling_ = nullptr;
-    }
-
-    return res;
-}
-
-void Node::destroy_()
-{
-    // Recursively destroy descendants. Note: we can't use a range loop here
-    // since we're modifying the range while iterating.
-    while (Node* child = lastChild()) {
-        child->destroy();
-    }
-
-    // Detach this Node from current parent if any. Note: if we are already
-    // part of this Node's destructor call stack, then this node is guaranteed
-    // to have no parent.
-    NodeSharedPtr thisPtr = detachFromParent_();
-
-    // Clear data
-    //
-    // Note: we intentionally don't clear nodeType_ since it is useful
-    // debug info and clearing it wouldn't save memory
-    //
-    // XXX TODO: call virtual method overriden by Element and Document
-    // which clear() and shrink_to_fit() the authored attributes
-    //
-
-    // Set this Node as not alive.
-    //
-    // Note: the raw pointer document_ might be dangling after this node is
-    // destroyed, which is why we must set it to nullptr, and thus we use it as
-    // an otherwise redundant "isAlive_" member variable.
-    //
-    document_ = nullptr;
-
-    // Destruct this Node now, unless:
-    // - other shared pointers also point to this Node (= observers), or
-    // - we are already part of this Node's destructor call stack.
-    //
-    // This line of code is redundant with closing the scope, but it is kept
-    // for clarifying intent.
-    //
-    thisPtr.reset();
+    // Note: this Node might be a descendant of oldNode, so we need
+    // remove it from parent before destroying the old Node.
+    Node* parent = oldNode->parent();
+    Node* nextSibling = oldNode->nextSibling();
+    core::ObjectPtr self = removeObjectFromParent_();
+    oldNode->destroyObject_();
+    parent->insertChildObject_(this, nextSibling);
 }
 
 } // namespace dom

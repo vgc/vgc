@@ -25,12 +25,6 @@ namespace dom {
 
 namespace internal {
 
-std::string notAliveMsg(const Node* node)
-{
-    return core::format(
-        "Node {} is not alive", core::toAddressString(node));
-}
-
 std::string wrongDocumentMsg(const Node* n1, const Node* n2)
 {
     return core::format(
@@ -80,7 +74,6 @@ std::string replaceDocumentMsg(const Document* oldNode, const Node* newNode)
 } // namespace internal
 
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
-VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NotAliveError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(WrongDocumentError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(HierarchyRequestError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(WrongChildTypeError)

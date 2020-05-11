@@ -25,8 +25,8 @@
 namespace vgc {
 namespace dom {
 
-VGC_CORE_DECLARE_PTRS(Document);
-VGC_CORE_DECLARE_PTRS(Element);
+VGC_DECLARE_OBJECT(Document);
+VGC_DECLARE_OBJECT(Element);
 
 /// \class vgc::dom::Document
 /// \brief Represents a VGC document.
@@ -135,30 +135,25 @@ VGC_CORE_DECLARE_PTRS(Element);
 /// observers to track Node changes), and we wouldn't want to dynamically
 /// allocate all attributes, especially default attributes.
 ///
-class VGC_DOM_API Document: public Node
-{
-    VGC_CORE_OBJECT(Document)
+class VGC_DOM_API Document : public Node {
+private:
+    VGC_OBJECT(Document)
 
-public:
+protected:
     /// Creates a new document with no root element. This constructor is an
     /// implementation detail only available to derived classes. In order to
     /// create a Document, please use the following:
     ///
-    /// \code
-    /// DocumentSharedPtr document = Document::create();
-    /// \endcode
+    /// ```cpp
+    /// DocumentPtr document = Document::create();
+    /// ```
     ///
-    Document(const ConstructorKey&);
+    Document();
 
 public:
-    /// Destructs the Document. Never call this manually, and instead let the
-    /// shared pointers do the work for you. See vgc::core::~Object for details.
-    ///
-    virtual ~Document();
-
     /// Creates a new document with no root element.
     ///
-    static DocumentSharedPtr create();
+    static DocumentPtr create();
 
     /// Opens the file given by its \p filePath.
     ///
@@ -166,7 +161,7 @@ public:
     /// - Raises FileError if the document cannot be opened due to system errors.
     /// - Raises ParseError if the document cannot be opened due to syntax errors.
     ///
-    static DocumentSharedPtr open(const std::string& filePath);
+    static DocumentPtr open(const std::string& filePath);
 
     /// Casts the given \p node to a Document. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Document.

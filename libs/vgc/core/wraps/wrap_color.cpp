@@ -15,7 +15,7 @@
 // limitations under the License.
 
 #include <pybind11/operators.h>
-#include <pybind11/pybind11.h>
+#include <vgc/core/wraps/common.h>
 #include <vgc/core/color.h>
 
 namespace py = pybind11;

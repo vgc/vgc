@@ -33,11 +33,12 @@
 namespace vgc {
 namespace scene {
 
-VGC_CORE_DECLARE_PTRS(Scene);
+VGC_DECLARE_OBJECT(Scene);
 
-class VGC_SCENE_API Scene: public core::Object
-{
-    VGC_CORE_OBJECT(Scene)
+class VGC_SCENE_API Scene : public core::Object {
+private:
+    VGC_OBJECT(Scene)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
     /// Creates a new Scene.
@@ -52,7 +53,7 @@ public:
     // XXX This is a temporary test. Final API will be different
     void startCurve(const core::Vec2d& p, double width = 1.0);
     void continueCurve(const core::Vec2d& p, double width = 1.0);
-    const std::vector<geometry::CurveSharedPtr>& curves() const {
+    const std::vector<geometry::Curve>& curves() const {
         return curves_;
     }
     void setNewCurveColor(const core::Color& color) {
@@ -61,7 +62,7 @@ public:
 
     /// Adds a curve to the Scene.
     ///
-    void addCurve(const geometry::CurveSharedPtr& curve);
+    void addCurve(const geometry::Curve& curve);
 
     /// This signal is emitted when the scene has changed.
     ///
@@ -99,7 +100,7 @@ public:
 
 private:
     core::Color newCurveColor_;
-    std::vector<geometry::CurveSharedPtr> curves_;
+    std::vector<geometry::Curve> curves_;
 
     // Signal pausing
     void emitChanged_();

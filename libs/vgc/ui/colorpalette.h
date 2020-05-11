@@ -22,25 +22,25 @@
 namespace vgc {
 namespace ui {
 
-VGC_CORE_DECLARE_PTRS(ColorPalette);
+VGC_DECLARE_OBJECT(ColorPalette);
 
 /// \class vgc::ui::ColorPalette
 /// \brief Allow users to select a color.
 ///
-class VGC_UI_API ColorPalette : public Widget
-{  
-    VGC_CORE_OBJECT(ColorPalette)
+class VGC_UI_API ColorPalette : public Widget {
+private:
+    VGC_OBJECT(ColorPalette)
 
-public:
+protected:
     /// This is an implementation details. Please use
     /// ColorPalette::create() instead.
     ///
-    ColorPalette(const ConstructorKey&);
+    ColorPalette();
 
 public:
     /// Creates a ColorPalette.
     ///
-    static ColorPaletteSharedPtr create();
+    static ColorPalettePtr create();
 
     /// Returns the selected color.
     ///

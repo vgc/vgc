@@ -68,25 +68,6 @@ public:
         core::LogicError(reason) {}
 };
 
-/// \class vgc::dom::NotAliveError
-/// \brief Raised when attempting to use a Node which is not alive.
-///
-/// This exception is raised whenever trying to perform an operation
-/// involving a Node that has already been destroyed.
-///
-/// \sa Node::isAlive() and Node::destroy().
-///
-class VGC_DOM_API_EXCEPTION NotAliveError : public LogicError {
-private:
-    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
-
-public:
-    /// Constructs a NotAliveError informing that the Node \p node is not alive.
-    ///
-    NotAliveError(const Node* node) :
-        LogicError(internal::notAliveMsg(node)) {}
-};
-
 /// \class vgc::dom::WrongDocumentError
 /// \brief Raised when two nodes do not belong to the same document
 ///        but are supposed to.

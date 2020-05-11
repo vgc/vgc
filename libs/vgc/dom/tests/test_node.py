@@ -18,13 +18,14 @@
 
 import unittest
 
+from vgc.core import NotAliveError
+
 from vgc.dom import (
     ChildCycleError,
     Document,
     Element,
     Node,
     NodeType,
-    NotAliveError,
     ReplaceDocumentError,
     SecondRootElementError,
     WrongChildTypeError,
@@ -66,14 +67,6 @@ class TestNode(unittest.TestCase):
         n1 = Element(doc, "n1")
         self.assertTrue(doc.isAlive())
         self.assertTrue(n1.isAlive())
-
-    def testCheckAlive(self):
-        doc = Document()
-        n1 = Element(doc, "n1")
-        n1.checkAlive()
-        n1.destroy()
-        with self.assertRaises(NotAliveError):
-            n1.checkAlive()
 
     def testDestroy(self):
         doc = Document()
@@ -128,11 +121,15 @@ class TestNode(unittest.TestCase):
         self.assertTrue(n3.isAlive())
 
         doc = None
+        self.assertTrue(n3.isAlive())
+        n3.document.destroy()
         self.assertFalse(n3.isAlive())
 
         doc = Document()
         n1 = Element(doc, "n1")
         del doc
+        self.assertTrue(n1.isAlive())
+        n1.document.destroy()
         self.assertFalse(n1.isAlive())
 
         doc = Document()

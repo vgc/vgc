@@ -64,12 +64,12 @@ template<typename OStream>
 void write(OStream& out, NodeType type)
 {
     switch (type) {
-    case NodeType::Element: write(out, "Element");
-    case NodeType::Document: write(out, "Document");
+    case NodeType::Element: write(out, "Element"); break;
+    case NodeType::Document: write(out, "Document"); break;
     }
 }
 
-VGC_CORE_DECLARE_PTRS(Node);
+VGC_DECLARE_OBJECT(Node);
 
 /// \class vgc::dom::NodeIterator
 /// \brief Iterates over a range of Node siblings.
@@ -134,8 +134,7 @@ VGC_CORE_DECLARE_PTRS(Node);
 /// use the Node API (node->nextSibling(), etc.) instead of iterators. This is
 /// even safer and more readable anyway.
 ///
-class VGC_DOM_API NodeIterator
-{
+class VGC_DOM_API NodeIterator {
 public:
     typedef Node* value_type;
     typedef Node*& reference;
@@ -144,7 +143,10 @@ public:
 
     /// Constructs an iterator pointing to the given Node.
     ///
-    NodeIterator(Node* node) : node_(node) {}
+    NodeIterator(Node* node) : node_(node)
+    {
+
+    }
 
     /// Prefix-increments this iterator.
     ///
@@ -156,11 +158,17 @@ public:
 
     /// Dereferences this iterator with the star operator.
     ///
-    const value_type& operator*() const { return node_; }
+    const value_type& operator*() const
+    {
+        return node_;
+    }
 
     /// Dereferences this iterator with the arrow operator.
     ///
-    const value_type* operator->() const { return &node_; }
+    const value_type* operator->() const
+    {
+        return &node_;
+    }
 
     /// Returns whether the two iterators are equals.
     ///
@@ -188,8 +196,7 @@ private:
 ///
 /// \sa NodeIterator and Node.
 ///
-class VGC_DOM_API NodeList
-{
+class VGC_DOM_API NodeList {
 public:
     /// Constructs a range of sibling nodes from \p begin to \p end. The
     /// range includes \p begin but excludes \p end. The behavior is undefined
@@ -198,15 +205,24 @@ public:
     /// and \p end are null, then the range is empty. The behavior is undefined
     /// if \p begin is null but \p end is not.
     ///
-    NodeList(Node* begin, Node* end) : begin_(begin), end_(end) {}
+    NodeList(Node* begin, Node* end) : begin_(begin), end_(end)
+    {
+
+    }
 
     /// Returns the begin of the range.
     ///
-    const NodeIterator& begin() const { return begin_; }
+    const NodeIterator& begin() const
+    {
+        return begin_;
+    }
 
     /// Returns the end of the range.
     ///
-    const NodeIterator& end() const { return end_; }
+    const NodeIterator& end() const
+    {
+        return end_;
+    }
 
 private:
     NodeIterator begin_;
@@ -239,9 +255,9 @@ private:
 /// XXX Give details on what "constness" mean for nodes.
 ///
 ///
-class VGC_DOM_API Node: public core::Object
-{
-    VGC_CORE_OBJECT(Node)
+class VGC_DOM_API Node : public core::Object {
+private:
+    VGC_OBJECT(Node)
 
 protected:
     /// Constructs a parent-less Node of the given \p nodeType, owned by the
@@ -249,24 +265,19 @@ protected:
     /// available to derived classes. In order to create nodes, please use one
     /// of the following:
     ///
-    /// \code
-    /// DocumentSharedPtr document = Document::create();
-    /// ElementSharedPtr element = Element::create(parent, name);
-    /// \endcode
+    /// ```cpp
+    /// DocumentPtr document = Document::create();
+    /// Element* element = Element::create(parent, name);
+    /// ```
     ///
     Node(Document* document, NodeType nodeType);
 
 public:
-    /// Destructs the Node. Never call this manually, and instead let the
-    /// shared pointers do the work for you. See vgc::core::~Object for details.
-    ///
-    virtual ~Node();
-
     /// Returns the owner Document of this Node. This is always guaranteed to
     /// be a non-null valid Document.
     ///
-    Document* document() const {
-        checkAlive();
+    Document* document() const
+    {
         return document_;
     }
 
@@ -274,7 +285,8 @@ public:
     ///
     /// This function is safe to call even when the node is not alive.
     ///
-    NodeType nodeType() const {
+    NodeType nodeType() const
+    {
         return nodeType_;
     }
 
@@ -292,61 +304,30 @@ public:
     ///
     /// This function is safe to call even when the node is not alive.
     ///
-    static Node* cast(Node* node) {
+    static Node* cast(Node* node)
+    {
         return node;
-    }
-
-    /// Returns whether this Node is "alive".
-    ///
-    /// More precisely, the lifetime of a Node goes through three stages:
-    ///
-    /// 1. This node is created via Document::create() or
-    ///    Element::create(parent, name): the node is alive, and Node::isAlive()
-    ///    returns true.
-    ///
-    /// 2. Node::destroy() has been called: the node is not alive anymore, but
-    ///    all pointers to the node are still valid non-dangling pointers.
-    ///    Dereferencing the pointer is safe. Calling node->isAlive() is safe
-    ///    and returns false. But calling most other member methods will cause
-    ///    NotAliveError to be thrown.
-    ///
-    /// 3. Node::~Node() has been called: all raw pointers to the node are now
-    ///    dangling pointers, and all weak pointers to the node are now expired.
-    ///
-    /// Quite obviously, this function is safe to call even when the node is
-    /// not alive.
-    ///
-    /// \sa destroy().
-    ///
-    bool isAlive() const noexcept {
-        // Note: don't be tempted to use document() here instead of document_,
-        // since the former throws when the node is not alive.
-        return document_ != nullptr;
-    }
-
-    /// Throws a NotAliveError if this Node is not alive. Does nothing
-    /// otherwise.
-    ///
-    void checkAlive() const {
-        if (!isAlive()) {
-            throw NotAliveError(this);
-        }
     }
 
     /// Destroys this Node.
     ///
-    /// \sa isAlive().
+    /// \sa vgc::core::Object::isAlive().
     ///
-    void destroy();
+    // XXX Should we forbid to destroy the Document?
+    //
+    void destroy()
+    {
+        destroyObject_();
+    }
 
     /// Returns the parent Node of this Node. This is always nullptr for
     /// Document nodes, and always a non-null valid Node otherwise.
     ///
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
-    Node* parent() const {
-        checkAlive();
-        return parent_;
+    Node* parent() const
+    {
+        return static_cast<Node*>(parentObject());
     }
 
     /// Returns the first child Node of this Node. Returns nullptr if this Node
@@ -354,9 +335,9 @@ public:
     ///
     /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
-    Node* firstChild() const {
-        checkAlive();
-        return firstChild_.get();
+    Node* firstChild() const
+    {
+        return static_cast<Node*>(firstChildObject());
     }
 
     /// Returns the last child Node of this Node. Returns nullptr if this Node
@@ -364,9 +345,9 @@ public:
     ///
     /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
     ///
-    Node* lastChild() const {
-        checkAlive();
-        return lastChild_;
+    Node* lastChild() const
+    {
+        return static_cast<Node*>(lastChildObject());
     }
 
     /// Returns the previous sibling of this Node. Returns nullptr if this Node
@@ -374,9 +355,9 @@ public:
     ///
     /// \sa nextSibling(), parent(), firstChild(), and lastChild().
     ///
-    Node* previousSibling() const {
-        checkAlive();
-        return previousSibling_;
+    Node* previousSibling() const
+    {
+        return static_cast<Node*>(previousSiblingObject());
     }
 
     /// Returns the next sibling of this Node. Returns nullptr if this Node
@@ -384,9 +365,9 @@ public:
     ///
     /// \sa previousSibling(), parent(), firstChild(), and lastChild().
     ///
-    Node* nextSibling() const {
-        checkAlive();
-        return nextSibling_.get();
+    Node* nextSibling() const
+    {
+        return static_cast<Node*>(nextSiblingObject());
     }
 
     /// Returns all children of this Node as an iterable range.
@@ -399,8 +380,8 @@ public:
     /// }
     /// \endcode
     ///
-    NodeList children() const {
-        checkAlive();
+    NodeList children() const
+    {
         return NodeList(firstChild(), nullptr);
     }
 
@@ -471,46 +452,14 @@ public:
     /// Returns whether this node is a descendant of the given \p other node.
     /// Returns true if this node is equal to the \p other node.
     ///
-    bool isDescendant(const Node* other) const;
-
-protected:
-    // Helper method for Derived::create_. Assumes the node is alive, is fully
-    // constructed, has no parent, and can indeed be appended.
-    //
-    template <typename T>
-    static T* init_(std::shared_ptr<T> node, Node* parent) {
-        Node* res = parent->attachChild_(std::move(node));
-        return T::cast(res);
+    bool isDescendant(const Node* other) const
+    {
+        return isDescendantObject(other);
     }
 
 private:
-    // Owner document (also used as an 'isAlive_' flag)
     Document* document_;
-
-    // Node type
     NodeType nodeType_;
-
-    // parent-child relationship
-    Node* parent_;
-    NodeSharedPtr firstChild_;
-    Node* lastChild_;
-    Node* previousSibling_;
-    NodeSharedPtr nextSibling_;
-
-    // Insert \p child as the last child of this Node. Assumes that the child
-    // is alive, is fully constructed, has no parent, and is allowed to become
-    // a children of this Node. Returns a raw pointer to the child.
-    //
-    Node* attachChild_(NodeSharedPtr child);
-
-    // Removes this Node from its parent's children, but without destroying it,
-    // and returns the now parent-less Node as a shared pointer. Returns a null
-    // pointer if the node had no parent already.
-    //
-    NodeSharedPtr detachFromParent_();
-
-    // Helper method for ~Node and destroy()
-    void destroy_();
 };
 
 inline NodeIterator& NodeIterator::operator++() {

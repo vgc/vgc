@@ -24,7 +24,7 @@
 namespace vgc {
 namespace graphics {
 
-VGC_CORE_DECLARE_PTRS(Engine);
+VGC_DECLARE_OBJECT(Engine);
 
 /// \class vgc::graphics::Engine
 /// \brief Abstract interface for graphics rendering.
@@ -33,9 +33,10 @@ VGC_CORE_DECLARE_PTRS(Engine);
 /// graphics rendering. Implementations of this abstraction may provide
 /// backends such as OpenGL, Vulkan, Direct3D, Metal, or software rendering.
 ///
-class VGC_GRAPHICS_API Engine : public core::Object
-{
-    VGC_CORE_OBJECT(Engine)
+class VGC_GRAPHICS_API Engine : public core::Object {
+private:
+    VGC_OBJECT(Engine)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
     /// Constructs an Engine. This constructor is an implementation detail only

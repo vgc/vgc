@@ -25,7 +25,7 @@ namespace {
 void wrapFontLibrary(py::module& m)
 {
     using This = FontLibrary;
-    using Holder = FontLibrarySharedPtr;
+    using Holder = FontLibraryPtr;
     using Parent = core::Object;
     py::class_<This, Holder, Parent>(m, "FontLibrary")
         .def(py::init([]() { return This::create(); } ))
@@ -36,10 +36,9 @@ void wrapFontLibrary(py::module& m)
 void wrapFontFace(py::module& m)
 {
     using This = FontFace;
-    using Holder = FontFaceSharedPtr;
+    using Holder = FontFacePtr;
     using Parent = core::Object;
-    py::class_<This, Holder, Parent>(m, "FontFace")
-        .def("isAlive", &FontFace::isAlive);
+    py::class_<This, Holder, Parent>(m, "FontFace");
 }
 
 } // namespace

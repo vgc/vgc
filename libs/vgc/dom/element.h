@@ -26,33 +26,28 @@
 namespace vgc {
 namespace dom {
 
-VGC_CORE_DECLARE_PTRS(Element);
+VGC_DECLARE_OBJECT(Element);
 
 /// \class vgc::dom::Element
 /// \brief Represents an element of the DOM.
 ///
-class VGC_DOM_API Element: public Node
-{
-    VGC_CORE_OBJECT(Element)
+class VGC_DOM_API Element : public Node {
+private:
+    VGC_OBJECT(Element)
 
-public:
+protected:
     /// Constructs a parent-less Element with the given \p name, owned by the
     /// given \p document. This constructor is an implementation detail only
     /// available to derived classes. In order to create an Element, please use
     /// the following:
     ///
-    /// \code
-    /// ElementSharedPtr element = Element::create(parent, name);
-    /// \endcode
+    /// ```cpp
+    /// ElementPtr element = Element::create(parent, name);
+    /// ```
     ///
-    Element(const ConstructorKey&, Document* document, core::StringId name);
+    Element(Document* document, core::StringId name);
 
 public:
-    /// Destructs the Element. Never call this manually, and instead let the
-    /// shared pointers do the work for you. See vgc::core::~Object for details.
-    ///
-    virtual ~Element();
-
     /// Creates an element with the given \p name as the root element of the
     /// given \p parent Document. Returns a valid non-null Element.
     ///

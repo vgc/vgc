@@ -26,8 +26,8 @@
 namespace vgc {
 namespace core {
 
-VGC_CORE_DECLARE_PTRS(PerformanceLog);
-VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
+VGC_DECLARE_OBJECT(PerformanceLog);
+VGC_DECLARE_OBJECT(PerformanceLogParams);
 
 /// \class vgc::core::PerformanceLog
 /// \brief Measures and stores consecutive performance timings.
@@ -39,13 +39,13 @@ VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
 /// this knowledge to optimize their scene.
 ///
 /// Note: for now, only the last measure is stored; storing consecutive
-/// measures will be implemented in the near future.
+/// measures should be implemented in the future.
 ///
 /// First Example
 /// -------------
 ///
-/// \code
-/// PerformanceLogSharedPtr log = PerformanceLog::create("Foo");
+/// ```cpp
+/// PerformanceLogPtr log = PerformanceLog::create("Foo");
 ///
 /// log->start();
 /// foo();
@@ -55,7 +55,7 @@ VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
 ///
 /// // Possible output:
 /// // Foo: 1.2135468612s
-/// \endcode
+/// ```
 ///
 /// To start tracking performance, simply instanciate a PerformanceLog by
 /// calling PerformanceLog::create(), then surround the piece of code you wish
@@ -80,20 +80,15 @@ VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
 /// \endverbatim
 ///
 /// Child logs must be created using the createChild() method and cannot be
-/// added as children afterwards. Child logs are not owned by their parent log,
-/// but by the caller of createChild(). If the shared pointer returned by
-/// createChild() goes out of scope, then the log is removed from the hierarchy
-/// and destroyed. When a log is destroyed, its children are removed from the
-/// hierarchy but not destroyed, that is, they become parent-less but are still
-/// valid logs.
+/// added as children afterwards.
 ///
 /// Example:
 ///
 /// \code
 /// class A {
-///     PerformanceLogSharedPtr fooLog_;
-///     PerformanceLogSharedPtr barLog_;
-///     PerformanceLogSharedPtr bazLog_;
+///     PerformanceLogPtr fooLog_;
+///     PerformanceLog* barLog_;
+///     PerformanceLog* bazLog_;
 ///
 /// public:
 ///     A() :
@@ -159,7 +154,7 @@ VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
 ///     }
 ///
 ///     void stopLoggingUnder(PerformanceLog* parent) {
-///         PerformanceLogSharedPtr fooLog = fooTask_.stopLoggingUnder(parent);
+///         PerformanceLogPtr fooLog = fooTask_.stopLoggingUnder(parent);
 ///         barTask_.stopLoggingUnder(fooLog.get());
 ///         bazTask_.stopLoggingUnder(fooLog.get());
 ///     }
@@ -177,10 +172,10 @@ VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
 /// int main {
 ///     A a;
 ///
-///     PerformanceLogSharedPtr log1 = PerformanceLog::create();
+///     PerformanceLogPtr log1 = PerformanceLog::create();
 ///     a.startLoggingUnder(log1.get());
 ///
-///     PerformanceLogSharedPtr log2 = PerformanceLog::create();
+///     PerformanceLogPtr log2 = PerformanceLog::create();
 ///     a.startLoggingUnder(log2.get());
 ///
 ///     a.foo()
@@ -192,37 +187,25 @@ VGC_CORE_DECLARE_PTRS(PerformanceLogParams);
 /// }
 /// \endcode
 ///
-class VGC_CORE_API PerformanceLog : public Object
-{
+class VGC_CORE_API PerformanceLog : public Object {
 private:
-    VGC_CORE_OBJECT(PerformanceLog)
+    VGC_OBJECT(PerformanceLog)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
+
+protected:
+    PerformanceLog(PerformanceLog* parent, const std::string& name);
 
 public:
-    /// This is an implementation detail. Use create() instead.
-    ///
-    PerformanceLog(const ConstructorKey&, const std::string& name);
-
-    /// Destroys the PerformanceLog, removing it from the hierarchy beforehand.
-    ///
-    ~PerformanceLog();
-
     /// Creates a PerformanceLog with the given \p name.
     ///
-    static PerformanceLogSharedPtr create(const std::string& name = "");
+    static PerformanceLogPtr create(const std::string& name = "");
 
     /// Creates a PerformanceLog with the given \p name, as a child the given
     /// \p parent log.
     ///
-    /// \sa createChild()
-    ///
-    static PerformanceLogSharedPtr create(PerformanceLog* parent, const std::string& name = "");
-
-    /// Creates a PerformanceLog with the given \p name, as a child the given
-    /// \p parent log. This is equivalent to PerformanceLog::create(parent, name).
-    ///
     /// \sa create()
     ///
-    PerformanceLogSharedPtr createChild(const std::string& name = "");
+    PerformanceLog* createChild(const std::string& name = "");
 
     /// Returns the parameters of this log. These parameters are shared with
     /// all the children and ancestors of this log.
@@ -251,36 +234,49 @@ public:
 
     /// Returns the parent of log entry, if any.
     ///
-    PerformanceLog* parent() const;
+    PerformanceLog* parent() const
+    {
+        return cast_(parentObject());
+    }
 
     /// Returns the first child of this log, if any.
     ///
-    PerformanceLog* firstChild() const;
+    PerformanceLog* firstChild() const
+    {
+        return cast_(firstChildObject());
+    }
 
     /// Returns the last child of this log, if any.
     ///
-    PerformanceLog* lastChild() const;
+    PerformanceLog* lastChild() const
+    {
+        return cast_(lastChildObject());
+    }
 
     /// Returns the previous sibling of this log, if any.
     ///
-    PerformanceLog* previousSibling() const;
+    PerformanceLog* previousSibling() const
+    {
+        return cast_(previousSiblingObject());
+    }
 
     /// Returns the next sibling of this log, if any.
     ///
-    PerformanceLog* nextSibling() const;
+    PerformanceLog* nextSibling() const
+    {
+        return cast_(nextSiblingObject());
+    }
 
 private:
-    PerformanceLogParamsSharedPtr params_;
+    PerformanceLogParamsPtr params_;
     std::string name_;
     double time_;
 
-    PerformanceLog* parent_;
-    PerformanceLog* firstChild_;
-    PerformanceLog* lastChild_;
-    PerformanceLog* previousSibling_;
-    PerformanceLog* nextSibling_;
-
     Stopwatch stopwatch_;
+
+    static PerformanceLog* cast_(Object* obj) {
+        return static_cast<PerformanceLog*>(obj);
+    }
 };
 
 /// \class vgc::core::PerformanceLogParams
@@ -290,20 +286,19 @@ private:
 /// in the future, such as the maximum number of time samples to store in a
 /// log.
 ///
-class VGC_CORE_API PerformanceLogParams : public Object
-{
+class VGC_CORE_API PerformanceLogParams : public Object {
 private:
-    VGC_CORE_OBJECT(PerformanceLogParams)
+    VGC_OBJECT(PerformanceLogParams)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
     friend class PerformanceLog;
 
-public:
-    /// This is an implementation detail. Use create() instead.
-    ///
-    PerformanceLogParams(const ConstructorKey&);
+protected:
+    PerformanceLogParams();
 
+public:
     /// Creates a new PerformanceLogParams.
     ///
-    static PerformanceLogParamsSharedPtr create();
+    static PerformanceLogParamsPtr create();
 };
 
 /// \class vgc::core::PerformanceLogTask
@@ -311,8 +306,7 @@ public:
 ///
 /// See the documentation of PerformanceLog for details.
 ///
-class VGC_CORE_API PerformanceLogTask
-{
+class VGC_CORE_API PerformanceLogTask {
 public:
     /// Creates a PerformanceLogTask with the given \p name.
     ///
@@ -334,7 +328,7 @@ public:
     /// Releases ownership of the currently managed log whose parent is the given \p
     /// parent, if any.
     ///
-    PerformanceLogSharedPtr stopLoggingUnder(PerformanceLog* parent);
+    PerformanceLogPtr stopLoggingUnder(PerformanceLog* parent);
 
     /// Returns the currently managed log whose parent is the given \p parent,
     /// if any.
@@ -351,7 +345,7 @@ public:
 
 private:
     std::string name_;
-    std::vector<PerformanceLogSharedPtr> logs_;
+    std::vector<PerformanceLogPtr> logs_;
 
     Stopwatch stopwatch_;
 };

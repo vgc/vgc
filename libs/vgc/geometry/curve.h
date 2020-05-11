@@ -30,8 +30,6 @@ class Vec2d;
 
 namespace geometry {
 
-VGC_CORE_DECLARE_PTRS(Curve);
-
 /// \class vgc::geometry::Curve
 /// \brief Represents a 2D curve with variable width.
 ///
@@ -61,8 +59,7 @@ VGC_CORE_DECLARE_PTRS(Curve);
 /// In order to render the curve, you can call triangulate(), then render
 /// the triangles using OpenGL.
 ///
-class VGC_GEOMETRY_API Curve: public core::Object
-{
+class VGC_GEOMETRY_API Curve {
 public:
     /// Specifies the type of the curve, that is, how the
     /// position of its centerline is represented.

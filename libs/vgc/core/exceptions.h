@@ -399,6 +399,58 @@ public:
     IndexError(const std::string& reason) : LogicError(reason) {}
 };
 
+class Object;
+
+namespace internal {
+
+VGC_CORE_API std::string notAliveMsg(const Object* object);
+VGC_CORE_API std::string notAChildMsg(const Object* object, const Object* expectedParent);
+
+} // namespace internal
+
+/// \class vgc::core::NotAliveError
+/// \brief Raised when attempting to use an Object which is not alive.
+///
+/// This exception is raised whenever trying to perform an operation
+/// involving an Object that has already been destroyed.
+///
+/// \sa Object::isAlive() and Object::destroy().
+///
+class VGC_CORE_API_EXCEPTION NotAliveError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs a NotAliveError informing that the Object \p object is not
+    /// alive.
+    ///
+    NotAliveError(const Object* object) :
+        LogicError(internal::notAliveMsg(object)) {}
+};
+
+/// \class vgc::core::NotAChildError
+/// \brief Raised when a given Object is expected to be a child of another
+///        Object, but isn't.
+///
+/// This exception is raised when a given Object is expected to be a child of
+/// another Object, but isn't. For example, it is raised when the `nextSibling`
+/// argument of `obj->insertChildObject(node, nextSibling)` is non-null and
+/// isn't a child of `obj`.
+///
+/// \sa Object::insertChildObject().
+///
+class VGC_CORE_API_EXCEPTION NotAChildError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs a NotAChildError, informing that the given \p object is not a
+    /// child of the given \p expectedParent.
+    ///
+    NotAChildError(const Object* object, const Object* expectedParent) :
+        LogicError(internal::notAChildMsg(object, expectedParent)) {}
+};
+
 /// \class vgc::core::RuntimeError
 /// \brief Base class for all runtime errors
 ///

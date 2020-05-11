@@ -58,7 +58,7 @@ private Q_SLOTS:
     void saveAs();
 
 private:
-    dom::DocumentSharedPtr document_;
+    dom::DocumentPtr document_;
     core::PythonInterpreter* interpreter_;
 
     // XXX move what's below out of MainWindow to keep it generic.

@@ -15,13 +15,34 @@
 // limitations under the License.
 
 #include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
 
 namespace vgc {
 namespace core {
 
+namespace internal {
+
+std::string notAliveMsg(const Object* object)
+{
+    return core::format(
+        "Object {} is not alive", core::asAddress(object));
+}
+
+std::string notAChildMsg(const Object* object, const Object* expectedParent)
+{
+    return core::format(
+        "Object {} is not a child of {}",
+        core::asAddress(object),
+        core::asAddress(expectedParent));
+}
+
+} // namespace internal
+
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NegativeIntegerError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(IndexError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NotAliveError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NotAChildError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RuntimeError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ParseError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RangeError)

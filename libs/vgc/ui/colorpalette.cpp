@@ -24,8 +24,8 @@
 namespace vgc {
 namespace ui {
 
-ColorPalette::ColorPalette(const ConstructorKey&) :
-    Widget(Widget::ConstructorKey()),
+ColorPalette::ColorPalette() :
+    Widget(),
     selectedColor_(core::colors::black),
     trianglesId_(-1),
     oldWidth_(0),
@@ -54,9 +54,9 @@ ColorPalette::ColorPalette(const ConstructorKey&) :
 }
 
 /* static */
-ColorPaletteSharedPtr ColorPalette::create()
+ColorPalettePtr ColorPalette::create()
 {
-    return std::make_shared<ColorPalette>(ConstructorKey());
+    return ColorPalettePtr(new ColorPalette());
 }
 
 namespace {

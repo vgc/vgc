@@ -14,9 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/pybind11.h>
-
-namespace py = pybind11;
+#include <vgc/core/wraps/common.h>
 
 void wrap_curve(py::module& m);
 

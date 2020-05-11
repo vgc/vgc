@@ -47,7 +47,7 @@ struct XYRGBVertex {
 
 } // namespace
 
-UiWidget::UiWidget(ui::WidgetSharedPtr widget, QWidget* parent) :
+UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent) :
     QOpenGLWidget(parent),
     widget_(widget),
     engine_(UiWidgetEngine::create())
@@ -66,7 +66,7 @@ UiWidget::~UiWidget()
 
 namespace {
 
-ui::MouseEventSharedPtr convertEvent(QMouseEvent* event)
+ui::MouseEventPtr convertEvent(QMouseEvent* event)
 {
     const QPointF& p = event->localPos();
     return ui::MouseEvent::create(fromQtf(p));
@@ -76,19 +76,19 @@ ui::MouseEventSharedPtr convertEvent(QMouseEvent* event)
 
 void UiWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    ui::MouseEventSharedPtr e = convertEvent(event);
+    ui::MouseEventPtr e = convertEvent(event);
     event->setAccepted(widget_->onMouseMove(e.get()));
 }
 
 void UiWidget::mousePressEvent(QMouseEvent *event)
 {
-    ui::MouseEventSharedPtr e = convertEvent(event);
+    ui::MouseEventPtr e = convertEvent(event);
     event->setAccepted(widget_->onMousePress(e.get()));
 }
 
 void UiWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    ui::MouseEventSharedPtr e = convertEvent(event);
+    ui::MouseEventPtr e = convertEvent(event);
     event->setAccepted(widget_->onMouseRelease(e.get()));
 }
 
@@ -163,16 +163,16 @@ void UiWidget::onRepaintRequested()
     update();
 }
 
-UiWidgetEngine::UiWidgetEngine(const ConstructorKey&) :
+UiWidgetEngine::UiWidgetEngine() :
     graphics::Engine()
 {
 
 }
 
 /* static */
-UiWidgetEngineSharedPtr UiWidgetEngine::create()
+UiWidgetEnginePtr UiWidgetEngine::create()
 {
-    return std::make_shared<UiWidgetEngine>(ConstructorKey());
+    return UiWidgetEnginePtr(new UiWidgetEngine());
 }
 
 void UiWidgetEngine::initialize(UiWidget::OpenGLFunctions* functions, int posLoc, int colLoc)
