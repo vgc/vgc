@@ -218,7 +218,6 @@ FontGlyph* FontFace::getGlyphFromIndex(UInt32 glyphIndex)
     FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
     FT_Int32 flags = FT_LOAD_NO_SCALE;
     FT_Error error = FT_Load_Glyph(face, index, flags);
-    core::print("glyphIndex = {}\n", glyphIndex);
     if (error) {
         throw FontError(errorMsg(error));
     }
