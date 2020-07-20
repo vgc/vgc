@@ -139,12 +139,30 @@ public:
     }
 };
 
+class FontGlyphImpl {
+public:
+    UInt32 index;
+    std::string name;
+
+    FontGlyphImpl(UInt32 index, const char* name, FT_GlyphSlot /*slot*/) :
+        index(index),
+        name(name)
+    {
+
+    }
+};
+
 void FontLibraryImplDeleter::operator()(FontLibraryImpl* p)
 {
     delete p;
 }
 
 void FontFaceImplDeleter::operator()(FontFaceImpl* p)
+{
+    delete p;
+}
+
+void FontGlyphImplDeleter::operator()(FontGlyphImpl* p)
 {
     delete p;
 }
@@ -183,7 +201,81 @@ FontFace::FontFace(FontLibrary* library) :
     appendObjectToParent_(library);
 }
 
+FontGlyph* FontFace::getGlyphFromCodePoint(UInt32 codePoint)
+{
+    if (UInt32 index = getGlyphIndexFromCodePoint(codePoint)) {
+        return getGlyphFromIndex(index);
+    }
+    else {
+        return nullptr;
+    }
+}
+
+FontGlyph* FontFace::getGlyphFromIndex(UInt32 glyphIndex)
+{
+    // Load glyph data
+    FT_Face face = impl_->face;
+    FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
+    FT_Int32 flags = FT_LOAD_NO_SCALE;
+    FT_Error error = FT_Load_Glyph(face, index, flags);
+    core::print("glyphIndex = {}\n", glyphIndex);
+    if (error) {
+        throw FontError(errorMsg(error));
+    }
+
+    // Get glyph name
+    const int bufferMax = 1024;
+    char name[bufferMax];
+    if (FT_HAS_GLYPH_NAMES(face)) {
+        FT_Error error = FT_Get_Glyph_Name(face, index, name, bufferMax);
+        if (error) {
+            // Note: This code path is believed to be unreachable since we
+            // premptively check for FT_HAS_GLYPH_NAMES, and we know the index
+            // is valid. We still keep it for added safety, or if Freetype adds
+            // more error cases in the future.
+            throw FontError(errorMsg(error));
+        }
+    }
+
+    // Create FontGlyph object and copy data to object
+    FontGlyph* glyph = new FontGlyph(this);
+    FT_GlyphSlot slot = face->glyph;
+    glyph->impl_.reset(new internal::FontGlyphImpl(glyphIndex, name, slot));
+    return glyph;
+}
+
+UInt32 FontFace::getGlyphIndexFromCodePoint(UInt32 codePoint)
+{
+    // Note: we assume the charmap is unicode
+    FT_Face face = impl_->face;
+    FT_ULong charcode = core::int_cast<FT_ULong>(codePoint);
+    FT_UInt index = FT_Get_Char_Index(face, charcode);
+    return core::int_cast<UInt32>(index);
+}
+
 void FontFace::onDestroyed()
+{
+    impl_.reset();
+}
+
+FontGlyph::FontGlyph(FontFace* face) :
+    Object(),
+    impl_()
+{
+    appendObjectToParent_(face);
+}
+
+UInt32 FontGlyph::index() const
+{
+    return impl_->index;
+}
+
+std::string FontGlyph::name() const
+{
+    return impl_->name;
+}
+
+void FontGlyph::onDestroyed()
 {
     impl_.reset();
 }

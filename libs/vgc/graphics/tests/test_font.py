@@ -17,12 +17,28 @@
 # limitations under the License.
 
 import unittest
-
 from vgc.core import resourcePath
 from vgc.graphics import (
-    FontLibrary,
-    FontFace
+    FontError,
+    FontFace,
+    FontGlyph,
+    FontLibrary
 )
+
+
+def someFacePath():
+    return resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
+
+
+def someFace():
+    library = FontLibrary()
+    return library.addFace(someFacePath())
+
+
+def someGlyph():
+    face = someFace()
+    return face.getGlyphFromCodePoint(0x41)
+
 
 class TestFontLibrary(unittest.TestCase):
 
@@ -31,21 +47,66 @@ class TestFontLibrary(unittest.TestCase):
 
     def testAddFont(self):
         library = FontLibrary()
-        fontPath = resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
-        face = library.addFace(fontPath)
+        face = library.addFace(someFacePath())
         self.assertTrue(face.isAlive())
 
-class TestFace(unittest.TestCase):
+
+class TestFontFace(unittest.TestCase):
 
     def testConstructor(self):
         with self.assertRaises(TypeError):
             face = FontFace()
 
-    def testIsAlive(self):
-        library = FontLibrary()
-        fontPath = resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
-        face = library.addFace(fontPath)
-        self.assertTrue(face.isAlive())
+    def testGetGlyphFromCodePoint(self):
+        face = someFace()
+        glyph = face.getGlyphFromCodePoint(0x41)
+        self.assertEqual(glyph.name, "A")
+
+    def testGetGlyphFromCodePointZero(self):
+        face = someFace()
+        glyph = face.getGlyphFromCodePoint(0x0)
+        self.assertIsNone(glyph)
+
+    def testGetGlyphFromIndex(self):
+        face = someFace()
+        index = face.getGlyphIndexFromCodePoint(0x41)
+        glyph = face.getGlyphFromIndex(index)
+        self.assertEqual(glyph.index, index)
+        self.assertEqual(glyph.name, "A")
+
+    def testGetGlyphFromIndexZero(self):
+        face = someFace()
+        glyph = face.getGlyphFromIndex(0)
+        self.assertEqual(glyph.index, 0)
+        self.assertEqual(glyph.name, ".notdef")
+
+    def testGetGlyphFromIndexInvalid(self):
+        face = someFace()
+        with self.assertRaises(FontError):
+            glyph = face.getGlyphFromIndex(12345)
+
+    def testGetGlyphIndexFromCodePoint(self):
+        face = someFace()
+        index = face.getGlyphIndexFromCodePoint(0x41)
+        self.assertNotEqual(index, 0)
+
+
+class TestFontGlyph(unittest.TestCase):
+
+    def testConstructor(self):
+        with self.assertRaises(TypeError):
+            face = FontGlyph()
+
+    def testIndex(self):
+        face = someFace()
+        index = face.getGlyphIndexFromCodePoint(0x41)
+        glyph = face.getGlyphFromIndex(index)
+        self.assertEqual(glyph.index, index)
+
+    def testName(self):
+        glyph = someGlyph()
+        self.assertEqual(glyph.name, "A")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -29,7 +29,7 @@ void wrapFontLibrary(py::module& m)
     using Parent = core::Object;
     py::class_<This, Holder, Parent>(m, "FontLibrary")
         .def(py::init([]() { return This::create(); } ))
-        .def("addFace", &FontLibrary::addFace)
+        .def("addFace", &This::addFace)
     ;
 }
 
@@ -38,7 +38,22 @@ void wrapFontFace(py::module& m)
     using This = FontFace;
     using Holder = FontFacePtr;
     using Parent = core::Object;
-    py::class_<This, Holder, Parent>(m, "FontFace");
+    py::class_<This, Holder, Parent>(m, "FontFace")
+        .def("getGlyphFromCodePoint", &This::getGlyphFromCodePoint)
+        .def("getGlyphFromIndex", &This::getGlyphFromIndex)
+        .def("getGlyphIndexFromCodePoint", &This::getGlyphIndexFromCodePoint)
+    ;
+}
+
+void wrapFontGlyph(py::module& m)
+{
+    using This = FontGlyph;
+    using Holder = FontGlyphPtr;
+    using Parent = core::Object;
+    py::class_<This, Holder, Parent>(m, "FontGlyph")
+        .def_property_readonly("name", &This::name)
+        .def_property_readonly("index", &This::index)
+    ;
 }
 
 } // namespace
@@ -51,6 +66,7 @@ void wrap_font(py::module& m)
 
     wrapFontLibrary(m);
     wrapFontFace(m);
+    wrapFontGlyph(m);
 }
 
 } // namespace graphics
