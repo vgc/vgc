@@ -55,9 +55,6 @@ public:
 ///
 /// See documentation of Object for more details.
 ///
-// TODO: casting from ObjPtr<U> to ObjPtr<T> when U derives from T, and casting
-// from ObjPtr<const T> to ObjPtr<T>.
-//
 template<typename T>
 class ObjPtr {
 private:
