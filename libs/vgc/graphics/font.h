@@ -133,7 +133,7 @@ public:
     /// they do not correspond to any code point. If you need to access such
     /// glyphs, you must instead use getGlyphFromIndex() directly.
     ///
-    FontGlyph* getGlyphFromCodePoint(UInt32 codePoint);
+    FontGlyph* getGlyphFromCodePoint(Int codePoint);
 
     /// Returns the glyph at the given glyph index. This uses an internal
     /// indexing system, which may or may not be equal to the indices used in
@@ -142,12 +142,12 @@ public:
     /// Raises a vgc::core::FontError if the given glyphIndex is not a valid
     /// index or another error occurs.
     ///
-    FontGlyph* getGlyphFromIndex(UInt32 glyphIndex);
+    FontGlyph* getGlyphFromIndex(Int glyphIndex);
 
     /// Returns the glyph index corresponding to the given Unicode code point,
     /// or 0 if this face doesn't have a glyph for this code point.
     ///
-    UInt32 getGlyphIndexFromCodePoint(UInt32 codePoint);
+    Int getGlyphIndexFromCodePoint(Int codePoint);
 
 protected:
     /// \reimp
@@ -182,7 +182,7 @@ public:
     /// Returns the index of this glyph. This is an integer that can be
     /// used to retrieve the glyph via `face->getGlyphFromIndex()`.
     ///
-    UInt32 index() const;
+    Int index() const;
 
     /// Returns the name of this glyph, or an empty string if the face doesn't
     /// support glyph names.
