@@ -141,10 +141,10 @@ public:
 
 class FontGlyphImpl {
 public:
-    UInt32 index;
+    Int index;
     std::string name;
 
-    FontGlyphImpl(UInt32 index, const char* name, FT_GlyphSlot /*slot*/) :
+    FontGlyphImpl(Int index, const char* name, FT_GlyphSlot /*slot*/) :
         index(index),
         name(name)
     {
@@ -201,9 +201,9 @@ FontFace::FontFace(FontLibrary* library) :
     appendObjectToParent_(library);
 }
 
-FontGlyph* FontFace::getGlyphFromCodePoint(UInt32 codePoint)
+FontGlyph* FontFace::getGlyphFromCodePoint(Int codePoint)
 {
-    if (UInt32 index = getGlyphIndexFromCodePoint(codePoint)) {
+    if (Int index = getGlyphIndexFromCodePoint(codePoint)) {
         return getGlyphFromIndex(index);
     }
     else {
@@ -211,7 +211,7 @@ FontGlyph* FontFace::getGlyphFromCodePoint(UInt32 codePoint)
     }
 }
 
-FontGlyph* FontFace::getGlyphFromIndex(UInt32 glyphIndex)
+FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
 {
     // Load glyph data
     FT_Face face = impl_->face;
@@ -223,7 +223,7 @@ FontGlyph* FontFace::getGlyphFromIndex(UInt32 glyphIndex)
     }
 
     // Get glyph name
-    const int bufferMax = 1024;
+    const FT_UInt bufferMax = 1024;
     char name[bufferMax];
     if (FT_HAS_GLYPH_NAMES(face)) {
         FT_Error error = FT_Get_Glyph_Name(face, index, name, bufferMax);
@@ -243,13 +243,13 @@ FontGlyph* FontFace::getGlyphFromIndex(UInt32 glyphIndex)
     return glyph;
 }
 
-UInt32 FontFace::getGlyphIndexFromCodePoint(UInt32 codePoint)
+Int FontFace::getGlyphIndexFromCodePoint(Int codePoint)
 {
     // Note: we assume the charmap is unicode
     FT_Face face = impl_->face;
     FT_ULong charcode = core::int_cast<FT_ULong>(codePoint);
     FT_UInt index = FT_Get_Char_Index(face, charcode);
-    return core::int_cast<UInt32>(index);
+    return core::int_cast<Int>(index);
 }
 
 void FontFace::onDestroyed()
@@ -264,7 +264,7 @@ FontGlyph::FontGlyph(FontFace* face) :
     appendObjectToParent_(face);
 }
 
-UInt32 FontGlyph::index() const
+Int FontGlyph::index() const
 {
     return impl_->index;
 }
