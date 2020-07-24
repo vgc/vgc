@@ -5,10 +5,13 @@ matrix:
       os: linux
       dist: xenial
       install:
+        - pwd
         - sudo apt-get install -y libgl1-mesa-dev
         - sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
         - sudo apt-get install -y libfreetype6-dev
-        - cd /opt/pyenv && git pull && cd - # Upgrade pyenv
+        - pushd /opt/pyenv
+        - git pull # Upgrade pyenv
+        - popd
         - pyenv install --list |  grep 3.7
         - pyenv install -v 3.7.8
         - QT_VERSION=5.12.5
