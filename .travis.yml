@@ -9,16 +9,15 @@ matrix:
         - sudo apt-get install -y libgl1-mesa-dev
         - sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
         - sudo apt-get install -y libfreetype6-dev
-        - pushd /opt/pyenv
-        - git pull # Upgrade pyenv
-        - popd
-        - pyenv install --list |  grep 3.7
-        - pyenv install -v 3.7.8
+        - sudo add-apt-repository -y ppa:deadsnakes/ppa # For Python
+        - sudo apt-get update -q update
+        - sudo apt install python3.7
+        - pyenv global 3.7 # tmp
         - QT_VERSION=5.12.5
         - wget https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
         - sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C /opt
       before_script:
-        - pyenv global 3.7.8
+        - pyenv global 3.7
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/python3.7"
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$(python-config --prefix)/lib/libpython3.7m.so"
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/python3.7m"
