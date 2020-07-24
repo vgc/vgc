@@ -11,7 +11,9 @@ matrix:
         - PYTHON_XY=python3.7
         - PYTHON_VERSION=3.7.8
         - pushd /opt/pyenv
-        - git pull
+        - git status
+        - git branch --set-upstream-to=origin/master deploy
+        - git pull --ff-only
         - git checkout v1.2.20
         - pyenv install --list | grep 3.7
         - pyenv install -v ${PYTHON_VERSION}
