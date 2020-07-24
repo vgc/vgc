@@ -13,10 +13,13 @@ vgc_add_library(geometry
         camera2d.h
         catmullrom.h
         curve.h
+        curvecommand.h
+        curves2d.h
 
     CPP_FILES
         camera2d.cpp
         curve.cpp
+        curves2d.cpp
 )
 
 add_subdirectory(wraps)
