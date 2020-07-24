@@ -5,23 +5,25 @@ matrix:
       os: linux
       dist: xenial
       install:
-        - sudo add-apt-repository -y ppa:deadsnakes/ppa # For Python
-        - sudo apt-get update -q
         - sudo apt-get install -y libgl1-mesa-dev
         - sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
         - sudo apt-get install -y libfreetype6-dev
-        - PYTHON_VERSION=3.7
-        - sudo apt install python${PYTHON_VERSION} python${PYTHON_VERSION}-dev
+        - PYTHON_XY=python3.7
+        - PYTHON_VERSION=3.7.8
+        - pushd /opt/pyenv
+        - git pull
+        - git checkout v1.2.20
+        - pyenv install --list | grep 3.7
+        - pyenv install -v ${PYTHON_VERSION}
+        - popd
         - QT_VERSION=5.12.5
         - wget https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
         - sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C /opt
       before_script:
-        - ls -a /usr/bin | grep python
-        - ls -a /usr/lib | grep python
-        - ls -a /usr/include | grep python
-        - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=/usr/bin/python${PYTHON_VERSION}"
-        - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=/usr/lib/libpython${PYTHON_VERSION}m.so"
-        - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=/usr/include/python${PYTHON_VERSION}m"
+        - pyenv global ${PYTHON_VERSION}
+        - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$(python-config --prefix)/bin/${PYTHON_XY}"
+        - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$(python-config --prefix)/lib/lib${PYTHON_XY}m.so"
+        - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$(python-config --prefix)/include/${PYTHON_XY}m"
         - CMAKE_EXTRA_ARGS+=" -DQt=/opt/qt/$QT_VERSION/gcc_64"
     - name: "macOS 10.14.4"
       os: osx
