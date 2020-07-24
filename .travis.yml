@@ -8,6 +8,7 @@ matrix:
         - sudo apt-get install -y libgl1-mesa-dev
         - sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
         - sudo apt-get install -y libfreetype6-dev
+        - pyenv install --list | grep 3.7
         - pyenv install -v 3.7.8
         - QT_VERSION=5.12.5
         - wget https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
