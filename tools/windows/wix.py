@@ -451,7 +451,7 @@ class CodeSignerResource:
             #
             def sign(self, file):
                 if (self.certificate):
-                    if not dualSign or file.suffix == ".msi":
+                    if not self.dualSign or file.suffix == ".msi":
                         self.sign_(file, fd="sha256", dualSign=False)
                     else:
                         self.sign_(file, fd="sha1", dualSign=False)
