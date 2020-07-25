@@ -343,6 +343,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import uuid
 
 # Converts any string identifier into a valid WiX Id, that is:
@@ -388,6 +389,8 @@ class CodeSignerResource:
             def __init__(self, buildDir, codeSignUrl, codeSignUrlKey):
                 self.certificate = None
                 self.password = None
+                self.lastSignTime = None
+                self.delayBetweenSigns = 20 # Delay in seconds to avoid surcharching server
                 if codeSignUrl is not None and codeSignUrl != "":
                     print("Obtaining code signing certificate... ", end='')
                     try:
@@ -420,7 +423,15 @@ class CodeSignerResource:
                     if verbose:
                         args.append("/v")
                     args.append(str(file))
+                    if self.lastSignTime != None:
+                        elapsed = int(time.time()) - self.lastSignTime
+                        if elapsed < self.delayBetweenSigns:
+                            s = self.delayBetweenSigns - elapsed
+                            print(f"Waiting {s} seconds to avoid surcharging timestamp server... ", end='')
+                            time.sleep(s)
+                            print("OK.", flush=True)
                     subprocess.run(args)
+                    self.lastSignTime = int(time.time())
 
             # Signs the given file. If it is an EXE or a DLL, we dual-sign it
             # with both SHA-1 and SHA-256 for compatibility with Windows
