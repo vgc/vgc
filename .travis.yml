@@ -21,7 +21,7 @@ matrix:
       before_script:
         - pyenv global $PYTHON_VERSION
         - PYTHON_PREFIX=$(python-config --prefix)
-        - PYTHON_XY=python${PYTHON_VERSION%.*}" # X.Y.Z -> pythonX.Y
+        - PYTHON_XY=python${PYTHON_VERSION%.*} # X.Y.Z -> pythonX.Y
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_EXECUTABLE=$PYTHON_PREFIX/bin/$PYTHON_XY"
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$PYTHON_PREFIX/lib/lib${PYTHON_XY}m.so"
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$PYTHON_PREFIX/include/${PYTHON_XY}m"
