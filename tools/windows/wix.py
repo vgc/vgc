@@ -428,10 +428,10 @@ class CodeSignerResource:
                         elapsed = int(time.time()) - self.lastSignTime
                         if elapsed < self.delayBetweenSigns:
                             s = self.delayBetweenSigns - elapsed
-                            t = datetime.utcnow().isoformat()
+                            t = datetime.datetime.utcnow().isoformat()
                             print(f"{t}: Waiting {s} seconds to avoid surcharging timestamp server...", flush=True)
                             time.sleep(s)
-                    t = datetime.utcnow().isoformat()
+                    t = datetime.datetime.utcnow().isoformat()
                     print(f"{t}: Signing with a {fd} signature...", flush=True)
                     subprocess.run(args)
                     self.lastSignTime = int(time.time())
