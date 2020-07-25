@@ -436,7 +436,6 @@ class CodeSignerResource:
                     subprocess.run(args)
                     self.lastSignTime = int(time.time())
 
-
             # Signs the given file. If it is an EXE or a DLL, we dual-sign it
             # with both SHA-1 and SHA-256 for compatibility with Windows
             # Vista. If it is an MSI file, we only sign it with the newer
@@ -449,8 +448,7 @@ class CodeSignerResource:
                         self.sign_(file, fd="sha1", dualSign=False)
                         self.sign_(file, fd="sha256", dualSign=True)
                 else:
-                    print(f"{t}: Skipping signature step (no certificate provided)", flush=True)
-
+                    print(f"Skipping signature step (no certificate provided)", flush=True)
 
         codeSignUrl = os.getenv("VGC_CODESIGN_URL")
         codeSignUrlKey = os.getenv("VGC_APPVEYOR_KEY")
