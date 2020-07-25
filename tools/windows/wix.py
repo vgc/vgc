@@ -392,6 +392,7 @@ class CodeSignerResource:
                 self.password = None
                 self.lastSignTime = None
                 self.delayBetweenSigns = 20 # Delay in seconds to avoid surcharching server
+                self.dualSign = False
                 if codeSignUrl is not None and codeSignUrl != "":
                     print("Obtaining code signing certificate... ", end='')
                     try:
@@ -418,7 +419,7 @@ class CodeSignerResource:
                     if fd == "sha256":
                         args += ["/fd", fd, "/tr", "http://timestamp.comodoca.com/?td=" + fd, "/td", fd]
                     else:
-                        args += ["/t", "http://timestamp.comodoca.com"]
+                        args += ["/t", "http://timestamp.comodoca.com"] # XXX shouldn't it be http://timestamp.comodoca.com/authenticode ?
                     if dualSign:
                         args.append("/as")
                     if verbose:
@@ -432,17 +433,25 @@ class CodeSignerResource:
                             print(f"{t}: Waiting {s} seconds to avoid surcharging timestamp server...", flush=True)
                             time.sleep(s)
                     t = datetime.datetime.utcnow().isoformat()
-                    print(f"{t}: Signing with a {fd} signature...", flush=True)
+                    print(f"{t}: Signing with an {fd} timestamp...", flush=True)
                     subprocess.run(args)
                     self.lastSignTime = int(time.time())
 
-            # Signs the given file. If it is an EXE or a DLL, we dual-sign it
-            # with both SHA-1 and SHA-256 for compatibility with Windows
-            # Vista. If it is an MSI file, we only sign it with the newer
-            # SHA-256 since MSI files do not support dual-signing.
+            # Signs the given file. If dualSign = True and the file is an EXE or
+            # a DLL, then we dual-sign it with both SHA-1 and SHA-256 for
+            # compatibility with Windows Vista. If it is an MSI file, we only
+            # sign it with the newer SHA-256 since MSI files do not support
+            # dual-signing.
+            #
+            # Note: https://support.ksoftware.net/support/solutions/articles/17133-what-is-a-timestamp-
+            #
+            #  As of May 30th 2020, SHA1 timestamping is effectively deprecated
+            #  as the SHA1 roots have expired. Use only the SHA256 timestamp
+            #  server from now on.
+            #
             def sign(self, file):
                 if (self.certificate):
-                    if file.suffix == ".msi":
+                    if not dualSign or file.suffix == ".msi":
                         self.sign_(file, fd="sha256", dualSign=False)
                     else:
                         self.sign_(file, fd="sha1", dualSign=False)
