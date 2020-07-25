@@ -337,6 +337,7 @@ from urllib.request import urlopen
 from xml.dom.minidom import getDOMImplementation
 import argparse
 import base64
+import datetime
 import hashlib
 import json
 import os
@@ -427,9 +428,11 @@ class CodeSignerResource:
                         elapsed = int(time.time()) - self.lastSignTime
                         if elapsed < self.delayBetweenSigns:
                             s = self.delayBetweenSigns - elapsed
-                            print(f"Waiting {s} seconds to avoid surcharging timestamp server... ", end='')
+                            t = datetime.utcnow().isoformat()
+                            print(f"{t}: Waiting {s} seconds to avoid surcharging timestamp server...", flush=True)
                             time.sleep(s)
-                            print("OK.", flush=True)
+                    t = datetime.utcnow().isoformat()
+                    print(f"{t}: Signing with a {fd} signature...", flush=True)
                     subprocess.run(args)
                     self.lastSignTime = int(time.time())
 
@@ -735,11 +738,15 @@ class Wix:
         vcredistVersion     = (deployDir / "vc_redist.x64.exe.version").read_text().strip()
         binDir = self.wixDir / "bin"
 
+        print(f"\n_____________________________________________________________", flush=True)
+        print(f"Generating {installer_exe.name}", flush=True)
+
         # Generate the .wxs file of the MsiPackage
         msi_wxs.write_bytes(self.domDocument.toprettyxml(encoding='windows-1252'))
 
         # Generate the .wxsobj file of the MsiPackage
         # -sw1091: Silence warning CNDL1091: The Package/@Id attribute has been set.
+        print(f"\nStep 1: Running Candle for the MSI:", flush=True)
         subprocess.run([
             str(binDir / "candle.exe"), str(msi_wxs),
             "-sw1091",
@@ -749,12 +756,14 @@ class Wix:
         # Generate the .msi file of the MsiPackage
         # ICE07/ICE60: Remove warnings about font files. See:
         # https://stackoverflow.com/questions/13052258/installing-a-font-with-wix-not-to-the-local-font-folder
+        print(f"\nStep 2: Running Light for the MSI:", flush=True)
         subprocess.run([
             str(binDir / "light.exe"), str(msi_wixobj),
             "-sice:ICE07", "-sice:ICE60",
             "-out", str(msi)])
 
         # Sign the MSI
+        print(f"\nStep 3: Signing the MSI:", flush=True)
         codeSigner.sign(msi)
 
         # Generate the .wxs file of the Bundle
@@ -776,6 +785,7 @@ class Wix:
             "$(var.vcredistVersion)":     vcredistVersion}))
 
         # Generate the .wxsobj file of the Bundle
+        print(f"\nStep 4: Running Candle for the .exe installer:", flush=True)
         subprocess.run([
             str(binDir / "candle.exe"), str(bundle_wxs),
             "-ext", "WixBalExtension",
@@ -784,6 +794,7 @@ class Wix:
             "-out", str(bundle_wixobj)])
 
         # Generate the .exe file of the Bundle
+        print(f"\nStep 5: Running Light for the .exe installer:", flush=True)
         subprocess.run([
             str(binDir / "light.exe"), str(bundle_wixobj),
             "-ext", "WixBalExtension",
@@ -793,15 +804,19 @@ class Wix:
         # Detach and sign the burn engine, then re-attach and sign the installer.
         # See: https://wixtoolset.org/documentation/manual/v3/overview/insignia.html
         # We delete the engine afterwards to avoid deploying it as AppVeyor artifact.
+        print(f"\nStep 6: Running Insignia to extract the burn engine:", flush=True)
         subprocess.run([
             str(binDir / "insignia.exe"),
             "-ib", str(installer_exe),
             "-o", str(engine_exe)])
+        print(f"\nStep 7: Signing the burn engine:", flush=True)
         codeSigner.sign(engine_exe)
+        print(f"\nStep 8: Running Insignia to re-attach the burn engine:", flush=True)
         subprocess.run([
             str(binDir / "insignia.exe"),
             "-ab", str(engine_exe), str(installer_exe),
             "-o", str(installer_exe)])
+        print(f"\nStep 9: Signing the .exe installer:", flush=True)
         codeSigner.sign(installer_exe)
         engine_exe.unlink()
 
