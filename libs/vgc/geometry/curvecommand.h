@@ -22,65 +22,54 @@
 #include <vgc/geometry/api.h>
 
 namespace vgc {
-
 namespace geometry {
 
 /// \enum vgc::geometry::CurveCommandType
 /// \brief The type of a curve command (MoveTo, LineTo, etc.)
 ///
-enum class CurveCommandType {
-    ClosePath = 0, // Z (none)
-    MoveTo,        // M (x y)+
-    LineTo,        // L (x y)+
-    HLineTo,       // H x+
-    VLineTo,       // V y+
-    CCurveTo,      // C (x1 y1 x2 y2 x y)+
-    SCurveTo,      // S (x2 y2 x y)+
-    QCurveTo,      // Q (x1 y1 x y)+
-    TCurveTo,      // T (x y)+
-    ArcTo          // A (rx ry x-axis-rotation large-arc-flag sweep-flag x y)+
+enum class CurveCommandType : UInt8 {
+    Close,
+    MoveTo,
+    LineTo,
+    QuadraticBezierTo,
+    CubicBezierTo
 };
 
-/// \class vgc::geometry::CurveCommand
-/// \brief Stores the type, relativeness, and number of arguments of a curve command.
+/// Writes the given CurveCommandType to the output stream.
 ///
-class VGC_GEOMETRY_API CurveCommand {
-public:
-    /// Constructs a CurveCommand.
-    ///
-    CurveCommand(CurveCommandType type, bool isRelative, Int numArguments) :
-        numArguments_(numArguments),
-        type_(type),
-        isRelative_(isRelative) {
-
+template<typename OStream>
+void write(OStream& out, CurveCommandType c)
+{
+    using core::write;
+    switch (c) {
+    case CurveCommandType::Close: write(out, "Close"); break;
+    case CurveCommandType::MoveTo: write(out, "MoveTo"); break;
+    case CurveCommandType::LineTo: write(out, "LineTo"); break;
+    case CurveCommandType::QuadraticBezierTo: write(out, "QuadraticBezierTo"); break;
+    case CurveCommandType::CubicBezierTo: write(out, "CubicBezierTo"); break;
     }
+}
 
-    /// Returns the type of the command.
-    ///
-    CurveCommandType type() const {
-        return type_;
-    }
+namespace internal {
 
-    /// Returns whether this command use relative or absolute coordinates.
-    ///
-    bool isRelative() const {
-        return isRelative_;
-    }
-
-    /// Returns the number of arguments this command applies to.
-    ///
-    Int numArguments() const {
-        return numArguments_;
-    }
-
-private:
-    Int numArguments_;
-    CurveCommandType type_;
-    bool isRelative_;
-    // Note: members are ordered largest-first for better packing
+// Stores the type and how to access the parameters of each command. Note that
+// the parameters themselves are stored in a separate DoubleArray (= `data`).
+//
+// The param indices of the first command are from 0 to
+// commandsData[0].endParamIndex - 1, for the second command they are from
+// commandsData[0].endParamIndex to commandsData[1].endParamIndex - 1, etc.
+//
+// In the future, we may want to do benchmarks to determine whether performance
+// increases by storing type and endParamIndex as separate arrays.
+//
+struct VGC_GEOMETRY_API CurveCommandData {
+    CurveCommandType type;
+    Int endParamIndex;
 };
 
-using CurveCommandArray = core::Array<CurveCommand>;
+using CurveCommandDataArray = core::Array<CurveCommandData>;
+
+}
 
 } // namespace geometry
 } // namespace vgc
