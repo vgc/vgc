@@ -94,6 +94,12 @@ public:
         return Vec2f(v1) += v2;
     }
 
+    /// Returns a copy of this Vec2f (unary plus operator).
+    ///
+    Vec2f operator+() const {
+        return *this;
+    }
+
     /// Substracts in-place the \p other Vec2f to this Vec2f.
     ///
     Vec2f& operator-=(const Vec2f& other) {
@@ -106,6 +112,12 @@ public:
     ///
     friend Vec2f operator-(const Vec2f& v1, const Vec2f& v2) {
         return Vec2f(v1) -= v2;
+    }
+
+    /// Returns the opposite of this Vec2f (unary minus operator).
+    ///
+    Vec2f operator-() const {
+        return Vec2f(-data_[0], -data_[1]);
     }
 
     /// Multiplies in-place this Vec2f by the given scalar \p s.
