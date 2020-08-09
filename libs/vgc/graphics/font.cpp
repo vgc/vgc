@@ -18,6 +18,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_OUTLINE_H
 
 #include <vgc/core/array.h>
 #include <vgc/graphics/exceptions.h>
@@ -139,16 +140,80 @@ public:
     }
 };
 
+namespace {
+
+core::Vec2d toVec2d(const FT_Vector* v)
+{
+    // TODO: what if x is expressed as fixed precision 16.16 or 26.6?
+    // https://www.freetype.org/freetype2/docs/reference/ft2-basic_types.html#ft_pos
+    return core::Vec2d(v->x, v->y);
+}
+
+void closeLastCurveIfOpen(geometry::Curves2d& c)
+{
+    geometry::Curves2dCommandRange commands = c.commands();
+    geometry::Curves2dCommandIterator it = commands.end();
+    if (it != commands.begin()) {
+        --it;
+        if (it->type() != geometry::CurveCommandType::Close) {
+            c.close();
+        }
+    }
+}
+
+int moveTo(const FT_Vector* to,
+           void* user)
+{
+    geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
+    closeLastCurveIfOpen(*c);
+    c->moveTo(toVec2d(to));
+    return 0;
+}
+
+int lineTo(const FT_Vector* to,
+           void* user)
+{
+    geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
+    c->lineTo(toVec2d(to));
+    return 0;
+}
+
+int conicTo(const FT_Vector* control,
+            const FT_Vector* to,
+            void* user)
+{
+    geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
+    c->quadraticBezierTo(toVec2d(control), toVec2d(to));
+    return 0;
+}
+
+int cubicTo(const FT_Vector* control1,
+            const FT_Vector* control2,
+            const FT_Vector* to,
+            void* user)
+{
+    geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
+    c->cubicBezierTo(toVec2d(control1), toVec2d(control2), toVec2d(to));
+    return 0;
+}
+
+} // namespace
+
 class FontGlyphImpl {
 public:
     Int index;
     std::string name;
+    geometry::Curves2d outline;
 
-    FontGlyphImpl(Int index, const char* name, FT_GlyphSlot /*slot*/) :
+    FontGlyphImpl(Int index, const char* name, FT_GlyphSlot slot) :
         index(index),
         name(name)
     {
-
+        int shift = 0;
+        FT_Pos delta = 0;
+        FT_Outline_Funcs f{&moveTo, &lineTo, &conicTo, &cubicTo, shift, delta};
+        FT_Outline_Decompose(&slot->outline, &f, static_cast<void*>(&outline));
+        closeLastCurveIfOpen(outline);
     }
 };
 
@@ -272,6 +337,11 @@ Int FontGlyph::index() const
 std::string FontGlyph::name() const
 {
     return impl_->name;
+}
+
+const geometry::Curves2d& FontGlyph::outline() const
+{
+    return impl_->outline;
 }
 
 void FontGlyph::onDestroyed()
