@@ -18,6 +18,7 @@
 #define VGC_GRAPHICS_FONT_H
 
 #include <vgc/core/innercore.h>
+#include <vgc/geometry/curves2d.h>
 #include <vgc/graphics/api.h>
 
 namespace vgc {
@@ -188,6 +189,10 @@ public:
     /// support glyph names.
     ///
     std::string name() const;
+
+    /// Returns the outline of the glyph as a Curves2d.
+    ///
+    const geometry::Curves2d& outline() const;
 
 protected:
     /// \reimp

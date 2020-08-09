@@ -4,6 +4,7 @@ vgc_add_library(graphics
 
     VGC_DEPENDENCIES
         core
+        geometry
 
     HEADER_FILES
         api.h
