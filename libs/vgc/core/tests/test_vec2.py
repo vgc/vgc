@@ -100,10 +100,20 @@ class TestVec2(unittest.TestCase):
             v2 = v1 + Vec2x(1, 1)
             self.assertEqual(v1, Vec2x(4, 6))
             self.assertEqual(v2, Vec2x(5, 7))
+            v3 = +v2
+            self.assertEqual(v2, Vec2x(5, 7))
+            self.assertEqual(v3, Vec2x(5, 7))
+            v3 = +v3
+            self.assertEqual(v3, Vec2x(5, 7))
             v2 -= Vec2x(3, 2)
             self.assertEqual(v2, Vec2x(2, 5))
             v1 = v1 - v2;
             self.assertEqual(v1, Vec2x(2, 1))
+            v3 = - v2
+            self.assertEqual(v2, Vec2x(2, 5))
+            self.assertEqual(v3, Vec2x(-2, -5))
+            v3 = - v3
+            self.assertEqual(v3, Vec2x(2, 5))
             v1 *= 2
             self.assertEqual(v1, Vec2x(4, 2))
             v3 = 3 * v1 * 2
