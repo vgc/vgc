@@ -25,6 +25,7 @@ Prerequisites:
 - **Python 3.6+**: We recommend the latest Python 3.7.x version via the [official installer](https://www.python.org/downloads/).
 - **Qt 5.12+**: We recommend the latest Qt 5.12.x version via the [official installer](https://www.qt.io/download-qt-installer).
 - **FreeType**: We recommend the latest FreeType 2.x.
+- **HarfBuzz**: We recommend the latest HarfBuzz 2.x.
 - **OpenGL Dev Tools**: Already installed on Windows, macOS, and many Linux distributions. On Ubuntu, you need `sudo apt install libglu1-mesa-dev`.
 
 VGC also depends on the following libraries, but these are already included in
@@ -47,7 +48,7 @@ git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 .\bootstrap-vcpkg.bat
 .\vcpkg integrate install
-.\vcpkg install freetype:x64-windows
+.\vcpkg install freetype:x64-windows harfbuzz:x64-windows
 cd ..
 
 # Download, build, and run VGC

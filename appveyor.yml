@@ -32,7 +32,7 @@ install:
   - echo %VGC_COMMIT_BRANCH%
   - cd C:\Tools\vcpkg
   - vcpkg integrate install
-  - vcpkg install freetype:x64-windows
+  - vcpkg install freetype:x64-windows harfbuzz:x64-windows
 
 before_build:
   - cd C:\dev\vgc
