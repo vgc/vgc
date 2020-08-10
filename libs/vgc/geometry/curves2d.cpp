@@ -86,5 +86,70 @@ void Curves2d::cubicBezierTo(double x1, double y1,
     commandData_.append({CurveCommandType::CubicBezierTo, data_.length()});
 }
 
+namespace {
+
+void addSample(
+        core::DoubleArray& data,
+        core::Vec2d& v0,
+        core::Vec2d& v1,
+        const core::Vec2d& p,
+        const core::Vec2d& inset)
+{
+    core::Vec2d v2 = p + inset;
+    core::Vec2d v3 = p - inset;
+    data.insert(data.end(), {
+        v0[0], v0[1], v1[0], v1[1], v2[0], v2[1],
+        v2[0], v2[1], v1[0], v1[1], v3[0], v3[1]});
+    v0 = v2;
+    v1 = v3;
+}
+
+} // namespace
+
+void Curves2d::stroke(core::DoubleArray& data, double width) const
+{
+    // XXX TODO: actually implement this function. For now, this is just a
+    // temporary implementation (no computation of normals, no adaptive
+    // sampling, etc.) for testing the rest of the architecture.
+
+    // For now, assume fixed normal (like with calligraphy pen with wide flat with fixed orientation)
+    core::Vec2d normal(1.0, 1.0);
+    normal.normalize();
+    core::Vec2d inset = 0.5 * width * normal;
+
+    //    v0              v2
+    //    *-------------->*
+    //    |
+    //    *--centerline-->* p
+    //    |
+    //    *-------------->*
+    //    v1              v3
+    //
+    core::Vec2d v0, v1, p;
+    for (vgc::geometry::Curves2dCommandRef c : commands()) {
+        switch (c.type()) {
+        case vgc::geometry::CurveCommandType::Close:
+            break;
+        case vgc::geometry::CurveCommandType::MoveTo:
+            p = c.p();
+            v0 = p + inset;
+            v1 = p - inset;
+            break;
+        case vgc::geometry::CurveCommandType::LineTo:
+            p = c.p(); addSample(data, v0, v1, p, inset);
+            break;
+        case vgc::geometry::CurveCommandType::QuadraticBezierTo:
+            p = c.p1(); addSample(data, v0, v1, p, inset);
+            p = c.p2(); addSample(data, v0, v1, p, inset);
+            break;
+        case vgc::geometry::CurveCommandType::CubicBezierTo:
+            p = c.p1(); addSample(data, v0, v1, p, inset);
+            p = c.p2(); addSample(data, v0, v1, p, inset);
+            p = c.p3(); addSample(data, v0, v1, p, inset);
+            break;
+        }
+    }
+}
+
 } // namespace geometry
 } // namespace vgc

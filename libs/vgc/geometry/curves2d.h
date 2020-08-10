@@ -359,6 +359,29 @@ public:
                        double x2, double y2,
                        double x3, double y3);
 
+    /// Strokes this curve, that is, appends triangle data to the
+    /// given DoubleArray. The appended data is of the form:
+    ///
+    /// ```
+    /// [x1, y1,     // First vertex of first triangle
+    ///  x2, y2,     // Second vertex of first triangle
+    ///  x3, y3,     // Third vertex of first triangle
+    ///
+    ///  x4, y4,     // First vertex of second triangle
+    ///  x5, y5,     // Second vertex of second triangle
+    ///  x6, y6,     // Third vertex of second triangle
+    ///
+    ///  ...]
+    /// ```
+    ///
+    // Note: in the future, we may want to add a "VertexFormat" options to
+    // Specify an offset, stride, whether to add a z = 0 value and/or color
+    // information, etc. Also, The "width" is constant for now. Later, it
+    // could be some sort of CurveParamVec1d, while color could be CurveParamColor,
+    // or something like that.
+    //
+    void stroke(core::DoubleArray& data, double width) const;
+
 private:
     friend Curves2dCommandRef;
     friend Curves2dCommandIterator;
