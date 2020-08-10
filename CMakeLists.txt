@@ -562,32 +562,77 @@ message(STATUS "Version: ${GIT_VERSION_STRING}")
 message(STATUS "") # newline
 
 # Freetype
-# Note: on Windows, if using vcpkg, all required DLLs are automatically
-# moved to the bin/ folder so it is ready for deployment without having
-# to copy those ourselves
+#
+# On Windows, we use vcpkg which provides a freetype target with proper
+# INTERFACE_INCLUDE_DIRECTORIES property. On Linux/macOS, we use the built-in
+# FindFreetype module, which provides FREETYPE_LIBRARIES and
+# FREETYPE_INCLUDE_DIRS variables. To make these work nicely together, we
+# define FREETYPE_LIBRARIES even on Windows.
+#
 message(STATUS "[FreeType]")
 if(DEFINED VCPKG_TARGET_TRIPLET)
     find_package(freetype CONFIG REQUIRED)
     set(FREETYPE_LIBRARIES freetype)
-    set(FREETYPE_INCLUDE_DIRS "")
+    set(FREETYPE_INCLUDE_DIRS "") # not need for more: the freetype target is smart enough
     get_target_property(_FREETYPE_INCLUDE_DIRS freetype INTERFACE_INCLUDE_DIRECTORIES)
+    # Note: the value of _FREETYPE_INCLUDE_DIRS changed starting vcpkg 2019.06
+    # (see commit below). So for robustness we try out different paths.
+    # https://github.com/microsoft/vcpkg/commit/388d219f256b75452c088b4cc2e16fd38f7f6995
+    set(_FREETYPE_H_PATH "")
     foreach(h ${_FREETYPE_INCLUDE_DIRS})
-        if(EXISTS "${h}/freetype.h")
-            file(READ "${h}/freetype.h" _FREETYPE_H)
-            string(REGEX MATCH "define[ \t]+FREETYPE_MAJOR[ \t]+([0-9]+)" _FREETYPE_MAJOR_MATCH "${_FREETYPE_H}")
-            set(FREETYPE_VERSION_MAJOR "${CMAKE_MATCH_1}")
-            string(REGEX MATCH "define[ \t]+FREETYPE_MINOR[ \t]+([0-9]+)" _FREETYPE_MINOR_MATCH "${_FREETYPE_H}")
-            set(FREETYPE_VERSION_MINOR "${CMAKE_MATCH_1}")
-            string(REGEX MATCH "define[ \t]+FREETYPE_PATCH[ \t]+([0-9]+)" _FREETYPE_PATCH_MATCH "${_FREETYPE_H}")
-            set(FREETYPE_VERSION_PATCH "${CMAKE_MATCH_1}")
-            set(FREETYPE_VERSION_STRING "${FREETYPE_VERSION_MAJOR}.${FREETYPE_VERSION_MINOR}.${FREETYPE_VERSION_PATCH}")
+        if(NOT _FREETYPE_H_PATH)
+            if (EXISTS "${h}/freetype/freetype.h")
+                set(_FREETYPE_H_PATH "${h}/freetype/freetype.h")
+            elseif (EXISTS "${h}/freetype.h")
+                set(_FREETYPE_H_PATH "${h}/freetype.h")
+            endif()
         endif()
     endforeach()
+    if(_FREETYPE_H_PATH)
+        file(READ "${_FREETYPE_H_PATH}" _FREETYPE_H)
+        string(REGEX MATCH "define[ \t]+FREETYPE_MAJOR[ \t]+([0-9]+)" _FREETYPE_MAJOR_MATCH "${_FREETYPE_H}")
+        set(FREETYPE_VERSION_MAJOR "${CMAKE_MATCH_1}")
+        string(REGEX MATCH "define[ \t]+FREETYPE_MINOR[ \t]+([0-9]+)" _FREETYPE_MINOR_MATCH "${_FREETYPE_H}")
+        set(FREETYPE_VERSION_MINOR "${CMAKE_MATCH_1}")
+        string(REGEX MATCH "define[ \t]+FREETYPE_PATCH[ \t]+([0-9]+)" _FREETYPE_PATCH_MATCH "${_FREETYPE_H}")
+        set(FREETYPE_VERSION_PATCH "${CMAKE_MATCH_1}")
+        set(FREETYPE_VERSION_STRING "${FREETYPE_VERSION_MAJOR}.${FREETYPE_VERSION_MINOR}.${FREETYPE_VERSION_PATCH}")
+    endif()
 else()
     find_package(Freetype REQUIRED)
+    include_directories(${FREETYPE_INCLUDE_DIRS})
 endif()
 message(STATUS "Version: ${FREETYPE_VERSION_STRING}")
-include_directories(${FREETYPE_INCLUDE_DIRS})
+message(STATUS "") # newline
+
+# HarfBuzz
+# Note: As of CMake 3.18.1 (Jul 2020), there is still no official "FindHarBuzz" module
+# On Windows, we use vcpkg which provides a harfbuzz::harfbuzz target
+# On Linux/macOS, we are still looking for the best approach
+message(STATUS "[HarfBuzz]")
+if(DEFINED VCPKG_TARGET_TRIPLET)
+    find_package(harfbuzz CONFIG REQUIRED)
+    set(HARFBUZZ_LIBRARIES harfbuzz::harfbuzz)
+    # INCLUDE_DIRS doesn't seem properly defined by vcpkg, so we work around it
+    # by adding it manually. See: https://github.com/microsoft/vcpkg/issues/12847
+    set(HARFBUZZ_INCLUDE_DIRS "${_VCPKG_ROOT_DIR}/installed/x64-windows/include/harfbuzz")
+    set_target_properties(harfbuzz::harfbuzz PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${HARFBUZZ_INCLUDE_DIRS}")
+    if (EXISTS "${HARFBUZZ_INCLUDE_DIRS}/hb-version.h")
+        file(READ "${HARFBUZZ_INCLUDE_DIRS}/hb-version.h" _HB_VERSION_H)
+        string(REGEX MATCH "define[ \t]+HB_VERSION_MAJOR[ \t]+([0-9]+)" _HARFBUZZ_MAJOR_MATCH "${_HB_VERSION_H}")
+        set(HARFBUZZ_VERSION_MAJOR "${CMAKE_MATCH_1}")
+        string(REGEX MATCH "define[ \t]+HB_VERSION_MINOR[ \t]+([0-9]+)" _HARFBUZZ_MINOR_MATCH "${_HB_VERSION_H}")
+        set(HARFBUZZ_VERSION_MINOR "${CMAKE_MATCH_1}")
+        string(REGEX MATCH "define[ \t]+HB_VERSION_MICRO[ \t]+([0-9]+)" _HARFBUZZ_MICRO_MATCH "${_HB_VERSION_H}")
+        set(HARFBUZZ_VERSION_MICRO "${CMAKE_MATCH_1}")
+        set(HARFBUZZ_VERSION_STRING "${HARFBUZZ_VERSION_MAJOR}.${HARFBUZZ_VERSION_MINOR}.${HARFBUZZ_VERSION_MICRO}")
+    endif()
+else()
+    # TODO for Linux/macOS
+    #find_package(HarfBuzz REQUIRED)
+endif()
+message(STATUS "Version: ${HARFBUZZ_VERSION_STRING}")
 message(STATUS "") # newline
 
 # Add internal libs and apps

@@ -20,6 +20,11 @@
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 
+#if defined(VGC_CORE_OS_WINDOWS)
+#include <hb.h>
+#include <hb-ft.h>
+#endif
+
 #include <vgc/core/array.h>
 #include <vgc/graphics/exceptions.h>
 
@@ -127,6 +132,11 @@ public:
         }
 
         // TODO: FT_Set_Char_Size?
+
+        // Test HarfBuzz
+        #if defined(VGC_CORE_OS_WINDOWS)
+        hb_font_t* hb_font = hb_ft_font_create(face, NULL);
+        #endif
     }
 
     ~FontFaceImpl()
