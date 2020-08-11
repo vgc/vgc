@@ -561,48 +561,62 @@ find_package(Git REQUIRED)
 message(STATUS "Version: ${GIT_VERSION_STRING}")
 message(STATUS "") # newline
 
-# Freetype
-#
-# On Windows, we use vcpkg which provides a freetype target with proper
-# INTERFACE_INCLUDE_DIRECTORIES property. On Linux/macOS, we use the built-in
-# FindFreetype module, which provides FREETYPE_LIBRARIES and
-# FREETYPE_INCLUDE_DIRS variables. To make these work nicely together, we
-# define FREETYPE_LIBRARIES even on Windows.
-#
+# FreeType
 message(STATUS "[FreeType]")
-if(DEFINED VCPKG_TARGET_TRIPLET)
-    find_package(freetype CONFIG REQUIRED)
-    set(FREETYPE_LIBRARIES freetype)
-    set(FREETYPE_INCLUDE_DIRS "") # not need for more: the freetype target is smart enough
-    get_target_property(_FREETYPE_INCLUDE_DIRS freetype INTERFACE_INCLUDE_DIRECTORIES)
-    # Note: the value of _FREETYPE_INCLUDE_DIRS changed starting vcpkg 2019.06
-    # (see commit below). So for robustness we try out different paths.
-    # https://github.com/microsoft/vcpkg/commit/388d219f256b75452c088b4cc2e16fd38f7f6995
-    set(_FREETYPE_H_PATH "")
-    foreach(h ${_FREETYPE_INCLUDE_DIRS})
-        if(NOT _FREETYPE_H_PATH)
+find_package(freetype CONFIG QUIET)
+if(NOT freetype_FOUND)
+    # Note: we try to find a config package first, then a module package.
+    # Default order is the other way around, which is why we do this manually.
+    # Starting CMake 3.15, we could use CMAKE_FIND_PACKAGE_PREFER_CONFIG. See:
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/19236
+    # https://cmake.org/cmake/help/v3.15/variable/CMAKE_FIND_PACKAGE_PREFER_CONFIG.html
+    find_package(Freetype MODULE REQUIRED)
+endif()
+if(NOT TARGET Freetype::Freetype)
+    if(TARGET freetype)
+        # vcpkg uses "freetype" instead of "FreeType::Freetype"
+        add_library(Freetype::Freetype ALIAS freetype)
+    elseif(FREETYPE_INCLUDE_DIRS AND FREETYPE_LIBRARIES)
+        # CMake's FindFreetype only defines a target starting CMake >= 3.10, so
+        # we define it ourself if not found.
+        add_library(Freetype::Freetype UNKNOWN IMPORTED)
+        set_target_properties(Freetype::Freetype PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}"
+            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+            IMPORTED_LOCATION "${FREETYPE_LIBRARIES}")
+    endif()
+endif()
+get_target_property(FREETYPE_INCLUDE_DIRS Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(FREETYPE_LIBRARIES Freetype::Freetype IMPORTED_LOCATION)
+if(NOT FREETYPE_VERSION_STRING)
+    # Sometimes, VERSION_STRING isn't defined, so we do it ourselves. See:
+    # https://github.com/microsoft/vcpkg/issues/12848
+    set(FREETYPE_H "")
+    foreach(h ${FREETYPE_INCLUDE_DIRS})
+        if(NOT FREETYPE_H)
+            # Yes, FreeType's include hierarchy is a mess, and not all
+            # configurations provide the same include dirs.
             if (EXISTS "${h}/freetype/freetype.h")
-                set(_FREETYPE_H_PATH "${h}/freetype/freetype.h")
+                set(FREETYPE_H "${h}/freetype/freetype.h")
             elseif (EXISTS "${h}/freetype.h")
-                set(_FREETYPE_H_PATH "${h}/freetype.h")
+                set(FREETYPE_H "${h}/freetype.h")
             endif()
         endif()
     endforeach()
-    if(_FREETYPE_H_PATH)
-        file(READ "${_FREETYPE_H_PATH}" _FREETYPE_H)
-        string(REGEX MATCH "define[ \t]+FREETYPE_MAJOR[ \t]+([0-9]+)" _FREETYPE_MAJOR_MATCH "${_FREETYPE_H}")
+    if(FREETYPE_H)
+        file(READ "${FREETYPE_H}" FREETYPE_H_STR)
+        string(REGEX MATCH "define[ \t]+FREETYPE_MAJOR[ \t]+([0-9]+)" FREETYPE_MAJOR_MATCH "${FREETYPE_H_STR}")
         set(FREETYPE_VERSION_MAJOR "${CMAKE_MATCH_1}")
-        string(REGEX MATCH "define[ \t]+FREETYPE_MINOR[ \t]+([0-9]+)" _FREETYPE_MINOR_MATCH "${_FREETYPE_H}")
+        string(REGEX MATCH "define[ \t]+FREETYPE_MINOR[ \t]+([0-9]+)" FREETYPE_MINOR_MATCH "${FREETYPE_H_STR}")
         set(FREETYPE_VERSION_MINOR "${CMAKE_MATCH_1}")
-        string(REGEX MATCH "define[ \t]+FREETYPE_PATCH[ \t]+([0-9]+)" _FREETYPE_PATCH_MATCH "${_FREETYPE_H}")
+        string(REGEX MATCH "define[ \t]+FREETYPE_PATCH[ \t]+([0-9]+)" FREETYPE_PATCH_MATCH "${FREETYPE_H_STR}")
         set(FREETYPE_VERSION_PATCH "${CMAKE_MATCH_1}")
         set(FREETYPE_VERSION_STRING "${FREETYPE_VERSION_MAJOR}.${FREETYPE_VERSION_MINOR}.${FREETYPE_VERSION_PATCH}")
     endif()
-else()
-    find_package(Freetype REQUIRED)
-    include_directories(${FREETYPE_INCLUDE_DIRS})
 endif()
 message(STATUS "Version: ${FREETYPE_VERSION_STRING}")
+message(STATUS "Include: ${FREETYPE_INCLUDE_DIRS}")
+message(STATUS "Location: ${FREETYPE_LIBRARIES}")
 message(STATUS "") # newline
 
 # HarfBuzz
