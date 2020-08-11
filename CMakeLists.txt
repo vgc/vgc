@@ -562,40 +562,54 @@ message(STATUS "Version: ${GIT_VERSION_STRING}")
 message(STATUS "") # newline
 
 # FreeType
+#
+# Note: we try to accomodate both vcpkg, which uses a config package with a
+# 'freetype' target, and CMake's builtin FindFreetype module, which uses a
+# 'Freetype::Freetype' target (since CMake 3.10), and variables like
+# FREETYPE_LIBRARIES, FREETYPE_INCLUDE_DIRS, etc.
+#
+# Before changing this code, read this:
+# - https://stackoverflow.com/questions/60531709
+# - https://gitlab.kitware.com/cmake/cmake/-/issues/19236
+# - https://cmake.org/cmake/help/v3.15/variable/CMAKE_FIND_PACKAGE_PREFER_CONFIG.html
+#
 message(STATUS "[FreeType]")
 find_package(freetype CONFIG QUIET)
-if(NOT freetype_FOUND)
-    # Note: we try to find a config package first, then a module package.
-    # Default order is the other way around, which is why we do this manually.
-    # Starting CMake 3.15, we could use CMAKE_FIND_PACKAGE_PREFER_CONFIG. See:
-    # https://gitlab.kitware.com/cmake/cmake/-/issues/19236
-    # https://cmake.org/cmake/help/v3.15/variable/CMAKE_FIND_PACKAGE_PREFER_CONFIG.html
+if(TARGET freetype)
+    # Conceptually, we simply want to create an alias like this:
+    #   add_library(Freetype::Freetype ALIAS freetype)
+    # Unfortunately, it's only since CMake 3.11 that we can create
+    # aliases of imported targets, see:
+    #   https://gitlab.kitware.com/cmake/cmake/-/issues/15569
+    # And it's only since CMake 3.18 that we can create aliases
+    # of non-global imported target, see:
+    #   https://gitlab.kitware.com/cmake/cmake/-/issues/20641
+    # For info, since CMake 3.11, we can use IMPORTED_GLOBAL to
+    # make an imported target global afterwards, see:
+    #   https://stackoverflow.com/questions/45401212
+    # Since we only require CMake 3.1 (maybe we should change this?),
+    # we don't use aliases and instead define a new imported target
+    # with the proper name.
+    add_library(Freetype::Freetype SHARED IMPORTED)
+    set(FREETYPE_TARGET_PROPERTIES "INTERFACE_INCLUDE_DIRECTORIES;IMPORTED_IMPLIB_RELEASE;IMPORTED_LOCATION_RELEASE;IMPORTED_IMPLIB_DEBUG;IMPORTED_LOCATION_DEBUG")
+    foreach(prop ${FREETYPE_TARGET_PROPERTIES})
+        get_target_property(propval freetype ${prop})
+        if(propval)
+            set_target_properties(Freetype::Freetype PROPERTIES ${prop} ${propval})
+        endif()
+    endforeach()
+    set_property(TARGET Freetype::Freetype APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+    set_property(TARGET Freetype::Freetype APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
+else()
     find_package(Freetype MODULE REQUIRED)
-endif()
-if(NOT TARGET Freetype::Freetype)
-    # The FreeType::Freetype target of CMake's FindFreeType is only available
-    # since CMake 3.10, and vcpkg use a different name: "freetype"
-    if(TARGET freetype)
-        # Unfortunately, we cannot simply create an alias like this:
-        #     add_library(Freetype::Freetype ALIAS freetype)
-        # because creating aliases of non-global imported target is not
-        # allowed in CMake < 3.18, see:
-        #     https://gitlab.kitware.com/cmake/cmake/-/issues/20641
-        # So we create a new imported target instead, similarly to the
-        # workaround suggested in above link.
-        get_target_property(FREETYPE_INCLUDE_DIRS freetype INTERFACE_INCLUDE_DIRECTORIES)
-        get_target_property(FREETYPE_LIBRARIES freetype IMPORTED_LOCATION)
-    endif()
-    if(FREETYPE_INCLUDE_DIRS AND FREETYPE_LIBRARIES)
-        add_library(Freetype::Freetype UNKNOWN IMPORTED)
+    if(NOT TARGET Freetype::Freetype) # CMake < 3.10
+        add_library(Freetype::Freetype SHARED IMPORTED)
         set_target_properties(Freetype::Freetype PROPERTIES
             INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}"
-            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
             IMPORTED_LOCATION "${FREETYPE_LIBRARIES}")
     endif()
 endif()
 get_target_property(FREETYPE_INCLUDE_DIRS Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES)
-get_target_property(FREETYPE_LIBRARIES Freetype::Freetype IMPORTED_LOCATION)
 if(NOT FREETYPE_VERSION_STRING)
     # Sometimes, VERSION_STRING isn't defined, so we do it ourselves. See:
     # https://github.com/microsoft/vcpkg/issues/12848
@@ -623,8 +637,7 @@ if(NOT FREETYPE_VERSION_STRING)
     endif()
 endif()
 message(STATUS "Version: ${FREETYPE_VERSION_STRING}")
-message(STATUS "Include: ${FREETYPE_INCLUDE_DIRS}")
-message(STATUS "Location: ${FREETYPE_LIBRARIES}")
+vgc_print_imported_target_info(Freetype::Freetype)
 message(STATUS "") # newline
 
 # HarfBuzz

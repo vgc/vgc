@@ -376,3 +376,54 @@ function(vgc_add_app APP_NAME)
     endif()
 
 endfunction()
+
+# Print the given property of the given target as
+# a STATUS message.
+#
+# Example:
+# vgc_print_target_property(Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES)
+#
+# Output:
+# -- Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES: /usr/include/freetype2;/usr/include/x86_64-linux-gnu/freetype2
+#
+function(vgc_print_target_property target prop)
+    get_target_property(propval ${target} ${prop})
+    if(propval)
+        message(STATUS "${target} ${prop}: ${propval}")
+    else()
+        message(STATUS "${target} ${prop}: NOTFOUND")
+    endif()
+endfunction()
+
+# Print useful info about the imported target, such as
+# its include dirs and location.
+#
+# Example:
+# vgc_print_imported_target_info(Freetype::Freetype)
+#
+# Output:
+# -- Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES: C:/Users/Boris/vcpkg/installed/x64-windows/include
+# -- Freetype::Freetype IMPORTED_IMPLIB_RELEASE: C:/Users/Boris/vcpkg/installed/x64-windows/lib/freetype.lib
+# -- Freetype::Freetype IMPORTED_LOCATION_RELEASE: C:/Users/Boris/vcpkg/installed/x64-windows/bin/freetype.dll
+# -- Freetype::Freetype IMPORTED_IMPLIB_DEBUG: C:/Users/Boris/vcpkg/installed/x64-windows/debug/lib/freetyped.lib
+# -- Freetype::Freetype IMPORTED_LOCATION_DEBUG: C:/Users/Boris/vcpkg/installed/x64-windows/debug/bin/freetyped.dll
+# -- Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES: /usr/include/freetype2;/usr/include/x86_64-linux-gnu/freetype2
+#
+function(vgc_print_imported_target_info target)
+    if(NOT TARGET ${target})
+        message(WARNING "No target named '${target}'")
+        return()
+    endif()
+    vgc_print_target_property(${target} INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(configs ${target} IMPORTED_CONFIGURATIONS)
+    if(configs)
+        set(props "IMPORTED_IMPLIB;IMPORTED_LOCATION")
+        foreach(config ${configs})
+            foreach(prop ${props})
+                vgc_print_target_property(${target} ${prop}_${config})
+            endforeach()
+        endforeach()
+    else()
+        vgc_print_target_property(${target} IMPORTED_LOCATION)
+    endif()
+endfunction()
