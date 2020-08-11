@@ -573,20 +573,20 @@ if(NOT freetype_FOUND)
     find_package(Freetype MODULE REQUIRED)
 endif()
 if(NOT TARGET Freetype::Freetype)
+    # The FreeType::Freetype target of CMake's FindFreeType is only available
+    # since CMake 3.10, and vcpkg use a different name: "freetype"
     if(TARGET freetype)
-        # vcpkg uses "freetype" instead of "FreeType::Freetype".
         # Unfortunately, we cannot simply create an alias like this:
         #     add_library(Freetype::Freetype ALIAS freetype)
         # because creating aliases of non-global imported target is not
         # allowed in CMake < 3.18, see:
         #     https://gitlab.kitware.com/cmake/cmake/-/issues/20641
-        # So we create a new imported target instead, as per the
+        # So we create a new imported target instead, similarly to the
         # workaround suggested in above link.
-        add_library(Freetype::Freetype INTERFACE IMPORTED)
-        target_link_libraries(Freetype::Freetype INTERFACE freetype)
-    elseif(FREETYPE_INCLUDE_DIRS AND FREETYPE_LIBRARIES)
-        # CMake's FindFreetype only defines a target starting CMake >= 3.10, so
-        # we define it ourself if not found.
+        get_target_property(FREETYPE_INCLUDE_DIRS freetype INTERFACE_INCLUDE_DIRECTORIES)
+        get_target_property(FREETYPE_LIBRARIES freetype IMPORTED_LOCATION)
+    endif()
+    if(FREETYPE_INCLUDE_DIRS AND FREETYPE_LIBRARIES)
         add_library(Freetype::Freetype UNKNOWN IMPORTED)
         set_target_properties(Freetype::Freetype PROPERTIES
             INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}"
