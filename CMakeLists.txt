@@ -574,6 +574,7 @@ get_target_property(FREETYPE_INCLUDE_DIRS Freetype::Freetype INTERFACE_INCLUDE_D
 if(NOT FREETYPE_VERSION_STRING)
     # Sometimes, VERSION_STRING isn't defined, so we do it ourselves. See:
     # https://github.com/microsoft/vcpkg/issues/12848
+    # https://github.com/vgc/vgc/pull/413
     set(FREETYPE_H "")
     foreach(h ${FREETYPE_INCLUDE_DIRS})
         if(NOT FREETYPE_H)
