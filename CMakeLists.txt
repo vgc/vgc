@@ -574,8 +574,16 @@ if(NOT freetype_FOUND)
 endif()
 if(NOT TARGET Freetype::Freetype)
     if(TARGET freetype)
-        # vcpkg uses "freetype" instead of "FreeType::Freetype"
-        add_library(Freetype::Freetype ALIAS freetype)
+        # vcpkg uses "freetype" instead of "FreeType::Freetype".
+        # Unfortunately, we cannot simply create an alias like this:
+        #     add_library(Freetype::Freetype ALIAS freetype)
+        # because creating aliases of non-global imported target is not
+        # allowed in CMake < 3.18, see:
+        #     https://gitlab.kitware.com/cmake/cmake/-/issues/20641
+        # So we create a new imported target instead, as per the
+        # workaround suggested in above link.
+        add_library(Freetype::Freetype INTERFACE IMPORTED)
+        target_link_libraries(Freetype::Freetype INTERFACE freetype)
     elseif(FREETYPE_INCLUDE_DIRS AND FREETYPE_LIBRARIES)
         # CMake's FindFreetype only defines a target starting CMake >= 3.10, so
         # we define it ourself if not found.
