@@ -561,53 +561,14 @@ find_package(Git REQUIRED)
 message(STATUS "Version: ${GIT_VERSION_STRING}")
 message(STATUS "") # newline
 
-# FreeType
-#
-# Note: we try to accomodate both vcpkg, which uses a config package with a
-# 'freetype' target, and CMake's builtin FindFreetype module, which uses a
-# 'Freetype::Freetype' target (since CMake 3.10), and variables like
-# FREETYPE_LIBRARIES, FREETYPE_INCLUDE_DIRS, etc.
-#
-# Before changing this code, read this:
-# - https://stackoverflow.com/questions/60531709
-# - https://gitlab.kitware.com/cmake/cmake/-/issues/19236
-# - https://cmake.org/cmake/help/v3.15/variable/CMAKE_FIND_PACKAGE_PREFER_CONFIG.html
-#
+# Freetype
 message(STATUS "[FreeType]")
-find_package(freetype CONFIG QUIET)
-if(TARGET freetype)
-    # Conceptually, we simply want to create an alias like this:
-    #   add_library(Freetype::Freetype ALIAS freetype)
-    # Unfortunately, it's only since CMake 3.11 that we can create
-    # aliases of imported targets, see:
-    #   https://gitlab.kitware.com/cmake/cmake/-/issues/15569
-    # And it's only since CMake 3.18 that we can create aliases
-    # of non-global imported target, see:
-    #   https://gitlab.kitware.com/cmake/cmake/-/issues/20641
-    # For info, since CMake 3.11, we can use IMPORTED_GLOBAL to
-    # make an imported target global afterwards, see:
-    #   https://stackoverflow.com/questions/45401212
-    # Since we only require CMake 3.1 (maybe we should change this?),
-    # we don't use aliases and instead define a new imported target
-    # with the proper name.
+find_package(Freetype REQUIRED)
+if(NOT TARGET Freetype::Freetype) # CMake < 3.10
     add_library(Freetype::Freetype SHARED IMPORTED)
-    set(FREETYPE_TARGET_PROPERTIES "INTERFACE_INCLUDE_DIRECTORIES;IMPORTED_IMPLIB_RELEASE;IMPORTED_LOCATION_RELEASE;IMPORTED_IMPLIB_DEBUG;IMPORTED_LOCATION_DEBUG")
-    foreach(prop ${FREETYPE_TARGET_PROPERTIES})
-        get_target_property(propval freetype ${prop})
-        if(propval)
-            set_target_properties(Freetype::Freetype PROPERTIES ${prop} ${propval})
-        endif()
-    endforeach()
-    set_property(TARGET Freetype::Freetype APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
-    set_property(TARGET Freetype::Freetype APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
-else()
-    find_package(Freetype MODULE REQUIRED)
-    if(NOT TARGET Freetype::Freetype) # CMake < 3.10
-        add_library(Freetype::Freetype SHARED IMPORTED)
-        set_target_properties(Freetype::Freetype PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}"
-            IMPORTED_LOCATION "${FREETYPE_LIBRARIES}")
-    endif()
+    set_target_properties(Freetype::Freetype PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}"
+        IMPORTED_LOCATION "${FREETYPE_LIBRARIES}")
 endif()
 get_target_property(FREETYPE_INCLUDE_DIRS Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES)
 if(NOT FREETYPE_VERSION_STRING)
