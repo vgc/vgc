@@ -11,6 +11,7 @@ matrix:
         - sudo apt-get install -y libgl1-mesa-dev
         - sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
         - sudo apt-get install -y libfreetype6-dev
+        - sudo apt-get install -y libharfbuzz-dev
         - pushd $(pyenv root)
         - git fetch
         - git checkout v$PYENV_VERSION
