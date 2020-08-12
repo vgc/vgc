@@ -506,6 +506,21 @@ if __name__ == "__main__":
         #
         # https://github.com/AppImage/AppImageKit/blob/master/src/appimagetool.c
         #
+        # Note that FreeType and HarfBuzz are intentionally not bundled by
+        # linuxdeployqt, with the following given reason:
+        #
+        #   Those seem to cause major problems on systems with never versions of
+        #   libfontconfig (such as Fedora, and recently Arch and their
+        #   derivatives). As they're most likely not direct dependencies, not
+        #   bundling them shouldn't break anything.
+        #
+        #   https://github.com/AppImage/pkg2appimage/pull/323
+        #
+        # However, in our case, they *are* direct dependencies, so I'm not sure
+        # not bundling them is a good idea. For now, let's try as is (that is,
+        # not including them as per linuxdeployqt advice), and if problems arise
+        # we can try to bundle them.
+        #
         env = os.environ.copy()
         env["VERSION"] = dashVersion
         env["LD_LIBRARY_PATH"] = f":{pythonHome}/lib"
