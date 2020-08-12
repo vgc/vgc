@@ -607,30 +607,38 @@ message(STATUS "") # newline
 # On Windows, we use vcpkg which provides a harfbuzz::harfbuzz target
 # On Linux/macOS, we are still looking for the best approach
 message(STATUS "[HarfBuzz]")
-if(DEFINED VCPKG_TARGET_TRIPLET)
-    find_package(harfbuzz CONFIG REQUIRED)
-    set(HARFBUZZ_LIBRARIES harfbuzz::harfbuzz)
-    # INCLUDE_DIRS doesn't seem properly defined by vcpkg, so we work around it
-    # by adding it manually. See: https://github.com/microsoft/vcpkg/issues/12847
-    set(HARFBUZZ_INCLUDE_DIRS "${_VCPKG_ROOT_DIR}/installed/x64-windows/include/harfbuzz")
-    set_target_properties(harfbuzz::harfbuzz PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${HARFBUZZ_INCLUDE_DIRS}")
-    if (EXISTS "${HARFBUZZ_INCLUDE_DIRS}/hb-version.h")
-        file(READ "${HARFBUZZ_INCLUDE_DIRS}/hb-version.h" _HB_VERSION_H)
+if(WIN32) # temp
+find_package(harfbuzz CONFIG QUIET)
+if(NOT harfbuzz_FOUND)
+    find_package(harfbuzz MODULE REQUIRED)
+endif()
+get_target_property(harfbuzz_INCLUDE_DIRS harfbuzz::harfbuzz INTERFACE_INCLUDE_DIRECTORIES)
+if(DEFINED VCPKG_TARGET_TRIPLET AND NOT harfbuzz_INCLUDE_DIRS)
+    # INTERFACE_INCLUDE_DIRECTORIES is missing in vcpkg <= 2020.06
+    # See: https://github.com/microsoft/vcpkg/issues/12847
+    set(harfbuzz_INCLUDE_DIRS "${_VCPKG_ROOT_DIR}/installed/${VCPKG_TARGET_TRIPLET}/include/harfbuzz")
+    set_target_properties(harfbuzz::harfbuzz PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${harfbuzz_INCLUDE_DIRS}")
+endif()
+if(NOT harfbuzz_VERSION_STRING)
+    # Sometimes, VERSION_STRING isn't defined, so we do it ourselves. See:
+    # https://github.com/microsoft/vcpkg/issues/12848
+    # https://github.com/vgc/vgc/pull/413
+    if (EXISTS "${harfbuzz_INCLUDE_DIRS}/hb-version.h")
+        file(READ "${harfbuzz_INCLUDE_DIRS}/hb-version.h" _HB_VERSION_H)
         string(REGEX MATCH "define[ \t]+HB_VERSION_MAJOR[ \t]+([0-9]+)" _HARFBUZZ_MAJOR_MATCH "${_HB_VERSION_H}")
         set(HARFBUZZ_VERSION_MAJOR "${CMAKE_MATCH_1}")
         string(REGEX MATCH "define[ \t]+HB_VERSION_MINOR[ \t]+([0-9]+)" _HARFBUZZ_MINOR_MATCH "${_HB_VERSION_H}")
         set(HARFBUZZ_VERSION_MINOR "${CMAKE_MATCH_1}")
         string(REGEX MATCH "define[ \t]+HB_VERSION_MICRO[ \t]+([0-9]+)" _HARFBUZZ_MICRO_MATCH "${_HB_VERSION_H}")
         set(HARFBUZZ_VERSION_MICRO "${CMAKE_MATCH_1}")
-        set(HARFBUZZ_VERSION_STRING "${HARFBUZZ_VERSION_MAJOR}.${HARFBUZZ_VERSION_MINOR}.${HARFBUZZ_VERSION_MICRO}")
+        set(harfbuzz_VERSION_STRING "${HARFBUZZ_VERSION_MAJOR}.${HARFBUZZ_VERSION_MINOR}.${HARFBUZZ_VERSION_MICRO}")
     endif()
-else()
-    # TODO for Linux/macOS
-    #find_package(HarfBuzz REQUIRED)
 endif()
-message(STATUS "Version: ${HARFBUZZ_VERSION_STRING}")
+set(HARFBUZZ_TARGET harfbuzz::harfbuzz) # temp
+message(STATUS "Version: ${harfbuzz_VERSION_STRING}")
+vgc_print_imported_target_info(harfbuzz::harfbuzz)
 message(STATUS "") # newline
+endif() # temp
 
 # Add internal libs and apps
 # TODO: avoid global `include_directories`
