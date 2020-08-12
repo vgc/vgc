@@ -1,7 +1,7 @@
 vgc_add_library(graphics
     THIRD_DEPENDENCIES
         Freetype::Freetype
-        harfbuzz::harfbuzz
+        ${HARFBUZZ_TARGET}
 
     VGC_DEPENDENCIES
         core

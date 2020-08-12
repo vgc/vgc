@@ -634,6 +634,7 @@ if(NOT harfbuzz_VERSION_STRING)
         set(harfbuzz_VERSION_STRING "${HARFBUZZ_VERSION_MAJOR}.${HARFBUZZ_VERSION_MINOR}.${HARFBUZZ_VERSION_MICRO}")
     endif()
 endif()
+set(HARFBUZZ_TARGET harfbuzz::harfbuzz) # temp
 message(STATUS "Version: ${harfbuzz_VERSION_STRING}")
 vgc_print_imported_target_info(harfbuzz::harfbuzz)
 message(STATUS "") # newline
