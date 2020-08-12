@@ -407,7 +407,6 @@ endfunction()
 # -- Freetype::Freetype IMPORTED_LOCATION_RELEASE: C:/Users/Boris/vcpkg/installed/x64-windows/bin/freetype.dll
 # -- Freetype::Freetype IMPORTED_IMPLIB_DEBUG: C:/Users/Boris/vcpkg/installed/x64-windows/debug/lib/freetyped.lib
 # -- Freetype::Freetype IMPORTED_LOCATION_DEBUG: C:/Users/Boris/vcpkg/installed/x64-windows/debug/bin/freetyped.dll
-# -- Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES: /usr/include/freetype2;/usr/include/x86_64-linux-gnu/freetype2
 #
 function(vgc_print_imported_target_info target)
     if(NOT TARGET ${target})
