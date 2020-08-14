@@ -431,12 +431,6 @@ def compute_lib_replacement(lib):
             while lib[i] != "/":
                 i -= 1
             newlib = "@rpath" + lib[i:]
-    if newlib != lib:
-        n = len(lib)
-        padding = ""
-        if n < 50:
-            padding = (50 - n) * " "
-        print("  " + lib + padding + " -> " + newlib, flush=True)
     return newlib
 
 # Returns all the binaries in the app bundle
@@ -517,13 +511,6 @@ def print_binaries_summary(bundle):
     print("Shipped binaries:", flush=True)
     for path in binaries:
         print("  " + str(path.relative_to(bundle)), flush=True)
-        id = get_lib_id(path)
-        if id != "":
-            print('\033[90m' + "          ID = " + id + '\033[0m', flush=True)
-        rpathPrefix = "      RPATHS = "
-        for rpath in get_rpaths(path):
-            print('\033[90m' + rpathPrefix + rpath + '\033[0m', flush=True)
-            rpathPrefix = "               "
 
     # Print libraries
     print("Dynamically linked libraries:", flush=True)
@@ -533,6 +520,19 @@ def print_binaries_summary(bundle):
             libs.add(lib)
     for lib in sorted(libs):
         print("  " + lib, flush=True)
+
+    # Print details
+    print("Details:", flush=True)
+    for path in binaries:
+        print("  " + str(path.relative_to(bundle)), flush=True)
+        id = get_lib_id(path)
+        if id != "":
+            print('\033[90m' + "    LC_ID_DYLIB:   " + id + '\033[0m', flush=True)
+        for rpath in get_rpaths(path):
+            print('\033[90m' + "    LC_RPATH:      " + rpath + '\033[0m', flush=True)
+        for lib in get_libs(path):
+            print('\033[90m' + "    LC_LOAD_DYLIB: " + lib + '\033[0m', flush=True)
+
 
 # Makes a POST request to the given URL with the given data.
 # The given data should be a Python dictionary, which this function
@@ -873,17 +873,22 @@ if __name__ == "__main__":
         executables = get_executables(bundleDir)
         replacements = {}
         for x in binaries:
+            print("  " + str(x), flush=True)
             # Delete rpaths
             for rpath in get_rpaths(x):
                 delete_rpath(x, rpath)
             # Update lib paths
             for lib in get_libs(x):
+                print('\033[90m' + "    " + lib, end='')
                 if lib not in replacements:
                     newlib = compute_lib_replacement(lib)
                     replacements[lib] = newlib
                 newlib = replacements[lib]
                 if newlib != lib:
                     change_lib(x, lib, newlib)
+                    print('\033[32m' + " -> " + newlib + '\033[0m', flush=True)
+                else:
+                    print('\033[0m', flush=True)
         # Add rpaths
         for x in executables:
             y = x.relative_to(bundleContentsDir)
