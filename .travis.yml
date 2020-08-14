@@ -36,6 +36,7 @@ matrix:
             - qt
             - freetype
             - harfbuzz
+          update: true
       before_script:
         - export CXX=clang++ CC=clang
         - CMAKE_EXTRA_ARGS+=" -DQt=/usr/local/opt/qt"
