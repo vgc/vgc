@@ -422,16 +422,46 @@ def set_lib_id(filename, id, *, verbose=False):
 # Computes new path for the given lib.
 #
 def compute_lib_replacement(lib):
-    newlib = lib
-    if not lib.startswith("/System"):
+
+    # Keep paths already relative to @rpath as is
+    if lib.startswith("@rpath/"):
+        return lib
+
+    # Change "@executable_path/../Frameworks/" to "@rpath/"
+    elif lib.startswith("@executable_path/../Frameworks/"):
+        return "@rpath" + lib[len("@executable_path/../Frameworks"):]
+
+    # Keep system frameworks and system libraries as is
+    if lib.startswith("/System/Library/Frameworks/") or lib.startswith("/usr/lib/"):
+        return lib
+
+    # Ship things that are user-installed, for example via Homebrew.
+    # Examples:
+    #   /Library/Frameworks/Python.framework/Versions/3.7/Python
+    #   /usr/local/Cellar/python/3.7.5/Frameworks/Python.framework/Versions/3.7/Python
+    #   /usr/local/opt/python/Frameworks/Python.framework/Versions/3.7/Python
+    #   /usr/local/opt/freetype/lib/libfreetype.6.dylib
+    elif (lib.startswith("/Library/Frameworks/") or
+          lib.startswith("/usr/local/Cellar/") or
+          lib.startswith("/usr/local/opt/")):
         i = lib.find(".framework")
-        if i == -1:
-            i = lib.find("libvgc")
         if i != -1:
             while lib[i] != "/":
                 i -= 1
-            newlib = "@rpath" + lib[i:]
-    return newlib
+            return "@rpath" + lib[i:] # @rpath/Python.framework/Versions/3.7/Python
+        else:
+            return "@rpath/" + Path(lib).name # @rpath/libfreetype.6.dylib
+
+    # Ship VGC libraries (obviously)
+    elif "libvgc" in lib:
+        i = lib.find("libvgc")
+        return "@rpath/" + Path(lib).name # @rpath/libvgccore.dylib
+
+    # Print a warning if it's not one of the above known categories
+    else:
+        print('\033[33m' + "    Warning: suspicious library path: " + lib + '\033[0m', flush=True)
+        return lib
+
 
 # Returns all the binaries in the app bundle
 #
@@ -533,6 +563,33 @@ def print_binaries_summary(bundle):
         for lib in get_libs(path):
             print('\033[90m' + "    LC_LOAD_DYLIB: " + lib + '\033[0m', flush=True)
 
+# Returns a path relative to another one. This is like
+# pathlib.Path.relative_to(), but it also handle the case where path isn't a
+# descendant of relto, by adding ".." components.
+#
+def relative_to(path, relto):
+    path = str(path)
+    relto = str(relto)
+    if path == relto:
+        return ""
+    if path.startswith(relto + "/"):
+        return path[len(relto)+1:]
+    else:
+        path_components = path.split("/")
+        relto_components = relto.split("/")
+        common_ancestor = ""
+        for p, r in zip(path_components, relto_components):
+            if p == r:
+                common_ancestor += p + "/"
+            else:
+                break
+        path_remainder = path[len(common_ancestor):]
+        relto_remainder = relto[len(common_ancestor):]
+        n = str(relto_remainder).count("/") + 1
+        res = (n * "../") + path_remainder
+        if res.endswith("/"): # example: "../" if path is a parent dir of relto
+            res = res[:-1]
+        return res
 
 # Makes a POST request to the given URL with the given data.
 # The given data should be a Python dictionary, which this function
@@ -877,7 +934,16 @@ if __name__ == "__main__":
             # Delete rpaths
             for rpath in get_rpaths(x):
                 delete_rpath(x, rpath)
-            # Update lib paths
+            # Update lib id path
+            id = get_lib_id(x)
+            if id != "":
+                newid = "@rpath/" + relative_to(x, bundleFrameworksDir)
+                print('\033[90m' + "    ID = " + id, end='')
+                if newid != id:
+                    set_lib_id(x, newid)
+                    print('\033[32m' + " -> " + newid + '\033[0m', flush=True)
+                else:print('\033[0m', flush=True)
+            # Update loaded lib paths
             for lib in get_libs(x):
                 print('\033[90m' + "    " + lib, end='')
                 if lib not in replacements:
@@ -889,22 +955,17 @@ if __name__ == "__main__":
                     print('\033[32m' + " -> " + newlib + '\033[0m', flush=True)
                 else:
                     print('\033[0m', flush=True)
+                if newlib.startswith("@rpath/"):
+                    if not (bundleFrameworksDir / newlib[len("@rpath/"):]).is_file():
+                        print('\033[33m' + "    Warning: file " + newlib + " does not exist" + '\033[0m', flush=True)
+
         # Add rpaths
         for x in executables:
             y = x.relative_to(bundleContentsDir)
             n = str(y).count("/")
             rpath = "@executable_path/" + (n * "../") + "Frameworks"
             add_rpath(x, rpath)
-        # Update lib IDs
-        for x in binaries:
-            id = get_lib_id(x)
-            if id != "":
-                if id not in replacements:
-                    newid = compute_lib_replacement(id)
-                    replacements[id] = newid
-                newid = replacements[id]
-                if newid != id:
-                    set_lib_id(x, newid)
+
         print("Done.", flush=True)
         print_binaries_summary(bundleDir)
 
