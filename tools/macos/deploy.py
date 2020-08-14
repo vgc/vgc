@@ -944,7 +944,8 @@ if __name__ == "__main__":
                 if newid != id:
                     set_lib_id(x, newid)
                     print('\033[32m' + " -> " + newid + '\033[0m', flush=True)
-                else:print('\033[0m', flush=True)
+                else:
+                    print('\033[0m', flush=True)
             # Update loaded lib paths
             for lib in get_libs(x):
                 print('\033[90m' + "    " + lib, end='')
@@ -958,7 +959,13 @@ if __name__ == "__main__":
                 else:
                     print('\033[0m', flush=True)
                 if newlib.startswith("@rpath/"):
-                    if not (bundleFrameworksDir / newlib[len("@rpath/"):]).is_file():
+                    dst = bundleFrameworksDir / newlib[len("@rpath/"):]
+                    if not dst.is_file():
+                        if lib.startswith("/"):
+                            src = Path(lib).resolve()
+                            copy(src, dst, verbose=True)
+                            binaries.append(dst) # find all missing libraries recursively
+                    if not dst.is_file():
                         print('\033[33m' + "    Warning: file " + newlib + " does not exist" + '\033[0m', flush=True)
 
         # Add rpaths
