@@ -496,7 +496,9 @@ def get_executables(bundle):
 
     # Find all executables
     tmp = []
-    tmp.extend((bundle / "Contents/MacOS/bin").glob("vgc*"))
+    for x in (bundle / "Contents/MacOS/bin").glob("vgc*"):
+        if x.name != "vgc.conf":
+            tmp.append(x)
     for app in bundle.glob("**/*.app"):
         name = app.stem
         tmp.extend(app.glob("**/" + name))
