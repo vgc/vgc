@@ -43,7 +43,7 @@ recommendations for library versions.
 Manually install Git, CMake, Visual Studio, Python, Qt, then:
 
 ```
-# Download and build FreeType via vcpkg
+# Download and build FreeType and HarfBuzz via vcpkg
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 .\bootstrap-vcpkg.bat
@@ -68,9 +68,9 @@ make
 Manually install Xcode, Python, Qt, then:
 
 ```
-# Download and install FreeType via homebrew
+# Download and install FreeType and HarfBuzz via homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-brew install freetype
+brew install freetype harfbuzz
 
 # Download, build, and run VGC
 git clone https://github.com/vgc/vgc.git
@@ -89,7 +89,7 @@ Manually install Qt, then:
 
 ```
 # Install remaining dependencies
-sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev libfreetype6-dev
+sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev libfreetype6-dev libharfbuzz-dev
 
 # Download, build, and run VGC
 git clone https://github.com/vgc/vgc.git
