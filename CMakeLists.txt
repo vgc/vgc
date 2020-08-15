@@ -609,7 +609,6 @@ message(STATUS "") # newline
 # Note: As of CMake 3.18.1 (Jul 2020), there is still no official "FindHarBuzz" module
 # On Windows, we use vcpkg which provides a harfbuzz::harfbuzz target
 # On Linux/macOS, we are still looking for the best approach
-if(NOT APPLE) # temp
 message(STATUS "[HarfBuzz]")
 find_package(harfbuzz CONFIG QUIET)
 if(NOT harfbuzz_FOUND)
@@ -637,11 +636,9 @@ if(NOT HARFBUZZ_VERSION_STRING)
         set(HARFBUZZ_VERSION_STRING "${HARFBUZZ_VERSION_MAJOR}.${HARFBUZZ_VERSION_MINOR}.${HARFBUZZ_VERSION_MICRO}")
     endif()
 endif()
-set(HARFBUZZ_TARGET harfbuzz::harfbuzz) # temp
 message(STATUS "Version: ${HARFBUZZ_VERSION_STRING}")
 vgc_print_imported_target_info(harfbuzz::harfbuzz)
 message(STATUS "") # newline
-endif() # temp
 
 # Add internal libs and apps
 # TODO: avoid global `include_directories`
