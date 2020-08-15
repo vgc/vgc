@@ -72,6 +72,7 @@ public:
 class FontFaceImpl {
 public:
     FT_Face face;
+    hb_font_t* hbFont;
 
     FontFaceImpl(FT_Library library, const std::string& filename)
     {
@@ -129,14 +130,35 @@ public:
                 filename, "USC-2 charmap not found"));
         }
 
-        // TODO: FT_Set_Char_Size?
+        // Set character size.
+        //
+        // TODO: This should be passed to Face constructor and be immutable.
+        // In other words:
+        //
+        //     FontFace = family   (example: "Arial")
+        //                + weight (example: "Bold")
+        //                + style  (example: "Italic")
+        //                + size   (example: "12pt")
+        //
+        // Size of the EM square in points
+        float emWidth_ = 36;
+        float emHeight_ = 36;
+        // Size of the EM square in 26.6 fractional points
+        FT_F26Dot6 emWidth = vgc::core::ifloor<FT_F26Dot6>(64 * emWidth_);
+        FT_F26Dot6 emHeight = vgc::core::ifloor<FT_F26Dot6>(64 * emHeight_);
+        // Screen resolution in dpi
+        // TODO: Get this from system?
+        FT_UInt hdpi = 96;
+        FT_UInt vdpi = 96;
+        FT_Set_Char_Size(face, emWidth, emHeight, hdpi, vdpi);
 
-        // Test HarfBuzz
-        hb_font_t* hb_font = hb_ft_font_create(face, NULL);
+        // Create HarfBuzz font
+        hbFont = hb_ft_font_create(face, NULL);
     }
 
     ~FontFaceImpl()
     {
+        hb_font_destroy(hbFont);
         FT_Error error = FT_Done_Face(face);
         if (error) {
             // Note: we print a warning rather than throwing, because throwing
@@ -148,11 +170,18 @@ public:
 
 namespace {
 
+// Convert from fractional 26.6 to floating point
+//
+core::Vec2d toVec2d(unsigned int x, unsigned int y)
+{
+    return core::Vec2d(x / 64.0, y / 64.0);
+}
+
+// Convert from fractional 26.6 to floating point
+//
 core::Vec2d toVec2d(const FT_Vector* v)
 {
-    // TODO: what if x is expressed as fixed precision 16.16 or 26.6?
-    // https://www.freetype.org/freetype2/docs/reference/ft2-basic_types.html#ft_pos
-    return core::Vec2d(v->x, v->y);
+    return toVec2d(v->x, v->y);
 }
 
 void closeLastCurveIfOpen(geometry::Curves2d& c)
@@ -223,6 +252,93 @@ public:
     }
 };
 
+class FontShaperImpl {
+public:
+    // Keep the FontLibrary, thus the Fontface, alive.
+    // Note that the FontLibrary never destroys its children: a created FontFace
+    // stays in memory forever until the library itself is destroyed().
+    FontFacePtr facePtr;
+
+    // State
+    std::string text;
+    FontShapeArray shapes;
+
+    // HarbBuzz buffer
+    hb_buffer_t* buf;
+
+    FontShaperImpl(FontFace* face) :
+        facePtr(face),
+        text(),
+        shapes(),
+        buf(hb_buffer_create())
+    {
+
+    }
+
+    FontShaperImpl(const FontShaperImpl& other) :
+        facePtr(other.facePtr),
+        text(other.text),
+        shapes(other.shapes),
+        buf(hb_buffer_create())
+    {
+
+    }
+
+    FontShaperImpl& operator=(const FontShaperImpl& other)
+    {
+        if (this != &other) {
+            facePtr = other.facePtr;
+            text = other.text;
+            shapes = other.shapes;
+        }
+        return *this;
+    }
+
+    ~FontShaperImpl()
+    {
+        hb_buffer_destroy(buf);
+    }
+
+    void shape(const std::string& text_)
+    {
+        // Prepare input data
+        text = text_;
+        const char* data = text.data();
+        int dataLength = core::int_cast<int>(text.size());
+        unsigned int itemOffset = 0; // index of first char to add
+        int itemLength = dataLength; // number of chars to add
+
+        // Add data to buffer, set settings, and shape
+        hb_buffer_reset(buf);
+        hb_buffer_add_utf8(buf, data, dataLength, itemOffset, itemLength);
+        hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+        hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+        hb_buffer_set_language(buf, hb_language_from_string("en", -1));
+        hb_shape(facePtr->impl_->hbFont, buf, NULL, 0);
+
+        // Shape output
+        unsigned int n;
+        hb_glyph_info_t* infos = hb_buffer_get_glyph_infos(buf, &n);
+        hb_glyph_position_t* positions = hb_buffer_get_glyph_positions(buf, &n);
+
+        // Convert to FontShapeArray
+        shapes.clear();
+        core::Vec2d totalAdvance(0.0, 0.0);
+        for (unsigned int i = 0; i < n; ++i) {
+            hb_glyph_info_t& info = infos[i];
+            hb_glyph_position_t& pos = positions[i];
+            FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
+            core::Vec2d offset = toVec2d(pos.x_offset, pos.y_offset);
+            core::Vec2d advance = toVec2d(pos.x_advance, pos.y_advance);
+            shapes.append(FontShape(glyph, totalAdvance + offset));
+            totalAdvance += advance;
+        }
+    }
+
+private:
+    friend class FontShaper;
+};
+
 void FontLibraryImplDeleter::operator()(FontLibraryImpl* p)
 {
     delete p;
@@ -265,6 +381,56 @@ void FontLibrary::onDestroyed()
     impl_.reset();
 }
 
+FontShaper::FontShaper(FontFace* face) :
+    impl_()
+{
+    impl_ = new internal::FontShaperImpl(face);
+}
+
+FontShaper::FontShaper(const FontShaper& other)
+{
+    impl_ = new internal::FontShaperImpl(*(other.impl_));
+}
+
+FontShaper::FontShaper(FontShaper&& other)
+{
+    impl_ = other.impl_;
+    other.impl_ = nullptr;
+}
+
+FontShaper& FontShaper::operator=(const FontShaper& other)
+{
+    if (this != &other) {
+        *impl_ = *(other.impl_);
+    }
+    return *this;
+}
+
+FontShaper& FontShaper::operator=(FontShaper&& other)
+{
+    if (this != &other) {
+        impl_ = other.impl_;
+        other.impl_ = nullptr;
+    }
+    return *this;
+}
+
+FontShaper::~FontShaper()
+{
+    delete impl_;
+}
+
+void FontShaper::shape(const std::string& text)
+{
+    impl_->shape(text);
+
+}
+
+const FontShapeArray& FontShaper::shapes() const
+{
+    return impl_->shapes;
+}
+
 FontFace::FontFace(FontLibrary* library) :
     Object(),
     impl_()
@@ -287,7 +453,7 @@ FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
     // Load glyph data
     FT_Face face = impl_->face;
     FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
-    FT_Int32 flags = FT_LOAD_NO_SCALE;
+    FT_Int32 flags = FT_LOAD_NO_BITMAP;
     FT_Error error = FT_Load_Glyph(face, index, flags);
     if (error) {
         throw FontError(errorMsg(error));
@@ -321,6 +487,11 @@ Int FontFace::getGlyphIndexFromCodePoint(Int codePoint)
     FT_ULong charcode = core::int_cast<FT_ULong>(codePoint);
     FT_UInt index = FT_Get_Char_Index(face, charcode);
     return core::int_cast<Int>(index);
+}
+
+FontShaper FontFace::shaper()
+{
+    return FontShaper(this);
 }
 
 void FontFace::onDestroyed()

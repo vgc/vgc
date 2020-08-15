@@ -74,23 +74,27 @@ void Label::onPaintDraw(graphics::Engine* engine)
         core::FloatArray a;
 
         // Convert text to triangles
-        // TODO: shaping + other letters
-        float scale = 0.1; // TODO: how to determine the correct scale?
         if (text_.length() > 0) {
             // TODO: we should a more persistent font library rather than creating
             // a new one each time
             std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
             graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
             graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
-            graphics::FontGlyph* fontGlyph = fontFace->getGlyphFromCodePoint(text_[0]);
-            if (fontGlyph) {
-                core::DoubleArray b;
-                fontGlyph->outline().stroke(b, 100);
-                for (Int i = 0; 2*i+1 < b.length(); ++i) {
-                    a.insert(a.end(), {
-                        scale * static_cast<float>(b[2*i]),
-                        scale * static_cast<float>(b[2*i+1]),
-                        1, 0, 0});
+            graphics::FontShaper shaper = fontFace->shaper();
+            shaper.shape(text_);
+            core::DoubleArray b;
+            for (const graphics::FontShape& shape : shaper.shapes()) {
+                if (shape.glyph()) {
+                    float xoffset = shape.offset()[0];
+                    float yoffset = shape.offset()[1];
+                    b.clear();
+                    shape.glyph()->outline().stroke(b, 1);
+                    for (Int i = 0; 2*i+1 < b.length(); ++i) {
+                        a.insert(a.end(), {
+                            xoffset + static_cast<float>(b[2*i]),
+                            yoffset + static_cast<float>(b[2*i+1]),
+                            1, 0, 0});
+                    }
                 }
             }
         }

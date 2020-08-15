@@ -18,6 +18,7 @@
 #define VGC_GRAPHICS_FONT_H
 
 #include <vgc/core/innercore.h>
+#include <vgc/core/array.h>
 #include <vgc/geometry/curves2d.h>
 #include <vgc/graphics/api.h>
 
@@ -29,6 +30,7 @@ namespace internal {
 class FontLibraryImpl;
 class FontFaceImpl;
 class FontGlyphImpl;
+class FontShaperImpl;
 
 // See: https://stackoverflow.com/questions/9954518/stdunique-ptr-with-an-incomplete-type-wont-compile
 // TODO: vgc/core/pimpl.h for helper macros.
@@ -95,6 +97,73 @@ private:
     internal::FontLibraryPimpl impl_;
 };
 
+class VGC_GRAPHICS_API FontShape {
+public:
+    /// Creates a FontShape.
+    ///
+    FontShape(FontGlyph* glyph, const core::Vec2d& offset) :
+        glyph_(glyph), offset_(offset) {}
+
+    /// Returns the glyph.
+    ///
+    FontGlyph* glyph() const {
+        return glyph_.get();
+    }
+
+    /// Return the offset.
+    ///
+    core::Vec2d offset() const {
+        return offset_;
+    }
+
+private:
+    FontGlyphPtr glyph_;
+    core::Vec2d offset_;
+};
+
+using FontShapeArray = core::Array<FontShape>;
+
+/// \class vgc::graphics::FontShaper
+/// \brief An object for performing font shaping operations.
+///
+class VGC_GRAPHICS_API FontShaper {
+public:
+    /// Creates a new FontShaper.
+    ///
+    FontShaper(FontFace* face);
+
+    /// Creates a copy of the FontShaper
+    ///
+    FontShaper(const FontShaper& other);
+
+    /// Move-constructs the FontShaper
+    ///
+    FontShaper(FontShaper&& other);
+
+    /// Assigns a copy of the FontShaper
+    ///
+    FontShaper& operator=(const FontShaper& other);
+
+    /// Move-assigns the other FontShaper
+    ///
+    FontShaper& operator=(FontShaper&& other);
+
+    /// Destroys the FontShaper.
+    ///
+    ~FontShaper();
+
+    /// Shapes the given UTF-8 encoded text.
+    ///
+    void shape(const std::string& text);
+
+    /// Returns the shapes from the previous call of shape().
+    ///
+    const FontShapeArray& shapes() const;
+
+private:
+    internal::FontShaperImpl* impl_;
+};
+
 /// \class vgc::graphics::FontFace
 /// \brief A given typeface, in a given style.
 ///
@@ -150,6 +219,10 @@ public:
     ///
     Int getGlyphIndexFromCodePoint(Int codePoint);
 
+    /// Creates a FontShaper for shaping text with this FontFace.
+    ///
+    FontShaper shaper();
+
 protected:
     /// \reimp
     void onDestroyed() override;
@@ -158,6 +231,7 @@ private:
     internal::FontFacePimpl impl_;
     friend class FontLibrary;
     friend class internal::FontLibraryImpl;
+    friend class internal::FontShaperImpl;
 };
 
 /// \class vgc::graphics::FontGlyph
