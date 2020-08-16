@@ -257,19 +257,21 @@ public:
     // Keep the FontLibrary, thus the Fontface, alive.
     // Note that the FontLibrary never destroys its children: a created FontFace
     // stays in memory forever until the library itself is destroyed().
+    // XXX thread-safety? What if two threads create two FontShapers at the
+    //     same time, wouldn't this cause a race condition when increasing
+    //     the reference counts? Shouldn't we make the reference counts atomic,
+    //     or else protect the assignment to this facePtr by a mutex?
     FontFacePtr facePtr;
 
-    // State
-    std::string text;
-    FontShapeArray shapes;
+    // Output of shaping
+    FontItemArray items;
 
     // HarbBuzz buffer
     hb_buffer_t* buf;
 
     FontShaperImpl(FontFace* face) :
         facePtr(face),
-        text(),
-        shapes(),
+        items(),
         buf(hb_buffer_create())
     {
 
@@ -277,8 +279,7 @@ public:
 
     FontShaperImpl(const FontShaperImpl& other) :
         facePtr(other.facePtr),
-        text(other.text),
-        shapes(other.shapes),
+        items(other.items),
         buf(hb_buffer_create())
     {
 
@@ -288,8 +289,7 @@ public:
     {
         if (this != &other) {
             facePtr = other.facePtr;
-            text = other.text;
-            shapes = other.shapes;
+            items = other.items;
         }
         return *this;
     }
@@ -299,30 +299,32 @@ public:
         hb_buffer_destroy(buf);
     }
 
-    void shape(const std::string& text_)
+    void shape(const std::string& text)
     {
-        // Prepare input data
-        text = text_;
+        // HarfBuzz input
         const char* data = text.data();
         int dataLength = core::int_cast<int>(text.size());
-        unsigned int itemOffset = 0; // index of first char to add
-        int itemLength = dataLength; // number of chars to add
+        unsigned int firstChar = 0;
+        int numChars = dataLength;
 
-        // Add data to buffer, set settings, and shape
-        hb_buffer_reset(buf);
-        hb_buffer_add_utf8(buf, data, dataLength, itemOffset, itemLength);
+        // Shape
+        // XXX use hb_buffer_guess_segment_properties instead of explicit direction/script/language?
+        // See doc regarding thread-safety. Calling hb_language_get_default() in
+        // the constructor of FontLibrary, protected by a mutex, seems a good solution.
+        hb_buffer_clear_contents(buf);
+        hb_buffer_add_utf8(buf, data, dataLength, firstChar, numChars);
         hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
         hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
         hb_buffer_set_language(buf, hb_language_from_string("en", -1));
         hb_shape(facePtr->impl_->hbFont, buf, NULL, 0);
 
-        // Shape output
+        // HarfBuzz output
         unsigned int n;
         hb_glyph_info_t* infos = hb_buffer_get_glyph_infos(buf, &n);
         hb_glyph_position_t* positions = hb_buffer_get_glyph_positions(buf, &n);
 
-        // Convert to FontShapeArray
-        shapes.clear();
+        // Convert to FontItemArray
+        items.clear();
         core::Vec2d totalAdvance(0.0, 0.0);
         for (unsigned int i = 0; i < n; ++i) {
             hb_glyph_info_t& info = infos[i];
@@ -330,7 +332,7 @@ public:
             FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
             core::Vec2d offset = toVec2d(pos.x_offset, pos.y_offset);
             core::Vec2d advance = toVec2d(pos.x_advance, pos.y_advance);
-            shapes.append(FontShape(glyph, totalAdvance + offset));
+            items.append(FontItem(glyph, totalAdvance + offset));
             totalAdvance += advance;
         }
     }
@@ -420,15 +422,15 @@ FontShaper::~FontShaper()
     delete impl_;
 }
 
-void FontShaper::shape(const std::string& text)
+const FontItemArray& FontShaper::shape(const std::string& text)
 {
     impl_->shape(text);
-
+    return items();
 }
 
-const FontShapeArray& FontShaper::shapes() const
+const FontItemArray& FontShaper::items() const
 {
-    return impl_->shapes;
+    return impl_->items;
 }
 
 FontFace::FontFace(FontLibrary* library) :
@@ -492,6 +494,14 @@ Int FontFace::getGlyphIndexFromCodePoint(Int codePoint)
 FontShaper FontFace::shaper()
 {
     return FontShaper(this);
+}
+
+FontItemArray FontFace::shape(const std::string& text)
+{
+    FontShaper s = shaper();
+    s.shape(text);
+    FontItemArray res(std::move(s.impl_->items));
+    return res;
 }
 
 void FontFace::onDestroyed()

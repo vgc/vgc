@@ -80,15 +80,13 @@ void Label::onPaintDraw(graphics::Engine* engine)
             std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
             graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
             graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
-            graphics::FontShaper shaper = fontFace->shaper();
-            shaper.shape(text_);
             core::DoubleArray b;
-            for (const graphics::FontShape& shape : shaper.shapes()) {
-                if (shape.glyph()) {
+            for (const graphics::FontItem& shape : fontFace->shape(text_)) {
+                if (shape.glyph()) { // XXX can this be nullptr?
                     float xoffset = shape.offset()[0];
                     float yoffset = shape.offset()[1];
                     b.clear();
-                    shape.glyph()->outline().stroke(b, 1);
+                    shape.glyph()->outline().stroke(b, 3);
                     for (Int i = 0; 2*i+1 < b.length(); ++i) {
                         a.insert(a.end(), {
                             xoffset + static_cast<float>(b[2*i]),
@@ -101,7 +99,7 @@ void Label::onPaintDraw(graphics::Engine* engine)
         // Load triangles
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
-    engine->clear(core::Color(0.337, 0.345, 0.353));
+    engine->clear(core::Color(0, 0.345, 0.353));
     engine->drawTriangles(trianglesId_);
 }
 
