@@ -27,16 +27,15 @@ matrix:
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_LIBRARY=$PYTHON_PREFIX/lib/lib${PYTHON_XY}m.so"
         - CMAKE_EXTRA_ARGS+=" -DPYTHON_INCLUDE_DIR=$PYTHON_PREFIX/include/${PYTHON_XY}m"
         - CMAKE_EXTRA_ARGS+=" -DQt=/opt/qt/$QT_VERSION/gcc_64"
-    - name: "macOS 10.14.4"
+    - name: "macOS 10.15.4"
       os: osx
-      osx_image: xcode10.3
+      osx_image: xcode11.6
       addons:
         homebrew:
           packages:
             - qt
             - freetype
             - harfbuzz
-          update: true
       before_script:
         - export CXX=clang++ CC=clang
         - CMAKE_EXTRA_ARGS+=" -DQt=/usr/local/opt/qt"
