@@ -31,9 +31,9 @@ matrix:
       os: osx
       osx_image: xcode10.3
       install:
-        - brew install qt
-        - brew install freetype
-        - brew install harfbuzz
+        - brew list qt &>/dev/null || brew install qt
+        - brew list freetype &>/dev/null || brew install freetype
+        - brew list harfbuzz &>/dev/null || brew install harfbuzz
       before_script:
         - export CXX=clang++ CC=clang
         - CMAKE_EXTRA_ARGS+=" -DQt=/usr/local/opt/qt"
