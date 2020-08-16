@@ -18,6 +18,7 @@
 #define VGC_GRAPHICS_FONT_H
 
 #include <vgc/core/innercore.h>
+#include <vgc/core/array.h>
 #include <vgc/geometry/curves2d.h>
 #include <vgc/graphics/api.h>
 
@@ -29,6 +30,7 @@ namespace internal {
 class FontLibraryImpl;
 class FontFaceImpl;
 class FontGlyphImpl;
+class FontShaperImpl;
 
 // See: https://stackoverflow.com/questions/9954518/stdunique-ptr-with-an-incomplete-type-wont-compile
 // TODO: vgc/core/pimpl.h for helper macros.
@@ -95,6 +97,129 @@ private:
     internal::FontLibraryPimpl impl_;
 };
 
+/// \class vgc::graphics::FontItem
+/// \brief Represents one item of a shaped text.
+///
+/// A FontItem stores a reference to a FontGlyph as well as information where
+/// to draw the glyph. It is typically used as output of a text shaping
+/// operation. See FontShaper for more details on text shaping.
+///
+/// Note that for performance and thread-safety reasons, a FontItem stores a
+/// raw FontGlyph pointer, not a FontGlyphPtr. This means that it doesn't keep
+/// alive the referenced FontGlyph: it is the responsibility of client code to
+/// ensure that the referenced FontGlyph outlive the FontItem itself. For
+/// example, each FontShaper object does keep alive its underlying FontFace
+/// (therefore all its glyphs too), therefore it is safe to use the items in
+/// FontShaper::items() as long as the FontShaper is alive.
+///
+class VGC_GRAPHICS_API FontItem {
+public:
+    /// Creates a FontItem.
+    ///
+    FontItem(FontGlyph* glyph, const core::Vec2d& offset) :
+        glyph_(glyph), offset_(offset) {}
+
+    /// Returns the glyph.
+    ///
+    FontGlyph* glyph() const {
+        return glyph_;
+    }
+
+    /// Returns the offset.
+    ///
+    core::Vec2d offset() const {
+        return offset_;
+    }
+
+private:
+    FontGlyph* glyph_;
+    core::Vec2d offset_;
+};
+
+using FontItemArray = core::Array<FontItem>;
+
+/// \class vgc::graphics::FontShaper
+/// \brief Performs text shaping operations using a given font face.
+///
+/// The FontShaper class performs text shaping operations using a given font face.
+///
+/// ```cpp
+/// vgc::graphics::FontFace* face = someFace();
+/// vgc::graphics::FontShaper shaper = face->shaper();
+/// for (const vgc::graphics::FontItem& item : shaper.shape("Hello,")) {
+///     ...
+/// }
+/// for (const vgc::graphics::FontItem& item : shaper.shape("World!")) {
+///     ...
+/// }
+/// ```
+///
+/// Like most classes in VGC, keep in mind that this class is NOT thread-safe.
+/// In particular, each FontShaper object internally stores a FontItemArray
+/// which is used as a buffer to re-use the container's capacity across
+/// consecutive calls to the shape() method. This avoids unnecessary memory
+/// deallocations and reallocations and thus improves performance. But this
+/// obviously means that you cannnot iterate over (or even copy!) the returned
+/// shapes() while another thread calls shape() on the same FontShaper
+/// instance.
+///
+/// However, like most classes in VGC, all methods in this class are
+/// re-entrant: as long as you use a separate FontShaper instance per thread,
+/// it is safe to call the methods of the FontShaper class in parallel.
+///
+class VGC_GRAPHICS_API FontShaper {
+public:
+    /// Creates a new FontShaper.
+    ///
+    FontShaper(FontFace* face);
+
+    /// Creates a copy of the given FontShaper.
+    ///
+    FontShaper(const FontShaper& other);
+
+    /// Move-constructs the given FontShaper.
+    ///
+    FontShaper(FontShaper&& other);
+
+    /// Assigns a copy of the given FontShaper.
+    ///
+    FontShaper& operator=(const FontShaper& other);
+
+    /// Move-assigns the other FontShaper.
+    ///
+    FontShaper& operator=(FontShaper&& other);
+
+    /// Destroys this FontShaper.
+    ///
+    ~FontShaper();
+
+    /// Shapes the given UTF-8 encoded text, and returns the shaped text.
+    ///
+    /// ```cpp
+    /// vgc::graphics::FontFace* face = someFace();
+    /// vgc::graphics::FontShaper shaper = face->shaper();
+    /// for (const vgc::graphics::FontItem& item : shaper.shape("Hello")) {
+    ///     ...
+    /// }
+    /// ```
+    ///
+    /// The items in the returned FontItemArray are guaranteed to be valid as
+    /// long as either the FontShaper or its underlying FontFace is alive.
+    ///
+    const FontItemArray& shape(const std::string& text);
+
+    /// Returns the result of the last call to shape().
+    ///
+    /// The items in the returned FontItemArray are guaranteed to be valid as
+    /// long as either the FontShaper or its underlying FontFace is alive.
+    ///
+    const FontItemArray& items() const;
+
+private:
+    friend class FontFace; // Allow to move the stored FontItemArray
+    internal::FontShaperImpl* impl_;
+};
+
 /// \class vgc::graphics::FontFace
 /// \brief A given typeface, in a given style.
 ///
@@ -150,6 +275,37 @@ public:
     ///
     Int getGlyphIndexFromCodePoint(Int codePoint);
 
+    /// Creates a FontShaper for shaping text with this FontFace.
+    ///
+    FontShaper shaper();
+
+    /// Shapes the given UTF-8 encoded text, and returns the shaped text.
+    ///
+    /// ```cpp
+    /// for (const vgc::graphics::FontItem& item : face->shape("Hello")) {
+    ///     ...
+    /// }
+    /// ```
+    ///
+    /// The items in the returned FontItemArray are guaranteed to be valid as
+    /// long as the FontFace is alive.
+    ///
+    /// Note that if you need to perform consecutive text shaping computations,
+    /// it is more efficient to first create a FontShaper (which acts as a
+    /// buffer), then call shaper.shape() several times:
+    ///
+    /// ```cpp
+    /// vgc::graphics::FontShaper shaper = face->shaper();
+    /// for (const vgc::graphics::FontItem& item : shaper.shape("Hello,")) {
+    ///     ...
+    /// }
+    /// for (const vgc::graphics::FontItem& item : shaper.shape("World!")) {
+    ///     ...
+    /// }
+    /// ```
+    ///
+    FontItemArray shape(const std::string& text);
+
 protected:
     /// \reimp
     void onDestroyed() override;
@@ -158,6 +314,7 @@ private:
     internal::FontFacePimpl impl_;
     friend class FontLibrary;
     friend class internal::FontLibraryImpl;
+    friend class internal::FontShaperImpl;
 };
 
 /// \class vgc::graphics::FontGlyph
