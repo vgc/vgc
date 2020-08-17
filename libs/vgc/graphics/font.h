@@ -264,7 +264,7 @@ protected:
 public:
     /// Returns the number of pixels per em of this FontFace.
     ///
-    Int ppem() const;
+    double ppem() const;
 
     /// Returns the height of ascenders, in pixels. See:
     ///
