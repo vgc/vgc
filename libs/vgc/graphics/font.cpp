@@ -16,6 +16,8 @@
 
 #include <vgc/graphics/font.h>
 
+#include <mutex>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
@@ -56,6 +58,22 @@ public:
         if (error) {
             throw FontError(errorMsg(error));
         }
+
+        // Call hb_language_get_default(), protected by a mutex, to avoid
+        // thread-safety problems later. See:
+        //
+        //   https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-language-get-default
+        //
+        //   « Note that the first time this function is called, it calls "setlocale
+        //   (LC_CTYPE, nullptr)" to fetch current locale. The underlying setlocale
+        //   function is, in many implementations, NOT threadsafe. To avoid
+        //   problems, call this function once before multiple threads can call it.
+        //   This function is only used from hb_buffer_guess_segment_properties() by
+        //   HarfBuzz itself. »
+        //
+        static std::mutex* mutex = new std::mutex; // leaky singleton (see vgc/core/stringid.cpp)
+        std::lock_guard<std::mutex> lock(*mutex);
+        hb_language_get_default();
     }
 
     ~FontLibraryImpl()
@@ -308,14 +326,9 @@ public:
         int numChars = dataLength;
 
         // Shape
-        // XXX use hb_buffer_guess_segment_properties instead of explicit direction/script/language?
-        // See doc regarding thread-safety. Calling hb_language_get_default() in
-        // the constructor of FontLibrary, protected by a mutex, seems a good solution.
-        hb_buffer_clear_contents(buf);
+        hb_buffer_reset(buf);
         hb_buffer_add_utf8(buf, data, dataLength, firstChar, numChars);
-        hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
-        hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
-        hb_buffer_set_language(buf, hb_language_from_string("en", -1));
+        hb_buffer_guess_segment_properties(buf);
         hb_shape(facePtr->impl_->hbFont, buf, NULL, 0);
 
         // HarfBuzz output
