@@ -332,7 +332,9 @@ public:
             FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
             core::Vec2d offset = toVec2d(pos.x_offset, pos.y_offset);
             core::Vec2d advance = toVec2d(pos.x_advance, pos.y_advance);
-            items.append(FontItem(glyph, totalAdvance + offset));
+            if (glyph) {
+                items.append(FontItem(glyph, totalAdvance + offset));
+            }
             totalAdvance += advance;
         }
     }
