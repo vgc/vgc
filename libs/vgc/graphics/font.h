@@ -234,13 +234,17 @@ private:
 };
 
 /// \class vgc::graphics::FontFace
-/// \brief A given typeface, in a given style.
+/// \brief A given typeface, in a given style, in a given size.
 ///
-/// A font face represents the data contains in one TTF or OTF file, for
-/// example, "SourceSansPro-Bold.otf". A given font family is typically made of
-/// several font faces, for example, the "Source Sans Pro" font family has
-/// several faces to represent all its variations: light, regular, bold, light
-/// italic, italic, bold italic, etc.
+/// A font face represents a given typeface, in a given style, in a given size.
+/// For example, "Source Sans Pro, bold, 12pt @ 72dpi".
+///
+/// Note that a given typeface, even with a given style (example:
+/// "SourceSansPro-Bold.otf"), may still use different glyphs based on the
+/// size. For example, smaller point size (8pt) may have less details than
+/// higher point sizes (36pt), and different hinting should be applied based on
+/// the size. This is why we use separate FontFace objects to represent the
+/// same typeface at different sizes.
 ///
 class VGC_GRAPHICS_API FontFace : public core::Object {
 private:
@@ -258,6 +262,28 @@ protected:
     FontFace(FontLibrary* library);
 
 public:
+    /// Returns the number of pixels per em of this FontFace.
+    ///
+    Int ppem() const;
+
+    /// Returns the height of ascenders, in pixels. See:
+    ///
+    /// https://www.freetype.org/freetype2/docs/glyphs/glyphs-3.html
+    ///
+    double ascent() const;
+
+    /// Returns the height of descenders, in pixels. Note that it is usually a
+    /// negative value. See:
+    ///
+    /// https://www.freetype.org/freetype2/docs/glyphs/glyphs-3.html
+    ///
+    double descent() const;
+
+    /// Returns the height of this face, in pixels. This is the vertical
+    /// distance between two baselines.
+    ///
+    double height() const;
+
     /// Returns the glyph corresponding to the given Unicode code point, or
     /// nullptr if this face doesn't have a glyph for this code point.
     ///

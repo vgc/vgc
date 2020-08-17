@@ -91,6 +91,7 @@ class FontFaceImpl {
 public:
     FT_Face face;
     hb_font_t* hbFont;
+    Int ppem;
 
     FontFaceImpl(FT_Library library, const std::string& filename)
     {
@@ -159,15 +160,16 @@ public:
         //                + size   (example: "12pt")
         //
         // Size of the EM square in points
-        float emWidth_ = 36;
-        float emHeight_ = 36;
+        FT_UInt emWidth_ = 36;
+        FT_UInt emHeight_ = 36;
         // Size of the EM square in 26.6 fractional points
-        FT_F26Dot6 emWidth = vgc::core::ifloor<FT_F26Dot6>(64 * emWidth_);
-        FT_F26Dot6 emHeight = vgc::core::ifloor<FT_F26Dot6>(64 * emHeight_);
+        FT_F26Dot6 emWidth = 64 * core::int_cast<FT_F26Dot6>(emWidth_);
+        FT_F26Dot6 emHeight = 64 * core::int_cast<FT_F26Dot6>(emHeight_);
         // Screen resolution in dpi
         // TODO: Get this from system?
         FT_UInt hdpi = 96;
         FT_UInt vdpi = 96;
+        ppem = core::int_cast<Int>(emWidth_ * hdpi);
         FT_Set_Char_Size(face, emWidth, emHeight, hdpi, vdpi);
 
         // Create HarfBuzz font
@@ -453,6 +455,36 @@ FontFace::FontFace(FontLibrary* library) :
     impl_()
 {
     appendObjectToParent_(library);
+}
+
+namespace {
+
+double fontUnitsToPixels(const internal::FontFaceImpl* impl, FT_Short u)
+{
+    // Note: u is in fractional 26.6 units
+    return static_cast<double>(u) * impl->ppem / impl->face->units_per_EM / 64.0;
+}
+
+} // namespace
+
+Int FontFace::ppem() const
+{
+    return impl_->ppem;
+}
+
+double FontFace::ascent() const
+{
+    return fontUnitsToPixels(impl_.get(), impl_->face->ascender);
+}
+
+double FontFace::descent() const
+{
+    return fontUnitsToPixels(impl_.get(), impl_->face->descender);
+}
+
+double FontFace::height() const
+{
+    return fontUnitsToPixels(impl_.get(), impl_->face->height);
 }
 
 FontGlyph* FontFace::getGlyphFromCodePoint(Int codePoint)
