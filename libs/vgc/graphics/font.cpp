@@ -91,7 +91,7 @@ class FontFaceImpl {
 public:
     FT_Face face;
     hb_font_t* hbFont;
-    Int ppem;
+    double ppem;
 
     FontFaceImpl(FT_Library library, const std::string& filename)
     {
@@ -169,7 +169,7 @@ public:
         // TODO: Get this from system?
         FT_UInt hdpi = 96;
         FT_UInt vdpi = 96;
-        ppem = core::int_cast<Int>(emWidth_ * hdpi);
+        ppem = static_cast<double>(emWidth_) * hdpi / 72.0; // 72 pt = 1 inch
         FT_Set_Char_Size(face, emWidth, emHeight, hdpi, vdpi);
 
         // Create HarfBuzz font
@@ -461,13 +461,12 @@ namespace {
 
 double fontUnitsToPixels(const internal::FontFaceImpl* impl, FT_Short u)
 {
-    // Note: u is in fractional 26.6 units
-    return static_cast<double>(u) * impl->ppem / impl->face->units_per_EM / 64.0;
+    return static_cast<double>(u) * impl->ppem / impl->face->units_per_EM;
 }
 
 } // namespace
 
-Int FontFace::ppem() const
+double FontFace::ppem() const
 {
     return impl_->ppem;
 }
