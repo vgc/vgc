@@ -82,17 +82,15 @@ void Label::onPaintDraw(graphics::Engine* engine)
             graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
             core::DoubleArray b;
             for (const graphics::FontItem& shape : fontFace->shape(text_)) {
-                if (shape.glyph()) { // XXX can this be nullptr?
-                    float xoffset = shape.offset()[0];
-                    float yoffset = shape.offset()[1];
-                    b.clear();
-                    shape.glyph()->outline().stroke(b, 3);
-                    for (Int i = 0; 2*i+1 < b.length(); ++i) {
-                        a.insert(a.end(), {
-                            xoffset + static_cast<float>(b[2*i]),
-                            yoffset + static_cast<float>(b[2*i+1]),
-                            1, 0, 0});
-                    }
+                float xoffset = shape.offset()[0];
+                float yoffset = shape.offset()[1];
+                b.clear();
+                shape.glyph()->outline().stroke(b, 3);
+                for (Int i = 0; 2*i+1 < b.length(); ++i) {
+                    a.insert(a.end(), {
+                        xoffset + static_cast<float>(b[2*i]),
+                        yoffset + static_cast<float>(b[2*i+1]),
+                        1, 0, 0});
                 }
             }
         }

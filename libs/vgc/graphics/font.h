@@ -121,6 +121,19 @@ public:
 
     /// Returns the glyph.
     ///
+    /// Note that the shape() methods of FontShaper and FontFace never return
+    /// NULL glyphs:
+    ///
+    /// - In case of a missing glyph in the face, the ".notdef" glyph [1] is
+    ///   returned. It is typically represented as a rectangle (sometimes with
+    ///   an "X" or "?" inside). More info:
+    ///
+    ///   https://docs.microsoft.com/en-us/typography/opentype/spec/recom#glyph-0-the-notdef-glyph
+    ///
+    /// - In case of other shaping problems (such as invalid unicode input),
+    ///   the `U+FFFD � REPLACEMENT CHARACTER` might be used, or the codepoints
+    ///   causing problems are simply skipped.
+    ///
     FontGlyph* glyph() const {
         return glyph_;
     }
