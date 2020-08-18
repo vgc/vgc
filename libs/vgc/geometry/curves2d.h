@@ -359,6 +359,41 @@ public:
                        double x2, double y2,
                        double x3, double y3);
 
+    /// Computes and returns an approximation of this Curves2d using line
+    /// segments only (MoveTo, LineTo, and Close commands).
+    ///
+    /// Using the default parameters, the sampling is "adaptive". This means
+    /// that the number of samples generated for each original curved segment
+    /// depends on the curvature: the higher the curvature, the more samples
+    /// are generated. More precisely, consecutive line segments within a given
+    /// original curved segment never have an angle more than the given \p
+    /// maxAngle (expressed in radian). This ensures that the curve looks
+    /// "smooth" at any zoom level, except of course when the curve has an
+    /// intentional corner.
+    ///
+    /// \verbatim
+    ///                  o p2
+    ///                .`
+    ///              .` } maxAngle
+    /// o----------o`- - - - -
+    /// p0         p1
+    /// \endverbatim
+    ///
+    /// The additional parameter \p maxSamplesPerSegment allows you to limit
+    /// how many samples there can be for each original curved segment. This is
+    /// necessary to break infinite loops in case the segment contains a cusp.
+    ///
+    // TODO:
+    //   minSamplesPerSegment?
+    //   minDistanceBetweenSamples?
+    //   maxDistanceBetweenSamples?
+    //   preserveSegmentEndPoints?
+    //   Pass a single SampleParams instead many individual params?
+    //
+    Curves2d sample(
+            double maxAngle = 0.05,
+            Int maxSamplesPerSegment = 64) const;
+
     /// Strokes this curve, that is, appends triangle data to the
     /// given DoubleArray. The appended data is of the form:
     ///
