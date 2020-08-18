@@ -190,9 +190,16 @@ public:
 
 namespace {
 
-// Convert from fractional 26.6 to floating point
+// Convert from fractional 26.6 to floating point.
 //
-core::Vec2d toVec2d(unsigned int x, unsigned int y)
+// Note: we use a template because FreeType and HarfBuzz use types which may or
+// may not be the same underlying fundamental types:
+//
+// - FreeType: `typedef signed long  FT_Pos;`
+// - HarfBuzz: `typedef int32_t hb_position_t;`
+//
+template<class T>
+core::Vec2d toVec2d(T x, T y)
 {
     return core::Vec2d(x / 64.0, y / 64.0);
 }
