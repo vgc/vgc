@@ -116,6 +116,7 @@
 ///
 
 #include <cmath> // fabs, nextafter
+#include <cstdint> // int32_t, etc.
 #include <limits> // min, max, infinity
 #include <type_traits>
 
@@ -259,6 +260,14 @@ constexpr UInt32 UInt32Max = tmax_<UInt32>::value;
 ///
 constexpr UInt64 UInt64Max = tmax_<UInt64>::value;
 
+/// Maximum finite value of a float.
+///
+constexpr float FloatMax = tmax_<float>::value;
+
+/// Maximum finite value of a double.
+///
+constexpr double DoubleMax = tmax_<double>::value;
+
 /// Minimum value of an Int.
 ///
 constexpr Int IntMin = tmin_<Int>::value;
@@ -298,6 +307,26 @@ constexpr UInt32 UInt32Min = tmin_<UInt32>::value;
 /// Minimum value of a UInt64.
 ///
 constexpr UInt64 UInt64Min = tmin_<UInt64>::value;
+
+/// Minimum finite value of a float. This is a very large negative number. Not
+/// to be confused with FLT_MIN or std::numeric_limits<float>::min(), which is
+/// the minimum normalized positive value.
+///
+constexpr float FloatMin = - tmax_<float>::value;
+
+/// Minimum finite value of a double. This is a very large negative number. Not
+/// to be confused with DBL_MIN or std::numeric_limits<double>::min(), which is
+/// the minimum normalized positive value.
+///
+constexpr double DoubleMin = - tmax_<double>::value;
+
+/// Positive infinity value of a float.
+///
+constexpr float FloatInfinity = std::numeric_limits<float>::infinity();
+
+/// Positive infinity value of a double.
+///
+constexpr double DoubleInfinity = std::numeric_limits<double>::infinity();
 
 /// Returns a human-readable name for integer types.
 ///
