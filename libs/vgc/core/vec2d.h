@@ -258,9 +258,87 @@ public:
     /// double d = a.dot(b); // equivalent to a[0]*b[0] + a[1]*b[1]
     /// ```
     ///
-    double dot(const Vec2d& b) {
+    /// Note that this is also equal to `a.length() * b.length() * cos(a.angle(b))`.
+    ///
+    /// \sa det(), angle()
+    ///
+    double dot(const Vec2d& b) const {
         const Vec2d& a = *this;
         return a[0]*b[0] + a[1]*b[1];
+    }
+
+    /// Returns the "determinant" between this Vec2d `a` and the given Vec2d `b`.
+    ///
+    /// ```cpp
+    /// double d = a.det(b); // equivalent to a[0]*b[1] - a[1]*b[0]
+    /// ```
+    ///
+    /// Note that this is equal to:
+    /// - `a.length() * b.length() * sin(a.angle(b))`
+    /// - the (signed) area of the parallelogram spanned by `a` and `b`
+    /// - the Z coordinate of the cross product between `a` and `b`, if `a` and `b`
+    ///   are interpreted as 3D vectors with Z = 0.
+    ///
+    /// Note that `a.det(b)` has the same sign as `a.angle(b)`. See the
+    /// documentation of Vec2d::angle() for more information on how to
+    /// interpret this sign based on your choice of coordinate system (Y-axis
+    /// pointing up or down).
+    ///
+    /// \sa dot(), angle()
+    ///
+    double det(const Vec2d& b) const {
+        const Vec2d& a = *this;
+        return a[0]*b[1] - a[1]*b[0];
+    }
+
+    /// Returns the angle, in radians and in the interval (−π, π], between this
+    /// Vec2d `a` and the given Vec2d `b`.
+    ///
+    /// ```cpp
+    /// Vec2d a(1, 0);
+    /// Vec2d b(1, 1);
+    /// double d = a.angle(b); // returns 0.7853981633974483 (approx. π/4 rad = 45 deg)
+    /// ```
+    ///
+    /// This value is computed using the following formula:
+    ///
+    /// ```cpp
+    /// double angle = atan2(a.det(b), a.dot(b));
+    /// ```
+    ///
+    /// It returns an undefined value if either `a` or `b` is zero-length.
+    ///
+    /// If you are using the following coordinate system (X pointing right and Y
+    /// pointing up, like is usual in the fields of mathematics):
+    ///
+    /// ```
+    /// ^ Y
+    /// |
+    /// |
+    /// o-----> X
+    /// ```
+    ///
+    /// then a.angle(b) is positive if going from a to b is a counterclockwise
+    /// motion, and negative if going from a to b is a clockwise motion.
+    ///
+    /// If instead you are using the following coordinate system (X pointing
+    /// right and Y pointing down, like is usual in user interface systems):
+    ///
+    /// ```
+    /// o-----> X
+    /// |
+    /// |
+    /// v Y
+    /// ```
+    ///
+    /// then a.angle(b) is positive if going from a to b is a clockwise motion,
+    /// and negative if going from a to b is a counterclockwise motion.
+    ///
+    /// \sa det(), dot()
+    ///
+    double angle(const Vec2d& b) const {
+        const Vec2d& a = *this;
+        return std::atan2(a.det(b), a.dot(b));
     }
 
     /// Returns whether this Vec2d `a` and the given Vec2d `b` are almost equal

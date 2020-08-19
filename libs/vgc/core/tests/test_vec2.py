@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from math import inf
+from math import inf, pi
 import locale
 import unittest
 
@@ -177,6 +177,37 @@ class TestVec2(unittest.TestCase):
             v2 = v1.orthogonalized()
             self.assertEqual(v1, Vec2x(3, 4))
             self.assertEqual(v2, Vec2x(-4, 3))
+
+    def testDot(self):
+        for Vec2x in Vec2Types:
+            v1 = Vec2x(1, 2)
+            v2 = Vec2x(3, 4)
+            self.assertEqual(v1.dot(v1), 5)
+            self.assertEqual(v1.dot(v2), 11)
+
+    def testDet(self):
+        for Vec2x in Vec2Types:
+            v1 = Vec2x(1, 2)
+            v2 = Vec2x(3, 4)
+            self.assertEqual(v1.det(v1), 0)
+            self.assertEqual(v1.det(v2), -2)
+
+    def testAngle(self):
+        for Vec2x in Vec2Types:
+            if Vec2x == Vec2d:
+                places = 10
+            else:
+                places = 6
+            v1 = Vec2x(1, 0)
+            v2 = Vec2x(1, 1)
+            v3 = Vec2x(-3, 0)
+            v4 = Vec2x(-2, -2)
+            self.assertEqual(v1.angle(v1), 0)
+            self.assertAlmostEqual(v1.angle(v2), pi/4, places=places)
+            self.assertAlmostEqual(v1.angle(v3), pi, places=places)
+            self.assertAlmostEqual(v1.angle(v4), -3*pi/4, places=places)
+            self.assertAlmostEqual(v2.angle(v4), pi, places=places)
+            self.assertAlmostEqual(v4.angle(v3), -pi/4, places=places)
 
     def testParse(self):
         for Vec2x in Vec2Types:
