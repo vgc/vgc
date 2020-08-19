@@ -128,14 +128,6 @@ struct CubicSegment {
     }
 };
 
-// TODO: expose this as part of the Vec2 interface, as well as "det".
-double angle(const core::Vec2d& a, const core::Vec2d& b)
-{
-    double dot = a[0]*b[0] + a[1]*b[1]; // XXX can't use a.dot(b) cause non-const. See https://github.com/vgc/vgc/issues/434.
-    double det = a[0]*b[1] - a[1]*b[0];
-    return std::atan2(det, dot);
-}
-
 template<class SegmentType>
 void sampleSegment(
         Curves2d& res,
@@ -164,7 +156,7 @@ void sampleSegment(
         for (Int i = 1; i < samples.length() - 1; ++i) {
             core::Vec2d a = samples[i].position - samples[i-1].position;
             core::Vec2d b = samples[i+1].position - samples[i].position;
-            if (std::abs(angle(a, b)) > maxAngle) {
+            if (std::abs(a.angle(b)) > maxAngle) {
                 failed.append(i);
             }
         }
