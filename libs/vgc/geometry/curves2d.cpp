@@ -256,45 +256,151 @@ Curves2d Curves2d::sample(
     return res;
 }
 
+namespace {
+
+//    a    left-side    c
+//    o---------------->o
+//    |                 |
+//    |                 |
+//    o---------------->o
+//    b   right-side    d
+//
+void insertQuad(core::DoubleArray& data,
+                const core::Vec2d& a, const core::Vec2d& b,
+                const core::Vec2d& c, const core::Vec2d& d)
+{
+    // Two triangles: ABC and CBD
+    data.insert(data.end(), {
+        a[0], a[1],   b[0], b[1],   c[0], c[1],
+        c[0], c[1],   b[0], b[1],   d[0], d[1]});
+}
+
+void editQuadData(core::DoubleArray& data, Int i,
+                  const core::Vec2d& a, const core::Vec2d& b)
+{
+    data[i] = a[0]; data[i+1] = a[1];
+    data[i+2] = b[0]; data[i+3] = b[1];
+    data[i+8] = b[0]; data[i+9] = b[1];
+}
+
+// Each of the "process" methods computes n1, l1, and r1 based
+// on c0, c1, c2, and n0:
+//
+//    l0  left-side     l1              l2
+//    o---------------->o-------------->o
+//    |       ^         |       ^       |
+//    |       | n0      |c1     | n1    |
+// c0 o---------------->o-------------->o c2
+//    |   centerline    |               |
+//    |                 |               |
+//    o---------------->o-------------->o
+//    r0  right-side    r1              r3
+//
+// For the first sample, we don't have c0 and n0.
+// For the last sample, we don't have c2.
+//
+void processFirstSample(
+        core::DoubleArray& /*data*/, double width,
+        const core::Vec2d& c1, const core::Vec2d& c2,
+        core::Vec2d& l1, core::Vec2d& r1,
+        core::Vec2d& n1)
+{
+    n1 = (c2 - c1).normalize().orthogonalized();
+    l1 = c1 + 0.5 * width * n1;
+    r1 = c1 - 0.5 * width * n1;
+}
+
+void processMiddleSample(
+        core::DoubleArray& data, double width,
+        const core::Vec2d& /*c0*/, const core::Vec2d& c1, const core::Vec2d& c2,
+        const core::Vec2d& l0, core::Vec2d& l1,
+        const core::Vec2d& r0, core::Vec2d& r1,
+        const core::Vec2d& n0, core::Vec2d& n1)
+{
+    // Compute n1
+    n1 = (c2 - c1).normalize().orthogonalized();
+
+    // Compute miterLenght. We have miterLength = width / sin(t/2)
+    // where t is the angle between the two segments. See:
+    //
+    // https://www.w3.org/TR/SVG2/painting.html#StrokeMiterlimitProperty.
+    //
+    // We use the double angle formula giving sin(t/2) = sqrt((1-cos(t))/2),
+    // and since n0 and n1 are normal vectors, cos(t) is just a dot product.
+    //
+    double cost = n0.dot(-n1);
+    double sint2 = std::sqrt(0.5*(1-cost));
+    double miterLength = width / sint2; // TODO: handle miterclip (sint2 close to 0)
+    core::Vec2d miterDir = (n0 + n1).normalized();
+    l1 = c1 + 0.5 * miterLength * miterDir;
+    r1 = c1 - 0.5 * miterLength * miterDir;
+
+    // Insert
+    insertQuad(data, l0, r0, l1, r1);
+}
+
+void processLastOpenSample(
+        core::DoubleArray& data, double width,
+        const core::Vec2d& c0, const core::Vec2d& c1,
+        const core::Vec2d& l0, core::Vec2d& l1,
+        const core::Vec2d& r0, core::Vec2d& r1,
+        const core::Vec2d& /*n0*/, core::Vec2d& n1)
+{
+    n1 = (c1 - c0).normalize().orthogonalized();
+    l1 = c1 + 0.5 * width * n1;
+    r1 = c1 - 0.5 * width * n1;
+    insertQuad(data, l0, r0, l1, r1);
+}
+
+} // namespace
+
 void Curves2d::stroke(core::DoubleArray& data, double width) const
 {
-    // XXX TODO: actually implement this function. For now, this is just a
-    // temporary implementation (no computation of normals, etc.) for testing
-    // the rest of the architecture.
-
     // Compute adaptive sampling
     Curves2d samples = sample();
 
-    // For now, assume fixed normal (like with calligraphy pen with wide flat with fixed orientation)
-    core::Vec2d normal(1.0, 1.0);
-    normal.normalize();
-    core::Vec2d inset = 0.5 * width * normal;
-
-    //    v0              v2
-    //    *-------------->*
-    //    |
-    //    *--centerline-->* p
-    //    |
-    //    *-------------->*
-    //    v1              v3
-    //
-    core::Vec2d v0, v1;
+    // Stroke samples
+    Int numSamples = 0;
+    Int firstVertexIndex = data.length();
+    core::Vec2d firstPoint, secondPoint;
+    core::Vec2d c0, c1, c2, l0, l1, r0, r1, n0, n1;
     for (Curves2dCommandRef c : samples.commands()) {
         if (c.type() == CurveCommandType::MoveTo) {
-            core::Vec2d p = c.p();
-            v0 = p + inset;
-            v1 = p - inset;
+            if (numSamples > 1) {
+                processLastOpenSample(data, width, c0, c1, l0, l1, r0, r1, n0, n1);
+            }
+            firstVertexIndex = data.length();
+            firstPoint = c.p();
+            c1 = firstPoint;
+            numSamples = 1;
         }
         else if (c.type() == CurveCommandType::LineTo) {
-            core::Vec2d p = c.p();
-            core::Vec2d v2 = p + inset;
-            core::Vec2d v3 = p - inset;
-            data.insert(data.end(), {
-                v0[0], v0[1], v1[0], v1[1], v2[0], v2[1],
-                v2[0], v2[1], v1[0], v1[1], v3[0], v3[1]});
-            v0 = v2;
-            v1 = v3;
+            c2 = c.p();
+            if (numSamples == 1) {
+                secondPoint = c2;
+                processFirstSample(data, width, c1, c2, l1, r1, n1);
+            }
+            else {
+                processMiddleSample(data, width, c0, c1, c2, l0, l1, r0, r1, n0, n1);
+            }
+            c0 = c1;
+            c1 = c2;
+            l0 = l1;
+            r0 = r1;
+            n0 = n1;
+            numSamples += 1;
         }
+        else if (c.type() == CurveCommandType::Close) {
+            if (numSamples > 2) {
+                c2 = secondPoint;
+                processMiddleSample(data, width, c0, c1, c2, l0, l1, r0, r1, n0, n1);
+                editQuadData(data, firstVertexIndex, l1, r1);
+                numSamples = 0;
+            }
+        }
+    }
+    if (numSamples > 1) {
+        processLastOpenSample(data, width, c0, c1, l0, l1, r0, r1, n0, n1);
     }
 }
 
