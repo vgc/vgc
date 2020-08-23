@@ -554,6 +554,44 @@ else()
 endif()
 message(STATUS "") # newline
 
+# libtess2
+# https://github.com/memononen/libtess2
+message(STATUS "[libtess2]")
+set(VGC_LIBTESS2_LIB_TYPE static CACHE STRING "How should we build/use libtess2? Options: 'shared', 'static'")
+set(VGC_LIBTESS2_DIR ${CMAKE_CURRENT_LIST_DIR}/third/libtess2 CACHE FILEPATH "Path to libtess2")
+if(EXISTS ${VGC_LIBTESS2_DIR})
+    message(STATUS "Found libtess2: ${VGC_LIBTESS2_DIR}")
+    message(STATUS "Library type: ${VGC_LIBTESS2_LIB_TYPE}")
+    set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
+    if(VGC_LIBTESS2_LIB_TYPE STREQUAL "shared")
+        set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+    elseif(VGC_LIBTESS2_LIB_TYPE STREQUAL "static")
+        if(DEFINED BUILD_SHARED_LIBS)
+            set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+        endif()
+    else()
+        message(SEND_ERROR "Unknown library type for libtess2.")
+    endif()
+    add_subdirectory(${VGC_LIBTESS2_DIR})
+    if(VGC_LIBTESS2_LIB_TYPE STREQUAL "static")
+        set_target_properties(libtess2 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    elseif(VGC_LIBTESS2_LIB_TYPE STREQUAL "shared")
+        set_target_properties(libtess2 PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/lib
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin)
+    endif()
+    if(BUILD_SHARED_LIBS_OLD STREQUAL "")
+        if(DEFINED BUILD_SHARED_LIBS)
+            unset(BUILD_SHARED_LIBS CACHE)
+        endif()
+    else()
+        set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE BOOL "" FORCE)
+    endif()
+else()
+    message(SEND_ERROR "Can't find libtess2")
+endif()
+message(STATUS "") # newline
+
 # Git
 message(STATUS "[Git]")
 if (GIT_EXECUTABLE)
