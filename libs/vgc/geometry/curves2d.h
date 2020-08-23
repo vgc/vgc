@@ -417,6 +417,27 @@ public:
     //
     void stroke(core::DoubleArray& data, double width) const;
 
+    /// Fills this Curves2d, that is, triangulate the interior of the curves
+    /// interpreted as contours of a polygon, using the non-zero winding rule.
+    /// Subcurves which are not closed are ignored. The triangle data is
+    /// appended to the given DoubleArray in this form:
+    ///
+    /// ```
+    /// [x1, y1,     // First vertex of first triangle
+    ///  x2, y2,     // Second vertex of first triangle
+    ///  x3, y3,     // Third vertex of first triangle
+    ///
+    ///  x4, y4,     // First vertex of second triangle
+    ///  x5, y5,     // Second vertex of second triangle
+    ///  x6, y6,     // Third vertex of second triangle
+    ///
+    ///  ...]
+    /// ```
+    ///
+    // TODO: add winding rule, anti-aliasing options, auto-closing open subcurves, etc.
+    //
+    void fill(core::DoubleArray& data) const;
+
 private:
     friend Curves2dCommandRef;
     friend Curves2dCommandIterator;
