@@ -1,5 +1,6 @@
 vgc_add_library(geometry
     THIRD_DEPENDENCIES
+        libtess2
 
     VGC_DEPENDENCIES
         core

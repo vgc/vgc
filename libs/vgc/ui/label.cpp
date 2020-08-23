@@ -106,8 +106,8 @@ void Label::onPaintDraw(graphics::Engine* engine)
             float baseline = static_cast<float>(fontFace->height());
 
             // Draw rectangles to visualize font metrics
-            insertRect(a, core::colors::black, 0, 0, 400, baseline);
-            insertRect(a, core::colors::blue, 0, baseline, 400, 2* baseline);
+            //insertRect(a, core::colors::black, 0, 0, width(), baseline);
+            //insertRect(a, core::colors::blue, 0, baseline, width(), 2* baseline);
 
             // Shape and triangulate text
             core::DoubleArray b;
@@ -115,19 +115,19 @@ void Label::onPaintDraw(graphics::Engine* engine)
                 float xoffset = shape.offset()[0];
                 float yoffset = shape.offset()[1];
                 b.clear();
-                shape.glyph()->outline().stroke(b, 3);
+                shape.glyph()->outline().fill(b);
                 for (Int i = 0; 2*i+1 < b.length(); ++i) {
                     a.insert(a.end(), {
                         xoffset + static_cast<float>(b[2*i]),
                         baseline - (yoffset + static_cast<float>(b[2*i+1])),
-                        1, 0, 0});
+                        0.9, 0.9, 0.9});
                 }
             }
         }
         // Load triangles
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
-    engine->clear(core::Color(0, 0.345, 0.353));
+    engine->clear(core::Color(0.337, 0.345, 0.353));
     engine->drawTriangles(trianglesId_);
 }
 

@@ -16,6 +16,8 @@
 
 #include <vgc/geometry/curves2d.h>
 
+#include <tesselator.h> // libtess2
+
 #include <vgc/core/intarray.h>
 
 namespace vgc {
@@ -401,6 +403,67 @@ void Curves2d::stroke(core::DoubleArray& data, double width) const
     }
     if (numSamples > 1) {
         processLastOpenSample(data, width, c0, c1, l0, l1, r0, r1, n0, n1);
+    }
+}
+
+void Curves2d::fill(core::DoubleArray& data) const
+{
+    // Compute adaptive sampling
+    Curves2d samples = sample();
+
+    // Triangulate using libtess2
+    TESSalloc* alloc = nullptr; // Default allocator
+    int vertexSize = 2;         // Number of coordinates per vertex (must be 2 or 3)
+    int windingRule = TESS_WINDING_NONZERO; // Winding rule
+    int elementType = TESS_POLYGONS;  // Use sequence of polygons as output. Note: we could use
+                                      // TESS_CONNECTED_POLYGONS to detect which edges have no neighbor
+                                      // polygons, which can be useful for anti-aliasing.
+    int maxPolySize = 3;              // Triangles only
+    const TESSreal* normal = nullptr; // Automatically compute polygon normal
+    TESStesselator* tess = tessNewTess(alloc);
+    core::Array<TESSreal> coords;
+    for (Curves2dCommandRef c : samples.commands()) {
+        if (c.type() == CurveCommandType::MoveTo) {
+            coords.clear();
+            core::Vec2d p = c.p();
+            coords.append(p[0]);
+            coords.append(p[1]);
+        }
+        else if (c.type() == CurveCommandType::LineTo) {
+            core::Vec2d p = c.p();
+            coords.append(p[0]);
+            coords.append(p[1]);
+        }
+        else if (c.type() == CurveCommandType::Close) {
+            if (coords.size() > 4) { // ignore contour if 2 points or less
+                tessAddContour(tess, vertexSize, coords.data(),
+                               sizeof(TESSreal) * vertexSize,
+                               core::int_cast<int>(coords.length()/2));
+            }
+        }
+    }
+    int success = tessTesselate(tess, windingRule, elementType,
+                                maxPolySize, vertexSize, normal);
+    if (success) {
+        const TESSreal* vertices = tessGetVertices(tess);
+        const TESSindex* polygons = tessGetElements(tess);
+        const int numPolygons = tessGetElementCount(tess);
+        for (int i = 0; i < numPolygons; ++i) {
+            const TESSindex* p = &polygons[i*maxPolySize];
+            int polySize = maxPolySize;
+            while (p[polySize-1] == TESS_UNDEF) {
+                --polySize;
+            }
+            for (int j = 0; j < polySize-2; ++j) { // triangle fan
+                const TESSreal* v1 = &vertices[p[j]   * vertexSize];
+                const TESSreal* v2 = &vertices[p[j+1] * vertexSize];
+                const TESSreal* v3 = &vertices[p[j+2] * vertexSize];
+                data.insert(data.end(), {v1[0], v1[1], v2[0], v2[1], v3[0], v3[1]});
+            }
+        }
+    }
+    else {
+        // TODO: error reporting?
     }
 }
 
