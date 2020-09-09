@@ -120,7 +120,7 @@ void Label::onPaintDraw(graphics::Engine* engine)
                     a.insert(a.end(), {
                         xoffset + static_cast<float>(b[2*i]),
                         baseline - (yoffset + static_cast<float>(b[2*i+1])),
-                        0.9, 0.9, 0.9});
+                        0.9f, 0.9f, 0.9f});
                 }
             }
         }
