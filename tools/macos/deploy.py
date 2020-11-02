@@ -47,11 +47,13 @@ import urllib.parse
 import urllib.request
 import uuid
 
-# We use dmgbuild (and its dependencies ds_store, mac_alias, and biplist) to
-# generate our DMG files. These are non-standard packages all shipped alongside
-# this deploy.py script. More info:
+# We use dmgbuild (and its dependencies ds_store and mac_alias) to generate our DMG files.
+# This is a non-standard packages which can be installed via pip, for example:
 #
-# https://dmgbuild.readthedocs.io/en/latest/index.html
+# /Library/Frameworks/Python.framework/Versions/3.9/bin/pip3 install dmgbuild
+#
+# Note that starting with Python 3.9, the old API of plistlib is removed, and
+# thus you need dmgbuild >= 1.4.1 which uses the new API.
 #
 import dmgbuild
 
