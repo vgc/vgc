@@ -289,6 +289,8 @@ if(Python)
         # approach.
         #
         set(PYTHON_EXECUTABLE ${Python}/python.exe CACHE FILEPATH "Path to the Python executable")
+    elseif(APPLE)
+        set(PYTHON_EXECUTABLE ${Python}/bin/python3 CACHE FILEPATH "Path to the Python executable")
     endif()
 endif()
 find_package(PythonInterp 3.6 REQUIRED)
