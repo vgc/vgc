@@ -291,7 +291,7 @@ function(vgc_add_app APP_NAME)
     vgc_prepend_(TARGET_NAME vgc_app_ ${APP_NAME})
 
     # Add executable
-    add_executable(${TARGET_NAME} ${ARG_CPP_FILES})
+    add_executable(${TARGET_NAME} WIN32 ${ARG_CPP_FILES})
 
     # VGC dependencies
     vgc_prepend_(VGC_DEPENDENCIES vgc_lib_ ${ARG_VGC_DEPENDENCIES})
