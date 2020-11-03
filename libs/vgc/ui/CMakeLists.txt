@@ -6,6 +6,7 @@ vgc_add_library(ui
 
     HEADER_FILES
         api.h
+        button.h
         colorpalette.h
         event.h
         label.h
@@ -13,6 +14,7 @@ vgc_add_library(ui
         widget.h
 
     CPP_FILES
+        button.cpp
         colorpalette.cpp
         event.cpp
         label.cpp
