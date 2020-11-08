@@ -27,10 +27,81 @@ Widget::Widget() :
 
 }
 
-/* static */
 WidgetPtr Widget::create()
 {
     return WidgetPtr(new Widget());
+}
+
+namespace {
+bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false)
+{
+    if (parent && parent->isDescendantObject(child)) {
+        if (simulate) return false;
+        else throw ChildCycleError(parent, child);
+    }
+    return true;
+}
+} // namespace
+
+bool Widget::canReparent(Widget* newParent)
+{
+    const bool simulate = true;
+    return checkCanReparent_(newParent, this, simulate);
+}
+
+void Widget::reparent(Widget* newParent)
+{
+    checkCanReparent_(newParent, this);
+    appendObjectToParent_(newParent);
+}
+
+namespace {
+bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = false)
+{
+    if (!oldWidget) {
+        if (simulate) return false;
+        else throw core::NullError();
+    }
+
+    if (oldWidget == newWidget) {
+        return true;
+    }
+
+    Widget* oldWidgetParent = oldWidget->parent();
+    if (oldWidgetParent) {
+        return checkCanReparent_(oldWidgetParent, newWidget, simulate);
+    }
+    else {
+        return true;
+    }
+}
+} // namespace
+
+bool Widget::canReplace(Widget* oldWidget)
+{
+    const bool simulate = true;
+    return checkCanReplace_(oldWidget, this, simulate);
+}
+
+void Widget::replace(Widget* oldWidget)
+{
+    checkCanReplace_(oldWidget, this);
+    if (this == oldWidget) {
+        // nothing to do
+        return;
+    }
+    // Note: this Widget might be a descendant of oldWidget, so we need
+    // remove it from parent before destroying the old Widget.
+    Widget* parent = oldWidget->parent();
+    Widget* nextSibling = oldWidget->nextSibling();
+    core::ObjectPtr self = removeObjectFromParent_();
+    oldWidget->destroyObject_();
+    if (parent) {
+        parent->insertChildObject_(this, nextSibling);
+    }
+    else {
+        // nothing to do
+    }
 }
 
 void Widget::resize(float width, float height)

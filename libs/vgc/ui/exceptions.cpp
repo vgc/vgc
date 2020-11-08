@@ -14,12 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
+#include <vgc/ui/exceptions.h>
 
-void wrap_exceptions(py::module& m);
-void wrap_widget(py::module& m);
+#include <vgc/core/format.h>
+#include <vgc/ui/widget.h>
 
-PYBIND11_MODULE(ui, m) {
-    wrap_exceptions(m);
-    wrap_widget(m);
+namespace vgc {
+namespace ui {
+
+namespace internal {
+
+std::string childCycleMsg(const Widget* parent, const Widget* child)
+{
+    return core::format(
+        "Widget {} cannot be a child of Widget {}"
+        " because the latter is a descendant of the former",
+        core::toAddressString(child),
+        core::toAddressString(parent));
 }
+
+} // namespace internal
+
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ChildCycleError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RuntimeError)
+
+} // namespace ui
+} // namespace vgc
