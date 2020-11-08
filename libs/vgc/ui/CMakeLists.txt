@@ -9,6 +9,7 @@ vgc_add_library(ui
         button.h
         colorpalette.h
         event.h
+        exceptions.h
         label.h
         mouseevent.h
         widget.h
@@ -17,6 +18,7 @@ vgc_add_library(ui
         button.cpp
         colorpalette.cpp
         event.cpp
+        exceptions.cpp
         label.cpp
         mouseevent.cpp
         widget.cpp
