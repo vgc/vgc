@@ -137,6 +137,11 @@ void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix)
 
 bool Object::isDescendantObject(const Object* other) const
 {
+    // Fast path when other is nullptr
+    if (!other) {
+        return false;
+    }
+
     // Go up from this node to the root; check if we encounter the other node
     const Object* obj = this;
     while (obj != nullptr) {
@@ -246,7 +251,7 @@ void Object::destroyObject_()
 
 void Object::destroyChildObject_(Object* child)
 {
-    if (child->parentObject_ != this) {
+    if (!child || child->parentObject_ != this) {
         throw core::NotAChildError(child, this);
     }
     else {
@@ -266,6 +271,11 @@ void Object::prependChildObject_(Object* child)
 
 void Object::insertChildObject_(Object* child, Object* nextSibling)
 {
+    // Check that child is non-nullptr
+    if (!child) {
+        throw core::NullError();
+    }
+
     // Ensure that nextSibling is either null or a child of `this`
     if (nextSibling && nextSibling->parentObject_ != this) {
         throw core::NotAChildError(nextSibling, this);
@@ -307,7 +317,7 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
 
 ObjectPtr Object::removeChildObject_(Object* child)
 {
-    if (child->parentObject_ != this) {
+    if (!child || child->parentObject_ != this) {
         throw core::NotAChildError(child, this);
     }
     else {
@@ -317,17 +327,32 @@ ObjectPtr Object::removeChildObject_(Object* child)
 
 void Object::appendObjectToParent_(Object* parent)
 {
-    parent->appendChildObject_(this);
+    if (parent) {
+        parent->appendChildObject_(this);
+    }
+    else {
+        removeObjectFromParent_();
+    }
 }
 
 void Object::prependObjectToParent_(Object* parent)
 {
-    parent->prependChildObject_(this);
+    if (parent) {
+        parent->prependChildObject_(this);
+    }
+    else {
+        removeObjectFromParent_();
+    }
 }
 
 void Object::insertObjectToParent_(Object* parent, Object* nextSibling)
 {
-    parent->insertChildObject_(this, nextSibling);
+    if (parent) {
+        parent->insertChildObject_(this, nextSibling);
+    }
+    else {
+        removeObjectFromParent_();
+    }
 }
 
 ObjectPtr Object::removeObjectFromParent_()
