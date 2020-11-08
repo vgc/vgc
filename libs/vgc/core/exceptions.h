@@ -399,6 +399,24 @@ public:
     IndexError(const std::string& reason) : LogicError(reason) {}
 };
 
+/// \class vgc::core::NullError
+/// \brief Raised when a null pointer is encountered.
+///
+/// This exception is raised whenever a function expects an argument
+/// to be non-null, but is given a null pointer.
+///
+class VGC_CORE_API_EXCEPTION NullError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs a NotAliveError informing that the Object \p object is not
+    /// alive.
+    ///
+    NullError() :
+        LogicError("Null pointer encountered") {}
+};
+
 class Object;
 
 namespace internal {

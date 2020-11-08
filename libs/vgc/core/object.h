@@ -615,7 +615,8 @@ public:
     }
 
     /// Returns whether this Object is a descendant of the given \p other
-    /// Object. Returns true in the special case where `this == other`.
+    /// Object. Returns true in the special case where `this == other`. Returns
+    /// false if \p other is nullptr.
     ///
     bool isDescendantObject(const Object* other) const;
 
@@ -678,8 +679,9 @@ protected:
     ///
     void destroyObject_();
 
-    /// Destroys a child of this Object. If child isn't a child of this Object,
-    /// then NotAChildError is raised. See destroyObject_() for details.
+    /// Destroys a child of this Object. If child is null or isn't a child of
+    /// this Object, then NotAChildError is raised. See destroyObject_() for
+    /// details.
     ///
     /// This is a low-level method which should only be used by direct
     /// subclasses as a helper method to implement their API. This method is
@@ -687,7 +689,8 @@ protected:
     ///
     void destroyChildObject_(Object* child);
 
-    /// Inserts the given Object as the last child of this Object.
+    /// Inserts the given Object as the last child of this Object. If child is
+    /// null, then NullError is raised.
     ///
     /// This is a low-level method which should only be used by direct
     /// subclasses as a helper method to implement their API. This method is
@@ -715,7 +718,8 @@ protected:
     ///
     void appendChildObject_(Object* child);
 
-    /// Inserts the given Object as the first child of this Object.
+    /// Inserts the given Object as the first child of this Object. If child is
+    /// null, then NullError is raised.
     ///
     /// This is a low-level method which should only be used by direct
     /// subclasses as a helper method to implement their API. This method is
@@ -744,9 +748,9 @@ protected:
     void prependChildObject_(Object* child);
 
     /// Inserts the given Object as a child of this Object, just before
-    /// nextSibling. If nextSibling is null, then it is inserted last. If
-    /// nextSibling is non-null but isn't a child of this Object, then
-    /// NotAChildError is raised.
+    /// nextSibling. If child is null, then NullError is raised. If nextSibling
+    /// is null, then it is inserted last. If nextSibling is non-null but isn't
+    /// a child of this Object, then NotAChildError is raised.
     ///
     /// This is a low-level method which should only be used by direct
     /// subclasses as a helper method to implement their API. This method is
@@ -776,7 +780,7 @@ protected:
 
     /// Removes the given Object from the list of children of this Object.
     /// Returns an ObjPtr<Object> managing the given Object which is now a root
-    /// Object and therefore not uniquely owned by its parent. If child isn't a
+    /// Object and therefore not uniquely owned by its parent. If child is null or isn't a
     /// child of this Object, then NotAChildError is raised.
     ///
     /// This is a low-level method which should only be used by direct
@@ -805,8 +809,9 @@ protected:
     ///
     ObjectPtr removeChildObject_(Object* child);
 
-    /// Inserts this Object as the last child of the given parent Object. The
-    /// behavior is undefined if parent is nullptr.
+    /// Inserts this Object as the last child of the given parent Object. If
+    /// parent is null, this function is equivalent to \p
+    /// removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
     /// subclasses to implement their API. This method is automatically made
@@ -824,8 +829,9 @@ protected:
     ///
     void appendObjectToParent_(Object* parent);
 
-    /// Inserts this Object as the first child of the given parent Object. The
-    /// behavior is undefined if parent is nullptr.
+    /// Inserts this Object as the first child of the given parent Object. If
+    /// parent is null, this function is equivalent to \p
+    /// removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
     /// subclasses to implement their API. This method is automatically made
@@ -846,7 +852,8 @@ protected:
     /// Inserts this Object as a child of the given parent Object, just before
     /// nextSibling. If nextSibling is null, then it is inserted last. If
     /// nextSibling is non-null but isn't a child of the given parent, then
-    /// NotAChildError is raised. The behavior is undefined if parent is nullptr.
+    /// NotAChildError is raised. If parent is null, this function is
+    /// equivalent to \p removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
     /// subclasses to implement their API. This method is automatically made

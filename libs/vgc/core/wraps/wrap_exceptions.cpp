@@ -23,6 +23,7 @@ void wrap_exceptions(py::module& m)
     VGC_CORE_WRAP_BASE_EXCEPTION(core, LogicError);
     VGC_CORE_WRAP_EXCEPTION(core, NegativeIntegerError, m, LogicError);
     VGC_CORE_WRAP_EXCEPTION(core, IndexError, m, LogicError);
+    VGC_CORE_WRAP_EXCEPTION(core, NullError, m, LogicError);
     VGC_CORE_WRAP_EXCEPTION(core, NotAliveError, m, LogicError);
     VGC_CORE_WRAP_EXCEPTION(core, NotAChildError, m, LogicError);
 
