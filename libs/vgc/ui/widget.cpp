@@ -21,8 +21,8 @@ namespace ui {
 
 Widget::Widget() :
     Object(),
-    width_(0.0f),
-    height_(0.0f)
+    position_(0.0f, 0.0f),
+    size_(0.0f, 0.0f)
 {
 
 }
@@ -104,10 +104,15 @@ void Widget::replace(Widget* oldWidget)
     }
 }
 
-void Widget::resize(float width, float height)
+void Widget::move(const core::Vec2f& position)
 {
-    width_ = width;
-    height_ = height;
+    position_ = position;
+    repaint();
+}
+
+void Widget::resize(const core::Vec2f& size)
+{
+    size_ = size;
     repaint();
 }
 

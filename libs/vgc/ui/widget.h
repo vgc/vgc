@@ -18,6 +18,7 @@
 #define VGC_UI_WIDGET_H
 
 #include <vgc/core/innercore.h>
+#include <vgc/core/vec2f.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
@@ -264,23 +265,65 @@ public:
         return isDescendantObject(other);
     }
 
+    /// Returns the position of the widget relative to its parent.
+    ///
+    core::Vec2f position() const
+    {
+        return position_;
+    }
+
+    /// Returns the X coordinate of the widget relative to its parent.
+    ///
+    float x() const
+    {
+        return position_[0];
+    }
+
+    /// Returns the Y coordinate of the widget relative to its parent.
+    ///
+    float y() const
+    {
+        return position_[1];
+    }
+
+    /// Moves the widget to the given position relative to its parent.
+    ///
+    void move(const core::Vec2f& position);
+    /// \overload
+    void move(float x, float y)
+    {
+        move(core::Vec2f(x, y));
+    }
+
+    /// Returns the size of the widget.
+    ///
+    core::Vec2f size() const
+    {
+        return size_;
+    }
+
     /// Returns the width of the widget.
     ///
     float width() const
     {
-        return width_;
+        return size_[0];
     }
 
     /// Returns the height of the widget.
     ///
     float height() const
     {
-        return height_;
+        return size_[1];
     }
 
-    /// Resizes the widget to the given width and height.
+    /// Resizes the widget to the given size.
     ///
-    void resize(float width, float height);
+    void resize(const core::Vec2f& size);
+    /// \overload
+    void resize(float width, float height)
+    {
+        resize(core::Vec2f(width, height));
+    }
 
     /// Requests this widget to be repainted, for example because the data
     /// displayed by this widget has changed. The widget is not immediately
@@ -354,8 +397,8 @@ public:
     virtual bool onMouseLeave();
 
 private:
-    float width_;
-    float height_;
+    core::Vec2f position_;
+    core::Vec2f size_;
 };
 
 } // namespace ui
