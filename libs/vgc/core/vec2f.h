@@ -39,7 +39,7 @@ namespace core {
 /// (= unit vector). Unlike other libraries, we do not use separate types for
 /// all these use cases.
 ///
-/// The memory size a Vec2f is exactly 2 * sizeof(float). This will never
+/// The memory size of a Vec2f is exactly 2 * sizeof(float). This will never
 /// change in any future version, as this allows to conveniently use this class
 /// for data transfer to the GPU (via OpenGL, Metal, etc.).
 ///
