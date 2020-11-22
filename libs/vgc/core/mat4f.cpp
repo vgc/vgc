@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/mat4d.h>
+#include <vgc/core/mat4f.h>
 
 // Note: The 4x4 matrix inversion is lifted from __gluInvertMatrixd, which can
 // be found in the file src/libutil/project.c of the MESA implementation of
@@ -54,9 +54,9 @@
 
 namespace {
 
-bool gluInvertMatrix_(const double* m, double* invOut)
+bool gluInvertMatrix_(const float* m, float* invOut)
 {
-    double inv[16], det;
+    float inv[16], det;
     int i;
 
     inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15]
@@ -109,11 +109,11 @@ bool gluInvertMatrix_(const double* m, double* invOut)
 namespace vgc {
 namespace core {
 
-Mat4d Mat4d::inverse() const
+Mat4f Mat4f::inverse() const
 {
-    Mat4d inv;
-    const double* thisData = reinterpret_cast<const double*>(data_);
-    double* invData = reinterpret_cast<double*>(inv.data_);
+    Mat4f inv;
+    const float* thisData = reinterpret_cast<const float*>(data_);
+    float* invData = reinterpret_cast<float*>(inv.data_);
     gluInvertMatrix_(thisData, invData);
     return inv;
 }
