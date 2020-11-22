@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script generates all Vec2x.h/.cpp files. Usage:
+# This script generates all vec2x.h/.cpp files. Usage:
 #
 # ./vec2.py
 #
