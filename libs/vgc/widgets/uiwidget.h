@@ -81,8 +81,7 @@ private:
     widgets::UiWidgetEnginePtr engine_;
 
     // Projection and view matrices
-    QMatrix4x4 proj_;
-    QMatrix4x4 view_;
+    core::Mat4f proj_;
 
     // Shader program
     QOpenGLShaderProgram shaderProgram_;
@@ -120,10 +119,20 @@ public:
     /// Initializes the engine with the given OpenGL parameters required to
     /// perform its OpenGL calls.
     ///
-    void initialize(UiWidget::OpenGLFunctions* functions, int posLoc, int colLoc);
+    void initialize(UiWidget::OpenGLFunctions* functions,
+                    QOpenGLShaderProgram* shaderProgram,
+                    int posLoc, int colLoc, int projLoc, int viewLoc);
 
     // Implementation of graphics::Engine API
     void clear(const core::Color& color) override;
+    core::Mat4f projectionMatrix() override;
+    void setProjectionMatrix(const core::Mat4f& m) override;
+    void pushProjectionMatrix() override;
+    void popProjectionMatrix() override;
+    core::Mat4f viewMatrix() override;
+    void setViewMatrix(const core::Mat4f& m) override;
+    void pushViewMatrix() override;
+    void popViewMatrix() override;
     Int createTriangles() override;
     void loadTriangles(Int id, const float* data, Int length) override;
     void drawTriangles(Int id) override;
@@ -131,8 +140,13 @@ public:
 
 private:
     UiWidget::OpenGLFunctions* openGLFunctions_;
+    QOpenGLShaderProgram* shaderProgram_;
     int posLoc_;
     int colLoc_;
+    int projLoc_;
+    int viewLoc_;
+    core::Array<core::Mat4f> projectionMatrices_;
+    core::Array<core::Mat4f> viewMatrices_;
     graphics::IdGenerator trianglesIdGenerator_;
     struct TrianglesBuffer {
         // Note: we use a pointer for the VAO because copying

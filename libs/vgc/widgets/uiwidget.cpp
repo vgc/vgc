@@ -33,12 +33,21 @@ QString shaderPath_(const std::string& name) {
     return toQt(path);
 }
 
-QMatrix4x4 toQtMatrix(const core::Mat4d& m) {
-    return QMatrix4x4(
+core::Mat4f toMat4f(const core::Mat4d& m) {
+    // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
+    return core::Mat4f(
                (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
                (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
                (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
                (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
+}
+
+QMatrix4x4 toQtMatrix(const core::Mat4f& m) {
+    return QMatrix4x4(
+               m(0,0), m(0,1), m(0,2), m(0,3),
+               m(1,0), m(1,1), m(1,2), m(1,3),
+               m(2,0), m(2,1), m(2,2), m(2,3),
+               m(3,0), m(3,1), m(3,2), m(3,3));
 }
 
 struct XYRGBVertex {
@@ -124,7 +133,7 @@ void UiWidget::initializeGL()
 
     // Initialize engine
     OpenGLFunctions* f = openGLFunctions();
-    engine_->initialize(f, posLoc_, colLoc_);
+    engine_->initialize(f, &shaderProgram_, posLoc_, colLoc_, projLoc_, viewLoc_);
 
     // Initialize widget for painting
     widget_->onPaintCreate(engine_.get());
@@ -134,8 +143,7 @@ void UiWidget::resizeGL(int w, int h)
 {
     geometry::Camera2d c;
     c.setViewportSize(w, h);
-    proj_ = toQtMatrix(c.projectionMatrix());
-    view_ = QMatrix4x4(); // identity
+    proj_ = toMat4f(c.projectionMatrix());
 
     // Resize widget. Note: if w or h is > 16777216 (=2^24), then static_cast
     // silently rounds to the nearest integer representable as a float. See:
@@ -147,8 +155,9 @@ void UiWidget::resizeGL(int w, int h)
 void UiWidget::paintGL()
 {
     shaderProgram_.bind();
-    shaderProgram_.setUniformValue(projLoc_, proj_);
-    shaderProgram_.setUniformValue(viewLoc_, view_);
+    engine_->setProjectionMatrix(proj_);
+    engine_->setViewMatrix(core::Mat4f::identity());
+    engine_->clear(core::Color(0.337, 0.345, 0.353));
     widget_->onPaintDraw(engine_.get());
     shaderProgram_.release();
 }
@@ -166,7 +175,10 @@ void UiWidget::onRepaintRequested()
 UiWidgetEngine::UiWidgetEngine() :
     graphics::Engine()
 {
-
+    projectionMatrices_.clear();
+    projectionMatrices_.append(core::Mat4f::identity());
+    viewMatrices_.clear();
+    viewMatrices_.append(core::Mat4f::identity());
 }
 
 /* static */
@@ -175,11 +187,16 @@ UiWidgetEnginePtr UiWidgetEngine::create()
     return UiWidgetEnginePtr(new UiWidgetEngine());
 }
 
-void UiWidgetEngine::initialize(UiWidget::OpenGLFunctions* functions, int posLoc, int colLoc)
+void UiWidgetEngine::initialize(UiWidget::OpenGLFunctions* functions,
+                                QOpenGLShaderProgram* shaderProgram,
+                                int posLoc, int colLoc, int projLoc, int viewLoc)
 {
     openGLFunctions_ = functions;
+    shaderProgram_ = shaderProgram;
     posLoc_ = posLoc;
     colLoc_ = colLoc;
+    projLoc_ = projLoc;
+    viewLoc_ = viewLoc;
 }
 
 void UiWidgetEngine::clear(const core::Color& color)
@@ -190,6 +207,58 @@ void UiWidgetEngine::clear(const core::Color& color)
         static_cast<float>(color.b()),
         static_cast<float>(color.a()));
     openGLFunctions_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+core::Mat4f UiWidgetEngine::projectionMatrix()
+{
+    return projectionMatrices_.last();
+}
+
+void UiWidgetEngine::setProjectionMatrix(const core::Mat4f& m)
+{
+    projectionMatrices_.last() = m;
+    shaderProgram_->setUniformValue(projLoc_, toQtMatrix(m));
+}
+
+void UiWidgetEngine::pushProjectionMatrix()
+{
+    // Note: we need a temporary copy by value, since the address
+    // of the current projection matrix might change during "append" in
+    // case of memory re-allocation.
+    core::Mat4f m = projectionMatrix();
+    projectionMatrices_.append(m);
+}
+
+void UiWidgetEngine::popProjectionMatrix()
+{
+    projectionMatrices_.removeLast();
+    shaderProgram_->setUniformValue(projLoc_, toQtMatrix(projectionMatrices_.last()));
+}
+
+core::Mat4f UiWidgetEngine::viewMatrix()
+{
+    return viewMatrices_.last();
+}
+
+void UiWidgetEngine::setViewMatrix(const core::Mat4f& m)
+{
+    viewMatrices_.last() = m;
+    shaderProgram_->setUniformValue(viewLoc_, toQtMatrix(m));
+}
+
+void UiWidgetEngine::pushViewMatrix()
+{
+    // Note: we need a temporary copy by value, since the address
+    // of the current view matrix might change during "append" in
+    // case of memory re-allocation.
+    core::Mat4f m = viewMatrix();
+    viewMatrices_.append(m);
+}
+
+void UiWidgetEngine::popViewMatrix()
+{
+    viewMatrices_.removeLast();
+    shaderProgram_->setUniformValue(viewLoc_, toQtMatrix(viewMatrices_.last()));
 }
 
 Int UiWidgetEngine::createTriangles()
