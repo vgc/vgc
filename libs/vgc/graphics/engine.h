@@ -19,6 +19,7 @@
 
 #include <vgc/core/color.h>
 #include <vgc/core/innercore.h>
+#include <vgc/core/mat4f.h>
 #include <vgc/graphics/api.h>
 
 namespace vgc {
@@ -32,6 +33,14 @@ VGC_DECLARE_OBJECT(Engine);
 /// This class is an abstract base class defining a common shared API for
 /// graphics rendering. Implementations of this abstraction may provide
 /// backends such as OpenGL, Vulkan, Direct3D, Metal, or software rendering.
+///
+/// The graphics engine is responsible for managing two matrix stacks: the
+/// projection matrix stack, and the view matrix stack. When the engine is
+/// constructed, each of these stacks is initialized with the identity matrix
+/// as the only matrix in the stack. It is undefined behavior for clients to
+/// call "pop" more times than "push": some implementations may emit an
+/// exception (instantly or later), others may cause a crash (instantly or
+/// later), or the drawing operations may fail.
 ///
 class VGC_GRAPHICS_API Engine : public core::Object {
 private:
@@ -48,6 +57,44 @@ public:
     /// Clears the whole render area with the given color.
     ///
     virtual void clear(const core::Color& color) = 0;
+
+    /// Returns the current projection matrix.
+    ///
+    virtual core::Mat4f projectionMatrix() = 0;
+
+    /// Sets the current projection matrix.
+    ///
+    virtual void setProjectionMatrix(const core::Mat4f& m) = 0;
+
+    /// Adds a copy of the current projection matrix to the matrix stack.
+    ///
+    virtual void pushProjectionMatrix() = 0;
+
+    /// Removes the current projection matrix from the matrix stack.
+    ///
+    /// The behavior is undefined if there is only one matrix in the stack
+    /// before calling this function.
+    ///
+    virtual void popProjectionMatrix() = 0;
+
+    /// Returns the current view matrix.
+    ///
+    virtual core::Mat4f viewMatrix() = 0;
+
+    /// Sets the current view matrix.
+    ///
+    virtual void setViewMatrix(const core::Mat4f& m) = 0;
+
+    /// Adds a copy of the current view matrix to the matrix stack.
+    ///
+    virtual void pushViewMatrix() = 0;
+
+    /// Removes the current view matrix from the matrix stack.
+    ///
+    /// The behavior is undefined if there is only one matrix in the stack
+    /// before calling this function.
+    ///
+    virtual void popViewMatrix() = 0;
 
     /// Creates a vertex buffer for storing triangles data, and returns the ID
     /// of the buffer.
