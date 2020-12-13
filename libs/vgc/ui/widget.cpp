@@ -22,7 +22,9 @@ namespace ui {
 Widget::Widget() :
     Object(),
     position_(0.0f, 0.0f),
-    size_(0.0f, 0.0f)
+    size_(0.0f, 0.0f),
+    mousePressedChild_(nullptr),
+    mouseEnteredChild_(nullptr)
 {
 
 }
@@ -42,6 +44,12 @@ bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false)
     return true;
 }
 } // namespace
+
+void Widget::addChild(Widget* child)
+{
+    checkCanReparent_(this, child);
+    appendChildObject_(child);
+}
 
 bool Widget::canReparent(Widget* newParent)
 {
@@ -118,36 +126,147 @@ void Widget::resize(const core::Vec2f& size)
 
 void Widget::repaint()
 {
-    repaintRequested();
+    Widget* widget = this;
+    while (widget) {
+        widget->repaintRequested();
+        widget = widget->parent();
+    }
 }
 
-void Widget::onPaintCreate(graphics::Engine* /*engine*/)
+void Widget::onPaintCreate(graphics::Engine* engine)
 {
-
+    for (Widget* child : children()) {
+        child->onPaintCreate(engine);
+    }
 }
 
-void Widget::onPaintDraw(graphics::Engine* /*engine*/)
+void Widget::onPaintDraw(graphics::Engine* engine)
 {
-
+    for (Widget* widget : children()) {
+        engine->pushViewMatrix();
+        core::Mat4f m = engine->viewMatrix();
+        core::Vec2f pos = widget->position();
+        m.translate(pos[0], pos[1]); // TODO: Mat4f.translate(const Vec2f&)
+        engine->setViewMatrix(m);
+        widget->onPaintDraw(engine);
+        engine->popViewMatrix();
+    }
 }
 
-void Widget::onPaintDestroy(graphics::Engine* /*engine*/)
+void Widget::onPaintDestroy(graphics::Engine* engine)
 {
-
+    for (Widget* child : children()) {
+        child->onPaintDestroy(engine);
+    }
 }
 
-bool Widget::onMouseMove(MouseEvent* /*event*/)
+bool Widget::onMouseMove(MouseEvent* event)
 {
+    // If we are in the middle of a press-move-release sequence, then we
+    // automatically forward the move event to the pressed child. We also delay
+    // emitting the leave event until the mouse is released (see implementation
+    // of onMouseRelease).
+    //
+    if (mousePressedChild_) {
+        MouseEventPtr e = ui::MouseEvent::create(event->pos() - mousePressedChild_->position());
+        return mousePressedChild_->onMouseMove(e.get());
+    }
+
+    // Otherwise, we iterate over all child widgets. Note that we iterate in
+    // reverse order, so that widgets drawn last receive the event first. Also
+    // note that for now, widget are always "opaque for mouse events", that is,
+    // if a widget A is on top of a sibling widget B, then the widget B doesn't
+    // receive the mouse event.
+    //
+    float x = event->x();
+    float y = event->y();
+    for (Widget* child = lastChild(); child != nullptr; child = child->previousSibling()) {
+        float cx = child->x();
+        float cy = child->y();
+        float cw = child->width();
+        float ch = child->height();
+        if (cx <= x && x <= cx + cw && cy <= y && y <= cy + ch) {
+            if (mouseEnteredChild_ != child) {
+                if (mouseEnteredChild_) {
+                    mouseEnteredChild_->onMouseLeave();
+                }
+                child->onMouseEnter();
+                mouseEnteredChild_ = child;
+            }
+            MouseEventPtr e = ui::MouseEvent::create(event->pos() - child->position());
+            return child->onMouseMove(e.get());
+        }
+
+    }
+
+    // Emit leave event if we're not anymore in previously entered widget.
+    //
+    if (mouseEnteredChild_) {
+        mouseEnteredChild_->onMouseLeave();
+        mouseEnteredChild_ = nullptr;
+    }
+
+    return false;    
+
+    // TODO: we could (should?) modify the existing MouseEvent object instead
+    // of creating a new one when propagating to children. This would reduce
+    // the number of allocations.
+    //
+    // TODO: We could (should?) factorize the code:
+    //
+    //   if (cx <= x && x <= cx + cw && cy <= y && y <= cy + ch) {
+    //       ...
+    //   }
+    //
+    // into something along the lines of:
+    //
+    //   if (child->rect().contains(event->pos())) {
+    //       ...
+    //   }
+    //
+    // However, what if we allow rotated widgets? Or if the widget isn't shaped
+    // as a rectangle, for example a circle? Perhaps a more generic approach
+    // would be, instead of a "rect()" method, to have a boundingRect() method,
+    // complemented by a virtual bool isUnderMouse(const Vec2f& p) method, so
+    // that we can hangle non-rectangle or non-axis-aligned widgets.
+}
+
+bool Widget::onMousePress(MouseEvent* event)
+{
+    // Note: we don't handle multiple clicks, that is, a left-button-pressed
+    // must be released before we issue a right-button-press
+    if (mouseEnteredChild_ && !mousePressedChild_) {
+        mousePressedChild_ = mouseEnteredChild_;
+        MouseEventPtr e = ui::MouseEvent::create(event->pos() - mousePressedChild_->position());
+        return mousePressedChild_->onMousePress(e.get());
+    }
     return false;
 }
 
-bool Widget::onMousePress(MouseEvent* /*event*/)
+bool Widget::onMouseRelease(MouseEvent* event)
 {
-    return false;
-}
+    if (mousePressedChild_) {
+        MouseEventPtr e = ui::MouseEvent::create(event->pos() - mousePressedChild_->position());
+        bool accepted = mousePressedChild_->onMouseRelease(e.get());
 
-bool Widget::onMouseRelease(MouseEvent* /*event*/)
-{
+        // Emit the mouse leave event now if the mouse exited the widget during
+        // the press-move-release sequence.
+        float x = event->x();
+        float y = event->y();
+        float cx = mousePressedChild_->x();
+        float cy = mousePressedChild_->y();
+        float cw = mousePressedChild_->width();
+        float ch = mousePressedChild_->height();
+        if (!(cx <= x && x <= cx + cw && cy <= y && y <= cy + ch)) {
+            if (mouseEnteredChild_ != mousePressedChild_) {
+                throw core::LogicError("mouseEnteredChild_ != mousePressedChild_");
+            }
+            mouseEnteredChild_->onMouseLeave();
+            mouseEnteredChild_ = nullptr;
+        }
+        mousePressedChild_ = nullptr;
+        return accepted;
+    }
     return false;
 }
 
