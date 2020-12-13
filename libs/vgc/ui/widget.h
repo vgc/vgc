@@ -225,6 +225,21 @@ public:
         return WidgetList(firstChild(), nullptr);
     }
 
+    /// Creates a new widget of type \p WidgetClass constructed with
+    /// the given arguments \p args, and add it as a child of this widget.
+    /// Returns a pointer to the created widget.
+    ///
+    template<typename WidgetClass, typename... Args>
+    WidgetClass* createChild(Args&&... args) {
+        core::ObjPtr<WidgetClass> child = WidgetClass::create(args...);
+        addChild(child.get());
+        return child.get();
+    }
+
+    /// Adds a child to this widget.
+    ///
+    void addChild(Widget* child);
+
     /// Returns whether this Widget can be reparented with the given \p newParent.
     /// See reparent() for details.
     ///
@@ -399,7 +414,28 @@ public:
 private:
     core::Vec2f position_;
     core::Vec2f size_;
+    Widget* mousePressedChild_;
+    Widget* mouseEnteredChild_;
 };
+
+inline WidgetIterator& WidgetIterator::operator++() {
+    widget_ = widget_->nextSibling();
+    return *this;
+}
+
+inline WidgetIterator WidgetIterator::operator++(int) {
+    WidgetIterator res(*this);
+    operator++();
+    return res;
+}
+
+inline bool operator==(const WidgetIterator& it1, const WidgetIterator& it2) {
+    return it1.widget_ == it2.widget_;
+}
+
+inline bool operator!=(const WidgetIterator& it1, const WidgetIterator& it2) {
+    return !(it1 == it2);
+}
 
 } // namespace ui
 } // namespace vgc
