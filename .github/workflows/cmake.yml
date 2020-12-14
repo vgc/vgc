@@ -15,6 +15,11 @@ jobs:
         # We need to fetch more than one commit to get the correct build name
         fetch-depth: 100
 
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: '5.15.2'
+
     - name: Configure
       shell: bash
       working-directory: ${{runner.workspace}}
