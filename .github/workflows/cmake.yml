@@ -46,7 +46,8 @@ jobs:
         sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
         ls -ls
         echo "${{runner.workspace}}"
-        tree ${{runner.workspace}}
+        sudo apt-get install -y tree
+        tree ${{runner.workspace}}/qt
         CMAKE_EXTRA_ARGS+=" -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64"
         echo "${CMAKE_EXTRA_ARGS}"
 
