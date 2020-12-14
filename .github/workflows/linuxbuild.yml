@@ -20,24 +20,24 @@ jobs:
     # https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables
     - name: Print GitHub environment variables
       run: |
-        echo $GITHUB_WORKFLOW
-        echo $GITHUB_RUN_ID
-        echo $GITHUB_RUN_NUMBER
-        echo $GITHUB_ACTION
-        echo $GITHUB_ACTIONS
-        echo $GITHUB_ACTOR
-        echo $GITHUB_REPOSITORY
-        echo $GITHUB_EVENT_NAME
-        echo $GITHUB_EVENT_PATH
-        echo $GITHUB_WORKSPACE
-        echo $GITHUB_SHA
-        echo $GITHUB_REF
-        echo $GITHUB_HEAD_REF
-        echo $GITHUB_BASE_REF
-        echo $GITHUB_SERVER_URL
-        echo $GITHUB_API_URL
-        echo $GITHUB_GRAPHQL_URL
-        echo $COMMIT_MESSAGE
+        echo "GITHUB_WORKFLOW:      $GITHUB_WORKFLOW"
+        echo "GITHUB_RUN_ID:        $GITHUB_RUN_ID"
+        echo "GITHUB_RUN_NUMBER:    $GITHUB_RUN_NUMBER"
+        echo "GITHUB_ACTION:        $GITHUB_ACTION"
+        echo "GITHUB_ACTIONS:       $GITHUB_ACTIONS"
+        echo "GITHUB_ACTOR:         $GITHUB_ACTOR"
+        echo "GITHUB_REPOSITORY:    $GITHUB_REPOSITORY"
+        echo "GITHUB_EVENT_NAME:    $GITHUB_EVENT_NAME"
+        echo "GITHUB_EVENT_PATH:    $GITHUB_EVENT_PATH"
+        echo "GITHUB_WORKSPACE:     $GITHUB_WORKSPACE"
+        echo "GITHUB_SHA:           $GITHUB_SHA"
+        echo "GITHUB_REF:           $GITHUB_REF"
+        echo "GITHUB_HEAD_REF:      $GITHUB_HEAD_REF"
+        echo "GITHUB_BASE_REF:      $GITHUB_BASE_REF"
+        echo "GITHUB_SERVER_URL:    $GITHUB_SERVER_URL"
+        echo "GITHUB_API_URL:       $GITHUB_API_URL"
+        echo "GITHUB_GRAPHQL_URL:   $GITHUB_GRAPHQL_URL"
+        echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
 
     - name: Setup Python
       uses: actions/setup-python@v2
