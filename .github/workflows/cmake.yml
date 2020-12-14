@@ -4,6 +4,7 @@ on: [push]
 
 env:
   BUILD_TYPE: Release
+  QT_VERSION: 5.12.5
 
 jobs:
   build:
@@ -15,15 +16,35 @@ jobs:
         # We need to fetch more than one commit to get the correct build name
         fetch-depth: 100
 
-    - uses: actions/setup-python@v2
+    - name: Setup Python
+      uses: actions/setup-python@v2
       with:
         python-version: '3.7'
         architecture: 'x64'
 
+    - name: Install most dependencies
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: |
+        sudo apt-get install -y libgl1-mesa-dev
+        sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
+        sudo apt-get install -y libfreetype6-dev
+        sudo apt-get install -y libharfbuzz-dev
+
+    # The following works to install Qt, but it takes quite a long time (4min) and
+    # it overrides our python version
+    #- name: Install Qt
+    #  uses: jurplel/install-qt-action@v2
+    #  with:
+    #    version: '5.15.2'
+
     - name: Install Qt
-      uses: jurplel/install-qt-action@v2
-      with:
-        version: '5.15.2'
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: |
+        wget https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
+        sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}/opt
+        CMAKE_EXTRA_ARGS+=" -DQt=${{runner.workspace}}/opt/qt/$QT_VERSION/gcc_64"
 
     - name: Configure
       shell: bash
@@ -31,7 +52,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE ${CMAKE_EXTRA_ARGS}
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
