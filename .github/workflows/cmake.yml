@@ -7,13 +7,18 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-16.04
 
     steps:
     - uses: actions/checkout@v2
       with:
         # We need to fetch more than one commit to get the correct build name
         fetch-depth: 100
+
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+        architecture: 'x64'
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -28,17 +33,17 @@ jobs:
         cd build
         cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
-#    - name: Build
-#      working-directory: ${{runner.workspace}}/build
-#      shell: bash
-#      run: make
-#
-#    - name: Test
-#      working-directory: ${{runner.workspace}}/build
-#      shell: bash
-#      run: make check
-#
-#    - name: Deploy
-#      working-directory: ${{runner.workspace}}/build
-#      shell: bash
-#      run: make check
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: make
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: make check
+
+    - name: Deploy
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: make deploy
