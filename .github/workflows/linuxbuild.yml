@@ -19,6 +19,11 @@ jobs:
         # We need to fetch more than one commit to get the correct build name
         fetch-depth: 100
 
+    - name: Print git log
+      shell: bash
+      working-directory: $GITHUB_WORKSPACE
+      run: git log
+
     - name: Get commit branch and commit message
       if: github.event_name == 'push'
       run: |
@@ -55,7 +60,7 @@ jobs:
         echo "GITHUB_SERVER_URL:    $GITHUB_SERVER_URL"
         echo "GITHUB_API_URL:       $GITHUB_API_URL"
         echo "GITHUB_GRAPHQL_URL:   $GITHUB_GRAPHQL_URL"
-        echo "COMMIT_MESSAGE:       $COMMIT_BRANCH"
+        echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
 
     - name: Setup Python
