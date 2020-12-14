@@ -42,14 +42,8 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}
       run: |
-        wget --no-verbose https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
-        sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
-        ls -ls
-        echo "${{runner.workspace}}"
-        sudo apt-get install -y tree
-        tree ${{runner.workspace}}/qt
-        CMAKE_EXTRA_ARGS+=" -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64"
-        echo "${CMAKE_EXTRA_ARGS}"
+        wget --progress=dot:giga https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
+        tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
 
     - name: Configure
       shell: bash
@@ -58,7 +52,7 @@ jobs:
         mkdir build
         cd build
         echo "${CMAKE_EXTRA_ARGS}"
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE ${CMAKE_EXTRA_ARGS}
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
