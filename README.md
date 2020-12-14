@@ -1,7 +1,7 @@
 ![VGC](https://github.com/vgc/vgc/blob/master/hero.png)
 
-[![TravisCI Build Status](https://travis-ci.com/vgc/vgc.svg?branch=master)](https://travis-ci.com/vgc/vgc)
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/3tasnhbrlucfltp5?svg=true)](https://ci.appveyor.com/project/vgc/vgc)
+[![Linux Build](https://github.com/vgc/vgc/workflows/Linux%20Build/badge.svg)](https://github.com/vgc/vgc/actions?query=workflow%3ALinux%20Build)
 
 VGC is an upcoming suite of applications for graphic design and 2D animation,
 in which the lines and shapes you draw are connected to each others both in
