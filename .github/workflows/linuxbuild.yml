@@ -20,12 +20,7 @@ jobs:
         fetch-depth: 100
 
     - name: Print git log
-      shell: bash
-      working-directory: ${{runner.workspace}}
-      run: |
-        cd vgc
-        ls -al
-        git log
+      run: git log
 
     - name: Get commit branch and commit message
       if: github.event_name == 'push'
@@ -102,7 +97,7 @@ jobs:
         mkdir build
         cd build
         echo "${CMAKE_EXTRA_ARGS}"
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$VGC_COMMIT_BRANCH -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
