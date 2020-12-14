@@ -549,7 +549,7 @@ if __name__ == "__main__":
         # Add to list of files to upload
         filesToUpload.append(desiredOutput)
 
-    # Upload artifacts if this is a Travis build.
+    # Upload artifacts if this is a Travis of GitHub Action build.
     #
     # We check for TRAVIS_REPO_SLUG rather than simply TRAVIS to prevent users
     # from mistakenly attempting to upload artifacts to our VGC servers if they
@@ -561,10 +561,22 @@ if __name__ == "__main__":
     # Note that VGC_TRAVIS_KEY is a secure environment variable not defined
     # for pull requests.
     #
+    upload = False
     if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
+        upload = True
         key = os.getenv("VGC_TRAVIS_KEY", default="")
         pr = os.getenv("TRAVIS_PULL_REQUEST", default="false")
         url = "https://webhooks.vgc.io/travis"
+        commitMessage = os.getenv("TRAVIS_COMMIT_MESSAGE")
+    elif os.getenv("GITHUB_REPOSITORY") == "vgc/vgc":
+        upload = False #TODO
+        key = os.getenv("VGC_GITHUB_KEY", default="")
+        headref = os.getenv("GITHUB_HEAD_REF", default="")
+        # TODO: compute pr based on headref
+        pr = ""
+        url = "https://webhooks.vgc.io/github"
+        commitMessage = os.getenv("COMMIT_MESSAGE")
+    if upload:
         print_("Uploading commit metadata...", end="")
         response = post_json(
             urlencode(url, {
@@ -581,7 +593,7 @@ if __name__ == "__main__":
             "commitDate": commitDate,
             "commitTime": commitTime,
             "commitIndex": commitIndex,
-            "commitMessage": os.getenv("TRAVIS_COMMIT_MESSAGE")
+            "commitMessage": commitMessage
         })
         print_(" Done.")
         releaseId = response["releaseId"]
