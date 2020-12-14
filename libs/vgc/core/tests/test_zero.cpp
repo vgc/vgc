@@ -45,6 +45,9 @@ void setZero(F& x) { x.m = 0; }
 // EXPECT_EQ(a.m, 42), but it didn't pass on all compilers (a.m wasn't equal to
 // 42, but was still equal to some garbage value, not zero).
 //
+// Update 2020-12-14: Even the less aggressive EXPECT_NE(a.m, 0) fails when
+// testing on the GitHub Actions Ubuntu machines. Therefore, we comment them out.
+//
 #define FILL { int m = 42; EXPECT_EQ(m, 42); }
 
 // We use this macro to fill heap memory with something else than 0, before
@@ -56,12 +59,12 @@ void setZero(F& x) { x.m = 0; }
 
 TEST(TestZero, StackDefaultInitialization)
 {
-    { FILL; foo::A a; EXPECT_NE(a.m, 0); } // UB!
-    { FILL; foo::B a; EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::A a; EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::B a; EXPECT_NE(a.m, 0); } // UB!
     { FILL; foo::C a; EXPECT_EQ(a.m, 0); }
-    { FILL; foo::D a; EXPECT_NE(a.m, 0); } // UB!
-    { FILL; foo::E a; EXPECT_NE(a.m, 0); } // UB!
-    { FILL; foo::F a; EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::D a; EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::E a; EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::F a; EXPECT_NE(a.m, 0); } // UB!
 }
 
 TEST(TestZero, StackValueInitialization)
@@ -69,9 +72,9 @@ TEST(TestZero, StackValueInitialization)
     { FILL; foo::A a = foo::A(); EXPECT_EQ(a.m, 0); }
     { FILL; foo::B a = foo::B(); EXPECT_EQ(a.m, 0); }
     { FILL; foo::C a = foo::C(); EXPECT_EQ(a.m, 0); }
-    { FILL; foo::D a = foo::D(); EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::D a = foo::D(); EXPECT_NE(a.m, 0); } // UB!
     { FILL; foo::E a = foo::E(); EXPECT_EQ(a.m, 0); }
-    { FILL; foo::F a = foo::F(); EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::F a = foo::F(); EXPECT_NE(a.m, 0); } // UB!
 }
 
 TEST(TestZero, StackListInitialization)
@@ -79,9 +82,9 @@ TEST(TestZero, StackListInitialization)
     { FILL; foo::A a{}; EXPECT_EQ(a.m, 0); }
     { FILL; foo::B a{}; EXPECT_EQ(a.m, 0); }
     { FILL; foo::C a{}; EXPECT_EQ(a.m, 0); }
-    { FILL; foo::D a{}; EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::D a{}; EXPECT_NE(a.m, 0); } // UB!
     { FILL; foo::E a{}; EXPECT_EQ(a.m, 0); }
-    { FILL; foo::F a{}; EXPECT_NE(a.m, 0); } // UB!
+    // { FILL; foo::F a{}; EXPECT_NE(a.m, 0); } // UB!
 }
 
 TEST(TestZero, StackExplicitZero)
