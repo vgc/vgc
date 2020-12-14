@@ -44,7 +44,7 @@ jobs:
       run: |
         wget --no-verbose https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
         sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
-        la -ls
+        ls -ls
         echo "${{runner.workspace}}"
         tree ${{runner.workspace}}
         CMAKE_EXTRA_ARGS+=" -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64"
