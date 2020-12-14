@@ -1,0 +1,39 @@
+name: Linux Build
+
+on: [push]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        # We need to fetch more than one commit to get the correct build name
+        fetch-depth: 100
+
+    - name: Configure
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+#    - name: Build
+#      working-directory: ${{runner.workspace}}/build
+#      shell: bash
+#      run: make
+#
+#    - name: Test
+#      working-directory: ${{runner.workspace}}/build
+#      shell: bash
+#      run: make check
+#
+#    - name: Deploy
+#      working-directory: ${{runner.workspace}}/build
+#      shell: bash
+#      run: make check
