@@ -21,8 +21,11 @@ jobs:
 
     - name: Print git log
       shell: bash
-      working-directory: $GITHUB_WORKSPACE
-      run: git log
+      working-directory: ${{runner.workspace}}
+      run: |
+        cd vgc
+        ls -al
+        git log
 
     - name: Get commit branch and commit message
       if: github.event_name == 'push'
