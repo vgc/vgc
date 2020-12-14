@@ -44,7 +44,11 @@ jobs:
       run: |
         wget --no-verbose https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
         sudo tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
+        la -ls
+        echo "${{runner.workspace}}"
+        tree ${{runner.workspace}}
         CMAKE_EXTRA_ARGS+=" -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64"
+        echo "${CMAKE_EXTRA_ARGS}"
 
     - name: Configure
       shell: bash
@@ -52,6 +56,7 @@ jobs:
       run: |
         mkdir build
         cd build
+        echo "${CMAKE_EXTRA_ARGS}"
         cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE ${CMAKE_EXTRA_ARGS}
 
     - name: Build
