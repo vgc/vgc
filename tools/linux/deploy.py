@@ -524,6 +524,7 @@ if __name__ == "__main__":
         env = os.environ.copy()
         env["VERSION"] = dashVersion
         env["LD_LIBRARY_PATH"] = f":{pythonHome}/lib"
+        env["ARCH"] = architecture
         subprocess.run([
             f"{linuxdeployqtPath}",
             f"{appdir}/usr/share/applications/{exeName}.desktop",
