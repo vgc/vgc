@@ -19,12 +19,9 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}
       run: |
-        ls -al
         mkdir build
-        ls -al
         cd build
-        ls -al
-        cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
 #    - name: Build
 #      working-directory: ${{runner.workspace}}/build
