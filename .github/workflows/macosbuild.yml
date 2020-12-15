@@ -72,10 +72,12 @@ jobs:
         brew install harfbuzz
         pip3 install dmgbuild
 
+    # Note: this takes 8min. Could it be reduced by using the cache or another method entirely?
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: '5.15.2'
+        version: ${{env.QT_VERSION}}
+        setup-python: false
 
     #- name: Install Qt
     #  shell: bash
@@ -90,7 +92,7 @@ jobs:
         mkdir build
         cd build
         echo "${CMAKE_EXTRA_ARGS}"
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/Qt/$QT_VERSION/clang_64
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
