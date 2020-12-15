@@ -456,8 +456,17 @@ def compute_lib_replacement(lib):
 
     # Ship VGC libraries (obviously)
     elif "libvgc" in lib:
-        i = lib.find("libvgc")
         return "@rpath/" + Path(lib).name # @rpath/libvgccore.dylib
+
+    # GitHub Actions Python
+    # Note that libpython3.7m.dylib is both in
+    #   Frameworks/libpython3.7m.dylib
+    # and in
+    #   Frameworks/Python/lib/libpython3.7m.dylib
+    # XXX Remove the duplicate
+    elif (lib.startswith("/Users/runner/hostedtoolcache/Python") and
+          ("x64/lib/libpython" in lib)):
+        return "@rpath/" + Path(lib).name # @rpath/libpython3.7m.dylib
 
     # Print a warning if it's not one of the above known categories
     else:
@@ -788,34 +797,93 @@ if __name__ == "__main__":
             copy(lib, bundleLib, verbose=verbose)
 
         # Find Python framework and determine new location
-        pythonFrameworkName = "Python.framework"
+        #
+        # On Travis, the Python structure looks like:
+        #   -- [Python]
+        #   -- Found PythonInterp: /usr/local/bin/python3 (found suitable version "3.9.1", minimum required is "3.6")
+        #   -- Found PythonLibs: /usr/local/Frameworks/Python.framework/Versions/3.9/lib/libpython3.9.dylib (found suitable version "3.9.1", minimum required is "3.6")
+        #   -- Version: 3.9.1
+        #   -- PYTHON_PREFIX: /usr/local/Cellar/python@3.9/3.9.1/Frameworks/Python.framework/Versions/3.9
+        #   -- PYTHON_EXEC_PREFIX: /usr/local/Cellar/python@3.9/3.9.1/Frameworks/Python.framework/Versions/3.9
+        #   -- PYTHON_HOME: /usr/local/Cellar/python@3.9/3.9.1/Frameworks/Python.framework/Versions/3.9
+        #
+        # On GitHub Actions, it looks like:
+        #   -- [Python]
+        #   -- Found PythonInterp: /Users/runner/hostedtoolcache/Python/3.7.9/x64/bin/python3 (found suitable version "3.7.9", minimum required is "3.6")
+        #   -- Found PythonLibs: /Users/runner/hostedtoolcache/Python/3.7.9/x64/lib/libpython3.7m.dylib (found suitable version "3.7.9", minimum required is "3.6")
+        #   -- Version: 3.7.9
+        #   -- PYTHON_PREFIX: /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #   -- PYTHON_EXEC_PREFIX: /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #   -- PYTHON_HOME: /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #
+        #   /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #   ├── Python-3.7.9.tgz
+        #   ├── bin
+        #   │   ├── python -> python3.7
+        #   │   ├── python3 -> python3.7
+        #   │   ├── python3.7
+        #   │   ...
+        #   ├── include
+        #   │   └── python3.7m
+        #   │       ├── Python.h
+        #   │       ...
+        #   ├── lib
+        #   │   ├── libpython3.7m.dylib
+        #   │   ├── pkgconfig
+        #   │   │   ├── python-3.7.pc
+        #   │   │   ├── python-3.7m.pc -> python-3.7.pc
+        #   │   │   └── python3.pc -> python-3.7.pc
+        #   │   └── python3.7
+        #   │       ├── __future__.py
+        #   │       ...
+        #   ├── python -> ./bin/python3.7
+        #   ├── python-3.7.9-darwin-x64.tar.gz
+        #   ├── share
+        #   │   └── man
+        #   │       └── man1
+        #   │           ├── python3.1 -> python3.7.1
+        #   │           └── python3.7.1
+        #   └── tools_structure.txt
+        #
+        print_binary_info(bundleExecutable)
         for lib in get_libs(bundleExecutable):
-            i = lib.find(pythonFrameworkName)
+            i = lib.find("Python.framework")
             if i != -1:
                 pythonOldRef = lib                         # Example: /usr/local/opt/python/Frameworks/Python.framework/Versions/3.7/Python
                 pythonFrameworkOldParent = Path(lib[:i-1]) # Example: /usr/local/opt/python/Frameworks
                 pythonLibRelPath = Path(lib[i:])           # Example: Python.framework/Versions/3.7/Python
                 print("                Found library " + lib + "\n" +
                       "                referenced in " + str(bundleExecutable) + "\n", flush=True)
+                pythonFrameworkOldPath = pythonFrameworkOldParent / "Python.framework"
+                pythonFrameworkPath = bundleFrameworksDir / "Python.framework"
+                pythonHome = (bundleFrameworksDir / pythonLibRelPath).parent
+                break
+            i = lib.find("x64/lib/libpython3")
+            if i != -1:
+                pythonOldRef = lib                            # Example: /Users/runner/hostedtoolcache/Python/3.7.9/x64/lib/libpython3.7m.dylib
+                pythonFrameworkOldParent = Path(lib[:i-1])    # Example: /Users/runner/hostedtoolcache/Python/3.7.9
+                pythonLibRelPath = Path("Python" + lib[i+3:]) # Example: Python/x64/lib/libpython3.7m.dylib
+                print("                Found library " + lib + "\n" +
+                      "                referenced in " + str(bundleExecutable) + "\n", flush=True)
+                pythonFrameworkOldPath = pythonFrameworkOldParent / "x64"
+                pythonFrameworkPath = bundleFrameworksDir / "Python"
+                pythonHome = pythonFrameworkPath
                 break
 
         # Copy Python framework to our bundle
-        pythonFrameworkOldPath = pythonFrameworkOldParent / pythonFrameworkName
-        pythonFrameworkPath = bundleFrameworksDir / pythonFrameworkName
         copy(pythonFrameworkOldPath, pythonFrameworkPath, verbose=verbose)
 
         # Delete Python stuff we don't need.
-        # Sizes are given for the official 64bit-only installation of Python 3.7.4 from www.python.org.
+        # Sizes are given sometimes for the official 64bit-only installation of Python 3.7.4 from www.python.org,
+        # and sometimes for the Python distribution provided by GitHub Actions (GA).
         # We don't keep __pycache__ folders for two reasons:
         # 1. They contain non-relocatable file paths which I don't know how to change
         # 2. The take a lot of space
         # 3. They can be generated at runtime anyway (either preemptively at install time,
         #    or automatically when importing a module at runtime)
-        pythonLibPath = bundleFrameworksDir / pythonLibRelPath
-        pythonHome = pythonLibPath.parent
-        pythonVersionInfo = sys.version_info
+        xDotY = f"{sys.version_info.major}.{sys.version_info.minor}"
+        pythonXdotY = "python" + xDotY
         pythonLibDir = pythonHome / "lib"
-        pythonXdotY = "python{}.{}".format(pythonVersionInfo.major, pythonVersionInfo.minor)
         pythonXdotYDir = pythonLibDir / pythonXdotY
         delete(pythonFrameworkPath / "Python", verbose=verbose)    # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Python ? QtCore, QtGui, etc. do this)
         delete(pythonFrameworkPath / "Resources", verbose=verbose) # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Resources ?)
@@ -829,6 +897,14 @@ if __name__ == "__main__":
         delete(pythonXdotYDir / "test")                            # tests (23 MB) (+ 25 MB of __pycache__)
         for x in pythonXdotYDir.glob("**/__pycache__"):            # Python bytecode (58.5 MB) (including tests)
             delete(x, verbose=verbose)
+        delete(pythonXdotYDir / "site-packages")                   # Manually installed packages (GA: 51MB). Examples: Crypto, pip, setuptools, dmgbuild, mac_alias, ds_store, etc.
+        for x in pythonXdotYDir.glob("**/*.profclangr"):           # Profiling files in unittest folder (GA: 10 MB)
+            delete(x, verbose=verbose)
+        for x in pythonHome.glob("*.tgz"):                         # Compressed copy of python src (GA: 22MB)
+            delete(x, verbose=verbose)
+        for x in pythonHome.glob("*.tar.gz"):                      # Compressed copy of python distribution (GA: 71MB)
+            delete(x, verbose=verbose)
+        delete(pythonXdotYDir / f"config-{xDotY}m-darwin")         # Config stuff (GA: 18MB)
 
         # Copy VGC Python modules to the Python framework
         copy(buildDir / "python/vgc", pythonXdotYDir / "vgc", verbose=verbose)
@@ -1055,9 +1131,11 @@ if __name__ == "__main__":
         dmgbuild.build_dmg(dmgFilename, dmgVolumeName, settings=dmgSettings)
         print("Done.", flush=True)
         filesToUpload.append(dmgFile)
+        print("File size: " + str(dmgFile.stat().st_size) + "B", flush=True)
 
 
-    # Upload artifacts if this is a Travis build.
+
+    # Upload artifacts if this is a Travis of GitHub Action build.
     #
     # We check for TRAVIS_REPO_SLUG rather than simply TRAVIS to prevent users
     # from mistakenly attempting to upload artifacts to our VGC servers if they
@@ -1069,10 +1147,30 @@ if __name__ == "__main__":
     # Note that VGC_TRAVIS_KEY is a secure environment variable not defined
     # for pull requests.
     #
+    upload = False
     if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
+        upload = True
         key = os.getenv("VGC_TRAVIS_KEY", default="")
         pr = os.getenv("TRAVIS_PULL_REQUEST", default="false")
         url = "https://webhooks.vgc.io/travis"
+        commitMessage = os.getenv("TRAVIS_COMMIT_MESSAGE")
+    elif os.getenv("GITHUB_REPOSITORY") == "vgc/vgc":
+        eventName = os.getenv("GITHUB_EVENT_NAME")
+        url = "https://webhooks.vgc.io/github"
+        commitMessage = os.getenv("COMMIT_MESSAGE")
+        if eventName == "pull_request":
+            upload = True
+            key = ""
+            ref = os.getenv("GITHUB_REF") # Example: refs/pull/461/merge
+            pr = ref.split('/')[2]        # Example: 461
+        elif eventName == "push":
+            upload = True
+            key = os.getenv("VGC_GITHUB_KEY")
+            assert key, "Missing key: cannot upload artifact"
+            pr = "false"
+        else:
+            upload = False
+    if upload:
         print_("Uploading commit metadata...", end="")
         response = post_json(
             urlencode(url, {
@@ -1089,7 +1187,7 @@ if __name__ == "__main__":
             "commitDate": commitDate,
             "commitTime": commitTime,
             "commitIndex": commitIndex,
-            "commitMessage": os.getenv("TRAVIS_COMMIT_MESSAGE")
+            "commitMessage": commitMessage
         })
         print_(" Done.")
         releaseId = response["releaseId"]

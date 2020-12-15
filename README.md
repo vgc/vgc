@@ -1,6 +1,7 @@
 ![VGC](https://github.com/vgc/vgc/blob/master/hero.png)
 
 [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/3tasnhbrlucfltp5?svg=true)](https://ci.appveyor.com/project/vgc/vgc)
+[![macOS Build](https://github.com/vgc/vgc/workflows/macOS%20Build/badge.svg?branch=master&event=push)](https://github.com/vgc/vgc/actions?query=workflow%3AmacOS%20Build)
 [![Linux Build](https://github.com/vgc/vgc/workflows/Linux%20Build/badge.svg?branch=master&event=push)](https://github.com/vgc/vgc/actions?query=workflow%3ALinux%20Build)
 
 VGC is an upcoming suite of applications for graphic design and 2D animation,
