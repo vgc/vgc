@@ -575,8 +575,8 @@ if __name__ == "__main__":
         if eventName == "pull_request":
             upload = True
             key = ""
-            headref = os.getenv("GITHUB_HEAD_REF") # Example: refs/pull/461/merge
-            pr = headref.split('/')[2]                         # Example: 461
+            ref = os.getenv("GITHUB_REF") # Example: refs/pull/461/merge
+            pr = ref.split('/')[2]        # Example: 461
         elif eventName == "push":
             upload = True
             key = os.getenv("VGC_GITHUB_KEY")
