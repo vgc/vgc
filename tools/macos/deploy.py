@@ -1122,6 +1122,8 @@ if __name__ == "__main__":
         dmgbuild.build_dmg(dmgFilename, dmgVolumeName, settings=dmgSettings)
         print("Done.", flush=True)
         filesToUpload.append(dmgFile)
+        print("File size: " + str(dmgFile.stat().st_size) + "B", flush=True)
+
 
 
     # Upload artifacts if this is a Travis of GitHub Action build.
@@ -1159,6 +1161,7 @@ if __name__ == "__main__":
             pr = "false"
         else:
             upload = False
+    upload = False
     if upload:
         print_("Uploading commit metadata...", end="")
         response = post_json(

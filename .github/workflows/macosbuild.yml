@@ -103,3 +103,9 @@ jobs:
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: make deploy
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: DMG-Image
+        path: ${{runner.workspace}}/build/deploy/Release/*.dmg
