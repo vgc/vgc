@@ -874,15 +874,16 @@ if __name__ == "__main__":
         copy(pythonFrameworkOldPath, pythonFrameworkPath, verbose=verbose)
 
         # Delete Python stuff we don't need.
-        # Sizes are given for the official 64bit-only installation of Python 3.7.4 from www.python.org.
+        # Sizes are given sometimes for the official 64bit-only installation of Python 3.7.4 from www.python.org,
+        # and sometimes for the Python distribution provided by GitHub Actions (GA).
         # We don't keep __pycache__ folders for two reasons:
         # 1. They contain non-relocatable file paths which I don't know how to change
         # 2. The take a lot of space
         # 3. They can be generated at runtime anyway (either preemptively at install time,
         #    or automatically when importing a module at runtime)
-        pythonVersionInfo = sys.version_info
+        xDotY = f"{sys.version_info.major}.{sys.version_info.minor}"
+        pythonXdotY = "python" + xDotY
         pythonLibDir = pythonHome / "lib"
-        pythonXdotY = "python{}.{}".format(pythonVersionInfo.major, pythonVersionInfo.minor)
         pythonXdotYDir = pythonLibDir / pythonXdotY
         delete(pythonFrameworkPath / "Python", verbose=verbose)    # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Python ? QtCore, QtGui, etc. do this)
         delete(pythonFrameworkPath / "Resources", verbose=verbose) # broken symlink: points to itself (XXX should we instead make it point to Versions/X.Y/Resources ?)
@@ -896,6 +897,14 @@ if __name__ == "__main__":
         delete(pythonXdotYDir / "test")                            # tests (23 MB) (+ 25 MB of __pycache__)
         for x in pythonXdotYDir.glob("**/__pycache__"):            # Python bytecode (58.5 MB) (including tests)
             delete(x, verbose=verbose)
+        delete(pythonXdotYDir / "site-packages")                   # Manually installed packages (GA: 51MB). Examples: Crypto, pip, setuptools, dmgbuild, mac_alias, ds_store, etc.
+        for x in pythonXdotYDir.glob("**/*.profclangr"):           # Profiling files in unittest folder (GA: 10 MB)
+            delete(x, verbose=verbose)
+        for x in pythonHome.glob("*.tgz"):                         # Compressed copy of python src (GA: 22MB)
+            delete(x, verbose=verbose)
+        for x in pythonHome.glob("*.tar.gz"):                      # Compressed copy of python distribution (GA: 71MB)
+            delete(x, verbose=verbose)
+        delete(pythonXdotYDir / f"config-{xDotY}m-darwin")         # Config stuff (GA: 18MB)
 
         # Copy VGC Python modules to the Python framework
         copy(buildDir / "python/vgc", pythonXdotYDir / "vgc", verbose=verbose)
@@ -1161,7 +1170,6 @@ if __name__ == "__main__":
             pr = "false"
         else:
             upload = False
-    upload = False
     if upload:
         print_("Uploading commit metadata...", end="")
         response = post_json(
