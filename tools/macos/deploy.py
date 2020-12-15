@@ -456,8 +456,17 @@ def compute_lib_replacement(lib):
 
     # Ship VGC libraries (obviously)
     elif "libvgc" in lib:
-        i = lib.find("libvgc")
         return "@rpath/" + Path(lib).name # @rpath/libvgccore.dylib
+
+    # GitHub Actions Python
+    # Note that libpython3.7m.dylib is both in
+    #   Frameworks/libpython3.7m.dylib
+    # and in
+    #   Frameworks/Python/lib/libpython3.7m.dylib
+    # XXX Remove the duplicate
+    elif (lib.startswith("/Users/runner/hostedtoolcache/Python") and
+          ("x64/lib/libpython" in lib)):
+        return "@rpath/" + Path(lib).name # @rpath/libpython3.7m.dylib
 
     # Print a warning if it's not one of the above known categories
     else:
