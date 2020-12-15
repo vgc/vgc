@@ -70,20 +70,15 @@ jobs:
       run: |
         brew install freetype
         brew install harfbuzz
+        brew install tree
         pip3 install dmgbuild
+        tree /Users/runner/hostedtoolcache/Python/3.7.9/x64
 
-    # Note: this takes 8min. Could it be reduced by using the cache or another method entirely?
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
         version: ${{env.QT_VERSION}}
         setup-python: false
-
-    #- name: Install Qt
-    #  shell: bash
-    #  working-directory: ${{runner.workspace}}
-    #  run: |
-    #    brew install qt
 
     - name: Configure
       shell: bash

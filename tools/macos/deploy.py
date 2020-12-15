@@ -788,21 +788,52 @@ if __name__ == "__main__":
             copy(lib, bundleLib, verbose=verbose)
 
         # Find Python framework and determine new location
-        pythonFrameworkName = "Python.framework"
+        #
+        # On Travis, the Python structure looks like:
+        #   -- [Python]
+        #   -- Found PythonInterp: /usr/local/bin/python3 (found suitable version "3.9.1", minimum required is "3.6")
+        #   -- Found PythonLibs: /usr/local/Frameworks/Python.framework/Versions/3.9/lib/libpython3.9.dylib (found suitable version "3.9.1", minimum required is "3.6")
+        #   -- Version: 3.9.1
+        #   -- PYTHON_PREFIX: /usr/local/Cellar/python@3.9/3.9.1/Frameworks/Python.framework/Versions/3.9
+        #   -- PYTHON_EXEC_PREFIX: /usr/local/Cellar/python@3.9/3.9.1/Frameworks/Python.framework/Versions/3.9
+        #   -- PYTHON_HOME: /usr/local/Cellar/python@3.9/3.9.1/Frameworks/Python.framework/Versions/3.9
+        #
+        # On GitHub Actions, it looks like:
+        #   -- [Python]
+        #   -- Found PythonInterp: /Users/runner/hostedtoolcache/Python/3.7.9/x64/bin/python3 (found suitable version "3.7.9", minimum required is "3.6")
+        #   -- Found PythonLibs: /Users/runner/hostedtoolcache/Python/3.7.9/x64/lib/libpython3.7m.dylib (found suitable version "3.7.9", minimum required is "3.6")
+        #   -- Version: 3.7.9
+        #   -- PYTHON_PREFIX: /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #   -- PYTHON_EXEC_PREFIX: /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #   -- PYTHON_HOME: /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #
+        # Also see: https://github.com/actions/setup-python/issues/58
+        #
+        print_binary_info(bundleExecutable)
         for lib in get_libs(bundleExecutable):
-            i = lib.find(pythonFrameworkName)
+            i = lib.find("Python.framework")
             if i != -1:
                 pythonOldRef = lib                         # Example: /usr/local/opt/python/Frameworks/Python.framework/Versions/3.7/Python
                 pythonFrameworkOldParent = Path(lib[:i-1]) # Example: /usr/local/opt/python/Frameworks
                 pythonLibRelPath = Path(lib[i:])           # Example: Python.framework/Versions/3.7/Python
                 print("                Found library " + lib + "\n" +
                       "                referenced in " + str(bundleExecutable) + "\n", flush=True)
+                pythonFrameworkOldPath = pythonFrameworkOldParent / "Python.framework"
+                pythonFrameworkPath = bundleFrameworksDir / "Python.framework"
+                break
+            i = lib.find("x64/lib/libpython3")
+            if i != -1:
+                pythonOldRef = lib                            # Example: /Users/runner/hostedtoolcache/Python/3.7.9/x64/lib/libpython3.7m.dylib
+                pythonFrameworkOldParent = Path(lib[:i-1])    # Example: /Users/runner/hostedtoolcache/Python/3.7.9
+                pythonLibRelPath = Path("Python" + lib[i+3:]) # Example: Python/x64/lib/libpython3.7m.dylib
+                print("                Found library " + lib + "\n" +
+                      "                referenced in " + str(bundleExecutable) + "\n", flush=True)
+                pythonFrameworkOldPath = pythonFrameworkOldParent / "x64"
+                pythonFrameworkPath = bundleFrameworksDir / "Python"
                 break
 
         # Copy Python framework to our bundle
-        pythonFrameworkOldPath = pythonFrameworkOldParent / pythonFrameworkName
-        pythonFrameworkPath = bundleFrameworksDir / pythonFrameworkName
-        copy(pythonFrameworkOldPath, pythonFrameworkPath, verbose=verbose)
+        copy(pythonFrameworkOldPath, pythonFrameworkPath, verbose=verbose, recursiveVerbose=True)
 
         # Delete Python stuff we don't need.
         # Sizes are given for the official 64bit-only installation of Python 3.7.4 from www.python.org.
