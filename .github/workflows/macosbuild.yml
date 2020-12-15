@@ -1,0 +1,110 @@
+name: macOS Build
+
+on: [push, pull_request]
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: 5.15.2
+
+jobs:
+  build:
+    runs-on: macos-10.15
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        # We need to fetch more than one commit to get the correct build name
+        fetch-depth: 100
+
+    - name: Print git log
+      run: git log
+
+    - name: Get commit branch and commit message
+      if: github.event_name == 'push'
+      run: |
+        echo "COMMIT_BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
+        echo "COMMIT_MESSAGE=${{github.event.head_commit.message}}" >> $GITHUB_ENV
+
+    # https://github.community/t/accessing-commit-message-in-pull-request-event/17158
+    - name: Get commit branch and commit message
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "COMMIT_BRANCH=$GITHUB_HEAD_REF" >> $GITHUB_ENV
+        echo "COMMIT_MESSAGE=$(git log --format=%B -n 1 ${{ github.event.after }})" >> $GITHUB_ENV
+
+
+
+    # https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables
+    - name: Print useful environment variables
+      if:
+      run: |
+        echo "GITHUB_WORKFLOW:      $GITHUB_WORKFLOW"
+        echo "GITHUB_RUN_ID:        $GITHUB_RUN_ID"
+        echo "GITHUB_RUN_NUMBER:    $GITHUB_RUN_NUMBER"
+        echo "GITHUB_ACTION:        $GITHUB_ACTION"
+        echo "GITHUB_ACTIONS:       $GITHUB_ACTIONS"
+        echo "GITHUB_ACTOR:         $GITHUB_ACTOR"
+        echo "GITHUB_REPOSITORY:    $GITHUB_REPOSITORY"
+        echo "GITHUB_EVENT_NAME:    $GITHUB_EVENT_NAME"
+        echo "GITHUB_EVENT_PATH:    $GITHUB_EVENT_PATH"
+        echo "GITHUB_WORKSPACE:     $GITHUB_WORKSPACE"
+        echo "GITHUB_SHA:           $GITHUB_SHA"
+        echo "GITHUB_REF:           $GITHUB_REF"
+        echo "GITHUB_HEAD_REF:      $GITHUB_HEAD_REF"
+        echo "GITHUB_BASE_REF:      $GITHUB_BASE_REF"
+        echo "GITHUB_SERVER_URL:    $GITHUB_SERVER_URL"
+        echo "GITHUB_API_URL:       $GITHUB_API_URL"
+        echo "GITHUB_GRAPHQL_URL:   $GITHUB_GRAPHQL_URL"
+        echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
+        echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+        architecture: 'x64'
+
+    - name: Install most dependencies
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: |
+        brew install freetype
+        brew install harfbuzz
+        pip3 install dmgbuild
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: $QT_VERSION
+
+    #- name: Install Qt
+    #  shell: bash
+    #  working-directory: ${{runner.workspace}}
+    #  run: |
+    #    brew install qt
+
+    - name: Configure
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: |
+        mkdir build
+        cd build
+        echo "${CMAKE_EXTRA_ARGS}"
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: make
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: make check
+
+    - name: Deploy
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      env:
+        VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
+      run: make deploy
