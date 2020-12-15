@@ -569,13 +569,21 @@ if __name__ == "__main__":
         url = "https://webhooks.vgc.io/travis"
         commitMessage = os.getenv("TRAVIS_COMMIT_MESSAGE")
     elif os.getenv("GITHUB_REPOSITORY") == "vgc/vgc":
-        upload = False #TODO
-        key = os.getenv("VGC_GITHUB_KEY", default="")
-        headref = os.getenv("GITHUB_HEAD_REF", default="")
-        # TODO: compute pr based on headref
-        pr = ""
+        eventName = os.getenv("GITHUB_EVENT_NAME")
         url = "https://webhooks.vgc.io/github"
         commitMessage = os.getenv("COMMIT_MESSAGE")
+        if eventName == "pull_request":
+            upload = True
+            key = ""
+            headref = os.getenv("GITHUB_HEAD_REF") # Example: refs/pull/461/merge
+            pr = headref.split('/')[2]                         # Example: 461
+        elif eventName == "push":
+            upload = True
+            key = os.getenv("VGC_GITHUB_KEY")
+            assert key, "Missing key: cannot upload artifact"
+            pr = "false"
+        else:
+            upload = False
     if upload:
         print_("Uploading commit metadata...", end="")
         response = post_json(
