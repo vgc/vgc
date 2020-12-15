@@ -807,7 +807,34 @@ if __name__ == "__main__":
         #   -- PYTHON_EXEC_PREFIX: /Users/runner/hostedtoolcache/Python/3.7.9/x64
         #   -- PYTHON_HOME: /Users/runner/hostedtoolcache/Python/3.7.9/x64
         #
-        # Also see: https://github.com/actions/setup-python/issues/58
+        #   /Users/runner/hostedtoolcache/Python/3.7.9/x64
+        #   ├── Python-3.7.9.tgz
+        #   ├── bin
+        #   │   ├── python -> python3.7
+        #   │   ├── python3 -> python3.7
+        #   │   ├── python3.7
+        #   │   ...
+        #   ├── include
+        #   │   └── python3.7m
+        #   │       ├── Python.h
+        #   │       ...
+        #   ├── lib
+        #   │   ├── libpython3.7m.dylib
+        #   │   ├── pkgconfig
+        #   │   │   ├── python-3.7.pc
+        #   │   │   ├── python-3.7m.pc -> python-3.7.pc
+        #   │   │   └── python3.pc -> python-3.7.pc
+        #   │   └── python3.7
+        #   │       ├── __future__.py
+        #   │       ...
+        #   ├── python -> ./bin/python3.7
+        #   ├── python-3.7.9-darwin-x64.tar.gz
+        #   ├── share
+        #   │   └── man
+        #   │       └── man1
+        #   │           ├── python3.1 -> python3.7.1
+        #   │           └── python3.7.1
+        #   └── tools_structure.txt
         #
         print_binary_info(bundleExecutable)
         for lib in get_libs(bundleExecutable):
@@ -820,6 +847,7 @@ if __name__ == "__main__":
                       "                referenced in " + str(bundleExecutable) + "\n", flush=True)
                 pythonFrameworkOldPath = pythonFrameworkOldParent / "Python.framework"
                 pythonFrameworkPath = bundleFrameworksDir / "Python.framework"
+                pythonHome = (bundleFrameworksDir / pythonLibRelPath).parent
                 break
             i = lib.find("x64/lib/libpython3")
             if i != -1:
@@ -830,10 +858,11 @@ if __name__ == "__main__":
                       "                referenced in " + str(bundleExecutable) + "\n", flush=True)
                 pythonFrameworkOldPath = pythonFrameworkOldParent / "x64"
                 pythonFrameworkPath = bundleFrameworksDir / "Python"
+                pythonHome = pythonFrameworkPath
                 break
 
         # Copy Python framework to our bundle
-        copy(pythonFrameworkOldPath, pythonFrameworkPath, verbose=verbose, recursiveVerbose=True)
+        copy(pythonFrameworkOldPath, pythonFrameworkPath, verbose=verbose)
 
         # Delete Python stuff we don't need.
         # Sizes are given for the official 64bit-only installation of Python 3.7.4 from www.python.org.
@@ -842,8 +871,6 @@ if __name__ == "__main__":
         # 2. The take a lot of space
         # 3. They can be generated at runtime anyway (either preemptively at install time,
         #    or automatically when importing a module at runtime)
-        pythonLibPath = bundleFrameworksDir / pythonLibRelPath
-        pythonHome = pythonLibPath.parent
         pythonVersionInfo = sys.version_info
         pythonLibDir = pythonHome / "lib"
         pythonXdotY = "python{}.{}".format(pythonVersionInfo.major, pythonVersionInfo.minor)
