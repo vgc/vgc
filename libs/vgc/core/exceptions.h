@@ -321,7 +321,7 @@ namespace core {
 /// low-level library detecting the error doesn't know about. And imagine a
 /// third-party using the library for something entirely different: we
 /// definitly do not want to receive bug reports for logic errors coming from
-/// their code, nor they which to use a library doing so, for many obvious
+/// their code, nor they wish to use a library doing so, for many obvious
 /// reasons! In a nutshell, throwing an exception is more flexible and useful
 /// than crashing the app, even if it is a logic error. It defers the decision
 /// of how to handle the exception to upstream code, which generally has way
