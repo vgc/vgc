@@ -620,15 +620,41 @@ public:
     ///
     bool isDescendantObject(const Object* other) const;
 
-    // When this callback function is called, all children of this Object have
-    // already been destroyed, but this Object is still a child of its parent,
-    // if any.
-    //
-    virtual void onDestroyed();
-
     /// Prints this object tree to stdout, typically for debugging purposes.
     ///
     void dumpObjectTree() const;
+
+protected:
+    // This callback method is invoked when this object has just been
+    // destroyed, that is, just after isAlive() has switched from true to
+    // false. However, note that its C++ destructor has not been called yet:
+    // the destructor will be called when refCount() reaches zero, and for now
+    // refCount() is still at least one.
+    //
+    // Implementing this callback is useful when you can release expensive
+    // resources early. For example, it is often a good idea to release
+    // allocated memory here: there is no need to keep it around until the
+    // destructor is called. The destructor will be called when all
+    // ObjectPtr observers (for example, a python variable pointing to this
+    // object) are themselves destroyed.
+    //
+    // Note that when this method is called, all the children of this Object
+    // have already been destroyed, and if this Object previsouly had a parent,
+    // then it has already been removed from this parent.
+    //
+    virtual void onDestroyed();
+
+    /// This callback method is invoked whenever a child has been added to this
+    /// Object. When this method is called, the child has already been added
+    /// to its parent, that is, `child->parent() == this`
+    ///
+    virtual void onChildAdded(Object* child);
+
+    /// This callback method is invoked whenever a child has been removed from
+    /// this Object. When this function is called, the child has already been removed
+    /// from its parent, that is, `child->parent() == nullptr`.
+    ///
+    virtual void onChildRemoved(Object* child);
 
 protected:
     /// Constructs an Object.
