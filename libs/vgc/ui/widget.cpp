@@ -121,7 +121,13 @@ void Widget::move(const core::Vec2f& position)
 void Widget::resize(const core::Vec2f& size)
 {
     size_ = size;
+    onResize();
     repaint();
+}
+
+void Widget::onResize()
+{
+
 }
 
 void Widget::repaint()
