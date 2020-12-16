@@ -19,20 +19,27 @@ jobs:
     - name: Print git log
       run: git log
 
+    # In case of a push event, the commit we care about is simply HEAD.
+    # The current branch name can be found by parsing GITHUB_REF, for example,
+    # if we are on the master branch, then GITHUB_REF = refs/heads/master.
     - name: Get commit branch and commit message
       if: github.event_name == 'push'
       run: |
         echo "COMMIT_BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
-        echo "COMMIT_MESSAGE=${{github.event.head_commit.message}}" >> $GITHUB_ENV
+        echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
+        echo "$(git log --format=%B -n 1 HEAD)" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
-    # https://github.community/t/accessing-commit-message-in-pull-request-event/17158
+    # In case of a pull_request event, the commit we care about is HEAD^2, that
+    # is, the second parent of the pull request merge commit.
+    # The current branch name is directly given by GITHUB_HEAD_REF
     - name: Get commit branch and commit message
       if: github.event_name == 'pull_request'
       run: |
         echo "COMMIT_BRANCH=$GITHUB_HEAD_REF" >> $GITHUB_ENV
-        echo "COMMIT_MESSAGE=$(git log --format=%B -n 1 ${{ github.event.after }})" >> $GITHUB_ENV
-
-
+        echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
+        echo "$(git log --format=%B -n 1 HEAD^2)" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
     # https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables
     - name: Print useful environment variables
