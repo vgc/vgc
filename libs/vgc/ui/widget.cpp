@@ -168,8 +168,8 @@ bool Widget::onMouseMove(MouseEvent* event)
     // of onMouseRelease).
     //
     if (mousePressedChild_) {
-        MouseEventPtr e = ui::MouseEvent::create(event->pos() - mousePressedChild_->position());
-        return mousePressedChild_->onMouseMove(e.get());
+        event->setPos(event->pos() - mousePressedChild_->position());
+        return mousePressedChild_->onMouseMove(event);
     }
 
     // Otherwise, we iterate over all child widgets. Note that we iterate in
@@ -193,10 +193,9 @@ bool Widget::onMouseMove(MouseEvent* event)
                 child->onMouseEnter();
                 mouseEnteredChild_ = child;
             }
-            MouseEventPtr e = ui::MouseEvent::create(event->pos() - child->position());
-            return child->onMouseMove(e.get());
+            event->setPos(event->pos() - child->position());
+            return child->onMouseMove(event);
         }
-
     }
 
     // Emit leave event if we're not anymore in previously entered widget.
@@ -208,10 +207,6 @@ bool Widget::onMouseMove(MouseEvent* event)
 
     return false;    
 
-    // TODO: we could (should?) modify the existing MouseEvent object instead
-    // of creating a new one when propagating to children. This would reduce
-    // the number of allocations.
-    //
     // TODO: We could (should?) factorize the code:
     //
     //   if (cx <= x && x <= cx + cw && cy <= y && y <= cy + ch) {
@@ -237,8 +232,8 @@ bool Widget::onMousePress(MouseEvent* event)
     // must be released before we issue a right-button-press
     if (mouseEnteredChild_ && !mousePressedChild_) {
         mousePressedChild_ = mouseEnteredChild_;
-        MouseEventPtr e = ui::MouseEvent::create(event->pos() - mousePressedChild_->position());
-        return mousePressedChild_->onMousePress(e.get());
+        event->setPos(event->pos() - mousePressedChild_->position());
+        return mousePressedChild_->onMousePress(event);
     }
     return false;
 }
@@ -246,13 +241,14 @@ bool Widget::onMousePress(MouseEvent* event)
 bool Widget::onMouseRelease(MouseEvent* event)
 {
     if (mousePressedChild_) {
-        MouseEventPtr e = ui::MouseEvent::create(event->pos() - mousePressedChild_->position());
-        bool accepted = mousePressedChild_->onMouseRelease(e.get());
+        core::Vec2f eventPos = event->pos();
+        event->setPos(eventPos - mousePressedChild_->position());
+        bool accepted = mousePressedChild_->onMouseRelease(event);
 
         // Emit the mouse leave event now if the mouse exited the widget during
         // the press-move-release sequence.
-        float x = event->x();
-        float y = event->y();
+        float x = eventPos[0];
+        float y = eventPos[1];
         float cx = mousePressedChild_->x();
         float cy = mousePressedChild_->y();
         float cw = mousePressedChild_->width();

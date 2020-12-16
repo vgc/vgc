@@ -51,6 +51,15 @@ public:
         return pos_;
     }
 
+    /// Sets the position of the mouse cursor, in local coordinates. This
+    /// method should typically only be used when implementing mouse event
+    /// propagation.
+    ///
+    void setPos(const core::Vec2f& pos)
+    {
+        pos_ = pos;
+    }
+
     /// Returns the X-coordinate of the position of the mouse cursor, in local
     /// coordinates, when the event occurs. This is equivalent to `pos()[0]`.
     ///
@@ -59,12 +68,30 @@ public:
         return pos_[0];
     }
 
+    /// Sets the X-coordinate of the position of the mouse cursor, in local
+    /// coordinates. This method should typically only be used when
+    /// implementing mouse event propagation.
+    ///
+    void setX(float x)
+    {
+        pos_[0] = x;
+    }
+
     /// Returns the Y-coordinate of the position of the mouse cursor, in local
     /// coordinates, when the event occurs. This is equivalent to `pos()[1]`.
     ///
     float y() const
     {
         return pos_[1];
+    }
+
+    /// Sets the Y-coordinate of the position of the mouse cursor, in local
+    /// coordinates. This method should typically only be used when
+    /// implementing mouse event propagation.
+    ///
+    void setY(float y)
+    {
+        pos_[1] = y;
     }
 
 private:
