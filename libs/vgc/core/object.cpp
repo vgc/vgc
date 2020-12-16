@@ -153,17 +153,27 @@ bool Object::isDescendantObject(const Object* other) const
     return false;
 }
 
-void Object::onDestroyed()
-{
-    printDebugInfo_(this, "destroyed");
-}
-
 void Object::dumpObjectTree() const
 {
     std::string out;
     std::string prefix;
     dumpObjectTree_(this, out, prefix);
     core::print(out);
+}
+
+void Object::onDestroyed()
+{
+    printDebugInfo_(this, "destroyed");
+}
+
+void Object::onChildAdded(Object*)
+{
+
+}
+
+void Object::onChildRemoved(Object*)
+{
+
 }
 
 Object::Object() :
@@ -313,6 +323,7 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
     else {
         firstChildObject_ = child;
     }
+    onChildAdded(child);
 }
 
 ObjectPtr Object::removeChildObject_(Object* child)
@@ -374,6 +385,7 @@ ObjectPtr Object::removeObjectFromParent_()
         previousSiblingObject_ = nullptr;
         nextSiblingObject_ = nullptr;
         parentObject_ = nullptr;
+        parent->onChildRemoved(this);
         if (refCount_ > 0) {
             // The above test is important: we don't want to call decref()
             // if this call to detachObjectFromParent() already originates
@@ -389,11 +401,12 @@ void Object::destroyObjectImpl_()
     while (firstChildObject_) {
         firstChildObject_->destroyObjectImpl_();
     }
-    onDestroyed();
     ObjectPtr p = removeObjectFromParent_();
     refCount_ = Int64Min + refCount_;
+    onDestroyed();
 
-    // Note 1: The last line simply switches the "sign" bit from 0 to 1.
+    // Note 1: The second line switches isAlive() from true to false, while
+    // keeping refCount() unchanged.
     //
     // Note 2: At the end of this scope, p is destructed, which deletes this
     // Object if refCount() reaches 0, i.e., if refCount_ == INT64_MIN.
@@ -421,7 +434,6 @@ void Object::destroyObjectImpl_()
     // Interesting discussion here:
     //
     // https://stackoverflow.com/questions/755196/deleting-a-pointer-to-const-t-const
-    //
 }
 
 } // namespace core
