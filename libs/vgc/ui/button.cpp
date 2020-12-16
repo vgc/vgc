@@ -72,7 +72,6 @@ void Button::onPaintDraw(graphics::Engine* engine)
         insertRect(a, color, 0, 0, width(), height());
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
-    engine->clear(core::Color(0.337, 0.345, 0.353));
     engine->drawTriangles(trianglesId_);
 }
 
