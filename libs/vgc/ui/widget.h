@@ -340,6 +340,11 @@ public:
         resize(core::Vec2f(width, height));
     }
 
+    /// This virtual function is called each time the widget is resized. When
+    /// this function is called, the widget already has its new size.
+    ///
+    virtual void onResize();
+
     /// Requests this widget to be repainted, for example because the data
     /// displayed by this widget has changed. The widget is not immediately
     /// repainted: it is only scheduled for repaint. The actual moment when the
