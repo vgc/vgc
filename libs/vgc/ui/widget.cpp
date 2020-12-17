@@ -279,7 +279,11 @@ bool Widget::onMouseEnter()
 
 bool Widget::onMouseLeave()
 {
-    return false;
+    if (mouseEnteredChild_) {
+        mouseEnteredChild_->onMouseLeave();
+        mouseEnteredChild_ = nullptr;
+    }
+    return true;
 }
 
 } // namespace ui
