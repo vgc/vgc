@@ -17,6 +17,7 @@
 #ifndef VGC_UI_LENGTHPOLICY_H
 #define VGC_UI_LENGTHPOLICY_H
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/lengthtype.h>
 
@@ -197,12 +198,39 @@ public:
         shrink_ = shrink;
     }
 
+    /// Returns whether the two LengthPolicy are equal.
+    ///
+    friend bool operator==(const LengthPolicy& p1, const LengthPolicy& p2);
+
+    /// Returns whether the two LengthPolicy are different.
+    ///
+    friend bool operator!=(const LengthPolicy& p1, const LengthPolicy& p2);
+
 private:
     LengthType type_;
     float value_;
     float stretch_;
     float shrink_;
 };
+
+inline bool operator==(const LengthPolicy& p1, const LengthPolicy& p2) {
+    const float eps = 1e-6;
+    if (p1.type() == LengthType::Auto) {
+        return (p2.type() == LengthType::Auto) &&
+               core::isNear(p1.stretch(), p2.stretch(), eps) &&
+               core::isNear(p1.shrink(), p2.shrink(), eps);
+    }
+    else {
+        return (p1.type() == p2.type()) &&
+               core::isNear(p1.value(), p2.value(), eps) &&
+               core::isNear(p1.stretch(), p2.stretch(), eps) &&
+               core::isNear(p1.shrink(), p2.shrink(), eps);
+    }
+}
+
+inline bool operator!=(const LengthPolicy& p1, const LengthPolicy& p2) {
+    return !(p1 == p2);
+}
 
 } // namespace ui
 } // namespace vgc
