@@ -170,11 +170,11 @@ public:
         return &node_;
     }
 
-    /// Returns whether the two iterators are equals.
+    /// Returns whether the two iterators are equal.
     ///
     friend bool operator==(const NodeIterator&, const NodeIterator&);
 
-    /// Returns whether the two iterators are differents.
+    /// Returns whether the two iterators are different.
     ///
     friend bool operator!=(const NodeIterator&, const NodeIterator&);
 
