@@ -17,6 +17,7 @@
 #include <vgc/ui/button.h>
 
 #include <vgc/core/floatarray.h>
+#include <vgc/core/random.h>
 
 namespace vgc {
 namespace ui {
@@ -27,7 +28,10 @@ Button::Button() :
     reload_(true),
     isHovered_(false)
 {
-
+    core::UniformDistribution d(0, 360);
+    double h = d();
+    backgroundColor_ = core::Color::hsl(h, 1, 0.5);
+    backgroundColorOnHover_ = core::Color::hsl(h, 1, 0.7);
 }
 
 ButtonPtr Button::create()
@@ -67,8 +71,8 @@ void Button::onPaintDraw(graphics::Engine* engine)
         reload_ = false;
         core::FloatArray a;
         core::Color color = isHovered_ ?
-            core::Color(1.0, 0.5, 0.5) :
-            core::Color(1.0, 0.0, 0.0);
+            backgroundColorOnHover_ :
+            backgroundColor_;
         insertRect(a, color, 0, 0, width(), height());
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
