@@ -89,6 +89,10 @@ private:
     int colLoc_;
     int projLoc_;
     int viewLoc_;
+
+    // Ensure that we don't call onPaintDestroy() if onPaintCreate()
+    // has not been called
+    bool isInitialized_;
 };
 
 /// \class vgc::widget::UiWidgetEngine
