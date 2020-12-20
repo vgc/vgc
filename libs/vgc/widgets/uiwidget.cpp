@@ -59,7 +59,8 @@ struct XYRGBVertex {
 UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent) :
     QOpenGLWidget(parent),
     widget_(widget),
-    engine_(UiWidgetEngine::create())
+    engine_(UiWidgetEngine::create()),
+    isInitialized_(false)
 {
     setMouseTracking(true);
     widget_->repaintRequested.connect(std::bind(
@@ -135,7 +136,11 @@ void UiWidget::initializeGL()
     OpenGLFunctions* f = openGLFunctions();
     engine_->initialize(f, &shaderProgram_, posLoc_, colLoc_, projLoc_, viewLoc_);
 
-    // Initialize widget for painting
+    // Initialize widget for painting.
+    // Note that initializedGL() is never called if the widget is never visible.
+    // Therefore it's important to keep track whether it has been called, so that
+    // we don't call onPaintDestroy() without first calling onPaintCreate()
+    isInitialized_ = true;
     widget_->onPaintCreate(engine_.get());
 }
 
@@ -164,7 +169,10 @@ void UiWidget::paintGL()
 
 void UiWidget::cleanupGL()
 {
-    widget_->onPaintDestroy(engine_.get());
+    if (isInitialized_) {
+        widget_->onPaintDestroy(engine_.get());
+        isInitialized_ = false;
+    }
 }
 
 void UiWidget::onRepaintRequested()
