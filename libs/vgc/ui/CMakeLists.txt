@@ -8,27 +8,27 @@ vgc_add_library(ui
         api.h
         button.h
         colorpalette.h
-        columnlayout.h
+        column.h
         event.h
         exceptions.h
-        flexlayout.h
+        flex.h
         label.h
         lengthpolicy.h
         lengthtype.h
         mouseevent.h
-        rowlayout.h
+        row.h
         widget.h
 
     CPP_FILES
         button.cpp
         colorpalette.cpp
-        columnlayout.cpp
+        column.cpp
         event.cpp
         exceptions.cpp
-        flexlayout.cpp
+        flex.cpp
         label.cpp
         mouseevent.cpp
-        rowlayout.cpp
+        row.cpp
         widget.cpp
 )
 

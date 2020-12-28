@@ -17,44 +17,44 @@
 #ifndef VGC_UI_COLUMNLAYOUT_H
 #define VGC_UI_COLUMNLAYOUT_H
 
-#include <vgc/ui/flexlayout.h>
+#include <vgc/ui/flex.h>
 
 namespace vgc {
 namespace ui {
 
-VGC_DECLARE_OBJECT(ColumnLayout);
+VGC_DECLARE_OBJECT(Column);
 
-/// \class vgc::ui::ColumnLayout
+/// \class vgc::ui::Column
 /// \brief A vertical column of widgets.
 ///
-/// This class is a convenient subclass of FlexLayout that initializes it with
+/// This class is a convenient subclass of Flex that initializes it with
 /// a Column direction and NoWrap wrapping behavior.
 ///
 /// ```cpp
-/// auto column = ColumnLayout::create();
+/// auto column = Column::create();
 /// column->createChild<Button>();
 /// column->createChild<Button>();
 /// ```
 ///
 /// Note that it is allowed to change the direction and wrapping behavior after
-/// creating a ColumnLayout, although for better readability we advise to
-/// directly create a FlexLayout instead of a ColumnLayout if you intend to do
+/// creating a Column, although for better readability we advise to
+/// directly create a Flex instead of a Column if you intend to do
 /// so.
 ///
-class VGC_UI_API ColumnLayout : public FlexLayout {
+class VGC_UI_API Column : public Flex {
 private:
-    VGC_OBJECT(ColumnLayout)
+    VGC_OBJECT(Column)
 
 protected:
     /// This is an implementation details. Please use
-    /// ColumnLayout::create() instead.
+    /// Column::create() instead.
     ///
-    ColumnLayout();
+    Column();
 
 public:
-    /// Creates a ColumnLayout.
+    /// Creates a Column.
     ///
-    static ColumnLayoutPtr create();
+    static ColumnPtr create();
 };
 
 } // namespace ui

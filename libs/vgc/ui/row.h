@@ -17,43 +17,43 @@
 #ifndef VGC_UI_ROWLAYOUT_H
 #define VGC_UI_ROWLAYOUT_H
 
-#include <vgc/ui/flexlayout.h>
+#include <vgc/ui/flex.h>
 
 namespace vgc {
 namespace ui {
 
-VGC_DECLARE_OBJECT(RowLayout);
+VGC_DECLARE_OBJECT(Row);
 
-/// \class vgc::ui::RowLayout
+/// \class vgc::ui::Row
 /// \brief A horizontal row of widgets.
 ///
-/// This class is a convenient subclass of FlexLayout that initializes it with
+/// This class is a convenient subclass of Flex that initializes it with
 /// a Row direction and NoWrap wrapping behavior.
 ///
 /// ```cpp
-/// auto row = RowLayout::create();
+/// auto row = Row::create();
 /// row->createChild<Button>();
 /// row->createChild<Button>();
 /// ```
 ///
 /// Note that it is allowed to change the direction and wrapping behavior after
-/// creating a RowLayout, although for better readability we advise to directly
-/// create a FlexLayout instead of a RowLayout if you intend to do so.
+/// creating a Row, although for better readability we advise to directly
+/// create a Flex instead of a Row if you intend to do so.
 ///
-class VGC_UI_API RowLayout : public FlexLayout {
+class VGC_UI_API Row : public Flex {
 private:
-    VGC_OBJECT(RowLayout)
+    VGC_OBJECT(Row)
 
 protected:
     /// This is an implementation details. Please use
-    /// RowLayout::create() instead.
+    /// Row::create() instead.
     ///
-    RowLayout();
+    Row();
 
 public:
-    /// Creates a RowLayout.
+    /// Creates a Row.
     ///
-    static RowLayoutPtr create();
+    static RowPtr create();
 };
 
 } // namespace ui
