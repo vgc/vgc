@@ -91,16 +91,14 @@ public:
     ///
     void setWrap(FlexWrap wrap);
 
-    // reimpl
-    void onResize() override;
-
 protected:
     // reimpl
     void onChildAdded(Object* child) override;
     void onChildRemoved(Object* child) override;
+    core::Vec2f computePreferredSize() const override;
+    void updateChildrenGeometry() override;
 
 private:
-    void updateGeometry_();
     FlexDirection direction_;
     FlexWrap wrap_;
 };

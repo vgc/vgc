@@ -22,6 +22,7 @@
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
+#include <vgc/ui/lengthpolicy.h>
 #include <vgc/ui/mouseevent.h>
 
 namespace vgc {
@@ -68,11 +69,11 @@ public:
         return &widget_;
     }
 
-    /// Returns whether the two iterators are equals.
+    /// Returns whether the two iterators are equal.
     ///
     friend bool operator==(const WidgetIterator&, const WidgetIterator&);
 
-    /// Returns whether the two iterators are differents.
+    /// Returns whether the two iterators are different.
     ///
     friend bool operator!=(const WidgetIterator&, const WidgetIterator&);
 
@@ -280,6 +281,11 @@ public:
         return isDescendantObject(other);
     }
 
+    /// Returns the root widget of this widget, that is, the ancestor of this
+    /// widget which has no parent widget itself.
+    ///
+    Widget* root() const;
+
     /// Returns the position of the widget relative to its parent.
     ///
     core::Vec2f position() const
@@ -301,13 +307,43 @@ public:
         return position_[1];
     }
 
-    /// Moves the widget to the given position relative to its parent.
+    /// Sets the new position and size of this widget (relative to its parent),
+    /// then calls updateChildrenGeometry().
     ///
-    void move(const core::Vec2f& position);
+    /// Unless this widget is the root widget, this method should only be
+    /// called by the parent of this widget, inside updateChildrenGeometry().
+    /// In other words, setGeometry() calls updateChildrenGeometry(), which
+    /// calls setGeometry() on all its children, etc.
+    ///
+    /// In order to prevent infinite loops, this function does not
+    /// automatically triggers a repaint nor informs the parent widget that the
+    /// geometry changed. Indeed, the assumption is that the parent widget
+    /// already knows, since it is the object that called this function in the
+    /// first place.
+    ///
+    void setGeometry(const core::Vec2f& position, const core::Vec2f& size);
     /// \overload
-    void move(float x, float y)
+    void setGeometry(float x, float y, float width, float height)
     {
-        move(core::Vec2f(x, y));
+        setGeometry(core::Vec2f(x, y), core::Vec2f(width, height));
+    }
+
+    /// Returns the preferred size of this widget, that is, the size that
+    /// layout classes will try to assign to this widget. However, note this
+    /// widget may be assigned a different size if its size policy allows it to
+    /// shrink or grow, or if it is impossible to meet all size constraints.
+    ///
+    /// If you need to modify the preferred size of a given widget, you can
+    /// either change its widthPolicy() or heightPolicy() from LengthType::Auto
+    /// to a fixed length, or you create a new Widget subclass and reimplement
+    /// computePreferredSize() for finer control.
+    ///
+    core::Vec2f preferredSize() const {
+        if (!isPreferredSizeComputed_) {
+            preferredSize_ = computePreferredSize();
+            isPreferredSizeComputed_ = true;
+        }
+        return preferredSize_;
     }
 
     /// Returns the size of the widget.
@@ -331,14 +367,37 @@ public:
         return size_[1];
     }
 
-    /// Resizes the widget to the given size.
+    /// Returns the LengthPolicy related to the width of this widget. This
+    /// tells layout classes how to stretch and shrink this widget, and what
+    /// the desired width should be in case it's not LengthType::Auto.
     ///
-    void resize(const core::Vec2f& size);
-    /// \overload
-    void resize(float width, float height)
+    LengthPolicy widthPolicy() const
     {
-        resize(core::Vec2f(width, height));
+        return widthPolicy_;
     }
+
+    /// Sets the LengthPolicy related to the width of this widget.
+    ///
+    void setWidthPolicy(const LengthPolicy& policy);
+
+    /// Returns the LengthPolicy related to the height of this widget. This
+    /// tells layout classes how to stretch and shrink this widget, and what
+    /// the desired height should be in case it's not LengthType::Auto.
+    ///
+    LengthPolicy heightPolicy() const
+    {
+        return heightPolicy_;
+    }
+
+    /// Sets the LengthPolicy related to the height of this widget.
+    ///
+    void setHeightPolicy(const LengthPolicy& policy);
+
+    /// This method should be called when the size policy or preferred size of
+    /// this widget changed, to inform its parent that its geometry should be
+    /// recomputed.
+    ///
+    void updateGeometry();
 
     /// This virtual function is called each time the widget is resized. When
     /// this function is called, the widget already has its new size.
@@ -416,7 +475,37 @@ public:
     ///
     virtual bool onMouseLeave();
 
+protected:
+    /// Computes the preferred size of this widget based on its size policy, as
+    /// well as its content and the preferred size and size policy of its
+    /// children.
+    ///
+    /// For example, the preferred size of RowLayout class is computed based on
+    /// the preferred size of its children, and the preferred size of Label is
+    /// computed based on the length of the text.
+    ///
+    /// If you reimplement this method, make sure to check whether the
+    /// widthPolicy() or heightPolicy() of this widget is different from
+    /// LengthType::Auto, in which case this function should return the
+    /// specified fixed value.
+    ///
+    /// Note that if, for example, widthPolicy() is a fixed value, but
+    /// heightPolicy() is Auto, then the preferred height may depend on the
+    /// value of the fixed width.
+    ///
+    virtual core::Vec2f computePreferredSize() const;
+
+    /// Updates the position and size of children of this widget (by calling
+    /// the setGeometry() methods of the children), based on the current width
+    /// and height of this widget.
+    ///
+    virtual void updateChildrenGeometry();
+
 private:
+    mutable core::Vec2f preferredSize_;
+    mutable bool isPreferredSizeComputed_;
+    LengthPolicy widthPolicy_;
+    LengthPolicy heightPolicy_;
     core::Vec2f position_;
     core::Vec2f size_;
     Widget* mousePressedChild_;

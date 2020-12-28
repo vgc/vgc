@@ -214,7 +214,7 @@ private:
 };
 
 inline bool operator==(const LengthPolicy& p1, const LengthPolicy& p2) {
-    const float eps = 1e-6;
+    const float eps = 1e-6f; // XXX Should we instead use exact equality? And implement a separate isNear() method?
     if (p1.type() == LengthType::Auto) {
         return (p2.type() == LengthType::Auto) &&
                core::isNear(p1.stretch(), p2.stretch(), eps) &&

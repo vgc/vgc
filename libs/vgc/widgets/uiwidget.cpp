@@ -150,11 +150,13 @@ void UiWidget::resizeGL(int w, int h)
     c.setViewportSize(w, h);
     proj_ = toMat4f(c.projectionMatrix());
 
-    // Resize widget. Note: if w or h is > 16777216 (=2^24), then static_cast
+    // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
     // silently rounds to the nearest integer representable as a float. See:
     //   https://stackoverflow.com/a/60339495/1951907
     // Should we issue a warning in these cases?
-    widget()->resize(static_cast<float>(w), static_cast<float>(h));
+    widget()->setGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
+
+    // Note: paintGL will automatically be called after this
 }
 
 void UiWidget::paintGL()

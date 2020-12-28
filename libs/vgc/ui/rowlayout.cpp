@@ -22,7 +22,8 @@ namespace ui {
 RowLayout::RowLayout() :
     FlexLayout(FlexDirection::Row, FlexWrap::NoWrap)
 {
-
+    setWidthPolicy(ui::LengthPolicy::AutoFlexible());
+    setHeightPolicy(ui::LengthPolicy::AutoFixed());
 }
 
 RowLayoutPtr RowLayout::create()

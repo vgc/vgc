@@ -53,6 +53,9 @@ public:
     bool onMouseEnter() override;
     bool onMouseLeave() override;
 
+protected:
+    core::Vec2f computePreferredSize() const override;
+
 private:
     core::Color backgroundColor_;
     core::Color backgroundColorOnHover_;

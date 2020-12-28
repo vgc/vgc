@@ -21,6 +21,10 @@ namespace ui {
 
 Widget::Widget() :
     Object(),
+    preferredSize_(0.0f, 0.0f),
+    isPreferredSizeComputed_(false),
+    widthPolicy_(LengthPolicy::AutoFixed()),
+    heightPolicy_(LengthPolicy::AutoFixed()),
     position_(0.0f, 0.0f),
     size_(0.0f, 0.0f),
     mousePressedChild_(nullptr),
@@ -112,16 +116,50 @@ void Widget::replace(Widget* oldWidget)
     }
 }
 
-void Widget::move(const core::Vec2f& position)
+Widget* Widget::root() const
 {
-    position_ = position;
-    repaint();
+    const Widget* res = this;
+    const Widget* w = this;
+    while (w) {
+        res = w;
+        w = w->parent();
+    }
+    return const_cast<Widget*>(res);
 }
 
-void Widget::resize(const core::Vec2f& size)
+void Widget::setGeometry(const core::Vec2f& position, const core::Vec2f& size)
 {
+    position_ = position;
     size_ = size;
-    onResize();
+    updateChildrenGeometry();
+}
+
+void Widget::setWidthPolicy(const LengthPolicy& policy)
+{
+    if (policy != widthPolicy_) {
+        widthPolicy_ = policy;
+        updateGeometry();
+    }
+}
+
+void Widget::setHeightPolicy(const LengthPolicy& policy)
+{
+    if (policy != heightPolicy_) {
+        heightPolicy_ = policy;
+        updateGeometry();
+    }
+}
+
+void Widget::updateGeometry()
+{
+    Widget* root = this;
+    Widget* w = this;
+    while (w) {
+        w->isPreferredSizeComputed_ = false;
+        root = w;
+        w = w->parent();
+    }
+    root->updateChildrenGeometry();
     repaint();
 }
 
@@ -284,6 +322,19 @@ bool Widget::onMouseLeave()
         mouseEnteredChild_ = nullptr;
     }
     return true;
+}
+
+core::Vec2f Widget::computePreferredSize() const
+{
+    // TODO: convert units if any.
+    return core::Vec2f(
+                (widthPolicy_.type() == LengthType::Auto) ? 0 : widthPolicy_.value(),
+                (heightPolicy_.type() == LengthType::Auto) ? 0 : heightPolicy_.value());
+}
+
+void Widget::updateChildrenGeometry()
+{
+    // nothing
 }
 
 } // namespace ui

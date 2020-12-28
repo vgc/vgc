@@ -22,7 +22,8 @@ namespace ui {
 ColumnLayout::ColumnLayout() :
     FlexLayout(FlexDirection::Column, FlexWrap::NoWrap)
 {
-
+    setWidthPolicy(ui::LengthPolicy::AutoFixed());
+    setHeightPolicy(ui::LengthPolicy::AutoFlexible());
 }
 
 ColumnLayoutPtr ColumnLayout::create()
