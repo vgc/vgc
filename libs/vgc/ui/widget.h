@@ -480,7 +480,7 @@ protected:
     /// well as its content and the preferred size and size policy of its
     /// children.
     ///
-    /// For example, the preferred size of RowLayout class is computed based on
+    /// For example, the preferred size of Row class is computed based on
     /// the preferred size of its children, and the preferred size of Label is
     /// computed based on the length of the text.
     ///

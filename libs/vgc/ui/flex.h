@@ -33,7 +33,7 @@ enum class FlexDirection {
 };
 
 /// \enum vgc::ui::FlexWrap
-/// \brief How to wrap widgets in a FlexLayout
+/// \brief How to wrap widgets in a Flex
 ///
 /// For now, only NoWrap is supported. Wrap and WrapReverse will
 /// be added in the future.
@@ -47,47 +47,46 @@ enum class FlexWrap {
 // TODO: FlexJustifyContent, FlexAlignItems, FlexAlignContent
 // Great resource: https://css-tricks.com/snippets/css/a-guide-to-flexbox/
 
-VGC_DECLARE_OBJECT(FlexLayout);
+VGC_DECLARE_OBJECT(Flex);
 
-/// \class vgc::ui::FlexLayout
+/// \class vgc::ui::Flex
 /// \brief Arrange a sequence of widgets in rows and/or columns.
 ///
-class VGC_UI_API FlexLayout : public Widget {
+class VGC_UI_API Flex : public Widget {
 private:
-    VGC_OBJECT(FlexLayout)
+    VGC_OBJECT(Flex)
 
 protected:
     /// This is an implementation details. Please use
-    /// FlexLayout::create() instead.
+    /// Flex::create() instead.
     ///
-    FlexLayout(
-            FlexDirection direction = FlexDirection::Row,
-            FlexWrap wrap = FlexWrap::NoWrap);
+    Flex(FlexDirection direction = FlexDirection::Row,
+         FlexWrap wrap = FlexWrap::NoWrap);
 
 public:
-    /// Creates a RowLayout.
+    /// Creates a Row.
     ///
-    static FlexLayoutPtr create(
+    static FlexPtr create(
             FlexDirection direction = FlexDirection::Row,
             FlexWrap wrap = FlexWrap::NoWrap);
 
-    /// Returns the FlexDirection of this FlexLayout.
+    /// Returns the FlexDirection of this Flex.
     ///
     FlexDirection direction() const {
         return direction_;
     }
 
-    /// Sets the FlexDirection of this FlexLayout.
+    /// Sets the FlexDirection of this Flex.
     ///
     void setDirection(FlexDirection direction);
 
-    /// Returns the FlexWrap of this FlexLayout.
+    /// Returns the FlexWrap of this Flex.
     ///
     FlexWrap wrap() const {
         return wrap_;
     }
 
-    /// Sets the FlexWrap of this FlexLayout.
+    /// Sets the FlexWrap of this Flex.
     ///
     void setWrap(FlexWrap wrap);
 

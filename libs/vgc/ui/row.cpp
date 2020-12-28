@@ -14,21 +14,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/columnlayout.h>
+#include <vgc/ui/row.h>
 
 namespace vgc {
 namespace ui {
 
-ColumnLayout::ColumnLayout() :
-    FlexLayout(FlexDirection::Column, FlexWrap::NoWrap)
+Row::Row() :
+    Flex(FlexDirection::Row, FlexWrap::NoWrap)
 {
-    setWidthPolicy(ui::LengthPolicy::AutoFixed());
-    setHeightPolicy(ui::LengthPolicy::AutoFlexible());
+    setWidthPolicy(ui::LengthPolicy::AutoFlexible());
+    setHeightPolicy(ui::LengthPolicy::AutoFixed());
 }
 
-ColumnLayoutPtr ColumnLayout::create()
+RowPtr Row::create()
 {
-    return ColumnLayoutPtr(new ColumnLayout());
+    return RowPtr(new Row());
 }
 
 } // namespace ui

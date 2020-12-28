@@ -14,12 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/flexlayout.h>
+#include <vgc/ui/flex.h>
 
 namespace vgc {
 namespace ui {
 
-FlexLayout::FlexLayout(
+Flex::Flex(
         FlexDirection direction,
         FlexWrap wrap) :
     Widget(),
@@ -30,36 +30,36 @@ FlexLayout::FlexLayout(
     setHeightPolicy(ui::LengthPolicy::AutoFlexible());
 }
 
-FlexLayoutPtr FlexLayout::create(
+FlexPtr Flex::create(
         FlexDirection direction,
         FlexWrap wrap)
 {
-    return FlexLayoutPtr(new FlexLayout(direction, wrap));
+    return FlexPtr(new Flex(direction, wrap));
 }
 
-void FlexLayout::setDirection(FlexDirection direction)
+void Flex::setDirection(FlexDirection direction)
 {
     direction_ = direction;
     updateGeometry();
 }
 
-void FlexLayout::setWrap(FlexWrap wrap)
+void Flex::setWrap(FlexWrap wrap)
 {
     wrap_ = wrap;
     updateGeometry();
 }
 
-void FlexLayout::onChildAdded(Object*)
+void Flex::onChildAdded(Object*)
 {
     updateGeometry();
 }
 
-void FlexLayout::onChildRemoved(Object*)
+void Flex::onChildRemoved(Object*)
 {
     updateGeometry();
 }
 
-core::Vec2f FlexLayout::computePreferredSize() const
+core::Vec2f Flex::computePreferredSize() const
 {
     bool isRow = (direction_ == FlexDirection::Row) ||
             (direction_ == FlexDirection::RowReverse);
@@ -104,7 +104,7 @@ core::Vec2f FlexLayout::computePreferredSize() const
     return core::Vec2f(preferredWidth, preferredHeight);
 }
 
-void FlexLayout::updateChildrenGeometry()
+void Flex::updateChildrenGeometry()
 {
     // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
     // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
