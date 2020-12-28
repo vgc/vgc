@@ -26,7 +26,8 @@ FlexLayout::FlexLayout(
     direction_(direction),
     wrap_(wrap)
 {
-
+    setWidthPolicy(ui::LengthPolicy::AutoFlexible());
+    setHeightPolicy(ui::LengthPolicy::AutoFlexible());
 }
 
 FlexLayoutPtr FlexLayout::create(
@@ -39,35 +40,75 @@ FlexLayoutPtr FlexLayout::create(
 void FlexLayout::setDirection(FlexDirection direction)
 {
     direction_ = direction;
-    updateGeometry_();
+    updateGeometry();
 }
 
 void FlexLayout::setWrap(FlexWrap wrap)
 {
     wrap_ = wrap;
-    updateGeometry_();
-}
-
-void FlexLayout::onResize()
-{
-    updateGeometry_();
+    updateGeometry();
 }
 
 void FlexLayout::onChildAdded(Object*)
 {
-    updateGeometry_();
+    updateGeometry();
 }
 
 void FlexLayout::onChildRemoved(Object*)
 {
-    updateGeometry_();
+    updateGeometry();
 }
 
-void FlexLayout::updateGeometry_()
+core::Vec2f FlexLayout::computePreferredSize() const
 {
-    // TODO: take into account children "preferred" size, stretch/shrink factors,
-    // margin/padding, gap, and allow to wrap, align, etc.
-    Int numChildren = 0;
+    bool isRow = (direction_ == FlexDirection::Row) ||
+            (direction_ == FlexDirection::RowReverse);
+    float preferredWidth = 0;
+    float preferredHeight = 0;
+    if (widthPolicy().type() != LengthType::Auto) {
+        preferredWidth = widthPolicy().value();
+    }
+    else {
+        if (isRow) {
+            for (Widget* child : children()) {
+                preferredWidth += child->preferredSize().x();
+            }
+        }
+        else {
+            // For now, we use the max preferred width of all widgets as
+            // preferred width for the column. In the future, we could compute
+            // minimum/maximum widths based on the stretch and shrink
+            // factors of the children, compute an average preferred width
+            // (possibly weighted by the stretch/shrink factors?), and clamp
+            // using the min/max widths.
+            for (Widget* child : children()) {
+                preferredWidth = std::max(preferredWidth, child->preferredSize().x());
+            }
+        }
+    }
+    if (heightPolicy().type() != LengthType::Auto) {
+        preferredHeight = heightPolicy().value();
+    }
+    else {
+        if (!isRow) {
+            for (Widget* child : children()) {
+                preferredHeight += child->preferredSize().y();
+            }
+        }
+        else {
+            for (Widget* child : children()) {
+                preferredHeight = std::max(preferredHeight, child->preferredSize().y());
+            }
+        }
+    }
+    return core::Vec2f(preferredWidth, preferredHeight);
+}
+
+void FlexLayout::updateChildrenGeometry()
+{
+    // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
+    // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
+    Int numChildren = 0; // TODO: have a (possibly constant-time) numChildren() method
     for (Widget* child : children()) {
         (void)child; // Unused
         numChildren += 1;
@@ -78,30 +119,114 @@ void FlexLayout::updateGeometry_()
         bool isReverse =
                 (direction_ == FlexDirection::RowReverse) ||
                 (direction_ == FlexDirection::ColumnReverse);
-        float s1, s2, sc1, sc2; // 1 = main axis; 2 = other axis; s = size; sc = size of child
-        if (isRow) {
-            s1 = width();
-            s2 = height();
-        }
-        else {
-            s1 = height();
-            s2 = width();
-        }
-        sc1 = s1 / numChildren;
-        sc2 = s2;
-        Int childIndex = 0;
-        Widget* child = isReverse ? lastChild() : firstChild();
-        while (child) {
-            if (isRow) {
-                child->move(childIndex * sc1, 0);
-                child->resize(sc1, sc2);
+        float preferredMainSize = isRow ? preferredSize().x() : preferredSize().y();
+        float mainSize = isRow ? width() : height();
+        float crossSize = isRow ? height() : width();
+        float freeSpace = mainSize - preferredMainSize;
+        float eps = 1e-6f;
+        // TODO: have a loop to resolve constraint violations, as per 9.7.4:
+        // https://www.w3.org/TR/css-flexbox-1/#resolve-flexible-length
+        // Indeed, although we currently don't have explicit min/max constraints,
+        // we still have an implicit min-size = 0 constraint. The algorithm
+        // below don't properly handle this constraint: if the size of one of
+        // the items is shrinked to a negative size, then it is clamped to zero,
+        // but the lost space due to clamping isn't redistributed to other items,
+        // causing an overflow.
+        if (freeSpace >= 0) {
+            // Handle stretching
+            float totalStretch = 0;
+            for (Widget* child : children()) {
+                float childStretch = isRow ? child->widthPolicy().stretch() : child->heightPolicy().stretch();
+                totalStretch += childStretch;
+            }
+            if (totalStretch > eps) {
+                float extraSpacePerStretch = freeSpace / totalStretch;
+                float childMainPosition = 0.0f; // TODO: if isReverse is true, we should start at width() and iterate
+                                                // children from first to last. This would better handle future alignment properties.
+                Widget* child = isReverse ? lastChild() : firstChild();
+                while (child) {
+                    float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
+                    float childStretch = isRow ? child->widthPolicy().stretch() : child->heightPolicy().stretch();
+                    float childMainSize = childPreferredMainSize + extraSpacePerStretch * childStretch;
+                    if (isRow) {
+                        child->setGeometry(childMainPosition, 0, childMainSize, crossSize);
+                    }
+                    else {
+                        child->setGeometry(0, childMainPosition, crossSize, childMainSize);
+                    }
+                    child = isReverse ? child->previousSibling() : child->nextSibling();
+                    childMainPosition += childMainSize;
+                }
             }
             else {
-                child->move(0, childIndex * sc1);
-                child->resize(sc2, sc1);
+                // Stretch evenly. TODO: should we instead leave empty space at the end of the main axis?
+                float freeSpacePerChild = freeSpace / numChildren;
+                float childMainPosition = 0.0f;
+                Widget* child = isReverse ? lastChild() : firstChild();
+                while (child) {
+                    float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
+                    float childMainSize = childPreferredMainSize + freeSpacePerChild;
+                    if (isRow) {
+                        child->setGeometry(childMainPosition, 0, childMainSize, crossSize);
+                    }
+                    else {
+                        child->setGeometry(0, childMainPosition, crossSize, childMainSize);
+                    }
+                    child = isReverse ? child->previousSibling() : child->nextSibling();
+                    childMainPosition += childMainSize;
+                }
             }
-            child = isReverse ? child->previousSibling() : child->nextSibling();
-            childIndex += 1;
+        }
+        else {
+            // Handle shrinking. Note that unlike when stretching, the shrink
+            // factor is multiplied with the preferred size. This ensures that
+            // if they have the same shrink factor, large items shrink faster
+            // than small items, so that they reach a zero-size at the same
+            // time. This is the same behavior as CSS.
+            float totalScaledShrink = 0;
+            for (Widget* child : children()) {
+                float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
+                float childShrink = isRow ? child->widthPolicy().shrink() : child->heightPolicy().shrink();
+                float childScaledShrink = childShrink * childPreferredMainSize;
+                totalScaledShrink += childScaledShrink;
+            }
+            if (totalScaledShrink > eps) {
+                float freeSpacePerScaledShrink = freeSpace / totalScaledShrink;
+                float childMainPosition = 0.0f;
+                Widget* child = isReverse ? lastChild() : firstChild();
+                while (child) {
+                    float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
+                    float childShrink = isRow ? child->widthPolicy().shrink() : child->heightPolicy().shrink();
+                    float childScaledShrink = childShrink * childPreferredMainSize;
+                    float childMainSize = childPreferredMainSize + freeSpacePerScaledShrink * childScaledShrink;
+                    if (isRow) {
+                        child->setGeometry(childMainPosition, 0, childMainSize, crossSize);
+                    }
+                    else {
+                        child->setGeometry(0, childMainPosition, crossSize, childMainSize);
+                    }
+                    child = isReverse ? child->previousSibling() : child->nextSibling();
+                    childMainPosition += childMainSize;
+                }
+            }
+            else {
+                // Shrink evenly. TODO: should we instead overflow?
+                float freeSpacePerChild = freeSpace / numChildren;
+                float childMainPosition = 0.0f;
+                Widget* child = isReverse ? lastChild() : firstChild();
+                while (child) {
+                    float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
+                    float childMainSize = childPreferredMainSize + freeSpacePerChild;
+                    if (isRow) {
+                        child->setGeometry(childMainPosition, 0, childMainSize, crossSize);
+                    }
+                    else {
+                        child->setGeometry(0, childMainPosition, crossSize, childMainSize);
+                    }
+                    child = isReverse ? child->previousSibling() : child->nextSibling();
+                    childMainPosition += childMainSize;
+                }
+            }
         }
     }
 }

@@ -115,5 +115,26 @@ bool Button::onMouseLeave()
     return true;
 }
 
+core::Vec2f Button::computePreferredSize() const
+{
+    float width = 0;
+    float height = 0;
+    if (widthPolicy().type() == LengthType::Auto) {
+        width = 60;
+        // TODO: compute appropriate width based on text length
+    }
+    else {
+        width = widthPolicy().value();
+    }
+    if (heightPolicy().type() == LengthType::Auto) {
+        height = 30;
+        // TODO: compute appropriate height based on font size?
+    }
+    else {
+        height = heightPolicy().value();
+    }
+    return core::Vec2f(width, height);
+}
+
 } // namespace ui
 } // namespace vgc
