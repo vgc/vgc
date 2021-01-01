@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2020 The VGC Developers
+# Copyright 2021 The VGC Developers
 # See the COPYRIGHT file at the top-level directory of this distribution
 # and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 #
