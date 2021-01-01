@@ -30,6 +30,9 @@ vgc_add_library(ui
         mouseevent.cpp
         row.cpp
         widget.cpp
+
+    RESOURCE_FILES
+        stylesheets/default.vgcss
 )
 
 add_subdirectory(wraps)
