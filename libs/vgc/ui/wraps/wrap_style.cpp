@@ -15,13 +15,25 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/ui/style.h>
 
-void wrap_exceptions(py::module& m);
-void wrap_style(py::module& m);
-void wrap_widget(py::module& m);
+void wrap_StyleSheet(py::module& m)
+{
+    using This = vgc::ui::StyleSheet;
+    using Holder = vgc::ui::StyleSheetPtr;
+    using Parent = vgc::core::Object;
 
-PYBIND11_MODULE(ui, m) {
-    wrap_exceptions(m);
-    wrap_style(m);
-    wrap_widget(m);
+    py::class_<This, Holder, Parent>(m, "StyleSheet")
+        .def(py::init([]() { return This::create(); } ))
+        .def(py::init([](const std::string& s) { return This::create(s); } ))
+    ;
+}
+
+void wrap_style(py::module& m)
+{
+    // Necessary to define inheritance across modules. See:
+    // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
+    py::module::import("vgc.core");
+
+    wrap_StyleSheet(m);
 }
