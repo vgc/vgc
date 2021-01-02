@@ -17,6 +17,7 @@ vgc_add_library(ui
         lengthtype.h
         mouseevent.h
         row.h
+        style.h
         widget.h
 
     CPP_FILES
@@ -29,6 +30,7 @@ vgc_add_library(ui
         label.cpp
         mouseevent.cpp
         row.cpp
+        style.cpp
         widget.cpp
 
     RESOURCE_FILES
