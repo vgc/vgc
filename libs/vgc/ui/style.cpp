@@ -167,7 +167,7 @@ bool isUtf8ContinuationByte_(char c) {
     return (c_ >> 6) == 2;
 }
 
-// Decode the input string. We don't actually "deco
+// Decode the input string.
 //
 // References:
 // https://www.w3.org/TR/css-syntax-3/#input-byte-stream
@@ -412,10 +412,10 @@ void write(OStream& out, const Token& token)
 
 class TokenStream {
 public:
-    // Constructs a TokenStream from the given character range.
-    // The TokenStream must outlive the character range.
-    // The given character range must have been preprocessed
-    // and contain a final '\0' character.
+    // Constructs a TokenStream from the given character range. The given
+    // character range must outlive the TokenStream, since the tokens point to
+    // characters in the range. The given character range is assumed to be
+    // already "decoded" and contain a final '\0' character.
     TokenStream(const char* s) :
         c1p_(nullptr),
         c1_(eof),
@@ -430,7 +430,7 @@ public:
             hasNext_ = false;
         }
         else {
-            consumeToken_(/*token_.end*/);
+            consumeToken_();
         }
         return token_;
     }
@@ -1111,58 +1111,404 @@ private:
     }
 };
 
-class Parser
+using TokenArray = core::Array<Token>;
+using TokenIterator = core::Array<Token>::iterator;
+
+// Returns a TokenArray from the given character range. The given character
+// range must outlive the tokens, since they point to characters in the range.
+// The given character range is assumed to be already "decoded" and contain a
+// final '\0' character.
+//
+TokenArray tokenize_(const char* s)
 {
-public:
-    static void parse(const std::string& styleString, StyleSheet* styleSheet)
-    {
-        std::string decodedStyleString = decode_(styleString);
-        Parser parser(std::move(decodedStyleString), styleSheet);
-        parser.parse_();
+    TokenArray res;
+    TokenStream stream(s);
+    while (true) {
+        Token t = stream.get();
+        if (t.type == TokenType::Eof) {
+            break;
+        }
+        else {
+            res.append(std::move(t));
+        }
     }
+    return res;
+}
+
+
+} // namespace
+
+
+namespace internal {
+
+// https://www.w3.org/TR/css-syntax-3/#parsing
+//
+// Note: we use a class with static functions (rather than free functions) to
+// make it easier for the StyleSheet class (and other classes) to simply
+// befriend this class, instead of befriending all the free functions.
+//
+class StyleParser {
+public:
+    // https://www.w3.org/TR/css-syntax-3/#parse-stylesheet
+    static StyleSheetPtr parseStyleSheet(const std::string& styleString) {
+        StyleSheetPtr styleSheet = StyleSheet::create();
+        std::string decoded = decode_(styleString);
+        TokenArray tokens = tokenize_(decoded.data());
+        bool topLevel = true;
+        TokenIterator it = tokens.begin();
+        core::Array<StyleRuleSetPtr> rules = consumeRuleList_(it, tokens.end(), topLevel);
+        for (StyleRuleSetPtr& rule : rules) {
+            styleSheet->appendChildObject_(rule.get());
+            styleSheet->ruleSets_.append(rule.get());
+        }
+        return styleSheet;
+    }
+
+    // TODO: implement the other entry points, see:
+    // https://www.w3.org/TR/css-syntax-3/#parser-entry-points
 
 private:
-    std::string decodedStyleString_;
-    TokenStream tokens_;
-    StyleSheet* styleSheet_;
+    // https://www.w3.org/TR/css-syntax-3/#consume-list-of-rules
+    // Note: we use 'styleSheet != nullptr' as top-level flag
+    static core::Array<StyleRuleSetPtr> consumeRuleList_(TokenIterator& it, TokenIterator end, bool topLevel) {
+        core::Array<StyleRuleSetPtr> res;
+        while (true) {
+            if (it == end) {
+                break;
+            }
+            else if (it->type == TokenType::Whitespace) {
+                ++it;
+            }
+            else if (it->type == TokenType::Cdo || it->type == TokenType::Cdc) {
+                // We handle '<!--' and '-->' tokens by ignoring the tokens,
+                // i.e., the block within the tokens are NOT commented out.
+                // This is the intented behavior: these tokens are a historical
+                // hack to allow embedding CSS within a HTML <style> element,
+                // while not confusing ancient browsers that don't support the
+                // <style> elements at all. See:
+                //
+                // https://stackoverflow.com/questions/9812489/html-comments-in-css
+                //
+                // Note: we might want to completely remove handling these for
+                // our VGCSS syntax, which is slightly divergent from CSS anyway.
+                // However let's keep it for now, in case we want to use this code
+                // as a base for an actual CSS parser.
+                //
+                if (topLevel) {
+                    ++it;
+                    continue;
+                }
+                else {
+                    StyleRuleSetPtr rule = consumeQualifiedRule_(it, end);
+                    if (rule) {
+                        res.append(rule);
+                    }
+                }
+            }
+            else if (it->type == TokenType::AtKeyword) {
+                // TODO: append a StyleAtRule to the result
+                consumeAtRule_(it, end);
+            }
+            else {
+                StyleRuleSetPtr rule = consumeQualifiedRule_(it, end);
+                if (rule) {
+                    res.append(rule);
+                }
+            }
+        }
+        return res;
+    }
 
-    // Creates the parser object.
-    // The given decoded string must outlive the Parser.
-    Parser(std::string&& s, StyleSheet* styleSheet) :
-        decodedStyleString_(s),
-        tokens_(decodedStyleString_.data()),
-        styleSheet_(styleSheet)
-    {
+    // https://www.w3.org/TR/css-syntax-3/#consume-at-rule
+    static void consumeAtRule_(TokenIterator& it, TokenIterator end) {
+        // For now, we just consume the rule without returning anything.
+        // In the future, we'll return a StyleAtRule
+        ++it; // skip At token
+        while (true) {
+            if (it == end) {
+                // Parse Error: return the partially consumed AtRule
+                break;
+            }
+            else if (it->type == TokenType::Semicolon) {
+                ++it;
+                break;
+            }
+            else if (it->type == TokenType::LeftCurlyBracket) {
+                consumeSimpleBlock_(it, end);
+                // TODO: assign the simple block to the AtRule's block
+                break;
+            }
+            else {
+                consumeComponentValue_(it, end);
+                // TODO: append the component value to the AtRule's prelude
+            }
+        }
+        // TODO: return the AtRule
+    }
+
+    // https://www.w3.org/TR/css-syntax-3/#consume-qualified-rule
+    //
+    // Assumes `it != end`.
+    //
+    // Note: this function returns a null StyleRuleSetPtr when the spec says to
+    // "return nothing".
+    //
+    // Note: https://www.w3.org/TR/css-syntax-3/#style-rules
+    //
+    //   « Qualified rules at the top-level of a CSS stylesheet are style
+    //     rules. Qualified rules in other contexts may or may not be style
+    //     rules, as defined by the context. »
+    //
+    // Since in this implementation, all calls to consumeQualifiedRule_() are
+    // made at the top-level of the stylesheet, we treat all qualified rules as
+    // style rules, and directly create and populate a StyleRuleSet. If we ever
+    // come across a use case were a qualifed rule should not be a style rule,
+    // then we'll have to make this implementation more generic.
+    //
+    static StyleRuleSetPtr consumeQualifiedRule_(TokenIterator& it, TokenIterator end) {
+        StyleRuleSetPtr rule = StyleRuleSet::create();
+        const char* preludeBegin = it->begin;
+        while (true) {
+            if (it == end) {
+                // Parse Error: return nothing
+                return StyleRuleSetPtr();
+            }
+            else if (it->type == TokenType::LeftCurlyBracket) {
+                const char* preludeEnd = it->begin;
+                ++it;
+
+                // Set the whole prelude as one selector
+                // TODO: parse the prelude as a list of selector:
+                // https://www.w3.org/TR/selectors-4/#selector-list
+                StyleSelectorPtr selector = StyleSelector::create();
+                selector->text_ = std::string(preludeBegin, preludeEnd);
+                rule->appendChildObject_(selector.get());
+                rule->selectors_.append(selector.get());
+
+                // Consume list of declarations
+                bool expectRightCurlyBracket = true;
+                core::Array<StyleDeclarationPtr> declarations = consumeDeclarationList_(it, end, expectRightCurlyBracket);
+                for (StyleDeclarationPtr& declaration : declarations) {
+                    rule->appendChildObject_(declaration.get());
+                    rule->declarations_.append(declaration.get());
+                }
+                break;
+
+                // Note: for a qualifed rule which is not a style rule, we
+                // should more generically consume a simple block rather than a
+                // declaration list.
+            }
+            else {
+                consumeComponentValue_(it, end);
+            }
+        }
+        return rule;
+    }
+
+    // https://www.w3.org/TR/css-syntax-3/#consume-list-of-declarations
+    //
+    // Note: in the link above, the case RightCurlyBracket is not handled,
+    // because the spec assumes that the block is first parsed using
+    // consumeSimpleBlock_(), and only then its content is parsed as a list of
+    // declarations as a second pass. Instead, we do both in one pass, so we
+    // need to handle the possibility of a closing RightCurlyBracket.
+    //
+    static core::Array<StyleDeclarationPtr> consumeDeclarationList_(TokenIterator& it, TokenIterator end, bool expectRightCurlyBracket) {
+        core::Array<StyleDeclarationPtr> res;
+        while (true) {
+            if (it == end) {
+                if (expectRightCurlyBracket) {
+                    // Parse error: return the partially consumed list
+                    break;
+                }
+                else {
+                    // Finished consuming all declaration (not an error)
+                    break;
+                }
+            }
+            else if (it->type == TokenType::Whitespace) {
+                ++it;
+            }
+            else if  (it->type == TokenType::Semicolon) {
+                ++it;
+            }
+            else if (it->type == TokenType::AtKeyword) {
+                consumeAtRule_(it, end);
+                // Note: for now, the at rule is simply skipped and
+                // not appended to the list of declarations.
+            }
+            else if (it->type == TokenType::Ident) {
+                TokenIterator declarationBegin = it;
+                while (true) {
+                    if (it == end ||
+                        it->type == TokenType::Semicolon ||
+                        (expectRightCurlyBracket && it->type == TokenType::RightCurlyBracket)) {
+
+                        break;
+                    }
+                    else {
+                        consumeComponentValue_(it, end);
+                    }
+                }
+                TokenIterator declarationEnd = it;
+                StyleDeclarationPtr declaration = consumeDeclaration_(declarationBegin, declarationEnd);
+                if (declaration) {
+                    res.append(declaration);
+                }
+            }
+            else if (expectRightCurlyBracket && it->type == TokenType::RightCurlyBracket) {
+                ++it;
+                break;
+            }
+            else {
+                // Parse error: throw away component values until semicolon or eof
+                while (true) {
+                    if (it == end ||
+                        it->type == TokenType::Semicolon ||
+                        (expectRightCurlyBracket && it->type == TokenType::RightCurlyBracket)) {
+
+                        break;
+                    }
+                    else {
+                        consumeComponentValue_(it, end);
+                    }
+                }
+            }
+        }
+        return res;
+    }
+
+    // https://www.w3.org/TR/css-syntax-3/#consume-declaration
+    // Assumes that the current token is the identifier.
+    // May return a null pointer in case of parse errors.
+    static StyleDeclarationPtr consumeDeclaration_(TokenIterator& it, TokenIterator end) {
+        StyleDeclarationPtr declaration = StyleDeclaration::create();
+        declaration->property_ = it->codePointsValue;
+        ++it;
+        // Consume whitespaces
+        while (it != end && it->type == TokenType::Whitespace) {
+            ++it;
+        }
+        // Ensure first non-whitespace token is a Colon
+        if (it == end || it->type != TokenType::Colon) {
+            // Parse error: return nothing
+            return StyleDeclarationPtr();
+        }
+        else {
+            ++it;
+        }
+        // Consume whitespaces
+        while (it != end && it->type == TokenType::Whitespace) {
+            ++it;
+        }
+        // Consume value components
+        if (it != end) {
+            TokenIterator valueBegin = it;
+            while (it != end) {
+                consumeComponentValue_(it, end);
+            }
+            TokenIterator valueLast = it - 1;
+            while (valueLast->type == TokenType::Whitespace) {
+                --valueLast;
+            }
+            // TODO: handle "!important"
+            declaration->value_ = std::string(valueBegin->begin, valueLast->end);
+        }
+        return declaration;
 
     }
 
-    void parse_() {
-        Token token = tokens_.get();
-        while (token.type != TokenType::Eof) {
-            using core::write;
-            write(std::cout, token);
-            write(std::cout, "\n");
-            token = tokens_.get();
+    // https://www.w3.org/TR/css-syntax-3/#consume-component-value
+    // Assumes that `it` is not end
+    static void consumeComponentValue_(TokenIterator& it, TokenIterator end) {
+        if (it->type == TokenType::LeftParenthesis ||
+            it->type == TokenType::LeftCurlyBracket ||
+            it->type == TokenType::LeftSquareBracket) {
+
+            consumeSimpleBlock_(it, end);
+            // TODO: return it
         }
+        else if (it->type == TokenType::Function) {
+            consumeFunction_(it, end);
+            // TODO: return it
+        }
+        else {
+            ++it;
+            // TODO: return consumed token
+        }
+    }
+
+    // https://www.w3.org/TR/css-syntax-3/#consume-simple-block
+    // Assumes that the `it` token is a left parenthesis or left curly/square bracket.
+    static void consumeSimpleBlock_(TokenIterator& it, TokenIterator end) {
+        TokenType startToken = it->type;
+        TokenType endToken;
+        if (startToken == TokenType::LeftParenthesis) {
+            endToken = TokenType::RightParenthesis;
+        }
+        else if (startToken == TokenType::LeftCurlyBracket) {
+            endToken = TokenType::RightCurlyBracket;
+        }
+        else { // startToken == TokenType::LeftSquareBracket
+            endToken = TokenType::RightSquareBracket;
+        }
+        ++it;
+        while (true) {
+            if (it == end) {
+                // Parse error: return the block
+                break;
+            }
+            else if (it->type == endToken) {
+                ++it;
+                break;
+            }
+            else {
+                consumeComponentValue_(it, end);
+                // TODO: append component value to block's value
+            }
+        }
+        // TODO: return block
+    }
+
+    // https://www.w3.org/TR/css-syntax-3/#consume-function
+    // assumes `it` is a function token
+    static void consumeFunction_(TokenIterator& it, TokenIterator end) {
+        // TODO: create function object, and set its name to it->codePoints
+        ++it;
+        while (true) {
+            if (it == end) {
+                // Parse error: return the function
+                break;
+            }
+            else if (it->type == TokenType::RightParenthesis) {
+                ++it;
+                break;
+            }
+            else {
+                consumeComponentValue_(it, end);
+                // TODO: append component value to function's value
+            }
+        }
+        // TODO: return function
     }
 };
 
 } // namespace
 
-StyleSheet::StyleSheet(const std::string& s) :
+StyleSheet::StyleSheet() :
     Object()
 {
-    Parser::parse(s, this);
+
 }
 
 StyleSheetPtr StyleSheet::create()
 {
-    return StyleSheetPtr(new StyleSheet(""));
+    return StyleSheetPtr(new StyleSheet());
 }
 
 StyleSheetPtr StyleSheet::create(const std::string& s)
 {
-    return StyleSheetPtr(new StyleSheet(s));
+    return internal::StyleParser::parseStyleSheet(s);
 }
 
 StyleRuleSet::StyleRuleSet() :
