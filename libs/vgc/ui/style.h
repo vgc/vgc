@@ -18,12 +18,24 @@
 #define VGC_UI_STYLE_H
 
 #include <vgc/core/innercore.h>
+#include <vgc/core/array.h>
 #include <vgc/ui/api.h>
 
 namespace vgc {
 namespace ui {
 
+namespace internal {
+class StyleParser;
+}
+
 VGC_DECLARE_OBJECT(StyleSheet);
+VGC_DECLARE_OBJECT(StyleRuleSet);
+VGC_DECLARE_OBJECT(StyleSelector);
+VGC_DECLARE_OBJECT(StyleDeclaration);
+
+using StyleRuleSetArray = core::Array<StyleRuleSet*>;
+using StyleSelectorArray = core::Array<StyleSelector*>;
+using StyleDeclarationArray = core::Array<StyleDeclaration*>;
 
 /// \class vgc::ui::StyleSheet
 /// \brief Parses and stores a VGCSS stylesheet.
@@ -33,17 +45,6 @@ private:
     VGC_OBJECT(StyleSheet)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-protected :
-    /// Constructs a StyleSheet. This constructor is an implementation detail
-    /// only available to derived classes. In order to create a StyleSheet,
-    /// please use the following:
-    ///
-    /// ```cpp
-    /// StyleSheetPtr stylesheet = StyleSheet::create();
-    /// ```
-    ///
-    StyleSheet(const std::string& s);
-
 public:
     /// Creates an empty stylesheet.
     ///
@@ -52,9 +53,19 @@ public:
     /// Creates a stylesheet from the given string.
     ///
     static StyleSheetPtr create(const std::string& s);
-};
 
-VGC_DECLARE_OBJECT(StyleRuleSet);
+    /// Returns all the rule sets of this stylesheet.
+    ///
+    const StyleRuleSetArray& ruleSets() const {
+        return ruleSets_;
+    }
+
+private:
+    StyleRuleSetArray ruleSets_;
+
+    friend class internal::StyleParser;
+    StyleSheet();
+};
 
 /// \class vgc::ui::StyleRuleSet
 /// \brief One rule set of a stylesheet.
@@ -64,13 +75,23 @@ private:
     VGC_OBJECT(StyleRuleSet)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
+public:
+    const StyleSelectorArray& selectors() const {
+        return selectors_;
+    }
+
+    const StyleDeclarationArray& declarations() const {
+        return declarations_;
+    }
+
 private:
-    friend class StyleSheet;
+    StyleSelectorArray selectors_;
+    StyleDeclarationArray declarations_;
+
+    friend class internal::StyleParser;
     StyleRuleSet();
     static StyleRuleSetPtr create();
 };
-
-VGC_DECLARE_OBJECT(StyleSelector);
 
 /// \class vgc::ui::StyleSelector
 /// \brief One selector of a rule set of a stylesheet.
@@ -80,13 +101,19 @@ private:
     VGC_OBJECT(StyleSelector)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
+public:
+    const std::string& text() {
+        return text_;
+    }
+
 private:
-    friend class StyleSheet;
+    std::string text_;
+
+    friend class internal::StyleParser;
     StyleSelector();
     static StyleSelectorPtr create();
 };
 
-VGC_DECLARE_OBJECT(StyleDeclaration);
 
 /// \class vgc::ui::StyleDeclaration
 /// \brief One declaration of a rule set of a stylesheet.
@@ -96,8 +123,20 @@ private:
     VGC_OBJECT(StyleDeclaration)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
+public:
+    const std::string& property() {
+        return property_;
+    }
+
+    const std::string& value() {
+        return value_;
+    }
+
 private:
-    friend class StyleSheet;
+    std::string property_;
+    std::string value_;
+
+    friend class internal::StyleParser;
     StyleDeclaration();
     static StyleDeclarationPtr create();
 };
