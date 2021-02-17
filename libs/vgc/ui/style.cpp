@@ -978,35 +978,39 @@ private:
         token_.codePointsValue.clear();
     }
 
+    bool isUrl_() {
+        if (token_.codePointsValue.size() != 3) {
+            return false;
+        }
+        char c1 = token_.codePointsValue[0];
+        char c2 = token_.codePointsValue[1];
+        char c3 = token_.codePointsValue[2];
+        return (c1 == 'u' || c1 == 'U') &&
+               (c2 == 'r' || c2 == 'R') &&
+               (c3 == 'l' || c3 == 'L') &&
+               c2_ == '(';
+    }
+
     // https://www.w3.org/TR/css-syntax-3/#consume-ident-like-token
     void consumeIdentLikeToken_() {
         consumeName_();
-        if (token_.codePointsValue.size() == 3) {
-            char c1 = token_.codePointsValue[0];
-            char c2 = token_.codePointsValue[1];
-            char c3 = token_.codePointsValue[2];
-            if ((c1 == 'u' || c1 == 'U') &&
-                (c2 == 'r' || c2 == 'R') &&
-                (c3 == 'l' || c3 == 'L') &&
-                c2_ == '(')
-            {
+        if (isUrl_()) {
+            consumeInput_();
+            // Consume all whitespace characters except the last.
+            // Note: keeping one whitespace ensures that we generate a
+            // whitespace token if this ident-like token is a function
+            // token rather than a URL token
+            while (isWhitespace_(c2_) && isWhitespace_(c3_)) {
                 consumeInput_();
-                // Consume all whitespace characters except the last.
-                // Note: keeping one whitespace ensures that we generate a
-                // whitespace token if this ident-like token is a function
-                // token rather than a URL token
-                while (isWhitespace_(c2_) && isWhitespace_(c3_)) {
-                    consumeInput_();
-                }
-                if (c2_ == '\"' || c2_ == '\'' ||
+            }
+            if (c2_ == '\"' || c2_ == '\'' ||
                     (isWhitespace_(c2_) && (c3_ == '\"' || c3_ == '\'')))
-                {
-                    token_.type = TokenType::Function;
-                }
-                else {
-                    token_.codePointsValue.clear();
-                    consumeUrlToken_();
-                }
+            {
+                token_.type = TokenType::Function;
+            }
+            else {
+                token_.codePointsValue.clear();
+                consumeUrlToken_();
             }
         }
         else if (c2_ == '(') {
@@ -1415,7 +1419,6 @@ private:
             declaration->value_ = std::string(valueBegin->begin, valueLast->end);
         }
         return declaration;
-
     }
 
     // https://www.w3.org/TR/css-syntax-3/#consume-component-value
