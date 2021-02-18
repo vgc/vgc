@@ -37,6 +37,10 @@ using StyleRuleSetArray = core::Array<StyleRuleSet*>;
 using StyleSelectorArray = core::Array<StyleSelector*>;
 using StyleDeclarationArray = core::Array<StyleDeclaration*>;
 
+/// Get global stylesheet.
+///
+StyleSheet* styleSheet();
+
 /// \class vgc::ui::StyleSheet
 /// \brief Parses and stores a VGCSS stylesheet.
 ///

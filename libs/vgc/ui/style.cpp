@@ -17,11 +17,31 @@
 #include <vgc/ui/style.h>
 
 #include <string.h> // strcmp
+#include <vgc/core/io.h>
 #include <vgc/core/parse.h>
+#include <vgc/core/paths.h>
 #include <vgc/ui/lengthtype.h>
 
 namespace vgc {
 namespace ui {
+
+namespace {
+
+StyleSheetPtr createGlobalStyleSheet() {
+    std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
+    std::string s = core::readFile(path);
+    return StyleSheet::create(s);
+}
+
+} // namespace
+
+/// Get global stylesheet.
+///
+StyleSheet* styleSheet()
+{
+    static StyleSheetPtr s = createGlobalStyleSheet();
+    return s.get();
+}
 
 namespace {
 
