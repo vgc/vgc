@@ -145,9 +145,9 @@ public:
     /// Returns whether this StringId is equal to the given string.
     ///
     bool operator==(const std::string& other) const {
-        // Note: comparing strings is faster than building a StringId(other)
-        // then comparing the StringIds, unless they have a long common prefix.
-        return string() == other;
+        // Note: comparing two std::strings is typically faster than building
+        // a StringId from an std::string, so we choose to do the former.
+        return *stringPtr_ == other;
     }
 
 private:
