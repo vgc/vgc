@@ -324,6 +324,21 @@ bool Widget::onMouseLeave()
     return true;
 }
 
+void Widget::addClass(core::StringId class_) {
+    classes_.add(class_);
+    // TODO: recomputes style and update.
+}
+
+void Widget::removeClass(core::StringId class_) {
+    classes_.remove(class_);
+    // TODO: recomputes style and update.
+}
+
+void Widget::toggleClass(core::StringId class_) {
+    classes_.toggle(class_);
+    // TODO: recomputes style and update.
+}
+
 core::Vec2f Widget::computePreferredSize() const
 {
     // TODO: convert units if any.
