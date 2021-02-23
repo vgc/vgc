@@ -28,6 +28,7 @@
 #include <vgc/ui/exceptions.h>
 #include <vgc/ui/lengthpolicy.h>
 #include <vgc/ui/mouseevent.h>
+#include <vgc/ui/style.h>
 
 namespace vgc {
 namespace ui {
@@ -600,6 +601,10 @@ public:
     ///
     void toggleClass(core::StringId class_);
 
+    /// Returns the computed value of a given style property of this widget.
+    ///
+    StyleValue style(core::StringId property);
+
 protected:
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its
@@ -636,6 +641,9 @@ private:
     Widget* mousePressedChild_;
     Widget* mouseEnteredChild_;
     WidgetClasses classes_;
+    friend class Style;
+    Style style_;
+    void onClassesChanged_();
 };
 
 inline WidgetIterator& WidgetIterator::operator++() {

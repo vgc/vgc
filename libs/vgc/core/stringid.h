@@ -17,6 +17,7 @@
 #ifndef VGC_CORE_STRINGID_H
 #define VGC_CORE_STRINGID_H
 
+#include <functional> // hash
 #include <string>
 #include <vgc/core/api.h>
 
@@ -151,6 +152,7 @@ public:
     }
 
 private:
+    friend class std::hash<StringId>;
     const std::string* stringPtr_;
 };
 
@@ -160,10 +162,20 @@ private:
 /// Writes the underlying string of the given \p stringId to the given output
 /// stream \p out.
 ///
-template <typename OutputStream>
+template<typename OutputStream>
 OutputStream& operator<<(OutputStream& out, vgc::core::StringId stringId) {
     out << stringId.string();
     return out;
 }
+
+// Implement hash function to make StringId compatible with std::unordered_map
+namespace std {
+template<>
+struct hash<vgc::core::StringId> {
+    std::size_t operator()(const vgc::core::StringId& s) const {
+        return std::hash<const std::string*>()(s.stringPtr_);
+    }
+};
+} // namespace std
 
 #endif // VGC_CORE_STRINGID_H

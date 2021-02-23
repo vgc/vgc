@@ -326,17 +326,22 @@ bool Widget::onMouseLeave()
 
 void Widget::addClass(core::StringId class_) {
     classes_.add(class_);
-    // TODO: recomputes style and update.
+    onClassesChanged_();
 }
 
 void Widget::removeClass(core::StringId class_) {
     classes_.remove(class_);
-    // TODO: recomputes style and update.
+    onClassesChanged_();
 }
 
 void Widget::toggleClass(core::StringId class_) {
     classes_.toggle(class_);
-    // TODO: recomputes style and update.
+    onClassesChanged_();
+}
+
+StyleValue Widget::style(core::StringId property)
+{
+    return style_.computedValue(property, this);
 }
 
 core::Vec2f Widget::computePreferredSize() const
@@ -350,6 +355,12 @@ core::Vec2f Widget::computePreferredSize() const
 void Widget::updateChildrenGeometry()
 {
     // nothing
+}
+
+void Widget::onClassesChanged_()
+{
+    style_ = styleSheet()->computeStyle(this);
+    // TODO: re-render
 }
 
 } // namespace ui
