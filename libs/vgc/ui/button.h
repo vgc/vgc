@@ -57,8 +57,6 @@ protected:
     core::Vec2f computePreferredSize() const override;
 
 private:
-    core::Color backgroundColor_;
-    core::Color backgroundColorOnHover_;
     Int trianglesId_;
     bool reload_;
     bool isHovered_;

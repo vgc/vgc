@@ -1,15 +1,20 @@
 /* Default style for buttons and labels */
-Button,
-Label {
+.Button,
+.Label {
     margin-top: 10dp;
     margin-right: 10dp;
     margin-bottom: 10dp;
     margin-left: 10dp;
 }
 
+.Button {
+    background-color: rgb(255, 0, 0);
+    background-color-on-hover: rgb(255, 255, 0);
+}
+
 /* Default style for flex container.
    Note: these values are temporary (for testing only). */
-Flex {
+.Flex {
     margin-top: 5dp;    /* temporary value */
     margin-right: 5dp;  /* temporary value */
     margin-bottom: 5dp; /* temporary value */

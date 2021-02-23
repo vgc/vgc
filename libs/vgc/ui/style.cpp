@@ -21,9 +21,89 @@
 #include <vgc/core/parse.h>
 #include <vgc/core/paths.h>
 #include <vgc/ui/lengthtype.h>
+#include <vgc/ui/widget.h>
 
 namespace vgc {
 namespace ui {
+
+StylePropertySpec* StylePropertySpec::get(core::StringId property)
+{
+    if (map_.empty()) {
+        init();
+    }
+    auto search = map_.find(property);
+    if (search == map_.end()) {
+        return nullptr;
+    }
+    else {
+        return &(search->second);
+    }
+}
+
+StylePropertySpec::Table StylePropertySpec::map_;
+
+void StylePropertySpec::init()
+{
+    const auto make = internal::StylePropertySpecMaker::make;
+    map_ = {
+        make("margin-left", StyleValue::none(), true),
+        make("margin-right", StyleValue::none(), true)
+        // TODO: complete this
+    };
+}
+
+Style::Style()
+{
+
+}
+
+StyleValue Style::cascadedValue(core::StringId property)
+{
+    auto search = map_.find(property);
+    if (search != map_.end()) {
+        return search->second;
+    }
+    else {
+        return StyleValue::none();
+    }
+}
+
+StyleValue Style::computedValue(core::StringId property, Widget* widget)
+{
+    StylePropertySpec* spec = StylePropertySpec::get(property);
+    return computedValue_(property, widget, spec);
+}
+
+// This function is a performance optimization: by passing in the spec, it
+// avoids repeateadly searching for it
+StyleValue Style::computedValue_(core::StringId property, Widget* widget, StylePropertySpec* spec)
+{
+    StyleValue v = cascadedValue(property);
+    if (v.type() == StyleValueType::None || v.type() == StyleValueType::Inherit) {
+        if (spec && v.type() == StyleValueType::None) {
+            if (spec->isInherited()) {
+                v = StyleValue::inherit();
+            }
+            else {
+                v = spec->initialValue();
+            }
+        }
+        if (v.type() == StyleValueType::Inherit) {
+            Widget* parent = widget->parent();
+            if (parent) {
+                v = parent->style_.computedValue_(property, parent, spec);
+            }
+            else if (spec) {
+                v = spec->initialValue();
+            }
+            else {
+                v = StyleValue::none();
+            }
+        }
+
+    }
+    return v;
+}
 
 namespace {
 
@@ -1407,7 +1487,7 @@ private:
     // May return a null pointer in case of parse errors.
     static StyleDeclarationPtr consumeDeclaration_(TokenIterator& it, TokenIterator end) {
         StyleDeclarationPtr declaration = StyleDeclaration::create();
-        declaration->property_ = it->codePointsValue;
+        declaration->property_ = core::StringId(it->codePointsValue);
         ++it;
         // Consume whitespaces
         while (it != end && it->type == TokenType::Whitespace) {
@@ -1436,7 +1516,8 @@ private:
                 --valueLast;
             }
             // TODO: handle "!important"
-            declaration->value_ = std::string(valueBegin->begin, valueLast->end);
+            declaration->text_ = std::string(valueBegin->begin, valueLast->end);
+            declaration->value_ = StyleValue(declaration->text_); // TODO: parse string
         }
         return declaration;
     }
@@ -1534,6 +1615,45 @@ StyleSheetPtr StyleSheet::create(const std::string& s)
     return internal::StyleParser::parseStyleSheet(s);
 }
 
+Style StyleSheet::computeStyle(Widget* widget)
+{
+    Style style;
+
+    // Compute which rule sets match this widget.
+    //
+    // TODO: improve performance by not iterating through all rule sets, but
+    // instead only iterate over potential candidate rule sets (or selectors)
+    // based on the widget's classes. Each per-class candidate rule sets would
+    // be precomputed once after parsing the spreadsheet.
+    //
+    // TODO: sort rule sets by selector's specificity
+    //
+    for (StyleRuleSet* rule : ruleSets()) {
+        for (StyleSelector* selector : rule->selectors()) {
+            if (selector->matches(widget)) {
+                style.ruleSets_.append(rule);
+                break;
+                // Note: the break is to prevent duplicate rule sets. But when
+                // implementing specificity, we'll have to evaluate all
+                // selectors and keep the one with largest specificity. Or
+                // simply iterate over all candidate selectors regardless of
+                // rule sets, and remove duplicate rule sets as a
+                // post-processing step.
+            }
+        }
+    }
+
+    // Compute cascaded values.
+    //
+    for (StyleRuleSet* rule : ruleSets_) {
+        for (StyleDeclaration* declaration : rule->declarations()) {
+            style.map_[declaration->property()] = declaration->value();
+        }
+    }
+
+    return style;
+}
+
 StyleRuleSet::StyleRuleSet() :
     Object()
 {
@@ -1543,6 +1663,42 @@ StyleRuleSet::StyleRuleSet() :
 StyleRuleSetPtr StyleRuleSet::create()
 {
     return StyleRuleSetPtr(new StyleRuleSet());
+}
+
+namespace {
+
+// TODO: move to core/stringutil.h or similar
+// Note: std::string::starts_with is available since C++20
+bool startsWith(const std::string& s, const std::string& prefix) {
+    if (s.size() < prefix.size()) {
+        return false;
+    }
+    else {
+        for (size_t i = 0; i < prefix.size(); ++i) {
+            if (s[i] != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+} // namespace
+
+bool StyleSelector::matches(Widget* widget)
+{
+    // TODO: actually implement this function. For now we use a super temporary
+    // method for testing, where we assume that the selector is a single class
+    // identifier, and for simplicity we only check for a matching prefixes so
+    // that whitespaces don't cause problems. In the actual implementation, the
+    // whitespaces and leading "." will be preprocessed away.
+
+    for (core::StringId c : widget->classes()) {
+        if (startsWith(text(), "." + c.string())) {
+            return true;
+        }
+    }
+    return false;
 }
 
 StyleSelector::StyleSelector() :

@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/ui/button.h>
+#include <vgc/ui/style.h>
 
 #include <vgc/core/floatarray.h>
 #include <vgc/core/random.h>
@@ -22,16 +23,21 @@
 namespace vgc {
 namespace ui {
 
+namespace strings {
+
+core::StringId Button("Button");
+core::StringId background_color("background-color");
+core::StringId background_color_on_hover("background-color-on-hover");
+
+} // namespace strings
+
 Button::Button() :
     Widget(),
     trianglesId_(-1),
     reload_(true),
     isHovered_(false)
 {
-    core::UniformDistribution d(0, 360);
-    double h = d();
-    backgroundColor_ = core::Color::hsl(h, 1, 0.5);
-    backgroundColorOnHover_ = core::Color::hsl(h, 1, 0.7);
+    addClass(strings::Button);
 }
 
 ButtonPtr Button::create()
@@ -70,9 +76,17 @@ void Button::onPaintDraw(graphics::Engine* engine)
     if (reload_) {
         reload_ = false;
         core::FloatArray a;
-        core::Color color = isHovered_ ?
-            backgroundColorOnHover_ :
-            backgroundColor_;
+        core::Color color; // default color
+        StyleValue v = style(isHovered_ ?
+                             strings::background_color_on_hover :
+                             strings::background_color);
+        if (v.type() == StyleValueType::String) {
+            color = core::parse<core::Color>(v.string());
+            // TODO: the above parsing should be precomputed from the style,
+            // that is, the StyleValue should already be either None (possibly,
+            // syntax error) or Color. Ideally, even the call to style(...)
+            // should be precomputed, perhaps on a onStyleChanged slot.
+        }
         insertRect(a, color, 0, 0, width(), height());
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
