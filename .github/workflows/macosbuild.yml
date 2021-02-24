@@ -83,8 +83,7 @@ jobs:
       uses: jurplel/install-qt-action@v2
       with:
         version: ${{env.QT_VERSION}}
-        setup-python: false
-
+        setup-python: true
 
     - name: Configure
       shell: bash
