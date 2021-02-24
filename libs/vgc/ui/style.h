@@ -64,7 +64,7 @@ private:
 public:
     /// Returns the type of the StyleValue
     ///
-    StyleValueType type() { return type_; }
+    StyleValueType type() const { return type_; }
 
     /// Creates a StyleValue of type None.
     ///
@@ -90,7 +90,7 @@ public:
     /// Returns the length of the StyleValue.
     /// The behavior is undefined if the type isn't Length.
     ///
-    float length() { return length_; }
+    float length() const { return length_; }
 
     /// Creates a StyleValue of type String
     ///
@@ -104,7 +104,7 @@ public:
     /// Returns the string of the StyleValue.
     /// The behavior is undefined if the type isn't String.
     ///
-    const std::string& string() { return string_; }
+    const std::string& string() const { return string_; }
 
 private:
     StyleValueType type_;
@@ -198,7 +198,7 @@ public:
     /// If there is no declared value for the given property, then
     /// a value of type StyleValueType::None is returned.
     ///
-    StyleValue cascadedValue(core::StringId property);
+    StyleValue cascadedValue(core::StringId property) const;
 
     /// Returns the computed value of the given property for the given
     /// widget, see:
@@ -211,7 +211,7 @@ public:
     /// default value for the given property (this can be the case for custom
     /// properties which are missing from the stylesheet).
     ///
-    StyleValue computedValue(core::StringId property, Widget* widget);
+    StyleValue computedValue(core::StringId property, Widget* widget) const;
 
 private:
     friend class StyleSheet;
@@ -220,7 +220,7 @@ private:
     // and only storing here an std::shared_ptr<StyleData>.
     core::Array<StyleRuleSet*> ruleSets_;
     std::unordered_map<core::StringId, StyleValue> map_;
-    StyleValue computedValue_(core::StringId property, Widget* widget, StylePropertySpec* spec);
+    StyleValue computedValue_(core::StringId property, Widget* widget, StylePropertySpec* spec) const;
 };
 
 /// Get global stylesheet.
@@ -253,7 +253,7 @@ public:
     /// Returns the style that applies to the given widget,
     /// by computing which ruleSets matches the widget.
     ///
-    Style computeStyle(Widget* widget);
+    Style computeStyle(Widget* widget) const;
 
 private:
     StyleRuleSetArray ruleSets_;
@@ -288,6 +288,47 @@ private:
     static StyleRuleSetPtr create();
 };
 
+/// \enum vgc::ui::StyleSelectorItemType
+/// \brief The type of a StyleSelectorItem
+///
+enum class StyleSelectorItemType : Int8 {
+    ClassSelector
+};
+
+/// \class vgc::ui::StyleSelectorItem
+/// \brief One item of a StyleSelector.
+///
+/// A style selector consists of a sequence of "items". For now, the only
+/// available item is "class selector".
+///
+/// In the future, more items should be supported, such as the universal
+/// selector, combinators, pseudo classes, and perhaps attribute selectors and
+/// pseudo-elements. See:
+///
+/// https://www.w3.org/TR/selectors-3/#selector-syntax
+///
+class VGC_UI_API StyleSelectorItem {
+public:
+    /// Creates a StyleSelectorItem of the given type and given name.
+    ///
+    StyleSelectorItem(StyleSelectorItemType type, core::StringId name) :
+        type_(type), name_(name) {}
+
+    /// Returns the type of this StyleSelectorItem.
+    ///
+    StyleSelectorItemType type() const { return type_; }
+
+    /// Returns the name of this StyleSelectorItem. What this names represents
+    /// depends on the type of this item. In the case of a ClassSelector, this
+    /// represent the class name.
+    ///
+    core::StringId name() const { return name_; }
+
+private:
+    StyleSelectorItemType type_;
+    core::StringId name_;
+};
+
 /// \class vgc::ui::StyleSelector
 /// \brief One selector of a rule set of a stylesheet.
 ///
@@ -297,18 +338,12 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
-    /// Returns the string representation of this selector.
-    ///
-    const std::string& text() {
-        return text_;
-    }
-
     /// Returns whether the given widget matches this selector.
     ///
     bool matches(Widget* widget);
 
 private:
-    std::string text_;
+    core::Array<StyleSelectorItem> items_;
 
     friend class internal::StyleParser;
     StyleSelector();
