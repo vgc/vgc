@@ -57,7 +57,7 @@ Style::Style()
 
 }
 
-StyleValue Style::cascadedValue(core::StringId property)
+StyleValue Style::cascadedValue(core::StringId property) const
 {
     auto search = map_.find(property);
     if (search != map_.end()) {
@@ -68,7 +68,7 @@ StyleValue Style::cascadedValue(core::StringId property)
     }
 }
 
-StyleValue Style::computedValue(core::StringId property, Widget* widget)
+StyleValue Style::computedValue(core::StringId property, Widget* widget) const
 {
     StylePropertySpec* spec = StylePropertySpec::get(property);
     return computedValue_(property, widget, spec);
@@ -76,7 +76,7 @@ StyleValue Style::computedValue(core::StringId property, Widget* widget)
 
 // This function is a performance optimization: by passing in the spec, it
 // avoids repeateadly searching for it
-StyleValue Style::computedValue_(core::StringId property, Widget* widget, StylePropertySpec* spec)
+StyleValue Style::computedValue_(core::StringId property, Widget* widget, StylePropertySpec* spec) const
 {
     StyleValue v = cascadedValue(property);
     if (v.type() == StyleValueType::None || v.type() == StyleValueType::Inherit) {
@@ -1261,7 +1261,7 @@ public:
         bool topLevel = true;
         TokenIterator it = tokens.begin();
         core::Array<StyleRuleSetPtr> rules = consumeRuleList_(it, tokens.end(), topLevel);
-        for (StyleRuleSetPtr& rule : rules) {
+        for (const StyleRuleSetPtr& rule : rules) {
             styleSheet->appendChildObject_(rule.get());
             styleSheet->ruleSets_.append(rule.get());
         }
@@ -1371,28 +1371,33 @@ private:
     //
     static StyleRuleSetPtr consumeQualifiedRule_(TokenIterator& it, TokenIterator end) {
         StyleRuleSetPtr rule = StyleRuleSet::create();
-        const char* preludeBegin = it->begin;
+        TokenIterator preludeBegin = it;
         while (true) {
             if (it == end) {
                 // Parse Error: return nothing
                 return StyleRuleSetPtr();
             }
             else if (it->type == TokenType::LeftCurlyBracket) {
-                const char* preludeEnd = it->begin;
+                TokenIterator preludeEnd = it;
                 ++it;
 
-                // Set the whole prelude as one selector
-                // TODO: parse the prelude as a list of selector:
-                // https://www.w3.org/TR/selectors-4/#selector-list
-                StyleSelectorPtr selector = StyleSelector::create();
-                selector->text_ = std::string(preludeBegin, preludeEnd);
-                rule->appendChildObject_(selector.get());
-                rule->selectors_.append(selector.get());
+                // Parse the prelude as a selector group
+                core::Array<StyleSelectorPtr> selectors = consumeSelectorGroup_(preludeBegin, preludeEnd);
+                if (selectors.isEmpty()) {
+                    // Parse error
+                    return StyleRuleSetPtr();
+                }
+                else {
+                    for (const StyleSelectorPtr& selector : selectors) {
+                        rule->appendChildObject_(selector.get());
+                        rule->selectors_.append(selector.get());
+                    }
+                }
 
                 // Consume list of declarations
                 bool expectRightCurlyBracket = true;
                 core::Array<StyleDeclarationPtr> declarations = consumeDeclarationList_(it, end, expectRightCurlyBracket);
-                for (StyleDeclarationPtr& declaration : declarations) {
+                for (const StyleDeclarationPtr& declaration : declarations) {
                     rule->appendChildObject_(declaration.get());
                     rule->declarations_.append(declaration.get());
                 }
@@ -1595,6 +1600,80 @@ private:
         }
         // TODO: return function
     }
+
+    // https://www.w3.org/TR/selectors-3/#grouping
+    // Returns an empty array if any of the selectors in the group is invalid.
+    static core::Array<StyleSelectorPtr> consumeSelectorGroup_(TokenIterator& it, TokenIterator end) {
+        core::Array<StyleSelectorPtr> res;
+        while (true) {
+            TokenIterator selectorBegin = it;
+            while (it != end && it->type != TokenType::Comma) {
+                ++it;
+            }
+            StyleSelectorPtr selector = consumeSelector_(selectorBegin, it);
+            if (selector) {
+                 res.append(selector);
+            }
+            else {
+                // Syntax error
+                return core::Array<StyleSelectorPtr>();
+            }
+            if (it == end) {
+                break;
+            }
+            else { // it->type == TokenType::Comma
+                ++it;
+            }
+        }
+        return res;
+    }
+
+    // https://www.w3.org/TR/selectors-3/#selector-syntax
+    // Returns null if the selector is invalid.
+    // For now, we only accepts a single class selector as valid selector.
+    static StyleSelectorPtr consumeSelector_(TokenIterator& it, TokenIterator end) {
+        StyleSelectorPtr selector = StyleSelector::create();
+        // Trim whitespaces at both ends
+        while (it != end && it->type == TokenType::Whitespace) {
+            ++it;
+        }
+        while (it != end && (end-1)->type == TokenType::Whitespace) {
+            --end;
+        }
+        if (it == end) {
+            // Parse error
+            return StyleSelectorPtr();
+        }
+        // Consume items
+        while (it != end) {
+            bool ok = consumeSelectorItem_(selector->items_, it, end);
+            if (!ok) {
+                // Parse error
+                return StyleSelectorPtr();
+            }
+        }
+        return selector;
+    }
+
+    // Consumes one item and appends it to the given array. Returns false in
+    // case of parse errors, in which case the item is not appended.
+    static bool consumeSelectorItem_(core::Array<StyleSelectorItem>& items, TokenIterator& it, TokenIterator end) {
+        if (it == end) {
+            return false;
+        }
+        if (it->type == TokenType::Delim && it->codePointsValue == ".") {
+            ++it;
+            if (it == end || it->type != TokenType::Ident) {
+                return false;
+            }
+            ++it;
+            items.append(StyleSelectorItem(
+                             StyleSelectorItemType::ClassSelector,
+                             core::StringId(it->codePointsValue)));
+            return true;
+        }
+        return false;
+    }
 };
 
 } // namespace
@@ -1615,7 +1694,7 @@ StyleSheetPtr StyleSheet::create(const std::string& s)
     return internal::StyleParser::parseStyleSheet(s);
 }
 
-Style StyleSheet::computeStyle(Widget* widget)
+Style StyleSheet::computeStyle(Widget* widget) const
 {
     Style style;
 
@@ -1665,40 +1744,23 @@ StyleRuleSetPtr StyleRuleSet::create()
     return StyleRuleSetPtr(new StyleRuleSet());
 }
 
-namespace {
-
-// TODO: move to core/stringutil.h or similar
-// Note: std::string::starts_with is available since C++20
-bool startsWith(const std::string& s, const std::string& prefix) {
-    if (s.size() < prefix.size()) {
-        return false;
-    }
-    else {
-        for (size_t i = 0; i < prefix.size(); ++i) {
-            if (s[i] != prefix[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
-} // namespace
-
 bool StyleSelector::matches(Widget* widget)
 {
-    // TODO: actually implement this function. For now we use a super temporary
-    // method for testing, where we assume that the selector is a single class
-    // identifier, and for simplicity we only check for a matching prefixes so
-    // that whitespaces don't cause problems. In the actual implementation, the
-    // whitespaces and leading "." will be preprocessed away.
+    if (items_.isEmpty()) {
+        // Logic error, but let's silently return false
+        return false;
+    }
 
-    for (core::StringId c : widget->classes()) {
-        if (startsWith(text(), "." + c.string())) {
-            return true;
+    // For now, we only support a sequence of class selectors, that is,
+    // something like ".class1.class2.class3". No combinators, pseudo-classes,
+    // etc.. so the implementation is super easy : the widget simply has to
+    // have all classes.
+    for (const StyleSelectorItem& item : items_) {
+        if (!widget->hasClass(item.name())) {
+            return false;
         }
     }
-    return false;
+    return true;
 }
 
 StyleSelector::StyleSelector() :
