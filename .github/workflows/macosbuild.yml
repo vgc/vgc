@@ -65,25 +65,27 @@ jobs:
         echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
 
+    # Install Qt. Note: this will automatically set Python to a version suitable
+    # for installing Qt. We override this in the "Setup Python" step that follows.
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: ${{env.QT_VERSION}}
+        setup-python: true
+
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.7'
         architecture: 'x64'
 
-    - name: Install most dependencies
+    - name: Install other dependencies
       shell: bash
       working-directory: ${{runner.workspace}}
       run: |
         brew install freetype
         brew install harfbuzz
         pip3 install dmgbuild
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
-      with:
-        version: ${{env.QT_VERSION}}
-        setup-python: true
 
     - name: Configure
       shell: bash
