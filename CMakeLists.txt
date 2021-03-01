@@ -189,8 +189,8 @@ if(VGC_CORE_OBJECT_DEBUG)
      add_definitions(-DVGC_CORE_OBJECT_DEBUG)
 endif()
 
-# Use C++11
-set(CMAKE_CXX_STANDARD 11)
+# Use C++17
+set(CMAKE_CXX_STANDARD 17)
 
 # Tell CMake where to find our FindFoobar.cmake modules.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/tools")
