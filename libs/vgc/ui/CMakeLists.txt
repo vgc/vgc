@@ -18,6 +18,7 @@ vgc_add_library(ui
         mouseevent.h
         row.h
         style.h
+        styletoken.h
         widget.h
 
     CPP_FILES
@@ -31,6 +32,7 @@ vgc_add_library(ui
         mouseevent.cpp
         row.cpp
         style.cpp
+        styletoken.cpp
         widget.cpp
 
     RESOURCE_FILES
