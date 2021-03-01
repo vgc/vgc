@@ -22,7 +22,7 @@ you can try our earlier research prototype [VPaint](https://www.vpaint.org).
 
 Prerequisites:
 - **CMake 3.1+**: We recommend the latest version of CMake.
-- **C++11**: We recommend Visual Studio 2017 on Windows, and any recent version of Clang/GCC on macOS/Linux.
+- **C++17**: We recommend Visual Studio 2017 on Windows, and any recent version of Clang/GCC on macOS/Linux.
 - **Python 3.6+**: We recommend the latest Python 3.7.x version via the [official installer](https://www.python.org/downloads/).
 - **Qt 5.12+**: We recommend the latest Qt 5.12.x version via the [official installer](https://www.qt.io/download-qt-installer).
 - **FreeType**: We recommend the latest FreeType 2.x.
