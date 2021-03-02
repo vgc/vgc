@@ -18,11 +18,33 @@
 
 #include <vgc/core/io.h>
 #include <vgc/core/paths.h>
-#include <vgc/ui/styletoken.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc {
 namespace ui {
+
+StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    if (begin == end) {
+        return StyleValue(std::string(""));
+    }
+    else {
+        return StyleValue(std::string(begin->begin, (end-1)->end));
+    }
+}
+
+StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    StyleValue v = parseStyleDefault(begin, end);
+    try {
+        core::Color color = core::parse<core::Color>(v.string());
+        return StyleValue(color);
+    } catch (const core::ParseError&) {
+        return StyleValue::invalid();
+    } catch (const core::RangeError&) {
+        return StyleValue::invalid();
+    }
+}
 
 StylePropertySpec* StylePropertySpec::get(core::StringId property)
 {
@@ -44,8 +66,10 @@ void StylePropertySpec::init()
 {
     const auto make = internal::StylePropertySpecMaker::make;
     map_ = {
-        make("margin-left", StyleValue::none(), true),
-        make("margin-right", StyleValue::none(), true)
+        make("margin-left", StyleValue::none(), true, &parseStyleDefault),
+        make("margin-right", StyleValue::none(), true, &parseStyleDefault),
+        make("background-color", StyleValue(core::Color(0, 0, 0, 0)), true, &parseStyleColor),
+        make("background-color-on-hover", StyleValue(core::Color(0, 0, 0, 0)), true, &parseStyleColor)
         // TODO: complete this
     };
 }
@@ -98,7 +122,6 @@ StyleValue Style::computedValue_(core::StringId property, Widget* widget, StyleP
                 v = StyleValue::none();
             }
         }
-
     }
     return v;
 }
@@ -371,6 +394,7 @@ private:
     static StyleDeclarationPtr consumeDeclaration_(StyleTokenIterator& it, StyleTokenIterator end) {
         StyleDeclarationPtr declaration = StyleDeclaration::create();
         declaration->property_ = core::StringId(it->codePointsValue);
+        declaration->value_ = StyleValue::invalid();
         ++it;
         // Consume whitespaces
         while (it != end && it->type == StyleTokenType::Whitespace) {
@@ -389,18 +413,24 @@ private:
             ++it;
         }
         // Consume value components
-        if (it != end) {
-            StyleTokenIterator valueBegin = it;
-            while (it != end) {
-                consumeComponentValue_(it, end);
-            }
-            StyleTokenIterator valueLast = it - 1;
-            while (valueLast->type == StyleTokenType::Whitespace) {
-                --valueLast;
-            }
-            // TODO: handle "!important"
-            declaration->text_ = std::string(valueBegin->begin, valueLast->end);
-            declaration->value_ = StyleValue(declaration->text_); // TODO: parse string
+        StyleTokenIterator valueBegin = it;
+        while (it != end) {
+            consumeComponentValue_(it, end);
+        }
+        StyleTokenIterator valueEnd = it;
+        // Remove trailing whitespaces from value
+        // TODO: also remove "!important" from value and set it as flag, see (5) in:
+        //       https://www.w3.org/TR/css-syntax-3/#consume-declaration
+        while (valueEnd != valueBegin && (valueEnd-1)->type == StyleTokenType::Whitespace) {
+            --valueEnd;
+        }
+        // Parse value
+        StylePropertySpec* spec = StylePropertySpec::get(declaration->property_);
+        StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
+        declaration->value_ = parser(valueBegin, valueEnd);
+        if (declaration->value_.type() == StyleValueType::Invalid) {
+            // Parse error: return nothing
+            return StyleDeclarationPtr();
         }
         return declaration;
     }

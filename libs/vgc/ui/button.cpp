@@ -80,12 +80,8 @@ void Button::onPaintDraw(graphics::Engine* engine)
         StyleValue v = style(isHovered_ ?
                              strings::background_color_on_hover :
                              strings::background_color);
-        if (v.type() == StyleValueType::String) {
-            color = core::parse<core::Color>(v.string());
-            // TODO: the above parsing should be precomputed from the style,
-            // that is, the StyleValue should already be either None (possibly,
-            // syntax error) or Color. Ideally, even the call to style(...)
-            // should be precomputed, perhaps on a onStyleChanged slot.
+        if (v.type() == StyleValueType::Color) {
+            color = v.color();
         }
         insertRect(a, color, 0, 0, width(), height());
         engine->loadTriangles(trianglesId_, a.data(), a.length());
