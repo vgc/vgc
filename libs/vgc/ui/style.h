@@ -20,9 +20,11 @@
 #include <unordered_map>
 
 #include <vgc/core/array.h>
+#include <vgc/core/color.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/styletoken.h>
 
 namespace vgc {
 namespace ui {
@@ -46,10 +48,12 @@ using StyleDeclarationArray = core::Array<StyleDeclaration*>;
 ///
 enum class StyleValueType : Int8 {
     None,     ///< There is no value at all
+    Invalid,  ///< The value is invalid (e.g., parse error)
     Inherit,  ///< The value should inherit from a parent widget
     Auto,     ///< The value is auto
     Length,   ///< The value is a length
-    String    ///< The value is a string
+    String,   ///< The value is a string
+    Color,    ///< The value is a color
 };
 
 /// \enum vgc::ui::StyleValue
@@ -73,6 +77,10 @@ public:
     /// Creates a StyleValue of type None
     ///
     static StyleValue none() { return StyleValue(StyleValueType::None); }
+
+    /// Creates a StyleValue of type Invalid
+    ///
+    static StyleValue invalid() { return StyleValue(StyleValueType::Invalid); }
 
     /// Creates a StyleValue of type Inherit
     ///
@@ -106,12 +114,44 @@ public:
     ///
     const std::string& string() const { return string_; }
 
+    /// Creates a StyleValue of type Color
+    ///
+    StyleValue(const core::Color color) :
+        type_(StyleValueType::Color),
+        color_(color)
+    {
+
+    }
+
+    /// Returns the color of the StyleValue.
+    /// The behavior is undefined if the type isn't Color.
+    ///
+    core::Color color() const { return color_; }
+
 private:
     StyleValueType type_;
     // TODO: Encapsulate following member variables in std::variant (C++17)
     float length_;
     std::string string_;
+    core::Color color_;
 };
+
+/// \typedef vgc::ui::StylePropertyParser
+/// \brief The type of a function that takes as input a token range
+///        and outputs a StyleValue.
+///
+using StylePropertyParser = StyleValue(*)(StyleTokenIterator begin, StyleTokenIterator end);
+
+/// This is the default function used for parsing properties when no
+/// StylePropertySpec exists for the given property. It returns a StyleValue of
+/// type String, where the string is made of all the characters in the given
+/// token range (including quotes and double quotes characters, if any).
+///
+StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
+
+/// Parses the given style tokens as a color.
+///
+StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end);
 
 namespace internal {
 class StylePropertySpecMaker;
@@ -150,26 +190,31 @@ public:
         return isInherited_;
     }
 
+    StylePropertyParser parser() const {
+        return parser_;
+    }
+
 private:
     core::StringId name_;
     StyleValue initialValue_;
     bool isInherited_;
+    StylePropertyParser parser_;
 
     friend class internal::StylePropertySpecMaker;
     using Table = std::unordered_map<core::StringId, StylePropertySpec>;
     static Table map_;
     static void init();
-    StylePropertySpec(core::StringId name, const StyleValue& initialValue, bool isInherited) :
-        name_(name), initialValue_(initialValue), isInherited_(isInherited) {}
+    StylePropertySpec(core::StringId name, const StyleValue& initialValue, bool isInherited, StylePropertyParser parser) :
+        name_(name), initialValue_(initialValue), isInherited_(isInherited), parser_(parser) {}
 };
 
 namespace internal {
 class StylePropertySpecMaker {
 public:
     static StylePropertySpec::Table::value_type
-    make(const char* name, const StyleValue& initialValue, bool isInherited) {
+    make(const char* name, const StyleValue& initialValue, bool isInherited, StylePropertyParser parser) {
         core::StringId n(name);
-        return std::make_pair(n, StylePropertySpec(n, initialValue, isInherited));
+        return std::make_pair(n, StylePropertySpec(n, initialValue, isInherited, parser));
     }
 };
 }
@@ -207,7 +252,7 @@ public:
     ///
     /// This resolves widget inheritance and default values. In other words,
     /// the returned StyleValue is never of type StyleValueType::Inherit.
-    /// However, the type could be StyleValueType::None if there is no know
+    /// However, the type could be StyleValueType::None if there is no known
     /// default value for the given property (this can be the case for custom
     /// properties which are missing from the stylesheet).
     ///
