@@ -15,21 +15,14 @@
 // limitations under the License.
 
 #include <vgc/ui/button.h>
-#include <vgc/ui/style.h>
 
 #include <vgc/core/floatarray.h>
 #include <vgc/core/random.h>
+#include <vgc/ui/strings.h>
+#include <vgc/ui/style.h>
 
 namespace vgc {
 namespace ui {
-
-namespace strings {
-
-core::StringId Button("Button");
-core::StringId background_color("background-color");
-core::StringId background_color_on_hover("background-color-on-hover");
-
-} // namespace strings
 
 Button::Button() :
     Widget(),

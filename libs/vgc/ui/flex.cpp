@@ -16,6 +16,8 @@
 
 #include <vgc/ui/flex.h>
 
+#include <vgc/ui/strings.h>
+
 namespace vgc {
 namespace ui {
 
@@ -26,6 +28,7 @@ Flex::Flex(
     direction_(direction),
     wrap_(wrap)
 {
+    addClass(strings::Flex);
     setWidthPolicy(ui::LengthPolicy::AutoFlexible());
     setHeightPolicy(ui::LengthPolicy::AutoFlexible());
 }

@@ -16,8 +16,10 @@
 
 #include <vgc/ui/style.h>
 
+#include <vgc/core/colors.h>
 #include <vgc/core/io.h>
 #include <vgc/core/paths.h>
+#include <vgc/ui/strings.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc {
@@ -46,6 +48,26 @@ StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end)
     }
 }
 
+StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    // For now, we only support a unique Dimension token with a "dp" unit
+    bool isValid =
+            (begin != end) &&
+            (begin->type == StyleTokenType::Dimension) &&
+            (begin->codePointsValue == "dp") &&
+            (begin + 1 == end);
+
+    if (!isValid) {
+        float v = (begin->flag == StyleTokenFlag::Integer) ?
+                  static_cast<float>(begin->numericValue.integer) :
+                  static_cast<float>(begin->numericValue.number);
+        return StyleValue(v);
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
 StylePropertySpec* StylePropertySpec::get(core::StringId property)
 {
     if (map_.empty()) {
@@ -64,13 +86,19 @@ StylePropertySpec::Table StylePropertySpec::map_;
 
 void StylePropertySpec::init()
 {
-    const auto make = internal::StylePropertySpecMaker::make;
+    // For reference: https://www.w3.org/TR/CSS21/propidx.html
+    auto transparent = StyleValue(core::colors::transparent);
+    auto zero = StyleValue(0.0f);
+    auto m = internal::StylePropertySpecMaker::make;
     map_ = {
-        make("margin-left", StyleValue::none(), true, &parseStyleDefault),
-        make("margin-right", StyleValue::none(), true, &parseStyleDefault),
-        make("background-color", StyleValue(core::Color(0, 0, 0, 0)), true, &parseStyleColor),
-        make("background-color-on-hover", StyleValue(core::Color(0, 0, 0, 0)), true, &parseStyleColor)
-        // TODO: complete this
+        //      name                    initial   inherited     parser
+        //
+        m("background-color",          transparent, false, &parseStyleColor),
+        m("background-color-on-hover", transparent, false, &parseStyleColor),
+        m("margin-bottom",             zero,        false, &parseStyleLength),
+        m("margin-left",               zero,        false, &parseStyleLength),
+        m("margin-right",              zero,        false, &parseStyleLength),
+        m("margin-top",                zero,        false, &parseStyleLength)
     };
 }
 
