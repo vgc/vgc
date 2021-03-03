@@ -14,30 +14,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_COLORS_H
-#define VGC_CORE_COLORS_H
+#ifndef VGC_UI_STRINGS_H
+#define VGC_UI_STRINGS_H
 
-#include <vgc/core/api.h>
-#include <vgc/core/color.h>
+#include <vgc/core/stringid.h>
+#include <vgc/ui/api.h>
 
 namespace vgc {
-namespace core {
+namespace ui {
+namespace strings {
 
-/// \namespace colors
-/// \brief Defines predefined colors.
-///
-namespace colors
-{
+VGC_UI_API extern const core::StringId Button;
+VGC_UI_API extern const core::StringId Flex;
+VGC_UI_API extern const core::StringId Label;
 
-const Color transparent = Color(0, 0, 0, 0); ///< Predefined color equals to Color(0, 0, 0, 0)
-const Color black = Color(0, 0, 0); ///< Predefined color equals to Color(0, 0, 0)
-const Color red = Color(1, 0, 0); ///< Predefined color equals to Color(1, 0, 0)
-const Color green = Color(0, 1, 0); ///< Predefined color equals to Color(0, 1, 0)
-const Color blue = Color(0, 0, 1); ///< Predefined color equals to Color(0, 0, 1)
+VGC_UI_API extern const core::StringId background_color;
+VGC_UI_API extern const core::StringId background_color_on_hover;
+VGC_UI_API extern const core::StringId margin_bottom;
+VGC_UI_API extern const core::StringId margin_left;
+VGC_UI_API extern const core::StringId margin_right;
+VGC_UI_API extern const core::StringId margin_top;
 
-} // colors
-
-} // namespace core
+} // namespace strings
+} // namespace ui
 } // namespace vgc
 
-#endif // VGC_CORE_COLORS_H
+#endif // VGC_UI_STRINGS_H

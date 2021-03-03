@@ -14,30 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_COLORS_H
-#define VGC_CORE_COLORS_H
-
-#include <vgc/core/api.h>
-#include <vgc/core/color.h>
+#include <vgc/ui/strings.h>
 
 namespace vgc {
-namespace core {
+namespace ui {
+namespace strings {
 
-/// \namespace colors
-/// \brief Defines predefined colors.
-///
-namespace colors
-{
+const core::StringId Button("Button");
+const core::StringId Flex("Flex");
+const core::StringId Label("Label");
 
-const Color transparent = Color(0, 0, 0, 0); ///< Predefined color equals to Color(0, 0, 0, 0)
-const Color black = Color(0, 0, 0); ///< Predefined color equals to Color(0, 0, 0)
-const Color red = Color(1, 0, 0); ///< Predefined color equals to Color(1, 0, 0)
-const Color green = Color(0, 1, 0); ///< Predefined color equals to Color(0, 1, 0)
-const Color blue = Color(0, 0, 1); ///< Predefined color equals to Color(0, 0, 1)
+const core::StringId background_color("background-color");
+const core::StringId background_color_on_hover("background-color-on-hover");
+const core::StringId margin_bottom("margin-bottom");
+const core::StringId margin_left("margin-left");
+const core::StringId margin_right("margin-right");
+const core::StringId margin_top("margin-top");
 
-} // colors
-
-} // namespace core
+} // namespace strings
+} // namespace ui
 } // namespace vgc
-
-#endif // VGC_CORE_COLORS_H

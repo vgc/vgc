@@ -20,6 +20,7 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/floatarray.h>
 #include <vgc/graphics/font.h>
+#include <vgc/ui/strings.h>
 
 namespace vgc {
 namespace ui {
@@ -30,7 +31,7 @@ Label::Label() :
     trianglesId_(-1),
     reload_(true)
 {
-
+    addClass(strings::Label);
 }
 
 Label::Label(const std::string& text) :

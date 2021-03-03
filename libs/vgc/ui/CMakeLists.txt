@@ -17,6 +17,7 @@ vgc_add_library(ui
         lengthtype.h
         mouseevent.h
         row.h
+        strings.h
         style.h
         styletoken.h
         widget.h
@@ -31,6 +32,7 @@ vgc_add_library(ui
         label.cpp
         mouseevent.cpp
         row.cpp
+        strings.cpp
         style.cpp
         styletoken.cpp
         widget.cpp
