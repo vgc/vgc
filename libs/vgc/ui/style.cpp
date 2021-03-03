@@ -57,7 +57,7 @@ StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end)
             (begin->codePointsValue == "dp") &&
             (begin + 1 == end);
 
-    if (!isValid) {
+    if (isValid) {
         float v = (begin->flag == StyleTokenFlag::Integer) ?
                   static_cast<float>(begin->numericValue.integer) :
                   static_cast<float>(begin->numericValue.number);
@@ -602,10 +602,10 @@ private:
             if (it == end || it->type != StyleTokenType::Ident) {
                 return false;
             }
-            ++it;
             items.append(StyleSelectorItem(
                              StyleSelectorItemType::ClassSelector,
                              core::StringId(it->codePointsValue)));
+            ++it;
             return true;
         }
         return false;
@@ -660,7 +660,7 @@ Style StyleSheet::computeStyle(Widget* widget) const
 
     // Compute cascaded values.
     //
-    for (StyleRuleSet* rule : ruleSets_) {
+    for (StyleRuleSet* rule : style.ruleSets_) {
         for (StyleDeclaration* declaration : rule->declarations()) {
             style.map_[declaration->property()] = declaration->value();
         }
