@@ -38,6 +38,11 @@ ButtonPtr Button::create()
     return ButtonPtr(new Button());
 }
 
+void Button::onResize()
+{
+    reload_ = true;
+}
+
 void Button::onPaintCreate(graphics::Engine* engine)
 {
     trianglesId_ = engine->createTriangles();
@@ -123,14 +128,14 @@ core::Vec2f Button::computePreferredSize() const
     float width = 0;
     float height = 0;
     if (widthPolicy().type() == LengthType::Auto) {
-        width = 60;
+        width = 100;
         // TODO: compute appropriate width based on text length
     }
     else {
         width = widthPolicy().value();
     }
     if (heightPolicy().type() == LengthType::Auto) {
-        height = 30;
+        height = 50;
         // TODO: compute appropriate height based on font size?
     }
     else {

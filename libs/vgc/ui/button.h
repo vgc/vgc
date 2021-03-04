@@ -44,6 +44,7 @@ public:
     static ButtonPtr create();
 
     // reimpl
+    void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine) override;
     void onPaintDestroy(graphics::Engine* engine) override;
