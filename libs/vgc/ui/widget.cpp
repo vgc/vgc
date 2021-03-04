@@ -129,9 +129,13 @@ Widget* Widget::root() const
 
 void Widget::setGeometry(const core::Vec2f& position, const core::Vec2f& size)
 {
+    core::Vec2f oldSize = size_;
     position_ = position;
     size_ = size;
     updateChildrenGeometry();
+    if (!oldSize.allNear(size_, 1e-6f)) {
+        onResize();
+    }
 }
 
 void Widget::setWidthPolicy(const LengthPolicy& policy)
