@@ -603,7 +603,7 @@ public:
 
     /// Returns the computed value of a given style property of this widget.
     ///
-    StyleValue style(core::StringId property);
+    StyleValue style(core::StringId property) const;
 
 protected:
     /// Computes the preferred size of this widget based on its size policy, as

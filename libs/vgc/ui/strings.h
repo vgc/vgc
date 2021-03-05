@@ -34,6 +34,10 @@ VGC_UI_API extern const core::StringId margin_bottom;
 VGC_UI_API extern const core::StringId margin_left;
 VGC_UI_API extern const core::StringId margin_right;
 VGC_UI_API extern const core::StringId margin_top;
+VGC_UI_API extern const core::StringId padding_bottom;
+VGC_UI_API extern const core::StringId padding_left;
+VGC_UI_API extern const core::StringId padding_right;
+VGC_UI_API extern const core::StringId padding_top;
 
 } // namespace strings
 } // namespace ui

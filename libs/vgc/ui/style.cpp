@@ -98,7 +98,11 @@ void StylePropertySpec::init()
         m("margin-bottom",             zero,        false, &parseStyleLength),
         m("margin-left",               zero,        false, &parseStyleLength),
         m("margin-right",              zero,        false, &parseStyleLength),
-        m("margin-top",                zero,        false, &parseStyleLength)
+        m("margin-top",                zero,        false, &parseStyleLength),
+        m("padding-bottom",            zero,        false, &parseStyleLength),
+        m("padding-left",              zero,        false, &parseStyleLength),
+        m("padding-right",             zero,        false, &parseStyleLength),
+        m("padding-top",               zero,        false, &parseStyleLength)
     };
 }
 
@@ -118,7 +122,7 @@ StyleValue Style::cascadedValue(core::StringId property) const
     }
 }
 
-StyleValue Style::computedValue(core::StringId property, Widget* widget) const
+StyleValue Style::computedValue(core::StringId property, const Widget* widget) const
 {
     StylePropertySpec* spec = StylePropertySpec::get(property);
     return computedValue_(property, widget, spec);
@@ -126,7 +130,7 @@ StyleValue Style::computedValue(core::StringId property, Widget* widget) const
 
 // This function is a performance optimization: by passing in the spec, it
 // avoids repeateadly searching for it
-StyleValue Style::computedValue_(core::StringId property, Widget* widget, StylePropertySpec* spec) const
+StyleValue Style::computedValue_(core::StringId property, const Widget* widget, StylePropertySpec* spec) const
 {
     StyleValue v = cascadedValue(property);
     if (v.type() == StyleValueType::None || v.type() == StyleValueType::Inherit) {

@@ -30,6 +30,10 @@ const core::StringId margin_bottom("margin-bottom");
 const core::StringId margin_left("margin-left");
 const core::StringId margin_right("margin-right");
 const core::StringId margin_top("margin-top");
+const core::StringId padding_bottom("padding-bottom");
+const core::StringId padding_left("padding-left");
+const core::StringId padding_right("padding-right");
+const core::StringId padding_top("padding-top");
 
 } // namespace strings
 } // namespace ui

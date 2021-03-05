@@ -343,7 +343,7 @@ void Widget::toggleClass(core::StringId class_) {
     onClassesChanged_();
 }
 
-StyleValue Widget::style(core::StringId property)
+StyleValue Widget::style(core::StringId property) const
 {
     return style_.computedValue(property, this);
 }
