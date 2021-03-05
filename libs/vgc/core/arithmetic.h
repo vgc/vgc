@@ -969,6 +969,12 @@ inline double uint8ToDouble01(Int x) {
 ///
 const double epsilon = 1e-10;
 
+/// Double-precision pi.
+///
+/// Note: C++ 20 has std::numbers::pi
+///
+const double pi = 3.141592653589793238463;
+
 } // namespace core
 
 } // namespace vgc

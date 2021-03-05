@@ -30,6 +30,7 @@ VGC_UI_API extern const core::StringId Label;
 
 VGC_UI_API extern const core::StringId background_color;
 VGC_UI_API extern const core::StringId background_color_on_hover;
+VGC_UI_API extern const core::StringId border_radius;
 VGC_UI_API extern const core::StringId margin_bottom;
 VGC_UI_API extern const core::StringId margin_left;
 VGC_UI_API extern const core::StringId margin_right;

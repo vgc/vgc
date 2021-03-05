@@ -26,6 +26,7 @@ const core::StringId Label("Label");
 
 const core::StringId background_color("background-color");
 const core::StringId background_color_on_hover("background-color-on-hover");
+const core::StringId border_radius("border-radius");
 const core::StringId margin_bottom("margin-bottom");
 const core::StringId margin_left("margin-left");
 const core::StringId margin_right("margin-right");
