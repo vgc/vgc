@@ -86,7 +86,7 @@ public:
     ///
     static StyleValue inherit() { return StyleValue(StyleValueType::Inherit); }
 
-    /// Creates a StyleValue of type Lenght
+    /// Creates a StyleValue of type Length
     ///
     StyleValue(float length) :
         type_(StyleValueType::Length),
@@ -152,6 +152,10 @@ StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
 /// Parses the given style tokens as a color.
 ///
 StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end);
+
+/// Parses the given style tokens as a length.
+///
+StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end);
 
 namespace internal {
 class StylePropertySpecMaker;
@@ -256,7 +260,7 @@ public:
     /// default value for the given property (this can be the case for custom
     /// properties which are missing from the stylesheet).
     ///
-    StyleValue computedValue(core::StringId property, Widget* widget) const;
+    StyleValue computedValue(core::StringId property, const Widget* widget) const;
 
 private:
     friend class StyleSheet;
@@ -265,7 +269,7 @@ private:
     // and only storing here an std::shared_ptr<StyleData>.
     core::Array<StyleRuleSet*> ruleSets_;
     std::unordered_map<core::StringId, StyleValue> map_;
-    StyleValue computedValue_(core::StringId property, Widget* widget, StylePropertySpec* spec) const;
+    StyleValue computedValue_(core::StringId property, const Widget* widget, StylePropertySpec* spec) const;
 };
 
 /// Get global stylesheet.

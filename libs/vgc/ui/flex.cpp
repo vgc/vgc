@@ -64,7 +64,7 @@ void Flex::onChildRemoved(Object*)
 
 namespace {
 
-float getLength(Widget* widget, core::StringId property)
+float getLength(const Widget* widget, core::StringId property)
 {
     float res = 0.0f;
     StyleValue style = widget->style(property);
@@ -74,16 +74,28 @@ float getLength(Widget* widget, core::StringId property)
     return res;
 }
 
-float getLeftRightMargins(Widget* widget)
+float getLeftRightMargins(const Widget* widget)
 {
     return getLength(widget, strings::margin_left) +
            getLength(widget, strings::margin_right);
 }
 
-float getTopBottomMargins(Widget* widget)
+float getTopBottomMargins(const Widget* widget)
 {
     return getLength(widget, strings::margin_top) +
            getLength(widget, strings::margin_bottom);
+}
+
+float getLeftRightPadding(const Widget* widget)
+{
+    return getLength(widget, strings::padding_left) +
+           getLength(widget, strings::padding_right);
+}
+
+float getTopBottomPadding(const Widget* widget)
+{
+    return getLength(widget, strings::padding_top) +
+           getLength(widget, strings::padding_bottom);
 }
 
 } // namespace
@@ -92,8 +104,8 @@ core::Vec2f Flex::computePreferredSize() const
 {
     bool isRow = (direction_ == FlexDirection::Row) ||
             (direction_ == FlexDirection::RowReverse);
-    float preferredWidth = 0;
-    float preferredHeight = 0;
+    float preferredWidth = getLeftRightPadding(this);
+    float preferredHeight = getTopBottomPadding(this);
     if (widthPolicy().type() != LengthType::Auto) {
         preferredWidth = widthPolicy().value();
     }
@@ -179,7 +191,8 @@ float computeTotalStretch(bool isRow, float freeSpace, Widget* parent, float chi
 
 void stretchChild(
         bool isRow, float freeSpace, float crossSize, float extraSpacePerStretch,
-        Widget* child, float childStretchBonus, float& childMainPosition)
+        Widget* child, float childStretchBonus, float& childMainPosition,
+        float parentCrossPaddingBefore, float parentCrossPaddingAfter)
 {
     float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
     float childStretch = getChildStretch(isRow, freeSpace, child, childStretchBonus);
@@ -188,13 +201,14 @@ void stretchChild(
     float childMainMarginAfter = isRow ? getLength(child, strings::margin_right) : getLength(child, strings::margin_bottom);
     float childCrossMarginBefore = isRow ? getLength(child, strings::margin_top) : getLength(child, strings::margin_left);
     float childCrossMarginAfter = isRow ? getLength(child, strings::margin_bottom) : getLength(child, strings::margin_right);
-    float childCrossSize = crossSize - childCrossMarginBefore - childCrossMarginAfter;
+    float childCrossSize = crossSize - parentCrossPaddingBefore - parentCrossPaddingAfter - childCrossMarginBefore - childCrossMarginAfter;
+    float childCrossPosition = parentCrossPaddingBefore + childCrossMarginBefore;
     childMainPosition += childMainMarginBefore;
     if (isRow) {
-        child->setGeometry(childMainPosition, childCrossMarginBefore, childMainSize, childCrossSize);
+        child->setGeometry(childMainPosition, childCrossPosition, childMainSize, childCrossSize);
     }
     else {
-        child->setGeometry(childCrossMarginBefore, childMainPosition, childCrossSize, childMainSize);
+        child->setGeometry(childCrossPosition, childMainPosition, childCrossSize, childMainSize);
     }
     childMainPosition += childMainSize + childMainMarginAfter;
 }
@@ -217,6 +231,9 @@ void Flex::updateChildrenGeometry()
                 (direction_ == FlexDirection::RowReverse) ||
                 (direction_ == FlexDirection::ColumnReverse);
         float preferredMainSize = isRow ? preferredSize().x() : preferredSize().y();
+        float mainPaddingBefore = isRow ? getLength(this, strings::padding_left) : getLength(this, strings::padding_top);
+        float crossPaddingBefore = isRow ? getLength(this, strings::padding_top) : getLength(this, strings::padding_left);
+        float crossPaddingAfter = isRow ? getLength(this, strings::padding_bottom) : getLength(this, strings::padding_right);
         float mainSize = isRow ? width() : height();
         float crossSize = isRow ? height() : width();
         float freeSpace = mainSize - preferredMainSize;
@@ -240,10 +257,12 @@ void Flex::updateChildrenGeometry()
             totalStretch = computeTotalStretch(isRow, freeSpace, this, childStretchBonus);
         }
         float extraSpacePerStretch = freeSpace / totalStretch;
-        float childMainPosition = 0.0f;
+        float childMainPosition = mainPaddingBefore;
         Widget* child = isReverse ? lastChild() : firstChild();
         while (child) {
-            stretchChild(isRow, freeSpace, crossSize, extraSpacePerStretch, child, childStretchBonus, childMainPosition);
+            stretchChild(isRow, freeSpace, crossSize, extraSpacePerStretch,
+                         child, childStretchBonus, childMainPosition,
+                         crossPaddingBefore, crossPaddingAfter);
             child = isReverse ? child->previousSibling() : child->nextSibling();
         }
     }

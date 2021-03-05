@@ -1,22 +1,19 @@
-/* Default style for buttons and labels */
 .Button,
 .Label {
-    margin-top: 10dp;
-    margin-right: 10dp;
-    margin-bottom: 10dp;
-    margin-left: 10dp;
+    margin-top: 5dp;
+    margin-right: 5dp;
+    margin-bottom: 5dp;
+    margin-left: 5dp;
 }
 
 .Button {
-    background-color: rgb(255, 0, 0);
-    background-color-on-hover: rgb(255, 255, 0);
+    background-color: rgb(44, 46, 47);
+    background-color-on-hover: rgb(11, 82, 172);
 }
 
-/* Default style for flex container.
-   Note: these values are temporary (for testing only). */
 .Flex {
-    margin-top: 5dp;    /* temporary value */
-    margin-right: 5dp;  /* temporary value */
-    margin-bottom: 5dp; /* temporary value */
-    margin-left: 5dp    /* note that the last semicolon of a declaration block is optional */
+    padding-top: 5dp;
+    padding-right: 5dp;
+    padding-bottom: 5dp;
+    padding-left: 5dp;
 }
