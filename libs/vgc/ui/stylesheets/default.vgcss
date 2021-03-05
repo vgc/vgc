@@ -9,6 +9,7 @@
 .Button {
     background-color: rgb(44, 46, 47);
     background-color-on-hover: rgb(11, 82, 172);
+    border-radius: 3dp;
 }
 
 .Flex {

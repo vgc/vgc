@@ -95,6 +95,7 @@ void StylePropertySpec::init()
         //
         m("background-color",          transparent, false, &parseStyleColor),
         m("background-color-on-hover", transparent, false, &parseStyleColor),
+        m("border-radius",             zero,        false, &parseStyleLength),
         m("margin-bottom",             zero,        false, &parseStyleLength),
         m("margin-left",               zero,        false, &parseStyleLength),
         m("margin-right",              zero,        false, &parseStyleLength),
