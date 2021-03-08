@@ -87,6 +87,7 @@ StylePropertySpec::Table StylePropertySpec::map_;
 void StylePropertySpec::init()
 {
     // For reference: https://www.w3.org/TR/CSS21/propidx.html
+    auto black = StyleValue(core::colors::black);
     auto transparent = StyleValue(core::colors::transparent);
     auto zero = StyleValue(0.0f);
     auto m = internal::StylePropertySpecMaker::make;
@@ -103,7 +104,8 @@ void StylePropertySpec::init()
         m("padding-bottom",            zero,        false, &parseStyleLength),
         m("padding-left",              zero,        false, &parseStyleLength),
         m("padding-right",             zero,        false, &parseStyleLength),
-        m("padding-top",               zero,        false, &parseStyleLength)
+        m("padding-top",               zero,        false, &parseStyleLength),
+        m("text-color",                black,       true,  &parseStyleColor)
     };
 }
 

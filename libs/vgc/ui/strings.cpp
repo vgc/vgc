@@ -35,6 +35,7 @@ const core::StringId padding_bottom("padding-bottom");
 const core::StringId padding_left("padding-left");
 const core::StringId padding_right("padding-right");
 const core::StringId padding_top("padding-top");
+const core::StringId text_color("text-color");
 
 } // namespace strings
 } // namespace ui

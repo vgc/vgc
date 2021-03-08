@@ -34,14 +34,28 @@ private:
 
 protected:
     /// This is an implementation details. Please use
-    /// Button::create() instead.
+    /// Button::create(text) instead.
     ///
-    Button();
+    Button(const std::string& text);
 
 public:
     /// Creates a Button.
     ///
     static ButtonPtr create();
+
+    /// Creates a Button with the given text.
+    ///
+    static ButtonPtr create(const std::string& text);
+
+    /// Returns the Button's text.
+    ///
+    const std::string& text() const {
+        return text_;
+    }
+
+    /// Sets the Button's text.
+    ///
+    void setText(const std::string& text);
 
     // reimpl
     void onResize() override;
@@ -58,6 +72,7 @@ protected:
     core::Vec2f computePreferredSize() const override;
 
 private:
+    std::string text_;
     Int trianglesId_;
     bool reload_;
     bool isHovered_;

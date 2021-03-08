@@ -17,15 +17,18 @@
 #include <vgc/ui/button.h>
 
 #include <vgc/core/floatarray.h>
+#include <vgc/core/paths.h>
 #include <vgc/core/random.h>
+#include <vgc/graphics/font.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/style.h>
 
 namespace vgc {
 namespace ui {
 
-Button::Button() :
+Button::Button(const std::string& text) :
     Widget(),
+    text_(text),
     trianglesId_(-1),
     reload_(true),
     isHovered_(false)
@@ -35,7 +38,21 @@ Button::Button() :
 
 ButtonPtr Button::create()
 {
-    return ButtonPtr(new Button());
+    return ButtonPtr(new Button(""));
+}
+
+ButtonPtr Button::create(const std::string& text)
+{
+    return ButtonPtr(new Button(text));
+}
+
+void Button::setText(const std::string& text)
+{
+    if (text_ != text) {
+        text_ = text;
+        reload_ = true;
+        repaint();
+    }
 }
 
 void Button::onResize()
@@ -99,7 +116,6 @@ void insertRect(
             x1, y2, r, g, b});
     }
     else {
-        Int32 numCornerTriangles = core::ifloor<Int32>(borderRadius);
         float x1_ = x1 + borderRadius;
         float x2_ = x2 - borderRadius;
         float y1_ = y1 + borderRadius;
@@ -129,6 +145,60 @@ void insertRect(
     }
 }
 
+void insertText(
+        core::FloatArray& a,
+        const core::Color& c,
+        const std::string& text)
+{
+    if (text.length() > 0) {
+        float r = static_cast<float>(c[0]);
+        float g = static_cast<float>(c[1]);
+        float b = static_cast<float>(c[2]);
+
+        // Get FontFace.
+        // TODO: we should use a persistent font library rather than
+        // creating a new one each time
+        std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
+        graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
+        graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
+        float baseline = static_cast<float>(fontFace->height());
+
+        // Shape and triangulate text
+        core::DoubleArray buf;
+        for (const graphics::FontItem& item : fontFace->shape(text)) {
+            float xoffset = item.offset()[0];
+            float yoffset = item.offset()[1];
+            buf.clear();
+            item.glyph()->outline().fill(buf);
+            for (Int i = 0; 2*i+1 < buf.length(); ++i) {
+                float x = xoffset + static_cast<float>(buf[2*i]);
+                float y = baseline - (yoffset + static_cast<float>(buf[2*i+1]));
+                a.insert(a.end(), {x, y, r, g, b});
+            }
+        }
+    }
+}
+
+core::Color getColor(const Widget* widget, core::StringId property)
+{
+    core::Color res;
+    StyleValue value = widget->style(property);
+    if (value.type() == StyleValueType::Color) {
+        res = value.color();
+    }
+    return res;
+}
+
+float getLength(const Widget* widget, core::StringId property)
+{
+    float res = 0;
+    StyleValue value = widget->style(property);
+    if (value.type() == StyleValueType::Length) {
+        res = value.length();
+    }
+    return res;
+}
+
 } // namespace
 
 void Button::onPaintDraw(graphics::Engine* engine)
@@ -136,19 +206,13 @@ void Button::onPaintDraw(graphics::Engine* engine)
     if (reload_) {
         reload_ = false;
         core::FloatArray a;
-        core::Color color; // default color
-        StyleValue v = style(isHovered_ ?
-                             strings::background_color_on_hover :
-                             strings::background_color);
-        if (v.type() == StyleValueType::Color) {
-            color = v.color();
-        }
-        float borderRadius = 0;
-        StyleValue b = style(strings::border_radius);
-        if (b.type() == StyleValueType::Length) {
-            borderRadius = b.length();
-        }
-        insertRect(a, color, 0, 0, width(), height(), borderRadius);
+        core::Color backgroundColor = getColor(this, isHovered_ ?
+                        strings::background_color_on_hover :
+                        strings::background_color);
+        core::Color textColor = getColor(this, strings::text_color);
+        float borderRadius = getLength(this, strings::border_radius);
+        insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+        insertText(a, textColor, text_);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
@@ -202,7 +266,7 @@ core::Vec2f Button::computePreferredSize() const
         width = widthPolicy().value();
     }
     if (heightPolicy().type() == LengthType::Auto) {
-        height = 50;
+        height = 26;
         // TODO: compute appropriate height based on font size?
     }
     else {

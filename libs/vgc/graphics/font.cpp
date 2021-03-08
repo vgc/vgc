@@ -160,13 +160,14 @@ public:
         //                + size   (example: "12pt")
         //
         // Size of the EM square in points
-        FT_UInt emWidth_ = 36;
-        FT_UInt emHeight_ = 36;
+        FT_UInt emWidth_ = 11;
+        FT_UInt emHeight_ = 11;
         // Size of the EM square in 26.6 fractional points
         FT_F26Dot6 emWidth = 64 * core::int_cast<FT_F26Dot6>(emWidth_);
         FT_F26Dot6 emHeight = 64 * core::int_cast<FT_F26Dot6>(emHeight_);
         // Screen resolution in dpi
         // TODO: Get this from system?
+        //       What if using dual monitors with different DPIs?
         FT_UInt hdpi = 96;
         FT_UInt vdpi = 96;
         ppem = static_cast<double>(emWidth_) * hdpi / 72.0; // 72 pt = 1 inch
