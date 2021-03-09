@@ -25,6 +25,7 @@ namespace ui {
 namespace strings {
 
 VGC_UI_API extern const core::StringId Button;
+VGC_UI_API extern const core::StringId ColorPalette;
 VGC_UI_API extern const core::StringId Flex;
 VGC_UI_API extern const core::StringId Label;
 

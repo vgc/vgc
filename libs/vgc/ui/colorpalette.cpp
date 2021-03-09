@@ -20,6 +20,7 @@
 
 #include <vgc/core/colors.h>
 #include <vgc/core/floatarray.h>
+#include <vgc/ui/strings.h>
 
 namespace vgc {
 namespace ui {
@@ -50,7 +51,9 @@ ColorPalette::ColorPalette() :
     oldSaturationIndex_(numSaturationSteps_ - 1),
     oldLightnessIndex_(numLightnessSteps_ / 2)
 {
-
+    addClass(strings::ColorPalette);
+    setWidthPolicy(SizePolicy::Flexible(PreferredSizeType::Dp, 100));
+    setHeightPolicy(SizePolicy::Flexible(PreferredSizeType::Dp, 200));
 }
 
 /* static */
