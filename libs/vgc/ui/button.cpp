@@ -258,19 +258,19 @@ core::Vec2f Button::computePreferredSize() const
 {
     float width = 0;
     float height = 0;
-    if (widthPolicy().type() == SizePolicyType::Auto) {
+    if (widthPolicy().preferredSizeType() == PreferredSizeType::Auto) {
         width = 100;
         // TODO: compute appropriate width based on text length
     }
     else {
-        width = widthPolicy().value();
+        width = widthPolicy().preferredSizeValue();
     }
-    if (heightPolicy().type() == SizePolicyType::Auto) {
+    if (heightPolicy().preferredSizeType() == PreferredSizeType::Auto) {
         height = 26;
         // TODO: compute appropriate height based on font size?
     }
     else {
-        height = heightPolicy().value();
+        height = heightPolicy().preferredSizeValue();
     }
     return core::Vec2f(width, height);
 }
