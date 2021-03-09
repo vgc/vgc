@@ -29,8 +29,8 @@ Flex::Flex(
     wrap_(wrap)
 {
     addClass(strings::Flex);
-    setWidthPolicy(ui::LengthPolicy::AutoFlexible());
-    setHeightPolicy(ui::LengthPolicy::AutoFlexible());
+    setWidthPolicy(ui::SizePolicy::AutoFlexible());
+    setHeightPolicy(ui::SizePolicy::AutoFlexible());
 }
 
 FlexPtr Flex::create(
@@ -106,7 +106,7 @@ core::Vec2f Flex::computePreferredSize() const
             (direction_ == FlexDirection::RowReverse);
     float preferredWidth = getLeftRightPadding(this);
     float preferredHeight = getTopBottomPadding(this);
-    if (widthPolicy().type() != LengthType::Auto) {
+    if (widthPolicy().type() != SizePolicyType::Auto) {
         preferredWidth = widthPolicy().value();
     }
     else {
@@ -127,7 +127,7 @@ core::Vec2f Flex::computePreferredSize() const
             }
         }
     }
-    if (heightPolicy().type() != LengthType::Auto) {
+    if (heightPolicy().type() != SizePolicyType::Auto) {
         preferredHeight = heightPolicy().value();
     }
     else {
