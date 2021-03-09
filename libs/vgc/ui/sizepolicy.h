@@ -14,46 +14,59 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_LENGTHPOLICY_H
-#define VGC_UI_LENGTHPOLICY_H
+#ifndef VGC_UI_SIZEPOLICY_H
+#define VGC_UI_SIZEPOLICY_H
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/ui/api.h>
-#include <vgc/ui/lengthtype.h>
 
 namespace vgc {
 namespace ui {
 
-/// \class vgc::ui::LengthPolicy
-/// \brief Encode whether a desired length is specified, and whether the length
+/// \enum vgc::ui::SizePolicyType
+/// \brief Encode whether a length is "auto", and if not, what unit is used.
+///
+// TODO: support "Percentage" and all the dimension units of Android, they are great:
+// https://developer.android.com/guide/topics/resources/more-resources.html#Dimension
+//
+// Could it also be useful to have max-content, min-content, or fit-content from CSS?
+// https://developer.mozilla.org/en-US/docs/Web/CSS/width
+//
+enum class SizePolicyType {
+    Auto,
+    Dp
+};
+
+/// \class vgc::ui::SizePolicy
+/// \brief Encode whether a desired size is specified, and whether the size
 /// is allowed to stretch or shrink.
 ///
 // TODO: Should we also have a minValue and maxValue? This might (?) be useful
 // if the widget is shrinkable but can't be less than a given size, or if it is
 // stretchable but can't be more than a given size. Or is it overkill? For
-// example, users could set the policy to Stretchable(10, LengthType::Dp, 200)
+// example, users could set the policy to Stretchable(10, SizePolicyType::Dp, 200)
 // to have a minimum value of 200dp while being able to be bigger. Is it ever
 // useful to have both a maximum and minimum? Or have a desired length
 // different than this minimum or maximum? Maybe. But let's wait until an
 // actual use case arises before implementing it.
 //
-class VGC_UI_API LengthPolicy {
+class VGC_UI_API SizePolicy {
 public:
-    /// Creates a LengthPolicy with the given type, value, stretch factor, and
+    /// Creates a SizePolicy with the given type, value, stretch factor, and
     /// shrink factor.
     ///
     /// Note that we also provide convenient static functions which are often
     /// more concise and readable than this constructor. We encourage you to
     /// use them:
     ///
-    /// - LengthPolicy::AutoFlexible(stretch, shrink)
-    /// - LengthPolicy::AutoStretchable(stretch)
-    /// - LengthPolicy::AutoShrinkable(shrink)
-    /// - LengthPolicy::AutoFixed()
-    /// - LengthPolicy::Flexible(type, value, stretch, shrink)
-    /// - LengthPolicy::Stretchable(type, value, stretch)
-    /// - LengthPolicy::Shrinkable(type, value, shrink)
-    /// - LengthPolicy::Fixed(type, value)
+    /// - SizePolicy::AutoFlexible(stretch, shrink)
+    /// - SizePolicy::AutoStretchable(stretch)
+    /// - SizePolicy::AutoShrinkable(shrink)
+    /// - SizePolicy::AutoFixed()
+    /// - SizePolicy::Flexible(type, value, stretch, shrink)
+    /// - SizePolicy::Stretchable(type, value, stretch)
+    /// - SizePolicy::Shrinkable(type, value, shrink)
+    /// - SizePolicy::Fixed(type, value)
     ///
     /// In all the methods where type/value is not an available argument, then it is set to auto/0.
     ///
@@ -66,157 +79,157 @@ public:
     /// ```cpp
     /// // A policy for a widget that can stretch and shrink, and whose default
     /// // size is automatically computed based on its content.
-    /// auto p = LengthPolicy::AutoFlexible()
+    /// auto p = SizePolicy::AutoFlexible()
     ///
     /// // A policy for a widget that can stretch (but not shrink), and whose
     /// // default size is automatically computed based on its content.
-    /// auto p = LengthPolicy::AutoStretchable()
+    /// auto p = SizePolicy::AutoStretchable()
     ///
     /// // A policy for a widget that can shrink (but not stretch), and whose
     /// // default size is automatically computed based on its content.
-    /// auto p = LengthPolicy::AutoShrinkable()
+    /// auto p = SizePolicy::AutoShrinkable()
     ///
     /// // A policy for a widget that can neither stretch or grow, and whose
     /// // default size is automatically computed based on its content.
-    /// auto p = LengthPolicy::AutoFixed()
+    /// auto p = SizePolicy::AutoFixed()
     /// ```
     ///
-    LengthPolicy(LengthType type = LengthType::Auto, float value = 0,
+    SizePolicy(SizePolicyType type = SizePolicyType::Auto, float value = 0,
                  float stretch = 0, float shrink = 0) :
         type_(type), value_(value), stretch_(stretch), shrink_(shrink) {
 
     }
 
-    /// Creates a LengthPolicy of type LengthType::Auto with the given stretch
+    /// Creates a SizePolicy of type SizePolicyType::Auto with the given stretch
     /// factor and shrink factor.
     ///
-    static LengthPolicy AutoFlexible(float stretch = 1, float shrink = 1) {
-        return LengthPolicy(LengthType::Auto, 0, stretch, shrink);
+    static SizePolicy AutoFlexible(float stretch = 1, float shrink = 1) {
+        return SizePolicy(SizePolicyType::Auto, 0, stretch, shrink);
     }
 
-    /// Creates a LengthPolicy of type LengthType::Auto with the given stretch
+    /// Creates a SizePolicy of type SizePolicyType::Auto with the given stretch
     /// factor, and a shrink factor set to zero.
     ///
-    static LengthPolicy AutoStretchable(float stretch = 1) {
-        return LengthPolicy(LengthType::Auto, 0, stretch, 0);
+    static SizePolicy AutoStretchable(float stretch = 1) {
+        return SizePolicy(SizePolicyType::Auto, 0, stretch, 0);
     }
 
-    /// Creates a LengthPolicy of type LengthType::Auto with the given shrink
+    /// Creates a SizePolicy of type SizePolicyType::Auto with the given shrink
     /// factor, and a stretch factor set to zero.
     ///
-    static LengthPolicy AutoShrinkable(float shrink = 1) {
-        return LengthPolicy(LengthType::Auto, 0, 0, shrink);
+    static SizePolicy AutoShrinkable(float shrink = 1) {
+        return SizePolicy(SizePolicyType::Auto, 0, 0, shrink);
     }
 
-    /// Creates a LengthPolicy of type LengthType::Auto with the shrink factor
+    /// Creates a SizePolicy of type SizePolicyType::Auto with the shrink factor
     /// and stretch factor both set to zero.
     ///
-    static LengthPolicy AutoFixed() {
-        return LengthPolicy(LengthType::Auto, 0, 0, 0);
+    static SizePolicy AutoFixed() {
+        return SizePolicy(SizePolicyType::Auto, 0, 0, 0);
     }
 
-    /// Creates a LengthPolicy with the given type, the given stretch factor,
+    /// Creates a SizePolicy with the given type, the given stretch factor,
     /// and the given shrink factor.
     ///
-    /// This method is meant to be used for creating a LengthPolicy whose type
+    /// This method is meant to be used for creating a SizePolicy whose type
     /// is not Auto. If the type is auto, you may want to use AutoFlexible()
     /// instead: it is more concise and readable.
     ///
-    static LengthPolicy Flexible(LengthType type, float value,
+    static SizePolicy Flexible(SizePolicyType type, float value,
                                  float stretch = 1, float shrink = 1) {
-        return LengthPolicy(type, value, stretch, shrink);
+        return SizePolicy(type, value, stretch, shrink);
     }
 
-    /// Creates a LengthPolicy with the given type, the given stretch factor,
+    /// Creates a SizePolicy with the given type, the given stretch factor,
     /// and a shrink factor set to zero.
     ///
-    static LengthPolicy Stretchable(LengthType type, float value,
+    static SizePolicy Stretchable(SizePolicyType type, float value,
                                     float stretch = 1) {
-        return LengthPolicy(type, value, stretch, 0);
+        return SizePolicy(type, value, stretch, 0);
     }
 
-    /// Creates a LengthPolicy with the given type, the given shrink factor,
+    /// Creates a SizePolicy with the given type, the given shrink factor,
     /// and a stretch factor set to zero.
     ///
-    static LengthPolicy Shrinkable(LengthType type, float value,
+    static SizePolicy Shrinkable(SizePolicyType type, float value,
                                    float shrink = 1) {
-        return LengthPolicy(type, value, 0, shrink);
+        return SizePolicy(type, value, 0, shrink);
     }
 
-    /// Creates a LengthPolicy with the given type, and a shrink factor and
+    /// Creates a SizePolicy with the given type, and a shrink factor and
     /// stretch factor both set to zero.
     ///
-    static LengthPolicy Fixed(LengthType type, float value) {
-        return LengthPolicy(type, value, 0, 0);
+    static SizePolicy Fixed(SizePolicyType type, float value) {
+        return SizePolicy(type, value, 0, 0);
     }
 
-    /// Returns the LenghType of this LengthPolicy.
+    /// Returns the LenghType of this SizePolicy.
     ///
-    LengthType type() const {
+    SizePolicyType type() const {
         return type_;
     }
 
-    /// Sets the LenghType of this LengthPolicy.
+    /// Sets the LenghType of this SizePolicy.
     ///
-    void setType(LengthType type) {
+    void setType(SizePolicyType type) {
         type_ = type;
     }
 
-    /// Returns the value of this LengthPolicy.
+    /// Returns the value of this SizePolicy.
     ///
     float value() const {
         return value_;
     }
 
-    /// Sets the value of this LengthPolicy.
+    /// Sets the value of this SizePolicy.
     ///
     void setValue(float value) {
         value_ = value;
     }
 
-    /// Returns the stretch factor of this LengthPolicy.
+    /// Returns the stretch factor of this SizePolicy.
     ///
     float stretch() const {
         return stretch_;
     }
 
-    /// Sets the stretch factor of this LengthPolicy.
+    /// Sets the stretch factor of this SizePolicy.
     ///
     void setStretch(float stretch) {
         stretch_ = stretch;
     }
 
-    /// Returns the shrink factor of this LengthPolicy.
+    /// Returns the shrink factor of this SizePolicy.
     ///
     float shrink() const {
         return shrink_;
     }
 
-    /// Sets the value of this LengthPolicy.
+    /// Sets the value of this SizePolicy.
     ///
     void setShrink(float shrink) {
         shrink_ = shrink;
     }
 
-    /// Returns whether the two LengthPolicy are equal.
+    /// Returns whether the two SizePolicy are equal.
     ///
-    friend bool operator==(const LengthPolicy& p1, const LengthPolicy& p2);
+    friend bool operator==(const SizePolicy& p1, const SizePolicy& p2);
 
-    /// Returns whether the two LengthPolicy are different.
+    /// Returns whether the two SizePolicy are different.
     ///
-    friend bool operator!=(const LengthPolicy& p1, const LengthPolicy& p2);
+    friend bool operator!=(const SizePolicy& p1, const SizePolicy& p2);
 
 private:
-    LengthType type_;
+    SizePolicyType type_;
     float value_;
     float stretch_;
     float shrink_;
 };
 
-inline bool operator==(const LengthPolicy& p1, const LengthPolicy& p2) {
+inline bool operator==(const SizePolicy& p1, const SizePolicy& p2) {
     const float eps = 1e-6f; // XXX Should we instead use exact equality? And implement a separate isNear() method?
-    if (p1.type() == LengthType::Auto) {
-        return (p2.type() == LengthType::Auto) &&
+    if (p1.type() == SizePolicyType::Auto) {
+        return (p2.type() == SizePolicyType::Auto) &&
                core::isNear(p1.stretch(), p2.stretch(), eps) &&
                core::isNear(p1.shrink(), p2.shrink(), eps);
     }
@@ -228,11 +241,11 @@ inline bool operator==(const LengthPolicy& p1, const LengthPolicy& p2) {
     }
 }
 
-inline bool operator!=(const LengthPolicy& p1, const LengthPolicy& p2) {
+inline bool operator!=(const SizePolicy& p1, const SizePolicy& p2) {
     return !(p1 == p2);
 }
 
 } // namespace ui
 } // namespace vgc
 
-#endif // VGC_UI_LENGTHPOLICY_H
+#endif // VGC_UI_SIZEPOLICY_H

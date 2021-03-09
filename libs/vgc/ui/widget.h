@@ -26,8 +26,8 @@
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
-#include <vgc/ui/lengthpolicy.h>
 #include <vgc/ui/mouseevent.h>
+#include <vgc/ui/sizepolicy.h>
 #include <vgc/ui/style.h>
 
 namespace vgc {
@@ -436,7 +436,7 @@ public:
     /// shrink or grow, or if it is impossible to meet all size constraints.
     ///
     /// If you need to modify the preferred size of a given widget, you can
-    /// either change its widthPolicy() or heightPolicy() from LengthType::Auto
+    /// either change its widthPolicy() or heightPolicy() from SizePolicyType::Auto
     /// to a fixed length, or you create a new Widget subclass and reimplement
     /// computePreferredSize() for finer control.
     ///
@@ -469,31 +469,31 @@ public:
         return size_[1];
     }
 
-    /// Returns the LengthPolicy related to the width of this widget. This
+    /// Returns the SizePolicy related to the width of this widget. This
     /// tells layout classes how to stretch and shrink this widget, and what
-    /// the desired width should be in case it's not LengthType::Auto.
+    /// the desired width should be in case it's not SizePolicyType::Auto.
     ///
-    LengthPolicy widthPolicy() const
+    SizePolicy widthPolicy() const
     {
         return widthPolicy_;
     }
 
-    /// Sets the LengthPolicy related to the width of this widget.
+    /// Sets the SizePolicy related to the width of this widget.
     ///
-    void setWidthPolicy(const LengthPolicy& policy);
+    void setWidthPolicy(const SizePolicy& policy);
 
-    /// Returns the LengthPolicy related to the height of this widget. This
+    /// Returns the SizePolicy related to the height of this widget. This
     /// tells layout classes how to stretch and shrink this widget, and what
-    /// the desired height should be in case it's not LengthType::Auto.
+    /// the desired height should be in case it's not SizePolicyType::Auto.
     ///
-    LengthPolicy heightPolicy() const
+    SizePolicy heightPolicy() const
     {
         return heightPolicy_;
     }
 
-    /// Sets the LengthPolicy related to the height of this widget.
+    /// Sets the SizePolicy related to the height of this widget.
     ///
-    void setHeightPolicy(const LengthPolicy& policy);
+    void setHeightPolicy(const SizePolicy& policy);
 
     /// This method should be called when the size policy or preferred size of
     /// this widget changed, to inform its parent that its geometry should be
@@ -616,7 +616,7 @@ protected:
     ///
     /// If you reimplement this method, make sure to check whether the
     /// widthPolicy() or heightPolicy() of this widget is different from
-    /// LengthType::Auto, in which case this function should return the
+    /// SizePolicyType::Auto, in which case this function should return the
     /// specified fixed value.
     ///
     /// Note that if, for example, widthPolicy() is a fixed value, but
@@ -634,8 +634,8 @@ protected:
 private:
     mutable core::Vec2f preferredSize_;
     mutable bool isPreferredSizeComputed_;
-    LengthPolicy widthPolicy_;
-    LengthPolicy heightPolicy_;
+    SizePolicy widthPolicy_;
+    SizePolicy heightPolicy_;
     core::Vec2f position_;
     core::Vec2f size_;
     Widget* mousePressedChild_;

@@ -22,8 +22,8 @@ namespace ui {
 Row::Row() :
     Flex(FlexDirection::Row, FlexWrap::NoWrap)
 {
-    setWidthPolicy(ui::LengthPolicy::AutoFlexible());
-    setHeightPolicy(ui::LengthPolicy::AutoFixed());
+    setWidthPolicy(ui::SizePolicy::AutoFlexible());
+    setHeightPolicy(ui::SizePolicy::AutoFixed());
 }
 
 RowPtr Row::create()

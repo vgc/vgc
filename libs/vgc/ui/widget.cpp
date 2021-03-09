@@ -23,8 +23,8 @@ Widget::Widget() :
     Object(),
     preferredSize_(0.0f, 0.0f),
     isPreferredSizeComputed_(false),
-    widthPolicy_(LengthPolicy::AutoFixed()),
-    heightPolicy_(LengthPolicy::AutoFixed()),
+    widthPolicy_(SizePolicy::AutoFixed()),
+    heightPolicy_(SizePolicy::AutoFixed()),
     position_(0.0f, 0.0f),
     size_(0.0f, 0.0f),
     mousePressedChild_(nullptr),
@@ -138,7 +138,7 @@ void Widget::setGeometry(const core::Vec2f& position, const core::Vec2f& size)
     }
 }
 
-void Widget::setWidthPolicy(const LengthPolicy& policy)
+void Widget::setWidthPolicy(const SizePolicy& policy)
 {
     if (policy != widthPolicy_) {
         widthPolicy_ = policy;
@@ -146,7 +146,7 @@ void Widget::setWidthPolicy(const LengthPolicy& policy)
     }
 }
 
-void Widget::setHeightPolicy(const LengthPolicy& policy)
+void Widget::setHeightPolicy(const SizePolicy& policy)
 {
     if (policy != heightPolicy_) {
         heightPolicy_ = policy;
@@ -352,8 +352,8 @@ core::Vec2f Widget::computePreferredSize() const
 {
     // TODO: convert units if any.
     return core::Vec2f(
-                (widthPolicy_.type() == LengthType::Auto) ? 0 : widthPolicy_.value(),
-                (heightPolicy_.type() == LengthType::Auto) ? 0 : heightPolicy_.value());
+                (widthPolicy_.type() == SizePolicyType::Auto) ? 0 : widthPolicy_.value(),
+                (heightPolicy_.type() == SizePolicyType::Auto) ? 0 : heightPolicy_.value());
 }
 
 void Widget::updateChildrenGeometry()

@@ -13,8 +13,7 @@ vgc_add_library(ui
         exceptions.h
         flex.h
         label.h
-        lengthpolicy.h
-        lengthtype.h
+        sizepolicy.h
         mouseevent.h
         row.h
         strings.h

@@ -22,8 +22,8 @@ namespace ui {
 Column::Column() :
     Flex(FlexDirection::Column, FlexWrap::NoWrap)
 {
-    setWidthPolicy(ui::LengthPolicy::AutoFixed());
-    setHeightPolicy(ui::LengthPolicy::AutoFlexible());
+    setWidthPolicy(ui::SizePolicy::AutoFixed());
+    setHeightPolicy(ui::SizePolicy::AutoFlexible());
 }
 
 ColumnPtr Column::create()

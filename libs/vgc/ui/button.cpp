@@ -258,14 +258,14 @@ core::Vec2f Button::computePreferredSize() const
 {
     float width = 0;
     float height = 0;
-    if (widthPolicy().type() == LengthType::Auto) {
+    if (widthPolicy().type() == SizePolicyType::Auto) {
         width = 100;
         // TODO: compute appropriate width based on text length
     }
     else {
         width = widthPolicy().value();
     }
-    if (heightPolicy().type() == LengthType::Auto) {
+    if (heightPolicy().type() == SizePolicyType::Auto) {
         height = 26;
         // TODO: compute appropriate height based on font size?
     }
