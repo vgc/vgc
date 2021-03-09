@@ -21,6 +21,7 @@ namespace ui {
 namespace strings {
 
 const core::StringId Button("Button");
+const core::StringId ColorPalette("ColorPalette");
 const core::StringId Flex("Flex");
 const core::StringId Label("Label");
 
