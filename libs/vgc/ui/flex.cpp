@@ -104,8 +104,8 @@ core::Vec2f Flex::computePreferredSize() const
 {
     bool isRow = (direction_ == FlexDirection::Row) ||
             (direction_ == FlexDirection::RowReverse);
-    float preferredWidth = getLeftRightPadding(this);
-    float preferredHeight = getTopBottomPadding(this);
+    float preferredWidth = 0;
+    float preferredHeight = 0;
     if (widthPolicy().preferredSizeType() != PreferredSizeType::Auto) {
         preferredWidth = widthPolicy().preferredSizeValue();
     }
@@ -126,6 +126,7 @@ core::Vec2f Flex::computePreferredSize() const
                 preferredWidth = std::max(preferredWidth, child->preferredSize().x() + getLeftRightMargins(child)) ;
             }
         }
+        preferredWidth += getLeftRightPadding(this);
     }
     if (heightPolicy().preferredSizeType() != PreferredSizeType::Auto) {
         preferredHeight = heightPolicy().preferredSizeValue();
@@ -141,6 +142,7 @@ core::Vec2f Flex::computePreferredSize() const
                 preferredHeight = std::max(preferredHeight, child->preferredSize().y() + getTopBottomMargins(child));
             }
         }
+        preferredHeight += getTopBottomPadding(this);
     }
     return core::Vec2f(preferredWidth, preferredHeight);
 }
