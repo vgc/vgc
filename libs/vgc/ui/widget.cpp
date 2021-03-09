@@ -352,8 +352,8 @@ core::Vec2f Widget::computePreferredSize() const
 {
     // TODO: convert units if any.
     return core::Vec2f(
-                (widthPolicy_.type() == SizePolicyType::Auto) ? 0 : widthPolicy_.value(),
-                (heightPolicy_.type() == SizePolicyType::Auto) ? 0 : heightPolicy_.value());
+                (widthPolicy_.preferredSizeType() == PreferredSizeType::Auto) ? 0 : widthPolicy_.preferredSizeValue(),
+                (heightPolicy_.preferredSizeType() == PreferredSizeType::Auto) ? 0 : heightPolicy_.preferredSizeValue());
 }
 
 void Widget::updateChildrenGeometry()

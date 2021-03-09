@@ -436,7 +436,7 @@ public:
     /// shrink or grow, or if it is impossible to meet all size constraints.
     ///
     /// If you need to modify the preferred size of a given widget, you can
-    /// either change its widthPolicy() or heightPolicy() from SizePolicyType::Auto
+    /// either change its widthPolicy() or heightPolicy() from PreferredSizeType::Auto
     /// to a fixed length, or you create a new Widget subclass and reimplement
     /// computePreferredSize() for finer control.
     ///
@@ -471,7 +471,7 @@ public:
 
     /// Returns the SizePolicy related to the width of this widget. This
     /// tells layout classes how to stretch and shrink this widget, and what
-    /// the desired width should be in case it's not SizePolicyType::Auto.
+    /// the desired width should be in case it's not PreferredSizeType::Auto.
     ///
     SizePolicy widthPolicy() const
     {
@@ -484,7 +484,7 @@ public:
 
     /// Returns the SizePolicy related to the height of this widget. This
     /// tells layout classes how to stretch and shrink this widget, and what
-    /// the desired height should be in case it's not SizePolicyType::Auto.
+    /// the desired height should be in case it's not PreferredSizeType::Auto.
     ///
     SizePolicy heightPolicy() const
     {
@@ -616,7 +616,7 @@ protected:
     ///
     /// If you reimplement this method, make sure to check whether the
     /// widthPolicy() or heightPolicy() of this widget is different from
-    /// SizePolicyType::Auto, in which case this function should return the
+    /// PreferredSizeType::Auto, in which case this function should return the
     /// specified fixed value.
     ///
     /// Note that if, for example, widthPolicy() is a fixed value, but

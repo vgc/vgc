@@ -106,8 +106,8 @@ core::Vec2f Flex::computePreferredSize() const
             (direction_ == FlexDirection::RowReverse);
     float preferredWidth = getLeftRightPadding(this);
     float preferredHeight = getTopBottomPadding(this);
-    if (widthPolicy().type() != SizePolicyType::Auto) {
-        preferredWidth = widthPolicy().value();
+    if (widthPolicy().preferredSizeType() != PreferredSizeType::Auto) {
+        preferredWidth = widthPolicy().preferredSizeValue();
     }
     else {
         if (isRow) {
@@ -127,8 +127,8 @@ core::Vec2f Flex::computePreferredSize() const
             }
         }
     }
-    if (heightPolicy().type() != SizePolicyType::Auto) {
-        preferredHeight = heightPolicy().value();
+    if (heightPolicy().preferredSizeType() != PreferredSizeType::Auto) {
+        preferredHeight = heightPolicy().preferredSizeValue();
     }
     else {
         if (!isRow) {
