@@ -74,6 +74,12 @@ UiWidget::~UiWidget()
     doneCurrent();
 }
 
+QSize UiWidget::sizeHint() const
+{
+    core::Vec2f s = widget_->preferredSize();
+    return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
+}
+
 namespace {
 
 ui::MouseEventPtr convertEvent(QMouseEvent* event)

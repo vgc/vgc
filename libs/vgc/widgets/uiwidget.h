@@ -60,6 +60,9 @@ public:
     ///
     ui::Widget* widget() { return widget_.get(); }
 
+    // overrides
+    QSize sizeHint() const override;
+
 protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
