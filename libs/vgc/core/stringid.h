@@ -156,6 +156,12 @@ private:
     const std::string* stringPtr_;
 };
 
+/// Returns whether the given std::string is equal to the given StringId.
+///
+inline bool operator==(const std::string& s1, const StringId& s2) {
+    return s2 == s1;
+}
+
 } // namespace core
 } // namespace vgc
 

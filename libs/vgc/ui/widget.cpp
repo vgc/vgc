@@ -16,6 +16,8 @@
 
 #include <vgc/ui/widget.h>
 
+#include <vgc/ui/strings.h>
+
 namespace vgc {
 namespace ui {
 
@@ -23,8 +25,6 @@ Widget::Widget() :
     Object(),
     preferredSize_(0.0f, 0.0f),
     isPreferredSizeComputed_(false),
-    widthPolicy_(SizePolicy::AutoFixed()),
-    heightPolicy_(SizePolicy::AutoFixed()),
     position_(0.0f, 0.0f),
     size_(0.0f, 0.0f),
     mousePressedChild_(nullptr),
@@ -138,20 +138,34 @@ void Widget::setGeometry(const core::Vec2f& position, const core::Vec2f& size)
     }
 }
 
-void Widget::setWidthPolicy(const SizePolicy& policy)
+PreferredSize Widget::preferredWidth() const
 {
-    if (policy != widthPolicy_) {
-        widthPolicy_ = policy;
-        updateGeometry();
-    }
+    return style(strings::preferred_width).preferredSize();
 }
 
-void Widget::setHeightPolicy(const SizePolicy& policy)
+float Widget::stretchWidth() const
 {
-    if (policy != heightPolicy_) {
-        heightPolicy_ = policy;
-        updateGeometry();
-    }
+    return style(strings::stretch_width).number();
+}
+
+float Widget::shrinkWidth() const
+{
+    return style(strings::shrink_width).number();
+}
+
+PreferredSize Widget::preferredHeight() const
+{
+    return style(strings::preferred_height).preferredSize();
+}
+
+float Widget::stretchHeight() const
+{
+    return style(strings::stretch_height).number();
+}
+
+float Widget::shrinkHeight() const
+{
+    return style(strings::shrink_height).number();
 }
 
 void Widget::updateGeometry()
@@ -351,9 +365,11 @@ StyleValue Widget::style(core::StringId property) const
 core::Vec2f Widget::computePreferredSize() const
 {
     // TODO: convert units if any.
-    return core::Vec2f(
-                (widthPolicy_.preferredSizeType() == PreferredSizeType::Auto) ? 0 : widthPolicy_.preferredSizeValue(),
-                (heightPolicy_.preferredSizeType() == PreferredSizeType::Auto) ? 0 : heightPolicy_.preferredSizeValue());
+    PreferredSizeType auto_ = PreferredSizeType::Auto;
+    PreferredSize w = preferredWidth();
+    PreferredSize h = preferredHeight();
+    return core::Vec2f(w.type() == auto_ ? 0 : w.value(),
+                       h.type() == auto_ ? 0 : h.value());
 }
 
 void Widget::updateChildrenGeometry()

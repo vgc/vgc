@@ -24,6 +24,7 @@
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/sizepolicy.h>
 #include <vgc/ui/styletoken.h>
 
 namespace vgc {
@@ -47,13 +48,13 @@ using StyleDeclarationArray = core::Array<StyleDeclaration*>;
 /// \brief The type of a StyleValue
 ///
 enum class StyleValueType : Int8 {
-    None,     ///< There is no value at all
-    Invalid,  ///< The value is invalid (e.g., parse error)
-    Inherit,  ///< The value should inherit from a parent widget
-    Auto,     ///< The value is auto
-    Length,   ///< The value is a length
-    String,   ///< The value is a string
-    Color,    ///< The value is a color
+    None,          ///< There is no value at all
+    Invalid,       ///< The value is invalid (e.g., parse error)
+    Inherit,       ///< The value should inherit from a parent widget
+    Number,        ///< The value is a number
+    String,        ///< The value is a string
+    Color,         ///< The value is a color
+    PreferredSize, ///< The value is a PreferredSize
 };
 
 /// \enum vgc::ui::StyleValue
@@ -86,19 +87,19 @@ public:
     ///
     static StyleValue inherit() { return StyleValue(StyleValueType::Inherit); }
 
-    /// Creates a StyleValue of type Length
+    /// Creates a StyleValue of type Number
     ///
-    StyleValue(float length) :
-        type_(StyleValueType::Length),
-        length_(length)
+    StyleValue(float number) :
+        type_(StyleValueType::Number),
+        number_(number)
     {
 
     }
 
-    /// Returns the length of the StyleValue.
-    /// The behavior is undefined if the type isn't Length.
+    /// Returns the number of the StyleValue.
+    /// The behavior is undefined if the type isn't Number.
     ///
-    float length() const { return length_; }
+    float number() const { return number_; }
 
     /// Creates a StyleValue of type String
     ///
@@ -116,7 +117,7 @@ public:
 
     /// Creates a StyleValue of type Color
     ///
-    StyleValue(const core::Color color) :
+    StyleValue(const core::Color& color) :
         type_(StyleValueType::Color),
         color_(color)
     {
@@ -128,12 +129,27 @@ public:
     ///
     core::Color color() const { return color_; }
 
+    /// Creates a StyleValue of type PreferredSize
+    ///
+    StyleValue(const PreferredSize& preferredSize) :
+        type_(StyleValueType::PreferredSize),
+        preferredSize_(preferredSize)
+    {
+
+    }
+
+    /// Returns the color of the StyleValue.
+    /// The behavior is undefined if the type isn't Color.
+    ///
+    PreferredSize preferredSize() const { return preferredSize_; }
+
 private:
     StyleValueType type_;
     // TODO: Encapsulate following member variables in std::variant (C++17)
-    float length_;
+    float number_;
     std::string string_;
     core::Color color_;
+    PreferredSize preferredSize_;
 };
 
 /// \typedef vgc::ui::StylePropertyParser
@@ -156,6 +172,14 @@ StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end);
 /// Parses the given style tokens as a length.
 ///
 StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end);
+
+/// Parses the given style tokens as a number.
+///
+StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end);
+
+/// Parses the given style tokens as a PreferredSize.
+///
+StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end);
 
 namespace internal {
 class StylePropertySpecMaker;

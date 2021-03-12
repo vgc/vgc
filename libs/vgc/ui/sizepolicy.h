@@ -44,7 +44,7 @@ class VGC_UI_API PreferredSize {
 public:
     /// Creates a PreferredSize with the given type and value.
     ///
-    PreferredSize(PreferredSizeType type, float value = 0) :
+    PreferredSize(PreferredSizeType type = PreferredSizeType::Auto, float value = 0) :
         type_(type), value_(value) {}
 
 

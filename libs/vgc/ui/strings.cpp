@@ -36,7 +36,16 @@ const core::StringId padding_bottom("padding-bottom");
 const core::StringId padding_left("padding-left");
 const core::StringId padding_right("padding-right");
 const core::StringId padding_top("padding-top");
+const core::StringId preferred_height("preferred-height");
+const core::StringId preferred_width("preferred-width");
+const core::StringId shrink_height("shrink-height");
+const core::StringId shrink_width("shrink-width");
+const core::StringId stretch_height("stretch-height");
+const core::StringId stretch_width("stretch-width");
 const core::StringId text_color("text-color");
+
+const core::StringId auto_("auto");
+extern const core::StringId inherit("inherit");
 
 } // namespace strings
 } // namespace ui

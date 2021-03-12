@@ -436,9 +436,14 @@ public:
     /// shrink or grow, or if it is impossible to meet all size constraints.
     ///
     /// If you need to modify the preferred size of a given widget, you can
-    /// either change its widthPolicy() or heightPolicy() from PreferredSizeType::Auto
-    /// to a fixed length, or you create a new Widget subclass and reimplement
-    /// computePreferredSize() for finer control.
+    /// either change its `preferred-width` or `preferred-height` from auto
+    /// (the default value) to a fixed length, or you can create a new Widget
+    /// subclass and reimplement computePreferredSize() for finer control.
+    ///
+    /// Note that this function returns the "computed" preferred size of the
+    /// widget. In particular, while preferredWidth() and preferredHeight() may
+    /// return "auto", this function always returns actual values based on the
+    /// widget content.
     ///
     core::Vec2f preferredSize() const {
         if (!isPreferredSizeComputed_) {
@@ -469,31 +474,29 @@ public:
         return size_[1];
     }
 
-    /// Returns the SizePolicy related to the width of this widget. This
-    /// tells layout classes how to stretch and shrink this widget, and what
-    /// the desired width should be in case it's not PreferredSizeType::Auto.
+    /// Returns the preferred width of this widget.
     ///
-    SizePolicy widthPolicy() const
-    {
-        return widthPolicy_;
-    }
+    PreferredSize preferredWidth() const;
 
-    /// Sets the SizePolicy related to the width of this widget.
+    /// Returns the width stretch factor of this widget.
     ///
-    void setWidthPolicy(const SizePolicy& policy);
+    float stretchWidth() const;
 
-    /// Returns the SizePolicy related to the height of this widget. This
-    /// tells layout classes how to stretch and shrink this widget, and what
-    /// the desired height should be in case it's not PreferredSizeType::Auto.
+    /// Returns the width shrink factor of this widget.
     ///
-    SizePolicy heightPolicy() const
-    {
-        return heightPolicy_;
-    }
+    float shrinkWidth() const;
 
-    /// Sets the SizePolicy related to the height of this widget.
+    /// Returns the preferred height of this widget.
     ///
-    void setHeightPolicy(const SizePolicy& policy);
+    PreferredSize preferredHeight() const;
+
+    /// Returns the height stretch factor of this widget.
+    ///
+    float stretchHeight() const;
+
+    /// Returns the height shrink factor of this widget.
+    ///
+    float shrinkHeight() const;
 
     /// This method should be called when the size policy or preferred size of
     /// this widget changed, to inform its parent that its geometry should be
@@ -634,8 +637,6 @@ protected:
 private:
     mutable core::Vec2f preferredSize_;
     mutable bool isPreferredSizeComputed_;
-    SizePolicy widthPolicy_;
-    SizePolicy heightPolicy_;
     core::Vec2f position_;
     core::Vec2f size_;
     Widget* mousePressedChild_;

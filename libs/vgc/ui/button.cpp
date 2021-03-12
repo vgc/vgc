@@ -193,8 +193,8 @@ float getLength(const Widget* widget, core::StringId property)
 {
     float res = 0;
     StyleValue value = widget->style(property);
-    if (value.type() == StyleValueType::Length) {
-        res = value.length();
+    if (value.type() == StyleValueType::Number) {
+        res = value.number();
     }
     return res;
 }
@@ -256,23 +256,25 @@ bool Button::onMouseLeave()
 
 core::Vec2f Button::computePreferredSize() const
 {
-    float width = 0;
-    float height = 0;
-    if (widthPolicy().preferredSizeType() == PreferredSizeType::Auto) {
-        width = 100;
+    PreferredSizeType auto_ = PreferredSizeType::Auto;
+    PreferredSize w = preferredWidth();
+    PreferredSize h = preferredHeight();
+    core::Vec2f res(0, 0);
+    if (w.type() == auto_) {
+        res[0] = 100;
         // TODO: compute appropriate width based on text length
     }
     else {
-        width = widthPolicy().preferredSizeValue();
+        res[0] = w.value();
     }
-    if (heightPolicy().preferredSizeType() == PreferredSizeType::Auto) {
-        height = 26;
+    if (h.type() == auto_) {
+        res[1] = 26;
         // TODO: compute appropriate height based on font size?
     }
     else {
-        height = heightPolicy().preferredSizeValue();
+        res[1] = h.value();
     }
-    return core::Vec2f(width, height);
+    return res;
 }
 
 } // namespace ui

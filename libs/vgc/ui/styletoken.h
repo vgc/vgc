@@ -136,6 +136,15 @@ struct StyleToken {
     // Initializes a dummy token starting and ending at s.
     // All other fields are uninitialized.
     StyleToken(const char* s) : begin(s), end(s), type(StyleTokenType::Delim) {}
+
+    /// Returns the numericValue of this token as a float. Assumes the type of
+    /// this token is either Number, Percentage, or Dimension.
+    ///
+    float toFloat() const {
+        return flag == StyleTokenFlag::Integer ?
+                    static_cast<float>(numericValue.integer) :
+                    static_cast<float>(numericValue.number);
+    }
 };
 
 /// Writes the given StyleToken to the output stream.
