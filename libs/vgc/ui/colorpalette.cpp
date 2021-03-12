@@ -52,8 +52,6 @@ ColorPalette::ColorPalette() :
     oldLightnessIndex_(numLightnessSteps_ / 2)
 {
     addClass(strings::ColorPalette);
-    setWidthPolicy(SizePolicy::Flexible(PreferredSizeType::Dp, 100));
-    setHeightPolicy(SizePolicy::Flexible(PreferredSizeType::Dp, 200));
 }
 
 /* static */

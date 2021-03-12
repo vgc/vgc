@@ -51,17 +51,48 @@ StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end)
 StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end)
 {
     // For now, we only support a unique Dimension token with a "dp" unit
-    bool isValid =
-            (begin != end) &&
-            (begin->type == StyleTokenType::Dimension) &&
-            (begin->codePointsValue == "dp") &&
-            (begin + 1 == end);
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Dimension &&
+             begin->codePointsValue == "dp" &&
+             begin + 1 == end) {
+        return StyleValue(begin->toFloat());
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
 
-    if (isValid) {
-        float v = (begin->flag == StyleTokenFlag::Integer) ?
-                  static_cast<float>(begin->numericValue.integer) :
-                  static_cast<float>(begin->numericValue.number);
-        return StyleValue(v);
+StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Number &&
+             begin + 1 == end) {
+        return StyleValue(begin->toFloat());
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    // For now, we only support 'auto' or a unique Dimension token with a "dp" unit
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Ident &&
+             begin->codePointsValue == strings::auto_ &&
+             begin + 1 == end) {
+        return StyleValue(PreferredSize(PreferredSizeType::Auto));
+    }
+    else if (begin->type == StyleTokenType::Dimension &&
+             begin->codePointsValue == "dp" &&
+             begin + 1 == end) {
+        return StyleValue(PreferredSize(PreferredSizeType::Dp, begin->toFloat()));
     }
     else {
         return StyleValue::invalid();
@@ -90,7 +121,9 @@ void StylePropertySpec::init()
     auto black = StyleValue(core::colors::black);
     auto transparent = StyleValue(core::colors::transparent);
     auto zero = StyleValue(0.0f);
+    auto one = StyleValue(1.0f);
     auto m = internal::StylePropertySpecMaker::make;
+    auto autosize = StyleValue(PreferredSize(PreferredSizeType::Auto));
     map_ = {
         //      name                    initial   inherited     parser
         //
@@ -105,6 +138,12 @@ void StylePropertySpec::init()
         m("padding-left",              zero,        false, &parseStyleLength),
         m("padding-right",             zero,        false, &parseStyleLength),
         m("padding-top",               zero,        false, &parseStyleLength),
+        m("preferred-height",          autosize,    false, &parseStylePreferredSize),
+        m("preferred-width",           autosize,    false, &parseStylePreferredSize),
+        m("shrink-height",             one,         false, &parseStyleNumber),
+        m("shrink-width",              one,         false, &parseStyleNumber),
+        m("stretch-height",            one,         false, &parseStyleNumber),
+        m("stretch-width",             one,         false, &parseStyleNumber),
         m("text-color",                black,       true,  &parseStyleColor)
     };
 }

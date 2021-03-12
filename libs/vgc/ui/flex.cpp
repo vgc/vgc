@@ -29,8 +29,6 @@ Flex::Flex(
     wrap_(wrap)
 {
     addClass(strings::Flex);
-    setWidthPolicy(ui::SizePolicy::AutoFlexible());
-    setHeightPolicy(ui::SizePolicy::AutoFlexible());
 }
 
 FlexPtr Flex::create(
@@ -68,8 +66,8 @@ float getLength(const Widget* widget, core::StringId property)
 {
     float res = 0.0f;
     StyleValue style = widget->style(property);
-    if (style.type() == StyleValueType::Length) {
-        res = style.length();
+    if (style.type() == StyleValueType::Number) {
+        res = style.number();
     }
     return res;
 }
@@ -104,15 +102,17 @@ core::Vec2f Flex::computePreferredSize() const
 {
     bool isRow = (direction_ == FlexDirection::Row) ||
             (direction_ == FlexDirection::RowReverse);
-    float preferredWidth = 0;
-    float preferredHeight = 0;
-    if (widthPolicy().preferredSizeType() != PreferredSizeType::Auto) {
-        preferredWidth = widthPolicy().preferredSizeValue();
+    core::Vec2f res(0, 0);
+    PreferredSizeType auto_ = PreferredSizeType::Auto;
+    PreferredSize w = preferredWidth();
+    PreferredSize h = preferredHeight();
+    if (w.type() != auto_) {
+        res[0] = w.value();
     }
     else {
         if (isRow) {
             for (Widget* child : children()) {
-                preferredWidth += child->preferredSize().x() + getLeftRightMargins(child);
+                res[0] += child->preferredSize().x() + getLeftRightMargins(child);
             }
         }
         else {
@@ -123,28 +123,28 @@ core::Vec2f Flex::computePreferredSize() const
             // (possibly weighted by the stretch/shrink factors?), and clamp
             // using the min/max widths.
             for (Widget* child : children()) {
-                preferredWidth = std::max(preferredWidth, child->preferredSize().x() + getLeftRightMargins(child)) ;
+                res[0] = std::max(res[0], child->preferredSize().x() + getLeftRightMargins(child)) ;
             }
         }
-        preferredWidth += getLeftRightPadding(this);
+        res[0] += getLeftRightPadding(this);
     }
-    if (heightPolicy().preferredSizeType() != PreferredSizeType::Auto) {
-        preferredHeight = heightPolicy().preferredSizeValue();
+    if (h.type() != PreferredSizeType::Auto) {
+        res[1] = h.value();
     }
     else {
         if (!isRow) {
             for (Widget* child : children()) {
-                preferredHeight += child->preferredSize().y() + getTopBottomMargins(child);
+                res[1] += child->preferredSize().y() + getTopBottomMargins(child);
             }
         }
         else {
             for (Widget* child : children()) {
-                preferredHeight = std::max(preferredHeight, child->preferredSize().y() + getTopBottomMargins(child));
+                res[1] = std::max(res[1], child->preferredSize().y() + getTopBottomMargins(child));
             }
         }
-        preferredHeight += getTopBottomPadding(this);
+        res[1] += getTopBottomPadding(this);
     }
-    return core::Vec2f(preferredWidth, preferredHeight);
+    return res;
 }
 
 namespace {
@@ -165,7 +165,7 @@ float getChildStretch(bool isRow, float freeSpace, Widget* child, float childStr
     float childAuthoredStretch = 0;
     float childStretchMultiplier = 1;
     if (freeSpace >= 0) {
-        childAuthoredStretch = isRow ? child->widthPolicy().stretch() : child->heightPolicy().stretch();
+        childAuthoredStretch = isRow ? child->stretchWidth() : child->stretchHeight();
         childStretchMultiplier = 1;
     }
     else {
@@ -174,7 +174,7 @@ float getChildStretch(bool isRow, float freeSpace, Widget* child, float childStr
         // same authored shrink factor) large items shrink faster than small
         // items, so that they reach a zero-size at the same time. This is the
         // same behavior as CSS.
-        childAuthoredStretch = isRow ? child->widthPolicy().shrink() : child->heightPolicy().shrink();
+        childAuthoredStretch = isRow ? child->shrinkWidth() : child->shrinkHeight();
         childStretchMultiplier = isRow ? child->preferredSize().x() : child->preferredSize().y();
     }
     childAuthoredStretch = std::max(childAuthoredStretch, 0.0f);

@@ -11,6 +11,8 @@
     background-color-on-hover: rgb(11, 82, 172);
     border-radius: 3dp;
     text-color: rgb(221, 221, 221);
+    preferred-width: auto;
+    preferred-height: 26dp;
 }
 
 .Flex {
@@ -18,4 +20,9 @@
     padding-right: 5dp;
     padding-bottom: 5dp;
     padding-left: 5dp;
+}
+
+.ColorPalette {
+    preferred-width: 100dp;
+    preferred-height: 200dp;
 }
