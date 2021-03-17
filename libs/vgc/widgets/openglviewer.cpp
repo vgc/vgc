@@ -104,16 +104,32 @@ QCursor crossCursor() {
 void OpenGLViewer::init()
 {
     // Note:
-    // Performance seems to be significantly impacted by format.setSamples().
-    // For now I keep setSamples(1). May change to 4 or 16 after investigation.
-    // Should probably be a user preference.
+    //
+    // Performance seems to be significantly impacted by multisample
+    // antialiasing (MSAA), which is controlled by format.setSamples(n).
+    //
+    // Ideally, we may want to implement antialiasing either via FXAA/MLAA
+    // (i.e. as a post-processing step), or since we are 2D, by generating
+    // special thin "blurry" geometry at the boundary of objects, which may
+    // provide better performance.
+    //
+    // In the meantime, since none of the above is currently implemented, we do
+    // use MSAA which is trivial to enable/implement. Not using antialiasing at
+    // all (or with too few samples like 2 or 4) makes the lines quite ugly,
+    // but more importantly, makes the text almost unreadable (since it's
+    // currently rendered as triangles rather than textured quads or distance
+    // fields). Using setSamples(8) seems like a good trade-off for now.
+    //
+    // Note that to disable MSAA, you need to call setSamples(0). Calling
+    // setSamples(1) instead does NOT disable MSAA, but surprisingly gives the
+    // same result as setSamples(2).
 
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     format.setVersion(3, 2);
     format.setProfile(QSurfaceFormat::CoreProfile);
-    format.setSamples(1);
+    format.setSamples(8);
     format.setSwapInterval(0);
     QSurfaceFormat::setDefaultFormat(format);
 }
