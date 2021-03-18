@@ -40,6 +40,7 @@ VGC_UI_API extern const core::StringId padding_bottom;
 VGC_UI_API extern const core::StringId padding_left;
 VGC_UI_API extern const core::StringId padding_right;
 VGC_UI_API extern const core::StringId padding_top;
+VGC_UI_API extern const core::StringId pixel_hinting;
 VGC_UI_API extern const core::StringId preferred_height;
 VGC_UI_API extern const core::StringId preferred_width;
 VGC_UI_API extern const core::StringId shrink_height;
@@ -50,6 +51,8 @@ VGC_UI_API extern const core::StringId text_color;
 
 VGC_UI_API extern const core::StringId auto_;
 VGC_UI_API extern const core::StringId inherit;
+VGC_UI_API extern const core::StringId normal;
+VGC_UI_API extern const core::StringId off;
 
 } // namespace strings
 } // namespace ui
