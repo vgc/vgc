@@ -118,13 +118,13 @@ public:
 
     /// Returns the string represented by this StringId.
     ///
-    std::string string() const {
+    const std::string& string() const {
         return *stringPtr_;
     }
 
     /// Allows implicit conversion from StringId to std::string.
     ///
-    operator std::string() const {
+    operator const std::string&() const {
         return string();
     }
 
