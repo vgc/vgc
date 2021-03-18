@@ -110,10 +110,40 @@ public:
 
     }
 
+    /// Creates a StyleValue of type String
+    ///
+    StyleValue(const core::StringId& string) :
+        type_(StyleValueType::String),
+        string_(string)
+    {
+
+    }
+
     /// Returns the string of the StyleValue.
     /// The behavior is undefined if the type isn't String.
     ///
-    const std::string& string() const { return string_; }
+    const std::string& string() const { return string_.string(); }
+
+    /// Returns the StringId of the StyleValue.
+    /// The behavior is undefined if the type isn't String.
+    ///
+    const core::StringId& stringId() const { return string_; }
+
+    /// Returns whether this StyleValue is of type String and
+    /// whose string value is equal the given string.
+    ///
+    bool operator==(const std::string& string) {
+        return type() == StyleValueType::String &&
+               string_ == string;
+    }
+
+    /// Returns whether this StyleValue is of type String and
+    /// whose string value is equal the given string.
+    ///
+    bool operator==(const core::StringId& string) {
+        return type() == StyleValueType::String &&
+               string_ == string;
+    }
 
     /// Creates a StyleValue of type Color
     ///
@@ -127,7 +157,7 @@ public:
     /// Returns the color of the StyleValue.
     /// The behavior is undefined if the type isn't Color.
     ///
-    core::Color color() const { return color_; }
+    const core::Color& color() const { return color_; }
 
     /// Creates a StyleValue of type PreferredSize
     ///
@@ -141,13 +171,13 @@ public:
     /// Returns the color of the StyleValue.
     /// The behavior is undefined if the type isn't Color.
     ///
-    PreferredSize preferredSize() const { return preferredSize_; }
+    const PreferredSize& preferredSize() const { return preferredSize_; }
 
 private:
     StyleValueType type_;
     // TODO: Encapsulate following member variables in std::variant (C++17)
     float number_;
-    std::string string_;
+    core::StringId string_;
     core::Color color_;
     PreferredSize preferredSize_;
 };
@@ -180,6 +210,10 @@ StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end);
 /// Parses the given style tokens as a PreferredSize.
 ///
 StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end);
+
+/// Parses the "pixel-hinting" property.
+///
+StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end);
 
 namespace internal {
 class StylePropertySpecMaker;

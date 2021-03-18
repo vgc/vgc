@@ -99,6 +99,17 @@ StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator 
     }
 }
 
+StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    StyleValue res = parseStyleDefault(begin, end);
+    if (!(res == strings::off ||
+          res == strings::normal))
+    {
+        res = StyleValue::invalid();
+    }
+    return res;
+}
+
 StylePropertySpec* StylePropertySpec::get(core::StringId property)
 {
     if (map_.empty()) {
@@ -118,12 +129,13 @@ StylePropertySpec::Table StylePropertySpec::map_;
 void StylePropertySpec::init()
 {
     // For reference: https://www.w3.org/TR/CSS21/propidx.html
-    auto black = StyleValue(core::colors::black);
+    auto black       = StyleValue(core::colors::black);
     auto transparent = StyleValue(core::colors::transparent);
-    auto zero = StyleValue(0.0f);
-    auto one = StyleValue(1.0f);
+    auto zero        = StyleValue(0.0f);
+    auto one         = StyleValue(1.0f);
+    auto autosize    = StyleValue(PreferredSize(PreferredSizeType::Auto));
+    auto normal      = StyleValue(strings::normal);
     auto m = internal::StylePropertySpecMaker::make;
-    auto autosize = StyleValue(PreferredSize(PreferredSizeType::Auto));
     map_ = {
         //      name                    initial   inherited     parser
         //
@@ -138,6 +150,7 @@ void StylePropertySpec::init()
         m("padding-left",              zero,        false, &parseStyleLength),
         m("padding-right",             zero,        false, &parseStyleLength),
         m("padding-top",               zero,        false, &parseStyleLength),
+        m("pixel-hinting",             normal,      false, &parsePixelHinting),
         m("preferred-height",          autosize,    false, &parseStylePreferredSize),
         m("preferred-width",           autosize,    false, &parseStylePreferredSize),
         m("shrink-height",             one,         false, &parseStyleNumber),

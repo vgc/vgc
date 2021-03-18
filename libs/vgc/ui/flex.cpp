@@ -191,10 +191,15 @@ float computeTotalStretch(bool isRow, float freeSpace, Widget* parent, float chi
     return totalStretch;
 }
 
+float hinted(float x, bool hinting) {
+    return hinting ? std::round(x) : x;
+}
+
 void stretchChild(
         bool isRow, float freeSpace, float crossSize, float extraSpacePerStretch,
         Widget* child, float childStretchBonus, float& childMainPosition,
-        float parentCrossPaddingBefore, float parentCrossPaddingAfter)
+        float parentCrossPaddingBefore, float parentCrossPaddingAfter,
+        bool hinting)
 {
     float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
     float childStretch = getChildStretch(isRow, freeSpace, child, childStretchBonus);
@@ -206,11 +211,15 @@ void stretchChild(
     float childCrossSize = crossSize - parentCrossPaddingBefore - parentCrossPaddingAfter - childCrossMarginBefore - childCrossMarginAfter;
     float childCrossPosition = parentCrossPaddingBefore + childCrossMarginBefore;
     childMainPosition += childMainMarginBefore;
+    float hChildMainPosition = hinted(childMainPosition, hinting);
+    float hChildCrossPosition = hinted(childCrossPosition, hinting);
+    float hChildMainSize = hinted(childMainPosition + childMainSize, hinting) - hChildMainPosition;
+    float hChildCrossSize = hinted(childCrossPosition + childCrossSize, hinting) - hChildCrossPosition;
     if (isRow) {
-        child->setGeometry(childMainPosition, childCrossPosition, childMainSize, childCrossSize);
+        child->setGeometry(hChildMainPosition, hChildCrossPosition, hChildMainSize, hChildCrossSize);
     }
     else {
-        child->setGeometry(childCrossPosition, childMainPosition, childCrossSize, childMainSize);
+        child->setGeometry(hChildCrossPosition, hChildMainPosition, hChildCrossSize, hChildMainSize);
     }
     childMainPosition += childMainSize + childMainMarginAfter;
 }
@@ -232,6 +241,7 @@ void Flex::updateChildrenGeometry()
         bool isReverse =
                 (direction_ == FlexDirection::RowReverse) ||
                 (direction_ == FlexDirection::ColumnReverse);
+        bool hinting = (style(strings::pixel_hinting) == strings::normal);
         float preferredMainSize = isRow ? preferredSize().x() : preferredSize().y();
         float mainPaddingBefore = isRow ? getLength(this, strings::padding_left) : getLength(this, strings::padding_top);
         float crossPaddingBefore = isRow ? getLength(this, strings::padding_top) : getLength(this, strings::padding_left);
@@ -264,7 +274,8 @@ void Flex::updateChildrenGeometry()
         while (child) {
             stretchChild(isRow, freeSpace, crossSize, extraSpacePerStretch,
                          child, childStretchBonus, childMainPosition,
-                         crossPaddingBefore, crossPaddingAfter);
+                         crossPaddingBefore, crossPaddingAfter,
+                         hinting);
             child = isReverse ? child->previousSibling() : child->nextSibling();
         }
     }

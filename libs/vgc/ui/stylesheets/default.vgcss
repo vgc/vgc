@@ -20,6 +20,7 @@
     padding-right: 5dp;
     padding-bottom: 5dp;
     padding-left: 5dp;
+    pixel-hinting: normal;
 }
 
 .ColorPalette {
