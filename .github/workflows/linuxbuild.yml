@@ -5,6 +5,8 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.12.5
+  CC: gcc-9
+  CXX: g++-9
 
 jobs:
   build:
@@ -98,6 +100,7 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}
       run: |
+
         mkdir build
         cd build
         echo "${CMAKE_EXTRA_ARGS}"
