@@ -602,4 +602,19 @@ void readTo(Vec2f& v, IStream& in)
 } // namespace core
 } // namespace vgc
 
+// see https://fmt.dev/latest/api.html#formatting-user-defined-types
+template <>
+struct fmt::formatter<vgc::core::Vec2f> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+            throw format_error("invalid format");
+        return it;
+    }
+    template <typename FormatContext>
+    auto format(const vgc::core::Vec2f v, FormatContext& ctx) {
+        return format_to(ctx.out(),"({}, {})", v[0], v[1]);
+    }
+};
+
 #endif // VGC_CORE_VEC2F_H
