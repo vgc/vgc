@@ -36,6 +36,7 @@
 ///
 
 #include <cstring> // strlen
+#include <cstdio> // fflush, fputc
 #include <ios> // streamsize
 #include <limits>
 #include <string>
@@ -62,17 +63,86 @@
 namespace vgc {
 namespace core {
 
-// For now, we directly use the format function from {fmt}. Later, we will
-// either define our own function, or use C++20 when available.
-//
-// TODO: also define formatTo(). Note that we don't want to call it format_to()
-// for consistency with our naming conventions, especially if it's not just a
-// polyfill but has slightly different behaviour. The change of name makes it
-// less trivial to define than just `using fmt::format_to`, so we've deferred
-// this to later.
-//
-using fmt::format;
-using fmt::print;
+/// Flushes the given `std::FILE`. If no argument is provided, flushes `stdout`.
+///
+/// Returns zero on success. Otherwise EOF is returned and the error indicator
+/// of the file stream is set.
+///
+/// This is a convenient wrapper around `std::fflush`, see:
+///
+/// https://en.cppreference.com/w/cpp/io/c/fflush
+///
+inline int flush(std::FILE* stream = stdout) {
+    return std::fflush(stream);
+}
+
+/// Prints formatted data to the given file `f`.
+///
+/// ```cpp
+/// vgc::core::Vec2d v(12, 42);
+/// vgc::core::print(stderr, "position = {}", v);
+/// ```
+///
+/// This function uses the {fmt} library under the hood. For more info on the
+/// format syntax, https://fmt.dev/latest/syntax.html
+///
+template<typename S, typename... Args>
+inline void print(std::FILE* f, const S& formatString, Args&&... args) {
+    fmt::vprint(f, formatString, fmt::make_args_checked<Args...>(formatString, args...));
+}
+
+/// Prints formatted data to `stdout`.
+///
+/// ```cpp
+/// vgc::core::Vec2d v(12, 42);
+/// vgc::core::print("position = {}", v);
+/// ```
+///
+/// This function uses the {fmt} library under the hood. For more info on the
+/// format syntax, https://fmt.dev/latest/syntax.html
+///
+template<typename S, typename... Args>
+inline void print(const S& formatString, Args&&... args) {
+    fmt::vprint(formatString, fmt::make_args_checked<Args...>(formatString, args...));
+}
+
+/// Prints formatted data to the given file `f`, adds a newline, and flushes.
+///
+/// \sa print()
+///
+template<typename S, typename... Args>
+inline void println(std::FILE* f, const S& formatString, Args&&... args) {
+    fmt::vprint(f, formatString, fmt::make_args_checked<Args...>(formatString, args...));
+    std::fputc('\n', f);
+    vgc::core::flush(f);
+}
+
+/// Prints formatted data to `stdout`, adds a newline, and flushes.
+///
+/// \sa print()
+///
+template<typename S, typename... Args>
+inline void println(const S& formatString, Args&&... args) {
+    fmt::vprint(formatString, fmt::make_args_checked<Args...>(formatString, args...));
+    std::fputc('\n', stdout);
+    vgc::core::flush(stdout);
+}
+
+/// Formats arguments and returns the result as a string.
+///
+/// ```cpp
+/// vgc::core::Vec2d v(12, 42);
+/// std::string s = vgc::core::format("position = {}", v);
+/// ```
+///
+/// This function uses the {fmt} library under the hood. For more info on the
+/// format syntax, https://fmt.dev/latest/syntax.html
+///
+template <typename S, typename... Args, typename Char = fmt::char_t<S>>
+inline std::basic_string<Char> format(const S& formatString, Args&&... args) {
+    const auto& vargs = fmt::make_args_checked<Args...>(formatString, args...);
+    return fmt::vformat(formatString, vargs);
+}
 
 /// Writes the given `char` to the given output stream.
 ///
