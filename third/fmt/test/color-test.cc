@@ -6,6 +6,11 @@
 // For the license information refer to format.h.
 
 #include "fmt/color.h"
+
+#include <iterator>
+#include <string>
+#include <utility>
+
 #include "gtest-extra.h"
 
 TEST(ColorsTest, ColorsPrint) {
@@ -50,6 +55,8 @@ TEST(ColorsTest, ColorsPrint) {
 TEST(ColorsTest, Format) {
   EXPECT_EQ(fmt::format(fg(fmt::rgb(255, 20, 30)), "rgb(255,20,30)"),
             "\x1b[38;2;255;020;030mrgb(255,20,30)\x1b[0m");
+  EXPECT_EQ(fmt::format(fg(fmt::rgb(255, 20, 30)), L"rgb(255,20,30) wide"),
+            L"\x1b[38;2;255;020;030mrgb(255,20,30) wide\x1b[0m");
   EXPECT_EQ(fmt::format(fg(fmt::color::blue), "blue"),
             "\x1b[38;2;000;000;255mblue\x1b[0m");
   EXPECT_EQ(
@@ -80,4 +87,13 @@ TEST(ColorsTest, Format) {
             "\x1b[105mtbmagenta\x1b[0m");
   EXPECT_EQ(fmt::format(fg(fmt::terminal_color::red), "{}", "foo"),
             "\x1b[31mfoo\x1b[0m");
+}
+
+TEST(ColorsTest, FormatToOutAcceptsTextStyle) {
+  fmt::text_style ts = fg(fmt::rgb(255, 20, 30));
+  std::string out;
+  fmt::format_to(std::back_inserter(out), ts, "rgb(255,20,30){}{}{}", 1, 2, 3);
+
+  EXPECT_EQ(fmt::to_string(out),
+            "\x1b[38;2;255;020;030mrgb(255,20,30)123\x1b[0m");
 }
