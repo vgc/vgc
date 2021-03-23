@@ -52,6 +52,14 @@ To build a `shared library`__ set the ``BUILD_SHARED_LIBS`` CMake variable to
 
 __ http://en.wikipedia.org/wiki/Library_%28computing%29#Shared_libraries
 
+
+To build a `static library` with position independent code (required if the main
+consumer of the fmt library is a shared library i.e. a Python extension) set the
+``CMAKE_POSITION_INDEPENDENT_CODE`` CMake variable to ``TRUE``::
+
+  cmake -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE ...
+
+
 Installing the Library
 ======================
 
@@ -83,6 +91,49 @@ Setting up your target to use a header-only version of ``fmt`` is equally easy::
 
    target_link_libraries(<your-target> PRIVATE fmt::fmt-header-only)
 
+Usage with build2
+=================
+
+You can use `build2 <https://build2.org>`_, a dependency manager and a
+build-system combined, to use ``fmt``.
+
+Currently this package is available in these package repositories:
+
+- **https://cppget.org/fmt/** for released and published versions.
+- `The git repository with the sources of the build2 package of fmt <https://github.com/build2-packaging/fmt.git>`_
+  for unreleased or custom revisions of ``fmt``.
+
+**Usage:**
+
+- ``build2`` package name: ``fmt``
+- Library target name : ``lib{fmt}``
+
+For example, to make your ``build2`` project depend on ``fmt``:
+
+- Add one of the repositories to your configurations, or in your
+  ``repositories.manifest``, if not already there::
+
+    :
+    role: prerequisite
+    location: https://pkg.cppget.org/1/stable
+
+- Add this package as a dependency to your ``./manifest`` file
+  (example for ``v7.0.x``)::
+
+    depends: fmt ~7.0.0
+
+- Import the target and use it as a prerequisite to your own target
+  using `fmt` in the appropriate ``buildfile``::
+
+    import fmt = fmt%lib{fmt}
+    lib{mylib} : cxx{**} ... $fmt
+
+Then build your project as usual with `b` or `bdep update`.
+
+For ``build2`` newcomers or to get more details and use cases, you can read the
+``build2``
+`toolchain introduction <https://build2.org/build2-toolchain/doc/build2-toolchain-intro.xhtml>`_.
+
 Building the Documentation
 ==========================
 
@@ -113,6 +164,34 @@ fmt can be installed on Linux, macOS and Windows with
 `package <https://github.com/conda-forge/fmt-feedstock>`__, as follows::
 
   conda install -c conda-forge fmt
+
+Vcpkg
+=====
+
+You can download and install fmt using the `vcpkg
+<https://github.com/Microsoft/vcpkg>`__ dependency manager::
+
+  git clone https://github.com/Microsoft/vcpkg.git
+  cd vcpkg
+  ./bootstrap-vcpkg.sh
+  ./vcpkg integrate install
+  ./vcpkg install fmt
+
+The fmt port in vcpkg is kept up to date by Microsoft team members and community
+contributors. If the version is out of date, please `create an issue or pull
+request <https://github.com/Microsoft/vcpkg>`__ on the vcpkg repository.
+
+LHelper
+=======
+
+You can download and install fmt using
+`lhelper <https://github.com/franko/lhelper>`__ dependency manager::
+
+  lhelper activate <some-environment>
+  lhelper install fmt
+
+All the recipes for lhelper are kept in the
+`lhelper's recipe <https://github.com/franko/lhelper-recipes>`__ repository.
 
 Android NDK
 ===========

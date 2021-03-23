@@ -1,4 +1,5 @@
 #include <format>
+
 #include "gtest.h"
 
 TEST(StdFormatTest, Escaping) {
@@ -29,8 +30,8 @@ TEST(StdFormatTest, Alignment) {
   string s4 = format("{:*^6}", 'x');  // s4 == "**x***"
   // Error: '=' with charT and no integer presentation type
   EXPECT_THROW(string s5 = format("{:=6}", 'x'), std::format_error);
-  string s6 = format("{:6d}", c);       // s6 == "   120"
-  string s7 = format("{:6}", true);     // s9 == "true  "
+  string s6 = format("{:6d}", c);    // s6 == "   120"
+  string s7 = format("{:6}", true);  // s9 == "true  "
   EXPECT_EQ(s0, "    42");
   EXPECT_EQ(s1, "x     ");
   EXPECT_EQ(s2, "x*****");
@@ -61,7 +62,7 @@ TEST(StdFormatTest, Int) {
   string s0 = format("{}", 42);                       // s0 == "42"
   string s1 = format("{0:b} {0:d} {0:o} {0:x}", 42);  // s1 == "101010 42 52 2a"
   string s2 = format("{0:#x} {0:#X}", 42);            // s2 == "0x2a 0X2A"
-  string s3 = format("{:n}", 1234);  // s3 == "1234" (depends on the locale)
+  string s3 = format("{:L}", 1234);  // s3 == "1234" (depends on the locale)
   EXPECT_EQ(s0, "42");
   EXPECT_EQ(s1, "101010 42 52 2a");
   EXPECT_EQ(s2, "0x2a 0X2A");
@@ -123,7 +124,7 @@ template <> struct std::formatter<S> {
           if constexpr (!is_integral_v<type> || is_same_v<type, bool>)
             throw format_error("width is not integral");
           // else if (value < 0 || value > numeric_limits<int>::max())
-          else if (fmt::internal::is_negative(value) ||
+          else if (fmt::detail::is_negative(value) ||
                    value > numeric_limits<int>::max())
             throw format_error("invalid width");
           else
