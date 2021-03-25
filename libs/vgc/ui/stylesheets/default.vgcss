@@ -12,7 +12,7 @@
     border-radius: 3dp;
     text-color: rgb(221, 221, 221);
     preferred-width: auto;
-    preferred-height: 26dp;
+    preferred-height: 28dp;
 }
 
 .Flex {

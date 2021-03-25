@@ -145,10 +145,13 @@ void insertRect(
     }
 }
 
+// x1, y1, x2, y2 is the text box to center the text into
 void insertText(
         core::FloatArray& a,
         const core::Color& c,
-        const std::string& text)
+        float /*x1*/, float y1, float /*x2*/, float y2,
+        const std::string& text,
+        bool hinting)
 {
     if (text.length() > 0) {
         float r = static_cast<float>(c[0]);
@@ -161,18 +164,38 @@ void insertText(
         std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
         graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
         graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
-        float baseline = static_cast<float>(fontFace->height());
+
+        // Vertical centering
+        float ascent = static_cast<float>(fontFace->ascent());
+        float descent = static_cast<float>(fontFace->descent());
+        float height = ascent - descent;
+        float textTop = y1 + 0.5 * (y2-y1-height);
+        float baseline = textTop + ascent;
+        if (hinting) {
+            baseline = std::round(baseline);
+        }
+
+        // Note: we currently disable per-letter hinting (which can be seen as
+        // a component of horizontal hinting) because it looked worse, at least
+        // with the current implementation. It produced uneven spacing between
+        // letters, making kerning look bad.
+        constexpr bool perLetterHinting = false;
 
         // Shape and triangulate text
         core::DoubleArray buf;
         for (const graphics::FontItem& item : fontFace->shape(text)) {
             float xoffset = item.offset()[0];
             float yoffset = item.offset()[1];
+            if (perLetterHinting) {
+                xoffset = std::round(xoffset);
+                yoffset = std::round(yoffset);
+            }
             buf.clear();
             item.glyph()->outline().fill(buf);
             for (Int i = 0; 2*i+1 < buf.length(); ++i) {
                 float x = xoffset + static_cast<float>(buf[2*i]);
-                float y = baseline - (yoffset + static_cast<float>(buf[2*i+1]));
+                float y = yoffset + static_cast<float>(buf[2*i+1]);
+                y = baseline - y; // [ascent, descent] -> [0, height]
                 a.insert(a.end(), {x, y, r, g, b});
             }
         }
@@ -211,8 +234,9 @@ void Button::onPaintDraw(graphics::Engine* engine)
                         strings::background_color);
         core::Color textColor = getColor(this, strings::text_color);
         float borderRadius = getLength(this, strings::border_radius);
+        bool hinting = style(strings::pixel_hinting) == strings::normal;
         insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
-        insertText(a, textColor, text_);
+        insertText(a, textColor, 0, 0, width(), height(), text_, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
