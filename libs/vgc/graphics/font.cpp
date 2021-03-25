@@ -151,27 +151,140 @@ public:
 
         // Set character size.
         //
-        // TODO: This should be passed to Face constructor and be immutable.
-        // In other words:
+        // Currently, the font size is given in pixels, and pixelWidth is
+        // assumed to be equal to pixelHeight (same hdpi as vdpi). If font size
+        // given in points, or if hdpi and vdpi are different, then we should
+        // perform calculation like:
+        //
+        // pixelHeight = fontSizeInPoints * vdpi / 72; // 72 pt = 1 inch
+        // pixelWidth = fontSizeInPoints * hdpi / 72;
+        //
+        double fontSizeInPixels = 15;
+        ppem = std::round(fontSizeInPixels);
+        ppem = std::max(1.0, ppem);
+        FT_UInt pixelWidth = static_cast<FT_UInt>(ppem);
+        FT_UInt pixelHeight = pixelWidth;
+        FT_Set_Pixel_Sizes(face, pixelWidth, pixelHeight);
+
+        // TODO: The font size should be passed to the Face constructor and be
+        // immutable. In other words:
         //
         //     FontFace = family   (example: "Arial")
         //                + weight (example: "Bold")
         //                + style  (example: "Italic")
         //                + size   (example: "12pt")
         //
-        // Size of the EM square in points
-        FT_UInt emWidth_ = 11;
-        FT_UInt emHeight_ = 11;
-        // Size of the EM square in 26.6 fractional points
-        FT_F26Dot6 emWidth = 64 * core::int_cast<FT_F26Dot6>(emWidth_);
-        FT_F26Dot6 emHeight = 64 * core::int_cast<FT_F26Dot6>(emHeight_);
-        // Screen resolution in dpi
-        // TODO: Get this from system?
-        //       What if using dual monitors with different DPIs?
-        FT_UInt hdpi = 96;
-        FT_UInt vdpi = 96;
-        ppem = static_cast<double>(emWidth_) * hdpi / 72.0; // 72 pt = 1 inch
-        FT_Set_Char_Size(face, emWidth, emHeight, hdpi, vdpi);
+        // The reason why the size should be immutable and part of the identity
+        // of a FontFace is that it affects both hinting of the vector outline
+        // (in the case of vector fonts) and bitmap selection (in the case of
+        // bitmap fonts with different bitmaps provided for different fonts),
+        // both of which can be cached for performance. In order to represent a
+        // "resolution-independent font face" (for exemple, if the text size is
+        // animated or the output resolution unknown), then perhaps it should
+        // be a special "size" whose value is "scalable", in which case the
+        // font outline isn't hinted and is expressed in font units rather than
+        // pixels.
+        //
+        // Note that currently, "font-size" is interpreted as "size of the EM
+        // square", which is what CSS does. Such font-size is neither the
+        // capital height (height of "A"), nor the x height (height of "x"),
+        // nor the line height (distance between descender and ascender,
+        // including the line gap or not), but an arbitrary metric set by the
+        // font designer. It would be nice to add another font property like:
+        //
+        // font-size-mode: em | ascent | descent | height | capital-height | x-height
+        //
+        // So that UI designer could specify for example that they want the
+        // capital height to be a specific value in pixels.
+        //
+        // Such font-size-mode (or a separate vertical-align-mode) may also be
+        // used to specify "what" should be vertically centered: should capital
+        // letters be vertically centered? Or should the lowercase letter "x"
+        // be vertically centered? Or should the "height" (area from ascender
+        // to descender) be vertically centered? The latter is the current
+        // behavior, and also the behavior of CSS.
+        //
+        // The following article is an amazing write-up about this subject,
+        // including CSS tricks to compute the appropriate font-size such that
+        // the capital height has the desired number of pixels, and such that
+        // capital letters are properly vertically centered:
+        //
+        // https://iamvdo.me/en/blog/css-font-metrics-line-height-and-vertical-align
+        //
+        // In my experience, having capital letters perfectly centered is
+        // indeed what looks best, especially in buttons and form fields. For
+        // example, this is the choice of Chrome in my current setup: in the
+        // address bar, a capital letter is exactly 10px high, with 9px of
+        // space above and 9px below, for a total address bar height of 28px:
+        //
+        // -------- top of address bar
+        //
+        //
+        // 8px
+        //
+        //
+        // -------- top of ascending letters
+        // 1px
+        // -------- top of capital letters
+        // 2px
+        //
+        // -------- top of non-ascending letters (x height)
+        //
+        //
+        // 8px
+        //
+        //
+        // -------- baseline
+        //
+        // 4px
+        //
+        // -------- bottom of descending letters
+        //
+        // 5px
+        //
+        // -------- bottom of address bar
+        //
+        // Finally, note that there is one more thing to take into
+        // consideration when dealing with font size: the "ascent" and
+        // "descent" metadata values stored in font files do not generally
+        // correspond to the top of ascending letters and the bottom of
+        // descending letters. There are in fact several of these metadata
+        // values (HHead Ascent, Win Ascent, Typo Ascent, ...), which may or
+        // may not have the same value, and may or may not be the real distance
+        // between the baseline and the top of ascending letters. It is yet
+        // unclear which of these is stored by Freetype in face->ascender, but
+        // if necessary, it is possible to query directly the OS/2 metrics or
+        // horizontal header metrics via:
+        //
+        //     #include FT_TRUETYPE_TABLES_H
+        //
+        //     TT_OS2* os2 = (TT_OS2*)FT_Get_Sfnt_Table(face, FT_SFNT_OS2);
+        //     if (os2) {
+        //         FT_UShort version = os2->version;
+        //         FT_Short  typoAscent  = os2->sTypoAscender;
+        //         FT_Short  typoDescent = os2->sTypoDescender;
+        //         FT_Short  typoLineGap = os2->sTypoLineGap;
+        //         FT_UShort winAscent   = os2->usWinAscent;
+        //         FT_UShort winDescent  = os2->usWinDescent;
+        //         FT_Short  xHeight     = os2->sxHeight;   // only version 2 and higher
+        //         FT_Short  capHeight   = os2->sCapHeight; // only version 2 and higher
+        //     }
+        //
+        //     TT_HoriHeader* hhead = (TT_HoriHeader*)FT_Get_Sfnt_Table(face, FT_SFNT_HHEA);
+        //     if (hhead) {
+        //         FT_Short ascender  = hhead->Ascender;
+        //         FT_Short descender = hhead->Descender;
+        //         FT_Short lineGap   = hhead->Line_Gap;
+        //     }
+        //
+        // See: https://www.freetype.org/freetype2/docs/reference/ft2-truetype_tables.html
+        //
+        // One potential option may also be to load for example the "A" glyph,
+        // the "x" glyph, the "b" glyph, and the "p" glyph, and directly
+        // measure the ascender and descender based on the glyph outline,
+        // ignoring font metadata. Unfortunately, this method might not always
+        // be reliable, in particular with cursive/handwriting/display/fantasy
+        // categories of fonts.
 
         // Create HarfBuzz font
         hbFont = hb_ft_font_create(face, NULL);
