@@ -112,11 +112,12 @@ void Label::onPaintDraw(graphics::Engine* engine)
 
             // Shape and triangulate text
             core::DoubleArray b;
-            for (const graphics::FontItem& shape : fontFace->shape(text_)) {
-                float xoffset = shape.offset()[0];
-                float yoffset = shape.offset()[1];
+            graphics::ShapedText shapedText = fontFace->shape(text_);
+            for (const graphics::ShapedGlyph& glyph : shapedText.glyphs()) {
+                float xoffset = glyph.offset()[0];
+                float yoffset = glyph.offset()[1];
                 b.clear();
-                shape.glyph()->outline().fill(b);
+                glyph.fontGlyph()->outline().fill(b);
                 for (Int i = 0; 2*i+1 < b.length(); ++i) {
                     a.insert(a.end(), {
                         xoffset + static_cast<float>(b[2*i]),

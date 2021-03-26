@@ -183,15 +183,16 @@ void insertText(
 
         // Shape and triangulate text
         core::DoubleArray buf;
-        for (const graphics::FontItem& item : fontFace->shape(text)) {
-            float xoffset = item.offset()[0];
-            float yoffset = item.offset()[1];
+        graphics::ShapedText shapedText = fontFace->shape(text);
+        for (const graphics::ShapedGlyph& glyph : shapedText.glyphs()) {
+            float xoffset = glyph.offset()[0];
+            float yoffset = glyph.offset()[1];
             if (perLetterHinting) {
                 xoffset = std::round(xoffset);
                 yoffset = std::round(yoffset);
             }
             buf.clear();
-            item.glyph()->outline().fill(buf);
+            glyph.fontGlyph()->outline().fill(buf);
             for (Int i = 0; 2*i+1 < buf.length(); ++i) {
                 float x = xoffset + static_cast<float>(buf[2*i]);
                 float y = yoffset + static_cast<float>(buf[2*i+1]);
