@@ -393,56 +393,68 @@ public:
     }
 };
 
-class FontShaperImpl {
+class ShapedTextImpl {
 public:
-    // Keep the FontLibrary, thus the Fontface, alive.
-    // Note that the FontLibrary never destroys its children: a created FontFace
-    // stays in memory forever until the library itself is destroyed().
-    // XXX thread-safety? What if two threads create two FontShapers at the
+    // Input of shaping.
+    //
+    // Note that that we store a FontFacePtr to keep both the FontFace and the
+    // FontLibrary alive. Note that the FontLibrary never destroys its
+    // children: a created FontFace stays in memory forever until the library
+    // itself is destroyed().
+    //
+    // XXX thread-safety? What if two threads create two ShapedTexts at the
     //     same time, wouldn't this cause a race condition when increasing
     //     the reference counts? Shouldn't we make the reference counts atomic,
     //     or else protect the assignment to this facePtr by a mutex?
+    //
     FontFacePtr facePtr;
+    std::string text;
 
     // Output of shaping
-    FontItemArray items;
+    //
+    ShapedGlyphArray glyphs;
 
     // HarbBuzz buffer
+    //
     hb_buffer_t* buf;
 
-    FontShaperImpl(FontFace* face) :
+    ShapedTextImpl(FontFace* face, const std::string& text) :
         facePtr(face),
-        items(),
+        text(),
+        glyphs(),
         buf(hb_buffer_create())
     {
-
+        setText(text);
     }
 
-    FontShaperImpl(const FontShaperImpl& other) :
+    ShapedTextImpl(const ShapedTextImpl& other) :
         facePtr(other.facePtr),
-        items(other.items),
+        text(other.text),
+        glyphs(other.glyphs),
         buf(hb_buffer_create())
     {
 
     }
 
-    FontShaperImpl& operator=(const FontShaperImpl& other)
+    ShapedTextImpl& operator=(const ShapedTextImpl& other)
     {
         if (this != &other) {
             facePtr = other.facePtr;
-            items = other.items;
+            text = other.text;
+            glyphs = other.glyphs;
         }
         return *this;
     }
 
-    ~FontShaperImpl()
+    ~ShapedTextImpl()
     {
         hb_buffer_destroy(buf);
     }
 
-    void shape(const std::string& text)
+    void setText(const std::string& text_)
     {
         // HarfBuzz input
+        text = text_;
         const char* data = text.data();
         int dataLength = core::int_cast<int>(text.size());
         unsigned int firstChar = 0;
@@ -459,8 +471,8 @@ public:
         hb_glyph_info_t* infos = hb_buffer_get_glyph_infos(buf, &n);
         hb_glyph_position_t* positions = hb_buffer_get_glyph_positions(buf, &n);
 
-        // Convert to FontItemArray
-        items.clear();
+        // Convert to ShapedGlyph elements
+        glyphs.clear();
         core::Vec2d totalAdvance(0.0, 0.0);
         for (unsigned int i = 0; i < n; ++i) {
             hb_glyph_info_t& info = infos[i];
@@ -469,14 +481,14 @@ public:
             core::Vec2d offset = toVec2d(pos.x_offset, pos.y_offset);
             core::Vec2d advance = toVec2d(pos.x_advance, pos.y_advance);
             if (glyph) {
-                items.append(FontItem(glyph, totalAdvance + offset));
+                glyphs.append(ShapedGlyph(glyph, totalAdvance + offset));
             }
             totalAdvance += advance;
         }
     }
 
 private:
-    friend class FontShaper;
+    friend class ShapedText;
 };
 
 void FontLibraryImplDeleter::operator()(FontLibraryImpl* p)
@@ -521,24 +533,24 @@ void FontLibrary::onDestroyed()
     impl_.reset();
 }
 
-FontShaper::FontShaper(FontFace* face) :
+ShapedText::ShapedText(FontFace* face, const std::string& text) :
     impl_()
 {
-    impl_ = new internal::FontShaperImpl(face);
+    impl_ = new internal::ShapedTextImpl(face, text);
 }
 
-FontShaper::FontShaper(const FontShaper& other)
+ShapedText::ShapedText(const ShapedText& other)
 {
-    impl_ = new internal::FontShaperImpl(*(other.impl_));
+    impl_ = new internal::ShapedTextImpl(*(other.impl_));
 }
 
-FontShaper::FontShaper(FontShaper&& other)
+ShapedText::ShapedText(ShapedText&& other)
 {
     impl_ = other.impl_;
     other.impl_ = nullptr;
 }
 
-FontShaper& FontShaper::operator=(const FontShaper& other)
+ShapedText& ShapedText::operator=(const ShapedText& other)
 {
     if (this != &other) {
         *impl_ = *(other.impl_);
@@ -546,7 +558,7 @@ FontShaper& FontShaper::operator=(const FontShaper& other)
     return *this;
 }
 
-FontShaper& FontShaper::operator=(FontShaper&& other)
+ShapedText& ShapedText::operator=(ShapedText&& other)
 {
     if (this != &other) {
         impl_ = other.impl_;
@@ -555,20 +567,29 @@ FontShaper& FontShaper::operator=(FontShaper&& other)
     return *this;
 }
 
-FontShaper::~FontShaper()
+ShapedText::~ShapedText()
 {
     delete impl_;
 }
 
-const FontItemArray& FontShaper::shape(const std::string& text)
+void ShapedText::setText(const std::string& text)
 {
-    impl_->shape(text);
-    return items();
+    impl_->setText(text);
 }
 
-const FontItemArray& FontShaper::items() const
+const FontFace* ShapedText::fontFace() const
 {
-    return impl_->items;
+    return impl_->facePtr.get();
+}
+
+const std::string& ShapedText::text() const
+{
+    return impl_->text;
+}
+
+const ShapedGlyphArray& ShapedText::glyphs() const
+{
+    return impl_->glyphs;
 }
 
 FontFace::FontFace(FontLibrary* library) :
@@ -658,17 +679,9 @@ Int FontFace::getGlyphIndexFromCodePoint(Int codePoint)
     return core::int_cast<Int>(index);
 }
 
-FontShaper FontFace::shaper()
+ShapedText FontFace::shape(const std::string& text)
 {
-    return FontShaper(this);
-}
-
-FontItemArray FontFace::shape(const std::string& text)
-{
-    FontShaper s = shaper();
-    s.shape(text);
-    FontItemArray res(std::move(s.impl_->items));
-    return res;
+    return ShapedText(this, text);
 }
 
 void FontFace::onDestroyed()
