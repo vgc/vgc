@@ -413,6 +413,7 @@ public:
     // Output of shaping
     //
     ShapedGlyphArray glyphs;
+    core::Vec2d advance;
 
     // HarbBuzz buffer
     //
@@ -422,6 +423,7 @@ public:
         facePtr(face),
         text(),
         glyphs(),
+        advance(0, 0),
         buf(hb_buffer_create())
     {
         setText(text);
@@ -431,6 +433,7 @@ public:
         facePtr(other.facePtr),
         text(other.text),
         glyphs(other.glyphs),
+        advance(other.advance),
         buf(hb_buffer_create())
     {
 
@@ -442,6 +445,7 @@ public:
             facePtr = other.facePtr;
             text = other.text;
             glyphs = other.glyphs;
+            advance = other.advance;
         }
         return *this;
     }
@@ -473,17 +477,18 @@ public:
 
         // Convert to ShapedGlyph elements
         glyphs.clear();
-        core::Vec2d totalAdvance(0.0, 0.0);
+        advance = core::Vec2d(0, 0);
         for (unsigned int i = 0; i < n; ++i) {
             hb_glyph_info_t& info = infos[i];
             hb_glyph_position_t& pos = positions[i];
             FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
-            core::Vec2d offset = toVec2d(pos.x_offset, pos.y_offset);
-            core::Vec2d advance = toVec2d(pos.x_advance, pos.y_advance);
+            core::Vec2d glyphOffset = toVec2d(pos.x_offset, pos.y_offset);
+            core::Vec2d glyphAdvance = toVec2d(pos.x_advance, pos.y_advance);
+            core::Vec2d glyphPosition = advance + glyphOffset;
             if (glyph) {
-                glyphs.append(ShapedGlyph(glyph, totalAdvance + offset));
+                glyphs.append(ShapedGlyph(glyph, glyphOffset, glyphAdvance, glyphPosition));
             }
-            totalAdvance += advance;
+            advance += glyphAdvance;
         }
     }
 
@@ -531,6 +536,51 @@ FontFace* FontLibrary::addFace(const std::string& filename)
 void FontLibrary::onDestroyed()
 {
     impl_.reset();
+}
+
+void ShapedGlyph::fill(core::FloatArray& data,
+                       const core::Vec2d& origin,
+                       float r, float g, float b) const
+{
+    // Note: we currently disable per-letter hinting (which can be seen as a
+    // component of horizontal hinting) because it looked worse, at least with
+    // the current implementation. It produced uneven spacing between letters,
+    // making kerning look bad.
+    constexpr bool hinting = false;
+
+    // Triangulate the glyph in local glyph coordinates.
+    //
+    // Note: for performance, it would be better to avoid dynamic allocations
+    // by using a unique buffer when calling ShapedText::fill(), rather than
+    // creating a new one for each ShapedGlyph. For now, it probably doesn't
+    // matter much though, since the current implementation of Curves2d::fill()
+    // does a lot of dynamic allocations anyway (for curve resampling and
+    // triangulation). It might be a good idea to pass to all functions a
+    // generic "geometry::Buffer", or perhaps a "core::Allocator".
+    //
+    // Another option would be to simply cache the triangulation within the
+    // FontGlyph.
+    //
+    core::DoubleArray localFill;
+    fontGlyph()->outline().fill(localFill);
+
+    // Apply local-to-global transform and populate the output array.
+    //
+    // XXX: Is the Y-axis of position() and offset() currently pointing up or
+    // down? Do we want it be pointing up or down? In our current tested usage,
+    // all these vertical values are always zero, so it doesn't matter, but we
+    // need to clarify this.
+    //
+    core::Vec2d p = origin + position();
+    if (hinting) {
+        p[0] = std::round(p[0]);
+        p[1] = std::round(p[1]);
+    }
+    for (Int i = 0; 2*i+1 < localFill.length(); ++i) {
+        float x = static_cast<float>(p[0] + localFill[2*i]);
+        float y = static_cast<float>(p[1] - localFill[2*i+1]); // revert Y axis
+        data.insert(data.end(), {x, y, r, g, b});
+    }
 }
 
 ShapedText::ShapedText(FontFace* face, const std::string& text) :
@@ -590,6 +640,20 @@ const std::string& ShapedText::text() const
 const ShapedGlyphArray& ShapedText::glyphs() const
 {
     return impl_->glyphs;
+}
+
+core::Vec2d ShapedText::advance() const
+{
+    return impl_->advance;
+}
+
+void ShapedText::fill(core::FloatArray& data,
+                      const core::Vec2d& origin,
+                      float r, float g, float b) const
+{
+    for (const ShapedGlyph& glyph : glyphs()) {
+        glyph.fill(data, origin, r, g, b);
+    }
 }
 
 FontFace::FontFace(FontLibrary* library) :
