@@ -18,6 +18,8 @@
 
 #include <vgc/ui/strings.h>
 
+#include <vgc/ui/internal/paintutil.h>
+
 namespace vgc {
 namespace ui {
 
@@ -62,38 +64,28 @@ void Flex::onChildRemoved(Object*)
 
 namespace {
 
-float getLength(const Widget* widget, core::StringId property)
-{
-    float res = 0.0f;
-    StyleValue style = widget->style(property);
-    if (style.type() == StyleValueType::Number) {
-        res = style.number();
-    }
-    return res;
-}
-
 float getLeftRightMargins(const Widget* widget)
 {
-    return getLength(widget, strings::margin_left) +
-           getLength(widget, strings::margin_right);
+    return internal::getLength(widget, strings::margin_left) +
+           internal::getLength(widget, strings::margin_right);
 }
 
 float getTopBottomMargins(const Widget* widget)
 {
-    return getLength(widget, strings::margin_top) +
-           getLength(widget, strings::margin_bottom);
+    return internal::getLength(widget, strings::margin_top) +
+           internal::getLength(widget, strings::margin_bottom);
 }
 
 float getLeftRightPadding(const Widget* widget)
 {
-    return getLength(widget, strings::padding_left) +
-           getLength(widget, strings::padding_right);
+    return internal::getLength(widget, strings::padding_left) +
+           internal::getLength(widget, strings::padding_right);
 }
 
 float getTopBottomPadding(const Widget* widget)
 {
-    return getLength(widget, strings::padding_top) +
-           getLength(widget, strings::padding_bottom);
+    return internal::getLength(widget, strings::padding_top) +
+           internal::getLength(widget, strings::padding_bottom);
 }
 
 } // namespace
@@ -204,10 +196,10 @@ void stretchChild(
     float childPreferredMainSize = isRow ? child->preferredSize().x() : child->preferredSize().y();
     float childStretch = getChildStretch(isRow, freeSpace, child, childStretchBonus);
     float childMainSize = childPreferredMainSize + extraSpacePerStretch * childStretch;
-    float childMainMarginBefore = isRow ? getLength(child, strings::margin_left) : getLength(child, strings::margin_top);
-    float childMainMarginAfter = isRow ? getLength(child, strings::margin_right) : getLength(child, strings::margin_bottom);
-    float childCrossMarginBefore = isRow ? getLength(child, strings::margin_top) : getLength(child, strings::margin_left);
-    float childCrossMarginAfter = isRow ? getLength(child, strings::margin_bottom) : getLength(child, strings::margin_right);
+    float childMainMarginBefore = isRow ? internal::getLength(child, strings::margin_left) : internal::getLength(child, strings::margin_top);
+    float childMainMarginAfter = isRow ? internal::getLength(child, strings::margin_right) : internal::getLength(child, strings::margin_bottom);
+    float childCrossMarginBefore = isRow ? internal::getLength(child, strings::margin_top) : internal::getLength(child, strings::margin_left);
+    float childCrossMarginAfter = isRow ? internal::getLength(child, strings::margin_bottom) : internal::getLength(child, strings::margin_right);
     float childCrossSize = crossSize - parentCrossPaddingBefore - parentCrossPaddingAfter - childCrossMarginBefore - childCrossMarginAfter;
     float childCrossPosition = parentCrossPaddingBefore + childCrossMarginBefore;
     childMainPosition += childMainMarginBefore;
@@ -243,9 +235,9 @@ void Flex::updateChildrenGeometry()
                 (direction_ == FlexDirection::ColumnReverse);
         bool hinting = (style(strings::pixel_hinting) == strings::normal);
         float preferredMainSize = isRow ? preferredSize().x() : preferredSize().y();
-        float mainPaddingBefore = isRow ? getLength(this, strings::padding_left) : getLength(this, strings::padding_top);
-        float crossPaddingBefore = isRow ? getLength(this, strings::padding_top) : getLength(this, strings::padding_left);
-        float crossPaddingAfter = isRow ? getLength(this, strings::padding_bottom) : getLength(this, strings::padding_right);
+        float mainPaddingBefore = isRow ? internal::getLength(this, strings::padding_left) : internal::getLength(this, strings::padding_top);
+        float crossPaddingBefore = isRow ? internal::getLength(this, strings::padding_top) : internal::getLength(this, strings::padding_left);
+        float crossPaddingAfter = isRow ? internal::getLength(this, strings::padding_bottom) : internal::getLength(this, strings::padding_right);
         float mainSize = isRow ? width() : height();
         float crossSize = isRow ? height() : width();
         float freeSpace = mainSize - preferredMainSize;

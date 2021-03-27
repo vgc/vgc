@@ -16,11 +16,10 @@
 
 #include <vgc/ui/label.h>
 
-#include <vgc/core/colors.h>
-#include <vgc/core/paths.h>
 #include <vgc/core/floatarray.h>
-#include <vgc/graphics/font.h>
 #include <vgc/ui/strings.h>
+
+#include <vgc/ui/internal/paintutil.h>
 
 namespace vgc {
 namespace ui {
@@ -69,82 +68,14 @@ void Label::onPaintCreate(graphics::Engine* engine)
     trianglesId_ = engine->createTriangles();
 }
 
-namespace {
-
-void insertRect(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2)
-{
-    float r = static_cast<float>(c[0]);
-    float g = static_cast<float>(c[1]);
-    float b = static_cast<float>(c[2]);
-    a.insert(a.end(), {
-        x1, y1, r, g, b,
-        x2, y1, r, g, b,
-        x1, y2, r, g, b,
-        x2, y1, r, g, b,
-        x2, y2, r, g, b,
-        x1, y2, r, g, b});
-}
-
-// x1, y1, x2, y2 is the text box to center the text into
-void insertText(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float /*x2*/, float y2,
-        const std::string& text,
-        bool hinting)
-{
-    if (text.length() > 0) {
-        float r = static_cast<float>(c[0]);
-        float g = static_cast<float>(c[1]);
-        float b = static_cast<float>(c[2]);
-
-        // Get FontFace.
-        // TODO: we should use a persistent font library rather than
-        // creating a new one each time
-        std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
-        graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
-        graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
-
-        // Vertical centering
-        float ascent = static_cast<float>(fontFace->ascent());
-        float descent = static_cast<float>(fontFace->descent());
-        float height = ascent - descent;
-        float textTop = y1 + 0.5 * (y2-y1-height);
-        float baseline = textTop + ascent;
-        if (hinting) {
-            baseline = std::round(baseline);
-        }
-        core::Vec2d origin(x1, baseline);
-
-        // Shape and triangulate text
-        graphics::ShapedText shapedText = fontFace->shape(text);
-        shapedText.fill(a, origin, r, g, b);
-    }
-}
-
-core::Color getColor(const Widget* widget, core::StringId property)
-{
-    core::Color res;
-    StyleValue value = widget->style(property);
-    if (value.type() == StyleValueType::Color) {
-        res = value.color();
-    }
-    return res;
-}
-
-} // namespace
-
 void Label::onPaintDraw(graphics::Engine* engine)
 {
     if (reload_) {
         reload_ = false;
         core::FloatArray a;        
-        core::Color textColor = getColor(this, strings::text_color);
+        core::Color textColor = internal::getColor(this, strings::text_color);
         bool hinting = style(strings::pixel_hinting) == strings::normal;
-        insertText(a, textColor, 0, 0, width(), height(), text_, hinting);
+        internal::insertText(a, textColor, 0, 0, width(), height(), text_, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
