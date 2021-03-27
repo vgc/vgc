@@ -149,7 +149,7 @@ void insertRect(
 void insertText(
         core::FloatArray& a,
         const core::Color& c,
-        float /*x1*/, float y1, float /*x2*/, float y2,
+        float x1, float y1, float /*x2*/, float y2,
         const std::string& text,
         bool hinting)
 {
@@ -174,32 +174,11 @@ void insertText(
         if (hinting) {
             baseline = std::round(baseline);
         }
-
-        // Note: we currently disable per-letter hinting (which can be seen as
-        // a component of horizontal hinting) because it looked worse, at least
-        // with the current implementation. It produced uneven spacing between
-        // letters, making kerning look bad.
-        constexpr bool perLetterHinting = false;
+        core::Vec2d origin(x1, baseline);
 
         // Shape and triangulate text
-        core::DoubleArray buf;
         graphics::ShapedText shapedText = fontFace->shape(text);
-        for (const graphics::ShapedGlyph& glyph : shapedText.glyphs()) {
-            float xoffset = glyph.offset()[0];
-            float yoffset = glyph.offset()[1];
-            if (perLetterHinting) {
-                xoffset = std::round(xoffset);
-                yoffset = std::round(yoffset);
-            }
-            buf.clear();
-            glyph.fontGlyph()->outline().fill(buf);
-            for (Int i = 0; 2*i+1 < buf.length(); ++i) {
-                float x = xoffset + static_cast<float>(buf[2*i]);
-                float y = yoffset + static_cast<float>(buf[2*i+1]);
-                y = baseline - y; // [ascent, descent] -> [0, height]
-                a.insert(a.end(), {x, y, r, g, b});
-            }
-        }
+        shapedText.fill(a, origin, r, g, b);
     }
 }
 

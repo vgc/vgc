@@ -88,48 +88,65 @@ void insertRect(
         x1, y2, r, g, b});
 }
 
+// x1, y1, x2, y2 is the text box to center the text into
+void insertText(
+        core::FloatArray& a,
+        const core::Color& c,
+        float x1, float y1, float /*x2*/, float y2,
+        const std::string& text,
+        bool hinting)
+{
+    if (text.length() > 0) {
+        float r = static_cast<float>(c[0]);
+        float g = static_cast<float>(c[1]);
+        float b = static_cast<float>(c[2]);
+
+        // Get FontFace.
+        // TODO: we should use a persistent font library rather than
+        // creating a new one each time
+        std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
+        graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
+        graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
+
+        // Vertical centering
+        float ascent = static_cast<float>(fontFace->ascent());
+        float descent = static_cast<float>(fontFace->descent());
+        float height = ascent - descent;
+        float textTop = y1 + 0.5 * (y2-y1-height);
+        float baseline = textTop + ascent;
+        if (hinting) {
+            baseline = std::round(baseline);
+        }
+        core::Vec2d origin(x1, baseline);
+
+        // Shape and triangulate text
+        graphics::ShapedText shapedText = fontFace->shape(text);
+        shapedText.fill(a, origin, r, g, b);
+    }
+}
+
+core::Color getColor(const Widget* widget, core::StringId property)
+{
+    core::Color res;
+    StyleValue value = widget->style(property);
+    if (value.type() == StyleValueType::Color) {
+        res = value.color();
+    }
+    return res;
+}
+
 } // namespace
 
 void Label::onPaintDraw(graphics::Engine* engine)
 {
     if (reload_) {
         reload_ = false;
-        core::FloatArray a;
-        // Convert text to triangles
-        if (text_.length() > 0) {
-
-            // Get FontFace.
-            // TODO: we should use a persistent font library rather than
-            // creating a new one each time
-            std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
-            graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
-            graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
-            float baseline = static_cast<float>(fontFace->height());
-
-            // Draw rectangles to visualize font metrics
-            //insertRect(a, core::colors::black, 0, 0, width(), baseline);
-            //insertRect(a, core::colors::blue, 0, baseline, width(), 2* baseline);
-
-            // Shape and triangulate text
-            core::DoubleArray b;
-            graphics::ShapedText shapedText = fontFace->shape(text_);
-            for (const graphics::ShapedGlyph& glyph : shapedText.glyphs()) {
-                float xoffset = glyph.offset()[0];
-                float yoffset = glyph.offset()[1];
-                b.clear();
-                glyph.fontGlyph()->outline().fill(b);
-                for (Int i = 0; 2*i+1 < b.length(); ++i) {
-                    a.insert(a.end(), {
-                        xoffset + static_cast<float>(b[2*i]),
-                        baseline - (yoffset + static_cast<float>(b[2*i+1])),
-                        0.9f, 0.9f, 0.9f});
-                }
-            }
-        }
-        // Load triangles
+        core::FloatArray a;        
+        core::Color textColor = getColor(this, strings::text_color);
+        bool hinting = style(strings::pixel_hinting) == strings::normal;
+        insertText(a, textColor, 0, 0, width(), height(), text_, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
-    engine->clear(core::Color(0.337, 0.345, 0.353));
     engine->drawTriangles(trianglesId_);
 }
 
