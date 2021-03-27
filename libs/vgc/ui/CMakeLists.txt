@@ -21,6 +21,8 @@ vgc_add_library(ui
         styletoken.h
         widget.h
 
+        internal/paintutil.h
+
     CPP_FILES
         button.cpp
         colorpalette.cpp
@@ -35,6 +37,8 @@ vgc_add_library(ui
         style.cpp
         styletoken.cpp
         widget.cpp
+
+        internal/paintutil.cpp
 
     RESOURCE_FILES
         stylesheets/default.vgcss
