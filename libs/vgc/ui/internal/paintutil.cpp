@@ -122,7 +122,7 @@ void insertRect(
 void insertText(
         core::FloatArray& a,
         const core::Color& c,
-        float x1, float y1, float /*x2*/, float y2,
+        float x1, float y1, float x2, float y2,
         const std::string& text,
         bool hinting)
 {
@@ -138,6 +138,9 @@ void insertText(
         graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
         graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
 
+        // Shape text
+        graphics::ShapedText shapedText = fontFace->shape(text);
+
         // Vertical centering
         float ascent = static_cast<float>(fontFace->ascent());
         float descent = static_cast<float>(fontFace->descent());
@@ -147,10 +150,13 @@ void insertText(
         if (hinting) {
             baseline = std::round(baseline);
         }
-        core::Vec2d origin(x1, baseline);
 
-        // Shape and triangulate text
-        graphics::ShapedText shapedText = fontFace->shape(text);
+        // Horizontal centering
+        float advance = shapedText.advance()[0];
+        float textLeft = x1 + 0.5 * (x2-x1-advance);
+
+        // Triangulate text
+        core::Vec2d origin(textLeft, baseline);
         shapedText.fill(a, origin, r, g, b);
     }
 }
