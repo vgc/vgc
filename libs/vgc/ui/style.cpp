@@ -223,8 +223,6 @@ StyleSheetPtr createGlobalStyleSheet() {
 
 } // namespace
 
-/// Get global stylesheet.
-///
 StyleSheet* styleSheet()
 {
     static StyleSheetPtr s = createGlobalStyleSheet();
