@@ -332,7 +332,7 @@ private:
 
 /// Get global stylesheet.
 ///
-StyleSheet* styleSheet();
+VGC_UI_API StyleSheet* styleSheet();
 
 /// \class vgc::ui::StyleSheet
 /// \brief Parses and stores a VGCSS stylesheet.

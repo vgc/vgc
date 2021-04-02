@@ -90,6 +90,37 @@ public:
     ///
     FontFace* addFace(const std::string& filename);
 
+    /// Returns the default FontFace. Returns nullptr if no default FontFace
+    /// has been defined via setDefaultFace().
+    ///
+    /// Note: for now, there is only one default FontFace, which is the one
+    /// defined via setDefaultFontFace(). Unfortunately, this is not always the
+    /// best approach, since this default font may not contain all the required
+    /// Unicode characters (e.g., Arabic, Chinese, etc.) for a given text
+    /// string. In the future, the idea is to implement an additional class
+    /// called FontQuery, similar to QFont, which basically stores a desired
+    /// `font-family`, `font-style`, `font-size`, etc. Like in CSS, the
+    /// `font-family` can be as simple as `serif` (which means "get the default
+    /// serif font"), or a more precise query with fallbacks, like `Arial,
+    /// Helvetica, sans-serif`. The FontLibrary will be responsible for finding
+    /// the appropriate FontFaces based on a given FontQuery and text string:
+    /// there might be different FontFaces for different segments of the text.
+    ///
+    // Useful references:
+    // https://developer.mozilla.org/en-US/docs/Web/CSS/font-family
+    // https://tex.stackexchange.com/a/520048/45625
+    // https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-script-t
+    // https://github.com/harfbuzz/harfbuzz/issues/1288
+    // https://stackoverflow.com/questions/23508605/display-mixed-complex-script-in-text-editor-via-harfbuzz-freetype
+    //
+    FontFace* defaultFace() const;
+
+    /// Sets the default FontFace.
+    ///
+    /// \sa defaultFace().
+    ///
+    void setDefaultFace(FontFace* fontFace);
+
 protected:
     /// \reimp
     void onDestroyed() override;
@@ -97,6 +128,10 @@ protected:
 private:
     internal::FontLibraryPimpl impl_;
 };
+
+/// Returns the global font library.
+///
+VGC_GRAPHICS_API FontLibrary* fontLibrary();
 
 /// \class vgc::graphics::ShapedGlyph
 /// \brief Represents one glyph of a shaped text.

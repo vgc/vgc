@@ -16,7 +16,6 @@
 
 #include <vgc/ui/internal/paintutil.h>
 
-#include <vgc/core/paths.h>
 #include <vgc/graphics/font.h>
 
 namespace vgc {
@@ -132,11 +131,7 @@ void insertText(
         float b = static_cast<float>(c[2]);
 
         // Get FontFace.
-        // TODO: we should use a persistent font library rather than
-        // creating a new one each time
-        std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
-        graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
-        graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
+        graphics::FontFace* fontFace = graphics::fontLibrary()->defaultFace();
 
         // Shape text
         graphics::ShapedText shapedText = fontFace->shape(text);
