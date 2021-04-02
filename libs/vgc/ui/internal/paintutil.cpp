@@ -146,13 +146,36 @@ void insertText(
             baseline = std::round(baseline);
         }
 
-        // Horizontal centering
+        // Horizontal centering. Note: we intentionally don't perform hinting
+        // on the horizontal direction.
+        const graphics::ShapedGlyphArray& glyphs = shapedText.glyphs();
+        Int start = 0;
+        Int end = glyphs.length();
+        float width = x2-x1;
         float advance = shapedText.advance()[0];
-        float textLeft = x1 + 0.5 * (x2-x1-advance);
+        std::unique_ptr<graphics::ShapedText> ellipsis;
+        if (advance > width) {
+            ellipsis = std::make_unique<graphics::ShapedText>(fontFace, "...");
+            advance = ellipsis->advance()[0];
+            end = 0;
+            for (const graphics::ShapedGlyph& glyph : glyphs) {
+                float newAdvance = advance + glyph.advance()[0];
+                if (newAdvance > width) {
+                    break;
+                }
+                advance = newAdvance;
+                end += 1;
+            }
+        }
+        float textLeft = x1 + 0.5 * (width-advance);
 
         // Triangulate text
         core::Vec2d origin(textLeft, baseline);
-        shapedText.fill(a, origin, r, g, b);
+        shapedText.fill(a, origin, r, g, b, start, end);
+        if (ellipsis) {
+            core::Vec2d ellipsisOrigin = origin + core::Vec2d(advance, 0) - ellipsis->advance();
+            ellipsis->fill(a, ellipsisOrigin, r, g, b);
+        }
     }
 }
 

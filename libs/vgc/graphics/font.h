@@ -362,6 +362,17 @@ public:
               const core::Vec2d& origin,
               float r, float g, float b) const;
 
+    /// Fills this ShapedText from glyph index start to glyph index `start` (included)
+    /// to glyph index `end` (exluded).
+    ///
+    /// See the other overloads of fill() for documentation of the remaining
+    /// arguments.
+    ///
+    void fill(core::FloatArray& data,
+              const core::Vec2d& origin,
+              float r, float g, float b,
+              Int start, Int end) const;
+
 private:
     internal::ShapedTextImpl* impl_;
 };

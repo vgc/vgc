@@ -688,6 +688,17 @@ void ShapedText::fill(core::FloatArray& data,
     }
 }
 
+void ShapedText::fill(core::FloatArray& data,
+                      const core::Vec2d& origin,
+                      float r, float g, float b,
+                      Int start, Int end) const
+{
+    const ShapedGlyphArray& glyphs = impl_->glyphs;
+    for (Int i = start; i < end; ++i) {
+        glyphs[i].fill(data, origin, r, g, b);
+    }
+}
+
 FontFace::FontFace(FontLibrary* library) :
     Object(),
     impl_()
