@@ -26,6 +26,7 @@
 #include <hb-ft.h>
 
 #include <vgc/core/array.h>
+#include <vgc/core/paths.h>
 #include <vgc/graphics/exceptions.h>
 
 namespace vgc {
@@ -51,8 +52,10 @@ namespace internal {
 class FontLibraryImpl {
 public:
     FT_Library library;
+    FontFace* defaultFace;
 
-    FontLibraryImpl()
+    FontLibraryImpl() :
+        defaultFace(nullptr)
     {
         FT_Error error = FT_Init_FreeType(&library);
         if (error) {
@@ -533,9 +536,38 @@ FontFace* FontLibrary::addFace(const std::string& filename)
     return res;
 }
 
+FontFace* FontLibrary::defaultFace() const
+{
+    return impl_->defaultFace;
+}
+
+void FontLibrary::setDefaultFace(FontFace* fontFace)
+{
+    impl_->defaultFace = fontFace;
+}
+
 void FontLibrary::onDestroyed()
 {
     impl_.reset();
+}
+
+namespace {
+
+FontLibraryPtr createGlobalFontLibrary()
+{
+    std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
+    graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
+    graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
+    fontLibrary->setDefaultFace(fontFace);
+    return fontLibrary;
+}
+
+} // namespace
+
+FontLibrary* fontLibrary()
+{
+    static FontLibraryPtr res = createGlobalFontLibrary();
+    return res.get();
 }
 
 void ShapedGlyph::fill(core::FloatArray& data,
