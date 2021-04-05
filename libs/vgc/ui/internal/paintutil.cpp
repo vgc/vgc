@@ -17,6 +17,7 @@
 #include <vgc/ui/internal/paintutil.h>
 
 #include <vgc/graphics/font.h>
+#include <vgc/graphics/text.h>
 
 namespace vgc {
 namespace ui {
@@ -134,7 +135,7 @@ void insertText(
         graphics::FontFace* fontFace = graphics::fontLibrary()->defaultFace();
 
         // Shape text
-        graphics::ShapedText shapedText = fontFace->shape(text);
+        graphics::ShapedText shapedText(fontFace, text);
 
         // Vertical centering
         float ascent = static_cast<float>(fontFace->ascent());
