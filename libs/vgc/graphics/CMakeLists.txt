@@ -13,12 +13,14 @@ vgc_add_library(graphics
         exceptions.h
         font.h
         idgenerator.h
+        text.h
 
     CPP_FILES
         engine.cpp
         exceptions.cpp
         font.cpp
         idgenerator.cpp
+        text.cpp
 
     RESOURCE_FILES
         fonts/SourceSansPro/LICENSE.md

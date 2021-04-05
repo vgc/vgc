@@ -1,0 +1,280 @@
+// Copyright 2021 The VGC Developers
+// See the COPYRIGHT file at the top-level directory of this distribution
+// and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef VGC_GRAPHICS_TEXT_H
+#define VGC_GRAPHICS_TEXT_H
+
+#include <vgc/core/innercore.h>
+#include <vgc/graphics/api.h>
+#include <vgc/graphics/font.h>
+
+namespace vgc {
+namespace graphics {
+
+namespace internal {
+
+class ShapedTextImpl;
+
+} // namespace internal
+
+/// \class vgc::graphics::ShapedGlyph
+/// \brief Represents one glyph of a shaped text.
+///
+/// A ShapedGlyph stores a reference to a FontGlyph as well as information
+/// where to draw the glyph. It is typically used as part of a ShapedText
+/// object.
+///
+/// See ShapedText for more details.
+///
+/// Note that for performance and thread-safety reasons, a ShapedGlyph stores a
+/// raw FontGlyph pointer, not a FontGlyphPtr. This means that it doesn't keep
+/// alive the referenced FontGlyph: it is the responsibility of client code to
+/// ensure that the referenced FontGlyph outlive the ShapedGlyph itself. For
+/// example, each ShapedText object does keep alive its underlying FontFace
+/// (ans thus all its glyphs too), so it is safe to use the glyphs in
+/// ShapedText::glyphs() as long as the ShapedText is alive.
+///
+class VGC_GRAPHICS_API ShapedGlyph {
+public:
+    /// Creates a ShapedGlyph.
+    ///
+    ShapedGlyph(FontGlyph* fontGlyph,
+                const core::Vec2d& offset,
+                const core::Vec2d& advance,
+                const core::Vec2d& position) :
+        fontGlyph_(fontGlyph),
+        offset_(offset),
+        advance_(advance),
+        position_(position) {}
+
+    /// Returns the FontGlyph that this ShapedGlyph references.
+    ///
+    /// Note that a ShapedText never contain ShapedGlyph elements whose
+    /// fontGlyph() is NULL.
+    ///
+    /// - In case of a missing glyph in the face, the ".notdef" glyph [1] is
+    ///   returned. It is typically represented as a rectangle (sometimes with
+    ///   an "X" or "?" inside). More info:
+    ///
+    ///   https://docs.microsoft.com/en-us/typography/opentype/spec/recom#glyph-0-the-notdef-glyph
+    ///
+    /// - In case of other shaping problems (such as invalid unicode input),
+    ///   the `U+FFFD � REPLACEMENT CHARACTER` might be used, or the codepoints
+    ///   causing problems are simply skipped.
+    ///
+    FontGlyph* fontGlyph() const {
+        return fontGlyph_;
+    }
+
+    /// Returns how much the glyph should be moved before drawing
+    /// it. This should not affect how much the line advances.
+    ///
+    core::Vec2d offset() const {
+        return offset_;
+    }
+
+    // Returns how much the line advances after drawing this ShapedGlyph. The
+    // X-coordinate corresponds to the advance when setting text in horizontal
+    // direction, and the Y-coordinate corresponds to the advance when setting
+    // text in vertical direction.
+    //
+    core::Vec2d advance() const {
+        return advance_;
+    }
+
+    /// Returns where to draw the fontGlyph() relative to the origin of the
+    /// ShapedText this ShapedGlyph belongs to.
+    ///
+    /// This is equal to the sum of this ShapedGlyph's offset and the advances
+    /// of all the previous ShapedGlyph of the ShapedText.
+    ///
+    core::Vec2d position() const {
+        return position_;
+    }
+
+    /// Fills this ShapedGlyph, taking into account its relative position() and
+    /// the given origin:
+    ///
+    /// ```
+    ///                      ██
+    ///                      ██
+    ///                      ██
+    ///       position()     ██
+    ///   ────────────────>  █████
+    /// ─┼─────────────────┼────────────  baseline
+    /// origin
+    /// ```
+    ///
+    /// The output triangles are appended to the given output parameter `data`
+    /// in the following format:
+    ///
+    /// ```
+    /// [x1, y1, r1, g1, b1,     // First vertex of first triangle
+    ///  x2, y2, r2, g2, b2,     // Second vertex of first triangle
+    ///  x3, y3, r3, g3, b3,     // Third vertex of first triangle
+    ///
+    ///  x4, y4, r4, g4, b4,     // First vertex of second triangle
+    ///  x5, y5, r5, g5, b5,     // Second vertex of second triangle
+    ///  x6, y6, r6, g6, b6,     // Third vertex of second triangle
+    ///
+    ///  ...]
+    /// ```
+    ///
+    /// Note that fontGlyph()->outline() is a Curves2d where the Y-axis points
+    /// up, as per OpenType conventions. This function takes care of reverting
+    /// the Y coordinate to follow the VGC convention of having the Y-axis
+    /// pointing down, and takes care of translating the glyph to its correct
+    /// position.
+    ///
+    void fill(core::FloatArray& data,
+              const core::Vec2d& origin,
+              float r, float g, float b) const;
+
+private:
+    FontGlyph* fontGlyph_;
+    core::Vec2d offset_;
+    core::Vec2d advance_;
+    core::Vec2d position_;
+};
+
+using ShapedGlyphArray = core::Array<ShapedGlyph>;
+
+/// \class vgc::graphics::ShapedText
+/// \brief Performs text shaping and stores the resulting shaped text.
+///
+/// The ShapedText class performs text shaping and stores the resulting shaped
+/// text. In other words, it takes as input a given text string and a given
+/// FontFace, and stores as output a sequence of FontGlyph elements together
+/// with additional information to know where each glyph should be drawn.
+///
+/// ```cpp
+/// vgc::graphics::FontFace* face = someFace();
+/// vgc::graphics::ShapedText text(face, "Hello");
+/// for (const vgc::graphics::ShapedGlyph& glyph : text.glyphs()) {
+///     ...
+/// }
+/// ```
+///
+class VGC_GRAPHICS_API ShapedText {
+public:
+    /// Creates a new ShapedText.
+    ///
+    ShapedText(FontFace* face, const std::string& text);
+
+    /// Creates a copy of the given ShapedText.
+    ///
+    ShapedText(const ShapedText& other);
+
+    /// Move-constructs the given ShapedText.
+    ///
+    ShapedText(ShapedText&& other);
+
+    /// Assigns a copy of the given ShapedText.
+    ///
+    ShapedText& operator=(const ShapedText& other);
+
+    /// Move-assigns the other ShapedText.
+    ///
+    ShapedText& operator=(ShapedText&& other);
+
+    /// Destroys this ShapedText.
+    ///
+    ~ShapedText();
+
+    /// Returns the FontFace of this ShapedText.
+    ///
+    const FontFace* fontFace() const;
+
+    /// Returns the input text string of this ShapedText.
+    ///
+    const std::string& text() const;
+
+    /// Modifies the input text string of this ShapedText. This automatically
+    /// recomputes the glyphs.
+    ///
+    void setText(const std::string& text);
+
+    /// Returns the ShapedGlyph elements composing this ShapedText.
+    ///
+    /// The ShapedGlyph elements are guaranteed to be valid as long as either
+    /// this ShapedText are its FontFace is alive.
+    ///
+    const ShapedGlyphArray& glyphs() const;
+
+    // Returns how much the line advances after drawing this ShapedText. The
+    // X-coordinate corresponds to the advance when setting text in horizontal
+    // direction, and the Y-coordinate corresponds to the advance when setting
+    // text in vertical direction.
+    //
+    // This is equal to the sum of `glyph->advance()` for all the ShapedGlyph
+    // elements in glyphs().
+    //
+    core::Vec2d advance() const;
+
+    /// Fills this ShapedText at the given origin:
+    ///
+    /// ```
+    ///    ██  ██  █████  ██     ██      ████
+    ///    ██  ██  ██     ██     ██     ██  ██
+    ///    ██████  █████  ██     ██     ██  ██
+    ///    ██  ██  ██     ██     ██     ██  ██
+    ///    ██  ██  █████  █████  █████   ████
+    /// ─┼──────────────────────────────────────  baseline
+    /// origin
+    /// ```
+    ///
+    /// The output triangles are appended to the given output parameter `data`
+    /// in the following format:
+    ///
+    /// ```
+    /// [x1, y1, r1, g1, b1,     // First vertex of first triangle
+    ///  x2, y2, r2, g2, b2,     // Second vertex of first triangle
+    ///  x3, y3, r3, g3, b3,     // Third vertex of first triangle
+    ///
+    ///  x4, y4, r4, g4, b4,     // First vertex of second triangle
+    ///  x5, y5, r5, g5, b5,     // Second vertex of second triangle
+    ///  x6, y6, r6, g6, b6,     // Third vertex of second triangle
+    ///
+    ///  ...]
+    /// ```
+    ///
+    /// Note that this function follows the VGC convention of having the Y-axis
+    /// pointing down, so in the example ASCII art above, if origin = (0, 0),
+    /// then all the Y-coordinates of the triangle vertices will be negative.
+    ///
+    void fill(core::FloatArray& data,
+              const core::Vec2d& origin,
+              float r, float g, float b) const;
+
+    /// Fills this ShapedText from glyph index start to glyph index `start` (included)
+    /// to glyph index `end` (exluded).
+    ///
+    /// See the other overloads of fill() for documentation of the remaining
+    /// arguments.
+    ///
+    void fill(core::FloatArray& data,
+              const core::Vec2d& origin,
+              float r, float g, float b,
+              Int start, Int end) const;
+
+private:
+    internal::ShapedTextImpl* impl_;
+};
+
+} // namespace graphics
+} // namespace vgc
+
+#endif // VGC_GRAPHICS_TEXT_H
