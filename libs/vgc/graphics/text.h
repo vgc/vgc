@@ -30,6 +30,86 @@ class ShapedTextImpl;
 
 } // namespace internal
 
+/// \enum vgc::graphics::TextHorizontalAlign
+/// \brief How to align text horizontally
+///
+// TODO: Justify
+//       (?) Start / End
+//       (?) enum TextDirection { LeftToRight, ... }
+//       (?) enum TextHorizontalAlignLast { Auto, Left, ... }
+//
+// Note: there is no need for TextHorizontalAlign::JustifyAll if we
+//       have a TextHorizontalAlignLast enum, which covers this case
+//       and is more expressive.
+//
+// See: https://developer.mozilla.org/en-US/docs/Web/CSS/text-align
+//      https://developer.mozilla.org/en-US/docs/Web/CSS/direction
+//      https://developer.mozilla.org/en-US/docs/Web/CSS/text-align-last
+//      https://stackoverflow.com/questions/10684533/text-align-justify-but-to-the-right
+//      https://drafts.csswg.org/css-text-3/#justification
+//
+enum class TextHorizontalAlign : Int8 {
+    Left,
+    Right,
+    Center
+};
+
+/// \enum vgc::graphics::TextVerticalAlign
+/// \brief How to align text vertically
+///
+enum class TextVerticalAlign : Int8 {
+    Top,
+    Middle,
+    Bottom
+};
+
+/// \enum vgc::graphics::TextProperties
+/// \brief Specifies text properties such as alignment, justification, etc.
+///
+/// For now, TextProperties simply stores a desired TextHorizontalAlign and
+/// TextVerticalAlign. In the future, the idea is to extend this class to
+/// cover most CSS3 properties enumerated here:
+///
+/// https://drafts.csswg.org/css-text-3/#property-index
+///
+class VGC_GRAPHICS_API TextProperties {
+public:
+    /// Constructs a TextProperties with the given alignment.
+    ///
+    TextProperties(TextHorizontalAlign horizontalAlign = TextHorizontalAlign::Left,
+                   TextVerticalAlign verticalAlign = TextVerticalAlign::Top) :
+        horizontalAlign_(horizontalAlign),
+        verticalAlign_(verticalAlign) {}
+
+    /// Returns the horizontal alignment.
+    ///
+    TextHorizontalAlign horizontalAlign() const {
+        return horizontalAlign_;
+    }
+
+    /// Sets the horizontal alignment.
+    ///
+    void setHorizontalAlign(TextHorizontalAlign horizontalAlign) {
+        horizontalAlign_ = horizontalAlign;
+    }
+
+    /// Returns the vertical alignment.
+    ///
+    TextVerticalAlign verticalAlign() const {
+        return verticalAlign_;
+    }
+
+    /// Sets the vertical alignment.
+    ///
+    void setVerticalAlign(TextVerticalAlign verticalAlign) {
+        verticalAlign_ = verticalAlign;
+    }
+
+private:
+    TextHorizontalAlign horizontalAlign_;
+    TextVerticalAlign verticalAlign_;
+};
+
 /// \class vgc::graphics::ShapedGlyph
 /// \brief Represents one glyph of a shaped text.
 ///
