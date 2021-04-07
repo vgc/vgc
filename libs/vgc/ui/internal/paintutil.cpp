@@ -17,7 +17,6 @@
 #include <vgc/ui/internal/paintutil.h>
 
 #include <vgc/graphics/font.h>
-#include <vgc/graphics/text.h>
 
 namespace vgc {
 namespace ui {
@@ -124,6 +123,7 @@ void insertText(
         const core::Color& c,
         float x1, float y1, float x2, float y2,
         const std::string& text,
+        const graphics::TextProperties& textProperties,
         bool hinting)
 {
     if (text.length() > 0) {
@@ -138,10 +138,22 @@ void insertText(
         graphics::ShapedText shapedText(fontFace, text);
 
         // Vertical centering
+        float height = y2-y1;
         float ascent = static_cast<float>(fontFace->ascent());
         float descent = static_cast<float>(fontFace->descent());
-        float height = ascent - descent;
-        float textTop = y1 + 0.5 * (y2-y1-height);
+        float textHeight = ascent - descent;
+        float textTop = 0;
+        switch (textProperties.verticalAlign()) {
+        case graphics::TextVerticalAlign::Top:
+            textTop = y1;
+            break;
+        case graphics::TextVerticalAlign::Middle:
+            textTop = y1 + 0.5 * (height - textHeight);
+            break;
+        case graphics::TextVerticalAlign::Bottom:
+            textTop = y1 + (height - textHeight);
+            break;
+        }
         float baseline = textTop + ascent;
         if (hinting) {
             baseline = std::round(baseline);
@@ -168,7 +180,20 @@ void insertText(
                 end += 1;
             }
         }
-        float textLeft = x1 + 0.5 * (width-advance);
+        float textLeft = 0;
+        switch (textProperties.horizontalAlign()) {
+        case graphics::TextHorizontalAlign::Left:
+            textLeft = x1;
+            break;
+        case graphics::TextHorizontalAlign::Center:
+            textLeft = x1 + 0.5 * (width - advance);
+            break;
+        case graphics::TextHorizontalAlign::Right:
+            // XXX: Should the ellipsis be on the left in this case? See:
+            //      https://developer.mozilla.org/en-US/docs/Web/CSS/text-overflow
+            textLeft = x1 + (width - advance);
+            break;
+        }
 
         // Triangulate text
         core::Vec2d origin(textLeft, baseline);

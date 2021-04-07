@@ -22,6 +22,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/floatarray.h>
 #include <vgc/core/stringid.h>
+#include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc {
@@ -56,6 +57,7 @@ void insertText(
         const core::Color& c,
         float x1, float y1, float x2, float y2,
         const std::string& text,
+        const graphics::TextProperties& textProperties,
         bool hinting);
 
 core::Color getColor(const Widget* widget, core::StringId property);

@@ -74,9 +74,12 @@ void Button::onPaintDraw(graphics::Engine* engine)
                         strings::background_color);
         core::Color textColor = internal::getColor(this, strings::text_color);
         float borderRadius = internal::getLength(this, strings::border_radius);
+        graphics::TextProperties textProperties(
+                    graphics::TextHorizontalAlign::Center,
+                    graphics::TextVerticalAlign::Middle);
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
-        internal::insertText(a, textColor, 0, 0, width(), height(), text_, hinting);
+        internal::insertText(a, textColor, 0, 0, width(), height(), text_, textProperties, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
