@@ -74,8 +74,11 @@ void Label::onPaintDraw(graphics::Engine* engine)
         reload_ = false;
         core::FloatArray a;        
         core::Color textColor = internal::getColor(this, strings::text_color);
+        graphics::TextProperties textProperties(
+                    graphics::TextHorizontalAlign::Center,
+                    graphics::TextVerticalAlign::Middle);
         bool hinting = style(strings::pixel_hinting) == strings::normal;
-        internal::insertText(a, textColor, 0, 0, width(), height(), text_, hinting);
+        internal::insertText(a, textColor, 0, 0, width(), height(), text_, textProperties, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
