@@ -1,4 +1,7 @@
 vgc_add_library(ui
+    THIRD_DEPENDENCIES
+        Qt5::Gui
+
     VGC_DEPENDENCIES
         core
         geometry
