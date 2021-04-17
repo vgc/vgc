@@ -65,6 +65,8 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent) :
     setMouseTracking(true);
     widget_->repaintRequested.connect(std::bind(
         &UiWidget::onRepaintRequested, this));
+    widget_->focusRequested.connect(std::bind(
+        &UiWidget::onFocusRequested, this));
 }
 
 UiWidget::~UiWidget()
@@ -116,6 +118,27 @@ void UiWidget::enterEvent(QEvent* event)
 void UiWidget::leaveEvent(QEvent* event)
 {
     event->setAccepted(widget_->onMouseLeave());
+}
+
+void UiWidget::focusInEvent(QFocusEvent* /*event*/)
+{
+    widget_->setTreeActive(true);
+}
+
+void UiWidget::focusOutEvent(QFocusEvent* /*event*/)
+{
+    widget_->setTreeActive(false);
+}
+
+void UiWidget::keyPressEvent(QKeyEvent* event)
+{
+    bool accepted = widget_->onKeyPress(event);
+    event->setAccepted(accepted);
+}
+
+void UiWidget::keyReleaseEvent(QKeyEvent* event)
+{
+    event->setAccepted(widget_->onKeyRelease(event));
 }
 
 UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const
@@ -186,6 +209,12 @@ void UiWidget::cleanupGL()
 void UiWidget::onRepaintRequested()
 {
     update();
+}
+
+void UiWidget::onFocusRequested()
+{
+    setFocus();
+    // Note: Under the hood, this calls setFocus(Qt::OtherFocusReason)
 }
 
 UiWidgetEngine::UiWidgetEngine() :

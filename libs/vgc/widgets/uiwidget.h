@@ -69,6 +69,10 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void enterEvent(QEvent* event) override;
     void leaveEvent(QEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
 
 private:
     OpenGLFunctions* openGLFunctions() const;
@@ -79,6 +83,7 @@ private:
     void cleanupGL();
 
     void onRepaintRequested();
+    void onFocusRequested();
 
     ui::WidgetPtr widget_;
     widgets::UiWidgetEnginePtr engine_;
