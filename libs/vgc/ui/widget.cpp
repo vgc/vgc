@@ -28,7 +28,9 @@ Widget::Widget() :
     position_(0.0f, 0.0f),
     size_(0.0f, 0.0f),
     mousePressedChild_(nullptr),
-    mouseEnteredChild_(nullptr)
+    mouseEnteredChild_(nullptr),
+    isTreeActive_(false),
+    focus_(nullptr)
 {
 
 }
@@ -340,6 +342,105 @@ bool Widget::onMouseLeave()
         mouseEnteredChild_ = nullptr;
     }
     return true;
+}
+
+void Widget::setTreeActive(bool active)
+{
+    Widget* r = root();
+    if (r->isTreeActive_ != active) {
+        r->isTreeActive_ = active;
+        Widget* f = focusedWidget();
+        if (f) {
+            if (active) {
+                f->onFocusIn();
+            }
+            else {
+                f->onFocusOut();
+            }
+        }
+    }
+}
+
+void Widget::setFocus()
+{
+    if (!isFocusedWidget()) {
+        clearFocus();
+        Widget* widget = this;
+        Widget* focus = this;
+        while (widget) {
+            widget->focus_ = focus;
+            focus = widget;
+            widget = widget->parent();
+        }
+        if (isTreeActive()) {
+            onFocusIn();
+        }
+    }
+    Widget* widget = this;
+    while (widget) {
+        widget->focusRequested();
+        widget = widget->parent();
+    }
+}
+
+void Widget::clearFocus()
+{
+    Widget* w = focusedWidget();
+    if (w) {
+        if (isTreeActive()) {
+            onFocusOut();
+        }
+        while (w) {
+            w->focus_ = nullptr;
+            w = w->parent();
+        }
+    }
+}
+
+Widget* Widget::focusedWidget() const
+{
+    Widget* res = root()->focus_;
+    while (res != nullptr) {
+        if (res->isFocusedWidget()) {
+            return res;
+        }
+        else {
+            res = res->focus_;
+        }
+    }
+    return res;
+}
+
+bool Widget::onFocusIn()
+{
+    return false;
+}
+
+bool Widget::onFocusOut()
+{
+    return false;
+}
+
+bool Widget::onKeyPress(QKeyEvent* event)
+{
+    Widget* fc = focusedChild();
+    if (fc) {
+        return fc->onKeyPress(event);
+    }
+    else {
+        return false;
+    }
+}
+
+bool Widget::onKeyRelease(QKeyEvent* event)
+{
+    Widget* fc = focusedChild();
+    if (fc) {
+        return fc->onKeyRelease(event);
+    }
+    else {
+        return false;
+    }
 }
 
 void Widget::addClass(core::StringId class_) {

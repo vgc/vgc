@@ -30,6 +30,8 @@
 #include <vgc/ui/sizepolicy.h>
 #include <vgc/ui/style.h>
 
+class QKeyEvent;
+
 namespace vgc {
 namespace ui {
 
@@ -580,6 +582,157 @@ public:
     ///
     virtual bool onMouseLeave();
 
+    /// Returns whether this widget tree is active, that is, whether it
+    /// receives key press and focus events.
+    ///
+    /// More precisely, when the widget tree is active, then one FocusOut event
+    /// and one FocusIn event are sent whenever the focused widget changes.
+    ///
+    /// On the contrary, when the widget tree is not active, then no FocusIn
+    /// and FocusOut events are sent.
+    ///
+    /// A FocusIn event is sent to the focused widget (if any) when the tree
+    /// becomes active.
+    ///
+    /// A FocusOut event is sent to the focused widget (if any) when the tree
+    /// becomes inactive.
+    ///
+    /// \sa setTreeActive()
+    ///
+    bool isTreeActive() const {
+        return root()->isTreeActive_;
+    }
+
+    /// Sets whether this widget tree is active.
+    ///
+    /// \sa isTreeActive()
+    ///
+    void setTreeActive(bool active);
+
+    /// This signal is emitted when someone requested this widget, or one of
+    /// its descendent widgets, to be focused.
+    ///
+    const core::Signal<> focusRequested;
+
+    /// Makes this widget the focused widget of this widget tree, and emits the
+    /// focusRequested signal.
+    ///
+    /// If the tree is active, then this widget will now receive keyboard
+    /// events.
+    ///
+    /// If the tree is active and if this widget was not already the focused
+    /// widget, then this widget will receive a FocusIn event.
+    ///
+    /// Note that if this widget was already the focused widget, then typically
+    /// it will not receive a FocusIn event. However, the focusRequested signal
+    /// is still emitted, and as a result the tree may switch from inactive to
+    /// active, in which case this widget will in fact indirectly receive a
+    /// FocusIn event.
+    ///
+    /// After calling this function, all ancestors of this widget become part
+    /// of what is called the "focus branch": it is the branch that goes from
+    /// the root of the widget tree to the focused widget. For all widgets in
+    /// this branch (including the focused widget), hasFocusWithin() returns
+    /// true, and focusedChild() returns the child in this branch.
+    ///
+    /// \sa isTreeActive(), clearFocus(), focusedWidget()
+    ///
+    void setFocus();
+
+    /// Removes the focus from the focused widget, if any. If the tree is
+    /// active, the focused widget will receive a FocusOut event, and from now
+    /// on will not receive keyboard events.
+    ///
+    /// Does nothing if focusedWidget() is nullptr.
+    ///
+    void clearFocus();
+
+    /// Returns which child of this widget is part of the focus branch (see
+    /// setFocus() for details). The returned widget is the only child of this
+    /// widget, if any, such that hasFocusWithin() returns true.
+    ///
+    /// Returns nullptr if none of the descendant of this widget is the focused
+    /// widget. Also returns nullptr if this widget itself is the focused
+    /// widget.
+    ///
+    /// \sa setFocus(), clearFocus(), focusedWidget(), hasFocusWithin()
+    ///
+    Widget* focusedChild() const {
+        return isFocusedWidget() ? nullptr : focus_;
+    }
+
+    /// Returns the focused widget of this widget tree, if any.
+    ///
+    Widget* focusedWidget() const;
+
+    /// Returns whether this widget is the focused widget.
+    ///
+    bool isFocusedWidget() const {
+        return focus_ == this;
+    }
+
+    /// Returns whether this widget is the focused widget, and this widget tree
+    /// is active.
+    ///
+    bool hasFocus() const {
+        return isFocusedWidget() && isTreeActive();
+    }
+
+    /// Returns whether this widget or any of its descendant is the focused
+    /// widget, and this widget tree is active.
+    ///
+    bool hasFocusWithin() const {
+        return focus_ != nullptr && isTreeActive();
+    }
+
+    /// Override this function if you wish to handle FocusIn events. You must
+    /// return true if the event was handled, false otherwise. The default
+    /// implementation returns false.
+    ///
+    /// This function is called when:
+    /// 1. isTreeActive() is true and the focused widget changed, or
+    /// 2. isTreeActive() changed from false to true
+    ///
+    /// Note that this function is only called for the focused widget itself,
+    /// not for all its ancestors.
+    ///
+    /// \sa onFocusOut(), setFocus(), clearFocus(), isTreeActive()
+    ///
+    virtual bool onFocusIn();
+
+    /// Override this function if you wish to handle FocusOut events. You must
+    /// return true if the event was handled, false otherwise. The default
+    /// implementation returns false.
+    ///
+    /// This function is called when:
+    /// 1. isTreeActive() is true and the focused widget changed, or
+    /// 2. isTreeActive() changed from true to false
+    ///
+    /// Note that this function is only called for the focused widget itself,
+    /// not for all its ancestors.
+    ///
+    /// \sa onFocusIn(), setFocus(), clearFocus(), isTreeActive()
+    ///
+    virtual bool onFocusOut();
+
+    /// Override this function if you wish to handle key press events. You must
+    /// return true if the event was handled, false otherwise.
+    ///
+    /// The default implementation recursively calls onKeyPress() on the
+    /// focusedChild(), if any. If there is no focusedChild(), the default
+    /// implementation returns false.
+    ///
+    virtual bool onKeyPress(QKeyEvent* event);
+
+    /// Override this function if you wish to handle key release events. You must
+    /// return true if the event was handled, false otherwise.
+    ///
+    /// The default implementation recursively calls onKeyRelease() on the
+    /// focusedChild(), if any. If there is no focusedChild(), the default
+    /// implementation returns false.
+    ///
+    virtual bool onKeyRelease(QKeyEvent* event);
+
     /// Returns the set of classes of this widget.
     ///
     const WidgetClasses& classes() const {
@@ -641,6 +794,10 @@ private:
     core::Vec2f size_;
     Widget* mousePressedChild_;
     Widget* mouseEnteredChild_;
+    bool isTreeActive_;
+    Widget* focus_; // This can be: nullptr   (when no focused widget)
+                    //              this      (when this is the focused widget)
+                    //              child ptr (when a descendant is the focused widget)
     WidgetClasses classes_;
     friend class Style;
     Style style_;
