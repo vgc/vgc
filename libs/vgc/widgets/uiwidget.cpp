@@ -17,6 +17,7 @@
 #include <vgc/widgets/uiwidget.h>
 
 #include <QMouseEvent>
+#include <QInputMethodEvent>
 
 #include <vgc/core/paths.h>
 #include <vgc/geometry/camera2d.h>
@@ -67,6 +68,19 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent) :
         &UiWidget::onRepaintRequested, this));
     widget_->focusRequested.connect(std::bind(
         &UiWidget::onFocusRequested, this));
+
+    // Handle dead keys and complex input methods.
+    //
+    // Also see:
+    // - inputMethodQuery(Qt::InputMethodQuery)
+    // - inputMethodEvent(QInputMethodEvent*)
+    //
+    // XXX Shouldn't we enable/disable this property dynamically at runtime,
+    // based on which ui::Widget has the focus? Is it even possible? Indeed, we
+    // probably want to prevent an IME to popup if the focused widget doesn't
+    // accept text input.
+    //
+    setAttribute(Qt::WA_InputMethodEnabled, true);
 }
 
 UiWidget::~UiWidget()
@@ -144,6 +158,48 @@ void UiWidget::keyReleaseEvent(QKeyEvent* event)
 UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const
 {
     return context()->versionFunctions<OpenGLFunctions>();
+}
+
+QVariant UiWidget::inputMethodQuery(Qt::InputMethodQuery) const
+{
+    // This function allows the input method editor (commonly abbreviated IME)
+    // to query useful info about the widget state that it needs to operate.
+    // For more info on IME in general, see:
+    //
+    // https://en.wikipedia.org/wiki/Input_method
+    //
+    // For inspiration on how to implement this function, see QLineEdit:
+    //
+    // https://github.com/qt/qtbase/blob/ec7ff5cede92412b929ff30207b0eeafce93ee3b/src/widgets/widgets/qlineedit.cpp#L1849
+    //
+    // For now, we simply return an empty QVariant. Most likely, this means
+    // that many (most?) IME won't work with our app. Fixing this is left for
+    // future work.
+    //
+    // Also see:
+    //
+    // - https://stackoverflow.com/questions/43078567/qt-inputmethodevent-get-the-keyboard-key-that-was-pressed
+    // - https://stackoverflow.com/questions/3287180/putting-ime-in-a-custom-text-box-derived-from-control
+    // - https://stackoverflow.com/questions/434048/how-do-you-use-ime
+    //
+    return QVariant();
+}
+
+void UiWidget::inputMethodEvent(QInputMethodEvent* event)
+{
+    // For now, we only use a very simple implementation that, at the very
+    // least, correctly handle dead keys. See:
+    //
+    // https://stackoverflow.com/questions/28793356/qt-and-dead-keys-in-a-custom-widget
+    //
+    // Most likely, complex IME still won't work correctly, see comment in the
+    // implementation of inputMethodQuery().
+    //
+    if (!event->commitString().isEmpty()) {
+        // XXX Shouldn't we pass more appropriate modifiers?
+        QKeyEvent keyEvent(QEvent::KeyPress, 0, Qt::NoModifier, event->commitString());
+        keyPressEvent(&keyEvent);
+    }
 }
 
 void UiWidget::initializeGL()
