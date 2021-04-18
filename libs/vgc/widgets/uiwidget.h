@@ -62,6 +62,7 @@ public:
 
     // overrides
     QSize sizeHint() const override;
+    QVariant inputMethodQuery(Qt::InputMethodQuery querty) const override;
 
 protected:
     void mouseMoveEvent(QMouseEvent* event) override;
@@ -73,6 +74,7 @@ protected:
     void focusOutEvent(QFocusEvent* event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
+    void inputMethodEvent(QInputMethodEvent* event) override;
 
 private:
     OpenGLFunctions* openGLFunctions() const;
