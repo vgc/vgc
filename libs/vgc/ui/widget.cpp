@@ -23,6 +23,7 @@ namespace ui {
 
 Widget::Widget() :
     Object(),
+    children_(WidgetList::create(this)),
     preferredSize_(0.0f, 0.0f),
     isPreferredSizeComputed_(false),
     position_(0.0f, 0.0f),
@@ -54,7 +55,7 @@ bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false)
 void Widget::addChild(Widget* child)
 {
     checkCanReparent_(this, child);
-    appendChildObject_(child);
+    children_->append(child);
 }
 
 bool Widget::canReparent(Widget* newParent)
@@ -66,6 +67,7 @@ bool Widget::canReparent(Widget* newParent)
 void Widget::reparent(Widget* newParent)
 {
     checkCanReparent_(newParent, this);
+    newParent->children_->append(this);
     appendObjectToParent_(newParent);
 }
 
@@ -111,7 +113,7 @@ void Widget::replace(Widget* oldWidget)
     core::ObjectPtr self = removeObjectFromParent_();
     oldWidget->destroyObject_();
     if (parent) {
-        parent->insertChildObject_(this, nextSibling);
+        parent->children_->insert(this, nextSibling);
     }
     else {
         // nothing to do

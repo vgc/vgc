@@ -271,42 +271,6 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 } // namespace core
 } // namespace vgc
 
-/// Forward-declares the given object subclass and its related smart pointers.
-/// More specifically, the following code:
-///
-/// ```cpp
-/// VGC_DECLARE_OBJECT(Foo);
-/// ```
-///
-/// expands to:
-///
-/// ```cpp
-/// class Foo;
-/// using FooPtr = vgc::core::ObjPtr<Foo>;
-/// using FooConstPtr = vgc::core::ObjPtr<const Foo>;
-/// ```
-///
-/// This macro should typically be called in the header file `foo.h` just
-/// before declaring the `Foo` class, or in other header files when you need to
-/// use the `Foo` and/or `FooPtr` types but cannot include "foo.h" due to cylic
-/// dependencies.
-///
-/// Like when using traditional forward-declarations, you should call this
-/// macro in the same namespace as Foo, for example:
-///
-/// ```cpp
-/// namespace vgc {
-/// namespace ui {
-/// VGC_DECLARE_OBJECT(Widget);
-/// }
-/// }
-/// ```
-///
-#define VGC_DECLARE_OBJECT(T)                      \
-    class T;                                       \
-    using T##Ptr      = vgc::core::ObjPtr<T>;      \
-    using T##ConstPtr = vgc::core::ObjPtr<const T>
-
 /// This macro should appear within a private section of the class declaration
 /// of any Object subclass.
 ///
@@ -346,7 +310,15 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 namespace vgc {
 namespace core {
 
-VGC_DECLARE_OBJECT(Object);
+// Define the ObjectPtr name alias (we use it in the definition of Object).
+//
+// Note: the idea would be to simply call VGC_DECLARE_OBJECT(Object) here,
+// which includes the ObjectPtr name alias. Unfortunately we can't call this
+// macro here due to a cyclic dependency: the macro requires ObjList to be
+// defined, which requires Object to be defined. So we defer the macro call to
+// the end of this file, and simply redundantly define ObjectPtr here.
+//
+using ObjectPtr = ObjPtr<Object>;
 
 /// \class vgc::core::Object
 /// \brief Provides a common API for object-based tree hierarchies.
@@ -906,7 +878,7 @@ protected:
     /// subclasses to implement their API. This method is automatically made
     /// private by the VGC_OBJECT macro.
     ///
-    ObjectPtr removeObjectFromParent_();
+    ObjPtr<Object> removeObjectFromParent_();
 
 private:
     friend class internal::ObjPtrAccess;
@@ -955,6 +927,248 @@ inline void ObjPtrAccess::decref(const Object* obj, Int64 k)
 }
 
 } // namespace internal
+
+/// \class vgc::ui::ObjListIterator
+/// \brief Iterates over an ObjList
+///
+template<typename T>
+class ObjListIterator {
+public:
+    typedef T* value_type;
+    typedef T*& reference;
+    typedef T** pointer;
+    typedef std::input_iterator_tag iterator_category;
+
+    /// Constructs an iterator pointing to the given object.
+    ///
+    ObjListIterator(T* p) : p_(p) {
+
+    }
+
+    /// Prefix-increments this iterator.
+    ///
+    ObjListIterator& operator++() {
+        p_ = static_cast<T*>(p_->nextSiblingObject());
+        return *this;
+    }
+
+    /// Postfix-increments this iterator.
+    ///
+    ObjListIterator operator++(int) {
+        ObjListIterator res(*this);
+        operator++();
+        return res;
+    }
+
+    /// Dereferences this iterator with the star operator.
+    ///
+    const value_type& operator*() const {
+        return p_;
+    }
+
+    /// Dereferences this iterator with the arrow operator.
+    ///
+    const value_type* operator->() const {
+        return &p_;
+    }
+
+    /// Returns whether the two iterators are equal.
+    ///
+    bool operator==(const ObjListIterator& other) const {
+        return p_ == other.p_;
+    }
+
+    /// Returns whether the two iterators are different.
+    ///
+    bool operator!=(const ObjListIterator& other) const {
+        return p_ != other.p_;
+    }
+
+private:
+    T* p_;
+};
+
+template<typename T>
+class ObjList;
+
+/// \class vgc::ui::ObjListView
+/// \brief A non-owning view onto an ObjList<T>, or onto any range of sibling
+///        objects of type T.
+///
+/// This is a range-like class to make it convenient to iterate over sibling
+/// Object instances sharing the same type T, such as for example an
+/// ObjList<T>.
+///
+/// Example:
+///
+/// \code
+/// for (Widget* child : widget->children()) {
+///     // ...
+/// }
+/// \endcode
+///
+/// \sa ObjList
+///
+template<typename T>
+class ObjListView {
+public:
+    /// Constructs an ObjListView from the given ObjList.
+    ///
+    ObjListView(ObjList<T>* list) : begin_(list->first()), end_(nullptr) {
+
+    }
+
+    /// Constructs a range of sibling objects from \p begin to \p end. The
+    /// range includes \p begin but excludes \p end. The behavior is undefined
+    /// if \p begin and \p end do not have the same parent. If \p end is null,
+    /// then the range includes all siblings after \p begin. If both \p start
+    /// and \p end are null, then the range is empty. The behavior is undefined
+    /// if \p begin is null but \p end is not.
+    ///
+    ObjListView(T* begin, T* end) : begin_(begin), end_(end) {
+
+    }
+
+    /// Returns the begin of the range.
+    ///
+    const ObjListIterator<T>& begin() const {
+        return begin_;
+    }
+
+    /// Returns the end of the range.
+    ///
+    const ObjListIterator<T>& end() const {
+        return end_;
+    }
+
+private:
+    ObjListIterator<T> begin_;
+    ObjListIterator<T> end_;
+};
+
+/// \class vgc::ui::ObjList
+/// \brief Stores a list of child objects of a given type T.
+///
+/// An ObjList<T> is an Object that stores and manages a list of Objects of
+/// type T. The ObjList owns the contained objects, that is, the ObjList is the
+/// parent object of the contained objects.
+///
+/// Using an ObjList is the preferred way for a given object `a` to own a
+/// list of other objects `b_i`. Note that this means that the `b_i` objects
+/// are not direct child objects of `a`, but are instead grand-child objects:
+///
+/// ```
+/// a
+/// └ list
+///    ├ b_0
+///    ├ b_0
+///    │ ...
+///    └ b_n
+/// ```
+///
+/// Instead of using the above design, one could be tempted to have `a` own the
+/// `b_i` as direct child objects. It is indeed possible, but a problem is that
+/// whenever `a` needs to own other unrelated objects, they would all be
+/// sibling objects, which is not as clean semantically, and makes it bug-prone
+/// and harder to maintain/debug. Using an ObjList ensures that sibling objects
+/// are part of the same semantic "list", which makes the design more robust
+/// and extensible. ObjList also provide convenient methods to make iterating
+/// easier.
+///
+template<typename T>
+class ObjList : public core::Object {
+private:
+    VGC_OBJECT(ObjList<T>)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
+
+protected:
+    ObjList() {}
+
+public:
+    static ObjList* create(Object* parent) {
+        ObjList* res = new ObjList();
+        res->appendObjectToParent_(parent);
+        return res;
+    }
+
+    T* first() {
+        return static_cast<T*>(firstChildObject());
+    }
+
+    T* last() {
+        return static_cast<T*>(lastChildObject());
+    }
+
+    void append(T* child) {
+        appendChildObject_(child);
+    }
+
+    void insert(T* child, T* nextSibling) {
+        insertChildObject_(child, nextSibling);
+    }
+
+    core::ObjPtr<T> remove(T* child) {
+        core::ObjPtr<Object> removed = removeChildObject_(child);
+        core::ObjPtr<T> res(static_cast<T*>(removed.get()));
+        return res;
+
+        // Note: if we were using std::shared_ptr, then we would have to use
+        // std::static_pointer_cast instead, otherwise the reference counting
+        // block wouldn't be shared. But in our case, the above static_cast
+        // works since our core::ObjPtr use intrusive reference counting.
+    }
+};
+
+} // namespace core
+} // namespace vgc
+
+/// Forward-declares the given object subclass, and define convenient name
+/// aliases for its related smart pointers and list classes. More specifically,
+/// the following code:
+///
+/// ```cpp
+/// VGC_DECLARE_OBJECT(Foo);
+/// ```
+///
+/// expands to:
+///
+/// ```cpp
+/// class Foo;
+/// using FooPtr          = vgc::core::ObjPtr<Foo>;
+/// using FooConstPtr     = vgc::core::ObjPtr<const Foo>;
+/// using FooList         = vgc::core::ObjList<Foo>;
+/// using FooListIterator = vgc::core::ObjListIterator<Foo>;
+/// using FooListView     = vgc::core::ObjListView<Foo>;
+/// ```
+///
+/// This macro should typically be called in the header file `foo.h` just
+/// before declaring the `Foo` class, or in other header files when you need to
+/// use the `Foo` and/or `FooPtr` types but cannot include "foo.h" due to cylic
+/// dependencies.
+///
+/// Like when using traditional forward-declarations, you should call this
+/// macro in the same namespace as Foo, for example:
+///
+/// ```cpp
+/// namespace vgc {
+/// namespace ui {
+/// VGC_DECLARE_OBJECT(Widget);
+/// }
+/// }
+/// ```
+///
+#define VGC_DECLARE_OBJECT(T)                              \
+    class T;                                               \
+    using T##Ptr          = vgc::core::ObjPtr<T>;          \
+    using T##ConstPtr     = vgc::core::ObjPtr<const T>;    \
+    using T##List         = vgc::core::ObjList<T>;         \
+    using T##ListIterator = vgc::core::ObjListIterator<T>; \
+    using T##ListView     = vgc::core::ObjListView<T>
+
+namespace vgc {
+namespace core {
+
+VGC_DECLARE_OBJECT(Object);
 
 } // namespace core
 } // namespace vgc

@@ -71,164 +71,6 @@ void write(OStream& out, NodeType type)
 
 VGC_DECLARE_OBJECT(Node);
 
-/// \class vgc::dom::NodeIterator
-/// \brief Iterates over a range of Node siblings.
-///
-/// This iterator class is a thin wrapper around Node*, where `operator++` is
-/// implemented as `node->nextSibling()`. Together with NodeList, this
-/// class enables range-based loops like the following:
-///
-/// \code
-/// for (Node* child : node->children()) {
-///     // ...
-/// }
-/// \endcode
-///
-/// Typically, you never have to manipulate NodeIterators directly, but
-/// keep them as an implementation detail for range-based loops. If you need
-/// more fine-grain traversal, we recommend to directly use `Node*` as your
-/// "iterator type", and use the methods Node::previousSibling() and
-/// Node::nextSibling() to access neighbor nodes.
-///
-/// \sa NodeList and Node.
-///
-/// Past-last-child Iterator
-/// ------------------------
-///
-/// There is a special sentinel value which we call the "past-last-child"
-/// iterator, which is constructed by passing nullptr to the constructor of
-/// NodeIterator.
-///
-/// Be aware that all node->children() share the same past-last-child iterator.
-/// In other words:
-///
-///     node1->children().end() == node2->children().end()
-///
-/// Intuitively, this is because this past-last-child iterator is simply
-/// implemented by storing a nullptr, that is, the iterator does not know what
-/// is its "parent". This allows for a more intuitive API, stronger guarantees
-/// on iterator validity (see next section), and slightly more efficient
-/// implementation.
-///
-/// However, we note that this design choice is why our NodeIterator is not
-/// bidirectional: we wouldn't be able to decrement the past-last-child
-/// iterator. We decided that this was a minor concern since in the rare cases
-/// where you'd need bidirectionality, you can simply use the Node API
-/// directly.
-///
-/// Iterator Validity
-/// -----------------
-///
-/// NodeIterators are always valid as long as the underlying Node* stays
-/// valid. If the iterator is a past-last-child iterator, then it is always
-/// valid.
-///
-/// In particular, deleting or inserting siblings of a given iterator keeps
-/// this iterator valid. Reparenting or moving the location of a Node among its
-/// sibling keeps the iterator valid. However, be careful to keep the end of a
-/// range reachable! This is never a problem if the end of the range is the
-/// past-last-child iterator, but can be in other cases.
-///
-/// Despite all of these guarantees, we recommend that whenever you're doing
-/// anything else than a simple iteration over all children, you should simply
-/// use the Node API (node->nextSibling(), etc.) instead of iterators. This is
-/// even safer and more readable anyway.
-///
-class VGC_DOM_API NodeIterator {
-public:
-    typedef Node* value_type;
-    typedef Node*& reference;
-    typedef Node** pointer;
-    typedef std::input_iterator_tag iterator_category;
-
-    /// Constructs an iterator pointing to the given Node.
-    ///
-    NodeIterator(Node* node) : node_(node)
-    {
-
-    }
-
-    /// Prefix-increments this iterator.
-    ///
-    NodeIterator& operator++();
-
-    /// Postfix-increments this iterator.
-    ///
-    NodeIterator operator++(int);
-
-    /// Dereferences this iterator with the star operator.
-    ///
-    const value_type& operator*() const
-    {
-        return node_;
-    }
-
-    /// Dereferences this iterator with the arrow operator.
-    ///
-    const value_type* operator->() const
-    {
-        return &node_;
-    }
-
-    /// Returns whether the two iterators are equal.
-    ///
-    friend bool operator==(const NodeIterator&, const NodeIterator&);
-
-    /// Returns whether the two iterators are different.
-    ///
-    friend bool operator!=(const NodeIterator&, const NodeIterator&);
-
-private:
-    Node* node_;
-};
-
-/// \class vgc::dom::NodeList
-/// \brief Enable range-based loops for sibling Nodes.
-///
-/// This range class is used together with NodeIterator to
-/// enable range-based loops like the following:
-///
-/// \code
-/// for (Node* child : node->children()) {
-///     // ...
-/// }
-/// \endcode
-///
-/// \sa NodeIterator and Node.
-///
-class VGC_DOM_API NodeList {
-public:
-    /// Constructs a range of sibling nodes from \p begin to \p end. The
-    /// range includes \p begin but excludes \p end. The behavior is undefined
-    /// if \p begin and \p end do not have the same parent. If \p end is null,
-    /// then the range includes all siblings after \p begin. If both \p start
-    /// and \p end are null, then the range is empty. The behavior is undefined
-    /// if \p begin is null but \p end is not.
-    ///
-    NodeList(Node* begin, Node* end) : begin_(begin), end_(end)
-    {
-
-    }
-
-    /// Returns the begin of the range.
-    ///
-    const NodeIterator& begin() const
-    {
-        return begin_;
-    }
-
-    /// Returns the end of the range.
-    ///
-    const NodeIterator& end() const
-    {
-        return end_;
-    }
-
-private:
-    NodeIterator begin_;
-    NodeIterator end_;
-};
-
 /// \class vgc::dom::Node
 /// \brief Represents a node of the document Node tree.
 ///
@@ -380,9 +222,10 @@ public:
     /// }
     /// \endcode
     ///
-    NodeList children() const
+    NodeListView children() const
     {
-        return NodeList(firstChild(), nullptr);
+        // TODO: store children in a NodeList (see ui::Widget for an example)
+        return NodeListView(firstChild(), nullptr);
     }
 
     /// Returns whether this Node can be reparented with the given \p newParent.
@@ -461,25 +304,6 @@ private:
     Document* document_;
     NodeType nodeType_;
 };
-
-inline NodeIterator& NodeIterator::operator++() {
-    node_ = node_->nextSibling();
-    return *this;
-}
-
-inline NodeIterator NodeIterator::operator++(int) {
-    NodeIterator res(*this);
-    operator++();
-    return res;
-}
-
-inline bool operator==(const NodeIterator& it1, const NodeIterator& it2) {
-    return it1.node_ == it2.node_;
-}
-
-inline bool operator!=(const NodeIterator& it1, const NodeIterator& it2) {
-    return !(it1 == it2);
-}
 
 } // namespace dom
 } // namespace vgc
