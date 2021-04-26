@@ -37,104 +37,6 @@ namespace ui {
 
 VGC_DECLARE_OBJECT(Widget);
 
-/// \class vgc::ui::WidgetIterator
-/// \brief Iterates over a range of Widget siblings.
-///
-class VGC_UI_API WidgetIterator {
-public:
-    typedef Widget* value_type;
-    typedef Widget*& reference;
-    typedef Widget** pointer;
-    typedef std::input_iterator_tag iterator_category;
-
-    /// Constructs an iterator pointing to the given Widget.
-    ///
-    WidgetIterator(Widget* widget) : widget_(widget)
-    {
-
-    }
-
-    /// Prefix-increments this iterator.
-    ///
-    WidgetIterator& operator++();
-
-    /// Postfix-increments this iterator.
-    ///
-    WidgetIterator operator++(int);
-
-    /// Dereferences this iterator with the star operator.
-    ///
-    const value_type& operator*() const
-    {
-        return widget_;
-    }
-
-    /// Dereferences this iterator with the arrow operator.
-    ///
-    const value_type* operator->() const
-    {
-        return &widget_;
-    }
-
-    /// Returns whether the two iterators are equal.
-    ///
-    friend bool operator==(const WidgetIterator&, const WidgetIterator&);
-
-    /// Returns whether the two iterators are different.
-    ///
-    friend bool operator!=(const WidgetIterator&, const WidgetIterator&);
-
-private:
-    Widget* widget_;
-};
-
-/// \class vgc::ui::WidgetList
-/// \brief Enable range-based loops for sibling Widgets.
-///
-/// This range class is used together with WidgetIterator to
-/// enable range-based loops like the following:
-///
-/// \code
-/// for (Widget* child : widget->children()) {
-///     // ...
-/// }
-/// \endcode
-///
-/// \sa WidgetIterator and Widget.
-///
-class VGC_UI_API WidgetList {
-public:
-    /// Constructs a range of sibling widgets from \p begin to \p end. The
-    /// range includes \p begin but excludes \p end. The behavior is undefined
-    /// if \p begin and \p end do not have the same parent. If \p end is null,
-    /// then the range includes all siblings after \p begin. If both \p start
-    /// and \p end are null, then the range is empty. The behavior is undefined
-    /// if \p begin is null but \p end is not.
-    ///
-    WidgetList(Widget* begin, Widget* end) : begin_(begin), end_(end)
-    {
-
-    }
-
-    /// Returns the begin of the range.
-    ///
-    const WidgetIterator& begin() const
-    {
-        return begin_;
-    }
-
-    /// Returns the end of the range.
-    ///
-    const WidgetIterator& end() const
-    {
-        return end_;
-    }
-
-private:
-    WidgetIterator begin_;
-    WidgetIterator end_;
-};
-
 /// \typedef vgc::ui::WidgetClasses
 /// \brief Stores a set of widget classes.
 ///
@@ -230,8 +132,6 @@ private:
     core::Array<core::StringId> a_;
 };
 
-
-
 /// \class vgc::ui::Widget
 /// \brief Base class of all elements in the user interface.
 ///
@@ -272,7 +172,14 @@ public:
     ///
     Widget* parent() const
     {
-        return static_cast<Widget*>(parentObject());
+        // TODO; the parent widget should actually be a member variable, to be
+        // able to correctly handle the case of a root widget owned by another
+        // object (that is, the widget would have a non-null parent object, but
+        // would still be the root widget).
+
+        core::Object* list = parentObject();
+        core::Object* widget = list ? list->parentObject() : nullptr;
+        return static_cast<Widget*>(widget);
     }
 
     /// Returns the first child Widget of this Widget. Returns nullptr if this
@@ -282,7 +189,7 @@ public:
     ///
     Widget* firstChild() const
     {
-        return static_cast<Widget*>(firstChildObject());
+        return children_->first();
     }
 
     /// Returns the last child Widget of this Widget. Returns nullptr if this
@@ -292,7 +199,7 @@ public:
     ///
     Widget* lastChild() const
     {
-        return static_cast<Widget*>(lastChildObject());
+        return children_->last();
     }
 
     /// Returns the previous sibling of this Widget. Returns nullptr if this
@@ -325,9 +232,9 @@ public:
     /// }
     /// \endcode
     ///
-    WidgetList children() const
+    WidgetListView children() const
     {
-        return WidgetList(firstChild(), nullptr);
+        return WidgetListView(children_);
     }
 
     /// Creates a new widget of type \p WidgetClass constructed with
@@ -788,6 +695,7 @@ protected:
     virtual void updateChildrenGeometry();
 
 private:
+    WidgetList* children_;
     mutable core::Vec2f preferredSize_;
     mutable bool isPreferredSizeComputed_;
     core::Vec2f position_;
@@ -803,25 +711,6 @@ private:
     Style style_;
     void onClassesChanged_();
 };
-
-inline WidgetIterator& WidgetIterator::operator++() {
-    widget_ = widget_->nextSibling();
-    return *this;
-}
-
-inline WidgetIterator WidgetIterator::operator++(int) {
-    WidgetIterator res(*this);
-    operator++();
-    return res;
-}
-
-inline bool operator==(const WidgetIterator& it1, const WidgetIterator& it2) {
-    return it1.widget_ == it2.widget_;
-}
-
-inline bool operator!=(const WidgetIterator& it1, const WidgetIterator& it2) {
-    return !(it1 == it2);
-}
 
 } // namespace ui
 } // namespace vgc

@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/node.h>
 
@@ -24,18 +25,6 @@ using Parent = vgc::core::Object;
 
 using vgc::dom::Node;
 using vgc::dom::NodeType;
-using vgc::dom::NodeIterator;
-using vgc::dom::NodeList;
-
-namespace {
-// Unlike C++ iterators, Python iterators need to be self-aware of when to stop
-struct PyNodeIterator_ {
-    NodeIterator current;
-    NodeIterator end;
-    PyNodeIterator_(const NodeList& list) :
-        current(list.begin()), end(list.end()) {}
-};
-} // namespace
 
 void wrap_node(py::module& m)
 {
@@ -44,21 +33,7 @@ void wrap_node(py::module& m)
         .value("Document", NodeType::Document)
     ;
 
-    py::class_<PyNodeIterator_>(m, "NodeIterator")
-        .def("__iter__", [](PyNodeIterator_& self) -> PyNodeIterator_& { return self; })
-        .def("__next__", [](PyNodeIterator_& self) -> Node* {
-            if (self.current == self.end) throw py::stop_iteration();
-            return *(self.current++); },
-            py::return_value_policy::reference_internal)
-    ;
-
-    py::class_<NodeList>(m, "NodeList")
-        .def("__iter__", [](NodeList& self) { return PyNodeIterator_(self); }, py::return_value_policy::reference_internal)
-    ;
-
-    // Necessary to define inheritance across modules. See:
-    // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
-    py::module::import("vgc.core");
+    vgc::core::wraps::wrapObjectCommon<This>(m, "Node");
 
     py::class_<This, Holder, Parent>(m, "Node")
         // Note: Node has no public constructor

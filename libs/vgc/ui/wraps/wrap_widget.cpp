@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
 #include <vgc/ui/widget.h>
 
 using This = vgc::ui::Widget;
@@ -23,9 +24,7 @@ using Parent = vgc::core::Object;
 
 void wrap_widget(py::module& m)
 {
-    // Necessary to define inheritance across modules. See:
-    // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
-    py::module::import("vgc.core");
+    vgc::core::wraps::wrapObjectCommon<This>(m, "Widget");
 
     py::class_<This, Holder, Parent>(m, "Widget")
         .def(py::init([]() { return This::create(); } ))

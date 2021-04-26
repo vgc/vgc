@@ -1,6 +1,7 @@
 vgc_wrap_library(core
     common.h
     exceptions.h
+    object.h
     module.cpp
     wrap_arithmetic.cpp
     wrap_arrays.cpp
