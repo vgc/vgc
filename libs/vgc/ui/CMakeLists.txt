@@ -15,10 +15,12 @@ vgc_add_library(ui
         event.h
         exceptions.h
         flex.h
+        key.h
         label.h
-        sizepolicy.h
+        modifierkey.h
         mouseevent.h
         row.h
+        sizepolicy.h
         strings.h
         style.h
         styletoken.h
