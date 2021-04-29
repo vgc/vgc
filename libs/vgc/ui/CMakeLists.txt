@@ -20,6 +20,7 @@ vgc_add_library(ui
         modifierkey.h
         mouseevent.h
         row.h
+        shortcut.h
         sizepolicy.h
         strings.h
         style.h
