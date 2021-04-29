@@ -17,6 +17,7 @@
 #ifndef VGC_UI_MODIFIERKEY_H
 #define VGC_UI_MODIFIERKEY_H
 
+#include <type_traits> // underlying_type
 #include <vgc/core/arithmetic.h>
 #include <vgc/ui/api.h>
 
