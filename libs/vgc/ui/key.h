@@ -37,6 +37,8 @@ namespace ui {
 /// \sa ModifierKey
 ///
 enum class Key : UInt32 {
+    None                = 0x00000000,
+
     // ASCII
     Space               = 0x00000020,
     Exclamation         = 0x00000021,
