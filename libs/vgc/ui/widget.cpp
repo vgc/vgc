@@ -16,6 +16,7 @@
 
 #include <vgc/ui/widget.h>
 
+#include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc {
@@ -24,6 +25,7 @@ namespace ui {
 Widget::Widget() :
     Object(),
     children_(WidgetList::create(this)),
+    actions_(ActionList::create(this)),
     preferredSize_(0.0f, 0.0f),
     isPreferredSizeComputed_(false),
     position_(0.0f, 0.0f),
@@ -463,6 +465,13 @@ void Widget::toggleClass(core::StringId class_) {
 StyleValue Widget::style(core::StringId property) const
 {
     return style_.computedValue(property, this);
+}
+
+Action* Widget::createAction(const Shortcut& shortcut)
+{
+    ActionPtr action = Action::create(shortcut);
+    actions_->append(action.get());
+    return action.get();
 }
 
 core::Vec2f Widget::computePreferredSize() const

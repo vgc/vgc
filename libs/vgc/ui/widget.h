@@ -24,9 +24,11 @@
 #include <vgc/core/stringid.h>
 #include <vgc/core/vec2f.h>
 #include <vgc/graphics/engine.h>
+#include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
 #include <vgc/ui/mouseevent.h>
+#include <vgc/ui/shortcut.h>
 #include <vgc/ui/sizepolicy.h>
 #include <vgc/ui/style.h>
 
@@ -35,6 +37,7 @@ class QKeyEvent;
 namespace vgc {
 namespace ui {
 
+VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(Widget);
 
 /// \typedef vgc::ui::WidgetClasses
@@ -668,6 +671,17 @@ public:
     ///
     StyleValue style(core::StringId property) const;
 
+    /// Returns the list of actions of this widget.
+    ///
+    ActionListView actions() const {
+        return ActionListView(actions_);
+    }
+
+    /// Creates an Action with the given shortcut, adds it to this widget, and
+    /// returns the action.
+    ///
+    Action* createAction(const Shortcut& shortcut);
+
 protected:
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its
@@ -696,6 +710,7 @@ protected:
 
 private:
     WidgetList* children_;
+    ActionList* actions_;
     mutable core::Vec2f preferredSize_;
     mutable bool isPreferredSizeComputed_;
     core::Vec2f position_;
