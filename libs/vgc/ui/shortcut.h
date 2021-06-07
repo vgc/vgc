@@ -31,7 +31,13 @@ namespace ui {
 ///
 class VGC_UI_API Shortcut {
 public:
-    /// Creates a Shortcut.
+
+    /// Creates an empty shortcut, that is, a shortcut whose key is set
+    /// as Key::None.
+    ///
+    Shortcut() : modifiers_(), key_(Key::None) {}
+
+    /// Creates a Shortcut with the given modifier keys and key.
     ///
     Shortcut(ModifierKeys modifiers, Key key) :
         modifiers_(modifiers), key_(key) {}
@@ -48,12 +54,19 @@ public:
 
     /// Returns the key of this shortcut.
     ///
-    Key key() { return key_; }
+    Key key() const { return key_; }
 
     /// Sets the key of this shortcut.
     ///
     void setKey(Key key) {
         key_ = key;
+    }
+
+    /// Returns whether the shortcut is empty, that is, whether key() is
+    /// Key::None.
+    ///
+    bool isEmpty() const {
+        return key() == Key::None;
     }
 
 private:
