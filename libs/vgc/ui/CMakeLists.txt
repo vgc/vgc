@@ -8,6 +8,7 @@ vgc_add_library(ui
         graphics
 
     HEADER_FILES
+        action.h
         api.h
         button.h
         colorpalette.h
@@ -30,6 +31,7 @@ vgc_add_library(ui
         internal/paintutil.h
 
     CPP_FILES
+        action.cpp
         button.cpp
         colorpalette.cpp
         column.cpp
