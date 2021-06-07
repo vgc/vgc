@@ -28,6 +28,7 @@ VGC_UI_API extern const core::StringId Button;
 VGC_UI_API extern const core::StringId ColorPalette;
 VGC_UI_API extern const core::StringId Flex;
 VGC_UI_API extern const core::StringId Label;
+VGC_UI_API extern const core::StringId LineEdit;
 
 VGC_UI_API extern const core::StringId background_color;
 VGC_UI_API extern const core::StringId background_color_on_hover;

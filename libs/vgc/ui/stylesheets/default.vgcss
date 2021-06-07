@@ -1,5 +1,6 @@
 .Button,
-.Label {
+.Label,
+.LineEdit{
     margin-top: 5dp;
     margin-right: 5dp;
     margin-bottom: 5dp;
@@ -9,6 +10,14 @@
 .Button {
     background-color: rgb(44, 46, 47);
     background-color-on-hover: rgb(11, 82, 172);
+    border-radius: 3dp;
+    text-color: rgb(221, 221, 221);
+    preferred-width: auto;
+    preferred-height: 28dp;
+}
+
+.LineEdit {
+    background-color: rgb(44, 46, 47);
     border-radius: 3dp;
     text-color: rgb(221, 221, 221);
     preferred-width: auto;
