@@ -84,7 +84,9 @@ public:
     /// Returns the OR combination of the given flags.
     ///
     ModifierKeys operator|(ModifierKeys other) {
-        i_ |= other.i_;
+        ModifierKeys res = *this;
+        res.i_ |= other.i_;
+        return res;
     }
 
 private:
@@ -94,7 +96,7 @@ private:
 
 /// Returns the OR combination of the given flags.
 ///
-ModifierKeys operator|(ModifierKey m1, ModifierKey m2) {
+inline ModifierKeys operator|(ModifierKey m1, ModifierKey m2) {
     ModifierKeys res = m1;
     res.setFlag(m2);
     return res;
@@ -102,7 +104,7 @@ ModifierKeys operator|(ModifierKey m1, ModifierKey m2) {
 
 /// Returns the OR combination of the given flags.
 ///
-ModifierKeys operator|(ModifierKeys m1, ModifierKey m2) {
+inline ModifierKeys operator|(ModifierKeys m1, ModifierKey m2) {
     m1.setFlag(m2);
     return m1;
 }
