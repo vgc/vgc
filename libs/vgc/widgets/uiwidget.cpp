@@ -202,6 +202,14 @@ void UiWidget::inputMethodEvent(QInputMethodEvent* event)
     }
 }
 
+bool UiWidget::event(QEvent* e)
+{
+    if (e->type() == QEvent::ShortcutOverride) {
+        e->accept();
+    }
+    return QWidget::event(e);
+}
+
 void UiWidget::initializeGL()
 {
     // Initialize shader program
