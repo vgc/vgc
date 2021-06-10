@@ -80,12 +80,15 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
             textColor = core::colors::green;
         }
         float borderRadius = internal::getLength(this, strings::border_radius);
+        float paddingLeft = internal::getLength(this, strings::padding_left);
+        float paddingRight = internal::getLength(this, strings::padding_right);
+        float textWidth = width() - paddingLeft - paddingRight;
         graphics::TextProperties textProperties(
                     graphics::TextHorizontalAlign::Left,
                     graphics::TextVerticalAlign::Middle);
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
-        internal::insertText(a, textColor, 0, 0, width(), height(), text_, textProperties, hinting);
+        internal::insertText(a, textColor, paddingLeft, 0, textWidth, height(), text_, textProperties, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
