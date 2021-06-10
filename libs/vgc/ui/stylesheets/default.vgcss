@@ -22,6 +22,8 @@
     text-color: rgb(221, 221, 221);
     preferred-width: auto;
     preferred-height: 28dp;
+    padding-left: 5dp;
+    padding-right: 5dp;
 }
 
 .Flex {
