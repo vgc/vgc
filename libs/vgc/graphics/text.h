@@ -27,6 +27,7 @@ namespace graphics {
 namespace internal {
 
 class ShapedTextImpl;
+class TextBoundaryIteratorImpl;
 
 } // namespace internal
 
@@ -134,11 +135,13 @@ public:
     ShapedGlyph(FontGlyph* fontGlyph,
                 const core::Vec2d& offset,
                 const core::Vec2d& advance,
-                const core::Vec2d& position) :
+                const core::Vec2d& position,
+                Int bytePosition) :
         fontGlyph_(fontGlyph),
         offset_(offset),
         advance_(advance),
-        position_(position) {}
+        position_(position),
+        bytePosition_(bytePosition) {}
 
     /// Returns the FontGlyph that this ShapedGlyph references.
     ///
@@ -185,6 +188,16 @@ public:
         return position_;
     }
 
+    /// Returns the smallest UTF-8 byte index in the original text that
+    /// corresponds to this ShapedGlyph. If one unicode character is shaped
+    /// into multiple glyphs, then all these glyphs will have the same byte
+    /// index. If several unicode characters are merged into one glyph, then
+    /// this function returns the smallest index.
+    ///
+    Int bytePosition() const {
+        return bytePosition_;
+    }
+
     /// Fills this ShapedGlyph, taking into account its relative position() and
     /// the given origin:
     ///
@@ -228,6 +241,7 @@ private:
     core::Vec2d offset_;
     core::Vec2d advance_;
     core::Vec2d position_;
+    Int bytePosition_;
 };
 
 using ShapedGlyphArray = core::Array<ShapedGlyph>;
@@ -276,7 +290,7 @@ public:
 
     /// Returns the FontFace of this ShapedText.
     ///
-    const FontFace* fontFace() const;
+    FontFace* fontFace() const;
 
     /// Returns the input text string of this ShapedText.
     ///
@@ -339,8 +353,8 @@ public:
               const core::Vec2d& origin,
               float r, float g, float b) const;
 
-    /// Fills this ShapedText from glyph index start to glyph index `start` (included)
-    /// to glyph index `end` (exluded).
+    /// Fills this ShapedText from glyph index `start` (included) to glyph
+    /// index `end` (excluded).
     ///
     /// See the other overloads of fill() for documentation of the remaining
     /// arguments.
@@ -352,6 +366,137 @@ public:
 
 private:
     internal::ShapedTextImpl* impl_;
+};
+
+/// \class vgc::graphics::TextCursor
+/// \brief Represents the position and properties of the text cursor.
+///
+class VGC_GRAPHICS_API TextCursor {
+public:
+    /// Creates a TextCursor.
+    ///
+    TextCursor(bool isVisible = false,
+               Int bytePosition = 0) :
+        isVisible_(isVisible),
+        bytePosition_(bytePosition) {}
+
+    /// Returns whether the TextCursor is visible.
+    ///
+    bool isVisible() const {
+        return isVisible_;
+    }
+
+    /// Sets whether the TextCursor is visible.
+    ///
+    void setVisible(bool isVisible) {
+        isVisible_ = isVisible;
+    }
+
+    /// Returns the cursor position as a UTF-8 byte index.
+    ///
+    Int bytePosition() const {
+        return bytePosition_;
+    }
+
+    /// Sets the cursor position given as a UTF-8 byte index.
+    ///
+    void setBytePosition(Int bytePosition) {
+        bytePosition_ = bytePosition;
+    }
+
+private:
+    bool isVisible_;
+    Int bytePosition_;
+};
+
+/// \class vgc::graphics::TextBoundaryType
+/// \brief The different types of Unicode text segmentation
+///
+/// See also:
+/// - TextBoundaryIterator
+/// - http://www.unicode.org/reports/tr29/
+/// - https://doc.qt.io/qt-5/qtextboundaryfinder.html
+///
+enum class TextBoundaryType {
+    Grapheme = 0,
+    Word = 1,
+    Sentence = 2,
+    Line = 3
+};
+
+// TODO: TextBoundaryReason(s). See QTextBoundaryFinder::BoundaryReason(s)
+
+/// \class vgc::graphics::TextBoundaryIterator
+/// \brief Iterates through a string based on Unicode text boundaries.
+///
+/// This is a thin wrapper around QTextBoundaryFinder, based on std::string
+/// rather than QChar/QString.
+///
+/// See:
+/// - https://doc.qt.io/qt-5/qtextboundaryfinder.html
+/// - https://unicode.org/reports/tr29/
+///
+class VGC_GRAPHICS_API TextBoundaryIterator {
+public:
+    /// Creates a TextBoundaryIterator that iterates over the given UTF-8 string
+    /// based on the given boundary type.
+    ///
+    TextBoundaryIterator(TextBoundaryType type, const std::string& string);
+
+    /// Destroys the TextBoundaryIterator.
+    ///
+    ~TextBoundaryIterator();
+
+    // Disable copy, move, assign, and move-assign
+    TextBoundaryIterator(const TextBoundaryIterator& other) = delete;
+    TextBoundaryIterator(TextBoundaryIterator&& other) = delete;
+    TextBoundaryIterator& operator=(const TextBoundaryIterator& other) = delete;
+    TextBoundaryIterator& operator=(TextBoundaryIterator&& other) = delete;
+
+    /// Returns whether the current position is at a boundary.
+    ///
+    bool isAtBoundary() const;
+
+    /// Returns whether the iterator is in a valid state.
+    ///
+    bool isValid() const;
+
+    /// Returns the current position of the iterator, that is, the
+    /// corresponding index in the input UTF-8 string. The range is from 0 to
+    /// the length of the input string (included).
+    ///
+    Int	position() const;
+
+    /// Moves the iterator to the given position, snapping it to a valid position.
+    ///
+    void setPosition(Int position);
+
+    /// Moves the iterator to the end of the string. This is equivalent to
+    /// setPosition(string.size()).
+    ///
+    void toEnd();
+
+    /// Moves the iterator to the next boundary and returns that position.
+    /// Returns -1 if there is no next boundary.
+    ///
+    Int	toNextBoundary();
+
+    /// Moves the iterator to the previous boundary and returns that position.
+    /// Returns -1 if there is no previous boundary.
+    ///
+    Int	toPreviousBoundary();
+
+    /// Moves the iterator to the beginning of the string. This is equivalent to
+    /// setPosition(0).
+    ///
+    void toStart();
+
+    /// Returns the ty pe of this TextBoundaryIterator.
+    ///
+    TextBoundaryType type() const;
+
+private:
+    internal::TextBoundaryIteratorImpl* impl_;
 };
 
 } // namespace graphics

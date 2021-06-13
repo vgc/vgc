@@ -18,6 +18,7 @@
 #define VGC_UI_LINEEDIT_H
 
 #include <vgc/core/color.h>
+#include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc {
@@ -76,6 +77,8 @@ protected:
 
 private:
     std::string text_;
+    graphics::ShapedText shapedText_;
+    graphics::TextCursor textCursor_;
     Int trianglesId_;
     bool reload_;
     bool isHovered_;
