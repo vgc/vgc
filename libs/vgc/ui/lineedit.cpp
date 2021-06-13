@@ -30,12 +30,15 @@ namespace ui {
 
 LineEdit::LineEdit(const std::string& text) :
     Widget(),
-    text_(text),
+    text_(""),
+    shapedText_(graphics::fontLibrary()->defaultFace(), text_),
+    textCursor_(false, 0),
     trianglesId_(-1),
     reload_(true),
     isHovered_(false)
 {
     addClass(strings::LineEdit);
+    setText(text);
 }
 
 LineEditPtr LineEdit::create()
@@ -52,6 +55,7 @@ void LineEdit::setText(const std::string& text)
 {
     if (text_ != text) {
         text_ = text;
+        shapedText_.setText(text);
         reload_ = true;
         repaint();
     }
@@ -76,9 +80,6 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
                         strings::background_color_on_hover :
                         strings::background_color);
         core::Color textColor = internal::getColor(this, strings::text_color);
-        if (hasFocus()) {
-            textColor = core::colors::green;
-        }
         float borderRadius = internal::getLength(this, strings::border_radius);
         float paddingLeft = internal::getLength(this, strings::padding_left);
         float paddingRight = internal::getLength(this, strings::padding_right);
@@ -86,9 +87,15 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
         graphics::TextProperties textProperties(
                     graphics::TextHorizontalAlign::Left,
                     graphics::TextVerticalAlign::Middle);
+        if (hasFocus()) {
+            textCursor_.setVisible(true);
+        }
+        else {
+            textCursor_.setVisible(false);
+        }
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
-        internal::insertText(a, textColor, paddingLeft, 0, textWidth, height(), text_, textProperties, hinting);
+        internal::insertText(a, textColor, paddingLeft, 0, textWidth, height(), shapedText_, textProperties, textCursor_, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
@@ -151,13 +158,40 @@ bool LineEdit::onFocusOut()
 
 bool LineEdit::onKeyPress(QKeyEvent* event)
 {
-    std::string t = event->text().toStdString();
-    if (!t.empty()) {
-        setText(text() + t);
+    if (event->key() == Qt::Key_Left || event->key() == Qt::Key_Right) {
+        graphics::TextBoundaryIterator it(graphics::TextBoundaryType::Grapheme, text());
+        it.setPosition(textCursor_.bytePosition());
+        if (event->key() == Qt::Key_Left) {
+            if (textCursor_.bytePosition() > 0) {
+                it.toPreviousBoundary();
+            }
+        }
+        else {
+            if (textCursor_.bytePosition() < core::int_cast<Int>(text().size())) {
+                it.toNextBoundary();
+            }
+        }
+        textCursor_.setBytePosition(it.position());
+        reload_ = true;
+        repaint();
         return true;
     }
     else {
-        return false;
+        std::string t = event->text().toStdString();
+        if (!t.empty()) {
+            size_t p = core::int_cast<size_t>(textCursor_.bytePosition());
+            std::string newText;
+            newText.reserve(text().size() + t.size());
+            newText.append(text(), 0, p);
+            newText.append(t);
+            newText.append(text(), p);
+            textCursor_.setBytePosition(p + t.size());
+            setText(newText);
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 }
 

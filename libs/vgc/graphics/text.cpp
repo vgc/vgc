@@ -19,6 +19,8 @@
 #include <hb.h>
 #include <hb-ft.h>
 
+#include <QTextBoundaryFinder>
+
 namespace vgc {
 namespace graphics {
 
@@ -97,9 +99,10 @@ public:
 
         // Shape
         hb_buffer_reset(buf);
+        hb_buffer_set_cluster_level(buf, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS);
         hb_buffer_add_utf8(buf, data, dataLength, firstChar, numChars);
         hb_buffer_guess_segment_properties(buf);
-        hb_shape(facePtr->impl_->hbFont, buf, NULL, 0);
+        hb_shape(facePtr->impl_->hbFont, buf, nullptr, 0);
 
         // HarfBuzz output
         unsigned int n;
@@ -113,11 +116,12 @@ public:
             hb_glyph_info_t& info = infos[i];
             hb_glyph_position_t& pos = positions[i];
             FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
+            Int bytePosition = core::int_cast<Int>(info.cluster);
             core::Vec2d glyphOffset = internal::f266ToVec2d(pos.x_offset, pos.y_offset);
             core::Vec2d glyphAdvance = internal::f266ToVec2d(pos.x_advance, pos.y_advance);
             core::Vec2d glyphPosition = advance + glyphOffset;
             if (glyph) {
-                glyphs.append(ShapedGlyph(glyph, glyphOffset, glyphAdvance, glyphPosition));
+                glyphs.append(ShapedGlyph(glyph, glyphOffset, glyphAdvance, glyphPosition, bytePosition));
             }
             advance += glyphAdvance;
         }
@@ -213,7 +217,7 @@ ShapedText::~ShapedText()
     delete impl_;
 }
 
-const FontFace* ShapedText::fontFace() const
+FontFace* ShapedText::fontFace() const
 {
     return impl_->facePtr.get();
 }
@@ -256,6 +260,156 @@ void ShapedText::fill(core::FloatArray& data,
     for (Int i = start; i < end; ++i) {
         glyphs[i].fill(data, origin, r, g, b);
     }
+}
+
+// Convenient macro for checking assertions and failing with a LogicError.
+// We should eventually add this to vgc::core API
+#define VGC_EXPECT_EQ(a, b) \
+    if (!((a) == (b))) { \
+        std::string error = core::format( \
+            "Failed to satisfy condition `" #a " == " #b "`. Actual values are {} and {}.", (a), (b)); \
+        throw core::LogicError(error); \
+    } else (void)0
+
+namespace internal {
+
+// Determines whether this byte is a continuation byte of a valid UTF-8 encoded
+// stream. These have the form 10xxxxxx.
+//
+bool isUtf8ContinuationByte_(char c) {
+    unsigned char c_ = static_cast<unsigned char>(c);
+    return (c_ >> 6) == 2;
+}
+
+class TextBoundaryIteratorImpl {
+public:
+    TextBoundaryIteratorImpl(TextBoundaryType type, const std::string& string) :
+        q(static_cast<QTextBoundaryFinder::BoundaryType>(type),
+          QString::fromStdString(string))
+    {
+        QString qstring = q.string();
+
+        // Compute number of UTF-8 positions and UTF-16 positions
+        size_t u8_length = string.size();
+        int u16_length = qstring.length();
+        Int u8_numPositions = core::int_cast<Int>(u8_length) + 1;
+        Int u16_numPositions = core::int_cast<Int>(u16_length) + 1;
+
+        // Reserve array size
+        u8_to_u16_.reserve(u8_numPositions);
+        u16_to_u8_.reserve(u16_numPositions);
+
+        // Compute UTF-8/UTF-16 index mapping
+        size_t u8_index = 0;
+        for (int i = 0; i < u16_length; ++i) {
+            int u16_index = i;
+            QChar c = qstring.at(i);
+            u16_to_u8_.append(core::int_cast<Int>(u8_index));
+            if (c.isLowSurrogate()) {
+                u16_to_u8_.append(core::int_cast<Int>(u8_index));
+                ++i;
+            }
+            u8_to_u16_.append(u16_index);
+            u8_index += 1;
+            while (u8_index < u8_length && isUtf8ContinuationByte_(string[u8_index])) {
+                u8_to_u16_.append(u16_index);
+                u8_index += 1;
+            }
+        }
+        u8_to_u16_.append(u16_length);
+        u16_to_u8_.append(core::int_cast<Int>(u8_length));
+        u8_min_ = 0;
+        u8_max_ = u8_to_u16_.length();
+        u16_min_ = 0;
+        u16_max_ = u16_to_u8_.length();
+
+        // Check that the array sizes are what we expect
+        VGC_EXPECT_EQ(u8_to_u16_.length(), u8_numPositions);
+        VGC_EXPECT_EQ(u16_to_u8_.length(), u16_numPositions);
+    }
+
+    int u8_to_u16(Int p) const {
+        p = core::clamp(p, u8_min_, u8_max_);
+        return u8_to_u16_[p];
+    }
+
+    Int u16_to_u8(int p) const {
+        Int p_ = core::int_cast<Int>(p);
+        p_ = core::clamp(p_, u16_min_, u16_max_);
+        return u16_to_u8_[p_];
+    }
+
+    QTextBoundaryFinder q;
+
+private:
+    core::Array<int> u8_to_u16_;
+    Int u8_min_;
+    Int u8_max_;
+
+    core::Array<Int> u16_to_u8_;
+    Int u16_min_;
+    Int u16_max_;
+};
+
+} // namespace internal
+
+TextBoundaryIterator::TextBoundaryIterator(TextBoundaryType type, const std::string& string)
+{
+    impl_ = new internal::TextBoundaryIteratorImpl(type, string);
+}
+
+TextBoundaryIterator::~TextBoundaryIterator()
+{
+    delete impl_;
+}
+
+bool TextBoundaryIterator::isAtBoundary() const
+{
+    return impl_->q.isAtBoundary();
+}
+
+bool TextBoundaryIterator::isValid() const
+{
+    return impl_->q.isValid();
+}
+
+Int TextBoundaryIterator::position() const
+{
+    int p = impl_->q.position();
+    return impl_->u16_to_u8(p);
+}
+
+void TextBoundaryIterator::setPosition(Int position)
+{
+    int p = impl_->u8_to_u16(position);
+    impl_->q.setPosition(p);
+}
+
+void TextBoundaryIterator::toEnd()
+{
+    impl_->q.toEnd();
+}
+
+Int TextBoundaryIterator::toNextBoundary()
+{
+    int p = impl_->q.toNextBoundary();
+    return (p == -1) ? -1 : impl_->u16_to_u8(p);
+}
+
+Int TextBoundaryIterator::toPreviousBoundary()
+{
+    int p = impl_->q.toPreviousBoundary();
+    return (p == -1) ? -1 : impl_->u16_to_u8(p);
+}
+
+void TextBoundaryIterator::toStart()
+{
+    return impl_->q.toStart();
+}
+
+TextBoundaryType TextBoundaryIterator::type() const
+{
+    return static_cast<TextBoundaryType>(impl_->q.type());
 }
 
 } // namespace graphics

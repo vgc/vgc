@@ -117,30 +117,36 @@ void insertRect(
         x1, y2, r, g, b});
 }
 
+graphics::ShapedText shapeText(const std::string& text)
+{
+    graphics::FontFace* fontFace = graphics::fontLibrary()->defaultFace();
+    return graphics::ShapedText(fontFace, text);
+}
+
 // x1, y1, x2, y2 is the text box to center the text into
 void insertText(
         core::FloatArray& a,
         const core::Color& c,
         float x1, float y1, float x2, float y2,
-        const std::string& text,
+        const graphics::ShapedText& shapedText,
         const graphics::TextProperties& textProperties,
+        const graphics::TextCursor& textCursor,
         bool hinting)
 {
-    if (text.length() > 0) {
+    graphics::FontFace* fontFace = shapedText.fontFace();
+    if (shapedText.text().length() > 0 || textCursor.isVisible()) {
         float r = static_cast<float>(c[0]);
         float g = static_cast<float>(c[1]);
         float b = static_cast<float>(c[2]);
-
-        // Get FontFace.
-        graphics::FontFace* fontFace = graphics::fontLibrary()->defaultFace();
-
-        // Shape text
-        graphics::ShapedText shapedText(fontFace, text);
 
         // Vertical centering
         float height = y2-y1;
         float ascent = static_cast<float>(fontFace->ascent());
         float descent = static_cast<float>(fontFace->descent());
+        if (hinting) {
+            ascent = std::round(ascent);
+            descent = std::round(descent);
+        }
         float textHeight = ascent - descent;
         float textTop = 0;
         switch (textProperties.verticalAlign()) {
@@ -148,16 +154,16 @@ void insertText(
             textTop = y1;
             break;
         case graphics::TextVerticalAlign::Middle:
-            textTop = y1 + 0.5 * (height - textHeight);
+            textTop = y1 + 0.5f * (height - textHeight);
             break;
         case graphics::TextVerticalAlign::Bottom:
             textTop = y1 + (height - textHeight);
             break;
         }
-        float baseline = textTop + ascent;
         if (hinting) {
-            baseline = std::round(baseline);
+            textTop = std::round(textTop);
         }
+        float baseline = textTop + ascent;
 
         // Horizontal centering. Note: we intentionally don't perform hinting
         // on the horizontal direction.
@@ -165,14 +171,14 @@ void insertText(
         Int start = 0;
         Int end = glyphs.length();
         float width = x2-x1;
-        float advance = shapedText.advance()[0];
+        float advance = static_cast<float>(shapedText.advance()[0]);
         std::unique_ptr<graphics::ShapedText> ellipsis;
         if (advance > width) {
             ellipsis = std::make_unique<graphics::ShapedText>(fontFace, "...");
-            advance = ellipsis->advance()[0];
+            advance = static_cast<float>(ellipsis->advance()[0]);
             end = 0;
             for (const graphics::ShapedGlyph& glyph : glyphs) {
-                float newAdvance = advance + glyph.advance()[0];
+                float newAdvance = advance + static_cast<float>(glyph.advance()[0]);
                 if (newAdvance > width) {
                     break;
                 }
@@ -186,7 +192,7 @@ void insertText(
             textLeft = x1;
             break;
         case graphics::TextHorizontalAlign::Center:
-            textLeft = x1 + 0.5 * (width - advance);
+            textLeft = x1 + 0.5f * (width - advance);
             break;
         case graphics::TextHorizontalAlign::Right:
             // XXX: Should the ellipsis be on the left in this case? See:
@@ -196,13 +202,56 @@ void insertText(
         }
 
         // Triangulate text
-        core::Vec2d origin(textLeft, baseline);
+        core::Vec2d origin(static_cast<double>(textLeft), static_cast<double>(baseline));
         shapedText.fill(a, origin, r, g, b, start, end);
         if (ellipsis) {
-            core::Vec2d ellipsisOrigin = origin + core::Vec2d(advance, 0) - ellipsis->advance();
+            core::Vec2d ellipsisOrigin = origin + core::Vec2d(static_cast<double>(advance), 0) - ellipsis->advance();
             ellipsis->fill(a, ellipsisOrigin, r, g, b);
         }
+
+        // Draw cursor
+        if (textCursor.isVisible()) {
+            Int cursorBytePosition = textCursor.bytePosition();
+            float cursorAdvance = 0.0f;
+            Int glyphIndex = 0;
+            for (const graphics::ShapedGlyph& glyph : glyphs) {
+                if (glyph.bytePosition() >= cursorBytePosition) {
+                    // TODO: handle glyphs spanning several graphemes, e.g., ligatures
+                    // In which case we need to substract from cursorAdvance a fraction
+                    // of the last glyph advance.
+                    break;
+                }
+                cursorAdvance += static_cast<float>(glyph.advance()[0]);
+                glyphIndex += 1;
+            }
+            if (glyphIndex <= end) {
+                float cursorX = x1 + cursorAdvance;
+                if (hinting) {
+                    // Note: while we don't perform horizontal hinting for letters,
+                    // we do perform horizontal hinting for the cursor.
+                    cursorX = std::round(cursorX);
+                }
+                float cursorY = textTop;
+                float cursorW = 1.0f;
+                float cursorH = textHeight;
+                insertRect(a, c, cursorX, cursorY, cursorX + cursorW, cursorY + cursorH);
+            }
+        }
     }
+}
+
+// x1, y1, x2, y2 is the text box to center the text into
+void insertText(
+        core::FloatArray& a,
+        const core::Color& c,
+        float x1, float y1, float x2, float y2,
+        const std::string& text,
+        const graphics::TextProperties& textProperties,
+        const graphics::TextCursor& textCursor,
+        bool hinting)
+{
+    graphics::ShapedText shapedText = shapeText(text);
+    insertText(a, c, x1, y1, x2, y2, shapedText, textProperties, textCursor, hinting);
 }
 
 core::Color getColor(const Widget* widget, core::StringId property)
