@@ -46,6 +46,7 @@ public:
     // Output of shaping
     //
     ShapedGlyphArray glyphs;
+    ShapedGraphemeArray graphemes;
     core::Vec2d advance;
 
     // HarbBuzz buffer
@@ -56,6 +57,7 @@ public:
         facePtr(face),
         text(),
         glyphs(),
+        graphemes(),
         advance(0, 0),
         buf(hb_buffer_create())
     {
@@ -66,6 +68,7 @@ public:
         facePtr(other.facePtr),
         text(other.text),
         glyphs(other.glyphs),
+        graphemes(other.graphemes),
         advance(other.advance),
         buf(hb_buffer_create())
     {
@@ -78,6 +81,7 @@ public:
             facePtr = other.facePtr;
             text = other.text;
             glyphs = other.glyphs;
+            graphemes = other.graphemes;
             advance = other.advance;
         }
         return *this;
@@ -124,6 +128,78 @@ public:
                 glyphs.append(ShapedGlyph(glyph, glyphOffset, glyphAdvance, glyphPosition, bytePosition));
             }
             advance += glyphAdvance;
+        }
+
+        // Compute graphemes and correspondence with glyphs
+        // First pass: create graphemes with corresponding byte position
+        graphemes.clear();
+        TextBoundaryIterator it(TextBoundaryType::Grapheme, text);
+        Int bytePositionBefore = 0;
+        Int bytePositionAfter = it.toNextBoundary();
+        while (bytePositionAfter != -1) {
+            graphemes.append(ShapedGrapheme(0, core::Vec2d(0, 0), core::Vec2d(0, 0), bytePositionBefore));
+            bytePositionBefore = bytePositionAfter;
+            bytePositionAfter = it.toNextBoundary();
+        }
+        // Second pass: compute the smallest glyph corresponding to each grapheme
+        Int numGraphemes = graphemes.length();
+        Int numGlyphs = glyphs.length();
+        if (numGraphemes > 0 && numGlyphs > 0) {
+            Int graphemeIndex = 0;
+            Int glyphIndex = 0;
+            Int numBytes = core::int_cast<Int>(text.size());
+            for (Int p = 0; p < numBytes; ++p) {
+                while (glyphs[glyphIndex].bytePosition() < p &&
+                       glyphIndex + 1 < numGlyphs &&
+                       glyphs[glyphIndex + 1].bytePosition() <= p) {
+                    glyphIndex += 1;
+                }
+                while (graphemes[graphemeIndex].bytePosition() < p &&
+                       graphemeIndex + 1 < numGraphemes &&
+                       graphemes[graphemeIndex + 1].bytePosition() <= p) {
+                    graphemeIndex += 1;
+                    graphemes[graphemeIndex].glyphIndex_ = glyphIndex;
+                 }
+            }
+        }
+        // Third pass: compute the grapheme advance by computing the sum of the
+        // glyph advances (if several glyphs for one grapheme, e.g., accents),
+        // or uniformly dividing the glyph advance by the number of graphemes
+        // (if one glyph for several graphemes, e.g., ligatures).
+        for (Int graphemeIndex = 0; graphemeIndex < numGraphemes; ++graphemeIndex) {
+            Int glyphIndexBegin = graphemes[graphemeIndex].glyphIndex();
+            Int glyphIndexEnd = (graphemeIndex + 1 < numGraphemes) ?
+                                graphemes[graphemeIndex + 1].glyphIndex() :
+                                numGlyphs;
+            if (glyphIndexBegin == glyphIndexEnd) {
+                // one glyph for several graphemes
+                Int glyphIndex = glyphIndexBegin;
+                Int graphemeIndexBegin = graphemeIndex;
+                while (graphemeIndex + 1 < numGraphemes &&
+                       graphemes[graphemeIndex + 1].glyphIndex() == glyphIndex) {
+                    graphemeIndex += 1;
+                }
+                core::Vec2d glyphAdvance = glyphs[glyphIndexBegin].advance();
+                Int numGraphemesForGlyph = graphemeIndex - graphemeIndexBegin + 1;
+                core::Vec2d graphemeAdvance = glyphAdvance / static_cast<double>(numGraphemesForGlyph);
+                for (Int k = graphemeIndexBegin; k <= graphemeIndex; ++k) {
+                    graphemes[k].advance_ = graphemeAdvance;
+                }
+            }
+            else {
+                // one grapheme for one or several glyphs
+                core::Vec2d graphemeAdvance(0, 0);
+                for (Int i = glyphIndexBegin; i < glyphIndexEnd; ++i) {
+                    graphemeAdvance += glyphs[i].advance();
+                }
+                graphemes[graphemeIndex].advance_ = graphemeAdvance;
+            }
+        }
+        // Fourth pass: compute position based on advance
+        core::Vec2d graphemePosition(0, 0);
+        for (Int graphemeIndex = 0; graphemeIndex < numGraphemes; ++graphemeIndex) {
+            graphemes[graphemeIndex].position_ = graphemePosition;
+            graphemePosition += graphemes[graphemeIndex].advance();
         }
     }
 
@@ -235,6 +311,11 @@ void ShapedText::setText(const std::string& text)
 const ShapedGlyphArray& ShapedText::glyphs() const
 {
     return impl_->glyphs;
+}
+
+const ShapedGraphemeArray& ShapedText::graphemes() const
+{
+    return impl_->graphemes;
 }
 
 core::Vec2d ShapedText::advance() const

@@ -211,20 +211,18 @@ void insertText(
 
         // Draw cursor
         if (textCursor.isVisible()) {
+            const graphics::ShapedGraphemeArray& graphemes = shapedText.graphemes();
             Int cursorBytePosition = textCursor.bytePosition();
             float cursorAdvance = 0.0f;
             Int glyphIndex = 0;
-            for (const graphics::ShapedGlyph& glyph : glyphs) {
-                if (glyph.bytePosition() >= cursorBytePosition) {
-                    // TODO: handle glyphs spanning several graphemes, e.g., ligatures
-                    // In which case we need to substract from cursorAdvance a fraction
-                    // of the last glyph advance.
+            for (const graphics::ShapedGrapheme& grapheme : graphemes) {
+                if (grapheme.bytePosition() >= cursorBytePosition) {
                     break;
                 }
-                cursorAdvance += static_cast<float>(glyph.advance()[0]);
-                glyphIndex += 1;
+                cursorAdvance += static_cast<float>(grapheme.advance()[0]);
+                glyphIndex = grapheme.glyphIndex();
             }
-            if (glyphIndex <= end) {
+            if (glyphIndex < end) {
                 float cursorX = x1 + cursorAdvance;
                 if (hinting) {
                     // Note: while we don't perform horizontal hinting for letters,
