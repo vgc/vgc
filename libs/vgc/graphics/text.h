@@ -169,11 +169,11 @@ public:
         return offset_;
     }
 
-    // Returns how much the line advances after drawing this ShapedGlyph. The
-    // X-coordinate corresponds to the advance when setting text in horizontal
-    // direction, and the Y-coordinate corresponds to the advance when setting
-    // text in vertical direction.
-    //
+    /// Returns how much the line advances after drawing this ShapedGlyph. The
+    /// X-coordinate corresponds to the advance when setting text in horizontal
+    /// direction, and the Y-coordinate corresponds to the advance when setting
+    /// text in vertical direction.
+    ///
     core::Vec2d advance() const {
         return advance_;
     }
@@ -244,7 +244,108 @@ private:
     Int bytePosition_;
 };
 
+/// \class vgc::graphics::ShapedGrapheme
+/// \brief Represents one grapheme of a shaped text.
+///
+/// A grapheme represents the concept of "user-perceived character": for
+/// example the base character `A` with a grave accent gives the grapheme `À`.
+/// This concept is typically used for text cursor navigation: you want the
+/// cursor to advance grapheme by grapheme, rather than glyph by glyph or
+/// codepoint by codepoint.
+///
+/// Indeed, several Unicode codepoints may be combined together to form a
+/// single grapheme. Also, several glyphs may be necessary to render a single
+/// grapheme.
+///
+/// Conversely, it is also possible for a single glyph to span several
+/// graphemes, such as in the case of ligatures. For example, the text "ff" is
+/// often rendered as one glyph, while represented as two codepoints, and
+/// representing two graphemes.
+///
+/// Note that unlike glyphs, converting a Unicode text to a sequence of
+/// graphemes does not depend on a choice of font, and in particular does not
+/// require shaping. If you do not need shaping, you can directly use the class
+/// TextBoundaryIterator to iterate over the graphemes of a given string, which
+/// is much cheaper than creating a ShapedText.
+///
+/// However, if you do need shaping, then iterating over the ShapedGrapheme
+/// elements of a ShapedText makes it possible to know the 2D location of the
+/// graphemes, as well as the correspondence between the graphemes and glyphs.
+/// In particular, it gives the advance and position of each grapheme,
+/// correctly handling the case of multiple glyphs per grapheme, and the case
+/// of ligatures.
+///
+class VGC_GRAPHICS_API ShapedGrapheme {
+public:
+    /// Creates a ShapedGrapheme.
+    ///
+    ShapedGrapheme(Int glyphIndex,
+                   const core::Vec2d& advance,
+                   const core::Vec2d& position,
+                   Int bytePosition) :
+        glyphIndex_(glyphIndex),
+        advance_(advance),
+        position_(position),
+        bytePosition_(bytePosition) {}
+
+    /// Returns the index of the ShapedGlyph  corresponding to this grapheme.
+    ///
+    /// If this grapheme is made of several glyphs, it returns the first.
+    ///
+    /// If this grapheme is part of a glyph that spans several graphemes,
+    /// then all these graphemes will return the same glyph.
+    ///
+    Int glyphIndex() const {
+        return glyphIndex_;
+    }
+
+    /// Returns how much the line advances after this grapheme. The
+    /// X-coordinate corresponds to the advance when setting text in horizontal
+    /// direction, and the Y-coordinate corresponds to the advance when setting
+    /// text in vertical direction.
+    ///
+    /// If this grapheme is made of several glyphs, it returns the sum of the
+    /// glyph advances.
+    ///
+    /// If several graphemes are part of the same glyph (e.g., ligatures), it
+    /// returns the glyph advance divided by the number of graphemes which are
+    /// part of the glyph.
+    ///
+    core::Vec2d advance() const {
+        return advance_;
+    }
+
+    /// Returns where this grapheme is located relative to the origin of the
+    /// ShapedText.
+    ///
+    /// This is equal to the sum of the advances of all the previous graphemes
+    /// of the ShapedText.
+    ///
+    core::Vec2d position() const {
+        return position_;
+    }
+
+    /// Returns the smallest UTF-8 byte index in the original text that
+    /// corresponds to this grapheme. If several unicode characters are
+    /// composed into one grapheme, then this function returns the smallest
+    /// index. Note that a single unicode character never results in multiple
+    /// grapheme, so this function always return a different bytePosition for
+    /// different graphemes.
+    ///
+    Int bytePosition() const {
+        return bytePosition_;
+    }
+
+private:
+    friend class internal::ShapedTextImpl;
+    Int glyphIndex_;
+    core::Vec2d advance_;
+    core::Vec2d position_;
+    Int bytePosition_;
+};
+
 using ShapedGlyphArray = core::Array<ShapedGlyph>;
+using ShapedGraphemeArray = core::Array<ShapedGrapheme>;
 
 /// \class vgc::graphics::ShapedText
 /// \brief Performs text shaping and stores the resulting shaped text.
@@ -304,9 +405,16 @@ public:
     /// Returns the ShapedGlyph elements composing this ShapedText.
     ///
     /// The ShapedGlyph elements are guaranteed to be valid as long as either
-    /// this ShapedText are its FontFace is alive.
+    /// this ShapedText and its FontFace is alive.
     ///
     const ShapedGlyphArray& glyphs() const;
+
+    /// Returns the ShapedGrapheme elements composing this ShapedText.
+    ///
+    /// The ShapedGrapheme elements are guaranteed to be valid as long as this
+    /// ShapedText is alive.
+    ///
+    const ShapedGraphemeArray& graphemes() const;
 
     // Returns how much the line advances after drawing this ShapedText. The
     // X-coordinate corresponds to the advance when setting text in horizontal
