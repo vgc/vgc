@@ -162,7 +162,11 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
         Int p1_ = textCursor_.bytePosition();
         Int p2_ = -1;
-        graphics::TextBoundaryIterator it(graphics::TextBoundaryType::Grapheme, text());
+        graphics::TextBoundaryType boundaryType =
+                (event->modifiers().testFlag(Qt::ControlModifier)) ?
+                    graphics::TextBoundaryType::Word :
+                    graphics::TextBoundaryType::Grapheme;
+        graphics::TextBoundaryIterator it(boundaryType, text());
         it.setPosition(p1_);
         if (key == Qt::Key_Delete) {
             p2_ = it.toNextBoundary();
