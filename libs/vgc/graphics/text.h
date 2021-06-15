@@ -472,6 +472,11 @@ public:
               float r, float g, float b,
               Int start, Int end) const;
 
+    /// Returns the byte position in the original text corresponding to the
+    /// grapheme boundary closest to the given mouse position.
+    ///
+    Int bytePosition(const core::Vec2d& mousePosition);
+
 private:
     internal::ShapedTextImpl* impl_;
 };
