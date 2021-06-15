@@ -222,7 +222,7 @@ void insertText(
                 cursorAdvance += static_cast<float>(grapheme.advance()[0]);
                 glyphIndex = grapheme.glyphIndex();
             }
-            if (glyphIndex < end) {
+            if (glyphIndex == 0 || glyphIndex < end) {
                 float cursorX = x1 + cursorAdvance;
                 if (hinting) {
                     // Note: while we don't perform horizontal hinting for letters,
