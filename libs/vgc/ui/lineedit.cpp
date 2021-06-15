@@ -158,10 +158,35 @@ bool LineEdit::onFocusOut()
 
 bool LineEdit::onKeyPress(QKeyEvent* event)
 {
-    if (event->key() == Qt::Key_Left || event->key() == Qt::Key_Right) {
+    int key = event->key();
+    if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
+        Int p1_ = textCursor_.bytePosition();
+        Int p2_ = -1;
+        graphics::TextBoundaryIterator it(graphics::TextBoundaryType::Grapheme, text());
+        it.setPosition(p1_);
+        if (key == Qt::Key_Delete) {
+            p2_ = it.toNextBoundary();
+        }
+        else { // Backspace
+            p2_ = p1_;
+            p1_ = it.toPreviousBoundary();
+        }
+        if (p1_ != -1 && p2_ != -1) {
+            size_t p1 = core::int_cast<size_t>(p1_);
+            size_t p2 = core::int_cast<size_t>(p2_);
+            std::string newText;
+            newText.reserve(text().size() + p2 - p1);
+            newText.append(text(), 0, p1);
+            newText.append(text(), p2);
+            textCursor_.setBytePosition(p1_);
+            setText(newText);
+        }
+        return true;
+    }
+    else if (key == Qt::Key_Left || key == Qt::Key_Right) {
         graphics::TextBoundaryIterator it(graphics::TextBoundaryType::Grapheme, text());
         it.setPosition(textCursor_.bytePosition());
-        if (event->key() == Qt::Key_Left) {
+        if (key == Qt::Key_Left) {
             if (textCursor_.bytePosition() > 0) {
                 it.toPreviousBoundary();
             }
