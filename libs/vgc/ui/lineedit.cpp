@@ -188,21 +188,25 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         return true;
     }
     else if (key == Qt::Key_Left || key == Qt::Key_Right) {
-        graphics::TextBoundaryIterator it(graphics::TextBoundaryType::Grapheme, text());
-        it.setPosition(textCursor_.bytePosition());
+        Int p1 = textCursor_.bytePosition();
+        Int p2 = -1;
+        graphics::TextBoundaryType boundaryType =
+                (event->modifiers().testFlag(Qt::ControlModifier)) ?
+                    graphics::TextBoundaryType::Word :
+                    graphics::TextBoundaryType::Grapheme;
+        graphics::TextBoundaryIterator it(boundaryType, text());
+        it.setPosition(p1);
         if (key == Qt::Key_Left) {
-            if (textCursor_.bytePosition() > 0) {
-                it.toPreviousBoundary();
-            }
+            p2 = it.toPreviousBoundary();
         }
-        else {
-            if (textCursor_.bytePosition() < core::int_cast<Int>(text().size())) {
-                it.toNextBoundary();
-            }
+        else { // Right
+            p2 = it.toNextBoundary();
         }
-        textCursor_.setBytePosition(it.position());
-        reload_ = true;
-        repaint();
+        if (p2 != -1 && p1 != p2) {
+            textCursor_.setBytePosition(it.position());
+            reload_ = true;
+            repaint();
+        }
         return true;
     }
     else {
