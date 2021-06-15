@@ -20,6 +20,7 @@
 
 #include <vgc/core/colors.h>
 #include <vgc/core/floatarray.h>
+#include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/style.h>
 
@@ -124,21 +125,13 @@ bool LineEdit::onMouseRelease(MouseEvent* /*event*/)
 
 bool LineEdit::onMouseEnter()
 {
-    /*
-    isHovered_ = true;
-    reload_ = true;
-    repaint();
-    */
+    pushCursor(Qt::IBeamCursor);
     return true;
 }
 
 bool LineEdit::onMouseLeave()
 {
-    /*
-    isHovered_ = false;
-    reload_ = true;
-    repaint();
-    */
+    popCursor();
     return true;
 }
 
