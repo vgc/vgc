@@ -76,12 +76,15 @@ protected:
     core::Vec2f computePreferredSize() const override;
 
 private:
+    void updateBytePosition_(const core::Vec2f& mousePosition);
+    Int bytePosition_(const core::Vec2f& mousePosition);
     std::string text_;
     graphics::ShapedText shapedText_;
     graphics::TextCursor textCursor_;
     Int trianglesId_;
     bool reload_;
     bool isHovered_;
+    bool isMousePressed_;
 };
 
 } // namespace ui

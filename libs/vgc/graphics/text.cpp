@@ -343,6 +343,81 @@ void ShapedText::fill(core::FloatArray& data,
     }
 }
 
+namespace {
+
+double pos_(const ShapedGrapheme& grapheme) {
+    return grapheme.position()[0];
+}
+
+double adv_(const ShapedGrapheme& grapheme) {
+    return grapheme.advance()[0];
+}
+
+} // namespace
+
+Int ShapedText::bytePosition(const core::Vec2d& mousePosition)
+{
+    const ShapedGraphemeArray& g = graphemes();
+    double x = mousePosition[0];
+    Int numGraphemes = g.length();
+    if (numGraphemes == 0) {
+        return 0;
+    }
+    else {
+        if (x < 0) {
+            return 0;
+        }
+        else {
+            const ShapedGrapheme& last = g.last();
+            if (x > pos_(last) + adv_(last)) {
+                return core::int_cast<Int>(text().size());
+            }
+            else {
+                // Binary search: find grapheme hovered by mouse cursor.
+                // i1 = index of grapheme s.t. mouse is after start of grapheme.
+                // i2 = index of grapheme s.t. mouse is before end of grapheme.
+                // At end of loop: i1 == i2 == grapheme hovered by mouse position
+                Int i1 = 0;
+                Int i2 = g.length() - 1;
+                while (i1 != i2) {
+                    if (i2 == i1 + 1) {
+                        if (x < pos_(g[i2])) {
+                            i2 = i1;
+                        }
+                        else {
+                            i1 = i2;
+                        }
+                    }
+                    else {
+                        Int i3 = (i1 + i2) / 2;
+                        if (x < pos_(g[i3])) {
+                            i2 = i3;
+                        }
+                        else {
+                            i1 = i3;
+                        }
+                    }
+                }
+                // Determine whether the cursor is closer to the beginning
+                // of the grapheme or the end of the grapheme.
+                const ShapedGrapheme& grapheme = g[i1];
+                if (x - pos_(grapheme) < 0.5 * adv_(grapheme)) {
+                    return grapheme.bytePosition();
+                }
+                else {
+                    i2 = i1 + 1;
+                    if (i2 >= g.length()) {
+                        return core::int_cast<Int>(text().size());
+                    }
+                    else {
+                        return g[i2].bytePosition();
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Convenient macro for checking assertions and failing with a LogicError.
 // We should eventually add this to vgc::core API
 #define VGC_EXPECT_EQ(a, b) \

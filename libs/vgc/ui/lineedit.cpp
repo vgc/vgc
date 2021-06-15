@@ -36,7 +36,8 @@ LineEdit::LineEdit(const std::string& text) :
     textCursor_(false, 0),
     trianglesId_(-1),
     reload_(true),
-    isHovered_(false)
+    isHovered_(false),
+    isMousePressed_(false)
 {
     addClass(strings::LineEdit);
     setText(text);
@@ -107,19 +108,25 @@ void LineEdit::onPaintDestroy(graphics::Engine* engine)
     engine->destroyTriangles(trianglesId_);
 }
 
-bool LineEdit::onMouseMove(MouseEvent* /*event*/)
+bool LineEdit::onMouseMove(MouseEvent* event)
 {
+    if (isMousePressed_) {
+        updateBytePosition_(event->pos());
+    }
     return true;
 }
 
-bool LineEdit::onMousePress(MouseEvent* /*event*/)
+bool LineEdit::onMousePress(MouseEvent* event)
 {
+    isMousePressed_ = true;
     setFocus();
+    updateBytePosition_(event->pos());
     return true;
 }
 
 bool LineEdit::onMouseRelease(MouseEvent* /*event*/)
 {
+    isMousePressed_ = false;
     return true;
 }
 
@@ -262,6 +269,25 @@ core::Vec2f LineEdit::computePreferredSize() const
         res[1] = h.value();
     }
     return res;
+}
+
+void LineEdit::updateBytePosition_(const core::Vec2f& mousePosition)
+{
+    Int bytePosition = bytePosition_(mousePosition);
+    if (bytePosition != textCursor_.bytePosition()) {
+        textCursor_.setBytePosition(bytePosition);
+        reload_ = true;
+        repaint();
+    }
+}
+
+Int LineEdit::bytePosition_(const core::Vec2f& mousePosition)
+{
+    float paddingLeft = internal::getLength(this, strings::padding_left);
+    float x = mousePosition[0] - paddingLeft;
+    float y = mousePosition[1];
+    return shapedText_.bytePosition(
+                core::Vec2d(static_cast<double>(x), static_cast<double>(y)));
 }
 
 } // namespace ui
