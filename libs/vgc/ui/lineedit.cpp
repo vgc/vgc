@@ -187,6 +187,26 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         }
         return true;
     }
+    else if (key == Qt::Key_Home) {
+        Int p1 = textCursor_.bytePosition();
+        Int home = 0;
+        if (p1 != home) {
+            textCursor_.setBytePosition(home);
+            reload_ = true;
+            repaint();
+        }
+        return true;
+    }
+    else if (key == Qt::Key_End) {
+        Int p1 = textCursor_.bytePosition();
+        Int end = core::int_cast<Int>(text().size());
+        if (p1 != end) {
+            textCursor_.setBytePosition(end);
+            reload_ = true;
+            repaint();
+        }
+        return true;
+    }
     else if (key == Qt::Key_Left || key == Qt::Key_Right) {
         Int p1 = textCursor_.bytePosition();
         Int p2 = -1;
