@@ -13,6 +13,7 @@ vgc_add_library(ui
         button.h
         colorpalette.h
         column.h
+        cursor.h
         event.h
         exceptions.h
         flex.h
@@ -36,6 +37,7 @@ vgc_add_library(ui
         button.cpp
         colorpalette.cpp
         column.cpp
+        cursor.cpp
         event.cpp
         exceptions.cpp
         flex.cpp
