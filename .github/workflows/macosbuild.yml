@@ -95,7 +95,6 @@ jobs:
       run: |
         mkdir build
         cd build
-        echo "${CMAKE_EXTRA_ARGS}"
         cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/Qt/$QT_VERSION/clang_64
 
     - name: Build
