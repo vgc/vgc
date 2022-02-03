@@ -81,15 +81,19 @@ jobs:
         version: ${{env.QT_VERSION}}
         setup-python: false
 
+    - name: Install latest CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Install vcpkg dependencies
+      uses: lukka/run-vcpkg@v10.1
+      with:
+        vcpkgJsonGlob: 'vcpkg.json'
+        runVcpkgInstall: true
+
     # Still TODO: give Qt and Wix path to cmake
     - name: Configure
       working-directory: ${{runner.workspace}}
       run: |
         mkdir build
-        echo "${{runner.workspace}}"
-        echo "$GITHUB_WORKSPACE"
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=$GITHUB_WORKSPACE/Qt/$QT_VERSION/msvc2019_64
-        ls -al $GITHUB_WORKSPACE
-        ls -al $GITHUB_WORKSPACE/Qt
-        ls -al $GITHUB_WORKSPACE/Qt/$QT_VERSION
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH
