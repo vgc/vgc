@@ -75,10 +75,19 @@ jobs:
         python-version: '3.7'
         architecture: 'x64'
 
-    # Still TODO: give Qt, Wix, and python path to cmake
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: ${{env.QT_VERSION}}
+        setup-python: false
+
+    # Still TODO: give Qt and Wix path to cmake
     - name: Configure
       working-directory: ${{runner.workspace}}
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH
+        ls -al ${{runner.workspace}}
+        ls -al ${{runner.workspace}}/Qt
+        ls -al ${{runner.workspace}}/Qt/$QT_VERSION
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/Qt/$QT_VERSION/msvc2019_64

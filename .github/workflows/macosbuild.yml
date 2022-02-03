@@ -69,8 +69,18 @@ jobs:
         echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
 
-    # Install Qt. Note: this will automatically set Python to a version suitable
+    # Install Qt.
+    #
+    # Note: this will automatically set Python to a version suitable
     # for installing Qt. We override this in the "Setup Python" step that follows.
+    #
+    # Later note: I'm not quite sure why we don't just run setup-python first,
+    # then install Qt with "setup-python: false", as explained here:
+    #   https://github.com/jurplel/install-qt-action#setup-python
+    # But since when writing this note, there was explicitely "setup-python: true",
+    # I assume there was a good reason, e.g., the installation of Qt fails because
+    # the version of Python isn't appropriate.
+    #
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
