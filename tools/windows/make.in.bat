@@ -8,8 +8,7 @@ call "${CMAKE_GENERATOR_INSTANCE}\Common7\Tools\VsDevCmd.bat" -arch=amd64
 
 :: Build the given target with the default config
 if "%~1"=="" (
-    set TARGET=""
+    cmake --build . --config ${DefaultConfig}
 ) else (
-    set TARGET = "--target %1"
+    cmake --build . --target %1 --config ${DefaultConfig}
 )
-cmake --build . %TARGET% --config ${DefaultConfig}
