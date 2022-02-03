@@ -109,8 +109,10 @@ jobs:
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
+      shell: cmd
       run: make
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
+      shell: cmd
       run: make check
