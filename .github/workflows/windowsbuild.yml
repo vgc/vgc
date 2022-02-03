@@ -5,6 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
+  VCPKG_GIT_COMMIT_ID: 8518284c18b9f47b1ccae804cb68694181b780a8
 
 defaults:
   run:
@@ -84,16 +85,33 @@ jobs:
     - name: Install latest CMake
       uses: lukka/get-cmake@latest
 
+    # We manually install vcpkg to be able to cache installed
+    # dependencies, which would not be possible by using the
+    # provided vcpkg which is in C:\vcpkg
+
+    # - name: Install vcpkg
+    #   working-directory: ${{github.workspace}}
+    #   run: |
+    #     if cd vcpkg; then
+    #       git fetch
+    #     else
+    #       git clone --depth 1 https://github.com/microsoft/vcpkg.git
+    #       cd vcpkg
+    #     fi
+    #     git reset --hard $VCPKG_GIT_COMMIT_ID
+
     - name: Install vcpkg dependencies
       uses: lukka/run-vcpkg@v10.1
       with:
+        vcpkgDirectory: ${{github.workspace}}/vcpkg
+        vcpkgGitCommitId: ${{env.VCPKG_GIT_COMMIT_ID}}
         vcpkgJsonGlob: 'vcpkg.json'
         runVcpkgInstall: true
 
-    # Still TODO: give Qt and Wix path to cmake
+    # Still TODO: give Wix path to cmake
     - name: Configure
       working-directory: ${{runner.workspace}}
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH
