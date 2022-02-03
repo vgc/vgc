@@ -1,0 +1,20 @@
+name: Windows Build
+
+on: [push, pull_request]
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: 5.15.2
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        # We need to fetch more than one commit to get the correct build name
+        fetch-depth: 100
+
+    - name: Print git log
+      run: git log
