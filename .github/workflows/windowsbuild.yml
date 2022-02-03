@@ -5,7 +5,6 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
-  VCPKG_GIT_COMMIT_ID: 8518284c18b9f47b1ccae804cb68694181b780a8
 
 defaults:
   run:
@@ -85,26 +84,18 @@ jobs:
     - name: Install latest CMake
       uses: lukka/get-cmake@latest
 
-    # We manually install vcpkg to be able to cache installed
-    # dependencies, which would not be possible by using the
-    # provided vcpkg which is in C:\vcpkg
-
-    # - name: Install vcpkg
-    #   working-directory: ${{github.workspace}}
-    #   run: |
-    #     if cd vcpkg; then
-    #       git fetch
-    #     else
-    #       git clone --depth 1 https://github.com/microsoft/vcpkg.git
-    #       cd vcpkg
-    #     fi
-    #     git reset --hard $VCPKG_GIT_COMMIT_ID
-
+    # This does the following:
+    # - Download vcpkg (version = given commit ID) to the given directory
+    # - Install vcpkg and all the dependencies listed in vcpkg.json
+    # - Cache the result, using as cache key the commit ID and a hash of
+    #   vcpkg.json, so that we don't need to do it again if neither the
+    #   commit ID of vcpkg.json file changes.
+    # - Set $VCPKG_ROOT as the location where vcpkg was installed
     - name: Install vcpkg dependencies
       uses: lukka/run-vcpkg@v10.1
       with:
         vcpkgDirectory: ${{github.workspace}}/vcpkg
-        vcpkgGitCommitId: ${{env.VCPKG_GIT_COMMIT_ID}}
+        vcpkgGitCommitId: 8518284c18b9f47b1ccae804cb68694181b780a8
         vcpkgJsonGlob: 'vcpkg.json'
         runVcpkgInstall: true
 
@@ -114,4 +105,12 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      run: make
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      run: make check
