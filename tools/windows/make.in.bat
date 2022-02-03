@@ -1,6 +1,6 @@
 :: Don't print commands before executing them and keep variables
 :: and working directory local to this script
-@echo off
+@echo on
 setlocal
 
 :: Setup Visual Studio development environment
