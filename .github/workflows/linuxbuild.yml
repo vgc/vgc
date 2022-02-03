@@ -8,6 +8,10 @@ env:
   CC: gcc-9
   CXX: g++-9
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ubuntu-18.04
@@ -74,7 +78,6 @@ jobs:
         architecture: 'x64'
 
     - name: Install most dependencies
-      shell: bash
       working-directory: ${{runner.workspace}}
       run: |
         sudo apt-get install -y libgl1-mesa-dev
@@ -90,14 +93,12 @@ jobs:
     #    version: '5.15.2'
 
     - name: Install Qt
-      shell: bash
       working-directory: ${{runner.workspace}}
       run: |
         wget --progress=dot:giga https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
         tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
 
     - name: Configure
-      shell: bash
       working-directory: ${{runner.workspace}}
       run: |
         mkdir build
@@ -107,17 +108,14 @@ jobs:
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
-      shell: bash
       run: make
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
-      shell: bash
       run: make check
 
     - name: Deploy
       working-directory: ${{runner.workspace}}/build
-      shell: bash
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: make deploy

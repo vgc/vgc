@@ -68,3 +68,9 @@ jobs:
         echo "GITHUB_GRAPHQL_URL:   $GITHUB_GRAPHQL_URL"
         echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+        architecture: 'x64'
