@@ -86,8 +86,10 @@ jobs:
       working-directory: ${{runner.workspace}}
       run: |
         mkdir build
+        echo "${{runner.workspace}}"
+        echo "$GITHUB_WORKSPACE"
         cd build
-        ls -al ${{runner.workspace}}
-        ls -al ${{runner.workspace}}/Qt
-        ls -al ${{runner.workspace}}/Qt/$QT_VERSION
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/Qt/$QT_VERSION/msvc2019_64
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=$GITHUB_WORKSPACE/Qt/$QT_VERSION/msvc2019_64
+        ls -al $GITHUB_WORKSPACE
+        ls -al $GITHUB_WORKSPACE/Qt
+        ls -al $GITHUB_WORKSPACE/Qt/$QT_VERSION
