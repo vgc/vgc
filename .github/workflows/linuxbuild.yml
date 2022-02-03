@@ -85,13 +85,20 @@ jobs:
         sudo apt-get install -y libfreetype6-dev
         sudo apt-get install -y libharfbuzz-dev
 
-    # The following works to install Qt, but it takes quite a long time (4min) and
-    # it overrides our python version
-    #- name: Install Qt
-    #  uses: jurplel/install-qt-action@v2
-    #  with:
-    #    version: '5.15.2'
-
+    # Install Qt.
+    #
+    # Note: The following would also work to install Qt, but it takes
+    # quite a long time (4min) and it overrides our python version.
+    #
+    # - name: Install Qt
+    #   uses: jurplel/install-qt-action@v2
+    #   with:
+    #     version: '5.15.2'
+    #
+    # Note 2: regarding the python issue, looks like we could simply pass
+    # "setup-python: false" to install-qt-action, see:
+    # https://github.com/jurplel/install-qt-action#setup-python
+    #
     - name: Install Qt
       working-directory: ${{runner.workspace}}
       run: |

@@ -74,3 +74,11 @@ jobs:
       with:
         python-version: '3.7'
         architecture: 'x64'
+
+    # Still TODO: give Qt, Wix, and python path to cmake
+    - name: Configure
+      working-directory: ${{runner.workspace}}
+      run: |
+        mkdir build
+        cd build
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH
