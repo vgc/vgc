@@ -46,7 +46,7 @@
 # - C:/Program Files/VGC Alpha/
 #
 # Note that other things determine whether different versions can be installed
-# side-by-side, such as the "upgrade policy". See vgc/tools/windows/wix.py for
+# side-by-side, such as the "upgrade policy". See vgc/tools/windows/deploy.py for
 # more details.
 #
 # Version number (major and minor)
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 
     # Note: installFamily, installVersion, and installHumanVersion are not in
     # the version.txt file since they depend on the upgradePolicy, which we
-    # cannot know at this time. See vgc/tools/windows/wix.py for details.
+    # cannot know at this time. See vgc/tools/windows/deploy.py for details.
 
     # Write commit info
     res += "commitRepository=" + commitRepository + "\n"
