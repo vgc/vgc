@@ -481,6 +481,48 @@ private:
     internal::ShapedTextImpl* impl_;
 };
 
+/// \class vgc::graphics::TextScroll
+/// \brief Represents whether the text is scrolled left/right or up/down.
+///
+class VGC_GRAPHICS_API TextScroll {
+public:
+
+    /// Creates a TextScroll with the given horizontal scrolling `x` and
+    /// vertical scrolling `y`.
+    ///
+    TextScroll(Int x = 0, Int y = 0) :
+        x_(x),
+        y_(y) {}
+
+    /// Returns the horizontal scrolling.
+    ///
+    Int x() const {
+        return x_;
+    }
+
+    /// Sets the horizontal scrolling.
+    ///
+    void setX(Int x) {
+        x_ = x;
+    }
+
+    /// Returns the vertical scrolling.
+    ///
+    Int y() const {
+        return y_;
+    }
+
+    /// Sets the vertical scrolling.
+    ///
+    void setY(Int y) {
+        y_ = y;
+    }
+
+private:
+    Int x_;
+    Int y_;
+};
+
 /// \class vgc::graphics::TextCursor
 /// \brief Represents the position and properties of the text cursor.
 ///
