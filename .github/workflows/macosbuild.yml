@@ -6,6 +6,10 @@ env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: macos-10.15
@@ -65,8 +69,18 @@ jobs:
         echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
 
-    # Install Qt. Note: this will automatically set Python to a version suitable
+    # Install Qt.
+    #
+    # Note: this will automatically set Python to a version suitable
     # for installing Qt. We override this in the "Setup Python" step that follows.
+    #
+    # Later note: I'm not quite sure why we don't just run setup-python first,
+    # then install Qt with "setup-python: false", as explained here:
+    #   https://github.com/jurplel/install-qt-action#setup-python
+    # But since when writing this note, there was explicitely "setup-python: true",
+    # I assume there was a good reason, e.g., the installation of Qt fails because
+    # the version of Python isn't appropriate.
+    #
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
@@ -80,7 +94,6 @@ jobs:
         architecture: 'x64'
 
     - name: Install other dependencies
-      shell: bash
       working-directory: ${{runner.workspace}}
       run: |
         brew install freetype
@@ -88,27 +101,22 @@ jobs:
         pip3 install dmgbuild
 
     - name: Configure
-      shell: bash
       working-directory: ${{runner.workspace}}
       run: |
         mkdir build
         cd build
-        echo "${CMAKE_EXTRA_ARGS}"
         cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/Qt/$QT_VERSION/clang_64
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
-      shell: bash
       run: make
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
-      shell: bash
       run: make check
 
     - name: Deploy
       working-directory: ${{runner.workspace}}/build
-      shell: bash
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: make deploy

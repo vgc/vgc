@@ -774,7 +774,7 @@ if(WIN32)
             \).VersionInfo.FileVersion
             > ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe.version
         COMMAND ${PYTHON_EXECUTABLE}
-            "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/wix.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/deploy.py"
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"

@@ -1,12 +1,10 @@
-name: Linux Build
+name: Windows Build
 
 on: [push, pull_request]
 
 env:
   BUILD_TYPE: Release
-  QT_VERSION: 5.12.5
-  CC: gcc-9
-  CXX: g++-9
+  QT_VERSION: 5.15.2
 
 defaults:
   run:
@@ -14,7 +12,7 @@ defaults:
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -70,6 +68,7 @@ jobs:
         echo "GITHUB_GRAPHQL_URL:   $GITHUB_GRAPHQL_URL"
         echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
+        echo "WIX:                  $WIX"
 
     - name: Setup Python
       uses: actions/setup-python@v2
@@ -77,51 +76,52 @@ jobs:
         python-version: '3.7'
         architecture: 'x64'
 
-    - name: Install most dependencies
-      working-directory: ${{runner.workspace}}
-      run: |
-        sudo apt-get install -y libgl1-mesa-dev
-        sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
-        sudo apt-get install -y libfreetype6-dev
-        sudo apt-get install -y libharfbuzz-dev
-
-    # Install Qt.
-    #
-    # Note: The following would also work to install Qt, but it takes
-    # quite a long time (4min) and it overrides our python version.
-    #
-    # - name: Install Qt
-    #   uses: jurplel/install-qt-action@v2
-    #   with:
-    #     version: '5.15.2'
-    #
-    # Note 2: regarding the python issue, looks like we could simply pass
-    # "setup-python: false" to install-qt-action, see:
-    # https://github.com/jurplel/install-qt-action#setup-python
-    #
     - name: Install Qt
-      working-directory: ${{runner.workspace}}
-      run: |
-        wget --progress=dot:giga https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
-        tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: ${{env.QT_VERSION}}
+        setup-python: false
 
+    - name: Install latest CMake
+      uses: lukka/get-cmake@latest
+
+    # This does the following:
+    # - Download vcpkg (version = given commit ID) to the given directory
+    # - Install vcpkg and all the dependencies listed in vcpkg.json
+    # - Cache the result, using as cache key the commit ID and a hash of
+    #   vcpkg.json, so that we don't need to do it again if neither the
+    #   commit ID of vcpkg.json file changes.
+    # - Set $VCPKG_ROOT as the location where vcpkg was installed
+    - name: Install vcpkg dependencies
+      uses: lukka/run-vcpkg@v10.1
+      with:
+        vcpkgDirectory: ${{github.workspace}}/vcpkg
+        vcpkgGitCommitId: 8518284c18b9f47b1ccae804cb68694181b780a8
+        vcpkgJsonGlob: 'vcpkg.json'
+        runVcpkgInstall: true
+
+    # Still TODO: give Wix path to cmake
     - name: Configure
       working-directory: ${{runner.workspace}}
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DWiX="$WIX"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
+      shell: cmd
       run: make
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
+      shell: cmd
       run: make check
 
     - name: Deploy
       working-directory: ${{runner.workspace}}/build
+      shell: cmd
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
+        VGC_CODESIGN_URL: ${{secrets.VGC_CODESIGN_URL}}
       run: make deploy

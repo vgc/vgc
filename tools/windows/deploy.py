@@ -339,13 +339,24 @@ import argparse
 import base64
 import datetime
 import hashlib
+import io
 import json
+import mimetypes
 import os
 import re
 import subprocess
 import sys
 import time
+import urllib.parse
+import urllib.request
 import uuid
+
+# Prints with flush=True by default. Using flush=True tends to behave better and
+# prevent truncating and ordering issues in TravisCI and perhaps other systems
+# which process and redirect the output.
+#
+def print_(*objects, sep=' ', end='\n', file=sys.stdout, flush=True):
+    print(*objects, sep=sep, end=end, file=file, flush=flush)
 
 # Converts any string identifier into a valid WiX Id, that is:
 # - only contain ASCII characters A-Z, a-z, digits, underscores, or period,
@@ -460,7 +471,12 @@ class CodeSignerResource:
                     print(f"Skipping signature step (no certificate provided)", flush=True)
 
         codeSignUrl = os.getenv("VGC_CODESIGN_URL")
-        codeSignUrlKey = os.getenv("VGC_APPVEYOR_KEY")
+        codeSignUrlKey = None
+        for key_name in ["VGC_GITHUB_KEY", "VGC_APPVEYOR_KEY"]:
+            key = os.getenv(key_name)
+            if key:
+                codeSignUrlKey = key
+                break
         self.codeSigner = CodeSigner(self.buildDir, codeSignUrl, codeSignUrlKey)
         return self.codeSigner
 
@@ -1034,6 +1050,84 @@ def makeSuiteInstaller(
 def getIniValue(ini, key):
     return re.search("^" + key + "=(.*)$", ini, flags = re.MULTILINE).group(1)
 
+# Makes a POST request to the given URL with the given data.
+# The given data should be a Python dictionary, which this function
+# automatically encodes as JSON. Finally, the JSON response is decoded
+# and returned as a python dictionary.
+#
+def post_json(url, data):
+    databytes = json.dumps(data).encode("utf-8")
+    request = urllib.request.Request(url)
+    request.method = "POST"
+    request.add_header("Content-Type", "application/json; charset=utf-8")
+    response = urllib.request.urlopen(request, databytes)
+    encoding = response.info().get_param("charset") or "utf-8"
+    return json.loads(response.read().decode(encoding))
+
+# Makes a multipart POST request to the given URL with the given
+# fields and files. The JSON response is decoded
+# and returned as a python dictionary.
+#
+# fields should be a dictionary of the form:
+# {
+#     "name1": "value1",
+#     "name2": "value2"
+# }
+#
+# and files should be a dictionary of the form:
+# {
+#     "name3": filepath3,
+#     "name4": filepath4
+# }
+#
+# where filepaths are of type pathlib.Path.
+#
+def post_multipart(url, fields, files):
+    boundary = uuid.uuid4().hex
+    bBoundary = boundary.encode("utf-8")
+    data = io.BytesIO()
+    for name, value in fields.items():
+        bName = name.encode("utf-8")
+        bValue = value.encode("utf-8")
+        data.write(b"--" + bBoundary + b"\r\n")
+        data.write(b"Content-Disposition: form-data; name=\"" + bName + b"\"\r\n")
+        data.write(b"\r\n")
+        data.write(bValue)
+        data.write(b"\r\n")
+    for name, filepath in files.items():
+        filename = filepath.name
+        mimetype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        bName = name.encode("utf-8")
+        bFilename = filename.encode("utf-8")
+        bMimetype = mimetype.encode("utf-8")
+        data.write(b"--" + bBoundary + b"\r\n")
+        data.write(b"Content-Disposition: form-data; name=\"" + bName + b"\"; filename=\"" + bFilename + b"\"\r\n")
+        data.write(b"Content-Type: " + bMimetype + b"\r\n")
+        data.write(b"\r\n")
+        data.write(filepath.read_bytes())
+        data.write(b"\r\n")
+    data.write(b"--" + bBoundary + b"--\r\n")
+    databytes = data.getvalue()
+    request = urllib.request.Request(url)
+    request.method = "POST"
+    request.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+    request.add_header("Content-Length", len(databytes))
+    response = urllib.request.urlopen(request, databytes)
+    encoding = response.info().get_param("charset") or "utf-8"
+    return json.loads(response.read().decode(encoding))
+
+# Contructs a URL by concatenating the given base url with
+# the given query parameters.
+#
+# Example:
+# urlencode("http://www.example.com", {"key": "hello", "password": "world"})
+#
+# Output:
+# "http://www.example.com?key=hello&password=world"
+#
+def urlencode(url, data):
+    return url + "?" + urllib.parse.urlencode(data)
+
 # Script entry point.
 #
 if __name__ == "__main__":
@@ -1066,8 +1160,12 @@ if __name__ == "__main__":
     versionType = getIniValue(version, "versionType")
     versionMajor = getIniValue(version, "versionMajor")
     versionMinor = getIniValue(version, "versionMinor")
+    versionName = getIniValue(version, "versionName")
+    commitRepository = getIniValue(version, "commitRepository")
     commitBranch = getIniValue(version, "commitBranch")
+    commitHash = getIniValue(version, "commitHash")
     commitDate = getIniValue(version, "commitDate")
+    commitTime = getIniValue(version, "commitTime")
     commitIndex = getIniValue(version, "commitIndex")
     architecture = getIniValue(version, "buildArchitecture")
 
@@ -1096,3 +1194,72 @@ if __name__ == "__main__":
 
         # TODO: also create a ZIP for portable installation (like Blender
         # does), with updates disabled.
+
+    # Upload artifacts if this is a Travis of GitHub Action build.
+    #
+    # We check for TRAVIS_REPO_SLUG rather than simply TRAVIS to prevent users
+    # from mistakenly attempting to upload artifacts to our VGC servers if they
+    # fork VGC and setup their own Travis builds.
+    #
+    # We have other security measures in place to prevent intentional harm from
+    # malicious users.
+    #
+    # Note that VGC_TRAVIS_KEY is a secure environment variable not defined
+    # for pull requests.
+    #
+    filesToUpload = list(deployDir.glob('VGC*.exe'))
+    upload = False
+    if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
+        upload = True
+        key = os.getenv("VGC_TRAVIS_KEY", default="")
+        pr = os.getenv("TRAVIS_PULL_REQUEST", default="false")
+        url = "https://webhooks.vgc.io/travis"
+        commitMessage = os.getenv("TRAVIS_COMMIT_MESSAGE")
+    elif os.getenv("GITHUB_REPOSITORY") == "vgc/vgc":
+        eventName = os.getenv("GITHUB_EVENT_NAME")
+        url = "https://webhooks.vgc.io/github"
+        commitMessage = os.getenv("COMMIT_MESSAGE")
+        if eventName == "pull_request":
+            upload = True
+            key = ""
+            ref = os.getenv("GITHUB_REF") # Example: refs/pull/461/merge
+            pr = ref.split('/')[2]        # Example: 461
+        elif eventName == "push":
+            upload = True
+            key = os.getenv("VGC_GITHUB_KEY")
+            assert key, "Missing key: cannot upload artifact"
+            pr = "false"
+        else:
+            upload = False
+    if upload:
+        print_("Uploading commit metadata...", end="")
+        response = post_json(
+            urlencode(url, {
+                "key": key,
+                "pr": pr
+            }), {
+            "versionType": versionType,
+            "versionMajor": versionMajor,
+            "versionMinor": versionMinor,
+            "versionName": versionName,
+            "commitRepository": commitRepository,
+            "commitBranch": commitBranch,
+            "commitHash": commitHash,
+            "commitDate": commitDate,
+            "commitTime": commitTime,
+            "commitIndex": commitIndex,
+            "commitMessage": commitMessage
+        })
+        print_(" Done.")
+        releaseId = response["releaseId"]
+        for file in filesToUpload:
+            print_(f"Uploading {file}...", end="")
+            response = post_multipart(
+                urlencode(url, {
+                    "key": key,
+                    "pr": pr,
+                    "releaseId": releaseId
+                }), {}, {
+                "file": file
+            })
+            print_(" Done.")
