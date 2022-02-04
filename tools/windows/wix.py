@@ -1116,6 +1116,18 @@ def post_multipart(url, fields, files):
     encoding = response.info().get_param("charset") or "utf-8"
     return json.loads(response.read().decode(encoding))
 
+# Contructs a URL by concatenating the given base url with
+# the given query parameters.
+#
+# Example:
+# urlencode("http://www.example.com", {"key": "hello", "password": "world"})
+#
+# Output:
+# "http://www.example.com?key=hello&password=world"
+#
+def urlencode(url, data):
+    return url + "?" + urllib.parse.urlencode(data)
+
 # Script entry point.
 #
 if __name__ == "__main__":
@@ -1197,7 +1209,8 @@ if __name__ == "__main__":
     #
     filesToUpload = deployDir.glob('VGC*.exe')
     print_("files to upload:")
-    print_(filesToUpload)
+    for file in filesToUpload:
+        print_(file)
     upload = False
     if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
         upload = True
