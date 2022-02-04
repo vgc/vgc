@@ -460,7 +460,12 @@ class CodeSignerResource:
                     print(f"Skipping signature step (no certificate provided)", flush=True)
 
         codeSignUrl = os.getenv("VGC_CODESIGN_URL")
-        codeSignUrlKey = os.getenv("VGC_APPVEYOR_KEY")
+        codeSignUrlKey = None
+        for key_name in ["VGC_GITHUB_KEY", "VGC_APPVEYOR_KEY"]:
+            key = os.getenv(key_name)
+            if key:
+                codeSignUrlKey = key
+                break
         self.codeSigner = CodeSigner(self.buildDir, codeSignUrl, codeSignUrlKey)
         return self.codeSigner
 
