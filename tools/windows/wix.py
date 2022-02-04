@@ -1207,10 +1207,7 @@ if __name__ == "__main__":
     # Note that VGC_TRAVIS_KEY is a secure environment variable not defined
     # for pull requests.
     #
-    filesToUpload = deployDir.glob('VGC*.exe')
-    print_("files to upload:")
-    for file in filesToUpload:
-        print_(file)
+    filesToUpload = list(deployDir.glob('VGC*.exe'))
     upload = False
     if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
         upload = True
