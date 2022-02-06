@@ -82,6 +82,13 @@
 #
 
 cmake_minimum_required(VERSION 3.1.0)
+
+# Disable vcpkg manifest mode. See:
+#  https://vcpkg.readthedocs.io/en/latest/users/manifests/
+#  https://github.com/vgc/vgc/issues/578
+#
+set(VCPKG_MANIFEST_MODE OFF)
+
 project(vgc)
 
 # Manufacturer, suite, and commit repository. Customize this if you are
