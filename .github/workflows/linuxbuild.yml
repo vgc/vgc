@@ -5,8 +5,8 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.12.5
-  CC: gcc-9
-  CXX: g++-9
+  CC: gcc-7
+  CXX: g++-7
 
 defaults:
   run:
