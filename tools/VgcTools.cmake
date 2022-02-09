@@ -395,34 +395,40 @@ function(vgc_print_target_property target prop)
     endif()
 endfunction()
 
-# Print useful info about the imported target, such as
+# Print useful info about the target library, such as
 # its include dirs and location.
 #
 # Example:
-# vgc_print_imported_target_info(Freetype::Freetype)
+# vgc_print_library_info(Freetype::Freetype)
 #
 # Output:
+# -- Freetype::Freetype TYPE: IMPORTED_LIBRARY
 # -- Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES: C:/Users/Boris/vcpkg/installed/x64-windows/include
 # -- Freetype::Freetype IMPORTED_IMPLIB_RELEASE: C:/Users/Boris/vcpkg/installed/x64-windows/lib/freetype.lib
 # -- Freetype::Freetype IMPORTED_LOCATION_RELEASE: C:/Users/Boris/vcpkg/installed/x64-windows/bin/freetype.dll
 # -- Freetype::Freetype IMPORTED_IMPLIB_DEBUG: C:/Users/Boris/vcpkg/installed/x64-windows/debug/lib/freetyped.lib
 # -- Freetype::Freetype IMPORTED_LOCATION_DEBUG: C:/Users/Boris/vcpkg/installed/x64-windows/debug/bin/freetyped.dll
 #
-function(vgc_print_imported_target_info target)
+function(vgc_print_library_info target)
     if(NOT TARGET ${target})
         message(WARNING "No target named '${target}'")
-        return()
-    endif()
-    vgc_print_target_property(${target} INTERFACE_INCLUDE_DIRECTORIES)
-    get_target_property(configs ${target} IMPORTED_CONFIGURATIONS)
-    if(configs)
-        set(props "IMPORTED_IMPLIB;IMPORTED_LOCATION")
-        foreach(config ${configs})
-            foreach(prop ${props})
-                vgc_print_target_property(${target} ${prop}_${config})
-            endforeach()
-        endforeach()
     else()
-        vgc_print_target_property(${target} IMPORTED_LOCATION)
+        vgc_print_target_property(${target} TYPE)
+        vgc_print_target_property(${target} INTERFACE_INCLUDE_DIRECTORIES)
+        get_target_property(type ${target} TYPE)
+        if(${type} STREQUAL "IMPORTED_LIBRARY")
+            get_target_property(configs ${target} IMPORTED_CONFIGURATIONS)
+            if(configs)
+                set(props "IMPORTED_IMPLIB;IMPORTED_LOCATION")
+                foreach(config ${configs})
+                    foreach(prop ${props})
+                        vgc_print_target_property(${target} ${prop}_${config})
+                    endforeach()
+                endforeach()
+            else()
+                vgc_print_target_property(${target} IMPORTED_LOCATION)
+            endif()
+        endif()
     endif()
+
 endfunction()
