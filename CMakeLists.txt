@@ -642,7 +642,7 @@ if(NOT FREETYPE_VERSION_STRING)
     endif()
 endif()
 message(STATUS "Version: ${FREETYPE_VERSION_STRING}")
-vgc_print_imported_target_info(Freetype::Freetype)
+vgc_print_library_info(Freetype::Freetype)
 message(STATUS "") # newline
 
 # HarfBuzz
@@ -677,7 +677,7 @@ if(NOT HARFBUZZ_VERSION_STRING)
     endif()
 endif()
 message(STATUS "Version: ${HARFBUZZ_VERSION_STRING}")
-vgc_print_imported_target_info(harfbuzz::harfbuzz)
+vgc_print_library_info(harfbuzz::harfbuzz)
 message(STATUS "") # newline
 
 # Add internal libs and apps
