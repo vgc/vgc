@@ -12,7 +12,7 @@ defaults:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
     - uses: actions/checkout@v2
@@ -100,7 +100,6 @@ jobs:
         vcpkgJsonGlob: 'vcpkg.json'
         runVcpkgInstall: true
 
-    # Still TODO: give Wix path to cmake
     - name: Configure
       working-directory: ${{runner.workspace}}
       run: |
