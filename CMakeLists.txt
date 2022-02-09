@@ -1,86 +1,3 @@
-#
-# Build instructions
-# ==================
-#
-# ## On Windows
-#
-# git clone https://github.com/vgc/vgc.git
-# mkdir build
-# cd build
-# cmake ../vgc
-#     -G "Visual Studio 15 2017" -A x64
-#     -DPython="C:/Users/Boris/AppData/Local/Programs/Python/Python37"
-#     -DQt="C:/Qt/5.12.3/msvc2017_64"
-#     -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
-# make
-# test [-VV]
-# [make deploy]
-#
-# Note: Wix is only necessary if you plan to deploy the application, that is,
-# create a Windows installer.
-#
-# Note 2: `make` and `test` refer to batch scripts `make.bat` and `test.bat`,
-# which CMake copies from tools/windows to the build directory.
-#
-# ## On Linux
-#
-# git clone https://github.com/vgc/vgc.git
-# mkdir build
-# cd build
-# cmake ../vgc
-#     -DQt="~/Qt/5.12.3/gcc_64"
-# make
-# ctest [-VV]
-# [make deploy]
-#
-# Branching model
-# ===============
-#
-# We follow a trunk-based [1] branching model that looks like:
-#
-#                     __ 2020.0    __ 2020.1           <- "stable"
-#                ____/____________/___________ 2020    <- "beta"
-#               /          /
-#              /          / <- cherry-pick
-# ____________/__________/____________________ master  <- "alpha"
-#  \______/      \______/
-#    gh62          gh63
-#
-# [1] https://trunkbaseddevelopment.com/
-#
-# Branches like 2020 are called "beta branches", and branches like 2020.0 are
-# called "stable branches". Both are specific cases of "release branches".
-#
-# New features and bug fixes are developed via topic branches off the master
-# branch (e.g., "gh62", referring to the issue #62 on GitHub). If we want to
-# fix a bug affecting 2020.0, we first fix it in master, then manually
-# cherry-pick the fix to 2020. In rare cases, if the bug isn't reproducible in
-# master (e.g., due to significant refactoring or removed feature), it is
-# allowed to fix a bug directy off a beta branch, not merging back to master.
-#
-# In fact, unlike in the "GitFlow" branching model, we never merge back or
-# cherry-pick changes from release branches to master. We only go the other
-# way around: from master to release:
-#
-#   GitFlow:      release --> master  (merge or cherry-pick)
-#   trunk-based:  master  --> release (cherry-pick)
-#
-# The rationale is that any merge or cherry-pick introduces a small risk of
-# (possibly undetected) problems, and we prefer these problems to only affect
-# a single release branch rather than all future versions. Philosophically,
-# one can view this approach as prioritizing long-term quality over short-term
-# quality. Practically, this has many advantages:
-# - Conceptually simpler branching model.
-# - Makes integrations between master and release branches explicit
-#   (and as we know, "explicit is better than implicit").
-# - Prevents merge hell.
-# - Allows to set VGC_VERSION_* after creating a release branch without
-#   worrying that this change could be merged back to master.
-# - Allows to fix bugs differently in master and release branches in case
-#   these branches have diverged too much.
-# - Other advantages well documented in [1].
-#
-
 cmake_minimum_required(VERSION 3.1.0)
 project(vgc)
 
@@ -105,29 +22,20 @@ set(VGC_MANUFACTURER "VGC Software" CACHE STRING "Customize this if you distribu
 set(VGC_SUITE "VGC" CACHE STRING "Customize this if you distribute modified versions of VGC.")
 set(VGC_COMMIT_REPOSITORY "https://github.com/vgc/vgc" CACHE STRING "Customize this if you distribute modified versions of VGC.")
 
-# Commit branch. By default, the current commit branch is automatically
-# detected at build time and written to resources/core/version.txt via the
-# following command:
+# Commit branch. This value is written to resources/core/version.txt and used
+# to generate appropriate metadata and program name. See ./tools/version.py for
+# more info.
+#
+# By default, the current commit branch is automatically detected at build time
+# via the following command:
 #
 #   git rev-parse --abbrev-ref HEAD
 #
-# However, you can override this automatic detection by manually specifying a
-# non-empty string to VGC_COMMIT_BRANCH. This is useful if you are in a
-# detached HEAD state, in which case the concept of branch is ambiguous and
-# the above command would return "HEAD". For example, in Travis, one may
-# use TRAVIS_BRANCH or TRAVIS_PULL_REQUEST_BRANCH, documented here:
-#
-#   https://docs.travis-ci.com/user/environment-variables/
-#
-# Note that automatic detection of the branch happens at build time, since the
-# current branch may change from build to build without CMake being re-run.
-# This means that you can't know the automatically detected branch in this
-# CMakeLists. In particular, the CMake variable VGC_COMMIT_BRANCH stays empty
-# unless you manually specify it. If you need to known the automatically
-# detected branch, you must read and parse resources/core/version.txt at build
-# time.
-#
-# See ./tools/version.py for more info.
+# Unfortunately, the command above doesn't work well when you're in a detached
+# HEAD state, which is often the case in CI builds. In this case, you can
+# manually specify the branch by setting an explicit value for
+# VGC_COMMIT_BRANCH. See for example the various GitHub Actions files in
+# .github/workflows
 #
 set(VGC_COMMIT_BRANCH "" CACHE STRING "Commit branch. Leave empty for automatic detection.")
 
