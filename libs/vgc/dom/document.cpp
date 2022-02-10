@@ -711,7 +711,7 @@ DocumentPtr Document::open(const std::string& filePath)
 
     std::ifstream in(filePath);
     if (!in.is_open()) {
-        throw FileError("Cannot open file " + filePath + ": " +  std::strerror(errno));
+        throw FileError("Cannot open file " + filePath + ": " + std::strerror(errno));
     }
 
     return Parser::parse(in);
@@ -837,7 +837,7 @@ void Document::save(const std::string& filePath,
 {
     std::ofstream out(filePath);
     if (!out.is_open()) {
-        throw FileError("Cannot save file " + filePath + ": " +  std::strerror(errno));
+        throw FileError("Cannot save file " + filePath + ": " + std::strerror(errno));
     }
 
     out << xmlDeclaration_ << std::endl;
