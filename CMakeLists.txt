@@ -75,12 +75,16 @@ endif()
 #
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(VGC_COMPILER_WARNING_FLAGS "")
+    set(VGC_COMPILER_WARNING_DEFINITIONS "")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(VGC_COMPILER_WARNING_FLAGS "")
+    set(VGC_COMPILER_WARNING_DEFINITIONS "")
 elseif(MSVC)
-    # /wd4251 class 'Foo' needs to have dll-interface to be used by clients of class 'Bar'
-    #         https://github.com/vgc/vgc/issues/377
+    # /wd4251: class 'Foo' needs to have dll-interface to be used by clients of class 'Bar'
+    #          https://github.com/vgc/vgc/issues/377
     set(VGC_COMPILER_WARNING_FLAGS /wd4251)
+    # C4996: 'strerror'/'getenv'/etc: This function or variable may be unsafe. Consider using 'strerror_s'/_dupenv_s'/etc instead.
+    set(VGC_COMPILER_WARNING_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
 endif ()
 
 # Import helper CMake functions
