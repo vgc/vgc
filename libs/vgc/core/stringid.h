@@ -152,7 +152,7 @@ public:
     }
 
 private:
-    friend class std::hash<StringId>;
+    friend struct std::hash<StringId>;
     const std::string* stringPtr_;
 };
 
