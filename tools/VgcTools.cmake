@@ -105,6 +105,9 @@ function(vgc_add_library LIB_NAME)
     # Note: This is already the default on Windows.
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
+    # Add compiler warning flags
+    target_compile_options(${TARGET_NAME} PUBLIC ${VGC_COMPILER_WARNING_FLAGS})
+
     # Write list of resources as comma-separated string
     set(RESOURCES_TXT ${CMAKE_CURRENT_BINARY_DIR}/resources.txt)
     vgc_prepend_(RESOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ ${ARG_RESOURCE_FILES})

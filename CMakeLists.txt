@@ -71,6 +71,18 @@ else()
     set(VGC_ARCHITECTURE x86_64 CACHE STRING "Target architecture. We only support x86_64 for now.")
 endif()
 
+# Compiler warning flags.
+#
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(VGC_COMPILER_WARNING_FLAGS "")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(VGC_COMPILER_WARNING_FLAGS "")
+elseif(MSVC)
+    # /wd4251 class 'Foo' needs to have dll-interface to be used by clients of class 'Bar'
+    #         https://github.com/vgc/vgc/issues/377
+    set(VGC_COMPILER_WARNING_FLAGS /wd4251)
+endif ()
+
 # Import helper CMake functions
 include(tools/VgcTools.cmake)
 
