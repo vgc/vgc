@@ -26,16 +26,16 @@ std::string replace(const std::string& s,
     std::string res;
     res.reserve(s.size());
 
-    // Early return if from is an empty string
-    if (from.size() == 0) {
+    // Early return if either `s` or `from` are empty strings
+    size_t ns = s.size();
+    size_t nf = from.size();
+    if (ns == 0 || nf == 0) {
         res = s;
         return res;
     }
 
-    int i = 0;
-    int k = 0;
-    int ns = s.size();
-    int nf = from.size();
+    size_t i = 0;
+    size_t k = 0;
     while (i + k <= ns) {
         // Invariants:
         // 0 <= k <= from.size()
@@ -52,7 +52,7 @@ std::string replace(const std::string& s,
             // Not found, let's copy s into res.
             // In most loop iteration, we end up here, and k == 0, that
             // is, we copy one more character from s to res.
-            int imax = std::min(i+k, ns-1);
+            size_t imax = std::min(i+k, ns-1);
             while (i <= imax) {
                 res += s[i];
                 ++i;
