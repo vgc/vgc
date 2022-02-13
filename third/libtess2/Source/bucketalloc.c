@@ -55,7 +55,7 @@ struct BucketAlloc
 
 static int CreateBucket( struct BucketAlloc* ba )
 {
-    unsigned int size;
+	unsigned int size;
 	Bucket* bucket;
 	void* freelist;
 	unsigned char* head;
