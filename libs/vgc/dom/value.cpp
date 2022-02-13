@@ -79,6 +79,7 @@ Value parseValue(const std::string& s, ValueType t)
             "Failed to convert '" + s + "' into a Value of type " +
              core::toString(t) + " for the following reason: " + e.what());
     }
+    return Value::invalid(); // Silence "not all control paths return a value" in MSVC
 }
 
 } // namespace dom
