@@ -66,7 +66,7 @@ namespace {
 // the first byte of a UTF-8 encoded character.
 
 const char eof = '\0';
-const char* replacementCharacter = "\uFFFD";
+const char* replacementCharacter = u8"\uFFFD";
 
 // https://www.w3.org/TR/css-syntax-3/#digit
 bool isDigit_(char c)
