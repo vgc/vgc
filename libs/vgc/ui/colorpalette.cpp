@@ -167,7 +167,7 @@ void insertCellHighlight(
 
 void ColorPalette::onPaintDraw(graphics::Engine* engine)
 {
-    float eps = 1e-6;
+    float eps = 1e-6f;
     if (reload_ || std::abs(oldWidth_ - width()) > eps || std::abs(oldHeight_ - height()) > eps) {
         reload_ = false;
         oldWidth_ = width();
