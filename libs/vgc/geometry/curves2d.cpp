@@ -426,13 +426,15 @@ void Curves2d::fill(core::DoubleArray& data) const
         if (c.type() == CurveCommandType::MoveTo) {
             coords.clear();
             core::Vec2d p = c.p();
-            coords.append(p[0]);
-            coords.append(p[1]);
+            coords.append(static_cast<TESSreal>(p[0]));
+            coords.append(static_cast<TESSreal>(p[1]));
+            // Note: libtess2 currently uses float, hence the casts.
+            // Would using double-precision be better for this task?
         }
         else if (c.type() == CurveCommandType::LineTo) {
             core::Vec2d p = c.p();
-            coords.append(p[0]);
-            coords.append(p[1]);
+            coords.append(static_cast<TESSreal>(p[0]));
+            coords.append(static_cast<TESSreal>(p[1]));
         }
         else if (c.type() == CurveCommandType::Close) {
             if (coords.size() > 4) { // ignore contour if 2 points or less

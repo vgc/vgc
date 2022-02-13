@@ -58,7 +58,7 @@ void insertRect(
     float r = static_cast<float>(c[0]);
     float g = static_cast<float>(c[1]);
     float b = static_cast<float>(c[2]);
-    float maxBorderRadius = 0.5 * std::min(std::abs(x2-x1), std::abs(y2-y1));
+    float maxBorderRadius = 0.5f * std::min(std::abs(x2-x1), std::abs(y2-y1));
     borderRadius = core::clamp(borderRadius, 0.0f, maxBorderRadius);
     Int32 numCornerTriangles = core::ifloor<Int32>(borderRadius);
     if (numCornerTriangles < 1) {
@@ -85,7 +85,8 @@ void insertRect(
         // rounded corners
         float rcost_ = borderRadius;
         float rsint_ = 0;
-        float dt = (0.5 * core::pi) / numCornerTriangles;
+        float pi = static_cast<float>(core::pi);
+        float dt = (0.5f * pi) / numCornerTriangles;
         for (Int32 i = 1; i <= numCornerTriangles; ++i) {
             float t = i * dt;
             float rcost = borderRadius * std::cos(t);
