@@ -17,16 +17,13 @@
 #ifndef VGC_GEOMETRY_CURVE_H
 #define VGC_GEOMETRY_CURVE_H
 
-#include <vector>
 #include <vgc/core/color.h>
+#include <vgc/core/doublearray.h>
 #include <vgc/core/object.h>
+#include <vgc/core/vec2darray.h>
 #include <vgc/geometry/api.h>
 
 namespace vgc {
-
-namespace core {
-class Vec2d;
-}
 
 namespace geometry {
 
@@ -122,7 +119,7 @@ public:
 
     /// Returns the position data of the curve.
     ///
-    const std::vector<double>& positionData() const { return positionData_; }
+    const core::DoubleArray& positionData() const { return positionData_; }
 
     /// Returns the AttributeVariability of the width attribute.
     ///
@@ -130,7 +127,7 @@ public:
 
     /// Returns the width data of the curve.
     ///
-    const std::vector<double>& widthData() const { return widthData_; }
+    const core::DoubleArray& widthData() const { return widthData_; }
 
     /// Returns the width of the curve. If width is varying, then returns
     /// the average width;
@@ -213,10 +210,10 @@ public:
     /// control points, simply set maxAngle to any value, and set minQuads =
     /// maxQuads = number of desired quads.
     ///
-    std::vector<core::Vec2d> triangulate(
+    core::Vec2dArray triangulate(
             double maxAngle = 0.05,
-            int minQuads = 1,
-            int maxQuads = 64) const;
+            Int minQuads = 1,
+            Int maxQuads = 64) const;
 
     /// Sets the color of the curve.
     ///
@@ -237,11 +234,11 @@ public:
 private:
     // Representation of the centerline of the curve
     Type type_;
-    std::vector<double> positionData_;
+    core::DoubleArray positionData_;
 
     // Representation of the width of the curve
     AttributeVariability widthVariability_;
-    std::vector<double> widthData_;
+    core::DoubleArray widthData_;
 
     // Color of the curve
     core::Color color_;

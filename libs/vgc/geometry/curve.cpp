@@ -18,7 +18,7 @@
 
 #include <vgc/core/algorithm.h>
 #include <vgc/core/colors.h>
-#include <vgc/core/vec2d.h>
+#include <vgc/core/intarray.h>
 #include <vgc/geometry/bezier.h>
 #include <vgc/geometry/catmullrom.h>
 
@@ -27,15 +27,15 @@ namespace geometry {
 
 namespace {
 
-template <typename T>
-void removeAllExceptLastElement(std::vector<T>& v) {
-    v.front() = v.back();
+template <typename ContainerType>
+void removeAllExceptLastElement(ContainerType& v) {
+    v.first() = v.last();
     v.resize(1);
 }
 
-template <typename T>
-void appendUninitializedElement(std::vector<T>& v) {
-    v.emplace_back();
+template <typename ContainerType>
+void appendUninitializedElement(ContainerType& v) {
+    v.append(typename ContainerType::value_type());
 }
 
 void computeSample(
@@ -89,16 +89,16 @@ double Curve::width() const
 void Curve::addControlPoint(double x, double y)
 {
     // Set position
-    positionData_.push_back(x);
-    positionData_.push_back(y);
+    positionData_.append(x);
+    positionData_.append(y);
 
     // Set width
     if (widthVariability() == AttributeVariability::PerControlPoint) {
         double width = 1.0;
         if (widthData_.size() > 0) {
-            width = widthData_.back();
+            width = widthData_.last();
         }
-        widthData_.push_back(width);
+        widthData_.append(width);
     }
 }
 
@@ -110,12 +110,12 @@ void Curve::addControlPoint(const core::Vec2d& position)
 void Curve::addControlPoint(double x, double y, double width)
 {
     // Set position
-    positionData_.push_back(x);
-    positionData_.push_back(y);
+    positionData_.append(x);
+    positionData_.append(y);
 
     // Set width
     if (widthVariability() == AttributeVariability::PerControlPoint) {
-        widthData_.push_back(width);
+        widthData_.append(width);
     }
 }
 
@@ -124,16 +124,16 @@ void Curve::addControlPoint(const core::Vec2d& position, double width)
     addControlPoint(position.x(), position.y(), width);
 }
 
-std::vector<core::Vec2d> Curve::triangulate(
+core::Vec2dArray Curve::triangulate(
         double maxAngle,
-        int minQuads,
-        int maxQuads) const
+        Int minQuads,
+        Int maxQuads) const
 {
     // Result of this computation.
     // Final size = 2 * nSamples
     //   where nSamples = nQuads + 1
     //
-    std::vector<core::Vec2d> res;
+    core::Vec2dArray res;
 
     // For adaptive sampling, we need to remember a few things about all the
     // samples in the currently processed segment ("segment" means "part of the
@@ -143,34 +143,35 @@ std::vector<core::Vec2d> Curve::triangulate(
     // here for performance (reuse vector capacity). All these vectors have
     // the same size.
     //
-    std::vector<core::Vec2d> leftPositions;
-    std::vector<core::Vec2d> rightPositions;
-    std::vector<core::Vec2d> normals;
-    std::vector<double> uParams;
+    core::Vec2dArray leftPositions;
+    core::Vec2dArray rightPositions;
+    core::Vec2dArray normals;
+    core::DoubleArray uParams;
 
     // Remember which quads do not pass the angle test. The index is relative
     // to the vectors above (e.g., leftPositions).
     //
-    std::vector<int> failedQuads;
+    core::IntArray failedQuads;
 
     // Factor out computation of cos(maxAngle)
     double cosMaxAngle = std::cos(maxAngle);
 
     // Early return if not enough segments
-    int numControlPoints = positionData_.size() / 2;
-    int numSegments = numControlPoints - 1;
+    Int numControlPoints = positionData_.length() / 2;
+    Int numSegments = numControlPoints - 1;
     if (numSegments < 1) {
         return res;
     }
 
     // Iterate over all segments
-    for (int i = 0; i < numSegments; ++i)
+    for (Int i = 0; i < numSegments; ++i)
     {
         // Get indices of Catmull-Rom control points for current segment
-        int i0 = core::clamp(i-1, 0, numControlPoints-1);
-        int i1 = core::clamp(i  , 0, numControlPoints-1);
-        int i2 = core::clamp(i+1, 0, numControlPoints-1);
-        int i3 = core::clamp(i+2, 0, numControlPoints-1);
+        Int zero = 0;
+        Int i0 = core::clamp(i-1, zero, numControlPoints-1);
+        Int i1 = core::clamp(i  , zero, numControlPoints-1);
+        Int i2 = core::clamp(i+1, zero, numControlPoints-1);
+        Int i3 = core::clamp(i+2, zero, numControlPoints-1);
 
         // Get positions of Catmull-Rom control points
         core::Vec2d p0(positionData_[2*i0], positionData_[2*i0+1]);
@@ -213,14 +214,14 @@ std::vector<core::Vec2d> Curve::triangulate(
             appendUninitializedElement(rightPositions);
             appendUninitializedElement(normals);
             computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
-                          leftPositions.back(),
-                          rightPositions.back(),
-                          normals.back());
+                          leftPositions.last(),
+                          rightPositions.last(),
+                          normals.last());
 
             // Add this sample to res right now. For all the other samples, we
             // need to wait until adaptive sampling is complete.
-            res.push_back(leftPositions.back());
-            res.push_back(rightPositions.back());
+            res.append(leftPositions.last());
+            res.append(rightPositions.last());
         }
         else {
             // re-use last sample of previous segment
@@ -229,22 +230,23 @@ std::vector<core::Vec2d> Curve::triangulate(
             removeAllExceptLastElement(normals);
         }
         uParams.clear();
-        uParams.push_back(0);
+        uParams.append(0);
 
         // Compute uniform samples for this segment
-        int numQuads = 0;
-        for (int j = 1; j <= minQuads; ++j)
+        Int numQuads = 0;
+        double du = 1.0 / static_cast<double>(minQuads);
+        for (Int j = 1; j <= minQuads; ++j)
         {
-            double u = (double) j / (double) minQuads;
+            double u = j * du;
             appendUninitializedElement(leftPositions);
             appendUninitializedElement(rightPositions);
             appendUninitializedElement(normals);
             computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
-                          leftPositions.back(),
-                          rightPositions.back(),
-                          normals.back());
+                          leftPositions.last(),
+                          rightPositions.last(),
+                          normals.last());
 
-            uParams.push_back(u);
+            uParams.append(u);
             ++numQuads;
         }
 
@@ -258,9 +260,9 @@ std::vector<core::Vec2d> Curve::triangulate(
             // leftPositions[i+1], and rightPositions[i+1].
             //
             failedQuads.clear();
-            for (int i = 0; i < numQuads; ++i) {
+            for (Int i = 0; i < numQuads; ++i) {
                 if (normals[i].dot(normals[i+1]) < cosMaxAngle) {
-                    failedQuads.push_back(i);
+                    failedQuads.append(i);
                 }
             }
 
@@ -270,7 +272,7 @@ std::vector<core::Vec2d> Curve::triangulate(
             }
 
             // We reached max number of quads :(
-            numQuads += failedQuads.size();
+            numQuads += failedQuads.length();
             if (numQuads > maxQuads) {
                 break;
             }
@@ -288,18 +290,18 @@ std::vector<core::Vec2d> Curve::triangulate(
             //
             // The asterisks emphasize the two new samples.
             //
-            int numSamplesBefore = uParams.size(); // 6
-            int numSamplesAfter = uParams.size() + failedQuads.size(); // 8
+            Int numSamplesBefore = uParams.length(); // 6
+            Int numSamplesAfter = uParams.length() + failedQuads.length(); // 8
             leftPositions.resize(numSamplesAfter);
             rightPositions.resize(numSamplesAfter);
             normals.resize(numSamplesAfter);
             uParams.resize(numSamplesAfter);
-            int i = numSamplesBefore - 1; // 5
-            for (int j = failedQuads.size() - 1; j >= 0; --j) { // j = 1, then j = 0
-                int k = failedQuads[j];                         // k = 3, then k = 1
+            Int i = numSamplesBefore - 1; // 5
+            for (Int j = failedQuads.length() - 1; j >= 0; --j) { // j = 1, then j = 0
+                Int k = failedQuads[j];                           // k = 3, then k = 1
 
                 // First, offset index of all samples after the failed quad
-                int offset = j + 1;                   // offset = 2, then offset = 1
+                Int offset = j + 1;                   // offset = 2, then offset = 1
                 while (i > k) {                       // i = [5, 4], then i = [3, 2]
                     leftPositions[i + offset] = leftPositions[i];
                     rightPositions[i + offset] = rightPositions[i];
@@ -335,10 +337,10 @@ std::vector<core::Vec2d> Curve::triangulate(
         // new    j=0 i=1: [ 0.0   0.2   0.3   0.4   0.6   0.7   0.8   1.0 ]
 
         // Transfer local leftPositions and rightPositions into res
-        int numSamples = leftPositions.size();
-        for (int i = 1; i < numSamples; ++i) {
-            res.push_back(leftPositions[i]);
-            res.push_back(rightPositions[i]);
+        Int numSamples = leftPositions.length();
+        for (Int i = 1; i < numSamples; ++i) {
+            res.append(leftPositions[i]);
+            res.append(rightPositions[i]);
         }
     }
 
