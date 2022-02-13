@@ -628,7 +628,7 @@ void OpenGLViewer::updateCurveGLResources_(int i)
         minQuads = 10;
         maxQuads = 10;
     }
-    std::vector<core::Vec2d> triangulation =
+    core::Vec2dArray triangulation =
             curve.triangulate(maxAngle, minQuads, maxQuads);
 
     // Convert triangles to single-precision and transfer to GPU

@@ -40,17 +40,17 @@ namespace core {
 /// Returns the sum of all values in the given vector.
 /// Returns zero<T>() if the vector is empty.
 ///
-template<typename T>
-T sum(const std::vector<T>& v)
+template<typename ContainerType>
+typename ContainerType::value_type sum(const ContainerType& v)
 {
-    return std::accumulate(v.begin(), v.end(), zero<T>());
+    return std::accumulate(v.begin(), v.end(), zero<typename ContainerType::value_type>());
 }
 
 /// Returns the average value of the given vector of values.
 /// Returns zero<T>() if the vector is empty.
 ///
-template<typename T>
-T average(const std::vector<T>& v)
+template<typename ContainerType>
+typename ContainerType::value_type average(const ContainerType& v)
 {
     const size_t n = v.size();
 
@@ -58,7 +58,7 @@ T average(const std::vector<T>& v)
         return (1.0 / static_cast<double>(n)) * sum(v);
     }
     else {
-        return zero<T>();
+        return zero<typename ContainerType::value_type>();
     }
 }
 
