@@ -101,16 +101,17 @@ void updateCodeBlockIndex_(int lineNumber, const std::vector<int>& codeBlocks, i
         }
         // 3. Otherwise, we are in case (B)
         else {
-            codeBlockIndex = codeBlocks.size() - 1;
+            codeBlockIndex = vgc::core::int_cast<int>(codeBlocks.size()) - 1;
         }
     }
     else {
         // The subsequent times, we simply advance one by one
-        while ((int) codeBlocks.size() > codeBlockIndex + 1
-               && codeBlocks[codeBlockIndex + 1] <= lineNumber)
-        {
-            ++codeBlockIndex;
+        size_t i = vgc::core::int_cast<size_t>(codeBlockIndex);
+        size_t n = codeBlocks.size();
+        while (i + 1 < n && codeBlocks[i + 1] <= lineNumber) {
+            ++i;
         }
+        codeBlockIndex = vgc::core::int_cast<int>(i);
     }
 }
 } // namespace
