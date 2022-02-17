@@ -31,13 +31,15 @@ namespace widgets {
 
 QString toQt(const std::string& s)
 {
-    return QString::fromUtf8(s.data(), s.size());
+    int size = vgc::core::int_cast<int>(s.size());
+    return QString::fromUtf8(s.data(), size);
 }
 
 std::string fromQt(const QString& s)
 {
     QByteArray a = s.toUtf8();
-    return std::string(a.data(), a.size());
+    size_t size = vgc::core::int_cast<size_t>(s.size());
+    return std::string(a.data(), size);
 }
 
 QColor toQt(const core::Color& c)
