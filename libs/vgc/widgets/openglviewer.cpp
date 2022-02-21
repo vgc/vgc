@@ -27,11 +27,14 @@
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
+#include <vgc/core/vec2f.h>
+#include <vgc/core/vec2farray.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
+
 
 namespace {
 
@@ -43,17 +46,11 @@ QString shaderPath_(const std::string& name) {
 
 QMatrix4x4 toQtMatrix(const core::Mat4d& m) {
     return QMatrix4x4(
-               (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
-               (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
-               (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
-               (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
+               static_cast<float>(m(0,0)), static_cast<float>(m(0,1)), static_cast<float>(m(0,2)), static_cast<float>(m(0,3)),
+               static_cast<float>(m(1,0)), static_cast<float>(m(1,1)), static_cast<float>(m(1,2)), static_cast<float>(m(1,3)),
+               static_cast<float>(m(2,0)), static_cast<float>(m(2,1)), static_cast<float>(m(2,2)), static_cast<float>(m(2,3)),
+               static_cast<float>(m(3,0)), static_cast<float>(m(3,1)), static_cast<float>(m(3,2)), static_cast<float>(m(3,3)));
 }
-
-// XXX TODO implement and use core::Vec2f instead.
-struct GLVertex {
-    float x, y;
-    GLVertex(float x, float y) : x(x), y(y) {}
-};
 
 double width_(const PointingDeviceEvent& event) {
     const double defaultWidth = 6.0;
@@ -463,10 +460,10 @@ void OpenGLViewer::paintGL()
         for (CurveGLResources& r: curveGLResources_) {
             shaderProgram_.setUniformValue(
                         colorLoc_,
-                        (float)r.trianglesColor.r(),
-                        (float)r.trianglesColor.g(),
-                        (float)r.trianglesColor.b(),
-                        (float)r.trianglesColor.a());
+                        static_cast<float>(r.trianglesColor.r()),
+                        static_cast<float>(r.trianglesColor.g()),
+                        static_cast<float>(r.trianglesColor.b()),
+                        static_cast<float>(r.trianglesColor.a()));
             r.vaoTriangles->bind();
             f->glDrawArrays(GL_TRIANGLE_STRIP, 0, r.numVerticesTriangles);
             r.vaoTriangles->release();
@@ -497,8 +494,8 @@ void OpenGLViewer::paintGL()
 
 void OpenGLViewer::cleanupGL()
 {
-    int nCurvesInGpu = curveGLResources_.size();
-    for (int i = nCurvesInGpu - 1; i >= 0; --i) {
+    Int nCurvesInGpu = curveGLResources_.length();
+    for (Int i = nCurvesInGpu - 1; i >= 0; --i) {
         destroyCurveGLResources_(i);
     }
 }
@@ -509,7 +506,7 @@ void OpenGLViewer::updateGLResources_()
     // XXX CLEAN + don't assume all elements are paths
     // + make constant-time complexity
     dom::Element* root = document_->rootElement();
-    int nCurvesInCpu = 0;
+    Int nCurvesInCpu = 0;
     for (dom::Node* node : root->children()) {
         if (dom::Element::cast(node)) {
             ++nCurvesInCpu;
@@ -523,14 +520,14 @@ void OpenGLViewer::updateGLResources_()
             ++i;
         }
     }
-    int nCurvesInGpu = curveGLResources_.size();
-    for (int i = nCurvesInGpu; i < nCurvesInCpu; ++i) {
+    Int nCurvesInGpu = curveGLResources_.length();
+    for (Int i = nCurvesInGpu; i < nCurvesInCpu; ++i) {
         createCurveGLResources_(i);
     }
 
     // Destroy GPU resources for deleted curves
     // XXX why the decreasing loop index?
-    for (int i = nCurvesInGpu - 1; i >= nCurvesInCpu; --i) {
+    for (Int i = nCurvesInGpu - 1; i >= nCurvesInCpu; --i) {
         destroyCurveGLResources_(i);
     }
 
@@ -546,35 +543,36 @@ void OpenGLViewer::updateGLResources_()
     bool tesselationModeChanged = requestedTesselationMode_ != currentTesselationMode_;
     if (dontKnowWhichCurvesHaveChanged || tesselationModeChanged) {
         currentTesselationMode_ = requestedTesselationMode_;
-        for (int i = 0; i < nCurvesInGpu; ++i) {
+        for (Int i = 0; i < nCurvesInGpu; ++i) {
             updateCurveGLResources_(i);
         }
     }
 }
 
-void OpenGLViewer::createCurveGLResources_(int)
+void OpenGLViewer::createCurveGLResources_(Int)
 {
-    curveGLResources_.push_back(CurveGLResources());
-    CurveGLResources& r = curveGLResources_.back();
+    curveGLResources_.append(CurveGLResources());
+    CurveGLResources& r = curveGLResources_.last();
 
     OpenGLFunctions* f = openGLFunctions();
+    GLuint vertexLoc = static_cast<GLuint>(vertexLoc_);
 
     // Create VBO/VAO for rendering triangles
     r.vboTriangles.create();
     r.vaoTriangles = new QOpenGLVertexArrayObject();
     r.vaoTriangles->create();
-    GLsizei stride  = sizeof(GLVertex);
-    GLvoid* pointer = reinterpret_cast<void*>(offsetof(GLVertex, x));
+    GLsizei stride  = sizeof(core::Vec2f);
+    GLvoid* pointer = nullptr;
     r.vaoTriangles->bind();
     r.vboTriangles.bind();
-    f->glEnableVertexAttribArray(vertexLoc_);
+    f->glEnableVertexAttribArray(vertexLoc);
     f->glVertexAttribPointer(
-                vertexLoc_, // index of the generic vertex attribute
-                2,          // number of components (x and y components)
-                GL_FLOAT,   // type of each component
-                GL_FALSE,   // should it be normalized
-                stride,     // byte offset between consecutive vertex attributes
-                pointer);   // byte offset between the first attribute and the pointer given to allocate()
+                vertexLoc, // index of the generic vertex attribute
+                2,         // number of components (x and y components)
+                GL_FLOAT,  // type of each component
+                GL_FALSE,  // should it be normalized
+                stride,    // byte offset between consecutive vertex attributes
+                pointer);  // byte offset between the first attribute and the pointer given to allocate()
     r.vboTriangles.release();
     r.vaoTriangles->release();
 
@@ -584,19 +582,19 @@ void OpenGLViewer::createCurveGLResources_(int)
     r.vaoControlPoints->create();
     r.vaoControlPoints->bind();
     r.vboControlPoints.bind();
-    f->glEnableVertexAttribArray(vertexLoc_);
+    f->glEnableVertexAttribArray(vertexLoc);
     f->glVertexAttribPointer(
-                vertexLoc_, // index of the generic vertex attribute
-                2,          // number of components   (x and y components)
-                GL_FLOAT,   // type of each component
-                GL_FALSE,   // should it be normalized
-                stride,     // byte offset between consecutive vertex attributes
-                pointer);   // byte offset between the first attribute and the pointer given to allocate()
+                vertexLoc, // index of the generic vertex attribute
+                2,         // number of components (x and y components)
+                GL_FLOAT,  // type of each component
+                GL_FALSE,  // should it be normalized
+                stride,    // byte offset between consecutive vertex attributes
+                pointer);  // byte offset between the first attribute and the pointer given to allocate()
     r.vboControlPoints.release();
     r.vaoControlPoints->release();
 }
 
-void OpenGLViewer::updateCurveGLResources_(int i)
+void OpenGLViewer::updateCurveGLResources_(Int i)
 {
     assert(i >= 0); // TODO convert all asserts to VGC_CORE_ASSERT
     assert(i < curveGLResources_.size());
@@ -610,10 +608,10 @@ void OpenGLViewer::updateCurveGLResources_(int i)
     core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
     core::Color color = path->getAttribute(COLOR).getColor();
     VGC_CORE_ASSERT(positions.size() == widths.size());
-    int nControlPoints = positions.size();
+    Int nControlPoints = positions.length();
     geometry::Curve curve;
     curve.setColor(color);
-    for (int i = 0; i < nControlPoints; ++i) {
+    for (Int i = 0; i < nControlPoints; ++i) {
         curve.addControlPoint(positions[i], widths[i]);
     }
 
@@ -632,34 +630,44 @@ void OpenGLViewer::updateCurveGLResources_(int i)
             curve.triangulate(maxAngle, minQuads, maxQuads);
 
     // Convert triangles to single-precision and transfer to GPU
-    r.numVerticesTriangles = triangulation.size();
-    std::vector<GLVertex> glVerticesTriangles;
+    //
+    // XXX For the doubles to floats, we should either:
+    //     - have a public helper function to do this
+    //     - directly compute the triangulation using floats (although
+    //       using doubles is more precise for intersection tests)
+    //
+    r.numVerticesTriangles = core::int_cast<GLsizei>(triangulation.length());
+    core::Vec2fArray glVerticesTriangles;
     for(const core::Vec2d& v: triangulation) {
-        glVerticesTriangles.emplace_back((float)v[0], (float)v[1]);
+        glVerticesTriangles.append(core::Vec2f(static_cast<float>(v[0]),
+                                               static_cast<float>(v[1])));
     }
     r.vboTriangles.bind();
-    r.vboTriangles.allocate(glVerticesTriangles.data(), r.numVerticesTriangles * sizeof(GLVertex));
+    int count = core::int_cast<int>(r.numVerticesTriangles) * static_cast<int>(sizeof(core::Vec2f));
+    r.vboTriangles.allocate(glVerticesTriangles.data(), count);
     r.vboTriangles.release();
 
     // Transfer control points vertex data to GPU
-    std::vector<GLVertex> glVerticesControlPoints;
-    const auto& d = curve.positionData();
-    r.numVerticesControlPoints = d.size() / 2;
-    for (int i = 0; i < r.numVerticesControlPoints; ++i) {
-        glVerticesControlPoints.emplace_back((float)d[2*i], (float)d[2*i+1]);
+    core::Vec2fArray glVerticesControlPoints;
+    const core::DoubleArray& d = curve.positionData();
+    r.numVerticesControlPoints = core::int_cast<GLsizei>(d.length() / 2);
+    for (Int i = 0; i < r.numVerticesControlPoints; ++i) {
+        glVerticesControlPoints.append(core::Vec2f(static_cast<float>(d[2*i]),
+                                                   static_cast<float>(d[2*i+1])));
     }
     r.vboControlPoints.bind();
-    r.vboControlPoints.allocate(glVerticesControlPoints.data(), r.numVerticesControlPoints * sizeof(GLVertex));
+    count = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(core::Vec2f));
+    r.vboControlPoints.allocate(glVerticesControlPoints.data(), count);
     r.vboControlPoints.release();
 
     // Set color
     r.trianglesColor = curve.color();
 }
 
-void OpenGLViewer::destroyCurveGLResources_(int)
+void OpenGLViewer::destroyCurveGLResources_(Int)
 {
     assert(curveGLResources_.size() > 0);
-    CurveGLResources& r = curveGLResources_.back();
+    CurveGLResources& r = curveGLResources_.last();
 
     r.vaoTriangles->destroy();
     delete r.vaoTriangles;
@@ -669,7 +677,7 @@ void OpenGLViewer::destroyCurveGLResources_(int)
     delete r.vaoControlPoints;
     r.vboControlPoints.destroy();
 
-    curveGLResources_.pop_back();
+    curveGLResources_.removeLast();
 }
 
 void OpenGLViewer::startCurve_(const core::Vec2d& p, double width)

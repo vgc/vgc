@@ -38,6 +38,7 @@ vgc_add_library(core
         vec2d.h
         vec2darray.h
         vec2f.h
+        vec2farray.h
 
         internal/containerutil.h
 
