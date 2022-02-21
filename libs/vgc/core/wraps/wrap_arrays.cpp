@@ -22,6 +22,7 @@
 #include <vgc/core/floatarray.h>
 #include <vgc/core/intarray.h>
 #include <vgc/core/vec2darray.h>
+#include <vgc/core/vec2farray.h>
 
 namespace py = pybind11;
 
@@ -168,4 +169,5 @@ void wrap_arrays(py::module& m)
     wrap_1darray<vgc::core::FloatArray>(m, "Float");
     wrap_1darray<vgc::core::IntArray>(m, "Int");
     wrap_2darray<vgc::core::Vec2dArray>(m, "Vec2d");
+    wrap_2darray<vgc::core::Vec2fArray>(m, "Vec2f");
 }

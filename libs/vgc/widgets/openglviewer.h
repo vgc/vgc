@@ -25,6 +25,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 
+#include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/performancelog.h>
 #include <vgc/core/vec2d.h>
@@ -135,20 +136,20 @@ private:
         // Drawing triangles
         QOpenGLBuffer vboTriangles;
         QOpenGLVertexArrayObject* vaoTriangles; // Pointer because copy of QOpenGLVertexArrayObject is disabled
-        int numVerticesTriangles;
+        GLsizei numVerticesTriangles;
         core::Color trianglesColor;
 
         // Drawing control points
         QOpenGLBuffer vboControlPoints;
         QOpenGLVertexArrayObject* vaoControlPoints; // Pointer because copy of QOpenGLVertexArrayObject is disabled
-        int numVerticesControlPoints;
+        GLsizei numVerticesControlPoints;
     };
-    std::vector<CurveGLResources> curveGLResources_;
-    std::vector<dom::Element*> paths_;
+    core::Array<CurveGLResources> curveGLResources_;
+    core::Array<dom::Element*> paths_;
     void updateGLResources_();
-    void createCurveGLResources_(int i);
-    void updateCurveGLResources_(int i);
-    void destroyCurveGLResources_(int i);
+    void createCurveGLResources_(Int i);
+    void updateCurveGLResources_(Int i);
+    void destroyCurveGLResources_(Int i);
 
     // Make sure to disallow concurrent usage of the mouse and the tablet to
     // avoid conflicts. This also acts as a work around the following Qt bugs:

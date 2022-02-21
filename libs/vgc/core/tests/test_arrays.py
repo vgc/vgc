@@ -24,7 +24,9 @@ from vgc.core import (
     FloatArray,
     IntArray,
     Vec2d,
-    Vec2dArray
+    Vec2dArray,
+    Vec2f,
+    Vec2fArray
 )
 
 def get1DArrayClasses():
