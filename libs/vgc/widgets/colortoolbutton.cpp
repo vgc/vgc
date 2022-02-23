@@ -66,7 +66,6 @@ void ColorToolButton::updateIcon()
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
     painter.setPen(QPen(Qt::black));
     painter.setBrush(QBrush(toQt(color())));
     painter.drawEllipse(QRect(diskTopLeft, diskSize));
