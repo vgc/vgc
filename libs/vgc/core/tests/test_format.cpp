@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <sstream>
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/compiler.h>
 #include <vgc/core/format.h>
 
 // For benchmarking
@@ -99,20 +100,34 @@ writeFloat(T x, const char* expected)
     EXPECT_EQ(s, expected);
 }
 
+#if defined(VGC_CORE_COMPILER_MSVC)
+#  pragma warning(push)
+#  pragma warning(disable: 4723) // potential divide by 0
+#endif
+template<typename T>
+void writeFloatsCreatedViaDivideByZero()
+{
+    T zero = static_cast<T>(0);
+    T one = static_cast<T>(1);
+    writeFloat(one / zero, "inf");
+    writeFloat(-one / zero, "-inf");
+    writeFloat(zero / zero, "nan");
+    writeFloat(-zero / zero, "nan");
+}
+#if defined(VGC_CORE_COMPILER_MSVC)
+#  pragma warning(pop)
+#endif
+
 template<typename T>
 void writeFloats()
 {
     T zero = static_cast<T>(0);
-    T one = static_cast<T>(1);
     T inf = std::numeric_limits<T>::infinity();
     writeFloat(zero, "0");
     writeFloat(-zero, "0");
     writeFloat(inf, "inf");
     writeFloat(-inf, "-inf");
-    writeFloat(one / zero, "inf");
-    writeFloat(-one / zero, "-inf");
-    writeFloat(zero / zero, "nan");
-    writeFloat(-zero / zero, "nan");
+    writeFloatsCreatedViaDivideByZero<T>();
     writeFloat(static_cast<T>( 42.0),               "42");
     writeFloat(static_cast<T>( 420.0),              "420");
     writeFloat(static_cast<T>( 1988.42),            "1988.42");
