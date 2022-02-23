@@ -433,6 +433,18 @@ void throwNegativeIntegerError(U value) {
 //            concrete examples of T and U to help follow the proof.
 //
 
+// In the functions below, if the template type T or U is 'bool', then a warning
+// may be emitted because using '<' or '>' with bool is generally bad practice.
+// However, in our case:
+// - it's safe to do it
+// - it's more concise/readable than specializing the templates for 'bool'
+// So we simply silence the warning.
+//
+#if defined(VGC_CORE_COMPILER_MSVC)
+#  pragma warning(push)
+#  pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#endif
+
 // int_cast from from U to T when:
 // - U and T are both signed or both unsigned
 // - The range of T includes the range of U.
@@ -562,6 +574,10 @@ int_cast(U value) {
     }
     return static_cast<T>(value);
 }
+
+#if defined(VGC_CORE_COMPILER_MSVC)
+#  pragma warning(pop)
+#endif
 
 /// Sets the given bool, character, integer or floating-point number to zero.
 ///

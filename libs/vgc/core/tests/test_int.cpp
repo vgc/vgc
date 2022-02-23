@@ -54,7 +54,7 @@ using ullong = unsigned long long;
 //
 // https://stackoverflow.com/q/13403600/what-are-extended-integer-types
 //
-// All the types listed above as distinct types, and all other integral types
+// All the types listed above are distinct types, and all other integral types
 // (e.g., size_t, int64_t) are required to be a typedef for one of those types.
 // For example, size_t is typically a typedef for unsigned long or unsigned
 // long long.
@@ -251,6 +251,7 @@ TEST(TestInt, MiscThrow) {
     EXPECT_THROW(core::int_cast<Int8>(Int16(128))         , core::IntegerOverflowError);
     EXPECT_THROW(core::int_cast<UInt8>(UInt16(256))       , core::IntegerOverflowError);
 }
+
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
