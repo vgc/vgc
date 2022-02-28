@@ -660,8 +660,8 @@ void Console::computeConsoleMarginWidth_()
 {
     int padding = 4;
     int promptWidth = std::max(
-                fontMetrics().width(primaryPromptString_),
-                fontMetrics().width(secondaryPromptString_));
+                fontMetrics().horizontalAdvance(primaryPromptString_),
+                fontMetrics().horizontalAdvance(secondaryPromptString_));
     consoleMarginWidth_ = promptWidth + 2 * padding;
 }
 

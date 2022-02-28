@@ -120,7 +120,7 @@ public:
     Qt::MouseButton button() const;
 
     /// Returns the button state when the event was generated. The button state
-    /// is a combination of Qt::LeftButton, Qt::RightButton, Qt::MidButton
+    /// is a combination of Qt::LeftButton, Qt::RightButton, Qt::MiddleButton
     /// using the OR operator. For mouse/tablet move events, this is all buttons that
     /// are pressed down. For mouse/tablet press events this includes
     /// the button that caused the event. For mouse/tablet release events this

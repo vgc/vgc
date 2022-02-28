@@ -279,7 +279,7 @@ void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
         cameraAtPress_ = camera_;
     }
     else if (event.modifiers() == Qt::AltModifier &&
-             event.button() == Qt::MidButton)
+             event.button() == Qt::MiddleButton)
     {
         isPanning_ = true;
         pointingDevicePosAtPress_ = event.pos();
