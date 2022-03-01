@@ -740,7 +740,7 @@ public:
         return data_.empty();
     }
 
-    /// Returns whether this Array contains i.
+    /// Returns whether this Array contains value.
     ///
     bool contains(T value) const noexcept {
         return (std::find(data_.begin(), data_.end(), value) != data_.end());
