@@ -221,5 +221,11 @@ class TestVec2dArray(unittest.TestCase):
         a = Vec2dArray("[]")
         self.assertTrue(a == Vec2dArray())
 
+    def testContains(self):
+        a3 = Vec2dArray([(1, 2), (3, 4), (5, 6)])
+        self.assertTrue(Vec2d(3, 4) in a3)
+        self.assertFalse(Vec2d(4, 3) in a3)
+        self.assertTrue(Vec2d(4, 3) not in a3)
+
 if __name__ == '__main__':
     unittest.main()

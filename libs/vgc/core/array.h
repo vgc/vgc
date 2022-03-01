@@ -740,6 +740,12 @@ public:
         return data_.empty();
     }
 
+    /// Returns whether this Array contains i.
+    ///
+    bool contains(T value) const noexcept {
+        return (std::find(data_.begin(), data_.end(), value) != data_.end());
+    }
+
     /// Returns, as an unsigned integer, the number of elements in this Array.
     ///
     /// This function is provided for compatibility with the STL: prefer using

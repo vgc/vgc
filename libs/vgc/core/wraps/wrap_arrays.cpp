@@ -111,6 +111,10 @@ void defineCommonMethods(py::class_<This>& c)
         py::keep_alive<0, 1>()
     );
 
+    c.def("__contains__", [](This& a, const T& value) {
+        return a.contains(value);
+    });
+
     c.def("append", [](This& a, const T& value) { a.append(value); });
     c.def("pop", [](This& a) { return a.pop(); });
     c.def("pop", [](This& a, vgc::Int i) {
