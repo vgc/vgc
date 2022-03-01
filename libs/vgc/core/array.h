@@ -742,7 +742,7 @@ public:
 
     /// Returns whether this Array contains value.
     ///
-    bool contains(T value) const noexcept {
+    bool contains(const T& value) const noexcept {
         return (std::find(data_.begin(), data_.end(), value) != data_.end());
     }
 
