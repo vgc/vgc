@@ -43,6 +43,7 @@ TEST(TestArray, Construct) {
     { Array<int> a(size_t(10), 42); EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
     { Array<int> a(size_t(10));     EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
     { Array<int> a{10, 42};         EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
+    { Array<int> a{10, 42, 5};      EXPECT_TRUE(a.contains(42)); EXPECT_FALSE(a.contains(43)); }
     EXPECT_THROW(Array<int>(-1),          NegativeIntegerError);
     EXPECT_THROW(Array<int>(Int(-1)),     NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, 42),      NegativeIntegerError);
