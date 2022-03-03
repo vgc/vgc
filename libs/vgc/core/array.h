@@ -275,6 +275,19 @@ public:
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+    // The iterator and const_iterator types are currently typedefs of pointers
+    // This cause ambiguous overload resolution of f(Int..) and f(const_iterator..)
+    // when using the literal 0 as argument. (see overloads of insert and emplace).
+    // To solve this problem until we use custom iterators we can use this small wrapper.
+    // Its goal is to increase the rank of the implicit conversion of 0 to our type
+    // so that insert(Int..) is selected.
+    struct ConstIterator
+    {
+        ConstIterator(const_iterator it) : it(it) {}
+        operator const_iterator() { return it; }
+        const_iterator it;
+    };
+
     /// Creates an empty Array.
     ///
     /// ```
@@ -895,7 +908,7 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
-    iterator insert(const_iterator it, const T& value) {
+    iterator insert(ConstIterator it, const T& value) {
         return emplace(it, value);
     }
 
@@ -905,7 +918,7 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
-    iterator insert(const_iterator it, T&& value) {
+    iterator insert(ConstIterator it, T&& value) {
         return emplace(it, std::move(value));
     }
 
@@ -920,8 +933,9 @@ public:
     /// the overload passing n as a signed integer instead.
     ///
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
-    iterator insert(const_iterator it, size_type n, const T& value) {
+    ///
+    iterator insert(ConstIterator it, size_type n, const T& value) {
+        checkLength_(n); // necessary before casting to Int
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
@@ -938,8 +952,8 @@ public:
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
-    iterator insert(const_iterator it, IntType n, const T& value) {
-        checkPositive_(n);
+    iterator insert(ConstIterator it, IntType n, const T& value) {
+        checkLength_(n); // necessary before casting to Int
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
@@ -956,9 +970,9 @@ public:
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    ///
     template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
-    iterator insert(const_iterator it, InputIt first, InputIt last) {
+    iterator insert(ConstIterator it, InputIt first, InputIt last) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertRange_(i, first, last));
@@ -972,8 +986,8 @@ public:
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
-    iterator insert(const_iterator it, std::initializer_list<T> ilist) {
+    ///
+    iterator insert(ConstIterator it, std::initializer_list<T> ilist) {
         return insert(it, ilist.begin(), ilist.end());
     }
 
@@ -1062,7 +1076,7 @@ public:
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     /// 
     template <typename... Args>
-    iterator emplace(const_iterator it, Args&&... args) {
+    iterator emplace(ConstIterator it, Args&&... args) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(emplaceAt_(i, std::forward<Args>(args)...));
