@@ -452,7 +452,6 @@ public:
     /// This function is provided for compatibility with the STL: prefer using
     /// the overload accepting a signed integer as argument instead.
     ///
-    /// Throws NegativeIntegerError if the given \p length is negative.
     /// Throws LengthError if the given \p length is greater than maxLength().
     /// 
     void assign(size_type length, T value) {
