@@ -1942,7 +1942,8 @@ private:
                        "out of range [0, " + toString(size()) + ")."));
     }
     void checkInRange_(Int i1, Int i2) const {
-        if (i1 > i2 || i2 > length()) {
+        const bool inRange = (0 <= i1) && (i1 <= i2) && (i2 <= length());
+        if (!inRange) {
             throwNotInRange_(i1, i2);
         }
     }
