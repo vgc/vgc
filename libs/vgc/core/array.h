@@ -1360,7 +1360,8 @@ private:
     void constructElement_(T* p, Args&&... args) {
         using Allocator = std::allocator<T>;
         using AllocatorTraits = std::allocator_traits<Allocator>;
-        AllocatorTraits::construct(Allocator(), p, std::forward<Args>(args)...);
+        Allocator al = {};
+        AllocatorTraits::construct(al, p, std::forward<Args>(args)...);
     }
 
     // Standard destruction
@@ -1368,7 +1369,8 @@ private:
     void destroyElement_(T* p) {
         using Allocator = std::allocator<T>;
         using AllocatorTraits = std::allocator_traits<Allocator>;
-        AllocatorTraits::destroy(Allocator(), p);
+        Allocator al = {};
+        AllocatorTraits::destroy(al, p);
     }
 
     // Helper for fill construction.
