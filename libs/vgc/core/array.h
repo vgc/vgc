@@ -1343,47 +1343,32 @@ private:
     // Throws NegativeIntegerError if n is negative.
     //
     [[nodiscard]] T* allocate_(Int n) {
-        constexpr size_t alignment = alignof(T);
-        const size_t size = int_cast<size_t>(n) * sizeof(T);
-        // aligned alloc is slower so we use it only under the following condition
-        if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-            // microsoft's trick to help autovectorization, 0x1000 is page size
-            size_t al_alignment = (size > 0x1000) ? (std::max)(alignment, 32ull): alignment;
-            return static_cast<T*>(::operator new (size, std::align_val_t{al_alignment}));
-        }
-        else {
-            return static_cast<T*>(::operator new (size));
-        }
+        using Allocator = std::allocator<T>;
+        return Allocator().allocate(n);
     }
 
     // Throws NegativeIntegerError if n is negative.
     //
     void deallocate_(T* p, Int n) {
-        constexpr size_t alignment = alignof(T);
-        const size_t size = int_cast<size_t>(n) * sizeof(T);
-        // we must match the allocation style, see allocate_().
-        if (alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-            size_t al_alignment = (size > 0x1000) ? std::max(alignment, 32ull): alignment;
-            ::operator delete (p, size, std::align_val_t{al_alignment});
-        }
-        else {
-            ::operator delete (p, size);
-        }
+        using Allocator = std::allocator<T>;
+        Allocator().deallocate(p, n);
     }
 
-    // Standard construction, used
-    // by std's uninitialized memory algorithms.
-    // Note: we can implement variants of these algorithms
-    // that use an allocator as argument to support custom allocators.
+    // Standard construction
+    //
     template<typename... Args>
     void constructElement_(T* p, Args&&... args) {
-        ::new (const_cast<void*>(static_cast<const volatile void*>(p))) T(std::forward<Args>(args)...);
+        using Allocator = std::allocator<T>;
+        using AllocatorTraits = std::allocator_traits<Allocator>;
+        AllocatorTraits::construct(Allocator(), p, std::forward<Args>(args)...);
     }
 
-    // Standard destruction, used
-    // by std::destroy_n.
+    // Standard destruction
+    //
     void destroyElement_(T* p) {
-        p->~T();
+        using Allocator = std::allocator<T>;
+        using AllocatorTraits = std::allocator_traits<Allocator>;
+        AllocatorTraits::destroy(Allocator(), p);
     }
 
     // Helper for fill construction.
