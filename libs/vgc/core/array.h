@@ -278,9 +278,9 @@ public:
     // The iterator and const_iterator types are currently typedefs of pointers
     // This causes ambiguous overload resolution of f(Int..) and f(const_iterator..)
     // when using literal 0 as argument. (see overloads of insert and emplace).
-    // To solve this problem until we use custom iterators we can use this small wrapper.
+    // To solve this problem - until we use custom iterators - we can use this wrapper.
     // Its goal is to increase the rank of the implicit conversion of 0 to our type
-    // so that insert(Int..) is selected.
+    // so that selection of f(Int..) has priority over f(ConstIterator..).
     struct ConstIterator
     {
         ConstIterator(const_iterator it) : it(it) {}
