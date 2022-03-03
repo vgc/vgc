@@ -1726,8 +1726,9 @@ private:
             }
             else {
                 // Shift of elements does overlap.
-                std::uninitialized_move(oldEnd - n, oldEnd, oldEnd);
-                std::move_backward(insertPtr, oldEnd - n, oldEnd);
+                const pointer m = oldEnd - n;
+                std::uninitialized_move(m, oldEnd, oldEnd);
+                std::move_backward(insertPtr, m, oldEnd);
                 length_ = newLen;
                 return i + n;
             }
@@ -1739,8 +1740,9 @@ private:
             const pointer newData = allocate_(newReservedLen);
             const pointer insertPtr = newData + i;
 
-            std::uninitialized_move(oldData, oldData + i, newData);
-            std::uninitialized_move(oldData + i, oldData + oldLen, insertPtr + n);
+            const pointer splitPtr = oldData + i;
+            std::uninitialized_move(oldData, splitPtr, newData);
+            std::uninitialized_move(splitPtr, oldData + oldLen, insertPtr + n);
 
             data_ = newData;
             length_ = newLen;
