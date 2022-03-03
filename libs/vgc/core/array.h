@@ -17,14 +17,14 @@
 #ifndef VGC_CORE_ARRAY_H
 #define VGC_CORE_ARRAY_H
 
+#include <algorithm>
 #include <cstddef> // for ptrdiff_t
+#include <initializer_list>
+#include <iterator>
+#include <memory>
 #include <stdexcept>
 #include <type_traits>
-#include <memory>
 #include <utility>
-#include <algorithm>
-#include <iterator>
-#include <initializer_list>
 
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
