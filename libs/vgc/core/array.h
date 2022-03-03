@@ -1453,8 +1453,8 @@ private:
     // Throws NegativeIntegerError if n is negative.
     //
     void allocateStorage_(const Int n) {
-      data_ = allocate_(n);
-      reservedLength_ = n;
+        data_ = allocate_(n);
+        reservedLength_ = n;
     }
 
     // Reallocates storage to hold exactly n elements.
@@ -1480,12 +1480,12 @@ private:
     void shrinkToFit_() {
         const Int len = length_;
         if (len != reservedLength_) {
-          if (len == 0) {
-            reset_();
-          }
-          else {
-            reallocateExactly_(len);
-          }
+            if (len == 0) {
+                reset_();
+            }
+            else {
+                reallocateExactly_(len);
+            }
         }
     } 
 
@@ -1549,14 +1549,14 @@ private:
             const pointer p = data_;
 
             if (newLen <= oldLen) {
-              // Less or as many elements
-              std::fill_n(p, newLen, value);
-              std::destroy(p + newLen, p + oldLen);
+                // Less or as many elements
+                std::fill_n(p, newLen, value);
+                std::destroy(p + newLen, p + oldLen);
             }
             else {
-              // More elements
-              std::fill_n(p, oldLen, value);
-              std::uninitialized_fill(p + oldLen, p + newLen, value);
+                // More elements
+                std::fill_n(p, oldLen, value);
+                std::uninitialized_fill(p + oldLen, p + newLen, value);
             }
 
             length_ = newLen;
@@ -1676,7 +1676,7 @@ private:
             const pointer back = last - 1;
             // *last is uninitialized!
             constructElement_(last, std::move(*back));
-            // Ranges overlap -> Move backard
+            // Ranges overlap -> Move backward
             std::move_backward(newElementPtr, back, last);
             // Emplace new element
             *newElementPtr = T(std::forward<Args>(args)...);
@@ -1901,13 +1901,13 @@ private:
         using type = U;
     };
 
-    // Throws NegativeIntegerError if length is negative..
+    // Throws NegativeIntegerError if length is negative.
     //
     template<typename IntType>
     void checkPositive_(IntType length) const {
         if constexpr (std::is_signed_v<IntType>) {
             if (length < 0) {
-                throw NegativeIntegerError("Array length cannot be nagative.");
+                throw NegativeIntegerError("Array length cannot be negative.");
             }
         }
     }
