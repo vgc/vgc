@@ -854,7 +854,7 @@ public:
     /// estimate of the number of elements to append.
     ///
     /// Throws NegativeIntegerError if the given \p length is negative.
-    /// Throws LengthError if \p the given length is greater maxLength().
+    /// Throws LengthError if the given \p length is greater than maxLength().
     ///
     void reserve(Int length) {
         checkLength_(length);
