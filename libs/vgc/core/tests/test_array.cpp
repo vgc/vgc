@@ -301,7 +301,7 @@ TEST(TestArray, InsertAtIndex) {
     Array<int> c = {4, 10, 42, 15, 12};
     Array<int> d = {4, 10, 42, 15, 12, 13};
     a.insert(2, 15); EXPECT_EQ(a, b);
-    a.insert(0, 4); EXPECT_EQ(a, c);
+    a.insert(Int(0), 4); EXPECT_EQ(a, c);
     a.insert(5, 13); EXPECT_EQ(a, d);
     EXPECT_THROW(a.insert(-1, 10), IndexError);
     EXPECT_THROW(a.insert(7, 10), IndexError);
@@ -340,7 +340,7 @@ TEST(TestArray, Emplace) {
     Array<Foo> a;
     a.emplace(a.begin(), 12, 42);
     EXPECT_EQ(a[0].x(), 12); EXPECT_EQ(a[0].y(), 42);
-    a.emplace(0, 13, 43);
+    a.emplace(Int(0), 13, 43);
     EXPECT_EQ(a[0].x(), 13); EXPECT_EQ(a[0].y(), 43);
     EXPECT_THROW(a.emplace(-1, 13, 43), IndexError);
 }
