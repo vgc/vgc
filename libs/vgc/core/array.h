@@ -1900,9 +1900,9 @@ private:
     // e.g. throwLengthError's IntType is deduced from first argument only,
     // then second argument must be convertible to it.
     // todo: move it to some common header or adopt c++20.
-    template<typename T>
+    template<typename U>
     struct type_identity {
-        using type = T;
+        using type = U;
     };
 
     // Throws NegativeIntegerError if length is negative..
