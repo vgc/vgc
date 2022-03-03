@@ -1929,7 +1929,7 @@ private:
     }
 
     // Checks whether range [i1, i2) is valid:
-    //     0 <= i1 <= i2 <= size()
+    //     0 <= i1 <= i2 <= length()
     //
     // Note that i2 (or even i1 when i1 == i2) doesn't have to be
     // dereferenceable. In particular, [end(), end()) is a valid empty range.
@@ -1941,20 +1941,8 @@ private:
             (i1 > i2 ? "invalid (second index must be greater or equal than first index)" :
                        "out of range [0, " + toString(size()) + ")."));
     }
-    void checkInRange_(size_type i1, size_type i2) const {
-        // Note: we compare as an unsigned int with size(), rather than as a
-        // signed int with length(), because we are currently using std::vector
-        // as a backend, thus size() is cached while length() isn't, thus
-        // comparing with size() should be faster (one less comparison).
-        if (i1 > i2 || i2 > size()) {
-            throwNotInRange_(i1, i2);
-        }
-    }
     void checkInRange_(Int i1, Int i2) const {
-        try {
-            checkInRange_(int_cast<size_type>(i1), int_cast<size_type>(i2));
-        }
-        catch (NegativeIntegerError&) {
+        if (i1 > i2 || i2 > length()) {
             throwNotInRange_(i1, i2);
         }
     }
@@ -1968,16 +1956,6 @@ private:
     void checkInRangeForInsert_(const_iterator it) const {
         difference_type i = std::distance(begin(), it);
         if (i < 0 || static_cast<size_type>(i) > size()) {
-            throw IndexError("Array index " + toString(i) + " out of range for insertion (array length is " +
-                              toString(size()) + ").");
-        }
-    }
-    void checkInRangeForInsert_(size_type i) const {
-        // Note: we compare as an unsigned int with size(), rather than as a
-        // signed int with length(), because we are currently using std::vector
-        // as a backend, thus size() is cached while length() isn't, thus
-        // comparing with size() should be faster (one less comparison).
-        if (i > size()) {
             throw IndexError("Array index " + toString(i) + " out of range for insertion (array length is " +
                               toString(size()) + ").");
         }
