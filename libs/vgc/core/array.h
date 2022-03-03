@@ -405,11 +405,6 @@ public:
     ///
     ~Array() {
         destroyStorage_();
-        // todo: Remove when unit-tests are implemented.
-        // A destroyed object shouldn't be reused
-        data_ = (T*)0x2143658778563412;
-        length_ = -1;
-        reservedLength_ = -1;
     }
 
     /// Copy-assigns the given \p other Array.
