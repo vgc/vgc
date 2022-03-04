@@ -28,6 +28,9 @@ using vgc::core::NegativeIntegerError;
 // To properly test containers we have to check that:
 // - its elements are not being over-destroyed or over-constructed.
 // - its size always equals the count of alive elements (from the outside).
+// TestTag is here to prevent sharing the static Statistics instance between
+// test groups which can run concurrently.
+//
 template <typename TestTag>
 class TestObject
 {
@@ -467,12 +470,13 @@ TEST(TestArray, InsertAtIndex) {
     }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
     {
         Array<int> s1 = {1, 1, 1};
-        Array<int> s2 = {42, 42};
+        Array<int> s2 = {2, 2};
         Array<int> s3 = {0, 0, 0, 0};
-        Array<TestObj> r1 = {7, 7, 7, 7};
-        Array<TestObj> r2 = {7, 7, 1, 1, 1, 7, 7};
-        Array<TestObj> r3 = {7, 7, 1, 42, 42, 1, 1, 7, 7};
-        Array<TestObj> r4 = {7, 7, 1, 42, 42, 0, 0, 0, 0, 1, 1, 7, 7};
+        Array<TestObj> r0 =  {7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
+        Array<TestObj> r1 =  {7, 7, 7, 7};
+        Array<TestObj> r2 =  {7, 7, 1, 1, 1, 7, 7};
+        Array<TestObj> r3 =  {7, 7, 1, 2, 2, 1, 1, 7, 7};
+        Array<TestObj> r4 =  {7, 7, 1, 2, 2, 0, 0, 0, 0, 1, 1, 7, 7};
         Array<TestObj> r2b = {7, 7, 1, 2, 3, 4, 5, 7, 7};
         const auto preCnt = TestObj::aliveCount();
         {
@@ -480,7 +484,7 @@ TEST(TestArray, InsertAtIndex) {
             Array<TestObj> a(10, 7);
             a.resize(4);                        EXPECT_EQ(a, r1);
             a.insert(2, 3, 1);                  EXPECT_EQ(a, r2); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // shift without overlap
-            a.insert(3, 2, 42);                 EXPECT_EQ(a, r3); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // shift with overlap
+            a.insert(3, 2, 2);                  EXPECT_EQ(a, r3); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // shift with overlap
             a.insert(5, 4, 0);                  EXPECT_EQ(a, r4); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // reallocation
         }   EXPECT_NO_THROW(TestObj::doPostTestChecks(preCnt));
         {
