@@ -113,7 +113,7 @@ Enter the following on Powershell. Of course, if you're using different versions
 
 ```
 cd %UserProfile%
-git clone https://github.com/vgc/vgc.git
+git clone --recurse-submodules https://github.com/vgc/vgc.git
 mkdir build && cd build
 cmake ..\vgc ^
     -DCMAKE_TOOLCHAIN_FILE="%UserProfile%\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
@@ -151,7 +151,7 @@ Manually install Xcode, Python, Qt, then:
 brew install freetype harfbuzz
 
 # Download, build, and run VGC
-git clone https://github.com/vgc/vgc.git
+git clone --recurse-submodules https://github.com/vgc/vgc.git
 mkdir build && cd build
 cmake ../vgc \
     -DCMAKE_BUILD_TYPE=Release \
@@ -172,7 +172,7 @@ Manually install Qt, then:
 sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev libfreetype6-dev libharfbuzz-dev
 
 # Download, build, and run VGC
-git clone https://github.com/vgc/vgc.git
+git clone --recurse-submodules https://github.com/vgc/vgc.git
 mkdir build && cd build
 cmake ../vgc \
     -DCMAKE_BUILD_TYPE=Release \
