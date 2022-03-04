@@ -276,12 +276,16 @@ public:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     // The iterator and const_iterator types are currently typedefs of pointers.
-    // This causes ambiguous overload resolution of f(Int..) and f(const_iterator..)
-    // when using literal 0 as argument (see overloads of insert, and emplace).
+    // This causes an ambiguous overload resolution compilation error for a
+    // call f(0) when both f(Int..) and f(const_iterator..) are declared.
+    // It was the case for our overloads of insert, and emplace.
     // A similar case is discussed at https://stackoverflow.com/questions/4610503.
-    // To solve this problem - until we use custom iterators - we can use this wrapper.
-    // It has a higher rank of implicit conversion from 0 than const_iterator
-    // so that the selection of f(Int..) has priority over f(ConstIterator..).
+    // To solve this problem we provide ConstIterator (until we use custom iterators).
+    // Matching f(0) to f(ConstIterator) requires a user-defined implicit conversion.
+    // According to overload resolution rules, this has lesser priority than the
+    // standard conversion required to use f(Int).
+    // Thus replacing f(const_iterator) with f(ConstIterator) is enough to lift the
+    // ambiguity as the compiler will then prefer f(Int) when compiling a call f(0).
     struct ConstIterator {
         ConstIterator(const_iterator it) : it(it) {}
         operator const_iterator() { return it; }
