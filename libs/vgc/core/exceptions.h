@@ -399,6 +399,26 @@ public:
     IndexError(const std::string& reason) : LogicError(reason) {}
 };
 
+/// \class vgc::core::LengthError
+/// \brief Raised when an operation tries to exceed a length limit.
+///
+/// This exception is raised whenever an operation attempts to grow a container
+/// beyond its maximum capacity.
+///
+/// ```cpp
+/// vgc::core::DoubleArray a((size_t)(vgc::core::DoubleArray::maxLength()) + 1); // => LengthError!
+/// ```
+///
+class VGC_CORE_API_EXCEPTION LengthError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs an LengthError with the given \p reason.
+    ///
+    LengthError(const std::string& reason) : LogicError(reason) {}
+};
+
 /// \class vgc::core::NullError
 /// \brief Raised when a null pointer is encountered.
 ///

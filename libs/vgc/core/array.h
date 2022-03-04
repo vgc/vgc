@@ -17,8 +17,14 @@
 #ifndef VGC_CORE_ARRAY_H
 #define VGC_CORE_ARRAY_H
 
+#include <algorithm>
 #include <cstddef> // for ptrdiff_t
-#include <vector>
+#include <initializer_list>
+#include <iterator>
+#include <memory>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
 
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
@@ -238,7 +244,17 @@ namespace core {
 template<typename T>
 class Array
 {
+private:
+    // Used internally to select value initialization behavior.
+    //
+    struct ValueInitTag {};
+
 public:
+    /// Used to select default initialization behavior.
+    /// Public use is limited to the fill constructor.
+    ///
+    struct DefaultInitTag {};
+
     // Define all typedefs necessary to meet the requirements of
     // SequenceContainer. Note that size_type must be unsigned (cf.
     // [tab:container.req] in the C++ standard), therefore we define it to be
@@ -254,10 +270,27 @@ public:
     using const_pointer          = const T*;
     using size_type              = size_t;
     using difference_type        = ptrdiff_t;
-    using iterator               = typename std::vector<T>::iterator;
-    using const_iterator         = typename std::vector<T>::const_iterator;
-    using reverse_iterator       = typename std::vector<T>::reverse_iterator;
-    using const_reverse_iterator = typename std::vector<T>::const_reverse_iterator;
+    using iterator               = pointer;
+    using const_iterator         = const_pointer;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+    // The iterator and const_iterator types are currently typedefs of pointers.
+    // This causes an ambiguous overload resolution compilation error for a
+    // call f(0) when both f(Int..) and f(const_iterator..) are declared.
+    // It was the case for our overloads of insert, and emplace.
+    // A similar case is discussed at https://stackoverflow.com/questions/4610503.
+    // To solve this problem we provide ConstIterator (until we use custom iterators).
+    // Matching f(0) to f(ConstIterator) requires a user-defined implicit conversion.
+    // According to overload resolution rules, this has lesser priority than the
+    // standard conversion required to use f(Int).
+    // Thus replacing f(const_iterator) with f(ConstIterator) is enough to lift the
+    // ambiguity as the compiler will then prefer f(Int) when compiling a call f(0).
+    struct ConstIterator {
+        ConstIterator(const_iterator it) : it(it) {}
+        operator const_iterator() { return it; }
+        const_iterator it;
+    };
 
     /// Creates an empty Array.
     ///
@@ -267,13 +300,15 @@ public:
     /// a.isEmpty();  // => true
     /// ```
     ///
-    Array() : data_() {
+    Array() noexcept {
 
     }
 
-    /// Creates an Array of given \p length with all values default-inserted.
+    /// Creates an Array of given \p length.
+    /// Elements are value initialized.
     ///
     /// Throws NegativeIntegerError if the given \p length is negative.
+    /// Throws LengthError if the given \p length is greater than maxLength().
     ///
     /// ```
     /// vgc::core::Array<double> a(3);
@@ -281,25 +316,34 @@ public:
     /// std::cout << a;  // => [0, 0, 0]
     /// ```
     ///
-    explicit Array(Int length) : data_(int_cast<size_type>(length)) {
-
+    explicit Array(Int length) {
+        checkLength_(length);
+        init_(length, ValueInitTag{});
     }
 
-    /// Creates an Array of given \p length with all values initialized to
-    /// the given \p value.
+    /// Creates an Array of given \p length.
+    /// Elements are default initialized.
+    /// 
+    /// Throws NegativeIntegerError if the given \p length is negative.
+    /// Throws LengthError if the given \p length is greater than maxLength().
+    /// 
+    /// ```
+    /// vgc::core::Array<double> a(2);
+    /// a.length();      // => 2
+    /// std::cout << a;  // => [undefined, undefined,undefined]
+    /// ```
     ///
-    /// This is an overload provided for compatibility with the STL.
-    ///
-    Array(size_type length, const T& value) :
-        data_(length, value) {
-
+    explicit Array(Int length, DefaultInitTag) {
+        checkLength_(length);
+        init_(length, DefaultInitTag{});
     }
 
     /// Creates an Array of given \p length with all values initialized to
     /// the given \p value.
     ///
     /// Throws NegativeIntegerError if the given \p length is negative.
-    ///
+    /// Throws LengthError if the given \p length is greater than maxLength().
+    /// 
     /// ```
     /// vgc::core::Array<double> a(3, 42);
     /// a.length();      // => 3
@@ -307,9 +351,21 @@ public:
     /// ```
     ///
     template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
-    Array(IntType length, const T& value) :
-        data_(int_cast<size_type>(length), value) {
+    Array(IntType length, const T& value) {
+        checkLength_(length);
+        init_(length, value);
+    }
 
+    /// Creates an Array of given \p length with all values initialized to
+    /// the given \p value.
+    ///
+    /// This is an overload provided for compatibility with the STL.
+    ///
+    /// Throws LengthError if the given \p length is greater than maxLength().
+    /// 
+    Array(size_type length, const T& value) {
+        checkLength_(length);
+        init_(static_cast<Int>(length), value);
     }
 
     /// Creates an Array initialized from the elements in the range given by
@@ -317,64 +373,84 @@ public:
     ///
     /// The behavior is undefined if [\p first, \p last) isn't a valid range.
     ///
+    /// Throws LengthError if the length of the given range is greater than maxLength().
+    /// 
     /// ```
     /// std::list<double> l = {1, 2, 3};
     /// vgc::core::Array<double> a(l.begin(), l.end()); // Copy the list as an Array
     /// ```
     ///
     template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
-    Array(InputIt first, InputIt last) :
-        data_(first, last) {
-
+    Array(InputIt first, InputIt last) {
+        rangeConstruct_(first, last);
     }
 
     /// Copy-constructs the \p other Array.
     ///
-    Array(const Array& other) : data_(other.data_) {
+    Array(const Array& other) :
+        Array(other.begin(), other.end()) {
 
     }
 
     /// Move-constructs the \p other Array.
     ///
-    Array(Array&& other) : data_(std::move(other.data_)) {
+    Array(Array&& other) :
+        data_(other.data_),
+        length_(other.length_),
+        reservedLength_(other.reservedLength_) {
 
+        other.data_ = nullptr;
+        other.length_ = 0;
+        other.reservedLength_ = 0;
     }
 
     /// Creates an Array initialized by the values given in the initializer
     /// list \p init.
+    ///
+    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
     /// std::cout << a;  // => [10, 42, 12]
     /// ```
     ///
-    Array(std::initializer_list<T> init) :
-        data_(init) {
-
+    Array(std::initializer_list<T> ilist) {
+        rangeConstruct_(ilist.begin(), ilist.end());
     }
 
     /// Destructs the given Array.
     ///
     ~Array() {
-
+        destroyStorage_();
     }
 
     /// Copy-assigns the given \p other Array.
     ///
     Array& operator=(const Array& other) {
-        data_ = other.data_;
+        if (this != &other) {
+            assign(other.begin(), other.end());
+        }
         return *this;
     }
 
     /// Move-assigns the given \p other Array.
     ///
     Array& operator=(Array&& other) {
-        data_ = std::move(other.data_);
+        if (this != &other) {
+            data_ = other.data_;
+            length_ = other.length_;
+            reservedLength_ = other.reservedLength_;
+            other.data_ = nullptr;
+            other.length_ = 0;
+            other.reservedLength_ = 0;
+        }
         return *this;
     }
 
     /// Replaces the contents of this Array by the values given in the
     /// initializer list \p ilist.
+    ///
+    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
     ///
     /// ```
     /// vgc::core::Array<double> a;
@@ -383,7 +459,7 @@ public:
     /// ```
     ///
     Array& operator=(std::initializer_list<T> ilist) {
-        data_ = ilist;
+        assign(ilist.begin(), ilist.end());
         return *this;
     }
 
@@ -393,15 +469,19 @@ public:
     /// This function is provided for compatibility with the STL: prefer using
     /// the overload accepting a signed integer as argument instead.
     ///
+    /// Throws LengthError if the given \p length is greater than maxLength().
+    /// 
     void assign(size_type length, T value) {
-        data_.assign(length, value);
+        checkLength_(length);
+        assignFill_(static_cast<Int>(length), value);
     }
 
-    /// Replaces the content of the Array by an array of the given \p size
+    /// Replaces the content of the Array by an array of the given \p length
     /// with all values initialized to the given \p value.
     ///
-    /// Throws NegativeIntegerError if the given \p size is negative.
-    ///
+    /// Throws NegativeIntegerError if the given \p length is negative.
+    /// Throws LengthError if the given \p length is greater than maxLength().
+    /// 
     /// ```
     /// vgc::core::Array<double> a;
     /// a.assign(3, 42);
@@ -410,7 +490,8 @@ public:
     ///
     template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
     void assign(IntType length, T value) {
-        data_.assign(int_cast<size_type>(length), value);
+        checkLength_(length);
+        assignFill_(static_cast<Int>(length), value);
     }
 
     /// Replaces the content of the Array by the elements in the range given by
@@ -419,6 +500,8 @@ public:
     /// The behavior is undefined if [\p first, \p last) isn't a valid range,
     /// or is a range into this Array.
     ///
+    /// Throws LengthError if the length of the given range is greater than maxLength().
+    /// 
     /// ```
     /// vgc::core::Array<double> a;
     /// std::list<double> l = someList();
@@ -427,14 +510,16 @@ public:
     ///
     template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
     void assign(InputIt first, InputIt last) {
-        data_.assign(first, last);
+        assignRange_(first, last);
     }
 
     /// Replaces the contents of this Array by the values given in the
     /// initializer list \p ilist.
     ///
+    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
+    /// 
     void assign(std::initializer_list<T> ilist) {
-        data_.assign(ilist);
+        assignRange_(ilist.begin(), ilist.end());
     }
 
     /// Returns a mutable reference to the element at index \p i.
@@ -524,7 +609,7 @@ public:
     T& getWrapped(Int i) {
         if (isEmpty()) {
             throw IndexError(
-                "Calling getWrapped(" + toString(i) + ") on an empty Array");
+                "Calling getWrapped(" + toString(i) + ") on an empty Array.");
         }
         return data_[static_cast<size_type>(wrap_(i))];
     }
@@ -546,7 +631,7 @@ public:
     const T& getWrapped(Int i) const {
         if (isEmpty()) {
             throw IndexError(
-                "Calling getWrapped(" + toString(i) + ") on an empty Array");
+                "Calling getWrapped(" + toString(i) + ") on an empty Array.");
         }
         return data_[static_cast<size_type>(wrap_(i))];
     }
@@ -566,7 +651,7 @@ public:
     T& first() {
         if (isEmpty()) {
             throw IndexError(
-                "Attempting to access the first element of an empty Array");
+                "Attempting to access the first element of an empty Array.");
         }
         return *begin();
     }
@@ -585,7 +670,7 @@ public:
     const T& first() const {
         if (isEmpty()) {
             throw IndexError(
-                "Attempting to access the first element of an empty Array");
+                "Attempting to access the first element of an empty Array.");
         }
         return *begin();
     }
@@ -605,7 +690,7 @@ public:
     T& last() {
         if (isEmpty()) {
             throw IndexError(
-                "Attempting to access the last element of an empty Array");
+                "Attempting to access the last element of an empty Array.");
         }
         return *(end() - 1);
     }
@@ -624,7 +709,7 @@ public:
     const T& last() const {
         if (isEmpty()) {
             throw IndexError(
-                "Attempting to access the last element of an empty Array");
+                "Attempting to access the last element of an empty Array.");
         }
         return *(end() - 1);
     }
@@ -635,7 +720,7 @@ public:
     /// of this Array to a API expecting a C-style array.
     ///
     T* data() noexcept {
-        return data_.data();
+        return data_;
     }
 
     /// Returns a const pointer to the underlying data.
@@ -644,85 +729,85 @@ public:
     /// of this Array to a API expecting a C-style array.
     ///
     const T* data() const noexcept {
-        return data_.data();
+        return data_;
     }
 
     /// Returns an iterator to the first element in this Array.
     ///
     iterator begin() noexcept {
-        return data_.begin();
+        return data_;
     }
 
     /// Returns a const iterator to the first element in this Array.
     ///
     const_iterator begin() const noexcept {
-        return data_.begin();
+        return cbegin();
     }
 
     /// Returns a const iterator to the first element in this Array.
     ///
     const_iterator cbegin() const noexcept {
-        return data_.cbegin();
+        return data_;
     }
 
     /// Returns an iterator to the past-the-last element in this Array.
     ///
     iterator end() noexcept {
-        return data_.end();
+        return data_ + length_;
     }
 
     /// Returns a const iterator to the past-the-last element in this Array.
     ///
     const_iterator end() const noexcept {
-        return data_.end();
+        return cend();
     }
 
     /// Returns a const iterator to the past-the-last element in this Array.
     ///
     const_iterator cend() const noexcept {
-        return data_.cend();
+        return data_ + length_;
     }
 
     /// Returns a reverse iterator to the first element of the reversed
     /// Array.
     ///
     reverse_iterator rbegin() noexcept {
-        return data_.rbegin();
+        return reverse_iterator(data_ + length_);
     }
 
     /// Returns a const reverse iterator to the first element of the reversed
     /// Array.
     ///
     const_reverse_iterator rbegin() const noexcept {
-        return data_.rbegin();
+        return crbegin();
     }
 
     /// Returns a const reverse iterator to the first element of the reversed
     /// Array.
     ///
     const_reverse_iterator crbegin() const noexcept {
-        return data_.crbegin();
+        return const_reverse_iterator(data_ + length_);
     }
 
     /// Returns a reverse iterator to the past-the-last element of the reversed
     /// Array.
     ///
     reverse_iterator rend() noexcept {
-        return data_.rend();
+        return reverse_iterator(data_);
     }
 
     /// Returns a const reverse iterator to the past-the-last element of the
     /// reversed Array.
     ///
     const_reverse_iterator rend() const noexcept {
-        return data_.rend();
+        return crend();
     }
 
     /// Returns a const reverse iterator to the past-the-last element of the
     /// reversed Array.
     ///
     const_reverse_iterator crend() const noexcept {
-        return data_.crend();
+        return const_reverse_iterator(data_);
     }
 
     /// Returns whether this Array is empty.
@@ -737,13 +822,13 @@ public:
     /// Returns whether this Array is empty.
     ///
     bool isEmpty() const noexcept {
-        return data_.empty();
+        return length_ == 0;
     }
 
     /// Returns whether this Array contains value.
     ///
     bool contains(const T& value) const noexcept {
-        return (std::find(data_.begin(), data_.end(), value) != data_.end());
+        return std::find(begin(), end(), value) != end();
     }
 
     /// Returns, as an unsigned integer, the number of elements in this Array.
@@ -752,23 +837,13 @@ public:
     /// length() instead.
     ///
     size_type size() const noexcept {
-        return data_.size();
+        return static_cast<size_type>(length_);
     }
 
     /// Returns the number of elements in this Array.
     ///
     Int length() const {
-        // Note: this function isn't noexcept due to our use of int_cast, which
-        // may throw. It'd be nice to just use static_cast (for performance and
-        // noexcept guarantees), but unfortunately this won't be safe as we
-        // currently don't prevent users from adding more than IntMax elements
-        // to the vector.
-        // TODO short term: update implementation of Array to make it
-        // impossible to create more than IntMax elements.
-        // TODO long term: implement array from scratch, storing the current
-        // length as an Int, and making it impossible to create more
-        // than IntMax elements.
-        return int_cast<Int>(data_.size());
+        return length_;
     }
 
     /// Returns, as an unsigned integer, the maximum number of elements this
@@ -779,37 +854,37 @@ public:
     /// maxLength() instead.
     ///
     size_type max_size() const noexcept {
-        return data_.max_size();
+        return static_cast<size_type>(maxLength());
     }
 
     /// Returns the maximum number of elements this Array is able to hold due
     /// to system or library implementation limitations.
     ///
-    Int maxLength() const noexcept {
-        // TODO: enforce length() <= maxLength.
-        // See comment in length().
+    constexpr Int maxLength() const noexcept {
         return vgc::core::tmax_<Int>::value;
     }
 
-    /// Increases the resevedLength() of this Array, that is, the maximum
+    /// Increases the reservedLength() of this Array, that is, the maximum
     /// number of elements this Array can contain without having to perform a
     /// reallocation. It may improve performance to call this function before
     /// performing multiple append(), when you know an upper bound or an
     /// estimate of the number of elements to append.
     ///
     /// Throws NegativeIntegerError if the given \p length is negative.
+    /// Throws LengthError if the given \p length is greater than maxLength().
     ///
     void reserve(Int length) {
-        data_.reserve(int_cast<size_type>(length));
+        checkLength_(length);
+        if (length > reservedLength_) {
+            reallocateExactly_(length); 
+        }
     }
 
     /// Returns the maximum number of elements this Array can contain without
     /// having to perform a reallocation.
     ///
-    Int reservedLength() const {
-        // TODO: make noexcept.
-        // See comment in length().
-        return int_cast<Int>(data_.capacity());
+    Int reservedLength() const noexcept {
+        return reservedLength_;
     }
 
     /// Reclaims unused memory. Use this if the current length() of this Array
@@ -819,13 +894,16 @@ public:
     /// make adding them back efficient.
     ///
     void shrinkToFit()  {
-        data_.shrink_to_fit();
+        shrinkToFit_();
     }
 
     /// Removes all the elements in this Array, making it empty.
     ///
     void clear() noexcept {
-        data_.clear();
+        if (length_ != 0) {
+            std::destroy_n(data_, length_);
+            length_ = 0;
+        }
     }
 
     /// Inserts the given \p value just before the element referred to by the
@@ -834,8 +912,8 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
-    iterator insert(const_iterator it, const T& value) {
-        return data_.insert(it, value);
+    iterator insert(ConstIterator it, const T& value) {
+        return emplace(it, value);
     }
 
     /// Move-inserts the given \p value just before the element referred to by
@@ -844,8 +922,8 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
-    iterator insert(const_iterator it, T&& value) {
-        return data_.insert(it, std::move(value));
+    iterator insert(ConstIterator it, T&& value) {
+        return emplace(it, std::move(value));
     }
 
     /// Inserts \p n copies of the given \p value just before the element
@@ -858,8 +936,13 @@ public:
     /// This function is provided for compatibility with the STL: prefer using
     /// the overload passing n as a signed integer instead.
     ///
-    iterator insert(const_iterator it, size_type n, const T& value) {
-        return data_.insert(it, n, value);
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    iterator insert(ConstIterator it, size_type n, const T& value) {
+        checkLength_(n); // necessary before casting to Int
+        pointer pos = unwrapIterator(it);
+        const Int i = static_cast<Int>(std::distance(data_, pos));
+        return makeIterator(insertFill_(i, static_cast<Int>(n), value));
     }
 
     /// Inserts \p n copies of the given \p value just before the element
@@ -869,11 +952,15 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
-    /// Throws NegativeIntegerError if \p n is negative.
+    /// Throws NegativeIntegerError if the given \p n is negative.
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
-    iterator insert(const_iterator it, IntType n, const T& value) {
-        return data_.insert(it, int_cast<size_type>(n), value);
+    iterator insert(ConstIterator it, IntType n, const T& value) {
+        checkLength_(n); // necessary before casting to Int
+        pointer pos = unwrapIterator(it);
+        const Int i = static_cast<Int>(std::distance(data_, pos));
+        return makeIterator(insertFill_(i, static_cast<Int>(n), value));
     }
 
     /// Inserts the range given by the input iterators \p first (inclusive) and
@@ -886,9 +973,13 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
     template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
-    iterator insert(const_iterator it, InputIt first, InputIt last) {
-        return data_.insert(it, first, last);
+    iterator insert(ConstIterator it, InputIt first, InputIt last) {
+        pointer pos = unwrapIterator(it);
+        const Int i = static_cast<Int>(std::distance(data_, pos));
+        return makeIterator(insertRange_(i, first, last));
     }
 
     /// Inserts the values given in the initializer list \p ilist just before
@@ -898,8 +989,10 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
-    iterator insert(const_iterator it, std::initializer_list<T> ilist) {
-        return data_.insert(it, ilist);
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    iterator insert(ConstIterator it, std::initializer_list<T> ilist) {
+        return insert(it, ilist.begin(), ilist.end());
     }
 
     /// Inserts the given \p value just before the element at index \p i, or
@@ -918,7 +1011,7 @@ public:
     ///
     void insert(Int i, const T& value) {
         checkInRangeForInsert_(i);
-        insert(toConstIterator_(i), value);
+        emplaceAt_(i, value);
     }
 
     /// Move-inserts the given \p value just before the element at index \p i,
@@ -928,17 +1021,16 @@ public:
     ///
     void insert(Int i, T&& value) {
         checkInRangeForInsert_(i);
-        insert(toConstIterator_(i), std::move(value));
+        emplaceAt_(i, std::move(value));
     }
-
 
     /// Inserts \p n copies of the given \p value just before the element
     /// at index \p i, or after the last element if `i == length()`.
     ///
     /// Throws IndexError if \p i does not belong to [0, length()].
-    ///
     /// Throws NegativeIntegerError if \p n is negative.
-    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12};
     /// a.insert(2, 3, 15);    // => [10, 42, 15, 15, 15, 12]
@@ -946,9 +1038,9 @@ public:
     ///
     void insert(Int i, Int n, const T& value) {
         checkInRangeForInsert_(i);
-        insert(toConstIterator_(i), n, value);
+        checkPositive_(n);
+        insertFill_(i, n, value);
     }
-
 
     /// Inserts the range given by the input iterators \p first (inclusive) and
     /// \p last (exclusive) just before the element at index \p i, or after the
@@ -958,11 +1050,12 @@ public:
     /// or is a range into this Array.
     ///
     /// Throws IndexError if \p i does not belong to [0, length()].
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
     void insert(Int i, InputIt first, InputIt last) {
         checkInRangeForInsert_(i);
-        insert(toConstIterator_(i), first, last);
+        insertRange_(i, first, last);
     }
 
     /// Inserts the values given in the initializer list \p ilist just before
@@ -970,10 +1063,11 @@ public:
     /// length()`.
     ///
     /// Throws IndexError if \p i does not belong to [0, length()].
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     void insert(Int i, std::initializer_list<T> ilist) {
         checkInRangeForInsert_(i);
-        data_.insert(toConstIterator_(i), ilist);
+        insertRange_(i, ilist.begin(), ilist.end());
     }
 
     /// Inserts a new element, constructed from the arguments \p args, just
@@ -983,9 +1077,13 @@ public:
     ///
     /// The behavior is undefined if \p it is not a valid iterator into this Array.
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     template <typename... Args>
-    iterator emplace(const_iterator it, Args&&... args) {
-        return data_.emplace(it, args...);
+    iterator emplace(ConstIterator it, Args&&... args) {
+        pointer pos = unwrapIterator(it);
+        const Int i = static_cast<Int>(std::distance(data_, pos));
+        return makeIterator(emplaceAt_(i, std::forward<Args>(args)...));
     }
 
     /// Inserts a new element, constructed from the arguments \p args, just
@@ -997,7 +1095,7 @@ public:
     template <typename... Args>
     void emplace(Int i, Args&&... args) {
         checkInRangeForInsert_(i);
-        emplace(toConstIterator_(i), args...);
+        emplaceAt_(i, std::forward<Args>(args)...);
     }
 
     /// Removes the element referred to by the iterator \p it. Returns an
@@ -1010,7 +1108,9 @@ public:
     /// behavior.
     //
     iterator erase(const_iterator it) {
-        return data_.erase(it);
+        pointer pos = unwrapIterator(it);
+        const Int i = static_cast<Int>(std::distance(data_, pos));
+        return makeIterator(erase_(i));
     }
 
     /// Removes all elements in the range given by the iterators \p it1
@@ -1022,7 +1122,9 @@ public:
     /// Array.
     //
     iterator erase(const_iterator it1, const_iterator it2) {
-        return data_.erase(it1, it2);
+        const pointer p1 = unwrapIterator(it1);
+        const pointer p2 = unwrapIterator(it2);
+        return makeIterator(erase_(p1, p2));
     }
 
     /// Removes the element at index \p i, shifting all subsequent elements one
@@ -1042,7 +1144,7 @@ public:
     ///
     void removeAt(Int i) {
         checkInRange_(i);
-        erase(toConstIterator_(i));
+        erase_(i);
     }
 
     /// Removes all elements from index \p i1 (inclusive) to index \p i2
@@ -1064,7 +1166,8 @@ public:
     ///
     void removeRange(Int i1, Int i2) {
         checkInRange_(i1, i2);
-        erase(toConstIterator_(i1), toConstIterator_(i2));
+        const pointer data = data_;
+        erase_(data + i1, data + i2);
     }
 
     /// Appends the given \p value to the end of this Array. This is fast:
@@ -1076,13 +1179,19 @@ public:
     /// ```
     ///
     void append(const T& value) {
-        insert(end(), value);
+        if (length_ == maxLength()) {
+            throwLengthError(length_, 1);
+        }
+        emplaceAt_(length_, value);
     }
 
     /// Move-appends the given \p value to the end of this Array.
     ///
     void append(T&& value) {
-        insert(end(), std::move(value));
+        if (length_ == maxLength()) {
+            throwLengthError(length_, 1);
+        }
+        emplaceAt_(length_, std::move(value));
     }
 
     /// Prepends the given \p value to the beginning of this Array, shifting
@@ -1095,13 +1204,19 @@ public:
     /// ```
     ///
     void prepend(const T& value) {
-        insert(begin(), value);
+        if (length_ == maxLength()) {
+            throwLengthError(length_, 1);
+        }
+        emplaceAt_(0, value);
     }
 
     /// Move-prepends the given \p value to the beginning of this Array.
     ///
     void prepend(T&& value) {
-        insert(begin(), std::move(value));
+        if (length_ == maxLength()) {
+            throwLengthError(length_, 1);
+        }
+        emplaceAt_(0, std::move(value));
     }
 
     /// Removes the first element of this Array, shifting all existing elements
@@ -1120,9 +1235,9 @@ public:
     void removeFirst() {
         if (isEmpty()) {
             throw IndexError(
-                "Attempting to remove the first element of an empty Array");
+                "Attempting to remove the first element of an empty Array.");
         }
-        erase(begin());
+        erase_(0);
     }
 
     /// Removes the last element of this Array. This is fast: O(1). This is
@@ -1140,9 +1255,9 @@ public:
     void removeLast() {
         if (isEmpty()) {
             throw IndexError(
-                "Attempting to remove the last element of an empty Array");
+                "Attempting to remove the last element of an empty Array.");
         }
-        erase(end()-1);
+        erase_(length_ - 1);
     }
 
     /// Removes and returns the last element of this Array. This is fast: O(1).
@@ -1166,8 +1281,9 @@ public:
     /// \sa removeAt(i), pop()
     ///
     T pop(Int i) {
+        checkInRange_(i);
         T res = (*this)[i];
-        removeAt(i);
+        erase_(i);
         return res;
     }
 
@@ -1175,12 +1291,26 @@ public:
     /// current length(). If \p count is smaller than the current length(), the
     /// last (length() - \p count) elements are discarded. If \p count is
     /// greater than the current length(), (\p count - length())
-    /// default-inserted elements are appended.
+    /// value-initialized elements are appended.
     ///
     /// Throws NegativeIntegerError if the given \p count is negative.
     ///
     void resize(Int count) {
-        data_.resize(int_cast<size_type>(count));
+        checkPositive_(count);
+        resize_(count, ValueInitTag{});
+    }
+
+    /// Resizes this Array so that it contains \p count elements instead of its
+    /// current length(). If \p count is smaller than the current length(), the
+    /// last (length() - \p count) elements are discarded. If \p count is
+    /// greater than the current length(), (\p count - length())
+    /// default-initialized elements are appended.
+    ///
+    /// Throws NegativeIntegerError if the given \p count is negative.
+    ///
+    void resizeNoInit(Int count) {
+        checkPositive_(count);
+        resize_(count, DefaultInitTag{});
     }
 
     /// Resizes this Array so that it contains \p count elements instead of its
@@ -1192,18 +1322,561 @@ public:
     /// Throws NegativeIntegerError if the given \p count is negative.
     ///
     void resize(Int count, const T& value) {
-        data_.resize(int_cast<size_type>(count), value);
+        checkPositive_(count);
+        resize_(count, value);
     }
 
     /// Exchanges the content of this Array with the content of the \p other
     /// Array.
     ///
     void swap(Array& other) {
-        data_.swap(other.data_);
+        if (this != &other) {
+            std::swap(data_, other.data_);
+            std::swap(length_, other.length_);
+            std::swap(reservedLength_, other.reservedLength_);
+        }
     }
 
 private:
-    std::vector<T> data_;
+    T* data_ = nullptr;
+    Int length_ = 0;
+    Int reservedLength_ = 0;
+
+    T* unwrapIterator(iterator it) {
+        return it;
+    }
+    T* unwrapIterator(const_iterator it) {
+        return const_cast<pointer>(it);
+    }
+    iterator makeIterator(pointer p) {
+        return p;
+    }
+
+    // Throws NegativeIntegerError if n is negative.
+    //
+    [[nodiscard]] T* allocate_(Int n) {
+        using Allocator = std::allocator<T>;
+        return Allocator().allocate(n);
+    }
+
+    // Throws NegativeIntegerError if n is negative.
+    //
+    void deallocate_(T* p, Int n) {
+        using Allocator = std::allocator<T>;
+        Allocator().deallocate(p, n);
+    }
+
+    // Standard construction
+    //
+    template<typename... Args>
+    void constructElement_(T* p, Args&&... args) {
+        using Allocator = std::allocator<T>;
+        using AllocatorTraits = std::allocator_traits<Allocator>;
+        Allocator al = {};
+        AllocatorTraits::construct(al, p, std::forward<Args>(args)...);
+    }
+
+    // Standard destruction
+    //
+    void destroyElement_(T* p) {
+        using Allocator = std::allocator<T>;
+        using AllocatorTraits = std::allocator_traits<Allocator>;
+        Allocator al = {};
+        AllocatorTraits::destroy(al, p);
+    }
+
+    // Helper for fill construction.
+    // New elements are initialized depending on InitValueType:
+    // - T, const T&: copy
+    // - ValueInitTag: value-initialization
+    // - DefaultInitTag: default-initialization
+    // Expects: length <= maxLength()
+    // 
+    // Throws NegativeIntegerError if the given length is negative.
+    //
+    template<typename InitValueType>
+    void init_(Int length, InitValueType v) {
+        if (length != 0) {
+            allocateStorage_(length);
+            uninitializedFillN_(data_, length, v);
+            length_ = length;
+        }
+    }
+
+    // Only for range constructors.
+    //
+    // Throws LengthError if range size exceeds maxLength().
+    //
+    template<typename InputIt>
+    void rangeConstruct_(InputIt first, InputIt last) {
+        using iterator_category = typename std::iterator_traits<InputIt>::iterator_category;
+
+        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
+            const auto dist = std::distance(first, last);
+            if (dist != 0) {
+                checkLength_(dist);
+                const Int newLen = static_cast<Int>(dist);
+                allocateStorage_(newLen);
+                std::uninitialized_copy(first, last, data_);
+                length_ = newLen;
+            }
+        }
+        else {
+            while (first != last) {
+                append(*first++);
+            }
+        }
+    }
+
+    // Calculates a new storage size to hold newLength objects.
+    // The result both depends on reservedLength() and newLength.
+    // Expects: newLength < maxLength()
+    //
+    Int calculateGrowth_(const Int newLength) const {
+        const Int oldReservedLen = reservedLength_;
+        const Int maxLen = maxLength();
+ 
+        if (oldReservedLen > maxLen - oldReservedLen) {
+            return maxLen;
+        }
+ 
+        const Int geometric = oldReservedLen + oldReservedLen;
+
+        if (geometric < newLength) {
+            return newLength;
+        }
+ 
+        return geometric;
+    }
+
+    // Destroys all elements and deallocates current storage.
+    // Leaves data_ as a dangling pointer!
+    //
+    void destroyStorage_() {
+        if (data_) {
+            std::destroy_n(data_, static_cast<size_t>(length_));
+            deallocate_(data_, reservedLength_);
+        }
+    }
+
+    // Resets the container to its default constructed state (empty, no storage).
+    //
+    void reset_() noexcept {
+        destroyStorage_();
+    }
+
+    // Leaves length_ unchanged!
+    // Expects: (data_ == nullptr) and (n <= maxLength()).
+    // 
+    // Throws NegativeIntegerError if n is negative.
+    //
+    void allocateStorage_(const Int n) {
+        data_ = allocate_(n);
+        reservedLength_ = n;
+    }
+
+    // Reallocates storage to hold exactly n elements.
+    // Content is moved from old to new storage.
+    // Expects: n <= maxLength()
+    //
+    // Throws NegativeIntegerError if n is negative.
+    //
+    void reallocateExactly_(const Int n) {
+        if (n < length_) {
+            throw LogicError("reallocateExactly_ is being called with n < length()");
+        }
+        const pointer newData = allocate_(n);
+        std::uninitialized_move_n(data_, length_, newData);
+        destroyStorage_();
+        data_ = newData;
+        reservedLength_ = n;
+    }
+
+    // Reallocates storage if necessary to fit the elements range.
+    // If the container is empty, storage is deallocated.
+    //
+    void shrinkToFit_() {
+        const Int len = length_;
+        if (len != reservedLength_) {
+            if (len == 0) {
+                reset_();
+            }
+            else {
+                reallocateExactly_(len);
+            }
+        }
+    } 
+
+    // Clears content and allocates new storage.
+    //
+    // Throws NegativeIntegerError if n is negative.
+    //
+    void clearAllocate_(const Int n) {
+        const pointer newData = allocate_(n);
+        destroyStorage_();
+        data_ = newData;
+        length_ = 0;
+        reservedLength_ = n;
+    }
+
+    // Resizes the container.
+    // Eventual new elements are initialized depending on InitValueType:
+    // - T, const T&: copy
+    // - ValueInitTag: value-initialization
+    // - DefaultInitTag: default-initialization
+    //
+    template<typename InitValueType>
+    void resize_(const Int newLen, InitValueType value) {
+        const Int oldLen = length_;
+        if (newLen == oldLen) {
+            return;
+        }
+
+        if (newLen > reservedLength_) {
+            // Increasing length beyond reserved length, reallocation required
+            const Int newReservedLen = calculateGrowth_(newLen);
+            const pointer newData = allocate_(newReservedLen);
+
+            std::uninitialized_move_n(data_, oldLen, newData);
+            uninitializedFillN_(newData + oldLen, newLen - oldLen, value);
+
+            destroyStorage_();
+            data_ = newData;
+            length_ = newLen;
+            reservedLength_ = newReservedLen;
+        }
+        else if (newLen < oldLen) {
+            // Decreasing length
+            std::destroy_n(data_ + newLen, oldLen - newLen);
+            length_ = newLen;
+        }
+        else {
+            // Increasing length within reserved range
+            uninitializedFillN_(data_ + oldLen, newLen - oldLen, value);
+            length_ = newLen;
+        }
+    }
+
+    // Assigns content to be newLen copies of value.
+    // Expects: newLen <= maxLength()
+    // 
+    void assignFill_(const Int newLen, const T& value) {
+        if (newLen <= reservedLength_) {
+            // Reuse storage
+            const Int oldLen = length_;
+            const pointer p = data_;
+
+            if (newLen <= oldLen) {
+                // Less or as many elements
+                std::fill_n(p, newLen, value);
+                std::destroy(p + newLen, p + oldLen);
+            }
+            else {
+                // More elements
+                std::fill_n(p, oldLen, value);
+                std::uninitialized_fill(p + oldLen, p + newLen, value);
+            }
+
+            length_ = newLen;
+        }
+        else {
+            // Allocate bigger storage
+            clearAllocate_(newLen);
+            uninitializedFillN_(data_, newLen, value);
+            length_ = newLen;
+        }
+    }
+
+    template<typename InputIt>
+    void assignRange_(InputIt first, InputIt last) {
+        using iterator_category = typename std::iterator_traits<InputIt>::iterator_category;
+        const Int oldLen = length_;
+
+        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
+            // Forward iterator case
+            const auto dist = std::distance(first, last);
+            checkLength_(dist);
+            const Int newLen = static_cast<Int>(dist);
+
+            if (newLen <= reservedLength_) {
+                // Reuse storage
+                const Int oldLen = length_;
+                const pointer p = data_;
+
+                if (newLen <= oldLen) {
+                    // Less or as many elements in input range than this container
+                    std::copy(first, last, p);
+                    std::destroy(p + newLen, p + oldLen);
+                }
+                else {
+                    // More elements in input range than this container
+                    const InputIt uBeg = std::next(first, oldLen); // not perfect
+                    std::copy(first, uBeg, data_);
+                    std::uninitialized_copy(uBeg, last, data_ + oldLen);
+                }
+            }
+            if (newLen > reservedLength_) {
+                // Allocate bigger storage
+                clearAllocate_(newLen);
+                std::uninitialized_copy(first, last, data_);
+            }
+
+            length_ = newLen;
+        }
+        else {
+            // Input iterator case (fallback)
+            const pointer data = data_;
+            const pointer e = data + oldLen;
+            pointer p = data;
+
+            // Exhaust either input range or output range
+            for (; first != last && p != e; ++first) {
+                *p++ = *first;
+            }
+
+            length_ = static_cast<Int>(p - data);
+            if (length_ < oldLen) {
+                // Less elements in input range than this container
+                std::destroy(p, e);
+            }
+            else {
+                // More or as many elements in input range than this container
+                for (; first != last; ++first) {
+                    append(*first);
+                }
+            }
+        }
+    }
+
+    // Expects: (length_ < maxLength()) and (0 <= i <= length_)
+    //
+    template<typename... Args>
+    pointer emplaceReallocate_(const Int i, Args&&... args) {
+        const Int oldLen = length_;
+        const Int newLen = oldLen + 1;
+        const Int newReservedLen = calculateGrowth_(newLen);
+        const pointer newData = allocate_(newReservedLen);
+        const pointer oldData = data_;
+        const pointer newElementPtr = newData + i;
+
+        // Move range [0, i) of oldData to newData
+        std::uninitialized_move_n(oldData, i, newData);
+        // Emplace new element at position i in newData
+        constructElement_(newElementPtr, std::forward<Args>(args)...);
+        // Move range [i, oldLen) of oldData to range [i + 1, oldLen + 1) of newData
+        if (i != oldLen) {
+            std::uninitialized_move_n(oldData + i, oldLen - i, newElementPtr + 1);
+        }
+
+        destroyStorage_();
+        data_ = newData;
+        length_ = newLen;
+        reservedLength_ = newReservedLen;
+
+        return newElementPtr;
+    }
+
+    // Expects: (length_ < reservedLength()) and (0 <= i <= length_)
+    //
+    template<typename... Args>
+    pointer emplaceReserved_(const Int i, Args&&... args) {
+        const Int oldLen = length_;
+        const pointer data = data_;
+
+        const pointer newElementPtr = data + i;
+
+        if (i == oldLen) {
+            constructElement_(newElementPtr, std::forward<Args>(args)...);
+        }
+        else {
+            // (0 <= i <= length()) and (i != oldLen) => (oldLen > 0)
+            const pointer last = data + oldLen;
+            const pointer back = last - 1;
+            // *last is uninitialized!
+            constructElement_(last, std::move(*back));
+            // Ranges overlap -> Move backward
+            std::move_backward(newElementPtr, back, last);
+            // Emplace new element
+            *newElementPtr = T(std::forward<Args>(args)...);
+        }
+
+        ++length_;
+        return newElementPtr;
+    }
+
+    template<typename... Args>
+    pointer emplaceAt_(const Int i, Args&&... args) {
+        if (length_ < reservedLength_) {
+            return emplaceReserved_(i, std::forward<Args>(args)...);
+        }
+        else {
+            return emplaceReallocate_(i, std::forward<Args>(args)...);
+        }
+    }
+
+    // Prepares for insertion of a range elements.
+    // Returns index of first uninitialized element contained in insertion range, or end of insertion range.
+    // Expects: (0 <= i <= length_) and (n > 0)
+    //
+    // Throws LengthError if the resulting number of elements would exceed maxLength().
+    //
+    Int prepareInsertRange_(const Int i, const Int n) {
+
+        const Int oldLen = length_;
+        const Int newLen = oldLen + n;
+
+        if (oldLen > maxLength() - n) {
+            throwLengthError(length_, n);
+        }
+
+        if (newLen < reservedLength_) {
+            // Reuse storage
+            const pointer data = data_;
+            const pointer oldEnd = data + oldLen;
+            const pointer insertPtr = data + i;
+            const Int displacedCount = oldEnd - insertPtr;
+
+            if (displacedCount <= n) {
+                // Shift of elements does not overlap.
+                std::uninitialized_move(insertPtr, oldEnd, insertPtr + n);
+                length_ = newLen;
+                return oldLen;
+            }
+            else {
+                // Shift of elements does overlap.
+                const pointer m = oldEnd - n;
+                std::uninitialized_move(m, oldEnd, oldEnd);
+                std::move_backward(insertPtr, m, oldEnd);
+                length_ = newLen;
+                return i + n;
+            }
+        }
+        else {
+            // Allocate bigger storage
+            const Int newReservedLen = calculateGrowth_(newLen);
+            const pointer oldData = data_;
+            const pointer newData = allocate_(newReservedLen);
+            const pointer insertPtr = newData + i;
+
+            const pointer splitPtr = oldData + i;
+            std::uninitialized_move(oldData, splitPtr, newData);
+            std::uninitialized_move(splitPtr, oldData + oldLen, insertPtr + n);
+
+            destroyStorage_();
+            data_ = newData;
+            length_ = newLen;
+            reservedLength_ = newReservedLen;
+
+            return i;
+        }
+    }
+
+    // Expects: (0 <= i <= length_) and (n > 0)
+    //
+    // Throws LengthError if the resulting number of elements would exceed maxLength().
+    //
+    pointer insertFill_(const Int i, const Int n, const T& value) {
+        if (n == 0) {
+            return data_ + i;
+        }
+
+        const Int j = prepareInsertRange_(i, n);
+        const pointer uBeg = data_ + j;
+        const pointer insertBeg = data_ + i;
+        const pointer insertEnd = insertBeg + n;
+        if (insertBeg < uBeg) {
+            std::fill(insertBeg, uBeg, value);
+        }
+        if (uBeg < insertEnd) {
+            std::uninitialized_fill(uBeg, insertEnd, value);
+        }
+
+        return insertBeg;
+    }
+
+    // Expects: (0 <= i <= length_) and (n > 0)
+    //
+    // Throws LengthError if the resulting number of elements would exceed maxLength().
+    //
+    template<typename Iter>
+    pointer insertRange_(const Int i, Iter first, Iter last) {
+        using iterator_category = typename std::iterator_traits<Iter>::iterator_category;
+
+        if (first == last) {
+            return data_ + i;
+        }
+
+        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
+            // Forward iterator implementation
+            const auto dist = std::distance(first, last);
+
+            checkLength_(dist);
+            const Int n = static_cast<Int>(dist);
+
+            const Int j = prepareInsertRange_(i, n);
+            const pointer insertBeg = data_ + i;
+            const Int initCount = j - i;
+
+            if (initCount > 0) {
+                std::copy_n(first, initCount, insertBeg);
+                if (initCount < n) {
+                    const Iter m = std::next(first, initCount);
+                    std::uninitialized_copy(m, last, insertBeg + initCount);
+                }
+            }
+            else {
+                std::uninitialized_copy(first, last, insertBeg);
+            }
+
+            return insertBeg;
+        }
+        else {
+            // Input iterator implementation (fallback, slow!)
+            const Int oldLen = length_;
+            for (; first != last; ++first) {
+                append(*first);
+            }
+            const pointer data = data_;
+            const pointer insertBeg = data + i;
+            std::rotate(insertBeg, data + oldLen, data + length_);
+            return insertBeg;
+        }
+    }
+
+    // Expects: (0 <= i < length_)
+    //
+    pointer erase_(const Int i) noexcept {
+        const pointer data = data_;
+        const pointer oldEnd = data + length_;
+        const pointer erasePtr = data + i;
+        std::move(erasePtr + 1, oldEnd, erasePtr);
+        destroyElement_(oldEnd - 1);
+        --length_;
+        return erasePtr;
+    }
+
+    pointer erase_(const pointer first, const pointer last) noexcept {
+        if (first != last) {
+            const pointer oldEnd = data_ + length_;
+            const Int n = static_cast<Int>(std::distance(first, last));
+            std::move(last, oldEnd, first);
+            std::destroy_n(oldEnd - n, n);
+            length_ -= n;
+        }
+        return first;
+    }
+
+    iterator uninitializedFillN_(iterator first, const Int n, const T& value) {
+        return std::uninitialized_fill_n(unwrapIterator(first), n, value);
+    }
+
+    iterator uninitializedFillN_(iterator first, const Int n, ValueInitTag) {
+        return std::uninitialized_value_construct_n(unwrapIterator(first), n);
+    }
+
+    iterator uninitializedFillN_(iterator first, const Int n, DefaultInitTag) {
+        return std::uninitialized_default_construct_n(unwrapIterator(first), n);
+    }
 
     // Casts from integer to const_iterator.
     //
@@ -1223,7 +1896,7 @@ private:
             "Array index " + toString(i) + " out of range " +
             (isEmpty() ? "(the array is empty)" :
                          ("[0, " + toString(size() - 1) + "] " +
-                         "(array length is " + toString(size()) + ")")));
+                         "(array length is " + toString(size()) + ").")));
     }
     void checkInRange_(size_type i) const {
         // Note: we compare as an unsigned int with size(), rather than as a
@@ -1243,8 +1916,45 @@ private:
         }
     }
 
+    // Available in C++20
+    // Used to establish non-deduced contexts in template argument deduction.
+    // e.g. throwLengthError's IntType is deduced from first argument only,
+    // then second argument must be convertible to it.
+    // todo: move it to some common header or adopt c++20.
+    template<typename U>
+    struct type_identity {
+        using type = U;
+    };
+
+    // Throws NegativeIntegerError if length is negative.
+    //
+    template<typename IntType>
+    void checkPositive_(IntType length) const {
+        if constexpr (std::is_signed_v<IntType>) {
+            if (length < 0) {
+                throw NegativeIntegerError("Array length cannot be negative.");
+            }
+        }
+    }
+
+    // Throws NegativeIntegerError if length is negative.
+    // Throws LengthError if length > maxLength().
+    //
+    template<typename IntType>
+    void checkLength_(IntType length) const {
+        checkPositive_(length);
+        // both are positive, thus safe to compare
+        if (static_cast<size_t>(length) > static_cast<size_t>(maxLength())) {
+            throw LengthError("Exceeding maximum Array length.");
+        }
+    }
+    template<typename IntType>
+    void throwLengthError(IntType current, typename type_identity<IntType>::type addend) const {
+        throw LengthError("Exceeding maximum Array length.");
+    }
+
     // Checks whether range [i1, i2) is valid:
-    //     0 <= i1 <= i2 <= size()
+    //     0 <= i1 <= i2 <= length()
     //
     // Note that i2 (or even i1 when i1 == i2) doesn't have to be
     // dereferenceable. In particular, [end(), end()) is a valid empty range.
@@ -1254,22 +1964,11 @@ private:
         throw IndexError(
             "Array index range [" + toString(i1) + ", " + toString(i2) + ") " +
             (i1 > i2 ? "invalid (second index must be greater or equal than first index)" :
-                       "out of range [0, " + toString(size()) + ")"));
-    }
-    void checkInRange_(size_type i1, size_type i2) const {
-        // Note: we compare as an unsigned int with size(), rather than as a
-        // signed int with length(), because we are currently using std::vector
-        // as a backend, thus size() is cached while length() isn't, thus
-        // comparing with size() should be faster (one less comparison).
-        if (i1 > i2 || i2 > size()) {
-            throwNotInRange_(i1, i2);
-        }
+                       "out of range [0, " + toString(size()) + ")."));
     }
     void checkInRange_(Int i1, Int i2) const {
-        try {
-            checkInRange_(int_cast<size_type>(i1), int_cast<size_type>(i2));
-        }
-        catch (NegativeIntegerError&) {
+        const bool inRange = (0 <= i1) && (i1 <= i2) && (i2 <= length());
+        if (!inRange) {
             throwNotInRange_(i1, i2);
         }
     }
@@ -1284,23 +1983,13 @@ private:
         difference_type i = std::distance(begin(), it);
         if (i < 0 || static_cast<size_type>(i) > size()) {
             throw IndexError("Array index " + toString(i) + " out of range for insertion (array length is " +
-                              toString(size()) + ")");
-        }
-    }
-    void checkInRangeForInsert_(size_type i) const {
-        // Note: we compare as an unsigned int with size(), rather than as a
-        // signed int with length(), because we are currently using std::vector
-        // as a backend, thus size() is cached while length() isn't, thus
-        // comparing with size() should be faster (one less comparison).
-        if (i > size()) {
-            throw IndexError("Array index " + toString(i) + " out of range for insertion (array length is " +
-                              toString(size()) + ")");
+                              toString(size()) + ").");
         }
     }
     void checkInRangeForInsert_(Int i) const {
         if (i < 0 || i > length()) {
             throw IndexError("Array index " + toString(i) + " out of range for insertion (array length is " +
-                              toString(length()) + ")");
+                              toString(length()) + ").");
         }
     }
 
@@ -1389,7 +2078,7 @@ void write(OStream& out, const Array<T>& a)
     else {
         write(out, '[');
         auto it = a.cbegin();
-        auto last = --a.cend();
+        auto last = a.cend()-1;
         write(out, *it);
         while (it != last) {
             write(out, ", ", *++it);

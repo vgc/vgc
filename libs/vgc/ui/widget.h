@@ -96,7 +96,7 @@ public:
     ///
     void remove(core::StringId class_) {
         // TODO: implement removeOne() and removeAll() method directly in core::Array
-        auto it = find(begin(), end(), class_);
+        auto it = std::find(begin(), end(), class_);
         if (it != end()) {
             a_.erase(it);
         }
@@ -106,7 +106,7 @@ public:
     /// otherwise removes the class.
     ///
     void toggle(core::StringId class_) {
-        auto it = find(begin(), end(), class_);
+        auto it = std::find(begin(), end(), class_);
         if (it == end()) {
             a_.append(class_);
         }
