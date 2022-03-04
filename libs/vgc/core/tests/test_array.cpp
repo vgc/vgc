@@ -14,13 +14,106 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <iterator>
+
 #include <gtest/gtest.h>
 #include <vgc/core/array.h>
 
 using vgc::Int;
 using vgc::core::Array;
 using vgc::core::IndexError;
+using vgc::core::LengthError;
 using vgc::core::NegativeIntegerError;
+
+// To properly test containers we have to check that:
+// - its elements are not being over-destroyed or over-constructed.
+// - its size always equals the count of alive elements (from the outside).
+template <typename TestTag>
+class TestObject
+{
+public:
+    struct Statistics {
+        size_t overConstructCount = 0;
+        size_t overDestroyCount = 0;
+        int64_t aliveCount = 0;
+    };
+
+    TestObject() : i_(0) {
+        init_();
+    }
+
+    TestObject(int i) : i_(i) {
+        init_();
+    }
+
+    TestObject(const TestObject& other) : i_(other.i_) {
+        init_();
+    }
+
+    TestObject(TestObject&& other) : i_(other.i_) {
+        init_();
+    }
+
+    TestObject& operator=(const TestObject& other) {
+        i_ = other.i_;
+        return *this;
+    }
+
+    TestObject& operator=(TestObject&& other) {
+        i_ = other.i_;
+        return *this;
+    }
+
+    ~TestObject() {
+        const int id = static_cast<int>((char*)this - (char*)0);
+        if (cookie_ != id) {
+            ++stats_().overDestroyCount;
+        }
+        --stats_().aliveCount;
+        cookie_ = id;
+        i_ = -1;
+    }
+
+    static int64_t aliveCount() {
+        return stats_().aliveCount;
+    }
+
+    static void doPostTestChecks(int64_t expectedAliveCount = 0) {
+        if (stats_().overConstructCount > 0) {
+            throw std::runtime_error("Some array elements have been over-constructed");
+        }
+        if (stats_().overDestroyCount > 0) {
+            throw std::runtime_error("Some array elements have been over-destroyed");
+        }
+        if (stats_().aliveCount != expectedAliveCount) {
+            throw std::runtime_error("Unexpected count of alive elements.");
+        }
+    }
+
+    operator int() const { return i_; }
+
+    friend std::istream& operator>>(std::istream& stream, TestObject& o) {
+        return stream >> o.i_;
+    }
+
+private:
+    void init_() {
+        const int id = static_cast<int>((char*)this - (char*)0);
+        if (cookie_ == id) {
+            ++stats_().overConstructCount;
+        }
+        ++stats_().aliveCount;
+        cookie_ = id;
+    }
+
+    static Statistics& stats_() {
+        static Statistics s = {};
+        return s;
+    }
+
+    int cookie_ = 0;
+    int i_;
+};
 
 TEST(TestArray, Construct) {
     // Note: it's important to test the zero-init after the non-zero init, to
@@ -45,9 +138,19 @@ TEST(TestArray, Construct) {
     { Array<int> a{10, 42};         EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
     { Array<int> a{10, 42, 5};      EXPECT_TRUE(a.contains(42)); EXPECT_FALSE(a.contains(43)); }
     EXPECT_THROW(Array<int>(-1),          NegativeIntegerError);
-    EXPECT_THROW(Array<int>(Int(-1)),     NegativeIntegerError);
+    EXPECT_THROW(Array<int>(-1, Array<int>::DefaultInitTag{}), NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, 42),      NegativeIntegerError);
-    EXPECT_THROW(Array<int>(Int(-1), 42), NegativeIntegerError);
+    if (static_cast<Int>(size_t(-1)) > 0) {
+        EXPECT_THROW(Array<int>(size_t(-1)), LengthError);
+        EXPECT_THROW(Array<int>(size_t(-1), Array<int>::DefaultInitTag{}), LengthError);
+        EXPECT_THROW(Array<int>(size_t(-1), 42), LengthError);
+    }
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        // Tests init_
+        Array<TestObj> a(10);       EXPECT_EQ(a.length(), TestObj::aliveCount());
+    }
+    EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
 TEST(TestArray, CopyAndMove) {
@@ -88,6 +191,31 @@ TEST(TestArray, Assign) {
     a.assign({11, 43});                 EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 11); EXPECT_EQ(a[1], 43);
     EXPECT_THROW(a.assign(-1, 42),      NegativeIntegerError);
     EXPECT_THROW(a.assign(Int(-1), 42), NegativeIntegerError);
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        // Tests assignFill_
+        Array<TestObj> a(10);
+        a.assign(3, 1);                 EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
+        a.assign(8, 2);                 EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
+        a.resize(16, 3);                EXPECT_EQ(a.length(), TestObj::aliveCount());
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
+    {
+        // Tests assignRange_ with forward iterator
+        Array<int> v = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+        Array<TestObj> a(6);
+        a.assign(v.begin(), v.begin() + 3); EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 6);
+        a.assign(v.begin(), v.begin() + 5); EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 6);
+        a.assign(v.begin(), v.begin() + 9); EXPECT_EQ(a.length(), TestObj::aliveCount());
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
+    {
+        // Tests assignRange_ with input-only iterator
+        std::istringstream sst4("1 2 3 4");
+        std::istringstream sst6("1 2 3 4 5 6");
+        using ISIt = std::istream_iterator<TestObj>;
+        Array<TestObj> a(10);
+        a.assign(ISIt{sst4}, ISIt{});       EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a[2], 3);
+        a.assign(ISIt{sst6}, ISIt{});       EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a[4], 5);
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
 TEST(TestArray, GetChecked) {
@@ -246,7 +374,6 @@ TEST(TestArray, Length) {
     EXPECT_GE(a.reservedLength(), 1);
     EXPECT_GE(a.max_size(), 1);
     EXPECT_GE(a.maxLength(), 1);
-
 }
 
 TEST(TestArray, Reserve) {
@@ -326,6 +453,53 @@ TEST(TestArray, InsertAtIndex) {
     Array<int> k = {10, 1, 2, 42, 15, 10, 42, 15, 15, 12};
     h.insert(1, {1, 2}); EXPECT_EQ(h, k);
     EXPECT_THROW(h.insert(-1, {1, 2}), IndexError);
+
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        Array<TestObj> a(10);
+        a.resize(8);
+        // Tests emplaceReserved_
+        a.append(17);                   EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10); 
+        a.append(11);                   EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10); 
+        // Tests emplaceReallocate_ with i != length()
+        a.insert(4, 41);                EXPECT_EQ(a.length(), TestObj::aliveCount());
+        EXPECT_EQ(a[4], 41); EXPECT_EQ(a[9], 17); EXPECT_EQ(a[10], 11);
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
+    {
+        Array<int> s1 = {1, 1, 1};
+        Array<int> s2 = {42, 42};
+        Array<int> s3 = {0, 0, 0, 0};
+        Array<TestObj> r1 = {7, 7, 7, 7};
+        Array<TestObj> r2 = {7, 7, 1, 1, 1, 7, 7};
+        Array<TestObj> r3 = {7, 7, 1, 42, 42, 1, 1, 7, 7};
+        Array<TestObj> r4 = {7, 7, 1, 42, 42, 0, 0, 0, 0, 1, 1, 7, 7};
+        Array<TestObj> r2b = {7, 7, 1, 2, 3, 4, 5, 7, 7};
+        const auto preCnt = TestObj::aliveCount();
+        {
+            // Tests prepareInsertRange_ via insertFill_
+            Array<TestObj> a(10, 7);
+            a.resize(4);                        EXPECT_EQ(a, r1);
+            a.insert(2, 3, 1);                  EXPECT_EQ(a, r2); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // shift without overlap
+            a.insert(3, 2, 42);                 EXPECT_EQ(a, r3); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // shift with overlap
+            a.insert(5, 4, 0);                  EXPECT_EQ(a, r4); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // reallocation
+        }   EXPECT_NO_THROW(TestObj::doPostTestChecks(preCnt));
+        {
+            // Tests insertRange_ with forward iterator
+            Array<TestObj> a(10, 7);
+            a.resize(4);                        EXPECT_EQ(a, r1);
+            a.insert(2, s1.begin(), s1.end());  EXPECT_EQ(a, r2); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // shift without overlap
+            a.insert(3, s2.begin(), s2.end());  EXPECT_EQ(a, r3); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // shift with overlap
+            a.insert(5, s3.begin(), s3.end());  EXPECT_EQ(a, r4); EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt); // reallocation
+        }   EXPECT_NO_THROW(TestObj::doPostTestChecks(preCnt));
+        {
+            // Tests insertRange_ with input-only iterator
+            std::istringstream sst4("1 2 3 4 5");
+            using ISIt = std::istream_iterator<TestObj>;
+            Array<TestObj> a(6, 7);
+            a.resize(4);                        EXPECT_EQ(a, r1);   EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt);
+            a.insert(2, ISIt{sst4}, ISIt{});    EXPECT_EQ(a, r2b);  EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt);
+        }   EXPECT_NO_THROW(TestObj::doPostTestChecks(preCnt));
+    }
 }
 
 class Foo {
@@ -351,6 +525,11 @@ TEST(TestArray, EraseAtIterator) {
     Array<int> c = {10};
     auto it = a.erase(a.begin()+1); EXPECT_EQ(a, b); EXPECT_EQ(*it, 12);
     auto it2 = a.erase(a.begin()+1); EXPECT_EQ(a, c); EXPECT_EQ(it2, a.end());
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        Array<TestObj> a(10);
+        a.erase(a.begin() + 3); EXPECT_EQ(a.length(), TestObj::aliveCount());
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
 TEST(TestArray, EraseRangeIterator) {
@@ -361,6 +540,11 @@ TEST(TestArray, EraseRangeIterator) {
     auto it2 = a.erase(a.begin(), a.begin()); EXPECT_EQ(a, b); EXPECT_EQ(it2, a.begin());
     auto it3 = a.erase(a.end(), a.end()); EXPECT_EQ(a, b); EXPECT_EQ(it3, a.end());
     auto it4 = a.erase(a.begin(), a.end()); EXPECT_TRUE(a.isEmpty()); EXPECT_EQ(it4, a.end());
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        Array<TestObj> a(10);
+        a.erase(a.begin() + 3, a.begin() + 5); EXPECT_EQ(a.length(), TestObj::aliveCount());
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
 TEST(TestArray, RemoveAt) {
@@ -432,6 +616,26 @@ TEST(TestArray, Resize) {
     a.resize(5); EXPECT_EQ(a, c);
     a.resize(8, 15); EXPECT_EQ(a, d);
     EXPECT_THROW(a.resize(-1), NegativeIntegerError);
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        // Tests resize_
+        Array<TestObj> a(10);
+        a.resize(3);        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
+        a.resize(8);        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
+        a.resize(16);       EXPECT_EQ(a.length(), TestObj::aliveCount());
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
+}
+
+TEST(TestArray, ShrinkToFit) {
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        // Tests shrinkToFit_
+        Array<TestObj> a(10);
+        a.resize(3);        EXPECT_EQ(a.reservedLength(), 10);
+        a[2] = 42;
+        a.shrinkToFit();    EXPECT_EQ(a.reservedLength(), 3);
+        EXPECT_EQ(a[2], 42);
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
 TEST(TestArray, Swap) {
@@ -467,6 +671,23 @@ TEST(TestArray, Compare) {
 TEST(TestArray, ToString) {
     Array<int> a = {1, 2}; EXPECT_EQ(toString(a), "[1, 2]");
     Array<int> b = {};     EXPECT_EQ(toString(b), "[]");
+}
+
+TEST(TestArray, PrivRangeConstruct) {
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    using ISIt = std::istream_iterator<TestObj>;
+    std::istringstream sst("1 2 3 4 5");
+    std::vector<int> v = {1, 2, 3, 4, 5};
+    {
+        // rangeConstruct_ with input-only iterator
+        Array<TestObj> a(ISIt{sst}, ISIt{});
+        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a[2], 3);
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
+    {
+        // rangeConstruct_ with forward iterator
+        Array<TestObj> a(v.begin(), v.end());
+        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a[2], 3);
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
 int main(int argc, char **argv) {
