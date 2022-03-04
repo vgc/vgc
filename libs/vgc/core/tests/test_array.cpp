@@ -31,6 +31,8 @@ using vgc::core::NegativeIntegerError;
 template <typename TestTag>
 class TestObject
 {
+    static constexpr int magic = 0x67BF402E;
+
 public:
     struct Statistics {
         size_t overConstructCount = 0;
@@ -65,12 +67,11 @@ public:
     }
 
     ~TestObject() {
-        const int id = static_cast<int>((char*)this - (char*)0);
-        if (cookie_ != id) {
+        if (cookie_ != magic) {
             ++stats_().overDestroyCount;
         }
         --stats_().aliveCount;
-        cookie_ = id;
+        cookie_ = 0;
         i_ = -1;
     }
 
@@ -98,12 +99,11 @@ public:
 
 private:
     void init_() {
-        const int id = static_cast<int>((char*)this - (char*)0);
-        if (cookie_ == id) {
+        if (cookie_ == magic) {
             ++stats_().overConstructCount;
         }
         ++stats_().aliveCount;
-        cookie_ = id;
+        cookie_ = magic;
     }
 
     static Statistics& stats_() {
