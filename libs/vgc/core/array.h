@@ -1762,6 +1762,7 @@ private:
             std::uninitialized_move(oldData, splitPtr, newData);
             std::uninitialized_move(splitPtr, oldData + oldLen, insertPtr + n);
 
+            destroyStorage_();
             data_ = newData;
             length_ = newLen;
             reservedLength_ = newReservedLen;
@@ -1871,6 +1872,10 @@ private:
 
     iterator uninitializedFillN_(iterator first, const Int n, ValueInitTag) {
         return std::uninitialized_value_construct_n(unwrapIterator(first), n);
+    }
+
+    iterator uninitializedFillN_(iterator first, const Int n, DefaultInitTag) {
+        return std::uninitialized_default_construct_n(unwrapIterator(first), n);
     }
 
     // Casts from integer to const_iterator.
