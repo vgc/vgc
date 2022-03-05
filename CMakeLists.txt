@@ -438,6 +438,12 @@ if(EXISTS ${FMT_DIR})
         # 'std::runtime_error' used as base for dll-interface class
         # 'fmt::v6::format_error' / 'fmt::v6::system_error'
         target_compile_options(fmt PRIVATE /wd4275)
+        # disable warning C4251 (since fmt 8.0.0): 'fmt::v8::ostream::file_':
+        # class 'fmt::v8::file' needs to have dll-interface to be used by
+        # clients of class 'fmt::v8::ostream'
+        # See: https://github.com/fmtlib/fmt/issues/2796
+        # We may remove this if is a fix is merged for the above issue
+        target_compile_options(fmt PRIVATE /wd4251)
     endif()
     if(VGC_FMT_LIB_TYPE STREQUAL "static")
         set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
