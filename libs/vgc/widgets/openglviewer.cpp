@@ -597,7 +597,7 @@ void OpenGLViewer::createCurveGLResources_(Int)
 void OpenGLViewer::updateCurveGLResources_(Int i)
 {
     assert(i >= 0); // TODO convert all asserts to VGC_CORE_ASSERT
-    assert(i < curveGLResources_.size());
+    assert(i < curveGLResources_.length());
     //assert(i < scene_->curves().size());
     CurveGLResources& r = curveGLResources_[i];
 
