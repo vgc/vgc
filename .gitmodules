@@ -4,3 +4,6 @@
 [submodule "third/pybind11"]
 	path = third/pybind11
 	url = https://github.com/pybind/pybind11.git
+[submodule "third/fmt"]
+	path = third/fmt
+	url = https://github.com/fmtlib/fmt.git

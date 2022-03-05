@@ -311,7 +311,7 @@ write(OStream& out, FloatType x)
     //   9999999.f -> " 9999999.000000000000" (after calling fmt::format_to)
     //             -> "10000000             " (after our post-processing)
     fmt::memory_buffer b;
-    fmt::format_to(b, " {:.12f}", x);
+    fmt::format_to(std::back_inserter(b), " {:.12f}", x);
     auto begin = b.begin() + 1;
     auto end = b.end();
 
