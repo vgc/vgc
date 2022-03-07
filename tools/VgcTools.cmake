@@ -132,6 +132,7 @@ function(vgc_add_library LIB_NAME)
             "lib"
             "${LIB_NAME}"
     )
+    add_dependencies(${TARGET_NAME} ${TARGET_NAME}_resources)
 
 endfunction()
 
@@ -377,6 +378,11 @@ function(vgc_add_app APP_NAME)
                     ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe
             VERBATIM
         )
+
+        # Add dependency to copy_python so that pythonXY.dll is copied to the 
+        # build folder when building the app.
+        #
+        add_dependencies(${TARGET_NAME} copy_python)
     endif()
 
 endfunction()
