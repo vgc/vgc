@@ -25,6 +25,7 @@ void wrap_io(py::module& m);
 void wrap_object(py::module& m);
 void wrap_parse(py::module& m);
 void wrap_paths(py::module& m);
+void wrap_signal(py::module& m);
 void wrap_stopwatch(py::module& m);
 void wrap_vec2(py::module& m);
 
@@ -38,6 +39,7 @@ PYBIND11_MODULE(core, m) {
     wrap_object(m);
     wrap_parse(m);
     wrap_paths(m);
+    wrap_signal(m);
     wrap_stopwatch(m);
     wrap_vec2(m);
 }

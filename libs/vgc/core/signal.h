@@ -17,8 +17,10 @@
 #ifndef VGC_CORE_SIGNAL_H
 #define VGC_CORE_SIGNAL_H
 
-#include <vector>
 #include <functional>
+#include <memory>
+#include <vector>
+
 #include <vgc/core/api.h>
 #include <vgc/core/object.h>
 
@@ -99,6 +101,48 @@ public:
 
 private:
     mutable std::vector<std::function<void(Args...)>> slots_;
+};
+
+using SimpleSignal = Signal<>;
+
+class ObjectOwnedSignalRef
+{
+public:
+    ObjectOwnedSignalRef(const ObjectPtr& o, SimpleSignal* p) {
+        o_ = o;
+        p_ = p;
+    }
+
+    void connect(const std::function<void()>& slot) const {
+        p_->connect(slot);
+    }
+
+    void operator()() const {
+        (*p_)();
+    }
+
+private:
+    ObjectPtr o_;
+    SimpleSignal* p_;
+};
+
+class UnsharedOwnerSignal
+{
+public:
+    UnsharedOwnerSignal() {
+        ss_ = std::make_shared<Signal<>>();
+    }
+
+    void connect(const std::function<void()>& slot) const {
+        ss_->connect(slot);
+    }
+
+    void operator()() const {
+        (*ss_)();
+    }
+
+private:
+    std::shared_ptr<Signal<>> ss_;
 };
 
 } // namespace core

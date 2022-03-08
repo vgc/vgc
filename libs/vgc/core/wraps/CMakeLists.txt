@@ -12,6 +12,7 @@ vgc_wrap_library(core
     wrap_object.cpp
     wrap_parse.cpp
     wrap_paths.cpp
+    wrap_signal.cpp
     wrap_stopwatch.cpp
     wrap_vec2.cpp
 )
