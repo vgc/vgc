@@ -10,3 +10,6 @@
 [submodule "third/eigen"]
 	path = third/eigen
 	url = https://gitlab.com/libeigen/eigen.git
+[submodule "third/libtess2"]
+	path = third/libtess2
+	url = https://github.com/vgc/libtess2.git
