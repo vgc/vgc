@@ -88,8 +88,8 @@ namespace dom {
 ///
 enum class ValueType {
     // XXX TODO: complete the list of types
-    Invalid,
     None,
+    Invalid,
     Color,
     DoubleArray,
     Vec2dArray,
