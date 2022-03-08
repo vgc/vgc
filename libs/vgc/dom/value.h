@@ -17,6 +17,8 @@
 #ifndef VGC_DOM_VALUE_H
 #define VGC_DOM_VALUE_H
 
+#include <variant>
+
 #include <vgc/core/color.h>
 #include <vgc/core/doublearray.h>
 #include <vgc/core/vec2d.h>
@@ -86,10 +88,11 @@ namespace dom {
 ///
 enum class ValueType {
     // XXX TODO: complete the list of types
+    None,
     Invalid,
     Color,
     DoubleArray,
-    Vec2dArray
+    Vec2dArray,
 };
 
 /// Writes the given ValueType to the output stream.
@@ -100,6 +103,8 @@ void write(OStream& out, ValueType v)
     switch (v) {
     case ValueType::Invalid:
         write(out, "ValueType::Invalid");
+    case ValueType::None:
+        write(out, "ValueType::None");
     case ValueType::Color:
         write(out, "ValueType::Color");
     case ValueType::DoubleArray:
@@ -118,7 +123,7 @@ public:
     /// Constructs an invalid Value.
     ///
     Value() :
-        type_(ValueType::Invalid) {
+        Value(ValueType::None) {
 
     }
 
@@ -131,7 +136,7 @@ public:
     ///
     Value(const core::Color& color) :
         type_(ValueType::Color),
-        color_(color) {
+        var_(color) {
 
     }
 
@@ -139,7 +144,7 @@ public:
     ///
     Value(const core::DoubleArray& doubleArray) :
         type_(ValueType::DoubleArray),
-        doubleArray_(doubleArray) {
+        var_(doubleArray) {
 
     }
 
@@ -147,7 +152,7 @@ public:
     ///
     Value(const core::Vec2dArray& vec2dArray) :
         type_(ValueType::Vec2dArray),
-        vec2dArray_(vec2dArray) {
+        var_(vec2dArray) {
 
     }
 
@@ -165,90 +170,92 @@ public:
         return type() != ValueType::Invalid;
     }
 
-    /// Stops holding any Value. This makes this Value invalid.
+    /// Stops holding any Value. This makes this Value empty.
     ///
-    void unset();
+    void clear();
 
     /// Reclaims unused memory.
     ///
     void shrinkToFit();
 
-    /// Returns the Color hold by this Value. The behavior is undefined if
-    /// type() != ValueType::Color.
+    /// Returns the Color held by this Value.
+    /// The behavior is undefined if type() != ValueType::Color.
     ///
     core::Color getColor() const {
-        return color_;
+        return std::get<core::Color>(var_);
     }
 
-    /// Returns the Color hold by this Value. The behavior is undefined if
-    /// type() != ValueType::Color.
+    /// Copies the Color held by this Value to \p color.
+    /// The behavior is undefined if type() != ValueType::Color.
     ///
     void get(core::Color& color) const {
-        color = color_;
+        color = std::get<core::Color>(var_);
     }
 
     /// Sets this Value to the given \p color.
     ///
     void set(const core::Color& color) {
-        unset();
         type_ = ValueType::Color;
-        color_ = color;
+        var_ = color;
     }
 
-    /// Returns the Vec2dArray hold by this Value. The behavior is undefined if
-    /// type() != ValueType::Vec2dArray.
+    /// Returns the Vec2dArray held by this Value.
+    /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
     const core::Vec2dArray& getVec2dArray() const {
-        return vec2dArray_;
+        return std::get<core::Vec2dArray>(var_);
     }
 
-    /// Returns the Vec2dArray hold by this Value. The behavior is undefined if
-    /// type() != ValueType::Vec2dArray.
+    /// Copies the Vec2dArray held by this Value to \p doubleArray.
+    /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
     void get(core::Vec2dArray& vec2dArray) const {
-        vec2dArray = vec2dArray_;
+        vec2dArray = std::get<core::Vec2dArray>(var_);
     }
 
     /// Sets this value to the given \p vec2dArray.
     ///
     void set(const core::Vec2dArray& vec2dArray) {
-        unset();
         type_ = ValueType::Vec2dArray;
-        vec2dArray_ = vec2dArray;
+        var_ = vec2dArray;
     }
 
-    /// Returns the DoubleArray hold by this Value. The behavior is undefined if
-    /// type() != ValueType::DoubleArray.
+    /// Returns the DoubleArray held by this Value.
+    /// The behavior is undefined if type() != ValueType::DoubleArray.
     ///
     const core::DoubleArray& getDoubleArray() const {
-        return doubleArray_;
+        return std::get<core::DoubleArray>(var_);
     }
 
-    /// Returns the DoubleArray hold by this Value. The behavior is undefined if
-    /// type() != ValueType::DoubleArray.
+    /// Copies the DoubleArray held by this Value to \p doubleArray.
+    /// The behavior is undefined if type() != ValueType::DoubleArray.
     ///
     void get(core::DoubleArray& doubleArray) const {
-        doubleArray = doubleArray_;
+        doubleArray = std::get<core::DoubleArray>(var_);
     }
 
     /// Sets this value to the given \p vec2dArray.
     ///
     void set(const core::DoubleArray& doubleArray) {
-        unset();
         type_ = ValueType::DoubleArray;
-        doubleArray_ = doubleArray;
+        var_ = doubleArray;
     }
 
 private:
-    // XXX This is just a memory-wasteful temporary implementation to test the
-    // rest of the architecture first. Later we'll probably use boost::variant
-    // (or custom-made similar structure), then std::variant once we require
-    // C++17.
-    //
-    ValueType type_;
-    core::Color color_;
-    core::DoubleArray doubleArray_;
-    core::Vec2dArray vec2dArray_;
+    /// For the different valueless ValueType.
+    ///
+    explicit Value(ValueType type) :
+        type_(type) {
+
+    }
+
+    ValueType type_ = ValueType::Invalid;
+    std::variant<
+        std::monostate,
+        core::Color,
+        core::DoubleArray,
+        core::Vec2dArray
+    > var_;
 };
 
 /// Writes the given Value to the output stream.

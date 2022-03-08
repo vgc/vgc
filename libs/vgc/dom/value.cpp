@@ -24,40 +24,24 @@ namespace dom {
 const Value& Value::invalid()
 {
     // trusty leaky singleton
-    static const Value* v = new Value();
+    static const Value* v = new Value(ValueType::Invalid);
     return *v;
 }
 
-void Value::unset()
+void Value::clear()
 {
-    switch (type()) {
-    case ValueType::DoubleArray:
-        doubleArray_.clear();
-        break;
-    case ValueType::Vec2dArray:
-        vec2dArray_.clear();
-        break;
-    default:
-        // nothing
-        break;
-    }
-    type_ = ValueType::Invalid;
+    type_ = ValueType::None;
+    var_ = std::monostate{};
 }
 
 void Value::shrinkToFit()
 {
-    // Note: it is possible that several vectors have unused capacity, which is
-    // why we can't just shrinkToFit the current type(), but have to shrinkToFit
-    // all of them.
-    //
-    // Example:
-    // Value v;
-    // v.set(Vec2dArray({{12, 10}, {23, 42}}));
-    // v.set(DoubleArray({1, 2, 3})); // doesn't shrink vec2dArray_;
-    //
-
-    vec2dArray_.shrinkToFit();
-    doubleArray_.shrinkToFit();
+    switch (type_) {
+    case ValueType::DoubleArray:    std::get<core::DoubleArray>(var_).shrinkToFit(); break;
+    case ValueType::Vec2dArray:     std::get<core::Vec2dArray>(var_).shrinkToFit(); break;
+    default:
+         break;
+    }
 }
 
 Value parseValue(const std::string& s, ValueType t)
@@ -84,3 +68,4 @@ Value parseValue(const std::string& s, ValueType t)
 
 } // namespace dom
 } // namespace vgc
+
