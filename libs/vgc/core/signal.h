@@ -30,16 +30,17 @@
 //#include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 class Object;
-using ConnectionHandle = uintptr_t;
+using ConnectionHandle = UInt64;
 
 namespace internal {
 
 using SlotId = std::pair<const Object*, StringId>;
 using FreeFuncId = void*;
+
+ConnectionHandle genConnectionHandle();
 
 /// \class Signal
 /// \brief Implements a signal-slot notification mechanism.
@@ -121,14 +122,14 @@ public:
     /// Deprecated
     // XXX Deprecated
     void connect(FnType fn) const {
-        addListener(fn);
+        addListener_(fn);
     }
 
 private:
     // This class defines connect helpers and thus needs access to Signal internals.
     friend class SignalOps;
 
-    struct Listener {
+    struct Listener_ {
         FnType fn;
         ConnectionHandle h;
         std::variant<
@@ -142,37 +143,34 @@ private:
         }
     };
 
-    mutable Array<Listener> listeners_;
+    mutable Array<Listener_> listeners_;
 
-    static ConnectionHandle genHandle()
-    {
-        static ConnectionHandle s = 0;
-        // XXX make this thread-safe
-        return ++s;
-    }
-
-    void removeListener(ConnectionHandle h) const {
-        auto it = std::remove_if(listeners_.begin(), listeners_.end(), [h](const Listener& l) { return l == h; });
+    template<typename Pred>
+    void removeListenerIf_(Pred pred) {
+        auto it = std::remove_if(listeners_.begin(), listeners_.end(), pred);
         listeners_.erase(it, listeners_.end());
     }
 
-    void removeListener(Object* o, StringId slotName) const {
-        auto it = std::remove_if(listeners_.begin(), listeners_.end(), [h](const Listener& l) {
+    void removeListener_(ConnectionHandle h) const {
+        removeListenerIf_([=](const Listener_& l) {
+            return l == h; 
+        });
+    }
+
+    void removeListener_(Object* o, StringId slotName) const {
+        removeListenerIf_([=](const Listener_& l) {
             return std::holds_alternative<SlotId>(l.id) && std::get<SlotId>(l.id) == SlotId(o, slotName);
         });
-        listeners_.erase(it, listeners_.end());
     }
 
-    void removeListener(void* freeFunc) const {
-        auto it = std::remove_if(listeners_.begin(), listeners_.end(), [h](const Listener& l) {
+    void removeListener_(void* freeFunc) const {
+        removeListenerIf_([=](const Listener_& l) {
             return std::holds_alternative<FreeFuncId>(l.id) && l.id == freeFunc;
         });
-        listeners_.erase(it, listeners_.end());
     }
 
-    ConnectionHandle addListener(FnType fn) const
-    {
-        auto h = genHandle();
+    ConnectionHandle addListener_(FnType fn) const {
+        auto h = genHandle_();
         listeners_.append({fn, h, std::monostate{}});
         return h;
     }
@@ -212,17 +210,17 @@ public:
     ConnectionHandle>
     connect(
         const SenderObj* sender, Signal<Args...> SenderObj::* signal,
-        const ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
+        ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
         typename Signal<Args...>::FnType f = [=](Args... args) {
-            auto&& argsTuple = std::forward_as_tuple(std::move(const_cast<ReceiverObj*>(receiver)), std::forward<Args>(args)...);
+            auto&& argsTuple = std::forward_as_tuple(receiver, std::forward<Args>(args)...);
             internal::applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
         };
 
         auto& lz = (sender->*signal).listeners_;
-        lz.emplace(lz.end(), typename Signal<Args...>::Listener{f, ConnectionHandle(), SlotId(receiver, SlotPrivateT::name())});
+        lz.emplace(lz.end(), typename Signal<Args...>::Listener_{f, ConnectionHandle(), SlotId(receiver, SlotPrivateT::name_())});
         return 0;
     }
 
@@ -242,8 +240,7 @@ public:
 template<typename... Args>
 using Signal = internal::Signal<Args...>;
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 
 #define VGC_SIGNAL(name, ...) \
@@ -256,7 +253,7 @@ using Signal = internal::Signal<Args...>;
 #define VGC_SLOT_PRIVATE_(sname) \
     class VGC_SLOT_PRIVATE_TNAME_(sname) { \
         friend class ::vgc::core::internal::SignalOps; \
-        static const StringId& name() { \
+        static const StringId& name_() { \
             static StringId s(#sname); return s; \
         } \
     }
@@ -274,6 +271,7 @@ using Signal = internal::Signal<Args...>;
     VGC_SLOT_PRIVATE_(name); \
     virtual void name(__VA_ARGS__)
 
+// XXX add comment to explain SlotPrivateVCheck_
 #define VGC_OVERRIDE_SLOT(name, ...) \
     struct SlotPrivateVCheck_ : VGC_SLOT_PRIVATE_TNAME_(name) {}; \
     void name(__VA_ARGS__) override
@@ -283,7 +281,8 @@ using Signal = internal::Signal<Args...>;
 
 #define VGC_CONNECT_SLOT(sender, signalName, receiver, slotName) \
     ::vgc::core::internal::SignalOps::connect<typename std::remove_pointer_t<decltype(receiver)>:: VGC_SLOT_PRIVATE_TNAME_(slotName)>( \
-        sender, & std::remove_pointer_t<decltype(sender)> ::signalName, receiver, & std::remove_pointer_t<decltype(receiver)> ::slotName)
+        sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
+        receiver, & std::remove_pointer_t<decltype(receiver)> ::slotName)
 
 #define VGC_CONNECT_FUNC(sender, signalName, function) \
     ::vgc::core::internal::SignalOps::connect(sender, &(sender->signalName), function)
@@ -292,7 +291,8 @@ using Signal = internal::Signal<Args...>;
 #define VGC_CONNECT3_(...) VGC_CONNECT_FUNC(__VA_ARGS__)
 #define VGC_CONNECT4_(...) VGC_CONNECT_SLOT(__VA_ARGS__)
 #define VGC_CONNECT_DISPATCH_(_1, _2, _3, _4, NAME, ...) NAME
-#define VGC_CONNECT(...) VGC_CONNECT_EXPAND_(VGC_CONNECT_DISPATCH_(__VA_ARGS__, VGC_CONNECT_SLOT, VGC_CONNECT_FUNC, UNUSED)(__VA_ARGS__))
+#define VGC_CONNECT(...) VGC_CONNECT_EXPAND_(VGC_CONNECT_DISPATCH_(__VA_ARGS__, VGC_CONNECT_SLOT, VGC_CONNECT_FUNC, NOOVERLOAD, NOOVERLOAD)(__VA_ARGS__))
+
 
 namespace vgc::core::internal {
 
@@ -301,8 +301,16 @@ class TestSignalObject : public ObjectT {
 public:
     VGC_SIGNAL(signalIntDouble, int, double);
     VGC_SLOT(slotInt, int) { slotIntCalled = true; }
-    VGC_SLOT(slotIntDouble, int) { slotIntDoubleCalled = true; }
+    VGC_SLOT(slotIntDouble, int, double) { slotIntDoubleCalled = true; }
+    VGC_SLOT(slotUInt, unsigned int) { slotUIntCalled = true; }
 
+    void selfConnect() {
+        VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
+        VGC_CONNECT(this, signalIntDouble, this, slotInt);
+        VGC_CONNECT(this, signalIntDouble, this, slotUInt);
+    }
+
+    bool slotUIntCalled = false;
     bool slotIntCalled = false;
     bool slotIntDoubleCalled = false;
 };

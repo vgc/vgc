@@ -19,5 +19,16 @@
 namespace vgc {
 namespace core {
 
+namespace internal {
+
+ConnectionHandle genConnectionHandle() {
+    static ConnectionHandle s = 0;
+    // XXX make this thread-safe
+    return ++s;
+}
+
+} // namespace internal
+
+
 } // namespace core
 } // namespace vgc

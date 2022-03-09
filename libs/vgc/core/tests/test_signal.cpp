@@ -22,11 +22,11 @@
 TEST(TestSignal, TestConnectSlot)
 {
     vgc::core::internal::TestSignalObject<> t;
-    VGC_CONNECT(&t, signalIntDouble, &t, slotInt);
-    VGC_CONNECT(&t, signalIntDouble, &t, slotIntDouble);
+    t.selfConnect();
     t.signalIntDouble.emit(0, 1);
-    ASSERT_TRUE(t.slotIntCalled);
     ASSERT_TRUE(t.slotIntDoubleCalled);
+    ASSERT_TRUE(t.slotIntCalled);
+    ASSERT_TRUE(t.slotUIntCalled);
 }
 
 int main(int argc, char **argv)
