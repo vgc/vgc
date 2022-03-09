@@ -317,7 +317,7 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 message(STATUS "Qt5_DIR: ${Qt5_DIR}")
 get_filename_component(VGC_QT_ROOT ${Qt5_DIR}/../../.. ABSOLUTE)
-message(STATUS "Found Qt: ${Qt}")
+message(STATUS "Found Qt: ${VGC_QT_ROOT}")
 message(STATUS "Version: ${Qt5_VERSION}")
 
 # Disable usage of emit/signals/slots because they collide with <Python.h>.
@@ -692,7 +692,7 @@ elseif(APPLE)
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
-            "${Qt}"
+            "${VGC_QT_ROOT}"
     )
 else()
     add_custom_target(deploy
@@ -703,6 +703,6 @@ else()
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
-            "${Qt}"
+            "${VGC_QT_ROOT}"
     )
 endif()
