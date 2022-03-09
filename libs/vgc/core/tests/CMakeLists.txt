@@ -5,6 +5,7 @@ vgc_test_library(core
         test_format.cpp
         test_int.cpp
         test_parse.cpp
+        test_signal.cpp
         test_zero.cpp
 
     PYTHON_TESTS

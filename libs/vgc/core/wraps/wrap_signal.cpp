@@ -18,6 +18,7 @@
 
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/signal.h>
+#include <vgc/core/object.h>
 
 // wrapping Signal as an object instead of a class requires:
 //  - shared state, so that emitting on a copied signal does signal on the same connections!
@@ -25,16 +26,26 @@
 // signals should live either with their owner object, or by themselves..
 // -> shared_ptr to state VS shared_ptr to owner.
 
+// emit:
+// obj->signal(./->)emit()
+
+
+class TestSignalsObject : vgc::core::Object
+{
+  
+};
+
+
 void wrap_signal(py::module& m)
 {
-    using UnsharedOwnerSignal = vgc::core::Signal<>;
+    using UnsharedOwnerSignal = vgc::core::internal::Signal<>;
     py::class_<UnsharedOwnerSignal> c(m, "Signal");
 
-    c.def("connect",
+    /*c.def("connect",
         [](UnsharedOwnerSignal& a, const std::function<void()>& slot_func) {
             a.connect(slot_func);
         }
-    );
+    );*/
 
     c.def("emit",
         [](UnsharedOwnerSignal& a) {
