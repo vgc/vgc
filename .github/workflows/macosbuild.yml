@@ -5,6 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
+  PYTHON_VERSION: 3.7.12
 
 defaults:
   run:
@@ -91,7 +92,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.7'
+        python-version: ${{env.PYTHON_VERSION}}
         architecture: 'x64'
 
     - name: Install other dependencies
@@ -99,6 +100,9 @@ jobs:
       run: |
         brew install freetype
         brew install harfbuzz
+        python3 --version
+        pip --version
+        pip3 --version
         pip3 install dmgbuild
 
     - name: Configure
@@ -106,7 +110,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt5_DIR=${{runner.workspace}}/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt5_DIR=${{runner.workspace}}/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5 -DPython_ROOT_DIR=/Users/runner/hostedtoolcache/Python/$PYTHON_VERSION/x64
 
     - name: Build
       working-directory: ${{runner.workspace}}/build

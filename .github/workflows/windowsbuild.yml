@@ -110,7 +110,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DWiX="$WIX" -DPython_ROOT_DIR="/Users/runner/hostedtoolcache/Python/$PYTHON_VERSION/x64"
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT_DIR="C:/hostedtoolcache/windows/Python/3.10.2/x64" -DWiX="$WIX"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
