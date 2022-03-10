@@ -38,7 +38,7 @@ class TestSignalsObject : vgc::core::Object
 
 void wrap_signal(py::module& m)
 {
-    using UnsharedOwnerSignal = vgc::core::internal::Signal<>;
+    using UnsharedOwnerSignal = vgc::core::Signal<>;
     py::class_<UnsharedOwnerSignal> c(m, "Signal");
 
     /*c.def("connect",

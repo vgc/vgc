@@ -40,6 +40,47 @@ namespace internal {
 using SlotId = std::pair<const Object*, StringId>;
 using FreeFuncId = void*;
 
+
+template<typename R, typename... Args>
+struct SignalHandlerTraitsDef_ {
+    using ReturnType = R;
+    using ArgsTuple = std::tuple<Args...>;
+    static constexpr size_t arity = sizeof...(Args);
+};
+
+// primary with fallback
+template<typename T, bool FallBack = false>
+struct SignalHandlerTraits_ : SignalHandlerTraits_<decltype(&T::operator()), true> {};
+
+// free function
+template<typename R, typename... Args>
+struct SignalHandlerTraits_<R (*)(Args...), false> : SignalHandlerTraitsDef_<R, Args...> {};
+
+// member function
+template<typename R, typename L, typename... Args>
+struct SignalHandlerTraits_<R (L::*)(Args...), false> : SignalHandlerTraitsDef_<R, Args...> {};
+
+// callable
+template<typename R, typename L, typename... Args>
+struct SignalHandlerTraits_<R (L::*)(Args...)const, true> : SignalHandlerTraitsDef_<R, Args...> {};
+
+template<typename T>
+using SignalHandlerTraits = SignalHandlerTraits_<std::remove_reference_t<T>>;
+
+
+template<class F, class ArgsTuple, std::size_t... I>
+void applyPartialImpl(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
+    std::invoke(std::forward<F>(f), std::get<I>(std::forward<ArgsTuple>(t))...);
+}
+ 
+template<size_t N, class F, class Tuple>
+void applyPartial(F&& f, Tuple&& t) {
+    applyPartialImpl(
+        std::forward<F>(f), std::forward<Tuple>(t),
+        std::make_index_sequence<N>{});
+}
+
+
 VGC_CORE_API
 ConnectionHandle genConnectionHandle();
 
@@ -97,12 +138,18 @@ ConnectionHandle genConnectionHandle();
 /// \endcode
 ///
 
+struct SignalTag {};
+
+template<typename Sig>
+class SignalImpl;
 
 template<typename... Args>
-class SignalImpl {
+class SignalImpl<void(Args...)> {
 private:
+    using ArgsTuple = std::tuple<Args...>;
     using CFnType = void(Args...);
     using FnType = std::function<CFnType>;
+    
 
 public:
     /// Triggers the signal, that is, calls all connected functions.
@@ -187,107 +234,79 @@ private:
         listeners_.append({fn, h, FreeFuncId{freeFunc}});
         return h;
     }
+
+    // pointer-to-member-function
+    template<typename Object, typename... SlotArgs>
+    static inline
+    FnType adaptHandler(Object* o, void (Object::* mfn)(SlotArgs...)) {
+        return [=](Args... args) {
+            auto&& argsTuple = std::forward_as_tuple(o, std::forward<Args>(args)...);
+            applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
+        };
+    }
+
+    // free functions and callables
+    template<typename Handler>
+    static inline
+    FnType adaptHandler(Handler&& f) {
+        using HTraits = SignalHandlerTraits<Handler>;
+        static_assert(std::is_same_v<typename HTraits::ReturnType, void>, "Signal handlers must return void.");
+        return [=](Args... args) {
+            auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);
+            applyPartial<HTraits::arity>(f, argsTuple);
+        };
+    }
+
 };
-
-
-template <typename T>
-struct IsSignalImpl : std::false_type {};
-
-template <typename... Args>
-struct IsSignalImpl<SignalImpl<Args...>> : std::true_type {};
 
 
 template<typename T>
-struct SignalImplFromSig
-{
-    static_assert(!std::is_same_v<T, T>, "SignalFromSig expects a function type");
-};
+struct IsSignalImpl : std::false_type {};
 
-template<typename... Args>
-struct SignalImplFromSig<void(Args...)>
-{
-    using type = SignalImpl<Args...>;
-};
-
-
-template <class F, class ArgsTuple, std::size_t... I>
-void applyPartialImpl(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
-    std::invoke(std::forward<F>(f), std::get<I>(std::forward<ArgsTuple>(t))...);
-}
- 
-template <size_t N, class F, class Tuple>
-void applyPartial(F&& f, Tuple&& t) {
-    applyPartialImpl(
-        std::forward<F>(f), std::forward<Tuple>(t),
-        std::make_index_sequence<N>{});
-}
+template<typename Sig>
+struct IsSignalImpl<SignalImpl<Sig>> : std::true_type {};
 
 
 class SignalOps {
 public:
-    // connect to slot
-    //
-    template<typename SlotPrivateT, typename SenderObj, typename ReceiverObj, typename SignalT, typename Fn>
+    template<typename SenderObj, typename SignalT, typename... Args>
     static
     ConnectionHandle
-    connectSlot(const SenderObj* sender, SignalT SenderObj::* signal, ReceiverObj* receiver, Fn mfn) {
+    connect(const SenderObj* sender, SignalT SenderObj::* signal, Args&&... args) {
+        static_assert(std::is_base_of_v<SignalTag, SignalT>, "Signals must be declared with VGC_SIGNAL");
         static_assert(std::is_base_of_v<Object, SenderObj>, "Signals must reside in Objects");
-        static_assert(std::is_base_of_v<Object, ReceiverObj>, "Slots must reside in Objects");
-        return connectSlotImpl<SlotPrivateT>((sender->*signal).impl_, receiver, mfn);
+
+        return connectImpl(sender, (sender->*signal).impl_, std::forward<Args>(args)...);
     }
 
-    template<typename SlotPrivateT, typename ReceiverObj, typename... Args, typename... SlotArgs>
+    // slot
+    template<typename SenderObj, typename SignalImplT, typename ReceiverObj, typename... HandlerArgs>
     static
     ConnectionHandle
-    connectSlotImpl(SignalImpl<Args...>& signalImpl, ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
+    connectImpl(const SenderObj* sender, const SignalImplT& sImpl, ReceiverObj* receiver, void (ReceiverObj::*mfn)(HandlerArgs...), const StringId& id) {
+        static_assert(std::is_base_of_v<Object, ReceiverObj>, "Slots must reside in Objects");
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
-        typename SignalImpl<Args...>::FnType f = [=](Args... args) {
-            auto&& argsTuple = std::forward_as_tuple(receiver, std::forward<Args>(args)...);
-            internal::applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
-        };
-        return signalImpl.addListener_(f, receiver, SlotPrivateT::name_());
+        return sImpl.addListener_(SignalImplT::adaptHandler(receiver, mfn), receiver, id);
     }
 
-    // connect free-function / function
-    //
-    template<typename SenderObj, typename SignalT, typename Fn>
+    // free function
+    template<typename SenderObj, typename SignalImplT, typename... HandlerArgs>
     static
     ConnectionHandle
-    connectFunc(const SenderObj* sender, SignalT SenderObj::* signal, Fn fn) {
-        static_assert(std::is_base_of_v<Object, SenderObj>, "Signals must reside in Objects");
-        return connectFuncImpl((sender->*signal).impl_, fn);
+    connectImpl(const SenderObj* sender, const SignalImplT& sImpl, void (*ffn)(HandlerArgs...)) {
+
+        return sImpl.addListener_(SignalImplT::adaptHandler(ffn), ffn);
     }
 
-    template<typename... Args, typename... FArgs>
+    // callables
+    template<typename SenderObj, typename SignalImplT, typename Fn>
     static
     ConnectionHandle
-    connectFuncImpl(SignalImpl<Args...>& signalImpl, void(*ffn)(FArgs...)) {
-        typename SignalImpl<Args...>::FnType f = [=](Args... args) {
-            auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);
-            internal::applyPartial<sizeof...(FArgs)>(ffn, argsTuple);
-        };
-        return signalImpl.addListener_(f, ffn);
-    }
+    connectImpl(const SenderObj* sender, const SignalImplT& sImpl, Fn&& fn) {
 
-    template<typename... Args, typename... FArgs>
-    static
-    ConnectionHandle
-    connectFuncImpl(SignalImpl<Args...>& signalImpl, std::function<void(FArgs...)> fn) {
-        typename SignalImpl<Args...>::FnType f = [=](Args... args) {
-            auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);
-            internal::applyPartial<sizeof...(FArgs)>(fn, argsTuple);
-        };
-        return signalImpl.addListener_(f);
-    }
-
-    template<typename... Args>
-    static
-    ConnectionHandle
-    connectFuncImpl(SignalImpl<Args...>& signalImpl, typename SignalImpl<Args...>::FnType fn) {
-        // perfect match
-        return signalImpl.addListener_(fn);
+        return sImpl.addListener_(SignalImplT::adaptHandler(std::forward<Fn>(fn)));
     }
 };
 
@@ -295,7 +314,7 @@ public:
 
 // XXX temporary until all pieces of code use VGC_SIGNAL
 template<typename... Args>
-using Signal = internal::SignalImpl<Args...>;
+using Signal = internal::SignalImpl<void(Args...)>;
 
 } // namespace vgc::core
 
@@ -326,23 +345,22 @@ using Signal = internal::SignalImpl<Args...>;
 #define VGC_SIG_PBOTH_(x) VGC_SIG_PBOTH2_ x
 
 #define VGC_SIGNAL(name, ...) \
-    class Signal_##name { \
+    class Signal_##name : ::vgc::core::internal::SignalTag { \
     public: \
         void emit(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__)) const { \
             impl_.emit(VGC_TRANSFORM(VGC_SIG_PNAME_, __VA_ARGS__)); \
         } \
     private: \
         friend class ::vgc::core::internal::SignalOps; \
-        using SignalImplType = ::vgc::core::internal::SignalImplFromSig<void(VGC_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))>::type; \
-        mutable SignalImplType impl_; \
+        using SignalImplT = ::vgc::core::internal::SignalImpl<void(VGC_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))>; \
+        mutable SignalImplT impl_; \
     } name
 
 #define VGC_SLOT_PRIVATE_TNAME_(name) \
     SlotPrivate_##name##_
 
 #define VGC_SLOT_PRIVATE_(sname) \
-    class VGC_SLOT_PRIVATE_TNAME_(sname) { \
-        friend class ::vgc::core::internal::SignalOps; \
+    struct VGC_SLOT_PRIVATE_TNAME_(sname) { \
         static const ::vgc::core::StringId& name_() { \
             static ::vgc::core::StringId s(#sname); return s; \
         } \
@@ -370,12 +388,13 @@ using Signal = internal::SignalImpl<Args...>;
 
 
 #define VGC_CONNECT_SLOT(sender, signalName, receiver, slotName) \
-    ::vgc::core::internal::SignalOps::connectSlot<typename std::remove_pointer_t<decltype(receiver)>:: VGC_SLOT_PRIVATE_TNAME_(slotName)>( \
+    ::vgc::core::internal::SignalOps::connect( \
         sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
-        receiver, & std::remove_pointer_t<decltype(receiver)> ::slotName)
+        receiver, & std::remove_pointer_t<decltype(receiver)> ::slotName, \
+        typename std::remove_pointer_t<decltype(receiver)>::VGC_SLOT_PRIVATE_TNAME_(slotName)::name_())
 
 #define VGC_CONNECT_FUNC(sender, signalName, function) \
-    ::vgc::core::internal::SignalOps::connectFunc( \
+    ::vgc::core::internal::SignalOps::connect( \
         sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
         function)
 
@@ -401,8 +420,10 @@ public:
         VGC_CONNECT(this, signalIntDouble, this, slotInt);
         VGC_CONNECT(this, signalIntDouble, this, slotUInt);
         VGC_CONNECT(this, signalIntDouble, staticFuncInt);
+        VGC_CONNECT(this, signalIntDouble, std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
         VGC_CONNECT(this, signalIntDouble, [&](int, double) { fnIntDoubleCalled = true; } );
         VGC_CONNECT(this, signalIntDouble, std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
+        VGC_CONNECT(this, signalIntDouble, [&](unsigned int) { fnUIntCalled = true; });
     }
 
     static inline void staticFuncInt() {
