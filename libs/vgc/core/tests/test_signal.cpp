@@ -27,6 +27,9 @@ TEST(TestSignal, TestConnectSlot)
     ASSERT_TRUE(t.slotIntDoubleCalled);
     ASSERT_TRUE(t.slotIntCalled);
     ASSERT_TRUE(t.slotUIntCalled);
+    ASSERT_TRUE(t.sfnIntCalled);
+    ASSERT_TRUE(t.fnIntDoubleCalled);
+    ASSERT_TRUE(t.fnUIntCalled);
 }
 
 int main(int argc, char **argv)

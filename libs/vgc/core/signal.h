@@ -191,12 +191,10 @@ private:
 
 
 template <typename T>
-struct IsSignalImpl
-  : std::false_type {};
+struct IsSignalImpl : std::false_type {};
 
 template <typename... Args>
-struct IsSignalImpl<SignalImpl<Args...>>
-  : std::true_type {};
+struct IsSignalImpl<SignalImpl<Args...>> : std::true_type {};
 
 
 template<typename T>
@@ -227,27 +225,21 @@ void applyPartial(F&& f, Tuple&& t) {
 
 class SignalOps {
 public:
-    //template<typename... Args>
-    //static void disconnect(Signal<Args...>& signal) {
+    // connect to slot
     //
-    //    // XXX 
-    //}
-
     template<typename SlotPrivateT, typename SenderObj, typename ReceiverObj, typename SignalT, typename Fn>
-    static std::enable_if_t<std::conjunction_v<
-        std::is_base_of<Object, SenderObj>,
-        std::is_base_of<Object, ReceiverObj>,
-        IsSignalImpl<typename SignalT::SignalImplType>>,
-    ConnectionHandle>
-    connect(const SenderObj* sender, SignalT SenderObj::* signal, ReceiverObj* receiver, Fn mfn) {
-
-        return connectImpl<SlotPrivateT>((sender->*signal).impl_, receiver, mfn);
+    static
+    ConnectionHandle
+    connectSlot(const SenderObj* sender, SignalT SenderObj::* signal, ReceiverObj* receiver, Fn mfn) {
+        static_assert(std::is_base_of_v<Object, SenderObj>, "Signals must reside in Objects");
+        static_assert(std::is_base_of_v<Object, ReceiverObj>, "Slots must reside in Objects");
+        return connectSlotImpl<SlotPrivateT>((sender->*signal).impl_, receiver, mfn);
     }
 
     template<typename SlotPrivateT, typename ReceiverObj, typename... Args, typename... SlotArgs>
-    static std::enable_if_t<std::conjunction_v<std::is_base_of<Object, ReceiverObj>>,
-    ConnectionHandle>
-    connectImpl(SignalImpl<Args...>& signal, ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
+    static
+    ConnectionHandle
+    connectSlotImpl(SignalImpl<Args...>& signalImpl, ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
@@ -255,18 +247,48 @@ public:
             auto&& argsTuple = std::forward_as_tuple(receiver, std::forward<Args>(args)...);
             internal::applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
         };
-
-        return signal.addListener_(f, receiver, SlotPrivateT::name_());
+        return signalImpl.addListener_(f, receiver, SlotPrivateT::name_());
     }
 
-   /* template<typename SenderObj, typename... Args,
-             std::enable_if_t<std::conjunction_v<std::is_base_of<Object, SenderObj>>, int> = 0>
-    static void connect(
-        const SenderObj* sender, SignalImpl<Args...> SenderObj::* signal,
-        const std::function<void(Args...)>& fn) {
+    // connect free-function / function
+    //
+    template<typename SenderObj, typename SignalT, typename Fn>
+    static
+    ConnectionHandle
+    connectFunc(const SenderObj* sender, SignalT SenderObj::* signal, Fn fn) {
+        static_assert(std::is_base_of_v<Object, SenderObj>, "Signals must reside in Objects");
+        return connectFuncImpl((sender->*signal).impl_, fn);
+    }
 
-        sender.*signal.slots_.emplace_back(fn);
-    }*/
+    template<typename... Args, typename... FArgs>
+    static
+    ConnectionHandle
+    connectFuncImpl(SignalImpl<Args...>& signalImpl, void(*ffn)(FArgs...)) {
+        typename SignalImpl<Args...>::FnType f = [=](Args... args) {
+            auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);
+            internal::applyPartial<sizeof...(FArgs)>(ffn, argsTuple);
+        };
+        return signalImpl.addListener_(f, ffn);
+    }
+
+    template<typename... Args, typename... FArgs>
+    static
+    ConnectionHandle
+    connectFuncImpl(SignalImpl<Args...>& signalImpl, std::function<void(FArgs...)> fn) {
+        typename SignalImpl<Args...>::FnType f = [=](Args... args) {
+            auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);
+            internal::applyPartial<sizeof...(FArgs)>(fn, argsTuple);
+        };
+        return signalImpl.addListener_(f);
+    }
+
+    template<typename... Args>
+    static
+    ConnectionHandle
+    connectFuncImpl(SignalImpl<Args...>& signalImpl, typename SignalImpl<Args...>::FnType fn) {
+        // perfect match
+        return signalImpl.addListener_(fn);
+    }
 };
 
 } // namespace internal
@@ -348,12 +370,14 @@ using Signal = internal::SignalImpl<Args...>;
 
 
 #define VGC_CONNECT_SLOT(sender, signalName, receiver, slotName) \
-    ::vgc::core::internal::SignalOps::connect<typename std::remove_pointer_t<decltype(receiver)>:: VGC_SLOT_PRIVATE_TNAME_(slotName)>( \
+    ::vgc::core::internal::SignalOps::connectSlot<typename std::remove_pointer_t<decltype(receiver)>:: VGC_SLOT_PRIVATE_TNAME_(slotName)>( \
         sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
         receiver, & std::remove_pointer_t<decltype(receiver)> ::slotName)
 
 #define VGC_CONNECT_FUNC(sender, signalName, function) \
-    ::vgc::core::internal::SignalOps::connect(sender, &(sender->signalName), function)
+    ::vgc::core::internal::SignalOps::connectFunc( \
+        sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
+        function)
 
 #define VGC_CONNECT_EXPAND_(x) x
 #define VGC_CONNECT3_(...) VGC_CONNECT_FUNC(__VA_ARGS__)
@@ -373,19 +397,24 @@ public:
     VGC_SLOT(slotUInt, (unsigned int, a)) { slotUIntCalled = true; }
 
     void selfConnect() {
-
-        ::vgc::core::internal::SignalOps::connect<typename std::remove_pointer_t<decltype(this)>:: VGC_SLOT_PRIVATE_TNAME_(slotIntDouble)>( \
-        this,   & std::remove_pointer_t<decltype(this)>   ::signalIntDouble, \
-        this, & std::remove_pointer_t<decltype(this)> ::slotIntDouble);
-
         VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
         VGC_CONNECT(this, signalIntDouble, this, slotInt);
         VGC_CONNECT(this, signalIntDouble, this, slotUInt);
+        VGC_CONNECT(this, signalIntDouble, staticFuncInt);
+        VGC_CONNECT(this, signalIntDouble, [&](int, double) { fnIntDoubleCalled = true; } );
+        VGC_CONNECT(this, signalIntDouble, std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
     }
 
-    bool slotUIntCalled = false;
-    bool slotIntCalled = false;
+    static inline void staticFuncInt() {
+        sfnIntCalled = true;
+    }
+
     bool slotIntDoubleCalled = false;
+    bool slotIntCalled = false;
+    bool slotUIntCalled = false;
+    static inline bool sfnIntCalled = false;
+    bool fnIntDoubleCalled = false;
+    bool fnUIntCalled = false;
 };
 
 } // namespace vgc::core::internal
