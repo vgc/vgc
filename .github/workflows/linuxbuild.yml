@@ -83,6 +83,7 @@ jobs:
       working-directory: ${{runner.workspace}}
       run: |
         which python
+        python3 -c "import sys; print(sys.executable)"
 
     - name: Install most dependencies
       working-directory: ${{runner.workspace}}
