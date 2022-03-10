@@ -82,8 +82,7 @@ jobs:
     - name: Get Python Executable
       working-directory: ${{runner.workspace}}
       run: |
-        which python
-        python3 -c "import sys; print(sys.executable)"
+        python -c "import sys; print('PYTHON_EXECUTABLE=' + sys.executable)" >> $GITHUB_ENV
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -115,7 +114,7 @@ jobs:
         mkdir build
         cd build
         cmake --version
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT="$pythonLocation" -DWiX="$WIX"
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_EXECUTABLE="$PYTHON_EXECUTABLE" -DWiX="$WIX"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build

@@ -80,8 +80,7 @@ jobs:
     - name: Get Python Executable
       working-directory: ${{runner.workspace}}
       run: |
-        which python
-        python3 -c "import sys; print(sys.executable)"
+        python -c "import sys; print('PYTHON_EXECUTABLE=' + sys.executable)" >> $GITHUB_ENV
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -94,10 +93,7 @@ jobs:
       run: |
         brew install freetype
         brew install harfbuzz
-        python3 --version
-        pip --version
-        pip3 --version
-        pip3 install dmgbuild
+        pip install dmgbuild
 
     - name: Configure
       working-directory: ${{runner.workspace}}
@@ -105,7 +101,7 @@ jobs:
         mkdir build
         cd build
         cmake --version
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT="$pythonLocation" -DQt5_DIR=${{runner.workspace}}/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_EXECUTABLE="$PYTHON_EXECUTABLE" -DQt5_DIR=${{runner.workspace}}/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
