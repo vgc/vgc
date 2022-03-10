@@ -149,7 +149,6 @@ private:
     using ArgsTuple = std::tuple<Args...>;
     using CFnType = void(Args...);
     using FnType = std::function<CFnType>;
-    
 
 public:
     /// Triggers the signal, that is, calls all connected functions.
@@ -194,18 +193,18 @@ private:
     mutable Array<Listener_> listeners_;
 
     template<typename Pred>
-    void removeListenerIf_(Pred pred) {
+    void removeListenerIf_(Pred pred) const {
         auto it = std::remove_if(listeners_.begin(), listeners_.end(), pred);
         listeners_.erase(it, listeners_.end());
     }
 
     void removeListener_(ConnectionHandle h) const {
         removeListenerIf_([=](const Listener_& l) {
-            return l == h; 
+            return l.h == h; 
         });
     }
 
-    void removeListener_(Object* o, StringId slotName) const {
+    void removeListener_(const Object* o, const StringId& slotName) const {
         removeListenerIf_([=](const Listener_& l) {
             return std::holds_alternative<SlotId>(l.id) && std::get<SlotId>(l.id) == SlotId(o, slotName);
         });
@@ -308,6 +307,15 @@ public:
 
         return sImpl.addListener_(SignalImplT::adaptHandler(std::forward<Fn>(fn)));
     }
+
+    template<typename SenderObj, typename SignalT, typename... Args>
+    static void
+    disconnect(const SenderObj* sender, SignalT SenderObj::* signal, Args&&... args) {
+        static_assert(std::is_base_of_v<SignalTag, SignalT>, "Signals must be declared with VGC_SIGNAL");
+        static_assert(std::is_base_of_v<Object, SenderObj>, "Signals must reside in Objects");
+
+        return (sender->*signal).impl_.removeListener_(std::forward<Args>(args)...);
+    }
 };
 
 } // namespace internal
@@ -328,7 +336,6 @@ using Signal = internal::SignalImpl<void(Args...)>;
 #define VGC_TF_7_(F, x, ...) F(x), VGC_TF_6_(F, __VA_ARGS__)
 #define VGC_TF_8_(F, x, ...) F(x), VGC_TF_7_(F, __VA_ARGS__)
 #define VGC_TF_9_(F, x, ...) F(x), VGC_TF_8_(F, __VA_ARGS__)
-
 #define VGC_TF_EXPAND_(x) x
 #define VGC_TF_DISPATCH_(_1,_2,_3,_4,_5,_6,_7,_8,_9,S,...) S 
 #define VGC_TRANSFORM(F, ...) \
@@ -391,7 +398,7 @@ using Signal = internal::SignalImpl<void(Args...)>;
     ::vgc::core::internal::SignalOps::connect( \
         sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
         receiver, & std::remove_pointer_t<decltype(receiver)> ::slotName, \
-        typename std::remove_pointer_t<decltype(receiver)>::VGC_SLOT_PRIVATE_TNAME_(slotName)::name_())
+        std::remove_pointer_t<decltype(receiver)>::VGC_SLOT_PRIVATE_TNAME_(slotName)::name_())
 
 #define VGC_CONNECT_FUNC(sender, signalName, function) \
     ::vgc::core::internal::SignalOps::connect( \
@@ -404,6 +411,23 @@ using Signal = internal::SignalImpl<void(Args...)>;
 #define VGC_CONNECT_DISPATCH_(_1, _2, _3, _4, NAME, ...) NAME
 #define VGC_CONNECT(...) VGC_CONNECT_EXPAND_(VGC_CONNECT_DISPATCH_(__VA_ARGS__, VGC_CONNECT_SLOT, VGC_CONNECT_FUNC, NOOVERLOAD, NOOVERLOAD)(__VA_ARGS__))
 
+
+#define VGC_DISCONNECT_SLOT(sender, signalName, receiver, slotName) \
+    ::vgc::core::internal::SignalOps::disconnect( \
+        sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
+        receiver, \
+        std::remove_pointer_t<decltype(receiver)>::VGC_SLOT_PRIVATE_TNAME_(slotName)::name_())
+
+#define VGC_DISCONNECT_HANDLE_OR_FUNC(sender, signalName, functionOrHandle) \
+    ::vgc::core::internal::SignalOps::disconnect( \
+        sender,   & std::remove_pointer_t<decltype(sender)>   ::signalName, \
+        functionOrHandle)
+
+#define VGC_DISCONNECT_EXPAND_(x) x
+#define VGC_DISCONNECT3_(...) VGC_DISCONNECT_HANDLE_OR_FUNC(__VA_ARGS__)
+#define VGC_DISCONNECT4_(...) VGC_DISCONNECT_SLOT(__VA_ARGS__)
+#define VGC_DISCONNECT_DISPATCH_(_1, _2, _3, _4, NAME, ...) NAME
+#define VGC_DISCONNECT(...) VGC_DISCONNECT_EXPAND_(VGC_DISCONNECT_DISPATCH_(__VA_ARGS__, VGC_DISCONNECT_SLOT, VGC_DISCONNECT_HANDLE_OR_FUNC, NOOVERLOAD, NOOVERLOAD)(__VA_ARGS__))
 
 namespace vgc::core::internal {
 
@@ -428,6 +452,15 @@ public:
 
     static inline void staticFuncInt() {
         sfnIntCalled = true;
+    }
+
+    void resetFlags() {
+        slotIntDoubleCalled = false;
+        slotIntCalled = false;
+        slotUIntCalled = false;
+        sfnIntCalled = false;
+        fnIntDoubleCalled = false;
+        fnUIntCalled = false;
     }
 
     bool slotIntDoubleCalled = false;
