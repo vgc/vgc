@@ -111,18 +111,18 @@ public:
         }
     }
 
-    /// Triggers the signal, that is, calls all connected functions.
-    ///
-    void emit(Args... args) const {
-        for(const auto& l : listeners_) {
-            l(args...);
-        }
-    }
-
     /// Deprecated
     // XXX Deprecated
     void connect(FnType fn) const {
         addListener_(fn);
+    }
+
+protected:
+
+    void emitImpl_(Args... args) const {
+        for(const auto& l : listeners_) {
+            l(args...);
+        }
     }
 
 private:
@@ -170,13 +170,35 @@ private:
     }
 
     ConnectionHandle addListener_(FnType fn) const {
-        auto h = genHandle_();
+        auto h = genConnectionHandle();
         listeners_.append({fn, h, std::monostate{}});
+        return h;
+    }
+
+    ConnectionHandle addListener_(FnType fn, Object* o, StringId slotName) const {
+        auto h = genConnectionHandle();
+        listeners_.append({fn, h, SlotId{o, slotName}});
+        return h;
+    }
+
+    ConnectionHandle addListener_(FnType fn, void* freeFunc) const {
+        auto h = genConnectionHandle();
+        listeners_.append({fn, h, FreeFuncId{freeFunc}});
         return h;
     }
 };
 
+template<typename T>
+struct SignalFromSig
+{
+    static_assert(!std::is_same_v<T, T>, "SignalFromSig expects a function type");
+};
 
+template<typename... Args>
+struct SignalFromSig<void(Args...)>
+{
+    using type = Signal<Args...>;
+};
 
 template <class F, class ArgsTuple, std::size_t... I>
 void applyPartialImpl(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
@@ -189,6 +211,13 @@ void applyPartial(F&& f, Tuple&& t) {
         std::forward<F>(f), std::forward<Tuple>(t),
         std::make_index_sequence<N>{});
 }
+
+//template <typename... Args>
+//struct SignalArgTraits<ReturnType(ClassType::*)(Args...) const>
+//{
+//    using Args = Args...; // <-- add this
+//};
+
 
 //template<typename... Args>
 //class SignalRef
@@ -219,9 +248,7 @@ public:
             internal::applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
         };
 
-        auto& lz = (sender->*signal).listeners_;
-        lz.emplace(lz.end(), typename Signal<Args...>::Listener_{f, ConnectionHandle(), SlotId(receiver, SlotPrivateT::name_())});
-        return 0;
+        return (sender->*signal).addListener_(f, receiver, SlotPrivateT::name_());
     }
 
    /* template<typename SenderObj, typename... Args,
@@ -242,9 +269,39 @@ using Signal = internal::Signal<Args...>;
 
 } // namespace vgc::core
 
+// transform macro
+#define VGC_TF_1_(F, x) F(x)
+#define VGC_TF_2_(F, x, ...) F(x), VGC_TF_1_(F, __VA_ARGS__)
+#define VGC_TF_3_(F, x, ...) F(x), VGC_TF_2_(F, __VA_ARGS__)
+#define VGC_TF_4_(F, x, ...) F(x), VGC_TF_3_(F, __VA_ARGS__)
+#define VGC_TF_5_(F, x, ...) F(x), VGC_TF_4_(F, __VA_ARGS__)
+#define VGC_TF_6_(F, x, ...) F(x), VGC_TF_5_(F, __VA_ARGS__)
+#define VGC_TF_7_(F, x, ...) F(x), VGC_TF_6_(F, __VA_ARGS__)
+#define VGC_TF_8_(F, x, ...) F(x), VGC_TF_7_(F, __VA_ARGS__)
+#define VGC_TF_9_(F, x, ...) F(x), VGC_TF_8_(F, __VA_ARGS__)
+
+#define VGC_TF_EXPAND_(x) x
+#define VGC_TF_DISPATCH_(_1,_2,_3,_4,_5,_6,_7,_8,_9,S,...) S 
+#define VGC_TRANSFORM(F, ...) \
+  VGC_TF_EXPAND_(VGC_TF_DISPATCH_(__VA_ARGS__,\
+    VGC_TF_9_,VGC_TF_8_,VGC_TF_7_,VGC_TF_6_,\
+    VGC_TF_5_,VGC_TF_4_,VGC_TF_3_,VGC_TF_2_,VGC_TF_1_\
+  )(F,__VA_ARGS__))
+
+#define VGC_SIG_PTYPE2_(t, n) t
+#define VGC_SIG_PNAME2_(t, n) n
+#define VGC_SIG_PBOTH2_(t, n) t n
+#define VGC_SIG_PTYPE_(x) VGC_SIG_PTYPE2_ x
+#define VGC_SIG_PNAME_(x) VGC_SIG_PNAME2_ x
+#define VGC_SIG_PBOTH_(x) VGC_SIG_PBOTH2_ x
 
 #define VGC_SIGNAL(name, ...) \
-    mutable internal::Signal<__VA_ARGS__> name; \
+    mutable class Signal_##name : public ::vgc::core::internal::SignalFromSig<\
+        void(VGC_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))>::type { \
+        void emit(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__)) const { \
+            emitImpl_(VGC_TRANSFORM(VGC_SIG_PNAME_, __VA_ARGS__)); \
+        } \
+    } name; \
     class SignalPrivate_##name##_ {}
 
 #define VGC_SLOT_PRIVATE_TNAME_(name) \
@@ -253,8 +310,8 @@ using Signal = internal::Signal<Args...>;
 #define VGC_SLOT_PRIVATE_(sname) \
     class VGC_SLOT_PRIVATE_TNAME_(sname) { \
         friend class ::vgc::core::internal::SignalOps; \
-        static const StringId& name_() { \
-            static StringId s(#sname); return s; \
+        static const ::vgc::core::StringId& name_() { \
+            static ::vgc::core::StringId s(#sname); return s; \
         } \
     }
 
@@ -265,18 +322,18 @@ using Signal = internal::Signal<Args...>;
 
 #define VGC_SLOT(name, ...) \
     VGC_SLOT_PRIVATE_(name); \
-    void name(__VA_ARGS__)
+    void name(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__))
 
 #define VGC_VIRTUAL_SLOT(name, ...) \
     VGC_SLOT_PRIVATE_(name); \
-    virtual void name(__VA_ARGS__)
+    virtual void name(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__))
 
 // XXX add comment to explain SlotPrivateVCheck_
 #define VGC_OVERRIDE_SLOT(name, ...) \
     struct SlotPrivateVCheck_ : VGC_SLOT_PRIVATE_TNAME_(name) {}; \
-    void name(__VA_ARGS__) override
+    void name(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__)) override
 
-#define VGC_DEFINE_SLOT(name, ...) void name(__VA_ARGS__)
+#define VGC_DEFINE_SLOT(cls, name, ...) void cls::name(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__))
 
 
 #define VGC_CONNECT_SLOT(sender, signalName, receiver, slotName) \
@@ -299,15 +356,16 @@ namespace vgc::core::internal {
 template<typename ObjectT = ::vgc::core::Object>
 class TestSignalObject : public ObjectT {
 public:
-    VGC_SIGNAL(signalIntDouble, int, double);
-    VGC_SLOT(slotInt, int) { slotIntCalled = true; }
-    VGC_SLOT(slotIntDouble, int, double) { slotIntDoubleCalled = true; }
-    VGC_SLOT(slotUInt, unsigned int) { slotUIntCalled = true; }
+    VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
+    VGC_SLOT(slotInt, (int, a)) { slotIntCalled = true; }
+    VGC_SLOT(slotIntDouble, (int, a), (double, b)) { slotIntDoubleCalled = true; }
+    VGC_SLOT(slotUInt, (unsigned int, a)) { slotUIntCalled = true; }
 
     void selfConnect() {
         VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
         VGC_CONNECT(this, signalIntDouble, this, slotInt);
         VGC_CONNECT(this, signalIntDouble, this, slotUInt);
+        VGC_CONNECT(this)
     }
 
     bool slotUIntCalled = false;
