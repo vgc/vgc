@@ -96,8 +96,10 @@ ConnectionHandle genConnectionHandle();
 /// }
 /// \endcode
 ///
+
+
 template<typename... Args>
-class Signal {
+class SignalImpl {
 private:
     using CFnType = void(Args...);
     using FnType = std::function<CFnType>;
@@ -118,9 +120,7 @@ public:
         addListener_(fn);
     }
 
-protected:
-
-    void emitImpl_(Args... args) const {
+    void emit(Args... args) const {
         for(const auto& l : listeners_) {
             l(args...);
         }
@@ -189,17 +189,28 @@ private:
     }
 };
 
+
+template <typename T>
+struct IsSignalImpl
+  : std::false_type {};
+
+template <typename... Args>
+struct IsSignalImpl<SignalImpl<Args...>>
+  : std::true_type {};
+
+
 template<typename T>
-struct SignalFromSig
+struct SignalImplFromSig
 {
     static_assert(!std::is_same_v<T, T>, "SignalFromSig expects a function type");
 };
 
 template<typename... Args>
-struct SignalFromSig<void(Args...)>
+struct SignalImplFromSig<void(Args...)>
 {
-    using type = Signal<Args...>;
+    using type = SignalImpl<Args...>;
 };
+
 
 template <class F, class ArgsTuple, std::size_t... I>
 void applyPartialImpl(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
@@ -213,19 +224,6 @@ void applyPartial(F&& f, Tuple&& t) {
         std::make_index_sequence<N>{});
 }
 
-//template <typename... Args>
-//struct SignalArgTraits<ReturnType(ClassType::*)(Args...) const>
-//{
-//    using Args = Args...; // <-- add this
-//};
-
-
-//template<typename... Args>
-//class SignalRef
-//{
-//    Object* po_;
-//    Signal<Args...>* ps_;
-//};
 
 class SignalOps {
 public:
@@ -235,23 +233,25 @@ public:
     //    // XXX 
     //}
 
-
     template<typename SlotPrivateT, typename SenderObj, typename ReceiverObj, typename SignalT, typename Fn>
-    static std::enable_if_t<std::conjunction_v<std::is_base_of<Object, SenderObj>, std::is_base_of<Object, ReceiverObj>>,
+    static std::enable_if_t<std::conjunction_v<
+        std::is_base_of<Object, SenderObj>,
+        std::is_base_of<Object, ReceiverObj>,
+        IsSignalImpl<typename SignalT::SignalImplType>>,
     ConnectionHandle>
     connect(const SenderObj* sender, SignalT SenderObj::* signal, ReceiverObj* receiver, Fn mfn) {
 
-        return connectImpl<SlotPrivateT>(sender->*signal, receiver, mfn);
+        return connectImpl<SlotPrivateT>((sender->*signal).impl_, receiver, mfn);
     }
 
     template<typename SlotPrivateT, typename ReceiverObj, typename... Args, typename... SlotArgs>
     static std::enable_if_t<std::conjunction_v<std::is_base_of<Object, ReceiverObj>>,
     ConnectionHandle>
-    connectImpl(const Signal<Args...>& signal, ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
+    connectImpl(SignalImpl<Args...>& signal, ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
-        typename Signal<Args...>::FnType f = [=](Args... args) {
+        typename SignalImpl<Args...>::FnType f = [=](Args... args) {
             auto&& argsTuple = std::forward_as_tuple(receiver, std::forward<Args>(args)...);
             internal::applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
         };
@@ -262,7 +262,7 @@ public:
    /* template<typename SenderObj, typename... Args,
              std::enable_if_t<std::conjunction_v<std::is_base_of<Object, SenderObj>>, int> = 0>
     static void connect(
-        const SenderObj* sender, Signal<Args...> SenderObj::* signal,
+        const SenderObj* sender, SignalImpl<Args...> SenderObj::* signal,
         const std::function<void(Args...)>& fn) {
 
         sender.*signal.slots_.emplace_back(fn);
@@ -273,7 +273,7 @@ public:
 
 // XXX temporary until all pieces of code use VGC_SIGNAL
 template<typename... Args>
-using Signal = internal::Signal<Args...>;
+using Signal = internal::SignalImpl<Args...>;
 
 } // namespace vgc::core
 
@@ -304,14 +304,16 @@ using Signal = internal::Signal<Args...>;
 #define VGC_SIG_PBOTH_(x) VGC_SIG_PBOTH2_ x
 
 #define VGC_SIGNAL(name, ...) \
-    mutable class Signal_##name : public ::vgc::core::internal::SignalFromSig<\
-        void(VGC_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))>::type { \
-        public: \
+    class Signal_##name { \
+    public: \
         void emit(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__)) const { \
-            emitImpl_(VGC_TRANSFORM(VGC_SIG_PNAME_, __VA_ARGS__)); \
+            impl_.emit(VGC_TRANSFORM(VGC_SIG_PNAME_, __VA_ARGS__)); \
         } \
-    } name; \
-    class SignalPrivate_##name##_ {}
+    private: \
+        friend class ::vgc::core::internal::SignalOps; \
+        using SignalImplType = ::vgc::core::internal::SignalImplFromSig<void(VGC_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))>::type; \
+        mutable SignalImplType impl_; \
+    } name
 
 #define VGC_SLOT_PRIVATE_TNAME_(name) \
     SlotPrivate_##name##_
