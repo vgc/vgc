@@ -77,9 +77,6 @@ jobs:
       with:
         python-version: ${{env.PYTHON_VERSION}}
         architecture: 'x64'
-      run: |
-        python --version
-        python3 --version
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
