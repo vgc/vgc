@@ -308,43 +308,15 @@ endif()
 message(STATUS "") # newline
 
 # Find, configure, and include Qt. The recommended way to make sure that the
-# desired version of Qt is found is to pass -DQt to cmake, e.g.:
+# desired version of Qt is found is to pass -DQt5_DIR to cmake, e.g.:
 #
-#   cmake -DQt="C:/Qt5.12.3/5.12.3/msvc2017_64"
-#
-# Note: The Qt documentation also recommends to set the following CMake
-# variable:
-#
-#   set(CMAKE_INCLUDE_CURRENT_DIR ON)
-#
-# However, this has proven to lead to naming conflicts. More specifically, we
-# used to have a header file vgc/core/math.h, which included <cmath> which
-# includes <math.h>. If CMAKE_INCLUDE_CURRENT_DIR was ON, then <math.h>
-# resolved to vgc/core/math.h instead of the C standard library header, leading
-# to compilation errors. Therefore, we do not set CMAKE_INCLUDE_CURRENT_DIR to
-# ON, forcing libraries to use absolute paths, which is better practice anyway.
-# Now, we don't have the vgc/core/math.h header anymore, but we still don't set
-# it to ON due to potential similar problems.
-#
-# Here are useful cmake variables that can be queried (with example value):
-#   QT_MOC_EXECUTABLE=/home/user/Qt/5.12.0/gcc_64/bin/moc
-#   QT_QMAKE_EXECUTABLE=/home/user/Qt/5.12.0/gcc_64/bin/qmake
-#   Qt5_DIR=/home/user/Qt/5.12.0/gcc_64/lib/cmake/Qt5
-#   Qt5_VERSION=5.12.0
-#   Qt5_VERSION_COUNT=3
-#   Qt5_VERSION_MAJOR=5
-#   Qt5_VERSION_MINOR=12
-#   Qt5_VERSION_PATCH=0
-#   Qt5_VERSION_TWEAK=0
+#   cmake -DQt5_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5"
 #
 message(STATUS "[Qt]")
-if (Qt)
-    set(Qt5_DIR ${Qt}/lib/cmake/Qt5)
-endif()
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
-get_filename_component(Qt ${Qt5_DIR}/../../.. ABSOLUTE)
-message(STATUS "Found Qt: ${Qt}")
+get_filename_component(VGC_QT_ROOT ${Qt5_DIR}/../../.. ABSOLUTE)
+message(STATUS "Found Qt: ${VGC_QT_ROOT}")
 message(STATUS "Version: ${Qt5_VERSION}")
 
 # Disable usage of emit/signals/slots because they collide with <Python.h>.
@@ -719,7 +691,7 @@ elseif(APPLE)
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
-            "${Qt}"
+            "${VGC_QT_ROOT}"
     )
 else()
     add_custom_target(deploy
@@ -730,6 +702,6 @@ else()
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
-            "${Qt}"
+            "${VGC_QT_ROOT}"
     )
 endif()

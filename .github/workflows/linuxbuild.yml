@@ -111,7 +111,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt=${{runner.workspace}}/qt/$QT_VERSION/gcc_64
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt5_DIR=${{runner.workspace}}/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
