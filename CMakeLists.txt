@@ -159,6 +159,7 @@ message(STATUS "Version: ${Python_VERSION}")
 message(STATUS "Python Prefix:      ${VGC_PYTHON_PREFIX}")
 message(STATUS "Python Exec Prefix: ${VGC_PYTHON_EXEC_PREFIX}")
 message(STATUS "Python Home:        ${VGC_PYTHON_HOME}")
+message(STATUS "Python Executable:  ${Python_EXECUTABLE}")
 message(STATUS "") # newline
 
 # Generate the vgc.conf file, telling VGC executables about the location
