@@ -27,7 +27,6 @@
 
 #include <vgc/core/api.h>
 #include <vgc/core/array.h>
-//#include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 
 namespace vgc::core {
@@ -48,21 +47,24 @@ struct SignalHandlerTraitsDef_ {
     static constexpr size_t arity = sizeof...(Args);
 };
 
+template<typename T>
+struct SignalCallableHandlerTraits_;
+
+// callable's operator
+template<typename R, typename L, typename... Args>
+struct SignalCallableHandlerTraits_<R (L::*)(Args...)const> : SignalHandlerTraitsDef_<R, Args...> {};
+
 // primary with fallback
-template<typename T, bool FallBack = false>
-struct SignalHandlerTraits_ : SignalHandlerTraits_<decltype(&T::operator()), true> {};
+template<typename T>
+struct SignalHandlerTraits_ : SignalCallableHandlerTraits_<decltype(&T::operator())> {};
 
 // free function
 template<typename R, typename... Args>
-struct SignalHandlerTraits_<R (*)(Args...), false> : SignalHandlerTraitsDef_<R, Args...> {};
+struct SignalHandlerTraits_<R (*)(Args...)> : SignalHandlerTraitsDef_<R, Args...> {};
 
 // member function
 template<typename R, typename L, typename... Args>
-struct SignalHandlerTraits_<R (L::*)(Args...), false> : SignalHandlerTraitsDef_<R, Args...> {};
-
-// callable
-template<typename R, typename L, typename... Args>
-struct SignalHandlerTraits_<R (L::*)(Args...)const, true> : SignalHandlerTraitsDef_<R, Args...> {};
+struct SignalHandlerTraits_<R (L::*)(Args...)> : SignalHandlerTraitsDef_<R, Args...> {};
 
 template<typename T>
 using SignalHandlerTraits = SignalHandlerTraits_<std::remove_reference_t<T>>;
