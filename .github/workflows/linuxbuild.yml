@@ -79,6 +79,11 @@ jobs:
         python-version: ${{env.PYTHON_VERSION}}
         architecture: 'x64'
 
+    - name: Get Python Executable
+      working-directory: ${{runner.workspace}}
+      run: |
+        which python
+
     - name: Install most dependencies
       working-directory: ${{runner.workspace}}
       run: |
