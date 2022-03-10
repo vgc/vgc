@@ -5,7 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
-  PYTHON_VERSION: 3.7.12
+  PYTHON_VERSION: 3.7
 
 defaults:
   run:
@@ -72,6 +72,7 @@ jobs:
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
         echo "WIX:                  $WIX"
 
+    # Install the required version of Python, and write its root dir to pythonLocation
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
@@ -107,7 +108,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT_DIR="C:/hostedtoolcache/windows/Python/3.10.2/x64" -DWiX="$WIX"
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT_DIR="$pythonLocation" -DWiX="$WIX"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
