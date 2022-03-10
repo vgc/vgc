@@ -1,4 +1,11 @@
-# Used from CMake 3.12: FindPython (new version)
+# Required:
+# - CMake 3.12: New version of FindPython
+#
+# Useful:
+# - CMake 3.15: Capability to specify any package via <Package>_ROOT
+# - CMake 3.16: Capability to specify FindPython's desired artifacts (e.g. Python_EXECUTABLE)
+#               See: https://gitlab.kitware.com/cmake/cmake/-/issues/19492
+#
 cmake_minimum_required(VERSION 3.12)
 project(vgc)
 
@@ -120,18 +127,27 @@ set(CMAKE_CXX_STANDARD 17)
 # Tell CMake where to find our FindFoobar.cmake modules.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/tools")
 
-# Find Python. The recommended way to specify a Python installation is
-# to pass -DPython_ROOT_DIR to cmake, e.g.:
+# Find Python. The recommended way to specify a Python installation is to use
+# CMake 3.15+ and pass -DPython_ROOT to CMake, e.g.:
+#
+#   cmake .. -DPython_ROOT="%UserProfile%\AppData\Local\Programs\Python\Python37"
+#
+# If you use CMake 3.12-3.14, you can use -DPython_ROOT_DIR, e.g.:
 #
 #   cmake .. -DPython_ROOT_DIR="%UserProfile%\AppData\Local\Programs\Python\Python37"
 #
-# Note that we explicitly set PYTHON_EXECUTABLE to ensure that pybind11 finds the
-# same Python installation as the one found here.
+# Unfortunately, unlike Python_ROOT which forces package selection,
+# Python_ROOT_DIR is only treated as a hint, and CMake might still choose a
+# different installation of Python.
+#
+# Since CMake 3.16, FindPython has gain the capability to use Python_EXECUTABLE
+# (and others) as input. We therefore recommend to use CMake 3.16 to ensure
+# that all subsequent calls to find_package(Python ...) will select the same
+# Python installation as the first call.
 #
 message(STATUS "") # newline
 message(STATUS "[Python]")
 find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
-#set(PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE FILEPATH "Path to the Python executable")
 execute_process(COMMAND ${Python_EXECUTABLE} -c "import sys; print(sys.prefix, end='')" OUTPUT_VARIABLE VGC_PYTHON_PREFIX)
 execute_process(COMMAND ${Python_EXECUTABLE} -c "import sys; print(sys.exec_prefix, end='')" OUTPUT_VARIABLE VGC_PYTHON_EXEC_PREFIX)
 if(VGC_PYTHON_PREFIX STREQUAL VGC_PYTHON_EXEC_PREFIX)
@@ -139,7 +155,6 @@ if(VGC_PYTHON_PREFIX STREQUAL VGC_PYTHON_EXEC_PREFIX)
 else()
     set(VGC_PYTHON_HOME ${VGC_PYTHON_PREFIX}:${VGC_PYTHON_EXEC_PREFIX})
 endif()
-#include_directories(${Python_INCLUDE_DIRS}) # TODO: avoid global `include_directories`
 message(STATUS "Version: ${Python_VERSION}")
 message(STATUS "Python Prefix:      ${VGC_PYTHON_PREFIX}")
 message(STATUS "Python Exec Prefix: ${VGC_PYTHON_EXEC_PREFIX}")

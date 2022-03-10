@@ -20,7 +20,7 @@ you can try our earlier research prototype [VPaint](https://www.vpaint.org).
 
 ## Dependencies
 
-- **CMake 3.1+**: We recommend the latest version of CMake.
+- **CMake 3.12+**: We recommend the latest version of CMake.
 - **C++17**: We recommend Visual Studio 2019 on Windows, Clang 5+ on macOS, and GCC 7+ on Linux.
 - **Python 3.6+**: We recommend the latest Python 3.7.x version via the [official installer](https://www.python.org/downloads/).
 - **Qt 5.15+**: We recommend Qt 5.15.2 via the [official installer](https://www.qt.io/download-qt-installer).
@@ -166,7 +166,7 @@ make
 ./Release/bin/vgcillustration
 ```
 
-## Build instructions for Ubuntu 18.04+
+## Build instructions for Ubuntu 20.04+
 
 (Note: if you're using different software versions, change commands accordingly)
 
@@ -185,3 +185,5 @@ cmake ../vgc \
 make
 ./Release/bin/vgcillustration
 ```
+
+Note: in earlier versions of Ubuntu, you'd have to install a newer version of CMake and/or GCC manually.
