@@ -315,7 +315,6 @@ message(STATUS "") # newline
 message(STATUS "[Qt]")
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
-message(STATUS "Qt5_DIR: ${Qt5_DIR}")
 get_filename_component(VGC_QT_ROOT ${Qt5_DIR}/../../.. ABSOLUTE)
 message(STATUS "Found Qt: ${VGC_QT_ROOT}")
 message(STATUS "Version: ${Qt5_VERSION}")
