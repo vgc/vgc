@@ -5,7 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
-  PYTHON_VERSION: 3.7.12
+  PYTHON_VERSION: 3.7
 
 defaults:
   run:

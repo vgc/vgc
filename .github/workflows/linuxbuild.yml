@@ -5,7 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.12.5
-  PYTHON_VERSION: 3.7.12
+  PYTHON_VERSION: 3.7
   CC: gcc-7
   CXX: g++-7
 
