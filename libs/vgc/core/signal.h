@@ -40,6 +40,7 @@ namespace internal {
 using SlotId = std::pair<const Object*, StringId>;
 using FreeFuncId = void*;
 
+VGC_CORE_API
 ConnectionHandle genConnectionHandle();
 
 /// \class Signal
@@ -234,12 +235,19 @@ public:
     //    // XXX 
     //}
 
-    template<typename SlotPrivateT, typename SenderObj, typename ReceiverObj, typename... Args, typename... SlotArgs>
+
+    template<typename SlotPrivateT, typename SenderObj, typename ReceiverObj, typename SignalT, typename Fn>
     static std::enable_if_t<std::conjunction_v<std::is_base_of<Object, SenderObj>, std::is_base_of<Object, ReceiverObj>>,
     ConnectionHandle>
-    connect(
-        const SenderObj* sender, Signal<Args...> SenderObj::* signal,
-        ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
+    connect(const SenderObj* sender, SignalT SenderObj::* signal, ReceiverObj* receiver, Fn mfn) {
+
+        return connectImpl<SlotPrivateT>(sender->*signal, receiver, mfn);
+    }
+
+    template<typename SlotPrivateT, typename ReceiverObj, typename... Args, typename... SlotArgs>
+    static std::enable_if_t<std::conjunction_v<std::is_base_of<Object, ReceiverObj>>,
+    ConnectionHandle>
+    connectImpl(const Signal<Args...>& signal, ReceiverObj* receiver, void (ReceiverObj::* mfn)(SlotArgs...)) {
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
@@ -248,7 +256,7 @@ public:
             internal::applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
         };
 
-        return (sender->*signal).addListener_(f, receiver, SlotPrivateT::name_());
+        return signal.addListener_(f, receiver, SlotPrivateT::name_());
     }
 
    /* template<typename SenderObj, typename... Args,
@@ -298,6 +306,7 @@ using Signal = internal::Signal<Args...>;
 #define VGC_SIGNAL(name, ...) \
     mutable class Signal_##name : public ::vgc::core::internal::SignalFromSig<\
         void(VGC_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))>::type { \
+        public: \
         void emit(VGC_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__)) const { \
             emitImpl_(VGC_TRANSFORM(VGC_SIG_PNAME_, __VA_ARGS__)); \
         } \
@@ -362,10 +371,14 @@ public:
     VGC_SLOT(slotUInt, (unsigned int, a)) { slotUIntCalled = true; }
 
     void selfConnect() {
+
+        ::vgc::core::internal::SignalOps::connect<typename std::remove_pointer_t<decltype(this)>:: VGC_SLOT_PRIVATE_TNAME_(slotIntDouble)>( \
+        this,   & std::remove_pointer_t<decltype(this)>   ::signalIntDouble, \
+        this, & std::remove_pointer_t<decltype(this)> ::slotIntDouble);
+
         VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
         VGC_CONNECT(this, signalIntDouble, this, slotInt);
         VGC_CONNECT(this, signalIntDouble, this, slotUInt);
-        VGC_CONNECT(this)
     }
 
     bool slotUIntCalled = false;
