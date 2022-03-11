@@ -5,6 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
+  PYTHON_VERSION: 3.7
 
 defaults:
   run:
@@ -74,8 +75,13 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.7'
+        python-version: ${{env.PYTHON_VERSION}}
         architecture: 'x64'
+
+    - name: Get Python Executable
+      working-directory: ${{runner.workspace}}
+      run: |
+        python -c "import sys; print('PYTHON_EXECUTABLE=' + sys.executable)" >> $GITHUB_ENV
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -106,7 +112,8 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DWiX="$WIX"
+        cmake --version
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_EXECUTABLE="$PYTHON_EXECUTABLE" -DWiX="$WIX"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build

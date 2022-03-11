@@ -20,7 +20,7 @@ you can try our earlier research prototype [VPaint](https://www.vpaint.org).
 
 ## Dependencies
 
-- **CMake 3.1+**: We recommend the latest version of CMake.
+- **CMake 3.12+**: We recommend the latest version of CMake (in particular CMake 3.16+ for -DPython_EXECUTABLE).
 - **C++17**: We recommend Visual Studio 2019 on Windows, Clang 5+ on macOS, and GCC 7+ on Linux.
 - **Python 3.6+**: We recommend the latest Python 3.7.x version via the [official installer](https://www.python.org/downloads/).
 - **Qt 5.15+**: We recommend Qt 5.15.2 via the [official installer](https://www.qt.io/download-qt-installer).
@@ -124,13 +124,15 @@ cmake .. ^
     -DCMAKE_TOOLCHAIN_FILE="%UserProfile%\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
     -DVCPKG_MANIFEST_MODE=OFF ^
     -G "Visual Studio 16 2019" -A x64 ^
-    -DPython="%UserProfile%\AppData\Local\Programs\Python\Python37"
+    -DPython_EXECUTABLE="%UserProfile%\AppData\Local\Programs\Python\Python37\python.exe"
     -DQt5_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5"
 .\make.bat
 \Release\bin\vgcillustration.exe
 ```
 
-Note: `make.bat` is a convenient custom script which sets up a Visual Studio environment by calling the appropriate `VsDevCmd.bat` file, then call `cmake --build . --config Release`.
+Note 1: `make.bat` is a convenient custom script which sets up a Visual Studio environment by calling the appropriate `VsDevCmd.bat` file, then call `cmake --build . --config Release`.
+
+Note 2: `-DPython_EXECUTABLE` only works in CMake 3.16+. With a lower version, you can try `-DPython_ROOT_DIR` or `-DPython_ROOT`, but they are not as reliable as `-DPython_EXECUTABLE` from CMake 3.16+.
 
 ### Generate an installer (optional)
 
@@ -160,13 +162,15 @@ git clone --recurse-submodules https://github.com/vgc/vgc.git
 mkdir build && cd build
 cmake ../vgc \
     -DCMAKE_BUILD_TYPE=Release \
-    -DPython="/Library/Frameworks/Python.framework/Versions/3.7" \
+    -DPython_EXECUTABLE="/Library/Frameworks/Python.framework/Versions/3.7/bin/python" \
     -DQt5_DIR="~/Qt/5.15.2/clang_64/lib/cmake/Qt5"
 make
 ./Release/bin/vgcillustration
 ```
 
-## Build instructions for Ubuntu 18.04+
+Note 2: `-DPython_EXECUTABLE` only works in CMake 3.16+. With a lower version, you can try `-DPython_ROOT_DIR` or `-DPython_ROOT`, but they are not as reliable as `-DPython_EXECUTABLE` from CMake 3.16+.
+
+## Build instructions for Ubuntu 20.04+
 
 (Note: if you're using different software versions, change commands accordingly)
 
@@ -185,3 +189,5 @@ cmake ../vgc \
 make
 ./Release/bin/vgcillustration
 ```
+
+Note: in earlier versions of Ubuntu, you'd have to install a newer version of CMake and/or GCC manually.

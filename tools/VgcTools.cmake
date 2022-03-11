@@ -124,7 +124,7 @@ function(vgc_add_library LIB_NAME)
     add_custom_target(${TARGET_NAME}_resources ALL
         VERBATIM
         DEPENDS ${RESOURCES_TXT}
-        COMMAND ${PYTHON_EXECUTABLE}
+        COMMAND ${Python_EXECUTABLE}
             "${CMAKE_SOURCE_DIR}/tools/copy_resources.py"
             "${CMAKE_SOURCE_DIR}"
             "${CMAKE_BINARY_DIR}"
@@ -199,7 +199,7 @@ endfunction()
 #
 # By calling the command
 #
-#   ${PYTHON_EXECUTABLE} <vgc-source-dir>/libs/vgc/mylib/tests/test_mytest.py -v'
+#   ${Python_EXECUTABLE} <vgc-source-dir>/libs/vgc/mylib/tests/test_mytest.py -v'
 #
 # with the following folder added to PYTHONPATH:
 #
@@ -255,7 +255,7 @@ function(vgc_test_library LIB_NAME)
         else()
             add_test(
                 NAME ${PYTHON_TEST_TARGET_NAME}
-                COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
+                COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_TEST_FILENAME} -v
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             )
             set_tests_properties(${PYTHON_TEST_TARGET_NAME} PROPERTIES
@@ -332,7 +332,7 @@ function(vgc_add_app APP_NAME)
     add_custom_target(${TARGET_NAME}_resources ALL
         VERBATIM
         DEPENDS ${RESOURCES_TXT}
-        COMMAND ${PYTHON_EXECUTABLE}
+        COMMAND ${Python_EXECUTABLE}
             "${CMAKE_SOURCE_DIR}/tools/copy_resources.py"
             "${CMAKE_SOURCE_DIR}"
             "${CMAKE_BINARY_DIR}"

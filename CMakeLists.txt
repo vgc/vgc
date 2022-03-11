@@ -1,4 +1,14 @@
-cmake_minimum_required(VERSION 3.1.0)
+# Required:
+# - CMake 3.12: New version of FindPython
+#
+# Useful:
+# - CMake 3.16: Capability to specify which Python to use with Python_EXECUTABLE
+#               See: https://gitlab.kitware.com/cmake/cmake/-/issues/19492
+#
+# Nice overview of important features introduced by each version of CMake:
+# - https://cliutils.gitlab.io/modern-cmake/chapters/intro/newcmake.html
+#
+cmake_minimum_required(VERSION 3.12)
 project(vgc)
 
 # Manufacturer, suite, and commit repository. Customize this if you are
@@ -119,120 +129,36 @@ set(CMAKE_CXX_STANDARD 17)
 # Tell CMake where to find our FindFoobar.cmake modules.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/tools")
 
-# Find Python. The following variables are defined (with example value):
+# Find Python. The recommended way to specify a Python installation is to use
+# CMake 3.16+ and pass -DPython_EXECUTABLE to CMake, e.g.:
 #
-# PYTHONINTERP_FOUND         TRUE
-# PYTHON_EXECUTABLE          C:/Users/Boris/AppData/Local/Programs/Python/Python37/python.exe
-# PYTHON_VERSION_STRING      3.7.3
-# PYTHON_VERSION_MAJOR       3
-# PYTHON_VERSION_MINOR       7
-# PYTHON_VERSION_PATCH       3
-# PYTHONLIBS_FOUND           TRUE
-# PYTHON_LIBRARIES           C:/Users/Boris/AppData/Local/Programs/Python/Python37/libs/python37.lib
-# PYTHON_INCLUDE_DIRS        C:/Users/Boris/AppData/Local/Programs/Python/Python37/include
-# PYTHONLIBS_VERSION_STRING  3.7.3
+#   cmake .. -DPython_EXECUTABLE="%UserProfile%\AppData\Local\Programs\Python\Python37\python.exe"
 #
-# Note 1: since CMake 3.12, there is a new FindPython module and the separate
-# FindPythonInterp and FindPythonLibs modules are deprecated. For now, we keep
-# using the deprecated modules since requiring CMake 3.12 is a bit too
-# constraining (e.g., Ubuntu 18.04 ships with CMake 3.10 only). More info:
+# If you use CMake 3.12-3.15, you can use -DPython_ROOT_DIR, e.g.:
 #
-# https://cmake.org/cmake/help/latest/module/FindPython.html
-# https://cmake.org/cmake/help/latest/module/FindPythonInterp.html
-# https://cmake.org/cmake/help/latest/module/FindPythonLibs.html
+#   cmake .. -DPython_ROOT_DIR="%UserProfile%\AppData\Local\Programs\Python\Python37"
 #
-# Note 2: pybind11 will also search for Python using its own custom module
-# called FindPythonLibsNew. It will properly detect that PYTHON_EXECUTABLE
-# is already defined and not attempt to search for another Python installation.
-# It will define additional PYTHON_* variables useful to pybind11, but these
-# variables are not available in this CMakeLists due to CMake scoping rules.
+# Unfortunately, the above is only treated as a hint, and CMake might still choose a
+# different installation of Python. Using -DPython_ROOT is also unreliable.
 #
 message(STATUS "") # newline
 message(STATUS "[Python]")
-if(Python)
-    if(WIN32)
-        # Explicitly set the path to the Python executable.
-        #
-        # Note 1: It is important to set it as a CACHE variable otherwise
-        # pybind11 fails with:
-        #
-        #   CMake Error at C:/Program Files/CMake/share/cmake-3.12/Modules/FindPackageHandleStandardArgs.cmake:137 (message):
-        #     Could NOT find PythonInterp (missing: PYTHON_EXECUTABLE) (found suitable
-        #     version "3.7.3", minimum required is "3.7.3")
-        #   Call Stack (most recent call first):
-        #     C:/Program Files/CMake/share/cmake-3.12/Modules/FindPackageHandleStandardArgs.cmake:378 (_FPHSA_FAILURE_MESSAGE)
-        #     C:/Program Files/CMake/share/cmake-3.12/Modules/FindPythonInterp.cmake:159 (FIND_PACKAGE_HANDLE_STANDARD_ARGS)
-        #     third/pybind11/tools/FindPythonLibsNew.cmake:60 (find_package)
-        #     third/pybind11/tools/pybind11Tools.cmake:16 (find_package)
-        #     third/pybind11/CMakeLists.txt:33 (include)
-        #
-        # (our own earlier call to find_package(PythonInterp) does work, though)
-        #
-        # We believe the reason is that find_package(PythonInterp) calls
-        # find_program(PYTHON_EXECUTABLE) under the hood [1], which sets
-        # PYTHON_EXECUTABLE as a CACHE FILEPATH variable [2, 3] if it doesn't
-        # exist yet. It seems that FindPackageHandleStandardArgs is confused if
-        # PYTHON_EXECUTABLE does indeed exist, but isn't a CACHE variable as
-        # expected. For some reason, it seems less confused if it isn't a CACHE
-        # variable but is at least defined in the current scope.
-        #
-        # [1] https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/FindPythonInterp.cmake
-        # [2] https://cmake.org/cmake/help/latest/command/find_program.html
-        # [3] https://gitlab.kitware.com/cmake/cmake/blob/master/Source/cmFindProgramCommand.cxx
-        #
-        # Note 2: We also experimented with using PythonInterp_ROOT instead of
-        # the more explicit PYTHON_EXECUTABLE. This is a new feature of
-        # find_program() since CMake 3.12, which requires to enable the
-        # CMP0074 policy, like so:
-        #
-        #   if (POLICY CMP0074)
-        #       cmake_policy(SET CMP0074 NEW)
-        #       set(PythonInterp_ROOT ${Python})
-        #   endif()
-        #
-        # Unfortunately, for some reason, the policy does not propagate to
-        # pybind11 (like I think it should [4]), and causes the following
-        # warning in pybind11:
-        #
-        # [4] https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Policies#policy-stack
-        #
-        #   CMake Warning (dev) at third/pybind11/tools/FindPythonLibsNew.cmake:60 (find_package):
-        #     Policy CMP0074 is not set: find_package uses <PackageName>_ROOT variables.
-        #     Run "cmake --help-policy CMP0074" for policy details.  Use the cmake_policy
-        #     command to set the policy and suppress this warning.
-        #     CMake variable PythonInterp_ROOT is set to:
-        #       C:/Users/Boris/AppData/Local/Programs/Python/Python37
-        #     For compatibility, CMake is ignoring the variable.
-        #   Call Stack (most recent call first):
-        #     third/pybind11/tools/pybind11Tools.cmake:16 (find_package)
-        #     third/pybind11/CMakeLists.txt:33 (include)
-        #   This warning is for project developers.  Use -Wno-dev to suppress it.
-        #
-        # In order to avoid this warning, and since <PackageName>_ROOT is only
-        # available since CMake 3.12, we prefer using the PYTHON_EXECUTABLE
-        # approach.
-        #
-        set(PYTHON_EXECUTABLE ${Python}/python.exe CACHE FILEPATH "Path to the Python executable")
-    elseif(APPLE)
-        set(PYTHON_EXECUTABLE ${Python}/bin/python3 CACHE FILEPATH "Path to the Python executable")
-    endif()
-endif()
-find_package(PythonInterp 3.6 REQUIRED)
-find_package(PythonLibs 3.6 REQUIRED)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print(sys.prefix, end='')" OUTPUT_VARIABLE PYTHON_PREFIX)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print(sys.exec_prefix, end='')" OUTPUT_VARIABLE PYTHON_EXEC_PREFIX)
-set(PYTHON_PREFIX ${PYTHON_PREFIX} CACHE INTERNAL "")
-set(PYTHON_EXEC_PREFIX ${PYTHON_EXEC_PREFIX} CACHE INTERNAL "")
-if(PYTHON_PREFIX STREQUAL PYTHON_EXEC_PREFIX)
-    set(PYTHON_HOME ${PYTHON_PREFIX} CACHE INTERNAL "")
+find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
+execute_process(COMMAND ${Python_EXECUTABLE} -c "import sys; print(sys.prefix, end='')" OUTPUT_VARIABLE VGC_PYTHON_PREFIX)
+execute_process(COMMAND ${Python_EXECUTABLE} -c "import sys; print(sys.exec_prefix, end='')" OUTPUT_VARIABLE VGC_PYTHON_EXEC_PREFIX)
+if(VGC_PYTHON_PREFIX STREQUAL VGC_PYTHON_EXEC_PREFIX)
+    set(VGC_PYTHON_HOME ${VGC_PYTHON_PREFIX})
 else()
-    set(PYTHON_HOME ${PYTHON_PREFIX}:${PYTHON_EXEC_PREFIX} CACHE INTERNAL "")
+    set(VGC_PYTHON_HOME ${VGC_PYTHON_PREFIX}:${VGC_PYTHON_EXEC_PREFIX})
 endif()
-include_directories(${PYTHON_INCLUDE_DIRS}) # TODO: avoid global `include_directories`
-message(STATUS "Version: ${PYTHON_VERSION_STRING}")
-message(STATUS "PYTHON_PREFIX: ${PYTHON_PREFIX}")
-message(STATUS "PYTHON_EXEC_PREFIX: ${PYTHON_EXEC_PREFIX}")
-message(STATUS "PYTHON_HOME: ${PYTHON_HOME}")
+message(STATUS "Version: ${Python_VERSION}")
+message(STATUS "Python Prefix:        ${VGC_PYTHON_PREFIX}")
+message(STATUS "Python Exec Prefix:   ${VGC_PYTHON_EXEC_PREFIX}")
+message(STATUS "Python Home:          ${VGC_PYTHON_HOME}")
+message(STATUS "Python Executable:    ${Python_EXECUTABLE}")
+message(STATUS "Python Libraries:     ${Python_LIBRARIES}")
+message(STATUS "Python Library Dirs:  ${Python_LIBRARY_DIRS}")
+message(STATUS "Python Include Dirs:  ${Python_INCLUDE_DIRS}")
 message(STATUS "") # newline
 
 # Generate the vgc.conf file, telling VGC executables about the location
@@ -240,12 +166,12 @@ message(STATUS "") # newline
 #
 add_custom_target(conf ALL
     VERBATIM
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${Python_EXECUTABLE}
         "${CMAKE_CURRENT_SOURCE_DIR}/tools/conf.py"
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_BINARY_DIR}"
         "$<CONFIG>"
-        "${PYTHON_HOME}"
+        "${VGC_PYTHON_HOME}"
 )
 
 # Always generate unit tests
@@ -310,7 +236,7 @@ message(STATUS "") # newline
 # Find, configure, and include Qt. The recommended way to make sure that the
 # desired version of Qt is found is to pass -DQt5_DIR to cmake, e.g.:
 #
-#   cmake -DQt5_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5"
+#   cmake .. -DQt5_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5"
 #
 message(STATUS "[Qt]")
 set(CMAKE_AUTOMOC ON)
@@ -595,7 +521,7 @@ message(STATUS "") # newline
 #
 add_custom_target(version ALL
     VERBATIM
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${Python_EXECUTABLE}
         "${CMAKE_CURRENT_SOURCE_DIR}/tools/version.py"
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_BINARY_DIR}"
@@ -651,7 +577,7 @@ endif()
 if(WIN32)
     add_custom_target(copy_python ALL
         VERBATIM
-        COMMAND ${PYTHON_EXECUTABLE}
+        COMMAND ${Python_EXECUTABLE}
             "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/copy_python.py"
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
@@ -675,7 +601,7 @@ if(WIN32)
             Get-Item ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe
             \).VersionInfo.FileVersion
             > ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe.version
-        COMMAND ${PYTHON_EXECUTABLE}
+        COMMAND ${Python_EXECUTABLE}
             "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/deploy.py"
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
@@ -686,7 +612,7 @@ elseif(APPLE)
     add_custom_target(deploy
         VERBATIM
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${PYTHON_EXECUTABLE}
+        COMMAND ${Python_EXECUTABLE}
             "${CMAKE_CURRENT_SOURCE_DIR}/tools/macos/deploy.py"
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"
@@ -697,7 +623,7 @@ else()
     add_custom_target(deploy
         VERBATIM
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${PYTHON_EXECUTABLE}
+        COMMAND ${Python_EXECUTABLE}
             "${CMAKE_CURRENT_SOURCE_DIR}/tools/linux/deploy.py"
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}"

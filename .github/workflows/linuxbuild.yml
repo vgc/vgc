@@ -5,6 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.12.5
+  PYTHON_VERSION: 3.7
   CC: gcc-7
   CXX: g++-7
 
@@ -75,8 +76,13 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.7'
+        python-version: ${{env.PYTHON_VERSION}}
         architecture: 'x64'
+
+    - name: Get Python Executable
+      working-directory: ${{runner.workspace}}
+      run: |
+        python -c "import sys; print('PYTHON_EXECUTABLE=' + sys.executable)" >> $GITHUB_ENV
 
     - name: Install most dependencies
       working-directory: ${{runner.workspace}}
@@ -86,20 +92,6 @@ jobs:
         sudo apt-get install -y libfreetype6-dev
         sudo apt-get install -y libharfbuzz-dev
 
-    # Install Qt.
-    #
-    # Note: The following would also work to install Qt, but it takes
-    # quite a long time (4min) and it overrides our python version.
-    #
-    # - name: Install Qt
-    #   uses: jurplel/install-qt-action@v2
-    #   with:
-    #     version: '5.15.2'
-    #
-    # Note 2: regarding the python issue, looks like we could simply pass
-    # "setup-python: false" to install-qt-action, see:
-    # https://github.com/jurplel/install-qt-action#setup-python
-    #
     - name: Install Qt
       working-directory: ${{runner.workspace}}
       run: |
@@ -111,7 +103,8 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DQt5_DIR=${{runner.workspace}}/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5
+        cmake --version
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_EXECUTABLE="$PYTHON_EXECUTABLE" -DQt5_DIR=${{runner.workspace}}/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
