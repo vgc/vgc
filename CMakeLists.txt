@@ -2,13 +2,14 @@
 # - CMake 3.12: New version of FindPython
 #
 # Useful:
+# - CMake 3.15: FindPython gives higher priority to Python_ROOT_DIR
 # - CMake 3.16: Capability to specify which Python to use with Python_EXECUTABLE
-#               See: https://gitlab.kitware.com/cmake/cmake/-/issues/19492
 #
 # Nice overview of important features introduced by each version of CMake:
 # - https://cliutils.gitlab.io/modern-cmake/chapters/intro/newcmake.html
 #
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.12...3.22)
+
 project(vgc)
 
 # Manufacturer, suite, and commit repository. Customize this if you are
@@ -130,16 +131,16 @@ set(CMAKE_CXX_STANDARD 17)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/tools")
 
 # Find Python. The recommended way to specify a Python installation is to use
-# CMake 3.16+ and pass -DPython_EXECUTABLE to CMake, e.g.:
-#
-#   cmake .. -DPython_EXECUTABLE="%UserProfile%\AppData\Local\Programs\Python\Python37\python.exe"
-#
-# If you use CMake 3.12-3.15, you can use -DPython_ROOT_DIR, e.g.:
 #
 #   cmake .. -DPython_ROOT_DIR="%UserProfile%\AppData\Local\Programs\Python\Python37"
 #
-# Unfortunately, the above is only treated as a hint, and CMake might still choose a
-# different installation of Python. Using -DPython_ROOT is also unreliable.
+# If you use CMake < 3.15, be aware that the above isn't very reliable, and CMake
+# might prefer a higher version of Python rather than the one explicitly provided.
+# The only solution is to upgrade your CMake version.
+#
+# Starting with CMake 3.16, you can also choose to explicitly point to the desired
+# Python executable with -DPython_EXECUTABLE. You can try this if -DPython_ROOT_DIR
+# doesn't work as expected.
 #
 message(STATUS "") # newline
 message(STATUS "[Python]")
