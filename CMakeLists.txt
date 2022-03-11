@@ -9,6 +9,11 @@
 # - https://cliutils.gitlab.io/modern-cmake/chapters/intro/newcmake.html
 #
 cmake_minimum_required(VERSION 3.12)
+
+cmake_policy(GET CMP0094 _CMP0094)
+message(STATUS "Python_FIND_STRATEGY_POLICY: ${_CMP0094}")
+message(STATUS "Python_FIND_STRATEGY: ${Python_FIND_STRATEGY}")
+
 project(vgc)
 
 # Manufacturer, suite, and commit repository. Customize this if you are
