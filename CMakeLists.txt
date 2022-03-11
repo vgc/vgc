@@ -2,9 +2,11 @@
 # - CMake 3.12: New version of FindPython
 #
 # Useful:
-# - CMake 3.15: Capability to specify any package via <Package>_ROOT
-# - CMake 3.16: Capability to specify FindPython's desired artifacts (e.g. Python_EXECUTABLE)
+# - CMake 3.16: Capability to specify which Python to use with Python_EXECUTABLE
 #               See: https://gitlab.kitware.com/cmake/cmake/-/issues/19492
+#
+# Nice overview of important features introduced by each version of CMake:
+# - https://cliutils.gitlab.io/modern-cmake/chapters/intro/newcmake.html
 #
 cmake_minimum_required(VERSION 3.12)
 project(vgc)
@@ -128,22 +130,16 @@ set(CMAKE_CXX_STANDARD 17)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/tools")
 
 # Find Python. The recommended way to specify a Python installation is to use
-# CMake 3.15+ and pass -DPython_ROOT to CMake, e.g.:
+# CMake 3.16+ and pass -DPython_EXECUTABLE to CMake, e.g.:
 #
-#   cmake .. -DPython_ROOT="%UserProfile%\AppData\Local\Programs\Python\Python37"
+#   cmake .. -DPython_EXECUTABLE="%UserProfile%\AppData\Local\Programs\Python\Python37\python.exe"
 #
-# If you use CMake 3.12-3.14, you can use -DPython_ROOT_DIR, e.g.:
+# If you use CMake 3.12-3.15, you can use -DPython_ROOT_DIR, e.g.:
 #
 #   cmake .. -DPython_ROOT_DIR="%UserProfile%\AppData\Local\Programs\Python\Python37"
 #
-# Unfortunately, unlike Python_ROOT which forces package selection,
-# Python_ROOT_DIR is only treated as a hint, and CMake might still choose a
-# different installation of Python.
-#
-# Since CMake 3.16, FindPython has gain the capability to use Python_EXECUTABLE
-# (and others) as input. We therefore recommend to use CMake 3.16 to ensure
-# that all subsequent calls to find_package(Python ...) will select the same
-# Python installation as the first call.
+# Unfortunately, the above is only treated as a hint, and CMake might still choose a
+# different installation of Python. Using -DPython_ROOT is also unreliable.
 #
 message(STATUS "") # newline
 message(STATUS "[Python]")
@@ -156,10 +152,13 @@ else()
     set(VGC_PYTHON_HOME ${VGC_PYTHON_PREFIX}:${VGC_PYTHON_EXEC_PREFIX})
 endif()
 message(STATUS "Version: ${Python_VERSION}")
-message(STATUS "Python Prefix:      ${VGC_PYTHON_PREFIX}")
-message(STATUS "Python Exec Prefix: ${VGC_PYTHON_EXEC_PREFIX}")
-message(STATUS "Python Home:        ${VGC_PYTHON_HOME}")
-message(STATUS "Python Executable:  ${Python_EXECUTABLE}")
+message(STATUS "Python Prefix:        ${VGC_PYTHON_PREFIX}")
+message(STATUS "Python Exec Prefix:   ${VGC_PYTHON_EXEC_PREFIX}")
+message(STATUS "Python Home:          ${VGC_PYTHON_HOME}")
+message(STATUS "Python Executable:    ${Python_EXECUTABLE}")
+message(STATUS "Python Libraries:     ${Python_LIBRARIES}")
+message(STATUS "Python Library Dirs:  ${Python_LIBRARY_DIRS}")
+message(STATUS "Python Include Dirs:  ${Python_INCLUDE_DIRS}")
 message(STATUS "") # newline
 
 # Generate the vgc.conf file, telling VGC executables about the location
