@@ -124,7 +124,7 @@ cmake .. ^
     -DCMAKE_TOOLCHAIN_FILE="%UserProfile%\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
     -DVCPKG_MANIFEST_MODE=OFF ^
     -G "Visual Studio 16 2019" -A x64 ^
-    -DPython_ROOT_DIR="%UserProfile%\AppData\Local\Programs\Python\Python37"
+    -DPython_ROOT_DIR="%UserProfile%\AppData\Local\Programs\Python\Python37" ^
     -DQt5_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5"
 make
 \Release\bin\vgcillustration.exe
@@ -142,7 +142,7 @@ If you'd like to generate an installer, you will need to install WiX 3.11, add i
 
 ```
 cmake ..\vgc ^
-    [other cmake variables here]
+    [other cmake variables here] ^
     -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
 make
 make deploy
