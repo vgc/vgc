@@ -101,29 +101,6 @@ endif ()
 # Import helper CMake functions
 include(tools/VgcTools.cmake)
 
-# Configure VGC
-#
-# XXX TODO Implement CMake macros to ease the definition of such CMake options.
-#
-# Note: All VGC modules (core, dom, etc.) must have the VGC_CORE_OBJECT_DEBUG
-# C++ macro defined when the VGC_CORE_OBJECT_DEBUG CMake option is ON. For
-# example, the following would NOT work:
-#
-# vgc_add_library(core
-#     ...
-#     COMPILE_DEFINITIONS
-#         ...
-#         -DVGC_CORE_OBJECT_DEBUG
-# )
-#
-# since it would define VGC_CORE_OBJECT_DEBUG only when compiling vgc_core, but not
-# when compiling the other modules that depend on it.
-#
-option(VGC_CORE_OBJECT_DEBUG "Enable debug mode for vgc::core::Object" OFF)
-if(VGC_CORE_OBJECT_DEBUG)
-     add_definitions(-DVGC_CORE_OBJECT_DEBUG)
-endif()
-
 # Use C++17
 set(CMAKE_CXX_STANDARD 17)
 

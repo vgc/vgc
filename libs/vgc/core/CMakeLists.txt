@@ -66,5 +66,8 @@ vgc_add_library(core
     COMPILE_DEFINITIONS
 )
 
+vgc_optional_compile_definition(core PUBLIC VGC_CORE_USE_32BIT_INT "Define vgc::Int/UInt as 32-bit integers (default is 64-bit)")
+vgc_optional_compile_definition(core PRIVATE VGC_CORE_OBJECT_DEBUG "Enable debug mode for vgc::core::Object")
+
 add_subdirectory(wraps)
 add_subdirectory(tests)

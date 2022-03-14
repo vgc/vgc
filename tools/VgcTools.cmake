@@ -43,7 +43,13 @@ function(vgc_add_library LIB_NAME)
 
     set(options "")
     set(oneValueArgs "")
-    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES HEADER_FILES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
+    set(multiValueArgs
+            THIRD_DEPENDENCIES
+            VGC_DEPENDENCIES
+            HEADER_FILES
+            CPP_FILES
+            COMPILE_DEFINITIONS
+            RESOURCE_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Add library using target name "vgc_lib_mylib"
@@ -95,9 +101,11 @@ function(vgc_add_library LIB_NAME)
     target_link_libraries(${TARGET_NAME} ${ARG_THIRD_DEPENDENCIES})
 
     # Set compile definitions, that is, values given to preprocessor variables
-    # In addition to those provided to vgc_add_library, we add -DVGC_FOO_EXPORTS
-    # to properly export DLL symbols (see libs/vgc/core/dll.h for details)
-    target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_COMPILE_DEFINITIONS})
+    # These are public, that is, they propagate to dependent libraries.
+    target_compile_definitions(${TARGET_NAME} PUBLIC ${ARG_COMPILE_DEFINITIONS})
+
+    # Set -DVGC_FOO_EXPORTS when compiling this library (but not when using it)
+    # to properly export DLL symbols. See libs/vgc/core/dll.h for details.
     string(TOUPPER VGC_${LIB_NAME}_EXPORTS EXPORTS_COMPILE_DEFINITION)
     target_compile_definitions(${TARGET_NAME} PRIVATE ${EXPORTS_COMPILE_DEFINITION})
 
@@ -134,6 +142,18 @@ function(vgc_add_library LIB_NAME)
     )
     add_dependencies(${TARGET_NAME} ${TARGET_NAME}_resources)
 
+endfunction()
+
+# Defines an optional compile definition that can be added. VISIBILITY can be
+# either INTERFACE, PUBLIC, or PRIVATE. Example:
+#
+# vgc_optional_compile_definition(core PUBLIC VGC_CORE_USE_32BIT_INT "Define vgc::Int/UInt as 32-bit integers (default is 64-bit)")
+#
+function(vgc_optional_compile_definition LIBNAME VISIBILITY NAME DOC)
+    option(${NAME} ${DOC})
+    if(${NAME})
+        target_compile_definitions(vgc_lib_${LIBNAME} ${VISIBILITY} ${NAME})
+    endif()
 endfunction()
 
 # Defines a new python extension module that wraps the given
