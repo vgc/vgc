@@ -443,7 +443,7 @@ public:
 
     // slot
     template<typename SignalT, typename Receiver, typename... SlotArgs>
-    ConnectionHandle addConnection(StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::* slot)(SlotArgs...)) {
+    ConnectionHandle addSlotConnection(StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::* slot)(SlotArgs...)) {
         using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(const_cast<Receiver*>(receiver), slot);
@@ -529,7 +529,7 @@ public:
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
-        return sender->signalMgr_.addConnection<SignalT>(signalId, receiver, slotName, slot);
+        return sender->signalMgr_.addSlotConnection<SignalT>(signalId, receiver, slotName, slot);
     }
 
     // free-callables
