@@ -61,7 +61,7 @@ using FreeFuncId = void*;
 // Serves as a reminder to use VGC_EMIT to emit signals.
 // It is used as return type of signals in conjunction with [[nodiscard]].
 //
-struct YouForgot_VGC_EMIT {
+struct [[nodiscard]] YouForgot_VGC_EMIT {
     using me = YouForgot_VGC_EMIT;
     YouForgot_VGC_EMIT(const me&) = delete; 
     me& operator=(const me&) = delete;
@@ -443,7 +443,7 @@ public:
 
     // slot
     template<typename SignalT, typename Receiver, typename... SlotArgs>
-    ConnectionHandle addSlotConnection(StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::* slot)(SlotArgs...)) {
+    ConnectionHandle connectSlot(StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::* slot)(SlotArgs...)) {
         using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(const_cast<Receiver*>(receiver), slot);
@@ -453,7 +453,7 @@ public:
 
     // free-function
     template<typename SignalT, typename... HandlerArgs>
-    ConnectionHandle addConnection(StringId signalId, void (*ffn)(HandlerArgs...)) {
+    ConnectionHandle connectCallback(StringId signalId, void (*ffn)(HandlerArgs...)) {
         using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(ffn);
@@ -463,7 +463,7 @@ public:
 
     // free-callables
     template<typename SignalT, typename Callable>
-    ConnectionHandle addConnection(StringId signalId, Callable&& c) {
+    ConnectionHandle connectCallback(StringId signalId, Callable&& c) {
         using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(c);
@@ -472,21 +472,21 @@ public:
     }
 
     // any
-    void removeConnection(StringId /*signalId*/, ConnectionHandle h) {
+    void disconnect(StringId /*signalId*/, ConnectionHandle h) {
         removeConnectionIf_([=](const Connection_& c) {
             return c.h == h; 
         });
     }
 
     // slot
-    void removeConnection(StringId signalId, const Object* o, const StringId& slotName) {
+    void disconnect(StringId signalId, const Object* o, const StringId& slotName) {
         removeConnectionIf_([=](const Connection_& c) {
             return c.from == signalId && std::holds_alternative<SlotId>(c.to) && std::get<SlotId>(c.to) == SlotId(o, slotName);
         });
     }
 
     // free-callables
-    void removeConnection(StringId signalId, void* freeFunc) {
+    void disconnect(StringId signalId, void* freeFunc) {
         removeConnectionIf_([=](const Connection_& c) {
             return c.from == signalId && std::holds_alternative<FreeFuncId>(c.to) && std::get<FreeFuncId>(c.to) == FreeFuncId(freeFunc);
         });
@@ -529,7 +529,7 @@ public:
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
-        return sender->signalMgr_.template addSlotConnection<SignalT>(signalId, receiver, slotName, slot);
+        return sender->signalMgr_.template connectSlot<SignalT>(signalId, receiver, slotName, slot);
     }
 
     // free-callables
@@ -539,7 +539,7 @@ public:
         static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
-        return sender->signalMgr_.template addConnection<SignalT>(signalId, std::forward<Fn>(fn));
+        return sender->signalMgr_.template connectCallback<SignalT>(signalId, std::forward<Fn>(fn));
     }
 
     template<typename SignalT, typename Sender, typename... Args>
@@ -548,7 +548,7 @@ public:
         static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
-        return sender->signalMgr_.removeConnection(std::forward<Args>(args)...);
+        return sender->signalMgr_.disconnect(std::forward<Args>(args)...);
     }
 };
 
@@ -670,7 +670,7 @@ using Signal = internal::SignalImpl<void(Args...)>;
 ///
 #define VGC_SIGNAL(...) VGC_EXPAND(VGC_SIGNAL_(__VA_ARGS__, VaEnd))
 #define VGC_SIGNAL_(name, ...) \
-    [[nodiscard]] VGC_SIGNAL_RET_TYPE_ \
+    VGC_SIGNAL_RET_TYPE_ \
     name(VGC_PARAMS_(__VA_ARGS__)) const { \
         CHECK_TYPE_IS_VGC_OBJECT(std::remove_pointer_t<decltype(this)>); \
         static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name), "Signal names are not allowed to be identifiers of superclass members."); \
