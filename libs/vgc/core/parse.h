@@ -34,6 +34,7 @@
 /// \endcode
 ///
 
+#include <cstring> // std::strlen
 #include <limits>
 #include <string>
 #include <type_traits>
@@ -159,6 +160,61 @@ void skipExpectedCharacter(IStream& in, char c)
         throw ParseError(
             std::string("Unexpected '") + d + "'. Expected '" + c + "'.");
     }
+}
+
+/// Attempts to read the string [begin, end) from the input stream.
+/// Raises ParseError if the input stream does not start with [begin, end).
+///
+template<typename IStream, typename CharIterator>
+void skipExpectedString(IStream& in, CharIterator begin, CharIterator end)
+{
+    CharIterator it = begin;
+    char c = -1;
+    for (CharIterator it = begin; it < end; ++it) {
+        if (!in.get(c)) {
+            std::string message;
+            if (it == begin) {
+                message += "Unexpected end of stream.";
+            }
+            else {
+                message += "Unexpected end of stream after '";
+                message.append(begin, it);
+                message += "'.";
+            }
+            message += " Expected '";
+            message.append(begin, end);
+            message += "'.";
+            throw ParseError(message);
+        }
+        if (c != *it)  {
+            std::string message;
+            message += "Unexpected '";
+            message.append(begin, end);
+            message += *it;
+            message += "'. Expected '";
+            message.append(begin, end);
+            message += "'.";
+            throw ParseError(message);
+        }
+    }
+}
+
+/// Attempts to read the string s from the input stream.
+/// Raises ParseError if the input stream does not start with s.
+///
+template<typename IStream>
+void skipExpectedString(IStream& in, const std::string& s)
+{
+    skipExpectedString(in, s.begin(), s.end());
+}
+
+/// Attempts to read the string literal s from the input stream.
+/// Raises ParseError if the input stream does not start with s.
+///
+template<typename IStream>
+void skipExpectedString(IStream& in, const char* s)
+{
+    skipExpectedString(in, s, s + std::strlen(s));
 }
 
 /// Extracts the next character from the input stream, excepting that there is
