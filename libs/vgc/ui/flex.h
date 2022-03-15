@@ -54,7 +54,7 @@ VGC_DECLARE_OBJECT(Flex);
 ///
 class VGC_UI_API Flex : public Widget {
 private:
-    VGC_OBJECT(Flex)
+    VGC_OBJECT(Flex, Widget)
 
 protected:
     /// This is an implementation details. Please use

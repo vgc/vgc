@@ -140,7 +140,7 @@ private:
 ///
 class VGC_UI_API Widget : public core::Object {
 private:
-    VGC_OBJECT(Widget)
+    VGC_OBJECT(Widget, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected :

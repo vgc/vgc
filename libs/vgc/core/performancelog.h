@@ -189,7 +189,7 @@ VGC_DECLARE_OBJECT(PerformanceLogParams);
 ///
 class VGC_CORE_API PerformanceLog : public Object {
 private:
-    VGC_OBJECT(PerformanceLog)
+    VGC_OBJECT(PerformanceLog, Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
@@ -288,7 +288,7 @@ private:
 ///
 class VGC_CORE_API PerformanceLogParams : public Object {
 private:
-    VGC_OBJECT(PerformanceLogParams)
+    VGC_OBJECT(PerformanceLogParams, Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
     friend class PerformanceLog;
 

@@ -30,7 +30,7 @@ VGC_DECLARE_OBJECT(Button);
 ///
 class VGC_UI_API Button : public Widget {
 private:
-    VGC_OBJECT(Button)
+    VGC_OBJECT(Button, Widget)
 
 protected:
     /// This is an implementation details. Please use

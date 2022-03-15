@@ -29,7 +29,7 @@ VGC_DECLARE_OBJECT(Label);
 ///
 class VGC_UI_API Label : public Widget {
 private:
-    VGC_OBJECT(Label)
+    VGC_OBJECT(Label, Widget)
 
 protected:
     /// This is an implementation details. Please use

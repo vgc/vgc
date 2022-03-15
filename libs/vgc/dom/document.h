@@ -137,7 +137,7 @@ VGC_DECLARE_OBJECT(Element);
 ///
 class VGC_DOM_API Document : public Node {
 private:
-    VGC_OBJECT(Document)
+    VGC_OBJECT(Document, Node)
 
 protected:
     /// Creates a new document with no root element. This constructor is an

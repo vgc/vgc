@@ -30,7 +30,7 @@ VGC_DECLARE_OBJECT(Event);
 ///
 class VGC_UI_API Event : public core::Object {
 private:
-    VGC_OBJECT(Event)
+    VGC_OBJECT(Event, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:

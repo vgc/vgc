@@ -29,7 +29,7 @@ VGC_DECLARE_OBJECT(ColorPalette);
 ///
 class VGC_UI_API ColorPalette : public Widget {
 private:
-    VGC_OBJECT(ColorPalette)
+    VGC_OBJECT(ColorPalette, Widget)
 
 protected:
     /// This is an implementation details. Please use

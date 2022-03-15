@@ -37,7 +37,7 @@ VGC_DECLARE_OBJECT(Scene);
 
 class VGC_SCENE_API Scene : public core::Object {
 private:
-    VGC_OBJECT(Scene)
+    VGC_OBJECT(Scene, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:

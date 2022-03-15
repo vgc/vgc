@@ -23,6 +23,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
+#include <vgc/core/signal.h>
 
 namespace vgc {
 namespace core {
@@ -286,7 +287,12 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 /// For now, it simply ensures that the destructor is protected. In the future,
 /// it may also provide some introspection features.
 ///
-#define VGC_OBJECT(T)                                      \
+#define VGC_OBJECT(T, S)                                   \
+    public:                                                \
+        using ThisClass = T;                               \
+        using SuperClass = S;                              \
+        static_assert(std::is_same_v<SuperClass, SuperClass::ThisClass>, \
+            "You forgot to use VGC_OBJECT in " #S);        \
     protected:                                             \
         ~T() override = default;                           \
     private:
@@ -343,7 +349,7 @@ using ObjectPtr = ObjPtr<Object>;
 ///
 /// class Foo : public Object {
 /// private:
-///     VGC_OBJECT(Foo)
+///     VGC_OBJECT(Foo, Object)
 ///
 /// protected:
 ///     Foo();
@@ -381,8 +387,8 @@ using ObjectPtr = ObjPtr<Object>;
 /// where ownership is involved, such as creating a new root object, or
 /// detaching a child object from its parent.
 ///
-/// The `VGC_OBJECT(Foo)` macro adds a few definitions common to all objects,
-/// for example, it makes the destructor protected.
+/// The `VGC_OBJECT(Foo, SuperClass)` macro adds a few definitions common to
+/// all objects, for example, it makes the destructor protected.
 ///
 /// The constructors should always be protected, and sublasses should instead
 /// provide either static functions like `Foo::create()` or
@@ -471,12 +477,15 @@ using ObjectPtr = ObjPtr<Object>;
 /// a specific subclass of Object, you must manually define a clone() method.
 ///
 class VGC_CORE_API Object {
+public:
+    using ThisClass = Object;
+
 private:
     // Disable move and copy
-    Object(const Object&) = default;
-    Object(Object&&) = default;
-    Object& operator=(const Object&) = default;
-    Object& operator=(Object&&) = default;
+    Object(const Object&) = delete;
+    Object(Object&&) = delete;
+    Object& operator=(const Object&) = delete;
+    Object& operator=(Object&&) = delete;
 
 public:
     /// Returns how many ObjPtrs are currently referencing this Object or any
@@ -904,7 +913,11 @@ protected:
     ///
     ObjPtr<Object> removeObjectFromParent_();
 
+protected:
+    mutable internal::SignalMgr signalMgr_;
+
 private:
+    friend class internal::SignalOps;
     friend class internal::ObjPtrAccess;
     mutable Int64 refCount_; // If >= 0: isAlive = true, refCount = refCount_
                              // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
@@ -1112,7 +1125,7 @@ private:
 template<typename T>
 class ObjList : public core::Object {
 private:
-    VGC_OBJECT(ObjList<T>)
+    VGC_OBJECT(ObjList<T>, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:

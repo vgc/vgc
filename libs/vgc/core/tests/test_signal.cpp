@@ -25,20 +25,20 @@ TEST(TestSignal, TestConnectSlot)
 
     VGC_CONNECT(&t, signalIntDouble, &t, slotUInt);
     VGC_DISCONNECT(&t, signalIntDouble, &t, slotUInt);
-    t.signalIntDouble.emit(0, 1);
+    VGC_EMIT t.signalIntDouble(0, 1);
     ASSERT_FALSE(t.slotUIntCalled);
 
     auto h = VGC_CONNECT(&t, signalIntDouble, &t, slotUInt);
     VGC_DISCONNECT(&t, signalIntDouble, h);
-    t.signalIntDouble.emit(0, 1);
+    VGC_EMIT t.signalIntDouble(0, 1);
     ASSERT_FALSE(t.slotUIntCalled);
 
     VGC_CONNECT(&t, signalIntDouble, &t, slotUInt);
-    t.signalIntDouble.emit(0, 1);
+    VGC_EMIT t.signalIntDouble(0, 1);
     ASSERT_TRUE(t.slotUIntCalled);
 
     t.selfConnect();
-    t.signalIntDouble.emit(0, 1);
+    VGC_EMIT t.signalIntDouble(0, 1);
     ASSERT_TRUE(t.slotIntDoubleCalled);
     ASSERT_TRUE(t.slotIntCalled);
     ASSERT_TRUE(t.slotUIntCalled);
