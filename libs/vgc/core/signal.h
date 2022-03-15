@@ -504,6 +504,7 @@ public:
             if (c.from == id) {
                 // XXX replace with static_cast after initial test rounds
                 const auto& f = *dynamic_cast<HandlerType*>(c.f.get());
+                f(std::forward<Args>(args)...);
             }
         }
     }
@@ -674,10 +675,10 @@ using Signal = internal::SignalImpl<void(Args...)>;
         CHECK_TYPE_IS_VGC_OBJECT(std::remove_pointer_t<decltype(this)>); \
         static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name), "Signal names are not allowed to be identifiers of superclass members."); \
         static_assert(VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(ThisClass, name), "Overloading signals is not allowed."); \
-        static ::vgc::core::StringId id(#name); \
+        static ::vgc::core::StringId signalId_(#name); \
         /* Argument types must be passed explicitly! */ \
         signalMgr_.emit_<true, VGC_PARAMS_TYPE_(__VA_ARGS__)>( \
-            VGC_TRIM_VAEND_(id, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__))); \
+            VGC_TRIM_VAEND_(signalId_, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__))); \
         return {}; \
     }
 
