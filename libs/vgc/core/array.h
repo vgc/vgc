@@ -861,7 +861,9 @@ public:
     /// to system or library implementation limitations.
     ///
     constexpr Int maxLength() const noexcept {
-        return vgc::core::tmax_<Int>::value;
+        return IntMax;
+        // Note: if you change this implementation, don't forget to also change
+        // the implementation of checkNoMoreThanMaxLength_().
     }
 
     /// Increases the reservedLength() of this Array, that is, the maximum
@@ -1180,7 +1182,7 @@ public:
     ///
     void append(const T& value) {
         if (length_ == maxLength()) {
-            throwLengthError(length_, 1);
+            throwLengthErrorAdd_(length_, 1);
         }
         emplaceAt_(length_, value);
     }
@@ -1189,7 +1191,7 @@ public:
     ///
     void append(T&& value) {
         if (length_ == maxLength()) {
-            throwLengthError(length_, 1);
+            throwLengthErrorAdd_(length_, 1);
         }
         emplaceAt_(length_, std::move(value));
     }
@@ -1205,7 +1207,7 @@ public:
     ///
     void prepend(const T& value) {
         if (length_ == maxLength()) {
-            throwLengthError(length_, 1);
+            throwLengthErrorAdd_(length_, 1);
         }
         emplaceAt_(0, value);
     }
@@ -1214,7 +1216,7 @@ public:
     ///
     void prepend(T&& value) {
         if (length_ == maxLength()) {
-            throwLengthError(length_, 1);
+            throwLengthErrorAdd_(length_, 1);
         }
         emplaceAt_(0, std::move(value));
     }
@@ -1726,7 +1728,7 @@ private:
         const Int newLen = oldLen + n;
 
         if (oldLen > maxLength() - n) {
-            throwLengthError(length_, n);
+            throwLengthErrorAdd_(length_, n);
         }
 
         if (newLen < reservedLength_) {
@@ -1937,19 +1939,41 @@ private:
         }
     }
 
+    // Throws LengthError if length > maxLength().
+    //
+    template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
+    void checkNoMoreThanMaxLength_(IntType length) const {
+        if constexpr (core::tmax_<IntType>::value > IntMax) {
+            if (length > IntMax) { // same-signedness => safe implicit conversion
+                throwLengthErrorInit_(length);
+            }
+        }
+    }
+
+    // Throws LengthError if length > maxLength().
+    //
+    void checkNoMoreThanMaxLength_(size_type length) const {
+        if (length > static_cast<size_type>(IntMax)) {
+            throw LengthError("Exceeding maximum Array length.");
+        }
+    }
+
     // Throws NegativeIntegerError if length is negative.
     // Throws LengthError if length > maxLength().
     //
     template<typename IntType>
     void checkLength_(IntType length) const {
         checkPositive_(length);
-        // both are positive, thus safe to compare
-        if (static_cast<size_t>(length) > static_cast<size_t>(maxLength())) {
-            throw LengthError("Exceeding maximum Array length.");
-        }
+        checkNoMoreThanMaxLength_(length);
     }
+
     template<typename IntType>
-    void throwLengthError(IntType current, typename type_identity<IntType>::type addend) const {
+    void throwLengthErrorInit_(IntType length) const {
+        throw LengthError("Exceeding maximum Array length.");
+    }
+
+    template<typename IntType>
+    void throwLengthErrorAdd_(IntType current, typename type_identity<IntType>::type addend) const {
         throw LengthError("Exceeding maximum Array length.");
     }
 
