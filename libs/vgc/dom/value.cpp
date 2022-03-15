@@ -50,6 +50,8 @@ Value parseValue(const std::string& s, ValueType t)
         switch (t) {
         case ValueType::Invalid:
             return Value::invalid();
+        case ValueType::None:
+            return Value::invalid();
         case ValueType::Color:
             return Value(core::parse<core::Color>(s));
         case ValueType::DoubleArray:
