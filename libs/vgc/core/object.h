@@ -1230,4 +1230,54 @@ VGC_DECLARE_OBJECT(Object);
 } // namespace core
 } // namespace vgc
 
+namespace vgc::core::internal {
+
+class TestSignalObject : public Object {
+public:
+    using ThisClass = TestSignalObject;
+    using SuperClass = Object;
+
+    VGC_SIGNAL(signalNoArgs);
+    VGC_SIGNAL(signalInt, (int, a));
+    VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
+    VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
+
+    VGC_SLOT(slotInt, (int, a)) { slotIntCalled = true; }
+    VGC_SLOT(slotIntDouble, (int, a), (double, b)) { slotIntDoubleCalled = true; }
+    VGC_SLOT(slotUInt, (unsigned int, a)) { slotUIntCalled = true; }
+
+    void selfConnect() {
+        VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
+        VGC_CONNECT(this, signalIntDouble, this, slotInt);
+        VGC_CONNECT(this, signalIntDouble, this, slotUInt);
+        VGC_CONNECT(this, signalIntDouble, staticFuncInt);
+        VGC_CONNECT(this, signalIntDouble, std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
+        VGC_CONNECT(this, signalIntDouble, [&](int, double) { fnIntDoubleCalled = true; } );
+        VGC_CONNECT(this, signalIntDouble, std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
+        VGC_CONNECT(this, signalIntDouble, [&](unsigned int) { fnUIntCalled = true; });
+    }
+
+    static inline void staticFuncInt() {
+        sfnIntCalled = true;
+    }
+
+    void resetFlags() {
+        slotIntDoubleCalled = false;
+        slotIntCalled = false;
+        slotUIntCalled = false;
+        sfnIntCalled = false;
+        fnIntDoubleCalled = false;
+        fnUIntCalled = false;
+    }
+
+    bool slotIntDoubleCalled = false;
+    bool slotIntCalled = false;
+    bool slotUIntCalled = false;
+    static inline bool sfnIntCalled = false;
+    bool fnIntDoubleCalled = false;
+    bool fnUIntCalled = false;
+};
+
+} // namespace vgc::core::internal
+
 #endif // VGC_CORE_OBJECT_H

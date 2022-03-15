@@ -21,7 +21,7 @@
 
 TEST(TestSignal, TestConnectSlot)
 {
-    vgc::core::internal::TestSignalObject<> t;
+    vgc::core::internal::TestSignalObject t;
 
     VGC_CONNECT(&t, signalIntDouble, &t, slotUInt);
     VGC_DISCONNECT(&t, signalIntDouble, &t, slotUInt);

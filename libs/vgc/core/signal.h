@@ -653,7 +653,9 @@ using Signal = internal::SignalImpl<void(Args...)>;
 
 
 
-
+/*
+* 
+*/
 
 /// Macro to define VGC Object Signals.
 ///
@@ -675,7 +677,7 @@ using Signal = internal::SignalImpl<void(Args...)>;
         static_assert(VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(ThisClass, name), "Overloading signals is not allowed."); \
         static ::vgc::core::StringId signalId_(#name); \
         /* Argument types must be passed explicitly! */ \
-        signalMgr_.emit_<true, VGC_PARAMS_TYPE_(__VA_ARGS__)>( \
+        signalMgr_.emit_<VGC_PARAMS_TYPE_((true, _), __VA_ARGS__)>( \
             VGC_TRIM_VAEND_(signalId_, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__))); \
         return {}; \
     }
@@ -750,57 +752,5 @@ using Signal = internal::SignalImpl<void(Args...)>;
 #define VGC_DISCONNECT4_(...) VGC_DISCONNECT_SLOT(__VA_ARGS__)
 #define VGC_DISCONNECT_DISPATCH_(_1, _2, _3, _4, NAME, ...) NAME
 #define VGC_DISCONNECT(...) VGC_DISCONNECT_EXPAND_(VGC_DISCONNECT_DISPATCH_(__VA_ARGS__, VGC_DISCONNECT_SLOT, VGC_DISCONNECT_HANDLE_OR_FUNC, NOOVERLOAD, NOOVERLOAD)(__VA_ARGS__))
-
-namespace vgc::core::internal {
-
-template<typename ObjectT = ::vgc::core::Object>
-class TestSignalObject : public ObjectT {
-public:
-    using ThisClass = TestSignalObject;
-    using SuperClass = ObjectT;
-
-    VGC_SIGNAL(signalNoArgs);
-    VGC_SIGNAL(signalInt, (int, a));
-    VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
-    VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
-
-    VGC_SLOT(slotInt, (int, a)) { slotIntCalled = true; }
-    VGC_SLOT(slotIntDouble, (int, a), (double, b)) { slotIntDoubleCalled = true; }
-    VGC_SLOT(slotUInt, (unsigned int, a)) { slotUIntCalled = true; }
-
-    void selfConnect() {
-        VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
-        VGC_CONNECT(this, signalIntDouble, this, slotInt);
-        VGC_CONNECT(this, signalIntDouble, this, slotUInt);
-        VGC_CONNECT(this, signalIntDouble, staticFuncInt);
-        VGC_CONNECT(this, signalIntDouble, std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
-        VGC_CONNECT(this, signalIntDouble, [&](int, double) { fnIntDoubleCalled = true; } );
-        VGC_CONNECT(this, signalIntDouble, std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
-        VGC_CONNECT(this, signalIntDouble, [&](unsigned int) { fnUIntCalled = true; });
-    }
-
-    static inline void staticFuncInt() {
-        sfnIntCalled = true;
-    }
-
-    void resetFlags() {
-        slotIntDoubleCalled = false;
-        slotIntCalled = false;
-        slotUIntCalled = false;
-        sfnIntCalled = false;
-        fnIntDoubleCalled = false;
-        fnUIntCalled = false;
-    }
-
-    bool slotIntDoubleCalled = false;
-    bool slotIntCalled = false;
-    bool slotUIntCalled = false;
-    static inline bool sfnIntCalled = false;
-    bool fnIntDoubleCalled = false;
-    bool fnUIntCalled = false;
-};
-
-} // namespace vgc::core::internal
-
 
 #endif // VGC_CORE_SIGNAL_H
