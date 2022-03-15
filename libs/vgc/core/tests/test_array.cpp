@@ -140,14 +140,10 @@ TEST(TestArray, Construct) {
     { Array<int> a(size_t(10));     EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
     { Array<int> a{10, 42};         EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
     { Array<int> a{10, 42, 5};      EXPECT_TRUE(a.contains(42)); EXPECT_FALSE(a.contains(43)); }
-    EXPECT_THROW(Array<int>(-1),          NegativeIntegerError);
+    EXPECT_THROW(Array<int>(-1),                               NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, Array<int>::DefaultInitTag{}), NegativeIntegerError);
-    EXPECT_THROW(Array<int>(-1, 42),      NegativeIntegerError);
-    if (static_cast<Int>(size_t(-1)) > 0) {
-        EXPECT_THROW(Array<int>(size_t(-1)), LengthError);
-        EXPECT_THROW(Array<int>(size_t(-1), Array<int>::DefaultInitTag{}), LengthError);
-        EXPECT_THROW(Array<int>(size_t(-1), 42), LengthError);
-    }
+    EXPECT_THROW(Array<int>(-1, 42),                           NegativeIntegerError);
+    EXPECT_THROW(Array<int>(vgc::core::tmax_<size_t>::value, 42), LengthError);
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         // Tests init_
@@ -231,10 +227,8 @@ TEST(TestArray, GetChecked) {
     a[size_t(2)] = 40; EXPECT_EQ(a[2], 40);
     a[Int(2)]    = 50; EXPECT_EQ(a[2], 50);
     EXPECT_THROW(a[-1],              IndexError);
-    EXPECT_THROW(a[size_t(-1)],      IndexError);
     EXPECT_THROW(a[Int(-1)],         IndexError);
     EXPECT_THROW(a[-1]         = 10, IndexError);
-    EXPECT_THROW(a[size_t(-1)] = 10, IndexError);
     EXPECT_THROW(a[Int(-1)]    = 10, IndexError);
     EXPECT_THROW(a[4],               IndexError);
     EXPECT_THROW(a[size_t(4)],       IndexError);
