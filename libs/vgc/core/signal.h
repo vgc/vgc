@@ -529,7 +529,7 @@ public:
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
-        return sender->signalMgr_.addSlotConnection<SignalT>(signalId, receiver, slotName, slot);
+        return sender->signalMgr_.addSlotConnection<typename SignalT>(signalId, receiver, slotName, slot);
     }
 
     // free-callables
