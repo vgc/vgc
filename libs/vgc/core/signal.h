@@ -145,10 +145,8 @@ struct SignalFreeHandlerTraits_ : SignalCallableHandlerTraits_<decltype(&T::oper
 template<typename R, typename... Args>
 struct SignalFreeHandlerTraits_<R (*)(Args...)> : FunctionTraitsDef_<R, Args...> {};
 
-
 template<typename T>
 using SignalFreeHandlerTraits = SignalFreeHandlerTraits_<std::remove_reference_t<T>>;
-
 
 
 template<class F, class ArgsTuple, std::size_t... I>
@@ -446,7 +444,7 @@ public:
     // slot
     template<typename SignalT, typename Receiver, typename... SlotArgs>
     ConnectionHandle addConnection(StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::* slot)(SlotArgs...)) {
-        using HandlerType = typename SignalHandlerTpl<SignalT>;
+        using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(const_cast<Receiver*>(receiver), slot);
         connections_.emplace(connections_.end(), signalHandler, h, signalId, SlotId{receiver, slotName});
@@ -456,7 +454,7 @@ public:
     // free-function
     template<typename SignalT, typename... HandlerArgs>
     ConnectionHandle addConnection(StringId signalId, void (*ffn)(HandlerArgs...)) {
-        using HandlerType = typename SignalHandlerTpl<SignalT>;
+        using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(ffn);
         connections_.emplace(connections_.end(), signalHandler, h, signalId, FreeFuncId(ffn));
@@ -466,7 +464,7 @@ public:
     // free-callables
     template<typename SignalT, typename Callable>
     ConnectionHandle addConnection(StringId signalId, Callable&& c) {
-        using HandlerType = typename SignalHandlerTpl<SignalT>;
+        using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(c);
         connections_.emplace(connections_.end(), signalHandler, h, signalId, std::monostate{});
@@ -499,7 +497,7 @@ public:
     //
     template<bool Enable, typename... Args>
     void emit_(SignalId id, Args&&... args) const {
-        using HandlerType = SignalHandlerTpl<void(Args...)>;
+        using HandlerType = typename SignalHandlerTpl<void(Args...)>;
         for (auto& c : connections_) {
             if (c.from == id) {
                 // XXX replace with static_cast after initial test rounds
