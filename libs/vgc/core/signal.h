@@ -497,7 +497,7 @@ public:
     //
     template<bool Enable, typename... Args>
     void emit_(SignalId id, Args&&... args) const {
-        using HandlerType = typename SignalHandlerTpl<void(Args...)>;
+        using HandlerType = SignalHandlerTpl<void(Args...)>;
         for (auto& c : connections_) {
             if (c.from == id) {
                 // XXX replace with static_cast after initial test rounds
