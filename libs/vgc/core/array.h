@@ -1954,7 +1954,7 @@ private:
     //
     void checkNoMoreThanMaxLength_(size_type length) const {
         if (length > static_cast<size_type>(IntMax)) {
-            throw LengthError("Exceeding maximum Array length.");
+            throwLengthErrorInit_(length);
         }
     }
 
