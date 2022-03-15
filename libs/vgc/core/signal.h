@@ -520,16 +520,16 @@ private:
 class SignalOps {
 public:
     // slot
-    template<typename SignalTp, typename Sender, typename Receiver, typename... SlotArgs>
+    template<typename SignalT, typename Sender, typename Receiver, typename... SlotArgs>
     static ConnectionHandle
     connect(const Sender* sender, StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::*slot)(SlotArgs...)) {
-        //static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
-        //static_assert(isObject<Sender>, "Signals must reside in Objects");
-        //static_assert(isObject<Receiver>, "Slots must reside in Objects");
+        static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
+        static_assert(isObject<Sender>, "Signals must reside in Objects");
+        static_assert(isObject<Receiver>, "Slots must reside in Objects");
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
-        return sender->signalMgr_.addSlotConnection<SignalTp >(signalId, receiver, slotName, slot);
+        return sender->signalMgr_.template addSlotConnection<SignalT>(signalId, receiver, slotName, slot);
     }
 
     // free-callables
@@ -539,7 +539,7 @@ public:
         static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
-        return sender->signalMgr_.addConnection<SignalT>(signalId, std::forward<Fn>(fn));
+        return sender->signalMgr_.template addConnection<SignalT>(signalId, std::forward<Fn>(fn));
     }
 
     template<typename SignalT, typename Sender, typename... Args>
