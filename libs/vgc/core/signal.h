@@ -386,8 +386,8 @@ public:
 
     // pointer-to-member-function
     template<typename ObjectT, typename... SlotArgs>
-    static inline
-    [[nodiscard]] SignalHandlerTpl*
+    [[nodiscard]] static inline
+    SignalHandlerTpl*
     create(ObjectT* o, void (ObjectT::* mfn)(SlotArgs...)) {
         return new SignalHandlerTpl(
             [=](Args&&... args) {
@@ -398,8 +398,8 @@ public:
 
     // free functions and callables
     template<typename FreeHandler>
-    static inline
-    [[nodiscard]] SignalHandlerTpl*
+    [[nodiscard]] static inline
+    SignalHandlerTpl*
     create(FreeHandler&& f) {
         using HTraits = SignalFreeHandlerTraits<FreeHandler>;
         static_assert(std::is_same_v<typename HTraits::ReturnType, void>, "Signal handlers must return void.");
