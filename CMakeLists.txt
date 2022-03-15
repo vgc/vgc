@@ -225,7 +225,6 @@ message(STATUS "Version: ${Qt5_VERSION}")
 
 # Disable usage of emit/signals/slots because they collide with <Python.h>.
 # Instead, we use the more explicit Q_EMIT/Q_SIGNALS/Q_SLOTS.
-add_definitions(-DQT_NO_KEYWORDS)
 message(STATUS "") # newline
 
 # pybind11

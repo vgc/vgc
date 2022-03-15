@@ -19,7 +19,13 @@
 
 #include <string>
 
-#include <pybind11/pybind11.h>
+#if defined(Q_SLOTS) && defined(slots)
+#    undef slots
+#    include <pybind11/pybind11.h>
+#    define slots Q_SLOTS
+#else
+#    include <pybind11/pybind11.h>
+#endif
 
 #include <vgc/core/api.h>
 #include <vgc/core/signal.h>
