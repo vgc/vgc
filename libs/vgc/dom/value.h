@@ -101,10 +101,10 @@ template<typename OStream>
 void write(OStream& out, ValueType v)
 {
     switch (v) {
-    case ValueType::Invalid:
-        write(out, "ValueType::Invalid");
     case ValueType::None:
         write(out, "ValueType::None");
+    case ValueType::Invalid:
+        write(out, "ValueType::Invalid");
     case ValueType::Color:
         write(out, "ValueType::Color");
     case ValueType::DoubleArray:
@@ -120,12 +120,17 @@ void write(OStream& out, ValueType v)
 class VGC_DOM_API Value
 {
 public:
-    /// Constructs an invalid Value.
+    /// Constructs an empty value, that is, whose ValueType is None.
     ///
     Value() :
         Value(ValueType::None) {
 
     }
+
+    /// Returns a const reference to an empty value. This is useful for error
+    /// handling in methods that must return a Value by const reference.
+    ///
+    static const Value& none();
 
     /// Returns a const reference to an invalid value. This is useful for error
     /// handling in methods that must return a Value by const reference.
@@ -264,8 +269,10 @@ template<typename OStream>
 void write(OStream& out, const Value& v)
 {
     switch (v.type()) {
+    case ValueType::None:
+        write(out, "None");
     case ValueType::Invalid:
-        write(out, "invalid_value");
+        write(out, "Invalid");
     case ValueType::Color:
         return write(out, v.getColor());
     case ValueType::DoubleArray:

@@ -21,6 +21,13 @@
 namespace vgc {
 namespace dom {
 
+const Value& Value::none()
+{
+    // trusty leaky singleton
+    static const Value* v = new Value(ValueType::None);
+    return *v;
+}
+
 const Value& Value::invalid()
 {
     // trusty leaky singleton
@@ -44,11 +51,26 @@ void Value::shrinkToFit()
     }
 }
 
+namespace  {
+
+void checkExpectedString_(const std::string& s, const char* expected) {
+    core::StringReader in(s);
+    core::skipExpectedString(in, expected);
+    skipWhitespaceCharacters(in);
+    skipExpectedEof(in);
+}
+
+} // namespace
+
 Value parseValue(const std::string& s, ValueType t)
 {
     try {
         switch (t) {
+        case ValueType::None:
+            checkExpectedString_(s, "None");
+            return Value();
         case ValueType::Invalid:
+            checkExpectedString_(s, "Invalid");
             return Value::invalid();
         case ValueType::Color:
             return Value(core::parse<core::Color>(s));
