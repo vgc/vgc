@@ -226,13 +226,6 @@ message(STATUS "Version: ${Qt5_VERSION}")
 # Disable usage of emit/signals/slots because they collide with <Python.h>.
 # Instead, we use the more explicit Q_EMIT/Q_SIGNALS/Q_SLOTS.
 add_definitions(-DQT_NO_KEYWORDS)
-
-# Explicitly include Qt directories. According to the Qt doc, this is redundant
-# with find_package(Qt5). In practice, we need this for python wrappers.
-# See https://stackoverflow.com/questions/29613423/cmake-include-files-not-found-with-object
-include_directories(${Qt5Core_INCLUDE_DIRS})
-include_directories(${Qt5Gui_INCLUDE_DIRS})
-include_directories(${Qt5Widgets_INCLUDE_DIRS})
 message(STATUS "") # newline
 
 # pybind11
