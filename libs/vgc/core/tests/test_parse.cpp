@@ -21,12 +21,75 @@
 
 // TODO: write more tests
 
+
+template<typename IStream>
+void skipExpectedString(IStream& in, const std::string& s)
+{
+
+
+}
+
 TEST(TestParse, ReadChar)
 {
     std::string s = "hello";
     vgc::core::StringReader in(s);
     char c = vgc::core::readCharacter(in);
     EXPECT_EQ(c, 'h');
+}
+
+TEST(TestParse, SkipExpectedString)
+{
+    {
+        std::string s = "";
+        vgc::core::StringReader in(s);
+        vgc::core::skipExpectedString(in, "");
+        EXPECT_NO_THROW(vgc::core::skipExpectedEof(in));
+    }
+    {
+        std::string s = "hello";
+        vgc::core::StringReader in(s);
+        vgc::core::skipExpectedString(in, "");
+        EXPECT_EQ(vgc::core::readCharacter(in), 'h');
+    }
+    {
+        std::string s = "hello";
+        vgc::core::StringReader in(s);
+        vgc::core::skipExpectedString(in, "hell");
+        EXPECT_EQ(vgc::core::readCharacter(in), 'o');
+    }
+    {
+        std::string s = "hello";
+        std::string s2 = "hell";
+        vgc::core::StringReader in(s);
+        vgc::core::skipExpectedString(in, s2);
+        EXPECT_EQ(vgc::core::readCharacter(in), 'o');
+    }
+    {
+        std::string s = "hello";
+        vgc::core::StringReader in(s);
+        vgc::core::skipExpectedString(in, "hello");
+        EXPECT_NO_THROW(vgc::core::skipExpectedEof(in));
+    }
+    {
+        std::string s = "hell";
+        vgc::core::StringReader in(s);
+        EXPECT_THROW(vgc::core::skipExpectedString(in, "hello"), vgc::core::ParseError);
+    }
+    {
+        std::string s = "help";
+        vgc::core::StringReader in(s);
+        EXPECT_THROW(vgc::core::skipExpectedString(in, "hello"), vgc::core::ParseError);
+    }
+    {
+        std::string s = "hello";
+        vgc::core::StringReader in(s);
+        EXPECT_THROW(vgc::core::skipExpectedString(in, "help"), vgc::core::ParseError);
+    }
+    {
+        std::string s = "";
+        vgc::core::StringReader in(s);
+        EXPECT_THROW(vgc::core::skipExpectedString(in, "help"), vgc::core::ParseError);
+    }
 }
 
 // We need this to ensure that std::stod uses the C locale
