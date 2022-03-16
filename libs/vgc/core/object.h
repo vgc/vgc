@@ -1242,15 +1242,17 @@ public:
     VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
     VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
 
-    static_assert(::vgc::core::internal::LambdaSfinae<ThisClass*>::check( \
-        [](auto* v) -> std::void_t<decltype(&std::remove_pointer_t<decltype(v)>::slotInt)> {} \
-    ), "Overloading slots is not allowed.");
-
     VGC_SLOT(slotInt, (int, a)) { slotIntCalled = true; }
     VGC_SLOT(slotIntDouble, (int, a), (double, b)) { slotIntDoubleCalled = true; }
     VGC_SLOT(slotUInt, (unsigned int, a)) { slotUIntCalled = true; }
 
+    //void fakeSlotInt(int) {}
+    //void slotInt(int) {}
+
     void selfConnect() {
+
+        //VGC_CONNECT(this, signalIntDouble, this, fakeSlotInt);
+
         VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
         VGC_CONNECT(this, signalIntDouble, this, slotInt);
         VGC_CONNECT(this, signalIntDouble, this, slotUInt);
