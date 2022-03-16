@@ -351,6 +351,15 @@ struct IsSignalImpl<SignalImpl<Sig>> : std::true_type {};
 
 // new impl
 
+// This is a polymorphic adapter class for slots and free functions.
+// It is used to store signal receivers in a single container as well as
+// provide a common signature for all the connected receivers of a given
+// signal. The input argument list is forwarded to the receiver and truncated
+// if necessary.
+// For instance, a handler adapting slot(double a) to
+// signal(int a, double b) would be equivalent to this:
+// handler(int&& a, double&& b) { slot(std::forward<int>(a)); }
+//
 class SignalHandler {
 protected:
     SignalHandler() = default;
@@ -363,23 +372,16 @@ template<typename SignalType>
 class SignalHandlerTpl;
 
 template<typename ObjT, typename... Args>
-class SignalHandlerTpl<VGC_SIGNAL_RET_TYPE_ (ObjT::*)(Args...) const> :
-    public SignalHandlerTpl<void(Args...)> {
-
-};
-
-template<typename... Args>
-class SignalHandlerTpl<void(Args...)> : public SignalHandler {
+class SignalHandlerTpl<VGC_SIGNAL_RET_TYPE_ (ObjT::*)(Args...) const> : public SignalHandler {
 public:
     using CFnType = void(Args&&...);
     using FnType = std::function<CFnType>;
 
-protected:
+    // left public for python bindings
     SignalHandlerTpl(FnType&& fn) : fn_(std::move(fn)) {
 
     }
 
-public:
     void operator()(Args&&... args) const {
         fn_(std::forward<Args>(args)...);
     }
@@ -418,7 +420,6 @@ private:
 class SignalMgr {
 private:
     struct Connection_ {
-
         template<typename To>
         Connection_(SignalHandler* f, ConnectionHandle h, SignalId from, To&& to) :
             f(f), h(h), from(from), to(std::forward<To>(to)) {
@@ -447,6 +448,7 @@ public:
         using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(const_cast<Receiver*>(receiver), slot);
+        // XXX use emplaceLast when possible
         connections_.emplace(connections_.end(), signalHandler, h, signalId, SlotId{receiver, slotName});
         return h;
     }
@@ -457,6 +459,7 @@ public:
         using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(ffn);
+        // XXX use emplaceLast when possible
         connections_.emplace(connections_.end(), signalHandler, h, signalId, FreeFuncId(ffn));
         return h;
     }
@@ -467,6 +470,7 @@ public:
         using HandlerType = SignalHandlerTpl<SignalT>;
         auto h = genConnectionHandle();
         auto signalHandler = HandlerType::create(c);
+        // XXX use emplaceLast when possible
         connections_.emplace(connections_.end(), signalHandler, h, signalId, std::monostate{});
         return h;
     }
