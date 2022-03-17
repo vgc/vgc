@@ -338,6 +338,7 @@ from xml.dom.minidom import getDOMImplementation
 import argparse
 import base64
 import datetime
+import fnmatch
 import hashlib
 import io
 import json
@@ -983,19 +984,23 @@ class WixElement:
     def getFile(self, name):
         return self.files[name]
 
-    # Recursively add the given directory and all its files to this directory
-    # for the given feature. Files or directories whose names appear in the
-    # `exclude` list are ignored.
+    # Recursively add the given directory and all its child files/dirs for the
+    # given feature. Direct children whose names match any of the Unix-like file
+    # patterns in the `exclude` list are ignored.
     #
     def addDirectory(self, srcDir, feature, *, exclude=[]):
         destDir = self.createDirectory(srcDir.name)
         for child in srcDir.iterdir():
-            if child.name in exclude:
-                pass
-            elif child.is_file():
-                destDir.createFile(str(child), child.name, feature)
-            elif child.is_dir():
-                destDir.addDirectory(child, feature)
+            isExcluded = False
+            for pattern in exclude:
+                if fnmatch.fnmatch(child.name, pattern):
+                    isExcluded = True
+                    break
+            if not isExcluded:
+                if child.is_file():
+                    destDir.createFile(str(child), child.name, feature)
+                elif child.is_dir():
+                    destDir.addDirectory(child, feature)
         return destDir
 
 # Generates an MSI file for the given suite
@@ -1017,7 +1022,7 @@ def makeSuiteInstaller(
     appFeature = wix.createFeature("Complete")
 
     # Add 'bin', 'python', and 'resources' directories
-    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", appFeature, exclude=["vgc.conf", "_test_"])
+    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", appFeature, exclude=["vgc.conf", "vgc_*_test_*_cpp.exe"])
     wix.installDirectory.addDirectory(configDir / "python", appFeature)
     wix.installDirectory.addDirectory(configDir / "resources", appFeature)
 
