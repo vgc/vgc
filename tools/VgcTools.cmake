@@ -91,6 +91,7 @@ function(vgc_add_library LIB_NAME)
             OUTPUT_NAME vgc${LIB_NAME}
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/lib
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin
+            FOLDER libs/${LIB_NAME}
     )
 
     # Add dependencies to other VGC libraries
@@ -139,6 +140,10 @@ function(vgc_add_library LIB_NAME)
             "$<CONFIG>"
             "lib"
             "${LIB_NAME}"
+    )
+    set_target_properties(${TARGET_NAME}_resources
+        PROPERTIES
+            FOLDER libs/${LIB_NAME}
     )
     add_dependencies(${TARGET_NAME} ${TARGET_NAME}_resources)
 
@@ -190,6 +195,7 @@ function(vgc_wrap_library LIB_NAME)
             OUTPUT_NAME ${LIB_NAME}
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/python/vgc
+            FOLDER libs/${LIB_NAME}
     )
 
     # Link to the C++ library this Python module is wrapping
@@ -261,6 +267,7 @@ function(vgc_test_library LIB_NAME)
         set_target_properties(${EXE_TARGET} PROPERTIES
             OUTPUT_NAME ${EXE_TARGET_OUTPUT_NAME}
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/${TEST_SUBFOLDER}
+            FOLDER libs/${LIB_NAME}/tests
         )
         if(WIN32)            
             add_test(
@@ -359,6 +366,7 @@ function(vgc_add_app APP_NAME)
         PROPERTIES
             OUTPUT_NAME vgc${APP_NAME}
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/bin
+            FOLDER apps/${APP_NAME}
     )
 
     # Write list of resources as comma-separated string
@@ -383,6 +391,10 @@ function(vgc_add_app APP_NAME)
             "$<CONFIG>"
             "app"
             "${APP_NAME}"
+    )
+    set_target_properties(${TARGET_NAME}_resources
+        PROPERTIES
+            FOLDER apps/${APP_NAME}
     )
 
     if(WIN32)
