@@ -82,7 +82,7 @@ jobs:
     - name: Install Qt
       working-directory: ${{runner.workspace}}
       run: |
-        wget --progress=dot:giga https://www.vgc.io/releases/qt/qt-$QT_VERSION-msvc${MSVC_VERSION}_64.zip
+        C:\msys64\usr\bin\wget.exe --progress=dot:giga https://www.vgc.io/releases/qt/qt-$QT_VERSION-msvc${MSVC_VERSION}_64.zip
         unzip qt-$QT_VERSION-msvc${MSVC_VERSION}_64.zip -d ${{runner.workspace}}
 
     # - name: Install Qt
