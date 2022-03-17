@@ -1017,7 +1017,7 @@ def makeSuiteInstaller(
     appFeature = wix.createFeature("Complete")
 
     # Add 'bin', 'python', and 'resources' directories
-    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", appFeature, exclude=["vgc.conf"])
+    wixBinDir = wix.installDirectory.addDirectory(configDir / "bin", appFeature, exclude=["vgc.conf", "_test_"])
     wix.installDirectory.addDirectory(configDir / "python", appFeature)
     wix.installDirectory.addDirectory(configDir / "resources", appFeature)
 

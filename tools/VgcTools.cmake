@@ -234,28 +234,52 @@ function(vgc_test_library LIB_NAME)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Add C++ tests
-    vgc_prepend_(LIB_TARGET_NAME vgc_lib_ ${LIB_NAME})
-    foreach(CPP_TEST_FILENAME ${ARG_CPP_TESTS})
-        set(CPP_TEST_TARGET_NAME vgc_${LIB_NAME}_${CPP_TEST_FILENAME})
-        set(CPP_TEST_TARGET_NAME_OUT ${CPP_TEST_TARGET_NAME}.out)
-        add_executable(${CPP_TEST_TARGET_NAME_OUT} EXCLUDE_FROM_ALL ${CPP_TEST_FILENAME})
-        target_link_libraries(${CPP_TEST_TARGET_NAME_OUT} ${LIB_TARGET_NAME} gtest)
-        add_dependencies(tests ${CPP_TEST_TARGET_NAME_OUT})
-        set_target_properties(${CPP_TEST_TARGET_NAME_OUT} PROPERTIES
-            OUTPUT_NAME ${CPP_TEST_FILENAME}.out
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        )
-        add_test(
-            NAME ${CPP_TEST_TARGET_NAME}
-            COMMAND ${CPP_TEST_TARGET_NAME_OUT}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        )
+    vgc_prepend_(LIB_TARGET vgc_lib_ ${LIB_NAME})
+    foreach(FILENAME ${ARG_CPP_TESTS})
+        string(REPLACE "." "_" FILENAME_WITHOUT_DOT ${FILENAME})
+        set(TEST_TARGET vgc_${LIB_NAME}_${FILENAME})
+        set(EXE_TARGET vgc_${LIB_NAME}_${FILENAME_WITHOUT_DOT})
         if(WIN32)
-            set_tests_properties(${CPP_TEST_TARGET_NAME} PROPERTIES
-                ENVIRONMENT "PATH=%PATH%\;${CMAKE_BINARY_DIR}/$<CONFIG>/bin"
+            # On Windows, we generate the tests in the ./bin folder so that Visual Studio
+            # (and perhaps other tools) can find the dependent DLLs. In theory, we'd
+            # prefer to keep the tests out of ./bin and provide an appropriate PATH
+            # before launching them, but the Test Explorer of VS seems to perform some
+            # preprocessing on the tests (e.g., detecting Google Test symbols) which
+            # ignores our set_tests_properties(.. ENVIRONMENT "PATH=..."). This means
+            # that if our C++ tests are not in ./bin, they do not show up int the Test
+            # Explorer and can't be easily run and debugged.
+            #
+            set(TEST_SUBFOLDER bin)
+            set(EXE_TARGET_OUTPUT_NAME ${EXE_TARGET})  # ".exe" suffix automatically added
+        else()
+            set(TEST_SUBFOLDER tests/vgc/${LIB_NAME})
+            set(EXE_TARGET_OUTPUT_NAME ${FILENAME_WITHOUT_DOT}.out)
+        endif()
+        add_executable(${EXE_TARGET} EXCLUDE_FROM_ALL ${FILENAME})
+        target_link_libraries(${EXE_TARGET} ${LIB_TARGET} gtest)
+        add_dependencies(tests ${EXE_TARGET})
+        set_target_properties(${EXE_TARGET} PROPERTIES
+            OUTPUT_NAME ${EXE_TARGET_OUTPUT_NAME}
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/${TEST_SUBFOLDER}
+        )
+        if(WIN32)            
+            add_test(
+                NAME ${TEST_TARGET}
+                COMMAND ${CMAKE_BINARY_DIR}/$<CONFIG>/${TEST_SUBFOLDER}/${EXE_TARGET_OUTPUT_NAME}.exe
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/${TEST_SUBFOLDER}
+            )
+            # Note: If we move the tests outside ./bin, we'd need this:
+            #   set_tests_properties(${TEST_TARGET} PROPERTIES
+            #       ENVIRONMENT "PATH=%PATH%\;${CMAKE_BINARY_DIR}/$<CONFIG>/bin"
+            #   )
+        else()
+            add_test(
+                NAME ${TEST_TARGET}
+                COMMAND ${CMAKE_BINARY_DIR}/$<CONFIG>/${TEST_SUBFOLDER}/${EXE_TARGET_OUTPUT_NAME}
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/${TEST_SUBFOLDER}
             )
         endif()
-        set_property(TEST ${CPP_TEST_TARGET_NAME} APPEND PROPERTY
+        set_property(TEST ${TEST_TARGET} APPEND PROPERTY
             ENVIRONMENT VGCBASEPATH=${CMAKE_BINARY_DIR}/$<CONFIG>
         )
     endforeach()
