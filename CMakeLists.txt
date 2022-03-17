@@ -151,6 +151,7 @@ add_custom_target(conf ALL
         "$<CONFIG>"
         "${VGC_PYTHON_HOME}"
 )
+set_target_properties(conf PROPERTIES FOLDER misc)
 
 # Always generate unit tests
 enable_testing()
@@ -161,6 +162,7 @@ enable_testing()
 # explicitly before running `make check`.
 #
 add_custom_target(tests)
+set_target_properties(tests PROPERTIES FOLDER misc)
 
 # Define `make check` to run the unit tests in --output-on-failure mode. This
 # is more useful than the built-in `make test` which would run without printing
@@ -184,6 +186,11 @@ else()
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 add_dependencies(check tests)
+set_target_properties(check PROPERTIES FOLDER misc)
+
+# Set "third" as default FOLDER target property
+set(VGC_CMAKE_FOLDER_OLD ${CMAKE_FOLDER})
+set(CMAKE_FOLDER third)
 
 # Google Test.
 #
@@ -479,6 +486,9 @@ message(STATUS "Version: ${HARFBUZZ_VERSION_STRING}")
 vgc_print_library_info(harfbuzz::harfbuzz)
 message(STATUS "") # newline
 
+# Restore default value of FOLDER target property
+set(CMAKE_FOLDER ${VGC_CMAKE_FOLDER_OLD})
+
 # Add internal libs and apps
 # TODO: avoid global `include_directories`
 message(STATUS "[VGC]")
@@ -509,6 +519,7 @@ add_custom_target(version ALL
         "${VGC_ARCHITECTURE}"
         "$<CONFIG>"
 )
+set_target_properties(version PROPERTIES FOLDER misc)
 
 # On Windows, create a convenient batch script called 'make.bat' in the build
 # folder, which allows you to run the following command in cmd.exe:
@@ -553,6 +564,7 @@ if(WIN32)
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
     )
+    set_target_properties(copy_python PROPERTIES FOLDER misc)
 endif()
 
 # Add deploy target.
@@ -602,3 +614,4 @@ else()
             "${VGC_QT_ROOT}"
     )
 endif()
+set_target_properties(deploy PROPERTIES FOLDER misc)
