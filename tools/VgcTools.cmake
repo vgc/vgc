@@ -140,7 +140,6 @@ function(vgc_add_library LIB_NAME)
             "$<CONFIG>"
             "lib"
             "${LIB_NAME}"
-            FOLDER libs/${LIB_NAME}
     )
     set_target_properties(${TARGET_NAME}_resources
         PROPERTIES
