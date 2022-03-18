@@ -81,15 +81,16 @@ jobs:
 
     - name: Install Qt
       working-directory: ${{runner.workspace}}
+      shell: pwsh
       run: |
-        C:/msys64/usr/bin/wget.exe --progress=dot:giga https://www.vgc.io/releases/qt/qt-$QT_VERSION-msvc${MSVC_VERSION}_64.zip
-        unzip qt-$QT_VERSION-msvc${MSVC_VERSION}_64.zip -d ${{runner.workspace}}
-
-    # - name: Install Qt
-    #   uses: jurplel/install-qt-action@v2
-    #   with:
-    #     version: ${{env.QT_VERSION}}
-    #     setup-python: false
+        $url = "https://vgcci.blob.core.windows.net/vgc-ci"
+        $dirname = "qt-${env:QT_VERSION}-msvc${env:MSVC_VERSION}_64"
+        $filename = "$dirname.zip"
+        C:/msys64/usr/bin/wget.exe --progress=dot:giga "$url/$filename"
+        echo "Unzipping..."
+        unzip -q $filename -d $dirname
+        echo "Done."
+        echo "Qt5Location=${{runner.workspace}}/$dirname" >> ${env:GITHUB_ENV}
 
     - name: Install latest CMake
       uses: lukka/get-cmake@latest
@@ -115,7 +116,7 @@ jobs:
         mkdir build
         cd build
         cmake --version
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR=${{runner.workspace}}/qt-$QT_VERSION-msvc${MSVC_VERSION}_64/lib/cmake/Qt5 -DWiX="$WIX"
+        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location" -DWiX="$WIX"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
