@@ -23,25 +23,25 @@ TEST(TestSignal, TestConnectSlot)
 {
     vgc::core::internal::TestSignalObject t;
 
-    VGC_CONNECT(&t, signalIntDouble, &t, slotUInt);
-    VGC_DISCONNECT(&t, signalIntDouble, &t, slotUInt);
+    VGC_CONNECT(&t, signalIntDouble, &t, slotInt);
+    VGC_DISCONNECT(&t, signalIntDouble, &t, slotInt);
     VGC_EMIT t.signalIntDouble(0, 1);
-    ASSERT_FALSE(t.slotUIntCalled);
+    ASSERT_FALSE(t.slotIntCalled);
 
-    auto h = VGC_CONNECT(&t, signalIntDouble, &t, slotUInt);
+    auto h = VGC_CONNECT(&t, signalIntDouble, &t, slotInt);
     VGC_DISCONNECT(&t, signalIntDouble, h);
     VGC_EMIT t.signalIntDouble(0, 1);
-    ASSERT_FALSE(t.slotUIntCalled);
+    ASSERT_FALSE(t.slotIntCalled);
 
-    VGC_CONNECT(&t, signalIntDouble, &t, slotUInt);
+    VGC_CONNECT(&t, signalIntDouble, &t, slotInt);
     VGC_EMIT t.signalIntDouble(0, 1);
-    ASSERT_TRUE(t.slotUIntCalled);
+    ASSERT_TRUE(t.slotIntCalled);
 
     t.selfConnect();
     VGC_EMIT t.signalIntDouble(0, 1);
     ASSERT_TRUE(t.slotIntDoubleCalled);
     ASSERT_TRUE(t.slotIntCalled);
-    ASSERT_TRUE(t.slotUIntCalled);
+    //ASSERT_TRUE(t.slotUIntCalled); -> static_assert
     ASSERT_TRUE(t.sfnIntCalled);
     ASSERT_TRUE(t.fnIntDoubleCalled);
     ASSERT_TRUE(t.fnUIntCalled);

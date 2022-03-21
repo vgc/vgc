@@ -914,7 +914,7 @@ protected:
     ObjPtr<Object> removeObjectFromParent_();
 
 protected:
-    mutable internal::SignalMgr signalMgr_;
+    mutable internal::SignalHub signalHub_;
 
 private:
     friend class internal::SignalOps;
@@ -1255,7 +1255,7 @@ public:
 
         VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
         VGC_CONNECT(this, signalIntDouble, this, slotInt);
-        VGC_CONNECT(this, signalIntDouble, this, slotUInt);
+        //VGC_CONNECT(this, signalIntDouble, this, slotUInt); -> static_assert
         VGC_CONNECT(this, signalIntDouble, staticFuncInt);
         VGC_CONNECT(this, signalIntDouble, std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
         VGC_CONNECT(this, signalIntDouble, [&](int, double) { fnIntDoubleCalled = true; } );

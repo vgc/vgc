@@ -23,9 +23,7 @@
 #include <vgc/core/signal.h>
 #include <vgc/core/object.h>
 
-namespace vgc {
-namespace core {
-namespace wraps {
+namespace vgc::core::wraps {
 
 // to be used with connect
 // should define emit(...)
@@ -57,6 +55,4 @@ private:
 };
 
 
-} // namespace wraps
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core::wraps

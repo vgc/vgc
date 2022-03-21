@@ -21,7 +21,7 @@ import unittest
 from pathlib import Path
 
 from vgc.core import (
-    Signal,
+    Signal, signal, slot, testBoundCallback, Object as VGCObject
 )
 
 class TestSignal(unittest.TestCase):
@@ -34,6 +34,35 @@ class TestSignal(unittest.TestCase):
         # s.connect(slot)
         s.emit()
         # self.assertTrue(res.get('ok', False))
+
+    def testDecorators(self):
+
+        class TestObj:
+            @signal
+            def test_signal(a):
+                pass
+
+            @slot
+            def test_slot(a):
+                pass
+
+            @slot
+            def plop(s, e):
+                print(e)
+
+        print("TestObj.test_signal.__name__:", TestObj.test_signal.__name__)
+        print("dir(TestObj.test_signal)", dir(TestObj.test_signal))
+        a = TestObj()
+        self.assertTrue(a.test_signal(2) == 2)
+        self.assertTrue(hasattr(TestObj.test_slot, "__slot_tag__"))
+
+        testBoundCallback(a.plop)
+
+        # try to add custom attrs to pybound function
+        testBoundCallback.__slot_tag__ = 1
+
+        self.assertTrue(dir(TestObj.test_signal) is None)
+
 
 if __name__ == '__main__':
     unittest.main()
