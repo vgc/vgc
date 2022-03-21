@@ -88,7 +88,7 @@ jobs:
         $filename = "$dirname.zip"
         C:/msys64/usr/bin/wget.exe --progress=dot:giga "$url/$filename"
         echo "Unzipping..."
-        unzip -q $filename -d $dirname
+        unzip -q $filename -d .
         echo "Done."
         echo "Qt5Location=${{runner.workspace}}/$dirname" >> ${env:GITHUB_ENV}
 
