@@ -22,9 +22,9 @@
 
 namespace vgc::core::wraps {
 
-class TestWrapObject : vgc::core::Object
+class TestWrapObject : Object
 {
-    VGC_OBJECT(TestWrapObject, vgc::core::Object)
+    VGC_OBJECT(TestWrapObject, Object)
 
     VGC_SIGNAL(signalIFI, (int, a), (float, b), (int, c));
     VGC_SLOT(slotID, (int, a), (double, b));
@@ -48,7 +48,7 @@ auto createCppToPyTransmitter(py::cpp_function) {
 
 // used for py-signals only ! 
 //
-class PyToPyTransmitter : public ::vgc::core::internal::AbstractSignalTransmitter {
+class PyToPyTransmitter : public core::internal::AbstractSignalTransmitter {
 public:
     py::function boundSlot_; 
 };
@@ -87,39 +87,54 @@ py::cpp_function signalDecorator(const py::function& signal) {
     return wrapper;
 }
 
+class AbstractSlotRef {
+protected:
+    AbstractSlotRef(bool isCpp) :
+        isCpp_(isCpp) {}
 
-// SlotRef doit contenir une définition générique de la fonction slot pour qu'il n'y ait qu'un seul layout
-// sinon on doit partir en virtuel..
+public:
+    virtual ~AbstractSlotRef() = default;
+    
+    bool isCpp() const {
+        return isCpp_;
+    }
 
-
-// transmitter will receive forwarded signal args..
-// need easy way to build transmitter from slotref...
-
+private:
+    bool isCpp_ = false;
+};
 
 class AbstractCppSlotRef {
 protected:
     AbstractCppSlotRef(ObjectPtr obj, std::initializer_list<std::type_index> parameters) :
-        obj(obj), parameters(parameters) {}
+        obj_(obj), parameters_(parameters) {}
 
 public:
-    std::vector<std::type_index> parameters;
-    ObjectPtr obj;
+    const auto& parameters() {
+        return parameters_;
+    }
 
-    virtual ~AbstractCppSlotRef() = default;
+    const ObjectPtr owner() {
+        return obj_;
+    }
+
     virtual py::cpp_function getPyWrappedBoundSlot() = 0;
-};
 
-// XXX could cache bound slot and cpp_function..
+protected:
+    std::vector<std::type_index> parameters_;
+    ObjectPtr obj_;
+};
 
 template<typename... SlotArgs>
 class CppSlotRef : public AbstractCppSlotRef {
 public:
-    using BoundSlot = void(SlotArgs...);
-
+    // Note: forwarded arguments as for transmitters
+    using BoundSlotSig = void(SlotArgs&&...);
+    using BoundSlot = std::function<BoundSlotSig>;
+    
     using AbstractCppSlotRef::AbstractCppSlotRef;
 
-    std::function<BoundSlot> getBoundSlot() {
-        return bind_(obj.get());
+    BoundSlot getBoundSlot() {
+        return bind_(obj_.get());
     }
     
     virtual py::cpp_function getPyWrappedBoundSlot() override {
@@ -127,13 +142,14 @@ public:
     }
 
 private:
-    virtual std::function<BoundSlot> bind_(ObjectPtr obj) = 0;
+    virtual BoundSlot bind_(ObjectPtr obj) = 0;
 };
 
 template<typename Obj, typename... SlotArgs>
 class CppSlotRefImpl : public CppSlotRef<SlotArgs...> {
     using SuperClass = CppSlotRef<SlotArgs...>;
     using MFnT = void (Obj::*)(SlotArgs...);
+    using BoundSlot = typename SuperClass::BoundSlot;
 
 public:
     CppSlotRefImpl(ObjPtr<Obj>* obj, MFnT mfn) :
@@ -143,7 +159,7 @@ public:
 private:
     MFnT mfn_;
 
-    virtual BoundSlot bind_(ObjectPtr obj) {
+    virtual BoundSlot bind_(ObjectPtr obj) override {
         // XXX can add alive check here or in the lambda..
         using MFnT = void (Obj::*)(SlotArgs...);
         return [obj](SlotArgs&&... args) {
@@ -154,60 +170,101 @@ private:
 };
 
 
-class AbstractCppSignalRef {
+class AbstractSignalRef {
+protected:
+    AbstractSignalRef(bool isCpp) :
+        isCpp_(isCpp) {}
+
+public:
+    virtual ~AbstractSignalRef() = default;
+
+    bool isCpp() const {
+        return isCpp_;
+    }
+
+private:
+    bool isCpp_ = false;
+};
+
+class AbstractCppSignalRef : public AbstractSignalRef {
 public:
     std::vector<std::type_index> parameters;
 
     ~AbstractCppSignalRef() = default;
 
-    virtual std::unique_ptr<vgc::core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) = 0;
+    virtual std::unique_ptr<core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) = 0;
 };
 
 
+template<typename ArgsTuple>
+struct CppSlotRefTypeFromArgsTuple_;
+template<typename... SlotArgs>
+struct CppSlotRefTypeFromArgsTuple_<std::tuple<SlotArgs...>> {
+    using type = CppSlotRef<SlotArgs...>;
+};
+template<typename ArgsTuple>
+using CppSlotRefTypeFromArgsTuple = typename CppSlotRefTypeFromArgsTuple_<ArgsTuple>::type;
 
-template<typename... SignalArgs, size_t SlotArgCount>
-std::unique_ptr<vgc::core::internal::AbstractSignalTransmitter> createTransmitter_(AbstractCppSlotRef* slotRef) {
-
+        
+void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCppSlotRef* slotRef) {
+    const auto& signalParams = signalRef->parameters;
     const auto& slotParams = slotRef->parameters;
-
-    if (parameters.size() < slotParams.size()) {
-        // XXX error wrong sig
-        return nullptr;
+    if (slotParams.size() > signalParams.size()) {
+        // XXX subclass LogicError
+        throw LogicError("Slot signature is too long for this Signal.");
     }
-    if (!std::equal(slotParams.begin(), slotParams.end(), parameters.begin())) {
-        // XXX error wrong sig
-        return nullptr;
+    if (!std::equal(slotParams.begin(), slotParams.end(), signalParams.begin())) {
+        // XXX subclass LogicError
+        throw LogicError("Slot/Signal signature mismatch.");
     }
-
-    // here implementation dispatch..
-    vgc::core::SignalTransmitter<SignalArgs...>::create()
 }
 
+
+#define CREATE_TRANSMITTER_SWITCH_CASE(i) \
+    case i: \
+        if constexpr (sizeof...(SignalArgs) >= i) { \
+            using SlotRefType = CppSlotRefTypeFromArgsTuple<core::internal::SubPackAsTuple<0, i, SignalArgs...>>; \
+            auto castedSlotRef = static_cast<SlotRefType*>(slotRef); \
+            return TransmitterType::create(castedSlotRef.getBoundSlot()); \
+        } \
+        [[fallthrough]]
 
 template<typename... SignalArgs>
 struct CppSignalRef : public AbstractCppSignalRef {
     using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
 
-    virtual std::unique_ptr<vgc::core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) override {
-        
+    [[nodiscard]]
+    core::internal::AbstractSignalTransmitter* createTransmitter_(AbstractCppSlotRef* slotRef) {
+    
         const auto& slotParams = slotRef->parameters;
+        
+        if (!checkCompatibility(this, slotRef))
+            return nullptr;
 
-        if (parameters.size() < slotParams.size()) {
-            // XXX error wrong sig
+        switch (slotParams.size()) {
+        CREATE_TRANSMITTER_SWITCH_CASE(0)
+        CREATE_TRANSMITTER_SWITCH_CASE(1)
+        CREATE_TRANSMITTER_SWITCH_CASE(2)
+        CREATE_TRANSMITTER_SWITCH_CASE(3)
+        CREATE_TRANSMITTER_SWITCH_CASE(4)
+        CREATE_TRANSMITTER_SWITCH_CASE(5)
+        CREATE_TRANSMITTER_SWITCH_CASE(6)
+        CREATE_TRANSMITTER_SWITCH_CASE(7)
+        CREATE_TRANSMITTER_SWITCH_CASE(8)
+        CREATE_TRANSMITTER_SWITCH_CASE(9)
+        default:
             return nullptr;
         }
-        if (!std::equal(slotParams.begin(), slotParams.end(), parameters.begin())) {
-            // XXX error wrong sig
-            return nullptr;
-        }
-
-        // here implementation dispatch..
-
     }
 };
 
+#undef CREATE_TRANSMITTER_SWITCH_CASE
 
 // connect (signalRef, slotRef)
+
+
+
+
 
 
 py::function slotDecorator(const py::function& slot) {

@@ -391,9 +391,8 @@ public:
     using FnType = std::function<CFnType>;
 
     // left public for python bindings
-    SignalTransmitter(FnType&& fn) : fn_(std::move(fn)) {
-
-    }
+    SignalTransmitter(FnType&& fn) :
+        fn_(std::move(fn)) {}
 
     void operator()(SignalArgs&&... args) const {
         fn_(std::forward<SignalArgs>(args)...);
@@ -422,9 +421,14 @@ public:
     [[nodiscard]] static inline
     SignalTransmitter*
     create(FreeHandler&& f) {
-
         using HTraits = SignalFreeHandlerTraits<FreeHandler>;
         static_assert(std::is_same_v<typename HTraits::ReturnType, void>, "Signal handlers must return void.");
+        
+        // optimization: when the target has already the desired signature
+        if constexpr (std::is_same_v<std::tuple<SignalArgs&&...>, typename HTraits::ArgsTuple>) {
+            return f;
+        }
+                
         return new SignalTransmitter(
             [=](SignalArgs&&... args) {
                 auto&& argsTuple = std::forward_as_tuple(std::forward<SignalArgs>(args)...);
