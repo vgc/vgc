@@ -118,6 +118,9 @@ function(vgc_add_library LIB_NAME)
     target_compile_options(${TARGET_NAME} PUBLIC ${VGC_COMPILER_WARNING_FLAGS})
     target_compile_definitions(${TARGET_NAME} PUBLIC ${VGC_COMPILER_WARNING_DEFINITIONS})
 
+    # Add private compile definitions
+    target_compile_definitions(${TARGET_NAME} PUBLIC ${VGC_PRIVATE_COMPILE_DEFINITIONS})
+
     # Write list of resources as comma-separated string
     set(RESOURCES_TXT ${CMAKE_CURRENT_BINARY_DIR}/resources.txt)
     vgc_prepend_(RESOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ ${ARG_RESOURCE_FILES})
