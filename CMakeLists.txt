@@ -242,13 +242,11 @@ message(STATUS "Version: ${Qt5_VERSION}")
 message(STATUS "") # newline
 
 # pybind11
-# TODO: avoid global `include_directories`
 message(STATUS "[pybind11]")
-set(pybind11 ${CMAKE_CURRENT_LIST_DIR}/third/pybind11 CACHE FILEPATH "Path to the root of the pybind11 distribution")
-if (EXISTS ${pybind11})
-    message(STATUS "Found pybind11: ${pybind11}")
-    add_subdirectory(${pybind11})
-    include_directories(${pybind11}/include)
+set(pybind11_DIR ${CMAKE_CURRENT_LIST_DIR}/third/pybind11 CACHE FILEPATH "Path to the root of the pybind11 distribution")
+add_subdirectory(${pybind11_DIR})
+if (${pybind11_FOUND})
+    message(STATUS "Found pybind11: ${pybind11_DIR}")
 else()
     message(SEND_ERROR "Can't find pybind11")
 endif()
