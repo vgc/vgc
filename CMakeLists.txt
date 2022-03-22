@@ -82,6 +82,11 @@ else()
     set(VGC_ARCHITECTURE x86_64 CACHE STRING "Target architecture. We only support x86_64 for now.")
 endif()
 
+# List of private compile definitions. These are applied when compiling VGC
+# libraries, but not transitively applied for libraries linking to VGC.
+#
+set(VGC_PRIVATE_COMPILE_DEFINITIONS "")
+
 # Compiler warning flags.
 #
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -216,15 +221,17 @@ message(STATUS "") # newline
 #
 #   cmake .. -DQt5_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5"
 #
+# Note that we add -DQT_NO_KEYWORDS as a private compile definition to all
+# VGC libs, which forces them to use Q_EMIT/Q_SIGNALS/Q_SLOTS, but doesn't
+# force their clients to do the same.
+#
 message(STATUS "[Qt]")
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+list(APPEND VGC_PRIVATE_COMPILE_DEFINITIONS "QT_NO_KEYWORDS") # Force usage of 
 get_filename_component(VGC_QT_ROOT ${Qt5_DIR}/../../.. ABSOLUTE)
 message(STATUS "Found Qt: ${VGC_QT_ROOT}")
 message(STATUS "Version: ${Qt5_VERSION}")
-
-# Disable usage of emit/signals/slots because they collide with <Python.h>.
-# Instead, we use the more explicit Q_EMIT/Q_SIGNALS/Q_SLOTS.
 message(STATUS "") # newline
 
 # pybind11
