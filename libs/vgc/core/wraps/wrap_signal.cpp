@@ -27,7 +27,6 @@ namespace vgc::core::wraps {
 void wrapCppSlotRef(py::module& m)
 {
     py::class_<AbstractCppSlotRef>(m, "AbstractCppSlotRef")
-        .def("object", &AbstractCppSlotRef::object)
         .def("__call__", [](py::object self, py::args args) {
             auto ref = self.cast<AbstractCppSlotRef*>();
             ref->getPyWrappedBoundSlot().call(*args);
@@ -35,89 +34,16 @@ void wrapCppSlotRef(py::module& m)
     ;
 }
 
-template<typename ArgsTuple>
-struct CppSlotRefTypeFromArgsTuple_;
-template<typename... SlotArgs>
-struct CppSlotRefTypeFromArgsTuple_<std::tuple<SlotArgs...>> {
-    using type = CppSlotRef<SlotArgs...>;
-};
-template<typename ArgsTuple>
-using CppSlotRefTypeFromArgsTuple = typename CppSlotRefTypeFromArgsTuple_<ArgsTuple>::type;
-
-
-class AbstractCppSignalRef {
-protected:
-    AbstractCppSignalRef(Object* obj, std::initializer_list<std::type_index> parameters) :
-        obj_(obj), parameters_(parameters) {}
-
-public:
-    const auto& parameters() const {
-        return parameters_;
-    }
-
-    Object* object() const {
-        return obj_;
-    }
-
-    virtual std::unique_ptr<core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) = 0;
-
-protected:
-    std::vector<std::type_index> parameters_;
-    Object* obj_;
-};
-
-void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCppSlotRef* slotRef) {
-    const auto& signalParams = signalRef->parameters();
-    const auto& slotParams = slotRef->parameters();
-    if (slotParams.size() > signalParams.size()) {
-        // XXX subclass LogicError
-        throw LogicError("Slot signature is too long for this Signal.");
-    }
-    if (!std::equal(slotParams.begin(), slotParams.end(), signalParams.begin())) {
-        // XXX subclass LogicError
-        throw LogicError("Slot/Signal signature mismatch.");
-    }
+void wrapCppSignalRef(py::module& m)
+{
+    py::class_<AbstractCppSignalRef>(m, "AbstractCppSignalRef")
+        .def("__call__", [](py::object self, py::args args) {
+            auto ref = self.cast<AbstractCppSignalRef*>();
+            // XXX emit
+            
+        })
+   ;
 }
-
-#define CREATE_TRANSMITTER_SWITCH_CASE(i) \
-    case i: \
-        if constexpr (sizeof...(SignalArgs) >= i) { \
-            using SlotRefType = CppSlotRefTypeFromArgsTuple<core::internal::SubPackAsTuple<0, i, SignalArgs...>>; \
-            auto castedSlotRef = static_cast<SlotRefType*>(slotRef); \
-            return TransmitterType::create(castedSlotRef.getBoundSlot()); \
-        } \
-        [[fallthrough]]
-
-template<typename... SignalArgs>
-struct CppSignalRef : public AbstractCppSignalRef {
-    using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
-
-    [[nodiscard]]
-    core::internal::AbstractSignalTransmitter* createTransmitter_(AbstractCppSlotRef* slotRef) {
-    
-        const auto& slotParams = slotRef->parameters;
-        
-        if (!checkCompatibility(this, slotRef))
-            return nullptr;
-
-        switch (slotParams.size()) {
-        CREATE_TRANSMITTER_SWITCH_CASE(0)
-        CREATE_TRANSMITTER_SWITCH_CASE(1)
-        CREATE_TRANSMITTER_SWITCH_CASE(2)
-        CREATE_TRANSMITTER_SWITCH_CASE(3)
-        CREATE_TRANSMITTER_SWITCH_CASE(4)
-        CREATE_TRANSMITTER_SWITCH_CASE(5)
-        CREATE_TRANSMITTER_SWITCH_CASE(6)
-        CREATE_TRANSMITTER_SWITCH_CASE(7)
-        CREATE_TRANSMITTER_SWITCH_CASE(8)
-        CREATE_TRANSMITTER_SWITCH_CASE(9)
-        default:
-            return nullptr;
-        }
-    }
-};
-
-#undef CREATE_TRANSMITTER_SWITCH_CASE
 
 // connect (signalRef, slotRef)
 
@@ -221,7 +147,7 @@ public:
         return TestWrapObjectPtr(new TestWrapObject());
     }
 
-    VGC_SIGNAL(signalIFI, (int, a), (float, b), (int, c));
+    VGC_SIGNAL(signalIDI, (int, a), (double, b), (int, c));
 
     VGC_SLOT(slotID, (int, a), (double, b)) {
         a_ = a;
@@ -266,8 +192,8 @@ void wrap_signal(py::module& m)
         using vgc::core::wraps::TestWrapObject;
         auto c = vgc::core::wraps::ObjClass<TestWrapObject>(m, "TestWrapObject")
             .def(py::init([]() { return TestWrapObject::create(); }))
+            .def_signal("signalIDI", &TestWrapObject::signalIDI)
             .def_slot("slotID", &TestWrapObject::slotID)
-            .def("slotID_direct", &TestWrapObject::slotID)
             .def_readwrite("a", &TestWrapObject::a_)
             .def_readwrite("b", &TestWrapObject::b_)
         ;

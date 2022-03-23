@@ -90,6 +90,7 @@ public:
 
     template<typename... SlotArgs, typename... Extra>
     ObjClass& def_slot(const char* name, void (type_::* mfn)(SlotArgs...), const Extra&... extra) {
+        // XXX check is slot if possible
         py::cpp_function fget(
             [mfn](const type_& c) -> AbstractCppSlotRef* {
                 return new CppSlotRefImpl<type_, SlotArgs...>(const_cast<type_*>(&c), mfn);
@@ -98,8 +99,16 @@ public:
         return *this;
     }
 
-    /*ObjClass& def_signal() {
-    }*/
+    template<typename R, typename... SignalArgs, typename... Extra>
+    ObjClass& def_signal(const char* name, R (type_::* mfn)(SignalArgs...), const Extra&... extra) {
+        static_assert(vgc::core::internal::isSignal<decltype(mfn)>);
+        py::cpp_function fget(
+            [mfn](const type_& c) -> AbstractCppSignalRef* {
+                return new CppSignalRef<SignalArgs...>(const_cast<type_*>(&c), R::getInfo().name);
+            }, py::is_method(*this));
+        PyClass::def_property_readonly(name, fget, py::return_value_policy::take_ownership, extra...);
+        return *this;
+    }
 };
 
 #undef OBJCLASS_WRAP_PYCLASS_METHOD

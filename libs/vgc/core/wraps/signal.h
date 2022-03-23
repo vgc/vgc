@@ -75,7 +75,7 @@ class CppSlotRefImpl : public CppSlotRef<SlotArgs...> {
 
 public:
     CppSlotRefImpl(const Obj* obj, MFnT mfn) :
-        SuperClass(obj, { std::type_index(typeid(SlotArgs))... }),
+        SuperClass(obj, {std::type_index(typeid(SlotArgs))...}),
         mfn_(mfn) {}
 
 private:
@@ -91,6 +91,94 @@ private:
 };
 
 
+template<typename ArgsTuple>
+struct CppSlotRefTypeFromArgsTuple_;
+template<typename... SlotArgs>
+struct CppSlotRefTypeFromArgsTuple_<std::tuple<SlotArgs...>> {
+    using type = CppSlotRef<SlotArgs...>;
+};
+template<typename ArgsTuple>
+using CppSlotRefTypeFromArgsTuple = typename CppSlotRefTypeFromArgsTuple_<ArgsTuple>::type;
+
+
+class AbstractCppSignalRef {
+protected:
+    AbstractCppSignalRef(const Object* obj, const core::internal::SignalId& id, std::initializer_list<std::type_index> parameters) :
+        obj_(const_cast<core::Object*>(obj)), parameters_(parameters) {}
+
+public:
+    const auto& parameters() const {
+        return parameters_;
+    }
+
+    core::Object* object() const {
+        return obj_;
+    }
+
+    virtual std::unique_ptr<core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) const = 0;
+
+protected:
+    std::vector<std::type_index> parameters_;
+    core::Object* obj_;
+    core::internal::SignalId id_;
+};
+
+void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCppSlotRef* slotRef) {
+    const auto& signalParams = signalRef->parameters();
+    const auto& slotParams = slotRef->parameters();
+    if (slotParams.size() > signalParams.size()) {
+        // XXX subclass LogicError
+        throw LogicError("Slot signature is too long for this Signal.");
+    }
+    if (!std::equal(slotParams.begin(), slotParams.end(), signalParams.begin())) {
+        // XXX subclass LogicError
+        throw LogicError("Slot/Signal signature mismatch.");
+    }
+}
+
+#define CREATE_TRANSMITTER_SWITCH_CASE(i) \
+    case i: \
+        if constexpr (sizeof...(SignalArgs) >= i) { \
+            using SlotRefType = CppSlotRefTypeFromArgsTuple<core::internal::SubPackAsTuple<0, i, SignalArgs...>>; \
+            auto castedSlotRef = static_cast<SlotRefType*>(slotRef); \
+            return TransmitterType::create(castedSlotRef.getBoundSlot()); \
+        } \
+        [[fallthrough]]
+
+template<typename... SignalArgs>
+struct CppSignalRef : public AbstractCppSignalRef {
+    using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
+
+    CppSignalRef(const Object* obj, const core::internal::SignalId& id) :
+        AbstractCppSignalRef(obj, id, {std::type_index(typeid(SlotArgs))...}) {}
+
+    virtual
+    [[nodiscard]] core::internal::AbstractSignalTransmitter*
+    createTransmitter_(AbstractCppSlotRef* slotRef) const override {
+
+        const auto& slotParams = slotRef->parameters;
+
+        if (!checkCompatibility(this, slotRef))
+            return nullptr;
+
+        switch (slotParams.size()) {
+            CREATE_TRANSMITTER_SWITCH_CASE(0)
+                CREATE_TRANSMITTER_SWITCH_CASE(1)
+                CREATE_TRANSMITTER_SWITCH_CASE(2)
+                CREATE_TRANSMITTER_SWITCH_CASE(3)
+                CREATE_TRANSMITTER_SWITCH_CASE(4)
+                CREATE_TRANSMITTER_SWITCH_CASE(5)
+                CREATE_TRANSMITTER_SWITCH_CASE(6)
+                CREATE_TRANSMITTER_SWITCH_CASE(7)
+                CREATE_TRANSMITTER_SWITCH_CASE(8)
+                CREATE_TRANSMITTER_SWITCH_CASE(9)
+        default:
+            return nullptr;
+        }
+    }
+};
+
+#undef CREATE_TRANSMITTER_SWITCH_CASE
 
 
 
