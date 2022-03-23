@@ -1,6 +1,7 @@
 vgc_add_library(core
     THIRD_DEPENDENCIES
         Python::Python
+        pybind11::headers
         ${VGC_FMT}
 
     VGC_DEPENDENCIES
