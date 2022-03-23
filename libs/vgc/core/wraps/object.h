@@ -18,11 +18,10 @@
 #define VGC_CORE_WRAPS_OBJECT_H
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/signal.h>
 #include <vgc/core/object.h>
 
-namespace vgc {
-namespace core {
-namespace wraps {
+namespace vgc::core::wraps {
 
 // Define a suitable iterator object to be used for iterating in Python.
 // Indeed, we can't use ObjListIterator<T> as is, because unlike C++ iterators,
@@ -62,8 +61,73 @@ void wrapObjectCommon(py::module& m, const std::string& className)
     ;
 }
 
-} // namespace wraps
-} // namespace core
-} // namespace vgc
+#define OBJCLASS_WRAP_PYCLASS_METHOD(name) \
+    template<typename... Args> \
+    ObjClass& name(Args&&... args) { \
+        PyClass::name(std::forward<Args>(args)...); \
+        return *this; \
+    }
+
+template <typename type_, typename... options>
+class ObjClass : py::class_<type_, core::ObjPtr<type_>, options...> {
+public:
+    using Holder = core::ObjPtr<type_>;
+    using PyClass = py::class_<type_, Holder, options...>;
+    using PyClass::PyClass;
+    
+    OBJCLASS_WRAP_PYCLASS_METHOD(def)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_cast)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_buffer)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readwrite)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readonly)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readwrite_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readonly_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_readonly)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_readonly_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_static)
+
+    template<typename... SlotArgs, typename... Extra>
+    ObjClass& def_slot(const char* name, void (type_::* mfn)(SlotArgs...), const Extra&... extra) {
+        py::cpp_function fget(
+            [mfn](const type_& c) -> AbstractCppSlotRef* {
+                return new CppSlotRefImpl<type_, SlotArgs...>(const_cast<type_*>(&c), mfn);
+            }, py::is_method(*this));
+        PyClass::def_property_readonly(name, fget, py::return_value_policy::take_ownership, extra...);
+        return *this;
+    }
+
+    /*ObjClass& def_signal() {
+    }*/
+};
+
+#undef OBJCLASS_WRAP_PYCLASS_METHOD
+
+} // namespace vgc::core::wraps
+
+
+// Wraps all the  exception base class.
+//
+// ```cpp
+// VGC_CORE_WRAP_BASE_EXCEPTION(core, LogicError);
+// ```
+//
+#define VGC_CORE_WRAP_OBJECT_RELATED_CLASSES(libname, ErrorType) \
+    py::register_exception<vgc::libname::ErrorType>(m, #ErrorType)
+
+// Wraps an exception class deriving from another exception class. If the
+// parent exception is from the same module, simply pass it `m`, otherwise, you
+// must import beforehand the module in whic the parent Exception is defined.
+//
+// ```cpp
+// VGC_CORE_WRAP_EXCEPTION(core, IndexError, m, LogicError);
+//
+// py::module core = py::module::import("vgc.core");
+// VGC_CORE_WRAP_EXCEPTION(dom, LogicError, core, LogicError);
+// ```
+//
+#define VGC_CORE_WRAP_EXCEPTION(libname, ErrorType, parentmodule, ParentErrorType) \
+    py::register_exception<vgc::libname::ErrorType>(m, #ErrorType, parentmodule.attr(#ParentErrorType).ptr())
 
 #endif // VGC_CORE_WRAPS_OBJECT_H

@@ -17,11 +17,12 @@
 # limitations under the License.
 
 import unittest
+import inspect
 
 from pathlib import Path
 
 from vgc.core import (
-    Signal, signal, slot, testBoundCallback, Object as VGCObject
+    Signal, signal, slot, testBoundCallback, TestWrapObject, Object as VGCObject
 )
 
 class TestSignal(unittest.TestCase):
@@ -43,7 +44,7 @@ class TestSignal(unittest.TestCase):
                 pass
 
             @slot
-            def test_slot(a):
+            def test_slot(a, b, j=4):
                 pass
 
             @slot
@@ -54,14 +55,26 @@ class TestSignal(unittest.TestCase):
         print("dir(TestObj.test_signal)", dir(TestObj.test_signal))
         a = TestObj()
         self.assertTrue(a.test_signal(2) == 2)
-        self.assertTrue(hasattr(TestObj.test_slot, "__slot_tag__"))
+
+        #print(inspect.getargspec(slot))
+        #self.assertTrue(hasattr(TestObj.test_slot, "__slot_tag__"))
+         # try to add custom attrs to pybound function
+        #testBoundCallback.__slot_tag__ = 1
+
 
         testBoundCallback(a.plop)
 
-        # try to add custom attrs to pybound function
-        testBoundCallback.__slot_tag__ = 1
+        a = TestWrapObject()
 
-        self.assertTrue(dir(TestObj.test_signal) is None)
+        self.assertEqual(a.a, 0)
+        self.assertEqual(a.b, 0)
+ 
+        a.slotID(42, 0.5)
+        self.assertEqual(a.a, 42)
+        self.assertEqual(a.b, 0.5)
+
+
+        #self.assertTrue(dir(TestObj.test_signal) is None)
 
 
 if __name__ == '__main__':

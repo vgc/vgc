@@ -31,6 +31,8 @@
 #include <vgc/core/array.h>
 #include <vgc/core/stringid.h>
 
+#include <vgc/core/internal/templateutil.h>
+
 namespace vgc::core {
 
 class Object;
@@ -43,48 +45,18 @@ using SlotId = std::pair<const Object*, StringId>;
 using FreeFuncId = void*;
 
 
-//template <const char* const StringLiteral>
-//struct StringIdSingleton {
-//    StringIdSingleton(const StringIdSingleton&) = delete;
-//    StringIdSingleton& operator=(const StringIdSingleton&) = delete;
-//
-//    static const StringId& get()
-//    {
-//        static StringId s(StringLiteral);
-//        return s;
-//    }
-//
-//private:
-//    StringIdSingleton() {}
-//    ~StringIdSingleton() {}
-//};
-
-
-// Serves as a reminder to use VGC_EMIT to emit signals.
-// It is used as return type of signals.
-//
-struct [[nodiscard]] EmitCheck {
-    EmitCheck(const EmitCheck&) = delete; 
-    EmitCheck& operator=(const EmitCheck&) = delete;
+struct SignalInfo {
+    StringId name;
 };
 
-struct SlotRetType {};
-
-// To be able to simplify doxygen doc
-#define VGC_SIGNAL_RET_TYPE_ ::vgc::core::internal::EmitCheck
-
-//::vgc::core::internal::SlotRetType
-
-// Used to inline sfinae-based tests on type ArgType.
-// see VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_ for an example.
-//
-template<typename ArgType>
-struct LambdaSfinae {
-    static constexpr bool check(...)  { return false; }
-    template <class Lambda>
-    static constexpr auto check(Lambda lambda) 
-        -> decltype(lambda(std::declval<ArgType>()), bool{}) { return true; }
+struct [[nodiscard]] SignalTraits_ {
+    SignalTraits_(const SignalTraits_&) = delete;
+    SignalTraits_& operator=(const SignalTraits_&) = delete;
 };
+
+template <typename T>
+inline constexpr bool IsSignalTraits = std::is_base_of_v<SignalTraits_, T>;
+
 
 // compile-time evaluates to true only if &cls::id is a valid expression.
 //
@@ -97,6 +69,7 @@ struct LambdaSfinae {
     ::vgc::core::internal::LambdaSfinae<cls*>::check( \
         [](auto* v) -> std::void_t<typename std::remove_pointer_t<decltype(v)>::tname> {} \
     )
+
 
 template<typename T, typename Enable = void>
 struct hasSuperClassTypedef_ : std::false_type {};
@@ -118,9 +91,10 @@ inline constexpr bool isObject = isObject_<T>::value;
 
 template<typename T>
 struct isSignal_ : std::false_type {};
-template<typename C, typename... Args>
-struct isSignal_<VGC_SIGNAL_RET_TYPE_ (C::*)(Args...) const> : std::true_type {
-    static_assert(isObject<C>, "Signals must reside in an Objects.");
+template<typename R, typename C, typename... Args>
+struct isSignal_<R (C::*)(Args...) const> {
+    static constexpr bool value = IsSignalTraits<R>;
+    static_assert(!value || isObject<C>, "Signals must reside in an Objects.");
 };
 template <typename T>
 inline constexpr bool isSignal = isSignal_<T>::value;
@@ -156,14 +130,6 @@ template<typename T>
 using SignalFreeHandlerTraits = SignalFreeHandlerTraits_<std::remove_reference_t<T>>;
 
 
-template<std::size_t I, typename... T, std::size_t... Is>
-constexpr std::tuple<std::tuple_element_t<I + Is, std::tuple<T...>>...>
-SubPackAsTuple_(std::index_sequence<Is...>);
-
-template<size_t I, size_t N, typename... T>
-using SubPackAsTuple = decltype(SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
-
-
 template<class F, class ArgsTuple, std::size_t... I>
 void applyPartialImpl(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
     std::invoke(std::forward<F>(f), std::get<I>(std::forward<ArgsTuple>(t))...);
@@ -175,7 +141,6 @@ void applyPartial(F&& f, Tuple&& t) {
         std::forward<F>(f), std::forward<Tuple>(t),
         std::make_index_sequence<N>{});
 }
-
 
 VGC_CORE_API
 ConnectionHandle genConnectionHandle();
@@ -383,18 +348,19 @@ public:
     virtual ~AbstractSignalTransmitter() = default;
 };
 
+
 template<typename... SignalArgs>
 class SignalTransmitter : public AbstractSignalTransmitter {
 public:
     using SignalArgsTuple = std::tuple<SignalArgs...>;
-    using CFnType = void(SignalArgs&&...);
-    using FnType = std::function<CFnType>;
+    using CallSig = void(SignalArgs&&...);
+    using FnType = std::function<CallSig>;
 
     // left public for python bindings
     SignalTransmitter(FnType&& fn) :
         fn_(std::move(fn)) {}
 
-    void operator()(SignalArgs&&... args) const {
+    inline void operator()(SignalArgs&&... args) const {
         fn_(std::forward<SignalArgs>(args)...);
     }
 
@@ -440,14 +406,14 @@ private:
     FnType fn_;
 };
 
-template<typename SignalType>
-struct SignalTransmitterTypeFromSignalType_;
-template<typename ObjT, typename... SignalArgs>
-struct SignalTransmitterTypeFromSignalType_<VGC_SIGNAL_RET_TYPE_ (ObjT::*)(SignalArgs...) const> {
-    using type = SignalTransmitter<SignalArgs...>;
+template<typename Signal>
+struct SignalTransmitterTypeFor_;
+template<typename R, typename ObjT, typename... SignalArgs>
+struct SignalTransmitterTypeFor_<R (ObjT::*)(SignalArgs...) const> {
+    using type = std::enable_if_t<IsSignalTraits<R>, SignalTransmitter<SignalArgs...>>;
 };
 template<typename SignalType>
-using SignalTransmitterTypeFromSignalType = typename SignalTransmitterTypeFromSignalType_<SignalType>::type;
+using SignalTransmitterTypeFor = typename SignalTransmitterTypeFor_<SignalType>::type;
 
 
 class SignalHub {
@@ -553,51 +519,51 @@ private:
 class SignalOps {
 public:
     // slot
-    template<typename SignalT, typename Sender, typename Receiver, typename... SlotArgs>
+    template<typename Signal, typename Sender, typename Receiver, typename... SlotArgs>
     static ConnectionHandle
     connect(const Sender* sender, StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::*slot)(SlotArgs...)) {
-        static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
+        static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
         static_assert(isObject<Receiver>, "Slots must reside in Objects");
 
         // XXX make sender listen on receiver destroy to automatically disconnect signals
 
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
-            SignalTransmitterTypeFromSignalType<SignalT>::create(const_cast<Receiver*>(receiver), slot));
+            SignalTransmitterTypeFor<Signal>::create(const_cast<Receiver*>(receiver), slot));
 
         return sender->signalHub_.connectSlot(signalId, std::move(transmitter), receiver, slotName);
     }
 
     // free-function
-    template<typename SignalT, typename Sender, typename... FnArgs>
+    template<typename Signal, typename Sender, typename... FnArgs>
     static ConnectionHandle
     connect(const Sender* sender, StringId signalId, void (*ffn)(FnArgs...)) {
-        static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
+        static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
-            SignalTransmitterTypeFromSignalType<SignalT>::create(ffn));
+            SignalTransmitterTypeFor<Signal>::create(ffn));
 
         return sender->signalHub_.connectCallback(signalId, std::move(transmitter), ffn);
     }
 
     // free-callables
-    template<typename SignalT, typename Sender, typename Fn>
+    template<typename Signal, typename Sender, typename Fn>
     static ConnectionHandle
     connect(const Sender* sender, StringId signalId, Fn&& fn) {
-        static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
+        static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
-            SignalTransmitterTypeFromSignalType<SignalT>::create(std::forward<Fn>(fn)));
+            SignalTransmitterTypeFor<Signal>::create(std::forward<Fn>(fn)));
 
         return sender->signalHub_.connectCallback(signalId, std::move(transmitter));
     }
 
-    template<typename SignalT, typename Sender, typename... Args>
+    template<typename Signal, typename Sender, typename... Args>
     static void
     disconnect(const Sender* sender, Args&&... args) {
-        static_assert(isSignal<SignalT>, "signal must be a Signal (declared with VGC_SIGNAL).");
+        static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
         return sender->signalHub_.disconnect(std::forward<Args>(args)...);
@@ -688,6 +654,14 @@ using Signal = internal::SignalImpl<void(Args...)>;
     struct VGC_SLOT_TAG_TNAME_(name_) {}
 
 
+#ifndef DOXYGEN
+#define VGC_SIGNAL_RET_TYPE_ auto
+#define VGC_SIGNAL_RET_ return Traits{};
+#else
+#define VGC_SIGNAL_RET_TYPE_ void
+#define VGC_SIGNAL_RET_
+#endif
+
 /// Macro to define VGC Object Signals.
 ///
 /// Example:
@@ -700,16 +674,30 @@ using Signal = internal::SignalImpl<void(Args...)>;
 /// \endcode
 ///
 #define VGC_SIGNAL(...) VGC_EXPAND(VGC_SIGNAL_(__VA_ARGS__, VaEnd))
-#define VGC_SIGNAL_(name, ...) \
+#define VGC_SIGNAL_(name_, ...) \
     VGC_SIGNAL_RET_TYPE_ \
-    name(VGC_PARAMS_(__VA_ARGS__)) const { \
-        CHECK_TYPE_IS_VGC_OBJECT(std::remove_pointer_t<decltype(this)>); \
-        static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name), "Signal names are not allowed to be identifiers of superclass members."); \
-        static ::vgc::core::StringId signalId_(#name); \
+    name_(VGC_PARAMS_(__VA_ARGS__)) const { \
+        using MyClass_ = std::remove_pointer_t<decltype(this)>; \
+        CHECK_TYPE_IS_VGC_OBJECT(MyClass_); \
+        static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name_), "Signal names are not allowed to be identifiers of superclass members."); \
+        \
+        using ::vgc::core::internal::SignalInfo; \
+        using Parent = std::remove_pointer_t<decltype(this)>; \
+        \
+        struct [[nodiscard]] Traits : public ::vgc::core::internal::SignalTraits_ { \
+            using MyClass = MyClass_; \
+            static std::enable_if_t<std::is_same_v<ThisClass, ThisClass>, /* removes unused-local-typedef warning */ \
+            const SignalInfo&> getInfo() { \
+                static SignalInfo s = { ::vgc::core::StringId(#name_) }; \
+                return s; \
+            } \
+        }; \
+        \
         using TransmitterType = ::vgc::core::internal::SignalTransmitter<VGC_PARAMS_TYPE_(__VA_ARGS__)>; \
         signalHub_.emit_<TransmitterType>( \
-            VGC_TRIM_VAEND_(signalId_, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__))); \
-        return {}; \
+            VGC_TRIM_VAEND_(Traits::getInfo().name, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__))); \
+        \
+        VGC_SIGNAL_RET_ \
     }
 
 #define VGC_EMIT std::ignore =

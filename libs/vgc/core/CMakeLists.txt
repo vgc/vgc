@@ -44,6 +44,7 @@ vgc_add_library(core
         vec2farray.h
 
         internal/containerutil.h
+        internal/templateutil.h
 
     CPP_FILES
         algorithm.cpp

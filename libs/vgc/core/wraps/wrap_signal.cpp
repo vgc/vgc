@@ -17,184 +17,23 @@
 #include <pybind11/functional.h>
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/signal.h>
+#include <vgc/core/wraps/object.h>
 #include <vgc/core/signal.h>
 #include <vgc/core/object.h>
 
 namespace vgc::core::wraps {
 
-class TestWrapObject : Object
+void wrapCppSlotRef(py::module& m)
 {
-    VGC_OBJECT(TestWrapObject, Object)
-
-    VGC_SIGNAL(signalIFI, (int, a), (float, b), (int, c));
-    VGC_SLOT(slotID, (int, a), (double, b));
-};
-
-// simple adapter
-py::cpp_function pySlotAdapter(py::args args, py::kwargs kwargs) {
-    return {};
+    py::class_<AbstractCppSlotRef>(m, "AbstractCppSlotRef")
+        .def("object", &AbstractCppSlotRef::object)
+        .def("__call__", [](py::object self, py::args args) {
+            auto ref = self.cast<AbstractCppSlotRef*>();
+            ref->getPyWrappedBoundSlot().call(*args);
+        })
+    ;
 }
-
-template<typename... SignalArgs>
-[[nodiscard]] static inline
-auto createCppToPyTransmitter(py::cpp_function) {
-    return new core::internal::SignalTransmitter<SignalArgs...>(
-        [=](SignalArgs&&... args) {
-            
-            // forward N args to cpp_function
-            // N must be retrieved from func slot attrs.. (if i can add them even for cpp slots..)
-        });
-}
-
-// used for py-signals only ! 
-//
-class PyToPyTransmitter : public core::internal::AbstractSignalTransmitter {
-public:
-    py::function boundSlot_; 
-};
-
-//
-
-// cpp-signal binding must provide function to CREATE a transmitter from py signature'd slot
-
-// cpp-signal overridden by py-signal can be checked in connect
-
-// slot binding must define a py signature'd c++ wrapper.. for the above
-
-
-// signal_impl(py::object, py::args args, const py::kwargs& kwargs
-
-void transmit(py::object self, py::str, py::args, py::kwargs)
-{
-    std::cout << "transmit" << std::endl;
-}
-
-py::cpp_function signalDecorator(const py::function& signal) {
-
-    py::str signalName = signal.attr("__name__");
-    py::cpp_function wrapper([=](py::object self, py::args args, py::kwargs kwargs) {
-        transmit(self, signalName, args, kwargs);
-
-        // XXX test
-        return 2;
-    });
-
-    // XXX impossible this way, maybe do it manually via Extra args of cpp_function constructor
-    // 
-    //py::function update_wrapper = py::module::import("functools").attr("update_wrapper");
-    //update_wrapper(wrapper, signal);
-
-    return wrapper;
-}
-
-class AbstractSlotRef {
-protected:
-    AbstractSlotRef(bool isCpp) :
-        isCpp_(isCpp) {}
-
-public:
-    virtual ~AbstractSlotRef() = default;
-    
-    bool isCpp() const {
-        return isCpp_;
-    }
-
-private:
-    bool isCpp_ = false;
-};
-
-class AbstractCppSlotRef {
-protected:
-    AbstractCppSlotRef(ObjectPtr obj, std::initializer_list<std::type_index> parameters) :
-        obj_(obj), parameters_(parameters) {}
-
-public:
-    const auto& parameters() {
-        return parameters_;
-    }
-
-    const ObjectPtr owner() {
-        return obj_;
-    }
-
-    virtual py::cpp_function getPyWrappedBoundSlot() = 0;
-
-protected:
-    std::vector<std::type_index> parameters_;
-    ObjectPtr obj_;
-};
-
-template<typename... SlotArgs>
-class CppSlotRef : public AbstractCppSlotRef {
-public:
-    // Note: forwarded arguments as for transmitters
-    using BoundSlotSig = void(SlotArgs&&...);
-    using BoundSlot = std::function<BoundSlotSig>;
-    
-    using AbstractCppSlotRef::AbstractCppSlotRef;
-
-    BoundSlot getBoundSlot() {
-        return bind_(obj_.get());
-    }
-    
-    virtual py::cpp_function getPyWrappedBoundSlot() override {
-        return py::cpp_function(getBoundSlot());
-    }
-
-private:
-    virtual BoundSlot bind_(ObjectPtr obj) = 0;
-};
-
-template<typename Obj, typename... SlotArgs>
-class CppSlotRefImpl : public CppSlotRef<SlotArgs...> {
-    using SuperClass = CppSlotRef<SlotArgs...>;
-    using MFnT = void (Obj::*)(SlotArgs...);
-    using BoundSlot = typename SuperClass::BoundSlot;
-
-public:
-    CppSlotRefImpl(ObjPtr<Obj>* obj, MFnT mfn) :
-        SuperClass(obj, { std::type_index(typeid(SlotArgs))... }),
-        mfn_(mfn) {}
-
-private:
-    MFnT mfn_;
-
-    virtual BoundSlot bind_(ObjectPtr obj) override {
-        // XXX can add alive check here or in the lambda..
-        using MFnT = void (Obj::*)(SlotArgs...);
-        return [obj](SlotArgs&&... args) {
-            auto mfn = *reinterpret_cast<MFnT*>(&pmfn_);
-            mfn(obj, std::forward<SlotArgs>(args));
-        };
-    }
-};
-
-
-class AbstractSignalRef {
-protected:
-    AbstractSignalRef(bool isCpp) :
-        isCpp_(isCpp) {}
-
-public:
-    virtual ~AbstractSignalRef() = default;
-
-    bool isCpp() const {
-        return isCpp_;
-    }
-
-private:
-    bool isCpp_ = false;
-};
-
-class AbstractCppSignalRef : public AbstractSignalRef {
-public:
-    std::vector<std::type_index> parameters;
-
-    ~AbstractCppSignalRef() = default;
-
-    virtual std::unique_ptr<core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) = 0;
-};
-
 
 template<typename ArgsTuple>
 struct CppSlotRefTypeFromArgsTuple_;
@@ -205,10 +44,31 @@ struct CppSlotRefTypeFromArgsTuple_<std::tuple<SlotArgs...>> {
 template<typename ArgsTuple>
 using CppSlotRefTypeFromArgsTuple = typename CppSlotRefTypeFromArgsTuple_<ArgsTuple>::type;
 
-        
+
+class AbstractCppSignalRef {
+protected:
+    AbstractCppSignalRef(Object* obj, std::initializer_list<std::type_index> parameters) :
+        obj_(obj), parameters_(parameters) {}
+
+public:
+    const auto& parameters() const {
+        return parameters_;
+    }
+
+    Object* object() const {
+        return obj_;
+    }
+
+    virtual std::unique_ptr<core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) = 0;
+
+protected:
+    std::vector<std::type_index> parameters_;
+    Object* obj_;
+};
+
 void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCppSlotRef* slotRef) {
-    const auto& signalParams = signalRef->parameters;
-    const auto& slotParams = slotRef->parameters;
+    const auto& signalParams = signalRef->parameters();
+    const auto& slotParams = slotRef->parameters();
     if (slotParams.size() > signalParams.size()) {
         // XXX subclass LogicError
         throw LogicError("Slot signature is too long for this Signal.");
@@ -218,7 +78,6 @@ void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCpp
         throw LogicError("Slot/Signal signature mismatch.");
     }
 }
-
 
 #define CREATE_TRANSMITTER_SWITCH_CASE(i) \
     case i: \
@@ -267,6 +126,66 @@ struct CppSignalRef : public AbstractCppSignalRef {
 
 
 
+
+
+// simple adapter
+py::cpp_function pySlotAdapter(py::args args, py::kwargs kwargs) {
+    return {};
+}
+
+template<typename... SignalArgs>
+[[nodiscard]] static inline
+auto createCppToPyTransmitter(py::cpp_function) {
+    return new core::internal::SignalTransmitter<SignalArgs...>(
+        [=](SignalArgs&&... args) {
+
+            // forward N args to cpp_function
+            // N must be retrieved from func slot attrs.. (if i can add them even for cpp slots..)
+        });
+}
+
+// used for py-signals only ! 
+//
+class PyToPyTransmitter : public core::internal::AbstractSignalTransmitter {
+public:
+    py::function boundSlot_;
+};
+
+//
+
+// cpp-signal binding must provide function to CREATE a transmitter from py signature'd slot
+
+// cpp-signal overridden by py-signal can be checked in connect
+
+// slot binding must define a py signature'd c++ wrapper.. for the above
+
+
+// signal_impl(py::object, py::args args, const py::kwargs& kwargs
+
+void transmit(py::object self, py::str, py::args, py::kwargs)
+{
+    std::cout << "transmit" << std::endl;
+}
+
+py::cpp_function signalDecorator(const py::function& signal) {
+
+    py::str signalName = signal.attr("__name__");
+    py::cpp_function wrapper([=](py::object self, py::args args, py::kwargs kwargs) {
+        transmit(self, signalName, args, kwargs);
+
+        // XXX test
+        return 2;
+        });
+
+    // XXX impossible this way, maybe do it manually via Extra args of cpp_function constructor
+    // 
+    //py::function update_wrapper = py::module::import("functools").attr("update_wrapper");
+    //update_wrapper(wrapper, signal);
+
+    return wrapper;
+}
+
+
 py::function slotDecorator(const py::function& slot) {
     slot.attr("__slot_tag__") = 1;
     return slot;
@@ -292,10 +211,33 @@ void testBoundCallback(const py::function& cb) {
 // emit:
 // obj.signal.emit()
 
+VGC_DECLARE_OBJECT(TestWrapObject);
+
+class TestWrapObject : public Object {
+    VGC_OBJECT(TestWrapObject, Object)
+
+public:
+    static inline TestWrapObjectPtr create() {
+        return TestWrapObjectPtr(new TestWrapObject());
+    }
+
+    VGC_SIGNAL(signalIFI, (int, a), (float, b), (int, c));
+
+    VGC_SLOT(slotID, (int, a), (double, b)) {
+        a_ = a;
+        b_ = b;
+    }
+
+    int a_ = 0;
+    double b_ = 0.;
+};
+
 } // namespace vgc::core::wraps
 
 void wrap_signal(py::module& m)
 {
+    vgc::core::wraps::wrapCppSlotRef(m);
+
     m.def("signal", &vgc::core::wraps::signalDecorator);
     m.def("slot", &vgc::core::wraps::slotDecorator);
     m.def("testBoundCallback", &vgc::core::wraps::testBoundCallback);
@@ -319,6 +261,17 @@ void wrap_signal(py::module& m)
         UnsharedOwnerSignal res;
         return res;
     }));
+
+    {
+        using vgc::core::wraps::TestWrapObject;
+        auto c = vgc::core::wraps::ObjClass<TestWrapObject>(m, "TestWrapObject")
+            .def(py::init([]() { return TestWrapObject::create(); }))
+            .def_slot("slotID", &TestWrapObject::slotID)
+            .def("slotID_direct", &TestWrapObject::slotID)
+            .def_readwrite("a", &TestWrapObject::a_)
+            .def_readwrite("b", &TestWrapObject::b_)
+        ;
+    }
 }
 
 
