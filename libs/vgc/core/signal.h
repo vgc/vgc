@@ -36,39 +36,29 @@
 namespace vgc::core {
 
 class Object;
-using ConnectionHandle = UInt64;
 
 namespace internal {
 
 using SignalId = StringId;
 using SlotId = std::pair<const Object*, StringId>;
 using FreeFuncId = void*;
-
+using ConnectionHandle = UInt64;
 
 struct SignalInfo {
     StringId name;
 };
 
-struct [[nodiscard]] SignalTraits_ {
-    SignalTraits_(const SignalTraits_&) = delete;
-    SignalTraits_& operator=(const SignalTraits_&) = delete;
+struct SlotInfo {
+    StringId name;
 };
 
+// Base struct from which traits are derived.
+struct [[nodiscard]] SignalTraits {
+    SignalTraits(const SignalTraits&) = delete;
+    SignalTraits& operator=(const SignalTraits&) = delete;
+};
 template <typename T>
-inline constexpr bool IsSignalTraits = std::is_base_of_v<SignalTraits_, T>;
-
-
-// compile-time evaluates to true only if &cls::id is a valid expression.
-//
-#define VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(cls, id) \
-    ::vgc::core::internal::LambdaSfinae<cls*>::check( \
-        [](auto* v) -> std::void_t<decltype(&std::remove_pointer_t<decltype(v)>::id)> {} \
-    )
-
-#define VGC_CONSTEXPR_IS_TYPE_DEFINED_IN_CLASS_(cls, tname) \
-    ::vgc::core::internal::LambdaSfinae<cls*>::check( \
-        [](auto* v) -> std::void_t<typename std::remove_pointer_t<decltype(v)>::tname> {} \
-    )
+inline constexpr bool IsSignalTraits = std::is_base_of_v<SignalTraits, T>;
 
 
 template<typename T, typename Enable = void>
@@ -88,6 +78,7 @@ struct isObject_<T, std::enable_if_t<std::is_base_of_v<Object, T>, void>> : std:
 };
 template <typename T>
 inline constexpr bool isObject = isObject_<T>::value;
+
 
 template<typename T>
 struct isSignal_ : std::false_type {};
@@ -114,11 +105,21 @@ struct FunctionTraitsDef_ {
 };
 
 
+template<typename MemberFunctionPointerType>
+struct MemberFunctionTraits_;
+template<typename R, typename C, typename... Args>
+struct MemberFunctionTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, Args...> {};
+template <typename R, typename C, typename... Args>
+struct MemberFunctionTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<R, Args...> {};
+template<typename T>
+using MemberFunctionTraits = MemberFunctionTraits_<std::remove_reference_t<T>>;
+
+
 // callable's operator
 template<typename T>
 struct SignalCallableHandlerTraits_;
-template<typename R, typename L, typename... Args>
-struct SignalCallableHandlerTraits_<R (L::*)(Args...)const> : FunctionTraitsDef_<R, Args...> {};
+template<typename R, typename C, typename... Args>
+struct SignalCallableHandlerTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, Args...> {};
 // primary with fallback
 template<typename T>
 struct SignalFreeHandlerTraits_ : SignalCallableHandlerTraits_<decltype(&T::operator())> {};
@@ -416,7 +417,7 @@ template<typename SignalType>
 using SignalTransmitterTypeFor = typename SignalTransmitterTypeFor_<SignalType>::type;
 
 
-class SignalHub {
+class ConnectionList {
 private:
     struct Connection_ {
         template<typename To>
@@ -435,11 +436,11 @@ private:
         > to;
     };
 
-    SignalHub(const SignalHub&) = delete;
-    SignalHub& operator=(const SignalHub&) = delete;
+    ConnectionList(const ConnectionList&) = delete;
+    ConnectionList& operator=(const ConnectionList&) = delete;
 
 public:
-    SignalHub() = default;
+    ConnectionList() = default;
 
     // slot
     template<typename Receiver>
@@ -531,7 +532,7 @@ public:
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
             SignalTransmitterTypeFor<Signal>::create(const_cast<Receiver*>(receiver), slot));
 
-        return sender->signalHub_.connectSlot(signalId, std::move(transmitter), receiver, slotName);
+        return sender->connectionList_.connectSlot(signalId, std::move(transmitter), receiver, slotName);
     }
 
     // free-function
@@ -544,7 +545,7 @@ public:
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
             SignalTransmitterTypeFor<Signal>::create(ffn));
 
-        return sender->signalHub_.connectCallback(signalId, std::move(transmitter), ffn);
+        return sender->connectionList_.connectCallback(signalId, std::move(transmitter), ffn);
     }
 
     // free-callables
@@ -557,7 +558,7 @@ public:
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
             SignalTransmitterTypeFor<Signal>::create(std::forward<Fn>(fn)));
 
-        return sender->signalHub_.connectCallback(signalId, std::move(transmitter));
+        return sender->connectionList_.connectCallback(signalId, std::move(transmitter));
     }
 
     template<typename Signal, typename Sender, typename... Args>
@@ -566,7 +567,7 @@ public:
         static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
-        return sender->signalHub_.disconnect(std::forward<Args>(args)...);
+        return sender->connectionList_.disconnect(std::forward<Args>(args)...);
     }
 };
 
@@ -622,10 +623,10 @@ using Signal = internal::SignalImpl<void(Args...)>;
 #define VGC_TF_9_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_8_(F, __VA_ARGS__))
 #define VGC_TF_DISPATCH_(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,S,...) S
 // ... must end with VaEnd
-#define VGC_TRANSFORM_(F, ...) \
-  VGC_EXPAND(VGC_TF_DISPATCH_(__VA_ARGS__, \
-    VGC_TF_9_,VGC_TF_8_,VGC_TF_7_,VGC_TF_6_,VGC_TF_5_, \
-    VGC_TF_4_,VGC_TF_3_,VGC_TF_2_,VGC_TF_1_,VGC_TF_0_ \
+#define VGC_TRANSFORM_(F, ...)                              \
+  VGC_EXPAND(VGC_TF_DISPATCH_(__VA_ARGS__,                  \
+    VGC_TF_9_,VGC_TF_8_,VGC_TF_7_,VGC_TF_6_,VGC_TF_5_,      \
+    VGC_TF_4_,VGC_TF_3_,VGC_TF_2_,VGC_TF_1_,VGC_TF_0_       \
   )(F, __VA_ARGS__))
 
 #define VGC_SIG_PTYPE2_(t, n) t
@@ -644,14 +645,6 @@ using Signal = internal::SignalImpl<void(Args...)>;
 
 #define VGC_SIG_FWD2_(t, n) std::forward<t>(n)
 #define VGC_SIG_FWD_(x) VGC_SIG_FWD2_ x
-
-// unused
-#define VGC_SLOT_TAG_TNAME_(name_) \
-    _internal_##name_
-
-// unused
-#define VGC_SLOT_TAG_(name_) \
-    struct VGC_SLOT_TAG_TNAME_(name_) {}
 
 
 #ifndef DOXYGEN
@@ -684,9 +677,10 @@ using Signal = internal::SignalImpl<void(Args...)>;
         using ::vgc::core::internal::SignalInfo; \
         using Parent = std::remove_pointer_t<decltype(this)>; \
         \
-        struct [[nodiscard]] Traits : public ::vgc::core::internal::SignalTraits_ { \
+        struct [[nodiscard]] Traits : public ::vgc::core::internal::SignalTraits { \
             using MyClass = MyClass_; \
-            static std::enable_if_t<std::is_same_v<ThisClass, ThisClass>, /* removes unused-local-typedef warning */ \
+            /* enable_if_t to remove unused-local-typedef warning */ \
+            static std::enable_if_t<std::is_same_v<MyClass, MyClass>,  \
             const SignalInfo&> getInfo() { \
                 static SignalInfo s = { ::vgc::core::StringId(#name_) }; \
                 return s; \
@@ -694,13 +688,28 @@ using Signal = internal::SignalImpl<void(Args...)>;
         }; \
         \
         using TransmitterType = ::vgc::core::internal::SignalTransmitter<VGC_PARAMS_TYPE_(__VA_ARGS__)>; \
-        signalHub_.emit_<TransmitterType>( \
+        connectionList_.emit_<TransmitterType>( \
             VGC_TRIM_VAEND_(Traits::getInfo().name, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__))); \
         \
         VGC_SIGNAL_RET_ \
-    }
+    } \
+    auto name_##SignalRef_() { return std::make_pair(this, &ThisClass::name_); }
 
 #define VGC_EMIT std::ignore =
+
+
+#define VGC_SLOT_TRAITS_TYPENAME_(name_) _internal_##name_
+
+#define VGC_SLOT_TRAITS_(name_)                                         \
+    struct VGC_SLOT_TRAITS_TYPENAME_(name_) {                           \
+        using MyClass = MyClass_;                                       \
+        /* enable_if_t to remove unused-local-typedef warning */        \
+        static std::enable_if_t<std::is_same_v<MyClass, MyClass>,       \
+        const SlotInfo&> getInfo() {                                    \
+            static SlotInfo s = {::vgc::core::StringId(#name_)};        \
+            return s;                                                   \
+        }                                                               \
+    };
 
 // you can either declare:
 // VGC_SLOT(foo, int);
@@ -708,16 +717,22 @@ using Signal = internal::SignalImpl<void(Args...)>;
 // VGC_SLOT(foo, int) { /* impl */ }
 // 
 #define VGC_SLOT(...) VGC_EXPAND(VGC_SLOT_(__VA_ARGS__, VaEnd))
-#define VGC_SLOT_(name, ...) \
-    static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name), "Slot names are not allowed to be identifiers of superclass members (except virtual slots)."); \
-    VGC_SLOT_TAG_(name); \
-    void name(VGC_PARAMS_(__VA_ARGS__))
+#define VGC_SLOT_(name_, ...) \
+    static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name_),    \
+                  "Slot names are not allowed to be identifiers of superclass "     \
+                  "members (except virtual slots).");                               \
+    VGC_SLOT_TRAITS_(name_);                                                        \
+    void name_(VGC_PARAMS_(__VA_ARGS__))                                            \
+    auto name_##SlotRef_() { return std::make_pair(this, &ThisClass::name_); }
 
 #define VGC_VIRTUAL_SLOT(...) VGC_EXPAND(VGC_VIRTUAL_SLOT_(__VA_ARGS__, VaEnd))
-#define VGC_VIRTUAL_SLOT_(name, ...) \
-    static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name), "Slot names are not allowed to be identifiers of superclass members (except virtual slots)."); \
-    VGC_SLOT_TAG_(name); \
-    virtual void name(VGC_PARAMS_(__VA_ARGS__))
+#define VGC_VIRTUAL_SLOT_(name_, ...) \
+    static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name_),    \
+                  "Slot names are not allowed to be identifiers of superclass "     \
+                  "members (except virtual slots).");                               \
+    VGC_SLOT_TRAITS_(name_);                                                        \
+    virtual void name_(VGC_PARAMS_(__VA_ARGS__))                                    \
+    auto name_##SlotRef_() { return std::make_pair(this, &ThisClass::name_); }
 
 // XXX add comment to explain SlotPrivateVCheck_
 #define VGC_OVERRIDE_SLOT(...) VGC_EXPAND(VGC_OVERRIDE_SLOT_(__VA_ARGS__, VaEnd))
@@ -729,25 +744,60 @@ using Signal = internal::SignalImpl<void(Args...)>;
     void cls::name(VGC_PARAMS_(__VA_ARGS__))
 
 
-#define VGC_CONNECT_SLOT(sender, signalName, receiver, slotName) \
-    [&](){ \
-        static_assert(VGC_CONSTEXPR_IS_TYPE_DEFINED_IN_CLASS_(std::remove_pointer_t<decltype(receiver)>, VGC_SLOT_TAG_TNAME_(slotName)), \
-            #slotName " is not a Slot! Did you forget VGC_SLOT ?"); \
-        static_assert(VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(std::remove_pointer_t<decltype(receiver)>, slotName),  \
-            "Slot " #slotName " has overloads, which is not allowed!"); \
-        static ::vgc::core::StringId signalId_(#signalName); \
-        static ::vgc::core::StringId slotName_(#slotName); \
-        return ::vgc::core::internal::SignalOps::connect<decltype(&std::remove_pointer_t<decltype(sender)>::signalName)>( \
-            sender, signalId_, receiver, slotName_, \
-            &std::remove_pointer_t<decltype(receiver)>::slotName); \
-    }()
+#define VGC_CONNECT_SLOT(sender, signalName, receiver, slotName)                    \                                                                    \
+    do {                                                                            \
+        using Sender = std::remove_pointer_t<decltype(sender)>;                     \
+        using Signal = decltype(&Sender::signalName);                               \
+        using ::vgc::core::internal::MemberFunctionTraits;                          \
+        using SignalTraits = typename MemberFunctionTraits<Signal>::ReturnType;     \
+        using Receiver = std::remove_pointer_t<decltype(receiver)>;                 \
+        using Slot = decltype(&Receiver::slotName);                                 \
+        using SlotTraits = Receiver::VGC_SLOT_TRAITS_TYPENAME_(slotName);           \
+        static_assert(VGC_CONSTEXPR_IS_TYPE_DEFINED_IN_CLASS_(                      \
+                          Receiver, VGC_SLOT_TRAITS_TYPENAME_(slotName)),           \
+                      #slotName " is not a Slot! Did you forget VGC_SLOT ?");       \
+        static_assert(VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(                    \
+                          Receiver, slotName),                                      \
+                      "Slot " #slotName " has overloads, which is not allowed!");   \
+        ::vgc::core::internal::SignalOps::connect<Signal>(                          \
+            sender, SignalTraits::getInfo().name,                                   \
+            receiver, SlotTraits::getInfo().name,                                   \
+            &Receiver::slotName);                                                   \
+    } while(0)
 
-#define VGC_CONNECT_FUNC(sender, signalName, function) \
-    [&](){ \
-        static ::vgc::core::StringId signalId_(#signalName); \
-        return ::vgc::core::internal::SignalOps::connect<decltype(&std::remove_pointer_t<decltype(sender)>::signalName)>( \
-            sender, signalId_, function); \
-    }()
+#define VGC_CONNECT_FUNC(sender, signalName, function)                              \
+    do {                                                                            \
+        using Sender = std::remove_pointer_t<decltype(sender)>;                     \
+        using Signal = decltype(&Sender::signalName);                               \
+        using ::vgc::core::internal::MemberFunctionTraits;                          \
+        using SignalTraits = typename MemberFunctionTraits<Signal>::ReturnType;     \
+        ::vgc::core::internal::SignalOps::connect<Signal>(                          \
+            sender, SignalTraits::getInfo().name,                                   \
+            function);                                                              \
+    } while(0)
+
+#define VGC_CONNECT_SLOT2(signal, slot)                                             \
+    do {                                                                            \
+        auto signalRef = signal##SignalRef_();                                      \
+        auto slotRef = slot##SlotRef_();                                            \
+        using Sender = std::remove_pointer_t<decltype(signalRef.first)>;            \
+        using Signal = decltype(signalRef.second);                                  \
+        using ::vgc::core::internal::MemberFunctionTraits;                          \
+        using SignalTraits = typename MemberFunctionTraits<Signal>::ReturnType;     \
+        using Receiver = std::remove_pointer_t<decltype(slotRef.first)>;            \
+        using Slot = decltype(slotRef.second);                                      \
+        using SlotTraits = Receiver::VGC_SLOT_TRAITS_TYPENAME_(slotName);           \
+        static_assert(VGC_CONSTEXPR_IS_TYPE_DEFINED_IN_CLASS_(                      \
+                          Receiver, VGC_SLOT_TRAITS_TYPENAME_(slotName)),           \
+                      #slotName " is not a Slot! Did you forget VGC_SLOT ?");       \
+        static_assert(VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(                    \
+                          Receiver, slotName),                                      \
+                      "Slot " #slotName " has overloads, which is not allowed!");   \
+        ::vgc::core::internal::SignalOps::connect<Signal>(                          \
+            sender, SignalTraits::getInfo().name,                                   \
+            receiver, SlotTraits::getInfo().name,                                   \
+            &Receiver::slotName);                                                   \
+    } while(0)
 
 
 #define VGC_CONNECT_EXPAND_(x) x
@@ -777,5 +827,12 @@ using Signal = internal::SignalImpl<void(Args...)>;
 #define VGC_DISCONNECT4_(...) VGC_DISCONNECT_SLOT(__VA_ARGS__)
 #define VGC_DISCONNECT_DISPATCH_(_1, _2, _3, _4, NAME, ...) NAME
 #define VGC_DISCONNECT(...) VGC_DISCONNECT_EXPAND_(VGC_DISCONNECT_DISPATCH_(__VA_ARGS__, VGC_DISCONNECT_SLOT, VGC_DISCONNECT_HANDLE_OR_FUNC, NOOVERLOAD, NOOVERLOAD)(__VA_ARGS__))
+
+namespace vgc::core {
+
+using ConnectionHandle = internal::ConnectionHandle;
+
+} // namespace vgc::core
+
 
 #endif // VGC_CORE_SIGNAL_H

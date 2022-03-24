@@ -35,6 +35,21 @@ struct LambdaSfinae {
     }
 };
 
+
+// compile-time evaluates to true only if &cls::id is a valid expression.
+#define VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(cls, id)                    \
+  ::vgc::core::internal::LambdaSfinae<cls*>::check(                           \
+      [](auto* v)                                                             \
+          -> std::void_t<decltype(&std::remove_pointer_t<decltype(v)>::id)> { \
+      })
+
+#define VGC_CONSTEXPR_IS_TYPE_DEFINED_IN_CLASS_(cls, tname)                    \
+  ::vgc::core::internal::LambdaSfinae<cls*>::check(                            \
+      [](auto* v)                                                              \
+          -> std::void_t<typename std::remove_pointer_t<decltype(v)>::tname> { \
+      })
+
+
 template<std::size_t I, typename... T, std::size_t... Is>
 constexpr std::tuple<std::tuple_element_t<I + Is, std::tuple<T...>>...>
 SubPackAsTuple_(std::index_sequence<Is...>);
