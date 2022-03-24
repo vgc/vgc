@@ -38,4 +38,12 @@
 #    define VGC_CORE_COMPILER_MSVC_VERSION _MSC_VER
 #endif
 
+#define VGC_NODISCARD(msg) nodiscard
+#ifdef __has_cpp_attribute
+#if __has_cpp_attribute(nodiscard) >= 201907L
+#undef VGC_NODISCARD
+#define VGC_NODISCARD(msg) nodiscard(msg)
+#endif
+#endif
+
 #endif // VGC_CORE_COMPILER_H

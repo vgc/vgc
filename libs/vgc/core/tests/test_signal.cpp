@@ -37,6 +37,13 @@ TEST(TestSignal, TestConnectSlot)
     VGC_EMIT t.signalIntDouble(0, 1);
     ASSERT_TRUE(t.slotIntCalled);
 
+
+    t.slotIntCalled = false;
+    VGC_CONNECT(t.signalIntDouble, t.slotInt);
+    VGC_EMIT t.signalIntDouble(0, 1);
+    ASSERT_TRUE(t.slotIntCalled);
+
+
     t.selfConnect();
     VGC_EMIT t.signalIntDouble(0, 1);
     ASSERT_TRUE(t.slotIntDoubleCalled);

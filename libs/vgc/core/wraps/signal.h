@@ -115,7 +115,8 @@ public:
         return obj_;
     }
 
-    virtual std::unique_ptr<core::internal::AbstractSignalTransmitter> createTransmitter(AbstractCppSlotRef* slotRef) const = 0;
+    virtual [[nodiscard]] core::internal::AbstractSignalTransmitter*
+    createTransmitter(AbstractCppSlotRef* slotRef) const = 0;
 
 protected:
     std::vector<std::type_index> parameters_;
@@ -136,42 +137,38 @@ void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCpp
     }
 }
 
-#define CREATE_TRANSMITTER_SWITCH_CASE(i) \
-    case i: \
-        if constexpr (sizeof...(SignalArgs) >= i) { \
-            using SlotRefType = CppSlotRefTypeFromArgsTuple<core::internal::SubPackAsTuple<0, i, SignalArgs...>>; \
-            auto castedSlotRef = static_cast<SlotRefType*>(slotRef); \
-            return TransmitterType::create(castedSlotRef.getBoundSlot()); \
-        } \
-        [[fallthrough]]
+#define CREATE_TRANSMITTER_SWITCH_CASE(i)                                   \
+    case i:                                                                 \
+        if constexpr (sizeof...(SignalArgs) >= i) {                         \
+            using SlotRefType = CppSlotRefTypeFromArgsTuple<                \
+                core::internal::SubPackAsTuple<0, i, SignalArgs...>>;       \
+            auto castedSlotRef = static_cast<SlotRefType*>(slotRef);        \
+            return TransmitterType::create(castedSlotRef->getBoundSlot());  \
+        }                                                                   \
+        [[fallthrough]];
 
 template<typename... SignalArgs>
 struct CppSignalRef : public AbstractCppSignalRef {
     using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
 
     CppSignalRef(const Object* obj, const core::internal::SignalId& id) :
-        AbstractCppSignalRef(obj, id, {std::type_index(typeid(SlotArgs))...}) {}
+        AbstractCppSignalRef(obj, id, {std::type_index(typeid(SignalArgs))...}) {}
 
-    virtual
-    [[nodiscard]] core::internal::AbstractSignalTransmitter*
-    createTransmitter_(AbstractCppSlotRef* slotRef) const override {
-
-        const auto& slotParams = slotRef->parameters;
-
-        if (!checkCompatibility(this, slotRef))
-            return nullptr;
-
+    virtual [[nodiscard]] core::internal::AbstractSignalTransmitter*
+    createTransmitter(AbstractCppSlotRef* slotRef) const override {
+        checkCompatibility(this, slotRef);
+        const auto& slotParams = slotRef->parameters();
         switch (slotParams.size()) {
-            CREATE_TRANSMITTER_SWITCH_CASE(0)
-                CREATE_TRANSMITTER_SWITCH_CASE(1)
-                CREATE_TRANSMITTER_SWITCH_CASE(2)
-                CREATE_TRANSMITTER_SWITCH_CASE(3)
-                CREATE_TRANSMITTER_SWITCH_CASE(4)
-                CREATE_TRANSMITTER_SWITCH_CASE(5)
-                CREATE_TRANSMITTER_SWITCH_CASE(6)
-                CREATE_TRANSMITTER_SWITCH_CASE(7)
-                CREATE_TRANSMITTER_SWITCH_CASE(8)
-                CREATE_TRANSMITTER_SWITCH_CASE(9)
+        CREATE_TRANSMITTER_SWITCH_CASE(0)
+        CREATE_TRANSMITTER_SWITCH_CASE(1)
+        CREATE_TRANSMITTER_SWITCH_CASE(2)
+        CREATE_TRANSMITTER_SWITCH_CASE(3)
+        CREATE_TRANSMITTER_SWITCH_CASE(4)
+        CREATE_TRANSMITTER_SWITCH_CASE(5)
+        CREATE_TRANSMITTER_SWITCH_CASE(6)
+        CREATE_TRANSMITTER_SWITCH_CASE(7)
+        CREATE_TRANSMITTER_SWITCH_CASE(8)
+        CREATE_TRANSMITTER_SWITCH_CASE(9)
         default:
             return nullptr;
         }
