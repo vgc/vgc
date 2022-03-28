@@ -21,10 +21,12 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <typeindex>
 #include <utility>
 #include <variant>
 #include <vector>
 
+// XXX temporary
 #include <iostream>
 
 #include <vgc/core/api.h>
@@ -118,60 +120,48 @@ inline constexpr bool isObject = isObject_<T>::value;
     static_assert(::vgc::core::internal::isObject<Type>, #Type " should be a vgc::core::Object.");
 
 
-using SignalId = StringId;
-using SlotId = std::pair<const Object*, StringId>;
+
+using SignalId = std::type_index;
+using SlotId = std::type_index;
+using BoundSlotId = std::pair<const Object*, SlotId>;
+
 using FreeFuncId = void*;
 using ConnectionHandle = UInt64;
 
-struct SignalInfo {
-    StringId name;
-};
 
-struct SlotInfo {
-    StringId name;
-};
 
 // To enforce the use of VGC_EMIT.
-struct [[VGC_NODISCARD("Please use VGC_EMIT.")]] EmitCheck {
+struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
     EmitCheck(const EmitCheck&) = delete;
     EmitCheck& operator=(const EmitCheck&) = delete;
 };
 
-
-struct SignalTraits {
-    SignalTraits(const SignalTraits&) = delete;
-    SignalTraits& operator=(const SignalTraits&) = delete;
+template<typename PointerToMemberSignal>
+struct isPointerToMemberSignal_ : std::false_type {};
+template<typename C, typename... Args>
+struct isPointerToMemberSignal_<EmitCheck (C::*)(Args...) const> : std::true_type {
+    static_assert(isObject<C>, "Signals can only be declared in Objects.");
 };
 template <typename T>
-inline constexpr bool IsSignalTraits = std::is_base_of_v<SignalTraits, T>;
+inline constexpr bool isPointerToMemberSignal = isPointerToMemberSignal_<T>::value;
 
 
-// XXX maybe unused after rework
-template<typename T>
-struct isSignal_ : std::false_type {};
+
 template<typename R, typename C, typename... Args>
-struct isSignal_<R (C::*)(Args...) const> {
-    static constexpr bool value = IsSignalTraits<R>;
-    static_assert(!value || isObject<C>, "Signals must reside in an Objects.");
-};
-template <typename T>
-inline constexpr bool isSignal = isSignal_<T>::value;
-
-
-template<typename R, typename... Args>
 struct FunctionTraitsDef_ {
     using ReturnType = R;
+    using Obj = C;
     using ArgsTuple = std::tuple<Args...>;
     static constexpr size_t arity = sizeof...(Args);
 };
 
 
-template<typename MemberFunctionPointerType>
+template<typename MemberFunctionPointer>
 struct MemberFunctionTraits_;
 template<typename R, typename C, typename... Args>
-struct MemberFunctionTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, Args...> {};
+struct MemberFunctionTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, C, Args...> {};
 template <typename R, typename C, typename... Args>
-struct MemberFunctionTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<R, Args...> {};
+struct MemberFunctionTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<R, C, Args...> {};
 template<typename T>
 using MemberFunctionTraits = MemberFunctionTraits_<std::remove_reference_t<T>>;
 
@@ -180,16 +170,34 @@ using MemberFunctionTraits = MemberFunctionTraits_<std::remove_reference_t<T>>;
 template<typename T>
 struct SignalCallableHandlerTraits_;
 template<typename R, typename C, typename... Args>
-struct SignalCallableHandlerTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, Args...> {};
+struct SignalCallableHandlerTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, C, Args...> {};
 // primary with fallback
+template<typename T, typename Enable = void>
+struct SignalFreeHandlerTraits_;
 template<typename T>
-struct SignalFreeHandlerTraits_ : SignalCallableHandlerTraits_<decltype(&T::operator())> {};
+struct SignalFreeHandlerTraits_<T, std::void_t<decltype(&T::operator())>> : SignalCallableHandlerTraits_<decltype(&T::operator())> {};
 // free function
 template<typename R, typename... Args>
-struct SignalFreeHandlerTraits_<R (*)(Args...)> : FunctionTraitsDef_<R, Args...> {};
-
+struct SignalFreeHandlerTraits_<R (*)(Args...), void> : FunctionTraitsDef_<R, void, Args...> {};
 template<typename T>
 using SignalFreeHandlerTraits = SignalFreeHandlerTraits_<std::remove_reference_t<T>>;
+
+
+template<typename T, typename Enable = void>
+struct isSignalFreeHandler_ : std::false_type {};
+template<typename T>
+struct isSignalFreeHandler_<T, typename SignalFreeHandlerTraits<T>::ReturnType> : std::true_type {};
+template <typename T>
+inline constexpr bool isSignalFreeHandler = isSignalFreeHandler_<T>::value;
+
+
+template<typename T, typename Traits_>
+struct WithTraits : T {
+    using T::T;
+    using UnderlyingType = T;
+    using Traits = Traits_;
+};
+
 
 
 template<class F, class ArgsTuple, std::size_t... I>
@@ -207,10 +215,55 @@ void applyPartial(F&& f, ArgsTuple&& t) {
 VGC_CORE_API
 ConnectionHandle genConnectionHandle();
 
+// XXX BoundSignal/BoundSlot instead of SignalRef/SlotRef ?
+
+template<typename PointerToMemberSignal>
+class SignalRef {
+public:
+    static_assert(isSignal<PointerToMemberSignal>);
+
+    using MemberType = PointerToMemberSignal;
+    using Obj = typename MemberFunctionTraits<PointerToMemberSignal>::Obj;
+    
+    SignalRef(const Obj* object) :
+        object_(const_cast<Obj*>(object)) {}
+
+    SignalRef(const SignalRef&) = delete;
+    SignalRef& operator=(const SignalRef&) = delete;
+
+    Obj* object() const {
+        return object_;
+    }
+
+private:
+    Obj* object_;
+};
 
 
+template<typename PointerToMemberSlot> // XXX SlotFunction
+class SlotRef {
+public:
+    using MFnType = PointerToMemberSlot;
+    using Obj = typename MemberFunctionTraits<PointerToMemberSlot>::Obj;
 
+    SlotRef(const Obj* object, PointerToMemberSlot mfn_) :
+        object_(const_cast<Obj*>(object)), mfn_(mfn_) {}
 
+    SlotRef(const SlotRef&) = delete;
+    SlotRef& operator=(const SlotRef&) = delete;
+
+    Obj* object() const {
+        return object_;
+    }
+
+    PointerToMemberSlot mfn() const {
+        return mfn_;
+    }
+
+private:
+    Obj* object_;
+    PointerToMemberSlot mfn_;
+};
 
 
 // new impl
@@ -296,7 +349,7 @@ template<typename Signal>
 struct SignalTransmitterTypeFor_;
 template<typename R, typename ObjT, typename... SignalArgs>
 struct SignalTransmitterTypeFor_<R (ObjT::*)(SignalArgs...) const> {
-    using type = std::enable_if_t<IsSignalTraits<R>, SignalTransmitter<SignalArgs...>>;
+    using type = std::enable_if_t<std::is_base_of_v<EmitCheck, R>, SignalTransmitter<SignalArgs...>>;
 };
 template<typename SignalType>
 using SignalTransmitterTypeFor = typename SignalTransmitterTypeFor_<SignalType>::type;
@@ -316,7 +369,7 @@ private:
         SignalId from;
         std::variant<
             std::monostate,
-            SlotId,
+            BoundSlotId,
             FreeFuncId
         > to;
     };
@@ -329,16 +382,16 @@ public:
 
     // slot
     template<typename Receiver>
-    ConnectionHandle connectSlot(StringId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, const Receiver* receiver, StringId slotName) {
+    ConnectionHandle connectSlot(SignalId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, const Receiver* receiver, SlotId slotId) {
         auto h = genConnectionHandle();
         // XXX use emplaceLast when possible
-        connections_.emplace(connections_.end(), std::move(transmitter), h, signalId, SlotId{receiver, slotName});
+        connections_.emplace(connections_.end(), std::move(transmitter), h, signalId, BoundSlotId{receiver, slotId});
         return h;
     }
 
     // free-function
     template<typename... FnArgs>
-    ConnectionHandle connectCallback(StringId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, void (*ffn)(FnArgs...)) {
+    ConnectionHandle connectCallback(SignalId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, void (*ffn)(FnArgs...)) {
         auto h = genConnectionHandle();
         // XXX use emplaceLast when possible
         connections_.emplace(connections_.end(), std::move(transmitter), h, signalId, FreeFuncId(ffn));
@@ -346,7 +399,7 @@ public:
     }
 
     // free-callables
-    ConnectionHandle connectCallback(StringId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter) {
+    ConnectionHandle connectCallback(SignalId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter) {
         auto h = genConnectionHandle();
         // XXX use emplaceLast when possible
         connections_.emplace(connections_.end(), std::move(transmitter), h, signalId, std::monostate{});
@@ -354,21 +407,21 @@ public:
     }
 
     // any
-    void disconnect(StringId /*signalId*/, ConnectionHandle h) {
+    void disconnect(SignalId /*signalId*/, ConnectionHandle h) {
         removeConnectionIf_([=](const Connection_& c) {
             return c.h == h; 
         });
     }
 
     // slot
-    void disconnect(StringId signalId, const Object* o, const StringId& slotName) {
+    void disconnect(SignalId signalId, const Object* o, const SlotId& slotId) {
         removeConnectionIf_([=](const Connection_& c) {
-            return c.from == signalId && std::holds_alternative<SlotId>(c.to) && std::get<SlotId>(c.to) == SlotId(o, slotName);
+            return c.from == signalId && std::holds_alternative<BoundSlotId>(c.to) && std::get<BoundSlotId>(c.to) == BoundSlotId(o, slotId);
         });
     }
 
     // free-callables
-    void disconnect(StringId signalId, void* freeFunc) {
+    void disconnect(SignalId signalId, void* freeFunc) {
         removeConnectionIf_([=](const Connection_& c) {
             return c.from == signalId && std::holds_alternative<FreeFuncId>(c.to) && std::get<FreeFuncId>(c.to) == FreeFuncId(freeFunc);
         });
@@ -402,12 +455,15 @@ private:
     }
 };
 
+
 class SignalOps {
 public:
     // slot
     template<typename Signal, typename Sender, typename Receiver, typename... SlotArgs>
     static ConnectionHandle
-    connect(const Sender* sender, StringId signalId, const Receiver* receiver, StringId slotName, void (Receiver::*slot)(SlotArgs...)) {
+    connect(const Sender* sender, SignalId signalId, const TypeIdentity<Receiver>* receiver, SlotId slotId, void (Receiver::*slot)(SlotArgs...)) {
+
+        
         static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
         static_assert(isObject<Receiver>, "Slots must reside in Objects");
@@ -417,13 +473,32 @@ public:
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
             SignalTransmitterTypeFor<Signal>::create(const_cast<Receiver*>(receiver), slot));
 
-        return sender->signalHub_.connectSlot(signalId, std::move(transmitter), receiver, slotName);
+        return sender->signalHub_.connectSlot(signalId, std::move(transmitter), receiver, slotId);
     }
+
+    template<typename PointerToMemberSignal, typename PointerToMemberSlot>
+    ConnectionHandle connect(const internal::SignalRef<PointerToMemberSignal>& sg, 
+                             const internal::SlotRef<PointerToMemberSlot>& sl) {
+        
+        // WIP either have Signal Slot as template params + 
+
+        auto* sender = sg.object();
+        auto* receiver = sl.object();
+        static_assert(isObject<Sender>, "Signals must reside in Objects");
+        static_assert(isObject<Receiver>, "Slots must reside in Objects");
+
+        return internal::SignalOps::connect<PointerToMemberSignal>(
+            sg.object(), std::type_index(typeid(PointerToMemberSignal)),
+            sl.object(), std::type_index(typeid(PointerToMemberSlot)),
+            sl.mfn());
+    }
+
+
 
     // free-function
     template<typename Signal, typename Sender, typename... FnArgs>
     static ConnectionHandle
-    connect(const Sender* sender, StringId signalId, void (*ffn)(FnArgs...)) {
+    connect(const Sender* sender, SignalId signalId, void (*ffn)(FnArgs...)) {
         static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
@@ -436,7 +511,7 @@ public:
     // free-callables
     template<typename Signal, typename Sender, typename Fn>
     static ConnectionHandle
-    connect(const Sender* sender, StringId signalId, Fn&& fn) {
+    connect(const Sender* sender, SignalId signalId, Fn&& fn) {
         static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
         static_assert(isObject<Sender>, "Signals must reside in Objects");
 
@@ -454,13 +529,38 @@ public:
 
         return sender->signalHub_.disconnect(std::forward<Args>(args)...);
     }
+
+
+
+
+    template<typename PointerToMemberSignal, typename SignalFreeHandler>
+    std::enable_if_t<internal::isSignalFreeHandler<SignalFreeHandler&&>, ConnectionHandle>
+        //ConnectionHandle
+        connect(const internal::SignalRef<PointerToMemberSignal>& sg, 
+            SignalFreeHandler&& handler) {
+        return internal::SignalOps::connect<PointerToMemberSignal>(
+            sg.object(), std::type_index(typeid(PointerToMemberSignal)),
+            std::forward<SignalFreeHandler>(handler));
+    }
+
+    template<typename PointerToMemberSignal, typename PointerToMemberSlot>
+    ConnectionHandle disconnect(const internal::SignalRef<PointerToMemberSignal>& sg, 
+        const internal::SlotRef<PointerToMemberSlot>& sl) {
+        return internal::SignalOps::disconnect<PointerToMemberSignal>(
+            sg.object(), std::type_index(typeid(PointerToMemberSignal)),
+            sl.object(), std::type_index(typeid(PointerToMemberSlot)));
+    }
+
+    template<typename PointerToMemberSignal, typename FunctionOrHandle>
+    ConnectionHandle disconnect(const internal::SignalRef<PointerToMemberSignal>& sg, 
+        FunctionOrHandle&& x) {
+        return internal::SignalOps::disconnect<PointerToMemberSignal>(
+            sg.object(), std::type_index(typeid(PointerToMemberSignal)),
+            std::forward<FunctionOrHandle>(x));
+    }
 };
 
 } // namespace internal
-
-// XXX temporary until all pieces of code use VGC_SIGNAL
-template<typename... Args>
-using Signal = internal::SignalImpl<void(Args...)>;
 
 } // namespace vgc::core
 
@@ -469,6 +569,9 @@ using Signal = internal::SignalImpl<void(Args...)>;
 
 #define VGC_STR(x) #x
 #define VGC_XSTR(x) VGC_STR(x)
+
+#define VGC_CONCAT(x, y) x##y
+#define VGC_XCONCAT(x, y) VGC_CONCAT(x,y)
 
 #define VGC_EXPAND(x) x
 #define VGC_EXPAND2(x) VGC_EXPAND(x)
@@ -532,15 +635,8 @@ using Signal = internal::SignalImpl<void(Args...)>;
 #define VGC_SIG_FWD_(x) VGC_SIG_FWD2_ x
 
 
-#ifndef DOXYGEN
-#define VGC_SIGNAL_RET_TYPE_ auto
-#define VGC_SIGNAL_RET_() return Traits{}
-#else
-#define VGC_SIGNAL_RET_TYPE_ void
-#define VGC_SIGNAL_RET_()
-#endif
-
-#define VGC_SIGNAL_REFFUNC_POSTFIX_ _InternalSignalRef_
+#define VGC_SIGNAL_REFFUNC_POSTFIX_ Signal
+#define VGC_SLOT_REFFUNC_POSTFIX_ Slot
 
 /// Macro to define VGC Object Signals.
 ///
@@ -555,57 +651,23 @@ using Signal = internal::SignalImpl<void(Args...)>;
 ///
 #define VGC_SIGNAL(...) VGC_EXPAND(VGC_SIGNAL_(__VA_ARGS__, VaEnd))
 #define VGC_SIGNAL_(name_, ...)                                                                         \
-    VGC_SIGNAL_RET_TYPE_                                                                                \
-    name_(VGC_PARAMS_(__VA_ARGS__)) const {                                                             \
+    auto VGC_XCONCAT(name_, VGC_SIGNAL_REFFUNC_POSTFIX_)() {                                            \
+        using PointerToMemberSignal = decltype(&ThisClass::name_);                                      \
+        return SignalRef<PointerToMemberSignal>(this);                                                  \
+    }                                                                                                   \
+    ::vgc::core::internal::EmitCheck name_(VGC_PARAMS_(__VA_ARGS__)) const {                            \
         using MyClass_ = std::remove_pointer_t<decltype(this)>;                                         \
         CHECK_TYPE_IS_VGC_OBJECT(MyClass_);                                                             \
         static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name_),                    \
                       "Signal names are not allowed to be identifiers of superclass members.");         \
-        using ::vgc::core::internal::SignalInfo;                                                        \
         using ::vgc::core::internal::SignalTransmitter;                                                 \
-        using Parent = std::remove_pointer_t<decltype(this)>;                                           \
-        struct [[nodiscard]] Traits : public ::vgc::core::internal::SignalTraits {                      \
-            using MyClass = MyClass_;                                                                   \
-            /* enable_if_t to remove unused-local-typedef warning */                                    \
-            static std::enable_if_t<std::is_same_v<MyClass, MyClass>,                                   \
-            const SignalInfo&> getInfo() {                                                              \
-                static SignalInfo s = { ::vgc::core::StringId(#name_) };                                \
-                return s;                                                                               \
-            }                                                                                           \
-        };                                                                                              \
         using TransmitterType = SignalTransmitter<VGC_PARAMS_TYPE_(__VA_ARGS__)>;                       \
+        std::type_index signalId(typeid(&ThisClass::name_));                                            \
         signalHub_.emit_<TransmitterType>(                                                              \
-            VGC_TRIM_VAEND_(Traits::getInfo().name, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__)));        \
-        VGC_SIGNAL_RET_();                                                                              \
-    }                                                                                                   \
-    auto name_ ## VGC_SIGNAL_REFFUNC_POSTFIX_ () { return std::make_pair(this, &ThisClass::name_); }
-
+            VGC_TRIM_VAEND_(signalId, VGC_TRANSFORM_(VGC_SIG_FWD_, __VA_ARGS__)));                      \
+    }
+    
 #define VGC_EMIT std::ignore =
-
-
-#define VGC_SLOT_REFFUNC_POSTFIX_ _InternalSlotRef_
-#define VGC_SLOT_TRAITS_(name_) _internal_##name_
-#define VGC_SLOT_REF_(name_) SlotRef##name_
-
-#define VGC_SLOT_TRAITS_DEF_(name_)                                     \
-    struct VGC_SLOT_TRAITS_(name_) {                                    \
-        using MyClass = ThisClass;                                      \
-        using SlotInfo = ::vgc::core::internal::SlotInfo;               \
-        /* enable_if_t to remove unused-local-typedef warning */        \
-        static std::enable_if_t<std::is_same_v<MyClass, MyClass>,       \
-        const SlotInfo&> getInfo() {                                    \
-            static SlotInfo s = {::vgc::core::StringId(#name_)};        \
-            return s;                                                   \
-        }                                                               \
-    };
-
-template<typename T, typename Traits_>
-struct WithTraits : T {
-    using T::T;
-    using UnderlyingType = T;
-    using Traits = Traits_;
-};
-
 
 // you can either declare:
 // VGC_SLOT(foo, int);
@@ -617,10 +679,9 @@ struct WithTraits : T {
     static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name_),        \
                   "Slot names are not allowed to be identifiers of superclass "         \
                   "members (except virtual slots).");                                   \
-    VGC_SLOT_TRAITS_DEF_(name_);                                                        \
-    auto name_ ## VGC_SLOT_REFFUNC_POSTFIX_ () {                                        \
-        auto pair = std::make_pair(this, &ThisClass::name_);                            \
-        return WithTraits<decltype(pair), VGC_SLOT_TRAITS_(name_)>(std::move(pair));    \
+    auto VGC_XCONCAT(name_, VGC_SLOT_REFFUNC_POSTFIX_)() {                              \
+        using PointerToMemberSlot = decltype(&ThisClass::name_);                        \
+        return SlotRef<PointerToMemberSlot>(this, &ThisClass::name_);                   \
     }                                                                                   \
     void name_(VGC_PARAMS_(__VA_ARGS__))
 
@@ -629,10 +690,9 @@ struct WithTraits : T {
     static_assert(!VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(SuperClass, name_),        \
                   "Slot names are not allowed to be identifiers of superclass "         \
                   "members (except virtual slots).");                                   \
-    VGC_SLOT_TRAITS_DEF_(name_);                                                        \
-    auto name_ ## VGC_SLOT_REFFUNC_POSTFIX_ () {                                        \
-        auto pair = std::make_pair(this, &ThisClass::name_);                            \
-        return WithTraits<decltype(pair), VGC_SLOT_TRAITS_(name_)>(std::move(pair));    \
+    auto VGC_XCONCAT(name_, VGC_SLOT_REFFUNC_POSTFIX_)() {                              \
+        using PointerToMemberSlot = decltype(&ThisClass::name_);                        \
+        return SlotRef<PointerToMemberSlot>(this, &ThisClass::name_);                   \
     }                                                                                   \
     virtual void name_(VGC_PARAMS_(__VA_ARGS__))
 
@@ -646,79 +706,152 @@ struct WithTraits : T {
     void cls::name(VGC_PARAMS_(__VA_ARGS__))
 
 
-#define VGC_CONNECT_SLOT(sender, signalName, receiver, slotName)                    \
-    [&]() -> ::vgc::core::ConnectionHandle {                                        \
-        using Sender = std::remove_pointer_t<decltype(sender)>;                     \
-        using Signal = decltype(&Sender::signalName);                               \
-        using SignalTraits = typename ::vgc::core::internal::MemberFunctionTraits<Signal>::ReturnType; \
-        using Receiver = std::remove_pointer_t<decltype(receiver)>;                 \
-        using Slot = decltype(&Receiver::slotName);                                 \
-        using SlotTraits = Receiver:: VGC_SLOT_TRAITS_(slotName);                   \
-        static_assert(VGC_CONSTEXPR_IS_TYPE_DEFINED_IN_CLASS_(                      \
-                          Receiver, VGC_SLOT_TRAITS_(slotName)),                    \
-                      #slotName " is not a Slot! Did you forget VGC_SLOT ?");       \
-        static_assert(VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(                    \
-                          Receiver, slotName),                                      \
-                      "Slot " #slotName " has overloads, which is not allowed!");   \
-        return ::vgc::core::internal::SignalOps::connect<Signal>(                   \
-            sender, SignalTraits::getInfo().name,                                   \
-            receiver, SlotTraits::getInfo().name,                                   \
-            &Receiver::slotName);                                                   \
-    }()
-
-#define VGC_CONNECT_FUNC(sender, signalName, function)                              \
-    [&]() -> ::vgc::core::ConnectionHandle {                                        \
-        using Sender = std::remove_pointer_t<decltype(sender)>;                     \
-        using Signal = decltype(&Sender::signalName);                               \
-        using SignalTraits = typename ::vgc::core::internal::MemberFunctionTraits<Signal>::ReturnType; \
-        return ::vgc::core::internal::SignalOps::connect<Signal>(                   \
-            sender, SignalTraits::getInfo().name,                                   \
-            function);                                                              \
-    }()
-
-#define VGC_CONNECT_SLOT2(signal, slot)                                             \
-    [&]() -> ::vgc::core::ConnectionHandle {                                        \
-        auto signalRef = signal ## VGC_SIGNAL_REFFUNC_POSTFIX_ ();                  \
-        auto slotRef = slot ## VGC_SLOT_REFFUNC_POSTFIX_ ();                        \
-        using Sender = std::remove_pointer_t<decltype(signalRef.first)>;            \
-        using Signal = decltype(signalRef.second);                                  \
-        using SignalTraits = typename ::vgc::core::internal::MemberFunctionTraits<Signal>::ReturnType; \
-        using Receiver = std::remove_pointer_t<decltype(slotRef.first)>;            \
-        using Slot = decltype(slotRef.second);                                      \
-        using SlotTraits = decltype(slotRef)::Traits;                               \
-        return ::vgc::core::internal::SignalOps::connect<Signal>(                   \
-            signalRef.first, SignalTraits::getInfo().name,                          \
-            slotRef.first, SlotTraits::getInfo().name,                              \
-            slotRef.second);                                                        \
-    }()
-
-
-#define VGC_CONNECT_DISPATCH_(_1, _2, _3, _4, NAME, ...) NAME
-#define VGC_CONNECT(...) VGC_EXPAND(VGC_CONNECT_DISPATCH_(__VA_ARGS__, VGC_CONNECT_SLOT, VGC_CONNECT_FUNC, VGC_CONNECT_SLOT2, NOOVERLOAD)(__VA_ARGS__))
-
-
-#define VGC_DISCONNECT_SLOT(sender, signalName, receiver, slotName) \
-    [&](){ \
-        static ::vgc::core::StringId signalId_(#signalName); \
-        static ::vgc::core::StringId slotName_(#slotName); \
-        ::vgc::core::internal::SignalOps::disconnect<decltype(&std::remove_pointer_t<decltype(sender)>::signalName)>( \
-            sender, signalId_, receiver, slotName_); \
-    }()
-
-#define VGC_DISCONNECT_HANDLE_OR_FUNC(sender, signalName, functionOrHandle) \
-    [&](){ \
-        static ::vgc::core::StringId signalId_(#signalName); \
-        ::vgc::core::internal::SignalOps::disconnect<decltype(&std::remove_pointer_t<decltype(sender)>::signalName)>( \
-            sender, signalId_, functionOrHandle); \
-    }()
-
-#define VGC_DISCONNECT_DISPATCH_(_1, _2, _3, _4, NAME, ...) NAME
-#define VGC_DISCONNECT(...) VGC_EXPAND(VGC_DISCONNECT_DISPATCH_(__VA_ARGS__, VGC_DISCONNECT_SLOT, VGC_DISCONNECT_HANDLE_OR_FUNC, NOOVERLOAD, NOOVERLOAD)(__VA_ARGS__))
-
 
 namespace vgc::core {
 
 using ConnectionHandle = internal::ConnectionHandle;
+
+
+
+} // namespace vgc::core::internal
+
+
+
+// Simple impl
+
+namespace vgc::core::internal {
+
+template<typename Sig>
+class SignalImpl;
+
+template<typename... Args>
+class SignalImpl<void(Args...)> {
+private:
+    using ArgsTuple = std::tuple<Args...>;
+    using CFnType = void(Args...);
+    using FnType = std::function<CFnType>;
+
+public:
+    /// Triggers the signal, that is, calls all connected functions.
+    ///
+    // XXX should this be non-const to prevent outsiders from emitting the signal?
+    void operator()(Args... args) const {
+        for(const auto& l : listeners_) {
+            l(args...);
+        }
+    }
+
+    /// Deprecated
+    // XXX Deprecated
+    void connect(FnType fn) const {
+        addListener_(fn);
+    }
+
+    void emit(Args... args) const {
+        for(const auto& l : listeners_) {
+            l(args...);
+        }
+    }
+
+private:
+    // This class defines connect helpers and thus needs access to Signal internals.
+    friend class SignalOps;
+
+    struct Listener_ {
+        FnType fn;
+        ConnectionHandle h;
+        std::variant<
+            std::monostate,
+            SlotId,
+            FreeFuncId
+        > id;
+
+        void operator()(Args... args) const {
+            fn(args...);
+        }
+    };
+
+    mutable Array<Listener_> listeners_;
+
+    template<typename Pred>
+    void removeListenerIf_(Pred pred) const {
+        auto it = std::remove_if(listeners_.begin(), listeners_.end(), pred);
+        listeners_.erase(it, listeners_.end());
+    }
+
+    void removeListener_(ConnectionHandle h) const {
+        removeListenerIf_([=](const Listener_& l) {
+            return l.h == h; 
+            });
+    }
+
+    void removeListener_(const Object* o, const StringId& slotName) const {
+        removeListenerIf_([=](const Listener_& l) {
+            return std::holds_alternative<SlotId>(l.id) && std::get<SlotId>(l.id) == SlotId(o, slotName);
+            });
+    }
+
+    void removeListener_(void* freeFunc) const {
+        removeListenerIf_([=](const Listener_& l) {
+            return std::holds_alternative<FreeFuncId>(l.id) && l.id == freeFunc;
+            });
+    }
+
+    ConnectionHandle addListener_(FnType fn) const {
+        auto h = genConnectionHandle();
+        listeners_.append({fn, h, std::monostate{}});
+        return h;
+    }
+
+    ConnectionHandle addListener_(FnType fn, Object* o, StringId slotName) const {
+        auto h = genConnectionHandle();
+        listeners_.append({fn, h, SlotId{o, slotName}});
+        return h;
+    }
+
+    ConnectionHandle addListener_(FnType fn, void* freeFunc) const {
+        auto h = genConnectionHandle();
+        listeners_.append({fn, h, FreeFuncId{freeFunc}});
+        return h;
+    }
+
+    // pointer-to-member-function
+    template<typename Object, typename... SlotArgs>
+    static inline
+        FnType adaptHandler_(Object* o, void (Object::* mfn)(SlotArgs...)) {
+        return [=](Args... args) {
+            auto&& argsTuple = std::forward_as_tuple(o, std::forward<Args>(args)...);
+            applyPartial<1 + sizeof...(SlotArgs)>(mfn, argsTuple);
+        };
+    }
+
+    // free functions and callables
+    template<typename Handler>
+    static inline
+        FnType adaptHandler_(Handler&& f) {
+        using HTraits = SignalFreeHandlerTraits<Handler>;
+        static_assert(std::is_same_v<typename HTraits::ReturnType, void>, "Signal handlers must return void.");
+        return [=](Args... args) {
+            auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);
+            applyPartial<HTraits::arity>(f, argsTuple);
+        };
+    }
+};
+
+
+template<typename T>
+struct IsSignalImpl : std::false_type {};
+
+template<typename Sig>
+struct IsSignalImpl<SignalImpl<Sig>> : std::true_type {};
+
+} // namespace vgc::core::internal
+
+namespace vgc::core {
+
+// XXX temporary until all pieces of code use VGC_SIGNAL
+template<typename... Args>
+using Signal = internal::SignalImpl<void(Args...)>;
 
 } // namespace vgc::core
 

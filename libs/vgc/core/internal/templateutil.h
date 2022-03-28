@@ -57,8 +57,22 @@ SubPackAsTuple_(std::index_sequence<Is...>);
 template<size_t I, size_t N, typename... T>
 using SubPackAsTuple = decltype(SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
 
-
-
 } // namespace vgc::core::internal
+
+namespace vgc::core {
+
+// Available in C++20: std::type_identity
+// Used to establish non-deduced contexts in template argument deduction.
+// e.g. throwLengthError's IntType is deduced from first argument only,
+// then second argument must be convertible to it.
+// todo: move it to some common header or adopt c++20.
+template<typename U>
+struct TypeIdentity_ {
+    using type = U;
+};
+template<typename U>
+using TypeIdentity = typename TypeIdentity_<U>::type;
+
+} // namespace vgc::core
 
 #endif // VGC_CORE_INTERNAL_TEMPLATEUTIL_H

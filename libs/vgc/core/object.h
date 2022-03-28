@@ -913,6 +913,10 @@ protected:
     ///
     ObjPtr<Object> removeObjectFromParent_();
 
+
+    // connect methods here
+
+
 protected:
     mutable internal::SignalHub signalHub_;
 
@@ -1222,13 +1226,17 @@ inline Int Object::numChildObjects() const
     using T##ListIterator = vgc::core::ObjListIterator<T>; \
     using T##ListView     = vgc::core::ObjListView<T>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 VGC_DECLARE_OBJECT(Object);
 
-} // namespace core
-} // namespace vgc
+// Alias of Object::connect
+template<typename ...Args>
+inline ConnectionHandle connect(Args... args) {
+    return Object::connect(std::forward<Args>(args)...);
+}
+
+} // namespace vgc::core
 
 namespace vgc::core::internal {
 
@@ -1253,14 +1261,16 @@ public:
 
         //VGC_CONNECT(this, signalIntDouble, this, fakeSlotInt);
 
-        VGC_CONNECT(this, signalIntDouble, this, slotIntDouble);
-        VGC_CONNECT(this, signalIntDouble, this, slotInt);
-        //VGC_CONNECT(this, signalIntDouble, this, slotUInt); -> static_assert
-        VGC_CONNECT(this, signalIntDouble, staticFuncInt);
-        VGC_CONNECT(this, signalIntDouble, std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
-        VGC_CONNECT(this, signalIntDouble, [&](int, double) { fnIntDoubleCalled = true; } );
-        VGC_CONNECT(this, signalIntDouble, std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
-        VGC_CONNECT(this, signalIntDouble, [&](unsigned int) { fnUIntCalled = true; });
+        connect(signalIntDoubleSignal(), slotIntDoubleSlot());
+        connect(signalIntDoubleSignal(), slotIntSlot());
+        //connect(signalIntDoubleSignal(), slotUIntSlot()); -> static_assert
+        ::vgc::core::internal::SignalFreeHandlerTraits<std::function<void(int, double)>>::ReturnType;
+        ::vgc::core::internal::SignalFreeHandlerTraits<void(*)()>::ReturnType;
+        connect(signalIntDoubleSignal(), &staticFuncInt);
+        connect(signalIntDoubleSignal(), std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
+        connect(signalIntDoubleSignal(), [&](int, double) { fnIntDoubleCalled = true; } );
+        connect(signalIntDoubleSignal(), std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
+        connect(signalIntDoubleSignal(), [&](unsigned int) { fnUIntCalled = true; });
     }
 
     static inline void staticFuncInt() {

@@ -33,6 +33,7 @@
 #include <vgc/core/parse.h>
 
 #include <vgc/core/internal/containerutil.h>
+#include <vgc/core/internal/templateutil.h>
 
 namespace vgc {
 namespace core {
@@ -2084,16 +2085,6 @@ private:
         }
     }
 
-    // Available in C++20
-    // Used to establish non-deduced contexts in template argument deduction.
-    // e.g. throwLengthError's IntType is deduced from first argument only,
-    // then second argument must be convertible to it.
-    // todo: move it to some common header or adopt c++20.
-    template<typename U>
-    struct type_identity {
-        using type = U;
-    };
-
     // Throws NegativeIntegerError if length is negative.
     //
     template<typename IntType>
@@ -2139,7 +2130,7 @@ private:
     }
 
     template<typename IntType>
-    void throwLengthErrorAdd_(IntType current, typename type_identity<IntType>::type addend) const {
+    void throwLengthErrorAdd_(IntType current, TypeIdentity<IntType> addend) const {
         throw LengthError("Exceeding maximum Array length.");
     }
 
