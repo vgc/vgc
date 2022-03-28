@@ -23,6 +23,11 @@
 #include <vgc/core/signal.h>
 #include <vgc/core/object.h>
 
+struct Args {
+    template<size_t N>
+    constexpr Args(const char (&str)[N]) {}
+};
+
 namespace vgc::core::wraps {
 
 class AbstractCppSlotRef {
@@ -159,16 +164,16 @@ struct CppSignalRef : public AbstractCppSignalRef {
         checkCompatibility(this, slotRef);
         const auto& slotParams = slotRef->parameters();
         switch (slotParams.size()) {
-        CREATE_TRANSMITTER_SWITCH_CASE(0)
-        CREATE_TRANSMITTER_SWITCH_CASE(1)
-        CREATE_TRANSMITTER_SWITCH_CASE(2)
-        CREATE_TRANSMITTER_SWITCH_CASE(3)
-        CREATE_TRANSMITTER_SWITCH_CASE(4)
-        CREATE_TRANSMITTER_SWITCH_CASE(5)
-        CREATE_TRANSMITTER_SWITCH_CASE(6)
-        CREATE_TRANSMITTER_SWITCH_CASE(7)
-        CREATE_TRANSMITTER_SWITCH_CASE(8)
-        CREATE_TRANSMITTER_SWITCH_CASE(9)
+        CREATE_TRANSMITTER_SWITCH_CASE(0);
+        CREATE_TRANSMITTER_SWITCH_CASE(1);
+        CREATE_TRANSMITTER_SWITCH_CASE(2);
+        CREATE_TRANSMITTER_SWITCH_CASE(3);
+        CREATE_TRANSMITTER_SWITCH_CASE(4);
+        CREATE_TRANSMITTER_SWITCH_CASE(5);
+        CREATE_TRANSMITTER_SWITCH_CASE(6);
+        CREATE_TRANSMITTER_SWITCH_CASE(7);
+        CREATE_TRANSMITTER_SWITCH_CASE(8);
+        CREATE_TRANSMITTER_SWITCH_CASE(9);
         default:
             return nullptr;
         }
@@ -176,9 +181,6 @@ struct CppSignalRef : public AbstractCppSignalRef {
 };
 
 #undef CREATE_TRANSMITTER_SWITCH_CASE
-
-
-
 
 // to be used with connect
 // should define emit(...)

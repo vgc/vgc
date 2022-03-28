@@ -32,8 +32,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/array.h>
 #include <vgc/core/stringid.h>
-
-#include <vgc/core/internal/templateutil.h>
+#include <vgc/core/templateutil.h>
 
 // XXX rewrite
 /// \class Signal
@@ -97,54 +96,68 @@ class Object;
 namespace internal {
 
 template<typename T, typename Enable = void>
-struct hasSuperClassTypedef_ : std::false_type {};
+struct hasObjectTypedefs_ : std::false_type {};
 template<typename T>
-struct hasSuperClassTypedef_<T, std::void_t<typename T::SuperClass>> : std::true_type {
-    static_assert(std::is_same_v<typename T::SuperClass, typename T::SuperClass::ThisClass>,
-        "Missing VGC_OBJECT(..) in T's superclass."); \
-};
+struct hasObjectTypedefs_<T, std::void_t<typename T::ThisClass, typename T::SuperClass>> :
+    std::is_same<T, typename T::ThisClass> {};
 
+// If T is an Object, it also checks that VGC_OBJECT has been used in T.
+// 
 template<typename T, typename Enable = void>
 struct isObject_ : std::false_type {};
+template<>
+struct isObject_<Object, void> : std::true_type {};
 template<typename T>
 struct isObject_<T, std::enable_if_t<std::is_base_of_v<Object, T>, void>> : std::true_type {
-    static_assert(hasSuperClassTypedef_<T>::value || std::is_same_v<T, Object>, \
-        "Missing VGC_OBJECT(..) in T."); \
+    static_assert(hasObjectTypedefs_<T>::value,
+        "Missing VGC_OBJECT(..) in T.");
 };
+
+} // namespace internal
+
 template <typename T>
-inline constexpr bool isObject = isObject_<T>::value;
+inline constexpr bool isObject = internal::isObject_<T>::value;
 
 // Checks that Type inherits from Object.
 // Also checks that VGC_OBJECT(..) has been used in Type.
 #define CHECK_TYPE_IS_VGC_OBJECT(Type) \
-    static_assert(::vgc::core::internal::isObject<Type>, #Type " should be a vgc::core::Object.");
+    static_assert(::vgc::core::internal::isObject<Type>, #Type " should inherit from vgc::core::Object.");
 
+namespace internal {
+
+// Signals and Slots getters can be identified by signature.
+//template<typename T>
+//struct isSignalOrSlotGetter_ : std::false_type {};
+//template<typename R, typename C, typename... Args>
+//struct isSignalOrSlotGetter_<R (C::*)(Args...) const> {
+//    static constexpr bool value = IsSignalTraits<R>;
+//    static_assert(!value || isObject<C>, "Signals must reside in an Objects.");
+//};
+//template <typename T>
+//inline constexpr bool isSignal = isSignal_<T>::value;
 
 
 using SignalId = std::type_index;
 using SlotId = std::type_index;
 using BoundSlotId = std::pair<const Object*, SlotId>;
-
 using FreeFuncId = void*;
 using ConnectionHandle = UInt64;
 
 
-
-// To enforce the use of VGC_EMIT.
+// To enforce the use of VGC_EMIT when emitting a signal.
 struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
     EmitCheck(const EmitCheck&) = delete;
     EmitCheck& operator=(const EmitCheck&) = delete;
 };
 
-template<typename PointerToMemberSignal>
-struct isPointerToMemberSignal_ : std::false_type {};
+template<typename PointerToMemberFunction>
+struct isSignalFunction_ : std::false_type {};
 template<typename C, typename... Args>
-struct isPointerToMemberSignal_<EmitCheck (C::*)(Args...) const> : std::true_type {
+struct isSignalFunction_<EmitCheck (C::*)(Args...) const> : std::true_type {
     static_assert(isObject<C>, "Signals can only be declared in Objects.");
 };
 template <typename T>
-inline constexpr bool isPointerToMemberSignal = isPointerToMemberSignal_<T>::value;
-
+inline constexpr bool isSignalFunction = isSignalFunction_<T>::value;
 
 
 template<typename R, typename C, typename... Args>
@@ -154,7 +167,6 @@ struct FunctionTraitsDef_ {
     using ArgsTuple = std::tuple<Args...>;
     static constexpr size_t arity = sizeof...(Args);
 };
-
 
 template<typename MemberFunctionPointer>
 struct MemberFunctionTraits_;
@@ -166,6 +178,8 @@ template<typename T>
 using MemberFunctionTraits = MemberFunctionTraits_<std::remove_reference_t<T>>;
 
 
+// XXX could benefit from a reusable FunctionTraits with a category attribute.
+//
 // callable's operator
 template<typename T>
 struct SignalCallableHandlerTraits_;
@@ -179,9 +193,9 @@ struct SignalFreeHandlerTraits_<T, std::void_t<decltype(&T::operator())>> : Sign
 // free function
 template<typename R, typename... Args>
 struct SignalFreeHandlerTraits_<R (*)(Args...), void> : FunctionTraitsDef_<R, void, Args...> {};
+//
 template<typename T>
 using SignalFreeHandlerTraits = SignalFreeHandlerTraits_<std::remove_reference_t<T>>;
-
 
 template<typename T, typename Enable = void>
 struct isSignalFreeHandler_ : std::false_type {};
@@ -191,24 +205,18 @@ template <typename T>
 inline constexpr bool isSignalFreeHandler = isSignalFreeHandler_<T>::value;
 
 
-template<typename T, typename Traits_>
-struct WithTraits : T {
-    using T::T;
-    using UnderlyingType = T;
-    using Traits = Traits_;
-};
-
-
-
 template<class F, class ArgsTuple, std::size_t... I>
 void applyPartialImpl(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
-    std::invoke(std::forward<F>(f), std::get<I>(std::forward<ArgsTuple>(t))...);
+    std::invoke(
+        std::forward<F>(f),
+        std::get<I>(std::forward<ArgsTuple>(t))...);
 }
 
 template<size_t N, class F, class ArgsTuple>
 void applyPartial(F&& f, ArgsTuple&& t) {
     applyPartialImpl(
-        std::forward<F>(f), std::forward<ArgsTuple>(t),
+        std::forward<F>(f),
+        std::forward<ArgsTuple>(t),
         std::make_index_sequence<N>{});
 }
 
@@ -217,14 +225,14 @@ ConnectionHandle genConnectionHandle();
 
 // XXX BoundSignal/BoundSlot instead of SignalRef/SlotRef ?
 
-template<typename PointerToMemberSignal>
+template<typename SignalFunctionT>
 class SignalRef {
 public:
-    static_assert(isSignal<PointerToMemberSignal>);
-
-    using MemberType = PointerToMemberSignal;
-    using Obj = typename MemberFunctionTraits<PointerToMemberSignal>::Obj;
+    using SignalFunction = SignalFunctionT;
+    using Obj = typename MemberFunctionTraits<SignalFunction>::Obj;
     
+    static_assert(isSignal<SignalFunction>);
+
     SignalRef(const Obj* object) :
         object_(const_cast<Obj*>(object)) {}
 
@@ -240,14 +248,14 @@ private:
 };
 
 
-template<typename PointerToMemberSlot> // XXX SlotFunction
+template<typename SlotFunctionT>
 class SlotRef {
 public:
-    using MFnType = PointerToMemberSlot;
-    using Obj = typename MemberFunctionTraits<PointerToMemberSlot>::Obj;
+    using SlotFunction = SlotFunctionT;
+    using Obj = typename MemberFunctionTraits<SlotFunction>::Obj;
 
-    SlotRef(const Obj* object, PointerToMemberSlot mfn_) :
-        object_(const_cast<Obj*>(object)), mfn_(mfn_) {}
+    SlotRef(const Obj* object, SlotFunction mfn) :
+        object_(const_cast<Obj*>(object)), mfn_(mfn) {}
 
     SlotRef(const SlotRef&) = delete;
     SlotRef& operator=(const SlotRef&) = delete;
@@ -262,17 +270,16 @@ public:
 
 private:
     Obj* object_;
-    PointerToMemberSlot mfn_;
+    SlotFunction mfn_;
 };
 
 
-// new impl
-
 // This is a polymorphic adapter class for slots and free functions.
-// It is used to store signal receivers in a single container as well as
-// provide a common signature for all the connected receivers of a given
-// signal. The input argument list is forwarded to the receiver and truncated
-// if necessary.
+// It is used to store the handlers of all signals of a given object
+// in a single container.
+// Moreover it provides a common handler signature per signal.
+// Handlers with less arguments than the signal they are connected
+// to are supported. The tail arguments are simply omitted.
 // For instance, a handler adapting slot(double a) to
 // signal(int a, double b) would be equivalent to this:
 // handler(int&& a, double&& b) { slot(std::forward<int>(a)); }
@@ -565,58 +572,6 @@ public:
 } // namespace vgc::core
 
 
-// XXX move this in pp.h
-
-#define VGC_STR(x) #x
-#define VGC_XSTR(x) VGC_STR(x)
-
-#define VGC_CONCAT(x, y) x##y
-#define VGC_XCONCAT(x, y) VGC_CONCAT(x,y)
-
-#define VGC_EXPAND(x) x
-#define VGC_EXPAND2(x) VGC_EXPAND(x)
-
-#define VGC_FIRST_(a, ...) a
-#define VGC_SUBLIST_1_END_(_0,...) __VA_ARGS__
-#define VGC_SUBLIST_2_END_(_0,_1,...) __VA_ARGS__
-
-#define VGC_TVE_0_(_)
-#define VGC_TVE_1_(x, _)   x
-#define VGC_TVE_2_(x, ...) x, VGC_EXPAND(VGC_TVE_1_(__VA_ARGS__))
-#define VGC_TVE_3_(x, ...) x, VGC_EXPAND(VGC_TVE_2_(__VA_ARGS__))
-#define VGC_TVE_4_(x, ...) x, VGC_EXPAND(VGC_TVE_3_(__VA_ARGS__))
-#define VGC_TVE_5_(x, ...) x, VGC_EXPAND(VGC_TVE_4_(__VA_ARGS__))
-#define VGC_TVE_6_(x, ...) x, VGC_EXPAND(VGC_TVE_5_(__VA_ARGS__))
-#define VGC_TVE_7_(x, ...) x, VGC_EXPAND(VGC_TVE_6_(__VA_ARGS__))
-#define VGC_TVE_8_(x, ...) x, VGC_EXPAND(VGC_TVE_7_(__VA_ARGS__))
-#define VGC_TVE_9_(x, ...) x, VGC_EXPAND(VGC_TVE_8_(__VA_ARGS__))
-#define VGC_TVE_DISPATCH_(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,S,...) S
-// ... must end with VaEnd
-#define VGC_TRIM_VAEND_(...) \
-  VGC_EXPAND(VGC_TVE_DISPATCH_(__VA_ARGS__, \
-    VGC_TVE_9_,VGC_TVE_8_,VGC_TVE_7_,VGC_TVE_6_,VGC_TVE_5_, \
-    VGC_TVE_4_,VGC_TVE_3_,VGC_TVE_2_,VGC_TVE_1_,VGC_TVE_0_ \
-  )(__VA_ARGS__))
-
-// XXX check that the VGC_EXPAND fix for msvc works with all F
-#define VGC_TF_0_(F, _)      VaEnd
-#define VGC_TF_1_(F, x, ...) F(x), VaEnd
-#define VGC_TF_2_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_1_(F, __VA_ARGS__))
-#define VGC_TF_3_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_2_(F, __VA_ARGS__))
-#define VGC_TF_4_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_3_(F, __VA_ARGS__))
-#define VGC_TF_5_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_4_(F, __VA_ARGS__))
-#define VGC_TF_6_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_5_(F, __VA_ARGS__))
-#define VGC_TF_7_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_6_(F, __VA_ARGS__))
-#define VGC_TF_8_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_7_(F, __VA_ARGS__))
-#define VGC_TF_9_(F, x, ...) F(x), VGC_EXPAND(VGC_TF_8_(F, __VA_ARGS__))
-#define VGC_TF_DISPATCH_(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,S,...) S
-// ... must end with VaEnd
-#define VGC_TRANSFORM_(F, ...)                              \
-  VGC_EXPAND(VGC_TF_DISPATCH_(__VA_ARGS__,                  \
-    VGC_TF_9_,VGC_TF_8_,VGC_TF_7_,VGC_TF_6_,VGC_TF_5_,      \
-    VGC_TF_4_,VGC_TF_3_,VGC_TF_2_,VGC_TF_1_,VGC_TF_0_       \
-  )(F, __VA_ARGS__))
-
 #define VGC_SIG_PTYPE2_(t, n) t
 #define VGC_SIG_PNAME2_(t, n) n
 #define VGC_SIG_PBOTH2_(t, n) t n
@@ -696,7 +651,7 @@ public:
     }                                                                                   \
     virtual void name_(VGC_PARAMS_(__VA_ARGS__))
 
-// XXX add comment to explain SlotPrivateVCheck_
+
 #define VGC_OVERRIDE_SLOT(...) VGC_EXPAND(VGC_OVERRIDE_SLOT_(__VA_ARGS__, VaEnd))
 #define VGC_OVERRIDE_SLOT_(name, ...) \
     void name(VGC_PARAMS_(__VA_ARGS__)) override

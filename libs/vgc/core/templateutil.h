@@ -14,13 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_INTERNAL_TEMPLATEUTIL_H
-#define VGC_CORE_INTERNAL_TEMPLATEUTIL_H
+#ifndef VGC_CORE_TEMPLATEUTIL_H
+#define VGC_CORE_TEMPLATEUTIL_H
 
 #include <tuple>
 #include <type_traits>
 
-namespace vgc::core::internal {
+namespace vgc::core {
+
+namespace internal {
 
 // Used to inline sfinae-based tests on type ArgType.
 // see VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_ for an example.
@@ -35,33 +37,22 @@ struct LambdaSfinae {
     }
 };
 
+} // namespace internal
 
 // compile-time evaluates to true only if &cls::id is a valid expression.
-#define VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS_(cls, id)                    \
-  ::vgc::core::internal::LambdaSfinae<cls*>::check(                           \
-      [](auto* v)                                                             \
-          -> std::void_t<decltype(&std::remove_pointer_t<decltype(v)>::id)> { \
-      })
+#define VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS(cls, id)                           \
+    ::vgc::core::internal::LambdaSfinae<cls*>::check(                               \
+        [](auto* v)                                                                 \
+            -> std::void_t<decltype(&std::remove_pointer_t<decltype(v)>::id)> {     \
+        })
 
-#define VGC_CONSTEXPR_IS_TYPE_DEFINED_IN_CLASS_(cls, tname)                    \
-  ::vgc::core::internal::LambdaSfinae<cls*>::check(                            \
-      [](auto* v)                                                              \
-          -> std::void_t<typename std::remove_pointer_t<decltype(v)>::tname> { \
-      })
+#define VGC_CONSTEXPR_IS_TYPE_DECLARED_IN_CLASS(cls, tname)                         \
+    ::vgc::core::internal::LambdaSfinae<cls*>::check(                               \
+        [](auto* v)                                                                 \
+            -> std::void_t<typename std::remove_pointer_t<decltype(v)>::tname> {    \
+        })
 
-
-template<std::size_t I, typename... T, std::size_t... Is>
-constexpr std::tuple<std::tuple_element_t<I + Is, std::tuple<T...>>...>
-SubPackAsTuple_(std::index_sequence<Is...>);
-
-template<size_t I, size_t N, typename... T>
-using SubPackAsTuple = decltype(SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
-
-} // namespace vgc::core::internal
-
-namespace vgc::core {
-
-// Available in C++20: std::type_identity
+// Similar as std::type_identity available in C++20.
 // Used to establish non-deduced contexts in template argument deduction.
 // e.g. throwLengthError's IntType is deduced from first argument only,
 // then second argument must be convertible to it.
@@ -73,6 +64,21 @@ struct TypeIdentity_ {
 template<typename U>
 using TypeIdentity = typename TypeIdentity_<U>::type;
 
+template<std::size_t I, typename... T, std::size_t... Is>
+constexpr std::tuple<std::tuple_element_t<I + Is, std::tuple<T...>>...>
+    SubPackAsTuple_(std::index_sequence<Is...>);
+
+template<size_t I, size_t N, typename... T>
+using SubPackAsTuple = decltype(SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
+
+
+template<typename T, typename Traits_>
+struct WithTraits : T {
+    using T::T;
+    using UnderlyingType = T;
+    using Traits = Traits_;
+};
+
 } // namespace vgc::core
 
-#endif // VGC_CORE_INTERNAL_TEMPLATEUTIL_H
+#endif // VGC_CORE_TEMPLATEUTIL_H

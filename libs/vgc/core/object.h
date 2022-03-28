@@ -284,17 +284,18 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 /// };
 /// ```
 ///
-/// For now, it simply ensures that the destructor is protected. In the future,
-/// it may also provide some introspection features.
-///
-#define VGC_OBJECT(T, S)                                   \
-    public:                                                \
-        using ThisClass = T;                               \
-        using SuperClass = S;                              \
-        static_assert(std::is_same_v<SuperClass, SuperClass::ThisClass>, \
-            "You forgot to use VGC_OBJECT in " #S);        \
-    protected:                                             \
-        ~T() override = default;                           \
+#define VGC_OBJECT(T, S)                                                        \
+    public:                                                                     \
+        using ThisClass = T;                                                    \
+        using SuperClass = S;                                                   \
+        static_assert(std::is_base_of_v<::vgc::core::Object, ThisClass>,        \
+            "Cannot use VGC_OBJECT(..) in class that does not inherit from Object."); \
+        static_assert(std::is_base_of_v<SuperClass, ThisClass>,                 \
+            "ThisClass is expected to inherit from SuperClass.");               \
+        static_assert(hasObjectTypedefs_<SuperClass>::value,            \
+            "Missing VGC_OBJECT(..) in SuperClass.");                           \
+    protected:                                                                  \
+        ~T() override = default;                                                \
     private:
 
 /// This macro ensures that unsafe base protected methods are not accessible in
