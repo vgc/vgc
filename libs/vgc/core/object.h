@@ -922,7 +922,7 @@ protected:
     mutable internal::SignalHub signalHub_;
 
 private:
-    friend class internal::SignalOps;
+    friend class internal::SignalHubAccess;
     friend class internal::ObjPtrAccess;
     mutable Int64 refCount_; // If >= 0: isAlive = true, refCount = refCount_
                              // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
