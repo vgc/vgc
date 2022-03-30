@@ -156,20 +156,21 @@ using ConnectionHandle = UInt64;
 
 
 
-template<typename R, typename C, typename... Args>
+template<typename C, bool IsCallOperator, typename R, typename... Args>
 struct FunctionTraitsDef_ {
     using ReturnType = R;
     using Obj = C;
     using ArgsTuple = std::tuple<Args...>;
     static constexpr size_t arity = sizeof...(Args);
+    static constexpr bool isCallOperator = IsCallOperator;
 };
 
 template<typename MemberFunctionPointer>
 struct MemberFunctionTraits_;
 template<typename R, typename C, typename... Args>
-struct MemberFunctionTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, C, Args...> {};
+struct MemberFunctionTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, false, R, Args...> {};
 template <typename R, typename C, typename... Args>
-struct MemberFunctionTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<R, C, Args...> {};
+struct MemberFunctionTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, false, R, Args...> {};
 template<typename T>
 using MemberFunctionTraits = MemberFunctionTraits_<std::remove_reference_t<T>>;
 
@@ -180,7 +181,9 @@ using MemberFunctionTraits = MemberFunctionTraits_<std::remove_reference_t<T>>;
 template<typename T>
 struct SignalCallableHandlerTraits_;
 template<typename R, typename C, typename... Args>
-struct SignalCallableHandlerTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<R, C, Args...> {};
+struct SignalCallableHandlerTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, true, R, Args...> {};
+template<typename R, typename C, typename... Args>
+struct SignalCallableHandlerTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, true, R, Args...> {};
 // primary with fallback
 template<typename T, typename Enable = void>
 struct SignalFreeHandlerTraits_;
@@ -188,7 +191,7 @@ template<typename T>
 struct SignalFreeHandlerTraits_<T, std::void_t<decltype(&T::operator())>> : SignalCallableHandlerTraits_<decltype(&T::operator())> {};
 // free function
 template<typename R, typename... Args>
-struct SignalFreeHandlerTraits_<R (*)(Args...), void> : FunctionTraitsDef_<R, void, Args...> {};
+struct SignalFreeHandlerTraits_<R (*)(Args...), void> : FunctionTraitsDef_<void, false, R, Args...> {};
 //
 template<typename T>
 using SignalFreeHandlerTraits = SignalFreeHandlerTraits_<std::remove_reference_t<T>>;
@@ -218,33 +221,6 @@ void applyPartial(F&& f, ArgsTuple&& t) {
 
 VGC_CORE_API
 ConnectionHandle genConnectionHandle();
-
-template<typename SlotFunctionT>
-class SlotRef {
-public:
-    using SlotFunction = SlotFunctionT;
-    using FnTraits = MemberFunctionTraits<SlotFunction>;
-    using Obj = typename FnTraits::Obj;
-    using ArgsTuple = typename FnTraits::ArgsTuple;
-
-    SlotRef(const Obj* object, SlotFunction mfn) :
-        object_(const_cast<Obj*>(object)), mfn_(mfn) {}
-
-    SlotRef(const SlotRef&) = delete;
-    SlotRef& operator=(const SlotRef&) = delete;
-
-    Obj* object() const {
-        return object_;
-    }
-
-    SlotFunction mfn() const {
-        return mfn_;
-    }
-
-private:
-    Obj* const object_;
-    SlotFunction const mfn_;
-};
 
 
 // This is a polymorphic adapter class for slots and free functions.
@@ -340,8 +316,7 @@ public:
 
     ConnectionHandle connect(SignalId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, const SignalHandlerId& handlerId) {
         auto h = genConnectionHandle();
-        // XXX use emplaceLast when possible
-        connections_.emplace(connections_.end(), std::move(transmitter), h, signalId, handlerId);
+        connections_.emplaceLast(std::move(transmitter), h, signalId, handlerId);
         return h;
     }
 
@@ -392,21 +367,57 @@ private:
     }
 };
 
+// Friend of vgc::core::Object.
 struct SignalHubAccess {
     template<typename = void>
-    static SignalHub* get(Object* o) { return &o->signalHub_; }
+    static constexpr SignalHub* get(Object* o) { return &o->signalHub_; }
 };
 
 // todo: subclass SignalRef in the getter (VGC_SIGNAL) to define emit
 // todo: add SlotTag slot in Object
 
-template<typename Derived, typename ObjT, typename... Args>
+template<typename UniqueIdentifierTag, typename SlotFunctionT>
+class SlotRef {
+public:
+    using UIdTag = UniqueIdentifierTag;
+    using SlotFunction = SlotFunctionT;
+    using FnTraits = MemberFunctionTraits<SlotFunction>;
+    using Obj = typename FnTraits::Obj;
+    using ArgsTuple = typename FnTraits::ArgsTuple;
+
+    static_assert(isObject<Obj>, "Slots must be declared only in Objects");
+
+    SlotRef(const Obj* object, SlotFunction mfn) :
+        object_(const_cast<Obj*>(object)), mfn_(mfn) {}
+
+    SlotRef(const SlotRef&) = delete;
+    SlotRef& operator=(const SlotRef&) = delete;
+
+    static constexpr SlotId id() const {
+        return SlotId(typeid(UniqueIdentifierTag));
+    }
+
+    constexpr Obj* object() const {
+        return object_;
+    }
+
+    constexpr const SlotFunction& mfn() const {
+        return mfn_;
+    }
+
+private:
+    Obj* const object_;
+    SlotFunction const mfn_;
+};
+
+template<typename UniqueIdentifierTag, typename ObjT, typename... Args>
 class SignalRef {
 public:
+    using UIdTag = UniqueIdentifierTag;
     using Obj = ObjT;
     using ArgsTuple = std::tuple<Args...>;
 
-    static_assert(std::is_base_of_v<SignalRef, Derived>);
+    static_assert(isObject<Obj>, "Signals must be declared only in Objects");
 
     SignalRef(const Obj* object) :
         object_(const_cast<Obj*>(object)) {}
@@ -414,87 +425,51 @@ public:
     SignalRef(const SignalRef&) = delete;
     SignalRef& operator=(const SignalRef&) = delete;
 
-    Obj* object() const {
+    static constexpr SignalId id() const {
+        return SignalId(typeid(UniqueIdentifierTag));
+    }
+
+    constexpr Obj* object() const {
         return object_;
     }
 
-    template<typename U, typename SlotFunctionT>
-    static ConnectionHandle connect(SlotRef<U, SlotFunctionT>&& slot) const {
-    
-        // XXX make sender listen on receiver destroy to automatically disconnect signals
-
+    template<typename UIdTag, typename SlotFunctionT>
+    static ConnectionHandle connect(SlotRef<UIdTag, SlotFunctionT>&& slot) const {
+        // XXX make owner listen on receiver destroy to automatically disconnect signals
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
             SignalTransmitter<Args...>::create(slot.object(), slot.mfn()));
+        return SignalHubAccess::get(object_).connect(id(), std::move(transmitter), BoundSlotId(slot.object(), slot.id()));
+    }
 
-        return SignalHubAccess::get(object_).connect(typeid(Derived), std::move(transmitter), receiver, slotId);
+    template<typename R, typename... FnArgs>
+    static ConnectionHandle connect(R (*callback)(Args...)) const {
+        std::unique_ptr<AbstractSignalTransmitter> transmitter(
+            SignalTransmitter<Args...>::create(callback));
+        return SignalHubAccess::get(object_).connect(id(), std::move(transmitter), FreeFuncId(callback));
+    }
+
+    template<typename Callable, std::enable_if_t<SignalFreeHandlerTraits<Callable>::isCallOperator, int> = 0>
+    static ConnectionHandle connect(Callable&& callable) const {
+        std::unique_ptr<AbstractSignalTransmitter> transmitter(
+            SignalTransmitter<Args...>::create(callable));
+        return SignalHubAccess::get(object_).connect(id(), std::move(transmitter), std::monostate{});
     }
 
 private:
     Obj* const object_;
 };
 
+// todo: add vector<pair<obj*, connectCount>> in Object to track listened objects and disconnect on destroy.
+// 
 
-class SignalHubAccess {
+
+
+// XXX to remove
+class SignalOps {
 public:
 
-    static 
-    // slot
-    template<typename Signal, typename Sender, typename Receiver, typename... SlotArgs>
-    static ConnectionHandle
-    connect(const Sender* sender, SignalId signalId, const TypeIdentity<Receiver>* receiver, SlotId slotId, void (Receiver::*slot)(SlotArgs...)) {
-
-        
-        static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
-        static_assert(isObject<Sender>, "Signals must reside in Objects");
-        static_assert(isObject<Receiver>, "Slots must reside in Objects");
-
-        
-    }
-
-    template<typename PointerToMemberSignal, typename PointerToMemberSlot>
-    ConnectionHandle connect(const internal::SignalRef<PointerToMemberSignal>& sg, 
-                             const internal::SlotRef<PointerToMemberSlot>& sl) {
-        
-        // WIP either have Signal Slot as template params + 
-
-        auto* sender = sg.object();
-        auto* receiver = sl.object();
-        static_assert(isObject<Sender>, "Signals must reside in Objects");
-        static_assert(isObject<Receiver>, "Slots must reside in Objects");
-
-        return internal::SignalOps::connect<PointerToMemberSignal>(
-            sg.object(), std::type_index(typeid(PointerToMemberSignal)),
-            sl.object(), std::type_index(typeid(PointerToMemberSlot)),
-            sl.mfn());
-    }
-
-
-
-    // free-function
-    template<typename Signal, typename Sender, typename... FnArgs>
-    static ConnectionHandle
-    connect(const Sender* sender, SignalId signalId, void (*ffn)(FnArgs...)) {
-        static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
-        static_assert(isObject<Sender>, "Signals must reside in Objects");
-
-        std::unique_ptr<AbstractSignalTransmitter> transmitter(
-            SignalTransmitterTypeFor<Signal>::create(ffn));
-
-        return sender->signalHub_.connectCallback(signalId, std::move(transmitter), ffn);
-    }
-
-    // free-callables
-    template<typename Signal, typename Sender, typename Fn>
-    static ConnectionHandle
-    connect(const Sender* sender, SignalId signalId, Fn&& fn) {
-        static_assert(isSignal<Signal>, "signal must be a Signal (declared with VGC_SIGNAL).");
-        static_assert(isObject<Sender>, "Signals must reside in Objects");
-
-        std::unique_ptr<AbstractSignalTransmitter> transmitter(
-            SignalTransmitterTypeFor<Signal>::create(std::forward<Fn>(fn)));
-
-        return sender->signalHub_.connectCallback(signalId, std::move(transmitter));
-    }
+   
+  
 
     template<typename Signal, typename Sender, typename... Args>
     static void
@@ -505,26 +480,6 @@ public:
         return sender->signalHub_.disconnect(std::forward<Args>(args)...);
     }
 
-
-
-
-    template<typename PointerToMemberSignal, typename SignalFreeHandler>
-    std::enable_if_t<internal::isSignalFreeHandler<SignalFreeHandler&&>, ConnectionHandle>
-        //ConnectionHandle
-        connect(const internal::SignalRef<PointerToMemberSignal>& sg, 
-            SignalFreeHandler&& handler) {
-        return internal::SignalOps::connect<PointerToMemberSignal>(
-            sg.object(), std::type_index(typeid(PointerToMemberSignal)),
-            std::forward<SignalFreeHandler>(handler));
-    }
-
-    template<typename PointerToMemberSignal, typename PointerToMemberSlot>
-    ConnectionHandle disconnect(const internal::SignalRef<PointerToMemberSignal>& sg, 
-        const internal::SlotRef<PointerToMemberSlot>& sl) {
-        return internal::SignalOps::disconnect<PointerToMemberSignal>(
-            sg.object(), std::type_index(typeid(PointerToMemberSignal)),
-            sl.object(), std::type_index(typeid(PointerToMemberSlot)));
-    }
 
     template<typename PointerToMemberSignal, typename FunctionOrHandle>
     ConnectionHandle disconnect(const internal::SignalRef<PointerToMemberSignal>& sg, 

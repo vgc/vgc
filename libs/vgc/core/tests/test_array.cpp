@@ -613,6 +613,30 @@ TEST(TestArray, RemoveAt) {
     EXPECT_THROW(a.removeAt(a.length()), IndexError);
 }
 
+TEST(TestArray, RemoveOne) {
+    Array<int> a = {8, 10, 12, 42, 12, 15};
+    Array<int> b = {8, 10, 42, 12, 15};
+    Array<int> c = {8, 42, 12, 15};
+    a.removeOne(12); EXPECT_EQ(a, b);
+    a.removeOne(10); EXPECT_EQ(a, c);
+}
+
+TEST(TestArray, RemoveFirst) {
+    Array<int> a = {8, 10, 42, 12, 15};
+    Array<int> b = {10, 42, 12, 15};
+    Array<int> c = {12, 15};
+    a.removeFirst(1); EXPECT_EQ(a, b);
+    a.removeFirst(2); EXPECT_EQ(a, c);
+    EXPECT_THROW(a.removeFirst(100), IndexError);
+    EXPECT_THROW(a.removeFirst(-1), IndexError);
+}
+
+TEST(TestArray, RemoveIf) {
+    Array<int> a = {8, 10, 42, 12, 7, 15};
+    Array<int> b = {8, 42, 7, 15};
+    a.removeIf([](int a){ return a >= 10 && a < 20; }); EXPECT_EQ(a, b);
+}
+
 TEST(TestArray, RemoveRange) {
     Array<int> a = {8, 10, 42, 12, 15};
     Array<int> b = {8, 12, 15};
@@ -635,16 +659,17 @@ TEST(TestArray, AppendAndPrepend) {
     EXPECT_EQ(a, b);
     a.clear();
     a.prepend(12);
-    a.prepend(42);
+    a.emplaceLast(42);
     a.prepend(10);
     EXPECT_EQ(a, b);
 
     Array<Array<int>> c = {{1, 2}, {3, 4}};
     Array<int> d = {5, 6};
     Array<int> e = {7, 8};
-    Array<Array<int>> f = {{7, 8}, {1, 2}, {3, 4}, {5, 6}};
+    Array<Array<int>> f = {{7, 8}, {1, 2}, {3, 4}, {5, 6}, {7, 7}};
     c.append(std::move(d));
     c.prepend(std::move(e));
+    c.emplaceLast(2, 7);
     EXPECT_EQ(c, f);
     EXPECT_EQ(d.length(), 0);
     EXPECT_EQ(e.length(), 0);

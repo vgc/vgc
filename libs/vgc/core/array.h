@@ -1217,6 +1217,58 @@ public:
         erase_(i);
     }
 
+    /// Removes the first element that compares equal to \p value, shifting all subsequent elements one
+    /// index to the left.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {5, 12, 11, 12};
+    /// a.removeOne(12);           // => [5, 11, 12]
+    /// a.removeOne(13);           // => [5, 12, 11, 12]
+    /// ```
+    ///
+    void removeOne(const T value) {
+        auto it = std::find(begin(), end(), value);
+        if (it != end()) {
+            erase_(unwrapIterator(it));
+        }
+    }
+
+    /// Removes the \p count first elements from the container.
+    /// All subsequent elements are shifted to the left.
+    ///
+    /// Throws IndexError if [0, count) isn't a valid range in this Array, that
+    /// is, if it doesn't satisfy:
+    ///
+    ///     0 <= count <= length()
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
+    /// a.removeFirst(3);          // => [12, 15]
+    /// a.removeFirst(100);        // => vgc::core::IndexError!
+    /// a.removeFirst(-1);         // => vgc::core::IndexError!
+    /// ```
+    ///
+    void removeFirst(Int count) {
+        checkInRange_(i);
+        erase_(data_, data_ + count);
+    }
+
+    /// Removes all elements that satisfy the predicate \p pred from the container.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {5, 12, 11, 12, 14};
+    /// a.removeIf([](double v){ return v > 11; }); // => [5, 11]
+    /// ```
+    ///
+    template<typename Pred>
+    void removeIf(Pred pred) {
+        const auto end_ = end();
+        auto it = std::remove_if(begin(), end_, pred);
+        auto r = std::distance(it, end_);
+        erase_(it, end_);
+        return r;
+    }
+
     /// Removes all elements from index \p i1 (inclusive) to index \p i2
     /// (exclusive), shifting all subsequent elements to the left.
     ///
@@ -1386,6 +1438,13 @@ public:
     ///
     void preextend(std::initializer_list<T> ilist) {
         insertRange_(0, ilist.begin(), ilist.end());
+    }
+
+    /// Construct-appends a value with arguments \p args, at the end of this Array.
+    ///
+    template<typename... Args>
+    reference emplaceLast(Args&&... args) {
+        emplaceAt_(length_, std::forward<Args>args...);
     }
 
     /// Removes the first element of this Array, shifting all existing elements
@@ -2015,13 +2074,15 @@ private:
     // Expects: (0 <= i < length_)
     //
     pointer erase_(const Int i) noexcept {
-        const pointer data = data_;
-        const pointer oldEnd = data + length_;
-        const pointer erasePtr = data + i;
-        std::move(erasePtr + 1, oldEnd, erasePtr);
+        return erase_(data_ + i);
+    }
+
+    pointer erase_(const pointer at) noexcept {
+        const pointer oldEnd = data_ + length_;
+        std::move(at + 1, oldEnd, at);
         destroyElement_(oldEnd - 1);
         --length_;
-        return erasePtr;
+        return at;
     }
 
     pointer erase_(const pointer first, const pointer last) noexcept {
