@@ -326,6 +326,8 @@ public:
     // Must be called by Object's destructor.
     static void onDestroy(Object* sender) {
         auto& hub = access(sender);
+
+        // XXX TODO !!!
     }
 
     static ConnectionHandle connect(Object* sender, SignalId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, const SignalHandlerId& handlerId) {
@@ -587,9 +589,6 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
 // 
 // VGC_SIGNAL(changed, (args..))
 // VGC_SLOT(onChangedSlot)
-//
-// SlotTag in Object
-//
 
 
 /// Macro to define VGC Object Signals.
@@ -599,7 +598,7 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
 /// \code
 /// struct A : vgc::core::Object {
 ///     VGC_SIGNAL(signal1);
-///     VGC_SIGNAL(signal2, arg0);
+///     VGC_SIGNAL(signal2, (type0, arg0), (type1, arg1));
 /// };
 /// \endcode
 ///
@@ -628,6 +627,7 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
 
 #define VGC_EMIT std::ignore =
 
+
 #define VGC_SLOT(name_)                                                                                 \
     auto name_##Slot() {                                                                                \
         struct Tag {};                                                                                  \
@@ -637,15 +637,29 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
         return SlotRef(this, &MyClass::name_);                                                          \
     }
 
+#define VGC_SLOT_ALIAS(name_, funcName_)                                                                \
+    auto name_() {                                                                                      \
+        struct Tag {};                                                                                  \
+        using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
+        using SlotRef = ::vgc::core::internal::SlotRef<                                                 \
+            Tag, decltype(&MyClass::funcName_)>;                                                        \
+        return SlotRef(this, &MyClass::funcName_);                                                      \
+    }
 
 
 namespace vgc::core {
 
 using ConnectionHandle = internal::ConnectionHandle;
 
-
-
 } // namespace vgc::core::internal
+
+
+
+
+
+
+
+
 
 
 

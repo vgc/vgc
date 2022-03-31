@@ -31,8 +31,8 @@ namespace vgc::core::wraps {
 
 class AbstractCppSlotRef {
 protected:
-    AbstractCppSlotRef(const core::Object* obj, std::initializer_list<std::type_index> parameters) :
-        obj_(const_cast<core::Object*>(obj)), parameters_(parameters) {}
+    AbstractCppSlotRef(const core::Object* obj, core::internal::SlotId id, std::initializer_list<std::type_index> parameters) :
+        obj_(const_cast<core::Object*>(obj)), id_(id), parameters_(parameters) {}
 
 public:
     const auto& parameters() const {
@@ -43,11 +43,16 @@ public:
         return obj_;
     }
 
+    const core::internal::SlotId& id() const {
+        return id_;
+    }
+
     virtual py::cpp_function getPyWrappedBoundSlot() const = 0;
 
 protected:
     std::vector<std::type_index> parameters_;
     core::Object* obj_;
+    core::internal::SlotId id_;
 };
 
 template<typename... SlotArgs>
@@ -78,8 +83,8 @@ class CppSlotRefImpl : public CppSlotRef<SlotArgs...> {
     using BoundSlot = typename SuperClass::BoundSlot;
 
 public:
-    CppSlotRefImpl(const Obj* obj, MFnT mfn) :
-        SuperClass(obj, {std::type_index(typeid(SlotArgs))...}),
+    CppSlotRefImpl(const Obj* obj, core::internal::SlotId id, MFnT mfn) :
+        SuperClass(obj, id, {std::type_index(typeid(SlotArgs))...}),
         mfn_(mfn) {}
 
 private:
@@ -107,7 +112,7 @@ using CppSlotRefTypeFromArgsTuple = typename CppSlotRefTypeFromArgsTuple_<ArgsTu
 
 class AbstractCppSignalRef {
 protected:
-    AbstractCppSignalRef(const Object* obj, const core::internal::SignalId& id, std::initializer_list<std::type_index> parameters) :
+    AbstractCppSignalRef(const Object* obj, core::internal::SignalId id, std::initializer_list<std::type_index> parameters) :
         obj_(const_cast<core::Object*>(obj)), id_(id), parameters_(parameters) {}
 
 public:
@@ -119,6 +124,10 @@ public:
         return obj_;
     }
 
+    const core::internal::SlotId& id() const {
+        return id_;
+    }
+
     virtual [[nodiscard]] core::internal::AbstractSignalTransmitter*
     createTransmitter(AbstractCppSlotRef* slotRef) const = 0;
 
@@ -128,6 +137,7 @@ protected:
     core::internal::SignalId id_;
 };
 
+// XXX split this, we want a fallback to python if basic compatibility is met (slot sig not too long)
 void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCppSlotRef* slotRef) {
     const auto& signalParams = signalRef->parameters();
     const auto& slotParams = slotRef->parameters();
@@ -160,6 +170,9 @@ struct CppSignalRef : public AbstractCppSignalRef {
 
     virtual [[nodiscard]] core::internal::AbstractSignalTransmitter*
     createTransmitter(AbstractCppSlotRef* slotRef) const override {
+
+        // XXX add fallback to python transmitter
+
         checkCompatibility(this, slotRef);
         const auto& slotParams = slotRef->parameters();
         switch (slotParams.size()) {
@@ -169,10 +182,6 @@ struct CppSignalRef : public AbstractCppSignalRef {
         CREATE_TRANSMITTER_SWITCH_CASE(3);
         CREATE_TRANSMITTER_SWITCH_CASE(4);
         CREATE_TRANSMITTER_SWITCH_CASE(5);
-        CREATE_TRANSMITTER_SWITCH_CASE(6);
-        CREATE_TRANSMITTER_SWITCH_CASE(7);
-        CREATE_TRANSMITTER_SWITCH_CASE(8);
-        CREATE_TRANSMITTER_SWITCH_CASE(9);
         default:
             return nullptr;
         }
