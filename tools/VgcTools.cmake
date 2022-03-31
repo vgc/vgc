@@ -96,10 +96,10 @@ function(vgc_add_library LIB_NAME)
 
     # Add dependencies to other VGC libraries
     vgc_prepend_(VGC_DEPENDENCIES vgc_lib_ ${ARG_VGC_DEPENDENCIES})
-    target_link_libraries(${TARGET_NAME} ${VGC_DEPENDENCIES})
+    target_link_libraries(${TARGET_NAME} PUBLIC ${VGC_DEPENDENCIES})
 
     # Add dependencies to third-party dependencies
-    target_link_libraries(${TARGET_NAME} ${ARG_THIRD_DEPENDENCIES})
+    target_link_libraries(${TARGET_NAME} PUBLIC ${ARG_THIRD_DEPENDENCIES})
 
     # Set compile definitions, that is, values given to preprocessor variables
     # These are public, that is, they propagate to dependent libraries.
@@ -183,7 +183,7 @@ function(vgc_wrap_library LIB_NAME)
     # Example:
     #   LIB_NAME = geometry
     #   LIB_TARGET_NAME = vgc_lib_geometry
-    #   MODULE_TARGET_NAME = vgc_wrap_geometry
+    #   WRAP_TARGET_NAME = vgc_wrap_geometry
     vgc_prepend_(LIB_TARGET_NAME vgc_lib_ ${LIB_NAME})
     vgc_prepend_(WRAP_TARGET_NAME vgc_wrap_ ${LIB_NAME})
 
@@ -265,7 +265,7 @@ function(vgc_test_library LIB_NAME)
             set(EXE_TARGET_OUTPUT_NAME ${FILENAME_WITHOUT_DOT}.out)
         endif()
         add_executable(${EXE_TARGET} EXCLUDE_FROM_ALL ${FILENAME})
-        target_link_libraries(${EXE_TARGET} ${LIB_TARGET} gtest)
+        target_link_libraries(${EXE_TARGET} PRIVATE ${LIB_TARGET} gtest)
         add_dependencies(tests ${EXE_TARGET})
         set_target_properties(${EXE_TARGET} PROPERTIES
             OUTPUT_NAME ${EXE_TARGET_OUTPUT_NAME}
@@ -354,10 +354,10 @@ function(vgc_add_app APP_NAME)
 
     # VGC dependencies
     vgc_prepend_(VGC_DEPENDENCIES vgc_lib_ ${ARG_VGC_DEPENDENCIES})
-    target_link_libraries(${TARGET_NAME} ${VGC_DEPENDENCIES})
+    target_link_libraries(${TARGET_NAME} PRIVATE ${VGC_DEPENDENCIES})
 
     # Third-party dependencies
-    target_link_libraries(${TARGET_NAME} ${ARG_THIRD_DEPENDENCIES})
+    target_link_libraries(${TARGET_NAME} PRIVATE ${ARG_THIRD_DEPENDENCIES})
 
     # Compile definitions, that is, values given to preprocessor variables
     target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_COMPILE_DEFINITIONS})
