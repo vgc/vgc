@@ -36,7 +36,6 @@ vgc_add_library(core
         pp.h
         python.h
         random.h
-        signal.h
         stopwatch.h
         stringid.h
         templateutil.h
@@ -46,6 +45,7 @@ vgc_add_library(core
         vec2farray.h
 
         internal/containerutil.h
+        internal/signal.h
 
     CPP_FILES
         algorithm.cpp
@@ -64,11 +64,12 @@ vgc_add_library(core
         performancelog.cpp
         python.cpp
         random.cpp
-        signal.cpp
         stopwatch.cpp
         stringid.cpp
         vec2d.cpp
         vec2f.cpp
+
+        internal/signal.cpp
 
     COMPILE_DEFINITIONS
 )

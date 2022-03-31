@@ -28,7 +28,7 @@
 #endif
 
 #include <vgc/core/api.h>
-#include <vgc/core/signal.h>
+#include <vgc/core/object.h>
 
 namespace vgc {
 namespace core {

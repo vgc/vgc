@@ -61,7 +61,6 @@ class TestSignal(unittest.TestCase):
          # try to add custom attrs to pybound function
         #testBoundCallback.__slot_tag__ = 1
 
-
         testBoundCallback(a.plop)
 
         a = TestWrapObject()
@@ -69,9 +68,9 @@ class TestSignal(unittest.TestCase):
         self.assertEqual(a.a, 0)
         self.assertEqual(a.b, 0)
  
-        a.slotID(42, 0.5)
-        self.assertEqual(a.a, 42)
-        self.assertEqual(a.b, 0.5)
+        #a.slotID(42, 0.5)
+        #self.assertEqual(a.a, 42)
+        #self.assertEqual(a.b, 0.5)
 
 
         #self.assertTrue(dir(TestObj.test_signal) is None)

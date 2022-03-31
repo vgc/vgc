@@ -31,6 +31,5 @@
 #include <vgc/core/format.h>
 #include <vgc/core/logging.h>
 #include <vgc/core/object.h>
-#include <vgc/core/signal.h>
 
 #endif // VGC_CORE_INNERCORE_H

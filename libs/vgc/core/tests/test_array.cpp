@@ -633,7 +633,7 @@ TEST(TestArray, RemoveFirst) {
 
 TEST(TestArray, RemoveIf) {
     Array<int> a = {8, 10, 42, 12, 7, 15};
-    Array<int> b = {8, 42, 7, 15};
+    Array<int> b = {8, 42, 7};
     a.removeIf([](int a){ return a >= 10 && a < 20; }); EXPECT_EQ(a, b);
 }
 
@@ -654,12 +654,12 @@ TEST(TestArray, AppendAndPrepend) {
     Array<int> a;
     Array<int> b = {10, 42, 12};
     a.append(10);
-    a.append(42);
+    a.emplaceLast(42);
     a.append(12);
     EXPECT_EQ(a, b);
     a.clear();
     a.prepend(12);
-    a.emplaceLast(42);
+    a.prepend(42);
     a.prepend(10);
     EXPECT_EQ(a, b);
 

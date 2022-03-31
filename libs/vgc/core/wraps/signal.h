@@ -20,7 +20,6 @@
 #include <functional>
 
 #include <vgc/core/wraps/common.h>
-#include <vgc/core/signal.h>
 #include <vgc/core/object.h>
 
 struct Args {
@@ -109,7 +108,7 @@ using CppSlotRefTypeFromArgsTuple = typename CppSlotRefTypeFromArgsTuple_<ArgsTu
 class AbstractCppSignalRef {
 protected:
     AbstractCppSignalRef(const Object* obj, const core::internal::SignalId& id, std::initializer_list<std::type_index> parameters) :
-        obj_(const_cast<core::Object*>(obj)), parameters_(parameters) {}
+        obj_(const_cast<core::Object*>(obj)), id_(id), parameters_(parameters) {}
 
 public:
     const auto& parameters() const {

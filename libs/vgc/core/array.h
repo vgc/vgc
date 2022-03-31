@@ -33,7 +33,7 @@
 #include <vgc/core/parse.h>
 
 #include <vgc/core/internal/containerutil.h>
-#include <vgc/core/internal/templateutil.h>
+#include <vgc/core/templateutil.h>
 
 namespace vgc {
 namespace core {
@@ -1249,19 +1249,20 @@ public:
     /// ```
     ///
     void removeFirst(Int count) {
-        checkInRange_(i);
+        checkInRange_(0, count);
         erase_(data_, data_ + count);
     }
 
     /// Removes all elements that satisfy the predicate \p pred from the container.
-    ///
+    /// Returns the number of removed elements.
+    /// 
     /// ```cpp
     /// vgc::core::Array<double> a = {5, 12, 11, 12, 14};
     /// a.removeIf([](double v){ return v > 11; }); // => [5, 11]
     /// ```
     ///
     template<typename Pred>
-    void removeIf(Pred pred) {
+    Int removeIf(Pred pred) {
         const auto end_ = end();
         auto it = std::remove_if(begin(), end_, pred);
         auto r = std::distance(it, end_);
@@ -1444,7 +1445,7 @@ public:
     ///
     template<typename... Args>
     reference emplaceLast(Args&&... args) {
-        emplaceAt_(length_, std::forward<Args>args...);
+        return *emplaceAt_(length_, std::forward<Args>(args)...);
     }
 
     /// Removes the first element of this Array, shifting all existing elements
@@ -1465,7 +1466,7 @@ public:
             throw IndexError(
                 "Attempting to remove the first element of an empty Array.");
         }
-        erase_(0);
+        erase_(Int(0));
     }
 
     /// Removes the last element of this Array. This is fast: O(1). This is

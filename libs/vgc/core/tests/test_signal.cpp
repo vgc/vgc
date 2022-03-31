@@ -16,36 +16,29 @@
 
 #include <gtest/gtest.h>
 #include <memory>
-#include <vgc/core/signal.h>
 #include <vgc/core/object.h>
 
 TEST(TestSignal, TestConnectSlot)
 {
     vgc::core::internal::TestSignalObject t;
 
-    VGC_CONNECT(&t, signalIntDouble, &t, slotInt);
-    VGC_DISCONNECT(&t, signalIntDouble, &t, slotInt);
-    VGC_EMIT t.signalIntDouble(0, 1);
+    t.signalIntDouble().connect(t.slotIntSlot());
+    t.signalIntDouble().disconnect(t.slotIntSlot());
+    VGC_EMIT t.signalIntDouble().emit(0, 1);
     ASSERT_FALSE(t.slotIntCalled);
 
-    auto h = VGC_CONNECT(&t, signalIntDouble, &t, slotInt);
-    VGC_DISCONNECT(&t, signalIntDouble, h);
-    VGC_EMIT t.signalIntDouble(0, 1);
+    auto h = t.signalIntDouble().connect(t.slotIntSlot());
+    t.signalIntDouble().disconnect(h);
+    VGC_EMIT t.signalIntDouble().emit(0, 1);
     ASSERT_FALSE(t.slotIntCalled);
 
-    VGC_CONNECT(&t, signalIntDouble, &t, slotInt);
-    VGC_EMIT t.signalIntDouble(0, 1);
+    t.signalIntDouble().connect(t.slotIntSlot());
+    VGC_EMIT t.signalIntDouble().emit(0, 1);
     ASSERT_TRUE(t.slotIntCalled);
-
 
     t.slotIntCalled = false;
-    VGC_CONNECT(t.signalIntDouble, t.slotInt);
-    VGC_EMIT t.signalIntDouble(0, 1);
-    ASSERT_TRUE(t.slotIntCalled);
-
-
     t.selfConnect();
-    VGC_EMIT t.signalIntDouble(0, 1);
+    VGC_EMIT t.signalIntDouble().emit(0, 1);
     ASSERT_TRUE(t.slotIntDoubleCalled);
     ASSERT_TRUE(t.slotIntCalled);
     //ASSERT_TRUE(t.slotUIntCalled); -> static_assert

@@ -19,7 +19,6 @@
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/signal.h>
 #include <vgc/core/wraps/object.h>
-#include <vgc/core/signal.h>
 #include <vgc/core/object.h>
 
 namespace vgc::core::wraps {
@@ -147,12 +146,12 @@ public:
         return TestWrapObjectPtr(new TestWrapObject());
     }
 
-    VGC_SIGNAL(signalIDI, (int, a), (double, b), (int, c));
+    /*VGC_SIGNAL(signalIDI, (int, a), (double, b), (int, c));
 
     VGC_SLOT(slotID, (int, a), (double, b)) {
         a_ = a;
         b_ = b;
-    }
+    }*/
 
     int a_ = 0;
     double b_ = 0.;
@@ -192,8 +191,8 @@ void wrap_signal(py::module& m)
         using vgc::core::wraps::TestWrapObject;
         auto c = vgc::core::wraps::ObjClass<TestWrapObject>(m, "TestWrapObject")
             .def(py::init([]() { return TestWrapObject::create(); }))
-            .def_signal("signalIDI", &TestWrapObject::signalIDI)
-            .def_slot("slotID", &TestWrapObject::slotID)
+           /* .def_signal("signalIDI", &TestWrapObject::signalIDI)
+            .def_slot("slotID", &TestWrapObject::slotID)*/
             .def_readwrite("a", &TestWrapObject::a_)
             .def_readwrite("b", &TestWrapObject::b_)
         ;

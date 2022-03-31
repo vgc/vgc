@@ -23,7 +23,8 @@
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
-#include <vgc/core/signal.h>
+
+#include <vgc/core/internal/signal.h>
 
 namespace vgc {
 namespace core {
@@ -288,12 +289,10 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
     public:                                                                     \
         using ThisClass = T;                                                    \
         using SuperClass = S;                                                   \
-        static_assert(std::is_base_of_v<::vgc::core::Object, ThisClass>,        \
-            "Cannot use VGC_OBJECT(..) in class that does not inherit from Object."); \
-        static_assert(std::is_base_of_v<SuperClass, ThisClass>,                 \
-            "ThisClass is expected to inherit from SuperClass.");               \
-        static_assert(hasObjectTypedefs_<SuperClass>::value,            \
-            "Missing VGC_OBJECT(..) in SuperClass.");                           \
+        /*static_assert(std::is_base_of_v<SuperClass, ThisClass>,               */\
+        /*    "ThisClass is expected to inherit from SuperClass.");             */\
+        static_assert(::vgc::core::isObject<SuperClass>,                        \
+            "Superclass must inherit from Object and use VGC_OBJECT(..).");                           \
     protected:                                                                  \
         ~T() override = default;                                                \
     private:
@@ -914,15 +913,13 @@ protected:
     ///
     ObjPtr<Object> removeObjectFromParent_();
 
-
-    // connect methods here
-
+    // XXX connect/disconnect methods here
 
 protected:
     mutable internal::SignalHub signalHub_;
 
 private:
-    friend class internal::SignalHubAccess;
+    friend class internal::SignalHub;
     friend class internal::ObjPtrAccess;
     mutable Int64 refCount_; // If >= 0: isAlive = true, refCount = refCount_
                              // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
@@ -936,6 +933,11 @@ private:
 };
 
 namespace internal {
+
+// Required by signal.h
+constexpr SignalHub& SignalHub::access(Object* o) { 
+    return o->signalHub_;
+}
 
 inline void ObjPtrAccess::incref(const Object* obj, Int64 k)
 {
@@ -1231,12 +1233,6 @@ namespace vgc::core {
 
 VGC_DECLARE_OBJECT(Object);
 
-// Alias of Object::connect
-template<typename ...Args>
-inline ConnectionHandle connect(Args... args) {
-    return Object::connect(std::forward<Args>(args)...);
-}
-
 } // namespace vgc::core
 
 namespace vgc::core::internal {
@@ -1246,32 +1242,48 @@ public:
     using ThisClass = TestSignalObject;
     using SuperClass = Object;
 
+    auto signalNoArgs2() {
+        struct Tag {};
+        using MyClass = std::remove_pointer_t<decltype(this)>;
+        using SignalRefBase = ::vgc::core::internal::SignalRefBase<
+        Tag, MyClass>;
+        class SignalRef : public SignalRefBase {
+        public:
+            using SignalRefBase::SignalRefBase;
+            ::vgc::core::internal::EmitCheck
+            emit() const {                                                     
+                using TransmitterType = ::vgc::core::internal::SignalTransmitter<>;
+                SignalHub::emit_<TransmitterType>(object(), SignalRefBase::id());
+            }
+        };
+        return SignalRef(this);
+    }
+
     VGC_SIGNAL(signalNoArgs);
     VGC_SIGNAL(signalInt, (int, a));
     VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
     VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
+    //
 
-    VGC_SLOT(slotInt, (int, a)) { slotIntCalled = true; }
-    VGC_SLOT(slotIntDouble, (int, a), (double, b)) { slotIntDoubleCalled = true; }
-    VGC_SLOT(slotUInt, (unsigned int, a)) { slotUIntCalled = true; }
+    void slotInt(int a) { slotIntCalled = true; }
+    void slotIntDouble(int a, double b) { slotIntDoubleCalled = true; }
+    void slotUInt(unsigned int a) { slotUIntCalled = true; }
+
+    VGC_SLOT(slotInt)
+    VGC_SLOT(slotIntDouble)
+    VGC_SLOT(slotUInt)
 
     //void fakeSlotInt(int) {}
     //void slotInt(int) {}
 
     void selfConnect() {
-
-        //VGC_CONNECT(this, signalIntDouble, this, fakeSlotInt);
-
-        connect(signalIntDoubleSignal(), slotIntDoubleSlot());
-        connect(signalIntDoubleSignal(), slotIntSlot());
-        //connect(signalIntDoubleSignal(), slotUIntSlot()); -> static_assert
-        ::vgc::core::internal::SignalFreeHandlerTraits<std::function<void(int, double)>>::ReturnType;
-        ::vgc::core::internal::SignalFreeHandlerTraits<void(*)()>::ReturnType;
-        connect(signalIntDoubleSignal(), &staticFuncInt);
-        connect(signalIntDoubleSignal(), std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
-        connect(signalIntDoubleSignal(), [&](int, double) { fnIntDoubleCalled = true; } );
-        connect(signalIntDoubleSignal(), std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
-        connect(signalIntDoubleSignal(), [&](unsigned int) { fnUIntCalled = true; });
+        signalIntDouble().connect(slotIntDoubleSlot());
+        signalIntDouble().connect(slotIntSlot());
+        signalIntDouble().connect(&staticFuncInt);
+        signalIntDouble().connect(std::function<void(int, double)>([&](int, double) { fnIntDoubleCalled = true; }));
+        signalIntDouble().connect([&](int, double) { fnIntDoubleCalled = true; } );
+        signalIntDouble().connect(std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
+        signalIntDouble().connect([&](unsigned int) { fnUIntCalled = true; });
     }
 
     static inline void staticFuncInt() {

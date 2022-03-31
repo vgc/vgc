@@ -25,7 +25,6 @@
 #include <vector>
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
-#include <vgc/core/signal.h>
 #include <vgc/core/vec2d.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/scene/api.h>
