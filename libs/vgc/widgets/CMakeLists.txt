@@ -111,3 +111,5 @@ vgc_add_library(widgets
         images/spinboxup.png
         stylesheets/dark.qss
 )
+
+set_property(TARGET vgc_lib_widgets PROPERTY AUTOMOC ON)

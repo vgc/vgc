@@ -233,7 +233,6 @@ message(STATUS "") # newline
 # force their clients to do the same.
 #
 message(STATUS "[Qt]")
-set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 list(APPEND VGC_PRIVATE_COMPILE_DEFINITIONS "QT_NO_KEYWORDS")
 get_filename_component(VGC_QT_ROOT ${Qt5_DIR}/../../.. ABSOLUTE)
