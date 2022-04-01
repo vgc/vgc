@@ -144,39 +144,18 @@ message(STATUS "Python Library Dirs:  ${Python_LIBRARY_DIRS}")
 message(STATUS "Python Include Dirs:  ${Python_INCLUDE_DIRS}")
 message(STATUS "") # newline
 
-# Generate the vgc.conf file, telling VGC executables about the location
-# of various runtime resources.
-#
-add_custom_target(conf ALL
-    VERBATIM
-    COMMAND ${Python_EXECUTABLE}
-        "${CMAKE_CURRENT_SOURCE_DIR}/tools/conf.py"
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_CURRENT_BINARY_DIR}"
-        "$<CONFIG>"
-        "${VGC_PYTHON_HOME}"
-)
-set_target_properties(conf PROPERTIES FOLDER misc)
-
 # Always generate unit tests
 enable_testing()
 
-# Define `make tests` to build the C++ tests. Indeed, we do not build tests by
-# default when running `make`. However, note that the "tests" target is a
-# dependency of the "check" target, so there is no need to call `make tests`
-# explicitly before running `make check`.
-#
-add_custom_target(tests)
-set_target_properties(tests PROPERTIES FOLDER misc)
+# Define a vgc_tests target that builds all tests (in particular, C++ tests)
+add_custom_target(vgc_tests)
+set_target_properties(vgc_tests PROPERTIES FOLDER misc)
 
-# Define `make check` to run the unit tests in --output-on-failure mode. This
-# is more useful than the built-in `make test` which would run without printing
-# what went wrong when a test fails. We also use the --force-new-ctest-process
-# option as this is what `make test` uses too. Note that while you can run
-# `make test` in any subfolder, you can only run `make check` at the root of
-# the build folder.
-#
-# Implementation inspired from: https://stackoverflow.com/q/16158091
+# Define a `check` target that builds and run all tests.
+# Unlike `make test`, running `make check` builds the tests and all its
+# dependencies so you don't need to run `make` beforehand. Also, unlike
+# `make test`, which doesn't print what went wrong after a test fails, we
+# use --output-on-failure for `make check` which is much more useful.
 #
 if (CMAKE_CONFIGURATION_TYPES)
     add_custom_target(check
@@ -190,7 +169,7 @@ else()
             --force-new-ctest-process --output-on-failure
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
-add_dependencies(check tests)
+add_dependencies(check vgc_tests)
 set_target_properties(check PROPERTIES FOLDER misc)
 
 # Set "third" as default FOLDER target property
@@ -492,18 +471,10 @@ message(STATUS "") # newline
 # Restore default value of FOLDER target property
 set(CMAKE_FOLDER ${VGC_CMAKE_FOLDER_OLD})
 
-# Add internal libs and apps
-# TODO: avoid global `include_directories`
-message(STATUS "[VGC]")
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
-add_subdirectory(libs)
-add_subdirectory(apps)
-message(STATUS "") # newline
-
 # Generate the file resources/core/version.txt with versioning info.
 # See vgc/tools/version.py for details.
 #
-add_custom_target(version ALL
+add_custom_target(vgc_version
     VERBATIM
     COMMAND ${Python_EXECUTABLE}
         "${CMAKE_CURRENT_SOURCE_DIR}/tools/version.py"
@@ -522,7 +493,64 @@ add_custom_target(version ALL
         "${VGC_ARCHITECTURE}"
         "$<CONFIG>"
 )
-set_target_properties(version PROPERTIES FOLDER misc)
+set_target_properties(vgc_version PROPERTIES FOLDER misc)
+
+# Generate the vgc.conf file, telling VGC executables about the location
+# of various runtime resources.
+#
+add_custom_target(vgc_conf
+    VERBATIM
+    COMMAND ${Python_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/conf.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "$<CONFIG>"
+        "${VGC_PYTHON_HOME}"
+)
+set_target_properties(vgc_conf PROPERTIES FOLDER misc)
+
+# Copy Python dependencies
+#
+# On Windows we cannot easily use the system Python to import our Python wrappers
+# (including for running our Python unit tests), because the system Python wouldn't
+# find our DLLs even if we add them to the PATH.
+#
+# For example, for our python tests, if we used:
+#   add_test(... COMMAND ${Python_EXECUTABLE} ...)
+#   set_tests_properties(... ENVIRONMENT "PATH=${CMAKE_BINARY_DIR}/$<CONFIG>/bin;PYTHONPATH=${CMAKE_BINARY_DIR}/$<CONFIG>/python") 
+#
+# Then ${Python_EXECUTABLE} would correctly find <build>/<config>/python/vgc/core.*.pyd
+# thanks to the provided PYTHONPATH, but would still fail with:
+#
+#   ImportError: DLL load failed while importing core: The specified module could not be found.
+#
+# The reason is that python/vgc/core.*.pyd cannot find bin/vgccore.dll, even if the
+# bin folder is in the PATH. Indeed, since Python 3.8, Python completely ignores
+# the PATH variable for DLL resolution. Instead, it is required to use
+# os.add_dll_directory('path/to/dll'), see:
+#
+#   - https://docs.python.org/3/library/os.html#os.add_dll_directory
+#   - https://docs.python.org/3/whatsnew/3.8.html#bpo-36085-whatsnew
+#
+# Therefore, for now, our solution is to copy the whole Python distribution to our build 
+# folder and use this copy of Python instead of the system Python whenever we need to
+# import our Python modules (for example, in our Python tests, or in the embedded interpreter
+# of our apps).
+#
+# A more long-term solution might be to rename our pyd module `core_`, and have a
+# pure-Python module called `core` that calls os.add_dll_directory() before 
+# importing core_ and transferring all symbols from core_ to core.
+#
+if(WIN32)
+    add_custom_target(vgc_copy_python
+        VERBATIM
+        COMMAND ${Python_EXECUTABLE}
+            "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/copy_python.py"
+            "${CMAKE_CURRENT_BINARY_DIR}"
+            "$<CONFIG>"
+    )
+    set_target_properties(vgc_copy_python PROPERTIES FOLDER misc)
+endif()
 
 # On Windows, create a convenient batch script called 'make.bat' in the build
 # folder, which allows you to run the following command in cmd.exe:
@@ -555,19 +583,6 @@ if(WIN32)
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/test.in.bat
         ${CMAKE_BINARY_DIR}/test.bat)
-endif()
-
-# Copy Python dependencies
-#
-if(WIN32)
-    add_custom_target(copy_python ALL
-        VERBATIM
-        COMMAND ${Python_EXECUTABLE}
-            "${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/copy_python.py"
-            "${CMAKE_CURRENT_BINARY_DIR}"
-            "$<CONFIG>"
-    )
-    set_target_properties(copy_python PROPERTIES FOLDER misc)
 endif()
 
 # Add deploy target.
@@ -618,3 +633,11 @@ else()
     )
 endif()
 set_target_properties(deploy PROPERTIES FOLDER misc)
+
+# Add internal libs and apps
+# TODO: avoid global `include_directories`
+message(STATUS "[VGC]")
+include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
+add_subdirectory(libs)
+add_subdirectory(apps)
+message(STATUS "") # newline
