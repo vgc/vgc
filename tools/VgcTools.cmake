@@ -375,6 +375,9 @@ function(vgc_test_library LIB_NAME)
                 COMMAND ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/python.exe ${CMAKE_CURRENT_SOURCE_DIR}/${FILENAME} -v
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             )
+            set_tests_properties(${TEST_TARGET} PROPERTIES
+                ENVIRONMENT "PATH=%PATH%\;${CMAKE_BINARY_DIR}/$<CONFIG>/bin"
+            )
         else()
             add_test(
                 NAME ${TEST_TARGET}
