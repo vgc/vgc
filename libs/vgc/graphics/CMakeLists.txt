@@ -5,7 +5,6 @@ vgc_add_library(graphics
         harfbuzz::harfbuzz
 
     VGC_DEPENDENCIES
-        core
         geometry
 
     HEADER_FILES
