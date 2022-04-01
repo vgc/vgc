@@ -296,7 +296,7 @@ function(vgc_test_library LIB_NAME)
     # Create target vgc_<libname>_tests
     add_custom_target(${TESTS_TARGET} SOURCES ${ARG_CPP_TESTS} ${ARG_PYTHON_TESTS})
     set_target_properties(${TESTS_TARGET} PROPERTIES FOLDER libs/${LIB_NAME}/tests)
-    add_dependencies(tests ${TESTS_TARGET})
+    add_dependencies(vgc_tests ${TESTS_TARGET})
 
     # C++ tests
     if(ARG_CPP_TESTS) # If there is at least one C++ test
@@ -363,6 +363,9 @@ function(vgc_test_library LIB_NAME)
         set_target_properties(${PYTHON_TESTS_TARGET} PROPERTIES FOLDER libs/${LIB_NAME}/tests)
         add_dependencies(${TESTS_TARGET} ${PYTHON_TESTS_TARGET})
         add_dependencies(${PYTHON_TESTS_TARGET} ${BASE_TARGET})
+        if(WIN32)
+            add_dependencies(${PYTHON_TESTS_TARGET} vgc_copy_python)
+        endif()
     endif()
     foreach(FILENAME ${ARG_PYTHON_TESTS})
         set(TEST_TARGET vgc_${LIB_NAME}_${FILENAME})
@@ -494,6 +497,12 @@ function(vgc_add_app APP_NAME)
         )
         add_dependencies(${APP_TARGET} ${RESOURCES_TARGET})
     endif()    
+    
+    # Ensures the vgc.conf file is generated next to the app
+    add_dependencies(${APP_TARGET} vgc_conf)
+    
+    # Add the app to the deploy target
+    add_dependencies(deploy ${APP_TARGET})
 
     if(WIN32)
         # Run windeployqt to copy all required Qt dependencies in the bin
@@ -533,10 +542,10 @@ function(vgc_add_app APP_NAME)
             VERBATIM
         )
 
-        # Add dependency to copy_python so that pythonXY.dll is copied to the 
+        # Add dependency to vgc_copy_python so that pythonXY.dll is copied to the 
         # build folder when building the app.
         #
-        add_dependencies(${APP_TARGET} copy_python)
+        add_dependencies(${APP_TARGET} vgc_copy_python)
     endif()
 
 endfunction()
