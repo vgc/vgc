@@ -3,8 +3,6 @@ vgc_add_library(ui
         Qt5::Gui
 
     VGC_DEPENDENCIES
-        core
-        geometry
         graphics
 
     HEADER_FILES

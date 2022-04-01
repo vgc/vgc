@@ -3,9 +3,7 @@ vgc_add_library(widgets
         Qt5::Widgets
 
     VGC_DEPENDENCIES
-        core
         dom
-        geometry
         ui
 
     HEADER_FILES
@@ -112,4 +110,4 @@ vgc_add_library(widgets
         stylesheets/dark.qss
 )
 
-set_property(TARGET vgc_lib_widgets PROPERTY AUTOMOC ON)
+set_property(TARGET vgc_widgets_lib PROPERTY AUTOMOC ON)
