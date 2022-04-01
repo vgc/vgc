@@ -71,6 +71,20 @@ constexpr std::tuple<std::tuple_element_t<I + Is, std::tuple<T...>>...>
 template<size_t I, size_t N, typename... T>
 using SubPackAsTuple = decltype(SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
 
+template<class F, class ArgsTuple, std::size_t... I>
+void applyPartial_(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
+    std::invoke(
+        std::forward<F>(f),
+        std::get<I>(std::forward<ArgsTuple>(t))...);
+}
+
+template<size_t N, class F, class ArgsTuple>
+void applyPartial(F&& f, ArgsTuple&& t) {
+    applyPartial_(
+        std::forward<F>(f),
+        std::forward<ArgsTuple>(t),
+        std::make_index_sequence<N>{});
+}
 
 template<typename T, typename Traits_>
 struct WithTraits : T {

@@ -22,11 +22,17 @@ namespace core {
 namespace internal {
 
 ConnectionHandle genConnectionHandle() {
-    static ConnectionHandle s = 0;
-    // XXX make this thread-safe
-    return ++s;
+    static ConnectionHandle s = {0};
+    // XXX make this thread-safe ?
+    return {++s.id};
 }
 
+VGC_CORE_API
+ObjectMethodId genObjectMethodId() {
+    static ObjectMethodId s = 0;
+    // XXX make this thread-safe ?
+    return ++s;
+}
 } // namespace internal
 
 

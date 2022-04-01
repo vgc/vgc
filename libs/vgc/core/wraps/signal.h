@@ -18,6 +18,7 @@
 #define VGC_CORE_WRAPS_SIGNAL_H
 
 #include <functional>
+#include <typeindex>
 
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/object.h>
@@ -29,127 +30,174 @@ struct Args {
 
 namespace vgc::core::wraps {
 
-class AbstractCppSlotRef {
-protected:
-    AbstractCppSlotRef(const core::Object* obj, core::internal::SlotId id, std::initializer_list<std::type_index> parameters) :
-        obj_(const_cast<core::Object*>(obj)), id_(id), parameters_(parameters) {}
 
+// some facts to help designing this part:
+// 1) connect(..) is member of sigrefs
+//     -> we only need an easy overload for connect that doesn't just try all
+//     -> so we need a common type for all slots that we dispatch in C++ (with switch or dyn casts..)
+// 
+
+// Common py interface for slots.
+class PyAbstractSlotRef {
 public:
-    const auto& parameters() const {
-        return parameters_;
-    }
+    PyAbstractSlotRef(
+        const core::Object* obj,
+        const core::internal::ObjectMethodId id) :
+
+        obj_(const_cast<core::Object*>(obj)),
+        id_(id) {}
 
     core::Object* object() const {
         return obj_;
     }
 
-    const core::internal::SlotId& id() const {
+    const core::internal::ObjectMethodId& id() const {
         return id_;
     }
 
-    virtual py::cpp_function getPyWrappedBoundSlot() const = 0;
-
-protected:
-    std::vector<std::type_index> parameters_;
-    core::Object* obj_;
-    core::internal::SlotId id_;
-};
-
-template<typename... SlotArgs>
-class CppSlotRef : public AbstractCppSlotRef {
-public:
-    // Note: forwarded arguments as for transmitters
-    using BoundSlotSig = void(SlotArgs&&...);
-    using BoundSlot = std::function<BoundSlotSig>;
-
-    using AbstractCppSlotRef::AbstractCppSlotRef;
-
-    BoundSlot getBoundSlot() const {
-        return bind_(object());
-    }
-
-    virtual py::cpp_function getPyWrappedBoundSlot() const override {
-        return py::cpp_function(getBoundSlot());
-    }
+    virtual py::cpp_function getPyWrappedFunction() const = 0;
 
 private:
-    virtual BoundSlot bind_(Object* obj) const = 0;
+    core::Object* const obj_;
+    const core::internal::ObjectMethodId id_;
 };
 
-template<typename Obj, typename... SlotArgs>
-class CppSlotRefImpl : public CppSlotRef<SlotArgs...> {
-    using SuperClass = CppSlotRef<SlotArgs...>;
-    using MFnT = void (Obj::*)(SlotArgs...);
-    using BoundSlot = typename SuperClass::BoundSlot;
 
+// Object* is safe as long as PyPySlotRef instances are used as rvalues.
+class PyPySlotRef : public PyAbstractSlotRef {
 public:
-    CppSlotRefImpl(const Obj* obj, core::internal::SlotId id, MFnT mfn) :
-        SuperClass(obj, id, {std::type_index(typeid(SlotArgs))...}),
-        mfn_(mfn) {}
+    PyPySlotRef(
+        const core::Object* obj,
+        const core::internal::ObjectMethodId id,
+        const py::function fn) :
+
+        PyAbstractSlotRef(obj, id),
+        fn_(fn){}
 
 private:
-    MFnT mfn_;
-
-    virtual BoundSlot bind_(core::Object* obj) const override {
-        // XXX can add alive check here or in the lambda..
-        using MFnT = void (Obj::*)(SlotArgs...);
-        return [=](SlotArgs&&... args) {
-            (static_cast<Obj*>(obj)->*mfn_)(std::forward<SlotArgs>(args)...);
-        };
-    }
+    const py::function fn_;
 };
 
 
-template<typename ArgsTuple>
-struct CppSlotRefTypeFromArgsTuple_;
-template<typename... SlotArgs>
-struct CppSlotRefTypeFromArgsTuple_<std::tuple<SlotArgs...>> {
-    using type = CppSlotRef<SlotArgs...>;
-};
-template<typename ArgsTuple>
-using CppSlotRefTypeFromArgsTuple = typename CppSlotRefTypeFromArgsTuple_<ArgsTuple>::type;
-
-
-class AbstractCppSignalRef {
+class AbstractBoundObjectMethodSlot {
 protected:
-    AbstractCppSignalRef(const Object* obj, core::internal::SignalId id, std::initializer_list<std::type_index> parameters) :
-        obj_(const_cast<core::Object*>(obj)), id_(id), parameters_(parameters) {}
+    AbstractBoundObjectMethodSlot(std::initializer_list<std::type_index> parameters) :
+        parameters_(parameters) {}
 
 public:
+    virtual ~AbstractBoundObjectMethodSlot();
+    
     const auto& parameters() const {
         return parameters_;
     }
+    
+    virtual py::cpp_function getPyWrapped() const = 0;
 
-    core::Object* object() const {
-        return obj_;
+private:
+    const std::vector<std::type_index> parameters_;
+};
+
+template<typename... Args>
+class BoundObjectMethodSlot : public AbstractBoundObjectMethodSlot {
+public:
+    using FunctionSig = void(Args&&...);
+    using Function = std::function<FunctionSig>;
+
+    template<typename Fn>
+    BoundObjectMethodSlot(Fn&& fn) :
+        AbstractBoundObjectMethodSlot({std::type_index(typeid(Args))...}),
+        fn_(std::forward<Fn>(fn)) {}
+
+    virtual py::cpp_function getPyWrapped() const override {
+        return py::cpp_function(fn_);
     }
 
-    const core::internal::SlotId& id() const {
-        return id_;
+    const Function fn_;
+};
+
+class PyAbstractCppSlotRef : public PyAbstractSlotRef {
+public:
+    PyAbstractCppSlotRef(
+        const core::Object* obj,
+        const core::internal::ObjectMethodId id,
+        std::unique_ptr<const AbstractBoundObjectMethodSlot>&& afn) :
+
+        PyAbstractSlotRef(obj, id),
+        afn_(std::move(afn)) {}
+
+    const auto& parameters() const {
+        return afn_->parameters();
     }
 
+private:
+    const std::unique_ptr<const AbstractBoundObjectMethodSlot> afn_;
+};
+
+// XXX instead of a templated child, let's do a makePyCppSlotRef..
+
+
+
+
+//template<typename Obj, typename... SlotArgs>
+//class PyCppSlotRef : public PyAbstractCppSlotRef<SlotArgs...> {
+//private:
+//    using SuperClass = PyAbstractCppSlotRef<SlotArgs...>;
+//
+//public:
+//    using MFnT = void (Obj::*)(SlotArgs...);
+//    using BoundFunction = typename SuperClass::BoundFunction;
+//
+//    PyCppSlotRef(const Obj* obj, core::internal::SlotId id, MFnT mfn) :
+//        SuperClass(obj, id),
+//        mfn_(mfn) {}
+//
+//    virtual BoundFunction getBoundFunction() const override {
+//        // XXX can add alive check here or in the lambda..
+//        using MFnT = void (Obj::*)(SlotArgs...);
+//        return [=](SlotArgs&&... args) {
+//            (static_cast<Obj*>(object())->*mfn_)(std::forward<SlotArgs>(args)...);
+//        };
+//    }
+//
+//private:
+//    MFnT mfn_;
+//};
+
+
+
+class PyAbstractCppSignalRef : public PyAbstractCppConnectableRef {
+private:
+    using SuperClass = PyAbstractCppConnectableRef;
+
+public:
+    using SuperClass::SuperClass;
+
+    const core::internal::SignalId& id() const {
+        return SuperClass::id();
+    }
+
+    // XXX do getBoundFunction, that is the bound emit
+
+protected:
     virtual [[nodiscard]] core::internal::AbstractSignalTransmitter*
-    createTransmitter(AbstractCppSlotRef* slotRef) const = 0;
-
-protected:
-    std::vector<std::type_index> parameters_;
-    core::Object* obj_;
-    core::internal::SignalId id_;
+    createTransmitter(PyAbstractCppConnectableRef* connectableRef) const = 0;
 };
+
+
 
 // XXX split this, we want a fallback to python if basic compatibility is met (slot sig not too long)
-void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCppSlotRef* slotRef) {
-    const auto& signalParams = signalRef->parameters();
-    const auto& slotParams = slotRef->parameters();
-    if (slotParams.size() > signalParams.size()) {
-        // XXX subclass LogicError
-        throw LogicError("Slot signature is too long for this Signal.");
-    }
-    if (!std::equal(slotParams.begin(), slotParams.end(), signalParams.begin())) {
-        // XXX subclass LogicError
-        throw LogicError("Slot/Signal signature mismatch.");
-    }
-}
+//void checkCompatibility(const PyAbstractCppSignalRef* signalRef, const PyAbstractCppConnectableRef* connectableRef) {
+//    const auto& signalParams = signalRef->parameters();
+//    const auto& cParams = connectableRef->parameters();
+//    if (cParams.size() > signalParams.size()) {
+//        // XXX subclass LogicError
+//        throw LogicError("Handler signature is too long for this Signal.");
+//    }
+//    if (!std::equal(cParams.begin(), slotParams.end(), signalParams.begin())) {
+//        // XXX subclass LogicError
+//        throw LogicError("Slot/Signal signature mismatch.");
+//    }
+//}
 
 #define CREATE_TRANSMITTER_SWITCH_CASE(i)                                   \
     case i:                                                                 \
@@ -161,19 +209,23 @@ void checkCompatibility(const AbstractCppSignalRef* signalRef, const AbstractCpp
         }                                                                   \
         [[fallthrough]];
 
+
+
 template<typename... SignalArgs>
-struct CppSignalRef : public AbstractCppSignalRef {
+class PyCppSignalRef : public PyAbstractCppSignalRef {
+private:
     using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
 
-    CppSignalRef(const Object* obj, const core::internal::SignalId& id) :
-        AbstractCppSignalRef(obj, id, {std::type_index(typeid(SignalArgs))...}) {}
+public:
+    PyCppSignalRef(const Object* obj, const core::internal::SignalId& id) :
+        PyAbstractCppSignalRef(obj, id, {std::type_index(typeid(SignalArgs))...}) {}
 
     virtual [[nodiscard]] core::internal::AbstractSignalTransmitter*
     createTransmitter(AbstractCppSlotRef* slotRef) const override {
 
         // XXX add fallback to python transmitter
 
-        checkCompatibility(this, slotRef);
+        //checkCompatibility(this, slotRef);
         const auto& slotParams = slotRef->parameters();
         switch (slotParams.size()) {
         CREATE_TRANSMITTER_SWITCH_CASE(0);

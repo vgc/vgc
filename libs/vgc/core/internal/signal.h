@@ -21,7 +21,6 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
-#include <typeindex>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -94,6 +93,7 @@ namespace vgc::core {
 
 class Object;
 
+
 namespace internal {
 
 template<typename T, typename Enable = void>
@@ -116,6 +116,7 @@ struct isObject_<T, std::enable_if_t<std::is_base_of_v<Object, T>, void>> : std:
 
 } // namespace internal
 
+
 template <typename T>
 inline constexpr bool isObject = internal::isObject_<T>::value;
 
@@ -124,36 +125,18 @@ inline constexpr bool isObject = internal::isObject_<T>::value;
 #define CHECK_TYPE_IS_VGC_OBJECT(Type) \
     static_assert(::vgc::core::internal::isObject<Type>, #Type " should inherit from vgc::core::Object.");
 
+
 namespace internal {
 
-// Signals and Slots getters can be identified by signature.
-//template<typename T>
-//struct isSignalOrSlotGetter_ : std::false_type {};
-//template<typename R, typename C, typename... Args>
-//struct isSignalOrSlotGetter_<R (C::*)(Args...) const> {
-//    static constexpr bool value = IsSignalTraits<R>;
-//    static_assert(!value || isObject<C>, "Signals must reside in an Objects.");
-//};
-//template <typename T>
-//inline constexpr bool isSignal = isSignal_<T>::value;
-
-
-using SignalId = std::type_index;
-using SlotId = std::type_index;
-using BoundSlotId = std::pair<Object*, SlotId>;
+using ObjectMethodId = Int;
+using BoundObjectMethodId = std::pair<Object*, ObjectMethodId>;
 using FreeFuncId = void*;
-using SignalHandlerId = std::variant<std::monostate, BoundSlotId, FreeFuncId>;
-using ConnectionHandle = UInt64;
+using SlotId = std::variant<std::monostate, BoundObjectMethodId, FreeFuncId>;
+using SignalMethodId = ObjectMethodId;
 
-
-//template<typename PointerToMemberFunction>
-//struct isSignalFunction_ : std::false_type {};
-//template<typename C, typename... Args>
-//struct isSignalFunction_<EmitCheck (C::*)(Args...) const> : std::true_type {
-//    static_assert(isObject<C>, "Signals can only be declared in Objects.");
-//};
-//template <typename T>
-//inline constexpr bool isSignalFunction = isSignalFunction_<T>::value;
+struct ConnectionHandle {
+    Int64 id;
+};
 
 template<typename C, bool IsCallOperator, typename R, typename... Args>
 struct FunctionTraitsDef_ {
@@ -164,62 +147,66 @@ struct FunctionTraitsDef_ {
     static constexpr bool isCallOperator = IsCallOperator;
 };
 
+// An ObjectMethod is a non-static member function of a subclass of Object.
 template<typename MemberFunctionPointer>
-struct MemberFunctionTraits_;
+struct ObjectMethodTraits_;
 template<typename R, typename C, typename... Args>
-struct MemberFunctionTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, false, R, Args...> {};
+struct ObjectMethodTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, false, R, Args...> {};
 template <typename R, typename C, typename... Args>
-struct MemberFunctionTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, false, R, Args...> {};
+struct ObjectMethodTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, false, R, Args...> {};
 template<typename T>
-using MemberFunctionTraits = MemberFunctionTraits_<std::remove_reference_t<T>>;
+using ObjectMethodTraits = ObjectMethodTraits_<std::remove_reference_t<T>>;
 
 
 // XXX could benefit from a reusable FunctionTraits with a category attribute.
 //
-// callable's operator
+// Function object operator()
 template<typename T>
-struct SignalCallableHandlerTraits_;
+struct FunctionObjectTraits_;
 template<typename R, typename C, typename... Args>
-struct SignalCallableHandlerTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, true, R, Args...> {};
+struct FunctionObjectTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, true, R, Args...> {};
 template<typename R, typename C, typename... Args>
-struct SignalCallableHandlerTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, true, R, Args...> {};
-// primary with fallback
+struct FunctionObjectTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, true, R, Args...> {};
+// Primary with fallback.
 template<typename T, typename Enable = void>
-struct SignalFreeHandlerTraits_;
+struct SimpleCallableTraits_;
 template<typename T>
-struct SignalFreeHandlerTraits_<T, std::void_t<decltype(&T::operator())>> : SignalCallableHandlerTraits_<decltype(&T::operator())> {};
-// free function
+struct SimpleCallableTraits_<T, std::void_t<decltype(&T::operator())>> : FunctionObjectTraits_<decltype(&T::operator())> {};
+// Free function.
 template<typename R, typename... Args>
-struct SignalFreeHandlerTraits_<R (*)(Args...), void> : FunctionTraitsDef_<void, false, R, Args...> {};
+struct SimpleCallableTraits_<R (*)(Args...), void> : FunctionTraitsDef_<void, false, R, Args...> {};
 //
 template<typename T>
-using SignalFreeHandlerTraits = SignalFreeHandlerTraits_<std::remove_reference_t<T>>;
+using SimpleCallableTraits = SimpleCallableTraits_<std::remove_reference_t<T>>;
 
 template<typename T, typename Enable = void>
-struct isSignalFreeHandler_ : std::false_type {};
+struct isSimpleCallable_ : std::false_type {};
 template<typename T>
-struct isSignalFreeHandler_<T, typename SignalFreeHandlerTraits<T>::ReturnType> : std::true_type {};
+struct isSimpleCallable_<T, typename SimpleCallableTraits<T>::ReturnType> : std::true_type {};
+
+
+// Simple callables are all callables except pointer to member functions.
 template <typename T>
-inline constexpr bool isSignalFreeHandler = isSignalFreeHandler_<T>::value;
+inline constexpr bool isSimpleCallable = isSimpleCallable_<T>::value;
 
-
-template<class F, class ArgsTuple, std::size_t... I>
-void applyPartialImpl(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
-    std::invoke(
-        std::forward<F>(f),
-        std::get<I>(std::forward<ArgsTuple>(t))...);
-}
-
-template<size_t N, class F, class ArgsTuple>
-void applyPartial(F&& f, ArgsTuple&& t) {
-    applyPartialImpl(
-        std::forward<F>(f),
-        std::forward<ArgsTuple>(t),
-        std::make_index_sequence<N>{});
-}
 
 VGC_CORE_API
 ConnectionHandle genConnectionHandle();
+
+VGC_CORE_API
+ObjectMethodId genObjectMethodId();
+
+template<typename ObjectMethodTag>
+class ObjectMethodIdSingleton_ {
+public:
+    static ObjectMethodId get() {
+        static ObjectMethodId s = genObjectMethodId();
+        return s;
+    }
+
+private:
+    ObjectMethodIdSingleton_() = delete;
+};
 
 
 // This is a polymorphic adapter class for slots and free functions.
@@ -264,14 +251,14 @@ public:
     // pointer-to-member-function
     template<typename R, typename Obj, typename... SlotArgs>
     [[nodiscard]] static inline
-    SignalTransmitter* create(Obj* o, R (Obj::* mfn)(SlotArgs...)) {
+    SignalTransmitter* create(Obj* o, R (Obj::* method)(SlotArgs...)) {
         static_assert(sizeof...(SignalArgs) >= sizeof...(SlotArgs),
             "The slot signature cannot be longer than the signal signature.");
         static_assert(std::is_same_v<std::tuple<SlotArgs...>, SubPackAsTuple<0, sizeof...(SlotArgs), SignalArgs...>>,
             "The slot signature does not match the signal signature.");
         return new SignalTransmitter(
             [=](SignalArgs&&... args) {
-                applyPartial<1 + sizeof...(SlotArgs)>(mfn, std::forward_as_tuple(o, std::forward<SignalArgs>(args)...));
+                applyPartial<1 + sizeof...(SlotArgs)>(method, std::forward_as_tuple(o, std::forward<SignalArgs>(args)...));
             });
     }
 
@@ -279,7 +266,7 @@ public:
     template<typename FreeHandler>
     [[nodiscard]] static inline
     SignalTransmitter* create(FreeHandler&& f) {
-        using HTraits = SignalFreeHandlerTraits<FreeHandler>;
+        using HTraits = SimpleCallableTraits<FreeHandler>;
         // optimization: when the target has already the desired signature
         if constexpr (std::is_same_v<CallArgsTuple, typename HTraits::ArgsTuple>) {
             return new SignalTransmitter(std::forward<FreeHandler>(f));
@@ -300,13 +287,13 @@ class SignalHub {
 private:
     struct Connection_ {
         template<typename To>
-        Connection_(std::unique_ptr<AbstractSignalTransmitter>&& f, ConnectionHandle h, SignalId from, To&& to) :
+        Connection_(std::unique_ptr<AbstractSignalTransmitter>&& f, ConnectionHandle h, SignalMethodId from, To&& to) :
             f(std::move(f)), h(h), from(from), to(std::forward<To>(to)) {}
 
         std::unique_ptr<AbstractSignalTransmitter> f;
         ConnectionHandle h;
-        SignalId from;
-        SignalHandlerId to;
+        SignalMethodId from;
+        SlotId to;
     };
 
     struct ListenedObjectInfo {
@@ -330,35 +317,35 @@ public:
         // XXX TODO !!!
     }
 
-    static ConnectionHandle connect(Object* sender, SignalId signalId, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, const SignalHandlerId& handlerId) {
+    static ConnectionHandle connect(Object* sender, SignalMethodId from, std::unique_ptr<AbstractSignalTransmitter>&& transmitter, const SlotId& to) {
         auto& hub = access(sender);
         auto h = genConnectionHandle();
-        hub.connections_.emplaceLast(std::move(transmitter), h, signalId, handlerId);
+        hub.connections_.emplaceLast(std::move(transmitter), h, from, to);
         return h;
     }
 
     // XXX add to public interface of Object
     static bool disconnect(Object* sender, ConnectionHandle h) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
-            return c.h == h; 
+            return c.h.id == h.id; 
         });
     }
 
-    static bool disconnect(Object* sender, SignalId signalId) {
+    static bool disconnect(Object* sender, SignalMethodId from) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
-            return c.from == signalId;
+            return c.from == from;
         });
     }
 
-    static bool disconnect(Object* sender, SignalId signalId, ConnectionHandle h) {
+    static bool disconnect(Object* sender, SignalMethodId from, ConnectionHandle h) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
-            return c.from == signalId && c.h == h;
+            return c.from == from && c.h.id == h.id;
         });
     }
 
-    static bool disconnect(Object* sender, SignalId signalId, const SignalHandlerId& signalHandlerId) {
+    static bool disconnect(Object* sender, SignalMethodId from, const SlotId& to) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
-            return c.from == signalId && c.to == signalHandlerId;
+            return c.from == from && c.to == to;
         });
     }
 
@@ -366,11 +353,11 @@ public:
     //
     template<typename SignalTransmitterType, typename... Args>
     std::enable_if_t<std::is_base_of_v<AbstractSignalTransmitter, SignalTransmitterType>>
-    static emit_(Object* sender, SignalId id, Args&&... args) {
+    static emit_(Object* sender, SignalMethodId from, Args&&... args) {
         auto& hub = access(sender);
         using TransmitterType = SignalTransmitter<Args...>;
         for (auto& c : hub.connections_) {
-            if (c.from == id) {
+            if (c.from == from) {
                 // XXX replace with static_cast after initial test rounds
                 const auto* f = dynamic_cast<SignalTransmitterType*>(c.f.get());
                 if (!f) {
@@ -386,7 +373,7 @@ protected:
     static void disconnect_(Object* sender, Object* receiver) {
         auto& hub = access(sender);
         auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c) {
-                return std::holds_alternative<BoundSlotId>(c.to) && std::get<BoundSlotId>(c.to).first == receiver; 
+                return std::holds_alternative<BoundObjectMethodId>(c.to) && std::get<BoundObjectMethodId>(c.to).first == receiver; 
             });
         hub.connections_.erase(it, hub.connections_.end());
     }
@@ -435,9 +422,9 @@ private:
                 }
                 else {
                     const Connection_& c = *it;
-                    if (std::holds_alternative<BoundSlotId>(c.to)) {
+                    if (std::holds_alternative<BoundObjectMethodId>(c.to)) {
                         // Decrement numInboundConnections in the receiver's info about sender.
-                        const auto& bsid = std::get<BoundSlotId>(c.to);
+                        const auto& bsid = std::get<BoundObjectMethodId>(c.to);
                         auto& info = access(bsid.first).getListenedObjectInfoRef(sender);
                         info.numInboundConnections--;
                     }
@@ -453,70 +440,70 @@ private:
 };
 
 
-template<typename UniqueIdentifierTag, typename SlotFunctionT>
+template<typename ObjectMethodTag, typename SlotMethodT>
 class SlotRef {
 public:
-    using SlotFunction = SlotFunctionT;
-    using FnTraits = MemberFunctionTraits<SlotFunction>;
-    using Obj = typename FnTraits::Obj;
-    using ArgsTuple = typename FnTraits::ArgsTuple;
+    using SlotMethod = SlotMethodT;
+    using SlotMethodTraits = ObjectMethodTraits<SlotMethod>;
+    using Obj = typename SlotMethodTraits::Obj;
+    using ArgsTuple = typename SlotMethodTraits::ArgsTuple;
 
     static_assert(isObject<Obj>, "Slots must be declared only in Objects");
 
-    SlotRef(const Obj* object, SlotFunction mfn) :
-        object_(const_cast<Obj*>(object)), mfn_(mfn) {}
+    SlotRef(const Obj* object, SlotMethod m) :
+        object_(const_cast<Obj*>(object)), m_(m) {}
 
     SlotRef(const SlotRef&) = delete;
     SlotRef& operator=(const SlotRef&) = delete;
 
-    static constexpr SlotId id() {
-        return SlotId(typeid(UniqueIdentifierTag));
+    static constexpr ObjectMethodId id() {
+        return ObjectMethodIdSingleton_<ObjectMethodTag>::get();
     }
 
     constexpr Obj* object() const {
         return object_;
     }
 
-    constexpr const SlotFunction& mfn() const {
-        return mfn_;
+    constexpr const SlotMethod& method() const {
+        return m_;
     }
 
 private:
     Obj* const object_;
-    SlotFunction const mfn_;
+    SlotMethod const m_;
 };
 
 // It does not define emit(..) and is intended to be locally subclassed in
 // the signal getter.
 //
-template<typename UniqueIdentifierTag, typename ObjT, typename... Args>
-class SignalRefBase {
+template<typename ObjectMethodTag, typename ObjT, typename... Args>
+class SignalRef {
 public:
     using Obj = ObjT;
     using ArgsTuple = std::tuple<Args...>;
 
     static_assert(isObject<Obj>, "Signals must be declared only in Objects");
 
-    SignalRefBase(const Obj* object) :
+    SignalRef(const Obj* object) :
         object_(const_cast<Obj*>(object)) {}
 
-    SignalRefBase(const SignalRefBase&) = delete;
-    SignalRefBase& operator=(const SignalRefBase&) = delete;
+    SignalRef(const SignalRef&) = delete;
+    SignalRef& operator=(const SignalRef&) = delete;
 
-    static constexpr SignalId id() {
-        return SignalId(typeid(UniqueIdentifierTag));
+    static constexpr SignalMethodId id() {
+        return ObjectMethodIdSingleton_<ObjectMethodTag>::get();;
     }
 
     constexpr Obj* object() const {
         return object_;
     }
 
-    template<typename UIdTag, typename SlotFunctionT>
-    ConnectionHandle connect(SlotRef<UIdTag, SlotFunctionT>&& slot) const {
+    template<typename ObjectMethodTag, typename SlotMethodT>
+    ConnectionHandle connect(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
         // XXX make owner listen on receiver destroy to automatically disconnect signals
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
-            SignalTransmitter<Args...>::create(slot.object(), slot.mfn()));
-        return SignalHub::connect(object_, id(), std::move(transmitter), BoundSlotId(slot.object(), slot.id()));
+            SignalTransmitter<Args...>::create(slotRef.object(), slotRef.method()));
+        return SignalHub::connect(object_, id(), std::move(transmitter), BoundObjectMethodId(slotRef.object(), slotRef.id()));
     }
 
     template<typename R, typename... FnArgs>
@@ -526,10 +513,10 @@ public:
         return SignalHub::connect(object_, id(), std::move(transmitter), FreeFuncId(callback));
     }
 
-    template<typename Callable, std::enable_if_t<SignalFreeHandlerTraits<Callable>::isCallOperator, int> = 0>
-    ConnectionHandle connect(Callable&& callable) const {
+    template<typename FunctionObject, std::enable_if_t<SimpleCallableTraits<FunctionObject>::isCallOperator, int> = 0>
+    ConnectionHandle connect(FunctionObject&& funcObj) const {
         std::unique_ptr<AbstractSignalTransmitter> transmitter(
-            SignalTransmitter<Args...>::create(callable));
+            SignalTransmitter<Args...>::create(funcObj));
         return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
     }
 
@@ -541,9 +528,9 @@ public:
         return SignalHub::disconnect(object_, id(), h);
     }
 
-    template<typename UIdTag, typename SlotFunctionT>
-    bool disconnect(SlotRef<UIdTag, SlotFunctionT>&& slot) const {
-        return SignalHub::disconnect(object_, id(), BoundSlotId(slot.object(), slot.id()));
+    template<typename ObjectMethodTag, typename SlotMethodT>
+    bool disconnect(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
+        return SignalHub::disconnect(object_, id(), BoundObjectMethodId(slotRef.object(), slotRef.id()));
     }
 
     template<typename R, typename... FnArgs>
@@ -607,7 +594,7 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
     auto name_() {                                                                                      \
         struct Tag {};                                                                                  \
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
-        using SignalRefBase = ::vgc::core::internal::SignalRefBase<                                     \
+        using SignalRefBase = ::vgc::core::internal::SignalRef<                                     \
             Tag, VGC_PARAMS_TYPE_((MyClass,), __VA_ARGS__)>;                                            \
         class SignalRef : public SignalRefBase {                                                        \
         public:                                                                                         \
@@ -632,8 +619,12 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
     auto name_##Slot() {                                                                                \
         struct Tag {};                                                                                  \
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
-        using SlotRef = ::vgc::core::internal::SlotRef<                                                 \
-            Tag, decltype(&MyClass::name_)>;                                                            \
+        using SlotRefBase = ::vgc::core::internal::SlotRef<                                             \
+            Tag, decltype(&MyClass::name_)>;                                                        \
+        class SlotRef : public SlotRefBase {                                                            \
+        public:                                                                                         \
+            using SlotRefBase::SlotRefBase;                                                             \
+        };                                                                                              \
         return SlotRef(this, &MyClass::name_);                                                          \
     }
 
@@ -641,8 +632,12 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
     auto name_() {                                                                                      \
         struct Tag {};                                                                                  \
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
-        using SlotRef = ::vgc::core::internal::SlotRef<                                                 \
+        using SlotRefBase = ::vgc::core::internal::SlotRef<                                             \
             Tag, decltype(&MyClass::funcName_)>;                                                        \
+        class SlotRef : public SlotRefBase {                                                            \
+        public:                                                                                         \
+            using SlotRefBase::SlotRefBase;                                                             \
+        };                                                                                              \
         return SlotRef(this, &MyClass::funcName_);                                                      \
     }
 
@@ -775,7 +770,7 @@ private:
     template<typename Handler>
     static inline
         FnType adaptHandler_(Handler&& f) {
-        using HTraits = SignalFreeHandlerTraits<Handler>;
+        using HTraits = SimpleCallableTraits<Handler>;
         static_assert(std::is_same_v<typename HTraits::ReturnType, void>, "Signal handlers must return void.");
         return [=](Args... args) {
             auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);

@@ -1245,7 +1245,7 @@ public:
     auto signalNoArgs2() {
         struct Tag {};
         using MyClass = std::remove_pointer_t<decltype(this)>;
-        using SignalRefBase = ::vgc::core::internal::SignalRefBase<
+        using SignalRefBase = ::vgc::core::internal::SignalRef<
         Tag, MyClass>;
         class SignalRef : public SignalRefBase {
         public:
