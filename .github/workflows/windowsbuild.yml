@@ -110,10 +110,16 @@ jobs:
         vcpkgJsonGlob: 'vcpkg.json'
         runVcpkgInstall: true
 
-    # - name: Setup Developer Command Prompt for VS2019 x64
-    #   shell: cmd
-    #   run: |
-    #     "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+    - name: Setup Developer Command Prompt for VS2019 x64
+      shell: cmd
+      run: |
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+        echo %PATH%
+
+    - name: Setup Developer Command Prompt for VS2019 x64
+      shell: cmd
+      run: |
+        echo %PATH%
 
     # Try something else
     #- name: setup devcmd
@@ -123,11 +129,22 @@ jobs:
       working-directory: ${{runner.workspace}}
       shell: cmd
       run: |
-        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+        echo %VCPKG_ROOT%
+        echo %COMMIT_BRANCH%
+        echo %pythonLocation%
+        echo %Qt5Location%
+        echo %WIX%
         mkdir build
         cd build
         cmake --version
         cmake %GITHUB_WORKSPACE% -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_MANIFEST_MODE=OFF -DVGC_COMMIT_BRANCH=%COMMIT_BRANCH% -DPython_ROOT_DIR="%pythonLocation%" -DQt5_DIR="%Qt5Location%/lib/cmake/Qt5" -DWiX="%WIX%"
+
+    - name: Show CMakeCache
+      working-directory: ${{runner.workspace}}
+      shell: cmd
+      run: |
+        cd build
+        type CMakeCache.txt
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
