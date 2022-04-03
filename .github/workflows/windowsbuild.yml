@@ -110,10 +110,14 @@ jobs:
         vcpkgJsonGlob: 'vcpkg.json'
         runVcpkgInstall: true
 
-    - name: Setup Developer Command Prompt for VS2019 x64
-      shell: cmd
-      run: |
-        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+    # - name: Setup Developer Command Prompt for VS2019 x64
+    #   shell: cmd
+    #   run: |
+    #     "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+
+    # Try something else
+    - name: setup devcmd
+     uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure
       working-directory: ${{runner.workspace}}
