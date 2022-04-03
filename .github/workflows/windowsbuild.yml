@@ -112,7 +112,8 @@ jobs:
 
     - name: Setup Developer Command Prompt for VS2019 x64
       shell: cmd
-      run: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64
+      run: |
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64
 
     - name: Configure
       working-directory: ${{runner.workspace}}
