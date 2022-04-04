@@ -66,10 +66,15 @@ using TypeIdentity = typename TypeIdentity_<U>::type;
 
 template<std::size_t I, typename... T, std::size_t... Is>
 constexpr std::tuple<std::tuple_element_t<I + Is, std::tuple<T...>>...>
-    SubPackAsTuple_(std::index_sequence<Is...>);
-
+SubPackAsTuple_(std::index_sequence<Is...>);
 template<size_t I, size_t N, typename... T>
 using SubPackAsTuple = decltype(SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
+
+template<std::size_t I, typename Tuple, std::size_t... Is>
+constexpr std::tuple<std::tuple_element_t<I + Is, Tuple>...>
+SubTuple_(std::index_sequence<Is...>);
+template<size_t I, size_t N, typename Tuple>
+using SubTuple = decltype(SubTuple_<I, Tuple>(std::make_index_sequence<N>{}));
 
 template<class F, class ArgsTuple, std::size_t... I>
 void applyPartial_(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {

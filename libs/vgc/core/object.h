@@ -1252,8 +1252,8 @@ public:
             using SignalRefBase::SignalRefBase;
             ::vgc::core::internal::EmitCheck
             emit() const {                                                     
-                using TransmitterType = ::vgc::core::internal::SignalTransmitter<>;
-                SignalHub::emit_<TransmitterType>(object(), SignalRefBase::id());
+                //using TransmitterType = ::vgc::core::internal::SignalTransmitter<>;
+                //SignalHub::emit_<TransmitterType>(object(), SignalRefBase::id());
             }
         };
         return SignalRef(this);

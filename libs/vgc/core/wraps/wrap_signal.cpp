@@ -71,7 +71,7 @@ auto createCppToPyTransmitter(py::cpp_function) {
 
 // used for py-signals only ! 
 //
-class PyToPyTransmitter : public core::internal::AbstractSignalTransmitter {
+class PyToPyTransmitter : public core::internal::AbstractSignalTransmitterOld {
 public:
     py::function boundSlot_;
 };
