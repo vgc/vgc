@@ -6,6 +6,7 @@ env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
   PYTHON_VERSION: 3.7
+  PARALLEL_JOBS: 4
 
 defaults:
   run:
@@ -96,18 +97,18 @@ jobs:
         mkdir build
         cd build
         cmake --version
-        cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" --parallel 3 -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="${{runner.workspace}}/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5"
+        cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="${{runner.workspace}}/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
-      run: make
+      run: cmake --build . --parallel $PARALLEL_JOBS
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
-      run: make check
+      run: cmake --build . --target check --parallel $PARALLEL_JOBS
 
     - name: Deploy
       working-directory: ${{runner.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
-      run: make deploy
+      run: cmake --build . --target deploy --parallel $PARALLEL_JOBS
