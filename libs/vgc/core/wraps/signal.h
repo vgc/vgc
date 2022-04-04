@@ -23,13 +23,16 @@
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/object.h>
 
-struct Args {
-    template<size_t N>
-    constexpr Args(const char (&str)[N]) {}
-};
-
 namespace vgc::core::wraps {
 
+// The Signal/Slot api in python is:
+//  - declaration:  @signal | @slot
+//  - connect:      objectA.signalA.connect(objectB.slotB | function)
+//  - emit:         objectA.signalA.emit(args...)
+//  - slot call:    objectB.slotB(args...)
+// 
+// In our current implementation, signals and slots are functions that creates a temporary slotref.
+// Another possibility would be to pre-instanciate the slotrefs on object instanciation.
 
 // some facts to help designing this part:
 // 1) connect(..) is member of sigrefs
@@ -38,79 +41,115 @@ namespace vgc::core::wraps {
 // 
 
 // Common py interface for slots.
+// Keeping a simple Object* is safe as long as instances are used as rvalues.
 class PyAbstractSlotRef {
 public:
-    PyAbstractSlotRef(
-        const core::Object* obj,
-        const core::internal::ObjectMethodId id) :
+    using Id = core::internal::ObjectMethodId;
 
-        obj_(const_cast<core::Object*>(obj)),
-        id_(id) {}
+    PyAbstractSlotRef(const core::Object* obj, const Id id) :
+        obj_(const_cast<core::Object*>(obj)), id_(id) {}
 
     core::Object* object() const {
         return obj_;
     }
 
-    const core::internal::ObjectMethodId& id() const {
+    const Id& id() const {
         return id_;
     }
 
-    virtual py::cpp_function getPyWrappedFunction() const = 0;
-
 private:
     core::Object* const obj_;
-    const core::internal::ObjectMethodId id_;
+    const Id id_;
 };
 
-
-// Object* is safe as long as PyPySlotRef instances are used as rvalues.
+// For Slots/Signals declared in Python.
 class PyPySlotRef : public PyAbstractSlotRef {
 public:
     PyPySlotRef(
         const core::Object* obj,
-        const core::internal::ObjectMethodId id,
+        const Id id,
         const py::function fn) :
 
         PyAbstractSlotRef(obj, id),
         fn_(fn){}
+
+    const py::function& getFunction() const {
+        return fn_;
+    }
 
 private:
     const py::function fn_;
 };
 
 
-class AbstractBoundObjectMethodSlot {
+template<typename R, typename ArgsTuple>
+struct BoundCppMethodSlotSig_;
+template<typename R, typename... Args>
+struct BoundCppMethodSlotSig_<R, std::tuple<Args...>> {
+    using type = R(Args&&...);
+};
+
+//template<typename R, typename C, typename... Args>
+//struct ObjectMethodTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, false, R, Args...> {};
+//template <typename R, typename C, typename... Args>
+//struct ObjectMethodTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, false, R, Args...> {};
+//template<typename T>
+//using ObjectMethodTraits = ObjectMethodTraits_<std::remove_reference_t<T>>;
+
+// a slotref is created from:
+//  cpp: obj + method
+//  py: through cpp decorator that builds a cpp type instance wrapping the py::function.
+
+// an instance is created on each getattr..
+
+// Holds a bound method.
+// What matters is to at least defer the cpp_function instanciation.
+// While we are at it why not deferring the object binding ?
+// To do so, we can only use a polymorphic object.
+// It seems more future-proof to implement it in a separate class.
+class BoundCppMethodSlot {
 protected:
-    AbstractBoundObjectMethodSlot(std::initializer_list<std::type_index> parameters) :
-        parameters_(parameters) {}
+    template<typename Fn, typename... Args>
+    BoundCppMethodSlot(Fn&& fn, void()) :
+        parameters_({std::type_index(typeid(Args))...}),
+        pyfn_(fn), fn_(new std::remove_reference_t<Fn>(std::forward<Fn>(fn))) {}
 
 public:
-    virtual ~AbstractBoundObjectMethodSlot();
-    
+    /*template<typename Fn>
+    BoundCppMethodSlot(
+        std::initializer_list<std::type_index> parameters,
+        py::cpp_function pyfn) :
+
+        parameters_(parameters),
+        pyfn_(pyfn) {} */
+
     const auto& parameters() const {
         return parameters_;
     }
     
-    virtual py::cpp_function getPyWrapped() const = 0;
+    const py::cpp_function& getPyFunction() const {
+        return pyfn_;
+    }
 
 private:
     const std::vector<std::type_index> parameters_;
+    const py::cpp_function pyfn_;
+    const std::unique_ptr<const void*> fn_;
 };
 
+// 
 template<typename... Args>
-class BoundObjectMethodSlot : public AbstractBoundObjectMethodSlot {
+class BoundObjectMethodSlotT : public AbstractBoundObjectMethodSlot {
 public:
     using FunctionSig = void(Args&&...);
     using Function = std::function<FunctionSig>;
 
     template<typename Fn>
     BoundObjectMethodSlot(Fn&& fn) :
-        AbstractBoundObjectMethodSlot({std::type_index(typeid(Args))...}),
+        AbstractBoundObjectMethodSlot(
+            {std::type_index(typeid(Args))...},
+            py::cpp_function(fn)),
         fn_(std::forward<Fn>(fn)) {}
-
-    virtual py::cpp_function getPyWrapped() const override {
-        return py::cpp_function(fn_);
-    }
 
     const Function fn_;
 };
