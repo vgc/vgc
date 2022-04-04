@@ -72,12 +72,18 @@ else()
     set(VGC_VERSION_TYPE "stable")
 endif()
 
-# Target architecture. Currently, we only support x86_64.
-# On Windows, this must be set by passing "-A x64" to the CMake command.
-# On other platforms, it is automatically set to x86_64.
+# Target architecture. Currently, we only support x64, and this value is hard
+# coded. In the future, we may want to support more architecture (e.g., arm64).
 #
+# TODO: Perform more checks to actually verify that we're compiling to x64.
+# 
 if(WIN32)
-    set(VGC_ARCHITECTURE ${CMAKE_GENERATOR_PLATFORM} CACHE STRING "Target architecture. Note: you MUST explicitly pass -A x64 to CMake.")
+    set(VGC_ARCHITECTURE x64 CACHE STRING "Target architecture. We only support x64 for now.")
+    if(CMAKE_GENERATOR MATCHES "Visual Studio")
+        if (NOT ${CMAKE_GENERATOR_PLATFORM} MATCHES "x64")
+            message(FATAL_ERROR "Detected incorrect architecture: '${CMAKE_GENERATOR_PLATFORM}'. Did you forget '-A x64'?")
+        endif()
+    endif()
 else()
     set(VGC_ARCHITECTURE x86_64 CACHE STRING "Target architecture. We only support x86_64 for now.")
 endif()

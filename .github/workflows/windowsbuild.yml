@@ -122,17 +122,14 @@ jobs:
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
-      shell: cmd
       run: cmake --build .
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
-      shell: cmd
       run: cmake --build . --target check
 
     - name: Deploy
       working-directory: ${{runner.workspace}}/build
-      shell: cmd
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
         VGC_CODESIGN_URL: ${{secrets.VGC_CODESIGN_URL}}
