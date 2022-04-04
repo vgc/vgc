@@ -108,7 +108,9 @@ jobs:
         vcpkgDirectory: ${{github.workspace}}/vcpkg
         vcpkgGitCommitId: 8518284c18b9f47b1ccae804cb68694181b780a8
         vcpkgJsonGlob: 'vcpkg.json'
-        runVcpkgInstall: true
+
+    - name: Setup Developer Command Prompt for VS
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure
       working-directory: ${{runner.workspace}}
@@ -116,22 +118,19 @@ jobs:
         mkdir build
         cd build
         cmake --version
-        cmake $GITHUB_WORKSPACE -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 16 2019" -A x64 -DVGC_COMMIT_BRANCH=$COMMIT_BRANCH -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" -DWiX="$WIX"
+        cmake "$GITHUB_WORKSPACE" -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" -DWiX="$WIX"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
-      shell: cmd
-      run: make
+      run: cmake --build .
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
-      shell: cmd
-      run: make check
+      run: cmake --build . --target check
 
     - name: Deploy
       working-directory: ${{runner.workspace}}/build
-      shell: cmd
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
         VGC_CODESIGN_URL: ${{secrets.VGC_CODESIGN_URL}}
-      run: make deploy
+      run: cmake --build . --target deploy
