@@ -330,12 +330,21 @@ endif()
 message(STATUS "") # newline
 
 # Eigen
-# TODO: avoid global `include_directories`
+#
+# Note: we don't use add_subdirectory(${Eigen_DIR}) because:
+# - it generates an error due to their target 'check' conflicting with ours
+# - it is too verbose anyway (~120 lines of output)
+#
+# Therfore, we manually create an INTERFACE target.
+#
+set(Eigen_DIR ${CMAKE_CURRENT_LIST_DIR}/third/eigen CACHE FILEPATH "Path to the root of the Eigen distribution")
 message(STATUS "[Eigen]")
-set(Eigen ${CMAKE_CURRENT_LIST_DIR}/third/eigen CACHE FILEPATH "Path to the root of the Eigen distribution")
-if (EXISTS ${Eigen})
-    message(STATUS "Found Eigen: ${Eigen}")
-    file(READ "${Eigen}/Eigen/src/Core/util/Macros.h" _eigen_version_header)
+if (EXISTS ${Eigen_DIR}/Eigen/src/Core/util/Macros.h)
+    add_library(eigen INTERFACE)
+    add_library(Eigen3::Eigen ALIAS eigen)
+    target_include_directories(eigen INTERFACE ${Eigen_DIR})
+    message(STATUS "Found Eigen: ${Eigen_DIR}")
+    file(READ "${Eigen_DIR}/Eigen/src/Core/util/Macros.h" _eigen_version_header)
     string(REGEX MATCH "define[ \t]+EIGEN_WORLD_VERSION[ \t]+([0-9]+)" _eigen_world_version_match "${_eigen_version_header}")
     set(EIGEN_WORLD_VERSION "${CMAKE_MATCH_1}")
     string(REGEX MATCH "define[ \t]+EIGEN_MAJOR_VERSION[ \t]+([0-9]+)" _eigen_major_version_match "${_eigen_version_header}")
@@ -344,7 +353,6 @@ if (EXISTS ${Eigen})
     set(EIGEN_MINOR_VERSION "${CMAKE_MATCH_1}")
     set(EIGEN_VERSION_NUMBER )
     message(STATUS "Version: ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION}")
-    include_directories(${Eigen})
 else()
     message(SEND_ERROR "Can't find Eigen")
 endif()
