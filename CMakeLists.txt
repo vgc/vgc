@@ -643,7 +643,6 @@ set_target_properties(deploy PROPERTIES FOLDER misc)
 # Add internal libs and apps
 # TODO: avoid global `include_directories`
 message(STATUS "[VGC]")
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs)
 add_subdirectory(libs)
 add_subdirectory(apps)
 message(STATUS "") # newline
