@@ -402,12 +402,6 @@ message(STATUS "") # newline
 # Freetype
 message(STATUS "[FreeType]")
 find_package(Freetype REQUIRED)
-if(NOT TARGET Freetype::Freetype) # CMake < 3.10
-    add_library(Freetype::Freetype SHARED IMPORTED)
-    set_target_properties(Freetype::Freetype PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}"
-        IMPORTED_LOCATION "${FREETYPE_LIBRARIES}")
-endif()
 get_target_property(FREETYPE_INCLUDE_DIRS Freetype::Freetype INTERFACE_INCLUDE_DIRECTORIES)
 if(NOT FREETYPE_VERSION_STRING)
     # Sometimes, VERSION_STRING isn't defined, so we do it ourselves. See:
