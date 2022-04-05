@@ -111,6 +111,11 @@ function(vgc_add_library LIB_NAME)
             FOLDER libs/${LIB_NAME}
     )
 
+    # Include dir ( = ${CMAKE_CURRENT_SOURCE_DIR}/../.. )
+    get_filename_component(LIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
+    get_filename_component(LIB_INCLUDE_DIR ${LIB_INCLUDE_DIR} DIRECTORY)
+    target_include_directories(${LIB_TARGET} PUBLIC ${LIB_INCLUDE_DIR})
+
     # Add dependencies to other VGC libraries
     vgc_add_prefix_suffix_(VGC_LIB_DEPENDENCIES vgc_ "${ARG_VGC_DEPENDENCIES}" _lib)
     target_link_libraries(${LIB_TARGET} PUBLIC ${VGC_LIB_DEPENDENCIES})
