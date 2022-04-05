@@ -110,42 +110,34 @@ You can now finish the installation of vcpkg and of VGC dependencies with the fo
 
 ### Build and run VGC (Windows 7/8/10/11)
 
+In this step, we assume that you installed Visual Studio 2019, Python 3.7 and Qt 5.15.2 in their default paths. If you installed different versions, or if you installed them in different paths, change the commands below accordingly.
 
-Enter the following on a command prompt.
-
-Note that in this example, we assume that you installed Visual Studio 2019, Python 3.7 and Qt 5.15.2 in their default paths. If you installed different versions, or if you installed them in different paths, change the `cmake` command below accordingly.
+Enter the following on a **Visual Studio x64 command prompt** (Windows Key > type "prompt" > Choose "x64 Native Tools Command Prompt for VS 2019").
 
 
 ```
 cd %UserProfile%
 git clone --recurse-submodules https://github.com/vgc/vgc.git
-mkdir build && cd build
+cd vgc && mkdir build && cd build
 cmake .. ^
+    -G Ninja -DCMAKE_BUILD_TYPE=Release ^
     -DCMAKE_TOOLCHAIN_FILE="%UserProfile%\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
-    -DVCPKG_MANIFEST_MODE=OFF ^
     -G "Visual Studio 16 2019" -A x64 ^
     -DPython_ROOT_DIR="%UserProfile%\AppData\Local\Programs\Python\Python37" ^
     -DQt5_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5"
-make
+cmake --build .
 \Release\bin\vgcillustration.exe
 ```
-
-Note: Here, `make` isn't GNU Make, but a custom script called `make.bat` which
-we generate during the cmake step. This script automatically sets up a Visual
-Studio environment by calling the appropriate `VsDevCmd.bat` file, then call
-`cmake --build . --config Release` (or `cmake --build . --config
-Release --target %1` if you pass an argument).
 
 ### Generate an installer (optional)
 
 If you'd like to generate an installer, you will need to install WiX 3.11, add its path to the cmake command, then run make deploy, as such:
 
 ```
-cmake ..\vgc ^
+cmake .. ^
     [other cmake variables here] ^
     -DWiX="C:/Program Files (x86)/WiX Toolset v3.11"
-make
-make deploy
+cmake --build . --target deploy
 ```
 
 ## Build instructions for macOS
@@ -161,14 +153,16 @@ brew install freetype harfbuzz
 
 # Download, build, and run VGC
 git clone --recurse-submodules https://github.com/vgc/vgc.git
-mkdir build && cd build
-cmake ../vgc \
+cd vgc && mkdir build && cd build
+cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DPython_ROOT_DIR="/Library/Frameworks/Python.framework/Versions/3.7" \
     -DQt5_DIR="~/Qt/5.15.2/clang_64/lib/cmake/Qt5"
-make
+cmake --build . --parallel 8
 ./Release/bin/vgcillustration
 ```
+
+Note: You can change `--parallel 8` to `--parallel <n>` where `<n>` is the number of desired thread. A reasonable number is "CPU cores + 2".
 
 ## Build instructions for Ubuntu 20.04+
 
@@ -182,12 +176,14 @@ sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev libfreet
 
 # Download, build, and run VGC
 git clone --recurse-submodules https://github.com/vgc/vgc.git
-mkdir build && cd build
-cmake ../vgc \
+cd vg && mkdir build && cd build
+cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DQt5_DIR="~/Qt/5.15.2/gcc_64/lib/cmake/Qt5"
-make
+cmake --build . --parallel 8
 ./Release/bin/vgcillustration
 ```
 
-Note: in earlier versions of Ubuntu, you'd have to install a newer version of CMake and/or GCC manually.
+Note 1: in earlier versions of Ubuntu, you'd have to install a newer version of CMake and/or GCC manually.
+
+Note 2: You can change `--parallel 8` to `--parallel <n>` where `<n>` is the number of desired thread. A reasonable number is "CPU cores + 2".

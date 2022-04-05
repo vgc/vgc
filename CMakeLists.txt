@@ -1,4 +1,5 @@
 # Required:
+# - CMake 3.10: Freetype::Freetype target
 # - CMake 3.12: New version of FindPython
 #
 # Useful:
@@ -73,7 +74,7 @@ else()
 endif()
 
 # Target architecture. Currently, we only support x64, and this value is hard
-# coded. In the future, we may want to support more architecture (e.g., arm64).
+# coded. In the future, we may want to support more architectures (e.g., arm64).
 #
 # TODO: Perform more checks to actually verify that we're compiling to x64.
 # 
@@ -558,39 +559,6 @@ if(WIN32)
     set_target_properties(vgc_copy_python PROPERTIES FOLDER misc)
 endif()
 
-# On Windows, create a convenient batch script called 'make.bat' in the build
-# folder, which allows you to run the following command in cmd.exe:
-#
-# make [targetname]
-#
-# as syntactic sugar for running the following command in the appropriate Visual
-# Studio command prompt:
-#
-# cmake --build . --target [targetname] --config Release
-#
-# Note: the reason we automatically setup a Visual Studio environment is that
-# windeployqt requires it to find the appropriate dependencies.
-#
-if(WIN32)
-
-    # Set which configuration (Debug, Release, MinSizeRel, or RelWithDebInfo)
-    # should be used when calling make.bat.
-    #
-    set(DefaultConfig Release)
-
-    # Create make.bat.
-    #
-    configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/make.in.bat
-        ${CMAKE_BINARY_DIR}/make.bat)
-
-    # Create test.bat.
-    #
-    configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/tools/windows/test.in.bat
-        ${CMAKE_BINARY_DIR}/test.bat)
-endif()
-
 # Add deploy target.
 #
 if(WIN32)
@@ -641,7 +609,6 @@ endif()
 set_target_properties(deploy PROPERTIES FOLDER misc)
 
 # Add internal libs and apps
-# TODO: avoid global `include_directories`
 message(STATUS "[VGC]")
 add_subdirectory(libs)
 add_subdirectory(apps)
