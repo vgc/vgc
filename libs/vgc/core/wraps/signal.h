@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <typeindex>
+#include <vector>
 
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/object.h>
@@ -84,187 +85,75 @@ private:
     const py::function fn_;
 };
 
-
-template<typename ArgsTuple>
-struct BoundCppMethodSlotSig_;
-template<typename... Args>
-struct BoundCppMethodSlotSig_<std::tuple<Args...>> {
-    using type = void(Args&&...);
-};
-template<typename MemberFunctionPointer>
-using BoundCppMethodSlotSig = typename BoundCppMethodSlotSig_<
-    core::internal::ObjectMethodTraits<MemberFunctionPointer>>::type;
-
-
-//template<typename R, typename C, typename... Args>
-//struct ObjectMethodTraits_<R (C::*)(Args...)> : FunctionTraitsDef_<C, false, R, Args...> {};
-//template <typename R, typename C, typename... Args>
-//struct ObjectMethodTraits_<R (C::*)(Args...) const> : FunctionTraitsDef_<C, false, R, Args...> {};
-//template<typename T>
-//using ObjectMethodTraits = ObjectMethodTraits_<std::remove_reference_t<T>>;
-
-// a slotref is created from:
-//  cpp: obj + method
-//  py: through cpp decorator that builds a cpp type instance wrapping the py::function.
-
-// an instance is created on each getattr..
-
 // Holds a bound method, meant to be cached.
 // Requires pybind11's custom type setup for GC support.
 class PyCppMethodSlotRef : PyAbstractSlotRef{
-protected:
-    template<typename... FnArgs>
-    PyCppMethodSlotRef(
-        std::initializer_list<std::type_index> parameters,
-        std::function<void(FnArgs...)>* fn) :
+    using SignalTransmitter = core::internal::SignalTransmitter;
 
+protected:
+    template<typename Obj, typename... Args>
+    PyCppMethodSlotRef(
+        const Obj* obj,
+        const Id id,
+        SignalTransmitter&& transmitter,
+        std::tuple<Args...>* sig) :
+
+        PyAbstractSlotRef(obj, id),
         parameters_({std::type_index(typeid(Args))...}),
-        pyfn_(*fn), fn_(fn) {}
+        transmitter_(std::move(transmitter)) {
+    
+        pyfn_ = py::cpp_function(transmitter_.getFn<void(Args&&...)>());
+    }
 
 public:
-    template<typename Obj, typename... Args>
-    PyCppMethodSlotRef(const Obj* o, void (Obj::*mfn)(Args...)) :
+    template<typename Callable, std::enable_if_t<isMethod<RemoveCRef<Callable>>, int> = 0>
+    PyCppMethodSlotRef(const Id id, Callable&& c, typename MethodTraits<Callable>::This o) :
         PyCppMethodSlotRef(
-            {std::type_index(typeid(Args))...},
-            new std::function<void(Args&&...)>(
-                [=](Args&&... args) {
-                    (static_cast<Obj*>(o)->*mfn)(std::forward<Args>(args)...);
-                })
-        ) {
-    
-    }
-
-    template<typename BoundFn, std::enable_if_t<
-        std::is_same_v<typename core::internal::SimpleCallableTraits<BoundFn>::ReturnType, void>,
-        int> = 0>
-    PyCppMethodSlotRef(BoundFn&& fn, void(*)()/*methodSig*/) :
-
-        core::internal::SimpleCallableTraits<BoundFn>
-
-        PyCppMethodSlotRef(
-            {std::type_index(typeid(Args))...},
-            new std::function<void(Args&&...)>(
-                [=](Args&&... args) {
-                    (static_cast<Obj*>(o)->*mfn)(std::forward<Args>(args)...);
-                })
-        ) {
+            o, id,
+            SignalTransmitter::build<typename CallableTraits<Callable>::ArgsTuple>(c, o),
+            static_cast<typename CallableTraits<Callable>::ArgsTuple*>(nullptr)) {
 
     }
-
-
-     /*   std::initializer_list<std::type_index> parameters,
-        py::cpp_function pyfn) {
-
-        fn_ = new std::function<void(Args&&...)>(
-            [=](SlotArgs&&... args) {
-                (static_cast<Obj*>(o)->*mfn_)(std::forward<SlotArgs>(args)...);
-        });
-    }
-        parameters_(parameters),
-        pyfn_(pyfn) {}*/
 
     const auto& parameters() const {
         return parameters_;
     }
     
-    virtual const py::cpp_function& getPyFunction() const {
+    const SignalTransmitter& getTransmitter() const {
+        return transmitter_;
+    }
+
+    const py::cpp_function& getPyFunction() const {
         return pyfn_;
     }
 
-    virtual const py::cpp_function& getPyFunction() const {
-        return pyfn_;
-    }
-
 private:
-    const std::vector<std::type_index> parameters_;
-    const py::cpp_function pyfn_;
-    const std::unique_ptr<const void*> fn_;
-};
-
-// 
-template<typename... Args>
-class BoundObjectMethodSlotT : public AbstractBoundObjectMethodSlot {
-public:
-    using FunctionSig = void(Args&&...);
-    using Function = std::function<FunctionSig>;
-
-    template<typename Fn>
-    BoundObjectMethodSlot(Fn&& fn) :
-        AbstractBoundObjectMethodSlot(
-            {std::type_index(typeid(Args))...},
-            py::cpp_function(fn)),
-        fn_(std::forward<Fn>(fn)) {}
-
-    const Function fn_;
-};
-
-class PyAbstractCppSlotRef : public PyAbstractSlotRef {
-public:
-    PyAbstractCppSlotRef(
-        const core::Object* obj,
-        const core::internal::ObjectMethodId id,
-        std::unique_ptr<const AbstractBoundObjectMethodSlot>&& afn) :
-
-        PyAbstractSlotRef(obj, id),
-        afn_(std::move(afn)) {}
-
-    const auto& parameters() const {
-        return afn_->parameters();
-    }
-
-private:
-    const std::unique_ptr<const AbstractBoundObjectMethodSlot> afn_;
-};
-
-// XXX instead of a templated child, let's do a makePyCppSlotRef..
-
-
-
-
-template<typename Obj, typename... SlotArgs>
-class PyCppSlotRef2 : public PyAbstractCppSlotRef<SlotArgs...> {
-private:
-    using SuperClass = PyAbstractCppSlotRef<SlotArgs...>;
-
-public:
-    using MFnT = void (Obj::*)(SlotArgs...);
-    using BoundFunction = typename SuperClass::BoundFunction;
-
-    PyCppSlotRef(const Obj* obj, core::internal::SlotId id, MFnT mfn) :
-        SuperClass(obj, id),
-        mfn_(mfn) {}
-
-    virtual BoundFunction getBoundFunction() const override {
-        // XXX can add alive check here or in the lambda..
-        using MFnT = void (Obj::*)(SlotArgs...);
-        return [=](SlotArgs&&... args) {
-            (static_cast<Obj*>(object())->*mfn_)(std::forward<SlotArgs>(args)...);
-        };
-    }
-
-private:
-    MFnT mfn_;
+    std::vector<std::type_index> parameters_;
+    SignalTransmitter transmitter_;
+    py::cpp_function pyfn_;
 };
 
 
-
-class PyAbstractCppSignalRef : public PyAbstractCppConnectableRef {
+class PyAbstractSignalRef : public PyAbstractSlotRef {
 private:
-    using SuperClass = PyAbstractCppConnectableRef;
+    using SuperClass = PyAbstractSlotRef;
 
 public:
-    using SuperClass::SuperClass;
+    using PyAbstractSlotRef::PyAbstractSlotRef;
 
-    const core::internal::SignalId& id() const {
+    const core::internal::SignalMethodId& id() const {
         return SuperClass::id();
     }
 
-    // XXX do getBoundFunction, that is the bound emit
-
+    // Our Transmitter calls our emit
+   
 protected:
-    virtual [[nodiscard]] core::internal::AbstractSignalTransmitterOld*
-    createTransmitter(PyAbstractCppConnectableRef* connectableRef) const = 0;
+    /*virtual [[nodiscard]] core::internal::SignalTransmitter*
+    createTransmitter(PyAbstractCppConnectableRef* connectableRef) const = 0;*/
 };
+
+
+// to bind cpp signal to py slot -> create a transmitter from lambda that captures the py slot ref, do the connect with the slot it !
 
 
 
@@ -281,6 +170,7 @@ protected:
 //        throw LogicError("Slot/Signal signature mismatch.");
 //    }
 //}
+
 
 #define CREATE_TRANSMITTER_SWITCH_CASE(i)                                   \
     case i:                                                                 \
@@ -306,6 +196,8 @@ public:
     PyCppSignalRef(const Object* obj, const core::internal::SignalId& id) :
         PyAbstractCppSignalRef(obj, id, {std::type_index(typeid(SignalArgs))...}) {}
 
+
+    // we no longer need this do we ?
     virtual [[nodiscard]] core::internal::AbstractSignalTransmitterOld*
     createTransmitter(AbstractCppSlotRef* slotRef) const override {
 
