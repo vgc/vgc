@@ -432,7 +432,6 @@ public:
     }
 
 protected:
-
     static void disconnect_(Object* sender, Object* receiver) {
         auto& hub = access(sender);
         auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c) {
@@ -561,10 +560,6 @@ public:
 
     constexpr Obj* object() const {
         return object_;
-    }
-
-    void objectkhl() {
-        return 4;
     }
 
     template<typename ObjectMethodTag, typename SlotMethodT>

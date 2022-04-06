@@ -85,9 +85,15 @@ private:
     const py::function fn_;
 };
 
+class PyPySignalRef : public PyPySlotRef {
+
+};
+
+
 // Holds a bound method, meant to be cached.
 // Requires pybind11's custom type setup for GC support.
-class PyCppMethodSlotRef : PyAbstractSlotRef{
+class PyCppMethodSlotRef : public PyAbstractSlotRef {
+public:
     using SignalTransmitter = core::internal::SignalTransmitter;
 
 protected:
@@ -106,12 +112,13 @@ protected:
     }
 
 public:
-    template<typename Callable, std::enable_if_t<isMethod<RemoveCRef<Callable>>, int> = 0>
-    PyCppMethodSlotRef(const Id id, Callable&& c, typename MethodTraits<Callable>::This o) :
+    template<typename Method, std::enable_if_t<isMethod<RemoveCRef<Method>>, int> = 0>
+    PyCppMethodSlotRef(const Id id, Method&& method, typename MethodTraits<Method>::This obj) :
         PyCppMethodSlotRef(
-            o, id,
-            SignalTransmitter::build<typename CallableTraits<Callable>::ArgsTuple>(c, o),
-            static_cast<typename CallableTraits<Callable>::ArgsTuple*>(nullptr)) {
+            obj,
+            id,
+            SignalTransmitter::build<typename CallableTraits<Method>::ArgsTuple>(method, obj),
+            static_cast<typename CallableTraits<Method>::ArgsTuple*>(nullptr)) {
 
     }
 
@@ -134,23 +141,34 @@ private:
 };
 
 
-class PyAbstractSignalRef : public PyAbstractSlotRef {
-private:
-    using SuperClass = PyAbstractSlotRef;
-
+// To be constructed from a SignalRef.
+class PyCppSignalRef : public PyCppMethodSlotRef {
 public:
-    using PyAbstractSlotRef::PyAbstractSlotRef;
+    using SignalTransmitter = core::internal::SignalTransmitter;
 
-    const core::internal::SignalMethodId& id() const {
-        return SuperClass::id();
+    template<typename SignalRefImpl, typename... Args,
+        std::enable_if_t<std::is_same_v<SignalRefImpl::ArgsTuple, std::tuple<Args...>>, int> = 0>
+    PyCppSignalRef(const SignalRefImpl& signalRef, std::tuple<Args...>* sig) :
+        PyCppMethodSlotRef(
+            signalRef.object(),
+            signalRef.id(),
+            SignalTransmitter::build<std::tuple<Args...>>(
+                [=](Args&&...){
+                    signalRef.emit(std::forward<Args>(args)...);
+                }),
+            static_cast<std::tuple<Args...>*>(nullptr)) {
+
     }
 
-    // Our Transmitter calls our emit
-   
-protected:
-    /*virtual [[nodiscard]] core::internal::SignalTransmitter*
-    createTransmitter(PyAbstractCppConnectableRef* connectableRef) const = 0;*/
+    const core::internal::SignalMethodId& id() const {
+        return PyCppMethodSlotRef::id();
+    }
 };
+
+
+// I need special transmitters for py signals !!
+// The only way is to re-wrap, let's do that in connect.
+
 
 
 // to bind cpp signal to py slot -> create a transmitter from lambda that captures the py slot ref, do the connect with the slot it !
@@ -187,42 +205,43 @@ protected:
 // to be implemented in 
 
 
-template<typename... SignalArgs>
-class PyCppSignalRef : public PyAbstractCppSignalRef {
-private:
-    using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
-
-public:
-    PyCppSignalRef(const Object* obj, const core::internal::SignalId& id) :
-        PyAbstractCppSignalRef(obj, id, {std::type_index(typeid(SignalArgs))...}) {}
-
-
-    // we no longer need this do we ?
-    virtual [[nodiscard]] core::internal::AbstractSignalTransmitterOld*
-    createTransmitter(AbstractCppSlotRef* slotRef) const override {
-
-        // XXX add fallback to python transmitter
-
-        //checkCompatibility(this, slotRef);
-        const auto& slotParams = slotRef->parameters();
-        switch (slotParams.size()) {
-        CREATE_TRANSMITTER_SWITCH_CASE(0);
-        CREATE_TRANSMITTER_SWITCH_CASE(1);
-        CREATE_TRANSMITTER_SWITCH_CASE(2);
-        CREATE_TRANSMITTER_SWITCH_CASE(3);
-        CREATE_TRANSMITTER_SWITCH_CASE(4);
-        CREATE_TRANSMITTER_SWITCH_CASE(5);
-        default:
-            return nullptr;
-        }
-    }
-};
+//template<typename... SignalArgs>
+//class PyCppSignalRef : public PyAbstractCppSignalRef {
+//private:
+//    using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
+//
+//public:
+//    PyCppSignalRef(const Object* obj, const core::internal::SignalId& id) :
+//        PyAbstractCppSignalRef(obj, id, {std::type_index(typeid(SignalArgs))...}) {}
+//
+//
+//    // we no longer need this do we ?
+//    virtual [[nodiscard]] core::internal::AbstractSignalTransmitterOld*
+//    createTransmitter(AbstractCppSlotRef* slotRef) const override {
+//
+//        // XXX add fallback to python transmitter
+//
+//        //checkCompatibility(this, slotRef);
+//        const auto& slotParams = slotRef->parameters();
+//        switch (slotParams.size()) {
+//        CREATE_TRANSMITTER_SWITCH_CASE(0);
+//        CREATE_TRANSMITTER_SWITCH_CASE(1);
+//        CREATE_TRANSMITTER_SWITCH_CASE(2);
+//        CREATE_TRANSMITTER_SWITCH_CASE(3);
+//        CREATE_TRANSMITTER_SWITCH_CASE(4);
+//        CREATE_TRANSMITTER_SWITCH_CASE(5);
+//        default:
+//            return nullptr;
+//        }
+//    }
+//};
 
 #undef CREATE_TRANSMITTER_SWITCH_CASE
 
 // to be used with connect
 // should define emit(...)
 
+// simple test impl, temporary
 class PySignal {
 private:
     using ImplFn = void (*)(Object*, const py::args& args);
