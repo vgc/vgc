@@ -821,7 +821,7 @@ private:
         ConnectionHandle h;
         std::variant<
             std::monostate,
-            SlotId,
+            //SlotId,
             FreeFuncId
         > id;
 
@@ -844,12 +844,12 @@ private:
             });
     }
 
-    void removeListener_(const Object* o, const StringId& slotName) const {
+    /*void removeListener_(const Object* o, const StringId& slotName) const {
         removeListenerIf_([=](const Listener_& l) {
             return std::holds_alternative<BoundObjectMethodId>(l.id) &&
                 std::get<BoundObjectMethodId>(l.id) == BoundObjectMethodId(o, slotName);
             });
-    }
+    }*/
 
     void removeListener_(void* freeFunc) const {
         removeListenerIf_([=](const Listener_& l) {
