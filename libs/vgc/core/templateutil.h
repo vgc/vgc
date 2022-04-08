@@ -17,6 +17,7 @@
 #ifndef VGC_CORE_TEMPLATEUTIL_H
 #define VGC_CORE_TEMPLATEUTIL_H
 
+#include <functional>
 #include <tuple>
 #include <type_traits>
 

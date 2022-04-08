@@ -242,7 +242,7 @@ private:
     static void emitImpl(Object* o, const py::args& args)
     {
         if (!o->isAlive()) {
-            throw vgc::core::NotAliveError(obj);
+            throw vgc::core::NotAliveError(o);
         }
 
     }

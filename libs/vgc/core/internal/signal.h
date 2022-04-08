@@ -459,7 +459,7 @@ protected:
                 return x;
             }
         }
-        auto info = listenedObjectInfos_.emplaceLast();
+        auto& info = listenedObjectInfos_.emplaceLast();
         info.object = object;
         return info;
     }
@@ -846,7 +846,8 @@ private:
 
     void removeListener_(const Object* o, const StringId& slotName) const {
         removeListenerIf_([=](const Listener_& l) {
-            return std::holds_alternative<SlotId>(l.id) && std::get<SlotId>(l.id) == SlotId(o, slotName);
+            return std::holds_alternative<BoundObjectMethodId>(l.id) &&
+                std::get<BoundObjectMethodId>(l.id) == BoundObjectMethodId(o, slotName);
             });
     }
 

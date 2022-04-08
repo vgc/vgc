@@ -55,16 +55,16 @@ py::cpp_function pySlotAdapter(py::args args, py::kwargs kwargs) {
 }
 
 
-template<typename... SignalArgs>
-[[nodiscard]] static inline
-auto createCppToPyTransmitter(py::cpp_function) {
-    return new core::internal::SignalTransmitter<SignalArgs...>(
-        [=](SignalArgs&&... args) {
-
-            // forward N args to cpp_function
-            // N must be retrieved from func slot attrs.. (if i can add them even for cpp slots..)
-        });
-}
+//template<typename... SignalArgs>
+//[[nodiscard]] static inline
+//auto createCppToPyTransmitter(py::cpp_function) {
+//    return new core::internal::SignalTransmitter<SignalArgs...>(
+//        [=](SignalArgs&&... args) {
+//
+//            // forward N args to cpp_function
+//            // N must be retrieved from func slot attrs.. (if i can add them even for cpp slots..)
+//        });
+//}
 
 // used for py-signals only ! 
 //
