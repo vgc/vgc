@@ -228,15 +228,18 @@ namespace internal {
 template<typename T, typename Enable = void>
 struct CallableTraits_;
 
-template<typename T> struct CallableTraits_<T, std::void_t<typename FreeFunctionTraits_<T>::ReturnType>> : FreeFunctionTraits<T> {
+// Cannot use std::void_t here because it fails on MacOS.
+// Probably a compiler bug similar to https://bugs.llvm.org/show_bug.cgi?id=46791
+
+template<typename T> struct CallableTraits_<T, std::enable_if_t<FreeFunctionTraits_<T>::arity >= 0>> : FreeFunctionTraits<T> {
     static constexpr CallableKind kind = CallableKind::FreeFunction;
 };
 
-template<typename T> struct CallableTraits_<T, std::void_t<typename MethodTraits_<T>::ReturnType>> : MethodTraits<T> {
+template<typename T> struct CallableTraits_<T, std::enable_if_t<MethodTraits_<T>::arity >= 0>> : MethodTraits<T> {
     static constexpr CallableKind kind = CallableKind::Method;
 };
 
-template<typename T> struct CallableTraits_<T, std::void_t<typename FunctorTraits_<T>::ReturnType>> : FunctorTraits<T> {
+template<typename T> struct CallableTraits_<T, std::enable_if_t<FunctorTraits_<T>::arity >= 0>> : FunctorTraits<T> {
     static constexpr CallableKind kind = CallableKind::Functor;
 };
 
