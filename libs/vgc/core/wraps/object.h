@@ -113,13 +113,28 @@ public:
     }
 
 protected:
-    template<typename SignalRefT, typename... SignalArgs, typename... Extra>
-    void defSignal(const char* name, SignalRefT (ObjT::* mfn)(SignalArgs...) const, const Extra&... extra) {
+    template<typename SignalRefT, typename... Extra>
+    void defSignal(const char* name, SignalRefT (ObjT::* mfn)() const, const Extra&... extra) {
         std::string sname(name);
         py::cpp_function fget(
             [=](py::object self) -> PyCppSignalRef* {
                 ObjT* this_ = self.cast<ObjT*>();
                 PyCppSignalRef* sref = new PyCppSignalRef((this_->*mfn)());
+                py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
+                py::setattr(self, sname.c_str(), pysref); // caching
+                return sref; // pybind will find the object in registered_instances
+            },
+            py::keep_alive<0, 1>());
+        PyClass::def_property_readonly(name, fget, extra...);
+    }
+
+    template<typename SlotRefT, typename... Extra>
+    void defSlot(const char* name, SlotRefT (ObjT::* mfn)() const, const Extra&... extra) {
+        std::string sname(name);
+        py::cpp_function fget(
+            [=](py::object self) -> PyCppMethodSlotRef* {
+                ObjT* this_ = self.cast<ObjT*>();
+                PyCppMethodSlotRef* sref = new PyCppMethodSlotRef((this_->*mfn)());
                 py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
                 py::setattr(self, sname.c_str(), pysref); // caching
                 return sref; // pybind will find the object in registered_instances

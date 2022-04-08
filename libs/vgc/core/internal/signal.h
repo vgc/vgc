@@ -215,7 +215,7 @@ public:
     template<typename FreeHandler>
     [[nodiscard]] static inline
         SignalTransmitterOld* create(FreeHandler&& f) {
-        using HTraits = SimpleCallableTraits<FreeHandler>;
+        using HTraits = CallableTraits<FreeHandler>;
         // optimization: when the target has already the desired signature
         if constexpr (std::is_same_v<CallArgsTuple, typename HTraits::ArgsTuple>) {
             return new SignalTransmitterOld(std::forward<FreeHandler>(f));
@@ -330,7 +330,7 @@ public:
 
     template<typename TruncatedSignalArgsTuple>
     const auto& getFn() const {
-        using FnType = typename SignalTransmitterFnType<TruncatedSignalArgsTuple>;
+        using FnType = SignalTransmitterFnType<TruncatedSignalArgsTuple>;
         return *std::any_cast<FnType>(&fn_);
     }
 
@@ -616,8 +616,8 @@ public:
     }
 
 protected:
-    template<typename ObjectMethodTag, typename SlotMethodT>
-    ConnectionHandle connect_(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
+    template<typename TagT, typename SlotMethodT>
+    ConnectionHandle connect_(SlotRef<TagT, SlotMethodT>&& slotRef) const {
         // XXX make owner listen on receiver destroy to automatically disconnect signals
         static_assert(isMethod<SlotMethodT>);
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(slotRef.method(), slotRef.object());
@@ -630,8 +630,8 @@ protected:
         return SignalHub::connect(object_, id(), std::move(transmitter), FreeFuncId(callback));
     }
 
-    template<typename ObjectMethodTag, typename SlotMethodT>
-    bool disconnect_(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
+    template<typename TagT, typename SlotMethodT>
+    bool disconnect_(SlotRef<TagT, SlotMethodT>&& slotRef) const {
         return SignalHub::disconnect(object_, id(), BoundObjectMethodId(slotRef.object(), slotRef.id()));
     }
 

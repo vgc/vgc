@@ -122,6 +122,11 @@ public:
 
     }
 
+    template<typename SlotRefT,
+        std::enable_if_t<core::internal::isSlotRef<SlotRefT>, int> = 0>
+    PyCppMethodSlotRef(const SlotRefT& slotRef) :
+        PyCppMethodSlotRef(SlotRefT::id(), slotRef.method(), slotRef.object()) {}
+
     const auto& parameters() const {
         return parameters_;
     }
@@ -168,7 +173,7 @@ protected:
 public:
     template<typename SignalRefT,
         std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
-     PyCppSignalRef(const SignalRefT& signalRef) :
+    PyCppSignalRef(const SignalRefT& signalRef) :
         PyCppSignalRef(signalRef, signalRef.object(), static_cast<typename SignalRefT::ArgsTuple*>(nullptr)) {}
 
     const core::internal::SignalMethodId& id() const {
