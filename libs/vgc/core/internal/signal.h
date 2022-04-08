@@ -888,7 +888,7 @@ private:
     template<typename Handler>
     static inline
         FnType adaptHandler_(Handler&& f) {
-        using HTraits = SimpleCallableTraits<Handler>;
+        using HTraits = CallableTraits<Handler>;
         static_assert(std::is_same_v<typename HTraits::ReturnType, void>, "Signal handlers must return void.");
         return [=](Args... args) {
             auto&& argsTuple = std::forward_as_tuple(std::forward<Args>(args)...);
