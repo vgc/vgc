@@ -52,32 +52,49 @@ struct LambdaSfinae {
             -> std::void_t<typename std::remove_pointer_t<decltype(v)>::tname> {    \
         })
 
+namespace internal {
+
+template<typename U>
+struct TypeIdentity_ {
+    using type = U;
+};
+
+} // namespace internal
+
 // Similar as std::type_identity available in C++20.
 // Used to establish non-deduced contexts in template argument deduction.
 // e.g. throwLengthError's IntType is deduced from first argument only,
 // then second argument must be convertible to it.
 // todo: move it to some common header or adopt c++20.
 template<typename U>
-struct TypeIdentity_ {
-    using type = U;
-};
-template<typename U>
-using TypeIdentity = typename TypeIdentity_<U>::type;
+using TypeIdentity = typename internal::TypeIdentity_<U>::type;
 
 template<typename T>
 using RemoveCRef = std::remove_const_t<std::remove_reference_t<T>>;
 
+namespace internal {
+
 template<std::size_t I, typename... T, std::size_t... Is>
 constexpr std::tuple<std::tuple_element_t<I + Is, std::tuple<T...>>...>
 SubPackAsTuple_(std::index_sequence<Is...>);
+
+} // namespace internal
+
 template<size_t I, size_t N, typename... T>
-using SubPackAsTuple = decltype(SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
+using SubPackAsTuple = decltype(internal::SubPackAsTuple_<I, T...>(std::make_index_sequence<N>{}));
+
+namespace internal {
 
 template<std::size_t I, typename Tuple, std::size_t... Is>
 constexpr std::tuple<std::tuple_element_t<I + Is, Tuple>...>
 SubTuple_(std::index_sequence<Is...>);
+
+} // namespace internal
+
 template<size_t I, size_t N, typename Tuple>
-using SubTuple = decltype(SubTuple_<I, Tuple>(std::make_index_sequence<N>{}));
+using SubTuple = decltype(internal::SubTuple_<I, Tuple>(std::make_index_sequence<N>{}));
+
+namespace internal {
 
 template<class F, class ArgsTuple, std::size_t... I>
 void applyPartial_(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
@@ -86,9 +103,11 @@ void applyPartial_(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
         std::get<I>(std::forward<ArgsTuple>(t))...);
 }
 
+} // namespace internal
+
 template<size_t N, class F, class ArgsTuple>
 void applyPartial(F&& f, ArgsTuple&& t) {
-    applyPartial_(
+    internal::applyPartial_(
         std::forward<F>(f),
         std::forward<ArgsTuple>(t),
         std::make_index_sequence<N>{});
@@ -117,6 +136,8 @@ struct CallSigTraits<R(Args...)> {
 
 // Method Traits (non-rvalue-reference-qualified)
 
+namespace internal {
+
 template<typename T>
 struct MethodTraits_;
 
@@ -139,10 +160,14 @@ template<typename R, typename C, typename... Args> struct MethodTraits_<R (C::*)
 template<typename R, typename C, typename... Args> struct MethodTraits_<R (C::*)(Args...) const&  > :
     MethodTraitsDef_<C, const C*, true, R, Args...> {};                               
 
+} // namespace internal
+
 template<typename T>
-using MethodTraits = MethodTraits_<RemoveCRef<T>>;
+using MethodTraits = internal::MethodTraits_<RemoveCRef<T>>;
 
 // Functor Traits
+
+namespace internal {
 
 template<typename T, typename Enable = void>
 struct FunctorTraits_;
@@ -161,10 +186,14 @@ struct FunctorTraits_<T, std::void_t<decltype(&T::operator())>> :
     using Obj = typename CallOpTraits::Obj;
 };
 
+} // namespace internal
+
 template<typename T>
-using FunctorTraits = FunctorTraits_<RemoveCRef<T>>;
+using FunctorTraits = internal::FunctorTraits_<RemoveCRef<T>>;
 
 // Free-Function Traits
+
+namespace internal {
 
 template<typename T>
 struct FreeFunctionTraits_;
@@ -180,8 +209,10 @@ template<typename R, typename... Args> struct FreeFunctionTraits_<R(*)(Args...)>
 template<typename R, typename... Args> struct FreeFunctionTraits_<R   (Args...)> :
     FreeFunctionTraitsDef_<R, Args...> {};
 
+} // namespace internal
+
 template<typename T>
-using FreeFunctionTraits = FreeFunctionTraits_<RemoveCRef<T>>;
+using FreeFunctionTraits = internal::FreeFunctionTraits_<RemoveCRef<T>>;
 
 // Callable Traits
 
@@ -190,6 +221,8 @@ enum class CallableKind {
     Method,
     Functor
 };
+
+namespace internal {
 
 template<typename T, typename Enable = void>
 struct CallableTraits_;
@@ -206,41 +239,62 @@ template<typename T> struct CallableTraits_<T, std::void_t<typename FunctorTrait
     static constexpr CallableKind kind = CallableKind::Functor;
 };
 
-template<typename T>
-using CallableTraits = CallableTraits_<RemoveCRef<T>>;
+} // namespace internal
 
+template<typename T>
+using CallableTraits = internal::CallableTraits_<RemoveCRef<T>>;
+
+namespace internal {
 
 template<typename T, typename Enable = void>
 struct isFreeFunction_ : std::false_type {};
 template<typename T>
 struct isFreeFunction_<T, std::enable_if_t<CallableTraits_<T>::kind == CallableKind::FreeFunction, void>> : std::true_type {};
+
+} // namespace internal
+
 template<typename T>
-inline constexpr bool isFreeFunction = isFreeFunction_<T>::value;
+inline constexpr bool isFreeFunction = internal::isFreeFunction_<T>::value;
+
+namespace internal {
 
 template<typename T, typename Enable = void>
 struct isMethod_ : std::false_type {};
 template<typename T>
 struct isMethod_<T, std::enable_if_t<CallableTraits_<T>::kind == CallableKind::Method, void>> : std::true_type {};
+
+} // namespace internal
+
 // "Method" = non-rvalue-reference-qualified non-static member function.
 // i.e.: For "struct Foo { void foo() &&; };", isMethod<&Foo::foo> is false.
 //
 template<typename T>
-inline constexpr bool isMethod = isMethod_<T>::value;
+inline constexpr bool isMethod = internal::isMethod_<T>::value;
+
+namespace internal {
 
 template<typename T, typename Enable = void>
 struct isFunctor_ : std::false_type {};
 template<typename T>
 struct isFunctor_<T, std::enable_if_t<CallableTraits_<T>::kind == CallableKind::Functor, void>> : std::true_type {};
+
+} // namespace internal
+
 template<typename T>
-inline constexpr bool isFunctor = isFunctor_<T>::value;
+inline constexpr bool isFunctor = internal::isFunctor_<T>::value;
+
+namespace internal {
 
 template<typename T, typename Enable = void>
 struct isCallable_ : std::false_type {};
 template<typename T>
 struct isCallable_<T, std::void_t<typename CallableTraits_<T>::CallSig>> : std::true_type {};
+
+} // namespace internal
+
 // Does not include pointers to data members.
 template<typename T>
-inline constexpr bool isCallable = isCallable_<T>::value;
+inline constexpr bool isCallable = internal::isCallable_<T>::value;
 
 
 // XXX to allow slots for pairs of ref-qualified member functions via a select func:
@@ -249,6 +303,28 @@ template<typename R, typename C, typename... Args>
 auto getLValueRefQualifiedMethodOverload_(R(C::*x)(Args...)) { return x; }
 template<typename R, typename C, typename... Args>
 auto getLValueRefQualifiedMethodOverload_(R(C::*x)(Args...)&) { return x; }
+
+
+namespace internal {
+
+template<template<typename...> typename Base, typename... Ts>
+std::true_type  testIsConvertibleToTplBasePointer(const volatile Base<Ts...>*);
+template<template<typename...> typename Base>
+std::false_type testIsConvertibleToTplBasePointer(const volatile void*);
+
+template<template<typename...> typename Base, typename Derived>
+auto testIsTplBaseOf(int) -> decltype(testIsConvertibleToTplBasePointer<Base>(static_cast<Derived*>(nullptr)));
+template<template<typename...> typename Base, typename Derived>
+auto testIsTplBaseOf(...) -> std::true_type; // inaccessible base
+
+template<template<typename...> typename Base, typename Derived>
+struct IsTplBaseOf_ : std::bool_constant<
+    std::is_class_v<Derived> && decltype(testIsTplBaseOf<Base, Derived>(0))::value> {};
+
+} // namespace internal
+
+template<template<typename...> typename Base, typename Derived>
+inline constexpr bool IsTplBaseOf = internal::IsTplBaseOf_<Base, Derived>::value;
 
 } // namespace vgc::core
 

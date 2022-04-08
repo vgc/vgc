@@ -17,6 +17,8 @@
 #ifndef VGC_CORE_WRAPS_OBJECT_H
 #define VGC_CORE_WRAPS_OBJECT_H
 
+#include <type_traits>
+
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/signal.h>
 #include <vgc/core/object.h>
@@ -68,13 +70,15 @@ void wrapObjectCommon(py::module& m, const std::string& className)
         return *this; \
     }
 
-template <typename type_, typename... options>
-class ObjClass : py::class_<type_, core::ObjPtr<type_>, options...> {
+template <typename ObjT, typename... Options>
+class ObjClass : py::class_<ObjT, core::ObjPtr<type_>, Options...> {
 public:
-    using Holder = core::ObjPtr<type_>;
-    using PyClass = py::class_<type_, Holder, options...>;
+    using Holder = core::ObjPtr<ObjT>;
+    using PyClass = py::class_<ObjT, Holder, Options...>;
     using PyClass::PyClass;
     
+    static_assert(isObject<ObjT>);
+
     OBJCLASS_WRAP_PYCLASS_METHOD(def)
     OBJCLASS_WRAP_PYCLASS_METHOD(def_static)
     OBJCLASS_WRAP_PYCLASS_METHOD(def_cast)
@@ -88,23 +92,36 @@ public:
     OBJCLASS_WRAP_PYCLASS_METHOD(def_property)
     OBJCLASS_WRAP_PYCLASS_METHOD(def_property_static)
 
-    template<typename R, typename... SignalArgs, typename... Extra>
-    ObjClass& def_signal(const char* name, R(type_::* mfn)(SignalArgs...) const, const Extra&... extra) {
-        static_assert(vgc::core::internal::isSignal<decltype(mfn)>);
+    template<typename SignalT, std::enable_if_t<core::internal::isSignal<SignalT>, int> = 0>
+    ObjClass& def_signal(const char* name, SignalT signal, const Extra&... extra) {
+        static_assert(std::is_invocable<SignalT, const ObjT*>,
+            "Signal must be accessible in the class being pybound.");
+        defSignal(name, signal, extra...);
+    }
+
+    template<typename SlotT, std::enable_if_t<core::internal::isSlot<SlotT>, int> = 0>
+    ObjClass& def_signal(const char* name, SlotT slot, const Extra&... extra) {
+        static_assert(std::is_invocable<SlotT, ObjT*>,
+            "Slot must be accessible in the class being pybound.");
+        defSlot(name, slot, extra...);
+    }
+
+protected:
+    template<typename SignalRefT, typename... SignalArgs, typename... Extra>
+    ObjClass& defSignal(const char* name, SignalRefT (ObjT::* mfn)(SignalArgs...) const, const Extra&... extra) {
         py::cpp_function fget(
-            [mfn](const type_& c) -> AbstractCppSignalRef* {
-                return new CppSignalRef<SignalArgs...>(const_cast<type_*>(&c), R::getInfo().name);
+            [mfn](const ObjT& c) -> AbstractCppSignalRef* {
+                return new CppSignalRef<SignalArgs...>(const_cast<ObjT*>(&c), R::getInfo().name);
             }, py::is_method(*this));
         PyClass::def_property_readonly(name, fget, py::return_value_policy::take_ownership, extra...);
         return *this;
     }
 
-    template<typename... SlotArgs, typename... Extra>
-    ObjClass& def_slot(const char* name, void (type_::* mfn)(SlotArgs...), const Extra&... extra) {
-        // XXX check is slot if possible
+    template<typename SlotRefT, typename... SlotArgs, typename... Extra>
+    ObjClass& defSlot(const char* name, SlotRefT (ObjT::* mfn)(SlotArgs...), const Extra&... extra) {
         py::cpp_function fget(
-            [mfn](const type_& c) -> AbstractCppSlotRef* {
-                return new CppSlotRefImpl<type_, SlotArgs...>(const_cast<type_*>(&c), mfn);
+            [mfn](const ObjT& c) -> AbstractCppSlotRef* {
+                return new CppSlotRefImpl<ObjT, SlotArgs...>(const_cast<ObjT*>(&c), mfn);
             }, py::is_method(*this));
         PyClass::def_property_readonly(name, fget, py::return_value_policy::take_ownership, extra...);
         return *this;

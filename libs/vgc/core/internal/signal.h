@@ -102,7 +102,7 @@ template<typename T, typename Enable = void>
 struct hasObjectTypedefs_ : std::false_type {};
 template<typename T>
 struct hasObjectTypedefs_<T, std::void_t<typename T::ThisClass, typename T::SuperClass>> :
-    std::is_same<T, typename T::ThisClass> {};
+    std::is_same<std::remove_const_t<T>, typename T::ThisClass> {};
 
 // If T is an Object, it also checks that VGC_OBJECT has been used in T.
 // 
@@ -329,9 +329,9 @@ public:
     }
 
     template<typename TruncatedSignalArgsTuple>
-    const auto& getFn() {
+    const auto& getFn() const {
         using FnType = typename SignalTransmitterFnType<TruncatedSignalArgsTuple>;
-        return std::any_cast<FnType>>(fn_);
+        return std::any_cast<FnType>(fn_);
     }
 
 protected:
@@ -501,7 +501,8 @@ private:
     }    
 };
 
-
+// It is intended to be locally subclassed in the slot (getter).
+//
 template<typename ObjectMethodTag, typename SlotMethodT>
 class SlotRef {
 public:
@@ -512,9 +513,11 @@ public:
 
     static_assert(isObject<Obj>, "Slots must be declared only in Objects");
 
+protected:
     SlotRef(const Obj* object, SlotMethod m) :
         object_(const_cast<Obj*>(object)), m_(m) {}
 
+public:
     // Non-Copyable
     SlotRef(const SlotRef&) = delete;
     SlotRef& operator=(const SlotRef&) = delete;
@@ -536,8 +539,11 @@ private:
     SlotMethod m_;
 };
 
+template<typename T>
+inline constexpr bool isSlotRef = IsTplBaseOf<SlotRef, T>;
+
 // It does not define emit(..) and is intended to be locally subclassed in
-// the signal getter.
+// the signal (getter).
 //
 template<typename ObjectMethodTag, typename ObjT, typename... Args>
 class SignalRef {
@@ -547,23 +553,71 @@ public:
 
     static_assert(isObject<Obj>, "Signals must be declared only in Objects");
 
+protected:
     SignalRef(const Obj* object) :
         object_(const_cast<Obj*>(object)) {}
 
+public:
     // Non-Copyable
     SignalRef(const SignalRef&) = delete;
     SignalRef& operator=(const SignalRef&) = delete;
 
+    // XXX doc
     static constexpr SignalMethodId id() {
         return ObjectMethodIdSingleton_<ObjectMethodTag>::get();;
     }
 
+    // XXX doc
     constexpr Obj* object() const {
         return object_;
     }
 
+    // XXX doc
+    template<typename SlotRefT, std::enable_if_t<isSlotRef<SlotRefT>, int> = 0>
+    ConnectionHandle connect(SlotRefT&& slotRef) const {
+        return connect_(std::forward<SlotRefT>(slotRef));
+    }
+
+    // XXX doc
+    template<typename FreeFunctionT, std::enable_if_t<isFreeFunction<FreeFunctionT>, int> = 0>
+    ConnectionHandle connect(FreeFunctionT&& callback) const {
+        return connect_(std::forward<FreeFunctionT>(callback));
+    }
+
+    // XXX doc
+    template<typename Functor, std::enable_if_t<isFunctor<Functor>, int> = 0>
+    ConnectionHandle connect(Functor&& funcObj) const {
+        SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(funcObj);
+        return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
+    }
+
+    // XXX doc
+    bool disconnect() const {
+        return SignalHub::disconnect(object_, id());
+    }
+
+    // XXX doc
+    bool disconnect(ConnectionHandle h) const {
+        return SignalHub::disconnect(object_, id(), h);
+    }
+
+    // XXX add disconnects in object
+
+    // XXX doc
+    template<typename SlotRefT, std::enable_if_t<isSlotRef<SlotRefT>, int> = 0>
+    bool disconnect(SlotRefT&& slotRef) const {
+        return disconnect_(slotRef);
+    }
+
+    // XXX doc
+    template<typename FreeFunctionT>
+    bool disconnect(FreeFunctionT&& callback) const {
+        return disconnect_(std::forward<FreeFunctionT>(callback));
+    }
+
+protected:
     template<typename ObjectMethodTag, typename SlotMethodT>
-    ConnectionHandle connect(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
+    ConnectionHandle connect_(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
         // XXX make owner listen on receiver destroy to automatically disconnect signals
         static_assert(isMethod<SlotMethodT>);
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(slotRef.method(), slotRef.object());
@@ -571,38 +625,27 @@ public:
     }
 
     template<typename R, typename... FnArgs>
-    ConnectionHandle connect(R (*callback)(FnArgs...)) const {
+    ConnectionHandle connect_(R (*callback)(FnArgs...)) const {
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(callback);
         return SignalHub::connect(object_, id(), std::move(transmitter), FreeFuncId(callback));
     }
 
-    template<typename Functor, std::enable_if_t<CallableTraits<Functor>::kind == CallableKind::Functor, int> = 0>
-    ConnectionHandle connect(Functor&& funcObj) const {
-        SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(funcObj);
-        return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
-    }
-
-    bool disconnect() const {
-        return SignalHub::disconnect(object_, id());
-    }
-
-    bool disconnect(ConnectionHandle h) const {
-        return SignalHub::disconnect(object_, id(), h);
-    }
-
     template<typename ObjectMethodTag, typename SlotMethodT>
-    bool disconnect(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
+    bool disconnect_(SlotRef<ObjectMethodTag, SlotMethodT>&& slotRef) const {
         return SignalHub::disconnect(object_, id(), BoundObjectMethodId(slotRef.object(), slotRef.id()));
     }
 
     template<typename R, typename... FnArgs>
-    bool disconnect(R (*callback)(FnArgs...)) const {
+    bool disconnect_(R (*callback)(FnArgs...)) const {
         return SignalHub::disconnect(object_, id(), FreeFuncId(callback));
     }
 
 private:
     Obj* object_;
 };
+
+template<typename T>
+inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
 
 // To enforce the use of VGC_EMIT when emitting a signal.
 struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
@@ -653,24 +696,35 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
 ///
 #define VGC_SIGNAL(...) VGC_PP_EXPAND(VGC_SIGNAL_(__VA_ARGS__, VaEnd))
 #define VGC_SIGNAL_(name_, ...)                                                                         \
-    auto name_() {                                                                                      \
+    auto name_() const {                                                                                \
         struct Tag {};                                                                                  \
-        using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
-        using SignalRefBase = ::vgc::core::internal::SignalRef<                                         \
+        using MyClass = std::remove_const_t<std::remove_pointer_t<decltype(this)>>;                     \
+        using SignalRefT = ::vgc::core::internal::SignalRef<                                            \
             Tag, VGC_PARAMS_TYPE_((MyClass,), __VA_ARGS__)>;                                            \
-        class SignalRef : public SignalRefBase {                                                        \
+        class SignalRef : public SignalRefT {                                                           \
         public:                                                                                         \
-            using SignalRefBase::SignalRefBase;                                                         \
+            SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
             ::vgc::core::internal::EmitCheck                                                            \
             emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                      \
                 SignalHub::emit_<std::tuple<VGC_PARAMS_TYPE_(__VA_ARGS__)>>(                            \
                     VGC_PP_TRIM_VAEND(                                                                  \
-                        object(), SignalRefBase::id(), VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__)));   \
+                        object(), SignalRefT::id(), VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__)));   \
                 return {};                                                                              \
             }                                                                                           \
         };                                                                                              \
         return SignalRef(this);                                                                         \
     }
+
+namespace vgc::core::internal {
+
+template<typename T>
+struct isSignal_ : std::false_type {};
+template<typename ObjT, typename SignalRefT>
+struct isSignal_<SignalRefT (ObjT::*)() const> : std::bool_constant<isSignalRef<SignalRefT> && isObject<ObjT>> {};
+template<typename T>
+inline constexpr bool isSignal = isSignal_<std::remove_reference_t<T>>::value;
+
+} // namespace vgc::core::internal
 
 #define VGC_EMIT std::ignore =
 
@@ -679,11 +733,11 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
     auto name_##Slot() {                                                                                \
         struct Tag {};                                                                                  \
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
-        using SlotRefBase = ::vgc::core::internal::SlotRef<                                             \
-            Tag, decltype(&MyClass::name_)>;                                                            \
-        class SlotRef : public SlotRefBase {                                                            \
+        using SlotMethod = decltype(&MyClass::name_);                                                   \
+        using SlotRefT = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                               \
+        class SlotRef : public SlotRefT {                                                               \
         public:                                                                                         \
-            using SlotRefBase::SlotRefBase;                                                             \
+            SlotRef(const MyClass* object, SlotMethod m) : SlotRefT(object, m) {}                       \
         };                                                                                              \
         return SlotRef(this, &MyClass::name_);                                                          \
     }
@@ -692,30 +746,33 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
     auto name_() {                                                                                      \
         struct Tag {};                                                                                  \
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
-        using SlotRefBase = ::vgc::core::internal::SlotRef<                                             \
-            Tag, decltype(&MyClass::funcName_)>;                                                        \
-        class SlotRef : public SlotRefBase {                                                            \
+        using SlotMethod = decltype(&MyClass::funcName_);                                               \
+        using SlotRefT = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                               \
+        class SlotRef : public SlotRefT {                                                               \
         public:                                                                                         \
-            using SlotRefBase::SlotRefBase;                                                             \
+            SlotRef(const MyClass* object, SlotMethod m) : SlotRefT(object, m) {}                       \
         };                                                                                              \
         return SlotRef(this, &MyClass::funcName_);                                                      \
     }
+
+
+namespace vgc::core::internal {
+
+template<typename T>
+struct isSlot_ : std::false_type {};
+template<typename ObjT, typename SignalRefT>
+struct isSlot_<SignalRefT(ObjT::*)()> : std::bool_constant<isSignalRef<SignalRefT> && isObject<ObjT>> {};
+template<typename T>
+inline constexpr bool isSlot = isSlot_<std::remove_reference_t<T>>::value;
+
+} // namespace vgc::core::internal
 
 
 namespace vgc::core {
 
 using ConnectionHandle = internal::ConnectionHandle;
 
-} // namespace vgc::core::internal
-
-
-
-
-
-
-
-
-
+} // namespace vgc::core
 
 
 // Simple impl

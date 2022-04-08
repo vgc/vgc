@@ -1249,7 +1249,7 @@ public:
         Tag, MyClass>;
         class SignalRef : public SignalRefBase {
         public:
-            using SignalRefBase::SignalRefBase;
+            SignalRef(const Obj* object) : SignalRefBase(object) {}
             ::vgc::core::internal::EmitCheck
             emit() const {                                                     
                 //using TransmitterType = ::vgc::core::internal::SignalTransmitter<>;

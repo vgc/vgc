@@ -141,14 +141,17 @@ private:
 };
 
 
-// To be constructed from a SignalRef.
+// Should only be constructed from the return value of a Signal method defined
+// with the VGC_SIGNAL macro.
+//
 class PyCppSignalRef : public PyCppMethodSlotRef {
 public:
     using SignalTransmitter = core::internal::SignalTransmitter;
 
-    template<typename SignalRefImpl, typename... Args,
-        std::enable_if_t<std::is_same_v<SignalRefImpl::ArgsTuple, std::tuple<Args...>>, int> = 0>
-    PyCppSignalRef(const SignalRefImpl& signalRef, std::tuple<Args...>* sig) :
+protected:
+    template<typename SignalRefT, typename... Args,
+        std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
+    PyCppSignalRef(const SignalRefT& signalRef, std::tuple<Args...>* sig) :
         PyCppMethodSlotRef(
             signalRef.object(),
             signalRef.id(),
@@ -160,18 +163,36 @@ public:
 
     }
 
+public:
+    template<typename SignalRefT,
+        std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
+     PyCppSignalRef(const SignalRefT& signalRef) :
+        PyCppSignalRef(signalRef, static_cast<typename SignalRefT::ArgsTuple*>(nullptr)) {}
+
     const core::internal::SignalMethodId& id() const {
         return PyCppMethodSlotRef::id();
     }
 };
 
 
+// left todo: 2 decorators + connect/disconnect..
+
 // I need special transmitters for py signals !!
 // The only way is to re-wrap, let's do that in connect.
 
-
-
 // to bind cpp signal to py slot -> create a transmitter from lambda that captures the py slot ref, do the connect with the slot it !
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -189,54 +210,6 @@ public:
 //    }
 //}
 
-
-#define CREATE_TRANSMITTER_SWITCH_CASE(i)                                   \
-    case i:                                                                 \
-        if constexpr (sizeof...(SignalArgs) >= i) {                         \
-            using SlotRefType = CppSlotRefTypeFromArgsTuple<                \
-                core::internal::SubPackAsTuple<0, i, SignalArgs...>>;       \
-            auto castedSlotRef = static_cast<SlotRefType*>(slotRef);        \
-            return TransmitterType::create(castedSlotRef->getBoundSlot());  \
-        }                                                                   \
-        [[fallthrough]];
-
-
-// can create perfect transmitter if slot and signal args match perfectly
-// to be implemented in 
-
-
-//template<typename... SignalArgs>
-//class PyCppSignalRef : public PyAbstractCppSignalRef {
-//private:
-//    using TransmitterType = vgc::core::internal::SignalTransmitter<SignalArgs...>;
-//
-//public:
-//    PyCppSignalRef(const Object* obj, const core::internal::SignalId& id) :
-//        PyAbstractCppSignalRef(obj, id, {std::type_index(typeid(SignalArgs))...}) {}
-//
-//
-//    // we no longer need this do we ?
-//    virtual [[nodiscard]] core::internal::AbstractSignalTransmitterOld*
-//    createTransmitter(AbstractCppSlotRef* slotRef) const override {
-//
-//        // XXX add fallback to python transmitter
-//
-//        //checkCompatibility(this, slotRef);
-//        const auto& slotParams = slotRef->parameters();
-//        switch (slotParams.size()) {
-//        CREATE_TRANSMITTER_SWITCH_CASE(0);
-//        CREATE_TRANSMITTER_SWITCH_CASE(1);
-//        CREATE_TRANSMITTER_SWITCH_CASE(2);
-//        CREATE_TRANSMITTER_SWITCH_CASE(3);
-//        CREATE_TRANSMITTER_SWITCH_CASE(4);
-//        CREATE_TRANSMITTER_SWITCH_CASE(5);
-//        default:
-//            return nullptr;
-//        }
-//    }
-//};
-
-#undef CREATE_TRANSMITTER_SWITCH_CASE
 
 // to be used with connect
 // should define emit(...)
