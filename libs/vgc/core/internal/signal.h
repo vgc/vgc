@@ -863,11 +863,11 @@ private:
         return h;
     }
 
-    ConnectionHandle addListener_(FnType fn, Object* o, StringId slotName) const {
+    /*ConnectionHandle addListener_(FnType fn, Object* o, StringId slotName) const {
         auto h = genConnectionHandle();
         listeners_.append({fn, h, SlotId{o, slotName}});
         return h;
-    }
+    }*/
 
     ConnectionHandle addListener_(FnType fn, void* freeFunc) const {
         auto h = genConnectionHandle();
