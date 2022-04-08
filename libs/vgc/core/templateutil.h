@@ -73,6 +73,20 @@ using TypeIdentity = typename internal::TypeIdentity_<U>::type;
 template<typename T>
 using RemoveCRef = std::remove_const_t<std::remove_reference_t<T>>;
 
+
+namespace internal {
+
+template<typename... Ts>
+struct MakeVoid { 
+    using type = void;
+};
+
+} // namespace internal
+
+// MacOS std::void_t doesn't SFINAE and makes redefinition errors.
+template<typename... Ts>
+using VoidT = typename internal::MakeVoid<Ts...>::type;
+
 namespace internal {
 
 template<std::size_t I, typename... T, std::size_t... Is>
@@ -228,18 +242,15 @@ namespace internal {
 template<typename T, typename Enable = void>
 struct CallableTraits_;
 
-// Cannot use std::void_t here because it fails on MacOS.
-// Probably a compiler bug similar to https://bugs.llvm.org/show_bug.cgi?id=46791
-
-template<typename T> struct CallableTraits_<T, std::enable_if_t<FreeFunctionTraits_<T>::arity >= 0>> : FreeFunctionTraits<T> {
+template<typename T> struct CallableTraits_<T, VoidT<typename FreeFunctionTraits_<T>::ReturnType>> : FreeFunctionTraits<T> {
     static constexpr CallableKind kind = CallableKind::FreeFunction;
 };
 
-template<typename T> struct CallableTraits_<T, std::enable_if_t<MethodTraits_<T>::arity >= 0>> : MethodTraits<T> {
+template<typename T> struct CallableTraits_<T, VoidT<typename MethodTraits_<T>::ReturnType>> : MethodTraits<T> {
     static constexpr CallableKind kind = CallableKind::Method;
 };
 
-template<typename T> struct CallableTraits_<T, std::enable_if_t<FunctorTraits_<T>::arity >= 0>> : FunctorTraits<T> {
+template<typename T> struct CallableTraits_<T, VoidT<typename FunctorTraits_<T>::ReturnType>> : FunctorTraits<T> {
     static constexpr CallableKind kind = CallableKind::Functor;
 };
 
