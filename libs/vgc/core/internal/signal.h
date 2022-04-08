@@ -298,7 +298,7 @@ public:
     #define VGC_SIGNALTRANSMITTER_TRANSMIT_CASE(i)                                                  \
             case i: if constexpr (sizeof...(SignalArgs) >= i) {                                     \
                 using TruncatedSignalArgsTuple = SubTuple<0, i, SignalArgsTuple>;                   \
-                const auto& f = getFn<TruncatedSignalArgsTuple>();                                  \
+                auto f = getFn<TruncatedSignalArgsTuple>();                                 \
                 applyPartial<i>(f, std::forward_as_tuple(std::forward<SignalArgs>(args)...));       \
                 break;                                                                              \
             }                                                                                       \
@@ -331,7 +331,7 @@ public:
     template<typename TruncatedSignalArgsTuple>
     const auto& getFn() const {
         using FnType = typename SignalTransmitterFnType<TruncatedSignalArgsTuple>;
-        return std::any_cast<FnType>(fn_);
+        return *std::any_cast<FnType>(&fn_);
     }
 
 protected:
@@ -587,7 +587,7 @@ public:
     // XXX doc
     template<typename Functor, std::enable_if_t<isFunctor<Functor>, int> = 0>
     ConnectionHandle connect(Functor&& funcObj) const {
-        SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(funcObj);
+        SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(std::forward<Functor>(funcObj));
         return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
     }
 
@@ -606,11 +606,11 @@ public:
     // XXX doc
     template<typename SlotRefT, std::enable_if_t<isSlotRef<SlotRefT>, int> = 0>
     bool disconnect(SlotRefT&& slotRef) const {
-        return disconnect_(slotRef);
+        return disconnect_(std::forward<SlotRefT>(slotRef));
     }
 
     // XXX doc
-    template<typename FreeFunctionT>
+    template<typename FreeFunctionT, std::enable_if_t<isFreeFunction<FreeFunctionT>, int> = 0>
     bool disconnect(FreeFunctionT&& callback) const {
         return disconnect_(std::forward<FreeFunctionT>(callback));
     }
@@ -648,7 +648,7 @@ template<typename T>
 inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
 
 // To enforce the use of VGC_EMIT when emitting a signal.
-struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
+struct VGC_NODISCARD("Did you forget VGC_EMIT?") EmitCheck {
     EmitCheck(const EmitCheck&) = delete;
     EmitCheck& operator=(const EmitCheck&) = delete;
 };
@@ -706,9 +706,10 @@ struct VGC_NODISCARD("Please use VGC_EMIT.") EmitCheck {
             SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
             ::vgc::core::internal::EmitCheck                                                            \
             emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                      \
-                SignalHub::emit_<std::tuple<VGC_PARAMS_TYPE_(__VA_ARGS__)>>(                            \
-                    VGC_PP_TRIM_VAEND(                                                                  \
-                        object(), SignalRefT::id(), VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__)));   \
+                ::vgc::core::internal::SignalHub::emit_<                                                \
+                    std::tuple<VGC_PARAMS_TYPE_(__VA_ARGS__)>                                           \
+                >(VGC_PP_TRIM_VAEND(                                                                    \
+                    object(), SignalRefT::id(), VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__)));          \
                 return {};                                                                              \
             }                                                                                           \
         };                                                                                              \

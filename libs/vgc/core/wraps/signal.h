@@ -108,7 +108,7 @@ protected:
         parameters_({std::type_index(typeid(Args))...}),
         transmitter_(std::move(transmitter)) {
     
-        pyfn_ = py::cpp_function(transmitter_.getFn<void(Args&&...)>());
+        pyfn_ = py::cpp_function(transmitter_.getFn<std::tuple<Args&&...>>());
     }
 
 public:
@@ -149,15 +149,17 @@ public:
     using SignalTransmitter = core::internal::SignalTransmitter;
 
 protected:
-    template<typename SignalRefT, typename... Args,
+    template<typename SignalRefT, typename ObjT, typename... Args,
         std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
-    PyCppSignalRef(const SignalRefT& signalRef, std::tuple<Args...>* sig) :
+    PyCppSignalRef(const SignalRefT& signalRef, ObjT* object, std::tuple<Args...>* sig) :
+        // SignalRefs are non-copyable to prevent ppl from storing them.
+        // But that's what we need to do here. Solution is to rebuild one.
         PyCppMethodSlotRef(
-            signalRef.object(),
+            object,
             signalRef.id(),
             SignalTransmitter::build<std::tuple<Args...>>(
-                [=](Args&&...){
-                    signalRef.emit(std::forward<Args>(args)...);
+                [=](Args&&... args){
+                    VGC_EMIT SignalRefT(object).emit(std::forward<Args>(args)...);
                 }),
             static_cast<std::tuple<Args...>*>(nullptr)) {
 
@@ -167,7 +169,7 @@ public:
     template<typename SignalRefT,
         std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
      PyCppSignalRef(const SignalRefT& signalRef) :
-        PyCppSignalRef(signalRef, static_cast<typename SignalRefT::ArgsTuple*>(nullptr)) {}
+        PyCppSignalRef(signalRef, signalRef.object(), static_cast<typename SignalRefT::ArgsTuple*>(nullptr)) {}
 
     const core::internal::SignalMethodId& id() const {
         return PyCppMethodSlotRef::id();

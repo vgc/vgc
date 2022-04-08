@@ -25,30 +25,26 @@ namespace vgc::core::wraps {
 
 void wrapCppSlotRef(py::module& m)
 {
-    py::class_<AbstractCppSlotRef>(m, "AbstractCppSlotRef")
+   /* py::class_<AbstractCppSlotRef>(m, "AbstractCppSlotRef")
         .def("__call__", [](py::object self, py::args args) {
             auto ref = self.cast<AbstractCppSlotRef*>();
             ref->getPyWrappedBoundSlot().call(*args);
         })
-    ;
+    ;*/
 }
 
 void wrapCppSignalRef(py::module& m)
 {
-    py::class_<AbstractCppSignalRef>(m, "AbstractCppSignalRef")
-        .def("__call__", [](py::object self, py::args args) {
-            auto ref = self.cast<AbstractCppSignalRef*>();
-            // XXX emit
-            
-        })
-   ;
+   // py::class_<AbstractCppSignalRef>(m, "AbstractCppSignalRef")
+   //     .def("__call__", [](py::object self, py::args args) {
+   //         auto ref = self.cast<AbstractCppSignalRef*>();
+   //         // XXX emit
+   //         
+   //     })
+   //;
 }
 
 // connect (signalRef, slotRef)
-
-
-
-
 
 
 
@@ -57,6 +53,7 @@ void wrapCppSignalRef(py::module& m)
 py::cpp_function pySlotAdapter(py::args args, py::kwargs kwargs) {
     return {};
 }
+
 
 template<typename... SignalArgs>
 [[nodiscard]] static inline
@@ -146,8 +143,9 @@ public:
         return TestWrapObjectPtr(new TestWrapObject());
     }
 
-    /*VGC_SIGNAL(signalIDI, (int, a), (double, b), (int, c));
-
+    VGC_SIGNAL(signalIDI, (int, a), (double, b), (int, c));
+    
+    /*
     VGC_SLOT(slotID, (int, a), (double, b)) {
         a_ = a;
         b_ = b;
@@ -191,8 +189,8 @@ void wrap_signal(py::module& m)
         using vgc::core::wraps::TestWrapObject;
         auto c = vgc::core::wraps::ObjClass<TestWrapObject>(m, "TestWrapObject")
             .def(py::init([]() { return TestWrapObject::create(); }))
-           /* .def_signal("signalIDI", &TestWrapObject::signalIDI)
-            .def_slot("slotID", &TestWrapObject::slotID)*/
+            .def_signal("signalIDI", &TestWrapObject::signalIDI)
+            //.def_slot("slotID", &TestWrapObject::slotID)
             .def_readwrite("a", &TestWrapObject::a_)
             .def_readwrite("b", &TestWrapObject::b_)
         ;

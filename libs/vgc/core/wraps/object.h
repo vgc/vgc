@@ -17,6 +17,7 @@
 #ifndef VGC_CORE_WRAPS_OBJECT_H
 #define VGC_CORE_WRAPS_OBJECT_H
 
+#include <memory>
 #include <type_traits>
 
 #include <vgc/core/wraps/common.h>
@@ -71,12 +72,15 @@ void wrapObjectCommon(py::module& m, const std::string& className)
     }
 
 template <typename ObjT, typename... Options>
-class ObjClass : py::class_<ObjT, core::ObjPtr<type_>, Options...> {
+class ObjClass : py::class_<ObjT, core::ObjPtr<ObjT>, Options...> {
 public:
     using Holder = core::ObjPtr<ObjT>;
     using PyClass = py::class_<ObjT, Holder, Options...>;
-    using PyClass::PyClass;
     
+    template <typename... Extra>
+    ObjClass(py::handle scope, const char *name, const Extra&... extra) :
+        PyClass(scope, name, py::dynamic_attr(), extra...) {}
+
     static_assert(isObject<ObjT>);
 
     OBJCLASS_WRAP_PYCLASS_METHOD(def)
@@ -92,40 +96,46 @@ public:
     OBJCLASS_WRAP_PYCLASS_METHOD(def_property)
     OBJCLASS_WRAP_PYCLASS_METHOD(def_property_static)
 
-    template<typename SignalT, std::enable_if_t<core::internal::isSignal<SignalT>, int> = 0>
+    template<typename SignalT, typename... Extra, std::enable_if_t<core::internal::isSignal<SignalT>, int> = 0>
     ObjClass& def_signal(const char* name, SignalT signal, const Extra&... extra) {
-        static_assert(std::is_invocable<SignalT, const ObjT*>,
+        static_assert(std::is_invocable_v<SignalT, const ObjT*>,
             "Signal must be accessible in the class being pybound.");
         defSignal(name, signal, extra...);
+        return *this;
     }
 
-    template<typename SlotT, std::enable_if_t<core::internal::isSlot<SlotT>, int> = 0>
-    ObjClass& def_signal(const char* name, SlotT slot, const Extra&... extra) {
-        static_assert(std::is_invocable<SlotT, ObjT*>,
+    template<typename SlotT, typename... Extra, std::enable_if_t<core::internal::isSlot<SlotT>, int> = 0>
+    ObjClass& def_slot(const char* name, SlotT slot, const Extra&... extra) {
+        static_assert(std::is_invocable_v<SlotT, ObjT*>,
             "Slot must be accessible in the class being pybound.");
         defSlot(name, slot, extra...);
+        return *this;
     }
 
 protected:
     template<typename SignalRefT, typename... SignalArgs, typename... Extra>
-    ObjClass& defSignal(const char* name, SignalRefT (ObjT::* mfn)(SignalArgs...) const, const Extra&... extra) {
+    void defSignal(const char* name, SignalRefT (ObjT::* mfn)(SignalArgs...) const, const Extra&... extra) {
+        std::string sname(name);
         py::cpp_function fget(
-            [mfn](const ObjT& c) -> AbstractCppSignalRef* {
-                return new CppSignalRef<SignalArgs...>(const_cast<ObjT*>(&c), R::getInfo().name);
-            }, py::is_method(*this));
-        PyClass::def_property_readonly(name, fget, py::return_value_policy::take_ownership, extra...);
-        return *this;
+            [=](py::object self) -> PyCppSignalRef* {
+                ObjT* this_ = self.cast<ObjT*>();
+                PyCppSignalRef* sref = new PyCppSignalRef((this_->*mfn)());
+                py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
+                py::setattr(self, sname.c_str(), pysref); // caching
+                return sref; // pybind will find the object in registered_instances
+            },
+            py::keep_alive<0, 1>());
+        PyClass::def_property_readonly(name, fget, extra...);
     }
 
-    template<typename SlotRefT, typename... SlotArgs, typename... Extra>
-    ObjClass& defSlot(const char* name, SlotRefT (ObjT::* mfn)(SlotArgs...), const Extra&... extra) {
+    /*template<typename SlotRefT, typename... SlotArgs, typename... Extra>
+    void defSlot(const char* name, SlotRefT (ObjT::* mfn)(SlotArgs...), const Extra&... extra) {
         py::cpp_function fget(
             [mfn](const ObjT& c) -> AbstractCppSlotRef* {
                 return new CppSlotRefImpl<ObjT, SlotArgs...>(const_cast<ObjT*>(&c), mfn);
             }, py::is_method(*this));
         PyClass::def_property_readonly(name, fget, py::return_value_policy::take_ownership, extra...);
-        return *this;
-    }
+    }*/
 };
 
 #undef OBJCLASS_WRAP_PYCLASS_METHOD
