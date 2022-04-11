@@ -23,6 +23,67 @@
 
 namespace vgc::core::wraps {
 
+// Does something similar to what is done in ObjClass::defSignal().
+py::object signalDecoratorFn(const py::function& signalMethod) {
+    auto builtins = py::module::import("builtins");
+    auto inspect = py::module::import("inspect");
+
+    if (!inspect.attr("isfunction")(signalMethod)) {
+        throw py::value_error("@signal only applies to functions");
+    }
+
+    py::str signalName = signalMethod.attr("__name__");
+
+    // Create the property getter
+    auto newId = core::internal::genObjectMethodId();
+    py::cpp_function fget(
+        [=](py::object self) -> PyPySignalRef* {
+            // XXX more explicit error when self is not a core::Object.
+            Object* this_ = self.cast<Object*>();
+            PyPySignalRef* sref = new PyPySignalRef(this_, newId, signalMethod);
+            py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
+            py::setattr(self, signalName, pysref); // caching
+            return sref; // pybind will find the object in registered_instances
+        },
+        py::keep_alive<0, 1>());
+
+    // Create the property
+    auto prop = builtins.attr("property")(fget);
+
+    return prop;
+}
+
+// Does something similar to what is done in ObjClass::defSlot().
+py::object slotDecoratorFn(const py::function& slotMethod) {
+    auto builtins = py::module::import("builtins");
+    auto inspect = py::module::import("inspect");
+
+    if (!inspect.attr("isfunction")(slotMethod)) {
+        throw py::value_error("@slot only applies to functions");
+    }
+
+    py::str slotName = slotMethod.attr("__name__");
+
+    // Create the property getter
+    auto newId = core::internal::genObjectMethodId();
+    py::cpp_function fget(
+        [=](py::object self) -> PyPySlotRef* {
+            // XXX more explicit error when self is not a core::Object.
+            Object* this_ = self.cast<Object*>();
+            PyPySlotRef* sref = new PyPySlotRef(this_, newId, slotMethod);
+            py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
+            py::setattr(self, slotName, pysref); // caching
+            return sref; // pybind will find the object in registered_instances
+        },
+        py::keep_alive<0, 1>());
+
+    // Create the property
+    auto prop = builtins.attr("property")(fget);
+
+    return prop;
+}
+
+
 void wrapCppSlotRef(py::module& m)
 {
    /* py::class_<AbstractCppSlotRef>(m, "AbstractCppSlotRef")
@@ -89,29 +150,7 @@ void transmit(py::object self, py::str, py::args, py::kwargs)
     std::cout << "transmit" << std::endl;
 }
 
-py::cpp_function signalDecorator(const py::function& signal) {
 
-    py::str signalName = signal.attr("__name__");
-    py::cpp_function wrapper([=](py::object self, py::args args, py::kwargs kwargs) {
-        transmit(self, signalName, args, kwargs);
-
-        // XXX test
-        return 2;
-        });
-
-    // XXX impossible this way, maybe do it manually via Extra args of cpp_function constructor
-    // 
-    //py::function update_wrapper = py::module::import("functools").attr("update_wrapper");
-    //update_wrapper(wrapper, signal);
-
-    return wrapper;
-}
-
-
-py::function slotDecorator(const py::function& slot) {
-    slot.attr("__slot_tag__") = 1;
-    return slot;
-}
 
 void testBoundCallback(const py::function& cb) {
     if (py::hasattr(cb, "__slot_tag__")) {
@@ -161,8 +200,9 @@ void wrap_signal(py::module& m)
 {
     vgc::core::wraps::wrapCppSlotRef(m);
 
-    m.def("signal", &vgc::core::wraps::signalDecorator);
-    m.def("slot", &vgc::core::wraps::slotDecorator);
+    m.def("signal", &vgc::core::wraps::signalDecoratorFn);
+    m.def("slot", &vgc::core::wraps::slotDecoratorFn);
+
     m.def("testBoundCallback", &vgc::core::wraps::testBoundCallback);
 
     using UnsharedOwnerSignal = vgc::core::Signal<>;
