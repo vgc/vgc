@@ -640,6 +640,12 @@ protected:
         return SignalHub::disconnect(object_, id(), FreeFuncId(callback));
     }
 
+    void emit_(Args&&... args) const {
+        ::vgc::core::internal::SignalHub::emit_<ArgsTuple>(
+            object(), id(),
+            std::forward<Args>(args)...);
+    }
+
 private:
     Obj* object_;
 };
@@ -664,6 +670,8 @@ struct VGC_NODISCARD("Did you forget VGC_EMIT?") EmitCheck {
 #define VGC_SIG_PTYPE_(x) VGC_SIG_PTYPE2_ x
 #define VGC_SIG_PNAME_(x) VGC_SIG_PNAME2_ x
 #define VGC_SIG_PBOTH_(x) VGC_SIG_PBOTH2_ x
+#define VGC_SIG_FWD2_(t, n) std::forward<t>(n)
+#define VGC_SIG_FWD_(x) VGC_SIG_FWD2_ x
 
 // ... must end with VaEnd
 #define VGC_PARAMS_TYPE_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))
@@ -671,9 +679,9 @@ struct VGC_NODISCARD("Did you forget VGC_EMIT?") EmitCheck {
 #define VGC_PARAMS_NAME_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PNAME_, __VA_ARGS__))
 // ... must end with VaEnd
 #define VGC_PARAMS_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__))
+// ... must end with VaEnd
+#define VGC_PARAMS_FWD_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__))
 
-#define VGC_SIG_FWD2_(t, n) std::forward<t>(n)
-#define VGC_SIG_FWD_(x) VGC_SIG_FWD2_ x
 
 
 // a->changed().emit(...)
@@ -706,10 +714,7 @@ struct VGC_NODISCARD("Did you forget VGC_EMIT?") EmitCheck {
             SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
             ::vgc::core::internal::EmitCheck                                                            \
             emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                      \
-                ::vgc::core::internal::SignalHub::emit_<                                                \
-                    std::tuple<VGC_PARAMS_TYPE_(__VA_ARGS__)>                                           \
-                >(VGC_PP_TRIM_VAEND(                                                                    \
-                    object(), SignalRefT::id(), VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__)));          \
+                emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                                    \
                 return {};                                                                              \
             }                                                                                           \
         };                                                                                              \
@@ -771,9 +776,16 @@ inline constexpr bool isSlot = isSlot_<std::remove_reference_t<T>>::value;
 
 namespace vgc::core {
 
+// XXX move namespace imports in object.h
+
 using ConnectionHandle = internal::ConnectionHandle;
 
 } // namespace vgc::core
+
+
+////////////////////////
+// DEPRECATED
+////////////////////////
 
 
 // Simple impl
