@@ -71,11 +71,12 @@ void wrapObjectCommon(py::module& m, const std::string& className)
         return *this; \
     }
 
-template <typename ObjT, typename... Options>
-class ObjClass : py::class_<ObjT, core::ObjPtr<ObjT>, Options...> {
+template <typename ObjT, typename ParentT, typename... Options>
+class ObjClass : py::class_<ObjT, core::ObjPtr<ObjT>, ParentT, Options...> {
 public:
     using Holder = core::ObjPtr<ObjT>;
-    using PyClass = py::class_<ObjT, Holder, Options...>;
+    using Parent = ParentT;
+    using PyClass = py::class_<ObjT, Holder, Parent, Options...>;
     
     template <typename... Extra>
     ObjClass(py::handle scope, const char *name, const Extra&... extra) :
@@ -95,6 +96,17 @@ public:
     OBJCLASS_WRAP_PYCLASS_METHOD(def_property_readonly_static)
     OBJCLASS_WRAP_PYCLASS_METHOD(def_property)
     OBJCLASS_WRAP_PYCLASS_METHOD(def_property_static)
+
+    template<typename R = void, typename... Args>
+    ObjClass& def_create() {
+        if constexpr (std::is_same_v<R, void>) {
+            def(py::init(&ObjT::create));
+        }
+        else {
+            def(py::init(static_cast<R (*)(Args...)>(&ObjT::create)));
+        }
+        return *this;
+    }
 
     template<typename SignalT, typename... Extra, std::enable_if_t<core::internal::isSignal<SignalT>, int> = 0>
     ObjClass& def_signal(const char* name, SignalT signal, const Extra&... extra) {
@@ -129,7 +141,7 @@ protected:
     }
 
     template<typename SlotRefT, typename... Extra>
-    void defSlot(const char* name, SlotRefT (ObjT::* mfn)() const, const Extra&... extra) {
+    void defSlot(const char* name, SlotRefT (ObjT::* mfn)(), const Extra&... extra) {
         std::string sname(name);
         py::cpp_function fget(
             [=](py::object self) -> PyCppMethodSlotRef* {
@@ -142,15 +154,6 @@ protected:
             py::keep_alive<0, 1>());
         PyClass::def_property_readonly(name, fget, extra...);
     }
-
-    /*template<typename SlotRefT, typename... SlotArgs, typename... Extra>
-    void defSlot(const char* name, SlotRefT (ObjT::* mfn)(SlotArgs...), const Extra&... extra) {
-        py::cpp_function fget(
-            [mfn](const ObjT& c) -> AbstractCppSlotRef* {
-                return new CppSlotRefImpl<ObjT, SlotArgs...>(const_cast<ObjT*>(&c), mfn);
-            }, py::is_method(*this));
-        PyClass::def_property_readonly(name, fget, py::return_value_policy::take_ownership, extra...);
-    }*/
 };
 
 #undef OBJCLASS_WRAP_PYCLASS_METHOD

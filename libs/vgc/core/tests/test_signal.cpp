@@ -18,33 +18,38 @@
 #include <memory>
 #include <vgc/core/object.h>
 
-TEST(TestSignal, TestConnectSlot)
+TEST(TestSignal, All)
 {
-    vgc::core::internal::TestSignalObject t;
+    auto t = vgc::core::internal::TestSignalObject::create();
 
-    t.signalIntDouble().connect(t.slotIntSlot());
-    t.signalIntDouble().disconnect(t.slotIntSlot());
-    VGC_EMIT t.signalIntDouble().emit(0, 1);
-    ASSERT_FALSE(t.slotIntCalled);
+    t->signalIntDouble().connect(t->slotIntSlot());
+    t->signalIntDouble().disconnect(t->slotIntSlot());
+    VGC_EMIT t->signalIntDouble().emit(12, 2.);
+    VGC_EMIT t->signalIntDouble().emit(11, 0.5);
+    ASSERT_EQ(t->sumInt, 0);
+    ASSERT_FLOAT_EQ(t->sumDouble, 0);
 
-    auto h = t.signalIntDouble().connect(t.slotIntSlot());
-    t.signalIntDouble().disconnect(h);
-    VGC_EMIT t.signalIntDouble().emit(0, 1);
-    ASSERT_FALSE(t.slotIntCalled);
+    auto h = t->signalIntDouble().connect(t->slotIntSlot());
+    VGC_EMIT t->signalIntDouble().emit(12, 2.);
+    VGC_EMIT t->signalIntDouble().emit(11, 0.5);
+    ASSERT_EQ(t->sumInt, 23);
+    ASSERT_FLOAT_EQ(t->sumDouble, 0);
+    t->signalIntDouble().disconnect(h);
+    t->sumInt = 0;
+    t->sumDouble = 0;
+    VGC_EMIT t->signalIntDouble().emit(12, 2.);
+    VGC_EMIT t->signalIntDouble().emit(11, 0.5);
+    ASSERT_EQ(t->sumInt, 0);
+    ASSERT_FLOAT_EQ(t->sumDouble, 0);
 
-    t.signalIntDouble().connect(t.slotIntSlot());
-    VGC_EMIT t.signalIntDouble().emit(0, 1);
-    ASSERT_TRUE(t.slotIntCalled);
-
-    t.slotIntCalled = false;
-    t.selfConnect();
-    VGC_EMIT t.signalIntDouble().emit(0, 1);
-    ASSERT_TRUE(t.slotIntDoubleCalled);
-    ASSERT_TRUE(t.slotIntCalled);
-    //ASSERT_TRUE(t.slotUIntCalled); -> static_assert
-    ASSERT_TRUE(t.sfnIntCalled);
-    ASSERT_TRUE(t.fnIntDoubleCalled);
-    ASSERT_TRUE(t.fnUIntCalled);
+    t->selfConnectIntDouble();
+    VGC_EMIT t->signalIntDouble().emit(21, 4.);
+    // slotIntDouble, slotInt, and slotUInt should be called
+    ASSERT_EQ(t->sumInt, 21 * 3);
+    ASSERT_FLOAT_EQ(t->sumDouble, 4.);
+    ASSERT_TRUE(t->sfnIntCalled);
+    ASSERT_TRUE(t->fnIntDoubleCalled);
+    ASSERT_TRUE(t->fnUIntCalled);
 }
 
 int main(int argc, char **argv)

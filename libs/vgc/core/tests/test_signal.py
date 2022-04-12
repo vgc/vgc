@@ -22,11 +22,11 @@ import inspect
 from pathlib import Path
 
 from vgc.core import (
-    signal, slot, Object as VGCObject # , CppTestSignalObject
+    signal, slot, Object as VGCObject, ConstructibleTestObject # , CppTestSignalObject
 )
 
 # Has similar signals and slots as the c++ test object.
-class TestSignalObject(VGCObject):
+class TestSignalObject(ConstructibleTestObject):
 
     def __init__(self):
         super(TestSignalObject, self).__init__()
@@ -38,38 +38,38 @@ class TestSignalObject(VGCObject):
         self.slotFloatCalled = False
 
     @signal
-    def signalNoArgs():
+    def signalNoArgs(self):
         pass
 
     @signal
-    def signalInt(a : int):
+    def signalInt(self, a : int):
         pass
 
     @signal
-    def signalIntFloat(a : int, b : float):
+    def signalIntFloat(self, a : int, b : float):
         pass
 
     @signal
-    def signalIntFloatBool(a : int, b : float, c : bool):
+    def signalIntFloatBool(self, a : int, b : float, c : bool):
         pass
 
     @slot
-    def slotNoArgs():
+    def slotNoArgs(self):
         self.slotNoArgsCalled = False
 
     @slot
-    def slotInt(a : int):
+    def slotInt(self,a : int):
         self.slotIntCalled = False
         self.a = a
 
     @slot
-    def slotIntFloat(a : int, b : float):
+    def slotIntFloat(self, a : int, b : float):
         self.slotIntFloatCalled = False
         self.a = a
         self.b = b
 
     @slot
-    def slotFloat(a : float):
+    def slotFloat(self,a : float):
         self.slotFloatCalled = False
         self.a = a
 

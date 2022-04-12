@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_SIGNAL_H
-#define VGC_CORE_SIGNAL_H
+#ifndef VGC_CORE_INTERNAL_SIGNAL_H
+#define VGC_CORE_INTERNAL_SIGNAL_H
 
 #include <any>
 #include <functional>
@@ -773,8 +773,8 @@ namespace vgc::core::internal {
 
 template<typename T>
 struct isSlot_ : std::false_type {};
-template<typename ObjT, typename SignalRefT>
-struct isSlot_<SignalRefT(ObjT::*)()> : std::bool_constant<isSignalRef<SignalRefT> && isObject<ObjT>> {};
+template<typename ObjT, typename SlotRefT>
+struct isSlot_<SlotRefT(ObjT::*)()> : std::bool_constant<isSlotRef<SlotRefT> && isObject<ObjT>> {};
 template<typename T>
 inline constexpr bool isSlot = isSlot_<std::remove_reference_t<T>>::value;
 
@@ -935,4 +935,4 @@ using Signal = internal::SignalImpl<void(Args...)>;
 } // namespace vgc::core
 
 
-#endif // VGC_CORE_SIGNAL_H
+#endif // VGC_CORE_INTERNAL_SIGNAL_H

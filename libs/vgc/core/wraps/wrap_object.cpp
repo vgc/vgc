@@ -55,4 +55,29 @@ void wrap_object(py::module& m)
         .def("isDescendantObject", &This::isDescendantObject)
         .def("dumpObjectTree", &This::dumpObjectTree)
     ;
+
+    // test objects
+
+    vgc::core::wraps::ObjClass<vgc::core::internal::ConstructibleTestObject, vgc::core::Object>(m, "ConstructibleTestObject")
+        .def_create()
+    ;
+
+    using TestSignalObject = vgc::core::internal::TestSignalObject;
+    vgc::core::wraps::ObjClass<TestSignalObject, vgc::core::Object>(m, "CppTestSignalObject")
+        .def_create()
+        .def_signal("signalNoArgs", &TestSignalObject::signalNoArgs)
+        .def_signal("signalInt", &TestSignalObject::signalInt)
+        .def_signal("signalIntDouble", &TestSignalObject::signalIntDouble)
+        .def_signal("signalIntDoubleBool", &TestSignalObject::signalIntDoubleBool)
+        .def_slot("slotInt", &TestSignalObject::slotIntSlot)
+        .def_slot("slotIntDouble", &TestSignalObject::slotIntDoubleSlot)
+        .def_slot("slotUInt", &TestSignalObject::slotUIntSlot)
+        .def("selfConnectIntDouble", &TestSignalObject::selfConnectIntDouble)
+        .def("reset", &TestSignalObject::reset)
+        .def_readwrite_static("sfnIntCalled", &TestSignalObject::sfnIntCalled)
+        .def_readwrite("fnIntDoubleCalled", &TestSignalObject::fnIntDoubleCalled)
+        .def_readwrite("fnUIntCalled", &TestSignalObject::fnUIntCalled)
+        .def_readwrite("sumInt", &TestSignalObject::sumInt)
+        .def_readwrite("sumDouble", &TestSignalObject::sumDouble)
+    ;
 }
