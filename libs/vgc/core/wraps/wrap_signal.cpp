@@ -59,7 +59,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
     //
     // XXX can use py::name, py::doc if py::dynamic_attr doesn't let us use functools.update_wrapper
     //
-    py::cpp_function emit(
+    py::object emitFn = py::cpp_function(
         [=](py::object self, py::args args) -> void {
             PyPySignalRef* this_ = self.cast<PyPySignalRef*>();
             using SignalArgsTuple = std::tuple<const py::args&>;
@@ -73,12 +73,12 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
     // Create the property getter
     py::str signalName = signalMethod.attr("__name__");
     py::cpp_function fget(
-        [=,emit0=emit](py::object self) -> PyPySignalRef* {
+        [=](py::object self) -> PyPySignalRef* {
             // XXX more explicit error when self is not a core::Object.
             Object* this_ = self.cast<Object*>();
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, signalMethod);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
-            py::setattr(pysref, "emit", emit0);
+            py::setattr(pysref, "emit", emitFn);
             py::setattr(self, signalName, pysref); // caching
             return sref; // pybind will find the object in registered_instances
         },
