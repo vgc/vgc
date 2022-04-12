@@ -27,7 +27,7 @@ using vgc::dom::Element;
 
 void wrap_element(py::module& m)
 {
-    vgc::core::wraps::ObjClass<This, Parent>(m, "Element")
+    vgc::core::wraps::ObjClass<This>(m, "Element")
         .def_create<This*, Document*, const std::string&>()
         .def_create<This*, Element*, const std::string&>()
         //.def(py::init([](Document* parent, const std::string& name) { return This::create(parent, name); } ))
