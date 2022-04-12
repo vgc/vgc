@@ -137,7 +137,14 @@ using SignalMethodId = ObjectMethodId;
 
 struct ConnectionHandle {
     Int64 id;
+
+    constexpr ConnectionHandle(Int64 id)
+        : id(id) {}
+
+    static const ConnectionHandle invalid;
 };
+
+inline constexpr ConnectionHandle ConnectionHandle::invalid = {-1};
 
 VGC_CORE_API
 ConnectionHandle genConnectionHandle();

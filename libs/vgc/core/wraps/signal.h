@@ -89,7 +89,7 @@ class PyPySignalRef : public PyPySlotRef {
     using PyPySlotRef::PyPySlotRef;
 
     ConnectionHandle connect(PyPySlotRef* slot) {
-
+        return ConnectionHandle::invalid;
     }
 
     // XXX need to dynamically assign the emit to have a custom __doc__..
