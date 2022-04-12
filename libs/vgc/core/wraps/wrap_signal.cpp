@@ -23,25 +23,62 @@
 
 namespace vgc::core::wraps {
 
+// XXX factor out common blocks in signalDecoratorFn and slotDecoratorFn.
+
+// Used to decorate a python signal method.
 // Does something similar to what is done in ObjClass::defSignal().
+//
 py::object signalDecoratorFn(const py::function& signalMethod) {
     auto builtins = py::module::import("builtins");
     auto inspect = py::module::import("inspect");
 
+    // Check it is a function (not a method yet since not processed by metaclass).
     if (!inspect.attr("isfunction")(signalMethod)) {
-        throw py::value_error("@signal only applies to functions");
+        throw py::value_error("@signal and @slot only apply to method declarations.");
     }
 
-    py::str signalName = signalMethod.attr("__name__");
+    // Check that it only has a fixed count of arguments.
+    py::object sig = inspect.attr("signature")(signalMethod);
+    py::object parameter = inspect.attr("Parameter");
+    py::handle POSITIONAL_ONLY = parameter.attr("POSITIONAL_ONLY");
+    py::handle POSITIONAL_OR_KEYWORD = parameter.attr("POSITIONAL_OR_KEYWORD");
+    py::iterable parameters = sig.attr("parameters").attr("values")();
+    Int arity = 0;
+    for (auto it = py::iter(parameters); it != py::iterator::sentinel(); ++it) {
+        py::handle kind = it->attr("kind");
+        if (kind.not_equal(POSITIONAL_ONLY) && kind.not_equal(POSITIONAL_OR_KEYWORD)) {
+            throw py::value_error("@signal and @slot only apply to methods with no var-positional argument, nor kw-only arguments.");
+        }
+        ++arity;
+    }
+
+    // Create a new unique ID for this signal.
+    auto newId = core::internal::genObjectMethodId();
+
+    // Create emit function.
+    //
+    // XXX can use py::name, py::doc if py::dynamic_attr doesn't let us use functools.update_wrapper
+    //
+    py::cpp_function emit(
+        [=](py::object self, py::args args) -> void {
+            PyPySignalRef* this_ = self.cast<PyPySignalRef*>();
+            using SignalArgsTuple = std::tuple<const py::args&>;
+            core::internal::SignalHub::emit_<SignalArgsTuple>(
+                this_->object(),
+                newId,
+                args);
+        },
+        py::is_method(py::none())); // XXX use class object of PyPySignalRef ?
 
     // Create the property getter
-    auto newId = core::internal::genObjectMethodId();
+    py::str signalName = signalMethod.attr("__name__");
     py::cpp_function fget(
         [=](py::object self) -> PyPySignalRef* {
             // XXX more explicit error when self is not a core::Object.
             Object* this_ = self.cast<Object*>();
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, signalMethod);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
+            py::setattr(pysref, "emit", emit);
             py::setattr(self, signalName, pysref); // caching
             return sref; // pybind will find the object in registered_instances
         },
@@ -53,7 +90,9 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
     return prop;
 }
 
+// Used to decorate a python slot method.
 // Does something similar to what is done in ObjClass::defSlot().
+//
 py::object slotDecoratorFn(const py::function& slotMethod) {
     auto builtins = py::module::import("builtins");
     auto inspect = py::module::import("inspect");
@@ -83,32 +122,39 @@ py::object slotDecoratorFn(const py::function& slotMethod) {
     return prop;
 }
 
-
-void wrapCppSlotRef(py::module& m)
+void wrapSignalAndSlotRefs(py::module& m)
 {
-   /* py::class_<AbstractCppSlotRef>(m, "AbstractCppSlotRef")
-        .def("__call__", [](py::object self, py::args args) {
-            auto ref = self.cast<AbstractCppSlotRef*>();
-            ref->getPyWrappedBoundSlot().call(*args);
-        })
-    ;*/
-}
+    // XXX provide a getter for id too ?
+    //     could be interesting to expose signal/slot info/stats to python.
+    auto pyAbstractSlotRef =
+        py::class_<PyAbstractSlotRef>(m, "AbstractSlotRef")
+        .def_property_readonly(
+            "object",
+            [](PyAbstractSlotRef* this_) {
+                return this_->object();
+            })
+        ;
+    
+    auto pySlotRef =
+        py::class_<PyPySlotRef, PyAbstractSlotRef>(m, "SlotRef")
+        .def(
+            /* calling slot calls its method. */
+            "__call__",
+            [](PyPySlotRef* this_, py::args args) {
+                this_->getFunction()(args);
+            })
+        ;
 
-void wrapCppSignalRef(py::module& m)
-{
-   // py::class_<AbstractCppSignalRef>(m, "AbstractCppSignalRef")
-   //     .def("__call__", [](py::object self, py::args args) {
-   //         auto ref = self.cast<AbstractCppSignalRef*>();
-   //         // XXX emit
-   //         
-   //     })
-   //;
+    // Inheritance from PyPySlotRef is not used, since we don't want its
+    // interface.
+    auto pySignalRef =
+        py::class_<PyPySignalRef, PyAbstractSlotRef>(m, "SignalRef")
+        ;
+
+    // XXX C++ ones
 }
 
 // connect (signalRef, slotRef)
-
-
-
 
 // simple adapter
 py::cpp_function pySlotAdapter(py::args args, py::kwargs kwargs) {
@@ -172,6 +218,10 @@ void testBoundCallback(const py::function& cb) {
 // emit:
 // obj.signal.emit()
 
+
+
+// XXX Use internal::TestSignalObject
+
 VGC_DECLARE_OBJECT(TestWrapObject);
 
 class TestWrapObject : public Object {
@@ -183,25 +233,30 @@ public:
     }
 
     VGC_SIGNAL(signalIDI, (int, a), (double, b), (int, c));
-    
-    /*
-    VGC_SLOT(slotID, (int, a), (double, b)) {
-        a_ = a;
-        b_ = b;
-    }*/
+    VGC_SLOT(slotID);
 
-    int a_ = 0;
-    double b_ = 0.;
+    bool slotID(int a, double b) {
+        this->a = a;
+        this->b = b;
+        return false;
+    }
+
+    int a = 0;
+    double b = 0.;
 };
 
 } // namespace vgc::core::wraps
 
 void wrap_signal(py::module& m)
 {
-    vgc::core::wraps::wrapCppSlotRef(m);
+    // ref types
+    vgc::core::wraps::wrapSignalAndSlotRefs(m);
 
+    // decorators
     m.def("signal", &vgc::core::wraps::signalDecoratorFn);
     m.def("slot", &vgc::core::wraps::slotDecoratorFn);
+
+    // tests
 
     m.def("testBoundCallback", &vgc::core::wraps::testBoundCallback);
 
@@ -231,8 +286,8 @@ void wrap_signal(py::module& m)
             .def(py::init([]() { return TestWrapObject::create(); }))
             .def_signal("signalIDI", &TestWrapObject::signalIDI)
             //.def_slot("slotID", &TestWrapObject::slotID)
-            .def_readwrite("a", &TestWrapObject::a_)
-            .def_readwrite("b", &TestWrapObject::b_)
+            .def_readwrite("a", &TestWrapObject::a)
+            .def_readwrite("b", &TestWrapObject::b)
         ;
     }
 }

@@ -86,8 +86,16 @@ private:
 };
 
 class PyPySignalRef : public PyPySlotRef {
+    using PyPySlotRef::PyPySlotRef;
 
+    ConnectionHandle connect(PyPySlotRef* slot) {
+
+    }
+
+    // XXX need to dynamically assign the emit to have a custom __doc__..
+    const py::function emitFn;
 };
+
 
 
 // Holds a bound method, meant to be cached.
@@ -179,6 +187,8 @@ public:
     const core::internal::SignalMethodId& id() const {
         return PyCppMethodSlotRef::id();
     }
+
+    // XXX connects
 };
 
 

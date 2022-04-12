@@ -1242,28 +1242,10 @@ public:
     using ThisClass = TestSignalObject;
     using SuperClass = Object;
 
-    auto signalNoArgs2() {
-        struct Tag {};
-        using MyClass = std::remove_pointer_t<decltype(this)>;
-        using SignalRefBase = ::vgc::core::internal::SignalRef<
-        Tag, MyClass>;
-        class SignalRef : public SignalRefBase {
-        public:
-            SignalRef(const Obj* object) : SignalRefBase(object) {}
-            ::vgc::core::internal::EmitCheck
-            emit() const {                                                     
-                //using TransmitterType = ::vgc::core::internal::SignalTransmitter<>;
-                //SignalHub::emit_<TransmitterType>(object(), SignalRefBase::id());
-            }
-        };
-        return SignalRef(this);
-    }
-
     VGC_SIGNAL(signalNoArgs);
     VGC_SIGNAL(signalInt, (int, a));
     VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
     VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
-    //
 
     void slotInt(int a) { slotIntCalled = true; }
     void slotIntDouble(int a, double b) { slotIntDoubleCalled = true; }

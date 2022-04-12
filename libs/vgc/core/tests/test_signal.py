@@ -22,58 +22,70 @@ import inspect
 from pathlib import Path
 
 from vgc.core import (
-    Signal, signal, slot, testBoundCallback, TestWrapObject, Object as VGCObject
+    signal, slot, Object as VGCObject # , CppTestSignalObject
 )
+
+# Has similar signals and slots as the c++ test object.
+class TestSignalObject(VGCObject):
+
+    def __init__(self):
+        super(TestSignalObject, self).__init__()
+        self.a = 0
+        self.b = 0
+        self.slotNoArgsCalled = False
+        self.slotIntCalled = False
+        self.slotIntFloatCalled = False
+        self.slotFloatCalled = False
+
+    @signal
+    def signalNoArgs():
+        pass
+
+    @signal
+    def signalInt(a : int):
+        pass
+
+    @signal
+    def signalIntFloat(a : int, b : float):
+        pass
+
+    @signal
+    def signalIntFloatBool(a : int, b : float, c : bool):
+        pass
+
+    @slot
+    def slotNoArgs():
+        self.slotNoArgsCalled = False
+
+    @slot
+    def slotInt(a : int):
+        self.slotIntCalled = False
+        self.a = a
+
+    @slot
+    def slotIntFloat(a : int, b : float):
+        self.slotIntFloatCalled = False
+        self.a = a
+        self.b = b
+
+    @slot
+    def slotFloat(a : float):
+        self.slotFloatCalled = False
+        self.a = a
+
 
 class TestSignal(unittest.TestCase):
 
-    def testPySignal(self):
-        s = Signal()
-        res = {}
-        def slot():
-          res['ok'] = True
-        # s.connect(slot)
-        s.emit()
-        # self.assertTrue(res.get('ok', False))
+    def testGetters(self):
+        o = TestSignalObject()
+        self.assertTrue(o.signalInt.object == o)
+        self.assertTrue(o.slotIntFloat.object == o)
 
-    def testDecorators(self):
-
-        class TestObj:
-            @signal
-            def test_signal(a):
-                pass
-
-            @slot
-            def test_slot(a, b, j=4):
-                pass
-
-            @slot
-            def plop(s, e):
-                print(e)
-
-        print("TestObj.test_signal.__name__:", TestObj.test_signal.__name__)
-        print("dir(TestObj.test_signal)", dir(TestObj.test_signal))
-        a = TestObj()
-        self.assertTrue(a.test_signal(2) == 2)
-
-        #print(inspect.getargspec(slot))
-        #self.assertTrue(hasattr(TestObj.test_slot, "__slot_tag__"))
-         # try to add custom attrs to pybound function
-        #testBoundCallback.__slot_tag__ = 1
-
-        testBoundCallback(a.plop)
-
-        a = TestWrapObject()
-
-        self.assertEqual(a.a, 0)
-        self.assertEqual(a.b, 0)
- 
-        #a.slotID(42, 0.5)
-        #self.assertEqual(a.a, 42)
-        #self.assertEqual(a.b, 0.5)
-
-
-        #self.assertTrue(dir(TestObj.test_signal) is None)
+    def testSlots(self):
+        o = TestSignalObject()
+        p = (42, 21.)
+        o.slotIntFloat(*p)
+        self.assertTrue((o.a, o.b) == p)
 
 
 if __name__ == '__main__':
