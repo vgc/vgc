@@ -172,7 +172,7 @@ protected:
             signalRef.id(),
             SignalTransmitter::build<std::tuple<Args...>>(
                 [=](Args&&... args){
-                    VGC_EMIT SignalRefT(object).emit(std::forward<Args>(args)...);
+                    SignalRefT(object).emit(std::forward<Args>(args)...);
                 }),
             static_cast<std::tuple<Args...>*>(nullptr)) {
 

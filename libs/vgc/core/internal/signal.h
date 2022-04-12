@@ -660,12 +660,6 @@ private:
 template<typename T>
 inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
 
-// To enforce the use of VGC_EMIT when emitting a signal.
-struct VGC_NODISCARD("Did you forget VGC_EMIT?") EmitCheck {
-    EmitCheck(const EmitCheck&) = delete;
-    EmitCheck& operator=(const EmitCheck&) = delete;
-};
-
 } // namespace internal
 
 } // namespace vgc::core
@@ -716,13 +710,12 @@ struct VGC_NODISCARD("Did you forget VGC_EMIT?") EmitCheck {
         using MyClass = std::remove_const_t<std::remove_pointer_t<decltype(this)>>;                     \
         using SignalRefT = ::vgc::core::internal::SignalRef<                                            \
             Tag, VGC_PARAMS_TYPE_((MyClass,), __VA_ARGS__)>;                                            \
-        class SignalRef : public SignalRefT {                                                           \
+        class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_ "().emit(..)?"))             \
+        SignalRef : public SignalRefT {                                                                 \
         public:                                                                                         \
             SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
-            ::vgc::core::internal::EmitCheck                                                            \
-            emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                      \
+            void emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                 \
                 emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                                    \
-                return {};                                                                              \
             }                                                                                           \
         };                                                                                              \
         return SignalRef(this);                                                                         \
@@ -739,8 +732,6 @@ inline constexpr bool isSignal = isSignal_<std::remove_reference_t<T>>::value;
 
 } // namespace vgc::core::internal
 
-#define VGC_EMIT std::ignore =
-
 
 #define VGC_SLOT(name_)                                                                                 \
     auto name_##Slot() {                                                                                \
@@ -748,7 +739,9 @@ inline constexpr bool isSignal = isSignal_<std::remove_reference_t<T>>::value;
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
         using SlotMethod = decltype(&MyClass::name_);                                                   \
         using SlotRefT = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                               \
-        class SlotRef : public SlotRefT {                                                               \
+        class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend "                                             \
+            VGC_PP_STR(name_##Slot) "() instead of " #name_ "()?"))                                     \
+        SlotRef : public SlotRefT {                                                                     \
         public:                                                                                         \
             SlotRef(const MyClass* object, SlotMethod m) : SlotRefT(object, m) {}                       \
         };                                                                                              \
@@ -761,7 +754,8 @@ inline constexpr bool isSignal = isSignal_<std::remove_reference_t<T>>::value;
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
         using SlotMethod = decltype(&MyClass::funcName_);                                               \
         using SlotRefT = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                               \
-        class SlotRef : public SlotRefT {                                                               \
+        class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend " #funcName_ "() instead of " #name_ "()?"))  \
+        SlotRef : public SlotRefT {                                                                     \
         public:                                                                                         \
             SlotRef(const MyClass* object, SlotMethod m) : SlotRefT(object, m) {}                       \
         };                                                                                              \

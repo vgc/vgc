@@ -24,26 +24,26 @@ TEST(TestSignal, All)
 
     t->signalIntDouble().connect(t->slotIntSlot());
     t->signalIntDouble().disconnect(t->slotIntSlot());
-    VGC_EMIT t->signalIntDouble().emit(12, 2.);
-    VGC_EMIT t->signalIntDouble().emit(11, 0.5);
+    t->signalIntDouble().emit(12, 2.);
+    t->signalIntDouble().emit(11, 0.5);
     ASSERT_EQ(t->sumInt, 0);
     ASSERT_FLOAT_EQ(t->sumDouble, 0);
 
     auto h = t->signalIntDouble().connect(t->slotIntSlot());
-    VGC_EMIT t->signalIntDouble().emit(12, 2.);
-    VGC_EMIT t->signalIntDouble().emit(11, 0.5);
+    t->signalIntDouble().emit(12, 2.);
+    t->signalIntDouble().emit(11, 0.5);
     ASSERT_EQ(t->sumInt, 23);
     ASSERT_FLOAT_EQ(t->sumDouble, 0);
     t->signalIntDouble().disconnect(h);
     t->sumInt = 0;
     t->sumDouble = 0;
-    VGC_EMIT t->signalIntDouble().emit(12, 2.);
-    VGC_EMIT t->signalIntDouble().emit(11, 0.5);
+    t->signalIntDouble().emit(12, 2.);
+    t->signalIntDouble().emit(11, 0.5);
     ASSERT_EQ(t->sumInt, 0);
     ASSERT_FLOAT_EQ(t->sumDouble, 0);
 
     t->selfConnectIntDouble();
-    VGC_EMIT t->signalIntDouble().emit(21, 4.);
+    t->signalIntDouble().emit(21, 4.);
     // slotIntDouble, slotInt, and slotUInt should be called
     ASSERT_EQ(t->sumInt, 21 * 3);
     ASSERT_FLOAT_EQ(t->sumDouble, 4.);
