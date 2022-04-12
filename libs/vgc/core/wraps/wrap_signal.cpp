@@ -25,20 +25,16 @@ namespace vgc::core::wraps {
 
 // XXX factor out common blocks in signalDecoratorFn and slotDecoratorFn.
 
-// Used to decorate a python signal method.
-// Does something similar to what is done in ObjClass::defSignal().
-//
-py::object signalDecoratorFn(const py::function& signalMethod) {
-    auto builtins = py::module::import("builtins");
+Int getSlotMethodArity_(py::handle builtins, const py::function& method) {
     auto inspect = py::module::import("inspect");
 
     // Check it is a function (not a method yet since not processed by metaclass).
-    if (!inspect.attr("isfunction")(signalMethod)) {
+    if (!inspect.attr("isfunction")(method)) {
         throw py::value_error("@signal and @slot only apply to method declarations.");
     }
 
     // Check that it only has a fixed count of arguments.
-    py::object sig = inspect.attr("signature")(signalMethod);
+    py::object sig = inspect.attr("signature")(method);
     py::object parameter = inspect.attr("Parameter");
     py::handle POSITIONAL_ONLY = parameter.attr("POSITIONAL_ONLY");
     py::handle POSITIONAL_OR_KEYWORD = parameter.attr("POSITIONAL_OR_KEYWORD");
@@ -51,6 +47,16 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
         }
         ++arity;
     }
+    return arity;
+}
+
+// Used to decorate a python signal method.
+// Does something similar to what is done in ObjClass::defSignal().
+//
+py::object signalDecoratorFn(const py::function& signalMethod) {
+    auto builtins = py::module::import("builtins");
+
+    Int arity = getSlotMethodArity_(builtins, signalMethod);
 
     // Create a new unique ID for this signal.
     auto newId = core::internal::genObjectMethodId();
@@ -95,11 +101,8 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
 //
 py::object slotDecoratorFn(const py::function& slotMethod) {
     auto builtins = py::module::import("builtins");
-    auto inspect = py::module::import("inspect");
 
-    if (!inspect.attr("isfunction")(slotMethod)) {
-        throw py::value_error("@slot only applies to functions");
-    }
+    Int arity = getSlotMethodArity_(builtins, slotMethod);
 
     py::str slotName = slotMethod.attr("__name__");
 

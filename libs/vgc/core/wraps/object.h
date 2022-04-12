@@ -71,11 +71,11 @@ void wrapObjectCommon(py::module& m, const std::string& className)
         return *this; \
     }
 
-template <typename ObjT, typename ParentT, typename... Options>
-class ObjClass : py::class_<ObjT, core::ObjPtr<ObjT>, ParentT, Options...> {
+template <typename ObjT, typename... Options>
+class ObjClass : py::class_<ObjT, core::ObjPtr<ObjT>, typename ObjT::SuperClass, Options...> {
 public:
     using Holder = core::ObjPtr<ObjT>;
-    using Parent = ParentT;
+    using Parent = typename ObjT::SuperClass;
     using PyClass = py::class_<ObjT, Holder, Parent, Options...>;
     
     template <typename... Extra>
