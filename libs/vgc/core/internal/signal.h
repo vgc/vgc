@@ -710,7 +710,7 @@ inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
         using MyClass = std::remove_const_t<std::remove_pointer_t<decltype(this)>>;                     \
         using SignalRefT = ::vgc::core::internal::SignalRef<                                            \
             Tag, VGC_PARAMS_TYPE_((MyClass,), __VA_ARGS__)>;                                            \
-        class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_ "().emit(..)?"))             \
+        class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_ "().emit()?"))               \
         SignalRef : public SignalRefT {                                                                 \
         public:                                                                                         \
             SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
@@ -740,7 +740,7 @@ inline constexpr bool isSignal = isSignal_<std::remove_reference_t<T>>::value;
         using SlotMethod = decltype(&MyClass::name_);                                                   \
         using SlotRefT = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                               \
         class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend "                                             \
-            VGC_PP_STR(name_##Slot) "() instead of " #name_ "()?"))                                     \
+             #name_ "() instead of " VGC_PP_STR(name_##Slot) "()?"))                                    \
         SlotRef : public SlotRefT {                                                                     \
         public:                                                                                         \
             SlotRef(const MyClass* object, SlotMethod m) : SlotRefT(object, m) {}                       \
