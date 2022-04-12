@@ -73,12 +73,12 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
     // Create the property getter
     py::str signalName = signalMethod.attr("__name__");
     py::cpp_function fget(
-        [=](py::object self) -> PyPySignalRef* {
+        [=,emit0=emit](py::object self) -> PyPySignalRef* {
             // XXX more explicit error when self is not a core::Object.
             Object* this_ = self.cast<Object*>();
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, signalMethod);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
-            py::setattr(pysref, "emit", emit);
+            py::setattr(pysref, "emit", emit0);
             py::setattr(self, signalName, pysref); // caching
             return sref; // pybind will find the object in registered_instances
         },
