@@ -161,6 +161,7 @@ private:
 
 inline constexpr ConnectionHandle ConnectionHandle::invalid = {-1};
 
+
 VGC_CORE_API
 ObjectMethodId genObjectMethodId();
 
@@ -356,15 +357,26 @@ public:
     static constexpr SignalHub& access(Object* o);
 
     // Must be called by Object's destructor.
-    static void onDestroy(Object* sender) {
-        auto& hub = access(sender);
-
-        // XXX TODO !!!
+    static void onDestroy(Object* receiver) {
+        auto& hub = access(receiver);
+        for (ListenedObjectInfo& x : hub.listenedObjectInfos_) {
+            if (x.numInboundConnections > 0) {
+                SignalHub::lastDisconnect_(x.object, receiver);
+            }
+        }
     }
 
     static ConnectionHandle connect(Object* sender, SignalMethodId from, SignalTransmitter&& transmitter, const SlotId& to) {
         auto& hub = access(sender);
         auto h = ConnectionHandle::generate();
+
+        if (std::holds_alternative<BoundObjectMethodId>(to)) {
+            // Increment numInboundConnections in the receiver's info about sender.
+            const auto& bsid = std::get<BoundObjectMethodId>(to);
+            auto& info = access(bsid.first).findOrCreateListenedObjectInfo(sender);
+            info.numInboundConnections++;
+        }
+
         hub.connections_.emplaceLast(std::move(transmitter), h, from, to);
         return h;
     }
@@ -405,7 +417,8 @@ public:
     }
 
 protected:
-    static void disconnect_(Object* sender, Object* receiver) {
+    // Used in onDestroy(), receiver is about to be destroyed.
+    static void lastDisconnect_(Object* sender, Object* receiver) {
         auto& hub = access(sender);
         auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c){
                 return std::holds_alternative<BoundObjectMethodId>(c.to) && std::get<BoundObjectMethodId>(c.to).first == receiver; 

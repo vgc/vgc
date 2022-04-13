@@ -404,6 +404,7 @@ void Object::destroyObjectImpl_()
     ObjectPtr p = removeObjectFromParent_();
     refCount_ = Int64Min + refCount_;
     onDestroyed();
+    internal::SignalHub::onDestroy(this);
 
     // Note 1: The second line switches isAlive() from true to false, while
     // keeping refCount() unchanged.

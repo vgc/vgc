@@ -25,6 +25,7 @@ from vgc.core import (
     signal, slot, Object as VGCObject, ConstructibleTestObject # , CppTestSignalObject
 )
 
+
 # Has similar signals and slots as the c++ test object.
 class TestSignalObject(ConstructibleTestObject):
 
