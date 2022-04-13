@@ -32,7 +32,7 @@ namespace vgc::core::wraps {
 //  - emit:         objectA.signalA.emit(args...)
 //  - slot call:    objectB.slotB(args...)
 // 
-// In our current implementation, signals and slots are functions that creates a temporary slotref.
+// In our current implementation, signals and slots are property getters that creates a temporary slotref.
 // Another possibility would be to pre-instanciate the slotrefs on object instanciation.
 
 // Python function slot wrap
@@ -43,14 +43,26 @@ namespace vgc::core::wraps {
 //     -> so we need a common type for all slots that we dispatch in C++ (with switch or dyn casts..)
 // 
 
-// Common py interface for slots.
-// Keeping a simple Object* is safe as long as instances are used as rvalues.
+Int getFunctionArity(const py::function& method);
+Int getFunctionArity(py::handle inspect, const py::function& method);
+
+// Common py interface for Signals and Slots.
+// XXX Requires pybind11's custom type setup for GC support.
 class PyAbstractSlotRef {
 public:
+    using SignalTransmitter = core::internal::SignalTransmitter;
     using Id = core::internal::ObjectMethodId;
 
-    PyAbstractSlotRef(const core::Object* obj, const Id id) :
-        obj_(const_cast<core::Object*>(obj)), id_(id) {}
+    PyAbstractSlotRef(
+        const core::Object* obj,
+        Id id) :
+
+        obj_(const_cast<core::Object*>(obj)),
+        id_(id) {
+
+    }
+
+    virtual ~PyAbstractSlotRef() = default;
 
     core::Object* object() const {
         return obj_;
@@ -60,104 +72,213 @@ public:
         return id_;
     }
 
-private:
-    core::Object* const obj_;
-    const Id id_;
+    virtual SignalTransmitter buildPyTransmitter() = 0;
+
+protected:
+    // Object bound to the slot.
+    core::Object* const obj_; 
+    // Unique identifier of the slot.
+    Id id_;
 };
 
-// For Slots/Signals declared in Python.
-// Requires pybind11's custom type setup for GC support.
+// C++ Slots wrapped in a cpp_function expect positional arguments and not a py::args.
+// Thus in case of Py Signals the behavior is also to expand args before the transmit.
+//
+// For a C++ Signal, a SignalTransmitter can be built only with the knowledge of the Signal Args used by the Slot.
+// C++ Signal -> C++ Slot : truncation of C++ arguments pack, see C++ impl.
+// C++ Signal -> Py  Slot : same but the transmit forwards arguments to a py::function.
+// For a Py Signal, pybind11 is responsible for the arguments conversion and testing.
+// Our transmitter could either accept (py::args, arity) or a truncation of the expanded args.
+// Py Signal -> C++ Slot : truncation of expanded python arguments pack. C++ transmit must be wrapped in cpp_function.
+//                         Special case: Slot with 0 arguments. We can directly use the C++ transmit even with a Py Signal.
+// Py Signal -> Py  Slot : truncation of expanded python arguments pack.
+//
+
 class PyPySlotRef : public PyAbstractSlotRef {
 public:
+    using Id = core::internal::ObjectMethodId;
+
+    // 'self' does not count in arity.
     PyPySlotRef(
         const core::Object* obj,
-        const Id id,
-        const py::function fn) :
+        Id id,
+        py::function unboundFn,
+        Int arity) :
 
         PyAbstractSlotRef(obj, id),
-        fn_(fn){}
+        unboundFn_(unboundFn),
+        arity_(arity) {
 
-    const py::function& getFunction() const {
-        return fn_;
     }
 
-private:
-    const py::function fn_;
+    const py::function& getUnboundFn() const {
+        return unboundFn_;
+    }
+
+    const Int& getArity() const {
+        return arity_;
+    }
+
+    virtual SignalTransmitter buildPyTransmitter() override {
+        py::object self = py::cast(object());
+        if (arity_ == 0) {
+            return SignalTransmitter(std::function<void()>(
+                [=]() {
+                    unboundFn_(self);
+                }));
+        }
+        else {
+            return SignalTransmitter(std::function<void(py::args args)>(
+                [=](py::args args) {
+                    unboundFn_(self, *(args[py::slice(0, arity_)]));
+                }));
+        }
+    }
+
+protected:
+    // Unbound slot py-method.
+    py::function unboundFn_;
+    // Arity of slot py-method, self excluded.
+    Int arity_;
 };
 
-class PyPySignalRef : public PyPySlotRef {
+class PyPySignalRef : public PyAbstractSlotRef {
 public:
-    using PyPySlotRef::PyPySlotRef;
+    PyPySignalRef(
+        const core::Object* obj,
+        Id id,
+        py::function boundEmitFn,
+        Int arity) :
 
-    ConnectionHandle connect(PyPySlotRef* slot) {
-        return ConnectionHandle::invalid;
+        PyAbstractSlotRef(obj, id),
+        boundEmitFn_(boundEmitFn),
+        arity_(arity) {
+
     }
 
-    py::function emitFn;
+    // XXX connects
+
+    /*
+    ConnectionHandle connect(SlotRefT&& slotRef)
+    ConnectionHandle connect(FreeFunctionT&& callback)
+    ConnectionHandle connect(Functor&& funcObj)
+    bool disconnect()
+    bool disconnect(ConnectionHandle h)
+    bool disconnect(SlotRefT&& slotRef)
+    */
+
+    ConnectionHandle connect(PyAbstractSlotRef* slot) {
+        return core::internal::SignalHub::connect(object(), id(), slot->buildPyTransmitter(), core::internal::BoundObjectMethodId(slot->object(), slot->id()));
+    }
+
+    ConnectionHandle connectCallback(py::function callback) {
+        auto inspect = py::module::import("inspect");
+        Int arity = getFunctionArity(inspect, callback);
+        return core::internal::SignalHub::connect(
+            object(), id(),
+            SignalTransmitter(std::function<void(py::args args)>(
+                [=](py::args args) {
+                    callback(*(args[py::slice(0, arity)]));
+                })),
+            std::monostate{});
+    }
+
+    const py::function& getBoundEmitFn() const {
+        return boundEmitFn_;
+    }
+
+    virtual SignalTransmitter buildPyTransmitter() override {
+        return SignalTransmitter(std::function<void(py::args args)>(
+            [=](py::args args) {
+                boundEmitFn_(args);
+            }));
+    }
+
+protected:
+    // Bound emit py-function.
+    py::function boundEmitFn_;
+    // Arity of the emit py-function.
+    Int arity_;
 };
 
-
-
-// Holds a bound method, meant to be cached.
-// Requires pybind11's custom type setup for GC support.
-class PyCppMethodSlotRef : public PyAbstractSlotRef {
+// Holds a C++ transmitter, meant to be cached.
+class PyAbstractCppSlotRef : public PyAbstractSlotRef {
 public:
     using SignalTransmitter = core::internal::SignalTransmitter;
 
 protected:
     template<typename Obj, typename... Args>
-    PyCppMethodSlotRef(
+    PyAbstractCppSlotRef(
         const Obj* obj,
         const Id id,
-        SignalTransmitter&& transmitter,
+        SignalTransmitter&& cppTransmitter,
         std::tuple<Args...>* sig) :
 
-        PyAbstractSlotRef(obj, id),
+        PyAbstractSlotRef(
+            obj,
+            id),
         parameters_({std::type_index(typeid(Args))...}),
-        transmitter_(std::move(transmitter)) {
-    
-        pyfn_ = py::cpp_function(transmitter_.getFn<std::tuple<Args&&...>>());
+        cppTransmitter_(std::move(cppTransmitter)) {
+
     }
 
 public:
+    const auto& parameters() const {
+        return parameters_;
+    }
+    
+    const SignalTransmitter& getCppTransmitter() const {
+        return cppTransmitter_;
+    }
+
+private:
+    std::vector<std::type_index> parameters_;
+    SignalTransmitter cppTransmitter_;
+};
+
+// Should only be constructed from the return value of a Slot method defined
+// with the VGC_SLOT macro.
+//
+class PyCppSlotRef : public PyAbstractCppSlotRef {
+public:
     template<typename Method, std::enable_if_t<isMethod<RemoveCRef<Method>>, int> = 0>
-    PyCppMethodSlotRef(const Id id, Method&& method, typename MethodTraits<Method>::This obj) :
-        PyCppMethodSlotRef(
+    PyCppSlotRef(const Id id, Method&& method, typename MethodTraits<Method>::This obj) :
+        PyAbstractCppSlotRef(
             obj,
             id,
             SignalTransmitter::build<typename CallableTraits<Method>::ArgsTuple>(method, obj),
             static_cast<typename CallableTraits<Method>::ArgsTuple*>(nullptr)) {
 
+        //py::cpp_function(bindMethod(obj, method, static_cast<typename CallableTraits<Method>::ArgsTuple*>(nullptr))),
+
     }
 
     template<typename SlotRefT,
         std::enable_if_t<core::internal::isSlotRef<SlotRefT>, int> = 0>
-    PyCppMethodSlotRef(const SlotRefT& slotRef) :
-        PyCppMethodSlotRef(SlotRefT::id(), slotRef.method(), slotRef.object()) {}
-
-    const auto& parameters() const {
-        return parameters_;
-    }
+    PyCppSlotRef(const SlotRefT& slotRef) :
+        PyCppSlotRef(SlotRefT::id(), slotRef.method(), slotRef.object()) {
     
-    const SignalTransmitter& getTransmitter() const {
-        return transmitter_;
     }
 
-    const py::cpp_function& getPyFunction() const {
-        return pyfn_;
+    virtual SignalTransmitter buildPyTransmitter() override {
+        // XXX todo
+        return {};
     }
 
-private:
-    std::vector<std::type_index> parameters_;
-    SignalTransmitter transmitter_;
-    py::cpp_function pyfn_;
+protected:
+    template<typename Obj, typename Method, typename... MethodArgs>
+    [[nodiscard]] static auto bindMethod(Obj* obj, Method&& method, std::tuple<MethodArgs...>*) {
+        return std::function<void(MethodArgs...)>(
+            [=](MethodArgs... args) {
+                std::invoke(method, obj, std::forward<MethodArgs>(args)...);
+            });
+    }
 };
-
 
 // Should only be constructed from the return value of a Signal method defined
 // with the VGC_SIGNAL macro.
 //
-class PyCppSignalRef : public PyCppMethodSlotRef {
+class PyCppSignalRef : public PyAbstractCppSlotRef {
 public:
     using SignalTransmitter = core::internal::SignalTransmitter;
 
@@ -167,11 +288,11 @@ protected:
     PyCppSignalRef(const SignalRefT& signalRef, ObjT* object, std::tuple<Args...>* sig) :
         // SignalRefs are non-copyable to prevent ppl from storing them.
         // But that's what we need to do here. Solution is to rebuild one.
-        PyCppMethodSlotRef(
+        PyAbstractCppSlotRef(
             object,
             signalRef.id(),
             SignalTransmitter::build<std::tuple<Args...>>(
-                [=](Args&&... args){
+                [=](Args&&... args) {
                     SignalRefT(object).emit(std::forward<Args>(args)...);
                 }),
             static_cast<std::tuple<Args...>*>(nullptr)) {
@@ -182,13 +303,23 @@ public:
     template<typename SignalRefT,
         std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
     PyCppSignalRef(const SignalRefT& signalRef) :
-        PyCppSignalRef(signalRef, signalRef.object(), static_cast<typename SignalRefT::ArgsTuple*>(nullptr)) {}
+        PyCppSignalRef(signalRef, signalRef.object(), static_cast<typename SignalRefT::ArgsTuple*>(nullptr)) {
+    
+    }
 
     const core::internal::SignalMethodId& id() const {
-        return PyCppMethodSlotRef::id();
+        return PyAbstractCppSlotRef::id();
+    }
+
+    virtual SignalTransmitter buildPyTransmitter() override {
+        // XXX todo
+        return {};
     }
 
     // XXX connects
+
+private:
+    std::function<SignalTransmitter*(py::function slot, Int arity)> transmitterFactory_;
 };
 
 

@@ -144,9 +144,9 @@ protected:
     void defSlot(const char* name, SlotRefT (ObjT::* mfn)(), const Extra&... extra) {
         std::string sname(name);
         py::cpp_function fget(
-            [=](py::object self) -> PyCppMethodSlotRef* {
+            [=](py::object self) -> PyCppSlotRef* {
                 ObjT* this_ = self.cast<ObjT*>();
-                PyCppMethodSlotRef* sref = new PyCppMethodSlotRef((this_->*mfn)());
+                PyCppSlotRef* sref = new PyCppSlotRef((this_->*mfn)());
                 py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
                 py::setattr(self, sname.c_str(), pysref); // caching
                 return sref; // pybind will find the object in registered_instances

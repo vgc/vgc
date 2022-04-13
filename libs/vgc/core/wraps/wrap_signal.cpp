@@ -23,16 +23,12 @@
 
 namespace vgc::core::wraps {
 
-// XXX factor out common blocks in signalDecoratorFn and slotDecoratorFn.
-
-Int getSlotMethodArity_(py::handle builtins, const py::function& method) {
+Int getFunctionArity(const py::function& method) {
     auto inspect = py::module::import("inspect");
+    return getFunctionArity(inspect, method);
+}
 
-    // Check it is a function (not a method yet since not processed by metaclass).
-    if (!inspect.attr("isfunction")(method)) {
-        throw py::value_error("@signal and @slot only apply to method declarations.");
-    }
-
+Int getFunctionArity(py::handle inspect, const py::function& method) {
     // Check that it only has a fixed count of arguments.
     py::object sig = inspect.attr("signature")(method);
     py::object parameter = inspect.attr("Parameter");
@@ -43,7 +39,7 @@ Int getSlotMethodArity_(py::handle builtins, const py::function& method) {
     for (auto it = py::iter(parameters); it != py::iterator::sentinel(); ++it) {
         py::handle kind = it->attr("kind");
         if (kind.not_equal(POSITIONAL_ONLY) && kind.not_equal(POSITIONAL_OR_KEYWORD)) {
-            throw py::value_error("@signal and @slot only apply to methods with no var-positional argument, nor kw-only arguments.");
+            throw py::value_error("Arity only apply to methods with no var-positional argument, nor kw-only arguments.");
         }
         ++arity;
     }
@@ -55,26 +51,24 @@ Int getSlotMethodArity_(py::handle builtins, const py::function& method) {
 //
 py::object signalDecoratorFn(const py::function& signalMethod) {
     auto builtins = py::module::import("builtins");
+    auto inspect = py::module::import("inspect");
 
-    Int arity = getSlotMethodArity_(builtins, signalMethod);
+    // Check it is a function (not a method yet since not processed by metaclass).
+    if (!inspect.attr("isfunction")(signalMethod)) {
+        throw py::value_error("@signal only apply to method declarations.");
+    }
+
+    Int arity = getFunctionArity(inspect, signalMethod);
+    if (arity == 0) {
+        throw py::value_error("Signal method expected to at least have 'self' parameter.");
+    }
+    --arity;
+    if (arity > 7) {
+        throw py::value_error("Signals and Slots are limited to 7 arguments.");
+    }
 
     // Create a new unique ID for this signal.
     auto newId = core::internal::genObjectMethodId();
-
-    // Create emit function.
-    //
-    // XXX can use py::name, py::doc if py::dynamic_attr doesn't let us use functools.update_wrapper
-    //
-    py::object emitFn = py::cpp_function(
-        [=](py::object self, py::args args) -> void {
-            PyPySignalRef* this_ = self.cast<PyPySignalRef*>();
-            using SignalArgsTuple = std::tuple<const py::args&>;
-            core::internal::SignalHub::emit_<SignalArgsTuple>(
-                this_->object(),
-                newId,
-                args);
-        },
-        py::is_method(py::none())); // XXX use class object of PyPySignalRef ?
 
     // Create the property getter
     py::str signalName = signalMethod.attr("__name__");
@@ -82,9 +76,20 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
         [=](py::object self) -> PyPySignalRef* {
             // XXX more explicit error when self is not a core::Object.
             Object* this_ = self.cast<Object*>();
-            PyPySignalRef* sref = new PyPySignalRef(this_, newId, signalMethod);
+
+            // Create emit function.
+            //
+            // XXX can use py::name, py::doc if py::dynamic_attr doesn't let us use functools.update_wrapper
+            //
+            py::cpp_function emitFn(
+                [=](py::args args) -> void {
+                    // XXX add check enough args
+                    using SignalArgsTuple = std::tuple<const py::args&>;
+                    core::internal::SignalHub::emit_<SignalArgsTuple>(this_, newId, args);
+                });
+
+            PyPySignalRef* sref = new PyPySignalRef(this_, newId, emitFn, arity);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
-            sref->emitFn = emitFn.cast<py::function>();
             self.attr("__dict__")[signalName] = pysref; // caching
             return sref; // pybind will find the object in registered_instances
         },
@@ -99,20 +104,34 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
 // Used to decorate a python slot method.
 // Does something similar to what is done in ObjClass::defSlot().
 //
-py::object slotDecoratorFn(const py::function& slotMethod) {
+py::object slotDecoratorFn(const py::function& unboundSlotMethod) {
     auto builtins = py::module::import("builtins");
+    auto inspect = py::module::import("inspect");
 
-    Int arity = getSlotMethodArity_(builtins, slotMethod);
+    // Check it is a function (not a method yet since not processed by metaclass).
+    if (!inspect.attr("isfunction")(unboundSlotMethod)) {
+        throw py::value_error("@slot only apply to method declarations.");
+    }
 
-    py::str slotName = slotMethod.attr("__name__");
+    Int arity = getFunctionArity(inspect, unboundSlotMethod);
+    if (arity == 0) {
+        throw py::value_error("Slot method expected to at least have 'self' parameter.");
+    }
+    --arity;
+    if (arity > 7) {
+        throw py::value_error("Signals and Slots are limited to 7 arguments.");
+    }
+
+    // Create a new unique ID for this slot.
+    auto newId = core::internal::genObjectMethodId();
 
     // Create the property getter
-    auto newId = core::internal::genObjectMethodId();
+    py::str slotName = unboundSlotMethod.attr("__name__");
     py::cpp_function fget(
         [=](py::object self) -> PyPySlotRef* {
             // XXX more explicit error when self is not a core::Object.
             Object* this_ = self.cast<Object*>();
-            PyPySlotRef* sref = new PyPySlotRef(this_, newId, slotMethod);
+            PyPySlotRef* sref = new PyPySlotRef(this_, newId, unboundSlotMethod, arity);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
             self.attr("__dict__")[slotName] = pysref; // caching
             return sref; // pybind will find the object in registered_instances
@@ -127,6 +146,8 @@ py::object slotDecoratorFn(const py::function& slotMethod) {
 
 void wrapSignalAndSlotRefs(py::module& m)
 {
+    py::class_<ConnectionHandle>(m, "ConnectionHandle");
+
     // XXX provide a getter for id too ?
     //     could be interesting to expose signal/slot info/stats to python.
     auto pyAbstractSlotRef =
@@ -136,39 +157,47 @@ void wrapSignalAndSlotRefs(py::module& m)
                     return this_->object();
                 })
         ;
-    
+
     auto pySlotRef =
         py::class_<PyPySlotRef, PyAbstractSlotRef>(m, "SlotRef")
             .def(
                 /* calling slot calls its method. */
                 "__call__", [](py::object self, py::args args) {
                     PyPySlotRef* this_ = self.cast<PyPySlotRef*>();
-                    this_->getFunction()(this_->object(), *args);
+                    this_->getUnboundFn()(this_->object(), *args);
                 })
         ;
 
-    // Inheritance from PyPySlotRef is not used, since we don't want its
-    // interface.
     auto pySignalRef =
         py::class_<PyPySignalRef, PyAbstractSlotRef>(m, "SignalRef")
-            .def_readonly(
-                "emit", &PyPySignalRef::emitFn)
+            .def_property_readonly(
+                "emit", [](PyPySignalRef* this_){
+                    return this_->getBoundEmitFn(); 
+                })
+            .def("connect", &PyPySignalRef::connect)
+            .def("connect", &PyPySignalRef::connectCallback)
         ;
 
-    // XXX C++ ones
+    auto pyAbstractCppSlotRef =
+        py::class_<PyAbstractCppSlotRef, PyAbstractSlotRef>(m, "AbstractCppSlotRef")
+        ;
 
-    auto pyCppMethodSlotRef =
-        py::class_<PyCppMethodSlotRef, PyAbstractSlotRef>(m, "CppSlotRef")
-            .def(
-                /* calling slot calls its method. */
-                "__call__", [](py::object self, py::args args) {
-                    PyCppMethodSlotRef* this_ = self.cast<PyCppMethodSlotRef*>();
-                    this_->getPyFunction()(this_->object(), *args);
-                })
+    auto pyCppSlotRef =
+        py::class_<PyCppSlotRef, PyAbstractCppSlotRef>(m, "CppSlotRef")
+            //.def(
+            //    /* calling slot calls its method. */
+            //    "__call__", [](py::object self, py::args args) {
+            //        PyCppSlotRef* this_ = self.cast<PyCppSlotRef*>();
+            //        this_->getSlotPyMethod()(this_->object(), *args);
+            //    })
         ;
 
     auto pyCppSignalRef =
-        py::class_<PyCppSignalRef, PyAbstractSlotRef>(m, "CppSignalRef")
+        py::class_<PyCppSignalRef, PyAbstractCppSlotRef>(m, "CppSignalRef")
+            /*.def_property_readonly(
+                "emit", [](PyCppSignalRef* this_){
+                    return this_->getEmitPyFunction(); 
+                })*/
         ;
 }
 

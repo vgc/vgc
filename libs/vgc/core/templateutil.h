@@ -111,11 +111,11 @@ using SubTuple = decltype(internal::SubTuple_<I, Tuple>(std::make_index_sequence
 
 namespace internal {
 
-template<class F, class ArgsTuple, std::size_t... I>
-void applyPartial_(F&& f, ArgsTuple&& t, std::index_sequence<I...>) {
+template<class F, class ArgsTuple, std::size_t... Is>
+void applyPartial_(F&& f, ArgsTuple&& t, std::index_sequence<Is...>) {
     std::invoke(
         std::forward<F>(f),
-        std::get<I>(std::forward<ArgsTuple>(t))...);
+        std::get<Is>(std::forward<ArgsTuple>(t))...);
 }
 
 } // namespace internal

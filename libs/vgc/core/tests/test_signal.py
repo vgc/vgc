@@ -30,12 +30,9 @@ class TestSignalObject(ConstructibleTestObject):
 
     def __init__(self):
         super(TestSignalObject, self).__init__()
-        self.a = 0
-        self.b = 0
-        self.slotNoArgsCalled = False
-        self.slotIntCalled = False
-        self.slotIntFloatCalled = False
-        self.slotFloatCalled = False
+        self.sumA = 0
+        self.sumB = 0
+        self.slotNoArgsCallCount = 0
 
     @signal
     def signalNoArgs(self):
@@ -55,23 +52,20 @@ class TestSignalObject(ConstructibleTestObject):
 
     @slot
     def slotNoArgs(self):
-        self.slotNoArgsCalled = False
+        self.slotNoArgsCallCount += 1
 
     @slot
-    def slotInt(self,a : int):
-        self.slotIntCalled = False
-        self.a = a
+    def slotInt(self, a : int):
+        self.sumA += a
 
     @slot
     def slotIntFloat(self, a : int, b : float):
-        self.slotIntFloatCalled = False
-        self.a = a
-        self.b = b
+        self.sumA += a
+        self.sumB += b
 
     @slot
     def slotFloat(self,a : float):
-        self.slotFloatCalled = False
-        self.a = a
+        self.sumA += a
 
 
 class TestSignal(unittest.TestCase):
@@ -85,8 +79,19 @@ class TestSignal(unittest.TestCase):
         o = TestSignalObject()
         p = (42, 21.)
         o.slotIntFloat(*p)
-        self.assertTrue((o.a, o.b) == p)
+        self.assertTrue((o.sumA, o.sumB) == p)
 
+    def testConnectPyToPy(self):
+        o1 = TestSignalObject()
+        o2 = TestSignalObject()
+        o1.signalIntFloat.connect(o2.slotNoArgs)
+        o1.signalIntFloat.connect(o2.slotInt)
+        #o1.signalIntFloat.connect(o2.slotIntFloat)
+        #o1.signalIntFloat.connect(o2.slotFloat)
+        o1.signalIntFloat.emit(1, 1.)
+        self.assertTrue(o2.slotNoArgsCallCount == 1)
+        #self.assertTrue(o2.sumA == 3)
+        #self.assertTrue(o2.sumB == 1.)
 
 if __name__ == '__main__':
     unittest.main()

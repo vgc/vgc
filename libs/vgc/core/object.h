@@ -972,7 +972,7 @@ inline void ObjPtrAccess::decref(const Object* obj, Int64 k)
 
 } // namespace internal
 
-/// \class vgc::ui::ObjListIterator
+/// \class vgc::core::ObjListIterator
 /// \brief Iterates over an ObjList
 ///
 template<typename T>
@@ -1036,7 +1036,7 @@ private:
 template<typename T>
 class ObjList;
 
-/// \class vgc::ui::ObjListView
+/// \class vgc::core::ObjListView
 /// \brief A non-owning view onto an ObjList<T>, or onto any range of sibling
 ///        objects of type T.
 ///
@@ -1100,7 +1100,7 @@ private:
     ObjListIterator<T> end_;
 };
 
-/// \class vgc::ui::ObjList
+/// \class vgc::core::ObjList
 /// \brief Stores a list of child objects of a given type T.
 ///
 /// An ObjList<T> is an Object that stores and manages a list of Objects of
@@ -1130,9 +1130,9 @@ private:
 /// easier.
 ///
 template<typename T>
-class ObjList : public core::Object {
+class ObjList : public Object {
 private:
-    VGC_OBJECT(ObjList<T>, core::Object)
+    VGC_OBJECT(ObjList<T>, Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
@@ -1261,10 +1261,15 @@ public:
     }
 
     static inline bool sfnIntCalled = false;
+    Int slotNoargsCallCount = 0;
     bool fnIntDoubleCalled = false;
     bool fnUIntCalled = false;
     int sumInt = 0;
     double sumDouble = 0.;
+
+    void slotNoargs(int a) {
+        ++slotNoargsCallCount;
+    }
 
     void slotInt(int a) {
         this->sumInt += a;
@@ -1288,6 +1293,7 @@ public:
     VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
     VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
 
+    VGC_SLOT(slotNoargs);
     VGC_SLOT(slotInt);
     VGC_SLOT(slotIntDouble);
     VGC_SLOT(slotUInt);
@@ -1303,6 +1309,7 @@ public:
 
     void reset() {
         sfnIntCalled = false;
+        slotNoargsCallCount = 0;
         fnIntDoubleCalled = false;
         fnUIntCalled = false;
         sumInt = 0;

@@ -21,10 +21,10 @@ namespace core {
 
 namespace internal {
 
-ConnectionHandle genConnectionHandle() {
+ConnectionHandle ConnectionHandle::generate() {
     static ConnectionHandle s = {0};
     // XXX make this thread-safe ?
-    return {++s.id};
+    return {++s.id_};
 }
 
 VGC_CORE_API

@@ -127,6 +127,7 @@ inline constexpr bool isObject = internal::isObject_<T>::value;
 #define CHECK_TYPE_IS_VGC_OBJECT(Type) \
     static_assert(::vgc::core::internal::isObject<Type>, #Type " should inherit from vgc::core::Object.");
 
+
 namespace internal {
 
 using ObjectMethodId = Int;
@@ -135,19 +136,30 @@ using FreeFuncId = void*;
 using SlotId = std::variant<std::monostate, BoundObjectMethodId, FreeFuncId>;
 using SignalMethodId = ObjectMethodId;
 
-struct ConnectionHandle {
-    Int64 id;
-
-    constexpr ConnectionHandle(Int64 id)
-        : id(id) {}
-
+class ConnectionHandle {
+public:
     static const ConnectionHandle invalid;
+
+protected:
+    constexpr ConnectionHandle(Int64 id)
+        : id_(id) {}
+
+public:
+    static VGC_CORE_API ConnectionHandle generate();
+
+    friend bool operator==(const ConnectionHandle& h1, const ConnectionHandle& h2) {
+        return h1.id_ == h2.id_;
+    }
+
+    friend bool operator!=(const ConnectionHandle& h1, const ConnectionHandle& h2) {
+        return h1.id_ == h2.id_;
+    }
+
+private:
+    Int64 id_;
 };
 
 inline constexpr ConnectionHandle ConnectionHandle::invalid = {-1};
-
-VGC_CORE_API
-ConnectionHandle genConnectionHandle();
 
 VGC_CORE_API
 ObjectMethodId genObjectMethodId();
@@ -248,12 +260,18 @@ template<typename TruncatedSignalArgsTuple>
 using SignalTransmitterFnType = typename SignalTransmitterFnType_<TruncatedSignalArgsTuple>::type;
 
 class SignalTransmitter {
-protected:
-    template<typename... Args>
-    SignalTransmitter(std::function<void(Args...)>&& fn) :
-        fn_(std::move(fn)), arity_(sizeof...(Args)) {}
-
 public:
+    SignalTransmitter() :
+        forwardingFn_(), arity_(0) {}
+
+    template<typename... Args>
+    SignalTransmitter(const std::function<void(Args...)>& forwardingFn) :
+        forwardingFn_(forwardingFn), arity_(sizeof...(Args)) {}
+
+    template<typename... Args>
+    SignalTransmitter(std::function<void(Args...)>&& forwardingFn) :
+        forwardingFn_(std::move(forwardingFn)), arity_(sizeof...(Args)) {}
+
     template<typename SignalArgsTuple, typename Callable, typename... OptionalObj>
     [[nodiscard]] static std::enable_if_t<isCallable<RemoveCRef<Callable>>, SignalTransmitter>
     build(Callable&& c, OptionalObj... methodObj) {
@@ -281,7 +299,7 @@ public:
                 "Expecting methodObj only for methods, the given callable is not a method.");
         }
 
-        auto fn = createFn(
+        auto fn = createForwardingFn(
             std::forward<Callable>(c),
             static_cast<TruncatedSignalArgsTuple*>(nullptr),
             methodObj...);
@@ -298,14 +316,14 @@ public:
         try {
             switch (arity_) {
             case 0: {
-                std::any_cast<std::function<void()>>(fn_)();
+                (*std::any_cast<std::function<void()>>(&forwardingFn_))();
                 break;
             }
 
     #define VGC_SIGNALTRANSMITTER_TRANSMIT_CASE(i)                                                  \
             case i: if constexpr (sizeof...(SignalArgs) >= i) {                                     \
                 using TruncatedSignalArgsTuple = SubTuple<0, i, SignalArgsTuple>;                   \
-                auto f = getFn<TruncatedSignalArgsTuple>();                                 \
+                auto f = getForwardingFn<TruncatedSignalArgsTuple>();                               \
                 applyPartial<i>(f, std::forward_as_tuple(std::forward<SignalArgs>(args)...));       \
                 break;                                                                              \
             }                                                                                       \
@@ -336,14 +354,16 @@ public:
     }
 
     template<typename TruncatedSignalArgsTuple>
-    const auto& getFn() const {
+    const auto& getForwardingFn() const {
         using FnType = SignalTransmitterFnType<TruncatedSignalArgsTuple>;
-        return *std::any_cast<FnType>(&fn_);
+        return *std::any_cast<FnType>(&forwardingFn_);
     }
 
 protected:
     template<typename Callable, typename... TruncatedSignalArgs, typename... OptionalObj>
-    [[nodiscard]] static auto createFn(Callable&& c, std::tuple<TruncatedSignalArgs...>* sig, OptionalObj&&... methodObj) {
+    [[nodiscard]] static auto createForwardingFn(
+        Callable&& c, std::tuple<TruncatedSignalArgs...>* sig, OptionalObj&&... methodObj) {
+
         using Traits = CallableTraits<Callable>;
 
         static_assert(std::is_invocable_v<Callable&&, OptionalObj&&..., TruncatedSignalArgs&&...>,
@@ -356,7 +376,7 @@ protected:
     }
 
 private:
-    std::any fn_;
+    std::any forwardingFn_;
     UInt8 arity_;
 };
 
@@ -398,7 +418,7 @@ public:
 
     static ConnectionHandle connect(Object* sender, SignalMethodId from, SignalTransmitter&& transmitter, const SlotId& to) {
         auto& hub = access(sender);
-        auto h = genConnectionHandle();
+        auto h = ConnectionHandle::generate();
         hub.connections_.emplaceLast(std::move(transmitter), h, from, to);
         return h;
     }
@@ -406,7 +426,7 @@ public:
     // XXX add to public interface of Object
     static bool disconnect(Object* sender, ConnectionHandle h) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
-            return c.h.id == h.id; 
+            return c.h == h;
         });
     }
 
@@ -418,7 +438,7 @@ public:
 
     static bool disconnect(Object* sender, SignalMethodId from, ConnectionHandle h) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
-            return c.from == from && c.h.id == h.id;
+            return c.from == from && c.h == h;
         });
     }
 
@@ -441,7 +461,7 @@ public:
 protected:
     static void disconnect_(Object* sender, Object* receiver) {
         auto& hub = access(sender);
-        auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c) {
+        auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c){
                 return std::holds_alternative<BoundObjectMethodId>(c.to) && std::get<BoundObjectMethodId>(c.to).first == receiver; 
             });
         hub.connections_.erase(it, hub.connections_.end());
@@ -505,7 +525,7 @@ private:
             return true;
         }
         return false;
-    }    
+    }
 };
 
 // It is intended to be locally subclassed in the slot (getter).
@@ -518,7 +538,7 @@ public:
     using Obj = typename SlotMethodTraits::Obj;
     using ArgsTuple = typename SlotMethodTraits::ArgsTuple;
 
-    static_assert(isObject<Obj>, "Slots must be declared only in Objects");
+    static_assert(isObject<Obj>, "Slots can only be declared in Objects");
 
 protected:
     SlotRef(const Obj* object, SlotMethod m) :
@@ -558,7 +578,7 @@ public:
     using Obj = ObjT;
     using ArgsTuple = std::tuple<Args...>;
 
-    static_assert(isObject<Obj>, "Signals must be declared only in Objects");
+    static_assert(isObject<Obj>, "Signals can only be declared in Objects");
 
 protected:
     SignalRef(const Obj* object) :
@@ -733,21 +753,6 @@ inline constexpr bool isSignal = isSignal_<std::remove_reference_t<T>>::value;
 } // namespace vgc::core::internal
 
 
-#define VGC_SLOT(name_)                                                                                 \
-    auto name_##Slot() {                                                                                \
-        struct Tag {};                                                                                  \
-        using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
-        using SlotMethod = decltype(&MyClass::name_);                                                   \
-        using SlotRefT = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                               \
-        class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend "                                             \
-             #name_ "() instead of " VGC_PP_STR(name_##Slot) "()?"))                                    \
-        SlotRef : public SlotRefT {                                                                     \
-        public:                                                                                         \
-            SlotRef(const MyClass* object, SlotMethod m) : SlotRefT(object, m) {}                       \
-        };                                                                                              \
-        return SlotRef(this, &MyClass::name_);                                                          \
-    }
-
 #define VGC_SLOT_ALIAS(name_, funcName_)                                                                \
     auto name_() {                                                                                      \
         struct Tag {};                                                                                  \
@@ -761,6 +766,9 @@ inline constexpr bool isSignal = isSignal_<std::remove_reference_t<T>>::value;
         };                                                                                              \
         return SlotRef(this, &MyClass::funcName_);                                                      \
     }
+
+#define VGC_SLOT(name_) \
+    VGC_PP_EXPAND(VGC_SLOT_ALIAS(name_##Slot, name_))
 
 
 namespace vgc::core::internal {
@@ -852,21 +860,17 @@ private:
     }
 
     void removeListener_(ConnectionHandle h) const {
-        removeListenerIf_([=](const Listener_& l) {
-            return l.h == h; 
+        removeListenerIf_(
+            [=](const Listener_& l) {
+                return l.h == h; 
             });
     }
 
-    /*void removeListener_(const Object* o, const StringId& slotName) const {
-        removeListenerIf_([=](const Listener_& l) {
-            return std::holds_alternative<BoundObjectMethodId>(l.id) &&
-                std::get<BoundObjectMethodId>(l.id) == BoundObjectMethodId(o, slotName);
-            });
-    }*/
 
     void removeListener_(void* freeFunc) const {
-        removeListenerIf_([=](const Listener_& l) {
-            return std::holds_alternative<FreeFuncId>(l.id) && l.id == freeFunc;
+        removeListenerIf_(
+            [=](const Listener_& l) {
+                return std::holds_alternative<FreeFuncId>(l.id) && l.id == freeFunc;
             });
     }
 
@@ -875,12 +879,6 @@ private:
         listeners_.append({fn, h, std::monostate{}});
         return h;
     }
-
-    /*ConnectionHandle addListener_(FnType fn, Object* o, StringId slotName) const {
-        auto h = genConnectionHandle();
-        listeners_.append({fn, h, SlotId{o, slotName}});
-        return h;
-    }*/
 
     ConnectionHandle addListener_(FnType fn, void* freeFunc) const {
         auto h = genConnectionHandle();
