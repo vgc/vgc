@@ -196,60 +196,6 @@ public:
 };
 
 
-template<typename... SignalArgs>
-class SignalTransmitterOld : public AbstractSignalTransmitterOld {
-public:
-    using SignalArgsTuple = std::tuple<SignalArgs...>;
-    using CallArgsTuple = std::tuple<SignalArgs&&...>;
-    using CallSig = void(SignalArgs&&...);
-    using FnType = std::function<CallSig>;
-
-    // left public for python bindings
-    SignalTransmitterOld(const FnType& fn) :
-        fn_(fn) {}
-
-    // left public for python bindings
-    SignalTransmitterOld(FnType&& fn) :
-        fn_(std::move(fn)) {}
-
-    inline void operator()(SignalArgs&&... args) const {
-        fn_(std::forward<SignalArgs>(args)...);
-    }
-
-    // pointer-to-member-function
-    template<typename R, typename Obj, typename... SlotArgs>
-    [[nodiscard]] static inline
-        SignalTransmitterOld* create(Obj* o, R (Obj::* method)(SlotArgs...)) {
-        static_assert(sizeof...(SignalArgs) >= sizeof...(SlotArgs),
-            "The slot signature cannot be longer than the signal signature.");
-        static_assert(std::is_same_v<std::tuple<SlotArgs...>, SubPackAsTuple<0, sizeof...(SlotArgs), SignalArgs...>>,
-            "The slot signature does not match the signal signature.");
-        return new SignalTransmitterOld(
-            [=](SignalArgs&&... args) {
-                applyPartial<1 + sizeof...(SlotArgs)>(method, std::forward_as_tuple(o, std::forward<SignalArgs>(args)...));
-            });
-    }
-
-    // free functions and callables
-    template<typename FreeHandler>
-    [[nodiscard]] static inline
-        SignalTransmitterOld* create(FreeHandler&& f) {
-        using HTraits = CallableTraits<FreeHandler>;
-        // optimization: when the target has already the desired signature
-        if constexpr (std::is_same_v<CallArgsTuple, typename HTraits::ArgsTuple>) {
-            return new SignalTransmitterOld(std::forward<FreeHandler>(f));
-        }
-        return new SignalTransmitterOld(
-            [=](SignalArgs&&... args) {
-                applyPartial<HTraits::arity>(f, std::forward_as_tuple(std::forward<SignalArgs>(args)...));
-            });
-    }
-
-private:
-    FnType fn_;
-};
-
-
 template<typename TruncatedSignalArgsTuple>
 struct SignalTransmitterFnType_;
 template<typename... TruncatedSignalArgs>
