@@ -55,10 +55,12 @@ public:
 
     PyAbstractSlotRef(
         const core::Object* obj,
-        Id id) :
+        Id id,
+        Int arity) :
 
         obj_(const_cast<core::Object*>(obj)),
-        id_(id) {
+        id_(id),
+        arity_(arity) {
 
     }
 
@@ -72,6 +74,10 @@ public:
         return id_;
     }
 
+    Int arity() const {
+        return arity_;
+    }
+
     virtual SignalTransmitter buildPyTransmitter() = 0;
 
 protected:
@@ -79,6 +85,8 @@ protected:
     core::Object* const obj_; 
     // Unique identifier of the slot.
     Id id_;
+    // Arity of the bound slot.
+    Int arity_;
 };
 
 // C++ Slots wrapped in a cpp_function expect positional arguments and not a py::args.
@@ -105,18 +113,13 @@ public:
         py::function unboundFn,
         Int arity) :
 
-        PyAbstractSlotRef(obj, id),
-        unboundFn_(unboundFn),
-        arity_(arity) {
+        PyAbstractSlotRef(obj, id, arity),
+        unboundFn_(unboundFn) {
 
     }
 
-    const py::function& getUnboundFn() const {
+    const py::function& unboundFn() const {
         return unboundFn_;
-    }
-
-    const Int& getArity() const {
-        return arity_;
     }
 
     virtual SignalTransmitter buildPyTransmitter() override {
@@ -128,9 +131,13 @@ public:
                 }));
         }
         else {
-            return SignalTransmitter(std::function<void(py::args args)>(
-                [=](py::args args) {
-                    unboundFn_(self, *(args[py::slice(0, arity_)]));
+            return SignalTransmitter(std::function<void(const py::args& args)>(
+                [=](const py::args& args) {
+                    auto newArgs = py::tuple(arity_);
+                    for (Int i = 0; i < arity_; ++i) {
+                        newArgs[i] = args[i];
+                    }
+                    unboundFn_(self, *newArgs);
                 }));
         }
     }
@@ -138,8 +145,6 @@ public:
 protected:
     // Unbound slot py-method.
     py::function unboundFn_;
-    // Arity of slot py-method, self excluded.
-    Int arity_;
 };
 
 class PyPySignalRef : public PyAbstractSlotRef {
@@ -150,9 +155,8 @@ public:
         py::function boundEmitFn,
         Int arity) :
 
-        PyAbstractSlotRef(obj, id),
-        boundEmitFn_(boundEmitFn),
-        arity_(arity) {
+        PyAbstractSlotRef(obj, id, arity),
+        boundEmitFn_(boundEmitFn) {
 
     }
 
@@ -168,6 +172,11 @@ public:
     */
 
     ConnectionHandle connect(PyAbstractSlotRef* slot) {
+        if (arity() < slot->arity()) {
+            throw py::value_error("The slot signature cannot be longer than the signal signature.");
+        }
+        // XXX "Signals and Slots are limited to 7 parameters."
+
         return core::internal::SignalHub::connect(object(), id(), slot->buildPyTransmitter(), core::internal::BoundObjectMethodId(slot->object(), slot->id()));
     }
 
@@ -176,20 +185,20 @@ public:
         Int arity = getFunctionArity(inspect, callback);
         return core::internal::SignalHub::connect(
             object(), id(),
-            SignalTransmitter(std::function<void(py::args args)>(
-                [=](py::args args) {
+            SignalTransmitter(std::function<void(const py::args& args)>(
+                [=](const py::args& args) {
                     callback(*(args[py::slice(0, arity)]));
                 })),
             std::monostate{});
     }
 
-    const py::function& getBoundEmitFn() const {
+    const py::function& boundEmitFn() const {
         return boundEmitFn_;
     }
 
     virtual SignalTransmitter buildPyTransmitter() override {
-        return SignalTransmitter(std::function<void(py::args args)>(
-            [=](py::args args) {
+        return SignalTransmitter(std::function<void(const py::args& args)>(
+            [=](const py::args& args) {
                 boundEmitFn_(args);
             }));
     }
@@ -197,8 +206,6 @@ public:
 protected:
     // Bound emit py-function.
     py::function boundEmitFn_;
-    // Arity of the emit py-function.
-    Int arity_;
 };
 
 // Holds a C++ transmitter, meant to be cached.
@@ -214,9 +221,7 @@ protected:
         SignalTransmitter&& cppTransmitter,
         std::tuple<Args...>* sig) :
 
-        PyAbstractSlotRef(
-            obj,
-            id),
+        PyAbstractSlotRef(obj, id, sizeof...(Args)),
         parameters_({std::type_index(typeid(Args))...}),
         cppTransmitter_(std::move(cppTransmitter)) {
 
@@ -227,7 +232,7 @@ public:
         return parameters_;
     }
     
-    const SignalTransmitter& getCppTransmitter() const {
+    const SignalTransmitter& cppTransmitter() const {
         return cppTransmitter_;
     }
 

@@ -86,12 +86,15 @@ class TestSignal(unittest.TestCase):
         o2 = TestSignalObject()
         o1.signalIntFloat.connect(o2.slotNoArgs)
         o1.signalIntFloat.connect(o2.slotInt)
-        #o1.signalIntFloat.connect(o2.slotIntFloat)
-        #o1.signalIntFloat.connect(o2.slotFloat)
+        o1.signalIntFloat.connect(o2.slotIntFloat)
+        o1.signalIntFloat.connect(o2.slotFloat)
         o1.signalIntFloat.emit(1, 1.)
         self.assertTrue(o2.slotNoArgsCallCount == 1)
-        #self.assertTrue(o2.sumA == 3)
-        #self.assertTrue(o2.sumB == 1.)
+        self.assertTrue(o2.sumA == 3)
+        self.assertTrue(o2.sumB == 1.)
+        with self.assertRaises(ValueError) as context:
+            o1.signalNoArgs.connect(o2.slotInt)
+
 
 if __name__ == '__main__':
     unittest.main()

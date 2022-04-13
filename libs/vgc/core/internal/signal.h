@@ -316,7 +316,7 @@ public:
         try {
             switch (arity_) {
             case 0: {
-                (*std::any_cast<std::function<void()>>(&forwardingFn_))();
+                std::any_cast<const std::function<void()>&>(forwardingFn_)();
                 break;
             }
 
@@ -356,7 +356,7 @@ public:
     template<typename TruncatedSignalArgsTuple>
     const auto& getForwardingFn() const {
         using FnType = SignalTransmitterFnType<TruncatedSignalArgsTuple>;
-        return *std::any_cast<FnType>(&forwardingFn_);
+        return std::any_cast<const FnType&>(forwardingFn_);
     }
 
 protected:
@@ -875,13 +875,13 @@ private:
     }
 
     ConnectionHandle addListener_(FnType fn) const {
-        auto h = genConnectionHandle();
+        auto h = ConnectionHandle::generate();
         listeners_.append({fn, h, std::monostate{}});
         return h;
     }
 
     ConnectionHandle addListener_(FnType fn, void* freeFunc) const {
-        auto h = genConnectionHandle();
+        auto h = ConnectionHandle::generate();
         listeners_.append({fn, h, FreeFuncId{freeFunc}});
         return h;
     }

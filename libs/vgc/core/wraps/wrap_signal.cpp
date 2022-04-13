@@ -104,7 +104,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
 // Used to decorate a python slot method.
 // Does something similar to what is done in ObjClass::defSlot().
 //
-py::object slotDecoratorFn(const py::function& unboundSlotMethod) {
+py::object slotDecoratorFn(py::function unboundSlotMethod) {
     auto builtins = py::module::import("builtins");
     auto inspect = py::module::import("inspect");
 
@@ -164,7 +164,7 @@ void wrapSignalAndSlotRefs(py::module& m)
                 /* calling slot calls its method. */
                 "__call__", [](py::object self, py::args args) {
                     PyPySlotRef* this_ = self.cast<PyPySlotRef*>();
-                    this_->getUnboundFn()(this_->object(), *args);
+                    this_->unboundFn()(this_->object(), *args);
                 })
         ;
 
@@ -172,7 +172,7 @@ void wrapSignalAndSlotRefs(py::module& m)
         py::class_<PyPySignalRef, PyAbstractSlotRef>(m, "SignalRef")
             .def_property_readonly(
                 "emit", [](PyPySignalRef* this_){
-                    return this_->getBoundEmitFn(); 
+                    return this_->boundEmitFn(); 
                 })
             .def("connect", &PyPySignalRef::connect)
             .def("connect", &PyPySignalRef::connectCallback)
