@@ -73,7 +73,6 @@ using TypeIdentity = typename internal::TypeIdentity_<U>::type;
 template<typename T>
 using RemoveCRef = std::remove_const_t<std::remove_reference_t<T>>;
 
-
 namespace internal {
 
 template<typename... Ts>

@@ -123,7 +123,7 @@ public:
     }
 
     virtual SignalTransmitter buildPyTransmitter() override {
-        py::object self = py::cast(object());
+        py::handle self = py::cast(object());
         if (arity_ == 0) {
             return SignalTransmitter(std::function<void()>(
                 [=]() {
@@ -302,6 +302,7 @@ protected:
                 }),
             static_cast<std::tuple<Args...>*>(nullptr)) {
 
+        transmitterFactory_ = buildTransmitterFactory<Args...>();
     }
 
 public:
@@ -309,7 +310,6 @@ public:
         std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
     PyCppSignalRef(const SignalRefT& signalRef) :
         PyCppSignalRef(signalRef, signalRef.object(), static_cast<typename SignalRefT::ArgsTuple*>(nullptr)) {
-    
     }
 
     const core::internal::SignalMethodId& id() const {
@@ -323,8 +323,60 @@ public:
 
     // XXX connects
 
+
+
+protected:
+    using TransmitterFactoryFn = std::function<SignalTransmitter(py::handle obj, py::function slot, Int arity)>;
+
+    template<typename... SignalArgs>
+    static TransmitterFactoryFn buildTransmitterFactory() {
+        return [](py::handle obj, py::function slot, Int arity) -> SignalTransmitter {
+            using SignalArgsTuple = std::tuple<SignalArgs...>;
+            switch (arity) {
+            case 0: {
+                return SignalTransmitter(std::function<void()>(
+                    [=]() {
+                        slot(obj);
+                    }));
+                break;
+            }
+
+#define VGC_TRANSMITTER_FACTORY_CASE(i)                                                             \
+            case i: if constexpr (sizeof...(SignalArgs) >= i) {                                     \
+                using TruncatedSignalArgsTuple = SubTuple<0, i, SignalArgsTuple>;                   \
+                return SignalTransmitter(getForwardingToPyFn(                                       \
+                    obj, slot, static_cast<TruncatedSignalArgsTuple*>(nullptr)));                   \
+                break;                                                                              \
+            }                                                                                       \
+            [[fallthrough]]
+
+            VGC_TRANSMITTER_FACTORY_CASE(1);
+            VGC_TRANSMITTER_FACTORY_CASE(2);
+            VGC_TRANSMITTER_FACTORY_CASE(3);
+            VGC_TRANSMITTER_FACTORY_CASE(4);
+            VGC_TRANSMITTER_FACTORY_CASE(5);
+            VGC_TRANSMITTER_FACTORY_CASE(6);
+            VGC_TRANSMITTER_FACTORY_CASE(7);
+
+#undef VGC_TRANSMITTER_FACTORY_CASE
+
+            default:
+                throw core::LogicError("The slot signature cannot be longer than the signal signature.");
+                break;
+            }
+        };
+    }
+
+    template<typename... Args>
+    static auto getForwardingToPyFn(py::handle obj, py::function slot, std::tuple<Args...>*) {
+        return std::function<void(Args&&... args)>(
+            [=](Args&&... args) {
+                slot(obj, args...);
+            });
+    }
+
 private:
-    std::function<SignalTransmitter*(py::function slot, Int arity)> transmitterFactory_;
+    std::function<SignalTransmitter(py::function slot, Int arity)> transmitterFactory_;
 };
 
 

@@ -246,7 +246,7 @@ public:
                 "Expecting methodObj only for methods, the given callable is not a method.");
         }
 
-        auto fn = createForwardingFn(
+        auto fn = buildForwardingFn(
             std::forward<Callable>(c),
             static_cast<TruncatedSignalArgsTuple*>(nullptr),
             methodObj...);
@@ -308,7 +308,7 @@ public:
 
 protected:
     template<typename Callable, typename... TruncatedSignalArgs, typename... OptionalObj>
-    [[nodiscard]] static auto createForwardingFn(
+    [[nodiscard]] static auto buildForwardingFn(
         Callable&& c, std::tuple<TruncatedSignalArgs...>* sig, OptionalObj&&... methodObj) {
 
         using Traits = CallableTraits<Callable>;

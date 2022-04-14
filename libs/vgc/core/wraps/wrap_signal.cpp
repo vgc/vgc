@@ -82,6 +82,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
             // XXX can use py::name, py::doc if py::dynamic_attr doesn't let us use functools.update_wrapper
             //
             py::cpp_function emitFn(
+                // Captures this_ -> must die before object dies.
                 [=](py::args args) -> void {
                     // XXX add check enough args
                     using SignalArgsTuple = std::tuple<const py::args&>;
