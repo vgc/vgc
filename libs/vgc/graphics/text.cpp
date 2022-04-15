@@ -204,7 +204,7 @@ public:
     }
 
 private:
-    friend class ShapedText;
+    friend class graphics::ShapedText;
 };
 
 } // namespace internal
@@ -461,7 +461,7 @@ public:
             int u16_index = i;
             QChar c = qstring.at(i);
             u16_to_u8_.append(core::int_cast<Int>(u8_index));
-            if (c.isLowSurrogate()) {
+            if (c.isHighSurrogate()) {
                 u16_to_u8_.append(core::int_cast<Int>(u8_index));
                 ++i;
             }
@@ -560,7 +560,7 @@ Int TextBoundaryIterator::toPreviousBoundary()
 
 void TextBoundaryIterator::toStart()
 {
-    return impl_->q.toStart();
+    impl_->q.toStart();
 }
 
 TextBoundaryType TextBoundaryIterator::type() const
