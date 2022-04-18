@@ -616,9 +616,13 @@ public:
     ///
     bool isValid() const;
 
+    /// Returns the number of bytes of the input UTF-8 string.
+    ///
+    Int	numBytes() const;
+
     /// Returns the current position of the iterator, that is, the
     /// corresponding index in the input UTF-8 string. The range is from 0 to
-    /// the length of the input string (included).
+    /// the number of bytes of the input string (included).
     ///
     Int	position() const;
 
@@ -646,7 +650,7 @@ public:
     ///
     void toStart();
 
-    /// Returns the ty pe of this TextBoundaryIterator.
+    /// Returns the type of this TextBoundaryIterator.
     ///
     TextBoundaryType type() const;
 
