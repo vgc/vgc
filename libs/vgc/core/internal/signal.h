@@ -258,6 +258,9 @@ public:
     template<typename SignalArgsTuple, typename... SignalArgs>
     void transmit(SignalArgs&&... args) const {
 
+        // XXX could use a special const std::vector<void*>& to pass args
+        // with all types converted to pointer type.
+
         // XXX add check size of SignalArgsTuple is sizeof...(SignalArgs)
 
         try {
@@ -695,6 +698,11 @@ inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
             SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
             void emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                 \
                 emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                                    \
+            }                                                                                           \
+        protected:                                                                                      \
+            /* for wraps */                                                                             \
+            static void unboundEmit_(VGC_PARAMS_((const MyClass*, obj_), __VA_ARGS__)) const {          \
+                SignalRefT(obj_).emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                   \
             }                                                                                           \
         };                                                                                              \
         return SignalRef(this);                                                                         \
