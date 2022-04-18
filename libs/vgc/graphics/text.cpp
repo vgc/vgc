@@ -475,9 +475,9 @@ public:
         u8_to_u16_.append(u16_length);
         u16_to_u8_.append(core::int_cast<Int>(u8_length));
         u8_min_ = 0;
-        u8_max_ = u8_to_u16_.length();
+        u8_max_ = u8_to_u16_.length() - 1;
         u16_min_ = 0;
-        u16_max_ = u16_to_u8_.length();
+        u16_max_ = u16_to_u8_.length() - 1;
 
         // Check that the array sizes are what we expect
         VGC_EXPECT_EQ(u8_to_u16_.length(), u8_numPositions);
@@ -493,6 +493,10 @@ public:
         Int p_ = core::int_cast<Int>(p);
         p_ = core::clamp(p_, u16_min_, u16_max_);
         return u16_to_u8_[p_];
+    }
+
+    Int u8_length() const {
+        return u8_max_;
     }
 
     QTextBoundaryFinder q;
@@ -527,6 +531,11 @@ bool TextBoundaryIterator::isAtBoundary() const
 bool TextBoundaryIterator::isValid() const
 {
     return impl_->q.isValid();
+}
+
+Int TextBoundaryIterator::numBytes() const
+{
+    return impl_->u8_length();
 }
 
 Int TextBoundaryIterator::position() const
