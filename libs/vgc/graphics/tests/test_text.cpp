@@ -16,7 +16,6 @@
 
 #include <gtest/gtest.h>
 #include <vgc/graphics/text.h>
-#include <icu.h>
 
 using namespace vgc;
 
