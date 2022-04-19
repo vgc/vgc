@@ -179,7 +179,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
             size_t p1 = core::int_cast<size_t>(p1_);
             size_t p2 = core::int_cast<size_t>(p2_);
             std::string newText;
-            newText.reserve(text().size() + p2 - p1);
+            newText.reserve(text().size() - (p2 - p1));
             newText.append(text(), 0, p1);
             newText.append(text(), p2);
             textCursor_.setBytePosition(p1_);
