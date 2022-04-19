@@ -28,8 +28,8 @@ ConnectionHandle ConnectionHandle::generate() {
 }
 
 VGC_CORE_API
-ObjectMethodId genObjectMethodId() {
-    static ObjectMethodId s = 0;
+FunctionId genFunctionId() {
+    static FunctionId s = 0;
     // XXX make this thread-safe ?
     return ++s;
 }

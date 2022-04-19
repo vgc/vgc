@@ -21,6 +21,9 @@
 TEST(TestSignal, All)
 {
     auto t = vgc::core::internal::TestSignalObject::create();
+    auto t2 = vgc::core::internal::TestSignalObject::create();
+
+    t2->signalIntDoubleBool().connect(t->signalIntDouble());
 
     t->signalIntDouble().connect(t->slotIntSlot());
     t->signalIntDouble().disconnect(t->slotIntSlot());
@@ -29,18 +32,31 @@ TEST(TestSignal, All)
     ASSERT_EQ(t->sumInt, 0);
     ASSERT_FLOAT_EQ(t->sumDouble, 0);
 
-    auto h = t->signalIntDouble().connect(t->slotIntSlot());
-    t->signalIntDouble().emit(12, 2.);
-    t->signalIntDouble().emit(11, 0.5);
-    ASSERT_EQ(t->sumInt, 23);
-    ASSERT_FLOAT_EQ(t->sumDouble, 0);
-    t->signalIntDouble().disconnect(h);
-    t->sumInt = 0;
-    t->sumDouble = 0;
-    t->signalIntDouble().emit(12, 2.);
-    t->signalIntDouble().emit(11, 0.5);
-    ASSERT_EQ(t->sumInt, 0);
-    ASSERT_FLOAT_EQ(t->sumDouble, 0);
+    {
+        auto h = t->signalIntDouble().connect(t->slotIntSlot());
+        t2->signalIntDoubleBool().emit(12, 2., false);
+        t2->signalIntDoubleBool().emit(11, 0.5, true);
+        ASSERT_EQ(t->sumInt, 23);
+        ASSERT_FLOAT_EQ(t->sumDouble, 0);
+        t->signalIntDouble().disconnect(h);
+        t->sumInt = 0;
+        t->sumDouble = 0;
+    }
+
+    {
+        auto h = t->signalIntDouble().connect(t->slotIntSlot());
+        t->signalIntDouble().emit(12, 2.);
+        t->signalIntDouble().emit(11, 0.5);
+        ASSERT_EQ(t->sumInt, 23);
+        ASSERT_FLOAT_EQ(t->sumDouble, 0);
+        t->signalIntDouble().disconnect(h);
+        t->sumInt = 0;
+        t->sumDouble = 0;
+        t->signalIntDouble().emit(12, 2.);
+        t->signalIntDouble().emit(11, 0.5);
+        ASSERT_EQ(t->sumInt, 0);
+        ASSERT_FLOAT_EQ(t->sumDouble, 0);
+    }
 
     t->selfConnectIntDouble();
     t->signalIntDouble().emit(21, 4.);

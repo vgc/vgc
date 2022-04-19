@@ -131,7 +131,7 @@ protected:
         py::cpp_function fget(
             [=](py::object self) -> PyCppSignalRef* {
                 ObjT* this_ = self.cast<ObjT*>();
-                PyCppSignalRef* sref = new PyCppSignalRef((this_->*mfn)());
+                PyCppSignalRef* sref = new PyCppSignalRefImpl<SignalRefT>((this_->*mfn)());
                 py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
                 py::setattr(self, sname.c_str(), pysref); // caching
                 return sref; // pybind will find the object in registered_instances
@@ -146,7 +146,7 @@ protected:
         py::cpp_function fget(
             [=](py::object self) -> PyCppSlotRef* {
                 ObjT* this_ = self.cast<ObjT*>();
-                PyCppSlotRef* sref = new PyCppSlotRef((this_->*mfn)());
+                PyCppSlotRef* sref = new PyCppSlotRefImpl<typename SlotRefT::SlotMethod>((this_->*mfn)());
                 py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
                 py::setattr(self, sname.c_str(), pysref); // caching
                 return sref; // pybind will find the object in registered_instances

@@ -91,12 +91,26 @@
 /// \endcode
 ///
 
+// XXX ORPHANED COMMENT
+// This is a polymorphic adapter class for slots and free functions.
+// It is used to store the handlers of all signals of a given object
+// in a single container.
+// Moreover it provides a common handler signature per signal.
+// Handlers with less arguments than the signal they are connected
+// to are supported. The tail arguments are simply omitted.
+// For instance, a handler adapting slot(double a) to
+// signal(int a, double b) would be equivalent to this:
+// handler(int&& a, double&& b) { slot(std::forward<int>(a)); }
+//
+
+
 namespace vgc::core {
 
 class Object;
 
-
 namespace internal {
+
+static constexpr Int maxSignalArgs = 8;
 
 template<typename T, typename Enable = void>
 struct hasObjectTypedefs_ : std::false_type {};
@@ -130,12 +144,16 @@ inline constexpr bool isObject = internal::isObject_<T>::value;
 
 namespace internal {
 
-using ObjectMethodId = Int;
-using BoundObjectMethodId = std::pair<Object*, ObjectMethodId>;
+using FunctionId = Int;
+using ObjectSlotId = std::pair<Object*, FunctionId>;
 using FreeFuncId = void*;
-using SlotId = std::variant<std::monostate, BoundObjectMethodId, FreeFuncId>;
-using SignalMethodId = ObjectMethodId;
+using SlotId = std::variant<std::monostate, ObjectSlotId, FreeFuncId>;
+using SignalId = FunctionId;
 
+VGC_CORE_API FunctionId genFunctionId();
+
+/// A handle to a Signal/Slot connection.
+/// It is returned by Signal's connect functions and can be used in disconnect functions.
 class ConnectionHandle {
 public:
     static const ConnectionHandle invalid;
@@ -162,39 +180,117 @@ private:
 inline constexpr ConnectionHandle ConnectionHandle::invalid = {-1};
 
 
-VGC_CORE_API
-ObjectMethodId genObjectMethodId();
-
-template<typename ObjectMethodTag>
-class ObjectMethodIdSingleton_ {
+template<typename Tag>
+class FunctionIdSingleton_ {
 public:
-    static ObjectMethodId get() {
-        static ObjectMethodId s = genObjectMethodId();
+    static FunctionId get() {
+        static FunctionId s = genFunctionId();
         return s;
     }
 
 private:
-    ObjectMethodIdSingleton_() = delete;
+    FunctionIdSingleton_() = delete;
 };
 
 
-// This is a polymorphic adapter class for slots and free functions.
-// It is used to store the handlers of all signals of a given object
-// in a single container.
-// Moreover it provides a common handler signature per signal.
-// Handlers with less arguments than the signal they are connected
-// to are supported. The tail arguments are simply omitted.
-// For instance, a handler adapting slot(double a) to
-// signal(int a, double b) would be equivalent to this:
-// handler(int&& a, double&& b) { slot(std::forward<int>(a)); }
-//
-class AbstractSignalTransmitterOld {
+// Used to pass arguments from signal to slot wrappers in a more efficient way.
+template<size_t N>
+class SignalArgsArray_ {
+public:
+    static constexpr Int maxSize = N;
+
 protected:
-    AbstractSignalTransmitterOld() = default;
+    // To keep CVR as part of the type.
+    template<typename T>
+    struct ArgType {};
+
+    class AnyArg {
+        static constexpr size_t storageSize = sizeof(void*);
+
+        AnyArg() = default;
+
+        template<typename T>
+        static constexpr bool shouldCopy() {
+            return (sizeof(T) < storageSize) &&
+                std::is_object_v<T> &&
+                std::is_trivially_destructible_v<T>;
+        }
+
+    public:
+        template<typename T>
+        AnyArg make(std::add_lvalue_reference_t<T> x) {
+
+            // T&&      -> stored value type.
+            // -------------------------------
+            // int      -> int
+            // U*       -> U*
+            // U**      -> U**
+            // U&       -> U*
+            // U&&      -> U*
+            // Big      -> Big*
+
+            AnyArg ret;
+            if constexpr (shouldCopy<T>()) {
+                ::new(&ret.v) T(x);
+            }
+            else {
+                using Pointer = std::remove_reference_t<T>*;
+                ::new(&ret.v) Pointer(std::addressof(x));
+            }
+#ifdef VGC_DEBUG
+            ret.t_ = typeid(ArgType<T>);
+#endif
+            return ret;
+        }
+
+        // inlining when T is a value type should elid any copy of big objects.
+        template<typename T>
+        auto get() {
+#ifdef VGC_DEBUG
+            if (t_ != typeid(ArgType<T>)) {
+                throw LogicError("Bad cast of AnyArg.")
+            }
+#endif
+            if constexpr (shouldCopy<T>()) {
+                return static_cast<T>(*std::launder(reinterpret_cast<T*>(&ret.v)));
+            }
+            else {
+                using Pointer = std::remove_reference_t<T>*;
+                Pointer p = *std::launder(reinterpret_cast<Pointer*>(&ret.v));
+                if constexpr (!std::is_reference_v<T>) {
+                    return static_cast<const T&>(*p);
+                }
+                else {
+                    return static_cast<T>(*p);
+                }
+            }
+        }
+
+    private:
+        std::aligned_storage<storageSize, storageSize> v_;
+#ifdef VGC_DEBUG
+        std::type_index t_ = typeid(void);
+#endif
+    };
+
+    SignalArgsArray_(std::initializer_list<ArgRef> refs) :
+        refs_(refs),
+        size_(refs.size()) {}
 
 public:
-    virtual ~AbstractSignalTransmitterOld() = default;
+    template<typename... Ts>
+    static SignalArgsArray_ make(std::add_lvalue_reference_t<Ts>... args) {
+        //return ArgRefsArray_({ArgRef{}...});
+        // XXX todo
+        return {};
+    }
+
+private:
+    std::array<ArgRef, maxSize> refs_;
+    Int size_;
 };
+
+using SignalArgsArray = SignalArgsArray_<maxSignalArgs>;
 
 
 template<typename TruncatedSignalArgsTuple>
@@ -317,7 +413,7 @@ protected:
         using Traits = CallableTraits<Callable>;
 
         static_assert(std::is_invocable_v<Callable&&, OptionalObj&&..., TruncatedSignalArgs&&...>,
-            "Slot signature is not compatible with signal.");
+            "The slot signature is not compatible with the signal.");
 
         return std::function<void(TruncatedSignalArgs&&...)>(
             [=](TruncatedSignalArgs&&... args) {
@@ -336,12 +432,12 @@ class SignalHub {
 private:
     struct Connection_ {
         template<typename To>
-        Connection_(SignalTransmitter&& transmitter, ConnectionHandle h, SignalMethodId from, To&& to) :
+        Connection_(SignalTransmitter&& transmitter, ConnectionHandle h, SignalId from, To&& to) :
             transmitter(std::move(transmitter)), h(h), from(from), to(std::forward<To>(to)) {}
 
         SignalTransmitter transmitter;
         ConnectionHandle h;
-        SignalMethodId from;
+        SignalId from;
         SlotId to;
     };
 
@@ -356,26 +452,42 @@ private:
 public:
     SignalHub() = default;
 
+    // XXX in debug check in destructor that disconnectSlots and disconnectSignals have been called
+
     // Defined in object.h
     static constexpr SignalHub& access(Object* o);
 
     // Must be called by Object's destructor.
-    static void onDestroy(Object* receiver) {
+    static void disconnectSlots(Object* receiver) {
         auto& hub = access(receiver);
         for (ListenedObjectInfo& x : hub.listenedObjectInfos_) {
             if (x.numInboundConnections > 0) {
                 SignalHub::lastDisconnect_(x.object, receiver);
             }
         }
+        hub.listenedObjectInfos_.clear();
     }
 
-    static ConnectionHandle connect(Object* sender, SignalMethodId from, SignalTransmitter&& transmitter, const SlotId& to) {
+    // Must be called by Object's destructor.
+    static void disconnectSignals(Object* sender) {
+        auto& hub = access(sender);
+        for (const auto& c : hub.connections_) {
+            if (std::holds_alternative<ObjectSlotId>(c.to)) {
+                const auto& bsid = std::get<ObjectSlotId>(c.to);
+                auto& info = access(bsid.first).getListenedObjectInfoRef(sender);
+                info.numInboundConnections--;
+            }
+        }
+        hub.connections_.clear();
+    }
+
+    static ConnectionHandle connect(Object* sender, SignalId from, SignalTransmitter&& transmitter, const SlotId& to) {
         auto& hub = access(sender);
         auto h = ConnectionHandle::generate();
 
-        if (std::holds_alternative<BoundObjectMethodId>(to)) {
+        if (std::holds_alternative<ObjectSlotId>(to)) {
             // Increment numInboundConnections in the receiver's info about sender.
-            const auto& bsid = std::get<BoundObjectMethodId>(to);
+            const auto& bsid = std::get<ObjectSlotId>(to);
             auto& info = access(bsid.first).findOrCreateListenedObjectInfo(sender);
             info.numInboundConnections++;
         }
@@ -391,26 +503,26 @@ public:
         });
     }
 
-    static bool disconnect(Object* sender, SignalMethodId from) {
+    static bool disconnect(Object* sender, SignalId from) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
             return c.from == from;
         });
     }
 
-    static bool disconnect(Object* sender, SignalMethodId from, ConnectionHandle h) {
+    static bool disconnect(Object* sender, SignalId from, ConnectionHandle h) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
             return c.from == from && c.h == h;
         });
     }
 
-    static bool disconnect(Object* sender, SignalMethodId from, const SlotId& to) {
+    static bool disconnect(Object* sender, SignalId from, const SlotId& to) {
         return removeConnectionIf_(sender, [=](const Connection_& c) {
             return c.from == from && c.to == to;
         });
     }
 
     template<typename SignalArgsTuple, typename... Args>
-    static void emit_(Object* sender, SignalMethodId from, Args&&... args) {
+    static void emit_(Object* sender, SignalId from, Args&&... args) {
         auto& hub = access(sender);
         for (auto& c : hub.connections_) {
             if (c.from == from) {
@@ -424,7 +536,7 @@ protected:
     static void lastDisconnect_(Object* sender, Object* receiver) {
         auto& hub = access(sender);
         auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c){
-                return std::holds_alternative<BoundObjectMethodId>(c.to) && std::get<BoundObjectMethodId>(c.to).first == receiver; 
+                return std::holds_alternative<ObjectSlotId>(c.to) && std::get<ObjectSlotId>(c.to).first == receiver; 
             });
         hub.connections_.erase(it, hub.connections_.end());
     }
@@ -454,6 +566,7 @@ protected:
     }
 
 private:
+    // Manipulating it should be done with knowledge of the auto-disconnect mechanism.
     Array<Connection_> connections_;
     // Used to auto-disconnect on destroy.
     Array<ListenedObjectInfo> listenedObjectInfos_;
@@ -473,9 +586,9 @@ private:
                 }
                 else {
                     const Connection_& c = *it;
-                    if (std::holds_alternative<BoundObjectMethodId>(c.to)) {
+                    if (std::holds_alternative<ObjectSlotId>(c.to)) {
                         // Decrement numInboundConnections in the receiver's info about sender.
-                        const auto& bsid = std::get<BoundObjectMethodId>(c.to);
+                        const auto& bsid = std::get<ObjectSlotId>(c.to);
                         auto& info = access(bsid.first).getListenedObjectInfoRef(sender);
                         info.numInboundConnections--;
                     }
@@ -511,8 +624,8 @@ public:
     SlotRef(const SlotRef&) = delete;
     SlotRef& operator=(const SlotRef&) = delete;
 
-    static constexpr ObjectMethodId id() {
-        return ObjectMethodIdSingleton_<ObjectMethodTag>::get();
+    static constexpr FunctionId id() {
+        return FunctionIdSingleton_<ObjectMethodTag>::get();
     }
 
     constexpr Obj* object() const {
@@ -530,6 +643,12 @@ private:
 
 template<typename T>
 inline constexpr bool isSlotRef = IsTplBaseOf<SlotRef, T>;
+
+template<typename ObjectMethodTag, typename ObjT, typename... Args>
+class SignalRef;
+
+template<typename T>
+inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
 
 // It does not define emit(..) and is intended to be locally subclassed in
 // the signal (getter).
@@ -552,8 +671,8 @@ public:
     SignalRef& operator=(const SignalRef&) = delete;
 
     // XXX doc
-    static constexpr SignalMethodId id() {
-        return ObjectMethodIdSingleton_<ObjectMethodTag>::get();;
+    static constexpr SignalId id() {
+        return FunctionIdSingleton_<ObjectMethodTag>::get();;
     }
 
     // XXX doc
@@ -565,6 +684,12 @@ public:
     template<typename SlotRefT, std::enable_if_t<isSlotRef<SlotRefT>, int> = 0>
     ConnectionHandle connect(SlotRefT&& slotRef) const {
         return connect_(std::forward<SlotRefT>(slotRef));
+    }
+
+    // XXX doc
+    template<typename SignalRefT, std::enable_if_t<isSignalRef<SignalRefT>, int> = 0>
+    ConnectionHandle connect(SignalRefT&& signalRef) const {
+        return connect_(std::forward<SignalRefT>(signalRef));
     }
 
     // XXX doc
@@ -595,7 +720,13 @@ public:
     // XXX doc
     template<typename SlotRefT, std::enable_if_t<isSlotRef<SlotRefT>, int> = 0>
     bool disconnect(SlotRefT&& slotRef) const {
-        return disconnect_(std::forward<SlotRefT>(slotRef));
+        return SignalHub::disconnect(object_, id(), ObjectSlotId(slotRef.object(), slotRef.id()));
+    }
+
+    // XXX doc
+    template<typename SignalRefT, std::enable_if_t<isSignalRef<SignalRefT>, int> = 0>
+    bool disconnect(SignalRefT&& signalRef) const {
+        return SignalHub::disconnect(object_, id(), ObjectSlotId(signalRef.object(), signalRef.id()));
     }
 
     // XXX doc
@@ -605,23 +736,30 @@ public:
     }
 
 protected:
-    template<typename TagT, typename SlotMethodT>
-    ConnectionHandle connect_(SlotRef<TagT, SlotMethodT>&& slotRef) const {
-        // XXX make owner listen on receiver destroy to automatically disconnect signals
-        static_assert(isMethod<SlotMethodT>);
+    template<typename TagU, typename SlotMethodU>
+    ConnectionHandle connect_(SlotRef<TagU, SlotMethodU>&& slotRef) const {
+        static_assert(isMethod<SlotMethodU>);
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(slotRef.method(), slotRef.object());
-        return SignalHub::connect(object_, id(), std::move(transmitter), BoundObjectMethodId(slotRef.object(), slotRef.id()));
+        return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(slotRef.object(), slotRef.id()));
+    }
+
+    template<typename TagU, typename ObjU, typename... ArgUs>
+    ConnectionHandle connect_(SignalRef<TagU, ObjU, ArgUs...>&& signalRef) const {
+        ObjU* obj = signalRef.object();
+        auto slotId = signalRef.id();
+        SignalTransmitter transmitter = SignalTransmitter(std::function<void(ArgUs&&...)>(
+            [=](ArgUs&&... args) {
+                ::vgc::core::internal::SignalHub::emit_<std::tuple<ArgUs...>>(
+                    obj, slotId,
+                    std::forward<ArgUs>(args)...);
+            }));
+        return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(signalRef.object(), signalRef.id()));
     }
 
     template<typename R, typename... FnArgs>
     ConnectionHandle connect_(R (*callback)(FnArgs...)) const {
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(callback);
         return SignalHub::connect(object_, id(), std::move(transmitter), FreeFuncId(callback));
-    }
-
-    template<typename TagT, typename SlotMethodT>
-    bool disconnect_(SlotRef<TagT, SlotMethodT>&& slotRef) const {
-        return SignalHub::disconnect(object_, id(), BoundObjectMethodId(slotRef.object(), slotRef.id()));
     }
 
     template<typename R, typename... FnArgs>
@@ -638,9 +776,6 @@ protected:
 private:
     Obj* object_;
 };
-
-template<typename T>
-inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
 
 } // namespace internal
 

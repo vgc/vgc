@@ -340,6 +340,23 @@ struct IsTplBaseOf_ : std::bool_constant<
 template<template<typename...> typename Base, typename Derived>
 inline constexpr bool IsTplBaseOf = internal::IsTplBaseOf_<Base, Derived>::value;
 
+namespace internal {
+
+template<template<Int> typename Case, std::size_t... Is>
+auto tplFnTable_(std::index_sequence<Is...>) {
+    static constexpr std::array<decltype(&Case<0>::execute), sizeof...(Is)> s = {Case<Is>::execute...};
+    return s;
+};
+
+} // namespace internal
+
+  // Experimental
+template<template<Int> typename Case, Int N>
+auto tplFnTable() {
+    return internal::tplSwitchI_<Case>(std::make_index_sequence<N>{});
+};
+
+
 } // namespace vgc::core
 
 #endif // VGC_CORE_TEMPLATEUTIL_H

@@ -68,7 +68,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
     }
 
     // Create a new unique ID for this signal.
-    auto newId = core::internal::genObjectMethodId();
+    auto newId = core::internal::genFunctionId();
 
     // Create the property getter
     py::str signalName = signalMethod.attr("__name__");
@@ -124,7 +124,7 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
     }
 
     // Create a new unique ID for this slot.
-    auto newId = core::internal::genObjectMethodId();
+    auto newId = core::internal::genFunctionId();
 
     // Create the property getter
     py::str slotName = unboundSlotMethod.attr("__name__");
@@ -160,20 +160,20 @@ void wrapSignalAndSlotRefs(py::module& m)
         ;
 
     auto pySlotRef =
-        py::class_<PyPySlotRef, PyAbstractSlotRef>(m, "SlotRef")
+        py::class_<PyPySlotRef, PyAbstractSlotRef>(m, "PySlotRef")
             .def(
                 /* calling slot calls its method. */
                 "__call__", [](py::object self, py::args args) {
                     PyPySlotRef* this_ = self.cast<PyPySlotRef*>();
-                    this_->unboundFn()(this_->object(), *args);
+                    this_->unboundPyFn()(this_->object(), *args);
                 })
         ;
 
     auto pySignalRef =
-        py::class_<PyPySignalRef, PyAbstractSlotRef>(m, "SignalRef")
+        py::class_<PyPySignalRef, PyAbstractSlotRef>(m, "PySignalRef")
             .def_property_readonly(
                 "emit", [](PyPySignalRef* this_){
-                    return this_->boundEmitFn(); 
+                    return this_->boundEmitPyFn(); 
                 })
             .def("connect", &PyPySignalRef::connect)
             .def("connect", &PyPySignalRef::connectCallback)
@@ -221,12 +221,7 @@ py::cpp_function pySlotAdapter(py::args args, py::kwargs kwargs) {
 //        });
 //}
 
-// used for py-signals only ! 
-//
-class PyToPyTransmitter : public core::internal::AbstractSignalTransmitterOld {
-public:
-    py::function boundSlot_;
-};
+
 
 //
 

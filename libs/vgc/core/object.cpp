@@ -403,8 +403,11 @@ void Object::destroyObjectImpl_()
     }
     ObjectPtr p = removeObjectFromParent_();
     refCount_ = Int64Min + refCount_;
+    
+    internal::SignalHub::disconnectSlots(this);
     onDestroyed();
-    internal::SignalHub::onDestroy(this);
+    // Done after onDestroyed since someone could want to emit there.
+    internal::SignalHub::disconnectSignals(this);
 
     // Note 1: The second line switches isAlive() from true to false, while
     // keeping refCount() unchanged.
