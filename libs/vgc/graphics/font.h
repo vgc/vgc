@@ -18,6 +18,7 @@
 #define VGC_GRAPHICS_FONT_H
 
 #include <mutex>
+#include <unordered_map>
 
 #include <vgc/core/array.h>
 #include <vgc/core/floatarray.h>
