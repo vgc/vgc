@@ -17,6 +17,7 @@
 #ifndef VGC_CORE_OBJECT_H
 #define VGC_CORE_OBJECT_H
 
+#include <iterator> // distance
 #include <type_traits>
 
 #include <vgc/core/api.h>
@@ -310,6 +311,10 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 namespace vgc {
 namespace core {
 
+// Forward declaration needed for Object::childObjects()
+template<typename T> class ObjListView;
+using ObjectListView = ObjListView<Object>;
+
 // Define the ObjectPtr name alias (we use it in the definition of Object).
 //
 // Note: the idea would be to simply call VGC_DECLARE_OBJECT(Object) here,
@@ -585,6 +590,25 @@ public:
     {
         return previousSiblingObject_;
     }
+
+    /// Returns a range that iterates over all child objects of this Object.
+    ///
+    /// Example :
+    ///
+    /// ```cpp
+    /// for (Object* child : obj->childObjects()) {
+    ///     ...
+    /// }
+    /// ```
+    ///
+    ObjectListView childObjects() const;
+
+    /// Returns the number of child objects of this Object.
+    ///
+    /// Note that this function is slow (linear complexity), because it has to
+    /// iterate over all child objects (the number of children is not cached).
+    ///
+    Int numChildObjects() const;
 
     /// Returns whether this Object is a descendant of the given \p other
     /// Object. Returns true in the special case where `this == other`. Returns
@@ -935,13 +959,14 @@ template<typename T>
 class ObjListIterator {
 public:
     typedef T* value_type;
-    typedef T*& reference;
-    typedef T** pointer;
-    typedef std::input_iterator_tag iterator_category;
+    typedef Int difference_type;
+    typedef const value_type& reference; // 'const' => non-mutable forward iterator
+    typedef const value_type* pointer;;  // 'const' => non-mutable forward iterator
+    typedef std::forward_iterator_tag iterator_category;
 
     /// Constructs an iterator pointing to the given object.
     ///
-    ObjListIterator(T* p) : p_(p) {
+    ObjListIterator(T* p = nullptr) : p_(p) {
 
     }
 
@@ -1041,6 +1066,15 @@ public:
         return end_;
     }
 
+    /// Returns the number of objects in the range.
+    ///
+    /// Note that this function is slow (linear complexity), because it has to
+    /// iterate over all objects in the range.
+    ///
+    Int length() const {
+        return std::distance(begin_, end_);
+    }
+
 private:
     ObjListIterator<T> begin_;
     ObjListIterator<T> end_;
@@ -1118,6 +1152,16 @@ public:
         // works since our core::ObjPtr use intrusive reference counting.
     }
 };
+
+inline ObjectListView Object::childObjects() const
+{
+    return ObjectListView(firstChildObject(), nullptr);
+}
+
+inline Int Object::numChildObjects() const
+{
+    return childObjects().length();
+}
 
 } // namespace core
 } // namespace vgc

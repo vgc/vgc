@@ -196,7 +196,14 @@ class TestNode(unittest.TestCase):
         n2 = Element(n1, "bar1")
         n3 = Element(n1, "bar2")
         n4 = Element(n1, "bar3")
+        self.assertEqual(doc.numChildObjects(), 1)
+        self.assertEqual(n1.numChildObjects(), 3)
         self.assertEqual(getChildNames(n1), ["bar1", "bar2", "bar3"])
+        childObjects = []
+        for child in n1.childObjects():
+            childObjects.append(child)
+        self.assertEqual(len(childObjects), 3)
+        self.assertEqual(len(n1.childObjects()), 3)
 
     def testReparent(self):
         doc = Document()
