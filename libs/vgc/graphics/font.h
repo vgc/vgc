@@ -17,6 +17,9 @@
 #ifndef VGC_GRAPHICS_FONT_H
 #define VGC_GRAPHICS_FONT_H
 
+#include <mutex>
+#include <unordered_map>
+
 #include <vgc/core/array.h>
 #include <vgc/core/floatarray.h>
 #include <vgc/core/innercore.h>
@@ -34,6 +37,10 @@ typedef struct hb_font_t hb_font_t;
 
 namespace vgc {
 namespace graphics {
+
+VGC_DECLARE_OBJECT(FontLibrary);
+VGC_DECLARE_OBJECT(FontFace);
+VGC_DECLARE_OBJECT(FontGlyph);
 
 namespace internal {
 
@@ -66,6 +73,8 @@ public:
     FT_Face face;
     hb_font_t* hbFont;
     double ppem;
+    std::mutex glyphsMutex;
+    std::unordered_map<Int, FontGlyph*> glyphsMap;
     FontFaceImpl(FT_Library library, const std::string& filename);
     ~FontFaceImpl();
 };
@@ -85,10 +94,6 @@ core::Vec2d f266ToVec2d(T x, T y)
 }
 
 } // namespace internal
-
-VGC_DECLARE_OBJECT(FontLibrary);
-VGC_DECLARE_OBJECT(FontFace);
-VGC_DECLARE_OBJECT(FontGlyph);
 
 /// \class vgc::graphics::FontLibrary
 /// \brief Manages a set of available fonts.

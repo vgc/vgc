@@ -493,33 +493,44 @@ FontGlyph* FontFace::getGlyphFromCodePoint(Int codePoint)
 
 FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
 {
-    // Load glyph data
-    FT_Face face = impl_->face;
-    FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
-    FT_Int32 flags = FT_LOAD_NO_BITMAP;
-    FT_Error error = FT_Load_Glyph(face, index, flags);
-    if (error) {
-        throw FontError(errorMsg(error));
-    }
+    // Prevent two threads from modifying the glyphsMap at the same time
+    impl_->glyphsMutex.lock();
 
-    // Get glyph name
-    const FT_UInt bufferMax = 1024;
-    char name[bufferMax];
-    if (FT_HAS_GLYPH_NAMES(face)) {
-        FT_Error error = FT_Get_Glyph_Name(face, index, name, bufferMax);
+    // Get existing FontGlyph* or insert nullptr in the map
+    FontGlyph*& glyph = impl_->glyphsMap[glyphIndex];
+
+    // If no existing FontGlyph*, create it
+    if (!glyph) {
+
+        // Load glyph data
+        FT_Face face = impl_->face;
+        FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
+        FT_Int32 flags = FT_LOAD_NO_BITMAP;
+        FT_Error error = FT_Load_Glyph(face, index, flags);
         if (error) {
-            // Note: This code path is believed to be unreachable since we
-            // premptively check for FT_HAS_GLYPH_NAMES, and we know the index
-            // is valid. We still keep it for added safety, or if Freetype adds
-            // more error cases in the future.
             throw FontError(errorMsg(error));
         }
+
+        // Get glyph name
+        const FT_UInt bufferMax = 1024;
+        char name[bufferMax];
+        if (FT_HAS_GLYPH_NAMES(face)) {
+            FT_Error error = FT_Get_Glyph_Name(face, index, name, bufferMax);
+            if (error) {
+                // Note: This code path is believed to be unreachable since we
+                // premptively check for FT_HAS_GLYPH_NAMES, and we know the index
+                // is valid. We still keep it for added safety, or if Freetype adds
+                // more error cases in the future.
+                throw FontError(errorMsg(error));
+            }
+        }
+        // Create FontGlyph object and copy data to object
+        glyph = new FontGlyph(this);
+        FT_GlyphSlot slot = face->glyph;
+        glyph->impl_.reset(new internal::FontGlyphImpl(glyphIndex, name, slot));
     }
 
-    // Create FontGlyph object and copy data to object
-    FontGlyph* glyph = new FontGlyph(this);
-    FT_GlyphSlot slot = face->glyph;
-    glyph->impl_.reset(new internal::FontGlyphImpl(glyphIndex, name, slot));
+    impl_->glyphsMutex.unlock();
     return glyph;
 }
 
