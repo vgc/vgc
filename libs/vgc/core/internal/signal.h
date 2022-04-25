@@ -192,6 +192,81 @@ private:
     FunctionIdSingleton_() = delete;
 };
 
+// Container for a single signal argument of any type.
+// The contained value is meant to be reused multiple times as a slot argument.
+// For instance get<T>() returns a const T& because it would make no sense to
+// allow for multiple calls of slot(T&&) on copies..
+class AnySignalArg {
+    static constexpr size_t storageSize = sizeof(void*);
+
+    // To keep CVR as part of the type.
+    template<typename T>
+    struct ArgType {};
+
+    AnySignalArg() = default;
+
+    template<typename T>
+    static constexpr bool shouldCopy() {
+        return (sizeof(T) < storageSize) &&
+            std::is_object_v<T> &&
+            std::is_trivially_destructible_v<T>;
+    }
+
+public:
+    template<typename T>
+    AnySignalArg make(std::add_lvalue_reference_t<T> x) {
+
+        // T&&      -> stored value type.
+        // -------------------------------
+        // int      -> int
+        // U*       -> U*
+        // U**      -> U**
+        // U&       -> U*
+        // U&&      -> U*
+        // Big      -> Big*
+
+        AnyArg ret;
+        if constexpr (shouldCopy<T>()) {
+            ::new(&ret.v) T(x);
+        }
+        else {
+            using Pointer = std::remove_reference_t<T>*;
+            ::new(&ret.v) Pointer(std::addressof(x));
+        }
+#ifdef VGC_DEBUG
+        ret.t_ = typeid(ArgType<T>);
+#endif
+        return ret;
+    }
+
+    // inlining when T is a value type should elid any copy of big objects.
+    template<typename T>
+    auto get() {
+#ifdef VGC_DEBUG
+        if (t_ != typeid(ArgType<T>)) {
+            throw LogicError("Bad cast of AnySignalArg.")
+        }
+#endif
+        if constexpr (shouldCopy<T>()) {
+            return static_cast<const T&>(*std::launder(reinterpret_cast<T*>(&ret.v)));
+        }
+        else {
+            using Pointer = std::remove_reference_t<T>*;
+            using RetType = std::conditional_t<
+                std::is_reference_v<T>, T, const T&>;
+
+            Pointer p = *std::launder(reinterpret_cast<Pointer*>(&ret.v));
+            return static_cast<RetType>(*p);
+        }
+    }
+
+private:
+    std::aligned_storage<storageSize, storageSize> v_;
+#ifdef VGC_DEBUG
+    std::type_index t_ = typeid(void);
+#endif
+};
+
 
 // Used to pass arguments from signal to slot wrappers in a more efficient way.
 template<size_t N>
@@ -200,97 +275,30 @@ public:
     static constexpr Int maxSize = N;
 
 protected:
-    // To keep CVR as part of the type.
-    template<typename T>
-    struct ArgType {};
-
-    class AnyArg {
-        static constexpr size_t storageSize = sizeof(void*);
-
-        AnyArg() = default;
-
-        template<typename T>
-        static constexpr bool shouldCopy() {
-            return (sizeof(T) < storageSize) &&
-                std::is_object_v<T> &&
-                std::is_trivially_destructible_v<T>;
-        }
-
-    public:
-        template<typename T>
-        AnyArg make(std::add_lvalue_reference_t<T> x) {
-
-            // T&&      -> stored value type.
-            // -------------------------------
-            // int      -> int
-            // U*       -> U*
-            // U**      -> U**
-            // U&       -> U*
-            // U&&      -> U*
-            // Big      -> Big*
-
-            AnyArg ret;
-            if constexpr (shouldCopy<T>()) {
-                ::new(&ret.v) T(x);
-            }
-            else {
-                using Pointer = std::remove_reference_t<T>*;
-                ::new(&ret.v) Pointer(std::addressof(x));
-            }
-#ifdef VGC_DEBUG
-            ret.t_ = typeid(ArgType<T>);
-#endif
-            return ret;
-        }
-
-        // inlining when T is a value type should elid any copy of big objects.
-        template<typename T>
-        auto get() {
-#ifdef VGC_DEBUG
-            if (t_ != typeid(ArgType<T>)) {
-                throw LogicError("Bad cast of AnyArg.")
-            }
-#endif
-            if constexpr (shouldCopy<T>()) {
-                return static_cast<T>(*std::launder(reinterpret_cast<T*>(&ret.v)));
-            }
-            else {
-                using Pointer = std::remove_reference_t<T>*;
-                Pointer p = *std::launder(reinterpret_cast<Pointer*>(&ret.v));
-                if constexpr (!std::is_reference_v<T>) {
-                    return static_cast<const T&>(*p);
-                }
-                else {
-                    return static_cast<T>(*p);
-                }
-            }
-        }
-
-    private:
-        std::aligned_storage<storageSize, storageSize> v_;
-#ifdef VGC_DEBUG
-        std::type_index t_ = typeid(void);
-#endif
-    };
-
-    SignalArgsArray_(std::initializer_list<ArgRef> refs) :
+    SignalArgsArray_(std::initializer_list<AnySignalArg> refs) :
         refs_(refs),
         size_(refs.size()) {}
 
 public:
     template<typename... Ts>
     static SignalArgsArray_ make(std::add_lvalue_reference_t<Ts>... args) {
-        //return ArgRefsArray_({ArgRef{}...});
-        // XXX todo
-        return {};
+        return SignalArgsArray_({AnySignalArg::make<Ts>(args)...});
+    }
+
+    template<typename T>
+    auto get(Int i) {
+        // XXX index check
+        return refs_[i].get<T>();
     }
 
 private:
-    std::array<ArgRef, maxSize> refs_;
+    std::array<AnySignalArg, maxSize> refs_;
     Int size_;
 };
 
 using SignalArgsArray = SignalArgsArray_<maxSignalArgs>;
+
+// XXX need a make SignalArgsArray that expecs SignalArgsTuple !
 
 
 template<typename TruncatedSignalArgsTuple>
@@ -304,8 +312,11 @@ using SignalTransmitterFnType = typename SignalTransmitterFnType_<TruncatedSigna
 
 class SignalTransmitter {
 public:
+    using ForwarderSig = void(const SignalArgsArray&);
+    using ForwarderFn = std::function<ForwarderSig>;
+
     SignalTransmitter() :
-        forwardingFn_(), arity_(0) {}
+        forwardingFn_(), forwarder_(), arity_(0) {}
 
     template<typename... Args>
     SignalTransmitter(const std::function<void(Args...)>& forwardingFn) :
@@ -315,9 +326,15 @@ public:
     SignalTransmitter(std::function<void(Args...)>&& forwardingFn) :
         forwardingFn_(std::move(forwardingFn)), arity_(sizeof...(Args)) {}
 
+    SignalTransmitter(const ForwarderFn& forwarder, UInt8 arity) :
+        forwarder_(forwarder), arity_(arity) {}
+
+    SignalTransmitter(ForwarderFn&& forwarder, UInt8 arity) :
+        forwarder_(std::move(forwarder)), arity_(arity) {}
+
     template<typename SignalArgsTuple, typename Callable, typename... OptionalObj>
     [[nodiscard]] static std::enable_if_t<isCallable<RemoveCRef<Callable>>, SignalTransmitter>
-    build(Callable&& c, OptionalObj... methodObj) {
+    build_DEPREC(Callable&& c, OptionalObj... methodObj) {
         using Traits = CallableTraits<Callable>;
 
         static_assert(std::tuple_size_v<SignalArgsTuple> >= Traits::arity,
@@ -345,6 +362,39 @@ public:
         auto fn = buildForwardingFn(
             std::forward<Callable>(c),
             static_cast<TruncatedSignalArgsTuple*>(nullptr),
+            methodObj...);
+
+        return SignalTransmitter(std::move(fn));
+    }
+
+    template<typename SignalArgsTuple, typename Callable, typename... OptionalObj>
+    [[nodiscard]] static std::enable_if_t<isCallable<RemoveCRef<Callable>>, SignalTransmitter>
+    build(Callable&& c, OptionalObj... methodObj) {
+        using Traits = CallableTraits<Callable>;
+
+        static_assert(std::tuple_size_v<SignalArgsTuple> >= Traits::arity,
+            "The slot signature cannot be longer than the signal signature.");
+
+        using TruncatedSignalArgsTuple = SubTuple<0, Traits::arity, SignalArgsTuple>;
+
+        if constexpr (isMethod<RemoveCRef<Callable>>) {
+            static_assert(sizeof...(OptionalObj) == 1,
+                "Expecting one methodObj to bind the given method.");
+            using Obj = std::remove_reference_t<
+                std::tuple_element_t<0, std::tuple<OptionalObj&&...>> >;
+            static_assert(std::is_pointer_v<Obj>,
+                "Requires methodObj to be passed by pointer.");
+            static_assert(std::is_convertible_v<Obj, typename Traits::This>,
+                "The given methodObj cannot be used to bind the given method.");
+        }
+        else {
+            static_assert(sizeof...(OptionalObj) == 0,
+                "Expecting methodObj only for methods, the given callable is not a method.");
+        }
+
+        auto fn = buildForwarder<TruncatedSignalArgsTuple>(
+            std::forward<Callable>(c),
+            std::make_index_sequence<Traits::arity>{},
             methodObj...);
 
         return SignalTransmitter(std::move(fn));
@@ -394,6 +444,10 @@ public:
             throw core::LogicError("Invalid arguments given to SignalTransmitter call operator.");
         }
     }
+    
+    void transmit(const SignalArgsArray& args) const {
+        forwarder_(args);
+    }
 
     const UInt8 slotArity() const {
         return arity_;
@@ -403,6 +457,10 @@ public:
     const auto& getForwardingFn() const {
         using FnType = SignalTransmitterFnType<TruncatedSignalArgsTuple>;
         return std::any_cast<const FnType&>(forwardingFn_);
+    }
+
+    const ForwarderFn& getForwarder() const {
+        return forwarder_;
     }
 
 protected:
@@ -421,8 +479,25 @@ protected:
             });
     }
 
+    template<typename TTruncatedSignalArgsTuple, typename TCallable, size_t... Is, typename... TOptionalObj>
+    [[nodiscard]] static auto buildForwarder(
+        TCallable&& c, std::index_sequence<Is...>, TOptionalObj&&... methodObj) {
+
+        using Traits = CallableTraits<TCallable>;
+
+        static_assert(std::is_invocable_v<TCallable&&, TOptionalObj&&...,
+                decltype(std::declval<AnySignalArg>().get<std::tuple_element_t<Is, TTruncatedSignalArgsTuple>>())...>,
+            "The slot signature is not compatible with the signal.");
+
+        return ForwarderFn(
+            [=](const SignalArgsArray& args) {
+                std::invoke(c, methodObj..., args.get<std::tuple_element_t<Is, TTruncatedSignalArgsTuple>>(Is)...);
+            });
+    }
+
 private:
     std::any forwardingFn_;
+    ForwarderFn forwarder_;
     UInt8 arity_;
 };
 
@@ -521,12 +596,19 @@ public:
         });
     }
 
+    // XXX emit_ for arg array ?
+
     template<typename SignalArgsTuple, typename... Args>
     static void emit_(Object* sender, SignalId from, Args&&... args) {
+        //auto argsArray = SignalArgsArray::make<>();
+        
+    }
+
+    static void emit_(Object* sender, SignalId from, const SignalArgsArray& args) {
         auto& hub = access(sender);
         for (auto& c : hub.connections_) {
             if (c.from == from) {
-                c.transmitter.transmit<SignalArgsTuple>(std::forward<Args>(args)...);
+                c.transmitter.transmit(args);
             }
         }
     }
@@ -605,10 +687,10 @@ private:
 
 // It is intended to be locally subclassed in the slot (getter).
 //
-template<typename ObjectMethodTag, typename SlotMethodT>
+template<typename TObjectMethodTag, typename TSlotMethod>
 class SlotRef {
 public:
-    using SlotMethod = SlotMethodT;
+    using SlotMethod = TSlotMethod;
     using SlotMethodTraits = MethodTraits<SlotMethod>;
     using Obj = typename SlotMethodTraits::Obj;
     using ArgsTuple = typename SlotMethodTraits::ArgsTuple;
@@ -625,7 +707,7 @@ public:
     SlotRef& operator=(const SlotRef&) = delete;
 
     static constexpr FunctionId id() {
-        return FunctionIdSingleton_<ObjectMethodTag>::get();
+        return FunctionIdSingleton_<TObjectMethodTag>::get();
     }
 
     constexpr Obj* object() const {
@@ -644,7 +726,7 @@ private:
 template<typename T>
 inline constexpr bool isSlotRef = IsTplBaseOf<SlotRef, T>;
 
-template<typename ObjectMethodTag, typename ObjT, typename... Args>
+template<typename TObjectMethodTag, typename TObj, typename... TArgs>
 class SignalRef;
 
 template<typename T>
@@ -653,11 +735,11 @@ inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
 // It does not define emit(..) and is intended to be locally subclassed in
 // the signal (getter).
 //
-template<typename ObjectMethodTag, typename ObjT, typename... Args>
+template<typename TObjectMethodTag, typename TObj, typename... TArgs>
 class SignalRef {
 public:
-    using Obj = ObjT;
-    using ArgsTuple = std::tuple<Args...>;
+    using Obj = TObj;
+    using ArgsTuple = std::tuple<TArgs...>;
 
     static_assert(isObject<Obj>, "Signals can only be declared in Objects");
 
@@ -672,7 +754,7 @@ public:
 
     // XXX doc
     static constexpr SignalId id() {
-        return FunctionIdSingleton_<ObjectMethodTag>::get();;
+        return FunctionIdSingleton_<TObjectMethodTag>::get();;
     }
 
     // XXX doc
@@ -693,9 +775,9 @@ public:
     }
 
     // XXX doc
-    template<typename FreeFunctionT, std::enable_if_t<isFreeFunction<FreeFunctionT>, int> = 0>
-    ConnectionHandle connect(FreeFunctionT&& callback) const {
-        return connect_(std::forward<FreeFunctionT>(callback));
+    template<typename FreeFunction, std::enable_if_t<isFreeFunction<FreeFunction>, int> = 0>
+    ConnectionHandle connect(FreeFunction&& callback) const {
+        return connect_(std::forward<FreeFunction>(callback));
     }
 
     // XXX doc
@@ -730,29 +812,45 @@ public:
     }
 
     // XXX doc
-    template<typename FreeFunctionT, std::enable_if_t<isFreeFunction<FreeFunctionT>, int> = 0>
-    bool disconnect(FreeFunctionT&& callback) const {
-        return disconnect_(std::forward<FreeFunctionT>(callback));
+    template<typename FreeFunction, std::enable_if_t<isFreeFunction<FreeFunction>, int> = 0>
+    bool disconnect(FreeFunction&& callback) const {
+        return disconnect_(std::forward<FreeFunction>(callback));
     }
 
 protected:
-    template<typename TagU, typename SlotMethodU>
-    ConnectionHandle connect_(SlotRef<TagU, SlotMethodU>&& slotRef) const {
-        static_assert(isMethod<SlotMethodU>);
+    template<typename Tag, typename SlotMethod>
+    ConnectionHandle connect_(SlotRef<Tag, SlotMethod>&& slotRef) const {
+        static_assert(isMethod<SlotMethod>);
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(slotRef.method(), slotRef.object());
         return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(slotRef.object(), slotRef.id()));
     }
 
-    template<typename TagU, typename ObjU, typename... ArgUs>
-    ConnectionHandle connect_(SignalRef<TagU, ObjU, ArgUs...>&& signalRef) const {
-        ObjU* obj = signalRef.object();
+    template<typename Tag, typename Receiver, typename... SignalArgs>
+    ConnectionHandle connect_(SignalRef<Tag, Receiver, SignalArgs...>&& signalRef) const {
+        Receiver* obj = signalRef.object();
         auto slotId = signalRef.id();
-        SignalTransmitter transmitter = SignalTransmitter(std::function<void(ArgUs&&...)>(
-            [=](ArgUs&&... args) {
-                ::vgc::core::internal::SignalHub::emit_<std::tuple<ArgUs...>>(
+        /*
+        SignalTransmitter transmitter = SignalTransmitter(std::function<void(SignalArgs&&...)>(
+            [=](SignalArgs&&... args) {
+                ::vgc::core::internal::SignalHub::emit_<std::tuple<SignalArgs...>>(
                     obj, slotId,
-                    std::forward<ArgUs>(args)...);
+                    std::forward<SignalArgs>(args)...);
             }));
+        */
+        SignalTransmitter transmitter = SignalTransmitter(std::function<void(const SignalArgsArray&)>(
+            [=](const SignalArgsArray& args) {
+                ::vgc::core::internal::SignalHub::emit_<std::tuple<SignalArgs...>>(
+                    obj, slotId,
+                    std::forward<SignalArgs>(args)...);
+            }));
+
+        /*
+        [=](const SignalArgsArray& args) {
+                std::invoke(c, methodObj..., args.get<std::tuple_element_t<Is, TTruncatedSignalArgsTuple>>(Is)...);
+            });
+        */
+
+
         return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(signalRef.object(), signalRef.id()));
     }
 
@@ -767,10 +865,10 @@ protected:
         return SignalHub::disconnect(object_, id(), FreeFuncId(callback));
     }
 
-    void emit_(Args&&... args) const {
+    void emit_(TArgs&&... args) const {
         ::vgc::core::internal::SignalHub::emit_<ArgsTuple>(
             object(), id(),
-            std::forward<Args>(args)...);
+            std::forward<TArgs>(args)...);
     }
 
 private:
@@ -836,8 +934,8 @@ private:
             }                                                                                           \
         protected:                                                                                      \
             /* for wraps */                                                                             \
-            static void unboundEmit_(VGC_PARAMS_((const MyClass*, obj_), __VA_ARGS__)) const {          \
-                SignalRefT(obj_).emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                   \
+            static void unboundEmit_(VGC_PARAMS_((const MyClass*, obj_), __VA_ARGS__)) {                \
+                SignalRef(obj_).emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                   \
             }                                                                                           \
         };                                                                                              \
         return SignalRef(this);                                                                         \
