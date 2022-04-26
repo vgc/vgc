@@ -121,6 +121,7 @@ private:
 TEST(TestArray, Construct) {
     // Note: it's important to test the zero-init after the non-zero init, to
     // decrease the chance that the memory is zero "by chance".
+    std::vector<int> v{1, 2, 3};
     { Array<int> a;                 EXPECT_EQ(a.size(), 0); }
     { Array<int> a{};               EXPECT_EQ(a.size(), 0); }
     { Array<int> a(10, 42);         EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
@@ -130,6 +131,7 @@ TEST(TestArray, Construct) {
     { Array<int> a(size_t(10), 42); EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
     { Array<int> a(size_t(10));     EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
     { Array<int> a{10, 42};         EXPECT_EQ(a.size(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
+    { Array<int> a(v);              EXPECT_EQ(a.size(), 3);  EXPECT_EQ(a[0], 1);  EXPECT_EQ(a[2], 3); }
     { Array<int> a;                 EXPECT_EQ(a.length(), 0); }
     { Array<int> a{};               EXPECT_EQ(a.length(), 0); }
     { Array<int> a(10, 42);         EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
@@ -139,6 +141,7 @@ TEST(TestArray, Construct) {
     { Array<int> a(size_t(10), 42); EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
     { Array<int> a(size_t(10));     EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
     { Array<int> a{10, 42};         EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
+    { Array<int> a(v);              EXPECT_EQ(a.length(), 3);  EXPECT_EQ(a[0], 1);  EXPECT_EQ(a[2], 3); }
     { Array<int> a{10, 42, 5};      EXPECT_TRUE(a.contains(42)); EXPECT_FALSE(a.contains(43)); }
     EXPECT_THROW(Array<int>(-1),                               NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, Array<int>::DefaultInitTag{}), NegativeIntegerError);
@@ -183,10 +186,12 @@ TEST(TestArray, CopyAssignAndMoveAssign) {
 TEST(TestArray, Assign) {
     Array<int> a;
     Array<int> b = {10, 42, 3, 4};
+    std::vector<int> v = {10, 42, 3, 4};
     a.assign(10, 1);                    EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 1); EXPECT_EQ(a[9], 1);
     a.assign(Int(11), 2);               EXPECT_EQ(a.length(), 11); EXPECT_EQ(a[0], 2); EXPECT_EQ(a[10], 2);
     a.assign(size_t(12), 3);            EXPECT_EQ(a.length(), 12); EXPECT_EQ(a[0], 3); EXPECT_EQ(a[11], 3);
     a.assign(b.begin(), b.begin() + 2); EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42);
+    a.assign(v);                        EXPECT_EQ(a.length(), 4);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[3], 4);
     a.assign({11, 43});                 EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 11); EXPECT_EQ(a[1], 43);
     EXPECT_THROW(a.assign(-1, 42),      NegativeIntegerError);
     EXPECT_THROW(a.assign(Int(-1), 42), NegativeIntegerError);
@@ -409,6 +414,7 @@ TEST(TestArray, InsertAtIterator) {
     Array<int> c = {43};
     Array<int> e = {44};
     Array<int> f = {45};
+    std::vector<Array<int>> v = {{10, 20}, {30, 40}, {50, 60}};
     a.insert(a.begin(), b); EXPECT_EQ(a.length(), 1); EXPECT_EQ(a[0][0], 42);
     a.insert(a.begin(), std::move(c)); EXPECT_EQ(a.length(), 2); EXPECT_EQ(a[0][0], 43); EXPECT_EQ(c.length(), 0);
     a.insert(a.begin(), size_t(2), b); EXPECT_EQ(a.length(), 4);
@@ -417,6 +423,7 @@ TEST(TestArray, InsertAtIterator) {
     Array<Array<int>> d = a;
     a.insert(a.begin(), d.begin(), d.end()); EXPECT_EQ(a.length(), 12);
     a.insert(a.begin(), {{1, 2}, {3, 4}, {5, 6}}); EXPECT_EQ(a.length(), 15);
+    a.insert(a.begin() + 2, v); EXPECT_EQ(a.length(), 18); EXPECT_EQ(a[3], (Array<int>{30, 40}));
 }
 
 TEST(TestArray, InsertAtIndex) {
@@ -450,6 +457,10 @@ TEST(TestArray, InsertAtIndex) {
     Array<int> k = {10, 1, 2, 42, 15, 10, 42, 15, 15, 12};
     h.insert(1, {1, 2}); EXPECT_EQ(h, k);
     EXPECT_THROW(h.insert(-1, {1, 2}), IndexError);
+
+    Array<int> l = {10, 1, 100, 200, 2, 42, 15, 10, 42, 15, 15, 12};
+    h.insert(2, std::vector<int>{100, 200}); EXPECT_EQ(h, l);
+    EXPECT_THROW(h.insert(-1, std::vector<int>{100, 200}), IndexError);
 
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
@@ -592,6 +603,52 @@ TEST(TestArray, AppendAndPrepend) {
     EXPECT_EQ(c, f);
     EXPECT_EQ(d.length(), 0);
     EXPECT_EQ(e.length(), 0);
+}
+
+TEST(TestArray, ExtendAndPreextend) {
+    Array<int> empty = {};
+    std::vector<int> v = {5, 6, 7};
+    Array<int> b = {5, 6, 7};
+
+    { Array<int> a; a.extend(empty);                    EXPECT_EQ(a, (Array<int>{})); }
+    { Array<int> a; a.extend(v.begin(), v.begin());     EXPECT_EQ(a, (Array<int>{})); }
+    { Array<int> a; a.extend(b.end(), b.end());         EXPECT_EQ(a, (Array<int>{})); }
+    { Array<int> a; a.extend(2, 1);                     EXPECT_EQ(a, (Array<int>{1, 1})); }
+    { Array<int> a; a.extend(v.begin(), v.begin() + 2); EXPECT_EQ(a, (Array<int>{5, 6})); }
+    { Array<int> a; a.extend(b.begin(), b.begin() + 2); EXPECT_EQ(a, (Array<int>{5, 6})); }
+    { Array<int> a; a.extend(v);                        EXPECT_EQ(a, (Array<int>{5, 6, 7})); }
+    { Array<int> a; a.extend(b);                        EXPECT_EQ(a, (Array<int>{5, 6, 7})); }
+    { Array<int> a; a.extend({5, 6, 7});                EXPECT_EQ(a, (Array<int>{5, 6, 7})); }
+
+    { Array<int> a; a.preextend(empty);                    EXPECT_EQ(a, (Array<int>{})); }
+    { Array<int> a; a.preextend(v.begin(), v.begin());     EXPECT_EQ(a, (Array<int>{})); }
+    { Array<int> a; a.preextend(b.end(), b.end());         EXPECT_EQ(a, (Array<int>{})); }
+    { Array<int> a; a.preextend(2, 1);                     EXPECT_EQ(a, (Array<int>{1, 1})); }
+    { Array<int> a; a.preextend(v.begin(), v.begin() + 2); EXPECT_EQ(a, (Array<int>{5, 6})); }
+    { Array<int> a; a.preextend(b.begin(), b.begin() + 2); EXPECT_EQ(a, (Array<int>{5, 6})); }
+    { Array<int> a; a.preextend(v);                        EXPECT_EQ(a, (Array<int>{5, 6, 7})); }
+    { Array<int> a; a.preextend(b);                        EXPECT_EQ(a, (Array<int>{5, 6, 7})); }
+    { Array<int> a; a.preextend({5, 6, 7});                EXPECT_EQ(a, (Array<int>{5, 6, 7})); }
+
+    { Array<int> a{1, 2}; a.extend(empty);                    EXPECT_EQ(a, (Array<int>{1, 2})); }
+    { Array<int> a{1, 2}; a.extend(v.begin(), v.begin());     EXPECT_EQ(a, (Array<int>{1, 2})); }
+    { Array<int> a{1, 2}; a.extend(b.end(), b.end());         EXPECT_EQ(a, (Array<int>{1, 2})); }
+    { Array<int> a{1, 2}; a.extend(2, 1);                     EXPECT_EQ(a, (Array<int>{1, 2, 1, 1})); }
+    { Array<int> a{1, 2}; a.extend(v.begin(), v.begin() + 2); EXPECT_EQ(a, (Array<int>{1, 2, 5, 6})); }
+    { Array<int> a{1, 2}; a.extend(b.begin(), b.begin() + 2); EXPECT_EQ(a, (Array<int>{1, 2, 5, 6})); }
+    { Array<int> a{1, 2}; a.extend(v);                        EXPECT_EQ(a, (Array<int>{1, 2, 5, 6, 7})); }
+    { Array<int> a{1, 2}; a.extend(b);                        EXPECT_EQ(a, (Array<int>{1, 2, 5, 6, 7})); }
+    { Array<int> a{1, 2}; a.extend({5, 6, 7});                EXPECT_EQ(a, (Array<int>{1, 2, 5, 6, 7})); }
+
+    { Array<int> a{1, 2}; a.preextend(empty);                    EXPECT_EQ(a, (Array<int>{1, 2})); }
+    { Array<int> a{1, 2}; a.preextend(v.begin(), v.begin());     EXPECT_EQ(a, (Array<int>{1, 2})); }
+    { Array<int> a{1, 2}; a.preextend(b.end(), b.end());         EXPECT_EQ(a, (Array<int>{1, 2})); }
+    { Array<int> a{1, 2}; a.preextend(2, 1);                     EXPECT_EQ(a, (Array<int>{1, 1, 1, 2})); }
+    { Array<int> a{1, 2}; a.preextend(v.begin(), v.begin() + 2); EXPECT_EQ(a, (Array<int>{5, 6, 1, 2})); }
+    { Array<int> a{1, 2}; a.preextend(b.begin(), b.begin() + 2); EXPECT_EQ(a, (Array<int>{5, 6, 1, 2})); }
+    { Array<int> a{1, 2}; a.preextend(v);                        EXPECT_EQ(a, (Array<int>{5, 6, 7, 1, 2})); }
+    { Array<int> a{1, 2}; a.preextend(b);                        EXPECT_EQ(a, (Array<int>{5, 6, 7, 1, 2})); }
+    { Array<int> a{1, 2}; a.preextend({5, 6, 7});                EXPECT_EQ(a, (Array<int>{5, 6, 7, 1, 2})); }
 }
 
 TEST(TestArray, RemoveFirstAndLast) {

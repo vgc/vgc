@@ -350,7 +350,7 @@ public:
     /// std::cout << a;  // => [42, 42, 42]
     /// ```
     ///
-    template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
+    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     Array(IntType length, const T& value) {
         checkLength_(length);
         init_(length, value);
@@ -380,9 +380,39 @@ public:
     /// vgc::core::Array<double> a(l.begin(), l.end()); // Copy the list as an Array
     /// ```
     ///
-    template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
+    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
     Array(InputIt first, InputIt last) {
         rangeConstruct_(first, last);
+    }
+
+    /// Creates an Array initialized from the elements in the given range
+    ///
+    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a valid range.
+    ///
+    /// Throws LengthError if the length of the given range is greater than maxLength().
+    ///
+    /// ```
+    /// std::list<double> l = {1, 2, 3};
+    /// vgc::core::Array<double> a(l); // Copy the list as an Array
+    /// ```
+    ///
+    template<typename Range, internal::RequiresRange<Range> = true>
+    explicit Array(const Range& range) {
+        rangeConstruct_(range.begin(), range.end());
+    }
+
+    /// Creates an Array initialized by the values given in the initializer
+    /// list \p init.
+    ///
+    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
+    ///
+    /// ```
+    /// vgc::core::Array<double> a = {10, 42, 12};
+    /// std::cout << a;  // => [10, 42, 12]
+    /// ```
+    ///
+    Array(std::initializer_list<T> ilist) {
+        rangeConstruct_(ilist.begin(), ilist.end());
     }
 
     /// Copy-constructs the \p other Array.
@@ -402,20 +432,6 @@ public:
         other.data_ = nullptr;
         other.length_ = 0;
         other.reservedLength_ = 0;
-    }
-
-    /// Creates an Array initialized by the values given in the initializer
-    /// list \p init.
-    ///
-    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
-    ///
-    /// ```
-    /// vgc::core::Array<double> a = {10, 42, 12};
-    /// std::cout << a;  // => [10, 42, 12]
-    /// ```
-    ///
-    Array(std::initializer_list<T> ilist) {
-        rangeConstruct_(ilist.begin(), ilist.end());
     }
 
     /// Destructs the given Array.
@@ -488,7 +504,7 @@ public:
     /// std::cout << a;  // => [42, 42, 42]
     /// ```
     ///
-    template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
+    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     void assign(IntType length, T value) {
         checkLength_(length);
         assignFill_(static_cast<Int>(length), value);
@@ -505,12 +521,30 @@ public:
     /// ```
     /// vgc::core::Array<double> a;
     /// std::list<double> l = someList();
+    /// a.assign(l.begin(), l.end()); // Make the existing array a copy of the list
+    /// ```
+    ///
+    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    void assign(InputIt first, InputIt last) {
+        assignRange_(first, last);
+    }
+
+    /// Replaces the content of the Array by the elements in the given range.
+    ///
+    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a valid range,
+    /// or is a range into this Array.
+    ///
+    /// Throws LengthError if the length of the given range is greater than maxLength().
+    ///
+    /// ```
+    /// vgc::core::Array<double> a;
+    /// std::list<double> l = someList();
     /// a.assign(l); // Make the existing array a copy of the list
     /// ```
     ///
-    template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
-    void assign(InputIt first, InputIt last) {
-        assignRange_(first, last);
+    template<typename Range, internal::RequiresRange<Range> = true>
+    void assign(const Range& range) {
+        assignRange_(range.begin(), range.end());
     }
 
     /// Replaces the contents of this Array by the values given in the
@@ -941,7 +975,7 @@ public:
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     iterator insert(ConstIterator it, size_type n, const T& value) {
-        checkLength_(n); // necessary before casting to Int
+        checkLength_(n); // Precondition for insertFill_
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
@@ -957,9 +991,9 @@ public:
     /// Throws NegativeIntegerError if the given \p n is negative.
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
-    template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
+    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     iterator insert(ConstIterator it, IntType n, const T& value) {
-        checkLength_(n); // necessary before casting to Int
+        checkLength_(n); // Precondition for insertFill_
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
@@ -977,11 +1011,29 @@ public:
     ///
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
-    template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
+    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
     iterator insert(ConstIterator it, InputIt first, InputIt last) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertRange_(i, first, last));
+    }
+
+    /// Inserts the given range just before the element referred to by the iterator
+    /// \p it, or after the last element if `it == end()`. Returns an iterator
+    /// pointing to the first inserted element, or \p it if the range is empty.
+    ///
+    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a valid range,
+    /// or is a range into this Array.
+    ///
+    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    template<typename Range, internal::RequiresRange<Range> = true>
+    iterator insert(ConstIterator it, const Range& range) {
+        pointer pos = unwrapIterator(it);
+        const Int i = static_cast<Int>(std::distance(data_, pos));
+        return makeIterator(insertRange_(i, range.begin(), range.end()));
     }
 
     /// Inserts the values given in the initializer list \p ilist just before
@@ -1054,10 +1106,25 @@ public:
     /// Throws IndexError if \p i does not belong to [0, length()].
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
-    template<typename InputIt, typename = internal::RequireInputIterator<InputIt>>
+    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
     void insert(Int i, InputIt first, InputIt last) {
         checkInRangeForInsert_(i);
         insertRange_(i, first, last);
+    }
+
+    /// Inserts the given range just before the element at index \p i, or after
+    /// the last element if `i == length()`.
+    ///
+    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a
+    /// valid iterator range, or is a range into this Array.
+    ///
+    /// Throws IndexError if \p i does not belong to [0, length()].
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    template<typename Range, internal::RequiresRange<Range> = true>
+    void insert(Int i, const Range& range) {
+        checkInRangeForInsert_(i);
+        insertRange_(i, range.begin(), range.end());
     }
 
     /// Inserts the values given in the initializer list \p ilist just before
@@ -1180,6 +1247,8 @@ public:
     /// a.append(15);          // => [10, 42, 12, 15]
     /// ```
     ///
+    /// If you need to append several elements, see also `extend(...)`.
+    ///
     void append(const T& value) {
         if (length_ == maxLength()) {
             throwLengthErrorAdd_(length_, 1);
@@ -1205,6 +1274,8 @@ public:
     /// a.prepend(15);         // => [15, 10, 42, 12]
     /// ```
     ///
+    /// If you need to prepend several elements, see also `preextend(...)`.
+    ///
     void prepend(const T& value) {
         if (length_ == maxLength()) {
             throwLengthErrorAdd_(length_, 1);
@@ -1219,6 +1290,101 @@ public:
             throwLengthErrorAdd_(length_, 1);
         }
         emplaceAt_(0, std::move(value));
+    }    
+
+    /// Inserts \p n copies of the given \p value at the end of this Array.
+    /// This is equivalent to insert(length(), n, value).
+    ///
+    /// Throws NegativeIntegerError if \p n is negative.
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    void extend(Int n, const T& value) {
+        checkPositive_(n);
+        insertFill_(length(), n, value);
+    }
+
+    /// Inserts the range given by the input iterators \p first (inclusive) and
+    /// \p last (exclusive) at the end of this Array. This is equivalent to
+    /// insert(length(), first, last).
+    ///
+    /// The behavior is undefined if [\p first, \p last) isn't a valid range,
+    /// or is a range into this Array.
+    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    void extend(InputIt first, InputIt last) {
+        insertRange_(length(), first, last);
+    }
+
+    /// Inserts the given range at the end of this Array. This is equivalent to
+    /// insert(length(), range).
+    ///
+    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a
+    /// valid iterator range, or is a range into this Array.
+    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    template<typename Range, internal::RequiresRange<Range> = true>
+    void extend(const Range& range) {
+        insertRange_(length(), range.begin(), range.end());
+    }
+
+    /// Inserts the values given in the initializer list \p ilist at the end of
+    /// this Array. This is equivalent to insert(length(), ilist).
+    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    void extend(std::initializer_list<T> ilist) {
+        insertRange_(length(), ilist.begin(), ilist.end());
+    }
+
+    /// Inserts \p n copies of the given \p value at the beginning of this Array.
+    /// This is slow: O(length() + n). This is equivalent to insert(0, n, value).
+    ///
+    /// Throws NegativeIntegerError if \p n is negative.
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    void preextend(Int n, const T& value) {
+        checkPositive_(n);
+        insertFill_(0, n, value);
+    }
+
+    /// Inserts the range given by the input iterators \p first (inclusive) and
+    /// \p last (exclusive) at the beginning of this Array. This is slow:
+    /// O(length() + numInserted). This is equivalent to insert(0, first, last).
+    ///
+    /// The behavior is undefined if [\p first, \p last) isn't a valid range,
+    /// or is a range into this Array.
+    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    void preextend(InputIt first, InputIt last) {
+        insertRange_(0, first, last);
+    }
+
+    /// Inserts the given range at the beginning of this Array. This is slow:
+    /// O(length() + numInserted). This is equivalent to insert(0, range).
+    ///
+    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a
+    /// valid iterator range, or is a range into this Array.
+    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    template<typename Range, internal::RequiresRange<Range> = true>
+    void preextend(const Range& range) {
+        insertRange_(0, range.begin(), range.end());
+    }
+
+    /// Inserts the values given in the initializer list \p ilist at the
+    /// beginning of this Array. This is slow: O(length() + numInserted).
+    /// This is equivalent to insert(length(), ilist).
+    ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    ///
+    void preextend(std::initializer_list<T> ilist) {
+        insertRange_(0, ilist.begin(), ilist.end());
     }
 
     /// Removes the first element of this Array, shifting all existing elements
@@ -1941,7 +2107,7 @@ private:
 
     // Throws LengthError if length > maxLength().
     //
-    template<typename IntType, typename = internal::RequireSignedInteger<IntType>>
+    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     void checkNoMoreThanMaxLength_(IntType length) const {
         if constexpr (core::tmax_<IntType>::value > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
