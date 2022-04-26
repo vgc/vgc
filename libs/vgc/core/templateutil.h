@@ -258,57 +258,48 @@ template<typename T> struct CallableTraits_<T, VoidT<typename FunctorTraits_<T>:
 template<typename T>
 using CallableTraits = internal::CallableTraits_<RemoveCRef<T>>;
 
-namespace internal {
 
 template<typename T, typename Enable = void>
-struct isFreeFunction_ : std::false_type {};
+struct IsFreeFunction : std::false_type {};
 template<typename T>
-struct isFreeFunction_<T, std::enable_if_t<CallableTraits_<T>::kind == CallableKind::FreeFunction, void>> : std::true_type {};
-
-} // namespace internal
+struct IsFreeFunction<T, std::enable_if_t<internal::CallableTraits_<T>::kind == CallableKind::FreeFunction, void>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool isFreeFunction = internal::isFreeFunction_<T>::value;
+inline constexpr bool isFreeFunction = IsFreeFunction<T>::value;
 
-namespace internal {
 
+// "Method" = non-rvalue-reference-qualified non-static member function.
+// i.e.: For "struct Foo { void foo() &&; };", IsMethod<&Foo::foo> is std::false_type.
+//
 template<typename T, typename Enable = void>
-struct isMethod_ : std::false_type {};
+struct IsMethod : std::false_type {};
 template<typename T>
-struct isMethod_<T, std::enable_if_t<CallableTraits_<T>::kind == CallableKind::Method, void>> : std::true_type {};
-
-} // namespace internal
+struct IsMethod<T, std::enable_if_t<internal::CallableTraits_<T>::kind == CallableKind::Method, void>> : std::true_type {};
 
 // "Method" = non-rvalue-reference-qualified non-static member function.
 // i.e.: For "struct Foo { void foo() &&; };", isMethod<&Foo::foo> is false.
 //
 template<typename T>
-inline constexpr bool isMethod = internal::isMethod_<T>::value;
+inline constexpr bool isMethod = IsMethod<T>::value;
 
-namespace internal {
-
-template<typename T, typename Enable = void>
-struct isFunctor_ : std::false_type {};
-template<typename T>
-struct isFunctor_<T, std::enable_if_t<CallableTraits_<T>::kind == CallableKind::Functor, void>> : std::true_type {};
-
-} // namespace internal
-
-template<typename T>
-inline constexpr bool isFunctor = internal::isFunctor_<T>::value;
-
-namespace internal {
 
 template<typename T, typename Enable = void>
-struct isCallable_ : std::false_type {};
+struct IsFunctor : std::false_type {};
 template<typename T>
-struct isCallable_<T, std::void_t<typename CallableTraits_<T>::CallSig>> : std::true_type {};
+struct IsFunctor<T, std::enable_if_t<internal::CallableTraits_<T>::kind == CallableKind::Functor, void>> : std::true_type {};
 
-} // namespace internal
+template<typename T>
+inline constexpr bool isFunctor = IsFunctor<T>::value;
+
+
+template<typename T, typename Enable = void>
+struct IsCallable : std::false_type {};
+template<typename T>
+struct IsCallable<T, std::void_t<typename internal::CallableTraits_<T>::CallSig>> : std::true_type {};
 
 // Does not include pointers to data members.
 template<typename T>
-inline constexpr bool isCallable = internal::isCallable_<T>::value;
+inline constexpr bool isCallable = IsCallable<T>::value;
 
 
 // XXX to allow slots for pairs of ref-qualified member functions via a select func:
@@ -331,14 +322,14 @@ auto testIsTplBaseOf(int) -> decltype(testIsConvertibleToTplBasePointer<Base>(st
 template<template<typename...> typename Base, typename Derived>
 auto testIsTplBaseOf(...) -> std::true_type; // inaccessible base
 
-template<template<typename...> typename Base, typename Derived>
-struct IsTplBaseOf_ : std::bool_constant<
-    std::is_class_v<Derived> && decltype(testIsTplBaseOf<Base, Derived>(0))::value> {};
-
 } // namespace internal
 
 template<template<typename...> typename Base, typename Derived>
-inline constexpr bool IsTplBaseOf = internal::IsTplBaseOf_<Base, Derived>::value;
+struct IsTplBaseOf : std::bool_constant<
+    std::is_class_v<Derived> && decltype(internal::testIsTplBaseOf<Base, Derived>(0))::value> {};
+
+template<template<typename...> typename Base, typename Derived>
+inline constexpr bool isTplBaseOf = IsTplBaseOf<Base, Derived>::value;
 
 namespace internal {
 

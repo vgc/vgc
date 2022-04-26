@@ -111,7 +111,7 @@ class Object;
 
 namespace internal {
 
-static constexpr Int maxSignalArgs = 8;
+static constexpr Int maxSignalArgs = 20;
 
 template<typename T, typename Enable = void>
 struct hasObjectTypedefs_ : std::false_type {};
@@ -293,32 +293,36 @@ public:
     static constexpr Int maxSize = N;
 
 protected:
-    template<typename... Ts, typename... Args>
-    SignalArgsArray_(const Ts&... args, std::tuple<Args...>*) :
+    template<typename... Args>
+    SignalArgsArray_(std::tuple<Args...>*, const TypeIdentity<Args>&... args) :
         refs_{AnySignalArg::make<Args>(args)...},
-        size_(sizeof...(Args)) {
-
-        static_assert(
-            std::is_same_v<
-                std::tuple<std::add_lvalue_reference_t<Args>...>,
-                std::tuple<const Ts&...>>,
-            "Passed arguments don't match the given signal argument types.");
-    }
+        size_(sizeof...(Args)) {}
 
 public:
-    template<typename ArgsTuple, typename... Args>
+   /* template<typename SignalArgsTuple, typename... Args>
+    static constexpr bool canMakeFrom() {
+        return std::is_constructible_v<SignalArgsArray_, SignalArgsTuple*, Args...>;
+    }*/
+
+    template<typename SignalArgsTuple, typename... Args,
+        std::enable_if_t<true /* XXX */, int> = 0>
     static SignalArgsArray_ make(const Args&... args) {
-        return SignalArgsArray_(args..., static_cast<ArgsTuple*>(nullptr));
+        return SignalArgsArray_(static_cast<SignalArgsTuple*>(nullptr), args...);
+
     }
 
     template<typename T>
     AnySignalArg::Reference<T> get(Int i) const {
+#ifdef VGC_DEBUG
         try {
             return refs_.at(i).get<T>();
         }
         catch (std::out_of_range& e) {
             throw IndexError(e.what());
         }
+#else
+        return refs_[i].get<T>();
+#endif
     }
 
 private:
@@ -328,7 +332,7 @@ private:
 
 using SignalArgsArray = SignalArgsArray_<maxSignalArgs>;
 
-
+// <TOREM>
 template<typename TruncatedSignalArgsTuple>
 struct SignalTransmitterFnType_;
 template<typename... TruncatedSignalArgs>
@@ -337,6 +341,7 @@ struct SignalTransmitterFnType_<std::tuple<TruncatedSignalArgs...>> {
 };
 template<typename TruncatedSignalArgsTuple>
 using SignalTransmitterFnType = typename SignalTransmitterFnType_<TruncatedSignalArgsTuple>::type;
+// </TOREM>
 
 class SignalTransmitter {
 public:
@@ -344,8 +349,10 @@ public:
     using SlotWrapper = std::function<SlotWrapperSig>;
 
     SignalTransmitter() :
-        forwardingFn_(), wrapper_(), arity_(0) {}
+        forwardingFn_(), // TOREM
+        wrapper_(), arity_(0) {}
 
+    // <TOREM>
     template<typename... Args>
     SignalTransmitter(const std::function<void(Args...)>& forwardingFn) :
         forwardingFn_(forwardingFn), arity_(sizeof...(Args)) {}
@@ -353,6 +360,7 @@ public:
     template<typename... Args>
     SignalTransmitter(std::function<void(Args...)>&& forwardingFn) :
         forwardingFn_(std::move(forwardingFn)), arity_(sizeof...(Args)) {}
+    // </TOREM>
 
     SignalTransmitter(const SlotWrapper& wrapper, UInt8 arity) :
         wrapper_(wrapper), arity_(arity) {}
@@ -360,6 +368,7 @@ public:
     SignalTransmitter(SlotWrapper&& wrapper, UInt8 arity) :
         wrapper_(std::move(wrapper)), arity_(arity) {}
 
+    // <TOREM>
     template<typename SignalArgsTuple, typename Callable, typename... OptionalObj>
     [[nodiscard]] static std::enable_if_t<isCallable<RemoveCRef<Callable>>, SignalTransmitter>
     build_DEPREC(Callable&& c, OptionalObj... methodObj) {
@@ -394,6 +403,7 @@ public:
 
         return SignalTransmitter(std::move(fn));
     }
+    // </TOREM>
 
     template<typename SignalArgsTuple, typename SlotCallable, typename... OptionalObj>
     [[nodiscard]] static std::enable_if_t<isCallable<RemoveCRef<SlotCallable>>, SignalTransmitter>
@@ -402,8 +412,6 @@ public:
 
         static_assert(std::tuple_size_v<SignalArgsTuple> >= Traits::arity,
             "The slot signature cannot be longer than the signal signature.");
-
-        using TruncatedSignalArgsTuple = SubTuple<0, Traits::arity, SignalArgsTuple>;
 
         if constexpr (isMethod<RemoveCRef<SlotCallable>>) {
             static_assert(sizeof...(OptionalObj) == 1,
@@ -420,6 +428,8 @@ public:
                 "Expecting methodObj only for methods, the given callable is not a method.");
         }
 
+        using TruncatedSignalArgsTuple = SubTuple<0, Traits::arity, SignalArgsTuple>;
+
         auto fn = buildWrapper<TruncatedSignalArgsTuple>(
             std::forward<SlotCallable>(c),
             std::make_index_sequence<Traits::arity>{},
@@ -428,6 +438,7 @@ public:
         return SignalTransmitter(std::move(fn));
     }
 
+    // <TOREM>
     // Limited to 7 args atm.
     template<typename SignalArgsTuple, typename... SignalArgs>
     void transmit(SignalArgs&&... args) const {
@@ -472,7 +483,8 @@ public:
             throw core::LogicError("Invalid arguments given to SignalTransmitter call operator.");
         }
     }
-    
+    // </TOREM>
+
     void transmit(const SignalArgsArray& args) const {
         wrapper_(args);
     }
@@ -481,17 +493,20 @@ public:
         return arity_;
     }
 
+    // <TOREM>
     template<typename TruncatedSignalArgsTuple>
     const auto& getForwardingFn() const {
         using FnType = SignalTransmitterFnType<TruncatedSignalArgsTuple>;
         return std::any_cast<const FnType&>(forwardingFn_);
     }
+    // </TOREM>
 
     const SlotWrapper& getSlotWrapper() const {
         return wrapper_;
     }
 
 protected:
+    // <TOREM>
     template<typename Callable, typename... TruncatedSignalArgs, typename... OptionalObj>
     [[nodiscard]] static auto buildForwardingFn(
         Callable&& c, std::tuple<TruncatedSignalArgs...>* sig, OptionalObj&&... methodObj) {
@@ -506,6 +521,7 @@ protected:
                 std::invoke(c, methodObj..., std::forward<TruncatedSignalArgs>(args)...);
             });
     }
+    // </TOREM>
 
     template<typename TruncatedSignalArgsTuple, typename Callable, size_t... Is, typename... OptionalObj>
     [[nodiscard]] static auto buildWrapper(
@@ -524,12 +540,14 @@ protected:
     }
 
 private:
+    // <TOREM>
     std::any forwardingFn_;
+    // </TOREM>
     SlotWrapper wrapper_;
     UInt8 arity_;
 };
 
-
+// XXX doc
 // Its member functions are static because we have to operate from the context of its owner Object.
 class SignalHub {
 private:
@@ -542,9 +560,11 @@ private:
         ConnectionHandle h;
         SignalId from;
         SlotId to;
+
+        // XXX bool disabled ?
     };
 
-    struct ListenedObjectInfo {
+    struct ListenedObjectInfo_ {
         Object* object = nullptr;
         Int numInboundConnections = 0;
     };
@@ -555,30 +575,64 @@ private:
 public:
     SignalHub() = default;
 
-    // XXX in debug check in destructor that disconnectSlots and disconnectSignals have been called
+#ifdef VGC_DEBUG
+    ~SignalHub() noexcept(false) {
+        if (!listenedObjectInfos_.empty()) {
+            throw LogicError(
+                "A SignalHub is being destroyed but is still subscribed to some Object's signals."
+                "Object destruction should call disconnectSlots() explicitly."
+            );
+        }
+        if (!connections_.empty()) {
+            throw LogicError(
+                "A SignalHub is being destroyed but is still connected to some Object's slots."
+                "Object destruction should call disconnectSignals() explicitly."
+            );
+        }
+    }
+#endif
 
     // Defined in object.h
     static constexpr SignalHub& access(Object* o);
 
-    // Must be called by Object's destructor.
+    // Must be called during receiver destruction.
     static void disconnectSlots(Object* receiver) {
         auto& hub = access(receiver);
-        for (ListenedObjectInfo& x : hub.listenedObjectInfos_) {
+        for (ListenedObjectInfo_& x : hub.listenedObjectInfos_) {
             if (x.numInboundConnections > 0) {
-                SignalHub::lastDisconnect_(x.object, receiver);
+                SignalHub::eraseConnections_(x.object, receiver);
             }
         }
         hub.listenedObjectInfos_.clear();
     }
 
-    // Must be called by Object's destructor.
+    // Must be called during sender destruction.
     static void disconnectSignals(Object* sender) {
         auto& hub = access(sender);
+        // We sort connections by receiver so that we can fully disconnect each
+        // only once without a seen set.
+        struct {
+            bool operator()(const Connection_& a, const Connection_& b) const {
+                if (std::holds_alternative<ObjectSlotId>(a.to)) {
+                    if (std::holds_alternative<ObjectSlotId>(b.to)) {
+                        return std::get<ObjectSlotId>(a.to).first < std::get<ObjectSlotId>(b.to).first;
+                    }
+                    return true;
+                }
+                return false;
+            }
+        } ByReceiver;
+        std::sort(hub.connections_.begin(), hub.connections_.end(), ByReceiver);
+        // Now let's reset the info about this object which is stored in receiver objects.
+        Object* prevDisconnectedReceiver = nullptr;
         for (const auto& c : hub.connections_) {
             if (std::holds_alternative<ObjectSlotId>(c.to)) {
-                const auto& bsid = std::get<ObjectSlotId>(c.to);
-                auto& info = access(bsid.first).getListenedObjectInfoRef(sender);
-                info.numInboundConnections--;
+                const auto& osid = std::get<ObjectSlotId>(c.to);
+                if (osid.first != prevDisconnectedReceiver) {
+                    prevDisconnectedReceiver = osid.first;
+                    auto& info = access(osid.first).getListenedObjectInfoRef(sender);
+                    info.numInboundConnections = 0;
+                }
             }
         }
         hub.connections_.clear();
@@ -624,12 +678,24 @@ public:
         });
     }
 
-    // XXX emit_ for arg array ?
+    static bool disconnect(Object* sender, SignalId from, Object* receiver) {
+        return removeConnectionIf_(sender, [=](const Connection_& c) {
+            return c.from == from &&
+                std::holds_alternative<ObjectSlotId>(c.to) &&
+                std::get<ObjectSlotId>(c.to).first == receiver;
+        });
+    }
+
+    static bool disconnect(Object* sender, Object* receiver) {
+        eraseConnections_(sender, receiver);
+        auto& info = access(receiver).getListenedObjectInfoRef(sender);
+        info.numInboundConnections = 0;
+    }
 
     template<typename SignalArgsTuple, typename... Args>
     static void emit_(Object* sender, SignalId from, Args&&... args) {
-        //auto argsArray = SignalArgsArray::make<>();
-        
+        auto argsArray = SignalArgsArray::make<SignalArgsTuple>(std::forward<Args>(args)...);
+        emit_(sender, from, args);
     }
 
     static void emit_(Object* sender, SignalId from, const SignalArgsArray& args) {
@@ -643,7 +709,8 @@ public:
 
 protected:
     // Used in onDestroy(), receiver is about to be destroyed.
-    static void lastDisconnect_(Object* sender, Object* receiver) {
+    // This does not update the numInboundConnections in the sender info stored in receiver.
+    static void eraseConnections_(Object* sender, Object* receiver) {
         auto& hub = access(sender);
         auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c){
                 return std::holds_alternative<ObjectSlotId>(c.to) && std::get<ObjectSlotId>(c.to).first == receiver; 
@@ -651,8 +718,8 @@ protected:
         hub.connections_.erase(it, hub.connections_.end());
     }
 
-    ListenedObjectInfo& getListenedObjectInfoRef(Object* object) {
-        for (ListenedObjectInfo& x : listenedObjectInfos_) {
+    ListenedObjectInfo_& getListenedObjectInfoRef(Object* object) {
+        for (ListenedObjectInfo_& x : listenedObjectInfos_) {
             if (x.object == object) {
                 return x;
             }
@@ -660,8 +727,8 @@ protected:
         throw LogicError("Info should be present.");
     }
 
-    ListenedObjectInfo& findOrCreateListenedObjectInfo(Object* object) {
-        for (ListenedObjectInfo& x : listenedObjectInfos_) {
+    ListenedObjectInfo_& findOrCreateListenedObjectInfo(Object* object) {
+        for (ListenedObjectInfo_& x : listenedObjectInfos_) {
             if (x.object == object) {
                 return x;
             }
@@ -679,7 +746,7 @@ private:
     // Manipulating it should be done with knowledge of the auto-disconnect mechanism.
     Array<Connection_> connections_;
     // Used to auto-disconnect on destroy.
-    Array<ListenedObjectInfo> listenedObjectInfos_;
+    Array<ListenedObjectInfo_> listenedObjectInfos_;
 
     // Returns true if any connection is removed.
     template<typename Pred>
@@ -725,6 +792,8 @@ public:
 
     static_assert(isObject<Obj>, "Slots can only be declared in Objects");
 
+    static constexpr Int arity = SlotMethodTraits::arity;
+
 protected:
     SlotRef(const Obj* object, SlotMethod m) :
         object_(const_cast<Obj*>(object)), m_(m) {}
@@ -752,13 +821,13 @@ private:
 };
 
 template<typename T>
-inline constexpr bool isSlotRef = IsTplBaseOf<SlotRef, T>;
+inline constexpr bool isSlotRef = isTplBaseOf<SlotRef, T>;
 
 template<typename TObjectMethodTag, typename TObj, typename... TArgs>
 class SignalRef;
 
 template<typename T>
-inline constexpr bool isSignalRef = IsTplBaseOf<SignalRef, T>;
+inline constexpr bool isSignalRef = isTplBaseOf<SignalRef, T>;
 
 // It does not define emit(..) and is intended to be locally subclassed in
 // the signal (getter).
@@ -770,6 +839,8 @@ public:
     using ArgsTuple = std::tuple<TArgs...>;
 
     static_assert(isObject<Obj>, "Signals can only be declared in Objects");
+
+    static constexpr Int arity = sizeof...(TArgs);
 
 protected:
     SignalRef(const Obj* object) :
@@ -799,6 +870,7 @@ public:
     // XXX doc
     template<typename SignalRefT, std::enable_if_t<isSignalRef<SignalRefT>, int> = 0>
     ConnectionHandle connect(SignalRefT&& signalRef) const {
+
         return connect_(std::forward<SignalRefT>(signalRef));
     }
 
@@ -845,6 +917,11 @@ public:
         return disconnect_(std::forward<FreeFunction>(callback));
     }
 
+    // XXX doc
+    bool disconnect(Object* receiver) const {
+        return SignalHub::disconnect(object_, id(), receiver);
+    }
+
 protected:
     template<typename Tag, typename SlotMethod>
     ConnectionHandle connect_(SlotRef<Tag, SlotMethod>&& slotRef) const {
@@ -853,10 +930,10 @@ protected:
         return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(slotRef.object(), slotRef.id()));
     }
 
-    template<typename Tag, typename Receiver, typename... SignalArgs>
-    ConnectionHandle connect_(SignalRef<Tag, Receiver, SignalArgs...>&& signalRef) const {
-        Receiver* obj = signalRef.object();
-        auto slotId = signalRef.id();
+    template<typename Tag, typename Receiver, typename... Args>
+    ConnectionHandle connect_(SignalRef<Tag, Receiver, Args...>&& signalSlotRef) const {
+        Receiver* obj = signalSlotRef.object();
+        auto slotId = signalSlotRef.id();
         /*
         SignalTransmitter transmitter = SignalTransmitter(std::function<void(SignalArgs&&...)>(
             [=](SignalArgs&&... args) {
@@ -865,21 +942,47 @@ protected:
                     std::forward<SignalArgs>(args)...);
             }));
         */
-        SignalTransmitter transmitter = SignalTransmitter(std::function<void(const SignalArgsArray&)>(
-            [=](const SignalArgsArray& args) {
-                ::vgc::core::internal::SignalHub::emit_<std::tuple<SignalArgs...>>(
-                    obj, slotId,
-                    std::forward<SignalArgs>(args)...);
-            }));
-
         /*
         [=](const SignalArgsArray& args) {
-                std::invoke(c, methodObj..., args.get<std::tuple_element_t<Is, TTruncatedSignalArgsTuple>>(Is)...);
-            });
+        std::invoke(c, methodObj..., args.get<std::tuple_element_t<Is, TTruncatedSignalArgsTuple>>(Is)...);
+        });
         */
 
+        // XXX check compat here or caller ?
 
-        return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(signalRef.object(), signalRef.id()));
+        static_assert(arity >= sizeof...(Args),
+            "The signal-slot signature cannot be longer than the signal signature.");
+
+        using TruncatedSignalArgsTuple = SubTuple<0, sizeof...(Args), ArgsTuple>;
+
+        std::function<void(const SignalArgsArray&)> wrapper;
+        if constexpr (std::is_same_v<std::tuple<Args...>, TruncatedSignalArgsTuple>) {
+            // If the slot signature is an exact match for the signal truncated sig
+            // then we can reuse the SignalArgsArray.
+            wrapper = [=](const SignalArgsArray& args) {
+                ::vgc::core::internal::SignalHub::emit_(obj, slotId, args);
+            };
+        }
+        else {
+            // Otherwise we check for compatibility and call emit with expanded args..
+
+            static_assert(
+                SignalArgsArray::make<SignalArgsTuple>(std::forward<Args>(args)...)
+                );
+            /*template<typename SignalArgsTuple, typename... Args>
+            static void emit_(Object* sender, SignalId from, Args&&... args) {
+                auto argsArray = SignalArgsArray::make<SignalArgsTuple>(std::forward<Args>(args)...);
+                emit_(sender, from, args);
+            }*/
+
+
+            /*static_assert(std::is_invocable_v<Callable&&, OptionalObj&&...,
+            AnySignalArg::Reference<std::tuple_element_t<Is, TruncatedSignalArgsTuple>>...>,
+            "The slot signature is not compatible with the signal.");*/
+        }
+
+        SignalTransmitter transmitter(wrapper);
+        return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(signalSlotRef.object(), signalSlotRef.id()));
     }
 
     template<typename R, typename... FnArgs>
@@ -963,7 +1066,7 @@ private:
         protected:                                                                                      \
             /* for wraps */                                                                             \
             static void unboundEmit_(VGC_PARAMS_((const MyClass*, obj_), __VA_ARGS__)) {                \
-                SignalRef(obj_).emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                   \
+                SignalRef(obj_).emit_(VGC_PARAMS_FWD_(__VA_ARGS__));                                    \
             }                                                                                           \
         };                                                                                              \
         return SignalRef(this);                                                                         \
