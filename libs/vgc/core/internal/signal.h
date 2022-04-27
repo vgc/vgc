@@ -825,7 +825,7 @@ public:
 
     static_assert(isObject<Obj>, "Slots can only be declared in Objects");
     static_assert(!hasRvalueReferences<ArgsTuple>,
-        "Signal and Slot parameters are not allowed to have an rvalue reference type.");
+        "Slot parameters are not allowed to have an rvalue reference type.");
 
     static constexpr Int arity = SlotMethodTraits::arity;
 
@@ -875,7 +875,7 @@ public:
 
     static_assert(isObject<Obj>, "Signals can only be declared in Objects");
     static_assert(!hasRvalueReferences<ArgsTuple>,
-        "Signal and Slot parameters are not allowed to have an rvalue reference type.");
+        "Signal parameters are not allowed to have an rvalue reference type.");
 
     static constexpr Int arity = sizeof...(TArgs);
 
@@ -907,19 +907,22 @@ public:
     // XXX doc
     template<typename SignalRefT, std::enable_if_t<isSignalRef<RemoveCVRef<SignalRefT>>, int> = 0>
     ConnectionHandle connect(SignalRefT&& signalRef) const {
-
         return connect_(std::forward<SignalRefT>(signalRef));
     }
 
     // XXX doc
     template<typename FreeFunction, std::enable_if_t<isFreeFunction<RemoveCVRef<FreeFunction>>, int> = 0>
     ConnectionHandle connect(FreeFunction&& callback) const {
+        static_assert(!hasRvalueReferences<typename FreeFunctionTraits<RemoveCVRef<FreeFunction>>::ArgsTuple>,
+            "Slot parameters are not allowed to have an rvalue reference type.");
         return connect_(std::forward<FreeFunction>(callback));
     }
 
     // XXX doc
     template<typename Functor, std::enable_if_t<isFunctor<RemoveCVRef<Functor>>, int> = 0>
     ConnectionHandle connect(Functor&& funcObj) const {
+        static_assert(!hasRvalueReferences<typename FunctorTraits<RemoveCVRef<Functor>>::ArgsTuple>,
+            "Slot parameters are not allowed to have an rvalue reference type.");
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(std::forward<Functor>(funcObj));
         return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
     }
