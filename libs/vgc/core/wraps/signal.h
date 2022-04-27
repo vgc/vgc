@@ -238,7 +238,7 @@ class PyCppSlotRef : public PyAbstractCppSlotRef {
     using PyAbstractCppSlotRef::PyAbstractCppSlotRef;
 };
 
-template<typename Method, std::enable_if_t<isMethod<RemoveCRef<Method>>, int> = 0>
+template<typename Method, std::enable_if_t<isMethod<RemoveCVRef<Method>>, int> = 0>
 class PyCppSlotRefImpl : public PyCppSlotRef {
 public:
     using ArgsTuple = typename MethodTraits<Method>::ArgsTuple;

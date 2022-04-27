@@ -85,7 +85,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
                 // Captures this_ -> must die before object dies.
                 [=](py::args args) -> void {
                     // XXX add check enough args
-                    using SignalArgsTuple = std::tuple<const py::args&>;
+                    using SignalArgsTuple = std::tuple<py::args>;
                     core::internal::SignalHub::emit_<SignalArgsTuple>(this_, newId, args);
                 });
 

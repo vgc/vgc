@@ -71,7 +71,7 @@ template<typename U>
 using TypeIdentity = typename internal::TypeIdentity_<U>::type;
 
 template<typename T>
-using RemoveCRef = std::remove_const_t<std::remove_reference_t<T>>;
+using RemoveCVRef = std::remove_cv_t<std::remove_reference_t<T>>;
 
 namespace internal {
 
@@ -152,81 +152,71 @@ struct CallSigTraits<R(Args...)> {
 
 namespace internal {
 
-template<typename T>
-struct MethodTraits_;
-
-template<typename Obj_, typename This_, bool IsConst, typename R, typename... Args>
+template<typename TObj, typename TThis, bool IsConst, typename R, typename... Args>
 struct MethodTraitsDef_ : CallSigTraits<R(Args...)> {
-    using Obj = Obj_;
-    using This = This_;
+    using Obj = TObj;
+    using This = TThis;
     static constexpr bool isConst = IsConst;
 };
-
-template<typename R, typename C, typename... Args> struct MethodTraits_<R (C::*)(Args...)         > :
-    MethodTraitsDef_<C, C*, false, R, Args...> {};                                
-
-template<typename R, typename C, typename... Args> struct MethodTraits_<R (C::*)(Args...) &       > :
-    MethodTraitsDef_<C, C*, false, R, Args...> {};                              
-
-template<typename R, typename C, typename... Args> struct MethodTraits_<R (C::*)(Args...) const   > :
-    MethodTraitsDef_<C, const C*, true, R, Args...> {};                                 
-
-template<typename R, typename C, typename... Args> struct MethodTraits_<R (C::*)(Args...) const&  > :
-    MethodTraitsDef_<C, const C*, true, R, Args...> {};                               
 
 } // namespace internal
 
 template<typename T>
-using MethodTraits = internal::MethodTraits_<RemoveCRef<T>>;
+struct MethodTraits;
+
+template<typename R, typename C, typename... Args> struct MethodTraits<R (C::*)(Args...)         > :
+    internal::MethodTraitsDef_<C, C*, false, R, Args...> {};                                
+
+template<typename R, typename C, typename... Args> struct MethodTraits<R (C::*)(Args...) &       > :
+    internal::MethodTraitsDef_<C, C*, false, R, Args...> {};                              
+
+template<typename R, typename C, typename... Args> struct MethodTraits<R (C::*)(Args...) const   > :
+    internal::MethodTraitsDef_<C, const C*, true, R, Args...> {};                                 
+
+template<typename R, typename C, typename... Args> struct MethodTraits<R (C::*)(Args...) const&  > :
+    internal::MethodTraitsDef_<C, const C*, true, R, Args...> {};                               
 
 // Functor Traits
 
 namespace internal {
 
-template<typename T, typename Enable = void>
-struct FunctorTraits_;
-
-template<typename Obj_, typename R, typename... Args>
-struct FunctorTraitsDef_ : CallSigTraits<R(Args...)> {
-    using Obj = Obj_;
-};
-
-template<typename T>
-struct FunctorTraits_<T, std::void_t<decltype(&T::operator())>> : 
-    CallSigTraits<typename MethodTraits<decltype(&T::operator())>::CallSig> {
-
-    using CallOpType = decltype(&T::operator());
-    using CallOpTraits = MethodTraits<CallOpType>;
+template<typename TCallOp>
+struct FunctorTraitsDef_ :
+    CallSigTraits<typename MethodTraits<TCallOp>::CallSig> {
+    
+    using CallOp = TCallOp;
+    using CallOpTraits = MethodTraits<CallOp>;
     using Obj = typename CallOpTraits::Obj;
 };
 
 } // namespace internal
 
+template<typename T, typename Enable = void>
+struct FunctorTraits;
+
 template<typename T>
-using FunctorTraits = internal::FunctorTraits_<RemoveCRef<T>>;
+struct FunctorTraits<T, std::void_t<decltype(&T::operator())>> : 
+    internal::FunctorTraitsDef_<decltype(&T::operator())> {};
 
 // Free-Function Traits
 
 namespace internal {
-
-template<typename T>
-struct FreeFunctionTraits_;
 
 template<typename R, typename... Args>
 struct FreeFunctionTraitsDef_ : CallSigTraits<R(Args...)> {
     // nothing more atm..
 };
 
-template<typename R, typename... Args> struct FreeFunctionTraits_<R(*)(Args...)> :
-    FreeFunctionTraitsDef_<R, Args...> {}; 
-
-template<typename R, typename... Args> struct FreeFunctionTraits_<R   (Args...)> :
-    FreeFunctionTraitsDef_<R, Args...> {};
-
 } // namespace internal
 
 template<typename T>
-using FreeFunctionTraits = internal::FreeFunctionTraits_<RemoveCRef<T>>;
+struct FreeFunctionTraits;
+
+template<typename R, typename... Args> struct FreeFunctionTraits<R(*)(Args...)> :
+    internal::FreeFunctionTraitsDef_<R, Args...> {}; 
+
+template<typename R, typename... Args> struct FreeFunctionTraits<R   (Args...)> :
+    internal::FreeFunctionTraitsDef_<R, Args...> {};
 
 // Callable Traits
 
@@ -236,33 +226,26 @@ enum class CallableKind {
     Functor
 };
 
-namespace internal {
-
 template<typename T, typename Enable = void>
-struct CallableTraits_;
+struct CallableTraits;
 
-template<typename T> struct CallableTraits_<T, VoidT<typename FreeFunctionTraits_<T>::ReturnType>> : FreeFunctionTraits<T> {
+template<typename T> struct CallableTraits<T, VoidT<typename FreeFunctionTraits<T>::ReturnType>> : FreeFunctionTraits<T> {
     static constexpr CallableKind kind = CallableKind::FreeFunction;
 };
 
-template<typename T> struct CallableTraits_<T, VoidT<typename MethodTraits_<T>::ReturnType>> : MethodTraits<T> {
+template<typename T> struct CallableTraits<T, VoidT<typename MethodTraits<T>::ReturnType>> : MethodTraits<T> {
     static constexpr CallableKind kind = CallableKind::Method;
 };
 
-template<typename T> struct CallableTraits_<T, VoidT<typename FunctorTraits_<T>::ReturnType>> : FunctorTraits<T> {
+template<typename T> struct CallableTraits<T, VoidT<typename FunctorTraits<T>::ReturnType>> : FunctorTraits<T> {
     static constexpr CallableKind kind = CallableKind::Functor;
 };
-
-} // namespace internal
-
-template<typename T>
-using CallableTraits = internal::CallableTraits_<RemoveCRef<T>>;
 
 
 template<typename T, typename Enable = void>
 struct IsFreeFunction : std::false_type {};
 template<typename T>
-struct IsFreeFunction<T, std::enable_if_t<internal::CallableTraits_<T>::kind == CallableKind::FreeFunction, void>> : std::true_type {};
+struct IsFreeFunction<T, std::enable_if_t<CallableTraits<T>::kind == CallableKind::FreeFunction, void>> : std::true_type {};
 
 template<typename T>
 inline constexpr bool isFreeFunction = IsFreeFunction<T>::value;
@@ -274,7 +257,7 @@ inline constexpr bool isFreeFunction = IsFreeFunction<T>::value;
 template<typename T, typename Enable = void>
 struct IsMethod : std::false_type {};
 template<typename T>
-struct IsMethod<T, std::enable_if_t<internal::CallableTraits_<T>::kind == CallableKind::Method, void>> : std::true_type {};
+struct IsMethod<T, std::enable_if_t<CallableTraits<T>::kind == CallableKind::Method, void>> : std::true_type {};
 
 // "Method" = non-rvalue-reference-qualified non-static member function.
 // i.e.: For "struct Foo { void foo() &&; };", isMethod<&Foo::foo> is false.
@@ -286,7 +269,7 @@ inline constexpr bool isMethod = IsMethod<T>::value;
 template<typename T, typename Enable = void>
 struct IsFunctor : std::false_type {};
 template<typename T>
-struct IsFunctor<T, std::enable_if_t<internal::CallableTraits_<T>::kind == CallableKind::Functor, void>> : std::true_type {};
+struct IsFunctor<T, std::enable_if_t<CallableTraits<T>::kind == CallableKind::Functor, void>> : std::true_type {};
 
 template<typename T>
 inline constexpr bool isFunctor = IsFunctor<T>::value;
@@ -295,7 +278,7 @@ inline constexpr bool isFunctor = IsFunctor<T>::value;
 template<typename T, typename Enable = void>
 struct IsCallable : std::false_type {};
 template<typename T>
-struct IsCallable<T, std::void_t<typename internal::CallableTraits_<T>::CallSig>> : std::true_type {};
+struct IsCallable<T, std::void_t<typename CallableTraits<T>::CallSig>> : std::true_type {};
 
 // Does not include pointers to data members.
 template<typename T>
@@ -341,7 +324,7 @@ auto tplFnTable_(std::index_sequence<Is...>) {
 
 } // namespace internal
 
-  // Experimental
+// Experimental
 template<template<Int> typename Case, Int N>
 auto tplFnTable() {
     return internal::tplSwitchI_<Case>(std::make_index_sequence<N>{});
