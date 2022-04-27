@@ -20,26 +20,84 @@
 #include <iterator>
 #include <type_traits>
 
-namespace vgc {
-namespace core {
-namespace internal {
+namespace vgc::core::internal {
+
+// Helper to create SFINAE types.
+// TODO: move to core/templateutil.h
+template<bool B>
+using Requires = std::enable_if_t<B, bool>;
 
 // Checks whether the given template argument is a signed integer.
-template<typename I>
-using RequireSignedInteger =
-    typename std::enable_if<
-        std::is_integral<I>::value &&
-        std::is_signed<I>::value>::type;
+
+template<typename T, typename Enable = void>
+struct IsSignedInteger : std::false_type {};
+
+template<typename T>
+struct IsSignedInteger<T, std::enable_if_t<
+        std::is_integral_v<T> &&
+        std::is_signed_v<T>>> :
+    std::true_type {};
+
+template<typename T>
+constexpr bool isSignedInteger = IsSignedInteger<T>::value;
+
+template<typename T>
+using RequiresSignedInteger = Requires<isSignedInteger<T>>;
 
 // Checks whether the given template argument is an input iterator.
-template<typename It>
-using RequireInputIterator =
-    typename std::enable_if<std::is_convertible<
-        typename std::iterator_traits<It>::iterator_category,
-        std::input_iterator_tag>::value>::type;
 
-} // namespace internal
-} // namespace core
-} // namespace vgc
+template<typename T, typename Enable = void>
+struct IsInputIterator : std::false_type {};
+
+template<typename T>
+struct IsInputIterator<T, std::enable_if_t<
+    std::is_convertible_v<
+        typename std::iterator_traits<T>::iterator_category,
+        std::input_iterator_tag>>> :
+    std::true_type {};
+
+template<typename T>
+constexpr bool isInputIterator = IsInputIterator<T>::value;
+
+template<typename T>
+using RequiresInputIterator = Requires<isInputIterator<T>>;
+
+// Checks whether the given template argument is a forward iterator.
+
+template<typename T, typename Enable = void>
+struct isForwardIterator_ : std::false_type {};
+
+template<typename T>
+struct isForwardIterator_<T, std::enable_if_t<
+    std::is_convertible_v<
+        typename std::iterator_traits<T>::iterator_category,
+        std::forward_iterator_tag>>> :
+    std::true_type {};
+
+template<typename T>
+constexpr bool isForwardIterator = isForwardIterator_<T>::value;
+
+template<typename T>
+using RequiresForwardIterator = Requires<isForwardIterator<T>>;
+
+// Checks whether the given template argument is a range, that is, whether it
+// has Range::begin() and Range::end() and they return forward iterators.
+
+template<typename T, typename Enable = void>
+struct IsRange : std::false_type {};
+
+template<typename T>
+struct IsRange<T, std::enable_if_t<
+        isForwardIterator<decltype(std::declval<T>().begin())> &&
+        isForwardIterator<decltype(std::declval<T>().end())>>> :
+    std::true_type {};
+
+template<typename T>
+constexpr bool isRange = IsRange<T>::value;
+
+template<typename T>
+using RequiresRange = Requires<isRange<T>>;
+
+} // namespace vgc::core::internal
 
 #endif // VGC_CORE_INTERNAL_CONTAINERUTIL_H
