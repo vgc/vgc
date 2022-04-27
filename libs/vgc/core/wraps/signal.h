@@ -46,10 +46,12 @@ Int getFunctionArity(py::handle inspect, const py::function& method);
         });
 }*/
 
+using SignalTransmitter = core::internal::SignalTransmitter;
+using SignalArgRefsArray = core::internal::SignalArgRefsArray;
+
 // Common py interface for Signals and Slots.
 class PyAbstractSlotRef {
 public:
-    using SignalTransmitter = core::internal::SignalTransmitter;
     using Id = core::internal::FunctionId;
 
     PyAbstractSlotRef(
@@ -84,20 +86,21 @@ protected:
         py::handle self = py::cast(object());
         Int n = arity();
         if (n == 0) {
-            return SignalTransmitter(std::function<void()>(
-                [=]() {
+            return SignalTransmitter(
+                [=](const SignalArgRefsArray& args) {
                     pyFn(self);
-                }));
+                });
         }
         else {
-            return SignalTransmitter(std::function<void(const py::args& args)>(
-                [=](const py::args& args) {
+            return SignalTransmitter(
+                [=](const SignalArgRefsArray& x) {
+                    py::args args = x.get<py::args>(0);
                     auto newArgs = py::tuple(n);
                     for (Int i = 0; i < n; ++i) {
                         newArgs[i] = args[i];
                     }
                     pyFn(self, *newArgs);
-                }));
+                });
         }
     }
 
@@ -167,10 +170,11 @@ public:
         Int arity = getFunctionArity(inspect, callback);
         return core::internal::SignalHub::connect(
             object(), id(),
-            SignalTransmitter(std::function<void(const py::args& args)>(
-                [=](const py::args& args) {
+            SignalTransmitter(
+                [=](const SignalArgRefsArray& x) {
+                    py::args args = x.get<py::args>(0);
                     callback(*(args[py::slice(0, arity)]));
-                })),
+                }),
             std::monostate{});
     }
 
@@ -179,10 +183,11 @@ public:
     }
 
     virtual SignalTransmitter buildPyTransmitter() override {
-        return SignalTransmitter(std::function<void(const py::args& args)>(
-            [=](const py::args& args) {
+        return SignalTransmitter(
+            [=](const SignalArgRefsArray& x) {
+                py::args args = x.get<py::args>(0);
                 boundEmitPyFn_(args);
-            }));
+            });
     }
 
 protected:

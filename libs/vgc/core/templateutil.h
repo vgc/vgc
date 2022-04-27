@@ -73,18 +73,34 @@ using TypeIdentity = typename internal::TypeIdentity_<U>::type;
 template<typename T>
 using RemoveCVRef = std::remove_cv_t<std::remove_reference_t<T>>;
 
+// Helper to create SFINAE-based template overloads/specializations.
+// 
+// ```
+// template<typename Union, Requires<std::is_union_v<Union>> = true>
+// void foo(Union p) { ... }
+// ```
+//
+template<bool B>
+using Requires = std::enable_if_t<B, bool>;
+
 namespace internal {
 
 template<typename... Ts>
-struct MakeVoid { 
-    using type = void;
+struct MakeBool { 
+    using type = bool;
 };
 
 } // namespace internal
 
-// MacOS std::void_t doesn't SFINAE and makes redefinition errors.
+// Helper to create SFINAE-based template overloads/specializations.
+// It maps a sequence of types Ts to bool.
+//
 template<typename... Ts>
-using VoidT = typename internal::MakeVoid<Ts...>::type;
+using RequiresValid = typename internal::MakeBool<Ts...>::type;
+
+// Alias of std::enable_if_t
+template<bool B, typename T = void>
+using EnableIf = std::enable_if_t<B, T>;
 
 namespace internal {
 
@@ -191,11 +207,11 @@ struct FunctorTraitsDef_ :
 
 } // namespace internal
 
-template<typename T, typename Enable = void>
+template<typename T, typename Enable = bool>
 struct FunctorTraits;
 
 template<typename T>
-struct FunctorTraits<T, std::void_t<decltype(&T::operator())>> : 
+struct FunctorTraits<T, RequiresValid<decltype(&T::operator())>> : 
     internal::FunctorTraitsDef_<decltype(&T::operator())> {};
 
 // Free-Function Traits
@@ -226,18 +242,18 @@ enum class CallableKind {
     Functor
 };
 
-template<typename T, typename Enable = void>
+template<typename T, typename Enable = bool>
 struct CallableTraits;
 
-template<typename T> struct CallableTraits<T, VoidT<typename FreeFunctionTraits<T>::ReturnType>> : FreeFunctionTraits<T> {
+template<typename T> struct CallableTraits<T, RequiresValid<typename FreeFunctionTraits<T>::ReturnType>> : FreeFunctionTraits<T> {
     static constexpr CallableKind kind = CallableKind::FreeFunction;
 };
 
-template<typename T> struct CallableTraits<T, VoidT<typename MethodTraits<T>::ReturnType>> : MethodTraits<T> {
+template<typename T> struct CallableTraits<T, RequiresValid<typename MethodTraits<T>::ReturnType>> : MethodTraits<T> {
     static constexpr CallableKind kind = CallableKind::Method;
 };
 
-template<typename T> struct CallableTraits<T, VoidT<typename FunctorTraits<T>::ReturnType>> : FunctorTraits<T> {
+template<typename T> struct CallableTraits<T, RequiresValid<typename FunctorTraits<T>::ReturnType>> : FunctorTraits<T> {
     static constexpr CallableKind kind = CallableKind::Functor;
 };
 
@@ -275,10 +291,10 @@ template<typename T>
 inline constexpr bool isFunctor = IsFunctor<T>::value;
 
 
-template<typename T, typename Enable = void>
+template<typename T, typename Enable = bool>
 struct IsCallable : std::false_type {};
 template<typename T>
-struct IsCallable<T, std::void_t<typename CallableTraits<T>::CallSig>> : std::true_type {};
+struct IsCallable<T, RequiresValid<typename CallableTraits<T>::CallSig>> : std::true_type {};
 
 // Does not include pointers to data members.
 template<typename T>
