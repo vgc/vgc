@@ -822,7 +822,7 @@ public:
 
     static_assert(isObject<Obj>, "Slots can only be declared in Objects");
     static_assert(!hasRValueReferences<ArgsTuple>,
-        "Slot parameters are not allowed to have an rvalue reference type.");
+        "Slot parameters are not allowed to have a rvalue reference type.");
 
     static constexpr Int arity = SlotMethodTraits::arity;
 
@@ -872,7 +872,7 @@ public:
 
     static_assert(isObject<Obj>, "Signals can only be declared in Objects");
     static_assert(!hasRValueReferences<ArgsTuple>,
-        "Signal parameters are not allowed to have an rvalue reference type.");
+        "Signal parameters are not allowed to have a rvalue reference type.");
 
     static constexpr Int arity = sizeof...(TArgs);
 
@@ -911,7 +911,7 @@ public:
     template<typename FreeFunction, std::enable_if_t<isFreeFunction<RemoveCVRef<FreeFunction>>, int> = 0>
     ConnectionHandle connect(FreeFunction&& callback) const {
         static_assert(!hasRValueReferences<typename FreeFunctionTraits<RemoveCVRef<FreeFunction>>::ArgsTuple>,
-            "Slot parameters are not allowed to have an rvalue reference type.");
+            "Slot parameters are not allowed to have a rvalue reference type.");
         return connect_(std::forward<FreeFunction>(callback));
     }
 
@@ -919,7 +919,7 @@ public:
     template<typename Functor, std::enable_if_t<isFunctor<RemoveCVRef<Functor>>, int> = 0>
     ConnectionHandle connect(Functor&& funcObj) const {
         static_assert(!hasRValueReferences<typename FunctorTraits<RemoveCVRef<Functor>>::ArgsTuple>,
-            "Slot parameters are not allowed to have an rvalue reference type.");
+            "Slot parameters are not allowed to have a rvalue reference type.");
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(std::forward<Functor>(funcObj));
         return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
     }
