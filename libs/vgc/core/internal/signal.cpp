@@ -40,7 +40,7 @@ struct B_ : A_ {};
 static_assert( AnySignalArg::isMakeableFrom<      A_  , B_&>);
 static_assert( AnySignalArg::isMakeableFrom<      A_& , B_&>);
 static_assert( AnySignalArg::isMakeableFrom<const A_& , B_&>);
-static_assert(!AnySignalArg::isMakeableFrom<      A_  , const B_&>);
+static_assert( AnySignalArg::isMakeableFrom<      A_  , const B_&>);
 static_assert(!AnySignalArg::isMakeableFrom<      A_& , const B_&>);
 static_assert( AnySignalArg::isMakeableFrom<const A_& , const B_&>);
 static_assert(!AnySignalArg::isMakeableFrom<      A_  , B_&&>);

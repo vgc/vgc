@@ -23,6 +23,7 @@
 
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/object.h>
+#include <vgc/core/internal/signal.h>
 
 namespace vgc::core::wraps {
 
@@ -298,7 +299,8 @@ public:
     }
 
     virtual SignalTransmitter buildCppTransmitter() override {
-        return SignalTransmitter(buildCppTransmitFn(static_cast<ArgsTuple*>(nullptr)));
+        Obj* this_ = static_cast<Obj*>(object());
+        return core::internal::buildRetransmitter<ArgsTuple>(SignalRefT(this_));
     }
 
     // XXX connects
@@ -363,23 +365,11 @@ public:
     }
 
 protected:
+    // XXX use internal::unboundEmit
     template<typename... Args>
     py::function buildUnboundEmitPyFn(std::tuple<Args...>* sig) {
         return py::cpp_function(
-            [=](Obj* this_, Args... args) {
-                SignalRefT(this_).emit(std::forward<Args>(args)...);
-            });
-    }
-
-    template<typename... Args>
-    auto buildCppTransmitFn(std::tuple<Args...>* sig) {
-        Obj* this_ = static_cast<Obj*>(object());
-        // SignalRefs are non-copyable to prevent ppl from storing them.
-        // But that's what we need to do here. Solution is to rebuild one.
-        return std::function<void(Args&&...)>(
-            [=](Args&&... args) {
-                SignalRefT(this_).emit(std::forward<Args>(args)...);
-            });
+            core::internal::unboundEmit<typename SignalRefT::Tag, Obj, Args...>);
     }
 
     using CppToPyTransmitterFactoryFn = std::function<SignalTransmitter(py::handle obj, py::function slot, Int arity)>;
@@ -397,8 +387,8 @@ protected:
 #define VGC_TRANSMITTER_FACTORY_CASE(i)                                                             \
             case i: if constexpr (sizeof...(SignalArgs) >= i) {                                     \
                 using TruncatedSignalArgsTuple = SubTuple<0, i, SignalArgsTuple>;                   \
-                return SignalTransmitter(getForwardingToPyFn(                                       \
-                    obj, slot, static_cast<TruncatedSignalArgsTuple*>(nullptr)));                   \
+                return SignalTransmitter(getForwardingToPyFn<TruncatedSignalArgsTuple>(             \
+                    obj, slot, std::make_index_sequence<i>{}));                                    \
                 break;                                                                              \
             }                                                                                       \
             [[fallthrough]]
@@ -420,25 +410,25 @@ protected:
         };
     }
 
-    static auto getZeroArgsPySlotFn(py::handle obj, py::function slot) {
+    static typename SignalTransmitter::SlotWrapper
+    getZeroArgsPySlotFn(py::handle obj, py::function slot) {
         if (obj.is_none()) {
-            return std::function<void()>([=](){ slot(); });
+            return {[=](const SignalArgRefsArray& args){ slot(); }};
         }
-        return std::function<void()>([=](){ slot(obj); });
+        return {[=](const SignalArgRefsArray& args){ slot(obj); }};
     }
 
-    template<typename... Args>
-    static auto getForwardingToPyFn(py::handle obj, py::function slot, std::tuple<Args...>*) {
+    template<typename SignalArgsTuple, size_t... Is>
+    static typename SignalTransmitter::SlotWrapper
+    getForwardingToPyFn(py::handle obj, py::function slot, std::index_sequence<Is...>) {
         if (obj.is_none()) {
-            return std::function<void(Args&&... args)>(
-                [=](Args&&... args) {
-                    slot(args...);
-                });
+            return {[=](const SignalArgRefsArray& args) {
+                slot(args.get<std::tuple_element_t<Is, SignalArgsTuple>>(Is)...);
+            }};
         }
-        return std::function<void(Args&&... args)>(
-            [=](Args&&... args) {
-                slot(obj, args...);
-            });
+        return {[=](const SignalArgRefsArray& args) {
+            slot(obj, args.get<std::tuple_element_t<Is, SignalArgsTuple>>(Is)...);
+        }};
     }
 
 private:
