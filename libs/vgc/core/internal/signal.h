@@ -241,7 +241,7 @@ public:
     template<typename T, typename Arg>
     struct IsMakeableFrom : std::conjunction<
         std::negation<std::is_rvalue_reference<T>>,
-        std::is_same<T&, Arg>> {};
+        std::is_convertible<Arg, const T&>> {};
 
     template<typename T, typename Arg>
     static constexpr bool isMakeableFrom = IsMakeableFrom<T, Arg>::value;
@@ -249,12 +249,10 @@ public:
     AnySignalArg() = default;
 
     // Overload to prevent construction from temporaries.
-    template<typename T, typename Arg,
-        std::enable_if_t<isMakeableFrom<T, Arg&>, int> = 0>
+    template<typename T, typename Arg>
     static AnySignalArg make(const Arg&& x) = delete;
 
     // Only accepts lvalue references.
-    // Conversions are not allowed to avoid temporaries.
     // If T is not a reference type, Arg is expected to be non-const.
     //
     template<typename T, typename Arg,
@@ -266,8 +264,9 @@ public:
             ::new(&ret.v_) T(x);
         }
         else {
+            T& y = x;
             ::new(&ret.v_) Pointer<T>(
-                const_cast<Pointer<T>>(std::addressof(x)));
+                const_cast<Pointer<T>>(std::addressof(y)));
         }
 
 #ifdef VGC_DEBUG
