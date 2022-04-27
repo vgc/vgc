@@ -194,14 +194,13 @@ private:
 
 
 template<typename TupleT>
-struct HasRvalueReferences;
+struct HasRValueReferences;
 template<typename... Ts>
-struct HasRvalueReferences<std::tuple<Ts...>> :
+struct HasRValueReferences<std::tuple<Ts...>> :
     std::disjunction<std::is_rvalue_reference<Ts>...> {};
 
 template<typename TupleT>
-static constexpr bool hasRvalueReferences = HasRvalueReferences<TupleT>::value;
-
+static constexpr bool hasRValueReferences = HasRValueReferences<TupleT>::value;
 
 // References a signal argument of any type.
 // It makes it simpler to pass signal arguments to multiple slots.
@@ -459,7 +458,7 @@ public:
 
         using TruncatedSignalArgsTuple = SubTuple<0, Traits::arity, SignalArgsTuple>;
 
-        auto fn = buildWrapper<TruncatedSignalArgsTuple>(
+        auto fn = buildSlotWrapper<TruncatedSignalArgsTuple>(
             std::forward<SlotCallable>(c),
             std::make_index_sequence<Traits::arity>{},
             methodObj...);
@@ -553,8 +552,7 @@ protected:
     // </TOREM>
 
     template<typename TruncatedSignalArgsTuple, typename Callable, size_t... Is, typename... OptionalObj>
-    [[nodiscard]] static auto buildWrapper(
-        Callable&& c, std::index_sequence<Is...>, OptionalObj&&... methodObj) {
+    [[nodiscard]] static auto buildSlotWrapper(Callable&& c, std::index_sequence<Is...>, OptionalObj&&... methodObj) {
 
         using Traits = CallableTraits<Callable>;
 
@@ -684,31 +682,31 @@ public:
 
     // XXX add to public interface of Object
     static bool disconnect(Object* sender, ConnectionHandle h) {
-        return removeConnectionIf_(sender, [=](const Connection_& c) {
+        return disconnectIf_(sender, [=](const Connection_& c) {
             return c.h == h;
         });
     }
 
     static bool disconnect(Object* sender, SignalId from) {
-        return removeConnectionIf_(sender, [=](const Connection_& c) {
+        return disconnectIf_(sender, [=](const Connection_& c) {
             return c.from == from;
         });
     }
 
     static bool disconnect(Object* sender, SignalId from, ConnectionHandle h) {
-        return removeConnectionIf_(sender, [=](const Connection_& c) {
+        return disconnectIf_(sender, [=](const Connection_& c) {
             return c.from == from && c.h == h;
         });
     }
 
     static bool disconnect(Object* sender, SignalId from, const SlotId& to) {
-        return removeConnectionIf_(sender, [=](const Connection_& c) {
+        return disconnectIf_(sender, [=](const Connection_& c) {
             return c.from == from && c.to == to;
         });
     }
 
     static bool disconnect(Object* sender, SignalId from, Object* receiver) {
-        return removeConnectionIf_(sender, [=](const Connection_& c) {
+        return disconnectIf_(sender, [=](const Connection_& c) {
             return c.from == from &&
                 std::holds_alternative<ObjectSlotId>(c.to) &&
                 std::get<ObjectSlotId>(c.to).first == receiver;
@@ -781,7 +779,7 @@ private:
 
     // Returns true if any connection is removed.
     template<typename Pred>
-    static bool removeConnectionIf_(Object* sender, Pred pred) {
+    static bool disconnectIf_(Object* sender, Pred pred) {
         auto& hub = access(sender);
         auto end = hub.connections_.end();
         auto it = std::find_if(hub.connections_.begin(), end, pred);
@@ -823,7 +821,7 @@ public:
     using ArgsTuple = typename SlotMethodTraits::ArgsTuple;
 
     static_assert(isObject<Obj>, "Slots can only be declared in Objects");
-    static_assert(!hasRvalueReferences<ArgsTuple>,
+    static_assert(!hasRValueReferences<ArgsTuple>,
         "Slot parameters are not allowed to have an rvalue reference type.");
 
     static constexpr Int arity = SlotMethodTraits::arity;
@@ -873,7 +871,7 @@ public:
     using ArgsTuple = std::tuple<TArgs...>;
 
     static_assert(isObject<Obj>, "Signals can only be declared in Objects");
-    static_assert(!hasRvalueReferences<ArgsTuple>,
+    static_assert(!hasRValueReferences<ArgsTuple>,
         "Signal parameters are not allowed to have an rvalue reference type.");
 
     static constexpr Int arity = sizeof...(TArgs);
@@ -912,7 +910,7 @@ public:
     // XXX doc
     template<typename FreeFunction, std::enable_if_t<isFreeFunction<RemoveCVRef<FreeFunction>>, int> = 0>
     ConnectionHandle connect(FreeFunction&& callback) const {
-        static_assert(!hasRvalueReferences<typename FreeFunctionTraits<RemoveCVRef<FreeFunction>>::ArgsTuple>,
+        static_assert(!hasRValueReferences<typename FreeFunctionTraits<RemoveCVRef<FreeFunction>>::ArgsTuple>,
             "Slot parameters are not allowed to have an rvalue reference type.");
         return connect_(std::forward<FreeFunction>(callback));
     }
@@ -920,7 +918,7 @@ public:
     // XXX doc
     template<typename Functor, std::enable_if_t<isFunctor<RemoveCVRef<Functor>>, int> = 0>
     ConnectionHandle connect(Functor&& funcObj) const {
-        static_assert(!hasRvalueReferences<typename FunctorTraits<RemoveCVRef<Functor>>::ArgsTuple>,
+        static_assert(!hasRValueReferences<typename FunctorTraits<RemoveCVRef<Functor>>::ArgsTuple>,
             "Slot parameters are not allowed to have an rvalue reference type.");
         SignalTransmitter transmitter = SignalTransmitter::build<ArgsTuple>(std::forward<Functor>(funcObj));
         return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
