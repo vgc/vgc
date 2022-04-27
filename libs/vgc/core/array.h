@@ -1029,7 +1029,7 @@ public:
     ///
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
-    template<typename Range, internal::RequiresRange<Range> = true>
+    template<typename Range, internal::RequiresCompatibleRange<Range, T> = true>
     iterator insert(ConstIterator it, const Range& range) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
@@ -1121,7 +1121,7 @@ public:
     /// Throws IndexError if \p i does not belong to [0, length()].
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
-    template<typename Range, internal::RequiresRange<Range> = true>
+    template<typename Range, internal::RequiresCompatibleRange<Range, T> = true>
     void insert(Int i, const Range& range) {
         checkInRangeForInsert_(i);
         insertRange_(i, range.begin(), range.end());

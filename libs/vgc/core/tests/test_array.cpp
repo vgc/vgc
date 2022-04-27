@@ -427,6 +427,7 @@ TEST(TestArray, InsertAtIterator) {
 }
 
 TEST(TestArray, InsertAtIndex) {
+
     Array<int> a = {10, 42, 12};
     Array<int> b = {10, 42, 15, 12};
     Array<int> c = {4, 10, 42, 15, 12};
@@ -508,6 +509,50 @@ TEST(TestArray, InsertAtIndex) {
             a.resize(4);                        EXPECT_EQ(a, r1);   EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt);
             a.insert(2, ISIt{sst4}, ISIt{});    EXPECT_EQ(a, r2b);  EXPECT_EQ(a.length(), TestObj::aliveCount() - preCnt);
         }   EXPECT_NO_THROW(TestObj::doPostTestChecks(preCnt));
+    }
+
+    // Test overload resolution between insert(Int, const Range&) and insert(Int, const T&)
+    {
+        // A range class that is assignable from an std::vector<int>
+        class IntVector {
+            using iterator = std::vector<int>::iterator;
+            std::vector<int> v;
+
+        public:
+            IntVector() : v() {}
+            IntVector(std::initializer_list<int> ilist) : v(ilist.begin(), ilist.end()) {}
+            IntVector(const std::vector<int>& vec) : v(vec) {}
+            iterator begin() { return v.begin(); }
+            iterator end() { return v.end(); }
+
+            bool operator==(const IntVector& other) const { return v == other.v; }
+        };
+
+        Array<IntVector> a = {{1, 2}, {3, 4}};
+
+        Array<std::vector<int>> b = {{5, 6}, {7, 8}};
+        a.insert(a.length(), b);
+        EXPECT_EQ(a, (Array<IntVector>{{1, 2}, {3, 4}, {5, 6}, {7, 8}}));
+
+        IntVector c = {9, 10};
+        a.insert(a.length(), c);
+        EXPECT_EQ(a, (Array<IntVector>{{1, 2}, {3, 4}, {5, 6}, {7, 8}, {9, 10}}));
+
+        std::vector<int> d = {11, 12};
+        a.insert(a.length(), d);
+        EXPECT_EQ(a, (Array<IntVector>{{1, 2}, {3, 4}, {5, 6}, {7, 8}, {9, 10}, {11, 12}}));
+
+        // Note: the following:
+        //
+        //  Array<Array<short>> e = {{13, 14}, {15, 16}};
+        //  a.insert(a.length(), e);
+        //  EXPECT_EQ(a, (Array<Array<int>>{{1, 2}, {3, 4}, {5, 6}, {7, 8}, {9, 10}, {11, 12}, {13, 14}, {15, 16}}));
+        //
+        // wouldn't compile because:
+        // - insert(Int, const T&) isn't selected because:
+        //     Array<Array<short>> isn't implicitly convertible to T (= Array<int>)
+        // - insert(Int, const Range&) isn't selected because:
+        //     T (= Array<int>) isn't assignable from Range::value_type (= Array<short>)
     }
 }
 
