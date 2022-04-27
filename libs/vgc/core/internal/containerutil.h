@@ -65,17 +65,17 @@ using RequiresInputIterator = Requires<isInputIterator<T>>;
 // Checks whether the given template argument is a forward iterator.
 
 template<typename T, typename Enable = void>
-struct isForwardIterator_ : std::false_type {};
+struct IsForwardIterator : std::false_type {};
 
 template<typename T>
-struct isForwardIterator_<T, std::enable_if_t<
+struct IsForwardIterator<T, std::enable_if_t<
     std::is_convertible_v<
         typename std::iterator_traits<T>::iterator_category,
         std::forward_iterator_tag>>> :
     std::true_type {};
 
 template<typename T>
-constexpr bool isForwardIterator = isForwardIterator_<T>::value;
+constexpr bool isForwardIterator = IsForwardIterator<T>::value;
 
 template<typename T>
 using RequiresForwardIterator = Requires<isForwardIterator<T>>;
@@ -97,6 +97,46 @@ constexpr bool isRange = IsRange<T>::value;
 
 template<typename T>
 using RequiresRange = Requires<isRange<T>>;
+
+// Checks whether the given template argument is a forward iterator
+// whose value_type is assignable to a T
+
+template<typename It, typename T, typename Enable = void>
+struct IsCompatibleForwardIterator : std::false_type {};
+
+template<typename It, typename T>
+struct IsCompatibleForwardIterator<It, T, std::enable_if_t<
+    std::is_convertible_v<
+        typename std::iterator_traits<It>::iterator_category,
+        std::forward_iterator_tag> &&
+    std::is_assignable_v<
+        T&,
+        typename std::iterator_traits<It>::value_type>>> :
+    std::true_type {};
+
+template<typename It, typename T>
+constexpr bool isCompatibleForwardIterator = IsCompatibleForwardIterator<It, T>::value;
+
+template<typename It, typename T>
+using RequiresCompatibleForwardIterator = Requires<isCompatibleForwardIterator<It, T>>;
+
+// Checks whether the given template argument is a range whose value_type of its
+// iterators is assignable to a T
+
+template<typename Range, typename T, typename Enable = void>
+struct IsCompatibleRange : std::false_type {};
+
+template<typename Range, typename T>
+struct IsCompatibleRange<Range, T, std::enable_if_t<
+        isCompatibleForwardIterator<decltype(std::declval<Range>().begin()), T> &&
+        isCompatibleForwardIterator<decltype(std::declval<Range>().end()), T>>> :
+    std::true_type {};
+
+template<typename Range, typename T>
+constexpr bool isCompatibleRange = IsCompatibleRange<Range, T>::value;
+
+template<typename Range, typename T>
+using RequiresCompatibleRange = Requires<isCompatibleRange<Range, T>>;
 
 } // namespace vgc::core::internal
 
