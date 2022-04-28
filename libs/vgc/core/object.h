@@ -1255,8 +1255,7 @@ class TestSignalObject : public Object {
     VGC_OBJECT(TestSignalObject, Object)
 
 public:
-    static TestSignalObjectPtr create()
-    {
+    static TestSignalObjectPtr create() {
         return new TestSignalObject();
     }
 

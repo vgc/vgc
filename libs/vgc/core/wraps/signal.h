@@ -27,6 +27,9 @@
 
 namespace vgc::core::wraps {
 
+using SignalTransmitter = core::internal::SignalTransmitter;
+using SignalArgRefsArray = core::internal::SignalArgRefsArray;
+
 // The Signal/Slot api in python is:
 //  - declaration:  @signal | @slot
 //  - connect:      objectA.signalA.connect(objectB.slotB | function)
@@ -39,32 +42,22 @@ namespace vgc::core::wraps {
 Int getFunctionArity(const py::function& method);
 Int getFunctionArity(py::handle inspect, const py::function& method);
 
-/*template<typename Obj, typename Method, typename... MethodArgs>
-[[nodiscard]] static auto bindMethod(Obj* obj, Method&& method, std::tuple<MethodArgs...>*) {
-    return std::function<void(MethodArgs...)>(
-        [=](MethodArgs... args) {
-            std::invoke(method, obj, std::forward<MethodArgs>(args)...);
-        });
-}*/
+inline py::tuple truncatePyArgs(const py::args& args, Int n) {
+    auto ret = py::tuple(n);
+    for (Int i = 0; i < n; ++i) {
+        ret[i] = args[i];
+    }
+    return ret;
+}
 
-using SignalTransmitter = core::internal::SignalTransmitter;
-using SignalArgRefsArray = core::internal::SignalArgRefsArray;
-
-// Common py interface for Signals and Slots.
+// Common interface for Python Signals and Slots.
 class PyAbstractSlotRef {
 public:
     using Id = core::internal::FunctionId;
 
-    PyAbstractSlotRef(
-        const core::Object* obj,
-        Id id,
-        Int arity) :
-
+    PyAbstractSlotRef(const core::Object* obj, Id id, Int arity) :
         obj_(const_cast<core::Object*>(obj)),
-        id_(id),
-        arity_(arity) {
-
-    }
+        id_(id), arity_(arity) {}
 
     virtual ~PyAbstractSlotRef() = default;
 
@@ -87,22 +80,14 @@ protected:
         py::handle self = py::cast(object());
         Int n = arity();
         if (n == 0) {
-            return SignalTransmitter(
-                [=](const SignalArgRefsArray& args) {
-                    pyFn(self);
-                });
+            return [=](const SignalArgRefsArray& args) {
+                pyFn(self);
+            };
         }
-        else {
-            return SignalTransmitter(
-                [=](const SignalArgRefsArray& x) {
-                    py::args args = x.get<py::args>(0);
-                    auto newArgs = py::tuple(n);
-                    for (Int i = 0; i < n; ++i) {
-                        newArgs[i] = args[i];
-                    }
-                    pyFn(self, *newArgs);
-                });
-        }
+        return [=](const SignalArgRefsArray& x) {
+            py::args args = x.get<py::args>(0);
+            pyFn(self, *truncatePyArgs(args, n));
+        };
     }
 
 private:
@@ -114,22 +99,14 @@ private:
     Int arity_;
 };
 
-
 class PyPySlotRef : public PyAbstractSlotRef {
 public:
     using Id = core::internal::FunctionId;
 
     // 'self' does not count in arity.
-    PyPySlotRef(
-        const core::Object* obj,
-        Id id,
-        py::function unboundPyFn,
-        Int arity) :
-
+    PyPySlotRef(const core::Object* obj, Id id, Int arity, py::function unboundPyFn) :
         PyAbstractSlotRef(obj, id, arity),
-        unboundPyFn_(unboundPyFn) {
-
-    }
+        unboundPyFn_(unboundPyFn) {}
 
     const py::function& unboundPyFn() const {
         return unboundPyFn_;
@@ -146,35 +123,28 @@ private:
 
 class PyPySignalRef : public PyAbstractSlotRef {
 public:
-    PyPySignalRef(
-        const core::Object* obj,
-        Id id,
-        py::function boundEmitPyFn,
-        Int arity) :
-
+    PyPySignalRef(const core::Object* obj, Id id, Int arity, py::function boundEmitPyFn) :
         PyAbstractSlotRef(obj, id, arity),
-        boundEmitPyFn_(boundEmitPyFn) {
-
-    }
+        boundEmitPyFn_(boundEmitPyFn) {}
 
     ConnectionHandle connect(PyAbstractSlotRef* slot) {
         if (arity() < slot->arity()) {
             throw py::value_error("The slot signature cannot be longer than the signal signature.");
         }
-        // XXX "Signals and Slots are limited to 7 parameters."
-
-        return core::internal::SignalHub::connect(object(), id(), slot->buildPyTransmitter(), core::internal::ObjectSlotId(slot->object(), slot->id()));
+        core::internal::ObjectSlotId slotId(slot->object(), slot->id());
+        return core::internal::SignalHub::connect(
+            object(), id(), slot->buildPyTransmitter(), slotId);
     }
 
     ConnectionHandle connectCallback(py::function callback) {
         auto inspect = py::module::import("inspect");
-        Int arity = getFunctionArity(inspect, callback);
+        Int n = getFunctionArity(inspect, callback);
         return core::internal::SignalHub::connect(
             object(), id(),
             SignalTransmitter(
                 [=](const SignalArgRefsArray& x) {
                     py::args args = x.get<py::args>(0);
-                    callback(*(args[py::slice(0, arity)]));
+                    callback(*truncatePyArgs(args, n));
                 }),
             std::monostate{});
     }
@@ -211,9 +181,7 @@ protected:
 
         PyAbstractSlotRef(obj, id, sizeof...(Args)),
         parameters_({std::type_index(typeid(Args))...}),
-        unboundPyFn_(unboundPyFn) {
-
-    }
+        unboundPyFn_(unboundPyFn) {}
 
 public:
     const auto& parameters() const {
@@ -379,10 +347,6 @@ protected:
         return [](py::handle obj, py::function slot, Int arity) -> SignalTransmitter {
             using SignalArgsTuple = std::tuple<SignalArgs...>;
             switch (arity) {
-            case 0: {
-                return SignalTransmitter(getZeroArgsPySlotFn(obj, slot));
-                break;
-            }
 
 #define VGC_TRANSMITTER_FACTORY_CASE(i)                                                             \
             case i: if constexpr (sizeof...(SignalArgs) >= i) {                                     \
@@ -393,6 +357,7 @@ protected:
             }                                                                                       \
             [[fallthrough]]
 
+            VGC_TRANSMITTER_FACTORY_CASE(0);
             VGC_TRANSMITTER_FACTORY_CASE(1);
             VGC_TRANSMITTER_FACTORY_CASE(2);
             VGC_TRANSMITTER_FACTORY_CASE(3);
@@ -408,14 +373,6 @@ protected:
                 break;
             }
         };
-    }
-
-    static typename SignalTransmitter::SlotWrapper
-    getZeroArgsPySlotFn(py::handle obj, py::function slot) {
-        if (obj.is_none()) {
-            return {[=](const SignalArgRefsArray& args){ slot(); }};
-        }
-        return {[=](const SignalArgRefsArray& args){ slot(obj); }};
     }
 
     template<typename SignalArgsTuple, size_t... Is>

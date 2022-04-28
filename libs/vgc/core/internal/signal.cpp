@@ -31,36 +31,4 @@ FunctionId genFunctionId() {
     return ++s;
 }
 
-// Checking that AnySignalArg::IsMakeableFrom is working as expected.
-// The goal is for AnySignalArg to not accept temporaries created on construction.
-//
-struct A_ {};
-struct B_ : A_ {};
-// upcasts are allowed
-static_assert( AnySignalArg::isMakeableFrom<      A_  , B_&>);
-static_assert( AnySignalArg::isMakeableFrom<      A_& , B_&>);
-static_assert( AnySignalArg::isMakeableFrom<const A_& , B_&>);
-static_assert( AnySignalArg::isMakeableFrom<      A_  , const B_&>);
-static_assert(!AnySignalArg::isMakeableFrom<      A_& , const B_&>);
-static_assert( AnySignalArg::isMakeableFrom<const A_& , const B_&>);
-static_assert(!AnySignalArg::isMakeableFrom<      A_  , B_&&>);
-static_assert(!AnySignalArg::isMakeableFrom<      A_& , B_&&>);
-static_assert(!AnySignalArg::isMakeableFrom<const A_& , B_&&>);
-static_assert(!AnySignalArg::isMakeableFrom<      A_  , const B_&&>);
-static_assert(!AnySignalArg::isMakeableFrom<      A_& , const B_&&>);
-static_assert(!AnySignalArg::isMakeableFrom<const A_& , const B_&&>);
-// copies are not allowed
-static_assert(!AnySignalArg::isMakeableFrom<      int  , float&>);
-static_assert(!AnySignalArg::isMakeableFrom<      int& , float&>);
-static_assert(!AnySignalArg::isMakeableFrom<const int& , float&>);
-static_assert(!AnySignalArg::isMakeableFrom<      int  , const float&>);
-static_assert(!AnySignalArg::isMakeableFrom<      int& , const float&>);
-static_assert(!AnySignalArg::isMakeableFrom<const int& , const float&>);
-static_assert(!AnySignalArg::isMakeableFrom<      int  , float&&>);
-static_assert(!AnySignalArg::isMakeableFrom<      int& , float&&>);
-static_assert(!AnySignalArg::isMakeableFrom<const int& , float&&>);
-static_assert(!AnySignalArg::isMakeableFrom<      int  , const float&&>);
-static_assert(!AnySignalArg::isMakeableFrom<      int& , const float&&>);
-static_assert(!AnySignalArg::isMakeableFrom<const int& , const float&&>);
-
 } // namespace vgc::core::internal

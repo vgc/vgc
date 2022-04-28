@@ -76,7 +76,6 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
         [=](py::object self) -> PyPySignalRef* {
             // XXX more explicit error when self is not a core::Object.
             Object* this_ = self.cast<Object*>();
-
             // Create emit function.
             //
             // XXX can use py::name, py::doc if py::dynamic_attr doesn't let us use functools.update_wrapper
@@ -89,8 +88,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
                     auto cArgs = core::internal::SignalArgRefsArray::make<std::tuple<py::args>>(args);
                     core::internal::SignalHub::emit_(this_, newId, cArgs);
                 });
-
-            PyPySignalRef* sref = new PyPySignalRef(this_, newId, emitFn, arity);
+            PyPySignalRef* sref = new PyPySignalRef(this_, newId, arity, emitFn);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
             self.attr("__dict__")[signalName] = pysref; // caching
             return sref; // pybind will find the object in registered_instances
@@ -120,8 +118,8 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
         throw py::value_error("Slot method expected to at least have 'self' parameter.");
     }
     --arity;
-    if (arity > 7) {
-        throw py::value_error("Signals and Slots are limited to 7 arguments.");
+    if (arity > core::internal::maxSignalArgs) {
+        throw py::value_error("Signals and Slots are limited to maxSignalArgs arguments.");
     }
 
     // Create a new unique ID for this slot.
@@ -133,7 +131,7 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
         [=](py::object self) -> PyPySlotRef* {
             // XXX more explicit error when self is not a core::Object.
             Object* this_ = self.cast<Object*>();
-            PyPySlotRef* sref = new PyPySlotRef(this_, newId, unboundSlotMethod, arity);
+            PyPySlotRef* sref = new PyPySlotRef(this_, newId, arity, unboundSlotMethod);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
             self.attr("__dict__")[slotName] = pysref; // caching
             return sref; // pybind will find the object in registered_instances

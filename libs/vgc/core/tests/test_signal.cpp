@@ -18,6 +18,42 @@
 #include <memory>
 #include <vgc/core/object.h>
 
+TEST(TestSignal, AnySignalArg)
+{
+    using AnySignalArg = vgc::core::internal::AnySignalArg;
+    // Checking that AnySignalArg::IsMakeableFrom is working as expected.
+    // The goal is for AnySignalArg to not accept temporaries created on construction.
+    //
+    struct A_ {};
+    struct B_ : A_ {};
+    // upcasts are allowed
+    ASSERT_TRUE((  AnySignalArg::isMakeableFrom<       A_    , B_&              > ));
+    ASSERT_TRUE((  AnySignalArg::isMakeableFrom<       A_&   , B_&              > ));
+    ASSERT_TRUE((  AnySignalArg::isMakeableFrom< const A_&   , B_&              > ));
+    ASSERT_TRUE((  AnySignalArg::isMakeableFrom<       A_    , const B_&        > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       A_&   , const B_&        > ));
+    ASSERT_TRUE((  AnySignalArg::isMakeableFrom< const A_&   , const B_&        > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       A_    , B_&&             > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       A_&   , B_&&             > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom< const A_&   , B_&&             > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       A_    , const B_&&       > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       A_&   , const B_&&       > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom< const A_&   , const B_&&       > ));
+    // copies ar( e not allowed                  
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int   , float&           > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int&  , float&           > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom< const int&  , float&           > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int   , const float&     > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int&  , const float&     > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom< const int&  , const float&     > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int   , float&&          > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int&  , float&&          > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom< const int&  , float&&          > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int   , const float&&    > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom<       int&  , const float&&    > ));
+    ASSERT_TRUE(( !AnySignalArg::isMakeableFrom< const int&  , const float&&    > ));
+}
+
 TEST(TestSignal, All)
 {
     auto t = vgc::core::internal::TestSignalObject::create();

@@ -104,14 +104,17 @@
 // handler(int&& a, double&& b) { slot(std::forward<int>(a)); }
 //
 
+// Configuration
+namespace vgc::core::internal {
+static constexpr Int maxSignalArgs = 20;
+} // namespace vgc::core::internal
+
 
 namespace vgc::core {
 
 class Object;
 
 namespace internal {
-
-static constexpr Int maxSignalArgs = 20;
 
 template<typename T, typename Enable = bool>
 struct HasObjectTypedefs : std::false_type {};
@@ -181,7 +184,7 @@ inline constexpr ConnectionHandle ConnectionHandle::invalid = {-1};
 
 
 template<typename Tag>
-class FunctionIdSingleton_ {
+class FunctionIdSingleton {
 public:
     static FunctionId get() {
         static FunctionId s = genFunctionId();
@@ -189,7 +192,7 @@ public:
     }
 
 private:
-    FunctionIdSingleton_() = delete;
+    FunctionIdSingleton() = delete;
 };
 
 
@@ -201,6 +204,7 @@ struct HasRValueReferences<std::tuple<Ts...>> :
 
 template<typename TupleT>
 static constexpr bool hasRValueReferences = HasRValueReferences<TupleT>::value;
+
 
 // References a signal argument of any type.
 // It makes it simpler to pass signal arguments to multiple slots.
@@ -232,14 +236,13 @@ public:
         std::is_reference_v<SignalArg>, std::remove_reference_t<SignalArg>, const SignalArg>;
 
     template<typename SignalArg>
-    using Reference = std::conditional_t<
-        std::is_reference_v<SignalArg>, SignalArg, const SignalArg&>;
+    using Reference = ValueType<SignalArg>&;
 
     template<typename SignalArg>
     using Pointer = ValueType<SignalArg>*;
 
-    // Similar to the construction constraint of std::reference_wrapper.
-    // It remains flexible to eventually accept rvalue references in the future.
+    // Similar to the construction constraint of std::reference_wrapper
+    // but expressed more explicitly.
     //
     template<typename SignalArg, typename U>
     struct IsMakeableFrom : std::conjunction<
@@ -257,9 +260,9 @@ public:
         Requires<isMakeableFrom<SignalArg, U&&>> = true>
     static AnySignalArg make(U&& x) {
 
-        AnySignalArg ret;
+        AnySignalArg ret = {};
         if constexpr (isCopiedIn<SignalArg>()) {
-            ::new(&ret.v_) SignalArg(x);
+            ::new(&ret.v_) ValueType<SignalArg>(x);
         }
         else {
             ::new(&ret.v_) Pointer<SignalArg>(std::addressof(x));
@@ -289,19 +292,23 @@ public:
     }
 
 protected:
-    template<typename T>
+    template<typename SignalArg>
     static constexpr bool isCopiedIn() {
-        return (sizeof(T) < storageSize) &&
-            std::is_object_v<T> &&
-            std::is_trivially_destructible_v<T>;
+        using ValueT = ValueType<SignalArg>;
+        return (sizeof(ValueT) <= storageSize) &&
+            std::is_const_v<ValueT> &&
+            std::is_trivially_copyable_v<ValueT>;
     }
 
 private:
-    mutable std::aligned_storage<storageSize, storageSize> v_;
+    mutable std::aligned_storage_t<storageSize, storageSize> v_;
 #ifdef VGC_DEBUG
     std::type_index t_ = typeid(void);
 #endif
 };
+
+template<typename T>
+using SignalArgRef = AnySignalArg::Reference<T>;
 
 // Used to pass arguments from signal to slot wrappers in a more efficient way.
 // Constructing from temporaries is not allowed.
@@ -355,6 +362,7 @@ private:
 };
 
 using SignalArgRefsArray = SignalArgRefsArray_<maxSignalArgs>;
+
 
 class SignalTransmitter {
 public:
@@ -419,13 +427,9 @@ public:
 protected:
     template<typename TruncatedSignalArgsTuple, typename Callable, size_t... Is, typename... OptionalObj>
     [[nodiscard]] static auto buildSlotWrapper(Callable&& c, std::index_sequence<Is...>, OptionalObj&&... methodObj) {
-
-        using Traits = CallableTraits<Callable>;
-
         static_assert(std::is_invocable_v<Callable&&, OptionalObj&&...,
                 AnySignalArg::Reference<std::tuple_element_t<Is, TruncatedSignalArgsTuple>>...>,
             "The slot signature is not compatible with the signal.");
-
         return SlotWrapper(
             [=](const SignalArgRefsArray& args) {
                 std::invoke(c, methodObj..., args.get<std::tuple_element_t<Is, TruncatedSignalArgsTuple>>(Is)...);
@@ -513,6 +517,7 @@ public:
             }
         } ByReceiver;
         std::sort(hub.connections_.begin(), hub.connections_.end(), ByReceiver);
+
         // Now let's reset the info about this object which is stored in receiver objects.
         Object* prevDisconnectedReceiver = nullptr;
         for (const auto& c : hub.connections_) {
@@ -710,7 +715,7 @@ public:
     SlotRef& operator=(const SlotRef&) = delete;
 
     static FunctionId id() {
-        return FunctionIdSingleton_<TObjectMethodTag>::get();
+        return FunctionIdSingleton<TObjectMethodTag>::get();
     }
 
     constexpr Obj* object() const {
@@ -764,6 +769,8 @@ public:
     using Obj = TObj;
     using ArgsTuple = std::tuple<TArgs...>;
 
+    // TODO: we could normalize the signal args so that A turns into const A&..
+
     static_assert(isObject<Obj>, "Signals can only be declared in Objects");
     static_assert(!hasRValueReferences<ArgsTuple>,
         "Signal parameters are not allowed to have a rvalue reference type.");
@@ -785,7 +792,7 @@ public:
 
     // XXX doc
     static SignalId id() {
-        return FunctionIdSingleton_<TObjectMethodTag>::get();
+        return FunctionIdSingleton<TObjectMethodTag>::get();
     }
 
     // XXX doc
@@ -882,16 +889,11 @@ protected:
         return SignalHub::disconnect(object_, id(), FreeFuncId(callback));
     }
 
-    template<typename... Args>
-    void emitFwd_(Args&&... args) const {
-        static_assert(SignalArgRefsArray::isMakeableFrom<ArgsTuple, Args&&...>);
-        auto argsArray = SignalArgRefsArray::make<ArgsTuple>(std::forward<Args>(args)...);
+    // Takes signal args by reference.
+    void emit_(SignalArgRef<TArgs>... args) const {
+        static_assert(SignalArgRefsArray::isMakeableFrom<ArgsTuple, SignalArgRef<TArgs>...>);
+        auto argsArray = SignalArgRefsArray::make<ArgsTuple>(args...);
         ::vgc::core::internal::SignalHub::emit_(object(), id(), argsArray);
-    }
-
-    // by-value, allows for conversion
-    void emit_(TArgs... args) const {
-        emitFwd_(static_cast<AnySignalArg::Reference<TArgs>>(args)...);
     }
 
     template<typename SignalArgsTuple>
@@ -967,8 +969,7 @@ SignalTransmitter buildRetransmitter(const SignalRef<TagT, ObjT, ArgsT...>& sign
 
 template<typename TagT, typename ObjT, typename... ArgsT>
 void unboundEmit(const TypeIdentity<ObjT>* obj, TypeIdentity<ArgsT>... args) {
-    SignalRef<TagT, ObjT, ArgsT...>(obj).emitFwd_(
-        static_cast<AnySignalArg::Reference<ArgsT>>(args)...);
+    SignalRef<TagT, ObjT, ArgsT...>(obj).emit_(args...);
 }
 
 } // namespace internal
@@ -983,8 +984,6 @@ void unboundEmit(const TypeIdentity<ObjT>* obj, TypeIdentity<ArgsT>... args) {
 #define VGC_SIG_PBOTH_(x) VGC_SIG_PBOTH2_ x
 #define VGC_SIG_FWD2_(t, n) std::forward<t>(n)
 #define VGC_SIG_FWD_(x) VGC_SIG_FWD2_ x
-#define VGC_SIG_SIGNALARGFWD2_(t, n) static_cast<::vgc::core::internal::AnySignalArg::Reference<t>>(n)
-#define VGC_SIG_SIGNALARGFWD_(x) VGC_SIG_SIGNALARGFWD2_ x
 
 // ... must end with VaEnd
 #define VGC_PARAMS_TYPE_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))
@@ -994,10 +993,6 @@ void unboundEmit(const TypeIdentity<ObjT>* obj, TypeIdentity<ArgsT>... args) {
 #define VGC_PARAMS_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__))
 // ... must end with VaEnd
 #define VGC_PARAMS_FWD_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__))
-// ... must end with VaEnd
-#define VGC_PARAMS_SIGNALARGFWD_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_SIGNALARGFWD_, __VA_ARGS__))
-
-
 
 /// Macro to define VGC Object Signals.
 ///
@@ -1022,12 +1017,7 @@ void unboundEmit(const TypeIdentity<ObjT>* obj, TypeIdentity<ArgsT>... args) {
         public:                                                                                         \
             SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
             void emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                 \
-                emitFwd_(VGC_PARAMS_SIGNALARGFWD_(__VA_ARGS__));                                        \
-            }                                                                                           \
-        protected:                                                                                      \
-            /* for wraps */                                                                             \
-            static void unboundEmit_(VGC_PARAMS_((const MyClass*, obj_), __VA_ARGS__)) {                \
-                SignalRef(obj_).emitFwd_(VGC_PARAMS_SIGNALARGFWD_(__VA_ARGS__));                        \
+                emit_(VGC_PARAMS_NAME_(__VA_ARGS__));                                                   \
             }                                                                                           \
         };                                                                                              \
         return SignalRef(this);                                                                         \
