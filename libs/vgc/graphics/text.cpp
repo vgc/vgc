@@ -16,10 +16,15 @@
 
 #include <vgc/graphics/text.h>
 
+#include <array>
+#include <functional> // std::less, std::greater
+
 #include <hb.h>
 #include <hb-ft.h>
 
 #include <QTextBoundaryFinder>
+
+#include <vgc/core/vec2f.h>
 
 namespace vgc {
 namespace graphics {
@@ -213,6 +218,29 @@ void ShapedGlyph::fill(core::FloatArray& data,
                        const core::Vec2d& origin,
                        float r, float g, float b) const
 {
+    Int oldLength = data.length();
+
+    // Get position data
+    fill(data, origin);
+
+    // Add colors: [x1, y1, x2, y2] -> [x1, x1, r, g, b, x2, x2, r, g, b]
+    Int newLength = data.length();
+    Int numVertices = (newLength - oldLength) / 2;
+    data.resize(oldLength + 5*numVertices);
+    for (Int i = numVertices - 1; i >= 0; --i) {
+        data[oldLength + 5*i]   = data[oldLength + 2*i];
+        data[oldLength + 5*i+1] = data[oldLength + 2*i+1];
+        data[oldLength + 5*i+2] = r;
+        data[oldLength + 5*i+3] = g;
+        data[oldLength + 5*i+4] = b;
+    }
+}
+
+void ShapedGlyph::fill(core::FloatArray& data,
+                       const core::Vec2d& origin) const
+{
+    Int oldLength = data.length();
+
     // Note: we currently disable per-letter hinting (which can be seen as a
     // component of horizontal hinting) because it looked worse, at least with
     // the current implementation. It produced uneven spacing between letters,
@@ -221,19 +249,10 @@ void ShapedGlyph::fill(core::FloatArray& data,
 
     // Triangulate the glyph in local glyph coordinates.
     //
-    // Note: for performance, it would be better to avoid dynamic allocations
-    // by using a unique buffer when calling ShapedText::fill(), rather than
-    // creating a new one for each ShapedGlyph. For now, it probably doesn't
-    // matter much though, since the current implementation of Curves2d::fill()
-    // does a lot of dynamic allocations anyway (for curve resampling and
-    // triangulation). It might be a good idea to pass to all functions a
-    // generic "geometry::Buffer", or perhaps a "core::Allocator".
-    //
     // Another option would be to simply cache the triangulation within the
     // FontGlyph.
     //
-    core::DoubleArray localFill;
-    fontGlyph()->outline().fill(localFill);
+    fontGlyph()->outline().fill(data);
 
     // Apply local-to-global transform and populate the output array.
     //
@@ -242,15 +261,19 @@ void ShapedGlyph::fill(core::FloatArray& data,
     // all these vertical values are always zero, so it doesn't matter, but we
     // need to clarify this.
     //
-    core::Vec2d p = origin + position();
+    core::Vec2d p_ = origin + position();
+    core::Vec2f p(static_cast<float>(p_[0]), static_cast<float>(p_[1]));
     if (hinting) {
         p[0] = std::round(p[0]);
         p[1] = std::round(p[1]);
     }
-    for (Int i = 0; 2*i+1 < localFill.length(); ++i) {
-        float x = static_cast<float>(p[0] + localFill[2*i]);
-        float y = static_cast<float>(p[1] - localFill[2*i+1]); // revert Y axis
-        data.insert(data.end(), {x, y, r, g, b});
+    Int newLength = data.length();
+    Int numVertices = (newLength - oldLength) / 2;
+    for (Int i = 0; i < numVertices; ++i) {
+        float& x = data[oldLength + 2*i];
+        float& y = data[oldLength + 2*i+1];
+        x = p[0] + x;
+        y = p[1] - y; // revert Y axis
     }
 }
 
@@ -323,6 +346,18 @@ core::Vec2d ShapedText::advance() const
     return impl_->advance;
 }
 
+core::Vec2d ShapedText::advance(Int bytePosition) const
+{
+    core::Vec2d res(0, 0);
+    for (const graphics::ShapedGrapheme& grapheme : graphemes()) {
+        if (grapheme.bytePosition() >= bytePosition) {
+            break;
+        }
+        res += grapheme.advance();
+    }
+    return res;
+}
+
 void ShapedText::fill(core::FloatArray& data,
                       const core::Vec2d& origin,
                       float r, float g, float b) const
@@ -340,6 +375,213 @@ void ShapedText::fill(core::FloatArray& data,
     const ShapedGlyphArray& glyphs = impl_->glyphs;
     for (Int i = start; i < end; ++i) {
         glyphs[i].fill(data, origin, r, g, b);
+    }
+}
+
+namespace {
+
+class Triangle2f {
+    std::array<core::Vec2f, 3> d_;
+
+public:
+    Triangle2f(const core::Vec2f& a, const core::Vec2f& b, const core::Vec2f& c) :
+        d_({a, b, c}) {}
+
+    Triangle2f(float ax, float ay, float bx, float by, float cx, float cy) :
+        d_({core::Vec2f(ax, ay), core::Vec2f(bx, by), core::Vec2f(cx, cy)}) {}
+
+    core::Vec2f& operator[](Int i) {
+        return d_[i];
+    }
+
+    const core::Vec2f& operator[](Int i) const {
+        return d_[i];
+    }
+};
+
+using Triangle2fArray = core::Array<Triangle2f>;
+
+void initTriangles(const core::FloatArray& data, Triangle2fArray& out)
+{
+    out.clear();
+    Int numTriangles = data.length() / 6;
+    out.reserve(numTriangles);
+    const float* begin = data.begin();
+    const float* end = begin + 6 * numTriangles;
+    for (const float* f = begin; f < end; f += 6) {
+        out.emplace(out.end(), f[0], f[1], f[2], f[3], f[4], f[5]);
+    }
+}
+
+void addTriangles(
+        core::FloatArray& data,
+        const Triangle2fArray& triangles,
+        float r, float g, float b)
+{
+    data.reserve(triangles.length() * 15);
+    for (const Triangle2f& t : triangles) {
+        data.extend({t[0][0], t[0][1], r, g, b,
+                     t[1][0], t[1][1], r, g, b,
+                     t[2][0], t[2][1], r, g, b});
+    }
+}
+
+// Helper macro to perform pre-clipping:
+// - Assumes that (a, b, c) are sorted relative to the i-th coordinate.
+// - If the triangle is entirely inside or outside the clipping half-plane, the
+//   triangle is either kept or discarded entirely, then the function returns.
+// - Otherwise, assigns (a, b, c) to (A, B, C) for further processing.
+//
+#define PRECLIP_(a, b, c)                                        \
+    if      (cmp(c[i], clip2)) { return; }                       \
+    else if (cmp(clip1, a[i])) { out.append(triangle); return; } \
+    else                       { A = a; B = b; C = c; }
+
+// Clips the given triangle along the given `clip` line. Appends the resulting
+// triangles (either zero, one, or two triangles) to the given out parameter.
+//
+// See documentation of clipTriangles_() for an explanation of the template
+// parameters.
+//
+// The two values `clip1` and `clip2` are used for numerical precision and must
+// specify a narrow band around the `clip` value, satisfying:
+//
+//      LessOrGreater(clip1, clip) and LessOrGreater(clip, clip2)
+//
+// The vertices within this band are considered to be exactly at the clip line
+// and are clipped accordingly.
+//
+template<int i, template<typename> typename LessOrGreater>
+void clipTriangle_(Triangle2fArray& out,
+                   const Triangle2f& triangle,
+                   float clip, float clip1, float clip2)
+{
+    constexpr auto cmp = LessOrGreater<float>();
+
+    // Sort by i-th coordinate and returns early in trivial cases
+    core::Vec2f A, B, C;
+    bool mirrored;
+    const core::Vec2f& a = triangle[0];
+    const core::Vec2f& b = triangle[1];
+    const core::Vec2f& c = triangle[2];
+    if (cmp(a[i], b[i])) {
+        if      (cmp(b[i], c[i])) { PRECLIP_(a, b, c); mirrored = false; }
+        else if (cmp(a[i], c[i])) { PRECLIP_(a, c, b); mirrored = true;  }
+        else                      { PRECLIP_(c, a, b); mirrored = false; }
+    }
+    else {
+        if      (cmp(a[i], c[i])) { PRECLIP_(b, a, c); mirrored = true;  }
+        else if (cmp(b[i], c[i])) { PRECLIP_(b, c, a); mirrored = false; }
+        else                      { PRECLIP_(c, b, a); mirrored = true;  }
+    }
+
+    // If we're still here, then (A[i], B[i], C[i]) are sorted and:
+    //
+    //   A[i] < clip1 < clip < clip2 < C[i]   (where "x < y" means `cmp(x, y)`)
+    //
+    // We just need to check whether B[i] is within [clip1, clip2],
+    // or before this range, or after this range.
+    //
+    if (cmp(B[i], clip1)) {
+        A += (clip-A[i])/(C[i]-A[i]) * (C-A);
+        B += (clip-B[i])/(C[i]-B[i]) * (C-B);
+        if (mirrored) {
+            out.emplace(out.end(), B, A, C);
+        }
+        else {
+            out.emplace(out.end(), A, B, C);
+        }
+    }
+    else if (cmp(B[i], clip2)) {
+        A += (clip-A[i])/(C[i]-A[i]) * (C-A);
+        if (mirrored) {
+            out.emplace(out.end(), B, A, C);
+        }
+        else {
+            out.emplace(out.end(), A, B, C);
+        }
+    }
+    else {
+        core::Vec2f B_ = A + (clip-A[i])/(B[i]-A[i]) * (B-A);
+        core::Vec2f C_ = A + (clip-A[i])/(C[i]-A[i]) * (C-A);
+        if (mirrored) {
+            out.emplace(out.end(), B, B_, C);
+            out.emplace(out.end(), C, B_, C_);
+        }
+        else {
+            out.emplace(out.end(), B_, B, C);
+            out.emplace(out.end(), B_, C, C_);
+        }
+    }
+}
+
+#undef PRECLIP_
+
+// Clips the given triangles along the given `clip` line. The clipping is
+// performed in-place, that is, the given array `triangles` is used both as
+// input and output. The given `buffer` is used for temporary computation: it
+// is emptied at the beginning of this function, and its final value is
+// unspecified.
+//
+// The template parameter `i` represents the chosen coordinate:
+// - 0 for the x-coordinate
+// - 1 for the y-coordinate
+//
+// The template parameter `LessOrGreater` should be either:
+// - std::less: if you'd like to clip (= remove) every vertex whose
+//   i-th coordinate is less than the given clip line
+// - std::greater: if you'd like to clip (= remove) every vertex whose
+//   i-th coordinate is greater than the given clip line
+//
+template<int i, template<typename> typename LessOrGreater>
+void clipTriangles_(Triangle2fArray& data,
+                    Triangle2fArray& buffer,
+                    float clip)
+{
+    constexpr auto cmp = LessOrGreater<float>();
+    constexpr float eps = 1e-6f;
+    constexpr bool isLess = cmp(0, eps);
+    const float clip1 = isLess ? clip - eps : clip + eps;
+    const float clip2 = isLess ? clip + eps : clip - eps;
+
+    buffer.clear();
+    for (const Triangle2f& t : data) {
+        clipTriangle_<i, LessOrGreater>(buffer, t, clip, clip1, clip2);
+    }
+    std::swap(data, buffer);
+}
+
+}
+
+void ShapedText::fill(core::FloatArray& data,
+                      const core::Vec2d& origin,
+                      float r, float g, float b,
+                      float clipLeft, float clipRight,
+                      float clipTop, float clipBottom) const
+{
+    core::FloatArray floatBuffer;
+    Triangle2fArray trianglesBuffer;
+    Triangle2fArray triangles;
+
+    for (const ShapedGlyph& glyph : glyphs()) {
+
+        // TODO: Implement ShapedGlyph::boundingBox() and use it as initial
+        // early clipping: we don't want to call glyph.fill() and/or
+        // clipTriangles_() if not necessary.
+
+        // Get unclipped glyph as triangles
+        floatBuffer.clear();
+        glyph.fill(floatBuffer, origin);
+        initTriangles(floatBuffer, triangles);
+
+        // Clip in all directions
+        clipTriangles_<0, std::less>(triangles, trianglesBuffer, clipLeft);
+        clipTriangles_<1, std::less>(triangles, trianglesBuffer, clipTop);
+        clipTriangles_<0, std::greater>(triangles, trianglesBuffer, clipRight);
+        clipTriangles_<1, std::greater>(triangles, trianglesBuffer, clipBottom);
+
+        // Add triangles
+        addTriangles(data, triangles, r, g, b);
     }
 }
 

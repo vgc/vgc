@@ -236,6 +236,24 @@ public:
               const core::Vec2d& origin,
               float r, float g, float b) const;
 
+    /// Overload of fill that doesn't output color information, that is, the
+    /// output triangles are appended to the given output parameter `data` in
+    /// the following format:
+    ///
+    /// ```
+    /// [x1, y1,     // First vertex of first triangle
+    ///  x2, y2,     // Second vertex of first triangle
+    ///  x3, y3,     // Third vertex of first triangle
+    ///
+    ///  x4, y4,     // First vertex of second triangle
+    ///  x5, y5,     // Second vertex of second triangle
+    ///  x6, y6,     // Third vertex of second triangle
+    ///
+    ///  ...]
+    ///
+    void fill(core::FloatArray& data,
+              const core::Vec2d& origin) const;
+
 private:
     FontGlyph* fontGlyph_;
     core::Vec2d offset_;
@@ -426,6 +444,13 @@ public:
     //
     core::Vec2d advance() const;
 
+    // Returns how much the line advances after drawing all the graphemes until
+    // the given bytePosition.
+    //
+    // \sa bytePosition()
+    //
+    core::Vec2d advance(Int bytePosition) const;
+
     /// Fills this ShapedText at the given origin:
     ///
     /// ```
@@ -471,6 +496,18 @@ public:
               const core::Vec2d& origin,
               float r, float g, float b,
               Int start, Int end) const;
+
+    /// Fills this ShapedText, clipping it to the rectangle given by `clipLeft`,
+    /// `clipRight`, `clipTop`, and `clipBottom`.
+    ///
+    /// See the other overloads of fill() for documentation of the remaining
+    /// arguments.
+    ///
+    void fill(core::FloatArray& data,
+              const core::Vec2d& origin,
+              float r, float g, float b,
+              float clipLeft, float clipRight,
+              float clipTop, float clipBottom) const;
 
     /// Returns the byte position in the original text corresponding to the
     /// grapheme boundary closest to the given mouse position.

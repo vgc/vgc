@@ -129,10 +129,12 @@ void insertText(
         core::FloatArray& a,
         const core::Color& c,
         float x1, float y1, float x2, float y2,
+        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
         const graphics::ShapedText& shapedText,
         const graphics::TextProperties& textProperties,
         const graphics::TextCursor& textCursor,
-        bool hinting)
+        bool hinting,
+        float scrollLeft)
 {
     graphics::FontFace* fontFace = shapedText.fontFace();
     if (shapedText.text().length() > 0 || textCursor.isVisible()) {
@@ -141,7 +143,7 @@ void insertText(
         float b = static_cast<float>(c[2]);
 
         // Vertical centering
-        float height = y2-y1;
+        float height = (y2 - paddingBottom) - (y1 + paddingTop);
         float ascent = static_cast<float>(fontFace->ascent());
         float descent = static_cast<float>(fontFace->descent());
         if (hinting) {
@@ -152,13 +154,13 @@ void insertText(
         float textTop = 0;
         switch (textProperties.verticalAlign()) {
         case graphics::TextVerticalAlign::Top:
-            textTop = y1;
+            textTop = y1 + paddingTop;
             break;
         case graphics::TextVerticalAlign::Middle:
-            textTop = y1 + 0.5f * (height - textHeight);
+            textTop = y1 + paddingTop + 0.5f * (height - textHeight);
             break;
         case graphics::TextVerticalAlign::Bottom:
-            textTop = y1 + (height - textHeight);
+            textTop = y1 + paddingTop + (height - textHeight);
             break;
         }
         if (hinting) {
@@ -168,72 +170,73 @@ void insertText(
 
         // Horizontal centering. Note: we intentionally don't perform hinting
         // on the horizontal direction.
-        const graphics::ShapedGlyphArray& glyphs = shapedText.glyphs();
-        Int start = 0;
-        Int end = glyphs.length();
-        float width = x2-x1;
+        float width = (x2 - paddingRight) - (x1 + paddingLeft);
         float advance = static_cast<float>(shapedText.advance()[0]);
-        std::unique_ptr<graphics::ShapedText> ellipsis;
-        if (advance > width) {
-            ellipsis = std::make_unique<graphics::ShapedText>(fontFace, "...");
-            advance = static_cast<float>(ellipsis->advance()[0]);
-            end = 0;
-            for (const graphics::ShapedGlyph& glyph : glyphs) {
-                float newAdvance = advance + static_cast<float>(glyph.advance()[0]);
-                if (newAdvance > width) {
-                    break;
-                }
-                advance = newAdvance;
-                end += 1;
-            }
-        }
         float textLeft = 0;
         switch (textProperties.horizontalAlign()) {
         case graphics::TextHorizontalAlign::Left:
-            textLeft = x1;
+            textLeft = x1 + paddingLeft;
             break;
         case graphics::TextHorizontalAlign::Center:
-            textLeft = x1 + 0.5f * (width - advance);
+            textLeft = x1 + paddingLeft + 0.5f * (width - advance);
             break;
         case graphics::TextHorizontalAlign::Right:
             // XXX: Should the ellipsis be on the left in this case? See:
             //      https://developer.mozilla.org/en-US/docs/Web/CSS/text-overflow
-            textLeft = x1 + (width - advance);
+            textLeft = x1 + paddingLeft + (width - advance);
             break;
         }
+        textLeft -= scrollLeft;
 
-        // Triangulate text
+        // Triangulate and clip the text.
+        //
+        // Note that we clip the text at the given padding. This is often
+        // appropriate for LineEdits, but not necessarily for TextEdits, where
+        // we may want to clip up to the border of the given text box instead.
+        //
+        constexpr bool clipAtPadding = true;
         core::Vec2d origin(static_cast<double>(textLeft), static_cast<double>(baseline));
-        shapedText.fill(a, origin, r, g, b, start, end);
-        if (ellipsis) {
-            core::Vec2d ellipsisOrigin = origin + core::Vec2d(static_cast<double>(advance), 0) - ellipsis->advance();
-            ellipsis->fill(a, ellipsisOrigin, r, g, b);
-        }
+        float clipLeft   = x1 + (clipAtPadding ? paddingLeft   : 0);
+        float clipRight  = x2 - (clipAtPadding ? paddingRight  : 0);
+        float clipTop    = y1 + (clipAtPadding ? paddingTop    : 0);
+        float clipBottom = y2 - (clipAtPadding ? paddingBottom : 0);
+        shapedText.fill(a, origin, r, g, b, clipLeft, clipRight, clipTop, clipBottom);
 
         // Draw cursor
         if (textCursor.isVisible()) {
             const graphics::ShapedGraphemeArray& graphemes = shapedText.graphemes();
             Int cursorBytePosition = textCursor.bytePosition();
-            float cursorAdvance = 0.0f;
-            Int glyphIndex = 0;
+            float cursorAdvance = - scrollLeft;
             for (const graphics::ShapedGrapheme& grapheme : graphemes) {
                 if (grapheme.bytePosition() >= cursorBytePosition) {
                     break;
                 }
                 cursorAdvance += static_cast<float>(grapheme.advance()[0]);
-                glyphIndex = grapheme.glyphIndex();
             }
-            if (glyphIndex == 0 || glyphIndex < end) {
-                float cursorX = x1 + cursorAdvance;
-                if (hinting) {
-                    // Note: while we don't perform horizontal hinting for letters,
-                    // we do perform horizontal hinting for the cursor.
-                    cursorX = std::round(cursorX);
-                }
+            float cursorX = x1 + paddingLeft + cursorAdvance;
+            float cursorW = 1.0f;
+            if (hinting) {
+                // Note: while we don't perform horizontal hinting for letters,
+                // we do perform horizontal hinting for the cursor.
+                cursorX = std::round(cursorX);
+            }
+            if constexpr (clipAtPadding) {
+                // Ensure that we still draw the cursor when it is just barely
+                // in the clipped padding (typically, when the cursor is at the
+                // end of the text)
+                clipLeft -= cursorW;
+                clipRight += cursorW;
+            }
+            // Clip and draw cursor. Note that whenever the cursor is at least
+            // partially visible in the horizontal direction, we draw it full-legth
+            if (clipLeft <= cursorX && cursorX <= clipRight) {
                 float cursorY = textTop;
-                float cursorW = 1.0f;
                 float cursorH = textHeight;
-                insertRect(a, c, cursorX, cursorY, cursorX + cursorW, cursorY + cursorH);
+                float cursorY1 = std::max(cursorY, clipTop);
+                float cursorY2 = std::min(cursorY + cursorH, clipBottom);
+                if (cursorY2 > cursorY1) {
+                    insertRect(a, c, cursorX, cursorY1, cursorX + cursorW, cursorY2);
+                }
             }
         }
     }
@@ -244,13 +247,17 @@ void insertText(
         core::FloatArray& a,
         const core::Color& c,
         float x1, float y1, float x2, float y2,
+        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
         const std::string& text,
         const graphics::TextProperties& textProperties,
         const graphics::TextCursor& textCursor,
-        bool hinting)
+        bool hinting,
+        float scrollLeft)
 {
     graphics::ShapedText shapedText = shapeText(text);
-    insertText(a, c, x1, y1, x2, y2, shapedText, textProperties, textCursor, hinting);
+    insertText(a, c, x1, y1, x2, y2,
+               paddingLeft, paddingRight, paddingTop, paddingBottom,
+               shapedText, textProperties, textCursor, hinting, scrollLeft);
 }
 
 core::Color getColor(const Widget* widget, core::StringId property)

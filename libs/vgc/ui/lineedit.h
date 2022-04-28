@@ -78,9 +78,11 @@ protected:
 private:
     void updateBytePosition_(const core::Vec2f& mousePosition);
     Int bytePosition_(const core::Vec2f& mousePosition);
+    void updateScroll_(float textWidth);
     std::string text_;
     graphics::ShapedText shapedText_;
     graphics::TextCursor textCursor_;
+    float scrollLeft_ = 0.0f;
     Int trianglesId_;
     bool reload_;
     bool isHovered_;
