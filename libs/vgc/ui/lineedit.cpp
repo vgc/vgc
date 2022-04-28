@@ -34,6 +34,7 @@ LineEdit::LineEdit(const std::string& text) :
     text_(""),
     shapedText_(graphics::fontLibrary()->defaultFace(), text_),
     textCursor_(false, 0),
+    scrollLeft_(0.0f),
     trianglesId_(-1),
     reload_(true),
     isHovered_(false),
@@ -95,9 +96,10 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
         else {
             textCursor_.setVisible(false);
         }
+        updateScroll_(textWidth);
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
-        internal::insertText(a, textColor, paddingLeft, 0, textWidth, height(), shapedText_, textProperties, textCursor_, hinting);
+        internal::insertText(a, textColor, 0, 0, width(), height(), paddingLeft, paddingRight, 0, 0, shapedText_, textProperties, textCursor_, hinting, scrollLeft_);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);
@@ -287,7 +289,31 @@ Int LineEdit::bytePosition_(const core::Vec2f& mousePosition)
     float x = mousePosition[0] - paddingLeft;
     float y = mousePosition[1];
     return shapedText_.bytePosition(
-                core::Vec2d(static_cast<double>(x), static_cast<double>(y)));
+                core::Vec2d(static_cast<double>(x + scrollLeft_), static_cast<double>(y)));
+}
+
+void LineEdit::updateScroll_(float textWidth)
+{
+    float textEndAdvance = shapedText_.advance()[0];
+    float currentTextEndPos = textEndAdvance - scrollLeft_;
+    if (currentTextEndPos < textWidth && scrollLeft_ > 0) {
+        if (textEndAdvance < textWidth) {
+            scrollLeft_ = 0;
+        }
+        else {
+            scrollLeft_ = textEndAdvance - textWidth;
+        }
+    }
+    if (textCursor_.isVisible()) {
+        float cursorAdvance = shapedText_.advance(textCursor_.bytePosition())[0];
+        float currentCursorPos = cursorAdvance - scrollLeft_;
+        if (currentCursorPos < 0) {
+            scrollLeft_ = cursorAdvance;
+        }
+        else if (currentCursorPos > textWidth) {
+            scrollLeft_ = cursorAdvance - textWidth;
+        }
+    }
 }
 
 } // namespace ui

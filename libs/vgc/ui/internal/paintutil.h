@@ -56,19 +56,23 @@ void insertText(
         core::FloatArray& a,
         const core::Color& c,
         float x1, float y1, float x2, float y2,
+        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
         const std::string& text,
         const graphics::TextProperties& textProperties,
         const graphics::TextCursor& textCursor,
-        bool hinting);
+        bool hinting,
+        float scrollLeft = 0.0f);
 
 void insertText(
         core::FloatArray& a,
         const core::Color& c,
         float x1, float y1, float x2, float y2,
+        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
         const graphics::ShapedText& shapedText,
         const graphics::TextProperties& textProperties,
         const graphics::TextCursor& textCursor,
-        bool hinting);
+        bool hinting,
+        float scrollLeft = 0.0f);
 
 core::Color getColor(const Widget* widget, core::StringId property);
 

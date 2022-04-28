@@ -406,11 +406,11 @@ void Curves2d::stroke(core::DoubleArray& data, double width) const
     }
 }
 
-void Curves2d::fill(core::DoubleArray& data) const
-{
-    // Compute adaptive sampling
-    Curves2d samples = sample();
+namespace {
 
+template<typename TFloat>
+void fill_(core::Array<TFloat>& data, const Curves2d& samples)
+{
     // Triangulate using libtess2
     TESSalloc* alloc = nullptr; // Default allocator
     int vertexSize = 2;         // Number of coordinates per vertex (must be 2 or 3)
@@ -428,8 +428,12 @@ void Curves2d::fill(core::DoubleArray& data) const
             core::Vec2d p = c.p();
             coords.append(static_cast<TESSreal>(p[0]));
             coords.append(static_cast<TESSreal>(p[1]));
-            // Note: libtess2 currently uses float, hence the casts.
-            // Would using double-precision be better for this task?
+            // Note: currently, TESSreal == float.
+            // Ideally, we'd like to be able to tesslate using either floats
+            // or doubles. Once question would still be, in the case of
+            // Curves2d::fill(FloatArray& out, ...), should we first cast
+            // the contours to float then tesselate in float, or keep the
+            // contours in double then tesselate in double then cast to float?
         }
         else if (c.type() == CurveCommandType::LineTo) {
             core::Vec2d p = c.p();
@@ -450,6 +454,16 @@ void Curves2d::fill(core::DoubleArray& data) const
         const TESSreal* vertices = tessGetVertices(tess);
         const TESSindex* polygons = tessGetElements(tess);
         const int numPolygons = tessGetElementCount(tess);
+        Int numOutputVertices = 0;
+        for (int i = 0; i < numPolygons; ++i) {
+            const TESSindex* p = &polygons[i*maxPolySize];
+            int polySize = maxPolySize;
+            while (p[polySize-1] == TESS_UNDEF) {
+                --polySize;
+            }
+            numOutputVertices += 6 * (polySize-2);
+        }
+        data.reserve(data.length() + numOutputVertices);
         for (int i = 0; i < numPolygons; ++i) {
             const TESSindex* p = &polygons[i*maxPolySize];
             int polySize = maxPolySize;
@@ -460,13 +474,30 @@ void Curves2d::fill(core::DoubleArray& data) const
                 const TESSreal* v1 = &vertices[p[j]   * vertexSize];
                 const TESSreal* v2 = &vertices[p[j+1] * vertexSize];
                 const TESSreal* v3 = &vertices[p[j+2] * vertexSize];
-                data.insert(data.end(), {v1[0], v1[1], v2[0], v2[1], v3[0], v3[1]});
+                data.append(static_cast<TFloat>(v1[0]));
+                data.append(static_cast<TFloat>(v1[1]));
+                data.append(static_cast<TFloat>(v2[0]));
+                data.append(static_cast<TFloat>(v2[1]));
+                data.append(static_cast<TFloat>(v3[0]));
+                data.append(static_cast<TFloat>(v3[1]));
             }
         }
     }
     else {
         // TODO: error reporting?
     }
+}
+
+} // namespace
+
+void Curves2d::fill(core::DoubleArray& data) const
+{
+    fill_(data, sample());
+}
+
+void Curves2d::fill(core::FloatArray& data) const
+{
+    fill_(data, sample());
 }
 
 } // namespace geometry

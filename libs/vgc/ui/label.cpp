@@ -79,7 +79,7 @@ void Label::onPaintDraw(graphics::Engine* engine)
                     graphics::TextVerticalAlign::Middle);
         graphics::TextCursor textCursor;
         bool hinting = style(strings::pixel_hinting) == strings::normal;
-        internal::insertText(a, textColor, 0, 0, width(), height(), text_, textProperties, textCursor, hinting);
+        internal::insertText(a, textColor, 0, 0, width(), height(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
         engine->loadTriangles(trianglesId_, a.data(), a.length());
     }
     engine->drawTriangles(trianglesId_);

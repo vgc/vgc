@@ -18,6 +18,7 @@
 #define VGC_GEOMETRY_CURVES2D_H
 
 #include <vgc/core/doublearray.h>
+#include <vgc/core/floatarray.h>
 #include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curvecommand.h>
@@ -417,6 +418,10 @@ public:
     //
     void stroke(core::DoubleArray& data, double width) const;
 
+    /// \overload
+    ///
+    void stroke(core::FloatArray& data, double width) const;
+
     /// Fills this Curves2d, that is, triangulate the interior of the curves
     /// interpreted as contours of a polygon, using the non-zero winding rule.
     /// Subcurves which are not closed are ignored. The triangle data is
@@ -437,6 +442,10 @@ public:
     // TODO: add winding rule, anti-aliasing options, auto-closing open subcurves, etc.
     //
     void fill(core::DoubleArray& data) const;
+
+    /// \overload
+    ///
+    void fill(core::FloatArray& data) const;
 
 private:
     friend Curves2dCommandRef;
