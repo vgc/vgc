@@ -306,9 +306,10 @@ public:
 
         auto pySlot = dynamic_cast<PyPySlotRef*>(slot);
         if (pySlot != nullptr) {
+            py::handle self = py::cast(slot->object());
             return core::internal::SignalHub::connect(
                 object(), id(), 
-                cppToPyTransmitterFactory_(slot->object(), pySlot->unboundPyFn(), pySlot->arity()),
+                cppToPyTransmitterFactory_(self, pySlot->unboundPyFn(), pySlot->arity()),
                 slotId);
         }
 
@@ -342,6 +343,8 @@ protected:
 
     using CppToPyTransmitterFactoryFn = std::function<SignalTransmitter(py::handle obj, py::function slot, Int arity)>;
 
+    // XXX we may be able to get rid of the switch !
+
     template<typename... SignalArgs>
     static CppToPyTransmitterFactoryFn buildCppToPyTransmitterFactory() {
         return [](py::handle obj, py::function slot, Int arity) -> SignalTransmitter {
@@ -352,7 +355,7 @@ protected:
             case i: if constexpr (sizeof...(SignalArgs) >= i) {                                     \
                 using TruncatedSignalArgsTuple = SubTuple<0, i, SignalArgsTuple>;                   \
                 return SignalTransmitter(getForwardingToPyFn<TruncatedSignalArgsTuple>(             \
-                    obj, slot, std::make_index_sequence<i>{}));                                    \
+                    obj, slot, std::make_index_sequence<i>{}));                                     \
                 break;                                                                              \
             }                                                                                       \
             [[fallthrough]]

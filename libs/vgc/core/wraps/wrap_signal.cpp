@@ -85,7 +85,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
                 [=](py::args args) -> void {
                     // XXX add check enough args
                     using SignalArgsTuple = std::tuple<py::args>;
-                    auto cArgs = core::internal::SignalArgRefsArray::make<std::tuple<py::args>>(args);
+                    auto cArgs = core::internal::SignalArgRefsArray::make<SignalArgsTuple>(args);
                     core::internal::SignalHub::emit_(this_, newId, cArgs);
                 });
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, arity, emitFn);

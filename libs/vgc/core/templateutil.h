@@ -343,7 +343,7 @@ auto tplFnTable_(std::index_sequence<Is...>) {
 // Experimental
 template<template<Int> typename Case, Int N>
 auto tplFnTable() {
-    return internal::tplSwitchI_<Case>(std::make_index_sequence<N>{});
+    return internal::tplFnTable_<Case>(std::make_index_sequence<N>{});
 };
 
 

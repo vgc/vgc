@@ -352,7 +352,7 @@ public:
             throw IndexError(e.what());
         }
 #else
-        return refs_[i].get<T>();
+        return refs_[i].template get<T>();
 #endif
     }
 
@@ -874,7 +874,7 @@ protected:
 
     template<typename TagT, typename Receiver, typename... Args>
     ConnectionHandle connect_(const SignalRef<TagT, Receiver, Args...>& signalSlotRef) const {
-        SignalTransmitter transmitter = signalSlotRef.buildRetransmitter_<ArgsTuple>();
+        SignalTransmitter transmitter = signalSlotRef.template buildRetransmitter_<ArgsTuple>();
         return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(signalSlotRef.object(), signalSlotRef.id()));
     }
 
@@ -959,12 +959,12 @@ private:
 
 template<typename SignalArgsTuple, typename TagT, typename ObjT, typename... ArgsT>
 void reEmit(const SignalRef<TagT, ObjT, ArgsT...>& signalSlotRef, const SignalArgRefsArray& args) {
-    signalSlotRef.reEmit_<SignalArgsTuple>(args);
+    signalSlotRef.template reEmit_<SignalArgsTuple>(args);
 }
 
 template<typename SignalArgsTuple, typename TagT, typename ObjT, typename... ArgsT>
 SignalTransmitter buildRetransmitter(const SignalRef<TagT, ObjT, ArgsT...>& signalSlotRef) {
-    return signalSlotRef.buildRetransmitter_<SignalArgsTuple>();
+    return signalSlotRef.template buildRetransmitter_<SignalArgsTuple>();
 }
 
 template<typename TagT, typename ObjT, typename... ArgsT>
