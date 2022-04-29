@@ -84,9 +84,8 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
                 // Captures this_ -> must die before object dies.
                 [=](py::args args) -> void {
                     // XXX add check enough args
-                    using SignalArgsTuple = std::tuple<py::args>;
-                    auto cArgs = core::internal::SignalArgRefsArray::make<SignalArgsTuple>(args);
-                    core::internal::SignalHub::emit_(this_, newId, cArgs);
+                    using SignalArgRefsTuple = std::tuple<const py::args&>;
+                    core::internal::SignalHub::emitFwd<SignalArgRefsTuple>(this_, newId, args);
                 });
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, arity, emitFn);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
