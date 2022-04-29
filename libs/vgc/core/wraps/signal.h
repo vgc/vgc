@@ -127,6 +127,18 @@ public:
         PyAbstractSlotRef(obj, id, arity),
         boundEmitPyFn_(boundEmitPyFn) {}
 
+    const py::function& boundEmitPyFn() const {
+        return boundEmitPyFn_;
+    }
+
+    virtual SignalTransmitter buildPyTransmitter() override {
+        return SignalTransmitter(
+            [=](const TransmitArgs& x) {
+                py::args args = x.get<const py::args&>(0);
+                boundEmitPyFn_(args);
+            });
+    }
+
     ConnectionHandle connect(PyAbstractSlotRef* slot) {
         if (arity() < slot->arity()) {
             throw py::value_error("The slot signature cannot be longer than the signal signature.");
@@ -149,16 +161,17 @@ public:
             std::monostate{});
     }
 
-    const py::function& boundEmitPyFn() const {
-        return boundEmitPyFn_;
+    bool disconnect() {
+        core::internal::SignalHub::disconnect(object(), id());
     }
 
-    virtual SignalTransmitter buildPyTransmitter() override {
-        return SignalTransmitter(
-            [=](const TransmitArgs& x) {
-                py::args args = x.get<const py::args&>(0);
-                boundEmitPyFn_(args);
-            });
+    bool disconnect(ConnectionHandle h) {
+        core::internal::SignalHub::disconnect(object(), id(), h);
+    }
+
+    bool disconnect(PyAbstractSlotRef* slotRef) const {
+        core::internal::SignalHub::disconnect(object(), id(),
+            vgc::core::internal::ObjectSlotId(slotRef->object(), slotRef->id()));
     }
 
 protected:
@@ -172,15 +185,15 @@ public:
     using SignalTransmitter = core::internal::SignalTransmitter;
 
 protected:
-    template<typename Obj, typename... Args>
+    template<typename Obj, typename... ArgRefs>
     PyAbstractCppSlotRef(
         const Obj* obj,
         const Id id,
         py::function unboundPyFn,
-        std::tuple<Args...>* sig) :
+        std::tuple<ArgRefs...>* sig) :
 
-        PyAbstractSlotRef(obj, id, sizeof...(Args)),
-        parameters_({std::type_index(typeid(Args))...}),
+        PyAbstractSlotRef(obj, id, sizeof...(ArgRefs)),
+        parameters_({std::type_index(typeid(ArgRefs))...}),
         unboundPyFn_(unboundPyFn) {}
 
 public:
@@ -272,17 +285,6 @@ public:
         return core::internal::buildRetransmitter<ArgRefsTuple, ArgRefsTuple>(object(), id());
     }
 
-    // XXX connects
-
-    /*
-    ConnectionHandle connect(SlotRefT&& slotRef)
-    ConnectionHandle connect(FreeFunctionT&& callback)
-    ConnectionHandle connect(Functor&& funcObj)
-    bool disconnect()
-    bool disconnect(ConnectionHandle h)
-    bool disconnect(SlotRefT&& slotRef)
-    */
-
     ConnectionHandle connect(PyAbstractSlotRef* slot) {
         if (arity() < slot->arity()) {
             throw py::value_error("The slot signature cannot be longer than the signal signature.");
@@ -334,6 +336,19 @@ public:
             std::monostate{});
     }
 
+    bool disconnect() {
+        core::internal::SignalHub::disconnect(object(), id());
+    }
+
+    bool disconnect(ConnectionHandle h) {
+        core::internal::SignalHub::disconnect(object(), id(), h);
+    }
+
+    bool disconnect(PyAbstractSlotRef* slotRef) const {
+        core::internal::SignalHub::disconnect(object(), id(),
+            vgc::core::internal::ObjectSlotId(slotRef->object(), slotRef->id()));
+    }
+
 protected:
     // XXX use internal::unboundEmit
     template<typename... ArgRefs>
@@ -345,46 +360,44 @@ protected:
             });
     }
 
-    using CppToPyTransmitterFactoryFn = std::function<SignalTransmitter(py::handle obj, py::function slot, Int arity)>;
+    using CppToPyTransmitterFactoryFn = std::function<
+        SignalTransmitter(py::handle obj, py::function slot, Int arity)>;
 
-    // XXX we may be able to get rid of the switch !
-
-    template<typename... SignalArgs>
+    template<typename... SignalArgRefs>
     static CppToPyTransmitterFactoryFn buildCppToPyTransmitterFactory() {
         return [](py::handle obj, py::function slot, Int arity) -> SignalTransmitter {
-            using SignalArgsTuple = std::tuple<SignalArgs...>;
-            switch (arity) {
-
-#define VGC_TRANSMITTER_FACTORY_CASE(i)                                                             \
-            case i: if constexpr (sizeof...(SignalArgs) >= i) {                                     \
-                using TruncatedSignalArgsTuple = SubTuple<0, i, SignalArgsTuple>;                   \
-                return SignalTransmitter(getForwardingToPyFn<TruncatedSignalArgsTuple>(             \
-                    obj, slot, std::make_index_sequence<i>{}));                                     \
-                break;                                                                              \
-            }                                                                                       \
-            [[fallthrough]]
-
-            VGC_TRANSMITTER_FACTORY_CASE(0);
-            VGC_TRANSMITTER_FACTORY_CASE(1);
-            VGC_TRANSMITTER_FACTORY_CASE(2);
-            VGC_TRANSMITTER_FACTORY_CASE(3);
-            VGC_TRANSMITTER_FACTORY_CASE(4);
-            VGC_TRANSMITTER_FACTORY_CASE(5);
-            VGC_TRANSMITTER_FACTORY_CASE(6);
-            VGC_TRANSMITTER_FACTORY_CASE(7);
-
-#undef VGC_TRANSMITTER_FACTORY_CASE
-
-            default:
+            using SignalArgRefsTuple = std::tuple<SignalArgRefs...>;
+            const auto& makeWrapperFuncs = getPySlotWrapperFnArray<SignalArgRefsTuple>(
+                std::make_index_sequence<std::tuple_size_v<SignalArgRefsTuple>>{});
+            try {
+                return makeWrapperFuncs[arity](obj, slot);
+            }
+            catch (std::out_of_range& e) {
                 throw core::LogicError("The slot signature cannot be longer than the signal signature.");
-                break;
             }
         };
     }
 
+    template<typename SignalArgRefsTuple>
+    static typename SignalTransmitter::SlotWrapper
+    makePySlotWrapper(py::handle obj, py::function slot) {
+        return makePySlotWrapper_<SignalArgRefsTuple>(
+            obj, slot, std::make_index_sequence<std::tuple_size_v<SignalArgRefsTuple>>{});
+    }
+
+protected:
+    template<typename SignalArgRefsTuple, size_t... Is>
+    static auto getPySlotWrapperFnArray(std::index_sequence<Is...>) {
+        using MakeWrapperFn = decltype(makePySlotWrapper<std::tuple<>>)*;
+        static constexpr std::array<MakeWrapperFn, sizeof...(Is)> makeWrapperFuncs = {
+            makePySlotWrapper<SubTuple<0, Is, SignalArgRefsTuple>>...
+        };
+        return makeWrapperFuncs;
+    }
+
     template<typename SignalArgRefsTuple, size_t... Is>
     static typename SignalTransmitter::SlotWrapper
-    getForwardingToPyFn(py::handle obj, py::function slot, std::index_sequence<Is...>) {
+    makePySlotWrapper_(py::handle obj, py::function slot, std::index_sequence<Is...>) {
         if (obj.is_none()) {
             return {[=](const TransmitArgs& args) {
                 slot(args.get<std::tuple_element_t<Is, SignalArgRefsTuple>>(Is)...);

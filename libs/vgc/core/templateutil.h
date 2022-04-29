@@ -124,6 +124,14 @@ SubTuple_(std::index_sequence<Is...>);
 template<size_t I, size_t N, typename Tuple>
 using SubTuple = decltype(internal::SubTuple_<I, Tuple>(std::make_index_sequence<N>{}));
 
+// Tests if T is among Us.
+template<typename T, typename... Us>
+struct IsAmong : std::disjunction<std::is_same<T, Us>...> {};
+
+template<typename T, typename... Us>
+inline constexpr bool isAmong = IsAmong<T>::value;
+
+
 namespace internal {
 
 template<class F, class ArgsTuple, std::size_t... Is>

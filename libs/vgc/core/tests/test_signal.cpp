@@ -18,6 +18,8 @@
 #include <memory>
 #include <vgc/core/object.h>
 
+using TestSignalObject = vgc::core::internal::TestSignalObject;
+
 TEST(TestSignal, AnySignalArg)
 {
     //using AnySignalArg = vgc::core::internal::AnySignalArg;
@@ -54,10 +56,78 @@ TEST(TestSignal, AnySignalArg)
     //ASSERT_TRUE(( !AnySignalArg::isMakeableFrom< const int&  , const float&&    > ));
 }
 
+TEST(TestSignal, ConnectDisconnect)
+{
+    auto t = TestSignalObject::create();
+    auto t2 = TestSignalObject::create();
+
+    bool vref = false;
+    /*  (1) */ t->signalIntDouble().connect(t->slotIntSlot());
+    /*  (2) */ t->signalIntDouble().connect(t2->slotIntSlot());
+    /*  (3) */ t->signalIntDouble().connect(t2->signalInt());
+    /*  (4) */ t->signalIntDouble().connect(TestSignalObject::staticFuncInt);
+    /*  (5) */ t->signalIntDouble().connect([&](int){ vref = true; });
+    ASSERT_EQ(t->numConnections(), 5);
+
+    /*  (6) */ t->signalInt().connect(TestSignalObject::staticFuncInt);
+    /*  (7) */ t->signalInt().connect(t2->slotIntSlot());
+    /*  (8) */ t->signalInt().connect(t2->slotIntSlot());
+    /*  (9) */ t->signalInt().connect(t2->signalInt());
+    /* (10) */ t->signalInt().connect(t2->signalInt());
+    /* (11) */ t->signalInt().connect(t2->slotNoargsSlot());
+    /* (12) */ t->signalInt().connect(t2->slotUIntSlot());
+    /* (13) */ auto h = t->signalInt().connect(t->slotIntSlot());
+    /* (14) */ t->signalInt().connect([&](int){ vref = true; });
+    /* (15) */ t->signalInt().connect(t->slotIntSlot());
+    int expected = 15;
+    ASSERT_EQ(t->numConnections(), expected);
+
+    // disconnect signal from all slots: (1), (2), (3), (4), (5)
+    ASSERT_TRUE(t->signalIntDouble().disconnect());
+    expected -= 5;
+    ASSERT_EQ(t->numConnections(), expected);
+    ASSERT_FALSE(t->signalIntDouble().disconnect());
+
+    // disconnect signal from free function: (6)
+    ASSERT_TRUE(t->signalInt().disconnect(TestSignalObject::staticFuncInt));
+    expected -= 1;
+    ASSERT_EQ(t->numConnections(), expected);
+    ASSERT_FALSE(t->signalInt().disconnect(TestSignalObject::staticFuncInt));
+
+    // disconnect signal by slot: (7), (8)
+    ASSERT_TRUE(t->signalInt().disconnect(t2->slotIntSlot()));
+    expected -= 2;
+    ASSERT_EQ(t->numConnections(), expected);
+    ASSERT_FALSE(t->signalInt().disconnect(t2->slotIntSlot()));
+
+    // disconnect signal by signal-slot: (9), (10)
+    ASSERT_TRUE(t->signalInt().disconnect(t2->signalInt()));
+    expected -= 2;
+    ASSERT_EQ(t->numConnections(), expected);
+    ASSERT_FALSE(t->signalInt().disconnect(t2->signalInt()));
+
+    // disconnect signal by receiver: (11), (12)
+    ASSERT_TRUE(t->signalInt().disconnect(t2.get()));
+    expected -= 2;
+    ASSERT_EQ(t->numConnections(), expected);
+    ASSERT_FALSE(t->signalInt().disconnect(t2.get()));
+
+    // disconnect signal by handle: (13)
+    ASSERT_TRUE(t->signalInt().disconnect(h));
+    expected -= 1;
+    ASSERT_EQ(t->numConnections(), expected);
+    ASSERT_FALSE(t->signalInt().disconnect(h));
+
+    // disconnect signal from all slots
+    ASSERT_TRUE(t->signalInt().disconnect());
+    ASSERT_EQ(t->numConnections(), 0);
+    ASSERT_FALSE(t->signalInt().disconnect());
+}
+
 TEST(TestSignal, All)
 {
-    auto t = vgc::core::internal::TestSignalObject::create();
-    auto t2 = vgc::core::internal::TestSignalObject::create();
+    auto t = TestSignalObject::create();
+    auto t2 = TestSignalObject::create();
 
     t2->signalIntDoubleBool().connect(t->signalIntDouble());
 
@@ -94,14 +164,21 @@ TEST(TestSignal, All)
         ASSERT_FLOAT_EQ(t->sumDouble, 0);
     }
 
-    t->selfConnectIntDouble();
+    bool fnIntDoubleCalled = false;
+    bool fnUIntCalled = false;
+    t->signalIntDouble().connect(t->slotIntDoubleSlot());
+    t->signalIntDouble().connect(t->slotIntSlot());
+    t->signalIntDouble().connect(t->slotUIntSlot());
+    t->signalIntDouble().connect(TestSignalObject::staticFuncInt);
+    t->signalIntDouble().connect([&](int, double) { fnIntDoubleCalled = true; } );
+    t->signalIntDouble().connect(std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
     t->signalIntDouble().emit(21, 4.);
     // slotIntDouble, slotInt, and slotUInt should be called
     ASSERT_EQ(t->sumInt, 21 * 3);
     ASSERT_FLOAT_EQ(t->sumDouble, 4.);
     ASSERT_TRUE(t->sfnIntCalled);
-    ASSERT_TRUE(t->fnIntDoubleCalled);
-    ASSERT_TRUE(t->fnUIntCalled);
+    ASSERT_TRUE(fnIntDoubleCalled);
+    ASSERT_TRUE(fnUIntCalled);
 }
 
 int main(int argc, char **argv)

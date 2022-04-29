@@ -30,6 +30,7 @@ namespace vgc {
 namespace core {
 
 class Object;
+using ConnectionHandle = internal::ConnectionHandle;
 
 namespace internal {
 
@@ -629,6 +630,32 @@ public:
     ///
     void dumpObjectTree() const;
 
+    /// Disconnects the signal-slot connection represented by \p h.
+    /// Returns true if the connection was present.
+    ///
+    bool disconnect(ConnectionHandle h) const {
+        return internal::SignalHub::disconnect(this, h);
+    }
+
+    /// Removes all the signal-slot connections between this and \p receiver.
+    /// Returns true if the connection was present.
+    ///
+    bool disconnect(const Object* receiver) const {
+        return internal::SignalHub::disconnect(this, receiver);
+    }
+
+    /// Disconnects all signals bound to this object from any slots.
+    ///
+    void disconnect() const {
+        internal::SignalHub::disconnectSignals(this);
+    }
+
+    /// Returns the number of outbound signal-slot connections.
+    ///
+    Int numConnections() const {
+        return internal::SignalHub::numOutboundConnections(this);
+    }
+
 protected:
     // This callback method is invoked when this object has just been
     // destroyed, that is, just after isAlive() has switched from true to
@@ -935,8 +962,8 @@ private:
 namespace internal {
 
 // Required by signal.h
-constexpr SignalHub& SignalHub::access(Object* o) { 
-    return o->signalHub_;
+constexpr SignalHub& SignalHub::access(const Object* o) { 
+    return const_cast<Object*>(o)->signalHub_;
 }
 
 inline void ObjPtrAccess::incref(const Object* obj, Int64 k)
@@ -1261,26 +1288,39 @@ public:
 
     static inline bool sfnIntCalled = false;
     Int slotNoargsCallCount = 0;
-    bool fnIntDoubleCalled = false;
-    bool fnUIntCalled = false;
     int sumInt = 0;
     double sumDouble = 0.;
 
-    void slotNoargs(int a) {
+    void reset() {
+        sfnIntCalled = false;
+        slotNoargsCallCount = 0;
+        sumInt = 0;
+        sumDouble = 0.;
+    }
+
+    void slotNoargs() {
         ++slotNoargsCallCount;
+    }
+
+    void slotUInt(unsigned int a) {
+        this->sumInt += a;
     }
 
     void slotInt(int a) {
         this->sumInt += a;
     }
 
+    void slotConstIntRef(const int& a) {
+        this->sumInt += a;
+    }
+
+    void slotIncIntRef(int& a) {
+        ++a;
+    }
+
     void slotIntDouble(int a, double b) {
         this->sumInt += a;
         this->sumDouble += b;
-    }
-
-    void slotUInt(unsigned int a) {
-        this->sumInt += a;
     }
 
     static inline void staticFuncInt() {
@@ -1289,31 +1329,17 @@ public:
 
     VGC_SIGNAL(signalNoArgs);
     VGC_SIGNAL(signalInt, (int, a));
+    VGC_SIGNAL(signalIntRef, (int&, a));
+    VGC_SIGNAL(signalConstIntRef, (const int&, a));
     VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
     VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
 
     VGC_SLOT(slotNoargs);
-    VGC_SLOT(slotInt);
-    VGC_SLOT(slotIntDouble);
     VGC_SLOT(slotUInt);
-
-    void selfConnectIntDouble() {
-        signalIntDouble().connect(slotIntDoubleSlot());
-        signalIntDouble().connect(slotIntSlot());
-        signalIntDouble().connect(slotUIntSlot());
-        signalIntDouble().connect(&staticFuncInt);
-        signalIntDouble().connect([&](int, double) { fnIntDoubleCalled = true; } );
-        signalIntDouble().connect(std::function<void(unsigned int)>([&](unsigned int) { fnUIntCalled = true; }));
-    }
-
-    void reset() {
-        sfnIntCalled = false;
-        slotNoargsCallCount = 0;
-        fnIntDoubleCalled = false;
-        fnUIntCalled = false;
-        sumInt = 0;
-        sumDouble = 0.;
-    }
+    VGC_SLOT(slotInt);
+    VGC_SLOT(slotConstIntRef);
+    VGC_SLOT(slotIncIntRef);
+    VGC_SLOT(slotIntDouble);
 };
 
 } // namespace vgc::core::internal
