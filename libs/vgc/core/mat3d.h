@@ -256,7 +256,7 @@ public:
     /// has all its elements set to std::numeric_limits<double>::infinity().
     ///
     VGC_CORE_API
-    Mat4d inversed(bool* isInvertible = nullptr, double epsilon = 0) const;
+    Mat3d inversed(bool* isInvertible = nullptr, double epsilon = 0) const;
 
     /// Right-multiplies this matrix by the translation matrix given
     /// by vx and vy, that is:

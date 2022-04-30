@@ -268,7 +268,7 @@ void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
         core::Vec2d viewCoords = event.pos();
-        core::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+        core::Vec2d worldCoords = camera_.viewMatrix().inversed() * viewCoords;
         startCurve_(worldCoords, width_(event));
     }
     else if (event.modifiers() == Qt::AltModifier &&
@@ -305,7 +305,7 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
         core::Vec2d viewCoords = event.pos();
-        core::Vec2d worldCoords = camera_.viewMatrix().inverse() * viewCoords;
+        core::Vec2d worldCoords = camera_.viewMatrix().inversed() * viewCoords;
         continueCurve_(worldCoords, width_(event));
     }
     else if (isPanning_) {
@@ -326,7 +326,7 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
 
         // Set new camera center so that rotation center = mouse pos at press
         core::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
+        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inversed() * pivotViewCoords;
         core::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
@@ -344,7 +344,7 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
 
         // Set new camera center so that zoom center = mouse pos at press
         core::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverse() * pivotViewCoords;
+        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inversed() * pivotViewCoords;
         core::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
