@@ -24,8 +24,7 @@
 #include <vgc/core/api.h>
 #include "vec2.h"
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \class vgc::core::Mat4x
 /// \brief 4x4 matrix using %SCALAR_DESCRIPTION%.
@@ -43,7 +42,9 @@ namespace core {
 /// transformation. For example, you can multiply a Mat4x with a Vec2x, which
 /// returns the same as multiplying the matrix with the 4D vector [x, y, 0, 1].
 ///
-class VGC_CORE_API Mat4x
+// VGC_CORE_API <- Omitted on purpose, otherwise we couldn't define `identity`.
+//                 Instead, we manually export functions defined in the .cpp.
+class Mat4x
 {
 public:
     /// Creates an uninitialized Mat4x.
@@ -52,22 +53,32 @@ public:
 
     /// Creates a Mat4x initialized with the given arguments.
     ///
-    Mat4x(float m11, float m12, float m13, float m14,
-          float m21, float m22, float m23, float m24,
-          float m31, float m32, float m33, float m34,
-          float m41, float m42, float m43, float m44)
+    constexpr Mat4x(float m11, float m12, float m13, float m14,
+                    float m21, float m22, float m23, float m24,
+                    float m31, float m32, float m33, float m34,
+                    float m41, float m42, float m43, float m44) :
+
+        data_{{m11, m21, m31, m41},
+              {m12, m22, m32, m42},
+              {m13, m23, m33, m43},
+              {m14, m24, m34, m44}}
     {
-        setElements(m11, m12, m13, m14,
-                    m21, m22, m23, m24,
-                    m31, m32, m33, m34,
-                    m41, m42, m43, m44);
+
     }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat4x(0), and the identity
     /// matrix is Mat4x(1).
     ///
-    Mat4x(float d) { setToDiagonal(d); }
+    constexpr Mat4x(float d) :
+
+        data_{{d, 0, 0, 0},
+              {0, d, 0, 0},
+              {0, 0, d, 0},
+              {0, 0, 0, d}}
+    {
+
+    }
 
     /// Defines explicitely all the elements of the matrix
     ///
@@ -102,17 +113,17 @@ public:
     ///
     Mat4x& setToIdentity() { return setToDiagonal(1); }
 
-    /// Returns the identity matrix Mat4x(1).
+    /// The identity matrix Mat4x(1).
     ///
-    static Mat4x identity() { return Mat4x(1); }
+    static const Mat4x identity;
 
     /// Accesses the component of the Mat4x the the i-th row and j-th column.
     ///
-    const float& operator()(int i, int j) const { return data_[j][i]; }
+    const float& operator()(Int i, Int j) const { return data_[j][i]; }
 
     /// Mutates the component of the Mat4x the the i-th row and j-th column.
     ///
-    float& operator()(int i, int j) { return data_[j][i]; }
+    float& operator()(Int i, Int j) { return data_[j][i]; }
 
     /// Adds in-place the \p other Mat4x to this Mat4x.
     ///
@@ -275,7 +286,20 @@ public:
 
     /// Returns the inverse of this Mat4x.
     ///
-    Mat4x inverse() const;
+    /// If provided, isInvertible is set to either true or false depending on
+    /// whether the matrix was considered invertible or not.
+    ///
+    /// The matrix is considered non-invertible whenever its determinant is
+    /// less or equal than the provided epsilon. An appropriate epsilon is
+    /// context-dependent, and therefore zero is used as default, which means
+    /// that the matrix is considered non-invertible if and only if its
+    /// determinant is exactly zero (example: the null matrix).
+    ///
+    /// If the matrix is considered non-invertible, then the returned matrix
+    /// has all its elements set to std::numeric_limits<float>::infinity().
+    ///
+    VGC_CORE_API
+    Mat4x inversed(bool* isInvertible = nullptr, float epsilon = 0) const;
 
     /// Right-multiplies this matrix by the translation matrix given
     /// by vx, vy, and vy, that is:
@@ -371,7 +395,8 @@ private:
     float data_[4][4];
 };
 
-} // namespace core
-} // namespace vgc
+inline constexpr Mat4x Mat4x::identity = Mat4x(1);
+
+} // namespace vgc::core
 
 #endif // VGC_CORE_MAT4X_H
