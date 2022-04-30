@@ -24,6 +24,8 @@ vgc_add_library(core
         intarray.h
         io.h
         logging.h
+        mat3d.h
+        mat3f.h
         mat4d.h
         mat4f.h
         object.h
@@ -52,6 +54,8 @@ vgc_add_library(core
         logging.cpp
         mat4d.cpp
         mat4f.cpp
+        mat3d.cpp
+        mat3f.cpp
         object.cpp
         parse.cpp
         paths.cpp

@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -16,107 +16,71 @@
 
 #include <vgc/core/mat4f.h>
 
-// Note: The 4x4 matrix inversion is lifted from __gluInvertMatrixd, which can
-// be found in the file src/libutil/project.c of the MESA implementation of
-// GLU. Please find below the respective copyright notice. We also note that
-// the __gluInvertMatrixd method contains the following additional authorship
-// information: "Contributed by David Moore (See Mesa bug #6748)"
+#include <limits>
 
-/*
- * SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
- * Copyright (C) 1991-2000 Silicon Graphics, Inc. All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice including the dates of first publication and
- * either this permission notice or a reference to
- * http://oss.sgi.com/projects/FreeB/
- * shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * SILICON GRAPHICS, INC. BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
- * OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- * Except as contained in this notice, the name of Silicon Graphics, Inc.
- * shall not be used in advertising or otherwise to promote the sale, use or
- * other dealings in this Software without prior written authorization from
- * Silicon Graphics, Inc.
- */
+namespace vgc::core {
 
-namespace {
-
-bool gluInvertMatrix_(const float* m, float* invOut)
+Mat4f Mat4f::inversed(bool* isInvertible, float epsilon) const
 {
-    float inv[16], det;
-    int i;
+    Mat4f res;
 
-    inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15]
-             + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
-    inv[4] =  -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15]
-             - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
-    inv[8] =   m[4]*m[9]*m[15] - m[4]*m[11]*m[13] - m[8]*m[5]*m[15]
-             + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
-    inv[12] = -m[4]*m[9]*m[14] + m[4]*m[10]*m[13] + m[8]*m[5]*m[14]
-             - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
-    inv[1] =  -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15]
-             - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
-    inv[5] =   m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15]
-             + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
-    inv[9] =  -m[0]*m[9]*m[15] + m[0]*m[11]*m[13] + m[8]*m[1]*m[15]
-             - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
-    inv[13] =  m[0]*m[9]*m[14] - m[0]*m[10]*m[13] - m[8]*m[1]*m[14]
-             + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
-    inv[2] =   m[1]*m[6]*m[15] - m[1]*m[7]*m[14] - m[5]*m[2]*m[15]
-             + m[5]*m[3]*m[14] + m[13]*m[2]*m[7] - m[13]*m[3]*m[6];
-    inv[6] =  -m[0]*m[6]*m[15] + m[0]*m[7]*m[14] + m[4]*m[2]*m[15]
-             - m[4]*m[3]*m[14] - m[12]*m[2]*m[7] + m[12]*m[3]*m[6];
-    inv[10] =  m[0]*m[5]*m[15] - m[0]*m[7]*m[13] - m[4]*m[1]*m[15]
-             + m[4]*m[3]*m[13] + m[12]*m[1]*m[7] - m[12]*m[3]*m[5];
-    inv[14] = -m[0]*m[5]*m[14] + m[0]*m[6]*m[13] + m[4]*m[1]*m[14]
-             - m[4]*m[2]*m[13] - m[12]*m[1]*m[6] + m[12]*m[2]*m[5];
-    inv[3] =  -m[1]*m[6]*m[11] + m[1]*m[7]*m[10] + m[5]*m[2]*m[11]
-             - m[5]*m[3]*m[10] - m[9]*m[2]*m[7] + m[9]*m[3]*m[6];
-    inv[7] =   m[0]*m[6]*m[11] - m[0]*m[7]*m[10] - m[4]*m[2]*m[11]
-             + m[4]*m[3]*m[10] + m[8]*m[2]*m[7] - m[8]*m[3]*m[6];
-    inv[11] = -m[0]*m[5]*m[11] + m[0]*m[7]*m[9] + m[4]*m[1]*m[11]
-             - m[4]*m[3]*m[9] - m[8]*m[1]*m[7] + m[8]*m[3]*m[5];
-    inv[15] =  m[0]*m[5]*m[10] - m[0]*m[6]*m[9] - m[4]*m[1]*m[10]
-             + m[4]*m[2]*m[9] + m[8]*m[1]*m[6] - m[8]*m[2]*m[5];
+    const auto& d = data_;
+    auto& inv = res.data_;
 
-    det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
-    if (det == 0) // XXX:Boris We may want to use epsilon here
-        return false;
+    inv[0][0] =   d[1][1]*d[2][2]*d[3][3] - d[1][1]*d[2][3]*d[3][2] - d[2][1]*d[1][2]*d[3][3]
+                + d[2][1]*d[1][3]*d[3][2] + d[3][1]*d[1][2]*d[2][3] - d[3][1]*d[1][3]*d[2][2];
+    inv[1][0] = - d[1][0]*d[2][2]*d[3][3] + d[1][0]*d[2][3]*d[3][2] + d[2][0]*d[1][2]*d[3][3]
+                - d[2][0]*d[1][3]*d[3][2] - d[3][0]*d[1][2]*d[2][3] + d[3][0]*d[1][3]*d[2][2];
+    inv[2][0] =   d[1][0]*d[2][1]*d[3][3] - d[1][0]*d[2][3]*d[3][1] - d[2][0]*d[1][1]*d[3][3]
+                + d[2][0]*d[1][3]*d[3][1] + d[3][0]*d[1][1]*d[2][3] - d[3][0]*d[1][3]*d[2][1];
+    inv[3][0] = - d[1][0]*d[2][1]*d[3][2] + d[1][0]*d[2][2]*d[3][1] + d[2][0]*d[1][1]*d[3][2]
+                - d[2][0]*d[1][2]*d[3][1] - d[3][0]*d[1][1]*d[2][2] + d[3][0]*d[1][2]*d[2][1];
 
-    det = 1.0f / det;
+    float det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0] + d[0][3]*inv[3][0];
 
-    for (i = 0; i < 16; i++)
-        invOut[i] = inv[i] * det;
+    if (std::abs(det) <= epsilon) {
+        if(isInvertible) {
+            *isInvertible = false;
+        }
+        constexpr float inf = std::numeric_limits<float>::infinity();
+        res.setElements(inf, inf, inf, inf,
+                        inf, inf, inf, inf,
+                        inf, inf, inf, inf,
+                        inf, inf, inf, inf);
+    }
+    else {
+        if(isInvertible) {
+            *isInvertible = true;
+        }
 
-    return true;
+        inv[0][1] = - d[0][1]*d[2][2]*d[3][3] + d[0][1]*d[2][3]*d[3][2] + d[2][1]*d[0][2]*d[3][3]
+                    - d[2][1]*d[0][3]*d[3][2] - d[3][1]*d[0][2]*d[2][3] + d[3][1]*d[0][3]*d[2][2];
+        inv[1][1] =   d[0][0]*d[2][2]*d[3][3] - d[0][0]*d[2][3]*d[3][2] - d[2][0]*d[0][2]*d[3][3]
+                    + d[2][0]*d[0][3]*d[3][2] + d[3][0]*d[0][2]*d[2][3] - d[3][0]*d[0][3]*d[2][2];
+        inv[2][1] = - d[0][0]*d[2][1]*d[3][3] + d[0][0]*d[2][3]*d[3][1] + d[2][0]*d[0][1]*d[3][3]
+                    - d[2][0]*d[0][3]*d[3][1] - d[3][0]*d[0][1]*d[2][3] + d[3][0]*d[0][3]*d[2][1];
+        inv[3][1] =   d[0][0]*d[2][1]*d[3][2] - d[0][0]*d[2][2]*d[3][1] - d[2][0]*d[0][1]*d[3][2]
+                    + d[2][0]*d[0][2]*d[3][1] + d[3][0]*d[0][1]*d[2][2] - d[3][0]*d[0][2]*d[2][1];
+        inv[0][2] =   d[0][1]*d[1][2]*d[3][3] - d[0][1]*d[1][3]*d[3][2] - d[1][1]*d[0][2]*d[3][3]
+                    + d[1][1]*d[0][3]*d[3][2] + d[3][1]*d[0][2]*d[1][3] - d[3][1]*d[0][3]*d[1][2];
+        inv[1][2] = - d[0][0]*d[1][2]*d[3][3] + d[0][0]*d[1][3]*d[3][2] + d[1][0]*d[0][2]*d[3][3]
+                    - d[1][0]*d[0][3]*d[3][2] - d[3][0]*d[0][2]*d[1][3] + d[3][0]*d[0][3]*d[1][2];
+        inv[2][2] =   d[0][0]*d[1][1]*d[3][3] - d[0][0]*d[1][3]*d[3][1] - d[1][0]*d[0][1]*d[3][3]
+                    + d[1][0]*d[0][3]*d[3][1] + d[3][0]*d[0][1]*d[1][3] - d[3][0]*d[0][3]*d[1][1];
+        inv[3][2] = - d[0][0]*d[1][1]*d[3][2] + d[0][0]*d[1][2]*d[3][1] + d[1][0]*d[0][1]*d[3][2]
+                    - d[1][0]*d[0][2]*d[3][1] - d[3][0]*d[0][1]*d[1][2] + d[3][0]*d[0][2]*d[1][1];
+        inv[0][3] = - d[0][1]*d[1][2]*d[2][3] + d[0][1]*d[1][3]*d[2][2] + d[1][1]*d[0][2]*d[2][3]
+                    - d[1][1]*d[0][3]*d[2][2] - d[2][1]*d[0][2]*d[1][3] + d[2][1]*d[0][3]*d[1][2];
+        inv[1][3] =   d[0][0]*d[1][2]*d[2][3] - d[0][0]*d[1][3]*d[2][2] - d[1][0]*d[0][2]*d[2][3]
+                    + d[1][0]*d[0][3]*d[2][2] + d[2][0]*d[0][2]*d[1][3] - d[2][0]*d[0][3]*d[1][2];
+        inv[2][3] = - d[0][0]*d[1][1]*d[2][3] + d[0][0]*d[1][3]*d[2][1] + d[1][0]*d[0][1]*d[2][3]
+                    - d[1][0]*d[0][3]*d[2][1] - d[2][0]*d[0][1]*d[1][3] + d[2][0]*d[0][3]*d[1][1];
+        inv[3][3] =   d[0][0]*d[1][1]*d[2][2] - d[0][0]*d[1][2]*d[2][1] - d[1][0]*d[0][1]*d[2][2]
+                    + d[1][0]*d[0][2]*d[2][1] + d[2][0]*d[0][1]*d[1][2] - d[2][0]*d[0][2]*d[1][1];
+
+        res *= static_cast<float>(1) / det;
+    }
+    return res;
 }
 
-} // namespace
-
-namespace vgc {
-namespace core {
-
-Mat4f Mat4f::inverse() const
-{
-    Mat4f inv;
-    const float* thisData = reinterpret_cast<const float*>(data_);
-    float* invData = reinterpret_cast<float*>(inv.data_);
-    gluInvertMatrix_(thisData, invData);
-    return inv;
-}
-
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

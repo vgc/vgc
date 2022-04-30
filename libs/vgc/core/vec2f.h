@@ -28,8 +28,7 @@
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \class vgc::core::Vec2f
 /// \brief 2D vector using single-precision floating points.
@@ -43,7 +42,9 @@ namespace core {
 /// change in any future version, as this allows to conveniently use this class
 /// for data transfer to the GPU (via OpenGL, Metal, etc.).
 ///
-class VGC_CORE_API Vec2f
+// VGC_CORE_API <- Omitted on purpose.
+//                 If needed, manually export individual functions.
+class Vec2f
 {
 public:
     using value_type = float;
@@ -54,15 +55,15 @@ public:
 
     /// Creates a Vec2f initialized with the given arguments.
     ///
-    Vec2f(float x, float y) : data_{x, y} {}
+    constexpr Vec2f(float x, float y) : data_{x, y} {}
 
     /// Accesses the i-th component of the Vec2f.
     ///
-    const float& operator[](int i) const { return data_[i]; }
+    const float& operator[](Int i) const { return data_[i]; }
 
     /// Mutates the i-th component of the Vec2f.
     ///
-    float& operator[](int i) { return data_[i]; }
+    float& operator[](Int i) { return data_[i]; }
 
     /// Accesses the first component of the Vec2f.
     ///
@@ -599,8 +600,7 @@ void readTo(Vec2f& v, IStream& in)
     skipExpectedCharacter(in, ')');
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
 template <>
