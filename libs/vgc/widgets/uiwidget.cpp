@@ -256,7 +256,7 @@ void UiWidget::paintGL()
 {
     shaderProgram_.bind();
     engine_->setProjectionMatrix(proj_);
-    engine_->setViewMatrix(core::Mat4f::identity());
+    engine_->setViewMatrix(core::Mat4f::identity);
     engine_->clear(core::Color(0.337, 0.345, 0.353));
     widget_->onPaintDraw(engine_.get());
     shaderProgram_.release();
@@ -285,9 +285,9 @@ UiWidgetEngine::UiWidgetEngine() :
     graphics::Engine()
 {
     projectionMatrices_.clear();
-    projectionMatrices_.append(core::Mat4f::identity());
+    projectionMatrices_.append(core::Mat4f::identity);
     viewMatrices_.clear();
-    viewMatrices_.append(core::Mat4f::identity());
+    viewMatrices_.append(core::Mat4f::identity);
 }
 
 /* static */
