@@ -17,6 +17,8 @@
 #ifndef VGC_CORE_INTERNAL_SIGNAL_H
 #define VGC_CORE_INTERNAL_SIGNAL_H
 
+#include <windows.h>
+
 #include <any>
 #include <array>
 #include <functional>
@@ -56,18 +58,18 @@
 ///
 /// Example 1:
 ///
-/// \code
+/// ```cpp
 /// void printInt(int i) { std::cout << i << std::endl; }
 /// int main() {
 ///     vgc::core::Signal<int> s;
 ///     s.connect(&printInt);
 ///     s(42); // print 42
 /// }
-/// \endcode
+/// ```
 ///
 /// Example 2:
 ///
-/// \code
+/// ```cpp
 /// class Model {
 /// int x_;
 /// public:
@@ -89,7 +91,7 @@
 ///     model.changed.connect(std::bind(&View::update, &view));
 ///     model.setX(42); // print 42
 /// }
-/// \endcode
+/// ```
 ///
 
 // XXX ORPHANED COMMENT
@@ -556,10 +558,11 @@ public:
             if (info.numInboundConnections > 0) {
                 Int count = SignalHub::eraseConnections_(info.object, receiver);
 #ifdef VGC_DEBUG
-                if (count != x.numInboundConnections) {
+                if (count != info.numInboundConnections) {
                     throw LogicError("Erased connections count != info.numInboundConnections");
                 }
 #endif
+                info.numInboundConnections = 0;
             }
         }
         hub.listenedObjectInfos_.clear();
@@ -728,10 +731,16 @@ protected:
         return info;
     }
 
+    template <typename T = void>
     static void emit_(Object* sender, SignalId from, const TransmitArgs& args) {
         auto& hub = access(sender);
         for (auto& c : hub.connections_) {
             if (c.from == from) {
+                if (std::holds_alternative<ObjectSlotId>(c.to)) {
+                    OutputDebugStringA(vgc::core::format(
+                        "emit_: (sender={}, sender->refCount={}, from={}, to={})\n",
+                        (void*)sender, sender->refCount(), from,  (void*)std::get<ObjectSlotId>(c.to).first).c_str());
+                }
                 c.transmitter.transmit(args);
             }
         }
@@ -765,21 +774,17 @@ private:
         auto end = hub.connections_.end();
         auto it = std::find_if(hub.connections_.begin(), end, pred);
         auto insertIt = it;
-        if (it != end) {
-            while (++it != end) {
-                if (!pred(*it)) {
-                    *insertIt = std::move(*it);
-                    ++insertIt;
-                }
-                else {
-                    const Connection_& c = *it;
-                    if (std::holds_alternative<ObjectSlotId>(c.to)) {
-                        // Decrement numInboundConnections in the receiver's info about sender.
-                        const auto& bsid = std::get<ObjectSlotId>(c.to);
-                        auto& info = access(bsid.first).getListenedObjectInfoRef_(sender);
-                        info.numInboundConnections--;
-                    }
-                }
+        while (it != end) {
+            const Connection_& c = *it;
+            if (std::holds_alternative<ObjectSlotId>(c.to)) {
+                // Decrement numInboundConnections in the receiver's info about sender.
+                const auto& bsid = std::get<ObjectSlotId>(c.to);
+                auto& info = access(bsid.first).getListenedObjectInfoRef_(sender);
+                info.numInboundConnections--;
+            }
+            while (++it != end && !pred(*it)) {
+                *insertIt = std::move(*it);
+                ++insertIt;
             }
         }
         if (insertIt != end) {
@@ -879,10 +884,6 @@ public:
 
     static constexpr Int arity = std::tuple_size_v<ArgRefsTuple>;
 
-    // friend of all its siblings
-    //template<typename ObjectMethodTagT, typename ObjT, typename ArgRefsTupleT>
-    //friend class SignalRef;
-
 protected:
     SignalRef(const Obj* object) :
         object_(const_cast<Obj*>(object)) {}
@@ -892,23 +893,23 @@ public:
     SignalRef(const SignalRef&) = delete;
     SignalRef& operator=(const SignalRef&) = delete;
 
-    // XXX doc
+    // Returns a unique identifier that represents this signal.
     static SignalId id() {
         return FunctionIdSingleton<TObjectMethodTag>::get();
     }
 
-    // XXX doc
+    // Returns a pointer to the object bound to this signal.
     constexpr Obj* object() const {
         return object_;
     }
 
-    // XXX doc
+    // Connects to a method slot.
     template<typename SlotRefT, Requires<isSlotRef<SlotRefT>> = true>
     ConnectionHandle connect(const SlotRefT& slotRef) const {
         return connect_(slotRef);
     }
 
-    // XXX doc
+    // Connects to a signal-slot.
     template<typename SignalRefT, Requires<isSignalRef<SignalRefT>> = true>
     ConnectionHandle connect(const SignalRefT& signalRef) const {
         using SignalSlotArgRefsTuple = typename RemoveCVRef<SignalRefT>::ArgRefsTuple;
@@ -921,7 +922,7 @@ public:
         return connect_(signalRef);
     }
 
-    // XXX doc
+    // Connects to a free function.
     template<typename FreeFunction, Requires<isFreeFunction<RemoveCVRef<FreeFunction>>> = true>
     ConnectionHandle connect(FreeFunction&& callback) const {
         static_assert(!hasRValueReferences<typename FreeFunctionTraits<RemoveCVRef<FreeFunction>>::ArgsTuple>,
@@ -929,7 +930,9 @@ public:
         return connect_(std::forward<FreeFunction>(callback));
     }
 
-    // XXX doc
+    // Connects to a functor.
+    // Can only be disconnected using the returned handle.
+    //
     template<typename Functor, Requires<isFunctor<RemoveCVRef<Functor>>> = true>
     ConnectionHandle connect(Functor&& funcObj) const {
         static_assert(!hasRValueReferences<typename FunctorTraits<RemoveCVRef<Functor>>::ArgsTuple>,
@@ -938,35 +941,47 @@ public:
         return SignalHub::connect(object_, id(), std::move(transmitter), std::monostate{});
     }
 
-    // XXX doc
+    // Disconnects all slots (method and non-method).
+    // Returns true if a disconnection happened.
+    //
     bool disconnect() const {
         return SignalHub::disconnect(object_, id());
     }
 
-    // XXX doc
+    // Disconnects the slot identified by the given handle `h`.
+    // Returns true if a disconnection happened.
+    //
     bool disconnect(ConnectionHandle h) const {
         return SignalHub::disconnect(object_, id(), h);
     }
 
-    // XXX doc
+    // Disconnects the given slot `slotRef`.
+    // Returns true if a disconnection happened.
+    //
     template<typename SlotRefT, Requires<isSlotRef<RemoveCVRef<SlotRefT>>> = true>
     bool disconnect(SlotRefT&& slotRef) const {
         return SignalHub::disconnect(object_, id(), ObjectSlotId(slotRef.object(), slotRef.id()));
     }
 
-    // XXX doc
+    // Disconnects the given signal-slot `signalRef`.
+    // Returns true if a disconnection happened.
+    //
     template<typename SignalRefT, Requires<isSignalRef<RemoveCVRef<SignalRefT>>> = true>
     bool disconnect(SignalRefT&& signalRef) const {
         return SignalHub::disconnect(object_, id(), ObjectSlotId(signalRef.object(), signalRef.id()));
     }
 
-    // XXX doc
+    // Disconnects the given free function.
+    // Returns true if a disconnection happened.
+    //
     template<typename FreeFunction, Requires<isFreeFunction<RemoveCVRef<FreeFunction>>> = true>
     bool disconnect(FreeFunction&& callback) const {
         return disconnect_(std::forward<FreeFunction>(callback));
     }
 
-    // XXX doc
+    // Disconnects all method slots which are bound to the given `receiver`.
+    // Returns true if a disconnection happened.
+    //
     bool disconnect(Object* receiver) const {
         return SignalHub::disconnect(object_, id(), receiver);
     }
@@ -1034,12 +1049,12 @@ private:
 ///
 /// Example:
 /// 
-/// \code
+/// ```cpp
 /// struct A : vgc::core::Object {
 ///     VGC_SIGNAL(changed);
 ///     VGC_SIGNAL(changedThings, (type0, arg0), (type1, arg1));
 /// };
-/// \endcode
+/// ```
 ///
 #define VGC_SIGNAL(...) VGC_PP_EXPAND(VGC_SIGNAL_(__VA_ARGS__, VaEnd))
 #define VGC_SIGNAL_(name_, ...)                                                                         \
@@ -1070,18 +1085,7 @@ inline constexpr bool isSignal = IsSignal<T>::value;
 
 } // namespace vgc::core::internal
 
-/// Macro to define VGC Object Slots with custom name.
-///
-/// Example:
-/// 
-/// \code
-/// struct A : vgc::core::Object {
-///     void doSomething(type0, type1);
-///     VGC_SLOT(onChangedThings, doSomething); // defines onChangedThings()
-/// };
-/// \endcode
-///
-#define VGC_SLOT_ALIAS(name_, funcName_)                                                                \
+#define VGC_SLOT_ALIAS_(name_, funcName_)                                                               \
     auto name_() {                                                                                      \
         struct Tag {};                                                                                  \
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
@@ -1095,20 +1099,35 @@ inline constexpr bool isSignal = IsSignal<T>::value;
         return SlotRef(this, &MyClass::funcName_);                                                      \
     }
 
+#define VGC_SLOT_DEFAULT_ALIAS_(name_) \
+    VGC_PP_EXPAND(VGC_SLOT_ALIAS_(name_##Slot, name_))
+
+#define VGC_SLOT2_(a, b) VGC_SLOT_ALIAS_(a, b)
+#define VGC_SLOT1_(a) VGC_SLOT_DEFAULT_ALIAS_(a)
+#define VGC_SLOT_DISPATCH_(_1, _2, _3, NAME, ...) NAME
+
 /// Macro to define VGC Object Slots.
-/// The newly defined slot is named after the method postfixed with "Slot".
-///
+/// 
+/// VGC_SLOT(slotName, slotMethod) -> defines slot slotName bound to slotMethod.
+/// VGC_SLOT(slotMethod) -> defines slot slotMethodSlot bound to slotMethod.
+/// 
 /// Example:
 /// 
-/// \code
+/// ```cpp
 /// struct A : vgc::core::Object {
-///     void onChangedThings(type0, type1);
-///     VGC_SLOT(onChangedThings); // defines onChangedThingsSlot()
+///     void onFooChanged(int i);
+/// 
+///     VGC_SLOT(onFooChanged);                     // defines onFooChangedSlot()
+///     VGC_SLOT(onBarChanged_);                    // defines onBarChanged_Slot()
+///     VGC_SLOT(onBarChangedSlot, onBarChanged_);  // defines onBarChangedSlot()
+/// 
+/// private:
+///     void onBarChanged_(double d);
 /// };
-/// \endcode
+/// ```
 ///
-#define VGC_SLOT(name_) \
-    VGC_PP_EXPAND(VGC_SLOT_ALIAS(name_##Slot, name_))
+#define VGC_SLOT(...) VGC_PP_EXPAND(VGC_SLOT_DISPATCH_(__VA_ARGS__, NOOVERLOAD, VGC_SLOT2_, VGC_SLOT1_)(__VA_ARGS__))
+
 
 namespace vgc::core::internal {
 

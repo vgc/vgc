@@ -108,6 +108,7 @@ public:
         return *this;
     }
 
+    // XXX prevent signatures with references to python immutables (int..)
     template<typename SignalT, typename... Extra, std::enable_if_t<core::internal::isSignal<SignalT>, int> = 0>
     ObjClass& def_signal(const char* name, SignalT signal, const Extra&... extra) {
         static_assert(std::is_invocable_v<SignalT, const ObjT*>,
@@ -116,6 +117,7 @@ public:
         return *this;
     }
 
+    // XXX prevent signatures with references to python immutables (int..)
     template<typename SlotT, typename... Extra, std::enable_if_t<core::internal::isSlot<SlotT>, int> = 0>
     ObjClass& def_slot(const char* name, SlotT slot, const Extra&... extra) {
         static_assert(std::is_invocable_v<SlotT, ObjT*>,
@@ -133,7 +135,7 @@ protected:
                 ObjT* this_ = self.cast<ObjT*>();
                 PyCppSignalRef* sref = new PyCppSignalRefImpl<SignalRefT>((this_->*mfn)());
                 py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
-                py::setattr(self, sname.c_str(), pysref); // caching
+                self.attr("__dict__")[sname.c_str()] = pysref; // caching
                 return sref; // pybind will find the object in registered_instances
             },
             py::keep_alive<0, 1>());
@@ -148,7 +150,7 @@ protected:
                 ObjT* this_ = self.cast<ObjT*>();
                 PyCppSlotRef* sref = new PyCppSlotRefImpl<typename SlotRefT::SlotMethod>((this_->*mfn)());
                 py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
-                py::setattr(self, sname.c_str(), pysref); // caching
+                self.attr("__dict__")[sname.c_str()] = pysref; // caching
                 return sref; // pybind will find the object in registered_instances
             },
             py::keep_alive<0, 1>());

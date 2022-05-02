@@ -1276,51 +1276,55 @@ public:
     }
 };
 
-VGC_DECLARE_OBJECT(TestSignalObject);
+VGC_DECLARE_OBJECT(SignalTestObject);
 
-class TestSignalObject : public Object {
-    VGC_OBJECT(TestSignalObject, Object)
+class SignalTestObject : public Object {
+    VGC_OBJECT(SignalTestObject, Object)
 
 public:
-    static TestSignalObjectPtr create() {
-        return new TestSignalObject();
+    static SignalTestObjectPtr create() {
+        return new SignalTestObject();
     }
 
     static inline bool sfnIntCalled = false;
     Int slotNoargsCallCount = 0;
     int sumInt = 0;
-    double sumDouble = 0.;
+    float sumFloat = 0.;
 
     void reset() {
         sfnIntCalled = false;
         slotNoargsCallCount = 0;
         sumInt = 0;
-        sumDouble = 0.;
+        sumFloat = 0.;
     }
 
-    void slotNoargs() {
+    void slotNoArgs_() {
         ++slotNoargsCallCount;
     }
 
-    void slotUInt(unsigned int a) {
+    void slotFloat_(float a) {
+        this->sumFloat += a;
+    }
+
+    void slotUInt_(unsigned int a) {
         this->sumInt += a;
     }
 
-    void slotInt(int a) {
+    void slotInt_(int a) {
         this->sumInt += a;
     }
 
-    void slotConstIntRef(const int& a) {
+    void slotConstIntRef_(const int& a) {
         this->sumInt += a;
     }
 
-    void slotIncIntRef(int& a) {
+    void slotIncIntRef_(int& a) {
         ++a;
     }
 
-    void slotIntDouble(int a, double b) {
+    void slotIntFloat_(int a, float b) {
         this->sumInt += a;
-        this->sumDouble += b;
+        this->sumFloat += b;
     }
 
     static inline void staticFuncInt() {
@@ -1331,15 +1335,16 @@ public:
     VGC_SIGNAL(signalInt, (int, a));
     VGC_SIGNAL(signalIntRef, (int&, a));
     VGC_SIGNAL(signalConstIntRef, (const int&, a));
-    VGC_SIGNAL(signalIntDouble, (int, a), (double, b));
-    VGC_SIGNAL(signalIntDoubleBool, (int, a), (double, b), (bool, c));
+    VGC_SIGNAL(signalIntFloat, (int, a), (float, b));
+    VGC_SIGNAL(signalIntFloatBool, (int, a), (float, b), (bool, c));
 
-    VGC_SLOT(slotNoargs);
-    VGC_SLOT(slotUInt);
-    VGC_SLOT(slotInt);
-    VGC_SLOT(slotConstIntRef);
-    VGC_SLOT(slotIncIntRef);
-    VGC_SLOT(slotIntDouble);
+    VGC_SLOT(slotNoArgs, slotNoArgs_);
+    VGC_SLOT(slotFloat, slotFloat_);
+    VGC_SLOT(slotUInt, slotUInt_);
+    VGC_SLOT(slotInt, slotInt_);
+    VGC_SLOT(slotConstIntRef, slotConstIntRef_);
+    VGC_SLOT(slotIncIntRef, slotIncIntRef_);
+    VGC_SLOT(slotIntFloat, slotIntFloat_);
 };
 
 } // namespace vgc::core::internal

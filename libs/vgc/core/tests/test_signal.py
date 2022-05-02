@@ -22,17 +22,16 @@ import inspect
 from pathlib import Path
 
 from vgc.core import (
-    signal, slot, Object as VGCObject, ConstructibleTestObject # , CppTestSignalObject
+    signal, slot, Object as VGCObject, ConstructibleTestObject, CppSignalTestObject
 )
 
-
 # Has similar signals and slots as the c++ test object.
-class TestSignalObject(ConstructibleTestObject):
+class PySignalTestObject(ConstructibleTestObject):
 
     def __init__(self):
-        super(TestSignalObject, self).__init__()
-        self.sumA = 0
-        self.sumB = 0
+        super(PySignalTestObject, self).__init__()
+        self.sumInt = 0
+        self.sumFloat = 0
         self.slotNoArgsCallCount = 0
 
     @signal
@@ -57,44 +56,120 @@ class TestSignalObject(ConstructibleTestObject):
 
     @slot
     def slotInt(self, a : int):
-        self.sumA += a
+        self.sumInt += a
 
     @slot
     def slotIntFloat(self, a : int, b : float):
-        self.sumA += a
-        self.sumB += b
+        self.sumInt += a
+        self.sumFloat += b
 
     @slot
-    def slotFloat(self,a : float):
-        self.sumA += a
+    def slotFloat(self, a : float):
+        self.sumFloat += a
 
 
-class TestSignal(unittest.TestCase):
+def testSignalToSlot(test, o1, o2):
+    o2.sumInt = 0
+    o1.signalInt.connect(o2.slotInt)
+    o1.signalInt.connect(o2.slotInt)
+    o1.signalInt.emit(21)
+    test.assertEqual(o2.sumInt, 42)
 
-    def testGetters(self):
-        o = TestSignalObject()
-        self.assertTrue(o.signalInt.object == o)
-        self.assertTrue(o.slotIntFloat.object == o)
 
-    def testSlots(self):
-        o = TestSignalObject()
-        p = (42, 21.)
-        o.slotIntFloat(*p)
-        self.assertTrue((o.sumA, o.sumB) == p)
+def testSignalToSignalToSlot(test, o1, o2, o3):
+    o3.sumInt = 0
+    o1.signalInt.connect(o2.signalInt)
+    o2.signalInt.connect(o3.slotInt)
+    o1.signalInt.emit(42)
+    test.assertEqual(o3.sumInt, 42)
 
-    def testConnectPyToPy(self):
-        o1 = TestSignalObject()
-        o2 = TestSignalObject()
-        o1.signalIntFloat.connect(o2.slotNoArgs)
-        o1.signalIntFloat.connect(o2.slotInt)
-        o1.signalIntFloat.connect(o2.slotIntFloat)
-        o1.signalIntFloat.connect(o2.slotFloat)
-        o1.signalIntFloat.emit(1, 1.)
-        self.assertTrue(o2.slotNoArgsCallCount == 1)
-        self.assertTrue(o2.sumA == 3)
-        self.assertTrue(o2.sumB == 1.)
+
+class TestCppSignal(unittest.TestCase):
+
+    def testSlot(self):
+        o1 = CppSignalTestObject()
+        o1.slotInt(42)
+        self.assertEqual(o1.sumInt, 42)
+
+    def testSignalToSlot(self):
+        o1 = CppSignalTestObject()
+        o2 = CppSignalTestObject()
+        testSignalToSlot(self, o1, o2)
+
+    def testSignalToSignalToSlot(self):
+        o1 = CppSignalTestObject()
+        o2 = CppSignalTestObject()
+        o3 = CppSignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
+
+
+class TestPySignal(unittest.TestCase):
+
+    def testRefs(self):
+        o1 = PySignalTestObject()
+        o2 = PySignalTestObject()
+        self.assertNotEqual(id(o1.slotInt), id(o2.slotInt))
+        self.assertNotEqual(id(o1.signalInt), id(o2.signalInt))
+        self.assertNotEqual(id(o1.slotInt.object), id(o2.slotInt.object))
+        self.assertNotEqual(id(o1.signalInt.object), id(o2.signalInt.object))
+
+    def testSlot(self):
+        o1 = PySignalTestObject()
+        o1.slotInt(42)
+        self.assertEqual(o1.sumInt, 42)
+
+    def testSignalToSlot(self):
+        o1 = PySignalTestObject()
+        o2 = PySignalTestObject()
+        testSignalToSlot(self, o1, o2)
+
+    def testSignalToSignalToSlot(self):
+        o1 = PySignalTestObject()
+        o2 = PySignalTestObject()
+        o3 = PySignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
+
+    def testSignalToFunc(self):
+        o1 = PySignalTestObject()
+        a = [0]
+        def foo(b):
+            a[0] += b
+        o1.signalInt.connect(foo)
+        o1.signalInt.emit(21)
+        o1.signalInt.emit(21)
+        self.assertEqual(a[0], 42)
+
+    def testIncompatibilityErrors(self):
+        o1 = PySignalTestObject()
+        o2 = CppSignalTestObject()
+        with self.assertRaises(ValueError) as context:
+            o1.signalNoArgs.connect(o1.slotInt)
         with self.assertRaises(ValueError) as context:
             o1.signalNoArgs.connect(o2.slotInt)
+        with self.assertRaises(ValueError) as context:
+            o2.signalNoArgs.connect(o1.slotInt)
+        with self.assertRaises(ValueError) as context:
+            o2.signalNoArgs.connect(o2.slotInt)
+
+class TestCrossLanguageSignal(unittest.TestCase):
+
+    def testSignalToSlot(self):
+        o1 = CppSignalTestObject()
+        o2 = PySignalTestObject()
+        testSignalToSlot(self, o1, o2)
+        testSignalToSlot(self, o2, o1)
+
+    def testCppSignalToPySignalToSlot(self):
+        o1 = CppSignalTestObject()
+        o2 = PySignalTestObject()
+        o3 = CppSignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
+
+    def testPySignalToCppSignalToSlot(self):
+        o1 = PySignalTestObject()
+        o2 = CppSignalTestObject()
+        o3 = CppSignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
 
 
 if __name__ == '__main__':
