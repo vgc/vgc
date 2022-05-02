@@ -20,12 +20,9 @@
 #include <iterator>
 #include <type_traits>
 
-namespace vgc::core::internal {
+#include <vgc/core/templateutil.h>
 
-// Helper to create SFINAE types.
-// TODO: move to core/templateutil.h
-template<bool B>
-using Requires = std::enable_if_t<B, bool>;
+namespace vgc::core::internal {
 
 // Checks whether the given template argument is a signed integer.
 

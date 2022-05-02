@@ -1167,6 +1167,20 @@ public:
         checkInRangeForInsert_(i);
         emplaceAt_(i, std::forward<Args>(args)...);
     }
+    
+    /// Construct-prepends a value with arguments \p args, at the beginning of this Array.
+    ///
+    template<typename... Args>
+    reference emplaceFirst(Args&&... args) {
+        return *emplaceAt_(0, std::forward<Args>(args)...);
+    }
+
+    /// Construct-appends a value with arguments \p args, at the end of this Array.
+    ///
+    template<typename... Args>
+    reference emplaceLast(Args&&... args) {
+        return *emplaceAt_(length_, std::forward<Args>(args)...);
+    }
 
     /// Removes the element referred to by the iterator \p it. Returns an
     /// iterator to the element following the removed element, or end() if the
@@ -1439,13 +1453,6 @@ public:
     ///
     void preextend(std::initializer_list<T> ilist) {
         insertRange_(0, ilist.begin(), ilist.end());
-    }
-
-    /// Construct-appends a value with arguments \p args, at the end of this Array.
-    ///
-    template<typename... Args>
-    reference emplaceLast(Args&&... args) {
-        return *emplaceAt_(length_, std::forward<Args>(args)...);
     }
 
     /// Removes the first element of this Array, shifting all existing elements
