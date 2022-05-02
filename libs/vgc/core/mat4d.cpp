@@ -20,7 +20,7 @@
 
 namespace vgc::core {
 
-Mat4d Mat4d::inversed(bool* isInvertible, double epsilon) const
+Mat4d Mat4d::inverted(bool* isInvertible, double epsilon) const
 {
     Mat4d res;
 
@@ -39,7 +39,7 @@ Mat4d Mat4d::inversed(bool* isInvertible, double epsilon) const
     double det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0] + d[0][3]*inv[3][0];
 
     if (std::abs(det) <= epsilon) {
-        if(isInvertible) {
+        if (isInvertible) {
             *isInvertible = false;
         }
         constexpr double inf = std::numeric_limits<double>::infinity();
@@ -49,7 +49,7 @@ Mat4d Mat4d::inversed(bool* isInvertible, double epsilon) const
                         inf, inf, inf, inf);
     }
     else {
-        if(isInvertible) {
+        if (isInvertible) {
             *isInvertible = true;
         }
 

@@ -12,6 +12,7 @@ vgc_test_library(core
         test_arrays.py
         test_color.py
         test_format.py
+        test_mat.py
         test_object.py
         test_parse.py
         test_paths.py

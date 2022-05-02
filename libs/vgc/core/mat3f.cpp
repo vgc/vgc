@@ -20,7 +20,7 @@
 
 namespace vgc::core {
 
-Mat3f Mat3f::inversed(bool* isInvertible, float epsilon) const
+Mat3f Mat3f::inverted(bool* isInvertible, float epsilon) const
 {
     Mat3f res;
 
@@ -34,7 +34,7 @@ Mat3f Mat3f::inversed(bool* isInvertible, float epsilon) const
     float det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0];
 
     if (std::abs(det) <= epsilon) {
-        if(isInvertible) {
+        if (isInvertible) {
             *isInvertible = false;
         }
         constexpr float inf = std::numeric_limits<float>::infinity();
@@ -43,7 +43,7 @@ Mat3f Mat3f::inversed(bool* isInvertible, float epsilon) const
                         inf, inf, inf);
     }
     else {
-        if(isInvertible) {
+        if (isInvertible) {
             *isInvertible = true;
         }
 

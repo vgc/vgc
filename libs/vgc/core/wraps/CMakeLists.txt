@@ -9,6 +9,7 @@ vgc_wrap_library(core
     wrap_exceptions.cpp
     wrap_format.cpp
     wrap_io.cpp
+    wrap_mat.cpp
     wrap_object.cpp
     wrap_parse.cpp
     wrap_paths.cpp
