@@ -37,72 +37,67 @@
 #include <vgc/core/stringid.h>
 #include <vgc/core/templateutil.h>
 
-// XXX rewrite
-/// \class Signal
 /// \brief Implements a signal-slot notification mechanism.
 ///
-/// This is VGC's implementation of a Qt-style signal-slot notification system,
-/// similar to the excellent Boost::signals2 library. It allows a "sender" to
-/// notify a "listener" that something happened to the sender.
+/// This is VGC's implementation oof a Qt-style signal-slot notification system.
+/// It allows a "sender" to notify a "listener" that something happened in the sender.
 ///
 /// Typically, this is used in model-view paradigms, where views must be
 /// notified when models change in order to redraw them.
 ///
-/// For now, the VGC signal-slot mechanism is neither thread-safe nor allows
-/// disconnections, unlike Boost::signals2. The reason VGC is not using
-/// Boost::signals2 is two-folds: first, we desired to avoid the dependency to
+/// For now, the VGC signal-slot mechanism is not thread-safe.
+/// The reason VGC is not using Boost::signals2 is two-folds: first, we desired to avoid the dependency to
 /// Boost, and secondly, we desire to fine-tune this mechanism to the VGC
 /// object model, and make it play nice with Python.
 ///
+/// Slots with less arguments than the signal they are connected
+/// to are supported. The tail arguments are simply omitted.
+/// 
 /// Example 1:
 ///
 /// ```cpp
 /// void printInt(int i) { std::cout << i << std::endl; }
-/// int main() {
-///     vgc::core::Signal<int> s;
-///     s.connect(&printInt);
-///     s(42); // print 42
+/// class MyObject : vgc::core::Object {
+/// public:
+///     MyObject() {
+///         valueChanged().connect(printInt);
+///         valueChanged().emit(42); // prints 42
+///     }
+/// 
+///     VGC_SIGNAL(valueChanged, (int, a));
 /// }
 /// ```
 ///
 /// Example 2:
 ///
 /// ```cpp
-/// class Model {
+/// class Model : vgc::core::Object {
 /// int x_;
 /// public:
-///     vgc::core::Signal<> changed;
 ///     int x() const { return x_; }
-///     void setX(int x) { x_ = x; changed(); }
+///     void setX(int x) { x_ = x; changed().emit(); }
+/// 
+///     VGC_SIGNAL(changed);
 /// };
 ///
-/// class View {
+/// class View : vgc::core::Object {
 /// const Model* m_;
 /// public:
 ///     View(const Model* m) : m_(m) {}
 ///     void update() { std::cout << m_->x() << std::endl; }
+/// 
+///     VGC_SLOT(onModelChanged, update);
 /// };
 ///
 /// int main() {
 ///     Model model;
 ///     View view(&model);
-///     model.changed.connect(std::bind(&View::update, &view));
-///     model.setX(42); // print 42
+///     model.changed().connect(view.onModelChanged());
+///     model.setX(42); // prints 42
 /// }
 /// ```
 ///
 
-// XXX ORPHANED COMMENT
-// This is a polymorphic adapter class for slots and free functions.
-// It is used to store the handlers of all signals of a given object
-// in a single container.
-// Moreover it provides a common handler signature per signal.
-// Handlers with less arguments than the signal they are connected
-// to are supported. The tail arguments are simply omitted.
-// For instance, a handler adapting slot(double a) to
-// signal(int a, double b) would be equivalent to this:
-// handler(int&& a, double&& b) { slot(std::forward<int>(a)); }
-//
 
 // Configuration
 namespace vgc::core::internal {
@@ -386,7 +381,7 @@ private:
 
 using TransmitArgs = TransmitArgs_<maxSignalArgs>;
 
-
+// Wraps slots under a common signature.
 class SignalTransmitter {
 public:
     using SlotWrapperSig = void(const TransmitArgs&);
@@ -501,8 +496,11 @@ template<typename SignalArgRefsTuple, typename SignalSlotArgRefsTuple>
 inline constexpr bool isCompatibleReEmit = IsCompatibleReEmit<SignalArgRefsTuple, SignalSlotArgRefsTuple>::value;
 
 
-// XXX doc
 // Its member functions are static because we have to operate from the context of its owner Object.
+//
+// It is used to store the handlers of all signals of a given object
+// in a single container.
+//
 class SignalHub {
 private:
     struct Connection_ {
