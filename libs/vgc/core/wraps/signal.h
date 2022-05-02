@@ -149,11 +149,6 @@ public:
             throw py::value_error("The slot signature cannot be longer than the signal signature.");
         }
         core::internal::ObjectSlotId slotId(slot->object(), slot->id());
-
-        OutputDebugStringA(vgc::core::format(
-            "PyPySignalRef::connect: (object()={}, object()->refCount={}, signalId={}, slotObj={}, slotId={})\n",
-            (void*)object(), object()->refCount(), id(), (void*)slot->object(), slot->id()).c_str());
-
         return core::internal::SignalHub::connect(
             object(), id(), slot->buildPyTransmitter(), slotId);
     }

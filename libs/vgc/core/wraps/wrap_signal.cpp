@@ -14,8 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <windows.h>
-
 #include <pybind11/functional.h>
 
 #include <vgc/core/wraps/common.h>
@@ -87,9 +85,6 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
                 [=](py::args args) -> void {
                     // XXX add check enough args
                     using SignalArgRefsTuple = std::tuple<const py::args&>;
-                    OutputDebugStringA(vgc::core::format(
-                        "py(boundEmitFn): (this_={}, this_->refCount={}, signalId={})\n",
-                        (void*)this_, this_->refCount(), newId).c_str());
                     core::internal::SignalHub::emitFwd<SignalArgRefsTuple>(this_, newId, args);
                 });
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, arity, emitFn);

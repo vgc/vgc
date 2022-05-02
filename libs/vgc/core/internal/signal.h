@@ -17,8 +17,6 @@
 #ifndef VGC_CORE_INTERNAL_SIGNAL_H
 #define VGC_CORE_INTERNAL_SIGNAL_H
 
-#include <windows.h>
-
 #include <any>
 #include <array>
 #include <functional>
@@ -736,11 +734,6 @@ protected:
         auto& hub = access(sender);
         for (auto& c : hub.connections_) {
             if (c.from == from) {
-                if (std::holds_alternative<ObjectSlotId>(c.to)) {
-                    OutputDebugStringA(vgc::core::format(
-                        "emit_: (sender={}, sender->refCount={}, from={}, to={})\n",
-                        (void*)sender, sender->refCount(), from,  (void*)std::get<ObjectSlotId>(c.to).first).c_str());
-                }
                 c.transmitter.transmit(args);
             }
         }
