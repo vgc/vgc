@@ -58,7 +58,7 @@ public:
     ///
     /// \sa trigger()
     ///
-    const core::Signal<> triggered;
+    VGC_SIGNAL(triggered);
 
     /// Returns the shortcut associated with this action. This can be an empty
     /// shortcut if this action has no associated shortcut.

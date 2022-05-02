@@ -33,13 +33,21 @@
 namespace vgc {
 namespace core {
 
+VGC_DECLARE_OBJECT(PythonInterpreter);
+
 /// \class vgc::core::PythonInterpreter
 /// \brief A thin C++ wrapper around the CPython interpreter.
 ///
-class VGC_CORE_API PythonInterpreter
-{
+class VGC_CORE_API PythonInterpreter : public Object {
+private:
+    VGC_OBJECT(PythonInterpreter, Object)
+
+protected:
+    PythonInterpreter(const std::string& programName,
+                      const std::string& pythonHome);
+
 public:
-    /// Constructs a PythonInterpreter, with the following settings:
+    /// Creates a PythonInterpreter, with the following settings:
     ///
     /// - program name is set as \p programName.
     ///
@@ -61,12 +69,9 @@ public:
     /// the interpreter early in your main() functions, then pass it around to
     /// objects that need it.
     ///
-    PythonInterpreter(const std::string& programName,
-                      const std::string& pythonHome);
-
-    /// Destructs the PythonInterpreter.
-    ///
-    ~PythonInterpreter();
+    static PythonInterpreterPtr create(
+        const std::string& programName,
+        const std::string& pythonHome);
 
     /// Interprets the given string.
     ///
@@ -86,11 +91,11 @@ public:
     /// This signal is emitted when the interpreter is about to run some Python
     /// code.
     ///
-    const core::Signal<> runStarted;
+    VGC_SIGNAL(runStarted);
 
     /// This signal is emitted when the interpreter has finished to run.
     ///
-    const core::Signal<> runFinished;
+    VGC_SIGNAL(runFinished);
 
 private:
     // Note: the scoped interpreter must be constructed first, and destructed
@@ -110,8 +115,8 @@ private:
     class ScopedRunSignalsEmitter_ {
         PythonInterpreter* p_;
     public:
-        ScopedRunSignalsEmitter_(PythonInterpreter* p) : p_(p) { p_->runStarted(); }
-        ~ScopedRunSignalsEmitter_() { p_->runFinished(); }
+        ScopedRunSignalsEmitter_(PythonInterpreter* p) : p_(p) { p_->runStarted().emit(); }
+        ~ScopedRunSignalsEmitter_() { p_->runFinished().emit(); }
     };
 
     pybind11::module main_;

@@ -176,9 +176,12 @@ PythonInterpreter::PythonInterpreter(
         .cast<pybind11::list>().append(pythonPath());
 }
 
-PythonInterpreter::~PythonInterpreter()
+/* static */
+PythonInterpreterPtr PythonInterpreter::create(
+    const std::string& programName,
+    const std::string& pythonHome)
 {
-
+    return PythonInterpreterPtr(new PythonInterpreter(programName, pythonHome));
 }
 
 void PythonInterpreter::run(const std::string& str)

@@ -56,7 +56,7 @@ public:
     /// of user interaction with the color palette. The signal isn't emitted
     /// when the selected color is set programatically via setSelectedColor().
     ///
-    const core::Signal<> colorSelected;
+    VGC_SIGNAL(colorSelected);
 
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;

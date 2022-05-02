@@ -196,7 +196,7 @@ void Widget::repaint()
 {
     Widget* widget = this;
     while (widget) {
-        widget->repaintRequested();
+        widget->repaintRequested().emit();
         widget = widget->parent();
     }
 }
@@ -382,7 +382,7 @@ void Widget::setFocus()
     }
     Widget* widget = this;
     while (widget) {
-        widget->focusRequested();
+        widget->focusRequested().emit();
         widget = widget->parent();
     }
 }

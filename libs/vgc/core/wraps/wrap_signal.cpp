@@ -237,22 +237,6 @@ void wrap_signal(py::module& m)
     // decorators
     m.def("signal", &vgc::core::wraps::signalDecoratorFn);
     m.def("slot", &vgc::core::wraps::slotDecoratorFn);
-
-    // deprecated
-
-    using UnsharedOwnerSignal = vgc::core::Signal<>;
-    py::class_<UnsharedOwnerSignal> c(m, "Signal");
-
-    c.def("emit",
-        [](UnsharedOwnerSignal& a) {
-            a();
-        }
-    );
-
-    c.def(py::init([]() {
-        UnsharedOwnerSignal res;
-        return res;
-    }));
 }
 
 

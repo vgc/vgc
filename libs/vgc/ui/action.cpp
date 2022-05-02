@@ -43,7 +43,7 @@ ActionPtr Action::create(const Shortcut& shortcut)
 
 void Action::trigger()
 {
-    triggered();
+    triggered().emit();
 }
 
 } // namespace ui
