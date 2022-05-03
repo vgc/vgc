@@ -27,6 +27,7 @@ vgc_add_library(ui
         style.h
         styletoken.h
         widget.h
+        window.h
 
         internal/paintutil.h
 
@@ -47,6 +48,7 @@ vgc_add_library(ui
         style.cpp
         styletoken.cpp
         widget.cpp
+        window.cpp
 
         internal/paintutil.cpp
 

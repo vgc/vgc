@@ -22,16 +22,22 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
+#include <vgc/ui/lineedit.h>
+#include <vgc/ui/window.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
 #include <vgc/widgets/qtutil.h>
 #include <vgc/widgets/stylesheets.h>
 
+
+
 namespace py = pybind11;
 
 int main(int argc, char* argv[])
 {
+    QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+
     // Conversion between QString and std::string.
     using vgc::widgets::fromQt;
     using vgc::widgets::toQt;
@@ -155,6 +161,12 @@ int main(int argc, char* argv[])
     timer.setSingleShot(true);
     QObject::connect(&timer, SIGNAL(timeout()), &w, SLOT(showMaximized()));
     timer.start(10);
+
+
+    vgc::ui::LineEditPtr le = vgc::ui::LineEdit::create();
+    vgc::ui::WindowPtr wnd = vgc::ui::Window::create(le);
+
+    wnd->setVisible(true);
 
     // Start event loop
     return application.exec();
