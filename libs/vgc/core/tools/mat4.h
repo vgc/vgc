@@ -70,7 +70,7 @@ public:
     /// value. As specific cases, the null matrix is Mat4x(0), and the identity
     /// matrix is Mat4x(1).
     ///
-    constexpr Mat4x(float d) :
+    explicit constexpr Mat4x(float d) :
 
         data_{{d, 0, 0, 0},
               {0, d, 0, 0},
@@ -153,6 +153,12 @@ public:
         return Mat4x(m1) += m2;
     }
 
+    /// Returns a copy of this Mat4x (unary plus operator).
+    ///
+    Mat4x operator+() const {
+        return *this;
+    }
+
     /// Substracts in-place the \p other Mat4x to this Mat4x.
     ///
     Mat4x& operator-=(const Mat4x& other) {
@@ -179,6 +185,12 @@ public:
     ///
     friend Mat4x operator-(const Mat4x& m1, const Mat4x& m2) {
         return Mat4x(m1) -= m2;
+    }
+
+    /// Returns the opposite of this Mat4x (unary minus operator).
+    ///
+    Mat4x operator-() const {
+        return Mat4x(*this) *= -1;
     }
 
     /// Multiplies in-place the \p other Mat4x to this Mat4x.
@@ -273,6 +285,48 @@ public:
         return Mat4x(*this) /= s;
     }
 
+    /// Returns whether the two given Vec2x \p v1 and \p v2 are equal.
+    ///
+    friend bool operator==(const Mat4x& m1, const Mat4x& m2) {
+        return m1.data_[0][0] == m2.data_[0][0] &&
+               m1.data_[0][1] == m2.data_[0][1] &&
+               m1.data_[0][2] == m2.data_[0][2] &&
+               m1.data_[0][3] == m2.data_[0][3] &&
+               m1.data_[1][0] == m2.data_[1][0] &&
+               m1.data_[1][1] == m2.data_[1][1] &&
+               m1.data_[1][2] == m2.data_[1][2] &&
+               m1.data_[1][3] == m2.data_[1][3] &&
+               m1.data_[2][0] == m2.data_[2][0] &&
+               m1.data_[2][1] == m2.data_[2][1] &&
+               m1.data_[2][2] == m2.data_[2][2] &&
+               m1.data_[2][3] == m2.data_[2][3] &&
+               m1.data_[3][0] == m2.data_[3][0] &&
+               m1.data_[3][1] == m2.data_[3][1] &&
+               m1.data_[3][2] == m2.data_[3][2] &&
+               m1.data_[3][3] == m2.data_[3][3];
+    }
+
+    /// Returns whether the two given Vec2x \p v1 and \p v2 are different.
+    ///
+    friend bool operator!=(const Mat4x& m1, const Mat4x& m2) {
+        return m1.data_[0][0] != m2.data_[0][0] ||
+               m1.data_[0][1] != m2.data_[0][1] ||
+               m1.data_[0][2] != m2.data_[0][2] ||
+               m1.data_[0][3] != m2.data_[0][3] ||
+               m1.data_[1][0] != m2.data_[1][0] ||
+               m1.data_[1][1] != m2.data_[1][1] ||
+               m1.data_[1][2] != m2.data_[1][2] ||
+               m1.data_[1][3] != m2.data_[1][3] ||
+               m1.data_[2][0] != m2.data_[2][0] ||
+               m1.data_[2][1] != m2.data_[2][1] ||
+               m1.data_[2][2] != m2.data_[2][2] ||
+               m1.data_[2][3] != m2.data_[2][3] ||
+               m1.data_[3][0] != m2.data_[3][0] ||
+               m1.data_[3][1] != m2.data_[3][1] ||
+               m1.data_[3][2] != m2.data_[3][2] ||
+               m1.data_[3][3] != m2.data_[3][3];
+    }
+
     /// Returns the multiplication of this Mat4x by the given Vec2x \p v.
     /// This assumes that the Vec2x represents the Vec4x(x, y, 0, 1) in
     /// homogeneous coordinates, and then only returns the x and y coordinates
@@ -299,7 +353,7 @@ public:
     /// has all its elements set to std::numeric_limits<float>::infinity().
     ///
     VGC_CORE_API
-    Mat4x inversed(bool* isInvertible = nullptr, float epsilon = 0) const;
+    Mat4x inverted(bool* isInvertible = nullptr, float epsilon = 0) const;
 
     /// Right-multiplies this matrix by the translation matrix given
     /// by vx, vy, and vy, that is:
@@ -333,9 +387,28 @@ public:
     ///
     /// Returns a reference to this Mat4x.
     ///
-    Mat4x& rotate(float t) {
-        float s = std::sin(t);
+    /// If `orthosnap` is true (the default), then rotations which are
+    /// extremely close to a multiple of 90° are snapped to this exact multiple
+    /// of 90°. This ensures that if you call `rotate(pi / 2)`, you get exactly
+    /// the following matrix:
+    ///
+    /// \verbatim
+    /// | 1 -1  0  0 |
+    /// | 1  1  0  0 |
+    /// | 0  0  1  0 |
+    /// | 0  0  0  1 |
+    /// \endverbatim
+    ///
+    Mat4x& rotate(float t, bool orthosnap = true) {
+        static float eps = std::numeric_limits<float>::epsilon();
         float c = std::cos(t);
+        float s = std::sin(t);
+        if (std::abs(c) < eps || std::abs(s) < eps) {
+            float cr = std::round(c);
+            float sr = std::round(s);
+            c = cr;
+            s = sr;
+        }
         Mat4x m(c,-s, 0, 0,
                 s, c, 0, 0,
                 0, 0, 1, 0,
@@ -397,6 +470,51 @@ private:
 
 inline constexpr Mat4x Mat4x::identity = Mat4x(1);
 
+/// Overloads setZero(T& x).
+///
+/// \sa vgc::core::zero<T>()
+///
+inline void setZero(Mat4x& m)
+{
+    m.setToZero();
+}
+
+/// Writes the given Mat3x to the output stream.
+///
+template<typename OStream>
+void write(OStream& out, const Mat4x& m)
+{
+    static const char* s = ", ";
+    write(out, '[', m(0,0), s, m(0,1), s, m(0,2), s, m(0,3), s,
+                    m(1,0), s, m(1,1), s, m(1,2), s, m(1,3), s,
+                    m(2,0), s, m(2,1), s, m(2,2), s, m(2,3), s,
+                    m(3,0), s, m(3,1), s, m(3,2), s, m(3,3), ']');
+}
+
 } // namespace vgc::core
+
+// see https://fmt.dev/latest/api.html#formatting-user-defined-types
+template <>
+struct fmt::formatter<vgc::core::Mat4x> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+            throw format_error("invalid format");
+        return it;
+    }
+    template <typename FormatContext>
+    auto format(const vgc::core::Mat4x m, FormatContext& ctx) {
+        return format_to(ctx.out(),"[{}, {}, {}, {},"
+                                   " {}, {}, {}, {},"
+                                   " {}, {}, {}, {},"
+                                   " {}, {}, {}, {}]",
+                         m(0,0), m(0,1), m(0,2), m(0,3),
+                         m(1,0), m(1,1), m(1,2), m(1,3),
+                         m(2,0), m(2,1), m(2,2), m(2,3),
+                         m(3,0), m(3,1), m(3,2), m(3,3));
+    }
+};
+
+// TODO: parse from string
 
 #endif // VGC_CORE_MAT4X_H

@@ -22,6 +22,9 @@
 
 #include <cmath>
 #include <vgc/core/api.h>
+#include <vgc/core/arithmetic.h>
+#include <vgc/core/format.h>
+#include <vgc/core/parse.h>
 #include <vgc/core/vec2d.h>
 
 namespace vgc::core {
@@ -138,6 +141,12 @@ public:
         return Mat3d(m1) += m2;
     }
 
+    /// Returns a copy of this Mat3d (unary plus operator).
+    ///
+    Mat3d operator+() const {
+        return *this;
+    }
+
     /// Substracts in-place the \p other Mat3d to this Mat3d.
     ///
     Mat3d& operator-=(const Mat3d& other) {
@@ -157,6 +166,12 @@ public:
     ///
     friend Mat3d operator-(const Mat3d& m1, const Mat3d& m2) {
         return Mat3d(m1) -= m2;
+    }
+
+    /// Returns the opposite of this Mat3d (unary minus operator).
+    ///
+    Mat3d operator-() const {
+        return Mat3d(*this) *= -1;
     }
 
     /// Multiplies in-place the \p other Mat3d to this Mat3d.
@@ -230,6 +245,34 @@ public:
         return Mat3d(*this) /= s;
     }
 
+    /// Returns whether the two given Vec2d \p v1 and \p v2 are equal.
+    ///
+    friend bool operator==(const Mat3d& m1, const Mat3d& m2) {
+        return m1.data_[0][0] == m2.data_[0][0] &&
+               m1.data_[0][1] == m2.data_[0][1] &&
+               m1.data_[0][2] == m2.data_[0][2] &&
+               m1.data_[1][0] == m2.data_[1][0] &&
+               m1.data_[1][1] == m2.data_[1][1] &&
+               m1.data_[1][2] == m2.data_[1][2] &&
+               m1.data_[2][0] == m2.data_[2][0] &&
+               m1.data_[2][1] == m2.data_[2][1] &&
+               m1.data_[2][2] == m2.data_[2][2];
+    }
+
+    /// Returns whether the two given Vec2d \p v1 and \p v2 are different.
+    ///
+    friend bool operator!=(const Mat3d& m1, const Mat3d& m2) {
+        return m1.data_[0][0] != m2.data_[0][0] ||
+               m1.data_[0][1] != m2.data_[0][1] ||
+               m1.data_[0][2] != m2.data_[0][2] ||
+               m1.data_[1][0] != m2.data_[1][0] ||
+               m1.data_[1][1] != m2.data_[1][1] ||
+               m1.data_[1][2] != m2.data_[1][2] ||
+               m1.data_[2][0] != m2.data_[2][0] ||
+               m1.data_[2][1] != m2.data_[2][1] ||
+               m1.data_[2][2] != m2.data_[2][2];
+    }
+
     /// Returns the multiplication of this Mat3d by the given Vec2d \p v.
     /// This assumes that the Vec2d represents the Vec3d(x, y, 1) in
     /// homogeneous coordinates, and then only returns the x and y coordinates
@@ -256,7 +299,7 @@ public:
     /// has all its elements set to std::numeric_limits<double>::infinity().
     ///
     VGC_CORE_API
-    Mat3d inversed(bool* isInvertible = nullptr, double epsilon = 0) const;
+    Mat3d inverted(bool* isInvertible = nullptr, double epsilon = 0) const;
 
     /// Right-multiplies this matrix by the translation matrix given
     /// by vx and vy, that is:
@@ -287,9 +330,27 @@ public:
     ///
     /// Returns a reference to this Mat3d.
     ///
-    Mat3d& rotate(double t) {
-        double s = std::sin(t);
+    /// If `orthosnap` is true (the default), then rotations which are
+    /// extremely close to a multiple of 90° are snapped to this exact multiple
+    /// of 90°. This ensures that if you call `rotate(pi / 2)`, you get exactly
+    /// the following matrix:
+    ///
+    /// \verbatim
+    /// | 1 -1  0 |
+    /// | 1  1  0 |
+    /// | 0  0  1 |
+    /// \endverbatim
+    ///
+    Mat3d& rotate(double t, bool orthosnap = true) {
+        static double eps = std::numeric_limits<double>::epsilon();
         double c = std::cos(t);
+        double s = std::sin(t);
+        if (std::abs(c) < eps || std::abs(s) < eps) {
+            double cr = std::round(c);
+            double sr = std::round(s);
+            c = cr;
+            s = sr;
+        }
         Mat3d m(c,-s, 0,
                 s, c, 0,
                 0, 0, 1);
@@ -333,7 +394,7 @@ public:
     ///
     /// Returns a reference to this Mat3d.
     ///
-    Mat3d& scale(double sx, double sy, double sz = 1) {
+    Mat3d& scale(double sx, double sy) {
         Mat3d m(sx, 0,  0,
                 0,  sy, 0,
                 0,  0,  1);
@@ -346,6 +407,48 @@ private:
 
 inline constexpr Mat3d Mat3d::identity = Mat3d(1);
 
+/// Overloads setZero(T& x).
+///
+/// \sa vgc::core::zero<T>()
+///
+inline void setZero(Mat3d& m)
+{
+    m.setToZero();
+}
+
+/// Writes the given Mat3d to the output stream.
+///
+template<typename OStream>
+void write(OStream& out, const Mat3d& m)
+{
+    static const char* s = ", ";
+    write(out, '[', m(0,0), s, m(0,1), s, m(0,2), s,
+                    m(1,0), s, m(1,1), s, m(1,2), s,
+                    m(2,0), s, m(2,1), s, m(2,2), ']');
+}
+
 } // namespace vgc::core
+
+// see https://fmt.dev/latest/api.html#formatting-user-defined-types
+template <>
+struct fmt::formatter<vgc::core::Mat3d> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+            throw format_error("invalid format");
+        return it;
+    }
+    template <typename FormatContext>
+    auto format(const vgc::core::Mat3d m, FormatContext& ctx) {
+        return format_to(ctx.out(),"[{}, {}, {},"
+                                   " {}, {}, {},"
+                                   " {}, {}, {}]",
+                         m(0,0), m(0,1), m(0,2),
+                         m(1,0), m(1,1), m(1,2),
+                         m(2,0), m(2,1), m(2,2));
+    }
+};
+
+// TODO: parse from string
 
 #endif // VGC_CORE_MAT3D_H
