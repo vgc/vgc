@@ -22,10 +22,10 @@ import inspect
 from pathlib import Path
 
 from vgc.core import (
-    signal, slot, Object as VGCObject, ConstructibleTestObject, CppSignalTestObject
+    signal, slot, ConstructibleTestObject, CppSignalTestObject
 )
 
-# Has similar signals and slots as the c++ test object.
+# Has similar signals and slots as the C++ test object.
 class PySignalTestObject(ConstructibleTestObject):
 
     def __init__(self):
@@ -39,15 +39,15 @@ class PySignalTestObject(ConstructibleTestObject):
         pass
 
     @signal
-    def signalInt(self, a : int):
+    def signalInt(self, a: int):
         pass
 
     @signal
-    def signalIntFloat(self, a : int, b : float):
+    def signalIntFloat(self, a: int, b: float):
         pass
 
     @signal
-    def signalIntFloatBool(self, a : int, b : float, c : bool):
+    def signalIntFloatBool(self, a: int, b: float, c: bool):
         pass
 
     @slot
@@ -55,16 +55,16 @@ class PySignalTestObject(ConstructibleTestObject):
         self.slotNoArgsCallCount += 1
 
     @slot
-    def slotInt(self, a : int):
+    def slotInt(self, a: int):
         self.sumInt += a
 
     @slot
-    def slotIntFloat(self, a : int, b : float):
+    def slotIntFloat(self, a: int, b: float):
         self.sumInt += a
         self.sumFloat += b
 
     @slot
-    def slotFloat(self, a : float):
+    def slotFloat(self, a: float):
         self.sumFloat += a
 
 
@@ -159,13 +159,37 @@ class TestCrossLanguageSignal(unittest.TestCase):
         testSignalToSlot(self, o1, o2)
         testSignalToSlot(self, o2, o1)
 
-    def testCppSignalToPySignalToSlot(self):
+    def testCppSignalToCppSignalToPySlot(self):
+        o1 = CppSignalTestObject()
+        o2 = CppSignalTestObject()
+        o3 = PySignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
+
+    def testCppSignalToPySignalToCppSlot(self):
         o1 = CppSignalTestObject()
         o2 = PySignalTestObject()
         o3 = CppSignalTestObject()
         testSignalToSignalToSlot(self, o1, o2, o3)
 
-    def testPySignalToCppSignalToSlot(self):
+    def testCppSignalToPySignalToPySlot(self):
+        o1 = CppSignalTestObject()
+        o2 = PySignalTestObject()
+        o3 = PySignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
+
+    def testPySignalToPySignalToCppSlot(self):
+        o1 = PySignalTestObject()
+        o2 = PySignalTestObject()
+        o3 = CppSignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
+
+    def testPySignalToCppSignalToPySlot(self):
+        o1 = PySignalTestObject()
+        o2 = CppSignalTestObject()
+        o3 = PySignalTestObject()
+        testSignalToSignalToSlot(self, o1, o2, o3)
+
+    def testPySignalToCppSignalToCppSlot(self):
         o1 = PySignalTestObject()
         o2 = CppSignalTestObject()
         o3 = CppSignalTestObject()

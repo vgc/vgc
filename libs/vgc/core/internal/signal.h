@@ -26,33 +26,29 @@
 #include <typeindex>
 #include <utility>
 #include <variant>
-#include <vector>
-
-// XXX temporary
-#include <iostream>
 
 #include <vgc/core/api.h>
 #include <vgc/core/array.h>
 #include <vgc/core/pp.h>
-#include <vgc/core/stringid.h>
 #include <vgc/core/templateutil.h>
 
 /// \brief Implements a signal-slot notification mechanism.
 ///
-/// This is VGC's implementation oof a Qt-style signal-slot notification system.
-/// It allows a "sender" to notify a "listener" that something happened in the sender.
+/// This is VGC's implementation of a Qt-style signal-slot notification system.
+/// It allows a "sender" to notify a "listener" that something happened in the
+/// sender.
 ///
 /// Typically, this is used in model-view paradigms, where views must be
 /// notified when models change in order to redraw them.
 ///
 /// For now, the VGC signal-slot mechanism is not thread-safe.
-/// The reason VGC is not using Boost::signals2 is two-folds: first, we desired to avoid the dependency to
-/// Boost, and secondly, we desire to fine-tune this mechanism to the VGC
-/// object model, and make it play nice with Python.
+/// The reason VGC is not using Boost::signals2 is two-folds: first, we desired
+/// to avoid the dependency to Boost, and secondly, we desire to fine-tune this
+/// mechanism to the VGC object model, and make it play nice with Python.
 ///
 /// Slots with less arguments than the signal they are connected
 /// to are supported. The tail arguments are simply omitted.
-/// 
+///
 /// Example 1:
 ///
 /// ```cpp
@@ -62,6 +58,7 @@
 ///     MyObject() {
 ///         valueChanged().connect(printInt);
 ///         valueChanged().emit(42); // prints 42
+///         valueChanged().disconnect(printInt);
 ///     }
 /// 
 ///     VGC_SIGNAL(valueChanged, (int, a));
@@ -94,16 +91,16 @@
 ///     View view(&model);
 ///     model.changed().connect(view.onModelChanged());
 ///     model.setX(42); // prints 42
+///     model.changed().disconnect(view.onModelChanged());
 /// }
 /// ```
 ///
 
-
-// Configuration
-namespace vgc::core::internal {
-static constexpr Int maxSignalArgs = 20;
-} // namespace vgc::core::internal
-
+/// Defines the maximum number of arguments a signal/slot can have.
+///
+// We need it as a macro for use in static asserts.
+//
+#define VGC_CORE_MAX_SIGNAL_ARGS 20
 
 namespace vgc::core {
 
@@ -119,8 +116,8 @@ struct HasObjectTypedefs<T, RequiresValid<typename T::ThisClass, typename T::Sup
 
 } // namespace internal
 
-// If T is an Object, it also checks that VGC_OBJECT has been used in T.
-// 
+/// Type trait for isObject<T>.
+/// 
 template<typename T, typename Enable = bool>
 struct IsObject : std::false_type {};
 template<>
@@ -131,12 +128,15 @@ struct IsObject<T, Requires<std::is_base_of_v<Object, T>>> : std::true_type {
         "Missing VGC_OBJECT(..) in T.");
 };
 
+/// Checks whether T is vgc::core::Object or derives from it.
+/// If true, static asserts that VGC_OBJECT appears in the declaration of T.
+/// 
 template <typename T>
 inline constexpr bool isObject = IsObject<T>::value;
 
-// Checks that Type inherits from Object.
-// Also checks that VGC_OBJECT(..) has been used in Type.
-#define CHECK_TYPE_IS_VGC_OBJECT(Type) \
+/// Static asserts that Type derives from Object and that VGC_OBJECT appear in its declaration.
+///
+#define VGC_CHECK_TYPE_IS_OBJECT(Type) \
     static_assert(::vgc::core::internal::isObject<Type>, #Type " should inherit from vgc::core::Object.");
 
 
@@ -148,10 +148,12 @@ using FreeFuncId = void*;
 using SlotId = std::variant<std::monostate, ObjectSlotId, FreeFuncId>;
 using SignalId = FunctionId;
 
+// Dynamically generates a unique identifier.
+// Used by slots and signals.
 VGC_CORE_API FunctionId genFunctionId();
 
-/// A handle to a Signal/Slot connection.
-/// It is returned by Signal's connect functions and can be used in disconnect functions.
+/// A handle to a signal/slot connection.
+/// It is returned by SignalRef's connect functions and can be used in disconnect functions.
 class ConnectionHandle {
 public:
     static const ConnectionHandle invalid;
@@ -191,16 +193,21 @@ private:
 };
 
 
-// Helper to check that signal/slot arguments don't contain
-// rvalue reference types (that are not allowed).
-template<typename TupleT> struct HasRValueReferences;
+// Type trait for hasRValueReferences<TTuple>.
+//
+template<typename TTuple> struct HasRValueReferences;
 template<typename... Ts>  struct HasRValueReferences<std::tuple<Ts...>> :
     std::disjunction<std::is_rvalue_reference<Ts>...> {};
 
-template<typename TupleT>
-static constexpr bool hasRValueReferences = HasRValueReferences<TupleT>::value;
+// Checks whether TupleT's parameter types contain any rvalue reference type.
+// Precondition: TTuple must be an std::tuple (compile error otherwise)
+//
+template<typename TTuple>
+static constexpr bool hasRValueReferences = HasRValueReferences<TTuple>::value;
 
 
+// Helper to get the emittable type of a signal argument type.
+// 
 // Arguments of signals are meant to be forwarded to multiple slots.
 // Thus, perfect forwarding is not an option.
 // However, since we don't allow rvalues as signal/slot arguments, we can
@@ -219,15 +226,18 @@ using MakeSignalArgRef = std::enable_if_t<
     !std::is_rvalue_reference_v<SignalArg>,
     std::conditional_t<
         std::is_reference_v<SignalArg>,
-        std::remove_reference_t<SignalArg>&,
+        SignalArg,
         const SignalArg&>>;
 
+// Type trait for isSignalArgRef<T>.
+//
 template<typename T>
 struct IsSignalArgRef : std::is_lvalue_reference<T> {};
 
+// Checks whether T and MakeSignalArgRef<T> are equivalent.
+//
 template<typename T>
 static constexpr bool isSignalArgRef = IsSignalArgRef<T>::value;
-
 
 template<typename SignalArgsTuple>
 struct MakeSignalArgRefsTuple_;
@@ -236,15 +246,22 @@ struct MakeSignalArgRefsTuple_<std::tuple<SignalArgs...>> {
     using type = std::tuple<MakeSignalArgRef<SignalArgs>...>;
 };
 
+// Applies MakeSignalArgRef<T> to each parameter type T of a std::tuple<...T>.
+// e.g.: std::tuple<int, int*> -> std::tuple<const int&, int* const &>
+//
 template<typename SignalArgsTuple>
 using MakeSignalArgRefsTuple = typename MakeSignalArgRefsTuple_<SignalArgsTuple>::type;
 
+// Type trait for isSignalArgRefsTuple<T>.
+//
 template<typename T>
 struct IsSignalArgRefsTuple : std::false_type {};
 template<typename... Ts>
 struct IsSignalArgRefsTuple<std::tuple<Ts...>> :
     std::conjunction<IsSignalArgRef<Ts>...> {};
 
+// Checks whether T is a std::tuple<...U> such that isSignalArgRef<U> is true for each U.
+//
 template<typename T>
 static constexpr bool isSignalArgRefsTuple = IsSignalArgRefsTuple<T>::value;
 
@@ -327,7 +344,7 @@ protected:
     }
 
 private:
-    mutable std::aligned_storage_t<storageSize, storageSize> v_;
+    mutable std::aligned_storage_t<storageSize, storageSize> v_ = {};
 #ifdef VGC_DEBUG
     std::type_index t_ = typeid(void);
 #endif
@@ -379,7 +396,7 @@ private:
     Int size_;
 };
 
-using TransmitArgs = TransmitArgs_<maxSignalArgs>;
+using TransmitArgs = TransmitArgs_<VGC_CORE_MAX_SIGNAL_ARGS>;
 
 // Wraps slots under a common signature.
 class SignalTransmitter {
@@ -389,10 +406,10 @@ public:
 
     SignalTransmitter() = default;
 
-    template<typename SlotWrapperT, Requires<isFunctor<RemoveCVRef<SlotWrapperT>>> = true>
-    SignalTransmitter(SlotWrapperT&& wrapper, bool isNative = false) :
-        wrapper_(std::forward<SlotWrapperT>(wrapper)),
-        arity_(FunctorTraits<RemoveCVRef<SlotWrapperT>>::arity),
+    template<typename TSlotWrapper, Requires<isFunctor<RemoveCVRef<TSlotWrapper>>> = true>
+    SignalTransmitter(TSlotWrapper&& wrapper, bool isNative = false) :
+        wrapper_(std::forward<TSlotWrapper>(wrapper)),
+        arity_(FunctorTraits<RemoveCVRef<TSlotWrapper>>::arity),
         isNative_(isNative) {}
 
     template<typename SignalArgRefsTuple, typename SlotCallable, typename... OptionalObj,
@@ -404,8 +421,8 @@ public:
 
         static_assert(std::tuple_size_v<SignalArgRefsTuple> >= Traits::arity,
             "The slot signature cannot be longer than the signal signature.");
-        static_assert(std::tuple_size_v<SignalArgRefsTuple> < maxSignalArgs,
-            "Signals and Slots are limited to maxSignalArgs parameters.");
+        static_assert(std::tuple_size_v<SignalArgRefsTuple> < VGC_CORE_MAX_SIGNAL_ARGS,
+            "Signals and slots are limited to " VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " parameters.");
 
         if constexpr (isMethod<RemoveCVRef<SlotCallable>>) {
             static_assert(sizeof...(OptionalObj) == 1,
@@ -496,10 +513,10 @@ template<typename SignalArgRefsTuple, typename SignalSlotArgRefsTuple>
 inline constexpr bool isCompatibleReEmit = IsCompatibleReEmit<SignalArgRefsTuple, SignalSlotArgRefsTuple>::value;
 
 
-// Its member functions are static because we have to operate from the context of its owner Object.
+// Stores the connections of all signals of a given object in a single container.
 //
-// It is used to store the handlers of all signals of a given object
-// in a single container.
+// Its member functions are static because we have to operate from the context
+// of its owner Object.
 //
 class SignalHub {
 private:
@@ -512,8 +529,6 @@ private:
         ConnectionHandle h;
         SignalId from;
         SlotId to;
-
-        // XXX bool disabled ?
     };
 
     struct ListenedObjectInfo_ {
@@ -531,14 +546,14 @@ public:
     ~SignalHub() noexcept(false) {
         if (!listenedObjectInfos_.empty()) {
             throw LogicError(
-                "A SignalHub is being destroyed but is still subscribed to some Object's signals."
-                "Object destruction should call disconnectSlots() explicitly."
+                "A SignalHub is being destroyed but is still subscribed to some Object signals."
+                " Object destruction should call disconnectSlots() explicitly."
             );
         }
         if (!connections_.empty()) {
             throw LogicError(
-                "A SignalHub is being destroyed but is still connected to some Object's slots."
-                "Object destruction should call disconnectSignals() explicitly."
+                "A SignalHub is being destroyed but is still connected to some Object slots."
+                " Object destruction should call disconnectSignals() explicitly."
             );
         }
     }
@@ -555,7 +570,7 @@ public:
                 Int count = SignalHub::eraseConnections_(info.object, receiver);
 #ifdef VGC_DEBUG
                 if (count != info.numInboundConnections) {
-                    throw LogicError("Erased connections count != info.numInboundConnections");
+                    throw LogicError("Erased connections count != info.numInboundConnections.");
                 }
 #endif
                 info.numInboundConnections = 0;
@@ -653,7 +668,7 @@ public:
         auto& info = access(receiver).getListenedObjectInfoRef_(sender);
 #ifdef VGC_DEBUG
         if (count != info.numInboundConnections) {
-            throw LogicError("Erased connections count != info.numInboundConnections");
+            throw LogicError("Erased connections count != info.numInboundConnections.");
         }
 #endif
         info.numInboundConnections = 0;
@@ -812,7 +827,7 @@ public:
     using ArgsTuple = typename SlotMethodTraits::ArgsTuple;
     using ArgRefsTuple = MakeSignalArgRefsTuple<ArgsTuple>;
 
-    static_assert(isObject<Obj>, "Slots can only be declared in Objects");
+    static_assert(isObject<Obj>, "Slots can only be declared in Objects.");
     static_assert(!hasRValueReferences<ArgsTuple>,
         "Slot parameters are not allowed to have a rvalue reference type.");
 
@@ -869,7 +884,7 @@ public:
     using ArgsTuple = TArgsTuple;
     using ArgRefsTuple = MakeSignalArgRefsTuple<ArgsTuple>;
 
-    static_assert(isObject<Obj>, "Signals can only be declared in Objects");
+    static_assert(isObject<Obj>, "Signals can only be declared in Objects.");
     static_assert(!hasRValueReferences<ArgsTuple>,
         "Signal parameters are not allowed to have a rvalue reference type.");
 
@@ -895,15 +910,15 @@ public:
     }
 
     // Connects to a method slot.
-    template<typename SlotRefT, Requires<isSlotRef<SlotRefT>> = true>
-    ConnectionHandle connect(const SlotRefT& slotRef) const {
+    template<typename TSlotRef, Requires<isSlotRef<TSlotRef>> = true>
+    ConnectionHandle connect(const TSlotRef& slotRef) const {
         return connect_(slotRef);
     }
 
     // Connects to a signal-slot.
-    template<typename SignalRefT, Requires<isSignalRef<SignalRefT>> = true>
-    ConnectionHandle connect(const SignalRefT& signalRef) const {
-        using SignalSlotArgRefsTuple = typename RemoveCVRef<SignalRefT>::ArgRefsTuple;
+    template<typename USignalRef, Requires<isSignalRef<USignalRef>> = true>
+    ConnectionHandle connect(const USignalRef& signalRef) const {
+        using SignalSlotArgRefsTuple = typename RemoveCVRef<USignalRef>::ArgRefsTuple;
         constexpr size_t signalSlotArity = std::tuple_size_v<SignalSlotArgRefsTuple>;
         static_assert(signalSlotArity <= arity,
             "The signal-slot signature cannot be longer than the signal signature.");
@@ -949,16 +964,16 @@ public:
     // Disconnects the given slot `slotRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename SlotRefT, Requires<isSlotRef<RemoveCVRef<SlotRefT>>> = true>
-    bool disconnect(SlotRefT&& slotRef) const {
+    template<typename TSlotRef, Requires<isSlotRef<RemoveCVRef<TSlotRef>>> = true>
+    bool disconnect(TSlotRef&& slotRef) const {
         return SignalHub::disconnect(object_, id(), ObjectSlotId(slotRef.object(), slotRef.id()));
     }
 
     // Disconnects the given signal-slot `signalRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename SignalRefT, Requires<isSignalRef<RemoveCVRef<SignalRefT>>> = true>
-    bool disconnect(SignalRefT&& signalRef) const {
+    template<typename USignalRef, Requires<isSignalRef<RemoveCVRef<USignalRef>>> = true>
+    bool disconnect(USignalRef&& signalRef) const {
         return SignalHub::disconnect(object_, id(), ObjectSlotId(signalRef.object(), signalRef.id()));
     }
 
@@ -978,17 +993,16 @@ public:
     }
 
 protected:
-    template<typename TagT, typename SlotMethod>
-    ConnectionHandle connect_(const SlotRef<TagT, SlotMethod>& slotRef) const {
+    template<typename UTag, typename SlotMethod>
+    ConnectionHandle connect_(const SlotRef<UTag, SlotMethod>& slotRef) const {
         static_assert(isMethod<SlotMethod>);
         SignalTransmitter transmitter = SignalTransmitter::build<ArgRefsTuple>(slotRef.method(), slotRef.object());
         return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(slotRef.object(), slotRef.id()));
     }
 
-    // XXX move in connect directly .. no need for SignalRef params.
-    template<typename TagT, typename ReceiverT, typename ArgTupleT>
-    ConnectionHandle connect_(const SignalRef<TagT, ReceiverT, ArgTupleT>& signalSlotRef) const {
-        using SlotArgRefsTuple = typename SignalRef<TagT, ReceiverT, ArgTupleT>::ArgRefsTuple;
+    template<typename UTag, typename UReceiver, typename UArgTuple>
+    ConnectionHandle connect_(const SignalRef<UTag, UReceiver, UArgTuple>& signalSlotRef) const {
+        using SlotArgRefsTuple = typename SignalRef<UTag, UReceiver, UArgTuple>::ArgRefsTuple;
         SignalTransmitter transmitter = buildRetransmitter<ArgRefsTuple, SlotArgRefsTuple>(signalSlotRef.object(), signalSlotRef.id());
         return SignalHub::connect(object_, id(), std::move(transmitter), ObjectSlotId(signalSlotRef.object(), signalSlotRef.id()));
     }
@@ -1036,7 +1050,7 @@ private:
 // ... must end with VaEnd
 #define VGC_PARAMS_FWD_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__))
 
-/// Macro to define VGC Object Signals.
+/// Macro to define Object signals.
 ///
 /// Example:
 /// 
@@ -1069,8 +1083,8 @@ namespace vgc::core::internal {
 
 template<typename T>
 struct IsSignal : std::false_type {};
-template<typename ObjT, typename SignalRefT>
-struct IsSignal<SignalRefT (ObjT::*)() const> : std::conjunction<IsSignalRef<SignalRefT>, IsObject<ObjT>> {};
+template<typename TObj, typename TSignalRef>
+struct IsSignal<TSignalRef (TObj::*)() const> : std::conjunction<IsSignalRef<TSignalRef>, IsObject<TObj>> {};
 template<typename T>
 inline constexpr bool isSignal = IsSignal<T>::value;
 
@@ -1081,11 +1095,11 @@ inline constexpr bool isSignal = IsSignal<T>::value;
         struct Tag {};                                                                                  \
         using MyClass = std::remove_pointer_t<decltype(this)>;                                          \
         using SlotMethod = decltype(&MyClass::funcName_);                                               \
-        using SlotRefT = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                               \
+        using SlotRefBase = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;                            \
         class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend " #funcName_ "() instead of " #name_ "()?"))  \
-        SlotRef : public SlotRefT {                                                                     \
+        SlotRef : public SlotRefBase {                                                                  \
         public:                                                                                         \
-            SlotRef(const MyClass* object, SlotMethod m) : SlotRefT(object, m) {}                       \
+            SlotRef(const MyClass* object, SlotMethod m) : SlotRefBase(object, m) {}                    \
         };                                                                                              \
         return SlotRef(this, &MyClass::funcName_);                                                      \
     }
@@ -1097,7 +1111,7 @@ inline constexpr bool isSignal = IsSignal<T>::value;
 #define VGC_SLOT1_(a) VGC_SLOT_DEFAULT_ALIAS_(a)
 #define VGC_SLOT_DISPATCH_(_1, _2, _3, NAME, ...) NAME
 
-/// Macro to define VGC Object Slots.
+/// Macro to define Object slots.
 /// 
 /// VGC_SLOT(slotName, slotMethod) -> defines slot slotName bound to slotMethod.
 /// VGC_SLOT(slotMethod) -> defines slot slotMethodSlot bound to slotMethod.
@@ -1124,8 +1138,8 @@ namespace vgc::core::internal {
 
 template<typename T>
 struct IsSlot : std::false_type {};
-template<typename ObjT, typename SlotRefT>
-struct IsSlot<SlotRefT(ObjT::*)()> : std::conjunction<IsSlotRef<SlotRefT>, IsObject<ObjT>> {};
+template<typename TObj, typename TSlotRef>
+struct IsSlot<TSlotRef(TObj::*)()> : std::conjunction<IsSlotRef<TSlotRef>, IsObject<TObj>> {};
 template<typename T>
 inline constexpr bool isSlot = IsSlot<T>::value;
 

@@ -940,21 +940,22 @@ protected:
     ///
     ObjPtr<Object> removeObjectFromParent_();
 
-    // XXX connect/disconnect methods here
-
-protected:
-    mutable internal::SignalHub signalHub_;
-
 private:
-    friend class internal::SignalHub;
-    friend class internal::ObjPtrAccess;
+    // Reference counting
+    friend class internal::ObjPtrAccess; // To access refCount_
     mutable Int64 refCount_; // If >= 0: isAlive = true, refCount = refCount_
                              // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
+
+    // Parent-child relationship
     Object* parentObject_;
     Object* firstChildObject_;
     Object* lastChildObject_;
     Object* previousSiblingObject_;
     Object* nextSiblingObject_;
+
+    // Signal-slot mechanism
+    friend class internal::SignalHub; // To access signalHub_
+    mutable internal::SignalHub signalHub_;
 
     void destroyObjectImpl_();
 };
@@ -1266,6 +1267,7 @@ namespace vgc::core::internal {
 
 VGC_DECLARE_OBJECT(ConstructibleTestObject);
 
+// XXX add a create() in Object directly?
 class ConstructibleTestObject : public Object {
     VGC_OBJECT(ConstructibleTestObject, Object)
 

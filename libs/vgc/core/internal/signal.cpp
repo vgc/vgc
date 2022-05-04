@@ -24,7 +24,6 @@ ConnectionHandle ConnectionHandle::generate() {
     return {++s.id_};
 }
 
-VGC_CORE_API
 FunctionId genFunctionId() {
     static FunctionId s = 0;
     // XXX make this thread-safe ?

@@ -131,14 +131,26 @@ TEST(TestSignal, SameSlot)
     ASSERT_EQ(o2->sumInt, 3 * 2);
 }
 
+namespace {
+
+void getTheAnswer(int& a) {
+    a = 42;
+}
+
+} // namespace
 TEST(TestSignal, SignalToFreeFunc)
 {
     auto o1 = SignalTestObject::create();
 
+    o1->sfnIntCalled = false;
     o1->signalInt().connect(o1->staticFuncInt);
-
     o1->signalInt().emit(42);
     ASSERT_TRUE(o1->sfnIntCalled);
+
+    int theAnswer = 0;
+    o1->signalIntRef().connect(getTheAnswer);
+    o1->signalIntRef().emit(theAnswer);
+    ASSERT_EQ(theAnswer, 42);
 }
 
 TEST(TestSignal, SignalToLambda)

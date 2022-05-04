@@ -60,11 +60,12 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
 
     Int arity = getFunctionArity(inspect, signalMethod);
     if (arity == 0) {
-        throw py::value_error("Python Signal method expected to at least have 'self' parameter.");
+        throw py::value_error("Python signal method expected to at least have 'self' parameter.");
     }
     --arity;
-    if (arity > core::internal::maxSignalArgs) {
-        throw py::value_error("Signals and Slots are limited to maxSignalArgs arguments.");
+    if (arity > VGC_CORE_MAX_SIGNAL_ARGS) {
+        throw py::value_error("Signals and slots are limited to "
+            VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
     }
 
     // Create a new unique ID for this signal.
@@ -117,8 +118,9 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
         throw py::value_error("Slot method expected to at least have 'self' parameter.");
     }
     --arity;
-    if (arity > core::internal::maxSignalArgs) {
-        throw py::value_error("Signals and Slots are limited to maxSignalArgs arguments.");
+    if (arity > VGC_CORE_MAX_SIGNAL_ARGS) {
+        throw py::value_error("Signals and slots are limited to "
+            VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
     }
 
     // Create a new unique ID for this slot.
@@ -145,7 +147,8 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
 
 void wrapSignalAndSlotRefs(py::module& m)
 {
-    py::class_<ConnectionHandle>(m, "ConnectionHandle");
+    auto pyConnectionHandle =
+        py::class_<ConnectionHandle>(m, "ConnectionHandle");
 
     // XXX provide a getter for id too ?
     //     could be interesting to expose signal/slot info/stats to python.
@@ -206,26 +209,6 @@ void wrapSignalAndSlotRefs(py::module& m)
             .def("disconnect", &PyCppSignalRef::disconnectSlot)
         ;
 }
-
-// connect (signalRef, slotRef)
-
-// simple adapter
-py::cpp_function pySlotAdapter(py::args args, py::kwargs kwargs) {
-    return {};
-}
-
-
-//template<typename... SignalArgs>
-//[[nodiscard]] static inline
-//auto createCppToPyTransmitter(py::cpp_function) {
-//    return new core::internal::SignalTransmitter<SignalArgs...>(
-//        [=](SignalArgs&&... args) {
-//
-//            // forward N args to cpp_function
-//            // N must be retrieved from func slot attrs.. (if i can add them even for cpp slots..)
-//        });
-//}
-
 
 } // namespace vgc::core::wraps
 

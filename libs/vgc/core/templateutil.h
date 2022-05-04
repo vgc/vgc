@@ -66,7 +66,6 @@ struct TypeIdentity_ {
 // Used to establish non-deduced contexts in template argument deduction.
 // e.g. throwLengthError's IntType is deduced from first argument only,
 // then second argument must be convertible to it.
-// todo: move it to some common header or adopt c++20.
 template<typename U>
 using TypeIdentity = typename internal::TypeIdentity_<U>::type;
 
@@ -308,15 +307,6 @@ struct IsCallable<T, RequiresValid<typename CallableTraits<T>::CallSig>> : std::
 template<typename T>
 inline constexpr bool isCallable = IsCallable<T>::value;
 
-
-// XXX to allow slots for pairs of ref-qualified member functions via a select func:
-// valid: decltype(getLValueRefQualifiedOverload_(&Foo::foo))
-template<typename R, typename C, typename... Args>
-auto getLValueRefQualifiedMethodOverload_(R(C::*x)(Args...)) { return x; }
-template<typename R, typename C, typename... Args>
-auto getLValueRefQualifiedMethodOverload_(R(C::*x)(Args...)&) { return x; }
-
-
 namespace internal {
 
 template<template<typename...> typename Base, typename... Ts>
@@ -337,23 +327,6 @@ struct IsTplBaseOf : std::bool_constant<
 
 template<template<typename...> typename Base, typename Derived>
 inline constexpr bool isTplBaseOf = IsTplBaseOf<Base, Derived>::value;
-
-namespace internal {
-
-template<template<Int> typename Case, std::size_t... Is>
-auto tplFnTable_(std::index_sequence<Is...>) {
-    static constexpr std::array<decltype(&Case<0>::execute), sizeof...(Is)> s = {Case<Is>::execute...};
-    return s;
-};
-
-} // namespace internal
-
-// Experimental
-template<template<Int> typename Case, Int N>
-auto tplFnTable() {
-    return internal::tplFnTable_<Case>(std::make_index_sequence<N>{});
-};
-
 
 } // namespace vgc::core
 

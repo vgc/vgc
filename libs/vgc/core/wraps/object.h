@@ -162,28 +162,4 @@ protected:
 
 } // namespace vgc::core::wraps
 
-
-// Wraps all the  exception base class.
-//
-// ```cpp
-// VGC_CORE_WRAP_BASE_EXCEPTION(core, LogicError);
-// ```
-//
-#define VGC_CORE_WRAP_OBJECT_RELATED_CLASSES(libname, ErrorType) \
-    py::register_exception<vgc::libname::ErrorType>(m, #ErrorType)
-
-// Wraps an exception class deriving from another exception class. If the
-// parent exception is from the same module, simply pass it `m`, otherwise, you
-// must import beforehand the module in whic the parent Exception is defined.
-//
-// ```cpp
-// VGC_CORE_WRAP_EXCEPTION(core, IndexError, m, LogicError);
-//
-// py::module core = py::module::import("vgc.core");
-// VGC_CORE_WRAP_EXCEPTION(dom, LogicError, core, LogicError);
-// ```
-//
-#define VGC_CORE_WRAP_EXCEPTION(libname, ErrorType, parentmodule, ParentErrorType) \
-    py::register_exception<vgc::libname::ErrorType>(m, #ErrorType, parentmodule.attr(#ParentErrorType).ptr())
-
 #endif // VGC_CORE_WRAPS_OBJECT_H

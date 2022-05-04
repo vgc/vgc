@@ -18,7 +18,7 @@
 #define VGC_CORE_PP_H
 
 #define VGC_PP_STR(x) #x
-#define VGC_PP_XSTR(x) VGC_STR(x)
+#define VGC_PP_XSTR(x) VGC_PP_STR(x)
 
 #define VGC_PP_CONCAT(x, y) x##y
 #define VGC_PP_XCONCAT(x, y) VGC_PP_CONCAT(x,y)

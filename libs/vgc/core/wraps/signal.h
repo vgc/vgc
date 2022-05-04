@@ -30,7 +30,7 @@ namespace vgc::core::wraps {
 using SignalTransmitter = core::internal::SignalTransmitter;
 using TransmitArgs = core::internal::TransmitArgs;
 
-// The Signal/Slot API in python is:
+// The signal/slot API in python is:
 //  - declaration:  @signal | @slot
 //  - connect:      objectA.signalA.connect(objectB.slotB | objectB.signalB | function)
 //  - emit:         objectA.signalA.emit(args...)
@@ -51,7 +51,7 @@ inline py::tuple truncatePyArgs(const py::args& args, Int n) {
     return ret;
 }
 
-// Common interface for Python Signals and Slots.
+// Common interface for Python signals and slots.
 class PyAbstractSlotRef {
 public:
     using Id = core::internal::FunctionId;
@@ -226,8 +226,8 @@ private:
     py::function unboundPySlotFn_;
 };
 
-// Should only be constructed from the return value of a Slot method defined
-// with the VGC_SLOT_ALIAS macro.
+// Should only be constructed from the return value of a slot method (defined
+// with the VGC_SLOT macro).
 //
 class PyCppSlotRef : public PyAbstractCppSlotRef {
     using PyAbstractCppSlotRef::PyAbstractCppSlotRef;
