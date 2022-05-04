@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -26,6 +26,55 @@
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc::ui {
+
+
+/*
+DESIGN PSEUDOCODE:
+    Context {
+        int id;
+    }
+    Engine {
+        Context* ctx;
+    }
+
+    Foo = Engine or Context
+
+    Widget {
+        Foo ref;
+        rid resourceId;
+
+        paintDrawInternal(Engine* drawingEngine) {
+            if (drawingEngine.ref != ref) {
+                onPaintDestroy(ref);
+                ctx = drawingEngine->ctx;
+                onPaintCreate(drawingEngine);
+                ctx->onDestroy().connect(this->onCtxDestroyed());
+            }
+
+            paintDraw(drawingEngine);
+        }
+
+        void onCtxDestroyed_(Context*) {
+            onPaintDestroy(ctx);
+        }
+        VGC_SLOT(onCtxDestroyed, onCtxDestroyed_);
+
+        virtual onPaintCreate(Engine*);
+        virtual onPaintDraw(Engine*);
+        virtual onPaintDestroy(Foo*);
+    }
+
+*/
+
+
+
+
+
+
+
+
+
+
 
 namespace {
 
@@ -77,7 +126,216 @@ core::Mat4f toMat4f(const core::Mat4d& m) {
         (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
 }
 
+QMatrix4x4 toQtMatrix(const core::Mat4f& m) {
+    return QMatrix4x4(
+        m(0,0), m(0,1), m(0,2), m(0,3),
+        m(1,0), m(1,1), m(1,2), m(1,3),
+        m(2,0), m(2,1), m(2,2), m(2,3),
+        m(3,0), m(3,1), m(3,2), m(3,3));
+}
+
+struct XYRGBVertex {
+    float x, y, r, g, b;
+};
+
 } // namespace
+
+QWindowEngine::QWindowEngine() :
+    graphics::Engine(),
+    projectionMatrices_({core::Mat4f::identity}),
+    viewMatrices_({core::Mat4f::identity}),
+    ctx_(QOpenGLContext::globalShareContext()) {
+
+}
+
+/* static */
+QWindowEnginePtr QWindowEngine::create()
+{
+    return QWindowEnginePtr(new QWindowEngine());
+}
+
+void QWindowEngine::clear(const core::Color& color)
+{
+    api_->glClearColor(
+        static_cast<float>(color.r()),
+        static_cast<float>(color.g()),
+        static_cast<float>(color.b()),
+        static_cast<float>(color.a()));
+    api_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+core::Mat4f QWindowEngine::projectionMatrix()
+{
+    return projectionMatrices_.last();
+}
+
+void QWindowEngine::setProjectionMatrix(const core::Mat4f& m)
+{
+    projectionMatrices_.last() = m;
+    shaderProgram_.setUniformValue(projLoc_, toQtMatrix(m));
+}
+
+void QWindowEngine::pushProjectionMatrix()
+{
+    // Note: we need a temporary copy by value, since the address
+    // of the current projection matrix might change during "append" in
+    // case of memory re-allocation.
+    core::Mat4f m = projectionMatrix();
+    projectionMatrices_.append(m);
+}
+
+void QWindowEngine::popProjectionMatrix()
+{
+    projectionMatrices_.removeLast();
+    shaderProgram_.setUniformValue(projLoc_, toQtMatrix(projectionMatrices_.last()));
+}
+
+core::Mat4f QWindowEngine::viewMatrix()
+{
+    return viewMatrices_.last();
+}
+
+void QWindowEngine::setViewMatrix(const core::Mat4f& m)
+{
+    viewMatrices_.last() = m;
+    shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(m));
+}
+
+void QWindowEngine::pushViewMatrix()
+{
+    // Note: we need a temporary copy by value, since the address
+    // of the current view matrix might change during "append" in
+    // case of memory re-allocation.
+    core::Mat4f m = viewMatrix();
+    viewMatrices_.append(m);
+}
+
+void QWindowEngine::popViewMatrix()
+{
+    viewMatrices_.removeLast();
+    shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(viewMatrices_.last()));
+}
+
+Int QWindowEngine::createTriangles()
+{
+    // Get or create TrianglesBuffer
+    Int id = trianglesIdGenerator_.generate();
+    if (id >= trianglesBuffers_.length()) {
+        trianglesBuffers_.append(TrianglesBuffer()); // use Array growth policy
+    }
+    if (id >= trianglesBuffers_.length()) {
+        trianglesBuffers_.resize(id+1);              // bypass Array growth policy
+    }
+    TrianglesBuffer& r = trianglesBuffers_[id];
+
+    // Create VBO/VAO for rendering triangles
+    r.vboTriangles.create();
+    r.vaoTriangles = new QOpenGLVertexArrayObject();
+    r.vaoTriangles->create();
+    GLsizei stride  = sizeof(XYRGBVertex);
+    GLvoid* posPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, x));
+    GLvoid* colPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, r));
+    GLboolean normalized = GL_FALSE;
+    r.vaoTriangles->bind();
+    r.vboTriangles.bind();
+    api_->glEnableVertexAttribArray(posLoc_);
+    api_->glEnableVertexAttribArray(colLoc_);
+    api_->glVertexAttribPointer(posLoc_, 2, GL_FLOAT, normalized, stride, posPointer);
+    api_->glVertexAttribPointer(colLoc_, 3, GL_FLOAT, normalized, stride, colPointer);
+    r.vboTriangles.release();
+    r.vaoTriangles->release();
+
+    return id;
+}
+
+void QWindowEngine::loadTriangles(Int id, const float* data, Int length)
+{
+    if (length < 0) {
+        throw core::NegativeIntegerError(core::format(
+            "Negative length ({}) provided to loadTriangles()", length));
+    }
+    TrianglesBuffer& r = trianglesBuffers_[id];
+    r.numVertices = length / 5;
+    r.vboTriangles.bind();
+    r.vboTriangles.allocate(data, r.numVertices * sizeof(XYRGBVertex));
+    r.vboTriangles.release();
+}
+
+void QWindowEngine::drawTriangles(Int id)
+{
+    TrianglesBuffer& r = trianglesBuffers_[id];
+    r.vaoTriangles->bind();
+    api_->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    api_->glDrawArrays(GL_TRIANGLES, 0, r.numVertices);
+    r.vaoTriangles->release();
+}
+
+void QWindowEngine::destroyTriangles(Int id)
+{
+    TrianglesBuffer& r = trianglesBuffers_[id];
+    r.vaoTriangles->destroy();
+    delete r.vaoTriangles;
+    r.vboTriangles.destroy();
+    trianglesIdGenerator_.release(id);
+}
+
+bool QWindowEngine::setViewport(Int x, Int y, Int width, Int height)
+{
+    api_->glViewport(0, 0, width, height);
+}
+
+bool QWindowEngine::initContext()
+{
+    if (ctx_ == nullptr) {
+        throw LogicError("ctx_ is null.");
+    }
+
+    //m_context->setFormat(requestedFormat());
+    //ctx_->create();
+    //ctx_->makeCurrent(this);
+
+    QSurfaceFormat format;
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    format.setVersion(3, 2);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setSamples(8);
+    format.setSwapInterval(0);
+    ctx_->setFormat(format);
+
+    // Initialize shader program
+    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
+    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
+    shaderProgram_.link();
+
+    // Get shader locations
+    shaderProgram_.bind();
+    posLoc_  = shaderProgram_.attributeLocation("pos");
+    colLoc_  = shaderProgram_.attributeLocation("col");
+    projLoc_ = shaderProgram_.uniformLocation("proj");
+    viewLoc_ = shaderProgram_.uniformLocation("view");
+    shaderProgram_.release();
+
+    // Initialize engine
+    api_ = ctx_->versionFunctions<QOpenGLFunctions_3_2_Core>();
+    api_->initializeOpenGLFunctions();
+
+    // Initialize widget for painting.
+    // Note that initializedGL() is never called if the widget is never visible.
+    // Therefore it's important to keep track whether it has been called, so that
+    // we don't call onPaintDestroy() without first calling onPaintCreate()
+
+    /*ctx_->makeCurrent(this);
+
+    oglf_->glViewport(0, 0, width(), height());
+
+    oglf_->glClearColor(1.f, 0, 0, 1.f);
+    oglf_->glClear(GL_COLOR_BUFFER_BIT);
+
+    m_context->swapBuffers(this);
+
+    widget_->onPaintCreate(engine_.get());*/
+}
 
 Window::Window(ui::WidgetPtr widget) :
     widget_(widget),
@@ -115,41 +373,6 @@ WindowPtr Window::create(ui::WidgetPtr widget)
 }
 
 void Window::setupDefaultEngine() {
-    auto e = vgc::ui::UiWidgetEngine::create();
-    engine_ = e;
-
-    // Init context (TO FACTOR OUT)
-    m_context = new QOpenGLContext(this);
-    //m_context->setFormat(requestedFormat());
-    m_context->create();
-    m_context->makeCurrent(this);
-
-    /*QSurfaceFormat format;
-    format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
-    format.setVersion(3, 2);
-    format.setProfile(QSurfaceFormat::CoreProfile);
-    format.setSamples(8);
-    format.setSwapInterval(0);
-    m_context->setFormat(format);*/
-
-    // Initialize shader program
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
-    shaderProgram_.link();
-
-    // Get shader locations
-    shaderProgram_.bind();
-    posLoc_  = shaderProgram_.attributeLocation("pos");
-    colLoc_  = shaderProgram_.attributeLocation("col");
-    projLoc_ = shaderProgram_.uniformLocation("proj");
-    viewLoc_ = shaderProgram_.uniformLocation("view");
-    shaderProgram_.release();
-
-    // Initialize engine
-    oglf_ = m_context->versionFunctions<QOpenGLFunctions_3_2_Core>();
-    oglf_->initializeOpenGLFunctions();
-    e->initialize(oglf_, &shaderProgram_, posLoc_, colLoc_, projLoc_, viewLoc_);
 
     // Initialize widget for painting.
     // Note that initializedGL() is never called if the widget is never visible.
@@ -157,9 +380,9 @@ void Window::setupDefaultEngine() {
     // we don't call onPaintDestroy() without first calling onPaintCreate()
     isInitialized_ = true;
     if (widget_) {
-        m_context->makeCurrent(this);
+        //m_context->makeCurrent(this);
 
-        oglf_->glViewport(0, 0, width(), height());
+        engine_->glViewport(0, 0, width(), height());
 
         oglf_->glClearColor(1.f, 0, 0, 1.f);
         oglf_->glClear(GL_COLOR_BUFFER_BIT);
@@ -167,6 +390,7 @@ void Window::setupDefaultEngine() {
         m_context->swapBuffers(this);
         widget_->onPaintCreate(engine_.get());
     }
+
 }
 
 

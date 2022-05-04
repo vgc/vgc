@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -19,6 +19,7 @@
 
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions_3_2_Core>
+#include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QWindow>
@@ -30,20 +31,91 @@
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Window);
+VGC_DECLARE_OBJECT(QWindowEngine);
+
+
+/// \class vgc::widget::QWindowEngine
+/// \brief The graphics::Engine for windows and widgets.
+///
+/// This class is an implementation of graphics::Engine using QOpenGLContext and
+/// OpenGL calls.
+///
+class VGC_UI_API QWindowEngine : public graphics::Engine {
+private:
+    VGC_OBJECT(QWindowEngine, graphics::Engine)
+
+protected:
+    QWindowEngine();
+
+public:
+    using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
+
+    /// Creates a new OpenglEngine.
+    ///
+    static QWindowEnginePtr create();
+
+    // Implementation of graphics::Engine API
+    void clear(const core::Color& color) override;
+    core::Mat4f projectionMatrix() override;
+    void setProjectionMatrix(const core::Mat4f& m) override;
+    void pushProjectionMatrix() override;
+    void popProjectionMatrix() override;
+    core::Mat4f viewMatrix() override;
+    void setViewMatrix(const core::Mat4f& m) override;
+    void pushViewMatrix() override;
+    void popViewMatrix() override;
+    Int createTriangles() override;
+    void loadTriangles(Int id, const float* data, Int length) override;
+    void drawTriangles(Int id) override;
+    void destroyTriangles(Int id) override;
+
+    bool setViewport(Int x, Int y, Int width, Int height);
+
+protected:
+    bool initContext();
+
+private:
+    QOpenGLContext* ctx_ = nullptr;
+    QOpenGLFunctions_3_2_Core* api_ = nullptr;
+
+    // Shader
+    QOpenGLShaderProgram shaderProgram_;
+    int posLoc_;
+    int colLoc_;
+    int projLoc_;
+    int viewLoc_;
+
+    // Matrices
+    core::Mat4f proj_;
+    core::Array<core::Mat4f> projectionMatrices_;
+    core::Array<core::Mat4f> viewMatrices_;
+
+    // Triangles
+    struct TrianglesBuffer {
+        // Note: we use a pointer for the VAO because copying
+        // QOpenGLVertexArrayObject is disabled
+        QOpenGLBuffer vboTriangles;
+        QOpenGLVertexArrayObject* vaoTriangles;
+        int numVertices;
+    };
+    core::Array<TrianglesBuffer> trianglesBuffers_;
+    graphics::IdGenerator trianglesIdGenerator_;
+};
+
 
 /// \class vgc::ui::Window
 /// \brief A window able to contain a vgc::ui::widget.
 ///
-class VGC_UI_API Window : public core::Object, public QWindow
-{
+class VGC_UI_API Window : public core::Object, public QWindow {
     // optional
     //Q_OBJECT
 
-public:
+protected:
     /// Constructs a UiWidget wrapping the given vgc::ui::Widget.
     ///
     Window(ui::WidgetPtr widget);
 
+public:
     /// Destructs the UiWidget.
     ///
     ~Window() noexcept override;
@@ -91,22 +163,8 @@ private:
     // TO FACTOR OUT
     ////////////////////////////
 
-    QOpenGLFunctions_3_2_Core* oglf_;
-
     virtual void paint();
     virtual void cleanup();
-
-    // Projection and view matrices
-    core::Mat4f proj_;
-
-    // Shader program
-    QOpenGLShaderProgram shaderProgram_;
-    QOpenGLContext* m_context = nullptr;
-
-    int posLoc_;
-    int colLoc_;
-    int projLoc_;
-    int viewLoc_;
 };
 
 } // namespace vgc::ui
