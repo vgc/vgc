@@ -2,6 +2,7 @@ vgc_wrap_library(core
     common.h
     exceptions.h
     object.h
+    signal.h
     module.cpp
     wrap_arithmetic.cpp
     wrap_arrays.cpp
@@ -13,6 +14,7 @@ vgc_wrap_library(core
     wrap_object.cpp
     wrap_parse.cpp
     wrap_paths.cpp
+    wrap_signal.cpp
     wrap_stopwatch.cpp
     wrap_vec2.cpp
 )

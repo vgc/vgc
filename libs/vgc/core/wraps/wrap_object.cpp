@@ -55,4 +55,35 @@ void wrap_object(py::module& m)
         .def("isDescendantObject", &This::isDescendantObject)
         .def("dumpObjectTree", &This::dumpObjectTree)
     ;
+
+    // test objects
+
+    using ConstructibleTestObject = vgc::core::internal::ConstructibleTestObject;
+    vgc::core::wraps::ObjClass<ConstructibleTestObject>(m, "ConstructibleTestObject")
+        .def_create()
+    ;
+
+    using SignalTestObject = vgc::core::internal::SignalTestObject;
+    vgc::core::wraps::ObjClass<SignalTestObject>(m, "CppSignalTestObject")
+        .def_create()
+        .def_signal("signalNoArgs", &SignalTestObject::signalNoArgs)
+        .def_signal("signalInt", &SignalTestObject::signalInt)
+        .def_signal("signalIntRef", &SignalTestObject::signalIntRef)
+        .def_signal("signalConstIntRef", &SignalTestObject::signalConstIntRef)
+        .def_signal("signalIntFloat", &SignalTestObject::signalIntFloat)
+        .def_signal("signalIntFloatBool", &SignalTestObject::signalIntFloatBool)
+        .def_slot("slotNoArgs", &SignalTestObject::slotNoArgs)
+        .def_slot("slotFloat", &SignalTestObject::slotFloat)
+        .def_slot("slotUInt", &SignalTestObject::slotUInt)
+        .def_slot("slotInt", &SignalTestObject::slotInt)
+        .def_slot("slotConstIntRef", &SignalTestObject::slotConstIntRef)
+        .def_slot("slotIncIntRef", &SignalTestObject::slotIncIntRef)
+        .def_slot("slotIntFloat", &SignalTestObject::slotIntFloat)
+        .def("staticFuncInt", &SignalTestObject::staticFuncInt)
+        .def("reset", &SignalTestObject::reset)
+        .def_readwrite_static("sfnIntCalled", &SignalTestObject::sfnIntCalled)
+        .def_readwrite("slotNoargsCallCount", &SignalTestObject::slotNoargsCallCount)
+        .def_readwrite("sumInt", &SignalTestObject::sumInt)
+        .def_readwrite("sumFloat", &SignalTestObject::sumFloat)
+    ;
 }

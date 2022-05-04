@@ -31,7 +31,7 @@ VGC_DECLARE_OBJECT(Action);
 ///
 class VGC_UI_API Action : public core::Object {
 private:
-    VGC_OBJECT(Action)
+    VGC_OBJECT(Action, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected :
@@ -58,7 +58,7 @@ public:
     ///
     /// \sa trigger()
     ///
-    const core::Signal<> triggered;
+    VGC_SIGNAL(triggered);
 
     /// Returns the shortcut associated with this action. This can be an empty
     /// shortcut if this action has no associated shortcut.

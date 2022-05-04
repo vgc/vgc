@@ -104,7 +104,7 @@ core::Vec2d f266ToVec2d(T x, T y)
 ///
 class VGC_GRAPHICS_API FontLibrary : public core::Object {
 private:
-    VGC_OBJECT(FontLibrary)
+    VGC_OBJECT(FontLibrary, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
@@ -192,7 +192,7 @@ VGC_GRAPHICS_API FontLibrary* fontLibrary();
 ///
 class VGC_GRAPHICS_API FontFace : public core::Object {
 private:
-    VGC_OBJECT(FontFace)
+    VGC_OBJECT(FontFace, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
@@ -274,7 +274,7 @@ private:
 ///
 class VGC_GRAPHICS_API FontGlyph : public core::Object {
 private:
-    VGC_OBJECT(FontGlyph)
+    VGC_OBJECT(FontGlyph, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:

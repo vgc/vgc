@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
 
     // Create the python interpreter
     std::string programName(argv[0]);
-    vgc::core::PythonInterpreter pythonInterpreter(programName, pythonHome);
+    auto pythonInterpreter = vgc::core::PythonInterpreter::create(programName, pythonHome);
 
     // Create the document + root element
     // -> Let's have the MainWindow be the owner of the document for now.
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 
     // Create the main window
     //vgc::widgets::MainWindow w(doc.get(), &pythonInterpreter);
-    vgc::widgets::MainWindow w(&pythonInterpreter);
+    vgc::widgets::MainWindow w(pythonInterpreter.get());
     w.setWindowTitle("VGC Illustration");
 
     // Set style

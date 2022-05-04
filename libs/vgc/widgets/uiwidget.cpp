@@ -64,10 +64,8 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent) :
     isInitialized_(false)
 {
     setMouseTracking(true);
-    widget_->repaintRequested.connect(std::bind(
-        &UiWidget::onRepaintRequested, this));
-    widget_->focusRequested.connect(std::bind(
-        &UiWidget::onFocusRequested, this));
+    widget_->repaintRequested().connect([this](){ this->onRepaintRequested(); });
+    widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
 
     // Handle dead keys and complex input methods.
     //

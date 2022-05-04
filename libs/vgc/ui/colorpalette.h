@@ -29,7 +29,7 @@ VGC_DECLARE_OBJECT(ColorPalette);
 ///
 class VGC_UI_API ColorPalette : public Widget {
 private:
-    VGC_OBJECT(ColorPalette)
+    VGC_OBJECT(ColorPalette, Widget)
 
 protected:
     /// This is an implementation details. Please use
@@ -56,7 +56,7 @@ public:
     /// of user interaction with the color palette. The signal isn't emitted
     /// when the selected color is set programatically via setSelectedColor().
     ///
-    const core::Signal<> colorSelected;
+    VGC_SIGNAL(colorSelected);
 
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;

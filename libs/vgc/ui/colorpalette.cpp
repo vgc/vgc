@@ -521,7 +521,7 @@ bool ColorPalette::selectColorFromHovered_()
         selectedColor_ = colorFromHslIndices(
             numHueSteps_, numSaturationSteps_, numLightnessSteps_,
             selectedHueIndex_, selectedSaturationIndex_, selectedLightnessIndex_);
-        colorSelected();
+        colorSelected().emit();
         repaint();
     }
     return accepted;

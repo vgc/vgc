@@ -33,6 +33,7 @@
 #include <vgc/core/parse.h>
 
 #include <vgc/core/internal/containerutil.h>
+#include <vgc/core/templateutil.h>
 
 namespace vgc {
 namespace core {
@@ -1166,6 +1167,20 @@ public:
         checkInRangeForInsert_(i);
         emplaceAt_(i, std::forward<Args>(args)...);
     }
+    
+    /// Construct-prepends a value with arguments \p args, at the beginning of this Array.
+    ///
+    template<typename... Args>
+    reference emplaceFirst(Args&&... args) {
+        return *emplaceAt_(0, std::forward<Args>(args)...);
+    }
+
+    /// Construct-appends a value with arguments \p args, at the end of this Array.
+    ///
+    template<typename... Args>
+    reference emplaceLast(Args&&... args) {
+        return *emplaceAt_(length_, std::forward<Args>(args)...);
+    }
 
     /// Removes the element referred to by the iterator \p it. Returns an
     /// iterator to the element following the removed element, or end() if the
@@ -1214,6 +1229,59 @@ public:
     void removeAt(Int i) {
         checkInRange_(i);
         erase_(i);
+    }
+
+    /// Removes the first element that compares equal to \p value, shifting all subsequent elements one
+    /// index to the left.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {5, 12, 11, 12};
+    /// a.removeOne(12);           // => [5, 11, 12]
+    /// a.removeOne(13);           // => [5, 12, 11, 12]
+    /// ```
+    ///
+    void removeOne(const T value) {
+        auto it = std::find(begin(), end(), value);
+        if (it != end()) {
+            erase_(unwrapIterator(it));
+        }
+    }
+
+    /// Removes the \p count first elements from the container.
+    /// All subsequent elements are shifted to the left.
+    ///
+    /// Throws IndexError if [0, count) isn't a valid range in this Array, that
+    /// is, if it doesn't satisfy:
+    ///
+    ///     0 <= count <= length()
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
+    /// a.removeFirst(3);          // => [12, 15]
+    /// a.removeFirst(100);        // => vgc::core::IndexError!
+    /// a.removeFirst(-1);         // => vgc::core::IndexError!
+    /// ```
+    ///
+    void removeFirst(Int count) {
+        checkInRange_(0, count);
+        erase_(data_, data_ + count);
+    }
+
+    /// Removes all elements that satisfy the predicate \p pred from the container.
+    /// Returns the number of removed elements.
+    /// 
+    /// ```cpp
+    /// vgc::core::Array<double> a = {5, 12, 11, 12, 14};
+    /// a.removeIf([](double v){ return v > 11; }); // => [5, 11]
+    /// ```
+    ///
+    template<typename Pred>
+    Int removeIf(Pred pred) {
+        const auto end_ = end();
+        auto it = std::remove_if(begin(), end_, pred);
+        auto r = std::distance(it, end_);
+        erase_(it, end_);
+        return r;
     }
 
     /// Removes all elements from index \p i1 (inclusive) to index \p i2
@@ -1405,7 +1473,7 @@ public:
             throw IndexError(
                 "Attempting to remove the first element of an empty Array.");
         }
-        erase_(0);
+        erase_(Int(0));
     }
 
     /// Removes the last element of this Array. This is fast: O(1). This is
@@ -2014,13 +2082,15 @@ private:
     // Expects: (0 <= i < length_)
     //
     pointer erase_(const Int i) noexcept {
-        const pointer data = data_;
-        const pointer oldEnd = data + length_;
-        const pointer erasePtr = data + i;
-        std::move(erasePtr + 1, oldEnd, erasePtr);
+        return erase_(data_ + i);
+    }
+
+    pointer erase_(const pointer at) noexcept {
+        const pointer oldEnd = data_ + length_;
+        std::move(at + 1, oldEnd, at);
         destroyElement_(oldEnd - 1);
         --length_;
-        return erasePtr;
+        return at;
     }
 
     pointer erase_(const pointer first, const pointer last) noexcept {
@@ -2084,16 +2154,6 @@ private:
         }
     }
 
-    // Available in C++20
-    // Used to establish non-deduced contexts in template argument deduction.
-    // e.g. throwLengthError's IntType is deduced from first argument only,
-    // then second argument must be convertible to it.
-    // todo: move it to some common header or adopt c++20.
-    template<typename U>
-    struct type_identity {
-        using type = U;
-    };
-
     // Throws NegativeIntegerError if length is negative.
     //
     template<typename IntType>
@@ -2139,7 +2199,7 @@ private:
     }
 
     template<typename IntType>
-    void throwLengthErrorAdd_(IntType current, typename type_identity<IntType>::type addend) const {
+    void throwLengthErrorAdd_(IntType current, TypeIdentity<IntType> addend) const {
         throw LengthError("Exceeding maximum Array length.");
     }
 

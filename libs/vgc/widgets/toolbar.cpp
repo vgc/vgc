@@ -71,7 +71,7 @@ Toolbar::Toolbar(QWidget* parent) :
 
     connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
     connect(colorToolButton_, &ColorToolButton::colorChanged, this, &Toolbar::onColorToolButtonColorChanged_);
-    colorPalette_->colorSelected.connect(std::bind(&Toolbar::onColorPaletteColorSelected_, this));
+    colorPalette_->colorSelected().connect([this](){ this->onColorPaletteColorSelected_(); });
 }
 
 Toolbar::~Toolbar()

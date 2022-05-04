@@ -24,10 +24,13 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
 
+#include <vgc/core/internal/signal.h>
+
 namespace vgc {
 namespace core {
 
 class Object;
+using ConnectionHandle = internal::ConnectionHandle;
 
 namespace internal {
 
@@ -283,12 +286,16 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 /// };
 /// ```
 ///
-/// For now, it simply ensures that the destructor is protected. In the future,
-/// it may also provide some introspection features.
-///
-#define VGC_OBJECT(T)                                      \
-    protected:                                             \
-        ~T() override = default;                           \
+#define VGC_OBJECT(T, S)                                                        \
+    public:                                                                     \
+        using ThisClass = T;                                                    \
+        using SuperClass = S;                                                   \
+        /*static_assert(std::is_base_of_v<SuperClass, ThisClass>,               */\
+        /*    "ThisClass is expected to inherit from SuperClass.");             */\
+        static_assert(::vgc::core::isObject<SuperClass>,                        \
+            "Superclass must inherit from Object and use VGC_OBJECT(..).");                           \
+    protected:                                                                  \
+        ~T() override = default;                                                \
     private:
 
 /// This macro ensures that unsafe base protected methods are not accessible in
@@ -343,7 +350,7 @@ using ObjectPtr = ObjPtr<Object>;
 ///
 /// class Foo : public Object {
 /// private:
-///     VGC_OBJECT(Foo)
+///     VGC_OBJECT(Foo, Object)
 ///
 /// protected:
 ///     Foo();
@@ -381,8 +388,8 @@ using ObjectPtr = ObjPtr<Object>;
 /// where ownership is involved, such as creating a new root object, or
 /// detaching a child object from its parent.
 ///
-/// The `VGC_OBJECT(Foo)` macro adds a few definitions common to all objects,
-/// for example, it makes the destructor protected.
+/// The `VGC_OBJECT(Foo, SuperClass)` macro adds a few definitions common to
+/// all objects, for example, it makes the destructor protected.
 ///
 /// The constructors should always be protected, and sublasses should instead
 /// provide either static functions like `Foo::create()` or
@@ -471,12 +478,15 @@ using ObjectPtr = ObjPtr<Object>;
 /// a specific subclass of Object, you must manually define a clone() method.
 ///
 class VGC_CORE_API Object {
+public:
+    using ThisClass = Object;
+
 private:
     // Disable move and copy
-    Object(const Object&) = default;
-    Object(Object&&) = default;
-    Object& operator=(const Object&) = default;
-    Object& operator=(Object&&) = default;
+    Object(const Object&) = delete;
+    Object(Object&&) = delete;
+    Object& operator=(const Object&) = delete;
+    Object& operator=(Object&&) = delete;
 
 public:
     /// Returns how many ObjPtrs are currently referencing this Object or any
@@ -619,6 +629,32 @@ public:
     /// Prints this object tree to stdout, typically for debugging purposes.
     ///
     void dumpObjectTree() const;
+
+    /// Disconnects the signal-slot connection represented by \p h.
+    /// Returns true if the connection was present.
+    ///
+    bool disconnect(ConnectionHandle h) const {
+        return internal::SignalHub::disconnect(this, h);
+    }
+
+    /// Removes all the signal-slot connections between this and \p receiver.
+    /// Returns true if the connection was present.
+    ///
+    bool disconnect(const Object* receiver) const {
+        return internal::SignalHub::disconnect(this, receiver);
+    }
+
+    /// Disconnects all signals bound to this object from any slots.
+    ///
+    void disconnect() const {
+        internal::SignalHub::disconnectSignals(this);
+    }
+
+    /// Returns the number of outbound signal-slot connections.
+    ///
+    Int numConnections() const {
+        return internal::SignalHub::numOutboundConnections(this);
+    }
 
 protected:
     // This callback method is invoked when this object has just been
@@ -905,19 +941,31 @@ protected:
     ObjPtr<Object> removeObjectFromParent_();
 
 private:
-    friend class internal::ObjPtrAccess;
+    // Reference counting
+    friend class internal::ObjPtrAccess; // To access refCount_
     mutable Int64 refCount_; // If >= 0: isAlive = true, refCount = refCount_
                              // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
+
+    // Parent-child relationship
     Object* parentObject_;
     Object* firstChildObject_;
     Object* lastChildObject_;
     Object* previousSiblingObject_;
     Object* nextSiblingObject_;
 
+    // Signal-slot mechanism
+    friend class internal::SignalHub; // To access signalHub_
+    mutable internal::SignalHub signalHub_;
+
     void destroyObjectImpl_();
 };
 
 namespace internal {
+
+// Required by signal.h
+constexpr SignalHub& SignalHub::access(const Object* o) { 
+    return const_cast<Object*>(o)->signalHub_;
+}
 
 inline void ObjPtrAccess::incref(const Object* obj, Int64 k)
 {
@@ -952,7 +1000,7 @@ inline void ObjPtrAccess::decref(const Object* obj, Int64 k)
 
 } // namespace internal
 
-/// \class vgc::ui::ObjListIterator
+/// \class vgc::core::ObjListIterator
 /// \brief Iterates over an ObjList
 ///
 template<typename T>
@@ -1016,7 +1064,7 @@ private:
 template<typename T>
 class ObjList;
 
-/// \class vgc::ui::ObjListView
+/// \class vgc::core::ObjListView
 /// \brief A non-owning view onto an ObjList<T>, or onto any range of sibling
 ///        objects of type T.
 ///
@@ -1080,7 +1128,7 @@ private:
     ObjListIterator<T> end_;
 };
 
-/// \class vgc::ui::ObjList
+/// \class vgc::core::ObjList
 /// \brief Stores a list of child objects of a given type T.
 ///
 /// An ObjList<T> is an Object that stores and manages a list of Objects of
@@ -1110,9 +1158,9 @@ private:
 /// easier.
 ///
 template<typename T>
-class ObjList : public core::Object {
+class ObjList : public Object {
 private:
-    VGC_OBJECT(ObjList<T>)
+    VGC_OBJECT(ObjList<T>, Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
@@ -1209,12 +1257,98 @@ inline Int Object::numChildObjects() const
     using T##ListIterator = vgc::core::ObjListIterator<T>; \
     using T##ListView     = vgc::core::ObjListView<T>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 VGC_DECLARE_OBJECT(Object);
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
+
+namespace vgc::core::internal {
+
+VGC_DECLARE_OBJECT(ConstructibleTestObject);
+
+// XXX add a create() in Object directly?
+class ConstructibleTestObject : public Object {
+    VGC_OBJECT(ConstructibleTestObject, Object)
+
+public:
+    static ConstructibleTestObjectPtr create()
+    {
+        return new ConstructibleTestObject();
+    }
+};
+
+VGC_DECLARE_OBJECT(SignalTestObject);
+
+class SignalTestObject : public Object {
+    VGC_OBJECT(SignalTestObject, Object)
+
+public:
+    static SignalTestObjectPtr create() {
+        return new SignalTestObject();
+    }
+
+    static inline bool sfnIntCalled = false;
+    Int slotNoargsCallCount = 0;
+    int sumInt = 0;
+    float sumFloat = 0.;
+
+    void reset() {
+        sfnIntCalled = false;
+        slotNoargsCallCount = 0;
+        sumInt = 0;
+        sumFloat = 0.;
+    }
+
+    void slotNoArgs_() {
+        ++slotNoargsCallCount;
+    }
+
+    void slotFloat_(float a) {
+        this->sumFloat += a;
+    }
+
+    void slotUInt_(unsigned int a) {
+        this->sumInt += a;
+    }
+
+    void slotInt_(int a) {
+        this->sumInt += a;
+    }
+
+    void slotConstIntRef_(const int& a) {
+        this->sumInt += a;
+    }
+
+    void slotIncIntRef_(int& a) {
+        ++a;
+    }
+
+    void slotIntFloat_(int a, float b) {
+        this->sumInt += a;
+        this->sumFloat += b;
+    }
+
+    static inline void staticFuncInt() {
+        sfnIntCalled = true;
+    }
+
+    VGC_SIGNAL(signalNoArgs);
+    VGC_SIGNAL(signalInt, (int, a));
+    VGC_SIGNAL(signalIntRef, (int&, a));
+    VGC_SIGNAL(signalConstIntRef, (const int&, a));
+    VGC_SIGNAL(signalIntFloat, (int, a), (float, b));
+    VGC_SIGNAL(signalIntFloatBool, (int, a), (float, b), (bool, c));
+
+    VGC_SLOT(slotNoArgs, slotNoArgs_);
+    VGC_SLOT(slotFloat, slotFloat_);
+    VGC_SLOT(slotUInt, slotUInt_);
+    VGC_SLOT(slotInt, slotInt_);
+    VGC_SLOT(slotConstIntRef, slotConstIntRef_);
+    VGC_SLOT(slotIncIntRef, slotIncIntRef_);
+    VGC_SLOT(slotIntFloat, slotIntFloat_);
+};
+
+} // namespace vgc::core::internal
 
 #endif // VGC_CORE_OBJECT_H

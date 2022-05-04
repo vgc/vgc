@@ -44,7 +44,7 @@ VGC_DECLARE_OBJECT(Engine);
 ///
 class VGC_GRAPHICS_API Engine : public core::Object {
 private:
-    VGC_OBJECT(Engine)
+    VGC_OBJECT(Engine, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:

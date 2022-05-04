@@ -114,7 +114,7 @@ private:
 ///
 class VGC_WIDGETS_API UiWidgetEngine : public graphics::Engine {
 private:
-    VGC_OBJECT(UiWidgetEngine)
+    VGC_OBJECT(UiWidgetEngine, graphics::Engine)
 
 protected:
     /// Creates a new UiWidgetEngine. This constructor is an implementation

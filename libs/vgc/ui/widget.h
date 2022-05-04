@@ -140,7 +140,7 @@ private:
 ///
 class VGC_UI_API Widget : public core::Object {
 private:
-    VGC_OBJECT(Widget)
+    VGC_OBJECT(Widget, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected :
@@ -446,7 +446,7 @@ public:
     /// This signal is emitted when someone requested this widget, or one of
     /// its descendent widgets, to be repainted.
     ///
-    const core::Signal<> repaintRequested;
+    VGC_SIGNAL(repaintRequested);
 
     /// This virtual function is called once before the first call to
     /// onPaintDraw(), and should be reimplemented to create required GPU
@@ -522,7 +522,7 @@ public:
     /// This signal is emitted when someone requested this widget, or one of
     /// its descendent widgets, to be focused.
     ///
-    const core::Signal<> focusRequested;
+    VGC_SIGNAL(focusRequested);
 
     /// Makes this widget the focused widget of this widget tree, and emits the
     /// focusRequested signal.

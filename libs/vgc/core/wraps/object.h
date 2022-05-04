@@ -17,12 +17,14 @@
 #ifndef VGC_CORE_WRAPS_OBJECT_H
 #define VGC_CORE_WRAPS_OBJECT_H
 
+#include <memory>
+#include <type_traits>
+
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/signal.h>
 #include <vgc/core/object.h>
 
-namespace vgc {
-namespace core {
-namespace wraps {
+namespace vgc::core::wraps {
 
 // Define a suitable iterator object to be used for iterating in Python.
 // Indeed, we can't use ObjListIterator<T> as is, because unlike C++ iterators,
@@ -62,8 +64,102 @@ void wrapObjectCommon(py::module& m, const std::string& className)
     ;
 }
 
-} // namespace wraps
-} // namespace core
-} // namespace vgc
+#define OBJCLASS_WRAP_PYCLASS_METHOD(name) \
+    template<typename... Args> \
+    ObjClass& name(Args&&... args) { \
+        PyClass::name(std::forward<Args>(args)...); \
+        return *this; \
+    }
+
+template <typename ObjT, typename... Options>
+class ObjClass : py::class_<ObjT, core::ObjPtr<ObjT>, typename ObjT::SuperClass, Options...> {
+public:
+    using Holder = core::ObjPtr<ObjT>;
+    using Parent = typename ObjT::SuperClass;
+    using PyClass = py::class_<ObjT, Holder, Parent, Options...>;
+    
+    template <typename... Extra>
+    ObjClass(py::handle scope, const char *name, const Extra&... extra) :
+        PyClass(scope, name, py::dynamic_attr(), extra...) {}
+
+    static_assert(isObject<ObjT>);
+
+    OBJCLASS_WRAP_PYCLASS_METHOD(def)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_cast)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_buffer)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readwrite)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readonly)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readwrite_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_readonly_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_readonly)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_readonly_static)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property)
+    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_static)
+
+    template<typename R = void, typename... Args>
+    ObjClass& def_create() {
+        if constexpr (std::is_same_v<R, void>) {
+            def(py::init(&ObjT::create));
+        }
+        else {
+            def(py::init(static_cast<R (*)(Args...)>(&ObjT::create)));
+        }
+        return *this;
+    }
+
+    // XXX prevent signatures with references to python immutables (int..)
+    template<typename SignalT, typename... Extra, std::enable_if_t<core::internal::isSignal<SignalT>, int> = 0>
+    ObjClass& def_signal(const char* name, SignalT signal, const Extra&... extra) {
+        static_assert(std::is_invocable_v<SignalT, const ObjT*>,
+            "Signal must be accessible in the class being pybound.");
+        defSignal(name, signal, extra...);
+        return *this;
+    }
+
+    // XXX prevent signatures with references to python immutables (int..)
+    template<typename SlotT, typename... Extra, std::enable_if_t<core::internal::isSlot<SlotT>, int> = 0>
+    ObjClass& def_slot(const char* name, SlotT slot, const Extra&... extra) {
+        static_assert(std::is_invocable_v<SlotT, ObjT*>,
+            "Slot must be accessible in the class being pybound.");
+        defSlot(name, slot, extra...);
+        return *this;
+    }
+
+protected:
+    template<typename SignalRefT, typename... Extra>
+    void defSignal(const char* name, SignalRefT (ObjT::* mfn)() const, const Extra&... extra) {
+        std::string sname(name);
+        py::cpp_function fget(
+            [=](py::object self) -> PyCppSignalRef* {
+                ObjT* this_ = self.cast<ObjT*>();
+                PyCppSignalRef* sref = new PyCppSignalRefImpl<SignalRefT>((this_->*mfn)());
+                py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
+                self.attr("__dict__")[sname.c_str()] = pysref; // caching
+                return sref; // pybind will find the object in registered_instances
+            },
+            py::keep_alive<0, 1>());
+        PyClass::def_property_readonly(name, fget, extra...);
+    }
+
+    template<typename SlotRefT, typename... Extra>
+    void defSlot(const char* name, SlotRefT (ObjT::* mfn)(), const Extra&... extra) {
+        std::string sname(name);
+        py::cpp_function fget(
+            [=](py::object self) -> PyCppSlotRef* {
+                ObjT* this_ = self.cast<ObjT*>();
+                PyCppSlotRef* sref = new PyCppSlotRefImpl<typename SlotRefT::SlotMethod>((this_->*mfn)());
+                py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
+                self.attr("__dict__")[sname.c_str()] = pysref; // caching
+                return sref; // pybind will find the object in registered_instances
+            },
+            py::keep_alive<0, 1>());
+        PyClass::def_property_readonly(name, fget, extra...);
+    }
+};
+
+#undef OBJCLASS_WRAP_PYCLASS_METHOD
+
+} // namespace vgc::core::wraps
 
 #endif // VGC_CORE_WRAPS_OBJECT_H

@@ -33,7 +33,7 @@ VGC_DECLARE_OBJECT(Element);
 ///
 class VGC_DOM_API Element : public Node {
 private:
-    VGC_OBJECT(Element)
+    VGC_OBJECT(Element, Node)
 
 protected:
     /// Constructs a parent-less Element with the given \p name, owned by the

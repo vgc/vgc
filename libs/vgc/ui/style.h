@@ -339,7 +339,7 @@ VGC_UI_API StyleSheet* styleSheet();
 ///
 class VGC_UI_API StyleSheet : public core::Object {
 private:
-    VGC_OBJECT(StyleSheet)
+    VGC_OBJECT(StyleSheet, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -374,7 +374,7 @@ private:
 ///
 class VGC_UI_API StyleRuleSet : public core::Object {
 private:
-    VGC_OBJECT(StyleRuleSet)
+    VGC_OBJECT(StyleRuleSet, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -441,7 +441,7 @@ private:
 ///
 class VGC_UI_API StyleSelector : public core::Object {
 private:
-    VGC_OBJECT(StyleSelector)
+    VGC_OBJECT(StyleSelector, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -462,7 +462,7 @@ private:
 ///
 class VGC_UI_API StyleDeclaration : public core::Object {
 private:
-    VGC_OBJECT(StyleDeclaration)
+    VGC_OBJECT(StyleDeclaration, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:

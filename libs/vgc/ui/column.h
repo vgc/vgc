@@ -43,7 +43,7 @@ VGC_DECLARE_OBJECT(Column);
 ///
 class VGC_UI_API Column : public Flex {
 private:
-    VGC_OBJECT(Column)
+    VGC_OBJECT(Column, Flex)
 
 protected:
     /// This is an implementation details. Please use

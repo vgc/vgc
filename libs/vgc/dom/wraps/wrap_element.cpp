@@ -15,11 +15,11 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 
 using This = vgc::dom::Element;
-using Holder = vgc::dom::ElementPtr;
 using Parent = vgc::dom::Node;
 
 using vgc::dom::Document;
@@ -27,9 +27,11 @@ using vgc::dom::Element;
 
 void wrap_element(py::module& m)
 {
-    py::class_<This, Holder, Parent>(m, "Element")
-        .def(py::init([](Document* parent, const std::string& name) { return This::create(parent, name); } ))
-        .def(py::init([](Element* parent, const std::string& name) { return This::create(parent, name); } ))
+    vgc::core::wraps::ObjClass<This>(m, "Element")
+        .def_create<This*, Document*, const std::string&>()
+        .def_create<This*, Element*, const std::string&>()
+        //.def(py::init([](Document* parent, const std::string& name) { return This::create(parent, name); } ))
+        //.def(py::init([](Element* parent, const std::string& name) { return This::create(parent, name); } ))
         .def_property_readonly("name", [](const This& self) { return self.name().string(); } )
     ;
 }

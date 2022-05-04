@@ -31,7 +31,7 @@ VGC_DECLARE_OBJECT(LineEdit);
 ///
 class VGC_UI_API LineEdit : public Widget {
 private:
-    VGC_OBJECT(LineEdit)
+    VGC_OBJECT(LineEdit, Widget)
 
 protected:
     /// This is an implementation details. Please use

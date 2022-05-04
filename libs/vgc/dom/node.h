@@ -99,7 +99,7 @@ VGC_DECLARE_OBJECT(Node);
 ///
 class VGC_DOM_API Node : public core::Object {
 private:
-    VGC_OBJECT(Node)
+    VGC_OBJECT(Node, core::Object)
 
 protected:
     /// Constructs a parent-less Node of the given \p nodeType, owned by the

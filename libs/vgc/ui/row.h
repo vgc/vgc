@@ -42,7 +42,7 @@ VGC_DECLARE_OBJECT(Row);
 ///
 class VGC_UI_API Row : public Flex {
 private:
-    VGC_OBJECT(Row)
+    VGC_OBJECT(Row, Flex)
 
 protected:
     /// This is an implementation details. Please use

@@ -30,7 +30,7 @@ VGC_DECLARE_OBJECT(MouseEvent);
 ///
 class VGC_UI_API MouseEvent : public Event {
 private:
-    VGC_OBJECT(MouseEvent)
+    VGC_OBJECT(MouseEvent, Event)
 
 protected:
     /// This is an implementation details. Please use
