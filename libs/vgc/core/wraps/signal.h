@@ -383,7 +383,7 @@ protected:
             try {
                 return makeWrapperFuncs[arity](obj, slot);
             }
-            catch (std::out_of_range& e) {
+            catch (std::out_of_range&) {
                 throw core::LogicError("The slot signature cannot be longer than the signal signature.");
             }
         };
