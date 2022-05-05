@@ -67,11 +67,12 @@ function(vgc_add_library LIB_NAME)
             HEADER_FILES
             CPP_FILES
             COMPILE_DEFINITIONS
-            RESOURCE_FILES)
+            RESOURCE_FILES
+            NATVIS_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Create library target "vgc_<libname>_lib"
-    add_library(${LIB_TARGET} SHARED ${ARG_HEADER_FILES} ${ARG_CPP_FILES})
+    add_library(${LIB_TARGET} SHARED ${ARG_HEADER_FILES} ${ARG_CPP_FILES} ${ARG_NATVIS_FILES})
 
     # Set library output directory and filenames.
     #

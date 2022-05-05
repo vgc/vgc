@@ -71,6 +71,9 @@ vgc_add_library(core
 
         internal/signal.cpp
 
+    NATVIS_FILES
+        tools/vgccore.natvis
+
     COMPILE_DEFINITIONS
 )
 
