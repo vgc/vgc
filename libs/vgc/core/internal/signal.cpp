@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <unordered_map>
+
 #include <vgc/core/object.h>
 
 namespace vgc::core::internal {
@@ -24,10 +26,26 @@ ConnectionHandle ConnectionHandle::generate() {
     return {++s.id_};
 }
 
+namespace {
+
+FunctionId lastId = 0;
+std::unordered_map<std::type_index, FunctionId> typesMap;
+
+} // namespace
+
 FunctionId genFunctionId() {
-    static FunctionId s = 0;
     // XXX make this thread-safe ?
-    return ++s;
+    return ++lastId;
+}
+
+FunctionId genFunctionId(std::type_index ti)
+{
+    // XXX make this thread-safe ?
+    FunctionId& id = typesMap[ti];
+    if (id == 0) {
+        id = ++lastId;
+    }
+    return id;
 }
 
 } // namespace vgc::core::internal
