@@ -23,6 +23,8 @@
 #include <vgc/core/array.h>
 #include <vgc/core/floatarray.h>
 #include <vgc/core/innercore.h>
+#include <vgc/core/mat3f.h>
+#include <vgc/core/vec2f.h>
 #include <vgc/geometry/curves2d.h>
 #include <vgc/graphics/api.h>
 
@@ -302,6 +304,24 @@ public:
     /// Returns the outline of the glyph as a Curves2d.
     ///
     const geometry::Curves2d& outline() const;
+
+    /// Appends to the given FloatArray `data` a triangulation of this glyph
+    /// with the given `transform` applied, in the following format:
+    ///
+    ///
+    /// ```
+    /// [x1, y1,     // First vertex of first triangle
+    ///  x2, y2,     // Second vertex of first triangle
+    ///  x3, y3,     // Third vertex of first triangle
+    ///
+    ///  x4, y4,     // First vertex of second triangle
+    ///  x5, y5,     // Second vertex of second triangle
+    ///  x6, y6,     // Third vertex of second triangle
+    ///
+    ///  ...]
+    ///
+    void fill(core::FloatArray& data,
+              const core::Mat3f& transform) const;
 
 protected:
     /// \reimp
