@@ -1280,7 +1280,7 @@ public:
 
 VGC_DECLARE_OBJECT(SignalTestObject);
 
-class SignalTestObject : public Object {
+class VGC_CORE_API SignalTestObject : public Object {
     VGC_OBJECT(SignalTestObject, Object)
 
 public:
@@ -1332,6 +1332,8 @@ public:
     static inline void staticFuncInt() {
         sfnIntCalled = true;
     }
+
+    void connectToOtherNoArgs(SignalTestObject* other) const;
 
     VGC_SIGNAL(signalNoArgs);
     VGC_SIGNAL(signalInt, (int, a));

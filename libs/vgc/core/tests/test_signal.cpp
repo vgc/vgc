@@ -176,7 +176,7 @@ TEST(TestSignal, TruncateArgs)
     o1->signalIntFloatBool().emit(4, 10.5f, false);
     ASSERT_EQ(o2->sumInt, 4 * 2);
     ASSERT_FLOAT_EQ(o2->sumFloat, 10.5f);
-    ASSERT_FLOAT_EQ(o2->slotNoargsCallCount, 1);
+    ASSERT_EQ(o2->slotNoargsCallCount, 1);
 }
 
 TEST(TestSignal, SlotWithConvertibleArgs)
@@ -200,8 +200,29 @@ TEST(TestSignal, SlotWithConvertibleArgs)
     ASSERT_FLOAT_EQ(o2->sumFloat, 42.f);
 }
 
+TEST(TestSignal, CrossModuleSignals)
+{
+    // The idea of this test is to call connect() inside a shared lib,
+    // then call emit() outside of the shared lib. The risk is that
+    // connect() adds to the SignalHub a SignalId which is different
+    // from the SignalId passed by the emit() call, in which case it
+    // wouldn't match any connection and the slot wouldn't be called.
+    auto o1 = SignalTestObject::create();
+    auto o2 = SignalTestObject::create();
+    o1->connectToOtherNoArgs(o2.get());
+    o1->signalNoArgs().emit();
+    EXPECT_EQ(o2->slotNoargsCallCount, 1);
+}
+
 int main(int argc, char **argv)
 {
+    // Mess up with ID generation for CrossModuleSignals test.
+    // The idea is to check whether a call to  basically attempt to get
+    const int biggerThanNumSignalsInCore = 1000;
+    for(int i = 0; i < biggerThanNumSignalsInCore; ++i) {
+        vgc::core::internal::genFunctionId();
+    }
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

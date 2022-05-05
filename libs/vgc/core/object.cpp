@@ -17,8 +17,7 @@
 #include <vgc/core/object.h>
 #include <vgc/core/format.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 namespace {
 
@@ -440,5 +439,13 @@ void Object::destroyObjectImpl_()
     // https://stackoverflow.com/questions/755196/deleting-a-pointer-to-const-t-const
 }
 
-} // namespace core
-} // namespace vgc
+namespace internal {
+
+void SignalTestObject::connectToOtherNoArgs(SignalTestObject* other) const
+{
+    signalNoArgs().connect(other->slotNoArgs());
+}
+
+} // namespace internal
+
+} // namespace core::vgc
