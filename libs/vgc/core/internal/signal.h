@@ -151,6 +151,7 @@ using SignalId = FunctionId;
 // Dynamically generates a unique identifier.
 // Used by slots and signals.
 VGC_CORE_API FunctionId genFunctionId();
+VGC_CORE_API FunctionId genFunctionId(std::type_index ti);
 
 /// A handle to a signal/slot connection.
 /// It is returned by SignalRef's connect functions and can be used in disconnect functions.
@@ -184,7 +185,7 @@ template<typename Tag>
 class FunctionIdSingleton {
 public:
     static FunctionId get() {
-        static FunctionId s = genFunctionId();
+        static FunctionId s = genFunctionId(std::type_index(typeid(Tag)));
         return s;
     }
 
