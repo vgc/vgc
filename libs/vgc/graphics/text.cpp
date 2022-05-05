@@ -239,42 +239,27 @@ void ShapedGlyph::fill(core::FloatArray& data,
 void ShapedGlyph::fill(core::FloatArray& data,
                        const core::Vec2d& origin) const
 {
-    Int oldLength = data.length();
-
     // Note: we currently disable per-letter hinting (which can be seen as a
     // component of horizontal hinting) because it looked worse, at least with
     // the current implementation. It produced uneven spacing between letters,
     // making kerning look bad.
     constexpr bool hinting = false;
 
-    // Triangulate the glyph in local glyph coordinates.
-    //
-    // Another option would be to simply cache the triangulation within the
-    // FontGlyph.
-    //
-    fontGlyph()->outline().fill(data);
-
-    // Apply local-to-global transform and populate the output array.
-    //
-    // XXX: Is the Y-axis of position() and offset() currently pointing up or
-    // down? Do we want it be pointing up or down? In our current tested usage,
-    // all these vertical values are always zero, so it doesn't matter, but we
-    // need to clarify this.
-    //
+    // Per-letter hinting
     core::Vec2d p_ = origin + position();
     core::Vec2f p(static_cast<float>(p_[0]), static_cast<float>(p_[1]));
     if (hinting) {
         p[0] = std::round(p[0]);
         p[1] = std::round(p[1]);
     }
-    Int newLength = data.length();
-    Int numVertices = (newLength - oldLength) / 2;
-    for (Int i = 0; i < numVertices; ++i) {
-        float& x = data[oldLength + 2*i];
-        float& y = data[oldLength + 2*i+1];
-        x = p[0] + x;
-        y = p[1] - y; // revert Y axis
-    }
+
+    // Transform from local glyph coordinates to requested coordinates.
+    core::Mat3f transform = core::Mat3f::identity;
+    transform.translate(p[0], p[1]); // TODO: Mat3f::translate(const Vec2f&)
+    transform.scale(1, -1);
+
+    // Get the glyph triangulation
+    fontGlyph()->fill(data, transform);
 }
 
 ShapedText::ShapedText(FontFace* face, const std::string& text) :

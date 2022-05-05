@@ -361,6 +361,7 @@ public:
     Int index;
     std::string name;
     geometry::Curves2d outline;
+    core::FloatArray triangles;
 
     FontGlyphImpl(Int index, const char* name, FT_GlyphSlot slot) :
         index(index),
@@ -371,6 +372,7 @@ public:
         FT_Outline_Funcs f{&moveTo, &lineTo, &conicTo, &cubicTo, shift, delta};
         FT_Outline_Decompose(&slot->outline, &f, static_cast<void*>(&outline));
         closeLastCurveIfOpen(outline);
+        outline.fill(triangles);
     }
 };
 
@@ -568,6 +570,20 @@ std::string FontGlyph::name() const
 const geometry::Curves2d& FontGlyph::outline() const
 {
     return impl_->outline;
+}
+
+void FontGlyph::fill(core::FloatArray& data,
+                     const core::Mat3f& transform) const
+{
+    const core::FloatArray& triangles = impl_->triangles;
+    Int numVertices = triangles.length() / 2;
+    data.reserve(data.length() + 2 * numVertices);
+    for (Int i = 0; i < numVertices; ++i) {
+        core::Vec2f v1(triangles[2*i], triangles[2*i+1]);
+        core::Vec2f v2 = transform * v1;
+        data.append(v2[0]);
+        data.append(v2[1]);
+    }
 }
 
 void FontGlyph::onDestroyed()

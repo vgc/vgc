@@ -181,8 +181,6 @@ void insertText(
             textLeft = x1 + paddingLeft + 0.5f * (width - advance);
             break;
         case graphics::TextHorizontalAlign::Right:
-            // XXX: Should the ellipsis be on the left in this case? See:
-            //      https://developer.mozilla.org/en-US/docs/Web/CSS/text-overflow
             textLeft = x1 + paddingLeft + (width - advance);
             break;
         }
