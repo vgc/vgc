@@ -36,6 +36,8 @@ protected:
 
 public:
     ~Resource() {
+        // XXX cannot do that, virtual call in destructor is not gud..
+        // could be call in the shared_ptr destructor...
         destroy_();
     }
 
