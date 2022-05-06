@@ -557,6 +557,10 @@ void Window::keyReleaseEvent(QKeyEvent* event)
 //}
 
 void Window::paint() {
+    if (!isExposed()) {
+        return;
+    }
+
     if (!engine_) {
         throw LogicError("engine_ is null.");
     }
@@ -587,6 +591,13 @@ bool Window::event(QEvent* e)
         break;
     }
     return QWindow::event(e);
+}
+
+void Window::exposeEvent(QExposeEvent*)
+{
+    if (isExposed()) {
+        paint();
+    }
 }
 
 void Window::cleanup()

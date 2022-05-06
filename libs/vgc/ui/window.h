@@ -207,6 +207,7 @@ protected:
     void resizeEvent(QResizeEvent *ev) override;
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
+    void exposeEvent(QExposeEvent *event) override;
     //void inputMethodEvent(QInputMethodEvent* event) override;
     bool event(QEvent* e) override;
 
