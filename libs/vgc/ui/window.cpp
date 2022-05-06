@@ -66,16 +66,6 @@ DESIGN PSEUDOCODE:
 
 */
 
-
-
-
-
-
-
-
-
-
-
 namespace {
 
 QString toQt(const std::string& s)
@@ -111,11 +101,17 @@ core::Vec2f fromQtf(const QPointF& v)
     return core::Vec2f(v.x(), v.y());
 }
 
-// Returns the file path of a shader file as a QString
-QString shaderPath_(const std::string& name) {
-    std::string path = core::resourcePath("graphics/opengl/" + name);
-    return toQt(path);
+QMatrix4x4 toQtMatrix(const core::Mat4f& m) {
+    return QMatrix4x4(
+        m(0,0), m(0,1), m(0,2), m(0,3),
+        m(1,0), m(1,1), m(1,2), m(1,3),
+        m(2,0), m(2,1), m(2,2), m(2,3),
+        m(3,0), m(3,1), m(3,2), m(3,3));
 }
+
+} // namespace
+
+namespace {
 
 core::Mat4f toMat4f(const core::Mat4d& m) {
     // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
@@ -126,12 +122,10 @@ core::Mat4f toMat4f(const core::Mat4d& m) {
         (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
 }
 
-QMatrix4x4 toQtMatrix(const core::Mat4f& m) {
-    return QMatrix4x4(
-        m(0,0), m(0,1), m(0,2), m(0,3),
-        m(1,0), m(1,1), m(1,2), m(1,3),
-        m(2,0), m(2,1), m(2,2), m(2,3),
-        m(3,0), m(3,1), m(3,2), m(3,3));
+// Returns the file path of a shader file as a QString
+QString shaderPath_(const std::string& name) {
+    std::string path = core::resourcePath("graphics/opengl/" + name);
+    return toQt(path);
 }
 
 struct XYRGBVertex {
@@ -140,21 +134,81 @@ struct XYRGBVertex {
 
 } // namespace
 
-QWindowEngine::QWindowEngine() :
+QOpenglTrianglesBuffer::QOpenglTrianglesBuffer(QOpenglEngine* engine) :
+    graphics::TrianglesBuffer(engine)
+{
+    // Create VBO/VAO for rendering triangles
+    vbo_.create();
+    vao_ = new QOpenGLVertexArrayObject();
+    vao_->create();
+}
+
+void QOpenglTrianglesBuffer::load(const float* data, Int length)
+{
+    if (!vao_) return;
+    if (length < 0) {
+        throw core::NegativeIntegerError(core::format(
+            "Negative length ({}) provided to loadTriangles()", length));
+    }
+    numVertices_ = length / 5;
+    vbo_.bind();
+    vbo_.allocate(data, numVertices_ * sizeof(XYRGBVertex));
+    vbo_.release();
+}
+
+void QOpenglTrianglesBuffer::draw()
+{
+    if (!vao_) return;
+    vao_->bind();
+    auto api = engine()->api();
+    api->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    api->glDrawArrays(GL_TRIANGLES, 0, numVertices_);
+    vao_->destroy();
+}
+
+void QOpenglTrianglesBuffer::destroyImpl()
+{
+    if (!vao_) return;
+    vao_->destroy();
+    delete vao_;
+    vao_ = nullptr;
+    vbo_.destroy();
+}
+
+QOpenglEngine::QOpenglEngine() :
+    QOpenglEngine(new QOpenGLContext()) {}
+
+QOpenglEngine::QOpenglEngine(QOpenGLContext* ctx) :
     graphics::Engine(),
     projectionMatrices_({core::Mat4f::identity}),
     viewMatrices_({core::Mat4f::identity}),
-    ctx_(QOpenGLContext::globalShareContext()) {
+    ctx_(new QOpenGLContext())
+{
+    auto shareCtx = QOpenGLContext::globalShareContext();
+    if (!shareCtx) {
+        throw LogicError("Qt's globalShareContext is null..");
+    }
+    ctx_->setShareContext(shareCtx);
+}
 
+void QOpenglEngine::onDestroyed()
+{ 
+    delete ctx_;
 }
 
 /* static */
-QWindowEnginePtr QWindowEngine::create()
+QOpenglEnginePtr QOpenglEngine::create()
 {
-    return QWindowEnginePtr(new QWindowEngine());
+    return QOpenglEnginePtr(new QOpenglEngine());
 }
 
-void QWindowEngine::clear(const core::Color& color)
+/* static */
+QOpenglEnginePtr QOpenglEngine::create(QOpenGLContext* ctx)
+{
+    return QOpenglEnginePtr(new QOpenglEngine(ctx));
+}
+
+void QOpenglEngine::clear(const core::Color& color)
 {
     api_->glClearColor(
         static_cast<float>(color.r()),
@@ -164,18 +218,18 @@ void QWindowEngine::clear(const core::Color& color)
     api_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-core::Mat4f QWindowEngine::projectionMatrix()
+core::Mat4f QOpenglEngine::projectionMatrix()
 {
     return projectionMatrices_.last();
 }
 
-void QWindowEngine::setProjectionMatrix(const core::Mat4f& m)
+void QOpenglEngine::setProjectionMatrix(const core::Mat4f& m)
 {
     projectionMatrices_.last() = m;
     shaderProgram_.setUniformValue(projLoc_, toQtMatrix(m));
 }
 
-void QWindowEngine::pushProjectionMatrix()
+void QOpenglEngine::pushProjectionMatrix()
 {
     // Note: we need a temporary copy by value, since the address
     // of the current projection matrix might change during "append" in
@@ -184,24 +238,24 @@ void QWindowEngine::pushProjectionMatrix()
     projectionMatrices_.append(m);
 }
 
-void QWindowEngine::popProjectionMatrix()
+void QOpenglEngine::popProjectionMatrix()
 {
     projectionMatrices_.removeLast();
     shaderProgram_.setUniformValue(projLoc_, toQtMatrix(projectionMatrices_.last()));
 }
 
-core::Mat4f QWindowEngine::viewMatrix()
+core::Mat4f QOpenglEngine::viewMatrix()
 {
     return viewMatrices_.last();
 }
 
-void QWindowEngine::setViewMatrix(const core::Mat4f& m)
+void QOpenglEngine::setViewMatrix(const core::Mat4f& m)
 {
     viewMatrices_.last() = m;
     shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(m));
 }
 
-void QWindowEngine::pushViewMatrix()
+void QOpenglEngine::pushViewMatrix()
 {
     // Note: we need a temporary copy by value, since the address
     // of the current view matrix might change during "append" in
@@ -210,89 +264,67 @@ void QWindowEngine::pushViewMatrix()
     viewMatrices_.append(m);
 }
 
-void QWindowEngine::popViewMatrix()
+void QOpenglEngine::popViewMatrix()
 {
     viewMatrices_.removeLast();
     shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(viewMatrices_.last()));
 }
 
-Int QWindowEngine::createTriangles()
+graphics::TrianglesBufferPtr QOpenglEngine::createTriangles()
 {
-    // Get or create TrianglesBuffer
-    Int id = trianglesIdGenerator_.generate();
-    if (id >= trianglesBuffers_.length()) {
-        trianglesBuffers_.append(TrianglesBuffer()); // use Array growth policy
-    }
-    if (id >= trianglesBuffers_.length()) {
-        trianglesBuffers_.resize(id+1);              // bypass Array growth policy
-    }
-    TrianglesBuffer& r = trianglesBuffers_[id];
-
-    // Create VBO/VAO for rendering triangles
-    r.vboTriangles.create();
-    r.vaoTriangles = new QOpenGLVertexArrayObject();
-    r.vaoTriangles->create();
+    auto r = QOpenglTrianglesBuffer::create(this);
     GLsizei stride  = sizeof(XYRGBVertex);
     GLvoid* posPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, x));
     GLvoid* colPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, r));
     GLboolean normalized = GL_FALSE;
-    r.vaoTriangles->bind();
-    r.vboTriangles.bind();
+    r->bind();
     api_->glEnableVertexAttribArray(posLoc_);
     api_->glEnableVertexAttribArray(colLoc_);
     api_->glVertexAttribPointer(posLoc_, 2, GL_FLOAT, normalized, stride, posPointer);
     api_->glVertexAttribPointer(colLoc_, 3, GL_FLOAT, normalized, stride, colPointer);
-    r.vboTriangles.release();
-    r.vaoTriangles->release();
-
-    return id;
+    r->release();
+    return r;
 }
 
-void QWindowEngine::loadTriangles(Int id, const float* data, Int length)
+void QOpenglEngine::setTarget(QSurface* qw)
 {
-    if (length < 0) {
-        throw core::NegativeIntegerError(core::format(
-            "Negative length ({}) provided to loadTriangles()", length));
+    if (!api_) {
+        initContext(qw);
     }
-    TrianglesBuffer& r = trianglesBuffers_[id];
-    r.numVertices = length / 5;
-    r.vboTriangles.bind();
-    r.vboTriangles.allocate(data, r.numVertices * sizeof(XYRGBVertex));
-    r.vboTriangles.release();
+    current_ = qw;
+    ctx_->makeCurrent(qw);
 }
 
-void QWindowEngine::drawTriangles(Int id)
-{
-    TrianglesBuffer& r = trianglesBuffers_[id];
-    r.vaoTriangles->bind();
-    api_->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    api_->glDrawArrays(GL_TRIANGLES, 0, r.numVertices);
-    r.vaoTriangles->release();
-}
-
-void QWindowEngine::destroyTriangles(Int id)
-{
-    TrianglesBuffer& r = trianglesBuffers_[id];
-    r.vaoTriangles->destroy();
-    delete r.vaoTriangles;
-    r.vboTriangles.destroy();
-    trianglesIdGenerator_.release(id);
-}
-
-bool QWindowEngine::setViewport(Int x, Int y, Int width, Int height)
+void QOpenglEngine::setViewport(Int x, Int y, Int width, Int height)
 {
     api_->glViewport(0, 0, width, height);
 }
 
-bool QWindowEngine::initContext()
+void QOpenglEngine::bindPaintShader()
+{
+    shaderProgram_.bind();
+}
+
+void QOpenglEngine::releasePaintShader()
+{
+    shaderProgram_.release();
+}
+
+void QOpenglEngine::present()
+{
+    ctx_->swapBuffers(current_);
+}
+
+void QOpenglEngine::initContext(QSurface* qw)
 {
     if (ctx_ == nullptr) {
         throw LogicError("ctx_ is null.");
     }
+    if (api_ != nullptr) {
+        throw LogicError("already initialized.");
+    }
 
-    //m_context->setFormat(requestedFormat());
-    //ctx_->create();
-    //ctx_->makeCurrent(this);
+    ctx_->create();
 
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
@@ -303,6 +335,12 @@ bool QWindowEngine::initContext()
     format.setSwapInterval(0);
     ctx_->setFormat(format);
 
+    ctx_->makeCurrent(qw);
+
+    setupContext();
+}
+
+void QOpenglEngine::setupContext() {
     // Initialize shader program
     shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
     shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
@@ -339,14 +377,15 @@ bool QWindowEngine::initContext()
 
 Window::Window(ui::WidgetPtr widget) :
     widget_(widget),
-    engine_(),
-    isInitialized_(false)
+    engine_(QOpenglEngine::create()),
+    proj_(core::Mat4f::identity),
+    clearColor_(0.337f, 0.345f, 0.353f, 1.f)
 {
+    setSurfaceType(QWindow::OpenGLSurface);
+
     //setMouseTracking(true);
     widget_->repaintRequested().connect([this](){ this->onRepaintRequested(); });
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
-
-    setSurfaceType(QWindow::OpenGLSurface);
 
     // Handle dead keys and complex input methods.
     //
@@ -365,6 +404,7 @@ Window::Window(ui::WidgetPtr widget) :
 
 Window::~Window() noexcept
 {
+    // XXX ?
 }
 
 WindowPtr Window::create(ui::WidgetPtr widget)
@@ -372,27 +412,26 @@ WindowPtr Window::create(ui::WidgetPtr widget)
     return WindowPtr(new Window(widget));
 }
 
-void Window::setupDefaultEngine() {
-
-    // Initialize widget for painting.
-    // Note that initializedGL() is never called if the widget is never visible.
-    // Therefore it's important to keep track whether it has been called, so that
-    // we don't call onPaintDestroy() without first calling onPaintCreate()
-    isInitialized_ = true;
-    if (widget_) {
-        //m_context->makeCurrent(this);
-
-        engine_->glViewport(0, 0, width(), height());
-
-        oglf_->glClearColor(1.f, 0, 0, 1.f);
-        oglf_->glClear(GL_COLOR_BUFFER_BIT);
-
-        m_context->swapBuffers(this);
-        widget_->onPaintCreate(engine_.get());
-    }
-
-}
-
+//void Window::setEngine() {
+//
+//    // Initialize widget for painting.
+//    // Note that initializedGL() is never called if the widget is never visible.
+//    // Therefore it's important to keep track whether it has been called, so that
+//    // we don't call onPaintDestroy() without first calling onPaintCreate()
+//    isInitialized_ = true;
+//    if (widget_) {
+//        //m_context->makeCurrent(this);
+//
+//        engine_->glViewport(0, 0, width(), height());
+//
+//        oglf_->glClearColor(1.f, 0, 0, 1.f);
+//        oglf_->glClear(GL_COLOR_BUFFER_BIT);
+//
+//        m_context->swapBuffers(this);
+//        widget_->onPaintCreate(engine_.get());
+//    }
+//
+//}
 
 //QSize Window::sizeHint() const
 //{
@@ -459,7 +498,8 @@ void Window::resizeEvent(QResizeEvent *ev)
     //   https://stackoverflow.com/a/60339495/1951907
     // Should we issue a warning in these cases?
     widget_->setGeometry(0, 0, static_cast<float>(width()), static_cast<float>(height()));
-    // Note: paintGL will automatically be called after this
+
+    // redraw now
     paint();
 }
 
@@ -517,22 +557,21 @@ void Window::keyReleaseEvent(QKeyEvent* event)
 //}
 
 void Window::paint() {
-    if (!m_context) {
-        setupDefaultEngine();
+    if (!engine_) {
+        throw LogicError("engine_ is null.");
     }
-    m_context->makeCurrent(this);
-    oglf_->glViewport(0, 0, width(), height());
-    oglf_->glClearColor(1.f, 0, 0, 1.f);
-    oglf_->glClear(GL_COLOR_BUFFER_BIT);
-    
-    shaderProgram_.bind();
+
+    engine_->setTarget(this);
+    engine_->setViewport(0, 0, width(), height());
+    engine_->clear(clearColor_);
+
+    engine_->bindPaintShader();
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(core::Mat4f::identity);
-    engine_->clear(core::Color(0.337, 0.345, 0.353));
-    widget_->onPaintDraw(engine_.get());
-    shaderProgram_.release();
+    widget_->paint(engine_.get());
+    engine_->releasePaintShader();
 
-    m_context->swapBuffers(this);
+    engine_->present();
 }
 
 bool Window::event(QEvent* e)
@@ -552,10 +591,7 @@ bool Window::event(QEvent* e)
 
 void Window::cleanup()
 {
-    if (isInitialized_) {
-        widget_->onPaintDestroy(engine_.get());
-        isInitialized_ = false;
-    }
+    // XXX ?
 }
 
 void Window::onRepaintRequested()

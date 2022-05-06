@@ -159,6 +159,9 @@ class ConnectionHandle {
 public:
     static const ConnectionHandle invalid;
 
+    constexpr ConnectionHandle()
+        : ConnectionHandle(-1) {}
+
 protected:
     constexpr ConnectionHandle(Int64 id)
         : id_(id) {}
@@ -182,7 +185,7 @@ private:
     Int64 id_;
 };
 
-inline constexpr ConnectionHandle ConnectionHandle::invalid = {-1};
+inline constexpr ConnectionHandle ConnectionHandle::invalid = {};
 
 
 template<typename Tag>

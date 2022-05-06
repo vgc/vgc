@@ -35,7 +35,6 @@ LineEdit::LineEdit(const std::string& text) :
     shapedText_(graphics::fontLibrary()->defaultFace(), text_),
     textCursor_(false, 0),
     scrollLeft_(0.0f),
-    trianglesId_(-1),
     reload_(true),
     isHovered_(false),
     isMousePressed_(false)
@@ -71,7 +70,7 @@ void LineEdit::onResize()
 
 void LineEdit::onPaintCreate(graphics::Engine* engine)
 {
-    trianglesId_ = engine->createTriangles();
+    triangles_ = engine->createTriangles();
 }
 
 void LineEdit::onPaintDraw(graphics::Engine* engine)
@@ -100,14 +99,14 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
         internal::insertText(a, textColor, 0, 0, width(), height(), paddingLeft, paddingRight, 0, 0, shapedText_, textProperties, textCursor_, hinting, scrollLeft_);
-        engine->loadTriangles(trianglesId_, a.data(), a.length());
+        triangles_->load(a.data(), a.length());
     }
-    engine->drawTriangles(trianglesId_);
+    triangles_->draw();
 }
 
 void LineEdit::onPaintDestroy(graphics::Engine* engine)
 {
-    engine->destroyTriangles(trianglesId_);
+    triangles_.reset();
 }
 
 bool LineEdit::onMouseMove(MouseEvent* event)

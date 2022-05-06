@@ -656,6 +656,13 @@ public:
         return internal::SignalHub::numOutboundConnections(this);
     }
 
+    /// This signal is emitted by this `object` just before it is destroyed.
+    /// The object is still alive, its children have not yet been recursively
+    /// destroyed, and none of the signals and slots have been automatically
+    /// disconnected.
+    ///
+    VGC_SIGNAL(aboutToBeDestroyed, (Object*, object));
+    
 protected:
     // This callback method is invoked when this object has just been
     // destroyed, that is, just after isAlive() has switched from true to

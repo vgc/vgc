@@ -161,6 +161,8 @@ protected :
     ///
     Widget();
 
+    void onDestroyed() override;
+
 public:
     /// Creates a widget.
     ///
@@ -450,29 +452,15 @@ public:
     ///
     void repaint();
 
+    /// This function is called whenever the widget needs to be
+    /// repainted.
+    ///
+    void paint(graphics::Engine* engine);
+
     /// This signal is emitted when someone requested this widget, or one of
     /// its descendent widgets, to be repainted.
     ///
     VGC_SIGNAL(repaintRequested);
-
-    /// This virtual function is called once before the first call to
-    /// onPaintDraw(), and should be reimplemented to create required GPU
-    /// resources.
-    ///
-    virtual void onPaintCreate(graphics::Engine* engine);
-
-    /// This virtual function is called whenever the widget needs to be
-    /// repainted. Subclasses should reimplement this, typically by issuing
-    /// draw calls.
-    ///
-    virtual void onPaintDraw(graphics::Engine* engine);
-
-    /// This virtual function is called once after the last call to
-    /// onPaintDraw(), for example before the widget is destructed, or if
-    /// switching graphics engine. It should be reimplemented to destroy the
-    /// created GPU resources.
-    ///
-    virtual void onPaintDestroy(graphics::Engine* engine);
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
@@ -689,6 +677,26 @@ public:
     ///
     Action* createAction(const Shortcut& shortcut);
 
+public:
+    /// This virtual function is called once before the first call to
+    /// onPaintDraw(), and should be reimplemented to create required GPU
+    /// resources.
+    ///
+    virtual void onPaintCreate(graphics::Engine* engine);
+
+    /// This virtual function is called whenever the widget needs to be
+    /// repainted. Subclasses should reimplement this, typically by issuing
+    /// draw calls.
+    ///
+    virtual void onPaintDraw(graphics::Engine* engine);
+
+    /// This virtual function is called once after the last call to
+    /// onPaintDraw(), for example before the widget is destructed, or if
+    /// switching graphics engine. It should be reimplemented to destroy the
+    /// created GPU resources.
+    ///
+    virtual void onPaintDestroy(graphics::Engine* engine);
+
 protected:
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its
@@ -731,76 +739,11 @@ private:
     WidgetClasses classes_;
     friend class Style;
     Style style_;
+    graphics::Engine* lastPaintEngine_ = nullptr;
     void onClassesChanged_();
-};
+    void releaseEngine_();
 
-/// \class vgc::widget::UiWidgetEngine
-/// \brief The graphics::Engine used by UiWidget.
-///
-/// This class is an implementation of graphics::Engine using QPainter and
-/// OpenGL calls, with the assumption to be used with a QOpenGLContext.
-///
-class VGC_UI_API UiWidgetEngine : public graphics::Engine {
-private:
-    VGC_OBJECT(UiWidgetEngine, graphics::Engine)
-
-protected:
-    /// Creates a new UiWidgetEngine. This constructor is an implementation
-    /// detail. In order to create a UiWidgetEngine, please use the following:
-    ///
-    /// \code
-    /// UiWidgetEnginePtr engine = UiWidgetEngine::create();
-    /// \endcode
-    ///
-    UiWidgetEngine();
-
-public:
-    using OpenGLFunctions = QOpenGLFunctions_3_2_Core;
-
-    /// Creates a new UiWidgetEngine.
-    ///
-    static UiWidgetEnginePtr create();
-
-    /// Initializes the engine with the given OpenGL parameters required to
-    /// perform its OpenGL calls.
-    ///
-    void initialize(OpenGLFunctions* functions,
-        QOpenGLShaderProgram* shaderProgram,
-        int posLoc, int colLoc, int projLoc, int viewLoc);
-
-    // Implementation of graphics::Engine API
-    void clear(const core::Color& color) override;
-    core::Mat4f projectionMatrix() override;
-    void setProjectionMatrix(const core::Mat4f& m) override;
-    void pushProjectionMatrix() override;
-    void popProjectionMatrix() override;
-    core::Mat4f viewMatrix() override;
-    void setViewMatrix(const core::Mat4f& m) override;
-    void pushViewMatrix() override;
-    void popViewMatrix() override;
-    Int createTriangles() override;
-    void loadTriangles(Int id, const float* data, Int length) override;
-    void drawTriangles(Int id) override;
-    void destroyTriangles(Int id) override;
-
-private:
-    OpenGLFunctions* openGLFunctions_;
-    QOpenGLShaderProgram* shaderProgram_;
-    int posLoc_;
-    int colLoc_;
-    int projLoc_;
-    int viewLoc_;
-    core::Array<core::Mat4f> projectionMatrices_;
-    core::Array<core::Mat4f> viewMatrices_;
-    graphics::IdGenerator trianglesIdGenerator_;
-    struct TrianglesBuffer {
-        // Note: we use a pointer for the VAO because copying
-        // QOpenGLVertexArrayObject is disabled
-        QOpenGLBuffer vboTriangles;
-        QOpenGLVertexArrayObject* vaoTriangles;
-        int numVertices;
-    };
-    core::Array<TrianglesBuffer> trianglesBuffers_;
+    VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_);
 };
 
 } // namespace ui

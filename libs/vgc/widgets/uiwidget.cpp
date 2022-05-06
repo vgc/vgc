@@ -49,7 +49,7 @@ core::Mat4f toMat4f(const core::Mat4d& m) {
 UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent) :
     QOpenGLWidget(parent),
     widget_(widget),
-    engine_(vgc::ui::UiWidgetEngine::create()),
+    engine_(),
     isInitialized_(false)
 {
     setMouseTracking(true);
@@ -142,11 +142,6 @@ void UiWidget::keyReleaseEvent(QKeyEvent* event)
     event->setAccepted(widget_->onKeyRelease(event));
 }
 
-UiWidget::OpenGLFunctions* UiWidget::openGLFunctions() const
-{
-    return context()->versionFunctions<OpenGLFunctions>();
-}
-
 QVariant UiWidget::inputMethodQuery(Qt::InputMethodQuery) const
 {
     // This function allows the input method editor (commonly abbreviated IME)
@@ -199,29 +194,16 @@ bool UiWidget::event(QEvent* e)
 
 void UiWidget::initializeGL()
 {
-    // Initialize shader program
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
-    shaderProgram_.link();
-
-    // Get shader locations
-    shaderProgram_.bind();
-    posLoc_  = shaderProgram_.attributeLocation("pos");
-    colLoc_  = shaderProgram_.attributeLocation("col");
-    projLoc_ = shaderProgram_.uniformLocation("proj");
-    viewLoc_ = shaderProgram_.uniformLocation("view");
-    shaderProgram_.release();
-
-    // Initialize engine
-    OpenGLFunctions* f = openGLFunctions();
-    engine_->initialize(f, &shaderProgram_, posLoc_, colLoc_, projLoc_, viewLoc_);
+    engine_ = vgc::ui::QOpenglEngine::create(context());
+    engine_->setupContext();
 
     // Initialize widget for painting.
     // Note that initializedGL() is never called if the widget is never visible.
     // Therefore it's important to keep track whether it has been called, so that
     // we don't call onPaintDestroy() without first calling onPaintCreate()
     isInitialized_ = true;
-    widget_->onPaintCreate(engine_.get());
+
+    //widget_->onPaintCreate(engine_.get());
 }
 
 void UiWidget::resizeGL(int w, int h)
@@ -241,18 +223,24 @@ void UiWidget::resizeGL(int w, int h)
 
 void UiWidget::paintGL()
 {
-    shaderProgram_.bind();
+    if (!engine_) {
+        throw core::LogicError("engine_ is null.");
+    }
+
+    // setViewport & present is done by Qt
+
+    engine_->clear(core::Color(0.337, 0.345, 0.353));
+    engine_->bindPaintShader();
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(core::Mat4f::identity);
-    engine_->clear(core::Color(0.337, 0.345, 0.353));
-    widget_->onPaintDraw(engine_.get());
-    shaderProgram_.release();
+    widget_->paint(engine_.get());
+    engine_->releasePaintShader();
 }
 
 void UiWidget::cleanupGL()
 {
     if (isInitialized_) {
-        widget_->onPaintDestroy(engine_.get());
+        engine_ = nullptr;
         isInitialized_ = false;
     }
 }

@@ -30,7 +30,6 @@ namespace ui {
 ColorPalette::ColorPalette() :
     Widget(),
     selectedColor_(core::colors::black),
-    trianglesId_(-1),
     oldWidth_(0),
     oldHeight_(0),
     reload_(true),
@@ -120,7 +119,7 @@ void ColorPalette::setSelectedColor(const core::Color& color)
 
 void ColorPalette::onPaintCreate(graphics::Engine* engine)
 {
-    trianglesId_ = engine->createTriangles();
+    triangles_ = engine->createTriangles();
 }
 
 namespace {
@@ -324,15 +323,15 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
         }
 
         // Load triangles
-        engine->loadTriangles(trianglesId_, a.data(), a.length());
+        triangles_->load(a.data(), a.length());
     }
     engine->clear(core::Color(0.337, 0.345, 0.353));
-    engine->drawTriangles(trianglesId_);
+    triangles_->draw();
 }
 
 void ColorPalette::onPaintDestroy(graphics::Engine* engine)
 {
-    engine->destroyTriangles(trianglesId_);
+    triangles_.reset();
 }
 
 bool ColorPalette::onMouseMove(MouseEvent* event)
