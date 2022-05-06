@@ -78,8 +78,6 @@ protected:
     bool event(QEvent* e) override;
 
 private:
-    OpenGLFunctions* openGLFunctions() const;
-
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;

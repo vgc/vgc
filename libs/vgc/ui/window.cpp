@@ -163,7 +163,7 @@ void QOpenglTrianglesBuffer::draw()
     auto api = engine()->api();
     api->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     api->glDrawArrays(GL_TRIANGLES, 0, numVertices_);
-    vao_->destroy();
+    vao_->release();
 }
 
 void QOpenglTrianglesBuffer::destroyImpl()
@@ -182,7 +182,7 @@ QOpenglEngine::QOpenglEngine(QOpenGLContext* ctx) :
     graphics::Engine(),
     projectionMatrices_({core::Mat4f::identity}),
     viewMatrices_({core::Mat4f::identity}),
-    ctx_(new QOpenGLContext())
+    ctx_(ctx)
 {
     auto shareCtx = QOpenGLContext::globalShareContext();
     if (!shareCtx) {
