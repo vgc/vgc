@@ -765,7 +765,7 @@ protected:
         bool outermostEmit = (hub.emitting_ == false);
         hub.emitting_ = true;
         // We do it by index because connect() can happen in transmit..
-        for (Int i = 0; i < connections.size(); ++i)
+        for (Int i = 0; i < connections.length(); ++i)
         {
             const Connection_& c = connections[i];
             if ((c.from == from) && !c.pendingRemoval) {
