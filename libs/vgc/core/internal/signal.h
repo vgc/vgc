@@ -166,12 +166,16 @@ protected:
 public:
     static VGC_CORE_API ConnectionHandle generate();
 
-    friend bool operator==(const ConnectionHandle& h1, const ConnectionHandle& h2) {
+    constexpr operator bool() const {
+        return *this != invalid;
+    }
+
+    friend constexpr bool operator==(const ConnectionHandle& h1, const ConnectionHandle& h2) {
         return h1.id_ == h2.id_;
     }
 
-    friend bool operator!=(const ConnectionHandle& h1, const ConnectionHandle& h2) {
-        return h1.id_ == h2.id_;
+    friend constexpr bool operator!=(const ConnectionHandle& h1, const ConnectionHandle& h2) {
+        return h1.id_ != h2.id_;
     }
 
 private:
@@ -523,13 +527,14 @@ class SignalHub {
 private:
     struct Connection_ {
         template<typename To>
-        Connection_(SignalTransmitter&& transmitter, ConnectionHandle h, SignalId from, To&& to) :
-            transmitter(std::move(transmitter)), h(h), from(from), to(std::forward<To>(to)) {}
+        Connection_(SignalTransmitter&& transmitter, ConnectionHandle handle, SignalId from, To&& to) :
+            transmitter(std::move(transmitter)), handle(handle), from(from), to(std::forward<To>(to)) {}
 
         SignalTransmitter transmitter;
-        ConnectionHandle h;
+        ConnectionHandle handle;
         SignalId from;
         SlotId to;
+        bool pendingRemoval = false;
     };
 
     struct ListenedObjectInfo_ {
@@ -601,7 +606,7 @@ public:
         // Now let's reset the info about this object which is stored in receiver objects.
         Object* prevDisconnectedReceiver = nullptr;
         for (const auto& c : hub.connections_) {
-            if (std::holds_alternative<ObjectSlotId>(c.to)) {
+            if (!c.pendingRemoval && std::holds_alternative<ObjectSlotId>(c.to)) {
                 const auto& osid = std::get<ObjectSlotId>(c.to);
                 if (osid.first != prevDisconnectedReceiver) {
                     prevDisconnectedReceiver = osid.first;
@@ -615,7 +620,7 @@ public:
 
     static ConnectionHandle connect(const Object* sender, SignalId from, SignalTransmitter&& transmitter, const SlotId& to) {
         auto& hub = access(sender);
-        auto h = ConnectionHandle::generate();
+        auto handle = ConnectionHandle::generate();
 
         if (std::holds_alternative<ObjectSlotId>(to)) {
             // Increment numInboundConnections in the receiver's info about sender.
@@ -624,17 +629,27 @@ public:
             info.numInboundConnections++;
         }
 
-        hub.connections_.emplaceLast(std::move(transmitter), h, from, to);
-        return h;
+        hub.connections_.emplaceLast(std::move(transmitter), handle, from, to);
+        return handle;
     }
 
     static Int numOutboundConnections(const Object* sender) {
-        return access(sender).connections_.size();
+        auto& hub = access(sender);
+        if (hub.pendingRemovals_) {
+            Int count = 0;
+            for (auto& c : hub.connections_) {
+                if (c.pendingRemoval == false) {
+                    ++count;
+                }
+            }
+            return count;
+        }
+        return hub.connections_.size();
     }
 
-    static bool disconnect(const Object* sender, ConnectionHandle h) {
+    static bool disconnect(const Object* sender, ConnectionHandle handle) {
         return disconnectIf_(sender, [=](const Connection_& c) {
-            return c.h == h;
+            return c.handle == handle;
         });
     }
 
@@ -644,9 +659,9 @@ public:
         });
     }
 
-    static bool disconnect(const Object* sender, SignalId from, ConnectionHandle h) {
+    static bool disconnect(const Object* sender, SignalId from, ConnectionHandle handle) {
         return disconnectIf_(sender, [=](const Connection_& c) {
-            return c.from == from && c.h == h;
+            return c.from == from && c.handle == handle;
         });
     }
 
@@ -746,10 +761,27 @@ protected:
     template <typename T = void>
     static void emit_(Object* sender, SignalId from, const TransmitArgs& args) {
         auto& hub = access(sender);
-        for (auto& c : hub.connections_) {
-            if (c.from == from) {
+        auto& connections = hub.connections_;
+        bool outermostEmit = (hub.emitting_ == false);
+        hub.emitting_ = true;
+        // We do it by index because connect() can happen in transmit..
+        for (Int i = 0; i < connections.size(); ++i)
+        {
+            const Connection_& c = connections[i];
+            if ((c.from == from) && !c.pendingRemoval) {
                 c.transmitter.transmit(args);
             }
+        }
+        if (outermostEmit) {
+            // In a second pass if we are the outermost emit of this signal
+            // we remove connections that have been disconnected and pending for removal.
+            if (hub.pendingRemovals_) {
+                auto it = connections.removeIf(
+                    [](const Connection_& c) {
+                        return c.pendingRemoval;
+                    });
+            }
+            hub.emitting_ = false;
         }
     }
 
@@ -772,33 +804,37 @@ private:
     // Used to auto-disconnect on destroy.
     Array<ListenedObjectInfo_> listenedObjectInfos_;
 
-    // Returns true if any connection is removed.
+    bool emitting_ = false;
+    bool pendingRemovals_ = false;
+
+    // Returns true if any disconnection occurs.
     // This does update the numInboundConnections in the sender info stored in receiver.
     //
     template<typename Pred>
     static bool disconnectIf_(const Object* sender, Pred pred) {
+
         auto& hub = access(sender);
         auto end = hub.connections_.end();
         auto it = std::find_if(hub.connections_.begin(), end, pred);
-        auto insertIt = it;
+        Int count = 0;
         while (it != end) {
-            const Connection_& c = *it;
-            if (std::holds_alternative<ObjectSlotId>(c.to)) {
-                // Decrement numInboundConnections in the receiver's info about sender.
-                const auto& bsid = std::get<ObjectSlotId>(c.to);
-                auto& info = access(bsid.first).getListenedObjectInfoRef_(sender);
-                info.numInboundConnections--;
+            if (pred(*it)) {
+                Connection_& c = *it;
+                if (!c.pendingRemoval) {
+                    c.pendingRemoval = true;
+                    hub.pendingRemovals_ = true;
+                    ++count;
+                    if (std::holds_alternative<ObjectSlotId>(c.to)) {
+                        // Decrement numInboundConnections in the receiver's info about sender.
+                        const auto& bsid = std::get<ObjectSlotId>(c.to);
+                        auto& info = access(bsid.first).getListenedObjectInfoRef_(sender);
+                        info.numInboundConnections--;
+                    }
+                }
             }
-            while (++it != end && !pred(*it)) {
-                *insertIt = std::move(*it);
-                ++insertIt;
-            }
+            ++it;
         }
-        if (insertIt != end) {
-            hub.connections_.erase(insertIt, end);
-            return true;
-        }
-        return false;
+        return count > 0;
     }
 };
 
