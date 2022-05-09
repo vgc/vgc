@@ -16,12 +16,9 @@ vgc_add_library(core
         colors.h
         compiler.h
         dll.h
-        doublearray.h
         exceptions.h
-        floatarray.h
         format.h
         innercore.h
-        intarray.h
         io.h
         logging.h
         mat3d.h
@@ -40,9 +37,7 @@ vgc_add_library(core
         stringid.h
         templateutil.h
         vec2d.h
-        vec2darray.h
         vec2f.h
-        vec2farray.h
 
         internal/containerutil.h
         internal/signal.h

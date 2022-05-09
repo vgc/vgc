@@ -21,7 +21,9 @@
 #define VGC_CORE_MAT4F_H
 
 #include <cmath>
+
 #include <vgc/core/api.h>
+#include <vgc/core/array.h>
 #include <vgc/core/vec2f.h>
 
 namespace vgc::core {
@@ -469,6 +471,10 @@ private:
 };
 
 inline constexpr Mat4f Mat4f::identity = Mat4f(1);
+
+/// Alias for vgc::core::Array<vgc::core::Mat4f>.
+///
+using Mat4fArray = Array<Mat4f>;
 
 /// Overloads setZero(T& x).
 ///

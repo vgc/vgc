@@ -18,8 +18,8 @@
 
 #include <QKeyEvent>
 
+#include <vgc/core/array.h>
 #include <vgc/core/colors.h>
-#include <vgc/core/floatarray.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/style.h>

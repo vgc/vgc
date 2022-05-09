@@ -21,7 +21,9 @@
 #define VGC_CORE_MAT4X_H
 
 #include <cmath>
+
 #include <vgc/core/api.h>
+#include <vgc/core/array.h>
 #include "vec2.h"
 
 namespace vgc::core {
@@ -469,6 +471,10 @@ private:
 };
 
 inline constexpr Mat4x Mat4x::identity = Mat4x(1);
+
+/// Alias for vgc::core::Array<vgc::core::Mat4x>.
+///
+using Mat4xArray = Array<Mat4x>;
 
 /// Overloads setZero(T& x).
 ///

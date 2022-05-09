@@ -17,8 +17,7 @@
 #ifndef VGC_GEOMETRY_CURVES2D_H
 #define VGC_GEOMETRY_CURVES2D_H
 
-#include <vgc/core/doublearray.h>
-#include <vgc/core/floatarray.h>
+#include <vgc/core/array.h>
 #include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curvecommand.h>

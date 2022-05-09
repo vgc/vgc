@@ -21,10 +21,9 @@
 #define VGC_CORE_MAT3D_H
 
 #include <cmath>
+
 #include <vgc/core/api.h>
-#include <vgc/core/arithmetic.h>
-#include <vgc/core/format.h>
-#include <vgc/core/parse.h>
+#include <vgc/core/array.h>
 #include <vgc/core/vec2d.h>
 
 namespace vgc::core {
@@ -406,6 +405,10 @@ private:
 };
 
 inline constexpr Mat3d Mat3d::identity = Mat3d(1);
+
+/// Alias for vgc::core::Array<vgc::core::Mat3d>.
+///
+using Mat3dArray = Array<Mat3d>;
 
 /// Overloads setZero(T& x).
 ///

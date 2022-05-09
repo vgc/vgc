@@ -21,7 +21,6 @@
 #include <unordered_map>
 
 #include <vgc/core/array.h>
-#include <vgc/core/floatarray.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/mat3f.h>
 #include <vgc/core/vec2f.h>
