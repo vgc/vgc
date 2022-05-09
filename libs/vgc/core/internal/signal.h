@@ -1110,7 +1110,7 @@ private:
         public:                                                                                         \
             SignalRef(const MyClass* object) : SignalRefT(object) {}                                    \
             void emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                 \
-                emitFwd_(VGC_PARAMS_NAME_(__VA_ARGS__));                                                \
+                this->emitFwd_(VGC_PARAMS_NAME_(__VA_ARGS__));                                          \
             }                                                                                           \
         };                                                                                              \
         return SignalRef(this);                                                                         \
