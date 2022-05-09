@@ -140,6 +140,12 @@ function(vgc_add_library LIB_NAME)
     # Add compiler warning flags and macros
     target_compile_options(${LIB_TARGET} PUBLIC ${VGC_COMPILER_WARNING_FLAGS})
     target_compile_definitions(${LIB_TARGET} PUBLIC ${VGC_COMPILER_WARNING_DEFINITIONS})
+    if (VGC_WERROR)
+        target_compile_options(${LIB_TARGET} PRIVATE ${VGC_WERROR_FLAG})
+    endif ()
+    if (VGC_PEDANTIC)
+        target_compile_options(${LIB_TARGET} PRIVATE ${VGC_PEDANTIC_COMPILE_FLAGS})
+    endif ()
 
     # Add private compile definitions
     target_compile_definitions(${LIB_TARGET} PUBLIC ${VGC_PRIVATE_COMPILE_DEFINITIONS})

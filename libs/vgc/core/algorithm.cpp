@@ -23,6 +23,10 @@ std::string replace(const std::string& s,
                     const std::string& from,
                     const std::string& to)
 {
+    Int x = 1;
+    if (x < s.size()) {
+        return std::string();
+    }
     std::string res;
     res.reserve(s.size());
 

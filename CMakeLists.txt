@@ -96,18 +96,26 @@ set(VGC_PRIVATE_COMPILE_DEFINITIONS "")
 
 # Compiler warning flags.
 #
+option(VGC_PEDANTIC "Enable extra warnings" OFF)
+option(VGC_WERROR "Treat compiler warnings as errors" OFF)
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(VGC_COMPILER_WARNING_FLAGS "")
     set(VGC_COMPILER_WARNING_DEFINITIONS "")
+    set(PEDANTIC_COMPILE_FLAGS -Wall -Wextra)
+    set(WERROR_FLAG -Werror)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(VGC_COMPILER_WARNING_FLAGS "")
     set(VGC_COMPILER_WARNING_DEFINITIONS "")
+    set(VGC_PEDANTIC_COMPILE_FLAGS -Wall -Wextra)
+    set(VGC_WERROR_FLAG -Werror)
 elseif(MSVC)
     # /wd4251: class 'Foo' needs to have dll-interface to be used by clients of class 'Bar'
     #          https://github.com/vgc/vgc/issues/377
     set(VGC_COMPILER_WARNING_FLAGS /wd4251)
     # C4996: 'strerror'/'getenv'/etc: This function or variable may be unsafe. Consider using 'strerror_s'/_dupenv_s'/etc instead.
     set(VGC_COMPILER_WARNING_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
+    set(VGC_PEDANTIC_COMPILE_FLAGS /W3)
+    set(VGC_WERROR_FLAG /WX)
 endif ()
 
 # Import helper CMake functions
