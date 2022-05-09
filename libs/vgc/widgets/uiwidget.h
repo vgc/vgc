@@ -25,6 +25,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/graphics/idgenerator.h>
+#include <vgc/ui/internal/qopenglengine.h>
 #include <vgc/ui/widget.h>
 #include <vgc/ui/window.h>
 #include <vgc/widgets/api.h>
@@ -87,17 +88,10 @@ private:
     void onFocusRequested();
 
     ui::WidgetPtr widget_;
-    ui::QOpenglEnginePtr engine_;
+    ui::internal::QOpenglEnginePtr engine_;
 
     // Projection and view matrices
     core::Mat4f proj_;
-
-    // Shader program
-    QOpenGLShaderProgram shaderProgram_;
-    int posLoc_;
-    int colLoc_;
-    int projLoc_;
-    int viewLoc_;
 
     // Ensure that we don't call onPaintDestroy() if onPaintCreate()
     // has not been called

@@ -194,7 +194,7 @@ bool UiWidget::event(QEvent* e)
 
 void UiWidget::initializeGL()
 {
-    engine_ = vgc::ui::QOpenglEngine::create(context());
+    engine_ = vgc::ui::internal::QOpenglEngine::create(context());
     engine_->setupContext();
 
     // Initialize widget for painting.

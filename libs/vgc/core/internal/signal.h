@@ -412,7 +412,7 @@ public:
     using SlotWrapperSig = void(const TransmitArgs&);
     using SlotWrapper = std::function<SlotWrapperSig>;
 
-    SignalTransmitter() = default;
+    //SignalTransmitter() = default;
 
     template<typename TSlotWrapper, Requires<isFunctor<RemoveCVRef<TSlotWrapper>>> = true>
     SignalTransmitter(TSlotWrapper&& wrapper, bool isNative = false) :

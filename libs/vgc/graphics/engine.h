@@ -24,8 +24,7 @@
 #include <vgc/core/mat4f.h>
 #include <vgc/graphics/api.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 VGC_DECLARE_OBJECT(Engine);
 
@@ -35,11 +34,7 @@ protected:
     explicit Resource(Engine* engine);
 
 public:
-    ~Resource() {
-        // XXX cannot do that, virtual call in destructor is not gud..
-        // could be call in the shared_ptr destructor...
-        destroy_();
-    }
+    virtual ~Resource();
 
     Resource(const Resource&) = delete;
     Resource& operator=(const Resource&) = delete;
@@ -49,11 +44,11 @@ public:
     }
 
 private:
-    void destroy_();
-    virtual void destroyImpl() = 0;
+    void onEngineDestroyed();
+    virtual void release() = 0;
 
-    core::ConnectionHandle onEngineDestroyedConnectionHandle;
     Engine* engine_;
+    core::ConnectionHandle onEngineDestroyedConnectionHandle;
 };
 
 using TrianglesBufferPtr = std::shared_ptr<class TrianglesBuffer>;
@@ -180,7 +175,6 @@ public:
     virtual TrianglesBufferPtr createTriangles() = 0;
 };
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics
 
 #endif // VGC_GRAPHICS_ENGINE_H

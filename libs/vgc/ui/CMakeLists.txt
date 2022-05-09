@@ -30,6 +30,7 @@ vgc_add_library(ui
         window.h
 
         internal/paintutil.h
+        internal/qopenglengine.h
 
     CPP_FILES
         action.cpp
@@ -51,6 +52,7 @@ vgc_add_library(ui
         window.cpp
 
         internal/paintutil.cpp
+        internal/qopenglengine.cpp
 
     RESOURCE_FILES
         stylesheets/default.vgcss
