@@ -166,12 +166,16 @@ protected:
 public:
     static VGC_CORE_API ConnectionHandle generate();
 
-    friend bool operator==(const ConnectionHandle& h1, const ConnectionHandle& h2) {
+    constexpr operator bool() const {
+        return *this != invalid;
+    }
+
+    friend constexpr bool operator==(const ConnectionHandle& h1, const ConnectionHandle& h2) {
         return h1.id_ == h2.id_;
     }
 
-    friend bool operator!=(const ConnectionHandle& h1, const ConnectionHandle& h2) {
-        return h1.id_ == h2.id_;
+    friend constexpr bool operator!=(const ConnectionHandle& h1, const ConnectionHandle& h2) {
+        return h1.id_ != h2.id_;
     }
 
 private:
