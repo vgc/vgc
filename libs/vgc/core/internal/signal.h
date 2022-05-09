@@ -1108,7 +1108,7 @@ private:
         class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_ "().emit()?"))               \
         SignalRef : public SignalRefT {                                                                 \
         public:                                                                                         \
-            SignalRef(const Obj* object) : SignalRefT(object) {}                                        \
+            SignalRef(const MyClass* object) : SignalRefT(object) {}                                    \
             void emit(VGC_PARAMS_(__VA_ARGS__)) const {                                                 \
                 emitFwd_(VGC_PARAMS_NAME_(__VA_ARGS__));                                                \
             }                                                                                           \
