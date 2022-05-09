@@ -534,6 +534,7 @@ private:
         ConnectionHandle handle;
         SignalId from;
         SlotId to;
+        bool pendingForRemoval = false;
     };
 
     struct ListenedObjectInfo_ {
@@ -605,7 +606,7 @@ public:
         // Now let's reset the info about this object which is stored in receiver objects.
         Object* prevDisconnectedReceiver = nullptr;
         for (const auto& c : hub.connections_) {
-            if (std::holds_alternative<ObjectSlotId>(c.to)) {
+            if (!c.pendingForRemoval && std::holds_alternative<ObjectSlotId>(c.to)) {
                 const auto& osid = std::get<ObjectSlotId>(c.to);
                 if (osid.first != prevDisconnectedReceiver) {
                     prevDisconnectedReceiver = osid.first;
@@ -633,7 +634,14 @@ public:
     }
 
     static Int numOutboundConnections(const Object* sender) {
-        return access(sender).connections_.size();
+        auto& hub = access(sender);
+        Int count = 0;
+        for (auto& c : hub.connections_) {
+            if (c.pendingForRemoval == false) {
+                ++count;
+            }
+        }
+        return count;
     }
 
     static bool disconnect(const Object* sender, ConnectionHandle handle) {
@@ -750,10 +758,26 @@ protected:
     template <typename T = void>
     static void emit_(Object* sender, SignalId from, const TransmitArgs& args) {
         auto& hub = access(sender);
-        for (auto& c : hub.connections_) {
+        auto end = hub.connections_.end();
+        auto it = hub.connections_.begin();
+        auto insertIt = it;
+        while (it != end) {
+            const Connection_& c = *it;
+            if (c.pendingForRemoval) {
+                ++it;
+                continue;
+            }
             if (c.from == from) {
                 c.transmitter.transmit(args);
             }
+            if (insertIt != it) {
+                *insertIt = std::move(*it);
+            }
+            ++insertIt;
+            ++it;
+        }
+        if (insertIt != end) {
+            hub.connections_.erase(insertIt, end);
         }
     }
 
@@ -776,33 +800,33 @@ private:
     // Used to auto-disconnect on destroy.
     Array<ListenedObjectInfo_> listenedObjectInfos_;
 
-    // Returns true if any connection is removed.
+    // Returns true if any disconnection occurs.
     // This does update the numInboundConnections in the sender info stored in receiver.
     //
     template<typename Pred>
     static bool disconnectIf_(const Object* sender, Pred pred) {
+
         auto& hub = access(sender);
         auto end = hub.connections_.end();
         auto it = std::find_if(hub.connections_.begin(), end, pred);
-        auto insertIt = it;
+        Int count = 0;
         while (it != end) {
-            const Connection_& c = *it;
-            if (std::holds_alternative<ObjectSlotId>(c.to)) {
-                // Decrement numInboundConnections in the receiver's info about sender.
-                const auto& bsid = std::get<ObjectSlotId>(c.to);
-                auto& info = access(bsid.first).getListenedObjectInfoRef_(sender);
-                info.numInboundConnections--;
+            if (pred(*it)) {
+                Connection_& c = *it;
+                if (!c.pendingForRemoval) {
+                    c.pendingForRemoval = true;
+                    ++count;
+                    if (std::holds_alternative<ObjectSlotId>(c.to)) {
+                        // Decrement numInboundConnections in the receiver's info about sender.
+                        const auto& bsid = std::get<ObjectSlotId>(c.to);
+                        auto& info = access(bsid.first).getListenedObjectInfoRef_(sender);
+                        info.numInboundConnections--;
+                    }
+                }
             }
-            while (++it != end && !pred(*it)) {
-                *insertIt = std::move(*it);
-                ++insertIt;
-            }
+            ++it;
         }
-        if (insertIt != end) {
-            hub.connections_.erase(insertIt, end);
-            return true;
-        }
-        return false;
+        return count > 0;
     }
 };
 
