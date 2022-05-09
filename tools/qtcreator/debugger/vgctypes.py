@@ -59,7 +59,7 @@
 #   d.currentValue = ReportItem("something", None)
 #
 # That is, the value is written as a str with no encoding. It will create
-# errors if your string contains special characters not allows in JSON
+# errors if your string contains special characters not allowed in JSON
 # strings. You can either escape those characters with json.dumps(myString)
 # [1:-1], or encode the string as an UTF-8 hex-encoded string, with
 # d.hexencode(myString) and put the value with d.putValue
