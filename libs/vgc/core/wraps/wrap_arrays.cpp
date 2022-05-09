@@ -17,12 +17,9 @@
 #include <vgc/core/wraps/common.h>
 #include <pybind11/operators.h>
 
-#include <vgc/core/arithmetic.h>
-#include <vgc/core/doublearray.h>
-#include <vgc/core/floatarray.h>
-#include <vgc/core/intarray.h>
-#include <vgc/core/vec2darray.h>
-#include <vgc/core/vec2farray.h>
+#include <vgc/core/array.h>
+#include <vgc/core/vec2d.h>
+#include <vgc/core/vec2f.h>
 
 namespace py = pybind11;
 
@@ -45,15 +42,11 @@ namespace py = pybind11;
 //   https://docs.scipy.org/doc/numpy/user/quickstart.html#view-or-shallow-copy
 //   It may be a good idea to have the same behaviour with VGC arrays.
 //
-// Note 2: NumPy supports uninitialized arrays, see np.empty(). It is still
-//   unclear whether VGC arrays should support this, see comment in
-//   doublearray.h
-//
-// Note 3: Automatic conversion of STL containers by pybind11 always create
+// Note 2: Automatic conversion of STL containers by pybind11 always create
 //   copies. Read this before including <pybind11/stl.h>:
 //   http://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#making-opaque-types
 //
-// Note 4: we're mimicking many of the things done in pybind11/stl_bind.h. See there for
+// Note 3: we're mimicking many of the things done in pybind11/stl_bind.h. See there for
 // additional implementation notes.
 
 namespace  {

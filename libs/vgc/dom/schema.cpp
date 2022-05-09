@@ -16,9 +16,9 @@
 
 #include <vgc/dom/schema.h>
 
+#include <vgc/core/array.h>
 #include <vgc/core/colors.h>
-#include <vgc/core/doublearray.h>
-#include <vgc/core/vec2darray.h>
+#include <vgc/core/vec2d.h>
 
 namespace vgc {
 namespace dom {

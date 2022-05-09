@@ -19,10 +19,9 @@
 
 #include <variant>
 
+#include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/core/doublearray.h>
 #include <vgc/core/vec2d.h>
-#include <vgc/core/vec2darray.h>
 #include <vgc/dom/api.h>
 
 namespace vgc {

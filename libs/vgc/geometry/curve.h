@@ -17,10 +17,10 @@
 #ifndef VGC_GEOMETRY_CURVE_H
 #define VGC_GEOMETRY_CURVE_H
 
+#include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/core/doublearray.h>
 #include <vgc/core/object.h>
-#include <vgc/core/vec2darray.h>
+#include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>
 
 namespace vgc {

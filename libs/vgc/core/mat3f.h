@@ -21,10 +21,9 @@
 #define VGC_CORE_MAT3F_H
 
 #include <cmath>
+
 #include <vgc/core/api.h>
-#include <vgc/core/arithmetic.h>
-#include <vgc/core/format.h>
-#include <vgc/core/parse.h>
+#include <vgc/core/array.h>
 #include <vgc/core/vec2f.h>
 
 namespace vgc::core {
@@ -406,6 +405,10 @@ private:
 };
 
 inline constexpr Mat3f Mat3f::identity = Mat3f(1);
+
+/// Alias for vgc::core::Array<vgc::core::Mat3f>.
+///
+using Mat3fArray = Array<Mat3f>;
 
 /// Overloads setZero(T& x).
 ///

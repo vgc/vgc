@@ -19,8 +19,8 @@
 
 #include <string>
 
+#include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/core/floatarray.h>
 #include <vgc/core/stringid.h>
 #include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>

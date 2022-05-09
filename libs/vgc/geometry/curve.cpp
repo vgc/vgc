@@ -17,8 +17,8 @@
 #include <vgc/geometry/curve.h>
 
 #include <vgc/core/algorithm.h>
+#include <vgc/core/array.h>
 #include <vgc/core/colors.h>
-#include <vgc/core/intarray.h>
 #include <vgc/geometry/bezier.h>
 #include <vgc/geometry/catmullrom.h>
 

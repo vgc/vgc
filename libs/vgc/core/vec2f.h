@@ -21,12 +21,9 @@
 #define VGC_CORE_VEC2F_H
 
 #include <cmath>
-#include <string>
 
 #include <vgc/core/api.h>
-#include <vgc/core/arithmetic.h>
-#include <vgc/core/format.h>
-#include <vgc/core/parse.h>
+#include <vgc/core/array.h>
 
 namespace vgc::core {
 
@@ -563,6 +560,10 @@ private:
                      internal::infdiff(a[1], b[1]));
     }
 };
+
+/// Alias for vgc::core::Array<vgc::core::Vec2f>.
+///
+using Vec2fArray = Array<Vec2f>;
 
 /// Overloads setZero(T& x).
 ///

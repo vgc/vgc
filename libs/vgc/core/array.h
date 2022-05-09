@@ -2362,6 +2362,18 @@ void readTo(Array<T>& a, IStream& in)
     }
 }
 
+/// Alias for vgc::core::Array<vgc::Int>.
+///
+using IntArray = Array<Int>;
+
+/// Alias for vgc::core::Array<float>.
+///
+using FloatArray = Array<float>;
+
+/// Alias for vgc::core::Array<double>.
+///
+using DoubleArray = Array<double>;
+
 } // namespace core
 } // namespace vgc
 

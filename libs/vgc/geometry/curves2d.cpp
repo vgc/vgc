@@ -18,8 +18,6 @@
 
 #include <tesselator.h> // libtess2
 
-#include <vgc/core/intarray.h>
-
 namespace vgc {
 namespace geometry {
 

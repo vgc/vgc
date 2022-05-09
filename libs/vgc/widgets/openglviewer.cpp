@@ -28,7 +28,6 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/core/vec2f.h>
-#include <vgc/core/vec2farray.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/widgets/qtutil.h>
 
