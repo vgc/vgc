@@ -534,7 +534,7 @@ private:
         ConnectionHandle handle;
         SignalId from;
         SlotId to;
-        bool pendingForRemoval = false;
+        bool pendingRemoval = false;
     };
 
     struct ListenedObjectInfo_ {
@@ -606,7 +606,7 @@ public:
         // Now let's reset the info about this object which is stored in receiver objects.
         Object* prevDisconnectedReceiver = nullptr;
         for (const auto& c : hub.connections_) {
-            if (!c.pendingForRemoval && std::holds_alternative<ObjectSlotId>(c.to)) {
+            if (!c.pendingRemoval && std::holds_alternative<ObjectSlotId>(c.to)) {
                 const auto& osid = std::get<ObjectSlotId>(c.to);
                 if (osid.first != prevDisconnectedReceiver) {
                     prevDisconnectedReceiver = osid.first;
@@ -635,13 +635,16 @@ public:
 
     static Int numOutboundConnections(const Object* sender) {
         auto& hub = access(sender);
-        Int count = 0;
-        for (auto& c : hub.connections_) {
-            if (c.pendingForRemoval == false) {
-                ++count;
+        if (hub.pendingRemovals_) {
+            Int count = 0;
+            for (auto& c : hub.connections_) {
+                if (c.pendingRemoval == false) {
+                    ++count;
+                }
             }
+            return count;
         }
-        return count;
+        return hub.connections_.size();
     }
 
     static bool disconnect(const Object* sender, ConnectionHandle handle) {
@@ -758,26 +761,27 @@ protected:
     template <typename T = void>
     static void emit_(Object* sender, SignalId from, const TransmitArgs& args) {
         auto& hub = access(sender);
-        auto end = hub.connections_.end();
-        auto it = hub.connections_.begin();
-        auto insertIt = it;
-        while (it != end) {
-            const Connection_& c = *it;
-            if (c.pendingForRemoval) {
-                ++it;
-                continue;
-            }
-            if (c.from == from) {
+        auto& connections = hub.connections_;
+        bool outermostEmit = (hub.emitting_ == false);
+        hub.emitting_ = true;
+        // We do it by index because connect() can happen in transmit..
+        for (Int i = 0; i < connections.size(); ++i)
+        {
+            const Connection_& c = connections[i];
+            if ((c.from == from) && !c.pendingRemoval) {
                 c.transmitter.transmit(args);
             }
-            if (insertIt != it) {
-                *insertIt = std::move(*it);
-            }
-            ++insertIt;
-            ++it;
         }
-        if (insertIt != end) {
-            hub.connections_.erase(insertIt, end);
+        if (outermostEmit) {
+            // In a second pass if we are the outermost emit of this signal
+            // we remove connections that have been disconnected and pending for removal.
+            if (hub.pendingRemovals_) {
+                auto it = connections.removeIf(
+                    [](const Connection_& c) {
+                        return c.pendingRemoval;
+                    });
+            }
+            hub.emitting_ = false;
         }
     }
 
@@ -800,6 +804,9 @@ private:
     // Used to auto-disconnect on destroy.
     Array<ListenedObjectInfo_> listenedObjectInfos_;
 
+    bool emitting_ = false;
+    bool pendingRemovals_ = false;
+
     // Returns true if any disconnection occurs.
     // This does update the numInboundConnections in the sender info stored in receiver.
     //
@@ -813,8 +820,9 @@ private:
         while (it != end) {
             if (pred(*it)) {
                 Connection_& c = *it;
-                if (!c.pendingForRemoval) {
-                    c.pendingForRemoval = true;
+                if (!c.pendingRemoval) {
+                    c.pendingRemoval = true;
+                    hub.pendingRemovals_ = true;
                     ++count;
                     if (std::holds_alternative<ObjectSlotId>(c.to)) {
                         // Decrement numInboundConnections in the receiver's info about sender.

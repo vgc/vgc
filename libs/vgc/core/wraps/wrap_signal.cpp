@@ -199,7 +199,7 @@ void wrapSignalAndSlotRefs(py::module& m)
     auto pyCppSignalRef =
         py::class_<PyCppSignalRef, PyAbstractCppSlotRef>(m, "CppSignalRef")
             .def(
-                "emit", [](PyCppSignalRef* this_, py::args args){
+                "emit", [](PyCppSignalRef* this_, py::args args) {
                     return this_->unboundPySlotFn()(this_->object(), *args);
                 })
             .def("connect", &PyCppSignalRef::connect)
