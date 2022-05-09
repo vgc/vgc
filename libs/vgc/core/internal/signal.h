@@ -527,11 +527,11 @@ class SignalHub {
 private:
     struct Connection_ {
         template<typename To>
-        Connection_(SignalTransmitter&& transmitter, ConnectionHandle h, SignalId from, To&& to) :
-            transmitter(std::move(transmitter)), h(h), from(from), to(std::forward<To>(to)) {}
+        Connection_(SignalTransmitter&& transmitter, ConnectionHandle handle, SignalId from, To&& to) :
+            transmitter(std::move(transmitter)), handle(handle), from(from), to(std::forward<To>(to)) {}
 
         SignalTransmitter transmitter;
-        ConnectionHandle h;
+        ConnectionHandle handle;
         SignalId from;
         SlotId to;
     };
@@ -619,7 +619,7 @@ public:
 
     static ConnectionHandle connect(const Object* sender, SignalId from, SignalTransmitter&& transmitter, const SlotId& to) {
         auto& hub = access(sender);
-        auto h = ConnectionHandle::generate();
+        auto handle = ConnectionHandle::generate();
 
         if (std::holds_alternative<ObjectSlotId>(to)) {
             // Increment numInboundConnections in the receiver's info about sender.
@@ -628,17 +628,17 @@ public:
             info.numInboundConnections++;
         }
 
-        hub.connections_.emplaceLast(std::move(transmitter), h, from, to);
-        return h;
+        hub.connections_.emplaceLast(std::move(transmitter), handle, from, to);
+        return handle;
     }
 
     static Int numOutboundConnections(const Object* sender) {
         return access(sender).connections_.size();
     }
 
-    static bool disconnect(const Object* sender, ConnectionHandle h) {
+    static bool disconnect(const Object* sender, ConnectionHandle handle) {
         return disconnectIf_(sender, [=](const Connection_& c) {
-            return c.h == h;
+            return c.handle == handle;
         });
     }
 
@@ -648,9 +648,9 @@ public:
         });
     }
 
-    static bool disconnect(const Object* sender, SignalId from, ConnectionHandle h) {
+    static bool disconnect(const Object* sender, SignalId from, ConnectionHandle handle) {
         return disconnectIf_(sender, [=](const Connection_& c) {
-            return c.from == from && c.h == h;
+            return c.from == from && c.handle == handle;
         });
     }
 
