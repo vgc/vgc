@@ -35,7 +35,8 @@ Widget::Widget() :
     isTreeActive_(false),
     focus_(nullptr)
 {
-
+    children_->childAdded().connect(onWidgetAdded_());
+    children_->childRemoved().connect(onWidgetRemoved_());
 }
 
 void Widget::onDestroyed()

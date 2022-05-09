@@ -31,18 +31,18 @@ VGC_DECLARE_OBJECT(Window);
 /// \brief A window able to contain a vgc::ui::widget.
 ///
 class VGC_UI_API Window : public core::Object, public QWindow {
-    // optional
-    //Q_OBJECT
+    VGC_OBJECT(Window, core::Object)
 
 protected:
     /// Constructs a UiWidget wrapping the given vgc::ui::Widget.
     ///
     Window(ui::WidgetPtr widget);
 
-public:
     /// Destructs the UiWidget.
     ///
-    ~Window() noexcept override;
+    void onDestroyed() override;
+
+public:
 
     static WindowPtr create(ui::WidgetPtr widget);
 
@@ -73,13 +73,15 @@ protected:
     bool event(QEvent* e) override;
 
 private:
-    void onRepaintRequested();
-
     ui::WidgetPtr widget_;
     // graphics::EnginePtr engine_;
     ui::internal::QOpenglEnginePtr engine_;
     core::Mat4f proj_;
     core::Color clearColor_;
+
+    void onRepaintRequested_();
+
+    VGC_SLOT(onRepaintRequested, onRepaintRequested_);
 
     /////////////////////////////
     // TO FACTOR OUT
@@ -87,6 +89,7 @@ private:
 
     virtual void paint();
     virtual void cleanup();
+
 };
 
 } // namespace vgc::ui

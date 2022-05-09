@@ -52,12 +52,12 @@ void Flex::setWrap(FlexWrap wrap)
     updateGeometry();
 }
 
-void Flex::onChildAdded(Object*)
+void Flex::onWidgetAdded(Object*)
 {
     updateGeometry();
 }
 
-void Flex::onChildRemoved(Object*)
+void Flex::onWidgetRemoved(Object*)
 {
     updateGeometry();
 }

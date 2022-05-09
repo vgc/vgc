@@ -36,7 +36,7 @@ Window::Window(ui::WidgetPtr widget) :
     setSurfaceType(QWindow::OpenGLSurface);
 
     //setMouseTracking(true);
-    widget_->repaintRequested().connect([this](){ this->onRepaintRequested(); });
+    widget_->repaintRequested().connect(onRepaintRequested());
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
 
     // Handle dead keys and complex input methods.
@@ -54,7 +54,7 @@ Window::Window(ui::WidgetPtr widget) :
 
 }
 
-Window::~Window() noexcept
+void Window::onDestroyed()
 {
     if (engine_) {
         // Resources are going to be released so we setup the correct context.
@@ -261,9 +261,12 @@ void Window::cleanup()
     // XXX ?
 }
 
-void Window::onRepaintRequested()
+void Window::onRepaintRequested_()
 {
-    requestUpdate();
+    if (engine_) {
+        engine_->setTarget(this);
+        requestUpdate();
+    }
 }
 
 } // namespace vgc::ui

@@ -24,13 +24,12 @@
 #include <vgc/dom/document.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/window.h>
+#include <vgc/ui/row.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
 #include <vgc/widgets/qtutil.h>
 #include <vgc/widgets/stylesheets.h>
-
-
 
 namespace py = pybind11;
 
@@ -162,9 +161,11 @@ int main(int argc, char* argv[])
     QObject::connect(&timer, SIGNAL(timeout()), &w, SLOT(showMaximized()));
     timer.start(10);
 
-
-    vgc::ui::LineEditPtr le = vgc::ui::LineEdit::create();
-    vgc::ui::WindowPtr wnd = vgc::ui::Window::create(le);
+    vgc::ui::RowPtr row = vgc::ui::Row::create();
+    vgc::ui::LineEdit* le1 = row->createChild<vgc::ui::LineEdit>();
+    vgc::ui::LineEdit* le2 = row->createChild<vgc::ui::LineEdit>();
+    vgc::ui::WindowPtr wnd = vgc::ui::Window::create(row);
+    row = nullptr;
 
     wnd->setVisible(true);
 

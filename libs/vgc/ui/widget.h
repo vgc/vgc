@@ -698,6 +698,9 @@ public:
     virtual void onPaintDestroy(graphics::Engine* engine);
 
 protected:
+    virtual void onWidgetAdded(Object* child) {};
+    virtual void onWidgetRemoved(Object* child) {};
+
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its
     /// children.
@@ -744,6 +747,8 @@ private:
     void releaseEngine_();
 
     VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_);
+    VGC_SLOT(onWidgetAdded_, onWidgetAdded);
+    VGC_SLOT(onWidgetRemoved_, onWidgetRemoved);
 };
 
 } // namespace ui

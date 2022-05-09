@@ -290,12 +290,12 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
     public:                                                                     \
         using ThisClass = T;                                                    \
         using SuperClass = S;                                                   \
-        /*static_assert(std::is_base_of_v<SuperClass, ThisClass>,               */\
-        /*    "ThisClass is expected to inherit from SuperClass.");             */\
+        /*static_assert(std::is_base_of_v<SuperClass, ThisClass>,             */\
+        /*    "ThisClass is expected to inherit from SuperClass.");           */\
         static_assert(::vgc::core::isObject<SuperClass>,                        \
-            "Superclass must inherit from Object and use VGC_OBJECT(..).");                           \
+            "Superclass must inherit from Object and use VGC_OBJECT(..).");     \
     protected:                                                                  \
-        ~T() override = default;                                                \
+        ~T() = default;                                                         \
     private:
 
 /// This macro ensures that unsafe base protected methods are not accessible in
@@ -1206,6 +1206,17 @@ public:
         // block wouldn't be shared. But in our case, the above static_cast
         // works since our core::ObjPtr use intrusive reference counting.
     }
+
+    void onChildAdded(Object* child) override {
+        childAdded().emit(static_cast<T*>(child));
+    }
+
+    void onChildRemoved(Object* child) override {
+        childRemoved().emit(static_cast<T*>(child));
+    }
+
+    VGC_SIGNAL(childAdded, (T*, child));
+    VGC_SIGNAL(childRemoved, (T*, child));
 };
 
 inline ObjectListView Object::childObjects() const

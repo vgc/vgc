@@ -91,9 +91,8 @@ public:
     void setWrap(FlexWrap wrap);
 
 protected:
-    // reimpl
-    void onChildAdded(Object* child) override;
-    void onChildRemoved(Object* child) override;
+    void onWidgetAdded(Object* child) override;
+    void onWidgetRemoved(Object* child) override;
     core::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
 
