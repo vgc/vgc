@@ -130,20 +130,6 @@ bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks,
 }
 } // namespace
 
-// Returns whether the enter key was pressed in the last  number is the first line of its code block.
-//
-// If you need to call this repetitively and know what you are doing, you can
-// use the overload taking the extra parameter codeBlockIndexHint for better
-// performance.
-//
-namespace {
-bool isFirstLineOfCodeBlock_(int lineNumber, const std::vector<int>& codeBlocks)
-{
-    int codeBlockIndexHint = -1;
-    return isFirstLineOfCodeBlock_(lineNumber, codeBlocks, codeBlockIndexHint);
-}
-} // namespace
-
 namespace vgc {
 namespace widgets {
 

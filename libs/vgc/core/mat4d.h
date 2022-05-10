@@ -405,7 +405,7 @@ public:
         static double eps = std::numeric_limits<double>::epsilon();
         double c = std::cos(t);
         double s = std::sin(t);
-        if (std::abs(c) < eps || std::abs(s) < eps) {
+        if (orthosnap && (std::abs(c) < eps || std::abs(s) < eps)) {
             double cr = std::round(c);
             double sr = std::round(s);
             c = cr;

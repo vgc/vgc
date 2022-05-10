@@ -728,10 +728,8 @@ private:
             }
         }
         if (c2_ == 'e' || c2_ == 'E') {
-            bool hasExponentialPart = false;
             c3 = (c2_ == eof) ? eof : *(token_.end + 1);
             if (isDigit_(c3)) {
-                hasExponentialPart = true;
                 token_.flag = StyleTokenFlag::Number;
                 token_.codePointsValue += c2_;
                 token_.codePointsValue += c3;
@@ -741,7 +739,6 @@ private:
             else if ((c3 == '+' || c3 == '-')) {
                 char c4 = (c3 == eof) ? eof : *(token_.end + 2);
                 if (isDigit_(c4)) {
-                    hasExponentialPart = true;
                     token_.flag = StyleTokenFlag::Number;
                     token_.codePointsValue += c2_;
                     token_.codePointsValue += c3;
