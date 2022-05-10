@@ -405,7 +405,7 @@ public:
         static float eps = std::numeric_limits<float>::epsilon();
         float c = std::cos(t);
         float s = std::sin(t);
-        if (std::abs(c) < eps || std::abs(s) < eps) {
+        if (orthosnap && (std::abs(c) < eps || std::abs(s) < eps)) {
             float cr = std::round(c);
             float sr = std::round(s);
             c = cr;
