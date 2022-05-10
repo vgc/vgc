@@ -110,7 +110,7 @@ char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
 {
     char c = readCharacter(in);
     bool allowed = false;
-    for (int i = 0; i < N; ++i) {
+    for (std::size_t i = 0; i < N; ++i) {
         allowed = allowed || (c == allowedCharacters[i]);
     }
     if (!allowed)  {
@@ -120,7 +120,7 @@ char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
             allowedCharactersString += allowedCharacters[0];
             allowedCharactersString += "'";
         }
-        for (int i = 1; i < N; ++i) {
+        for (std::size_t i = 1; i < N; ++i) {
             allowedCharactersString += ", '";
             allowedCharactersString += allowedCharacters[i];
             allowedCharactersString += "'";
@@ -168,7 +168,6 @@ void skipExpectedCharacter(IStream& in, char c)
 template<typename IStream, typename CharIterator>
 void skipExpectedString(IStream& in, CharIterator begin, CharIterator end)
 {
-    CharIterator it = begin;
     char c = -1;
     for (CharIterator it = begin; it < end; ++it) {
         if (!in.get(c)) {

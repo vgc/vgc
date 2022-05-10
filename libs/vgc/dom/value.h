@@ -275,8 +275,10 @@ void write(OStream& out, const Value& v)
     switch (v.type()) {
     case ValueType::None:
         write(out, "None");
+        break;
     case ValueType::Invalid:
         write(out, "Invalid");
+        break;
     case ValueType::Color:
         return write(out, v.getColor());
     case ValueType::DoubleArray:
