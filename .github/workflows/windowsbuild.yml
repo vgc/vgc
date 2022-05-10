@@ -118,7 +118,7 @@ jobs:
         mkdir build
         cd build
         cmake --version
-        cmake "$GITHUB_WORKSPACE" -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" -DWiX="$WIX"
+        cmake "$GITHUB_WORKSPACE" -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" -DWiX="$WIX" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
