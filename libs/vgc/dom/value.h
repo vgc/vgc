@@ -102,14 +102,19 @@ void write(OStream& out, ValueType v)
     switch (v) {
     case ValueType::None:
         write(out, "ValueType::None");
+        break;
     case ValueType::Invalid:
         write(out, "ValueType::Invalid");
+        break;
     case ValueType::Color:
         write(out, "ValueType::Color");
+        break;
     case ValueType::DoubleArray:
         write(out, "ValueType::DoubleArray");
+        break;
     case ValueType::Vec2dArray:
         write(out, "ValueType::Vec2dArray");
+        break;
     }
 }
 

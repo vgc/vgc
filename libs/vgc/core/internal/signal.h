@@ -573,7 +573,7 @@ public:
         auto& hub = access(receiver);
         for (ListenedObjectInfo_& info : hub.listenedObjectInfos_) {
             if (info.numInboundConnections > 0) {
-                Int count = SignalHub::eraseConnections_(info.object, receiver);
+                [[maybe_unused]] Int count = SignalHub::eraseConnections_(info.object, receiver);
 #ifdef VGC_DEBUG
                 if (count != info.numInboundConnections) {
                     throw LogicError("Erased connections count != info.numInboundConnections.");
@@ -776,7 +776,7 @@ protected:
             // In a second pass if we are the outermost emit of this signal
             // we remove connections that have been disconnected and pending for removal.
             if (hub.pendingRemovals_) {
-                auto it = connections.removeIf(
+                connections.removeIf(
                     [](const Connection_& c) {
                         return c.pendingRemoval;
                     });
