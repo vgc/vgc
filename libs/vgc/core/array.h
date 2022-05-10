@@ -318,7 +318,7 @@ public:
     /// ```
     ///
     explicit Array(Int length) {
-        checkLength_(length);
+        checkLengthForInit_(length);
         init_(length, ValueInitTag{});
     }
 
@@ -335,7 +335,7 @@ public:
     /// ```
     ///
     explicit Array(Int length, DefaultInitTag) {
-        checkLength_(length);
+        checkLengthForInit_(length);
         init_(length, DefaultInitTag{});
     }
 
@@ -353,7 +353,7 @@ public:
     ///
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     Array(IntType length, const T& value) {
-        checkLength_(length);
+        checkLengthForInit_(length);
         init_(length, value);
     }
 
@@ -365,7 +365,7 @@ public:
     /// Throws LengthError if the given \p length is greater than maxLength().
     /// 
     Array(size_type length, const T& value) {
-        checkLength_(length);
+        checkLengthForInit_(length);
         init_(static_cast<Int>(length), value);
     }
 
@@ -489,7 +489,7 @@ public:
     /// Throws LengthError if the given \p length is greater than maxLength().
     /// 
     void assign(size_type length, T value) {
-        checkLength_(length);
+        checkLengthForInit_(length);
         assignFill_(static_cast<Int>(length), value);
     }
 
@@ -507,7 +507,7 @@ public:
     ///
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     void assign(IntType length, T value) {
-        checkLength_(length);
+        checkLengthForInit_(length);
         assignFill_(static_cast<Int>(length), value);
     }
 
@@ -911,7 +911,7 @@ public:
     /// Throws LengthError if the given \p length is greater than maxLength().
     ///
     void reserve(Int length) {
-        checkLength_(length);
+        checkLengthForReserve_(length);
         if (length > reservedLength_) {
             reallocateExactly_(length); 
         }
@@ -976,7 +976,7 @@ public:
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     iterator insert(ConstIterator it, size_type n, const T& value) {
-        checkLength_(n); // Precondition for insertFill_
+        checkLengthForInsert_(n); // Precondition for insertFill_
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
@@ -994,7 +994,7 @@ public:
     ///
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     iterator insert(ConstIterator it, IntType n, const T& value) {
-        checkLength_(n); // Precondition for insertFill_
+        checkLengthForInsert_(n); // Precondition for insertFill_
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
@@ -1093,7 +1093,7 @@ public:
     ///
     void insert(Int i, Int n, const T& value) {
         checkInRangeForInsert_(i);
-        checkPositive_(n);
+        checkPositiveForInsert_(n);
         insertFill_(i, n, value);
     }
 
@@ -1367,7 +1367,7 @@ public:
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     void extend(Int n, const T& value) {
-        checkPositive_(n);
+        checkPositiveForInsert_(n);
         insertFill_(length(), n, value);
     }
 
@@ -1414,7 +1414,7 @@ public:
     /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     void preextend(Int n, const T& value) {
-        checkPositive_(n);
+        checkPositiveForInsert_(n);
         insertFill_(0, n, value);
     }
 
@@ -1532,7 +1532,7 @@ public:
     /// Throws NegativeIntegerError if the given \p count is negative.
     ///
     void resize(Int count) {
-        checkPositive_(count);
+        checkPositiveForInit_(count);
         resize_(count, ValueInitTag{});
     }
 
@@ -1545,7 +1545,7 @@ public:
     /// Throws NegativeIntegerError if the given \p count is negative.
     ///
     void resizeNoInit(Int count) {
-        checkPositive_(count);
+        checkPositiveForInit_(count);
         resize_(count, DefaultInitTag{});
     }
 
@@ -1558,7 +1558,7 @@ public:
     /// Throws NegativeIntegerError if the given \p count is negative.
     ///
     void resize(Int count, const T& value) {
-        checkPositive_(count);
+        checkPositiveForInit_(count);
         resize_(count, value);
     }
 
@@ -1650,7 +1650,7 @@ private:
         if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
             const auto dist = std::distance(first, last);
             if (dist != 0) {
-                checkLength_(dist);
+                checkLengthForInit_(dist);
                 const Int newLen = static_cast<Int>(dist);
                 allocateStorage_(newLen);
                 std::uninitialized_copy(first, last, data_);
@@ -1831,7 +1831,7 @@ private:
         if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
             // Forward iterator case
             const auto dist = std::distance(first, last);
-            checkLength_(dist);
+            checkLengthForInit_(dist);
             const Int newLen = static_cast<Int>(dist);
 
             if (newLen <= reservedLength_) {
@@ -2046,7 +2046,7 @@ private:
             // Forward iterator implementation
             const auto dist = std::distance(first, last);
 
-            checkLength_(dist);
+            checkLengthForInsert_(dist);
             const Int n = static_cast<Int>(dist);
 
             const Int j = prepareInsertRange_(i, n);
@@ -2154,13 +2154,44 @@ private:
         }
     }
 
-    // Throws NegativeIntegerError if length is negative.
+    // Throws NegativeIntegerError if length is negative, with an error message
+    // appropriate for reserve operations.
     //
     template<typename IntType>
-    void checkPositive_(IntType length) const {
+    void checkPositiveForReserve_([[maybe_unused]] IntType length) const {
         if constexpr (std::is_signed_v<IntType>) {
             if (length < 0) {
-                throw NegativeIntegerError("Array length cannot be negative.");
+                throw NegativeIntegerError(
+                    "Cannot reserve a length of " + toString(length) +
+                    " elements: the reserved length cannot be negative.");
+            }
+        }
+    }
+
+    // Throws NegativeIntegerError if length is negative, with an error message
+    // appropriate for creation or initialization operations.
+    //
+    template<typename IntType>
+    void checkPositiveForInit_([[maybe_unused]] IntType length) const {
+        if constexpr (std::is_signed_v<IntType>) {
+            if (length < 0) {
+                throw NegativeIntegerError(
+                    "Cannot create an Array with " + toString(length) +
+                    " elements: the number of elements cannot be negative.");
+            }
+        }
+    }
+
+    // Throws NegativeIntegerError if length is negative, with an error message
+    // appropriate for insertion operations.
+    //
+    template<typename IntType>
+    void checkPositiveForInsert_([[maybe_unused]] IntType length) const {
+        if constexpr (std::is_signed_v<IntType>) {
+            if (length < 0) {
+                throw NegativeIntegerError(
+                    "Cannot insert " + toString(length) +
+                    " elements in the Array: the number of elements cannot be negative.");
             }
         }
     }
@@ -2168,39 +2199,108 @@ private:
     // Throws LengthError if length > maxLength().
     //
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
-    void checkNoMoreThanMaxLength_(IntType length) const {
+    void checkNoMoreThanMaxLengthForReserve_([[maybe_unused]] IntType length) const {
         if constexpr (core::tmax_<IntType>::value > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
-                throwLengthErrorInit_(length);
+                throw LengthError(
+                            "Cannot reserve a length of " + toString(length) +
+                            " elements: it would exceed the maximum allowed length.");
             }
         }
     }
 
     // Throws LengthError if length > maxLength().
     //
-    void checkNoMoreThanMaxLength_(size_type length) const {
+    void checkNoMoreThanMaxLengthForReserve_(size_type length) const {
         if (length > static_cast<size_type>(IntMax)) {
-            throwLengthErrorInit_(length);
+            throw LengthError(
+                        "Cannot reserve a length of " + toString(length) +
+                        " elements: it would exceed the maximum allowed length.");
         }
     }
 
-    // Throws NegativeIntegerError if length is negative.
     // Throws LengthError if length > maxLength().
     //
-    template<typename IntType>
-    void checkLength_(IntType length) const {
-        checkPositive_(length);
-        checkNoMoreThanMaxLength_(length);
+    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    void checkNoMoreThanMaxLengthForInit_([[maybe_unused]] IntType length) const {
+        if constexpr (core::tmax_<IntType>::value > IntMax) {
+            if (length > IntMax) { // same-signedness => safe implicit conversion
+                throw LengthError(
+                            "Cannot create an Array with " + toString(length) +
+                            " elements: it would exceed the maximum allowed length.");
+            }
+        }
     }
 
-    template<typename IntType>
-    void throwLengthErrorInit_(IntType length) const {
-        throw LengthError("Exceeding maximum Array length.");
+    // Throws LengthError if length > maxLength().
+    //
+    void checkNoMoreThanMaxLengthForInit_(size_type length) const {
+        if (length > static_cast<size_type>(IntMax)) {
+            throw LengthError(
+                        "Cannot create an Array with " + toString(length) +
+                        " elements: it would exceed the maximum allowed length.");
+        }
+    }
+
+    // Throws LengthError if length > maxLength().
+    //
+    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    void checkNoMoreThanMaxLengthForInsert_([[maybe_unused]] IntType length) const {
+        if constexpr (core::tmax_<IntType>::value > IntMax) {
+            if (length > IntMax) { // same-signedness => safe implicit conversion
+                throw LengthError(
+                            "Cannot insert " + toString(length) +
+                            " elements in the Array: it would exceed the maximum allowed length.");
+            }
+        }
+    }
+
+    // Throws LengthError if length > maxLength().
+    //
+    void checkNoMoreThanMaxLengthForInsert_(size_type length) const {
+        if (length > static_cast<size_type>(IntMax)) {
+            throw LengthError(
+                        "Cannot insert " + toString(length) +
+                        " elements in the Array: it would exceed the maximum allowed length.");
+        }
     }
 
     template<typename IntType>
     void throwLengthErrorAdd_(IntType current, TypeIdentity<IntType> addend) const {
-        throw LengthError("Exceeding maximum Array length.");
+        throw LengthError("Cannot insert " + toString(addend) +
+                          " elements in this Array (current length = " +
+                          toString(current) +
+                          "): it would exceed the maximum allowed length.");
+    }
+
+    // Throws NegativeIntegerError if length is negative.
+    // Throws LengthError if length > maxLength().
+    // With an error message appropriate for reserve operations.
+    //
+    template<typename IntType>
+    void checkLengthForReserve_(IntType length) const {
+        checkPositiveForReserve_(length);
+        checkNoMoreThanMaxLengthForReserve_(length);
+    }
+
+    // Throws NegativeIntegerError if length is negative.
+    // Throws LengthError if length > maxLength().
+    // With an error message appropriate for creation or initialization operations.
+    //
+    template<typename IntType>
+    void checkLengthForInit_(IntType length) const {
+        checkPositiveForInit_(length);
+        checkNoMoreThanMaxLengthForInit_(length);
+    }
+
+    // Throws NegativeIntegerError if length is negative.
+    // Throws LengthError if length > maxLength().
+    // With an error message appropriate for insertion operations.
+    //
+    template<typename IntType>
+    void checkLengthForInsert_(IntType length) const {
+        checkPositiveForInsert_(length);
+        checkNoMoreThanMaxLengthForInsert_(length);
     }
 
     // Checks whether range [i1, i2) is valid:
