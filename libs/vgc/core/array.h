@@ -1161,6 +1161,7 @@ public:
     /// length()`.
     ///
     /// Throws IndexError if \p i does not belong to [0, length()].
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
     ///
     template <typename... Args>
     void emplace(Int i, Args&&... args) {
@@ -1170,6 +1171,8 @@ public:
     
     /// Construct-prepends a value with arguments \p args, at the beginning of this Array.
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     template<typename... Args>
     reference emplaceFirst(Args&&... args) {
         return *emplaceAt_(0, std::forward<Args>(args)...);
@@ -1177,9 +1180,11 @@ public:
 
     /// Construct-appends a value with arguments \p args, at the end of this Array.
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     template<typename... Args>
     reference emplaceLast(Args&&... args) {
-        return *emplaceAt_(length_, std::forward<Args>(args)...);
+        return *emplaceLast_(std::forward<Args>(args)...);
     }
 
     /// Removes the element referred to by the iterator \p it. Returns an
@@ -1310,6 +1315,8 @@ public:
     /// Appends the given \p value to the end of this Array. This is fast:
     /// amortized O(1). This is equivalent to insert(length(), value).
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12};
     /// a.append(15);          // => [10, 42, 12, 15]
@@ -1318,25 +1325,23 @@ public:
     /// If you need to append several elements, see also `extend(...)`.
     ///
     void append(const T& value) {
-        if (length_ == maxLength()) {
-            throwLengthErrorAdd_(length_, 1);
-        }
-        emplaceAt_(length_, value);
+        emplaceLast_(value);
     }
 
     /// Move-appends the given \p value to the end of this Array.
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     void append(T&& value) {
-        if (length_ == maxLength()) {
-            throwLengthErrorAdd_(length_, 1);
-        }
-        emplaceAt_(length_, std::move(value));
+        emplaceLast_(std::move(value));
     }
 
     /// Prepends the given \p value to the beginning of this Array, shifting
     /// all existing elements one index to the right. This is slow: O(n). This
     /// is equivalent to insert(0, value).
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12};
     /// a.prepend(15);         // => [15, 10, 42, 12]
@@ -1345,18 +1350,14 @@ public:
     /// If you need to prepend several elements, see also `preextend(...)`.
     ///
     void prepend(const T& value) {
-        if (length_ == maxLength()) {
-            throwLengthErrorAdd_(length_, 1);
-        }
         emplaceAt_(0, value);
     }
 
     /// Move-prepends the given \p value to the beginning of this Array.
     ///
+    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// 
     void prepend(T&& value) {
-        if (length_ == maxLength()) {
-            throwLengthErrorAdd_(length_, 1);
-        }
         emplaceAt_(0, std::move(value));
     }    
 
@@ -1659,7 +1660,7 @@ private:
         }
         else {
             while (first != last) {
-                append(*first++);
+                emplaceLast_(*first++);
             }
         }
     }
@@ -1823,6 +1824,8 @@ private:
         }
     }
 
+    // Throws LengthError if the resulting number of elements would exceed maxLength().
+    //
     template<typename InputIt>
     void assignRange_(InputIt first, InputIt last) {
         using iterator_category = typename std::iterator_traits<InputIt>::iterator_category;
@@ -1878,16 +1881,22 @@ private:
             else {
                 // More or as many elements in input range than this container
                 for (; first != last; ++first) {
-                    append(*first);
+                    emplaceLast_(*first);
                 }
             }
         }
     }
 
-    // Expects: (length_ < maxLength()) and (0 <= i <= length_)
+    // Expects: (0 <= i <= length_)
+    // 
+    // Throws LengthError if the resulting number of elements would exceed maxLength().
     //
     template<typename... Args>
     pointer emplaceReallocate_(const Int i, Args&&... args) {
+        if (length_ == maxLength()) {
+            throwLengthErrorAdd_(length_, 1);
+        }
+
         const Int oldLen = length_;
         const Int newLen = oldLen + 1;
         const Int newReservedLen = calculateGrowth_(newLen);
@@ -1912,13 +1921,22 @@ private:
         return newElementPtr;
     }
 
+    // Expects: (length_ < reservedLength())
+    //
+    template<typename... Args>
+    pointer emplaceReservedLast_(Args&&... args) {
+        const pointer newElementPtr = data_ + length_;
+        constructElement_(newElementPtr, std::forward<Args>(args)...);
+        ++length_;
+        return newElementPtr;
+    }
+
     // Expects: (length_ < reservedLength()) and (0 <= i <= length_)
     //
     template<typename... Args>
     pointer emplaceReserved_(const Int i, Args&&... args) {
         const Int oldLen = length_;
         const pointer data = data_;
-
         const pointer newElementPtr = data + i;
 
         if (i == oldLen) {
@@ -1940,9 +1958,25 @@ private:
         return newElementPtr;
     }
 
+    // Throws LengthError if the resulting number of elements would exceed maxLength().
+    //
+    template<typename... Args>
+    pointer emplaceLast_(Args&&... args) {
+        if (length_ < reservedLength_) {
+            return emplaceReservedLast_(std::forward<Args>(args)...);
+        }
+        else {
+            return emplaceReallocate_(length_, std::forward<Args>(args)...);
+        }
+    }
+
+    // Expects: (0 <= i <= length_)
+    // 
+    // Throws LengthError if the resulting number of elements would exceed maxLength().
+    //
     template<typename... Args>
     pointer emplaceAt_(const Int i, Args&&... args) {
-        if (length_ < reservedLength_) {
+        if (length_ != reservedLength_) {
             return emplaceReserved_(i, std::forward<Args>(args)...);
         }
         else {
@@ -2070,7 +2104,7 @@ private:
             // Input iterator implementation (fallback, slow!)
             const Int oldLen = length_;
             for (; first != last; ++first) {
-                append(*first);
+                emplaceLast_(*first);
             }
             const pointer data = data_;
             const pointer insertBeg = data + i;
