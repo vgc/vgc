@@ -66,7 +66,7 @@ void Label::onPaintCreate(graphics::Engine* engine)
     triangles_ = engine->createTriangles();
 }
 
-void Label::onPaintDraw(graphics::Engine* engine)
+void Label::onPaintDraw(graphics::Engine*)
 {
     if (reload_) {
         reload_ = false;
@@ -83,7 +83,7 @@ void Label::onPaintDraw(graphics::Engine* engine)
     triangles_->draw();
 }
 
-void Label::onPaintDestroy(graphics::Engine* engine)
+void Label::onPaintDestroy(graphics::Engine*)
 {
     triangles_.reset();
 }

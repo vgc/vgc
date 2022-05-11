@@ -698,8 +698,8 @@ public:
     virtual void onPaintDestroy(graphics::Engine* engine);
 
 protected:
-    virtual void onWidgetAdded(Object* child) {};
-    virtual void onWidgetRemoved(Object* child) {};
+    virtual void onWidgetAdded(Object*) {};
+    virtual void onWidgetRemoved(Object*) {};
 
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its

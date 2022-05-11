@@ -485,7 +485,7 @@ protected:
             "The slot signature is not compatible with the signal.");
 
         return SlotWrapper(
-            [=](const TransmitArgs& args) {
+            [=]([[maybe_unused]] const TransmitArgs& args) {
                 std::invoke(c, methodObj..., args.get<std::tuple_element_t<Is, TruncatedSignalArgRefsTuple>>(Is)...);
             });
     }

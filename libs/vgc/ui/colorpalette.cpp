@@ -329,7 +329,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
     triangles_->draw();
 }
 
-void ColorPalette::onPaintDestroy(graphics::Engine* engine)
+void ColorPalette::onPaintDestroy(graphics::Engine*)
 {
     triangles_.reset();
 }

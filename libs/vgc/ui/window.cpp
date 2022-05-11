@@ -158,7 +158,7 @@ void Window::focusOutEvent(QFocusEvent* /*event*/)
     widget_->setTreeActive(false);
 }
 
-void Window::resizeEvent(QResizeEvent *ev)
+void Window::resizeEvent(QResizeEvent*)
 {
     geometry::Camera2d c;
     c.setViewportSize(width(), height());

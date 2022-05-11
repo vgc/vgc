@@ -74,7 +74,7 @@ void LineEdit::onPaintCreate(graphics::Engine* engine)
     triangles_ = engine->createTriangles();
 }
 
-void LineEdit::onPaintDraw(graphics::Engine* engine)
+void LineEdit::onPaintDraw(graphics::Engine*)
 {
     if (reload_) {
         reload_ = false;
@@ -112,7 +112,7 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
     triangles_->draw();
 }
 
-void LineEdit::onPaintDestroy(graphics::Engine* engine)
+void LineEdit::onPaintDestroy(graphics::Engine*)
 {
     triangles_.reset();
 }

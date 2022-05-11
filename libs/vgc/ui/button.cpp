@@ -63,7 +63,7 @@ void Button::onPaintCreate(graphics::Engine* engine)
     triangles_ = engine->createTriangles();
 }
 
-void Button::onPaintDraw(graphics::Engine* engine)
+void Button::onPaintDraw(graphics::Engine*)
 {
     if (reload_) {
         reload_ = false;
@@ -85,7 +85,7 @@ void Button::onPaintDraw(graphics::Engine* engine)
     triangles_->draw();
 }
 
-void Button::onPaintDestroy(graphics::Engine* engine)
+void Button::onPaintDestroy(graphics::Engine*)
 {
     triangles_.reset();
 }

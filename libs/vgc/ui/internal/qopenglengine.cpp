@@ -306,7 +306,7 @@ void QOpenglEngine::setTarget(QSurface* qw)
 
 void QOpenglEngine::setViewport(Int x, Int y, Int width, Int height)
 {
-    api_->glViewport(0, 0, width, height);
+    api_->glViewport(x, y, width, height);
 }
 
 void QOpenglEngine::bindPaintShader()
