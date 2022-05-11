@@ -39,6 +39,7 @@ Resource::~Resource()
 void Resource::onEngineDestroyed()
 {
     release();
+    onEngineDestroyedConnectionHandle = core::ConnectionHandle::invalid;
     engine_ = nullptr;
 }
 
