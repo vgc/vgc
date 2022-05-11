@@ -188,7 +188,7 @@ Object::Object() :
 
 Object::~Object()
 {
-    //printDebugInfo_(this, "destructed");
+    printDebugInfo_(this, "destructed");
 }
 
 void Object::destroyObject_()
