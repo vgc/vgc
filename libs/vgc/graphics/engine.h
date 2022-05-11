@@ -48,7 +48,7 @@ private:
     virtual void release() = 0;
 
     Engine* engine_;
-    core::ConnectionHandle onEngineDestroyedConnectionHandle;
+    core::ConnectionHandle engineConnectionHandle_;
 };
 
 using TrianglesBufferPtr = std::shared_ptr<class TrianglesBuffer>;

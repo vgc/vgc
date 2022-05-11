@@ -21,7 +21,7 @@ namespace graphics {
 
 Resource::Resource(Engine* engine) :
     engine_(engine),
-    onEngineDestroyedConnectionHandle(
+    engineConnectionHandle_(
         engine->aboutToBeDestroyed().connect(
             [this](){ onEngineDestroyed(); })
     ) {}
@@ -29,9 +29,9 @@ Resource::Resource(Engine* engine) :
 
 Resource::~Resource()
 {
-    if (onEngineDestroyedConnectionHandle) {
-        engine_->disconnect(onEngineDestroyedConnectionHandle);
-        onEngineDestroyedConnectionHandle = core::ConnectionHandle::invalid;
+    if (engineConnectionHandle_) {
+        engine_->disconnect(engineConnectionHandle_);
+        engineConnectionHandle_ = core::ConnectionHandle::invalid;
         engine_ = nullptr;
     }
 }
@@ -39,7 +39,7 @@ Resource::~Resource()
 void Resource::onEngineDestroyed()
 {
     release();
-    onEngineDestroyedConnectionHandle = core::ConnectionHandle::invalid;
+    engineConnectionHandle_ = core::ConnectionHandle::invalid;
     engine_ = nullptr;
 }
 
