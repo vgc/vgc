@@ -286,7 +286,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
         if (isSelectedColorExact_) {
             Int i = selectedHueIndex_;
             float x1, y1, x2, y2;
-            double hue = i*dhue;
+            double shue = i*dhue;
             if (i < halfNumHueSteps) {
                 x1 = std::round(x0 + startOffset + i*dx);
                 x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
@@ -299,13 +299,13 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                 y1 = y0 + startOffset + dy;
                 y2 = y1 + dy - cellOffset;
             }
-            auto c = core::Color::hsl(hue, s, l);
+            auto c = core::Color::hsl(shue, s, l);
             insertCellHighlight(a, c, x1, y1, x2, y2);
         }
         if (hoveredHueIndex_ != -1) {
             Int i = hoveredHueIndex_;
             float x1, y1, x2, y2;
-            double hue = i*dhue;
+            double hhue = i*dhue;
             if (i < halfNumHueSteps) {
                 x1 = std::round(x0 + startOffset + i*dx);
                 x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
@@ -318,7 +318,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
                 y1 = y0 + startOffset + dy;
                 y2 = y1 + dy - cellOffset;
             }
-            auto c = core::Color::hsl(hue, s, l);
+            auto c = core::Color::hsl(hhue, s, l);
             insertCellHighlight(a, c, x1, y1, x2, y2);
         }
 

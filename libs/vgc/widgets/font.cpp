@@ -105,7 +105,7 @@ void printFontFamilyInfo(const std::string& family)
         QList<int> pointSizes = fd.pointSizes(f, s);
         std::cout << "        pointSizes:         [";
         std::string delimiter = "";
-        Q_FOREACH (int ps, pointSizes) {
+        for (int ps : pointSizes) {
             std::cout << delimiter << ps;
             delimiter = ", ";
         }
@@ -113,7 +113,7 @@ void printFontFamilyInfo(const std::string& family)
         QList<int> smoothSizes = fd.smoothSizes(f, s);
         std::cout << "        smoothSizes:        [";
         delimiter = "";
-        Q_FOREACH (int ss, smoothSizes) {
+        for (int ss : smoothSizes) {
             std::cout << delimiter << ss;
             delimiter = ", ";
         }

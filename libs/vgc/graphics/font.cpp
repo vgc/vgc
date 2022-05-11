@@ -131,7 +131,7 @@ FontFaceImpl::FontFaceImpl(FT_Library library, const std::string& filename)
         if ((c->platform_id == 0 && c->encoding_id == 3) ||
                 (c->platform_id == 3 && c->encoding_id == 1))
         {
-            FT_Error error = FT_Set_Charmap(face, c);
+            error = FT_Set_Charmap(face, c);
             if (error) {
                 throw FontError(core::format(
                                     "Error setting charmap for font file {}: {}",
@@ -517,7 +517,7 @@ FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
         const FT_UInt bufferMax = 1024;
         char name[bufferMax];
         if (FT_HAS_GLYPH_NAMES(face)) {
-            FT_Error error = FT_Get_Glyph_Name(face, index, name, bufferMax);
+            error = FT_Get_Glyph_Name(face, index, name, bufferMax);
             if (error) {
                 // Note: This code path is believed to be unreachable since we
                 // premptively check for FT_HAS_GLYPH_NAMES, and we know the index

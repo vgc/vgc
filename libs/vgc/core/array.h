@@ -1839,7 +1839,6 @@ private:
 
             if (newLen <= reservedLength_) {
                 // Reuse storage
-                const Int oldLen = length_;
                 const pointer p = data_;
 
                 if (newLen <= oldLen) {

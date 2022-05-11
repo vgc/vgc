@@ -114,7 +114,7 @@ elseif(MSVC)
     set(VGC_COMPILER_WARNING_FLAGS /wd4251)
     # C4996: 'strerror'/'getenv'/etc: This function or variable may be unsafe. Consider using 'strerror_s'/_dupenv_s'/etc instead.
     set(VGC_COMPILER_WARNING_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
-    set(VGC_PEDANTIC_COMPILE_FLAGS /W3)
+    set(VGC_PEDANTIC_COMPILE_FLAGS /W4)
     set(VGC_WERROR_FLAG /WX)
 endif ()
 

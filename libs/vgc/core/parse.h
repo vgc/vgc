@@ -115,7 +115,7 @@ char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
     }
     if (!allowed)  {
         std::string allowedCharactersString;
-        if (N > 0) {
+        if constexpr (N > 0) {
             allowedCharactersString += "'";
             allowedCharactersString += allowedCharacters[0];
             allowedCharactersString += "'";

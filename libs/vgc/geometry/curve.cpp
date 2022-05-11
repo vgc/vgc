@@ -164,14 +164,14 @@ core::Vec2dArray Curve::triangulate(
     }
 
     // Iterate over all segments
-    for (Int i = 0; i < numSegments; ++i)
+    for (Int idx = 0; idx < numSegments; ++idx)
     {
         // Get indices of Catmull-Rom control points for current segment
         Int zero = 0;
-        Int i0 = core::clamp(i-1, zero, numControlPoints-1);
-        Int i1 = core::clamp(i  , zero, numControlPoints-1);
-        Int i2 = core::clamp(i+1, zero, numControlPoints-1);
-        Int i3 = core::clamp(i+2, zero, numControlPoints-1);
+        Int i0 = core::clamp(idx-1, zero, numControlPoints-1);
+        Int i1 = core::clamp(idx  , zero, numControlPoints-1);
+        Int i2 = core::clamp(idx+1, zero, numControlPoints-1);
+        Int i3 = core::clamp(idx+2, zero, numControlPoints-1);
 
         // Get positions of Catmull-Rom control points
         core::Vec2d p0(positionData_[2*i0], positionData_[2*i0+1]);
@@ -207,7 +207,7 @@ core::Vec2dArray Curve::triangulate(
         }
 
         // Compute first sample of segment
-        if (i == 0) {
+        if (idx == 0) {
             // Compute first sample of first segment
             double u = 0;
             appendUninitializedElement(leftPositions);
@@ -260,9 +260,9 @@ core::Vec2dArray Curve::triangulate(
             // leftPositions[i+1], and rightPositions[i+1].
             //
             failedQuads.clear();
-            for (Int i = 0; i < numQuads; ++i) {
-                if (normals[i].dot(normals[i+1]) < cosMaxAngle) {
-                    failedQuads.append(i);
+            for (Int j = 0; j < numQuads; ++j) {
+                if (normals[j].dot(normals[j+1]) < cosMaxAngle) {
+                    failedQuads.append(j);
                 }
             }
 
