@@ -38,10 +38,11 @@
 
 namespace py = pybind11;
 
+#ifdef VGC_QOPENGL_EXPERIMENT
 // test fix for white artefacts during Windows window resizing.
 // https://bugreports.qt.io/browse/QTBUG-89688
 // indicated commit does not seem to be enough to fix the bug
-[[maybe_unused]] void runtimePatchQt() {
+void runtimePatchQt() {
     auto hMod = LoadLibraryA("platforms/qwindowsd.dll");
     if (hMod) {
         char* base = reinterpret_cast<char*>(hMod);
@@ -53,6 +54,7 @@ namespace py = pybind11;
         VirtualProtect(target, sizeof(patch), oldProt, &oldProt);
     }
 }
+#endif
 
 int main(int argc, char* argv[])
 {
