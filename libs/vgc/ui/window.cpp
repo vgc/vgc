@@ -28,6 +28,7 @@
 namespace vgc::ui {
 
 Window::Window(ui::WidgetPtr widget) :
+    QWindow(),
     widget_(widget),
     engine_(internal::QOpenglEngine::create()),
     proj_(core::Mat4f::identity),
@@ -35,9 +36,23 @@ Window::Window(ui::WidgetPtr widget) :
 {
     setSurfaceType(QWindow::OpenGLSurface);
 
+    connect(this, &QWindow::activeChanged, this, &Window::onActiveChanged_);
+
     //setMouseTracking(true);
     widget_->repaintRequested().connect(onRepaintRequested());
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
+
+    // useful ?
+    QSurfaceFormat format;
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    format.setVersion(3, 2);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setSamples(8);
+    format.setSwapInterval(0);
+    setFormat(format);
+
+    QWindow::create();
 
     // Handle dead keys and complex input methods.
     //
@@ -155,8 +170,8 @@ void Window::resizeEvent(QResizeEvent *ev)
     // Should we issue a warning in these cases?
     widget_->setGeometry(0, 0, static_cast<float>(width()), static_cast<float>(height()));
 
-    // redraw now
-    paint();
+    // ask for redraw
+    //onRepaintRequested_();
 }
 
 void Window::keyPressEvent(QKeyEvent* event)
@@ -231,6 +246,15 @@ void Window::paint() {
     widget_->paint(engine_.get());
     engine_->releasePaintShader();
 
+#ifdef VGC_QOPENGL_EXPERIMENT
+    static int frameIdx = 0;
+    auto fmt = format();
+    OutputDebugString(core::format("Window swap behavior: {}\n", (int)fmt.swapBehavior()).c_str());
+    OutputDebugString(core::format("Window swap interval: {}\n", fmt.swapInterval()).c_str());
+    OutputDebugString(core::format("frameIdx: {}\n", frameIdx).c_str());
+    frameIdx++;
+#endif
+
     engine_->present();
 }
 
@@ -253,12 +277,19 @@ void Window::exposeEvent(QExposeEvent*)
 {
     if (isExposed()) {
         paint();
+        //onRepaintRequested_();
     }
 }
 
 void Window::cleanup()
 {
     // XXX ?
+}
+
+void Window::onActiveChanged_()
+{
+    bool active = isActive();
+    widget_->setTreeActive(active);
 }
 
 void Window::onRepaintRequested_()

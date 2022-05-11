@@ -113,7 +113,8 @@ public:
 private:
     QOpenGLBuffer vbo_;
     QOpenGLVertexArrayObject* vao_ = nullptr;
-    int numVertices_ = 0;
+    Int numVertices_ = 0;
+    Int allocSize_ = 0;
 
     void release_();
     void release() override;
@@ -136,8 +137,20 @@ void QOpenglTrianglesBuffer::load(const float* data, Int length)
             "Negative length ({}) provided to loadTriangles()", length));
     }
     numVertices_ = length / 5;
+    Int dataSize = numVertices_ * sizeof(XYRGBVertex);
+
     vbo_.bind();
-    vbo_.allocate(data, numVertices_ * sizeof(XYRGBVertex));
+    if (dataSize > allocSize_) {
+        vbo_.allocate(data, dataSize);
+        allocSize_ = dataSize;
+    }
+    else if (dataSize * 2 < allocSize_) {
+        vbo_.allocate(data, dataSize);
+        allocSize_ = dataSize;
+    }
+    else {
+        vbo_.write(0, data, dataSize);
+    }
     vbo_.release();
 }
 
@@ -166,7 +179,9 @@ void QOpenglTrianglesBuffer::release()
 }
 
 QOpenglEngine::QOpenglEngine() :
-    QOpenglEngine(new QOpenGLContext(), false) {}
+    QOpenglEngine(new QOpenGLContext(), false)
+{
+}
 
 QOpenglEngine::QOpenglEngine(QOpenGLContext* ctx, bool isExternalCtx) :
     graphics::Engine(),
@@ -281,6 +296,12 @@ void QOpenglEngine::setTarget(QSurface* qw)
     }
     current_ = qw;
     ctx_->makeCurrent(qw);
+
+#ifdef VGC_QOPENGL_EXPERIMENT
+    auto fmt = ctx_->format();
+    OutputDebugString(core::format("Ctx swap behavior: {}\n", (int)fmt.swapBehavior()).c_str());
+    OutputDebugString(core::format("Ctx swap interval: {}\n", fmt.swapInterval()).c_str());
+#endif
 }
 
 void QOpenglEngine::setViewport(Int x, Int y, Int width, Int height)
@@ -312,8 +333,6 @@ void QOpenglEngine::initContext(QSurface* qw)
         throw core::LogicError("already initialized.");
     }
 
-    ctx_->create();
-
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
@@ -322,6 +341,7 @@ void QOpenglEngine::initContext(QSurface* qw)
     format.setSamples(8);
     format.setSwapInterval(0);
     ctx_->setFormat(format);
+    ctx_->create();
 
     ctx_->makeCurrent(qw);
 

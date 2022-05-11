@@ -415,7 +415,7 @@ void Widget::clearFocus()
     Widget* w = focusedWidget();
     if (w) {
         if (isTreeActive()) {
-            onFocusOut();
+            w->onFocusOut();
         }
         while (w) {
             w->focus_ = nullptr;

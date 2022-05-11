@@ -79,6 +79,7 @@ private:
     core::Mat4f proj_;
     core::Color clearColor_;
 
+    void onActiveChanged_();
     void onRepaintRequested_();
 
     VGC_SLOT(onRepaintRequested, onRepaintRequested_);

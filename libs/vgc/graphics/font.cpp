@@ -577,12 +577,18 @@ void FontGlyph::fill(core::FloatArray& data,
 {
     const core::FloatArray& triangles = impl_->triangles;
     Int numVertices = triangles.length() / 2;
-    data.reserve(data.length() + 2 * numVertices);
-    for (Int i = 0; i < numVertices; ++i) {
-        core::Vec2f v1(triangles[2*i], triangles[2*i+1]);
-        core::Vec2f v2 = transform * v1;
-        data.append(v2[0]);
-        data.append(v2[1]);
+
+    Int offset = data.length();
+    data.resizeNoInit(offset + 2 * numVertices);
+
+    auto itIn = triangles.begin();
+    auto itOut = data.begin() + offset;
+    while (itOut != data.end()) {
+        float x = *itIn++;
+        float y = *itIn++;
+        core::Vec2f v2 = transform * core::Vec2f(x, y);
+        *itOut++ = v2[0];
+        *itOut++ = v2[1];
     }
 }
 

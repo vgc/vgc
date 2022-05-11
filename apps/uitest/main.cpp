@@ -14,6 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <string>
+#include <string_view>
+
 #include <QApplication>
 #include <QDir>
 #include <QSettings>
@@ -21,9 +24,12 @@
 
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
+#include <vgc/core/random.h>
 #include <vgc/dom/document.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/window.h>
+#include <vgc/ui/column.h>
+#include <vgc/ui/row.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
@@ -32,8 +38,28 @@
 
 namespace py = pybind11;
 
+// test fix for white artefacts during Windows window resizing.
+// https://bugreports.qt.io/browse/QTBUG-89688
+// indicated commit does not seem to be enough to fix the bug
+void runtimePatchQt() {
+    auto hMod = LoadLibraryA("platforms/qwindowsd.dll");
+    if (hMod) {
+        char* base = reinterpret_cast<char*>(hMod);
+        char* target = base + 0x0001BA61;
+        DWORD oldProt{};
+        char patch[] = {'\x90', '\x90'};
+        VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &oldProt);
+        memcpy(target, patch, sizeof(patch));
+        VirtualProtect(target, sizeof(patch), oldProt, &oldProt);
+    }
+}
+
 int main(int argc, char* argv[])
 {
+#ifdef VGC_QOPENGL_EXPERIMENT
+    QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
+
     // Conversion between QString and std::string.
     using vgc::widgets::fromQt;
     using vgc::widgets::toQt;
@@ -80,7 +106,6 @@ int main(int argc, char* argv[])
     QDir baseDir = binDir;
     baseDir.cdUp();
     std::string basePath = fromQt(baseDir.path());
-    std::string pythonHome = basePath;
     if (binDir.exists("vgc.conf")) {
         QSettings conf(binDir.filePath("vgc.conf"), QSettings::IniFormat);
         if (conf.contains("BasePath")) {
@@ -88,54 +113,10 @@ int main(int argc, char* argv[])
             if (!v.isEmpty()) {
                 v = QDir::cleanPath(binDir.filePath(v));
                 basePath = fromQt(v);
-                pythonHome = fromQt(v);
-            }
-        }
-        if (conf.contains("PythonHome")) {
-            QString v = conf.value("PythonHome").toString();
-            if (!v.isEmpty()) {
-                v = QDir::cleanPath(binDir.filePath(v));
-                pythonHome = fromQt(v);
             }
         }
     }
     vgc::core::setBasePath(basePath);
-
-    // Create the python interpreter
-    std::string programName(argv[0]);
-    auto pythonInterpreter = vgc::core::PythonInterpreter::create(programName, pythonHome);
-
-    // Create the document + root element
-    // -> Let's have the MainWindow be the owner of the document for now.
-    //    Later, it should be the VgcIllustrationApp, accessible from the
-    //    MainWindow so that it could call app->setDocument(doc) on open.
-    //auto doc = vgc::dom::Document::create();
-    //vgc::dom::Element::create(doc.get(), "vgc");
-
-    // Expose the Document instance to the Python console as a local Python
-    // variable 'document'.
-    //
-    // XXX In the long term, we may not want to expose "document" directly, but:
-    // 1. Have a class VgcIllustrationApp: public QApplication.
-    // 2. Have an instance 'VgcIllustrationApp app'.
-    // 3. Pass the app to python.
-    // 4. Users can call things like:
-    //      app.document() (or just app.document, which is more pythonic)
-    //      app.currentDocument()
-    //      app.documents()
-    //      etc.
-    //
-    // One advantage is that the calls above can be made read-only.
-    // Currently, users can do document = Document() and then are not able
-    // to affect the actual document anymore...
-    //
-    //pythonInterpreter.run("import vgc.dom");
-    //pythonInterpreter.setVariableValue("document", document);
-
-    // Create the main window
-    //vgc::widgets::MainWindow w(doc.get(), &pythonInterpreter);
-    vgc::widgets::MainWindow w(pythonInterpreter.get());
-    w.setWindowTitle("VGC Illustration");
 
     // Set style
     vgc::widgets::addDefaultApplicationFonts();
@@ -145,18 +126,36 @@ int main(int argc, char* argv[])
     std::string iconPath = vgc::core::resourcePath("apps/illustration/icons/512.png");
     application.setWindowIcon(QIcon(toQt(iconPath)));
 
-    // Show maximized.
-    //
-    // We must call showMaximized() after the event loop has started,
-    // otherwise the QMenuBar's background won't extend to the full length of
-    // the window. This is a known Qt bug:
-    //
-    //   https://bugreports.qt.io/browse/QTBUG-55690
-    //
-    QTimer timer;
-    timer.setSingleShot(true);
-    QObject::connect(&timer, SIGNAL(timeout()), &w, SLOT(showMaximized()));
-    timer.start(10);
+    std::string lipsum =
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim "
+        "ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
+        "aliquip ex ea commodo consequat. Duis aute irure dolor in "
+        "reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla "
+        "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in "
+        "culpa qui officia deserunt mollit anim id est laborum.";
+
+    vgc::core::UniformDistribution ud(0, lipsum.size() - 0.1f);
+
+    vgc::ui::ColumnPtr col = vgc::ui::Column::create();
+    int size = 10;
+    for (int i = 0; i < size; ++i) {
+        vgc::ui::Row* row = col->createChild<vgc::ui::Row>();
+        for (int j = 0; j < size; ++j) {
+            auto le = row->createChild<vgc::ui::LineEdit>();
+            vgc::Int min = vgc::Int(ud());
+            vgc::Int max = vgc::Int(ud());
+            if (min > max) {
+                std::swap(min, max);
+            }
+            le->setText(std::string_view(lipsum).substr(min, max - min));
+        }
+    }
+
+    vgc::ui::WindowPtr wnd = vgc::ui::Window::create(col);
+    wnd->setTitle("VGC UI Test");
+    wnd->resize(QSize(800, 600));
+    wnd->setVisible(true);
 
     // Start event loop
     return application.exec();
