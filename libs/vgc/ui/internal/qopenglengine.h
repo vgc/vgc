@@ -89,25 +89,6 @@ inline core::Mat4f toMat4f(const core::Mat4d& m) {
 
 VGC_DECLARE_OBJECT(QOpenglEngine);
 
-//class Drawable
-//{
-//    Drawable(Int width, Int height) :
-//        width_(width), height_(height) {}
-//
-//    Int width() const { return width_; }
-//    Int height() const  { return height_; }
-//
-//    void setSize(Int width, Int height)
-//    {
-//        width_ = width;
-//        width_ = height;
-//    }
-//
-//private:
-//    Int width_;
-//    Int height_;
-//};
-
 /// \class vgc::widget::QOpenglEngine
 /// \brief The graphics::Engine for windows and widgets.
 ///
