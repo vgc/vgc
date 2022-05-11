@@ -22,8 +22,6 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
-#include <vgc/ui/lineedit.h>
-#include <vgc/ui/window.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
