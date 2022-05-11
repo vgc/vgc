@@ -163,7 +163,7 @@ public:
 
 private:
     QOpenGLContext* ctx_ = nullptr;
-    bool isExternalCtx = false;
+    bool isExternalCtx_ = false;
     QOpenGLFunctions_3_2_Core* api_ = nullptr;
 
     QSurface* current_ = nullptr;

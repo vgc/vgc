@@ -187,7 +187,7 @@ QOpenglEngine::QOpenglEngine() :
 QOpenglEngine::QOpenglEngine(QOpenGLContext* ctx, bool isExternalCtx) :
     graphics::Engine(),
     ctx_(ctx),
-    isExternalCtx(isExternalCtx),
+    isExternalCtx_(isExternalCtx),
     projectionMatrices_({core::Mat4f::identity}),
     viewMatrices_({core::Mat4f::identity})
 {
@@ -195,7 +195,7 @@ QOpenglEngine::QOpenglEngine(QOpenGLContext* ctx, bool isExternalCtx) :
 
 void QOpenglEngine::onDestroyed()
 {
-    if (!isExternalCtx) {
+    if (!isExternalCtx_) {
         delete ctx_;
     }
 }
@@ -277,7 +277,7 @@ void QOpenglEngine::popViewMatrix()
 graphics::TrianglesBufferPtr QOpenglEngine::createTriangles()
 {
     auto r = QOpenglTrianglesBuffer::create(this);
-    GLsizei stride  = sizeof(XYRGBVertex);
+    GLsizei stride = sizeof(XYRGBVertex);
     GLvoid* posPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, x));
     GLvoid* colPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, r));
     GLboolean normalized = GL_FALSE;
