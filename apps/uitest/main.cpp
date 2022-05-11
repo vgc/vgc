@@ -41,7 +41,7 @@ namespace py = pybind11;
 // test fix for white artefacts during Windows window resizing.
 // https://bugreports.qt.io/browse/QTBUG-89688
 // indicated commit does not seem to be enough to fix the bug
-void runtimePatchQt() {
+[[maybe_unused]] void runtimePatchQt() {
     auto hMod = LoadLibraryA("platforms/qwindowsd.dll");
     if (hMod) {
         char* base = reinterpret_cast<char*>(hMod);
