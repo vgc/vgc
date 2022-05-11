@@ -19,11 +19,17 @@
 
 #include <algorithm> // std::find
 
+#include <QOpenGLBuffer>
+#include <QOpenGLFunctions_3_2_Core>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLVertexArrayObject>
+
 #include <vgc/core/array.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
 #include <vgc/core/vec2f.h>
 #include <vgc/graphics/engine.h>
+#include <vgc/graphics/idgenerator.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
@@ -39,6 +45,7 @@ namespace ui {
 
 VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(Widget);
+VGC_DECLARE_OBJECT(UiWidgetEngine);
 
 /// \typedef vgc::ui::WidgetClasses
 /// \brief Stores a set of widget classes.
@@ -153,6 +160,8 @@ protected :
     /// ```
     ///
     Widget();
+
+    void onDestroyed() override;
 
 public:
     /// Creates a widget.
@@ -443,29 +452,15 @@ public:
     ///
     void repaint();
 
+    /// This function is called whenever the widget needs to be
+    /// repainted.
+    ///
+    void paint(graphics::Engine* engine);
+
     /// This signal is emitted when someone requested this widget, or one of
     /// its descendent widgets, to be repainted.
     ///
     VGC_SIGNAL(repaintRequested);
-
-    /// This virtual function is called once before the first call to
-    /// onPaintDraw(), and should be reimplemented to create required GPU
-    /// resources.
-    ///
-    virtual void onPaintCreate(graphics::Engine* engine);
-
-    /// This virtual function is called whenever the widget needs to be
-    /// repainted. Subclasses should reimplement this, typically by issuing
-    /// draw calls.
-    ///
-    virtual void onPaintDraw(graphics::Engine* engine);
-
-    /// This virtual function is called once after the last call to
-    /// onPaintDraw(), for example before the widget is destructed, or if
-    /// switching graphics engine. It should be reimplemented to destroy the
-    /// created GPU resources.
-    ///
-    virtual void onPaintDestroy(graphics::Engine* engine);
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
@@ -682,7 +677,30 @@ public:
     ///
     Action* createAction(const Shortcut& shortcut);
 
+public:
+    /// This virtual function is called once before the first call to
+    /// onPaintDraw(), and should be reimplemented to create required GPU
+    /// resources.
+    ///
+    virtual void onPaintCreate(graphics::Engine* engine);
+
+    /// This virtual function is called whenever the widget needs to be
+    /// repainted. Subclasses should reimplement this, typically by issuing
+    /// draw calls.
+    ///
+    virtual void onPaintDraw(graphics::Engine* engine);
+
+    /// This virtual function is called once after the last call to
+    /// onPaintDraw(), for example before the widget is destructed, or if
+    /// switching graphics engine. It should be reimplemented to destroy the
+    /// created GPU resources.
+    ///
+    virtual void onPaintDestroy(graphics::Engine* engine);
+
 protected:
+    virtual void onWidgetAdded(Object*) {};
+    virtual void onWidgetRemoved(Object*) {};
+
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its
     /// children.
@@ -724,7 +742,13 @@ private:
     WidgetClasses classes_;
     friend class Style;
     Style style_;
+    graphics::Engine* lastPaintEngine_ = nullptr;
     void onClassesChanged_();
+    void releaseEngine_();
+
+    VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_);
+    VGC_SLOT(onWidgetAdded_, onWidgetAdded);
+    VGC_SLOT(onWidgetRemoved_, onWidgetRemoved);
 };
 
 } // namespace ui

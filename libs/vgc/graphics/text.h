@@ -17,6 +17,8 @@
 #ifndef VGC_GRAPHICS_TEXT_H
 #define VGC_GRAPHICS_TEXT_H
 
+#include <string_view>
+
 #include <vgc/core/innercore.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/font.h>
@@ -385,7 +387,7 @@ class VGC_GRAPHICS_API ShapedText {
 public:
     /// Creates a new ShapedText.
     ///
-    ShapedText(FontFace* face, const std::string& text);
+    ShapedText(FontFace* face, std::string_view text);
 
     /// Creates a copy of the given ShapedText.
     ///
@@ -418,7 +420,7 @@ public:
     /// Modifies the input text string of this ShapedText. This automatically
     /// recomputes the glyphs.
     ///
-    void setText(const std::string& text);
+    void setText(std::string_view text);
 
     /// Returns the ShapedGlyph elements composing this ShapedText.
     ///

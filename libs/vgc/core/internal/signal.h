@@ -29,6 +29,7 @@
 
 #include <vgc/core/api.h>
 #include <vgc/core/array.h>
+#include <vgc/core/assert.h>
 #include <vgc/core/pp.h>
 #include <vgc/core/templateutil.h>
 
@@ -159,6 +160,9 @@ class ConnectionHandle {
 public:
     static const ConnectionHandle invalid;
 
+    constexpr ConnectionHandle()
+        : ConnectionHandle(-1) {}
+
 protected:
     constexpr ConnectionHandle(Int64 id)
         : id_(id) {}
@@ -182,7 +186,7 @@ private:
     Int64 id_;
 };
 
-inline constexpr ConnectionHandle ConnectionHandle::invalid = {-1};
+inline constexpr ConnectionHandle ConnectionHandle::invalid = {};
 
 
 template<typename Tag>
@@ -409,7 +413,7 @@ public:
     using SlotWrapperSig = void(const TransmitArgs&);
     using SlotWrapper = std::function<SlotWrapperSig>;
 
-    SignalTransmitter() = default;
+    SignalTransmitter() = delete;
 
     template<typename TSlotWrapper, Requires<isFunctor<RemoveCVRef<TSlotWrapper>>> = true>
     SignalTransmitter(TSlotWrapper&& wrapper, bool isNative = false) :
@@ -481,7 +485,7 @@ protected:
             "The slot signature is not compatible with the signal.");
 
         return SlotWrapper(
-            [=](const TransmitArgs& args) {
+            [=]([[maybe_unused]] const TransmitArgs& args) {
                 std::invoke(c, methodObj..., args.get<std::tuple_element_t<Is, TruncatedSignalArgRefsTuple>>(Is)...);
             });
     }
@@ -549,19 +553,13 @@ public:
     SignalHub() = default;
 
 #ifdef VGC_DEBUG
-    ~SignalHub() noexcept(false) {
-        if (!listenedObjectInfos_.empty()) {
-            throw LogicError(
-                "A SignalHub is being destroyed but is still subscribed to some Object signals."
-                " Object destruction should call disconnectSlots() explicitly."
-            );
-        }
-        if (!connections_.empty()) {
-            throw LogicError(
-                "A SignalHub is being destroyed but is still connected to some Object slots."
-                " Object destruction should call disconnectSignals() explicitly."
-            );
-        }
+    ~SignalHub() noexcept {
+        VGC_CORE_ASSERT(listenedObjectInfos_.empty() &&
+            "A SignalHub is being destroyed but is still subscribed to some Object signals."
+            " Object destruction should call disconnectSlots() explicitly.");
+        VGC_CORE_ASSERT((numOutboundConnections_() == 0) &&
+            "A SignalHub is being destroyed but is still connected to some Object slots."
+            " Object destruction should call disconnectSignals() explicitly.");
     }
 #endif
 
@@ -635,16 +633,7 @@ public:
 
     static Int numOutboundConnections(const Object* sender) {
         auto& hub = access(sender);
-        if (hub.pendingRemovals_) {
-            Int count = 0;
-            for (auto& c : hub.connections_) {
-                if (c.pendingRemoval == false) {
-                    ++count;
-                }
-            }
-            return count;
-        }
-        return hub.connections_.size();
+        return hub.numOutboundConnections_();
     }
 
     static bool disconnect(const Object* sender, ConnectionHandle handle) {
@@ -721,6 +710,19 @@ public:
     }
 
 protected:
+    Int numOutboundConnections_() {
+        if (pendingRemovals_) {
+            Int count = 0;
+            for (auto& c : connections_) {
+                if (c.pendingRemoval == false) {
+                    ++count;
+                }
+            }
+            return count;
+        }
+        return connections_.length();
+    }
+
     // Used in onDestroy(), receiver is about to be destroyed.
     // This does NOT update the numInboundConnections in the sender info stored in receiver.
     //

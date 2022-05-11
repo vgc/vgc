@@ -27,8 +27,10 @@ vgc_add_library(ui
         style.h
         styletoken.h
         widget.h
+        window.h
 
         internal/paintutil.h
+        internal/qopenglengine.h
 
     CPP_FILES
         action.cpp
@@ -47,8 +49,10 @@ vgc_add_library(ui
         style.cpp
         styletoken.cpp
         widget.cpp
+        window.cpp
 
         internal/paintutil.cpp
+        internal/qopenglengine.cpp
 
     RESOURCE_FILES
         stylesheets/default.vgcss

@@ -58,7 +58,7 @@ public:
     //
     hb_buffer_t* buf;
 
-    ShapedTextImpl(FontFace* face, const std::string& text) :
+    ShapedTextImpl(FontFace* face, std::string_view text) :
         facePtr(face),
         text(),
         glyphs(),
@@ -97,7 +97,7 @@ public:
         hb_buffer_destroy(buf);
     }
 
-    void setText(const std::string& text_)
+    void setText(std::string_view text_)
     {
         // HarfBuzz input
         text = text_;
@@ -262,7 +262,7 @@ void ShapedGlyph::fill(core::FloatArray& data,
     fontGlyph()->fill(data, transform);
 }
 
-ShapedText::ShapedText(FontFace* face, const std::string& text) :
+ShapedText::ShapedText(FontFace* face, std::string_view text) :
     impl_()
 {
     impl_ = new internal::ShapedTextImpl(face, text);
@@ -311,7 +311,7 @@ const std::string& ShapedText::text() const
     return impl_->text;
 }
 
-void ShapedText::setText(const std::string& text)
+void ShapedText::setText(std::string_view text)
 {
     impl_->setText(text);
 }

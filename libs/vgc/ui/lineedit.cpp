@@ -20,6 +20,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
+#include <vgc/core/performancelog.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/style.h>
@@ -29,13 +30,12 @@
 namespace vgc {
 namespace ui {
 
-LineEdit::LineEdit(const std::string& text) :
+LineEdit::LineEdit(std::string_view text) :
     Widget(),
     text_(""),
     shapedText_(graphics::fontLibrary()->defaultFace(), text_),
     textCursor_(false, 0),
     scrollLeft_(0.0f),
-    trianglesId_(-1),
     reload_(true),
     isHovered_(false),
     isMousePressed_(false)
@@ -49,12 +49,12 @@ LineEditPtr LineEdit::create()
     return LineEditPtr(new LineEdit(""));
 }
 
-LineEditPtr LineEdit::create(const std::string& text)
+LineEditPtr LineEdit::create(std::string_view text)
 {
     return LineEditPtr(new LineEdit(text));
 }
 
-void LineEdit::setText(const std::string& text)
+void LineEdit::setText(std::string_view text)
 {
     if (text_ != text) {
         text_ = text;
@@ -71,10 +71,10 @@ void LineEdit::onResize()
 
 void LineEdit::onPaintCreate(graphics::Engine* engine)
 {
-    trianglesId_ = engine->createTriangles();
+    triangles_ = engine->createTriangles();
 }
 
-void LineEdit::onPaintDraw(graphics::Engine* engine)
+void LineEdit::onPaintDraw(graphics::Engine*)
 {
     if (reload_) {
         reload_ = false;
@@ -82,6 +82,13 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
         core::Color backgroundColor = internal::getColor(this, isHovered_ ?
                         strings::background_color_on_hover :
                         strings::background_color);
+
+#ifdef VGC_QOPENGL_EXPERIMENT
+        static core::Stopwatch sw = {};
+        auto t = sw.elapsed() * 50.f;
+        backgroundColor = core::Color::hsl(t, 0.6f, 0.3f);
+#endif
+
         core::Color textColor = internal::getColor(this, strings::text_color);
         float borderRadius = internal::getLength(this, strings::border_radius);
         float paddingLeft = internal::getLength(this, strings::padding_left);
@@ -100,14 +107,14 @@ void LineEdit::onPaintDraw(graphics::Engine* engine)
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
         internal::insertText(a, textColor, 0, 0, width(), height(), paddingLeft, paddingRight, 0, 0, shapedText_, textProperties, textCursor_, hinting, scrollLeft_);
-        engine->loadTriangles(trianglesId_, a.data(), a.length());
+        triangles_->load(a.data(), a.length());
     }
-    engine->drawTriangles(trianglesId_);
+    triangles_->draw();
 }
 
-void LineEdit::onPaintDestroy(graphics::Engine* engine)
+void LineEdit::onPaintDestroy(graphics::Engine*)
 {
-    engine->destroyTriangles(trianglesId_);
+    triangles_.reset();
 }
 
 bool LineEdit::onMouseMove(MouseEvent* event)

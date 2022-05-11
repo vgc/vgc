@@ -397,6 +397,8 @@ ObjectPtr Object::removeObjectFromParent_()
 
 void Object::destroyObjectImpl_()
 {
+    aboutToBeDestroyed().emit(this);
+
     while (firstChildObject_) {
         firstChildObject_->destroyObjectImpl_();
     }

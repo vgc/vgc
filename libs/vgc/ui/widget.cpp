@@ -15,7 +15,6 @@
 // limitations under the License.
 
 #include <vgc/ui/widget.h>
-
 #include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
 
@@ -35,7 +34,16 @@ Widget::Widget() :
     isTreeActive_(false),
     focus_(nullptr)
 {
+    children_->childAdded().connect(onWidgetAdded_());
+    children_->childRemoved().connect(onWidgetRemoved_());
+}
 
+void Widget::onDestroyed()
+{
+    if (lastPaintEngine_)
+    {
+        // XXX what to do ?
+    }
 }
 
 WidgetPtr Widget::create()
@@ -199,6 +207,20 @@ void Widget::repaint()
         widget->repaintRequested().emit();
         widget = widget->parent();
     }
+}
+
+void Widget::paint(graphics::Engine* engine)
+{
+    if (engine != lastPaintEngine_) {
+        if (lastPaintEngine_) {
+            releaseEngine_();
+        }
+        lastPaintEngine_ = engine;
+        engine->aboutToBeDestroyed().connect(
+            onEngineAboutToBeDestroyed());
+        onPaintCreate(engine);
+    }
+    onPaintDraw(engine);
 }
 
 void Widget::onPaintCreate(graphics::Engine* engine)
@@ -392,7 +414,7 @@ void Widget::clearFocus()
     Widget* w = focusedWidget();
     if (w) {
         if (isTreeActive()) {
-            onFocusOut();
+            w->onFocusOut();
         }
         while (w) {
             w->focus_ = nullptr;
@@ -493,6 +515,14 @@ void Widget::onClassesChanged_()
 {
     style_ = styleSheet()->computeStyle(this);
     // TODO: re-render
+}
+
+void Widget::releaseEngine_()
+{
+    onPaintDestroy(lastPaintEngine_);
+    lastPaintEngine_->aboutToBeDestroyed().disconnect(
+        onEngineAboutToBeDestroyed());
+    lastPaintEngine_ = nullptr;
 }
 
 } // namespace ui

@@ -25,14 +25,15 @@
 
 #include <vgc/core/array.h>
 #include <vgc/graphics/idgenerator.h>
+#include <vgc/ui/internal/qopenglengine.h>
 #include <vgc/ui/widget.h>
+#include <vgc/ui/window.h>
 #include <vgc/widgets/api.h>
 
 namespace vgc {
 namespace widgets {
 
 VGC_DECLARE_OBJECT(UiWidget);
-VGC_DECLARE_OBJECT(UiWidgetEngine);
 
 /// \class vgc::widget::UiWidget
 /// \brief A QWidget based on a vgc::ui::widget.
@@ -78,8 +79,6 @@ protected:
     bool event(QEvent* e) override;
 
 private:
-    OpenGLFunctions* openGLFunctions() const;
-
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
@@ -89,88 +88,14 @@ private:
     void onFocusRequested();
 
     ui::WidgetPtr widget_;
-    widgets::UiWidgetEnginePtr engine_;
+    ui::internal::QOpenglEnginePtr engine_;
 
     // Projection and view matrices
     core::Mat4f proj_;
 
-    // Shader program
-    QOpenGLShaderProgram shaderProgram_;
-    int posLoc_;
-    int colLoc_;
-    int projLoc_;
-    int viewLoc_;
-
     // Ensure that we don't call onPaintDestroy() if onPaintCreate()
     // has not been called
     bool isInitialized_;
-};
-
-/// \class vgc::widget::UiWidgetEngine
-/// \brief The graphics::Engine used by UiWidget.
-///
-/// This class is an implementation of graphics::Engine using QPainter and
-/// OpenGL calls, with the assumption to be used in a QOpenGLWidget.
-///
-class VGC_WIDGETS_API UiWidgetEngine : public graphics::Engine {
-private:
-    VGC_OBJECT(UiWidgetEngine, graphics::Engine)
-
-protected:
-    /// Creates a new UiWidgetEngine. This constructor is an implementation
-    /// detail. In order to create a UiWidgetEngine, please use the following:
-    ///
-    /// \code
-    /// UiWidgetEnginePtr engine = UiWidgetEngine::create();
-    /// \endcode
-    ///
-    UiWidgetEngine();
-
-public:
-    /// Creates a new UiWidgetEngine.
-    ///
-    static UiWidgetEnginePtr create();
-
-    /// Initializes the engine with the given OpenGL parameters required to
-    /// perform its OpenGL calls.
-    ///
-    void initialize(UiWidget::OpenGLFunctions* functions,
-                    QOpenGLShaderProgram* shaderProgram,
-                    int posLoc, int colLoc, int projLoc, int viewLoc);
-
-    // Implementation of graphics::Engine API
-    void clear(const core::Color& color) override;
-    core::Mat4f projectionMatrix() override;
-    void setProjectionMatrix(const core::Mat4f& m) override;
-    void pushProjectionMatrix() override;
-    void popProjectionMatrix() override;
-    core::Mat4f viewMatrix() override;
-    void setViewMatrix(const core::Mat4f& m) override;
-    void pushViewMatrix() override;
-    void popViewMatrix() override;
-    Int createTriangles() override;
-    void loadTriangles(Int id, const float* data, Int length) override;
-    void drawTriangles(Int id) override;
-    void destroyTriangles(Int id) override;
-
-private:
-    UiWidget::OpenGLFunctions* openGLFunctions_;
-    QOpenGLShaderProgram* shaderProgram_;
-    int posLoc_;
-    int colLoc_;
-    int projLoc_;
-    int viewLoc_;
-    core::Array<core::Mat4f> projectionMatrices_;
-    core::Array<core::Mat4f> viewMatrices_;
-    graphics::IdGenerator trianglesIdGenerator_;
-    struct TrianglesBuffer {
-        // Note: we use a pointer for the VAO because copying
-        // QOpenGLVertexArrayObject is disabled
-        QOpenGLBuffer vboTriangles;
-        QOpenGLVertexArrayObject* vaoTriangles;
-        int numVertices;
-    };
-    core::Array<TrianglesBuffer> trianglesBuffers_;
 };
 
 } // namespace widgets

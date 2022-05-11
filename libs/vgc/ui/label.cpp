@@ -27,7 +27,6 @@ namespace ui {
 Label::Label() :
     Widget(),
     text_(""),
-    trianglesId_(-1),
     reload_(true)
 {
     addClass(strings::Label);
@@ -36,7 +35,6 @@ Label::Label() :
 Label::Label(const std::string& text) :
     Widget(),
     text_(text),
-    trianglesId_(-1),
     reload_(true)
 {
 
@@ -65,10 +63,10 @@ void Label::setText(const std::string& text)
 
 void Label::onPaintCreate(graphics::Engine* engine)
 {
-    trianglesId_ = engine->createTriangles();
+    triangles_ = engine->createTriangles();
 }
 
-void Label::onPaintDraw(graphics::Engine* engine)
+void Label::onPaintDraw(graphics::Engine*)
 {
     if (reload_) {
         reload_ = false;
@@ -80,14 +78,14 @@ void Label::onPaintDraw(graphics::Engine* engine)
         graphics::TextCursor textCursor;
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertText(a, textColor, 0, 0, width(), height(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
-        engine->loadTriangles(trianglesId_, a.data(), a.length());
+        triangles_->load(a.data(), a.length());
     }
-    engine->drawTriangles(trianglesId_);
+    triangles_->draw();
 }
 
-void Label::onPaintDestroy(graphics::Engine* engine)
+void Label::onPaintDestroy(graphics::Engine*)
 {
-    engine->destroyTriangles(trianglesId_);
+    triangles_.reset();
 }
 
 } // namespace ui

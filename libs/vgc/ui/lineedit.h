@@ -17,6 +17,8 @@
 #ifndef VGC_UI_LINEEDIT_H
 #define VGC_UI_LINEEDIT_H
 
+#include <string_view>
+
 #include <vgc/core/color.h>
 #include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
@@ -37,7 +39,7 @@ protected:
     /// This is an implementation details. Please use
     /// LineEdit::create(text) instead.
     ///
-    LineEdit(const std::string& text);
+    LineEdit(std::string_view text);
 
 public:
     /// Creates a LineEdit.
@@ -46,7 +48,7 @@ public:
 
     /// Creates a LineEdit with the given text.
     ///
-    static LineEditPtr create(const std::string& text);
+    static LineEditPtr create(std::string_view text);
 
     /// Returns the LineEdit's text.
     ///
@@ -56,7 +58,7 @@ public:
 
     /// Sets the LineEdit's text.
     ///
-    void setText(const std::string& text);
+    void setText(std::string_view text);
 
     // reimpl
     void onResize() override;
@@ -83,7 +85,7 @@ private:
     graphics::ShapedText shapedText_;
     graphics::TextCursor textCursor_;
     float scrollLeft_ = 0.0f;
-    Int trianglesId_;
+    graphics::TrianglesBufferPtr triangles_;
     bool reload_;
     bool isHovered_;
     bool isMousePressed_;

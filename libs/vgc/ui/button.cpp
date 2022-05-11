@@ -28,7 +28,6 @@ namespace ui {
 Button::Button(const std::string& text) :
     Widget(),
     text_(text),
-    trianglesId_(-1),
     reload_(true),
     isHovered_(false)
 {
@@ -61,10 +60,10 @@ void Button::onResize()
 
 void Button::onPaintCreate(graphics::Engine* engine)
 {
-    trianglesId_ = engine->createTriangles();
+    triangles_ = engine->createTriangles();
 }
 
-void Button::onPaintDraw(graphics::Engine* engine)
+void Button::onPaintDraw(graphics::Engine*)
 {
     if (reload_) {
         reload_ = false;
@@ -81,14 +80,14 @@ void Button::onPaintDraw(graphics::Engine* engine)
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
         internal::insertText(a, textColor, 0, 0, width(), height(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
-        engine->loadTriangles(trianglesId_, a.data(), a.length());
+        triangles_->load(a.data(), a.length());
     }
-    engine->drawTriangles(trianglesId_);
+    triangles_->draw();
 }
 
-void Button::onPaintDestroy(graphics::Engine* engine)
+void Button::onPaintDestroy(graphics::Engine*)
 {
-    engine->destroyTriangles(trianglesId_);
+    triangles_.reset();
 }
 
 bool Button::onMouseMove(MouseEvent* /*event*/)
