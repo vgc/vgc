@@ -138,6 +138,7 @@ void QOpenglTrianglesBuffer::load(const float* data, Int length)
     }
     numVertices_ = length / 5;
     Int dataSize = numVertices_ * sizeof(XYRGBVertex);
+    static_assert(sizeof(XYRGBVertex) == 5 * sizeof(float));
 
     vbo_.bind();
     if (dataSize > allocSize_) {
