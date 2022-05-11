@@ -29,12 +29,6 @@ namespace widgets {
 
 namespace {
 
-// Returns the file path of a shader file as a QString
-QString shaderPath_(const std::string& name) {
-    std::string path = core::resourcePath("graphics/opengl/" + name);
-    return toQt(path);
-}
-
 core::Mat4f toMat4f(const core::Mat4d& m) {
     // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
     return core::Mat4f(
