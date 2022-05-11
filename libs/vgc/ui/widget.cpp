@@ -15,7 +15,6 @@
 // limitations under the License.
 
 #include <vgc/ui/widget.h>
-#include <vgc/ui/window.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
 
