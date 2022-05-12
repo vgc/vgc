@@ -64,8 +64,8 @@ template<typename OStream>
 void write(OStream& out, NodeType type)
 {
     switch (type) {
-    case NodeType::Element: write(out, "Element"); break;
-    case NodeType::Document: write(out, "Document"); break;
+    case NodeType::Element:     write(out, "Element");  break;
+    case NodeType::Document:    write(out, "Document"); break;
     }
 }
 

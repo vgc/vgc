@@ -273,18 +273,11 @@ template<typename OStream>
 void write(OStream& out, const Value& v)
 {
     switch (v.type()) {
-    case ValueType::None:
-        write(out, "None");
-        break;
-    case ValueType::Invalid:
-        write(out, "Invalid");
-        break;
-    case ValueType::Color:
-        return write(out, v.getColor());
-    case ValueType::DoubleArray:
-        return write(out, v.getDoubleArray());
-    case ValueType::Vec2dArray:
-        return write(out, v.getVec2dArray());
+    case ValueType::None:           write(out, "None");             break;
+    case ValueType::Invalid:        write(out, "Invalid");          break;
+    case ValueType::Color:          write(out, v.getColor());       break;
+    case ValueType::DoubleArray:    write(out, v.getDoubleArray()); break;
+    case ValueType::Vec2dArray:     write(out, v.getVec2dArray());  break;
     }
 }
 
