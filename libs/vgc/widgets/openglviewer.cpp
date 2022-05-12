@@ -610,7 +610,7 @@ void OpenGLViewer::updateCurveGLResources_(Int i)
     Int nControlPoints = positions.length();
     geometry::Curve curve;
     curve.setColor(color);
-    for (Int j = 0; i < nControlPoints; ++j) {
+    for (Int j = 0; j < nControlPoints; ++j) {
         curve.addControlPoint(positions[j], widths[j]);
     }
 
