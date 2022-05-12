@@ -427,7 +427,7 @@ public:
 
     /// Move-constructs from `other`.
     ///
-    Array(Array&& other) :
+    Array(Array&& other) noexcept :
         data_(other.data_),
         length_(other.length_),
         reservedLength_(other.reservedLength_) {

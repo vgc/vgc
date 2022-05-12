@@ -681,31 +681,39 @@ public:
     }
 
     template<typename SignalArgRefsTuple, typename... Us>
-    static void emitFwd(Object* sender, SignalId from, Us&&... args) {
+    static inline void emitFwd(Object* sender, SignalId from, Us&&... args) {
         static_assert(sizeof...(Us) == std::tuple_size_v<SignalArgRefsTuple>);
-        auto argsArray = TransmitArgs::make<SignalArgRefsTuple>(std::forward<Us>(args)...);
-        emit_(sender, from, argsArray);
+        auto& hub = access(sender);
+        if (hub.canEmit_()) {
+            hub.emitFwd_<SignalArgRefsTuple>(from, std::forward<Us>(args)...);
+        }
     }
 
     template<typename SignalArgRefsTuple, typename... Us>
-    static void emitConvert(Object* sender, SignalId from, Us&&... args) {
+    static inline void emitConvert(Object* sender, SignalId from, Us&&... args) {
         constexpr size_t signalArity = std::tuple_size_v<SignalArgRefsTuple>;
-        static_assert(sizeof...(Us) == signalArity);
-        emitConvertImpl_<SignalArgRefsTuple>(sender, from, std::make_index_sequence<signalArity>{}, std::forward<Us>(args)...);
+        static_assert(sizeof...(Us) == std::tuple_size_v<SignalArgRefsTuple>);
+        auto& hub = access(sender);
+        if (hub.canEmit_()) {
+            hub.emitConvertImpl_<SignalArgRefsTuple>(from, std::make_index_sequence<signalArity>{}, std::forward<Us>(args)...);
+        }
     }
 
     template<typename SignalArgRefsTuple, typename SignalSlotArgRefsTuple>
-    static void reEmit(Object* sender, SignalId from, const TransmitArgs& args) {
+    static inline void reEmit(Object* sender, SignalId from, const TransmitArgs& args) {
         constexpr size_t signalSlotArity = std::tuple_size_v<SignalSlotArgRefsTuple>;
         static_assert(signalSlotArity <= std::tuple_size_v<SignalArgRefsTuple>);
         using TruncatedSignalArgRefsTuple = SubTuple<0, signalSlotArity, SignalArgRefsTuple>;
-        if constexpr (std::is_same_v<TruncatedSignalArgRefsTuple, SignalSlotArgRefsTuple>) {
-            emit_(sender, from, args);
-        }
-        else {
-            static_assert(isCompatibleReEmit<TruncatedSignalArgRefsTuple, SignalSlotArgRefsTuple>);
-            reEmitConvert_<TruncatedSignalArgRefsTuple, SignalSlotArgRefsTuple>(
-                sender, from, args, std::make_index_sequence<signalSlotArity>{});
+        auto& hub = access(sender);
+        if (hub.canEmit_()) {
+            if constexpr (std::is_same_v<TruncatedSignalArgRefsTuple, SignalSlotArgRefsTuple>) {
+                hub.emit_(from, args);
+            }
+            else {
+                static_assert(isCompatibleReEmit<TruncatedSignalArgRefsTuple, SignalSlotArgRefsTuple>);
+                hub.reEmitConvertImpl_<TruncatedSignalArgRefsTuple, SignalSlotArgRefsTuple>(
+                    from, args, std::make_index_sequence<signalSlotArity>{});
+            }
         }
     }
 
@@ -760,15 +768,16 @@ protected:
         return info;
     }
 
-    template <typename T = void>
-    static void emit_(Object* sender, SignalId from, const TransmitArgs& args) {
-        auto& hub = access(sender);
-        auto& connections = hub.connections_;
-        bool outermostEmit = (hub.emitting_ == false);
-        hub.emitting_ = true;
+    bool canEmit_() const {
+        return !connections_.isEmpty();
+    }
+
+    void emit_(SignalId from, const TransmitArgs& args) {
+        auto& connections = connections_;
+        bool outermostEmit = (emitting_ == false);
+        emitting_ = true;
         // We do it by index because connect() can happen in transmit..
-        for (Int i = 0; i < connections.length(); ++i)
-        {
+        for (Int i = 0; i < connections.length(); ++i) {
             const Connection_& c = connections[i];
             if ((c.from == from) && !c.pendingRemoval) {
                 c.transmitter.transmit(args);
@@ -777,24 +786,30 @@ protected:
         if (outermostEmit) {
             // In a second pass if we are the outermost emit of this signal
             // we remove connections that have been disconnected and pending for removal.
-            if (hub.pendingRemovals_) {
+            if (pendingRemovals_) {
                 connections.removeIf(
                     [](const Connection_& c) {
                         return c.pendingRemoval;
                     });
             }
-            hub.emitting_ = false;
+            emitting_ = false;
         }
     }
 
-    template<typename SignalArgRefsTuple, size_t... Is>
-    static void emitConvertImpl_(Object* sender, SignalId from, std::index_sequence<Is...>, std::tuple_element_t<Is, SignalArgRefsTuple>... args) {
-        emitFwd<SignalArgRefsTuple>(sender, from, args...);
+    template<typename SignalArgRefsTuple, typename... Us>
+    inline void emitFwd_(SignalId from, Us&&... args) {
+        auto argsArray = TransmitArgs::make<SignalArgRefsTuple>(std::forward<Us>(args)...);
+        emit_(from, argsArray);
     }
 
-    template<typename TruncatedSignalArgRefsTuple, typename SignalSlotArgRefsTuple, size_t... Is>
-    static void reEmitConvert_(Object* sender, SignalId from, const TransmitArgs& args, std::index_sequence<Is...>) {
-        emitConvert<SignalSlotArgRefsTuple>(sender, from, args.get<std::tuple_element_t<Is, TruncatedSignalArgRefsTuple>>(Is)...);
+    template<typename SignalArgRefsTuple, size_t... Is>
+    inline void emitConvertImpl_(SignalId from, std::index_sequence<Is...>, std::tuple_element_t<Is, SignalArgRefsTuple>... args) {
+        emitFwd_<SignalArgRefsTuple>(from, args...);
+    }
+
+    template<typename SignalArgRefsTuple, typename SignalSlotArgRefsTuple, size_t... Is>
+    inline void reEmitConvertImpl_(SignalId from, const TransmitArgs& args, std::index_sequence<Is...> seq) {
+        emitConvertImpl_<SignalSlotArgRefsTuple>(from, seq, args.get<std::tuple_element_t<Is, SignalArgRefsTuple>>(Is)...);
     }
 
     template<typename SignalArgRefsTuple, typename SignalSlotArgRefsTuple>
@@ -814,7 +829,6 @@ private:
     //
     template<typename Pred>
     static bool disconnectIf_(const Object* sender, Pred pred) {
-
         auto& hub = access(sender);
         auto end = hub.connections_.end();
         auto it = std::find_if(hub.connections_.begin(), end, pred);
@@ -1058,7 +1072,7 @@ protected:
     }
 
     template<typename... Us>
-    void emitFwd_(Us&&... args) const {
+    inline void emitFwd_(Us&&... args) const {
         static_assert(sizeof...(Us) == arity);
         ::vgc::core::internal::SignalHub::emitFwd<ArgRefsTuple>(object(), id(), std::forward<Us>(args)...);
     }
