@@ -929,7 +929,7 @@ ifloor(FloatType x)
     constexpr FloatType tminf = static_cast<FloatType>(tmin_<IntType>::value);
     constexpr FloatType tmaxf = static_cast<FloatType>(tmax_<IntType>::value);
     // Note: the outer "if" should be optimized out at compile time based on FloatType and IntType
-    if (tmaxf < 1 + tmaxf) { // all IntType integers representable as FloatType
+    if constexpr (tmaxf < 1 + tmaxf) { // all IntType integers representable as FloatType
         if (x < tminf) {
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Min = {})",

@@ -20,7 +20,7 @@
 
 namespace vgc::core {
 
-Mat4f Mat4f::inverted(bool* isInvertible, float epsilon) const
+Mat4f Mat4f::inverted(bool* isInvertible, float epsilon_) const
 {
     Mat4f res;
 
@@ -38,7 +38,7 @@ Mat4f Mat4f::inverted(bool* isInvertible, float epsilon) const
 
     float det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0] + d[0][3]*inv[3][0];
 
-    if (std::abs(det) <= epsilon) {
+    if (std::abs(det) <= epsilon_) {
         if (isInvertible) {
             *isInvertible = false;
         }

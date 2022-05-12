@@ -20,7 +20,7 @@
 
 namespace vgc::core {
 
-Mat3x Mat3x::inverted(bool* isInvertible, float epsilon) const
+Mat3x Mat3x::inverted(bool* isInvertible, float epsilon_) const
 {
     Mat3x res;
 
@@ -33,7 +33,7 @@ Mat3x Mat3x::inverted(bool* isInvertible, float epsilon) const
 
     float det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0];
 
-    if (std::abs(det) <= epsilon) {
+    if (std::abs(det) <= epsilon_) {
         if (isInvertible) {
             *isInvertible = false;
         }

@@ -512,11 +512,11 @@ void OpenGLViewer::updateGLResources_()
         }
     }
     paths_.resize(nCurvesInCpu);
-    int i = 0;
+    Int idx = 0;
     for (dom::Node* node : root->children()) {
         if (dom::Element* path = dom::Element::cast(node)) {
-            paths_[i] = path;
-            ++i;
+            paths_[idx] = path;
+            ++idx;
         }
     }
     Int nCurvesInGpu = curveGLResources_.length();
@@ -610,8 +610,8 @@ void OpenGLViewer::updateCurveGLResources_(Int i)
     Int nControlPoints = positions.length();
     geometry::Curve curve;
     curve.setColor(color);
-    for (Int i = 0; i < nControlPoints; ++i) {
-        curve.addControlPoint(positions[i], widths[i]);
+    for (Int j = 0; j < nControlPoints; ++j) {
+        curve.addControlPoint(positions[j], widths[j]);
     }
 
     // Triangulate the curve
@@ -650,9 +650,9 @@ void OpenGLViewer::updateCurveGLResources_(Int i)
     core::Vec2fArray glVerticesControlPoints;
     const core::DoubleArray& d = curve.positionData();
     r.numVerticesControlPoints = core::int_cast<GLsizei>(d.length() / 2);
-    for (Int i = 0; i < r.numVerticesControlPoints; ++i) {
-        glVerticesControlPoints.append(core::Vec2f(static_cast<float>(d[2*i]),
-                                                   static_cast<float>(d[2*i+1])));
+    for (Int j = 0; j < r.numVerticesControlPoints; ++j) {
+        glVerticesControlPoints.append(core::Vec2f(static_cast<float>(d[2*j]),
+                                                   static_cast<float>(d[2*j+1])));
     }
     r.vboControlPoints.bind();
     count = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(core::Vec2f));
