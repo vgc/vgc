@@ -106,7 +106,7 @@ jobs:
       uses: lukka/run-vcpkg@v10
       with:
         vcpkgDirectory: ${{github.workspace}}/vcpkg
-        vcpkgGitCommitId: '2022.05.10'
+        vcpkgGitCommitId: 14e7bb4ae24616ec54ff6b2f6ef4e8659434ea44 # 2022.05.10
         vcpkgJsonGlob: 'vcpkg.json'
 
     - name: Setup Developer Command Prompt for VS
