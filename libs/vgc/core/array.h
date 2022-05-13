@@ -260,9 +260,7 @@ public:
     // SequenceContainer. Note that size_type must be unsigned (cf.
     // [tab:container.req] in the C++ standard), therefore we define it to be
     // size_t, despite most our API working with signed integers. Finally, note
-    // that for now, we define our iterators to be typedefs of the std::vector
-    // iterators. This may change in the future, if/when we don't use
-    // std::vector anymore as backend.
+    // that for now, our iterators are raw pointers.
     //
     using value_type             = T;
     using reference              = T&;
@@ -293,7 +291,7 @@ public:
         const_iterator it;
     };
 
-    /// Creates an empty Array.
+    /// Creates an empty `Array`.
     ///
     /// ```
     /// vgc::core::Array<double> a;
@@ -305,11 +303,11 @@ public:
 
     }
 
-    /// Creates an Array of given \p length.
+    /// Creates an `Array` of given `length`.
     /// Elements are value initialized.
     ///
-    /// Throws NegativeIntegerError if the given \p length is negative.
-    /// Throws LengthError if the given \p length is greater than maxLength().
+    /// Throws `NegativeIntegerError` if `length` is negative.
+    /// Throws `LengthError` if `length` is greater than `maxLength()`.
     ///
     /// ```
     /// vgc::core::Array<double> a(3);
@@ -322,12 +320,12 @@ public:
         init_(length, ValueInitTag{});
     }
 
-    /// Creates an Array of given \p length.
+    /// Creates an `Array` of given `length`.
     /// Elements are default initialized.
-    /// 
-    /// Throws NegativeIntegerError if the given \p length is negative.
-    /// Throws LengthError if the given \p length is greater than maxLength().
-    /// 
+    ///
+    /// Throws `NegativeIntegerError` if `length` is negative.
+    /// Throws `LengthError` if `length` is greater than maxLength().
+    ///
     /// ```
     /// vgc::core::Array<double> a(2);
     /// a.length();      // => 2
@@ -339,12 +337,12 @@ public:
         init_(length, DefaultInitTag{});
     }
 
-    /// Creates an Array of given \p length with all values initialized to
-    /// the given \p value.
+    /// Creates an `Array` of given `length` with all values initialized to
+    /// `value`.
     ///
-    /// Throws NegativeIntegerError if the given \p length is negative.
-    /// Throws LengthError if the given \p length is greater than maxLength().
-    /// 
+    /// Throws `NegativeIntegerError` if `length` is negative.
+    /// Throws `LengthError` if `length` is greater than maxLength().
+    ///
     /// ```
     /// vgc::core::Array<double> a(3, 42);
     /// a.length();      // => 3
@@ -357,25 +355,26 @@ public:
         init_(length, value);
     }
 
-    /// Creates an Array of given \p length with all values initialized to
-    /// the given \p value.
+    /// Creates an `Array` of given `length` with all values initialized to
+    /// `value`.
     ///
     /// This is an overload provided for compatibility with the STL.
     ///
-    /// Throws LengthError if the given \p length is greater than maxLength().
-    /// 
+    /// Throws `LengthError` if `length` is greater than `maxLength()`.
+    ///
     Array(size_type length, const T& value) {
         checkLengthForInit_(length);
         init_(static_cast<Int>(length), value);
     }
 
-    /// Creates an Array initialized from the elements in the range given by
-    /// the input iterators \p first (inclusive) and \p last (exclusive).
+    /// Creates an `Array` initialized from the elements in the range given by
+    /// the input iterators `first` (inclusive) and `last` (exclusive).
     ///
-    /// The behavior is undefined if [\p first, \p last) isn't a valid range.
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range.
     ///
-    /// Throws LengthError if the length of the given range is greater than maxLength().
-    /// 
+    /// Throws `LengthError` if the length of the given range is greater than
+    /// `maxLength()`.
+    ///
     /// ```
     /// std::list<double> l = {1, 2, 3};
     /// vgc::core::Array<double> a(l.begin(), l.end()); // Copy the list as an Array
@@ -386,11 +385,13 @@ public:
         rangeConstruct_(first, last);
     }
 
-    /// Creates an Array initialized from the elements in the given range
+    /// Creates an `Array` initialized from the elements in `range`.
     ///
-    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a valid range.
+    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
+    /// valid range.
     ///
-    /// Throws LengthError if the length of the given range is greater than maxLength().
+    /// Throws `LengthError` if the length of `range` is greater than
+    /// `maxLength()`.
     ///
     /// ```
     /// std::list<double> l = {1, 2, 3};
@@ -402,10 +403,11 @@ public:
         rangeConstruct_(range.begin(), range.end());
     }
 
-    /// Creates an Array initialized by the values given in the initializer
-    /// list \p init.
+    /// Creates an `Array` initialized by the values given in the initializer
+    /// list `ilist`.
     ///
-    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
+    /// Throws `LengthError` if the length of `ilist` is greater than
+    /// `maxLength()`.
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -416,14 +418,14 @@ public:
         rangeConstruct_(ilist.begin(), ilist.end());
     }
 
-    /// Copy-constructs the \p other Array.
+    /// Copy-constructs from `other`.
     ///
     Array(const Array& other) :
         Array(other.begin(), other.end()) {
 
     }
 
-    /// Move-constructs the \p other Array.
+    /// Move-constructs from `other`.
     ///
     Array(Array&& other) :
         data_(other.data_),
@@ -435,13 +437,13 @@ public:
         other.reservedLength_ = 0;
     }
 
-    /// Destructs the given Array.
+    /// Destructs the `Array`.
     ///
     ~Array() {
         destroyStorage_();
     }
 
-    /// Copy-assigns the given \p other Array.
+    /// Copy-assigns from `other`.
     ///
     Array& operator=(const Array& other) {
         if (this != &other) {
@@ -450,9 +452,9 @@ public:
         return *this;
     }
 
-    /// Move-assigns the given \p other Array.
+    /// Move-assigns from `other`.
     ///
-    Array& operator=(Array&& other) {
+    Array& operator=(Array&& other) noexcept {
         if (this != &other) {
             data_ = other.data_;
             length_ = other.length_;
@@ -464,10 +466,11 @@ public:
         return *this;
     }
 
-    /// Replaces the contents of this Array by the values given in the
-    /// initializer list \p ilist.
+    /// Replaces the contents of this `Array` by the values given in the
+    /// initializer list `ilist`.
     ///
-    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
+    /// Throws `LengthError` if the length of `ilist` is greater than
+    /// `maxLength()`.
     ///
     /// ```
     /// vgc::core::Array<double> a;
@@ -480,25 +483,25 @@ public:
         return *this;
     }
 
-    /// Replaces the content of the Array by an array of given \p length with
-    /// all values initialized to the given \p value.
+    /// Replaces the content of this `Array` by an array of given `length` with
+    /// all values initialized to `value`.
     ///
     /// This function is provided for compatibility with the STL: prefer using
     /// the overload accepting a signed integer as argument instead.
     ///
-    /// Throws LengthError if the given \p length is greater than maxLength().
-    /// 
+    /// Throws `LengthError` if `length` is greater than `maxLength()`.
+    ///
     void assign(size_type length, T value) {
         checkLengthForInit_(length);
         assignFill_(static_cast<Int>(length), value);
     }
 
-    /// Replaces the content of the Array by an array of the given \p length
-    /// with all values initialized to the given \p value.
+    /// Replaces the content of this `Array` by an array of given `length` with
+    /// all values initialized to `value`.
     ///
-    /// Throws NegativeIntegerError if the given \p length is negative.
-    /// Throws LengthError if the given \p length is greater than maxLength().
-    /// 
+    /// Throws `NegativeIntegerError` if t`length` is negative.
+    /// Throws `LengthError` if `length` is greater than maxLength().
+    ///
     /// ```
     /// vgc::core::Array<double> a;
     /// a.assign(3, 42);
@@ -511,14 +514,15 @@ public:
         assignFill_(static_cast<Int>(length), value);
     }
 
-    /// Replaces the content of the Array by the elements in the range given by
-    /// the input iterators \p first (inclusive) and \p last (exclusive).
+    /// Replaces the content of this `Array` by the elements in the range given
+    /// by the input iterators `first` (inclusive) and `last` (exclusive).
     ///
-    /// The behavior is undefined if [\p first, \p last) isn't a valid range,
-    /// or is a range into this Array.
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range,
+    /// or is a range into this `Array`.
     ///
-    /// Throws LengthError if the length of the given range is greater than maxLength().
-    /// 
+    /// Throws `LengthError` if the length of the given range is greater than
+    /// `maxLength()`.
+    ///
     /// ```
     /// vgc::core::Array<double> a;
     /// std::list<double> l = someList();
@@ -530,12 +534,13 @@ public:
         assignRange_(first, last);
     }
 
-    /// Replaces the content of the Array by the elements in the given range.
+    /// Replaces the content of this `Array` by the elements in `range`.
     ///
-    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a valid range,
-    /// or is a range into this Array.
+    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
+    /// valid range, or is a range into this `Array`.
     ///
-    /// Throws LengthError if the length of the given range is greater than maxLength().
+    /// Throws `LengthError` if the length of `range` is greater than
+    /// `maxLength()`.
     ///
     /// ```
     /// vgc::core::Array<double> a;
@@ -548,19 +553,20 @@ public:
         assignRange_(range.begin(), range.end());
     }
 
-    /// Replaces the contents of this Array by the values given in the
-    /// initializer list \p ilist.
+    /// Replaces the contents of this `Array` by the values given in the
+    /// initializer list `ilist`.
     ///
-    /// Throws LengthError if the length of the given \p ilist is greater than maxLength().
-    /// 
+    /// Throws `LengthError` if the length of `ilist` is greater than
+    /// `maxLength()`.
+    ///
     void assign(std::initializer_list<T> ilist) {
         assignRange_(ilist.begin(), ilist.end());
     }
 
-    /// Returns a mutable reference to the element at index \p i.
+    /// Returns a mutable reference to the element at index `i`.
     ///
-    /// Throws IndexError if this Array is empty or if \p i does not belong
-    /// to [0, length() - 1].
+    /// Throws `IndexError` if this `Array` is empty or if `i` does not belong
+    /// to [`0`, `length() - 1`].
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -577,10 +583,10 @@ public:
         // Note: No need for int_cast (bounds already checked)
     }
 
-    /// Returns a const reference to the element at index \p i.
+    /// Returns a const reference to the element at index `i`.
     ///
-    /// Throws IndexError if this Array is empty or if \p i does not belong
-    /// to [0, length() - 1].
+    /// Throws `IndexError` if this `Array` is empty or if `i` does not belong
+    /// to [`0`, `length() - 1`].
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -595,11 +601,11 @@ public:
         // Note: No need for int_cast (bounds already checked)
     }
 
-    /// Returns a mutable reference to the element at index \p i, without
+    /// Returns a mutable reference to the element at index `i`, without
     /// bounds checking.
     ///
-    /// The behavior is undefined if this Array is empty or if \p i does not
-    /// belong to [0, length() - 1]. In practice, this may cause the
+    /// The behavior is undefined if this `Array` is empty or if `i` does not
+    /// belong to [`0`, `length() - 1`]. In practice, this may cause the
     /// application to crash (segfault), or be a security vulnerability
     /// (leaking a password).
     ///
@@ -611,11 +617,11 @@ public:
         return data_[static_cast<size_type>(i)];
     }
 
-    /// Returns a const reference to the element at index \p i, without
+    /// Returns a const reference to the element at index `i`, without
     /// bounds checking.
     ///
-    /// The behavior is undefined if this Array is empty or if \p i does not
-    /// belong to [0, length() - 1]. In practice, this may cause the
+    /// The behavior is undefined if this Array is empty or if `i` does not
+    /// belong to [`0`, `length() - 1`]. In practice, this may cause the
     /// application to crash (segfault), or be a security vulnerability
     /// (leaking a password).
     ///
@@ -627,10 +633,10 @@ public:
         return data_[static_cast<size_type>(i)];
     }
 
-    /// Returns a mutable reference to the element at index \p i, with
+    /// Returns a mutable reference to the element at index `i`, with
     /// wrapping behavior.
     ///
-    /// Throws IndexError if the Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -649,10 +655,10 @@ public:
         return data_[static_cast<size_type>(wrap_(i))];
     }
 
-    /// Returns a const reference to the element at index \p i, with
-    /// wrapping behavior.
+    /// Returns a const reference to the element at index `i`, with wrapping
+    /// behavior.
     ///
-    /// Throws IndexError if the Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -671,9 +677,9 @@ public:
         return data_[static_cast<size_type>(wrap_(i))];
     }
 
-    /// Returns a mutable reference to the first element in this Array.
+    /// Returns a mutable reference to the first element in this `Array`.
     ///
-    /// Throws IndexError if this Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -691,9 +697,9 @@ public:
         return *begin();
     }
 
-    /// Returns a const reference to the first element in this Array.
+    /// Returns a const reference to the first element in this `Array`.
     ///
-    /// Throws IndexError if this Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -710,9 +716,9 @@ public:
         return *begin();
     }
 
-    /// Returns a mutable reference to the last element in this Array.
+    /// Returns a mutable reference to the last element in this `Array`.
     ///
-    /// Throws IndexError if this Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -730,9 +736,9 @@ public:
         return *(end() - 1);
     }
 
-    /// Returns a const reference to the last element in this Array.
+    /// Returns a const reference to the last element in this `Array`.
     ///
-    /// Throws IndexError if this Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
     /// ```
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -751,8 +757,8 @@ public:
 
     /// Returns a mutable pointer to the underlying data.
     ///
-    /// You can use data() together with length() or size() to pass the content
-    /// of this Array to a API expecting a C-style array.
+    /// You can use `data()` together with `length()` or `size()` to pass the
+    /// content of this `Array` to an API expecting a C-style array.
     ///
     T* data() noexcept {
         return data_;
@@ -760,139 +766,225 @@ public:
 
     /// Returns a const pointer to the underlying data.
     ///
-    /// You can use data() together with length() or size() to pass the content
-    /// of this Array to a API expecting a C-style array.
+    /// You can use `data()` together with `length()` or `size()` to pass the
+    /// content of this `Array` to an API expecting a C-style array.
     ///
     const T* data() const noexcept {
         return data_;
     }
 
-    /// Returns an iterator to the first element in this Array.
+    /// Returns an iterator to the first element in this `Array`.
     ///
     iterator begin() noexcept {
         return data_;
     }
 
-    /// Returns a const iterator to the first element in this Array.
+    /// Returns a const iterator to the first element in this `Array`.
     ///
     const_iterator begin() const noexcept {
         return cbegin();
     }
 
-    /// Returns a const iterator to the first element in this Array.
+    /// Returns a const iterator to the first element in this `Array`.
     ///
     const_iterator cbegin() const noexcept {
         return data_;
     }
 
-    /// Returns an iterator to the past-the-last element in this Array.
+    /// Returns an iterator to the past-the-last element in this `Array`.
     ///
     iterator end() noexcept {
         return data_ + length_;
     }
 
-    /// Returns a const iterator to the past-the-last element in this Array.
+    /// Returns a const iterator to the past-the-last element in this `Array`.
     ///
     const_iterator end() const noexcept {
         return cend();
     }
 
-    /// Returns a const iterator to the past-the-last element in this Array.
+    /// Returns a const iterator to the past-the-last element in this `Array`.
     ///
     const_iterator cend() const noexcept {
         return data_ + length_;
     }
 
     /// Returns a reverse iterator to the first element of the reversed
-    /// Array.
+    /// `Array`.
     ///
     reverse_iterator rbegin() noexcept {
         return reverse_iterator(data_ + length_);
     }
 
     /// Returns a const reverse iterator to the first element of the reversed
-    /// Array.
+    /// `Array`.
     ///
     const_reverse_iterator rbegin() const noexcept {
         return crbegin();
     }
 
     /// Returns a const reverse iterator to the first element of the reversed
-    /// Array.
+    /// `Array`.
     ///
     const_reverse_iterator crbegin() const noexcept {
         return const_reverse_iterator(data_ + length_);
     }
 
     /// Returns a reverse iterator to the past-the-last element of the reversed
-    /// Array.
+    /// `Array`.
     ///
     reverse_iterator rend() noexcept {
         return reverse_iterator(data_);
     }
 
     /// Returns a const reverse iterator to the past-the-last element of the
-    /// reversed Array.
+    /// reversed `Array`.
     ///
     const_reverse_iterator rend() const noexcept {
         return crend();
     }
 
     /// Returns a const reverse iterator to the past-the-last element of the
-    /// reversed Array.
+    /// reversed `Array`.
     ///
     const_reverse_iterator crend() const noexcept {
         return const_reverse_iterator(data_);
     }
 
-    /// Returns whether this Array is empty.
+    /// Returns whether this `Array` is empty.
     ///
     /// This function is provided for compatibility with the STL: prefer using
-    /// isEmpty() instead.
+    /// `isEmpty()` instead.
     ///
     bool empty() const noexcept {
         return isEmpty();
     }
 
-    /// Returns whether this Array is empty.
+    /// Returns whether this `Array` is empty.
     ///
     bool isEmpty() const noexcept {
         return length_ == 0;
     }
 
-    /// Returns whether this Array contains value.
+    /// Returns whether this `Array` contains `value`.
     ///
-    bool contains(const T& value) const noexcept {
+    bool contains(const T& value) const {
         return std::find(begin(), end(), value) != end();
     }
 
-    /// Returns, as an unsigned integer, the number of elements in this Array.
+    /// Returns an iterator to the first element that compares equal to `value`,
+    /// or the end iterator if there is no such element.
+    ///
+    iterator find(const T& value) {
+        const T* end = data_ + length_;
+        for (const T* p = data_; p != end; ++p) {
+            if (*p == value) {
+                break;
+            }
+        }
+        return makeIterator(p);
+    }
+
+    /// Returns a const iterator to the first element that compares equal to
+    /// `value`, or the end const iterator if there is no such element.
+    ///
+    const_iterator find(const T& value) const {
+        return const_cast<Array*>(this)->find(value);
+    }
+
+    /// Returns an iterator to the first element for which `predicate(element)`
+    /// returns `true`, or the end iterator if there is no such element.
+    ///
+    template <typename UnaryPredicate>
+    iterator find(UnaryPredicate predicate) {
+        const T* end = data_ + length_;
+        for (const T* p = data_; p != end; ++p) {
+            if (predicate(*p)) {
+                break;
+            }
+        }
+        return makeIterator(p);
+    }
+
+    /// Returns a const iterator to the first element for which
+    /// `predicate(element)` returns `true`, or the end const iterator if there
+    /// is no such element.
+    ///
+    template <typename UnaryPredicate>
+    const_iterator find(UnaryPredicate predicate) const {
+        return const_cast<Array*>(this)->search(predicate);
+    }
+
+    /// Returns a pointer to the first element that compares equal to `value`,
+    /// or `nullptr` if there is no such element.
+    ///
+    T* search(const T& value) {
+        const T* end = data_ + length_;
+        for (const T* p = data_; p != end; ++p) {
+            if (*p == value) {
+                return p;
+            }
+        }
+        return nullptr;
+    }
+
+    /// Returns a const pointer to the first element that compares equal to
+    /// `value`, or `nullptr` if there is no such element.
+    ///
+    const T* search(const T& value) const {
+        return const_cast<Array*>(this)->search(value);
+    }
+
+    /// Returns a pointer to the first element for which `predicate(element)`
+    /// returns `true`, or `nullptr` if there is no such element.
+    ///
+    template <typename UnaryPredicate>
+    T* search(UnaryPredicate predicate) {
+        const T* end = data_ + length_;
+        for (const T* p = data_; p != end; ++p) {
+            if (predicate(*p)) {
+                return p;
+            }
+        }
+        return nullptr;
+    }
+
+    /// Returns a const pointer to the first element for which
+    /// `predicate(element)` returns `true`, or `nullptr` if there is no such
+    /// element.
+    ///
+    template <typename UnaryPredicate>
+    const T* search(UnaryPredicate predicate) const {
+        return const_cast<Array*>(this)->search(predicate);
+    }
+
+    /// Returns, as an unsigned integer, the number of elements in this `Array`.
     ///
     /// This function is provided for compatibility with the STL: prefer using
-    /// length() instead.
+    /// `length()` instead.
     ///
     size_type size() const noexcept {
         return static_cast<size_type>(length_);
     }
 
-    /// Returns the number of elements in this Array.
+    /// Returns the number of elements in this `Array`.
     ///
     Int length() const {
         return length_;
     }
 
     /// Returns, as an unsigned integer, the maximum number of elements this
-    /// Array is able to hold due to system or library implementation
+    /// `Array` is able to hold due to system or library implementation
     /// limitations.
     ///
     /// This function is provided for compatibility with the STL: prefer using
-    /// maxLength() instead.
+    /// `maxLength()` instead.
     ///
     size_type max_size() const noexcept {
         return static_cast<size_type>(maxLength());
     }
 
-    /// Returns the maximum number of elements this Array is able to hold due
+    /// Returns the maximum number of elements this `Array` is able to hold due
     /// to system or library implementation limitations.
     ///
     constexpr Int maxLength() const noexcept {
@@ -901,40 +993,40 @@ public:
         // the implementation of checkNoMoreThanMaxLength_().
     }
 
-    /// Increases the reservedLength() of this Array, that is, the maximum
-    /// number of elements this Array can contain without having to perform a
+    /// Increases the reserved length of this `Array`, that is, the maximum
+    /// number of elements this `Array` can contain without having to perform a
     /// reallocation. It may improve performance to call this function before
-    /// performing multiple append(), when you know an upper bound or an
+    /// performing multiple `append()`, when you know an upper bound or an
     /// estimate of the number of elements to append.
     ///
-    /// Throws NegativeIntegerError if the given \p length is negative.
-    /// Throws LengthError if the given \p length is greater than maxLength().
+    /// Throws `NegativeIntegerError` if `length` is negative.
+    /// Throws `LengthError` if `length` is greater than `maxLength()`.
     ///
     void reserve(Int length) {
         checkLengthForReserve_(length);
         if (length > reservedLength_) {
-            reallocateExactly_(length); 
+            reallocateExactly_(length);
         }
     }
 
-    /// Returns the maximum number of elements this Array can contain without
+    /// Returns the maximum number of elements this `Array` can contain without
     /// having to perform a reallocation.
     ///
     Int reservedLength() const noexcept {
         return reservedLength_;
     }
 
-    /// Reclaims unused memory. Use this if the current length() of this Array
-    /// is much smaller than its current reservedLength(), and you don't expect
-    /// the number of elements to grow anytime soon. Indeed, by default,
-    /// removing elements to an Array keeps the memory allocated in order to
-    /// make adding them back efficient.
+    /// Reclaims unused memory. Use this if the current `length()` of this
+    /// `Array` is much smaller than its current `reservedLength()`, and you
+    /// don't expect the number of elements to grow anytime soon. Indeed, by
+    /// default, removing elements from an `Array` keeps the memory allocated in
+    /// order to make adding them back efficient.
     ///
     void shrinkToFit()  {
         shrinkToFit_();
     }
 
-    /// Removes all the elements in this Array, making it empty.
+    /// Removes all the elements in this `Array`, making it empty.
     ///
     void clear() noexcept {
         if (length_ != 0) {
@@ -943,37 +1035,41 @@ public:
         }
     }
 
-    /// Inserts the given \p value just before the element referred to by the
-    /// iterator \p it, or after the last element if `it == end()`. Returns an
+    /// Inserts the given `value` just before the element referred to by the
+    /// iterator `it`, or after the last element if `it == end()`. Returns an
     /// iterator pointing to the inserted element.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
     iterator insert(ConstIterator it, const T& value) {
         return emplace(it, value);
     }
 
-    /// Move-inserts the given \p value just before the element referred to by
-    /// the iterator \p it, or after the last element if `it == end()`. Returns
+    /// Move-inserts the given `value` just before the element referred to by
+    /// the iterator `it`, or after the last element if `it == end()`. Returns
     /// an iterator pointing to the inserted element.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
     iterator insert(ConstIterator it, T&& value) {
         return emplace(it, std::move(value));
     }
 
-    /// Inserts \p n copies of the given \p value just before the element
-    /// referred to by the iterator \p it, or after the last element if `it ==
-    /// end()`. Returns an iterator pointing to the first inserted element, or
-    /// \p it if `n == 0`.
+    /// Inserts `n` copies of the given `value` just before the element referred
+    /// to by the iterator `it`, or after the last element if `it == end()`.
+    /// Returns an iterator pointing to the first inserted element, or `it` if
+    /// `n == 0`.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
     /// This function is provided for compatibility with the STL: prefer using
-    /// the overload passing n as a signed integer instead.
+    /// the overload passing `n` as a signed integer instead.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     iterator insert(ConstIterator it, size_type n, const T& value) {
         checkLengthForInsert_(n); // Precondition for insertFill_
@@ -982,15 +1078,17 @@ public:
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
     }
 
-    /// Inserts \p n copies of the given \p value just before the element
-    /// referred to by the iterator \p it, or after the last element if `it ==
-    /// end()`. Returns an iterator pointing to the first inserted element, or
-    /// \p it if `n == 0`.
+    /// Inserts `n` copies of the given `value` just before the element referred
+    /// to by the iterator `it`, or after the last element if `it == end()`.
+    /// Returns an iterator pointing to the first inserted element, or `it` if
+    /// `n == 0`.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
-    /// Throws NegativeIntegerError if the given \p n is negative.
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `NegativeIntegerError` if `n` is negative.
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     iterator insert(ConstIterator it, IntType n, const T& value) {
@@ -1000,17 +1098,19 @@ public:
         return makeIterator(insertFill_(i, static_cast<Int>(n), value));
     }
 
-    /// Inserts the range given by the input iterators \p first (inclusive) and
-    /// \p last (exclusive) just before the element referred to by the iterator
-    /// \p it, or after the last element if `it == end()`. Returns an iterator
-    /// pointing to the first inserted element, or \p it if `first == last`.
+    /// Inserts the range given by the input iterators `first` (inclusive) and
+    /// `last` (exclusive) just before the element referred to by the iterator
+    /// `it`, or after the last element if `it == end()`. Returns an iterator
+    /// pointing to the first inserted element, or `it` if `first == last`.
     ///
-    /// The behavior is undefined if [\p first, \p last) isn't a valid range,
-    /// or is a range into this Array.
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range,
+    /// or is a range into this `Array`.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
     iterator insert(ConstIterator it, InputIt first, InputIt last) {
@@ -1019,16 +1119,19 @@ public:
         return makeIterator(insertRange_(i, first, last));
     }
 
-    /// Inserts the given range just before the element referred to by the iterator
-    /// \p it, or after the last element if `it == end()`. Returns an iterator
-    /// pointing to the first inserted element, or \p it if the range is empty.
+    /// Inserts the elements of the given `range` just before the element
+    /// referred to by the iterator `it`, or after the last element if `it ==
+    /// end()`. Returns an iterator pointing to the first inserted element, or
+    /// `it` if the range is empty.
     ///
-    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a valid range,
-    /// or is a range into this Array.
+    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
+    /// valid range, or is a range into this `Array`.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template<typename Range, internal::RequiresCompatibleRange<Range, T> = true>
     iterator insert(ConstIterator it, const Range& range) {
@@ -1037,23 +1140,25 @@ public:
         return makeIterator(insertRange_(i, range.begin(), range.end()));
     }
 
-    /// Inserts the values given in the initializer list \p ilist just before
-    /// the element referred to by the iterator \p it, or after the last
-    /// element if `it == end()`. Returns an iterator pointing to the first
-    /// inserted element, or \p it if \p ilist is empty.
+    /// Inserts the values given in the initializer list `ilist` just before the
+    /// element referred to by the iterator `it`, or after the last element if
+    /// `it == end()`. Returns an iterator pointing to the first inserted
+    /// element, or `it` if `ilist` is empty.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     iterator insert(ConstIterator it, std::initializer_list<T> ilist) {
         return insert(it, ilist.begin(), ilist.end());
     }
 
-    /// Inserts the given \p value just before the element at index \p i, or
-    /// after the last element if `i == length()`.
+    /// Inserts the given `value` just before the element at index `i`, or after
+    /// the last element if `i == length()`.
     ///
-    /// Throws IndexError if \p i does not belong to [0, length()].
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length()`].
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12};
@@ -1069,23 +1174,24 @@ public:
         emplaceAt_(i, value);
     }
 
-    /// Move-inserts the given \p value just before the element at index \p i,
-    /// or after the last element if `i == length()`.
+    /// Move-inserts the given `value` just before the element at index `i`, or
+    /// after the last element if `i == length()`.
     ///
-    /// Throws IndexError if \p i does not belong to [0, length()].
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length()`].
     ///
     void insert(Int i, T&& value) {
         checkInRangeForInsert_(i);
         emplaceAt_(i, std::move(value));
     }
 
-    /// Inserts \p n copies of the given \p value just before the element
-    /// at index \p i, or after the last element if `i == length()`.
+    /// Inserts `n` copies of the given `value` just before the element at index
+    /// `i`, or after the last element if `i == length()`.
     ///
-    /// Throws IndexError if \p i does not belong to [0, length()].
-    /// Throws NegativeIntegerError if \p n is negative.
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length()`].
+    /// Throws `NegativeIntegerError` if `n` is negative.
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12};
     /// a.insert(2, 3, 15);    // => [10, 42, 15, 15, 15, 12]
@@ -1097,15 +1203,16 @@ public:
         insertFill_(i, n, value);
     }
 
-    /// Inserts the range given by the input iterators \p first (inclusive) and
-    /// \p last (exclusive) just before the element at index \p i, or after the
+    /// Inserts the range given by the input iterators `first` (inclusive) and
+    /// `last` (exclusive) just before the element at index `i`, or after the
     /// last element if `i == length()`.
     ///
-    /// The behavior is undefined if [\p first, \p last) isn't a valid range,
-    /// or is a range into this Array.
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range,
+    /// or is a range into this `Array`.
     ///
-    /// Throws IndexError if \p i does not belong to [0, length()].
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length()`].
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// maxLength().
     ///
     template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
     void insert(Int i, InputIt first, InputIt last) {
@@ -1113,14 +1220,15 @@ public:
         insertRange_(i, first, last);
     }
 
-    /// Inserts the given range just before the element at index \p i, or after
-    /// the last element if `i == length()`.
+    /// Inserts the elements of the given `range` just before the element at
+    /// index `i`, or after the last element if `i == length()`.
     ///
-    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a
-    /// valid iterator range, or is a range into this Array.
+    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
+    /// valid iterator range, or is a range into this `Array`.
     ///
-    /// Throws IndexError if \p i does not belong to [0, length()].
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length()`].
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template<typename Range, internal::RequiresCompatibleRange<Range, T> = true>
     void insert(Int i, const Range& range) {
@@ -1128,27 +1236,29 @@ public:
         insertRange_(i, range.begin(), range.end());
     }
 
-    /// Inserts the values given in the initializer list \p ilist just before
-    /// the element at index \p i, or after the last element if `i ==
-    /// length()`.
+    /// Inserts the values given in the initializer list `ilist` just before the
+    /// element at index `i`, or after the last element if `i == length()`.
     ///
-    /// Throws IndexError if \p i does not belong to [0, length()].
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length()`].
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     void insert(Int i, std::initializer_list<T> ilist) {
         checkInRangeForInsert_(i);
         insertRange_(i, ilist.begin(), ilist.end());
     }
 
-    /// Inserts a new element, constructed from the arguments \p args, just
-    /// before the element referred to by the iterator \p it, or after the last
+    /// Inserts a new element, constructed from the arguments `args`, just
+    /// before the element referred to by the iterator `it`, or after the last
     /// element if `it == end()`. Returns an iterator pointing to the inserted
     /// element.
     ///
-    /// The behavior is undefined if \p it is not a valid iterator into this Array.
+    /// The behavior is undefined if `it` is not a valid iterator into this
+    /// `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     template <typename... Args>
     iterator emplace(ConstIterator it, Args&&... args) {
         pointer pos = unwrapIterator(it);
@@ -1156,71 +1266,76 @@ public:
         return makeIterator(emplaceAt_(i, std::forward<Args>(args)...));
     }
 
-    /// Inserts a new element, constructed from the arguments \p args, just
-    /// before the element at index \p i, or after the last element if `i ==
+    /// Inserts a new element, constructed from the arguments `args`, just
+    /// before the element at index `i`, or after the last element if `i ==
     /// length()`.
     ///
-    /// Throws IndexError if \p i does not belong to [0, length()].
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length()`].
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template <typename... Args>
     void emplace(Int i, Args&&... args) {
         checkInRangeForInsert_(i);
         emplaceAt_(i, std::forward<Args>(args)...);
     }
-    
-    /// Construct-prepends a value with arguments \p args, at the beginning of this Array.
+
+    /// Construct-prepends a value with arguments `args`, at the beginning of
+    /// this `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     template<typename... Args>
     reference emplaceFirst(Args&&... args) {
         return *emplaceAt_(0, std::forward<Args>(args)...);
     }
 
-    /// Construct-appends a value with arguments \p args, at the end of this Array.
+    /// Construct-appends a value with arguments `args`, at the end of this
+    /// `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     template<typename... Args>
     reference emplaceLast(Args&&... args) {
         return *emplaceLast_(std::forward<Args>(args)...);
     }
 
-    /// Removes the element referred to by the iterator \p it. Returns an
-    /// iterator to the element following the removed element, or end() if the
-    /// removed element was the last element of this Array.
+    /// Removes the element referred to by the iterator `it`. Returns an
+    /// iterator to the element following the removed element, or `end()` if the
+    /// removed element was the last element of this `Array`.
     ///
-    /// The behavior is undefined if \p it is not a valid and derefereancable
-    /// iterator into this Array. Note: end() is valid, but not
-    /// dereferenceable, and thus passing end() to this function is undefined
+    /// The behavior is undefined if `it` is not a valid and derefereancable
+    /// iterator into this `Array`. Note: `end()` is valid, but not
+    /// dereferenceable, and thus passing `end()` to this function is undefined
     /// behavior.
-    //
+    ///
     iterator erase(const_iterator it) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(erase_(i));
     }
 
-    /// Removes all elements in the range given by the iterators \p it1
-    /// (inclusive) and \p it2 (exclusive). Returns an iterator pointing to the
-    /// element pointed to by \p it2 prior to any elements being removed. If
-    /// it2 == end() prior to removal, then the updated end() is returned.
+    /// Removes all elements in the range given by the iterators `first`
+    /// (inclusive) and `last` (exclusive). Returns an iterator pointing to the
+    /// element pointed to by `last` prior to any elements being removed. If
+    /// `last == end()` prior to removal, then the updated `end()` is returned.
     ///
-    /// The behavior is undefined if [it1, it2) isn't a valid range in this
-    /// Array.
-    //
-    iterator erase(const_iterator it1, const_iterator it2) {
-        const pointer p1 = unwrapIterator(it1);
-        const pointer p2 = unwrapIterator(it2);
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range in
+    /// this `Array`.
+    ///
+    iterator erase(const_iterator first, const_iterator last) {
+        const pointer p1 = unwrapIterator(first);
+        const pointer p2 = unwrapIterator(last);
         return makeIterator(erase_(p1, p2));
     }
 
-    /// Removes the element at index \p i, shifting all subsequent elements one
+    /// Removes the element at index `i`, shifting all subsequent elements one
     /// index to the left.
     ///
-    /// Throws IndexError if this Array is empty or if \p i does not belong to
-    /// [0, length() - 1].
+    /// Throws `IndexError` if this Array is empty or if `i` does not belong to
+    /// [`0`, `length() - 1`].
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
@@ -1236,8 +1351,8 @@ public:
         erase_(i);
     }
 
-    /// Removes the first element that compares equal to \p value, shifting all subsequent elements one
-    /// index to the left.
+    /// Removes the first element that compares equal to `value`, shifting all
+    /// subsequent elements one index to the left.
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {5, 12, 11, 12};
@@ -1252,13 +1367,11 @@ public:
         }
     }
 
-    /// Removes the \p count first elements from the container.
+    /// Removes the first `count` elements from the container.
     /// All subsequent elements are shifted to the left.
     ///
-    /// Throws IndexError if [0, count) isn't a valid range in this Array, that
-    /// is, if it doesn't satisfy:
-    ///
-    ///     0 <= count <= length()
+    /// Throws `IndexError` if [`0`, `count`) isn't a valid range in this
+    /// `Array`, that is, if it doesn't satisfy `0 <= count <= length()`.
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
@@ -1272,9 +1385,9 @@ public:
         erase_(data_, data_ + count);
     }
 
-    /// Removes all elements that satisfy the predicate \p pred from the container.
+    /// Removes all elements that satisfy the predicate `pred` from the container.
     /// Returns the number of removed elements.
-    /// 
+    ///
     /// ```cpp
     /// vgc::core::Array<double> a = {5, 12, 11, 12, 14};
     /// a.removeIf([](double v){ return v > 11; }); // => [5, 11]
@@ -1289,13 +1402,11 @@ public:
         return r;
     }
 
-    /// Removes all elements from index \p i1 (inclusive) to index \p i2
+    /// Removes all elements from index `i1` (inclusive) to index `i2`
     /// (exclusive), shifting all subsequent elements to the left.
     ///
-    /// Throws IndexError if [i1, i2) isn't a valid range in this Array, that
-    /// is, if it doesn't satisfy:
-    ///
-    ///     0 <= i1 <= i2 <= length()
+    /// Throws `IndexError` if [`i1`, `i2`) isn't a valid range in this `Array`,
+    /// that is, if it doesn't satisfy `0 <= i1 <= i2 <= length()`.
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
@@ -1312,11 +1423,14 @@ public:
         erase_(data + i1, data + i2);
     }
 
-    /// Appends the given \p value to the end of this Array. This is fast:
-    /// amortized O(1). This is equivalent to insert(length(), value).
+    /// Appends the given `value` to the end of this `Array`. This is equivalent
+    /// to `insert(length(), value)`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// This is fast: amortized O(1).
+    ///
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12};
     /// a.append(15);          // => [10, 42, 12, 15]
@@ -1328,20 +1442,24 @@ public:
         emplaceLast_(value);
     }
 
-    /// Move-appends the given \p value to the end of this Array.
+    /// Move-appends the given `value` to the end of this `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     void append(T&& value) {
         emplaceLast_(std::move(value));
     }
 
-    /// Prepends the given \p value to the beginning of this Array, shifting
-    /// all existing elements one index to the right. This is slow: O(n). This
-    /// is equivalent to insert(0, value).
+    /// Prepends the given `value` to the beginning of this `Array`, shifting
+    /// all existing elements one index to the right. This is equivalent to
+    /// `insert(0, value)`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// This is slow: O(n).
+    ///
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12};
     /// a.prepend(15);         // => [15, 10, 42, 12]
@@ -1353,121 +1471,140 @@ public:
         emplaceAt_(0, value);
     }
 
-    /// Move-prepends the given \p value to the beginning of this Array.
+    /// Move-prepends the given `value` to the beginning of this `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
-    /// 
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
+    ///
     void prepend(T&& value) {
         emplaceAt_(0, std::move(value));
-    }    
+    }
 
-    /// Inserts \p n copies of the given \p value at the end of this Array.
-    /// This is equivalent to insert(length(), n, value).
+    /// Inserts `n` copies of the given `value` at the end of this Array.
+    /// This is equivalent to `insert(length(), n, value)`.
     ///
-    /// Throws NegativeIntegerError if \p n is negative.
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `NegativeIntegerError` if `n` is negative.
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     void extend(Int n, const T& value) {
         checkPositiveForInsert_(n);
         insertFill_(length(), n, value);
     }
 
-    /// Inserts the range given by the input iterators \p first (inclusive) and
-    /// \p last (exclusive) at the end of this Array. This is equivalent to
-    /// insert(length(), first, last).
+    /// Inserts the range given by the input iterators `first` (inclusive) and
+    /// `last` (exclusive) at the end of this `Array`. This is equivalent to
+    /// `insert(length(), first, last)`.
     ///
-    /// The behavior is undefined if [\p first, \p last) isn't a valid range,
-    /// or is a range into this Array.
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range, or
+    /// is a range into this `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
     void extend(InputIt first, InputIt last) {
         insertRange_(length(), first, last);
     }
 
-    /// Inserts the given range at the end of this Array. This is equivalent to
-    /// insert(length(), range).
+    /// Inserts the elements of the given `range` at the end of this `Array`.
+    /// This is equivalent to `insert(length(), range)`.
     ///
-    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a
-    /// valid iterator range, or is a range into this Array.
+    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
+    /// valid iterator range, or is a range into this `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template<typename Range, internal::RequiresRange<Range> = true>
     void extend(const Range& range) {
         insertRange_(length(), range.begin(), range.end());
     }
 
-    /// Inserts the values given in the initializer list \p ilist at the end of
-    /// this Array. This is equivalent to insert(length(), ilist).
+    /// Inserts the values given in the initializer list `ilist` at the end of
+    /// this `Array`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// This is equivalent to `insert(length(), ilist)`.
+    ///
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     void extend(std::initializer_list<T> ilist) {
         insertRange_(length(), ilist.begin(), ilist.end());
     }
 
-    /// Inserts \p n copies of the given \p value at the beginning of this Array.
-    /// This is slow: O(length() + n). This is equivalent to insert(0, n, value).
+    /// Inserts `n` copies of the given `value` at the beginning of this
+    /// `Array`. This is equivalent to `insert(0, n, value)`.
     ///
-    /// Throws NegativeIntegerError if \p n is negative.
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// This is slow: O(`length() + n`).
+    ///
+    /// Throws `NegativeIntegerError` if `n` is negative.
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     void preextend(Int n, const T& value) {
         checkPositiveForInsert_(n);
         insertFill_(0, n, value);
     }
 
-    /// Inserts the range given by the input iterators \p first (inclusive) and
-    /// \p last (exclusive) at the beginning of this Array. This is slow:
-    /// O(length() + numInserted). This is equivalent to insert(0, first, last).
+    /// Inserts the range given by the input iterators `first` (inclusive) and
+    /// `last` (exclusive) at the beginning of this `Array`. This is equivalent
+    /// to `insert(0, first, last)`.
     ///
-    /// The behavior is undefined if [\p first, \p last) isn't a valid range,
+    /// This is slow: O(`length() + numInserted`).
+    ///
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range,
     /// or is a range into this Array.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
     void preextend(InputIt first, InputIt last) {
         insertRange_(0, first, last);
     }
 
-    /// Inserts the given range at the beginning of this Array. This is slow:
-    /// O(length() + numInserted). This is equivalent to insert(0, range).
+    /// Inserts the elements of the given `range` at the beginning of this
+    /// `Array`. This is equivalent to `insert(0, range)`.
     ///
-    /// The behavior is undefined if [\p range.begin(), \p range.end()) isn't a
+    /// This is slow: O(`length() + numInserted`).
+    ///
+    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
     /// valid iterator range, or is a range into this Array.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// Throws `LengthError` if the resulting number of elements would exceed `maxLength()`.
     ///
     template<typename Range, internal::RequiresRange<Range> = true>
     void preextend(const Range& range) {
         insertRange_(0, range.begin(), range.end());
     }
 
-    /// Inserts the values given in the initializer list \p ilist at the
-    /// beginning of this Array. This is slow: O(length() + numInserted).
-    /// This is equivalent to insert(length(), ilist).
+    /// Inserts the values given in the initializer list `ilist` at the
+    /// beginning of this `Array`. This is equivalent to `insert(length(),
+    /// ilist)`.
     ///
-    /// Throws LengthError if the resulting number of elements would exceed maxLength().
+    /// This is slow: O(`length() + numInserted`).
+    ///
+    /// Throws `LengthError` if the resulting number of elements would exceed
+    /// `maxLength()`.
     ///
     void preextend(std::initializer_list<T> ilist) {
         insertRange_(0, ilist.begin(), ilist.end());
     }
 
-    /// Removes the first element of this Array, shifting all existing elements
-    /// one index to the left. This is slow: O(n). This is equivalent to
-    /// removeAt(0).
+    /// Removes the first element of this `Array`, shifting all existing
+    /// elements one index to the left. This is equivalent to `removeAt(0)`.
+    ///
+    /// This is slow: O(n).
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {15, 10, 42, 12};
     /// a.removeFirst();       // => [10, 42, 12]
     /// ```
     ///
-    /// Throws IndexError if this Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
-    /// \sa pop(0)
+    /// \sa `pop(0)`
     ///
     void removeFirst() {
         if (isEmpty()) {
@@ -1477,17 +1614,19 @@ public:
         erase_(Int(0));
     }
 
-    /// Removes the last element of this Array. This is fast: O(1). This is
-    /// equivalent to removeAt(length() - 1).
+    /// Removes the last element of this `Array`. This is equivalent to
+    /// `removeAt(length() - 1)`.
+    ///
+    /// This is fast: O(1).
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {10, 42, 12, 15};
     /// a.removeLast();        // => [10, 42, 12]
     /// ```
     ///
-    /// Throws IndexError if this Array is empty.
+    /// Throws `IndexError` if this `Array` is empty.
     ///
-    /// \sa pop()
+    /// \sa `pop()`
     ///
     void removeLast() {
         if (isEmpty()) {
@@ -1497,11 +1636,13 @@ public:
         erase_(length_ - 1);
     }
 
-    /// Removes and returns the last element of this Array. This is fast: O(1).
+    /// Removes and returns the last element of this `Array`.
     ///
-    /// Throws IndexError if this Array is empty.
+    /// This is fast: O(1).
     ///
-    /// \sa removeLast(), pop(i)
+    /// Throws `IndexError` if this `Array` is empty.
+    ///
+    /// \sa `removeLast()`, `pop(i)`
     ///
     T pop() {
         T res = last();
@@ -1509,13 +1650,13 @@ public:
         return res;
     }
 
-    /// Removes and returns the element at index \p i, shifting all subsequent
+    /// Removes and returns the element at index `i`, shifting all subsequent
     /// elements one index to the left.
     ///
-    /// Throws IndexError if this Array is empty or if \p i does not belong to
-    /// [0, length() - 1].
+    /// Throws `IndexError` if this `Array` is empty or if `i` does not belong
+    /// to [`0`, `length() - 1`].
     ///
-    /// \sa removeAt(i), pop()
+    /// \sa `removeAt(i)`, `pop()`
     ///
     T pop(Int i) {
         checkInRange_(i);
@@ -1524,46 +1665,46 @@ public:
         return res;
     }
 
-    /// Resizes this Array so that it contains \p count elements instead of its
-    /// current length(). If \p count is smaller than the current length(), the
-    /// last (length() - \p count) elements are discarded. If \p count is
-    /// greater than the current length(), (\p count - length())
+    /// Resizes this `Array` so that it contains `count` elements instead of its
+    /// current `length()` elements. If `count` is smaller than the current
+    /// `length()`, the last `(length() - count)` elements are discarded. If
+    /// `count` is greater than the current `length()`, `(count - length())`
     /// value-initialized elements are appended.
     ///
-    /// Throws NegativeIntegerError if the given \p count is negative.
+    /// Throws `NegativeIntegerError` if `count` is negative.
     ///
     void resize(Int count) {
         checkPositiveForInit_(count);
         resize_(count, ValueInitTag{});
     }
 
-    /// Resizes this Array so that it contains \p count elements instead of its
-    /// current length(). If \p count is smaller than the current length(), the
-    /// last (length() - \p count) elements are discarded. If \p count is
-    /// greater than the current length(), (\p count - length())
+    /// Resizes this Array so that it contains `count` elements instead of its
+    /// current `length()` elements. If `count` is smaller than the current
+    /// `length()`, the last `(length() - count)` elements are discarded. If
+    /// `count` is greater than the current `length()`, `(count - length())`
     /// default-initialized elements are appended.
     ///
-    /// Throws NegativeIntegerError if the given \p count is negative.
+    /// Throws `NegativeIntegerError` if `count` is negative.
     ///
     void resizeNoInit(Int count) {
         checkPositiveForInit_(count);
         resize_(count, DefaultInitTag{});
     }
 
-    /// Resizes this Array so that it contains \p count elements instead of its
-    /// current length(). If \p count is smaller than the current length(), the
-    /// last (length() - \p count) elements are discarded. If \p count is
-    /// greater than the current length(), (\p count - length()) copies of the
-    /// given \p value are appended.
+    /// Resizes this Array so that it contains `count` elements instead of its
+    /// current `length()` elements. If `count` is smaller than the current
+    /// `length()`, the last `(length() - count)` elements are discarded. If
+    /// `count` is greater than the current `length()`, `(count - length())`
+    /// copies of `value` are appended.
     ///
-    /// Throws NegativeIntegerError if the given \p count is negative.
+    /// Throws `NegativeIntegerError` if `count` is negative.
     ///
     void resize(Int count, const T& value) {
         checkPositiveForInit_(count);
         resize_(count, value);
     }
 
-    /// Exchanges the content of this Array with the content of the \p other
+    /// Exchanges the content of this `Array` with the content of the `other`
     /// Array.
     ///
     void swap(Array& other) {
@@ -1628,8 +1769,8 @@ private:
     // - ValueInitTag: value-initialization
     // - DefaultInitTag: default-initialization
     // Expects: length <= maxLength()
-    // 
-    // Throws NegativeIntegerError if the given length is negative.
+    //
+    // Throws NegativeIntegerError if length is negative.
     //
     template<typename InitValueType>
     void init_(Int length, InitValueType v) {
@@ -1672,17 +1813,17 @@ private:
     Int calculateGrowth_(const Int newLength) const {
         const Int oldReservedLen = reservedLength_;
         const Int maxLen = maxLength();
- 
+
         if (oldReservedLen > maxLen - oldReservedLen) {
             return maxLen;
         }
- 
+
         const Int geometric = oldReservedLen + oldReservedLen;
 
         if (geometric < newLength) {
             return newLength;
         }
- 
+
         return geometric;
     }
 
@@ -1704,7 +1845,7 @@ private:
 
     // Leaves length_ unchanged!
     // Expects: (data_ == nullptr) and (n <= maxLength()).
-    // 
+    //
     // Throws NegativeIntegerError if n is negative.
     //
     void allocateStorage_(const Int n) {
@@ -1742,7 +1883,7 @@ private:
                 reallocateExactly_(len);
             }
         }
-    } 
+    }
 
     // Clears content and allocates new storage.
     //
@@ -1796,7 +1937,7 @@ private:
 
     // Assigns content to be newLen copies of value.
     // Expects: newLen <= maxLength()
-    // 
+    //
     void assignFill_(const Int newLen, const T& value) {
         if (newLen <= reservedLength_) {
             // Reuse storage
@@ -1887,7 +2028,7 @@ private:
     }
 
     // Expects: (0 <= i <= length_)
-    // 
+    //
     // Throws LengthError if the resulting number of elements would exceed maxLength().
     //
     template<typename... Args>
@@ -1970,7 +2111,7 @@ private:
     }
 
     // Expects: (0 <= i <= length_)
-    // 
+    //
     // Throws LengthError if the resulting number of elements would exceed maxLength().
     //
     template<typename... Args>
@@ -2394,9 +2535,8 @@ private:
 
 };
 
-/// Returns whether the two given Arrays \p a1 and \p a2 are equal, that is,
-/// whether they have the same number of elements and `a1[i] == a2[i]` for all
-/// elements.
+/// Returns whether the arrays `a1` and `a2` are equal, that is, whether they
+/// have the same number of elements and `a1[i] == a2[i]` for all elements.
 ///
 template<typename T>
 bool operator==(const Array<T>& a1, const Array<T>& a2) {
@@ -2404,16 +2544,16 @@ bool operator==(const Array<T>& a1, const Array<T>& a2) {
            std::equal(a1.begin(), a1.end(), a2.begin());
 }
 
-/// Returns whether the two given Arrays \p a1 and \p a2 are different, that
-/// is, whether they have a different number of elements or `a1[i] != a2[i]`
-/// for some elements.
+/// Returns whether the arrays `a1` and `a2` are different, that is, whether
+/// they have a different number of elements or `a1[i] != a2[i]` for some
+/// elements.
 ///
 template<typename T>
 bool operator!=(const Array<T>& a1, const Array<T>& a2) {
     return !(a1 == a2);
 }
 
-/// Compares the two Arrays \p a1 and \p a2 in lexicographic order.
+/// Compares the two arrays `a1` and `a2` in lexicographic order.
 ///
 template<typename T>
 bool operator<(const Array<T>& a1, const Array<T>& a2) {
@@ -2422,35 +2562,35 @@ bool operator<(const Array<T>& a1, const Array<T>& a2) {
                 a2.begin(), a2.end());
 }
 
-/// Compares the two Arrays \p a1 and \p a2 in lexicographic order.
+/// Compares the two arrays `a1` and `a2` in lexicographic order.
 ///
 template<typename T>
 bool operator<=(const Array<T>& a1, const Array<T>& a2) {
     return !(a2 < a1);
 }
 
-/// Compares the two Arrays \p a1 and \p a2 in inverse lexicographic order.
+/// Compares the two arrays `a1` and `a2` in inverse lexicographic order.
 ///
 template<typename T>
 bool operator>(const Array<T>& a1, const Array<T>& a2) {
     return a2 < a1;
 }
 
-/// Compares the two Arrays \p a1 and \p a2 in inverse lexicographic order.
+/// Compares the two arrays `a1` and `a2` in inverse lexicographic order.
 ///
 template<typename T>
 bool operator>=(const Array<T>& a1, const Array<T>& a2) {
     return !(a1 < a2);
 }
 
-/// Exchanges the content of \p a1 with the content of \p a2.
+/// Exchanges the content of `a1` with the content of `a2`.
 ///
 template<typename T>
 void swap(Array<T>& a1, Array<T>& a2) {
     a1.swap(a2);
 };
 
-/// Writes the given Array<T> to the output stream.
+/// Writes the given `Array<T>` to the output stream.
 ///
 template<typename OStream, typename T>
 void write(OStream& out, const Array<T>& a)
@@ -2470,10 +2610,12 @@ void write(OStream& out, const Array<T>& a)
     }
 }
 
-/// Reads the given Array<T> from the input stream, and stores it in the given
-/// output parameter. Leading whitespaces are allowed. Raises ParseError if the
-/// stream does not start with an Array<T>. Raises RangeError if one of the
-/// numbers in the array is outside of the representable range of its type.
+/// Reads the given `Array<T>` from the input stream, and stores it in the given
+/// output parameter `a`. Leading whitespaces are allowed.
+///
+/// Throws `ParseError` if the stream does not start with an `Array<T>`.
+/// Throws `RangeError` if one of the values in the array is outside of the
+/// representable range of its type.
 ///
 template <typename IStream, typename T>
 void readTo(Array<T>& a, IStream& in)
@@ -2495,15 +2637,15 @@ void readTo(Array<T>& a, IStream& in)
     }
 }
 
-/// Alias for vgc::core::Array<vgc::Int>.
+/// Alias for `vgc::core::Array<vgc::Int>`.
 ///
 using IntArray = Array<Int>;
 
-/// Alias for vgc::core::Array<float>.
+/// Alias for `vgc::core::Array<float>`.
 ///
 using FloatArray = Array<float>;
 
-/// Alias for vgc::core::Array<double>.
+/// Alias for `vgc::core::Array<double>`.
 ///
 using DoubleArray = Array<double>;
 
