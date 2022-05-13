@@ -142,7 +142,6 @@ TEST(TestArray, Construct) {
     { Array<int> a(size_t(10));     EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
     { Array<int> a{10, 42};         EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
     { Array<int> a(v);              EXPECT_EQ(a.length(), 3);  EXPECT_EQ(a[0], 1);  EXPECT_EQ(a[2], 3); }
-    { Array<int> a{10, 42, 5};      EXPECT_TRUE(a.contains(42)); EXPECT_FALSE(a.contains(43)); }
     EXPECT_THROW(Array<int>(-1),                               NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, Array<int>::DefaultInitTag{}), NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, 42),                           NegativeIntegerError);
@@ -791,6 +790,36 @@ TEST(TestArray, Compare) {
     EXPECT_LE(a, c);
     EXPECT_LE(a, d);
     EXPECT_LE(a, b);
+}
+
+TEST(TestArray, Contains) {
+    Array<int> a = {3, 4, 5, 42, 10};
+    EXPECT_TRUE(a.contains(42));
+    EXPECT_FALSE(a.contains(43));
+}
+
+TEST(TestArray, Find) {
+    Array<int> a = {3, 4, 5, 42, 10};
+    EXPECT_EQ(a.find(42), a.begin() + 3);
+    EXPECT_EQ(a.find(43), a.end());
+    EXPECT_EQ(a.find([](const int& v){ return v > 40; }), a.begin() + 3);
+    EXPECT_EQ(a.find([](const int& v){ return v > 100; }), a.end());
+}
+
+TEST(TestArray, Search) {
+    Array<int> a = {3, 4, 5, 42, 10};
+    EXPECT_EQ(a.search(42), &a[3]);
+    EXPECT_EQ(a.search(43), nullptr);
+    EXPECT_EQ(a.search([](const int& v){ return v > 40; }), &a[3]);
+    EXPECT_EQ(a.search([](const int& v){ return v > 100; }), nullptr);
+}
+
+TEST(TestArray, Index) {
+    Array<int> a = {3, 4, 5, 42, 10};
+    EXPECT_EQ(a.index(42), 3);
+    EXPECT_EQ(a.index(43), -1);
+    EXPECT_EQ(a.index([](const int& v){ return v > 40; }), 3);
+    EXPECT_EQ(a.index([](const int& v){ return v > 100; }), -1);
 }
 
 TEST(TestArray, ToString) {

@@ -869,7 +869,7 @@ public:
     /// Returns whether this `Array` contains `value`.
     ///
     bool contains(const T& value) const {
-        return std::find(begin(), end(), value) != end();
+        return search(value) != nullptr;
     }
 
     /// Returns an iterator to the first element that compares equal to `value`,
@@ -960,6 +960,35 @@ public:
     template <typename UnaryPredicate>
     const T* search(UnaryPredicate predicate) const {
         return const_cast<Array*>(this)->search(predicate);
+    }
+
+    /// Returns the index of the first element that compares equal to
+    /// `value`, or `-1` if there is no such element.
+    ///
+    Int index(const T& value) const {
+        const T* p = data_;
+        const T* end = p + length_;
+        for (; p != end; ++p) {
+            if (*p == value) {
+                return p - data_;
+            }
+        }
+        return -1;
+    }
+
+    /// Returns the index of the first element for which `predicate(element)`
+    /// returns `true`, or `-1` if there is no such element.
+    ///
+    template <typename UnaryPredicate>
+    Int index(UnaryPredicate predicate) const {
+        const T* p = data_;
+        const T* end = p + length_;
+        for (; p != end; ++p) {
+            if (predicate(*p)) {
+                return p - data_;
+            }
+        }
+        return -1;
     }
 
     /// Returns, as an unsigned integer, the number of elements in this `Array`.
