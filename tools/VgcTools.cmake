@@ -517,41 +517,18 @@ function(vgc_add_app APP_NAME)
     add_dependencies(deploy ${APP_TARGET})
 
     if(WIN32)
-        # Run windeployqt to copy all required Qt dependencies in the bin
-        # folder.
-        #
-        # Note: in theory, a POST_BUILD command will only be executed if the
-        # target is rebuilt. However, there a specific bug when using msbuild:
-        # POST_BUILD commands are always run regardless of whether the target
-        # is rebuilt or not. See:
-        #
-        # https://gitlab.kitware.com/cmake/cmake/issues/18530
-        #
-        # In addition, we may not even want to run windeployqt each time the
-        # target is rebuilt, since it is extremely rare that new Qt dependencies
-        # are added between two builds.
-        #
-        # Therefore, to avoid running windeployqt unnecessarily, we first check
-        # for the existence of *any* Qt DLL in the bin folder, then run
-        # windeployqt only if there are none. This would fail to add any newly
-        # required Qt dependency, but this should be very rare. If one needs
-        # windeployqt to be re-run, simply delete all Qt DLLs from the bin
-        # folder and rebuild.
-        #
-        # In the future, we may want to be a little more conservative, for
-        # example we could implement a way to at least automatically re-run
-        # windeployqt when a CMake file changes.
+        # Copy dependent DLLs to the bin folder. Unlike for other platforms,
+        # we do this as part of the app target rather than the deploy target
+        # because we needs the DLLs even just to run the app.
         #
         add_custom_command(TARGET ${APP_TARGET} POST_BUILD
-            COMMAND if not exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/Qt*.dll
-                ${VGC_QT_ROOT}/bin/windeployqt.exe
-                ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vgc${APP_NAME}.exe
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>
-            COMMAND if exist ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vc_redist.x64.exe
-                ${CMAKE_COMMAND} -E rename
-                    ${CMAKE_BINARY_DIR}/$<CONFIG>/bin/vc_redist.x64.exe
-                    ${CMAKE_BINARY_DIR}/deploy/$<CONFIG>/vc_redist.x64.exe
-            VERBATIM
+            COMMAND ${Python_EXECUTABLE}
+                "${CMAKE_SOURCE_DIR}/tools/windows/windeployqt.py"
+                "${CMAKE_SOURCE_DIR}"
+                "${CMAKE_BINARY_DIR}"
+                "$<CONFIG>"
+                "${VGC_QT_ROOT}/bin/windeployqt.exe"
+                "${APP_NAME}"
         )
 
         # Add dependency to vgc_copy_python so that pythonXY.dll is copied to the 
