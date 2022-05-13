@@ -499,7 +499,7 @@ public:
     /// Replaces the content of this `Array` by an array of given `length` with
     /// all values initialized to `value`.
     ///
-    /// Throws `NegativeIntegerError` if t`length` is negative.
+    /// Throws `NegativeIntegerError` if `length` is negative.
     /// Throws `LengthError` if `length` is greater than maxLength().
     ///
     /// ```
@@ -970,7 +970,8 @@ public:
         const T* end = p + length_;
         for (; p != end; ++p) {
             if (*p == value) {
-                return p - data_;
+                // invariant: smaller than length()
+                return static_cast<Int>(p - data_);
             }
         }
         return -1;
@@ -985,7 +986,8 @@ public:
         const T* end = p + length_;
         for (; p != end; ++p) {
             if (predicate(*p)) {
-                return p - data_;
+                // invariant: smaller than length()
+                return static_cast<Int>(p - data_);
             }
         }
         return -1;
@@ -1035,6 +1037,8 @@ public:
     /// Throws `NegativeIntegerError` if `length` is negative.
     /// Throws `LengthError` if `length` is greater than `maxLength()`.
     ///
+    /// \sa `reservedLength()`
+    ///
     void reserve(Int length) {
         checkLengthForReserve_(length);
         if (length > reservedLength_) {
@@ -1044,6 +1048,8 @@ public:
 
     /// Returns the maximum number of elements this `Array` can contain without
     /// having to perform a reallocation.
+    ///
+    /// \sa `reserve()`
     ///
     Int reservedLength() const noexcept {
         return reservedLength_;

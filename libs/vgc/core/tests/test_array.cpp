@@ -799,7 +799,7 @@ TEST(TestArray, Contains) {
 }
 
 TEST(TestArray, Find) {
-    Array<int> a = {3, 4, 5, 42, 10};
+    Array<int> a = {3, 4, 5, 42, 10, 42};
     EXPECT_EQ(a.find(42), a.begin() + 3);
     EXPECT_EQ(a.find(43), a.end());
     EXPECT_EQ(a.find([](const int& v){ return v > 40; }), a.begin() + 3);
@@ -807,7 +807,7 @@ TEST(TestArray, Find) {
 }
 
 TEST(TestArray, Search) {
-    Array<int> a = {3, 4, 5, 42, 10};
+    Array<int> a = {3, 4, 5, 42, 10, 42};
     EXPECT_EQ(a.search(42), &a[3]);
     EXPECT_EQ(a.search(43), nullptr);
     EXPECT_EQ(a.search([](const int& v){ return v > 40; }), &a[3]);
@@ -815,7 +815,7 @@ TEST(TestArray, Search) {
 }
 
 TEST(TestArray, Index) {
-    Array<int> a = {3, 4, 5, 42, 10};
+    Array<int> a = {3, 4, 5, 42, 10, 42};
     EXPECT_EQ(a.index(42), 3);
     EXPECT_EQ(a.index(43), -1);
     EXPECT_EQ(a.index([](const int& v){ return v > 40; }), 3);
