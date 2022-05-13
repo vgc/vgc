@@ -876,8 +876,9 @@ public:
     /// or the end iterator if there is no such element.
     ///
     iterator find(const T& value) {
-        const T* end = data_ + length_;
-        for (const T* p = data_; p != end; ++p) {
+        T* p = data_;
+        T* end = p + length_;
+        for (; p != end; ++p) {
             if (*p == value) {
                 break;
             }
@@ -897,8 +898,9 @@ public:
     ///
     template <typename UnaryPredicate>
     iterator find(UnaryPredicate predicate) {
-        const T* end = data_ + length_;
-        for (const T* p = data_; p != end; ++p) {
+        T* p = data_;
+        T* end = p + length_;
+        for (; p != end; ++p) {
             if (predicate(*p)) {
                 break;
             }
@@ -919,8 +921,9 @@ public:
     /// or `nullptr` if there is no such element.
     ///
     T* search(const T& value) {
-        const T* end = data_ + length_;
-        for (const T* p = data_; p != end; ++p) {
+        T* p = data_;
+        T* end = p + length_;
+        for (; p != end; ++p) {
             if (*p == value) {
                 return p;
             }
@@ -940,8 +943,9 @@ public:
     ///
     template <typename UnaryPredicate>
     T* search(UnaryPredicate predicate) {
-        const T* end = data_ + length_;
-        for (const T* p = data_; p != end; ++p) {
+        T* p = data_;
+        T* end = p + length_;
+        for (; p != end; ++p) {
             if (predicate(*p)) {
                 return p;
             }
