@@ -844,5 +844,17 @@ void Document::save(const std::string& filePath,
     writeChildren(out, style, 0, this);
 }
 
+void Document::setElementAttribute_(Element* element, core::StringId name, Value value)
+{
+    // If already authored, update the authored value
+    if (AuthoredAttribute* authored = element->findAuthoredAttribute_(name)) {
+        authored->setValue(value);
+    }
+    else {
+        // Otherwise, allocate a new AuthoredAttribute
+        authoredAttributes_.emplace_back(name, value);
+    }
+}
+
 } // namespace dom
 } // namespace vgc

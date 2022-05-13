@@ -102,7 +102,7 @@ public:
 
     /// Returns the authored attributes of this element.
     ///
-    const std::vector<AuthoredAttribute>& authoredAttributes() const {
+    const core::Array<AuthoredAttribute>& authoredAttributes() const {
         return authoredAttributes_;
     }
 
@@ -113,7 +113,11 @@ public:
 
     /// Sets the value of the given attribute.
     ///
-    void setAttribute(core::StringId name, const Value& value); // XXX Should we provide Value&& overload?
+    void setAttribute(core::StringId name, const Value& value);
+
+    /// Sets the value of the given attribute.
+    ///
+    void setAttribute(core::StringId name, Value&& value);
 
 private:
     // Name of this element.
@@ -130,7 +134,7 @@ private:
     // compilers, move semantics should be used instead, since
     // AuthoredAttribute has a non-throwing move constructor and destructor.
     //
-    std::vector<AuthoredAttribute> authoredAttributes_;
+    core::Array<AuthoredAttribute> authoredAttributes_;
 
     // Helper functions to find attributes. Return nullptr if not found.
     AuthoredAttribute* findAuthoredAttribute_(core::StringId name);

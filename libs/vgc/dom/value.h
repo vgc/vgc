@@ -126,7 +126,7 @@ class VGC_DOM_API Value
 public:
     /// Constructs an empty value, that is, whose ValueType is None.
     ///
-    Value() :
+    constexpr Value() :
         Value(ValueType::None) {
 
     }
@@ -253,8 +253,8 @@ public:
 private:
     /// For the different valueless ValueType.
     ///
-    explicit Value(ValueType type) :
-        type_(type) {
+    explicit constexpr Value(ValueType type) :
+        type_(type), var_() {
 
     }
 

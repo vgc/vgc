@@ -73,32 +73,41 @@ void Element::setAttribute(core::StringId name, const Value& value)
 {
     // If already authored, update the authored value
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+        this->document()->onSetElementAttribute_(this, name, authored->value(), value);
         authored->setValue(value);
     }
     else {
         // Otherwise, allocate a new AuthoredAttribute
-        authoredAttributes_.emplace_back(name, value);
+        this->document()->onSetElementAttribute_(this, name, Value::none(), value);
+        authoredAttributes_.emplaceLast(name, value);
+    }
+}
+
+void Element::setAttribute(core::StringId name, Value&& value)
+{
+    // If already authored, update the authored value
+    if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+        this->document()->onSetElementAttribute_(this, name, authored->value(), value);
+        authored->setValue(std::move(value));
+    }
+    else {
+        // Otherwise, allocate a new AuthoredAttribute
+        this->document()->onSetElementAttribute_(this, name, Value::none(), value);
+        authoredAttributes_.emplaceLast(name, std::move(value));
     }
 }
 
 AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name)
 {
-    for (AuthoredAttribute& a : authoredAttributes_) {
-        if (a.name() == name) {
-            return &a;
-        }
-    }
-    return nullptr;
+    return authoredAttributes_.search(
+        [name](const AuthoredAttribute& attr) {
+            return attr.name() == name;
+        });
 }
 
 const AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) const
 {
-    for (const AuthoredAttribute& a : authoredAttributes_) {
-        if (a.name() == name) {
-            return &a;
-        }
-    }
-    return nullptr;
+    return const_cast<Element*>(this)->findAuthoredAttribute_(name);
 }
 
 } // namespace dom

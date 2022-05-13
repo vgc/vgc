@@ -56,6 +56,12 @@ public:
         value_ = value;
     }
 
+    /// Sets the value of this authored attribute.
+    ///
+    void setValue(Value&& value) {
+        value_ = std::move(value);
+    }
+
     /// Returns the ValueType of this authored attribute.
     ///
     ValueType valueType() const {

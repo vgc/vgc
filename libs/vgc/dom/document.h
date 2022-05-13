@@ -18,8 +18,10 @@
 #define VGC_DOM_DOCUMENT_H
 
 #include <vgc/core/object.h>
+#include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/node.h>
+#include <vgc/dom/operation.h>
 #include <vgc/dom/xmlformattingstyle.h>
 
 namespace vgc {
@@ -345,6 +347,13 @@ private:
     bool xmlStandalone_;
     void generateXmlDeclaration_();
     std::string xmlDeclaration_;
+
+    // Track changes
+    friend class Element;
+    DocumentPtr removedElementsDoc;
+    core::Array<Operation> history;
+    Int historyPosition;
+    void onSetElementAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
 };
 
 } // namespace dom
