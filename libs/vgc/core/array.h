@@ -1119,7 +1119,7 @@ public:
         return makeIterator(insertRange_(i, first, last));
     }
 
-    /// Inserts the elements of the given `range` just before the element
+    /// Inserts the elements from the given `range` just before the element
     /// referred to by the iterator `it`, or after the last element if `it ==
     /// end()`. Returns an iterator pointing to the first inserted element, or
     /// `it` if the range is empty.
@@ -1220,7 +1220,7 @@ public:
         insertRange_(i, first, last);
     }
 
-    /// Inserts the elements of the given `range` just before the element at
+    /// Inserts the elements from the given `range` just before the element at
     /// index `i`, or after the last element if `i == length()`.
     ///
     /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
@@ -1507,7 +1507,7 @@ public:
         insertRange_(length(), first, last);
     }
 
-    /// Inserts the elements of the given `range` at the end of this `Array`.
+    /// Inserts the elements from the given `range` at the end of this `Array`.
     /// This is equivalent to `insert(length(), range)`.
     ///
     /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
@@ -1564,7 +1564,7 @@ public:
         insertRange_(0, first, last);
     }
 
-    /// Inserts the elements of the given `range` at the beginning of this
+    /// Inserts the elements from the given `range` at the beginning of this
     /// `Array`. This is equivalent to `insert(0, range)`.
     ///
     /// This is slow: O(`length() + numInserted`).
