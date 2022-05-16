@@ -31,7 +31,7 @@ Window::Window(ui::WidgetPtr widget) :
     QWindow(),
     widget_(widget),
     engine_(internal::QOpenglEngine::create()),
-    proj_(core::Mat4f::identity),
+    proj_(geometry::Mat4f::identity),
     clearColor_(0.337f, 0.345f, 0.353f, 1.f)
 {
     setSurfaceType(QWindow::OpenGLSurface);
@@ -106,7 +106,7 @@ WindowPtr Window::create(ui::WidgetPtr widget)
 
 //QSize Window::sizeHint() const
 //{
-//    core::Vec2f s = widget_->preferredSize();
+//    geometry::Vec2f s = widget_->preferredSize();
 //    return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
 //}
 
@@ -242,7 +242,7 @@ void Window::paint() {
 
     engine_->bindPaintShader();
     engine_->setProjectionMatrix(proj_);
-    engine_->setViewMatrix(core::Mat4f::identity);
+    engine_->setViewMatrix(geometry::Mat4f::identity);
     widget_->paint(engine_.get());
     engine_->releasePaintShader();
 

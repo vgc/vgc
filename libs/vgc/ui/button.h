@@ -69,7 +69,7 @@ public:
     bool onMouseLeave() override;
 
 protected:
-    core::Vec2f computePreferredSize() const override;
+    geometry::Vec2f computePreferredSize() const override;
 
 private:
     std::string text_;

@@ -14,15 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/mat4f.h>
+// This file was automatically generated, please do not edit directly.
+// Instead, edit tools/mat4x.cpp then run tools/mat4x.py.
+
+#include <vgc/geometry/mat4d.h>
 
 #include <limits>
 
-namespace vgc::core {
+namespace vgc::geometry {
 
-Mat4f Mat4f::inverted(bool* isInvertible, float epsilon_) const
+Mat4d Mat4d::inverted(bool* isInvertible, double epsilon_) const
 {
-    Mat4f res;
+    Mat4d res;
 
     const auto& d = data_;
     auto& inv = res.data_;
@@ -36,13 +39,13 @@ Mat4f Mat4f::inverted(bool* isInvertible, float epsilon_) const
     inv[3][0] = - d[1][0]*d[2][1]*d[3][2] + d[1][0]*d[2][2]*d[3][1] + d[2][0]*d[1][1]*d[3][2]
                 - d[2][0]*d[1][2]*d[3][1] - d[3][0]*d[1][1]*d[2][2] + d[3][0]*d[1][2]*d[2][1];
 
-    float det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0] + d[0][3]*inv[3][0];
+    double det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0] + d[0][3]*inv[3][0];
 
     if (std::abs(det) <= epsilon_) {
         if (isInvertible) {
             *isInvertible = false;
         }
-        constexpr float inf = std::numeric_limits<float>::infinity();
+        constexpr double inf = std::numeric_limits<double>::infinity();
         res.setElements(inf, inf, inf, inf,
                         inf, inf, inf, inf,
                         inf, inf, inf, inf,
@@ -78,9 +81,9 @@ Mat4f Mat4f::inverted(bool* isInvertible, float epsilon_) const
         inv[3][3] =   d[0][0]*d[1][1]*d[2][2] - d[0][0]*d[1][2]*d[2][1] - d[1][0]*d[0][1]*d[2][2]
                     + d[1][0]*d[0][2]*d[2][1] + d[2][0]*d[0][1]*d[1][2] - d[2][0]*d[0][2]*d[1][1];
 
-        res *= static_cast<float>(1) / det;
+        res *= static_cast<double>(1) / det;
     }
     return res;
 }
 
-} // namespace vgc::core
+} // namespace vgc::geometry

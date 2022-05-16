@@ -257,12 +257,12 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     }
 }
 
-core::Vec2f LineEdit::computePreferredSize() const
+geometry::Vec2f LineEdit::computePreferredSize() const
 {
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
-    core::Vec2f res(0, 0);
+    geometry::Vec2f res(0, 0);
     if (w.type() == auto_) {
         res[0] = 100;
         // TODO: compute appropriate width based on text length
@@ -280,7 +280,7 @@ core::Vec2f LineEdit::computePreferredSize() const
     return res;
 }
 
-void LineEdit::updateBytePosition_(const core::Vec2f& mousePosition)
+void LineEdit::updateBytePosition_(const geometry::Vec2f& mousePosition)
 {
     Int bytePosition = bytePosition_(mousePosition);
     if (bytePosition != textCursor_.bytePosition()) {
@@ -290,13 +290,13 @@ void LineEdit::updateBytePosition_(const core::Vec2f& mousePosition)
     }
 }
 
-Int LineEdit::bytePosition_(const core::Vec2f& mousePosition)
+Int LineEdit::bytePosition_(const geometry::Vec2f& mousePosition)
 {
     float paddingLeft = internal::getLength(this, strings::padding_left);
     float x = mousePosition[0] - paddingLeft;
     float y = mousePosition[1];
     return shapedText_.bytePosition(
-                core::Vec2d(static_cast<double>(x + scrollLeft_), static_cast<double>(y)));
+                geometry::Vec2d(static_cast<double>(x + scrollLeft_), static_cast<double>(y)));
 }
 
 void LineEdit::updateScroll_(float textWidth)

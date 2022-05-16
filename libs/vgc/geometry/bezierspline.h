@@ -23,8 +23,7 @@
 #include <vgc/core/algorithm.h>
 #include <vgc/geometry/api.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 /// \class vgc::geometry::BezierSpline
 /// \brief Represents a piecewise-cubic continuous curve represented via
@@ -179,7 +178,6 @@ private:
     std::vector<T> data_;
 };
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_BEZIERSPLINE_H

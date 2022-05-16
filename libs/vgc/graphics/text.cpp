@@ -24,7 +24,7 @@
 
 #include <QTextBoundaryFinder>
 
-#include <vgc/core/vec2f.h>
+#include <vgc/geometry/vec2f.h>
 
 namespace vgc {
 namespace graphics {
@@ -52,7 +52,7 @@ public:
     //
     ShapedGlyphArray glyphs;
     ShapedGraphemeArray graphemes;
-    core::Vec2d advance;
+    geometry::Vec2d advance;
 
     // HarbBuzz buffer
     //
@@ -120,15 +120,15 @@ public:
 
         // Convert to ShapedGlyph elements
         glyphs.clear();
-        advance = core::Vec2d(0, 0);
+        advance = geometry::Vec2d(0, 0);
         for (unsigned int i = 0; i < n; ++i) {
             hb_glyph_info_t& info = infos[i];
             hb_glyph_position_t& pos = positions[i];
             FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
             Int bytePosition = core::int_cast<Int>(info.cluster);
-            core::Vec2d glyphOffset = internal::f266ToVec2d(pos.x_offset, pos.y_offset);
-            core::Vec2d glyphAdvance = internal::f266ToVec2d(pos.x_advance, pos.y_advance);
-            core::Vec2d glyphPosition = advance + glyphOffset;
+            geometry::Vec2d glyphOffset = internal::f266ToVec2d(pos.x_offset, pos.y_offset);
+            geometry::Vec2d glyphAdvance = internal::f266ToVec2d(pos.x_advance, pos.y_advance);
+            geometry::Vec2d glyphPosition = advance + glyphOffset;
             if (glyph) {
                 glyphs.append(ShapedGlyph(glyph, glyphOffset, glyphAdvance, glyphPosition, bytePosition));
             }
@@ -142,7 +142,7 @@ public:
         Int bytePositionBefore = 0;
         Int bytePositionAfter = it.toNextBoundary();
         while (bytePositionAfter != -1) {
-            graphemes.append(ShapedGrapheme(0, core::Vec2d(0, 0), core::Vec2d(0, 0), bytePositionBefore));
+            graphemes.append(ShapedGrapheme(0, geometry::Vec2d(0, 0), geometry::Vec2d(0, 0), bytePositionBefore));
             bytePositionBefore = bytePositionAfter;
             bytePositionAfter = it.toNextBoundary();
         }
@@ -184,16 +184,16 @@ public:
                        graphemes[graphemeIndex + 1].glyphIndex() == glyphIndex) {
                     graphemeIndex += 1;
                 }
-                core::Vec2d glyphAdvance = glyphs[glyphIndexBegin].advance();
+                geometry::Vec2d glyphAdvance = glyphs[glyphIndexBegin].advance();
                 Int numGraphemesForGlyph = graphemeIndex - graphemeIndexBegin + 1;
-                core::Vec2d graphemeAdvance = glyphAdvance / static_cast<double>(numGraphemesForGlyph);
+                geometry::Vec2d graphemeAdvance = glyphAdvance / static_cast<double>(numGraphemesForGlyph);
                 for (Int k = graphemeIndexBegin; k <= graphemeIndex; ++k) {
                     graphemes[k].advance_ = graphemeAdvance;
                 }
             }
             else {
                 // one grapheme for one or several glyphs
-                core::Vec2d graphemeAdvance(0, 0);
+                geometry::Vec2d graphemeAdvance(0, 0);
                 for (Int i = glyphIndexBegin; i < glyphIndexEnd; ++i) {
                     graphemeAdvance += glyphs[i].advance();
                 }
@@ -201,7 +201,7 @@ public:
             }
         }
         // Fourth pass: compute position based on advance
-        core::Vec2d graphemePosition(0, 0);
+        geometry::Vec2d graphemePosition(0, 0);
         for (Int graphemeIndex = 0; graphemeIndex < numGraphemes; ++graphemeIndex) {
             graphemes[graphemeIndex].position_ = graphemePosition;
             graphemePosition += graphemes[graphemeIndex].advance();
@@ -215,7 +215,7 @@ private:
 } // namespace internal
 
 void ShapedGlyph::fill(core::FloatArray& data,
-                       const core::Vec2d& origin,
+                       const geometry::Vec2d& origin,
                        float r, float g, float b) const
 {
     Int oldLength = data.length();
@@ -237,7 +237,7 @@ void ShapedGlyph::fill(core::FloatArray& data,
 }
 
 void ShapedGlyph::fill(core::FloatArray& data,
-                       const core::Vec2d& origin) const
+                       const geometry::Vec2d& origin) const
 {
     // Note: we currently disable per-letter hinting (which can be seen as a
     // component of horizontal hinting) because it looked worse, at least with
@@ -246,15 +246,15 @@ void ShapedGlyph::fill(core::FloatArray& data,
     constexpr bool hinting = false;
 
     // Per-letter hinting
-    core::Vec2d p_ = origin + position();
-    core::Vec2f p(static_cast<float>(p_[0]), static_cast<float>(p_[1]));
+    geometry::Vec2d p_ = origin + position();
+    geometry::Vec2f p(static_cast<float>(p_[0]), static_cast<float>(p_[1]));
     if (hinting) {
         p[0] = std::round(p[0]);
         p[1] = std::round(p[1]);
     }
 
     // Transform from local glyph coordinates to requested coordinates.
-    core::Mat3f transform = core::Mat3f::identity;
+    geometry::Mat3f transform = geometry::Mat3f::identity;
     transform.translate(p[0], p[1]); // TODO: Mat3f::translate(const Vec2f&)
     transform.scale(1, -1);
 
@@ -326,14 +326,14 @@ const ShapedGraphemeArray& ShapedText::graphemes() const
     return impl_->graphemes;
 }
 
-core::Vec2d ShapedText::advance() const
+geometry::Vec2d ShapedText::advance() const
 {
     return impl_->advance;
 }
 
-core::Vec2d ShapedText::advance(Int bytePosition) const
+geometry::Vec2d ShapedText::advance(Int bytePosition) const
 {
-    core::Vec2d res(0, 0);
+    geometry::Vec2d res(0, 0);
     for (const graphics::ShapedGrapheme& grapheme : graphemes()) {
         if (grapheme.bytePosition() >= bytePosition) {
             break;
@@ -344,7 +344,7 @@ core::Vec2d ShapedText::advance(Int bytePosition) const
 }
 
 void ShapedText::fill(core::FloatArray& data,
-                      const core::Vec2d& origin,
+                      const geometry::Vec2d& origin,
                       float r, float g, float b) const
 {
     for (const ShapedGlyph& glyph : glyphs()) {
@@ -353,7 +353,7 @@ void ShapedText::fill(core::FloatArray& data,
 }
 
 void ShapedText::fill(core::FloatArray& data,
-                      const core::Vec2d& origin,
+                      const geometry::Vec2d& origin,
                       float r, float g, float b,
                       Int start, Int end) const
 {
@@ -366,20 +366,20 @@ void ShapedText::fill(core::FloatArray& data,
 namespace {
 
 class Triangle2f {
-    std::array<core::Vec2f, 3> d_;
+    std::array<geometry::Vec2f, 3> d_;
 
 public:
-    Triangle2f(const core::Vec2f& a, const core::Vec2f& b, const core::Vec2f& c) :
+    Triangle2f(const geometry::Vec2f& a, const geometry::Vec2f& b, const geometry::Vec2f& c) :
         d_({a, b, c}) {}
 
     Triangle2f(float ax, float ay, float bx, float by, float cx, float cy) :
-        d_({core::Vec2f(ax, ay), core::Vec2f(bx, by), core::Vec2f(cx, cy)}) {}
+        d_({geometry::Vec2f(ax, ay), geometry::Vec2f(bx, by), geometry::Vec2f(cx, cy)}) {}
 
-    core::Vec2f& operator[](Int i) {
+    geometry::Vec2f& operator[](Int i) {
         return d_[i];
     }
 
-    const core::Vec2f& operator[](Int i) const {
+    const geometry::Vec2f& operator[](Int i) const {
         return d_[i];
     }
 };
@@ -444,11 +444,11 @@ void clipTriangle_(Triangle2fArray& out,
     constexpr auto cmp = LessOrGreater<float>();
 
     // Sort by i-th coordinate and returns early in trivial cases
-    core::Vec2f A, B, C;
+    geometry::Vec2f A, B, C;
     bool mirrored;
-    const core::Vec2f& a = triangle[0];
-    const core::Vec2f& b = triangle[1];
-    const core::Vec2f& c = triangle[2];
+    const geometry::Vec2f& a = triangle[0];
+    const geometry::Vec2f& b = triangle[1];
+    const geometry::Vec2f& c = triangle[2];
     if (cmp(a[i], b[i])) {
         if      (cmp(b[i], c[i])) { PRECLIP_(a, b, c); mirrored = false; }
         else if (cmp(a[i], c[i])) { PRECLIP_(a, c, b); mirrored = true;  }
@@ -487,8 +487,8 @@ void clipTriangle_(Triangle2fArray& out,
         }
     }
     else {
-        core::Vec2f B_ = A + (clip-A[i])/(B[i]-A[i]) * (B-A);
-        core::Vec2f C_ = A + (clip-A[i])/(C[i]-A[i]) * (C-A);
+        geometry::Vec2f B_ = A + (clip-A[i])/(B[i]-A[i]) * (B-A);
+        geometry::Vec2f C_ = A + (clip-A[i])/(C[i]-A[i]) * (C-A);
         if (mirrored) {
             out.emplace(out.end(), B, B_, C);
             out.emplace(out.end(), C, B_, C_);
@@ -539,7 +539,7 @@ void clipTriangles_(Triangle2fArray& data,
 }
 
 void ShapedText::fill(core::FloatArray& data,
-                      const core::Vec2d& origin,
+                      const geometry::Vec2d& origin,
                       float r, float g, float b,
                       float clipLeft, float clipRight,
                       float clipTop, float clipBottom) const
@@ -582,7 +582,7 @@ double adv_(const ShapedGrapheme& grapheme) {
 
 } // namespace
 
-Int ShapedText::bytePosition(const core::Vec2d& mousePosition)
+Int ShapedText::bytePosition(const geometry::Vec2d& mousePosition)
 {
     const ShapedGraphemeArray& g = graphemes();
     double x = mousePosition[0];

@@ -27,11 +27,11 @@
 #include <QString>
 
 #include <vgc/core/color.h>
-#include <vgc/core/mat4d.h>
-#include <vgc/core/mat4f.h>
 #include <vgc/core/paths.h>
-#include <vgc/core/vec2d.h>
-#include <vgc/core/vec2f.h>
+#include <vgc/geometry/mat4d.h>
+#include <vgc/geometry/mat4f.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
 
@@ -50,27 +50,27 @@ inline std::string fromQt(const QString& s)
     return std::string(a.data(), size);
 }
 
-inline QPointF toQt(const core::Vec2d& v)
+inline QPointF toQt(const geometry::Vec2d& v)
 {
     return QPointF(v[0], v[1]);
 }
 
-inline QPointF toQt(const core::Vec2f& v)
+inline QPointF toQt(const geometry::Vec2f& v)
 {
     return QPointF(v[0], v[1]);
 }
 
-inline core::Vec2d fromQtd(const QPointF& v)
+inline geometry::Vec2d fromQtd(const QPointF& v)
 {
-    return core::Vec2d(v.x(), v.y());
+    return geometry::Vec2d(v.x(), v.y());
 }
 
-inline core::Vec2f fromQtf(const QPointF& v)
+inline geometry::Vec2f fromQtf(const QPointF& v)
 {
-    return core::Vec2f(v.x(), v.y());
+    return geometry::Vec2f(v.x(), v.y());
 }
 
-inline QMatrix4x4 toQtMatrix(const core::Mat4f& m) {
+inline QMatrix4x4 toQtMatrix(const geometry::Mat4f& m) {
     return QMatrix4x4(
         m(0,0), m(0,1), m(0,2), m(0,3),
         m(1,0), m(1,1), m(1,2), m(1,3),
@@ -78,9 +78,9 @@ inline QMatrix4x4 toQtMatrix(const core::Mat4f& m) {
         m(3,0), m(3,1), m(3,2), m(3,3));
 }
 
-inline core::Mat4f toMat4f(const core::Mat4d& m) {
+inline geometry::Mat4f toMat4f(const geometry::Mat4d& m) {
     // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
-    return core::Mat4f(
+    return geometry::Mat4f(
         (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
         (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
         (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
@@ -115,12 +115,12 @@ public:
 
     // Implementation of graphics::Engine API
     void clear(const core::Color& color) override;
-    core::Mat4f projectionMatrix() override;
-    void setProjectionMatrix(const core::Mat4f& m) override;
+    geometry::Mat4f projectionMatrix() override;
+    void setProjectionMatrix(const geometry::Mat4f& m) override;
     void pushProjectionMatrix() override;
     void popProjectionMatrix() override;
-    core::Mat4f viewMatrix() override;
-    void setViewMatrix(const core::Mat4f& m) override;
+    geometry::Mat4f viewMatrix() override;
+    void setViewMatrix(const geometry::Mat4f& m) override;
     void pushViewMatrix() override;
     void popViewMatrix() override;
 
@@ -157,9 +157,9 @@ private:
     int viewLoc_ = -1;
 
     // Matrices
-    core::Mat4f proj_;
-    core::Array<core::Mat4f> projectionMatrices_;
-    core::Array<core::Mat4f> viewMatrices_;
+    geometry::Mat4f proj_;
+    core::Array<geometry::Mat4f> projectionMatrices_;
+    core::Array<geometry::Mat4f> viewMatrices_;
 };
 
 } // namespace vgc::ui::internal

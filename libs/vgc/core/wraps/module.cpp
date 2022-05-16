@@ -22,13 +22,11 @@ void wrap_color(py::module& m);
 void wrap_exceptions(py::module& m);
 void wrap_format(py::module& m);
 void wrap_io(py::module& m);
-void wrap_mat(py::module& m);
 void wrap_object(py::module& m);
 void wrap_parse(py::module& m);
 void wrap_paths(py::module& m);
 void wrap_signal(py::module& m);
 void wrap_stopwatch(py::module& m);
-void wrap_vec2(py::module& m);
 
 PYBIND11_MODULE(core, m) {
     wrap_arithmetic(m);
@@ -37,11 +35,9 @@ PYBIND11_MODULE(core, m) {
     wrap_exceptions(m);
     wrap_format(m);
     wrap_io(m);
-    wrap_mat(m);
     wrap_object(m);
     wrap_parse(m);
     wrap_paths(m);
     wrap_signal(m);
     wrap_stopwatch(m);
-    wrap_vec2(m);
 }

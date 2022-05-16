@@ -22,11 +22,7 @@ from vgc.core import (
     IndexError,
     DoubleArray,
     FloatArray,
-    IntArray,
-    Vec2d,
-    Vec2dArray,
-    Vec2f,
-    Vec2fArray
+    IntArray
 )
 
 def get1DArrayClasses():
@@ -184,50 +180,6 @@ class Test1DArrays(unittest.TestCase):
         a = DoubleArray("  [ \n]   ")
         self.assertEqual(a, DoubleArray())
 
-class TestVec2dArray(unittest.TestCase):
-
-    def testDefaultConstructor(self):
-        a = Vec2dArray()
-        self.assertEqual(len(a), 0)
-
-    def testInitializingConstructors(self):
-        n = 3
-        x0 = Vec2d(0.5, 0.7)
-
-        a1 = Vec2dArray(n)
-        self.assertEqual(len(a1), n)
-        for x in a1:
-            self.assertEqual(x, Vec2d(0, 0))
-
-        a2 = Vec2dArray(n, x0)
-        self.assertEqual(len(a2), n)
-        for x in a2:
-            self.assertEqual(x, x0)
-
-        a3 = Vec2dArray([(1, 2), (3, 4)])
-        self.assertEqual(len(a3), 2)
-        self.assertEqual(a3[0], Vec2d(1, 2))
-        self.assertEqual(a3[1], Vec2d(3, 4))
-
-    def testAppend(self):
-        a = Vec2dArray()
-        a.append(Vec2d(1, 2))
-        a.append(Vec2d(3, 4))
-        self.assertEqual(a, Vec2dArray([(1, 2), (3, 4)]))
-
-    def testParse(self):
-        a = Vec2dArray("[(1, 2), (3, 4.5)]")
-        self.assertTrue(a == Vec2dArray([(1, 2), (3, 4.5)]))
-        a = Vec2dArray("[]")
-        self.assertTrue(a == Vec2dArray())
-
-    def testContains(self):
-        a3 = Vec2dArray([(1, 2), (3, 4), (5, 6)])
-        self.assertTrue(Vec2d(3, 4) in a3)
-        self.assertTrue(a3.__contains__(Vec2d(3, 4)))
-        self.assertFalse(Vec2d(4, 3) in a3)
-        self.assertFalse(a3.__contains__(Vec2d(4, 3)))
-        self.assertTrue(Vec2d(4, 3) not in a3)
 
 if __name__ == '__main__':
     unittest.main()

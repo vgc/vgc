@@ -15,19 +15,19 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit ./tools/vec2.h, and re-run ./tools/vec2.py.
+// Instead, edit tools/vec2x.h then run tools/vec2x.py.
 
-#ifndef VGC_CORE_VEC2D_H
-#define VGC_CORE_VEC2D_H
+#ifndef VGC_GEOMETRY_VEC2D_H
+#define VGC_GEOMETRY_VEC2D_H
 
 #include <cmath>
 
-#include <vgc/core/api.h>
 #include <vgc/core/array.h>
+#include <vgc/geometry/api.h>
 
-namespace vgc::core {
+namespace vgc::geometry {
 
-/// \class vgc::core::Vec2d
+/// \class vgc::geometry::Vec2d
 /// \brief 2D vector using double-precision floating points.
 ///
 /// A Vec2d represents either a 2D point (= position), a 2D vector (=
@@ -39,8 +39,8 @@ namespace vgc::core {
 /// change in any future version, as this allows to conveniently use this class
 /// for data transfer to the GPU (via OpenGL, Metal, etc.).
 ///
-// VGC_CORE_API <- Omitted on purpose.
-//                 If needed, manually export individual functions.
+// VGC_GEOMETRY_API <- Omitted on purpose.
+//                     If needed, manually export individual functions.
 class Vec2d
 {
 public:
@@ -218,7 +218,7 @@ public:
     ///
     Vec2d& normalize() {
         double l = length();
-        if (l > epsilon) { // XXX use zero instead of epsilon?
+        if (l > core::epsilon) { // XXX use zero instead of epsilon?
             *this /= l;
         }
         else {
@@ -556,14 +556,14 @@ private:
     Vec2d infdiff_(const Vec2d& b) const
     {
         const Vec2d& a = *this;
-        return Vec2d(internal::infdiff(a[0], b[0]),
-                     internal::infdiff(a[1], b[1]));
+        return Vec2d(core::internal::infdiff(a[0], b[0]),
+                     core::internal::infdiff(a[1], b[1]));
     }
 };
 
-/// Alias for vgc::core::Array<vgc::core::Vec2d>.
+/// Alias for vgc::core::Array<vgc::geometry::Vec2d>.
 ///
-using Vec2dArray = Array<Vec2d>;
+using Vec2dArray = core::Array<Vec2d>;
 
 /// Overloads setZero(T& x).
 ///
@@ -601,11 +601,11 @@ void readTo(Vec2d& v, IStream& in)
     skipExpectedCharacter(in, ')');
 }
 
-} // namespace vgc::core
+} // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
 template <>
-struct fmt::formatter<vgc::core::Vec2d> {
+struct fmt::formatter<vgc::geometry::Vec2d> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
         if (it != end && *it != '}')
@@ -613,9 +613,9 @@ struct fmt::formatter<vgc::core::Vec2d> {
         return it;
     }
     template <typename FormatContext>
-    auto format(const vgc::core::Vec2d v, FormatContext& ctx) {
+    auto format(const vgc::geometry::Vec2d v, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {})", v[0], v[1]);
     }
 };
 
-#endif // VGC_CORE_VEC2D_H
+#endif // VGC_GEOMETRY_VEC2D_H

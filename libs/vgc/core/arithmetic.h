@@ -596,9 +596,9 @@ setZero(T& x)
 /// Returns a zero-initialized value for the given type.
 ///
 /// ```cpp
-/// int x = vgc::core::zero();            // 0
-/// double y = vgc::core::zero<double>(); // 0.0
-/// Vec2d v = vgc::core::zero<Vec2d>();   // (0.0, 0.0)
+/// auto x = vgc::core::zero<int>();                  // int(0)
+/// auto y = vgc::core::zero<double>();               // double(0.0)
+/// auto v = vgc::core::zero<vgc::geometry::Vec2d>(); // Vec2d(0.0, 0.0)
 /// ```
 ///
 /// This function relies on ADL (= argument-dependent lookup), calling the
@@ -631,7 +631,7 @@ setZero(T& x)
 ///
 /// ```cpp
 /// double x = 0.0;
-/// Vec2d v(0.0, 0.0);
+/// vgc::geometry::Vec2d v(0.0, 0.0);
 /// ```
 ///
 /// \sa setZero(T& x)

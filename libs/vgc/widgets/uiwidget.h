@@ -91,7 +91,7 @@ private:
     ui::internal::QOpenglEnginePtr engine_;
 
     // Projection and view matrices
-    core::Mat4f proj_;
+    geometry::Mat4f proj_;
 
     // Ensure that we don't call onPaintDestroy() if onPaintCreate()
     // has not been called

@@ -121,12 +121,12 @@ bool Button::onMouseLeave()
     return true;
 }
 
-core::Vec2f Button::computePreferredSize() const
+geometry::Vec2f Button::computePreferredSize() const
 {
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
-    core::Vec2f res(0, 0);
+    geometry::Vec2f res(0, 0);
     if (w.type() == auto_) {
         res[0] = 100;
         // TODO: compute appropriate width based on text length

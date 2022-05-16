@@ -17,16 +17,14 @@
 #ifndef VGC_GEOMETRY_BEZIERSPLINE2D_H
 #define VGC_GEOMETRY_BEZIERSPLINE2D_H
 
-#include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/bezierspline.h>
+#include <vgc/geometry/vec2d.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
-using BezierSpline2d = BezierSpline<core::Vec2d>;
+using BezierSpline2d = BezierSpline<Vec2d>;
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_BEZIERSPLINE2D_H

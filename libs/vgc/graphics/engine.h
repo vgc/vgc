@@ -21,7 +21,7 @@
 
 #include <vgc/core/color.h>
 #include <vgc/core/innercore.h>
-#include <vgc/core/mat4f.h>
+#include <vgc/geometry/mat4f.h>
 #include <vgc/graphics/api.h>
 
 namespace vgc::graphics {
@@ -122,11 +122,11 @@ public:
 
     /// Returns the current projection matrix.
     ///
-    virtual core::Mat4f projectionMatrix() = 0;
+    virtual geometry::Mat4f projectionMatrix() = 0;
 
     /// Sets the current projection matrix.
     ///
-    virtual void setProjectionMatrix(const core::Mat4f& m) = 0;
+    virtual void setProjectionMatrix(const geometry::Mat4f& m) = 0;
 
     /// Adds a copy of the current projection matrix to the matrix stack.
     ///
@@ -141,11 +141,11 @@ public:
 
     /// Returns the current view matrix.
     ///
-    virtual core::Mat4f viewMatrix() = 0;
+    virtual geometry::Mat4f viewMatrix() = 0;
 
     /// Sets the current view matrix.
     ///
-    virtual void setViewMatrix(const core::Mat4f& m) = 0;
+    virtual void setViewMatrix(const geometry::Mat4f& m) = 0;
 
     /// Adds a copy of the current view matrix to the matrix stack.
     ///

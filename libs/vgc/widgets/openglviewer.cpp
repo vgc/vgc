@@ -27,7 +27,7 @@
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
-#include <vgc/core/vec2f.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/widgets/qtutil.h>
 
@@ -43,7 +43,7 @@ QString shaderPath_(const std::string& name) {
     return toQt(path);
 }
 
-QMatrix4x4 toQtMatrix(const core::Mat4d& m) {
+QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {
     return QMatrix4x4(
                static_cast<float>(m(0,0)), static_cast<float>(m(0,1)), static_cast<float>(m(0,2)), static_cast<float>(m(0,3)),
                static_cast<float>(m(1,0)), static_cast<float>(m(1,1)), static_cast<float>(m(1,2)), static_cast<float>(m(1,3)),
@@ -266,8 +266,8 @@ void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
         isSketching_ = true;
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
-        core::Vec2d viewCoords = event.pos();
-        core::Vec2d worldCoords = camera_.viewMatrix().inverted() * viewCoords;
+        geometry::Vec2d viewCoords = event.pos();
+        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted() * viewCoords;
         startCurve_(worldCoords, width_(event));
     }
     else if (event.modifiers() == Qt::AltModifier &&
@@ -303,13 +303,13 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
     if (isSketching_) {
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
-        core::Vec2d viewCoords = event.pos();
-        core::Vec2d worldCoords = camera_.viewMatrix().inverted() * viewCoords;
+        geometry::Vec2d viewCoords = event.pos();
+        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted() * viewCoords;
         continueCurve_(worldCoords, width_(event));
     }
     else if (isPanning_) {
-        core::Vec2d mousePos = event.pos();
-        core::Vec2d delta = pointingDevicePosAtPress_ - mousePos;
+        geometry::Vec2d mousePos = event.pos();
+        geometry::Vec2d delta = pointingDevicePosAtPress_ - mousePos;
         camera_.setCenter(cameraAtPress_.center() + delta);
         update();
     }
@@ -318,15 +318,15 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // XXX rotateViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double rotateViewSensitivity = 0.01;
-        core::Vec2d mousePos = event.pos();
-        core::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
+        geometry::Vec2d mousePos = event.pos();
+        geometry::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
         double deltaRotation = rotateViewSensitivity * (deltaPos.x() - deltaPos.y());
         camera_.setRotation(cameraAtPress_.rotation() + deltaRotation);
 
         // Set new camera center so that rotation center = mouse pos at press
-        core::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted() * pivotViewCoords;
-        core::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
+        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted() * pivotViewCoords;
+        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();
@@ -336,15 +336,15 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // XXX zoomViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double zoomViewSensitivity = 0.005;
-        core::Vec2d mousePos = event.pos();
-        core::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
+        geometry::Vec2d mousePos = event.pos();
+        geometry::Vec2d deltaPos = pointingDevicePosAtPress_ - mousePos;
         const double s = std::exp(zoomViewSensitivity * (deltaPos.y() - deltaPos.x()));
         camera_.setZoom(cameraAtPress_.zoom() * s);
 
         // Set new camera center so that zoom center = mouse pos at press
-        core::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        core::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted() * pivotViewCoords;
-        core::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
+        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted() * pivotViewCoords;
+        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();
@@ -560,7 +560,7 @@ void OpenGLViewer::createCurveGLResources_(Int)
     r.vboTriangles.create();
     r.vaoTriangles = new QOpenGLVertexArrayObject();
     r.vaoTriangles->create();
-    GLsizei stride  = sizeof(core::Vec2f);
+    GLsizei stride  = sizeof(geometry::Vec2f);
     GLvoid* pointer = nullptr;
     r.vaoTriangles->bind();
     r.vboTriangles.bind();
@@ -603,7 +603,7 @@ void OpenGLViewer::updateCurveGLResources_(Int i)
     // Convert the dom::Path to a geometry::Curve
     // XXX move this logic to dom::Path
     dom::Element* path = paths_[i];
-    core::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
+    geometry::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
     core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
     core::Color color = path->getAttribute(COLOR).getColor();
     VGC_CORE_ASSERT(positions.size() == widths.size());
@@ -625,7 +625,7 @@ void OpenGLViewer::updateCurveGLResources_(Int i)
         minQuads = 10;
         maxQuads = 10;
     }
-    core::Vec2dArray triangulation =
+    geometry::Vec2dArray triangulation =
             curve.triangulate(maxAngle, minQuads, maxQuads);
 
     // Convert triangles to single-precision and transfer to GPU
@@ -636,26 +636,26 @@ void OpenGLViewer::updateCurveGLResources_(Int i)
     //       using doubles is more precise for intersection tests)
     //
     r.numVerticesTriangles = core::int_cast<GLsizei>(triangulation.length());
-    core::Vec2fArray glVerticesTriangles;
-    for(const core::Vec2d& v: triangulation) {
-        glVerticesTriangles.append(core::Vec2f(static_cast<float>(v[0]),
+    geometry::Vec2fArray glVerticesTriangles;
+    for(const geometry::Vec2d& v: triangulation) {
+        glVerticesTriangles.append(geometry::Vec2f(static_cast<float>(v[0]),
                                                static_cast<float>(v[1])));
     }
     r.vboTriangles.bind();
-    int count = core::int_cast<int>(r.numVerticesTriangles) * static_cast<int>(sizeof(core::Vec2f));
+    int count = core::int_cast<int>(r.numVerticesTriangles) * static_cast<int>(sizeof(geometry::Vec2f));
     r.vboTriangles.allocate(glVerticesTriangles.data(), count);
     r.vboTriangles.release();
 
     // Transfer control points vertex data to GPU
-    core::Vec2fArray glVerticesControlPoints;
+    geometry::Vec2fArray glVerticesControlPoints;
     const core::DoubleArray& d = curve.positionData();
     r.numVerticesControlPoints = core::int_cast<GLsizei>(d.length() / 2);
     for (Int j = 0; j < r.numVerticesControlPoints; ++j) {
-        glVerticesControlPoints.append(core::Vec2f(static_cast<float>(d[2*j]),
+        glVerticesControlPoints.append(geometry::Vec2f(static_cast<float>(d[2*j]),
                                                    static_cast<float>(d[2*j+1])));
     }
     r.vboControlPoints.bind();
-    count = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(core::Vec2f));
+    count = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(geometry::Vec2f));
     r.vboControlPoints.allocate(glVerticesControlPoints.data(), count);
     r.vboControlPoints.release();
 
@@ -679,21 +679,21 @@ void OpenGLViewer::destroyCurveGLResources_(Int)
     curveGLResources_.removeLast();
 }
 
-void OpenGLViewer::startCurve_(const core::Vec2d& p, double width)
+void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
 {
     // XXX CLEAN
 
     dom::Element* root = document_->rootElement();
     dom::Element* path = dom::Element::create(root, PATH);
 
-    path->setAttribute(POSITIONS, core::Vec2dArray());
+    path->setAttribute(POSITIONS, geometry::Vec2dArray());
     path->setAttribute(WIDTHS, core::DoubleArray());
     path->setAttribute(COLOR, currentColor_);
 
     continueCurve_(p, width);
 }
 
-void OpenGLViewer::continueCurve_(const core::Vec2d& p, double width)
+void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
 {
     // XXX CLEAN
 
@@ -709,7 +709,7 @@ void OpenGLViewer::continueCurve_(const core::Vec2d& p, double width)
         // freely mutate the value and trusteing them in sending a changed
         // signal themselves.
 
-        core::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
+        geometry::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
         core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
 
         positions.append(p);

@@ -90,7 +90,7 @@ Qt::MouseButtons PointingDeviceEvent::buttons() const
     return buttons_;
 }
 
-core::Vec2d PointingDeviceEvent::pos() const
+geometry::Vec2d PointingDeviceEvent::pos() const
 {
     return pos_;
 }

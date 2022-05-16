@@ -16,11 +16,27 @@ vgc_add_library(geometry
         curve.h
         curvecommand.h
         curves2d.h
+        mat3d.h
+        mat3f.h
+        mat4d.h
+        mat4f.h
+        vec2d.h
+        vec2f.h
 
     CPP_FILES
         camera2d.cpp
         curve.cpp
         curves2d.cpp
+        mat3d.cpp
+        mat3f.cpp
+        mat4d.cpp
+        mat4f.cpp
+        vec2d.cpp
+        vec2f.cpp
+
+    NATVIS_FILES
+        tools/vgcgeometry.natvis
 )
 
 add_subdirectory(wraps)
+add_subdirectory(tests)

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="vgc::geometry::Vec2f">
+    <DisplayString>({data_[0]}, {data_[1]})</DisplayString>
+  </Type>
+  <Type Name="vgc::geometry::Vec2d">
+    <DisplayString>({data_[0]}, {data_[1]})</DisplayString>
+  </Type>
+</AutoVisualizer>

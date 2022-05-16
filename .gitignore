@@ -5,3 +5,4 @@ CMakeLists.txt.user*
 .DS_Store
 .directory
 CMakeSettings.json
+__pycache__

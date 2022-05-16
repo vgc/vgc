@@ -14,15 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/mat3f.h>
+// This file is used to generate all the variants of this class.
+// You must manually run mat3x.py after any modification.
+
+#include "mat3x.h"
 
 #include <limits>
 
-namespace vgc::core {
+namespace vgc::geometry {
 
-Mat3f Mat3f::inverted(bool* isInvertible, float epsilon_) const
+Mat3x Mat3x::inverted(bool* isInvertible, float epsilon_) const
 {
-    Mat3f res;
+    Mat3x res;
 
     const auto& d = data_;
     auto& inv = res.data_;
@@ -59,4 +62,4 @@ Mat3f Mat3f::inverted(bool* isInvertible, float epsilon_) const
     return res;
 }
 
-} // namespace vgc::core
+} // namespace vgc::geometry

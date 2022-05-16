@@ -20,12 +20,10 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
-#include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/vec2d.h>
 
-namespace vgc {
-
-namespace geometry {
+namespace vgc::geometry {
 
 /// \class vgc::geometry::Curve
 /// \brief Represents a 2D curve with variable width.
@@ -145,7 +143,7 @@ public:
 
     /// \overload addControlPoint(double x, double y)
     ///
-    void addControlPoint(const core::Vec2d& position);
+    void addControlPoint(const Vec2d& position);
 
     /// Convenient function to add a sample to the curve. This overload is
     /// intended to be used when widthVariability() == PerControlPoint.
@@ -156,7 +154,7 @@ public:
 
     /// \overload addControlPoint(double x, double y, double width)
     ///
-    void addControlPoint(const core::Vec2d& position, double width);
+    void addControlPoint(const Vec2d& position, double width);
 
     /// Computes and returns a triangulation of this curve as a triangle strip
     /// [ p0, p1, ..., p_{2n}, p_{2n+1} ]. The even indices are on the "left"
@@ -210,7 +208,7 @@ public:
     /// control points, simply set maxAngle to any value, and set minQuads =
     /// maxQuads = number of desired quads.
     ///
-    core::Vec2dArray triangulate(
+    Vec2dArray triangulate(
             double maxAngle = 0.05,
             Int minQuads = 1,
             Int maxQuads = 64) const;
@@ -244,7 +242,6 @@ private:
     core::Color color_;
 };
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_CURVE_H

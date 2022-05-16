@@ -20,12 +20,10 @@
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/bezierspline.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 using BezierSpline1d = BezierSpline<double>;
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_BEZIERSPLINE1D_H

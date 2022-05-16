@@ -18,12 +18,11 @@
 #define VGC_GEOMETRY_CURVES2D_H
 
 #include <vgc/core/array.h>
-#include <vgc/core/vec2d.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curvecommand.h>
+#include <vgc/geometry/vec2d.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 class Curves2d;
 
@@ -77,21 +76,21 @@ public:
 
     /// Returns the Vec2d parameter of the MoveTo or LineTo command.
     ///
-    core::Vec2d p() const;
+    Vec2d p() const;
 
     /// Returns the first Vec2d parameter of the QuadraticBezier or CubicBezier
     /// command.
     ///
-    core::Vec2d p1() const;
+    Vec2d p1() const;
 
     /// Returns the second Vec2d parameter of the QuadraticBezier or
     /// CubicBezier command.
     ///
-    core::Vec2d p2() const;
+    Vec2d p2() const;
 
     /// Returns the third Vec2d parameter of the CubicBezier command.
     ///
-    core::Vec2d p3() const;
+    Vec2d p3() const;
 
     /// Returns whether the two Curves2dCommandRef are equal, that is, whether
     /// they reference the same command of the same Curve2d, similar to
@@ -323,7 +322,7 @@ public:
 
     /// Adds a new MoveTo command.
     ///
-    void moveTo(const core::Vec2d& p);
+    void moveTo(const Vec2d& p);
 
     /// Adds a new MoveTo command.
     ///
@@ -331,7 +330,7 @@ public:
 
     /// Adds a new LineTo command.
     ///
-    void lineTo(const core::Vec2d& p);
+    void lineTo(const Vec2d& p);
 
     /// Adds a new LineTo command.
     ///
@@ -339,8 +338,8 @@ public:
 
     /// Adds a new QuadraticBezierTo command.
     ///
-    void quadraticBezierTo(const core::Vec2d& p1,
-                           const core::Vec2d& p2);
+    void quadraticBezierTo(const Vec2d& p1,
+                           const Vec2d& p2);
 
     /// Adds a new QBezierTo command.
     ///
@@ -349,9 +348,9 @@ public:
 
     /// Adds a new CBezierTo command.
     ///
-    void cubicBezierTo(const core::Vec2d& p1,
-                       const core::Vec2d& p2,
-                       const core::Vec2d& p3);
+    void cubicBezierTo(const Vec2d& p1,
+                       const Vec2d& p2,
+                       const Vec2d& p3);
 
     /// Adds a new CBezierTo command.
     ///
@@ -458,32 +457,32 @@ inline CurveCommandType Curves2dCommandRef::type() const
     return curves_->commandData_[commandIndex_].type;
 }
 
-inline core::Vec2d Curves2dCommandRef::p() const
+inline Vec2d Curves2dCommandRef::p() const
 {
     // TODO: exception if Close?
     const double* d = &(curves_->data_[paramIndex_]);
-    return core::Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d+1));
 }
 
-inline core::Vec2d Curves2dCommandRef::p1() const
+inline Vec2d Curves2dCommandRef::p1() const
 {
     // TODO: exception if Close?
     const double* d = &(curves_->data_[paramIndex_]);
-    return core::Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d+1));
 }
 
-inline core::Vec2d Curves2dCommandRef::p2() const
+inline Vec2d Curves2dCommandRef::p2() const
 {
     // TODO: exception if Close, MoveTo, LineTo?
     const double* d = &(curves_->data_[paramIndex_ + 2]);
-    return core::Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d+1));
 }
 
-inline core::Vec2d Curves2dCommandRef::p3() const
+inline Vec2d Curves2dCommandRef::p3() const
 {
     // TODO: exception if Close, MoveTo, LineTo, QuadraticBezierTo?
     const double* d = &(curves_->data_[paramIndex_ + 4]);
-    return core::Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d+1));
 }
 
 inline Curves2dCommandIterator& Curves2dCommandIterator::operator++()
@@ -505,7 +504,6 @@ inline Curves2dCommandIterator& Curves2dCommandIterator::operator--()
     return *this;
 }
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_CURVES2D_H

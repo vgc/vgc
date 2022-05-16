@@ -193,7 +193,7 @@ void insertText(
         // we may want to clip up to the border of the given text box instead.
         //
         constexpr bool clipAtPadding = true;
-        core::Vec2d origin(static_cast<double>(textLeft), static_cast<double>(baseline));
+        geometry::Vec2d origin(static_cast<double>(textLeft), static_cast<double>(baseline));
         float clipLeft   = x1 + (clipAtPadding ? paddingLeft   : 0);
         float clipRight  = x2 - (clipAtPadding ? paddingRight  : 0);
         float clipTop    = y1 + (clipAtPadding ? paddingTop    : 0);

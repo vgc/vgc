@@ -14,195 +14,195 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file was automatically generated, please do not edit directly.
-// Instead, edit ./tools/vec2.h, and re-run ./tools/vec2.py.
+// This file is used to generate all the variants of this class.
+// You must manually run vec2x.py after any modification.
 
-#ifndef VGC_CORE_VEC2F_H
-#define VGC_CORE_VEC2F_H
+#ifndef VGC_GEOMETRY_VEC2X_H
+#define VGC_GEOMETRY_VEC2X_H
 
 #include <cmath>
 
-#include <vgc/core/api.h>
 #include <vgc/core/array.h>
+#include <vgc/geometry/api.h>
 
-namespace vgc::core {
+namespace vgc::geometry {
 
-/// \class vgc::core::Vec2f
-/// \brief 2D vector using single-precision floating points.
+/// \class vgc::geometry::Vec2x
+/// \brief 2D vector using %scalar-type-description%.
 ///
-/// A Vec2f represents either a 2D point (= position), a 2D vector (=
+/// A Vec2x represents either a 2D point (= position), a 2D vector (=
 /// difference of positions), a 2D size (= positive position), or a 2D normal
 /// (= unit vector). Unlike other libraries, we do not use separate types for
 /// all these use cases.
 ///
-/// The memory size of a Vec2f is exactly 2 * sizeof(float). This will never
+/// The memory size of a Vec2x is exactly 2 * sizeof(float). This will never
 /// change in any future version, as this allows to conveniently use this class
 /// for data transfer to the GPU (via OpenGL, Metal, etc.).
 ///
-// VGC_CORE_API <- Omitted on purpose.
-//                 If needed, manually export individual functions.
-class Vec2f
+// VGC_GEOMETRY_API <- Omitted on purpose.
+//                     If needed, manually export individual functions.
+class Vec2x
 {
 public:
     using value_type = float;
 
-    /// Creates an uninitialized Vec2f.
+    /// Creates an uninitialized Vec2x.
     ///
-    Vec2f() {}
+    Vec2x() {}
 
-    /// Creates a Vec2f initialized with the given arguments.
+    /// Creates a Vec2x initialized with the given arguments.
     ///
-    constexpr Vec2f(float x, float y) : data_{x, y} {}
+    constexpr Vec2x(float x, float y) : data_{x, y} {}
 
-    /// Accesses the i-th component of the Vec2f.
+    /// Accesses the i-th component of the Vec2x.
     ///
     const float& operator[](Int i) const { return data_[i]; }
 
-    /// Mutates the i-th component of the Vec2f.
+    /// Mutates the i-th component of the Vec2x.
     ///
     float& operator[](Int i) { return data_[i]; }
 
-    /// Accesses the first component of the Vec2f.
+    /// Accesses the first component of the Vec2x.
     ///
     float x() const { return data_[0]; }
 
-    /// Accesses the second component of the Vec2f.
+    /// Accesses the second component of the Vec2x.
     ///
     float y() const { return data_[1]; }
 
-    /// Mutates the first component of the Vec2f.
+    /// Mutates the first component of the Vec2x.
     ///
     void setX(float x) { data_[0] = x; }
 
-    /// Mutates the second component of the Vec2f.
+    /// Mutates the second component of the Vec2x.
     ///
     void setY(float y) { data_[1] = y; }
 
-    /// Adds in-place the \p other Vec2f to this Vec2f.
+    /// Adds in-place the \p other Vec2x to this Vec2x.
     ///
-    Vec2f& operator+=(const Vec2f& other) {
+    Vec2x& operator+=(const Vec2x& other) {
         data_[0] += other[0];
         data_[1] += other[1];
         return *this;
     }
 
-    /// Returns the addition of the Vec2f \p v1 and the Vec2f \p v2.
+    /// Returns the addition of the Vec2x \p v1 and the Vec2x \p v2.
     ///
-    friend Vec2f operator+(const Vec2f& v1, const Vec2f& v2) {
-        return Vec2f(v1) += v2;
+    friend Vec2x operator+(const Vec2x& v1, const Vec2x& v2) {
+        return Vec2x(v1) += v2;
     }
 
-    /// Returns a copy of this Vec2f (unary plus operator).
+    /// Returns a copy of this Vec2x (unary plus operator).
     ///
-    Vec2f operator+() const {
+    Vec2x operator+() const {
         return *this;
     }
 
-    /// Substracts in-place the \p other Vec2f to this Vec2f.
+    /// Substracts in-place the \p other Vec2x to this Vec2x.
     ///
-    Vec2f& operator-=(const Vec2f& other) {
+    Vec2x& operator-=(const Vec2x& other) {
         data_[0] -= other[0];
         data_[1] -= other[1];
         return *this;
     }
 
-    /// Returns the substraction of the Vec2f \p v1 and the Vec2f \p v2.
+    /// Returns the substraction of the Vec2x \p v1 and the Vec2x \p v2.
     ///
-    friend Vec2f operator-(const Vec2f& v1, const Vec2f& v2) {
-        return Vec2f(v1) -= v2;
+    friend Vec2x operator-(const Vec2x& v1, const Vec2x& v2) {
+        return Vec2x(v1) -= v2;
     }
 
-    /// Returns the opposite of this Vec2f (unary minus operator).
+    /// Returns the opposite of this Vec2x (unary minus operator).
     ///
-    Vec2f operator-() const {
-        return Vec2f(-data_[0], -data_[1]);
+    Vec2x operator-() const {
+        return Vec2x(-data_[0], -data_[1]);
     }
 
-    /// Multiplies in-place this Vec2f by the given scalar \p s.
+    /// Multiplies in-place this Vec2x by the given scalar \p s.
     ///
-    Vec2f& operator*=(float s) {
+    Vec2x& operator*=(float s) {
         data_[0] *= s;
         data_[1] *= s;
         return *this;
     }
 
-    /// Returns the multiplication of this Vec2f by the given scalar \p s.
+    /// Returns the multiplication of this Vec2x by the given scalar \p s.
     ///
-    Vec2f operator*(float s) const {
-        return Vec2f(*this) *= s;
+    Vec2x operator*(float s) const {
+        return Vec2x(*this) *= s;
     }
 
-    /// Returns the multiplication of the scalar \p s with the Vec2f \p v.
+    /// Returns the multiplication of the scalar \p s with the Vec2x \p v.
     ///
-    friend Vec2f operator*(float s, const Vec2f& v) {
+    friend Vec2x operator*(float s, const Vec2x& v) {
         return v * s;
     }
 
-    /// Divides in-place this Vec2f by the given scalar \p s.
+    /// Divides in-place this Vec2x by the given scalar \p s.
     ///
-    Vec2f& operator/=(float s) {
+    Vec2x& operator/=(float s) {
         data_[0] /= s;
         data_[1] /= s;
         return *this;
     }
 
-    /// Returns the division of this Vec2f by the given scalar \p s.
+    /// Returns the division of this Vec2x by the given scalar \p s.
     ///
-    Vec2f operator/(float s) const {
-        return Vec2f(*this) /= s;
+    Vec2x operator/(float s) const {
+        return Vec2x(*this) /= s;
     }
 
-    /// Returns whether the two given Vec2f \p v1 and \p v2 are equal.
+    /// Returns whether the two given Vec2x \p v1 and \p v2 are equal.
     ///
-    friend bool operator==(const Vec2f& v1, const Vec2f& v2) {
+    friend bool operator==(const Vec2x& v1, const Vec2x& v2) {
         return v1.data_[0] == v2.data_[0] &&
                v1.data_[1] == v2.data_[1];
     }
 
-    /// Returns whether the two given Vec2f \p v1 and \p v2 are different.
+    /// Returns whether the two given Vec2x \p v1 and \p v2 are different.
     ///
-    friend bool operator!=(const Vec2f& v1, const Vec2f& v2) {
+    friend bool operator!=(const Vec2x& v1, const Vec2x& v2) {
         return v1.data_[0] != v2.data_[0] ||
                v1.data_[1] != v2.data_[1];
     }
 
-    /// Compares the two Vec2f \p v1 and \p v2 using the lexicographic
+    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
     /// order.
     ///
-    friend bool operator<(const Vec2f& v1, const Vec2f& v2) {
+    friend bool operator<(const Vec2x& v1, const Vec2x& v2) {
         return ( (v1.data_[0] < v2.data_[0]) ||
                (!(v2.data_[0] < v1.data_[0]) &&
                ( (v1.data_[1] < v2.data_[1]))));
     }
 
-    /// Compares the two Vec2f \p v1 and \p v2 using the lexicographic
+    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
     /// order.
     ///
-    friend bool operator<=(const Vec2f& v1, const Vec2f& v2) {
+    friend bool operator<=(const Vec2x& v1, const Vec2x& v2) {
         return !(v2 < v1);
     }
 
-    /// Compares the two Vec2f \p v1 and \p v2 using the lexicographic
+    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
     /// order.
     ///
-    friend bool operator>(const Vec2f& v1, const Vec2f& v2) {
+    friend bool operator>(const Vec2x& v1, const Vec2x& v2) {
         return v2 < v1;
     }
 
-    /// Compares the two Vec2f \p v1 and \p v2 using the lexicographic
+    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
     /// order.
     ///
-    friend bool operator>=(const Vec2f& v1, const Vec2f& v2) {
+    friend bool operator>=(const Vec2x& v1, const Vec2x& v2) {
         return !(v1 < v2);
     }
 
-    /// Returns the Euclidean length of the Vec2f.
+    /// Returns the Euclidean length of the Vec2x.
     ///
     float length() const {
         return std::sqrt(squaredLength());
     }
 
-    /// Returns the square of the Euclidean length of the Vec2f.
+    /// Returns the square of the Euclidean length of the Vec2x.
     ///
     /// This function is faster than length(), therefore it is a good idea to
     /// use it whenever you don't need the actual length. For example, if you
@@ -213,44 +213,44 @@ public:
         return data_[0] * data_[0] + data_[1] * data_[1];
     }
 
-    /// Makes this Vec2f a unit vector by dividing it by length().
-    /// If length() < epsilon, this Vec2f is set to (1.0f, 0.0f).
+    /// Makes this Vec2x a unit vector by dividing it by length().
+    /// If length() < epsilon, this Vec2x is set to (1.0f, 0.0f).
     ///
-    Vec2f& normalize() {
+    Vec2x& normalize() {
         float l = length();
-        if (l > epsilon) { // XXX use zero instead of epsilon?
+        if (l > core::epsilon) { // XXX use zero instead of epsilon?
             *this /= l;
         }
         else {
-            *this = Vec2f(1.0f, 0.0f);
+            *this = Vec2x(1.0f, 0.0f);
         }
         return *this;
     }
 
-    /// Returns a normalized copy of this Vec2f.
+    /// Returns a normalized copy of this Vec2x.
     ///
-    Vec2f normalized() const {
-        return Vec2f(*this).normalize();
+    Vec2x normalized() const {
+        return Vec2x(*this).normalize();
     }
 
-    /// Rotates this Vec2f by 90° counter-clockwise, assuming a left-handed
+    /// Rotates this Vec2x by 90° counter-clockwise, assuming a left-handed
     /// coordinate system.
     ///
-    Vec2f& orthogonalize() {
+    Vec2x& orthogonalize() {
         float tmp = data_[0];
         data_[0] = - data_[1];
         data_[1] = tmp;
         return *this;
     }
 
-    /// Returns a copy of this Vec2f rotated 90° counter-clockwise, assuming a
+    /// Returns a copy of this Vec2x rotated 90° counter-clockwise, assuming a
     /// left-handed coordinate system.
     ///
-    Vec2f orthogonalized() const {
-        return Vec2f(*this).orthogonalize();
+    Vec2x orthogonalized() const {
+        return Vec2x(*this).orthogonalize();
     }
 
-    /// Returns the dot product between this Vec2f `a` and the given Vec2f `b`.
+    /// Returns the dot product between this Vec2x `a` and the given Vec2x `b`.
     ///
     /// ```cpp
     /// float d = a.dot(b); // equivalent to a[0]*b[0] + a[1]*b[1]
@@ -260,12 +260,12 @@ public:
     ///
     /// \sa det(), angle()
     ///
-    float dot(const Vec2f& b) const {
-        const Vec2f& a = *this;
+    float dot(const Vec2x& b) const {
+        const Vec2x& a = *this;
         return a[0]*b[0] + a[1]*b[1];
     }
 
-    /// Returns the "determinant" between this Vec2f `a` and the given Vec2f `b`.
+    /// Returns the "determinant" between this Vec2x `a` and the given Vec2x `b`.
     ///
     /// ```cpp
     /// float d = a.det(b); // equivalent to a[0]*b[1] - a[1]*b[0]
@@ -278,23 +278,23 @@ public:
     ///   are interpreted as 3D vectors with Z = 0.
     ///
     /// Note that `a.det(b)` has the same sign as `a.angle(b)`. See the
-    /// documentation of Vec2f::angle() for more information on how to
+    /// documentation of Vec2x::angle() for more information on how to
     /// interpret this sign based on your choice of coordinate system (Y-axis
     /// pointing up or down).
     ///
     /// \sa dot(), angle()
     ///
-    float det(const Vec2f& b) const {
-        const Vec2f& a = *this;
+    float det(const Vec2x& b) const {
+        const Vec2x& a = *this;
         return a[0]*b[1] - a[1]*b[0];
     }
 
     /// Returns the angle, in radians and in the interval (−π, π], between this
-    /// Vec2f `a` and the given Vec2f `b`.
+    /// Vec2x `a` and the given Vec2x `b`.
     ///
     /// ```cpp
-    /// Vec2f a(1, 0);
-    /// Vec2f b(1, 1);
+    /// Vec2x a(1, 0);
+    /// Vec2x b(1, 1);
     /// float d = a.angle(b); // returns 0.7853981633974483 (approx. π/4 rad = 45 deg)
     /// ```
     ///
@@ -334,12 +334,12 @@ public:
     ///
     /// \sa det(), dot()
     ///
-    float angle(const Vec2f& b) const {
-        const Vec2f& a = *this;
+    float angle(const Vec2x& b) const {
+        const Vec2x& a = *this;
         return std::atan2(a.det(b), a.dot(b));
     }
 
-    /// Returns whether this Vec2f `a` and the given Vec2f `b` are almost equal
+    /// Returns whether this Vec2x `a` and the given Vec2x `b` are almost equal
     /// within some relative tolerance. If all values are finite, this function
     /// is equivalent to:
     ///
@@ -363,28 +363,28 @@ public:
     ///
     /// ```cpp
     /// float inf = std::numeric_limits<float>::infinity();
-    /// Vec2f(inf, inf).isClose(Vec2f(inf, inf));  // true
-    /// Vec2f(inf, inf).isClose(Vec2f(inf, -inf)); // false
+    /// Vec2x(inf, inf).isClose(Vec2x(inf, inf));  // true
+    /// Vec2x(inf, inf).isClose(Vec2x(inf, -inf)); // false
     /// ```
     ///
     /// If some coordinates are infinite and some others are finite, the
     /// behavior can in some cases be surprising, but actually makes sense:
     ///
     /// ```cpp
-    /// Vec2f(inf, inf).isClose(Vec2f(inf, 42)); // false
-    /// Vec2f(inf, 42).isClose(Vec2f(inf, 42));  // true
-    /// Vec2f(inf, 42).isClose(Vec2f(inf, 43));  // true (yes!)
+    /// Vec2x(inf, inf).isClose(Vec2x(inf, 42)); // false
+    /// Vec2x(inf, 42).isClose(Vec2x(inf, 42));  // true
+    /// Vec2x(inf, 42).isClose(Vec2x(inf, 43));  // true (yes!)
     /// ```
     ///
     /// Notice how the last one returns true even though `isClose(42, 43)`
     /// returns false. This is because for a sufficiently large x, the distance
-    /// between `Vec2f(x, 42)` and `Vec2f(x, 43)`, which is always equal to 1,
+    /// between `Vec2x(x, 42)` and `Vec2x(x, 43)`, which is always equal to 1,
     /// is indeed negligible compared to their respective length, which
     /// approaches infinity as x approaches infinity. For example, the
     /// following also returns true:
     ///
     /// ```cpp
-    /// Vec2f(1e20f, 42).isClose(Vec2f(1e20f, 43)); // true
+    /// Vec2x(1e20f, 42).isClose(Vec2x(1e20f, 43)); // true
     /// ```
     ///
     /// Note that `allClose()` returns false in these cases, which may or may
@@ -392,13 +392,13 @@ public:
     /// `isClose` is typically the better choice.
     ///
     /// ```cpp
-    /// Vec2f(inf, 42).allClose(Vec2f(inf, 43));   // false
-    /// Vec2f(1e20f, 42).allClose(Vec2f(1e20f, 43)); // false
+    /// Vec2x(inf, 42).allClose(Vec2x(inf, 43));   // false
+    /// Vec2x(1e20f, 42).allClose(Vec2x(1e20f, 43)); // false
     /// ```
     ///
-    bool isClose(const Vec2f& b, float relTol = 1e-5f, float absTol = 0.0f) const
+    bool isClose(const Vec2x& b, float relTol = 1e-5f, float absTol = 0.0f) const
     {
-        const Vec2f& a = *this;
+        const Vec2x& a = *this;
         float diff2 = a.infdiff_(b).squaredLength();
         if (diff2 == std::numeric_limits<float>::infinity()) {
             return false; // opposite infinities or finite/infinite mismatch
@@ -412,8 +412,8 @@ public:
         }
     }
 
-    /// Returns whether all coordinates in this Vec2f `a` are almost equal to
-    /// their corresponding coordinate in the given Vec2f `b`, within some
+    /// Returns whether all coordinates in this Vec2x `a` are almost equal to
+    /// their corresponding coordinate in the given Vec2x `b`, within some
     /// relative tolerance. this function is equivalent to:
     ///
     /// ```cpp
@@ -421,7 +421,7 @@ public:
     /// ```
     ///
     /// This is similar to `a.isClose(b)`, but completely decorellates the X
-    /// and Y coordinates, which may be preferrable if the two given Vec2f do
+    /// and Y coordinates, which may be preferrable if the two given Vec2x do
     /// not represent points/vectors in the euclidean plane, but more abstract
     /// parameters.
     ///
@@ -441,8 +441,8 @@ public:
     /// zero:
     ///
     /// ```cpp
-    /// vgc::core::Vec2f a(1.0f, 0.0f);
-    /// vgc::core::Vec2f b(1.0f, 1e-10f);
+    /// vgc::core::Vec2x a(1.0f, 0.0f);
+    /// vgc::core::Vec2x b(1.0f, 1e-10f);
     /// a.isClose(b);  // true because (b-a).length() <= relTol * a.length()
     /// a.allClose(b); // false because isClose(0.0f, 1e-10f) == false
     /// ```
@@ -451,15 +451,15 @@ public:
     /// points, even though their Y coordinates are not relatively close to
     /// each others.
     ///
-    bool allClose(const Vec2f& b, float relTol = 1e-5f, float absTol = 0.0f) const
+    bool allClose(const Vec2x& b, float relTol = 1e-5f, float absTol = 0.0f) const
     {
-        const Vec2f& a = *this;
+        const Vec2x& a = *this;
         return core::isClose(a[0], b[0], relTol, absTol) &&
                core::isClose(a[1], b[1], relTol, absTol);
     }
 
-    /// Returns whether the euclidean distance between this Vec2f `a` and the
-    /// given Vec2f `b` is smaller or equal than the given absolute tolerance.
+    /// Returns whether the euclidean distance between this Vec2x `a` and the
+    /// given Vec2x `b` is smaller or equal than the given absolute tolerance.
     /// In other words, this returns whether `b` is contained in the disk of
     /// center `a` and radius `absTol`. If all values are finite, this function
     /// is equivalent to:
@@ -485,17 +485,17 @@ public:
     /// ```cpp
     /// float inf = std::numeric_limits<float>::infinity();
     /// float absTol = 0.5f;
-    /// Vec2f(inf, inf).isNear(Vec2f(inf, inf), absTol);  // true
-    /// Vec2f(inf, inf).isNear(Vec2f(inf, -inf), absTol); // false
-    /// Vec2f(inf, inf).isNear(Vec2f(inf, 42), absTol);   // false
-    /// Vec2f(inf, 42).isNear(Vec2f(inf, 42), absTol);    // true
-    /// Vec2f(inf, 42).isNear(Vec2f(inf, 42.4f), absTol);  // true
-    /// Vec2f(inf, 42).isNear(Vec2f(inf, 42.6f), absTol);  // false
+    /// Vec2x(inf, inf).isNear(Vec2x(inf, inf), absTol);  // true
+    /// Vec2x(inf, inf).isNear(Vec2x(inf, -inf), absTol); // false
+    /// Vec2x(inf, inf).isNear(Vec2x(inf, 42), absTol);   // false
+    /// Vec2x(inf, 42).isNear(Vec2x(inf, 42), absTol);    // true
+    /// Vec2x(inf, 42).isNear(Vec2x(inf, 42.4f), absTol);  // true
+    /// Vec2x(inf, 42).isNear(Vec2x(inf, 42.6f), absTol);  // false
     /// ```
     ///
-    bool isNear(const Vec2f& b, float absTol) const
+    bool isNear(const Vec2x& b, float absTol) const
     {
-        const Vec2f& a = *this;
+        const Vec2x& a = *this;
         float diff2 = a.infdiff_(b).squaredLength();
         if (diff2 == std::numeric_limits<float>::infinity()) {
             return false; // opposite infinities or finite/infinite mismatch
@@ -506,8 +506,8 @@ public:
         }
     }
 
-    /// Returns whether all coordinates in this Vec2f `a` are within some
-    /// absolute tolerance of their corresponding coordinate in the given Vec2f
+    /// Returns whether all coordinates in this Vec2x `a` are within some
+    /// absolute tolerance of their corresponding coordinate in the given Vec2x
     /// `b`. this function is equivalent to:
     ///
     /// ```cpp
@@ -521,7 +521,7 @@ public:
     /// ```
     ///
     /// This is similar to `a.isNear(b)`, but completely decorellates the X and
-    /// Y coordinates, which may be preferrable if the two given Vec2f do not
+    /// Y coordinates, which may be preferrable if the two given Vec2x do not
     /// represent points/vectors in the euclidean plane, but more abstract
     /// parameters.
     ///
@@ -543,9 +543,9 @@ public:
     /// true euclidean test isn't really meaningful anyway, and the performance
     /// gain of using `allNear()` can be useful.
     ///
-    bool allNear(const Vec2f& b, float absTol) const
+    bool allNear(const Vec2x& b, float absTol) const
     {
-        const Vec2f& a = *this;
+        const Vec2x& a = *this;
         return core::isNear(a[0], b[0], absTol) &&
                core::isNear(a[1], b[1], absTol);
     }
@@ -553,43 +553,43 @@ public:
 private:
     float data_[2];
 
-    Vec2f infdiff_(const Vec2f& b) const
+    Vec2x infdiff_(const Vec2x& b) const
     {
-        const Vec2f& a = *this;
-        return Vec2f(internal::infdiff(a[0], b[0]),
-                     internal::infdiff(a[1], b[1]));
+        const Vec2x& a = *this;
+        return Vec2x(core::internal::infdiff(a[0], b[0]),
+                     core::internal::infdiff(a[1], b[1]));
     }
 };
 
-/// Alias for vgc::core::Array<vgc::core::Vec2f>.
+/// Alias for vgc::core::Array<vgc::geometry::Vec2x>.
 ///
-using Vec2fArray = Array<Vec2f>;
+using Vec2xArray = core::Array<Vec2x>;
 
 /// Overloads setZero(T& x).
 ///
 /// \sa vgc::core::zero<T>()
 ///
-inline void setZero(Vec2f& v)
+inline void setZero(Vec2x& v)
 {
     v[0] = 0.0f;
     v[1] = 0.0f;
 }
 
-/// Writes the given Vec2f to the output stream.
+/// Writes the given Vec2x to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const Vec2f& v)
+void write(OStream& out, const Vec2x& v)
 {
     write(out, '(', v[0], ", ", v[1], ')');
 }
 
-/// Reads a Vec2f from the input stream, and stores it in the given output
+/// Reads a Vec2x from the input stream, and stores it in the given output
 /// parameter. Leading whitespaces are allowed. Raises ParseError if the stream
-/// does not start with a Vec2f. Raises RangeError if one of its coordinate is
+/// does not start with a Vec2x. Raises RangeError if one of its coordinate is
 /// outside the representable range of a float.
 ///
 template <typename IStream>
-void readTo(Vec2f& v, IStream& in)
+void readTo(Vec2x& v, IStream& in)
 {
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, '(');
@@ -601,11 +601,11 @@ void readTo(Vec2f& v, IStream& in)
     skipExpectedCharacter(in, ')');
 }
 
-} // namespace vgc::core
+} // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
 template <>
-struct fmt::formatter<vgc::core::Vec2f> {
+struct fmt::formatter<vgc::geometry::Vec2x> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
         if (it != end && *it != '}')
@@ -613,9 +613,9 @@ struct fmt::formatter<vgc::core::Vec2f> {
         return it;
     }
     template <typename FormatContext>
-    auto format(const vgc::core::Vec2f v, FormatContext& ctx) {
+    auto format(const vgc::geometry::Vec2x v, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {})", v[0], v[1]);
     }
 };
 
-#endif // VGC_CORE_VEC2F_H
+#endif // VGC_GEOMETRY_VEC2X_H

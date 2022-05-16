@@ -76,7 +76,7 @@ private:
     ui::WidgetPtr widget_;
     // graphics::EnginePtr engine_;
     ui::internal::QOpenglEnginePtr engine_;
-    core::Mat4f proj_;
+    geometry::Mat4f proj_;
     core::Color clearColor_;
 
     void onActiveChanged_();

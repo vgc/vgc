@@ -18,15 +18,14 @@
 
 #include <tesselator.h> // libtess2
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 void Curves2d::close()
 {
     commandData_.append({CurveCommandType::Close, data_.length()});
 }
 
-void Curves2d::moveTo(const core::Vec2d& p)
+void Curves2d::moveTo(const Vec2d& p)
 {
     moveTo(p[0], p[1]);
 }
@@ -38,7 +37,7 @@ void Curves2d::moveTo(double x, double y)
     commandData_.append({CurveCommandType::MoveTo, data_.length()});
 }
 
-void Curves2d::lineTo(const core::Vec2d& p)
+void Curves2d::lineTo(const Vec2d& p)
 {
     lineTo(p[0], p[1]);
 }
@@ -52,8 +51,8 @@ void Curves2d::lineTo(double x, double y)
     commandData_.append({CurveCommandType::LineTo, data_.length()});
 }
 
-void Curves2d::quadraticBezierTo(const core::Vec2d& p1,
-                                 const core::Vec2d& p2)
+void Curves2d::quadraticBezierTo(const Vec2d& p1,
+                                 const Vec2d& p2)
 {
     quadraticBezierTo(p1[0], p1[1], p2[0], p2[1]);
 }
@@ -68,9 +67,9 @@ void Curves2d::quadraticBezierTo(double x1, double y1,
     commandData_.append({CurveCommandType::QuadraticBezierTo, data_.length()});
 }
 
-void Curves2d::cubicBezierTo(const core::Vec2d& p1,
-                             const core::Vec2d& p2,
-                             const core::Vec2d& p3)
+void Curves2d::cubicBezierTo(const Vec2d& p1,
+                             const Vec2d& p2,
+                             const Vec2d& p3)
 {
     cubicBezierTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
 }
@@ -92,7 +91,7 @@ namespace {
 
 struct Sample {
     double u;
-    core::Vec2d position;
+    Vec2d position;
 };
 
 struct SampleBuffer {
@@ -102,12 +101,12 @@ struct SampleBuffer {
 };
 
 struct QuadraticSegment {
-    core::Vec2d p0, p1, p2;
-    core::Vec2d startPosition() const { return p0; }
-    core::Vec2d endPosition() const { return p2; }
-    core::Vec2d startTangent() const { return p1 - p0; }
-    core::Vec2d endTangent() const { return p2 - p1; }
-    core::Vec2d operator()(double u) const {
+    Vec2d p0, p1, p2;
+    Vec2d startPosition() const { return p0; }
+    Vec2d endPosition() const { return p2; }
+    Vec2d startTangent() const { return p1 - p0; }
+    Vec2d endTangent() const { return p2 - p1; }
+    Vec2d operator()(double u) const {
         return (1-u)*(1-u)*p0 +
                2*u*(1-u)*p1 +
                u*u*p2;
@@ -115,12 +114,12 @@ struct QuadraticSegment {
 };
 
 struct CubicSegment {
-    core::Vec2d p0, p1, p2, p3;
-    core::Vec2d startPosition() const { return p0; }
-    core::Vec2d endPosition() const { return p3; }
-    core::Vec2d startTangent() const { return p1 - p0; }
-    core::Vec2d endTangent() const { return p3 - p2; }
-    core::Vec2d operator()(double u) const {
+    Vec2d p0, p1, p2, p3;
+    Vec2d startPosition() const { return p0; }
+    Vec2d endPosition() const { return p3; }
+    Vec2d startTangent() const { return p1 - p0; }
+    Vec2d endTangent() const { return p3 - p2; }
+    Vec2d operator()(double u) const {
         return (1-u)*(1-u)*(1-u)*p0 +
                3*u*(1-u)*(1-u)*p1 +
                3*u*u*(1-u)*p2 +
@@ -154,8 +153,8 @@ void sampleSegment(
         // Find which angles are too large
         failed.clear();
         for (Int i = 1; i < samples.length() - 1; ++i) {
-            core::Vec2d a = samples[i].position - samples[i-1].position;
-            core::Vec2d b = samples[i+1].position - samples[i].position;
+            Vec2d a = samples[i].position - samples[i-1].position;
+            Vec2d b = samples[i+1].position - samples[i].position;
             if (std::abs(a.angle(b)) > maxAngle) {
                 failed.append(i);
             }
@@ -219,7 +218,7 @@ Curves2d Curves2d::sample(
         Int maxSamplesPerSegment) const
 {
     Curves2d res;
-    core::Vec2d p0, p1, p2, p3;
+    Vec2d p0, p1, p2, p3;
     SampleBuffer buffer;
 
     for (vgc::geometry::Curves2dCommandRef c : commands()) {
@@ -266,8 +265,8 @@ namespace {
 //    b   right-side    d
 //
 void insertQuad(core::DoubleArray& data,
-                const core::Vec2d& a, const core::Vec2d& b,
-                const core::Vec2d& c, const core::Vec2d& d)
+                const Vec2d& a, const Vec2d& b,
+                const Vec2d& c, const Vec2d& d)
 {
     // Two triangles: ABC and CBD
     data.insert(data.end(), {
@@ -276,7 +275,7 @@ void insertQuad(core::DoubleArray& data,
 }
 
 void editQuadData(core::DoubleArray& data, Int i,
-                  const core::Vec2d& a, const core::Vec2d& b)
+                  const Vec2d& a, const Vec2d& b)
 {
     data[i] = a[0]; data[i+1] = a[1];
     data[i+2] = b[0]; data[i+3] = b[1];
@@ -301,9 +300,9 @@ void editQuadData(core::DoubleArray& data, Int i,
 //
 void processFirstSample(
         core::DoubleArray& /*data*/, double width,
-        const core::Vec2d& c1, const core::Vec2d& c2,
-        core::Vec2d& l1, core::Vec2d& r1,
-        core::Vec2d& n1)
+        const Vec2d& c1, const Vec2d& c2,
+        Vec2d& l1, Vec2d& r1,
+        Vec2d& n1)
 {
     n1 = (c2 - c1).normalize().orthogonalized();
     l1 = c1 + 0.5 * width * n1;
@@ -312,10 +311,10 @@ void processFirstSample(
 
 void processMiddleSample(
         core::DoubleArray& data, double width,
-        const core::Vec2d& /*c0*/, const core::Vec2d& c1, const core::Vec2d& c2,
-        const core::Vec2d& l0, core::Vec2d& l1,
-        const core::Vec2d& r0, core::Vec2d& r1,
-        const core::Vec2d& n0, core::Vec2d& n1)
+        const Vec2d& /*c0*/, const Vec2d& c1, const Vec2d& c2,
+        const Vec2d& l0, Vec2d& l1,
+        const Vec2d& r0, Vec2d& r1,
+        const Vec2d& n0, Vec2d& n1)
 {
     // Compute n1
     n1 = (c2 - c1).normalize().orthogonalized();
@@ -331,7 +330,7 @@ void processMiddleSample(
     double cost = n0.dot(-n1);
     double sint2 = std::sqrt(0.5*(1-cost));
     double miterLength = width / sint2; // TODO: handle miterclip (sint2 close to 0)
-    core::Vec2d miterDir = (n0 + n1).normalized();
+    Vec2d miterDir = (n0 + n1).normalized();
     l1 = c1 + 0.5 * miterLength * miterDir;
     r1 = c1 - 0.5 * miterLength * miterDir;
 
@@ -341,10 +340,10 @@ void processMiddleSample(
 
 void processLastOpenSample(
         core::DoubleArray& data, double width,
-        const core::Vec2d& c0, const core::Vec2d& c1,
-        const core::Vec2d& l0, core::Vec2d& l1,
-        const core::Vec2d& r0, core::Vec2d& r1,
-        const core::Vec2d& /*n0*/, core::Vec2d& n1)
+        const Vec2d& c0, const Vec2d& c1,
+        const Vec2d& l0, Vec2d& l1,
+        const Vec2d& r0, Vec2d& r1,
+        const Vec2d& /*n0*/, Vec2d& n1)
 {
     n1 = (c1 - c0).normalize().orthogonalized();
     l1 = c1 + 0.5 * width * n1;
@@ -362,8 +361,8 @@ void Curves2d::stroke(core::DoubleArray& data, double width) const
     // Stroke samples
     Int numSamples = 0;
     Int firstVertexIndex = data.length();
-    core::Vec2d firstPoint, secondPoint;
-    core::Vec2d c0, c1, c2, l0, l1, r0, r1, n0, n1;
+    Vec2d firstPoint, secondPoint;
+    Vec2d c0, c1, c2, l0, l1, r0, r1, n0, n1;
     for (Curves2dCommandRef c : samples.commands()) {
         if (c.type() == CurveCommandType::MoveTo) {
             if (numSamples > 1) {
@@ -423,7 +422,7 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples)
     for (Curves2dCommandRef c : samples.commands()) {
         if (c.type() == CurveCommandType::MoveTo) {
             coords.clear();
-            core::Vec2d p = c.p();
+            Vec2d p = c.p();
             coords.append(static_cast<TESSreal>(p[0]));
             coords.append(static_cast<TESSreal>(p[1]));
             // Note: currently, TESSreal == float.
@@ -434,7 +433,7 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples)
             // contours in double then tesselate in double then cast to float?
         }
         else if (c.type() == CurveCommandType::LineTo) {
-            core::Vec2d p = c.p();
+            Vec2d p = c.p();
             coords.append(static_cast<TESSreal>(p[0]));
             coords.append(static_cast<TESSreal>(p[1]));
         }
@@ -498,5 +497,4 @@ void Curves2d::fill(core::FloatArray& data) const
     fill_(data, sample());
 }
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry

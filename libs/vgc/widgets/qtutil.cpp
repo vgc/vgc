@@ -58,24 +58,24 @@ core::Color fromQt(const QColor& c)
                        c.alphaF());
 }
 
-QPointF toQt(const core::Vec2d& v)
+QPointF toQt(const geometry::Vec2d& v)
 {
     return QPointF(v[0], v[1]);
 }
 
-QPointF toQt(const core::Vec2f& v)
+QPointF toQt(const geometry::Vec2f& v)
 {
     return QPointF(v[0], v[1]);
 }
 
-core::Vec2d fromQtd(const QPointF& v)
+geometry::Vec2d fromQtd(const QPointF& v)
 {
-    return core::Vec2d(v.x(), v.y());
+    return geometry::Vec2d(v.x(), v.y());
 }
 
-core::Vec2f fromQtf(const QPointF& v)
+geometry::Vec2f fromQtf(const QPointF& v)
 {
-    return core::Vec2f(v.x(), v.y());
+    return geometry::Vec2f(v.x(), v.y());
 }
 
 } // namespace widgets
