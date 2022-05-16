@@ -14,22 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file is a "template" (not in the C++ sense) used to generate all the
-// Mat3 variants. Please refer to mat3.py for more info.
+// This file is used to generate all the variants of this class.
+// You must manually run mat3x.py after any modification.
 
-#ifndef VGC_CORE_MAT3X_H
-#define VGC_CORE_MAT3X_H
+#ifndef VGC_GEOMETRY_MAT3X_H
+#define VGC_GEOMETRY_MAT3X_H
 
 #include <cmath>
 
-#include <vgc/core/api.h>
 #include <vgc/core/array.h>
-#include "vec2.h"
+#include <vgc/geometry/api.h>
+#include "vec2x.h"
 
-namespace vgc::core {
+namespace vgc::geometry {
 
-/// \class vgc::core::Mat3x
-/// \brief 3x3 matrix using %SCALAR_DESCRIPTION%.
+/// \class vgc::geometry::Mat3x
+/// \brief 3x3 matrix using %scalar-type-description%.
 ///
 /// A Mat3x represents a 3x3 matrix in column-major format.
 ///
@@ -42,8 +42,8 @@ namespace vgc::core {
 /// words, if you wish to represent a 2D affine transformation, simply use a
 /// Mat3x.
 ///
-// VGC_CORE_API <- Omitted on purpose, otherwise we couldn't define `identity`.
-//                 Instead, we manually export functions defined in the .cpp.
+// VGC_GEOMETRY_API <- Omitted on purpose, otherwise we couldn't define `identity`.
+//                     Instead, we manually export functions defined in the .cpp.
 class Mat3x
 {
 public:
@@ -297,7 +297,7 @@ public:
     /// If the matrix is considered non-invertible, then the returned matrix
     /// has all its elements set to std::numeric_limits<float>::infinity().
     ///
-    VGC_CORE_API
+    VGC_GEOMETRY_API
     Mat3x inverted(bool* isInvertible = nullptr, float epsilon = 0) const;
 
     /// Right-multiplies this matrix by the translation matrix given
@@ -406,9 +406,9 @@ private:
 
 inline constexpr Mat3x Mat3x::identity = Mat3x(1);
 
-/// Alias for vgc::core::Array<vgc::core::Mat3x>.
+/// Alias for vgc::core::Array<vgc::geometry::Mat3x>.
 ///
-using Mat3xArray = Array<Mat3x>;
+using Mat3xArray = core::Array<Mat3x>;
 
 /// Overloads setZero(T& x).
 ///
@@ -430,11 +430,11 @@ void write(OStream& out, const Mat3x& m)
                     m(2,0), s, m(2,1), s, m(2,2), ']');
 }
 
-} // namespace vgc::core
+} // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
 template <>
-struct fmt::formatter<vgc::core::Mat3x> {
+struct fmt::formatter<vgc::geometry::Mat3x> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
         if (it != end && *it != '}')
@@ -442,7 +442,7 @@ struct fmt::formatter<vgc::core::Mat3x> {
         return it;
     }
     template <typename FormatContext>
-    auto format(const vgc::core::Mat3x m, FormatContext& ctx) {
+    auto format(const vgc::geometry::Mat3x m, FormatContext& ctx) {
         return format_to(ctx.out(),"[{}, {}, {},"
                                    " {}, {}, {},"
                                    " {}, {}, {}]",
@@ -454,4 +454,4 @@ struct fmt::formatter<vgc::core::Mat3x> {
 
 // TODO: parse from string
 
-#endif // VGC_CORE_MAT3X_H
+#endif // VGC_GEOMETRY_MAT3X_H

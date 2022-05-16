@@ -19,8 +19,7 @@
 
 #include <vgc/geometry/api.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 /// Convert four uniform Catmull-Rom control points into the four cubic Bézier
 /// control points corresponding to the same cubic curve. The formula is the
@@ -95,7 +94,6 @@ void uniformCatmullRomToBezier(
     b3 = c2;
 }
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_CATMULLROM_H

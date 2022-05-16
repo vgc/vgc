@@ -21,8 +21,8 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/core/vec2d.h>
 #include <vgc/dom/api.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 namespace dom {
@@ -159,7 +159,7 @@ public:
 
     /// Constructs a Value holding a Vec2dArray.
     ///
-    Value(const core::Vec2dArray& vec2dArray) :
+    Value(const geometry::Vec2dArray& vec2dArray) :
         type_(ValueType::Vec2dArray),
         var_(vec2dArray) {
 
@@ -211,20 +211,20 @@ public:
     /// Returns the Vec2dArray held by this Value.
     /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
-    const core::Vec2dArray& getVec2dArray() const {
-        return std::get<core::Vec2dArray>(var_);
+    const geometry::Vec2dArray& getVec2dArray() const {
+        return std::get<geometry::Vec2dArray>(var_);
     }
 
     /// Copies the Vec2dArray held by this Value to \p doubleArray.
     /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
-    void get(core::Vec2dArray& vec2dArray) const {
-        vec2dArray = std::get<core::Vec2dArray>(var_);
+    void get(geometry::Vec2dArray& vec2dArray) const {
+        vec2dArray = std::get<geometry::Vec2dArray>(var_);
     }
 
     /// Sets this value to the given \p vec2dArray.
     ///
-    void set(const core::Vec2dArray& vec2dArray) {
+    void set(const geometry::Vec2dArray& vec2dArray) {
         type_ = ValueType::Vec2dArray;
         var_ = vec2dArray;
     }
@@ -263,7 +263,7 @@ private:
         std::monostate,
         core::Color,
         core::DoubleArray,
-        core::Vec2dArray
+        geometry::Vec2dArray
     > var_;
 };
 

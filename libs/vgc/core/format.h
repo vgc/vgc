@@ -76,15 +76,15 @@ inline int flush(std::FILE* stream = stdout) {
     return std::fflush(stream);
 }
 
-/// Prints formatted data to the given file `f`.
+/// Prints formatted data to the given `std::FILE`.
 ///
 /// ```cpp
-/// vgc::core::Vec2d v(12, 42);
+/// vgc::geometry::Vec2d v(12, 42);
 /// vgc::core::print(stderr, "position = {}", v);
 /// ```
 ///
 /// This function uses the {fmt} library under the hood. For more info on the
-/// format syntax, https://fmt.dev/latest/syntax.html
+/// format syntax, see https://fmt.dev/latest/syntax.html
 ///
 template<typename S, typename... Args>
 inline void print(std::FILE* f, const S& formatString, Args&&... args) {
@@ -94,12 +94,12 @@ inline void print(std::FILE* f, const S& formatString, Args&&... args) {
 /// Prints formatted data to `stdout`.
 ///
 /// ```cpp
-/// vgc::core::Vec2d v(12, 42);
+/// vgc::geometry::Vec2d v(12, 42);
 /// vgc::core::print("position = {}", v);
 /// ```
 ///
 /// This function uses the {fmt} library under the hood. For more info on the
-/// format syntax, https://fmt.dev/latest/syntax.html
+/// format syntax, see https://fmt.dev/latest/syntax.html
 ///
 template<typename S, typename... Args>
 inline void print(const S& formatString, Args&&... args) {
@@ -131,7 +131,7 @@ inline void println(const S& formatString, Args&&... args) {
 /// Formats arguments and returns the result as a string.
 ///
 /// ```cpp
-/// vgc::core::Vec2d v(12, 42);
+/// vgc::geometry::Vec2d v(12, 42);
 /// std::string s = vgc::core::format("position = {}", v);
 /// ```
 ///

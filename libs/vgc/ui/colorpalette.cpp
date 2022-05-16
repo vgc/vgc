@@ -337,7 +337,7 @@ void ColorPalette::onPaintDestroy(graphics::Engine*)
 bool ColorPalette::onMouseMove(MouseEvent* event)
 {
     // Determine relevant selector
-    const core::Vec2f& p = event->pos();
+    const geometry::Vec2f& p = event->pos();
     SelectorType selector = scrubbedSelector_;
     if (selector == SelectorType::None) {
         selector = hoveredSelector_(p);
@@ -415,7 +415,7 @@ bool ColorPalette::onMouseLeave()
     return true;
 }
 
-ColorPalette::SelectorType ColorPalette::hoveredSelector_(const core::Vec2f& p)
+ColorPalette::SelectorType ColorPalette::hoveredSelector_(const geometry::Vec2f& p)
 {
     float x0 = margin_;
     float y0 = margin_;
@@ -441,7 +441,7 @@ ColorPalette::SelectorType ColorPalette::hoveredSelector_(const core::Vec2f& p)
     return SelectorType::None;
 }
 
-std::pair<Int, Int> ColorPalette::hoveredSaturationLightness_(const core::Vec2f& p)
+std::pair<Int, Int> ColorPalette::hoveredSaturationLightness_(const geometry::Vec2f& p)
 {
     float x0 = margin_;
     float y0 = margin_;
@@ -458,7 +458,7 @@ std::pair<Int, Int> ColorPalette::hoveredSaturationLightness_(const core::Vec2f&
     return {i, j};
 }
 
-Int ColorPalette::hoveredHue_(const core::Vec2f& p)
+Int ColorPalette::hoveredHue_(const geometry::Vec2f& p)
 {
     float x0 = margin_;
     float y0 = margin_;

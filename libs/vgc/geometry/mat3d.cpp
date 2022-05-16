@@ -14,15 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mat3.h"
+// This file was automatically generated, please do not edit directly.
+// Instead, edit tools/mat3x.cpp then run tools/mat3x.py.
+
+#include <vgc/geometry/mat3d.h>
 
 #include <limits>
 
-namespace vgc::core {
+namespace vgc::geometry {
 
-Mat3x Mat3x::inverted(bool* isInvertible, float epsilon_) const
+Mat3d Mat3d::inverted(bool* isInvertible, double epsilon_) const
 {
-    Mat3x res;
+    Mat3d res;
 
     const auto& d = data_;
     auto& inv = res.data_;
@@ -31,13 +34,13 @@ Mat3x Mat3x::inverted(bool* isInvertible, float epsilon_) const
     inv[1][0] = - d[1][0]*d[2][2] + d[2][0]*d[1][2];
     inv[2][0] =   d[1][0]*d[2][1] - d[2][0]*d[1][1];
 
-    float det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0];
+    double det = d[0][0]*inv[0][0] + d[0][1]*inv[1][0] + d[0][2]*inv[2][0];
 
     if (std::abs(det) <= epsilon_) {
         if (isInvertible) {
             *isInvertible = false;
         }
-        constexpr float inf = std::numeric_limits<float>::infinity();
+        constexpr double inf = std::numeric_limits<double>::infinity();
         res.setElements(inf, inf, inf,
                         inf, inf, inf,
                         inf, inf, inf);
@@ -54,9 +57,9 @@ Mat3x Mat3x::inverted(bool* isInvertible, float epsilon_) const
         inv[1][2] = - d[0][0]*d[1][2] + d[1][0]*d[0][2];
         inv[2][2] =   d[0][0]*d[1][1] - d[1][0]*d[0][1];
 
-        res *= static_cast<float>(1) / det;
+        res *= static_cast<double>(1) / det;
     }
     return res;
 }
 
-} // namespace vgc::core
+} // namespace vgc::geometry

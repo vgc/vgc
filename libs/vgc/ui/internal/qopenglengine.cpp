@@ -188,8 +188,8 @@ QOpenglEngine::QOpenglEngine(QOpenGLContext* ctx, bool isExternalCtx) :
     graphics::Engine(),
     ctx_(ctx),
     isExternalCtx_(isExternalCtx),
-    projectionMatrices_({core::Mat4f::identity}),
-    viewMatrices_({core::Mat4f::identity})
+    projectionMatrices_({geometry::Mat4f::identity}),
+    viewMatrices_({geometry::Mat4f::identity})
 {
 }
 
@@ -222,12 +222,12 @@ void QOpenglEngine::clear(const core::Color& color)
     api_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-core::Mat4f QOpenglEngine::projectionMatrix()
+geometry::Mat4f QOpenglEngine::projectionMatrix()
 {
     return projectionMatrices_.last();
 }
 
-void QOpenglEngine::setProjectionMatrix(const core::Mat4f& m)
+void QOpenglEngine::setProjectionMatrix(const geometry::Mat4f& m)
 {
     projectionMatrices_.last() = m;
     shaderProgram_.setUniformValue(projLoc_, toQtMatrix(m));
@@ -238,7 +238,7 @@ void QOpenglEngine::pushProjectionMatrix()
     // Note: we need a temporary copy by value, since the address
     // of the current projection matrix might change during "append" in
     // case of memory re-allocation.
-    core::Mat4f m = projectionMatrix();
+    geometry::Mat4f m = projectionMatrix();
     projectionMatrices_.append(m);
 }
 
@@ -248,12 +248,12 @@ void QOpenglEngine::popProjectionMatrix()
     shaderProgram_.setUniformValue(projLoc_, toQtMatrix(projectionMatrices_.last()));
 }
 
-core::Mat4f QOpenglEngine::viewMatrix()
+geometry::Mat4f QOpenglEngine::viewMatrix()
 {
     return viewMatrices_.last();
 }
 
-void QOpenglEngine::setViewMatrix(const core::Mat4f& m)
+void QOpenglEngine::setViewMatrix(const geometry::Mat4f& m)
 {
     viewMatrices_.last() = m;
     shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(m));
@@ -264,7 +264,7 @@ void QOpenglEngine::pushViewMatrix()
     // Note: we need a temporary copy by value, since the address
     // of the current view matrix might change during "append" in
     // case of memory re-allocation.
-    core::Mat4f m = viewMatrix();
+    geometry::Mat4f m = viewMatrix();
     viewMatrices_.append(m);
 }
 

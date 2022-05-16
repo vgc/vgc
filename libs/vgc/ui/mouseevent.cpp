@@ -19,7 +19,7 @@
 namespace vgc {
 namespace ui {
 
-MouseEvent::MouseEvent(const core::Vec2f& pos) :
+MouseEvent::MouseEvent(const geometry::Vec2f& pos) :
     Event(),
     pos_(pos)
 {
@@ -27,7 +27,7 @@ MouseEvent::MouseEvent(const core::Vec2f& pos) :
 }
 
 /* static */
-MouseEventPtr MouseEvent::create(const core::Vec2f& pos)
+MouseEventPtr MouseEvent::create(const geometry::Vec2f& pos)
 {
     return MouseEventPtr(new MouseEvent(pos));
 }

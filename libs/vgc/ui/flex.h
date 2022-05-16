@@ -93,7 +93,7 @@ public:
 protected:
     void onWidgetAdded(Object* child) override;
     void onWidgetRemoved(Object* child) override;
-    core::Vec2f computePreferredSize() const override;
+    geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
 
 private:

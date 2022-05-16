@@ -135,9 +135,9 @@ public:
     /// Creates a ShapedGlyph.
     ///
     ShapedGlyph(FontGlyph* fontGlyph,
-                const core::Vec2d& offset,
-                const core::Vec2d& advance,
-                const core::Vec2d& position,
+                const geometry::Vec2d& offset,
+                const geometry::Vec2d& advance,
+                const geometry::Vec2d& position,
                 Int bytePosition) :
         fontGlyph_(fontGlyph),
         offset_(offset),
@@ -167,7 +167,7 @@ public:
     /// Returns how much the glyph should be moved before drawing
     /// it. This should not affect how much the line advances.
     ///
-    core::Vec2d offset() const {
+    geometry::Vec2d offset() const {
         return offset_;
     }
 
@@ -176,7 +176,7 @@ public:
     /// direction, and the Y-coordinate corresponds to the advance when setting
     /// text in vertical direction.
     ///
-    core::Vec2d advance() const {
+    geometry::Vec2d advance() const {
         return advance_;
     }
 
@@ -186,7 +186,7 @@ public:
     /// This is equal to the sum of this ShapedGlyph's offset and the advances
     /// of all the previous ShapedGlyph of the ShapedText.
     ///
-    core::Vec2d position() const {
+    geometry::Vec2d position() const {
         return position_;
     }
 
@@ -235,7 +235,7 @@ public:
     /// position.
     ///
     void fill(core::FloatArray& data,
-              const core::Vec2d& origin,
+              const geometry::Vec2d& origin,
               float r, float g, float b) const;
 
     /// Overload of fill that doesn't output color information, that is, the
@@ -254,13 +254,13 @@ public:
     ///  ...]
     ///
     void fill(core::FloatArray& data,
-              const core::Vec2d& origin) const;
+              const geometry::Vec2d& origin) const;
 
 private:
     FontGlyph* fontGlyph_;
-    core::Vec2d offset_;
-    core::Vec2d advance_;
-    core::Vec2d position_;
+    geometry::Vec2d offset_;
+    geometry::Vec2d advance_;
+    geometry::Vec2d position_;
     Int bytePosition_;
 };
 
@@ -300,8 +300,8 @@ public:
     /// Creates a ShapedGrapheme.
     ///
     ShapedGrapheme(Int glyphIndex,
-                   const core::Vec2d& advance,
-                   const core::Vec2d& position,
+                   const geometry::Vec2d& advance,
+                   const geometry::Vec2d& position,
                    Int bytePosition) :
         glyphIndex_(glyphIndex),
         advance_(advance),
@@ -331,7 +331,7 @@ public:
     /// returns the glyph advance divided by the number of graphemes which are
     /// part of the glyph.
     ///
-    core::Vec2d advance() const {
+    geometry::Vec2d advance() const {
         return advance_;
     }
 
@@ -341,7 +341,7 @@ public:
     /// This is equal to the sum of the advances of all the previous graphemes
     /// of the ShapedText.
     ///
-    core::Vec2d position() const {
+    geometry::Vec2d position() const {
         return position_;
     }
 
@@ -359,8 +359,8 @@ public:
 private:
     friend class internal::ShapedTextImpl;
     Int glyphIndex_;
-    core::Vec2d advance_;
-    core::Vec2d position_;
+    geometry::Vec2d advance_;
+    geometry::Vec2d position_;
     Int bytePosition_;
 };
 
@@ -444,14 +444,14 @@ public:
     // This is equal to the sum of `glyph->advance()` for all the ShapedGlyph
     // elements in glyphs().
     //
-    core::Vec2d advance() const;
+    geometry::Vec2d advance() const;
 
     // Returns how much the line advances after drawing all the graphemes until
     // the given bytePosition.
     //
     // \sa bytePosition()
     //
-    core::Vec2d advance(Int bytePosition) const;
+    geometry::Vec2d advance(Int bytePosition) const;
 
     /// Fills this ShapedText at the given origin:
     ///
@@ -485,7 +485,7 @@ public:
     /// then all the Y-coordinates of the triangle vertices will be negative.
     ///
     void fill(core::FloatArray& data,
-              const core::Vec2d& origin,
+              const geometry::Vec2d& origin,
               float r, float g, float b) const;
 
     /// Fills this ShapedText from glyph index `start` (included) to glyph
@@ -495,7 +495,7 @@ public:
     /// arguments.
     ///
     void fill(core::FloatArray& data,
-              const core::Vec2d& origin,
+              const geometry::Vec2d& origin,
               float r, float g, float b,
               Int start, Int end) const;
 
@@ -506,7 +506,7 @@ public:
     /// arguments.
     ///
     void fill(core::FloatArray& data,
-              const core::Vec2d& origin,
+              const geometry::Vec2d& origin,
               float r, float g, float b,
               float clipLeft, float clipRight,
               float clipTop, float clipBottom) const;
@@ -514,7 +514,7 @@ public:
     /// Returns the byte position in the original text corresponding to the
     /// grapheme boundary closest to the given mouse position.
     ///
-    Int bytePosition(const core::Vec2d& mousePosition);
+    Int bytePosition(const geometry::Vec2d& mousePosition);
 
 private:
     internal::ShapedTextImpl* impl_;

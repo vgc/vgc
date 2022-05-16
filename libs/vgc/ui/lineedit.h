@@ -75,11 +75,11 @@ public:
     bool onKeyPress(QKeyEvent* event) override;
 
 protected:
-    core::Vec2f computePreferredSize() const override;
+    geometry::Vec2f computePreferredSize() const override;
 
 private:
-    void updateBytePosition_(const core::Vec2f& mousePosition);
-    Int bytePosition_(const core::Vec2f& mousePosition);
+    void updateBytePosition_(const geometry::Vec2f& mousePosition);
+    Int bytePosition_(const geometry::Vec2f& mousePosition);
     void updateScroll_(float textWidth);
     std::string text_;
     graphics::ShapedText shapedText_;

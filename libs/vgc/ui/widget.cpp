@@ -141,9 +141,9 @@ Widget* Widget::root() const
     return const_cast<Widget*>(res);
 }
 
-void Widget::setGeometry(const core::Vec2f& position, const core::Vec2f& size)
+void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size)
 {
-    core::Vec2f oldSize = size_;
+    geometry::Vec2f oldSize = size_;
     position_ = position;
     size_ = size;
     updateChildrenGeometry();
@@ -234,8 +234,8 @@ void Widget::onPaintDraw(graphics::Engine* engine)
 {
     for (Widget* widget : children()) {
         engine->pushViewMatrix();
-        core::Mat4f m = engine->viewMatrix();
-        core::Vec2f pos = widget->position();
+        geometry::Mat4f m = engine->viewMatrix();
+        geometry::Vec2f pos = widget->position();
         m.translate(pos[0], pos[1]); // TODO: Mat4f.translate(const Vec2f&)
         engine->setViewMatrix(m);
         widget->onPaintDraw(engine);
@@ -331,7 +331,7 @@ bool Widget::onMousePress(MouseEvent* event)
 bool Widget::onMouseRelease(MouseEvent* event)
 {
     if (mousePressedChild_) {
-        core::Vec2f eventPos = event->pos();
+        geometry::Vec2f eventPos = event->pos();
         event->setPos(eventPos - mousePressedChild_->position());
         bool accepted = mousePressedChild_->onMouseRelease(event);
 
@@ -496,13 +496,13 @@ Action* Widget::createAction(const Shortcut& shortcut)
     return action.get();
 }
 
-core::Vec2f Widget::computePreferredSize() const
+geometry::Vec2f Widget::computePreferredSize() const
 {
     // TODO: convert units if any.
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
-    return core::Vec2f(w.type() == auto_ ? 0 : w.value(),
+    return geometry::Vec2f(w.type() == auto_ ? 0 : w.value(),
                        h.type() == auto_ ? 0 : h.value());
 }
 

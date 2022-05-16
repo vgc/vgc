@@ -29,9 +29,9 @@ namespace widgets {
 
 namespace {
 
-core::Mat4f toMat4f(const core::Mat4d& m) {
+geometry::Mat4f toMat4f(const geometry::Mat4d& m) {
     // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
-    return core::Mat4f(
+    return geometry::Mat4f(
                (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
                (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
                (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
@@ -73,7 +73,7 @@ UiWidget::~UiWidget()
 
 QSize UiWidget::sizeHint() const
 {
-    core::Vec2f s = widget_->preferredSize();
+    geometry::Vec2f s = widget_->preferredSize();
     return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
 }
 
@@ -226,7 +226,7 @@ void UiWidget::paintGL()
     engine_->clear(core::Color(0.337, 0.345, 0.353));
     engine_->bindPaintShader();
     engine_->setProjectionMatrix(proj_);
-    engine_->setViewMatrix(core::Mat4f::identity);
+    engine_->setViewMatrix(geometry::Mat4f::identity);
     widget_->paint(engine_.get());
     engine_->releasePaintShader();
 }

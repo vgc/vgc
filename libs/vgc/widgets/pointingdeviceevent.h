@@ -19,7 +19,7 @@
 
 #include <QMouseEvent>
 #include <QTabletEvent>
-#include <vgc/core/vec2d.h>
+#include <vgc/geometry/vec2d.h>
 #include <vgc/widgets/api.h>
 
 namespace vgc {
@@ -136,7 +136,7 @@ public:
     ///
     /// \sa QMouseEvent::localPos() and QTabletEvent::posF().
     ///
-    core::Vec2d pos() const;
+    geometry::Vec2d pos() const;
 
     /// Returns whether there is pressure data associated with this
     /// PointingDeviceEvent. This is currently equivalent to isTabletEvent(),
@@ -156,7 +156,7 @@ private:
     unsigned long timestamp_;
     Qt::MouseButton button_;
     Qt::MouseButtons buttons_;
-    core::Vec2d pos_;
+    geometry::Vec2d pos_;
     bool hasPressure_;
     double pressure_;
 };

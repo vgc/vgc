@@ -27,7 +27,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
-#include <vgc/core/vec2f.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/graphics/idgenerator.h>
 #include <vgc/ui/action.h>
@@ -311,7 +311,7 @@ public:
 
     /// Returns the position of the widget relative to its parent.
     ///
-    core::Vec2f position() const
+    geometry::Vec2f position() const
     {
         return position_;
     }
@@ -344,11 +344,11 @@ public:
     /// already knows, since it is the object that called this function in the
     /// first place.
     ///
-    void setGeometry(const core::Vec2f& position, const core::Vec2f& size);
+    void setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size);
     /// \overload
     void setGeometry(float x, float y, float width, float height)
     {
-        setGeometry(core::Vec2f(x, y), core::Vec2f(width, height));
+        setGeometry(geometry::Vec2f(x, y), geometry::Vec2f(width, height));
     }
 
     /// Returns the preferred size of this widget, that is, the size that
@@ -366,7 +366,7 @@ public:
     /// return "auto", this function always returns actual values based on the
     /// widget content.
     ///
-    core::Vec2f preferredSize() const {
+    geometry::Vec2f preferredSize() const {
         if (!isPreferredSizeComputed_) {
             preferredSize_ = computePreferredSize();
             isPreferredSizeComputed_ = true;
@@ -376,7 +376,7 @@ public:
 
     /// Returns the size of the widget.
     ///
-    core::Vec2f size() const
+    geometry::Vec2f size() const
     {
         return size_;
     }
@@ -718,7 +718,7 @@ protected:
     /// heightPolicy() is Auto, then the preferred height may depend on the
     /// value of the fixed width.
     ///
-    virtual core::Vec2f computePreferredSize() const;
+    virtual geometry::Vec2f computePreferredSize() const;
 
     /// Updates the position and size of children of this widget (by calling
     /// the setGeometry() methods of the children), based on the current width
@@ -729,10 +729,10 @@ protected:
 private:
     WidgetList* children_;
     ActionList* actions_;
-    mutable core::Vec2f preferredSize_;
+    mutable geometry::Vec2f preferredSize_;
     mutable bool isPreferredSizeComputed_;
-    core::Vec2f position_;
-    core::Vec2f size_;
+    geometry::Vec2f position_;
+    geometry::Vec2f size_;
     Widget* mousePressedChild_;
     Widget* mouseEnteredChild_;
     bool isTreeActive_;

@@ -45,7 +45,7 @@ void Value::shrinkToFit()
 {
     switch (type_) {
     case ValueType::DoubleArray:    std::get<core::DoubleArray>(var_).shrinkToFit(); break;
-    case ValueType::Vec2dArray:     std::get<core::Vec2dArray>(var_).shrinkToFit(); break;
+    case ValueType::Vec2dArray:     std::get<geometry::Vec2dArray>(var_).shrinkToFit(); break;
     default:
          break;
     }
@@ -77,7 +77,7 @@ Value parseValue(const std::string& s, ValueType t)
         case ValueType::DoubleArray:
             return Value(core::parse<core::DoubleArray>(s));
         case ValueType::Vec2dArray:
-            return Value(core::parse<core::Vec2dArray>(s));
+            return Value(core::parse<geometry::Vec2dArray>(s));
         }
     }
     catch (const core::ParseError& e) {

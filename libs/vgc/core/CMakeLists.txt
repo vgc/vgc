@@ -21,10 +21,6 @@ vgc_add_library(core
         innercore.h
         io.h
         logging.h
-        mat3d.h
-        mat3f.h
-        mat4d.h
-        mat4f.h
         object.h
         os.h
         parse.h
@@ -36,8 +32,6 @@ vgc_add_library(core
         stopwatch.h
         stringid.h
         templateutil.h
-        vec2d.h
-        vec2f.h
 
         internal/containerutil.h
         internal/signal.h
@@ -49,10 +43,6 @@ vgc_add_library(core
         format.cpp
         io.cpp
         logging.cpp
-        mat4d.cpp
-        mat4f.cpp
-        mat3d.cpp
-        mat3f.cpp
         object.cpp
         parse.cpp
         paths.cpp
@@ -61,8 +51,6 @@ vgc_add_library(core
         random.cpp
         stopwatch.cpp
         stringid.cpp
-        vec2d.cpp
-        vec2f.cpp
 
         internal/signal.cpp
 

@@ -16,26 +16,26 @@
 
 #include <vgc/core/wraps/common.h>
 #include <pybind11/operators.h>
-#include <vgc/core/mat3d.h>
-#include <vgc/core/mat3f.h>
-#include <vgc/core/mat4d.h>
-#include <vgc/core/mat4f.h>
+#include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/mat3f.h>
+#include <vgc/geometry/mat4d.h>
+#include <vgc/geometry/mat4f.h>
 
 namespace {
 
 // Provides matrix alias template
 template<int dim, typename T> struct Mat_ {};
-template<> struct Mat_<3, float>  { using type = vgc::core::Mat3f; };
-template<> struct Mat_<3, double> { using type = vgc::core::Mat3d; };
-template<> struct Mat_<4, float>  { using type = vgc::core::Mat4f; };
-template<> struct Mat_<4, double> { using type = vgc::core::Mat4d; };
+template<> struct Mat_<3, float>  { using type = vgc::geometry::Mat3f; };
+template<> struct Mat_<3, double> { using type = vgc::geometry::Mat3d; };
+template<> struct Mat_<4, float>  { using type = vgc::geometry::Mat4f; };
+template<> struct Mat_<4, double> { using type = vgc::geometry::Mat4d; };
 template<int dim, typename T>
 using Mat = typename Mat_<dim, T>::type;
 
 // Provides vector alias template
 template<int dim, typename T> struct Vec_ {};
-template<> struct Vec_<2, float>  { using type = vgc::core::Vec2f; };
-template<> struct Vec_<2, double> { using type = vgc::core::Vec2d; };
+template<> struct Vec_<2, float>  { using type = vgc::geometry::Vec2f; };
+template<> struct Vec_<2, double> { using type = vgc::geometry::Vec2d; };
 template<int dim, typename T>
 using Vec = typename Vec_<dim, T>::type;
 
@@ -188,7 +188,7 @@ void wrap_mat(py::module& m, const std::string& name)
     }
 
     // Conversion to string
-    cmat.def("__repr__", [](const TMat& m) { return toString(m); });
+    cmat.def("__repr__", [](const TMat& m) { return vgc::core::toString(m); });
 
     // TODO: parse from string
 }

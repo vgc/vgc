@@ -18,7 +18,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
-#include <vgc/core/vec2d.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace vgc {
 namespace dom {
@@ -83,7 +83,7 @@ const Schema& schema()
     static const Schema* instance = new Schema {{
         { "path", {
             {"color", core::colors::black},
-            {"positions", core::Vec2dArray()},
+            {"positions", geometry::Vec2dArray()},
             {"widths", core::DoubleArray()}
         }},
         { "vgc", {

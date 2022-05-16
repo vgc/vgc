@@ -17,8 +17,7 @@
 #include <vgc/geometry/camera2d.h>
 #include <cmath>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 Camera2d::Camera2d() :
     center_(0, 0),
@@ -32,14 +31,14 @@ Camera2d::Camera2d() :
 
 }
 
-core::Mat4d Camera2d::viewMatrix() const
+Mat4d Camera2d::viewMatrix() const
 {
     const double cx = center().x();
     const double cy = center().y();
     const double w = viewportWidth();
     const double h = viewportHeight();
 
-    core::Mat4d res;
+    Mat4d res;
     res.setToIdentity();
     res.translate(0.5 * w - cx, 0.5 * h - cy);
     res.rotate(rotation());
@@ -47,18 +46,17 @@ core::Mat4d Camera2d::viewMatrix() const
     return res;
 }
 
-core::Mat4d Camera2d::projectionMatrix() const
+Mat4d Camera2d::projectionMatrix() const
 {
     const double w = viewportWidth_;
     const double h = viewportHeight_;
     const double n = nearPlane_;
     const double f = farPlane_;
 
-    return core::Mat4d(2/w , 0    , 0       , -1          ,
-                       0   , -2/h , 0       , 1           ,  // Inversion of Y axis (SVG -> OpenGL conventions)
-                       0   , 0    , 2/(n-f) , (n+f)/(n-f) ,  // XXX I'm not 100% sure of the signs on this row. Try later: an object at (0, 0, 0.5) should obsure one at (0, 0, -0.5)
-                       0   , 0    , 0       , 1           );
+    return Mat4d(2/w , 0    , 0       , -1          ,
+                 0   , -2/h , 0       , 1           ,  // Inversion of Y axis (SVG -> OpenGL conventions)
+                 0   , 0    , 2/(n-f) , (n+f)/(n-f) ,  // XXX I'm not 100% sure of the signs on this row. Try later: an object at (0, 0, 0.5) should obsure one at (0, 0, -0.5)
+                 0   , 0    , 0       , 1           );
 }
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry

@@ -18,7 +18,7 @@
 
 import unittest
 from math import pi, sqrt
-from vgc.core import Vec2d, Vec2f, Mat3d, Mat3f, Mat4d, Mat4f
+from vgc.geometry import Vec2d, Vec2f, Mat3d, Mat3f, Mat4d, Mat4f
 
 Mat3Types = [Mat3d, Mat3f]
 Mat4Types = [Mat4d, Mat4f]

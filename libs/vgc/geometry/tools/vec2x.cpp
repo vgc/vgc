@@ -14,13 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file was automatically generated, please do not edit directly.
-// Instead, edit ./tools/vec2.cpp, and re-run ./tools/vec2.py.
+// This file is used to generate all the variants of this class.
+// You must manually run vec2x.py after any modification.
 
-#include <vgc/core/vec2f.h>
+#include "vec2x.h"
 
-namespace vgc {
-namespace core {
+namespace vgc::geometry {
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::geometry

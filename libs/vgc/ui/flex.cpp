@@ -90,11 +90,11 @@ float getTopBottomPadding(const Widget* widget)
 
 } // namespace
 
-core::Vec2f Flex::computePreferredSize() const
+geometry::Vec2f Flex::computePreferredSize() const
 {
     bool isRow = (direction_ == FlexDirection::Row) ||
             (direction_ == FlexDirection::RowReverse);
-    core::Vec2f res(0, 0);
+    geometry::Vec2f res(0, 0);
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();

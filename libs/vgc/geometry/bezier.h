@@ -19,8 +19,7 @@
 
 #include <vgc/geometry/api.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 /// Returns the position at coordinate \p u of the cubic Bézier curve defined
 /// by the four control points \p p0, \p p1, \p p2, and \p p3.
@@ -113,7 +112,6 @@ T cubicBezierPosAndDer(
            + 3      * u2 * (p3 - p2);
 }
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_BEZIER_H

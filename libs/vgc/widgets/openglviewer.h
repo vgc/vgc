@@ -28,10 +28,10 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/performancelog.h>
-#include <vgc/core/vec2d.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 #include <vgc/geometry/camera2d.h>
+#include <vgc/geometry/vec2d.h>
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/pointingdeviceevent.h>
 
@@ -121,7 +121,7 @@ private:
     bool isPanning_;
     bool isRotating_;
     bool isZooming_;
-    core::Vec2d pointingDevicePosAtPress_;
+    geometry::Vec2d pointingDevicePosAtPress_;
     geometry::Camera2d cameraAtPress_;
 
     // Shader program
@@ -195,8 +195,8 @@ private:
     // Controller: Modifies the document based on user input (could be in the
     // form of "Action" instances).
     //
-    void startCurve_(const core::Vec2d& p, double width = 1.0);
-    void continueCurve_(const core::Vec2d& p, double width = 1.0);
+    void startCurve_(const geometry::Vec2d& p, double width = 1.0);
+    void continueCurve_(const geometry::Vec2d& p, double width = 1.0);
     core::Color currentColor_;
 
     // Performance logging

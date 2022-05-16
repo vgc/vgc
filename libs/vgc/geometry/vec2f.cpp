@@ -15,12 +15,10 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit ./tools/vec2.cpp, and re-run ./tools/vec2.py.
+// Instead, edit tools/vec2x.cpp then run tools/vec2x.py.
 
-#include <vgc/core/vec2d.h>
+#include <vgc/geometry/vec2f.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::geometry {
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::geometry

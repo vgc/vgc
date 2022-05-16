@@ -22,9 +22,9 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/innercore.h>
-#include <vgc/core/mat3f.h>
-#include <vgc/core/vec2f.h>
 #include <vgc/geometry/curves2d.h>
+#include <vgc/geometry/mat3f.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/api.h>
 
 // Manually forward-declare/typedef FreeType and HarfBuzz classes, to avoid
@@ -89,9 +89,9 @@ public:
 // - HarfBuzz: `typedef int32_t hb_position_t;`
 //
 template<class T>
-core::Vec2d f266ToVec2d(T x, T y)
+geometry::Vec2d f266ToVec2d(T x, T y)
 {
-    return core::Vec2d(x / 64.0, y / 64.0);
+    return geometry::Vec2d(x / 64.0, y / 64.0);
 }
 
 } // namespace internal
@@ -320,7 +320,7 @@ public:
     ///  ...]
     ///
     void fill(core::FloatArray& data,
-              const core::Mat3f& transform) const;
+              const geometry::Mat3f& transform) const;
 
 protected:
     /// \reimp

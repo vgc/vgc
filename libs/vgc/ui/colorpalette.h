@@ -74,9 +74,9 @@ private:
         Hue,
         SaturationLightness
     };
-    SelectorType hoveredSelector_(const core::Vec2f& p);
-    std::pair<Int, Int> hoveredSaturationLightness_(const core::Vec2f& p);
-    Int hoveredHue_(const core::Vec2f& p);
+    SelectorType hoveredSelector_(const geometry::Vec2f& p);
+    std::pair<Int, Int> hoveredSaturationLightness_(const geometry::Vec2f& p);
+    Int hoveredHue_(const geometry::Vec2f& p);
     bool selectColorFromHovered_();
     core::Color selectedColor_;
     graphics::TrianglesBufferPtr triangles_;

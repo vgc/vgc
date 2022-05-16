@@ -18,10 +18,4 @@
   <Type Name="vgc::core::StringId">
     <DisplayString>{*stringPtr_} (id={(void*)stringPtr_})</DisplayString>
   </Type>
-  <Type Name="vgc::core::Vec2f">
-    <DisplayString>({data_[0]}, {data_[1]})</DisplayString>
-  </Type>
-  <Type Name="vgc::core::Vec2d">
-    <DisplayString>({data_[0]}, {data_[1]})</DisplayString>
-  </Type>
 </AutoVisualizer>

@@ -14,10 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
-#include <pybind11/operators.h>
-#include <vgc/core/vec2d.h>
-#include <vgc/core/vec2f.h>
+#include <vgc/core/wraps/array.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2f.h>
 
 namespace  {
 
@@ -78,14 +77,37 @@ wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
         .def("isNear",   &This::isNear,   "b"_a, "absTol"_a)
         .def("allNear",  &This::allNear,  "b"_a, "absTol"_a)
 
-        .def("__repr__", [](const This& v) { return toString(v); })
+        .def("__repr__", [](const This& v) { return vgc::core::toString(v); })
     ;
+}
+
+template<typename This>
+void wrap_2darray(py::module& m, const std::string& valueTypeName)
+{
+    using T = typename This::value_type; // Example: Vec2d
+    using U = typename T::value_type;    // Example: double
+    std::string thisTypeName = valueTypeName + "Array";
+    py::class_<This> c(m, thisTypeName.c_str());
+    vgc::core::wraps::defineArrayCommonMethods(c);
+    c.def(py::init([valueTypeName](py::sequence s) {
+        This res;
+        for (auto it : s) {
+            auto t = py::reinterpret_borrow<py::tuple>(it);
+            if (t.size() != 2) {
+                throw py::value_error("Tuple length must be 2 for conversion to " + valueTypeName);
+            }
+            res.append(T(t[0].cast<U>(), t[1].cast<U>()));
+        }
+        return res;
+    }));
 }
 
 } // namespace
 
-void wrap_vec2(py::module& m)
+void wrap_vec(py::module& m)
 {
-    wrap_vec2x<vgc::core::Vec2d>(m, "Vec2d", 1e-9);
-    wrap_vec2x<vgc::core::Vec2f>(m, "Vec2f", 1e-5f);
+    wrap_vec2x<vgc::geometry::Vec2d>(m, "Vec2d", 1e-9);
+    wrap_vec2x<vgc::geometry::Vec2f>(m, "Vec2f", 1e-5f);
+    wrap_2darray<vgc::geometry::Vec2dArray>(m, "Vec2d");
+    wrap_2darray<vgc::geometry::Vec2fArray>(m, "Vec2f");
 }

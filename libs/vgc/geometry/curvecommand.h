@@ -21,8 +21,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 /// \enum vgc::geometry::CurveCommandType
 /// \brief The type of a curve command (MoveTo, LineTo, etc.)
@@ -71,7 +70,6 @@ using CurveCommandDataArray = core::Array<CurveCommandData>;
 
 }
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_CURVECOMMAND_H

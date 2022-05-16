@@ -301,7 +301,7 @@ FontFaceImpl::~FontFaceImpl()
 namespace {
 
 // Converts from fractional 26.6 to floating point.
-core::Vec2d f266ToVec2d(const FT_Vector* v)
+geometry::Vec2d f266ToVec2d(const FT_Vector* v)
 {
     return internal::f266ToVec2d(v->x, v->y);
 }
@@ -573,7 +573,7 @@ const geometry::Curves2d& FontGlyph::outline() const
 }
 
 void FontGlyph::fill(core::FloatArray& data,
-                     const core::Mat3f& transform) const
+                     const geometry::Mat3f& transform) const
 {
     const core::FloatArray& triangles = impl_->triangles;
     Int numVertices = triangles.length() / 2;
@@ -586,7 +586,7 @@ void FontGlyph::fill(core::FloatArray& data,
     while (itOut != data.end()) {
         float x = *itIn++;
         float y = *itIn++;
-        core::Vec2f v2 = transform * core::Vec2f(x, y);
+        geometry::Vec2f v2 = transform * geometry::Vec2f(x, y);
         *itOut++ = v2[0];
         *itOut++ = v2[1];
     }

@@ -14,13 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file is a "template" (not in the C++ sense) used to generate all the
-// Vec2 variants. Please refer to vec2.py for more info.
+// This file was automatically generated, please do not edit directly.
+// Instead, edit tools/vec2x.cpp then run tools/vec2x.py.
 
-#include <vgc/core/vec2x.h>
+#include <vgc/geometry/vec2d.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::geometry {
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::geometry

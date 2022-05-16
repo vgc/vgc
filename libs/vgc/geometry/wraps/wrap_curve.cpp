@@ -16,10 +16,10 @@
 
 #include <vgc/core/wraps/common.h>
 #include <vgc/geometry/curve.h>
-#include <vgc/core/vec2d.h>
+#include <vgc/geometry/vec2d.h>
 
 using vgc::geometry::Curve;
-using vgc::core::Vec2d;
+using vgc::geometry::Vec2d;
 
 void wrap_curve(py::module& m)
 {

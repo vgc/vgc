@@ -14,11 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mat4.h"
+// This file is used to generate all the variants of this class.
+// You must manually run mat4x.py after any modification.
+
+#include "mat4x.h"
 
 #include <limits>
 
-namespace vgc::core {
+namespace vgc::geometry {
 
 Mat4x Mat4x::inverted(bool* isInvertible, float epsilon_) const
 {
@@ -83,4 +86,4 @@ Mat4x Mat4x::inverted(bool* isInvertible, float epsilon_) const
     return res;
 }
 
-} // namespace vgc::core
+} // namespace vgc::geometry

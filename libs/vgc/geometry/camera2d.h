@@ -17,12 +17,11 @@
 #ifndef VGC_GEOMETRY_CAMERA2D_H
 #define VGC_GEOMETRY_CAMERA2D_H
 
-#include <vgc/core/mat4d.h>
-#include <vgc/core/vec2d.h>
+#include <vgc/geometry/mat4d.h>
+#include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/api.h>
 
-namespace vgc {
-namespace geometry {
+namespace vgc::geometry {
 
 /// \class vgc::geometry::Camera2d
 /// \brief 2D camera using double-precision floating points.
@@ -137,13 +136,13 @@ public:
     ///
     /// \sa setCenter()
     ///
-    const core::Vec2d& center() const { return center_; }
+    const Vec2d& center() const { return center_; }
 
     /// Sets the center of the camera.
     ///
     /// \sa center()
     ///
-    void setCenter(const core::Vec2d& center) { center_ = center; }
+    void setCenter(const Vec2d& center) { center_ = center; }
 
     /// Returns the zoom of the camera. This is the ratio between the size of
     /// an object in view coordinates (i.e., in pixels), and its size in world
@@ -235,14 +234,14 @@ public:
 
     /// Returns the 4x4 view matrix corresponding to the camera.
     ///
-    core::Mat4d viewMatrix() const;
+    Mat4d viewMatrix() const;
 
     /// Returns the 4x4 projection matrix corresponding to the camera.
     ///
-    core::Mat4d projectionMatrix() const;
+    Mat4d projectionMatrix() const;
 
 private:
-    core::Vec2d center_;
+    Vec2d center_;
     double zoom_;
     double rotation_;
     double viewportWidth_;
@@ -251,7 +250,6 @@ private:
     double farPlane_;
 };
 
-} // namespace geometry
-} // namespace vgc
+} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_CAMERA2D_H
