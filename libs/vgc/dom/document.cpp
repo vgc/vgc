@@ -844,17 +844,108 @@ void Document::save(const std::string& filePath,
     writeChildren(out, style, 0, this);
 }
 
-void Document::setElementAttribute_(Element* element, core::StringId name, Value value)
+void Document::setHistorySize(Int size)
 {
-    // If already authored, update the authored value
-    if (AuthoredAttribute* authored = element->findAuthoredAttribute_(name)) {
-        authored->setValue(value);
+    if (size == operationHistorySizeMax) {
+        return;
+    }
+
+    if (operationHistorySizeMax > 0) {
+        removedElementsDoc = nullptr;
+        operationStack.clear();
+        operationHistory.clear();
+        operationHistoryPosition = 0;
+        //isUndoable = false;
     }
     else {
-        // Otherwise, allocate a new AuthoredAttribute
-        authoredAttributes_.emplace_back(name, value);
+        removedElementsDoc = Document::create();
+        Element::create(removedElementsDoc.get(), "removed");
+        //isUndoable = false;
+    }
+
+    operationHistorySizeMax = size;
+}
+
+Operation* Document::beginOperation(std::string_view name)
+{
+}
+
+bool Document::endOperation()
+{
+    if (0) {
+        // XXX lot of things to do..
+
+        emitDiff();
     }
 }
+
+bool Document::emitDiff()
+{
+    if (!currentDiff.isEmpty()) {
+        documentChanged().emit(currentDiff);
+        currentDiff.reset();
+    }
+}
+
+void Document::appendAtomicOperation_(std::string_view name, AtomicOperation&& atomicOperation)
+{
+    // XXX maybe we can keep it simple here and rely on endOperation to do the hard work
+
+    Operation* op = nullptr;
+    if (operationStack.empty()) {
+        op = beginOperation(name);
+    }
+    else {
+
+    }
+}
+
+void Document::onCreatedAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
+{
+    if (hasHistoryEnabled()) {
+        appendAtomicOperation_(
+            "CreateAuthoredAttribute",
+            AtomicOperation(CreateAuthoredAttributeOperands(element, name, value)));
+        currentDiff.modifiedElements_[element].insert(name);
+    }
+}
+
+void Document::onRemovedAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
+{
+    if (hasHistoryEnabled()) {
+        appendAtomicOperation_(
+            "RemoveAuthoredAttribute",
+            AtomicOperation(RemoveAuthoredAttributeOperands(element, name, value)));
+        currentDiff.modifiedElements_[element].insert(name);
+    }
+}
+
+void Document::onChangedAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue)
+{
+    if (hasHistoryEnabled()) {
+        appendAtomicOperation_(
+            "ChangeAuthoredAttribute",
+            AtomicOperation(ChangeAuthoredAttributeOperands(element, name, oldValue, newValue)));
+        currentDiff.modifiedElements_[element].insert(name);
+    }
+}
+
+void Document::onCreateNode_(Node* node, const NodeLinks& links)
+{
+
+}
+
+void Document::onRemoveNode_(Node* node, const NodeLinks& links)
+{
+
+}
+
+void Document::onMoveNode_(Node* node, const NodeLinks& oldLinks, const NodeLinks& newLinks)
+{
+
+}
+
+
 
 } // namespace dom
 } // namespace vgc

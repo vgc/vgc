@@ -119,6 +119,10 @@ public:
     ///
     void setAttribute(core::StringId name, Value&& value);
 
+    /// Clears the authored value of the given attribute.
+    ///
+    void clearAttribute(core::StringId name);
+
 private:
     // Name of this element.
     core::StringId name_;

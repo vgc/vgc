@@ -14,9 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/diff.h>
+#include <vgc/dom/operation.h>
 
 namespace vgc::dom {
+
+namespace {
+
+OperationIndex lastId = 0;
+
+} // namespace
+
+OperationIndex genOperationIndex() {
+    // XXX make this thread-safe ?
+    return ++lastId;
+}
 
 
 } // namespace vgc::dom

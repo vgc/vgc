@@ -17,6 +17,8 @@
 #ifndef VGC_DOM_DOCUMENT_H
 #define VGC_DOM_DOCUMENT_H
 
+#include <unordered_map>
+
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
@@ -337,6 +339,18 @@ public:
     void save(const std::string& filePath,
               const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
+    void setHistorySize(Int size);
+
+    bool hasHistoryEnabled() const {
+        return operationHistorySizeMax > 0;
+    }
+
+    Operation* beginOperation(std::string_view name);
+    bool endOperation();
+    bool emitDiff();
+
+    VGC_SIGNAL(documentChanged, (const Diff&, diff));
+
 private:
     // XML declaration
     bool hasXmlDeclaration_;
@@ -349,11 +363,28 @@ private:
     std::string xmlDeclaration_;
 
     // Track changes
+
+    // XXX design decision: history always active but can be of size 0 !!
+    //                      meaning we always diff per operation and emit signals on operation end.
+
     friend class Element;
     DocumentPtr removedElementsDoc;
-    core::Array<Operation> history;
-    Int historyPosition;
-    void onSetElementAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
+    core::Array<std::string> operationStack;
+    core::Array<Operation> operationHistory;
+    Int operationHistoryPosition = 0;
+    Int operationHistorySizeMax = 0;
+    Operation currentOperation;
+    Diff currentDiff;
+    std::unordered_map<Node*, NodeLinks> oldLinks;
+
+    void appendAtomicOperation_(std::string_view name, AtomicOperation&& atomicOperation);
+
+    void onCreatedAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
+    void onRemovedAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
+    void onChangedAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
+    void onCreateNode_(Node* node, const NodeLinks& links);
+    void onRemoveNode_(Node* node, const NodeLinks& links);
+    void onMoveNode_(Node* node, const NodeLinks& oldLinks, const NodeLinks& newLinks);
 };
 
 } // namespace dom

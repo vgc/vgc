@@ -73,13 +73,14 @@ void Element::setAttribute(core::StringId name, const Value& value)
 {
     // If already authored, update the authored value
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
-        this->document()->onSetElementAttribute_(this, name, authored->value(), value);
+        Value oldValue = authored->value();
         authored->setValue(value);
+        this->document()->onChangedAuthoredAttribute_(this, name, oldValue, authored->value());
     }
     else {
         // Otherwise, allocate a new AuthoredAttribute
-        this->document()->onSetElementAttribute_(this, name, Value::none(), value);
         authoredAttributes_.emplaceLast(name, value);
+        this->document()->onCreatedAuthoredAttribute_(this, name, value);
     }
 }
 
@@ -87,13 +88,23 @@ void Element::setAttribute(core::StringId name, Value&& value)
 {
     // If already authored, update the authored value
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
-        this->document()->onSetElementAttribute_(this, name, authored->value(), value);
+        Value oldValue = authored->value();
         authored->setValue(std::move(value));
+        this->document()->onChangedAuthoredAttribute_(this, name, oldValue, authored->value());
     }
     else {
         // Otherwise, allocate a new AuthoredAttribute
-        this->document()->onSetElementAttribute_(this, name, Value::none(), value);
         authoredAttributes_.emplaceLast(name, std::move(value));
+        this->document()->onCreatedAuthoredAttribute_(this, name, authoredAttributes_.last().value());
+    }
+}
+
+void Element::clearAttribute(core::StringId name)
+{
+    if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+        Value oldValue = authored->value();
+        authoredAttributes_.removeAt(std::distance(&authoredAttributes_[0], authored));
+        this->document()->onRemovedAuthoredAttribute_(this, name, oldValue);
     }
 }
 
