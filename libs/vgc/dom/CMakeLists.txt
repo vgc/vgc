@@ -2,7 +2,7 @@ vgc_add_library(dom
     THIRD_DEPENDENCIES
 
     VGC_DEPENDENCIES
-        core
+        geometry
 
     HEADER_FILES
         api.h
