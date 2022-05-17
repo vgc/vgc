@@ -496,7 +496,7 @@ FontGlyph* FontFace::getGlyphFromCodePoint(Int codePoint)
 FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
 {
     // Prevent two threads from modifying the glyphsMap at the same time
-    impl_->glyphsMutex.lock();
+    const std::lock_guard<std::mutex> lock(impl_->glyphsMutex);
 
     // Get existing FontGlyph* or insert nullptr in the map
     FontGlyph*& glyph = impl_->glyphsMap[glyphIndex];
@@ -532,7 +532,6 @@ FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
         glyph->impl_.reset(new internal::FontGlyphImpl(glyphIndex, name, slot));
     }
 
-    impl_->glyphsMutex.unlock();
     return glyph;
 }
 
