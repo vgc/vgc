@@ -14,20 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/node.h>
-#include <vgc/dom/operation.h>
+#ifndef VGC_DOM_STRINGS_H
+#define VGC_DOM_STRINGS_H
 
-namespace vgc::dom {
+#include <vgc/core/stringid.h>
+#include <vgc/dom/api.h>
 
-namespace {
+namespace vgc::dom::strings {
 
-OperationIndex lastId = 0;
+VGC_DOM_API extern const core::StringId RemoveNode;
+VGC_DOM_API extern const core::StringId MoveNode_in_hierarchy;
+VGC_DOM_API extern const core::StringId CreateElement;
+VGC_DOM_API extern const core::StringId RemoveElement;
+VGC_DOM_API extern const core::StringId MoveElement_in_hierarchy;
 
-} // namespace
+VGC_DOM_API extern const core::StringId Set_authored_attribute;
+VGC_DOM_API extern const core::StringId Clear_authored_attribute;
 
-OperationIndex genOperationIndex() {
-    // XXX make this thread-safe ?
-    return ++lastId;
-}
+} // namespace vgc::dom::strings
 
-} // namespace vgc::dom
+#endif // VGC_DOM_STRINGS_H

@@ -17,6 +17,7 @@
 #ifndef VGC_DOM_DOCUMENT_H
 #define VGC_DOM_DOCUMENT_H
 
+#include <optional>
 #include <unordered_map>
 
 #include <vgc/core/object.h>
@@ -29,6 +30,7 @@
 namespace vgc {
 namespace dom {
 
+VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
@@ -342,10 +344,10 @@ public:
     void setHistorySize(Int size);
 
     bool hasHistoryEnabled() const {
-        return operationHistorySizeMax > 0;
+        return operationHistorySizeMax_ > 0;
     }
 
-    Operation* beginOperation(std::string_view name);
+    void beginOperation(core::StringId name);
     bool endOperation();
     bool emitDiff();
 
@@ -367,24 +369,27 @@ private:
     // XXX design decision: history always active but can be of size 0 !!
     //                      meaning we always diff per operation and emit signals on operation end.
 
+    friend class Node;
     friend class Element;
-    DocumentPtr removedElementsDoc;
-    core::Array<std::string> operationStack;
-    core::Array<Operation> operationHistory;
-    Int operationHistoryPosition = 0;
-    Int operationHistorySizeMax = 0;
-    Operation currentOperation;
-    Diff currentDiff;
-    std::unordered_map<Node*, NodeLinks> oldLinks;
+    core::Array<Operation> operationHistory_;
+    Int operationHistoryPosition_ = 0;
+    Int operationHistorySizeMax_ = 0;
+    core::Array<core::StringId> operationStack_; // stack of begun operations' names
+    std::optional<Operation> currentOperation_;
+    Diff currentDiff_;
+    std::unordered_map<Node*, NodeLinks> oldLinksMap_; // to finalize the diff
 
-    void appendAtomicOperation_(std::string_view name, AtomicOperation&& atomicOperation);
+    void finalizeDiff_();
 
-    void onCreatedAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
-    void onRemovedAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
-    void onChangedAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
+    // To record atomic operations
+    void onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
+    void onRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
+    void onChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
     void onCreateNode_(Node* node, const NodeLinks& links);
     void onRemoveNode_(Node* node, const NodeLinks& links);
     void onMoveNode_(Node* node, const NodeLinks& oldLinks, const NodeLinks& newLinks);
+
+    void onNodeVicinityChanged_(Node* node);
 };
 
 } // namespace dom

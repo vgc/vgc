@@ -18,11 +18,21 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/core/logging.h>
+#include <vgc/core/object.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
+#include <vgc/dom/strings.h>
 
 namespace vgc {
 namespace dom {
+
+namespace internal {
+
+void destroyNode(Node* node) {
+    node->destroyObject_();
+}
+
+} // namespace internal
 
 Node::Node(Document* document, NodeType nodeType) :
     Object(),
@@ -30,6 +40,18 @@ Node::Node(Document* document, NodeType nodeType) :
     nodeType_(nodeType)
 {
 
+}
+
+void Node::remove()
+{
+    NodeLinks links(this);
+
+    core::ObjPtr self = removeObjectFromParent_();
+    auto doc = document();
+    doc->beginOperation(strings::RemoveNode);
+    doc->currentOperation_.value().removedNodes_.append(core::static_pointer_cast<Node>(self));
+    doc->onRemoveNode_(this, links);
+    doc->endOperation();
 }
 
 namespace {
@@ -73,8 +95,13 @@ bool Node::canReparent(Node* newParent)
 
 void Node::reparent(Node* newParent)
 {
+    NodeLinks oldLinks(this);
     checkCanReparent_(newParent, this);
     appendObjectToParent_(newParent);
+    auto doc = document();
+    doc->beginOperation(strings::MoveNode_in_hierarchy);
+    doc->onMoveNode_(this, oldLinks, NodeLinks(this));
+    doc->endOperation();
 }
 
 namespace {
@@ -107,6 +134,13 @@ bool Node::canReplace(Node* oldNode)
 
 void Node::replace(Node* oldNode)
 {
+    // XXX record atomic operations
+
+    // newChid = this
+    // willLoseAChild = ignored = this->parent()
+    // oldChild = willBeDestroyed = oldNode
+    // willHaveAChildReplaced = oldNode->parent()
+
     checkCanReplace_(oldNode, this);
     if (this == oldNode) {
         // nothing to do
@@ -117,7 +151,13 @@ void Node::replace(Node* oldNode)
     Node* parent = oldNode->parent();
     Node* nextSibling = oldNode->nextSibling();
     core::ObjectPtr self = removeObjectFromParent_();
+
+    // XXX use remove, cuz this is currently not undoable
+    //parent->removeChildObject_()
+
     oldNode->destroyObject_();
+    //oldNode->removeObjectFromParent_();
+
     parent->insertChildObject_(this, nextSibling);
 }
 

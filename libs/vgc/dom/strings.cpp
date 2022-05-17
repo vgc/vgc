@@ -14,20 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/node.h>
-#include <vgc/dom/operation.h>
+#include <vgc/dom/strings.h>
 
-namespace vgc::dom {
+namespace vgc::dom::strings {
 
-namespace {
+const core::StringId RemoveNode("Remove Node");
+const core::StringId MoveNode_in_hierarchy("Move Node in hierarchy");
+const core::StringId CreateElement("Create Element");
+const core::StringId RemoveElement("Remove Element");
+const core::StringId MoveElement_in_hierarchy("Move Element in hierarchy");
 
-OperationIndex lastId = 0;
+const core::StringId Set_authored_attribute("Set authored attribute");
+const core::StringId Clear_authored_attribute("Clear authored attribute");
 
-} // namespace
-
-OperationIndex genOperationIndex() {
-    // XXX make this thread-safe ?
-    return ++lastId;
-}
-
-} // namespace vgc::dom
+} // namespace vgc::dom::strings

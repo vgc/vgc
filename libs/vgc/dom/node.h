@@ -71,6 +71,10 @@ void write(OStream& out, NodeType type)
 
 VGC_DECLARE_OBJECT(Node);
 
+namespace internal {
+void destroyNode(Node* node);
+} // namespace internal
+
 /// \class vgc::dom::Node
 /// \brief Represents a node of the document Node tree.
 ///
@@ -151,16 +155,9 @@ public:
         return node;
     }
 
-    /// Destroys this Node.
+    /// Remove this node from its document (undoable).
     ///
-    /// \sa vgc::core::Object::isAlive().
-    ///
-    // XXX Should we forbid to destroy the Document?
-    //
-    void destroy()
-    {
-        destroyObject_();
-    }
+    void remove();
 
     /// Returns the parent Node of this Node. This is always nullptr for
     /// Document nodes, and always a non-null valid Node otherwise.
@@ -301,6 +298,8 @@ public:
     }
 
 private:
+    friend void internal::destroyNode(Node* node);
+
     Document* document_;
     NodeType nodeType_;
 };

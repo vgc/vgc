@@ -66,6 +66,28 @@ private:
     using Compatible_ = typename std::enable_if<
         std::is_convertible<Y*, T*>::value>::type;
 
+    template<typename T, typename U>
+    friend ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename T, typename U>
+    friend ObjPtr<T> static_pointer_cast(ObjPtr<U>&& r) noexcept;
+
+    template<typename T, typename U>
+    friend ObjPtr<T> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename T, typename U>
+    friend ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept;
+
+    template<typename T, typename U>
+    friend ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename T, typename U>
+    friend ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept;
+
+    struct DontIncRefTag {};
+
+    // For move casts
+    ObjPtr(T* obj, DontIncRefTag) : obj_(obj)
+    {
+    }
+
 public:
     /// Creates a null ObjPtr<T>, that is, an ObjPtr<T> which doesn't manage any
     /// Object.
@@ -270,6 +292,52 @@ template<typename T, typename U>
 inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 {
     return a.get() != b.get();
+}
+
+
+template<typename T, typename U>
+ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept
+{
+    return ObjPtr<T>(static_cast<T*>(r.get()));
+}
+
+template<typename T, typename U>
+ObjPtr<T> static_pointer_cast(ObjPtr<U>&& r) noexcept
+{
+    ObjPtr<T> ret(static_cast<T*>(r.get()), ObjPtr<T>::DontIncRefTag{});
+    r.obj_ = nullptr;
+    return ret;
+}
+
+template<typename T, typename U>
+ObjPtr<T> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept
+{
+    return ObjPtr<T>(dynamic_cast<T*>(r.get()));
+}
+
+template<typename T, typename U>
+ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept
+{
+    T* p = dynamic_cast<T*>(r.get());
+    if (p) {
+        r.obj_ = nullptr;
+        return ObjPtr<T>(p, ObjPtr<T>::DontIncRefTag{});
+    }
+    return ObjPtr<T>(nullptr);
+}
+
+template<typename T, typename U>
+ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept
+{
+    return ObjPtr<T>(const_cast<T*>(r.get()));
+}
+
+template<typename T, typename U>
+ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept
+{
+    ObjPtr<T> ret(const_cast<T*>(r.get()), ObjPtr<T>::DontIncRefTag{});
+    r.obj_ = nullptr;
+    return ret;
 }
 
 } // namespace core
@@ -662,7 +730,7 @@ public:
     /// disconnected.
     ///
     VGC_SIGNAL(aboutToBeDestroyed, (Object*, object));
-    
+
 protected:
     // This callback method is invoked when this object has just been
     // destroyed, that is, just after isAlive() has switched from true to
@@ -970,7 +1038,7 @@ private:
 namespace internal {
 
 // Required by signal.h
-constexpr SignalHub& SignalHub::access(const Object* o) { 
+constexpr SignalHub& SignalHub::access(const Object* o) {
     return const_cast<Object*>(o)->signalHub_;
 }
 

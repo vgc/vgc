@@ -25,11 +25,14 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/object.h>
+#include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/node.h>
 #include <vgc/dom/value.h>
 
 namespace vgc::dom {
 
+VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
@@ -42,7 +45,7 @@ enum class AtomicOperationKind {
     MoveNode,
 };
 
-class CreateAuthoredAttributeOperands {
+class VGC_DOM_API CreateAuthoredAttributeOperands {
 public:
     Element* element()const  {
         return element_;
@@ -73,7 +76,7 @@ private:
 
 };
 
-class RemoveAuthoredAttributeOperands {
+class VGC_DOM_API RemoveAuthoredAttributeOperands {
 public:
     Element* element()const  {
         return element_;
@@ -103,7 +106,7 @@ private:
         value_(value) {}
 };
 
-class ChangeAuthoredAttributeOperands {
+class VGC_DOM_API ChangeAuthoredAttributeOperands {
 public:
     Element* element()const  {
         return element_;
@@ -140,37 +143,43 @@ private:
         newValue_(newValue) {}
 };
 
-class NodeLinks {
+class VGC_DOM_API NodeLinks {
 public:
+    NodeLinks(Node* node) :
+        NodeLinks(
+            node->parent(),
+            node->previousSibling(),
+            node->nextSibling()) {}
+
     Node* parent()const  {
         return parent_;
     }
 
-    Node* leftSibling() const {
-        return leftSibling_;
+    Node* previousSibling() const {
+        return previousSibling_;
     }
 
-    Node* rightSibling() const {
-        return rightSibling_;
+    Node* nextSibling() const {
+        return nextSibling_;
     }
 
 private:
     friend Document;
 
     Node* parent_;
-    Node* leftSibling_;
-    Node* rightSibling_;
+    Node* previousSibling_;
+    Node* nextSibling_;
 
     NodeLinks(
         Node* parent,
-        Node* leftSibling,
-        Node* rightSibling) :
+        Node* previousSibling,
+        Node* nextSibling) :
         parent_(parent),
-        leftSibling_(leftSibling),
-        rightSibling_(rightSibling) {}
+        previousSibling_(previousSibling),
+        nextSibling_(nextSibling) {}
 };
 
-class CreateNodeOperands {
+class VGC_DOM_API CreateNodeOperands {
 public:
     Node* node()const  {
         return node_;
@@ -193,7 +202,7 @@ private:
         links_(links) {}
 };
 
-class RemoveNodeOperands {
+class VGC_DOM_API RemoveNodeOperands {
 public:
     Node* node()const  {
         return node_;
@@ -216,7 +225,7 @@ private:
         links_(links) {}
 };
 
-class MoveNodeOperands {
+class VGC_DOM_API MoveNodeOperands {
 public:
     Node* node()const  {
         return node_;
@@ -246,7 +255,7 @@ private:
         newLinks_(newLinks) {}
 };
 
-class AtomicOperation {
+class VGC_DOM_API AtomicOperation {
 public:
     const CreateAuthoredAttributeOperands&
     getCreateAuthoredAttributeOperands() const {
@@ -307,6 +316,7 @@ public:
 
 private:
     friend Document;
+    friend class Operation;
 
     AtomicOperationKind kind_;
     std::variant<
@@ -353,9 +363,28 @@ using OperationIndex = UInt32;
 
 OperationIndex genOperationIndex();
 
-class Operation {
+class VGC_DOM_API Operation {
 public:
-    const std::string& name() const {
+    ~Operation() {
+        for (auto& node : removedNodes_) {
+            internal::destroyNode(node.get());
+        }
+    }
+
+    // non-copyable
+    Operation(const Operation&) = delete;
+    Operation& operator=(const Operation&) = delete;
+
+    Operation(Operation&& other) :
+        name_(other.name_),
+        index_(other.index_),
+        isReverted_(other.isReverted_) {
+
+        atomicOperations_.swap(other.atomicOperations_);
+        removedNodes_.swap(other.removedNodes_);
+    }
+
+    const core::StringId& name() const {
         return name_;
     }
 
@@ -372,25 +401,25 @@ public:
     }
 
 private:
+    friend Node;
     friend Document;
 
-    std::string name_;
+    core::StringId name_;
     core::Array<AtomicOperation> atomicOperations_;
+    core::Array<NodePtr> removedNodes_;
     OperationIndex index_;
     bool isReverted_ = false;
 
     explicit Operation(
-        std::string_view name) :
+        core::StringId name) :
         name_(name),
         atomicOperations_(),
         index_(genOperationIndex()) {}
 
-    void appendAtomicOperation(const AtomicOperation& atomicOperation) {
-        atomicOperations_.emplaceLast(atomicOperation);
-    }
-
-    void appendAtomicOperation(AtomicOperation&& atomicOperation) {
-        atomicOperations_.emplaceLast(std::move(atomicOperation));
+    template<typename... Args>
+    void emplaceLastAtomicOperation(Args&&... args) {
+        // AtomicOperation constructor is private, cannot emplace with args.
+        atomicOperations_.emplaceLast(AtomicOperation(std::forward<Args>(args)...));
     }
 };
 
@@ -403,7 +432,7 @@ private:
 //    }
 //}
 
-class Diff {
+class VGC_DOM_API Diff {
 public:
     const core::Array<Node*>& createdNodes() const {
         return createdNodes_;

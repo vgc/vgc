@@ -846,28 +846,37 @@ void Document::save(const std::string& filePath,
 
 void Document::setHistorySize(Int size)
 {
-    if (size == operationHistorySizeMax) {
+    if (size == operationHistorySizeMax_) {
         return;
     }
+    // XXX todo
+    return;
 
-    if (operationHistorySizeMax > 0) {
-        removedElementsDoc = nullptr;
-        operationStack.clear();
-        operationHistory.clear();
-        operationHistoryPosition = 0;
-        //isUndoable = false;
-    }
-    else {
-        removedElementsDoc = Document::create();
-        Element::create(removedElementsDoc.get(), "removed");
-        //isUndoable = false;
-    }
+    //if (operationHistorySizeMax > 0) {
+    //    removedElementsDoc = nullptr;
+    //    operationStack.clear();
+    //    operationHistory.clear();
+    //    operationHistoryPosition = 0;
+    //    //isUndoable = false;
+    //}
+    //else {
+    //    removedElementsDoc = Document::create();
+    //    Element::create(removedElementsDoc.get(), "removed");
+    //    //isUndoable = false;
+    //}
 
-    operationHistorySizeMax = size;
+    //operationHistorySizeMax = size;
 }
 
-Operation* Document::beginOperation(std::string_view name)
+void Document::beginOperation(core::StringId name)
 {
+    if (operationStack_.isEmpty()) {
+        if (currentOperation_.has_value()) {
+            throw LogicError("Pending operation present but operation stack is empty.");
+        }
+        currentOperation_.emplace(Operation(name));
+    }
+    operationStack_.append(name);
 }
 
 bool Document::endOperation()
@@ -877,75 +886,107 @@ bool Document::endOperation()
 
         emitDiff();
     }
+    return false;
 }
 
 bool Document::emitDiff()
 {
-    if (!currentDiff.isEmpty()) {
-        documentChanged().emit(currentDiff);
-        currentDiff.reset();
+    finalizeDiff_();
+    if (!currentDiff_.isEmpty()) {
+
+        documentChanged().emit(currentDiff_);
+        currentDiff_.reset();
     }
+    return false;
 }
 
-void Document::appendAtomicOperation_(std::string_view name, AtomicOperation&& atomicOperation)
+void Document::finalizeDiff_()
 {
-    // XXX maybe we can keep it simple here and rely on endOperation to do the hard work
+    for (const auto& [node, oldLinks] : oldLinksMap_) {
+        if (currentDiff_.createdNodes_.contains(node)) {
+            continue;
+        }
+        if (currentDiff_.removedNodes_.contains(node)) {
+            continue;
+        }
 
-    Operation* op = nullptr;
-    if (operationStack.empty()) {
-        op = beginOperation(name);
+        /*currentDiff.childrenChangedNodes_.insert(node->parent());
+        currentDiff.reorderedNodes_.insert(node->previousSibling());
+        currentDiff.reorderedNodes_.insert(node->nextSibling());*/
     }
-    else {
-
-    }
+    oldLinksMap_.clear();
 }
 
-void Document::onCreatedAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
+void Document::onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
 {
-    if (hasHistoryEnabled()) {
-        appendAtomicOperation_(
-            "CreateAuthoredAttribute",
-            AtomicOperation(CreateAuthoredAttributeOperands(element, name, value)));
-        currentDiff.modifiedElements_[element].insert(name);
+    if (operationStack_.isEmpty()) {
+        throw LogicError("No known begun operation.");
     }
+    currentOperation_.value().emplaceLastAtomicOperation(
+        CreateAuthoredAttributeOperands(element, name, value));
+    currentDiff_.modifiedElements_[element].insert(name);
 }
 
-void Document::onRemovedAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
+void Document::onRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
 {
-    if (hasHistoryEnabled()) {
-        appendAtomicOperation_(
-            "RemoveAuthoredAttribute",
-            AtomicOperation(RemoveAuthoredAttributeOperands(element, name, value)));
-        currentDiff.modifiedElements_[element].insert(name);
+    if (operationStack_.isEmpty()) {
+        throw LogicError("No known begun operation.");
     }
+    currentOperation_.value().emplaceLastAtomicOperation(
+        RemoveAuthoredAttributeOperands(element, name, value));
+    currentDiff_.modifiedElements_[element].insert(name);
 }
 
-void Document::onChangedAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue)
+void Document::onChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue)
 {
-    if (hasHistoryEnabled()) {
-        appendAtomicOperation_(
-            "ChangeAuthoredAttribute",
-            AtomicOperation(ChangeAuthoredAttributeOperands(element, name, oldValue, newValue)));
-        currentDiff.modifiedElements_[element].insert(name);
+    if (operationStack_.isEmpty()) {
+        throw LogicError("No known begun operation.");
     }
+    currentOperation_.value().emplaceLastAtomicOperation(
+        ChangeAuthoredAttributeOperands(element, name, oldValue, newValue));
+    currentDiff_.modifiedElements_[element].insert(name);
 }
 
 void Document::onCreateNode_(Node* node, const NodeLinks& links)
 {
-
+    if (operationStack_.isEmpty()) {
+        throw LogicError("No known begun operation.");
+    }
+    currentOperation_.value().emplaceLastAtomicOperation(
+        CreateNodeOperands(node, links));
+    currentDiff_.createdNodes_.emplaceLast(node);
+    onNodeVicinityChanged_(node->previousSibling());
+    onNodeVicinityChanged_(node->nextSibling());
 }
 
 void Document::onRemoveNode_(Node* node, const NodeLinks& links)
 {
-
+    if (operationStack_.isEmpty()) {
+        throw LogicError("No known begun operation.");
+    }
+    currentOperation_.value().emplaceLastAtomicOperation(
+        RemoveNodeOperands(node, links));
+    currentDiff_.removedNodes_.emplaceLast(node);
+    onNodeVicinityChanged_(node->previousSibling());
+    onNodeVicinityChanged_(node->nextSibling());
 }
 
 void Document::onMoveNode_(Node* node, const NodeLinks& oldLinks, const NodeLinks& newLinks)
 {
-
+    if (operationStack_.isEmpty()) {
+        throw LogicError("No known begun operation.");
+    }
+    currentOperation_.value().emplaceLastAtomicOperation(
+        MoveNodeOperands(node, oldLinks, newLinks));
+    onNodeVicinityChanged_(node);
+    onNodeVicinityChanged_(node->previousSibling());
+    onNodeVicinityChanged_(node->nextSibling());
 }
 
-
+void Document::onNodeVicinityChanged_(Node* node)
+{
+    oldLinksMap_.try_emplace(node, NodeLinks(node));
+}
 
 } // namespace dom
 } // namespace vgc
