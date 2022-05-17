@@ -61,7 +61,7 @@
 ///         valueChanged().emit(42); // prints 42
 ///         valueChanged().disconnect(printInt);
 ///     }
-/// 
+///
 ///     VGC_SIGNAL(valueChanged, (int, a));
 /// }
 /// ```
@@ -74,7 +74,7 @@
 /// public:
 ///     int x() const { return x_; }
 ///     void setX(int x) { x_ = x; changed().emit(); }
-/// 
+///
 ///     VGC_SIGNAL(changed);
 /// };
 ///
@@ -83,7 +83,7 @@
 /// public:
 ///     View(const Model* m) : m_(m) {}
 ///     void update() { std::cout << m_->x() << std::endl; }
-/// 
+///
 ///     VGC_SLOT(onModelChanged, update);
 /// };
 ///
@@ -118,7 +118,7 @@ struct HasObjectTypedefs<T, RequiresValid<typename T::ThisClass, typename T::Sup
 } // namespace internal
 
 /// Type trait for isObject<T>.
-/// 
+///
 template<typename T, typename Enable = bool>
 struct IsObject : std::false_type {};
 template<>
@@ -131,7 +131,7 @@ struct IsObject<T, Requires<std::is_base_of_v<Object, T>>> : std::true_type {
 
 /// Checks whether T is vgc::core::Object or derives from it.
 /// If true, static asserts that VGC_OBJECT appears in the declaration of T.
-/// 
+///
 template <typename T>
 inline constexpr bool isObject = IsObject<T>::value;
 
@@ -216,12 +216,12 @@ static constexpr bool hasRValueReferences = HasRValueReferences<TTuple>::value;
 
 
 // Helper to get the emittable type of a signal argument type.
-// 
+//
 // Arguments of signals are meant to be forwarded to multiple slots.
 // Thus, perfect forwarding is not an option.
 // However, since we don't allow rvalues as signal/slot arguments, we can
 // forward arguments by reference or const reference !
-// 
+//
 // SignalArg    | MakeSignalArgRef<SignalArg>
 // -------------|-----------------------------
 //       T      | const T&
@@ -495,7 +495,7 @@ private:
     // Arity of the wrapped slot.
     UInt8 arity_ = 0;
     // true if made with build()
-    bool isNative_ = false; 
+    bool isNative_ = false;
     // todo: More reflection info..
 };
 
@@ -737,7 +737,7 @@ protected:
     static Int eraseConnections_(const Object* sender, const Object* receiver) {
         auto& hub = access(sender);
         auto it = std::remove_if(hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c){
-                return std::holds_alternative<ObjectSlotId>(c.to) && std::get<ObjectSlotId>(c.to).first == receiver; 
+                return std::holds_alternative<ObjectSlotId>(c.to) && std::get<ObjectSlotId>(c.to).first == receiver;
             });
         Int count = std::distance(it, hub.connections_.end());
         hub.connections_.erase(it, hub.connections_.end());
@@ -1106,7 +1106,7 @@ private:
 /// Macro to define Object signals.
 ///
 /// Example:
-/// 
+///
 /// ```cpp
 /// struct A : vgc::core::Object {
 ///     VGC_SIGNAL(changed);
@@ -1165,20 +1165,20 @@ inline constexpr bool isSignal = IsSignal<T>::value;
 #define VGC_SLOT_DISPATCH_(_1, _2, _3, NAME, ...) NAME
 
 /// Macro to define Object slots.
-/// 
+///
 /// VGC_SLOT(slotName, slotMethod) -> defines slot slotName bound to slotMethod.
 /// VGC_SLOT(slotMethod) -> defines slot slotMethodSlot bound to slotMethod.
-/// 
+///
 /// Example:
-/// 
+///
 /// ```cpp
 /// struct A : vgc::core::Object {
 ///     void onFooChanged(int i);
-/// 
+///
 ///     VGC_SLOT(onFooChanged);                     // defines onFooChangedSlot()
 ///     VGC_SLOT(onBarChanged_);                    // defines onBarChanged_Slot()
 ///     VGC_SLOT(onBarChangedSlot, onBarChanged_);  // defines onBarChangedSlot()
-/// 
+///
 /// private:
 ///     void onBarChanged_(double d);
 /// };
