@@ -341,11 +341,24 @@ public:
     void save(const std::string& filePath,
               const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
-    void setHistorySize(Int size);
+
+    void setHistoryLimit(Int size);
+
+    Int getHistoryLimit() {
+        return operationHistorySizeMax_;
+    }
+
+    Int getHistorySize() {
+        return operationHistory_.length();
+    }
 
     bool hasHistoryEnabled() const {
         return operationHistorySizeMax_ > 0;
     }
+
+    bool gotoHistoryPos(Int pos);
+    bool undoOne();
+    bool redoOne();
 
     void beginOperation(core::StringId name);
     bool endOperation();
@@ -378,8 +391,6 @@ private:
     std::optional<Operation> currentOperation_;
     Diff currentDiff_;
     std::unordered_map<Node*, NodeLinks> oldLinksMap_; // to finalize the diff
-
-    void finalizeDiff_();
 
     // To record atomic operations
     void onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);

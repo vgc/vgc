@@ -255,6 +255,21 @@ private:
         newLinks_(newLinks) {}
 };
 
+// wip: possible refactor of atomic op to use polymorphism
+//      it'd be better to have the operation impl in a single place.
+//      on the other end the onVicinityChanged maybe only needed on the
+//      first run since we can store the diff in Operation.
+
+class VGC_DOM_API AtomicOperation2 {
+public:
+    virtual ~AtomicOperation2() = default;
+    virtual void undo(class Operation* parentOp) = 0;
+    virtual void redo(class Operation* parentOp) = 0;
+
+private:
+    AtomicOperationKind kind_;
+};
+
 class VGC_DOM_API AtomicOperation {
 public:
     const CreateAuthoredAttributeOperands&
@@ -318,6 +333,7 @@ private:
     friend Document;
     friend class Operation;
 
+    // XXX remove it, make it via conversion from operands_.index()
     AtomicOperationKind kind_;
     std::variant<
         CreateAuthoredAttributeOperands,
@@ -375,11 +391,19 @@ public:
     Operation(const Operation&) = delete;
     Operation& operator=(const Operation&) = delete;
 
-    Operation(Operation&& other) :
+    Operation(Operation&& other) noexcept :
         name_(other.name_),
         index_(other.index_),
         isReverted_(other.isReverted_) {
 
+        atomicOperations_.swap(other.atomicOperations_);
+        removedNodes_.swap(other.removedNodes_);
+    }
+
+    Operation& operator=(Operation&& other) noexcept {
+        std::swap(name_, other.name_);
+        std::swap(index_, other.index_);
+        std::swap(isReverted_, other.isReverted_);
         atomicOperations_.swap(other.atomicOperations_);
         removedNodes_.swap(other.removedNodes_);
     }
@@ -446,6 +470,7 @@ public:
         return reparentedNodes_;
     }
 
+    /// Nodes with at least one different sibling but same parent.
     const std::set<Node*>& reorderedNodes() const {
         return reorderedNodes_;
     }

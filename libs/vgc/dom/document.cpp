@@ -19,10 +19,12 @@
 #include <cerrno>
 #include <cstring>
 #include <fstream>
+
 #include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/io.h>
 #include <vgc/dom/schema.h>
+#include <vgc/dom/operation.h>
 
 namespace vgc {
 namespace dom {
@@ -844,28 +846,70 @@ void Document::save(const std::string& filePath,
     writeChildren(out, style, 0, this);
 }
 
-void Document::setHistorySize(Int size)
+void Document::setHistoryLimit(Int size)
 {
     if (size == operationHistorySizeMax_) {
         return;
     }
-    // XXX todo
-    return;
 
-    //if (operationHistorySizeMax > 0) {
-    //    removedElementsDoc = nullptr;
-    //    operationStack.clear();
-    //    operationHistory.clear();
-    //    operationHistoryPosition = 0;
-    //    //isUndoable = false;
-    //}
-    //else {
-    //    removedElementsDoc = Document::create();
-    //    Element::create(removedElementsDoc.get(), "removed");
-    //    //isUndoable = false;
-    //}
+    operationHistorySizeMax_ = size;
 
-    //operationHistorySizeMax = size;
+    /*if (operationHistory_.size() > operationHistorySizeMax_) {
+        operationHistory_.removeRange(0, operationHistory_.size() - operationHistorySizeMax_);
+    }*/
+}
+
+bool Document::gotoHistoryPos(Int pos)
+{
+    if (pos < 0) {
+        pos = operationHistory_.size() + pos;
+    }
+    if (pos < 0 || pos >= operationHistory_.size()) {
+        return false;
+    }
+    if (pos == operationHistoryPosition_) {
+        return true;
+    }
+
+    if (pos < operationHistoryPosition_) {
+        // undo
+        for (Int i = operationHistoryPosition_ - 1; i >= pos; --i) {
+            auto& op = operationHistory_[i];
+            for (auto it = op.atomicOperations_.rbegin(), end = op.atomicOperations_.rend(); it != end; ++it) {
+            }
+
+            // emit the diff too..
+        }
+    }
+    else {
+        // redo
+        for (Int i = operationHistoryPosition_; i < pos; ++i) {
+            auto& op = operationHistory_[i];
+            for (auto it = op.atomicOperations_.begin(), end = op.atomicOperations_.end(); it != end; ++it) {
+            }
+
+            // do..
+            // XXX maybe we should have the impl in the op..
+
+
+            // weird case: an operation containing setAttr + removeElem
+            // if diff contains the attribute change then we update resources for possibly nothing..
+            // and if we don't, we do it on Undo..
+
+
+            // emit the diff too..
+        }
+    }
+}
+
+bool Document::undoOne()
+{
+    gotoHistoryPos(operationHistoryPosition_ - 1);
+}
+
+bool Document::redoOne()
+{
+    gotoHistoryPos(operationHistoryPosition_ + 1);
 }
 
 void Document::beginOperation(core::StringId name)
@@ -881,26 +925,31 @@ void Document::beginOperation(core::StringId name)
 
 bool Document::endOperation()
 {
-    if (0) {
+    if (operationStack_.isEmpty()) {
+        throw LogicError("Trying to end an operation but operation stack is empty.");
+    }
+    if (!currentOperation_.has_value()) {
+        throw LogicError("Trying to end an operation but current operation does not exist.");
+    }
+    operationStack_.pop();
+    if (operationStack_.isEmpty()) {
         // XXX lot of things to do..
 
         emitDiff();
+
+        // XXX delete redos first..
+
+
+        if (operationHistory_.size() > operationHistorySizeMax_) {
+            // todo
+        }
+        operationHistory_.append(std::move(currentOperation_.value()));
+        currentOperation_.reset();
     }
     return false;
 }
 
 bool Document::emitDiff()
-{
-    finalizeDiff_();
-    if (!currentDiff_.isEmpty()) {
-
-        documentChanged().emit(currentDiff_);
-        currentDiff_.reset();
-    }
-    return false;
-}
-
-void Document::finalizeDiff_()
 {
     for (const auto& [node, oldLinks] : oldLinksMap_) {
         if (currentDiff_.createdNodes_.contains(node)) {
@@ -910,11 +959,59 @@ void Document::finalizeDiff_()
             continue;
         }
 
-        /*currentDiff.childrenChangedNodes_.insert(node->parent());
-        currentDiff.reorderedNodes_.insert(node->previousSibling());
-        currentDiff.reorderedNodes_.insert(node->nextSibling());*/
+        NodeLinks newLinks(node);
+
+        bool parentChanged = (oldLinks.parent_ != newLinks.parent_);
+        auto& movedChildNodes = (
+            parentChanged ?
+            currentDiff_.reparentedNodes_ :
+            currentDiff_.reorderedNodes_);
+
+        bool siblingsChanged = false;
+        if (oldLinks.previousSibling_ != newLinks.previousSibling_) {
+            movedChildNodes.insert(node);
+            siblingsChanged = true;
+        }
+        if (oldLinks.nextSibling_ != newLinks.nextSibling_) {
+            movedChildNodes.insert(node);
+            siblingsChanged = true;
+        }
+
+        if (parentChanged) {
+            currentDiff_.childrenChangedNodes_.insert(oldLinks.parent_);
+            currentDiff_.childrenChangedNodes_.insert(newLinks.parent_);
+        }
+        else if (siblingsChanged) {
+            currentDiff_.childrenChangedNodes_.insert(oldLinks.parent_);
+        }
     }
     oldLinksMap_.clear();
+
+    // remove created and removed nodes from modified elements
+    auto& modifiedElements = currentDiff_.modifiedElements_;
+    for (auto it = modifiedElements.begin(), last = modifiedElements.end(); it != last;) {
+        Node* node = it->first;
+        if (currentDiff_.createdNodes_.contains(node)) {
+            it = modifiedElements.erase(it);
+            continue;
+        }
+        if (currentDiff_.removedNodes_.contains(node)) {
+            it = modifiedElements.erase(it);
+            continue;
+        }
+        ++it;
+    }
+
+    if (!currentDiff_.isEmpty()) {
+
+        // XXX todo: emit node signals in here too !
+
+        documentChanged().emit(currentDiff_);
+        currentDiff_.reset();
+        return true;
+    }
+
+    return false;
 }
 
 void Document::onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
@@ -979,8 +1076,10 @@ void Document::onMoveNode_(Node* node, const NodeLinks& oldLinks, const NodeLink
     currentOperation_.value().emplaceLastAtomicOperation(
         MoveNodeOperands(node, oldLinks, newLinks));
     onNodeVicinityChanged_(node);
-    onNodeVicinityChanged_(node->previousSibling());
-    onNodeVicinityChanged_(node->nextSibling());
+    onNodeVicinityChanged_(oldLinks.previousSibling());
+    onNodeVicinityChanged_(oldLinks.nextSibling());
+    onNodeVicinityChanged_(newLinks.previousSibling());
+    onNodeVicinityChanged_(newLinks.nextSibling());
 }
 
 void Document::onNodeVicinityChanged_(Node* node)
