@@ -1019,9 +1019,15 @@ public:
     typedef const value_type* pointer;;  // 'const' => non-mutable forward iterator
     typedef std::forward_iterator_tag iterator_category;
 
+    /// Constructs an invalid `ObjListIterator`.
+    ///
+    ObjListIterator() : p_(nullptr) {
+
+    }
+
     /// Constructs an iterator pointing to the given object.
     ///
-    ObjListIterator(T* p = nullptr) : p_(p) {
+    explicit ObjListIterator(T* p) : p_(p) {
 
     }
 
