@@ -980,6 +980,26 @@ inline double uint8ToDouble01(Int x) {
     return vgc::core::clamp(x, Int(0), Int(255)) / 255.0;
 }
 
+/// \struct vgc::core::NoInit
+/// \brief Tag to select a function overload that doesn't perform initialization.
+///
+/// `NoInit` is a tag-like structure used to select a function overload
+/// (typically, a constructor) that doesn't perform initialization.
+///
+/// Example:
+///
+/// ```cpp
+/// vgc::geometry::Vec2d v;                          // (0, 0)
+/// vgc::geometry::Vec2d v();                        // (0, 0)
+/// vgc::geometry::Vec2d v{};                        // (0, 0)
+/// vgc::geometry::Vec2d v(vgc::core::NoInit{});     // (?, ?)
+///
+/// vgc::core::Array<int> a(3);                      // [0, 0, 0]
+/// vgc::core::Array<int> a(3, vgc::core::NoInit{}); // [?, ?, ?]
+/// ```
+///
+struct VGC_CORE_API NoInit {};
+
 /// Small epsilon value under which two doubles are considered
 /// indistinguishable.
 ///

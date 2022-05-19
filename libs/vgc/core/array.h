@@ -248,14 +248,9 @@ class Array
 private:
     // Used internally to select value initialization behavior.
     //
-    struct ValueInitTag {};
+    struct ValueInit {};
 
 public:
-    /// Used to select default initialization behavior.
-    /// Public use is limited to the fill constructor.
-    ///
-    struct DefaultInitTag {};
-
     // Define all typedefs necessary to meet the requirements of
     // SequenceContainer. Note that size_type must be unsigned (cf.
     // [tab:container.req] in the C++ standard), therefore we define it to be
@@ -303,8 +298,12 @@ public:
 
     }
 
-    /// Creates an `Array` of given `length`.
-    /// Elements are value initialized.
+    /// Creates an `Array` of given `length` whose elements are
+    /// [value-initialized](https://en.cppreference.com/w/cpp/language/value_initialization).
+    ///
+    /// For example, if `T` is a primitive type (such as `int`, `float`, raw
+    /// pointers, etc.), then the elements are zero-initialized. If `T` has a
+    /// default constructor, then the default constructor is called.
     ///
     /// Throws `NegativeIntegerError` if `length` is negative.
     /// Throws `LengthError` if `length` is greater than `maxLength()`.
@@ -313,28 +312,44 @@ public:
     /// vgc::core::Array<double> a(3);
     /// a.length();      // => 3
     /// std::cout << a;  // => [0, 0, 0]
+    ///
+    /// vgc::core::Array<vgc::core::Vec2d> b(3);
+    /// a.length();      // => 3
+    /// std::cout << a;  // => [(0, 0), (0, 0), (0, 0)]
     /// ```
     ///
     explicit Array(Int length) {
         checkLengthForInit_(length);
-        init_(length, ValueInitTag{});
+        init_(length, ValueInit{});
     }
 
-    /// Creates an `Array` of given `length`.
-    /// Elements are default initialized.
+    /// Creates an `Array` of given `length` without initializing its elements.
+    /// More precisely:
+    ///
+    /// - If `T` provides a `T(vgc::core::NoInit)` constructor, then the elements
+    ///   are initialized by calling this constructor.
+    ///
+    /// - Otherwise, the elements are
+    ///   [default-initialized](https://en.cppreference.com/w/cpp/language/default_initialization).
+    ///   For primitive types, this means no initialization. For class types, this
+    ///   means calling their default constructor.
     ///
     /// Throws `NegativeIntegerError` if `length` is negative.
     /// Throws `LengthError` if `length` is greater than maxLength().
     ///
     /// ```
-    /// vgc::core::Array<double> a(2);
-    /// a.length();      // => 2
-    /// std::cout << a;  // => [undefined, undefined,undefined]
+    /// vgc::core::Array<double> a(3, vgc::core::NoInit{});
+    /// a.length();      // => 3
+    /// std::cout << a;  // => [?, ?, ?]
+    ///
+    /// vgc::core::Array<vgc::core::Vec2d> b(3, vgc::core::NoInit{});
+    /// a.length();      // => 3
+    /// std::cout << a;  // => [(?, ?), (?, ?), (?, ?)]
     /// ```
     ///
-    explicit Array(Int length, DefaultInitTag) {
+    Array(Int length, NoInit) {
         checkLengthForInit_(length);
-        init_(length, DefaultInitTag{});
+        init_(length, NoInit{});
     }
 
     /// Creates an `Array` of given `length` with all values initialized to
@@ -1714,7 +1729,7 @@ public:
     ///
     void resize(Int count) {
         checkPositiveForInit_(count);
-        resize_(count, ValueInitTag{});
+        resize_(count, ValueInit{});
     }
 
     /// Resizes this Array so that it contains `count` elements instead of its
@@ -1727,7 +1742,7 @@ public:
     ///
     void resizeNoInit(Int count) {
         checkPositiveForInit_(count);
-        resize_(count, DefaultInitTag{});
+        resize_(count, NoInit{});
     }
 
     /// Resizes this Array so that it contains `count` elements instead of its
@@ -2321,12 +2336,20 @@ private:
         return std::uninitialized_fill_n(unwrapIterator(first), n, value);
     }
 
-    iterator uninitializedFillN_(iterator first, const Int n, ValueInitTag) {
+    iterator uninitializedFillN_(iterator first, const Int n, ValueInit) {
         return std::uninitialized_value_construct_n(unwrapIterator(first), n);
     }
 
-    iterator uninitializedFillN_(iterator first, const Int n, DefaultInitTag) {
-        return std::uninitialized_default_construct_n(unwrapIterator(first), n);
+    iterator uninitializedFillN_(iterator first, const Int n, NoInit) {
+        if constexpr (internal::isNoInitConstructible<T>) {
+            // Method 1, potentially dangerous:
+            //    std::advance(unwrapIterator(first), n)
+            // Method 2, safer: (but does the compiler really optimize?)
+            return std::uninitialized_fill_n(unwrapIterator(first), NoInit{});
+        }
+        else {
+            return std::uninitialized_default_construct_n(unwrapIterator(first), n);
+        }
     }
 
     // Casts from integer to const_iterator.

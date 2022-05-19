@@ -20,6 +20,7 @@
 #include <iterator>
 #include <type_traits>
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/templateutil.h>
 
 namespace vgc::core::internal {
@@ -134,6 +135,14 @@ constexpr bool isCompatibleRange = IsCompatibleRange<Range, T>::value;
 
 template<typename Range, typename T>
 using RequiresCompatibleRange = Requires<isCompatibleRange<Range, T>>;
+
+// Checks whether the given template argument has a NoInit constructor
+
+template<typename T>
+constexpr bool isNoInitConstructible = std::is_constructible_v<T, NoInit>;
+
+template<typename T>
+using RequiresNoInitConstructible = Requires<isNoInitConstructible<T>>;
 
 } // namespace vgc::core::internal
 
