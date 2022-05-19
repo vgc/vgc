@@ -24,6 +24,9 @@ using vgc::core::Array;
 using vgc::core::IndexError;
 using vgc::core::LengthError;
 using vgc::core::NegativeIntegerError;
+using vgc::core::NoInit;
+
+#define EXPECT_LENGTH(a, n) { EXPECT_EQ((a).size(), (n)); EXPECT_EQ((a).length(), (n)); }
 
 // To properly test containers we have to check that:
 // - its elements are not being over-destroyed or over-constructed.
@@ -122,29 +125,31 @@ TEST(TestArray, Construct) {
     // Note: it's important to test the zero-init after the non-zero init, to
     // decrease the chance that the memory is zero "by chance".
     std::vector<int> v{1, 2, 3};
-    { Array<int> a;                 EXPECT_EQ(a.size(), 0); }
-    { Array<int> a{};               EXPECT_EQ(a.size(), 0); }
-    { Array<int> a(10, 42);         EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
-    { Array<int> a(10);             EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
-    { Array<int> a(Int(10), 42);    EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
-    { Array<int> a(Int(10));        EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
-    { Array<int> a(size_t(10), 42); EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
-    { Array<int> a(size_t(10));     EXPECT_EQ(a.size(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
-    { Array<int> a{10, 42};         EXPECT_EQ(a.size(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
-    { Array<int> a(v);              EXPECT_EQ(a.size(), 3);  EXPECT_EQ(a[0], 1);  EXPECT_EQ(a[2], 3); }
-    { Array<int> a;                 EXPECT_EQ(a.length(), 0); }
-    { Array<int> a{};               EXPECT_EQ(a.length(), 0); }
-    { Array<int> a(10, 42);         EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
-    { Array<int> a(10);             EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
-    { Array<int> a(Int(10), 42);    EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
-    { Array<int> a(Int(10));        EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
-    { Array<int> a(size_t(10), 42); EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
-    { Array<int> a(size_t(10));     EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  } // zero-init
-    { Array<int> a{10, 42};         EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
-    { Array<int> a(v);              EXPECT_EQ(a.length(), 3);  EXPECT_EQ(a[0], 1);  EXPECT_EQ(a[2], 3); }
-    EXPECT_THROW(Array<int>(-1),                               NegativeIntegerError);
-    EXPECT_THROW(Array<int>(-1, Array<int>::DefaultInitTag{}), NegativeIntegerError);
-    EXPECT_THROW(Array<int>(-1, 42),                           NegativeIntegerError);
+
+    { Array<int> a;                       EXPECT_LENGTH(a, 0); }
+    { Array<int> a{};                     EXPECT_LENGTH(a, 0); }
+
+    { Array<int> a(10, NoInit{});         EXPECT_LENGTH(a, 10);                                           }
+    { Array<int> a(10, 42);               EXPECT_LENGTH(a, 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
+    { Array<int> a(10);                   EXPECT_LENGTH(a, 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  }
+
+    { Array<int> a(Int(10), NoInit{});    EXPECT_LENGTH(a, 10);                                           }
+    { Array<int> a(Int(10), 42);          EXPECT_LENGTH(a, 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
+    { Array<int> a(Int(10));              EXPECT_LENGTH(a, 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  }
+
+    { Array<int> a(size_t(10), NoInit{}); EXPECT_LENGTH(a, 10); }
+    { Array<int> a(size_t(10), 42);       EXPECT_LENGTH(a, 10); EXPECT_EQ(a[0], 42); EXPECT_EQ(a[9], 42); }
+    { Array<int> a(size_t(10));           EXPECT_LENGTH(a, 10); EXPECT_EQ(a[0], 0);  EXPECT_EQ(a[9], 0);  }
+
+    { Array<int> a{10, NoInit{}};         EXPECT_LENGTH(a, 10); }
+    { Array<int> a{10, 42};               EXPECT_LENGTH(a, 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42); }
+    { Array<int> a{10};                   EXPECT_LENGTH(a, 1);  EXPECT_EQ(a[0], 10); }
+
+    { Array<int> a(v);                    EXPECT_LENGTH(a, 3);  EXPECT_EQ(a[0], 1);  EXPECT_EQ(a[2], 3); }
+
+    EXPECT_THROW(Array<int>(-1),           NegativeIntegerError);
+    EXPECT_THROW(Array<int>(-1, NoInit{}), NegativeIntegerError);
+    EXPECT_THROW(Array<int>(-1, 42),       NegativeIntegerError);
     EXPECT_THROW(Array<int>(vgc::core::tmax_<size_t>::value, 42), LengthError);
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
@@ -747,6 +752,24 @@ TEST(TestArray, Resize) {
         a.resize(3);        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
         a.resize(8);        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
         a.resize(16);       EXPECT_EQ(a.length(), TestObj::aliveCount());
+    }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
+}
+
+TEST(TestArray, ResizeNoInit) {
+    Array<int> a = {15, 10, 42, 12};
+    Array<int> b = {15, 10, 42};
+    Array<int> c = {15, 10, 42, 12};
+    a.resizeNoInit(3);  EXPECT_EQ(a, b);
+    a.resizeNoInit(4);  EXPECT_EQ(a, c);
+    a.resizeNoInit(10); EXPECT_LENGTH(a, 10);
+    EXPECT_THROW(a.resizeNoInit(-1), NegativeIntegerError);
+    struct Tag {}; using TestObj = TestObject<Tag>;
+    {
+        // Tests resize_
+        Array<TestObj> a(10);
+        a.resizeNoInit(3);        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
+        a.resizeNoInit(8);        EXPECT_EQ(a.length(), TestObj::aliveCount()); EXPECT_EQ(a.reservedLength(), 10);
+        a.resizeNoInit(16);       EXPECT_EQ(a.length(), TestObj::aliveCount());
     }   EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
