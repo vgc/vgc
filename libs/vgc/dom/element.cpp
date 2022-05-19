@@ -48,7 +48,7 @@ Element* Element::create(Document* parent, core::StringId name)
     Element* res = create_(parent, name);
     auto doc = parent;
     doc->beginOperation(strings::CreateElement);
-    doc->onCreateNode_(res, NodeLinks(res));
+    doc->onCreateNode_(res, NodeRelatives(res));
     doc->endOperation();
     return res;
 }
@@ -59,7 +59,7 @@ Element* Element::create(Element* parent, core::StringId name)
     Element* res = create_(parent, name);
     auto doc = parent->document();
     doc->beginOperation(strings::CreateElement);
-    doc->onCreateNode_(res, NodeLinks(res));
+    doc->onCreateNode_(res, NodeRelatives(res));
     doc->endOperation();
     return res;
 }
@@ -95,24 +95,6 @@ void Element::setAttribute(core::StringId name, const Value& value)
         // Otherwise, allocate a new AuthoredAttribute
         authoredAttributes_.emplaceLast(name, value);
         doc->onCreateAuthoredAttribute_(this, name, value);
-    }
-    doc->endOperation();
-}
-
-void Element::setAttribute(core::StringId name, Value&& value)
-{
-    auto doc = this->document();
-    doc->beginOperation(strings::Set_authored_attribute);
-    // If already authored, update the authored value
-    if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
-        Value oldValue = authored->value();
-        authored->setValue(std::move(value));
-        doc->onChangeAuthoredAttribute_(this, name, oldValue, authored->value());
-    }
-    else {
-        // Otherwise, allocate a new AuthoredAttribute
-        authoredAttributes_.emplaceLast(name, std::move(value));
-        doc->onCreateAuthoredAttribute_(this, name, authoredAttributes_.last().value());
     }
     doc->endOperation();
 }

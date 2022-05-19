@@ -26,6 +26,7 @@
 namespace vgc {
 namespace dom {
 
+VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
 /// \class vgc::dom::Element
@@ -115,15 +116,15 @@ public:
     ///
     void setAttribute(core::StringId name, const Value& value);
 
-    /// Sets the value of the given attribute.
-    ///
-    void setAttribute(core::StringId name, Value&& value);
-
     /// Clears the authored value of the given attribute.
     ///
     void clearAttribute(core::StringId name);
 
 private:
+    friend class CreateAuthoredAttributeOperation;
+    friend class RemoveAuthoredAttributeOperation;
+    friend class ChangeAuthoredAttributeOperation;
+
     // Name of this element.
     core::StringId name_;
 

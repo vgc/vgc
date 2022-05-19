@@ -14,10 +14,61 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/node.h>
 #include <vgc/dom/operation.h>
 
+#include <vgc/dom/document.h>
+#include <vgc/dom/element.h>
+#include <vgc/dom/node.h>
+
 namespace vgc::dom {
+
+void CreateNodeOperation::undo(Document* doc)
+{
+}
+
+void CreateNodeOperation::redo(Document* doc)
+{
+}
+
+void RemoveNodeOperation::undo(Document* doc)
+{
+}
+
+void RemoveNodeOperation::redo(Document* doc)
+{
+}
+
+void MoveNodeOperation::undo(Document* doc)
+{
+}
+
+void MoveNodeOperation::redo(Document* doc)
+{
+}
+
+void CreateAuthoredAttributeOperation::undo(Document* doc)
+{
+}
+
+void CreateAuthoredAttributeOperation::redo(Document* doc)
+{
+}
+
+void RemoveAuthoredAttributeOperation::undo(Document* doc)
+{
+}
+
+void RemoveAuthoredAttributeOperation::redo(Document* doc)
+{
+}
+
+void ChangeAuthoredAttributeOperation::undo(Document* doc)
+{
+}
+
+void ChangeAuthoredAttributeOperation::redo(Document* doc)
+{
+}
 
 namespace {
 

@@ -17,8 +17,11 @@
 #ifndef VGC_DOM_OPERATION_H
 #define VGC_DOM_OPERATION_H
 
+#include <iterator>
+#include <memory>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <variant>
 
@@ -36,117 +39,14 @@ VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
-enum class AtomicOperationKind {
-    CreateAuthoredAttribute,
-    RemoveAuthoredAttribute,
-    ChangeAuthoredAttribute,
-    CreateNode, // and its children
-    RemoveNode, // and its children
-    MoveNode,
-};
+class AtomicOperation;
+class Operation;
+class Diff;
 
-class VGC_DOM_API CreateAuthoredAttributeOperands {
+class VGC_DOM_API NodeRelatives {
 public:
-    Element* element()const  {
-        return element_;
-    }
-
-    const core::StringId& name() const {
-        return name_;
-    }
-
-    const Value& value() const {
-        return value_;
-    }
-
-private:
-    friend Document;
-
-    Element* element_;
-    core::StringId name_;
-    Value value_;
-
-    CreateAuthoredAttributeOperands(
-        Element* element,
-        core::StringId name,
-        Value value) :
-        element_(element),
-        name_(name),
-        value_(value) {}
-
-};
-
-class VGC_DOM_API RemoveAuthoredAttributeOperands {
-public:
-    Element* element()const  {
-        return element_;
-    }
-
-    const core::StringId& name() const {
-        return name_;
-    }
-
-    const Value& value() const {
-        return value_;
-    }
-
-private:
-    friend Document;
-
-    Element* element_;
-    core::StringId name_;
-    Value value_;
-
-    RemoveAuthoredAttributeOperands(
-        Element* element,
-        core::StringId name,
-        Value value) :
-        element_(element),
-        name_(name),
-        value_(value) {}
-};
-
-class VGC_DOM_API ChangeAuthoredAttributeOperands {
-public:
-    Element* element()const  {
-        return element_;
-    }
-
-    const core::StringId& name() const {
-        return name_;
-    }
-
-    const Value& oldValue() const {
-        return oldValue_;
-    }
-
-    const Value& newValue() const {
-        return newValue_;
-    }
-
-private:
-    friend Document;
-
-    Element* element_;
-    core::StringId name_;
-    Value oldValue_;
-    Value newValue_;
-
-    ChangeAuthoredAttributeOperands(
-        Element* element,
-        core::StringId name,
-        Value oldValue,
-        Value newValue) :
-        element_(element),
-        name_(name),
-        oldValue_(oldValue),
-        newValue_(newValue) {}
-};
-
-class VGC_DOM_API NodeLinks {
-public:
-    NodeLinks(Node* node) :
-        NodeLinks(
+    NodeRelatives(Node* node) :
+        NodeRelatives(
             node->parent(),
             node->previousSibling(),
             node->nextSibling()) {}
@@ -170,7 +70,7 @@ private:
     Node* previousSibling_;
     Node* nextSibling_;
 
-    NodeLinks(
+    NodeRelatives(
         Node* parent,
         Node* previousSibling,
         Node* nextSibling) :
@@ -179,214 +79,245 @@ private:
         nextSibling_(nextSibling) {}
 };
 
-class VGC_DOM_API CreateNodeOperands {
-public:
-    Node* node()const  {
-        return node_;
-    }
-
-    const NodeLinks& links() const {
-        return links_;
-    }
-
-private:
-    friend Document;
-
-    Node* node_;
-    NodeLinks links_;
-
-    CreateNodeOperands(
-        Node* node,
-        const NodeLinks& links) :
-        node_(node),
-        links_(links) {}
-};
-
-class VGC_DOM_API RemoveNodeOperands {
-public:
-    Node* node()const  {
-        return node_;
-    }
-
-    const NodeLinks& links() const {
-        return links_;
-    }
-
-private:
-    friend Document;
-
-    Node* node_;
-    NodeLinks links_;
-
-    RemoveNodeOperands(
-        Node* node,
-        const NodeLinks& links) :
-        node_(node),
-        links_(links) {}
-};
-
-class VGC_DOM_API MoveNodeOperands {
-public:
-    Node* node()const  {
-        return node_;
-    }
-
-    const NodeLinks& oldLinks() const {
-        return oldLinks_;
-    }
-
-    const NodeLinks& newLinks() const {
-        return newLinks_;
-    }
-
-private:
-    friend Document;
-
-    Node* node_;
-    NodeLinks oldLinks_;
-    NodeLinks newLinks_;
-
-    MoveNodeOperands(
-        Node* node,
-        const NodeLinks& oldLinks,
-        const NodeLinks& newLinks) :
-        node_(node),
-        oldLinks_(oldLinks),
-        newLinks_(newLinks) {}
-};
-
-// wip: possible refactor of atomic op to use polymorphism
-//      it'd be better to have the operation impl in a single place.
-//      on the other end the onVicinityChanged maybe only needed on the
-//      first run since we can store the diff in Operation.
-
-class VGC_DOM_API AtomicOperation2 {
-public:
-    virtual ~AtomicOperation2() = default;
-    virtual void undo(class Operation* parentOp) = 0;
-    virtual void redo(class Operation* parentOp) = 0;
-
-private:
-    AtomicOperationKind kind_;
-};
-
 class VGC_DOM_API AtomicOperation {
+protected:
+    AtomicOperation() = default;
+
 public:
-    const CreateAuthoredAttributeOperands&
-    getCreateAuthoredAttributeOperands() const {
-        return std::get<CreateAuthoredAttributeOperands>(operands_);
-    }
+    virtual ~AtomicOperation() = default;
 
-    const RemoveAuthoredAttributeOperands&
-    getRemoveAuthoredAttributeOperands() const {
-        return std::get<RemoveAuthoredAttributeOperands>(operands_);
-    }
-
-    const ChangeAuthoredAttributeOperands&
-        getChangeAuthoredAttributeOperands() const {
-        return std::get<ChangeAuthoredAttributeOperands>(operands_);
-    }
-
-    const CreateNodeOperands& getCreateNodeOperands() const {
-        return std::get<CreateNodeOperands>(operands_);
-    }
-
-    const RemoveNodeOperands& getRemoveNodeOperands() const {
-        return std::get<RemoveNodeOperands>(operands_);
-    }
-
-    const MoveNodeOperands& getMoveNodeOperands() const {
-        return std::get<MoveNodeOperands>(operands_);
-    }
-
-    void get(CreateAuthoredAttributeOperands&
-        createAuthoredAttributeOperands) const {
-        createAuthoredAttributeOperands =
-            getCreateAuthoredAttributeOperands();
-    }
-
-    void get(RemoveAuthoredAttributeOperands&
-        removeAuthoredAttributeOperands) const {
-        removeAuthoredAttributeOperands =
-            getRemoveAuthoredAttributeOperands();
-    }
-
-    void get(ChangeAuthoredAttributeOperands&
-        changeAuthoredAttributeOperands) const {
-        changeAuthoredAttributeOperands =
-            getChangeAuthoredAttributeOperands();
-    }
-
-    void get(CreateNodeOperands& createNodeOperands) const {
-        createNodeOperands = getCreateNodeOperands();
-    }
-
-    void get(RemoveNodeOperands& removeNodeOperands) const {
-        removeNodeOperands = getRemoveNodeOperands();
-    }
-
-    void get(MoveNodeOperands& moveNodeOperands) const {
-        moveNodeOperands = getMoveNodeOperands();
-    }
-
-private:
-    friend Document;
-    friend class Operation;
-
-    // XXX remove it, make it via conversion from operands_.index()
-    AtomicOperationKind kind_;
-    std::variant<
-        CreateAuthoredAttributeOperands,
-        RemoveAuthoredAttributeOperands,
-        ChangeAuthoredAttributeOperands,
-        CreateNodeOperands,
-        RemoveNodeOperands,
-        MoveNodeOperands>
-        operands_;
-
-    explicit AtomicOperation(
-        const CreateAuthoredAttributeOperands&
-        createAuthoredAttributeOperands) :
-        kind_(AtomicOperationKind::CreateAuthoredAttribute),
-        operands_(createAuthoredAttributeOperands) {}
-
-    explicit AtomicOperation(
-        const RemoveAuthoredAttributeOperands&
-        removeAuthoredAttributeOperands) :
-        kind_(AtomicOperationKind::RemoveAuthoredAttribute),
-        operands_(removeAuthoredAttributeOperands) {}
-
-    explicit AtomicOperation(
-        const ChangeAuthoredAttributeOperands&
-        changeAuthoredAttributeOperands) :
-        kind_(AtomicOperationKind::ChangeAuthoredAttribute),
-        operands_(changeAuthoredAttributeOperands) {}
-
-    explicit AtomicOperation(const CreateNodeOperands& createNodeOperands) :
-        kind_(AtomicOperationKind::CreateNode),
-        operands_(createNodeOperands) {}
-
-    explicit AtomicOperation(const RemoveNodeOperands& removeNodeOperands) :
-        kind_(AtomicOperationKind::RemoveNode),
-        operands_(removeNodeOperands) {}
-
-    explicit AtomicOperation(const MoveNodeOperands& moveNodeOperands) :
-        kind_(AtomicOperationKind::MoveNode),
-        operands_(moveNodeOperands) {}
+protected:
+    friend Operation;
+    virtual void undo(Document* doc) = 0;
+    virtual void redo(Document* doc) = 0;
 };
 
-using OperationIndex = UInt32;
+class VGC_DOM_API CreateNodeOperation : public AtomicOperation {
+protected:
+    friend Operation;
 
-OperationIndex genOperationIndex();
+    CreateNodeOperation(
+        Node* node,
+        const NodeRelatives& relatives) :
+        node_(node),
+        savedRelatives_(relatives) {}
 
-class VGC_DOM_API Operation {
-public:
-    ~Operation() {
-        for (auto& node : removedNodes_) {
-            internal::destroyNode(node.get());
+    ~CreateNodeOperation() {
+        if (keepAlive_) {
+            internal::destroyNode(node_.get());
         }
     }
 
+public:
+    Node* node()const  {
+        return node_.get();
+    }
+
+    const NodeRelatives& savedRelatives() const {
+        return savedRelatives_;
+    }
+
+protected:
+    void undo(Document* doc) override;
+    void redo(Document* doc) override;
+
+private:
+    NodePtr node_;
+    bool keepAlive_ = false;
+    NodeRelatives savedRelatives_;
+};
+
+class VGC_DOM_API RemoveNodeOperation : public AtomicOperation {
+protected:
+    friend Operation;
+
+    RemoveNodeOperation(
+        Node* node,
+        const NodeRelatives& relatives) :
+        node_(node),
+        savedRelatives_(relatives) {}
+
+    ~RemoveNodeOperation() {
+        if (keepAlive_) {
+            internal::destroyNode(node_.get());
+        }
+    }
+
+public:
+    Node* node()const  {
+        return node_.get();
+    }
+
+    const NodeRelatives& savedRelatives() const {
+        return savedRelatives_;
+    }
+
+protected:
+    void undo(Document* doc) override;
+    void redo(Document* doc) override;
+
+private:
+    NodePtr node_;
+    bool keepAlive_ = true;
+    NodeRelatives savedRelatives_;
+};
+
+class VGC_DOM_API MoveNodeOperation : public AtomicOperation {
+protected:
+    friend Operation;
+
+    MoveNodeOperation(
+        Node* node,
+        const NodeRelatives& oldRelatives,
+        const NodeRelatives& newRelatives) :
+        node_(node),
+        oldRelatives_(oldRelatives),
+        newRelatives_(newRelatives) {}
+
+public:
+    Node* node()const  {
+        return node_;
+    }
+
+    const NodeRelatives& oldRelatives() const {
+        return oldRelatives_;
+    }
+
+    const NodeRelatives& newRelatives() const {
+        return newRelatives_;
+    }
+
+protected:
+    void undo(Document* doc) override;
+    void redo(Document* doc) override;
+
+private:
+    Node* node_;
+    NodeRelatives oldRelatives_;
+    NodeRelatives newRelatives_;
+};
+
+class VGC_DOM_API CreateAuthoredAttributeOperation : public AtomicOperation {
+protected:
+    friend Operation;
+
+    CreateAuthoredAttributeOperation(
+        Element* element,
+        core::StringId name,
+        const Value& value) :
+        element_(element),
+        name_(name),
+        value_(value) {}
+
+public:
+    Element* element()const  {
+        return element_;
+    }
+
+    const core::StringId& name() const {
+        return name_;
+    }
+
+    const Value& value() const {
+        return value_;
+    }
+
+protected:
+    void undo(Document* doc) override;
+    void redo(Document* doc) override;
+
+private:
+    Element* element_;
+    core::StringId name_;
+    Value value_;
+};
+
+class VGC_DOM_API RemoveAuthoredAttributeOperation : public AtomicOperation {
+protected:
+    friend Operation;
+
+    RemoveAuthoredAttributeOperation(
+        Element* element,
+        core::StringId name,
+        Value value) :
+        element_(element),
+        name_(name),
+        value_(value) {}
+
+public:
+    Element* element()const  {
+        return element_;
+    }
+
+    const core::StringId& name() const {
+        return name_;
+    }
+
+    const Value& value() const {
+        return value_;
+    }
+
+protected:
+    void undo(Document* doc) override;
+    void redo(Document* doc) override;
+
+private:
+    Element* element_;
+    core::StringId name_;
+    Value value_;
+};
+
+class VGC_DOM_API ChangeAuthoredAttributeOperation : public AtomicOperation {
+protected:
+    friend Operation;
+
+    ChangeAuthoredAttributeOperation(
+        Element* element,
+        core::StringId name,
+        Value oldValue,
+        Value newValue) :
+        element_(element),
+        name_(name),
+        oldValue_(oldValue),
+        newValue_(newValue) {}
+
+public:
+    Element* element()const  {
+        return element_;
+    }
+
+    const core::StringId& name() const {
+        return name_;
+    }
+
+    const Value& oldValue() const {
+        return oldValue_;
+    }
+
+    const Value& newValue() const {
+        return newValue_;
+    }
+
+protected:
+    void undo(Document* doc) override;
+    void redo(Document* doc) override;
+
+private:
+    Element* element_;
+    core::StringId name_;
+    Value oldValue_;
+    Value newValue_;
+};
+
+using OperationIndex = UInt32;
+OperationIndex genOperationIndex();
+
+class VGC_DOM_API Operation {
+protected:
+    explicit Operation(core::StringId name) :
+        name_(name), index_(genOperationIndex()) {}
+
+public:
     // non-copyable
     Operation(const Operation&) = delete;
     Operation& operator=(const Operation&) = delete;
@@ -397,7 +328,6 @@ public:
         isReverted_(other.isReverted_) {
 
         atomicOperations_.swap(other.atomicOperations_);
-        removedNodes_.swap(other.removedNodes_);
     }
 
     Operation& operator=(Operation&& other) noexcept {
@@ -405,15 +335,10 @@ public:
         std::swap(index_, other.index_);
         std::swap(isReverted_, other.isReverted_);
         atomicOperations_.swap(other.atomicOperations_);
-        removedNodes_.swap(other.removedNodes_);
     }
 
     const core::StringId& name() const {
         return name_;
-    }
-
-    const core::Array<AtomicOperation>& atomicOperations() const {
-        return atomicOperations_;
     }
 
     OperationIndex index() const {
@@ -425,36 +350,30 @@ public:
     }
 
 private:
-    friend Node;
     friend Document;
 
+    core::Array<std::unique_ptr<AtomicOperation>> atomicOperations_;
     core::StringId name_;
-    core::Array<AtomicOperation> atomicOperations_;
-    core::Array<NodePtr> removedNodes_;
     OperationIndex index_;
     bool isReverted_ = false;
 
-    explicit Operation(
-        core::StringId name) :
-        name_(name),
-        atomicOperations_(),
-        index_(genOperationIndex()) {}
-
-    template<typename... Args>
-    void emplaceLastAtomicOperation(Args&&... args) {
-        // AtomicOperation constructor is private, cannot emplace with args.
-        atomicOperations_.emplaceLast(AtomicOperation(std::forward<Args>(args)...));
+    const auto& atomicOperations_() const {
+        return atomicOperations_;
     }
+
+    template<typename TAtomicOperation, typename... Args,
+        core::Requires<std::is_base_of_v<AtomicOperation, TAtomicOperation>> = true>
+    void emplaceLastAtomicOperation_(Args&&... args) {
+        // AtomicOperation constructor is private, cannot emplace with args.
+        atomicOperations_.emplaceLast(TAtomicOperation(std::forward<Args>(args)...));
+    }
+
+    // XXX pointer to document could be a member..
+
+    void undo_(Document* doc);
+    void redo_(Document* doc);
 };
 
-
-//template<typename AtomicOperationIter>
-//Diff(AtomicOperationIter first, AtomicOperationIter last) {
-//    while (first != last) {
-//        // xxx move to cpp
-//
-//    }
-//}
 
 class VGC_DOM_API Diff {
 public:
@@ -468,11 +387,6 @@ public:
 
     const std::set<Node*>& reparentedNodes() const {
         return reparentedNodes_;
-    }
-
-    /// Nodes with at least one different sibling but same parent.
-    const std::set<Node*>& reorderedNodes() const {
-        return reorderedNodes_;
     }
 
     const std::set<Node*>& childrenChangedNodes() const {
@@ -491,7 +405,6 @@ private:
     core::Array<Node*> removedNodes_;
 
     std::set<Node*> reparentedNodes_;
-    std::set<Node*> reorderedNodes_;
     std::set<Node*> childrenChangedNodes_;
 
     std::unordered_map<Element*, std::set<core::StringId>>
@@ -503,7 +416,6 @@ private:
         createdNodes_.clear();
         removedNodes_.clear();
         reparentedNodes_.clear();
-        reorderedNodes_.clear();
         childrenChangedNodes_.clear();
         modifiedElements_.clear();
     }
@@ -513,7 +425,6 @@ private:
             createdNodes_.empty() &&
             removedNodes_.empty() &&
             reparentedNodes_.empty() &&
-            reorderedNodes_.empty() &&
             childrenChangedNodes_.empty() &&
             modifiedElements_.empty());
     }

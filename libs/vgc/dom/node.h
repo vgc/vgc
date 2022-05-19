@@ -25,8 +25,6 @@
 namespace vgc {
 namespace dom {
 
-class Document;
-
 /// \enum vgc::dom::NodeType
 /// \brief Specifies the type of a Node.
 ///
@@ -70,6 +68,7 @@ void write(OStream& out, NodeType type)
 }
 
 VGC_DECLARE_OBJECT(Node);
+VGC_DECLARE_OBJECT(Document);
 
 namespace internal {
 void destroyNode(Node* node);

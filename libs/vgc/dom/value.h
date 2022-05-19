@@ -17,6 +17,7 @@
 #ifndef VGC_DOM_VALUE_H
 #define VGC_DOM_VALUE_H
 
+#include <memory>
 #include <variant>
 
 #include <vgc/core/array.h>
@@ -153,7 +154,7 @@ public:
     ///
     Value(const core::DoubleArray& doubleArray) :
         type_(ValueType::DoubleArray),
-        var_(doubleArray) {
+        var_(std::make_shared<core::DoubleArray>(doubleArray)) {
 
     }
 
@@ -161,7 +162,7 @@ public:
     ///
     Value(const geometry::Vec2dArray& vec2dArray) :
         type_(ValueType::Vec2dArray),
-        var_(vec2dArray) {
+        var_(std::make_shared<geometry::Vec2dArray>(vec2dArray)) {
 
     }
 
@@ -212,7 +213,7 @@ public:
     /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
     const geometry::Vec2dArray& getVec2dArray() const {
-        return std::get<geometry::Vec2dArray>(var_);
+        return *std::get<std::shared_ptr<geometry::Vec2dArray>>(var_);
     }
 
     /// Copies the Vec2dArray held by this Value to \p doubleArray.
@@ -226,14 +227,14 @@ public:
     ///
     void set(const geometry::Vec2dArray& vec2dArray) {
         type_ = ValueType::Vec2dArray;
-        var_ = vec2dArray;
+        var_ = std::make_shared<geometry::Vec2dArray>(vec2dArray);
     }
 
     /// Returns the DoubleArray held by this Value.
     /// The behavior is undefined if type() != ValueType::DoubleArray.
     ///
     const core::DoubleArray& getDoubleArray() const {
-        return std::get<core::DoubleArray>(var_);
+        return *std::get<std::shared_ptr<core::DoubleArray>>(var_);
     }
 
     /// Copies the DoubleArray held by this Value to \p doubleArray.
@@ -247,7 +248,7 @@ public:
     ///
     void set(const core::DoubleArray& doubleArray) {
         type_ = ValueType::DoubleArray;
-        var_ = doubleArray;
+        var_ = std::make_shared<core::DoubleArray>(doubleArray);
     }
 
 private:
@@ -262,8 +263,8 @@ private:
     std::variant<
         std::monostate,
         core::Color,
-        core::DoubleArray,
-        geometry::Vec2dArray
+        std::shared_ptr<core::DoubleArray>,
+        std::shared_ptr<geometry::Vec2dArray>
     > var_;
 };
 

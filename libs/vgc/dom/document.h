@@ -17,6 +17,7 @@
 #ifndef VGC_DOM_DOCUMENT_H
 #define VGC_DOM_DOCUMENT_H
 
+#include <list>
 #include <optional>
 #include <unordered_map>
 
@@ -157,6 +158,8 @@ protected:
     Document();
 
 public:
+    using HistoryIterator = std::list<Operation>::iterator;
+
     /// Creates a new document with no root element.
     ///
     static DocumentPtr create();
@@ -349,20 +352,20 @@ public:
     }
 
     Int getHistorySize() {
-        return operationHistory_.length();
+        return core::int_cast<Int>(operationHistory_.size());
     }
 
     bool hasHistoryEnabled() const {
         return operationHistorySizeMax_ > 0;
     }
 
-    bool gotoHistoryPos(Int pos);
+    bool gotoHistoricalState(HistoryIterator it);
     bool undoOne();
     bool redoOne();
 
     void beginOperation(core::StringId name);
     bool endOperation();
-    bool emitDiff();
+    bool emitPendingDiff();
 
     VGC_SIGNAL(documentChanged, (const Diff&, diff));
 
@@ -379,28 +382,27 @@ private:
 
     // Track changes
 
-    // XXX design decision: history always active but can be of size 0 !!
-    //                      meaning we always diff per operation and emit signals on operation end.
-
-    friend class Node;
+    friend Node;
     friend class Element;
-    core::Array<Operation> operationHistory_;
-    Int operationHistoryPosition_ = 0;
+    friend CreateNodeOperation;
+    friend RemoveNodeOperation;
+    friend MoveNodeOperation;
+
     Int operationHistorySizeMax_ = 0;
+    std::list<Operation> operationHistory_;
+    std::list<Operation>::iterator currentOperationIterator_; // past the last undoable operation, first redoable operation.
     core::Array<core::StringId> operationStack_; // stack of begun operations' names
-    std::optional<Operation> currentOperation_;
-    Diff currentDiff_;
-    std::unordered_map<Node*, NodeLinks> oldLinksMap_; // to finalize the diff
+    std::optional<Operation> ongoingOperation_;
+    Diff pendingDiff_;
+    std::unordered_map<Node*, NodeRelatives> oldRelativesMap_; // to finalize the diff
 
     // To record atomic operations
+    void onCreateNode_(Node* node, const NodeRelatives& relatives);
+    void onRemoveNode_(Node* node, const NodeRelatives& relatives);
+    void onMoveNode_(Node* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives);
     void onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
     void onRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
     void onChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
-    void onCreateNode_(Node* node, const NodeLinks& links);
-    void onRemoveNode_(Node* node, const NodeLinks& links);
-    void onMoveNode_(Node* node, const NodeLinks& oldLinks, const NodeLinks& newLinks);
-
-    void onNodeVicinityChanged_(Node* node);
 };
 
 } // namespace dom

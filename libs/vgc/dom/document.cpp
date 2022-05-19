@@ -39,6 +39,7 @@ Document::Document() :
     xmlStandalone_(false)
 {
     generateXmlDeclaration_();
+    currentOperationIterator_ = operationHistory_.end();
 }
 
 /* static */
@@ -854,20 +855,39 @@ void Document::setHistoryLimit(Int size)
 
     operationHistorySizeMax_ = size;
 
+
+
+
+    // XXXXXXXXXX Boris wants an iterator in an operation tree for the ongoing operation.
+
+    // notes:
+    // need stack of OperationGroup { undoOne() -> returns true if if was the last.. }
+    // Diff must be filled by atomic ops themselves (doIt())
+    // we need last iteration direction, cuz we can diff only one way..
+
+
+    /*
+
+    auto doAtomicOp<TAtomicOp>(document, diff, args) {
+    TAtomicOp& op = static_cast<TAtomicOp&>(opStack[-1].emplaceOp(TAtomicOp(args)));
+    return TAtomicOp::doIt(document, diff, op);
+    return op.doIt(document, diff);
+
+    Element::CreateOperation
+    }
+
+    */
+
+
+
     /*if (operationHistory_.size() > operationHistorySizeMax_) {
         operationHistory_.removeRange(0, operationHistory_.size() - operationHistorySizeMax_);
     }*/
 }
 
-bool Document::gotoHistoryPos(Int pos)
+bool Document::gotoHistoricalState(HistoryIterator it)
 {
-    if (pos < 0) {
-        pos = operationHistory_.size() + pos;
-    }
-    if (pos < 0 || pos >= operationHistory_.size()) {
-        return false;
-    }
-    if (pos == operationHistoryPosition_) {
+    if (it == currentOperationIterator_) {
         return true;
     }
 
@@ -904,110 +924,110 @@ bool Document::gotoHistoryPos(Int pos)
 
 bool Document::undoOne()
 {
-    gotoHistoryPos(operationHistoryPosition_ - 1);
+    HistoryIterator it = currentOperationIterator_;
+    if (it != operationHistory_.begin()) {
+        gotoHistoricalState(--it);
+        return true;
+    }
+    return false;
 }
 
 bool Document::redoOne()
 {
-    gotoHistoryPos(operationHistoryPosition_ + 1);
+    HistoryIterator it = currentOperationIterator_;
+    if (it != operationHistory_.end()) {
+        gotoHistoricalState(++it);
+        return true;
+    }
+    return false;
 }
 
 void Document::beginOperation(core::StringId name)
 {
     if (operationStack_.isEmpty()) {
-        if (currentOperation_.has_value()) {
-            throw LogicError("Pending operation present but operation stack is empty.");
+        if (ongoingOperation_.has_value()) {
+            throw LogicError("Ongoing operation present but operation stack is empty.");
         }
-        currentOperation_.emplace(Operation(name));
+        // release the redos
+        currentOperationIterator_ = operationHistory_.erase(
+            currentOperationIterator_, operationHistory_.end());
+        // create an Operation
+        ongoingOperation_.emplace(Operation(name));
     }
     operationStack_.append(name);
 }
 
 bool Document::endOperation()
 {
-    if (operationStack_.isEmpty()) {
-        throw LogicError("Trying to end an operation but operation stack is empty.");
+    // XXX only in debug ?
+    {
+        if (operationStack_.isEmpty()) {
+            throw LogicError("Trying to end an operation when the operation stack is empty.");
+        }
+        if (!ongoingOperation_.has_value()) {
+            throw LogicError("Trying to end an operation when there is no ongoing operation.");
+        }
+        if (currentOperationIterator_ != operationHistory_.end()) {
+            throw LogicError("Operation history iterator has moved during ongoing operation.");
+        }
     }
-    if (!currentOperation_.has_value()) {
-        throw LogicError("Trying to end an operation but current operation does not exist.");
-    }
+
     operationStack_.pop();
     if (operationStack_.isEmpty()) {
-        // XXX lot of things to do..
+        emitPendingDiff();
 
-        emitDiff();
-
-        // XXX delete redos first..
-
-
-        if (operationHistory_.size() > operationHistorySizeMax_) {
-            // todo
+        if (hasHistoryEnabled()) {
+            operationHistory_.emplace_back(std::move(ongoingOperation_.value()));
+            if (operationHistory_.size() > operationHistorySizeMax_) {
+                operationHistory_.pop_front();
+            }
         }
-        operationHistory_.append(std::move(currentOperation_.value()));
-        currentOperation_.reset();
+
+        ongoingOperation_.reset();
     }
     return false;
 }
 
-bool Document::emitDiff()
+bool Document::emitPendingDiff()
 {
-    for (const auto& [node, oldLinks] : oldLinksMap_) {
-        if (currentDiff_.createdNodes_.contains(node)) {
+    for (const auto& [node, oldRelatives] : oldRelativesMap_) {
+        if (pendingDiff_.createdNodes_.contains(node)) {
             continue;
         }
-        if (currentDiff_.removedNodes_.contains(node)) {
+        if (pendingDiff_.removedNodes_.contains(node)) {
             continue;
         }
 
-        NodeLinks newLinks(node);
-
-        bool parentChanged = (oldLinks.parent_ != newLinks.parent_);
-        auto& movedChildNodes = (
-            parentChanged ?
-            currentDiff_.reparentedNodes_ :
-            currentDiff_.reorderedNodes_);
-
-        bool siblingsChanged = false;
-        if (oldLinks.previousSibling_ != newLinks.previousSibling_) {
-            movedChildNodes.insert(node);
-            siblingsChanged = true;
-        }
-        if (oldLinks.nextSibling_ != newLinks.nextSibling_) {
-            movedChildNodes.insert(node);
-            siblingsChanged = true;
-        }
-
-        if (parentChanged) {
-            currentDiff_.childrenChangedNodes_.insert(oldLinks.parent_);
-            currentDiff_.childrenChangedNodes_.insert(newLinks.parent_);
-        }
-        else if (siblingsChanged) {
-            currentDiff_.childrenChangedNodes_.insert(oldLinks.parent_);
+        NodeRelatives newRelatives(node);
+        if (oldRelatives.parent_ != newRelatives.parent_) {
+            pendingDiff_.childrenChangedNodes_.insert(oldRelatives.parent_);
+            pendingDiff_.childrenChangedNodes_.insert(newRelatives.parent_);
+            pendingDiff_.reparentedNodes_.insert(node);
         }
     }
-    oldLinksMap_.clear();
+    oldRelativesMap_.clear();
 
     // remove created and removed nodes from modified elements
-    auto& modifiedElements = currentDiff_.modifiedElements_;
+    auto& modifiedElements = pendingDiff_.modifiedElements_;
     for (auto it = modifiedElements.begin(), last = modifiedElements.end(); it != last;) {
         Node* node = it->first;
-        if (currentDiff_.createdNodes_.contains(node)) {
+        if (pendingDiff_.createdNodes_.contains(node)) {
             it = modifiedElements.erase(it);
             continue;
         }
-        if (currentDiff_.removedNodes_.contains(node)) {
+        if (pendingDiff_.removedNodes_.contains(node)) {
             it = modifiedElements.erase(it);
             continue;
         }
         ++it;
     }
 
-    if (!currentDiff_.isEmpty()) {
+    if (!pendingDiff_.isEmpty()) {
 
         // XXX todo: emit node signals in here too !
 
-        documentChanged().emit(currentDiff_);
-        currentDiff_.reset();
+        documentChanged().emit(pendingDiff_);
+        pendingDiff_.reset();
         return true;
     }
 
@@ -1017,74 +1037,61 @@ bool Document::emitDiff()
 void Document::onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
 {
     if (operationStack_.isEmpty()) {
-        throw LogicError("No known begun operation.");
+        throw LogicError("No known ongoing operation.");
     }
-    currentOperation_.value().emplaceLastAtomicOperation(
-        CreateAuthoredAttributeOperands(element, name, value));
-    currentDiff_.modifiedElements_[element].insert(name);
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        CreateAuthoredAttributeOperation>(element, name, value);
+    pendingDiff_.modifiedElements_[element].insert(name);
 }
 
 void Document::onRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
 {
     if (operationStack_.isEmpty()) {
-        throw LogicError("No known begun operation.");
+        throw LogicError("No known ongoing operation.");
     }
-    currentOperation_.value().emplaceLastAtomicOperation(
-        RemoveAuthoredAttributeOperands(element, name, value));
-    currentDiff_.modifiedElements_[element].insert(name);
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        RemoveAuthoredAttributeOperation>(element, name, value);
+    pendingDiff_.modifiedElements_[element].insert(name);
 }
 
 void Document::onChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue)
 {
     if (operationStack_.isEmpty()) {
-        throw LogicError("No known begun operation.");
+        throw LogicError("No known ongoing operation.");
     }
-    currentOperation_.value().emplaceLastAtomicOperation(
-        ChangeAuthoredAttributeOperands(element, name, oldValue, newValue));
-    currentDiff_.modifiedElements_[element].insert(name);
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        ChangeAuthoredAttributeOperation>(element, name, oldValue, newValue);
+    pendingDiff_.modifiedElements_[element].insert(name);
 }
 
-void Document::onCreateNode_(Node* node, const NodeLinks& links)
+void Document::onCreateNode_(Node* node, const NodeRelatives& relatives)
 {
     if (operationStack_.isEmpty()) {
-        throw LogicError("No known begun operation.");
+        throw LogicError("No known ongoing operation.");
     }
-    currentOperation_.value().emplaceLastAtomicOperation(
-        CreateNodeOperands(node, links));
-    currentDiff_.createdNodes_.emplaceLast(node);
-    onNodeVicinityChanged_(node->previousSibling());
-    onNodeVicinityChanged_(node->nextSibling());
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        CreateNodeOperation>(node, relatives);
+    pendingDiff_.createdNodes_.emplaceLast(node);
 }
 
-void Document::onRemoveNode_(Node* node, const NodeLinks& links)
+void Document::onRemoveNode_(Node* node, const NodeRelatives& savedRelatives)
 {
     if (operationStack_.isEmpty()) {
-        throw LogicError("No known begun operation.");
+        throw LogicError("No known ongoing operation.");
     }
-    currentOperation_.value().emplaceLastAtomicOperation(
-        RemoveNodeOperands(node, links));
-    currentDiff_.removedNodes_.emplaceLast(node);
-    onNodeVicinityChanged_(node->previousSibling());
-    onNodeVicinityChanged_(node->nextSibling());
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        RemoveNodeOperation>(node, savedRelatives);
+    pendingDiff_.removedNodes_.emplaceLast(node);
 }
 
-void Document::onMoveNode_(Node* node, const NodeLinks& oldLinks, const NodeLinks& newLinks)
+void Document::onMoveNode_(Node* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives)
 {
     if (operationStack_.isEmpty()) {
-        throw LogicError("No known begun operation.");
+        throw LogicError("No known ongoing operation.");
     }
-    currentOperation_.value().emplaceLastAtomicOperation(
-        MoveNodeOperands(node, oldLinks, newLinks));
-    onNodeVicinityChanged_(node);
-    onNodeVicinityChanged_(oldLinks.previousSibling());
-    onNodeVicinityChanged_(oldLinks.nextSibling());
-    onNodeVicinityChanged_(newLinks.previousSibling());
-    onNodeVicinityChanged_(newLinks.nextSibling());
-}
-
-void Document::onNodeVicinityChanged_(Node* node)
-{
-    oldLinksMap_.try_emplace(node, NodeLinks(node));
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        MoveNodeOperation>(node, oldRelatives, newRelatives);
+    oldRelativesMap_.try_emplace(node, NodeRelatives(node));
 }
 
 } // namespace dom

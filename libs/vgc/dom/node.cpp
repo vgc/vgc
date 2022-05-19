@@ -44,12 +44,10 @@ Node::Node(Document* document, NodeType nodeType) :
 
 void Node::remove()
 {
-    NodeLinks links(this);
-
+    NodeRelatives links(this);
     core::ObjPtr self = removeObjectFromParent_();
     auto doc = document();
     doc->beginOperation(strings::RemoveNode);
-    doc->currentOperation_.value().removedNodes_.append(core::static_pointer_cast<Node>(self));
     doc->onRemoveNode_(this, links);
     doc->endOperation();
 }
