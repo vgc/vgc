@@ -345,26 +345,6 @@ public:
               const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
 
-    void setHistoryLimit(Int size);
-
-    Int getHistoryLimit() {
-        return operationHistorySizeMax_;
-    }
-
-    Int getHistorySize() {
-        return core::int_cast<Int>(operationHistory_.size());
-    }
-
-    bool hasHistoryEnabled() const {
-        return operationHistorySizeMax_ > 0;
-    }
-
-    bool gotoHistoricalState(HistoryIterator it);
-    bool undoOne();
-    bool redoOne();
-
-    void beginOperation(core::StringId name);
-    bool endOperation();
     bool emitPendingDiff();
 
     VGC_SIGNAL(documentChanged, (const Diff&, diff));
@@ -380,29 +360,22 @@ private:
     void generateXmlDeclaration_();
     std::string xmlDeclaration_;
 
-    // Track changes
-
+    // Atomic operations impl
     friend Node;
     friend class Element;
     friend CreateNodeOperation;
     friend RemoveNodeOperation;
     friend MoveNodeOperation;
 
-    Int operationHistorySizeMax_ = 0;
-    std::list<Operation> operationHistory_;
-    std::list<Operation>::iterator currentOperationIterator_; // past the last undoable operation, first redoable operation.
-    core::Array<core::StringId> operationStack_; // stack of begun operations' names
-    std::optional<Operation> ongoingOperation_;
     Diff pendingDiff_;
     std::unordered_map<Node*, NodeRelatives> oldRelativesMap_; // to finalize the diff
 
-    // To record atomic operations
-    void onCreateNode_(Node* node, const NodeRelatives& relatives);
-    void onRemoveNode_(Node* node, const NodeRelatives& relatives);
-    void onMoveNode_(Node* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives);
-    void onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
-    void onRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
-    void onChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
+    void doCreateNode_(Node* node, const NodeRelatives& relatives);
+    void doRemoveNode_(Node* node, const NodeRelatives& relatives);
+    void doMoveNode_(Node* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives);
+    void doCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
+    void doRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
+    void doChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
 };
 
 } // namespace dom

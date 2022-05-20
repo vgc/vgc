@@ -30,6 +30,7 @@
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/history.h>
 #include <vgc/dom/node.h>
 #include <vgc/dom/value.h>
 
@@ -39,8 +40,6 @@ VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
-class AtomicOperation;
-class Operation;
 class Diff;
 
 class VGC_DOM_API NodeRelatives {
@@ -79,23 +78,8 @@ private:
         nextSibling_(nextSibling) {}
 };
 
-class VGC_DOM_API AtomicOperation {
+class VGC_DOM_API CreateNodeOperation : public Operation {
 protected:
-    AtomicOperation() = default;
-
-public:
-    virtual ~AtomicOperation() = default;
-
-protected:
-    friend Operation;
-    virtual void undo(Document* doc) = 0;
-    virtual void redo(Document* doc) = 0;
-};
-
-class VGC_DOM_API CreateNodeOperation : public AtomicOperation {
-protected:
-    friend Operation;
-
     CreateNodeOperation(
         Node* node,
         const NodeRelatives& relatives) :
@@ -118,8 +102,9 @@ public:
     }
 
 protected:
-    void undo(Document* doc) override;
-    void redo(Document* doc) override;
+    void do_(Document* doc) override;
+    void undo_(Document* doc) override;
+    void redo_(Document* doc) override;
 
 private:
     NodePtr node_;
@@ -127,10 +112,8 @@ private:
     NodeRelatives savedRelatives_;
 };
 
-class VGC_DOM_API RemoveNodeOperation : public AtomicOperation {
+class VGC_DOM_API RemoveNodeOperation : public Operation {
 protected:
-    friend Operation;
-
     RemoveNodeOperation(
         Node* node,
         const NodeRelatives& relatives) :
@@ -153,8 +136,9 @@ public:
     }
 
 protected:
-    void undo(Document* doc) override;
-    void redo(Document* doc) override;
+    void do_(Document* doc) override;
+    void undo_(Document* doc) override;
+    void redo_(Document* doc) override;
 
 private:
     NodePtr node_;
@@ -164,8 +148,6 @@ private:
 
 class VGC_DOM_API MoveNodeOperation : public AtomicOperation {
 protected:
-    friend Operation;
-
     MoveNodeOperation(
         Node* node,
         const NodeRelatives& oldRelatives,
@@ -188,8 +170,9 @@ public:
     }
 
 protected:
-    void undo(Document* doc) override;
-    void redo(Document* doc) override;
+    void do_(Document* doc) override;
+    void undo_(Document* doc) override;
+    void redo_(Document* doc) override;
 
 private:
     Node* node_;
@@ -199,8 +182,6 @@ private:
 
 class VGC_DOM_API CreateAuthoredAttributeOperation : public AtomicOperation {
 protected:
-    friend Operation;
-
     CreateAuthoredAttributeOperation(
         Element* element,
         core::StringId name,
@@ -223,8 +204,9 @@ public:
     }
 
 protected:
-    void undo(Document* doc) override;
-    void redo(Document* doc) override;
+    void do_(Document* doc) override;
+    void undo_(Document* doc) override;
+    void redo_(Document* doc) override;
 
 private:
     Element* element_;
@@ -234,8 +216,6 @@ private:
 
 class VGC_DOM_API RemoveAuthoredAttributeOperation : public AtomicOperation {
 protected:
-    friend Operation;
-
     RemoveAuthoredAttributeOperation(
         Element* element,
         core::StringId name,
@@ -258,8 +238,9 @@ public:
     }
 
 protected:
-    void undo(Document* doc) override;
-    void redo(Document* doc) override;
+    void do_(Document* doc) override;
+    void undo_(Document* doc) override;
+    void redo_(Document* doc) override;
 
 private:
     Element* element_;
@@ -312,17 +293,19 @@ private:
 using OperationIndex = UInt32;
 OperationIndex genOperationIndex();
 
-class VGC_DOM_API Operation {
+class VGC_DOM_API CompoundOperation : Operation {
 protected:
-    explicit Operation(core::StringId name) :
-        name_(name), index_(genOperationIndex()) {}
+    explicit CompoundOperation(core::StringId name) :
+        Operation(false),
+        name_(name),
+        index_(genOperationIndex()) {}
 
 public:
     // non-copyable
-    Operation(const Operation&) = delete;
-    Operation& operator=(const Operation&) = delete;
+    CompoundOperation(const CompoundOperation&) = delete;
+    CompoundOperation& operator=(const CompoundOperation&) = delete;
 
-    Operation(Operation&& other) noexcept :
+    CompoundOperation(CompoundOperation&& other) noexcept :
         name_(other.name_),
         index_(other.index_),
         isReverted_(other.isReverted_) {
@@ -330,7 +313,7 @@ public:
         atomicOperations_.swap(other.atomicOperations_);
     }
 
-    Operation& operator=(Operation&& other) noexcept {
+    CompoundOperation& operator=(CompoundOperation&& other) noexcept {
         std::swap(name_, other.name_);
         std::swap(index_, other.index_);
         std::swap(isReverted_, other.isReverted_);
@@ -352,18 +335,16 @@ public:
 private:
     friend Document;
 
-    core::Array<std::unique_ptr<AtomicOperation>> atomicOperations_;
+    core::Array<std::unique_ptr<Operation>> subOperations_;
+    Int subOperationsIt_;
+
     core::StringId name_;
     OperationIndex index_;
     bool isReverted_ = false;
 
-    const auto& atomicOperations_() const {
-        return atomicOperations_;
-    }
-
     template<typename TAtomicOperation, typename... Args,
         core::Requires<std::is_base_of_v<AtomicOperation, TAtomicOperation>> = true>
-    void emplaceLastAtomicOperation_(Args&&... args) {
+    void doAtomicOperation_(Args&&... args) {
         // AtomicOperation constructor is private, cannot emplace with args.
         atomicOperations_.emplaceLast(TAtomicOperation(std::forward<Args>(args)...));
     }
