@@ -49,9 +49,13 @@ namespace vgc::geometry {
 class Mat4d
 {
 public:
-    /// Creates an uninitialized Mat4d.
+    /// Creates a `Mat4d` initialized to the null matrix `Mat3d(0)`.
     ///
-    Mat4d() {}
+    constexpr Mat4d() : Mat4d(0) {}
+
+    /// Creates an uninitialized `Mat4d`.
+    ///
+    Mat4d(core::NoInit) {}
 
     /// Creates a Mat4d initialized with the given arguments.
     ///

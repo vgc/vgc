@@ -72,9 +72,7 @@ void wrap_mat(py::module& m, const std::string& name)
     py::class_<TMat> cmat(m, name.c_str());
 
     // Default constructor, copy constructor, and diagonal matrix constructor.
-    // Note that in Python, unlike in C++, the default constructor does
-    // zero-initialization.
-    cmat.def(py::init([]() { return TMat(0); } ))
+    cmat.def(py::init<>())
         .def(py::init<TMat>())
         .def(py::init<T>());
 

@@ -47,9 +47,13 @@ namespace vgc::geometry {
 class Mat3d
 {
 public:
-    /// Creates an uninitialized Mat3d.
+    /// Creates a `Mat3d` initialized to the null matrix `Mat3d(0)`.
     ///
-    Mat3d() {}
+    constexpr Mat3d() : Mat3d(0) {}
+
+    /// Creates an uninitialized `Mat3d`.
+    ///
+    Mat3d(core::NoInit) {}
 
     /// Creates a Mat3d initialized with the given arguments.
     ///
