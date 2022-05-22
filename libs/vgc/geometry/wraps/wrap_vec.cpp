@@ -20,14 +20,24 @@
 
 namespace  {
 
+template<typename This>
+This normalizedOrThrow(const This& v)
+{
+    bool isNormalizable;
+    This res = v.normalized(&isNormalizable);
+    if (!isNormalizable) {
+        throw py::value_error("The vector is not normalizable.");
+    }
+    return res;
+}
+
 template<typename This, typename T>
 typename std::enable_if<std::is_same<typename This::value_type, T>::value>::type
 wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
 {
     py::class_<This>(m, thisTypeName.c_str())
 
-        // Note: in Python, Vec2x() does zero-initialization, unlike in C++
-        .def(py::init([]() { return This(0, 0); } ))
+        .def(py::init<>())
         .def(py::init<T, T>())
         .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
         .def(py::init([thisTypeName](py::tuple t) {
@@ -65,8 +75,9 @@ wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
 
         .def("length", &This::length)
         .def("squaredLength", &This::squaredLength)
-        .def("normalize", &This::normalize)
-        .def("normalized", &This::normalized)
+
+        .def("normalize", [](This& v) { v = normalizedOrThrow(v); })
+        .def("normalized", [](const This& v) { return normalizedOrThrow(v); })
         .def("orthogonalize", &This::orthogonalize)
         .def("orthogonalized", &This::orthogonalized)
         .def("dot", &This::dot)
