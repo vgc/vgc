@@ -49,9 +49,13 @@ namespace vgc::geometry {
 class Mat4f
 {
 public:
-    /// Creates an uninitialized Mat4f.
+    /// Creates a `Mat4f` initialized to the null matrix `Mat3f(0)`.
     ///
-    Mat4f() {}
+    constexpr Mat4f() : Mat4f(0) {}
+
+    /// Creates an uninitialized `Mat4f`.
+    ///
+    Mat4f(core::NoInit) {}
 
     /// Creates a Mat4f initialized with the given arguments.
     ///
