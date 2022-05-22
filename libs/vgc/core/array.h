@@ -2345,7 +2345,7 @@ private:
             // Method 1, potentially dangerous:
             //    std::advance(unwrapIterator(first), n)
             // Method 2, safer: (but does the compiler really optimize?)
-            return std::uninitialized_fill_n(unwrapIterator(first), NoInit{});
+            return std::uninitialized_fill_n(unwrapIterator(first), n, NoInit{});
         }
         else {
             return std::uninitialized_default_construct_n(unwrapIterator(first), n);

@@ -35,7 +35,7 @@ namespace vgc::geometry {
 /// (= unit vector). Unlike other libraries, we do not use separate types for
 /// all these use cases.
 ///
-/// The memory size of a Vec2d is exactly 2 * sizeof(double). This will never
+/// The memory size of a `Vec2d` is exactly `2 * sizeof(double)`. This will never
 /// change in any future version, as this allows to conveniently use this class
 /// for data transfer to the GPU (via OpenGL, Metal, etc.).
 ///
@@ -46,39 +46,43 @@ class Vec2d
 public:
     using value_type = double;
 
-    /// Creates an uninitialized Vec2d.
+    /// Creates a `Vec2d` initialized to (0, 0).
     ///
-    Vec2d() {}
+    Vec2d() : data_{0, 0} {}
 
-    /// Creates a Vec2d initialized with the given arguments.
+    /// Creates an uninitialized `Vec2d`.
+    ///
+    Vec2d(core::NoInit) {}
+
+    /// Creates a `Vec2d` initialized with the given `x` and `y` coordinates.
     ///
     constexpr Vec2d(double x, double y) : data_{x, y} {}
 
-    /// Accesses the i-th component of the Vec2d.
+    /// Accesses the `i`-th coordinate of this `Vec2d`.
     ///
     const double& operator[](Int i) const { return data_[i]; }
 
-    /// Mutates the i-th component of the Vec2d.
+    /// Mutates the `i`-th coordinate of this `Vec2d`.
     ///
     double& operator[](Int i) { return data_[i]; }
 
-    /// Accesses the first component of the Vec2d.
+    /// Accesses the first coordinate of this `Vec2d`.
     ///
     double x() const { return data_[0]; }
 
-    /// Accesses the second component of the Vec2d.
+    /// Accesses the second coordinate of this `Vec2d`.
     ///
     double y() const { return data_[1]; }
 
-    /// Mutates the first component of the Vec2d.
+    /// Mutates the first coordinate of this `Vec2d`.
     ///
     void setX(double x) { data_[0] = x; }
 
-    /// Mutates the second component of the Vec2d.
+    /// Mutates the second coordinate of this `Vec2d`.
     ///
     void setY(double y) { data_[1] = y; }
 
-    /// Adds in-place the \p other Vec2d to this Vec2d.
+    /// Adds in-place `other` to this `Vec2d`.
     ///
     Vec2d& operator+=(const Vec2d& other) {
         data_[0] += other[0];
@@ -86,19 +90,19 @@ public:
         return *this;
     }
 
-    /// Returns the addition of the Vec2d \p v1 and the Vec2d \p v2.
+    /// Returns the addition of the two vectors `v1` and `v2`.
     ///
     friend Vec2d operator+(const Vec2d& v1, const Vec2d& v2) {
         return Vec2d(v1) += v2;
     }
 
-    /// Returns a copy of this Vec2d (unary plus operator).
+    /// Returns a copy of this `Vec2d` (unary plus operator).
     ///
     Vec2d operator+() const {
         return *this;
     }
 
-    /// Substracts in-place the \p other Vec2d to this Vec2d.
+    /// Substracts in-place `other` from this `Vec2d`.
     ///
     Vec2d& operator-=(const Vec2d& other) {
         data_[0] -= other[0];
@@ -106,19 +110,19 @@ public:
         return *this;
     }
 
-    /// Returns the substraction of the Vec2d \p v1 and the Vec2d \p v2.
+    /// Returns the substraction of `v1` and `v2`.
     ///
     friend Vec2d operator-(const Vec2d& v1, const Vec2d& v2) {
         return Vec2d(v1) -= v2;
     }
 
-    /// Returns the opposite of this Vec2d (unary minus operator).
+    /// Returns the opposite of this `Vec2d` (unary minus operator).
     ///
     Vec2d operator-() const {
         return Vec2d(-data_[0], -data_[1]);
     }
 
-    /// Multiplies in-place this Vec2d by the given scalar \p s.
+    /// Multiplies in-place this `Vec2d` by the scalar `s`.
     ///
     Vec2d& operator*=(double s) {
         data_[0] *= s;
@@ -126,19 +130,19 @@ public:
         return *this;
     }
 
-    /// Returns the multiplication of this Vec2d by the given scalar \p s.
+    /// Returns the multiplication of this `Vec2d` by the scalar `s`.
     ///
     Vec2d operator*(double s) const {
         return Vec2d(*this) *= s;
     }
 
-    /// Returns the multiplication of the scalar \p s with the Vec2d \p v.
+    /// Returns the multiplication of the scalar `s` with the vector `v`.
     ///
     friend Vec2d operator*(double s, const Vec2d& v) {
         return v * s;
     }
 
-    /// Divides in-place this Vec2d by the given scalar \p s.
+    /// Divides in-place this `Vec2d` by the scalar `s`.
     ///
     Vec2d& operator/=(double s) {
         data_[0] /= s;
@@ -146,27 +150,27 @@ public:
         return *this;
     }
 
-    /// Returns the division of this Vec2d by the given scalar \p s.
+    /// Returns the division of this `Vec2d` by the scalar `s`.
     ///
     Vec2d operator/(double s) const {
         return Vec2d(*this) /= s;
     }
 
-    /// Returns whether the two given Vec2d \p v1 and \p v2 are equal.
+    /// Returns whether `v1` and `v2` are equal.
     ///
     friend bool operator==(const Vec2d& v1, const Vec2d& v2) {
         return v1.data_[0] == v2.data_[0] &&
                v1.data_[1] == v2.data_[1];
     }
 
-    /// Returns whether the two given Vec2d \p v1 and \p v2 are different.
+    /// Returns whether `v1` and `v2` are different.
     ///
     friend bool operator!=(const Vec2d& v1, const Vec2d& v2) {
         return v1.data_[0] != v2.data_[0] ||
                v1.data_[1] != v2.data_[1];
     }
 
-    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator<(const Vec2d& v1, const Vec2d& v2) {
@@ -175,63 +179,65 @@ public:
                ( (v1.data_[1] < v2.data_[1]))));
     }
 
-    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator<=(const Vec2d& v1, const Vec2d& v2) {
         return !(v2 < v1);
     }
 
-    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// Compares the `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator>(const Vec2d& v1, const Vec2d& v2) {
         return v2 < v1;
     }
 
-    /// Compares the two Vec2d \p v1 and \p v2 using the lexicographic
+    /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator>=(const Vec2d& v1, const Vec2d& v2) {
         return !(v1 < v2);
     }
 
-    /// Returns the Euclidean length of the Vec2d.
+    /// Returns the Euclidean length of this `Vec2d`.
     ///
     double length() const {
         return std::sqrt(squaredLength());
     }
 
-    /// Returns the square of the Euclidean length of the Vec2d.
+    /// Returns the square of the Euclidean length of this `Vec2d`.
     ///
-    /// This function is faster than length(), therefore it is a good idea to
+    /// This function is faster than `length()`, therefore it is a good idea to
     /// use it whenever you don't need the actual length. For example, if you
     /// need to know which vector has greater length, you can use
-    /// v1.squaredLength() < v2.squaredLength().
+    /// `v1.squaredLength() < v2.squaredLength()`.
     ///
     double squaredLength() const {
         return data_[0] * data_[0] + data_[1] * data_[1];
     }
 
-    /// Makes this Vec2d a unit vector by dividing it by length().
-    /// If length() < epsilon, this Vec2d is set to (1.0, 0.0).
+    /// Makes this `Vec2d` a unit vector by dividing it by its length.
     ///
-    Vec2d& normalize() {
-        double l = length();
-        if (l > core::epsilon) { // XXX use zero instead of epsilon?
-            *this /= l;
-        }
-        else {
-            *this = Vec2d(1.0, 0.0);
-        }
-        return *this;
-    }
+    /// If provided, `isNormalizable` is set to either `true` or `false`
+    /// depending on whether the vector was considered normalizable.
+    ///
+    /// The vector is considered non-normalizable whenever its length is less
+    /// or equal than the given `epsilon`. An appropriate epsilon is
+    /// context-dependent, and therefore zero is used as default, which means
+    /// that the vector is considered non-normalizable if and only if it is
+    /// exactly equal to the null vector `Vec2d()`.
+    ///
+    /// If the vector is considered non-normalizable, then it is set to
+    /// `(1.0, 0.0)`.
+    ///
+    /// \sa `length()`.
+    ///
+    Vec2d& normalize(bool* isNormalizable = nullptr, double epsilon = 0.0);
 
     /// Returns a normalized copy of this Vec2d.
     ///
-    Vec2d normalized() const {
-        return Vec2d(*this).normalize();
-    }
+    Vec2d normalized(bool* isNormalizable = nullptr, double epsilon = 0.0) const;
 
     /// Rotates this Vec2d by 90° counter-clockwise, assuming a left-handed
     /// coordinate system.
@@ -561,13 +567,64 @@ private:
     }
 };
 
-/// Alias for vgc::core::Array<vgc::geometry::Vec2d>.
+// We define this function out-of-class to keep the name `epsilon` in the
+// declaration (and thus documentation), while using `epsilon_` in the
+// definition to prevent a warning about hiding vgc::core::epsilon.
+//
+// Note: Currently, (inf, 42).normalized() returns (nan, 0). Indeed,
+// we have v.length() = inf, and (inf/inf, 42/inf) = (nan, 0).
+//
+// We could instead do special handling of infinite values such that:
+//
+// ( inf, 42).normalized() -> ( 1,  0)
+// (-inf, 42).normalized() -> (-1,  0)
+// (42,  inf).normalized() -> ( 0,  1)
+// (42, -inf).normalized() -> ( 0, -1)
+//
+// ( inf,  inf).normalized() -> ( u,  u)  with u = sqrt(2) / 2
+// ( inf, -inf).normalized() -> ( u, -u)
+// (-inf,  inf).normalized() -> (-u,  u)
+// (-inf, -inf).normalized() -> (-u, -u)
+//
+// We could also have special handling of nan values such that:
+//
+// (nan,  42).normalized() -> (nan, nan)
+// (nan, inf).normalized() -> (0, 1) or (nan, nan)
+// (nan,   0).normalized() -> (1, 0)
+//
+// Perhaps such special handling could be optional, with a NanPolicy
+// argument controling whether to do special handling to avoid Nans.
+//
+inline Vec2d& Vec2d::normalize(bool* isNormalizable, double epsilon_)
+{
+    double l2 = squaredLength();
+    if (l2 <= epsilon_*epsilon_) {
+        if (isNormalizable) {
+            *isNormalizable = false;
+        }
+        *this = Vec2d(1.0, 0.0);
+    }
+    else {
+        if (isNormalizable) {
+            *isNormalizable = true;
+        }
+        double l = std::sqrt(l2);
+        *this /= l;
+    }
+    return *this;
+}
+
+inline Vec2d Vec2d::normalized(bool* isNormalizable, double epsilon_) const {
+    return Vec2d(*this).normalize(isNormalizable, epsilon_);
+}
+
+/// Alias for `vgc::core::Array<vgc::geometry::Vec2d>`.
 ///
 using Vec2dArray = core::Array<Vec2d>;
 
-/// Overloads setZero(T& x).
+/// Overloads `setZero(T& x)`.
 ///
-/// \sa vgc::core::zero<T>()
+/// \sa `vgc::core::zero<T>()`.
 ///
 inline void setZero(Vec2d& v)
 {
@@ -575,7 +632,7 @@ inline void setZero(Vec2d& v)
     v[1] = 0.0;
 }
 
-/// Writes the given Vec2d to the output stream.
+/// Writes the given `Vec2d` to the output stream.
 ///
 template<typename OStream>
 void write(OStream& out, const Vec2d& v)
@@ -583,10 +640,10 @@ void write(OStream& out, const Vec2d& v)
     write(out, '(', v[0], ", ", v[1], ')');
 }
 
-/// Reads a Vec2d from the input stream, and stores it in the given output
-/// parameter. Leading whitespaces are allowed. Raises ParseError if the stream
-/// does not start with a Vec2d. Raises RangeError if one of its coordinate is
-/// outside the representable range of a double.
+/// Reads a `Vec2d` from the input stream, and stores it in the given output
+/// parameter `v`. Leading whitespaces are allowed. Raises `ParseError` if the
+/// stream does not start with a `Vec2d`. Raises `RangeError` if one of its
+/// coordinates is outside the representable range of a double.
 ///
 template <typename IStream>
 void readTo(Vec2d& v, IStream& in)

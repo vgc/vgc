@@ -29,7 +29,6 @@ class TestVec2(unittest.TestCase):
 
     def testDefaultConstructor(self):
         for Vec2x in Vec2Types:
-            # Note: in Python, Vec2x() does zero-initialization, unlike in C++
             v = Vec2x()
             self.assertEqual(v.x, 0)
             self.assertEqual(v.y, 0)

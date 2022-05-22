@@ -35,7 +35,7 @@ namespace vgc::geometry {
 /// (= unit vector). Unlike other libraries, we do not use separate types for
 /// all these use cases.
 ///
-/// The memory size of a Vec2x is exactly 2 * sizeof(float). This will never
+/// The memory size of a `Vec2x` is exactly `2 * sizeof(float)`. This will never
 /// change in any future version, as this allows to conveniently use this class
 /// for data transfer to the GPU (via OpenGL, Metal, etc.).
 ///
@@ -46,39 +46,43 @@ class Vec2x
 public:
     using value_type = float;
 
-    /// Creates an uninitialized Vec2x.
+    /// Creates a `Vec2x` initialized to (0, 0).
     ///
-    Vec2x() {}
+    Vec2x() : data_{0, 0} {}
 
-    /// Creates a Vec2x initialized with the given arguments.
+    /// Creates an uninitialized `Vec2x`.
+    ///
+    Vec2x(core::NoInit) {}
+
+    /// Creates a `Vec2x` initialized with the given `x` and `y` coordinates.
     ///
     constexpr Vec2x(float x, float y) : data_{x, y} {}
 
-    /// Accesses the i-th component of the Vec2x.
+    /// Accesses the `i`-th coordinate of this `Vec2x`.
     ///
     const float& operator[](Int i) const { return data_[i]; }
 
-    /// Mutates the i-th component of the Vec2x.
+    /// Mutates the `i`-th coordinate of this `Vec2x`.
     ///
     float& operator[](Int i) { return data_[i]; }
 
-    /// Accesses the first component of the Vec2x.
+    /// Accesses the first coordinate of this `Vec2x`.
     ///
     float x() const { return data_[0]; }
 
-    /// Accesses the second component of the Vec2x.
+    /// Accesses the second coordinate of this `Vec2x`.
     ///
     float y() const { return data_[1]; }
 
-    /// Mutates the first component of the Vec2x.
+    /// Mutates the first coordinate of this `Vec2x`.
     ///
     void setX(float x) { data_[0] = x; }
 
-    /// Mutates the second component of the Vec2x.
+    /// Mutates the second coordinate of this `Vec2x`.
     ///
     void setY(float y) { data_[1] = y; }
 
-    /// Adds in-place the \p other Vec2x to this Vec2x.
+    /// Adds in-place `other` to this `Vec2x`.
     ///
     Vec2x& operator+=(const Vec2x& other) {
         data_[0] += other[0];
@@ -86,19 +90,19 @@ public:
         return *this;
     }
 
-    /// Returns the addition of the Vec2x \p v1 and the Vec2x \p v2.
+    /// Returns the addition of the two vectors `v1` and `v2`.
     ///
     friend Vec2x operator+(const Vec2x& v1, const Vec2x& v2) {
         return Vec2x(v1) += v2;
     }
 
-    /// Returns a copy of this Vec2x (unary plus operator).
+    /// Returns a copy of this `Vec2x` (unary plus operator).
     ///
     Vec2x operator+() const {
         return *this;
     }
 
-    /// Substracts in-place the \p other Vec2x to this Vec2x.
+    /// Substracts in-place `other` from this `Vec2x`.
     ///
     Vec2x& operator-=(const Vec2x& other) {
         data_[0] -= other[0];
@@ -106,19 +110,19 @@ public:
         return *this;
     }
 
-    /// Returns the substraction of the Vec2x \p v1 and the Vec2x \p v2.
+    /// Returns the substraction of `v1` and `v2`.
     ///
     friend Vec2x operator-(const Vec2x& v1, const Vec2x& v2) {
         return Vec2x(v1) -= v2;
     }
 
-    /// Returns the opposite of this Vec2x (unary minus operator).
+    /// Returns the opposite of this `Vec2x` (unary minus operator).
     ///
     Vec2x operator-() const {
         return Vec2x(-data_[0], -data_[1]);
     }
 
-    /// Multiplies in-place this Vec2x by the given scalar \p s.
+    /// Multiplies in-place this `Vec2x` by the scalar `s`.
     ///
     Vec2x& operator*=(float s) {
         data_[0] *= s;
@@ -126,19 +130,19 @@ public:
         return *this;
     }
 
-    /// Returns the multiplication of this Vec2x by the given scalar \p s.
+    /// Returns the multiplication of this `Vec2x` by the scalar `s`.
     ///
     Vec2x operator*(float s) const {
         return Vec2x(*this) *= s;
     }
 
-    /// Returns the multiplication of the scalar \p s with the Vec2x \p v.
+    /// Returns the multiplication of the scalar `s` with the vector `v`.
     ///
     friend Vec2x operator*(float s, const Vec2x& v) {
         return v * s;
     }
 
-    /// Divides in-place this Vec2x by the given scalar \p s.
+    /// Divides in-place this `Vec2x` by the scalar `s`.
     ///
     Vec2x& operator/=(float s) {
         data_[0] /= s;
@@ -146,27 +150,27 @@ public:
         return *this;
     }
 
-    /// Returns the division of this Vec2x by the given scalar \p s.
+    /// Returns the division of this `Vec2x` by the scalar `s`.
     ///
     Vec2x operator/(float s) const {
         return Vec2x(*this) /= s;
     }
 
-    /// Returns whether the two given Vec2x \p v1 and \p v2 are equal.
+    /// Returns whether `v1` and `v2` are equal.
     ///
     friend bool operator==(const Vec2x& v1, const Vec2x& v2) {
         return v1.data_[0] == v2.data_[0] &&
                v1.data_[1] == v2.data_[1];
     }
 
-    /// Returns whether the two given Vec2x \p v1 and \p v2 are different.
+    /// Returns whether `v1` and `v2` are different.
     ///
     friend bool operator!=(const Vec2x& v1, const Vec2x& v2) {
         return v1.data_[0] != v2.data_[0] ||
                v1.data_[1] != v2.data_[1];
     }
 
-    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
+    /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator<(const Vec2x& v1, const Vec2x& v2) {
@@ -175,63 +179,65 @@ public:
                ( (v1.data_[1] < v2.data_[1]))));
     }
 
-    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
+    /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator<=(const Vec2x& v1, const Vec2x& v2) {
         return !(v2 < v1);
     }
 
-    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
+    /// Compares the `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator>(const Vec2x& v1, const Vec2x& v2) {
         return v2 < v1;
     }
 
-    /// Compares the two Vec2x \p v1 and \p v2 using the lexicographic
+    /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
     friend bool operator>=(const Vec2x& v1, const Vec2x& v2) {
         return !(v1 < v2);
     }
 
-    /// Returns the Euclidean length of the Vec2x.
+    /// Returns the Euclidean length of this `Vec2x`.
     ///
     float length() const {
         return std::sqrt(squaredLength());
     }
 
-    /// Returns the square of the Euclidean length of the Vec2x.
+    /// Returns the square of the Euclidean length of this `Vec2x`.
     ///
-    /// This function is faster than length(), therefore it is a good idea to
+    /// This function is faster than `length()`, therefore it is a good idea to
     /// use it whenever you don't need the actual length. For example, if you
     /// need to know which vector has greater length, you can use
-    /// v1.squaredLength() < v2.squaredLength().
+    /// `v1.squaredLength() < v2.squaredLength()`.
     ///
     float squaredLength() const {
         return data_[0] * data_[0] + data_[1] * data_[1];
     }
 
-    /// Makes this Vec2x a unit vector by dividing it by length().
-    /// If length() < epsilon, this Vec2x is set to (1.0f, 0.0f).
+    /// Makes this `Vec2x` a unit vector by dividing it by its length.
     ///
-    Vec2x& normalize() {
-        float l = length();
-        if (l > core::epsilon) { // XXX use zero instead of epsilon?
-            *this /= l;
-        }
-        else {
-            *this = Vec2x(1.0f, 0.0f);
-        }
-        return *this;
-    }
+    /// If provided, `isNormalizable` is set to either `true` or `false`
+    /// depending on whether the vector was considered normalizable.
+    ///
+    /// The vector is considered non-normalizable whenever its length is less
+    /// or equal than the given `epsilon`. An appropriate epsilon is
+    /// context-dependent, and therefore zero is used as default, which means
+    /// that the vector is considered non-normalizable if and only if it is
+    /// exactly equal to the null vector `Vec2x()`.
+    ///
+    /// If the vector is considered non-normalizable, then it is set to
+    /// `(1.0f, 0.0f)`.
+    ///
+    /// \sa `length()`.
+    ///
+    Vec2x& normalize(bool* isNormalizable = nullptr, float epsilon = 0.0f);
 
     /// Returns a normalized copy of this Vec2x.
     ///
-    Vec2x normalized() const {
-        return Vec2x(*this).normalize();
-    }
+    Vec2x normalized(bool* isNormalizable = nullptr, float epsilon = 0.0f) const;
 
     /// Rotates this Vec2x by 90° counter-clockwise, assuming a left-handed
     /// coordinate system.
@@ -561,13 +567,64 @@ private:
     }
 };
 
-/// Alias for vgc::core::Array<vgc::geometry::Vec2x>.
+// We define this function out-of-class to keep the name `epsilon` in the
+// declaration (and thus documentation), while using `epsilon_` in the
+// definition to prevent a warning about hiding vgc::core::epsilon.
+//
+// Note: Currently, (inf, 42).normalized() returns (nan, 0). Indeed,
+// we have v.length() = inf, and (inf/inf, 42/inf) = (nan, 0).
+//
+// We could instead do special handling of infinite values such that:
+//
+// ( inf, 42).normalized() -> ( 1,  0)
+// (-inf, 42).normalized() -> (-1,  0)
+// (42,  inf).normalized() -> ( 0,  1)
+// (42, -inf).normalized() -> ( 0, -1)
+//
+// ( inf,  inf).normalized() -> ( u,  u)  with u = sqrt(2) / 2
+// ( inf, -inf).normalized() -> ( u, -u)
+// (-inf,  inf).normalized() -> (-u,  u)
+// (-inf, -inf).normalized() -> (-u, -u)
+//
+// We could also have special handling of nan values such that:
+//
+// (nan,  42).normalized() -> (nan, nan)
+// (nan, inf).normalized() -> (0, 1) or (nan, nan)
+// (nan,   0).normalized() -> (1, 0)
+//
+// Perhaps such special handling could be optional, with a NanPolicy
+// argument controling whether to do special handling to avoid Nans.
+//
+inline Vec2x& Vec2x::normalize(bool* isNormalizable, float epsilon_)
+{
+    float l2 = squaredLength();
+    if (l2 <= epsilon_*epsilon_) {
+        if (isNormalizable) {
+            *isNormalizable = false;
+        }
+        *this = Vec2x(1.0f, 0.0f);
+    }
+    else {
+        if (isNormalizable) {
+            *isNormalizable = true;
+        }
+        float l = std::sqrt(l2);
+        *this /= l;
+    }
+    return *this;
+}
+
+inline Vec2x Vec2x::normalized(bool* isNormalizable, float epsilon_) const {
+    return Vec2x(*this).normalize(isNormalizable, epsilon_);
+}
+
+/// Alias for `vgc::core::Array<vgc::geometry::Vec2x>`.
 ///
 using Vec2xArray = core::Array<Vec2x>;
 
-/// Overloads setZero(T& x).
+/// Overloads `setZero(T& x)`.
 ///
-/// \sa vgc::core::zero<T>()
+/// \sa `vgc::core::zero<T>()`.
 ///
 inline void setZero(Vec2x& v)
 {
@@ -575,7 +632,7 @@ inline void setZero(Vec2x& v)
     v[1] = 0.0f;
 }
 
-/// Writes the given Vec2x to the output stream.
+/// Writes the given `Vec2x` to the output stream.
 ///
 template<typename OStream>
 void write(OStream& out, const Vec2x& v)
@@ -583,10 +640,10 @@ void write(OStream& out, const Vec2x& v)
     write(out, '(', v[0], ", ", v[1], ')');
 }
 
-/// Reads a Vec2x from the input stream, and stores it in the given output
-/// parameter. Leading whitespaces are allowed. Raises ParseError if the stream
-/// does not start with a Vec2x. Raises RangeError if one of its coordinate is
-/// outside the representable range of a float.
+/// Reads a `Vec2x` from the input stream, and stores it in the given output
+/// parameter `v`. Leading whitespaces are allowed. Raises `ParseError` if the
+/// stream does not start with a `Vec2x`. Raises `RangeError` if one of its
+/// coordinates is outside the representable range of a float.
 ///
 template <typename IStream>
 void readTo(Vec2x& v, IStream& in)
