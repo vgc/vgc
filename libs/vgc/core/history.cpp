@@ -14,28 +14,148 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/history.h>
+#include <vgc/core/history.h>
 
-namespace vgc::dom {
+namespace vgc::core {
 
 namespace {
 
-UndoGroupIndex lastId = 0;
+HistoryNodeIndex lastId = 0;
 
 } // namespace
 
-UndoGroupIndex genUndoGroupIndex() {
+HistoryNodeIndex genHistoryNodeIndex()
+{
     // XXX make this thread-safe ?
     return ++lastId;
 }
 
-void History::setHistoryLimit(Int size)
+bool HistoryNode::commit()
 {
-    if (size == operationHistorySizeMax_) {
-        return;
+    history_->commitNode_(this);
+}
+
+void HistoryNode::undo_()
+{
+
+}
+
+void HistoryNode::redo_()
+{
+
+}
+
+History::History(core::StringId entrypointName)
+    : nodesCounts_(0) // root doesn't count
+{
+    auto ptr = HistoryNode::create(entrypointName, this);
+    this->appendChildObject_(ptr.get());
+    root_ = ptr.get();
+}
+
+void History::setMinLevelsCount(Int count)
+{
+    minLevels_ = count;
+    maxLevels_ = std::max(minLevels_, maxLevels_);
+}
+
+void History::setMaxLevelsCount(Int count)
+{
+    maxLevels_ = count;
+    // XXX prune now
+}
+
+Int History::getLevelsCount() const
+{
+}
+
+bool History::cancelOne()
+{
+}
+
+bool History::undoOne()
+{
+    if (cursor_ != root_) {
+        cursor_->undo_();
+        cursor_ = cursor_->prevNode();
+        return true;
+    }
+    return false;
+}
+
+bool History::redoOne()
+{
+    auto next = cursor_->nextNodeInMainBranch();
+    if (next) {
+        next->redo_();
+        cursor_ = next;
+        return true;
+    }
+    return false;
+}
+
+bool History::gotoNode(HistoryNode* node)
+{
+}
+
+void History::createNode(core::StringId name)
+{
+    auto next = cursor_;
+    while (next = cursor_->nextNodeInMainBranch(), next) {
+        if (!next->isCommitted()) {
+            next->destroyObject_();
+        }
     }
 
-    operationHistorySizeMax_ = size;
+    auto ptr = HistoryNode::create(name, this);
+    cursor_->appendChildObject_(ptr.get());
+    cursor_ = ptr.get();
+}
+
+bool History::commitNode_(HistoryNode* node)
+{
+
+
+    // logic error if out
+    /*{
+        if (operationStack_.isEmpty()) {
+            throw LogicError("Trying to end an operation when the operation stack is empty.");
+        }
+        if (!ongoingOperation_.has_value()) {
+            throw LogicError("Trying to end an operation when there is no ongoing operation.");
+        }
+        if (currentOperationIterator_ != operationHistory_.end()) {
+            throw LogicError("Operation history iterator has moved during ongoing operation.");
+        }
+    }
+
+    operationStack_.pop();
+    if (operationStack_.isEmpty()) {
+        emitPendingDiff();
+
+        if (hasHistoryEnabled()) {
+            operationHistory_.emplace_back(std::move(ongoingOperation_.value()));
+            if (operationHistory_.size() > operationHistorySizeMax_) {
+                operationHistory_.pop_front();
+            }
+        }
+
+        ongoingOperation_.reset();
+    }*/
+    return false;
+}
+
+void History::prune_()
+{
+}
+
+//void History::setHistoryLimit(Int size)
+//{
+//    if (size == operationHistorySizeMax_) {
+//        return;
+//    }
+//
+//    operationHistorySizeMax_ = size;
 
 
 
@@ -65,7 +185,7 @@ void History::setHistoryLimit(Int size)
     /*if (operationHistory_.size() > operationHistorySizeMax_) {
     operationHistory_.removeRange(0, operationHistory_.size() - operationHistorySizeMax_);
     }*/
-}
+//}
 
 //bool History::gotoState(UndoGroupIndex idx)
 //{
@@ -104,70 +224,8 @@ void History::setHistoryLimit(Int size)
 //    }
 //}
 
-bool History::undoOne()
-{
-    HistoryIterator it = currentOperationIterator_;
-    if (it != operationHistory_.begin()) {
-        gotoHistoricalState(--it);
-        return true;
-    }
-    return false;
-}
 
-bool History::redoOne()
-{
-    HistoryIterator it = currentOperationIterator_;
-    if (it != operationHistory_.end()) {
-        gotoHistoricalState(++it);
-        return true;
-    }
-    return false;
-}
 
-void History::beginOperation(core::StringId name)
-{
-    if (operationStack_.isEmpty()) {
-        if (ongoingOperation_.has_value()) {
-            throw LogicError("Ongoing operation present but operation stack is empty.");
-        }
-        // release the redos
-        currentOperationIterator_ = operationHistory_.erase(
-            currentOperationIterator_, operationHistory_.end());
-        // create an Operation
-        ongoingOperation_.emplace(Operation(name));
-    }
-    operationStack_.append(name);
-}
 
-bool History::endOperation()
-{
-    // XXX only in debug ?
-    {
-        if (operationStack_.isEmpty()) {
-            throw LogicError("Trying to end an operation when the operation stack is empty.");
-        }
-        if (!ongoingOperation_.has_value()) {
-            throw LogicError("Trying to end an operation when there is no ongoing operation.");
-        }
-        if (currentOperationIterator_ != operationHistory_.end()) {
-            throw LogicError("Operation history iterator has moved during ongoing operation.");
-        }
-    }
 
-    operationStack_.pop();
-    if (operationStack_.isEmpty()) {
-        emitPendingDiff();
-
-        if (hasHistoryEnabled()) {
-            operationHistory_.emplace_back(std::move(ongoingOperation_.value()));
-            if (operationHistory_.size() > operationHistorySizeMax_) {
-                operationHistory_.pop_front();
-            }
-        }
-
-        ongoingOperation_.reset();
-    }
-    return false;
-}
-
-} // namespace vgc::dom
+} // namespace vgc::core

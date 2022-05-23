@@ -10,7 +10,6 @@ vgc_add_library(dom
         document.h
         element.h
         exceptions.h
-        history.h
         io.h
         node.h
         operation.h
@@ -24,7 +23,6 @@ vgc_add_library(dom
         document.cpp
         element.cpp
         exceptions.cpp
-        history.cpp
         io.cpp
         node.cpp
         operation.cpp

@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_DOM_HISTORY_H
-#define VGC_DOM_HISTORY_H
+#ifndef VGC_CORE_HISTORY_H
+#define VGC_CORE_HISTORY_H
 
 #include <iterator>
 #include <memory>
@@ -26,26 +26,25 @@
 #include <unordered_map>
 #include <variant>
 
+#include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
-#include <vgc/dom/api.h>
-#include <vgc/dom/node.h>
-#include <vgc/dom/value.h>
 
-namespace vgc::dom {
+namespace vgc::core {
 
-class History;
+VGC_DECLARE_OBJECT(History);
+VGC_DECLARE_OBJECT(HistoryNode);
+
 class Operation;
-class UndoGroup;
 
-using UndoGroupIndex = UInt32;
-VGC_DOM_API UndoGroupIndex genUndoGroupIndex();
+using HistoryNodeIndex = Int;
+VGC_CORE_API HistoryNodeIndex genHistoryNodeIndex();
 
-class VGC_DOM_API Operation {
+class VGC_CORE_API Operation {
 protected:
-    friend UndoGroup;
+    friend HistoryNode;
     friend History;
 
     Operation() = default;
@@ -72,109 +71,109 @@ private:
     }
 };
 
-class VGC_DOM_API UndoGroup {
+class VGC_CORE_API HistoryNode : public Object {
+private:
+    VGC_OBJECT(HistoryNode, Object);
+
 protected:
-    explicit UndoGroup(core::StringId name) :
+    friend History;
+
+    explicit HistoryNode(core::StringId name, History* history) :
         name_(name),
-        index_(genUndoGroupIndex()) {}
+        history_(history),
+        index_(genHistoryNodeIndex()) {}
 
 public:
     // non-copyable
-    UndoGroup(const UndoGroup&) = delete;
-    UndoGroup& operator=(const UndoGroup&) = delete;
-
-    UndoGroup(UndoGroup&& other) noexcept :
-        name_(other.name_),
-        index_(other.index_),
-        isUndone_(other.isUndone_) {
-        operations_.swap(other.operations_);
-    }
-
-    UndoGroup& operator=(UndoGroup&& other) noexcept {
-        std::swap(name_, other.name_);
-        std::swap(index_, other.index_);
-        std::swap(isUndone_, other.isUndone_);
-        operations_.swap(other.operations_);
-    }
+    HistoryNode(const HistoryNode&) = delete;
+    HistoryNode& operator=(const HistoryNode&) = delete;
 
     core::StringId name() const {
         return name_;
     }
 
-    UndoGroupIndex index() const {
+    HistoryNodeIndex index() const {
         return index_;
+    }
+
+    bool commit();
+
+    bool isCommitted() const {
+        return isCommitted_;
     }
 
     bool isUndone() const {
         return isUndone_;
     }
 
+    HistoryNode* prevNode() const {
+        return static_cast<HistoryNode*>(this->parentObject());
+    }
+
+    HistoryNode* nextNodeInMainBranch() const {
+        return static_cast<HistoryNode*>(this->lastChildObject());
+    }
+
+    HistoryNode* nextNodeInSecondaryBranch() const {
+        auto last = this->lastChildObject();
+        return static_cast<HistoryNode*>(last ? last->previousSiblingObject() : nullptr);
+    }
+
 private:
     friend History;
 
     core::Array<std::unique_ptr<Operation>> operations_;
-    std::any userState_;
     core::StringId name_;
-    UndoGroupIndex index_;
+    HistoryNodeIndex index_;
+    History* history_;
+    bool isCommitted_ = false;
     bool isUndone_ = false;
+
+    static HistoryNodePtr create(core::StringId name, History* history) {
+        return HistoryNodePtr(new HistoryNode(name, history));
+    }
 
     void undo_();
     void redo_();
 };
 
-using SubGroupsList = std::list<UndoGroup>;
-using SubGroupsIteraror = SubGroupsList::iterator;
-
-class VGC_DOM_API OpenGroup {
-public:
-    /// Creates an empty OpenGroup.
-    ///
-    OpenGroup(core::StringId name) :
-        name_(name) {
-        firstRedo_ = subGroups_.end();
-    }
-
-    const SubGroupsList& subGroups() const {
-        return subGroups_;
-    }
-
-    SubGroupsIteraror firstRedo() const {
-        return firstRedo_;
-    }
-
-    core::StringId name() const {
-        return name_;
-    }
-
+class VGC_CORE_API History : public Object {
 private:
-    SubGroupsList subGroups_;
-    SubGroupsIteraror firstRedo_;
-    core::StringId name_;
-};
+    VGC_OBJECT(History, Object);
 
+protected:
+    friend HistoryNode;
 
-class VGC_DOM_API History {
+    History(core::StringId entrypointName);
+
 public:
-    void setHistoryLimit(Int size);
+    void setMinLevelsCount(Int count);
+    void setMaxLevelsCount(Int count);
 
-    Int getLengthLimit() const {
-        return lengthLimit_;
+    Int getMinLevelsCount() const {
+        return minLevels_;
     }
 
-    Int getLength() const {
-        return core::int_cast<Int>(openGroupsStack_[0].subGroups().size());
+    Int getMaxLevelsCount() const {
+        return maxLevels_;
+    }
+
+    Int getLevelsCount() const;
+    Int getNodesCount() const {
+        return nodesCounts_;
     }
 
     bool isEnabled() const {
-        return (lengthLimit_ > 0) || (getLength() > 0);
+        return (maxLevels_ > 0) || (getLevelsCount() > 0);
     }
 
-    bool cancelGroup();
+    bool cancelOne();
     bool undoOne();
     bool redoOne();
 
-    void beginUndoGroup(core::StringId name, std::any&& toolState);
-    bool endUndoGroup(std::any&& toolState);
+    bool gotoNode(HistoryNode* node);
+
+    void createNode(core::StringId name);
 
     //template<typename TOperation, typename... Args,
     //    core::Requires<std::is_base_of_v<Operation, TOperation>> = true>
@@ -184,20 +183,22 @@ public:
     //}
 
 private:
+    Int minLevels_ = 0;
+    Int maxLevels_ = 0;
+
+    // When inserting into a node we don't know yet if it requires an automatic sub-node.
+    core::Array<std::unique_ptr<Operation>> pendingOperations_;
+    HistoryNode* root_;
+    HistoryNode* cursor_ = nullptr;
+    Int nodesCounts_ = 0;
+
+    bool commitNode_(HistoryNode* node);
+    void prune_();
 
     // need custom iterator ?
-    bool gotoState(OperationIndex idx);
-
-    Int lengthLimit_ = 0;
-
-    // When inserting into a group we don't know yet if it requires an automatic subgroup.
-    core::Array<std::unique_ptr<Operation>> pendingOperations_;
-    core::Array<OpenGroup> openGroupsStack_;
-
-    Int insertionStackIndex_ = 0;
-    SubGroupsIteraror insertionIt_;
+    //bool gotoState(OperationIndex idx);
 };
 
-} // namespace vgc::dom
+} // namespace vgc::core
 
-#endif // VGC_DOM_HISTORY_H
+#endif // VGC_CORE_HISTORY_H
