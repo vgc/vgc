@@ -282,8 +282,7 @@ private:
             do {
                 ++token_.end;
                 c2_ = *token_.end;
-            }
-            while (isUtf8ContinuationByte_(c2_));
+            } while (isUtf8ContinuationByte_(c2_));
             c3_ = (c2_ == eof) ? eof : *(token_.end + 1);
             c4_ = (c3_ == eof) ? eof : *(token_.end + 2);
         }
@@ -300,8 +299,7 @@ private:
             do {
                 --token_.end;
                 c2_ = *token_.end;
-            }
-            while (isUtf8ContinuationByte_(c2_));
+            } while (isUtf8ContinuationByte_(c2_));
             c3_ = (c2_ == eof) ? eof : *(token_.end + 1);
             c4_ = (c3_ == eof) ? eof : *(token_.end + 2);
         }
