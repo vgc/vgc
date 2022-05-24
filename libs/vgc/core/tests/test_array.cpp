@@ -150,7 +150,7 @@ TEST(TestArray, Construct) {
     EXPECT_THROW(Array<int>(-1),           NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, NoInit{}), NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, 42),       NegativeIntegerError);
-    EXPECT_THROW(Array<int>(vgc::core::tmax_<size_t>::value, 42), LengthError);
+    EXPECT_THROW(Array<int>(vgc::core::tmax<size_t>, 42), LengthError);
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         // Tests init_

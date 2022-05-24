@@ -37,7 +37,7 @@ struct IsSignedInteger<T, std::enable_if_t<
     std::true_type {};
 
 template<typename T>
-constexpr bool isSignedInteger = IsSignedInteger<T>::value;
+inline constexpr bool isSignedInteger = IsSignedInteger<T>::value;
 
 template<typename T>
 using RequiresSignedInteger = Requires<isSignedInteger<T>>;
@@ -55,7 +55,7 @@ struct IsInputIterator<T, std::enable_if_t<
     std::true_type {};
 
 template<typename T>
-constexpr bool isInputIterator = IsInputIterator<T>::value;
+inline constexpr bool isInputIterator = IsInputIterator<T>::value;
 
 template<typename T>
 using RequiresInputIterator = Requires<isInputIterator<T>>;
@@ -73,7 +73,7 @@ struct IsForwardIterator<T, std::enable_if_t<
     std::true_type {};
 
 template<typename T>
-constexpr bool isForwardIterator = IsForwardIterator<T>::value;
+inline constexpr bool isForwardIterator = IsForwardIterator<T>::value;
 
 template<typename T>
 using RequiresForwardIterator = Requires<isForwardIterator<T>>;
@@ -91,7 +91,7 @@ struct IsRange<T, std::enable_if_t<
     std::true_type {};
 
 template<typename T>
-constexpr bool isRange = IsRange<T>::value;
+inline constexpr bool isRange = IsRange<T>::value;
 
 template<typename T>
 using RequiresRange = Requires<isRange<T>>;
@@ -113,7 +113,7 @@ struct IsCompatibleForwardIterator<It, T, std::enable_if_t<
     std::true_type {};
 
 template<typename It, typename T>
-constexpr bool isCompatibleForwardIterator = IsCompatibleForwardIterator<It, T>::value;
+inline constexpr bool isCompatibleForwardIterator = IsCompatibleForwardIterator<It, T>::value;
 
 template<typename It, typename T>
 using RequiresCompatibleForwardIterator = Requires<isCompatibleForwardIterator<It, T>>;
@@ -131,7 +131,7 @@ struct IsCompatibleRange<Range, T, std::enable_if_t<
     std::true_type {};
 
 template<typename Range, typename T>
-constexpr bool isCompatibleRange = IsCompatibleRange<Range, T>::value;
+inline constexpr bool isCompatibleRange = IsCompatibleRange<Range, T>::value;
 
 template<typename Range, typename T>
 using RequiresCompatibleRange = Requires<isCompatibleRange<Range, T>>;
@@ -139,7 +139,7 @@ using RequiresCompatibleRange = Requires<isCompatibleRange<Range, T>>;
 // Checks whether the given template argument has a NoInit constructor
 
 template<typename T>
-constexpr bool isNoInitConstructible = std::is_constructible_v<T, NoInit>;
+inline constexpr bool isNoInitConstructible = std::is_constructible_v<T, NoInit>;
 
 template<typename T>
 using RequiresNoInitConstructible = Requires<isNoInitConstructible<T>>;

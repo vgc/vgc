@@ -123,6 +123,7 @@
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/logging.h>
+#include <vgc/core/templateutil.h>
 
 namespace vgc {
 
@@ -182,151 +183,265 @@ using UInt64 = std::uint64_t;
     using UInt = UInt64;
 #endif
 
-namespace core {
+} // namespace vgc
 
-/// Returns the maximum value representable by the given type.
+namespace vgc::core {
+
+/// The type trait `TMax<T>` defines a public member typedef `TMax<T>::value`
+/// equal to the maximum finite value representable by the arithmetic type `T`.
 ///
-/// ```cpp
-/// int m = vgc::core::tmax_<Int8>::value; // 127
-/// ```
+/// This value is equivalent to `std::numeric_limits<T>::max()`.
 ///
-/// This is equivalent to `(std::numeric_limits<T>::max)()`, but avoids the
-/// naming conflicts caused by the min/max macros in `<Windows.h>`.
-///
-/// Once we require C++14, we will define the variable template
-/// `vgc::core::tmax<T>`, and deprecate the use of
-/// `vgc::core::tmax_<T>::value`.
+/// \sa `tmax<T>`, `TMin<T>`, and `Infinity<T>`.
 ///
 template<typename T>
-struct tmax_ {
+struct TMax {
+    static_assert(std::is_arithmetic_v<T>,
+        "vgc::core::TMax<T> is only defined for arithmetic types.");
     static constexpr T value = (std::numeric_limits<T>::max)();
 };
 
-/// Returns the minimum value representable by the given type.
+/// The type trait `TMin<T>` defines a public member typedef `TMin<T>::value`
+/// equal to the minimum finite value representable by the arithmetic type `T`.
 ///
-/// ```cpp
-/// int m = vgc::core::tmin_<Int8>::value; // -128
-/// ```
+/// For [integral types](https://en.cppreference.com/w/cpp/types/is_integral)
+/// (bool, char, int, etc.), this value is equivalent to
+/// `std::numeric_limits<T>::min()`.
 ///
-/// This is equivalent to `(std::numeric_limits<T>::min)()`, but avoids the
-/// naming conflicts caused by the min/max macros in `<Windows.h>`.
+/// For [floating-point types](https://en.cppreference.com/w/cpp/types/is_floating_point)
+/// (float, double, etc.), this value is equivalent to
+/// `- std::numeric_limits<T>::max()`.
 ///
-/// Once we require C++14, we will define the variable template
-/// `vgc::core::tmin<T>`, and deprecate the use of
-/// `vgc::core::tmin_<T>::value`.
+/// \sa `tmin<T>`, `TMax<T>`, and `SmallestNormal<T>`.
+///
+template<typename T, typename Enable = bool>
+struct TMin {
+    static_assert(std::is_arithmetic_v<T>,
+        "vgc::core::TMin<T> is only defined for arithmetic types.");
+};
+template<typename T>
+struct TMin<T, Requires<std::is_integral_v<T>>> {
+    static constexpr T value = (std::numeric_limits<T>::min)();
+};
+template<typename T>
+struct TMin<T, Requires<std::is_floating_point_v<T>>> {
+    static constexpr T value = - (std::numeric_limits<T>::max)();
+};
+
+/// The type trait `SmallestNormal<T>` defines a public member typedef
+/// `SmallestNormal<T>::value` equal to the smallest non-zero positive normal
+/// value representable by the floating point type `T`.
+///
+/// If `T` is a floating point type, this value is equivalent
+/// to `std::numeric_limits<T>::min()`.
+///
+/// \sa `smallestNormal<T>` and `TMin<T>`.
 ///
 template<typename T>
-struct tmin_ {
+struct SmallestNormal {
+    static_assert(std::is_floating_point_v<T>,
+        "vgc::core::SmallestNormal<T> is only defined for floating point types.");
     static constexpr T value = (std::numeric_limits<T>::min)();
 };
 
+/// The type trait `Infinity<T>` defines a public member typedef
+/// `Infinity<T>::value` equal to the value representing infinity for the
+/// floating-point type `T`.
+///
+/// \sa `infinity<T>` and `TMax<T>`
+///
+template<typename T>
+struct Infinity {
+    static_assert(std::is_floating_point_v<T>,
+        "vgc::core::Infinity<T> is only defined for floating point types.");
+    static constexpr T value = std::numeric_limits<T>::infinity();
+};
+
+/// Maximum finite value representable by the arithmetic type `T`.
+///
+/// ```cpp
+/// std::cout << vgc::core::tmax<bool>          << std::endl; // 1
+/// std::cout << vgc::core::tmax<unsigned char> << std::endl; // 255
+/// std::cout << vgc::core::tmax<uint32_t>      << std::endl; // 4294967295
+/// std::cout << vgc::core::tmax<int32_t>       << std::endl; // 2147483647
+/// std::cout << vgc::core::tmax<float>         << std::endl; // 3.40282e+38
+/// std::cout << vgc::core::tmax<double>        << std::endl; // 1.79769e+308
+/// ```
+///
+/// \sa `tmin<T>`, `infinity<T>`, `TMax<T>`, and the convenient aliases
+///     `IntMax`, `Int32Max`, `UInt32Max`, `FloatMax`, etc.
+///
+template<typename T>
+inline constexpr T tmax = TMax<T>::value;
+
+/// Minimum finite value representable by the arithmetic type `T`.
+///
+/// ```cpp
+/// std::cout << vgc::core::tmin<bool>          << std::endl; // 0
+/// std::cout << vgc::core::tmin<unsigned char> << std::endl; // 0
+/// std::cout << vgc::core::tmin<uint32_t>      << std::endl; // 0
+/// std::cout << vgc::core::tmin<int32_t>       << std::endl; // -2147483648
+/// std::cout << vgc::core::tmin<float>         << std::endl; // -3.40282e+38
+/// std::cout << vgc::core::tmin<double>        << std::endl; // -1.79769e+308
+/// ```
+///
+/// Note that for floating-point types, this is NOT the same as
+/// `std::numeric_limits<T>::min()`, which instead returns the smallest positive
+/// normal value.
+///
+/// \sa `tmax<T>`, `smallestNormal<T>`, `TMin<T>`, and the convenient aliases
+///     `IntMin`, `Int32Min`, `UInt32Min`, `FloatMin`, etc.
+///
+template<typename T>
+inline constexpr T tmin = TMin<T>::value;
+
+/// Smallest non-zero positive normal value representable by the floating point
+/// type `T`.
+///
+/// ```cpp
+/// std::cout << vgc::core::smallestNormal<float>  << std::endl; // 1.17549e-38
+/// std::cout << vgc::core::smallestNormal<double> << std::endl; // 2.22507e-308
+/// ```
+///
+/// \sa `tmin<T>`, `SmallestNormal<T>`, `FloatSmallestNormal`, and `DoubleSmallestNormal`.
+///
+template<typename T>
+inline constexpr T smallestNormal = SmallestNormal<T>::value;
+
+/// Value representing infinity for the floating-point type `T`.
+///
+/// \sa `tmax<T>`, `Infinity<T>`, `FloatInfinity`, and `DoubleInfinity`.
+///
+template<typename T>
+inline constexpr T infinity = Infinity<T>::value;
+
 /// Maximum value of an Int.
 ///
-constexpr Int IntMax = tmax_<Int>::value;
+inline constexpr Int IntMax = tmax<Int>;
 
 /// Maximum value of an Int8.
 ///
-constexpr Int8 Int8Max = tmax_<Int8>::value;
+inline constexpr Int8 Int8Max = tmax<Int8>;
 
 /// Maximum value of an Int16.
 ///
-constexpr Int16 Int16Max = tmax_<Int16>::value;
+inline constexpr Int16 Int16Max = tmax<Int16>;
 
 /// Maximum value of an Int32.
 ///
-constexpr Int32 Int32Max = tmax_<Int32>::value;
+inline constexpr Int32 Int32Max = tmax<Int32>;
 
 /// Maximum value of an Int64.
 ///
-constexpr Int64 Int64Max = tmax_<Int64>::value;
+inline constexpr Int64 Int64Max = tmax<Int64>;
 
 /// Maximum value of a UInt.
 ///
-constexpr UInt UIntMax = tmax_<UInt>::value;
+inline constexpr UInt UIntMax = tmax<UInt>;
 
 /// Maximum value of a UInt8.
 ///
-constexpr UInt8 UInt8Max = tmax_<UInt8>::value;
+inline constexpr UInt8 UInt8Max = tmax<UInt8>;
 
 /// Maximum value of a UInt16.
 ///
-constexpr UInt16 UInt16Max = tmax_<UInt16>::value;
+inline constexpr UInt16 UInt16Max = tmax<UInt16>;
 
 /// Maximum value of a UInt32.
 ///
-constexpr UInt32 UInt32Max = tmax_<UInt32>::value;
+inline constexpr UInt32 UInt32Max = tmax<UInt32>;
 
 /// Maximum value of a UInt64.
 ///
-constexpr UInt64 UInt64Max = tmax_<UInt64>::value;
+inline constexpr UInt64 UInt64Max = tmax<UInt64>;
 
 /// Maximum finite value of a float.
 ///
-constexpr float FloatMax = tmax_<float>::value;
+inline constexpr float FloatMax = tmax<float>;
 
 /// Maximum finite value of a double.
 ///
-constexpr double DoubleMax = tmax_<double>::value;
+inline constexpr double DoubleMax = tmax<double>;
 
 /// Minimum value of an Int.
 ///
-constexpr Int IntMin = tmin_<Int>::value;
+inline constexpr Int IntMin = tmin<Int>;
 
 /// Minimum value of an Int8.
 ///
-constexpr Int8 Int8Min = tmin_<Int8>::value;
+inline constexpr Int8 Int8Min = tmin<Int8>;
 
 /// Minimum value of an Int16.
 ///
-constexpr Int16 Int16Min = tmin_<Int16>::value;
+inline constexpr Int16 Int16Min = tmin<Int16>;
 
 /// Minimum value of an Int32.
 ///
-constexpr Int32 Int32Min = tmin_<Int32>::value;
+inline constexpr Int32 Int32Min = tmin<Int32>;
 
 /// Minimum value of an Int64.
 ///
-constexpr Int64 Int64Min = tmin_<Int64>::value;
+inline constexpr Int64 Int64Min = tmin<Int64>;
 
 /// Minimum value of a UInt.
 ///
-constexpr UInt UIntMin = tmin_<UInt>::value;
+inline constexpr UInt UIntMin = tmin<UInt>;
 
 /// Minimum value of a UInt8.
 ///
-constexpr UInt8 UInt8Min = tmin_<UInt8>::value;
+inline constexpr UInt8 UInt8Min = tmin<UInt8>;
 
 /// Minimum value of a UInt16.
 ///
-constexpr UInt16 UInt16Min = tmin_<UInt16>::value;
+inline constexpr UInt16 UInt16Min = tmin<UInt16>;
 
 /// Minimum value of a UInt32.
 ///
-constexpr UInt32 UInt32Min = tmin_<UInt32>::value;
+inline constexpr UInt32 UInt32Min = tmin<UInt32>;
 
 /// Minimum value of a UInt64.
 ///
-constexpr UInt64 UInt64Min = tmin_<UInt64>::value;
+inline constexpr UInt64 UInt64Min = tmin<UInt64>;
 
-/// Minimum finite value of a float. This is a very large negative number. Not
-/// to be confused with FLT_MIN or std::numeric_limits<float>::min(), which is
-/// the minimum normalized positive value.
+/// Minimum finite value of a float.
 ///
-constexpr float FloatMin = - tmax_<float>::value;
+/// Note: this is a very large negative number, and shouldn't be confused
+/// with FLT_MIN or std::numeric_limits<float>::min(), which are instead
+/// the smallest positive non-zero normal value.
+///
+/// \sa `FloatSmallestNormal`.
+///
+inline constexpr float FloatMin = tmin<float>;
 
-/// Minimum finite value of a double. This is a very large negative number. Not
-/// to be confused with DBL_MIN or std::numeric_limits<double>::min(), which is
-/// the minimum normalized positive value.
+/// Minimum finite value of a double.
 ///
-constexpr double DoubleMin = - tmax_<double>::value;
+/// Note: this is a very large negative number, and shouldn't be confused
+/// with DBL_MIN or std::numeric_limits<double>::min(), which are instead
+/// the smallest positive non-zero normal value.
+///
+/// \sa `DoubleSmallestNormal`.
+///
+inline constexpr double DoubleMin = tmin<double>;
 
-/// Positive infinity value of a float.
+/// Smallest non-zero positive normal value representable by a `float`.
 ///
-constexpr float FloatInfinity = std::numeric_limits<float>::infinity();
+/// \sa `FloatMin`.
+///
+inline constexpr float FloatSmallestNormal = smallestNormal<float>;
 
-/// Positive infinity value of a double.
+/// Smallest non-zero positive normal value representable by a `double`.
 ///
-constexpr double DoubleInfinity = std::numeric_limits<double>::infinity();
+/// \sa `DoubleMin`.
+///
+inline constexpr double DoubleSmallestNormal = smallestNormal<double>;
+
+/// Positive infinity value of a `float`.
+///
+inline constexpr float FloatInfinity = infinity<float>;
+
+/// Positive infinity value of a `double`.
+///
+inline constexpr double DoubleInfinity = infinity<double>;
 
 /// Returns a human-readable name for integer types.
 ///
@@ -349,10 +464,8 @@ constexpr double DoubleInfinity = std::numeric_limits<double>::infinity();
 /// Note how "char" is a separate type from both "signed char" (= Int8) and
 /// "unsigned char" (= UInt8).
 ///
-template <typename T>
-typename std::enable_if<
-    std::is_integral<T>::value,
-    std::string>::type int_typename() { return "UnknownInt"; }
+template <typename T, Requires<std::is_integral_v<T>> = true>
+           inline std::string int_typename() { return "UnknownInt"; }
 template<> inline std::string int_typename<bool>() { return "Bool"; }
 template<> inline std::string int_typename<char>() { return "Char"; }
 template<> inline std::string int_typename<Int8>() { return "Int8"; }
@@ -449,14 +562,14 @@ void throwNegativeIntegerError(U value) {
 // - U and T are both signed or both unsigned
 // - The range of T includes the range of U.
 //
-template <typename T, typename U>
-typename std::enable_if<
-    std::is_integral<T>::value &&
-    std::is_integral<U>::value &&
-    std::is_signed<T>::value == std::is_signed<U>::value &&
-    tmax_<T>::value >= tmax_<U>::value, // (1)
-    T>::type
-int_cast(U value) {
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_signed_v<T> == std::is_signed_v<U> &&
+        tmax<T> >= tmax<U> // (1)
+    > = true>
+T int_cast(U value) {
     return static_cast<T>(value);
 }
 
@@ -464,17 +577,17 @@ int_cast(U value) {
 // - U and T are both signed
 // - The range of T does not include the range of U.
 //
-template <typename T, typename U>
-typename std::enable_if<
-    std::is_integral<T>::value &&
-    std::is_integral<U>::value &&
-    std::is_signed<T>::value &&
-    std::is_signed<U>::value &&
-    tmax_<T>::value < tmax_<U>::value, // (1)
-    T>::type
-int_cast(U value) {
-    if (value < tmin_<T>::value || // (1)
-        value > tmax_<T>::value) { // (1)
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_signed_v<T> &&
+        std::is_signed_v<U> &&
+        tmax<T> < tmax<U>
+    > = true>
+T int_cast(U value) {
+    if (value < tmin<T> || // (1)
+        value > tmax<T>) { // (1)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
@@ -484,16 +597,16 @@ int_cast(U value) {
 // - U and T are both unsigned
 // - The range of T does not include the range of U.
 //
-template <typename T, typename U>
-typename std::enable_if<
-    std::is_integral<T>::value &&
-    std::is_integral<U>::value &&
-    std::is_unsigned<T>::value &&
-    std::is_unsigned<U>::value &&
-    tmax_<T>::value < tmax_<U>::value, // (1)
-    T>::type
-int_cast(U value) {
-    if (value > tmax_<T>::value) { // (1)
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_unsigned_v<T> &&
+        std::is_unsigned_v<U> &&
+        tmax<T> < tmax<U>
+    > = true>
+T int_cast(U value) {
+    if (value > tmax<T>) { // (1)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
@@ -503,15 +616,15 @@ int_cast(U value) {
 // - U is unsigned and T is signed
 // - The range of T includes the range of U
 //
-template <typename T, typename U>
-typename std::enable_if<
-    std::is_integral<T>::value &&
-    std::is_integral<U>::value &&
-    std::is_signed<T>::value &&
-    std::is_unsigned<U>::value &&
-    tmax_<T>::value >= tmax_<U>::value, // (2)
-    T>::type
-int_cast(U value) {
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_signed_v<T> &&
+        std::is_unsigned_v<U> &&
+        tmax<T> >= tmax<U> // (2)
+    > = true>
+T int_cast(U value) {
     return static_cast<T>(value);
 }
 
@@ -519,16 +632,16 @@ int_cast(U value) {
 // - U is unsigned and T is signed
 // - The range of T does not include the range of U
 //
-template <typename T, typename U>
-typename std::enable_if<
-    std::is_integral<T>::value &&
-    std::is_integral<U>::value &&
-    std::is_signed<T>::value &&
-    std::is_unsigned<U>::value &&
-    tmax_<T>::value < tmax_<U>::value, // (2)
-    T>::type
-int_cast(U value) {
-    if (value > tmax_<T>::value) { // (2)
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_signed_v<T> &&
+        std::is_unsigned_v<U> &&
+        tmax<T> < tmax<U> // (2)
+    > = true>
+T int_cast(U value) {
+    if (value > tmax<T>) { // (2)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
@@ -538,15 +651,15 @@ int_cast(U value) {
 // - U is signed and T is unsigned
 // - The range of T includes the positive range of U
 //
-template <typename T, typename U>
-typename std::enable_if<
-    std::is_integral<T>::value &&
-    std::is_integral<U>::value &&
-    std::is_unsigned<T>::value &&
-    std::is_signed<U>::value &&
-    tmax_<T>::value >= tmax_<U>::value, // (2)
-    T>::type
-int_cast(U value) {
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_unsigned_v<T> &&
+        std::is_signed_v<U> &&
+        tmax<T> >= tmax<U> // (2)
+    > = true>
+T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
         internal::throwNegativeIntegerError<T>(value);
     }
@@ -557,19 +670,19 @@ int_cast(U value) {
 // - U is signed and T is unsigned
 // - The range of T does not include the positive range of U
 //
-template <typename T, typename U>
-typename std::enable_if<
-    std::is_integral<T>::value &&
-    std::is_integral<U>::value &&
-    std::is_unsigned<T>::value &&
-    std::is_signed<U>::value &&
-    tmax_<T>::value < tmax_<U>::value, // (2)
-    T>::type
-int_cast(U value) {
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_unsigned_v<T> &&
+        std::is_signed_v<U> &&
+        tmax<T> < tmax<U> // (2)
+    > = true>
+T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
         internal::throwNegativeIntegerError<T>(value);
     }
-    else if (value > tmax_<T>::value) { // (2)
+    else if (value > tmax<T>) { // (2)
         internal::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
@@ -586,9 +699,8 @@ int_cast(U value) {
 ///
 /// \sa zero<T>()
 ///
-template<typename T>
-typename std::enable_if<std::is_arithmetic<T>::value>::type
-setZero(T& x)
+template<typename T, Requires<std::is_arithmetic_v<T>> = true>
+void setZero(T& x)
 {
     x = T();
 }
@@ -874,27 +986,27 @@ const T& clamp(const T& value, const T& min, const T& max)
 /// Returns the next representable floating point. This is equivalent to:
 ///
 /// ```cpp
-/// std::nextafter(x, vgc::core::tmax_<FloatType>::value);
+/// std::nextafter(x, vgc::core::tmax<FloatType>);
 /// ```
 ///
 template <typename FloatType>
 typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type
 nextafter(FloatType x)
 {
-    return std::nextafter(x, vgc::core::tmax_<FloatType>::value);
+    return std::nextafter(x, tmax<FloatType>);
 }
 
 /// Returns the previous representable floating point. This is equivalent to:
 ///
 /// ```cpp
-/// std::nextafter(x, -vgc::core::tmax_<FloatType>::value);
+/// std::nextafter(x, -vgc::core::tmax<FloatType>);
 /// ```
 ///
 template <typename FloatType>
 typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type
 nextbefore(FloatType x)
 {
-    return std::nextafter(x, -vgc::core::tmax_<FloatType>::value);
+    return std::nextafter(x, -tmax<FloatType>);
 }
 
 /// Converts the given floating point `x` to an integer type using floor.
@@ -924,10 +1036,10 @@ typename std::enable_if<
     std::is_integral<IntType>::value, IntType>::type
 ifloor(FloatType x)
 {
-    constexpr IntType tmini = tmin_<IntType>::value;
-    constexpr IntType tmaxi = tmax_<IntType>::value;
-    constexpr FloatType tminf = static_cast<FloatType>(tmin_<IntType>::value);
-    constexpr FloatType tmaxf = static_cast<FloatType>(tmax_<IntType>::value);
+    constexpr IntType tmini = tmin<IntType>;
+    constexpr IntType tmaxi = tmax<IntType>;
+    constexpr FloatType tminf = static_cast<FloatType>(tmin<IntType>);
+    constexpr FloatType tmaxf = static_cast<FloatType>(tmax<IntType>);
     // Note: the outer "if" should be optimized out at compile time based on FloatType and IntType
     if constexpr (tmaxf < 1 + tmaxf) { // all IntType integers representable as FloatType
         if (x < tminf) {
@@ -1003,16 +1115,14 @@ struct VGC_CORE_API NoInit {};
 /// Small epsilon value under which two doubles are considered
 /// indistinguishable.
 ///
-const double epsilon = 1e-10;
+inline constexpr double epsilon = 1e-10;
 
 /// Double-precision pi.
 ///
 /// Note: C++ 20 has std::numbers::pi
 ///
-const double pi = 3.141592653589793238463;
+inline constexpr double pi = 3.141592653589793238463;
 
-} // namespace core
-
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_ARITHMETIC_H
