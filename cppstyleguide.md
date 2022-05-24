@@ -10,7 +10,7 @@ Headers should be self-contained (i.e., they must be compilable by themselves).
 This is enforced by including each header first in their corresponding cpp file.
 
 Headers should be guarded with:
-```
+```cpp
 #ifndef VGC_LIBNAME_HEADERNAME_H
 #define VGC_LIBNAME_HEADERNAME_H
 
@@ -50,9 +50,8 @@ argument-dependent lookup), such as in `using std::swap;`.
 
 Always scope public API under two namespaces, and comment closing bracket for readability. Do not indent within the namespaces:
 
-```
-namespace vgc {
-namespace mylib {
+```cpp
+namespace vgc::mylib
 
 class MyClass
 {
@@ -61,14 +60,13 @@ class MyClass
 
 void myFreeFunction();
 
-} // namespace mylib
-} // namespace vgc
+} // namespace vgc::mylib
 ```
 
 In .cpp files, prefer using unnamed namespaces rather than static functions
 for defining things that aren't visible to other translation units:
 
-```
+```cpp
 namespace {
 
 void helperFunction_() {
@@ -86,7 +84,7 @@ struct HelperStruct_ {
 In .h files, encapsulate implementation details in an `internal` namespace.
 There is no need to use the `_` suffix for names in the `internal` namespace:
 
-```
+```cpp
 namespace internal {
 
 struct HelperStruct {
@@ -117,6 +115,7 @@ headerfilename.h
 cppfilename.cpp
 ClassName
 publicFunctionName()
+protectedFunctionName()  (underscore allowed for "unsafe" protected methods)
 privateFunctionName_()
 privateMemberVariableName_
 localVariable
@@ -132,59 +131,115 @@ enum class EnumName {
 
 Indent with 4 spaces. No tabs.
 
-Function declarations and definitions:
+Function declarations:
 
-```
+```cpp
 void byPtr(Foo* foo);
-void byRef(Foo* foo);
+void byRef(Foo& foo);
 void byConstPtr(const Foo* foo);
 void byConstRef(const Foo& foo);
+void byRValue(Foo&& foo);
 ```
 
-```
-void functionDefinition()
+Function definition:
+
+```cpp
+void largeOrNonInlineFunction()
 {
     thisIsPreferred();
 }
-```
 
-```
-void butForShortInlineFunctions() {
-    thisIsOkayToo();
+void shortInlineFunction() {
+    thisIsOkay();
 }
+
+void veryShortInlineFunction() { thisIsOkay(); }
 ```
 
-```
-// Or even a one liner if fits within 80 characters
-int getX() { return x_; }
+Constructors:
+
+```cpp
+LargeOrNonInlineConstructor::LargeOrNonInlineConstructor(
+    int veryLongParam1,
+    int veryLongParam2) :
+    
+    BaseClass(),
+    veryLongParam1_(veryLongParam1),
+    veryLongParam2_(veryLongParam2)
+{
+    doSomething();
+}
+
+LargeOrNonInlineConstructor::LargeOrNonInlineConstructor(int shortParam1, int shortParam2) :
+    BaseClass(),
+    shortParam1_(shortParam1), shortParam2_(shortParam2)
+{
+    doSomething();
+}
+
+LargeOrNonInlineConstructor::LargeOrNonInlineConstructor(int shortParam1, int shortParam2) :
+    shortParam1_(shortParam1), shortParam2_(shortParam2)
+{
+    doSomething();
+}
+
+NonInlineConstructorWithoutBody::NonInlineConstructorWithoutBody(int x) :
+    x_(x)
+{
+    
+}
+    
+InlineConstructorWithLongParams(int x, int y, int z, int w) :
+    x_(x), y_(y), z_(z), w_(w)
+{
+    doSomething();
+}
+
+InlineConstructorWithLongParamsWithoutBody(int x, int y, int z, int w) :
+    x_(x), y_(y), z_(z), w_(w) {}
+
+InlineConstructorWithShortParams(int x) : x_(x) {
+    doSomething();
+    doSomethingElse();
+}
+
+InlineConstructorWithShortParamsAndShortBody(double x) : x_(x) { doSomething(); }
+
+InlineConstructorWithShortParamsWithoutBody(double x) : x_(x) {}
 ```
 
 Conditional blocks:
 
-```
+```cpp
 if (condition) {
     thisIs();
     thePreferredStyle();
 }
 else {
-    forConditional();
+    forIf();
     blocks();
 }
-```
 
-```
+while (condition) {
+    thisIs();
+    thePreferredStyle();
+    forWhileBlocks();
+}
+
+do {
+    thisIs();
+    thePreferredStyle();
+    forDoWhileBlocks();
+} while (condition);
+
 for (int i = 0; i < n; ++i) {
     doSomething(i);
 }
-```
 
-```
 for (Node* child : node->children()) {
     doSomething(child);
 }
-```
 
-```
 switch (value) {
 case Enum::Value1:
     thisIs();
@@ -197,17 +252,13 @@ case Enum::Value2:
 default:
    break;
 }
-```
 
-```
 if (veryShortOneLiner1) thisIsOkay();
 if (veryShortOneLiner2) whenMoreReadable();
 if (veryShortOneLiner3) inRareCases();
 if (veryShortOneLiner4) whereYouHave();
 if (veryShortOneLiner5) manyOfThem();
-```
 
-```
 if (longBody ||
     multilineCondition)
 {
@@ -215,24 +266,53 @@ if (longBody ||
 }
 ```
 
-Class definitions:
+Class definitions (typical layout):
 
-```
-class TypicalClass : public BaseClass
-{
+```cpp
+class VGC_MYLIB_API DerivedClass : public BaseClass {
 public:
-    void thisIsPreferred();
+    void DerivedClass(); // constructors go first
+    void foo();          // then public methods
 
+protected:
+    void bar();          // then protected methods
+    
 private:
-    int becauseOneMoreLines_;
-    int doesntChangeMuch_;
+    int x_;              // then private member variables
+    int baz_();          // then private methods
 };
 ```
 
-```
-class ShortClassOrStruct {
-    ThisIs fine;
-};
+Class definitions (special case of `vgc::core::Object`):
+
+```cpp
+class VGC_UI_API Flex : public Widget {
+private: // the VGC_OBJECT macro goes first
+    VGC_OBJECT(Flex, Widget)
+
+protected: // then protected constructors                   
+    Flex(FlexDirection direction = FlexDirection::Row,
+         FlexWrap wrap = FlexWrap::NoWrap);
+
+public:
+    // then create(...) static functions
+    static FlexPtr create(
+            FlexDirection direction = FlexDirection::Row,
+            FlexWrap wrap = FlexWrap::NoWrap);
+            
+    // then other public methods
+    FlexDirection direction() const { 
+        return direction_;
+    }
+    
+protected: // then other protected methods
+    void onWidgetAdded(Object* child) override;
+    void onWidgetRemoved(Object* child) override;
+
+private:: // then private member variables and methods
+    FlexDirection direction_;
+    FlexWrap wrap_;
+}
 ```
 
 ## Templates
@@ -240,13 +320,61 @@ class ShortClassOrStruct {
 Use "typename" rather than "class" for template parameters. Format angle
 brackets `<>` as you would parenthesis in a function declaration.
 
-```
+```cpp
 template<typename T>
 T add(const T& x, const T& y)
 {
     return x + y;
 }
 ```
+
+In general, try to conform to the style found in `vgc/core/templateutil.h`, `vgc/core/arithmetic.h` or `vgc/core/array.h`.
+
+Examples:
+
+```cpp
+template<typename T, typename Enable = bool>
+struct IsCallable : std::false_type {};
+
+template<typename T>
+struct IsCallable<T, RequiresValid<typename CallableTraits<T>::CallSig>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool isCallable = IsCallable<T>::value;
+
+template<typename T, Requires<std::is_arithmetic_v<T>> = true>
+void setZero(T& x) {
+    x = T();
+}
+
+template <typename T, typename U,
+    Requires<
+        std::is_integral_v<T> &&
+        std::is_integral_v<U> &&
+        std::is_signed_v<T> &&
+        std::is_unsigned_v<U> &&
+        tmax<T> >= tmax<U>
+    > = true>
+T int_cast(U value) {
+    return static_cast<T>(value);
+}
+
+template<typename T>
+class Array {
+public:
+    // ...
+    
+    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    void assign(InputIt first, InputIt last) {
+        assignRange_(first, last);
+    }
+    
+    // ...
+};
+```
+
+However, we recognize that templated code can easily get complicated, so it's 
+okay to deviate a little from the recommended style if it increases readability.
 
 ## Polymorphic Classes
 
