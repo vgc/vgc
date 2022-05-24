@@ -40,7 +40,7 @@ Mat3d Mat3d::inverted(bool* isInvertible, double epsilon_) const
         if (isInvertible) {
             *isInvertible = false;
         }
-        constexpr double inf = std::numeric_limits<double>::infinity();
+        constexpr double inf = core::infinity<double>;
         res.setElements(inf, inf, inf,
                         inf, inf, inf,
                         inf, inf, inf);

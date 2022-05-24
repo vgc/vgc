@@ -74,10 +74,26 @@ using RemoveCVRef = std::remove_cv_t<std::remove_reference_t<T>>;
 
 // Helper to create SFINAE-based template overloads/specializations.
 // 
-// ```
+// Example 1: function template overload
+//
+// ```cpp
 // template<typename Union, Requires<std::is_union_v<Union>> = true>
-// void foo(Union p) { ... }
+// void foo(Union p) {
+//     ...
+// }
 // ```
+//
+// Example 2: struct/class template specialization
+//
+// ```cpp
+// template<typename T, typename Enable = bool>
+// struct Foo {
+//     ... // default implementation
+// };
+// template<typename T>
+// struct Foo<T, Requires<std::is_integral_v<T>>> {
+//     ... // specialization for integral types
+// };
 //
 template<bool B>
 using Requires = std::enable_if_t<B, bool>;

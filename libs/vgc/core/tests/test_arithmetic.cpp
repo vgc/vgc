@@ -256,6 +256,52 @@ TEST(TestArithmetic, IFloorLimitsFloat32ToUInt32)
     EXPECT_THROW(core::ifloor<UInt32>(UInt32Maxfa), core::IntegerOverflowError);
 }
 
+TEST(TestArithmetic, Typedefs)
+{
+    EXPECT_EQ(core::Int8Max,   127);
+    EXPECT_EQ(core::Int16Max,  32767);
+    EXPECT_EQ(core::Int32Max,  2147483647LL);
+    EXPECT_EQ(core::Int64Max,  9223372036854775807LL);
+    EXPECT_EQ(core::UInt8Max,  255);
+    EXPECT_EQ(core::UInt16Max, 65535);
+    EXPECT_EQ(core::UInt32Max, 4294967295ULL);
+    EXPECT_EQ(core::UInt64Max, 18446744073709551615ULL);
+    EXPECT_EQ(core::FloatMax,  FLT_MAX);
+    EXPECT_EQ(core::DoubleMax, DBL_MAX);
+
+    EXPECT_EQ(core::Int8Min,   -128);
+    EXPECT_EQ(core::Int16Min,  -32768);
+    EXPECT_EQ(core::Int32Min,  -2147483648LL);
+    EXPECT_EQ(core::Int64Min,  -9223372036854775808LL);
+    EXPECT_EQ(core::UInt8Min,  0);
+    EXPECT_EQ(core::UInt16Min, 0);
+    EXPECT_EQ(core::UInt32Min, 0);
+    EXPECT_EQ(core::UInt64Min, 0);
+    EXPECT_EQ(core::FloatMin,  -FLT_MAX);
+    EXPECT_EQ(core::DoubleMin, -DBL_MAX);
+
+    EXPECT_GT(core::FloatSmallestNormal,  0.0f);
+    EXPECT_GT(core::DoubleSmallestNormal, 0.0);
+    EXPECT_LT(core::FloatSmallestNormal,  2e-38f);
+    EXPECT_LT(core::DoubleSmallestNormal, 3e-308);
+    EXPECT_EQ(core::FloatSmallestNormal,  FLT_MIN);
+    EXPECT_EQ(core::DoubleSmallestNormal, DBL_MIN);
+    EXPECT_EQ(core::FloatInfinity,        HUGE_VALF);
+    EXPECT_EQ(core::DoubleInfinity,       HUGE_VAL);
+
+#ifdef VGC_CORE_USE_32BIT_INT
+    EXPECT_EQ(core::IntMax,  core::Int32Max);
+    EXPECT_EQ(core::IntMin,  core::Int32Min);
+    EXPECT_EQ(core::UIntMax, core::UInt32Max);
+    EXPECT_EQ(core::UIntMin, core::UInt32Min);
+#else
+    EXPECT_EQ(core::IntMax,  core::Int64Max);
+    EXPECT_EQ(core::IntMin,  core::Int64Min);
+    EXPECT_EQ(core::UIntMax, core::UInt64Max);
+    EXPECT_EQ(core::UIntMin, core::UInt64Min);
+#endif
+}
+
 int main(int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

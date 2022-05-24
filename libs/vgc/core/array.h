@@ -35,8 +35,7 @@
 #include <vgc/core/internal/containerutil.h>
 #include <vgc/core/templateutil.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \class vgc::core::Array
 /// \brief Sequence of elements with fast index-based access (= dynamic array).
@@ -2436,7 +2435,7 @@ private:
     //
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     void checkNoMoreThanMaxLengthForReserve_([[maybe_unused]] IntType length) const {
-        if constexpr (core::tmax_<IntType>::value > IntMax) {
+        if constexpr (tmax<IntType> > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
                 throw LengthError(
                             "Cannot reserve a length of " + toString(length) +
@@ -2459,7 +2458,7 @@ private:
     //
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     void checkNoMoreThanMaxLengthForInit_([[maybe_unused]] IntType length) const {
-        if constexpr (core::tmax_<IntType>::value > IntMax) {
+        if constexpr (tmax<IntType> > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
                 throw LengthError(
                             "Cannot create an Array with " + toString(length) +
@@ -2482,7 +2481,7 @@ private:
     //
     template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
     void checkNoMoreThanMaxLengthForInsert_([[maybe_unused]] IntType length) const {
-        if constexpr (core::tmax_<IntType>::value > IntMax) {
+        if constexpr (tmax<IntType> > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
                 throw LengthError(
                             "Cannot insert " + toString(length) +
@@ -2711,8 +2710,7 @@ using FloatArray = Array<float>;
 ///
 using DoubleArray = Array<double>;
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_ARRAY_H
 

@@ -40,7 +40,7 @@ Mat3x Mat3x::inverted(bool* isInvertible, float epsilon_) const
         if (isInvertible) {
             *isInvertible = false;
         }
-        constexpr float inf = std::numeric_limits<float>::infinity();
+        constexpr float inf = core::infinity<float>;
         res.setElements(inf, inf, inf,
                         inf, inf, inf,
                         inf, inf, inf);
