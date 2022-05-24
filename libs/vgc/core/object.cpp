@@ -258,6 +258,16 @@ void Object::destroyObject_()
     //   ---------
 }
 
+void Object::destroyAllChildObjects_()
+{
+    Object* x = this->firstChildObject_;
+    while (x) {
+        Object* next = x->nextSiblingObject_;
+        x->destroyObject_();
+        x = next;
+    }
+}
+
 void Object::destroyChildObject_(Object* child)
 {
     if (!child || child->parentObject_ != this) {
@@ -290,19 +300,25 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
         throw core::NotAChildError(nextSibling, this);
     }
 
-    // Detach child from current parent if any. Note that it would be safe to
-    // unconditionally do `ObjectPtr p = child->detachObjectFromParent();`, but
-    // it would cause unnecessary incref and decref in the common case where the
-    // given child doesn't have a parent yet.
-    ObjectPtr p;
-    if (child->parentObject()) {
-        ObjectPtr q = child->removeObjectFromParent_();
-        p = std::move(q);
-    }
+    // If parent is different we have to detach and reattach.
+    Object* oldParent = child->parentObject();
+    if (oldParent != this) {
+        // Detach child from current parent if any. Note that it would be safe to
+        // unconditionally do `ObjectPtr p = child->detachObjectFromParent();`, but
+        // it would cause unnecessary incref and decref in the common case where the
+        // given child doesn't have a parent yet.
+        ObjectPtr p;
+        if (oldParent) {
+            ObjectPtr q = child->removeObjectFromParent_();
+            p = std::move(q);
+        }
 
-    // Add refCount of child to new parent
-    if (child->refCount_ > 0) {
-        internal::ObjPtrAccess::incref(this, child->refCount_);
+        // Add refCount of child to new parent
+        if (child->refCount_ > 0) {
+            internal::ObjPtrAccess::incref(this, child->refCount_);
+        }
+
+        // XXX onChildReordered instead of onChildAdded ? See below.
     }
 
     // Set parent-child relationships
@@ -322,6 +338,9 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
     else {
         firstChildObject_ = child;
     }
+
+    // XXX May be better to have both general and fine grained events.
+    // e.g.: onChildrenChanged, onChildReordered, onChildAdded, onChildRemoved.
     onChildAdded(child);
 }
 
@@ -404,7 +423,7 @@ void Object::destroyObjectImpl_()
     }
     ObjectPtr p = removeObjectFromParent_();
     refCount_ = Int64Min + refCount_;
-    
+
     internal::SignalHub::disconnectSlots(this);
     onDestroyed();
     // Done after onDestroyed since someone could want to emit there.

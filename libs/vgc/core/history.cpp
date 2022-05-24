@@ -30,27 +30,54 @@ HistoryNodeIndex genHistoryNodeIndex()
     return ++lastId;
 }
 
-bool HistoryNode::commit()
+bool HistoryNode::finalize()
 {
-    history_->commitNode_(this);
+    history_->finalizeNode_(this);
 }
 
-void HistoryNode::undo_()
+void HistoryNode::undo_(bool forceCancel)
 {
+#ifdef VGC_DEBUG
+    if (isUndone_) {
+        throw LogicError("Already undone.");
+    }
+#endif
 
+    for (auto it = operations_.rbegin(); it != operations_.rend(); ++it) {
+        (*it)->callUndo_();
+    }
+
+    isUndone_ = true;
+    bool cancel = forceCancel || (isOngoing() && !firstChildObject());
+    undone().emit(this, cancel);
+    if (cancel) {
+        destroyObject_();
+    }
 }
 
 void HistoryNode::redo_()
 {
+#ifdef VGC_DEBUG
+    if (!isUndone_) {
+        throw LogicError("Cannot redo if not undone first.");
+    }
+#endif
 
+    for (auto it = operations_.begin(); it != operations_.end(); ++it) {
+        (*it)->callRedo_();
+    }
+
+    isUndone_ = false;
+    redone().emit(this);
 }
 
 History::History(core::StringId entrypointName)
-    : nodesCounts_(0) // root doesn't count
+    : nodesCount_(0) // root doesn't count
 {
     auto ptr = HistoryNode::create(entrypointName, this);
-    this->appendChildObject_(ptr.get());
-    root_ = ptr.get();
+    auto raw = ptr.get();
+    this->appendChildObject_(raw);
+    root_ = raw;
 }
 
 void History::setMinLevelsCount(Int count)
@@ -62,22 +89,28 @@ void History::setMinLevelsCount(Int count)
 void History::setMaxLevelsCount(Int count)
 {
     maxLevels_ = count;
-    // XXX prune now
-}
-
-Int History::getLevelsCount() const
-{
+    prune_();
 }
 
 bool History::cancelOne()
 {
+    if (head_->isOngoing()) {
+        HistoryNode* prev = head_->parent();
+        head_->undo_(true);
+        // XXX count ?
+        head_ = prev;
+        return true;
+    }
+    return false;
 }
 
 bool History::undoOne()
 {
-    if (cursor_ != root_) {
-        cursor_->undo_();
-        cursor_ = cursor_->prevNode();
+    if (head_ != root_) {
+        do {
+            head_->undo_();
+            head_ = head_->parent();
+        } while (head_->isOngoing());
         return true;
     }
     return false;
@@ -85,147 +118,114 @@ bool History::undoOne()
 
 bool History::redoOne()
 {
-    auto next = cursor_->nextNodeInMainBranch();
-    if (next) {
-        next->redo_();
-        cursor_ = next;
+    HistoryNode* child = head_->mainChild();
+    if (child) {
+        child->redo_();
+        head_ = child;
         return true;
     }
     return false;
 }
 
-bool History::gotoNode(HistoryNode* node)
+void History::gotoNode(HistoryNode* node)
 {
+    // The common ancestor of node and head_ is the first node that is not
+    // undone in the path from node to root.
+    // It always exists and it can be head_ itself.
+
+    // While searching for the common ancestor we have to reorder the branches
+    // of visited nodes to setup the new main path.
+    //
+    HistoryNode* a = node;
+    while (!a->isUndone()) {
+        HistoryNode* prev = a->parent();
+        prev->appendChildObject_(a);
+        a = prev;
+    }
+
+    // First undo all between head_ and common ancestor.
+    HistoryNode* x = head_;
+    while (x != a) {
+        x->undo_();
+        x = x->parent();
+    }
+
+    // Then redo all from common ancestor to node (included).
+    while (x != node) {
+        x = x->mainChild();
+        x->redo_();
+    }
 }
 
-void History::createNode(core::StringId name)
+HistoryNode* History::createNode(core::StringId name)
 {
-    auto next = cursor_;
-    while (next = cursor_->nextNodeInMainBranch(), next) {
-        if (!next->isCommitted()) {
-            next->destroyObject_();
+    // destroy first ongoing in main redos if present.
+    auto child = head_;
+    while (child = child->mainChild(), child) {
+        if (child->isOngoing()) {
+            child->destroyObject_();
+            break;
         }
     }
 
     auto ptr = HistoryNode::create(name, this);
-    cursor_->appendChildObject_(ptr.get());
-    cursor_ = ptr.get();
+    auto raw = ptr.get();
+    raw->squashNode_ = head_->squashNode_;
+    head_->appendChildObject_(raw);
+    head_ = raw;
+    return raw;
 }
 
-bool History::commitNode_(HistoryNode* node)
+bool History::finalizeNode_(HistoryNode* node)
 {
+    // Requirements:
+    // - `node` is ongoing
+    // - `node` is not undone (implies node is in main branch)
+    // - `node` is the first ongoing node in the path from head_ to root
 
+    if (!node->isOngoing() || node->isUndone()) {
+        return false;
+    }
 
-    // logic error if out
-    /*{
-        if (operationStack_.isEmpty()) {
-            throw LogicError("Trying to end an operation when the operation stack is empty.");
-        }
-        if (!ongoingOperation_.has_value()) {
-            throw LogicError("Trying to end an operation when there is no ongoing operation.");
-        }
-        if (currentOperationIterator_ != operationHistory_.end()) {
-            throw LogicError("Operation history iterator has moved during ongoing operation.");
+    // visit nodes between `node` and head_ to check that there is no active
+    // nested ongoing node.
+    for (HistoryNode* x = head_; x != node; x = x->parent()) {
+        if (node->isOngoing()) {
+            return false;
         }
     }
 
-    operationStack_.pop();
-    if (operationStack_.isEmpty()) {
-        emitPendingDiff();
-
-        if (hasHistoryEnabled()) {
-            operationHistory_.emplace_back(std::move(ongoingOperation_.value()));
-            if (operationHistory_.size() > operationHistorySizeMax_) {
-                operationHistory_.pop_front();
-            }
+    // Collect all operations in descendant nodes to form a single one.
+    for (HistoryNode* x = node; x != head_;) {
+        x = x->mainChild(); // iterate after test
+        for (auto& op : x->operations_) {
+            node->operations_.emplaceLast(std::move(op));
         }
+        x->operations_.clear();
+    }
 
-        ongoingOperation_.reset();
-    }*/
-    return false;
+    // Remove descendants and set node as head.
+    node->destroyAllChildObjects_();
+    HistoryNode* prev = node->parent();
+    node->squashNode_ = prev->squashNode_;
+    head_ = node;
+
+    if (!node->squashNode_) {
+        ++levelsCount_;
+        ++nodesCount_;
+        prune_();
+    }
+
+    return true;
 }
 
 void History::prune_()
 {
-}
-
-//void History::setHistoryLimit(Int size)
-//{
-//    if (size == operationHistorySizeMax_) {
-//        return;
-//    }
-//
-//    operationHistorySizeMax_ = size;
-
-
-
-
-    // XXXXXXXXXX Boris wants an iterator in an operation tree for the ongoing operation.
-
-    // notes:
-    // need stack of OperationGroup { undoOne() -> returns true if if was the last.. }
-    // Diff must be filled by atomic ops themselves (doIt())
-    // we need last iteration direction, cuz we can diff only one way..
-
-
-    /*
-
-    auto doAtomicOp<TAtomicOp>(document, diff, args) {
-    TAtomicOp& op = static_cast<TAtomicOp&>(opStack[-1].emplaceOp(TAtomicOp(args)));
-    return TAtomicOp::doIt(document, diff, op);
-    return op.doIt(document, diff);
-
-    Element::CreateOperation
+    if ((levelsCount_ < maxLevels_) && (nodesCount_ < 4 * maxLevels_)) {
+        return;
     }
 
-    */
-
-
-
-    /*if (operationHistory_.size() > operationHistorySizeMax_) {
-    operationHistory_.removeRange(0, operationHistory_.size() - operationHistorySizeMax_);
-    }*/
-//}
-
-//bool History::gotoState(UndoGroupIndex idx)
-//{
-//    if (it == currentOperationIterator_) {
-//        return true;
-//    }
-//
-//    if (pos < operationHistoryPosition_) {
-//        // undo
-//        for (Int i = operationHistoryPosition_ - 1; i >= pos; --i) {
-//            auto& op = operationHistory_[i];
-//            for (auto it = op.atomicOperations_.rbegin(), end = op.atomicOperations_.rend(); it != end; ++it) {
-//            }
-//
-//            // emit the diff too..
-//        }
-//    }
-//    else {
-//        // redo
-//        for (Int i = operationHistoryPosition_; i < pos; ++i) {
-//            auto& op = operationHistory_[i];
-//            for (auto it = op.atomicOperations_.begin(), end = op.atomicOperations_.end(); it != end; ++it) {
-//            }
-//
-//            // do..
-//            // XXX maybe we should have the impl in the op..
-//
-//
-//            // weird case: an operation containing setAttr + removeElem
-//            // if diff contains the attribute change then we update resources for possibly nothing..
-//            // and if we don't, we do it on Undo..
-//
-//
-//            // emit the diff too..
-//        }
-//    }
-//}
-
-
-
-
+    // XXX todo: trim oldest
+}
 
 } // namespace vgc::core

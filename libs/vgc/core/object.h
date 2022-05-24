@@ -784,10 +784,14 @@ protected:
     /// Destroys this Object.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to decide whether they wish to expose a destroy() method or
-    /// not. For example, a Foo subclass may, or may not, choose to define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to decide whether they wish to expose a
+    /// destroy() method or not. For example, a Foo subclass may, or may not,
+    /// choose to define:
     ///
     /// ```cpp
     /// void Foo::destroy()
@@ -812,13 +816,25 @@ protected:
     ///
     void destroyObject_();
 
+    /// Destroys all children of this Object.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    void destroyAllChildObjects_();
+
     /// Destroys a child of this Object. If child is null or isn't a child of
     /// this Object, then NotAChildError is raised. See destroyObject_() for
     /// details.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro.
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     void destroyChildObject_(Object* child);
 
@@ -826,11 +842,14 @@ protected:
     /// null, then NullError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to add additional restrictions on which types of children
-    /// are allowed. For example, a Foo subclass which only allows Foo children
-    /// may define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::appendChild(Foo* child)
@@ -855,11 +874,14 @@ protected:
     /// null, then NullError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to add additional restrictions on which types of children
-    /// are allowed. For example, a Foo subclass which only allows Foo children
-    /// may define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::prependChild(Foo* child)
@@ -886,11 +908,14 @@ protected:
     /// a child of this Object, then NotAChildError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to add additional restrictions on which types of children
-    /// are allowed. For example, a Foo subclass which only allows Foo children
-    /// may define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::insertChild(Foo* child, Foo* nextSibling)
@@ -917,11 +942,15 @@ protected:
     /// child of this Object, then NotAChildError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro. This design allows subclasses to add
-    /// additional restrictions on which types of children are allowed, and
-    /// whether removing children is allowed for this subclass of Object. For
-    /// example, a Foo subclass which only allows Foo children may define:
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed, and whether removing children is allowed
+    /// for this subclass of Object. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::removeChild(Foo* child)
@@ -947,8 +976,10 @@ protected:
     /// removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     /// Very importantly, you must NOT use this method to append an Object
     /// whose subclass isn't your own or closely related (= friend classes, or
@@ -967,8 +998,10 @@ protected:
     /// removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     /// Very importantly, you must NOT use this method to prepend an Object
     /// whose subclass isn't your own or closely related (= friend classes, or
@@ -989,8 +1022,10 @@ protected:
     /// equivalent to \p removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     /// Very importantly, you must NOT use this method to insert an Object
     /// whose subclass isn't your own or closely related (= friend classes, or
@@ -1010,8 +1045,10 @@ protected:
     /// if this Object is already a root Object.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     ObjPtr<Object> removeObjectFromParent_();
 

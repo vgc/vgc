@@ -158,8 +158,6 @@ protected:
     Document();
 
 public:
-    using HistoryIterator = std::list<Operation>::iterator;
-
     /// Creates a new document with no root element.
     ///
     static DocumentPtr create();
@@ -344,6 +342,9 @@ public:
     void save(const std::string& filePath,
               const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
+    core::History* history() const {
+        return history_;
+    }
 
     bool emitPendingDiff();
 
@@ -363,19 +364,20 @@ private:
     // Atomic operations impl
     friend Node;
     friend class Element;
-    friend CreateNodeOperation;
+    friend CreateElementOperation;
     friend RemoveNodeOperation;
     friend MoveNodeOperation;
 
+    core::History* history_;
     Diff pendingDiff_;
     std::unordered_map<Node*, NodeRelatives> oldRelativesMap_; // to finalize the diff
 
-    void doCreateNode_(Node* node, const NodeRelatives& relatives);
-    void doRemoveNode_(Node* node, const NodeRelatives& relatives);
-    void doMoveNode_(Node* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives);
-    void doCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
-    void doRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
-    void doChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue);
+    void onCreateElement_(Element* node, const NodeRelatives& relatives);
+    void onRemoveElement_(Element* node, const NodeRelatives& relatives);
+    void onMoveElement_(Element* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives);
+    void onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
+    void onRemoveAuthoredAttribute_(Element* element, core::StringId name, Int attributeIndex, const Value& value);
+    void onChangeAuthoredAttribute_(Element* element, core::StringId name, Int attributeIndex, const Value& oldValue, const Value& newValue);
 };
 
 } // namespace dom

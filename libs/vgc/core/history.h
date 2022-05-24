@@ -32,6 +32,31 @@
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 
+/*
+    [x]: main branch node
+    (x): dangling branch node
+    U: undoable
+    R: redoable
+    C: cancellable
+    ~: ongoing
+    <: head
+
+      [0]
+       |
+      [1] U
+     _/ \_____
+     |       |
+    (2) R   [3] C~
+         ___/ \___
+         |       |
+        (4) R   [6] U<
+         |       |
+        (5) R   [7] R~
+             ___/ \___
+             |       |
+            (8) R   [9] R
+*/
+
 namespace vgc::core {
 
 VGC_DECLARE_OBJECT(History);
@@ -73,7 +98,7 @@ private:
 
 class VGC_CORE_API HistoryNode : public Object {
 private:
-    VGC_OBJECT(HistoryNode, Object);
+    VGC_OBJECT(HistoryNode, Object)
 
 protected:
     friend History;
@@ -96,50 +121,82 @@ public:
         return index_;
     }
 
-    bool commit();
+    bool finalize();
 
-    bool isCommitted() const {
-        return isCommitted_;
+    bool isOngoing() const {
+        return squashNode_ == this;
+    }
+
+    bool isFinalized() const {
+        return !isOngoing();
     }
 
     bool isUndone() const {
         return isUndone_;
     }
 
-    HistoryNode* prevNode() const {
+    HistoryNode* parent() const {
         return static_cast<HistoryNode*>(this->parentObject());
     }
 
-    HistoryNode* nextNodeInMainBranch() const {
+    HistoryNode* mainChild() const {
+        return lastChild();
+    }
+
+    HistoryNode* secondaryChild() const {
+        auto last = lastChild();
+        return last ? last->previousAlternative() : nullptr;
+    }
+
+    HistoryNode* lastChild() const {
         return static_cast<HistoryNode*>(this->lastChildObject());
     }
 
-    HistoryNode* nextNodeInSecondaryBranch() const {
-        auto last = this->lastChildObject();
-        return static_cast<HistoryNode*>(last ? last->previousSiblingObject() : nullptr);
+    HistoryNode* firstChild() const {
+        return static_cast<HistoryNode*>(this->firstChildObject());
     }
+
+    HistoryNode* previousAlternative() const {
+        return static_cast<HistoryNode*>(this->previousSiblingObject());
+    }
+
+    HistoryNode* nextAlternative() const {
+        return static_cast<HistoryNode*>(this->nextSiblingObject());
+    }
+
+    VGC_SIGNAL(undone, (HistoryNode*, node), (bool, isCancel))
+    VGC_SIGNAL(redone, (HistoryNode*, node))
 
 private:
     friend History;
 
     core::Array<std::unique_ptr<Operation>> operations_;
     core::StringId name_;
-    HistoryNodeIndex index_;
-    History* history_;
-    bool isCommitted_ = false;
+    History* history_ = nullptr;
+    HistoryNode* squashNode_ = nullptr;
+    HistoryNodeIndex index_ = -1;
     bool isUndone_ = false;
 
     static HistoryNodePtr create(core::StringId name, History* history) {
         return HistoryNodePtr(new HistoryNode(name, history));
     }
 
-    void undo_();
+    bool isOngoingLeaf_() const {
+        return isOngoing() && !firstChildObject();
+    }
+
+    // Undo the contained operations.
+    // This node gets destroyed if it is both ongoing and childless or forceCancel is true.
+    // Assumes isUndone_ is false.
+    void undo_(bool forceCancel = false);
+
+    // Assumes isUndone_ is true.
     void redo_();
 };
 
 class VGC_CORE_API History : public Object {
 private:
-    VGC_OBJECT(History, Object);
+    VGC_OBJECT(History, Object)
 
 protected:
     friend HistoryNode;
@@ -147,6 +204,14 @@ protected:
     History(core::StringId entrypointName);
 
 public:
+    HistoryNode* root() const {
+        return root_;
+    }
+
+    HistoryNode* head() const {
+        return head_;
+    }
+
     void setMinLevelsCount(Int count);
     void setMaxLevelsCount(Int count);
 
@@ -158,9 +223,12 @@ public:
         return maxLevels_;
     }
 
-    Int getLevelsCount() const;
+    Int getLevelsCount() const {
+        return levelsCount_;
+    }
+
     Int getNodesCount() const {
-        return nodesCounts_;
+        return nodesCount_;
     }
 
     bool isEnabled() const {
@@ -171,32 +239,36 @@ public:
     bool undoOne();
     bool redoOne();
 
-    bool gotoNode(HistoryNode* node);
+    void gotoNode(HistoryNode* node);
 
-    void createNode(core::StringId name);
+    HistoryNode* createNode(core::StringId name);
 
-    //template<typename TOperation, typename... Args,
-    //    core::Requires<std::is_base_of_v<Operation, TOperation>> = true>
-    //void doAtomicOperation_(Args&&... args) {
-    //    // AtomicOperation constructor is private, cannot emplace with args.
-    //    atomicOperations_.emplaceLast(TAtomicOperation(std::forward<Args>(args)...));
-    //}
+    template<typename TOperation, typename... Args,
+        core::Requires<std::is_base_of_v<Operation, TOperation>> = true>
+    void do_(Args&&... args) {
+        if (!head_->isOngoingLeaf_()) {
+            throw LogicError("Cannot perform the requested operation without a non-finalized HistoryNode.");
+        }
+        struct FriendlyOperation : TOperation {
+            template<typename... UArgs>
+            FriendlyOperation(UArgs&&... args) : TOperation(std::forward<UArgs>(args)...) {}
+        };
+        const std::unique_ptr<Operation>& op =
+            pendingOperations_.emplaceLast(FriendlyOperation(std::forward<Args>(args)...));
+        op->do_();
+    }
 
 private:
     Int minLevels_ = 0;
     Int maxLevels_ = 0;
 
-    // When inserting into a node we don't know yet if it requires an automatic sub-node.
-    core::Array<std::unique_ptr<Operation>> pendingOperations_;
     HistoryNode* root_;
-    HistoryNode* cursor_ = nullptr;
-    Int nodesCounts_ = 0;
+    HistoryNode* head_ = nullptr;
+    Int nodesCount_ = 0;
+    Int levelsCount_ = 0;
 
-    bool commitNode_(HistoryNode* node);
+    bool finalizeNode_(HistoryNode* node);
     void prune_();
-
-    // need custom iterator ?
-    //bool gotoState(OperationIndex idx);
 };
 
 } // namespace vgc::core

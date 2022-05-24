@@ -27,10 +27,10 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
+#include <vgc/core/history.h>
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
-#include <vgc/dom/history.h>
 #include <vgc/dom/node.h>
 #include <vgc/dom/value.h>
 
@@ -44,6 +44,8 @@ class Diff;
 
 class VGC_DOM_API NodeRelatives {
 public:
+    NodeRelatives() = default;
+
     NodeRelatives(Node* node) :
         NodeRelatives(
             node->parent(),
@@ -65,9 +67,9 @@ public:
 private:
     friend Document;
 
-    Node* parent_;
-    Node* previousSibling_;
-    Node* nextSibling_;
+    Node* parent_ = nullptr;
+    Node* previousSibling_ = nullptr;
+    Node* nextSibling_ = nullptr;
 
     NodeRelatives(
         Node* parent,
@@ -78,15 +80,13 @@ private:
         nextSibling_(nextSibling) {}
 };
 
-class VGC_DOM_API CreateNodeOperation : public Operation {
-protected:
-    CreateNodeOperation(
-        Node* node,
-        const NodeRelatives& relatives) :
-        node_(node),
-        savedRelatives_(relatives) {}
 
-    ~CreateNodeOperation() {
+class VGC_DOM_API CreateElementOperation : public core::Operation {
+protected:
+    CreateElementOperation(Node* node, Node* parent, Node* nextSibling) :
+        node_(node), parent_(parent), nextSibling_(nextSibling) {}
+
+    ~CreateElementOperation() {
         if (keepAlive_) {
             internal::destroyNode(node_.get());
         }
@@ -97,28 +97,31 @@ public:
         return node_.get();
     }
 
+    Document* document() const {
+        return node_ ? node_->document() : nullptr;
+    }
+
     const NodeRelatives& savedRelatives() const {
         return savedRelatives_;
     }
 
 protected:
-    void do_(Document* doc) override;
-    void undo_(Document* doc) override;
-    void redo_(Document* doc) override;
+    void do_() override;
+    void undo_() override;
+    void redo_() override;
 
 private:
     NodePtr node_;
+    Node* parent_ = nullptr;
+    Node* nextSibling_ = nullptr;
     bool keepAlive_ = false;
     NodeRelatives savedRelatives_;
 };
 
-class VGC_DOM_API RemoveNodeOperation : public Operation {
+class VGC_DOM_API RemoveNodeOperation : public core::Operation {
 protected:
-    RemoveNodeOperation(
-        Node* node,
-        const NodeRelatives& relatives) :
-        node_(node),
-        savedRelatives_(relatives) {}
+    RemoveNodeOperation(Node* node) :
+        node_(node) {}
 
     ~RemoveNodeOperation() {
         if (keepAlive_) {
@@ -136,9 +139,9 @@ public:
     }
 
 protected:
-    void do_(Document* doc) override;
-    void undo_(Document* doc) override;
-    void redo_(Document* doc) override;
+    void do_() override;
+    void undo_() override;
+    void redo_() override;
 
 private:
     NodePtr node_;
@@ -146,15 +149,12 @@ private:
     NodeRelatives savedRelatives_;
 };
 
-class VGC_DOM_API MoveNodeOperation : public AtomicOperation {
+class VGC_DOM_API MoveNodeOperation : public core::Operation {
 protected:
-    MoveNodeOperation(
-        Node* node,
-        const NodeRelatives& oldRelatives,
-        const NodeRelatives& newRelatives) :
+    MoveNodeOperation(Node* node, Node* newParent, Node* newNextSibling) :
         node_(node),
-        oldRelatives_(oldRelatives),
-        newRelatives_(newRelatives) {}
+        newParent_(newParent),
+        newNextSibling_(newNextSibling) {}
 
 public:
     Node* node()const  {
@@ -170,97 +170,29 @@ public:
     }
 
 protected:
-    void do_(Document* doc) override;
-    void undo_(Document* doc) override;
-    void redo_(Document* doc) override;
+    void do_() override;
+    void undo_() override;
+    void redo_() override;
 
 private:
+    Node* newParent_ = nullptr;
+    Node* newNextSibling_ = nullptr;
     Node* node_;
     NodeRelatives oldRelatives_;
     NodeRelatives newRelatives_;
 };
 
-class VGC_DOM_API CreateAuthoredAttributeOperation : public AtomicOperation {
+class VGC_DOM_API SetAttributeOperation : public core::Operation {
 protected:
-    CreateAuthoredAttributeOperation(
-        Element* element,
-        core::StringId name,
-        const Value& value) :
-        element_(element),
-        name_(name),
-        value_(value) {}
+    friend Operation;
 
-public:
-    Element* element()const  {
-        return element_;
-    }
-
-    const core::StringId& name() const {
-        return name_;
-    }
-
-    const Value& value() const {
-        return value_;
-    }
-
-protected:
-    void do_(Document* doc) override;
-    void undo_(Document* doc) override;
-    void redo_(Document* doc) override;
-
-private:
-    Element* element_;
-    core::StringId name_;
-    Value value_;
-};
-
-class VGC_DOM_API RemoveAuthoredAttributeOperation : public AtomicOperation {
-protected:
-    RemoveAuthoredAttributeOperation(
+    SetAttributeOperation(
         Element* element,
         core::StringId name,
         Value value) :
         element_(element),
         name_(name),
-        value_(value) {}
-
-public:
-    Element* element()const  {
-        return element_;
-    }
-
-    const core::StringId& name() const {
-        return name_;
-    }
-
-    const Value& value() const {
-        return value_;
-    }
-
-protected:
-    void do_(Document* doc) override;
-    void undo_(Document* doc) override;
-    void redo_(Document* doc) override;
-
-private:
-    Element* element_;
-    core::StringId name_;
-    Value value_;
-};
-
-class VGC_DOM_API ChangeAuthoredAttributeOperation : public AtomicOperation {
-protected:
-    friend Operation;
-
-    ChangeAuthoredAttributeOperation(
-        Element* element,
-        core::StringId name,
-        Value oldValue,
-        Value newValue) :
-        element_(element),
-        name_(name),
-        oldValue_(oldValue),
-        newValue_(newValue) {}
+        newValue_(value) {}
 
 public:
     Element* element()const  {
@@ -280,80 +212,114 @@ public:
     }
 
 protected:
-    void undo(Document* doc) override;
-    void redo(Document* doc) override;
+    void do_() override;
+    void undo_() override;
+    void redo_() override;
 
 private:
     Element* element_;
     core::StringId name_;
+    bool isNew_ = false;
     Value oldValue_;
     Value newValue_;
 };
 
-using OperationIndex = UInt32;
-OperationIndex genOperationIndex();
-
-class VGC_DOM_API CompoundOperation : Operation {
+class VGC_DOM_API RemoveAuthoredAttributeOperation : public core::Operation {
 protected:
-    explicit CompoundOperation(core::StringId name) :
-        Operation(false),
-        name_(name),
-        index_(genOperationIndex()) {}
+    RemoveAuthoredAttributeOperation(
+        Element* element,
+        core::StringId name) :
+        element_(element),
+        name_(name) {}
 
 public:
-    // non-copyable
-    CompoundOperation(const CompoundOperation&) = delete;
-    CompoundOperation& operator=(const CompoundOperation&) = delete;
-
-    CompoundOperation(CompoundOperation&& other) noexcept :
-        name_(other.name_),
-        index_(other.index_),
-        isReverted_(other.isReverted_) {
-
-        atomicOperations_.swap(other.atomicOperations_);
-    }
-
-    CompoundOperation& operator=(CompoundOperation&& other) noexcept {
-        std::swap(name_, other.name_);
-        std::swap(index_, other.index_);
-        std::swap(isReverted_, other.isReverted_);
-        atomicOperations_.swap(other.atomicOperations_);
+    Element* element()const  {
+        return element_;
     }
 
     const core::StringId& name() const {
         return name_;
     }
 
-    OperationIndex index() const {
-        return index_;
+    const Value& value() const {
+        return value_;
     }
 
-    bool isReverted() const {
-        return isReverted_;
-    }
+protected:
+    void do_() override;
+    void undo_() override;
+    void redo_() override;
 
 private:
-    friend Document;
-
-    core::Array<std::unique_ptr<Operation>> subOperations_;
-    Int subOperationsIt_;
-
+    Element* element_;
     core::StringId name_;
-    OperationIndex index_;
-    bool isReverted_ = false;
-
-    template<typename TAtomicOperation, typename... Args,
-        core::Requires<std::is_base_of_v<AtomicOperation, TAtomicOperation>> = true>
-    void doAtomicOperation_(Args&&... args) {
-        // AtomicOperation constructor is private, cannot emplace with args.
-        atomicOperations_.emplaceLast(TAtomicOperation(std::forward<Args>(args)...));
-    }
-
-    // XXX pointer to document could be a member..
-
-    void undo_(Document* doc);
-    void redo_(Document* doc);
+    Value value_;
 };
+
+using OperationIndex = UInt32;
+OperationIndex genOperationIndex();
+
+//class VGC_DOM_API CompoundOperation : Operation {
+//protected:
+//    explicit CompoundOperation(core::StringId name) :
+//        Operation(false),
+//        name_(name),
+//        index_(genOperationIndex()) {}
+//
+//public:
+//    // non-copyable
+//    CompoundOperation(const CompoundOperation&) = delete;
+//    CompoundOperation& operator=(const CompoundOperation&) = delete;
+//
+//    CompoundOperation(CompoundOperation&& other) noexcept :
+//        name_(other.name_),
+//        index_(other.index_),
+//        isReverted_(other.isReverted_) {
+//
+//        atomicOperations_.swap(other.atomicOperations_);
+//    }
+//
+//    CompoundOperation& operator=(CompoundOperation&& other) noexcept {
+//        std::swap(name_, other.name_);
+//        std::swap(index_, other.index_);
+//        std::swap(isReverted_, other.isReverted_);
+//        atomicOperations_.swap(other.atomicOperations_);
+//    }
+//
+//    const core::StringId& name() const {
+//        return name_;
+//    }
+//
+//    OperationIndex index() const {
+//        return index_;
+//    }
+//
+//    bool isReverted() const {
+//        return isReverted_;
+//    }
+//
+//private:
+//    friend Document;
+//
+//    core::Array<std::unique_ptr<Operation>> subOperations_;
+//    Int subOperationsIt_;
+//
+//    core::StringId name_;
+//    OperationIndex index_;
+//    bool isReverted_ = false;
+//
+//    template<typename TAtomicOperation, typename... Args,
+//        core::Requires<std::is_base_of_v<AtomicOperation, TAtomicOperation>> = true>
+//    void doAtomicOperation_(Args&&... args) {
+//        // AtomicOperation constructor is private, cannot emplace with args.
+//        atomicOperations_.emplaceLast(TAtomicOperation(std::forward<Args>(args)...));
+//    }
+//
+//    // XXX pointer to document could be a member..
+//
+//    void undo_(Document* doc);
+//    void redo_(Document* doc);
+//};
 
 
 class VGC_DOM_API Diff {

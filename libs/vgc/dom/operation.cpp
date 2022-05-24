@@ -22,51 +22,63 @@
 
 namespace vgc::dom {
 
-void CreateNodeOperation::undo(Document* doc)
+void CreateElementOperation::do_()
 {
 }
 
-void CreateNodeOperation::redo(Document* doc)
+void CreateElementOperation::undo_()
 {
 }
 
-void RemoveNodeOperation::undo(Document* doc)
+void CreateElementOperation::redo_()
 {
 }
 
-void RemoveNodeOperation::redo(Document* doc)
+void RemoveNodeOperation::do_()
 {
 }
 
-void MoveNodeOperation::undo(Document* doc)
+void RemoveNodeOperation::undo_()
 {
 }
 
-void MoveNodeOperation::redo(Document* doc)
+void RemoveNodeOperation::redo_()
 {
 }
 
-void CreateAuthoredAttributeOperation::undo(Document* doc)
+void MoveNodeOperation::do_()
 {
 }
 
-void CreateAuthoredAttributeOperation::redo(Document* doc)
+void MoveNodeOperation::undo_()
 {
 }
 
-void RemoveAuthoredAttributeOperation::undo(Document* doc)
+void MoveNodeOperation::redo_()
 {
 }
 
-void RemoveAuthoredAttributeOperation::redo(Document* doc)
+void SetAttributeOperation::do_()
 {
 }
 
-void ChangeAuthoredAttributeOperation::undo(Document* doc)
+void SetAttributeOperation::undo_()
 {
 }
 
-void ChangeAuthoredAttributeOperation::redo(Document* doc)
+void SetAttributeOperation::redo_()
+{
+}
+
+void RemoveAuthoredAttributeOperation::do_()
+{
+}
+
+void RemoveAuthoredAttributeOperation::undo_()
+{
+}
+
+void RemoveAuthoredAttributeOperation::redo_()
 {
 }
 

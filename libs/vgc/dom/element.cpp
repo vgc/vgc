@@ -19,6 +19,7 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/strings.h>
+#include <vgc/dom/operation.h>
 
 namespace vgc {
 namespace dom {
@@ -32,10 +33,12 @@ Element::Element(Document* document, core::StringId name) :
 /* static */
 Element* Element::create_(Node* parent, core::StringId name)
 {
-    auto doc = parent->document();
-    Element* res = new Element(doc, name);
-    res->appendObjectToParent_(parent);
-    return res;
+    Document* document = parent->document();
+    Element* e = new Element(document, name);
+    // XXX do that in operation
+    //e->appendObjectToParent_(parent);
+    parent->document()->history()->do_<CreateElementOperation>(e, parent, nullptr);
+    return e;
 }
 
 /* static */
@@ -45,23 +48,13 @@ Element* Element::create(Document* parent, core::StringId name)
         throw SecondRootElementError(parent);
     }
 
-    Element* res = create_(parent, name);
-    auto doc = parent;
-    doc->beginOperation(strings::CreateElement);
-    doc->onCreateNode_(res, NodeRelatives(res));
-    doc->endOperation();
-    return res;
+    return create_(parent, name);
 }
 
 /* static */
 Element* Element::create(Element* parent, core::StringId name)
 {
-    Element* res = create_(parent, name);
-    auto doc = parent->document();
-    doc->beginOperation(strings::CreateElement);
-    doc->onCreateNode_(res, NodeRelatives(res));
-    doc->endOperation();
-    return res;
+    return create_(parent, name);
 }
 
 const Value& Element::getAttribute(core::StringId name) const
@@ -83,32 +76,32 @@ const Value& Element::getAttribute(core::StringId name) const
 
 void Element::setAttribute(core::StringId name, const Value& value)
 {
-    auto doc = this->document();
-    doc->beginOperation(strings::Set_authored_attribute);
-    // If already authored, update the authored value
-    if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
-        Value oldValue = authored->value();
-        authored->setValue(value);
-        doc->onChangeAuthoredAttribute_(this, name, oldValue, authored->value());
-    }
-    else {
-        // Otherwise, allocate a new AuthoredAttribute
-        authoredAttributes_.emplaceLast(name, value);
-        doc->onCreateAuthoredAttribute_(this, name, value);
-    }
-    doc->endOperation();
+    document()->history()->do_<SetAttributeOperation>(this, name, value);
+
+    // XXX do all this in the operation !!
+    //// If already authored, update the authored value
+    //if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+    //    Value oldValue = authored->value();
+    //    authored->setValue(value);
+    //    document->onChangeAuthoredAttribute_(this, name, oldValue, authored->value());
+    //}
+    //else {
+    //    // Otherwise, allocate a new AuthoredAttribute
+    //    authoredAttributes_.emplaceLast(name, value);
+    //    document->onCreateAuthoredAttribute_(this, name, value);
+    //}
 }
 
 void Element::clearAttribute(core::StringId name)
 {
-    auto doc = this->document();
-    doc->beginOperation(strings::Clear_authored_attribute);
-    if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+    document()->history()->do_<RemoveAuthoredAttributeOperation>(this, name);
+
+    // XXX do all this in the operation !!
+    /*if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         Value oldValue = authored->value();
         authoredAttributes_.removeAt(std::distance(&authoredAttributes_[0], authored));
-        doc->onRemoveAuthoredAttribute_(this, name, oldValue);
-    }
-    doc->endOperation();
+        document->onRemoveAuthoredAttribute_(this, name, oldValue);
+    }*/
 }
 
 AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name)

@@ -892,11 +892,31 @@ bool Document::emitPendingDiff()
     return false;
 }
 
+void Document::onCreateElement_(Element* node, const NodeRelatives& relatives)
+{
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        CreateNodeOperation>(node, relatives);
+    pendingDiff_.createdNodes_.emplaceLast(node);
+}
+
+void Document::onRemoveElement_(Element* node, const NodeRelatives& savedRelatives)
+{
+
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        RemoveNodeOperation>(node, savedRelatives);
+    pendingDiff_.removedNodes_.emplaceLast(node);
+}
+
+void Document::onMoveElement_(Element* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives)
+{
+
+    ongoingOperation_.value().emplaceLastAtomicOperation_<
+        MoveNodeOperation>(node, oldRelatives, newRelatives);
+    oldRelativesMap_.try_emplace(node, NodeRelatives(node));
+}
+
 void Document::onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
 {
-    if (operationStack_.isEmpty()) {
-        throw LogicError("No known ongoing operation.");
-    }
     ongoingOperation_.value().emplaceLastAtomicOperation_<
         CreateAuthoredAttributeOperation>(element, name, value);
     pendingDiff_.modifiedElements_[element].insert(name);
@@ -904,9 +924,6 @@ void Document::onCreateAuthoredAttribute_(Element* element, core::StringId name,
 
 void Document::onRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
 {
-    if (operationStack_.isEmpty()) {
-        throw LogicError("No known ongoing operation.");
-    }
     ongoingOperation_.value().emplaceLastAtomicOperation_<
         RemoveAuthoredAttributeOperation>(element, name, value);
     pendingDiff_.modifiedElements_[element].insert(name);
@@ -914,42 +931,9 @@ void Document::onRemoveAuthoredAttribute_(Element* element, core::StringId name,
 
 void Document::onChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue)
 {
-    if (operationStack_.isEmpty()) {
-        throw LogicError("No known ongoing operation.");
-    }
     ongoingOperation_.value().emplaceLastAtomicOperation_<
         ChangeAuthoredAttributeOperation>(element, name, oldValue, newValue);
     pendingDiff_.modifiedElements_[element].insert(name);
-}
-
-void Document::onCreateNode_(Node* node, const NodeRelatives& relatives)
-{
-    if (operationStack_.isEmpty()) {
-        throw LogicError("No known ongoing operation.");
-    }
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        CreateNodeOperation>(node, relatives);
-    pendingDiff_.createdNodes_.emplaceLast(node);
-}
-
-void Document::onRemoveNode_(Node* node, const NodeRelatives& savedRelatives)
-{
-    if (operationStack_.isEmpty()) {
-        throw LogicError("No known ongoing operation.");
-    }
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        RemoveNodeOperation>(node, savedRelatives);
-    pendingDiff_.removedNodes_.emplaceLast(node);
-}
-
-void Document::onMoveNode_(Node* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives)
-{
-    if (operationStack_.isEmpty()) {
-        throw LogicError("No known ongoing operation.");
-    }
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        MoveNodeOperation>(node, oldRelatives, newRelatives);
-    oldRelativesMap_.try_emplace(node, NodeRelatives(node));
 }
 
 } // namespace dom
