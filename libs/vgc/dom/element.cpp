@@ -35,9 +35,7 @@ Element* Element::create_(Node* parent, core::StringId name)
 {
     Document* document = parent->document();
     Element* e = new Element(document, name);
-    // XXX do that in operation
-    //e->appendObjectToParent_(parent);
-    parent->document()->history()->do_<CreateElementOperation>(e, parent, nullptr);
+    core::History::do_<CreateElementOperation>(parent->document()->history(), e, parent, nullptr);
     return e;
 }
 
@@ -76,32 +74,15 @@ const Value& Element::getAttribute(core::StringId name) const
 
 void Element::setAttribute(core::StringId name, const Value& value)
 {
-    document()->history()->do_<SetAttributeOperation>(this, name, value);
-
-    // XXX do all this in the operation !!
-    //// If already authored, update the authored value
-    //if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
-    //    Value oldValue = authored->value();
-    //    authored->setValue(value);
-    //    document->onChangeAuthoredAttribute_(this, name, oldValue, authored->value());
-    //}
-    //else {
-    //    // Otherwise, allocate a new AuthoredAttribute
-    //    authoredAttributes_.emplaceLast(name, value);
-    //    document->onCreateAuthoredAttribute_(this, name, value);
-    //}
+    core::History::do_<SetAttributeOperation>(document()->history(), this, name, value);
 }
 
 void Element::clearAttribute(core::StringId name)
 {
-    document()->history()->do_<RemoveAuthoredAttributeOperation>(this, name);
-
-    // XXX do all this in the operation !!
-    /*if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
-        Value oldValue = authored->value();
-        authoredAttributes_.removeAt(std::distance(&authoredAttributes_[0], authored));
-        document->onRemoveAuthoredAttribute_(this, name, oldValue);
-    }*/
+    if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+        Int index = std::distance(&authoredAttributes_[0], authored);
+        core::History::do_<RemoveAuthoredAttributeOperation>(document()->history(), this, name, index);
+    }
 }
 
 AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name)

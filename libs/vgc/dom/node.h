@@ -297,10 +297,14 @@ public:
     }
 
 private:
-    friend void internal::destroyNode(Node* node);
+    // Operations
+    friend class RemoveNodeOperation;
+    friend class MoveNodeOperation;
 
     Document* document_;
     NodeType nodeType_;
+
+    friend void internal::destroyNode(Node* node);
 };
 
 } // namespace dom

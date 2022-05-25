@@ -44,12 +44,7 @@ Node::Node(Document* document, NodeType nodeType) :
 
 void Node::remove()
 {
-    NodeRelatives links(this);
-    core::ObjPtr self = removeObjectFromParent_();
-    auto doc = document();
-    doc->beginOperation(strings::RemoveNode);
-    doc->onRemoveNode_(this, links);
-    doc->endOperation();
+    core::History::do_<RemoveNodeOperation>(document()->history(), this);
 }
 
 namespace {
@@ -93,13 +88,8 @@ bool Node::canReparent(Node* newParent)
 
 void Node::reparent(Node* newParent)
 {
-    NodeLinks oldLinks(this);
     checkCanReparent_(newParent, this);
-    appendObjectToParent_(newParent);
-    auto doc = document();
-    doc->beginOperation(strings::MoveNode_in_hierarchy);
-    doc->onMoveNode_(this, oldLinks, NodeLinks(this));
-    doc->endOperation();
+    core::History::do_<MoveNodeOperation>(document()->history(), this, newParent, nullptr);
 }
 
 namespace {

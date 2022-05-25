@@ -22,11 +22,14 @@
 
 namespace vgc::dom::strings {
 
-VGC_DOM_API extern const core::StringId RemoveNode;
-VGC_DOM_API extern const core::StringId MoveNode_in_hierarchy;
-VGC_DOM_API extern const core::StringId CreateElement;
-VGC_DOM_API extern const core::StringId RemoveElement;
-VGC_DOM_API extern const core::StringId MoveElement_in_hierarchy;
+
+VGC_DOM_API extern const core::StringId New_Document;
+
+VGC_DOM_API extern const core::StringId Remove_Node;
+VGC_DOM_API extern const core::StringId Move_Node_in_hierarchy;
+VGC_DOM_API extern const core::StringId Create_Element;
+VGC_DOM_API extern const core::StringId Remove_Element;
+VGC_DOM_API extern const core::StringId Move_Element_in_hierarchy;
 
 VGC_DOM_API extern const core::StringId Set_authored_attribute;
 VGC_DOM_API extern const core::StringId Clear_authored_attribute;

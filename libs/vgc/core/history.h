@@ -78,7 +78,9 @@ public:
     virtual ~Operation() = default;
 
 protected:
+    // must be called only once
     virtual void do_() = 0;
+
     virtual void undo_() = 0;
     virtual void redo_() = 0;
 
@@ -164,7 +166,7 @@ public:
         return static_cast<HistoryNode*>(this->nextSiblingObject());
     }
 
-    VGC_SIGNAL(undone, (HistoryNode*, node), (bool, isCancel))
+    VGC_SIGNAL(undone, (HistoryNode*, node), (bool, isAbort))
     VGC_SIGNAL(redone, (HistoryNode*, node))
 
 private:
@@ -186,13 +188,15 @@ private:
     }
 
     // Undo the contained operations.
-    // This node gets destroyed if it is both ongoing and childless or forceCancel is true.
+    // isAbort is passed to the undone signal.
+    //
     // Assumes isUndone_ is false.
-    void undo_(bool forceCancel = false);
+    void undo_(bool isAbort = false);
 
     // Assumes isUndone_ is true.
     void redo_();
 };
+
 
 class VGC_CORE_API History : public Object {
 private:
@@ -203,7 +207,18 @@ protected:
 
     History(core::StringId entrypointName);
 
+    template<typename T>
+    struct EnableConstruct : T {
+        template<typename... UArgs>
+        EnableConstruct(UArgs&&... args) : T(std::forward<UArgs>(args)...) {}
+    };
+
 public:
+    static HistoryPtr create(core::StringId entrypointName) {
+        HistoryPtr p(new History(entrypointName));
+        return p;
+    }
+
     HistoryNode* root() const {
         return root_;
     }
@@ -211,6 +226,9 @@ public:
     HistoryNode* head() const {
         return head_;
     }
+
+    // XXX setting max levels to 0 should disable and
+    //     thus remove all history directly for safety !!
 
     void setMinLevelsCount(Int count);
     void setMaxLevelsCount(Int count);
@@ -231,32 +249,40 @@ public:
         return nodesCount_;
     }
 
-    bool isEnabled() const {
+    /*bool isEnabled() const {
         return (maxLevels_ > 0) || (getLevelsCount() > 0);
-    }
+    }*/
 
-    bool cancelOne();
-    bool undoOne();
-    bool redoOne();
+    // XXX todos:
+    // - forbid createNode if head already has ops !
+    // - design a coalescing system
 
-    void gotoNode(HistoryNode* node);
+    bool abort();
+    bool undo();
+    bool redo();
+
+    void goTo(HistoryNode* node);
 
     HistoryNode* createNode(core::StringId name);
 
     template<typename TOperation, typename... Args,
         core::Requires<std::is_base_of_v<Operation, TOperation>> = true>
-    void do_(Args&&... args) {
-        if (!head_->isOngoingLeaf_()) {
-            throw LogicError("Cannot perform the requested operation without a non-finalized HistoryNode.");
+    static void do_(History* history, Args&&... args) {
+        if (history) {
+            if (!history->head_->isOngoingLeaf_()) {
+                throw LogicError("Cannot perform the requested operation without a non-finalized HistoryNode.");
+            }
+            const std::unique_ptr<Operation>& op =
+                history->head_->operations_.emplaceLast(new EnableConstruct<TOperation>(std::forward<Args>(args)...));
+            op->do_();
         }
-        struct FriendlyOperation : TOperation {
-            template<typename... UArgs>
-            FriendlyOperation(UArgs&&... args) : TOperation(std::forward<UArgs>(args)...) {}
-        };
-        const std::unique_ptr<Operation>& op =
-            pendingOperations_.emplaceLast(FriendlyOperation(std::forward<Args>(args)...));
-        op->do_();
+        else {
+            EnableConstruct<TOperation> op(std::forward<Args>(args)...);
+            static_cast<Operation&>(op).do_();
+        }
     }
+
+    VGC_SIGNAL(headChanged, (HistoryNode*, newNode))
 
 private:
     Int minLevels_ = 0;
@@ -266,6 +292,9 @@ private:
     HistoryNode* head_ = nullptr;
     Int nodesCount_ = 0;
     Int levelsCount_ = 0;
+
+    // Assumes head_ is undoable.
+    void undoOne_(bool forceAbort = false);
 
     bool finalizeNode_(HistoryNode* node);
     void prune_();

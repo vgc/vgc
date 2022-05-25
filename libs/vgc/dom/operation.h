@@ -31,14 +31,13 @@
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/element.h>
 #include <vgc/dom/node.h>
 #include <vgc/dom/value.h>
 
 namespace vgc::dom {
 
-VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
-VGC_DECLARE_OBJECT(Element);
 
 class Diff;
 
@@ -51,6 +50,14 @@ public:
             node->parent(),
             node->previousSibling(),
             node->nextSibling()) {}
+
+    NodeRelatives(
+        Node* parent,
+        Node* previousSibling,
+        Node* nextSibling) :
+        parent_(parent),
+        previousSibling_(previousSibling),
+        nextSibling_(nextSibling) {}
 
     Node* parent()const  {
         return parent_;
@@ -70,39 +77,29 @@ private:
     Node* parent_ = nullptr;
     Node* previousSibling_ = nullptr;
     Node* nextSibling_ = nullptr;
-
-    NodeRelatives(
-        Node* parent,
-        Node* previousSibling,
-        Node* nextSibling) :
-        parent_(parent),
-        previousSibling_(previousSibling),
-        nextSibling_(nextSibling) {}
 };
 
 
 class VGC_DOM_API CreateElementOperation : public core::Operation {
 protected:
-    CreateElementOperation(Node* node, Node* parent, Node* nextSibling) :
-        node_(node), parent_(parent), nextSibling_(nextSibling) {}
+    CreateElementOperation(Element* element, Node* parent, Node* nextSibling) :
+        element_(element), parent_(parent), nextSibling_(nextSibling) {}
 
-    ~CreateElementOperation() {
-        if (keepAlive_) {
-            internal::destroyNode(node_.get());
-        }
-    }
+    ~CreateElementOperation();
 
 public:
-    Node* node()const  {
-        return node_.get();
+    Element* element()const  {
+        return element_.get();
     }
 
-    Document* document() const {
-        return node_ ? node_->document() : nullptr;
+    Document* document() const;
+
+    Node* parent() const {
+        return parent_;
     }
 
-    const NodeRelatives& savedRelatives() const {
-        return savedRelatives_;
+    Node* nextSibling() const {
+        return nextSibling_;
     }
 
 protected:
@@ -111,11 +108,10 @@ protected:
     void redo_() override;
 
 private:
-    NodePtr node_;
+    ElementPtr element_;
     Node* parent_ = nullptr;
     Node* nextSibling_ = nullptr;
     bool keepAlive_ = false;
-    NodeRelatives savedRelatives_;
 };
 
 class VGC_DOM_API RemoveNodeOperation : public core::Operation {
@@ -153,8 +149,7 @@ class VGC_DOM_API MoveNodeOperation : public core::Operation {
 protected:
     MoveNodeOperation(Node* node, Node* newParent, Node* newNextSibling) :
         node_(node),
-        newParent_(newParent),
-        newNextSibling_(newNextSibling) {}
+        newRelatives_(newParent, nullptr, newNextSibling) {}
 
 public:
     Node* node()const  {
@@ -175,8 +170,6 @@ protected:
     void redo_() override;
 
 private:
-    Node* newParent_ = nullptr;
-    Node* newNextSibling_ = nullptr;
     Node* node_;
     NodeRelatives oldRelatives_;
     NodeRelatives newRelatives_;
@@ -219,6 +212,7 @@ protected:
 private:
     Element* element_;
     core::StringId name_;
+    Int index_ = -1;
     bool isNew_ = false;
     Value oldValue_;
     Value newValue_;
@@ -228,9 +222,11 @@ class VGC_DOM_API RemoveAuthoredAttributeOperation : public core::Operation {
 protected:
     RemoveAuthoredAttributeOperation(
         Element* element,
-        core::StringId name) :
+        core::StringId name,
+        Int index) :
         element_(element),
-        name_(name) {}
+        name_(name),
+        index_(index) {}
 
 public:
     Element* element()const  {
@@ -241,8 +237,8 @@ public:
         return name_;
     }
 
-    const Value& value() const {
-        return value_;
+    const Value& oldValue() const {
+        return oldValue_;
     }
 
 protected:
@@ -253,7 +249,8 @@ protected:
 private:
     Element* element_;
     core::StringId name_;
-    Value value_;
+    Int index_ = -1;
+    Value oldValue_;
 };
 
 using OperationIndex = UInt32;

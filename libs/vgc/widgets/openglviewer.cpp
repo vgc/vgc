@@ -155,6 +155,10 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     // therefore use a cross cursor. In the future, each tool should specify
     // which cursor should be drawn in the viewer.
     setCursor(crossCursor());
+
+    document_->history()->headChanged().connect([this](){
+        this->update();
+    }); // DEVCODE
 }
 
 void OpenGLViewer::setDocument(dom::Document* document)
@@ -357,6 +361,11 @@ void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&)
     isRotating_ = false;
     isPanning_ = false;
     isZooming_ = false;
+
+    if (drawActionHistoryNode_) {
+        drawActionHistoryNode_->finalize();
+        drawActionHistoryNode_ = nullptr;
+    }
 }
 
 void OpenGLViewer::keyPressEvent(QKeyEvent* event)
@@ -682,6 +691,11 @@ void OpenGLViewer::destroyCurveGLResources_(Int)
 void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
 {
     // XXX CLEAN
+    static core::StringId Draw_Curve("Draw Curve");
+    drawActionHistoryNode_ = document()->history()->createNode(Draw_Curve);
+
+    static core::StringId Create_Curve("Create Curve");
+    core::HistoryNode* createCurveNode = document()->history()->createNode(Create_Curve);
 
     dom::Element* root = document_->rootElement();
     dom::Element* path = dom::Element::create(root, PATH);
@@ -691,6 +705,8 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
     path->setAttribute(COLOR, currentColor_);
 
     continueCurve_(p, width);
+
+    createCurveNode->finalize();
 }
 
 void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
@@ -715,8 +731,13 @@ void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
         positions.append(p);
         widths.append(width);
 
+        static core::StringId Add_Point("Add Point");
+        core::HistoryNode* addPointNode = document()->history()->createNode(Add_Point);
+
         path->setAttribute(POSITIONS, positions);
         path->setAttribute(WIDTHS, widths);
+
+        addPointNode->finalize();
 
         update();
     }

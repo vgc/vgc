@@ -32,10 +32,10 @@ HistoryNodeIndex genHistoryNodeIndex()
 
 bool HistoryNode::finalize()
 {
-    history_->finalizeNode_(this);
+    return history_->finalizeNode_(this);
 }
 
-void HistoryNode::undo_(bool forceCancel)
+void HistoryNode::undo_(bool isAbort)
 {
 #ifdef VGC_DEBUG
     if (isUndone_) {
@@ -48,11 +48,7 @@ void HistoryNode::undo_(bool forceCancel)
     }
 
     isUndone_ = true;
-    bool cancel = forceCancel || (isOngoing() && !firstChildObject());
-    undone().emit(this, cancel);
-    if (cancel) {
-        destroyObject_();
-    }
+    undone().emit(this, isAbort);
 }
 
 void HistoryNode::redo_()
@@ -74,10 +70,10 @@ void HistoryNode::redo_()
 History::History(core::StringId entrypointName)
     : nodesCount_(0) // root doesn't count
 {
-    auto ptr = HistoryNode::create(entrypointName, this);
-    auto raw = ptr.get();
-    this->appendChildObject_(raw);
-    root_ = raw;
+    HistoryNode* ptr = new HistoryNode(entrypointName, this);
+    this->appendChildObject_(ptr);
+    root_ = ptr;
+    head_ = ptr;
 }
 
 void History::setMinLevelsCount(Int count)
@@ -92,46 +88,48 @@ void History::setMaxLevelsCount(Int count)
     prune_();
 }
 
-bool History::cancelOne()
+bool History::abort()
 {
     if (head_->isOngoing()) {
-        HistoryNode* prev = head_->parent();
-        head_->undo_(true);
-        // XXX count ?
-        head_ = prev;
+        undoOne_(true);
         return true;
     }
     return false;
 }
 
-bool History::undoOne()
+bool History::undo()
 {
     if (head_ != root_) {
         do {
-            head_->undo_();
-            head_ = head_->parent();
+            undoOne_();
         } while (head_->isOngoing());
+        headChanged().emit(head_);
         return true;
     }
     return false;
 }
 
-bool History::redoOne()
+bool History::redo()
 {
     HistoryNode* child = head_->mainChild();
     if (child) {
         child->redo_();
         head_ = child;
+        headChanged().emit(head_);
         return true;
     }
     return false;
 }
 
-void History::gotoNode(HistoryNode* node)
+void History::goTo(HistoryNode* node)
 {
     // The common ancestor of node and head_ is the first node that is not
     // undone in the path from node to root.
     // It always exists and it can be head_ itself.
+
+    if (head_ == node) {
+        return;
+    }
 
     // While searching for the common ancestor we have to reorder the branches
     // of visited nodes to setup the new main path.
@@ -144,36 +142,51 @@ void History::gotoNode(HistoryNode* node)
     }
 
     // First undo all between head_ and common ancestor.
-    HistoryNode* x = head_;
-    while (x != a) {
-        x->undo_();
-        x = x->parent();
+    while (head_ != a) {
+        undoOne_();
     }
 
     // Then redo all from common ancestor to node (included).
+    HistoryNode* x = head_;
     while (x != node) {
         x = x->mainChild();
         x->redo_();
     }
+
+    headChanged().emit(head_);
 }
 
 HistoryNode* History::createNode(core::StringId name)
 {
     // destroy first ongoing in main redos if present.
-    auto child = head_;
-    while (child = child->mainChild(), child) {
+    HistoryNode* child = head_->mainChild();
+    while (child) {
         if (child->isOngoing()) {
             child->destroyObject_();
             break;
         }
+        child = child->mainChild();
     }
 
-    auto ptr = HistoryNode::create(name, this);
-    auto raw = ptr.get();
-    raw->squashNode_ = head_->squashNode_;
+    HistoryNodePtr ptr = HistoryNode::create(name, this);
+    HistoryNode* raw = ptr.get();
+    //raw->squashNode_ = head_->squashNode_;
+    raw->squashNode_ = raw;
     head_->appendChildObject_(raw);
     head_ = raw;
+    headChanged().emit(head_);
     return raw;
+}
+
+void History::undoOne_(bool forceAbort)
+{
+    HistoryNode* parent = head_->parent();
+    bool abort = forceAbort || head_->isOngoingLeaf_();
+    head_->undo_(abort);
+    if (abort) {
+        head_->destroyObject_();
+    }
+    head_ = parent;
 }
 
 bool History::finalizeNode_(HistoryNode* node)
@@ -183,15 +196,19 @@ bool History::finalizeNode_(HistoryNode* node)
     // - `node` is not undone (implies node is in main branch)
     // - `node` is the first ongoing node in the path from head_ to root
 
-    if (!node->isOngoing() || node->isUndone()) {
-        return false;
+    if (!node->isOngoing()) {
+        throw LogicError("Cannot finalize a HistoryNode which is already finalized.");
+    }
+
+    if (node->isUndone()) {
+        throw LogicError("Cannot finalize a HistoryNode that is currently undone.");
     }
 
     // visit nodes between `node` and head_ to check that there is no active
     // nested ongoing node.
     for (HistoryNode* x = head_; x != node; x = x->parent()) {
-        if (node->isOngoing()) {
-            return false;
+        if (x->isOngoing()) {
+            throw LogicError("Cannot finalize a HistoryNode before its nested ones are finalized.");
         }
     }
 
@@ -216,6 +233,7 @@ bool History::finalizeNode_(HistoryNode* node)
         prune_();
     }
 
+    headChanged().emit(head_);
     return true;
 }
 

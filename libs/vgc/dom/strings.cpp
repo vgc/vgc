@@ -18,11 +18,14 @@
 
 namespace vgc::dom::strings {
 
-const core::StringId RemoveNode("Remove Node");
-const core::StringId MoveNode_in_hierarchy("Move Node in hierarchy");
-const core::StringId CreateElement("Create Element");
-const core::StringId RemoveElement("Remove Element");
-const core::StringId MoveElement_in_hierarchy("Move Element in hierarchy");
+
+const core::StringId New_Document("New Document");
+
+const core::StringId Remove_Node("Remove Node");
+const core::StringId Move_Node_in_hierarchy("Move Node in hierarchy");
+const core::StringId Create_Element("Create Element");
+const core::StringId Remove_Element("Remove Element");
+const core::StringId Move_Element_in_hierarchy("Move Element in hierarchy");
 
 const core::StringId Set_authored_attribute("Set authored attribute");
 const core::StringId Clear_authored_attribute("Clear authored attribute");

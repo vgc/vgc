@@ -115,6 +115,7 @@ private:
 
     // Scene
     dom::Document* document_;
+    core::HistoryNode* drawActionHistoryNode_ = nullptr;
 
     // Moving camera
     bool isSketching_;

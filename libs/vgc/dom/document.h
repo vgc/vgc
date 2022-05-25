@@ -342,13 +342,17 @@ public:
     void save(const std::string& filePath,
               const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
+    void enableHistory(core::StringId entrypointName);
+
     core::History* history() const {
-        return history_;
+        return history_.get();
     }
 
     bool emitPendingDiff();
 
-    VGC_SIGNAL(documentChanged, (const Diff&, diff));
+    VGC_SIGNAL(documentChanged, (const Diff&, diff))
+
+    VGC_SLOT(onHistoryHeadChanged, onHistoryHeadChanged_)
 
 private:
     // XML declaration
@@ -361,23 +365,26 @@ private:
     void generateXmlDeclaration_();
     std::string xmlDeclaration_;
 
-    // Atomic operations impl
-    friend Node;
-    friend class Element;
-    friend CreateElementOperation;
-    friend RemoveNodeOperation;
-    friend MoveNodeOperation;
+    // Operations
+    friend class CreateElementOperation;
+    friend class RemoveNodeOperation;
+    friend class MoveNodeOperation;
+    friend class SetAttributeOperation;
+    friend class RemoveAuthoredAttributeOperation;
 
-    core::History* history_;
+    //friend Node;
+    //friend class Element;
+
+    core::HistoryPtr history_;
     Diff pendingDiff_;
-    std::unordered_map<Node*, NodeRelatives> oldRelativesMap_; // to finalize the diff
+    std::unordered_map<Node*, NodeRelatives> previousRelativesMap_;
 
-    void onCreateElement_(Element* node, const NodeRelatives& relatives);
-    void onRemoveElement_(Element* node, const NodeRelatives& relatives);
-    void onMoveElement_(Element* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives);
-    void onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value);
-    void onRemoveAuthoredAttribute_(Element* element, core::StringId name, Int attributeIndex, const Value& value);
-    void onChangeAuthoredAttribute_(Element* element, core::StringId name, Int attributeIndex, const Value& oldValue, const Value& newValue);
+    void onHistoryHeadChanged_();
+
+    void onCreateNode_(Node* element);
+    void onRemoveNode_(Node* node);
+    void onMoveNode_(Node* node, const NodeRelatives& savedRelatives);
+    void onChangeAttribute_(Element* element, core::StringId name);
 };
 
 } // namespace dom

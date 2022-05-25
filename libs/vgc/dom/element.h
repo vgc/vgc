@@ -121,9 +121,10 @@ public:
     void clearAttribute(core::StringId name);
 
 private:
-    friend class CreateAuthoredAttributeOperation;
+    // Operations
+    friend class CreateElementOperation;
+    friend class SetAttributeOperation;
     friend class RemoveAuthoredAttributeOperation;
-    friend class ChangeAuthoredAttributeOperation;
 
     // Name of this element.
     core::StringId name_;

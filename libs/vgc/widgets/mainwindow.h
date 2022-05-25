@@ -56,6 +56,8 @@ private Q_SLOTS:
     void open();
     void save();
     void saveAs();
+    void undo();
+    void redo();
 
 private:
     dom::DocumentPtr document_;
@@ -78,11 +80,14 @@ private:
     QAction* actionSave_;
     QAction* actionSaveAs_;
     QAction* actionQuit_;
+    QAction* actionUndo_;
+    QAction* actionRedo_;
     QAction* actionToggleConsoleView_;
     QAction* actionTogglePerformanceMonitorView_;
 
     void setupMenus_();
     QMenu* menuFile_;
+    QMenu* menuEdit_;
     QMenu* menuView_;
 
     void setupConnections_();

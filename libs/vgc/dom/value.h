@@ -220,7 +220,7 @@ public:
     /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
     void get(geometry::Vec2dArray& vec2dArray) const {
-        vec2dArray = std::get<geometry::Vec2dArray>(var_);
+        vec2dArray = getVec2dArray();
     }
 
     /// Sets this value to the given \p vec2dArray.
@@ -241,7 +241,7 @@ public:
     /// The behavior is undefined if type() != ValueType::DoubleArray.
     ///
     void get(core::DoubleArray& doubleArray) const {
-        doubleArray = std::get<core::DoubleArray>(var_);
+        doubleArray = getDoubleArray();
     }
 
     /// Sets this value to the given \p vec2dArray.

@@ -23,8 +23,9 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/io.h>
-#include <vgc/dom/schema.h>
 #include <vgc/dom/operation.h>
+#include <vgc/dom/schema.h>
+#include <vgc/dom/strings.h>
 
 namespace vgc {
 namespace dom {
@@ -846,9 +847,17 @@ void Document::save(const std::string& filePath,
     writeChildren(out, style, 0, this);
 }
 
+void Document::enableHistory(core::StringId entrypointName)
+{
+    if (!history_) {
+        history_ = core::History::create(entrypointName);
+        history_->headChanged().connect(onHistoryHeadChanged());
+    }
+}
+
 bool Document::emitPendingDiff()
 {
-    for (const auto& [node, oldRelatives] : oldRelativesMap_) {
+    for (const auto& [node, oldRelatives] : previousRelativesMap_) {
         if (pendingDiff_.createdNodes_.contains(node)) {
             continue;
         }
@@ -863,7 +872,7 @@ bool Document::emitPendingDiff()
             pendingDiff_.reparentedNodes_.insert(node);
         }
     }
-    oldRelativesMap_.clear();
+    previousRelativesMap_.clear();
 
     // remove created and removed nodes from modified elements
     auto& modifiedElements = pendingDiff_.modifiedElements_;
@@ -892,47 +901,28 @@ bool Document::emitPendingDiff()
     return false;
 }
 
-void Document::onCreateElement_(Element* node, const NodeRelatives& relatives)
+void Document::onHistoryHeadChanged_()
 {
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        CreateNodeOperation>(node, relatives);
+    emitPendingDiff();
+}
+
+void Document::onCreateNode_(Node* node)
+{
     pendingDiff_.createdNodes_.emplaceLast(node);
 }
 
-void Document::onRemoveElement_(Element* node, const NodeRelatives& savedRelatives)
+void Document::onRemoveNode_(Node* node)
 {
-
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        RemoveNodeOperation>(node, savedRelatives);
     pendingDiff_.removedNodes_.emplaceLast(node);
 }
 
-void Document::onMoveElement_(Element* node, const NodeRelatives& oldRelatives, const NodeRelatives& newRelatives)
+void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives)
 {
-
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        MoveNodeOperation>(node, oldRelatives, newRelatives);
-    oldRelativesMap_.try_emplace(node, NodeRelatives(node));
+    previousRelativesMap_.try_emplace(node, savedRelatives);
 }
 
-void Document::onCreateAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
+void Document::onChangeAttribute_(Element* element, core::StringId name)
 {
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        CreateAuthoredAttributeOperation>(element, name, value);
-    pendingDiff_.modifiedElements_[element].insert(name);
-}
-
-void Document::onRemoveAuthoredAttribute_(Element* element, core::StringId name, const Value& value)
-{
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        RemoveAuthoredAttributeOperation>(element, name, value);
-    pendingDiff_.modifiedElements_[element].insert(name);
-}
-
-void Document::onChangeAuthoredAttribute_(Element* element, core::StringId name, const Value& oldValue, const Value& newValue)
-{
-    ongoingOperation_.value().emplaceLastAtomicOperation_<
-        ChangeAuthoredAttributeOperation>(element, name, oldValue, newValue);
     pendingDiff_.modifiedElements_[element].insert(name);
 }
 
