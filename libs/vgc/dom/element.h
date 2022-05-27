@@ -26,6 +26,7 @@
 namespace vgc {
 namespace dom {
 
+VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
 /// \class vgc::dom::Element
@@ -102,7 +103,7 @@ public:
 
     /// Returns the authored attributes of this element.
     ///
-    const std::vector<AuthoredAttribute>& authoredAttributes() const {
+    const core::Array<AuthoredAttribute>& authoredAttributes() const {
         return authoredAttributes_;
     }
 
@@ -113,9 +114,18 @@ public:
 
     /// Sets the value of the given attribute.
     ///
-    void setAttribute(core::StringId name, const Value& value); // XXX Should we provide Value&& overload?
+    void setAttribute(core::StringId name, const Value& value);
+
+    /// Clears the authored value of the given attribute.
+    ///
+    void clearAttribute(core::StringId name);
 
 private:
+    // Operations
+    friend class CreateElementOperation;
+    friend class SetAttributeOperation;
+    friend class RemoveAuthoredAttributeOperation;
+
     // Name of this element.
     core::StringId name_;
 
@@ -130,7 +140,7 @@ private:
     // compilers, move semantics should be used instead, since
     // AuthoredAttribute has a non-throwing move constructor and destructor.
     //
-    std::vector<AuthoredAttribute> authoredAttributes_;
+    core::Array<AuthoredAttribute> authoredAttributes_;
 
     // Helper functions to find attributes. Return nullptr if not found.
     AuthoredAttribute* findAuthoredAttribute_(core::StringId name);

@@ -44,8 +44,8 @@ void Value::clear()
 void Value::shrinkToFit()
 {
     switch (type_) {
-    case ValueType::DoubleArray:    std::get<core::DoubleArray>(var_).shrinkToFit(); break;
-    case ValueType::Vec2dArray:     std::get<geometry::Vec2dArray>(var_).shrinkToFit(); break;
+    case ValueType::DoubleArray:    std::get<std::shared_ptr<core::DoubleArray>>(var_)->shrinkToFit(); break;
+    case ValueType::Vec2dArray:     std::get<std::shared_ptr<geometry::Vec2dArray>>(var_)->shrinkToFit(); break;
     default:
          break;
     }

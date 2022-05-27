@@ -25,8 +25,6 @@
 namespace vgc {
 namespace dom {
 
-class Document;
-
 /// \enum vgc::dom::NodeType
 /// \brief Specifies the type of a Node.
 ///
@@ -64,12 +62,17 @@ template<typename OStream>
 void write(OStream& out, NodeType type)
 {
     switch (type) {
-    case NodeType::Element: write(out, "Element"); break;
-    case NodeType::Document: write(out, "Document"); break;
+    case NodeType::Element:     write(out, "Element");  break;
+    case NodeType::Document:    write(out, "Document"); break;
     }
 }
 
 VGC_DECLARE_OBJECT(Node);
+VGC_DECLARE_OBJECT(Document);
+
+namespace internal {
+void destroyNode(Node* node);
+} // namespace internal
 
 /// \class vgc::dom::Node
 /// \brief Represents a node of the document Node tree.
@@ -151,16 +154,9 @@ public:
         return node;
     }
 
-    /// Destroys this Node.
+    /// Remove this node from its document (undoable).
     ///
-    /// \sa vgc::core::Object::isAlive().
-    ///
-    // XXX Should we forbid to destroy the Document?
-    //
-    void destroy()
-    {
-        destroyObject_();
-    }
+    void remove();
 
     /// Returns the parent Node of this Node. This is always nullptr for
     /// Document nodes, and always a non-null valid Node otherwise.
@@ -301,8 +297,14 @@ public:
     }
 
 private:
+    // Operations
+    friend class RemoveNodeOperation;
+    friend class MoveNodeOperation;
+
     Document* document_;
     NodeType nodeType_;
+
+    friend void internal::destroyNode(Node* node);
 };
 
 } // namespace dom

@@ -155,6 +155,11 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     // therefore use a cross cursor. In the future, each tool should specify
     // which cursor should be drawn in the viewer.
     setCursor(crossCursor());
+
+    // XXX todo: safe impl
+    document_->history()->headChanged().connect([this](){
+        this->update();
+    });
 }
 
 void OpenGLViewer::setDocument(dom::Document* document)
@@ -357,6 +362,11 @@ void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&)
     isRotating_ = false;
     isPanning_ = false;
     isZooming_ = false;
+
+    if (drawCurveUndoGroup_) {
+        drawCurveUndoGroup_->close();
+        drawCurveUndoGroup_ = nullptr;
+    }
 }
 
 void OpenGLViewer::keyPressEvent(QKeyEvent* event)
@@ -682,6 +692,25 @@ void OpenGLViewer::destroyCurveGLResources_(Int)
 void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
 {
     // XXX CLEAN
+    static core::StringId Draw_Curve("Draw Curve");
+    drawCurveUndoGroup_ = document()->history()->createUndoGroup(Draw_Curve);
+
+    drawCurveUndoGroup_->undone().connect(
+        [this](core::UndoGroup*, bool){
+            isSketching_ = false;
+            drawCurveUndoGroup_ = nullptr;
+        });
+
+    drawCurveUndoGroup_->redone().connect(
+        [this](core::UndoGroup* ug){
+            if (ug->isOpen()) {
+                isSketching_ = true;
+                drawCurveUndoGroup_ = ug;
+            }
+        });
+
+    static core::StringId Create_Curve("Create Curve");
+    core::UndoGroup* createCurveNodeUndoGroup = document()->history()->createUndoGroup(Create_Curve);
 
     dom::Element* root = document_->rootElement();
     dom::Element* path = dom::Element::create(root, PATH);
@@ -689,6 +718,8 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
     path->setAttribute(POSITIONS, geometry::Vec2dArray());
     path->setAttribute(WIDTHS, core::DoubleArray());
     path->setAttribute(COLOR, currentColor_);
+
+    createCurveNodeUndoGroup->close();
 
     continueCurve_(p, width);
 }
@@ -715,8 +746,13 @@ void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
         positions.append(p);
         widths.append(width);
 
+        static core::StringId Add_Point("Add Point");
+        core::UndoGroup* addPointUndoGroup = document()->history()->createUndoGroup(Add_Point);
+
         path->setAttribute(POSITIONS, positions);
         path->setAttribute(WIDTHS, widths);
+
+        addPointUndoGroup->close();
 
         update();
     }

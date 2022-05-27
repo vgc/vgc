@@ -66,6 +66,28 @@ private:
     using Compatible_ = typename std::enable_if<
         std::is_convertible<Y*, T*>::value>::type;
 
+    template<typename S, typename U>
+    friend ObjPtr<S> static_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> static_pointer_cast(ObjPtr<U>&& r) noexcept;
+
+    template<typename S, typename U>
+    friend ObjPtr<S> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept;
+
+    template<typename S, typename U>
+    friend ObjPtr<S> const_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> const_pointer_cast(ObjPtr<U>&& r) noexcept;
+
+    struct DontIncRefTag {};
+
+    // For move casts
+    ObjPtr(T* obj, DontIncRefTag) : obj_(obj)
+    {
+    }
+
 public:
     /// Creates a null ObjPtr<T>, that is, an ObjPtr<T> which doesn't manage any
     /// Object.
@@ -270,6 +292,52 @@ template<typename T, typename U>
 inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
 {
     return a.get() != b.get();
+}
+
+
+template<typename T, typename U>
+ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept
+{
+    return ObjPtr<T>(static_cast<T*>(r.get()));
+}
+
+template<typename T, typename U>
+ObjPtr<T> static_pointer_cast(ObjPtr<U>&& r) noexcept
+{
+    ObjPtr<T> ret(static_cast<T*>(r.get()), typename ObjPtr<T>::DontIncRefTag{});
+    r.obj_ = nullptr;
+    return ret;
+}
+
+template<typename T, typename U>
+ObjPtr<T> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept
+{
+    return ObjPtr<T>(dynamic_cast<T*>(r.get()));
+}
+
+template<typename T, typename U>
+ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept
+{
+    T* p = dynamic_cast<T*>(r.get());
+    if (p) {
+        r.obj_ = nullptr;
+        return ObjPtr<T>(p, typename ObjPtr<T>::DontIncRefTag{});
+    }
+    return ObjPtr<T>(nullptr);
+}
+
+template<typename T, typename U>
+ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept
+{
+    return ObjPtr<T>(const_cast<T*>(r.get()));
+}
+
+template<typename T, typename U>
+ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept
+{
+    ObjPtr<T> ret(const_cast<T*>(r.get()), typename ObjPtr<T>::DontIncRefTag{});
+    r.obj_ = nullptr;
+    return ret;
 }
 
 } // namespace core
@@ -662,7 +730,7 @@ public:
     /// disconnected.
     ///
     VGC_SIGNAL(aboutToBeDestroyed, (Object*, object));
-    
+
 protected:
     // This callback method is invoked when this object has just been
     // destroyed, that is, just after isAlive() has switched from true to
@@ -716,10 +784,14 @@ protected:
     /// Destroys this Object.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to decide whether they wish to expose a destroy() method or
-    /// not. For example, a Foo subclass may, or may not, choose to define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to decide whether they wish to expose a
+    /// destroy() method or not. For example, a Foo subclass may, or may not,
+    /// choose to define:
     ///
     /// ```cpp
     /// void Foo::destroy()
@@ -744,13 +816,25 @@ protected:
     ///
     void destroyObject_();
 
+    /// Destroys all children of this Object.
+    ///
+    /// This is a low-level method which should only be used by direct
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    void destroyAllChildObjects_();
+
     /// Destroys a child of this Object. If child is null or isn't a child of
     /// this Object, then NotAChildError is raised. See destroyObject_() for
     /// details.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro.
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     void destroyChildObject_(Object* child);
 
@@ -758,11 +842,14 @@ protected:
     /// null, then NullError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to add additional restrictions on which types of children
-    /// are allowed. For example, a Foo subclass which only allows Foo children
-    /// may define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::appendChild(Foo* child)
@@ -787,11 +874,14 @@ protected:
     /// null, then NullError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to add additional restrictions on which types of children
-    /// are allowed. For example, a Foo subclass which only allows Foo children
-    /// may define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::prependChild(Foo* child)
@@ -818,11 +908,14 @@ protected:
     /// a child of this Object, then NotAChildError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses as a helper method to implement their API. This method is
-    /// automatically made private by the VGC_OBJECT macro. This design allows
-    /// subclasses to add additional restrictions on which types of children
-    /// are allowed. For example, a Foo subclass which only allows Foo children
-    /// may define:
+    /// subclasses as a helper method to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::insertChild(Foo* child, Foo* nextSibling)
@@ -849,11 +942,15 @@ protected:
     /// child of this Object, then NotAChildError is raised.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro. This design allows subclasses to add
-    /// additional restrictions on which types of children are allowed, and
-    /// whether removing children is allowed for this subclass of Object. For
-    /// example, a Foo subclass which only allows Foo children may define:
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
+    ///
+    /// This design allows subclasses to add additional restrictions on which
+    /// types of children are allowed, and whether removing children is allowed
+    /// for this subclass of Object. For example, a Foo subclass which only
+    /// allows Foo children may define:
     ///
     /// ```cpp
     /// void Foo::removeChild(Foo* child)
@@ -879,8 +976,10 @@ protected:
     /// removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     /// Very importantly, you must NOT use this method to append an Object
     /// whose subclass isn't your own or closely related (= friend classes, or
@@ -899,8 +998,10 @@ protected:
     /// removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     /// Very importantly, you must NOT use this method to prepend an Object
     /// whose subclass isn't your own or closely related (= friend classes, or
@@ -921,8 +1022,10 @@ protected:
     /// equivalent to \p removeObjectFromParent_();
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     /// Very importantly, you must NOT use this method to insert an Object
     /// whose subclass isn't your own or closely related (= friend classes, or
@@ -942,8 +1045,10 @@ protected:
     /// if this Object is already a root Object.
     ///
     /// This is a low-level method which should only be used by direct
-    /// subclasses to implement their API. This method is automatically made
-    /// private by the VGC_OBJECT macro.
+    /// subclasses to implement their API.
+    ///
+    /// Use VGC_PRIVATIZE_OBJECT_TREE_MUTATORS to privatize this function
+    /// in your subclass.
     ///
     ObjPtr<Object> removeObjectFromParent_();
 
@@ -959,6 +1064,9 @@ private:
     Object* lastChildObject_;
     Object* previousSiblingObject_;
     Object* nextSiblingObject_;
+    //Int64 numChildren_ = 0;
+    //Int64 branchSize_ = 0;
+
 
     // Signal-slot mechanism
     friend class internal::SignalHub; // To access signalHub_
@@ -970,7 +1078,7 @@ private:
 namespace internal {
 
 // Required by signal.h
-constexpr SignalHub& SignalHub::access(const Object* o) { 
+constexpr SignalHub& SignalHub::access(const Object* o) {
     return const_cast<Object*>(o)->signalHub_;
 }
 

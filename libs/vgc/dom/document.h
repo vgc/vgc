@@ -17,14 +17,21 @@
 #ifndef VGC_DOM_DOCUMENT_H
 #define VGC_DOM_DOCUMENT_H
 
+#include <list>
+#include <optional>
+#include <unordered_map>
+
 #include <vgc/core/object.h>
+#include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/node.h>
+#include <vgc/dom/operation.h>
 #include <vgc/dom/xmlformattingstyle.h>
 
 namespace vgc {
 namespace dom {
 
+VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
@@ -335,6 +342,18 @@ public:
     void save(const std::string& filePath,
               const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
+    void enableHistory(core::StringId entrypointName);
+
+    core::History* history() const {
+        return history_.get();
+    }
+
+    bool emitPendingDiff();
+
+    VGC_SIGNAL(documentChanged, (const Diff&, diff))
+
+    VGC_SLOT(onHistoryHeadChanged, onHistoryHeadChanged_)
+
 private:
     // XML declaration
     bool hasXmlDeclaration_;
@@ -345,6 +364,27 @@ private:
     bool xmlStandalone_;
     void generateXmlDeclaration_();
     std::string xmlDeclaration_;
+
+    // Operations
+    friend class CreateElementOperation;
+    friend class RemoveNodeOperation;
+    friend class MoveNodeOperation;
+    friend class SetAttributeOperation;
+    friend class RemoveAuthoredAttributeOperation;
+
+    //friend Node;
+    //friend class Element;
+
+    core::HistoryPtr history_;
+    Diff pendingDiff_;
+    std::unordered_map<Node*, NodeRelatives> previousRelativesMap_;
+
+    void onHistoryHeadChanged_();
+
+    void onCreateNode_(Node* element);
+    void onRemoveNode_(Node* node);
+    void onMoveNode_(Node* node, const NodeRelatives& savedRelatives);
+    void onChangeAttribute_(Element* element, core::StringId name);
 };
 
 } // namespace dom

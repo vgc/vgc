@@ -18,11 +18,21 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/core/logging.h>
+#include <vgc/core/object.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
+#include <vgc/dom/strings.h>
 
 namespace vgc {
 namespace dom {
+
+namespace internal {
+
+void destroyNode(Node* node) {
+    node->destroyObject_();
+}
+
+} // namespace internal
 
 Node::Node(Document* document, NodeType nodeType) :
     Object(),
@@ -30,6 +40,11 @@ Node::Node(Document* document, NodeType nodeType) :
     nodeType_(nodeType)
 {
 
+}
+
+void Node::remove()
+{
+    core::History::do_<RemoveNodeOperation>(document()->history(), this);
 }
 
 namespace {
@@ -74,7 +89,7 @@ bool Node::canReparent(Node* newParent)
 void Node::reparent(Node* newParent)
 {
     checkCanReparent_(newParent, this);
-    appendObjectToParent_(newParent);
+    core::History::do_<MoveNodeOperation>(document()->history(), this, newParent, nullptr);
 }
 
 namespace {
@@ -107,6 +122,13 @@ bool Node::canReplace(Node* oldNode)
 
 void Node::replace(Node* oldNode)
 {
+    // XXX record atomic operations
+
+    // newChid = this
+    // willLoseAChild = ignored = this->parent()
+    // oldChild = willBeDestroyed = oldNode
+    // willHaveAChildReplaced = oldNode->parent()
+
     checkCanReplace_(oldNode, this);
     if (this == oldNode) {
         // nothing to do
@@ -117,7 +139,13 @@ void Node::replace(Node* oldNode)
     Node* parent = oldNode->parent();
     Node* nextSibling = oldNode->nextSibling();
     core::ObjectPtr self = removeObjectFromParent_();
+
+    // XXX use remove, cuz this is currently not undoable
+    //parent->removeChildObject_()
+
     oldNode->destroyObject_();
+    //oldNode->removeObjectFromParent_();
+
     parent->insertChildObject_(this, nextSibling);
 }
 

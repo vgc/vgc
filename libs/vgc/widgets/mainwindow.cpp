@@ -22,6 +22,8 @@
 #include <QStandardPaths>
 
 #include <vgc/core/logging.h>
+#include <vgc/dom/document.h>
+#include <vgc/dom/strings.h>
 #include <vgc/widgets/menubar.h>
 #include <vgc/widgets/qtutil.h>
 
@@ -39,6 +41,7 @@ MainWindow::MainWindow(
 {
     document_ = vgc::dom::Document::create();
     vgc::dom::Element::create(document_.get(), "vgc");
+    document_->enableHistory(vgc::dom::strings::New_Document);
 
     setupWidgets_();
     setupActions_();
@@ -191,6 +194,16 @@ void MainWindow::saveAs()
     //   https://bugreports.qt.io/browse/QTBUG-56893
 }
 
+void MainWindow::undo()
+{
+    document()->history()->undo();
+}
+
+void MainWindow::redo()
+{
+    document()->history()->redo();
+}
+
 void MainWindow::open_()
 {
     // XXX TODO ask save current document
@@ -265,6 +278,16 @@ void MainWindow::setupActions_()
     actionQuit_->setShortcut(QKeySequence::Quit);
     connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
 
+    actionUndo_ = new QAction(tr("&Undo"), this);
+    actionUndo_->setStatusTip(tr("Revert the previous action."));
+    actionUndo_->setShortcut(QKeySequence::Undo);
+    connect(actionUndo_, SIGNAL(triggered()), this, SLOT(undo()));
+
+    actionRedo_ = new QAction(tr("&Redo"), this);
+    actionRedo_->setStatusTip(tr("Redo the undone action."));
+    actionRedo_->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Z));
+    connect(actionRedo_, SIGNAL(triggered()), this, SLOT(redo()));
+
     actionTogglePerformanceMonitorView_ = performanceMonitorPanel_->toggleViewAction();
     actionTogglePerformanceMonitorView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_M));
 
@@ -284,6 +307,11 @@ void MainWindow::setupMenus_()
     menuFile_->addSeparator();
     menuFile_->addAction(actionQuit_);
     menuBar_->addMenu(menuFile_);
+
+    menuEdit_ = new QMenu(tr("&Edit"));
+    menuEdit_->addAction(actionUndo_);
+    menuEdit_->addAction(actionRedo_);
+    menuBar_->addMenu(menuEdit_);
 
     menuView_ = new QMenu(tr("&View"));
     menuView_->addAction(actionTogglePerformanceMonitorView_);

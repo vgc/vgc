@@ -17,6 +17,7 @@
 #ifndef VGC_DOM_VALUE_H
 #define VGC_DOM_VALUE_H
 
+#include <memory>
 #include <variant>
 
 #include <vgc/core/array.h>
@@ -126,7 +127,7 @@ class VGC_DOM_API Value
 public:
     /// Constructs an empty value, that is, whose ValueType is None.
     ///
-    Value() :
+    constexpr Value() :
         Value(ValueType::None) {
 
     }
@@ -153,7 +154,7 @@ public:
     ///
     Value(const core::DoubleArray& doubleArray) :
         type_(ValueType::DoubleArray),
-        var_(doubleArray) {
+        var_(std::make_shared<core::DoubleArray>(doubleArray)) {
 
     }
 
@@ -161,7 +162,7 @@ public:
     ///
     Value(const geometry::Vec2dArray& vec2dArray) :
         type_(ValueType::Vec2dArray),
-        var_(vec2dArray) {
+        var_(std::make_shared<geometry::Vec2dArray>(vec2dArray)) {
 
     }
 
@@ -212,49 +213,49 @@ public:
     /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
     const geometry::Vec2dArray& getVec2dArray() const {
-        return std::get<geometry::Vec2dArray>(var_);
+        return *std::get<std::shared_ptr<geometry::Vec2dArray>>(var_);
     }
 
     /// Copies the Vec2dArray held by this Value to \p doubleArray.
     /// The behavior is undefined if type() != ValueType::Vec2dArray.
     ///
     void get(geometry::Vec2dArray& vec2dArray) const {
-        vec2dArray = std::get<geometry::Vec2dArray>(var_);
+        vec2dArray = getVec2dArray();
     }
 
     /// Sets this value to the given \p vec2dArray.
     ///
     void set(const geometry::Vec2dArray& vec2dArray) {
         type_ = ValueType::Vec2dArray;
-        var_ = vec2dArray;
+        var_ = std::make_shared<geometry::Vec2dArray>(vec2dArray);
     }
 
     /// Returns the DoubleArray held by this Value.
     /// The behavior is undefined if type() != ValueType::DoubleArray.
     ///
     const core::DoubleArray& getDoubleArray() const {
-        return std::get<core::DoubleArray>(var_);
+        return *std::get<std::shared_ptr<core::DoubleArray>>(var_);
     }
 
     /// Copies the DoubleArray held by this Value to \p doubleArray.
     /// The behavior is undefined if type() != ValueType::DoubleArray.
     ///
     void get(core::DoubleArray& doubleArray) const {
-        doubleArray = std::get<core::DoubleArray>(var_);
+        doubleArray = getDoubleArray();
     }
 
     /// Sets this value to the given \p vec2dArray.
     ///
     void set(const core::DoubleArray& doubleArray) {
         type_ = ValueType::DoubleArray;
-        var_ = doubleArray;
+        var_ = std::make_shared<core::DoubleArray>(doubleArray);
     }
 
 private:
     /// For the different valueless ValueType.
     ///
-    explicit Value(ValueType type) :
-        type_(type) {
+    explicit constexpr Value(ValueType type) :
+        type_(type), var_() {
 
     }
 
@@ -262,8 +263,8 @@ private:
     std::variant<
         std::monostate,
         core::Color,
-        core::DoubleArray,
-        geometry::Vec2dArray
+        std::shared_ptr<core::DoubleArray>,
+        std::shared_ptr<geometry::Vec2dArray>
     > var_;
 };
 
@@ -273,18 +274,11 @@ template<typename OStream>
 void write(OStream& out, const Value& v)
 {
     switch (v.type()) {
-    case ValueType::None:
-        write(out, "None");
-        break;
-    case ValueType::Invalid:
-        write(out, "Invalid");
-        break;
-    case ValueType::Color:
-        return write(out, v.getColor());
-    case ValueType::DoubleArray:
-        return write(out, v.getDoubleArray());
-    case ValueType::Vec2dArray:
-        return write(out, v.getVec2dArray());
+    case ValueType::None:           write(out, "None");             break;
+    case ValueType::Invalid:        write(out, "Invalid");          break;
+    case ValueType::Color:          write(out, v.getColor());       break;
+    case ValueType::DoubleArray:    write(out, v.getDoubleArray()); break;
+    case ValueType::Vec2dArray:     write(out, v.getVec2dArray());  break;
     }
 }
 

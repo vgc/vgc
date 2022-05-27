@@ -18,6 +18,7 @@ vgc_add_library(core
         dll.h
         exceptions.h
         format.h
+        history.h
         innercore.h
         io.h
         logging.h
@@ -41,6 +42,7 @@ vgc_add_library(core
         color.cpp
         exceptions.cpp
         format.cpp
+        history.cpp
         io.cpp
         logging.cpp
         object.cpp

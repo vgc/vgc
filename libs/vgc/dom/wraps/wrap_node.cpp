@@ -39,7 +39,7 @@ void wrap_node(py::module& m)
         // Note: Node has no public constructor
         .def_property_readonly("document", &This::document)
         .def_property_readonly("nodeType", &This::nodeType)
-        .def("destroy", &This::destroy)
+        .def("remove", &This::remove)
         .def_property_readonly("parent", &This::parent)
         .def_property_readonly("firstChild", &This::firstChild)
         .def_property_readonly("lastChild", &This::lastChild)

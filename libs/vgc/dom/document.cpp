@@ -19,10 +19,13 @@
 #include <cerrno>
 #include <cstring>
 #include <fstream>
+
 #include <vgc/core/logging.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/io.h>
+#include <vgc/dom/operation.h>
 #include <vgc/dom/schema.h>
+#include <vgc/dom/strings.h>
 
 namespace vgc {
 namespace dom {
@@ -842,6 +845,85 @@ void Document::save(const std::string& filePath,
 
     out << xmlDeclaration_ << std::endl;
     writeChildren(out, style, 0, this);
+}
+
+void Document::enableHistory(core::StringId entrypointName)
+{
+    if (!history_) {
+        history_ = core::History::create(entrypointName);
+        history_->headChanged().connect(onHistoryHeadChanged());
+    }
+}
+
+bool Document::emitPendingDiff()
+{
+    for (const auto& [node, oldRelatives] : previousRelativesMap_) {
+        if (pendingDiff_.createdNodes_.contains(node)) {
+            continue;
+        }
+        if (pendingDiff_.removedNodes_.contains(node)) {
+            continue;
+        }
+
+        NodeRelatives newRelatives(node);
+        if (oldRelatives.parent_ != newRelatives.parent_) {
+            pendingDiff_.childrenChangedNodes_.insert(oldRelatives.parent_);
+            pendingDiff_.childrenChangedNodes_.insert(newRelatives.parent_);
+            pendingDiff_.reparentedNodes_.insert(node);
+        }
+    }
+    previousRelativesMap_.clear();
+
+    // remove created and removed nodes from modified elements
+    auto& modifiedElements = pendingDiff_.modifiedElements_;
+    for (auto it = modifiedElements.begin(), last = modifiedElements.end(); it != last;) {
+        Node* node = it->first;
+        if (pendingDiff_.createdNodes_.contains(node)) {
+            it = modifiedElements.erase(it);
+            continue;
+        }
+        if (pendingDiff_.removedNodes_.contains(node)) {
+            it = modifiedElements.erase(it);
+            continue;
+        }
+        ++it;
+    }
+
+    if (!pendingDiff_.isEmpty()) {
+
+        // XXX todo: emit node signals in here too !
+
+        documentChanged().emit(pendingDiff_);
+        pendingDiff_.reset();
+        return true;
+    }
+
+    return false;
+}
+
+void Document::onHistoryHeadChanged_()
+{
+    emitPendingDiff();
+}
+
+void Document::onCreateNode_(Node* node)
+{
+    pendingDiff_.createdNodes_.emplaceLast(node);
+}
+
+void Document::onRemoveNode_(Node* node)
+{
+    pendingDiff_.removedNodes_.emplaceLast(node);
+}
+
+void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives)
+{
+    previousRelativesMap_.try_emplace(node, savedRelatives);
+}
+
+void Document::onChangeAttribute_(Element* element, core::StringId name)
+{
+    pendingDiff_.modifiedElements_[element].insert(name);
 }
 
 } // namespace dom

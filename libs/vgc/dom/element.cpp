@@ -18,6 +18,8 @@
 
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
+#include <vgc/dom/strings.h>
+#include <vgc/dom/operation.h>
 
 namespace vgc {
 namespace dom {
@@ -26,15 +28,15 @@ Element::Element(Document* document, core::StringId name) :
     Node(document, NodeType::Element),
     name_(name)
 {
-
 }
 
 /* static */
 Element* Element::create_(Node* parent, core::StringId name)
 {
-    Element* res = new Element(parent->document(), name);
-    res->appendObjectToParent_(parent);
-    return res;
+    Document* document = parent->document();
+    Element* e = new Element(document, name);
+    core::History::do_<CreateElementOperation>(parent->document()->history(), e, parent, nullptr);
+    return e;
 }
 
 /* static */
@@ -43,6 +45,7 @@ Element* Element::create(Document* parent, core::StringId name)
     if (parent->rootElement()) {
         throw SecondRootElementError(parent);
     }
+
     return create_(parent, name);
 }
 
@@ -71,34 +74,28 @@ const Value& Element::getAttribute(core::StringId name) const
 
 void Element::setAttribute(core::StringId name, const Value& value)
 {
-    // If already authored, update the authored value
+    core::History::do_<SetAttributeOperation>(document()->history(), this, name, value);
+}
+
+void Element::clearAttribute(core::StringId name)
+{
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
-        authored->setValue(value);
-    }
-    else {
-        // Otherwise, allocate a new AuthoredAttribute
-        authoredAttributes_.emplace_back(name, value);
+        Int index = std::distance(&authoredAttributes_[0], authored);
+        core::History::do_<RemoveAuthoredAttributeOperation>(document()->history(), this, name, index);
     }
 }
 
 AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name)
 {
-    for (AuthoredAttribute& a : authoredAttributes_) {
-        if (a.name() == name) {
-            return &a;
-        }
-    }
-    return nullptr;
+    return authoredAttributes_.search(
+        [name](const AuthoredAttribute& attr) {
+            return attr.name() == name;
+        });
 }
 
 const AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) const
 {
-    for (const AuthoredAttribute& a : authoredAttributes_) {
-        if (a.name() == name) {
-            return &a;
-        }
-    }
-    return nullptr;
+    return const_cast<Element*>(this)->findAuthoredAttribute_(name);
 }
 
 } // namespace dom
