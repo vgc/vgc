@@ -22,7 +22,6 @@
 
 namespace vgc::dom {
 
-
 // XXX todos:
 // - check create/remove conflicts in diff
 //     -> if remove is followed by create then remove the elem from diff

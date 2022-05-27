@@ -1064,6 +1064,9 @@ private:
     Object* lastChildObject_;
     Object* previousSiblingObject_;
     Object* nextSiblingObject_;
+    Int64 numChildren_ = 0;
+    Int64 branchSize_ = 0;
+
 
     // Signal-slot mechanism
     friend class internal::SignalHub; // To access signalHub_

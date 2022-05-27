@@ -212,7 +212,7 @@ protected:
 private:
     Element* element_;
     core::StringId name_;
-    Int index_ = -1;
+    Int index_ = -1; // XXX would be difficult to keep this optimization when coalescing in finalize()..
     bool isNew_ = false;
     Value oldValue_;
     Value newValue_;
@@ -255,68 +255,6 @@ private:
 
 using OperationIndex = UInt32;
 OperationIndex genOperationIndex();
-
-//class VGC_DOM_API CompoundOperation : Operation {
-//protected:
-//    explicit CompoundOperation(core::StringId name) :
-//        Operation(false),
-//        name_(name),
-//        index_(genOperationIndex()) {}
-//
-//public:
-//    // non-copyable
-//    CompoundOperation(const CompoundOperation&) = delete;
-//    CompoundOperation& operator=(const CompoundOperation&) = delete;
-//
-//    CompoundOperation(CompoundOperation&& other) noexcept :
-//        name_(other.name_),
-//        index_(other.index_),
-//        isReverted_(other.isReverted_) {
-//
-//        atomicOperations_.swap(other.atomicOperations_);
-//    }
-//
-//    CompoundOperation& operator=(CompoundOperation&& other) noexcept {
-//        std::swap(name_, other.name_);
-//        std::swap(index_, other.index_);
-//        std::swap(isReverted_, other.isReverted_);
-//        atomicOperations_.swap(other.atomicOperations_);
-//    }
-//
-//    const core::StringId& name() const {
-//        return name_;
-//    }
-//
-//    OperationIndex index() const {
-//        return index_;
-//    }
-//
-//    bool isReverted() const {
-//        return isReverted_;
-//    }
-//
-//private:
-//    friend Document;
-//
-//    core::Array<std::unique_ptr<Operation>> subOperations_;
-//    Int subOperationsIt_;
-//
-//    core::StringId name_;
-//    OperationIndex index_;
-//    bool isReverted_ = false;
-//
-//    template<typename TAtomicOperation, typename... Args,
-//        core::Requires<std::is_base_of_v<AtomicOperation, TAtomicOperation>> = true>
-//    void doAtomicOperation_(Args&&... args) {
-//        // AtomicOperation constructor is private, cannot emplace with args.
-//        atomicOperations_.emplaceLast(TAtomicOperation(std::forward<Args>(args)...));
-//    }
-//
-//    // XXX pointer to document could be a member..
-//
-//    void undo_(Document* doc);
-//    void redo_(Document* doc);
-//};
 
 
 class VGC_DOM_API Diff {

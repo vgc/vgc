@@ -362,9 +362,9 @@ void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&)
     isPanning_ = false;
     isZooming_ = false;
 
-    if (drawActionHistoryNode_) {
-        drawActionHistoryNode_->finalize();
-        drawActionHistoryNode_ = nullptr;
+    if (drawCurveUndoGroup_) {
+        drawCurveUndoGroup_->close();
+        drawCurveUndoGroup_ = nullptr;
     }
 }
 
@@ -692,10 +692,10 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
 {
     // XXX CLEAN
     static core::StringId Draw_Curve("Draw Curve");
-    drawActionHistoryNode_ = document()->history()->createNode(Draw_Curve);
+    drawCurveUndoGroup_ = document()->history()->createUndoGroup(Draw_Curve);
 
     static core::StringId Create_Curve("Create Curve");
-    core::HistoryNode* createCurveNode = document()->history()->createNode(Create_Curve);
+    core::UndoGroup* createCurveNodeUndoGroup = document()->history()->createUndoGroup(Create_Curve);
 
     dom::Element* root = document_->rootElement();
     dom::Element* path = dom::Element::create(root, PATH);
@@ -704,9 +704,9 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
     path->setAttribute(WIDTHS, core::DoubleArray());
     path->setAttribute(COLOR, currentColor_);
 
-    continueCurve_(p, width);
+    createCurveNodeUndoGroup->close();
 
-    createCurveNode->finalize();
+    continueCurve_(p, width);
 }
 
 void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
@@ -732,12 +732,12 @@ void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
         widths.append(width);
 
         static core::StringId Add_Point("Add Point");
-        core::HistoryNode* addPointNode = document()->history()->createNode(Add_Point);
+        core::UndoGroup* addPointUndoGroup = document()->history()->createUndoGroup(Add_Point);
 
         path->setAttribute(POSITIONS, positions);
         path->setAttribute(WIDTHS, widths);
 
-        addPointNode->finalize();
+        addPointUndoGroup->close();
 
         update();
     }

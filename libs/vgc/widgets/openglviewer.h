@@ -115,7 +115,7 @@ private:
 
     // Scene
     dom::Document* document_;
-    core::HistoryNode* drawActionHistoryNode_ = nullptr;
+    core::UndoGroup* drawCurveUndoGroup_ = nullptr;
 
     // Moving camera
     bool isSketching_;

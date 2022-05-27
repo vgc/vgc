@@ -38,7 +38,7 @@
     U: undoable
     R: redoable
     C: cancellable
-    ~: ongoing
+    ~: open
     <: head
 
       [0]
@@ -60,16 +60,16 @@
 namespace vgc::core {
 
 VGC_DECLARE_OBJECT(History);
-VGC_DECLARE_OBJECT(HistoryNode);
+VGC_DECLARE_OBJECT(UndoGroup);
 
 class Operation;
 
-using HistoryNodeIndex = Int;
-VGC_CORE_API HistoryNodeIndex genHistoryNodeIndex();
+using UndoGroupIndex = Int;
+VGC_CORE_API UndoGroupIndex genUndoGroupIndex();
 
 class VGC_CORE_API Operation {
 protected:
-    friend HistoryNode;
+    friend UndoGroup;
     friend History;
 
     Operation() = default;
@@ -98,76 +98,76 @@ private:
     }
 };
 
-class VGC_CORE_API HistoryNode : public Object {
+class VGC_CORE_API UndoGroup : public Object {
 private:
-    VGC_OBJECT(HistoryNode, Object)
+    VGC_OBJECT(UndoGroup, Object)
 
 protected:
     friend History;
 
-    explicit HistoryNode(core::StringId name, History* history) :
+    explicit UndoGroup(core::StringId name, History* history) :
         name_(name),
         history_(history),
-        index_(genHistoryNodeIndex()) {}
+        index_(genUndoGroupIndex()) {}
 
 public:
     // non-copyable
-    HistoryNode(const HistoryNode&) = delete;
-    HistoryNode& operator=(const HistoryNode&) = delete;
+    UndoGroup(const UndoGroup&) = delete;
+    UndoGroup& operator=(const UndoGroup&) = delete;
 
     core::StringId name() const {
         return name_;
     }
 
-    HistoryNodeIndex index() const {
+    UndoGroupIndex index() const {
         return index_;
     }
 
-    bool finalize();
+    bool close();
 
-    bool isOngoing() const {
-        return squashNode_ == this;
-    }
-
-    bool isFinalized() const {
-        return !isOngoing();
+    bool isOpen() const {
+        return openAncestor_ == this;
     }
 
     bool isUndone() const {
         return isUndone_;
     }
 
-    HistoryNode* parent() const {
-        return static_cast<HistoryNode*>(this->parentObject());
+    Int numOperations() const {
+        return operations_.size();
     }
 
-    HistoryNode* mainChild() const {
+    UndoGroup* parent() const {
+        return static_cast<UndoGroup*>(this->parentObject());
+    }
+
+    UndoGroup* mainChild() const {
         return lastChild();
     }
 
-    HistoryNode* secondaryChild() const {
+    UndoGroup* secondaryChild() const {
         auto last = lastChild();
         return last ? last->previousAlternative() : nullptr;
     }
 
-    HistoryNode* lastChild() const {
-        return static_cast<HistoryNode*>(this->lastChildObject());
+    UndoGroup* lastChild() const {
+        return static_cast<UndoGroup*>(this->lastChildObject());
     }
 
-    HistoryNode* firstChild() const {
-        return static_cast<HistoryNode*>(this->firstChildObject());
+    UndoGroup* firstChild() const {
+        return static_cast<UndoGroup*>(this->firstChildObject());
     }
 
-    HistoryNode* previousAlternative() const {
-        return static_cast<HistoryNode*>(this->previousSiblingObject());
+    UndoGroup* previousAlternative() const {
+        return static_cast<UndoGroup*>(this->previousSiblingObject());
     }
 
-    HistoryNode* nextAlternative() const {
-        return static_cast<HistoryNode*>(this->nextSiblingObject());
+    UndoGroup* nextAlternative() const {
+        return static_cast<UndoGroup*>(this->nextSiblingObject());
     }
 
-    VGC_SIGNAL(undone, (HistoryNode*, node), (bool, isAbort))
-    VGC_SIGNAL(redone, (HistoryNode*, node))
+    VGC_SIGNAL(undone, (UndoGroup*, node), (bool, isAbort))
+    VGC_SIGNAL(redone, (UndoGroup*, node))
 
 private:
     friend History;
@@ -175,16 +175,12 @@ private:
     core::Array<std::unique_ptr<Operation>> operations_;
     core::StringId name_;
     History* history_ = nullptr;
-    HistoryNode* squashNode_ = nullptr;
-    HistoryNodeIndex index_ = -1;
+    UndoGroup* openAncestor_ = nullptr;
+    UndoGroupIndex index_ = -1;
     bool isUndone_ = false;
 
-    static HistoryNodePtr create(core::StringId name, History* history) {
-        return HistoryNodePtr(new HistoryNode(name, history));
-    }
-
-    bool isOngoingLeaf_() const {
-        return isOngoing() && !firstChildObject();
+    static UndoGroupPtr create(core::StringId name, History* history) {
+        return UndoGroupPtr(new UndoGroup(name, history));
     }
 
     // Undo the contained operations.
@@ -203,7 +199,7 @@ private:
     VGC_OBJECT(History, Object)
 
 protected:
-    friend HistoryNode;
+    friend UndoGroup;
 
     History(core::StringId entrypointName);
 
@@ -219,11 +215,11 @@ public:
         return p;
     }
 
-    HistoryNode* root() const {
+    UndoGroup* root() const {
         return root_;
     }
 
-    HistoryNode* head() const {
+    UndoGroup* head() const {
         return head_;
     }
 
@@ -241,36 +237,35 @@ public:
         return maxLevels_;
     }
 
-    Int getLevelsCount() const {
+    /*Int getLevelsCount() const {
         return levelsCount_;
-    }
+    }*/
 
-    Int getNodesCount() const {
+    /*Int getNodesCount() const {
         return nodesCount_;
-    }
-
-    /*bool isEnabled() const {
-        return (maxLevels_ > 0) || (getLevelsCount() > 0);
     }*/
 
     // XXX todos:
-    // - forbid createNode if head already has ops !
     // - design a coalescing system
 
     bool abort();
     bool undo();
     bool redo();
 
-    void goTo(HistoryNode* node);
+    void goTo(UndoGroup* node);
 
-    HistoryNode* createNode(core::StringId name);
+    UndoGroup* createUndoGroup(core::StringId name);
 
     template<typename TOperation, typename... Args,
         core::Requires<std::is_base_of_v<Operation, TOperation>> = true>
     static void do_(History* history, Args&&... args) {
         if (history) {
-            if (!history->head_->isOngoingLeaf_()) {
-                throw LogicError("Cannot perform the requested operation without a non-finalized HistoryNode.");
+            if (!history->head_->isOpen()) {
+                throw LogicError("Cannot perform the requested operation without an open undo group.");
+            }
+            if (history->head_->firstChild() != nullptr) {
+                throw LogicError("Cannot perform the requested operation since the current undo group has nested groups.");
+                
             }
             const std::unique_ptr<Operation>& op =
                 history->head_->operations_.emplaceLast(new EnableConstruct<TOperation>(std::forward<Args>(args)...));
@@ -282,21 +277,25 @@ public:
         }
     }
 
-    VGC_SIGNAL(headChanged, (HistoryNode*, newNode))
+    VGC_SIGNAL(headChanged, (UndoGroup*, newNode))
 
 private:
     Int minLevels_ = 0;
     Int maxLevels_ = 0;
 
-    HistoryNode* root_;
-    HistoryNode* head_ = nullptr;
+    UndoGroup* root_;
+    UndoGroup* head_ = nullptr;
     Int nodesCount_ = 0;
     Int levelsCount_ = 0;
 
     // Assumes head_ is undoable.
     void undoOne_(bool forceAbort = false);
 
-    bool finalizeNode_(HistoryNode* node);
+    // Assumes head_->mainChild() exists.
+    void redoOne_();
+
+
+    bool closeUndoGroup_(UndoGroup* node);
     void prune_();
 };
 

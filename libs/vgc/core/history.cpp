@@ -20,22 +20,22 @@ namespace vgc::core {
 
 namespace {
 
-HistoryNodeIndex lastId = 0;
+UndoGroupIndex lastId = 0;
 
 } // namespace
 
-HistoryNodeIndex genHistoryNodeIndex()
+UndoGroupIndex genUndoGroupIndex()
 {
     // XXX make this thread-safe ?
     return ++lastId;
 }
 
-bool HistoryNode::finalize()
+bool UndoGroup::close()
 {
-    return history_->finalizeNode_(this);
+    return history_->closeUndoGroup_(this);
 }
 
-void HistoryNode::undo_(bool isAbort)
+void UndoGroup::undo_(bool isAbort)
 {
 #ifdef VGC_DEBUG
     if (isUndone_) {
@@ -51,7 +51,7 @@ void HistoryNode::undo_(bool isAbort)
     undone().emit(this, isAbort);
 }
 
-void HistoryNode::redo_()
+void UndoGroup::redo_()
 {
 #ifdef VGC_DEBUG
     if (!isUndone_) {
@@ -70,7 +70,7 @@ void HistoryNode::redo_()
 History::History(core::StringId entrypointName)
     : nodesCount_(0) // root doesn't count
 {
-    HistoryNode* ptr = new HistoryNode(entrypointName, this);
+    UndoGroup* ptr = new UndoGroup(entrypointName, this);
     this->appendChildObject_(ptr);
     root_ = ptr;
     head_ = ptr;
@@ -90,7 +90,7 @@ void History::setMaxLevelsCount(Int count)
 
 bool History::abort()
 {
-    if (head_->isOngoing()) {
+    if (head_->isOpen()) {
         undoOne_(true);
         return true;
     }
@@ -102,7 +102,7 @@ bool History::undo()
     if (head_ != root_) {
         do {
             undoOne_();
-        } while (head_->isOngoing());
+        } while (head_->isOpen());
         headChanged().emit(head_);
         return true;
     }
@@ -111,17 +111,18 @@ bool History::undo()
 
 bool History::redo()
 {
-    HistoryNode* child = head_->mainChild();
+    UndoGroup* child = head_->mainChild();
     if (child) {
-        child->redo_();
-        head_ = child;
+        do {
+            redoOne_();
+        } while (head_->isOpen() && head_->mainChild());
         headChanged().emit(head_);
         return true;
     }
     return false;
 }
 
-void History::goTo(HistoryNode* node)
+void History::goTo(UndoGroup* node)
 {
     // The common ancestor of node and head_ is the first node that is not
     // undone in the path from node to root.
@@ -134,9 +135,9 @@ void History::goTo(HistoryNode* node)
     // While searching for the common ancestor we have to reorder the branches
     // of visited nodes to setup the new main path.
     //
-    HistoryNode* a = node;
+    UndoGroup* a = node;
     while (!a->isUndone()) {
-        HistoryNode* prev = a->parent();
+        UndoGroup* prev = a->parent();
         prev->appendChildObject_(a);
         a = prev;
     }
@@ -147,31 +148,35 @@ void History::goTo(HistoryNode* node)
     }
 
     // Then redo all from common ancestor to node (included).
-    HistoryNode* x = head_;
-    while (x != node) {
-        x = x->mainChild();
-        x->redo_();
+    while (head_ != node) {
+        redoOne_();
     }
 
     headChanged().emit(head_);
 }
 
-HistoryNode* History::createNode(core::StringId name)
+UndoGroup* History::createUndoGroup(core::StringId name)
 {
-    // destroy first ongoing in main redos if present.
-    HistoryNode* child = head_->mainChild();
+    // Check current ongoing node (if any) doesn't have recorded operations.
+    if (head_->isOpen() && head_->numOperations()) {
+      throw LogicError(
+          "Cannot nest an undo group under another if the latter already contains operations." 
+      );
+    }
+
+    // Destroy first ongoing in main redos if present.
+    UndoGroup* child = head_->mainChild();
     while (child) {
-        if (child->isOngoing()) {
+        if (child->isOpen()) {
             child->destroyObject_();
             break;
         }
         child = child->mainChild();
     }
 
-    HistoryNodePtr ptr = HistoryNode::create(name, this);
-    HistoryNode* raw = ptr.get();
-    //raw->squashNode_ = head_->squashNode_;
-    raw->squashNode_ = raw;
+    UndoGroupPtr ptr = UndoGroup::create(name, this);
+    UndoGroup* raw = ptr.get();
+    raw->openAncestor_ = raw;
     head_->appendChildObject_(raw);
     head_ = raw;
     headChanged().emit(head_);
@@ -180,40 +185,64 @@ HistoryNode* History::createNode(core::StringId name)
 
 void History::undoOne_(bool forceAbort)
 {
-    HistoryNode* parent = head_->parent();
-    bool abort = forceAbort || head_->isOngoingLeaf_();
+    UndoGroup* parent = head_->parent();
+    bool abort = forceAbort;
+
+    if (head_->isOpen() && head_->firstChild() == nullptr) {
+        abort = true;
+    }
+
     head_->undo_(abort);
+
+    if (!head_->openAncestor_) {
+        --levelsCount_;
+    }
+
     if (abort) {
         head_->destroyObject_();
     }
     head_ = parent;
 }
 
-bool History::finalizeNode_(HistoryNode* node)
+
+void History::redoOne_()
+{
+    UndoGroup* child = head_->mainChild();
+
+    child->redo_();
+    
+    if (!head_->openAncestor_) {
+        ++levelsCount_;
+    }
+
+    head_ = child;
+}
+
+bool History::closeUndoGroup_(UndoGroup* node)
 {
     // Requirements:
     // - `node` is ongoing
     // - `node` is not undone (implies node is in main branch)
     // - `node` is the first ongoing node in the path from head_ to root
 
-    if (!node->isOngoing()) {
-        throw LogicError("Cannot finalize a HistoryNode which is already finalized.");
+    if (!node->isOpen()) {
+        throw LogicError("Cannot close an undo group which is already closed.");
     }
 
     if (node->isUndone()) {
-        throw LogicError("Cannot finalize a HistoryNode that is currently undone.");
+        throw LogicError("Cannot close an undo group that is currently undone.");
     }
 
-    // visit nodes between `node` and head_ to check that there is no active
+    // Visit nodes between `node` and head_ to check that there is no active
     // nested ongoing node.
-    for (HistoryNode* x = head_; x != node; x = x->parent()) {
-        if (x->isOngoing()) {
-            throw LogicError("Cannot finalize a HistoryNode before its nested ones are finalized.");
+    for (UndoGroup* x = head_; x != node; x = x->parent()) {
+        if (x->isOpen()) {
+            throw LogicError("Cannot close an undo group before its nested ones are closed.");
         }
     }
 
     // Collect all operations in descendant nodes to form a single one.
-    for (HistoryNode* x = node; x != head_;) {
+    for (UndoGroup* x = node; x != head_;) {
         x = x->mainChild(); // iterate after test
         for (auto& op : x->operations_) {
             node->operations_.emplaceLast(std::move(op));
@@ -223,27 +252,50 @@ bool History::finalizeNode_(HistoryNode* node)
 
     // Remove descendants and set node as head.
     node->destroyAllChildObjects_();
-    HistoryNode* prev = node->parent();
-    node->squashNode_ = prev->squashNode_;
+    UndoGroup* prev = node->parent();
+    node->openAncestor_ = prev->openAncestor_;
     head_ = node;
 
-    if (!node->squashNode_) {
+    if (!node->openAncestor_) {
         ++levelsCount_;
         ++nodesCount_;
         prune_();
     }
 
     headChanged().emit(head_);
+
+    if (!head_->openAncestor_) {
+        prune_();
+    }
+
     return true;
 }
 
 void History::prune_()
 {
-    if ((levelsCount_ < maxLevels_) && (nodesCount_ < 4 * maxLevels_)) {
-        return;
+    /*Int extraLevelsCount = maxLevels_ - levelsCount_;
+    for (Int i = 0; i < extraLevelsCount; ++i) {
+        for (UndoGroup* a = root_->firstChild(); a != root_->lastChild();) {
+            // XXX tofix: we need num in sub-tree, not num children !!!
+            nodesCount_ -= a->numChildObjects() + 1;
+            UndoGroup* tmp = a->nextAlternative();
+            a->destroyObject_();
+            a = tmp;
+        }
+        UndoGroup* newRoot = root_->mainChild();
+        if (newRoot) {
+            this->appendChildObject_(newRoot);
+        }
+        root_->destroyObject_();
+        --nodesCount_;
+        --levelsCount_;
+        root_ = newRoot;
     }
 
-    // XXX todo: trim oldest
+    Int maxNodesCount = 4 * maxLevels_;
+    while (nodesCount_ > maxNodesCount) {
+    
+    }*/
 }
 
 } // namespace vgc::core
