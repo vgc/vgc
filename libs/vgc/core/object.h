@@ -304,7 +304,7 @@ ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept
 template<typename T, typename U>
 ObjPtr<T> static_pointer_cast(ObjPtr<U>&& r) noexcept
 {
-    ObjPtr<T> ret(static_cast<T*>(r.get()), ObjPtr<T>::DontIncRefTag{});
+    ObjPtr<T> ret(static_cast<T*>(r.get()), typename ObjPtr<T>::DontIncRefTag{});
     r.obj_ = nullptr;
     return ret;
 }
@@ -321,7 +321,7 @@ ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept
     T* p = dynamic_cast<T*>(r.get());
     if (p) {
         r.obj_ = nullptr;
-        return ObjPtr<T>(p, ObjPtr<T>::DontIncRefTag{});
+        return ObjPtr<T>(p, typename ObjPtr<T>::DontIncRefTag{});
     }
     return ObjPtr<T>(nullptr);
 }
@@ -335,7 +335,7 @@ ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept
 template<typename T, typename U>
 ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept
 {
-    ObjPtr<T> ret(const_cast<T*>(r.get()), ObjPtr<T>::DontIncRefTag{});
+    ObjPtr<T> ret(const_cast<T*>(r.get()), typename ObjPtr<T>::DontIncRefTag{});
     r.obj_ = nullptr;
     return ret;
 }
