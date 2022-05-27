@@ -182,6 +182,18 @@ using Requires = std::enable_if_t<B>;
 ///
 #define VGC_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int> = 0
 
+namespace internal {
+
+// Note: we write our own implementation of std::void_t because it doesn't
+// properly SFINAE on some versions of Clang and produces redefinition errors.
+//
+template<typename... Ts>
+struct MakeVoid {
+    using type = void;
+};
+
+} // namespace internal
+
 /// If any of the given template arguments are ill-formed, then `RequiresValid<...>`
 /// is also ill-formed. Otherwise, `RequiresValid<...>` is an alias for `void`.
 ///
@@ -191,7 +203,7 @@ using Requires = std::enable_if_t<B>;
 /// `RequiresValid<...>` is equivalent to `std::void_t<...>`.
 ///
 template<typename... Ts>
-using RequiresValid = std::void_t<Ts...>;
+using RequiresValid = typename internal::MakeVoid<Ts...>::type;
 
 namespace internal {
 
