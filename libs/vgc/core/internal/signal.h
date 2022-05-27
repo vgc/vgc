@@ -109,20 +109,25 @@ class Object;
 
 namespace internal {
 
-template<typename T, typename Enable = bool>
+template<typename T, typename SFINAE = void>
 struct HasObjectTypedefs : std::false_type {};
+
 template<typename T>
-struct HasObjectTypedefs<T, RequiresValid<typename T::ThisClass, typename T::SuperClass>> :
+struct HasObjectTypedefs<T, RequiresValid<
+        typename T::ThisClass,
+        typename T::SuperClass>> :
     std::is_same<std::remove_const_t<T>, typename T::ThisClass> {};
 
 } // namespace internal
 
 /// Type trait for isObject<T>.
 ///
-template<typename T, typename Enable = bool>
+template<typename T, typename SFINAE = void>
 struct IsObject : std::false_type {};
+
 template<>
-struct IsObject<Object, bool> : std::true_type {};
+struct IsObject<Object, void> : std::true_type {};
+
 template<typename T>
 struct IsObject<T, Requires<std::is_base_of_v<Object, T>>> : std::true_type {
     static_assert(internal::HasObjectTypedefs<T>::value,
@@ -230,13 +235,11 @@ static constexpr bool hasRValueReferences = HasRValueReferences<TTuple>::value;
 //       T&&    | not defined
 // const T&&    | not defined
 //
-template<typename SignalArg>
-using MakeSignalArgRef = std::enable_if_t<
-    !std::is_rvalue_reference_v<SignalArg>,
-    std::conditional_t<
+template<typename SignalArg, VGC_REQUIRES(!std::is_rvalue_reference_v<SignalArg>)>
+using MakeSignalArgRef = std::conditional_t<
         std::is_reference_v<SignalArg>,
         SignalArg,
-        const SignalArg&>>;
+        const SignalArg&>;
 
 // Type trait for isSignalArgRef<T>.
 //
@@ -415,14 +418,14 @@ public:
 
     SignalTransmitter() = delete;
 
-    template<typename TSlotWrapper, Requires<isFunctor<RemoveCVRef<TSlotWrapper>>> = true>
+    template<typename TSlotWrapper, VGC_REQUIRES(isFunctor<RemoveCVRef<TSlotWrapper>>)>
     SignalTransmitter(TSlotWrapper&& wrapper, bool isNative = false) :
         wrapper_(std::forward<TSlotWrapper>(wrapper)),
         arity_(FunctorTraits<RemoveCVRef<TSlotWrapper>>::arity),
         isNative_(isNative) {}
 
     template<typename SignalArgRefsTuple, typename SlotCallable, typename... OptionalObj,
-        Requires<isCallable<RemoveCVRef<SlotCallable>>> = true>
+        VGC_REQUIRES(isCallable<RemoveCVRef<SlotCallable>>)>
     [[nodiscard]] static SignalTransmitter build(SlotCallable&& c, OptionalObj... methodObj) {
         static_assert(isSignalArgRefsTuple<SignalArgRefsTuple>);
 
@@ -500,20 +503,22 @@ private:
 };
 
 
-template<typename TTuple, typename UTuple, typename Enable = bool>
+template<typename TTuple, typename UTuple, typename SFINAE = void>
 struct IsTupleConvertible : std::false_type {};
+
 template<typename... Ts, typename... Us>
 struct IsTupleConvertible<
-    std::tuple<Ts...>, std::tuple<Us...>,
-    Requires<sizeof...(Ts) == sizeof...(Us)>> :
+        std::tuple<Ts...>, std::tuple<Us...>,
+        Requires<sizeof...(Ts) == sizeof...(Us)>> :
     std::conjunction<std::is_convertible<Ts, Us>...> {};
 
-template<typename SignalArgRefsTuple, typename SignalSlotArgRefsTuple, typename Enable = bool>
+template<typename SignalArgRefsTuple, typename SignalSlotArgRefsTuple, typename SFINAE = void>
 struct IsCompatibleReEmit : std::false_type {};
+
 template<typename... SignalArgRefs, typename... SignalSlotArgRefs>
 struct IsCompatibleReEmit<
-    std::tuple<SignalArgRefs...>, std::tuple<SignalSlotArgRefs...>,
-    Requires<sizeof...(SignalArgRefs) >= sizeof...(SignalSlotArgRefs)>> :
+        std::tuple<SignalArgRefs...>, std::tuple<SignalSlotArgRefs...>,
+        Requires<sizeof...(SignalArgRefs) >= sizeof...(SignalSlotArgRefs)>> :
     IsTupleConvertible<
         SubTuple<0, sizeof...(SignalSlotArgRefs), std::tuple<SignalArgRefs...>>,
         std::tuple<SignalSlotArgRefs...>> {};
@@ -876,7 +881,7 @@ class SlotRef {
 public:
     using SlotMethod = TSlotMethod;
     using SlotMethodTraits = MethodTraits<SlotMethod>;
-    using Obj = typename SlotMethodTraits::Obj;
+    using Obj = typename SlotMethodTraits::Class;
     using ArgsTuple = typename SlotMethodTraits::ArgsTuple;
     using ArgRefsTuple = MakeSignalArgRefsTuple<ArgsTuple>;
 
@@ -913,7 +918,7 @@ private:
 };
 
 template<typename T>
-struct IsSlotRef : IsTplBaseOf<SlotRef, T> {};
+struct IsSlotRef : IsTemplateBaseOf<SlotRef, T> {};
 template<typename T>
 inline constexpr bool isSlotRef = IsSlotRef<T>::value;
 
@@ -922,7 +927,7 @@ template<typename TObjectMethodTag, typename TObj, typename TArgRefsTuple>
 class SignalRef;
 
 template<typename T>
-struct IsSignalRef : IsTplBaseOf<SignalRef, T> {};
+struct IsSignalRef : IsTemplateBaseOf<SignalRef, T> {};
 template<typename T>
 inline constexpr bool isSignalRef = IsSignalRef<T>::value;
 
@@ -963,13 +968,13 @@ public:
     }
 
     // Connects to a method slot.
-    template<typename TSlotRef, Requires<isSlotRef<TSlotRef>> = true>
+    template<typename TSlotRef, VGC_REQUIRES(isSlotRef<TSlotRef>)>
     ConnectionHandle connect(const TSlotRef& slotRef) const {
         return connect_(slotRef);
     }
 
     // Connects to a signal-slot.
-    template<typename USignalRef, Requires<isSignalRef<USignalRef>> = true>
+    template<typename USignalRef, VGC_REQUIRES(isSignalRef<USignalRef>)>
     ConnectionHandle connect(const USignalRef& signalRef) const {
         using SignalSlotArgRefsTuple = typename RemoveCVRef<USignalRef>::ArgRefsTuple;
         constexpr size_t signalSlotArity = std::tuple_size_v<SignalSlotArgRefsTuple>;
@@ -982,7 +987,7 @@ public:
     }
 
     // Connects to a free function.
-    template<typename FreeFunction, Requires<isFreeFunction<RemoveCVRef<FreeFunction>>> = true>
+    template<typename FreeFunction, VGC_REQUIRES(isFreeFunction<RemoveCVRef<FreeFunction>>)>
     ConnectionHandle connect(FreeFunction&& callback) const {
         static_assert(!hasRValueReferences<typename FreeFunctionTraits<RemoveCVRef<FreeFunction>>::ArgsTuple>,
             "Slot parameters are not allowed to have a rvalue reference type.");
@@ -992,7 +997,7 @@ public:
     // Connects to a functor.
     // Can only be disconnected using the returned handle.
     //
-    template<typename Functor, Requires<isFunctor<RemoveCVRef<Functor>>> = true>
+    template<typename Functor, VGC_REQUIRES(isFunctor<RemoveCVRef<Functor>>)>
     ConnectionHandle connect(Functor&& funcObj) const {
         static_assert(!hasRValueReferences<typename FunctorTraits<RemoveCVRef<Functor>>::ArgsTuple>,
             "Slot parameters are not allowed to have a rvalue reference type.");
@@ -1017,7 +1022,7 @@ public:
     // Disconnects the given slot `slotRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename TSlotRef, Requires<isSlotRef<RemoveCVRef<TSlotRef>>> = true>
+    template<typename TSlotRef, VGC_REQUIRES(isSlotRef<RemoveCVRef<TSlotRef>>)>
     bool disconnect(TSlotRef&& slotRef) const {
         return SignalHub::disconnect(object_, id(), ObjectSlotId(slotRef.object(), slotRef.id()));
     }
@@ -1025,7 +1030,7 @@ public:
     // Disconnects the given signal-slot `signalRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename USignalRef, Requires<isSignalRef<RemoveCVRef<USignalRef>>> = true>
+    template<typename USignalRef, VGC_REQUIRES(isSignalRef<RemoveCVRef<USignalRef>>)>
     bool disconnect(USignalRef&& signalRef) const {
         return SignalHub::disconnect(object_, id(), ObjectSlotId(signalRef.object(), signalRef.id()));
     }
@@ -1033,7 +1038,7 @@ public:
     // Disconnects the given free function.
     // Returns true if a disconnection happened.
     //
-    template<typename FreeFunction, Requires<isFreeFunction<RemoveCVRef<FreeFunction>>> = true>
+    template<typename FreeFunction, VGC_REQUIRES(isFreeFunction<RemoveCVRef<FreeFunction>>)>
     bool disconnect(FreeFunction&& callback) const {
         return disconnect_(std::forward<FreeFunction>(callback));
     }

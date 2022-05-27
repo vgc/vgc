@@ -233,10 +233,10 @@ class PyCppSlotRef : public PyAbstractCppSlotRef {
     using PyAbstractCppSlotRef::PyAbstractCppSlotRef;
 };
 
-template<typename Method, std::enable_if_t<isMethod<RemoveCVRef<Method>>, int> = 0>
+template<typename Method, VGC_REQUIRES(isMethod<RemoveCVRef<Method>>)>
 class PyCppSlotRefImpl : public PyCppSlotRef {
 public:
-    using Obj = typename MethodTraits<Method>::Obj;
+    using Obj = typename MethodTraits<Method>::Class;
     using This = typename MethodTraits<Method>::This;
     using ArgsTuple = typename MethodTraits<Method>::ArgsTuple;
     using SignalArgRefsTuple = core::internal::MakeSignalArgRefsTuple<ArgsTuple>;
@@ -245,9 +245,9 @@ public:
         PyCppSlotRef(obj, id, py::cpp_function(method), static_cast<SignalArgRefsTuple*>(nullptr)),
         method_(method) {}
 
-    template<typename SlotRefT, std::enable_if_t<
+    template<typename SlotRefT, VGC_REQUIRES(
         core::internal::isSlotRef<SlotRefT> &&
-        std::is_same_v<typename SlotRefT::SlotMethod, Method>, int> = 0>
+        std::is_same_v<typename SlotRefT::SlotMethod, Method>)>
     PyCppSlotRefImpl(const SlotRefT& slotRef) :
         PyCppSlotRefImpl(SlotRefT::id(), slotRef.method(), slotRef.object()) {}
 
@@ -341,7 +341,7 @@ protected:
 // Should only be constructed from the return value of a Signal method defined
 // with the VGC_SIGNAL macro.
 //
-template<typename SignalRefT, std::enable_if_t<core::internal::isSignalRef<SignalRefT>, int> = 0>
+template<typename SignalRefT, VGC_REQUIRES(core::internal::isSignalRef<SignalRefT>)>
 class PyCppSignalRefImpl : public PyCppSignalRef {
 public:
     using ArgRefsTuple = typename SignalRefT::ArgRefsTuple;

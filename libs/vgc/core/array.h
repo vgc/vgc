@@ -242,8 +242,7 @@ namespace vgc::core {
 /// ---cpp---
 ///
 template<typename T>
-class Array
-{
+class Array {
 private:
     // Used internally to select value initialization behavior.
     //
@@ -363,7 +362,7 @@ public:
     /// std::cout << a;  // => [42, 42, 42]
     /// ```
     ///
-    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     Array(IntType length, const T& value) {
         checkLengthForInit_(length);
         init_(length, value);
@@ -394,7 +393,7 @@ public:
     /// vgc::core::Array<double> a(l.begin(), l.end()); // Copy the list as an Array
     /// ```
     ///
-    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
     Array(InputIt first, InputIt last) {
         rangeConstruct_(first, last);
     }
@@ -412,7 +411,7 @@ public:
     /// vgc::core::Array<double> a(l); // Copy the list as an Array
     /// ```
     ///
-    template<typename Range, internal::RequiresRange<Range> = true>
+    template<typename Range, VGC_REQUIRES(isRange<Range>)>
     explicit Array(const Range& range) {
         rangeConstruct_(range.begin(), range.end());
     }
@@ -522,7 +521,7 @@ public:
     /// std::cout << a;  // => [42, 42, 42]
     /// ```
     ///
-    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     void assign(IntType length, T value) {
         checkLengthForInit_(length);
         assignFill_(static_cast<Int>(length), value);
@@ -543,7 +542,7 @@ public:
     /// a.assign(l.begin(), l.end()); // Make the existing array a copy of the list
     /// ```
     ///
-    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
     void assign(InputIt first, InputIt last) {
         assignRange_(first, last);
     }
@@ -562,7 +561,7 @@ public:
     /// a.assign(l); // Make the existing array a copy of the list
     /// ```
     ///
-    template<typename Range, internal::RequiresRange<Range> = true>
+    template<typename Range, VGC_REQUIRES(isRange<Range>)>
     void assign(const Range& range) {
         assignRange_(range.begin(), range.end());
     }
@@ -1143,7 +1142,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     iterator insert(ConstIterator it, IntType n, const T& value) {
         checkLengthForInsert_(n); // Precondition for insertFill_
         pointer pos = unwrapIterator(it);
@@ -1165,7 +1164,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
     iterator insert(ConstIterator it, InputIt first, InputIt last) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
@@ -1186,7 +1185,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, internal::RequiresCompatibleRange<Range, T> = true>
+    template<typename Range, VGC_REQUIRES(internal::isCompatibleRange<Range, T>)>
     iterator insert(ConstIterator it, const Range& range) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
@@ -1267,7 +1266,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// maxLength().
     ///
-    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
     void insert(Int i, InputIt first, InputIt last) {
         checkInRangeForInsert_(i);
         insertRange_(i, first, last);
@@ -1283,7 +1282,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, internal::RequiresCompatibleRange<Range, T> = true>
+    template<typename Range, VGC_REQUIRES(internal::isCompatibleRange<Range, T>)>
     void insert(Int i, const Range& range) {
         checkInRangeForInsert_(i);
         insertRange_(i, range.begin(), range.end());
@@ -1555,7 +1554,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
     void extend(InputIt first, InputIt last) {
         insertRange_(length(), first, last);
     }
@@ -1569,7 +1568,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, internal::RequiresRange<Range> = true>
+    template<typename Range, VGC_REQUIRES(isRange<Range>)>
     void extend(const Range& range) {
         insertRange_(length(), range.begin(), range.end());
     }
@@ -1612,7 +1611,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
+    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
     void preextend(InputIt first, InputIt last) {
         insertRange_(0, first, last);
     }
@@ -1627,7 +1626,7 @@ public:
     ///
     /// Throws `LengthError` if the resulting number of elements would exceed `maxLength()`.
     ///
-    template<typename Range, internal::RequiresRange<Range> = true>
+    template<typename Range, VGC_REQUIRES(isRange<Range>)>
     void preextend(const Range& range) {
         insertRange_(0, range.begin(), range.end());
     }
@@ -2433,7 +2432,7 @@ private:
 
     // Throws LengthError if length > maxLength().
     //
-    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     void checkNoMoreThanMaxLengthForReserve_([[maybe_unused]] IntType length) const {
         if constexpr (tmax<IntType> > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
@@ -2456,7 +2455,7 @@ private:
 
     // Throws LengthError if length > maxLength().
     //
-    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     void checkNoMoreThanMaxLengthForInit_([[maybe_unused]] IntType length) const {
         if constexpr (tmax<IntType> > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
@@ -2479,7 +2478,7 @@ private:
 
     // Throws LengthError if length > maxLength().
     //
-    template<typename IntType, internal::RequiresSignedInteger<IntType> = true>
+    template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     void checkNoMoreThanMaxLengthForInsert_([[maybe_unused]] IntType length) const {
         if constexpr (tmax<IntType> > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion

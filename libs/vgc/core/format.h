@@ -59,6 +59,7 @@
 #endif
 
 #include <vgc/core/api.h>
+#include <vgc/core/templateutil.h>
 
 namespace vgc {
 namespace core {
@@ -243,9 +244,9 @@ void write(OStream& out, const std::string& s)
 /// `unsigned char`. Instead, we always use `Int8` or `UInt8`, and mean them to
 /// actually represent an 8-bit integer, not an ASCII character.
 ///
-template<typename OStream, typename IntType>
-typename std::enable_if<std::is_integral<IntType>::value>::type
-write(OStream& out, IntType x)
+template<typename OStream, typename IntType,
+         VGC_REQUIRES(std::is_integral_v<IntType>)>
+void write(OStream& out, IntType x)
 {
     fmt::format_int f(x);
     out.write(f.data(), f.size());
@@ -290,9 +291,9 @@ write(OStream& out, IntType x)
 /// vgc::core::write(out, 1234567890123456.0f);  // write "1234570000000000"
 /// ```
 ///
-template<typename OStream, typename FloatType>
-typename std::enable_if<std::is_floating_point<FloatType>::value>::type
-write(OStream& out, FloatType x)
+template<typename OStream, typename FloatType,
+         VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+void write(OStream& out, FloatType x)
 {
     // Shortcut for zero:
     //   0.0000000000004 -> "0"

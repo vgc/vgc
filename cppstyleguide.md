@@ -51,7 +51,7 @@ argument-dependent lookup), such as in `using std::swap;`.
 Always scope public API under two namespaces, and comment closing bracket for readability. Do not indent within the namespaces:
 
 ```cpp
-namespace vgc::mylib
+namespace vgc::mylib {
 
 class MyClass
 {
@@ -333,44 +333,39 @@ In general, try to conform to the style found in `vgc/core/templateutil.h`, `vgc
 Examples:
 
 ```cpp
-template<typename T, typename Enable = bool>
-struct IsCallable : std::false_type {};
+template<typename T, typename SFINAE = void>
+struct IsSignedInteger : std::false_type {};
 
 template<typename T>
-struct IsCallable<T, RequiresValid<typename CallableTraits<T>::CallSig>> : std::true_type {};
+struct IsSignedInteger<T, Requires<
+        std::is_integral_v<T> &&
+        std::is_signed_v<T>>> :
+    std::true_type {};
 
 template<typename T>
-inline constexpr bool isCallable = IsCallable<T>::value;
+inline constexpr bool isSignedInteger = IsSignedInteger<T>::value;
 
-template<typename T, Requires<std::is_arithmetic_v<T>> = true>
-void setZero(T& x) {
-    x = T();
-}
+template<typename T>
+class Array {
 
-template <typename T, typename U,
-    Requires<
+    // ...
+
+    template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
+    Array(IntType length, const T& value) {
+        checkLengthForInit_(length);
+        init_(length, value);
+    }
+};
+
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_signed_v<T> &&
         std::is_unsigned_v<U> &&
-        tmax<T> >= tmax<U>
-    > = true>
+        tmax<T> >= tmax<U>)
 T int_cast(U value) {
     return static_cast<T>(value);
 }
-
-template<typename T>
-class Array {
-public:
-    // ...
-    
-    template<typename InputIt, internal::RequiresInputIterator<InputIt> = true>
-    void assign(InputIt first, InputIt last) {
-        assignRange_(first, last);
-    }
-    
-    // ...
-};
 ```
 
 However, we recognize that templated code can easily get complicated, so it's 
