@@ -257,7 +257,7 @@ public:
     UndoGroup* createUndoGroup(core::StringId name);
 
     template<typename TOperation, typename... Args,
-        core::Requires<std::is_base_of_v<Operation, TOperation>> = true>
+             VGC_REQUIRES(std::is_base_of_v<Operation, TOperation>)>
     static void do_(History* history, Args&&... args) {
         if (history) {
             if (!history->head_->isOpen()) {
