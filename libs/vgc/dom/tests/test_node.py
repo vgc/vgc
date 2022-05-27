@@ -79,7 +79,7 @@ class TestNode(unittest.TestCase):
         self.assertTrue(n3.isAlive())
         self.assertTrue(doc.rootElement, n1)
 
-        n1.destroy()
+        n1.remove()
         self.assertTrue(doc.isAlive())
         self.assertFalse(n1.isAlive())
         self.assertFalse(n3.isAlive())
@@ -87,7 +87,7 @@ class TestNode(unittest.TestCase):
         with self.assertRaises(NotAliveError):
             n2 = n3.parent
 
-        doc.destroy()
+        doc.remove()
         self.assertFalse(doc.isAlive())
         with self.assertRaises(NotAliveError):
             n1 = doc.rootElement
@@ -122,14 +122,14 @@ class TestNode(unittest.TestCase):
 
         doc = None
         self.assertTrue(n3.isAlive())
-        n3.document.destroy()
+        n3.document.remove()
         self.assertFalse(n3.isAlive())
 
         doc = Document()
         n1 = Element(doc, "n1")
         del doc
         self.assertTrue(n1.isAlive())
-        n1.document.destroy()
+        n1.document.remove()
         self.assertFalse(n1.isAlive())
 
         doc = Document()
@@ -140,16 +140,16 @@ class TestNode(unittest.TestCase):
         n4 = Element(root, "n4")
         self.assertEqual(getChildNames(root), ["n1", "n2", "n3", "n4"])
 
-        n3.destroy()
+        n3.remove()
         self.assertEqual(getChildNames(root), ["n1", "n2", "n4"])
 
-        n4.destroy()
+        n4.remove()
         self.assertEqual(getChildNames(root), ["n1", "n2"])
 
-        n1.destroy()
+        n1.remove()
         self.assertEqual(getChildNames(root), ["n2"])
 
-        n2.destroy()
+        n2.remove()
         self.assertEqual(getChildNames(root), [])
 
     def testParentChildRelationships(self):

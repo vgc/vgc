@@ -302,7 +302,14 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
 
     // If parent is different we have to detach and reattach.
     Object* oldParent = child->parentObject();
-    if (oldParent != this) {
+    bool sameParent = oldParent == this;
+
+    // If exactly the same location, fast return.
+    if (sameParent && (nextSibling == child->nextSiblingObject_)) {
+        return;
+    }
+
+    if (!sameParent) {
         // Detach child from current parent if any. Note that it would be safe to
         // unconditionally do `ObjectPtr p = child->detachObjectFromParent();`, but
         // it would cause unnecessary incref and decref in the common case where the
@@ -318,11 +325,30 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
             internal::ObjPtrAccess::incref(this, child->refCount_);
         }
 
+        // Set parent-child relationships
+        child->parentObject_ = this;
+
         // XXX onChildReordered instead of onChildAdded ? See below.
     }
+    else {
+        // Detach from current siblings
+        child->nextSiblingObject_->previousSiblingObject_ = child->previousSiblingObject_;
 
-    // Set parent-child relationships
-    child->parentObject_ = this;
+        if (child->previousSiblingObject_) {
+            child->previousSiblingObject_->nextSiblingObject_ = child->nextSiblingObject_;
+        }
+        else {
+            firstChildObject_ = child->nextSiblingObject_;
+        }
+        if (child->nextSiblingObject_) {
+            child->nextSiblingObject_->previousSiblingObject_ = child->previousSiblingObject_;
+        }
+        else {
+            lastChildObject_ = child->previousSiblingObject_;
+        }
+    }
+
+    // Insert between target siblings
     child->nextSiblingObject_ = nextSibling;
     if (nextSibling) {
         child->previousSiblingObject_ = nextSibling->previousSiblingObject_;

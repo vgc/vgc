@@ -66,20 +66,20 @@ private:
     using Compatible_ = typename std::enable_if<
         std::is_convertible<Y*, T*>::value>::type;
 
-    template<typename T, typename U>
-    friend ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept;
-    template<typename T, typename U>
-    friend ObjPtr<T> static_pointer_cast(ObjPtr<U>&& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> static_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> static_pointer_cast(ObjPtr<U>&& r) noexcept;
 
-    template<typename T, typename U>
-    friend ObjPtr<T> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept;
-    template<typename T, typename U>
-    friend ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept;
 
-    template<typename T, typename U>
-    friend ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept;
-    template<typename T, typename U>
-    friend ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> const_pointer_cast(const ObjPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjPtr<S> const_pointer_cast(ObjPtr<U>&& r) noexcept;
 
     struct DontIncRefTag {};
 
@@ -1064,8 +1064,8 @@ private:
     Object* lastChildObject_;
     Object* previousSiblingObject_;
     Object* nextSiblingObject_;
-    Int64 numChildren_ = 0;
-    Int64 branchSize_ = 0;
+    //Int64 numChildren_ = 0;
+    //Int64 branchSize_ = 0;
 
 
     // Signal-slot mechanism
