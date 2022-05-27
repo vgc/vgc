@@ -156,9 +156,10 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     // which cursor should be drawn in the viewer.
     setCursor(crossCursor());
 
+    // XXX todo: safe impl
     document_->history()->headChanged().connect([this](){
         this->update();
-    }); // DEVCODE
+    });
 }
 
 void OpenGLViewer::setDocument(dom::Document* document)
@@ -693,6 +694,20 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
     // XXX CLEAN
     static core::StringId Draw_Curve("Draw Curve");
     drawCurveUndoGroup_ = document()->history()->createUndoGroup(Draw_Curve);
+
+    drawCurveUndoGroup_->undone().connect(
+        [this](core::UndoGroup*, bool){
+            isSketching_ = false;
+            drawCurveUndoGroup_ = nullptr;
+        });
+
+    drawCurveUndoGroup_->redone().connect(
+        [this](core::UndoGroup* ug){
+            if (ug->isOpen()) {
+                isSketching_ = true;
+                drawCurveUndoGroup_ = ug;
+            }
+        });
 
     static core::StringId Create_Curve("Create Curve");
     core::UndoGroup* createCurveNodeUndoGroup = document()->history()->createUndoGroup(Create_Curve);
