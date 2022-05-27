@@ -31,9 +31,8 @@ This normalizedOrThrow(const This& v)
     return res;
 }
 
-template<typename This, typename T>
-typename std::enable_if<std::is_same<typename This::value_type, T>::value>::type
-wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
+template<typename This, typename T, VGC_REQUIRES(std::is_same_v<typename This::value_type, T>)>
+void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
 {
     py::class_<This>(m, thisTypeName.c_str())
 

@@ -43,6 +43,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
+#include <vgc/core/templateutil.h>
 
 namespace vgc {
 namespace core {
@@ -239,9 +240,8 @@ void skipExpectedEof(IStream& in)
 /// Note that the output type can also be a signed integer type, but a
 /// ParseError is raised if a positive or negative signed is found.
 ///
-template<typename IntType, typename IStream>
-typename std::enable_if<std::is_integral<IntType>::value, IntType>::type
-readUnsignedInteger(IStream& in)
+template<typename IntType, typename IStream, VGC_REQUIRES(std::is_integral_v<IntType>)>
+IntType readUnsignedInteger(IStream& in)
 {
     constexpr IntType n = core::tmax<IntType>;
     constexpr IntType m = n / 10;
@@ -280,11 +280,8 @@ namespace internal {
 // any type of integer. Only in the implementation we have two functions using
 // SFINAE for dispatching.
 //
-template<typename SIntType, typename IStream>
-typename std::enable_if<
-    std::is_integral<SIntType>::value &&
-    std::is_signed<SIntType>::value, SIntType>::type
-readSignedIntegerImpl(IStream& in)
+template<typename SIntType, typename IStream, VGC_REQUIRES(isSignedInteger<SIntType>)>
+SIntType readSignedIntegerImpl(IStream& in)
 {
     char c = readFirstNonWhitespaceCharacter(in);
     bool isPositive = true;
@@ -317,11 +314,8 @@ readSignedIntegerImpl(IStream& in)
     }
 }
 
-template<typename UIntType, typename IStream>
-typename std::enable_if<
-    std::is_integral<UIntType>::value &&
-    std::is_unsigned<UIntType>::value, UIntType>::type
-readSignedIntegerImpl(IStream& in)
+template<typename UIntType, typename IStream, VGC_REQUIRES(isUnsignedInteger<UIntType>)>
+UIntType readSignedIntegerImpl(IStream& in)
 {
     char c = readFirstNonWhitespaceCharacter(in);
     bool isPositive = true;
@@ -354,9 +348,8 @@ readSignedIntegerImpl(IStream& in)
 /// case, if a negative integer is read, then a RangeError is raised. No error
 /// is raised for "-0".
 ///
-template<typename IntType, typename IStream>
-typename std::enable_if<std::is_integral<IntType>::value, IntType>::type
-readSignedInteger(IStream& in)
+template<typename IntType, typename IStream, VGC_REQUIRES(std::is_integral_v<IntType>)>
+IntType readSignedInteger(IStream& in)
 {
     return internal::readSignedIntegerImpl<IntType>(in);
 }
@@ -714,11 +707,8 @@ void readTo(char& c, IStream& in)
 /// ParseError if the stream does not contain an integer. Raises RangeError if
 /// the stream contains an integer but without the allowed range of IntType.
 ///
-template<typename SIntType, typename IStream>
-typename std::enable_if<
-    std::is_integral<SIntType>::value &&
-    std::is_signed<SIntType>::value>::type
-readTo(SIntType& i, IStream& in)
+template<typename SIntType, typename IStream, VGC_REQUIRES(isSignedInteger<SIntType>)>
+void readTo(SIntType& i, IStream& in)
 {
     i = readSignedInteger<SIntType>(in);
 }
@@ -729,11 +719,8 @@ readTo(SIntType& i, IStream& in)
 /// ParseError if the stream does not contain an integer. Raises RangeError if
 /// the stream contains an integer but without the allowed range of UIntType.
 ///
-template<typename UIntType, typename IStream>
-typename std::enable_if<
-    std::is_integral<UIntType>::value &&
-    std::is_unsigned<UIntType>::value>::type
-readTo(UIntType& i, IStream& in)
+template<typename UIntType, typename IStream, VGC_REQUIRES(isUnsignedInteger<UIntType>)>
+void readTo(UIntType& i, IStream& in)
 {
     i = readUnsignedInteger<UIntType>(in);
 }

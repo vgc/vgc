@@ -63,8 +63,7 @@ template<typename T>
 class ObjPtr {
 private:
     template<typename Y>
-    using Compatible_ = typename std::enable_if<
-        std::is_convertible<Y*, T*>::value>::type;
+    static constexpr bool isCompatible_ = std::is_convertible_v<Y*, T*>;
 
     template<typename S, typename U>
     friend ObjPtr<S> static_pointer_cast(const ObjPtr<U>& r) noexcept;
@@ -122,7 +121,7 @@ public:
     /// participate in overload resolution if Y* is not implicitly convertible
     /// to T*.
     ///
-    template<typename Y, typename = Compatible_<Y>>
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr(const ObjPtr<Y>& other) noexcept :
         obj_(other.obj_)
     {
@@ -145,7 +144,7 @@ public:
     /// doesn't participate in overload resolution if Y* is not implicitly
     /// convertible to T*.
     ///
-    template<typename Y, typename = Compatible_<Y>>
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr& operator=(const ObjPtr<Y>& other) noexcept
     {
         if(obj_ != other.obj_) {
@@ -167,7 +166,7 @@ public:
     /// doesn't participate in overload resolution if Y* is not implicitly
     /// convertible to T*.
     ///
-    template<typename Y, typename = Compatible_<Y>>
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr(ObjPtr<Y>&& other) noexcept : obj_(other.obj_)
     {
         other.obj_ = nullptr;
@@ -189,7 +188,7 @@ public:
     /// doesn't participate in overload resolution if Y* is not implicitly
     /// convertible to T*.
     ///
-    template<typename Y, typename = Compatible_<Y>>
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr& operator=(ObjPtr<Y>&& other) noexcept
     {
         if (*this != other) {

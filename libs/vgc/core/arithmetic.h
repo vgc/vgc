@@ -214,7 +214,7 @@ struct TMax {
 ///
 /// \sa `tmin<T>`, `TMax<T>`, and `SmallestNormal<T>`.
 ///
-template<typename T, typename Enable = bool>
+template<typename T, typename SFINAE = void>
 struct TMin {
     static_assert(std::is_arithmetic_v<T>,
         "vgc::core::TMin<T> is only defined for arithmetic types.");
@@ -464,8 +464,9 @@ inline constexpr double DoubleInfinity = infinity<double>;
 /// Note how "char" is a separate type from both "signed char" (= Int8) and
 /// "unsigned char" (= UInt8).
 ///
-template <typename T, Requires<std::is_integral_v<T>> = true>
-           inline std::string int_typename() { return "UnknownInt"; }
+template<typename T, VGC_REQUIRES(std::is_integral_v<T>)>
+inline std::string int_typename() { return "UnknownInt"; }
+
 template<> inline std::string int_typename<bool>() { return "Bool"; }
 template<> inline std::string int_typename<char>() { return "Char"; }
 template<> inline std::string int_typename<Int8>() { return "Int8"; }
@@ -479,17 +480,17 @@ template<> inline std::string int_typename<UInt64>() { return "UInt64"; }
 
 namespace internal {
 
-template <typename T, typename U>
+template<typename T, typename U>
 std::string intErrorReason(U value) {
     return core::format("Cannot convert {}({}) to type {}", int_typename<U>(), value, int_typename<T>());
 }
 
-template <typename T, typename U>
+template<typename T, typename U>
 void throwIntegerOverflowError(U value) {
     throw core::IntegerOverflowError(intErrorReason<T>(value));
 }
 
-template <typename T, typename U>
+template<typename T, typename U>
 void throwNegativeIntegerError(U value) {
     throw core::NegativeIntegerError(intErrorReason<T>(value));
 }
@@ -562,13 +563,11 @@ void throwNegativeIntegerError(U value) {
 // - U and T are both signed or both unsigned
 // - The range of T includes the range of U.
 //
-template <typename T, typename U,
-    Requires<
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_signed_v<T> == std::is_signed_v<U> &&
-        tmax<T> >= tmax<U> // (1)
-    > = true>
+        tmax<T> >= tmax<U>)> // (1)
 T int_cast(U value) {
     return static_cast<T>(value);
 }
@@ -577,14 +576,12 @@ T int_cast(U value) {
 // - U and T are both signed
 // - The range of T does not include the range of U.
 //
-template <typename T, typename U,
-    Requires<
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_signed_v<T> &&
         std::is_signed_v<U> &&
-        tmax<T> < tmax<U>
-    > = true>
+        tmax<T> < tmax<U>)>
 T int_cast(U value) {
     if (value < tmin<T> || // (1)
         value > tmax<T>) { // (1)
@@ -597,14 +594,12 @@ T int_cast(U value) {
 // - U and T are both unsigned
 // - The range of T does not include the range of U.
 //
-template <typename T, typename U,
-    Requires<
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_unsigned_v<T> &&
         std::is_unsigned_v<U> &&
-        tmax<T> < tmax<U>
-    > = true>
+        tmax<T> < tmax<U>)>
 T int_cast(U value) {
     if (value > tmax<T>) { // (1)
         internal::throwIntegerOverflowError<T>(value);
@@ -616,14 +611,12 @@ T int_cast(U value) {
 // - U is unsigned and T is signed
 // - The range of T includes the range of U
 //
-template <typename T, typename U,
-    Requires<
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_signed_v<T> &&
         std::is_unsigned_v<U> &&
-        tmax<T> >= tmax<U> // (2)
-    > = true>
+        tmax<T> >= tmax<U>)> // (2)
 T int_cast(U value) {
     return static_cast<T>(value);
 }
@@ -632,14 +625,12 @@ T int_cast(U value) {
 // - U is unsigned and T is signed
 // - The range of T does not include the range of U
 //
-template <typename T, typename U,
-    Requires<
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_signed_v<T> &&
         std::is_unsigned_v<U> &&
-        tmax<T> < tmax<U> // (2)
-    > = true>
+        tmax<T> < tmax<U>)> // (2)
 T int_cast(U value) {
     if (value > tmax<T>) { // (2)
         internal::throwIntegerOverflowError<T>(value);
@@ -651,14 +642,12 @@ T int_cast(U value) {
 // - U is signed and T is unsigned
 // - The range of T includes the positive range of U
 //
-template <typename T, typename U,
-    Requires<
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_unsigned_v<T> &&
         std::is_signed_v<U> &&
-        tmax<T> >= tmax<U> // (2)
-    > = true>
+        tmax<T> >= tmax<U>)> // (2)
 T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
         internal::throwNegativeIntegerError<T>(value);
@@ -670,14 +659,12 @@ T int_cast(U value) {
 // - U is signed and T is unsigned
 // - The range of T does not include the positive range of U
 //
-template <typename T, typename U,
-    Requires<
+template<typename T, typename U, VGC_REQUIRES(
         std::is_integral_v<T> &&
         std::is_integral_v<U> &&
         std::is_unsigned_v<T> &&
         std::is_signed_v<U> &&
-        tmax<T> < tmax<U> // (2)
-    > = true>
+        tmax<T> < tmax<U>)> // (2)
 T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
         internal::throwNegativeIntegerError<T>(value);
@@ -699,9 +686,8 @@ T int_cast(U value) {
 ///
 /// \sa zero<T>()
 ///
-template<typename T, Requires<std::is_arithmetic_v<T>> = true>
-void setZero(T& x)
-{
+template<typename T, VGC_REQUIRES(std::is_arithmetic_v<T>)>
+void setZero(T& x) {
     x = T();
 }
 
@@ -755,8 +741,7 @@ void setZero(T& x)
 /// - vgc/core/tests/test_zero.cpp
 ///
 template<typename T>
-T zero()
-{
+T zero() {
     T res;
     setZero(res);
     return res;
@@ -774,17 +759,13 @@ namespace internal {
 // }
 // ```
 //
-template<typename T>
-typename std::enable_if<std::is_floating_point<T>::value, T>::type
-infdiff(T a, T b)
-{
+template<typename T, VGC_REQUIRES(std::is_floating_point_v<T>)>
+T infdiff(T a, T b) {
     return (a == b) ? zero<T>() : (a - b);
 }
 
-template<typename T>
-typename std::enable_if<std::is_floating_point<T>::value, bool>::type
-isClose(T a, T b, T relTol, T absTol)
-{
+template<typename T, VGC_REQUIRES(std::is_floating_point_v<T>)>
+bool isClose(T a, T b, T relTol, T absTol) {
     T diff = std::fabs(infdiff(a, b));
     if (diff == std::numeric_limits<T>::infinity()) {
         return false; // opposite infinities or finite/infinite mismatch
@@ -796,10 +777,8 @@ isClose(T a, T b, T relTol, T absTol)
     }
 }
 
-template<typename T>
-typename std::enable_if<std::is_floating_point<T>::value, bool>::type
-isNear(T a, T b, T absTol)
-{
+template<typename T, VGC_REQUIRES(std::is_floating_point_v<T>)>
+bool isNear(T a, T b, T absTol) {
     T diff = std::fabs(infdiff(a, b));
     if (diff == std::numeric_limits<T>::infinity()) {
         return false; // opposite infinities or finite/infinite mismatch
@@ -897,8 +876,7 @@ isNear(T a, T b, T absTol)
 /// `math.isclose()`.
 ///
 VGC_CORE_API
-inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f)
-{
+inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f) {
     return internal::isClose(a, b, relTol, absTol);
 }
 
@@ -911,8 +889,7 @@ inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f)
 /// (doubles have a precision of approximately 15 decimal digits).
 ///
 VGC_CORE_API
-inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.0)
-{
+inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.0) {
     return internal::isClose(a, b, relTol, absTol);
 }
 
@@ -950,8 +927,7 @@ inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.
 /// ```
 ///
 VGC_CORE_API
-inline bool isNear(float a, float b, float absTol)
-{
+inline bool isNear(float a, float b, float absTol) {
     return internal::isNear(a, b, absTol);
 }
 
@@ -960,8 +936,7 @@ inline bool isNear(float a, float b, float absTol)
 /// for details.
 ///
 VGC_CORE_API
-inline bool isNear(double a, double b, double absTol)
-{
+inline bool isNear(double a, double b, double absTol) {
     return internal::isNear(a, b, absTol);
 }
 
@@ -969,8 +944,7 @@ inline bool isNear(double a, double b, double absTol)
 /// then a warning is issued and the value is clamped to [max, min] instead.
 ///
 template<typename T>
-const T& clamp(const T& value, const T& min, const T& max)
-{
+const T& clamp(const T& value, const T& min, const T& max) {
     if (max < min) {
         warning()
             << "Warning: vgc::core::clamp("
@@ -989,10 +963,8 @@ const T& clamp(const T& value, const T& min, const T& max)
 /// std::nextafter(x, vgc::core::tmax<FloatType>);
 /// ```
 ///
-template <typename FloatType>
-typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type
-nextafter(FloatType x)
-{
+template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+FloatType nextafter(FloatType x) {
     return std::nextafter(x, tmax<FloatType>);
 }
 
@@ -1002,10 +974,8 @@ nextafter(FloatType x)
 /// std::nextafter(x, -vgc::core::tmax<FloatType>);
 /// ```
 ///
-template <typename FloatType>
-typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type
-nextbefore(FloatType x)
-{
+template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+FloatType nextbefore(FloatType x) {
     return std::nextafter(x, -tmax<FloatType>);
 }
 
@@ -1030,11 +1000,10 @@ nextbefore(FloatType x)
 /// floating point to integer conversions, since floating points are subject to
 /// rounding errors which are less predictible than arithmetic on integers.
 ///
-template <typename IntType, typename FloatType>
-typename std::enable_if<
-    std::is_floating_point<FloatType>::value &&
-    std::is_integral<IntType>::value, IntType>::type
-ifloor(FloatType x)
+template<typename IntType, typename FloatType, VGC_REQUIRES(
+        std::is_floating_point_v<FloatType> &&
+        std::is_integral_v<IntType>)>
+IntType ifloor(FloatType x)
 {
     constexpr IntType tmini = tmin<IntType>;
     constexpr IntType tmaxi = tmax<IntType>;

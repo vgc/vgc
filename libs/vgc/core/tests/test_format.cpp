@@ -90,9 +90,8 @@ TEST(TestFormat, WriteIntegers)
     testWriteIntegers<vgc::UInt64>();
 }
 
-template<typename T>
-typename std::enable_if<std::is_floating_point<T>::value>::type
-writeFloat(T x, const char* expected)
+template<typename T, VGC_REQUIRES(std::is_floating_point_v<T>)>
+void writeFloat(T x, const char* expected)
 {
     std::string s;
     vgc::core::StringWriter sw(s);

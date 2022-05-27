@@ -109,7 +109,7 @@ public:
     }
 
     // XXX prevent signatures with references to python immutables (int..)
-    template<typename SignalT, typename... Extra, std::enable_if_t<core::internal::isSignal<SignalT>, int> = 0>
+    template<typename SignalT, typename... Extra, VGC_REQUIRES(core::internal::isSignal<SignalT>)>
     ObjClass& def_signal(const char* name, SignalT signal, const Extra&... extra) {
         static_assert(std::is_invocable_v<SignalT, const ObjT*>,
             "Signal must be accessible in the class being pybound.");
@@ -118,7 +118,7 @@ public:
     }
 
     // XXX prevent signatures with references to python immutables (int..)
-    template<typename SlotT, typename... Extra, std::enable_if_t<core::internal::isSlot<SlotT>, int> = 0>
+    template<typename SlotT, typename... Extra, VGC_REQUIRES(core::internal::isSlot<SlotT>)>
     ObjClass& def_slot(const char* name, SlotT slot, const Extra&... extra) {
         static_assert(std::is_invocable_v<SlotT, ObjT*>,
             "Slot must be accessible in the class being pybound.");
