@@ -76,15 +76,9 @@ History::History(core::StringId entrypointName)
     head_ = ptr;
 }
 
-void History::setMinLevelsCount(Int count)
-{
-    minLevels_ = count;
-    maxLevels_ = std::max(minLevels_, maxLevels_);
-}
-
 void History::setMaxLevelsCount(Int count)
 {
-    maxLevels_ = count;
+    maxLevels_ = std::max(count, Int(1));
     prune_();
 }
 
@@ -160,7 +154,7 @@ UndoGroup* History::createUndoGroup(core::StringId name)
     // Check current ongoing node (if any) doesn't have recorded operations.
     if (head_->isOpen() && head_->numOperations()) {
       throw LogicError(
-          "Cannot nest an undo group under another if the latter already contains operations." 
+          "Cannot nest an undo group under another if the latter already contains operations."
       );
     }
 
@@ -193,11 +187,9 @@ void History::undoOne_(bool forceAbort)
     }
 
     head_->undo_(abort);
-
     if (!head_->openAncestor_) {
         --levelsCount_;
     }
-
     if (abort) {
         head_->destroyObject_();
     }
@@ -210,11 +202,9 @@ void History::redoOne_()
     UndoGroup* child = head_->mainChild();
 
     child->redo_();
-    
     if (!head_->openAncestor_) {
         ++levelsCount_;
     }
-
     head_ = child;
 }
 
@@ -273,29 +263,32 @@ bool History::closeUndoGroup_(UndoGroup* node)
 
 void History::prune_()
 {
-    /*Int extraLevelsCount = maxLevels_ - levelsCount_;
+    // requires maxLevels_ >= 1
+    Int extraLevelsCount = levelsCount_ - maxLevels_;
     for (Int i = 0; i < extraLevelsCount; ++i) {
-        for (UndoGroup* a = root_->firstChild(); a != root_->lastChild();) {
-            // XXX tofix: we need num in sub-tree, not num children !!!
-            nodesCount_ -= a->numChildObjects() + 1;
-            UndoGroup* tmp = a->nextAlternative();
-            a->destroyObject_();
-            a = tmp;
-        }
+        Int size = root_->branchSize();
         UndoGroup* newRoot = root_->mainChild();
-        if (newRoot) {
-            this->appendChildObject_(newRoot);
-        }
+        size -= newRoot->branchSize();
+        this->appendChildObject_(newRoot);
         root_->destroyObject_();
-        --nodesCount_;
+        nodesCount_ -= size;
         --levelsCount_;
         root_ = newRoot;
     }
 
     Int maxNodesCount = 4 * maxLevels_;
+    // keeps the main branch intact, only able to destroy redos from the oldest branches.
     while (nodesCount_ > maxNodesCount) {
-    
-    }*/
+        UndoGroup* p = root_;
+        while (UndoGroup* n = p->firstChild()) {
+            p = n;
+        }
+        if (p->isPartOfAnOpenGroup() || !p->isUndone()) {
+            break;
+        }
+        p->destroyObject_();
+        --nodesCount_;
+    }
 }
 
 } // namespace vgc::core

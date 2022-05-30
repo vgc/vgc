@@ -867,9 +867,13 @@ bool Document::emitPendingDiff()
 
         NodeRelatives newRelatives(node);
         if (oldRelatives.parent_ != newRelatives.parent_) {
-            pendingDiff_.childrenChangedNodes_.insert(oldRelatives.parent_);
-            pendingDiff_.childrenChangedNodes_.insert(newRelatives.parent_);
             pendingDiff_.reparentedNodes_.insert(node);
+        }
+        else if (oldRelatives.nextSibling_ != newRelatives.nextSibling_ ||
+                 oldRelatives.previousSibling_ != newRelatives.previousSibling_) {
+            // this introduces false positives if old siblings were removed or
+            // new siblings were added.
+            pendingDiff_.childrenReorderedNodes_.insert(newRelatives.parent_);
         }
     }
     previousRelativesMap_.clear();
@@ -891,7 +895,7 @@ bool Document::emitPendingDiff()
 
     if (!pendingDiff_.isEmpty()) {
 
-        // XXX todo: emit node signals in here too !
+        // XXX todo: emit node signals in here ?
 
         documentChanged().emit(pendingDiff_);
         pendingDiff_.reset();

@@ -129,6 +129,10 @@ public:
         return openAncestor_ == this;
     }
 
+    bool isPartOfAnOpenGroup() const {
+        return openAncestor_ != nullptr;
+    }
+
     bool isUndone() const {
         return isUndone_;
     }
@@ -229,10 +233,6 @@ public:
     void setMinLevelsCount(Int count);
     void setMaxLevelsCount(Int count);
 
-    Int getMinLevelsCount() const {
-        return minLevels_;
-    }
-
     Int getMaxLevelsCount() const {
         return maxLevels_;
     }
@@ -252,6 +252,14 @@ public:
     bool undo();
     bool redo();
 
+    bool canUndo() const {
+        return head_ != root_;
+    }
+
+    bool canRedo() const {
+        return head_->mainChild() != nullptr;
+    }
+
     void goTo(UndoGroup* node);
 
     UndoGroup* createUndoGroup(core::StringId name);
@@ -265,7 +273,7 @@ public:
             }
             if (history->head_->firstChild() != nullptr) {
                 throw LogicError("Cannot perform the requested operation since the current undo group has nested groups.");
-                
+
             }
             const std::unique_ptr<Operation>& op =
                 history->head_->operations_.emplaceLast(new EnableConstruct<TOperation>(std::forward<Args>(args)...));
@@ -280,10 +288,9 @@ public:
     VGC_SIGNAL(headChanged, (UndoGroup*, newNode))
 
 private:
-    Int minLevels_ = 0;
-    Int maxLevels_ = 0;
+    Int maxLevels_ = 1000;
 
-    UndoGroup* root_;
+    UndoGroup* root_ = nullptr;
     UndoGroup* head_ = nullptr;
     Int nodesCount_ = 0;
     Int levelsCount_ = 0;
