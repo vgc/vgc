@@ -376,7 +376,7 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
 
     // XXX May be better to have both general and fine grained events.
     // e.g.: onChildrenChanged, onChildReordered, onChildAdded, onChildRemoved.
-    onChildAdded(child);
+    onChildAdded_(child);
 }
 
 ObjectPtr Object::removeChildObject_(Object* child)
@@ -438,7 +438,7 @@ ObjectPtr Object::removeObjectFromParent_()
         previousSiblingObject_ = nullptr;
         nextSiblingObject_ = nullptr;
         parentObject_ = nullptr;
-        parent->onChildRemoved(this);
+        parent->onChildRemoved_(this);
         if (refCount_ > 0) {
             // The above test is important: we don't want to call decref()
             // if this call to detachObjectFromParent() already originates
