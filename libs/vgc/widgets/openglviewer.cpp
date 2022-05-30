@@ -169,6 +169,12 @@ void OpenGLViewer::setDocument(dom::Document* document)
     doneCurrent();
 
     document_ = document;
+
+    // XXX todo: safe impl
+    document_->history()->headChanged().connect([this](){
+        this->update();
+    });
+
     update();
 }
 

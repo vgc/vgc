@@ -682,9 +682,6 @@ public:
 
     /// Returns the number of child objects of this Object.
     ///
-    /// Note that this function is slow (linear complexity), because it has to
-    /// iterate over all child objects (the number of children is not cached).
-    ///
     Int numChildObjects() const;
 
     /// Returns whether this Object is a descendant of the given \p other
@@ -1051,27 +1048,37 @@ protected:
     ///
     ObjPtr<Object> removeObjectFromParent_();
 
+    Int branchSize() const;
+
 private:
     // Reference counting
     friend class internal::ObjPtrAccess; // To access refCount_
-    mutable Int64 refCount_; // If >= 0: isAlive = true, refCount = refCount_
-                             // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
+    mutable Int64 refCount_ = 0; // If >= 0: isAlive = true, refCount = refCount_
+                                 // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
 
     // Parent-child relationship
-    Object* parentObject_;
-    Object* firstChildObject_;
-    Object* lastChildObject_;
-    Object* previousSiblingObject_;
-    Object* nextSiblingObject_;
-    //Int64 numChildren_ = 0;
-    //Int64 branchSize_ = 0;
+    Object* parentObject_ = nullptr;
+    Object* firstChildObject_ = nullptr;
+    Object* lastChildObject_ = nullptr;
+    Object* previousSiblingObject_ = nullptr;
+    Object* nextSiblingObject_ = nullptr;
+    Int numChildObjects_ = 0;
 
+    // Deferred values
+    mutable bool isBranchSizeDirty_ = false;
+    Int branchSize_ = 0;
 
     // Signal-slot mechanism
     friend class internal::SignalHub; // To access signalHub_
     mutable internal::SignalHub signalHub_;
 
     void destroyObjectImpl_();
+
+    void setBranchSizeDirty_();
+    void updateBranchSize_() const;
+
+    void onChildAdded_(Object* child);
+    void onChildRemoved_(Object* child);
 };
 
 namespace internal {
@@ -1339,7 +1346,7 @@ inline ObjectListView Object::childObjects() const
 
 inline Int Object::numChildObjects() const
 {
-    return childObjects().length();
+    return numChildObjects_;
 }
 
 } // namespace core

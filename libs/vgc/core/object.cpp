@@ -70,6 +70,8 @@ void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix)
 
     out += prefix;
     out += core::toAddressString(obj);
+    out += " ";
+    out += typeid(*obj).name();
     if (obj->isAlive()) {
         out += " [";
         out += core::toString(obj->refCount());
@@ -167,21 +169,27 @@ void Object::onDestroyed()
 
 void Object::onChildAdded(Object*)
 {
-
 }
 
 void Object::onChildRemoved(Object*)
 {
-
 }
 
-Object::Object() :
-    refCount_(0),
-    parentObject_(nullptr),
-    firstChildObject_(nullptr),
-    lastChildObject_(nullptr),
-    previousSiblingObject_(nullptr),
-    nextSiblingObject_(nullptr)
+void Object::onChildAdded_(Object* child)
+{
+    ++numChildObjects_;
+    setBranchSizeDirty_();
+    onChildAdded(child);
+}
+
+void Object::onChildRemoved_(Object* child)
+{
+    --numChildObjects_;
+    setBranchSizeDirty_();
+    onChildRemoved(child);
+}
+
+Object::Object()
 {
     printDebugInfo_(this, "constructed");
 }
@@ -309,12 +317,13 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
         return;
     }
 
+    ObjectPtr p;
     if (!sameParent) {
         // Detach child from current parent if any. Note that it would be safe to
         // unconditionally do `ObjectPtr p = child->detachObjectFromParent();`, but
         // it would cause unnecessary incref and decref in the common case where the
         // given child doesn't have a parent yet.
-        ObjectPtr p;
+
         if (oldParent) {
             ObjectPtr q = child->removeObjectFromParent_();
             p = std::move(q);
@@ -367,7 +376,7 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
 
     // XXX May be better to have both general and fine grained events.
     // e.g.: onChildrenChanged, onChildReordered, onChildAdded, onChildRemoved.
-    onChildAdded(child);
+    onChildAdded_(child);
 }
 
 ObjectPtr Object::removeChildObject_(Object* child)
@@ -429,7 +438,7 @@ ObjectPtr Object::removeObjectFromParent_()
         previousSiblingObject_ = nullptr;
         nextSiblingObject_ = nullptr;
         parentObject_ = nullptr;
-        parent->onChildRemoved(this);
+        parent->onChildRemoved_(this);
         if (refCount_ > 0) {
             // The above test is important: we don't want to call decref()
             // if this call to detachObjectFromParent() already originates
@@ -438,6 +447,12 @@ ObjectPtr Object::removeObjectFromParent_()
         }
     }
     return ObjectPtr(this);
+}
+
+Int Object::branchSize() const
+{
+    updateBranchSize_();
+    return branchSize_;
 }
 
 void Object::destroyObjectImpl_()
@@ -484,6 +499,65 @@ void Object::destroyObjectImpl_()
     // Interesting discussion here:
     //
     // https://stackoverflow.com/questions/755196/deleting-a-pointer-to-const-t-const
+}
+
+void Object::setBranchSizeDirty_()
+{
+    isBranchSizeDirty_ = true;
+    Object* obj = parentObject_;
+    while (obj && !obj->isBranchSizeDirty_) {
+        obj->isBranchSizeDirty_ = true;
+        obj = obj->parentObject_;
+    }
+}
+
+void Object::updateBranchSize_() const
+{
+    if (isBranchSizeDirty_) {
+        Object* self = const_cast<Object*>(this);
+        self->branchSize_ = 1;
+
+        Object* c = self->firstChildObject_;
+        if (c) {
+            bool firstVisit = true;
+            while (c != self) {
+                if (firstVisit && c->isBranchSizeDirty_) {
+
+                    // pre-update of c
+                    c->branchSize_ = 1;
+                    // ...
+
+                    if (c->firstChildObject_) {
+                        c = c->firstChildObject_;
+                        continue;
+                    }
+                }
+
+                // can reach here only if:
+                // - c is a leaf, or
+                // - c was not initially dirty, or
+                // - c is being visited for the second time
+
+                // post-update of c
+                c->isBranchSizeDirty_ = false;
+                // ...
+
+                // accumulate step of parent value
+                c->parentObject_->branchSize_ += c->branchSize_;
+
+                if (c->nextSiblingObject_) {
+                    c = c->nextSiblingObject_;
+                    firstVisit = true;
+                }
+                else {
+                    c = c->parentObject_;
+                    firstVisit = false;
+                }
+            }
+        }
+
+        self->isBranchSizeDirty_ = false;
+    }
 }
 
 namespace internal {

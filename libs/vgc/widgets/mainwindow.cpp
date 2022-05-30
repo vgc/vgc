@@ -42,11 +42,15 @@ MainWindow::MainWindow(
     document_ = vgc::dom::Document::create();
     vgc::dom::Element::create(document_.get(), "vgc");
     document_->enableHistory(vgc::dom::strings::New_Document);
+    headChangedConnectionHandle_ = document_->history()->headChanged().connect(
+        [this](){ updateUndoRedoActionState_(); });
 
     setupWidgets_();
     setupActions_();
     setupMenus_();
     setupConnections_();
+
+    updateUndoRedoActionState_();
 
     viewer_->startLoggingUnder(performanceMonitor_->log());
 }
@@ -204,12 +208,46 @@ void MainWindow::redo()
     document()->history()->redo();
 }
 
+void MainWindow::new_()
+{
+    // XXX TODO ask save current document
+
+    if (document_ && document_->history()) {
+        document_->history()->disconnect(headChangedConnectionHandle_);
+        headChangedConnectionHandle_ = core::ConnectionHandle::invalid;
+    }
+
+    try {
+        document_ = vgc::dom::Document::create();
+        vgc::dom::Element::create(document_.get(), "vgc");
+        document_->enableHistory(vgc::dom::strings::New_Document);
+        headChangedConnectionHandle_ = document_->history()->headChanged().connect(
+            [this](){ updateUndoRedoActionState_(); });
+        updateUndoRedoActionState_();
+
+        viewer_->setDocument(document());
+    }
+    catch (const dom::FileError& e) {
+        QMessageBox::critical(this, "Error Creating New File", e.what());
+    }
+}
+
 void MainWindow::open_()
 {
     // XXX TODO ask save current document
 
+    if (document_ && document_->history()) {
+        document_->history()->disconnect(headChangedConnectionHandle_);
+        headChangedConnectionHandle_ = core::ConnectionHandle::invalid;
+    }
+
     try {
         document_ = dom::Document::open(fromQt(filename_));
+        document_->enableHistory(vgc::dom::strings::Open_Document);
+        headChangedConnectionHandle_ = document_->history()->headChanged().connect(
+            [this](){ updateUndoRedoActionState_(); });
+        updateUndoRedoActionState_();
+
         viewer_->setDocument(document());
     }
     catch (const dom::FileError& e) {
@@ -224,6 +262,14 @@ void MainWindow::save_()
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Saving File", e.what());
+    }
+}
+
+void MainWindow::updateUndoRedoActionState_()
+{
+    if (document_ && document_->history()) {
+        actionUndo_->setEnabled(document_->history()->canUndo());
+        actionRedo_->setEnabled(document_->history()->canRedo());
     }
 }
 
@@ -255,6 +301,11 @@ void MainWindow::setupWidgets_()
 
 void MainWindow::setupActions_()
 {
+    actionNew_ = new QAction(tr("&New"), this);
+    actionNew_->setStatusTip(tr("Open a new document."));
+    //actionNew_->setShortcut(QKeySequence::New);
+    connect(actionNew_, SIGNAL(triggered()), this, SLOT(new_()));
+
     actionOpen_ = new QAction(tr("&Open"), this);
     actionOpen_->setStatusTip(tr("Open an existing document."));
     actionOpen_->setShortcut(QKeySequence::Open);
@@ -301,6 +352,7 @@ void MainWindow::setupMenus_()
     MenuBar* menuBar_ = new MenuBar();
 
     menuFile_ = new QMenu(tr("&File"));
+    menuFile_->addAction(actionNew_);
     menuFile_->addAction(actionOpen_);
     menuFile_->addAction(actionSave_);
     menuFile_->addAction(actionSaveAs_);

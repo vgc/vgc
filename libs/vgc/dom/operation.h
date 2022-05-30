@@ -256,7 +256,6 @@ private:
 using OperationIndex = UInt32;
 OperationIndex genOperationIndex();
 
-
 class VGC_DOM_API Diff {
 public:
     const core::Array<Node*>& createdNodes() const {
@@ -271,8 +270,8 @@ public:
         return reparentedNodes_;
     }
 
-    const std::set<Node*>& childrenChangedNodes() const {
-        return childrenChangedNodes_;
+    const std::set<Node*>& childrenReorderedNodes() const {
+        return childrenReorderedNodes_;
     }
 
     const std::unordered_map<Element*, std::set<core::StringId>>&
@@ -287,7 +286,7 @@ private:
     core::Array<Node*> removedNodes_;
 
     std::set<Node*> reparentedNodes_;
-    std::set<Node*> childrenChangedNodes_;
+    std::set<Node*> childrenReorderedNodes_;
 
     std::unordered_map<Element*, std::set<core::StringId>>
         modifiedElements_;
@@ -298,7 +297,7 @@ private:
         createdNodes_.clear();
         removedNodes_.clear();
         reparentedNodes_.clear();
-        childrenChangedNodes_.clear();
+        childrenReorderedNodes_.clear();
         modifiedElements_.clear();
     }
 
@@ -307,7 +306,7 @@ private:
             createdNodes_.empty() &&
             removedNodes_.empty() &&
             reparentedNodes_.empty() &&
-            childrenChangedNodes_.empty() &&
+            childrenReorderedNodes_.empty() &&
             modifiedElements_.empty());
     }
 };

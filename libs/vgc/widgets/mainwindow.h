@@ -22,6 +22,7 @@
 #include <QMenu>
 #include <QString>
 
+#include <vgc/core/object.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
 #include <vgc/widgets/api.h>
@@ -32,8 +33,7 @@
 #include <vgc/widgets/performancemonitor.h>
 #include <vgc/widgets/toolbar.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 class VGC_WIDGETS_API MainWindow : public QMainWindow
 {
@@ -58,6 +58,7 @@ private Q_SLOTS:
     void saveAs();
     void undo();
     void redo();
+    void new_();
 
 private:
     dom::DocumentPtr document_;
@@ -76,6 +77,7 @@ private:
     Panel* performanceMonitorPanel_;
 
     void setupActions_();
+    QAction* actionNew_;
     QAction* actionOpen_;
     QAction* actionSave_;
     QAction* actionSaveAs_;
@@ -96,9 +98,11 @@ private:
     void open_();
     void save_();
     QString filename_;
+
+    void updateUndoRedoActionState_();
+    core::ConnectionHandle headChangedConnectionHandle_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_MAINWINDOW_H
