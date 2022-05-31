@@ -350,7 +350,7 @@ public:
 
     bool emitPendingDiff();
 
-    VGC_SIGNAL(documentChanged, (const Diff&, diff))
+    VGC_SIGNAL(changed, (const Diff&, diff))
 
     VGC_SLOT(onHistoryHeadChanged, onHistoryHeadChanged_)
 

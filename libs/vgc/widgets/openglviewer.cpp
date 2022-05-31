@@ -133,10 +133,6 @@ void OpenGLViewer::init()
 OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     QOpenGLWidget(parent),
     document_(document),
-    isSketching_(false),
-    isPanning_(false),
-    isRotating_(false),
-    isZooming_(false),
     mousePressed_(false),
     tabletPressed_(false),
     polygonMode_(2),
@@ -156,10 +152,10 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     // which cursor should be drawn in the viewer.
     setCursor(crossCursor());
 
-    // XXX todo: safe impl
-    document_->history()->headChanged().connect([this](){
-        this->update();
-    });
+    documentChangedConnectionHandle_ = document_->changed().connect(
+        [this](const dom::Diff& diff) {
+            this->onDocumentChanged_(diff);
+        });
 }
 
 void OpenGLViewer::setDocument(dom::Document* document)
@@ -168,12 +164,15 @@ void OpenGLViewer::setDocument(dom::Document* document)
     cleanupGL();
     doneCurrent();
 
-    document_ = document;
+    if (documentChangedConnectionHandle_) {
+        document_->disconnect(documentChangedConnectionHandle_);
+    }
 
-    // XXX todo: safe impl
-    document_->history()->headChanged().connect([this](){
-        this->update();
-    });
+    document_ = document;
+    documentChangedConnectionHandle_ = document_->changed().connect(
+        [this](const dom::Diff& diff) {
+            this->onDocumentChanged_(diff);
+        });
 
     update();
 }
@@ -452,10 +451,7 @@ void OpenGLViewer::paintGL()
 
     OpenGLFunctions* f = openGLFunctions();
 
-    // Transfer to GPU any data out-of-sync with CPU
-    updateTask_.start();
     updateGLResources_();
-    updateTask_.stop();
 
     drawTask_.start();
 
@@ -472,7 +468,7 @@ void OpenGLViewer::paintGL()
     // Draw triangles
     if (polygonMode_ > 0) {
         f->glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
-        for (CurveGLResources& r: curveGLResources_) {
+        for (CurveGLResources& r : curveGLResources_) {
             shaderProgram_.setUniformValue(
                         colorLoc_,
                         static_cast<float>(r.trianglesColor.r()),
@@ -489,7 +485,7 @@ void OpenGLViewer::paintGL()
     if (showControlPoints_) {
         shaderProgram_.setUniformValue(colorLoc_, 1.0f, 0.0f, 0.0f, 1.0f);
         f->glPointSize(10.0);
-        for (CurveGLResources& r: curveGLResources_) {
+        for (CurveGLResources& r : curveGLResources_) {
             r.vaoControlPoints->bind();
             f->glDrawArrays(GL_POINTS, 0, r.numVerticesControlPoints);
             r.vaoControlPoints->release();
@@ -509,140 +505,253 @@ void OpenGLViewer::paintGL()
 
 void OpenGLViewer::cleanupGL()
 {
-    Int nCurvesInGpu = curveGLResources_.length();
-    for (Int i = nCurvesInGpu - 1; i >= 0; --i) {
-        destroyCurveGLResources_(i);
+    for (CurveGLResources& r : curveGLResources_) {
+        destroyCurveGLResources_(r);
     }
+    curveGLResources_.clear();
+    curveGLResourcesMap_.clear();
+}
+
+void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff)
+{
+    for (dom::Node* node : diff.removedNodes()) {
+        dom::Element* e = dom::Element::cast(node);
+        if (!e) {
+            continue;
+        }
+        auto it = curveGLResourcesMap_.find(e);
+        if (it != curveGLResourcesMap_.end()) {
+            removedGLResources_.splice(removedGLResources_.begin(), curveGLResources_, it->second);
+            curveGLResourcesMap_.erase(it);
+        }
+    }
+
+    bool needsSort = false;
+
+    dom::Element* root = document_->rootElement();
+    for (dom::Node* node : diff.reparentedNodes()) {
+        dom::Element* e = dom::Element::cast(node);
+        if (!e) {
+            continue;
+        }
+        if (e->parent() == root) {
+            needsSort = true;
+            auto it = appendCurveGLResources_(e);
+            toUpdate_.insert(it);
+        }
+        else {
+            auto it = curveGLResourcesMap_.find(e);
+            if (it != curveGLResourcesMap_.end()) {
+                removedGLResources_.splice(removedGLResources_.begin(), curveGLResources_, it->second);
+                curveGLResourcesMap_.erase(it);
+            }
+        }
+    }
+
+    for (dom::Node* node : diff.createdNodes()) {
+        dom::Element* e = dom::Element::cast(node);
+        if (!e) {
+            continue;
+        }
+        if (e->parent() == root) {
+            needsSort = true;
+            auto it = appendCurveGLResources_(e);
+            toUpdate_.insert(it);
+        }
+    }
+
+    if (!needsSort) {
+        for (dom::Node* node : diff.childrenReorderedNodes()) {
+            if (node == root) {
+                needsSort = true;
+                break;
+            }
+        }
+    }
+
+    if (needsSort) {
+        auto insert = curveGLResources_.begin();
+        for (dom::Node* node : root->children()) {
+            dom::Element* e = dom::Element::cast(node);
+            if (!e) {
+                continue;
+            }
+            auto it = curveGLResourcesMap_[e]; // works unless there is a bug
+            if (insert == it) {
+                ++insert;
+            }
+            else {
+                curveGLResources_.splice(insert, curveGLResources_, it);
+            }
+        }
+    }
+
+    // XXX it's possible that update is done twice if the element is both modified and reparented..
+
+    const auto& modifiedElements = diff.modifiedElements();
+    for (CurveGLResourcesIterator it = curveGLResources_.begin(); it != curveGLResources_.end(); ++it) {
+        auto it2 = modifiedElements.find(it->element);
+        if (it2 != modifiedElements.end()) {
+            toUpdate_.insert(it);
+        }
+    }
+
+    // ask for redraw
+    update();
 }
 
 void OpenGLViewer::updateGLResources_()
 {
-    // Create new GPU resources for new curves
-    // XXX CLEAN + don't assume all elements are paths
-    // + make constant-time complexity
-    dom::Element* root = document_->rootElement();
-    Int nCurvesInCpu = 0;
-    for (dom::Node* node : root->children()) {
-        if (dom::Element::cast(node)) {
-            ++nCurvesInCpu;
-        }
-    }
-    paths_.resize(nCurvesInCpu);
-    Int idx = 0;
-    for (dom::Node* node : root->children()) {
-        if (dom::Element* path = dom::Element::cast(node)) {
-            paths_[idx] = path;
-            ++idx;
-        }
-    }
-    Int nCurvesInGpu = curveGLResources_.length();
-    for (Int i = nCurvesInGpu; i < nCurvesInCpu; ++i) {
-        createCurveGLResources_(i);
-    }
+    updateTask_.start();
 
-    // Destroy GPU resources for deleted curves
-    // XXX why the decreasing loop index?
-    for (Int i = nCurvesInGpu - 1; i >= nCurvesInCpu; --i) {
-        destroyCurveGLResources_(i);
+    for (CurveGLResources& r : removedGLResources_) {
+        destroyCurveGLResources_(r);
     }
+    removedGLResources_.clear();
 
-    // Now the number of curve in GPU and CPU is the same
-    nCurvesInGpu = nCurvesInCpu;
-
-    // Retesselate all existing curves. This is overkill but safe.
-    //
-    // XXX TODO Avoid retesselating unchanged curves by querying the scene
-    // about which curves have changed.
-    //
-    bool dontKnowWhichCurvesHaveChanged = true;
     bool tesselationModeChanged = requestedTesselationMode_ != currentTesselationMode_;
-    if (dontKnowWhichCurvesHaveChanged || tesselationModeChanged) {
+    if (tesselationModeChanged) {
         currentTesselationMode_ = requestedTesselationMode_;
-        for (Int i = 0; i < nCurvesInGpu; ++i) {
-            updateCurveGLResources_(i);
+        for (CurveGLResources& r : curveGLResources_) {
+            updateCurveGLResources_(r);
         }
     }
+    else {
+        for (auto it : toUpdate_) {
+            updateCurveGLResources_(*it);
+        }
+    }
+    toUpdate_.clear();
+
+    updateTask_.stop();
 }
 
-void OpenGLViewer::createCurveGLResources_(Int)
+OpenGLViewer::CurveGLResourcesIterator OpenGLViewer::appendCurveGLResources_(dom::Element* element)
 {
-    curveGLResources_.append(CurveGLResources());
-    CurveGLResources& r = curveGLResources_.last();
-
-    OpenGLFunctions* f = openGLFunctions();
-    GLuint vertexLoc = static_cast<GLuint>(vertexLoc_);
-
-    // Create VBO/VAO for rendering triangles
-    r.vboTriangles.create();
-    r.vaoTriangles = new QOpenGLVertexArrayObject();
-    r.vaoTriangles->create();
-    GLsizei stride  = sizeof(geometry::Vec2f);
-    GLvoid* pointer = nullptr;
-    r.vaoTriangles->bind();
-    r.vboTriangles.bind();
-    f->glEnableVertexAttribArray(vertexLoc);
-    f->glVertexAttribPointer(
-                vertexLoc, // index of the generic vertex attribute
-                2,         // number of components (x and y components)
-                GL_FLOAT,  // type of each component
-                GL_FALSE,  // should it be normalized
-                stride,    // byte offset between consecutive vertex attributes
-                pointer);  // byte offset between the first attribute and the pointer given to allocate()
-    r.vboTriangles.release();
-    r.vaoTriangles->release();
-
-    // Setup VBO/VAO for rendering control points
-    r.vboControlPoints.create();
-    r.vaoControlPoints = new QOpenGLVertexArrayObject();
-    r.vaoControlPoints->create();
-    r.vaoControlPoints->bind();
-    r.vboControlPoints.bind();
-    f->glEnableVertexAttribArray(vertexLoc);
-    f->glVertexAttribPointer(
-                vertexLoc, // index of the generic vertex attribute
-                2,         // number of components (x and y components)
-                GL_FLOAT,  // type of each component
-                GL_FALSE,  // should it be normalized
-                stride,    // byte offset between consecutive vertex attributes
-                pointer);  // byte offset between the first attribute and the pointer given to allocate()
-    r.vboControlPoints.release();
-    r.vaoControlPoints->release();
+    auto it = curveGLResources_.emplace(curveGLResources_.end(), CurveGLResources(element));
+    curveGLResourcesMap_.emplace(element, it);
+    return it;
 }
 
-void OpenGLViewer::updateCurveGLResources_(Int i)
+void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
 {
-    assert(i >= 0); // TODO convert all asserts to VGC_CORE_ASSERT
-    assert(i < curveGLResources_.length());
-    //assert(i < scene_->curves().size());
-    CurveGLResources& r = curveGLResources_[i];
+    if (!r.inited_) {
+        OpenGLFunctions* f = openGLFunctions();
+        GLuint vertexLoc = static_cast<GLuint>(vertexLoc_);
 
-    // Convert the dom::Path to a geometry::Curve
-    // XXX move this logic to dom::Path
-    dom::Element* path = paths_[i];
+        // Create VBO/VAO for rendering triangles
+        r.vboTriangles.create();
+        r.vaoTriangles = new QOpenGLVertexArrayObject();
+        r.vaoTriangles->create();
+        GLsizei stride  = sizeof(geometry::Vec2f);
+        GLvoid* pointer = nullptr;
+        r.vaoTriangles->bind();
+        r.vboTriangles.bind();
+        f->glEnableVertexAttribArray(vertexLoc);
+        f->glVertexAttribPointer(
+            vertexLoc, // index of the generic vertex attribute
+            2,         // number of components (x and y components)
+            GL_FLOAT,  // type of each component
+            GL_FALSE,  // should it be normalized
+            stride,    // byte offset between consecutive vertex attributes
+            pointer);  // byte offset between the first attribute and the pointer given to allocate()
+        r.vboTriangles.release();
+        r.vaoTriangles->release();
+
+        // Setup VBO/VAO for rendering control points
+        r.vboControlPoints.create();
+        r.vaoControlPoints = new QOpenGLVertexArrayObject();
+        r.vaoControlPoints->create();
+        r.vaoControlPoints->bind();
+        r.vboControlPoints.bind();
+        f->glEnableVertexAttribArray(vertexLoc);
+        f->glVertexAttribPointer(
+            vertexLoc, // index of the generic vertex attribute
+            2,         // number of components (x and y components)
+            GL_FLOAT,  // type of each component
+            GL_FALSE,  // should it be normalized
+            stride,    // byte offset between consecutive vertex attributes
+            pointer);  // byte offset between the first attribute and the pointer given to allocate()
+        r.vboControlPoints.release();
+        r.vaoControlPoints->release();
+        r.inited_ = true;
+    }
+
+    geometry::Vec2dArray triangulation;
+    geometry::Vec2fArray glVerticesControlPoints;
+
+    dom::Element* path = r.element;
     geometry::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
     core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
     core::Color color = path->getAttribute(COLOR).getColor();
-    VGC_CORE_ASSERT(positions.size() == widths.size());
-    Int nControlPoints = positions.length();
-    geometry::Curve curve;
-    curve.setColor(color);
-    for (Int j = 0; j < nControlPoints; ++j) {
-        curve.addControlPoint(positions[j], widths[j]);
-    }
 
-    // Triangulate the curve
-    double maxAngle = 0.05;
-    int minQuads = 1;
-    int maxQuads = 64;
-    if (requestedTesselationMode_ == 0) {
-        maxQuads = 1;
+    if (1) {
+        // Convert the dom::Path to a geometry::Curve
+        // XXX move this logic to dom::Path
+
+        VGC_CORE_ASSERT(positions.size() == widths.size());
+        Int nControlPoints = positions.length();
+        geometry::Curve curve;
+        curve.setColor(color);
+        for (Int j = 0; j < nControlPoints; ++j) {
+            curve.addControlPoint(positions[j], widths[j]);
+        }
+
+        // Triangulate the curve
+        double maxAngle = 0.05;
+        int minQuads = 1;
+        int maxQuads = 64;
+        if (requestedTesselationMode_ == 0) {
+            maxQuads = 1;
+        }
+        else if (requestedTesselationMode_ == 1) {
+            minQuads = 10;
+            maxQuads = 10;
+        }
+        triangulation = curve.triangulate(maxAngle, minQuads, maxQuads);
+
+        const core::DoubleArray& d = curve.positionData();
+        Int ncp = core::int_cast<GLsizei>(d.length() / 2);
+        for (Int j = 0; j < ncp; ++j) {
+            glVerticesControlPoints.append(geometry::Vec2f(static_cast<float>(d[2*j]),
+                static_cast<float>(d[2*j+1])));
+        }
     }
-    else if (requestedTesselationMode_ == 1) {
-        minQuads = 10;
-        maxQuads = 10;
+    else { // simplest impl for perf comparison
+
+        Int ncp = positions.length();
+
+        using geometry::Vec2d;
+
+        // simple segments !
+        triangulation.resizeNoInit(4 * (positions.length() - 1));
+        Vec2d prevPoint = positions[0];
+        double prevWidth = widths[0];
+        for (Int i = 1; i < positions.length(); ++i) {
+            Vec2d nextPoint = positions[i];
+            double nextWidth = widths[i];
+
+            Vec2d seg = nextPoint - prevPoint;
+            Vec2d delta = seg.orthogonalized().normalized();
+
+            Int j = (i - 1) * 4;
+            triangulation[j + 0] = prevPoint - delta * prevWidth;
+            triangulation[j + 1] = prevPoint + delta * prevWidth;
+            triangulation[j + 2] = nextPoint - delta * nextWidth;
+            triangulation[j + 3] = nextPoint + delta * nextWidth;
+
+            prevPoint = nextPoint;
+            prevWidth = nextWidth;
+        }
+
+        for (Int j = 0; j < ncp; ++j) {
+            const Vec2d& v = positions[j];
+            glVerticesControlPoints.append(
+                geometry::Vec2f(
+                    static_cast<float>(v.x()),
+                    static_cast<float>(v.y())));
+        }
     }
-    geometry::Vec2dArray triangulation =
-            curve.triangulate(maxAngle, minQuads, maxQuads);
 
     // Convert triangles to single-precision and transfer to GPU
     //
@@ -663,27 +772,18 @@ void OpenGLViewer::updateCurveGLResources_(Int i)
     r.vboTriangles.release();
 
     // Transfer control points vertex data to GPU
-    geometry::Vec2fArray glVerticesControlPoints;
-    const core::DoubleArray& d = curve.positionData();
-    r.numVerticesControlPoints = core::int_cast<GLsizei>(d.length() / 2);
-    for (Int j = 0; j < r.numVerticesControlPoints; ++j) {
-        glVerticesControlPoints.append(geometry::Vec2f(static_cast<float>(d[2*j]),
-                                                   static_cast<float>(d[2*j+1])));
-    }
+    r.numVerticesControlPoints = glVerticesControlPoints.length();
     r.vboControlPoints.bind();
     count = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(geometry::Vec2f));
     r.vboControlPoints.allocate(glVerticesControlPoints.data(), count);
     r.vboControlPoints.release();
 
     // Set color
-    r.trianglesColor = curve.color();
+    r.trianglesColor = color;
 }
 
-void OpenGLViewer::destroyCurveGLResources_(Int)
+void OpenGLViewer::destroyCurveGLResources_(CurveGLResources& r)
 {
-    assert(curveGLResources_.size() > 0);
-    CurveGLResources& r = curveGLResources_.last();
-
     r.vaoTriangles->destroy();
     delete r.vaoTriangles;
     r.vboTriangles.destroy();
@@ -691,8 +791,6 @@ void OpenGLViewer::destroyCurveGLResources_(Int)
     r.vaoControlPoints->destroy();
     delete r.vaoControlPoints;
     r.vboControlPoints.destroy();
-
-    curveGLResources_.removeLast();
 }
 
 void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
@@ -702,21 +800,11 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
     drawCurveUndoGroup_ = document()->history()->createUndoGroup(Draw_Curve);
 
     drawCurveUndoGroup_->undone().connect(
-        [this](core::UndoGroup*, bool){
+        [this](core::UndoGroup*, bool /*isAbort*/) {
+            // isAbort should be true since we have no sub-group
             isSketching_ = false;
             drawCurveUndoGroup_ = nullptr;
         });
-
-    drawCurveUndoGroup_->redone().connect(
-        [this](core::UndoGroup* ug){
-            if (ug->isOpen()) {
-                isSketching_ = true;
-                drawCurveUndoGroup_ = ug;
-            }
-        });
-
-    static core::StringId Create_Curve("Create Curve");
-    core::UndoGroup* createCurveNodeUndoGroup = document()->history()->createUndoGroup(Create_Curve);
 
     dom::Element* root = document_->rootElement();
     dom::Element* path = dom::Element::create(root, PATH);
@@ -724,8 +812,6 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
     path->setAttribute(POSITIONS, geometry::Vec2dArray());
     path->setAttribute(WIDTHS, core::DoubleArray());
     path->setAttribute(COLOR, currentColor_);
-
-    createCurveNodeUndoGroup->close();
 
     continueCurve_(p, width);
 }
@@ -735,7 +821,7 @@ void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
     // XXX CLEAN
 
     dom::Element* root = document_->rootElement();
-    dom::Element* path = dom::Element::cast(root->lastChild()); // I really need the casted version like lastChildElement()
+    dom::Element* path = root->lastChildElement();
 
     if (path) {
         // Should I make this more efficient? If so, we have a few choices:
@@ -752,15 +838,10 @@ void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
         positions.append(p);
         widths.append(width);
 
-        static core::StringId Add_Point("Add Point");
-        core::UndoGroup* addPointUndoGroup = document()->history()->createUndoGroup(Add_Point);
+        path->setAttribute(POSITIONS, std::move(positions));
+        path->setAttribute(WIDTHS, std::move(widths));
 
-        path->setAttribute(POSITIONS, positions);
-        path->setAttribute(WIDTHS, widths);
-
-        addPointUndoGroup->close();
-
-        update();
+        document()->emitPendingDiff();
     }
 }
 

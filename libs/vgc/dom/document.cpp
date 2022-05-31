@@ -897,7 +897,7 @@ bool Document::emitPendingDiff()
 
         // XXX todo: emit node signals in here ?
 
-        documentChanged().emit(pendingDiff_);
+        changed().emit(pendingDiff_);
         pendingDiff_.reset();
         return true;
     }

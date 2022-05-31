@@ -175,6 +175,10 @@ protected:
 public:
     static VGC_CORE_API ConnectionHandle generate();
 
+    constexpr void invalidate() {
+        *this = invalid;
+    }
+
     constexpr operator bool() const {
         return *this != invalid;
     }

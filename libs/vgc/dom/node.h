@@ -158,8 +158,8 @@ public:
     ///
     void remove();
 
-    /// Returns the parent Node of this Node. This is always nullptr for
-    /// Document nodes, and always a non-null valid Node otherwise.
+    /// Returns the parent `Node` of this `Node`. This is always nullptr for
+    /// `Document` nodes, and always a non-null valid `Node` otherwise.
     ///
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
@@ -168,8 +168,8 @@ public:
         return static_cast<Node*>(parentObject());
     }
 
-    /// Returns the first child Node of this Node. Returns nullptr if this Node
-    /// has no children.
+    /// Returns the first child `Node` of this `Node`. Returns nullptr if this
+    /// `Node` has no child `Node`.
     ///
     /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
@@ -178,8 +178,8 @@ public:
         return static_cast<Node*>(firstChildObject());
     }
 
-    /// Returns the last child Node of this Node. Returns nullptr if this Node
-    /// has no children.
+    /// Returns the last child `Node` of this `Node`. Returns nullptr if this
+    /// `Node` has no child `Node`.
     ///
     /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
     ///
@@ -188,8 +188,9 @@ public:
         return static_cast<Node*>(lastChildObject());
     }
 
-    /// Returns the previous sibling of this Node. Returns nullptr if this Node
-    /// is a Document node, or if it is the first child of its parent.
+    /// Returns the previous sibling of this `Node`. Returns nullptr if this
+    /// `Node` is a `Document` node, or if this `Node` is the first child of its
+    /// parent.
     ///
     /// \sa nextSibling(), parent(), firstChild(), and lastChild().
     ///
@@ -198,8 +199,8 @@ public:
         return static_cast<Node*>(previousSiblingObject());
     }
 
-    /// Returns the next sibling of this Node. Returns nullptr if this Node
-    /// is a Document node, or if it is the last child of its parent.
+    /// Returns the next sibling of this `Node`. Returns nullptr if this `Node`
+    /// is a `Document` node, or if this `Node` is the last child of its parent.
     ///
     /// \sa previousSibling(), parent(), firstChild(), and lastChild().
     ///
@@ -208,7 +209,7 @@ public:
         return static_cast<Node*>(nextSiblingObject());
     }
 
-    /// Returns all children of this Node as an iterable range.
+    /// Returns all children of this `Node` as an iterable range.
     ///
     /// Example:
     ///

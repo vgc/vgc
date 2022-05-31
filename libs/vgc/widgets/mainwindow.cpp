@@ -297,6 +297,7 @@ void MainWindow::setupWidgets_()
 
     // Set central widget
     setCentralWidget(centralWidget_);
+    //setCentralWidget(viewer_);
 }
 
 void MainWindow::setupActions_()

@@ -120,6 +120,46 @@ public:
     ///
     void clearAttribute(core::StringId name);
 
+    /// Returns the first child `Element` of this `Element`.
+    /// Returns nullptr if this `Element` has no child `Element`.
+    ///
+    /// \sa lastChildElement(), previousSiblingElement(), and nextSiblingElement().
+    ///
+    Element* firstChildElement() const
+    {
+        return static_cast<Element*>(firstChildObject());
+    }
+
+    /// Returns the last child `Element` of this `Element`.
+    /// Returns nullptr if this `Element` has no child `Element`.
+    ///
+    /// \sa firstChildElement(), previousSiblingElement(), and nextSiblingElement().
+    ///
+    Element* lastChildElement() const
+    {
+        return static_cast<Element*>(lastChildObject());
+    }
+
+    /// Returns the previous sibling of this `Element`.
+    /// Returns nullptr if this `Element` is the last child `Element` of its parent.
+    ///
+    /// \sa nextSiblingElement(), firstChildElement(), and lastChildElement().
+    ///
+    Element* previousSiblingElement() const
+    {
+        return static_cast<Element*>(previousSiblingObject());
+    }
+
+    /// Returns the next sibling of this `Element`.
+    /// Returns nullptr if this `Element` is the last child `Element` of its parent.
+    ///
+    /// \sa previousSiblingElement(), firstChildElement(), and lastChildElement().
+    ///
+    Element* nextSiblingElement() const
+    {
+        return static_cast<Element*>(nextSiblingObject());
+    }
+
 private:
     // Operations
     friend class CreateElementOperation;
