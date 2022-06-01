@@ -1,6 +1,7 @@
 vgc_add_library(graphics
     THIRD_DEPENDENCIES
-        Qt5::Core
+        ${VGC_QT_CORE}
+        ${VGC_QT_OPENGL}
         Freetype::Freetype
         harfbuzz::harfbuzz
 

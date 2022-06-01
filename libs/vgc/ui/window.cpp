@@ -114,7 +114,11 @@ namespace {
 
 ui::MouseEventPtr convertEvent(QMouseEvent* event)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QPointF& p = event->localPos();
+#else
+    const QPointF& p = event->position();
+#endif
     return ui::MouseEvent::create(internal::fromQtf(p));
 }
 

@@ -19,6 +19,9 @@
 #include <cassert>
 #include <cmath>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QOpenGLVersionFunctionsFactory>
+#endif
 #include <QBitmap>
 #include <QMouseEvent>
 #include <QPainter>
@@ -415,7 +418,11 @@ void OpenGLViewer::keyPressEvent(QKeyEvent* event)
 
 OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const
 {
-    return context()->versionFunctions<OpenGLFunctions>();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    return context()->versionFunctions<QOpenGLFunctions_3_2_Core>();
+#else
+    return QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_2_Core>(context());
+#endif
 }
 
 void OpenGLViewer::initializeGL()

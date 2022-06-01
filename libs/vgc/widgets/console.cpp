@@ -538,7 +538,11 @@ void Console::contextMenuEvent(QContextMenuEvent* e)
 
 void Console::dropEvent(QDropEvent* e)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QTextCursor cursor = cursorForPosition(e->pos());
+#else
+    QTextCursor cursor = cursorForPosition(e->position().toPoint());
+#endif
     beginReadOnlyProtection_(cursor);
 
     QPlainTextEdit::dropEvent(e);

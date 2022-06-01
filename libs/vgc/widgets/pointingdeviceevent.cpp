@@ -28,7 +28,11 @@ PointingDeviceEvent::PointingDeviceEvent(QMouseEvent* event) :
     timestamp_(event->timestamp()),
     button_(event->button()),
     buttons_(event->buttons()),
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     pos_(fromQtd(event->localPos())),
+#else
+    pos_(fromQtd(event->position())),
+#endif
     hasPressure_(false),
     pressure_(0.0)
 {
@@ -44,7 +48,11 @@ PointingDeviceEvent::PointingDeviceEvent(QTabletEvent* event) :
     timestamp_(event->timestamp()),
     button_(event->button()),
     buttons_(event->buttons()),
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     pos_(fromQtd(event->posF())),
+#else
+    pos_(fromQtd(event->position())),
+#endif
     hasPressure_(true),
     pressure_(event->pressure())
 {
