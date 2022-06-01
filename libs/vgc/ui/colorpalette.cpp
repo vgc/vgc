@@ -337,6 +337,7 @@ void ColorPalette::onPaintDestroy(graphics::Engine*)
 bool ColorPalette::onMouseMove(MouseEvent* event)
 {
     // Determine relevant selector
+
     const geometry::Vec2f& p = event->pos();
     SelectorType selector = scrubbedSelector_;
     if (selector == SelectorType::None) {

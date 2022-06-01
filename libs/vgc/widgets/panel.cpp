@@ -40,7 +40,7 @@ Panel::Panel(const QString& title, QWidget* widget, QWidget* parent) :
     toggleViewAction_ = new ToggleViewAction(title, this, this);
 
     QVBoxLayout* layout = new  QVBoxLayout();
-    layout->setMargin(0);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     layout->addWidget(titleBar_);
     layout->addWidget(widget_);

@@ -37,7 +37,7 @@ PanelTitleBar::PanelTitleBar(const QString& title, QWidget* parent) :
     title_ = new QLabel(title);
     QHBoxLayout* layout = new QHBoxLayout();
     layout->setSpacing(0);
-    layout->setMargin(0);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(title_);
     setLayout(layout);
 }

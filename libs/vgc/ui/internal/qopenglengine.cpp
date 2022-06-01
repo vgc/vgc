@@ -16,6 +16,10 @@
 
 #include <vgc/ui/internal/qopenglengine.h>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QOpenGLVersionFunctionsFactory>
+#endif
+
 #include <vgc/core/exceptions.h>
 #include <vgc/core/paths.h>
 
@@ -364,7 +368,13 @@ void QOpenglEngine::setupContext() {
     shaderProgram_.release();
 
     // Initialize engine
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     api_ = ctx_->versionFunctions<QOpenGLFunctions_3_2_Core>();
+#else
+    api_ = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_2_Core>(ctx_);
+#endif
+    //
+
     api_->initializeOpenGLFunctions();
 
     // Initialize widget for painting.

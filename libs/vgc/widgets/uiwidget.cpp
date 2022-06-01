@@ -81,7 +81,11 @@ namespace {
 
 ui::MouseEventPtr convertEvent(QMouseEvent* event)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QPointF& p = event->localPos();
+#else
+    const QPointF& p = event->position();
+#endif
     return ui::MouseEvent::create(fromQtf(p));
 }
 
@@ -105,7 +109,11 @@ void UiWidget::mouseReleaseEvent(QMouseEvent *event)
     event->setAccepted(widget_->onMouseRelease(e.get()));
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 void UiWidget::enterEvent(QEvent* event)
+#else
+void UiWidget::enterEvent(QEnterEvent* event)
+#endif
 {
     event->setAccepted(widget_->onMouseEnter());
 }

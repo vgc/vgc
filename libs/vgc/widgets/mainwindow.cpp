@@ -319,7 +319,7 @@ void MainWindow::setupActions_()
 
     actionSaveAs_ = new QAction(tr("Save As..."), this);
     actionSaveAs_->setStatusTip(tr("Save the current document under a new name."));
-    actionSaveAs_->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_S));
+    actionSaveAs_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
     connect(actionSaveAs_, SIGNAL(triggered()), this, SLOT(saveAs()));
     // Note: we don't use QKeySequence::SaveAs because it is undefined on
     // Windows and KDE. XXX TODO: Have a proper Shortcut manager. Might be
@@ -337,14 +337,14 @@ void MainWindow::setupActions_()
 
     actionRedo_ = new QAction(tr("&Redo"), this);
     actionRedo_->setStatusTip(tr("Redo the undone action."));
-    actionRedo_->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Z));
+    actionRedo_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Z));
     connect(actionRedo_, SIGNAL(triggered()), this, SLOT(redo()));
 
     actionTogglePerformanceMonitorView_ = performanceMonitorPanel_->toggleViewAction();
-    actionTogglePerformanceMonitorView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_M));
+    actionTogglePerformanceMonitorView_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
 
     actionToggleConsoleView_ = centralWidget_->consoleToggleViewAction();
-    actionToggleConsoleView_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_P));
+    actionToggleConsoleView_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
 }
 
 

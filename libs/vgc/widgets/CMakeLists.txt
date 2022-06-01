@@ -1,6 +1,7 @@
 vgc_add_library(widgets
     THIRD_DEPENDENCIES
-        Qt5::Widgets
+        ${VGC_QT_WIDGETS}
+        ${VGC_QT_OPENGLWIDGETS}
 
     VGC_DEPENDENCIES
         dom

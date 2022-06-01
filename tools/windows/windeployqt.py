@@ -107,8 +107,10 @@ if __name__ == "__main__":
     if needsToRun(configDir, appName):
         with FileLock(configDir / "windeployqt.lock"):
             print(f"Running windeployqt.exe for {appFileName}", flush=True)
+
             appFile = binDir / appFileName
-            subprocess.run([args.windeployqtExe, str(appFile)])
+            subprocess.run([args.windeployqtExe, str(appFile)] + [str(p) for p in binDir.glob("vgc*.dll")])
+
             deployDir.mkdir(parents=True, exist_ok=True)
             vcredistFileName = "vc_redist.x64.exe"
             vcredistBinFile = binDir / vcredistFileName

@@ -1,6 +1,6 @@
 vgc_add_library(ui
     THIRD_DEPENDENCIES
-        Qt5::Gui
+        ${VGC_QT_GUI}
 
     VGC_DEPENDENCIES
         graphics
