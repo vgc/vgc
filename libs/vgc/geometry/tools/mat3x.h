@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file is used to generate all the variants of this class.
-// You must manually run mat3x.py after any modification.
+// You must manually run generate.py after any modification.
 
 #ifndef VGC_GEOMETRY_MAT3X_H
 #define VGC_GEOMETRY_MAT3X_H
@@ -47,13 +47,15 @@ namespace vgc::geometry {
 class Mat3x
 {
 public:
-    /// Creates a `Mat3x` initialized to the null matrix `Mat3x(0)`.
-    ///
-    constexpr Mat3x() : Mat3x(0) {}
+    using value_type = float;
 
     /// Creates an uninitialized `Mat3x`.
     ///
     Mat3x(core::NoInit) {}
+
+    /// Creates a `Mat3x` initialized to the null matrix `Mat3x(0)`.
+    ///
+    constexpr Mat3x() : Mat3x(0) {}
 
     /// Creates a Mat3x initialized with the given arguments.
     ///

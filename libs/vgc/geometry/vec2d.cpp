@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit tools/vec2x.cpp then run tools/vec2x.py.
+// Instead, edit tools/vec2x.cpp then run tools/generate.py.
 
 #include <vgc/geometry/vec2d.h>
 

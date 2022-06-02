@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit tools/mat3x.h then run tools/mat3x.py.
+// Instead, edit tools/mat3x.h then run tools/generate.py.
 
 #ifndef VGC_GEOMETRY_MAT3F_H
 #define VGC_GEOMETRY_MAT3F_H
@@ -47,13 +47,15 @@ namespace vgc::geometry {
 class Mat3f
 {
 public:
-    /// Creates a `Mat3f` initialized to the null matrix `Mat3f(0)`.
-    ///
-    constexpr Mat3f() : Mat3f(0) {}
+    using value_type = float;
 
     /// Creates an uninitialized `Mat3f`.
     ///
     Mat3f(core::NoInit) {}
+
+    /// Creates a `Mat3f` initialized to the null matrix `Mat3f(0)`.
+    ///
+    constexpr Mat3f() : Mat3f(0) {}
 
     /// Creates a Mat3f initialized with the given arguments.
     ///

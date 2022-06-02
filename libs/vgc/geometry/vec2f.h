@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit tools/vec2x.h then run tools/vec2x.py.
+// Instead, edit tools/vec2x.h then run tools/generate.py.
 
 #ifndef VGC_GEOMETRY_VEC2F_H
 #define VGC_GEOMETRY_VEC2F_H
@@ -45,14 +45,15 @@ class Vec2f
 {
 public:
     using value_type = float;
-
-    /// Creates a `Vec2f` initialized to (0, 0).
-    ///
-    Vec2f() : data_{0, 0} {}
+    static constexpr Int dimension = 2;
 
     /// Creates an uninitialized `Vec2f`.
     ///
     Vec2f(core::NoInit) {}
+
+    /// Creates a `Vec2f` initialized to (0, 0).
+    ///
+    constexpr Vec2f() : data_{0, 0} {}
 
     /// Creates a `Vec2f` initialized with the given `x` and `y` coordinates.
     ///
@@ -60,31 +61,31 @@ public:
 
     /// Accesses the `i`-th coordinate of this `Vec2f`.
     ///
-    const float& operator[](Int i) const { return data_[i]; }
+    constexpr const float& operator[](Int i) const { return data_[i]; }
 
     /// Mutates the `i`-th coordinate of this `Vec2f`.
     ///
-    float& operator[](Int i) { return data_[i]; }
+    constexpr float& operator[](Int i) { return data_[i]; }
 
     /// Accesses the first coordinate of this `Vec2f`.
     ///
-    float x() const { return data_[0]; }
+    constexpr float x() const { return data_[0]; }
 
     /// Accesses the second coordinate of this `Vec2f`.
     ///
-    float y() const { return data_[1]; }
+    constexpr float y() const { return data_[1]; }
 
     /// Mutates the first coordinate of this `Vec2f`.
     ///
-    void setX(float x) { data_[0] = x; }
+    constexpr void setX(float x) { data_[0] = x; }
 
     /// Mutates the second coordinate of this `Vec2f`.
     ///
-    void setY(float y) { data_[1] = y; }
+    constexpr void setY(float y) { data_[1] = y; }
 
     /// Adds in-place `other` to this `Vec2f`.
     ///
-    Vec2f& operator+=(const Vec2f& other) {
+    constexpr Vec2f& operator+=(const Vec2f& other) {
         data_[0] += other[0];
         data_[1] += other[1];
         return *this;
@@ -92,19 +93,19 @@ public:
 
     /// Returns the addition of the two vectors `v1` and `v2`.
     ///
-    friend Vec2f operator+(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr Vec2f operator+(const Vec2f& v1, const Vec2f& v2) {
         return Vec2f(v1) += v2;
     }
 
     /// Returns a copy of this `Vec2f` (unary plus operator).
     ///
-    Vec2f operator+() const {
+    constexpr Vec2f operator+() const {
         return *this;
     }
 
     /// Substracts in-place `other` from this `Vec2f`.
     ///
-    Vec2f& operator-=(const Vec2f& other) {
+    constexpr Vec2f& operator-=(const Vec2f& other) {
         data_[0] -= other[0];
         data_[1] -= other[1];
         return *this;
@@ -112,19 +113,19 @@ public:
 
     /// Returns the substraction of `v1` and `v2`.
     ///
-    friend Vec2f operator-(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr Vec2f operator-(const Vec2f& v1, const Vec2f& v2) {
         return Vec2f(v1) -= v2;
     }
 
     /// Returns the opposite of this `Vec2f` (unary minus operator).
     ///
-    Vec2f operator-() const {
+    constexpr Vec2f operator-() const {
         return Vec2f(-data_[0], -data_[1]);
     }
 
     /// Multiplies in-place this `Vec2f` by the scalar `s`.
     ///
-    Vec2f& operator*=(float s) {
+    constexpr Vec2f& operator*=(float s) {
         data_[0] *= s;
         data_[1] *= s;
         return *this;
@@ -132,19 +133,19 @@ public:
 
     /// Returns the multiplication of this `Vec2f` by the scalar `s`.
     ///
-    Vec2f operator*(float s) const {
+    constexpr Vec2f operator*(float s) const {
         return Vec2f(*this) *= s;
     }
 
     /// Returns the multiplication of the scalar `s` with the vector `v`.
     ///
-    friend Vec2f operator*(float s, const Vec2f& v) {
+    friend constexpr Vec2f operator*(float s, const Vec2f& v) {
         return v * s;
     }
 
     /// Divides in-place this `Vec2f` by the scalar `s`.
     ///
-    Vec2f& operator/=(float s) {
+    constexpr Vec2f& operator/=(float s) {
         data_[0] /= s;
         data_[1] /= s;
         return *this;
@@ -152,20 +153,20 @@ public:
 
     /// Returns the division of this `Vec2f` by the scalar `s`.
     ///
-    Vec2f operator/(float s) const {
+    constexpr Vec2f operator/(float s) const {
         return Vec2f(*this) /= s;
     }
 
     /// Returns whether `v1` and `v2` are equal.
     ///
-    friend bool operator==(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr bool operator==(const Vec2f& v1, const Vec2f& v2) {
         return v1.data_[0] == v2.data_[0] &&
                v1.data_[1] == v2.data_[1];
     }
 
     /// Returns whether `v1` and `v2` are different.
     ///
-    friend bool operator!=(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr bool operator!=(const Vec2f& v1, const Vec2f& v2) {
         return v1.data_[0] != v2.data_[0] ||
                v1.data_[1] != v2.data_[1];
     }
@@ -173,7 +174,7 @@ public:
     /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
-    friend bool operator<(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr bool operator<(const Vec2f& v1, const Vec2f& v2) {
         return ( (v1.data_[0] < v2.data_[0]) ||
                (!(v2.data_[0] < v1.data_[0]) &&
                ( (v1.data_[1] < v2.data_[1]))));
@@ -182,21 +183,21 @@ public:
     /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
-    friend bool operator<=(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr bool operator<=(const Vec2f& v1, const Vec2f& v2) {
         return !(v2 < v1);
     }
 
     /// Compares the `v1` and `v2` using the lexicographic
     /// order.
     ///
-    friend bool operator>(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr bool operator>(const Vec2f& v1, const Vec2f& v2) {
         return v2 < v1;
     }
 
     /// Compares `v1` and `v2` using the lexicographic
     /// order.
     ///
-    friend bool operator>=(const Vec2f& v1, const Vec2f& v2) {
+    friend constexpr bool operator>=(const Vec2f& v1, const Vec2f& v2) {
         return !(v1 < v2);
     }
 
@@ -213,7 +214,7 @@ public:
     /// need to know which vector has greater length, you can use
     /// `v1.squaredLength() < v2.squaredLength()`.
     ///
-    float squaredLength() const {
+    constexpr float squaredLength() const {
         return data_[0] * data_[0] + data_[1] * data_[1];
     }
 
@@ -242,7 +243,7 @@ public:
     /// Rotates this Vec2f by 90° counter-clockwise, assuming a left-handed
     /// coordinate system.
     ///
-    Vec2f& orthogonalize() {
+    constexpr Vec2f& orthogonalize() {
         float tmp = data_[0];
         data_[0] = - data_[1];
         data_[1] = tmp;
@@ -252,7 +253,7 @@ public:
     /// Returns a copy of this Vec2f rotated 90° counter-clockwise, assuming a
     /// left-handed coordinate system.
     ///
-    Vec2f orthogonalized() const {
+    constexpr Vec2f orthogonalized() const {
         return Vec2f(*this).orthogonalize();
     }
 
@@ -266,7 +267,7 @@ public:
     ///
     /// \sa det(), angle()
     ///
-    float dot(const Vec2f& b) const {
+    constexpr float dot(const Vec2f& b) const {
         const Vec2f& a = *this;
         return a[0]*b[0] + a[1]*b[1];
     }
@@ -290,7 +291,7 @@ public:
     ///
     /// \sa dot(), angle()
     ///
-    float det(const Vec2f& b) const {
+    constexpr float det(const Vec2f& b) const {
         const Vec2f& a = *this;
         return a[0]*b[1] - a[1]*b[0];
     }
