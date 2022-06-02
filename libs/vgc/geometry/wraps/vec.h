@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,16 +14,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef VGC_GEOMETRY_WRAPS_VEC_H
+#define VGC_GEOMETRY_WRAPS_VEC_H
+
+#include <vgc/core/templateutil.h>
 #include <vgc/core/wraps/common.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2f.h>
 
-void wrap_curve(py::module& m);
-void wrap_mat(py::module& m);
-void wrap_rect(py::module& m);
-void wrap_vec(py::module& m);
+namespace vgc::geometry::wraps {
 
-PYBIND11_MODULE(geometry, m) {
-    wrap_curve(m);
-    wrap_mat(m);
-    wrap_rect(m);
-    wrap_vec(m);
+template<typename TVec, VGC_REQUIRES(TVec::dimension == 2)>
+TVec vecFromTuple(py::tuple t) {
+    using T = typename TVec::value_type;
+    if (t.size() != 2) {
+        throw py::value_error("Tuple length must be 2 to be convertible to a Vec2 type.");
+    }
+    return TVec(t[0].cast<T>(), t[1].cast<T>());
 }
+
+} // namespace vgc::geometry::wraps
+
+#endif // VGC_GEOMETRY_WRAPS_VEC_H

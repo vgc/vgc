@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file is used to generate all the variants of this class.
-// You must manually run mat4x.py after any modification.
+// You must manually run generate.py after any modification.
 
 #ifndef VGC_GEOMETRY_MAT4X_H
 #define VGC_GEOMETRY_MAT4X_H
@@ -49,13 +49,15 @@ namespace vgc::geometry {
 class Mat4x
 {
 public:
-    /// Creates a `Mat4x` initialized to the null matrix `Mat3x(0)`.
-    ///
-    constexpr Mat4x() : Mat4x(0) {}
+    using value_type = float;
 
     /// Creates an uninitialized `Mat4x`.
     ///
     Mat4x(core::NoInit) {}
+
+    /// Creates a `Mat4x` initialized to the null matrix `Mat3x(0)`.
+    ///
+    constexpr Mat4x() : Mat4x(0) {}
 
     /// Creates a Mat4x initialized with the given arguments.
     ///

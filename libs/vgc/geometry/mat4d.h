@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit tools/mat4x.h then run tools/mat4x.py.
+// Instead, edit tools/mat4x.h then run tools/generate.py.
 
 #ifndef VGC_GEOMETRY_MAT4D_H
 #define VGC_GEOMETRY_MAT4D_H
@@ -49,13 +49,15 @@ namespace vgc::geometry {
 class Mat4d
 {
 public:
-    /// Creates a `Mat4d` initialized to the null matrix `Mat3d(0)`.
-    ///
-    constexpr Mat4d() : Mat4d(0) {}
+    using value_type = double;
 
     /// Creates an uninitialized `Mat4d`.
     ///
     Mat4d(core::NoInit) {}
+
+    /// Creates a `Mat4d` initialized to the null matrix `Mat3d(0)`.
+    ///
+    constexpr Mat4d() : Mat4d(0) {}
 
     /// Creates a Mat4d initialized with the given arguments.
     ///

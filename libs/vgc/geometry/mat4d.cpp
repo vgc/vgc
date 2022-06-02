@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit tools/mat4x.cpp then run tools/mat4x.py.
+// Instead, edit tools/mat4x.cpp then run tools/generate.py.
 
 #include <vgc/geometry/mat4d.h>
 

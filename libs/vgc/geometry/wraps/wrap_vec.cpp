@@ -17,6 +17,7 @@
 #include <vgc/core/wraps/array.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/wraps/vec.h>
 
 namespace  {
 
@@ -39,9 +40,7 @@ void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
         .def(py::init<>())
         .def(py::init<T, T>())
         .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
-        .def(py::init([thisTypeName](py::tuple t) {
-            if (t.size() != 2) throw py::value_error("Tuple length must be 2 for conversion to " + thisTypeName);
-            return This(t[0].cast<T>(), t[1].cast<T>()); } ))
+        .def(py::init([](py::tuple t) { return vgc::geometry::wraps::vecFromTuple<This>(t); }))
         .def(py::init<This>())
 
         .def("__getitem__", [](const This& v, int i) {

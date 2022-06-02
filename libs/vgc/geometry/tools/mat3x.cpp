@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file is used to generate all the variants of this class.
-// You must manually run mat3x.py after any modification.
+// You must manually run generate.py after any modification.
 
 #include "mat3x.h"
 

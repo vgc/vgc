@@ -21,12 +21,12 @@ from pathlib import Path
 
 autogenInfoIn = '''
 // This file is used to generate all the variants of this class.
-// You must manually run {} after any modification.
+// You must manually run generate.py after any modification.
 '''
 
 autogenInfoOut = '''
 // This file was automatically generated, please do not edit directly.
-// Instead, edit tools/{} then run tools/{}.
+// Instead, edit tools/{} then run tools/generate.py.
 '''
 
 
@@ -34,8 +34,8 @@ autogenInfoOut = '''
 # desired "vec2x.h" would be replaced to "vec2f.h". And since we call it after,
 # note that we must search for "vec2f.py" in autogenInfoIn, not for "vec2x.py".
 def replaceAutogenInfo(s, typ, n, x, suffix):
-    return s.replace(autogenInfoIn.format(f"{typ}{n}{x}.py"),
-                     autogenInfoOut.format(f"{typ}{n}x{suffix}", f"{typ}{n}x.py"))
+    return s.replace(autogenInfoIn,
+                     autogenInfoOut.format(f"{typ}{n}x{suffix}"))
 
 
 def replaceTypes(s, x):
@@ -83,3 +83,14 @@ def generateFile(typ, n, xname, suffix):
 def generateVariant(typ, n, xname):
     generateFile(typ, n, xname, ".h")
     generateFile(typ, n, xname, ".cpp")
+
+
+if __name__ == "__main__":
+    generateVariant("mat", "3", "float")
+    generateVariant("mat", "3", "double")
+    generateVariant("mat", "4", "float")
+    generateVariant("mat", "4", "double")
+    generateVariant("rect", "2", "float")
+    generateVariant("rect", "2", "double")
+    generateVariant("vec", "2", "float")
+    generateVariant("vec", "2", "double")

@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // This file was automatically generated, please do not edit directly.
-// Instead, edit tools/mat3x.cpp then run tools/mat3x.py.
+// Instead, edit tools/mat3x.cpp then run tools/generate.py.
 
 #include <vgc/geometry/mat3d.h>
 
