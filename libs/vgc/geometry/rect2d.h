@@ -529,6 +529,25 @@ public:
                       (std::max)(pMax_[1], other.pMax_[1]));
     }
 
+    /// Returns the smallest rectangle that contains both this rectangle
+    /// and the given `point`.
+    ///
+    /// This is equivalent to `unitedWith(Rect2d(point, point))`.
+    ///
+    /// See `unitedWith(const Rect2d&)` for more details, in particular about
+    /// how it handles empty rectangles: uniting an empty rectangle with a
+    /// point may result in a rectangle larger than just the point.
+    ///
+    /// However, uniting `Rect2d::empty` with a point always results in the
+    /// rectangle reduced to just the point.
+    ///
+    constexpr Rect2d unitedWith(const Vec2d& point) const {
+        return Rect2d((std::min)(pMin_[0], point[0]),
+                      (std::min)(pMin_[1], point[1]),
+                      (std::max)(pMax_[0], point[0]),
+                      (std::max)(pMax_[1], point[1]));
+    }
+
     /// Unites this rectangle in-place with the `other` rectangle.
     ///
     /// See `unitedWith(other)` for more details, in particular about how it
@@ -536,6 +555,23 @@ public:
     /// of this rectangle).
     ///
     constexpr Rect2d& uniteWith(const Rect2d& other) {
+        *this = unitedWith(other);
+        return *this;
+    }
+
+    /// Returns the smallest rectangle that contains both this rectangle
+    /// and the given `point`.
+    ///
+    /// This is equivalent to `uniteWith(Rect2d(point, point))`.
+    ///
+    /// See `unitedWith(const Rect2d&)` for more details, in particular about
+    /// how it handles empty rectangles: uniting an empty rectangle with a
+    /// point may result in a rectangle larger than just the point.
+    ///
+    /// However, uniting `Rect2d::empty` with a point always results in the
+    /// rectangle reduced to just the point.
+    ///
+    constexpr Rect2d& uniteWith(const Vec2d& other) {
         *this = unitedWith(other);
         return *this;
     }
