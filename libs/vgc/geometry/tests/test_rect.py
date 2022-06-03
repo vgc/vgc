@@ -299,7 +299,7 @@ class TestRect(unittest.TestCase):
             self.assertFalse(r1 != r2)
             self.assertFalse(r1 == r3)
 
-    def testUnitedWith(self):
+    def testUnitedWithRect2(self):
         for Rect2 in Rect2Types:
             r1 = Rect2(0, 0, 1, 1)
             r2 = Rect2(2, 2, 3, 3)
@@ -328,12 +328,39 @@ class TestRect(unittest.TestCase):
             self.assertEqual(s3, Rect2(0, 0, 2, 2))
             self.assertEqual(s4, Rect2(0, 0, 2, 2))
 
-    def testUniteWith(self):
+    def testUnitedWithVec2(self):
+        for Rect2, Vec2 in Rect2Vec2Types:
+            r1 = Rect2(0, 0, 1, 1)
+            r2 = r1.unitedWith(Vec2(2, 2))
+            r3 = r1.unitedWith(Vec2(-1, 2))
+            self.assertEqual(r2, Rect2(0, 0, 2, 2))
+            self.assertEqual(r3, Rect2(-1, 0, 1, 2))
+
+            r1 = Rect2.empty
+            r2 = r1.unitedWith(Vec2(1, 2))
+            self.assertEqual(r1, Rect2.empty)
+            self.assertEqual(r2, Rect2(1, 2, 1, 2))
+            self.assertFalse(r2.isEmpty())
+
+    def testUniteWithRect2(self):
         for Rect2 in Rect2Types:
             r1 = Rect2(0, 0, 1, 1)
             r2 = Rect2(2, 2, 3, 3)
             r1.uniteWith(r2)
             self.assertEqual(r1, Rect2(0, 0, 3, 3))
+
+    def testUniteWithVec2(self):
+        for Rect2, Vec2 in Rect2Vec2Types:
+            r1 = Rect2(0, 0, 1, 1)
+            r1.uniteWith(Vec2(2, 2))
+            self.assertEqual(r1, Rect2(0, 0, 2, 2))
+            r1.uniteWith(Vec2(-1, -1))
+            self.assertEqual(r1, Rect2(-1, -1, 2, 2))
+
+            r1 = Rect2.empty
+            r1.uniteWith(Vec2(1, 2))
+            self.assertEqual(r1, Rect2(1, 2, 1, 2))
+            self.assertFalse(r1.isEmpty())
 
     def testIntersectedWith(self):
         for Rect2 in Rect2Types:
