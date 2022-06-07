@@ -24,6 +24,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/mat.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -47,7 +48,8 @@ namespace vgc::geometry {
 class Mat3d
 {
 public:
-    using value_type = double;
+    using ScalarType = double;
+    static constexpr Int dimension = 4;
 
     /// Creates an uninitialized `Mat3d`.
     ///
@@ -61,34 +63,40 @@ public:
     ///
     constexpr Mat3d(double m11, double m12, double m13,
                     double m21, double m22, double m23,
-                    double m31, double m32, double m33) :
-
-        data_{{m11, m21, m31},
-              {m12, m22, m32},
-              {m13, m23, m33}}
-    {
-
-    }
+                    double m31, double m32, double m33)
+        : data_{{m11, m21, m31},
+                {m12, m22, m32},
+                {m13, m23, m33}} {}
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat3d(0), and the identity
     /// matrix is Mat3d(1).
     ///
-    explicit constexpr Mat3d(double d) :
+    explicit constexpr Mat3d(double d)
+        : data_{{d, 0, 0},
+                {0, d, 0},
+                {0, 0, d}} {}
 
-        data_{{d, 0, 0},
-              {0, d, 0},
-              {0, 0, d}}
-    {
-
-    }
+    /// Creates a `Mat3d` from a `Mat<3, T>` by performing a `static_cast` on
+    /// each of its elements.
+    ///
+    template<typename T, VGC_REQUIRES(!std::is_same_v<Mat<3, T>, Mat3d>)>
+    constexpr explicit Mat3d(const Mat<3, T>& other)
+        : data_{{static_cast<double>(other(0, 0)),
+                 static_cast<double>(other(1, 0)),
+                 static_cast<double>(other(2, 0))},
+                {static_cast<double>(other(0, 1)),
+                 static_cast<double>(other(1, 1)),
+                 static_cast<double>(other(2, 1))},
+                {static_cast<double>(other(0, 2)),
+                 static_cast<double>(other(1, 2)),
+                 static_cast<double>(other(2, 2))}} {}
 
     /// Defines explicitely all the elements of the matrix
     ///
     Mat3d& setElements(double m11, double m12, double m13,
                        double m21, double m22, double m23,
-                       double m31, double m32, double m33)
-    {
+                       double m31, double m32, double m33) {
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32;
         data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33;
@@ -98,8 +106,7 @@ public:
     /// Sets this Mat3d to a diagonal matrix with all diagonal elements equal to
     /// the given value.
     ///
-    Mat3d& setToDiagonal(double d)
-    {
+    Mat3d& setToDiagonal(double d) {
         return setElements(d, 0, 0,
                            0, d, 0,
                            0, 0, d);
@@ -412,24 +419,41 @@ private:
 
 inline constexpr Mat3d Mat3d::identity = Mat3d(1);
 
+namespace internal {
+
+// Define Mat<3, double> as alias for Mat3d
+template<>
+struct Mat_<3, double> {
+    using type = vgc::geometry::Mat3d;
+};
+
+} // namespace internal
+
 /// Alias for vgc::core::Array<vgc::geometry::Mat3d>.
 ///
 using Mat3dArray = core::Array<Mat3d>;
+
+/// Allows to iterate over a range of `Mat3d` stored in a memory buffer of
+/// doubles, where consecutive `Mat3d` elements are separated by a given stride.
+///
+using Mat3dSpan = StrideSpan<double, Mat3d>;
+
+/// Const version of `Mat3dSpan`.
+///
+using Mat3dConstSpan = StrideSpan<const double, const Mat3d>;
 
 /// Overloads setZero(T& x).
 ///
 /// \sa vgc::core::zero<T>()
 ///
-inline void setZero(Mat3d& m)
-{
+inline void setZero(Mat3d& m) {
     m.setToZero();
 }
 
 /// Writes the given Mat3d to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const Mat3d& m)
-{
+void write(OStream& out, const Mat3d& m) {
     static const char* s = ", ";
     write(out, '[', m(0,0), s, m(0,1), s, m(0,2), s,
                     m(1,0), s, m(1,1), s, m(1,2), s,

@@ -26,7 +26,7 @@ namespace vgc::geometry::wraps {
 
 template<typename TVec, VGC_REQUIRES(TVec::dimension == 2)>
 TVec vecFromTuple(py::tuple t) {
-    using T = typename TVec::value_type;
+    using T = typename TVec::ScalarType;
     if (t.size() != 2) {
         throw py::value_error("Tuple length must be 2 to be convertible to a Vec2 type.");
     }

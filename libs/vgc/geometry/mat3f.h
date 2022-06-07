@@ -24,6 +24,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/mat.h>
 #include <vgc/geometry/vec2f.h>
 
 namespace vgc::geometry {
@@ -47,7 +48,8 @@ namespace vgc::geometry {
 class Mat3f
 {
 public:
-    using value_type = float;
+    using ScalarType = float;
+    static constexpr Int dimension = 4;
 
     /// Creates an uninitialized `Mat3f`.
     ///
@@ -61,34 +63,40 @@ public:
     ///
     constexpr Mat3f(float m11, float m12, float m13,
                     float m21, float m22, float m23,
-                    float m31, float m32, float m33) :
-
-        data_{{m11, m21, m31},
-              {m12, m22, m32},
-              {m13, m23, m33}}
-    {
-
-    }
+                    float m31, float m32, float m33)
+        : data_{{m11, m21, m31},
+                {m12, m22, m32},
+                {m13, m23, m33}} {}
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat3f(0), and the identity
     /// matrix is Mat3f(1).
     ///
-    explicit constexpr Mat3f(float d) :
+    explicit constexpr Mat3f(float d)
+        : data_{{d, 0, 0},
+                {0, d, 0},
+                {0, 0, d}} {}
 
-        data_{{d, 0, 0},
-              {0, d, 0},
-              {0, 0, d}}
-    {
-
-    }
+    /// Creates a `Mat3f` from a `Mat<3, T>` by performing a `static_cast` on
+    /// each of its elements.
+    ///
+    template<typename T, VGC_REQUIRES(!std::is_same_v<Mat<3, T>, Mat3f>)>
+    constexpr explicit Mat3f(const Mat<3, T>& other)
+        : data_{{static_cast<float>(other(0, 0)),
+                 static_cast<float>(other(1, 0)),
+                 static_cast<float>(other(2, 0))},
+                {static_cast<float>(other(0, 1)),
+                 static_cast<float>(other(1, 1)),
+                 static_cast<float>(other(2, 1))},
+                {static_cast<float>(other(0, 2)),
+                 static_cast<float>(other(1, 2)),
+                 static_cast<float>(other(2, 2))}} {}
 
     /// Defines explicitely all the elements of the matrix
     ///
     Mat3f& setElements(float m11, float m12, float m13,
                        float m21, float m22, float m23,
-                       float m31, float m32, float m33)
-    {
+                       float m31, float m32, float m33) {
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32;
         data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33;
@@ -98,8 +106,7 @@ public:
     /// Sets this Mat3f to a diagonal matrix with all diagonal elements equal to
     /// the given value.
     ///
-    Mat3f& setToDiagonal(float d)
-    {
+    Mat3f& setToDiagonal(float d) {
         return setElements(d, 0, 0,
                            0, d, 0,
                            0, 0, d);
@@ -412,24 +419,41 @@ private:
 
 inline constexpr Mat3f Mat3f::identity = Mat3f(1);
 
+namespace internal {
+
+// Define Mat<3, float> as alias for Mat3f
+template<>
+struct Mat_<3, float> {
+    using type = vgc::geometry::Mat3f;
+};
+
+} // namespace internal
+
 /// Alias for vgc::core::Array<vgc::geometry::Mat3f>.
 ///
 using Mat3fArray = core::Array<Mat3f>;
+
+/// Allows to iterate over a range of `Mat3f` stored in a memory buffer of
+/// floats, where consecutive `Mat3f` elements are separated by a given stride.
+///
+using Mat3fSpan = StrideSpan<float, Mat3f>;
+
+/// Const version of `Mat3fSpan`.
+///
+using Mat3fConstSpan = StrideSpan<const float, const Mat3f>;
 
 /// Overloads setZero(T& x).
 ///
 /// \sa vgc::core::zero<T>()
 ///
-inline void setZero(Mat3f& m)
-{
+inline void setZero(Mat3f& m) {
     m.setToZero();
 }
 
 /// Writes the given Mat3f to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const Mat3f& m)
-{
+void write(OStream& out, const Mat3f& m) {
     static const char* s = ", ";
     write(out, '[', m(0,0), s, m(0,1), s, m(0,2), s,
                     m(1,0), s, m(1,1), s, m(1,2), s,
