@@ -944,7 +944,7 @@ inline bool isNear(double a, double b, double absTol) {
 /// then a warning is issued and the value is clamped to [max, min] instead.
 ///
 template<typename T>
-const T& clamp(const T& value, const T& min, const T& max) {
+const T& clamp(const T& value, const TypeIdentity<T>& min, const TypeIdentity<T>& max) {
     if (max < min) {
         warning()
             << "Warning: vgc::core::clamp("
