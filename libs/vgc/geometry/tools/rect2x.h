@@ -70,7 +70,8 @@ namespace vgc::geometry {
 class Rect2x
 {
 public:
-    using value_type = float;
+    using ScalarType = float;
+    static constexpr Int dimension = 2;
 
     /// Creates an uninitialized `Rect2x`.
     ///

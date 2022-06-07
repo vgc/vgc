@@ -23,26 +23,10 @@
 
 namespace {
 
-// Provides matrix alias template
-template<int dim, typename T> struct Mat_ {};
-template<> struct Mat_<3, float>  { using type = vgc::geometry::Mat3f; };
-template<> struct Mat_<3, double> { using type = vgc::geometry::Mat3d; };
-template<> struct Mat_<4, float>  { using type = vgc::geometry::Mat4f; };
-template<> struct Mat_<4, double> { using type = vgc::geometry::Mat4d; };
-template<int dim, typename T>
-using Mat = typename Mat_<dim, T>::type;
-
-// Provides vector alias template
-template<int dim, typename T> struct Vec_ {};
-template<> struct Vec_<2, float>  { using type = vgc::geometry::Vec2f; };
-template<> struct Vec_<2, double> { using type = vgc::geometry::Vec2d; };
-template<int dim, typename T>
-using Vec = typename Vec_<dim, T>::type;
-
 // Allows `mat[i][j]` Python syntax
-template<int dim, typename T>
+template<int dimension, typename T>
 class MatRowView {
-    using TMat = Mat<dim, T>;
+    using TMat = vgc::geometry::Mat<dimension, T>;
 
 public:
     MatRowView(TMat& mat, vgc::Int i) : mat_(&mat), i_(i) {}
@@ -54,19 +38,19 @@ private:
     vgc::Int i_;
 };
 
-template<int dim, typename T>
+template<int dimension, typename T>
 void wrap_mat(py::module& m, const std::string& name)
 {
-    using TMat = Mat<dim, T>;
-    using TRow = MatRowView<dim, T>;
+    using TMat = vgc::geometry::Mat<dimension, T>;
+    using TRow = MatRowView<dimension, T>;
 
     // Wrap RowView class
     py::class_<TRow>(m, (name + "RowView").c_str())
         .def("__getitem__", [](const TRow& row, vgc::Int j) {
-            if (j < 0 || j >= dim) throw py::index_error();
+            if (j < 0 || j >= dimension) throw py::index_error();
             return row[j]; })
         .def("__setitem__", [](TRow& row, vgc::Int j, T x) {
-            if (j < 0 || j >= dim) throw py::index_error();
+            if (j < 0 || j >= dimension) throw py::index_error();
             row[j] = x; });
 
     py::class_<TMat> cmat(m, name.c_str());
@@ -92,12 +76,12 @@ void wrap_mat(py::module& m, const std::string& name)
     // numColumns, since numpy doesn't have per-size specific matrix types. We
     // don't have this constraint, so there is no good reason to do the same.
     //
-    if constexpr (dim == 3) {
+    if constexpr (dimension == 3) {
         cmat.def(py::init<T, T, T,
                           T, T, T,
                           T, T, T>());
     }
-    else if constexpr (dim == 4) {
+    else if constexpr (dimension == 4) {
         cmat.def(py::init<T, T, T, T,
                           T, T, T, T,
                           T, T, T, T,
@@ -116,7 +100,7 @@ void wrap_mat(py::module& m, const std::string& name)
     // Get/Set individual element via `m[i][j] = 42`
     cmat.def("__getitem__",
         [](TMat& mat, vgc::Int i) {
-            if (i < 0 || i >= dim) throw py::index_error();
+            if (i < 0 || i >= dimension) throw py::index_error();
             return TRow(mat, i);
         },
         py::keep_alive<0, 1>()); // we want the Row to keep the Mat alive
@@ -126,11 +110,11 @@ void wrap_mat(py::module& m, const std::string& name)
     // Convenient way to iterate over all valid indices in the matrix type
     cmat.def_property_readonly_static("indices",
         [](py::object) {
-            py::list res(dim * dim);
-            for (int i = 0; i < dim; ++i) {
-                for (int j = 0; j < dim; ++j) {
+            py::list res(dimension * dimension);
+            for (int i = 0; i < dimension; ++i) {
+                for (int j = 0; j < dimension; ++j) {
                     py::tuple t(2); t[0] = i; t[1] = j;
-                    res[j + i*dim] = t;
+                    res[j + i*dimension] = t;
                 }
             }
             return res;
@@ -152,7 +136,7 @@ void wrap_mat(py::module& m, const std::string& name)
         .def(py::self / T())
         .def(py::self == py::self)
         .def(py::self != py::self)
-        .def(py::self * Vec<2, T>());
+        .def(py::self * vgc::geometry::Vec<2, T>());
 
     // Identity
     cmat.def_property_readonly_static("identity", [](py::object) -> TMat {
@@ -173,12 +157,12 @@ void wrap_mat(py::module& m, const std::string& name)
         .def("rotate", &TMat::rotate, "t"_a, "orthosnap"_a = true)
         .def("scale", py::overload_cast<T>(&TMat::scale));
 
-    if constexpr (dim == 3) {
+    if constexpr (dimension == 3) {
         cmat.def("translate", &TMat::translate,
                  "vx"_a, "vy"_a = 0)
              .def("scale", py::overload_cast<T, T>(&TMat::scale));
     }
-    else if constexpr (dim == 4) {
+    else if constexpr (dimension == 4) {
         cmat.def("translate", &TMat::translate,
                  "vx"_a, "vy"_a = 0, "vz"_a = 0)
              .def("scale", py::overload_cast<T, T, T>(&TMat::scale),

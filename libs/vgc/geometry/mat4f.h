@@ -24,6 +24,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/mat.h>
 #include <vgc/geometry/vec2f.h>
 
 namespace vgc::geometry {
@@ -49,7 +50,8 @@ namespace vgc::geometry {
 class Mat4f
 {
 public:
-    using value_type = float;
+    using ScalarType = float;
+    static constexpr Int dimension = 4;
 
     /// Creates an uninitialized `Mat4f`.
     ///
@@ -478,9 +480,28 @@ private:
 
 inline constexpr Mat4f Mat4f::identity = Mat4f(1);
 
+namespace internal {
+
+// Define Mat<4, float> as alias for Mat4f
+template<>
+struct Mat_<4, float> {
+    using type = vgc::geometry::Mat4f;
+};
+
+} // namespace internal
+
 /// Alias for vgc::core::Array<vgc::geometry::Mat4f>.
 ///
 using Mat4fArray = core::Array<Mat4f>;
+
+/// Allows to iterate over a range of `Mat4f` stored in a memory buffer of
+/// floats, where consecutive `Mat4f` elements are separated by a given stride.
+///
+using Mat4fSpan = StrideSpan<float, Mat4f>;
+
+/// Const version of `Mat3fSpan`.
+///
+using Mat4fConstSpan = StrideSpan<const float, const Mat4f>;
 
 /// Overloads setZero(T& x).
 ///

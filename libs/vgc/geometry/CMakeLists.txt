@@ -16,12 +16,15 @@ vgc_add_library(geometry
         curve.h
         curvecommand.h
         curves2d.h
+        mat.h
         mat3d.h
         mat3f.h
         mat4d.h
         mat4f.h
         rect2d.h
         rect2f.h
+        stride.h
+        vec.h
         vec2d.h
         vec2f.h
 

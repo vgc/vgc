@@ -24,6 +24,8 @@
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/mat.h>
+#include <vgc/geometry/stride.h>
 #include "vec2x.h"
 
 namespace vgc::geometry {
@@ -49,7 +51,8 @@ namespace vgc::geometry {
 class Mat4x
 {
 public:
-    using value_type = float;
+    using ScalarType = float;
+    static constexpr Int dimension = 4;
 
     /// Creates an uninitialized `Mat4x`.
     ///
@@ -64,37 +67,50 @@ public:
     constexpr Mat4x(float m11, float m12, float m13, float m14,
                     float m21, float m22, float m23, float m24,
                     float m31, float m32, float m33, float m34,
-                    float m41, float m42, float m43, float m44) :
-
-        data_{{m11, m21, m31, m41},
-              {m12, m22, m32, m42},
-              {m13, m23, m33, m43},
-              {m14, m24, m34, m44}}
-    {
-
-    }
+                    float m41, float m42, float m43, float m44)
+        : data_{{m11, m21, m31, m41},
+                {m12, m22, m32, m42},
+                {m13, m23, m33, m43},
+                {m14, m24, m34, m44}} {}
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat4x(0), and the identity
     /// matrix is Mat4x(1).
     ///
-    explicit constexpr Mat4x(float d) :
+    explicit constexpr Mat4x(float d)
+        : data_{{d, 0, 0, 0},
+                {0, d, 0, 0},
+                {0, 0, d, 0},
+                {0, 0, 0, d}} {}
 
-        data_{{d, 0, 0, 0},
-              {0, d, 0, 0},
-              {0, 0, d, 0},
-              {0, 0, 0, d}}
-    {
-
-    }
+    /// Creates a `Mat4x` from a `Mat<4, T>` by performing a `static_cast` on
+    /// each of its elements.
+    ///
+    template<typename T, VGC_REQUIRES(!std::is_same_v<T, ScalarType>)>
+    explicit constexpr Mat4x(const Mat<4, T>& other)
+        : data_{{static_cast<float>(other(0, 0)),
+                 static_cast<float>(other(1, 0)),
+                 static_cast<float>(other(2, 0)),
+                 static_cast<float>(other(3, 0))},
+                {static_cast<float>(other(0, 1)),
+                 static_cast<float>(other(1, 1)),
+                 static_cast<float>(other(2, 1)),
+                 static_cast<float>(other(3, 1))},
+                {static_cast<float>(other(0, 2)),
+                 static_cast<float>(other(1, 2)),
+                 static_cast<float>(other(2, 2)),
+                 static_cast<float>(other(3, 2))},
+                {static_cast<float>(other(0, 3)),
+                 static_cast<float>(other(1, 3)),
+                 static_cast<float>(other(2, 3)),
+                 static_cast<float>(other(3, 3))}} {}
 
     /// Defines explicitely all the elements of the matrix
     ///
     Mat4x& setElements(float m11, float m12, float m13, float m14,
                        float m21, float m22, float m23, float m24,
                        float m31, float m32, float m33, float m34,
-                       float m41, float m42, float m43, float m44)
-    {
+                       float m41, float m42, float m43, float m44) {
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31; data_[0][3] = m41;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32; data_[1][3] = m42;
         data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33; data_[2][3] = m43;
@@ -105,8 +121,7 @@ public:
     /// Sets this Mat4x to a diagonal matrix with all diagonal elements equal to
     /// the given value.
     ///
-    Mat4x& setToDiagonal(float d)
-    {
+    Mat4x& setToDiagonal(float d) {
         return setElements(d, 0, 0, 0,
                            0, d, 0, 0,
                            0, 0, d, 0,
@@ -478,24 +493,41 @@ private:
 
 inline constexpr Mat4x Mat4x::identity = Mat4x(1);
 
+namespace internal {
+
+// Define Mat<4, float> as alias for Mat4x
+template<>
+struct Mat_<4, float> {
+    using type = vgc::geometry::Mat4x;
+};
+
+} // namespace internal
+
 /// Alias for vgc::core::Array<vgc::geometry::Mat4x>.
 ///
 using Mat4xArray = core::Array<Mat4x>;
+
+/// Allows to iterate over a range of `Mat4x` stored in a memory buffer of
+/// floats, where consecutive `Mat4x` elements are separated by a given stride.
+///
+using Mat4xSpan = StrideSpan<float, Mat4x>;
+
+/// Const version of `Mat3xSpan`.
+///
+using Mat4xConstSpan = StrideSpan<const float, const Mat4x>;
 
 /// Overloads setZero(T& x).
 ///
 /// \sa vgc::core::zero<T>()
 ///
-inline void setZero(Mat4x& m)
-{
+inline void setZero(Mat4x& m) {
     m.setToZero();
 }
 
 /// Writes the given Mat3x to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const Mat4x& m)
-{
+void write(OStream& out, const Mat4x& m) {
     static const char* s = ", ";
     write(out, '[', m(0,0), s, m(0,1), s, m(0,2), s, m(0,3), s,
                     m(1,0), s, m(1,1), s, m(1,2), s, m(1,3), s,

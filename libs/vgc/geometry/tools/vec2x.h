@@ -24,6 +24,8 @@
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/stride.h>
+#include <vgc/geometry/vec.h>
 
 namespace vgc::geometry {
 
@@ -44,7 +46,7 @@ namespace vgc::geometry {
 class Vec2x
 {
 public:
-    using value_type = float;
+    using ScalarType = float;
     static constexpr Int dimension = 2;
 
     /// Creates an uninitialized `Vec2x`.
@@ -58,6 +60,13 @@ public:
     /// Creates a `Vec2x` initialized with the given `x` and `y` coordinates.
     ///
     constexpr Vec2x(float x, float y) : data_{x, y} {}
+
+    /// Creates a `Vec2x` from a `Vec<2, T>` by performing a `static_cast` on
+    /// each of its coordinates.
+    ///
+    template<typename T, VGC_REQUIRES(!std::is_same_v<T, ScalarType>)>
+    explicit constexpr Vec2x(const Vec<2, T>& other)
+        : data_{static_cast<float>(other[0]), static_cast<float>(other[1])} {}
 
     /// Accesses the `i`-th coordinate of this `Vec2x`.
     ///
@@ -619,9 +628,36 @@ inline Vec2x Vec2x::normalized(bool* isNormalizable, float epsilon_) const {
     return Vec2x(*this).normalize(isNormalizable, epsilon_);
 }
 
+namespace internal {
+
+// Define Vec<2, float> as alias for Vec2x
+template<>
+struct Vec_<2, float> {
+    using type = vgc::geometry::Vec2x;
+};
+
+} // namespace internal
+
 /// Alias for `vgc::core::Array<vgc::geometry::Vec2x>`.
 ///
 using Vec2xArray = core::Array<Vec2x>;
+
+/// Allows to iterate over a range of `Vec2x` stored in a memory buffer of
+/// floats, where consecutive `Vec2x` elements are separated by a given stride.
+///
+/// ```cpp
+/// FloatArray buffer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+/// for (const Vec2f& v : Vec2xSpan(buffer.data(), 2, 5)) {
+///     std::cout << v << std::end;
+/// }
+/// // => prints "(1, 2)(6, 7)"
+/// ```
+///
+using Vec2xSpan = StrideSpan<float, Vec2x>;
+
+/// Const version of `Vec2xSpan`.
+///
+using Vec2xConstSpan = StrideSpan<const float, const Vec2x>;
 
 /// Overloads `setZero(T& x)`.
 ///

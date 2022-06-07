@@ -32,7 +32,7 @@ This normalizedOrThrow(const This& v)
     return res;
 }
 
-template<typename This, typename T, VGC_REQUIRES(std::is_same_v<typename This::value_type, T>)>
+template<typename This, typename T, VGC_REQUIRES(std::is_same_v<typename This::ScalarType, T>)>
 void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
 {
     py::class_<This>(m, thisTypeName.c_str())
@@ -94,7 +94,7 @@ template<typename This>
 void wrap_2darray(py::module& m, const std::string& valueTypeName)
 {
     using T = typename This::value_type; // Example: Vec2d
-    using U = typename T::value_type;    // Example: double
+    using U = typename T::ScalarType;    // Example: double
     std::string thisTypeName = valueTypeName + "Array";
     py::class_<This> c(m, thisTypeName.c_str());
     vgc::core::wraps::defineArrayCommonMethods(c);
