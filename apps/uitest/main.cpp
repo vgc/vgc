@@ -137,20 +137,23 @@ int main(int argc, char* argv[])
         "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in "
         "culpa qui officia deserunt mollit anim id est laborum.";
 
-    vgc::core::UniformDistribution ud(0, lipsum.size() - 0.1f);
+    size_t lipsumSize = lipsum.size();
+    vgc::core::UniformDistribution randomBegin(0, lipsumSize);
+    vgc::core::UniformDistribution randomCount(0, 100);
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
     int size = 10;
     for (int i = 0; i < size; ++i) {
         vgc::ui::Row* row = col->createChild<vgc::ui::Row>();
         for (int j = 0; j < size; ++j) {
-            auto le = row->createChild<vgc::ui::LineEdit>();
-            vgc::Int min = vgc::Int(ud());
-            vgc::Int max = vgc::Int(ud());
-            if (min > max) {
-                std::swap(min, max);
-            }
-            le->setText(std::string_view(lipsum).substr(min, max - min));
+            vgc::ui::LineEdit* lineEdit = row->createChild<vgc::ui::LineEdit>();
+            size_t begin = vgc::core::ifloor<size_t>(randomBegin());
+            size_t count = vgc::core::ifloor<size_t>(randomCount());
+            begin = vgc::core::clamp(begin, 0, lipsumSize);
+            size_t end = begin + count;
+            end = vgc::core::clamp(end, 0, lipsumSize);
+            count = end - begin;
+            lineEdit->setText(std::string_view(lipsum).substr(begin, count));
         }
     }
 
