@@ -25,6 +25,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat.h>
+#include <vgc/geometry/stride.h>
 #include <vgc/geometry/vec2f.h>
 
 namespace vgc::geometry {
@@ -49,7 +50,7 @@ class Mat3f
 {
 public:
     using ScalarType = float;
-    static constexpr Int dimension = 4;
+    static constexpr Int dimension = 3;
 
     /// Creates an uninitialized `Mat3f`.
     ///
@@ -77,11 +78,14 @@ public:
                 {0, d, 0},
                 {0, 0, d}} {}
 
-    /// Creates a `Mat3f` from a `Mat<3, T>` by performing a `static_cast` on
-    /// each of its elements.
+    /// Creates a `Mat3f` from another `Mat<3, T>` object by performing a
+    /// `static_cast` on each of its elements.
     ///
-    template<typename T, VGC_REQUIRES(!std::is_same_v<Mat<3, T>, Mat3f>)>
-    constexpr explicit Mat3f(const Mat<3, T>& other)
+    template<typename TMat3, VGC_REQUIRES(
+                 isMat<TMat3> &&
+                 TMat3::dimension == 3 &&
+                 !std::is_same_v<TMat3, Mat3f>)>
+    explicit constexpr Mat3f(const TMat3& other)
         : data_{{static_cast<float>(other(0, 0)),
                  static_cast<float>(other(1, 0)),
                  static_cast<float>(other(2, 0))},
@@ -418,16 +422,6 @@ private:
 };
 
 inline constexpr Mat3f Mat3f::identity = Mat3f(1);
-
-namespace internal {
-
-// Define Mat<3, float> as alias for Mat3f
-template<>
-struct Mat_<3, float> {
-    using type = vgc::geometry::Mat3f;
-};
-
-} // namespace internal
 
 /// Alias for vgc::core::Array<vgc::geometry::Mat3f>.
 ///

@@ -25,6 +25,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat.h>
+#include <vgc/geometry/stride.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -49,7 +50,7 @@ class Mat3d
 {
 public:
     using ScalarType = double;
-    static constexpr Int dimension = 4;
+    static constexpr Int dimension = 3;
 
     /// Creates an uninitialized `Mat3d`.
     ///
@@ -77,11 +78,14 @@ public:
                 {0, d, 0},
                 {0, 0, d}} {}
 
-    /// Creates a `Mat3d` from a `Mat<3, T>` by performing a `static_cast` on
-    /// each of its elements.
+    /// Creates a `Mat3d` from another `Mat<3, T>` object by performing a
+    /// `static_cast` on each of its elements.
     ///
-    template<typename T, VGC_REQUIRES(!std::is_same_v<Mat<3, T>, Mat3d>)>
-    constexpr explicit Mat3d(const Mat<3, T>& other)
+    template<typename TMat3, VGC_REQUIRES(
+                 isMat<TMat3> &&
+                 TMat3::dimension == 3 &&
+                 !std::is_same_v<TMat3, Mat3d>)>
+    explicit constexpr Mat3d(const TMat3& other)
         : data_{{static_cast<double>(other(0, 0)),
                  static_cast<double>(other(1, 0)),
                  static_cast<double>(other(2, 0))},
@@ -418,16 +422,6 @@ private:
 };
 
 inline constexpr Mat3d Mat3d::identity = Mat3d(1);
-
-namespace internal {
-
-// Define Mat<3, double> as alias for Mat3d
-template<>
-struct Mat_<3, double> {
-    using type = vgc::geometry::Mat3d;
-};
-
-} // namespace internal
 
 /// Alias for vgc::core::Array<vgc::geometry::Mat3d>.
 ///
