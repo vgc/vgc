@@ -410,8 +410,8 @@ void addTriangles(
 // - Otherwise, assigns (a, b, c) to (A, B, C) for further processing.
 //
 #define PRECLIP_(a, b, c)                                        \
-    if      (cmp(c[i], clip2)) { return; }                       \
-    else if (cmp(clip1, a[i])) { out.append(triangle); return; } \
+    if      (!cmp(clip, c[i])) { return; }                       \
+    else if (!cmp(a[i], clip)) { out.append(triangle); return; } \
     else                       { A = a; B = b; C = c; }
 
 // Clips the given triangle along the given `clip` line. Appends the resulting
@@ -431,7 +431,7 @@ void addTriangles(
 template<int i, template<typename> typename LessOrGreater>
 void clipTriangle_(Triangle2fArray& out,
                    const Triangle2f& triangle,
-                   float clip, float clip1, float clip2)
+                   float clip)
 {
     constexpr auto cmp = LessOrGreater<float>();
 
@@ -452,35 +452,27 @@ void clipTriangle_(Triangle2fArray& out,
         else                      { PRECLIP_(c, b, a); mirrored = true;  }
     }
 
-    // If we're still here, then (A[i], B[i], C[i]) are sorted and:
+    // If we're still here, then, we have:
     //
-    //   A[i] < clip1 < clip < clip2 < C[i]   (where "x < y" means `cmp(x, y)`)
+    //   A[i] <= B[i] <= C[i]   (where "x <= y" means `!cmp(y, x)`)
     //
-    // We just need to check whether B[i] is within [clip1, clip2],
-    // or before this range, or after this range.
+    // and:
     //
-    if (cmp(B[i], clip1)) {
-        A += (clip-A[i])/(C[i]-A[i]) * (C-A);
-        B += (clip-B[i])/(C[i]-B[i]) * (C-B);
-        if (mirrored) {
-            out.emplace(out.end(), B, A, C);
+    //   A[i] < clip < C[i]     (where "x < y" means `cmp(x, y)`)
+    //
+    // We now need to check whether B[i] is before or after the clip
+    // line, and whether AB or BC are parallel to the clip line.
+    //
+    float eps = 1e-6f;
+    float ac = C[i]-A[i];
+    if (cmp(clip, B[i])) {
+        float ab = B[i]-A[i];
+        if (cmp(ab, eps * ac)) { // AB parallel to clip line
+            out.append(triangle);
+            return;
         }
-        else {
-            out.emplace(out.end(), A, B, C);
-        }
-    }
-    else if (cmp(B[i], clip2)) {
-        A += (clip-A[i])/(C[i]-A[i]) * (C-A);
-        if (mirrored) {
-            out.emplace(out.end(), B, A, C);
-        }
-        else {
-            out.emplace(out.end(), A, B, C);
-        }
-    }
-    else {
-        geometry::Vec2f B_ = A + (clip-A[i])/(B[i]-A[i]) * (B-A);
-        geometry::Vec2f C_ = A + (clip-A[i])/(C[i]-A[i]) * (C-A);
+        geometry::Vec2f B_ = A + (clip-A[i])/ab * (B-A);
+        geometry::Vec2f C_ = A + (clip-A[i])/ac * (C-A);
         if (mirrored) {
             out.emplace(out.end(), B, B_, C);
             out.emplace(out.end(), C, B_, C_);
@@ -488,6 +480,20 @@ void clipTriangle_(Triangle2fArray& out,
         else {
             out.emplace(out.end(), B_, B, C);
             out.emplace(out.end(), B_, C, C_);
+        }
+    }
+    else {
+        float bc = C[i]-B[i];
+        if (cmp(bc, eps * ac)) { // BC parallel to clip line
+            return;
+        }
+        A += (clip-A[i])/ac * (C-A);
+        B += (clip-B[i])/bc * (C-B); // Note: (B[i] == clip) => B unchanged
+        if (mirrored) {
+            out.emplace(out.end(), B, A, C);
+        }
+        else {
+            out.emplace(out.end(), A, B, C);
         }
     }
 }
@@ -515,15 +521,9 @@ void clipTriangles_(Triangle2fArray& data,
                     Triangle2fArray& buffer,
                     float clip)
 {
-    constexpr auto cmp = LessOrGreater<float>();
-    constexpr float eps = 1e-6f;
-    constexpr bool isLess = cmp(0, eps);
-    const float clip1 = isLess ? clip - eps : clip + eps;
-    const float clip2 = isLess ? clip + eps : clip - eps;
-
     buffer.clear();
     for (const Triangle2f& t : data) {
-        clipTriangle_<i, LessOrGreater>(buffer, t, clip, clip1, clip2);
+        clipTriangle_<i, LessOrGreater>(buffer, t, clip);
     }
     std::swap(data, buffer);
 }
