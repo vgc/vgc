@@ -20,6 +20,7 @@
 #include <string_view>
 
 #include <vgc/core/innercore.h>
+#include <vgc/geometry/rect2f.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/font.h>
 
@@ -143,7 +144,15 @@ public:
         offset_(offset),
         advance_(advance),
         position_(position),
-        bytePosition_(bytePosition) {}
+        bytePosition_(bytePosition),
+        boundingBox_(core::NoInit{})
+    {
+        // Convert bounding box from FontGlyph coords to ShapedText coords
+        geometry::Rect2f bbox = fontGlyph->boundingBox();
+        geometry::Vec2f positionf(position);
+        boundingBox_.setPMin(positionf.x() + bbox.xMin(), positionf.y() - bbox.yMax());
+        boundingBox_.setPMax(positionf.x() + bbox.xMax(), positionf.y() - bbox.yMin());
+    }
 
     /// Returns the FontGlyph that this ShapedGlyph references.
     ///
@@ -164,19 +173,21 @@ public:
         return fontGlyph_;
     }
 
-    /// Returns how much the glyph should be moved before drawing
-    /// it. This should not affect how much the line advances.
+    /// Returns how much the glyph should be moved before drawing it. This
+    /// should not affect how much the line advances. This is expressed in
+    /// ShapedText coordinates, that is, with the Y-axis pointing down.
     ///
-    geometry::Vec2d offset() const {
+    const geometry::Vec2d& offset() const {
         return offset_;
     }
 
     /// Returns how much the line advances after drawing this ShapedGlyph. The
     /// X-coordinate corresponds to the advance when setting text in horizontal
     /// direction, and the Y-coordinate corresponds to the advance when setting
-    /// text in vertical direction.
+    /// text in vertical direction. This is expressed in ShapedText
+    /// coordinates, that is, with the Y-axis pointing down.
     ///
-    geometry::Vec2d advance() const {
+    const geometry::Vec2d& advance() const {
         return advance_;
     }
 
@@ -186,7 +197,10 @@ public:
     /// This is equal to the sum of this ShapedGlyph's offset and the advances
     /// of all the previous ShapedGlyph of the ShapedText.
     ///
-    geometry::Vec2d position() const {
+    /// This is expressed in ShapedText coordinates, that is, with the Y-axis
+    /// pointing down.
+    ///
+    const geometry::Vec2d& position() const {
         return position_;
     }
 
@@ -198,6 +212,15 @@ public:
     ///
     Int bytePosition() const {
         return bytePosition_;
+    }
+
+    /// Returns the bounding box of the shaped glyph in ShapedText coordinates
+    /// (that is, with the Y-axis pointing down). In most cases, the X
+    /// coordinates of this bounding box are positive and the Y coordinates are
+    /// negatives.
+    ///
+    const geometry::Rect2f& boundingBox() const {
+        return boundingBox_;
     }
 
     /// Fills this ShapedGlyph, taking into account its relative position() and
@@ -262,6 +285,7 @@ private:
     geometry::Vec2d advance_;
     geometry::Vec2d position_;
     Int bytePosition_;
+    geometry::Rect2f boundingBox_;
 };
 
 /// \class vgc::graphics::ShapedGrapheme

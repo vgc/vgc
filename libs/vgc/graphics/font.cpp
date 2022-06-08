@@ -25,7 +25,6 @@
 #include <hb.h>
 #include <hb-ft.h>
 
-#include <vgc/core/array.h>
 #include <vgc/core/paths.h>
 #include <vgc/graphics/exceptions.h>
 
@@ -283,7 +282,8 @@ FontFaceImpl::FontFaceImpl(FT_Library library, const std::string& filename)
     // be reliable, in particular with cursive/handwriting/display/fantasy
     // categories of fonts.
 
-    // Create HarfBuzz font
+    // Create HarfBuzz font.
+    // Note: `hbFont` will use the same ppem as provided by `face`.
     hbFont = hb_ft_font_create(face, NULL);
 }
 
@@ -362,17 +362,24 @@ public:
     std::string name;
     geometry::Curves2d outline;
     core::FloatArray triangles;
+    geometry::Rect2f boundingBox = geometry::Rect2f::empty;
 
     FontGlyphImpl(Int index, const char* name, FT_GlyphSlot slot) :
         index(index),
         name(name)
     {
+        // Note: hinting might already be baked in the given FT_GlyphSlot.
+        // See implementation of FontFace::getGlyphFromIndex(Int glyphIndex).
         int shift = 0;
         FT_Pos delta = 0;
         FT_Outline_Funcs f{&moveTo, &lineTo, &conicTo, &cubicTo, shift, delta};
         FT_Outline_Decompose(&slot->outline, &f, static_cast<void*>(&outline));
         closeLastCurveIfOpen(outline);
         outline.fill(triangles);
+        for (const geometry::Vec2f& point :
+             geometry::Vec2fConstSpan(triangles.data(), triangles.length() / 2, 2)) {
+            boundingBox.uniteWith(point);
+        }
     }
 };
 
@@ -503,8 +510,17 @@ FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
 
     // If no existing FontGlyph*, create it
     if (!glyph) {
-
-        // Load glyph data
+        // Other potentially useful flags to control hinting:
+        //
+        // Use either font-provided or auto-hinter: (FT_LOAD_DEFAULT)
+        // Do not perform any hinting:              FT_LOAD_NO_HINTING
+        // Only use font-provided hinter:           FT_LOAD_NO_AUTOHINT
+        // Only use Freetype auto-hinter (light)    FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_LIGHT
+        // Only use Freetype auto-hinter (normal)   FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL
+        // No hinting + native scale (ignore ppem): FT_LOAD_NO_SCALE
+        //
+        // See: https://freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_load_xxx
+        //
         FT_Face face = impl_->face;
         FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
         FT_Int32 flags = FT_LOAD_NO_BITMAP;
@@ -561,7 +577,7 @@ Int FontGlyph::index() const
     return impl_->index;
 }
 
-std::string FontGlyph::name() const
+const std::string& FontGlyph::name() const
 {
     return impl_->name;
 }
@@ -571,9 +587,20 @@ const geometry::Curves2d& FontGlyph::outline() const
     return impl_->outline;
 }
 
+const geometry::Rect2f& FontGlyph::boundingBox() const
+{
+    return impl_->boundingBox;
+}
+
 void FontGlyph::fill(core::FloatArray& data,
                      const geometry::Mat3f& transform) const
 {
+    // Note: if the FontGlyph have hinting enabled, it only makes sense to use
+    // a `transform` that has a scale ratio of 1 or -1 in each axis, and use
+    // integer values for the translate part. Also, even with hinting disabled,
+    // if the FontGlyph has a small ppem then the cached tesselation may have a
+    // small number of triangles not suitable to draw at larger sizes.
+
     const core::FloatArray& triangles = impl_->triangles;
     Int numVertices = triangles.length() / 2;
 
