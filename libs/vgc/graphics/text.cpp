@@ -471,7 +471,6 @@ void clipTriangle_(Triangle2fArray& out,
             out.append(triangle);
             return;
         }
-        float ac = C[i]-A[i];
         geometry::Vec2f B_ = A + (clip-A[i])/ab * (B-A);
         geometry::Vec2f C_ = A + (clip-A[i])/ac * (C-A);
         if (mirrored) {
