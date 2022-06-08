@@ -335,6 +335,12 @@ public:
         return (*this) *= m;
     }
 
+    /// Overloads `Mat3x::translate(float, float)`.
+    ///
+    Mat3x& translate(const Vec2x& v) {
+        return translate(v.x(), v.y());
+    }
+
     /// Right-multiplies this matrix by the rotation matrix around
     /// the z-axis by \p t radians, that is:
     ///
@@ -415,6 +421,12 @@ public:
                 0,  sy, 0,
                 0,  0,  1);
         return (*this) *= m;
+    }
+
+    /// Overloads `Mat3x::scale(float, float)`.
+    ///
+    Mat3x& scale(const Vec2x& v) {
+        return scale(v.x(), v.y());
     }
 
 private:

@@ -427,6 +427,11 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m1 * v, Vec2(11, 22))
             self.assertEqual(m2 * v, Vec2(11, 22))
 
+        for (Mat3, Vec2) in Mat3Vec2Types:
+            v = Vec2(1, 2)
+            m1 = Mat3.identity.translate(Vec2(10, 20))
+            self.assertEqual(m1 * v, Vec2(11, 22))
+
         for (Mat4, Vec2) in Mat4Vec2Types:
             v = Vec2(1, 2)
             m1 = Mat4.identity.translate(10, 20, 30)
@@ -465,6 +470,11 @@ class TestMat(unittest.TestCase):
             m2.scale(20, 30)
             self.assertTrue(m1 * v, Vec2(40, 90))
             self.assertEqual(m2 * v, Vec2(40, 90))
+
+        for (Mat3, Vec2) in Mat3Vec2Types:
+            v = Vec2(2, 3)
+            m1 = Mat3.identity.scale(Vec2(20, 30))
+            self.assertTrue(m1 * v, Vec2(40, 90))
 
         for (Mat4, Vec2) in Mat4Vec2Types:
             v = Vec2(2, 3)

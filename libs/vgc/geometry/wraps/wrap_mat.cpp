@@ -41,6 +41,7 @@ private:
 template<int dimension, typename T>
 void wrap_mat(py::module& m, const std::string& name)
 {
+    using TVec2 = vgc::geometry::Vec<2, T>;
     using TMat = vgc::geometry::Mat<dimension, T>;
     using TRow = MatRowView<dimension, T>;
 
@@ -136,7 +137,7 @@ void wrap_mat(py::module& m, const std::string& name)
         .def(py::self / T())
         .def(py::self == py::self)
         .def(py::self != py::self)
-        .def(py::self * vgc::geometry::Vec<2, T>());
+        .def(py::self * TVec2());
 
     // Identity
     cmat.def_property_readonly_static("identity", [](py::object) -> TMat {
@@ -158,15 +159,15 @@ void wrap_mat(py::module& m, const std::string& name)
         .def("scale", py::overload_cast<T>(&TMat::scale));
 
     if constexpr (dimension == 3) {
-        cmat.def("translate", &TMat::translate,
-                 "vx"_a, "vy"_a = 0)
-             .def("scale", py::overload_cast<T, T>(&TMat::scale));
+        cmat.def("translate", py::overload_cast<T, T>(&TMat::translate), "vx"_a, "vy"_a = 0)
+            .def("translate", py::overload_cast<const TVec2&>(&TMat::translate))
+            .def("scale", py::overload_cast<T, T>(&TMat::scale))
+            .def("scale", py::overload_cast<const TVec2&>(&TMat::scale));
+
     }
     else if constexpr (dimension == 4) {
-        cmat.def("translate", &TMat::translate,
-                 "vx"_a, "vy"_a = 0, "vz"_a = 0)
-             .def("scale", py::overload_cast<T, T, T>(&TMat::scale),
-                  "sx"_a, "sy"_a, "sz"_a = 0);
+        cmat.def("translate", py::overload_cast<T, T, T>(&TMat::translate), "vx"_a, "vy"_a = 0, "vz"_a = 0)
+            .def("scale", py::overload_cast<T, T, T>(&TMat::scale), "sx"_a, "sy"_a, "sz"_a = 0);
     }
 
     // Conversion to string
