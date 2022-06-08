@@ -57,15 +57,24 @@ public:
     ///
     constexpr Vec2d() : data_{0, 0} {}
 
+
     /// Creates a `Vec2d` initialized with the given `x` and `y` coordinates.
     ///
     constexpr Vec2d(double x, double y) : data_{x, y} {}
 
-    /// Creates a `Vec2d` from a `Vec<2, T>` by performing a `static_cast` on
-    /// each of its coordinates.
+    /// Creates a `Vec2d` from another `Vec<2, T>` object by performing a
+    /// `static_cast` on each of its coordinates.
     ///
-    template<typename TVec2, VGC_REQUIRES(!std::is_same_v<TVec2, Vec2d>)>
-    constexpr explicit Vec2d(const TVec2& other)
+    /// ```cpp
+    /// vgc::geometrt::Vec2d vd(1, 2);
+    /// vgc::geometrt::Vec2 vf(vd); // cast from double to double
+    /// ```
+    ///
+    template<typename TVec2, VGC_REQUIRES(
+                 isVec<TVec2> &&
+                 TVec2::dimension == 2 &&
+                 !std::is_same_v<TVec2, Vec2d>)>
+    explicit constexpr Vec2d(const TVec2& other)
         : data_{static_cast<double>(other[0]), static_cast<double>(other[1])} {}
 
     /// Accesses the `i`-th coordinate of this `Vec2d`.
@@ -412,8 +421,7 @@ public:
     /// Vec2d(1e20, 42).allClose(Vec2d(1e20, 43)); // false
     /// ```
     ///
-    bool isClose(const Vec2d& b, double relTol = 1e-9, double absTol = 0.0) const
-    {
+    bool isClose(const Vec2d& b, double relTol = 1e-9, double absTol = 0.0) const {
         const Vec2d& a = *this;
         double diff2 = a.infdiff_(b).squaredLength();
         if (diff2 == std::numeric_limits<double>::infinity()) {
@@ -467,8 +475,7 @@ public:
     /// points, even though their Y coordinates are not relatively close to
     /// each others.
     ///
-    bool allClose(const Vec2d& b, double relTol = 1e-9, double absTol = 0.0) const
-    {
+    bool allClose(const Vec2d& b, double relTol = 1e-9, double absTol = 0.0) const {
         const Vec2d& a = *this;
         return core::isClose(a[0], b[0], relTol, absTol) &&
                core::isClose(a[1], b[1], relTol, absTol);
@@ -509,8 +516,7 @@ public:
     /// Vec2d(inf, 42).isNear(Vec2d(inf, 42.6), absTol);  // false
     /// ```
     ///
-    bool isNear(const Vec2d& b, double absTol) const
-    {
+    bool isNear(const Vec2d& b, double absTol) const {
         const Vec2d& a = *this;
         double diff2 = a.infdiff_(b).squaredLength();
         if (diff2 == std::numeric_limits<double>::infinity()) {
@@ -559,8 +565,7 @@ public:
     /// true euclidean test isn't really meaningful anyway, and the performance
     /// gain of using `allNear()` can be useful.
     ///
-    bool allNear(const Vec2d& b, double absTol) const
-    {
+    bool allNear(const Vec2d& b, double absTol) const {
         const Vec2d& a = *this;
         return core::isNear(a[0], b[0], absTol) &&
                core::isNear(a[1], b[1], absTol);
@@ -605,8 +610,7 @@ private:
 // Perhaps such special handling could be optional, with a NanPolicy
 // argument controling whether to do special handling to avoid Nans.
 //
-inline Vec2d& Vec2d::normalize(bool* isNormalizable, double epsilon_)
-{
+inline Vec2d& Vec2d::normalize(bool* isNormalizable, double epsilon_) {
     double l2 = squaredLength();
     if (l2 <= epsilon_*epsilon_) {
         if (isNormalizable) {
@@ -627,16 +631,6 @@ inline Vec2d& Vec2d::normalize(bool* isNormalizable, double epsilon_)
 inline Vec2d Vec2d::normalized(bool* isNormalizable, double epsilon_) const {
     return Vec2d(*this).normalize(isNormalizable, epsilon_);
 }
-
-namespace internal {
-
-// Define Vec<2, double> as alias for Vec2d
-template<>
-struct Vec_<2, double> {
-    using type = vgc::geometry::Vec2d;
-};
-
-} // namespace internal
 
 /// Alias for `vgc::core::Array<vgc::geometry::Vec2d>`.
 ///
@@ -663,8 +657,7 @@ using Vec2dConstSpan = StrideSpan<const double, const Vec2d>;
 ///
 /// \sa `vgc::core::zero<T>()`.
 ///
-inline void setZero(Vec2d& v)
-{
+inline void setZero(Vec2d& v) {
     v[0] = 0.0;
     v[1] = 0.0;
 }
@@ -672,8 +665,7 @@ inline void setZero(Vec2d& v)
 /// Writes the given `Vec2d` to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const Vec2d& v)
-{
+void write(OStream& out, const Vec2d& v) {
     write(out, '(', v[0], ", ", v[1], ')');
 }
 
@@ -683,8 +675,7 @@ void write(OStream& out, const Vec2d& v)
 /// coordinates is outside the representable range of a double.
 ///
 template <typename IStream>
-void readTo(Vec2d& v, IStream& in)
-{
+void readTo(Vec2d& v, IStream& in) {
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, '(');
     readTo(v[0], in);

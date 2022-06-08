@@ -24,10 +24,14 @@
 
 namespace vgc::geometry {
 
+class Vec2f;
+class Vec2d;
+
 namespace internal {
 
-template<int dimension, typename T>
-struct Vec_ {};
+template<int dimension, typename T> struct Vec_ {};
+template<> struct Vec_<2, float>  { using type = Vec2f; };
+template<> struct Vec_<2, double> { using type = Vec2d; };
 
 } // namespace internal
 
@@ -56,7 +60,7 @@ struct IsVec : std::false_type {};
 
 template<typename T>
 struct IsVec<T, core::Requires<
-        std::is_same_v<T, Vec<T::dimension, typename T::value_type>>>> :
+        std::is_same_v<T, Vec<T::dimension, typename T::ScalarType>>>> :
     std::true_type {};
 
 /// Checks whether `T` is a `vgc::geometry::Vec` type.

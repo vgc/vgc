@@ -83,11 +83,14 @@ public:
                 {0, 0, d, 0},
                 {0, 0, 0, d}} {}
 
-    /// Creates a `Mat4x` from a `Mat<4, T>` by performing a `static_cast` on
-    /// each of its elements.
+    /// Creates a `Mat4x` from another `Mat<4, T>` object by performing a
+    /// `static_cast` on each of its elements.
     ///
-    template<typename T, VGC_REQUIRES(!std::is_same_v<T, ScalarType>)>
-    explicit constexpr Mat4x(const Mat<4, T>& other)
+    template<typename TMat4, VGC_REQUIRES(
+                 isMat<TMat4> &&
+                 TMat4::dimension == 4 &&
+                 !std::is_same_v<TMat4, Mat4x>)>
+    explicit constexpr Mat4x(const TMat4& other)
         : data_{{static_cast<float>(other(0, 0)),
                  static_cast<float>(other(1, 0)),
                  static_cast<float>(other(2, 0)),
@@ -492,16 +495,6 @@ private:
 };
 
 inline constexpr Mat4x Mat4x::identity = Mat4x(1);
-
-namespace internal {
-
-// Define Mat<4, float> as alias for Mat4x
-template<>
-struct Mat_<4, float> {
-    using type = vgc::geometry::Mat4x;
-};
-
-} // namespace internal
 
 /// Alias for vgc::core::Array<vgc::geometry::Mat4x>.
 ///

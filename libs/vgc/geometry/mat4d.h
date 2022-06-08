@@ -25,6 +25,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat.h>
+#include <vgc/geometry/stride.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -66,37 +67,53 @@ public:
     constexpr Mat4d(double m11, double m12, double m13, double m14,
                     double m21, double m22, double m23, double m24,
                     double m31, double m32, double m33, double m34,
-                    double m41, double m42, double m43, double m44) :
-
-        data_{{m11, m21, m31, m41},
-              {m12, m22, m32, m42},
-              {m13, m23, m33, m43},
-              {m14, m24, m34, m44}}
-    {
-
-    }
+                    double m41, double m42, double m43, double m44)
+        : data_{{m11, m21, m31, m41},
+                {m12, m22, m32, m42},
+                {m13, m23, m33, m43},
+                {m14, m24, m34, m44}} {}
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat4d(0), and the identity
     /// matrix is Mat4d(1).
     ///
-    explicit constexpr Mat4d(double d) :
+    explicit constexpr Mat4d(double d)
+        : data_{{d, 0, 0, 0},
+                {0, d, 0, 0},
+                {0, 0, d, 0},
+                {0, 0, 0, d}} {}
 
-        data_{{d, 0, 0, 0},
-              {0, d, 0, 0},
-              {0, 0, d, 0},
-              {0, 0, 0, d}}
-    {
-
-    }
+    /// Creates a `Mat4d` from another `Mat<4, T>` object by performing a
+    /// `static_cast` on each of its elements.
+    ///
+    template<typename TMat4, VGC_REQUIRES(
+                 isMat<TMat4> &&
+                 TMat4::dimension == 4 &&
+                 !std::is_same_v<TMat4, Mat4d>)>
+    explicit constexpr Mat4d(const TMat4& other)
+        : data_{{static_cast<double>(other(0, 0)),
+                 static_cast<double>(other(1, 0)),
+                 static_cast<double>(other(2, 0)),
+                 static_cast<double>(other(3, 0))},
+                {static_cast<double>(other(0, 1)),
+                 static_cast<double>(other(1, 1)),
+                 static_cast<double>(other(2, 1)),
+                 static_cast<double>(other(3, 1))},
+                {static_cast<double>(other(0, 2)),
+                 static_cast<double>(other(1, 2)),
+                 static_cast<double>(other(2, 2)),
+                 static_cast<double>(other(3, 2))},
+                {static_cast<double>(other(0, 3)),
+                 static_cast<double>(other(1, 3)),
+                 static_cast<double>(other(2, 3)),
+                 static_cast<double>(other(3, 3))}} {}
 
     /// Defines explicitely all the elements of the matrix
     ///
     Mat4d& setElements(double m11, double m12, double m13, double m14,
                        double m21, double m22, double m23, double m24,
                        double m31, double m32, double m33, double m34,
-                       double m41, double m42, double m43, double m44)
-    {
+                       double m41, double m42, double m43, double m44) {
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31; data_[0][3] = m41;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32; data_[1][3] = m42;
         data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33; data_[2][3] = m43;
@@ -107,8 +124,7 @@ public:
     /// Sets this Mat4d to a diagonal matrix with all diagonal elements equal to
     /// the given value.
     ///
-    Mat4d& setToDiagonal(double d)
-    {
+    Mat4d& setToDiagonal(double d) {
         return setElements(d, 0, 0, 0,
                            0, d, 0, 0,
                            0, 0, d, 0,
@@ -480,16 +496,6 @@ private:
 
 inline constexpr Mat4d Mat4d::identity = Mat4d(1);
 
-namespace internal {
-
-// Define Mat<4, double> as alias for Mat4d
-template<>
-struct Mat_<4, double> {
-    using type = vgc::geometry::Mat4d;
-};
-
-} // namespace internal
-
 /// Alias for vgc::core::Array<vgc::geometry::Mat4d>.
 ///
 using Mat4dArray = core::Array<Mat4d>;
@@ -507,16 +513,14 @@ using Mat4dConstSpan = StrideSpan<const double, const Mat4d>;
 ///
 /// \sa vgc::core::zero<T>()
 ///
-inline void setZero(Mat4d& m)
-{
+inline void setZero(Mat4d& m) {
     m.setToZero();
 }
 
 /// Writes the given Mat3d to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const Mat4d& m)
-{
+void write(OStream& out, const Mat4d& m) {
     static const char* s = ", ";
     write(out, '[', m(0,0), s, m(0,1), s, m(0,2), s, m(0,3), s,
                     m(1,0), s, m(1,1), s, m(1,2), s, m(1,3), s,
