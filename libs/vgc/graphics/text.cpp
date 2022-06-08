@@ -133,6 +133,11 @@ public:
                 glyphs.append(ShapedGlyph(glyph, glyphOffset, glyphAdvance, glyphPosition, bytePosition));
             }
             advance += glyphAdvance;
+
+            // Note: so far, we have only tested cases where the y coords of
+            // offset and advance (and thus position) was 0. The desired output
+            // is to have the y axis pointing down. This might require to add
+            // minus signs in front of pos.y_offset and pos.y_advance.
         }
 
         // Compute graphemes and correspondence with glyphs
@@ -236,26 +241,13 @@ void ShapedGlyph::fill(core::FloatArray& data,
     }
 }
 
+using Test = geometry::Vec<2, double>;
 void ShapedGlyph::fill(core::FloatArray& data,
                        const geometry::Vec2d& origin) const
 {
-    // Note: we currently disable per-letter hinting (which can be seen as a
-    // component of horizontal hinting) because it looked worse, at least with
-    // the current implementation. It produced uneven spacing between letters,
-    // making kerning look bad.
-    constexpr bool hinting = false;
-
-    // Per-letter hinting
-    geometry::Vec2d p_ = origin + position();
-    geometry::Vec2f p(static_cast<float>(p_[0]), static_cast<float>(p_[1]));
-    if (hinting) {
-        p[0] = std::round(p[0]);
-        p[1] = std::round(p[1]);
-    }
-
-    // Transform from local glyph coordinates to requested coordinates.
+    // Transform from local glyph coordinates to requested coordinates
     geometry::Mat3f transform = geometry::Mat3f::identity;
-    transform.translate(p[0], p[1]); // TODO: Mat3f::translate(const Vec2f&)
+    transform.translate(geometry::Vec2f(origin + position()));
     transform.scale(1, -1);
 
     // Get the glyph triangulation
@@ -548,25 +540,32 @@ void ShapedText::fill(core::FloatArray& data,
     Triangle2fArray trianglesBuffer;
     Triangle2fArray triangles;
 
+    // Get clip rectangle in ShapedText coordinates
+    geometry::Rect2f clipRect(clipLeft, clipTop, clipRight, clipBottom);
+    geometry::Vec2f originf(origin);
+    clipRect.setPMin(clipRect.pMin() - originf);
+    clipRect.setPMax(clipRect.pMax() - originf);
+
+    // Iterate over all glyphs
     for (const ShapedGlyph& glyph : glyphs()) {
+        if (clipRect.intersects(glyph.boundingBox())) {
 
-        // TODO: Implement ShapedGlyph::boundingBox() and use it as initial
-        // early clipping: we don't want to call glyph.fill() and/or
-        // clipTriangles_() if not necessary.
+            // Get unclipped glyph
+            floatBuffer.clear();
+            glyph.fill(floatBuffer, origin);
+            initTriangles(floatBuffer, triangles);
 
-        // Get unclipped glyph as triangles
-        floatBuffer.clear();
-        glyph.fill(floatBuffer, origin);
-        initTriangles(floatBuffer, triangles);
+            // Clip the glyph if it's at the boundary of the bbox
+            if (!clipRect.contains(glyph.boundingBox())) {
+                clipTriangles_<0, std::less>(triangles, trianglesBuffer, clipLeft);
+                clipTriangles_<1, std::less>(triangles, trianglesBuffer, clipTop);
+                clipTriangles_<0, std::greater>(triangles, trianglesBuffer, clipRight);
+                clipTriangles_<1, std::greater>(triangles, trianglesBuffer, clipBottom);
+            }
 
-        // Clip in all directions
-        clipTriangles_<0, std::less>(triangles, trianglesBuffer, clipLeft);
-        clipTriangles_<1, std::less>(triangles, trianglesBuffer, clipTop);
-        clipTriangles_<0, std::greater>(triangles, trianglesBuffer, clipRight);
-        clipTriangles_<1, std::greater>(triangles, trianglesBuffer, clipBottom);
-
-        // Add triangles
-        addTriangles(data, triangles, r, g, b);
+            // Add glyph triangles to data buffer
+            addTriangles(data, triangles, r, g, b);
+        }
     }
 }
 

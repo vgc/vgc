@@ -24,6 +24,7 @@
 #include <vgc/core/innercore.h>
 #include <vgc/geometry/curves2d.h>
 #include <vgc/geometry/mat3f.h>
+#include <vgc/geometry/rect2f.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/api.h>
 
@@ -298,11 +299,15 @@ public:
     /// Returns the name of this glyph, or an empty string if the face doesn't
     /// support glyph names.
     ///
-    std::string name() const;
+    const std::string& name() const;
 
     /// Returns the outline of the glyph as a Curves2d.
     ///
     const geometry::Curves2d& outline() const;
+
+    /// Returns the bounding box of the glyph.
+    ///
+    const geometry::Rect2f& boundingBox() const;
 
     /// Appends to the given FloatArray `data` a triangulation of this glyph
     /// with the given `transform` applied, in the following format:
