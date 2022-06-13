@@ -325,7 +325,7 @@ public:
             ::new(&ret.v_) Pointer<SignalArgRef>(std::addressof(arg));
         }
 
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
         ret.t_ = typeid(TypeSig<SignalArgRef>);
 #endif
         return ret;
@@ -335,7 +335,7 @@ public:
     SignalArgRef get() const {
         static_assert(isSignalArgRef<SignalArgRef>);
 
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
         if (t_ != typeid(TypeSig<SignalArgRef>)) {
             throw LogicError("Bad cast of AnySignalArgRef.");
         }
@@ -361,7 +361,7 @@ protected:
 
 private:
     mutable std::aligned_storage_t<storageSize, storageSize> v_ = {};
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
     std::type_index t_ = typeid(void);
 #endif
 };
@@ -394,7 +394,7 @@ public:
     // Throws IndexError in debug builds if i not in [0, maxSize).
     template<typename SignalArgRef>
     SignalArgRef get(Int i) const {
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
         try {
             return refs_.at(i).template get<SignalArgRef>();
         }
@@ -561,7 +561,7 @@ private:
 public:
     SignalHub() = default;
 
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
     ~SignalHub() noexcept {
         VGC_CORE_ASSERT(listenedObjectInfos_.empty() &&
             "A SignalHub is being destroyed but is still subscribed to some Object signals."
@@ -581,7 +581,7 @@ public:
         for (ListenedObjectInfo_& info : hub.listenedObjectInfos_) {
             if (info.numInboundConnections > 0) {
                 [[maybe_unused]] Int count = SignalHub::eraseConnections_(info.object, receiver);
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
                 if (count != info.numInboundConnections) {
                     throw LogicError("Erased connections count != info.numInboundConnections.");
                 }
@@ -680,7 +680,7 @@ public:
     static bool disconnect(const Object* sender, const Object* receiver) {
         Int count = eraseConnections_(sender, receiver);
         auto& info = access(receiver).getListenedObjectInfoRef_(sender);
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
         if (count != info.numInboundConnections) {
             throw LogicError("Erased connections count != info.numInboundConnections.");
         }

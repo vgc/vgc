@@ -196,7 +196,7 @@ private:
 ///
 ///
 #define VGC_DECLARE_LOG_CATEGORY(...) \
-    VGC_PP_EXPAND(VGC_PP_OVERLOAD(VGC_DECLARE_LOG_CATEGORY_,__VA_ARGS__)(__VA_ARGS__))
+    VGC_PP_EXPAND(VGC_PP_OVERLOAD(VGC_DECLARE_LOG_CATEGORY_, __VA_ARGS__)(__VA_ARGS__))
 
 /// Defines a log category. See `VGC_DECLARE_LOG_CATEGORY` for details.
 ///
@@ -314,12 +314,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// For debug messages which are temporary and not meant to be commited (i.e.,
 /// short tests when trying to fix a bug), you can use VGC_DEBUG_TMP instead.
 ///
-// XXX: We currently use VGC_DEBUG_ (underscore) due to conflict with VGC_DEBUG
-//      (= "is this a debug build"). We may want to rename
-//      VGC_DEBUG  -> VGC_IS_DEBUG
-//      VGC_DEBUG_ -> VGC_DEBUG
-//
-#define VGC_DEBUG_(Category, fmt, ...) \
+#define VGC_DEBUG(Category, fmt, ...) \
     VGC_LOG(Category, ::vgc::core::LogLevel::Debug, fmt, __VA_ARGS__)
 
 /// A convenient alias for VGC_DEBUG(vgc::core::LogTmp, fmt, ...)
@@ -330,6 +325,6 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// search for `VGC_DEBUG_TMP` after the debugging session in order to remove
 /// them.
 ///
-#define VGC_DEBUG_TMP(fmt, ...) VGC_DEBUG_(::vgc::core::LogTmp, fmt, __VA_ARGS__)
+#define VGC_DEBUG_TMP(fmt, ...) VGC_DEBUG(::vgc::core::LogTmp, fmt, __VA_ARGS__)
 
 #endif // VGC_CORE_LOGGING_H

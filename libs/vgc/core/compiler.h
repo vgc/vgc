@@ -39,7 +39,7 @@
 #endif
 
 #ifndef NDEBUG
-#    define VGC_DEBUG
+#    define VGC_DEBUG_BUILD
 #endif
 
 #ifndef VGC_FORCEINLINE

@@ -43,7 +43,7 @@ TEST(TestArrays, ResizeNoInit) {
     EXPECT_EQ(a, c);
 }
 
-#ifndef VGC_DEBUG
+#ifndef VGC_DEBUG_BUILD
 
 namespace {
 
@@ -84,7 +84,7 @@ TEST(TestArrays, ResizeNoInitPerf) {
     //    Resize without init = 0.0000265 sec.
 }
 
-#endif // VGC_DEBUG
+#endif // VGC_DEBUG_BUILD
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
