@@ -149,7 +149,8 @@ int main(int argc, char* argv[])
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
 
-    VGC_INFO(LogCat, "The answer is {}.", 42);
+    //VGC_INFO(LogCat, "The answer is {}.", 42);
+    VGC_INFO(LogCat, "The answer is 42");
 
     //VGC_DEBUG_TMP("Some things");
     //VGC_DEBUG_TMP("Some other things: {}", 42);
