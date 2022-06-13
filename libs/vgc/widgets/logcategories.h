@@ -23,9 +23,9 @@
 namespace vgc::widgets {
 
 VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgets, Debug)
-VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFiles, Debug)
-VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFonts, Debug)
-VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsSplitter, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFiles, Info)
+VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFonts, Info)
+VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsSplitter, Info)
 
 } // namespace vgc::widgets
 
