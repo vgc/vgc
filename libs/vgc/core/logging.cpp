@@ -16,13 +16,76 @@
 
 #include <vgc/core/logging.h>
 
-namespace vgc {
-namespace core {
+#include <iostream> // cout
+
+#ifdef VGC_CORE_OS_WINDOWS
+#include <Windows.h>
+#endif
+
+namespace vgc::core {
+
+namespace {
+
+void appendStringToLogMessage(fmt::memory_buffer& message, const char* string)
+{
+    for (const char* it = string; *it != '\0'; ++it) {
+        message.push_back(*it);
+    }
+}
+
+} // namespace
+
+namespace internal {
+
+void appendPreambleToLogMessage(fmt::memory_buffer& message, const StringId& categoryName, LogLevel level)
+{
+    appendStringToLogMessage(message, categoryName.string().c_str());
+    appendStringToLogMessage(message, ": ");
+    switch(level) {
+    case LogLevel::Critical: appendStringToLogMessage(message, "Critical: "); break;
+    case LogLevel::Error:    appendStringToLogMessage(message, "Error: ");    break;
+    case LogLevel::Warning:  appendStringToLogMessage(message, "Warning: ");  break;
+    default: break;
+    }
+}
+
+void printLogMessageToStderr(fmt::memory_buffer& message)
+{
+    // TODO: if we print
+    message.push_back('\n');
+    message.push_back('\0');
+#ifdef VGC_CORE_OS_WINDOWS
+    OutputDebugStringA(message.data());
+    std::fflush(stderr);
+#else
+    std::fputs(message.data(), stderr);
+    std::fflush(stderr);
+#endif
+}
+
+} // namespace internal
 
 std::ostream& warning()
 {
     return std::cout;
 }
 
-} // namespace core
-} // namespace vgc
+LogCategoryRegistry::~LogCategoryRegistry()
+{
+    for (auto& [key, value] : map_) {
+        delete value;
+    }
+}
+
+LogCategoryRegistry* LogCategoryRegistry::instance()
+{
+    static std::unique_ptr<LogCategoryRegistry> instance_;
+    if (!instance_) {
+        instance_ = std::make_unique<LogCategoryRegistry>(ConstructorKey{});
+    }
+    return instance_.get();
+}
+
+VGC_DEFINE_LOG_CATEGORY(LogTmp, "tmp")
+
+} // namespace vgc::core

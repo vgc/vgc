@@ -77,4 +77,23 @@
     VGC_PP_TF_4_,VGC_PP_TF_3_,VGC_PP_TF_2_,VGC_PP_TF_1_,VGC_PP_TF_0_            \
   )(F, __VA_ARGS__))
 
+/// Returns the number of arguments of a macro.
+///
+#define VGC_PP_NUM_ARGS(...) VGC_PP_EXPAND(VGC_PP_NUM_ARGS_DISPATCH(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1))
+#define VGC_PP_NUM_ARGS_DISPATCH(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,S,...) S
+
+/// Allows to define macro overloads based on the number of arguments.
+///
+/// ```cpp
+/// #define FOO_1(x) doSomething(x)
+/// #define FOO_2(x, y) doSomethingElse(x, y)
+/// #define FOO(...) VGC_PP_EXPAND(VGC_PP_OVERLOAD(FOO_,__VA_ARGS__)(__VA_ARGS__))
+///
+/// // => Now you can use either FOO(x) or FOO(x, y)
+/// ```
+///
+#define VGC_PP_OVERLOAD(prefix, ...) \
+    VGC_PP_XCONCAT(prefix, VGC_PP_NUM_ARGS(__VA_ARGS__))
+
+
 #endif // VGC_CORE_PP_H
