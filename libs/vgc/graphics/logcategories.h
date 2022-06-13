@@ -22,7 +22,7 @@
 
 namespace vgc::graphics {
 
-VGC_DECLARE_LOG_CATEGORY(VGC_GRAPHICS_API, LogVgcGraphics, true)
+VGC_DECLARE_LOG_CATEGORY(VGC_GRAPHICS_API, LogVgcGraphics, Debug)
 
 } // namespace vgc::graphics
 

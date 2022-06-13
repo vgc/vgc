@@ -56,7 +56,7 @@ void runtimePatchQt() {
 }
 #endif
 
-VGC_DECLARE_LOG_CATEGORY(LogCat, true)
+VGC_DECLARE_LOG_CATEGORY(LogCat, Warning)
 VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
 
 int main(int argc, char* argv[])
@@ -146,8 +146,11 @@ int main(int argc, char* argv[])
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
 
-    VGC_INFO(LogCat, "The answer is {}.", 42);
+    VGC_CRITICAL(LogCat, "A critical log.");
+    VGC_ERROR(LogCat, "An error log.");
+    VGC_WARNING(LogCat, "An warning log.");
     VGC_INFO(LogCat, "The answer is 42");
+    VGC_DEBUG(LogCat, "A Debug log");
 
     VGC_DEBUG_TMP("Some things");
     VGC_DEBUG_TMP("Some other things: {}", 42);

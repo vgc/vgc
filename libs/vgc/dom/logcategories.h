@@ -22,7 +22,7 @@
 
 namespace vgc::dom {
 
-VGC_DECLARE_LOG_CATEGORY(VGC_DOM_API, LogVgcDom, true)
+VGC_DECLARE_LOG_CATEGORY(VGC_DOM_API, LogVgcDom, Debug)
 
 } // namespace vgc::dom
 

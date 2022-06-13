@@ -22,10 +22,10 @@
 
 namespace vgc::widgets {
 
-VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgets, true)
-VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFiles, true)
-VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFonts, true)
-VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsSplitter, true)
+VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgets, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFiles, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsFonts, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_WIDGETS_API, LogVgcWidgetsSplitter, Debug)
 
 } // namespace vgc::widgets
 

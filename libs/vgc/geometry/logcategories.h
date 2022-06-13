@@ -22,7 +22,7 @@
 
 namespace vgc::geometry {
 
-VGC_DECLARE_LOG_CATEGORY(VGC_GEOMETRY_API, LogVgcGeometry, true)
+VGC_DECLARE_LOG_CATEGORY(VGC_GEOMETRY_API, LogVgcGeometry, Debug)
 
 } // namespace vgc::geometry
 

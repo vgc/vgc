@@ -22,7 +22,7 @@
 
 namespace vgc::ui {
 
-VGC_DECLARE_LOG_CATEGORY(VGC_UI_API, LogVgcUi, true)
+VGC_DECLARE_LOG_CATEGORY(VGC_UI_API, LogVgcUi, Debug)
 
 } // namespace vgc::ui
 

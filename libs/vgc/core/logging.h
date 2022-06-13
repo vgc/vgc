@@ -35,13 +35,12 @@ namespace vgc::core {
 ///
 /// An enumeration of the different levels of logging.
 ///
-enum class LogLevel {
-    Critical,
+enum class LogLevel : uint8_t {
+    Critical = 0,
     Error,
     Warning,
     Info,
-    Debug,
-    None
+    Debug
 };
 
 namespace internal {
@@ -93,8 +92,7 @@ VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, const Str
 /// this directly, and instead use the macros:
 ///
 /// ```cpp
-/// VGC_DECLARE_LOG_CATEGORY(MyLogCat, true)        // in a *.h file
-///                                                 // true = isCompileTimeEnabled
+/// VGC_DECLARE_LOG_CATEGORY(MyLogCat, Debug)       // in a *.h file
 ///
 /// VGC_DEFINE_LOG_CATEGORY(MyLogCat, "my.log.cat") // in a *.cpp file
 /// ```
@@ -120,14 +118,14 @@ private:
 /// \class vgc::core::LogCategory
 /// \brief Adds compile-time information to LogCategoryBase
 ///
-template<bool isCompileTimeEnabled_>
+template<LogLevel compileTimeEnabledLevels_>
 class LogCategory : public LogCategoryBase {
 protected:
     friend class LogCategoryRegistry;
     LogCategory(const StringId& name) : LogCategoryBase(name) {}
 
 public:
-    static constexpr bool isCompileTimeEnabled = isCompileTimeEnabled_;
+    static constexpr LogLevel compileTimeEnabledLevels = compileTimeEnabledLevels_;
 };
 
 /// \class vgc::core::LogCategoryRegistry
@@ -162,30 +160,31 @@ private:
 
 // Bits for VGC_DECLARE_LOG_CATEGORY
 
-#define VGC_DECLARE_LOG_CATEGORY_2(ClassName, isCompileTimeEnabled)      \
-    class ClassName                                                      \
-    VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, isCompileTimeEnabled)
+#define VGC_DECLARE_LOG_CATEGORY_2(ClassName, compileTimeEnabledLevels)   \
+    class ClassName                                                       \
+    VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)
 
-#define VGC_DECLARE_LOG_CATEGORY_3(API, ClassName, isCompileTimeEnabled) \
-    class VGC_PP_EXPAND(API) ClassName                                   \
-    VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, isCompileTimeEnabled)
+#define VGC_DECLARE_LOG_CATEGORY_3(API, ClassName, compileTimeEnabledLevels) \
+    class VGC_PP_EXPAND(API) ClassName                                       \
+    VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)
 
-#define VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, isCompileTimeEnabled)  \
-    : public ::vgc::core::LogCategory<isCompileTimeEnabled> {            \
-        friend class ::vgc::core::LogCategoryRegistry;                   \
-        static ClassName* instance_;                                     \
-        ClassName(const ::vgc::core::StringId& name)                     \
-            : ::vgc::core::LogCategory<isCompileTimeEnabled>(name) {}    \
-    public:                                                              \
-        static ClassName* instance() { return instance_; }               \
+#define VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)                      \
+    : public ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels> {         \
+        friend class ::vgc::core::LogCategoryRegistry;                                           \
+        static ClassName* instance_;                                                             \
+        ClassName(const ::vgc::core::StringId& name)                                             \
+            : ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels>(name) {} \
+    public:                                                                                      \
+        static ClassName* instance() { return instance_; }                                       \
     };
 
-/// Declares a log category of type `ClassName` that can be either enabled or
-/// disabled at compile-time.
+/// Declares a log category of type `ClassName` whose enabled levels can be can
+/// be controlled at compile-time. For example, if we give `Warning` to the
+/// macro, then only `Warning`, `Error`, and `Critical` log messages are
+/// enabled at compile-time.
 ///
 /// ```cpp
-/// // in a *.h file, where the given boolean means `isCompileTimeEnabled`
-/// VGC_DECLARE_LOG_CATEGORY(MyCat, true)
+/// VGC_DECLARE_LOG_CATEGORY(MyCat, Debug)
 ///
 /// // in a *.cpp file
 /// VGC_DEFINE_LOG_CATEGORY(MyCat, "my.cat")
@@ -195,7 +194,7 @@ private:
 /// is meant to be exported and used in other DLLs:
 ///
 /// ```cpp
-/// VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogCore, true)
+/// VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogCore, Debug)
 ///
 /// // in a *.cpp file
 /// VGC_DEFINE_LOG_CATEGORY(MyCat, "my.cat")
@@ -214,7 +213,7 @@ private:
 
 namespace vgc::core {
 
-VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
+VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 
 } // namespace vgc::core
 
@@ -226,10 +225,11 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 ///
 /// \sa VGC_CRITICAL, VGC_ERROR, VGC_WARNING, VGC_INFO, VGC_DEBUG
 ///
-#define VGC_LOG(Category, level, ...)                                 \
-    if constexpr (Category::isCompileTimeEnabled) {                   \
-        ::vgc::core::internal::log(                                   \
-            Category::instance()->name(), level, __VA_ARGS__);        \
+#define VGC_LOG(Category, level, ...)                                         \
+    if constexpr (static_cast<uint8_t>(level) <=                              \
+                  static_cast<uint8_t>(Category::compileTimeEnabledLevels)) { \
+        ::vgc::core::internal::log(                                           \
+            Category::instance()->name(), level, __VA_ARGS__);                \
     }
 
 /// Prints a critical error message.
