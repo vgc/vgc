@@ -56,9 +56,6 @@ void runtimePatchQt() {
 }
 #endif
 
-VGC_DECLARE_LOG_CATEGORY(LogCat, Warning)
-VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
-
 int main(int argc, char* argv[])
 {
 #ifdef VGC_QOPENGL_EXPERIMENT
@@ -145,15 +142,6 @@ int main(int argc, char* argv[])
     vgc::core::UniformDistribution randomCount(0, 100);
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
-
-    VGC_CRITICAL(LogCat, "A critical log.");
-    VGC_ERROR(LogCat, "An error log.");
-    VGC_WARNING(LogCat, "An warning log.");
-    VGC_INFO(LogCat, "The answer is 42");
-    VGC_DEBUG(LogCat, "A Debug log");
-
-    VGC_DEBUG_TMP("Some things");
-    VGC_DEBUG_TMP("Some other things: {}", 42);
 
     int size = 10;
     for (int i = 0; i < size; ++i) {

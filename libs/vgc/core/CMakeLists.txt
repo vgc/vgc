@@ -56,7 +56,7 @@ vgc_add_library(core
         stopwatch.cpp
         stringid.cpp
 
-        internal/signal.cpp        
+        internal/signal.cpp
 
     NATVIS_FILES
         tools/vgccore.natvis

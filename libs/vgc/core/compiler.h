@@ -42,13 +42,13 @@
 #    define VGC_DEBUG_BUILD
 #endif
 
-#ifndef VGC_FORCEINLINE
+#ifndef VGC_FORCE_INLINE
 #    if defined(VGC_CORE_COMPILER_CLANG) || defined(VGC_CORE_COMPILER_GCC)
-#        define VGC_FORCEINLINE inline __attribute__((always_inline))
+#        define VGC_FORCE_INLINE inline __attribute__((always_inline))
 #    elif defined(VGC_CORE_COMPILER_MSVC)
-#        define VGC_FORCEINLINE inline __forceinline
+#        define VGC_FORCE_INLINE inline __forceinline
 #    else
-#        define VGC_FORCEINLINE inline
+#        define VGC_FORCE_INLINE inline
 #    endif
 #endif
 

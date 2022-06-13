@@ -63,22 +63,22 @@ void printLogMessageToStderr(fmt::memory_buffer& message);
 // based on the log level.
 //
 template <typename... T>
-VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, fmt::format_string<T...> fmt, T&&... args) {
+VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, fmt::format_string<T...> fmt, T&&... args) {
     fmt::memory_buffer message;
     appendPreambleToLogMessage(message, categoryName, level);
     fmt::format_to(std::back_inserter(message), fmt, args...);
     printLogMessageToStderr(message);
 }
 
-VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, const char* cstring) {
+VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, const char* cstring) {
     log(categoryName, level, "{}", cstring);
 }
 
-VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, const std::string& string) {
+VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, const std::string& string) {
     log(categoryName, level, "{}", string.c_str());
 }
 
-VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, const StringId& stringId) {
+VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, const StringId& stringId) {
     log(categoryName, level, "{}", stringId.string().c_str());
 }
 
