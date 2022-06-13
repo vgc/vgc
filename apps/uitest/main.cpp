@@ -56,11 +56,11 @@ void runtimePatchQt() {
 }
 #endif
 
-VGC_DECLARE_LOG_CATEGORY_2(LogCat, true)
-VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
+//VGC_DECLARE_LOG_CATEGORY_2(LogCat, true)
+//VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
 
-// VGC_DECLARE_LOG_CATEGORY(LogCat, true)
-// VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
+VGC_DECLARE_LOG_CATEGORY(LogCat, true)
+VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
 
 int main(int argc, char* argv[])
 {
