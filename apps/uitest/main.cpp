@@ -142,7 +142,6 @@ int main(int argc, char* argv[])
     vgc::core::UniformDistribution randomCount(0, 100);
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
-
     int size = 10;
     for (int i = 0; i < size; ++i) {
         vgc::ui::Row* row = col->createChild<vgc::ui::Row>();

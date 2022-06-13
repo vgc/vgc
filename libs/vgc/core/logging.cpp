@@ -16,7 +16,7 @@
 
 #include <vgc/core/logging.h>
 
-#include <iostream> // cout
+#include <iostream>
 
 #ifdef VGC_CORE_OS_WINDOWS
 #include <Windows.h>
@@ -39,8 +39,10 @@ namespace internal {
 
 void appendPreambleToLogMessage(fmt::memory_buffer& message, const StringId& categoryName, LogLevel level)
 {
-    appendStringToLogMessage(message, categoryName.string().c_str());
-    appendStringToLogMessage(message, ": ");
+    if (!(categoryName == LogTmp::instance()->name())) {
+        appendStringToLogMessage(message, categoryName.string().c_str());
+        appendStringToLogMessage(message, ": ");
+    }
     switch(level) {
     case LogLevel::Critical: appendStringToLogMessage(message, "Critical: "); break;
     case LogLevel::Error:    appendStringToLogMessage(message, "Error: ");    break;
@@ -51,7 +53,6 @@ void appendPreambleToLogMessage(fmt::memory_buffer& message, const StringId& cat
 
 void printLogMessageToStderr(fmt::memory_buffer& message)
 {
-    // TODO: if we print
     message.push_back('\n');
     message.push_back('\0');
 #ifdef VGC_CORE_OS_WINDOWS
