@@ -72,8 +72,9 @@ std::ostream& warning()
 
 LogCategoryRegistry::~LogCategoryRegistry()
 {
-    for (auto& [key, value] : map_) {
-        delete value;
+    for (const auto& it : map_) {
+        LogCategoryBase* category = it.second;
+        delete category;
     }
 }
 
