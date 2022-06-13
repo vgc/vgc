@@ -37,7 +37,7 @@ bool UndoGroup::close()
 
 void UndoGroup::undo_(bool isAbort)
 {
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
     if (isUndone_) {
         throw LogicError("Already undone.");
     }
@@ -53,7 +53,7 @@ void UndoGroup::undo_(bool isAbort)
 
 void UndoGroup::redo_()
 {
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
     if (!isUndone_) {
         throw LogicError("Cannot redo if not undone first.");
     }

@@ -18,8 +18,9 @@
 
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
-#include <vgc/dom/strings.h>
+#include <vgc/dom/logcategories.h>
 #include <vgc/dom/operation.h>
+#include <vgc/dom/strings.h>
 
 namespace vgc {
 namespace dom {
@@ -67,7 +68,7 @@ const Value& Element::getAttribute(core::StringId name) const
     }
     */
     else {
-        core::warning() << "Attribute is neither authored nor have a default value.";
+        VGC_WARNING(LogVgcDom, "Attribute is neither authored nor have a default value.");
         return Value::invalid();
     }
 }

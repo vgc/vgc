@@ -11,6 +11,7 @@ vgc_add_library(dom
         element.h
         exceptions.h
         io.h
+        logcategories.h
         node.h
         operation.h
         schema.h
@@ -24,6 +25,7 @@ vgc_add_library(dom
         element.cpp
         exceptions.cpp
         io.cpp
+        logcategories.cpp
         node.cpp
         operation.cpp
         schema.cpp

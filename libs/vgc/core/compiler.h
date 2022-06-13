@@ -39,15 +39,21 @@
 #endif
 
 #ifndef NDEBUG
-#define VGC_DEBUG
+#    define VGC_DEBUG_BUILD
 #endif
 
-#define VGC_NODISCARD(msg) [[nodiscard]]
-#ifdef __has_cpp_attribute
-#if __has_cpp_attribute(nodiscard) >= 201907L
-#undef VGC_NODISCARD
-#define VGC_NODISCARD(msg) [[nodiscard(msg)]]
+#if defined(VGC_CORE_COMPILER_CLANG) || defined(VGC_CORE_COMPILER_GCC)
+#    define VGC_FORCE_INLINE inline __attribute__((always_inline))
+#elif defined(VGC_CORE_COMPILER_MSVC)
+#    define VGC_FORCE_INLINE inline __forceinline
+#else
+#    define VGC_FORCE_INLINE inline
 #endif
+
+#if defined(__has_cpp_attribute) && __has_cpp_attribute(nodiscard) >= 201907L
+#    define VGC_NODISCARD(msg) [[nodiscard(msg)]]
+#else
+#    define VGC_NODISCARD(msg) [[nodiscard]]
 #endif
 
 #endif // VGC_CORE_COMPILER_H

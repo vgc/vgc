@@ -24,6 +24,7 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/strings.h>
+#include <vgc/widgets/logcategories.h>
 #include <vgc/widgets/menubar.h>
 #include <vgc/widgets/qtutil.h>
 
@@ -98,7 +99,7 @@ void MainWindow::open()
     if (result == QDialog::Accepted) {
         QStringList selectedFiles = dialog.selectedFiles();
         if (selectedFiles.size() == 0) {
-            core::warning() << "No file selected; file not opened";
+            VGC_WARNING(LogVgcWidgetsFiles, "No file selected; file not opened.");
         }
         if (selectedFiles.size() == 1) {
             QString selectedFile = selectedFiles.first();
@@ -108,11 +109,11 @@ void MainWindow::open()
                 open_();
             }
             else {
-                core::warning() << "Empty file path selected; file not opened";
+                VGC_WARNING(LogVgcWidgetsFiles, "Empty file path selected; file not opened.");
             }
         }
         else {
-            core::warning() << "More than one file selected; file not opened";
+            VGC_WARNING(LogVgcWidgetsFiles, "More than one file selected; file not opened.");
         }
     }
     else {
@@ -159,7 +160,7 @@ void MainWindow::saveAs()
     if (result == QDialog::Accepted) {
         QStringList selectedFiles = dialog.selectedFiles();
         if (selectedFiles.size() == 0) {
-            core::warning() << "No file selected; file not saved";
+            VGC_WARNING(LogVgcWidgetsFiles, "No file selected; file not saved.");
         }
         if (selectedFiles.size() == 1) {
             QString selectedFile = selectedFiles.first();
@@ -180,11 +181,11 @@ void MainWindow::saveAs()
                 save_();
             }
             else {
-                core::warning() << "Empty file path selected; file not saved";
+                VGC_WARNING(LogVgcWidgetsFiles, "Empty file path selected; file not saved.");
             }
         }
         else {
-            core::warning() << "More than one file selected; file not saved";
+            VGC_WARNING(LogVgcWidgetsFiles, "More than one file selected; file not saved.");
         }
     }
     else {

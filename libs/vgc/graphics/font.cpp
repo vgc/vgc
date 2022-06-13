@@ -27,6 +27,7 @@
 
 #include <vgc/core/paths.h>
 #include <vgc/graphics/exceptions.h>
+#include <vgc/graphics/logcategories.h>
 
 namespace vgc {
 namespace graphics {
@@ -84,7 +85,7 @@ public:
         if (error) {
             // Note: we print a warning rather than throwing, because throwing
             // in destructors is a bad idea.
-            core::warning() << errorMsg(error) << std::endl;
+            VGC_WARNING(LogVgcGraphics, errorMsg(error));
         }
     }
 };
@@ -294,7 +295,7 @@ FontFaceImpl::~FontFaceImpl()
     if (error) {
         // Note: we print a warning rather than throwing, because throwing
         // in destructors is a bad idea.
-        core::warning() << errorMsg(error) << std::endl;
+        VGC_WARNING(LogVgcGraphics, errorMsg(error));
     }
 }
 

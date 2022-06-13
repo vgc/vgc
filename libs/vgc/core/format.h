@@ -48,10 +48,16 @@
 //   warning C4275: non dll-interface class 'std::runtime_error' used as base
 //   for dll-interface class 'fmt::v6::format_error' / 'fmt::v6::system_error'
 //
+//   warning C4459: declaration of 'uint' hides global declaration
+//   QtCore/qglobal.h: note: see declaration of 'uint'
+//   fmt/format.h: note: see reference to function template instantiation
+//                 'fmt::v8::detail::dragonbox::'... being compiled
+//
 #include <vgc/core/compiler.h>
 #if defined(VGC_CORE_COMPILER_MSVC)
 #  pragma warning(push)
 #  pragma warning(disable: 4275)
+#  pragma warning(disable: 4459)
 #endif
 #include <fmt/format.h>
 #if defined(VGC_CORE_COMPILER_MSVC)

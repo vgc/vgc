@@ -16,18 +16,60 @@
 
 #include <vgc/widgets/font.h>
 
-#include <iostream>
+#include <sstream>
+
 #include <QFontDatabase>
-#include <vgc/core/logging.h>
+
 #include <vgc/core/paths.h>
+#include <vgc/widgets/logcategories.h>
 #include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
 
+namespace {
+
+std::string fontFamilyInfo(const std::string& family)
+{
+    std::stringstream ss;
+    QFontDatabase fd;
+    ss << "Font Family: " << family << "\n";
+    ss << "  Styles:\n";
+    QString f = toQt(family);
+    QStringList styles = fd.styles(f);
+    Q_FOREACH (const QString& s, styles) {
+        ss << "    " << fromQt(s) << ":\n";
+        ss << "        weight:             " << fd.weight(f, s) << "\n";
+        ss << "        bold:               " << (fd.bold(f, s)               ? "true" : "false") << "\n";
+        ss << "        italic:             " << (fd.italic(f, s)             ? "true" : "false") << "\n";
+        ss << "        isBitmapScalable:   " << (fd.isBitmapScalable(f, s)   ? "true" : "false") << "\n";
+        ss << "        isFixedPitch:       " << (fd.isFixedPitch(f, s)       ? "true" : "false") << "\n";
+        ss << "        isScalable:         " << (fd.isScalable(f, s)         ? "true" : "false") << "\n";
+        ss << "        isSmoothlyScalable: " << (fd.isSmoothlyScalable(f, s) ? "true" : "false") << "\n";
+        QList<int> pointSizes = fd.pointSizes(f, s);
+        ss << "        pointSizes:         [";
+        std::string delimiter = "";
+        for (int ps : pointSizes) {
+            ss << delimiter << ps;
+            delimiter = ", ";
+        }
+        ss << "]\n";
+        QList<int> smoothSizes = fd.smoothSizes(f, s);
+        ss << "        smoothSizes:        [";
+        delimiter = "";
+        for (int size : smoothSizes) {
+            ss << delimiter << size;
+            delimiter = ", ";
+        }
+        ss << "]\n";
+    }
+    return ss.str();
+}
+
+} // namespace
+
 void addDefaultApplicationFonts()
 {
-    const bool printFontInfo = false;
     std::vector<std::pair<std::string, std::string>> fontNames {
         {"SourceCodePro", "Black"},
         {"SourceCodePro", "BlackIt"},
@@ -64,19 +106,15 @@ void addDefaultApplicationFonts()
         std::string filepath = "widgets/fonts/" + name.first + fontSubFolder + filename;
         int id = widgets::addApplicationFont(filepath);
         if (id == -1) {
-            core::warning() << "Failed to add font \"" + filepath + "\".\n";
+            VGC_WARNING(LogVgcWidgetsFonts, "Failed to add font \"{}\".", filepath);
         }
         else {
-            if (printFontInfo) {
-                std::cout << "Added font file: " + filepath + "\n";
-            }
+            VGC_DEBUG(LogVgcWidgetsFonts, "Added font file \"{}\".", filepath);
         }
     }
 
-    if (printFontInfo) {
-        widgets::printFontFamilyInfo("Source Sans Pro");
-        widgets::printFontFamilyInfo("Source Code Pro");
-    }
+    VGC_DEBUG(LogVgcWidgetsFonts, fontFamilyInfo("Source Sans Pro"));
+    VGC_DEBUG(LogVgcWidgetsFonts, fontFamilyInfo("Source Code Pro"));
 }
 
 int addApplicationFont(const std::string& name)
@@ -88,37 +126,7 @@ int addApplicationFont(const std::string& name)
 
 void printFontFamilyInfo(const std::string& family)
 {
-    QFontDatabase fd;
-    std::cout << "Font Family: " << family << "\n";
-    std::cout << "  Styles:\n";
-    QString f = toQt(family);
-    QStringList styles = fd.styles(f);
-    Q_FOREACH (const QString& s, styles) {
-        std::cout << "    " << fromQt(s) << ":\n";
-        std::cout << "        weight:             " << fd.weight(f, s) << "\n";
-        std::cout << "        bold:               " << (fd.bold(f, s)               ? "true" : "false") << "\n";
-        std::cout << "        italic:             " << (fd.italic(f, s)             ? "true" : "false") << "\n";
-        std::cout << "        isBitmapScalable:   " << (fd.isBitmapScalable(f, s)   ? "true" : "false") << "\n";
-        std::cout << "        isFixedPitch:       " << (fd.isFixedPitch(f, s)       ? "true" : "false") << "\n";
-        std::cout << "        isScalable:         " << (fd.isScalable(f, s)         ? "true" : "false") << "\n";
-        std::cout << "        isSmoothlyScalable: " << (fd.isSmoothlyScalable(f, s) ? "true" : "false") << "\n";
-        QList<int> pointSizes = fd.pointSizes(f, s);
-        std::cout << "        pointSizes:         [";
-        std::string delimiter = "";
-        for (int ps : pointSizes) {
-            std::cout << delimiter << ps;
-            delimiter = ", ";
-        }
-        std::cout << "]\n";
-        QList<int> smoothSizes = fd.smoothSizes(f, s);
-        std::cout << "        smoothSizes:        [";
-        delimiter = "";
-        for (int ss : smoothSizes) {
-            std::cout << delimiter << ss;
-            delimiter = ", ";
-        }
-        std::cout << "]\n";
-    }
+    VGC_INFO(LogVgcWidgetsFonts, fontFamilyInfo(family));
 }
 
 } // namespace widgets

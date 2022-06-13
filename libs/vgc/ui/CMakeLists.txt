@@ -18,6 +18,7 @@ vgc_add_library(ui
         key.h
         label.h
         lineedit.h
+        logcategories.h
         modifierkey.h
         mouseevent.h
         row.h
@@ -43,6 +44,7 @@ vgc_add_library(ui
         flex.cpp
         label.cpp
         lineedit.cpp
+        logcategories.cpp
         mouseevent.cpp
         row.cpp
         strings.cpp
