@@ -31,11 +31,6 @@
 
 namespace vgc::core {
 
-/// Returns an output stream that can be used to issue warnings.
-///
-VGC_CORE_API
-std::ostream& warning();
-
 /// \enum vgc::core::LogLevel
 ///
 /// An enumeration of the different levels of logging.
@@ -74,6 +69,18 @@ VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, fmt::form
     appendPreambleToLogMessage(message, categoryName, level);
     fmt::format_to(std::back_inserter(message), fmt, args...);
     printLogMessageToStderr(message);
+}
+
+VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, const char* cstring) {
+    log(categoryName, level, "{}", cstring);
+}
+
+VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, const std::string& string) {
+    log(categoryName, level, "{}", string.c_str());
+}
+
+VGC_FORCEINLINE void log(const StringId& categoryName, LogLevel level, const StringId& stringId) {
+    log(categoryName, level, "{}", stringId.string().c_str());
 }
 
 } // namespace internal

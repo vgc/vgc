@@ -16,6 +16,7 @@ vgc_add_library(geometry
         curve.h
         curvecommand.h
         curves2d.h
+        logcategories.h
         mat.h
         mat3d.h
         mat3f.h
@@ -32,6 +33,7 @@ vgc_add_library(geometry
         camera2d.cpp
         curve.cpp
         curves2d.cpp
+        logcategories.cpp
         mat3d.cpp
         mat3f.cpp
         mat4d.cpp

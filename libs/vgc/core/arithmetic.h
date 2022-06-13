@@ -122,7 +122,7 @@
 
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
-#include <vgc/core/logging.h>
+#include <vgc/core/logcategories.h>
 #include <vgc/core/templateutil.h>
 
 namespace vgc {
@@ -946,10 +946,8 @@ inline bool isNear(double a, double b, double absTol) {
 template<typename T>
 const T& clamp(const T& value, const TypeIdentity<T>& min, const TypeIdentity<T>& max) {
     if (max < min) {
-        warning()
-            << "Warning: vgc::core::clamp("
-            << "value=" << value << ", min=" << min << ", max=" << max << ") "
-            << "called with max < min\n";
+        VGC_WARNING(LogVgcCore, "vgc::core::clamp(value={}, min={}, max={}) called with max < min.",
+                    value, min, max);
         return (value < max) ? max : (min < value) ? min : value;
     }
     else {

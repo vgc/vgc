@@ -14,6 +14,7 @@ vgc_add_library(graphics
         exceptions.h
         font.h
         idgenerator.h
+        logcategories.h
         text.h
 
     CPP_FILES
@@ -21,6 +22,7 @@ vgc_add_library(graphics
         exceptions.cpp
         font.cpp
         idgenerator.cpp
+        logcategories.cpp
         text.cpp
 
     RESOURCE_FILES

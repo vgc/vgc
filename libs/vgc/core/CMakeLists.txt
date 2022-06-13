@@ -21,6 +21,7 @@ vgc_add_library(core
         history.h
         innercore.h
         io.h
+        logcategories.h
         logging.h
         object.h
         os.h
@@ -44,6 +45,7 @@ vgc_add_library(core
         format.cpp
         history.cpp
         io.cpp
+        logcategories.cpp
         logging.cpp
         object.cpp
         parse.cpp
@@ -54,7 +56,7 @@ vgc_add_library(core
         stopwatch.cpp
         stringid.cpp
 
-        internal/signal.cpp
+        internal/signal.cpp        
 
     NATVIS_FILES
         tools/vgccore.natvis

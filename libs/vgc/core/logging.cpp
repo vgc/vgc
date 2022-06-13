@@ -65,11 +65,6 @@ void printLogMessageToStderr(fmt::memory_buffer& message)
 
 } // namespace internal
 
-std::ostream& warning()
-{
-    return std::cout;
-}
-
 LogCategoryRegistry::~LogCategoryRegistry()
 {
     for (const auto& it : map_) {

@@ -56,9 +56,6 @@ void runtimePatchQt() {
 }
 #endif
 
-//VGC_DECLARE_LOG_CATEGORY_2(LogCat, true)
-//VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
-
 VGC_DECLARE_LOG_CATEGORY(LogCat, true)
 VGC_DEFINE_LOG_CATEGORY(LogCat, "log.cat")
 
@@ -149,11 +146,11 @@ int main(int argc, char* argv[])
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
 
-    //VGC_INFO(LogCat, "The answer is {}.", 42);
+    VGC_INFO(LogCat, "The answer is {}.", 42);
     VGC_INFO(LogCat, "The answer is 42");
 
-    //VGC_DEBUG_TMP("Some things");
-    //VGC_DEBUG_TMP("Some other things: {}", 42);
+    VGC_DEBUG_TMP("Some things");
+    VGC_DEBUG_TMP("Some other things: {}", 42);
 
     int size = 10;
     for (int i = 0; i < size; ++i) {

@@ -22,6 +22,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/algorithm.h>
 #include <vgc/core/logging.h>
+#include <vgc/widgets/logcategories.h>
 #include <vgc/widgets/toggleviewaction.h>
 
 namespace vgc {
@@ -84,17 +85,15 @@ void Splitter::setMinimumLength(int min)
 {
     int max = maximumLength();
     if (min < 0) {
-        core::warning()
-            << "Warning: vgc::widgets::Splitter::setMinimumLength("
-            << "min=" << min << ") "
-            << "called with min < 0\n";
+        VGC_WARNING(LogVgcWidgetsSplitter,
+                    "vgc::widgets::Splitter::setMinimumLength(min={}) "
+                    "called with min < 0.", min);
         min = 0;
     }
     else if (min > max) {
-        core::warning()
-            << "Warning: vgc::widgets::Splitter::setMinimumLength("
-            << "min=" << min << ") "
-            << "called with min > maximumLength() (=" << max << ")\n";
+        VGC_WARNING(LogVgcWidgetsSplitter,
+                    "vgc::widgets::Splitter::setMinimumLength(min={}) "
+                    "called with min > maximumLength() (={}).", min, max);
         min = max;
     }
     minimumLength_ = min;
@@ -105,10 +104,9 @@ void Splitter::setMaximumLength(int max)
 {
     int min = minimumLength();
     if (max < min) {
-        core::warning()
-            << "Warning: vgc::widgets::Splitter::setMaximumLength("
-            << "max=" << max << ") "
-            << "called with max < minimumLength() (=" << min << ")\n";
+        VGC_WARNING(LogVgcWidgetsSplitter,
+                    "vgc::widgets::Splitter::setMaximumLength(max={}) "
+                    "called with max < minimumLength() (={}).", max, min);
         max = min;
     }
     maximumLength_ = max;
@@ -120,24 +118,21 @@ void Splitter::setLengthRange(int min, int max)
     minimumLength_ = min;
     maximumLength_ = max;
     if (min < 0) {
-        core::warning()
-            << "Warning: vgc::widgets::Splitter::setLengthRange("
-            << "min=" << min << ", max=" << max << ") "
-            << "called with min < 0\n";
+        VGC_WARNING(LogVgcWidgetsSplitter,
+                    "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
+                    "called with min < 0.", min, max);
         minimumLength_ = 0;
     }
     if (max < 0) {
-        core::warning()
-            << "Warning: vgc::widgets::Splitter::setLengthRange("
-            << "min=" << min << ", max=" << max << ") "
-            << "called with max < 0\n";
+        VGC_WARNING(LogVgcWidgetsSplitter,
+                    "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
+                    "called with max < 0.", min, max);
         maximumLength_ = 0;
     }
     if (min > max) {
-        core::warning()
-            << "Warning: vgc::widgets::Splitter::setLengthRange("
-            << "min=" << min << ", max=" << max << ") "
-            << "called with min > max\n";
+        VGC_WARNING(LogVgcWidgetsSplitter,
+                    "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
+                    "called with min > max.", min, max);
         std::swap(minimumLength_, maximumLength_);
     }
     setLength(length_);

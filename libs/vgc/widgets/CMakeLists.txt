@@ -15,6 +15,7 @@ vgc_add_library(widgets
         console.h
         dialog.h
         font.h
+        logcategories.h
         mainwindow.h
         menubar.h
         openglviewer.h
@@ -36,6 +37,7 @@ vgc_add_library(widgets
         console.cpp
         dialog.cpp
         font.cpp
+        logcategories.cpp
         mainwindow.cpp
         menubar.cpp
         openglviewer.cpp
