@@ -219,10 +219,10 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 ///
 /// \sa VGC_CRITICAL, VGC_ERROR, VGC_WARNING, VGC_INFO, VGC_DEBUG
 ///
-#define VGC_LOG(Category, level, fmt, ...)                                 \
-    if constexpr (Category::isCompileTimeEnabled) {                        \
-        ::vgc::core::internal::log(                                        \
-            Category::instance()->name(), level, fmt, __VA_ARGS__);        \
+#define VGC_LOG(Category, level, ...)                                 \
+    if constexpr (Category::isCompileTimeEnabled) {                   \
+        ::vgc::core::internal::log(                                   \
+            Category::instance()->name(), level, __VA_ARGS__);        \
     }
 
 /// Prints a critical error message.
@@ -234,8 +234,8 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// These are kept in release builds, and could be presented to the user via a
 /// popup dialog just before closing the application.
 ///
-#define VGC_CRITICAL(Category, fmt, ...) \
-    VGC_LOG(Category, ::vgc::core::LogLevel::Critical, fmt, __VA_ARGS__)
+#define VGC_CRITICAL(Category, ...) \
+    VGC_LOG(Category, ::vgc::core::LogLevel::Critical, __VA_ARGS__)
 
 /// Prints an error.
 ///
@@ -251,8 +251,8 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// various ways, for example in a widget with a list of all the errors that
 /// have occured.
 ///
-#define VGC_ERROR(Category, fmt, ...) \
-    VGC_LOG(Category, ::vgc::core::LogLevel::Error, fmt, __VA_ARGS__)
+#define VGC_ERROR(Category, ...) \
+    VGC_LOG(Category, ::vgc::core::LogLevel::Error, __VA_ARGS__)
 
 /// Logs a warning.
 ///
@@ -279,8 +279,8 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// various ways, for example in a widget with a list of all the warnings that
 /// have occured.
 ///
-#define VGC_WARNING(Category, fmt, ...) \
-    VGC_LOG(Category, ::vgc::core::LogLevel::Warning, fmt, __VA_ARGS__)
+#define VGC_WARNING(Category, ...) \
+    VGC_LOG(Category, ::vgc::core::LogLevel::Warning, __VA_ARGS__)
 
 /// Logs an informational message.
 ///
@@ -294,8 +294,8 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// various ways, for example printed to the console if any, or in a widget
 /// with a list of all available informational messages.
 ///
-#define VGC_INFO(Category, fmt, ...) \
-    VGC_LOG(Category, ::vgc::core::LogLevel::Info, fmt, __VA_ARGS__)
+#define VGC_INFO(Category, ...) \
+    VGC_LOG(Category, ::vgc::core::LogLevel::Info, __VA_ARGS__)
 
 /// Prints a debug message.
 ///
@@ -314,10 +314,10 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// For debug messages which are temporary and not meant to be commited (i.e.,
 /// short tests when trying to fix a bug), you can use VGC_DEBUG_TMP instead.
 ///
-#define VGC_DEBUG(Category, fmt, ...) \
-    VGC_LOG(Category, ::vgc::core::LogLevel::Debug, fmt, __VA_ARGS__)
+#define VGC_DEBUG(Category, ...) \
+    VGC_LOG(Category, ::vgc::core::LogLevel::Debug, __VA_ARGS__)
 
-/// A convenient alias for VGC_DEBUG(vgc::core::LogTmp, fmt, ...)
+/// A convenient alias for VGC_DEBUG(vgc::core::LogTmp, ...)
 ///
 /// This is useful for debug messages which are temporary and not meant to be
 /// commited (i.e., short tests when trying to fix a bug). The advantage of
@@ -325,6 +325,6 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, true)
 /// search for `VGC_DEBUG_TMP` after the debugging session in order to remove
 /// them.
 ///
-#define VGC_DEBUG_TMP(fmt, ...) VGC_DEBUG(::vgc::core::LogTmp, fmt, __VA_ARGS__)
+#define VGC_DEBUG_TMP(...) VGC_DEBUG(::vgc::core::LogTmp, __VA_ARGS__)
 
 #endif // VGC_CORE_LOGGING_H
