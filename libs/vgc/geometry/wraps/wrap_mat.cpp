@@ -122,10 +122,11 @@ void wrap_mat(py::module& m, const std::string& name)
          });
 
     // Overload of arithmetic operators
+    auto self2 = py::self; // Fix https://github.com/pybind/pybind11/issues/1893
     cmat.def(py::self += py::self)
         .def(py::self + py::self)
         .def(+ py::self)
-        .def(py::self -= py::self)
+        .def(self2 -= py::self)
         .def(py::self - py::self)
         .def(- py::self)
         .def(py::self *= py::self)

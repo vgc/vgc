@@ -188,17 +188,19 @@ TEST(TestArray, CopyAssignAndMoveAssign) {
 }
 
 TEST(TestArray, Assign) {
-    Array<int> a;
-    Array<int> b = {10, 42, 3, 4};
-    std::vector<int> v = {10, 42, 3, 4};
-    a.assign(10, 1);                    EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 1); EXPECT_EQ(a[9], 1);
-    a.assign(Int(11), 2);               EXPECT_EQ(a.length(), 11); EXPECT_EQ(a[0], 2); EXPECT_EQ(a[10], 2);
-    a.assign(size_t(12), 3);            EXPECT_EQ(a.length(), 12); EXPECT_EQ(a[0], 3); EXPECT_EQ(a[11], 3);
-    a.assign(b.begin(), b.begin() + 2); EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42);
-    a.assign(v);                        EXPECT_EQ(a.length(), 4);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[3], 4);
-    a.assign({11, 43});                 EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 11); EXPECT_EQ(a[1], 43);
-    EXPECT_THROW(a.assign(-1, 42),      NegativeIntegerError);
-    EXPECT_THROW(a.assign(Int(-1), 42), NegativeIntegerError);
+    {
+        Array<int> a;
+        Array<int> b = {10, 42, 3, 4};
+        std::vector<int> v = {10, 42, 3, 4};
+        a.assign(10, 1);                    EXPECT_EQ(a.length(), 10); EXPECT_EQ(a[0], 1); EXPECT_EQ(a[9], 1);
+        a.assign(Int(11), 2);               EXPECT_EQ(a.length(), 11); EXPECT_EQ(a[0], 2); EXPECT_EQ(a[10], 2);
+        a.assign(size_t(12), 3);            EXPECT_EQ(a.length(), 12); EXPECT_EQ(a[0], 3); EXPECT_EQ(a[11], 3);
+        a.assign(b.begin(), b.begin() + 2); EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[1], 42);
+        a.assign(v);                        EXPECT_EQ(a.length(), 4);  EXPECT_EQ(a[0], 10); EXPECT_EQ(a[3], 4);
+        a.assign({11, 43});                 EXPECT_EQ(a.length(), 2);  EXPECT_EQ(a[0], 11); EXPECT_EQ(a[1], 43);
+        EXPECT_THROW(a.assign(-1, 42),      NegativeIntegerError);
+        EXPECT_THROW(a.assign(Int(-1), 42), NegativeIntegerError);
+    }
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         // Tests assignFill_
@@ -431,42 +433,42 @@ TEST(TestArray, InsertAtIterator) {
 }
 
 TEST(TestArray, InsertAtIndex) {
+    {
+        Array<int> a = {10, 42, 12};
+        Array<int> b = {10, 42, 15, 12};
+        Array<int> c = {4, 10, 42, 15, 12};
+        Array<int> d = {4, 10, 42, 15, 12, 13};
+        a.insert(2, 15); EXPECT_EQ(a, b);
+        a.insert(0, 4); EXPECT_EQ(a, c);
+        a.insert(5, 13); EXPECT_EQ(a, d);
+        EXPECT_THROW(a.insert(-1, 10), IndexError);
+        EXPECT_THROW(a.insert(7, 10), IndexError);
 
-    Array<int> a = {10, 42, 12};
-    Array<int> b = {10, 42, 15, 12};
-    Array<int> c = {4, 10, 42, 15, 12};
-    Array<int> d = {4, 10, 42, 15, 12, 13};
-    a.insert(2, 15); EXPECT_EQ(a, b);
-    a.insert(0, 4); EXPECT_EQ(a, c);
-    a.insert(5, 13); EXPECT_EQ(a, d);
-    EXPECT_THROW(a.insert(-1, 10), IndexError);
-    EXPECT_THROW(a.insert(7, 10), IndexError);
+        Array<Array<int>> e = {{1, 2}, {3, 4}};
+        Array<int> f = {5, 6};
+        Array<int> g = {5, 6};
+        e.insert(1, f);            EXPECT_EQ(e.length(), 3); EXPECT_EQ(f.length(), 2);
+        e.insert(1, std::move(f)); EXPECT_EQ(e.length(), 4); EXPECT_EQ(f.length(), 0);
+        EXPECT_THROW(e.insert(-1, std::move(g)), IndexError);
 
-    Array<Array<int>> e = {{1, 2}, {3, 4}};
-    Array<int> f = {5, 6};
-    Array<int> g = {5, 6};
-    e.insert(1, f);            EXPECT_EQ(e.length(), 3); EXPECT_EQ(f.length(), 2);
-    e.insert(1, std::move(f)); EXPECT_EQ(e.length(), 4); EXPECT_EQ(f.length(), 0);
-    EXPECT_THROW(e.insert(-1, std::move(g)), IndexError);
+        Array<int> h = {10, 42, 12};
+        Array<int> i = {10, 42, 15, 15, 15, 12};
+        h.insert(2, 3, 15); EXPECT_EQ(h, i);
+        EXPECT_THROW(h.insert(-1, 3, 15), IndexError);
+        EXPECT_THROW(h.insert(2, -1, 15), NegativeIntegerError);
 
-    Array<int> h = {10, 42, 12};
-    Array<int> i = {10, 42, 15, 15, 15, 12};
-    h.insert(2, 3, 15); EXPECT_EQ(h, i);
-    EXPECT_THROW(h.insert(-1, 3, 15), IndexError);
-    EXPECT_THROW(h.insert(2, -1, 15), NegativeIntegerError);
+        Array<int> j = {10, 42, 15, 10, 42, 15, 15, 12};
+        h.insert(3, i.begin(), i.begin() + 2); EXPECT_EQ(h, j);
+        EXPECT_THROW(h.insert(-1, i.begin(), i.begin() + 2), IndexError);
 
-    Array<int> j = {10, 42, 15, 10, 42, 15, 15, 12};
-    h.insert(3, i.begin(), i.begin() + 2); EXPECT_EQ(h, j);
-    EXPECT_THROW(h.insert(-1, i.begin(), i.begin() + 2), IndexError);
+        Array<int> k = {10, 1, 2, 42, 15, 10, 42, 15, 15, 12};
+        h.insert(1, {1, 2}); EXPECT_EQ(h, k);
+        EXPECT_THROW(h.insert(-1, {1, 2}), IndexError);
 
-    Array<int> k = {10, 1, 2, 42, 15, 10, 42, 15, 15, 12};
-    h.insert(1, {1, 2}); EXPECT_EQ(h, k);
-    EXPECT_THROW(h.insert(-1, {1, 2}), IndexError);
-
-    Array<int> l = {10, 1, 100, 200, 2, 42, 15, 10, 42, 15, 15, 12};
-    h.insert(2, std::vector<int>{100, 200}); EXPECT_EQ(h, l);
-    EXPECT_THROW(h.insert(-1, std::vector<int>{100, 200}), IndexError);
-
+        Array<int> l = {10, 1, 100, 200, 2, 42, 15, 10, 42, 15, 15, 12};
+        h.insert(2, std::vector<int>{100, 200}); EXPECT_EQ(h, l);
+        EXPECT_THROW(h.insert(-1, std::vector<int>{100, 200}), IndexError);
+    }
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         Array<TestObj> a(10);
@@ -578,11 +580,13 @@ TEST(TestArray, Emplace) {
 }
 
 TEST(TestArray, EraseAtIterator) {
-    Array<int> a = {10, 42, 12};
-    Array<int> b = {10, 12};
-    Array<int> c = {10};
-    auto it = a.erase(a.begin()+1); EXPECT_EQ(a, b); EXPECT_EQ(*it, 12);
-    auto it2 = a.erase(a.begin()+1); EXPECT_EQ(a, c); EXPECT_EQ(it2, a.end());
+    {
+        Array<int> a = {10, 42, 12};
+        Array<int> b = {10, 12};
+        Array<int> c = {10};
+        auto it = a.erase(a.begin()+1); EXPECT_EQ(a, b); EXPECT_EQ(*it, 12);
+        auto it2 = a.erase(a.begin()+1); EXPECT_EQ(a, c); EXPECT_EQ(it2, a.end());
+    }
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         Array<TestObj> a(10);
@@ -591,13 +595,15 @@ TEST(TestArray, EraseAtIterator) {
 }
 
 TEST(TestArray, EraseRangeIterator) {
-    Array<int> a = {10, 42, 12};
-    Array<int> b = {12};
-    Array<int> c = {10};
-    auto it = a.erase(a.begin(), a.begin()+2); EXPECT_EQ(a, b); EXPECT_EQ(*it, 12);
-    auto it2 = a.erase(a.begin(), a.begin()); EXPECT_EQ(a, b); EXPECT_EQ(it2, a.begin());
-    auto it3 = a.erase(a.end(), a.end()); EXPECT_EQ(a, b); EXPECT_EQ(it3, a.end());
-    auto it4 = a.erase(a.begin(), a.end()); EXPECT_TRUE(a.isEmpty()); EXPECT_EQ(it4, a.end());
+    {
+        Array<int> a = {10, 42, 12};
+        Array<int> b = {12};
+        Array<int> c = {10};
+        auto it = a.erase(a.begin(), a.begin()+2); EXPECT_EQ(a, b); EXPECT_EQ(*it, 12);
+        auto it2 = a.erase(a.begin(), a.begin()); EXPECT_EQ(a, b); EXPECT_EQ(it2, a.begin());
+        auto it3 = a.erase(a.end(), a.end()); EXPECT_EQ(a, b); EXPECT_EQ(it3, a.end());
+        auto it4 = a.erase(a.begin(), a.end()); EXPECT_TRUE(a.isEmpty()); EXPECT_EQ(it4, a.end());
+    }
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         Array<TestObj> a(10);
@@ -737,14 +743,16 @@ TEST(TestArray, RemoveFirstAndLast) {
 }
 
 TEST(TestArray, Resize) {
-    Array<int> a = {15, 10, 42, 12};
-    Array<int> b = {15, 10, 42};
-    Array<int> c = {15, 10, 42, 0, 0};
-    Array<int> d = {15, 10, 42, 0, 0, 15, 15, 15};
-    a.resize(3); EXPECT_EQ(a, b);
-    a.resize(5); EXPECT_EQ(a, c);
-    a.resize(8, 15); EXPECT_EQ(a, d);
-    EXPECT_THROW(a.resize(-1), NegativeIntegerError);
+    {
+        Array<int> a = {15, 10, 42, 12};
+        Array<int> b = {15, 10, 42};
+        Array<int> c = {15, 10, 42, 0, 0};
+        Array<int> d = {15, 10, 42, 0, 0, 15, 15, 15};
+        a.resize(3); EXPECT_EQ(a, b);
+        a.resize(5); EXPECT_EQ(a, c);
+        a.resize(8, 15); EXPECT_EQ(a, d);
+        EXPECT_THROW(a.resize(-1), NegativeIntegerError);
+    }
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         // Tests resize_
@@ -756,13 +764,15 @@ TEST(TestArray, Resize) {
 }
 
 TEST(TestArray, ResizeNoInit) {
-    Array<int> a = {15, 10, 42, 12};
-    Array<int> b = {15, 10, 42};
-    Array<int> c = {15, 10, 42, 12};
-    a.resizeNoInit(3);  EXPECT_EQ(a, b);
-    a.resizeNoInit(4);  EXPECT_EQ(a, c);
-    a.resizeNoInit(10); EXPECT_LENGTH(a, 10);
-    EXPECT_THROW(a.resizeNoInit(-1), NegativeIntegerError);
+    {
+        Array<int> a = {15, 10, 42, 12};
+        Array<int> b = {15, 10, 42};
+        Array<int> c = {15, 10, 42, 12};
+        a.resizeNoInit(3);  EXPECT_EQ(a, b);
+        a.resizeNoInit(4);  EXPECT_EQ(a, c);
+        a.resizeNoInit(10); EXPECT_LENGTH(a, 10);
+        EXPECT_THROW(a.resizeNoInit(-1), NegativeIntegerError);
+    }
     struct Tag {}; using TestObj = TestObject<Tag>;
     {
         // Tests resize_
