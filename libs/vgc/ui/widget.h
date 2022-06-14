@@ -27,6 +27,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
+#include <vgc/geometry/rect2f.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/graphics/idgenerator.h>
@@ -328,6 +329,24 @@ public:
     float y() const
     {
         return position_[1];
+    }
+
+    /// Returns the geometry of the widget relative to its parent.
+    ///
+    /// This is equivalent to `Rect2f::fromPositionSize(position(), size())`.
+    ///
+    geometry::Rect2f geometry() const
+    {
+        return geometry::Rect2f::fromPositionSize(position_, size_);
+    }
+
+    /// Returns the geometry of the widget relative to itself.
+    ///
+    /// This is equivalent to `Rect2f::fromPositionSize(0, 0, size())`.
+    ///
+    geometry::Rect2f rect() const
+    {
+        return geometry::Rect2f::fromPositionSize(0, 0, size_);
     }
 
     /// Sets the new position and size of this widget (relative to its parent),
