@@ -19,16 +19,6 @@
 #include <sstream>
 #include <vgc/core/parse.h>
 
-// TODO: write more tests
-
-
-template<typename IStream>
-void skipExpectedString(IStream& in, const std::string& s)
-{
-
-
-}
-
 TEST(TestParse, ReadChar)
 {
     std::string s = "hello";
