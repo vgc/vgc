@@ -28,6 +28,19 @@ function(vgc_add_prefix_suffix_ var prefix middle suffix)
    set(${var} "${listVar}" PARENT_SCOPE)
 endfunction()
 
+# Sets the desired warning flags for a VGC lib, test, or app.
+#
+function(vgc_set_warning_flags target)
+    target_compile_options(${target} PUBLIC ${VGC_COMPILER_WARNING_FLAGS})
+    target_compile_definitions(${target} PUBLIC ${VGC_COMPILER_WARNING_DEFINITIONS})
+    if(VGC_WERROR)
+        target_compile_options(${target} PRIVATE ${VGC_WERROR_FLAG})
+    endif ()
+    if(VGC_PEDANTIC)
+        target_compile_options(${target} PRIVATE ${VGC_PEDANTIC_COMPILE_FLAGS})
+    endif()
+endfunction()
+
 # Defines a new VGC library. This calls add_library under the hood.
 #
 # Usage:
@@ -137,19 +150,12 @@ function(vgc_add_library LIB_NAME)
     # Note: This is already the default on Windows.
     set_target_properties(${LIB_TARGET} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
-    # Add compiler warning flags and macros
-    target_compile_options(${LIB_TARGET} PUBLIC ${VGC_COMPILER_WARNING_FLAGS})
-    target_compile_definitions(${LIB_TARGET} PUBLIC ${VGC_COMPILER_WARNING_DEFINITIONS})
-    if (VGC_WERROR)
-        target_compile_options(${LIB_TARGET} PRIVATE ${VGC_WERROR_FLAG})
-    endif ()
-    if (VGC_PEDANTIC)
-        target_compile_options(${LIB_TARGET} PRIVATE ${VGC_PEDANTIC_COMPILE_FLAGS})
-    endif ()
-
     # Add private compile definitions
     target_compile_definitions(${LIB_TARGET} PUBLIC ${VGC_PRIVATE_COMPILE_DEFINITIONS})
-    
+
+    # Set compiler warning flags
+    vgc_set_warning_flags(${LIB_TARGET})
+
     # Copy resources to the build folder whenever necessary
     if(ARG_RESOURCE_FILES)
         
@@ -245,7 +251,10 @@ function(vgc_wrap_library LIB_NAME)
     
     # Link to the C++ library this Python module is wrapping
     target_link_libraries(${WRAPS_TARGET} PRIVATE ${LIB_TARGET})
-    
+
+    # Set compiler warning flags
+    vgc_set_warning_flags(${WRAPS_TARGET})
+
     # Add vgc_<libname>_wraps target as dependency to vgc_<libname> target
     add_dependencies(${BASE_TARGET} ${WRAPS_TARGET})
 
@@ -339,6 +348,7 @@ function(vgc_test_library LIB_NAME)
         endif()
         add_executable(${EXE_TARGET} EXCLUDE_FROM_ALL ${FILENAME})
         target_link_libraries(${EXE_TARGET} PRIVATE ${LIB_TARGET} gtest)
+        vgc_set_warning_flags(${EXE_TARGET})
         add_dependencies(${CPP_TESTS_TARGET} ${EXE_TARGET})
         set_target_properties(${EXE_TARGET} PROPERTIES
             OUTPUT_NAME ${EXE_TARGET_OUTPUT_NAME}
@@ -467,6 +477,9 @@ function(vgc_add_app APP_NAME)
 
     # Compile definitions, that is, values given to preprocessor variables
     target_compile_definitions(${APP_TARGET} PRIVATE ${ARG_COMPILE_DEFINITIONS})
+
+    # Set compiler warning flags
+    vgc_set_warning_flags(${APP_TARGET})
 
     # Set the output name. Example (for now): vgcillustration
     # Under Windows, we may want to call it "VGC_Illustration_2020.exe"

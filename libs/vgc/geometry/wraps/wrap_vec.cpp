@@ -35,6 +35,8 @@ This normalizedOrThrow(const This& v)
 template<typename This, typename T, VGC_REQUIRES(std::is_same_v<typename This::ScalarType, T>)>
 void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
 {
+    auto self2 = py::self; // Fix https://github.com/pybind/pybind11/issues/1893
+
     py::class_<This>(m, thisTypeName.c_str())
 
         .def(py::init<>())
@@ -56,7 +58,7 @@ void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
         .def(py::self += py::self)
         .def(py::self + py::self)
         .def(+ py::self)
-        .def(py::self -= py::self)
+        .def(self2 -= py::self)
         .def(py::self - py::self)
         .def(- py::self)
         .def(py::self *= T())

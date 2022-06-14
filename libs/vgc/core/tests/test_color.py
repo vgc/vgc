@@ -20,6 +20,7 @@ import unittest
 
 from vgc.core import Color
 
+
 class TestColor(unittest.TestCase):
 
     def testDefaultConstructor(self):
@@ -103,7 +104,7 @@ class TestColor(unittest.TestCase):
         self.assertEqual(c2, Color(4, 40, 400, 4000))
         c2 -= Color(3, 30, 300, 3000)
         self.assertEqual(c2, Color(1, 10, 100, 1000))
-        c1 = c1 - c2;
+        c1 = c1 - c2
         self.assertEqual(c1, Color(2, 20, 200, 2000))
         c1 *= 2
         self.assertEqual(c1, Color(4, 40, 400, 4000))
@@ -139,6 +140,7 @@ class TestColor(unittest.TestCase):
         c2 = Color("rgba(1, 2, 3, 0.5)")
         self.assertTrue(c1 == Color(1.0 / 255.0, 2.0 / 255.0, 3.0 / 255.0))
         self.assertTrue(c2 == Color(1.0 / 255.0, 2.0 / 255.0, 3.0 / 255.0, 0.5))
+
 
 if __name__ == '__main__':
     unittest.main()

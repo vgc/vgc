@@ -24,6 +24,8 @@ using vgc::core::Color;
 
 void wrap_color(py::module& m)
 {
+    auto self2 = py::self; // Fix https://github.com/pybind/pybind11/issues/1893
+
     py::class_<Color>(m, "Color")
 
         // Note: in Python, Color() does (0,0,0,1)-initialization, unlike in C++
@@ -47,7 +49,7 @@ void wrap_color(py::module& m)
 
         .def(py::self += py::self)
         .def(py::self + py::self)
-        .def(py::self -= py::self)
+        .def(self2 -= py::self)
         .def(py::self - py::self)
         .def(py::self *= double())
         .def(double() * py::self)
