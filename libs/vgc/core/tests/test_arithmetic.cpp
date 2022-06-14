@@ -272,7 +272,10 @@ TEST(TestArithmetic, Typedefs)
     EXPECT_EQ(core::Int8Min,   -128);
     EXPECT_EQ(core::Int16Min,  -32768);
     EXPECT_EQ(core::Int32Min,  -2147483648LL);
-    EXPECT_EQ(core::Int64Min,  -9223372036854775808LL);
+    EXPECT_EQ(core::Int64Min,  -9223372036854775807LL-1);
+    // Note: we can't write -92...08LL directly because it's interpreted as
+    // <minus> <92...08LL> and 92...08 is too big to be represented as LL
+    // so it's interpreted as ULL instead. See -Wimplicitly-unsigned-literal
     EXPECT_EQ(core::UInt8Min,  0);
     EXPECT_EQ(core::UInt16Min, 0);
     EXPECT_EQ(core::UInt32Min, 0);
