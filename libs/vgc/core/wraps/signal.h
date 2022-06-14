@@ -82,7 +82,7 @@ protected:
         py::handle self = py::cast(object());
         Int n = arity();
         if (n == 0) {
-            return [=](const TransmitArgs& args) {
+            return [=](const TransmitArgs&) {
                 pySlotFn(self);
             };
         }
@@ -135,12 +135,12 @@ public:
 
     virtual SignalTransmitter buildPyTransmitter() override {
         vgc::core::Object* this_ = object();
-        auto id_ = id();
+        Id idcopy = id(); // copying for capturing in the lambda
         return SignalTransmitter(
             [=](const TransmitArgs& x) {
                 py::args args = x.get<const py::args&>(0);
                 using SignalArgRefsTuple = std::tuple<const py::args&>;
-                core::internal::SignalHub::emitFwd<SignalArgRefsTuple>(this_, id_, args);
+                core::internal::SignalHub::emitFwd<SignalArgRefsTuple>(this_, idcopy, args);
             });
     }
 
@@ -198,7 +198,7 @@ protected:
         const Obj* obj,
         const Id id,
         py::function unboundPySlotFn,
-        std::tuple<ArgRefs...>* sig) :
+        std::tuple<ArgRefs...>* /*sig*/) :
 
         PyAbstractSlotRef(obj, id, sizeof...(ArgRefs)),
         parameters_({std::type_index(typeid(ArgRefs))...}),
@@ -367,7 +367,7 @@ public:
 protected:
     // XXX use internal::unboundEmit
     template<typename... ArgRefs>
-    static py::function buildUnboundPyEmitFn(core::internal::SignalId id, std::tuple<ArgRefs...>* sig) {
+    static py::function buildUnboundPyEmitFn(core::internal::SignalId id, std::tuple<ArgRefs...>*) {
         return py::cpp_function(
             [=](Object* obj, ArgRefs... args) {
                 core::internal::SignalHub::emitFwd<ArgRefsTuple>(obj, id, args...);
@@ -410,13 +410,17 @@ protected:
     static typename SignalTransmitter::SlotWrapper
     makePySlotWrapper_(py::handle obj, py::function slot, std::index_sequence<Is...>) {
         if (obj.is_none()) {
-            return {[=](const TransmitArgs& args) {
-                slot(args.get<std::tuple_element_t<Is, SignalArgRefsTuple>>(Is)...);
-            }};
+            return typename SignalTransmitter::SlotWrapper(
+                [=]([[maybe_unused]] const TransmitArgs& args) {
+                    slot(args.get<std::tuple_element_t<Is, SignalArgRefsTuple>>(Is)...);
+                });
         }
-        return {[=](const TransmitArgs& args) {
-            slot(obj, args.get<std::tuple_element_t<Is, SignalArgRefsTuple>>(Is)...);
-        }};
+        else {
+            return typename SignalTransmitter::SlotWrapper(
+                [=]([[maybe_unused]] const TransmitArgs& args) {
+                    slot(obj, args.get<std::tuple_element_t<Is, SignalArgRefsTuple>>(Is)...);
+                });
+        }
     }
 };
 
