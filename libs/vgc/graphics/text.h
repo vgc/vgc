@@ -136,9 +136,9 @@ public:
     /// Creates a ShapedGlyph.
     ///
     ShapedGlyph(FontGlyph* fontGlyph,
-                const geometry::Vec2d& offset,
-                const geometry::Vec2d& advance,
-                const geometry::Vec2d& position,
+                const geometry::Vec2f& offset,
+                const geometry::Vec2f& advance,
+                const geometry::Vec2f& position,
                 Int bytePosition) :
         fontGlyph_(fontGlyph),
         offset_(offset),
@@ -177,7 +177,7 @@ public:
     /// should not affect how much the line advances. This is expressed in
     /// ShapedText coordinates, that is, with the Y-axis pointing down.
     ///
-    const geometry::Vec2d& offset() const {
+    const geometry::Vec2f& offset() const {
         return offset_;
     }
 
@@ -187,7 +187,7 @@ public:
     /// text in vertical direction. This is expressed in ShapedText
     /// coordinates, that is, with the Y-axis pointing down.
     ///
-    const geometry::Vec2d& advance() const {
+    const geometry::Vec2f& advance() const {
         return advance_;
     }
 
@@ -200,7 +200,7 @@ public:
     /// This is expressed in ShapedText coordinates, that is, with the Y-axis
     /// pointing down.
     ///
-    const geometry::Vec2d& position() const {
+    const geometry::Vec2f& position() const {
         return position_;
     }
 
@@ -258,7 +258,7 @@ public:
     /// position.
     ///
     void fill(core::FloatArray& data,
-              const geometry::Vec2d& origin,
+              const geometry::Vec2f& origin,
               float r, float g, float b) const;
 
     /// Overload of fill that doesn't output color information, that is, the
@@ -277,13 +277,13 @@ public:
     ///  ...]
     ///
     void fill(core::FloatArray& data,
-              const geometry::Vec2d& origin) const;
+              const geometry::Vec2f& origin) const;
 
 private:
     FontGlyph* fontGlyph_;
-    geometry::Vec2d offset_;
-    geometry::Vec2d advance_;
-    geometry::Vec2d position_;
+    geometry::Vec2f offset_;
+    geometry::Vec2f advance_;
+    geometry::Vec2f position_;
     Int bytePosition_;
     geometry::Rect2f boundingBox_;
 };
@@ -324,8 +324,8 @@ public:
     /// Creates a ShapedGrapheme.
     ///
     ShapedGrapheme(Int glyphIndex,
-                   const geometry::Vec2d& advance,
-                   const geometry::Vec2d& position,
+                   const geometry::Vec2f& advance,
+                   const geometry::Vec2f& position,
                    Int bytePosition) :
         glyphIndex_(glyphIndex),
         advance_(advance),
@@ -355,7 +355,7 @@ public:
     /// returns the glyph advance divided by the number of graphemes which are
     /// part of the glyph.
     ///
-    geometry::Vec2d advance() const {
+    geometry::Vec2f advance() const {
         return advance_;
     }
 
@@ -365,7 +365,7 @@ public:
     /// This is equal to the sum of the advances of all the previous graphemes
     /// of the ShapedText.
     ///
-    geometry::Vec2d position() const {
+    geometry::Vec2f position() const {
         return position_;
     }
 
@@ -383,8 +383,8 @@ public:
 private:
     friend class internal::ShapedTextImpl;
     Int glyphIndex_;
-    geometry::Vec2d advance_;
-    geometry::Vec2d position_;
+    geometry::Vec2f advance_;
+    geometry::Vec2f position_;
     Int bytePosition_;
 };
 
@@ -406,6 +406,12 @@ using ShapedGraphemeArray = core::Array<ShapedGrapheme>;
 ///     ...
 /// }
 /// ```
+///
+/// Note that the fill functions of this class are not thread-safe. In
+/// particular, two threads cannot concurrently call fill functions on the same
+/// ShapedText instance. The reason is that ShapedText uses internal buffers
+/// for intermediate computations, which are stored as data members to avoid
+/// dynamic allocations.
 ///
 class VGC_GRAPHICS_API ShapedText {
 public:
@@ -468,14 +474,14 @@ public:
     // This is equal to the sum of `glyph->advance()` for all the ShapedGlyph
     // elements in glyphs().
     //
-    geometry::Vec2d advance() const;
+    geometry::Vec2f advance() const;
 
     // Returns how much the line advances after drawing all the graphemes until
     // the given bytePosition.
     //
     // \sa bytePosition()
     //
-    geometry::Vec2d advance(Int bytePosition) const;
+    geometry::Vec2f advance(Int bytePosition) const;
 
     /// Fills this ShapedText at the given origin:
     ///
@@ -509,7 +515,7 @@ public:
     /// then all the Y-coordinates of the triangle vertices will be negative.
     ///
     void fill(core::FloatArray& data,
-              const geometry::Vec2d& origin,
+              const geometry::Vec2f& origin,
               float r, float g, float b) const;
 
     /// Fills this ShapedText from glyph index `start` (included) to glyph
@@ -519,7 +525,7 @@ public:
     /// arguments.
     ///
     void fill(core::FloatArray& data,
-              const geometry::Vec2d& origin,
+              const geometry::Vec2f& origin,
               float r, float g, float b,
               Int start, Int end) const;
 
@@ -530,7 +536,7 @@ public:
     /// arguments.
     ///
     void fill(core::FloatArray& data,
-              const geometry::Vec2d& origin,
+              const geometry::Vec2f& origin,
               float r, float g, float b,
               float clipLeft, float clipRight,
               float clipTop, float clipBottom) const;
@@ -538,7 +544,7 @@ public:
     /// Returns the byte position in the original text corresponding to the
     /// grapheme boundary closest to the given mouse position.
     ///
-    Int bytePosition(const geometry::Vec2d& mousePosition);
+    Int bytePosition(const geometry::Vec2f& mousePosition);
 
 private:
     internal::ShapedTextImpl* impl_;

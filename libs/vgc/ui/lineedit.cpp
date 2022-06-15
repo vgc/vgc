@@ -293,10 +293,9 @@ void LineEdit::updateBytePosition_(const geometry::Vec2f& mousePosition)
 Int LineEdit::bytePosition_(const geometry::Vec2f& mousePosition)
 {
     float paddingLeft = internal::getLength(this, strings::padding_left);
-    float x = mousePosition[0] - paddingLeft;
+    float x = mousePosition[0] - paddingLeft + scrollLeft_;
     float y = mousePosition[1];
-    return shapedText_.bytePosition(
-                geometry::Vec2d(static_cast<double>(x + scrollLeft_), static_cast<double>(y)));
+    return shapedText_.bytePosition(geometry::Vec2f(x, y));
 }
 
 void LineEdit::updateScroll_(float textWidth)

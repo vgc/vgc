@@ -156,21 +156,6 @@ private:
 /// - http://ericniebler.com/2015/01/28/to-be-or-not-to-be-an-iterator/
 /// - https://en.cppreference.com/w/cpp/container/vector_bool
 ///
-/// The reason we use a proxy iterator is the same as why std::vector<bool>
-///
-///
-///  that the reason we call this a "proxy" iterator is that there is no
-/// actual "Command" objects stored in a Curves2d. Instead, command data is
-/// split into an internal array storing command metadata (command type and
-/// number of arguments), and a a DoubleArray storing the geometric data (see
-/// Curves2d::data()). The class Curves2dCommandRef allows you to conveniently
-/// access the commands like if there was some Command object, but in fact
-/// there isn't. If you are curious about proxy iterators, you can read the
-/// following interesting article by Eric Niebler, lead designer of the C++20
-/// ranges concept:
-///
-///
-///
 class VGC_GEOMETRY_API Curves2dCommandIterator {
 public:
     using difference_type = ptrdiff_t;

@@ -29,6 +29,31 @@
 namespace vgc {
 namespace graphics {
 
+namespace {
+
+class Triangle2f {
+    std::array<geometry::Vec2f, 3> d_;
+
+public:
+    Triangle2f(const geometry::Vec2f& a, const geometry::Vec2f& b, const geometry::Vec2f& c) :
+        d_({a, b, c}) {}
+
+    Triangle2f(float ax, float ay, float bx, float by, float cx, float cy) :
+        d_({geometry::Vec2f(ax, ay), geometry::Vec2f(bx, by), geometry::Vec2f(cx, cy)}) {}
+
+    geometry::Vec2f& operator[](Int i) {
+        return d_[i];
+    }
+
+    const geometry::Vec2f& operator[](Int i) const {
+        return d_[i];
+    }
+};
+
+using Triangle2fArray = core::Array<Triangle2f>;
+
+} // namespace
+
 namespace internal {
 
 class ShapedTextImpl {
@@ -52,7 +77,13 @@ public:
     //
     ShapedGlyphArray glyphs;
     ShapedGraphemeArray graphemes;
-    geometry::Vec2d advance;
+    geometry::Vec2f advance;
+
+    // Buffers to avoid dynamic allocations during filling.
+    //
+    core::FloatArray floatBuffer;
+    Triangle2fArray trianglesBuffer1;
+    Triangle2fArray trianglesBuffer2;
 
     // HarbBuzz buffer
     //
@@ -120,15 +151,15 @@ public:
 
         // Convert to ShapedGlyph elements
         glyphs.clear();
-        advance = geometry::Vec2d(0, 0);
+        advance = geometry::Vec2f(0, 0);
         for (unsigned int i = 0; i < n; ++i) {
             hb_glyph_info_t& info = infos[i];
             hb_glyph_position_t& pos = positions[i];
             FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
             Int bytePosition = core::int_cast<Int>(info.cluster);
-            geometry::Vec2d glyphOffset = internal::f266ToVec2d(pos.x_offset, pos.y_offset);
-            geometry::Vec2d glyphAdvance = internal::f266ToVec2d(pos.x_advance, pos.y_advance);
-            geometry::Vec2d glyphPosition = advance + glyphOffset;
+            geometry::Vec2f glyphOffset = internal::f266ToVec2f(pos.x_offset, pos.y_offset);
+            geometry::Vec2f glyphAdvance = internal::f266ToVec2f(pos.x_advance, pos.y_advance);
+            geometry::Vec2f glyphPosition = advance + glyphOffset;
             if (glyph) {
                 glyphs.append(ShapedGlyph(glyph, glyphOffset, glyphAdvance, glyphPosition, bytePosition));
             }
@@ -147,7 +178,7 @@ public:
         Int bytePositionBefore = 0;
         Int bytePositionAfter = it.toNextBoundary();
         while (bytePositionAfter != -1) {
-            graphemes.append(ShapedGrapheme(0, geometry::Vec2d(0, 0), geometry::Vec2d(0, 0), bytePositionBefore));
+            graphemes.append(ShapedGrapheme(0, geometry::Vec2f(0, 0), geometry::Vec2f(0, 0), bytePositionBefore));
             bytePositionBefore = bytePositionAfter;
             bytePositionAfter = it.toNextBoundary();
         }
@@ -189,16 +220,16 @@ public:
                        graphemes[graphemeIndex + 1].glyphIndex() == glyphIndex) {
                     graphemeIndex += 1;
                 }
-                geometry::Vec2d glyphAdvance = glyphs[glyphIndexBegin].advance();
+                geometry::Vec2f glyphAdvance = glyphs[glyphIndexBegin].advance();
                 Int numGraphemesForGlyph = graphemeIndex - graphemeIndexBegin + 1;
-                geometry::Vec2d graphemeAdvance = glyphAdvance / static_cast<double>(numGraphemesForGlyph);
+                geometry::Vec2f graphemeAdvance = glyphAdvance / static_cast<float>(numGraphemesForGlyph);
                 for (Int k = graphemeIndexBegin; k <= graphemeIndex; ++k) {
                     graphemes[k].advance_ = graphemeAdvance;
                 }
             }
             else {
                 // one grapheme for one or several glyphs
-                geometry::Vec2d graphemeAdvance(0, 0);
+                geometry::Vec2f graphemeAdvance(0, 0);
                 for (Int i = glyphIndexBegin; i < glyphIndexEnd; ++i) {
                     graphemeAdvance += glyphs[i].advance();
                 }
@@ -206,7 +237,7 @@ public:
             }
         }
         // Fourth pass: compute position based on advance
-        geometry::Vec2d graphemePosition(0, 0);
+        geometry::Vec2f graphemePosition(0, 0);
         for (Int graphemeIndex = 0; graphemeIndex < numGraphemes; ++graphemeIndex) {
             graphemes[graphemeIndex].position_ = graphemePosition;
             graphemePosition += graphemes[graphemeIndex].advance();
@@ -220,7 +251,7 @@ private:
 } // namespace internal
 
 void ShapedGlyph::fill(core::FloatArray& data,
-                       const geometry::Vec2d& origin,
+                       const geometry::Vec2f& origin,
                        float r, float g, float b) const
 {
     Int oldLength = data.length();
@@ -231,27 +262,22 @@ void ShapedGlyph::fill(core::FloatArray& data,
     // Add colors: [x1, y1, x2, y2] -> [x1, x1, r, g, b, x2, x2, r, g, b]
     Int newLength = data.length();
     Int numVertices = (newLength - oldLength) / 2;
-    data.resize(oldLength + 5*numVertices);
-    for (Int i = numVertices - 1; i >= 0; --i) {
-        data[oldLength + 5*i]   = data[oldLength + 2*i];
-        data[oldLength + 5*i+1] = data[oldLength + 2*i+1];
-        data[oldLength + 5*i+2] = r;
-        data[oldLength + 5*i+3] = g;
-        data[oldLength + 5*i+4] = b;
+    data.resizeNoInit(oldLength + 5 * numVertices);
+    float* out = data.begin() + (oldLength + 5 * numVertices);
+    float* in = data.begin() + (oldLength + 2 * numVertices);
+    while(out != in) {
+        *(--out) = b;
+        *(--out) = g;
+        *(--out) = r;
+        *(--out) = *(--in);
+        *(--out) = *(--in);
     }
 }
 
-using Test = geometry::Vec<2, double>;
 void ShapedGlyph::fill(core::FloatArray& data,
-                       const geometry::Vec2d& origin) const
+                       const geometry::Vec2f& origin) const
 {
-    // Transform from local glyph coordinates to requested coordinates
-    geometry::Mat3f transform = geometry::Mat3f::identity;
-    transform.translate(geometry::Vec2f(origin + position()));
-    transform.scale(1, -1);
-
-    // Get the glyph triangulation
-    fontGlyph()->fill(data, transform);
+    fontGlyph()->fillYMirrored(data, origin + position());
 }
 
 ShapedText::ShapedText(FontFace* face, std::string_view text) :
@@ -318,14 +344,14 @@ const ShapedGraphemeArray& ShapedText::graphemes() const
     return impl_->graphemes;
 }
 
-geometry::Vec2d ShapedText::advance() const
+geometry::Vec2f ShapedText::advance() const
 {
     return impl_->advance;
 }
 
-geometry::Vec2d ShapedText::advance(Int bytePosition) const
+geometry::Vec2f ShapedText::advance(Int bytePosition) const
 {
-    geometry::Vec2d res(0, 0);
+    geometry::Vec2f res(0, 0);
     for (const graphics::ShapedGrapheme& grapheme : graphemes()) {
         if (grapheme.bytePosition() >= bytePosition) {
             break;
@@ -336,7 +362,7 @@ geometry::Vec2d ShapedText::advance(Int bytePosition) const
 }
 
 void ShapedText::fill(core::FloatArray& data,
-                      const geometry::Vec2d& origin,
+                      const geometry::Vec2f& origin,
                       float r, float g, float b) const
 {
     for (const ShapedGlyph& glyph : glyphs()) {
@@ -345,7 +371,7 @@ void ShapedText::fill(core::FloatArray& data,
 }
 
 void ShapedText::fill(core::FloatArray& data,
-                      const geometry::Vec2d& origin,
+                      const geometry::Vec2f& origin,
                       float r, float g, float b,
                       Int start, Int end) const
 {
@@ -356,27 +382,6 @@ void ShapedText::fill(core::FloatArray& data,
 }
 
 namespace {
-
-class Triangle2f {
-    std::array<geometry::Vec2f, 3> d_;
-
-public:
-    Triangle2f(const geometry::Vec2f& a, const geometry::Vec2f& b, const geometry::Vec2f& c) :
-        d_({a, b, c}) {}
-
-    Triangle2f(float ax, float ay, float bx, float by, float cx, float cy) :
-        d_({geometry::Vec2f(ax, ay), geometry::Vec2f(bx, by), geometry::Vec2f(cx, cy)}) {}
-
-    geometry::Vec2f& operator[](Int i) {
-        return d_[i];
-    }
-
-    const geometry::Vec2f& operator[](Int i) const {
-        return d_[i];
-    }
-};
-
-using Triangle2fArray = core::Array<Triangle2f>;
 
 void initTriangles(const core::FloatArray& data, Triangle2fArray& out)
 {
@@ -528,63 +533,73 @@ void clipTriangles_(Triangle2fArray& data,
     std::swap(data, buffer);
 }
 
-}
+} // namespace
 
 void ShapedText::fill(core::FloatArray& data,
-                      const geometry::Vec2d& origin,
+                      const geometry::Vec2f& origin,
                       float r, float g, float b,
                       float clipLeft, float clipRight,
                       float clipTop, float clipBottom) const
 {
-    core::FloatArray floatBuffer;
-    Triangle2fArray trianglesBuffer;
-    Triangle2fArray triangles;
-
     // Get clip rectangle in ShapedText coordinates
     geometry::Rect2f clipRect(clipLeft, clipTop, clipRight, clipBottom);
-    geometry::Vec2f originf(origin);
-    clipRect.setPMin(clipRect.pMin() - originf);
-    clipRect.setPMax(clipRect.pMax() - originf);
+    clipRect.setPMin(clipRect.pMin() - origin);
+    clipRect.setPMax(clipRect.pMax() - origin);
 
-    // Iterate over all glyphs
+    // Iterate over all glyphs. If the glyph's bbox doesn't intersect clipRect,
+    // then the glyph is entirely discarded. If the glyph's bbox is contained
+    // in clipRect, then the glyph is entirely kept. Otherwise, we process the
+    // glyph's triangles to cut them by the clipRect, and only keep the
+    // triangles inside.
+    //
     for (const ShapedGlyph& glyph : glyphs()) {
-        if (clipRect.intersects(glyph.boundingBox())) {
-
-            // Get unclipped glyph
-            floatBuffer.clear();
-            glyph.fill(floatBuffer, origin);
-            initTriangles(floatBuffer, triangles);
-
-            // Clip the glyph if it's at the boundary of the bbox
-            if (!clipRect.contains(glyph.boundingBox())) {
-                clipTriangles_<0, std::less>(triangles, trianglesBuffer, clipLeft);
-                clipTriangles_<1, std::less>(triangles, trianglesBuffer, clipTop);
-                clipTriangles_<0, std::greater>(triangles, trianglesBuffer, clipRight);
-                clipTriangles_<1, std::greater>(triangles, trianglesBuffer, clipBottom);
+        const geometry::Rect2f& bbox = glyph.boundingBox();
+        if (clipRect.intersects(bbox)) {
+            if (clipRect.contains(bbox)) {
+                glyph.fill(data, origin, r, g, b);
             }
+            else {
+                core::FloatArray& floatBuffer = impl_->floatBuffer;
+                Triangle2fArray& trianglesBuffer1 = impl_->trianglesBuffer1;
+                Triangle2fArray& trianglesBuffer2 = impl_->trianglesBuffer2;
 
-            // Add glyph triangles to data buffer
-            addTriangles(data, triangles, r, g, b);
+                floatBuffer.clear();
+                glyph.fill(floatBuffer, origin);
+                initTriangles(floatBuffer, trianglesBuffer1);
+                if (bbox.xMin() < clipRect.xMin()) {
+                    clipTriangles_<0, std::less>(trianglesBuffer1, trianglesBuffer2, clipLeft);
+                }
+                if (bbox.yMin() < clipRect.yMin()) {
+                    clipTriangles_<1, std::less>(trianglesBuffer1, trianglesBuffer2, clipTop);
+                }
+                if (bbox.xMax() > clipRect.xMax()) {
+                    clipTriangles_<0, std::greater>(trianglesBuffer1, trianglesBuffer2, clipRight);
+                }
+                if (bbox.yMax() > clipRect.yMax()) {
+                    clipTriangles_<1, std::greater>(trianglesBuffer1, trianglesBuffer2, clipBottom);
+                }
+                addTriangles(data, trianglesBuffer1, r, g, b);
+            }
         }
     }
 }
 
 namespace {
 
-double pos_(const ShapedGrapheme& grapheme) {
+float pos_(const ShapedGrapheme& grapheme) {
     return grapheme.position()[0];
 }
 
-double adv_(const ShapedGrapheme& grapheme) {
+float adv_(const ShapedGrapheme& grapheme) {
     return grapheme.advance()[0];
 }
 
 } // namespace
 
-Int ShapedText::bytePosition(const geometry::Vec2d& mousePosition)
+Int ShapedText::bytePosition(const geometry::Vec2f& mousePosition)
 {
     const ShapedGraphemeArray& g = graphemes();
-    double x = mousePosition[0];
+    float x = mousePosition[0];
     Int numGraphemes = g.length();
     if (numGraphemes == 0) {
         return 0;

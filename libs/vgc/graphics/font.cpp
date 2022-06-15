@@ -602,20 +602,65 @@ void FontGlyph::fill(core::FloatArray& data,
     // if the FontGlyph has a small ppem then the cached tesselation may have a
     // small number of triangles not suitable to draw at larger sizes.
 
-    const core::FloatArray& triangles = impl_->triangles;
-    Int numVertices = triangles.length() / 2;
+    Int numVertices = impl_->triangles.length() / 2;
+    Int oldLength = data.length();
 
-    Int offset = data.length();
-    data.resizeNoInit(offset + 2 * numVertices);
+    data.resizeNoInit(oldLength + 2 * numVertices);
 
-    auto itIn = triangles.begin();
-    auto itOut = data.begin() + offset;
-    while (itOut != data.end()) {
-        float x = *itIn++;
-        float y = *itIn++;
-        geometry::Vec2f v2 = transform * geometry::Vec2f(x, y);
-        *itOut++ = v2[0];
-        *itOut++ = v2[1];
+    const float* in = impl_->triangles.begin();
+    float* out = data.begin() + oldLength;
+    float* end = data.end();
+
+    while (out != end) {
+        float x = *in++;
+        float y = *in++;
+        geometry::Vec2f v = transform * geometry::Vec2f(x, y);
+        *out++ = v[0];
+        *out++ = v[1];
+    }
+}
+
+void FontGlyph::fill(core::FloatArray& data,
+                     const geometry::Vec2f& translation) const
+{
+    Int numVertices = impl_->triangles.length() / 2;
+    Int oldLength = data.length();
+
+    data.resizeNoInit(oldLength + 2 * numVertices);
+
+    const float* in = impl_->triangles.begin();
+    float* out = data.begin() + oldLength;
+    float* end = data.end();
+    float x0 = translation[0];
+    float y0 = translation[1];
+
+    while (out != end) {
+        float x = *in++;
+        float y = *in++;
+        *out++ = x0 + x;
+        *out++ = y0 + y;
+    }
+}
+
+void FontGlyph::fillYMirrored(core::FloatArray& data,
+                              const geometry::Vec2f& translation) const
+{
+    Int numVertices = impl_->triangles.length() / 2;
+    Int oldLength = data.length();
+
+    data.resizeNoInit(oldLength + 2 * numVertices);
+
+    const float* in = impl_->triangles.begin();
+    float* out = data.begin() + oldLength;
+    float* end = data.end();
+    float x0 = translation[0];
+    float y0 = translation[1];
+
+    while (out != end) {
+        float x = *in++;
+        float y = *in++;
+        *out++ = x0 + x;
+        *out++ = y0 - y;
     }
 }
 
