@@ -95,6 +95,12 @@ geometry::Vec2d f266ToVec2d(T x, T y)
     return geometry::Vec2d(x / 64.0, y / 64.0);
 }
 
+template<class T>
+geometry::Vec2f f266ToVec2f(T x, T y)
+{
+    return geometry::Vec2f(x / 64.0f, y / 64.0f);
+}
+
 } // namespace internal
 
 /// \class vgc::graphics::FontLibrary
@@ -326,6 +332,29 @@ public:
     ///
     void fill(core::FloatArray& data,
               const geometry::Mat3f& transform) const;
+
+    /// Same as fill(data, transform) but with only a translation part. This is
+    /// equivalent (but faster) to:
+    ///
+    /// ```cpp
+    /// geometry::Mat3f transform = geometry::Mat3f::identity;
+    /// transform.translate(translation);
+    /// ```
+    ///
+    void fill(core::FloatArray& data,
+              const geometry::Vec2f& translation) const;
+
+    /// Same as fill(data, transform) but with only a translation part as well as flipping the Y-coordinate. This is
+    /// equivalent (but faster) to:
+    ///
+    /// ```cpp
+    /// geometry::Mat3f transform = geometry::Mat3f::identity;
+    /// transform.translate(translation);
+    /// transform.scale(1, -1);
+    /// ```
+    ///
+    void fillYMirrored(core::FloatArray& data,
+                       const geometry::Vec2f& translation) const;
 
 protected:
     /// \reimp

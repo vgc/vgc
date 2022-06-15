@@ -193,7 +193,7 @@ void insertText(
         // we may want to clip up to the border of the given text box instead.
         //
         constexpr bool clipAtPadding = true;
-        geometry::Vec2d origin(static_cast<double>(textLeft), static_cast<double>(baseline));
+        geometry::Vec2f origin(textLeft, baseline);
         float clipLeft   = x1 + (clipAtPadding ? paddingLeft   : 0);
         float clipRight  = x2 - (clipAtPadding ? paddingRight  : 0);
         float clipTop    = y1 + (clipAtPadding ? paddingTop    : 0);
@@ -209,7 +209,7 @@ void insertText(
                 if (grapheme.bytePosition() >= cursorBytePosition) {
                     break;
                 }
-                cursorAdvance += static_cast<float>(grapheme.advance()[0]);
+                cursorAdvance += grapheme.advance()[0];
             }
             float cursorX = x1 + paddingLeft + cursorAdvance;
             float cursorW = 1.0f;
