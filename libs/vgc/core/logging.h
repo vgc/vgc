@@ -337,34 +337,41 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 namespace vgc::core::internal {
 
 template<typename T, VGC_REQUIRES(!std::is_pointer_v<T>)>
-const T& debugVarCast(const T& x) {
+const T& debugExprCast(const T& x) {
     return x;
 }
 
 template<typename T, VGC_REQUIRES(std::is_pointer_v<T>)>
-const void* debugVarCast(T p) {
+const void* debugExprCast(T p) {
     return fmt::ptr(p);
 }
 
 template<typename T>
-const void* debugVarCast(const std::unique_ptr<T>& p) {
+const void* debugExprCast(const std::unique_ptr<T>& p) {
   return fmt::ptr(p);
 }
 
 template<typename T>
-const void* debugVarCast(const std::shared_ptr<T>& p) {
+const void* debugExprCast(const std::shared_ptr<T>& p) {
   return fmt::ptr(p);
 }
 
 } // namespace vgc::core::internal
 
-/// Prints the name and value of a variable.
+/// Prints the result of an expression.
 ///
-/// This is essentially equivalent to `VGC_DEBUG_TMP("var = {}", var)`, with an
-/// automatic cast to `void*` in the case where `var` is a pointer type, which
-/// is required for proper formatting of pointer types.
+/// ```cpp
+/// int x = 2;
+/// int y = 40;
+/// VGC_DEBUG_TMP_EXPR(x);    // Prints "x = 2"
+/// VGC_DEBUG_TMP_EXPR(x+y);  // Prints "x+y = 42"
+/// ```
 ///
-#define VGC_DEBUG_TMP_VAR(var) \
-    VGC_DEBUG_TMP(#var " = {}", vgc::core::internal::debugVarCast(var))
+/// This is essentially equivalent to `VGC_DEBUG_TMP("expr = {}", expr)`, with
+/// an automatic cast to `void*` in the case where `expr` evaluates to a
+/// pointer type, which is required for proper formatting of pointer types.
+///
+#define VGC_DEBUG_TMP_EXPR(expr) \
+    VGC_DEBUG_TMP(#expr " = {}", vgc::core::internal::debugExprCast(expr))
 
 #endif // VGC_CORE_LOGGING_H
