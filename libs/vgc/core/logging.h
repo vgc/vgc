@@ -334,4 +334,37 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 ///
 #define VGC_DEBUG_TMP(...) VGC_DEBUG(::vgc::core::LogTmp, __VA_ARGS__)
 
+namespace vgc::core::internal {
+
+template<typename T, VGC_REQUIRES(!std::is_pointer_v<T>)>
+const T& debugVarCast(const T& x) {
+    return x;
+}
+
+template<typename T, VGC_REQUIRES(std::is_pointer_v<T>)>
+const void* debugVarCast(T p) {
+    return fmt::ptr(p);
+}
+
+template<typename T>
+const void* debugVarCast(const std::unique_ptr<T>& p) {
+  return fmt::ptr(p);
+}
+
+template<typename T>
+const void* debugVarCast(const std::shared_ptr<T>& p) {
+  return fmt::ptr(p);
+}
+
+} // namespace vgc::core::internal
+
+/// Prints the name and value of a variable.
+///
+/// This is essentially equivalent to `VGC_DEBUG_TMP("var = {}", var)`, with an
+/// automatic cast to `void*` in the case where `var` is a pointer type, which
+/// is required for proper formatting of pointer types.
+///
+#define VGC_DEBUG_TMP_VAR(var) \
+    VGC_DEBUG_TMP(#var " = {}", vgc::core::internal::debugVarCast(var))
+
 #endif // VGC_CORE_LOGGING_H
