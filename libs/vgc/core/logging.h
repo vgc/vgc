@@ -334,4 +334,44 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 ///
 #define VGC_DEBUG_TMP(...) VGC_DEBUG(::vgc::core::LogTmp, __VA_ARGS__)
 
+namespace vgc::core::internal {
+
+template<typename T, VGC_REQUIRES(!std::is_pointer_v<T>)>
+const T& debugExprCast(const T& x) {
+    return x;
+}
+
+template<typename T, VGC_REQUIRES(std::is_pointer_v<T>)>
+const void* debugExprCast(T p) {
+    return fmt::ptr(p);
+}
+
+template<typename T>
+const void* debugExprCast(const std::unique_ptr<T>& p) {
+  return fmt::ptr(p);
+}
+
+template<typename T>
+const void* debugExprCast(const std::shared_ptr<T>& p) {
+  return fmt::ptr(p);
+}
+
+} // namespace vgc::core::internal
+
+/// Prints the result of an expression.
+///
+/// ```cpp
+/// int x = 2;
+/// int y = 40;
+/// VGC_DEBUG_TMP_EXPR(x);    // Prints "x = 2"
+/// VGC_DEBUG_TMP_EXPR(x+y);  // Prints "x+y = 42"
+/// ```
+///
+/// This is essentially equivalent to `VGC_DEBUG_TMP("expr = {}", expr)`, with
+/// an automatic cast to `void*` in the case where `expr` evaluates to a
+/// pointer type, which is required for proper formatting of pointer types.
+///
+#define VGC_DEBUG_TMP_EXPR(expr) \
+    VGC_DEBUG_TMP(#expr " = {}", vgc::core::internal::debugExprCast(expr))
+
 #endif // VGC_CORE_LOGGING_H
