@@ -21,6 +21,7 @@
 #include <QOpenGLFunctions>
 
 #include <vgc/core/paths.h>
+#include <vgc/core/profile.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/ui/widget.h>
 #include <vgc/widgets/qtutil.h>
@@ -164,6 +165,8 @@ void Window::focusOutEvent(QFocusEvent* /*event*/)
 
 void Window::resizeEvent(QResizeEvent*)
 {
+    VGC_PROFILE_FUNCTION
+
     geometry::Camera2d c;
     c.setViewportSize(width(), height());
     proj_ = internal::toMat4f(c.projectionMatrix());

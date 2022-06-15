@@ -29,6 +29,7 @@ vgc_add_library(core
         paths.h
         performancelog.h
         pp.h
+        profile.h
         python.h
         random.h
         stopwatch.h
@@ -51,6 +52,7 @@ vgc_add_library(core
         parse.cpp
         paths.cpp
         performancelog.cpp
+        profile.cpp
         python.cpp
         random.cpp
         stopwatch.cpp
