@@ -174,8 +174,9 @@ void Window::resizeEvent(QResizeEvent*)
     // Should we issue a warning in these cases?
     widget_->setGeometry(0, 0, static_cast<float>(width()), static_cast<float>(height()));
 
-    // ask for redraw
-    //onRepaintRequested_();
+    // Ask for redraw. This often improves how smooth resizing the window looks like,
+    // since Qt doesn't always immediately post an update during resize.
+    requestUpdate();
 }
 
 void Window::keyPressEvent(QKeyEvent* event)
