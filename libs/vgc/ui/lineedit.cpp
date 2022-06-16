@@ -78,8 +78,6 @@ void LineEdit::onPaintCreate(graphics::Engine* engine)
 
 void LineEdit::onPaintDraw(graphics::Engine*)
 {
-    VGC_PROFILE_FUNCTION
-
     if (reload_) {
         reload_ = false;
         core::FloatArray a;

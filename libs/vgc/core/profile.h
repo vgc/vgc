@@ -17,100 +17,72 @@
 #ifndef VGC_CORE_PROFILE_H
 #define VGC_CORE_PROFILE_H
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/compiler.h>
-#include <vgc/core/logging.h>
-#include <vgc/core/stopwatch.h>
+#include <vgc/core/pp.h>
 
 namespace vgc::core::internal {
 
-struct FormatDuration {
-    double durationInSeconds;
-};
-
-struct FormatIndentation {
-    int indentLevel;
-};
-
-} // namespace vgc::core::internal
-
-template <>
-struct fmt::formatter<vgc::core::internal::FormatDuration> {
-    constexpr auto parse(format_parse_context& ctx) {
-        auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-        return it;
-    }
-    template <typename FormatContext>
-    auto format(vgc::core::internal::FormatDuration d, FormatContext& ctx) {
-        double s = d.durationInSeconds;
-        if      (s < 1e-6) { return format_to(ctx.out(),"{:>6.2f} ns", s * 1e9); }
-        else if (s < 1e-3) { return format_to(ctx.out(),"{:>6.2f} us", s * 1e6); }
-        else if (s < 1)    { return format_to(ctx.out(),"{:>6.2f} ms", s * 1e3); }
-        else               { return format_to(ctx.out(),"{:>6.2f} s ", s      ); }
-    }
-};
-
-template <>
-struct fmt::formatter<vgc::core::internal::FormatIndentation> {
-    constexpr auto parse(format_parse_context& ctx) {
-        auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-        return it;
-    }
-    template <typename FormatContext>
-    auto format(vgc::core::internal::FormatIndentation indent, FormatContext& ctx) {
-        return format_to(ctx.out(),"{:>{}}", " ", 2 * indent.indentLevel);
-    }
-};
-
-namespace vgc::core::internal {
-
-class VGC_CORE_API VgcProfileFunction {
+class VGC_CORE_API ScopeProfiler {
 public:
-    VgcProfileFunction(const char* function) : function_(function) {
-        indent_ += 1;
-    }
-
-    ~VgcProfileFunction() {
-        indent_ -= 1;
-        VGC_DEBUG_TMP("{} > {}        {}",
-                      FormatIndentation{indent_},
-                      FormatDuration{stopwatch_.elapsed()},
-                      function_);
-    }
+    ScopeProfiler(const char* name);
+    ~ScopeProfiler();
+    ScopeProfiler(const ScopeProfiler&) = delete;
+    ScopeProfiler& operator=(const ScopeProfiler&) = delete;
 
 private:
-    static int indent_;
-    const char* function_;
-    Stopwatch stopwatch_;
+    Int correspondingIndex_;
+    const char* name_;
 };
 
 } // namespace vgc::core::internal
 
-#define VGC_PROFILE_FUNCTION \
-    ::vgc::core::internal::VgcProfileFunction vgcProfileFunction_(VGC_PRETTY_FUNCTION); \
+/// Measures the time taken for executing a scope.
+///
+/// All measures are then printed via VGC_DEBUG_TMP, but only once the
+/// outer-most measured scoped is closed, so that printing does not affect the
+/// measurements.
+///
+///
+/// ```cpp
+/// void printHelloWorld() {
+///     VGC_PROFILE_FUNCTION
+///     {
+///         VGC_PROFILE_SCOPE("hello")
+///         std::cout << "hello";
+///     }
+///     {
+///         VGC_PROFILE_SCOPE("world")
+///         std::cout << "world" << std::endl;
+///     }
+/// }
+///
+/// int main() {
+///     printHelloWorld();
+/// }
+/// ```
+///
+/// Possible output:
+///
+/// ```
+/// [Thread 12216]
+///                5us 100ns    void __cdecl printHelloWorld(void)
+///                    700ns      hello
+///                4us 300ns      world
+/// ```
+///
+/// For now, usage of VGC_PROFILE_FUNCTION is not meant to be committed to the
+/// git repository, and only used temporarily while optimizing something. In
+/// the future, the stored measurements might be available via an API allowing
+/// to display them in a more convenient way.
+///
+#define VGC_PROFILE_SCOPE(name) \
+    ::vgc::core::internal::ScopeProfiler \
+    VGC_PP_XCONCAT(VGC_PP_XCONCAT(vgcProfiler, __LINE__), _)(name);
 
+/// Measures the time taken for executing a function.
+/// See VGC_PROFILE_SCOPE for details.
+///
+#define VGC_PROFILE_FUNCTION VGC_PROFILE_SCOPE(VGC_PRETTY_FUNCTION)
 
-
-/*
-#define VGC_PROFILE_FUNCTION                                           \
-    struct VgcProfileFunction_ {                                       \
-        const char* function = VGC_PRETTY_FUNCTION;                    \
-        ::vgc::core::Stopwatch sw;                                     \
-        VgcProfileFunction_() {                                    \
-            ::vgc::core::internal::VgcProfileFunctionGlobal::incrIndent(); \
-        } \
-        ~VgcProfileFunction_() {                                       \
-            ::vgc::core::internal::VgcProfileFunctionGlobal::decrIndent(); \
-            VGC_DEBUG_TMP(                                                 \
-                "{}{}: {}", \
-                ::vgc::core::internal::VgcProfileFunctionGlobal::indent(),\
-                function,                   \
-                ::vgc::core::internal::PrettyPrintDuration{sw.elapsed()}); \
-        }                                                                  \
-    } vgcProfileFunction_;
-
-    */
 #endif // VGC_CORE_PROFILE_H

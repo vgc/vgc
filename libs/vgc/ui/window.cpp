@@ -165,8 +165,6 @@ void Window::focusOutEvent(QFocusEvent* /*event*/)
 
 void Window::resizeEvent(QResizeEvent*)
 {
-    VGC_PROFILE_FUNCTION
-
     geometry::Camera2d c;
     c.setViewportSize(width(), height());
     proj_ = internal::toMat4f(c.projectionMatrix());

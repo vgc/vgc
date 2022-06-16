@@ -199,7 +199,7 @@ void Widget::updateGeometry()
 
 void Widget::onResize()
 {
-    VGC_PROFILE_FUNCTION
+
 }
 
 void Widget::repaint()
@@ -234,7 +234,6 @@ void Widget::onPaintCreate(graphics::Engine* engine)
 
 void Widget::onPaintDraw(graphics::Engine* engine)
 {
-    VGC_PROFILE_FUNCTION
     for (Widget* widget : children()) {
         engine->pushViewMatrix();
         geometry::Mat4f m = engine->viewMatrix();

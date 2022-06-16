@@ -56,8 +56,46 @@ void runtimePatchQt() {
 }
 #endif
 
+#include <vgc/core/profile.h>
+
+int globalVar = 0;
+
+__declspec(noinline) void hello() {
+    VGC_PROFILE_FUNCTION
+    globalVar += 1;
+}
+
+__declspec(noinline) void world() {
+    VGC_PROFILE_FUNCTION
+    globalVar += 1;
+}
+
+__declspec(noinline) void printHelloWorld2() {
+    VGC_PROFILE_FUNCTION
+    hello();
+    world();
+}
+
+__declspec(noinline) void printHelloWorld() {
+    VGC_PROFILE_FUNCTION
+    {
+        VGC_PROFILE_SCOPE("hello")
+        globalVar += 1;
+    }
+    {
+        VGC_PROFILE_SCOPE("world")
+        globalVar += 1;
+    }
+}
+
+
 int main(int argc, char* argv[])
 {
+    printHelloWorld();
+    printHelloWorld();
+    printHelloWorld();
+    printHelloWorld();
+
 #ifdef VGC_QOPENGL_EXPERIMENT
     QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif

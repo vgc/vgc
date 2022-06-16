@@ -16,10 +16,14 @@
 
 #include <vgc/core/stopwatch.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 Stopwatch::Stopwatch()
+{
+    start();
+}
+
+void Stopwatch::start()
 {
     t_ = Clock_::now();
 }
@@ -39,5 +43,32 @@ double Stopwatch::elapsed() const
     return seconds.count();
 }
 
-} // namespace core
-} // namespace vgc
+Int64 Stopwatch::elapsedSeconds() const
+{
+    Time_ t2 = Clock_::now();
+    using Units = std::chrono::duration<Int64>;
+    return std::chrono::duration_cast<Units>(t2 - t_).count();
+}
+
+Int64 Stopwatch::elapsedMilliseconds() const
+{
+    Time_ t2 = Clock_::now();
+    using Units = std::chrono::duration<Int64, std::milli>;
+    return std::chrono::duration_cast<Units>(t2 - t_).count();
+}
+
+Int64 Stopwatch::elapsedMicroseconds() const
+{
+    Time_ t2 = Clock_::now();
+    using Units = std::chrono::duration<Int64, std::micro>;
+    return std::chrono::duration_cast<Units>(t2 - t_).count();
+}
+
+Int64 Stopwatch::elapsedNanoseconds() const
+{
+    Time_ t2 = Clock_::now();
+    using Units = std::chrono::duration<Int64, std::nano>;
+    return std::chrono::duration_cast<Units>(t2 - t_).count();
+}
+
+} // namespace vgc::core
