@@ -56,4 +56,12 @@
 #    define VGC_NODISCARD(msg) [[nodiscard]]
 #endif
 
+#if defined(VGC_CORE_COMPILER_CLANG) || defined(VGC_CORE_COMPILER_GCC)
+#    define VGC_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#elif defined(VGC_CORE_COMPILER_MSVC)
+#    define VGC_PRETTY_FUNCTION __FUNCSIG__
+#else
+#    define VGC_PRETTY_FUNCTION __FUNCTION__
+#endif
+
 #endif // VGC_CORE_COMPILER_H

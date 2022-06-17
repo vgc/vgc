@@ -19,35 +19,71 @@
 
 #include <chrono>
 #include <vgc/core/api.h>
+#include <vgc/core/arithmetic.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \class vgc::core::Stopwatch
 /// \brief A class to measure elapsed time.
 ///
-/// Usage:
-/// \code
-/// Stopwatch t;
-/// doSomething();
-/// std::cout << "elpased time: " << t.elapsed() << "s\n";
-/// \endcode
-///
 class VGC_CORE_API Stopwatch {
 public:
-    /// Creates a Stopwatch.
+    /// Creates a Stopwatch. This automatically calls start().
+    ///
+    /// ```cpp
+    /// vgc::core::Stopwatch t;
+    /// doSomething();
+    /// std::cout << "elpased time: " << t.elapsed() << "s\n";
+    /// ```
     ///
     Stopwatch();
 
+    /// Creates a Stopwatch without initializing it. If you use this
+    /// constructor, you must manually call start before calling elapsed(),
+    /// otherwise the result of elapsed() is undefined.
+    ///
+    ///  ```cpp
+    /// vgc::core::Stopwatch t(vgc::core::NoInit{});
+    /// t.start();
+    /// doSomething();
+    /// std::cout << "elpased time: " << t.elapsed() << "s\n";
+    /// ```
+    ///
+    Stopwatch(NoInit) {}
+
+    /// Starts this Stopwatch.
+    ///
+    void start();
+
     /// Restarts this Stopwatch and returns the elapsed time, in seconds, since
-    /// this Stopwatch was created or last restarted.
+    /// this Stopwatch was created or last (re)started.
     ///
     double restart();
 
-    /// Returns the elapsed time, in seconds, since this Stopwatch was created
-    /// or last restarted.
+    /// Returns the elapsed time, in seconds, as a float, since this Stopwatch
+    /// was created or last (re)started.
     ///
     double elapsed() const;
+
+    /// Returns the elapsed time, in seconds, as an integer, since this
+    /// Stopwatch was created or last (re)started.
+    ///
+    Int64 elapsedSeconds() const;
+
+    /// Returns the elapsed time, in milliseconds, as an integer, since this
+    /// Stopwatch was created or last (re)started.
+    ///
+    Int64 elapsedMilliseconds() const;
+
+    /// Returns the elapsed time, in microseconds, as an integer, since this
+    /// Stopwatch was created or last (re)started.
+    ///
+    Int64 elapsedMicroseconds() const;
+
+    /// Returns the elapsed time, in nanoseconds, as an integer, since this
+    /// Stopwatch was created or last (re)started.
+    ///
+    Int64 elapsedNanoseconds() const;
 
 private:
     using Clock_ = std::chrono::steady_clock;
@@ -56,7 +92,6 @@ private:
     Time_ t_;
 };
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_STOPWATCH_H
