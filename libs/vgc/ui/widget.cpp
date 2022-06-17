@@ -18,8 +18,6 @@
 #include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
 
-#include <vgc/core/profile.h>
-
 namespace vgc {
 namespace ui {
 

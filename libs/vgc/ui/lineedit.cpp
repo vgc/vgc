@@ -27,8 +27,6 @@
 
 #include <vgc/ui/internal/paintutil.h>
 
-#include <vgc/core/profile.h>
-
 namespace vgc {
 namespace ui {
 

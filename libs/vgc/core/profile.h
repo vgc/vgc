@@ -31,8 +31,8 @@ public:
     ScopeProfiler& operator=(const ScopeProfiler&) = delete;
 
 private:
-    Int correspondingIndex_;
     const char* name_;
+    Int correspondingIndex_;
 };
 
 } // namespace vgc::core::internal
@@ -75,6 +75,11 @@ private:
 /// git repository, and only used temporarily while optimizing something. In
 /// the future, the stored measurements might be available via an API allowing
 /// to display them in a more convenient way.
+///
+/// Note that the first measurement of a given scope or function may include
+/// some initialization overhead up to 10 microseconds on some hardware. We
+/// recommend to rely only on subsequent measurements, whose overheads are
+/// typically less than 100 nanoseconds each.
 ///
 #define VGC_PROFILE_SCOPE(name) \
     ::vgc::core::internal::ScopeProfiler \

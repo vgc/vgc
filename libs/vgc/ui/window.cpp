@@ -21,7 +21,6 @@
 #include <QOpenGLFunctions>
 
 #include <vgc/core/paths.h>
-#include <vgc/core/profile.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/ui/widget.h>
 #include <vgc/widgets/qtutil.h>
