@@ -19,7 +19,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/compiler.h>
-#include <vgc/core/pp.h>
+#include <vgc/core/preprocessor.h>
 
 namespace vgc::core::internal {
 

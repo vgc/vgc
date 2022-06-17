@@ -28,7 +28,7 @@ vgc_add_library(core
         parse.h
         paths.h
         performancelog.h
-        pp.h
+        preprocessor.h
         profile.h
         python.h
         random.h

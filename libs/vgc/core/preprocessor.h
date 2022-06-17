@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_PP_H
-#define VGC_CORE_PP_H
+#ifndef VGC_CORE_PREPROCESSOR_H
+#define VGC_CORE_PREPROCESSOR_H
 
 #define VGC_PP_STR(x) #x
 #define VGC_PP_XSTR(x) VGC_PP_STR(x)
@@ -96,4 +96,4 @@
     VGC_PP_XCONCAT(prefix, VGC_PP_NUM_ARGS(__VA_ARGS__))
 
 
-#endif // VGC_CORE_PP_H
+#endif // VGC_CORE_PREPROCESSOR_H

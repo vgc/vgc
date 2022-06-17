@@ -30,7 +30,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/array.h>
 #include <vgc/core/assert.h>
-#include <vgc/core/pp.h>
+#include <vgc/core/preprocessor.h>
 #include <vgc/core/templateutil.h>
 
 /// \brief Implements a signal-slot notification mechanism.
