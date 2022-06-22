@@ -117,17 +117,17 @@ private:
 /// \class vgc::graphics::ShapedGlyph
 /// \brief Represents one glyph of a shaped text.
 ///
-/// A ShapedGlyph stores a reference to a FontGlyph as well as information
+/// A ShapedGlyph stores a reference to a SizedGlyph as well as information
 /// where to draw the glyph. It is typically used as part of a ShapedText
 /// object.
 ///
 /// See ShapedText for more details.
 ///
 /// Note that for performance and thread-safety reasons, a ShapedGlyph stores a
-/// raw FontGlyph pointer, not a FontGlyphPtr. This means that it doesn't keep
-/// alive the referenced FontGlyph: it is the responsibility of client code to
-/// ensure that the referenced FontGlyph outlive the ShapedGlyph itself. For
-/// example, each ShapedText object does keep alive its underlying FontFace
+/// raw SizedGlyph pointer, not a GlyphPtr. This means that it doesn't keep
+/// alive the referenced SizedGlyph: it is the responsibility of client code to
+/// ensure that the referenced SizedGlyph outlive the ShapedGlyph itself. For
+/// example, each ShapedText object does keep alive its underlying SizedFont
 /// (ans thus all its glyphs too), so it is safe to use the glyphs in
 /// ShapedText::glyphs() as long as the ShapedText is alive.
 ///
@@ -135,26 +135,26 @@ class VGC_GRAPHICS_API ShapedGlyph {
 public:
     /// Creates a ShapedGlyph.
     ///
-    ShapedGlyph(FontGlyph* fontGlyph,
+    ShapedGlyph(SizedGlyph* sizedGlyph,
                 const geometry::Vec2f& offset,
                 const geometry::Vec2f& advance,
                 const geometry::Vec2f& position,
                 Int bytePosition) :
-        fontGlyph_(fontGlyph),
+        sizedGlyph_(sizedGlyph),
         offset_(offset),
         advance_(advance),
         position_(position),
         bytePosition_(bytePosition),
         boundingBox_(core::NoInit{})
     {
-        // Convert bounding box from FontGlyph coords to ShapedText coords
-        geometry::Rect2f bbox = fontGlyph->boundingBox();
+        // Convert bounding box from SizedGlyph coords to ShapedText coords
+        geometry::Rect2f bbox = sizedGlyph->boundingBox();
         geometry::Vec2f positionf(position);
         boundingBox_.setPMin(positionf.x() + bbox.xMin(), positionf.y() - bbox.yMax());
         boundingBox_.setPMax(positionf.x() + bbox.xMax(), positionf.y() - bbox.yMin());
     }
 
-    /// Returns the FontGlyph that this ShapedGlyph references.
+    /// Returns the SizedGlyph that this ShapedGlyph references.
     ///
     /// Note that a ShapedText never contain ShapedGlyph elements whose
     /// fontGlyph() is NULL.
@@ -169,8 +169,8 @@ public:
     ///   the `U+FFFD � REPLACEMENT CHARACTER` might be used, or the codepoints
     ///   causing problems are simply skipped.
     ///
-    FontGlyph* fontGlyph() const {
-        return fontGlyph_;
+    SizedGlyph* sizedGlyph() const {
+        return sizedGlyph_;
     }
 
     /// Returns how much the glyph should be moved before drawing it. This
@@ -191,7 +191,7 @@ public:
         return advance_;
     }
 
-    /// Returns where to draw the fontGlyph() relative to the origin of the
+    /// Returns where to draw the sizedGlyph() relative to the origin of the
     /// ShapedText this ShapedGlyph belongs to.
     ///
     /// This is equal to the sum of this ShapedGlyph's offset and the advances
@@ -280,7 +280,7 @@ public:
               const geometry::Vec2f& origin) const;
 
 private:
-    FontGlyph* fontGlyph_;
+    SizedGlyph* sizedGlyph_;
     geometry::Vec2f offset_;
     geometry::Vec2f advance_;
     geometry::Vec2f position_;
@@ -396,11 +396,11 @@ using ShapedGraphemeArray = core::Array<ShapedGrapheme>;
 ///
 /// The ShapedText class performs text shaping and stores the resulting shaped
 /// text. In other words, it takes as input a given text string and a given
-/// FontFace, and stores as output a sequence of FontGlyph elements together
+/// SizedFont, and stores as output a sequence of SizedGlyph elements together
 /// with additional information to know where each glyph should be drawn.
 ///
 /// ```cpp
-/// vgc::graphics::FontFace* face = someFace();
+/// vgc::graphics::SizedFont* face = someFace();
 /// vgc::graphics::ShapedText text(face, "Hello");
 /// for (const vgc::graphics::ShapedGlyph& glyph : text.glyphs()) {
 ///     ...
@@ -417,7 +417,7 @@ class VGC_GRAPHICS_API ShapedText {
 public:
     /// Creates a new ShapedText.
     ///
-    ShapedText(FontFace* face, std::string_view text);
+    ShapedText(SizedFont* sizedFont, std::string_view text);
 
     /// Creates a copy of the given ShapedText.
     ///
@@ -439,9 +439,9 @@ public:
     ///
     ~ShapedText();
 
-    /// Returns the FontFace of this ShapedText.
+    /// Returns the SizedFont of this ShapedText.
     ///
-    FontFace* fontFace() const;
+    SizedFont* sizedFont() const;
 
     /// Returns the input text string of this ShapedText.
     ///
@@ -455,7 +455,7 @@ public:
     /// Returns the ShapedGlyph elements composing this ShapedText.
     ///
     /// The ShapedGlyph elements are guaranteed to be valid as long as either
-    /// this ShapedText and its FontFace is alive.
+    /// this ShapedText and its SizedFont is alive.
     ///
     const ShapedGlyphArray& glyphs() const;
 

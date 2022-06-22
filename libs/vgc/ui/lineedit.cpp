@@ -33,7 +33,7 @@ namespace ui {
 LineEdit::LineEdit(std::string_view text) :
     Widget(),
     text_(""),
-    shapedText_(graphics::fontLibrary()->defaultFace(), text_),
+    shapedText_(internal::getDefaultSizedFont(), text_),
     textCursor_(false, 0),
     scrollLeft_(0.0f),
     reload_(true),
