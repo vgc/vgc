@@ -241,7 +241,7 @@ public:
     /// Adds the font from the given filename to this library.
     ///
     /// ```cpp
-    /// SizedFont* fontFace = fontLibrary->addFont("fonts/DejaVuSerif.ttf");
+    /// Font* font = fontLibrary->addFont("fonts/DejaVuSerif.ttf");
     /// ```
     ///
     /// Some font files actually contain several typefaces, so you can
@@ -337,10 +337,10 @@ public:
     SizedFont* getSizedFont(const SizedFontParams& params);
 
     /// Returns the glyph corresponding to the given Unicode code point, or
-    /// nullptr if this face doesn't have a glyph for this code point.
+    /// nullptr if this font doesn't have a glyph for this code point.
     ///
     /// ```cpp
-    /// SizedGlyph* fontGlyph = fontFace->getGlyphFromCodePoint(0x0041); // => 'A'
+    /// Glyph* glyph = font->getGlyphFromCodePoint(0x0041); // => 'A'
     /// ```
     ///
     /// This function is equivalent to calling getGlyphIndexFromCodePoint() then
@@ -362,7 +362,7 @@ public:
     Glyph* getGlyphFromIndex(Int glyphIndex);
 
     /// Returns the glyph index corresponding to the given Unicode code point,
-    /// or 0 if this face doesn't have a glyph for this code point.
+    /// or 0 if this font doesn't have a glyph for this code point.
     ///
     Int getGlyphIndexFromCodePoint(Int codePoint);
 
@@ -388,7 +388,7 @@ private:
 
 protected:
     /// Creates a new Glyph. This constructor is an implementation detail.
-    /// In order to get a glyph in a given face, please use one of the following:
+    /// In order to get a glyph in a given font, please use one of the following:
     ///
     /// ```cpp
     /// Glyph* glyph1 = font->getGlyphFromCodePoint(codePoint);
@@ -425,7 +425,7 @@ private:
 /// \class vgc::graphics::SizedFont
 /// \brief A given typeface, in a given style, in a given size.
 ///
-/// A font face represents a given typeface, in a given style, in a given size.
+/// A `SizedFont` represents a given typeface, in a given style, in a given size.
 /// For example, "Source Sans Pro, bold, 12pt @ 72dpi".
 ///
 /// Note that a given typeface, even with a given style (example:
@@ -448,7 +448,7 @@ protected:
     /// detail. In order to create a SizedFont, please use the following:
     ///
     /// ```cpp
-    /// SizedFont* fontFace = fontLibrary->addFont(filename);
+    /// SizedFont* sizedFont = font->getSizedFont(params);
     /// ```
     ///
     SizedFont(Font* font);
@@ -475,20 +475,20 @@ public:
     ///
     float descent() const;
 
-    /// Returns the height of this face, in pixels. This is the vertical
+    /// Returns the height of this font, in pixels. This is the vertical
     /// distance between two baselines.
     ///
     float height() const;
 
-    /// Returns the glyph corresponding to the given Unicode code point, or
-    /// nullptr if this face doesn't have a glyph for this code point.
+    /// Returns the `SizedGlyph` corresponding to the given Unicode code point,
+    /// or nullptr if this font doesn't have a glyph for this code point.
     ///
     /// ```cpp
-    /// SizedGlyph* fontGlyph = fontFace->getGlyphFromCodePoint(0x0041); // => 'A'
+    /// SizedGlyph* sizedGlyph = sizedFont->getSizedGlyphFromCodePoint(0x0041); // => 'A'
     /// ```
     ///
     /// This function is equivalent to calling getGlyphIndexFromCodePoint() then
-    /// getGlyphFromIndex().
+    /// getSizedGlyphFromIndex().
     ///
     /// Note that some glyphs may not be accessible via this function, because
     /// they do not correspond to any code point. If you need to access such
@@ -506,7 +506,7 @@ public:
     SizedGlyph* getSizedGlyphFromIndex(Int glyphIndex);
 
     /// Returns the glyph index corresponding to the given Unicode code point,
-    /// or 0 if this face doesn't have a glyph for this code point.
+    /// or 0 if this font doesn't have a glyph for this code point.
     ///
     Int getGlyphIndexFromCodePoint(Int codePoint);
 
@@ -532,14 +532,14 @@ private:
 
 protected:
     /// Creates a new SizedGlyph. This constructor is an implementation detail.
-    /// In order to get a glyph in a given face, please use one of the following:
+    /// In order to get a glyph in a given font, please use one of the following:
     ///
     /// ```cpp
-    /// SizedGlyph* fontGlyph1 = fontFace->getGlyphFromCodePoint(codePoint);
-    /// SizedGlyph* fontGlyph2 = fontFace->getGlyphFromIndex(glyphIndex);
+    /// SizedGlyph* sizedGlyph1 = sizedFont->getSizedGlyphFromCodePoint(codePoint);
+    /// SizedGlyph* sizedGlyph2 = sizedFont->getSizedGlyphFromIndex(glyphIndex);
     /// ```
     ///
-    SizedGlyph(SizedFont* face);
+    SizedGlyph(SizedFont* font);
 
 public:
     /// Returns the `SizedFont` that this `SizedGlyph` belongs to.
@@ -551,11 +551,11 @@ public:
     Glyph* glyph() const;
 
     /// Returns the index of this glyph. This is an integer that can be
-    /// used to retrieve the glyph via `face->getGlyphFromIndex()`.
+    /// used to retrieve the glyph via `sizedFont->getSizedGlyphFromIndex()`.
     ///
     Int index() const;
 
-    /// Returns the name of this glyph, or an empty string if the face doesn't
+    /// Returns the name of this glyph, or an empty string if the font doesn't
     /// support glyph names.
     ///
     const std::string& name() const;
