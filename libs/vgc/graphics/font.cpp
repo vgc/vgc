@@ -52,10 +52,10 @@ namespace internal {
 class FontLibraryImpl {
 public:
     FT_Library library;
-    FontFace* defaultFace;
+    Font* defaultFont;
 
-    FontLibraryImpl() :
-        defaultFace(nullptr)
+    FontLibraryImpl()
+        : defaultFont(nullptr)
     {
         FT_Error error = FT_Init_FreeType(&library);
         if (error) {
@@ -90,20 +90,16 @@ public:
     }
 };
 
-FontFaceImpl::FontFaceImpl(FT_Library library, const std::string& filename)
-{
-    // Select the index of the face in the font file. For now, we only use
-    // index = 0, which should work for many fonts, and is the index we must
-    // use for files which only have one face.
-    //
-    // See:
-    // https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_open_face
-    //
-    FT_Long index = 0;
+namespace {
 
+void ftNewFace_(const std::string& filename,
+                Int index,
+                FT_Library ftLibrary,
+                FT_Face* ftFace)
+{
     // Load the face.
     //
-    FT_Error error = FT_New_Face(library, filename.c_str(), index, &face);
+    FT_Error error = FT_New_Face(ftLibrary, filename.c_str(), core::int_cast<FT_Long>(index), ftFace);
     if (error) {
         throw FontError(core::format(
                             "Error loading font file {}: {}", filename, errorMsg(error)));
@@ -125,6 +121,7 @@ FontFaceImpl::FontFaceImpl(FT_Library library, const std::string& filename)
     // TODO: Instead of FT_Set_Charmap, we may want to use "FT_Select_CharMap" instead:
     // https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_select_charmap
     //
+    FT_Face face = *ftFace;
     bool isCharmapSet = false;
     for(FT_Int i = 0; i < face->num_charmaps; ++i) {
         FT_CharMap c = face->charmaps[i];
@@ -145,49 +142,76 @@ FontFaceImpl::FontFaceImpl(FT_Library library, const std::string& filename)
                             "Error setting charmap for font file {}: {}",
                             filename, "USC-2 charmap not found"));
     }
+}
 
-    // Set character size.
-    //
-    // Currently, the font size is given in pixels, and pixelWidth is
-    // assumed to be equal to pixelHeight (same hdpi as vdpi). If font size
-    // given in points, or if hdpi and vdpi are different, then we should
-    // perform calculation like:
-    //
-    // pixelHeight = fontSizeInPoints * vdpi / 72; // 72 pt = 1 inch
-    // pixelWidth = fontSizeInPoints * hdpi / 72;
-    //
-    double fontSizeInPixels = 15;
-    ppem = std::round(fontSizeInPixels);
-    ppem = std::max(1.0, ppem);
-    FT_UInt pixelWidth = static_cast<FT_UInt>(ppem);
-    FT_UInt pixelHeight = pixelWidth;
-    FT_Set_Pixel_Sizes(face, pixelWidth, pixelHeight);
+void ftDoneFace_(FT_Face ftFace)
+{
+    FT_Error error = FT_Done_Face(ftFace);
+    if (error) {
+        // Note: we print a warning rather than throwing, because throwing
+        // in destructors is a bad idea.
+        VGC_WARNING(LogVgcGraphics, errorMsg(error));
+    }
+}
 
-    // TODO: The font size should be passed to the Face constructor and be
-    // immutable. In other words:
-    //
-    //     FontFace = family   (example: "Arial")
-    //                + weight (example: "Bold")
-    //                + style  (example: "Italic")
-    //                + size   (example: "12pt")
-    //
-    // The reason why the size should be immutable and part of the identity
-    // of a FontFace is that it affects both hinting of the vector outline
-    // (in the case of vector fonts) and bitmap selection (in the case of
-    // bitmap fonts with different bitmaps provided for different fonts),
-    // both of which can be cached for performance. In order to represent a
-    // "resolution-independent font face" (for exemple, if the text size is
-    // animated or the output resolution unknown), then perhaps it should
-    // be a special "size" whose value is "scalable", in which case the
-    // font outline isn't hinted and is expressed in font units rather than
-    // pixels.
-    //
-    // Note that currently, "font-size" is interpreted as "size of the EM
-    // square", which is what CSS does. Such font-size is neither the
-    // capital height (height of "A"), nor the x height (height of "x"),
-    // nor the line height (distance between descender and ascender,
-    // including the line gap or not), but an arbitrary metric set by the
-    // font designer. It would be nice to add another font property like:
+} // namespace
+
+class FontImpl {
+public:
+    std::string filename;
+    Int index;
+    FT_Library ftLibrary;
+    FT_Face ftFace;
+    std::mutex glyphsMutex;
+    std::unordered_map<Int, Glyph*> glyphsMap;
+    std::mutex sizedFontsMutex;
+    std::unordered_map<SizedFontParams, SizedFont*> sizedFontsMap;
+
+    FontImpl(const std::string& filename, Int index, FT_Library library) :
+        filename(filename), index(index), ftLibrary(library)
+    {
+        ftNewFace_(filename, index, library, &ftFace);
+    }
+
+    ~FontImpl()
+    {
+        ftDoneFace_(ftFace);
+    }
+};
+
+SizedFontImpl::SizedFontImpl(Font* font, const SizedFontParams& params_) :
+    params(params_)
+{
+    const std::string&filename = font->impl_->filename;
+    Int index = font->index();
+    FT_Library ftLibrary = font->impl_->ftLibrary;
+    ftNewFace_(filename, index, ftLibrary, &ftFace);
+
+    // Set pixel sizes
+    Int ppemWidth = params.ppemWidth();
+    Int ppemHeight = params.ppemHeight();
+    FontHinting hinting = params.hinting();
+    if (ppemWidth < 1 || ppemHeight < 1) {
+        Int ppemWidth_ = (std::min)(Int(1), ppemWidth);
+        Int ppemHeight_ = (std::min)(Int(1), ppemHeight);
+        VGC_WARNING(LogVgcGraphics,
+                    "Provided (ppemWidth, ppemHeight) = ({}, {}) must"
+                    " be at least 1. Using ({}, {}) instead.",
+                    ppemWidth, ppemHeight, ppemWidth_, ppemHeight_);
+        params = SizedFontParams(ppemWidth_, ppemHeight_, hinting);
+        ppemWidth = ppemWidth_;
+        ppemHeight = ppemHeight_;
+    }
+    FT_UInt pixelWidth = core::int_cast<FT_UInt>(ppemWidth);
+    FT_UInt pixelHeight = core::int_cast<FT_UInt>(ppemHeight);
+    FT_Set_Pixel_Sizes(ftFace, pixelWidth, pixelHeight);
+
+    // Note that "font-size" means "size of the EM square", as is traditionally
+    // done (CSS, etc.). Such font-size is neither the capital height (height
+    // of "A"), nor the x height (height of "x"), nor the line height (distance
+    // between descender and ascender, including the line gap or not), but an
+    // arbitrary metric set by the font designer. It would be nice to add
+    // another font property like:
     //
     // font-size-mode: em | ascent | descent | height | capital-height | x-height
     //
@@ -285,18 +309,13 @@ FontFaceImpl::FontFaceImpl(FT_Library library, const std::string& filename)
 
     // Create HarfBuzz font.
     // Note: `hbFont` will use the same ppem as provided by `face`.
-    hbFont = hb_ft_font_create(face, NULL);
+    hbFont = hb_ft_font_create(ftFace, NULL);
 }
 
-FontFaceImpl::~FontFaceImpl()
+SizedFontImpl::~SizedFontImpl()
 {
     hb_font_destroy(hbFont);
-    FT_Error error = FT_Done_Face(face);
-    if (error) {
-        // Note: we print a warning rather than throwing, because throwing
-        // in destructors is a bad idea.
-        VGC_WARNING(LogVgcGraphics, errorMsg(error));
-    }
+    ftDoneFace_(ftFace);
 }
 
 namespace {
@@ -357,20 +376,18 @@ int cubicTo(const FT_Vector* control1,
 
 } // namespace
 
-class FontGlyphImpl {
+class SizedGlyphImpl {
 public:
-    Int index;
-    std::string name;
+    Glyph* glyph;
     geometry::Curves2d outline;
     core::FloatArray triangles;
     geometry::Rect2f boundingBox = geometry::Rect2f::empty;
 
-    FontGlyphImpl(Int index, const char* name, FT_GlyphSlot slot) :
-        index(index),
-        name(name)
+    SizedGlyphImpl(Glyph* glyph, FT_GlyphSlot slot)
+        : glyph(glyph)
     {
         // Note: hinting might already be baked in the given FT_GlyphSlot.
-        // See implementation of FontFace::getGlyphFromIndex(Int glyphIndex).
+        // See implementation of SizedFont::getGlyphFromIndex(Int glyphIndex).
         int shift = 0;
         FT_Pos delta = 0;
         FT_Outline_Funcs f{&moveTo, &lineTo, &conicTo, &cubicTo, shift, delta};
@@ -389,12 +406,17 @@ void FontLibraryImplDeleter::operator()(FontLibraryImpl* p)
     delete p;
 }
 
-void FontFaceImplDeleter::operator()(FontFaceImpl* p)
+void FontImplDeleter::operator()(FontImpl* p)
 {
     delete p;
 }
 
-void FontGlyphImplDeleter::operator()(FontGlyphImpl* p)
+void SizedFontImplDeleter::operator()(SizedFontImpl* p)
+{
+    delete p;
+}
+
+void SizedGlyphImplDeleter::operator()(SizedGlyphImpl* p)
 {
     delete p;
 }
@@ -414,21 +436,21 @@ FontLibraryPtr FontLibrary::create()
     return FontLibraryPtr(new FontLibrary());
 }
 
-FontFace* FontLibrary::addFace(const std::string& filename)
+Font* FontLibrary::addFont(const std::string& filename, Int index)
 {
-    FontFace* res = new FontFace(this);
-    res->impl_.reset(new internal::FontFaceImpl(impl_->library, filename));
+    Font* res = new Font(this);
+    res->impl_.reset(new internal::FontImpl(filename, index, impl_->library));
     return res;
 }
 
-FontFace* FontLibrary::defaultFace() const
+Font* FontLibrary::defaultFont() const
 {
-    return impl_->defaultFace;
+    return impl_->defaultFont;
 }
 
-void FontLibrary::setDefaultFace(FontFace* fontFace)
+void FontLibrary::setDefaultFont(Font* font)
 {
-    impl_->defaultFace = fontFace;
+    impl_->defaultFont = font;
 }
 
 void FontLibrary::onDestroyed()
@@ -440,10 +462,10 @@ namespace {
 
 FontLibraryPtr createGlobalFontLibrary()
 {
-    std::string facePath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
+    std::string fontPath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
     graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
-    graphics::FontFace* fontFace = fontLibrary->addFace(facePath); // XXX can this be nullptr?
-    fontLibrary->setDefaultFace(fontFace);
+    graphics::Font* font = fontLibrary->addFont(fontPath); // XXX can this be nullptr?
+    fontLibrary->setDefaultFont(font);
     return fontLibrary;
 }
 
@@ -455,43 +477,41 @@ FontLibrary* fontLibrary()
     return res.get();
 }
 
-FontFace::FontFace(FontLibrary* library) :
+Font::Font(FontLibrary* library) :
     Object(),
     impl_()
 {
     appendObjectToParent_(library);
 }
 
-namespace {
-
-double fontUnitsToPixels(const internal::FontFaceImpl* impl, FT_Short u)
+FontLibrary* Font::library() const
 {
-    return static_cast<double>(u) * impl->ppem / impl->face->units_per_EM;
+    return static_cast<FontLibrary*>(parentObject());
 }
 
-} // namespace
-
-double FontFace::ppem() const
+Int Font::index() const
 {
-    return impl_->ppem;
+    return impl_->index;
 }
 
-double FontFace::ascent() const
+SizedFont* Font::getSizedFont(const SizedFontParams& params)
 {
-    return fontUnitsToPixels(impl_.get(), impl_->face->ascender);
+    // Prevent two threads from modifying the glyphsMap at the same time
+    const std::lock_guard<std::mutex> lock(impl_->sizedFontsMutex);
+
+    // Get existing SizedGlyph* or insert nullptr in the map
+    SizedFont*& sizedFont = impl_->sizedFontsMap[params];
+
+    // If no existing SizedGlyph*, create it
+    if (!sizedFont) {
+        sizedFont = new SizedFont(this);
+        sizedFont->impl_.reset(new internal::SizedFontImpl(this, params));
+    }
+
+    return sizedFont;
 }
 
-double FontFace::descent() const
-{
-    return fontUnitsToPixels(impl_.get(), impl_->face->descender);
-}
-
-double FontFace::height() const
-{
-    return fontUnitsToPixels(impl_.get(), impl_->face->height);
-}
-
-FontGlyph* FontFace::getGlyphFromCodePoint(Int codePoint)
+Glyph* Font::getGlyphFromCodePoint(Int codePoint)
 {
     if (Int index = getGlyphIndexFromCodePoint(codePoint)) {
         return getGlyphFromIndex(index);
@@ -501,30 +521,19 @@ FontGlyph* FontFace::getGlyphFromCodePoint(Int codePoint)
     }
 }
 
-FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
+Glyph* Font::getGlyphFromIndex(Int glyphIndex)
 {
     // Prevent two threads from modifying the glyphsMap at the same time
     const std::lock_guard<std::mutex> lock(impl_->glyphsMutex);
 
-    // Get existing FontGlyph* or insert nullptr in the map
-    FontGlyph*& glyph = impl_->glyphsMap[glyphIndex];
+    // Get existing SizedGlyph* or insert nullptr in the map
+    Glyph*& glyph = impl_->glyphsMap[glyphIndex];
 
-    // If no existing FontGlyph*, create it
+    // If no existing SizedGlyph*, create it
     if (!glyph) {
-        // Other potentially useful flags to control hinting:
-        //
-        // Use either font-provided or auto-hinter: (FT_LOAD_DEFAULT)
-        // Do not perform any hinting:              FT_LOAD_NO_HINTING
-        // Only use font-provided hinter:           FT_LOAD_NO_AUTOHINT
-        // Only use Freetype auto-hinter (light)    FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_LIGHT
-        // Only use Freetype auto-hinter (normal)   FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL
-        // No hinting + native scale (ignore ppem): FT_LOAD_NO_SCALE
-        //
-        // See: https://freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_load_xxx
-        //
-        FT_Face face = impl_->face;
+        FT_Face face = impl_->ftFace;
         FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
-        FT_Int32 flags = FT_LOAD_NO_BITMAP;
+        FT_Int32 flags = FT_LOAD_NO_BITMAP | FT_LOAD_NO_SCALE;
         FT_Error error = FT_Load_Glyph(face, index, flags);
         if (error) {
             throw FontError(errorMsg(error));
@@ -536,70 +545,201 @@ FontGlyph* FontFace::getGlyphFromIndex(Int glyphIndex)
         if (FT_HAS_GLYPH_NAMES(face)) {
             error = FT_Get_Glyph_Name(face, index, name, bufferMax);
             if (error) {
-                // Note: This code path is believed to be unreachable since we
-                // premptively check for FT_HAS_GLYPH_NAMES, and we know the index
-                // is valid. We still keep it for added safety, or if Freetype adds
-                // more error cases in the future.
                 throw FontError(errorMsg(error));
             }
         }
-        // Create FontGlyph object and copy data to object
-        glyph = new FontGlyph(this);
-        FT_GlyphSlot slot = face->glyph;
-        glyph->impl_.reset(new internal::FontGlyphImpl(glyphIndex, name, slot));
+
+        // Create Glyph object
+        glyph = new Glyph(this, glyphIndex, name);
     }
 
     return glyph;
 }
 
-Int FontFace::getGlyphIndexFromCodePoint(Int codePoint)
+Int Font::getGlyphIndexFromCodePoint(Int codePoint)
 {
     // Note: we assume the charmap is unicode
-    FT_Face face = impl_->face;
+    FT_Face face = impl_->ftFace;
     FT_ULong charcode = core::int_cast<FT_ULong>(codePoint);
     FT_UInt index = FT_Get_Char_Index(face, charcode);
     return core::int_cast<Int>(index);
 }
 
-void FontFace::onDestroyed()
+void Font::onDestroyed()
 {
     impl_.reset();
 }
 
-FontGlyph::FontGlyph(FontFace* face) :
+Glyph::Glyph(Font* font, Int index, const std::string& name)
+    : index_(index)
+    , name_(name)
+{
+    appendObjectToParent_(font);
+}
+
+Font* Glyph::font() const
+{
+    return static_cast<Font*>(parentObject());
+}
+
+SizedFont::SizedFont(Font* font) :
     Object(),
     impl_()
 {
-    appendObjectToParent_(face);
+    appendObjectToParent_(font);
 }
 
-Int FontGlyph::index() const
+namespace {
+
+float fontUnitsToVerticalPixels(const internal::SizedFontImpl* impl, FT_Short u)
 {
-    return impl_->index;
+    Int ppem = impl->params.ppemHeight();
+    return static_cast<float>(u) * ppem / impl->ftFace->units_per_EM;
 }
 
-const std::string& FontGlyph::name() const
+} // namespace
+
+Font* SizedFont::font() const
 {
-    return impl_->name;
+    return static_cast<Font*>(parentObject());
 }
 
-const geometry::Curves2d& FontGlyph::outline() const
+const SizedFontParams& SizedFont::params() const
+{
+    return impl_->params;
+}
+
+float SizedFont::ascent() const
+{
+    return fontUnitsToVerticalPixels(impl_.get(), impl_->ftFace->ascender);
+}
+
+float SizedFont::descent() const
+{
+    return fontUnitsToVerticalPixels(impl_.get(), impl_->ftFace->descender);
+}
+
+float SizedFont::height() const
+{
+    return fontUnitsToVerticalPixels(impl_.get(), impl_->ftFace->height);
+}
+
+SizedGlyph* SizedFont::getSizedGlyphFromCodePoint(Int codePoint)
+{
+    if (Int index = getGlyphIndexFromCodePoint(codePoint)) {
+        return getSizedGlyphFromIndex(index);
+    }
+    else {
+        return nullptr;
+    }
+}
+
+SizedGlyph* SizedFont::getSizedGlyphFromIndex(Int glyphIndex)
+{
+    // Prevent two threads from modifying the glyphsMap at the same time
+    const std::lock_guard<std::mutex> lock(impl_->glyphsMutex);
+
+    // Get existing SizedGlyph* or insert nullptr in the map
+    SizedGlyph*& sizedGlyph = impl_->glyphsMap[glyphIndex];
+
+    // If no existing SizedGlyph*, create it
+    if (!sizedGlyph) {
+        // Load glyph
+        // See https://freetype.org/freetype2/docs/reference/ft2-base_interface.html#ft_load_xxx
+        FT_Face face = impl_->ftFace;
+        FT_UInt index = core::int_cast<FT_UInt>(glyphIndex);
+        FT_Int32 flags = FT_LOAD_NO_BITMAP;
+        switch (impl_->params.hinting()) {
+        case FontHinting::None:
+            flags |= FT_LOAD_NO_HINTING;
+            break;
+        case FontHinting::Native:
+            flags |= FT_LOAD_NO_AUTOHINT;
+            break;
+        case FontHinting::AutoLight:
+            flags |= FT_LOAD_FORCE_AUTOHINT;
+            flags |= FT_LOAD_TARGET_LIGHT;
+            break;
+        case FontHinting::AutoNormal:
+            flags |= FT_LOAD_FORCE_AUTOHINT;
+            flags |= FT_LOAD_TARGET_NORMAL;
+            break;
+        }
+        FT_Error error = FT_Load_Glyph(face, index, flags);
+        if (error) {
+            throw FontError(errorMsg(error));
+        }
+
+        // Get unsized Glyph object
+        Glyph* glyph = font()->getGlyphFromIndex(glyphIndex);
+
+        // Create SizedGlyph object and copy data to object
+        sizedGlyph = new SizedGlyph(this);
+        FT_GlyphSlot slot = face->glyph;
+        sizedGlyph->impl_.reset(new internal::SizedGlyphImpl(glyph, slot));
+    }
+
+    return sizedGlyph;
+}
+
+Int SizedFont::getGlyphIndexFromCodePoint(Int codePoint)
+{
+    // Note: we assume the charmap is unicode
+    FT_Face face = impl_->ftFace;
+    FT_ULong charcode = core::int_cast<FT_ULong>(codePoint);
+    FT_UInt index = FT_Get_Char_Index(face, charcode);
+    return core::int_cast<Int>(index);
+}
+
+void SizedFont::onDestroyed()
+{
+    impl_.reset();
+}
+
+SizedGlyph::SizedGlyph(SizedFont* sizedFont) :
+    Object(),
+    impl_()
+{
+    appendObjectToParent_(sizedFont);
+}
+
+SizedFont* SizedGlyph::sizedFont() const
+{
+    return static_cast<SizedFont*>(parentObject());
+}
+
+Glyph* SizedGlyph::glyph() const
+{
+    return impl_->glyph;
+}
+
+Int SizedGlyph::index() const
+{
+    return impl_->glyph->index();
+}
+
+const std::string& SizedGlyph::name() const
+{
+    return impl_->glyph->name();
+}
+
+const geometry::Curves2d& SizedGlyph::outline() const
 {
     return impl_->outline;
 }
 
-const geometry::Rect2f& FontGlyph::boundingBox() const
+const geometry::Rect2f& SizedGlyph::boundingBox() const
 {
     return impl_->boundingBox;
 }
 
-void FontGlyph::fill(core::FloatArray& data,
+void SizedGlyph::fill(core::FloatArray& data,
                      const geometry::Mat3f& transform) const
 {
-    // Note: if the FontGlyph have hinting enabled, it only makes sense to use
+    // Note: if the SizedGlyph have hinting enabled, it only makes sense to use
     // a `transform` that has a scale ratio of 1 or -1 in each axis, and use
     // integer values for the translate part. Also, even with hinting disabled,
-    // if the FontGlyph has a small ppem then the cached tesselation may have a
+    // if the SizedGlyph has a small ppem then the cached tesselation may have a
     // small number of triangles not suitable to draw at larger sizes.
 
     Int numVertices = impl_->triangles.length() / 2;
@@ -620,7 +760,7 @@ void FontGlyph::fill(core::FloatArray& data,
     }
 }
 
-void FontGlyph::fill(core::FloatArray& data,
+void SizedGlyph::fill(core::FloatArray& data,
                      const geometry::Vec2f& translation) const
 {
     Int numVertices = impl_->triangles.length() / 2;
@@ -642,7 +782,7 @@ void FontGlyph::fill(core::FloatArray& data,
     }
 }
 
-void FontGlyph::fillYMirrored(core::FloatArray& data,
+void SizedGlyph::fillYMirrored(core::FloatArray& data,
                               const geometry::Vec2f& translation) const
 {
     Int numVertices = impl_->triangles.length() / 2;
@@ -664,7 +804,7 @@ void FontGlyph::fillYMirrored(core::FloatArray& data,
     }
 }
 
-void FontGlyph::onDestroyed()
+void SizedGlyph::onDestroyed()
 {
     impl_.reset();
 }

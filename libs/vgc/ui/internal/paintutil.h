@@ -78,6 +78,12 @@ core::Color getColor(const Widget* widget, core::StringId property);
 
 float getLength(const Widget* widget, core::StringId property);
 
+// Note: we don't use default arguments to avoid recompiling everything
+// when we want to change them for testing
+graphics::SizedFont* getDefaultSizedFont();
+graphics::SizedFont* getDefaultSizedFont(Int ppem);
+graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting);
+
 } // namespace internal
 } // namespace ui
 } // namespace vgc

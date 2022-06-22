@@ -18,9 +18,7 @@
 
 #include <vgc/graphics/font.h>
 
-namespace vgc {
-namespace ui {
-namespace internal {
+namespace vgc::ui::internal {
 
 void insertTriangle(
         core::FloatArray& a,
@@ -120,8 +118,8 @@ void insertRect(
 
 graphics::ShapedText shapeText(const std::string& text)
 {
-    graphics::FontFace* fontFace = graphics::fontLibrary()->defaultFace();
-    return graphics::ShapedText(fontFace, text);
+    graphics::SizedFont* sizedFont = getDefaultSizedFont();
+    return graphics::ShapedText(sizedFont, text);
 }
 
 // x1, y1, x2, y2 is the text box to center the text into
@@ -136,7 +134,7 @@ void insertText(
         bool hinting,
         float scrollLeft)
 {
-    graphics::FontFace* fontFace = shapedText.fontFace();
+    graphics::SizedFont* sizedFont = shapedText.sizedFont();
     if (shapedText.text().length() > 0 || textCursor.isVisible()) {
         float r = static_cast<float>(c[0]);
         float g = static_cast<float>(c[1]);
@@ -144,8 +142,8 @@ void insertText(
 
         // Vertical centering
         float height = (y2 - paddingBottom) - (y1 + paddingTop);
-        float ascent = static_cast<float>(fontFace->ascent());
-        float descent = static_cast<float>(fontFace->descent());
+        float ascent = sizedFont->ascent();
+        float descent = sizedFont->descent();
         if (hinting) {
             ascent = std::round(ascent);
             descent = std::round(descent);
@@ -278,6 +276,20 @@ float getLength(const Widget* widget, core::StringId property)
     return res;
 }
 
-} // namespace internal
-} // namespace ui
-} // namespace vgc
+graphics::SizedFont* getDefaultSizedFont()
+{
+    return getDefaultSizedFont(15, graphics::FontHinting::Native);
+}
+
+graphics::SizedFont* getDefaultSizedFont(Int ppem)
+{
+    return getDefaultSizedFont(ppem, graphics::FontHinting::Native);
+}
+
+graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting)
+{
+    graphics::Font* font = graphics::fontLibrary()->defaultFont();
+    return font->getSizedFont({ppem, hinting});
+}
+
+} // namespace vgc::ui::internal

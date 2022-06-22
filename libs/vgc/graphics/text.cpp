@@ -60,9 +60,9 @@ class ShapedTextImpl {
 public:
     // Input of shaping.
     //
-    // Note that that we store a FontFacePtr to keep both the FontFace and the
+    // Note that that we store a SizedFontPtr to keep both the SizedFont and the
     // FontLibrary alive. Note that the FontLibrary never destroys its
-    // children: a created FontFace stays in memory forever until the library
+    // children: a created SizedFont stays in memory forever until the library
     // itself is destroyed().
     //
     // XXX thread-safety? What if two threads create two ShapedTexts at the
@@ -70,7 +70,7 @@ public:
     //     the reference counts? Shouldn't we make the reference counts atomic,
     //     or else protect the assignment to this facePtr by a mutex?
     //
-    FontFacePtr facePtr;
+    SizedFontPtr facePtr;
     std::string text;
 
     // Output of shaping
@@ -89,7 +89,7 @@ public:
     //
     hb_buffer_t* buf;
 
-    ShapedTextImpl(FontFace* face, std::string_view text) :
+    ShapedTextImpl(SizedFont* face, std::string_view text) :
         facePtr(face),
         text(),
         glyphs(),
@@ -155,7 +155,7 @@ public:
         for (unsigned int i = 0; i < n; ++i) {
             hb_glyph_info_t& info = infos[i];
             hb_glyph_position_t& pos = positions[i];
-            FontGlyph* glyph = facePtr->getGlyphFromIndex(info.codepoint);
+            SizedGlyph* glyph = facePtr->getSizedGlyphFromIndex(info.codepoint);
             Int bytePosition = core::int_cast<Int>(info.cluster);
             geometry::Vec2f glyphOffset = internal::f266ToVec2f(pos.x_offset, pos.y_offset);
             geometry::Vec2f glyphAdvance = internal::f266ToVec2f(pos.x_advance, pos.y_advance);
@@ -277,13 +277,13 @@ void ShapedGlyph::fill(core::FloatArray& data,
 void ShapedGlyph::fill(core::FloatArray& data,
                        const geometry::Vec2f& origin) const
 {
-    fontGlyph()->fillYMirrored(data, origin + position());
+    sizedGlyph()->fillYMirrored(data, origin + position());
 }
 
-ShapedText::ShapedText(FontFace* face, std::string_view text) :
+ShapedText::ShapedText(SizedFont* sizedFont, std::string_view text) :
     impl_()
 {
-    impl_ = new internal::ShapedTextImpl(face, text);
+    impl_ = new internal::ShapedTextImpl(sizedFont, text);
 }
 
 ShapedText::ShapedText(const ShapedText& other)
@@ -319,7 +319,7 @@ ShapedText::~ShapedText()
     delete impl_;
 }
 
-FontFace* ShapedText::fontFace() const
+SizedFont* ShapedText::sizedFont() const
 {
     return impl_->facePtr.get();
 }
