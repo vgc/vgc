@@ -570,11 +570,11 @@ void Font::onDestroyed()
     impl_.reset();
 }
 
-Glyph::Glyph(Font* face, Int index, const std::string& name)
+Glyph::Glyph(Font* font, Int index, const std::string& name)
     : index_(index)
     , name_(name)
 {
-
+    appendObjectToParent_(font);
 }
 
 Font* Glyph::font() const
@@ -696,11 +696,11 @@ void SizedFont::onDestroyed()
     impl_.reset();
 }
 
-SizedGlyph::SizedGlyph(SizedFont* face) :
+SizedGlyph::SizedGlyph(SizedFont* sizedFont) :
     Object(),
     impl_()
 {
-    appendObjectToParent_(face);
+    appendObjectToParent_(sizedFont);
 }
 
 SizedFont* SizedGlyph::sizedFont() const

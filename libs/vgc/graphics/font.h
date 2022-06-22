@@ -395,7 +395,7 @@ protected:
     /// Glyph* glyph2 = font->getGlyphFromIndex(glyphIndex);
     /// ```
     ///
-    Glyph(Font* face, Int index, const std::string& name);
+    Glyph(Font* font, Int index, const std::string& name);
 
 public:
     /// Returns the font this glyph belongs to.

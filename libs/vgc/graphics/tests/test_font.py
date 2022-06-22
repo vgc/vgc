@@ -138,6 +138,12 @@ class TestGlyph(unittest.TestCase):
         with self.assertRaises(TypeError):
             glyph = Glyph()
 
+    def testFont(self):
+        font = someFont()
+        index = font.getGlyphIndexFromCodePoint(0x41)
+        glyph = font.getGlyphFromIndex(index)
+        self.assertEqual(glyph.font, font)
+
     def testIndex(self):
         font = someFont()
         index = font.getGlyphIndexFromCodePoint(0x41)
@@ -239,7 +245,7 @@ class TestSizedGlyph(unittest.TestCase):
     def testIndex(self):
         sizedFont = someSizedFont()
         index = sizedFont.getGlyphIndexFromCodePoint(0x41)
-        sizedGlyph = sizedFont.getGlyphFromIndex(index)
+        sizedGlyph = sizedFont.getSizedGlyphFromIndex(index)
         self.assertEqual(sizedGlyph.index, index)
 
     def testName(self):
