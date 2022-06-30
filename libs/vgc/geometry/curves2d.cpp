@@ -131,10 +131,13 @@ template<class SegmentType>
 void sampleSegment(
         Curves2d& res,
         SampleBuffer& buffer,
-        double maxAngle,
-        Int maxSamplesPerSegment,
+        const Curves2dSampleParams& params,
         SegmentType segment)
 {
+    double minDistanceSquared = params.minDistance() * params.minDistance();
+    double maxAngle = params.maxAngle();
+    Int maxSamplesPerSegment = params.maxSamplesPerSegment();
+
     core::Array<Sample>& samples = buffer.samples;
     core::IntArray& failed = buffer.failed;
     core::IntArray& added = buffer.added;
@@ -150,12 +153,13 @@ void sampleSegment(
     // Adaptive sampling
     while (samples.length() - 3 < maxSamplesPerSegment) {
 
-        // Find which angles are too large
+        // Find which angles are too large and followed by a segment
+        // longer than the minDistance.
         failed.clear();
         for (Int i = 1; i < samples.length() - 1; ++i) {
             Vec2d a = samples[i].position - samples[i-1].position;
             Vec2d b = samples[i+1].position - samples[i].position;
-            if (std::abs(a.angle(b)) > maxAngle) {
+            if (std::abs(a.angle(b)) > maxAngle && b.squaredLength() > minDistanceSquared) {
                 failed.append(i);
             }
         }
@@ -213,9 +217,7 @@ void sampleSegment(
 
 } // namespace
 
-Curves2d Curves2d::sample(
-        double maxAngle,
-        Int maxSamplesPerSegment) const
+Curves2d Curves2d::sample(const Curves2dSampleParams& params) const
 {
     Curves2d res;
     Vec2d p0, p1, p2, p3;
@@ -237,16 +239,14 @@ Curves2d Curves2d::sample(
         case vgc::geometry::CurveCommandType::QuadraticBezierTo:
             p1 = c.p1();
             p2 = c.p2();
-            sampleSegment(res, buffer, maxAngle, maxSamplesPerSegment,
-                          QuadraticSegment{p0, p1, p2});
+            sampleSegment(res, buffer, params, QuadraticSegment{p0, p1, p2});
             p0 = p2;
             break;
         case vgc::geometry::CurveCommandType::CubicBezierTo:
             p1 = c.p1();
             p2 = c.p2();
             p3 = c.p3();
-            sampleSegment(res, buffer, maxAngle, maxSamplesPerSegment,
-                          CubicSegment{p0, p1, p2, p3});
+            sampleSegment(res, buffer, params, CubicSegment{p0, p1, p2, p3});
             p0 = p3;
             break;
         }
@@ -353,10 +353,10 @@ void processLastOpenSample(
 
 } // namespace
 
-void Curves2d::stroke(core::DoubleArray& data, double width) const
+void Curves2d::stroke(core::DoubleArray& data, double width, const Curves2dSampleParams& params) const
 {
     // Compute adaptive sampling
-    Curves2d samples = sample();
+    Curves2d samples = sample(params);
 
     // Stroke samples
     Int numSamples = 0;
@@ -487,14 +487,14 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples)
 
 } // namespace
 
-void Curves2d::fill(core::DoubleArray& data) const
+void Curves2d::fill(core::DoubleArray& data, const Curves2dSampleParams& params) const
 {
-    fill_(data, sample());
+    fill_(data, sample(params));
 }
 
-void Curves2d::fill(core::FloatArray& data) const
+void Curves2d::fill(core::FloatArray& data, const Curves2dSampleParams& params) const
 {
-    fill_(data, sample());
+    fill_(data, sample(params));
 }
 
 } // namespace vgc::geometry

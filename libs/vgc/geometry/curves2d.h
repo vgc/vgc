@@ -257,6 +257,92 @@ private:
     Curves2dCommandIterator end_;
 };
 
+/// \class vgc::core::Curves2dSampleParams
+/// \brief Parameters for Curves2d::sample()
+///
+// TODO:
+//   minSamplesPerSegment?
+//   maxDistance?
+//   preserveSegmentEndPoints?
+//
+class VGC_GEOMETRY_API Curves2dSampleParams {
+protected:
+    Curves2dSampleParams(double minDistance,
+                         double maxAngle,
+                         Int maxSamplesPerSegment)
+        : minDistance_(minDistance)
+        , maxAngle_(maxAngle)
+        , maxSamplesPerSegment_(maxSamplesPerSegment) {}
+
+public:
+    /// Creates a Curves2dSampleParams to be used for adaptive sampling.
+    /// This sets `maxDistance()` to `0.0`.
+    ///
+    static Curves2dSampleParams adaptive(double maxAngle = 0.05,
+                                         Int maxSamplesPerSegment = 64) {
+        return Curves2dSampleParams(
+                    0.0,
+                    maxAngle,
+                    maxSamplesPerSegment);
+    }
+
+    /// Creates a Curves2dSampleParams to be used for adaptive sampling, but
+    /// never adds a new sample between two samples if the distance between
+    /// these two samples is already smaller than minDistance.
+    ///
+    static Curves2dSampleParams semiAdaptive(double minDistance = 1.0,
+                                             double maxAngle = 0.05,
+                                             Int maxSamplesPerSegment = 64) {
+        return Curves2dSampleParams(
+                    minDistance,
+                    maxAngle,
+                    maxSamplesPerSegment);
+    }
+
+    /// Returns the minimum distance between two samples required for a new
+    /// sample to be added.
+    ///
+    double minDistance() const {
+        return minDistance_;
+    }
+
+    /// Sets the minimum distance.
+    ///
+    void setMinDistance(double minDistance) {
+        minDistance_ = minDistance;
+    }
+
+    /// Returns the maximum angle allowed between two segments.
+    ///
+    double maxAngle() const {
+        return maxAngle_;
+    }
+
+    /// Sets the maximum angle.
+    ///
+    void setMaxAngle(double maxAngle) {
+        maxAngle_ = maxAngle;
+    }
+
+    /// Returns the maximum number of samples allowed as part of one
+    /// QuadraticTo/CubicTo/etc. segment.
+    ///
+    Int maxSamplesPerSegment() const {
+        return maxSamplesPerSegment_;
+    }
+
+    /// Sets the maximum number of samples.
+    ///
+    void setMaxSamplesPerSegment(Int maxSamplesPerSegment) {
+        maxSamplesPerSegment_ = maxSamplesPerSegment;
+    }
+
+private:
+    double minDistance_;
+    double maxAngle_;
+    Int maxSamplesPerSegment_;
+};
+
 /// \class vgc::geometry::Curves2d
 /// \brief Sequence of double-precision 2D curves.
 ///
@@ -367,16 +453,7 @@ public:
     /// how many samples there can be for each original curved segment. This is
     /// necessary to break infinite loops in case the segment contains a cusp.
     ///
-    // TODO:
-    //   minSamplesPerSegment?
-    //   minDistanceBetweenSamples?
-    //   maxDistanceBetweenSamples?
-    //   preserveSegmentEndPoints?
-    //   Pass a single SampleParams instead many individual params?
-    //
-    Curves2d sample(
-            double maxAngle = 0.05,
-            Int maxSamplesPerSegment = 64) const;
+    Curves2d sample(const Curves2dSampleParams& params) const;
 
     /// Strokes this curve, that is, appends triangle data to the
     /// given DoubleArray. The appended data is of the form:
@@ -399,11 +476,7 @@ public:
     // could be some sort of CurveParamVec1d, while color could be CurveParamColor,
     // or something like that.
     //
-    void stroke(core::DoubleArray& data, double width) const;
-
-    /// \overload
-    ///
-    void stroke(core::FloatArray& data, double width) const;
+    void stroke(core::DoubleArray& data, double width, const Curves2dSampleParams& params) const;
 
     /// Fills this Curves2d, that is, triangulate the interior of the curves
     /// interpreted as contours of a polygon, using the non-zero winding rule.
@@ -424,11 +497,11 @@ public:
     ///
     // TODO: add winding rule, anti-aliasing options, auto-closing open subcurves, etc.
     //
-    void fill(core::DoubleArray& data) const;
+    void fill(core::DoubleArray& data, const Curves2dSampleParams& params) const;
 
     /// \overload
     ///
-    void fill(core::FloatArray& data) const;
+    void fill(core::FloatArray& data, const Curves2dSampleParams& params) const;
 
 private:
     friend Curves2dCommandRef;
