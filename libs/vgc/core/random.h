@@ -18,22 +18,74 @@
 #define VGC_CORE_RANDOM_H
 
 #include <random>
+
 #include <vgc/core/api.h>
+#include <vgc/core/arithmetic.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
-class VGC_CORE_API UniformDistribution {
-public:
-    UniformDistribution(double min, double max);
-    double operator()();
+namespace internal {
 
-private:
-    std::default_random_engine e_;
-    std::uniform_real_distribution<double> d_;
+template<typename T, typename SFINAE = void>
+struct UniformDistribution_;
+
+template<typename T>
+struct UniformDistribution_<T, Requires<std::is_integral_v<T>>> {
+    using type = std::uniform_int_distribution<T>;
 };
 
-} // namespace core
-} // namespace vgc
+template<typename T>
+struct UniformDistribution_<T, Requires<std::is_floating_point_v<T>>> {
+    using type = std::uniform_real_distribution<T>;
+};
+
+template<typename T>
+using UniformDistribution = typename UniformDistribution_<T>::type;
+
+// Generates a non-deterministic uniformly-distributed random value
+// in the range std::random_device::min() and std::random_device::max().
+//
+// This simply calls operator() on a thread-local instance of std::random_device.
+//
+UInt32 generateRandomInteger();
+
+} // namespace internal
+
+template<typename T>
+class PseudoRandomUniform {
+public:
+    /// Creates a pseudo-random number generator over a uniform distribution,
+    /// initialized with with a non-deterministic hardware-generated random
+    /// seed (if available).
+    ///
+    PseudoRandomUniform(T min, T max)
+        : engine_(internal::generateRandomInteger())
+        , distribution_(min, max) {}
+
+    /// Creates a pseudo-random number generator over a uniform distribution,
+    /// initialized with the given seed.
+    ///
+    PseudoRandomUniform(T min, T max, UInt32 seed)
+        : engine_(seed)
+        , distribution_(min, max) {}
+
+    /// Initializes the pseudo-random engine with the given seed.
+    ///
+    void seed(UInt32 value) {
+        engine_.seed(value);
+    }
+
+    /// Generates a pseudo-random number.
+    ///
+    T operator()() {
+        return distribution_(engine_);
+    }
+
+private:
+    std::mt19937 engine_;
+    internal::UniformDistribution<T> distribution_;
+};
+
+} // namespace vgc::core
 
 #endif // VGC_CORE_RANDOM_H

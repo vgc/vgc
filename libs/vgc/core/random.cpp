@@ -17,23 +17,18 @@
 #include <vgc/core/random.h>
 
 namespace {
-std::random_device r_;
+
+// Instanciates one random_device per thread.
+// Note that calling randomDevice_() may be blocking on some architecture.
+//
+thread_local std::random_device randomDevice_;
+
 } // namespace
 
-namespace vgc {
-namespace core {
+namespace vgc::core::internal {
 
-UniformDistribution::UniformDistribution(double min, double max) :
-    e_(r_()),
-    d_(min, max)
-{
-
+UInt32 hardwareRandom() {
+    return randomDevice_();
 }
 
-double UniformDistribution::operator()()
-{
-    return d_(e_);
-}
-
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core::internal
