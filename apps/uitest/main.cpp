@@ -137,9 +137,12 @@ int main(int argc, char* argv[])
         "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in "
         "culpa qui officia deserunt mollit anim id est laborum.";
 
+    const vgc::UInt32 seed1 = 109283;
+    const vgc::UInt32 seed2 = 981427;
     size_t lipsumSize = lipsum.size();
-    vgc::core::UniformDistribution randomBegin(0, lipsumSize);
-    vgc::core::UniformDistribution randomCount(0, 100);
+    vgc::UInt32 lipsumSize32 = static_cast<vgc::UInt32>(lipsumSize);
+    vgc::core::PseudoRandomUniform<size_t> randomBegin(0, lipsumSize32, seed1);
+    vgc::core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
     int size = 10;
@@ -147,8 +150,8 @@ int main(int argc, char* argv[])
         vgc::ui::Row* row = col->createChild<vgc::ui::Row>();
         for (int j = 0; j < size; ++j) {
             vgc::ui::LineEdit* lineEdit = row->createChild<vgc::ui::LineEdit>();
-            size_t begin = vgc::core::ifloor<size_t>(randomBegin());
-            size_t count = vgc::core::ifloor<size_t>(randomCount());
+            size_t begin = randomBegin();
+            size_t count = randomCount();
             begin = vgc::core::clamp(begin, 0, lipsumSize);
             size_t end = begin + count;
             end = vgc::core::clamp(end, 0, lipsumSize);
