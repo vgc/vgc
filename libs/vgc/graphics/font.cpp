@@ -393,7 +393,7 @@ public:
         FT_Outline_Funcs f{&moveTo, &lineTo, &conicTo, &cubicTo, shift, delta};
         FT_Outline_Decompose(&slot->outline, &f, static_cast<void*>(&outline));
         closeLastCurveIfOpen(outline);
-        outline.fill(triangles);
+        outline.fill(triangles, geometry::Curves2dSampleParams::semiAdaptive(1.0));
         for (const geometry::Vec2f& point :
              geometry::Vec2fConstSpan(triangles.data(), triangles.length() / 2, 2)) {
             boundingBox.uniteWith(point);
