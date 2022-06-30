@@ -58,6 +58,7 @@
 #  pragma warning(push)
 #  pragma warning(disable: 4275)
 #  pragma warning(disable: 4459)
+#  pragma warning(disable: 4189)
 #endif
 #include <fmt/format.h>
 #if defined(VGC_CORE_COMPILER_MSVC)
