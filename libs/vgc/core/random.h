@@ -47,6 +47,7 @@ using UniformDistribution = typename UniformDistribution_<T>::type;
 //
 // This simply calls operator() on a thread-local instance of std::random_device.
 //
+VGC_CORE_API
 UInt32 generateRandomInteger();
 
 } // namespace internal
