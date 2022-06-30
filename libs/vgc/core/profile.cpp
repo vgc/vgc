@@ -50,7 +50,6 @@ std::string generateThreadName() {
     std::ostringstream ss;
     ss << std::this_thread::get_id();
     return ss.str();
-    std::thread::id id;
 }
 
 struct ProfilerGlobals {
