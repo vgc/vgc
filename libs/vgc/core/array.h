@@ -292,9 +292,7 @@ public:
     /// a.isEmpty();  // => true
     /// ```
     ///
-    Array() noexcept {
-
-    }
+    Array() noexcept {}
 
     /// Creates an `Array` of given `length` whose elements are
     /// [value-initialized](https://en.cppreference.com/w/cpp/language/value_initialization).
@@ -433,17 +431,15 @@ public:
 
     /// Copy-constructs from `other`.
     ///
-    Array(const Array& other) :
-        Array(other.begin(), other.end()) {
-
-    }
+    Array(const Array& other)
+        : Array(other.begin(), other.end()) {}
 
     /// Move-constructs from `other`.
     ///
-    Array(Array&& other) noexcept :
-        data_(other.data_),
-        length_(other.length_),
-        reservedLength_(other.reservedLength_) {
+    Array(Array&& other) noexcept
+        : data_(other.data_)
+        , length_(other.length_)
+        , reservedLength_(other.reservedLength_) {
 
         other.data_ = nullptr;
         other.length_ = 0;
@@ -494,6 +490,67 @@ public:
     Array& operator=(std::initializer_list<T> ilist) {
         assign(ilist.begin(), ilist.end());
         return *this;
+    }
+
+    /// Exchanges the content of this `Array` with the content of the `other`
+    /// Array.
+    ///
+    void swap(Array& other) {
+        if (this != &other) {
+            std::swap(data_, other.data_);
+            std::swap(length_, other.length_);
+            std::swap(reservedLength_, other.reservedLength_);
+        }
+    }
+
+    /// Returns, as an unsigned integer, the number of elements in this `Array`.
+    ///
+    /// This function is provided for compatibility with the STL: prefer using
+    /// `length()` instead.
+    ///
+    size_type size() const noexcept {
+        return static_cast<size_type>(length_);
+    }
+
+    /// Returns the number of elements in this `Array`.
+    ///
+    Int length() const {
+        return length_;
+    }
+
+    /// Returns whether this `Array` is empty.
+    ///
+    /// This function is provided for compatibility with the STL: prefer using
+    /// `isEmpty()` instead.
+    ///
+    bool empty() const noexcept {
+        return isEmpty();
+    }
+
+    /// Returns whether this `Array` is empty.
+    ///
+    bool isEmpty() const noexcept {
+        return length_ == 0;
+    }
+
+    /// Returns, as an unsigned integer, the maximum number of elements this
+    /// `Array` is able to hold due to system or library implementation
+    /// limitations.
+    ///
+    /// This function is provided for compatibility with the STL: prefer using
+    /// `maxLength()` instead.
+    ///
+    size_type max_size() const noexcept {
+        return static_cast<size_type>(maxLength());
+    }
+
+    /// Returns the maximum number of elements this `Array` is able to hold due
+    /// to system or library implementation limitations.
+    ///
+    constexpr Int maxLength() const noexcept {
+        return IntMax;
+        // Note: if you change this implementation, don't forget to also change
+        // the implementation of checkNoMoreThanMaxLength_().
     }
 
     /// Replaces the content of this `Array` by an array of given `length` with
@@ -574,6 +631,91 @@ public:
     ///
     void assign(std::initializer_list<T> ilist) {
         assignRange_(ilist.begin(), ilist.end());
+    }
+
+    /// Resizes this `Array` so that it contains `count` elements instead of its
+    /// current `length()` elements. If `count` is smaller than the current
+    /// `length()`, the last `(length() - count)` elements are discarded. If
+    /// `count` is greater than the current `length()`, `(count - length())`
+    /// value-initialized elements are appended.
+    ///
+    /// Throws `NegativeIntegerError` if `count` is negative.
+    ///
+    void resize(Int count) {
+        checkPositiveForInit_(count);
+        resize_(count, ValueInit{});
+    }
+
+    /// Resizes this Array so that it contains `count` elements instead of its
+    /// current `length()` elements. If `count` is smaller than the current
+    /// `length()`, the last `(length() - count)` elements are discarded. If
+    /// `count` is greater than the current `length()`, `(count - length())`
+    /// default-initialized elements are appended.
+    ///
+    /// Throws `NegativeIntegerError` if `count` is negative.
+    ///
+    void resizeNoInit(Int count) {
+        checkPositiveForInit_(count);
+        resize_(count, NoInit{});
+    }
+
+    /// Resizes this Array so that it contains `count` elements instead of its
+    /// current `length()` elements. If `count` is smaller than the current
+    /// `length()`, the last `(length() - count)` elements are discarded. If
+    /// `count` is greater than the current `length()`, `(count - length())`
+    /// copies of `value` are appended.
+    ///
+    /// Throws `NegativeIntegerError` if `count` is negative.
+    ///
+    void resize(Int count, const T& value) {
+        checkPositiveForInit_(count);
+        resize_(count, value);
+    }
+
+    /// Removes all the elements in this `Array`, making it empty.
+    ///
+    void clear() noexcept {
+        if (length_ != 0) {
+            std::destroy_n(data_, length_);
+            length_ = 0;
+        }
+    }
+
+    /// Returns the maximum number of elements this `Array` can contain without
+    /// having to perform a reallocation.
+    ///
+    /// \sa `reserve()`
+    ///
+    Int reservedLength() const noexcept {
+        return reservedLength_;
+    }
+
+    /// Increases the reserved length of this `Array`, that is, the maximum
+    /// number of elements this `Array` can contain without having to perform a
+    /// reallocation. It may improve performance to call this function before
+    /// performing multiple `append()`, when you know an upper bound or an
+    /// estimate of the number of elements to append.
+    ///
+    /// Throws `NegativeIntegerError` if `length` is negative.
+    /// Throws `LengthError` if `length` is greater than `maxLength()`.
+    ///
+    /// \sa `reservedLength()`
+    ///
+    void reserve(Int length) {
+        checkLengthForReserve_(length);
+        if (length > reservedLength_) {
+            reallocateExactly_(length);
+        }
+    }
+
+    /// Reclaims unused memory. Use this if the current `length()` of this
+    /// `Array` is much smaller than its current `reservedLength()`, and you
+    /// don't expect the number of elements to grow anytime soon. Indeed, by
+    /// default, removing elements from an `Array` keeps the memory allocated in
+    /// order to make adding them back efficient.
+    ///
+    void shrinkToFit()  {
+        shrinkToFit_();
     }
 
     /// Returns a mutable reference to the element at index `i`.
@@ -864,21 +1006,6 @@ public:
         return const_reverse_iterator(data_);
     }
 
-    /// Returns whether this `Array` is empty.
-    ///
-    /// This function is provided for compatibility with the STL: prefer using
-    /// `isEmpty()` instead.
-    ///
-    bool empty() const noexcept {
-        return isEmpty();
-    }
-
-    /// Returns whether this `Array` is empty.
-    ///
-    bool isEmpty() const noexcept {
-        return length_ == 0;
-    }
-
     /// Returns whether this `Array` contains `value`.
     ///
     bool contains(const T& value) const {
@@ -1004,87 +1131,6 @@ public:
             }
         }
         return -1;
-    }
-
-    /// Returns, as an unsigned integer, the number of elements in this `Array`.
-    ///
-    /// This function is provided for compatibility with the STL: prefer using
-    /// `length()` instead.
-    ///
-    size_type size() const noexcept {
-        return static_cast<size_type>(length_);
-    }
-
-    /// Returns the number of elements in this `Array`.
-    ///
-    Int length() const {
-        return length_;
-    }
-
-    /// Returns, as an unsigned integer, the maximum number of elements this
-    /// `Array` is able to hold due to system or library implementation
-    /// limitations.
-    ///
-    /// This function is provided for compatibility with the STL: prefer using
-    /// `maxLength()` instead.
-    ///
-    size_type max_size() const noexcept {
-        return static_cast<size_type>(maxLength());
-    }
-
-    /// Returns the maximum number of elements this `Array` is able to hold due
-    /// to system or library implementation limitations.
-    ///
-    constexpr Int maxLength() const noexcept {
-        return IntMax;
-        // Note: if you change this implementation, don't forget to also change
-        // the implementation of checkNoMoreThanMaxLength_().
-    }
-
-    /// Increases the reserved length of this `Array`, that is, the maximum
-    /// number of elements this `Array` can contain without having to perform a
-    /// reallocation. It may improve performance to call this function before
-    /// performing multiple `append()`, when you know an upper bound or an
-    /// estimate of the number of elements to append.
-    ///
-    /// Throws `NegativeIntegerError` if `length` is negative.
-    /// Throws `LengthError` if `length` is greater than `maxLength()`.
-    ///
-    /// \sa `reservedLength()`
-    ///
-    void reserve(Int length) {
-        checkLengthForReserve_(length);
-        if (length > reservedLength_) {
-            reallocateExactly_(length);
-        }
-    }
-
-    /// Returns the maximum number of elements this `Array` can contain without
-    /// having to perform a reallocation.
-    ///
-    /// \sa `reserve()`
-    ///
-    Int reservedLength() const noexcept {
-        return reservedLength_;
-    }
-
-    /// Reclaims unused memory. Use this if the current `length()` of this
-    /// `Array` is much smaller than its current `reservedLength()`, and you
-    /// don't expect the number of elements to grow anytime soon. Indeed, by
-    /// default, removing elements from an `Array` keeps the memory allocated in
-    /// order to make adding them back efficient.
-    ///
-    void shrinkToFit()  {
-        shrinkToFit_();
-    }
-
-    /// Removes all the elements in this `Array`, making it empty.
-    ///
-    void clear() noexcept {
-        if (length_ != 0) {
-            std::destroy_n(data_, length_);
-            length_ = 0;
-        }
     }
 
     /// Inserts the given `value` just before the element referred to by the
@@ -1354,127 +1400,6 @@ public:
         return *emplaceLast_(std::forward<Args>(args)...);
     }
 
-    /// Removes the element referred to by the iterator `it`. Returns an
-    /// iterator to the element following the removed element, or `end()` if the
-    /// removed element was the last element of this `Array`.
-    ///
-    /// The behavior is undefined if `it` is not a valid and derefereancable
-    /// iterator into this `Array`. Note: `end()` is valid, but not
-    /// dereferenceable, and thus passing `end()` to this function is undefined
-    /// behavior.
-    ///
-    iterator erase(const_iterator it) {
-        pointer pos = unwrapIterator(it);
-        const Int i = static_cast<Int>(std::distance(data_, pos));
-        return makeIterator(erase_(i));
-    }
-
-    /// Removes all elements in the range given by the iterators `first`
-    /// (inclusive) and `last` (exclusive). Returns an iterator pointing to the
-    /// element pointed to by `last` prior to any elements being removed. If
-    /// `last == end()` prior to removal, then the updated `end()` is returned.
-    ///
-    /// The behavior is undefined if [`first`, `last`) isn't a valid range in
-    /// this `Array`.
-    ///
-    iterator erase(const_iterator first, const_iterator last) {
-        const pointer p1 = unwrapIterator(first);
-        const pointer p2 = unwrapIterator(last);
-        return makeIterator(erase_(p1, p2));
-    }
-
-    /// Removes the element at index `i`, shifting all subsequent elements one
-    /// index to the left.
-    ///
-    /// Throws `IndexError` if this Array is empty or if `i` does not belong to
-    /// [`0`, `length() - 1`].
-    ///
-    /// ```cpp
-    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
-    /// a.removeAt(1);             // => [8, 42, 12, 15]
-    /// a.removeAt(0);             // => [42, 12, 15]
-    /// a.removeAt(a.length()-1);  // => [42, 12]
-    /// a.removeAt(-1);            // => vgc::core::IndexError!
-    /// a.removeAt(a.length());    // => vgc::core::IndexError!
-    /// ```
-    ///
-    void removeAt(Int i) {
-        checkInRange_(i);
-        erase_(i);
-    }
-
-    /// Removes the first element that compares equal to `value`, shifting all
-    /// subsequent elements one index to the left.
-    ///
-    /// ```cpp
-    /// vgc::core::Array<double> a = {5, 12, 11, 12};
-    /// a.removeOne(12);           // => [5, 11, 12]
-    /// a.removeOne(13);           // => [5, 12, 11, 12]
-    /// ```
-    ///
-    void removeOne(const T value) {
-        auto it = std::find(begin(), end(), value);
-        if (it != end()) {
-            erase_(unwrapIterator(it));
-        }
-    }
-
-    /// Removes the first `count` elements from the container.
-    /// All subsequent elements are shifted to the left.
-    ///
-    /// Throws `IndexError` if [`0`, `count`) isn't a valid range in this
-    /// `Array`, that is, if it doesn't satisfy `0 <= count <= length()`.
-    ///
-    /// ```cpp
-    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
-    /// a.removeFirst(3);          // => [12, 15]
-    /// a.removeFirst(100);        // => vgc::core::IndexError!
-    /// a.removeFirst(-1);         // => vgc::core::IndexError!
-    /// ```
-    ///
-    void removeFirst(Int count) {
-        checkInRange_(0, count);
-        erase_(data_, data_ + count);
-    }
-
-    /// Removes all elements that satisfy the predicate `pred` from the container.
-    /// Returns the number of removed elements.
-    ///
-    /// ```cpp
-    /// vgc::core::Array<double> a = {5, 12, 11, 12, 14};
-    /// a.removeIf([](double v){ return v > 11; }); // => [5, 11]
-    /// ```
-    ///
-    template<typename Pred>
-    Int removeIf(Pred pred) {
-        const auto end_ = end();
-        auto it = std::remove_if(begin(), end_, pred);
-        auto r = std::distance(it, end_);
-        erase_(it, end_);
-        return r;
-    }
-
-    /// Removes all elements from index `i1` (inclusive) to index `i2`
-    /// (exclusive), shifting all subsequent elements to the left.
-    ///
-    /// Throws `IndexError` if [`i1`, `i2`) isn't a valid range in this `Array`,
-    /// that is, if it doesn't satisfy `0 <= i1 <= i2 <= length()`.
-    ///
-    /// ```cpp
-    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
-    /// a.removeRange(1, 3);   // => [8, 12, 15]
-    /// a.removeRange(2, 3);   // => [42, 12]
-    /// a.removeRange(1, 0);   // => vgc::core::IndexError!
-    /// a.removeRange(-1, 0);  // => vgc::core::IndexError!
-    /// a.removeRange(2, 3);   // => vgc::core::IndexError!
-    /// ```
-    ///
-    void removeRange(Int i1, Int i2) {
-        checkInRange_(i1, i2);
-        const pointer data = data_;
-        erase_(data + i1, data + i2);
-    }
-
     /// Appends the given `value` to the end of this `Array`. This is equivalent
     /// to `insert(length(), value)`.
     ///
@@ -1644,6 +1569,127 @@ public:
         insertRange_(0, ilist.begin(), ilist.end());
     }
 
+    /// Removes the element referred to by the iterator `it`. Returns an
+    /// iterator to the element following the removed element, or `end()` if the
+    /// removed element was the last element of this `Array`.
+    ///
+    /// The behavior is undefined if `it` is not a valid and derefereancable
+    /// iterator into this `Array`. Note: `end()` is valid, but not
+    /// dereferenceable, and thus passing `end()` to this function is undefined
+    /// behavior.
+    ///
+    iterator erase(const_iterator it) {
+        pointer pos = unwrapIterator(it);
+        const Int i = static_cast<Int>(std::distance(data_, pos));
+        return makeIterator(erase_(i));
+    }
+
+    /// Removes all elements in the range given by the iterators `first`
+    /// (inclusive) and `last` (exclusive). Returns an iterator pointing to the
+    /// element pointed to by `last` prior to any elements being removed. If
+    /// `last == end()` prior to removal, then the updated `end()` is returned.
+    ///
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range in
+    /// this `Array`.
+    ///
+    iterator erase(const_iterator first, const_iterator last) {
+        const pointer p1 = unwrapIterator(first);
+        const pointer p2 = unwrapIterator(last);
+        return makeIterator(erase_(p1, p2));
+    }
+
+    /// Removes the element at index `i`, shifting all subsequent elements one
+    /// index to the left.
+    ///
+    /// Throws `IndexError` if this Array is empty or if `i` does not belong to
+    /// [`0`, `length() - 1`].
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
+    /// a.removeAt(1);             // => [8, 42, 12, 15]
+    /// a.removeAt(0);             // => [42, 12, 15]
+    /// a.removeAt(a.length()-1);  // => [42, 12]
+    /// a.removeAt(-1);            // => vgc::core::IndexError!
+    /// a.removeAt(a.length());    // => vgc::core::IndexError!
+    /// ```
+    ///
+    void removeAt(Int i) {
+        checkInRange_(i);
+        erase_(i);
+    }
+
+    /// Removes the first element that compares equal to `value`, shifting all
+    /// subsequent elements one index to the left.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {5, 12, 11, 12};
+    /// a.removeOne(12);           // => [5, 11, 12]
+    /// ```
+    ///
+    /// \sa removeAll(), removeIf().
+    ///
+    void removeOne(const T& value) {
+        auto it = std::find(begin(), end(), value);
+        if (it != end()) {
+            erase_(unwrapIterator(it));
+        }
+    }
+
+    /// Removes all elements that compares equal to `value`, shifting all
+    /// subsequent elements to the left.
+    ///
+    /// Returns the number of removed elements.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {5, 12, 11, 12};
+    /// Int numRemoved = a.removeAll(12);  // => numRemoved = 2
+    ///                                    //    a = [5, 11]
+    /// ```
+    ///
+    Int removeAll(const T& value) {
+        return removeIf([&](const T& x) { return x == value; });
+    }
+
+    /// Removes all elements that satisfy the predicate `pred` from the container.
+    /// Returns the number of removed elements.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {5, 12, 11, 12, 14};
+    /// Int numRemoved = a.removeIf([](double v) { return v > 11; });
+    /// // => numRemoved = 3
+    /// //    a= [5, 11]
+    /// ```
+    ///
+    template<typename Pred>
+    Int removeIf(Pred pred) {
+        const auto end_ = end();
+        auto it = std::remove_if(begin(), end_, pred);
+        auto r = std::distance(it, end_);
+        erase_(it, end_);
+        return r;
+    }
+
+    /// Removes all elements from index `i1` (inclusive) to index `i2`
+    /// (exclusive), shifting all subsequent elements to the left.
+    ///
+    /// Throws `IndexError` if [`i1`, `i2`) isn't a valid range in this `Array`,
+    /// that is, if it doesn't satisfy `0 <= i1 <= i2 <= length()`.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
+    /// a.removeRange(1, 3);   // => [8, 12, 15]
+    /// a.removeRange(2, 3);   // => [42, 12]
+    /// a.removeRange(1, 0);   // => vgc::core::IndexError!
+    /// a.removeRange(-1, 0);  // => vgc::core::IndexError!
+    /// a.removeRange(2, 3);   // => vgc::core::IndexError!
+    /// ```
+    ///
+    void removeRange(Int i1, Int i2) {
+        checkInRange_(i1, i2);
+        const pointer data = data_;
+        erase_(data + i1, data + i2);
+    }
+
     /// Removes the first element of this `Array`, shifting all existing
     /// elements one index to the left. This is equivalent to `removeAt(0)`.
     ///
@@ -1664,6 +1710,23 @@ public:
                 "Attempting to remove the first element of an empty Array.");
         }
         erase_(Int(0));
+    }    
+
+    /// Removes the first `count` elements from the container.
+    /// All subsequent elements are shifted to the left.
+    ///
+    /// Throws `IndexError` if [`0`, `count`) isn't a valid range in this
+    /// `Array`, that is, if it doesn't satisfy `0 <= count <= length()`.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
+    /// a.removeFirst(3);          // => [12, 15]
+    /// a.removeFirst(100);        // => vgc::core::IndexError!
+    /// a.removeFirst(-1);         // => vgc::core::IndexError!
+    /// ```
+    ///
+    void removeFirst(Int count) {
+        removeRange(0, count);
     }
 
     /// Removes the last element of this `Array`. This is equivalent to
@@ -1686,6 +1749,23 @@ public:
                 "Attempting to remove the last element of an empty Array.");
         }
         erase_(length_ - 1);
+    }
+
+    /// Removes the last `count` elements from the container.
+    /// All subsequent elements are shifted to the left.
+    ///
+    /// Throws `IndexError` if [`length()-cout`, `length()`) isn't a valid range in this
+    /// `Array`, that is, if it doesn't satisfy `0 <= count <= length()`.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
+    /// a.removeLast(3);           // => [8, 10]
+    /// a.removeLast(100);        // => vgc::core::IndexError!
+    /// a.removeLast(-1);         // => vgc::core::IndexError!
+    /// ```
+    ///
+    void removeLast(Int count) {
+        removeRange(length() - count, length());
     }
 
     /// Removes and returns the last element of this `Array`.
@@ -1715,56 +1795,6 @@ public:
         T res = (*this)[i];
         erase_(i);
         return res;
-    }
-
-    /// Resizes this `Array` so that it contains `count` elements instead of its
-    /// current `length()` elements. If `count` is smaller than the current
-    /// `length()`, the last `(length() - count)` elements are discarded. If
-    /// `count` is greater than the current `length()`, `(count - length())`
-    /// value-initialized elements are appended.
-    ///
-    /// Throws `NegativeIntegerError` if `count` is negative.
-    ///
-    void resize(Int count) {
-        checkPositiveForInit_(count);
-        resize_(count, ValueInit{});
-    }
-
-    /// Resizes this Array so that it contains `count` elements instead of its
-    /// current `length()` elements. If `count` is smaller than the current
-    /// `length()`, the last `(length() - count)` elements are discarded. If
-    /// `count` is greater than the current `length()`, `(count - length())`
-    /// default-initialized elements are appended.
-    ///
-    /// Throws `NegativeIntegerError` if `count` is negative.
-    ///
-    void resizeNoInit(Int count) {
-        checkPositiveForInit_(count);
-        resize_(count, NoInit{});
-    }
-
-    /// Resizes this Array so that it contains `count` elements instead of its
-    /// current `length()` elements. If `count` is smaller than the current
-    /// `length()`, the last `(length() - count)` elements are discarded. If
-    /// `count` is greater than the current `length()`, `(count - length())`
-    /// copies of `value` are appended.
-    ///
-    /// Throws `NegativeIntegerError` if `count` is negative.
-    ///
-    void resize(Int count, const T& value) {
-        checkPositiveForInit_(count);
-        resize_(count, value);
-    }
-
-    /// Exchanges the content of this `Array` with the content of the `other`
-    /// Array.
-    ///
-    void swap(Array& other) {
-        if (this != &other) {
-            std::swap(data_, other.data_);
-            std::swap(length_, other.length_);
-            std::swap(reservedLength_, other.reservedLength_);
-        }
     }
 
 private:
