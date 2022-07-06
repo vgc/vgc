@@ -631,14 +631,10 @@ TEST(TestArray, RemoveOne) {
     a.removeOne(10); EXPECT_EQ(a, c);
 }
 
-TEST(TestArray, RemoveFirst) {
-    Array<int> a = {8, 10, 42, 12, 15};
-    Array<int> b = {10, 42, 12, 15};
-    Array<int> c = {12, 15};
-    a.removeFirst(1); EXPECT_EQ(a, b);
-    a.removeFirst(2); EXPECT_EQ(a, c);
-    EXPECT_THROW(a.removeFirst(100), IndexError);
-    EXPECT_THROW(a.removeFirst(-1), IndexError);
+TEST(TestArray, RemoveAll) {
+    Array<int> a = {8, 10, 12, 42, 12, 15};
+    Array<int> b = {8, 10, 42, 15};
+    a.removeAll(12); EXPECT_EQ(a, b);
 }
 
 TEST(TestArray, RemoveIf) {
@@ -658,6 +654,37 @@ TEST(TestArray, RemoveRange) {
     EXPECT_THROW(a.removeRange(2, 3), IndexError);
     EXPECT_THROW(a.removeRange(-1, 0), IndexError);
     EXPECT_THROW(a.removeRange(2, 3), IndexError);
+}
+
+TEST(TestArray, RemoveFirstAndLast) {
+    Array<int> a = {15, 10, 42, 12};
+    Array<int> b = {10, 42, 12};
+    Array<int> c = {10, 42};
+    a.removeFirst(); EXPECT_EQ(a, b);
+    a.removeLast(); EXPECT_EQ(a, c);
+    a.clear();
+    EXPECT_THROW(a.removeFirst(), IndexError);
+    EXPECT_THROW(a.removeLast(), IndexError);
+}
+
+TEST(TestArray, RemoveFirst) {
+    Array<int> a = {8, 10, 42, 12, 15};
+    Array<int> b = {10, 42, 12, 15};
+    Array<int> c = {12, 15};
+    a.removeFirst(1); EXPECT_EQ(a, b);
+    a.removeFirst(2); EXPECT_EQ(a, c);
+    EXPECT_THROW(a.removeFirst(100), IndexError);
+    EXPECT_THROW(a.removeFirst(-1), IndexError);
+}
+
+TEST(TestArray, RemoveLast) {
+    Array<int> a = {8, 10, 42, 12, 15};
+    Array<int> b = {8, 10, 42, 12};
+    Array<int> c = {8, 10};
+    a.removeLast(1); EXPECT_EQ(a, b);
+    a.removeLast(2); EXPECT_EQ(a, c);
+    EXPECT_THROW(a.removeLast(100), IndexError);
+    EXPECT_THROW(a.removeLast(-1), IndexError);
 }
 
 TEST(TestArray, AppendAndPrepend) {
@@ -729,17 +756,6 @@ TEST(TestArray, ExtendAndPreextend) {
     { Array<int> a{1, 2}; a.preextend(v);                        EXPECT_EQ(a, (Array<int>{5, 6, 7, 1, 2})); }
     { Array<int> a{1, 2}; a.preextend(b);                        EXPECT_EQ(a, (Array<int>{5, 6, 7, 1, 2})); }
     { Array<int> a{1, 2}; a.preextend({5, 6, 7});                EXPECT_EQ(a, (Array<int>{5, 6, 7, 1, 2})); }
-}
-
-TEST(TestArray, RemoveFirstAndLast) {
-    Array<int> a = {15, 10, 42, 12};
-    Array<int> b = {10, 42, 12};
-    Array<int> c = {10, 42};
-    a.removeFirst(); EXPECT_EQ(a, b);
-    a.removeLast(); EXPECT_EQ(a, c);
-    a.clear();
-    EXPECT_THROW(a.removeFirst(), IndexError);
-    EXPECT_THROW(a.removeLast(), IndexError);
 }
 
 TEST(TestArray, Resize) {
