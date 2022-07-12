@@ -18,6 +18,8 @@ vgc_add_library(geometry
         curves2d.h
         logcategories.h
         mat.h
+        mat2d.h
+        mat2f.h
         mat3d.h
         mat3f.h
         mat4d.h
@@ -28,12 +30,18 @@ vgc_add_library(geometry
         vec.h
         vec2d.h
         vec2f.h
+        vec3d.h
+        vec3f.h
+        vec4d.h
+        vec4f.h
 
     CPP_FILES
         camera2d.cpp
         curve.cpp
         curves2d.cpp
         logcategories.cpp
+        mat2d.cpp
+        mat2f.cpp
         mat3d.cpp
         mat3f.cpp
         mat4d.cpp
@@ -42,6 +50,10 @@ vgc_add_library(geometry
         rect2f.cpp
         vec2d.cpp
         vec2f.cpp
+        vec3d.cpp
+        vec3f.cpp
+        vec4d.cpp
+        vec4f.cpp
 
     NATVIS_FILES
         tools/vgcgeometry.natvis

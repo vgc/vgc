@@ -27,6 +27,8 @@
 #include <vgc/geometry/mat.h>
 #include <vgc/geometry/stride.h>
 #include "vec2x.h"
+#include "vec3x.h"
+#include "vec4x.h"
 
 namespace vgc::geometry {
 
@@ -311,7 +313,7 @@ public:
         return Mat4x(*this) /= s;
     }
 
-    /// Returns whether the two given Vec2x \p v1 and \p v2 are equal.
+    /// Returns whether the two given Mat4x \p m1 and \p m2 are equal.
     ///
     friend bool operator==(const Mat4x& m1, const Mat4x& m2) {
         return m1.data_[0][0] == m2.data_[0][0] &&
@@ -332,7 +334,7 @@ public:
                m1.data_[3][3] == m2.data_[3][3];
     }
 
-    /// Returns whether the two given Vec2x \p v1 and \p v2 are different.
+    /// Returns whether the two given Mat4x \p m1 and \p m2 are different.
     ///
     friend bool operator!=(const Mat4x& m1, const Mat4x& m2) {
         return m1.data_[0][0] != m2.data_[0][0] ||
@@ -353,15 +355,75 @@ public:
                m1.data_[3][3] != m2.data_[3][3];
     }
 
-    /// Returns the multiplication of this Mat4x by the given Vec2x \p v.
-    /// This assumes that the Vec2x represents the Vec4x(x, y, 0, 1) in
-    /// homogeneous coordinates, and then only returns the x and y coordinates
-    /// of the result.
+    /// Returns the multiplication of this Mat4x by the given Vec4x \p v.
     ///
-    Vec2x operator*(const Vec2x& v) const {
-        return Vec2x(
-            data_[0][0]*v[0] + data_[1][0]*v[1] +  data_[3][0],
-            data_[0][1]*v[0] + data_[1][1]*v[1] +  data_[3][1]);
+    Vec4x operator*(const Vec4x& v) const {
+        return Vec4x(
+            data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0]*v[3],
+            data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1]*v[3],
+            data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2]*v[3],
+            data_[0][3]*v[0] + data_[1][3]*v[1] + data_[2][3]*v[2] + data_[3][3]*v[3]);
+    }
+
+    /// Returns the result of transforming the given `Vec3x` by this `Mat4x`
+    /// interpreted as a 3D projective transformation.
+    ///
+    /// This is equivalent to multiplying this `Mat4x` by `Vec3x(x, y, z, 1)`,
+    /// then returning the first three coordinates divided by the fourth
+    /// coordinate.
+    ///
+    Vec3x transformPoint(const Vec3x& v) const {
+        float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0];
+        float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1];
+        float z = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2];
+        float w = data_[0][3]*v[0] + data_[1][3]*v[1] + data_[2][3]*v[2] + data_[3][3];
+        float iw = 1.0f / w;
+        return Vec3x(iw * x, iw * y, iw * z);
+    }
+
+    /// Computes the transformation of the given `Vec2x` (interpreted as a
+    /// `Vec3x` with `z = 0`) by this `Mat4x` (interpreted as a 3D projective
+    /// transformation), and returns the first 2 coordinates.
+    ///
+    /// See `transformPoint(const Vec3x& v)` for details.
+    ///
+    Vec2x transformPoint(const Vec2x& v) const {
+        float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[3][0];
+        float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[3][1];
+        float w = data_[0][3]*v[0] + data_[1][3]*v[1] + data_[3][3];
+        float iw = 1.0f / w;
+        return Vec2x(iw * x, iw * y);
+    }
+
+    /// Returns the result of transforming the given `Vec3x` by this `Mat4x`
+    /// interpreted as a 3D affine transformation, that is, ignoring the
+    /// projective components.
+    ///
+    /// This is equivalent to multiplying the 3x4 submatrix of this `Mat4x` by
+    /// `Vec4x(x, y, z, 1)`.
+    ///
+    /// This can be used as a faster version of `transformPoint()` whenever you
+    /// know that the last row of the matrix is equal to `[0, 0, 0, 1]`, or
+    /// whenever you prefer to behave as if the last row was `[0, 0, 0, 1]`.
+    ///
+    Vec3x transformPointAffine(const Vec3x& v) const {
+        float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0];
+        float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1];
+        float z = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2];
+        return Vec3x(x, y, z);
+    }
+
+    /// Computes the transformation of the given `Vec2x` (interpreted as a
+    /// `Vec3x` with `z = 0`) by this `Mat4x` (interpreted as a 3D affine
+    /// transformation, that is, ignoring the projective component), and
+    /// returns the first 2 coordinates.
+    ///
+    /// See `transformPointAffine(const Vec3x& v)` for details.
+    ///
+    Vec2x transformPointAffine(const Vec2x& v) const {
+        float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[3][0];
+        float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[3][1];
+        return Vec2x(x, y);
     }
 
     /// Returns the inverse of this Mat4x.
@@ -399,6 +461,12 @@ public:
                 0, 0, 1, vz,
                 0, 0, 0, 1);
         return (*this) *= m;
+    }
+
+    /// Overloads `Mat4x::translate(float, float, float)`.
+    ///
+    Mat4x& translate(const Vec3x& v) {
+        return translate(v.x(), v.y(), v.z());
     }
 
     /// Right-multiplies this matrix by the rotation matrix around
@@ -488,6 +556,12 @@ public:
                 0,  0,  sz, 0,
                 0,  0,  0,  1);
         return (*this) *= m;
+    }
+
+    /// Overloads `Mat3x::scale(float, float, float)`.
+    ///
+    Mat4x& scale(const Vec3x& v) {
+        return scale(v.x(), v.y(), v.z());
     }
 
 private:

@@ -16,12 +16,33 @@
 
 #include <vgc/core/wraps/common.h>
 #include <pybind11/operators.h>
+
+#include <vgc/geometry/mat.h>
+#include <vgc/geometry/mat2d.h>
+#include <vgc/geometry/mat2f.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/mat3f.h>
 #include <vgc/geometry/mat4d.h>
 #include <vgc/geometry/mat4f.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec3d.h>
+#include <vgc/geometry/vec3f.h>
+#include <vgc/geometry/vec4d.h>
+#include <vgc/geometry/vec4f.h>
+
+using vgc::geometry::Mat;
+using vgc::geometry::Vec;
 
 namespace {
+
+template<int dimension, typename T> struct PointParam_;
+template<typename T> struct PointParam_<2, T> { using type = T; };
+template<typename T> struct PointParam_<3, T> { using type = const Vec<2, T>&; };
+template<typename T> struct PointParam_<4, T> { using type = const Vec<3, T>&; };
+
+template<int dimension, typename T>
+using PointParam = typename PointParam_<dimension, T>::type;
 
 // Allows `mat[i][j]` Python syntax
 template<int dimension, typename T>
@@ -41,7 +62,9 @@ private:
 template<int dimension, typename T>
 void wrap_mat(py::module& m, const std::string& name)
 {
+    using TPointParam = PointParam<dimension, T>;
     using TVec2 = vgc::geometry::Vec<2, T>;
+    using TVec = vgc::geometry::Vec<dimension, T>;
     using TMat = vgc::geometry::Mat<dimension, T>;
     using TRow = MatRowView<dimension, T>;
 
@@ -138,7 +161,15 @@ void wrap_mat(py::module& m, const std::string& name)
         .def(py::self / T())
         .def(py::self == py::self)
         .def(py::self != py::self)
-        .def(py::self * TVec2());
+        .def(py::self * TVec());
+
+    // Transform
+    cmat.def("transformPoint", py::overload_cast<TPointParam>(&TMat::transformPoint, py::const_));
+    cmat.def("transformPointAffine", py::overload_cast<TPointParam>(&TMat::transformPointAffine, py::const_));
+    if constexpr (dimension == 4) {
+        cmat.def("transformPoint", py::overload_cast<const TVec2&>(&TMat::transformPoint, py::const_));
+        cmat.def("transformPointAffine", py::overload_cast<const TVec2&>(&TMat::transformPointAffine, py::const_));
+    }
 
     // Identity
     cmat.def_property_readonly_static("identity", [](py::object) -> TMat {
@@ -155,20 +186,23 @@ void wrap_mat(py::module& m, const std::string& name)
             if (!isInvertible) {
                 throw py::value_error("The matrix is not invertible.");
             }
-            return res; })
-        .def("rotate", &TMat::rotate, "t"_a, "orthosnap"_a = true)
-        .def("scale", py::overload_cast<T>(&TMat::scale));
+            return res; });
 
     if constexpr (dimension == 3) {
         cmat.def("translate", py::overload_cast<T, T>(&TMat::translate), "vx"_a, "vy"_a = 0)
-            .def("translate", py::overload_cast<const TVec2&>(&TMat::translate))
+            .def("translate", py::overload_cast<TPointParam>(&TMat::translate))
+            .def("rotate", &TMat::rotate, "t"_a, "orthosnap"_a = true)
+            .def("scale", py::overload_cast<T>(&TMat::scale))
             .def("scale", py::overload_cast<T, T>(&TMat::scale))
             .def("scale", py::overload_cast<const TVec2&>(&TMat::scale));
-
     }
     else if constexpr (dimension == 4) {
         cmat.def("translate", py::overload_cast<T, T, T>(&TMat::translate), "vx"_a, "vy"_a = 0, "vz"_a = 0)
-            .def("scale", py::overload_cast<T, T, T>(&TMat::scale), "sx"_a, "sy"_a, "sz"_a = 0);
+            .def("translate", py::overload_cast<TPointParam>(&TMat::translate))
+            .def("rotate", &TMat::rotate, "t"_a, "orthosnap"_a = true)
+            .def("scale", py::overload_cast<T>(&TMat::scale))
+            .def("scale", py::overload_cast<T, T, T>(&TMat::scale), "sx"_a, "sy"_a, "sz"_a = 0)
+            .def("scale", py::overload_cast<TPointParam>(&TMat::scale));
     }
 
     // Conversion to string
@@ -181,6 +215,8 @@ void wrap_mat(py::module& m, const std::string& name)
 
 void wrap_mat(py::module& m)
 {
+    wrap_mat<2, float>(m, "Mat2f");
+    wrap_mat<2, double>(m, "Mat2d");
     wrap_mat<3, float>(m, "Mat3f");
     wrap_mat<3, double>(m, "Mat3d");
     wrap_mat<4, float>(m, "Mat4f");

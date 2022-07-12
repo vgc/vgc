@@ -24,6 +24,8 @@
 
 namespace vgc::geometry {
 
+class Mat2f;
+class Mat2d;
 class Mat3f;
 class Mat3d;
 class Mat4f;
@@ -32,6 +34,8 @@ class Mat4d;
 namespace internal {
 
 template<int dimension, typename T> struct Mat_ {};
+template<> struct Mat_<2, float>  { using type = Mat2f; };
+template<> struct Mat_<2, double> { using type = Mat2d; };
 template<> struct Mat_<3, float>  { using type = Mat3f; };
 template<> struct Mat_<3, double> { using type = Mat3d; };
 template<> struct Mat_<4, float>  { using type = Mat4f; };

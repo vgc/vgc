@@ -27,6 +27,7 @@
 #include <vgc/geometry/mat.h>
 #include <vgc/geometry/stride.h>
 #include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec3d.h>
 
 namespace vgc::geometry {
 
@@ -261,7 +262,7 @@ public:
         return Mat3d(*this) /= s;
     }
 
-    /// Returns whether the two given Vec2d \p v1 and \p v2 are equal.
+    /// Returns whether the two given Mat3d \p m1 and \p m2 are equal.
     ///
     friend bool operator==(const Mat3d& m1, const Mat3d& m2) {
         return m1.data_[0][0] == m2.data_[0][0] &&
@@ -275,7 +276,7 @@ public:
                m1.data_[2][2] == m2.data_[2][2];
     }
 
-    /// Returns whether the two given Vec2d \p v1 and \p v2 are different.
+    /// Returns whether the two given Mat3d \p m1 and \p m2 are different.
     ///
     friend bool operator!=(const Mat3d& m1, const Mat3d& m2) {
         return m1.data_[0][0] != m2.data_[0][0] ||
@@ -289,15 +290,45 @@ public:
                m1.data_[2][2] != m2.data_[2][2];
     }
 
-    /// Returns the multiplication of this Mat3d by the given Vec2d \p v.
-    /// This assumes that the Vec2d represents the Vec3d(x, y, 1) in
-    /// homogeneous coordinates, and then only returns the x and y coordinates
-    /// of the result.
+    /// Returns the multiplication of this Mat3d by the given Vec3d \p v.
     ///
-    Vec2d operator*(const Vec2d& v) const {
-        return Vec2d(
-            data_[0][0]*v[0] + data_[1][0]*v[1] +  data_[2][0],
-            data_[0][1]*v[0] + data_[1][1]*v[1] +  data_[2][1]);
+    Vec3d operator*(const Vec3d& v) const {
+        return Vec3d(
+            data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2],
+            data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2],
+            data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2]);
+    }
+
+    /// Returns the result of transforming the given `Vec2d` by this `Mat3d`
+    /// interpreted as a 2D projective transformation.
+    ///
+    /// This is equivalent to multiplying this `Mat3d` by `Vec3d(x, y, 1)`,
+    /// then returning the first two coordinates divided by the third
+    /// coordinate.
+    ///
+    Vec2d transformPoint(const Vec2d& v) const {
+        double x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0];
+        double y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1];
+        double w = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2];
+        double iw = 1.0 / w;
+        return Vec2d(iw * x, iw * y);
+    }
+
+    /// Returns the result of transforming the given `Vec2d` by this `Mat3d`
+    /// interpreted as a 2D affine transformation, that is, ignoring the
+    /// projective components.
+    ///
+    /// This is equivalent to multiplying the 2x3 submatrix of this `Mat3d` by
+    /// `Vec3d(x, y, 1)`.
+    ///
+    /// This can be used as a faster version of `transformPoint()` whenever you
+    /// know that the last row of the matrix is equal to `[0, 0, 1]`, or
+    /// whenever you prefer to behave as if the last row was `[0, 0, 1]`.
+    ///
+    Vec2d transformPointAffine(const Vec2d& v) const {
+        double x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0];
+        double y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1];
+        return Vec2d(x, y);
     }
 
     /// Returns the inverse of this Mat3d.

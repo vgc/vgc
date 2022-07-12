@@ -365,14 +365,14 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m7, m3)
             self.assertEqual(m8, m4)
 
-    def testMatVecMultiplication(self):
+    def testTransformPointAffine(self):
         for (Mat3, Vec2) in Mat3Vec2Types:
             m = Mat3(1, 2, 3,
                      4, 5, 6,
                      7, 8, 9)
             v1 = Vec2(10, 20)
             v2 = Vec2(53, 146)
-            v3 = m * v1
+            v3 = m.transformPointAffine(v1)
             self.assertEqual(v3, v2)
 
         for (Mat4, Vec2) in Mat4Vec2Types:
@@ -382,7 +382,7 @@ class TestMat(unittest.TestCase):
                      13, 14, 15, 16)
             v1 = Vec2(10, 20)
             v2 = Vec2(54, 178)
-            v3 = m * v1
+            v3 = m.transformPointAffine(v1)
             self.assertEqual(v3, v2)
 
     def testInvertedScale(self):
@@ -419,26 +419,26 @@ class TestMat(unittest.TestCase):
             m1 = Mat.identity.translate(10)
             m2 = Mat.identity
             m2.translate(10)
-            self.assertEqual(m1 * v, Vec2(11, 2))
-            self.assertEqual(m2 * v, Vec2(11, 2))
+            self.assertEqual(m1.transformPoint(v), Vec2(11, 2))
+            self.assertEqual(m2.transformPoint(v), Vec2(11, 2))
             m1 = Mat.identity.translate(10, 20)
             m2 = Mat.identity
             m2.translate(10, 20)
-            self.assertEqual(m1 * v, Vec2(11, 22))
-            self.assertEqual(m2 * v, Vec2(11, 22))
+            self.assertEqual(m1.transformPoint(v), Vec2(11, 22))
+            self.assertEqual(m2.transformPoint(v), Vec2(11, 22))
 
         for (Mat3, Vec2) in Mat3Vec2Types:
             v = Vec2(1, 2)
             m1 = Mat3.identity.translate(Vec2(10, 20))
-            self.assertEqual(m1 * v, Vec2(11, 22))
+            self.assertEqual(m1.transformPoint(v), Vec2(11, 22))
 
         for (Mat4, Vec2) in Mat4Vec2Types:
             v = Vec2(1, 2)
             m1 = Mat4.identity.translate(10, 20, 30)
             m2 = Mat4.identity
             m2.translate(10, 20, 30)
-            self.assertEqual(m1 * v, Vec2(11, 22))
-            self.assertEqual(m2 * v, Vec2(11, 22))
+            self.assertEqual(m1.transformPoint(v), Vec2(11, 22))
+            self.assertEqual(m2.transformPoint(v), Vec2(11, 22))
 
     def testRotate(self):
         for (Mat, Vec2) in Mat3Vec2Types + Mat4Vec2Types:
@@ -446,16 +446,16 @@ class TestMat(unittest.TestCase):
             m1 = Mat.identity.rotate(pi/2)
             m2 = Mat.identity
             m2.rotate(pi/2)
-            self.assertEqual(m1 * v, Vec2(-2, 1))
-            self.assertEqual(m2 * v, Vec2(-2, 1))
+            self.assertEqual(m1.transformPoint(v), Vec2(-2, 1))
+            self.assertEqual(m2.transformPoint(v), Vec2(-2, 1))
             v = Vec2(2, 0)
             m1 = Mat.identity.rotate(pi/3)
             m2 = Mat.identity
             m2.rotate(pi/3)
             v2 = Vec2(1, sqrt(3))
             absTol = 1.0e-6
-            self.assertTrue(v2.allNear(m1 * v, absTol))
-            self.assertTrue(v2.allNear(m2 * v, absTol))
+            self.assertTrue(v2.allNear(m1.transformPoint(v), absTol))
+            self.assertTrue(v2.allNear(m2.transformPoint(v), absTol))
 
     def testScale(self):
         for (Mat, Vec2) in Mat3Vec2Types + Mat4Vec2Types:
@@ -463,26 +463,26 @@ class TestMat(unittest.TestCase):
             m1 = Mat.identity.scale(20)
             m2 = Mat.identity
             m2.scale(20)
-            self.assertEqual(m1 * v, Vec2(40, 60))
-            self.assertEqual(m2 * v, Vec2(40, 60))
+            self.assertEqual(m1.transformPoint(v), Vec2(40, 60))
+            self.assertEqual(m2.transformPoint(v), Vec2(40, 60))
             m1 = Mat.identity.scale(20, 30)
             m2 = Mat.identity
             m2.scale(20, 30)
-            self.assertTrue(m1 * v, Vec2(40, 90))
-            self.assertEqual(m2 * v, Vec2(40, 90))
+            self.assertTrue(m1.transformPoint(v), Vec2(40, 90))
+            self.assertEqual(m2.transformPoint(v), Vec2(40, 90))
 
         for (Mat3, Vec2) in Mat3Vec2Types:
             v = Vec2(2, 3)
             m1 = Mat3.identity.scale(Vec2(20, 30))
-            self.assertTrue(m1 * v, Vec2(40, 90))
+            self.assertTrue(m1.transformPoint(v), Vec2(40, 90))
 
         for (Mat4, Vec2) in Mat4Vec2Types:
             v = Vec2(2, 3)
             m1 = Mat4.identity.scale(20, 30, 40)
             m2 = Mat4.identity
             m2.scale(20, 30, 40)
-            self.assertEqual(m1 * v, Vec2(40, 90))
-            self.assertEqual(m2 * v, Vec2(40, 90))
+            self.assertEqual(m1.transformPoint(v), Vec2(40, 90))
+            self.assertEqual(m2.transformPoint(v), Vec2(40, 90))
 
     def testComparisonOperators(self):
         for (Mat, dim) in MatTypes:
