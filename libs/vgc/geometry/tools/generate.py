@@ -86,6 +86,8 @@ def generateVariant(typ, n, xname):
 
 
 if __name__ == "__main__":
+    generateVariant("mat", "2", "float")
+    generateVariant("mat", "2", "double")
     generateVariant("mat", "3", "float")
     generateVariant("mat", "3", "double")
     generateVariant("mat", "4", "float")
@@ -94,3 +96,7 @@ if __name__ == "__main__":
     generateVariant("rect", "2", "double")
     generateVariant("vec", "2", "float")
     generateVariant("vec", "2", "double")
+    generateVariant("vec", "3", "float")
+    generateVariant("vec", "3", "double")
+    generateVariant("vec", "4", "float")
+    generateVariant("vec", "4", "double")

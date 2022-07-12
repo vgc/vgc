@@ -27,6 +27,8 @@
 #include <vgc/geometry/mat.h>
 #include <vgc/geometry/stride.h>
 #include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec3d.h>
+#include <vgc/geometry/vec4d.h>
 
 namespace vgc::geometry {
 
@@ -311,7 +313,7 @@ public:
         return Mat4d(*this) /= s;
     }
 
-    /// Returns whether the two given Vec2d \p v1 and \p v2 are equal.
+    /// Returns whether the two given Mat4d \p m1 and \p m2 are equal.
     ///
     friend bool operator==(const Mat4d& m1, const Mat4d& m2) {
         return m1.data_[0][0] == m2.data_[0][0] &&
@@ -332,7 +334,7 @@ public:
                m1.data_[3][3] == m2.data_[3][3];
     }
 
-    /// Returns whether the two given Vec2d \p v1 and \p v2 are different.
+    /// Returns whether the two given Mat4d \p m1 and \p m2 are different.
     ///
     friend bool operator!=(const Mat4d& m1, const Mat4d& m2) {
         return m1.data_[0][0] != m2.data_[0][0] ||
@@ -353,15 +355,75 @@ public:
                m1.data_[3][3] != m2.data_[3][3];
     }
 
-    /// Returns the multiplication of this Mat4d by the given Vec2d \p v.
-    /// This assumes that the Vec2d represents the Vec4d(x, y, 0, 1) in
-    /// homogeneous coordinates, and then only returns the x and y coordinates
-    /// of the result.
+    /// Returns the multiplication of this Mat4d by the given Vec4d \p v.
     ///
-    Vec2d operator*(const Vec2d& v) const {
-        return Vec2d(
-            data_[0][0]*v[0] + data_[1][0]*v[1] +  data_[3][0],
-            data_[0][1]*v[0] + data_[1][1]*v[1] +  data_[3][1]);
+    Vec4d operator*(const Vec4d& v) const {
+        return Vec4d(
+            data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0]*v[3],
+            data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1]*v[3],
+            data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2]*v[3],
+            data_[0][3]*v[0] + data_[1][3]*v[1] + data_[2][3]*v[2] + data_[3][3]*v[3]);
+    }
+
+    /// Returns the result of transforming the given `Vec3d` by this `Mat4d`
+    /// interpreted as a 3D projective transformation.
+    ///
+    /// This is equivalent to multiplying this `Mat4d` by `Vec3d(x, y, z, 1)`,
+    /// then returning the first three coordinates divided by the fourth
+    /// coordinate.
+    ///
+    Vec3d transformPoint(const Vec3d& v) const {
+        double x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0];
+        double y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1];
+        double z = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2];
+        double w = data_[0][3]*v[0] + data_[1][3]*v[1] + data_[2][3]*v[2] + data_[3][3];
+        double iw = 1.0 / w;
+        return Vec3d(iw * x, iw * y, iw * z);
+    }
+
+    /// Computes the transformation of the given `Vec2d` (interpreted as a
+    /// `Vec3d` with `z = 0`) by this `Mat4d` (interpreted as a 3D projective
+    /// transformation), and returns the first 2 coordinates.
+    ///
+    /// See `transformPoint(const Vec3d& v)` for details.
+    ///
+    Vec2d transformPoint(const Vec2d& v) const {
+        double x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[3][0];
+        double y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[3][1];
+        double w = data_[0][3]*v[0] + data_[1][3]*v[1] + data_[3][3];
+        double iw = 1.0 / w;
+        return Vec2d(iw * x, iw * y);
+    }
+
+    /// Returns the result of transforming the given `Vec3d` by this `Mat4d`
+    /// interpreted as a 3D affine transformation, that is, ignoring the
+    /// projective components.
+    ///
+    /// This is equivalent to multiplying the 3x4 submatrix of this `Mat4d` by
+    /// `Vec4d(x, y, z, 1)`.
+    ///
+    /// This can be used as a faster version of `transformPoint()` whenever you
+    /// know that the last row of the matrix is equal to `[0, 0, 0, 1]`, or
+    /// whenever you prefer to behave as if the last row was `[0, 0, 0, 1]`.
+    ///
+    Vec3d transformPointAffine(const Vec3d& v) const {
+        double x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0];
+        double y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1];
+        double z = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2];
+        return Vec3d(x, y, z);
+    }
+
+    /// Computes the transformation of the given `Vec2d` (interpreted as a
+    /// `Vec3d` with `z = 0`) by this `Mat4d` (interpreted as a 3D affine
+    /// transformation, that is, ignoring the projective component), and
+    /// returns the first 2 coordinates.
+    ///
+    /// See `transformPointAffine(const Vec3d& v)` for details.
+    ///
+    Vec2d transformPointAffine(const Vec2d& v) const {
+        double x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[3][0];
+        double y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[3][1];
+        return Vec2d(x, y);
     }
 
     /// Returns the inverse of this Mat4d.
@@ -399,6 +461,12 @@ public:
                 0, 0, 1, vz,
                 0, 0, 0, 1);
         return (*this) *= m;
+    }
+
+    /// Overloads `Mat4d::translate(double, double, double)`.
+    ///
+    Mat4d& translate(const Vec3d& v) {
+        return translate(v.x(), v.y(), v.z());
     }
 
     /// Right-multiplies this matrix by the rotation matrix around
@@ -488,6 +556,12 @@ public:
                 0,  0,  sz, 0,
                 0,  0,  0,  1);
         return (*this) *= m;
+    }
+
+    /// Overloads `Mat3d::scale(double, double, double)`.
+    ///
+    Mat4d& scale(const Vec3d& v) {
+        return scale(v.x(), v.y(), v.z());
     }
 
 private:

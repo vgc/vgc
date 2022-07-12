@@ -754,7 +754,7 @@ void SizedGlyph::fill(core::FloatArray& data,
     while (out != end) {
         float x = *in++;
         float y = *in++;
-        geometry::Vec2f v = transform * geometry::Vec2f(x, y);
+        geometry::Vec2f v = transform.transformPoint({x, y});
         *out++ = v[0];
         *out++ = v[1];
     }

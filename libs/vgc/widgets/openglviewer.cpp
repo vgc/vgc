@@ -280,7 +280,7 @@ void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
         geometry::Vec2d viewCoords = event.pos();
-        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted() * viewCoords;
+        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
         startCurve_(worldCoords, width_(event));
     }
     else if (event.modifiers() == Qt::AltModifier &&
@@ -317,7 +317,7 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
         geometry::Vec2d viewCoords = event.pos();
-        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted() * viewCoords;
+        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
         continueCurve_(worldCoords, width_(event));
     }
     else if (isPanning_) {
@@ -338,8 +338,8 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
 
         // Set new camera center so that rotation center = mouse pos at press
         geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted() * pivotViewCoords;
-        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
+        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();
@@ -356,8 +356,8 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
 
         // Set new camera center so that zoom center = mouse pos at press
         geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted() * pivotViewCoords;
-        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix() * pivotWorldCoords;
+        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
+        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();

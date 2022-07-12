@@ -26,12 +26,20 @@ namespace vgc::geometry {
 
 class Vec2f;
 class Vec2d;
+class Vec3f;
+class Vec3d;
+class Vec4f;
+class Vec4d;
 
 namespace internal {
 
 template<int dimension, typename T> struct Vec_ {};
 template<> struct Vec_<2, float>  { using type = Vec2f; };
 template<> struct Vec_<2, double> { using type = Vec2d; };
+template<> struct Vec_<3, float>  { using type = Vec3f; };
+template<> struct Vec_<3, double> { using type = Vec3d; };
+template<> struct Vec_<4, float>  { using type = Vec4f; };
+template<> struct Vec_<4, double> { using type = Vec4d; };
 
 } // namespace internal
 
