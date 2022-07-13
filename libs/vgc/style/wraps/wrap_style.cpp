@@ -15,11 +15,13 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+#include <vgc/style/style.h>
 
-void wrap_exceptions(py::module& m);
-void wrap_widget(py::module& m);
+void wrap_style(py::module& /*m*/)
+{
+    // Necessary to define inheritance across modules. See:
+    // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
+    py::module::import("vgc.core");
 
-PYBIND11_MODULE(ui, m) {
-    wrap_exceptions(m);
-    wrap_widget(m);
+    // TODO
 }

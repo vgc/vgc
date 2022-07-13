@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,30 +14,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_STYLETOKEN_H
-#define VGC_UI_STYLETOKEN_H
+#ifndef VGC_STYLE_TOKEN_H
+#define VGC_STYLE_TOKEN_H
 
 #include <vgc/core/array.h>
 #include <vgc/core/format.h>
-#include <vgc/ui/api.h>
 
-namespace vgc {
-namespace ui {
+#include <vgc/style/api.h>
 
-/// \enum vgc::ui::StyleTokenType
+namespace vgc::style {
+
+/// \enum vgc::style::StyleTokenType
 /// \brief The type of a StyleToken
 ///
 /// See: https://www.w3.org/TR/css-syntax-3/#tokenization
 ///
-/// Note: This API should be considered beta and is subject to change. In
-/// particular, we may remove Cdo and Cdc in the future, deviating from the
-/// official CSS token types.
+/// # Differences with CSS
+///
+/// In CSS, it is valid to write `<!--` and `-->` (HTML-style comment
+/// delimiters), which are tokenized into tokens called CDO and CDC. These
+/// tokens are then simply ignored by the CSS parser, but everything between a
+/// CDO/CDC pair is actually parsed normally and not treated as a comment. The
+/// rationale is to allow embedding CSS code in HTML while being backward
+/// compatible with older browsers that do not support CSS, by using the
+/// following trick:
+///
+/// ```html
+/// <style type="text/css">
+/// <!--
+///    h1 { color: red }
+///    p  { color: blue}
+/// -->
+/// </style>
+/// ```
+///
+/// (See section 14.5 of https://www.w3.org/TR/REC-html40/present/styles.html)
+///
+/// In VGC stylesheets, we made the choice to disallow this, so `<!--` and
+/// `-->` are tokenized following the other rules, therefore `<`, `!`, and `>`
+/// are tokenized as separate delimiters, and `--` is tokenized as an
+/// identifier.
 ///
 /// \sa StyleToken
 ///
 enum class StyleTokenType : Int8 {
-    Eof = 0,
-    Ident,
+    EndOfFile = 0,
+    Identifier,
     Function,
     AtKeyword,
     Hash,
@@ -45,13 +67,11 @@ enum class StyleTokenType : Int8 {
     BadString,
     Url,
     BadUrl,
-    Delim,
+    Delimiter,
     Number,
     Percentage,
     Dimension,
     Whitespace,
-    Cdo,
-    Cdc,
     Colon,
     Semicolon,
     Comma,
@@ -66,13 +86,9 @@ enum class StyleTokenType : Int8 {
 /// Converts the StyleTokenType enum value into a string literal, for printing
 /// purposes.
 ///
-/// Note: This API should be considered beta and is subject to change.
-///
 const char* toStringLiteral(StyleTokenType type);
 
 /// Writes the given StyleTokenType to the output stream.
-///
-/// Note: This API should be considered beta and is subject to change.
 ///
 template<typename OStream>
 void write(OStream& out, StyleTokenType type)
@@ -80,40 +96,47 @@ void write(OStream& out, StyleTokenType type)
     core::write(out, toStringLiteral(type));
 }
 
-/// \enum vgc::ui::StyleTokenFlag
-/// \brief The type flag component of a StyleToken.
+/// \enum vgc::style::StyleTokenHashFlag
+/// \brief The flag component of a token of type `StyleTokenType::Hash`.
 ///
-/// See: https://www.w3.org/TR/css-syntax-3/#tokenization
+/// This flag informs whether a token of type `StyleTokenType::Hash` stores a
+/// string that can be interpreted as a valid identifier (for example,
+/// `#main-content`), or if instead it is unrestricted, that is, it cannot be
+/// interpreted as an identifier (for example, because it starts with a digit,
+/// like in the hex color `#ff0000`).
 ///
-/// Note: This API should be considered beta and is subject to change.
-///
-/// See: https://www.w3.org/TR/css-syntax-3/#tokenization
-///
-/// \sa StyleToken
-///
-enum class StyleTokenFlag : Int8 {
-    Id,
-    Unrestricted,
-    Integer,
-    Number
+enum class StyleTokenHashFlag : Int8 {
+    Identifier,
+    Unrestricted
 };
 
-/// \class vgc::ui::StyleTokenNumericValue
-/// \brief The numeric value of a StyleToken.
+/// \enum vgc::style::StyleTokenNumericFlag
+/// \brief The flag component of a token of numeric type.
 ///
-/// See: https://www.w3.org/TR/css-syntax-3/#tokenization
+/// This flag informs whether a token of type `StyleTokenType::Number`,
+/// `StyleTokenType::Percentage`, or `StyleTokenType::Dimension` stores a
+/// numeric value stored as an integer or a floating point.
 ///
-/// Note: This API should be considered beta and is subject to change.
-/// In particular, we may change to using an std::variant rather than a union.
+enum class StyleTokenNumericFlag : Int8 {
+    Integer,
+    FloatingPoint
+};
+
+/// \class vgc::style::StyleTokenNumericValue
+/// \brief The numeric value of a token of numeric type.
 ///
-/// \sa StyleToken
+/// Stores the numeric value of a token of type `StyleTokenType::Number`,
+/// `StyleTokenType::Percentage`, or `StyleTokenType::Dimension`.
+///
+/// The numeric value can be either an `integer` or a `floatingPoint`, as
+/// specified by the `StyleToken::numericFlag()` of the token.
 ///
 union StyleTokenNumericValue {
     Int64 integer;
-    double number;
+    double floatingPoint;
 };
 
-/// \class vgc::ui::StyleToken
+/// \class vgc::style::StyleToken
 /// \brief One element of the output of tokenizing a style string.
 ///
 /// See: https://www.w3.org/TR/css-syntax-3/#tokenization
@@ -131,25 +154,41 @@ struct StyleToken {
     std::string codePointsValue;
     StyleTokenNumericValue numericValue;
     StyleTokenType type;
-    StyleTokenFlag flag;
+
+    void setHashFlag(StyleTokenHashFlag value) {
+        flag = static_cast<Int8>(value);
+    }
+
+    void setNumericFlag(StyleTokenNumericFlag value) {
+        flag = static_cast<Int8>(value);
+    }
+
+    StyleTokenHashFlag hashFlag() const {
+        return static_cast<StyleTokenHashFlag>(flag);
+    }
+
+    StyleTokenNumericFlag numericFlag() const {
+        return static_cast<StyleTokenNumericFlag>(flag);
+    }
 
     // Initializes a dummy token starting and ending at s.
     // All other fields are uninitialized.
-    StyleToken(const char* s) : begin(s), end(s), type(StyleTokenType::Delim) {}
+    StyleToken(const char* s) : begin(s), end(s), type(StyleTokenType::Delimiter) {}
 
     /// Returns the numericValue of this token as a float. Assumes the type of
     /// this token is either Number, Percentage, or Dimension.
     ///
     float toFloat() const {
-        return flag == StyleTokenFlag::Integer ?
+        return numericFlag() == StyleTokenNumericFlag::Integer ?
                     static_cast<float>(numericValue.integer) :
-                    static_cast<float>(numericValue.number);
+                    static_cast<float>(numericValue.floatingPoint);
     }
+
+private:
+    Int8 flag;
 };
 
 /// Writes the given StyleToken to the output stream.
-///
-/// Note: This API should be considered beta and is subject to change.
 ///
 template<typename OStream>
 void write(OStream& out, const StyleToken& token)
@@ -157,20 +196,20 @@ void write(OStream& out, const StyleToken& token)
     using core::write;
     write(out, token.type);
     switch (token.type) {
-    case StyleTokenType::Ident:
+    case StyleTokenType::Identifier:
     case StyleTokenType::Function:
     case StyleTokenType::AtKeyword:
     case StyleTokenType::String:
     case StyleTokenType::Url:
-    case StyleTokenType::Delim:
+    case StyleTokenType::Delimiter:
         write(out, "(\"");
         write(out, token.codePointsValue);
         write(out, "\")");
         break;
     case StyleTokenType::Hash:
         write(out, "(");
-        if (token.flag == StyleTokenFlag::Id) {
-            write(out, "(Id, \"");
+        if (token.hashFlag() == StyleTokenHashFlag::Identifier) {
+            write(out, "(Identifier, \"");
         }
         else {
             write(out, "(Unrestricted, \"");
@@ -182,13 +221,13 @@ void write(OStream& out, const StyleToken& token)
     case StyleTokenType::Percentage:
     case StyleTokenType::Dimension:
         write(out, "(");
-        if (token.flag == StyleTokenFlag::Integer) {
+        if (token.numericFlag() == StyleTokenNumericFlag::FloatingPoint) {
             write(out, "Integer, ");
             write(out, token.numericValue.integer);
         }
         else {
-            write(out, "Number, ");
-            write(out, token.numericValue.number);
+            write(out, "FloatingPoint, ");
+            write(out, token.numericValue.floatingPoint);
         }
         if (token.type == StyleTokenType::Dimension) {
             write(out, ", \"");
@@ -202,20 +241,14 @@ void write(OStream& out, const StyleToken& token)
     }
 }
 
-/// \typedef vgc::ui::StyleTokenArray
+/// \typedef vgc::style::StyleTokenArray
 /// \brief The output of tokenizing a style stream.
-///
-/// Note: This API should be considered beta and is subject to change. In
-/// particular, we may decide that StyleTokenArray should be a separate class
-/// rather than a typedef, managing the lifetime of the decoded style string in
-/// order to ensure that the tokens always point within a valid string.
 ///
 /// \sa StyleToken
 ///
 using StyleTokenArray = core::Array<StyleToken>;
 
-
-/// \typedef vgc::ui::StyleTokenIterator
+/// \typedef vgc::style::StyleTokenIterator
 /// \brief Iterating over a StyleTokenArray
 ///
 /// \sa StyleTokenArray, StyleToken
@@ -250,13 +283,10 @@ std::string decodeStyleString(const std::string& s);
 /// to characters in the string. The given null-terminated string is assumed to
 /// be already "decoded" using decodeStyleString().
 ///
-/// Note: This API should be considered beta and is subject to change.
-///
 /// \sa StyleTokenArray, StyleToken
 ///
 StyleTokenArray tokenizeStyleString(const char* s);
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::style
 
-#endif // VGC_UI_STYLETOKEN_H
+#endif // VGC_STYLE_TOKEN_H

@@ -259,9 +259,9 @@ void insertText(
 core::Color getColor(const Widget* widget, core::StringId property)
 {
     core::Color res;
-    StyleValue value = widget->style(property);
-    if (value.type() == StyleValueType::Color) {
-        res = value.color();
+    style::StyleValue value = widget->style(property);
+    if (value.has<core::Color>()) {
+        res = value.to<core::Color>();
     }
     return res;
 }
@@ -269,9 +269,9 @@ core::Color getColor(const Widget* widget, core::StringId property)
 float getLength(const Widget* widget, core::StringId property)
 {
     float res = 0;
-    StyleValue value = widget->style(property);
-    if (value.type() == StyleValueType::Number) {
-        res = value.number();
+    style::StyleValue value = widget->style(property);
+    if (value.type() == style::StyleValueType::Number) {
+        res = value.toFloat();
     }
     return res;
 }

@@ -15,6 +15,11 @@
 // limitations under the License.
 
 #include <vgc/ui/widget.h>
+
+#include <vgc/core/colors.h>
+#include <vgc/core/io.h>
+#include <vgc/core/paths.h>
+
 #include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
 
@@ -22,7 +27,7 @@ namespace vgc {
 namespace ui {
 
 Widget::Widget() :
-    Object(),
+    StylableObject(),
     children_(WidgetList::create(this)),
     actions_(ActionList::create(this)),
     preferredSize_(0.0f, 0.0f),
@@ -154,32 +159,32 @@ void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f&
 
 PreferredSize Widget::preferredWidth() const
 {
-    return style(strings::preferred_width).preferredSize();
+    return style(strings::preferred_width).to<PreferredSize>();
 }
 
 float Widget::stretchWidth() const
 {
-    return style(strings::stretch_width).number();
+    return style(strings::stretch_width).toFloat();
 }
 
 float Widget::shrinkWidth() const
 {
-    return style(strings::shrink_width).number();
+    return style(strings::shrink_width).toFloat();
 }
 
 PreferredSize Widget::preferredHeight() const
 {
-    return style(strings::preferred_height).preferredSize();
+    return style(strings::preferred_height).to<PreferredSize>();
 }
 
 float Widget::stretchHeight() const
 {
-    return style(strings::stretch_height).number();
+    return style(strings::stretch_height).toFloat();
 }
 
 float Widget::shrinkHeight() const
 {
-    return style(strings::shrink_height).number();
+    return style(strings::shrink_height).toFloat();
 }
 
 void Widget::updateGeometry()
@@ -469,26 +474,6 @@ bool Widget::onKeyRelease(QKeyEvent* event)
     }
 }
 
-void Widget::addClass(core::StringId class_) {
-    classes_.add(class_);
-    onClassesChanged_();
-}
-
-void Widget::removeClass(core::StringId class_) {
-    classes_.remove(class_);
-    onClassesChanged_();
-}
-
-void Widget::toggleClass(core::StringId class_) {
-    classes_.toggle(class_);
-    onClassesChanged_();
-}
-
-StyleValue Widget::style(core::StringId property) const
-{
-    return style_.computedValue(property, this);
-}
-
 Action* Widget::createAction(const Shortcut& shortcut)
 {
     ActionPtr action = Action::create(shortcut);
@@ -503,7 +488,7 @@ geometry::Vec2f Widget::computePreferredSize() const
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
     return geometry::Vec2f(w.type() == auto_ ? 0 : w.value(),
-                       h.type() == auto_ ? 0 : h.value());
+                           h.type() == auto_ ? 0 : h.value());
 }
 
 void Widget::updateChildrenGeometry()
@@ -511,10 +496,170 @@ void Widget::updateChildrenGeometry()
     // nothing
 }
 
-void Widget::onClassesChanged_()
+namespace {
+
+using style::StyleValue;
+using style::StyleValueType;
+using style::StyleTokenIterator;
+using style::StyleTokenType;
+
+StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end)
 {
-    style_ = styleSheet()->computeStyle(this);
-    // TODO: re-render
+    try {
+        std::string str(begin->begin, (end-1)->end);
+        core::Color color = core::parse<core::Color>(str);
+        return StyleValue::custom(color);
+    } catch (const core::ParseError&) {
+        return StyleValue::invalid();
+    } catch (const core::RangeError&) {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    // For now, we only support a unique Dimension token with a "dp" unit
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Dimension &&
+             begin->codePointsValue == "dp" &&
+             begin + 1 == end) {
+        return StyleValue::number(begin->toFloat());
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Number &&
+             begin + 1 == end) {
+        return StyleValue::number(begin->toFloat());
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    // For now, we only support 'auto' or a unique Dimension token with a "dp" unit
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Identifier &&
+             begin->codePointsValue == strings::auto_ &&
+             begin + 1 == end) {
+        return StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
+    }
+    else if (begin->type == StyleTokenType::Dimension &&
+             begin->codePointsValue == "dp" &&
+             begin + 1 == end) {
+        return StyleValue::custom(PreferredSize(PreferredSizeType::Dp, begin->toFloat()));
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end)
+{
+    StyleValue res = style::parseStyleDefault(begin, end);
+    if (res.type() == StyleValueType::Identifier &&
+            (res == strings::off || res == strings::normal)) {
+        res = StyleValue::invalid();
+    }
+    return res;
+}
+
+style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
+{
+    // For reference: https://www.w3.org/TR/CSS21/propidx.html
+    auto black       = StyleValue::custom(core::colors::black);
+    auto transparent = StyleValue::custom(core::colors::transparent);
+    auto zero        = StyleValue::number(0.0f);
+    auto one         = StyleValue::number(1.0f);
+    auto autosize    = StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
+    auto normal      = StyleValue::identifier(strings::normal);
+
+    auto table = std::make_shared<style::StylePropertySpecTable>();
+    table->insert("background-color",          transparent, false, &parseStyleColor);
+    table->insert("background-color",          transparent, false, &parseStyleColor);
+    table->insert("background-color-on-hover", transparent, false, &parseStyleColor);
+    table->insert("border-radius",             zero,        false, &parseStyleLength);
+    table->insert("margin-bottom",             zero,        false, &parseStyleLength);
+    table->insert("margin-left",               zero,        false, &parseStyleLength);
+    table->insert("margin-right",              zero,        false, &parseStyleLength);
+    table->insert("margin-top",                zero,        false, &parseStyleLength);
+    table->insert("padding-bottom",            zero,        false, &parseStyleLength);
+    table->insert("padding-left",              zero,        false, &parseStyleLength);
+    table->insert("padding-right",             zero,        false, &parseStyleLength);
+    table->insert("padding-top",               zero,        false, &parseStyleLength);
+    table->insert("pixel-hinting",             normal,      false, &parsePixelHinting);
+    table->insert("preferred-height",          autosize,    false, &parseStylePreferredSize);
+    table->insert("preferred-width",           autosize,    false, &parseStylePreferredSize);
+    table->insert("shrink-height",             one,         false, &parseStyleNumber);
+    table->insert("shrink-width",              one,         false, &parseStyleNumber);
+    table->insert("stretch-height",            one,         false, &parseStyleNumber);
+    table->insert("stretch-width",             one,         false, &parseStyleNumber);
+    table->insert("text-color",                black,       true,  &parseStyleColor);
+
+    return table;
+}
+
+const style::StylePropertySpecTablePtr& stylePropertySpecTable_()
+{
+    static style::StylePropertySpecTablePtr table = createGlobalStylePropertySpecTable_();
+    return table;
+}
+
+style::StyleSheetPtr createGlobalStyleSheet_() {
+    std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
+    std::string s = core::readFile(path);
+    return style::StyleSheet::create(stylePropertySpecTable_(), s);
+}
+
+const style::StyleSheet* styleSheet_()
+{
+    static style::StyleSheetPtr s = createGlobalStyleSheet_();
+    return s.get();
+}
+
+} // namespace
+
+style::StylableObject* Widget::parentStylableObject() const
+{
+    return static_cast<style::StylableObject*>(parent());
+}
+
+style::StylableObject* Widget::firstChildStylableObject() const
+{
+    return static_cast<style::StylableObject*>(firstChild());
+}
+
+style::StylableObject* Widget::lastChildStylableObject() const
+{
+    return static_cast<style::StylableObject*>(lastChild());
+}
+
+style::StylableObject* Widget::previousSiblingStylableObject() const
+{
+    return static_cast<style::StylableObject*>(previousSibling());
+}
+
+style::StylableObject* Widget::nextSiblingStylableObject() const
+{
+    return static_cast<style::StylableObject*>(nextSibling());
+}
+
+const style::StyleSheet* Widget::styleSheet() const
+{
+    return styleSheet_();
 }
 
 void Widget::releaseEngine_()

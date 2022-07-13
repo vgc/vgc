@@ -7,6 +7,7 @@ vgc_add_library(graphics
 
     VGC_DEPENDENCIES
         geometry
+        style
 
     HEADER_FILES
         api.h

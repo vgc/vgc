@@ -25,8 +25,6 @@ vgc_add_library(ui
         shortcut.h
         sizepolicy.h
         strings.h
-        style.h
-        styletoken.h
         widget.h
         window.h
 
@@ -48,8 +46,6 @@ vgc_add_library(ui
         mouseevent.cpp
         row.cpp
         strings.cpp
-        style.cpp
-        styletoken.cpp
         widget.cpp
         window.cpp
 

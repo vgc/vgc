@@ -18,7 +18,6 @@
 
 #include <vgc/core/array.h>
 #include <vgc/ui/strings.h>
-#include <vgc/ui/style.h>
 
 #include <vgc/ui/internal/paintutil.h>
 
@@ -31,7 +30,7 @@ Button::Button(const std::string& text) :
     reload_(true),
     isHovered_(false)
 {
-    addClass(strings::Button);
+    addStyleClass(strings::Button);
 }
 
 ButtonPtr Button::create()

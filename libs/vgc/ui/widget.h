@@ -31,124 +31,28 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/graphics/idgenerator.h>
+#include <vgc/style/stylableobject.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/shortcut.h>
 #include <vgc/ui/sizepolicy.h>
-#include <vgc/ui/style.h>
 
 class QKeyEvent;
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(Widget);
 VGC_DECLARE_OBJECT(UiWidgetEngine);
 
-/// \typedef vgc::ui::WidgetClasses
-/// \brief Stores a set of widget classes.
-///
-/// Each widget is assigned a set of classes (e.g., "Button", "on") which can
-/// be used to apply different styles to different widgets, or select a subset
-/// of widgets in the application.
-///
-/// ```cpp
-/// for (core::StringId class_ : widget->classes()) {
-///     if (class_ == "some string") {
-///         // ...
-///     }
-/// }
-/// ```
-///
-/// Note that WidgetClasses guarantees that the same class cannot be added
-/// twice, that is, if you call add() twice with the same class, then it is
-/// added only once. Therefore, you always get a sequence of unique class names
-/// when iterating over a WidgetClasses.
-///
-class VGC_UI_API WidgetClasses {
-public:
-    using const_iterator = typename core::Array<core::StringId>::const_iterator;
-
-    /// Returns an iterator to the first class.
-    ///
-    const_iterator begin() const {
-        return a_.begin();
-    }
-
-    /// Returns an iterator to the past-the-last class.
-    ///
-    const_iterator end() const {
-        return a_.end();
-    }
-
-    /// Returns whether this set of classes contains the
-    /// given class.
-    ///
-    bool contains(core::StringId class_) const {
-        // TODO: add contains() method directly to core::Array
-        return std::find(begin(), end(), class_) != end();
-    }
-
-    /// Adds a class.
-    ///
-    void add(core::StringId class_) {
-        if(!contains(class_)) {
-            a_.append(class_);
-        }
-    }
-
-    /// Removes a class.
-    ///
-    void remove(core::StringId class_) {
-        // TODO: implement removeOne() and removeAll() method directly in core::Array
-        auto it = std::find(begin(), end(), class_);
-        if (it != end()) {
-            a_.erase(it);
-        }
-    }
-
-    /// Adds the class to the list if it's not already there,
-    /// otherwise removes the class.
-    ///
-    void toggle(core::StringId class_) {
-        auto it = std::find(begin(), end(), class_);
-        if (it == end()) {
-            a_.append(class_);
-        }
-        else {
-            a_.erase(it);
-        }
-    }
-
-private:
-    // The array storing all the strings.
-    //
-    // Note 1: we use StringId instead of std::string because there is
-    // typically only a fixed number of class names, which are reused by many
-    // widgets. This makes comparing between strings faster, and reduce memory
-    // usage.
-    //
-    // Note 2: we use an array rather than an std::set or std::unordered_set
-    // because it's typically very small, so an array is most likely faster
-    // even for searching.
-    //
-    // TODO: in fact, should we even use a SmallArray<n, T> instead? Similar to
-    // the small-string optimization, this would be a class that keeps on the
-    // stack any array with less than n elements. In this case, a widget rarely
-    // has more than n = 5 classes.
-    //
-    core::Array<core::StringId> a_;
-};
-
 /// \class vgc::ui::Widget
 /// \brief Base class of all elements in the user interface.
 ///
-class VGC_UI_API Widget : public core::Object {
+class VGC_UI_API Widget : public style::StylableObject {
 private:
-    VGC_OBJECT(Widget, core::Object)
+    VGC_OBJECT(Widget, style::StylableObject)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected :
@@ -657,34 +561,6 @@ public:
     ///
     virtual bool onKeyRelease(QKeyEvent* event);
 
-    /// Returns the set of classes of this widget.
-    ///
-    const WidgetClasses& classes() const {
-        return classes_;
-    }
-
-    /// Returns whether this widget is assigned the given class.
-    ///
-    bool hasClass(core::StringId class_) const {
-        return classes_.contains(class_);
-    }
-
-    /// Adds the given class to this widget.
-    ///
-    void addClass(core::StringId class_);
-
-    /// Removes the given class to this widget.
-    ///
-    void removeClass(core::StringId class_) ;
-
-    /// Toggles the given class to this widget.
-    ///
-    void toggleClass(core::StringId class_);
-
-    /// Returns the computed value of a given style property of this widget.
-    ///
-    StyleValue style(core::StringId property) const;
-
     /// Returns the list of actions of this widget.
     ///
     ActionListView actions() const {
@@ -745,6 +621,14 @@ protected:
     ///
     virtual void updateChildrenGeometry();
 
+    // implements StylableObject interface
+    style::StylableObject* parentStylableObject() const override;
+    style::StylableObject* firstChildStylableObject() const override;
+    style::StylableObject* lastChildStylableObject() const override;
+    style::StylableObject* previousSiblingStylableObject() const override;
+    style::StylableObject* nextSiblingStylableObject() const override;
+    const style::StyleSheet* styleSheet() const override;
+
 private:
     WidgetList* children_;
     ActionList* actions_;
@@ -758,11 +642,8 @@ private:
     Widget* focus_; // This can be: nullptr   (when no focused widget)
                     //              this      (when this is the focused widget)
                     //              child ptr (when a descendant is the focused widget)
-    WidgetClasses classes_;
-    friend class Style;
-    Style style_;
+
     graphics::Engine* lastPaintEngine_ = nullptr;
-    void onClassesChanged_();
     void releaseEngine_();
 
     VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_);
@@ -770,7 +651,6 @@ private:
     VGC_SLOT(onWidgetRemoved_, onWidgetRemoved);
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_WIDGET_H

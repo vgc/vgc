@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -15,25 +15,9 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
-#include <vgc/ui/style.h>
 
-void wrap_StyleSheet(py::module& m)
-{
-    using This = vgc::ui::StyleSheet;
-    using Holder = vgc::ui::StyleSheetPtr;
-    using Parent = vgc::core::Object;
+void wrap_style(py::module& m);
 
-    py::class_<This, Holder, Parent>(m, "StyleSheet")
-        .def(py::init([]() { return This::create(); } ))
-        .def(py::init([](const std::string& s) { return This::create(s); } ))
-    ;
-}
-
-void wrap_style(py::module& m)
-{
-    // Necessary to define inheritance across modules. See:
-    // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
-    py::module::import("vgc.core");
-
-    wrap_StyleSheet(m);
+PYBIND11_MODULE(wraps, m) {
+    wrap_style(m);
 }

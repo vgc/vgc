@@ -30,7 +30,7 @@ Flex::Flex(
     direction_(direction),
     wrap_(wrap)
 {
-    addClass(strings::Flex);
+    addStyleClass(strings::Flex);
 }
 
 FlexPtr Flex::create(
