@@ -23,7 +23,6 @@
 #include <vgc/core/performancelog.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
-#include <vgc/ui/style.h>
 
 #include <vgc/ui/internal/paintutil.h>
 
@@ -40,7 +39,7 @@ LineEdit::LineEdit(std::string_view text) :
     isHovered_(false),
     isMousePressed_(false)
 {
-    addClass(strings::LineEdit);
+    addStyleClass(strings::LineEdit);
     setText(text);
 }
 

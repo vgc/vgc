@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,19 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/styletoken.h>
+#include <vgc/style/token.h>
 
 #include <string.h> // strcmp
 #include <vgc/core/parse.h> // readTo double and integer
 
-namespace vgc {
-namespace ui {
+namespace vgc::style {
 
 const char* toStringLiteral(StyleTokenType type) {
     using StringLiteral = const char*;
     static constexpr StringLiteral s[] = {
-        "Eof",
-        "Ident",
+        "EndOfFile",
+        "Identifier",
         "Function",
         "AtKeyword",
         "Hash",
@@ -34,13 +33,11 @@ const char* toStringLiteral(StyleTokenType type) {
         "BadString",
         "Url",
         "BadUrl",
-        "Delim",
+        "Delimiter",
         "Number",
         "Percentage",
         "Dimension",
         "Whitespace",
-        "Cdo",
-        "Cdc",
         "Colon",
         "Semicolon",
         "Comma",
@@ -330,7 +327,7 @@ private:
         consumeInput_();
         switch (c1_) {
         case eof:
-            token_.type = StyleTokenType::Eof;
+            token_.type = StyleTokenType::EndOfFile;
             break;
         case ' ':
         case '\t':
@@ -344,14 +341,14 @@ private:
         case '#':
             if (isNameCodePoint_(c2_) || startsValidEscape_(c2_, c3_)) {
                 token_.type = StyleTokenType::Hash;
-                token_.flag = StyleTokenFlag::Unrestricted;
+                token_.setHashFlag(StyleTokenHashFlag::Unrestricted);
                 if (startsIdentifier_(c2_, c3_, c4_)) {
-                    token_.flag = StyleTokenFlag::Id;
+                    token_.setHashFlag(StyleTokenHashFlag::Identifier);
                 }
                 consumeName_();
             }
             else {
-                token_.type = StyleTokenType::Delim;
+                token_.type = StyleTokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -367,7 +364,7 @@ private:
                 consumeNumericToken_();
             }
             else {
-                token_.type = StyleTokenType::Delim;
+                token_.type = StyleTokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -379,17 +376,18 @@ private:
                 reconsumeInput_();
                 consumeNumericToken_();
             }
-            else if (areNextCodePointsEqualTo_("->")) {
-                consumeInput_();
-                consumeInput_();
-                token_.type = StyleTokenType::Cdc;
-            }
+            // Uncomment if you wish to support CDO/CDC tokens
+            // else if (areNextCodePointsEqualTo_("->")) {
+            //     consumeInput_();
+            //     consumeInput_();
+            //     token_.type = StyleTokenType::CommentDelimiterClose;
+            // }
             else if (startsIdentifier_(c1_, c2_, c3_)) {
                 reconsumeInput_();
-                consumeIdentLikeToken_();
+                consumeIdentifierLikeToken_();
             }
             else {
-                token_.type = StyleTokenType::Delim;
+                token_.type = StyleTokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -399,7 +397,7 @@ private:
                 consumeNumericToken_();
             }
             else {
-                token_.type = StyleTokenType::Delim;
+                token_.type = StyleTokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -409,25 +407,26 @@ private:
         case ';':
             token_.type = StyleTokenType::Semicolon;
             break;
-        case '<':
-            if (areNextCodePointsEqualTo_("!--")) {
-                consumeInput_();
-                consumeInput_();
-                consumeInput_();
-                token_.type = StyleTokenType::Cdo;
-            }
-            else {
-                token_.type = StyleTokenType::Delim;
-                appendCurrentCodePointToTokenValue_();
-            }
-            break;
+        // Uncomment if you wish to support CDO/CDC tokens
+        // case '<':
+        //     if (areNextCodePointsEqualTo_("!--")) {
+        //         consumeInput_();
+        //         consumeInput_();
+        //         consumeInput_();
+        //         token_.type = StyleTokenType::CommentDelimiterOpen;
+        //     }
+        //     else {
+        //         token_.type = StyleTokenType::Delimiter;
+        //         appendCurrentCodePointToTokenValue_();
+        //     }
+        //     break;
         case '@':
             if (startsIdentifier_(c2_, c3_, c4_)) {
                 token_.type = StyleTokenType::AtKeyword;
                 consumeName_();
             }
             else {
-                token_.type = StyleTokenType::Delim;
+                token_.type = StyleTokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -446,11 +445,11 @@ private:
         case '\\':
             if (startsValidEscape_(c1_, c2_)) {
                 reconsumeInput_();
-                consumeIdentLikeToken_();
+                consumeIdentifierLikeToken_();
             }
             else {
                 // Parse error!
-                token_.type = StyleTokenType::Delim;
+                token_.type = StyleTokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -461,10 +460,10 @@ private:
             }
             else if (isNameStartCodePoint_(c1_)) {
                 reconsumeInput_();
-                consumeIdentLikeToken_();
+                consumeIdentifierLikeToken_();
             }
             else {
-                token_.type = StyleTokenType::Delim;
+                token_.type = StyleTokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -700,11 +699,11 @@ private:
     }
 
     // https://www.w3.org/TR/css-syntax-3/#consume-number
-    // The returned value and type is directly set in token_.numericValue and token_.flag
+    // The returned value and type is directly set in the token's numeric value and flag
     // Note that we use token_.codePointsValue as a buffer to store the
     // repr of the number. It is assume to be initially empty.
     void consumeNumber_() {
-        token_.flag = StyleTokenFlag::Integer;
+        token_.setNumericFlag(StyleTokenNumericFlag::Integer);
         if (c2_ == '+' || c2_ == '-') {
             token_.codePointsValue += c2_;
             consumeInput_();
@@ -715,7 +714,7 @@ private:
         }
         char c3 = (c2_ == eof) ? eof : *(token_.end + 1);
         if (c2_ == '.' && isDigit_(c3)) {
-            token_.flag = StyleTokenFlag::Number;
+            token_.setNumericFlag(StyleTokenNumericFlag::FloatingPoint);
             token_.codePointsValue += c2_;
             token_.codePointsValue += c3;
             consumeInput_();
@@ -728,7 +727,7 @@ private:
         if (c2_ == 'e' || c2_ == 'E') {
             c3 = (c2_ == eof) ? eof : *(token_.end + 1);
             if (isDigit_(c3)) {
-                token_.flag = StyleTokenFlag::Number;
+                token_.setNumericFlag(StyleTokenNumericFlag::FloatingPoint);
                 token_.codePointsValue += c2_;
                 token_.codePointsValue += c3;
                 consumeInput_();
@@ -737,7 +736,7 @@ private:
             else if ((c3 == '+' || c3 == '-')) {
                 char c4 = (c3 == eof) ? eof : *(token_.end + 2);
                 if (isDigit_(c4)) {
-                    token_.flag = StyleTokenFlag::Number;
+                    token_.setNumericFlag(StyleTokenNumericFlag::FloatingPoint);
                     token_.codePointsValue += c2_;
                     token_.codePointsValue += c3;
                     token_.codePointsValue += c4;
@@ -752,8 +751,8 @@ private:
             }
         }
         core::StringReader sr(token_.codePointsValue);
-        if (token_.flag == StyleTokenFlag::Number) {
-            core::readTo(token_.numericValue.number, sr);
+        if (token_.numericFlag() == StyleTokenNumericFlag::FloatingPoint) {
+            core::readTo(token_.numericValue.floatingPoint, sr);
         }
         else {
             core::readTo(token_.numericValue.integer, sr);
@@ -775,13 +774,13 @@ private:
     }
 
     // https://www.w3.org/TR/css-syntax-3/#consume-ident-like-token
-    void consumeIdentLikeToken_() {
+    void consumeIdentifierLikeToken_() {
         consumeName_();
         if (isUrl_()) {
             consumeInput_();
             // Consume all whitespace characters except the last.
             // Note: keeping one whitespace ensures that we generate a
-            // whitespace token if this ident-like token is a function
+            // whitespace token if this identifier-like token is a function
             // token rather than a URL token
             while (isWhitespace_(c2_) && isWhitespace_(c3_)) {
                 consumeInput_();
@@ -801,7 +800,7 @@ private:
             token_.type = StyleTokenType::Function;
         }
         else {
-            token_.type = StyleTokenType::Ident;
+            token_.type = StyleTokenType::Identifier;
         }
     }
 
@@ -986,7 +985,7 @@ StyleTokenArray tokenizeStyleString(const char* s)
     TokenStream stream(s);
     while (true) {
         StyleToken t = stream.get();
-        if (t.type == StyleTokenType::Eof) {
+        if (t.type == StyleTokenType::EndOfFile) {
             break;
         }
         else {
@@ -996,5 +995,4 @@ StyleTokenArray tokenizeStyleString(const char* s)
     return res;
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::style

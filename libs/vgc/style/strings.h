@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,12 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
+#ifndef VGC_STYLE_STRINGS_H
+#define VGC_STYLE_STRINGS_H
 
-void wrap_exceptions(py::module& m);
-void wrap_widget(py::module& m);
+#include <vgc/core/stringid.h>
+#include <vgc/style/api.h>
 
-PYBIND11_MODULE(ui, m) {
-    wrap_exceptions(m);
-    wrap_widget(m);
-}
+namespace vgc::style::strings {
+
+VGC_STYLE_API extern const core::StringId inherit;
+
+} // namespace vgc::style::strings
+
+#endif // VGC_STYLE_STRINGS_H

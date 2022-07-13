@@ -29,7 +29,7 @@ Label::Label() :
     text_(""),
     reload_(true)
 {
-    addClass(strings::Label);
+    addStyleClass(strings::Label);
 }
 
 Label::Label(const std::string& text) :

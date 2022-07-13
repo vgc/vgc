@@ -52,7 +52,7 @@ ColorPalette::ColorPalette() :
     oldSaturationIndex_(numSaturationSteps_ - 1),
     oldLightnessIndex_(numLightnessSteps_ / 2)
 {
-    addClass(strings::ColorPalette);
+    addStyleClass(strings::ColorPalette);
 }
 
 /* static */
