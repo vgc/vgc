@@ -191,9 +191,6 @@ StyleValue StylableObject::getStyleCascadedValue_(core::StringId property) const
 //
 StyleValue StylableObject::getStyleComputedValue_(core::StringId property) const
 {
-    //const StylePropertySpec* spec = propertySpecs_->get(property);
-    //return computedValue_(property, node, spec);
-
     StyleValue v = getStyleCascadedValue_(property);
     if (v.type() == StyleValueType::None) {
         const StylePropertySpec* spec = getStylePropertySpec_(property);
