@@ -33,58 +33,6 @@ StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end)
     return StyleValue::invalid();
 }
 
-Style::Style()
-{
-
-}
-
-StyleValue Style::cascadedValue(core::StringId property) const
-{
-    auto search = map_.find(property);
-    if (search != map_.end()) {
-        return search->second;
-    }
-    else {
-        return StyleValue::none();
-    }
-}
-
-StyleValue Style::computedValue(core::StringId property, const StylableObject* node) const
-{
-    const StylePropertySpec* spec = propertySpecs_->get(property);
-    return computedValue_(property, node, spec);
-}
-
-// This function is a performance optimization: by passing in the spec, it
-// avoids repeateadly searching for it
-StyleValue Style::computedValue_(core::StringId property, const StylableObject* node, const StylePropertySpec* spec) const
-{
-    StyleValue v = cascadedValue(property);
-    if (v.type() == StyleValueType::None || v.type() == StyleValueType::Inherit) {
-        if (spec && v.type() == StyleValueType::None) {
-            if (spec->isInherited()) {
-                v = StyleValue::inherit();
-            }
-            else {
-                v = spec->initialValue();
-            }
-        }
-        if (v.type() == StyleValueType::Inherit) {
-            StylableObject* parent = node->parentStylableObject();
-            if (parent) {
-                v = parent->style_.computedValue_(property, parent, spec);
-            }
-            else if (spec) {
-                v = spec->initialValue();
-            }
-            else {
-                v = StyleValue::none();
-            }
-        }
-    }
-    return v;
-}
-
 namespace internal {
 
 // https://www.w3.org/TR/css-syntax-3/#parsing
@@ -104,7 +52,7 @@ class StyleParser {
 public:
     // https://www.w3.org/TR/css-syntax-3/#parse-stylesheet
     static StyleSheetPtr parseStyleSheet(const StylePropertySpecTablePtr& specs,
-                                         const std::string& styleString) {
+                                         std::string_view styleString) {
 
         // Tokenize
         std::string decoded = decodeStyleString(styleString);
@@ -546,49 +494,9 @@ StyleSheetPtr StyleSheet::create()
 }
 
 StyleSheetPtr StyleSheet::create(const StylePropertySpecTablePtr& specs,
-                                 const std::string& s)
+                                 std::string_view s)
 {
     return internal::StyleParser::parseStyleSheet(specs, s);
-}
-
-Style StyleSheet::computeStyle(StylableObject* node) const
-{
-    Style style;
-    style.propertySpecs_ = propertySpecs_;
-
-    // Compute which rule sets match this node.
-    //
-    // TODO: improve performance by not iterating through all rule sets, but
-    // instead only iterate over potential candidate rule sets (or selectors)
-    // based on the node's classes. Each per-class candidate rule sets would
-    // be precomputed once after parsing the spreadsheet.
-    //
-    // TODO: sort rule sets by selector's specificity
-    //
-    for (StyleRuleSet* rule : ruleSets()) {
-        for (StyleSelector* selector : rule->selectors()) {
-            if (selector->matches(node)) {
-                style.ruleSets_.append(rule);
-                break;
-                // Note: the break is to prevent duplicate rule sets. But when
-                // implementing specificity, we'll have to evaluate all
-                // selectors and keep the one with largest specificity. Or
-                // simply iterate over all candidate selectors regardless of
-                // rule sets, and remove duplicate rule sets as a
-                // post-processing step.
-            }
-        }
-    }
-
-    // Compute cascaded values.
-    //
-    for (StyleRuleSet* rule : style.ruleSets_) {
-        for (StyleDeclaration* declaration : rule->declarations()) {
-            style.map_[declaration->property()] = declaration->value();
-        }
-    }
-
-    return style;
 }
 
 StyleRuleSet::StyleRuleSet() :

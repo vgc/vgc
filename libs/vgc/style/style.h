@@ -19,6 +19,7 @@
 
 #include <any>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 
 #include <vgc/core/array.h>
@@ -339,57 +340,6 @@ private:
 
 using StylePropertySpecTablePtr = std::shared_ptr<StylePropertySpecTable>;
 
-/// \class vgc::style::Style
-/// \brief Stores a given style.
-///
-class VGC_STYLE_API Style {
-public:
-    /// Constructs an empty style.
-    ///
-    Style();
-
-    /// Returns the cascaded value of the given property, that is,
-    /// the value "winning the cascade". See:
-    ///
-    /// https://www.w3.org/TR/css-cascade-4/#cascaded
-    ///
-    /// This takes into account the selector specificity and the order of
-    /// appearance in the stylesheet.
-    ///
-    /// This does NOT take into account StylableObject inheritance (i.e., properties
-    /// set of the parent StylableObject are ignored) and does not take into account
-    /// default values.
-    ///
-    /// If there is no declared value for the given property, then
-    /// a value of type StyleValueType::None is returned.
-    ///
-    StyleValue cascadedValue(core::StringId property) const;
-
-    /// Returns the computed value of the given property for the given
-    /// StylableObject, see:
-    ///
-    /// https://www.w3.org/TR/css-cascade-4/#computed
-    ///
-    /// This resolves StylableObject inheritance and default values. In other words,
-    /// the returned StyleValue is never of type StyleValueType::Inherit.
-    /// However, the type could be StyleValueType::None if there is no known
-    /// default value for the given property (this can be the case for custom
-    /// properties which are missing from the stylesheet).
-    ///
-    StyleValue computedValue(core::StringId property, const StylableObject* node) const;
-
-    ///
-private:
-    friend class StyleSheet;
-    // TODO: Share style data across similar StylableObjects by encapsulating
-    // all the member variables in a new class internal::StyleData,
-    // and only storing here an std::shared_ptr<StyleData>.    
-    StylePropertySpecTablePtr propertySpecs_;
-    core::Array<StyleRuleSet*> ruleSets_;
-    std::unordered_map<core::StringId, StyleValue> map_;
-    StyleValue computedValue_(core::StringId property, const StylableObject* node, const StylePropertySpec* spec) const;
-};
-
 /// \class vgc::style::StyleSheet
 /// \brief Parses and stores a VGCSS stylesheet.
 ///
@@ -403,18 +353,13 @@ public:
     /// Creates a stylesheet from the given specs and string.
     ///
     static StyleSheetPtr create(const StylePropertySpecTablePtr& specs,
-                                const std::string& s);
+                                std::string_view s);
 
     /// Returns all the rule sets of this stylesheet.
     ///
     const StyleRuleSetArray& ruleSets() const {
         return ruleSets_;
     }
-
-    /// Returns the style that applies to the given node,
-    /// by computing which ruleSets matches the node.
-    ///
-    Style computeStyle(StylableObject* node) const;
 
     const StylePropertySpecTablePtr& propertySpecs() const {
         return propertySpecs_;
@@ -496,6 +441,8 @@ private:
     core::StringId name_;
 };
 
+using StyleSpecificity = UInt64;
+
 /// \class vgc::style::StyleSelector
 /// \brief One selector of a rule set of a stylesheet.
 ///
@@ -508,6 +455,19 @@ public:
     /// Returns whether the given StylableObject matches this selector.
     ///
     bool matches(StylableObject* node);
+
+    /// Returns the specificy of the selector
+    ///
+    StyleSpecificity specificity() const {
+        // TODO: compute actual specificity based on id/class/etc.
+        // It could be computed as:
+        //    2^48 * numIDs
+        //  + 2^32 * numClasses
+        //  + numTypes
+        // (note: inline styles are treated as separate layers and thus don't need
+        //        to be given higher specificity)
+        return core::int_cast<StyleSpecificity>(items_.size());
+    }
 
 private:
     core::Array<StyleSelectorItem> items_;
