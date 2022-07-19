@@ -627,7 +627,7 @@ protected:
     style::StylableObject* lastChildStylableObject() const override;
     style::StylableObject* previousSiblingStylableObject() const override;
     style::StylableObject* nextSiblingStylableObject() const override;
-    const style::StyleSheet* styleSheet() const override;
+    const style::StyleSheet* defaultStyleSheet() const override;
 
 private:
     WidgetList* children_;

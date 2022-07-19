@@ -160,6 +160,10 @@ int main(int argc, char* argv[])
         }
     }
 
+    // Change style of first row
+    vgc::ui::Widget* firstRow = col->firstChild();
+    firstRow->setStyleSheet(".LineEdit { text-color: rgb(255, 100, 100); }");
+
     vgc::ui::WindowPtr wnd = vgc::ui::Window::create(col);
     wnd->setTitle("VGC UI Test");
     wnd->resize(QSize(800, 600));

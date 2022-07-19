@@ -899,7 +899,7 @@ private:
 
 } // namespace
 
-std::string decodeStyleString(const std::string& s)
+std::string decodeStyleString(std::string_view s)
 {
     std::string res;
     if (s.size() == 0) {

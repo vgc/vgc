@@ -116,6 +116,42 @@ private:
     core::Array<core::StringId> a_;
 };
 
+namespace internal {
+
+using RuleSetArray = core::Array<std::pair<StyleRuleSet*, StyleSpecificity>>;
+
+struct RuleSetSpan {
+    const StyleSheet* styleSheet;
+    Int begin;
+    Int end;
+};
+
+using RuleSetSpans = core::Array<RuleSetSpan>;
+
+struct StyleCachedData {
+
+    // Buffer to compute and store which RuleSets from which StyleSheets
+    // matches a given StylableObject. The StyleSheets are stored in
+    // ruleSetSpans from higher precedence to lower precedence, and
+    // the RuleSets are stored in ruleSetArray from lower specificity
+    // to higher specificity.
+    RuleSetArray ruleSetArray;
+    RuleSetSpans ruleSetSpans;
+
+    // Stores all cascaded values for a given StylableObject
+    // TODO: share this data across all StylableObject that
+    // have the same ruleSetArray and ruleSetSpans.
+    std::unordered_map<core::StringId, StyleValue> cascadedValues;
+
+    void clear() {
+        ruleSetArray.clear();
+        ruleSetSpans.clear();
+        cascadedValues.clear();
+    }
+};
+
+} // namespace internal
+
 /// \typedef vgc::style::StylableObject
 /// \brief Base abstract that must be implemented to use the style engine.
 ///
@@ -124,6 +160,33 @@ private:
     VGC_OBJECT(StylableObject, core::Object)
 
 public:
+    /// Sets the `StyleSheet` of this `StylableObject`.
+    ///
+    /// This style sheet affects both this object and all its descendants.
+    ///
+    /// This style sheet has a higher priority than the style sheets of ancestor
+    /// objects. In other words, rules from this style sheet always win over
+    /// rules from any ancestor style sheet, regardless of the selectors
+    /// specificity.
+    ///
+    /// This behavior is similar to CSS layers, although in our case the style
+    /// sheet is "scoped" (that is, it only applies to this objects and its
+    /// descendants), while CSS does not support scoped style sheet.
+    ///
+    void setStyleSheet(StyleSheetPtr styleSheet);
+
+    /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a style
+    /// sheet from the given string and uses the same `StylePropertySpecTable`
+    /// as the `defaultStyleSheet()`.
+    ///
+    void setStyleSheet(std::string_view string);
+
+    /// Returns the style sheet of this StylableObject.
+    ///
+    const StyleSheet* styleSheet() const {
+        return styleSheet_.get();
+    }
+
     /// Returns the style classes of this object.
     ///
     ClassSet styleClasses() {
@@ -150,10 +213,7 @@ public:
 
     /// Returns the computed value of a given style property of this widget.
     ///
-    style::StyleValue style(core::StringId property) const;
-
-protected :
-    StylableObject();
+    StyleValue style(core::StringId property) const;
 
     virtual StylableObject* parentStylableObject() const = 0;
     virtual StylableObject* firstChildStylableObject() const = 0;
@@ -161,15 +221,23 @@ protected :
     virtual StylableObject* previousSiblingStylableObject() const = 0;
     virtual StylableObject* nextSiblingStylableObject() const = 0;
 
-    virtual const StyleSheet* styleSheet() const = 0;
+    /// A stylesheet that is used by default if no other stylesheet provides
+    /// a value for the given property.
+    ///
+    virtual const StyleSheet* defaultStyleSheet() const = 0;
+
+protected :
+    StylableObject();
 
 private:
-    friend class Style;
-
+    StyleSheetPtr styleSheet_;
     ClassSet styleClasses_;
-    Style style_;
+    internal::StyleCachedData styleCachedData_;
 
-    void onStyleClassesChanged_();
+    void updateStyle_();
+    const StylePropertySpec* getStylePropertySpec_(core::StringId property) const;
+    StyleValue getStyleCascadedValue_(core::StringId property) const;
+    StyleValue getStyleComputedValue_(core::StringId property) const;
 };
 
 } // namespace vgc::style

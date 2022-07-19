@@ -624,13 +624,13 @@ style::StyleSheetPtr createGlobalStyleSheet_() {
     return style::StyleSheet::create(stylePropertySpecTable_(), s);
 }
 
-const style::StyleSheet* styleSheet_()
+} // namespace
+
+const style::StyleSheet* Widget::defaultStyleSheet() const
 {
     static style::StyleSheetPtr s = createGlobalStyleSheet_();
     return s.get();
 }
-
-} // namespace
 
 style::StylableObject* Widget::parentStylableObject() const
 {
@@ -655,11 +655,6 @@ style::StylableObject* Widget::previousSiblingStylableObject() const
 style::StylableObject* Widget::nextSiblingStylableObject() const
 {
     return static_cast<style::StylableObject*>(nextSibling());
-}
-
-const style::StyleSheet* Widget::styleSheet() const
-{
-    return styleSheet_();
 }
 
 void Widget::releaseEngine_()

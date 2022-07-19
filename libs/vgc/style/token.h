@@ -276,7 +276,7 @@ using StyleTokenIterator = core::Array<StyleToken>::iterator;
 //
 /// \sa StyleTokenArray, StyleToken,
 ///
-std::string decodeStyleString(const std::string& s);
+std::string decodeStyleString(std::string_view s);
 
 /// Tokenizes the given null-terminated string into an array of StyleTokens.
 /// The given null-terminated string must outlive the tokens, since they point
