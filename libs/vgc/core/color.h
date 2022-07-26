@@ -22,8 +22,7 @@
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \class vgc::core::Color
 /// \brief Color + alpha represented as RBGA with double-precision floats.
@@ -297,7 +296,29 @@ void readTo(Color& c, IStream& in)
     skipExpectedCharacter(in, ')');
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
+
+template <>
+struct fmt::formatter<vgc::core::Color> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+            throw format_error("invalid format");
+        return it;
+    }
+    template <typename FormatContext>
+    auto format(const vgc::core::Color c, FormatContext& ctx) {
+        vgc::UInt8 r = vgc::core::double01ToUint8(c.r());
+        vgc::UInt8 g = vgc::core::double01ToUint8(c.g());
+        vgc::UInt8 b = vgc::core::double01ToUint8(c.b());
+        double a = c.a();
+        if (a == 1.0) {
+            return format_to(ctx.out(), "rgb({}, {}, {})", r, g, b);
+        }
+        else {
+            return format_to(ctx.out(), "rgba({}, {}, {}, {})", r, g, b, a);
+        }
+    }
+};
 
 #endif // VGC_CORE_COLOR_H
