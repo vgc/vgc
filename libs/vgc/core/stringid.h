@@ -21,8 +21,7 @@
 #include <string>
 #include <vgc/core/api.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \class vgc::core::StringId
 /// \brief Represents a fast-to-compare and cheap-to-copy immutable string.
@@ -151,6 +150,18 @@ public:
         return *stringPtr_ == other;
     }
 
+    /// Returns whether the two StringId are different.
+    ///
+    bool operator!=(const StringId& other) const {
+        return stringPtr_ != other.stringPtr_;
+    }
+
+    /// Returns whether this StringId is different from the given string.
+    ///
+    bool operator!=(const std::string& other) const {
+        return *stringPtr_ != other;
+    }
+
 private:
     friend struct std::hash<StringId>;
     const std::string* stringPtr_;
@@ -162,8 +173,13 @@ inline bool operator==(const std::string& s1, const StringId& s2) {
     return s2 == s1;
 }
 
-} // namespace core
-} // namespace vgc
+/// Returns whether the given std::string is different from the given StringId.
+///
+inline bool operator!=(const std::string& s1, const StringId& s2) {
+    return s2 != s1;
+}
+
+} // namespace vgc::core
 
 /// Writes the underlying string of the given \p stringId to the given output
 /// stream \p out.
