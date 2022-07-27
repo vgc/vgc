@@ -20,11 +20,11 @@
 #include <string_view>
 
 #include <vgc/core/color.h>
+#include <vgc/graphics/richtext.h>
 #include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(LineEdit);
 
@@ -53,14 +53,18 @@ public:
     /// Returns the LineEdit's text.
     ///
     const std::string& text() const {
-        return text_;
+        return richText_->text();
     }
 
     /// Sets the LineEdit's text.
     ///
     void setText(std::string_view text);
 
-    // reimpl
+    // Reimplementation of StylableObject virtual methods
+    style::StylableObject* firstChildStylableObject() const override;
+    style::StylableObject* lastChildStylableObject() const override;
+
+    // Reimplementation of Widget virtual methods
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine) override;
@@ -79,19 +83,13 @@ protected:
 
 private:
     void updateBytePosition_(const geometry::Vec2f& mousePosition);
-    Int bytePosition_(const geometry::Vec2f& mousePosition);
-    void updateScroll_(float textWidth);
-    std::string text_;
-    graphics::ShapedText shapedText_;
-    graphics::TextCursor textCursor_;
-    float scrollLeft_ = 0.0f;
+    graphics::RichTextPtr richText_;
     graphics::TrianglesBufferPtr triangles_;
     bool reload_;
     bool isHovered_;
     bool isMousePressed_;
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_LINEEDIT_H

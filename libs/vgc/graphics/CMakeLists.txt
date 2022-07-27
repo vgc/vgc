@@ -16,6 +16,8 @@ vgc_add_library(graphics
         font.h
         idgenerator.h
         logcategories.h
+        richtext.h
+        strings.h
         text.h
 
     CPP_FILES
@@ -24,6 +26,8 @@ vgc_add_library(graphics
         font.cpp
         idgenerator.cpp
         logcategories.cpp
+        richtext.cpp
+        strings.cpp
         text.cpp
 
     RESOURCE_FILES

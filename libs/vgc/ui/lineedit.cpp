@@ -31,16 +31,14 @@ namespace ui {
 
 LineEdit::LineEdit(std::string_view text) :
     Widget(),
-    text_(""),
-    shapedText_(internal::getDefaultSizedFont(), text_),
-    textCursor_(false, 0),
-    scrollLeft_(0.0f),
+    richText_(graphics::RichText::create()),
     reload_(true),
     isHovered_(false),
     isMousePressed_(false)
 {
     addStyleClass(strings::LineEdit);
     setText(text);
+    richText_->setParentStylableObject(this);
 }
 
 LineEditPtr LineEdit::create()
@@ -55,16 +53,39 @@ LineEditPtr LineEdit::create(std::string_view text)
 
 void LineEdit::setText(std::string_view text)
 {
-    if (text_ != text) {
-        text_ = text;
-        shapedText_.setText(text);
+    if (text != richText_->text()) {
+        richText_->setText(text);
         reload_ = true;
         repaint();
     }
 }
 
+style::StylableObject* LineEdit::firstChildStylableObject() const
+{
+    return richText_.get();
+}
+
+style::StylableObject* LineEdit::lastChildStylableObject() const
+{
+    return richText_.get();
+}
+
 void LineEdit::onResize()
 {
+    // Compute contentRect
+    // TODO: move to Widget::contentRect()
+    float paddingLeft = internal::getLength(this, strings::padding_left);
+    float paddingRight = internal::getLength(this, strings::padding_right);
+    float paddingTop = internal::getLength(this, strings::padding_top);
+    float paddingBottom = internal::getLength(this, strings::padding_bottom);
+    geometry::Rect2f r = rect();
+    geometry::Vec2f pMinOffset(paddingLeft, paddingTop);
+    geometry::Vec2f pMaxOffset(paddingRight, paddingBottom);
+    geometry::Rect2f contentRect(r.pMin() + pMinOffset, r.pMax() - pMaxOffset);
+
+    // Set appropriate size for the RichText
+    richText_->setRect(contentRect);
+
     reload_ = true;
 }
 
@@ -78,34 +99,23 @@ void LineEdit::onPaintDraw(graphics::Engine*)
     if (reload_) {
         reload_ = false;
         core::FloatArray a;
+
+        // Draw background
         core::Color backgroundColor = internal::getColor(this, isHovered_ ?
                         strings::background_color_on_hover :
                         strings::background_color);
-
+        float borderRadius = internal::getLength(this, strings::border_radius);
 #ifdef VGC_QOPENGL_EXPERIMENT
         static core::Stopwatch sw = {};
         auto t = sw.elapsed() * 50.f;
         backgroundColor = core::Color::hsl(t, 0.6f, 0.3f);
 #endif
-
-        core::Color textColor = internal::getColor(this, strings::text_color);
-        float borderRadius = internal::getLength(this, strings::border_radius);
-        float paddingLeft = internal::getLength(this, strings::padding_left);
-        float paddingRight = internal::getLength(this, strings::padding_right);
-        float textWidth = width() - paddingLeft - paddingRight;
-        graphics::TextProperties textProperties(
-                    graphics::TextHorizontalAlign::Left,
-                    graphics::TextVerticalAlign::Middle);
-        if (hasFocus()) {
-            textCursor_.setVisible(true);
-        }
-        else {
-            textCursor_.setVisible(false);
-        }
-        updateScroll_(textWidth);
-        bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
-        internal::insertText(a, textColor, 0, 0, width(), height(), paddingLeft, paddingRight, 0, 0, shapedText_, textProperties, textCursor_, hinting, scrollLeft_);
+
+        // Draw text
+        richText_->fill(a);
+
+        // Load triangles data
         triangles_->load(a.data(), a.length());
     }
     triangles_->draw();
@@ -152,6 +162,7 @@ bool LineEdit::onMouseLeave()
 
 bool LineEdit::onFocusIn()
 {
+    richText_->setCursorVisible(true);
     reload_ = true;
     repaint();
     return true;
@@ -159,6 +170,7 @@ bool LineEdit::onFocusIn()
 
 bool LineEdit::onFocusOut()
 {
+    richText_->setCursorVisible(false);
     reload_ = true;
     repaint();
     return true;
@@ -168,7 +180,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
 {
     int key = event->key();
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
-        Int p1_ = textCursor_.bytePosition();
+        Int p1_ = richText_->cursorBytePosition();
         Int p2_ = -1;
         graphics::TextBoundaryType boundaryType =
                 (event->modifiers().testFlag(Qt::ControlModifier)) ?
@@ -190,33 +202,33 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
             newText.reserve(text().size() - (p2 - p1));
             newText.append(text(), 0, p1);
             newText.append(text(), p2);
-            textCursor_.setBytePosition(p1_);
+            richText_->setCursorBytePosition(p1_);
             setText(newText);
         }
         return true;
     }
     else if (key == Qt::Key_Home) {
-        Int p1 = textCursor_.bytePosition();
+        Int p1 = richText_->cursorBytePosition();
         Int home = 0;
         if (p1 != home) {
-            textCursor_.setBytePosition(home);
+            richText_->setCursorBytePosition(home);
             reload_ = true;
             repaint();
         }
         return true;
     }
     else if (key == Qt::Key_End) {
-        Int p1 = textCursor_.bytePosition();
+        Int p1 = richText_->cursorBytePosition();
         Int end = core::int_cast<Int>(text().size());
         if (p1 != end) {
-            textCursor_.setBytePosition(end);
+            richText_->setCursorBytePosition(end);
             reload_ = true;
             repaint();
         }
         return true;
     }
     else if (key == Qt::Key_Left || key == Qt::Key_Right) {
-        Int p1 = textCursor_.bytePosition();
+        Int p1 = richText_->cursorBytePosition();
         Int p2 = -1;
         graphics::TextBoundaryType boundaryType =
                 (event->modifiers().testFlag(Qt::ControlModifier)) ?
@@ -231,7 +243,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
             p2 = it.toNextBoundary();
         }
         if (p2 != -1 && p1 != p2) {
-            textCursor_.setBytePosition(it.position());
+            richText_->setCursorBytePosition(it.position());
             reload_ = true;
             repaint();
         }
@@ -240,14 +252,16 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     else {
         std::string t = event->text().toStdString();
         if (!t.empty()) {
-            size_t p = core::int_cast<size_t>(textCursor_.bytePosition());
+            size_t p = core::int_cast<size_t>(richText_->cursorBytePosition());
             std::string newText;
             newText.reserve(text().size() + t.size());
             newText.append(text(), 0, p);
             newText.append(t);
             newText.append(text(), p);
-            textCursor_.setBytePosition(p + t.size());
-            setText(newText);
+            richText_->setText(newText);
+            richText_->setCursorBytePosition(p + t.size());
+            reload_ = true;
+            repaint();
             return true;
         }
         else {
@@ -281,43 +295,15 @@ geometry::Vec2f LineEdit::computePreferredSize() const
 
 void LineEdit::updateBytePosition_(const geometry::Vec2f& mousePosition)
 {
-    Int bytePosition = bytePosition_(mousePosition);
-    if (bytePosition != textCursor_.bytePosition()) {
-        textCursor_.setBytePosition(bytePosition);
+    float paddingLeft = internal::getLength(this, strings::padding_left);
+    float paddingTop = internal::getLength(this, strings::padding_top);
+    geometry::Vec2f mouseOffset(paddingLeft, paddingTop);
+    Int oldBytePosition = richText_->cursorBytePosition();
+    richText_->setCursorFromMousePosition(mousePosition - mouseOffset);
+    Int newBytePosition = richText_->cursorBytePosition();
+    if (oldBytePosition != newBytePosition) {
         reload_ = true;
         repaint();
-    }
-}
-
-Int LineEdit::bytePosition_(const geometry::Vec2f& mousePosition)
-{
-    float paddingLeft = internal::getLength(this, strings::padding_left);
-    float x = mousePosition[0] - paddingLeft + scrollLeft_;
-    float y = mousePosition[1];
-    return shapedText_.bytePosition(geometry::Vec2f(x, y));
-}
-
-void LineEdit::updateScroll_(float textWidth)
-{
-    float textEndAdvance = shapedText_.advance()[0];
-    float currentTextEndPos = textEndAdvance - scrollLeft_;
-    if (currentTextEndPos < textWidth && scrollLeft_ > 0) {
-        if (textEndAdvance < textWidth) {
-            scrollLeft_ = 0;
-        }
-        else {
-            scrollLeft_ = textEndAdvance - textWidth;
-        }
-    }
-    if (textCursor_.isVisible()) {
-        float cursorAdvance = shapedText_.advance(textCursor_.bytePosition())[0];
-        float currentCursorPos = cursorAdvance - scrollLeft_;
-        if (currentCursorPos < 0) {
-            scrollLeft_ = cursorAdvance;
-        }
-        else if (currentCursorPos > textWidth) {
-            scrollLeft_ = cursorAdvance - textWidth;
-        }
     }
 }
 
