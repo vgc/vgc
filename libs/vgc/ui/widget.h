@@ -572,7 +572,6 @@ public:
     ///
     Action* createAction(const Shortcut& shortcut);
 
-public:
     /// This virtual function is called once before the first call to
     /// onPaintDraw(), and should be reimplemented to create required GPU
     /// resources.
@@ -591,6 +590,14 @@ public:
     /// created GPU resources.
     ///
     virtual void onPaintDestroy(graphics::Engine* engine);
+
+    // Implements StylableObject interface
+    style::StylableObject* parentStylableObject() const override;
+    style::StylableObject* firstChildStylableObject() const override;
+    style::StylableObject* lastChildStylableObject() const override;
+    style::StylableObject* previousSiblingStylableObject() const override;
+    style::StylableObject* nextSiblingStylableObject() const override;
+    const style::StyleSheet* defaultStyleSheet() const override;
 
 protected:
     virtual void onWidgetAdded(Object*) {};
@@ -620,14 +627,6 @@ protected:
     /// and height of this widget.
     ///
     virtual void updateChildrenGeometry();
-
-    // implements StylableObject interface
-    style::StylableObject* parentStylableObject() const override;
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
-    style::StylableObject* previousSiblingStylableObject() const override;
-    style::StylableObject* nextSiblingStylableObject() const override;
-    const style::StyleSheet* defaultStyleSheet() const override;
 
 private:
     WidgetList* children_;

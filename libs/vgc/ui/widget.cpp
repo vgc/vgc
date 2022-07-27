@@ -20,6 +20,8 @@
 #include <vgc/core/io.h>
 #include <vgc/core/paths.h>
 
+#include <vgc/graphics/richtext.h>
+
 #include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
 
@@ -503,35 +505,6 @@ using style::StyleValueType;
 using style::StyleTokenIterator;
 using style::StyleTokenType;
 
-StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end)
-{
-    try {
-        std::string str(begin->begin, (end-1)->end);
-        core::Color color = core::parse<core::Color>(str);
-        return StyleValue::custom(color);
-    } catch (const core::ParseError&) {
-        return StyleValue::invalid();
-    } catch (const core::RangeError&) {
-        return StyleValue::invalid();
-    }
-}
-
-StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end)
-{
-    // For now, we only support a unique Dimension token with a "dp" unit
-    if (begin == end) {
-        return StyleValue::invalid();
-    }
-    else if (begin->type == StyleTokenType::Dimension &&
-             begin->codePointsValue == "dp" &&
-             begin + 1 == end) {
-        return StyleValue::number(begin->toFloat());
-    }
-    else {
-        return StyleValue::invalid();
-    }
-}
-
 StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end)
 {
     if (begin == end) {
@@ -567,47 +540,23 @@ StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator 
     }
 }
 
-StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end)
-{
-    StyleValue res = style::parseStyleDefault(begin, end);
-    if (res.type() == StyleValueType::Identifier &&
-            (res == strings::off || res == strings::normal)) {
-        res = StyleValue::invalid();
-    }
-    return res;
-}
-
 style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
 {
-    // For reference: https://www.w3.org/TR/CSS21/propidx.html
-    auto black       = StyleValue::custom(core::colors::black);
-    auto transparent = StyleValue::custom(core::colors::transparent);
-    auto zero        = StyleValue::number(0.0f);
-    auto one         = StyleValue::number(1.0f);
     auto autosize    = StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
-    auto normal      = StyleValue::identifier(strings::normal);
+    auto one         = StyleValue::number(1.0f);
 
+    // Start with the same specs as RichTextSpan
     auto table = std::make_shared<style::StylePropertySpecTable>();
-    table->insert("background-color",          transparent, false, &parseStyleColor);
-    table->insert("background-color",          transparent, false, &parseStyleColor);
-    table->insert("background-color-on-hover", transparent, false, &parseStyleColor);
-    table->insert("border-radius",             zero,        false, &parseStyleLength);
-    table->insert("margin-bottom",             zero,        false, &parseStyleLength);
-    table->insert("margin-left",               zero,        false, &parseStyleLength);
-    table->insert("margin-right",              zero,        false, &parseStyleLength);
-    table->insert("margin-top",                zero,        false, &parseStyleLength);
-    table->insert("padding-bottom",            zero,        false, &parseStyleLength);
-    table->insert("padding-left",              zero,        false, &parseStyleLength);
-    table->insert("padding-right",             zero,        false, &parseStyleLength);
-    table->insert("padding-top",               zero,        false, &parseStyleLength);
-    table->insert("pixel-hinting",             normal,      false, &parsePixelHinting);
-    table->insert("preferred-height",          autosize,    false, &parseStylePreferredSize);
-    table->insert("preferred-width",           autosize,    false, &parseStylePreferredSize);
-    table->insert("shrink-height",             one,         false, &parseStyleNumber);
-    table->insert("shrink-width",              one,         false, &parseStyleNumber);
-    table->insert("stretch-height",            one,         false, &parseStyleNumber);
-    table->insert("stretch-width",             one,         false, &parseStyleNumber);
-    table->insert("text-color",                black,       true,  &parseStyleColor);
+    *table.get() = *graphics::RichTextSpan::stylePropertySpecs();
+
+    // Insert additional specs
+    // Reference: https://www.w3.org/TR/CSS21/propidx.html
+    table->insert("preferred-height", autosize, false, &parseStylePreferredSize);
+    table->insert("preferred-width",  autosize, false, &parseStylePreferredSize);
+    table->insert("shrink-height",    one,      false, &parseStyleNumber);
+    table->insert("shrink-width",     one,      false, &parseStyleNumber);
+    table->insert("stretch-height",   one,      false, &parseStyleNumber);
+    table->insert("stretch-width",    one,      false, &parseStyleNumber);
 
     return table;
 }

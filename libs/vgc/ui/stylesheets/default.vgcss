@@ -20,6 +20,8 @@
     background-color: rgb(44, 46, 47);
     border-radius: 3dp;
     text-color: rgb(221, 221, 221);
+    text-horizontal-align: left;
+    text-vertical-align: middle;
     preferred-width: auto;
     preferred-height: 28dp;
     padding-left: 5dp;
