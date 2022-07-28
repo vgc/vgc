@@ -141,6 +141,8 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
 {
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
     auto black       = StyleValue::custom(core::colors::black);
+    auto white       = StyleValue::custom(core::colors::white);
+    auto blueish     = StyleValue::custom(core::Color(0.20, 0.56, 1.0));
     auto transparent = StyleValue::custom(core::colors::transparent);
     auto zero        = StyleValue::number(0.0f);
     auto one         = StyleValue::number(1.0f);
@@ -149,21 +151,23 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
     auto top         = StyleValue::identifier(strings::top);
 
     auto table = std::make_shared<style::StylePropertySpecTable>();
-    table->insert("background-color",          transparent, false, &parseStyleColor);
-    table->insert("background-color-on-hover", transparent, false, &parseStyleColor);
-    table->insert("border-radius",             zero,        false, &parseStyleLength);
-    table->insert("margin-bottom",             zero,        false, &parseStyleLength);
-    table->insert("margin-left",               zero,        false, &parseStyleLength);
-    table->insert("margin-right",              zero,        false, &parseStyleLength);
-    table->insert("margin-top",                zero,        false, &parseStyleLength);
-    table->insert("padding-bottom",            zero,        false, &parseStyleLength);
-    table->insert("padding-left",              zero,        false, &parseStyleLength);
-    table->insert("padding-right",             zero,        false, &parseStyleLength);
-    table->insert("padding-top",               zero,        false, &parseStyleLength);
-    table->insert("pixel-hinting",             normal,      false, &parsePixelHinting);
-    table->insert("text-color",                black,       true,  &parseStyleColor);
-    table->insert("text-horizontal-align",     left,        true,  &parseTextHorizontalAlign);
-    table->insert("text-vertical-align",       top,         true,  &parseTextVerticalAlign);
+    table->insert("background-color",           transparent, false, &parseStyleColor);
+    table->insert("background-color-on-hover",  transparent, false, &parseStyleColor);
+    table->insert("border-radius",              zero,        false, &parseStyleLength);
+    table->insert("margin-bottom",              zero,        false, &parseStyleLength);
+    table->insert("margin-left",                zero,        false, &parseStyleLength);
+    table->insert("margin-right",               zero,        false, &parseStyleLength);
+    table->insert("margin-top",                 zero,        false, &parseStyleLength);
+    table->insert("padding-bottom",             zero,        false, &parseStyleLength);
+    table->insert("padding-left",               zero,        false, &parseStyleLength);
+    table->insert("padding-right",              zero,        false, &parseStyleLength);
+    table->insert("padding-top",                zero,        false, &parseStyleLength);
+    table->insert("pixel-hinting",              normal,      true,  &parsePixelHinting);
+    table->insert("selection-background-color", blueish,     true,  &parseStyleColor);
+    table->insert("selection-text-color",       white,       true,  &parseStyleColor);
+    table->insert("text-color",                 black,       true,  &parseStyleColor);
+    table->insert("text-horizontal-align",      left,        true,  &parseTextHorizontalAlign);
+    table->insert("text-vertical-align",        top,         true,  &parseTextVerticalAlign);
 
     return table;
 }
@@ -209,7 +213,10 @@ RichText::RichText(std::string_view text)
     : parentStylableObject_(nullptr)
     , text_(text)
     , shapedText_(getDefaultSizedFont_(), text)
-    , textCursor_(false, 0)
+    , isSelectionVisible_(false)
+    , isCursorVisible_(false)
+    , selectionBegin_(0)
+    , selectionEnd_(0)
     , horizontalScroll_(0.0f)
 {
 }
@@ -229,6 +236,9 @@ void RichText::setText(std::string_view text)
     if (text_ != text) {
         text_ = text;
         shapedText_.setText(text);
+        Int n = core::int_cast<Int>(text.size());
+        core::clamp(selectionBegin_, 0, n);
+        core::clamp(selectionEnd_, 0, n);
         updateScroll_();
     }
 }
@@ -252,119 +262,12 @@ void insertRect(
         x1, y2, r, g, b});
 }
 
-void insertText(core::FloatArray& a,
-                const graphics::ShapedText& shapedText,
-                const core::Color& textColor,
-                float x1, float y1, float x2, float y2,
-                float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-                const graphics::TextProperties& textProperties,
-                const graphics::TextCursor& textCursor,
-                bool hinting,
-                float scrollLeft)
+void insertRect(
+        core::FloatArray& a,
+        const core::Color& c,
+        const geometry::Rect2f& r)
 {
-    // Draw text
-    graphics::SizedFont* sizedFont = shapedText.sizedFont();
-    if (shapedText.text().length() > 0 || textCursor.isVisible()) {
-        float r = static_cast<float>(textColor[0]);
-        float g = static_cast<float>(textColor[1]);
-        float b = static_cast<float>(textColor[2]);
-
-        // Vertical centering
-        float height = (y2 - paddingBottom) - (y1 + paddingTop);
-        float ascent = sizedFont->ascent();
-        float descent = sizedFont->descent();
-        if (hinting) {
-            ascent = std::round(ascent);
-            descent = std::round(descent);
-        }
-        float textHeight = ascent - descent;
-        float textTop = 0;
-        switch (textProperties.verticalAlign()) {
-        case graphics::TextVerticalAlign::Top:
-            textTop = y1 + paddingTop;
-            break;
-        case graphics::TextVerticalAlign::Middle:
-            textTop = y1 + paddingTop + 0.5f * (height - textHeight);
-            break;
-        case graphics::TextVerticalAlign::Bottom:
-            textTop = y1 + paddingTop + (height - textHeight);
-            break;
-        }
-        if (hinting) {
-            textTop = std::round(textTop);
-        }
-        float baseline = textTop + ascent;
-
-        // Horizontal centering. Note: we intentionally don't perform hinting
-        // on the horizontal direction.
-        float width = (x2 - paddingRight) - (x1 + paddingLeft);
-        float advance = static_cast<float>(shapedText.advance()[0]);
-        float textLeft = 0;
-        switch (textProperties.horizontalAlign()) {
-        case graphics::TextHorizontalAlign::Left:
-            textLeft = x1 + paddingLeft;
-            break;
-        case graphics::TextHorizontalAlign::Center:
-            textLeft = x1 + paddingLeft + 0.5f * (width - advance);
-            break;
-        case graphics::TextHorizontalAlign::Right:
-            textLeft = x1 + paddingLeft + (width - advance);
-            break;
-        }
-        textLeft -= scrollLeft;
-
-        // Triangulate and clip the text.
-        //
-        // Note that we clip the text at the given padding. This is often
-        // appropriate for LineEdits, but not necessarily for TextEdits, where
-        // we may want to clip up to the border of the given text box instead.
-        //
-        constexpr bool clipAtPadding = true;
-        geometry::Vec2f origin(textLeft, baseline);
-        float clipLeft   = x1 + (clipAtPadding ? paddingLeft   : 0);
-        float clipRight  = x2 - (clipAtPadding ? paddingRight  : 0);
-        float clipTop    = y1 + (clipAtPadding ? paddingTop    : 0);
-        float clipBottom = y2 - (clipAtPadding ? paddingBottom : 0);
-        shapedText.fill(a, origin, r, g, b, clipLeft, clipRight, clipTop, clipBottom);
-
-        // Draw cursor
-        if (textCursor.isVisible()) {
-            const graphics::ShapedGraphemeArray& graphemes = shapedText.graphemes();
-            Int cursorBytePosition = textCursor.bytePosition();
-            float cursorAdvance = - scrollLeft;
-            for (const graphics::ShapedGrapheme& grapheme : graphemes) {
-                if (grapheme.bytePosition() >= cursorBytePosition) {
-                    break;
-                }
-                cursorAdvance += grapheme.advance()[0];
-            }
-            float cursorX = x1 + paddingLeft + cursorAdvance;
-            float cursorW = 1.0f;
-            if (hinting) {
-                // Note: while we don't perform horizontal hinting for letters,
-                // we do perform horizontal hinting for the cursor.
-                cursorX = std::round(cursorX);
-            }
-            if constexpr (clipAtPadding) {
-                // Ensure that we still draw the cursor when it is just barely
-                // in the clipped padding (typically, when the cursor is at the
-                // end of the text)
-                clipLeft -= cursorW;
-                clipRight += cursorW;
-            }
-            // Clip and draw cursor. Note that whenever the cursor is at least
-            // partially visible in the horizontal direction, we draw it full-legth
-            if (clipLeft <= cursorX && cursorX <= clipRight) {
-                float cursorY = textTop;
-                float cursorH = textHeight;
-                float cursorY1 = std::max(cursorY, clipTop);
-                float cursorY2 = std::min(cursorY + cursorH, clipBottom);
-                if (cursorY2 > cursorY1) {
-                    insertRect(a, textColor, cursorX, cursorY1, cursorX + cursorW, cursorY2);
-                }
-            }
-        }
-    }
+    insertRect(a, c, r.xMin(), r.yMin(), r.xMax(), r.yMax());
 }
 
 core::Color getColor(const RichTextSpan* span, core::StringId property)
@@ -421,18 +324,223 @@ TextProperties getTextProperties(const RichTextSpan* span)
 
 void RichText::fill(core::FloatArray& a)
 {
+    // Early return if nothing to draw
+    if (shapedText_.text().length() == 0 && !isCursorVisible_) {
+        return;
+    }
+
+    // Get style attributes
+    // TODO: cache this on style change
     core::Color textColor = getColor(this, strings::text_color);
+    core::Color selectionBackgroundColor = getColor(this, strings::selection_background_color);
+    core::Color selectionTextColor = getColor(this, strings::selection_text_color);
     bool hinting = getHinting(this, strings::pixel_hinting);
     TextProperties textProperties = getTextProperties(this);
-    insertText(a, shapedText_,
-               textColor,
-               rect_.xMin(), rect_.yMin(), rect_.xMax(), rect_.yMax(),
-               0, 0, 0, 0,
-               textProperties, textCursor_, hinting, horizontalScroll_);
+    float r = static_cast<float>(textColor[0]);
+    float g = static_cast<float>(textColor[1]);
+    float b = static_cast<float>(textColor[2]);
+    float sr = static_cast<float>(selectionTextColor[0]);
+    float sg = static_cast<float>(selectionTextColor[1]);
+    float sb = static_cast<float>(selectionTextColor[2]);
+    float paddingLeft = 0;
+    float paddingRight = 0;
+    float paddingBottom = 0;
+    float paddingTop = 0;
+
+    // Compute text geometry
+    // TODO: cache this on text change, rect change, or style change
+    // Vertical centering
+    graphics::SizedFont* sizedFont = shapedText_.sizedFont();
+    float height = (rect_.yMax() - paddingBottom) - (rect_.yMin() + paddingTop);
+    float ascent = sizedFont->ascent();
+    float descent = sizedFont->descent();
+    if (hinting) {
+        ascent = std::round(ascent);
+        descent = std::round(descent);
+    }
+    float textHeight = ascent - descent;
+    float textTop = 0;
+    switch (textProperties.verticalAlign()) {
+    case graphics::TextVerticalAlign::Top:
+        textTop = rect_.yMin() + paddingTop;
+        break;
+    case graphics::TextVerticalAlign::Middle:
+        textTop = rect_.yMin() + paddingTop + 0.5f * (height - textHeight);
+        break;
+    case graphics::TextVerticalAlign::Bottom:
+        textTop = rect_.yMin() + paddingTop + (height - textHeight);
+        break;
+    }
+    if (hinting) {
+        textTop = std::round(textTop);
+    }
+    float baseline = textTop + ascent;
+    // Horizontal centering. Note: we intentionally don't perform hinting
+    // on the horizontal direction.
+    float width = (rect_.xMax() - paddingRight) - (rect_.xMin() + paddingLeft);
+    float advance = static_cast<float>(shapedText_.advance()[0]);
+    float textLeft = 0;
+    switch (textProperties.horizontalAlign()) {
+    case graphics::TextHorizontalAlign::Left:
+        textLeft = rect_.xMin() + paddingLeft;
+        break;
+    case graphics::TextHorizontalAlign::Center:
+        textLeft = rect_.xMin() + paddingLeft + 0.5f * (width - advance);
+        break;
+    case graphics::TextHorizontalAlign::Right:
+        textLeft = rect_.xMin() + paddingLeft + (width - advance);
+        break;
+    }
+    textLeft -= horizontalScroll_;
+
+    // Set clipping rectangle. For now, we clip at the rect.
+    // This might be later disabled with overflow = true or other similar settings.
+    geometry::Rect2f clipRect = rect_;
+    float clipLeft   = clipRect.xMin();
+    float clipRight  = clipRect.xMax();
+    float clipTop    = clipRect.yMin();
+    float clipBottom = clipRect.yMax();
+
+    // Convert from byte positions to grapheme/glyphs indices and pixel offsets.
+    //
+    // Note: in some situations, a single glyph can be used to represent
+    // multiple graphemes (e.g., an "ff" ligature is one glyph but two
+    // graphemes). If the selection only covers some but not all of the glyph,
+    // then we ideally need to draw some part of the glyph in textColor and
+    // some other part in selectedTextColor. For now, we don't, but we should
+    // do it in the future.
+    //
+    bool hasSelection = selectionBegin_ != selectionEnd_;
+    bool hasVisibleSelection = isSelectionVisible_ && hasSelection;
+    Int selectionBeginGlyph = -1;
+    Int selectionEndGlyph = -1;
+    float selectionBeginAdvance = 0;
+    float selectionEndAdvance = 0;
+    if (isCursorVisible_ || hasVisibleSelection) {
+        const graphics::ShapedGraphemeArray& graphemes = shapedText_.graphemes();
+        for (const graphics::ShapedGrapheme& grapheme : graphemes) {
+            if (grapheme.bytePosition() < selectionBegin_) {
+                selectionBeginAdvance += grapheme.advance()[0];
+            }
+            else if (selectionBeginGlyph == -1) {
+                selectionBeginGlyph = grapheme.glyphIndex();
+            }
+            if (grapheme.bytePosition() < selectionEnd_) {
+                selectionEndAdvance += grapheme.advance()[0];
+            }
+            else if (selectionEndGlyph == -1) {
+                selectionEndGlyph = grapheme.glyphIndex();
+            }
+        }
+    }
+    if (selectionBeginGlyph == -1) {
+        selectionBeginGlyph = shapedText_.glyphs().length();
+    }
+    if (selectionEndGlyph == -1) {
+        selectionEndGlyph = shapedText_.glyphs().length();
+    }
+
+    // Draw selection background
+    if (hasVisibleSelection) {
+        geometry::Rect2f selectionRect(textLeft + selectionBeginAdvance, textTop,
+                                       textLeft + selectionEndAdvance, textTop + textHeight);
+        selectionRect.normalize();
+        selectionRect.intersectWith(clipRect);
+        if (!selectionRect.isEmpty()) {
+            insertRect(a, selectionBackgroundColor, selectionRect);
+        }
+    }
+
+    // Draw text
+    // TODO: convert selectionBegin_/End_ from byte position to glyph index
+    geometry::Vec2f origin(textLeft, baseline);
+    if (isSelectionVisible_) {
+        if (selectionBeginGlyph > selectionEndGlyph) {
+            std::swap(selectionBeginGlyph, selectionEndGlyph);
+        }
+        shapedText_.fill(a, origin, r, g, b, 0, selectionBeginGlyph, clipLeft, clipRight, clipTop, clipBottom);
+        shapedText_.fill(a, origin, sr, sg, sb, selectionBeginGlyph, selectionEndGlyph, clipLeft, clipRight, clipTop, clipBottom);
+        shapedText_.fill(a, origin, r, g, b, selectionEndGlyph, shapedText_.glyphs().length(), clipLeft, clipRight, clipTop, clipBottom);
+    }
+    else {
+        shapedText_.fill(a, origin, r, g, b, clipLeft, clipRight, clipTop, clipBottom);
+    }
+
+    // Draw cursor
+    if (isCursorVisible_) {
+        float cursorX = textLeft + selectionEndAdvance;
+        float cursorW = 1.0f;
+        if (hinting) {
+            // Note: while we don't perform horizontal hinting for letters,
+            // we do perform horizontal hinting for the cursor.
+            cursorX = std::round(cursorX);
+        }
+        // Ensure that we still draw the cursor when it is just barely
+        // in the clipped padding (typically, when the cursor is at the
+        // end of the text)
+        clipLeft -= cursorW;
+        clipRight += cursorW;
+        // Clip and draw cursor. Note that whenever the cursor is at least
+        // partially visible in the horizontal direction, we draw it full-legth
+        if (clipLeft <= cursorX && cursorX <= clipRight) {
+            float cursorY = textTop;
+            float cursorH = textHeight;
+            float cursorY1 = std::max(cursorY, clipTop);
+            float cursorY2 = std::min(cursorY + cursorH, clipBottom);
+            if (cursorY2 > cursorY1) {
+                insertRect(a, textColor, cursorX, cursorY1, cursorX + cursorW, cursorY2);
+            }
+        }
+    }
+}
+
+void RichText::deleteSelectedText()
+{
+    if (hasSelection()) {
+        if (selectionBegin_ > selectionEnd_) {
+            std::swap(selectionBegin_, selectionEnd_);
+        }
+        size_t p1 = core::int_cast<size_t>(selectionBegin_);
+        size_t p2 = core::int_cast<size_t>(selectionEnd_);
+        selectionEnd_ = selectionBegin_;
+        std::string newText;
+        newText.reserve(text().size() - (p2 - p1));
+        newText.append(text(), 0, p1);
+        newText.append(text(), p2);
+        setText(newText);
+    }
+}
+
+void RichText::deleteNext(TextBoundaryType boundaryType)
+{
+    if (!hasSelection()) {
+        graphics::TextBoundaryIterator it(boundaryType, text());
+        it.setPosition(selectionBegin_);
+        selectionEnd_ = it.toNextBoundary();
+        if (selectionEnd_ == -1) {
+            selectionEnd_ = selectionBegin_;
+        }
+    }
+    deleteSelectedText();
+}
+
+void RichText::deletePrevious(TextBoundaryType boundaryType)
+{
+    if (!hasSelection()) {
+        graphics::TextBoundaryIterator it(boundaryType, text());
+        it.setPosition(selectionEnd_);
+        selectionBegin_ = it.toPreviousBoundary();
+        if (selectionBegin_ == -1) {
+            selectionBegin_ = selectionEnd_;
+        }
+    }
+    deleteSelectedText();
 }
 
 Int RichText::bytePosition(const geometry::Vec2f& mousePosition)
 {
+    // TODO: take horizontal/vertical style alignment into account
+    // (see implementation of fill())
     float x = mousePosition[0] + horizontalScroll_;
     float y = mousePosition[1];
     return shapedText_.bytePosition({x, y});

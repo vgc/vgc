@@ -541,6 +541,16 @@ void ShapedText::fill(core::FloatArray& data,
                       float clipLeft, float clipRight,
                       float clipTop, float clipBottom) const
 {
+    fill(data, origin, r, g, b, 0, glyphs().length(), clipLeft, clipRight, clipTop, clipBottom);
+}
+
+void ShapedText::fill(core::FloatArray& data,
+                      const geometry::Vec2f& origin,
+                      float r, float g, float b,
+                      Int start, Int end,
+                      float clipLeft, float clipRight,
+                      float clipTop, float clipBottom) const
+{
     // Get clip rectangle in ShapedText coordinates
     geometry::Rect2f clipRect(clipLeft, clipTop, clipRight, clipBottom);
     clipRect.setPMin(clipRect.pMin() - origin);
@@ -552,7 +562,9 @@ void ShapedText::fill(core::FloatArray& data,
     // glyph's triangles to cut them by the clipRect, and only keep the
     // triangles inside.
     //
-    for (const ShapedGlyph& glyph : glyphs()) {
+    const ShapedGlyphArray& glyphs = impl_->glyphs;
+    for (Int i = start; i < end; ++i) {
+        const ShapedGlyph& glyph = glyphs[i];
         const geometry::Rect2f& bbox = glyph.boundingBox();
         if (clipRect.intersects(bbox)) {
             if (clipRect.contains(bbox)) {

@@ -30,6 +30,8 @@ const core::StringId padding_left("padding-left");
 const core::StringId padding_right("padding-right");
 const core::StringId padding_top("padding-top");
 const core::StringId pixel_hinting("pixel-hinting");
+const core::StringId selection_background_color("selection-background-color");
+const core::StringId selection_text_color("selection-text-color");
 const core::StringId text_color("text-color");
 const core::StringId text_horizontal_align("text-horizontal-align");
 const core::StringId text_vertical_align("text-vertical-align");

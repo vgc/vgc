@@ -536,6 +536,10 @@ public:
     /// 1. isTreeActive() is true and the focused widget changed, or
     /// 2. isTreeActive() changed from true to false
     ///
+    /// This function is called just after the widget loses focus, so you can rely
+    /// on the return value of `isFocusedWidget()` to determine whether this widget is
+    /// still the focused widget despite losing focus (i.e., situation 2. above).
+    ///
     /// Note that this function is only called for the focused widget itself,
     /// not for all its ancestors.
     ///

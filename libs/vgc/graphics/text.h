@@ -541,6 +541,20 @@ public:
               float clipLeft, float clipRight,
               float clipTop, float clipBottom) const;
 
+    /// Fills this ShapedText from glyph index `start` (included) to glyph
+    /// index `end` (excluded), clipping it to the rectangle given by
+    /// `clipLeft`, `clipRight`, `clipTop`, and `clipBottom`.
+    ///
+    /// See the other overloads of fill() for documentation of the remaining
+    /// arguments.
+    ///
+    void fill(core::FloatArray& data,
+              const geometry::Vec2f& origin,
+              float r, float g, float b,
+              Int start, Int end,
+              float clipLeft, float clipRight,
+              float clipTop, float clipBottom) const;
+
     /// Returns the byte position in the original text corresponding to the
     /// grapheme boundary closest to the given mouse position.
     ///
