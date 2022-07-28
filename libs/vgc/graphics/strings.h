@@ -34,6 +34,8 @@ VGC_GRAPHICS_API extern const core::StringId padding_left;
 VGC_GRAPHICS_API extern const core::StringId padding_right;
 VGC_GRAPHICS_API extern const core::StringId padding_top;
 VGC_GRAPHICS_API extern const core::StringId pixel_hinting;
+VGC_GRAPHICS_API extern const core::StringId selection_background_color;
+VGC_GRAPHICS_API extern const core::StringId selection_text_color;
 VGC_GRAPHICS_API extern const core::StringId text_color;
 VGC_GRAPHICS_API extern const core::StringId text_horizontal_align;
 VGC_GRAPHICS_API extern const core::StringId text_vertical_align;

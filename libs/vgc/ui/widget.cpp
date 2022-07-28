@@ -418,15 +418,14 @@ void Widget::setFocus()
 
 void Widget::clearFocus()
 {
-    Widget* w = focusedWidget();
-    if (w) {
-        if (isTreeActive()) {
-            w->onFocusOut();
-        }
-        while (w) {
-            w->focus_ = nullptr;
-            w = w->parent();
-        }
+    Widget* oldFocusedWidget = focusedWidget();
+    Widget* ancestor = oldFocusedWidget;
+    while (ancestor) {
+        ancestor->focus_ = nullptr;
+        ancestor = ancestor->parent();
+    }
+    if (oldFocusedWidget && isTreeActive()) {
+        oldFocusedWidget->onFocusOut();
     }
 }
 

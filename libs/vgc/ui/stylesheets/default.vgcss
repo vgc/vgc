@@ -5,13 +5,16 @@
     margin-right: 5dp;
     margin-bottom: 5dp;
     margin-left: 5dp;
+    pixel-hinting: normal;
+    text-color: rgb(221, 221, 221);
+    selection-text-color: rgb(221, 221, 221);
+    selection-background-color: rgb(11, 82, 172);
 }
 
 .Button {
     background-color: rgb(44, 46, 47);
     background-color-on-hover: rgb(11, 82, 172);
     border-radius: 3dp;
-    text-color: rgb(221, 221, 221);
     preferred-width: auto;
     preferred-height: 28dp;
 }
@@ -19,7 +22,6 @@
 .LineEdit {
     background-color: rgb(44, 46, 47);
     border-radius: 3dp;
-    text-color: rgb(221, 221, 221);
     text-horizontal-align: left;
     text-vertical-align: middle;
     preferred-width: auto;
@@ -33,7 +35,6 @@
     padding-right: 5dp;
     padding-bottom: 5dp;
     padding-left: 5dp;
-    pixel-hinting: normal;
 }
 
 .ColorPalette {

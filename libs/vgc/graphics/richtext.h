@@ -209,29 +209,83 @@ public:
     ///
     bool isCursorVisible() const
     {
-        return textCursor_.isVisible();
+        return isCursorVisible_;
     }
 
     /// Sets whether the cursor is visible.
     ///
     void setCursorVisible(bool isVisible)
     {
-        textCursor_.setVisible(isVisible);
+        isCursorVisible_ = isVisible;
         updateScroll_();
     }
+
+    /// Returns whether the selection is visible.
+    ///
+    bool isSelectionVisible() const
+    {
+        return isSelectionVisible_;
+    }
+
+    /// Sets whether the selection is visible.
+    ///
+    void setSelectionVisible(bool isVisible)
+    {
+        isSelectionVisible_ = isVisible;
+        updateScroll_();
+    }
+
+    void setSelectionBeginBytePosition(Int bytePosition)
+    {
+        selectionBegin_ = bytePosition;
+    }
+
+    void setSelectionEndBytePosition(Int bytePosition)
+    {
+        selectionEnd_ = bytePosition;
+        updateScroll_();
+    }
+
+    void clearSelection()
+    {
+        selectionBegin_ = selectionEnd_;
+    }
+
+    bool hasSelection()
+    {
+        return selectionBegin_ != selectionEnd_;
+    }
+
+    /// Deletes the selected text, and change the selection to a cursor
+    /// where the text was previously located.
+    ///
+    void deleteSelectedText();
+
+    /// Deletes the selected text if there is a selection. Otherwise, deletes
+    /// the `boundaryType` entity (grapheme, word, line, etc.) immediately
+    /// after the cursor.
+    ///
+    void deleteNext(TextBoundaryType boundaryType);
+
+    /// Deletes the selected text if there is a selection. Otherwise, deletes
+    /// the `boundaryType` entity (grapheme, word, line, etc.) immediately
+    /// before the cursor.
+    ///
+    void deletePrevious(TextBoundaryType boundaryType);
 
     /// Returns the position in byte of the cursor.
     ///
     Int cursorBytePosition() const
     {
-        return textCursor_.bytePosition();
+        return selectionEnd_;
     }
 
     /// Sets the position in byte of the cursor.
     ///
     void setCursorBytePosition(Int bytePosition)
     {
-        textCursor_.setBytePosition(bytePosition);
+        selectionBegin_ = bytePosition;
+        selectionEnd_ = bytePosition;
         updateScroll_();
     }
 
@@ -282,7 +336,10 @@ private:
     std::string text_;
     geometry::Rect2f rect_;
     graphics::ShapedText shapedText_;
-    graphics::TextCursor textCursor_;
+    bool isSelectionVisible_;
+    bool isCursorVisible_;
+    Int selectionBegin_;
+    Int selectionEnd_;
     float horizontalScroll_ = 0.0f;
 
     geometry::Vec2f graphemeAdvance_(Int bytePosition) const;

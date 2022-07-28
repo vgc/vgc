@@ -31,6 +31,7 @@ namespace colors
 
 const Color transparent = Color(0, 0, 0, 0); ///< Predefined color equals to Color(0, 0, 0, 0)
 const Color black = Color(0, 0, 0); ///< Predefined color equals to Color(0, 0, 0)
+const Color white = Color(0, 0, 0); ///< Predefined color equals to Color(0, 0, 0)
 const Color red = Color(1, 0, 0); ///< Predefined color equals to Color(1, 0, 0)
 const Color green = Color(0, 1, 0); ///< Predefined color equals to Color(0, 1, 0)
 const Color blue = Color(0, 0, 1); ///< Predefined color equals to Color(0, 0, 1)

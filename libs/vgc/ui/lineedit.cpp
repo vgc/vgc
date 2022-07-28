@@ -129,16 +129,34 @@ void LineEdit::onPaintDestroy(graphics::Engine*)
 bool LineEdit::onMouseMove(MouseEvent* event)
 {
     if (isMousePressed_) {
-        updateBytePosition_(event->pos());
+        geometry::Vec2f mousePosition = event->pos();
+        geometry::Vec2f mouseOffset = richText_->rect().pMin();
+
+        Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
+        richText_->setSelectionEndBytePosition(bytePosition);
+
+        isMousePressed_ = true;
+        reload_ = true;
+        setFocus();
+        repaint();
+        return true;
     }
     return true;
 }
 
 bool LineEdit::onMousePress(MouseEvent* event)
 {
+    geometry::Vec2f mousePosition = event->pos();
+    geometry::Vec2f mouseOffset = richText_->rect().pMin();
+
+    Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
+    richText_->setSelectionBeginBytePosition(bytePosition);
+    richText_->setSelectionEndBytePosition(bytePosition);
+
     isMousePressed_ = true;
+    reload_ = true;
     setFocus();
-    updateBytePosition_(event->pos());
+    repaint();
     return true;
 }
 
@@ -162,6 +180,7 @@ bool LineEdit::onMouseLeave()
 
 bool LineEdit::onFocusIn()
 {
+    richText_->setSelectionVisible(true);
     richText_->setCursorVisible(true);
     reload_ = true;
     repaint();
@@ -170,6 +189,14 @@ bool LineEdit::onFocusIn()
 
 bool LineEdit::onFocusOut()
 {
+    // Focus out can occur in two different situations:
+    // 1. Another widget in the same window gained the focus. In this
+    //    case, we want to clear the selection and make the cursor invisible.
+    // 2. Another window gained the focus. In this case, we keep the
+    //    selection, and simply make the cursor invisible.
+    if (!isFocusedWidget()) {
+        richText_->clearSelection();
+    }
     richText_->setCursorVisible(false);
     reload_ = true;
     repaint();
@@ -180,31 +207,18 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
 {
     int key = event->key();
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
-        Int p1_ = richText_->cursorBytePosition();
-        Int p2_ = -1;
         graphics::TextBoundaryType boundaryType =
                 (event->modifiers().testFlag(Qt::ControlModifier)) ?
                     graphics::TextBoundaryType::Word :
                     graphics::TextBoundaryType::Grapheme;
-        graphics::TextBoundaryIterator it(boundaryType, text());
-        it.setPosition(p1_);
         if (key == Qt::Key_Delete) {
-            p2_ = it.toNextBoundary();
+            richText_->deleteNext(boundaryType);
         }
-        else { // Backspace
-            p2_ = p1_;
-            p1_ = it.toPreviousBoundary();
+        else { // backspace
+            richText_->deletePrevious(boundaryType);
         }
-        if (p1_ != -1 && p2_ != -1) {
-            size_t p1 = core::int_cast<size_t>(p1_);
-            size_t p2 = core::int_cast<size_t>(p2_);
-            std::string newText;
-            newText.reserve(text().size() - (p2 - p1));
-            newText.append(text(), 0, p1);
-            newText.append(text(), p2);
-            richText_->setCursorBytePosition(p1_);
-            setText(newText);
-        }
+        reload_ = true;
+        repaint();
         return true;
     }
     else if (key == Qt::Key_Home) {
