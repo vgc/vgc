@@ -16,6 +16,8 @@
 
 #include <vgc/ui/lineedit.h>
 
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QKeyEvent>
 
 #include <vgc/core/array.h>
@@ -26,8 +28,7 @@
 
 #include <vgc/ui/internal/paintutil.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 LineEdit::LineEdit(std::string_view text) :
     Widget(),
@@ -160,9 +161,25 @@ bool LineEdit::onMousePress(MouseEvent* event)
     return true;
 }
 
+namespace {
+
+void copyToClipboard_(std::string_view text, QClipboard::Mode mode = QClipboard::Clipboard)
+{
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    size_t size = core::clamp(text.size(), 0, core::tmax<int>);
+    QString qtext = QString::fromUtf8(text.data(), static_cast<int>(size));
+    clipboard->setText(qtext, mode);
+}
+
+} // namespace
+
 bool LineEdit::onMouseRelease(MouseEvent* /*event*/)
 {
+    static bool supportsSelection = QGuiApplication::clipboard()->supportsSelection();
     isMousePressed_ = false;
+    if (supportsSelection && richText_->hasSelection()) {
+        copyToClipboard_(richText_->selectedTextView(), QClipboard::Selection);
+    }
     return true;
 }
 
@@ -206,11 +223,11 @@ bool LineEdit::onFocusOut()
 bool LineEdit::onKeyPress(QKeyEvent* event)
 {
     int key = event->key();
+    bool ctrl = event->modifiers().testFlag(Qt::ControlModifier);
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
-        graphics::TextBoundaryType boundaryType =
-                (event->modifiers().testFlag(Qt::ControlModifier)) ?
-                    graphics::TextBoundaryType::Word :
-                    graphics::TextBoundaryType::Grapheme;
+        graphics::TextBoundaryType boundaryType = ctrl
+                ? graphics::TextBoundaryType::Word
+                : graphics::TextBoundaryType::Grapheme;
         if (key == Qt::Key_Delete) {
             richText_->deleteNext(boundaryType);
         }
@@ -263,7 +280,53 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         }
         return true;
     }
-    else {
+    else if (ctrl && key == Qt::Key_X) {
+        if (richText_->hasSelection()) {
+            copyToClipboard_(richText_->selectedTextView());
+            richText_->deleteSelectedText();
+            reload_ = true;
+            repaint();
+        }
+        return true;
+    }
+    else if (ctrl && key == Qt::Key_C) {
+        if (richText_->hasSelection()) {
+            copyToClipboard_(richText_->selectedTextView());
+        }
+        return true;
+    }
+    else if (ctrl && key == Qt::Key_V) {
+        bool needsRepaint = false;
+        if (richText_->hasSelection()) {
+            richText_->deleteSelectedText();
+            needsRepaint = true;
+        }
+        QClipboard* clipboard = QGuiApplication::clipboard();
+        std::string t = clipboard->text().toStdString();
+        if (!t.empty()) {
+            size_t p = core::int_cast<size_t>(richText_->cursorBytePosition());
+            std::string newText;
+            newText.reserve(text().size() + t.size());
+            newText.append(text(), 0, p);
+            newText.append(t);
+            newText.append(text(), p);
+            richText_->setText(newText);
+            richText_->setCursorBytePosition(p + t.size());
+            needsRepaint = true;
+        }
+        if (needsRepaint) {
+            reload_ = true;
+            repaint();
+        }
+        return true;
+    }
+    else if (ctrl && key == Qt::Key_A) {
+        richText_->selectAll();
+        reload_ = true;
+        repaint();
+        return true;
+    }
+    else if (!ctrl) {
         std::string t = event->text().toStdString();
         if (!t.empty()) {
             size_t p = core::int_cast<size_t>(richText_->cursorBytePosition());
@@ -281,6 +344,9 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         else {
             return false;
         }
+    }
+    else {
+        return false;
     }
 }
 
@@ -321,5 +387,4 @@ void LineEdit::updateBytePosition_(const geometry::Vec2f& mousePosition)
     }
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
