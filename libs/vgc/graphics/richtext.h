@@ -256,6 +256,20 @@ public:
         return selectionBegin_ != selectionEnd_;
     }
 
+    void selectAll()
+    {
+        selectionBegin_ = 0;
+        selectionEnd_ = static_cast<Int>(text_.size());
+    }
+
+    /// Returns the subset of `text()` that is selected, as an 'std::string`.
+    ///
+    std::string selectedText() const;
+
+    /// Returns the subset of `text()` that is selected, as an `std::string_view`.
+    ///
+    std::string_view selectedTextView() const;
+
     /// Deletes the selected text, and change the selection to a cursor
     /// where the text was previously located.
     ///

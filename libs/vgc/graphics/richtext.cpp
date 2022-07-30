@@ -494,6 +494,20 @@ void RichText::fill(core::FloatArray& a)
     }
 }
 
+std::string RichText::selectedText() const {
+    return std::string(selectedTextView());
+}
+
+std::string_view RichText::selectedTextView() const {
+    Int begin = selectionBegin_;
+    Int end = selectionEnd_;
+    if (begin > end) {
+        std::swap(begin, end);
+    }
+    std::string_view res(text_);
+    return res.substr(begin, end - begin);
+}
+
 void RichText::deleteSelectedText()
 {
     if (hasSelection()) {
