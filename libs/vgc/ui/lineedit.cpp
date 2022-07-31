@@ -35,7 +35,7 @@ LineEdit::LineEdit(std::string_view text) :
     richText_(graphics::RichText::create()),
     reload_(true),
     isHovered_(false),
-    isMousePressed_(false)
+    mouseButton_(MouseButton::None)
 {
     addStyleClass(strings::LineEdit);
     setText(text);
@@ -129,32 +129,44 @@ void LineEdit::onPaintDestroy(graphics::Engine*)
 
 bool LineEdit::onMouseMove(MouseEvent* event)
 {
-    if (isMousePressed_) {
+    if (mouseButton_ == MouseButton::Left) {
         geometry::Vec2f mousePosition = event->pos();
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
-
         Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
         richText_->setSelectionEndBytePosition(bytePosition);
-
-        isMousePressed_ = true;
         reload_ = true;
-        setFocus();
         repaint();
-        return true;
     }
     return true;
 }
 
 bool LineEdit::onMousePress(MouseEvent* event)
 {
-    geometry::Vec2f mousePosition = event->pos();
-    geometry::Vec2f mouseOffset = richText_->rect().pMin();
+    // Only support one mouse button at a time
+    if (mouseButton_ != MouseButton::None) {
+        return false;
+    }
+    mouseButton_ = event->button();
 
-    Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
-    richText_->setSelectionBeginBytePosition(bytePosition);
-    richText_->setSelectionEndBytePosition(bytePosition);
+    // Change cursor position on press of any of the 3 standard mouse buttons
+    if (mouseButton_ == MouseButton::Left ||
+        mouseButton_ == MouseButton::Right ||
+        mouseButton_ == MouseButton::Middle) {
 
-    isMousePressed_ = true;
+        geometry::Vec2f mousePosition = event->pos();
+        geometry::Vec2f mouseOffset = richText_->rect().pMin();
+        Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
+        richText_->setSelectionBeginBytePosition(bytePosition);
+        richText_->setSelectionEndBytePosition(bytePosition);
+    }
+
+    // Perform extra actions on some buttons
+    if (mouseButton_ == MouseButton::Middle) {
+        QClipboard* clipboard = QGuiApplication::clipboard();
+        std::string t = clipboard->text(QClipboard::Selection).toStdString();
+        richText_->insertText(t);
+    }
+
     reload_ = true;
     setFocus();
     repaint();
@@ -171,15 +183,28 @@ void copyToClipboard_(std::string_view text, QClipboard::Mode mode = QClipboard:
     clipboard->setText(qtext, mode);
 }
 
-} // namespace
-
-bool LineEdit::onMouseRelease(MouseEvent* /*event*/)
+void copyToX11SelectionClipboard_(graphics::RichText* richText)
 {
     static bool supportsSelection = QGuiApplication::clipboard()->supportsSelection();
-    isMousePressed_ = false;
-    if (supportsSelection && richText_->hasSelection()) {
-        copyToClipboard_(richText_->selectedTextView(), QClipboard::Selection);
+    if (supportsSelection && richText->hasSelection()) {
+        copyToClipboard_(richText->selectedTextView(), QClipboard::Selection);
     }
+}
+
+} // namespace
+
+bool LineEdit::onMouseRelease(MouseEvent* event)
+{
+    // Only support one mouse button at a time
+    if (mouseButton_ != event->button()) {
+        return false;
+    }
+
+    if (mouseButton_ == MouseButton::Left) {
+        copyToX11SelectionClipboard_(richText_.get());
+    }
+
+    mouseButton_ = MouseButton::None;
     return true;
 }
 
@@ -229,6 +254,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     int key = event->key();
     bool ctrl = event->modifiers().testFlag(Qt::ControlModifier);
     bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
+    bool isMoveOperation = false;
 
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
         graphics::TextBoundaryType boundaryType = ctrl
@@ -243,9 +269,11 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     }
     else if (key == Qt::Key_Home) {
         richText_->moveCursor(ctrl ? Op::StartOfText : Op::StartOfLine, shift);
+        isMoveOperation = true;
     }
     else if (key == Qt::Key_End) {
         richText_->moveCursor(ctrl ? Op::EndOfText : Op::EndOfLine, shift);
+        isMoveOperation = true;
     }
     else if (key == Qt::Key_Left) {
         if (richText_->hasSelection() && !shift) {
@@ -254,6 +282,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         else {
             richText_->moveCursor(ctrl ? Op::LeftOneWord : Op::LeftOneCharacter, shift);
         }
+        isMoveOperation = true;
     }
     else if (key == Qt::Key_Right) {
         if (richText_->hasSelection() && !shift) {
@@ -262,6 +291,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         else {
             richText_->moveCursor(ctrl ? Op::RightOneWord : Op::RightOneCharacter, shift);
         }
+        isMoveOperation = true;
     }
     else if (ctrl && key == Qt::Key_X) {
         if (richText_->hasSelection()) {
@@ -298,6 +328,12 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     else {
         handled = false;
     }
+
+    // X11 selection clipboard
+    if (shift && isMoveOperation) {
+        copyToX11SelectionClipboard_(richText_.get());
+    }
+
     if (needsRepaint) {
         reload_ = true;
         repaint();
