@@ -236,7 +236,7 @@ void RichText::setText(std::string_view text)
     if (text_ != text) {
         text_ = text;
         shapedText_.setText(text);
-        Int n = core::int_cast<Int>(text.size());
+        Int n = static_cast<Int>(text.size());
         core::clamp(selectionBegin_, 0, n);
         core::clamp(selectionEnd_, 0, n);
         updateScroll_();
@@ -494,6 +494,113 @@ void RichText::fill(core::FloatArray& a)
     }
 }
 
+namespace {
+
+Int getNextBoundary(const std::string& text,
+                    Int currentPos,
+                    TextBoundaryType boundaryType) {
+    // TODO: cache the TextBoundaryIterator instead of creating a new one each time
+    TextBoundaryIterator it(boundaryType, text);
+    it.setPosition(currentPos);
+    Int res = it.toNextBoundary();
+    if (res == -1) {
+        res = static_cast<Int>(text.size());
+    }
+    return res;
+}
+
+Int getPreviousBoundary(const std::string& text,
+                        Int currentPos,
+                        TextBoundaryType boundaryType) {
+    TextBoundaryIterator it(boundaryType, text);
+    it.setPosition(currentPos);
+    Int res = it.toPreviousBoundary();
+    if (res == -1) {
+        res = 0;
+    }
+    return res;
+}
+
+} // namespace
+
+void RichText::moveCursor(RichTextMoveOperation operation, bool select) {
+    switch (operation) {
+    case NoMove:
+        break;
+    case StartOfLine:
+        // TODO: update this when adding support for multiline text
+        selectionEnd_ = 0;
+        break;
+    case StartOfText:
+        selectionEnd_ = 0;
+        break;
+    case StartOfSelection:
+        if (selectionEnd_ > selectionBegin_) {
+            selectionEnd_ = selectionBegin_;
+        }
+        break;
+    case EndOfLine:
+        // TODO: update this when adding support for multiline text
+        selectionEnd_ = static_cast<Int>(text_.size());
+        break;
+    case EndOfText:
+        selectionEnd_ = static_cast<Int>(text_.size());
+        break;
+    case EndOfSelection:
+        if (selectionEnd_ < selectionBegin_) {
+            selectionEnd_ = selectionBegin_;
+        }
+        break;
+    case PreviousCharacter:
+        selectionEnd_ = getPreviousBoundary(
+                text_, selectionEnd_, TextBoundaryType::Grapheme);
+        break;
+    case PreviousWord:
+        selectionEnd_ = getPreviousBoundary(
+                text_, selectionEnd_, TextBoundaryType::Word);
+        break;
+    case NextCharacter:
+        selectionEnd_ = getNextBoundary(
+                text_, selectionEnd_, TextBoundaryType::Grapheme);
+        break;
+    case NextWord:
+        selectionEnd_ = getNextBoundary(
+                text_, selectionEnd_, TextBoundaryType::Word);
+        break;
+    // TODO: map left/right to next/previous if text direction is rtl
+    case LeftOneCharacter:
+        selectionEnd_ = getPreviousBoundary(
+                text_, selectionEnd_, TextBoundaryType::Grapheme);
+        break;
+    case LeftOneWord:
+        selectionEnd_ = getPreviousBoundary(
+                text_, selectionEnd_, TextBoundaryType::Word);
+        break;
+    case LeftOfSelection:
+        if (selectionEnd_ > selectionBegin_) {
+            selectionEnd_ = selectionBegin_;
+        }
+        break;
+    case RightOneCharacter:
+        selectionEnd_ = getNextBoundary(
+                text_, selectionEnd_, TextBoundaryType::Grapheme);
+        break;
+    case RightOneWord:
+        selectionEnd_ = getNextBoundary(
+                text_, selectionEnd_, TextBoundaryType::Word);
+        break;
+    case RightOfSelection:
+        if (selectionEnd_ < selectionBegin_) {
+            selectionEnd_ = selectionBegin_;
+        }
+        break;
+    }
+    if (!select) {
+        selectionBegin_ = selectionEnd_;
+    }
+    updateScroll_();
+}
+
 std::string RichText::selectedText() const {
     return std::string(selectedTextView());
 }
@@ -514,8 +621,8 @@ void RichText::deleteSelectedText()
         if (selectionBegin_ > selectionEnd_) {
             std::swap(selectionBegin_, selectionEnd_);
         }
-        size_t p1 = core::int_cast<size_t>(selectionBegin_);
-        size_t p2 = core::int_cast<size_t>(selectionEnd_);
+        size_t p1 = static_cast<size_t>(selectionBegin_);
+        size_t p2 = static_cast<size_t>(selectionEnd_);
         selectionEnd_ = selectionBegin_;
         std::string newText;
         newText.reserve(text().size() - (p2 - p1));
@@ -549,6 +656,26 @@ void RichText::deletePrevious(TextBoundaryType boundaryType)
         }
     }
     deleteSelectedText();
+}
+
+void RichText::insertText(std::string_view textToInsert)
+{
+    if (hasSelection()) {
+        deleteSelectedText();
+    }
+    if (!textToInsert.empty()) {
+        Int previousCursor = selectionEnd_;
+        size_t p = static_cast<size_t>(previousCursor);
+        std::string newText;
+        newText.reserve(text_.size() + textToInsert.size());
+        newText.append(text_, 0, p);
+        newText.append(textToInsert);
+        newText.append(text_, p);
+        setText(newText);
+        selectionEnd_ = previousCursor + static_cast<Int>(textToInsert.size());
+        selectionBegin_ = selectionEnd_;
+        updateScroll_();
+    }
 }
 
 Int RichText::bytePosition(const geometry::Vec2f& mousePosition)

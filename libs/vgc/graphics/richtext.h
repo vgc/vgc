@@ -30,6 +30,26 @@ namespace vgc::graphics {
 VGC_DECLARE_OBJECT(RichText);
 VGC_DECLARE_OBJECT(RichTextSpan);
 
+enum RichTextMoveOperation {
+    NoMove,
+    StartOfLine,
+    StartOfText,
+    StartOfSelection,
+    EndOfLine,
+    EndOfText,
+    EndOfSelection,
+    PreviousCharacter,
+    PreviousWord,
+    NextCharacter,
+    NextWord,
+    LeftOneCharacter,
+    LeftOneWord,
+    LeftOfSelection,
+    RightOneCharacter,
+    RightOneWord,
+    RightOfSelection
+};
+
 /// \class vgc::graphics::RichTextSpan
 /// \brief One element in a RichText tree
 ///
@@ -235,6 +255,14 @@ public:
         updateScroll_();
     }
 
+    /// Moves the cursor according to the given operation. If `select` is false
+    /// (the default), then the selection is cleared. If `select` is true, then
+    /// the current selection is modified to integrate the given operation
+    /// (typically, this mode is used when a user presses `Shift`).
+    ///
+    void moveCursor(RichTextMoveOperation operation, bool select = false);
+
+
     void setSelectionBeginBytePosition(Int bytePosition)
     {
         selectionBegin_ = bytePosition;
@@ -286,6 +314,12 @@ public:
     /// before the cursor.
     ///
     void deletePrevious(TextBoundaryType boundaryType);
+
+    /// Inserts the given text at the current cursor location, and set the cursor at the end
+    /// of the newly inserted text. If there was a selection prior to inserting the text, the
+    /// selection is deleted.
+    ///
+    void insertText(std::string_view text);
 
     /// Returns the position in byte of the cursor.
     ///
