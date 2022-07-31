@@ -87,7 +87,7 @@ private:
     graphics::TrianglesBufferPtr triangles_;
     bool reload_;
     bool isHovered_;
-    bool isMousePressed_;
+    ui::MouseButton mouseButton_; // == `None` if no mouse button pressed
 };
 
 } // namespace vgc::ui

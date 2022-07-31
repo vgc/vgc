@@ -114,12 +114,14 @@ namespace {
 
 ui::MouseEventPtr convertEvent(QMouseEvent* event)
 {
+    Qt::MouseButton qbutton = event->button();
+    ui::MouseButton button = static_cast<ui::MouseButton>(qbutton);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QPointF& p = event->localPos();
 #else
     const QPointF& p = event->position();
 #endif
-    return ui::MouseEvent::create(internal::fromQtf(p));
+    return ui::MouseEvent::create(button, internal::fromQtf(p));
 }
 
 } // namespace
