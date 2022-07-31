@@ -222,8 +222,14 @@ bool LineEdit::onFocusOut()
 
 bool LineEdit::onKeyPress(QKeyEvent* event)
 {
+    using Op = graphics::RichTextMoveOperation;
+
+    bool handled = true;
+    bool needsRepaint = true;
     int key = event->key();
     bool ctrl = event->modifiers().testFlag(Qt::ControlModifier);
+    bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
+
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
         graphics::TextBoundaryType boundaryType = ctrl
                 ? graphics::TextBoundaryType::Word
@@ -234,120 +240,69 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         else { // backspace
             richText_->deletePrevious(boundaryType);
         }
-        reload_ = true;
-        repaint();
-        return true;
     }
     else if (key == Qt::Key_Home) {
-        Int p1 = richText_->cursorBytePosition();
-        Int home = 0;
-        if (p1 != home) {
-            richText_->setCursorBytePosition(home);
-            reload_ = true;
-            repaint();
-        }
-        return true;
+        richText_->moveCursor(ctrl ? Op::StartOfText : Op::StartOfLine, shift);
     }
     else if (key == Qt::Key_End) {
-        Int p1 = richText_->cursorBytePosition();
-        Int end = core::int_cast<Int>(text().size());
-        if (p1 != end) {
-            richText_->setCursorBytePosition(end);
-            reload_ = true;
-            repaint();
-        }
-        return true;
+        richText_->moveCursor(ctrl ? Op::EndOfText : Op::EndOfLine, shift);
     }
-    else if (key == Qt::Key_Left || key == Qt::Key_Right) {
-        Int p1 = richText_->cursorBytePosition();
-        Int p2 = -1;
-        graphics::TextBoundaryType boundaryType =
-                (event->modifiers().testFlag(Qt::ControlModifier)) ?
-                    graphics::TextBoundaryType::Word :
-                    graphics::TextBoundaryType::Grapheme;
-        graphics::TextBoundaryIterator it(boundaryType, text());
-        it.setPosition(p1);
-        if (key == Qt::Key_Left) {
-            p2 = it.toPreviousBoundary();
+    else if (key == Qt::Key_Left) {
+        if (richText_->hasSelection() && !shift) {
+            richText_->moveCursor(Op::LeftOfSelection);
         }
-        else { // Right
-            p2 = it.toNextBoundary();
+        else {
+            richText_->moveCursor(ctrl ? Op::LeftOneWord : Op::LeftOneCharacter, shift);
         }
-        if (p2 != -1 && p1 != p2) {
-            richText_->setCursorBytePosition(it.position());
-            reload_ = true;
-            repaint();
+    }
+    else if (key == Qt::Key_Right) {
+        if (richText_->hasSelection() && !shift) {
+            richText_->moveCursor(Op::RightOfSelection);
         }
-        return true;
+        else {
+            richText_->moveCursor(ctrl ? Op::RightOneWord : Op::RightOneCharacter, shift);
+        }
     }
     else if (ctrl && key == Qt::Key_X) {
         if (richText_->hasSelection()) {
             copyToClipboard_(richText_->selectedTextView());
             richText_->deleteSelectedText();
-            reload_ = true;
-            repaint();
         }
-        return true;
+        else {
+            needsRepaint = false;
+        }
     }
     else if (ctrl && key == Qt::Key_C) {
         if (richText_->hasSelection()) {
             copyToClipboard_(richText_->selectedTextView());
         }
-        return true;
+        needsRepaint = false;
     }
     else if (ctrl && key == Qt::Key_V) {
-        bool needsRepaint = false;
-        if (richText_->hasSelection()) {
-            richText_->deleteSelectedText();
-            needsRepaint = true;
-        }
         QClipboard* clipboard = QGuiApplication::clipboard();
         std::string t = clipboard->text().toStdString();
-        if (!t.empty()) {
-            size_t p = core::int_cast<size_t>(richText_->cursorBytePosition());
-            std::string newText;
-            newText.reserve(text().size() + t.size());
-            newText.append(text(), 0, p);
-            newText.append(t);
-            newText.append(text(), p);
-            richText_->setText(newText);
-            richText_->setCursorBytePosition(p + t.size());
-            needsRepaint = true;
-        }
-        if (needsRepaint) {
-            reload_ = true;
-            repaint();
-        }
-        return true;
+        richText_->insertText(t);
     }
     else if (ctrl && key == Qt::Key_A) {
         richText_->selectAll();
-        reload_ = true;
-        repaint();
-        return true;
     }
     else if (!ctrl) {
         std::string t = event->text().toStdString();
         if (!t.empty()) {
-            size_t p = core::int_cast<size_t>(richText_->cursorBytePosition());
-            std::string newText;
-            newText.reserve(text().size() + t.size());
-            newText.append(text(), 0, p);
-            newText.append(t);
-            newText.append(text(), p);
-            richText_->setText(newText);
-            richText_->setCursorBytePosition(p + t.size());
-            reload_ = true;
-            repaint();
-            return true;
+            richText_->insertText(t);
         }
         else {
-            return false;
+            handled = false;
         }
     }
     else {
-        return false;
+        handled = false;
     }
+    if (needsRepaint) {
+        reload_ = true;
+        repaint();
+    }
+    return handled;
 }
 
 geometry::Vec2f LineEdit::computePreferredSize() const
