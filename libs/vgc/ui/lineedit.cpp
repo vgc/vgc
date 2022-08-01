@@ -316,9 +316,16 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     else if (ctrl && key == Qt::Key_A) {
         richText_->selectAll();
     }
+    else if (key == Qt::Key_Escape) {
+        handled = false;
+    }
+    else if (key == Qt::Key_Tab) {
+        handled = false;
+    }
     else if (!ctrl) {
         std::string t = event->text().toStdString();
-        if (!t.empty()) {
+        bool isControlCharacter = (t.size() == 1) && (t[0] >= 0) && (t[0] < 32);
+        if (!t.empty() && !isControlCharacter) {
             richText_->insertText(t);
         }
         else {

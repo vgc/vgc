@@ -211,14 +211,16 @@ graphics::SizedFont* getDefaultSizedFont_()
 
 RichText::RichText(std::string_view text)
     : parentStylableObject_(nullptr)
-    , text_(text)
+    , text_()
     , shapedText_(getDefaultSizedFont_(), text)
     , isSelectionVisible_(false)
     , isCursorVisible_(false)
     , selectionBegin_(0)
     , selectionEnd_(0)
-    , horizontalScroll_(0.0f)
-{
+    , horizontalScroll_(0.0f) {
+
+    insertText_(text);
+    updateScroll_();
 }
 
 RichTextPtr RichText::create()
@@ -234,11 +236,13 @@ RichTextPtr RichText::create(std::string_view text)
 void RichText::setText(std::string_view text)
 {
     if (text_ != text) {
-        text_ = text;
-        shapedText_.setText(text);
-        Int n = static_cast<Int>(text.size());
-        core::clamp(selectionBegin_, 0, n);
-        core::clamp(selectionEnd_, 0, n);
+        Int oldSelectionBegin = selectionBegin_;
+        Int oldSelectionEnd = selectionEnd_;
+        text_.clear();
+        insertText_(text);
+        Int textSize = static_cast<Int>(text_.size());
+        selectionBegin_ = core::clamp(oldSelectionBegin, 0, textSize);
+        selectionEnd_ = core::clamp(oldSelectionEnd, 0, textSize);
         updateScroll_();
     }
 }
@@ -624,11 +628,9 @@ void RichText::deleteSelectedText()
         size_t p1 = static_cast<size_t>(selectionBegin_);
         size_t p2 = static_cast<size_t>(selectionEnd_);
         selectionEnd_ = selectionBegin_;
-        std::string newText;
-        newText.reserve(text().size() - (p2 - p1));
-        newText.append(text(), 0, p1);
-        newText.append(text(), p2);
-        setText(newText);
+        text_.erase(p1, p2 - p1);
+        shapedText_.setText(text_);
+        updateScroll_();
     }
 }
 
@@ -658,24 +660,13 @@ void RichText::deletePrevious(TextBoundaryType boundaryType)
     deleteSelectedText();
 }
 
-void RichText::insertText(std::string_view textToInsert)
+void RichText::insertText(std::string_view text)
 {
     if (hasSelection()) {
         deleteSelectedText();
     }
-    if (!textToInsert.empty()) {
-        Int previousCursor = selectionEnd_;
-        size_t p = static_cast<size_t>(previousCursor);
-        std::string newText;
-        newText.reserve(text_.size() + textToInsert.size());
-        newText.append(text_, 0, p);
-        newText.append(textToInsert);
-        newText.append(text_, p);
-        setText(newText);
-        selectionEnd_ = previousCursor + static_cast<Int>(textToInsert.size());
-        selectionBegin_ = selectionEnd_;
-        updateScroll_();
-    }
+    insertText_(text);
+    updateScroll_();
 }
 
 Int RichText::bytePosition(const geometry::Vec2f& mousePosition)
@@ -720,6 +711,46 @@ void RichText::updateScroll_()
             horizontalScroll_ = cursorAdvance - textWidth;
         }
     }
+}
+
+void RichText::insertText_(std::string_view textToInsert)
+{
+    // Get number of bytes to insert after removing unsupported characters
+    size_t numBytesToInsert = 0;
+    for (char c : textToInsert) {
+        if (c < 0 || c >= 32) {
+            ++numBytesToInsert;
+        }
+    }
+
+    if (numBytesToInsert > 0) {
+        Int oldCursor = selectionEnd_;
+        size_t insertPos = static_cast<size_t>(oldCursor);
+
+        // Resize text_, making space for the text to insert
+        size_t oldSize = text_.size();
+        size_t numBytesToShift = oldSize - insertPos;
+        text_.resize(oldSize + numBytesToInsert);
+        size_t newSize = text_.size();
+        for (size_t i = 1; i <= numBytesToShift; ++i) {
+            text_[newSize - i] = text_[oldSize - i];
+        }
+
+        // Insert the bytes
+        char* cp = &text_[insertPos];
+        for (char c : textToInsert) {
+            if (c < 0 || c >= 32) {
+                *cp = c;
+                ++cp;
+            }
+        }
+
+        // Update selection
+        selectionEnd_ = oldCursor + numBytesToInsert;
+        selectionBegin_ = selectionEnd_;
+    }
+
+    shapedText_.setText(text_);
 }
 
 } // namespace vgc::graphics

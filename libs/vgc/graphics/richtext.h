@@ -315,9 +315,13 @@ public:
     ///
     void deletePrevious(TextBoundaryType boundaryType);
 
-    /// Inserts the given text at the current cursor location, and set the cursor at the end
-    /// of the newly inserted text. If there was a selection prior to inserting the text, the
-    /// selection is deleted.
+    /// Inserts the given text at the current cursor location, and set the
+    /// cursor at the end of the newly inserted text. If there was a selection
+    /// prior to inserting the text, the selection is deleted.
+    ///
+    /// Note that all ASCII control characters (including tabs and newlines)
+    /// are automatically removed from the given text. In future versions of
+    /// the library, tabs and newlines may be supported.
     ///
     void insertText(std::string_view text);
 
@@ -393,6 +397,7 @@ private:
     geometry::Vec2f graphemeAdvance_(Int bytePosition) const;
     float maxCursorHorizontalAdvance_() const;
     void updateScroll_();
+    void insertText_(std::string_view text);
 };
 
 } // namespace vgc::graphics
