@@ -172,7 +172,6 @@ bool LineEdit::onMousePress(MouseEvent* event)
         mouseButton_ == MouseButton::Right ||
         mouseButton_ == MouseButton::Middle) {
 
-        geometry::Vec2f mousePosition = event->pos();
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
         Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
         richText_->setSelectionBeginBytePosition(bytePosition);
