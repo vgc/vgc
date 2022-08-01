@@ -20,6 +20,7 @@
 #include <string_view>
 
 #include <vgc/core/color.h>
+#include <vgc/core/stopwatch.h>
 #include <vgc/graphics/richtext.h>
 #include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
@@ -88,6 +89,11 @@ private:
     bool reload_;
     bool isHovered_;
     ui::MouseButton mouseButton_; // == `None` if no mouse button pressed
+
+    // Handle double/triple clicks
+    core::Stopwatch leftMouseButtonStopwatch_;
+    Int numLeftMouseButtonClicks_;
+    geometry::Vec2f mousePositionOnPress_;
 };
 
 } // namespace vgc::ui

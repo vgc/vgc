@@ -35,7 +35,8 @@ LineEdit::LineEdit(std::string_view text) :
     richText_(graphics::RichText::create()),
     reload_(true),
     isHovered_(false),
-    mouseButton_(MouseButton::None)
+    mouseButton_(MouseButton::None),
+    numLeftMouseButtonClicks_(0)
 {
     addStyleClass(strings::LineEdit);
     setText(text);
@@ -148,6 +149,24 @@ bool LineEdit::onMousePress(MouseEvent* event)
     }
     mouseButton_ = event->button();
 
+    // Handle double/triple left click
+    geometry::Vec2f mousePosition = event->pos();
+    if (mouseButton_ == MouseButton::Left) {
+        if (numLeftMouseButtonClicks_ > 0 &&
+            leftMouseButtonStopwatch_.elapsedMilliseconds() < 500 &&
+            (mousePosition - mousePositionOnPress_).length() < 5) {
+            ++numLeftMouseButtonClicks_;
+        }
+        else {
+            numLeftMouseButtonClicks_ = 1;
+        }
+        leftMouseButtonStopwatch_.restart();
+    }
+    else {
+        numLeftMouseButtonClicks_ = 0;
+    }
+    mousePositionOnPress_ = mousePosition;
+
     // Change cursor position on press of any of the 3 standard mouse buttons
     if (mouseButton_ == MouseButton::Left ||
         mouseButton_ == MouseButton::Right ||
@@ -158,6 +177,19 @@ bool LineEdit::onMousePress(MouseEvent* event)
         Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
         richText_->setSelectionBeginBytePosition(bytePosition);
         richText_->setSelectionEndBytePosition(bytePosition);
+
+        // On multiple left clicks, cycle between set cursor / select word / select line
+        if (numLeftMouseButtonClicks_ >= 2) {
+            Int mod = numLeftMouseButtonClicks_ % 3;
+            if (mod == 2) {
+                richText_->moveCursor(graphics::RichTextMoveOperation::LeftOneWord, false);
+                richText_->moveCursor(graphics::RichTextMoveOperation::RightOneWord, true);
+            }
+            else if (mod == 0) {
+                richText_->moveCursor(graphics::RichTextMoveOperation::StartOfLine, false);
+                richText_->moveCursor(graphics::RichTextMoveOperation::EndOfLine, true);
+            }
+        }
     }
 
     // Perform extra actions on some buttons
