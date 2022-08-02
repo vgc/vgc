@@ -167,9 +167,9 @@ private:
     UInt8 numSamples_ = 1;
     bool isMipGenerationEnabled_ = true;
     Usage usage_ = Usage::Default;
-    ImageBindFlags bindFlags_ = ImageBindFlags::ShaderResource;
-    CpuAccessFlags cpuAccessFlags_ = CpuAccessFlags::None;
-    ResourceMiscFlags resourceMiscFlags_ = ResourceMiscFlags::None;
+    ImageBindFlags bindFlags_ = ImageBindFlag::ShaderResource;
+    CpuAccessFlags cpuAccessFlags_ = CpuAccessFlag::None;
+    ResourceMiscFlags resourceMiscFlags_ = ResourceMiscFlag::None;
 };
 
 /// \class vgc::graphics::Image

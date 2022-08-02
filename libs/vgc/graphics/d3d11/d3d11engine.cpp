@@ -565,22 +565,22 @@ D3D11_USAGE usageToD3DUsage(Usage usage)
 UINT resourceMiscFlagsToD3DResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
 {
     UINT x = 0;
-    if (!!(resourceMiscFlags & ResourceMiscFlags::Shared)) {
+    if (resourceMiscFlags & ResourceMiscFlag::Shared) {
         x |= D3D11_RESOURCE_MISC_SHARED;
     }
-    //if (!!(resourceMiscFlags & ResourceMiscFlags::DrawIndirectArgs)) {
+    //if (resourceMiscFlags & ResourceMiscFlag::DrawIndirectArgs) {
     //    x |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
     //}
-    //if (!!(resourceMiscFlags & ResourceMiscFlags::BufferRaw)) {
+    //if (resourceMiscFlags & ResourceMiscFlag::BufferRaw) {
     //    x |= D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
     //}
-    //if (!!(resourceMiscFlags & ResourceMiscFlags::BufferStructured)) {
+    //if (resourceMiscFlags & ResourceMiscFlag::BufferStructured) {
     //    x |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
     //}
-    //if (!!(resourceMiscFlags & ResourceMiscFlags::ResourceClamp)) {
+    //if (resourceMiscFlags & ResourceMiscFlag::ResourceClamp) {
     //    x |= D3D11_RESOURCE_MISC_RESOURCE_CLAMP;
     //}
-    //if (!!(resourceMiscFlags & ResourceMiscFlags::SharedKeyedMutex)) {
+    //if (resourceMiscFlags & ResourceMiscFlag::SharedKeyedMutex) {
     //    x |= D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
     //}
     return x;
@@ -937,7 +937,7 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
     backBufferImage->object_ = backBuffer;
 
     ImageViewCreateInfo viewCreateInfo = {};
-    viewCreateInfo.setBindFlags(ImageBindFlags::RenderTarget);
+    viewCreateInfo.setBindFlags(ImageBindFlag::RenderTarget);
     D3d11ImageViewPtr colorView(new D3d11ImageView(resourceRegistry_, viewCreateInfo, backBufferImage));
 
     ComPtr<ID3D11RenderTargetView> backBufferView;
@@ -972,35 +972,35 @@ BufferPtr D3d11Engine::constructBuffer_(const BufferCreateInfo& createInfo)
     desc.Usage = usageToD3DUsage(createInfo.usage());
 
     const BindFlags bindFlags = createInfo.bindFlags();
-    if (!!(bindFlags & BindFlags::ConstantBuffer)) {
+    if (bindFlags & BindFlag::ConstantBuffer) {
         desc.BindFlags |= D3D11_BIND_FLAG::D3D11_BIND_CONSTANT_BUFFER;
-        if (bindFlags != BindFlags::ConstantBuffer) {
+        if (bindFlags != BindFlag::ConstantBuffer) {
             throw core::LogicError("D3d11Buffer: BindFlags::UniformBuffer cannot be combined with any other bind flag");
         }
     }
     else {
-        if (!!(bindFlags & BindFlags::VertexBuffer)) {
+        if (bindFlags & BindFlag::VertexBuffer) {
             desc.BindFlags |= D3D11_BIND_VERTEX_BUFFER;
         }
-        if (!!(bindFlags & BindFlags::IndexBuffer)) {
+        if (bindFlags & BindFlag::IndexBuffer) {
             desc.BindFlags |= D3D11_BIND_INDEX_BUFFER;
         }
-        if (!!(bindFlags & BindFlags::ConstantBuffer)) {
+        if (bindFlags & BindFlag::ConstantBuffer) {
             desc.BindFlags |= D3D11_BIND_CONSTANT_BUFFER;
         }
-        if (!!(bindFlags & BindFlags::ShaderResource)) {
+        if (bindFlags & BindFlag::ShaderResource) {
             desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
         }
-        if (!!(bindFlags & BindFlags::RenderTarget)) {
+        if (bindFlags & BindFlag::RenderTarget) {
             desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
         }
-        if (!!(bindFlags & BindFlags::DepthStencil)) {
+        if (bindFlags & BindFlag::DepthStencil) {
             desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
         }
-        if (!!(bindFlags & BindFlags::UnorderedAccess)) {
+        if (bindFlags & BindFlag::UnorderedAccess) {
             desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
         }
-        if (!!(bindFlags & BindFlags::StreamOutput)) {
+        if (bindFlags & BindFlag::StreamOutput) {
             desc.BindFlags |= D3D11_BIND_STREAM_OUTPUT;
         }
     }
@@ -1009,10 +1009,10 @@ BufferPtr D3d11Engine::constructBuffer_(const BufferCreateInfo& createInfo)
     desc.MiscFlags = resourceMiscFlagsToD3DResourceMiscFlags(resourceMiscFlags);
 
     const CpuAccessFlags cpuAccessFlags = createInfo.cpuAccessFlags();
-    if (!!(cpuAccessFlags & CpuAccessFlags::Write)) {
+    if (cpuAccessFlags & CpuAccessFlag::Write) {
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
     }
-    if (!!(cpuAccessFlags & CpuAccessFlags::Read)) {
+    if (cpuAccessFlags & CpuAccessFlag::Read) {
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
     }
 
@@ -1112,7 +1112,7 @@ void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 he
     backBufferImage->object_ = backBuffer;
 
     ImageViewCreateInfo viewCreateInfo = {};
-    viewCreateInfo.setBindFlags(ImageBindFlags::RenderTarget);
+    viewCreateInfo.setBindFlags(ImageBindFlag::RenderTarget);
     D3d11ImageViewPtr colorView(new D3d11ImageView(resourceRegistry_, viewCreateInfo, backBufferImage));
 
     ComPtr<ID3D11RenderTargetView> backBufferView;
@@ -1163,22 +1163,22 @@ void D3d11Engine::initImage_(Image* image, const Span<const Span<const char>>* d
     D3D11_USAGE d3dUsage = usageToD3DUsage(d3dImage->usage());
 
     UINT d3dBindFlags = 0;
-    if (!!(d3dImage->bindFlags() & ImageBindFlags::ShaderResource)) {
+    if (d3dImage->bindFlags() & ImageBindFlag::ShaderResource) {
         d3dBindFlags |= D3D11_BIND_SHADER_RESOURCE;
     }
-    if (!!(d3dImage->bindFlags() & ImageBindFlags::RenderTarget)) {
+    if (d3dImage->bindFlags() & ImageBindFlag::RenderTarget) {
         d3dBindFlags |= D3D11_BIND_RENDER_TARGET;
     }
-    if (!!(d3dImage->bindFlags() & ImageBindFlags::DepthStencil)) {
+    if (d3dImage->bindFlags() & ImageBindFlag::DepthStencil) {
         d3dBindFlags |= D3D11_BIND_DEPTH_STENCIL;
     }
 
     const CpuAccessFlags cpuAccessFlags = d3dImage->cpuAccessFlags();
     UINT d3dCPUAccessFlags = 0;
-    if (!!(cpuAccessFlags & CpuAccessFlags::Write)) {
+    if (cpuAccessFlags & CpuAccessFlag::Write) {
         d3dCPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
     }
-    if (!!(cpuAccessFlags & CpuAccessFlags::Read)) {
+    if (cpuAccessFlags & CpuAccessFlag::Read) {
         d3dCPUAccessFlags |= D3D11_CPU_ACCESS_READ;
     }
 
@@ -1226,7 +1226,7 @@ void D3d11Engine::initImage_(Image* image, const Span<const Span<const char>>* d
 void D3d11Engine::initImageView_(ImageView* view)
 {
     D3d11ImageView* d3dImageView = static_cast<D3d11ImageView*>(view);
-    if (!!(d3dImageView->bindFlags() & ImageBindFlags::ShaderResource)) {
+    if (d3dImageView->bindFlags() & ImageBindFlag::ShaderResource) {
         D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
         desc.Format = d3dImageView->dxgiFormat();
         if (view->isBuffer()) {
@@ -1275,7 +1275,7 @@ void D3d11Engine::initImageView_(ImageView* view)
         }
         device_->CreateShaderResourceView(d3dImageView->d3dViewedResource(), &desc, d3dImageView->srv_.releaseAndGetAddressOf());
     }
-    if (!!(d3dImageView->bindFlags() & ImageBindFlags::RenderTarget)) {
+    if (d3dImageView->bindFlags() & ImageBindFlag::RenderTarget) {
         D3D11_RENDER_TARGET_VIEW_DESC desc = {};
         desc.Format = d3dImageView->dxgiFormat();
         if (view->isBuffer()) {
@@ -1320,7 +1320,7 @@ void D3d11Engine::initImageView_(ImageView* view)
         }
         device_->CreateRenderTargetView(d3dImageView->d3dViewedResource(), &desc, d3dImageView->rtv_.releaseAndGetAddressOf());
     }
-    if (!!(d3dImageView->bindFlags() & ImageBindFlags::DepthStencil)) {
+    if (d3dImageView->bindFlags() & ImageBindFlag::DepthStencil) {
         D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
         desc.Format = d3dImageView->dxgiFormat();
         if (view->isBuffer()) {
@@ -1434,16 +1434,16 @@ void D3d11Engine::initBlendState_(BlendState* state)
         subDesc.DestBlendAlpha = blendFactorToD3DBlend(subState.equationAlpha().targetFactor());
         subDesc.BlendOpAlpha = blendOpToD3DBlendOp(subState.equationAlpha().operation());
         subDesc.RenderTargetWriteMask = 0;
-        if (!!(subState.writeMask() & BlendWriteMask::R)) {
+        if (subState.writeMask() & BlendWriteMaskBit::R) {
             subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_RED;
         }
-        if (!!(subState.writeMask() & BlendWriteMask::G)) {
+        if (subState.writeMask() & BlendWriteMaskBit::G) {
             subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_GREEN;
         }
-        if (!!(subState.writeMask() & BlendWriteMask::B)) {
+        if (subState.writeMask() & BlendWriteMaskBit::B) {
             subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_BLUE;
         }
-        if (!!(subState.writeMask() & BlendWriteMask::A)) {
+        if (subState.writeMask() & BlendWriteMaskBit::A) {
             subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
         }
     }

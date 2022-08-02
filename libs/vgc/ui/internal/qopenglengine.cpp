@@ -277,7 +277,7 @@ protected:
     }
 
 private:
-    GLuint object_;
+    GLuint object_ = badGLObject;
     QglImageViewPtr colorView_;
     QglImageViewPtr depthStencilView_;
 
@@ -305,7 +305,9 @@ protected:
     }
 
 private:
-    // ..
+    bool isExternal_ = false;
+    QSurface* surface_ = nullptr;
+    QWindow* window_ = nullptr;
 };
 
 // ENUM CONVERSIONS
@@ -395,12 +397,12 @@ GLenum usageToGLenum(Usage usage, CpuAccessFlags cpuAccessFlags)
     case Usage::Dynamic:
         return GL_STREAM_DRAW;
     case Usage::Staging: {
-        if (!!(cpuAccessFlags & CpuAccessFlags::Read)) {
-            if (!!(cpuAccessFlags & CpuAccessFlags::Write)) {
+        if (cpuAccessFlags & CpuAccessFlag::Read) {
+            if (cpuAccessFlags & CpuAccessFlag::Write) {
                 throw core::LogicError("Qgl: staging buffer cannot habe both read and write cpu access.");
             }
             return GL_STATIC_READ;
-        } else if (!!(cpuAccessFlags & CpuAccessFlags::Write)) {
+        } else if (cpuAccessFlags & CpuAccessFlag::Write) {
             return GL_STATIC_COPY;
         }
         throw core::LogicError("Qgl: staging buffer needs either read and write cpu access");
@@ -414,13 +416,13 @@ GLenum usageToGLenum(Usage usage, CpuAccessFlags cpuAccessFlags)
 UINT processResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
 {
     UINT x = 0;
-    if (!!(resourceMiscFlags & ResourceMiscFlags::Shared)) {
+    if (resourceMiscFlags & ResourceMiscFlag::Shared) {
         throw core::LogicError("QglEngine: ResourceMiscFlags::Shared is not supported at the moment");
     }
-    //if (!!(resourceMiscFlags & ResourceMiscFlags::TextureCube)) {
+    //if (resourceMiscFlags & ResourceMiscFlag::TextureCube) {
     //    throw core::LogicError("QglEngine: ResourceMiscFlags::TextureCube is not supported at the moment");
     //}
-    //if (!!(resourceMiscFlags & ResourceMiscFlags::ResourceClamp)) {
+    //if (resourceMiscFlags & ResourceMiscFlag::ResourceClamp) {
     //    throw core::LogicError("QglEngine: ResourceMiscFlags::ResourceClamp is not supported at the moment");
     //}
     return x;
@@ -582,7 +584,7 @@ GLenum cullModeToGLenum(CullMode mode)
 //                throw core::LogicError("QOpenglBuffer: unsupported bind flags");
 //            }
 //
-//            bool cpuWrites = !!(cpuAccessFlags() & CpuAccessFlags::Write);
+//            bool cpuWrites = cpuAccessFlags() & CpuAccessFlag::Write;
 //            QOpenGLBuffer::UsagePattern u = QOpenGLBuffer::StaticDraw;
 //            switch (usage()) {
 //            case Usage::Immutable: // no equivalent
@@ -787,7 +789,7 @@ QglEnginePtr QglEngine::create(QOpenGLContext* ctx)
     return QglEnginePtr(new QglEngine(ctx));
 }
 
-void QglEngine::setupContext()
+void QglEngine::initializeApi()
 {
     // Get API 3.3
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -820,19 +822,21 @@ SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInf
     if (ctx_ == nullptr) {
         throw core::LogicError("ctx_ is null.");
     }
+    // XXX can it be an external context ??
 
+    // XXX only allow D24_S8 for now.. 
     format_.setDepthBufferSize(24);
     format_.setStencilBufferSize(8);
-    format_.setVersion(3, 2);
+    format_.setVersion(3, 3);
     format_.setProfile(QSurfaceFormat::CoreProfile);
     format_.setSamples(createInfo.numSamples());
     format_.setSwapInterval(0);
-    
+
     QWindow* wnd = static_cast<QWindow*>(createInfo.windowNativeHandle());
     wnd->setFormat(format_);
     wnd->create();
-    
-    return nullptr;//makeUnique<QglSwapChain>(resourceRegistry_, createInfo, wnd);
+
+    return makeUnique<QglSwapChain>(resourceRegistry_, createInfo, wnd);
 }
 
 FramebufferPtr QglEngine::constructFramebuffer_(const ImageViewPtr& /*colorImageView*/)

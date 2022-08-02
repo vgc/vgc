@@ -108,7 +108,7 @@ private:
     UInt8 firstMipLevel_ = 0;
     UInt8 numMipLevels_ = 0;
 
-    ImageBindFlags bindFlags_ = ImageBindFlags::None;
+    ImageBindFlags bindFlags_ = ImageBindFlag::None;
 };
 
 /// \class vgc::graphics::ImageView

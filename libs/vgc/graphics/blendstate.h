@@ -120,7 +120,7 @@ private:
     bool isEnabled_ = true;
     BlendEquation equationRGB_ = {};
     BlendEquation equationAlpha_ = {};
-    BlendWriteMask writeMask_ = BlendWriteMask::All;
+    BlendWriteMask writeMask_ = BlendWriteMaskBit::All;
 };
 
 /// \class vgc::graphics::BlendStateCreateInfo

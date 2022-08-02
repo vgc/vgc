@@ -245,7 +245,9 @@ public:
 
     FramebufferPtr getDefaultFramebuffer();
 
-    void beginFrame(const SwapChainPtr& swapChain);
+    SwapChainPtr getSwapChain();
+
+    void beginFrame(const SwapChainPtr& swapChain, bool isStateDirty);
 
     void resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height);
 
@@ -282,7 +284,7 @@ public:
     //
     void present(UInt32 syncInterval,
                  std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
-                 PresentFlags flags = PresentFlags::None);
+                 PresentFlags flags = PresentFlag::None);
 
     std::chrono::steady_clock::time_point engineStartTime() const
     {
@@ -346,13 +348,16 @@ protected:
 protected:
     detail::ResourceRegistry* resourceRegistry_ = nullptr;
 
+    // wrapper engines may not know about the host state at some point
+    void setStateDirty() {
+        dirtyPipelineParameters_ = PipelineParameter::All;
+    }
+
     // -- builtins --
 
     ProgramPtr simpleProgram_; // (created by api-specific engine implementations)
     BlendStatePtr defaultBlendState_;
     RasterizerStatePtr defaultRasterizerState_;
-
-    void createBuiltinResources_();
 
     // -- builtin batching early impl --
 
@@ -445,6 +450,8 @@ private:
     core::Array<geometry::Mat4f> viewMatrixStack_;
     bool dirtyBuiltinConstantBuffer_ = false;
 
+    void createBuiltinResources_();
+
     // -- builtin batching early impl --
 
     void flushBuiltinBatches_();
@@ -500,6 +507,12 @@ private:
         }
         return true;
     }
+
+    template<typename U>
+    bool checkResourceIsValid_(const ResourcePtr<U>& resource)
+    {
+        return checkResourceIsValid_(resource.get());
+    }
 };
 
 inline geometry::Mat4f Engine::projectionMatrix() const
@@ -550,6 +563,11 @@ inline FramebufferPtr Engine::getDefaultFramebuffer()
 {
     SwapChain* swapChain = swapChain_.get();
     return swapChain ? swapChain->defaultFrameBuffer_ : FramebufferPtr();
+}
+
+inline SwapChainPtr Engine::getSwapChain()
+{
+    return swapChain_;
 }
 
 template<typename T>

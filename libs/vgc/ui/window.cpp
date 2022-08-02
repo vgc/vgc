@@ -97,7 +97,7 @@ Window::Window(ui::WidgetPtr widget) :
         createInfo.setTargetBlendEnabled(0, true);
         createInfo.setTargetBlendEquationRGB(0, graphics::BlendOp::Add, graphics::BlendFactor::SourceAlpha, graphics::BlendFactor::OneMinusSourceAlpha);
         createInfo.setTargetBlendEquationAlpha(0, graphics::BlendOp::Add, graphics::BlendFactor::One, graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setTargetBlendWriteMask(0, graphics::BlendWriteMask::All);
+        createInfo.setTargetBlendWriteMask(0, graphics::BlendWriteMaskBit::All);
         blendState_ = engine_->createBlendState(createInfo);
     }
 
@@ -293,7 +293,7 @@ void Window::paint(bool sync) {
     }
     updateDeferred_ = false;
 
-    engine_->setSwapChain(swapChain_);
+    engine_->beginFrame(swapChain_);
     engine_->setRasterizerState(rasterizerState_);
     engine_->setBlendState(blendState_, geometry::Vec4f());
     engine_->setViewport(0, 0, width_, height_);
