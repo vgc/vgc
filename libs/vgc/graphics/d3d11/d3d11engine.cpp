@@ -533,16 +533,22 @@ DXGI_FORMAT imageFormatToDxgiFormat(ImageFormat format)
 
 D3D_PRIMITIVE_TOPOLOGY primitiveTypeToD3DPrimitiveTopology(PrimitiveType type)
 {
-    switch (type) {
-    case PrimitiveType::Point:          return D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-    case PrimitiveType::LineList:       return D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-    case PrimitiveType::LineStrip:      return D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
-    case PrimitiveType::TriangleList:   return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-    case PrimitiveType::TriangleStrip:  return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-    default:
-        break;
+    static_assert(numPrimitiveTypes == 6);
+    static constexpr std::array<D3D_PRIMITIVE_TOPOLOGY, numPrimitiveTypes> map = {
+        D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,     // Undefined,
+        D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,     // Point,
+        D3D11_PRIMITIVE_TOPOLOGY_LINELIST,      // LineList,
+        D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,     // LineStrip,
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,  // TriangleList,
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, // TriangleStrip,
+    };
+
+    const UInt index = core::toUnderlying(type);
+    if (index == 0 || index >= numPrimitiveTypes) {
+        throw core::LogicError("D3d11Engine: invalid PrimitiveType enum value");
     }
-    return D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+
+    return map[index];
 }
 
 D3D11_USAGE usageToD3DUsage(Usage usage)

@@ -286,7 +286,9 @@ private:
 using QglFramebufferPtr = ResourcePtr<QglFramebuffer>;
 
 class QglSwapChain : public SwapChain {
-public:
+protected:
+    friend QglEngine;
+
     QglSwapChain(ResourceRegistry* registry,
                  const SwapChainCreateInfo& desc)
         : SwapChain(registry, desc) {
@@ -375,16 +377,22 @@ GLenum imageFormatToGLenum(ImageFormat format)
 
 GLenum primitiveTypeToGLenum(PrimitiveType type)
 {
-    switch (type) {
-    case PrimitiveType::Point:          return GL_POINTS;
-    case PrimitiveType::LineList:       return GL_LINES;
-    case PrimitiveType::LineStrip:      return GL_LINE_STRIP;
-    case PrimitiveType::TriangleList:   return GL_TRIANGLES;
-    case PrimitiveType::TriangleStrip:  return GL_TRIANGLE_STRIP;
-    default:
-        break;
+    static_assert(numPrimitiveTypes == 6);
+    static constexpr std::array<GLenum, numPrimitiveTypes> map = {
+        badGLenum,                      // Undefined,
+        GL_POINTS,                      // Point,
+        GL_LINES,                       // LineList,
+        GL_LINE_STRIP,                  // LineStrip,
+        GL_TRIANGLES,                   // TriangleList,
+        GL_TRIANGLE_STRIP,              // TriangleStrip,
+    };
+
+    const UInt index = core::toUnderlying(type);
+    if (index == 0 || index >= numPrimitiveTypes) {
+        throw core::LogicError("QglEngine: invalid PrimitiveType enum value");
     }
-    return badGLenum;
+
+    return map[index];
 }
 
 GLenum usageToGLenum(Usage usage, CpuAccessFlags cpuAccessFlags)
@@ -802,6 +810,10 @@ void QglEngine::initializeApi()
     api_->initializeOpenGLFunctions();
 }
 
+void QglEngine::setSwapChainFromCurrentSurface()
+{
+}
+
 // -- USER THREAD implementation functions --
 
 void QglEngine::createBuiltinShaders_()
@@ -836,7 +848,12 @@ SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInf
     wnd->setFormat(format_);
     wnd->create();
 
-    return makeUnique<QglSwapChain>(resourceRegistry_, createInfo, wnd);
+    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo);
+    swapChain->window_ = wnd;
+    swapChain->surface_ = wnd;
+    swapChain->isExternal_ = false;
+
+    return SwapChainPtr(swapChain.release());
 }
 
 FramebufferPtr QglEngine::constructFramebuffer_(const ImageViewPtr& /*colorImageView*/)

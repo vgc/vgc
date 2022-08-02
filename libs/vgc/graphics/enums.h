@@ -102,12 +102,15 @@ enum class Mapping : UInt8 {
 };
 
 enum class PrimitiveType : UInt8 {
+    Undefined,
     Point,
     LineList,
     LineStrip,
     TriangleList,
     TriangleStrip,
+    Max_ = TriangleStrip,
 };
+inline constexpr UInt8 numPrimitiveTypes = static_cast<UInt8>(PrimitiveType::Max_) + 1;
 
 enum class PresentFlag : UInt32 {
     None,

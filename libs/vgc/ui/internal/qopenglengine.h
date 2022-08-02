@@ -83,7 +83,7 @@ public:
     // not part of the common interface
 
     void initializeApi();
-    void updateSwapChainFromCurrentSurface();
+    void setSwapChainFromCurrentSurface();
 
     OpenGLFunctions* api() const {
         return api_;

@@ -191,7 +191,7 @@
 //
 //    // Widget overrides
 //    void onPaintCreate(graphics::Engine* engine) override;
-//    void onPaintDraw(graphics::Engine* engine, PaintFlags flags) override;
+//    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
 //    void onPaintDestroy(graphics::Engine* engine) override;
 //
 //    void cleanupGraphics();

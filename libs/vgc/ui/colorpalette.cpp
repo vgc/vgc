@@ -164,7 +164,7 @@ void insertCellHighlight(
 
 } // namespace
 
-void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintFlags /*flags*/)
+void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 {
     float eps = 1e-6f;
     if (reload_ || std::abs(oldWidth_ - width()) > eps || std::abs(oldHeight_ - height()) > eps) {

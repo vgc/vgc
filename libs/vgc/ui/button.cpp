@@ -62,7 +62,7 @@ void Button::onPaintCreate(graphics::Engine* engine)
     triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Button::onPaintDraw(graphics::Engine* engine, PaintFlag /*flags*/)
+void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 {
     if (reload_) {
         reload_ = false;

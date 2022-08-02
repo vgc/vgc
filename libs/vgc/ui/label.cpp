@@ -66,7 +66,7 @@ void Label::onPaintCreate(graphics::Engine* engine)
     triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Label::onPaintDraw(graphics::Engine* engine, PaintFlag /*flags*/)
+void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 {
     if (reload_) {
         reload_ = false;

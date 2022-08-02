@@ -247,7 +247,7 @@ public:
 
     SwapChainPtr getSwapChain();
 
-    void beginFrame(const SwapChainPtr& swapChain, bool isStateDirty);
+    void beginFrame(const SwapChainPtr& swapChain, bool isStateDirty = false);
 
     void resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height);
 
@@ -608,7 +608,7 @@ inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> dat
         return;
     }
 
-    if (!(buf->cpuAccessFlags() & CpuAccessFlags::Write)) {
+    if (!(buf->cpuAccessFlags() & CpuAccessFlag::Write)) {
         VGC_ERROR(LogVgcGraphics, "cpu does not have write access on buffer");
     }
 

@@ -98,7 +98,7 @@ void LineEdit::onPaintCreate(graphics::Engine* engine)
     triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void LineEdit::onPaintDraw(graphics::Engine* engine, PaintFlags /*flags*/)
+void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 {
     if (reload_) {
         reload_ = false;

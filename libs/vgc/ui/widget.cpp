@@ -216,22 +216,22 @@ void Widget::repaint()
     }
 }
 
-void Widget::preparePaint(graphics::Engine* engine, PaintFlags flags)
+void Widget::preparePaint(graphics::Engine* engine, PaintOptions options)
 {
     if (engine != lastPaintEngine_) {
         setEngine_(engine);
         onPaintCreate(engine);
     }
-    onPaintPrepare(engine, flags);
+    onPaintPrepare(engine, options);
 }
 
-void Widget::paint(graphics::Engine* engine, PaintFlags flags)
+void Widget::paint(graphics::Engine* engine, PaintOptions options)
 {
     if (engine != lastPaintEngine_) {
         setEngine_(engine);
         onPaintCreate(engine);
     }
-    onPaintDraw(engine, flags);
+    onPaintDraw(engine, options);
 }
 
 void Widget::onPaintCreate(graphics::Engine* engine)
@@ -241,14 +241,14 @@ void Widget::onPaintCreate(graphics::Engine* engine)
     }
 }
 
-void Widget::onPaintPrepare(graphics::Engine* engine, PaintFlags flags)
+void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options)
 {
     for (Widget* widget : children()) {
-        widget->preparePaint(engine, flags);
+        widget->preparePaint(engine, options);
     }
 }
 
-void Widget::onPaintDraw(graphics::Engine* engine, PaintFlags flags)
+void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options)
 {
     for (Widget* widget : children()) {
         engine->pushViewMatrix();
@@ -256,7 +256,7 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintFlags flags)
         geometry::Vec2f pos = widget->position();
         m.translate(pos[0], pos[1]); // TODO: Mat4f.translate(const Vec2f&)
         engine->setViewMatrix(m);
-        widget->paint(engine, flags);
+        widget->paint(engine, options);
         engine->popViewMatrix();
     }
 }
