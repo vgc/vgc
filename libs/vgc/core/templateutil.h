@@ -21,6 +21,7 @@
 #include <iterator>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace vgc::core {
 
@@ -94,6 +95,14 @@ struct TypeIdentity_ {
 ///
 template<typename U>
 using TypeIdentity = typename internal::TypeIdentity_<U>::type;
+
+/// Casts a class enum value to its underlying type.
+/// Equivalent to `return static_cast<std::underlying_type_t<Enum>>(e);`.
+///
+template<typename Enum>
+constexpr std::underlying_type_t<Enum> toUnderlying(Enum e) noexcept {
+    return static_cast<std::underlying_type_t<Enum>>(e);
+}
 
 /// Removes cv-qualifiers (const and volatile) and ref-qualifiers (lvalue and
 /// rvalue references) of the given type.
