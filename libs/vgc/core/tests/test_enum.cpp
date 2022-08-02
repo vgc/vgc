@@ -26,7 +26,7 @@ enum class MyEnum : vgc::UInt8 {
     Bar = 0x02,
     FooBar = Foo | Bar
 };
-VGC_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(MyEnum);
+VGC_DEFINE_FLAGS(MyFlags, MyEnum);
 
 TEST(TestEnum, Operators)
 {
@@ -62,10 +62,104 @@ TEST(TestEnum, Operators)
     EXPECT_EQ(foo ^ bar, foobar);
     EXPECT_EQ(foo ^ foobar, bar);
 
-    EXPECT_EQ(vgc::core::toUnderlying(~foo), 0xfe);
+    EXPECT_EQ((~foo).toUnderlying(), 0xfe);
 
     EXPECT_EQ(bool(foo & foobar), true);
     EXPECT_EQ(bool(foo & bar), false);
+}
+
+TEST(TestEnum, FlagsOperators)
+{
+    MyFlags none = MyEnum::None;
+    MyFlags foo = MyEnum::Foo;
+    MyFlags bar = MyEnum::Bar;
+    MyFlags foobar = MyEnum::FooBar;
+
+    EXPECT_EQ(none | none, none);
+    EXPECT_EQ(none | foo, foo);
+    EXPECT_EQ(none | bar, bar);
+    EXPECT_EQ(none | foobar, foobar);
+    EXPECT_EQ(foo | none, foo);
+    EXPECT_EQ(foo | foo, foo);
+    EXPECT_EQ(foo | bar, foobar);
+    EXPECT_EQ(foo | foobar, foobar);
+
+    EXPECT_EQ(none & none, none);
+    EXPECT_EQ(none & foo, none);
+    EXPECT_EQ(none & bar, none);
+    EXPECT_EQ(none & foobar, none);
+    EXPECT_EQ(foo & none, none);
+    EXPECT_EQ(foo & foo, foo);
+    EXPECT_EQ(foo & bar, none);
+    EXPECT_EQ(foo & foobar, foo);
+
+    EXPECT_EQ(none ^ none, none);
+    EXPECT_EQ(none ^ foo, foo);
+    EXPECT_EQ(none ^ bar, bar);
+    EXPECT_EQ(none ^ foobar, foobar);
+    EXPECT_EQ(foo ^ none, foo);
+    EXPECT_EQ(foo ^ foo, none);
+    EXPECT_EQ(foo ^ bar, foobar);
+    EXPECT_EQ(foo ^ foobar, bar);
+
+    MyFlags x = foobar;
+    x &= foo;
+    EXPECT_EQ(x, foo);
+    x ^= foobar;
+    EXPECT_EQ(x, bar);
+    x |= foo;
+    EXPECT_EQ(x, foobar);
+
+    EXPECT_EQ((~foo).toUnderlying(), 0xfe);
+
+    EXPECT_TRUE(foo & foobar);
+    EXPECT_FALSE(foo & bar);
+
+    if (foo & bar) {
+        EXPECT_TRUE(false);
+    }
+}
+
+TEST(TestEnum, FlagsMethods)
+{
+    MyFlags x(MyEnum::Foo);
+    EXPECT_EQ(x, MyEnum::Foo);
+    EXPECT_TRUE(x.has(MyEnum::Foo));
+    EXPECT_TRUE(x.hasAll(MyEnum::Foo));
+    EXPECT_FALSE(x.has(MyEnum::Bar));
+    EXPECT_FALSE(x.hasAll(MyEnum::Bar));
+    EXPECT_FALSE(x.has(MyEnum::FooBar));
+    EXPECT_FALSE(x.hasAll(MyEnum::FooBar));
+    EXPECT_TRUE(x.hasAny(MyEnum::FooBar));
+    x.set(MyEnum::Bar);
+    EXPECT_EQ(x, MyEnum::FooBar);
+    EXPECT_TRUE(x.has(MyEnum::Foo));
+    EXPECT_TRUE(x.hasAll(MyEnum::Foo));
+    EXPECT_TRUE(x.has(MyEnum::Bar));
+    EXPECT_TRUE(x.hasAll(MyEnum::Bar));
+    EXPECT_TRUE(x.has(MyEnum::FooBar));
+    EXPECT_TRUE(x.hasAll(MyEnum::FooBar));
+    EXPECT_TRUE(x.hasAny(MyEnum::FooBar));
+    x.unset(MyEnum::Foo);
+    EXPECT_EQ(x, MyEnum::Bar);
+    EXPECT_FALSE(x.has(MyEnum::Foo));
+    EXPECT_FALSE(x.hasAll(MyEnum::Foo));
+    EXPECT_TRUE(x.has(MyEnum::Bar));
+    EXPECT_TRUE(x.hasAll(MyEnum::Bar));
+    EXPECT_FALSE(x.has(MyEnum::FooBar));
+    EXPECT_FALSE(x.hasAll(MyEnum::FooBar));
+    EXPECT_TRUE(x.hasAny(MyEnum::FooBar));
+    x.set(MyEnum::Foo);
+    x.mask(MyEnum::Bar);
+    EXPECT_EQ(x, MyEnum::Bar);
+    x.toggle(MyEnum::Foo);
+    EXPECT_EQ(x, MyEnum::FooBar);
+    x.toggle(MyEnum::Foo);
+    EXPECT_EQ(x, MyEnum::Bar);
+    x.toggleAll();
+    EXPECT_EQ(x, ~MyEnum::Bar);
+    EXPECT_TRUE(x.has(MyEnum::Foo));
+    EXPECT_FALSE(x.has(MyEnum::Bar));
 }
 
 int main(int argc, char **argv)

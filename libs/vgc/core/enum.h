@@ -19,33 +19,141 @@
 
 #include <vgc/core/templateutil.h>
 
-#define VGC_DEFINE_CROSS_SCOPED_ENUM_OPERATOR(EnumA, EnumB, Op)             \
-    inline constexpr EnumA operator Op(EnumA a, EnumB b) noexcept {         \
-        return static_cast<EnumA>(                                          \
-            ::vgc::core::toUnderlying(a) Op ::vgc::core::toUnderlying(b));  \
-    }                                                                       \
-    inline EnumA& operator Op##=(EnumA& a, EnumB b) noexcept {              \
-        a = static_cast<EnumA>(                                             \
-            ::vgc::core::toUnderlying(a) Op ::vgc::core::toUnderlying(b));  \
-        return a;                                                           \
+namespace vgc::core {
+
+template<typename Enum>
+class Flags {
+public:
+    using EnumType = Enum;
+    using UnderlyingType = std::underlying_type_t<Enum>;
+
+    constexpr Flags() noexcept = default;
+
+    constexpr Flags(Enum v) noexcept
+        : v_(v) {
     }
 
-#define VGC_DEFINE_CROSS_SCOPED_ENUM_OPERATORS(EnumA, EnumB)    \
-    VGC_DEFINE_CROSS_SCOPED_ENUM_OPERATOR(EnumA, EnumB, |)      \
-    VGC_DEFINE_CROSS_SCOPED_ENUM_OPERATOR(EnumA, EnumB, &)      \
-    VGC_DEFINE_CROSS_SCOPED_ENUM_OPERATOR(EnumA, EnumB, ^)
-
-#define VGC_DEFINE_SCOPED_ENUM_OPERATOR(Enum, Op)           \
-    VGC_DEFINE_CROSS_SCOPED_ENUM_OPERATOR(Enum, Enum, Op)
-
-#define VGC_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(Enum)        \
-    VGC_DEFINE_CROSS_SCOPED_ENUM_OPERATORS(Enum, Enum)      \
-    inline Enum operator~(Enum value) noexcept {            \
-        return static_cast<Enum>(                           \
-            ~::vgc::core::toUnderlying(value));             \
-    }                                                       \
-    inline bool operator!(Enum value) noexcept {            \
-        return ::vgc::core::toUnderlying(value) == 0;       \
+    constexpr UnderlyingType toUnderlying() const noexcept {
+        return ::vgc::core::toUnderlying(v_);
     }
+
+    explicit constexpr operator bool() const noexcept {
+        return toUnderlying() != 0;
+    }
+
+    /// Returns whether this set of flags contains the given `flag`.
+    ///
+    /// If `flag` has more than one bit set to 1, this function returns true if `this` has all these bits set to 1.
+    /// If `flag` has no bits set to 1, this function always returns true.
+    ///
+    /// This is equivalent to `(*this & flag) == flag`.
+    ///
+    constexpr bool has(Enum flag) const noexcept {
+        return hasAll(flag);
+    }
+
+    constexpr bool hasAny(Flags flags) const noexcept {
+        return (toUnderlying() & flags.toUnderlying()) != 0;
+    }
+
+    constexpr bool hasAll(Flags flags) const noexcept {
+        return (toUnderlying() & flags.toUnderlying()) == flags.toUnderlying();
+    }
+
+    constexpr Flags& set(Flags flags) noexcept {
+        v_ = static_cast<Enum>(toUnderlying() | flags.toUnderlying());
+        return *this;
+    }
+
+    constexpr Flags& unset(Flags flags) noexcept {
+        v_ = static_cast<Enum>(toUnderlying() & ~flags.toUnderlying());
+        return *this;
+    }
+
+    constexpr Flags& toggle(Flags flags) noexcept {
+        v_ = static_cast<Enum>(toUnderlying() ^ flags.toUnderlying());
+        return *this;
+    }
+
+    constexpr Flags& toggleAll() noexcept {
+        v_ = static_cast<Enum>(~toUnderlying());
+        return *this;
+    }
+
+    constexpr Flags& mask(Flags flags) noexcept {
+        v_ = static_cast<Enum>(toUnderlying() & flags.toUnderlying());
+        return *this;
+    }
+
+    friend inline constexpr Flags operator|(Flags a, Flags b) noexcept {
+        return Flags(static_cast<Enum>(a.toUnderlying() | b.toUnderlying()));
+    }
+
+    friend inline constexpr Flags operator&(Flags a, Flags b) noexcept {
+        return Flags(static_cast<Enum>(a.toUnderlying() & b.toUnderlying()));
+    }
+
+    friend inline constexpr Flags operator^(Flags a, Flags b) noexcept {
+        return Flags(static_cast<Enum>(a.toUnderlying() ^ b.toUnderlying()));
+    }
+
+    constexpr Flags operator~() const noexcept {
+        return Flags(static_cast<Enum>(~toUnderlying()));
+    }
+
+    constexpr Flags& operator|=(Flags b) noexcept {
+        v_ = static_cast<Enum>(toUnderlying() | b.toUnderlying());
+        return *this;
+    }
+    
+    constexpr Flags& operator&=(Flags b) noexcept {
+        v_ = static_cast<Enum>(toUnderlying() & b.toUnderlying());
+        return *this;
+    }
+
+    constexpr Flags& operator^=(Flags b) noexcept {
+        v_ = static_cast<Enum>(toUnderlying() ^ b.toUnderlying());
+        return *this;
+    }
+
+    friend inline constexpr bool operator==(Flags a, Flags b) noexcept {
+        return a.toUnderlying() == b.toUnderlying();
+    }
+
+    friend inline constexpr bool operator!=(Flags a, Flags b) noexcept {
+        return a.toUnderlying() != b.toUnderlying();
+    }
+
+private:
+    Enum v_ = {};
+};
+
+} // namespace vgc::core
+
+#define VGC_DEFINE_SCOPED_ENUM_FLAGS_BINARY_OPERATOR(Enum, Op)                          \
+    inline constexpr ::vgc::core::Flags<Enum> operator Op(Enum a, Enum b) noexcept {    \
+        return ::vgc::core::Flags<Enum>(a) Op ::vgc::core::Flags<Enum>(b);              \
+    }
+
+#define VGC_DEFINE_SCOPED_ENUM_FLAGS_BINARY_OPERATORS(Enum)                     \
+    VGC_DEFINE_SCOPED_ENUM_FLAGS_BINARY_OPERATOR(Enum, |)                       \
+    VGC_DEFINE_SCOPED_ENUM_FLAGS_BINARY_OPERATOR(Enum, &)                       \
+    VGC_DEFINE_SCOPED_ENUM_FLAGS_BINARY_OPERATOR(Enum, ^)
+
+#define VGC_DEFINE_SCOPED_ENUM_FLAGS_BITWISE_NEGATION_OPERATOR(Enum)            \
+    inline constexpr ::vgc::core::Flags<Enum> operator~(Enum value) noexcept {  \
+        return ~::vgc::core::Flags<Enum>(value);                                \
+    }
+
+#define VGC_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(Enum)                            \
+    VGC_DEFINE_SCOPED_ENUM_FLAGS_BINARY_OPERATORS(Enum)                         \
+    VGC_DEFINE_SCOPED_ENUM_FLAGS_BITWISE_NEGATION_OPERATOR(Enum)
+
+#define VGC_DEFINE_SCOPED_ENUM_FLAGS_ALIAS(Enum, FlagsTypeName)                 \
+    using FlagsTypeName = ::vgc::core::Flags<Enum>;
+
+#define VGC_DEFINE_FLAGS(FlagsTypeName, EnumTypeName)                           \
+    VGC_DEFINE_SCOPED_ENUM_FLAGS_OPERATORS(EnumTypeName)                        \
+    VGC_DEFINE_SCOPED_ENUM_FLAGS_ALIAS(EnumTypeName, FlagsTypeName)
 
 #endif // VGC_CORE_ENUM_H
