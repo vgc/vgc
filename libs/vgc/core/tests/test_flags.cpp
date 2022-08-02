@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <vgc/core/arithmetic.h>
-#include <vgc/core/enum.h>
+#include <vgc/core/flags.h>
 
 using namespace vgc;
 
@@ -28,7 +28,7 @@ enum class MyEnum : vgc::UInt8 {
 };
 VGC_DEFINE_FLAGS(MyFlags, MyEnum);
 
-TEST(TestEnum, Operators)
+TEST(TestFlags, EnumOperators)
 {
     MyEnum none = MyEnum::None;
     MyEnum foo = MyEnum::Foo;
@@ -68,7 +68,7 @@ TEST(TestEnum, Operators)
     EXPECT_EQ(bool(foo & bar), false);
 }
 
-TEST(TestEnum, FlagsOperators)
+TEST(TestFlags, Operators)
 {
     MyFlags none = MyEnum::None;
     MyFlags foo = MyEnum::Foo;
@@ -120,7 +120,7 @@ TEST(TestEnum, FlagsOperators)
     }
 }
 
-TEST(TestEnum, FlagsMethods)
+TEST(TestFlags, Methods)
 {
     MyFlags x(MyEnum::Foo);
     EXPECT_EQ(x, MyEnum::Foo);

@@ -16,8 +16,8 @@ vgc_add_library(core
         colors.h
         compiler.h
         dll.h
-        enum.h
         exceptions.h
+        flags.h
         format.h
         history.h
         innercore.h
