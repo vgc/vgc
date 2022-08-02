@@ -122,11 +122,6 @@ TEST(TestEnum, FlagsOperators)
 
 TEST(TestEnum, FlagsMethods)
 {
-    MyFlags none = MyEnum::None;
-    MyFlags foo = MyEnum::Foo;
-    MyFlags bar = MyEnum::Bar;
-    MyFlags foobar = MyEnum::FooBar;
-
     MyFlags x(MyEnum::Foo);
     EXPECT_EQ(x, MyEnum::Foo);
     EXPECT_TRUE(x.has(MyEnum::Foo));
