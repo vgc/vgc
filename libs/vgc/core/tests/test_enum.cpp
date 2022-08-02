@@ -15,11 +15,12 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/enum.h>
 
 using namespace vgc;
 
-enum class MyEnum {
+enum class MyEnum : vgc::UInt8 {
     None = 0x00,
     Foo = 0x01,
     Bar = 0x02,
@@ -60,6 +61,8 @@ TEST(TestEnum, Operators)
     EXPECT_EQ(foo ^ foo, none);
     EXPECT_EQ(foo ^ bar, foobar);
     EXPECT_EQ(foo ^ foobar, bar);
+
+    EXPECT_EQ(vgc::core::toUnderlying(~foo), 0xfe);
 
     EXPECT_EQ(bool(foo & foobar), true);
     EXPECT_EQ(bool(foo & bar), false);
