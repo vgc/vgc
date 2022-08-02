@@ -92,7 +92,7 @@ private:
     void onFocusRequested();
 
     ui::WidgetPtr widget_;
-    ui::internal::QOpenglEnginePtr engine_;
+    ui::internal::QglEnginePtr engine_;
 
     // Projection and view matrices
     geometry::Mat4f proj_;

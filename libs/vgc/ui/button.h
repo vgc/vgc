@@ -60,7 +60,7 @@ public:
     // reimpl
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine) override;
+    void onPaintDraw(graphics::Engine* engine, PaintFlags flags) override;
     void onPaintDestroy(graphics::Engine* engine) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
@@ -73,7 +73,7 @@ protected:
 
 private:
     std::string text_;
-    graphics::TrianglesBufferPtr triangles_;
+    graphics::GeometryViewPtr triangles_;
     bool reload_;
     bool isHovered_;
 };

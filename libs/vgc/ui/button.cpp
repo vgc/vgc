@@ -59,14 +59,14 @@ void Button::onResize()
 
 void Button::onPaintCreate(graphics::Engine* engine)
 {
-    triangles_ = engine->createTriangles();
+    triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Button::onPaintDraw(graphics::Engine*)
+void Button::onPaintDraw(graphics::Engine* engine, PaintFlags /*flags*/)
 {
     if (reload_) {
         reload_ = false;
-        core::FloatArray a;
+        core::FloatArray a = {};
         core::Color backgroundColor = internal::getColor(this, isHovered_ ?
                         strings::background_color_on_hover :
                         strings::background_color);
@@ -79,9 +79,10 @@ void Button::onPaintDraw(graphics::Engine*)
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
         internal::insertText(a, textColor, 0, 0, width(), height(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
-        triangles_->load(a.data(), a.length());
+        engine->updateVertexBufferData(triangles_, std::move(a));
     }
-    triangles_->draw();
+    engine->setProgram(graphics::BuiltinProgram::Simple);
+    engine->draw(triangles_, -1, 0);
 }
 
 void Button::onPaintDestroy(graphics::Engine*)

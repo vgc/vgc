@@ -1,34 +1,30 @@
-//// Copyright 2022 The VGC Developers
-//// See the COPYRIGHT file at the top-level directory of this distribution
-//// and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
-////
-//// Licensed under the Apache License, Version 2.0 (the "License");
-//// you may not use this file except in compliance with the License.
-//// You may obtain a copy of the License at
-////
-////     http://www.apache.org/licenses/LICENSE-2.0
-////
-//// Unless required by applicable law or agreed to in writing, software
-//// distributed under the License is distributed on an "AS IS" BASIS,
-//// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// Copyright 2022 The VGC Developers
+// See the COPYRIGHT file at the top-level directory of this distribution
+// and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_QOPENGLENGINE_H
-#define VGC_UI_QOPENGLENGINE_H
+#ifndef VGC_GRAPHICS_D3D11_D3D11ENGINE_H
+#define VGC_GRAPHICS_D3D11_D3D11ENGINE_H
 
+#include <vgc/core/compiler.h>
+#ifdef VGC_CORE_COMPILER_MSVC
+
+#include <d3d11.h>
+
+#include <array>
 #include <chrono>
 #include <memory>
-
-#include <QOpenGLBuffer>
-#include <QOpenGLContext>
-#include <QOpenGLFunctions_3_2_Core>
-#include <QOpenGLFunctions_3_3_Core>
-#include <QOpenGLFunctions>
-#include <QOpenGLShaderProgram>
-#include <QOpenGLVertexArrayObject>
-#include <QPointF>
-#include <QString>
 
 #include <vgc/core/color.h>
 #include <vgc/core/paths.h>
@@ -36,57 +32,32 @@
 #include <vgc/geometry/mat4f.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
+#include <vgc/graphics/api.h>
 #include <vgc/graphics/engine.h>
-#include <vgc/ui/api.h>
+#include <vgc/graphics/detail/comptr.h>
 
-namespace vgc::ui::internal {
+namespace vgc::graphics {
 
-inline geometry::Mat4f toMat4f(const geometry::Mat4d& m) {
-    // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
-    return geometry::Mat4f(
-        (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
-        (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
-        (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
-        (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
-}
+VGC_DECLARE_OBJECT(D3d11Engine);
 
-namespace qopengl {
-
-VGC_DECLARE_OBJECT(QglEngine);
-
-using namespace ::vgc::graphics;
-
-/// \class vgc::widget::QglEngine
-/// \brief The QtOpenGL-based graphics::Engine.
+/// \class vgc::widget::D3d11Engine
+/// \brief The D3D11-based graphics::Engine.
 ///
-/// This class is an implementation of graphics::Engine using QOpenGLContext and
-/// OpenGL calls.
+/// This class is an implementation of Engine using Direct3D 11.0.
 ///
-class VGC_UI_API QglEngine : public Engine {
+class VGC_GRAPHICS_API D3d11Engine : public Engine {
 private:
-    VGC_OBJECT(QglEngine, Engine)
+    VGC_OBJECT(D3d11Engine, Engine)
 
 protected:
-    QglEngine();
-    QglEngine(QOpenGLContext* ctx, bool isExternalCtx = true);
+    D3d11Engine();
 
     void onDestroyed() override;
 
 public:
-    using OpenGLFunctions = QOpenGLFunctions_3_3_Core;
-
-    /// Creates a new OpenglEngine.
+    /// Creates a new D3d11Engine.
     ///
-    static QglEnginePtr create();
-    static QglEnginePtr create(QOpenGLContext* ctx);
-
-    // not part of the common interface
-
-    void setupContext();
-
-    OpenGLFunctions* api() const {
-        return api_;
-    }
+    static D3d11EnginePtr create();
 
 protected:
     // Implementation of Engine API
@@ -137,12 +108,13 @@ protected:
     UInt64 present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) override;
 
 private:
-    // XXX keep only format of first chain and compare against new windows ?
-    QSurfaceFormat format_;
-    QOpenGLContext* ctx_ = nullptr;
-    bool isExternalCtx_ = false;
-    QOpenGLFunctions_3_3_Core* api_ = nullptr;
-    QSurface* surface_ = nullptr;
+    ComPtr<IDXGIFactory> factory_;
+    ComPtr<ID3D11Device> device_;
+    ComPtr<ID3D11DeviceContext> deviceCtx_;
+    ComPtr<ID3D11DepthStencilState> depthStencilState_;
+    std::array<ComPtr<ID3D11InputLayout>, core::toUnderlying(BuiltinGeometryLayout::Max_) + 1> builtinLayouts_;
+    ID3D11InputLayout* layout_ = nullptr;
+    D3D11_PRIMITIVE_TOPOLOGY topology_ = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
     template<typename T, typename... Args>
     _NODISCARD std::unique_ptr<T> makeUnique(Args&&... args) {
@@ -150,20 +122,17 @@ private:
     }
 
     void initBuiltinShaders_();
+    bool loadBuffer_(class D3d11Buffer* buffer, const void* data, Int dataSize);
+    void onBufferRecreated_(class D3d11Buffer* buffer);
+    bool writeBufferReserved_(ID3D11Buffer* object, const void* data, Int dataSize);
 
-    // Shader
-    //std::unique_ptr<QOpenGLShaderProgram> paintShaderProgram_;
-    //int posLoc_ = -1;
-    //int colLoc_ = -1;
-    //int projLoc_ = -1;
-    //int viewLoc_ = -1;
+    // to support resizing buffers
+    std::array<StageConstantBufferArray, numShaderStages> boundConstantBufferArrays_;
+    std::array<StageImageViewArray, numShaderStages> boundImageViewArrays_;
+    FramebufferPtr boundFramebuffer_;
 };
 
-} // namespace qopengl
+} // namespace vgc::graphics
 
-using QglEngine = qopengl::QglEngine;
-using QglEnginePtr = qopengl::QglEnginePtr;
-
-} // namespace vgc::ui::internal
-
-#endif // VGC_UI_QOPENGLENGINE_H
+#endif // VGC_CORE_COMPILER_MSVC
+#endif // VGC_GRAPHICS_D3D11_D3D11ENGINE_H

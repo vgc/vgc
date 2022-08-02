@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
 
     vgc::ui::WindowPtr wnd = vgc::ui::Window::create(col);
     wnd->setTitle("VGC UI Test");
-    wnd->resize(QSize(800, 600));
+    wnd->resize(QSize(1100, 800));
     wnd->setVisible(true);
 
     // Start event loop

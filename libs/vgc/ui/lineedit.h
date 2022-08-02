@@ -68,7 +68,7 @@ public:
     // Reimplementation of Widget virtual methods
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine) override;
+    void onPaintDraw(graphics::Engine* engine, PaintFlags flags) override;
     void onPaintDestroy(graphics::Engine* engine) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
@@ -84,7 +84,7 @@ protected:
 
 private:
     graphics::RichTextPtr richText_;
-    graphics::TrianglesBufferPtr triangles_;
+    graphics::GeometryViewPtr triangles_;
     bool reload_;
     bool isHovered_;
     ui::MouseButton mouseButton_; // == `None` if no mouse button pressed

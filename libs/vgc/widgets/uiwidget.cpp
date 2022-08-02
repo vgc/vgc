@@ -186,7 +186,7 @@ bool UiWidget::event(QEvent* e)
 
 void UiWidget::initializeGL()
 {
-    engine_ = vgc::ui::internal::QOpenglEngine::create(context());
+    engine_ = vgc::ui::internal::QglEngine::create(context());
     engine_->setupContext();
 
     // Initialize widget for painting.
@@ -222,11 +222,12 @@ void UiWidget::paintGL()
     // setViewport & present is done by Qt
 
     engine_->clear(core::Color(0.337, 0.345, 0.353));
-    engine_->bindPaintShader();
+    engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
     widget_->paint(engine_.get());
-    engine_->releasePaintShader();
+    //engine_->releasePaintShader();
+    // XXX opengl only.. we need to add a flush/finish to submit ?
 }
 
 void UiWidget::cleanupGL()

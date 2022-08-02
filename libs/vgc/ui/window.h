@@ -20,7 +20,7 @@
 #include <QWindow>
 
 #include <vgc/core/array.h>
-#include <vgc/ui/internal/qopenglengine.h>
+#include <vgc/graphics/engine.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -34,11 +34,11 @@ class VGC_UI_API Window : public core::Object, public QWindow {
     VGC_OBJECT(Window, core::Object)
 
 protected:
-    /// Constructs a UiWidget wrapping the given vgc::ui::Widget.
+    /// Constructs a Window containing the given vgc::ui::Widget.
     ///
     Window(ui::WidgetPtr widget);
 
-    /// Destructs the UiWidget.
+    /// Destructs the Window.
     ///
     void onDestroyed() override;
 
@@ -56,6 +56,10 @@ public:
     //QVariant inputMethodQuery(Qt::InputMethodQuery querty) const override;
 
 protected:
+#if defined(VGC_CORE_COMPILER_MSVC)
+    HWND hwnd_ = {};
+    static LRESULT WINAPI WndProc(HWND, UINT, WPARAM, LPARAM);
+#endif
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -72,12 +76,28 @@ protected:
     //void inputMethodEvent(QInputMethodEvent* event) override;
     bool event(QEvent* e) override;
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    using NativeEventResult = long;
+#else
+    using NativeEventResult = qintptr;
+#endif
+
+    bool nativeEvent(const QByteArray& eventType, void* message, NativeEventResult* result) override;
+
 private:
     ui::WidgetPtr widget_;
-    // graphics::EnginePtr engine_;
-    ui::internal::QOpenglEnginePtr engine_;
+    graphics::EnginePtr engine_;
+    graphics::SwapChainPtr swapChain_;
+    graphics::RasterizerStatePtr rasterizerState_;
+    graphics::BlendStatePtr blendState_;
+    int width_ = 0;
+    int height_ = 0;
+    bool activeSizemove_ = false;
+
     geometry::Mat4f proj_;
     core::Color clearColor_;
+
+    bool updateDeferred_ = false;
 
     void onActiveChanged_();
     void onRepaintRequested_();
@@ -88,7 +108,7 @@ private:
     // TO FACTOR OUT
     ////////////////////////////
 
-    virtual void paint();
+    virtual void paint(bool sync = false);
     virtual void cleanup();
 
 };
