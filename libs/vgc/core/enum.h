@@ -24,7 +24,7 @@
         return static_cast<EnumA>(                                          \
             ::vgc::core::toUnderlying(a) Op ::vgc::core::toUnderlying(b));  \
     }                                                                       \
-    inline EnumA& operator Op=(EnumA& a, EnumB b) noexcept {                \
+    inline EnumA& operator Op##=(EnumA& a, EnumB b) noexcept {              \
         a = static_cast<EnumA>(                                             \
             ::vgc::core::toUnderlying(a) Op ::vgc::core::toUnderlying(b));  \
         return a;                                                           \
