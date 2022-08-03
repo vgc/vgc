@@ -77,6 +77,7 @@ public:
     //
     ShapedGlyphArray glyphs;
     ShapedGraphemeArray graphemes;
+    ShapedTextPositionInfoArray positions;
     geometry::Vec2f advance;
 
     // Buffers to avoid dynamic allocations during filling.
@@ -94,6 +95,7 @@ public:
         text(),
         glyphs(),
         graphemes(),
+        positions(),
         advance(0, 0),
         buf(hb_buffer_create())
     {
@@ -105,6 +107,7 @@ public:
         text(other.text),
         glyphs(other.glyphs),
         graphemes(other.graphemes),
+        positions(other.positions),
         advance(other.advance),
         buf(hb_buffer_create())
     {
@@ -118,6 +121,7 @@ public:
             text = other.text;
             glyphs = other.glyphs;
             graphemes = other.graphemes;
+            positions = other.positions;
             advance = other.advance;
         }
         return *this;
@@ -146,15 +150,15 @@ public:
 
         // HarfBuzz output
         unsigned int n;
-        hb_glyph_info_t* infos = hb_buffer_get_glyph_infos(buf, &n);
-        hb_glyph_position_t* positions = hb_buffer_get_glyph_positions(buf, &n);
+        hb_glyph_info_t* glyphInfos = hb_buffer_get_glyph_infos(buf, &n);
+        hb_glyph_position_t* glyphPositions = hb_buffer_get_glyph_positions(buf, &n);
 
         // Convert to ShapedGlyph elements
         glyphs.clear();
         advance = geometry::Vec2f(0, 0);
         for (unsigned int i = 0; i < n; ++i) {
-            hb_glyph_info_t& info = infos[i];
-            hb_glyph_position_t& pos = positions[i];
+            hb_glyph_info_t& info = glyphInfos[i];
+            hb_glyph_position_t& pos = glyphPositions[i];
             SizedGlyph* glyph = facePtr->getSizedGlyphFromIndex(info.codepoint);
             Int bytePosition = core::int_cast<Int>(info.cluster);
             geometry::Vec2f glyphOffset = internal::f266ToVec2f(pos.x_offset, pos.y_offset);
@@ -171,18 +175,23 @@ public:
             // minus signs in front of pos.y_offset and pos.y_advance.
         }
 
-        // Compute graphemes and correspondence with glyphs
-        // First pass: create graphemes with corresponding byte position
+        // Compute graphemes/positions and correspondence with glyphs
+        // First pass: create graphemes/positions with corresponding byte index
         graphemes.clear();
+        positions.clear();
         TextBoundaryIterator it(TextBoundaryType::Grapheme, text);
-        Int bytePositionBefore = 0;
-        Int bytePositionAfter = it.toNextBoundary();
-        while (bytePositionAfter != -1) {
-            graphemes.append(ShapedGrapheme(0, geometry::Vec2f(0, 0), geometry::Vec2f(0, 0), bytePositionBefore));
-            bytePositionBefore = bytePositionAfter;
-            bytePositionAfter = it.toNextBoundary();
+        Int byteIndexBefore = 0;
+        Int byteIndexAfter = it.toNextBoundary();
+        TextBoundaryMarkers markers = TextBoundaryMarker::Grapheme;
+        while (byteIndexAfter != -1) {
+            graphemes.append(ShapedGrapheme(0, geometry::Vec2f(0, 0), geometry::Vec2f(0, 0), byteIndexBefore));
+            positions.append(ShapedTextPositionInfo(0, byteIndexBefore, geometry::Vec2f(0, 0), markers));
+            byteIndexBefore = byteIndexAfter;
+            byteIndexAfter = it.toNextBoundary();
         }
-        // Second pass: compute the smallest glyph corresponding to each grapheme
+        positions.append(ShapedTextPositionInfo(-1, byteIndexBefore, geometry::Vec2f(0, 0), markers));
+
+        // Second pass: compute correspondence between graphemes/positions and glyphs
         Int numGraphemes = graphemes.length();
         Int numGlyphs = glyphs.length();
         if (numGraphemes > 0 && numGlyphs > 0) {
@@ -200,9 +209,12 @@ public:
                        graphemes[graphemeIndex + 1].bytePosition() <= p) {
                     graphemeIndex += 1;
                     graphemes[graphemeIndex].glyphIndex_ = glyphIndex;
+                    positions[graphemeIndex].glyphIndex_ = glyphIndex;
                  }
             }
         }
+        positions.last().glyphIndex_ = numGlyphs;
+
         // Third pass: compute the grapheme advance by computing the sum of the
         // glyph advances (if several glyphs for one grapheme, e.g., accents),
         // or uniformly dividing the glyph advance by the number of graphemes
@@ -236,11 +248,28 @@ public:
                 graphemes[graphemeIndex].advance_ = graphemeAdvance;
             }
         }
+
         // Fourth pass: compute position based on advance
         geometry::Vec2f graphemePosition(0, 0);
         for (Int graphemeIndex = 0; graphemeIndex < numGraphemes; ++graphemeIndex) {
             graphemes[graphemeIndex].position_ = graphemePosition;
+            positions[graphemeIndex].advance_ = graphemePosition;
             graphemePosition += graphemes[graphemeIndex].advance();
+        }
+        positions.last().advance_ = graphemePosition;
+
+        // Fifth pass: compute word boundaries
+        TextBoundaryIterator itWord(TextBoundaryType::Word, text);
+        Int position = 0;
+        Int byteIndex = 0;
+        Int maxPosition = positions.length() - 1;
+        while (byteIndex != -1) {
+            while(position < maxPosition
+                  && positions[position].byteIndex() < byteIndex) {
+                ++position;
+            }
+            positions[position].boundaryMarkers_ |= TextBoundaryMarker::Word;
+            byteIndex = itWord.toNextBoundary();
         }
     }
 
@@ -344,21 +373,34 @@ const ShapedGraphemeArray& ShapedText::graphemes() const
     return impl_->graphemes;
 }
 
+ShapedTextPositionInfo ShapedText::positionInfo(Int position) const
+{
+    if (position < 0 || position >= impl_->positions.length()) {
+        return ShapedTextPositionInfo(-1, -1, geometry::Vec2f(), TextBoundaryMarker::None);
+    }
+    else {
+        return impl_->positions.getUnchecked(position);
+    }
+}
+
+Int ShapedText::numPositions() const
+{
+    return impl_->positions.length();
+}
+
 geometry::Vec2f ShapedText::advance() const
 {
     return impl_->advance;
 }
 
-geometry::Vec2f ShapedText::advance(Int bytePosition) const
+geometry::Vec2f ShapedText::advance(Int position) const
 {
-    geometry::Vec2f res(0, 0);
-    for (const graphics::ShapedGrapheme& grapheme : graphemes()) {
-        if (grapheme.bytePosition() >= bytePosition) {
-            break;
-        }
-        res += grapheme.advance();
+    if (position < 0 || position >= impl_->positions.length()) {
+        return geometry::Vec2f();
     }
-    return res;
+    else {
+        return impl_->positions.getUnchecked(position).advance();
+    }
 }
 
 void ShapedText::fill(core::FloatArray& data,
@@ -596,78 +638,144 @@ void ShapedText::fill(core::FloatArray& data,
     }
 }
 
-namespace {
+Int ShapedText::positionfromByte(Int byteIntex) {
 
-float pos_(const ShapedGrapheme& grapheme) {
-    return grapheme.position()[0];
-}
-
-float adv_(const ShapedGrapheme& grapheme) {
-    return grapheme.advance()[0];
-}
-
-} // namespace
-
-Int ShapedText::bytePosition(const geometry::Vec2f& mousePosition)
-{
-    const ShapedGraphemeArray& g = graphemes();
-    float x = mousePosition[0];
-    Int numGraphemes = g.length();
-    if (numGraphemes == 0) {
-        return 0;
+    // Handle trivial cases
+    if (numPositions() < 2) {
+        return minPosition();
     }
-    else {
-        if (x < 0) {
-            return 0;
+
+    // Find the positions just before and just after, regardless of markers
+    Int beforePosition = minPosition();
+    Int afterPosition = maxPosition();
+    while (beforePosition != afterPosition) {
+        Int middlePosition = (beforePosition + afterPosition) / 2;
+        if (byteIntex < impl_->positions[middlePosition].byteIndex()) {
+            afterPosition = middlePosition;
         }
         else {
-            const ShapedGrapheme& last = g.last();
-            if (x > pos_(last) + adv_(last)) {
-                return core::int_cast<Int>(text().size());
+            beforePosition = middlePosition;
+        }
+    }
+    return afterPosition;
+}
+
+Int ShapedText::position(
+    const geometry::Vec2f& mousePosition,
+    TextBoundaryMarkers boundaryMarkers) {
+
+    const ShapedTextPositionInfoArray& p = impl_->positions;
+    float x = mousePosition[0];
+
+    // Handle trivial cases
+    if (numPositions() < 2) {
+        return minPosition();
+    }
+
+    // Find the positions just before and just after, regardless of markers
+    Int beforePosition;
+    Int afterPosition;
+    if (x < p[minPosition()].advance()[0]) {
+        beforePosition = minPosition();
+        afterPosition = minPosition();
+    }
+    else if (x > p[maxPosition()].advance()[0]) {
+        beforePosition = maxPosition();
+        afterPosition = maxPosition();
+    }
+    else {
+        // Binary search
+        beforePosition = minPosition();
+        afterPosition = maxPosition();
+        while (beforePosition + 1 != afterPosition) {
+            Int middlePosition = (beforePosition + afterPosition) / 2;
+            if (x < p[middlePosition].advance()[0]) {
+                afterPosition = middlePosition;
             }
             else {
-                // Binary search: find grapheme hovered by mouse cursor.
-                // i1 = index of grapheme s.t. mouse is after start of grapheme.
-                // i2 = index of grapheme s.t. mouse is before end of grapheme.
-                // At end of loop: i1 == i2 == grapheme hovered by mouse position
-                Int i1 = 0;
-                Int i2 = g.length() - 1;
-                while (i1 != i2) {
-                    if (i2 == i1 + 1) {
-                        if (x < pos_(g[i2])) {
-                            i2 = i1;
-                        }
-                        else {
-                            i1 = i2;
-                        }
-                    }
-                    else {
-                        Int i3 = (i1 + i2) / 2;
-                        if (x < pos_(g[i3])) {
-                            i2 = i3;
-                        }
-                        else {
-                            i1 = i3;
-                        }
-                    }
-                }
-                // Determine whether the cursor is closer to the beginning
-                // of the grapheme or the end of the grapheme.
-                const ShapedGrapheme& grapheme = g[i1];
-                if (x - pos_(grapheme) < 0.5 * adv_(grapheme)) {
-                    return grapheme.bytePosition();
-                }
-                else {
-                    i2 = i1 + 1;
-                    if (i2 >= g.length()) {
-                        return core::int_cast<Int>(text().size());
-                    }
-                    else {
-                        return g[i2].bytePosition();
-                    }
-                }
+                beforePosition = middlePosition;
             }
         }
+    }
+
+    // Extend positions to the given boundary markers
+    beforePosition = previousOrEqualBoundary(beforePosition, boundaryMarkers);
+    afterPosition = nextOrEqualBoundary(afterPosition, boundaryMarkers);
+
+    // Determine whether the cursor is closer to the position before or after
+    float beforeAdvance = p[beforePosition].advance()[0];
+    float afterAdvance = p[afterPosition].advance()[0];
+    if (x < 0.5 * (beforeAdvance + afterAdvance)) {
+        return beforePosition;
+    }
+    else {
+        return afterPosition;
+    }
+
+    // TODO: if direction is rtl, we should revert all `if (x < ...)` comparisons
+}
+
+Int ShapedText::nextBoundary(
+    Int position,
+    TextBoundaryMarkers boundaryMarkers,
+    bool clamp) {
+
+    return nextOrEqualBoundary(position + 1, boundaryMarkers, clamp);
+}
+
+Int ShapedText::nextOrEqualBoundary(
+    Int position,
+    TextBoundaryMarkers boundaryMarkers,
+    bool clamp) {
+
+    Int minPosition = 0;
+    Int maxPosition = numPositions() - 1;
+    if (position < minPosition) {
+        position = minPosition;
+    }
+
+    while (position <= maxPosition
+           && !impl_->positions[position].boundaryMarkers().hasAll(boundaryMarkers)) {
+        ++position;
+    }
+
+    if (position > maxPosition) {
+        return clamp ? maxPosition : -1;
+    }
+    else {
+        return position;
+    }
+}
+
+Int ShapedText::previousBoundary(
+    Int position,
+    TextBoundaryMarkers boundaryMarkers,
+    bool clamp) {
+
+    return previousOrEqualBoundary(position - 1, boundaryMarkers, clamp);
+}
+
+Int ShapedText::previousOrEqualBoundary(
+    Int position,
+    TextBoundaryMarkers boundaryMarkers,
+    bool clamp) {
+
+    Int minPosition = 0;
+    Int maxPosition = numPositions() - 1;
+    if (position > maxPosition) {
+        position = maxPosition;
+    }
+
+    while (position >= minPosition
+           && !impl_->positions[position].boundaryMarkers().hasAll(boundaryMarkers)) {
+        --position;
+    }
+
+    if (position < minPosition) {
+        return clamp ? minPosition : -1;
+    }
+    else {
+        return position;
     }
 }
 

@@ -171,6 +171,50 @@ private:
     RichTextSpanList* children_;
 };
 
+/*
+class RichTextCursorPositionInfo {
+private:
+    RichTextCursorPositionInfo(
+            Int bytePosition,
+            RichTextBoundaryType boundaryType)
+        : bytePosition_(bytePosition)
+        , boundaryType_(boundaryType){
+    }
+
+public:
+    Int bytePosition() const {
+        return bytePosition_;
+    }
+
+    RichTextBoundaryType boundaryType() const {
+        return boundaryType_;
+    }
+
+    vgc::geometry::Vec2f position() {
+
+    }
+
+private:
+    friend class RichText;
+    Int bytePosition_;
+    RichTextBoundaryType boundaryType_;
+    vgc::geometry::Vec2f position_;
+};
+
+class RichTextCursorPosition {
+private:
+    RichTextCursorPosition(Int bytePosition)
+        : bytePosition_(bytePosition) {
+    }
+
+public:
+
+private:
+    friend class RichText;
+    Int bytePosition_;
+};
+*/
+
 /// \class vgc::graphics::RichText
 /// \brief Represents text with complex layout and style.
 ///
@@ -255,6 +299,20 @@ public:
         updateScroll_();
     }
 
+    /// Returns the new position that a cursor would have if we applied
+    /// the given `operation` from the given `position`.
+    ///
+    /// If the operation is `StartOfSelection`, `EndOfSelection`,
+    /// `LeftOfSelection`, or `RightOfSelection`, the current selection is used
+    /// to determine the resulting position. In case of multiple selections
+    /// regions, the given `selectionIndex` specify which of the selections
+    /// should be used.
+    ///
+    Int movedPosition(
+        Int position,
+        RichTextMoveOperation operation,
+        Int selectionIndex = 0);
+
     /// Moves the cursor according to the given operation. If `select` is false
     /// (the default), then the selection is cleared. If `select` is true, then
     /// the current selection is modified to integrate the given operation
@@ -262,15 +320,14 @@ public:
     ///
     void moveCursor(RichTextMoveOperation operation, bool select = false);
 
-
-    void setSelectionBeginBytePosition(Int bytePosition)
+    void setSelectionBeginPosition(Int position)
     {
-        selectionBegin_ = bytePosition;
+        selectionBegin_ = position;
     }
 
-    void setSelectionEndBytePosition(Int bytePosition)
+    void setSelectionEndPosition(Int position)
     {
-        selectionEnd_ = bytePosition;
+        selectionEnd_ = position;
         updateScroll_();
     }
 
@@ -304,16 +361,10 @@ public:
     void deleteSelectedText();
 
     /// Deletes the selected text if there is a selection. Otherwise, deletes
-    /// the `boundaryType` entity (grapheme, word, line, etc.) immediately
-    /// after the cursor.
+    /// all the text between the current cursor position and the position
+    /// reached by moving the cursor according to the given `operation`.
     ///
-    void deleteNext(TextBoundaryType boundaryType);
-
-    /// Deletes the selected text if there is a selection. Otherwise, deletes
-    /// the `boundaryType` entity (grapheme, word, line, etc.) immediately
-    /// before the cursor.
-    ///
-    void deletePrevious(TextBoundaryType boundaryType);
+    void deleteFromCursor(RichTextMoveOperation operation);
 
     /// Inserts the given text at the current cursor location, and set the
     /// cursor at the end of the newly inserted text. If there was a selection
@@ -341,17 +392,6 @@ public:
         updateScroll_();
     }
 
-    /// Sets the position of the cursor corresponding to the grapheme boundary
-    /// closest to the given mouse position.
-    ///
-    void setCursorFromMousePosition(const geometry::Vec2f& mousePosition)
-    {
-        Int position = bytePosition(mousePosition);
-        if (position != cursorBytePosition()) {
-            setCursorBytePosition(position);
-        }
-    }
-
     /// Returns how much the text is scrolled horizontally relative to its
     /// default position. Scrolling is automatically performed in order to keep
     /// the cursor within `rect()`, whenever `isCursorVisible()` is true.
@@ -372,10 +412,12 @@ public:
         updateScroll_();
     }
 
-    /// Returns the byte position in the original text corresponding to the
-    /// grapheme boundary closest to the given mouse position.
+    /// Returns the text position closest to the given `mousePosition` that has
+    /// all the given `boundaryMarkers`.
     ///
-    Int bytePosition(const geometry::Vec2f& mousePosition);
+    Int position(
+        const geometry::Vec2f& mousePosition,
+        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
 
     // reimplementation of StylableObject virtual methods
     style::StylableObject* parentStylableObject() const override
@@ -394,7 +436,7 @@ private:
     Int selectionEnd_;
     float horizontalScroll_ = 0.0f;
 
-    geometry::Vec2f graphemeAdvance_(Int bytePosition) const;
+    geometry::Vec2f advance_(Int position) const;
     float maxCursorHorizontalAdvance_() const;
     void updateScroll_();
     void insertText_(std::string_view text);
