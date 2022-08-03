@@ -187,7 +187,13 @@ bool UiWidget::event(QEvent* e)
 void UiWidget::initializeGL()
 {
     engine_ = vgc::ui::internal::QglEngine::create(context());
-    engine_->initializeApi();
+    QSurface* surface = context()->surface();
+    graphics::SwapChainPtr swapChain = engine_->createSwapChainFromSurface(surface);
+    engine_->setSwapChain(swapChain);
+    engine_->start();
+    engine_->finish(); // finish initializing builtins
+    // Qt expects context to still be current
+    context()->makeCurrent(surface);
 
     // Initialize widget for painting.
     // Note that initializedGL() is never called if the widget is never visible.
@@ -221,12 +227,16 @@ void UiWidget::paintGL()
 
     // setViewport & present is done by Qt
 
-    engine_->setSwapChainFromCurrentSurface();
+    engine_->makeCurrent();
     engine_->clear(core::Color(0.337, 0.345, 0.353));
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
     widget_->paint(engine_.get());
+
+    // make current in current thread again, engine has no immediate mode yet
+    context()->makeCurrent(context()->surface());
+
     //engine_->releasePaintShader();
     // XXX opengl only.. we need to add a flush/finish to submit ?
 }

@@ -393,7 +393,7 @@ public:
         other.p_ = nullptr;
     }
 
-    template<typename U>
+    template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr& operator=(const ResourcePtr<U>& other)
     {
         if (p_ != other.p_) {
@@ -413,7 +413,7 @@ public:
         return operator=<T>(other);
     }
 
-    template<typename U>
+    template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr& operator=(ResourcePtr<U>&& other)
     {
         std::swap(p_, other.p_);

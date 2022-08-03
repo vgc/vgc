@@ -45,7 +45,7 @@ VGC_DECLARE_OBJECT(D3d11Engine);
 ///
 /// This class is an implementation of Engine using Direct3D 11.0.
 ///
-class VGC_GRAPHICS_API D3d11Engine : public Engine {
+class VGC_GRAPHICS_API D3d11Engine final : public Engine {
 private:
     VGC_OBJECT(D3d11Engine, Engine)
 
@@ -80,6 +80,8 @@ protected:
     void resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
 
     //--  RENDER THREAD implementation functions --
+
+    void onStart_() override {}
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;

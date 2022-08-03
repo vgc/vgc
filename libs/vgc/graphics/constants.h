@@ -41,6 +41,7 @@ inline constexpr UInt32 maxConstantBuffersPerStage = 12;
 //
 inline constexpr UInt32 maxImageViewsPerStage = 8;
 inline constexpr UInt32 maxSamplersPerStage = 8;
+inline constexpr UInt32 maxColorTargets = 8;
 
 } // namespace vgc::graphics
 

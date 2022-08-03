@@ -20,6 +20,7 @@
 #include <chrono>
 #include <memory>
 
+#include <QOffscreenSurface>
 #include <QOpenGLBuffer>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions_3_2_Core>
@@ -62,13 +63,12 @@ using namespace ::vgc::graphics;
 /// This class is an implementation of graphics::Engine using QOpenGLContext and
 /// OpenGL calls.
 ///
-class VGC_UI_API QglEngine : public Engine {
+class VGC_UI_API QglEngine final : public Engine {
 private:
     VGC_OBJECT(QglEngine, Engine)
 
 protected:
-    QglEngine();
-    QglEngine(QOpenGLContext* ctx, bool isExternalCtx = true);
+    QglEngine(QOpenGLContext* ctx, bool isExternalCtx);
 
     void onDestroyed() override;
 
@@ -82,8 +82,8 @@ public:
 
     // not part of the common interface
 
-    void initializeApi();
-    void setSwapChainFromCurrentSurface();
+    SwapChainPtr createSwapChainFromSurface(QSurface* surface);
+    void makeCurrent();
 
     OpenGLFunctions* api() const {
         return api_;
@@ -110,6 +110,8 @@ protected:
     void resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
 
     //--  RENDER THREAD implementation functions --
+
+    void onStart_() override;
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;
@@ -141,9 +143,13 @@ private:
     // XXX keep only format of first chain and compare against new windows ?
     QSurfaceFormat format_;
     QOpenGLContext* ctx_ = nullptr;
+    QOffscreenSurface* offscreenSurface_;
     bool isExternalCtx_ = false;
     QOpenGLFunctions_3_3_Core* api_ = nullptr;
     QSurface* surface_ = nullptr;
+
+    GLuint framebuffer_ = 0;
+    SamplerStatePtr currentSamplerState_;
 
     template<typename T, typename... Args>
     _NODISCARD std::unique_ptr<T> makeUnique(Args&&... args) {
@@ -151,6 +157,9 @@ private:
     }
 
     void initBuiltinShaders_();
+    void makeCurrent_();
+
+    bool hasAnisotropicFilteringSupport_ = false;
 
     // Shader
     //std::unique_ptr<QOpenGLShaderProgram> paintShaderProgram_;

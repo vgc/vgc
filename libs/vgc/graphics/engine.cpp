@@ -83,7 +83,6 @@ void Engine::onDestroyed()
 void Engine::start()
 {
     engineStartTime_ = std::chrono::steady_clock::now();
-    createBuiltinResources_();
     startRenderThread_();
 }
 
@@ -113,7 +112,7 @@ BufferPtr Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLe
             "Negative initialLengthInBytes ({}) provided to Engine::createBuffer()", initialLengthInBytes));
     }
 
-    BufferPtr buffer(constructBuffer_(createInfo));
+    BufferPtr buffer = constructBuffer_(createInfo);
     buffer->lengthInBytes_ = initialLengthInBytes;
 
     struct CommandParameters {
@@ -268,9 +267,25 @@ RasterizerStatePtr Engine::createRasterizerState(const RasterizerStateCreateInfo
     return rasterizerState;
 }
 
+void Engine::setSwapChain(const SwapChainPtr& swapChain)
+{
+    if (swapChain && !checkResourceIsValid_(swapChain)) {
+        return;
+    }
+    if (swapChain_ != swapChain) {
+        swapChain_ = swapChain;
+        queueLambdaCommandWithParameters_<SwapChainPtr>(
+            "setSwapChain",
+            [](Engine* engine, const SwapChainPtr& swapChain) {
+                engine->setSwapChain_(swapChain);
+            },
+            swapChain);
+    }
+}
+
 void Engine::setFramebuffer(const FramebufferPtr& framebuffer)
 {
-    if (framebuffer && !checkResourceIsValid_(framebuffer.get())) {
+    if (framebuffer && !checkResourceIsValid_(framebuffer)) {
         return;
     }
     if (framebufferStack_.last() != framebuffer) {
@@ -554,7 +569,7 @@ void Engine::syncState_()
     if (parameters & PipelineParameter::Framebuffer) {
         FramebufferPtr framebuffer = framebufferStack_.last();
         if (!framebuffer) {
-            framebuffer = getDefaultFramebuffer();
+            framebuffer = swapChain_ ? swapChain_->defaultFramebuffer() : FramebufferPtr();
         }
         queueLambdaCommandWithParameters_<FramebufferPtr>(
             "setFramebuffer",
@@ -681,24 +696,14 @@ void Engine::syncStageSamplers_(ShaderStage shaderStage)
         shaderStage);
 }
 
-void Engine::beginFrame(const SwapChainPtr& swapChain, bool isStateDirty)
+void Engine::beginFrame(bool isStateDirty)
 {
-    if (swapChain && swapChain->registry_ != resourceRegistry_) {
-        // XXX error, using a resource from another engine..
-        return;
-    }
-    swapChain_ = swapChain;
     frameStartTime_ = std::chrono::steady_clock::now();
     dirtyBuiltinConstantBuffer_ = true;
     if (isStateDirty) {
         setStateDirty();
     }
-    queueLambdaCommandWithParameters_<SwapChainPtr>(
-        "setSwapChain",
-        [](Engine* engine, const SwapChainPtr& swapChain) {
-            engine->setSwapChain_(swapChain);
-        },
-        swapChain);
+    // XXX check every stack has size one !
 }
 
 void Engine::resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height)
@@ -779,7 +784,6 @@ void Engine::present(UInt32 syncInterval,
     }
 }
 
-
 void Engine::createBuiltinResources_()
 {
     {
@@ -798,6 +802,7 @@ void Engine::createBuiltinResources_()
 // XXX add try/catch ?
 void Engine::renderThreadProc_()
 {
+    onStart_();
     std::unique_lock<std::mutex> lock(mutex_, std::defer_lock);
     while (1) {
         lock.lock();

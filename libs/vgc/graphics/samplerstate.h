@@ -65,16 +65,6 @@ public:
         mipFilter_ = mipFilter;
     }
 
-    UInt8 maxAnisotropy() const
-    {
-        return maxAnisotropy_;
-    }
-
-    void setMaxAnisotropy(UInt8 maxAnisotropy)
-    {
-        maxAnisotropy_ = maxAnisotropy;
-    }
-
     ImageWrapMode wrapModeU() const
     {
         return wrapModeU_;
@@ -113,6 +103,16 @@ public:
     void setComparisonFunction(ComparisonFunction comparisonFunction)
     {
         comparisonFunction_ = comparisonFunction;
+    }
+
+    UInt8 maxAnisotropy() const
+    {
+        return maxAnisotropy_;
+    }
+
+    void setMaxAnisotropy(UInt8 maxAnisotropy)
+    {
+        maxAnisotropy_ = maxAnisotropy;
     }
 
     const geometry::Vec4f& wrapColor() const
@@ -159,14 +159,14 @@ private:
     FilterMode magFilter_ = FilterMode::Point;
     FilterMode minFilter_ = FilterMode::Point;
     FilterMode mipFilter_ = FilterMode::Point;
-    // enables anisotropic filtering if >= 1, max is 16.
-    // has precedence over user-defined filter modes.
-    UInt8 maxAnisotropy_ = 0;
     ImageWrapMode wrapModeU_ = ImageWrapMode::ClampToConstantColor;
     ImageWrapMode wrapModeV_ = ImageWrapMode::ClampToConstantColor;
     ImageWrapMode wrapModeW_ = ImageWrapMode::ClampToConstantColor;
+    // enables comparison filtering if != Disabled
     ComparisonFunction comparisonFunction_ = ComparisonFunction::Disabled;
-    // enables comparison filtering if != None
+    // enables anisotropic filtering if >= 1, max is 16.
+    // has precedence over user-defined filter modes.
+    UInt8 maxAnisotropy_ = 0;
     geometry::Vec4f wrapColor_ = {0.f, 0.f, 0.f, 0.f};
     float mipLODBias_ = 0.f;
     float minLOD_ = 0.f;

@@ -21,6 +21,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/graphics/api.h>
+#include <vgc/graphics/constants.h>
 #include <vgc/graphics/enums.h>
 #include <vgc/graphics/resource.h>
 
@@ -76,7 +77,7 @@ public:
         isEnabled_ = enabled;
     }
 
-    BlendEquation equationRGB() const
+    const BlendEquation& equationRGB() const
     {
         return equationRGB_;
     }
@@ -91,7 +92,7 @@ public:
         equationRGB_ = BlendEquation(operation, sourceFactor, targetFactor);
     }
 
-    BlendEquation equationAlpha() const
+    const BlendEquation& equationAlpha() const
     {
         return equationAlpha_;
     }
@@ -117,7 +118,7 @@ public:
     }
 
 private:
-    bool isEnabled_ = true;
+    bool isEnabled_ = false;
     BlendEquation equationRGB_ = {};
     BlendEquation equationAlpha_ = {};
     BlendWriteMask writeMask_ = BlendWriteMaskBit::All;
@@ -183,7 +184,7 @@ public:
 private:
     bool isAlphaToCoverageEnabled_ = false;
     bool isIndependentBlendEnabled_ = false;
-    std::array<TargetBlendState, 8> targetBlendStates_ = {};
+    std::array<TargetBlendState, maxColorTargets> targetBlendStates_ = {};
 
     size_t castStateIndex_(Int i) const
     {

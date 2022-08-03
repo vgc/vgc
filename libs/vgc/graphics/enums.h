@@ -385,6 +385,7 @@ enum class BuiltinGeometryLayout : Int8 {
     XYZ = 2,
     Max_ = XYZ,
 };
+inline constexpr UInt8 numBuiltinGeometryLayouts = static_cast<UInt8>(BuiltinGeometryLayout::Max_) + 1;
 
 enum class PipelineParameter : UInt32 {
     None = 0,

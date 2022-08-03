@@ -130,6 +130,8 @@ public:
 
     // !! public methods should be called on user thread !!
 
+    void init();
+
     void start();
 
     /// Creates a swap chain for the given window.
@@ -164,7 +166,7 @@ public:
     BufferPtr createVertexBuffer(core::Array<T> initialData, bool isDynamic);
 
     GeometryViewPtr createDynamicTriangleListView(BuiltinGeometryLayout vertexLayout);
-    
+
     ImagePtr createImage(const ImageCreateInfo& createInfo);
 
     ImagePtr createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData);
@@ -181,6 +183,12 @@ public:
 
     RasterizerStatePtr createRasterizerState(const RasterizerStateCreateInfo& createInfo);
 
+    /// Sets the swapchain to be used by the default framebuffer.
+    ///
+    void setSwapChain(const SwapChainPtr& swapChain);
+
+    /// Sets the framebuffer to be drawn to.
+    ///
     void setFramebuffer(const FramebufferPtr& framebuffer = nullptr);
 
     void setViewport(Int x, Int y, Int width, Int height);
@@ -243,11 +251,18 @@ public:
 
     void popPipelineParameters(PipelineParameters parameters);
 
-    FramebufferPtr getDefaultFramebuffer();
+    /// Returns the default framebuffer.
+    /// If a swapchain is set, it is a framebuffer that uses its backbuffer as color target.
+    ///
+    FramebufferPtr defaultFramebuffer();
 
-    SwapChainPtr getSwapChain();
+    void setDefaultFramebuffer();
 
-    void beginFrame(const SwapChainPtr& swapChain, bool isStateDirty = false);
+    /// Returns the current swapchain.
+    ///
+    SwapChainPtr swapChain();
+
+    void beginFrame(bool isStateDirty = false);
 
     void resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height);
 
@@ -317,6 +332,8 @@ protected:
 
     // -- RENDER THREAD implementation functions --
 
+    virtual void onStart_() = 0;
+
     virtual void initFramebuffer_(Framebuffer* framebuffer) = 0;
     virtual void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) = 0;
     virtual void initImage_(Image* image, const Span<const Span<const char>>* dataSpanSpan) = 0;
@@ -347,6 +364,9 @@ protected:
 
 protected:
     detail::ResourceRegistry* resourceRegistry_ = nullptr;
+
+    // must be called in the final class constructor
+    void createBuiltinResources_();
 
     // wrapper engines may not know about the host state at some point
     void setStateDirty() {
@@ -381,6 +401,8 @@ protected:
     ProgramPtr roundedRectangleProgram_;
 
     // -- QUEUING --
+
+    // XXX future possible optimization: don't allocate commands but serialize them in a single storage.
 
     // cannot be flushed in out-of-order chunks unless userGarbagedResources is only sent with the last
     std::list<CommandUPtr> pendingCommands_;
@@ -450,8 +472,6 @@ private:
     core::Array<geometry::Mat4f> viewMatrixStack_;
     bool dirtyBuiltinConstantBuffer_ = false;
 
-    void createBuiltinResources_();
-
     // -- builtin batching early impl --
 
     void flushBuiltinBatches_();
@@ -502,7 +522,7 @@ private:
             return false;
         }
         if (resource->registry_ != resourceRegistry_) {
-            VGC_ERROR(LogVgcGraphics, "Trying to use a geometry view from an other engine");
+            VGC_ERROR(LogVgcGraphics, "Trying to use a resource from an other engine");
             return false;
         }
         return true;
@@ -559,13 +579,18 @@ inline void Engine::popViewMatrix()
     dirtyBuiltinConstantBuffer_ = true;
 }
 
-inline FramebufferPtr Engine::getDefaultFramebuffer()
+inline FramebufferPtr Engine::defaultFramebuffer()
 {
     SwapChain* swapChain = swapChain_.get();
-    return swapChain ? swapChain->defaultFrameBuffer_ : FramebufferPtr();
+    return swapChain ? swapChain->defaultFramebuffer() : FramebufferPtr();
 }
 
-inline SwapChainPtr Engine::getSwapChain()
+inline void Engine::setDefaultFramebuffer()
+{
+    setFramebuffer(defaultFramebuffer());
+}
+
+inline SwapChainPtr Engine::swapChain()
 {
     return swapChain_;
 }

@@ -23,6 +23,8 @@
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/enums.h>
 #include <vgc/graphics/framebuffer.h>
+#include <vgc/graphics/image.h>
+#include <vgc/graphics/imageview.h>
 #include <vgc/graphics/resource.h>
 
 namespace vgc::graphics {
@@ -145,9 +147,12 @@ protected:
     friend Engine;
     using Resource::Resource;
 
-    SwapChain(ResourceRegistry* registry, const SwapChainCreateInfo& createInfo)
-        : Resource(registry), info_(createInfo)
-    {
+    SwapChain(ResourceRegistry* registry,
+              const SwapChainCreateInfo& createInfo,
+              const FramebufferPtr& defaultFramebuffer)
+        : Resource(registry)
+        , info_(createInfo)
+        , defaultFramebuffer_(defaultFramebuffer) {
     }
 
 public:
@@ -166,21 +171,21 @@ public:
         return numPendingPresents_.load();
     }
 
-    const FramebufferPtr& defaultFrameBuffer() const
+    const FramebufferPtr& defaultFramebuffer() const
     {
-        return defaultFrameBuffer_;
+        return defaultFramebuffer_;
     }
 
 protected:
     void releaseSubResources_() override
     {
-        defaultFrameBuffer_.reset();
+        defaultFramebuffer_.reset();
     }
-
-    FramebufferPtr defaultFrameBuffer_;
 
 private:
     SwapChainCreateInfo info_;
+    FramebufferPtr defaultFramebuffer_;
+
     std::atomic_uint32_t numPendingPresents_ = 0; // to limit queuing in the Engine.
 };
 using SwapChainPtr = ResourcePtr<SwapChain>;

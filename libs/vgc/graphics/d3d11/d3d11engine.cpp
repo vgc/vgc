@@ -91,12 +91,6 @@ public:
         return dxgiFormat_;
     }
 
-    // resizing a swap chain requires releasing all views to its back buffers.
-    void forceReleaseD3dObject()
-    {
-        object_.reset();
-    }
-
 protected:
     void release_(Engine* engine) override
     {
@@ -150,19 +144,6 @@ public:
     DXGI_FORMAT dxgiFormat() const
     {
         return dxgiFormat_;
-    }
-
-    // resizing a swap chain requires releasing all views to its back buffers.
-    // XXX and forceSet after the resize ?
-    void forceReleaseD3dObject()
-    {
-        D3d11Image* d3dImage = viewedImage().get_static_cast<D3d11Image>();
-        if (d3dImage) {
-            d3dImage->forceReleaseD3dObject();
-        }
-        srv_.reset();
-        rtv_.reset();
-        dsv_.reset();
     }
 
     ID3D11Resource* d3dViewedResource() const
@@ -356,12 +337,6 @@ public:
             static_cast<ID3D11DepthStencilView*>(depthStencilView_->dsvObject()) : nullptr;
     }
 
-    // resizing a swap chain requires releasing all views to its back buffers.
-    void forceReleaseColorViewD3dObject()
-    {
-        colorView_->forceReleaseD3dObject();
-    }
-
 protected:
     void releaseSubResources_() override
     {
@@ -430,32 +405,24 @@ void D3d11Framebuffer::release_(Engine* engine)
 }
 
 class D3d11SwapChain : public SwapChain {
-public:
+protected:
+    friend D3d11Engine;
+
     D3d11SwapChain(ResourceRegistry* registry,
                    const SwapChainCreateInfo& desc,
-                   IDXGISwapChain* dxgiSwapChain)
-        : SwapChain(registry, desc)
-        , dxgiSwapChain_(dxgiSwapChain) {
+                   const FramebufferPtr& framebuffer)
+        : SwapChain(registry, desc, framebuffer) {
     }
 
+public:
     IDXGISwapChain* dxgiSwapChain() const
     {
         return dxgiSwapChain_.get();
     }
 
-    // can't be called from render thread
-    void setDefaultFramebuffer(const D3d11FramebufferPtr& defaultFrameBuffer)
+    D3d11Framebuffer* d3dDefaultFramebuffer()
     {
-        defaultFrameBuffer_ = defaultFrameBuffer;
-    }
-
-    // can't be called from render thread
-    void clearDefaultFramebuffer()
-    {
-        if (defaultFrameBuffer_) {
-            static_cast<D3d11Framebuffer*>(defaultFrameBuffer_.get())->forceReleaseColorViewD3dObject();
-            defaultFrameBuffer_.reset();
-        }
+        return defaultFramebuffer().get_static_cast<D3d11Framebuffer>();
     }
 
 protected:
@@ -748,6 +715,8 @@ D3d11Engine::D3d11Engine()
     device_->QueryInterface(IID_PPV_ARGS(dxgiDevice.releaseAndGetAddressOf()));
     dxgiDevice->GetParent(IID_PPV_ARGS(dxgiAdapter.releaseAndGetAddressOf()));
     dxgiAdapter->GetParent(IID_PPV_ARGS(factory_.releaseAndGetAddressOf()));
+
+    createBuiltinResources_();
 }
 
 void D3d11Engine::onDestroyed()
@@ -950,15 +919,15 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
     device_->CreateRenderTargetView(backBuffer.get(), NULL, backBufferView.releaseAndGetAddressOf());
     colorView->rtv_ = backBufferView.get();
 
-    D3d11FramebufferPtr newFramebuffer(
+    D3d11FramebufferPtr defaultFramebuffer(
         new D3d11Framebuffer(
             resourceRegistry_,
             colorView,
             D3d11ImageViewPtr(),
             true));
 
-    auto swapChain = makeUnique<D3d11SwapChain>(resourceRegistry_, createInfo, dxgiSwapChain.get());
-    swapChain->setDefaultFramebuffer(newFramebuffer);
+    auto swapChain = makeUnique<D3d11SwapChain>(resourceRegistry_, createInfo, defaultFramebuffer);
+    swapChain->dxgiSwapChain_ = dxgiSwapChain;
 
     return SwapChainPtr(swapChain.release());
 }
@@ -1095,7 +1064,11 @@ void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 he
     D3d11SwapChain* d3dSwapChain = static_cast<D3d11SwapChain*>(swapChain);
     IDXGISwapChain* dxgiSwapChain = d3dSwapChain->dxgiSwapChain();
 
-    d3dSwapChain->clearDefaultFramebuffer();
+    D3d11Framebuffer* defaultFramebuffer = d3dSwapChain->d3dDefaultFramebuffer();
+    D3d11ImageView* oldColorView = defaultFramebuffer->d3dColorView_;
+    oldColorView->rtv_.reset();
+    oldColorView->viewedImage().get_static_cast<D3d11Image>()->object_.reset();
+    oldColorView->dependentD3dFramebuffers_.removeOne(defaultFramebuffer);
 
     HRESULT hres = dxgiSwapChain->ResizeBuffers(
         0, width, height, DXGI_FORMAT_UNKNOWN, 0);
@@ -1125,14 +1098,14 @@ void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 he
     device_->CreateRenderTargetView(backBuffer.get(), NULL, backBufferView.releaseAndGetAddressOf());
     colorView->rtv_ = backBufferView.get();
 
-    D3d11FramebufferPtr newFramebuffer(
-        new D3d11Framebuffer(
-            resourceRegistry_,
-            colorView,
-            D3d11ImageViewPtr(),
-            true));
+    defaultFramebuffer->colorView_ = colorView;
+    defaultFramebuffer->d3dColorView_ = colorView.get();
+    colorView->dependentD3dFramebuffers_.append(defaultFramebuffer);
 
-    d3dSwapChain->setDefaultFramebuffer(newFramebuffer);
+    if (defaultFramebuffer == boundFramebuffer_.get()) {
+        boundFramebuffer_.reset();
+        setFramebuffer_(d3dSwapChain->defaultFramebuffer());
+    }
 }
 
 // -- RENDER THREAD functions --
@@ -1473,11 +1446,8 @@ void D3d11Engine::initRasterizerState_(RasterizerState* state)
     device_->CreateRasterizerState(&desc, d3dRasterizerState->object_.releaseAndGetAddressOf());
 }
 
-void D3d11Engine::setSwapChain_(const SwapChainPtr& swapChain)
+void D3d11Engine::setSwapChain_(const SwapChainPtr& /*swapChain*/)
 {
-    D3d11SwapChain* d3dSwapChain = swapChain.get_static_cast<D3d11SwapChain>();
-    setFramebuffer_(d3dSwapChain->defaultFrameBuffer());
-    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
     deviceCtx_->OMSetDepthStencilState(depthStencilState_.get(), 0);
     deviceCtx_->HSSetShader(NULL, NULL, 0);
     deviceCtx_->DSSetShader(NULL, NULL, 0);
@@ -1688,12 +1658,16 @@ void D3d11Engine::clear_(const core::Color& color)
 {
     ComPtr<ID3D11RenderTargetView> rtv;
     deviceCtx_->OMGetRenderTargets(1, rtv.releaseAndGetAddressOf(), NULL);
-    std::array<float, 4> c = {
-        static_cast<float>(color.r()),
-        static_cast<float>(color.g()),
-        static_cast<float>(color.b()),
-        static_cast<float>(color.a())};
-    deviceCtx_->ClearRenderTargetView(rtv.get(), c.data());
+    if (rtv) {
+        std::array<float, 4> c = {
+            static_cast<float>(color.r()),
+            static_cast<float>(color.g()),
+            static_cast<float>(color.b()),
+            static_cast<float>(color.a())};
+        deviceCtx_->ClearRenderTargetView(rtv.get(), c.data());
+    } else {
+        VGC_WARNING(LogVgcGraphics, "clear() called but no target is set");
+    }
 }
 
 UInt64 D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags /*flags*/)

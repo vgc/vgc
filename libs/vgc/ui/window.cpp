@@ -101,6 +101,8 @@ Window::Window(ui::WidgetPtr widget) :
         blendState_ = engine_->createBlendState(createInfo);
     }
 
+    engine_->setSwapChain(swapChain_);
+    engine_->setDefaultFramebuffer();
     engine_->start();
 
     // Handle dead keys and complex input methods.
@@ -293,7 +295,7 @@ void Window::paint(bool sync) {
     }
     updateDeferred_ = false;
 
-    engine_->beginFrame(swapChain_);
+    engine_->beginFrame();
     engine_->setRasterizerState(rasterizerState_);
     engine_->setBlendState(blendState_, geometry::Vec4f());
     engine_->setViewport(0, 0, width_, height_);
