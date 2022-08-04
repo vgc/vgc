@@ -273,6 +273,10 @@ public:
         }
     }
 
+    float horizontalAdvance(Int position) {
+        return positions[position].advance()[0];
+    }
+
 private:
     friend class graphics::ShapedText;
 };
@@ -638,64 +642,46 @@ void ShapedText::fill(core::FloatArray& data,
     }
 }
 
-Int ShapedText::positionfromByte(Int byteIntex) {
-
-    // Handle trivial cases
-    if (numPositions() < 2) {
-        return minPosition();
+Int ShapedText::positionfromByte(Int byteIndex) {
+    auto first = impl_->positions.cbegin();
+    auto last = impl_->positions.cend();
+    auto comp = [](const ShapedTextPositionInfo& info, Int byteIndex) {
+        return info.byteIndex() < byteIndex;
+    };
+    auto it = std::lower_bound(first, last, byteIndex, comp);
+    if (it == last) {
+        return maxPosition();
     }
-
-    // Find the positions just before and just after, regardless of markers
-    Int beforePosition = minPosition();
-    Int afterPosition = maxPosition();
-    while (beforePosition != afterPosition) {
-        Int middlePosition = (beforePosition + afterPosition) / 2;
-        if (byteIntex < impl_->positions[middlePosition].byteIndex()) {
-            afterPosition = middlePosition;
-        }
-        else {
-            beforePosition = middlePosition;
-        }
+    else {
+        return static_cast<Int>(std::distance(first, it));
     }
-    return afterPosition;
 }
 
 Int ShapedText::position(
     const geometry::Vec2f& mousePosition,
     TextBoundaryMarkers boundaryMarkers) {
 
-    const ShapedTextPositionInfoArray& p = impl_->positions;
+    // Find smallest text position after the given mouse position
     float x = mousePosition[0];
+    auto first = impl_->positions.cbegin();
+    auto last = impl_->positions.cend();
+    auto comp = [](const ShapedTextPositionInfo& info, float x) {
+        return info.advance()[0] < x;
+    };
+    auto it = std::lower_bound(first, last, x, comp);
 
-    // Handle trivial cases
-    if (numPositions() < 2) {
-        return minPosition();
+    // Deduce pair of text positions around the given mouse position
+    Int beforePosition = minPosition();
+    Int afterPosition = maxPosition();
+    if (it == first) {
+        afterPosition = beforePosition; // before = after = min
     }
-
-    // Find the positions just before and just after, regardless of markers
-    Int beforePosition;
-    Int afterPosition;
-    if (x < p[minPosition()].advance()[0]) {
-        beforePosition = minPosition();
-        afterPosition = minPosition();
-    }
-    else if (x > p[maxPosition()].advance()[0]) {
-        beforePosition = maxPosition();
-        afterPosition = maxPosition();
+    else if (it == last) {
+        beforePosition = afterPosition; // before = after = max
     }
     else {
-        // Binary search
-        beforePosition = minPosition();
-        afterPosition = maxPosition();
-        while (beforePosition + 1 != afterPosition) {
-            Int middlePosition = (beforePosition + afterPosition) / 2;
-            if (x < p[middlePosition].advance()[0]) {
-                afterPosition = middlePosition;
-            }
-            else {
-                beforePosition = middlePosition;
-            }
-        }
+        afterPosition = static_cast<Int>(std::distance(first, it));
+        beforePosition = afterPosition - 1;
     }
 
     // Extend positions to the given boundary markers
@@ -703,8 +689,8 @@ Int ShapedText::position(
     afterPosition = nextOrEqualBoundary(afterPosition, boundaryMarkers);
 
     // Determine whether the cursor is closer to the position before or after
-    float beforeAdvance = p[beforePosition].advance()[0];
-    float afterAdvance = p[afterPosition].advance()[0];
+    float beforeAdvance = impl_->horizontalAdvance(beforePosition);
+    float afterAdvance = impl_->horizontalAdvance(afterPosition);
     if (x < 0.5 * (beforeAdvance + afterAdvance)) {
         return beforePosition;
     }

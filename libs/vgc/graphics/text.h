@@ -652,9 +652,12 @@ public:
               float clipLeft, float clipRight,
               float clipTop, float clipBottom) const;
 
-    /// Returns the text position corresponding to the given UTF-8 `byteIndex` (or just after, if no text position exists exactly at the given byte index).
+    /// Returns the smallest text position whose UTF-8 byte index is greater or
+    /// equal than the given `byteIndex`.
     ///
-    Int positionfromByte(Int byteIntex);
+    /// Returns maxPosition() if no such position exists.
+    ///
+    Int positionfromByte(Int byteIndex);
 
     /// Returns the text position closest to the given `mousePosition` that has
     /// all the given `boundaryMarkers`.

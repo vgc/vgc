@@ -177,6 +177,7 @@ private:
 class VGC_GRAPHICS_API RichText : public RichTextSpan {
 private:
     VGC_OBJECT(RichText, RichTextSpan)
+    RichText();
     RichText(std::string_view text);
 
 public:
