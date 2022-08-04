@@ -209,23 +209,30 @@ graphics::SizedFont* getDefaultSizedFont_()
 
 } // namespace
 
-RichText::RichText(std::string_view text)
-    : parentStylableObject_(nullptr)
+RichText::RichText()
+    : RichTextSpan()
+    , parentStylableObject_(nullptr)
     , text_()
-    , shapedText_(getDefaultSizedFont_(), text)
+    , shapedText_(getDefaultSizedFont_(), "")
     , isSelectionVisible_(false)
     , isCursorVisible_(false)
     , selectionBegin_(0)
     , selectionEnd_(0)
     , horizontalScroll_(0.0f) {
+}
+
+RichText::RichText(std::string_view text)
+    : RichText() {
 
     insertText_(text);
+    selectionBegin_ = 0;
+    selectionEnd_ = 0;
     updateScroll_();
 }
 
 RichTextPtr RichText::create()
 {
-    return RichTextPtr(new RichText(std::string_view()));
+    return RichTextPtr(new RichText());
 }
 
 RichTextPtr RichText::create(std::string_view text)
@@ -236,14 +243,13 @@ RichTextPtr RichText::create(std::string_view text)
 void RichText::setText(std::string_view text)
 {
     if (text_ != text) {
-        Int oldSelectionBegin = selectionBegin_;
         Int oldSelectionEnd = selectionEnd_;
         text_.clear();
         insertText_(text);
         Int minPosition = shapedText_.minPosition();
         Int maxPosition = shapedText_.maxPosition();
-        selectionBegin_ = core::clamp(oldSelectionBegin, minPosition, maxPosition);
         selectionEnd_ = core::clamp(oldSelectionEnd, minPosition, maxPosition);
+        selectionBegin_ = selectionEnd_;
         updateScroll_();
     }
 }
@@ -484,39 +490,6 @@ void RichText::fill(core::FloatArray& a)
     }
 }
 
-/*
-namespace {
-
-Int getNextBoundary(const graphics::ShapedText& text,
-                    Int currentPos,
-                    TextBoundaryMarker boundaryType) {
-
-    Int numPositions =
-    // TODO: cache the TextBoundaryIterator instead of creating a new one each time
-    TextBoundaryIterator it(boundaryType, text);
-    it.setPosition(currentPos);
-    Int res = it.toNextBoundary();
-    if (res == -1) {
-        res = static_cast<Int>(text.size());
-    }
-    return res;
-}
-
-Int getPreviousBoundary(const graphics::ShapedText& text,
-                        Int currentPos,
-                        TextBoundaryType boundaryType) {
-    TextBoundaryIterator it(boundaryType, text);
-    it.setPosition(currentPos);
-    Int res = it.toPreviousBoundary();
-    if (res == -1) {
-        res = 0;
-    }
-    return res;
-}
-
-} // namespace
-*/
-
 Int RichText::movedPosition(
         Int position,
         RichTextMoveOperation operation,
@@ -650,14 +623,16 @@ float RichText::maxCursorHorizontalAdvance_() const
 void RichText::updateScroll_()
 {
     float textWidth = rect_.width();
-    float textEndAdvance = maxCursorHorizontalAdvance_();
-    float currentTextEndPos = textEndAdvance - horizontalScroll_;
-    if (currentTextEndPos < textWidth && horizontalScroll_ > 0) {
-        if (textEndAdvance < textWidth) {
-            horizontalScroll_ = 0;
-        }
-        else {
-            horizontalScroll_ = textEndAdvance - textWidth;
+    if (horizontalScroll_ > 0) {
+        float textEndAdvance = maxCursorHorizontalAdvance_();
+        float currentTextEndPos = textEndAdvance - horizontalScroll_;
+        if (currentTextEndPos < textWidth) {
+            if (textEndAdvance < textWidth) {
+                horizontalScroll_ = 0;
+            }
+            else {
+                horizontalScroll_ = textEndAdvance - textWidth;
+            }
         }
     }
     if (isCursorVisible()) {
@@ -672,6 +647,9 @@ void RichText::updateScroll_()
     }
 }
 
+// Inserts text at the current cursor position. The new cursor position
+// becomes the end of the inserted text and the selection is cleared.
+//
 void RichText::insertText_(std::string_view textToInsert)
 {
     // Get number of bytes to insert after removing unsupported characters
@@ -683,6 +661,8 @@ void RichText::insertText_(std::string_view textToInsert)
     }
 
     if (numBytesToInsert > 0) {
+
+        // Get byte index where to insert the text
         Int oldByteIndex = shapedText_.positionInfo(selectionEnd_).byteIndex();
         size_t insertPos = static_cast<size_t>(oldByteIndex);
 
@@ -704,12 +684,15 @@ void RichText::insertText_(std::string_view textToInsert)
             }
         }
 
-        // Update selection
+        // Update shaped text
+        shapedText_.setText(text_);
+
+        // Update cursor position
         selectionEnd_ = shapedText_.positionfromByte(oldByteIndex + numBytesToInsert);
-        selectionBegin_ = selectionEnd_;
     }
 
-    shapedText_.setText(text_);
+    // Clear selection
+    selectionBegin_ = selectionEnd_;
 }
 
 } // namespace vgc::graphics
