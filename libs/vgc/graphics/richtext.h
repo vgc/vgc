@@ -171,50 +171,6 @@ private:
     RichTextSpanList* children_;
 };
 
-/*
-class RichTextCursorPositionInfo {
-private:
-    RichTextCursorPositionInfo(
-            Int bytePosition,
-            RichTextBoundaryType boundaryType)
-        : bytePosition_(bytePosition)
-        , boundaryType_(boundaryType){
-    }
-
-public:
-    Int bytePosition() const {
-        return bytePosition_;
-    }
-
-    RichTextBoundaryType boundaryType() const {
-        return boundaryType_;
-    }
-
-    vgc::geometry::Vec2f position() {
-
-    }
-
-private:
-    friend class RichText;
-    Int bytePosition_;
-    RichTextBoundaryType boundaryType_;
-    vgc::geometry::Vec2f position_;
-};
-
-class RichTextCursorPosition {
-private:
-    RichTextCursorPosition(Int bytePosition)
-        : bytePosition_(bytePosition) {
-    }
-
-public:
-
-private:
-    friend class RichText;
-    Int bytePosition_;
-};
-*/
-
 /// \class vgc::graphics::RichText
 /// \brief Represents text with complex layout and style.
 ///
