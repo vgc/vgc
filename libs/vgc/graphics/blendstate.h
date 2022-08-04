@@ -60,12 +60,22 @@ private:
     BlendFactor targetFactor_ = BlendFactor::One;
 };
 
-/// \class vgc::graphics::TargetBlendState
-/// \brief Describes the blend state for some target.
+/// \class vgc::graphics::BlendStateCreateInfo
+/// \brief Parameters for blend state creation.
 ///
-class VGC_GRAPHICS_API TargetBlendState {
+class VGC_GRAPHICS_API BlendStateCreateInfo {
 public:
-    constexpr TargetBlendState() noexcept = default;
+    constexpr BlendStateCreateInfo() noexcept = default;
+
+    bool isAlphaToCoverageEnabled() const
+    {
+        return isAlphaToCoverageEnabled_;
+    }
+
+    void setAlphaToCoverageEnabled(bool enabled)
+    {
+        isAlphaToCoverageEnabled_ = enabled;
+    }
 
     bool isEnabled() const
     {
@@ -118,83 +128,16 @@ public:
     }
 
 private:
+    bool isAlphaToCoverageEnabled_ = false;
+
+    // independent blend is not always supported by the hardware
+    // see VkPhysicalDeviceFeatures::independentBlend
+    // at https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
+
     bool isEnabled_ = false;
     BlendEquation equationRGB_ = {};
     BlendEquation equationAlpha_ = {};
     BlendWriteMask writeMask_ = BlendWriteMaskBit::All;
-};
-
-/// \class vgc::graphics::BlendStateCreateInfo
-/// \brief Parameters for blend state creation.
-///
-class VGC_GRAPHICS_API BlendStateCreateInfo {
-public:
-    constexpr BlendStateCreateInfo() noexcept = default;
-
-    bool isAlphaToCoverageEnabled() const
-    {
-        return isAlphaToCoverageEnabled_;
-    }
-
-    void setAlphaToCoverageEnabled(bool enabled)
-    {
-        isAlphaToCoverageEnabled_ = enabled;
-    }
-
-    bool isIndependentBlendEnabled() const
-    {
-        return isIndependentBlendEnabled_;
-    }
-
-    void setIndependentBlendEnabled(bool enabled)
-    {
-        isIndependentBlendEnabled_ = enabled;
-    }
-
-    const TargetBlendState& targetBlendState(Int i) const
-    {
-        size_t idx = castStateIndex_(i);
-        return targetBlendStates_[idx];
-    }
-
-    void setTargetBlendEquationRGB(Int i, BlendOp operation, BlendFactor sourceFactor, BlendFactor targetFactor)
-    {
-        size_t idx = castStateIndex_(i);
-        targetBlendStates_[idx].setEquationRGB(operation, sourceFactor, targetFactor);
-    }
-
-    void setTargetBlendEquationAlpha(Int i, BlendOp operation, BlendFactor sourceFactor, BlendFactor targetFactor)
-    {
-        size_t idx = castStateIndex_(i);
-        targetBlendStates_[idx].setEquationAlpha(operation, sourceFactor, targetFactor);
-    }
-
-    void setTargetBlendEnabled(Int i, bool enabled)
-    {
-        size_t idx = castStateIndex_(i);
-        targetBlendStates_[idx].setEnabled(enabled);
-    }
-
-    void setTargetBlendWriteMask(Int i, BlendWriteMask writeMask)
-    {
-        size_t idx = castStateIndex_(i);
-        targetBlendStates_[idx].setWriteMask(writeMask);
-    }
-
-private:
-    bool isAlphaToCoverageEnabled_ = false;
-    bool isIndependentBlendEnabled_ = false;
-    std::array<TargetBlendState, maxColorTargets> targetBlendStates_ = {};
-
-    size_t castStateIndex_(Int i) const
-    {
-        size_t idx = core::int_cast<size_t>(i);
-        if (idx >= targetBlendStates_.size()) {
-            throw core::IndexError(core::format(
-                "Target blend state index {} is out of range [0, {}]", i, targetBlendStates_.size() - 1));
-        }
-        return idx;
-    }
 };
 
 /// \class vgc::graphics::BlendState
@@ -213,14 +156,24 @@ public:
         return info_.isAlphaToCoverageEnabled();
     }
 
-    bool isIndependentBlendEnabled() const
+    bool isEnabled() const
     {
-        return info_.isIndependentBlendEnabled();
+        return info_.isEnabled();
     }
 
-    const TargetBlendState& targetBlendState(Int i) const
+    const BlendEquation& equationRGB() const
     {
-        return info_.targetBlendState(i);
+        return info_.equationRGB();
+    }
+
+    const BlendEquation& equationAlpha() const
+    {
+        return info_.equationAlpha();
+    }
+
+    BlendWriteMask writeMask() const
+    {
+        return info_.writeMask();
     }
 
 private:

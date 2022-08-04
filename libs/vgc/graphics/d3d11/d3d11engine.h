@@ -85,7 +85,7 @@ protected:
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;
-    void initImage_(Image* image, const Span<const Span<const char>>* dataSpanSpan) override;
+    void initImage_(Image* image, const Span<const char>* mipLevelDataSpans, Int count) override;
     void initImageView_(ImageView* view) override;
     void initSamplerState_(SamplerState* state) override;
     void initGeometryView_(GeometryView* view) override;
@@ -98,9 +98,9 @@ protected:
     void setProgram_(const ProgramPtr& program) override;
     void setBlendState_(const BlendStatePtr& state, const geometry::Vec4f& blendFactor) override;
     void setRasterizerState_(const RasterizerStatePtr& state) override;
-    void setStageConstantBuffers_(BufferPtr const* buffers, Int startIndex, Int count, ShaderStage shaderStage) override;
-    void setStageImageViews_(ImageViewPtr const* views, Int startIndex, Int count, ShaderStage shaderStage) override;
-    void setStageSamplers_(SamplerStatePtr const* states, Int startIndex, Int count, ShaderStage shaderStage) override;
+    void setStageConstantBuffers_(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage) override;
+    void setStageImageViews_(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage) override;
+    void setStageSamplers_(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage) override;
 
     void updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) override;
 

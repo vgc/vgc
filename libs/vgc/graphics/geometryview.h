@@ -153,12 +153,12 @@ protected:
 
         for (const BufferPtr& vb : info_.vertexBuffers()) {
             if (vb && !(vb->bindFlags() & BindFlag::VertexBuffer)) {
-                throw core::LogicError("Buffer needs BindFlags::VertexBuffer flag to be used as a vertex buffer");
+                throw core::LogicError("Buffer needs BindFlag::VertexBuffer flag to be used as a vertex buffer");
             }
         }
         const BufferPtr& ib = info_.indexBuffer();
         if (ib && !(ib->bindFlags() & BindFlag::IndexBuffer)) {
-            throw core::LogicError("Buffer needs BindFlags::IndexBuffer flag to be used as an index buffer");
+            throw core::LogicError("Buffer needs BindFlag::IndexBuffer flag to be used as an index buffer");
         }
 
         BuiltinGeometryLayout builtinLayout = info.builtinGeometryLayout();

@@ -50,6 +50,12 @@ inline constexpr GLuint nullGLObject = 0;
 inline constexpr GLuint badGLObject = std::numeric_limits<GLuint>::max();
 inline constexpr GLenum badGLenum = std::numeric_limits<GLenum>::max();
 
+struct GLFormat {
+    GLenum internalFormat = 0;
+    GLenum pixelType = 0;
+    GLenum pixelFormat = 0;
+};
+
 class QglImageView;
 class QglFramebuffer;
 
@@ -90,7 +96,8 @@ protected:
     bool isEquivalentTo(const QglSamplerState& other) const {
         if (maxAnisotropyGL_ > 1.f && other.maxAnisotropyGL_ > 1.f) {
             if (maxAnisotropyGL_ != other.maxAnisotropyGL_) return false;
-        } else {
+        }
+        else {
             if (magFilterGL_ != other.magFilterGL_) return false;
             if (minFilterGL_ != other.minFilterGL_) return false;
             if (mipFilterGL_ != other.mipFilterGL_) return false;
@@ -125,9 +132,9 @@ public:
         return object_;
     }
 
-    GLint internalFormat() const
+    GLFormat glFormat() const
     {
-        return internalFormat_;
+        return glFormat_;
     }
 
 protected:
@@ -145,7 +152,8 @@ protected:
 
 private:
     GLuint object_ = badGLObject;
-    GLint internalFormat_ = 0;
+    GLFormat glFormat_ = {};
+    GLenum target_ = badGLenum;
 
     friend QglImageView;
     QglSamplerStatePtr samplerState_;
@@ -175,9 +183,9 @@ protected:
     }
 
 public:
-    GLuint internalFormat() const
+    GLFormat glFormat() const
     {
-        return internalFormat_;
+        return glFormat_;
     }
 
     GLuint object() const
@@ -191,17 +199,18 @@ protected:
     {
         ImageView::releaseSubResources_();
         viewSamplerState_.reset();
+        samplerStatePtrAddress_ = nullptr;
     }
 
     void release_(Engine* engine) override
     {
         ImageView::release_(engine);
-        viewSamplerState_.reset();
+        static_cast<QglEngine*>(engine)->api()->glDeleteTextures(1, &bufferTextureObject_);
     }
 
 private:
     GLuint bufferTextureObject_ = badGLObject;
-    GLuint internalFormat_ = 0;
+    GLFormat glFormat_ = {};
     QglSamplerStatePtr viewSamplerState_;
     QglSamplerStatePtr* samplerStatePtrAddress_ = nullptr;
 };
@@ -230,7 +239,7 @@ protected:
     }
 
 private:
-    GLenum topology_;
+    GLenum topology_ = badGLenum;
 
     std::array<GLuint, numBuiltinGeometryLayouts> builtinLayoutVAOs_;
 };
@@ -240,9 +249,6 @@ class QglProgram : public Program {
 protected:
     friend QglEngine;
     using Program::Program;
-
-public:
-    // ..
 
 protected:
     void release_(Engine* engine) override
@@ -275,18 +281,14 @@ protected:
     friend QglEngine;
     using BlendState::BlendState;
 
-public:
-    // ..
-
 protected:
     void release_(Engine* engine) override
     {
         BlendState::release_(engine);
-        // ..
     }
 
 private:
-    std::array<TargetBlendStateGL, maxColorTargets> targetBlendStatesGL_ = {};
+    TargetBlendStateGL targetBlendStateGL_ = {};
 };
 using QglBlendStatePtr = ResourcePtr<QglBlendState>;
 
@@ -295,14 +297,10 @@ protected:
     friend QglEngine;
     using RasterizerState::RasterizerState;
 
-public:
-    // ..
-
 protected:
     void release_(Engine* engine) override
     {
         RasterizerState::release_(engine);
-        // ..
     }
 
 private:
@@ -376,65 +374,73 @@ private:
 
 // ENUM CONVERSIONS
 
-GLenum imageFormatToGLenum(ImageFormat format)
+GLFormat imageFormatToGLFormat(ImageFormat format)
 {
-    switch (format) {
+    using F = GLFormat;
+    static_assert(numImageFormats == 47);
+    static constexpr std::array<GLFormat, numImageFormats> map = {
+        // InternalFormat,          PixelType,                          PixelType
+        F{ 0,                       0,                                  0                   },  // Unknown
         // Depth
-    case ImageFormat::D_16_UNORM:               return GL_DEPTH_COMPONENT16;
-    case ImageFormat::D_32_FLOAT:               return GL_DEPTH_COMPONENT32F;
+        F{ GL_DEPTH_COMPONENT16,    GL_UNSIGNED_SHORT,                  GL_DEPTH_COMPONENT  },  // D_16_UNORM,
+        F{ GL_DEPTH_COMPONENT32F,   GL_FLOAT,                           GL_DEPTH_COMPONENT  },  // D_32_FLOAT,
         // Depth + Stencil
-    case ImageFormat::DS_24_UNORM_8_UINT:       return GL_DEPTH24_STENCIL8;
-    case ImageFormat::DS_32_FLOAT_8_UINT_24_X:  return GL_DEPTH32F_STENCIL8;
+        F{ GL_DEPTH24_STENCIL8,     GL_UNSIGNED_INT_24_8,               GL_DEPTH_STENCIL    },  // DS_24_UNORM_8_UINT,
+        F{ GL_DEPTH32F_STENCIL8,    GL_FLOAT_32_UNSIGNED_INT_24_8_REV,  GL_DEPTH_STENCIL    },  // DS_32_FLOAT_8_UINT_24_X,
         // Red
-    case ImageFormat::R_8_UNORM:                return GL_R8;
-    case ImageFormat::R_8_SNORM:                return GL_R8_SNORM;
-    case ImageFormat::R_8_UINT:                 return GL_R8UI;
-    case ImageFormat::R_8_SINT:                 return GL_R8I;
-    case ImageFormat::R_16_UNORM:               return GL_R16;
-    case ImageFormat::R_16_SNORM:               return GL_R16_SNORM;
-    case ImageFormat::R_16_UINT:                return GL_R16UI;
-    case ImageFormat::R_16_SINT:                return GL_R16I;
-    case ImageFormat::R_16_FLOAT:               return GL_R16F;
-    case ImageFormat::R_32_UINT:                return GL_R32UI;
-    case ImageFormat::R_32_SINT:                return GL_R32I;
-    case ImageFormat::R_32_FLOAT:               return GL_R32F;
+        F{ GL_R8,                   GL_UNSIGNED_BYTE,                   GL_RED              },  // R_8_UNORM
+        F{ GL_R8_SNORM,             GL_BYTE,                            GL_RED              },  // R_8_SNORM
+        F{ GL_R8UI,                 GL_UNSIGNED_BYTE,                   GL_RED_INTEGER      },  // R_8_UINT
+        F{ GL_R8I,                  GL_BYTE,                            GL_RED_INTEGER      },  // R_8_SINT
+        F{ GL_R16,                  GL_UNSIGNED_SHORT,                  GL_RED              },  // R_16_UNORM
+        F{ GL_R16_SNORM,            GL_SHORT,                           GL_RED              },  // R_16_SNORM
+        F{ GL_R16UI,                GL_UNSIGNED_SHORT,                  GL_RED_INTEGER      },  // R_16_UINT
+        F{ GL_R16I,                 GL_SHORT,                           GL_RED_INTEGER      },  // R_16_SINT
+        F{ GL_R16F,                 GL_HALF_FLOAT,                      GL_RED              },  // R_16_FLOAT
+        F{ GL_R32UI,                GL_UNSIGNED_INT,                    GL_RED_INTEGER      },  // R_32_UINT
+        F{ GL_R32I,                 GL_INT,                             GL_RED_INTEGER      },  // R_32_SINT
+        F{ GL_R32F,                 GL_FLOAT,                           GL_RED              },  // R_32_FLOAT
         // RG
-    case ImageFormat::RG_8_UNORM:               return GL_RG8;
-    case ImageFormat::RG_8_SNORM:               return GL_RG8_SNORM;
-    case ImageFormat::RG_8_UINT:                return GL_RG8UI;
-    case ImageFormat::RG_8_SINT:                return GL_RG8I;
-    case ImageFormat::RG_16_UNORM:              return GL_RG16;
-    case ImageFormat::RG_16_SNORM:              return GL_RG16_SNORM;
-    case ImageFormat::RG_16_UINT:               return GL_RG16UI;
-    case ImageFormat::RG_16_SINT:               return GL_RG16I;
-    case ImageFormat::RG_16_FLOAT:              return GL_RG16F;
-    case ImageFormat::RG_32_UINT:               return GL_RG32UI;
-    case ImageFormat::RG_32_SINT:               return GL_RG32I;
-    case ImageFormat::RG_32_FLOAT:              return GL_RG32F;
+        F{ GL_RG8,                  GL_UNSIGNED_BYTE,                   GL_RG               },  // RG_8_UNORM
+        F{ GL_RG8_SNORM,            GL_BYTE,                            GL_RG               },  // RG_8_SNORM
+        F{ GL_RG8UI,                GL_UNSIGNED_BYTE,                   GL_RG_INTEGER       },  // RG_8_UINT
+        F{ GL_RG8I,                 GL_BYTE,                            GL_RG_INTEGER       },  // RG_8_SINT
+        F{ GL_RG16,                 GL_UNSIGNED_SHORT,                  GL_RG               },  // RG_16_UNORM
+        F{ GL_RG16_SNORM,           GL_SHORT,                           GL_RG               },  // RG_16_SNORM
+        F{ GL_RG16UI,               GL_UNSIGNED_SHORT,                  GL_RG_INTEGER       },  // RG_16_UINT
+        F{ GL_RG16I,                GL_SHORT,                           GL_RG_INTEGER       },  // RG_16_SINT
+        F{ GL_RG16F,                GL_HALF_FLOAT,                      GL_RG               },  // RG_16_FLOAT
+        F{ GL_RG32UI,               GL_UNSIGNED_INT,                    GL_RG_INTEGER       },  // RG_32_UINT
+        F{ GL_RG32I,                GL_INT,                             GL_RG_INTEGER       },  // RG_32_SINT
+        F{ GL_RG32F,                GL_FLOAT,                           GL_RG               },  // RG_32_FLOAT
         // RGB
-    case ImageFormat::RGB_11_11_10_FLOAT:       return GL_R11F_G11F_B10F;
-    case ImageFormat::RGB_32_UINT:              return GL_RGB32UI;
-    case ImageFormat::RGB_32_SINT:              return GL_RGB32I;
-    case ImageFormat::RGB_32_FLOAT:             return GL_RGB32F;
+        F{ GL_R11F_G11F_B10F,       GL_UNSIGNED_INT_10F_11F_11F_REV,    GL_RGB              },  // RGB_11_11_10_FLOAT
+        F{ GL_RGB32UI,              GL_UNSIGNED_INT,                    GL_RGB_INTEGER      },  // RGB_32_UINT
+        F{ GL_RGB32I,               GL_INT,                             GL_RGB_INTEGER      },  // RGB_32_SINT
+        F{ GL_RGB32F,               GL_FLOAT,                           GL_RGB              },  // RGB_32_FLOAT
         // RGBA
-    case ImageFormat::RGBA_8_UNORM:             return GL_RGBA8;
-    case ImageFormat::RGBA_8_UNORM_SRGB:        return GL_SRGB8_ALPHA8;
-    case ImageFormat::RGBA_8_SNORM:             return GL_RGBA8_SNORM;
-    case ImageFormat::RGBA_8_UINT:              return GL_RGBA8UI;
-    case ImageFormat::RGBA_8_SINT:              return GL_RGBA8I;
-    case ImageFormat::RGBA_10_10_10_2_UNORM:    return GL_RGB10_A2;
-    case ImageFormat::RGBA_10_10_10_2_UINT:     return GL_RGB10_A2UI;
-    case ImageFormat::RGBA_16_UNORM:            return GL_RGBA16;
-    case ImageFormat::RGBA_16_UINT:             return GL_RGBA16UI;
-    case ImageFormat::RGBA_16_SINT:             return GL_RGBA16I;
-    case ImageFormat::RGBA_16_FLOAT:            return GL_RGBA16F;
-    case ImageFormat::RGBA_32_UINT:             return GL_RGBA32UI;
-    case ImageFormat::RGBA_32_SINT:             return GL_RGBA32I;
-    case ImageFormat::RGBA_32_FLOAT:            return GL_RGBA32F;
-    default:
-        break;
+        F{ GL_RGBA8,                GL_UNSIGNED_BYTE,                   GL_RGBA             },  // RGBA_8_UNORM
+        F{ GL_SRGB8_ALPHA8,         GL_UNSIGNED_BYTE,                   GL_RGBA             },  // RGBA_8_UNORM_SRGB
+        F{ GL_RGBA8_SNORM,          GL_BYTE,                            GL_RGBA             },  // RGBA_8_SNORM
+        F{ GL_RGBA8UI,              GL_UNSIGNED_BYTE,                   GL_RGBA_INTEGER     },  // RGBA_8_UINT
+        F{ GL_RGBA8I,               GL_BYTE,                            GL_RGBA_INTEGER     },  // RGBA_8_SINT
+        F{ GL_RGB10_A2,             GL_UNSIGNED_INT_10_10_10_2,         GL_RGBA             },  // RGBA_10_10_10_2_UNORM
+        F{ GL_RGB10_A2UI,           GL_UNSIGNED_INT_10_10_10_2,         GL_RGBA_INTEGER     },  // RGBA_10_10_10_2_UINT
+        F{ GL_RGBA16,               GL_UNSIGNED_SHORT,                  GL_RGBA             },  // RGBA_16_UNORM
+        F{ GL_RGBA16UI,             GL_UNSIGNED_SHORT,                  GL_RGBA_INTEGER     },  // RGBA_16_UINT
+        F{ GL_RGBA16I,              GL_SHORT,                           GL_RGBA_INTEGER     },  // RGBA_16_SINT
+        F{ GL_RGBA16F,              GL_HALF_FLOAT,                      GL_RGBA             },  // RGBA_16_FLOAT
+        F{ GL_RGBA32UI,             GL_UNSIGNED_INT,                    GL_RGBA_INTEGER     },  // RGBA_32_UINT
+        F{ GL_RGBA32I,              GL_INT,                             GL_RGBA_INTEGER     },  // RGBA_32_SINT
+        F{ GL_RGBA32F,              GL_FLOAT,                           GL_RGBA             },  // RGBA_32_FLOAT
+    };
+
+    const UInt index = core::toUnderlying(format);
+    if (index == 0 || index >= numImageFormats) {
+        throw core::LogicError("QglEngine: invalid PrimitiveType enum value");
     }
-    return 0;
+
+    return map[index];
 }
 
 GLenum primitiveTypeToGLenum(PrimitiveType type)
@@ -472,7 +478,8 @@ GLenum usageToGLenum(Usage usage, CpuAccessFlags cpuAccessFlags)
                 throw core::LogicError("Qgl: staging buffer cannot habe both read and write cpu access.");
             }
             return GL_STATIC_READ;
-        } else if (cpuAccessFlags & CpuAccessFlag::Write) {
+        }
+        else if (cpuAccessFlags & CpuAccessFlag::Write) {
             return GL_STATIC_COPY;
         }
         throw core::LogicError("Qgl: staging buffer needs either read and write cpu access");
@@ -487,13 +494,13 @@ UINT processResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
 {
     UINT x = 0;
     if (resourceMiscFlags & ResourceMiscFlag::Shared) {
-        throw core::LogicError("QglEngine: ResourceMiscFlags::Shared is not supported at the moment");
+        throw core::LogicError("QglEngine: ResourceMiscFlag::Shared is not supported at the moment");
     }
     //if (resourceMiscFlags & ResourceMiscFlag::TextureCube) {
-    //    throw core::LogicError("QglEngine: ResourceMiscFlags::TextureCube is not supported at the moment");
+    //    throw core::LogicError("QglEngine: ResourceMiscFlag::TextureCube is not supported at the moment");
     //}
     //if (resourceMiscFlags & ResourceMiscFlag::ResourceClamp) {
-    //    throw core::LogicError("QglEngine: ResourceMiscFlags::ResourceClamp is not supported at the moment");
+    //    throw core::LogicError("QglEngine: ResourceMiscFlag::ResourceClamp is not supported at the moment");
     //}
     return x;
 }
@@ -647,6 +654,715 @@ GLenum filterModeToGLenum(FilterMode mode)
 
 // ENGINE FUNCTIONS
 
+QglEngine::QglEngine(QOpenGLContext* ctx, bool isExternalCtx) :
+    Engine(),
+    ctx_(ctx),
+    isExternalCtx_(isExternalCtx)
+{
+    offscreenSurface_ = new QOffscreenSurface();
+    QSurface* surface = ctx_->surface();
+    surface = surface ? surface : offscreenSurface_;
+    ctx_->makeCurrent(surface);
+    hasAnisotropicFilteringSupport_ = ctx_->hasExtension("EXT_texture_filter_anisotropic");
+
+    createBuiltinResources_();
+}
+
+void QglEngine::onDestroyed()
+{
+    Engine::onDestroyed();
+    if (!isExternalCtx_) {
+        delete ctx_;
+    }
+    ctx_ = nullptr;
+    delete offscreenSurface_;
+    offscreenSurface_ = nullptr;
+    surface_ = nullptr;
+}
+
+/* static */
+QglEnginePtr QglEngine::create()
+{
+    QOpenGLContext* ctx = new QOpenGLContext();
+    ctx->create();
+    return QglEnginePtr(new QglEngine(ctx, false));
+}
+
+/* static */
+QglEnginePtr QglEngine::create(QOpenGLContext* ctx)
+{
+    return QglEnginePtr(new QglEngine(ctx, true));
+}
+
+SwapChainPtr QglEngine::createSwapChainFromSurface(QSurface* surface)
+{
+    SwapChainCreateInfo createInfo = {};
+    // XXX fill from surface format
+
+    QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
+    framebuffer->isDefault_ = true;
+    framebuffer->object_ = 0;
+
+    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo, framebuffer);
+    swapChain->window_ = nullptr;
+    swapChain->surface_ = surface;
+    swapChain->isExternal_ = true;
+
+    return SwapChainPtr(swapChain.release());
+}
+
+void QglEngine::makeCurrent()
+{
+    queueLambdaCommand_(
+        "makeCurrent",
+        [=](Engine* engine) {
+            static_cast<QglEngine*>(engine)->makeCurrent_();
+        });
+}
+
+// -- USER THREAD implementation functions --
+
+void QglEngine::createBuiltinShaders_()
+{
+    queueLambdaCommand_(
+        "initBuiltinShaders",
+        [=](Engine* engine) {
+            static_cast<QglEngine*>(engine)->initBuiltinShaders_();
+        });
+}
+
+SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInfo)
+{
+    if (createInfo.windowNativeHandleType() != WindowNativeHandleType::QOpenGLWindow) {
+        throw core::LogicError("QglEngine: unsupported WindowNativeHandleType value.");
+    }
+
+    if (ctx_ == nullptr) {
+        throw core::LogicError("ctx_ is null.");
+    }
+    // XXX can it be an external context ??
+
+    // XXX only allow D24_S8 for now..
+    format_.setDepthBufferSize(24);
+    format_.setStencilBufferSize(8);
+    format_.setVersion(3, 3);
+    format_.setProfile(QSurfaceFormat::CoreProfile);
+    format_.setSamples(createInfo.numSamples());
+    format_.setSwapInterval(0);
+
+    QWindow* wnd = static_cast<QWindow*>(createInfo.windowNativeHandle());
+    wnd->setFormat(format_);
+    wnd->create();
+
+    QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
+    framebuffer->isDefault_ = true;
+    framebuffer->object_ = 0;
+
+    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo, framebuffer);
+    swapChain->window_ = wnd;
+    swapChain->surface_ = wnd;
+    swapChain->isExternal_ = false;
+
+    return SwapChainPtr(swapChain.release());
+}
+
+FramebufferPtr QglEngine::constructFramebuffer_(const ImageViewPtr& colorImageView)
+{
+    auto framebuffer = makeUnique<QglFramebuffer>(resourceRegistry_);
+    framebuffer->colorView_ = static_pointer_cast<QglImageView>(colorImageView);
+
+    return FramebufferPtr(framebuffer.release());
+}
+
+BufferPtr QglEngine::constructBuffer_(const BufferCreateInfo& createInfo)
+{
+    auto buffer = makeUnique<QglBuffer>(resourceRegistry_, createInfo);
+    buffer->usageGL_ = usageToGLenum(createInfo.usage(), createInfo.cpuAccessFlags());
+
+    return BufferPtr(buffer.release());
+}
+
+ImagePtr QglEngine::constructImage_(const ImageCreateInfo& createInfo)
+{
+    auto image = makeUnique<QglImage>(resourceRegistry_, createInfo);
+    image->glFormat_ = imageFormatToGLFormat(createInfo.format());
+
+    return ImagePtr(image.release());
+}
+
+ImageViewPtr QglEngine::constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image)
+{
+    auto view = makeUnique<QglImageView>(resourceRegistry_, createInfo, image);
+    view->glFormat_ = image.get_static_cast<QglImage>()->glFormat();
+
+    return ImageViewPtr(view.release());
+}
+
+ImageViewPtr QglEngine::constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements)
+{
+    auto view = makeUnique<QglImageView>(resourceRegistry_, createInfo, buffer, format, numElements);
+    view->glFormat_ = imageFormatToGLFormat(format);
+
+    return ImageViewPtr(view.release());
+}
+
+SamplerStatePtr QglEngine::constructSamplerState_(const SamplerStateCreateInfo& createInfo)
+{
+    auto state = makeUnique<QglSamplerState>(resourceRegistry_, createInfo);
+    state->magFilterGL_ = filterModeToGLenum(createInfo.magFilter());
+    state->minFilterGL_ = filterModeToGLenum(createInfo.minFilter());
+    state->mipFilterGL_ = filterModeToGLenum(createInfo.mipFilter());
+    if (createInfo.maxAnisotropy() >= 1) {
+        if (hasAnisotropicFilteringSupport_) {
+            state->maxAnisotropyGL_ = static_cast<float>(createInfo.maxAnisotropy());
+        }
+        else {
+            VGC_WARNING(LogVgcUi, "Anisotropic filtering is not supported.");
+        }
+    }
+    state->wrapS_ = imageWrapModeToGLenum(createInfo.wrapModeU());
+    state->wrapT_ = imageWrapModeToGLenum(createInfo.wrapModeV());
+    state->wrapR_ = imageWrapModeToGLenum(createInfo.wrapModeW());
+    state->comparisonFunctionGL_ = comparisonFunctionToGLenum(createInfo.comparisonFunction());
+
+    return SamplerStatePtr(state.release());
+}
+
+GeometryViewPtr QglEngine::constructGeometryView_(const GeometryViewCreateInfo& createInfo)
+{
+    auto view = makeUnique<QglGeometryView>(resourceRegistry_, createInfo);
+    view->topology_ = primitiveTypeToGLenum(createInfo.primitiveType());
+
+    return GeometryViewPtr(view.release());
+}
+
+BlendStatePtr QglEngine::constructBlendState_(const BlendStateCreateInfo& createInfo)
+{
+    auto state = makeUnique<QglBlendState>(resourceRegistry_, createInfo);
+    TargetBlendStateGL& blendStateGL = state->targetBlendStateGL_;
+    blendStateGL.isEnabled = state->isEnabled();
+    if (blendStateGL.isEnabled) {
+        blendStateGL.writeMask = state->writeMask();
+        const BlendEquation& equationRGB = state->equationRGB();
+        blendStateGL.equationRGB.operation = blendOpToGLenum(equationRGB.operation());
+        blendStateGL.equationRGB.sourceFactor = blendFactorToGLenum(equationRGB.sourceFactor());
+        blendStateGL.equationRGB.targetFactor = blendFactorToGLenum(equationRGB.targetFactor());
+        const BlendEquation& equationAlpha = state->equationAlpha();
+        blendStateGL.equationAlpha.operation = blendOpToGLenum(equationAlpha.operation());
+        blendStateGL.equationAlpha.sourceFactor = blendFactorToGLenum(equationAlpha.sourceFactor());
+        blendStateGL.equationAlpha.targetFactor = blendFactorToGLenum(equationAlpha.targetFactor());
+    }
+
+    return BlendStatePtr(state.release());
+}
+
+RasterizerStatePtr QglEngine::constructRasterizerState_(const RasterizerStateCreateInfo& createInfo)
+{
+    auto state = makeUnique<QglRasterizerState>(resourceRegistry_, createInfo);
+    state->fillModeGL_ = fillModeToGLenum(createInfo.fillMode());
+    state->cullModeGL_ = cullModeToGLenum(createInfo.cullMode());
+
+    return RasterizerStatePtr(state.release());
+}
+
+void QglEngine::resizeSwapChain_(SwapChain* /*swapChain*/, UInt32 /*width*/, UInt32 /*height*/)
+{
+    // XXX anything to do ?
+}
+
+//--  RENDER THREAD implementation functions --
+
+void QglEngine::onStart_()
+{
+    ctx_->makeCurrent(offscreenSurface_);
+
+    // Get API 3.3
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    api_ = ctx_->versionFunctions<QOpenGLFunctions_3_3_Core>();
+#else
+    api_ = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx_);
+#endif
+    //
+
+    api_->initializeOpenGLFunctions();
+
+    initBuiltinShaders_();
+}
+
+void QglEngine::initFramebuffer_(Framebuffer* framebuffer_)
+{
+    QglFramebuffer* framebuffer = static_cast<QglFramebuffer*>(framebuffer_);
+    api_->glGenFramebuffers(1, &framebuffer->object_);
+    api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer->object_);
+    // XXX handle the different textargets + ranks + layer !!
+    api_->glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer->colorView_->object(), 0);
+    api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, boundFramebuffer_);
+}
+
+void QglEngine::initBuffer_(Buffer* buffer_, const char* data, Int lengthInBytes)
+{
+    QglBuffer* buffer = static_cast<QglBuffer*>(buffer_);
+    GLuint object = 0;
+    api_->glGenBuffers(1, &object);
+    buffer->object_ = object;
+    loadBuffer_(buffer, data, lengthInBytes);
+}
+
+void QglEngine::initImage_(Image* image_, const Span<const char>* mipLevelDataSpans, Int count)
+{
+    QglImage* image = static_cast<QglImage*>(image_);
+
+    if (count <= 0) {
+        mipLevelDataSpans = nullptr;
+    } else {
+        VGC_CORE_ASSERT(mipLevelDataSpans);
+    }
+
+    UINT numLayers = image->numLayers();
+    UINT numMipLevels = image->numMipLevels();
+    bool isImmutable = image->usage() == Usage::Immutable;
+    bool isMultisampled = image->numSamples() > 1;
+    bool isMipmapGenEnabled = image->isMipGenerationEnabled();
+    bool isArray = numLayers > 1;
+
+    VGC_CORE_ASSERT(isMipmapGenEnabled || (numMipLevels > 0));
+
+    GLuint object = 0;
+    api_->glGenTextures(1, &object);
+    image->object_ = object;
+
+    GLenum target = badGLenum;
+
+    if (mipLevelDataSpans) {
+        // XXX let's consider for now that we are provided full mips or nothing
+        VGC_CORE_ASSERT(numMipLevels == count);
+        VGC_CORE_ASSERT(numMipLevels > 0);
+    }
+    else {
+        VGC_CORE_ASSERT(!isImmutable);
+    }
+
+    GLFormat glFormat = image->glFormat();
+
+    if (image->rank() == ImageRank::_1D) {
+        VGC_CORE_ASSERT(!isMultisampled);
+
+        if (isArray) {
+            target = GL_TEXTURE_1D_ARRAY;
+            for (Int mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+                api_->glTexImage2D(
+                    GL_TEXTURE_1D_ARRAY,
+                    mipLevel,
+                    glFormat.internalFormat,
+                    image->width(),
+                    image->numLayers(),
+                    0,
+                    glFormat.pixelFormat,
+                    glFormat.pixelType,
+                    mipLevelDataSpans ? mipLevelDataSpans[mipLevel].data() : nullptr); // XXX check size
+            }
+        }
+        else {
+            target = GL_TEXTURE_1D;
+            for (Int mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+                api_->glTexImage1D(
+                    GL_TEXTURE_1D,
+                    mipLevel,
+                    glFormat.internalFormat,
+                    image->width(),
+                    0,
+                    glFormat.pixelFormat,
+                    glFormat.pixelType,
+                    mipLevelDataSpans ? mipLevelDataSpans[mipLevel].data() : nullptr); // XXX check size
+            }
+        }
+    }
+    else {
+        VGC_CORE_ASSERT(image->rank() == ImageRank::_2D);
+        VGC_CORE_ASSERT(!isMultisampled || !mipLevelDataSpans);
+
+        if (isArray) {
+            if (isMultisampled) {
+                target = GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
+                api_->glTexImage3DMultisample(
+                    GL_TEXTURE_2D_MULTISAMPLE,
+                    image->numSamples(),
+                    glFormat.internalFormat,
+                    image->width(),
+                    image->height(),
+                    image->numLayers(),
+                    GL_TRUE);
+            }
+            else {
+                target = GL_TEXTURE_2D_ARRAY;
+                for (Int mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+                    api_->glTexImage3D(
+                        GL_TEXTURE_2D_ARRAY,
+                        mipLevel,
+                        glFormat.internalFormat,
+                        image->width(),
+                        image->height(),
+                        image->numLayers(),
+                        0,
+                        glFormat.pixelFormat,
+                        glFormat.pixelType,
+                        mipLevelDataSpans ? mipLevelDataSpans[mipLevel].data() : nullptr); // XXX check size
+                }
+            }
+        }
+        else {
+            if (isMultisampled) {
+                target = GL_TEXTURE_2D_MULTISAMPLE;
+                api_->glTexImage2DMultisample(
+                    GL_TEXTURE_2D_MULTISAMPLE,
+                    image->numSamples(),
+                    glFormat.internalFormat,
+                    image->width(),
+                    image->height(),
+                    GL_TRUE);
+            }
+            else {
+                target = GL_TEXTURE_2D;
+                for (Int mipLevel = 0; mipLevel < numMipLevels; ++mipLevel) {
+                    api_->glTexImage2D(
+                        GL_TEXTURE_2D,
+                        mipLevel,
+                        glFormat.internalFormat,
+                        image->width(),
+                        image->height(),
+                        0,
+                        glFormat.pixelFormat,
+                        glFormat.pixelType,
+                        mipLevelDataSpans ? mipLevelDataSpans[mipLevel].data() : nullptr); // XXX check size
+                }
+            }
+        }
+    }
+
+    image->target_ = target;
+}
+
+void QglEngine::initImageView_(ImageView* view_)
+{
+    QglImageView* view = static_cast<QglImageView*>(view_);
+    QglBuffer* buffer = view->viewedBuffer().get_static_cast<QglBuffer>();
+    if (buffer) {
+        GLuint object = 0;
+        api_->glGenTextures(1, &object);
+        view->bufferTextureObject_ = object;
+        api_->glBindBuffer(GL_TEXTURE_BUFFER, object);
+        api_->glTexBuffer(GL_TEXTURE_BUFFER, view->glFormat_.internalFormat, buffer->object_);
+        api_->glBindBuffer(GL_TEXTURE_BUFFER, 0);
+    }
+}
+
+void QglEngine::initSamplerState_(SamplerState* /*state*/)
+{
+    // no-op
+}
+
+void QglEngine::initGeometryView_(GeometryView* /*view*/)
+{
+    // no-op, vaos are built per program
+}
+
+void QglEngine::initBlendState_(BlendState* /*state*/)
+{
+    // no-op
+}
+
+void QglEngine::initRasterizerState_(RasterizerState* /*state*/)
+{
+    // no-op
+}
+
+void QglEngine::setSwapChain_(const SwapChainPtr& swapChain)
+{
+    if (swapChain) {
+        surface_ = swapChain.get_static_cast<QglSwapChain>()->surface_;
+    }
+    else {
+        surface_ = offscreenSurface_;
+    }
+    ctx_->makeCurrent(surface_);
+}
+
+void QglEngine::setFramebuffer_(const FramebufferPtr& framebuffer_)
+{
+    QglFramebuffer* framebuffer = framebuffer_.get_static_cast<QglFramebuffer>();
+    GLuint object = framebuffer ? framebuffer->object_ : 0;
+    api_->glBindFramebuffer(GL_FRAMEBUFFER, object);
+    boundFramebuffer_ = object;
+}
+
+void QglEngine::setViewport_(Int x, Int y, Int width, Int height)
+{
+    api_->glViewport(x, y, width, height);
+}
+
+void QglEngine::setProgram_(const ProgramPtr& program_)
+{
+    QglProgram* program = program_.get_static_cast<QglProgram>();
+    program->prog_->bind();
+    //api_->glUseProgram(object);
+}
+
+void QglEngine::setBlendState_(const BlendStatePtr& state_, const geometry::Vec4f& blendFactor)
+{
+    if (boundBlendState_ != state_) {
+        QglBlendState* oldState = boundBlendState_.get_static_cast<QglBlendState>();
+        QglBlendState* newState = state_.get_static_cast<QglBlendState>();
+
+        // OpenGL ES doesn't not support glEnablei and glBlendFunci...
+        // Simplify blend state ?
+
+        //if (!newState->isIndependentBlendEnabled())
+        //{
+        //    if (newState->targetBlendState(0).isEnabled()) {
+        //        api_->glEnable(GL_BLEND);
+        //    }
+        //    else {
+        //        api_->glDisable(GL_BLEND);
+        //    }
+        //}
+        //else {
+        //    for (Int i = 0; i < maxColorTargets; ++i) {
+        //
+        //
+        //
+        //    }
+        //}
+
+        boundBlendState_ = state_;
+    }
+}
+
+void QglEngine::setRasterizerState_(const RasterizerStatePtr& /*state*/)
+{
+
+}
+
+void QglEngine::setStageConstantBuffers_(const BufferPtr* /*buffers*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
+{
+}
+
+void QglEngine::setStageImageViews_(const ImageViewPtr* /*views*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
+{
+}
+
+void QglEngine::setStageSamplers_(const SamplerStatePtr* /*states*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
+{
+}
+
+void QglEngine::updateBufferData_(Buffer* /*buffer*/, const void* /*data*/, Int /*lengthInBytes*/)
+{
+}
+
+// should do init at beginFrame if needed..
+
+void QglEngine::draw_(GeometryView* /*view*/, UInt /*numIndices*/, UInt /*numInstances*/)
+{
+}
+
+void QglEngine::clear_(const core::Color& /*color*/)
+{
+}
+
+UInt64 QglEngine::present_(SwapChain* /*swapChain*/, UInt32 /*syncInterval*/, PresentFlags /*flags*/)
+{
+    return 0;
+}
+
+void QglEngine::setStateDirty_()
+{
+    boundFramebuffer_ = badGLObject;
+    boundBlendState_.reset();
+}
+
+// Private methods
+
+void QglEngine::initBuiltinShaders_()
+{
+    // Initialize shader program
+    //paintShaderProgram_.reset(new QOpenGLShaderProgram());
+    //paintShaderProgram_->addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
+    //paintShaderProgram_->addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
+    //paintShaderProgram_->link();
+
+    // Get shader locations
+    //paintShaderProgram_->bind();
+    //posLoc_  = paintShaderProgram_->attributeLocation("pos");
+    //colLoc_  = paintShaderProgram_->attributeLocation("col");
+    //projLoc_ = paintShaderProgram_->uniformLocation("proj");
+    //viewLoc_ = paintShaderProgram_->uniformLocation("view");
+    //paintShaderProgram_->release();
+}
+
+void QglEngine::makeCurrent_()
+{
+    ctx_->makeCurrent(ctx_->surface());
+}
+
+bool QglEngine::loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize)
+{
+    const GLuint object = buffer->object_;
+    if (dataSize) {
+        api_->glBindBuffer(GL_COPY_WRITE_BUFFER, object);
+        api_->glBufferData(GL_COPY_WRITE_BUFFER, dataSize, data, buffer->usageGL_);
+        api_->glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    }
+}
+
+//// USER THREAD pimpl functions
+//
+//SwapChain* QglEngine::createSwapChain_(const SwapChainCreateInfo& desc)
+//{
+//    //if (ctx_ == nullptr) {
+//    //    throw core::LogicError("ctx_ is null.");
+//    //}
+//
+//    if (desc.windowNativeHandleType() != WindowNativeHandleType::QOpenGLWindow) {
+//        return nullptr;
+//    }
+//
+//    format_.setDepthBufferSize(24);
+//    format_.setStencilBufferSize(8);
+//    format_.setVersion(3, 2);
+//    format_.setProfile(QSurfaceFormat::CoreProfile);
+//    format_.setSamples(desc.numSamples());
+//    format_.setSwapInterval(0);
+//
+//    QWindow* wnd = static_cast<QWindow*>(desc.windowNativeHandle());
+//    wnd->setFormat(format_);
+//    wnd->create();
+//
+//    return new QOpenglSwapChain(resourceRegistry_, desc, wnd);
+//}
+//
+//void QglEngine::resizeSwapChain_(SwapChain* /*swapChain*/, UInt32 /*width*/, UInt32 /*height*/)
+//{
+//    // no-op
+//}
+//
+//Buffer* QglEngine::createBuffer_(
+//    Usage usage, BindFlags bindFlags,
+//    ResourceMiscFlags resourceMiscFlags, CpuAccessFlags cpuAccessFlags)
+//{
+//    return new QOpenglBuffer(resourceRegistry_, usage, bindFlags, resourceMiscFlags, cpuAccessFlags);
+//}
+//
+//// RENDER THREAD functions
+//
+//void QglEngine::bindSwapChain_(SwapChain* swapChain)
+//{
+//    QOpenglSwapChain* oglChain = static_cast<QOpenglSwapChain*>(swapChain);
+//    surface_ = oglChain->surface();
+//
+//    if (!ctx_) {
+//        ctx_ = new QOpenGLContext();
+//        ctx_->setFormat(format_);
+//        ctx_->create();
+//    }
+//
+//    ctx_->makeCurrent(surface_);
+//    if (!api_) {
+//        setupContext();
+//    }
+//}
+//
+//UInt64 QglEngine::present_(SwapChain* swapChain, UInt32 /*syncInterval*/, PresentFlags /*flags*/)
+//{
+//    // XXX check valid ?
+//    auto oglChain = static_cast<QOpenglSwapChain*>(swapChain);
+//    ctx_->swapBuffers(oglChain->surface());
+//    return std::chrono::nanoseconds(std::chrono::steady_clock::now() - startTime_).count();
+//}
+//
+//void QglEngine::bindFramebuffer_(Framebuffer* framebuffer)
+//{
+//    QOpenglFramebuffer* fb = static_cast<QOpenglFramebuffer*>(framebuffer);
+//    GLuint fbo = fb->isDefault_ ? ctx_->defaultFramebufferObject() : fb->object_;
+//    api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+//}
+//
+//void QglEngine::setViewport_(Int x, Int y, Int width, Int height)
+//{
+//    api_->glViewport(x, y, width, height);
+//}
+//
+//void QglEngine::clear_(const core::Color& color)
+//{
+//    api_->glClearColor(
+//        static_cast<float>(color.r()),
+//        static_cast<float>(color.g()),
+//        static_cast<float>(color.b()),
+//        static_cast<float>(color.a()));
+//    api_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//}
+//
+//void QglEngine::setProjectionMatrix_(const geometry::Mat4f& m)
+//{
+//    paintShaderProgram_->setUniformValue(projLoc_, toQtMatrix(m));
+//}
+//
+//void QglEngine::setViewMatrix_(const geometry::Mat4f& m)
+//{
+//    paintShaderProgram_->setUniformValue(viewLoc_, toQtMatrix(m));
+//}
+//
+//void QglEngine::initBuffer_(Buffer* buffer, const void* data, Int initialLengthInBytes)
+//{
+//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
+//    oglBuffer->init(data, initialLengthInBytes);
+//}
+//
+//void QglEngine::updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes)
+//{
+//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
+//    oglBuffer->load(data, lengthInBytes);
+//}
+//
+//void QglEngine::setupVertexBufferForPaintShader_(Buffer* buffer)
+//{
+//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
+//    GLsizei stride = sizeof(XYRGBVertex);
+//    GLvoid* posPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, x));
+//    GLvoid* colPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, r));
+//    GLboolean normalized = GL_FALSE;
+//    oglBuffer->bind();
+//    api_->glEnableVertexAttribArray(posLoc_);
+//    api_->glEnableVertexAttribArray(colLoc_);
+//    api_->glVertexAttribPointer(posLoc_, 2, GL_FLOAT, normalized, stride, posPointer);
+//    api_->glVertexAttribPointer(colLoc_, 3, GL_FLOAT, normalized, stride, colPointer);
+//    oglBuffer->unbind();
+//}
+//
+//void QglEngine::drawPrimitives_(Buffer* buffer, PrimitiveType type)
+//{
+//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
+//    GLenum mode = 0;
+//    switch (type) {
+//    case PrimitiveType::LineList: mode = GL_LINES; break;
+//    case PrimitiveType::LineStrip: mode = GL_LINE_STRIP; break;
+//    case PrimitiveType::TriangleList: mode = GL_TRIANGLES; break;
+//    case PrimitiveType::TriangleStrip: mode = GL_TRIANGLE_STRIP; break;
+//    default:
+//        mode = GL_POINTS;
+//        break;
+//    }
+//    oglBuffer->draw(this, mode);
+//}
+//
+//void QglEngine::bindPaintShader_()
+//{
+//    paintShaderProgram_->bind();
+//}
+//
+//void QglEngine::releasePaintShader_()
+//{
+//    paintShaderProgram_->release();
+//}
+
 //namespace {
 //
 //class OpenglBuffer : public Buffer {
@@ -663,9 +1379,9 @@ GLenum filterModeToGLenum(FilterMode mode)
 //        if (!vao_) {
 //            QOpenGLBuffer::Type t = {};
 //            switch (bindFlags()) {
-//            case BindFlags::IndexBuffer:
+//            case BindFlag::IndexBuffer:
 //                t = QOpenGLBuffer::Type::IndexBuffer; break;
-//            case BindFlags::VertexBuffer:
+//            case BindFlag::VertexBuffer:
 //                t = QOpenGLBuffer::Type::VertexBuffer; break;
 //            default:
 //                throw core::LogicError("QOpenglBuffer: unsupported bind flags");
@@ -844,519 +1560,5 @@ GLenum filterModeToGLenum(FilterMode mode)
 //
 //} // namespace
 
-QglEngine::QglEngine(QOpenGLContext* ctx, bool isExternalCtx) :
-    Engine(),
-    ctx_(ctx),
-    isExternalCtx_(isExternalCtx)
-{
-    offscreenSurface_ = new QOffscreenSurface();
-    QSurface* surface = ctx_->surface();
-    surface = surface ? surface : offscreenSurface_;
-    ctx_->makeCurrent(surface);
-    hasAnisotropicFilteringSupport_ = ctx_->hasExtension("EXT_texture_filter_anisotropic");
-
-    createBuiltinResources_();
-}
-
-void QglEngine::onDestroyed()
-{
-    Engine::onDestroyed();
-    if (!isExternalCtx_) {
-        delete ctx_;
-    }
-    ctx_ = nullptr;
-    delete offscreenSurface_;
-    offscreenSurface_ = nullptr;
-    surface_ = nullptr;
-}
-
-/* static */
-QglEnginePtr QglEngine::create()
-{
-    QOpenGLContext* ctx = new QOpenGLContext();
-    ctx->create();
-    return QglEnginePtr(new QglEngine(ctx, false));
-}
-
-/* static */
-QglEnginePtr QglEngine::create(QOpenGLContext* ctx)
-{
-    return QglEnginePtr(new QglEngine(ctx, true));
-}
-
-SwapChainPtr QglEngine::createSwapChainFromSurface(QSurface* surface)
-{
-    SwapChainCreateInfo createInfo = {};
-    // XXX fill from surface format
-
-    QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
-    framebuffer->isDefault_ = true;
-    framebuffer->object_ = 0;
-
-    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo, framebuffer);
-    swapChain->window_ = nullptr;
-    swapChain->surface_ = surface;
-    swapChain->isExternal_ = true;
-
-    return SwapChainPtr(swapChain.release());
-}
-
-void QglEngine::makeCurrent()
-{
-    queueLambdaCommand_(
-        "makeCurrent",
-        [=](Engine* engine) {
-            static_cast<QglEngine*>(engine)->makeCurrent_();
-        });
-}
-
-// -- USER THREAD implementation functions --
-
-void QglEngine::createBuiltinShaders_()
-{
-    queueLambdaCommand_(
-        "initBuiltinShaders",
-        [=](Engine* engine) {
-            static_cast<QglEngine*>(engine)->initBuiltinShaders_();
-        });
-}
-
-SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInfo)
-{
-    if (createInfo.windowNativeHandleType() != WindowNativeHandleType::QOpenGLWindow) {
-        throw core::LogicError("QglEngine: unsupported WindowNativeHandleType value.");
-    }
-
-    if (ctx_ == nullptr) {
-        throw core::LogicError("ctx_ is null.");
-    }
-    // XXX can it be an external context ??
-
-    // XXX only allow D24_S8 for now..
-    format_.setDepthBufferSize(24);
-    format_.setStencilBufferSize(8);
-    format_.setVersion(3, 3);
-    format_.setProfile(QSurfaceFormat::CoreProfile);
-    format_.setSamples(createInfo.numSamples());
-    format_.setSwapInterval(0);
-
-    QWindow* wnd = static_cast<QWindow*>(createInfo.windowNativeHandle());
-    wnd->setFormat(format_);
-    wnd->create();
-
-    QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
-    framebuffer->isDefault_ = true;
-    framebuffer->object_ = 0;
-
-    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo, framebuffer);
-    swapChain->window_ = wnd;
-    swapChain->surface_ = wnd;
-    swapChain->isExternal_ = false;
-
-    return SwapChainPtr(swapChain.release());
-}
-
-FramebufferPtr QglEngine::constructFramebuffer_(const ImageViewPtr& colorImageView)
-{
-    auto framebuffer = makeUnique<QglFramebuffer>(resourceRegistry_);
-    framebuffer->colorView_ = static_pointer_cast<QglImageView>(colorImageView);
-
-    return FramebufferPtr(framebuffer.release());
-}
-
-BufferPtr QglEngine::constructBuffer_(const BufferCreateInfo& createInfo)
-{
-    auto buffer = makeUnique<QglBuffer>(resourceRegistry_, createInfo);
-    buffer->usageGL_ = usageToGLenum(createInfo.usage(), createInfo.cpuAccessFlags());
-
-    return BufferPtr(buffer.release());
-}
-
-ImagePtr QglEngine::constructImage_(const ImageCreateInfo& createInfo)
-{
-    auto image = makeUnique<QglImage>(resourceRegistry_, createInfo);
-    image->internalFormat_ = imageFormatToGLenum(createInfo.format());
-
-    return ImagePtr(image.release());
-}
-
-ImageViewPtr QglEngine::constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image)
-{
-    auto view = makeUnique<QglImageView>(resourceRegistry_, createInfo, image);
-    view->internalFormat_ = image.get_static_cast<QglImage>()->internalFormat();
-
-    return ImageViewPtr(view.release());
-}
-
-ImageViewPtr QglEngine::constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements)
-{
-    auto view = makeUnique<QglImageView>(resourceRegistry_, createInfo, buffer, format, numElements);
-    view->internalFormat_ = imageFormatToGLenum(format);
-
-    return ImageViewPtr(view.release());
-}
-
-SamplerStatePtr QglEngine::constructSamplerState_(const SamplerStateCreateInfo& createInfo)
-{
-    auto state = makeUnique<QglSamplerState>(resourceRegistry_, createInfo);
-    state->magFilterGL_ = filterModeToGLenum(createInfo.magFilter());
-    state->minFilterGL_ = filterModeToGLenum(createInfo.minFilter());
-    state->mipFilterGL_ = filterModeToGLenum(createInfo.mipFilter());
-    if (createInfo.maxAnisotropy() >= 1) {
-        if (hasAnisotropicFilteringSupport_) {
-            state->maxAnisotropyGL_ = static_cast<float>(createInfo.maxAnisotropy());
-        } else {
-            VGC_WARNING(LogVgcUi, "Anisotropic filtering is not supported.");
-        }
-    }
-    state->wrapS_ = imageWrapModeToGLenum(createInfo.wrapModeU());
-    state->wrapT_ = imageWrapModeToGLenum(createInfo.wrapModeV());
-    state->wrapR_ = imageWrapModeToGLenum(createInfo.wrapModeW());
-    state->comparisonFunctionGL_ = comparisonFunctionToGLenum(createInfo.comparisonFunction());
-
-    return SamplerStatePtr(state.release());
-}
-
-GeometryViewPtr QglEngine::constructGeometryView_(const GeometryViewCreateInfo& createInfo)
-{
-    auto view = makeUnique<QglGeometryView>(resourceRegistry_, createInfo);
-    view->topology_ = primitiveTypeToGLenum(createInfo.primitiveType());
-
-    return GeometryViewPtr(view.release());
-}
-
-BlendStatePtr QglEngine::constructBlendState_(const BlendStateCreateInfo& createInfo)
-{
-    auto state = makeUnique<QglBlendState>(resourceRegistry_, createInfo);
-    Int n = state->isIndependentBlendEnabled() ? maxColorTargets : 1;
-    for (Int i = 0; i < n; ++i) {
-        const TargetBlendState& blendState = state->targetBlendState(i);
-        TargetBlendStateGL& blendStateGL = state->targetBlendStatesGL_[i];
-        blendStateGL.isEnabled = blendState.isEnabled();
-        if (blendStateGL.isEnabled) {
-            blendStateGL.writeMask = blendState.writeMask();
-            const BlendEquation& equationRGB = blendState.equationRGB();
-            blendStateGL.equationRGB.operation = blendOpToGLenum(equationRGB.operation());
-            blendStateGL.equationRGB.sourceFactor = blendFactorToGLenum(equationRGB.sourceFactor());
-            blendStateGL.equationRGB.targetFactor = blendFactorToGLenum(equationRGB.targetFactor());
-            const BlendEquation& equationAlpha = blendState.equationAlpha();
-            blendStateGL.equationAlpha.operation = blendOpToGLenum(equationAlpha.operation());
-            blendStateGL.equationAlpha.sourceFactor = blendFactorToGLenum(equationAlpha.sourceFactor());
-            blendStateGL.equationAlpha.targetFactor = blendFactorToGLenum(equationAlpha.targetFactor());
-        }
-    }
-
-    return BlendStatePtr(state.release());
-}
-
-RasterizerStatePtr QglEngine::constructRasterizerState_(const RasterizerStateCreateInfo& createInfo)
-{
-    auto state = makeUnique<QglRasterizerState>(resourceRegistry_, createInfo);
-    state->fillModeGL_ = fillModeToGLenum(createInfo.fillMode());
-    state->cullModeGL_ = cullModeToGLenum(createInfo.cullMode());
-
-    return RasterizerStatePtr(state.release());
-}
-
-void QglEngine::resizeSwapChain_(SwapChain* /*swapChain*/, UInt32 /*width*/, UInt32 /*height*/)
-{
-    // XXX anything to do ?
-}
-
-//--  RENDER THREAD implementation functions --
-
-void QglEngine::onStart_()
-{
-    ctx_->makeCurrent(offscreenSurface_);
-
-    // Get API 3.3
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    api_ = ctx_->versionFunctions<QOpenGLFunctions_3_3_Core>();
-#else
-    api_ = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx_);
-#endif
-    //
-
-    api_->initializeOpenGLFunctions();
-
-    initBuiltinShaders_();
-}
-
-void QglEngine::initFramebuffer_(Framebuffer* framebuffer)
-{
-    QglFramebuffer* glFramebuffer = static_cast<QglFramebuffer*>(framebuffer);
-    api_->glGenFramebuffers(1, &glFramebuffer->object_);
-    api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, glFramebuffer->object_);
-    // XXX handle the different textargets + ranks + layer !!
-    api_->glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glFramebuffer->colorView_->object(), 0);
-    api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer_);
-}
-
-void QglEngine::initBuffer_(Buffer* buffer, const char* /*data*/, Int /*lengthInBytes*/)
-{
-    QglBuffer* glBuffer = static_cast<QglBuffer*>(buffer);
-    api_->glGenBuffers(1, &glBuffer->object_);
-    // ...
-}
-
-void QglEngine::initImage_(Image* /*image*/, const Span<const Span<const char>>* /*dataSpanSpan*/)
-{
-}
-
-void QglEngine::initImageView_(ImageView* /*view*/)
-{
-}
-
-void QglEngine::initSamplerState_(SamplerState* /*state*/)
-{
-}
-
-void QglEngine::initGeometryView_(GeometryView* /*view*/)
-{
-}
-
-void QglEngine::initBlendState_(BlendState* /*state*/)
-{
-}
-
-void QglEngine::initRasterizerState_(RasterizerState* /*state*/)
-{
-}
-
-void QglEngine::setSwapChain_(const SwapChainPtr& swapChain)
-{
-    if (swapChain) {
-        surface_ = swapChain.get_static_cast<QglSwapChain>()->surface_;
-    } else {
-        surface_ = offscreenSurface_;
-    }
-    ctx_->makeCurrent(surface_);
-}
-
-void QglEngine::setFramebuffer_(const FramebufferPtr& /*framebuffer*/)
-{
-    //framebuffer_
-}
-
-void QglEngine::setViewport_(Int /*x*/, Int /*y*/, Int /*width*/, Int /*height*/)
-{
-}
-
-void QglEngine::setProgram_(const ProgramPtr& /*program*/)
-{
-}
-
-void QglEngine::setBlendState_(const BlendStatePtr& /*state*/, const geometry::Vec4f& /*blendFactor*/)
-{
-}
-
-void QglEngine::setRasterizerState_(const RasterizerStatePtr& /*state*/)
-{
-}
-
-void QglEngine::setStageConstantBuffers_(BufferPtr const* /*buffers*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
-{
-}
-
-void QglEngine::setStageImageViews_(ImageViewPtr const* /*views*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
-{
-}
-
-void QglEngine::setStageSamplers_(SamplerStatePtr const* /*states*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
-{
-}
-
-void QglEngine::updateBufferData_(Buffer* /*buffer*/, const void* /*data*/, Int /*lengthInBytes*/)
-{
-}
-
-// should do init at beginFrame if needed..
-
-void QglEngine::draw_(GeometryView* /*view*/, UInt /*numIndices*/, UInt /*numInstances*/)
-{
-}
-
-void QglEngine::clear_(const core::Color& /*color*/)
-{
-}
-
-UInt64 QglEngine::present_(SwapChain* /*swapChain*/, UInt32 /*syncInterval*/, PresentFlags /*flags*/)
-{
-    return 0;
-}
-
-// Private methods
-
-void QglEngine::initBuiltinShaders_()
-{
-    // Initialize shader program
-    //paintShaderProgram_.reset(new QOpenGLShaderProgram());
-    //paintShaderProgram_->addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
-    //paintShaderProgram_->addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
-    //paintShaderProgram_->link();
-
-    // Get shader locations
-    //paintShaderProgram_->bind();
-    //posLoc_  = paintShaderProgram_->attributeLocation("pos");
-    //colLoc_  = paintShaderProgram_->attributeLocation("col");
-    //projLoc_ = paintShaderProgram_->uniformLocation("proj");
-    //viewLoc_ = paintShaderProgram_->uniformLocation("view");
-    //paintShaderProgram_->release();
-}
-
-void QglEngine::makeCurrent_()
-{
-    ctx_->makeCurrent(ctx_->surface());
-}
-
-//// USER THREAD pimpl functions
-//
-//SwapChain* QglEngine::createSwapChain_(const SwapChainCreateInfo& desc)
-//{
-//    //if (ctx_ == nullptr) {
-//    //    throw core::LogicError("ctx_ is null.");
-//    //}
-//
-//    if (desc.windowNativeHandleType() != WindowNativeHandleType::QOpenGLWindow) {
-//        return nullptr;
-//    }
-//
-//    format_.setDepthBufferSize(24);
-//    format_.setStencilBufferSize(8);
-//    format_.setVersion(3, 2);
-//    format_.setProfile(QSurfaceFormat::CoreProfile);
-//    format_.setSamples(desc.numSamples());
-//    format_.setSwapInterval(0);
-//
-//    QWindow* wnd = static_cast<QWindow*>(desc.windowNativeHandle());
-//    wnd->setFormat(format_);
-//    wnd->create();
-//
-//    return new QOpenglSwapChain(resourceRegistry_, desc, wnd);
-//}
-//
-//void QglEngine::resizeSwapChain_(SwapChain* /*swapChain*/, UInt32 /*width*/, UInt32 /*height*/)
-//{
-//    // no-op
-//}
-//
-//Buffer* QglEngine::createBuffer_(
-//    Usage usage, BindFlags bindFlags,
-//    ResourceMiscFlags resourceMiscFlags, CpuAccessFlags cpuAccessFlags)
-//{
-//    return new QOpenglBuffer(resourceRegistry_, usage, bindFlags, resourceMiscFlags, cpuAccessFlags);
-//}
-//
-//// RENDER THREAD functions
-//
-//void QglEngine::bindSwapChain_(SwapChain* swapChain)
-//{
-//    QOpenglSwapChain* oglChain = static_cast<QOpenglSwapChain*>(swapChain);
-//    surface_ = oglChain->surface();
-//
-//    if (!ctx_) {
-//        ctx_ = new QOpenGLContext();
-//        ctx_->setFormat(format_);
-//        ctx_->create();
-//    }
-//
-//    ctx_->makeCurrent(surface_);
-//    if (!api_) {
-//        setupContext();
-//    }
-//}
-//
-//UInt64 QglEngine::present_(SwapChain* swapChain, UInt32 /*syncInterval*/, PresentFlags /*flags*/)
-//{
-//    // XXX check valid ?
-//    auto oglChain = static_cast<QOpenglSwapChain*>(swapChain);
-//    ctx_->swapBuffers(oglChain->surface());
-//    return std::chrono::nanoseconds(std::chrono::steady_clock::now() - startTime_).count();
-//}
-//
-//void QglEngine::bindFramebuffer_(Framebuffer* framebuffer)
-//{
-//    QOpenglFramebuffer* fb = static_cast<QOpenglFramebuffer*>(framebuffer);
-//    GLuint fbo = fb->isDefault_ ? ctx_->defaultFramebufferObject() : fb->object_;
-//    api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
-//}
-//
-//void QglEngine::setViewport_(Int x, Int y, Int width, Int height)
-//{
-//    api_->glViewport(x, y, width, height);
-//}
-//
-//void QglEngine::clear_(const core::Color& color)
-//{
-//    api_->glClearColor(
-//        static_cast<float>(color.r()),
-//        static_cast<float>(color.g()),
-//        static_cast<float>(color.b()),
-//        static_cast<float>(color.a()));
-//    api_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//}
-//
-//void QglEngine::setProjectionMatrix_(const geometry::Mat4f& m)
-//{
-//    paintShaderProgram_->setUniformValue(projLoc_, toQtMatrix(m));
-//}
-//
-//void QglEngine::setViewMatrix_(const geometry::Mat4f& m)
-//{
-//    paintShaderProgram_->setUniformValue(viewLoc_, toQtMatrix(m));
-//}
-//
-//void QglEngine::initBuffer_(Buffer* buffer, const void* data, Int initialLengthInBytes)
-//{
-//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
-//    oglBuffer->init(data, initialLengthInBytes);
-//}
-//
-//void QglEngine::updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes)
-//{
-//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
-//    oglBuffer->load(data, lengthInBytes);
-//}
-//
-//void QglEngine::setupVertexBufferForPaintShader_(Buffer* buffer)
-//{
-//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
-//    GLsizei stride = sizeof(XYRGBVertex);
-//    GLvoid* posPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, x));
-//    GLvoid* colPointer = reinterpret_cast<void*>(offsetof(XYRGBVertex, r));
-//    GLboolean normalized = GL_FALSE;
-//    oglBuffer->bind();
-//    api_->glEnableVertexAttribArray(posLoc_);
-//    api_->glEnableVertexAttribArray(colLoc_);
-//    api_->glVertexAttribPointer(posLoc_, 2, GL_FLOAT, normalized, stride, posPointer);
-//    api_->glVertexAttribPointer(colLoc_, 3, GL_FLOAT, normalized, stride, colPointer);
-//    oglBuffer->unbind();
-//}
-//
-//void QglEngine::drawPrimitives_(Buffer* buffer, PrimitiveType type)
-//{
-//    QOpenglBuffer* oglBuffer = static_cast<QOpenglBuffer*>(buffer);
-//    GLenum mode = 0;
-//    switch (type) {
-//    case PrimitiveType::LineList: mode = GL_LINES; break;
-//    case PrimitiveType::LineStrip: mode = GL_LINE_STRIP; break;
-//    case PrimitiveType::TriangleList: mode = GL_TRIANGLES; break;
-//    case PrimitiveType::TriangleStrip: mode = GL_TRIANGLE_STRIP; break;
-//    default:
-//        mode = GL_POINTS;
-//        break;
-//    }
-//    oglBuffer->draw(this, mode);
-//}
-//
-//void QglEngine::bindPaintShader_()
-//{
-//    paintShaderProgram_->bind();
-//}
-//
-//void QglEngine::releasePaintShader_()
-//{
-//    paintShaderProgram_->release();
-//}
 
 } // namespace vgc::ui::internal::qopengl

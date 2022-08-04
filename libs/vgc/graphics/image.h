@@ -84,7 +84,7 @@ public:
 
     void setNumLayers(UInt8 numLayers)
     {
-        numLayers_ = numLayers;
+        numLayers_ = numLayers ? numLayers : 1;
     }
 
     UInt8 numMipLevels() const
@@ -102,9 +102,14 @@ public:
         return numSamples_;
     }
 
+    bool isMultisampled() const
+    {
+        return numSamples_ > 1;
+    }
+
     void setNumSamples(UInt8 numSamples)
     {
-        numSamples_ = numSamples;
+        numSamples_ = numSamples ? numSamples : 1;
     }
 
     bool isMipGenerationEnabled() const

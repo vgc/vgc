@@ -123,7 +123,9 @@ enum class ImageRank : UInt8 {
     // XXX future
     //_3D,
     //_CubeMap, // OpenGL doesn't support cubemap textures from 2d image array.
+    Max_ = _2D,
 };
+inline constexpr UInt8 numImageRanks = static_cast<UInt8>(ImageRank::Max_) + 1;
 
 enum class ImageFormat : UInt8 {
     Unknown,
@@ -193,7 +195,9 @@ enum class ImageFormat : UInt8 {
     //BC5_SNORM,
     //BC7_UNORM,
     //BC7_UNORM_SRGB,
+    Max_ = RGBA_32_FLOAT,
 };
+inline constexpr UInt8 numImageFormats = static_cast<UInt8>(ImageFormat::Max_) + 1;
 
 enum class SwapChainTargetFormat : UInt8 {
     RGBA_8_UNORM = core::toUnderlying(ImageFormat::RGBA_8_UNORM),

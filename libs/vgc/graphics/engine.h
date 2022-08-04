@@ -336,7 +336,7 @@ protected:
 
     virtual void initFramebuffer_(Framebuffer* framebuffer) = 0;
     virtual void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) = 0;
-    virtual void initImage_(Image* image, const Span<const Span<const char>>* dataSpanSpan) = 0;
+    virtual void initImage_(Image* image, const Span<const char>* mipLevelDataSpans, Int count) = 0;
     virtual void initImageView_(ImageView* view) = 0;
     virtual void initSamplerState_(SamplerState* state) = 0;
     virtual void initGeometryView_(GeometryView* view) = 0;
@@ -349,9 +349,9 @@ protected:
     virtual void setProgram_(const ProgramPtr& program) = 0;
     virtual void setBlendState_(const BlendStatePtr& state, const geometry::Vec4f& blendConstantFactor) = 0;
     virtual void setRasterizerState_(const RasterizerStatePtr& state) = 0;
-    virtual void setStageConstantBuffers_(BufferPtr const* buffers, Int startIndex, Int count, ShaderStage shaderStage) = 0;
-    virtual void setStageImageViews_(ImageViewPtr const* views, Int startIndex, Int count, ShaderStage shaderStage) = 0;
-    virtual void setStageSamplers_(SamplerStatePtr const* states, Int startIndex, Int count, ShaderStage shaderStage) = 0;
+    virtual void setStageConstantBuffers_(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage) = 0;
+    virtual void setStageImageViews_(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage) = 0;
+    virtual void setStageSamplers_(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage) = 0;
 
     // XXX virtual void setSwapChainDefaultFramebuffer_(const SwapChainPtr& swapChain, const FramebufferPtr& framebuffer) = 0;
 
@@ -362,6 +362,8 @@ protected:
 
     virtual UInt64 present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) = 0;
 
+    virtual void setStateDirty_() {};
+
 protected:
     detail::ResourceRegistry* resourceRegistry_ = nullptr;
 
@@ -371,6 +373,7 @@ protected:
     // wrapper engines may not know about the host state at some point
     void setStateDirty() {
         dirtyPipelineParameters_ = PipelineParameter::All;
+        setStateDirty_();
     }
 
     // -- builtins --
@@ -509,6 +512,10 @@ private:
     // returns false if translation was cancelled by a stop request.
     void waitCommandListTranslationFinished_(UInt commandListId = 0);
 
+    // -- helpers --
+
+    void sanitizeCreateImageInfo(ImageCreateInfo& createInfo);
+
     // -- checks --
 
     bool checkResourceIsValid_(Resource* resource)
@@ -619,9 +626,9 @@ inline BufferPtr Engine::createVertexBuffer(core::Array<T> initialData, bool isD
 {
     BufferCreateInfo createInfo = {};
     createInfo.setUsage(isDynamic ? Usage::Dynamic : Usage::Immutable);
-    createInfo.setBindFlags(BindFlags::VertexBuffer);
-    createInfo.setCpuAccessFlags(isDynamic ? CpuAccessFlags::Write : CpuAccessFlags::None);
-    createInfo.setResourceMiscFlags(ResourceMiscFlags::None);
+    createInfo.setBindFlags(BindFlag::VertexBuffer);
+    createInfo.setCpuAccessFlags(isDynamic ? CpuAccessFlag::Write : CpuAccessFlag::None);
+    createInfo.setResourceMiscFlags(ResourceMiscFlag::None);
     return createBuffer(createInfo, std::move(initialData));
 }
 
@@ -634,7 +641,7 @@ inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> dat
     }
 
     if (!(buf->cpuAccessFlags() & CpuAccessFlag::Write)) {
-        VGC_ERROR(LogVgcGraphics, "cpu does not have write access on buffer");
+        VGC_ERROR(LogVgcGraphics, "Cpu does not have write access on buffer.");
     }
 
     buf->lengthInBytes_ = data.length() * sizeof(T);

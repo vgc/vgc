@@ -158,15 +158,26 @@ GeometryViewPtr Engine::createDynamicTriangleListView(BuiltinGeometryLayout vert
 
 ImagePtr Engine::createImage(const ImageCreateInfo& createInfo)
 {
-    ImagePtr image(constructImage_(createInfo));
+    // sanitize create info
+    ImageCreateInfo sanitizedCreateInfo = createInfo;
+    sanitizeCreateImageInfo(sanitizedCreateInfo);
 
+    if (createInfo.usage() == Usage::Immutable) {
+        VGC_ERROR(LogVgcGraphics, "Cannot create an immutable image without initial data.");
+        return nullptr;
+    }
+
+    // construct
+    ImagePtr image(constructImage_(sanitizedCreateInfo));
+
+    // queue init
     struct CommandParameters {
         Image* image;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initImage",
         [](Engine* engine, const CommandParameters& p) {
-            engine->initImage_(p.image, nullptr);
+            engine->initImage_(p.image, nullptr, 0);
         },
         image.get());
     return image;
@@ -174,8 +185,24 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo)
 
 ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData)
 {
-    ImagePtr image(constructImage_(createInfo));
+    // sanitize create info
+    ImageCreateInfo sanitizedCreateInfo = createInfo;
+    sanitizeCreateImageInfo(sanitizedCreateInfo);
 
+    if (sanitizedCreateInfo.isMultisampled()) {
+        VGC_ERROR(LogVgcGraphics, "Initial data ignored: multisampled image cannot be initialized with data on creation.");
+        return createImage(sanitizedCreateInfo);
+    }
+
+    if (sanitizedCreateInfo.numMipLevels() == 0) {
+        VGC_ERROR(LogVgcGraphics, "Cannot create an image with initial data if the number of mip levels is 0 (automatic).");
+        return nullptr;
+    }
+
+    // construct
+    ImagePtr image(constructImage_(sanitizedCreateInfo));
+
+    // queue init
     struct CommandParameters {
         Image* image;
         core::Array<char> initialData;
@@ -183,9 +210,8 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initImage",
         [](Engine* engine, const CommandParameters& p) {
-            Span<const char> l0m0 = { p.initialData.data(), p.initialData.length() };
-            Span<const Span<const char>> imgs = { &l0m0, 1 };
-            engine->initImage_(p.image, &imgs);
+            Span<const char> m0 = { p.initialData.data(), p.initialData.length() };
+            engine->initImage_(p.image, &m0, 1);
         },
         image.get(), std::move(initialData));
     return image;
@@ -896,6 +922,25 @@ void Engine::waitCommandListTranslationFinished_(UInt commandListId)
     }
     renderThreadEventConditionVariable_.wait(lock, [&]{ return lastExecutedCommandListId_ == commandListId; });
     lock.unlock();
+}
+
+void Engine::sanitizeCreateImageInfo(ImageCreateInfo& createInfo)
+{
+    bool isMultisampled = createInfo.numSamples() > 1;
+    if (isMultisampled) {
+        if (createInfo.rank() == ImageRank::_1D) {
+            VGC_WARNING(LogVgcGraphics, "Sample count ignored: multisampling is not available for 1D images.");
+            createInfo.setNumSamples(1);
+        }
+        if (createInfo.numMipLevels() != 1) {
+            VGC_WARNING(LogVgcGraphics, "Number of mip levels ignored: multisampled image can only have level 0.");
+            createInfo.setNumMipLevels(1);
+        }
+    }
+    if (!createInfo.isMipGenerationEnabled() && createInfo.numMipLevels() == 0) {
+        VGC_WARNING(LogVgcGraphics, "Automatic number of mip levels resolves to 1 since mip generation is not enabled.");
+        createInfo.setNumMipLevels(1);
+    }
 }
 
 } // namespace graphics

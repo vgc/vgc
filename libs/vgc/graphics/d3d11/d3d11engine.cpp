@@ -950,7 +950,7 @@ BufferPtr D3d11Engine::constructBuffer_(const BufferCreateInfo& createInfo)
     if (bindFlags & BindFlag::ConstantBuffer) {
         desc.BindFlags |= D3D11_BIND_FLAG::D3D11_BIND_CONSTANT_BUFFER;
         if (bindFlags != BindFlag::ConstantBuffer) {
-            throw core::LogicError("D3d11Buffer: BindFlags::UniformBuffer cannot be combined with any other bind flag");
+            throw core::LogicError("D3d11Buffer: BindFlag::UniformBuffer cannot be combined with any other bind flag");
         }
     }
     else {
@@ -1126,33 +1126,38 @@ void D3d11Engine::initBuffer_(Buffer* buffer, const char* data, Int lengthInByte
     d3dBuffer->gpuLengthInBytes_ = lengthInBytes;
 }
 
-void D3d11Engine::initImage_(Image* image, const Span<const Span<const char>>* dataSpanSpan)
+void D3d11Engine::initImage_(Image* image_, const Span<const char>* mipLevelDataSpans, Int count)
 {
-    D3d11Image* d3dImage = static_cast<D3d11Image*>(image);
+    D3d11Image* image = static_cast<D3d11Image*>(image_);
 
-    // XXX add size checks, see https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createtexture2d
-    core::Array<D3D11_SUBRESOURCE_DATA> initData;
-    if (dataSpanSpan) {
-        initData.resize(dataSpanSpan->length());
-        for (Int i = 0; i < dataSpanSpan->length(); ++i) {
-            initData[i].pSysMem = dataSpanSpan->data()[i].data();
-        }
+    if (count <= 0) {
+        mipLevelDataSpans = nullptr;
+    } else {
+        VGC_CORE_ASSERT(mipLevelDataSpans);
     }
 
-    D3D11_USAGE d3dUsage = usageToD3DUsage(d3dImage->usage());
+    UINT numLayers = image->numLayers();
+    UINT numMipLevels = image->numMipLevels();
+    bool isImmutable = image->usage() == Usage::Immutable;
+    bool isMultisampled = image->numSamples() > 1;
+    bool isMipmapGenEnabled = image->isMipGenerationEnabled();
+
+    VGC_CORE_ASSERT(isMipmapGenEnabled || (numMipLevels > 0));
+
+    D3D11_USAGE d3dUsage = usageToD3DUsage(image->usage());
 
     UINT d3dBindFlags = 0;
-    if (d3dImage->bindFlags() & ImageBindFlag::ShaderResource) {
+    if (image->bindFlags() & ImageBindFlag::ShaderResource) {
         d3dBindFlags |= D3D11_BIND_SHADER_RESOURCE;
     }
-    if (d3dImage->bindFlags() & ImageBindFlag::RenderTarget) {
+    if (image->bindFlags() & ImageBindFlag::RenderTarget) {
         d3dBindFlags |= D3D11_BIND_RENDER_TARGET;
     }
-    if (d3dImage->bindFlags() & ImageBindFlag::DepthStencil) {
+    if (image->bindFlags() & ImageBindFlag::DepthStencil) {
         d3dBindFlags |= D3D11_BIND_DEPTH_STENCIL;
     }
 
-    const CpuAccessFlags cpuAccessFlags = d3dImage->cpuAccessFlags();
+    const CpuAccessFlags cpuAccessFlags = image->cpuAccessFlags();
     UINT d3dCPUAccessFlags = 0;
     if (cpuAccessFlags & CpuAccessFlag::Write) {
         d3dCPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
@@ -1161,18 +1166,43 @@ void D3d11Engine::initImage_(Image* image, const Span<const Span<const char>>* d
         d3dCPUAccessFlags |= D3D11_CPU_ACCESS_READ;
     }
 
-    UINT d3dMiscFlags = resourceMiscFlagsToD3DResourceMiscFlags(d3dImage->resourceMiscFlags());
-
-    if (d3dImage->isMipGenerationEnabled()) {
+    UINT d3dMiscFlags = resourceMiscFlagsToD3DResourceMiscFlags(image->resourceMiscFlags());
+    if (isMipmapGenEnabled) {
         d3dMiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
     }
 
-    if (d3dImage->rank() == ImageRank::_1D) {
+    // XXX add size checks
+    // see https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createtexture1d
+    // see https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createtexture2d
+    core::Array<D3D11_SUBRESOURCE_DATA> initData(numMipLevels * numLayers);
+    if (mipLevelDataSpans) {
+        // XXX let's consider for now that we are provided full mips or nothing
+        VGC_CORE_ASSERT(numMipLevels == count);
+        VGC_CORE_ASSERT(numMipLevels > 0);
+        initData.resize(numMipLevels * numLayers);
+        for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
+            const Span<const char>& mipLevelDataSpan = mipLevelDataSpans[mipLevel];
+            // each span has all layers
+            Int layerStride = mipLevelDataSpan.length() / numLayers;
+            VGC_CORE_ASSERT(layerStride * numLayers == mipLevelDataSpan.length());
+            for (Int layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
+                // layer0_mip0..layer0_mipN..layerN_mip0..layerN_mipN
+                initData[layerIdx * numMipLevels + mipLevel].pSysMem = mipLevelDataSpan.data() + layerStride * layerIdx;
+            }
+        }
+    }
+    else {
+        VGC_CORE_ASSERT(!isImmutable);
+    }
+
+    if (image->rank() == ImageRank::_1D) {
+        VGC_CORE_ASSERT(!isMultisampled);
+
         D3D11_TEXTURE1D_DESC desc = {};
-        desc.Width = d3dImage->width();
-        desc.MipLevels = d3dImage->numMipLevels();
-        desc.ArraySize = d3dImage->numLayers();
-        desc.Format = d3dImage->dxgiFormat();
+        desc.Width = image->width();
+        desc.MipLevels = numMipLevels;
+        desc.ArraySize = numLayers;
+        desc.Format = image->dxgiFormat();
         desc.Usage = d3dUsage;
         desc.BindFlags = d3dBindFlags;
         desc.CPUAccessFlags = d3dCPUAccessFlags;
@@ -1180,17 +1210,19 @@ void D3d11Engine::initImage_(Image* image, const Span<const Span<const char>>* d
 
         ComPtr<ID3D11Texture1D> texture;
         device_->CreateTexture1D(&desc, initData.size() ? initData.data() : nullptr, texture.releaseAndGetAddressOf());
-        d3dImage->object_ = texture;
+        image->object_ = texture;
     }
     else {
-        VGC_CORE_ASSERT(d3dImage->rank() == ImageRank::_2D);
+        VGC_CORE_ASSERT(image->rank() == ImageRank::_2D);
+        VGC_CORE_ASSERT(!isMultisampled || !mipLevelDataSpans);
+
         D3D11_TEXTURE2D_DESC desc = {};
-        desc.Width = d3dImage->width();
-        desc.Height = d3dImage->height();
-        desc.MipLevels = d3dImage->numMipLevels();
-        desc.ArraySize = std::max<UInt8>(1, d3dImage->numLayers());
-        desc.Format = d3dImage->dxgiFormat();
-        desc.SampleDesc.Count = d3dImage->numSamples();
+        desc.Width = image->width();
+        desc.Height = image->height();
+        desc.MipLevels = numMipLevels;
+        desc.ArraySize = numLayers;
+        desc.Format = image->dxgiFormat();
+        desc.SampleDesc.Count = image->numSamples();
         desc.Usage = d3dUsage;
         desc.BindFlags = d3dBindFlags;
         desc.CPUAccessFlags = d3dCPUAccessFlags;
@@ -1198,7 +1230,7 @@ void D3d11Engine::initImage_(Image* image, const Span<const Span<const char>>* d
 
         ComPtr<ID3D11Texture2D> texture;
         device_->CreateTexture2D(&desc, initData.size() ? initData.data() : nullptr, texture.releaseAndGetAddressOf());
-        d3dImage->object_ = texture;
+        image->object_ = texture;
     }
 }
 
@@ -1401,30 +1433,27 @@ void D3d11Engine::initBlendState_(BlendState* state)
     D3d11BlendState* d3dBlendState = static_cast<D3d11BlendState*>(state);
     D3D11_BLEND_DESC desc = {};
     desc.AlphaToCoverageEnable = state->isAlphaToCoverageEnabled();
-    desc.IndependentBlendEnable = state->isIndependentBlendEnabled();
-    for (Int i = 0; i < 8; ++i) {
-        const TargetBlendState& subState = state->targetBlendState(i);
-        D3D11_RENDER_TARGET_BLEND_DESC& subDesc = desc.RenderTarget[i];
-        subDesc.BlendEnable = subState.isEnabled();
-        subDesc.SrcBlend = blendFactorToD3DBlend(subState.equationRGB().sourceFactor());
-        subDesc.DestBlend = blendFactorToD3DBlend(subState.equationRGB().targetFactor());
-        subDesc.BlendOp = blendOpToD3DBlendOp(subState.equationRGB().operation());
-        subDesc.SrcBlendAlpha = blendFactorToD3DBlend(subState.equationAlpha().sourceFactor());
-        subDesc.DestBlendAlpha = blendFactorToD3DBlend(subState.equationAlpha().targetFactor());
-        subDesc.BlendOpAlpha = blendOpToD3DBlendOp(subState.equationAlpha().operation());
-        subDesc.RenderTargetWriteMask = 0;
-        if (subState.writeMask() & BlendWriteMaskBit::R) {
-            subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_RED;
-        }
-        if (subState.writeMask() & BlendWriteMaskBit::G) {
-            subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_GREEN;
-        }
-        if (subState.writeMask() & BlendWriteMaskBit::B) {
-            subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_BLUE;
-        }
-        if (subState.writeMask() & BlendWriteMaskBit::A) {
-            subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
-        }
+    desc.IndependentBlendEnable = false;
+    D3D11_RENDER_TARGET_BLEND_DESC& subDesc = desc.RenderTarget[0];
+    subDesc.BlendEnable = state->isEnabled();
+    subDesc.SrcBlend = blendFactorToD3DBlend(state->equationRGB().sourceFactor());
+    subDesc.DestBlend = blendFactorToD3DBlend(state->equationRGB().targetFactor());
+    subDesc.BlendOp = blendOpToD3DBlendOp(state->equationRGB().operation());
+    subDesc.SrcBlendAlpha = blendFactorToD3DBlend(state->equationAlpha().sourceFactor());
+    subDesc.DestBlendAlpha = blendFactorToD3DBlend(state->equationAlpha().targetFactor());
+    subDesc.BlendOpAlpha = blendOpToD3DBlendOp(state->equationAlpha().operation());
+    subDesc.RenderTargetWriteMask = 0;
+    if (state->writeMask() & BlendWriteMaskBit::R) {
+        subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_RED;
+    }
+    if (state->writeMask() & BlendWriteMaskBit::G) {
+        subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_GREEN;
+    }
+    if (state->writeMask() & BlendWriteMaskBit::B) {
+        subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_BLUE;
+    }
+    if (state->writeMask() & BlendWriteMaskBit::A) {
+        subDesc.RenderTargetWriteMask |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
     }
     device_->CreateBlendState(&desc, d3dBlendState->object_.releaseAndGetAddressOf());
 }
@@ -1500,7 +1529,7 @@ void D3d11Engine::setRasterizerState_(const RasterizerStatePtr& state)
     deviceCtx_->RSSetState(d3dRasterizerState->object());
 }
 
-void D3d11Engine::setStageConstantBuffers_(BufferPtr const* buffers, Int startIndex, Int count, ShaderStage shaderStage)
+void D3d11Engine::setStageConstantBuffers_(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage)
 {
     const Int stageIdx = core::toUnderlying(shaderStage);
     StageConstantBufferArray& boundConstantBufferArray = boundConstantBufferArrays_[core::toUnderlying(shaderStage)];
@@ -1536,7 +1565,7 @@ void D3d11Engine::setStageConstantBuffers_(BufferPtr const* buffers, Int startIn
         static_cast<UINT>(startIndex), static_cast<UINT>(count), d3d11Buffers.data());
 }
 
-void D3d11Engine::setStageImageViews_(ImageViewPtr const* views, Int startIndex, Int count, ShaderStage shaderStage)
+void D3d11Engine::setStageImageViews_(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage)
 {
     const Int stageIdx = core::toUnderlying(shaderStage);
     StageImageViewArray& boundImageViewArray = boundImageViewArrays_[core::toUnderlying(shaderStage)];
@@ -1572,7 +1601,7 @@ void D3d11Engine::setStageImageViews_(ImageViewPtr const* views, Int startIndex,
         static_cast<UINT>(startIndex), static_cast<UINT>(count), d3d11SRVs.data());
 }
 
-void D3d11Engine::setStageSamplers_(SamplerStatePtr const* states, Int startIndex, Int count, ShaderStage shaderStage)
+void D3d11Engine::setStageSamplers_(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage)
 {
     std::array<ID3D11SamplerState*, maxSamplersPerStage> d3d11SamplerStates = {};
     for (Int i = 0; i < count; ++i) {
@@ -1665,8 +1694,9 @@ void D3d11Engine::clear_(const core::Color& color)
             static_cast<float>(color.b()),
             static_cast<float>(color.a())};
         deviceCtx_->ClearRenderTargetView(rtv.get(), c.data());
-    } else {
-        VGC_WARNING(LogVgcGraphics, "clear() called but no target is set");
+    }
+    else {
+        VGC_WARNING(LogVgcGraphics, "Engine::clear() called but no target is currently set.");
     }
 }
 

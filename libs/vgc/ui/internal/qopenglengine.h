@@ -115,7 +115,7 @@ protected:
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;
-    void initImage_(Image* image, const Span<const Span<const char>>* dataSpanSpan) override;
+    void initImage_(Image* image, const Span<const char>* mipLevelDataSpans, Int numMipLevels) override;
     void initImageView_(ImageView* view) override;
     void initSamplerState_(SamplerState* state) override;
     void initGeometryView_(GeometryView* view) override;
@@ -128,9 +128,9 @@ protected:
     void setProgram_(const ProgramPtr& program) override;
     void setBlendState_(const BlendStatePtr& state, const geometry::Vec4f& blendFactor) override;
     void setRasterizerState_(const RasterizerStatePtr& state) override;
-    void setStageConstantBuffers_(BufferPtr const* buffers, Int startIndex, Int count, ShaderStage shaderStage) override;
-    void setStageImageViews_(ImageViewPtr const* views, Int startIndex, Int count, ShaderStage shaderStage) override;
-    void setStageSamplers_(SamplerStatePtr const* states, Int startIndex, Int count, ShaderStage shaderStage) override;
+    void setStageConstantBuffers_(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage) override;
+    void setStageImageViews_(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage) override;
+    void setStageSamplers_(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage) override;
 
     void updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) override;
 
@@ -138,6 +138,8 @@ protected:
     void clear_(const core::Color& color) override;
 
     UInt64 present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) override;
+
+    void setStateDirty_() override;
 
 private:
     // XXX keep only format of first chain and compare against new windows ?
@@ -148,8 +150,9 @@ private:
     QOpenGLFunctions_3_3_Core* api_ = nullptr;
     QSurface* surface_ = nullptr;
 
-    GLuint framebuffer_ = 0;
-    SamplerStatePtr currentSamplerState_;
+    // state tracking
+    GLuint boundFramebuffer_ = 0;
+    BlendStatePtr boundBlendState_;
 
     template<typename T, typename... Args>
     _NODISCARD std::unique_ptr<T> makeUnique(Args&&... args) {
@@ -158,6 +161,7 @@ private:
 
     void initBuiltinShaders_();
     void makeCurrent_();
+    bool loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize);
 
     bool hasAnisotropicFilteringSupport_ = false;
 
