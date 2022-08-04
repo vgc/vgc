@@ -655,7 +655,7 @@ public:
     /// Returns the smallest text position whose UTF-8 byte index is greater or
     /// equal than the given `byteIndex`.
     ///
-    /// Return maxPosition() if no such position exists.
+    /// Returns maxPosition() if no such position exists.
     ///
     Int positionfromByte(Int byteIndex);
 
