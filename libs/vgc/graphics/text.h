@@ -19,6 +19,7 @@
 
 #include <string_view>
 
+#include <vgc/core/flags.h>
 #include <vgc/core/innercore.h>
 #include <vgc/geometry/rect2f.h>
 #include <vgc/graphics/api.h>
@@ -112,6 +113,81 @@ public:
 private:
     TextHorizontalAlign horizontalAlign_;
     TextVerticalAlign verticalAlign_;
+};
+
+enum class TextBoundaryMarker : UInt32 {
+    None             = 0x00,
+    Grapheme         = 0x01,
+    Word             = 0x02,
+
+    // TODO? HardLineBreak, WordStart, WordEnd, LineWrap, LineBreakOpportunity, Span, Bidi, Style, etc.
+};
+VGC_DEFINE_FLAGS(TextBoundaryMarkers, TextBoundaryMarker);
+
+/// \class vgc::graphics::ShapedGlyph
+/// \brief Represents a position within a shaped text.
+///
+class ShapedTextPositionInfo {
+public:
+    /// Creates a ShapedTextPosition.
+    ///
+    ShapedTextPositionInfo(Int glyphIndex,
+                           Int byteIndex,
+                           const geometry::Vec2f& advance,
+                           TextBoundaryMarkers boundaryMarkers) :
+        glyphIndex_(glyphIndex),
+        byteIndex_(byteIndex),
+        advance_(advance),
+        boundaryMarkers_(boundaryMarkers) {}
+
+    /// Returns the index of the ShapedGlyph just after this position.
+    ///
+    /// Returns -1 if there is no ShapedGlyph after this position.
+    ///
+    /// If this position is in the middle of a glyph (i.e., a glyph spans
+    /// several graphemes, typically because of a ligature), then this glyph
+    /// index is returned.
+    ///
+    Int glyphIndex() const {
+        return glyphIndex_;
+    }
+
+    /// Returns the UTF-8 byte index in the original text that
+    /// corresponds to this position.
+    ///
+    /// Note that a single unicode character never results in multiple
+    /// graphemes, so this function always return a different byteIndex for
+    /// different positions.
+    ///
+    Int byteIndex() const {
+        return byteIndex_;
+    }
+
+    /// Returns how much the line advances from the beginning of the ShapedText
+    /// to this position. The X-coordinate corresponds to the advance when
+    /// setting text in horizontal direction, and the Y-coordinate corresponds
+    /// to the advance when setting text in vertical direction.
+    ///
+    geometry::Vec2f advance() const {
+        return advance_;
+    }
+
+    /// Returns whether this position is at the start/end of a grapheme, the
+    /// start/end of a word, etc.
+    ///
+    TextBoundaryMarkers boundaryMarkers() const {
+        return boundaryMarkers_;
+    }
+
+private:
+    friend class internal::ShapedTextImpl;
+    Int glyphIndex_;
+    Int byteIndex_;
+    geometry::Vec2f advance_;
+    TextBoundaryMarkers boundaryMarkers_;
+
+private:
+    friend class ShapedText;
 };
 
 /// \class vgc::graphics::ShapedGlyph
@@ -390,6 +466,7 @@ private:
 
 using ShapedGlyphArray = core::Array<ShapedGlyph>;
 using ShapedGraphemeArray = core::Array<ShapedGrapheme>;
+using ShapedTextPositionInfoArray = core::Array<ShapedTextPositionInfo>;
 
 /// \class vgc::graphics::ShapedText
 /// \brief Performs text shaping and stores the resulting shaped text.
@@ -466,22 +543,42 @@ public:
     ///
     const ShapedGraphemeArray& graphemes() const;
 
+    /// Returns the number of valid positions in this text.
+    ///
+    /// The valid positions are from `0` to `n - 1` where `n` is the number
+    /// returned by this function.
+    ///
+    Int numPositions() const;
+
+    /// Returns the smallest valid position in this text. This is always equal to `0`.
+    ///
+    Int minPosition() const {
+        return 0;
+    }
+
+    /// Returns the largest valid position in this text. This is equal to `numPositions() - 1`.
+    ///
+    Int maxPosition() const {
+        return numPositions() - 1;
+    }
+
+    /// Returns information about a given text position.
+    ///
+    /// If the given position isn't a valid position, then `positionInfo(i).byteIndex()` is equal to `-1`.
+    ///
+    ShapedTextPositionInfo positionInfo(Int position) const;
+
     // Returns how much the line advances after drawing this ShapedText. The
     // X-coordinate corresponds to the advance when setting text in horizontal
     // direction, and the Y-coordinate corresponds to the advance when setting
     // text in vertical direction.
     //
-    // This is equal to the sum of `glyph->advance()` for all the ShapedGlyph
-    // elements in glyphs().
-    //
     geometry::Vec2f advance() const;
 
     // Returns how much the line advances after drawing all the graphemes until
-    // the given bytePosition.
+    // the given text position.
     //
-    // \sa bytePosition()
-    //
-    geometry::Vec2f advance(Int bytePosition) const;
+    geometry::Vec2f advance(Int position) const;
 
     /// Fills this ShapedText at the given origin:
     ///
@@ -555,10 +652,70 @@ public:
               float clipLeft, float clipRight,
               float clipTop, float clipBottom) const;
 
-    /// Returns the byte position in the original text corresponding to the
-    /// grapheme boundary closest to the given mouse position.
+    /// Returns the text position corresponding to the given UTF-8 `byteIndex` (or just after, if no text position exists exactly at the given byte index).
     ///
-    Int bytePosition(const geometry::Vec2f& mousePosition);
+    Int positionfromByte(Int byteIntex);
+
+    /// Returns the text position closest to the given `mousePosition` that has
+    /// all the given `boundaryMarkers`.
+    ///
+    Int position(
+        const geometry::Vec2f& mousePosition,
+        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
+
+    /// Returns the smallest position with all the given `boundaryMarkers` that
+    /// is located strictly after the given `position`.
+    ///
+    /// If no such position exists, then:
+    /// - if `clamp` is true (the default), returns `numPositions() - 1`
+    /// - if `clamp` is false, returns `-1`
+    ///
+    Int nextBoundary(
+        Int position,
+        TextBoundaryMarkers boundaryMarkers,
+        bool clamp = true);
+
+    /// Returns the smallest position with all the given `boundaryMarkers` that
+    /// is located at or after the given `position`.
+    ///
+    /// This function returns the given `position` if it already has all the
+    /// given `boundaryMarkers`.
+    ///
+    /// If no such position exists, then:
+    /// - if `clamp` is true (the default), returns `numPositions() - 1`
+    /// - if `clamp` is false, returns `-1`
+    ///
+    Int nextOrEqualBoundary(
+        Int position,
+        TextBoundaryMarkers boundaryMarkers,
+        bool clamp = true);
+
+    /// Returns the largest position with all the given `boundaryMarkers` that
+    /// is located strictly before the given `position`.
+    ///
+    /// If no such position exists, then:
+    /// - if `clamp` is true (the default), returns `0`
+    /// - if `clamp` is false, returns `-1`
+    ///
+    Int previousBoundary(
+        Int position,
+        TextBoundaryMarkers boundaryMarkers,
+        bool clamp = true);
+
+    /// Returns the largest position with all the given `boundaryMarkers` that
+    /// is located at or before the given `position`.
+    ///
+    /// This function returns the given `position` if it already has all the
+    /// given `boundaryMarkers`.
+    ///
+    /// If no such position exists, then:
+    /// - if `clamp` is true (the default), returns `0`
+    /// - if `clamp` is false, returns `-1`
+    ///
+    Int previousOrEqualBoundary(
+        Int position,
+        TextBoundaryMarkers boundaryMarkers,
+        bool clamp = true);
 
 private:
     internal::ShapedTextImpl* impl_;

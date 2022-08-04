@@ -83,7 +83,6 @@ protected:
     geometry::Vec2f computePreferredSize() const override;
 
 private:
-    void updateBytePosition_(const geometry::Vec2f& mousePosition);
     graphics::RichTextPtr richText_;
     graphics::TrianglesBufferPtr triangles_;
     bool reload_;

@@ -133,8 +133,8 @@ bool LineEdit::onMouseMove(MouseEvent* event)
     if (mouseButton_ == MouseButton::Left) {
         geometry::Vec2f mousePosition = event->pos();
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
-        Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
-        richText_->setSelectionEndBytePosition(bytePosition);
+        Int position = richText_->position(mousePosition - mouseOffset);
+        richText_->setSelectionEndPosition(position);
         reload_ = true;
         repaint();
     }
@@ -173,14 +173,16 @@ bool LineEdit::onMousePress(MouseEvent* event)
         mouseButton_ == MouseButton::Middle) {
 
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
-        Int bytePosition = richText_->bytePosition(mousePosition - mouseOffset);
-        richText_->setSelectionBeginBytePosition(bytePosition);
-        richText_->setSelectionEndBytePosition(bytePosition);
+        Int position = richText_->position(mousePosition - mouseOffset);
+        richText_->setSelectionBeginPosition(position);
+        richText_->setSelectionEndPosition(position);
 
         // On multiple left clicks, cycle between set cursor / select word / select line
         if (numLeftMouseButtonClicks_ >= 2) {
             Int mod = numLeftMouseButtonClicks_ % 3;
             if (mod == 2) {
+                // TODO: use more precise simultaneous query of a pair (before, after)
+                // from a given mouse position.
                 richText_->moveCursor(graphics::RichTextMoveOperation::LeftOneWord, false);
                 richText_->moveCursor(graphics::RichTextMoveOperation::RightOneWord, true);
             }
@@ -288,14 +290,11 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
     bool isMoveOperation = false;
 
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
-        graphics::TextBoundaryType boundaryType = ctrl
-                ? graphics::TextBoundaryType::Word
-                : graphics::TextBoundaryType::Grapheme;
         if (key == Qt::Key_Delete) {
-            richText_->deleteNext(boundaryType);
+            richText_->deleteFromCursor(ctrl ? Op::NextWord : Op::NextCharacter);
         }
         else { // backspace
-            richText_->deletePrevious(boundaryType);
+            richText_->deleteFromCursor(ctrl ? Op::PreviousWord : Op::PreviousCharacter);
         }
     }
     else if (key == Qt::Key_Home) {
@@ -400,20 +399,6 @@ geometry::Vec2f LineEdit::computePreferredSize() const
         res[1] = h.value();
     }
     return res;
-}
-
-void LineEdit::updateBytePosition_(const geometry::Vec2f& mousePosition)
-{
-    float paddingLeft = internal::getLength(this, strings::padding_left);
-    float paddingTop = internal::getLength(this, strings::padding_top);
-    geometry::Vec2f mouseOffset(paddingLeft, paddingTop);
-    Int oldBytePosition = richText_->cursorBytePosition();
-    richText_->setCursorFromMousePosition(mousePosition - mouseOffset);
-    Int newBytePosition = richText_->cursorBytePosition();
-    if (oldBytePosition != newBytePosition) {
-        reload_ = true;
-        repaint();
-    }
 }
 
 } // namespace vgc::ui
