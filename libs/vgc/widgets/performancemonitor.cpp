@@ -20,7 +20,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/format.h>
-#include <vgc/widgets/qtutil.h>
+#include <vgc/ui/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -50,7 +50,7 @@ QString captionText_(core::PerformanceLog* log, int indentLevel)
     for (int i = 0; i < indentLevel; ++i) {
         res += "  ";
     }
-    res += toQt(log->name());
+    res += ui::toQt(log->name());
     return  res;
 }
 
@@ -77,7 +77,7 @@ void PerformanceMonitor::refresh()
         // Display the log (unless it's the root; we don't display the root)
         if (log != log_.get()) {
 
-            QString valueText = toQt(core::secondsToString(log->lastTime(), unit, decimals));
+            QString valueText = ui::toQt(core::secondsToString(log->lastTime(), unit, decimals));
 
             // If there was already something displayed for this index,
             // update the text of the QLabels

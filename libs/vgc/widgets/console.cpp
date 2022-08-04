@@ -23,7 +23,6 @@
 #include <vgc/core/algorithm.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/python.h>
-#include <vgc/widgets/qtutil.h>
 
 // Returns whether this key event is about pressing the Enter or Return key.
 //

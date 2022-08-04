@@ -22,10 +22,10 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/dom/document.h>
+#include <vgc/ui/qtutil.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
 #include <vgc/widgets/openglviewer.h>
-#include <vgc/widgets/qtutil.h>
 #include <vgc/widgets/stylesheets.h>
 
 namespace py = pybind11;
@@ -48,8 +48,8 @@ int main(int argc, char* argv[])
 #endif
 
     // Conversion between QString and std::string.
-    using vgc::widgets::fromQt;
-    using vgc::widgets::toQt;
+    using vgc::ui::fromQt;
+    using vgc::ui::toQt;
 
     // Init OpenGL. Must be called before QApplication creation. See Qt doc:
     //

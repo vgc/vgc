@@ -22,6 +22,7 @@
 
 #include <vgc/core/exceptions.h>
 #include <vgc/core/paths.h>
+#include <vgc/ui/qtutil.h>
 
 namespace vgc::ui::internal {
 
@@ -234,7 +235,7 @@ geometry::Mat4f QOpenglEngine::projectionMatrix()
 void QOpenglEngine::setProjectionMatrix(const geometry::Mat4f& m)
 {
     projectionMatrices_.last() = m;
-    shaderProgram_.setUniformValue(projLoc_, toQtMatrix(m));
+    shaderProgram_.setUniformValue(projLoc_, toQt(m));
 }
 
 void QOpenglEngine::pushProjectionMatrix()
@@ -249,7 +250,7 @@ void QOpenglEngine::pushProjectionMatrix()
 void QOpenglEngine::popProjectionMatrix()
 {
     projectionMatrices_.removeLast();
-    shaderProgram_.setUniformValue(projLoc_, toQtMatrix(projectionMatrices_.last()));
+    shaderProgram_.setUniformValue(projLoc_, toQt(projectionMatrices_.last()));
 }
 
 geometry::Mat4f QOpenglEngine::viewMatrix()
@@ -260,7 +261,7 @@ geometry::Mat4f QOpenglEngine::viewMatrix()
 void QOpenglEngine::setViewMatrix(const geometry::Mat4f& m)
 {
     viewMatrices_.last() = m;
-    shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(m));
+    shaderProgram_.setUniformValue(viewLoc_, toQt(m));
 }
 
 void QOpenglEngine::pushViewMatrix()
@@ -275,7 +276,7 @@ void QOpenglEngine::pushViewMatrix()
 void QOpenglEngine::popViewMatrix()
 {
     viewMatrices_.removeLast();
-    shaderProgram_.setUniformValue(viewLoc_, toQtMatrix(viewMatrices_.last()));
+    shaderProgram_.setUniformValue(viewLoc_, toQt(viewMatrices_.last()));
 }
 
 graphics::TrianglesBufferPtr QOpenglEngine::createTriangles()

@@ -17,7 +17,8 @@
 #include <vgc/widgets/pointingdeviceevent.h>
 
 #include <QGuiApplication>
-#include <vgc/widgets/qtutil.h>
+
+#include <vgc/ui/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -29,9 +30,9 @@ PointingDeviceEvent::PointingDeviceEvent(QMouseEvent* event) :
     button_(event->button()),
     buttons_(event->buttons()),
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    pos_(fromQtd(event->localPos())),
+    pos_(ui::fromQtd(event->localPos())),
 #else
-    pos_(fromQtd(event->position())),
+    pos_(ui::fromQtd(event->position())),
 #endif
     hasPressure_(false),
     pressure_(0.0)
@@ -49,9 +50,9 @@ PointingDeviceEvent::PointingDeviceEvent(QTabletEvent* event) :
     button_(event->button()),
     buttons_(event->buttons()),
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    pos_(fromQtd(event->posF())),
+    pos_(ui::fromQtd(event->posF())),
 #else
-    pos_(fromQtd(event->position())),
+    pos_(ui::fromQtd(event->position())),
 #endif
     hasPressure_(true),
     pressure_(event->pressure())

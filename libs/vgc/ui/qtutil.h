@@ -19,62 +19,79 @@
 ///        application.
 ///
 
-#ifndef VGC_WIDGETS_QTUTIL_H
-#define VGC_WIDGETS_QTUTIL_H
+#ifndef VGC_UI_QTUTIL_H
+#define VGC_UI_QTUTIL_H
 
 #include <string>
+
 #include <QColor>
+#include <QMatrix4x4>
 #include <QPointF>
 #include <QString>
+
 #include <vgc/core/color.h>
+#include <vgc/core/object.h>
+#include <vgc/geometry/mat4f.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
-#include <vgc/widgets/api.h>
+#include <vgc/ui/api.h>
 
-namespace vgc {
-namespace widgets {
+class QMouseEvent;
+
+namespace vgc::ui {
+
+VGC_DECLARE_OBJECT(MouseEvent);
 
 /// Converts the given UTF-8 encoded std::string \p s into a QString.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 QString toQt(const std::string& s);
 
 /// Converts the given QString \p s into a UTF-8 encoded std::string.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 std::string fromQt(const QString& s);
 
 /// Converts the given vgc::core::Color \p c into a QColor.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 QColor toQt(const core::Color& c);
 
 /// Converts the given QColor \p c into a vgc::core::Color.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 core::Color fromQt(const QColor& c);
 
 /// Converts the given vgc::geometry::Vec2d \p v into a QPointF.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 QPointF toQt(const geometry::Vec2d& v);
 
 /// Converts the given vgc::geometry::Vec2f \p v into a QPointF.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 QPointF toQt(const geometry::Vec2f& v);
 
 /// Converts the given QPointF \p v into a vgc::geometry::Vec2d.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 geometry::Vec2d fromQtd(const QPointF& v);
 
 /// Converts the given QPointF \p v into a vgc::geometry::Vec2f.
 ///
-VGC_WIDGETS_API
+VGC_UI_API
 geometry::Vec2f fromQtf(const QPointF& v);
 
-} // namespace widgets
-} // namespace vgc
+/// Converts the given QMouseEvent into a vgc::ui::MouseEvent.
+///
+VGC_UI_API
+MouseEventPtr fromQt(QMouseEvent* event);
 
-#endif // VGC_WIDGETS_QTUTIL_H
+/// Converts the given geometry::Mat4f into a QMatrix4x4.
+///
+VGC_UI_API
+QMatrix4x4 toQt(const geometry::Mat4f& m);
+
+} // namespace vgc::ui
+
+#endif // VGC_UI_QTUTIL_H

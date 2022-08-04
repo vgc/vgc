@@ -18,7 +18,8 @@
 
 #include <QColorDialog>
 #include <QPainter>
-#include <vgc/widgets/qtutil.h>
+
+#include <vgc/ui/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -67,7 +68,7 @@ void ColorToolButton::updateIcon()
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(QPen(Qt::black));
-    painter.setBrush(QBrush(toQt(color())));
+    painter.setBrush(QBrush(ui::toQt(color())));
     painter.drawEllipse(QRect(diskTopLeft, diskSize));
 
     // Set pixmap as tool icon
@@ -92,7 +93,7 @@ ColorDialog* ColorToolButton::colorDialog()
 void ColorToolButton::onClicked_()
 {
     previousColor_ = color_;
-    colorDialog()->setCurrentColor(toQt(color_));
+    colorDialog()->setCurrentColor(ui::toQt(color_));
     colorDialog()->show();
     colorDialog()->raise();
     colorDialog()->activateWindow();
@@ -117,7 +118,7 @@ void ColorToolButton::onColorDialogDestroyed_()
 
 void ColorToolButton::onColorDialogCurrentColorChanged_(const QColor& color)
 {
-    setColor(fromQt(color));
+    setColor(ui::fromQt(color));
 }
 
 void ColorToolButton::onColorDialogFinished_(int result)
