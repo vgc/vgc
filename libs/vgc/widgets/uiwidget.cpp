@@ -81,14 +81,34 @@ namespace {
 
 ui::MouseEventPtr convertEvent(QMouseEvent* event)
 {
+    // Button
     Qt::MouseButton qbutton = event->button();
     ui::MouseButton button = static_cast<ui::MouseButton>(qbutton);
+
+// Position
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QPointF& p = event->localPos();
 #else
     const QPointF& p = event->position();
 #endif
-    return ui::MouseEvent::create(button, fromQtf(p));
+
+    // Modidier keys
+    Qt::KeyboardModifiers modifiers = event->modifiers();
+    ui::ModifierKeys modifierKeys;
+    if (modifiers.testFlag(Qt::ShiftModifier)) {
+        modifierKeys.set(ui::ModifierKey::Shift);
+    }
+    if (modifiers.testFlag(Qt::ControlModifier)) {
+        modifierKeys.set(ui::ModifierKey::Ctrl);
+    }
+    if (modifiers.testFlag(Qt::AltModifier)) {
+        modifierKeys.set(ui::ModifierKey::Alt);
+    }
+    if (modifiers.testFlag(Qt::MetaModifier)) {
+        modifierKeys.set(ui::ModifierKey::Meta);
+    }
+
+    return ui::MouseEvent::create(button, fromQtf(p), modifierKeys);
 }
 
 } // namespace

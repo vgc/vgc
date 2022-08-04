@@ -338,7 +338,7 @@ bool ColorPalette::onMouseMove(MouseEvent* event)
 {
     // Determine relevant selector
 
-    const geometry::Vec2f& p = event->pos();
+    const geometry::Vec2f& p = event->position();
     SelectorType selector = scrubbedSelector_;
     if (selector == SelectorType::None) {
         selector = hoveredSelector_(p);

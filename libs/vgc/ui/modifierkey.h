@@ -17,12 +17,11 @@
 #ifndef VGC_UI_MODIFIERKEY_H
 #define VGC_UI_MODIFIERKEY_H
 
-#include <type_traits> // underlying_type
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/flags.h>
 #include <vgc/ui/api.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 /// \enum vgc::ui::ModifierKey
 /// \brief Represents Shift, Ctrl, Alt, or Meta.
@@ -38,78 +37,14 @@ namespace ui {
 /// \sa ModifierKeys
 ///
 enum class ModifierKey : UInt8 {
+    None  = 0x00,
     Shift = 0x01,
     Ctrl  = 0x02,
     Alt   = 0x04,
     Meta  = 0x08
 };
+VGC_DEFINE_FLAGS(ModifierKeys, ModifierKey)
 
-/// \enum vgc::ui::ModifierKeys
-/// \brief Stores a combination of Shift, Ctrl, Alt, or Meta.
-///
-/// \sa ModifierKey
-///
-// TODO: turn this design into a generic core::Flags type
-//
-class VGC_UI_API ModifierKeys {
-public:
-    using EnumType = ModifierKey;
-    using IntType = std::underlying_type_t<EnumType>;
-
-    /// Construct a ModifierKeys representing "no modifiers".
-    ///
-    ModifierKeys() : i_(0) {}
-
-    /// Construct a ModifierKeys consisting of a single modifier.
-    ///
-    ModifierKeys(ModifierKey m) : i_(cast_(m)) {}
-
-    /// Sets or unsets the given ModifierKey.
-    ///
-    void setFlag(ModifierKey m, bool on = true) {
-        if (on) {
-            i_ |= cast_(m);
-        }
-        else {
-            i_ &= ~cast_(m);
-        }
-    }
-
-    /// Returns whether this ModifierKeys has the given flag.
-    ///
-    bool hasFlag(ModifierKey m) const {
-        return i_ & cast_(m);
-    }
-
-    /// Returns the OR combination of the given flags.
-    ///
-    ModifierKeys operator|(ModifierKeys other) {
-        ModifierKeys res = *this;
-        res.i_ |= other.i_;
-        return res;
-    }
-
-private:
-    static IntType cast_(ModifierKey m) { return static_cast<IntType>(m); }
-    IntType i_;
-};
-
-/// Returns the OR combination of the given flags.
-///
-inline ModifierKeys operator|(ModifierKey m1, ModifierKey m2) {
-    ModifierKeys res = m1;
-    res.setFlag(m2);
-    return res;
-}
-
-/// Returns the OR combination of the given flags.
-///
-inline ModifierKeys operator|(ModifierKeys m1, ModifierKey m2) {
-    m1.setFlag(m2);
-    return m1;
-}
-
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_MODIFIERKEY_H

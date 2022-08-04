@@ -131,7 +131,7 @@ void LineEdit::onPaintDestroy(graphics::Engine*)
 bool LineEdit::onMouseMove(MouseEvent* event)
 {
     if (mouseButton_ == MouseButton::Left) {
-        geometry::Vec2f mousePosition = event->pos();
+        geometry::Vec2f mousePosition = event->position();
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
         geometry::Vec2f point = mousePosition - mouseOffset;
         Int position = richText_->positionFromPoint(point, mouseSelectionMarkers_);
@@ -166,7 +166,7 @@ bool LineEdit::onMousePress(MouseEvent* event)
     mouseButton_ = event->button();
 
     // Handle double/triple left click
-    geometry::Vec2f mousePosition = event->pos();
+    geometry::Vec2f mousePosition = event->position();
     if (mouseButton_ == MouseButton::Left) {
         if (numLeftMouseButtonClicks_ > 0 &&
             leftMouseButtonStopwatch_.elapsedMilliseconds() < 500 &&
