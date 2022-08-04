@@ -265,7 +265,7 @@ bool Widget::onMouseMove(MouseEvent* event)
     // of onMouseRelease).
     //
     if (mousePressedChild_) {
-        event->setPos(event->pos() - mousePressedChild_->position());
+        event->setPosition(event->position() - mousePressedChild_->position());
         return mousePressedChild_->onMouseMove(event);
     }
 
@@ -290,7 +290,7 @@ bool Widget::onMouseMove(MouseEvent* event)
                 child->onMouseEnter();
                 mouseEnteredChild_ = child;
             }
-            event->setPos(event->pos() - child->position());
+            event->setPosition(event->position() - child->position());
             return child->onMouseMove(event);
         }
     }
@@ -329,7 +329,7 @@ bool Widget::onMousePress(MouseEvent* event)
     // must be released before we issue a right-button-press
     if (mouseEnteredChild_ && !mousePressedChild_) {
         mousePressedChild_ = mouseEnteredChild_;
-        event->setPos(event->pos() - mousePressedChild_->position());
+        event->setPosition(event->position() - mousePressedChild_->position());
         return mousePressedChild_->onMousePress(event);
     }
     return false;
@@ -338,8 +338,8 @@ bool Widget::onMousePress(MouseEvent* event)
 bool Widget::onMouseRelease(MouseEvent* event)
 {
     if (mousePressedChild_) {
-        geometry::Vec2f eventPos = event->pos();
-        event->setPos(eventPos - mousePressedChild_->position());
+        geometry::Vec2f eventPos = event->position();
+        event->setPosition(eventPos - mousePressedChild_->position());
         bool accepted = mousePressedChild_->onMouseRelease(event);
 
         // Emit the mouse leave event now if the mouse exited the widget during

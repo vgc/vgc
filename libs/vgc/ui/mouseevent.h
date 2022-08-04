@@ -19,6 +19,7 @@
 
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/event.h>
+#include <vgc/ui/modifierkey.h>
 
 namespace vgc::ui {
 
@@ -69,12 +70,18 @@ protected:
     /// This is an implementation details. Please use
     /// MouseEvent::create() instead.
     ///
-    MouseEvent(MouseButton button, const geometry::Vec2f& pos);
+    MouseEvent(
+        MouseButton button,
+        const geometry::Vec2f& position,
+        ModifierKeys modifierKeys);
 
 public:
     /// Creates a MouseEvent.
     ///
-    static MouseEventPtr create(MouseButton button, const geometry::Vec2f& pos);
+    static MouseEventPtr create(
+        MouseButton button,
+        const geometry::Vec2f& position,
+        ModifierKeys modifierKeys);
 
     /// Returns the mouse button that caused a mouse press or mouse release event.
     /// Returns `MouseButton::None` for mouse move events.
@@ -94,18 +101,18 @@ public:
     /// Returns the position of the mouse cursor, in local coordinates, when
     /// the event occurs.
     ///
-    const geometry::Vec2f& pos() const
+    const geometry::Vec2f& position() const
     {
-        return pos_;
+        return position_;
     }
 
     /// Sets the position of the mouse cursor, in local coordinates. This
     /// method should typically only be used when implementing mouse event
     /// propagation.
     ///
-    void setPos(const geometry::Vec2f& pos)
+    void setPosition(const geometry::Vec2f& position)
     {
-        pos_ = pos;
+        position_ = position;
     }
 
     /// Returns the X-coordinate of the position of the mouse cursor, in local
@@ -113,7 +120,7 @@ public:
     ///
     float x() const
     {
-        return pos_[0];
+        return position_[0];
     }
 
     /// Sets the X-coordinate of the position of the mouse cursor, in local
@@ -122,7 +129,7 @@ public:
     ///
     void setX(float x)
     {
-        pos_[0] = x;
+        position_[0] = x;
     }
 
     /// Returns the Y-coordinate of the position of the mouse cursor, in local
@@ -130,7 +137,7 @@ public:
     ///
     float y() const
     {
-        return pos_[1];
+        return position_[1];
     }
 
     /// Sets the Y-coordinate of the position of the mouse cursor, in local
@@ -139,12 +146,28 @@ public:
     ///
     void setY(float y)
     {
-        pos_[1] = y;
+        position_[1] = y;
+    }
+
+    /// Returns the modifier keys (Ctrl, Shift, etc.) that were pressed
+    /// when this even was generated.
+    ///
+    ModifierKeys modifierKeys() const
+    {
+        return modifierKeys_;
+    }
+
+    /// Sets the modifier keys of this event.
+    ///
+    void setModifierKeys(ModifierKeys modifierKeys)
+    {
+        modifierKeys_ = modifierKeys;
     }
 
 private:
     MouseButton button_;
-    geometry::Vec2f pos_;
+    geometry::Vec2f position_;
+    ModifierKeys modifierKeys_;
 };
 
 } // namespace vgc::ui

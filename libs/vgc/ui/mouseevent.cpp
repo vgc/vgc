@@ -19,18 +19,26 @@
 namespace vgc {
 namespace ui {
 
-MouseEvent::MouseEvent(MouseButton button, const geometry::Vec2f& pos) :
-    Event(),
-    button_(button),
-    pos_(pos)
+MouseEvent::MouseEvent(
+    MouseButton button,
+    const geometry::Vec2f& position,
+    ModifierKeys modifierKeys)
+
+    : Event()
+    , button_(button)
+    , position_(position)
+    , modifierKeys_(modifierKeys)
 {
 
 }
 
 /* static */
-MouseEventPtr MouseEvent::create(MouseButton button, const geometry::Vec2f& pos)
+MouseEventPtr MouseEvent::create(
+    MouseButton button,
+    const geometry::Vec2f& position,
+    ModifierKeys modifierKeys)
 {
-    return MouseEventPtr(new MouseEvent(button, pos));
+    return MouseEventPtr(new MouseEvent(button, position, modifierKeys));
 }
 
 } // namespace ui
