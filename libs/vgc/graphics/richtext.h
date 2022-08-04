@@ -369,11 +369,23 @@ public:
         updateScroll_();
     }
 
-    /// Returns the text position closest to the given `mousePosition` that has
+    /// Returns the text position closest to the given 2D `point` that has
     /// all the given `boundaryMarkers`.
     ///
-    Int position(
-        const geometry::Vec2f& mousePosition,
+    Int positionFromPoint(
+        const geometry::Vec2f& point,
+        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
+
+    /// Returns the pair of positions enclosing the given 2D `point` that has
+    /// all the given `boundaryMarkers`.
+    ///
+    /// If no such pair of enclosing positions exist (for example, because the
+    /// given `point` is outside the left-most position or right-most position
+    /// of a given horizontal line of text), then the two returned positions are both
+    /// equal to the position closest to the given `point`.
+    ///
+    std::pair<Int, Int> positionPairFromPoint(
+        const geometry::Vec2f& point,
         TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
 
     // reimplementation of StylableObject virtual methods

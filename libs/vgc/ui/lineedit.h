@@ -93,6 +93,10 @@ private:
     core::Stopwatch leftMouseButtonStopwatch_;
     Int numLeftMouseButtonClicks_;
     geometry::Vec2f mousePositionOnPress_;
+
+    // Handle snapping to word/line boundaries on mouse move after double/triple-click
+    graphics::TextBoundaryMarkers mouseSelectionMarkers_;
+    std::pair<Int, Int> mouseSelectionInitialPair_;
 };
 
 } // namespace vgc::ui

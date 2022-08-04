@@ -133,8 +133,24 @@ bool LineEdit::onMouseMove(MouseEvent* event)
     if (mouseButton_ == MouseButton::Left) {
         geometry::Vec2f mousePosition = event->pos();
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
-        Int position = richText_->position(mousePosition - mouseOffset);
-        richText_->setSelectionEndPosition(position);
+        geometry::Vec2f point = mousePosition - mouseOffset;
+        Int position = richText_->positionFromPoint(point, mouseSelectionMarkers_);
+        Int beginPosition;
+        Int endPosition;
+        if (position < mouseSelectionInitialPair_.first) {
+            beginPosition = mouseSelectionInitialPair_.second;
+            endPosition = position;
+        }
+        else if (position < mouseSelectionInitialPair_.second) {
+            beginPosition = mouseSelectionInitialPair_.first;
+            endPosition = mouseSelectionInitialPair_.second;
+        }
+        else {
+            beginPosition = mouseSelectionInitialPair_.first;
+            endPosition = position;
+        }
+        richText_->setSelectionBeginPosition(beginPosition);
+        richText_->setSelectionEndPosition(endPosition);
         reload_ = true;
         repaint();
     }
@@ -173,25 +189,25 @@ bool LineEdit::onMousePress(MouseEvent* event)
         mouseButton_ == MouseButton::Middle) {
 
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
-        Int position = richText_->position(mousePosition - mouseOffset);
-        richText_->setSelectionBeginPosition(position);
-        richText_->setSelectionEndPosition(position);
+        geometry::Vec2f point = mousePosition - mouseOffset;
 
         // On multiple left clicks, cycle between set cursor / select word / select line
-        if (numLeftMouseButtonClicks_ >= 2) {
-            Int mod = numLeftMouseButtonClicks_ % 3;
-            if (mod == 2) {
-                // TODO: use more precise simultaneous query of a pair (before, after)
-                // from a given mouse position.
-                richText_->moveCursor(graphics::RichTextMoveOperation::LeftOneWord, false);
-                richText_->moveCursor(graphics::RichTextMoveOperation::RightOneWord, true);
-            }
-            else if (mod == 0) {
-                richText_->moveCursor(graphics::RichTextMoveOperation::StartOfLine, false);
-                richText_->moveCursor(graphics::RichTextMoveOperation::EndOfLine, true);
-            }
+        Int mod = numLeftMouseButtonClicks_ % 3;
+        if (numLeftMouseButtonClicks_ < 2 || mod == 1) {
+            mouseSelectionMarkers_ = graphics::TextBoundaryMarker::Grapheme;
+            Int position = richText_->positionFromPoint(point, mouseSelectionMarkers_);
+            mouseSelectionInitialPair_ = {position, position};
+        }
+        else {
+            mouseSelectionMarkers_ = mod
+                ? graphics::TextBoundaryMarker::Word
+                : graphics::TextBoundaryMarker::Line;
+            mouseSelectionInitialPair_ =
+                richText_->positionPairFromPoint(point, mouseSelectionMarkers_);
         }
     }
+    richText_->setSelectionBeginPosition(mouseSelectionInitialPair_.first);
+    richText_->setSelectionEndPosition(mouseSelectionInitialPair_.second);
 
     // Perform extra actions on some buttons
     if (mouseButton_ == MouseButton::Middle) {
