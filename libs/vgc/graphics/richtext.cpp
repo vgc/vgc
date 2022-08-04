@@ -599,15 +599,26 @@ void RichText::insertText(std::string_view text)
     updateScroll_();
 }
 
-Int RichText::position(
-    const geometry::Vec2f& mousePosition,
+Int RichText::positionFromPoint(
+    const geometry::Vec2f& point,
     TextBoundaryMarkers boundaryMarkers)
 {
     // TODO: take horizontal/vertical style alignment into account
     // (see implementation of fill())
-    float x = mousePosition[0] + horizontalScroll_;
-    float y = mousePosition[1];
-    return shapedText_.position({x, y}, boundaryMarkers);
+    float x = point[0] + horizontalScroll_;
+    float y = point[1];
+    return shapedText_.positionFromPoint({x, y}, boundaryMarkers);
+}
+
+std::pair<Int, Int> RichText::positionPairFromPoint(
+    const geometry::Vec2f& point,
+    TextBoundaryMarkers boundaryMarkers)
+{
+    // TODO: take horizontal/vertical style alignment into account
+    // (see implementation of fill())
+    float x = point[0] + horizontalScroll_;
+    float y = point[1];
+    return shapedText_.positionPairFromPoint({x, y}, boundaryMarkers);
 }
 
 geometry::Vec2f RichText::advance_(Int position) const
@@ -688,7 +699,7 @@ void RichText::insertText_(std::string_view textToInsert)
         shapedText_.setText(text_);
 
         // Update cursor position
-        selectionEnd_ = shapedText_.positionfromByte(oldByteIndex + numBytesToInsert);
+        selectionEnd_ = shapedText_.positionFromByte(oldByteIndex + numBytesToInsert);
     }
 
     // Clear selection

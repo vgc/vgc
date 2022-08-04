@@ -271,6 +271,10 @@ public:
             positions[position].boundaryMarkers_ |= TextBoundaryMarker::Word;
             byteIndex = itWord.toNextBoundary();
         }
+
+        // Set line boundaries
+        positions.first().boundaryMarkers_ |= TextBoundaryMarker::Line;
+        positions.last().boundaryMarkers_ |= TextBoundaryMarker::Line;
     }
 
     float horizontalAdvance(Int position) {
@@ -642,7 +646,7 @@ void ShapedText::fill(core::FloatArray& data,
     }
 }
 
-Int ShapedText::positionfromByte(Int byteIndex) {
+Int ShapedText::positionFromByte(Int byteIndex) {
     auto first = impl_->positions.cbegin();
     auto last = impl_->positions.cend();
     auto comp = [](const ShapedTextPositionInfo& info, Int byteIndex) {
@@ -657,12 +661,32 @@ Int ShapedText::positionfromByte(Int byteIndex) {
     }
 }
 
-Int ShapedText::position(
-    const geometry::Vec2f& mousePosition,
+Int ShapedText::positionFromPoint(
+    const geometry::Vec2f& point,
     TextBoundaryMarkers boundaryMarkers) {
 
+    std::pair<Int, Int> pair = positionPairFromPoint(point, boundaryMarkers);
+
+    // Determine whether the cursor is closer to the position before or after
+    float x = point[0];
+    float beforeAdvance = impl_->horizontalAdvance(pair.first);
+    float afterAdvance = impl_->horizontalAdvance(pair.second);
+    if (x < 0.5 * (beforeAdvance + afterAdvance)) {
+        return pair.first;
+    }
+    else {
+        return pair.second;
+    }
+
+    // TODO: if direction is rtl, we should revert all `if (x < ...)` comparisons
+}
+
+std::pair<Int, Int> ShapedText::positionPairFromPoint(
+    const geometry::Vec2f& point,
+    TextBoundaryMarkers boundaryMarkers)
+{
     // Find smallest text position after the given mouse position
-    float x = mousePosition[0];
+    float x = point[0];
     auto first = impl_->positions.cbegin();
     auto last = impl_->positions.cend();
     auto comp = [](const ShapedTextPositionInfo& info, float x) {
@@ -688,17 +712,7 @@ Int ShapedText::position(
     beforePosition = previousOrEqualBoundary(beforePosition, boundaryMarkers);
     afterPosition = nextOrEqualBoundary(afterPosition, boundaryMarkers);
 
-    // Determine whether the cursor is closer to the position before or after
-    float beforeAdvance = impl_->horizontalAdvance(beforePosition);
-    float afterAdvance = impl_->horizontalAdvance(afterPosition);
-    if (x < 0.5 * (beforeAdvance + afterAdvance)) {
-        return beforePosition;
-    }
-    else {
-        return afterPosition;
-    }
-
-    // TODO: if direction is rtl, we should revert all `if (x < ...)` comparisons
+    return std::make_pair(beforePosition, afterPosition);
 }
 
 Int ShapedText::nextBoundary(
