@@ -95,6 +95,9 @@ private:
     geometry::Vec2f mousePositionOnPress_;
 
     // Handle snapping to word/line boundaries on mouse move after double/triple-click
+    // and extending the selection with shift+click
+    void extendSelection_(const geometry::Vec2f& point);
+    void resetSelectionInitialPair_();
     graphics::TextBoundaryMarkers mouseSelectionMarkers_;
     std::pair<Int, Int> mouseSelectionInitialPair_;
 };

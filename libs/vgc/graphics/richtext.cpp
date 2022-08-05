@@ -216,7 +216,7 @@ RichText::RichText()
     , shapedText_(getDefaultSizedFont_(), "")
     , isSelectionVisible_(false)
     , isCursorVisible_(false)
-    , selectionBegin_(0)
+    , selectionStart_(0)
     , selectionEnd_(0)
     , horizontalScroll_(0.0f) {
 }
@@ -225,7 +225,7 @@ RichText::RichText(std::string_view text)
     : RichText() {
 
     insertText_(text);
-    selectionBegin_ = 0;
+    selectionStart_ = 0;
     selectionEnd_ = 0;
     updateScroll_();
 }
@@ -249,7 +249,7 @@ void RichText::setText(std::string_view text)
         Int minPosition = shapedText_.minPosition();
         Int maxPosition = shapedText_.maxPosition();
         selectionEnd_ = core::clamp(oldSelectionEnd, minPosition, maxPosition);
-        selectionBegin_ = selectionEnd_;
+        selectionStart_ = selectionEnd_;
         updateScroll_();
     }
 }
@@ -421,7 +421,7 @@ void RichText::fill(core::FloatArray& a)
     // some other part in selectedTextColor. For now, we don't, but we should
     // do it in the future.
     //
-    bool hasSelection = selectionBegin_ != selectionEnd_;
+    bool hasSelection = selectionStart_ != selectionEnd_;
     bool hasVisibleSelection = isSelectionVisible_ && hasSelection;
     Int selectionBeginGlyph = -1;
     Int selectionEndGlyph = -1;
@@ -429,7 +429,7 @@ void RichText::fill(core::FloatArray& a)
     float selectionEndAdvance = 0;
     if (isCursorVisible_ || hasVisibleSelection) {
         using Info = graphics::ShapedTextPositionInfo;
-        Info infoBegin = shapedText_.positionInfo(selectionBegin_);
+        Info infoBegin = shapedText_.positionInfo(selectionStart_);
         Info infoEnd = shapedText_.positionInfo(selectionEnd_);
         selectionBeginGlyph = infoBegin.glyphIndex();
         selectionEndGlyph = infoEnd.glyphIndex();
@@ -504,14 +504,14 @@ Int RichText::movedPosition(
     case StartOfText:
         return shapedText_.minPosition();
     case StartOfSelection:
-        return (std::min)(selectionBegin_, selectionEnd_);
+        return (std::min)(selectionStart_, selectionEnd_);
     case EndOfLine:
         // TODO: update this when adding support for multiline text
         return shapedText_.maxPosition();
     case EndOfText:
         return shapedText_.maxPosition();
     case EndOfSelection:
-        return (std::max)(selectionBegin_, selectionEnd_);
+        return (std::max)(selectionStart_, selectionEnd_);
     case PreviousCharacter:
         return shapedText_.previousBoundary(position, TextBoundaryMarker::Grapheme);
     case PreviousWord:
@@ -526,13 +526,13 @@ Int RichText::movedPosition(
     case LeftOneWord:
         return shapedText_.previousBoundary(position, TextBoundaryMarker::Word);
     case LeftOfSelection:
-        return (std::min)(selectionBegin_, selectionEnd_);
+        return (std::min)(selectionStart_, selectionEnd_);
     case RightOneCharacter:
         return shapedText_.nextBoundary(position, TextBoundaryMarker::Grapheme);
     case RightOneWord:
         return shapedText_.nextBoundary(position, TextBoundaryMarker::Word);
     case RightOfSelection:
-        return (std::max)(selectionBegin_, selectionEnd_);
+        return (std::max)(selectionStart_, selectionEnd_);
     default:
         // Silence compiler warning
         return position;
@@ -542,7 +542,7 @@ Int RichText::movedPosition(
 void RichText::moveCursor(RichTextMoveOperation operation, bool select) {
     selectionEnd_ = movedPosition(selectionEnd_, operation);
     if (!select) {
-        selectionBegin_ = selectionEnd_;
+        selectionStart_ = selectionEnd_;
     }
     updateScroll_();
 }
@@ -552,7 +552,7 @@ std::string RichText::selectedText() const {
 }
 
 std::string_view RichText::selectedTextView() const {
-    Int begin = shapedText_.positionInfo(selectionBegin_).byteIndex();
+    Int begin = shapedText_.positionInfo(selectionStart_).byteIndex();
     Int end = shapedText_.positionInfo(selectionEnd_).byteIndex();
     if (begin > end) {
         std::swap(begin, end);
@@ -566,18 +566,18 @@ std::string_view RichText::selectedTextView() const {
 void RichText::deleteSelectedText()
 {
     if (hasSelection()) {
-        if (selectionBegin_ > selectionEnd_) {
-            std::swap(selectionBegin_, selectionEnd_);
+        if (selectionStart_ > selectionEnd_) {
+            std::swap(selectionStart_, selectionEnd_);
         }
-        Int begin = shapedText_.positionInfo(selectionBegin_).byteIndex();
+        Int begin = shapedText_.positionInfo(selectionStart_).byteIndex();
         Int end = shapedText_.positionInfo(selectionEnd_).byteIndex();
         size_t p1 = static_cast<size_t>(begin);
         size_t p2 = static_cast<size_t>(end);
         text_.erase(p1, p2 - p1);
         shapedText_.setText(text_);
-        selectionBegin_ = core::clamp(
-            selectionBegin_, shapedText_.minPosition(), shapedText_.maxPosition());
-        selectionEnd_ = selectionBegin_;
+        selectionStart_ = core::clamp(
+            selectionStart_, shapedText_.minPosition(), shapedText_.maxPosition());
+        selectionEnd_ = selectionStart_;
         updateScroll_();
     }
 }
@@ -703,7 +703,7 @@ void RichText::insertText_(std::string_view textToInsert)
     }
 
     // Clear selection
-    selectionBegin_ = selectionEnd_;
+    selectionStart_ = selectionEnd_;
 }
 
 } // namespace vgc::graphics
