@@ -6,6 +6,7 @@
     margin-bottom: 5dp;
     margin-left: 5dp;
     pixel-hinting: normal;
+    caret-color: rgb(221, 221, 221);
     text-color: rgb(221, 221, 221);
     selection-text-color: rgb(221, 221, 221);
     selection-background-color: rgb(11, 82, 172);

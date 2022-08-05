@@ -154,6 +154,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
     table->insert("background-color",           transparent, false, &parseStyleColor);
     table->insert("background-color-on-hover",  transparent, false, &parseStyleColor);
     table->insert("border-radius",              zero,        false, &parseStyleLength);
+    table->insert("caret-color",                black,       true,  &parseStyleColor);
     table->insert("margin-bottom",              zero,        false, &parseStyleLength);
     table->insert("margin-left",                zero,        false, &parseStyleLength);
     table->insert("margin-right",               zero,        false, &parseStyleLength);
@@ -342,6 +343,7 @@ void RichText::fill(core::FloatArray& a)
 
     // Get style attributes
     // TODO: cache this on style change
+    core::Color caretColor = getColor(this, strings::caret_color);
     core::Color textColor = getColor(this, strings::text_color);
     core::Color selectionBackgroundColor = getColor(this, strings::selection_background_color);
     core::Color selectionTextColor = getColor(this, strings::selection_text_color);
@@ -484,7 +486,7 @@ void RichText::fill(core::FloatArray& a)
             float cursorY1 = std::max(cursorY, clipTop);
             float cursorY2 = std::min(cursorY + cursorH, clipBottom);
             if (cursorY2 > cursorY1) {
-                insertRect(a, textColor, cursorX, cursorY1, cursorX + cursorW, cursorY2);
+                insertRect(a, caretColor, cursorX, cursorY1, cursorX + cursorW, cursorY2);
             }
         }
     }
