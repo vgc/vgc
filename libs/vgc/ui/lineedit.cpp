@@ -36,7 +36,9 @@ LineEdit::LineEdit(std::string_view text) :
     reload_(true),
     isHovered_(false),
     mouseButton_(MouseButton::None),
-    numLeftMouseButtonClicks_(0)
+    numLeftMouseButtonClicks_(0),
+    mouseSelectionMarkers_(graphics::TextBoundaryMarker::Grapheme),
+    mouseSelectionInitialPair_(0, 0)
 {
     addStyleClass(strings::LineEdit);
     setText(text);
@@ -128,33 +130,50 @@ void LineEdit::onPaintDestroy(graphics::Engine*)
     triangles_.reset();
 }
 
+void LineEdit::extendSelection_(const geometry::Vec2f& point)
+{
+    Int position = richText_->positionFromPoint(point, mouseSelectionMarkers_);
+    Int beginPosition;
+    Int endPosition;
+    if (position < mouseSelectionInitialPair_.first) {
+        beginPosition = mouseSelectionInitialPair_.second;
+        endPosition = position;
+    }
+    else if (position < mouseSelectionInitialPair_.second) {
+        beginPosition = mouseSelectionInitialPair_.first;
+        endPosition = mouseSelectionInitialPair_.second;
+    }
+    else {
+        beginPosition = mouseSelectionInitialPair_.first;
+        endPosition = position;
+    }
+    richText_->setSelectionStart(beginPosition);
+    richText_->setSelectionEnd(endPosition);
+}
+
+void LineEdit::resetSelectionInitialPair_()
+{
+    Int position = richText_->selectionStart();
+    mouseSelectionMarkers_ = graphics::TextBoundaryMarker::Grapheme;
+    mouseSelectionInitialPair_ = std::make_pair(position, position);
+}
+
 bool LineEdit::onMouseMove(MouseEvent* event)
 {
     if (mouseButton_ == MouseButton::Left) {
         geometry::Vec2f mousePosition = event->position();
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
         geometry::Vec2f point = mousePosition - mouseOffset;
-        Int position = richText_->positionFromPoint(point, mouseSelectionMarkers_);
-        Int beginPosition;
-        Int endPosition;
-        if (position < mouseSelectionInitialPair_.first) {
-            beginPosition = mouseSelectionInitialPair_.second;
-            endPosition = position;
-        }
-        else if (position < mouseSelectionInitialPair_.second) {
-            beginPosition = mouseSelectionInitialPair_.first;
-            endPosition = mouseSelectionInitialPair_.second;
-        }
-        else {
-            beginPosition = mouseSelectionInitialPair_.first;
-            endPosition = position;
-        }
-        richText_->setSelectionBeginPosition(beginPosition);
-        richText_->setSelectionEndPosition(endPosition);
+        extendSelection_(point);
         reload_ = true;
         repaint();
     }
     return true;
+}
+namespace MouseButton_ {
+enum {
+    None = core::toUnderlying(MouseButton::None)
+};
 }
 
 bool LineEdit::onMousePress(MouseEvent* event)
@@ -165,12 +184,18 @@ bool LineEdit::onMousePress(MouseEvent* event)
     }
     mouseButton_ = event->button();
 
+    const bool left = mouseButton_ == MouseButton::Left;
+    const bool right = mouseButton_ == MouseButton::Right;
+    const bool middle = mouseButton_ == MouseButton::Middle;
+    const bool shift = event->modifierKeys().has(ModifierKey::Shift);
+
     // Handle double/triple left click
     geometry::Vec2f mousePosition = event->position();
-    if (mouseButton_ == MouseButton::Left) {
-        if (numLeftMouseButtonClicks_ > 0 &&
-            leftMouseButtonStopwatch_.elapsedMilliseconds() < 500 &&
-            (mousePosition - mousePositionOnPress_).length() < 5) {
+    if (left) {
+        if (numLeftMouseButtonClicks_ > 0
+            && leftMouseButtonStopwatch_.elapsedMilliseconds() < 500
+            && (mousePosition - mousePositionOnPress_).length() < 5) {
+
             ++numLeftMouseButtonClicks_;
         }
         else {
@@ -184,36 +209,37 @@ bool LineEdit::onMousePress(MouseEvent* event)
     mousePositionOnPress_ = mousePosition;
 
     // Change cursor position on press of any of the 3 standard mouse buttons
-    if (mouseButton_ == MouseButton::Left ||
-        mouseButton_ == MouseButton::Right ||
-        mouseButton_ == MouseButton::Middle) {
-
+    if (left || right || middle) {
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
         geometry::Vec2f point = mousePosition - mouseOffset;
-
-        // On multiple left clicks, cycle between set cursor / select word / select line
-        Int mod = numLeftMouseButtonClicks_ % 3;
-        if (numLeftMouseButtonClicks_ < 2 || mod == 1) {
-            mouseSelectionMarkers_ = graphics::TextBoundaryMarker::Grapheme;
-            Int position = richText_->positionFromPoint(point, mouseSelectionMarkers_);
-            mouseSelectionInitialPair_ = {position, position};
+        if (left && shift) {
+            extendSelection_(point);
         }
         else {
-            mouseSelectionMarkers_ = mod
-                ? graphics::TextBoundaryMarker::Word
-                : graphics::TextBoundaryMarker::Line;
-            mouseSelectionInitialPair_ =
-                richText_->positionPairFromPoint(point, mouseSelectionMarkers_);
+            // On multiple left clicks, cycle between set cursor / select word / select line
+            Int mod = numLeftMouseButtonClicks_ % 3;
+            if (numLeftMouseButtonClicks_ < 2 || mod == 1) {
+                mouseSelectionMarkers_ = graphics::TextBoundaryMarker::Grapheme;
+                Int position = richText_->positionFromPoint(point, mouseSelectionMarkers_);
+                mouseSelectionInitialPair_ = {position, position};
+            }
+            else {
+                mouseSelectionMarkers_ = mod ? graphics::TextBoundaryMarker::Word
+                                             : graphics::TextBoundaryMarker::Line;
+                mouseSelectionInitialPair_ =
+                    richText_->positionPairFromPoint(point, mouseSelectionMarkers_);
+            }
+            richText_->setSelectionStart(mouseSelectionInitialPair_.first);
+            richText_->setSelectionEnd(mouseSelectionInitialPair_.second);
         }
-    }
-    richText_->setSelectionBeginPosition(mouseSelectionInitialPair_.first);
-    richText_->setSelectionEndPosition(mouseSelectionInitialPair_.second);
 
-    // Perform extra actions on some buttons
-    if (mouseButton_ == MouseButton::Middle) {
-        QClipboard* clipboard = QGuiApplication::clipboard();
-        std::string t = clipboard->text(QClipboard::Selection).toStdString();
-        richText_->insertText(t);
+        // Middle-button paste on supported platforms (e.g., X11)
+        if (middle) {
+            QClipboard* clipboard = QGuiApplication::clipboard();
+            std::string t = clipboard->text(QClipboard::Selection).toStdString();
+            richText_->insertText(t);
+            resetSelectionInitialPair_();
+        }
     }
 
     reload_ = true;
@@ -298,11 +324,12 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
 {
     using Op = graphics::RichTextMoveOperation;
 
+    const int key = event->key();
+    const bool ctrl = event->modifiers().testFlag(Qt::ControlModifier);
+    const bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
+
     bool handled = true;
     bool needsRepaint = true;
-    int key = event->key();
-    bool ctrl = event->modifiers().testFlag(Qt::ControlModifier);
-    bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
     bool isMoveOperation = false;
 
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
@@ -387,7 +414,8 @@ bool LineEdit::onKeyPress(QKeyEvent* event)
         copyToX11SelectionClipboard_(richText_.get());
     }
 
-    if (needsRepaint) {
+    if (handled && needsRepaint) {
+        resetSelectionInitialPair_();
         reload_ = true;
         repaint();
     }

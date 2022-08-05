@@ -261,9 +261,9 @@ public:
     ///
     /// If the operation is `StartOfSelection`, `EndOfSelection`,
     /// `LeftOfSelection`, or `RightOfSelection`, the current selection is used
-    /// to determine the resulting position. In case of multiple selections
-    /// regions, the given `selectionIndex` specify which of the selections
-    /// should be used.
+    /// to determine the resulting position. In case of multiple selections,
+    /// the given `selectionIndex` specify which of the selections should be
+    /// used.
     ///
     Int movedPosition(
         Int position,
@@ -277,30 +277,63 @@ public:
     ///
     void moveCursor(RichTextMoveOperation operation, bool select = false);
 
-    void setSelectionBeginPosition(Int position)
+    /// Returns the start position of the selection. In case of multiple
+    /// selections, the given `index` specify which of the selections
+    /// should be used.
+    ///
+    Int selectionStart([[maybe_unused]] Int index = 0) const
     {
-        selectionBegin_ = position;
+        return selectionStart_;
     }
 
-    void setSelectionEndPosition(Int position)
+    /// Returns the end position of the selection. In case of multiple
+    /// selections, the given `index` specify which of the selections
+    /// should be used.
+    ///
+    Int selectionEnd([[maybe_unused]] Int index = 0) const
+    {
+        return selectionEnd_;
+    }
+
+    /// Sets the start position of the selection. In case of multiple
+    /// selections, the given `index` specify which of the selections
+    /// should be used.
+    ///
+    void setSelectionStart(Int position, [[maybe_unused]] Int index = 0)
+    {
+        selectionStart_ = position;
+    }
+
+    /// Sets the end position of the selection. In case of multiple
+    /// selections, the given `index` specify which of the selections
+    /// should be used.
+    ///
+    void setSelectionEnd(Int position, [[maybe_unused]] Int index = 0)
     {
         selectionEnd_ = position;
         updateScroll_();
     }
 
+    /// Unselects any selected region, preserving the cursor where it
+    /// previously was, that is, at the end of the selection.
+    ///
     void clearSelection()
     {
-        selectionBegin_ = selectionEnd_;
+        selectionStart_ = selectionEnd_;
     }
 
+    /// Returns whether there is at least one non-empty selected region.
+    ///
     bool hasSelection()
     {
-        return selectionBegin_ != selectionEnd_;
+        return selectionStart_ != selectionEnd_;
     }
 
+    /// Changes the selection such that the entire text is selected.
+    ///
     void selectAll()
     {
-        selectionBegin_ = 0;
+        selectionStart_ = 0;
         selectionEnd_ = static_cast<Int>(text_.size());
     }
 
@@ -344,7 +377,7 @@ public:
     ///
     void setCursorBytePosition(Int bytePosition)
     {
-        selectionBegin_ = bytePosition;
+        selectionStart_ = bytePosition;
         selectionEnd_ = bytePosition;
         updateScroll_();
     }
@@ -401,7 +434,7 @@ private:
     graphics::ShapedText shapedText_;
     bool isSelectionVisible_;
     bool isCursorVisible_;
-    Int selectionBegin_;
+    Int selectionStart_;
     Int selectionEnd_;
     float horizontalScroll_ = 0.0f;
 
