@@ -21,7 +21,7 @@
 #include <vgc/core/io.h>
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
-#include <vgc/widgets/qtutil.h>
+#include <vgc/ui/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -46,7 +46,7 @@ void setApplicationStyleSheet(const std::string& name)
         s = core::replace(s, "@font-size", fontSize);
 
         // Set stylesheet
-        qApp->setStyleSheet(toQt(s));
+        qApp->setStyleSheet(ui::toQt(s));
     }
 }
 

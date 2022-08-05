@@ -21,8 +21,8 @@
 #include <QFontDatabase>
 
 #include <vgc/core/paths.h>
+#include <vgc/ui/qtutil.h>
 #include <vgc/widgets/logcategories.h>
-#include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -35,10 +35,10 @@ std::string fontFamilyInfo(const std::string& family)
     QFontDatabase fd;
     ss << "Font Family: " << family << "\n";
     ss << "  Styles:\n";
-    QString f = toQt(family);
+    QString f = ui::toQt(family);
     QStringList styles = fd.styles(f);
     Q_FOREACH (const QString& s, styles) {
-        ss << "    " << fromQt(s) << ":\n";
+        ss << "    " << ui::fromQt(s) << ":\n";
         ss << "        weight:             " << fd.weight(f, s) << "\n";
         ss << "        bold:               " << (fd.bold(f, s)               ? "true" : "false") << "\n";
         ss << "        italic:             " << (fd.italic(f, s)             ? "true" : "false") << "\n";
@@ -120,7 +120,7 @@ void addDefaultApplicationFonts()
 int addApplicationFont(const std::string& name)
 {
     std::string fontPath = core::resourcePath(name);
-    int id = QFontDatabase::addApplicationFont(toQt(fontPath));
+    int id = QFontDatabase::addApplicationFont(ui::toQt(fontPath));
     return id;
 }
 

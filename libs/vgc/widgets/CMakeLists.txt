@@ -24,7 +24,6 @@ vgc_add_library(widgets
         paneltitlebar.h
         performancemonitor.h
         pointingdeviceevent.h
-        qtutil.h
         stylesheets.h
         toggleviewaction.h
         toolbar.h
@@ -46,7 +45,6 @@ vgc_add_library(widgets
         paneltitlebar.cpp
         performancemonitor.cpp
         pointingdeviceevent.cpp
-        qtutil.cpp
         stylesheets.cpp
         toggleviewaction.cpp
         toolbar.cpp

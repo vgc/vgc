@@ -32,7 +32,7 @@
 #include <vgc/core/stopwatch.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/curve.h>
-#include <vgc/widgets/qtutil.h>
+#include <vgc/ui/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -43,7 +43,7 @@ namespace {
 // Returns the file path of a shader file as a QString
 QString shaderPath_(const std::string& name) {
     std::string path = core::resourcePath("graphics/opengl/" + name);
-    return toQt(path);
+    return ui::toQt(path);
 }
 
 QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {

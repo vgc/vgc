@@ -21,6 +21,7 @@ vgc_add_library(ui
         logcategories.h
         modifierkey.h
         mouseevent.h
+        qtutil.h
         row.h
         shortcut.h
         sizepolicy.h
@@ -44,6 +45,7 @@ vgc_add_library(ui
         lineedit.cpp
         logcategories.cpp
         mouseevent.cpp
+        qtutil.cpp
         row.cpp
         strings.cpp
         widget.cpp

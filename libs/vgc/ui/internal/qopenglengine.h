@@ -37,47 +37,6 @@
 
 namespace vgc::ui::internal {
 
-inline QString toQt(const std::string& s)
-{
-    int size = vgc::core::int_cast<int>(s.size());
-    return QString::fromUtf8(s.data(), size);
-}
-
-inline std::string fromQt(const QString& s)
-{
-    QByteArray a = s.toUtf8();
-    size_t size = vgc::core::int_cast<size_t>(s.size());
-    return std::string(a.data(), size);
-}
-
-inline QPointF toQt(const geometry::Vec2d& v)
-{
-    return QPointF(v[0], v[1]);
-}
-
-inline QPointF toQt(const geometry::Vec2f& v)
-{
-    return QPointF(v[0], v[1]);
-}
-
-inline geometry::Vec2d fromQtd(const QPointF& v)
-{
-    return geometry::Vec2d(v.x(), v.y());
-}
-
-inline geometry::Vec2f fromQtf(const QPointF& v)
-{
-    return geometry::Vec2f(v.x(), v.y());
-}
-
-inline QMatrix4x4 toQtMatrix(const geometry::Mat4f& m) {
-    return QMatrix4x4(
-        m(0,0), m(0,1), m(0,2), m(0,3),
-        m(1,0), m(1,1), m(1,2), m(1,3),
-        m(2,0), m(2,1), m(2,2), m(2,3),
-        m(3,0), m(3,1), m(3,2), m(3,3));
-}
-
 inline geometry::Mat4f toMat4f(const geometry::Mat4d& m) {
     // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
     return geometry::Mat4f(

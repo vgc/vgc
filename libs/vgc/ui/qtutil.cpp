@@ -14,10 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/widgets/qtutil.h>
+#include <vgc/ui/qtutil.h>
 
 #include <cmath>
+
+#include <QMouseEvent>
+
 #include <vgc/core/algorithm.h>
+#include <vgc/ui/mouseevent.h>
 
 namespace {
 int to256(double x) {
@@ -26,8 +30,7 @@ int to256(double x) {
 }
 } // namespace
 
-namespace vgc {
-namespace widgets {
+namespace vgc::ui {
 
 QString toQt(const std::string& s)
 {
@@ -78,5 +81,45 @@ geometry::Vec2f fromQtf(const QPointF& v)
     return geometry::Vec2f(v.x(), v.y());
 }
 
-} // namespace widgets
-} // namespace vgc
+MouseEventPtr fromQt(QMouseEvent* event)
+{
+    // Button
+    Qt::MouseButton qbutton = event->button();
+    MouseButton button = static_cast<MouseButton>(qbutton);
+
+    // Position
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const QPointF& p = event->localPos();
+#else
+    const QPointF& p = event->position();
+#endif
+
+    // Modidier keys
+    Qt::KeyboardModifiers modifiers = event->modifiers();
+    ModifierKeys modifierKeys;
+    if (modifiers.testFlag(Qt::ShiftModifier)) {
+        modifierKeys.set(ModifierKey::Shift);
+    }
+    if (modifiers.testFlag(Qt::ControlModifier)) {
+        modifierKeys.set(ModifierKey::Ctrl);
+    }
+    if (modifiers.testFlag(Qt::AltModifier)) {
+        modifierKeys.set(ModifierKey::Alt);
+    }
+    if (modifiers.testFlag(Qt::MetaModifier)) {
+        modifierKeys.set(ModifierKey::Meta);
+    }
+
+    return MouseEvent::create(button, fromQtf(p), modifierKeys);
+}
+
+QMatrix4x4 toQt(const geometry::Mat4f& m)
+{
+    return QMatrix4x4(
+        m(0,0), m(0,1), m(0,2), m(0,3),
+        m(1,0), m(1,1), m(1,2), m(1,3),
+        m(2,0), m(2,1), m(2,2), m(2,3),
+        m(3,0), m(3,1), m(3,2), m(3,3));
+}
+
+} // namespace vgc::ui

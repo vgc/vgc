@@ -24,9 +24,9 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/strings.h>
+#include <vgc/ui/qtutil.h>
 #include <vgc/widgets/logcategories.h>
 #include <vgc/widgets/menubar.h>
-#include <vgc/widgets/qtutil.h>
 
 namespace vgc {
 namespace widgets {
@@ -243,7 +243,7 @@ void MainWindow::open_()
     }
 
     try {
-        document_ = dom::Document::open(fromQt(filename_));
+        document_ = dom::Document::open(ui::fromQt(filename_));
         document_->enableHistory(vgc::dom::strings::Open_Document);
         headChangedConnectionHandle_ = document_->history()->headChanged().connect(
             [this](){ updateUndoRedoActionState_(); });
@@ -259,7 +259,7 @@ void MainWindow::open_()
 void MainWindow::save_()
 {
     try {
-        document_->save(fromQt(filename_));
+        document_->save(ui::fromQt(filename_));
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Saving File", e.what());

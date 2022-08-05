@@ -22,8 +22,8 @@
 
 #include <vgc/core/paths.h>
 #include <vgc/geometry/camera2d.h>
+#include <vgc/ui/qtutil.h>
 #include <vgc/ui/widget.h>
-#include <vgc/widgets/qtutil.h>
 
 namespace vgc::ui {
 
@@ -110,57 +110,21 @@ WindowPtr Window::create(ui::WidgetPtr widget)
 //    return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
 //}
 
-namespace {
-
-ui::MouseEventPtr convertEvent(QMouseEvent* event)
-{
-    // Button
-    Qt::MouseButton qbutton = event->button();
-    ui::MouseButton button = static_cast<ui::MouseButton>(qbutton);
-
-    // Position
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const QPointF& p = event->localPos();
-#else
-    const QPointF& p = event->position();
-#endif
-
-    // Modidier keys
-    Qt::KeyboardModifiers modifiers = event->modifiers();
-    ModifierKeys modifierKeys;
-    if (modifiers.testFlag(Qt::ShiftModifier)) {
-        modifierKeys.set(ModifierKey::Shift);
-    }
-    if (modifiers.testFlag(Qt::ControlModifier)) {
-        modifierKeys.set(ModifierKey::Ctrl);
-    }
-    if (modifiers.testFlag(Qt::AltModifier)) {
-        modifierKeys.set(ModifierKey::Alt);
-    }
-    if (modifiers.testFlag(Qt::MetaModifier)) {
-        modifierKeys.set(ModifierKey::Meta);
-    }
-
-    return ui::MouseEvent::create(button, internal::fromQtf(p), modifierKeys);
-}
-
-} // namespace
-
 void Window::mouseMoveEvent(QMouseEvent *event)
 {
-    ui::MouseEventPtr e = convertEvent(event);
+    ui::MouseEventPtr e = fromQt(event);
     event->setAccepted(widget_->onMouseMove(e.get()));
 }
 
 void Window::mousePressEvent(QMouseEvent *event)
 {
-    ui::MouseEventPtr e = convertEvent(event);
+    ui::MouseEventPtr e = fromQt(event);
     event->setAccepted(widget_->onMousePress(e.get()));
 }
 
 void Window::mouseReleaseEvent(QMouseEvent *event)
 {
-    ui::MouseEventPtr e = convertEvent(event);
+    ui::MouseEventPtr e = fromQt(event);
     event->setAccepted(widget_->onMouseRelease(e.get()));
 }
 
