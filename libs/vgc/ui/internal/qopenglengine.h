@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <memory>
+#include <optional>
 
 #include <QOffscreenSurface>
 #include <QOpenGLBuffer>
@@ -68,7 +69,7 @@ private:
     VGC_OBJECT(QglEngine, Engine)
 
 protected:
-    QglEngine(QOpenGLContext* ctx, bool isExternalCtx);
+    QglEngine(QOpenGLContext* ctx, bool isExternalCtx, bool useRenderThread);
 
     void onDestroyed() override;
 
@@ -77,13 +78,12 @@ public:
 
     /// Creates a new OpenglEngine.
     ///
-    static QglEnginePtr create();
-    static QglEnginePtr create(QOpenGLContext* ctx);
+    static QglEnginePtr create(bool useRenderThread);
+    static QglEnginePtr create(QOpenGLContext* externalCtx);
 
     // not part of the common interface
 
     SwapChainPtr createSwapChainFromSurface(QSurface* surface);
-    void makeCurrent();
 
     OpenGLFunctions* api() const {
         return api_;
@@ -111,7 +111,8 @@ protected:
 
     //--  RENDER THREAD implementation functions --
 
-    void onStart_() override;
+    void initContext_() override;
+    void initBuiltinResources_() override;
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;
@@ -151,8 +152,21 @@ private:
     QSurface* surface_ = nullptr;
 
     // state tracking
+
     GLuint boundFramebuffer_ = 0;
     BlendStatePtr boundBlendState_;
+    std::optional<geometry::Vec4f> currentBlendFactor_;
+    RasterizerStatePtr boundRasterizerState_;
+    ProgramPtr boundProgram_;
+
+    static constexpr UInt32 numTextureUnits = maxSamplersPerStage * numShaderStages;
+    static_assert(maxSamplersPerStage == maxImageViewsPerStage);
+    std::array<ImageViewPtr, numTextureUnits> currentImageViews_;
+    std::array<SamplerStatePtr, numTextureUnits> currentSamplerStates_;
+    std::array<bool, numTextureUnits> isTextureStateDirtyMap_;
+    bool isAnyTextureStateDirty_ = true;
+
+    // helpers
 
     template<typename T, typename... Args>
     _NODISCARD std::unique_ptr<T> makeUnique(Args&&... args) {
@@ -162,15 +176,19 @@ private:
     void initBuiltinShaders_();
     void makeCurrent_();
     bool loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize);
+    void syncTextureStates_();
 
     bool hasAnisotropicFilteringSupport_ = false;
 
-    // Shader
-    //std::unique_ptr<QOpenGLShaderProgram> paintShaderProgram_;
-    //int posLoc_ = -1;
-    //int colLoc_ = -1;
-    //int projLoc_ = -1;
-    //int viewLoc_ = -1;
+    void setEnabled_(GLenum capability, bool isEnabled) {
+        if (isEnabled) {
+            api_->glEnable(capability);
+        }
+        else {
+            api_->glDisable(capability);
+        }
+    }
+
 };
 
 } // namespace qopengl

@@ -48,15 +48,17 @@ Window::Window(ui::WidgetPtr widget) :
     scd.setNumBuffers(2);
     scd.setNumSamples(8);
 
-#if defined(VGC_CORE_COMPILER_MSVC) && TRUE
+    const bool useRenderThread = false;
+
+#if defined(VGC_CORE_COMPILER_MSVC) && FALSE
     // RasterSurface looks ok since Qt seems to not automatically create a backing store.
     setSurfaceType(QWindow::RasterSurface);
     QWindow::create();
-    engine_ = graphics::D3d11Engine::create();
+    engine_ = graphics::D3d11Engine::create(useRenderThread);
+    engine_->init();
 
     HWND hwnd = (HWND)QWindow::winId();
     hwnd_ = hwnd;
-
     scd.setWindowNativeHandle(hwnd, graphics::WindowNativeHandleType::Win32);
 
     //WNDCLASSEXW wc = { sizeof(WNDCLASSEXW), CS_CLASSDC, Window::WndProc, 0L, 20 * sizeof(LONG_PTR), ::GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"Win32 Window", NULL };
@@ -81,7 +83,8 @@ Window::Window(ui::WidgetPtr widget) :
     //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
 #else
     setSurfaceType(QWindow::OpenGLSurface);
-    engine_ = internal::QglEngine::create();
+    engine_ = internal::QglEngine::create(useRenderThread);
+
     scd.setWindowNativeHandle(static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
 #endif
 
@@ -94,16 +97,16 @@ Window::Window(ui::WidgetPtr widget) :
 
     {
         graphics::BlendStateCreateInfo createInfo = {};
-        createInfo.setTargetBlendEnabled(0, true);
-        createInfo.setTargetBlendEquationRGB(0, graphics::BlendOp::Add, graphics::BlendFactor::SourceAlpha, graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setTargetBlendEquationAlpha(0, graphics::BlendOp::Add, graphics::BlendFactor::One, graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setTargetBlendWriteMask(0, graphics::BlendWriteMaskBit::All);
+        createInfo.setEnabled(true);
+        createInfo.setEquationRGB(graphics::BlendOp::Add, graphics::BlendFactor::SourceAlpha, graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setEquationAlpha(graphics::BlendOp::Add, graphics::BlendFactor::One, graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
         blendState_ = engine_->createBlendState(createInfo);
     }
-
+    // XXX move init in create function ?
+    engine_->init();
     engine_->setSwapChain(swapChain_);
     engine_->setDefaultFramebuffer();
-    engine_->start();
 
     // Handle dead keys and complex input methods.
     //

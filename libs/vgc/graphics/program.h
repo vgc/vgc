@@ -30,6 +30,19 @@ VGC_DECLARE_OBJECT(Engine);
 class VGC_GRAPHICS_API Program : public Resource {
 protected:
     using Resource::Resource;
+
+    Program(ResourceRegistry* registry, BuiltinProgram builtinId)
+        : Resource(registry), builtinId_(builtinId)
+    {
+    }
+
+public:
+    BuiltinProgram builtinId() const noexcept {
+        return builtinId_;
+    }
+
+private:
+    BuiltinProgram builtinId_ = BuiltinProgram::NotBuiltin;
 };
 using ProgramPtr = ResourcePtr<Program>;
 

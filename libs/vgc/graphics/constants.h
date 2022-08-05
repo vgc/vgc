@@ -30,7 +30,7 @@ namespace vgc::graphics {
 inline constexpr UInt32 maxConstantBuffersPerStage = 12;
 
 // There is no equivalent to D3D SRVs in OpenGL.
-// We have to use samplers and thus share the max count (16/2).
+// We have to reason in terms of textures.
 //
 // see:
 // D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT (128)
@@ -39,8 +39,9 @@ inline constexpr UInt32 maxConstantBuffersPerStage = 12;
 // GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS            (16 in GL3.3)
 // GL_MAX_GEOMETRY_TEXTURE_IMAGE_UNITS          (16 in GL3.3)
 //
-inline constexpr UInt32 maxImageViewsPerStage = 8;
-inline constexpr UInt32 maxSamplersPerStage = 8;
+inline constexpr UInt32 maxImageViewsPerStage = 16;
+inline constexpr UInt32 maxSamplersPerStage = 16;
+
 inline constexpr UInt32 maxColorTargets = 8;
 
 } // namespace vgc::graphics

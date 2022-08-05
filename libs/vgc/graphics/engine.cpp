@@ -21,9 +21,10 @@
 namespace vgc {
 namespace graphics {
 
-Engine::Engine()
+Engine::Engine(bool useRenderThread)
     : Object()
     , resourceRegistry_(new detail::ResourceRegistry())
+    , isMultiThreaded_(useRenderThread)
 {
     framebufferStack_.emplaceLast();
 
@@ -77,13 +78,29 @@ void Engine::onDestroyed()
 
     roundedRectangleProgram_.reset();
 
-    stopRenderThread_();
+    if (isMultiThreaded_) {
+        stopRenderThread_();
+    }
+    else {
+        resourceRegistry_->releaseAllResources(this);
+    }
 }
 
-void Engine::start()
+void Engine::init()
 {
     engineStartTime_ = std::chrono::steady_clock::now();
-    startRenderThread_();
+    if (isMultiThreaded_) {
+        startRenderThread_();
+    }
+    else {
+        initContext_();
+    }
+    createBuiltinResources_();
+    queueLambdaCommand_(
+        "initBuiltinResources",
+        [](Engine* engine) {
+            engine->initBuiltinResources_();
+        });
 }
 
 SwapChainPtr Engine::createSwapChain(const SwapChainCreateInfo& desc)
@@ -645,6 +662,11 @@ void Engine::syncState_()
             rasterizerStateStack_.last());
     }
     if (parameters & PipelineParameter::AllShadersResources) {
+
+        // XXX should prevent the use of the same image-view twice because
+        // OpenGL couples the concepts of view and sampler under the concept
+        // of texture.
+
         if (parameters & PipelineParameter::VertexShaderConstantBuffers) {
             syncStageConstantBuffers_(ShaderStage::Vertex);
         }
@@ -732,6 +754,13 @@ void Engine::beginFrame(bool isStateDirty)
     // XXX check every stack has size one !
 }
 
+void Engine::endFrame()
+{
+    if (!isMultiThreaded_) {
+        resourceRegistry_->releaseAndDeleteGarbagedResources(this);
+    }
+}
+
 void Engine::resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height)
 {
     if (!checkResourceIsValid_(swapChain)) {
@@ -776,8 +805,9 @@ void Engine::present(UInt32 syncInterval,
                      PresentFlags flags)
 {
     ++swapChain_->numPendingPresents_;
-    bool shouldSync = syncInterval > 0;
-    if (shouldSync && shouldPresentWaitFromSyncedUserThread_()) {
+    bool shouldWait = syncInterval > 0;
+
+    if (!isMultiThreaded_ || (shouldWait && shouldPresentWaitFromSyncedUserThread_())) {
         // Preventing dead-locks
         // See https://docs.microsoft.com/en-us/windows/win32/api/DXGI1_2/nf-dxgi1_2-idxgiswapchain1-present1#remarks
         finish();
@@ -801,7 +831,7 @@ void Engine::present(UInt32 syncInterval,
             },
             swapChain_.get(), syncInterval, flags, std::move(presentedCallback));
 
-        if (shouldSync) {
+        if (shouldWait) {
             finish();
         }
         else {
@@ -828,7 +858,7 @@ void Engine::createBuiltinResources_()
 // XXX add try/catch ?
 void Engine::renderThreadProc_()
 {
-    onStart_();
+    initContext_();
     std::unique_lock<std::mutex> lock(mutex_, std::defer_lock);
     while (1) {
         lock.lock();
@@ -878,9 +908,9 @@ void Engine::startRenderThread_()
     if (stopRequested_) {
         throw core::LogicError("Engine: restarts are not supported.");
     }
-    if (!running_) {
+    if (!isThreadRunning_) {
         renderThread_ = std::thread([=]{ this->renderThreadProc_(); });
-        running_ = true;
+        isThreadRunning_ = true;
     }
 }
 
@@ -888,14 +918,14 @@ void Engine::stopRenderThread_()
 {
     pendingCommands_.clear();
     swapChain_.reset();
-    if (running_) {
+    if (isThreadRunning_) {
         std::unique_lock<std::mutex> lock(mutex_);
         stopRequested_ = true;
         lock.unlock();
         wakeRenderThreadConditionVariable_.notify_all();
         VGC_CORE_ASSERT(renderThread_.joinable());
         renderThread_.join();
-        running_ = false;
+        isThreadRunning_ = false;
         return;
     }
 }

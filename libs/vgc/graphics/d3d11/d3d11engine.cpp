@@ -691,7 +691,8 @@ D3D11_CULL_MODE cullModeToD3DCullMode(CullMode mode)
 
 // ENGINE FUNCTIONS
 
-D3d11Engine::D3d11Engine()
+D3d11Engine::D3d11Engine(bool useRenderThread)
+    : Engine(useRenderThread)
 {
     // XXX add success checks (S_OK)
 
@@ -716,7 +717,7 @@ D3d11Engine::D3d11Engine()
     dxgiDevice->GetParent(IID_PPV_ARGS(dxgiAdapter.releaseAndGetAddressOf()));
     dxgiAdapter->GetParent(IID_PPV_ARGS(factory_.releaseAndGetAddressOf()));
 
-    createBuiltinResources_();
+    //createBuiltinResources_();
 }
 
 void D3d11Engine::onDestroyed()
@@ -725,16 +726,16 @@ void D3d11Engine::onDestroyed()
 }
 
 /* static */
-D3d11EnginePtr D3d11Engine::create()
+D3d11EnginePtr D3d11Engine::create(bool useRenderThread)
 {
-    return D3d11EnginePtr(new D3d11Engine());
+    return D3d11EnginePtr(new D3d11Engine(useRenderThread));
 }
 
 // USER THREAD pimpl functions
 
 void D3d11Engine::createBuiltinShaders_()
 {
-    D3d11ProgramPtr simpleProgram(new D3d11Program(resourceRegistry_));
+    D3d11ProgramPtr simpleProgram(new D3d11Program(resourceRegistry_, BuiltinProgram::Simple));
     simpleProgram_ = simpleProgram;
 
     // Create the simple shader
@@ -1123,7 +1124,6 @@ void D3d11Engine::initBuffer_(Buffer* buffer, const char* data, Int lengthInByte
                     data,
                     lengthInBytes);
     }
-    d3dBuffer->gpuLengthInBytes_ = lengthInBytes;
 }
 
 void D3d11Engine::initImage_(Image* image_, const Span<const char>* mipLevelDataSpans, Int count)
@@ -1620,11 +1620,10 @@ void D3d11Engine::setStageSamplers_(const SamplerStatePtr* states, Int startInde
         static_cast<UINT>(startIndex), static_cast<UINT>(count), d3d11SamplerStates.data());
 }
 
-void D3d11Engine::updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes)
+void D3d11Engine::updateBufferData_(Buffer* aBuffer, const void* data, Int lengthInBytes)
 {
-    D3d11Buffer* d3dBuffer = static_cast<D3d11Buffer*>(buffer);
-    loadBuffer_(d3dBuffer, data, lengthInBytes);
-    d3dBuffer->gpuLengthInBytes_ = lengthInBytes;
+    D3d11Buffer* buffer = static_cast<D3d11Buffer*>(aBuffer);
+    loadBuffer_(buffer, data, lengthInBytes);
 }
 
 void D3d11Engine::draw_(GeometryView* view, UInt numIndices, UInt numInstances)
@@ -1664,9 +1663,12 @@ void D3d11Engine::draw_(GeometryView* view, UInt numIndices, UInt numInstances)
     }
 
     D3d11Buffer* indexBuffer = view->indexBuffer().get_static_cast<D3d11Buffer>();
+    DXGI_FORMAT indexFormat = (view->indexFormat() == IndexFormat::UInt16)
+        ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
 
     if (numInstances == 0) {
         if (indexBuffer) {
+            deviceCtx_->IASetIndexBuffer(indexBuffer->object(), indexFormat, 0);
             deviceCtx_->DrawIndexed(nIdx, 0, 0);
         }
         else {
@@ -1675,6 +1677,7 @@ void D3d11Engine::draw_(GeometryView* view, UInt numIndices, UInt numInstances)
     }
     else {
         if (indexBuffer) {
+            deviceCtx_->IASetIndexBuffer(indexBuffer->object(), indexFormat, 0);
             deviceCtx_->DrawIndexedInstanced(nIdx, nInst, 0, 0, 0);
         }
         else {

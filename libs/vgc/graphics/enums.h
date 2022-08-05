@@ -374,22 +374,33 @@ enum class ShaderStage : Int8 {
 };
 inline constexpr UInt8 numShaderStages = static_cast<UInt8>(ShaderStage::Max_) + 1;
 
-enum class BuiltinProgram : UInt8 {
+enum class BuiltinProgram : Int8 {
+    NotBuiltin = -1,
     Simple,
     // XXX publicize ?
     //GlyphAtlas,
     //IconsAtlas,
     //RoundedRectangle,
+    Max_ = Simple,
 };
+inline constexpr UInt8 numBuiltinPrograms = static_cast<UInt8>(BuiltinProgram::Max_) + 1;
 
 enum class BuiltinGeometryLayout : Int8 {
-    None = -1,
+    NotBuiltin = -1,
     XY = 0,
     XYRGB = 1,
     XYZ = 2,
     Max_ = XYZ,
 };
 inline constexpr UInt8 numBuiltinGeometryLayouts = static_cast<UInt8>(BuiltinGeometryLayout::Max_) + 1;
+
+enum class IndexFormat : UInt8 {
+    Undefined,
+    UInt16,
+    UInt32,
+    Max_ = UInt32,
+};
+inline constexpr UInt8 numIndexFormats = static_cast<UInt8>(IndexFormat::Max_) + 1;
 
 enum class PipelineParameter : UInt32 {
     None = 0,

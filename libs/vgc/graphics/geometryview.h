@@ -72,6 +72,16 @@ public:
         indexBuffer_ = indexBuffer;
     }
 
+    IndexFormat indexFormat() const
+    {
+        return indexFormat_;
+    }
+
+    void setIndexFormat(IndexFormat indexFormat)
+    {
+        indexFormat_ = indexFormat;
+    }
+
     const VertexBufferArray& vertexBuffers() const
     {
         return vertexBuffers_;
@@ -126,8 +136,9 @@ private:
     friend GeometryView; // to reset resource pointers
 
     PrimitiveType primitiveType_ = PrimitiveType::Point;
-    BuiltinGeometryLayout builtinGeometryLayout_ = BuiltinGeometryLayout::None;
+    BuiltinGeometryLayout builtinGeometryLayout_ = BuiltinGeometryLayout::NotBuiltin;
     BufferPtr indexBuffer_ = {};
+    IndexFormat indexFormat_ = {};
     VertexBufferArray vertexBuffers_ = {};
     VertexBufferStridesArray strides_ = {};
     VertexBufferOffsetsArray offsets_ = {};
@@ -162,7 +173,7 @@ protected:
         }
 
         BuiltinGeometryLayout builtinLayout = info.builtinGeometryLayout();
-        if (builtinLayout != BuiltinGeometryLayout::None) {
+        if (builtinLayout != BuiltinGeometryLayout::NotBuiltin) {
             Int layoutIndex = core::toUnderlying(builtinLayout);
             if (info_.strides_[0] == 0) {
                 info_.strides_[0] = std::array{
@@ -190,6 +201,11 @@ public:
         return info_.indexBuffer();
     }
 
+    IndexFormat indexFormat() const
+    {
+        return info_.indexFormat();
+    }
+
     const VertexBufferArray& vertexBuffers() const
     {
         return info_.vertexBuffers();
@@ -213,7 +229,7 @@ public:
     const Int vertexSizeInBuffer(Int i) const
     {
         BuiltinGeometryLayout builtinLayout = info_.builtinGeometryLayout();
-        if (builtinLayout != BuiltinGeometryLayout::None) {
+        if (builtinLayout != BuiltinGeometryLayout::NotBuiltin) {
             Int layoutIndex = core::toUnderlying(builtinLayout);
             if (i == 0) {
                 return std::array{

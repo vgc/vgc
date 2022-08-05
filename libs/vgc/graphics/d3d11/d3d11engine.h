@@ -50,14 +50,14 @@ private:
     VGC_OBJECT(D3d11Engine, Engine)
 
 protected:
-    D3d11Engine();
+    D3d11Engine(bool useRenderThread);
 
     void onDestroyed() override;
 
 public:
     /// Creates a new D3d11Engine.
     ///
-    static D3d11EnginePtr create();
+    static D3d11EnginePtr create(bool useRenderThread = true);
 
 protected:
     // Implementation of Engine API
@@ -81,7 +81,8 @@ protected:
 
     //--  RENDER THREAD implementation functions --
 
-    void onStart_() override {}
+    void initContext_() override {}
+    void initBuiltinResources_() override {}
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;

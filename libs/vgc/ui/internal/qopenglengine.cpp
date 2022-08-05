@@ -85,6 +85,7 @@ protected:
 private:
     GLuint object_ = badGLObject;
     GLenum usageGL_ = badGLenum;
+    Int allocatedSize_ = 0;
 };
 using QglBufferPtr = ResourcePtr<QglBuffer>;
 
@@ -140,7 +141,7 @@ public:
 protected:
     void releaseSubResources_() override
     {
-        Image:releaseSubResources_();
+        Image::releaseSubResources_();
         samplerState_.reset();
     }
 
@@ -222,28 +223,46 @@ protected:
 
     QglGeometryView(ResourceRegistry* registry, const GeometryViewCreateInfo& info)
         : GeometryView(registry, info) {
-        std::fill(builtinLayoutVAOs_.begin(), builtinLayoutVAOs_.end(), nullGLObject);
+
+        for (auto& vaos : builtinProgramVAOs_) {
+            vaos.fill(nullGLObject);
+        }
     }
 
 public:
-    GLenum topology() const {
-        return topology_;
+    GLenum drawMode() const {
+        return drawMode_;
     }
 
 protected:
     void release_(Engine* engine) override
     {
         GeometryView::release_(engine);
-        static_cast<QglEngine*>(engine)->api()->glDeleteVertexArrays(
-            numBuiltinGeometryLayouts, builtinLayoutVAOs_.data());
+        for (const auto& vaos : builtinProgramVAOs_) {
+            static_cast<QglEngine*>(engine)->api()->glDeleteVertexArrays(
+                core::int_cast<GLsizei>(vaos.size()), vaos.data());
+        }
     }
 
 private:
-    GLenum topology_ = badGLenum;
+    GLenum drawMode_ = badGLenum;
 
-    std::array<GLuint, numBuiltinGeometryLayouts> builtinLayoutVAOs_;
+    std::array<
+        std::array<GLuint, numBuiltinGeometryLayouts>,
+        numBuiltinPrograms
+    > builtinProgramVAOs_;
 };
 using QglGeometryViewPtr = ResourcePtr<QglGeometryView>;
+
+struct GlAttribPointerDesc {
+    GLuint index;
+    GLint numElements;
+    GLenum elementType;
+    GLboolean normalized;
+    GLsizei stride;
+    uintptr_t offset;
+    uintptr_t bufferIndex;
+};
 
 class QglProgram : public Program {
 protected:
@@ -260,20 +279,28 @@ protected:
 
 private:
     std::unique_ptr<QOpenGLShaderProgram> prog_;
+    std::array<
+        core::Array<GlAttribPointerDesc>,
+        core::toUnderlying(BuiltinGeometryLayout::Max_) + 1
+    > builtinLayouts_;
 };
 using QglProgramPtr = ResourcePtr<QglProgram>;
 
-struct BlendEquationGL {
+struct GlBlendEquation {
     GLenum operation = badGLenum;
     GLenum sourceFactor = badGLenum;
     GLenum targetFactor = badGLenum;
-};
 
-struct TargetBlendStateGL {
-    bool isEnabled = false;
-    BlendEquationGL equationRGB = {};
-    BlendEquationGL equationAlpha = {};
-    BlendWriteMask writeMask = BlendWriteMaskBit::All;
+    constexpr bool operator==(const GlBlendEquation& other) const noexcept {
+        return (
+            operation == other.operation
+            && sourceFactor == other.sourceFactor
+            && targetFactor == other.targetFactor);
+    }
+
+    constexpr bool operator!=(const GlBlendEquation& other) const noexcept {
+        return !operator==(other);
+    }
 };
 
 class QglBlendState : public BlendState {
@@ -288,7 +315,8 @@ protected:
     }
 
 private:
-    TargetBlendStateGL targetBlendStateGL_ = {};
+    GlBlendEquation equationRGB_ = {};
+    GlBlendEquation equationAlpha_ = {};
 };
 using QglBlendStatePtr = ResourcePtr<QglBlendState>;
 
@@ -654,18 +682,21 @@ GLenum filterModeToGLenum(FilterMode mode)
 
 // ENGINE FUNCTIONS
 
-QglEngine::QglEngine(QOpenGLContext* ctx, bool isExternalCtx) :
-    Engine(),
+QglEngine::QglEngine(QOpenGLContext* ctx, bool isExternalCtx, bool useRenderThread) :
+    Engine(useRenderThread),
     ctx_(ctx),
     isExternalCtx_(isExternalCtx)
 {
-    offscreenSurface_ = new QOffscreenSurface();
+    /*offscreenSurface_ = new QOffscreenSurface();
     QSurface* surface = ctx_->surface();
-    surface = surface ? surface : offscreenSurface_;
-    ctx_->makeCurrent(surface);
-    hasAnisotropicFilteringSupport_ = ctx_->hasExtension("EXT_texture_filter_anisotropic");
+    surface = surface ? surface : offscreenSurface_;*/
 
-    createBuiltinResources_();
+    currentImageViews_.fill(nullptr);
+    currentSamplerStates_.fill(nullptr);
+    isTextureStateDirtyMap_.fill(true);
+    isAnyTextureStateDirty_ = true;
+
+    //createBuiltinResources_();
 }
 
 void QglEngine::onDestroyed()
@@ -681,17 +712,17 @@ void QglEngine::onDestroyed()
 }
 
 /* static */
-QglEnginePtr QglEngine::create()
+QglEnginePtr QglEngine::create(bool useRenderThread)
 {
-    QOpenGLContext* ctx = new QOpenGLContext();
-    ctx->create();
-    return QglEnginePtr(new QglEngine(ctx, false));
+
+
+    return QglEnginePtr(new QglEngine(nullptr, false, useRenderThread));
 }
 
 /* static */
-QglEnginePtr QglEngine::create(QOpenGLContext* ctx)
+QglEnginePtr QglEngine::create(QOpenGLContext* externalCtx)
 {
-    return QglEnginePtr(new QglEngine(ctx, true));
+    return QglEnginePtr(new QglEngine(externalCtx, true, false));
 }
 
 SwapChainPtr QglEngine::createSwapChainFromSurface(QSurface* surface)
@@ -711,24 +742,12 @@ SwapChainPtr QglEngine::createSwapChainFromSurface(QSurface* surface)
     return SwapChainPtr(swapChain.release());
 }
 
-void QglEngine::makeCurrent()
-{
-    queueLambdaCommand_(
-        "makeCurrent",
-        [=](Engine* engine) {
-            static_cast<QglEngine*>(engine)->makeCurrent_();
-        });
-}
-
 // -- USER THREAD implementation functions --
 
 void QglEngine::createBuiltinShaders_()
 {
-    queueLambdaCommand_(
-        "initBuiltinShaders",
-        [=](Engine* engine) {
-            static_cast<QglEngine*>(engine)->initBuiltinShaders_();
-        });
+    QglProgramPtr simpleProgram(new QglProgram(resourceRegistry_, BuiltinProgram::Simple));
+    simpleProgram_ = simpleProgram;
 }
 
 SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInfo)
@@ -737,9 +756,9 @@ SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInf
         throw core::LogicError("QglEngine: unsupported WindowNativeHandleType value.");
     }
 
-    if (ctx_ == nullptr) {
-        throw core::LogicError("ctx_ is null.");
-    }
+    //if (ctx_ == nullptr) {
+    //    throw core::LogicError("ctx_ is null.");
+    //}
     // XXX can it be an external context ??
 
     // XXX only allow D24_S8 for now..
@@ -831,7 +850,7 @@ SamplerStatePtr QglEngine::constructSamplerState_(const SamplerStateCreateInfo& 
 GeometryViewPtr QglEngine::constructGeometryView_(const GeometryViewCreateInfo& createInfo)
 {
     auto view = makeUnique<QglGeometryView>(resourceRegistry_, createInfo);
-    view->topology_ = primitiveTypeToGLenum(createInfo.primitiveType());
+    view->drawMode_ = primitiveTypeToGLenum(createInfo.primitiveType());
 
     return GeometryViewPtr(view.release());
 }
@@ -839,18 +858,17 @@ GeometryViewPtr QglEngine::constructGeometryView_(const GeometryViewCreateInfo& 
 BlendStatePtr QglEngine::constructBlendState_(const BlendStateCreateInfo& createInfo)
 {
     auto state = makeUnique<QglBlendState>(resourceRegistry_, createInfo);
-    TargetBlendStateGL& blendStateGL = state->targetBlendStateGL_;
-    blendStateGL.isEnabled = state->isEnabled();
-    if (blendStateGL.isEnabled) {
-        blendStateGL.writeMask = state->writeMask();
+    if (state->isEnabled()) {
         const BlendEquation& equationRGB = state->equationRGB();
-        blendStateGL.equationRGB.operation = blendOpToGLenum(equationRGB.operation());
-        blendStateGL.equationRGB.sourceFactor = blendFactorToGLenum(equationRGB.sourceFactor());
-        blendStateGL.equationRGB.targetFactor = blendFactorToGLenum(equationRGB.targetFactor());
+        GlBlendEquation& glEquationRGB = state->equationRGB_;
+        glEquationRGB.operation = blendOpToGLenum(equationRGB.operation());
+        glEquationRGB.sourceFactor = blendFactorToGLenum(equationRGB.sourceFactor());
+        glEquationRGB.targetFactor = blendFactorToGLenum(equationRGB.targetFactor());
         const BlendEquation& equationAlpha = state->equationAlpha();
-        blendStateGL.equationAlpha.operation = blendOpToGLenum(equationAlpha.operation());
-        blendStateGL.equationAlpha.sourceFactor = blendFactorToGLenum(equationAlpha.sourceFactor());
-        blendStateGL.equationAlpha.targetFactor = blendFactorToGLenum(equationAlpha.targetFactor());
+        GlBlendEquation& glEquationAlpha = state->equationAlpha_;
+        glEquationAlpha.operation = blendOpToGLenum(equationAlpha.operation());
+        glEquationAlpha.sourceFactor = blendFactorToGLenum(equationAlpha.sourceFactor());
+        glEquationAlpha.targetFactor = blendFactorToGLenum(equationAlpha.targetFactor());
     }
 
     return BlendStatePtr(state.release());
@@ -872,9 +890,34 @@ void QglEngine::resizeSwapChain_(SwapChain* /*swapChain*/, UInt32 /*width*/, UIn
 
 //--  RENDER THREAD implementation functions --
 
-void QglEngine::onStart_()
+void QglEngine::initContext_()
 {
+    QSurfaceFormat format;
+    format.setVersion(3, 3);
+    //format.setProfile(QSurfaceFormat::CoreProfile);
+    //format.setOption(QSurfaceFormat::DebugContext);
+
+    if (!isExternalCtx_) {
+
+        ctx_ = new QOpenGLContext();
+        ctx_->setFormat(format);
+        VGC_CORE_ASSERT(ctx_->create());
+    }
+
+    offscreenSurface_ = new QOffscreenSurface();
+    offscreenSurface_->setFormat(format);
+    offscreenSurface_->create();
+
+    QSurface* surface = ctx_->surface();
+    surface = surface ? surface : offscreenSurface_;
+
+
     ctx_->makeCurrent(offscreenSurface_);
+
+    VGC_CORE_ASSERT(ctx_->isValid());
+
+    // move to constructor with dummy context...
+    hasAnisotropicFilteringSupport_ = ctx_->hasExtension("EXT_texture_filter_anisotropic");
 
     // Get API 3.3
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -883,15 +926,52 @@ void QglEngine::onStart_()
     api_ = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx_);
 #endif
     //
-
+    VGC_CORE_ASSERT(api_ != nullptr);
     api_->initializeOpenGLFunctions();
-
-    initBuiltinShaders_();
 }
 
-void QglEngine::initFramebuffer_(Framebuffer* framebuffer_)
+void QglEngine::initBuiltinResources_()
 {
-    QglFramebuffer* framebuffer = static_cast<QglFramebuffer*>(framebuffer_);
+    // Initialize shader program
+    QglProgram* simpleProgram = simpleProgram_.get_static_cast<QglProgram>();
+    simpleProgram->prog_.reset(new QOpenGLShaderProgram());
+    QOpenGLShaderProgram* prog = simpleProgram->prog_.get();
+    prog->addShaderFromSourceFile(
+        QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
+    prog->addShaderFromSourceFile(
+        QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
+    prog->link();
+    prog->bind();
+    int xyLoc_ = prog->attributeLocation("pos");
+    int rgbLoc_ = prog->attributeLocation("col");
+    api_->glUniformBlockBinding(prog->programId(), 0, 0);
+    prog->release();
+
+    core::Array<GlAttribPointerDesc>& layout = simpleProgram->builtinLayouts_[
+        core::toUnderlying(BuiltinGeometryLayout::XYRGB)];
+
+    GlAttribPointerDesc& xyDesc = layout.emplaceLast();
+    xyDesc.index = xyLoc_;
+    xyDesc.numElements = 2;
+    xyDesc.elementType = GL_FLOAT;
+    xyDesc.normalized = false;
+    xyDesc.stride = sizeof(XYRGBVertex);
+    xyDesc.offset = (UINT)offsetof(XYRGBVertex, x);
+    xyDesc.bufferIndex = 0;
+
+    GlAttribPointerDesc& rgbDesc = layout.emplaceLast();
+    rgbDesc.index = rgbLoc_;
+    rgbDesc.numElements = 3;
+    rgbDesc.elementType = GL_FLOAT;
+    xyDesc.normalized = false;
+    xyDesc.stride = sizeof(XYRGBVertex);
+    xyDesc.offset = (UINT)offsetof(XYRGBVertex, r);
+    xyDesc.bufferIndex = 0;
+}
+
+void QglEngine::initFramebuffer_(Framebuffer* aFramebuffer)
+{
+    QglFramebuffer* framebuffer = static_cast<QglFramebuffer*>(aFramebuffer);
     api_->glGenFramebuffers(1, &framebuffer->object_);
     api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer->object_);
     // XXX handle the different textargets + ranks + layer !!
@@ -899,18 +979,18 @@ void QglEngine::initFramebuffer_(Framebuffer* framebuffer_)
     api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, boundFramebuffer_);
 }
 
-void QglEngine::initBuffer_(Buffer* buffer_, const char* data, Int lengthInBytes)
+void QglEngine::initBuffer_(Buffer* aBuffer, const char* data, Int lengthInBytes)
 {
-    QglBuffer* buffer = static_cast<QglBuffer*>(buffer_);
+    QglBuffer* buffer = static_cast<QglBuffer*>(aBuffer);
     GLuint object = 0;
     api_->glGenBuffers(1, &object);
     buffer->object_ = object;
     loadBuffer_(buffer, data, lengthInBytes);
 }
 
-void QglEngine::initImage_(Image* image_, const Span<const char>* mipLevelDataSpans, Int count)
+void QglEngine::initImage_(Image* aImage, const Span<const char>* mipLevelDataSpans, Int count)
 {
-    QglImage* image = static_cast<QglImage*>(image_);
+    QglImage* image = static_cast<QglImage*>(aImage);
 
     if (count <= 0) {
         mipLevelDataSpans = nullptr;
@@ -1042,9 +1122,9 @@ void QglEngine::initImage_(Image* image_, const Span<const char>* mipLevelDataSp
     image->target_ = target;
 }
 
-void QglEngine::initImageView_(ImageView* view_)
+void QglEngine::initImageView_(ImageView* aView)
 {
-    QglImageView* view = static_cast<QglImageView*>(view_);
+    QglImageView* view = static_cast<QglImageView*>(aView);
     QglBuffer* buffer = view->viewedBuffer().get_static_cast<QglBuffer>();
     if (buffer) {
         GLuint object = 0;
@@ -1087,10 +1167,10 @@ void QglEngine::setSwapChain_(const SwapChainPtr& swapChain)
     ctx_->makeCurrent(surface_);
 }
 
-void QglEngine::setFramebuffer_(const FramebufferPtr& framebuffer_)
+void QglEngine::setFramebuffer_(const FramebufferPtr& aFramebuffer)
 {
-    QglFramebuffer* framebuffer = framebuffer_.get_static_cast<QglFramebuffer>();
-    GLuint object = framebuffer ? framebuffer->object_ : 0;
+    QglFramebuffer* framebuffer = aFramebuffer.get_static_cast<QglFramebuffer>();
+    GLuint object = framebuffer ? framebuffer->object() : 0;
     api_->glBindFramebuffer(GL_FRAMEBUFFER, object);
     boundFramebuffer_ = object;
 }
@@ -1100,103 +1180,256 @@ void QglEngine::setViewport_(Int x, Int y, Int width, Int height)
     api_->glViewport(x, y, width, height);
 }
 
-void QglEngine::setProgram_(const ProgramPtr& program_)
+void QglEngine::setProgram_(const ProgramPtr& aProgram)
 {
-    QglProgram* program = program_.get_static_cast<QglProgram>();
+    QglProgram* program = aProgram.get_static_cast<QglProgram>();
     program->prog_->bind();
     //api_->glUseProgram(object);
+    boundProgram_ = aProgram;
 }
 
-void QglEngine::setBlendState_(const BlendStatePtr& state_, const geometry::Vec4f& blendFactor)
+void QglEngine::setBlendState_(const BlendStatePtr& aState, const geometry::Vec4f& blendFactor)
 {
-    if (boundBlendState_ != state_) {
+    if (boundBlendState_ != aState) {
         QglBlendState* oldState = boundBlendState_.get_static_cast<QglBlendState>();
-        QglBlendState* newState = state_.get_static_cast<QglBlendState>();
+        QglBlendState* newState = aState.get_static_cast<QglBlendState>();
+        // OpenGL ES doesn't not support glEnablei and glBlendFunci.
 
-        // OpenGL ES doesn't not support glEnablei and glBlendFunci...
-        // Simplify blend state ?
+        const bool isAlphaToCoverageEnabled = newState->isAlphaToCoverageEnabled();
+        if (!oldState || isAlphaToCoverageEnabled != oldState->isAlphaToCoverageEnabled()) {
+            setEnabled_(GL_SAMPLE_ALPHA_TO_COVERAGE, isAlphaToCoverageEnabled);
+        }
 
-        //if (!newState->isIndependentBlendEnabled())
-        //{
-        //    if (newState->targetBlendState(0).isEnabled()) {
-        //        api_->glEnable(GL_BLEND);
-        //    }
-        //    else {
-        //        api_->glDisable(GL_BLEND);
-        //    }
-        //}
-        //else {
-        //    for (Int i = 0; i < maxColorTargets; ++i) {
-        //
-        //
-        //
-        //    }
-        //}
+        //GL_SAMPLE_ALPHA_TO_COVERAGE
 
-        boundBlendState_ = state_;
+        if (newState->isEnabled()) {
+            const GlBlendEquation& equationRGB = newState->equationRGB_;
+            const GlBlendEquation& equationAlpha = newState->equationAlpha_;
+            const BlendWriteMask writeMask = newState->writeMask();
+
+            if (!oldState || equationRGB != oldState->equationRGB_ || equationAlpha != oldState->equationAlpha_) {
+                api_->glBlendEquationSeparate(equationRGB.operation, equationAlpha.operation);
+                api_->glBlendFuncSeparate(
+                    equationRGB.sourceFactor,
+                    equationRGB.targetFactor,
+                    equationAlpha.sourceFactor,
+                    equationAlpha.targetFactor);
+            }
+
+            if (!oldState || writeMask != oldState->writeMask()) {
+                api_->glColorMask(
+                    writeMask.has(BlendWriteMaskBit::R),
+                    writeMask.has(BlendWriteMaskBit::G),
+                    writeMask.has(BlendWriteMaskBit::B),
+                    writeMask.has(BlendWriteMaskBit::A));
+            }
+
+            if (!oldState || !oldState->isEnabled()) {
+                api_->glEnable(GL_BLEND);
+            }
+        }
+        else if (!oldState || oldState->isEnabled()) {
+            api_->glDisable(GL_BLEND);
+        }
+
+        boundBlendState_ = aState;
+    }
+    if (!currentBlendFactor_.has_value() || currentBlendFactor_.value() != blendFactor) {
+        api_->glBlendColor(
+            blendFactor.x(),
+            blendFactor.y(),
+            blendFactor.z(),
+            blendFactor.w());
+
+        currentBlendFactor_ = blendFactor;
     }
 }
 
-void QglEngine::setRasterizerState_(const RasterizerStatePtr& /*state*/)
+void QglEngine::setRasterizerState_(const RasterizerStatePtr& aState)
 {
+    if (boundRasterizerState_ != aState) {
+        QglRasterizerState* oldState = boundRasterizerState_.get_static_cast<QglRasterizerState>();
+        QglRasterizerState* newState = aState.get_static_cast<QglRasterizerState>();
 
+        GLenum fillModeGL = newState->fillModeGL_;
+        GLenum cullModeGL = newState->cullModeGL_;
+        bool isFrontCounterClockwise = newState->isFrontCounterClockwise();
+        bool isDepthClippingEnabled = newState->isDepthClippingEnabled();
+        bool isScissoringEnabled = newState->isScissoringEnabled();
+        bool isMultisamplingEnabled = newState->isMultisamplingEnabled();
+        bool isLineAntialiasingEnabled = newState->isLineAntialiasingEnabled();
+
+        if (!oldState || fillModeGL != oldState->fillModeGL_) {
+            api_->glPolygonMode(GL_FRONT_AND_BACK, fillModeGL);
+        }
+
+        if (!oldState || cullModeGL != oldState->cullModeGL_) {
+            api_->glCullFace(cullModeGL);
+        }
+
+        if (!oldState || isFrontCounterClockwise != oldState->isFrontCounterClockwise()) {
+            api_->glFrontFace(isFrontCounterClockwise ? GL_CCW : GL_CW);
+        }
+
+        if (!oldState || isDepthClippingEnabled != oldState->isDepthClippingEnabled()) {
+            setEnabled_(GL_DEPTH_CLAMP, isDepthClippingEnabled);
+        }
+
+        if (!oldState || isScissoringEnabled != oldState->isScissoringEnabled()) {
+            setEnabled_(GL_SCISSOR_TEST, isScissoringEnabled);
+        }
+
+        if (!oldState || isMultisamplingEnabled != oldState->isMultisamplingEnabled()) {
+            setEnabled_(GL_MULTISAMPLE, isMultisamplingEnabled);
+        }
+
+        if (!oldState || isLineAntialiasingEnabled != oldState->isLineAntialiasingEnabled()) {
+            setEnabled_(GL_LINE_SMOOTH, isLineAntialiasingEnabled);
+        }
+
+        boundRasterizerState_ = aState;
+    }
 }
 
-void QglEngine::setStageConstantBuffers_(const BufferPtr* /*buffers*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
+void QglEngine::setStageConstantBuffers_(const BufferPtr* aBuffers, Int startIndex, Int count, ShaderStage shaderStage)
 {
+    GLuint stageBaseIndex = core::toUnderlying(shaderStage) * maxConstantBuffersPerStage;
+    for (Int i = 0; i < count; ++i) {
+        const QglBuffer* buffer = aBuffers[i].get_static_cast<QglBuffer>();
+        api_->glBindBufferBase(GL_UNIFORM_BUFFER, stageBaseIndex + startIndex + i, buffer ? buffer->object() : 0);
+    }
 }
 
 void QglEngine::setStageImageViews_(const ImageViewPtr* /*views*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
 {
+    // todo, + defer coupling with sampler
 }
 
 void QglEngine::setStageSamplers_(const SamplerStatePtr* /*states*/, Int /*startIndex*/, Int /*count*/, ShaderStage /*shaderStage*/)
 {
+    // todo, + defer coupling with view
 }
 
-void QglEngine::updateBufferData_(Buffer* /*buffer*/, const void* /*data*/, Int /*lengthInBytes*/)
+void QglEngine::updateBufferData_(Buffer* aBuffer, const void* data, Int lengthInBytes)
 {
+    QglBuffer* buffer = static_cast<QglBuffer*>(aBuffer);
+    loadBuffer_(buffer, data, lengthInBytes);
 }
 
 // should do init at beginFrame if needed..
 
-void QglEngine::draw_(GeometryView* /*view*/, UInt /*numIndices*/, UInt /*numInstances*/)
+void QglEngine::draw_(GeometryView* aView, UInt numIndices, UInt numInstances)
 {
+    syncTextureStates_();
+
+    UINT nIdx = core::int_cast<UINT>(numIndices);
+    UINT nInst = core::int_cast<UINT>(numInstances);
+
+    if (nIdx == 0) {
+        return;
+    }
+
+    QglGeometryView* view = static_cast<QglGeometryView*>(aView);
+    QglProgram* program = boundProgram_.get_static_cast<QglProgram>();
+    if (!program) {
+        VGC_WARNING(LogVgcUi, "cannot draw without a bound program");
+        return;
+    }
+
+    VGC_CORE_ASSERT(program->builtinId() != BuiltinProgram::NotBuiltin);
+    Int progIdx = core::toUnderlying(program->builtinId());
+    VGC_CORE_ASSERT(view->builtinGeometryLayout() != BuiltinGeometryLayout::NotBuiltin);
+    Int layoutIdx = core::toUnderlying(view->builtinGeometryLayout());
+
+    GLuint& cachedVao = view->builtinProgramVAOs_[progIdx][layoutIdx];
+    if (cachedVao == nullGLObject) {
+        GLuint vao = {};
+        api_->glGenVertexArrays(1, &vao);
+        cachedVao = vao;
+
+        api_->glBindVertexArray(vao);
+
+        for (const GlAttribPointerDesc& attribDesc : program->builtinLayouts_[layoutIdx]) {
+            // maybe we could sort the attribs by buffer index..
+            QglBuffer* vbuf = view->vertexBuffer(attribDesc.bufferIndex).get_static_cast<QglBuffer>();
+            api_->glBindBuffer(GL_ARRAY_BUFFER, vbuf->object());
+            api_->glVertexAttribPointer(
+                attribDesc.index,
+                attribDesc.numElements,
+                attribDesc.elementType,
+                attribDesc.normalized,
+                attribDesc.stride,
+                reinterpret_cast<const GLvoid*>(attribDesc.offset));
+            api_->glEnableVertexAttribArray(attribDesc.index);
+        }
+        api_->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+    else {
+        api_->glBindVertexArray(cachedVao);
+    }
+
+    QglBuffer* indexBuffer = view->indexBuffer().get_static_cast<QglBuffer>();
+    GLenum indexFormat = (view->indexFormat() == IndexFormat::UInt16)
+        ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+
+    if (numInstances == 0) {
+        if (indexBuffer) {
+            api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
+            api_->glDrawElements(view->drawMode_, nIdx, indexFormat, 0);
+        }
+        else {
+            api_->glDrawArrays(view->drawMode_, 0, nIdx);
+        }
+    }
+    else {
+        if (indexBuffer) {
+            api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
+            api_->glDrawElementsInstanced(view->drawMode_, nIdx, indexFormat, 0, nInst);
+        }
+        else {
+            api_->glDrawArraysInstanced(view->drawMode_, 0, nIdx, nInst);
+        }
+    }
+
 }
 
-void QglEngine::clear_(const core::Color& /*color*/)
+void QglEngine::clear_(const core::Color& color)
 {
+    api_->glClearColor(
+        static_cast<float>(color.r()),
+        static_cast<float>(color.g()),
+        static_cast<float>(color.b()),
+        static_cast<float>(color.a()));
+    api_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-UInt64 QglEngine::present_(SwapChain* /*swapChain*/, UInt32 /*syncInterval*/, PresentFlags /*flags*/)
+UInt64 QglEngine::present_(SwapChain* aSwapChain, UInt32 /*syncInterval*/, PresentFlags /*flags*/)
 {
+    QglSwapChain* swapChain = static_cast<QglSwapChain*>(aSwapChain);
+    if (surface_ != swapChain->surface_) {
+        ctx_->makeCurrent(swapChain->surface_);
+    }
+    ctx_->swapBuffers(swapChain->surface_);
+    ctx_->makeCurrent(surface_);
     return 0;
 }
 
 void QglEngine::setStateDirty_()
 {
+    makeCurrent_();
     boundFramebuffer_ = badGLObject;
     boundBlendState_.reset();
+    currentBlendFactor_.reset();
+    boundRasterizerState_.reset();
+    currentImageViews_.fill(nullptr);
+    currentSamplerStates_.fill(nullptr);
+    isTextureStateDirtyMap_.fill(true);
+    // temporary
+    api_->glDisable(GL_DEPTH_TEST);
+    api_->glDisable(GL_STENCIL_TEST);
 }
 
 // Private methods
-
-void QglEngine::initBuiltinShaders_()
-{
-    // Initialize shader program
-    //paintShaderProgram_.reset(new QOpenGLShaderProgram());
-    //paintShaderProgram_->addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl"));
-    //paintShaderProgram_->addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("iv4fcol.f.glsl"));
-    //paintShaderProgram_->link();
-
-    // Get shader locations
-    //paintShaderProgram_->bind();
-    //posLoc_  = paintShaderProgram_->attributeLocation("pos");
-    //colLoc_  = paintShaderProgram_->attributeLocation("col");
-    //projLoc_ = paintShaderProgram_->uniformLocation("proj");
-    //viewLoc_ = paintShaderProgram_->uniformLocation("view");
-    //paintShaderProgram_->release();
-}
 
 void QglEngine::makeCurrent_()
 {
@@ -1205,12 +1438,49 @@ void QglEngine::makeCurrent_()
 
 bool QglEngine::loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize)
 {
-    const GLuint object = buffer->object_;
-    if (dataSize) {
-        api_->glBindBuffer(GL_COPY_WRITE_BUFFER, object);
-        api_->glBufferData(GL_COPY_WRITE_BUFFER, dataSize, data, buffer->usageGL_);
-        api_->glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    if (dataSize == 0) {
+        return false;
     }
+
+    const GLuint object = buffer->object();
+    api_->glBindBuffer(GL_COPY_WRITE_BUFFER, object);
+
+    Int allocSize = buffer->allocatedSize_;
+    bool skipCopy = false;
+    if ((dataSize > allocSize) || (dataSize * 4 < allocSize)) {
+        UINT dataWidth = core::int_cast<UINT>(dataSize);
+        allocSize = dataWidth;
+        if (buffer->bindFlags() & BindFlag::ConstantBuffer) {
+            allocSize = (allocSize + 0xFu) & ~UINT(0xFu);
+        }
+        if (data && allocSize == dataWidth) {
+            api_->glBufferData(GL_COPY_WRITE_BUFFER, allocSize, data, buffer->usageGL_);
+            skipCopy = true;
+        }
+        else {
+            api_->glBufferData(GL_COPY_WRITE_BUFFER, allocSize, nullptr, buffer->usageGL_);
+        }
+        buffer->allocatedSize_ = allocSize;
+    }
+
+    if (data && !skipCopy) {
+        void* mapped = api_->glMapBuffer(GL_COPY_WRITE_BUFFER, GL_WRITE_ONLY);
+        if (mapped) {
+            std::memcpy(mapped, data, dataSize);
+            api_->glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+        }
+        else {
+            VGC_ERROR(LogVgcUi, "Couldn't map buffer.");
+        }
+    }
+
+    api_->glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    return true;
+}
+
+void QglEngine::syncTextureStates_()
+{
+    // XXX todo
 }
 
 //// USER THREAD pimpl functions

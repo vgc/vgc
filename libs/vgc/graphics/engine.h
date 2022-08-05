@@ -121,7 +121,7 @@ protected:
     /// Constructs an Engine. This constructor is an implementation detail only
     /// available to derived classes.
     ///
-    Engine();
+    Engine(bool useRenderThread = true);
 
     void onDestroyed() override;
 
@@ -131,8 +131,6 @@ public:
     // !! public methods should be called on user thread !!
 
     void init();
-
-    void start();
 
     /// Creates a swap chain for the given window.
     ///
@@ -263,6 +261,7 @@ public:
     SwapChainPtr swapChain();
 
     void beginFrame(bool isStateDirty = false);
+    void endFrame();
 
     void resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height);
 
@@ -332,7 +331,8 @@ protected:
 
     // -- RENDER THREAD implementation functions --
 
-    virtual void onStart_() = 0;
+    virtual void initContext_() = 0;
+    virtual void initBuiltinResources_() = 0;
 
     virtual void initFramebuffer_(Framebuffer* framebuffer) = 0;
     virtual void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) = 0;
@@ -366,9 +366,6 @@ protected:
 
 protected:
     detail::ResourceRegistry* resourceRegistry_ = nullptr;
-
-    // must be called in the final class constructor
-    void createBuiltinResources_();
 
     // wrapper engines may not know about the host state at some point
     void setStateDirty() {
@@ -413,6 +410,10 @@ protected:
     template<typename TCommand, typename... Args>
     void queueCommand_(Args&&... args)
     {
+        if (!isMultiThreaded_) {
+            TCommand(std::forward<Args>(args)...).execute(this);
+            return;
+        }
         pendingCommands_.emplace_back(
             new TCommand(std::forward<Args>(args)...));
     };
@@ -420,6 +421,10 @@ protected:
     template<typename Lambda>
     void queueLambdaCommand_(std::string_view name, Lambda&& lambda)
     {
+        if (!isMultiThreaded_) {
+            lambda(this);
+            return;
+        }
         pendingCommands_.emplace_back(
             new detail::LambdaCommand(name, std::forward<Lambda>(lambda)));
     };
@@ -427,6 +432,10 @@ protected:
     template<typename Data, typename Lambda, typename... Args>
     void queueLambdaCommandWithParameters_(std::string_view name, Lambda&& lambda, Args&&... args)
     {
+        if (!isMultiThreaded_) {
+            lambda(this, Data{std::forward<Args>(args)...});
+            return;
+        }
         pendingCommands_.emplace_back(
             new detail::LambdaCommandWithParameters<Data, std::decay_t<Lambda>>(name, std::forward<Lambda>(lambda), std::forward<Args>(args)...));
     };
@@ -437,6 +446,8 @@ protected:
     }
 
 private:
+    void createBuiltinResources_();
+
     // -- pipeline state on the user thread --
 
     SwapChainPtr swapChain_;
@@ -482,13 +493,14 @@ private:
 
     // -- render thread + sync --
 
+    bool isMultiThreaded_ = true;
     std::thread renderThread_;
     std::mutex mutex_;
     std::condition_variable wakeRenderThreadConditionVariable_;
     std::condition_variable renderThreadEventConditionVariable_;
     UInt lastExecutedCommandListId_ = 0;
     UInt lastSubmittedCommandListId_ = 0;
-    bool running_ = false;
+    bool isThreadRunning_ = false;
     bool stopRequested_ = false;
 
     struct CommandList {
@@ -670,13 +682,18 @@ inline void Engine::updateVertexBufferData(const GeometryViewPtr& geometry, core
 
 inline UInt Engine::flush()
 {
-    return submitPendingCommandList_();
+    if (isMultiThreaded_) {
+        return submitPendingCommandList_();
+    }
+    return 0;
 }
 
 inline void Engine::finish()
 {
-    UInt id = submitPendingCommandList_();
-    waitCommandListTranslationFinished_(id);
+    if (isMultiThreaded_) {
+        UInt id = submitPendingCommandList_();
+        waitCommandListTranslationFinished_(id);
+    }
 }
 
 } // namespace vgc::graphics

@@ -187,13 +187,10 @@ bool UiWidget::event(QEvent* e)
 void UiWidget::initializeGL()
 {
     engine_ = vgc::ui::internal::QglEngine::create(context());
+    engine_->init();
     QSurface* surface = context()->surface();
     graphics::SwapChainPtr swapChain = engine_->createSwapChainFromSurface(surface);
     engine_->setSwapChain(swapChain);
-    engine_->start();
-    engine_->finish(); // finish initializing builtins
-    // Qt expects context to still be current
-    context()->makeCurrent(surface);
 
     // Initialize widget for painting.
     // Note that initializedGL() is never called if the widget is never visible.
@@ -227,7 +224,7 @@ void UiWidget::paintGL()
 
     // setViewport & present is done by Qt
 
-    engine_->makeCurrent();
+    engine_->beginFrame(true);
     engine_->clear(core::Color(0.337, 0.345, 0.353));
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);

@@ -105,7 +105,7 @@ private:
 class VGC_GRAPHICS_API Buffer : public Resource {
 protected:
     Buffer(ResourceRegistry* registry, const BufferCreateInfo& info)
-        : Resource(registry) , lengthInBytes_(0) , info_(info)
+        : Resource(registry), info_(info), lengthInBytes_(0)
     {
         // Limitation of D3D11 impl
         const BindFlags bindFlags = this->bindFlags();
@@ -148,11 +148,9 @@ public:
 protected:
     friend Engine;
 
-    Int gpuLengthInBytes_ = 0;
-
 private:
-    Int lengthInBytes_ = 0;
     BufferCreateInfo info_;
+    Int lengthInBytes_ = 0;
 };
 using BufferPtr = ResourcePtr<Buffer>;
 
