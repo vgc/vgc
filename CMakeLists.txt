@@ -226,6 +226,22 @@ message(STATUS "") # newline
 # VGC libs, which forces them to use Q_EMIT/Q_SIGNALS/Q_SLOTS, but doesn't
 # force their clients to do the same.
 #
+# If necessary, note that it is also possible to include private Qt headers,
+# for example:
+#
+#  vgc/CMakeLists.txt:
+#    find_package(Qt5Core COMPONENTS Private)
+#    set(VGC_QT_CORE_PRIVATE Qt5::CorePrivate)
+#
+#  libs/vgc/graphics/CMakeLists.txt:
+#    vgc_add_library(graphics
+#         THIRD_DEPENDENCIES
+#             ${VGC_QT_CORE}
+#             ${VGC_QT_CORE_PRIVATE}
+#
+#  libs/vgc/graphics/text.cpp:
+#    #include <QtCore/private/qunicodetools_p.h>
+#
 set(VGC_QT_VERSION "" CACHE STRING "Which Qt major version to use (latest by default)")
 message(STATUS "[Qt]")
 if(NOT VGC_QT_VERSION)
@@ -234,9 +250,9 @@ if(NOT VGC_QT_VERSION)
         find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
     endif()
 elseif(VGC_QT_VERSION EQUAL 6)
-    find_package(Qt6 COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets REQUIRED)
+    find_package(Qt6 COMPONENTS Private Core Gui Widgets OpenGL OpenGLWidgets REQUIRED)
 elseif(VGC_QT_VERSION EQUAL 5)
-    find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+    find_package(Qt5 COMPONENTS Private Core Gui Widgets REQUIRED)
 else()
     message(FATAL_ERROR "Given VGC_QT_VERSION (${VGC_QT_VERSION}) is not supported.")
 endif()

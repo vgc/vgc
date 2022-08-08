@@ -497,43 +497,45 @@ Int RichText::movedPosition(
         RichTextMoveOperation operation,
         Int /* selectionIndex */) {
 
+    using Op = RichTextMoveOperation;
+
     switch (operation) {
-    case NoMove:
+    case Op::NoMove:
         return position;
-    case StartOfLine:
+    case Op::StartOfLine:
         // TODO: update this when adding support for multiline text
         return shapedText_.minPosition();
-    case StartOfText:
+    case Op::StartOfText:
         return shapedText_.minPosition();
-    case StartOfSelection:
+    case Op::StartOfSelection:
         return (std::min)(selectionStart_, selectionEnd_);
-    case EndOfLine:
+    case Op::EndOfLine:
         // TODO: update this when adding support for multiline text
         return shapedText_.maxPosition();
-    case EndOfText:
+    case Op::EndOfText:
         return shapedText_.maxPosition();
-    case EndOfSelection:
+    case Op::EndOfSelection:
         return (std::max)(selectionStart_, selectionEnd_);
-    case PreviousCharacter:
+    case Op::PreviousCharacter:
         return shapedText_.previousBoundary(position, TextBoundaryMarker::Grapheme);
-    case PreviousWord:
+    case Op::PreviousWord:
         return shapedText_.previousBoundary(position, TextBoundaryMarker::Word);
-    case NextCharacter:
+    case Op::NextCharacter:
         return shapedText_.nextBoundary(position, TextBoundaryMarker::Grapheme);
-    case NextWord:
+    case Op::NextWord:
         return shapedText_.nextBoundary(position, TextBoundaryMarker::Word);
     // TODO: map left/right to next/previous if text direction is rtl
-    case LeftOneCharacter:
+    case Op::LeftOneCharacter:
         return shapedText_.previousBoundary(position, TextBoundaryMarker::Grapheme);
-    case LeftOneWord:
+    case Op::LeftOneWord:
         return shapedText_.previousBoundary(position, TextBoundaryMarker::Word);
-    case LeftOfSelection:
+    case Op::LeftOfSelection:
         return (std::min)(selectionStart_, selectionEnd_);
-    case RightOneCharacter:
+    case Op::RightOneCharacter:
         return shapedText_.nextBoundary(position, TextBoundaryMarker::Grapheme);
-    case RightOneWord:
+    case Op::RightOneWord:
         return shapedText_.nextBoundary(position, TextBoundaryMarker::Word);
-    case RightOfSelection:
+    case Op::RightOfSelection:
         return (std::max)(selectionStart_, selectionEnd_);
     default:
         // Silence compiler warning

@@ -30,7 +30,7 @@ namespace vgc::graphics {
 VGC_DECLARE_OBJECT(RichText);
 VGC_DECLARE_OBJECT(RichTextSpan);
 
-enum RichTextMoveOperation {
+enum class RichTextMoveOperation {
     NoMove,
     StartOfLine,
     StartOfText,

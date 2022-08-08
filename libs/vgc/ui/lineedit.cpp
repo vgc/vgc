@@ -225,7 +225,7 @@ bool LineEdit::onMousePress(MouseEvent* event)
             }
             else {
                 mouseSelectionMarkers_ = mod ? graphics::TextBoundaryMarker::Word
-                                             : graphics::TextBoundaryMarker::Line;
+                                             : graphics::TextBoundaryMarker::MandatoryLineBreak;
                 mouseSelectionInitialPair_ =
                     richText_->positionPairFromPoint(point, mouseSelectionMarkers_);
             }

@@ -115,15 +115,85 @@ private:
     TextVerticalAlign verticalAlign_;
 };
 
-enum class TextBoundaryMarker : UInt32 {
-    None             = 0x00,
-    Grapheme         = 0x01,
-    Word             = 0x02,
-    Line             = 0x04,
+/// \enum vgc::graphics::TextBoundaryMarker
+/// \brief Stores or queries boundary information about text positions.
+///
+/// This enumeration represents the different boundary properties
+/// that can be stored or queried about text positions.
+///
+/// # Text segmentation
+///
+/// Text written in natural languages can typically be decomposed into text
+/// elements such as graphemes ("user-perceived character"), words, and
+/// sentences. Guidelines for determining the boundaries between these elements
+/// is provided by the Unicode standard at:
+///
+/// https://www.unicode.org/reports/tr29
+///
+/// Computing these boundaries is important in user interfaces, as it allows a
+/// user to interact with the text in meaningful ways, for example, moving the
+/// text caret one grapheme or one word at a time, selecting a word by
+/// double-clicking on it, etc.
+///
+/// We call "significant" any word which is not only made of whitespace or
+/// punctuaction. This is sometimes useful to navigate from word to word, by
+/// automatically skipping whitespaces and punctuation.
+///
+/// # Line break opportunities
+///
+/// For word-wrapping purposes, it is important to know at which positions it
+/// is prohibited, allowed, or mandatory to split a long line into multiple
+/// lines. Guidelines for determining such line break opportunities are
+/// provided by the Unicode standard at:
+///
+/// https://www.unicode.org/reports/tr14
+///
+/// All line break opportunities, whether mandatory or optional, are marked
+/// with the `LineBreakOpportunity` flag.
+///
+/// If the `MandatoryLineBreak` flag is set, then the line break is mandatory.
+/// This typically occurs at the first position, the last position, or when a
+/// "newline character" (CR or CRLF) is found.
+///
+/// If the `MandatoryLineBreak` flag is not set, then the line break is
+/// optional. This typically occurs in two situations:
+///
+/// 1. At the beginning of a significant word, in which case the line can be
+/// broken without any additional marking, and the `SoftHyphen` flag is set to
+/// false.
+///
+/// 2. Just after an explicit soft hyphen character (U+00AD), or in the middle
+/// of word at a position that is considered breakable based on an algorithm or
+/// dictionary. In this case, the `SoftHyphen` flag is set to true, and a
+/// hyphen mark should typically be added at the end of the line if one decides
+/// to break the line here.
+///
+enum class TextBoundaryMarker : UInt16 {
+    None                  = 0x00,
 
-    // TODO? HardLineBreak, WordStart, WordEnd, LineWrap, LineBreakOpportunity, Span, Bidi, Style, etc.
+    Grapheme              = 0x01,
+    Word                  = 0x02,
+    Sentence              = 0x04,
+
+    SignificantWordStart  = 0x08,
+    SignificantWordEnd    = 0x10,
+
+    LineBreakOpportunity  = 0x20,
+    MandatoryLineBreak    = 0x40,
+    SoftHyphen            = 0x80
+
+    // TODO: add other useful boundaries: script, bidi, span, etc.
 };
 VGC_DEFINE_FLAGS(TextBoundaryMarkers, TextBoundaryMarker);
+
+using TextBoundaryMarkersArray = core::Array<TextBoundaryMarkers>;
+
+/// Computes boundary markers for the given UTF-8 encoded text.
+///
+/// The length of the returned array is `text.length() + 1`.
+///
+VGC_GRAPHICS_API
+TextBoundaryMarkersArray computeBoundaryMarkers(std::string_view text);
 
 /// \class vgc::graphics::ShapedGlyph
 /// \brief Represents a position within a shaped text.
@@ -818,100 +888,6 @@ public:
 private:
     bool isVisible_;
     Int bytePosition_;
-};
-
-/// \class vgc::graphics::TextBoundaryType
-/// \brief The different types of Unicode text segmentation
-///
-/// See also:
-/// - TextBoundaryIterator
-/// - http://www.unicode.org/reports/tr29/
-/// - https://doc.qt.io/qt-5/qtextboundaryfinder.html
-///
-enum class TextBoundaryType {
-    Grapheme = 0,
-    Word = 1,
-    Sentence = 2,
-    Line = 3
-};
-
-// TODO: TextBoundaryReason(s). See QTextBoundaryFinder::BoundaryReason(s)
-
-/// \class vgc::graphics::TextBoundaryIterator
-/// \brief Iterates through a string based on Unicode text boundaries.
-///
-/// This is a thin wrapper around QTextBoundaryFinder, based on std::string
-/// rather than QChar/QString.
-///
-/// See:
-/// - https://doc.qt.io/qt-5/qtextboundaryfinder.html
-/// - https://unicode.org/reports/tr29/
-///
-class VGC_GRAPHICS_API TextBoundaryIterator {
-public:
-    /// Creates a TextBoundaryIterator that iterates over the given UTF-8 string
-    /// based on the given boundary type.
-    ///
-    TextBoundaryIterator(TextBoundaryType type, const std::string& string);
-
-    /// Destroys the TextBoundaryIterator.
-    ///
-    ~TextBoundaryIterator();
-
-    // Disable copy, move, assign, and move-assign
-    TextBoundaryIterator(const TextBoundaryIterator& other) = delete;
-    TextBoundaryIterator(TextBoundaryIterator&& other) = delete;
-    TextBoundaryIterator& operator=(const TextBoundaryIterator& other) = delete;
-    TextBoundaryIterator& operator=(TextBoundaryIterator&& other) = delete;
-
-    /// Returns whether the current position is at a boundary.
-    ///
-    bool isAtBoundary() const;
-
-    /// Returns whether the iterator is in a valid state.
-    ///
-    bool isValid() const;
-
-    /// Returns the number of bytes of the input UTF-8 string.
-    ///
-    Int	numBytes() const;
-
-    /// Returns the current position of the iterator, that is, the
-    /// corresponding index in the input UTF-8 string. The range is from 0 to
-    /// the number of bytes of the input string (included).
-    ///
-    Int	position() const;
-
-    /// Moves the iterator to the given position, snapping it to a valid position.
-    ///
-    void setPosition(Int position);
-
-    /// Moves the iterator to the end of the string. This is equivalent to
-    /// setPosition(string.size()).
-    ///
-    void toEnd();
-
-    /// Moves the iterator to the next boundary and returns that position.
-    /// Returns -1 if there is no next boundary.
-    ///
-    Int	toNextBoundary();
-
-    /// Moves the iterator to the previous boundary and returns that position.
-    /// Returns -1 if there is no previous boundary.
-    ///
-    Int	toPreviousBoundary();
-
-    /// Moves the iterator to the beginning of the string. This is equivalent to
-    /// setPosition(0).
-    ///
-    void toStart();
-
-    /// Returns the type of this TextBoundaryIterator.
-    ///
-    TextBoundaryType type() const;
-
-private:
-    internal::TextBoundaryIteratorImpl* impl_;
 };
 
 } // namespace graphics
