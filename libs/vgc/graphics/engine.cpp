@@ -23,8 +23,8 @@ namespace graphics {
 
 Engine::Engine(const EngineCreateInfo& createInfo)
     : Object()
-    , createInfo_(createInfo)
     , resourceRegistry_(new detail::ResourceRegistry())
+    , createInfo_(createInfo)
 {
     framebufferStack_.emplaceLast();
 

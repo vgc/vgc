@@ -85,7 +85,7 @@ struct Span {
 
     T* end() const
     {
-        return data_ + size_;
+        return data_ + length_;
     }
 
     T* data_;
@@ -202,7 +202,6 @@ protected:
     void onDestroyed() override;
 
 public:
-    using SwapChainCreateInfo = SwapChainCreateInfo;
 
     const WindowSwapChainFormat& windowSwapChainFormat() const
     {
