@@ -18,6 +18,11 @@
 #include <vgc/graphics/text.h>
 
 using namespace vgc;
+using core::Array;
+using graphics::TextBoundaryMarker;
+using graphics::TextBoundaryMarkers;
+using graphics::TextBoundaryMarkersArray;
+using graphics::computeBoundaryMarkers;
 
 std::string acute_e_singlepoint = "\xC3" "\xA9"; // U+00E9 é
 std::string acute_e_doublepoint = "\x65"         // U+0065 e
@@ -55,17 +60,14 @@ std::string lazyredcat_chinese = "懒惰的红猫";
 
 std::string ff_ligature = "ff";
 
-Int numGraphemes(const std::string& s)
+Int numGraphemes(std::string_view text)
 {
-    graphics::TextBoundaryIterator it(graphics::TextBoundaryType::Grapheme, s);
-
-    Int numBytes = it.numBytes();
-    Int res = 0;
-    Int pos = it.position();
-    while (pos < numBytes) {
-        it.toNextBoundary();
-        pos = it.position();
-        ++res;
+    TextBoundaryMarkersArray markersArray = computeBoundaryMarkers(text);
+    Int res = -1;
+    for (TextBoundaryMarkers markers : markersArray) {
+        if (markers.has(TextBoundaryMarker::Grapheme)) {
+            ++res;
+        }
     }
     return res;
 }
