@@ -788,7 +788,6 @@ SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInf
     wnd->setSurfaceType(QSurface::SurfaceType::OpenGLSurface);
     wnd->setFormat(format_);
     wnd->create();
-    VGC_WARNING(LogVgcUi, "window format samples: {}", wnd->format().samples());
 
     QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
     framebuffer->isDefault_ = true;
@@ -1173,8 +1172,6 @@ void QglEngine::setSwapChain_(const SwapChainPtr& swapChain)
         surface_ = offscreenSurface_;
     }
     ctx_->makeCurrent(surface_);
-    VGC_WARNING(LogVgcUi, "ctx_ surface format samples: {}", ctx_->surface()->format().samples());
-    VGC_WARNING(LogVgcUi, "ctx_ format samples: {}", ctx_->format().samples());
 }
 
 void QglEngine::setFramebuffer_(const FramebufferPtr& aFramebuffer)
