@@ -52,7 +52,7 @@ public:
     }
 
     // texture views are not supported by Opengl until core 4.3
-    // 
+    //
     //void setNumLayers(UInt8 numLayers)
     //{
     //    numLayers_ = numLayers;
@@ -134,18 +134,18 @@ protected:
         : Resource(registry)
         , info_(createInfo)
         , viewedResource_(image)
-        , format_(image->format()) {
+        , pixelFormat_(image->pixelFormat()) {
     }
 
     ImageView(ResourceRegistry* registry,
               const ImageViewCreateInfo& createInfo,
               const BufferPtr& buffer,
-              ImageFormat format,
+              PixelFormat pixelFormat,
               UInt32 numBufferElements)
         : Resource(registry)
         , info_(createInfo)
         , viewedResource_(buffer)
-        , format_(format)
+        , pixelFormat_(pixelFormat)
         , numBufferElements_(numBufferElements) {
     }
 
@@ -185,9 +185,9 @@ public:
         return info_.bindFlags();
     }
 
-    ImageFormat format() const
+    PixelFormat pixelFormat() const
     {
-        return format_;
+        return pixelFormat_;
     }
 
     UInt32 numBufferElements() const
@@ -219,7 +219,7 @@ protected:
 private:
     ImageViewCreateInfo info_;
     ResourcePtr<Resource> viewedResource_;
-    ImageFormat format_;
+    PixelFormat pixelFormat_;
     UInt32 numBufferElements_ = 0;
 };
 using ImageViewPtr = ResourcePtr<ImageView>;

@@ -37,6 +37,9 @@ enum class WindowNativeHandleType : uint8_t {
     QOpenGLWindow,
 };
 
+// XXX do we let width/height configurable ?
+//     shouldn't it match the window size anyway ?
+
 class VGC_GRAPHICS_API SwapChainCreateInfo {
 public:
     UInt32 width() const
@@ -57,16 +60,6 @@ public:
     void setHeight(UInt32 height)
     {
         height_ = height;
-    }
-
-    SwapChainTargetFormat format() const
-    {
-        return format_;
-    }
-
-    void setFormat(SwapChainTargetFormat format)
-    {
-        format_ = format;
     }
 
     void* windowNativeHandle() const
@@ -96,26 +89,6 @@ public:
         windowed_ = windowed;
     }
 
-    UInt8 numSamples() const
-    {
-        return numSamples_;
-    }
-
-    void setNumSamples(UInt8 numSamples)
-    {
-        numSamples_ = numSamples;
-    }
-
-    UInt8 numBuffers() const
-    {
-        return numBuffers_;
-    }
-
-    void setNumBuffers(UInt8 numBuffers)
-    {
-        numBuffers_ = numBuffers;
-    }
-
     UInt flags() const
     {
         return flags_;
@@ -129,13 +102,9 @@ public:
 private:
     UInt32 width_ = 100;
     UInt32 height_ = 100;
-    SwapChainTargetFormat format_ = SwapChainTargetFormat::RGBA_8_UNORM;
-    // XXX add support for sample quality ?
     void* windowNativeHandle_ = nullptr;
     WindowNativeHandleType windowNativeHandleType_ = WindowNativeHandleType::None;
     bool windowed_ = true;
-    UInt8 numSamples_ = 1;
-    UInt8 numBuffers_ = 2;
     UInt flags_ = 0;
 };
 
@@ -159,11 +128,6 @@ public:
     const SwapChainCreateInfo& desc() const
     {
         return info_;
-    }
-
-    ImageFormat backBufferFormat() const
-    {
-        return swapChainTargetFormatToImageFormat(info_.format());
     }
 
     UInt32 numPendingPresents() const

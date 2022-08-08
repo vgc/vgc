@@ -67,14 +67,14 @@ public:
         rank_ = rank;
     }
 
-    ImageFormat format() const
+    PixelFormat pixelFormat() const
     {
-        return format_;
+        return pixelFormat_;
     }
 
-    void setFormat(ImageFormat format)
+    void setPixelFormat(PixelFormat pixelFormat)
     {
-        format_ = format;
+        pixelFormat_ = pixelFormat;
     }
 
     UInt8 numLayers() const
@@ -166,7 +166,7 @@ private:
     UInt32 width_ = 0;
     UInt32 height_ = 0;
     ImageRank rank_ = ImageRank::_1D;
-    ImageFormat format_ = ImageFormat::Unknown;
+    PixelFormat pixelFormat_ = PixelFormat::Unknown;
     UInt8 numLayers_ = 1;
     UInt8 numMipLevels_ = 1;
     UInt8 numSamples_ = 1;
@@ -205,9 +205,9 @@ public:
         return info_.rank();
     }
 
-    ImageFormat format() const
+    PixelFormat pixelFormat() const
     {
-        return info_.format();
+        return info_.pixelFormat();
     }
 
     UInt8 numLayers() const

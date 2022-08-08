@@ -112,8 +112,8 @@ private:
     //float slopeScaledDepthBias_;
     bool isDepthClippingEnabled_ = false;
     bool isScissoringEnabled_ = false;
-    bool isMultisamplingEnabled_ = false;
-    bool isLineAntialiasingEnabled_ = false;
+    bool isMultisamplingEnabled_ = true;
+    bool isLineAntialiasingEnabled_ = true;
 };
 
 /// \class vgc::graphics::RasterizerState

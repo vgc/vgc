@@ -32,6 +32,8 @@
 
 namespace vgc::ui {
 
+static constexpr bool debugEvents = false;
+
 Window::Window(ui::WidgetPtr widget) :
     QWindow(),
     widget_(widget),
@@ -45,17 +47,18 @@ Window::Window(ui::WidgetPtr widget) :
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
 
     graphics::SwapChainCreateInfo scd = {};
-    scd.setNumBuffers(2);
-    scd.setNumSamples(8);
 
-    const bool useRenderThread = false;
+    graphics::EngineCreateInfo engineConfig = {};
+    graphics::WindowSwapChainFormat& windowSwapChainFormat = engineConfig.windowSwapChainFormat();
+    windowSwapChainFormat.setNumBuffers(2);
+    windowSwapChainFormat.setNumSamples(8);
+    engineConfig.setMultithreadingEnabled(true);
 
 #if defined(VGC_CORE_COMPILER_MSVC) && FALSE
     // RasterSurface looks ok since Qt seems to not automatically create a backing store.
     setSurfaceType(QWindow::RasterSurface);
     QWindow::create();
-    engine_ = graphics::D3d11Engine::create(useRenderThread);
-    engine_->init();
+    engine_ = graphics::D3d11Engine::create(engineConfig);
 
     HWND hwnd = (HWND)QWindow::winId();
     hwnd_ = hwnd;
@@ -82,9 +85,7 @@ Window::Window(ui::WidgetPtr widget) :
     std::string classNameA(classNameW.begin(), classNameW.end());
     //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
 #else
-    setSurfaceType(QWindow::OpenGLSurface);
-    engine_ = internal::QglEngine::create(useRenderThread);
-
+    engine_ = internal::QglEngine::create(engineConfig);
     scd.setWindowNativeHandle(static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
 #endif
 
@@ -103,8 +104,7 @@ Window::Window(ui::WidgetPtr widget) :
         createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
         blendState_ = engine_->createBlendState(createInfo);
     }
-    // XXX move init in create function ?
-    engine_->init();
+
     engine_->setSwapChain(swapChain_);
     engine_->setDefaultFramebuffer();
 
@@ -204,7 +204,9 @@ void Window::resizeEvent(QResizeEvent* evt)
     QSize size = evt->size();
     [[maybe_unused]] int w = size.width();
     [[maybe_unused]] int h = size.height();
-    VGC_DEBUG(LogVgcUi, core::format("resizeEvent({:04d}, {:04d})", w, h));
+    if (debugEvents) {
+        VGC_DEBUG(LogVgcUi, core::format("resizeEvent({:04d}, {:04d})", w, h));
+    }
 
 #if !defined(VGC_CORE_COMPILER_MSVC)
     width_ = w;
@@ -281,7 +283,9 @@ void Window::keyReleaseEvent(QKeyEvent* event)
 //}
 
 void Window::paint(bool sync) {
-    VGC_DEBUG(LogVgcUi, "paint({})", sync);
+    if (debugEvents) {
+        VGC_DEBUG(LogVgcUi, "paint({})", sync);
+    }
 
     if (!isExposed()) {
         return;
@@ -351,7 +355,9 @@ bool Window::event(QEvent* e)
     switch (e->type()) {
     case QEvent::UpdateRequest:
         if (!activeSizemove_) {
-            VGC_DEBUG(LogVgcUi, "paint from UpdateRequest");
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, "paint from UpdateRequest");
+            }
             paint(true);
         }
         return true;
@@ -402,7 +408,9 @@ bool Window::nativeEvent(const QByteArray& eventType, void* message, NativeEvent
             UINT h = HIWORD(msg->lParam);
             width_ = w;
             height_ = h;
-            VGC_DEBUG(LogVgcUi, core::format("WM_SIZE({:04d}, {:04d})", width_, height_));
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, core::format("WM_SIZE({:04d}, {:04d})", width_, height_));
+            }
 
             geometry::Camera2d c;
             c.setViewportSize(w, h);
@@ -456,7 +464,9 @@ bool Window::nativeEvent(const QByteArray& eventType, void* message, NativeEvent
         }
         case WM_ERASEBKGND: {
             static int i = 0;
-            VGC_DEBUG(LogVgcUi, "WM_ERASEBKGND {}", ++i);
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, "WM_ERASEBKGND {}", ++i);
+            }
             //if (activeSizemove_) {
             //    paint(true);
             //}
@@ -469,7 +479,9 @@ bool Window::nativeEvent(const QByteArray& eventType, void* message, NativeEvent
         }
         case WM_PAINT: {
             static int i = 0;
-            VGC_DEBUG(LogVgcUi, "WM_PAINT {}", ++i);
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, "WM_PAINT {}", ++i);
+            }
             if (activeSizemove_) {
                 paint(true);
             }
@@ -499,7 +511,9 @@ void Window::exposeEvent(QExposeEvent*)
             requestUpdate();
         }
         else {
-            VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
+            }
             paint(true);
         }
     }

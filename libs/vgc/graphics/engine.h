@@ -92,6 +92,82 @@ struct Span {
     Int length_;
 };
 
+class VGC_GRAPHICS_API WindowSwapChainFormat {
+public:
+    PixelFormat pixelFormat() const
+    {
+        return pixelFormat_;
+    }
+
+    void setPixelFormat(WindowPixelFormat pixelFormat)
+    {
+        pixelFormat_ = windowPixelFormatToPixelFormat(pixelFormat);
+    }
+
+    UInt8 numSamples() const
+    {
+        return numSamples_;
+    }
+
+    void setNumSamples(UInt8 numSamples)
+    {
+        numSamples_ = numSamples;
+    }
+
+    UInt8 numBuffers() const
+    {
+        return numBuffers_;
+    }
+
+    void setNumBuffers(UInt8 numBuffers)
+    {
+        numBuffers_ = numBuffers;
+    }
+
+    UInt flags() const
+    {
+        return flags_;
+    }
+
+    void setFlags(UInt flags)
+    {
+        flags_ = flags;
+    }
+
+private:
+    PixelFormat pixelFormat_ = PixelFormat::RGBA_8_UNORM;
+    UInt8 numSamples_ = 1;
+    UInt8 numBuffers_ = 2;
+    UInt flags_ = 0;
+};
+
+class VGC_GRAPHICS_API EngineCreateInfo {
+public:
+    const WindowSwapChainFormat& windowSwapChainFormat() const
+    {
+        return windowSwapChainFormat_;
+    }
+
+    WindowSwapChainFormat& windowSwapChainFormat()
+    {
+        return windowSwapChainFormat_;
+    }
+
+    bool isMultithreadingEnabled() const
+    {
+        return isMultithreadingEnabled_;
+    }
+
+    void setMultithreadingEnabled(bool enabled)
+    {
+        isMultithreadingEnabled_ = enabled;
+    }
+
+private:
+    WindowSwapChainFormat windowSwapChainFormat_ = {};
+    bool isMultithreadingEnabled_ = false;
+};
+
 // XXX add something to limit the number of pending frames for each swapchain..
 
 /// \class vgc::graphics::Engine
@@ -121,16 +197,24 @@ protected:
     /// Constructs an Engine. This constructor is an implementation detail only
     /// available to derived classes.
     ///
-    Engine(bool useRenderThread = true);
+    Engine(const EngineCreateInfo& createInfo);
 
     void onDestroyed() override;
 
 public:
     using SwapChainCreateInfo = SwapChainCreateInfo;
 
-    // !! public methods should be called on user thread !!
+    const WindowSwapChainFormat& windowSwapChainFormat() const
+    {
+        return createInfo_.windowSwapChainFormat();
+    }
 
-    void init();
+    bool isMultithreadingEnabled() const
+    {
+        return createInfo_.isMultithreadingEnabled();
+    }
+
+    // !! public methods should be called on user thread !!
 
     /// Creates a swap chain for the given window.
     ///
@@ -171,7 +255,7 @@ public:
 
     ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image);
 
-    ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements);
+    ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements);
 
     SamplerStatePtr createSamplerState(const SamplerStateCreateInfo& createInfo);
 
@@ -319,7 +403,7 @@ protected:
     virtual BufferPtr constructBuffer_(const BufferCreateInfo& createInfo) = 0;
     virtual ImagePtr constructImage_(const ImageCreateInfo& createInfo) = 0;
     virtual ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image) = 0;
-    virtual ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements) = 0;
+    virtual ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements) = 0;
     virtual SamplerStatePtr constructSamplerState_(const SamplerStateCreateInfo& createInfo) = 0;
     virtual GeometryViewPtr constructGeometryView_(const GeometryViewCreateInfo& createInfo) = 0;
     virtual BlendStatePtr constructBlendState_(const BlendStateCreateInfo& createInfo) = 0;
@@ -367,6 +451,8 @@ protected:
 protected:
     detail::ResourceRegistry* resourceRegistry_ = nullptr;
 
+    void init_();
+
     // wrapper engines may not know about the host state at some point
     void setStateDirty() {
         dirtyPipelineParameters_ = PipelineParameter::All;
@@ -410,7 +496,7 @@ protected:
     template<typename TCommand, typename... Args>
     void queueCommand_(Args&&... args)
     {
-        if (!isMultiThreaded_) {
+        if (!isMultithreadingEnabled()) {
             TCommand(std::forward<Args>(args)...).execute(this);
             return;
         }
@@ -421,7 +507,7 @@ protected:
     template<typename Lambda>
     void queueLambdaCommand_(std::string_view name, Lambda&& lambda)
     {
-        if (!isMultiThreaded_) {
+        if (!isMultithreadingEnabled()) {
             lambda(this);
             return;
         }
@@ -432,7 +518,7 @@ protected:
     template<typename Data, typename Lambda, typename... Args>
     void queueLambdaCommandWithParameters_(std::string_view name, Lambda&& lambda, Args&&... args)
     {
-        if (!isMultiThreaded_) {
+        if (!isMultithreadingEnabled()) {
             lambda(this, Data{std::forward<Args>(args)...});
             return;
         }
@@ -447,6 +533,8 @@ protected:
 
 private:
     void createBuiltinResources_();
+
+    EngineCreateInfo createInfo_;
 
     // -- pipeline state on the user thread --
 
@@ -493,7 +581,6 @@ private:
 
     // -- render thread + sync --
 
-    bool isMultiThreaded_ = true;
     std::thread renderThread_;
     std::mutex mutex_;
     std::condition_variable wakeRenderThreadConditionVariable_;
@@ -682,7 +769,7 @@ inline void Engine::updateVertexBufferData(const GeometryViewPtr& geometry, core
 
 inline UInt Engine::flush()
 {
-    if (isMultiThreaded_) {
+    if (isMultithreadingEnabled()) {
         return submitPendingCommandList_();
     }
     return 0;
@@ -690,7 +777,7 @@ inline UInt Engine::flush()
 
 inline void Engine::finish()
 {
-    if (isMultiThreaded_) {
+    if (isMultithreadingEnabled()) {
         UInt id = submitPendingCommandList_();
         waitCommandListTranslationFinished_(id);
     }

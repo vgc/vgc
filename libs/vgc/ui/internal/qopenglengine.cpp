@@ -135,7 +135,7 @@ public:
 
     GLFormat glFormat() const
     {
-        return glFormat_;
+        return formatGL_;
     }
 
 protected:
@@ -153,7 +153,7 @@ protected:
 
 private:
     GLuint object_ = badGLObject;
-    GLFormat glFormat_ = {};
+    GLFormat formatGL_ = {};
     GLenum target_ = badGLenum;
 
     friend QglImageView;
@@ -176,7 +176,7 @@ protected:
     QglImageView(ResourceRegistry* registry,
                  const ImageViewCreateInfo& createInfo,
                  const BufferPtr& buffer,
-                 ImageFormat format,
+                 PixelFormat format,
                  UInt32 numBufferElements)
         : ImageView(registry, createInfo, buffer, format, numBufferElements) {
 
@@ -186,7 +186,7 @@ protected:
 public:
     GLFormat glFormat() const
     {
-        return glFormat_;
+        return formatGL_;
     }
 
     GLuint object() const
@@ -211,7 +211,7 @@ protected:
 
 private:
     GLuint bufferTextureObject_ = badGLObject;
-    GLFormat glFormat_ = {};
+    GLFormat formatGL_ = {};
     QglSamplerStatePtr viewSamplerState_;
     QglSamplerStatePtr* samplerStatePtrAddress_ = nullptr;
 };
@@ -402,11 +402,11 @@ private:
 
 // ENUM CONVERSIONS
 
-GLFormat imageFormatToGLFormat(ImageFormat format)
+GLFormat pixelFormatToGLFormat(PixelFormat format)
 {
     using F = GLFormat;
-    static_assert(numImageFormats == 47);
-    static constexpr std::array<GLFormat, numImageFormats> map = {
+    static_assert(numPixelFormats == 47);
+    static constexpr std::array<GLFormat, numPixelFormats> map = {
         // InternalFormat,          PixelType,                          PixelType
         F{ 0,                       0,                                  0                   },  // Unknown
         // Depth
@@ -464,7 +464,7 @@ GLFormat imageFormatToGLFormat(ImageFormat format)
     };
 
     const UInt index = core::toUnderlying(format);
-    if (index == 0 || index >= numImageFormats) {
+    if (index == 0 || index >= numPixelFormats) {
         throw core::LogicError("QglEngine: invalid PrimitiveType enum value");
     }
 
@@ -682,14 +682,35 @@ GLenum filterModeToGLenum(FilterMode mode)
 
 // ENGINE FUNCTIONS
 
-QglEngine::QglEngine(QOpenGLContext* ctx, bool isExternalCtx, bool useRenderThread) :
-    Engine(useRenderThread),
+QglEngine::QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx) :
+    Engine(createInfo),
     ctx_(ctx),
-    isExternalCtx_(isExternalCtx)
+    isExternalCtx_(ctx ? true : false)
 {
-    /*offscreenSurface_ = new QOffscreenSurface();
-    QSurface* surface = ctx_->surface();
-    surface = surface ? surface : offscreenSurface_;*/
+    if (isExternalCtx_) {
+        format_ = ctx_->format();
+    }
+    else {
+        // XXX only allow D24_S8 for now..
+        format_.setDepthBufferSize(24);
+        format_.setStencilBufferSize(8);
+        format_.setVersion(3, 3);
+        format_.setSamples(createInfo.windowSwapChainFormat().numSamples());
+        format_.setSwapInterval(0);
+
+        // XXX use buffer count
+        format_.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+
+        //format_.setProfile(QSurfaceFormat::CoreProfile);
+        //format_.setOption(QSurfaceFormat::DebugContext);
+    }
+    QSurfaceFormat::setDefaultFormat(format_);
+
+    // must be create here since the QWindow constructor is not thread-safe
+    // (can't construct windows is parallel threads)
+    offscreenSurface_ = new QOffscreenSurface();
+    offscreenSurface_->setFormat(format_);
+    offscreenSurface_->create();
 
     currentImageViews_.fill(nullptr);
     currentSamplerStates_.fill(nullptr);
@@ -712,17 +733,20 @@ void QglEngine::onDestroyed()
 }
 
 /* static */
-QglEnginePtr QglEngine::create(bool useRenderThread)
+QglEnginePtr QglEngine::create(const EngineCreateInfo& createInfo)
 {
-
-
-    return QglEnginePtr(new QglEngine(nullptr, false, useRenderThread));
+    QglEnginePtr engine(new QglEngine(createInfo, nullptr));
+    engine->init_();
+    return engine;
 }
 
 /* static */
-QglEnginePtr QglEngine::create(QOpenGLContext* externalCtx)
+QglEnginePtr QglEngine::create(const EngineCreateInfo& createInfo, QOpenGLContext* externalCtx)
 {
-    return QglEnginePtr(new QglEngine(externalCtx, true, false));
+    VGC_CORE_ASSERT(!createInfo.isMultithreadingEnabled()); // no supported atm, Qt does thread affinity
+    QglEnginePtr engine(new QglEngine(createInfo, externalCtx));
+    engine->init_();
+    return engine;
 }
 
 SwapChainPtr QglEngine::createSwapChainFromSurface(QSurface* surface)
@@ -761,17 +785,11 @@ SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInf
     //}
     // XXX can it be an external context ??
 
-    // XXX only allow D24_S8 for now..
-    format_.setDepthBufferSize(24);
-    format_.setStencilBufferSize(8);
-    format_.setVersion(3, 3);
-    format_.setProfile(QSurfaceFormat::CoreProfile);
-    format_.setSamples(createInfo.numSamples());
-    format_.setSwapInterval(0);
-
     QWindow* wnd = static_cast<QWindow*>(createInfo.windowNativeHandle());
+    wnd->setSurfaceType(QSurface::SurfaceType::OpenGLSurface);
     wnd->setFormat(format_);
     wnd->create();
+    VGC_WARNING(LogVgcUi, "window format samples: {}", wnd->format().samples());
 
     QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
     framebuffer->isDefault_ = true;
@@ -804,7 +822,7 @@ BufferPtr QglEngine::constructBuffer_(const BufferCreateInfo& createInfo)
 ImagePtr QglEngine::constructImage_(const ImageCreateInfo& createInfo)
 {
     auto image = makeUnique<QglImage>(resourceRegistry_, createInfo);
-    image->glFormat_ = imageFormatToGLFormat(createInfo.format());
+    image->formatGL_ = pixelFormatToGLFormat(createInfo.pixelFormat());
 
     return ImagePtr(image.release());
 }
@@ -812,15 +830,15 @@ ImagePtr QglEngine::constructImage_(const ImageCreateInfo& createInfo)
 ImageViewPtr QglEngine::constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image)
 {
     auto view = makeUnique<QglImageView>(resourceRegistry_, createInfo, image);
-    view->glFormat_ = image.get_static_cast<QglImage>()->glFormat();
+    view->formatGL_ = image.get_static_cast<QglImage>()->glFormat();
 
     return ImageViewPtr(view.release());
 }
 
-ImageViewPtr QglEngine::constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements)
+ImageViewPtr QglEngine::constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements)
 {
     auto view = makeUnique<QglImageView>(resourceRegistry_, createInfo, buffer, format, numElements);
-    view->glFormat_ = imageFormatToGLFormat(format);
+    view->formatGL_ = pixelFormatToGLFormat(format);
 
     return ImageViewPtr(view.release());
 }
@@ -892,25 +910,16 @@ void QglEngine::resizeSwapChain_(SwapChain* /*swapChain*/, UInt32 /*width*/, UIn
 
 void QglEngine::initContext_()
 {
-    QSurfaceFormat format;
-    format.setVersion(3, 3);
-    //format.setProfile(QSurfaceFormat::CoreProfile);
-    //format.setOption(QSurfaceFormat::DebugContext);
+    //format.setSamples(8); // mandatory, Qt ignores the QWindow format...
 
     if (!isExternalCtx_) {
-
         ctx_ = new QOpenGLContext();
-        ctx_->setFormat(format);
+        ctx_->setFormat(format_);
         VGC_CORE_ASSERT(ctx_->create());
     }
 
-    offscreenSurface_ = new QOffscreenSurface();
-    offscreenSurface_->setFormat(format);
-    offscreenSurface_->create();
-
     QSurface* surface = ctx_->surface();
     surface = surface ? surface : offscreenSurface_;
-
 
     ctx_->makeCurrent(offscreenSurface_);
 
@@ -963,10 +972,10 @@ void QglEngine::initBuiltinResources_()
     rgbDesc.index = rgbLoc_;
     rgbDesc.numElements = 3;
     rgbDesc.elementType = GL_FLOAT;
-    xyDesc.normalized = false;
-    xyDesc.stride = sizeof(XYRGBVertex);
-    xyDesc.offset = (UINT)offsetof(XYRGBVertex, r);
-    xyDesc.bufferIndex = 0;
+    rgbDesc.normalized = false;
+    rgbDesc.stride = sizeof(XYRGBVertex);
+    rgbDesc.offset = (UINT)offsetof(XYRGBVertex, r);
+    rgbDesc.bufferIndex = 0;
 }
 
 void QglEngine::initFramebuffer_(Framebuffer* aFramebuffer)
@@ -1000,10 +1009,10 @@ void QglEngine::initImage_(Image* aImage, const Span<const char>* mipLevelDataSp
 
     UINT numLayers = image->numLayers();
     UINT numMipLevels = image->numMipLevels();
-    bool isImmutable = image->usage() == Usage::Immutable;
-    bool isMultisampled = image->numSamples() > 1;
-    bool isMipmapGenEnabled = image->isMipGenerationEnabled();
-    bool isArray = numLayers > 1;
+    [[maybe_unused]] bool isImmutable = image->usage() == Usage::Immutable;
+    [[maybe_unused]] bool isMultisampled = image->numSamples() > 1;
+    [[maybe_unused]] bool isMipmapGenEnabled = image->isMipGenerationEnabled();
+    [[maybe_unused]] bool isArray = numLayers > 1;
 
     VGC_CORE_ASSERT(isMipmapGenEnabled || (numMipLevels > 0));
 
@@ -1035,7 +1044,7 @@ void QglEngine::initImage_(Image* aImage, const Span<const char>* mipLevelDataSp
                     mipLevel,
                     glFormat.internalFormat,
                     image->width(),
-                    image->numLayers(),
+                    numLayers,
                     0,
                     glFormat.pixelFormat,
                     glFormat.pixelType,
@@ -1131,7 +1140,7 @@ void QglEngine::initImageView_(ImageView* aView)
         api_->glGenTextures(1, &object);
         view->bufferTextureObject_ = object;
         api_->glBindBuffer(GL_TEXTURE_BUFFER, object);
-        api_->glTexBuffer(GL_TEXTURE_BUFFER, view->glFormat_.internalFormat, buffer->object_);
+        api_->glTexBuffer(GL_TEXTURE_BUFFER, view->formatGL_.internalFormat, buffer->object_);
         api_->glBindBuffer(GL_TEXTURE_BUFFER, 0);
     }
 }
@@ -1165,6 +1174,8 @@ void QglEngine::setSwapChain_(const SwapChainPtr& swapChain)
         surface_ = offscreenSurface_;
     }
     ctx_->makeCurrent(surface_);
+    VGC_WARNING(LogVgcUi, "ctx_ surface format samples: {}", ctx_->surface()->format().samples());
+    VGC_WARNING(LogVgcUi, "ctx_ format samples: {}", ctx_->format().samples());
 }
 
 void QglEngine::setFramebuffer_(const FramebufferPtr& aFramebuffer)
@@ -1183,7 +1194,9 @@ void QglEngine::setViewport_(Int x, Int y, Int width, Int height)
 void QglEngine::setProgram_(const ProgramPtr& aProgram)
 {
     QglProgram* program = aProgram.get_static_cast<QglProgram>();
-    program->prog_->bind();
+    if (program) {
+        program->prog_->bind();
+    }
     //api_->glUseProgram(object);
     boundProgram_ = aProgram;
 }

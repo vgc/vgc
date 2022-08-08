@@ -50,14 +50,14 @@ private:
     VGC_OBJECT(D3d11Engine, Engine)
 
 protected:
-    D3d11Engine(bool useRenderThread);
+    D3d11Engine(const EngineCreateInfo& createInfo);
 
     void onDestroyed() override;
 
 public:
     /// Creates a new D3d11Engine.
     ///
-    static D3d11EnginePtr create(bool useRenderThread = true);
+    static D3d11EnginePtr create(const EngineCreateInfo& createInfo);
 
 protected:
     // Implementation of Engine API
@@ -71,7 +71,7 @@ protected:
     BufferPtr constructBuffer_(const BufferCreateInfo& createInfo) override;
     ImagePtr constructImage_(const ImageCreateInfo& createInfo) override;
     ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image) override;
-    ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements) override;
+    ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements) override;
     SamplerStatePtr constructSamplerState_(const SamplerStateCreateInfo& createInfo) override;
     GeometryViewPtr constructGeometryView_(const GeometryViewCreateInfo& createInfo) override;
     BlendStatePtr constructBlendState_(const BlendStateCreateInfo& createInfo) override;
@@ -115,7 +115,7 @@ private:
     ComPtr<ID3D11Device> device_;
     ComPtr<ID3D11DeviceContext> deviceCtx_;
     ComPtr<ID3D11DepthStencilState> depthStencilState_;
-    std::array<ComPtr<ID3D11InputLayout>, core::toUnderlying(BuiltinGeometryLayout::Max_) + 1> builtinLayouts_;
+    std::array<ComPtr<ID3D11InputLayout>, numBuiltinGeometryLayouts> builtinLayouts_;
     ID3D11InputLayout* layout_ = nullptr;
     D3D11_PRIMITIVE_TOPOLOGY topology_ = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 

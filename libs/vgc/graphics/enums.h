@@ -127,7 +127,7 @@ enum class ImageRank : UInt8 {
 };
 inline constexpr UInt8 numImageRanks = static_cast<UInt8>(ImageRank::Max_) + 1;
 
-enum class ImageFormat : UInt8 {
+enum class PixelFormat : UInt8 {
     Unknown,
     // Depth
     D_16_UNORM,
@@ -197,67 +197,67 @@ enum class ImageFormat : UInt8 {
     //BC7_UNORM_SRGB,
     Max_ = RGBA_32_FLOAT,
 };
-inline constexpr UInt8 numImageFormats = static_cast<UInt8>(ImageFormat::Max_) + 1;
+inline constexpr UInt8 numPixelFormats = static_cast<UInt8>(PixelFormat::Max_) + 1;
 
-enum class SwapChainTargetFormat : UInt8 {
-    RGBA_8_UNORM = core::toUnderlying(ImageFormat::RGBA_8_UNORM),
-    RGBA_8_UNORM_SRGB = core::toUnderlying(ImageFormat::RGBA_8_UNORM_SRGB),
+enum class WindowPixelFormat : UInt8 {
+    RGBA_8_UNORM = core::toUnderlying(PixelFormat::RGBA_8_UNORM),
+    RGBA_8_UNORM_SRGB = core::toUnderlying(PixelFormat::RGBA_8_UNORM_SRGB),
 };
 
-inline constexpr ImageFormat swapChainTargetFormatToImageFormat(SwapChainTargetFormat format)
+inline constexpr PixelFormat windowPixelFormatToPixelFormat(WindowPixelFormat format)
 {
-    return static_cast<ImageFormat>(core::toUnderlying(format));
+    return static_cast<PixelFormat>(core::toUnderlying(format));
 }
 
-inline constexpr UInt8 imageFormatToElementSizeInBytes(ImageFormat format)
+inline constexpr UInt8 pixelFormatToElementSizeInBytes(PixelFormat format)
 {
     switch (format) {
-    case ImageFormat::D_16_UNORM:               return 2;
-    case ImageFormat::D_32_FLOAT:               return 4;
-    case ImageFormat::DS_24_UNORM_8_UINT:       return 4;
-    case ImageFormat::DS_32_FLOAT_8_UINT_24_X:  return 8;
-    case ImageFormat::R_8_UNORM:                return 1;
-    case ImageFormat::R_8_SNORM:                return 1;
-    case ImageFormat::R_8_UINT:                 return 1;
-    case ImageFormat::R_8_SINT:                 return 1;
-    case ImageFormat::R_16_UNORM:               return 2;
-    case ImageFormat::R_16_SNORM:               return 2;
-    case ImageFormat::R_16_UINT:                return 2;
-    case ImageFormat::R_16_SINT:                return 2;
-    case ImageFormat::R_16_FLOAT:               return 2;
-    case ImageFormat::R_32_UINT:                return 4;
-    case ImageFormat::R_32_SINT:                return 4;
-    case ImageFormat::R_32_FLOAT:               return 4;
-    case ImageFormat::RG_8_UNORM:               return 2;
-    case ImageFormat::RG_8_SNORM:               return 2;
-    case ImageFormat::RG_8_UINT:                return 2;
-    case ImageFormat::RG_8_SINT:                return 2;
-    case ImageFormat::RG_16_UNORM:              return 4;
-    case ImageFormat::RG_16_SNORM:              return 4;
-    case ImageFormat::RG_16_UINT:               return 4;
-    case ImageFormat::RG_16_SINT:               return 4;
-    case ImageFormat::RG_16_FLOAT:              return 4;
-    case ImageFormat::RG_32_UINT:               return 8;
-    case ImageFormat::RG_32_SINT:               return 8;
-    case ImageFormat::RG_32_FLOAT:              return 8;
-    case ImageFormat::RGB_11_11_10_FLOAT:       return 12;
-    case ImageFormat::RGB_32_UINT:              return 12;
-    case ImageFormat::RGB_32_SINT:              return 12;
-    case ImageFormat::RGB_32_FLOAT:             return 12;
-    case ImageFormat::RGBA_8_UNORM:             return 4;
-    case ImageFormat::RGBA_8_UNORM_SRGB:        return 4;
-    case ImageFormat::RGBA_8_SNORM:             return 4;
-    case ImageFormat::RGBA_8_UINT:              return 4;
-    case ImageFormat::RGBA_8_SINT:              return 4;
-    case ImageFormat::RGBA_10_10_10_2_UNORM:    return 4;
-    case ImageFormat::RGBA_10_10_10_2_UINT:     return 4;
-    case ImageFormat::RGBA_16_UNORM:            return 8;
-    case ImageFormat::RGBA_16_UINT:             return 8;
-    case ImageFormat::RGBA_16_SINT:             return 8;
-    case ImageFormat::RGBA_16_FLOAT:            return 8;
-    case ImageFormat::RGBA_32_UINT:             return 16;
-    case ImageFormat::RGBA_32_SINT:             return 16;
-    case ImageFormat::RGBA_32_FLOAT:            return 16;
+    case PixelFormat::D_16_UNORM:               return 2;
+    case PixelFormat::D_32_FLOAT:               return 4;
+    case PixelFormat::DS_24_UNORM_8_UINT:       return 4;
+    case PixelFormat::DS_32_FLOAT_8_UINT_24_X:  return 8;
+    case PixelFormat::R_8_UNORM:                return 1;
+    case PixelFormat::R_8_SNORM:                return 1;
+    case PixelFormat::R_8_UINT:                 return 1;
+    case PixelFormat::R_8_SINT:                 return 1;
+    case PixelFormat::R_16_UNORM:               return 2;
+    case PixelFormat::R_16_SNORM:               return 2;
+    case PixelFormat::R_16_UINT:                return 2;
+    case PixelFormat::R_16_SINT:                return 2;
+    case PixelFormat::R_16_FLOAT:               return 2;
+    case PixelFormat::R_32_UINT:                return 4;
+    case PixelFormat::R_32_SINT:                return 4;
+    case PixelFormat::R_32_FLOAT:               return 4;
+    case PixelFormat::RG_8_UNORM:               return 2;
+    case PixelFormat::RG_8_SNORM:               return 2;
+    case PixelFormat::RG_8_UINT:                return 2;
+    case PixelFormat::RG_8_SINT:                return 2;
+    case PixelFormat::RG_16_UNORM:              return 4;
+    case PixelFormat::RG_16_SNORM:              return 4;
+    case PixelFormat::RG_16_UINT:               return 4;
+    case PixelFormat::RG_16_SINT:               return 4;
+    case PixelFormat::RG_16_FLOAT:              return 4;
+    case PixelFormat::RG_32_UINT:               return 8;
+    case PixelFormat::RG_32_SINT:               return 8;
+    case PixelFormat::RG_32_FLOAT:              return 8;
+    case PixelFormat::RGB_11_11_10_FLOAT:       return 12;
+    case PixelFormat::RGB_32_UINT:              return 12;
+    case PixelFormat::RGB_32_SINT:              return 12;
+    case PixelFormat::RGB_32_FLOAT:             return 12;
+    case PixelFormat::RGBA_8_UNORM:             return 4;
+    case PixelFormat::RGBA_8_UNORM_SRGB:        return 4;
+    case PixelFormat::RGBA_8_SNORM:             return 4;
+    case PixelFormat::RGBA_8_UINT:              return 4;
+    case PixelFormat::RGBA_8_SINT:              return 4;
+    case PixelFormat::RGBA_10_10_10_2_UNORM:    return 4;
+    case PixelFormat::RGBA_10_10_10_2_UINT:     return 4;
+    case PixelFormat::RGBA_16_UNORM:            return 8;
+    case PixelFormat::RGBA_16_UINT:             return 8;
+    case PixelFormat::RGBA_16_SINT:             return 8;
+    case PixelFormat::RGBA_16_FLOAT:            return 8;
+    case PixelFormat::RGBA_32_UINT:             return 16;
+    case PixelFormat::RGBA_32_SINT:             return 16;
+    case PixelFormat::RGBA_32_FLOAT:            return 16;
     default:
         break;
     }

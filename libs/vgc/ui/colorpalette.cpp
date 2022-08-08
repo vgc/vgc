@@ -325,7 +325,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         // Load triangles
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
-    engine->clear(core::Color(0.337, 0.345, 0.353));
+    //engine->clear(core::Color(0.337, 0.345, 0.353));
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
 }

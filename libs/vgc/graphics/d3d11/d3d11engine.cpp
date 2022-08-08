@@ -117,7 +117,7 @@ protected:
     D3d11ImageView(ResourceRegistry* registry,
                    const ImageViewCreateInfo& createInfo,
                    const BufferPtr& buffer,
-                   ImageFormat format,
+                   PixelFormat format,
                    UInt32 numBufferElements)
         : ImageView(registry, createInfo, buffer, format, numBufferElements) {
 
@@ -437,61 +437,61 @@ private:
 
 // ENUM CONVERSIONS
 
-DXGI_FORMAT imageFormatToDxgiFormat(ImageFormat format)
+DXGI_FORMAT pixelFormatToDxgiFormat(PixelFormat format)
 {
     switch (format) {
         // Depth
-    case ImageFormat::D_16_UNORM:               return DXGI_FORMAT_D16_UNORM;
-    case ImageFormat::D_32_FLOAT:               return DXGI_FORMAT_D32_FLOAT;
+    case PixelFormat::D_16_UNORM:               return DXGI_FORMAT_D16_UNORM;
+    case PixelFormat::D_32_FLOAT:               return DXGI_FORMAT_D32_FLOAT;
         // Depth + Stencil
-    case ImageFormat::DS_24_UNORM_8_UINT:       return DXGI_FORMAT_D24_UNORM_S8_UINT;
-    case ImageFormat::DS_32_FLOAT_8_UINT_24_X:  return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+    case PixelFormat::DS_24_UNORM_8_UINT:       return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    case PixelFormat::DS_32_FLOAT_8_UINT_24_X:  return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
         // Red
-    case ImageFormat::R_8_UNORM:                return DXGI_FORMAT_R8_UNORM;
-    case ImageFormat::R_8_SNORM:                return DXGI_FORMAT_R8_SNORM;
-    case ImageFormat::R_8_UINT:                 return DXGI_FORMAT_R8_UINT;
-    case ImageFormat::R_8_SINT:                 return DXGI_FORMAT_R8_SINT;
-    case ImageFormat::R_16_UNORM:               return DXGI_FORMAT_R16_UNORM;
-    case ImageFormat::R_16_SNORM:               return DXGI_FORMAT_R16_SNORM;
-    case ImageFormat::R_16_UINT:                return DXGI_FORMAT_R16_UINT;
-    case ImageFormat::R_16_SINT:                return DXGI_FORMAT_R16_SINT;
-    case ImageFormat::R_16_FLOAT:               return DXGI_FORMAT_R16_FLOAT;
-    case ImageFormat::R_32_UINT:                return DXGI_FORMAT_R32_UINT;
-    case ImageFormat::R_32_SINT:                return DXGI_FORMAT_R32_SINT;
-    case ImageFormat::R_32_FLOAT:               return DXGI_FORMAT_R32_FLOAT;
+    case PixelFormat::R_8_UNORM:                return DXGI_FORMAT_R8_UNORM;
+    case PixelFormat::R_8_SNORM:                return DXGI_FORMAT_R8_SNORM;
+    case PixelFormat::R_8_UINT:                 return DXGI_FORMAT_R8_UINT;
+    case PixelFormat::R_8_SINT:                 return DXGI_FORMAT_R8_SINT;
+    case PixelFormat::R_16_UNORM:               return DXGI_FORMAT_R16_UNORM;
+    case PixelFormat::R_16_SNORM:               return DXGI_FORMAT_R16_SNORM;
+    case PixelFormat::R_16_UINT:                return DXGI_FORMAT_R16_UINT;
+    case PixelFormat::R_16_SINT:                return DXGI_FORMAT_R16_SINT;
+    case PixelFormat::R_16_FLOAT:               return DXGI_FORMAT_R16_FLOAT;
+    case PixelFormat::R_32_UINT:                return DXGI_FORMAT_R32_UINT;
+    case PixelFormat::R_32_SINT:                return DXGI_FORMAT_R32_SINT;
+    case PixelFormat::R_32_FLOAT:               return DXGI_FORMAT_R32_FLOAT;
         // RG
-    case ImageFormat::RG_8_UNORM:               return DXGI_FORMAT_R8G8_UNORM;
-    case ImageFormat::RG_8_SNORM:               return DXGI_FORMAT_R8G8_SNORM;
-    case ImageFormat::RG_8_UINT:                return DXGI_FORMAT_R8G8_UINT;
-    case ImageFormat::RG_8_SINT:                return DXGI_FORMAT_R8G8_SINT;
-    case ImageFormat::RG_16_UNORM:              return DXGI_FORMAT_R16G16_UNORM;
-    case ImageFormat::RG_16_SNORM:              return DXGI_FORMAT_R16G16_SNORM;
-    case ImageFormat::RG_16_UINT:               return DXGI_FORMAT_R16G16_UINT;
-    case ImageFormat::RG_16_SINT:               return DXGI_FORMAT_R16G16_SINT;
-    case ImageFormat::RG_16_FLOAT:              return DXGI_FORMAT_R16G16_FLOAT;
-    case ImageFormat::RG_32_UINT:               return DXGI_FORMAT_R32G32_UINT;
-    case ImageFormat::RG_32_SINT:               return DXGI_FORMAT_R32G32_SINT;
-    case ImageFormat::RG_32_FLOAT:              return DXGI_FORMAT_R32G32_FLOAT;
+    case PixelFormat::RG_8_UNORM:               return DXGI_FORMAT_R8G8_UNORM;
+    case PixelFormat::RG_8_SNORM:               return DXGI_FORMAT_R8G8_SNORM;
+    case PixelFormat::RG_8_UINT:                return DXGI_FORMAT_R8G8_UINT;
+    case PixelFormat::RG_8_SINT:                return DXGI_FORMAT_R8G8_SINT;
+    case PixelFormat::RG_16_UNORM:              return DXGI_FORMAT_R16G16_UNORM;
+    case PixelFormat::RG_16_SNORM:              return DXGI_FORMAT_R16G16_SNORM;
+    case PixelFormat::RG_16_UINT:               return DXGI_FORMAT_R16G16_UINT;
+    case PixelFormat::RG_16_SINT:               return DXGI_FORMAT_R16G16_SINT;
+    case PixelFormat::RG_16_FLOAT:              return DXGI_FORMAT_R16G16_FLOAT;
+    case PixelFormat::RG_32_UINT:               return DXGI_FORMAT_R32G32_UINT;
+    case PixelFormat::RG_32_SINT:               return DXGI_FORMAT_R32G32_SINT;
+    case PixelFormat::RG_32_FLOAT:              return DXGI_FORMAT_R32G32_FLOAT;
         // RGB
-    case ImageFormat::RGB_11_11_10_FLOAT:       return DXGI_FORMAT_R11G11B10_FLOAT;
-    case ImageFormat::RGB_32_UINT:              return DXGI_FORMAT_R32G32B32_UINT;
-    case ImageFormat::RGB_32_SINT:              return DXGI_FORMAT_R32G32B32_SINT;
-    case ImageFormat::RGB_32_FLOAT:             return DXGI_FORMAT_R32G32B32_FLOAT;
+    case PixelFormat::RGB_11_11_10_FLOAT:       return DXGI_FORMAT_R11G11B10_FLOAT;
+    case PixelFormat::RGB_32_UINT:              return DXGI_FORMAT_R32G32B32_UINT;
+    case PixelFormat::RGB_32_SINT:              return DXGI_FORMAT_R32G32B32_SINT;
+    case PixelFormat::RGB_32_FLOAT:             return DXGI_FORMAT_R32G32B32_FLOAT;
         // RGBA
-    case ImageFormat::RGBA_8_UNORM:             return DXGI_FORMAT_R8G8B8A8_UNORM;
-    case ImageFormat::RGBA_8_UNORM_SRGB:        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    case ImageFormat::RGBA_8_SNORM:             return DXGI_FORMAT_R8G8B8A8_SNORM;
-    case ImageFormat::RGBA_8_UINT:              return DXGI_FORMAT_R8G8B8A8_UINT;
-    case ImageFormat::RGBA_8_SINT:              return DXGI_FORMAT_R8G8B8A8_SINT;
-    case ImageFormat::RGBA_10_10_10_2_UNORM:    return DXGI_FORMAT_R10G10B10A2_UNORM;
-    case ImageFormat::RGBA_10_10_10_2_UINT:     return DXGI_FORMAT_R10G10B10A2_UINT;
-    case ImageFormat::RGBA_16_UNORM:            return DXGI_FORMAT_R16G16B16A16_UNORM;
-    case ImageFormat::RGBA_16_UINT:             return DXGI_FORMAT_R16G16B16A16_UINT;
-    case ImageFormat::RGBA_16_SINT:             return DXGI_FORMAT_R16G16B16A16_SINT;
-    case ImageFormat::RGBA_16_FLOAT:            return DXGI_FORMAT_R16G16B16A16_FLOAT;
-    case ImageFormat::RGBA_32_UINT:             return DXGI_FORMAT_R32G32B32A32_UINT;
-    case ImageFormat::RGBA_32_SINT:             return DXGI_FORMAT_R32G32B32A32_SINT;
-    case ImageFormat::RGBA_32_FLOAT:            return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case PixelFormat::RGBA_8_UNORM:             return DXGI_FORMAT_R8G8B8A8_UNORM;
+    case PixelFormat::RGBA_8_UNORM_SRGB:        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    case PixelFormat::RGBA_8_SNORM:             return DXGI_FORMAT_R8G8B8A8_SNORM;
+    case PixelFormat::RGBA_8_UINT:              return DXGI_FORMAT_R8G8B8A8_UINT;
+    case PixelFormat::RGBA_8_SINT:              return DXGI_FORMAT_R8G8B8A8_SINT;
+    case PixelFormat::RGBA_10_10_10_2_UNORM:    return DXGI_FORMAT_R10G10B10A2_UNORM;
+    case PixelFormat::RGBA_10_10_10_2_UINT:     return DXGI_FORMAT_R10G10B10A2_UINT;
+    case PixelFormat::RGBA_16_UNORM:            return DXGI_FORMAT_R16G16B16A16_UNORM;
+    case PixelFormat::RGBA_16_UINT:             return DXGI_FORMAT_R16G16B16A16_UINT;
+    case PixelFormat::RGBA_16_SINT:             return DXGI_FORMAT_R16G16B16A16_SINT;
+    case PixelFormat::RGBA_16_FLOAT:            return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    case PixelFormat::RGBA_32_UINT:             return DXGI_FORMAT_R32G32B32A32_UINT;
+    case PixelFormat::RGBA_32_SINT:             return DXGI_FORMAT_R32G32B32A32_SINT;
+    case PixelFormat::RGBA_32_FLOAT:            return DXGI_FORMAT_R32G32B32A32_FLOAT;
     default:
         break;
     }
@@ -691,8 +691,8 @@ D3D11_CULL_MODE cullModeToD3DCullMode(CullMode mode)
 
 // ENGINE FUNCTIONS
 
-D3d11Engine::D3d11Engine(bool useRenderThread)
-    : Engine(useRenderThread)
+D3d11Engine::D3d11Engine(const EngineCreateInfo& createInfo)
+    : Engine(createInfo)
 {
     // XXX add success checks (S_OK)
 
@@ -726,9 +726,11 @@ void D3d11Engine::onDestroyed()
 }
 
 /* static */
-D3d11EnginePtr D3d11Engine::create(bool useRenderThread)
+D3d11EnginePtr D3d11Engine::create(const EngineCreateInfo& createInfo)
 {
-    return D3d11EnginePtr(new D3d11Engine(useRenderThread));
+    D3d11EnginePtr engine(new D3d11Engine(createInfo));
+    engine->init_();
+    return engine;
 }
 
 // USER THREAD pimpl functions
@@ -859,35 +861,26 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
         return nullptr;
     }
 
-    ImageFormat colorViewFormat = {};
+     {};
+
+    const WindowSwapChainFormat& wscFormat = windowSwapChainFormat();
 
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.BufferCount = createInfo.numBuffers();
+    sd.BufferCount = wscFormat.numBuffers();
     sd.BufferDesc.Width = createInfo.width();
     sd.BufferDesc.Height = createInfo.height();
-    switch(createInfo.format()) {
-    case SwapChainTargetFormat::RGBA_8_UNORM: {
-        sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        colorViewFormat = ImageFormat::RGBA_8_UNORM;
-        break;
-    }
-    case SwapChainTargetFormat::RGBA_8_UNORM_SRGB: {
-        sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-        colorViewFormat = ImageFormat::RGBA_8_UNORM_SRGB;
-        break;
-    }
-    default:
-        throw core::LogicError("D3d11SwapChain: unsupported format");
-        break;
-    }
+
+    PixelFormat wpFormat = wscFormat.pixelFormat();
+
+    sd.BufferDesc.Format = pixelFormatToDxgiFormat(wpFormat);
     sd.BufferDesc.RefreshRate.Numerator = 0;
     sd.BufferDesc.RefreshRate.Denominator = 1;
     sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
     // do we need DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT ?
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow = static_cast<HWND>(createInfo.windowNativeHandle());
-    sd.SampleDesc.Count = createInfo.numSamples();
+    sd.SampleDesc.Count = wscFormat.numSamples();
     sd.SampleDesc.Quality = 0;
     sd.Windowed = true;
     //sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
@@ -906,7 +899,7 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
 
     ImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.setRank(ImageRank::_2D);
-    imageCreateInfo.setFormat(colorViewFormat);
+    imageCreateInfo.setPixelFormat(wpFormat);
     // XXX fill it using backBufferDesc
 
     D3d11ImagePtr backBufferImage(new D3d11Image(resourceRegistry_, imageCreateInfo));
@@ -997,7 +990,7 @@ BufferPtr D3d11Engine::constructBuffer_(const BufferCreateInfo& createInfo)
 
 ImagePtr D3d11Engine::constructImage_(const ImageCreateInfo& createInfo)
 {
-    DXGI_FORMAT dxgiFormat = imageFormatToDxgiFormat(createInfo.format());
+    DXGI_FORMAT dxgiFormat = pixelFormatToDxgiFormat(createInfo.pixelFormat());
     if (dxgiFormat == DXGI_FORMAT_UNKNOWN) {
         throw core::LogicError("D3d11: unknown image format");
     }
@@ -1016,11 +1009,11 @@ ImageViewPtr D3d11Engine::constructImageView_(const ImageViewCreateInfo& createI
     return ImageViewPtr(imageView.release());
 }
 
-ImageViewPtr D3d11Engine::constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements)
+ImageViewPtr D3d11Engine::constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements)
 {
     // XXX should check bind flags compatibility in abstract engine
 
-    DXGI_FORMAT dxgiFormat = imageFormatToDxgiFormat(format);
+    DXGI_FORMAT dxgiFormat = pixelFormatToDxgiFormat(format);
     if (dxgiFormat == DXGI_FORMAT_UNKNOWN) {
         throw core::LogicError("D3d11: unknown image format");
     }
@@ -1085,7 +1078,7 @@ void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 he
 
     ImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.setRank(ImageRank::_2D);
-    imageCreateInfo.setFormat(d3dSwapChain->backBufferFormat());
+    imageCreateInfo.setPixelFormat(windowSwapChainFormat().pixelFormat());
     // XXX fill it using backBufferDesc
 
     D3d11ImagePtr backBufferImage(new D3d11Image(resourceRegistry_, imageCreateInfo));
@@ -1138,8 +1131,8 @@ void D3d11Engine::initImage_(Image* image_, const Span<const char>* mipLevelData
 
     UINT numLayers = image->numLayers();
     UINT numMipLevels = image->numMipLevels();
-    bool isImmutable = image->usage() == Usage::Immutable;
-    bool isMultisampled = image->numSamples() > 1;
+    [[maybe_unused]] bool isImmutable = image->usage() == Usage::Immutable;
+    [[maybe_unused]] bool isMultisampled = image->numSamples() > 1;
     bool isMipmapGenEnabled = image->isMipGenerationEnabled();
 
     VGC_CORE_ASSERT(isMipmapGenEnabled || (numMipLevels > 0));

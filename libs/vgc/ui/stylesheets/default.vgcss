@@ -1,6 +1,7 @@
 .Button,
 .Label,
-.LineEdit {
+.LineEdit,
+.Plot2d {
     margin-top: 5dp;
     margin-right: 5dp;
     margin-bottom: 5dp;
@@ -18,6 +19,12 @@
     border-radius: 3dp;
     preferred-width: auto;
     preferred-height: 28dp;
+}
+
+.Plot2d {
+    background-color: rgb(44, 46, 47);
+    background-color-on-hover: rgb(13, 13, 13);
+    border-radius: 3dp;
 }
 
 .Very.Special {

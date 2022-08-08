@@ -69,7 +69,7 @@ private:
     VGC_OBJECT(QglEngine, Engine)
 
 protected:
-    QglEngine(QOpenGLContext* ctx, bool isExternalCtx, bool useRenderThread);
+    QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx);
 
     void onDestroyed() override;
 
@@ -78,8 +78,8 @@ public:
 
     /// Creates a new OpenglEngine.
     ///
-    static QglEnginePtr create(bool useRenderThread);
-    static QglEnginePtr create(QOpenGLContext* externalCtx);
+    static QglEnginePtr create(const EngineCreateInfo& createInfo);
+    static QglEnginePtr create(const EngineCreateInfo& createInfo, QOpenGLContext* externalCtx);
 
     // not part of the common interface
 
@@ -101,7 +101,7 @@ protected:
     BufferPtr constructBuffer_(const BufferCreateInfo& createInfo) override;
     ImagePtr constructImage_(const ImageCreateInfo& createInfo) override;
     ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image) override;
-    ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements) override;
+    ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements) override;
     SamplerStatePtr constructSamplerState_(const SamplerStateCreateInfo& createInfo) override;
     GeometryViewPtr constructGeometryView_(const GeometryViewCreateInfo& createInfo) override;
     BlendStatePtr constructBlendState_(const BlendStateCreateInfo& createInfo) override;

@@ -21,10 +21,10 @@
 namespace vgc {
 namespace graphics {
 
-Engine::Engine(bool useRenderThread)
+Engine::Engine(const EngineCreateInfo& createInfo)
     : Object()
+    , createInfo_(createInfo)
     , resourceRegistry_(new detail::ResourceRegistry())
-    , isMultiThreaded_(useRenderThread)
 {
     framebufferStack_.emplaceLast();
 
@@ -78,29 +78,12 @@ void Engine::onDestroyed()
 
     roundedRectangleProgram_.reset();
 
-    if (isMultiThreaded_) {
+    if (isMultithreadingEnabled()) {
         stopRenderThread_();
     }
     else {
         resourceRegistry_->releaseAllResources(this);
     }
-}
-
-void Engine::init()
-{
-    engineStartTime_ = std::chrono::steady_clock::now();
-    if (isMultiThreaded_) {
-        startRenderThread_();
-    }
-    else {
-        initContext_();
-    }
-    createBuiltinResources_();
-    queueLambdaCommand_(
-        "initBuiltinResources",
-        [](Engine* engine) {
-            engine->initBuiltinResources_();
-        });
 }
 
 SwapChainPtr Engine::createSwapChain(const SwapChainCreateInfo& desc)
@@ -248,7 +231,7 @@ ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, cons
     return imageView;
 }
 
-ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, ImageFormat format, UInt32 numElements)
+ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements)
 {
     // XXX should check bind flags compatibility here
 
@@ -756,7 +739,7 @@ void Engine::beginFrame(bool isStateDirty)
 
 void Engine::endFrame()
 {
-    if (!isMultiThreaded_) {
+    if (!isMultithreadingEnabled()) {
         resourceRegistry_->releaseAndDeleteGarbagedResources(this);
     }
 }
@@ -807,7 +790,7 @@ void Engine::present(UInt32 syncInterval,
     ++swapChain_->numPendingPresents_;
     bool shouldWait = syncInterval > 0;
 
-    if (!isMultiThreaded_ || (shouldWait && shouldPresentWaitFromSyncedUserThread_())) {
+    if (!isMultithreadingEnabled() || (shouldWait && shouldPresentWaitFromSyncedUserThread_())) {
         // Preventing dead-locks
         // See https://docs.microsoft.com/en-us/windows/win32/api/DXGI1_2/nf-dxgi1_2-idxgiswapchain1-present1#remarks
         finish();
@@ -838,6 +821,23 @@ void Engine::present(UInt32 syncInterval,
             submitPendingCommandList_();
         }
     }
+}
+
+void Engine::init_()
+{
+    engineStartTime_ = std::chrono::steady_clock::now();
+    if (isMultithreadingEnabled()) {
+        startRenderThread_();
+    }
+    else {
+        initContext_();
+    }
+    createBuiltinResources_();
+    queueLambdaCommand_(
+        "initBuiltinResources",
+        [](Engine* engine) {
+            engine->initBuiltinResources_();
+        });
 }
 
 void Engine::createBuiltinResources_()
