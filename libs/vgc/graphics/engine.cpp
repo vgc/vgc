@@ -334,6 +334,8 @@ void Engine::setProgram(BuiltinProgram builtinProgram)
         program = simpleProgram_;
         break;
     }
+    default:
+        break;
     }
     if (programStack_.last() != program) {
         programStack_.last() = program;

@@ -186,13 +186,29 @@ bool UiWidget::event(QEvent* e)
 
 void UiWidget::initializeGL()
 {
-    graphics::EngineCreateInfo createInfo = {};
-    createInfo.setMultithreadingEnabled(false);
+    {
+        graphics::EngineCreateInfo createInfo = {};
+        createInfo.setMultithreadingEnabled(false);
+        engine_ = vgc::ui::internal::QglEngine::create(createInfo, context());
+    }
 
-    engine_ = vgc::ui::internal::QglEngine::create(createInfo, context());
     QSurface* surface = context()->surface();
     graphics::SwapChainPtr swapChain = engine_->createSwapChainFromSurface(surface);
     engine_->setSwapChain(swapChain);
+
+    {
+        graphics::RasterizerStateCreateInfo createInfo = {};
+        rasterizerState_ = engine_->createRasterizerState(createInfo);
+    }
+
+    {
+        graphics::BlendStateCreateInfo createInfo = {};
+        createInfo.setEnabled(true);
+        createInfo.setEquationRGB(graphics::BlendOp::Add, graphics::BlendFactor::SourceAlpha, graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setEquationAlpha(graphics::BlendOp::Add, graphics::BlendFactor::One, graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
+        blendState_ = engine_->createBlendState(createInfo);
+    }
 
     // Initialize widget for painting.
     // Note that initializedGL() is never called if the widget is never visible.
@@ -225,24 +241,6 @@ void UiWidget::paintGL()
     }
 
     // setViewport & present is done by Qt
-
-    graphics::RasterizerStatePtr rasterizerState_;
-    graphics::BlendStatePtr blendState_;
-
-    {
-        graphics::RasterizerStateCreateInfo createInfo = {};
-        rasterizerState_ = engine_->createRasterizerState(createInfo);
-    }
-
-    {
-        graphics::BlendStateCreateInfo createInfo = {};
-        createInfo.setEnabled(true);
-        createInfo.setEquationRGB(graphics::BlendOp::Add, graphics::BlendFactor::SourceAlpha, graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setEquationAlpha(graphics::BlendOp::Add, graphics::BlendFactor::One, graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
-        blendState_ = engine_->createBlendState(createInfo);
-    }
-
     GLint vp[4];
     engine_->api()->glGetIntegerv(GL_VIEWPORT, vp);
 
@@ -271,6 +269,8 @@ void UiWidget::paintGL()
 void UiWidget::cleanupGL()
 {
     if (isInitialized_) {
+        blendState_.reset();
+        rasterizerState_.reset();
         engine_ = nullptr;
         isInitialized_ = false;
     }

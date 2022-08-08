@@ -34,7 +34,7 @@ VGC_DECLARE_OBJECT(Engine);
 
 class Resource;
 
-// XXX 
+// XXX
 /*
 
 Before a graphics::Resource can be deleted, its underlying-api-specific
@@ -184,7 +184,7 @@ private:
     }
 
     void incRef_()
-    { 
+    {
 #ifdef VGC_DEBUG
         if (refCount_ <= 0) {
             throw core::LogicError(
@@ -338,8 +338,8 @@ protected:
     ResourcePtr(T* p, CastTag)
         : Base(p)
     {
-        if (p_) {
-            p_->incRef_();
+        if (this->p_) {
+            this->p_->incRef_();
         }
     }
 
@@ -354,8 +354,8 @@ public:
     explicit ResourcePtr(T* p)
         : Base(p)
     {
-        if (p_) {
-            p_->initRef_();
+        if (this->p_) {
+            this->p_->initRef_();
         }
     }
 
@@ -367,8 +367,8 @@ public:
     ResourcePtr(const ResourcePtr<U>& other)
         : Base(other.p_)
     {
-        if (p_) {
-            p_->incRef_();
+        if (this->p_) {
+            this->p_->incRef_();
         }
     }
 
@@ -382,8 +382,8 @@ public:
     ResourcePtr(const ResourcePtr& other)
         : Base(other.p_)
     {
-        if (p_) {
-            p_->incRef_();
+        if (this->p_) {
+            this->p_->incRef_();
         }
     }
 
@@ -396,14 +396,14 @@ public:
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr& operator=(const ResourcePtr<U>& other)
     {
-        if (p_ != other.p_) {
+        if (this->p_ != other.p_) {
             if (other.p_) {
                 other.p_->incRef_();
             }
-            if (p_) {
-                p_->decRef_();
+            if (this->p_) {
+                this->p_->decRef_();
             }
-            p_ = other.p_;
+            this->p_ = other.p_;
         }
         return *this;
     }
@@ -416,22 +416,22 @@ public:
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr& operator=(ResourcePtr<U>&& other)
     {
-        std::swap(p_, other.p_);
+        std::swap(this->p_, other.p_);
         return *this;
     }
 
     ResourcePtr& operator=(ResourcePtr&& other) noexcept
     {
-        std::swap(p_, other.p_);
+        std::swap(this->p_, other.p_);
         return *this;
     }
 
     void reset()
     {
-        if (p_) {
-            p_->decRef_();
+        if (this->p_) {
+            this->p_->decRef_();
 #ifdef VGC_DEBUG
-            p_ = nullptr;
+            this->p_ = nullptr;
 #endif
         }
     }
@@ -441,15 +441,15 @@ public:
         if (p) {
             p->initRef_();
         }
-        if (p_) {
-            p_->decRef_();
+        if (this->p_) {
+            this->p_->decRef_();
         }
-        p_ = p;
+        this->p_ = p;
     }
 
     Int64 useCount() const
     {
-        return p_ ? p_->useCount() : 0;
+        return this->p_ ? this->p_->useCount() : 0;
     }
 };
 
