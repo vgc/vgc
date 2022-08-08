@@ -120,7 +120,7 @@ private:
     D3D11_PRIMITIVE_TOPOLOGY topology_ = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
     template<typename T, typename... Args>
-    _NODISCARD std::unique_ptr<T> makeUnique(Args&&... args) {
+    [[nodiscard]] std::unique_ptr<T> makeUnique(Args&&... args) {
         return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 

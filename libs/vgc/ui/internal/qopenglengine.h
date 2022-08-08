@@ -169,7 +169,7 @@ private:
     // helpers
 
     template<typename T, typename... Args>
-    _NODISCARD std::unique_ptr<T> makeUnique(Args&&... args) {
+    [[nodiscard]] std::unique_ptr<T> makeUnique(Args&&... args) {
         return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 

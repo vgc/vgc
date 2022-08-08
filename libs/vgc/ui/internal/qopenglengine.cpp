@@ -518,9 +518,8 @@ GLenum usageToGLenum(Usage usage, CpuAccessFlags cpuAccessFlags)
     throw core::LogicError("QglEngine: unsupported usage");
 }
 
-UINT processResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
+void processResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
 {
-    UINT x = 0;
     if (resourceMiscFlags & ResourceMiscFlag::Shared) {
         throw core::LogicError("QglEngine: ResourceMiscFlag::Shared is not supported at the moment");
     }
@@ -530,7 +529,7 @@ UINT processResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
     //if (resourceMiscFlags & ResourceMiscFlag::ResourceClamp) {
     //    throw core::LogicError("QglEngine: ResourceMiscFlag::ResourceClamp is not supported at the moment");
     //}
-    return x;
+    return;
 }
 
 GLenum imageWrapModeToGLenum(ImageWrapMode mode)
@@ -965,7 +964,7 @@ void QglEngine::initBuiltinResources_()
     xyDesc.elementType = GL_FLOAT;
     xyDesc.normalized = false;
     xyDesc.stride = sizeof(XYRGBVertex);
-    xyDesc.offset = (UINT)offsetof(XYRGBVertex, x);
+    xyDesc.offset = static_cast<uintptr_t>(offsetof(XYRGBVertex, x));
     xyDesc.bufferIndex = 0;
 
     GlAttribPointerDesc& rgbDesc = layout.emplaceLast();
@@ -974,7 +973,7 @@ void QglEngine::initBuiltinResources_()
     rgbDesc.elementType = GL_FLOAT;
     rgbDesc.normalized = false;
     rgbDesc.stride = sizeof(XYRGBVertex);
-    rgbDesc.offset = (UINT)offsetof(XYRGBVertex, r);
+    rgbDesc.offset = static_cast<uintptr_t>(offsetof(XYRGBVertex, r));
     rgbDesc.bufferIndex = 0;
 }
 
@@ -1007,8 +1006,8 @@ void QglEngine::initImage_(Image* aImage, const Span<const char>* mipLevelDataSp
         VGC_CORE_ASSERT(mipLevelDataSpans);
     }
 
-    UINT numLayers = image->numLayers();
-    UINT numMipLevels = image->numMipLevels();
+    GLint numLayers = image->numLayers();
+    GLint numMipLevels = image->numMipLevels();
     [[maybe_unused]] bool isImmutable = image->usage() == Usage::Immutable;
     [[maybe_unused]] bool isMultisampled = image->numSamples() > 1;
     [[maybe_unused]] bool isMipmapGenEnabled = image->isMipGenerationEnabled();
@@ -1335,8 +1334,8 @@ void QglEngine::draw_(GeometryView* aView, UInt numIndices, UInt numInstances)
 {
     syncTextureStates_();
 
-    UINT nIdx = core::int_cast<UINT>(numIndices);
-    UINT nInst = core::int_cast<UINT>(numInstances);
+    GLsizei nIdx = core::int_cast<GLsizei>(numIndices);
+    GLsizei nInst = core::int_cast<GLsizei>(numInstances);
 
     if (nIdx == 0) {
         return;
@@ -1461,10 +1460,10 @@ bool QglEngine::loadBuffer_(class QglBuffer* buffer, const void* data, Int dataS
     Int allocSize = buffer->allocatedSize_;
     bool skipCopy = false;
     if ((dataSize > allocSize) || (dataSize * 4 < allocSize)) {
-        UINT dataWidth = core::int_cast<UINT>(dataSize);
+        GLsizeiptr dataWidth = core::int_cast<GLsizeiptr>(dataSize);
         allocSize = dataWidth;
         if (buffer->bindFlags() & BindFlag::ConstantBuffer) {
-            allocSize = (allocSize + 0xFu) & ~UINT(0xFu);
+            allocSize = (allocSize + 0xFu) & ~GLsizeiptr(0xFu);
         }
         if (data && allocSize == dataWidth) {
             api_->glBufferData(GL_COPY_WRITE_BUFFER, allocSize, data, buffer->usageGL_);

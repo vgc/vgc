@@ -222,7 +222,7 @@ void Window::resizeEvent(QResizeEvent* evt)
     widget_->setGeometry(0, 0, static_cast<float>(width_), static_cast<float>(height_));
 
     if (engine_) {
-        engine_->resizeSwapChain(swapChain_.get(), width_, height_);
+        engine_->resizeSwapChain(swapChain_, width_, height_);
         paint(true);
         //qDebug() << "painted";
     }
