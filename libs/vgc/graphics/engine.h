@@ -511,7 +511,9 @@ protected:
             return;
         }
         pendingCommands_.emplace_back(
-            new detail::LambdaCommand(name, std::forward<Lambda>(lambda)));
+            // our deduction guide doesn't work on gcc 7.5.0
+            // new detail::LambdaCommand(name, std::forward<Lambda>(lambda)));
+            new detail::LambdaCommand<std::decay_t<Lambda>>(name, std::forward<Lambda>(lambda)));
     };
 
     template<typename Data, typename Lambda, typename... Args>
