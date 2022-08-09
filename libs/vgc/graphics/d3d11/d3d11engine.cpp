@@ -14,10 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/compiler.h>
-#ifdef VGC_CORE_COMPILER_MSVC
-
 #include <vgc/graphics/d3d11/d3d11engine.h>
+
+#ifdef VGC_CORE_OS_WINDOWS
 
 #include <algorithm>
 #include <array>
@@ -861,15 +860,18 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
         return nullptr;
     }
 
-     {};
-
     const WindowSwapChainFormat& wscFormat = windowSwapChainFormat();
+
+    UINT width = static_cast<UINT>(createInfo.width());
+    UINT height = static_cast<UINT>(createInfo.height());
+    UINT numSamples = static_cast<UINT>(wscFormat.numSamples());
+    UINT numBuffers = static_cast<UINT>(wscFormat.numBuffers());
 
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.BufferCount = wscFormat.numBuffers();
-    sd.BufferDesc.Width = createInfo.width();
-    sd.BufferDesc.Height = createInfo.height();
+    sd.BufferCount = numBuffers;
+    sd.BufferDesc.Width = width;
+    sd.BufferDesc.Height = height;
 
     PixelFormat wpFormat = wscFormat.pixelFormat();
 
@@ -880,7 +882,7 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
     // do we need DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT ?
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow = static_cast<HWND>(createInfo.windowNativeHandle());
-    sd.SampleDesc.Count = wscFormat.numSamples();
+    sd.SampleDesc.Count = numSamples;
     sd.SampleDesc.Quality = 0;
     sd.Windowed = true;
     //sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
@@ -1129,10 +1131,14 @@ void D3d11Engine::initImage_(Image* image_, const Span<const char>* mipLevelData
         VGC_CORE_ASSERT(mipLevelDataSpans);
     }
 
-    UINT numLayers = image->numLayers();
-    UINT numMipLevels = image->numMipLevels();
+    const UINT width = static_cast<UINT>(image->width());
+    const UINT height = static_cast<UINT>(image->height());
+    const UINT numSamples = static_cast<UINT>(image->numSamples());
+    const UINT numLayers = static_cast<UINT>(image->numLayers());
+    const UINT numMipLevels = static_cast<UINT>(image->numMipLevels());
+
     [[maybe_unused]] bool isImmutable = image->usage() == Usage::Immutable;
-    [[maybe_unused]] bool isMultisampled = image->numSamples() > 1;
+    [[maybe_unused]] bool isMultisampled = numSamples > 1;
     bool isMipmapGenEnabled = image->isMipGenerationEnabled();
 
     VGC_CORE_ASSERT(isMipmapGenEnabled || (numMipLevels > 0));
@@ -1192,7 +1198,7 @@ void D3d11Engine::initImage_(Image* image_, const Span<const char>* mipLevelData
         VGC_CORE_ASSERT(!isMultisampled);
 
         D3D11_TEXTURE1D_DESC desc = {};
-        desc.Width = image->width();
+        desc.Width = width;
         desc.MipLevels = numMipLevels;
         desc.ArraySize = numLayers;
         desc.Format = image->dxgiFormat();
@@ -1210,12 +1216,12 @@ void D3d11Engine::initImage_(Image* image_, const Span<const char>* mipLevelData
         VGC_CORE_ASSERT(!isMultisampled || !mipLevelDataSpans);
 
         D3D11_TEXTURE2D_DESC desc = {};
-        desc.Width = image->width();
-        desc.Height = image->height();
+        desc.Width = width;
+        desc.Height = height;
         desc.MipLevels = numMipLevels;
         desc.ArraySize = numLayers;
         desc.Format = image->dxgiFormat();
-        desc.SampleDesc.Count = image->numSamples();
+        desc.SampleDesc.Count = numSamples;
         desc.Usage = d3dUsage;
         desc.BindFlags = d3dBindFlags;
         desc.CPUAccessFlags = d3dCPUAccessFlags;
@@ -1230,6 +1236,13 @@ void D3d11Engine::initImage_(Image* image_, const Span<const char>* mipLevelData
 void D3d11Engine::initImageView_(ImageView* view)
 {
     D3d11ImageView* d3dImageView = static_cast<D3d11ImageView*>(view);
+
+    UINT firstLayer = static_cast<UINT>(d3dImageView->firstLayer());
+    UINT numLayers = static_cast<UINT>(d3dImageView->numLayers());
+    UINT firstMipLevel = static_cast<UINT>(d3dImageView->firstMipLevel());
+    UINT numMipLevels = static_cast<UINT>(d3dImageView->numMipLevels());
+    UINT numBufferElements = static_cast<UINT>(d3dImageView->numBufferElements());
+
     if (d3dImageView->bindFlags() & ImageBindFlag::ShaderResource) {
         D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
         desc.Format = d3dImageView->dxgiFormat();
@@ -1237,38 +1250,38 @@ void D3d11Engine::initImageView_(ImageView* view)
             BufferPtr buffer = view->viewedBuffer();
             desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
             desc.Buffer.FirstElement = 0;
-            desc.Buffer.NumElements = d3dImageView->numBufferElements();
+            desc.Buffer.NumElements = numBufferElements;
         }
         else {
             ImagePtr image = view->viewedImage();
             switch (image->rank()) {
             case ImageRank::_1D: {
-                if (image->numLayers() > 1) {
+                if (numLayers > 1) {
                     desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1DARRAY;
-                    desc.Texture1DArray.FirstArraySlice = d3dImageView->firstLayer();
-                    desc.Texture1DArray.ArraySize = d3dImageView->numLayers();
-                    desc.Texture1DArray.MostDetailedMip = d3dImageView->firstMipLevel();
-                    desc.Texture1DArray.MipLevels = d3dImageView->numMipLevels();
+                    desc.Texture1DArray.FirstArraySlice = firstLayer;
+                    desc.Texture1DArray.ArraySize = numLayers;
+                    desc.Texture1DArray.MostDetailedMip = firstMipLevel;
+                    desc.Texture1DArray.MipLevels = numMipLevels;
                 }
                 else {
                     desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1D;
-                    desc.Texture1D.MostDetailedMip = d3dImageView->firstMipLevel();
-                    desc.Texture1D.MipLevels = d3dImageView->numMipLevels();
+                    desc.Texture1D.MostDetailedMip = firstMipLevel;
+                    desc.Texture1D.MipLevels = numMipLevels;
                 }
                 break;
             }
             case ImageRank::_2D: {
                 if (image->numLayers() > 1) {
                     desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-                    desc.Texture2DArray.FirstArraySlice = d3dImageView->firstLayer();
-                    desc.Texture2DArray.ArraySize = d3dImageView->numLayers();
-                    desc.Texture2DArray.MostDetailedMip = d3dImageView->firstMipLevel();
-                    desc.Texture2DArray.MipLevels = d3dImageView->numMipLevels();
+                    desc.Texture2DArray.FirstArraySlice = firstLayer;
+                    desc.Texture2DArray.ArraySize = numLayers;
+                    desc.Texture2DArray.MostDetailedMip = firstMipLevel;
+                    desc.Texture2DArray.MipLevels = numMipLevels;
                 }
                 else {
                     desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                    desc.Texture2D.MostDetailedMip = d3dImageView->firstMipLevel();
-                    desc.Texture2D.MipLevels = d3dImageView->numMipLevels();
+                    desc.Texture2D.MostDetailedMip = firstMipLevel;
+                    desc.Texture2D.MipLevels = numMipLevels;
                 }
                 break;
             }
@@ -1286,7 +1299,7 @@ void D3d11Engine::initImageView_(ImageView* view)
             BufferPtr buffer = view->viewedBuffer();
             desc.ViewDimension = D3D11_RTV_DIMENSION_BUFFER;
             desc.Buffer.FirstElement = 0;
-            desc.Buffer.NumElements = d3dImageView->numBufferElements();
+            desc.Buffer.NumElements = numBufferElements;
         }
         else {
             ImagePtr image = view->viewedImage();
@@ -1294,26 +1307,26 @@ void D3d11Engine::initImageView_(ImageView* view)
             case ImageRank::_1D: {
                 if (image->numLayers() > 1) {
                     desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE1DARRAY;
-                    desc.Texture1DArray.FirstArraySlice = d3dImageView->firstLayer();
-                    desc.Texture1DArray.ArraySize = d3dImageView->numLayers();
-                    desc.Texture1DArray.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture1DArray.FirstArraySlice = firstLayer;
+                    desc.Texture1DArray.ArraySize = numLayers;
+                    desc.Texture1DArray.MipSlice = firstMipLevel;
                 }
                 else {
                     desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE1D;
-                    desc.Texture1D.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture1D.MipSlice = firstMipLevel;
                 }
                 break;
             }
             case ImageRank::_2D: {
                 if (image->numLayers() > 1) {
                     desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-                    desc.Texture2DArray.FirstArraySlice = d3dImageView->firstLayer();
-                    desc.Texture2DArray.ArraySize = d3dImageView->numLayers();
-                    desc.Texture2DArray.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture2DArray.FirstArraySlice = firstLayer;
+                    desc.Texture2DArray.ArraySize = numLayers;
+                    desc.Texture2DArray.MipSlice = firstMipLevel;
                 }
                 else {
                     desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-                    desc.Texture2D.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture2D.MipSlice = firstMipLevel;
                 }
                 break;
             }
@@ -1336,26 +1349,26 @@ void D3d11Engine::initImageView_(ImageView* view)
             case ImageRank::_1D: {
                 if (image->numLayers() > 1) {
                     desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE1DARRAY;
-                    desc.Texture1DArray.FirstArraySlice = d3dImageView->firstLayer();
-                    desc.Texture1DArray.ArraySize = d3dImageView->numLayers();
-                    desc.Texture1DArray.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture1DArray.FirstArraySlice = firstLayer;
+                    desc.Texture1DArray.ArraySize = numLayers;
+                    desc.Texture1DArray.MipSlice = firstMipLevel;
                 }
                 else {
                     desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE1D;
-                    desc.Texture1D.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture1D.MipSlice = firstMipLevel;
                 }
                 break;
             }
             case ImageRank::_2D: {
                 if (image->numLayers() > 1) {
                     desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-                    desc.Texture2DArray.FirstArraySlice = d3dImageView->firstLayer();
-                    desc.Texture2DArray.ArraySize = d3dImageView->numLayers();
-                    desc.Texture2DArray.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture2DArray.FirstArraySlice = firstLayer;
+                    desc.Texture2DArray.ArraySize = numLayers;
+                    desc.Texture2DArray.MipSlice = firstMipLevel;
                 }
                 else {
                     desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-                    desc.Texture2D.MipSlice = d3dImageView->firstMipLevel();
+                    desc.Texture2D.MipSlice = firstMipLevel;
                 }
                 break;
             }
@@ -1406,7 +1419,7 @@ void D3d11Engine::initSamplerState_(SamplerState* state)
     desc.AddressV = imageWrapModeToD3DTextureAddressMode(d3dSamplerState->wrapModeV());
     desc.AddressW = imageWrapModeToD3DTextureAddressMode(d3dSamplerState->wrapModeW());
     desc.MipLODBias = d3dSamplerState->mipLODBias();
-    desc.MaxAnisotropy = d3dSamplerState->maxAnisotropy();
+    desc.MaxAnisotropy = static_cast<UINT>(d3dSamplerState->maxAnisotropy());
     desc.ComparisonFunc = comparisonFunctionToD3DComparisonFunc(d3dSamplerState->comparisonFunction());
     // XXX add data() in vec4f
     memcpy(desc.BorderColor, &d3dSamplerState->wrapColor(), 4 * sizeof(float));
@@ -1643,11 +1656,25 @@ void D3d11Engine::draw_(GeometryView* view, UInt numIndices, UInt numInstances)
         d3d11VertexBuffers[i] = vb ? static_cast<D3d11Buffer*>(vb)->object() : nullptr;
     }
 
+    // convert strides to UINTs
+    const VertexBufferStridesArray& intStrides = view->strides();
+    std::array<UINT, maxAttachedVertexBuffers> strides = {};
+    for (Int i = 0; i < maxAttachedVertexBuffers; ++i ) {
+        strides[i] = static_cast<UINT>(intStrides[i]);
+    }
+
+    // convert offsets to UINTs
+    const VertexBufferOffsetsArray& intOffsets = view->offsets();
+    std::array<UINT, maxAttachedVertexBuffers> offsets = {};
+    for (Int i = 0; i < maxAttachedVertexBuffers; ++i ) {
+        offsets[i] = static_cast<UINT>(intOffsets[i]);
+    }
+
     deviceCtx_->IASetVertexBuffers(
         0, maxAttachedVertexBuffers,
         d3d11VertexBuffers.data(),
-        view->strides().data(),
-        view->offsets().data());
+        strides.data(),
+        offsets.data());
 
     D3D11_PRIMITIVE_TOPOLOGY topology = d3dGeometryView->topology();
     if (topology != topology_) {
@@ -1702,70 +1729,6 @@ UInt64 D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentF
     d3dSwapChain->dxgiSwapChain()->Present(syncInterval, 0);
     return std::chrono::nanoseconds(std::chrono::steady_clock::now() - engineStartTime()).count();
 }
-
-
-//void D3d11Engine::setProjectionMatrix_(const geometry::Mat4f& m)
-//{
-//    paintVertexShaderConstantBuffer_.projMatrix = m;
-//    writeBufferReserved_(
-//        vertexConstantBuffer_.get(), &paintVertexShaderConstantBuffer_,
-//        sizeof(PaintVertexShaderConstantBuffer));
-//}
-//
-//void D3d11Engine::setViewMatrix_(const geometry::Mat4f& m)
-//{
-//    paintVertexShaderConstantBuffer_.viewMatrix = m;
-//    writeBufferReserved_(
-//        vertexConstantBuffer_.get(), &paintVertexShaderConstantBuffer_,
-//        sizeof(PaintVertexShaderConstantBuffer));
-//}
-
-
-
-
-//void D3d11Engine::setupVertexBufferForPaintShader_(Buffer* /*buffer*/)
-//{
-//    // no-op
-//}
-
-//void D3d11Engine::drawPrimitives_(Buffer* buffer, PrimitiveType type)
-//{
-//    D3d11Buffer* d3dBuffer = static_cast<D3d11Buffer*>(buffer);
-//    ID3D11Buffer* object = d3dBuffer->object();
-//    if (!object) return;
-//
-//    D3D_PRIMITIVE_TOPOLOGY d3dTopology = {};
-//    switch (type) {
-//    case PrimitiveType::Point:
-//        d3dTopology = D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_POINTLIST; break;
-//    case PrimitiveType::LineList:
-//        d3dTopology = D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_LINELIST; break;
-//    case PrimitiveType::LineStrip:
-//        d3dTopology = D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP; break;
-//    case PrimitiveType::TriangleList:
-//        d3dTopology = D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST; break;
-//    case PrimitiveType::TriangleStrip:
-//        d3dTopology = D3D_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP; break;
-//    default:
-//        throw core::LogicError("D3d11Buffer: unsupported primitive type");
-//    }
-//
-//    Int numVertices = d3dBuffer->lengthInBytes_ / sizeof(XYRGBVertex);
-//    unsigned int stride = sizeof(XYRGBVertex);
-//    unsigned int offset = 0;
-//    deviceCtx_->IASetVertexBuffers(0, 1, &object, &stride, &offset);
-//    deviceCtx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-//    deviceCtx_->Draw(core::int_cast<UINT>(numVertices), 0);
-//}
-
-
-
-//void D3d11Engine::releasePaintShader_()
-//{
-//    deviceCtx_->VSSetShader(NULL, NULL, 0);
-//    deviceCtx_->VSSetConstantBuffers(0, 0, NULL);
-//    deviceCtx_->PSSetShader(NULL, NULL, 0);
-//}
 
 // Private methods
 
@@ -1864,20 +1827,6 @@ bool D3d11Engine::writeBufferReserved_(ID3D11Buffer* object, const void* data, I
     return true;
 }
 
-//void D3d11Engine::updatePaintVertexShaderConstantBuffer_()
-//{
-//    PaintVertexShaderConstantBuffer buffer = {};
-//    memcpy(buffer.projMatrix.data(), projMatrix_.data(), 16 * sizeof(float));
-//    memcpy(buffer.viewMatrix.data(), viewMatrix_.data(), 16 * sizeof(float));
-//    writeBufferReserved_(
-//        vertexConstantBuffer_.get(), &buffer,
-//        sizeof(PaintVertexShaderConstantBuffer));
-//}
-
-
-
-
-
 } // namespace vgc::graphics
 
-#endif // VGC_CORE_COMPILER_MSVC
+#endif // VGC_CORE_OS_WINDOWS

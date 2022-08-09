@@ -105,12 +105,12 @@ public:
         comparisonFunction_ = comparisonFunction;
     }
 
-    UInt8 maxAnisotropy() const
+    Int maxAnisotropy() const
     {
         return maxAnisotropy_;
     }
 
-    void setMaxAnisotropy(UInt8 maxAnisotropy)
+    void setMaxAnisotropy(Int maxAnisotropy)
     {
         maxAnisotropy_ = maxAnisotropy;
     }
@@ -166,7 +166,7 @@ private:
     ComparisonFunction comparisonFunction_ = ComparisonFunction::Disabled;
     // enables anisotropic filtering if >= 1, max is 16.
     // has precedence over user-defined filter modes.
-    UInt8 maxAnisotropy_ = 0;
+    Int maxAnisotropy_ = 0;
     geometry::Vec4f wrapColor_ = {0.f, 0.f, 0.f, 0.f};
     float mipLODBias_ = 0.f;
     float minLOD_ = 0.f;
@@ -199,7 +199,7 @@ public:
         return info_.mipFilter();
     }
 
-    UInt8 maxAnisotropy() const
+    Int maxAnisotropy() const
     {
         return info_.maxAnisotropy();
     }

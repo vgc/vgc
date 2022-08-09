@@ -34,7 +34,7 @@ class VGC_GRAPHICS_API ImageViewCreateInfo {
 public:
     constexpr ImageViewCreateInfo() noexcept = default;
 
-    UInt8 firstLayer() const
+    Int firstLayer() const
     {
         return firstLayer_;
     }
@@ -46,7 +46,7 @@ public:
     //    firstLayer_ = firstLayer;
     //}
 
-    UInt8 numLayers() const
+    Int numLayers() const
     {
         return numLayers_;
     }
@@ -58,12 +58,13 @@ public:
     //    numLayers_ = numLayers;
     //}
 
-    UInt8 lastLayer() const
+    Int lastLayer() const
     {
+        // XXX test overflow
         return firstLayer_ + numLayers_ - 1;
     }
 
-    UInt8 firstMipLevel() const
+    Int firstMipLevel() const
     {
         return firstMipLevel_;
     }
@@ -74,7 +75,7 @@ public:
     //    firstMipLevel_ = firstMipLevel;
     //}
 
-    UInt8 numMipLevels() const
+    Int numMipLevels() const
     {
         return numMipLevels_;
     }
@@ -87,8 +88,9 @@ public:
     //    numMipLevels_ = numMipLevels;
     //}
 
-    UInt8 lastMipLevel() const
+    Int lastMipLevel() const
     {
+        // XXX test overflow
         return firstMipLevel_ + numMipLevels_ - 1;
     }
 
@@ -103,10 +105,10 @@ public:
     }
 
 private:
-    UInt8 firstLayer_ = 0;
-    UInt8 numLayers_ = 0;
-    UInt8 firstMipLevel_ = 0;
-    UInt8 numMipLevels_ = 0;
+    Int firstLayer_ = 0;
+    Int numLayers_ = 1;
+    Int firstMipLevel_ = 0;
+    Int numMipLevels_ = 1;
 
     ImageBindFlags bindFlags_ = ImageBindFlag::None;
 };
@@ -141,41 +143,41 @@ protected:
               const ImageViewCreateInfo& createInfo,
               const BufferPtr& buffer,
               PixelFormat pixelFormat,
-              UInt32 numBufferElements)
+              Int numBufferElements)
         : Resource(registry)
         , info_(createInfo)
         , viewedResource_(buffer)
         , pixelFormat_(pixelFormat)
-        , numBufferElements_(numBufferElements) {
+        , numBufferElements_(core::int_cast<UInt32>(numBufferElements)) {
     }
 
 public:
-    UInt8 firstLayer() const
+    Int firstLayer() const
     {
         return info_.firstLayer();
     }
 
-    UInt8 numLayers() const
+    Int numLayers() const
     {
         return info_.numLayers();
     }
 
-    UInt8 lastLayer() const
+    Int lastLayer() const
     {
         return info_.lastLayer();
     }
 
-    UInt8 firstMipLevel() const
+    Int firstMipLevel() const
     {
         return info_.firstMipLevel();
     }
 
-    UInt8 numMipLevels() const
+    Int numMipLevels() const
     {
         return info_.numMipLevels();
     }
 
-    UInt8 lastMipLevel() const
+    Int lastMipLevel() const
     {
         return info_.lastMipLevel();
     }
@@ -190,9 +192,9 @@ public:
         return pixelFormat_;
     }
 
-    UInt32 numBufferElements() const
+    Int numBufferElements() const
     {
-        return numBufferElements_;
+        return static_cast<Int>(numBufferElements_);
     }
 
     bool isBuffer() const

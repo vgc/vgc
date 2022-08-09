@@ -17,8 +17,8 @@
 #ifndef VGC_GRAPHICS_D3D11_D3D11ENGINE_H
 #define VGC_GRAPHICS_D3D11_D3D11ENGINE_H
 
-#include <vgc/core/compiler.h>
-#ifdef VGC_CORE_COMPILER_MSVC
+#include <vgc/core/os.h>
+#ifdef VGC_CORE_OS_WINDOWS
 
 #include <d3d11.h>
 
@@ -137,5 +137,5 @@ private:
 
 } // namespace vgc::graphics
 
-#endif // VGC_CORE_COMPILER_MSVC
+#endif // VGC_CORE_OS_WINDOWS
 #endif // VGC_GRAPHICS_D3D11_D3D11ENGINE_H

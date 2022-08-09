@@ -86,9 +86,13 @@ void Engine::onDestroyed()
     }
 }
 
-SwapChainPtr Engine::createSwapChain(const SwapChainCreateInfo& desc)
+SwapChainPtr Engine::createSwapChain(const SwapChainCreateInfo& createInfo)
 {
-    return constructSwapChain_(desc);
+    // sanitize create info
+    SwapChainCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
+
+    return constructSwapChain_(sanitizedCreateInfo);
 }
 
 FramebufferPtr Engine::createFramebuffer(const ImageViewPtr& colorImageView)
@@ -112,7 +116,11 @@ BufferPtr Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLe
             "Negative initialLengthInBytes ({}) provided to Engine::createBuffer()", initialLengthInBytes));
     }
 
-    BufferPtr buffer = constructBuffer_(createInfo);
+    // sanitize create info
+    BufferCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
+
+    BufferPtr buffer = constructBuffer_(sanitizedCreateInfo);
     buffer->lengthInBytes_ = initialLengthInBytes;
 
     struct CommandParameters {
@@ -153,14 +161,11 @@ GeometryViewPtr Engine::createDynamicTriangleListView(BuiltinGeometryLayout vert
     return createGeometryView(createInfo);
 }
 
-//ImagePtr Engine::createImage(const ImageCreateInfo& createInfo)
-//ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData)
-
 ImagePtr Engine::createImage(const ImageCreateInfo& createInfo)
 {
     // sanitize create info
     ImageCreateInfo sanitizedCreateInfo = createInfo;
-    sanitizeCreateImageInfo(sanitizedCreateInfo);
+    sanitize_(sanitizedCreateInfo);
 
     if (createInfo.usage() == Usage::Immutable) {
         VGC_ERROR(LogVgcGraphics, "Cannot create an immutable image without initial data.");
@@ -187,7 +192,7 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char
 {
     // sanitize create info
     ImageCreateInfo sanitizedCreateInfo = createInfo;
-    sanitizeCreateImageInfo(sanitizedCreateInfo);
+    sanitize_(sanitizedCreateInfo);
 
     if (sanitizedCreateInfo.isMultisampled()) {
         VGC_ERROR(LogVgcGraphics, "Initial data ignored: multisampled image cannot be initialized with data on creation.");
@@ -219,9 +224,11 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char
 
 ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image)
 {
-    // XXX should check bind flags compatibility here
+    // sanitize create info
+    ImageViewCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
 
-    ImageViewPtr imageView = constructImageView_(createInfo, image);
+    ImageViewPtr imageView = constructImageView_(sanitizedCreateInfo, image);
     queueLambdaCommandWithParameters_<ImageView*>(
         "initImageView",
         [](Engine* engine, ImageView* p) {
@@ -231,11 +238,12 @@ ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, cons
     return imageView;
 }
 
-ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements)
+ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, Int numElements)
 {
-    // XXX should check bind flags compatibility here
+    ImageViewCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
 
-    ImageViewPtr imageView = constructImageView_(createInfo, buffer, format, numElements);
+    ImageViewPtr imageView = constructImageView_(sanitizedCreateInfo, buffer, format, core::int_cast<UInt32>(numElements));
     queueLambdaCommandWithParameters_<ImageView*>(
         "initBufferImageView",
         [](Engine* engine, ImageView* p) {
@@ -247,7 +255,10 @@ ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, cons
 
 SamplerStatePtr Engine::createSamplerState(const SamplerStateCreateInfo& createInfo)
 {
-    SamplerStatePtr samplerState = constructSamplerState_(createInfo);
+    SamplerStateCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
+
+    SamplerStatePtr samplerState = constructSamplerState_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<SamplerState*>(
         "initSamplerState",
         [](Engine* engine, SamplerState* p) {
@@ -259,7 +270,10 @@ SamplerStatePtr Engine::createSamplerState(const SamplerStateCreateInfo& createI
 
 GeometryViewPtr Engine::createGeometryView(const GeometryViewCreateInfo& createInfo)
 {
-    GeometryViewPtr geometryView = constructGeometryView_(createInfo);
+    GeometryViewCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
+
+    GeometryViewPtr geometryView = constructGeometryView_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<GeometryView*>(
         "initGeometryView",
         [](Engine* engine, GeometryView* p) {
@@ -271,7 +285,10 @@ GeometryViewPtr Engine::createGeometryView(const GeometryViewCreateInfo& createI
 
 BlendStatePtr Engine::createBlendState(const BlendStateCreateInfo& createInfo)
 {
-    BlendStatePtr blendState = constructBlendState_(createInfo);
+    BlendStateCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
+
+    BlendStatePtr blendState = constructBlendState_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<BlendState*>(
         "initBlendState",
         [](Engine* engine, BlendState* p) {
@@ -283,7 +300,10 @@ BlendStatePtr Engine::createBlendState(const BlendStateCreateInfo& createInfo)
 
 RasterizerStatePtr Engine::createRasterizerState(const RasterizerStateCreateInfo& createInfo)
 {
-    RasterizerStatePtr rasterizerState = constructRasterizerState_(createInfo);
+    RasterizerStateCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
+
+    RasterizerStatePtr rasterizerState = constructRasterizerState_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<RasterizerState*>(
         "initRasterizerState",
         [](Engine* engine, RasterizerState* p) {
@@ -571,19 +591,19 @@ void Engine::popPipelineParameters(PipelineParameters parameters)
 void Engine::syncState_()
 {
     if (dirtyBuiltinConstantBuffer_) {
-        BuiltinConstants constants = {};
+        detail::BuiltinConstants constants = {};
         constants.projMatrix = projectionMatrixStack_.last();
         constants.viewMatrix = viewMatrixStack_.last();
         constants.frameStartTimeInMs = core::int_cast<UInt32>(std::chrono::duration_cast<std::chrono::milliseconds>(
             frameStartTime_ - engineStartTime_).count());
         struct CommandParameters {
             Buffer* buffer;
-            BuiltinConstants constants;
+            detail::BuiltinConstants constants;
         };
         queueLambdaCommandWithParameters_<CommandParameters>(
             "updateBuiltinConstantBufferData",
             [](Engine* engine, const CommandParameters& p) {
-                engine->updateBufferData_(p.buffer, &p.constants, sizeof(BuiltinConstants));
+                engine->updateBufferData_(p.buffer, &p.constants, sizeof(detail::BuiltinConstants));
             },
             builtinConstantsBuffer_.get(), constants);
         dirtyBuiltinConstantBuffer_ = false;
@@ -748,17 +768,17 @@ void Engine::endFrame()
     }
 }
 
-void Engine::resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height)
+void Engine::resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int height)
 {
     if (!checkResourceIsValid_(swapChain)) {
         return;
     }
 
     finish();
-    resizeSwapChain_(swapChain.get(), width, height);
+    resizeSwapChain_(swapChain.get(), core::int_cast<UInt32>(width), core::int_cast<UInt32>(height));
 }
 
-void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, UInt numInstances)
+void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, Int numInstances)
 {
     if (!checkResourceIsValid_(geometryView)) {
         return;
@@ -766,12 +786,17 @@ void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, UInt numI
     if (numIndices == 0) {
         return;
     }
+    if (numInstances < 0) {
+        VGC_WARNING(LogVgcGraphics, "Negative numInstances ({}), skipping draw.", numInstances);
+        return;
+    }
     syncState_();
     Int n = (numIndices >= 0) ? numIndices : geometryView->numVertices();
+    UInt un = core::int_cast<UInt>(n);
     queueLambdaCommandWithParameters_<GeometryView*>(
         "draw",
         [=](Engine* engine, GeometryView* gv) {
-            engine->draw_(gv, static_cast<UInt>(n), numInstances);
+            engine->draw_(gv, un, numInstances);
         },
         geometryView.get());
 }
@@ -787,7 +812,7 @@ void Engine::clear(const core::Color& color)
         color);
 }
 
-void Engine::present(UInt32 syncInterval,
+void Engine::present(Int syncInterval,
                      std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
                      PresentFlags flags)
 {
@@ -798,7 +823,7 @@ void Engine::present(UInt32 syncInterval,
         // Preventing dead-locks
         // See https://docs.microsoft.com/en-us/windows/win32/api/DXGI1_2/nf-dxgi1_2-idxgiswapchain1-present1#remarks
         finish();
-        UInt64 timestamp = present_(swapChain_.get(), syncInterval, flags);
+        UInt64 timestamp = present_(swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags);
         --swapChain_->numPendingPresents_;
         presentedCallback(timestamp);
     }
@@ -816,7 +841,7 @@ void Engine::present(UInt32 syncInterval,
                 --p.swapChain->numPendingPresents_;
                 p.presentedCallback(timestamp);
             },
-            swapChain_.get(), syncInterval, flags, std::move(presentedCallback));
+            swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags, std::move(presentedCallback));
 
         if (shouldWait) {
             finish();
@@ -858,7 +883,7 @@ void Engine::createBuiltinResources_()
         createInfo.setUsage(Usage::Dynamic);
         createInfo.setBindFlags(BindFlag::ConstantBuffer);
         createInfo.setCpuAccessFlags(CpuAccessFlag::Write);
-        builtinConstantsBuffer_ = createBuffer(createInfo, sizeof(BuiltinConstants));
+        builtinConstantsBuffer_ = createBuffer(createInfo, sizeof(detail::BuiltinConstants));
     }
 
     createBuiltinShaders_();
@@ -959,7 +984,7 @@ UInt Engine::submitPendingCommandList_()
     return id;
 }
 
-void Engine::waitCommandListTranslationFinished_(UInt commandListId)
+void Engine::waitCommandListTranslationFinished_(Int commandListId)
 {
     std::unique_lock<std::mutex> lock(mutex_);
     if (commandListId == 0) {
@@ -969,12 +994,23 @@ void Engine::waitCommandListTranslationFinished_(UInt commandListId)
     lock.unlock();
 }
 
-void Engine::sanitizeCreateImageInfo(ImageCreateInfo& createInfo)
+
+void Engine::sanitize_(SwapChainCreateInfo& /*createInfo*/)
+{
+    // XXX
+}
+
+void Engine::sanitize_(BufferCreateInfo& /*createInfo*/)
+{
+    // XXX
+}
+
+void Engine::sanitize_(ImageCreateInfo& createInfo)
 {
     bool isMultisampled = createInfo.numSamples() > 1;
     if (isMultisampled) {
         if (createInfo.rank() == ImageRank::_1D) {
-            VGC_WARNING(LogVgcGraphics, "Sample count ignored: multisampling is not available for 1D images.");
+            VGC_WARNING(LogVgcGraphics, "Number of samples ignored: multisampling is not available for 1D images.");
             createInfo.setNumSamples(1);
         }
         if (createInfo.numMipLevels() != 1) {
@@ -986,7 +1022,81 @@ void Engine::sanitizeCreateImageInfo(ImageCreateInfo& createInfo)
         VGC_WARNING(LogVgcGraphics, "Automatic number of mip levels resolves to 1 since mip generation is not enabled.");
         createInfo.setNumMipLevels(1);
     }
+
+    const Int width = createInfo.width();
+    if (width <= 0 || width > maxImageWidth) {
+        std::string err = core::format("Requested image width ({}) should be in the range [1, {}].", width, maxImageWidth);
+        if (width <= 0) {
+            throw core::RangeError(err);
+        }
+        else {
+            VGC_ERROR(LogVgcGraphics, err);
+        }
+    }
+
+    const Int height = createInfo.height();
+    if (height != 0 && core::toUnderlying(createInfo.rank()) < core::toUnderlying(ImageRank::_2D)) {
+        VGC_WARNING(LogVgcGraphics, "Height ignored: image rank must be at least 2D.");
+        createInfo.setHeight(0);
+    }
+    else if (height <= 0 || height > maxImageHeight) {
+        std::string err = core::format("Requested image height ({}) should be in the range [1, {}].", height, maxImageHeight);
+        if (height <= 0) {
+            throw core::RangeError(err);
+        }
+        else {
+            VGC_ERROR(LogVgcGraphics, err);
+        }
+    }
+
+    const Int numLayers = createInfo.numLayers();
+    if (numLayers <= 0 || numLayers > maxImageLayers) {
+        VGC_ERROR(LogVgcGraphics, "Requested number of image layers ({}) should be in the range [1, {}].", numLayers, maxImageLayers);
+    }
+
+    //const float numMipLevels = createInfo.numMipLevels();
+    //if (numMipLevels <= 0 || numMipLevels > maxImageLayers) {
+    //    VGC_ERROR(LogVgcGraphics, "Requested image layers ({}) should be in the range [1, {}]", numLayers, maxImageLayers);
+    //}
+
+    // XXX check is power of 2
+    const Int numSamples = createInfo.numSamples();
+    if (numSamples <= 0 || numSamples > maxNumSamples) {
+        static_assert(maxNumSamples == 8); // hard-coded list
+        VGC_ERROR(LogVgcGraphics, "Requested number of samples ({}) should be either 1, 2, 4, or 8.", numSamples);
+    }
+
+    //usage
+    //bindFlags
+    //cpuAccessFlags
+    //resourceMiscFlags
 }
+
+void Engine::sanitize_(ImageViewCreateInfo& /*createInfo*/)
+{
+    // XXX should check bind flags compatibility here
+}
+
+void Engine::sanitize_(SamplerStateCreateInfo& /*createInfo*/)
+{
+    // XXX
+}
+
+void Engine::sanitize_(GeometryViewCreateInfo& /*createInfo*/)
+{
+    // XXX
+}
+
+void Engine::sanitize_(BlendStateCreateInfo& /*createInfo*/)
+{
+    // XXX
+}
+
+void Engine::sanitize_(RasterizerStateCreateInfo& /*createInfo*/)
+{
+    // XXX
+}
+
 
 } // namespace graphics
 } // namespace vgc

@@ -128,7 +128,7 @@ enum class ImageRank : UInt8 {
 inline constexpr UInt8 numImageRanks = static_cast<UInt8>(ImageRank::Max_) + 1;
 
 enum class PixelFormat : UInt8 {
-    Unknown,
+    Undefined,
     // Depth
     D_16_UNORM,
     D_32_FLOAT,

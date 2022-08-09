@@ -59,11 +59,15 @@ namespace vgc::graphics {
 
 VGC_DECLARE_OBJECT(Engine);
 
+namespace detail {
+
 struct BuiltinConstants {
     geometry::Mat4f projMatrix;
     geometry::Mat4f viewMatrix;
     UInt32 frameStartTimeInMs = 0;
 };
+
+} // namespace detail
 
 // temporary impl
 template <typename T>
@@ -94,6 +98,8 @@ struct Span {
 
 class VGC_GRAPHICS_API WindowSwapChainFormat {
 public:
+    using FlagsType = UInt64;
+
     PixelFormat pixelFormat() const
     {
         return pixelFormat_;
@@ -104,41 +110,41 @@ public:
         pixelFormat_ = windowPixelFormatToPixelFormat(pixelFormat);
     }
 
-    UInt8 numSamples() const
+    Int numSamples() const
     {
         return numSamples_;
     }
 
-    void setNumSamples(UInt8 numSamples)
+    void setNumSamples(Int numSamples)
     {
         numSamples_ = numSamples;
     }
 
-    UInt8 numBuffers() const
+    Int numBuffers() const
     {
         return numBuffers_;
     }
 
-    void setNumBuffers(UInt8 numBuffers)
+    void setNumBuffers(Int numBuffers)
     {
         numBuffers_ = numBuffers;
     }
 
-    UInt flags() const
+    FlagsType flags() const
     {
         return flags_;
     }
 
-    void setFlags(UInt flags)
+    void setFlags(FlagsType flags)
     {
         flags_ = flags;
     }
 
 private:
     PixelFormat pixelFormat_ = PixelFormat::RGBA_8_UNORM;
-    UInt8 numSamples_ = 1;
-    UInt8 numBuffers_ = 2;
-    UInt flags_ = 0;
+    Int numSamples_ = 1;
+    Int numBuffers_ = 2;
+    FlagsType flags_ = 0;
 };
 
 class VGC_GRAPHICS_API EngineCreateInfo {
@@ -226,21 +232,6 @@ public:
     template<typename T>
     BufferPtr createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialData);
 
-    // XXX fix comment
-    /// Creates a resource for storing primitives data, and returns a shared
-    /// pointer to it.
-    ///
-    /// Once created, you can load triangles data using
-    /// resource->load(...), and you can draw the loaded triangles
-    /// using resource->draw().
-    ///
-    /// When you don't need the buffer anymore (e.g., in the
-    /// vgc::ui::Widget::cleanup() function), you must reset the resource pointer.
-    ///
-    // Note: in the future, we may add overloads to this function to allow
-    // specifying the vertex format (i.e., XYRGB, XYZRGBA, etc.), but for now
-    // the format is fixed (XYRGB).
-    //
     BufferPtr createVertexBuffer(Int initialLengthInBytes);
 
     template<typename T>
@@ -254,7 +245,7 @@ public:
 
     ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image);
 
-    ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements);
+    ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, Int numElements);
 
     SamplerStatePtr createSamplerState(const SamplerStateCreateInfo& createInfo);
 
@@ -288,7 +279,7 @@ public:
 
     /// Returns the current projection matrix (top-most on the stack).
     ///
-    geometry::Mat4f projectionMatrix() const;
+    const geometry::Mat4f& projectionMatrix() const;
 
     /// Assigns `m` to the top-most matrix of the projection matrix stack.
     /// `m` becomes the current projection matrix.
@@ -309,7 +300,7 @@ public:
 
     /// Returns the current view matrix (top-most on the stack).
     ///
-    geometry::Mat4f viewMatrix() const;
+    const geometry::Mat4f& viewMatrix() const;
 
     /// Assigns `m` to the top-most matrix of the view matrix stack.
     /// `m` becomes the current view matrix.
@@ -346,7 +337,7 @@ public:
     void beginFrame(bool isStateDirty = false);
     void endFrame();
 
-    void resizeSwapChain(const SwapChainPtr& swapChain, UInt32 width, UInt32 height);
+    void resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int height);
 
     template<typename T>
     void updateBufferData(const BufferPtr& buffer, core::Array<T> data);
@@ -354,11 +345,11 @@ public:
     template<typename T>
     void updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data);
 
-    void draw(const GeometryViewPtr& geometryView, Int numIndices, UInt numInstances);
+    void draw(const GeometryViewPtr& geometryView, Int numIndices, Int numInstances);
 
-    void createTextAtlasResource();
+    //void createTextAtlasResource();
 
-    void drawText(const TextAtlasResource& gaText);
+    //void drawText(const TextAtlasResource& gaText);
 
     /// Clears the whole render area with the given color.
     ///
@@ -370,7 +361,7 @@ public:
     /// If the current command list is empty, `flush()` does nothing and
     /// returns the index of the previous list.
     ///
-    UInt flush();
+    Int flush();
 
     /// Submits the current command list if present then waits for all submitted
     /// command lists to finish being translated to GPU commands.
@@ -379,7 +370,7 @@ public:
 
     /// presentedCallback is called from an unspecified thread.
     //
-    void present(UInt32 syncInterval,
+    void present(Int syncInterval,
                  std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
                  PresentFlags flags = PresentFlag::None);
 
@@ -586,8 +577,8 @@ private:
     std::mutex mutex_;
     std::condition_variable wakeRenderThreadConditionVariable_;
     std::condition_variable renderThreadEventConditionVariable_;
-    UInt lastExecutedCommandListId_ = 0;
-    UInt lastSubmittedCommandListId_ = 0;
+    Int lastExecutedCommandListId_ = 0;
+    Int lastSubmittedCommandListId_ = 0;
     bool isThreadRunning_ = false;
     bool stopRequested_ = false;
 
@@ -610,11 +601,18 @@ private:
     UInt submitPendingCommandList_();
 
     // returns false if translation was cancelled by a stop request.
-    void waitCommandListTranslationFinished_(UInt commandListId = 0);
+    void waitCommandListTranslationFinished_(Int commandListId = 0);
 
     // -- helpers --
 
-    void sanitizeCreateImageInfo(ImageCreateInfo& createInfo);
+    void sanitize_(SwapChainCreateInfo& createInfo);
+    void sanitize_(BufferCreateInfo& createInfo);
+    void sanitize_(ImageCreateInfo& createInfo);
+    void sanitize_(ImageViewCreateInfo& createInfo);
+    void sanitize_(SamplerStateCreateInfo& createInfo);
+    void sanitize_(GeometryViewCreateInfo& createInfo);
+    void sanitize_(BlendStateCreateInfo& createInfo);
+    void sanitize_(RasterizerStateCreateInfo& createInfo);
 
     // -- checks --
 
@@ -642,7 +640,7 @@ private:
     }
 };
 
-inline geometry::Mat4f Engine::projectionMatrix() const
+inline const geometry::Mat4f& Engine::projectionMatrix() const
 {
     return projectionMatrixStack_.last();
 }
@@ -664,7 +662,7 @@ inline void Engine::popProjectionMatrix()
     dirtyBuiltinConstantBuffer_ = true;
 }
 
-inline geometry::Mat4f Engine::viewMatrix() const
+inline const geometry::Mat4f& Engine::viewMatrix() const
 {
     return viewMatrixStack_.last();
 }
@@ -768,10 +766,10 @@ inline void Engine::updateVertexBufferData(const GeometryViewPtr& geometry, core
     updateBufferData(geom->vertexBuffer(0), std::move(data));
 }
 
-inline UInt Engine::flush()
+inline Int Engine::flush()
 {
     if (isMultithreadingEnabled()) {
-        return submitPendingCommandList_();
+        return static_cast<Int>(submitPendingCommandList_());
     }
     return 0;
 }

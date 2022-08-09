@@ -14,6 +14,8 @@ vgc_add_library(graphics
         batch.h
         blendstate.h
         buffer.h
+        cliprect.h
+        colorgradient.h
         constants.h
         d3d11/d3d11engine.h
         detail/command.h

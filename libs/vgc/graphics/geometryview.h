@@ -32,8 +32,8 @@ class GeometryView;
 inline constexpr size_t maxAttachedVertexBuffers = 4;
 
 using VertexBufferArray = std::array<BufferPtr, maxAttachedVertexBuffers>;
-using VertexBufferStridesArray = std::array<UInt32, maxAttachedVertexBuffers>;
-using VertexBufferOffsetsArray = std::array<UInt32, maxAttachedVertexBuffers>;
+using VertexBufferStridesArray = std::array<Int, maxAttachedVertexBuffers>;
+using VertexBufferOffsetsArray = std::array<Int, maxAttachedVertexBuffers>;
 
 /// \class vgc::graphics::GeometryViewCreateInfo
 /// \brief Parameters for geometry view creation.
@@ -107,7 +107,7 @@ public:
         return strides_;
     }
 
-    void setStride(Int i, UInt32 stride)
+    void setStride(Int i, Int stride)
     {
         size_t idx = core::int_cast<size_t>(i);
         if (idx >= strides_.size()) {
@@ -122,7 +122,7 @@ public:
         return offsets_;
     }
 
-    void setOffset(Int i, UInt32 offset)
+    void setOffset(Int i, Int offset)
     {
         size_t idx = core::int_cast<size_t>(i);
         if (idx >= offsets_.size()) {

@@ -37,22 +37,22 @@ class VGC_GRAPHICS_API ImageCreateInfo {
 public:
     constexpr ImageCreateInfo() noexcept = default;
 
-    UInt32 width() const
+    Int width() const
     {
         return width_;
     }
 
-    void setWidth(UInt32 width)
+    void setWidth(Int width)
     {
         width_ = width;
     }
 
-    UInt32 height() const
+    Int height() const
     {
         return height_;
     }
 
-    void setHeight(UInt32 height)
+    void setHeight(Int height)
     {
         height_ = height;
     }
@@ -77,27 +77,27 @@ public:
         pixelFormat_ = pixelFormat;
     }
 
-    UInt8 numLayers() const
+    Int numLayers() const
     {
         return numLayers_;
     }
 
-    void setNumLayers(UInt8 numLayers)
+    void setNumLayers(Int numLayers)
     {
-        numLayers_ = numLayers ? numLayers : 1;
+        numLayers_ = numLayers;
     }
 
-    UInt8 numMipLevels() const
+    Int numMipLevels() const
     {
         return numMipLevels_;
     }
 
-    void setNumMipLevels(UInt8 numMipLevels)
+    void setNumMipLevels(Int numMipLevels)
     {
         numMipLevels_ = numMipLevels;
     }
 
-    UInt8 numSamples() const
+    Int numSamples() const
     {
         return numSamples_;
     }
@@ -107,9 +107,9 @@ public:
         return numSamples_ > 1;
     }
 
-    void setNumSamples(UInt8 numSamples)
+    void setNumSamples(Int numSamples)
     {
-        numSamples_ = numSamples ? numSamples : 1;
+        numSamples_ = numSamples;
     }
 
     bool isMipGenerationEnabled() const
@@ -163,13 +163,13 @@ public:
     }
 
 private:
-    UInt32 width_ = 0;
-    UInt32 height_ = 0;
+    Int width_ = 0;
+    Int height_ = 0;
     ImageRank rank_ = ImageRank::_1D;
-    PixelFormat pixelFormat_ = PixelFormat::Unknown;
-    UInt8 numLayers_ = 1;
-    UInt8 numMipLevels_ = 1;
-    UInt8 numSamples_ = 1;
+    PixelFormat pixelFormat_ = PixelFormat::Undefined;
+    Int numLayers_ = 1;
+    Int numMipLevels_ = 1;
+    Int numSamples_ = 1;
     bool isMipGenerationEnabled_ = true;
     Usage usage_ = Usage::Default;
     ImageBindFlags bindFlags_ = ImageBindFlag::ShaderResource;
@@ -190,12 +190,12 @@ protected:
     }
 
 public:
-    UInt32 width() const
+    Int width() const
     {
         return info_.width();
     }
 
-    UInt32 height() const
+    Int height() const
     {
         return info_.height();
     }
@@ -210,17 +210,17 @@ public:
         return info_.pixelFormat();
     }
 
-    UInt8 numLayers() const
+    Int numLayers() const
     {
         return info_.numLayers();
     }
 
-    UInt8 numMipLevels() const
+    Int numMipLevels() const
     {
         return info_.numMipLevels();
     }
 
-    UInt8 numSamples() const
+    Int numSamples() const
     {
         return info_.numSamples();
     }

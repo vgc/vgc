@@ -27,7 +27,7 @@ namespace vgc::graphics {
 // GL_MAX_FRAGMENT_UNIFORM_BLOCKS                       (12 in GL3.3)
 // GL_MAX_VERTEX_UNIFORM_BLOCKS                         (12 in GL3.3)
 // GL_MAX_GEOMETRY_UNIFORM_BLOCKS                       (12 in GL3.3)
-inline constexpr UInt32 maxConstantBuffersPerStage = 12;
+inline constexpr Int maxConstantBuffersPerStage = 12;
 
 // There is no equivalent to D3D SRVs in OpenGL.
 // We have to reason in terms of textures.
@@ -39,10 +39,18 @@ inline constexpr UInt32 maxConstantBuffersPerStage = 12;
 // GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS            (16 in GL3.3)
 // GL_MAX_GEOMETRY_TEXTURE_IMAGE_UNITS          (16 in GL3.3)
 //
-inline constexpr UInt32 maxImageViewsPerStage = 16;
-inline constexpr UInt32 maxSamplersPerStage = 16;
+inline constexpr Int maxImageViewsPerStage = 16;
+inline constexpr Int maxSamplersPerStage = 16;
 
-inline constexpr UInt32 maxColorTargets = 8;
+inline constexpr Int maxColorTargets = 8;
+
+inline constexpr Int maxImageWidth = 16384;
+inline constexpr Int maxImageHeight = 16384;
+//inline constexpr Int maxImageDepth = 16384;
+inline constexpr Int maxImageLayers = 2048;
+
+inline constexpr Int maxAnisotropy = 16;
+inline constexpr Int maxNumSamples = 8;
 
 } // namespace vgc::graphics
 

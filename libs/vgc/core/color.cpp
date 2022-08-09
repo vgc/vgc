@@ -30,10 +30,10 @@ Color Color::hsl(double h, double s,  double l)
     l = core::clamp(l, 0.0, 1.0);
 
     // HSL to RGB
-    double c = (1 - std::abs(2*l - 1)) * s;
+    double c = (1 - std::abs(2 * l - 1)) * s;
     double hp = h / 60;
     double x = c * (1 - std::abs(std::fmod(hp, 2.0) - 1));
-    int hi = core::ifloor<int>(hp+1); // in theory, we should use iceil instead
+    int hi = core::ifloor<int>(hp + 1); // in theory, we should use iceil instead
     double r1, g1, b1;
     if      (hi == 1) { r1 = c; g1 = x; b1 = 0; }
     else if (hi == 2) { r1 = x; g1 = c; b1 = 0; }
@@ -42,8 +42,35 @@ Color Color::hsl(double h, double s,  double l)
     else if (hi == 5) { r1 = x; g1 = 0; b1 = c; }
     else if (hi == 6) { r1 = c; g1 = 0; b1 = x; }
     else              { r1 = 0; g1 = 0; b1 = 0; }
-    double m = l - 0.5*c;
+    double m = l - 0.5 * c;
     return Color(r1 + m, g1 + m, b1 + m);
+}
+
+Colorf Colorf::hsl(float h, float s,  float l)
+{
+    // Wrap h to [0, 360] range, and clamp s, l to [0, 1]
+    h = std::fmod(h, 360.0f);
+    if (h < 0) {
+        h += 360;
+    }
+    s = core::clamp(s, 0.0f, 1.0f);
+    l = core::clamp(l, 0.0f, 1.0f);
+
+    // HSL to RGB
+    float c = (1 - std::abs(2 * l - 1)) * s;
+    float hp = h / 60;
+    float x = c * (1 - std::abs(std::fmod(hp, 2.0f) - 1));
+    int hi = core::ifloor<int>(hp + 1); // in theory, we should use iceil instead
+    float r1, g1, b1;
+    if      (hi == 1) { r1 = c; g1 = x; b1 = 0; }
+    else if (hi == 2) { r1 = x; g1 = c; b1 = 0; }
+    else if (hi == 3) { r1 = 0; g1 = c; b1 = x; }
+    else if (hi == 4) { r1 = 0; g1 = x; b1 = c; }
+    else if (hi == 5) { r1 = x; g1 = 0; b1 = c; }
+    else if (hi == 6) { r1 = c; g1 = 0; b1 = x; }
+    else              { r1 = 0; g1 = 0; b1 = 0; }
+    float m = l - 0.5f * c;
+    return Colorf(r1 + m, g1 + m, b1 + m);
 }
 
 } // namespace core

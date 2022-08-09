@@ -42,22 +42,24 @@ enum class WindowNativeHandleType : uint8_t {
 
 class VGC_GRAPHICS_API SwapChainCreateInfo {
 public:
-    UInt32 width() const
+    using FlagsType = UInt64;
+
+    Int width() const
     {
         return width_;
     }
 
-    void setWidth(UInt32 width)
+    void setWidth(Int width)
     {
         width_ = width;
     }
 
-    UInt32 height() const
+    Int height() const
     {
         return height_;
     }
 
-    void setHeight(UInt32 height)
+    void setHeight(Int height)
     {
         height_ = height;
     }
@@ -79,33 +81,33 @@ public:
         windowNativeHandleType_ = windowNativeHandleType;
     }
 
-    UInt32 windowed() const
+    bool isWindowed() const
     {
-        return windowed_;
+        return isWindowed_;
     }
 
-    void setWindowed(UInt32 windowed)
+    void setWindowed(bool isWindowed)
     {
-        windowed_ = windowed;
+        isWindowed_ = isWindowed;
     }
 
-    UInt flags() const
+    FlagsType flags() const
     {
         return flags_;
     }
 
-    void setFlags(UInt flags)
+    void setFlags(FlagsType flags)
     {
         flags_ = flags;
     }
 
 private:
-    UInt32 width_ = 100;
-    UInt32 height_ = 100;
+    Int width_ = 100;
+    Int height_ = 100;
     void* windowNativeHandle_ = nullptr;
     WindowNativeHandleType windowNativeHandleType_ = WindowNativeHandleType::None;
-    bool windowed_ = true;
-    UInt flags_ = 0;
+    bool isWindowed_ = true;
+    FlagsType flags_ = 0;
 };
 
 /// \class vgc::graphics::SwapChain
@@ -130,9 +132,10 @@ public:
         return info_;
     }
 
-    UInt32 numPendingPresents() const
+    Int numPendingPresents() const
     {
-        return numPendingPresents_.load();
+        // static_cast is safe because value is always small
+        return static_cast<Int>(numPendingPresents_.load());
     }
 
     const FramebufferPtr& defaultFramebuffer() const
