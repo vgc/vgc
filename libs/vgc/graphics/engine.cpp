@@ -65,8 +65,8 @@ void Engine::onDestroyed()
     projectionMatrixStack_.clear();
     viewMatrixStack_.clear();
 
-    colorGradientsBuffer_; // 1D buffer
-    colorGradientsBufferImageView_;
+    colorGradientsBuffer_.reset(); // 1D buffer
+    colorGradientsBufferImageView_.reset();
 
     glyphAtlasProgram_.reset();
     glyphAtlasBuffer_.reset();

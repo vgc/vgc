@@ -61,7 +61,7 @@ Window::Window(ui::WidgetPtr widget) :
     windowSwapChainFormat.setNumSamples(8);
     engineConfig.setMultithreadingEnabled(true);
 
-#if defined(VGC_CORE_OS_WINDOWS) && FALSE
+#if defined(VGC_CORE_OS_WINDOWS) && TRUE
     // RasterSurface looks ok since Qt seems to not automatically create a backing store.
     setSurfaceType(QWindow::RasterSurface);
     QWindow::create();
@@ -218,22 +218,8 @@ void Window::resizeEvent(QResizeEvent* evt)
 #if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
     width_ = w;
     height_ = h;
-    geometry::Camera2d c;
-    c.setViewportSize(width(), height());
-    proj_ = internal::toMat4f(c.projectionMatrix());
-
-    // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
-    // silently rounds to the nearest integer representable as a float. See:
-    //   https://stackoverflow.com/a/60339495/1951907
-    // Should we issue a warning in these cases?
-    widget_->setGeometry(0, 0, static_cast<float>(width_), static_cast<float>(height_));
-
-    if (engine_) {
-        engine_->resizeSwapChain(swapChain_, width_, height_);
-        paint(true);
-        //requestUpdate();
-        //qDebug() << "painted";
-    }
+    deferredResize_ = true;
+    requestUpdate();
 #endif
 }
 
@@ -357,8 +343,6 @@ void Window::paint(bool sync) {
                 QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
             }
         });
-
-
 }
 
 bool Window::event(QEvent* e)
@@ -369,6 +353,27 @@ bool Window::event(QEvent* e)
             if (debugEvents) {
                 VGC_DEBUG(LogVgcUi, "paint from UpdateRequest");
             }
+#if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+            if (deferredResize_) {
+                deferredResize_ = false;
+                
+                geometry::Camera2d c;
+                c.setViewportSize(width(), height());
+                proj_ = internal::toMat4f(c.projectionMatrix());
+
+                // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
+                // silently rounds to the nearest integer representable as a float. See:
+                //   https://stackoverflow.com/a/60339495/1951907
+                // Should we issue a warning in these cases?
+                widget_->setGeometry(0, 0, static_cast<float>(width_), static_cast<float>(height_));
+
+                if (engine_) {
+                    engine_->resizeSwapChain(swapChain_, width_, height_);
+                }
+
+                engine_->resizeSwapChain(swapChain_, width_, height_);
+            }
+#endif
             paint(true);
         }
         return true;
