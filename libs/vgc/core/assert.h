@@ -19,7 +19,13 @@
 
 #include <cassert>
 
-/// Aborts the program if the provided \p condition is false.
+#include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
+
+// Deprecated
+#define VGC_CORE_ASSERT assert
+
+/// Throws a LogicError if the provided \p condition is false.
 ///
 /// Use assertions whenever useful for testing pre-conditions, post-conditions,
 /// invariants, and intermediate checks that should be provable at class-level
@@ -34,7 +40,7 @@
 /// \code
 /// // Good
 /// void Foo::privateFunction_() {
-///     VGC_CORE_ASSERT(p_);
+///     VGC_ASSERT(p_);
 ///     p_->doSomething();
 /// }
 ///
@@ -59,8 +65,9 @@
 /// Never use assertions for testing the validity of input from end users of
 /// even from client code. Instead, invalid input from end users should emit a
 /// user-visible warning and fail gracefully, and invalid input from client
-/// code should either emit a warning and fail gracefully, or possibly throw an
-/// exception if recovery can only be handled at higher level.
+/// code should either emit a warning and fail gracefully, or possibly throw a
+/// well-defined and documented exception if recovery can only be handled at
+/// higher level.
 ///
 /// Assertions should be extremely readable and fast to compute one-liners. As
 /// a rule of thumb, if implementing the assertion would take you more than
@@ -74,6 +81,11 @@
 /// unless specified otherwise. Therefore, in order to keep the code concise,
 /// there is no need to check this as a precondition.
 ///
-#define VGC_CORE_ASSERT assert
+#define VGC_ASSERT(condition) \
+    if (!(condition)) { \
+        std::string error = core::format( \
+            "Failed to satisfy condition `" #condition "`"); \
+        throw core::LogicError(error); \
+    } else (void)0
 
 #endif // VGC_CORE_ASSERT_H
