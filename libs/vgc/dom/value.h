@@ -158,11 +158,27 @@ public:
 
     }
 
+    /// Constructs a Value holding a DoubleArray.
+    ///
+    Value(core::DoubleArray&& doubleArray) :
+        type_(ValueType::DoubleArray),
+        var_(std::make_shared<core::DoubleArray>(std::move(doubleArray))) {
+
+    }
+
     /// Constructs a Value holding a Vec2dArray.
     ///
     Value(const geometry::Vec2dArray& vec2dArray) :
         type_(ValueType::Vec2dArray),
         var_(std::make_shared<geometry::Vec2dArray>(vec2dArray)) {
+
+    }
+
+    /// Constructs a Value holding a Vec2dArray.
+    ///
+    Value(geometry::Vec2dArray&& vec2dArray) :
+        type_(ValueType::Vec2dArray),
+        var_(std::make_shared<geometry::Vec2dArray>(std::move(vec2dArray))) {
 
     }
 
