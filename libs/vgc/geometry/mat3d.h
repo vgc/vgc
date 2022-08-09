@@ -129,6 +129,14 @@ public:
     ///
     static const Mat3d identity;
 
+    /// Returns a pointer to the underlying (colum-major ordered) array of components.
+    ///
+    const double* data() const { return data_[0]; }
+
+    /// Returns a pointer to the underlying (colum-major ordered) array of components.
+    ///
+    double* data() { return data_[0]; }
+
     /// Accesses the component of the Mat3d the the i-th row and j-th column.
     ///
     const double& operator()(Int i, Int j) const { return data_[j][i]; }

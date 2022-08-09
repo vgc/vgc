@@ -79,6 +79,14 @@ public:
                 static_cast<float>(other[2]),
                 static_cast<float>(other[3])} {}
 
+    /// Returns a pointer to the underlying array of components.
+    ///
+    const float* data() const { return data_; }
+
+    /// Returns a pointer to the underlying array of components.
+    ///
+    float* data() { return data_; }
+
     /// Accesses the `i`-th coordinate of this `Vec4f`.
     ///
     constexpr const float& operator[](Int i) const { return data_[i]; }
