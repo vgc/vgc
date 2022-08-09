@@ -230,19 +230,19 @@ public:
     // XXX setting max levels to 0 should disable and
     //     thus remove all history directly for safety !!
 
-    void setMinLevelsCount(Int count);
-    void setMaxLevelsCount(Int count);
+    void setMinLevels(Int n);
+    void setMaxLevels(Int n);
 
-    Int getMaxLevelsCount() const {
+    Int maxLevels() const {
         return maxLevels_;
     }
 
-    /*Int getLevelsCount() const {
-        return levelsCount_;
+    /*Int numLevels() const {
+        return numLevels_;
     }*/
 
-    /*Int getNodesCount() const {
-        return nodesCount_;
+    /*Int numNodes() const {
+        return numNodes_;
     }*/
 
     // XXX todos:
@@ -292,8 +292,8 @@ private:
 
     UndoGroup* root_ = nullptr;
     UndoGroup* head_ = nullptr;
-    Int nodesCount_ = 0;
-    Int levelsCount_ = 0;
+    Int numNodes_ = 0;
+    Int numLevels_ = 0;
 
     // Assumes head_ is undoable.
     void undoOne_(bool forceAbort = false);
