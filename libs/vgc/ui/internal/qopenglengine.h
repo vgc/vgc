@@ -58,6 +58,11 @@ VGC_DECLARE_OBJECT(QglEngine);
 
 using namespace ::vgc::graphics;
 
+inline constexpr Int requiredOpenGLVersionMajor = 3;
+inline constexpr Int requiredOpenGLVersionMinor = 3;
+using OpenGLFunctions = QOpenGLFunctions_3_3_Core;
+inline constexpr QPair<int, int> requiredOpenGLVersionQPair(requiredOpenGLVersionMajor, requiredOpenGLVersionMinor);
+
 /// \class vgc::widget::QglEngine
 /// \brief The QtOpenGL-based graphics::Engine.
 ///
@@ -74,8 +79,6 @@ protected:
     void onDestroyed() override;
 
 public:
-    using OpenGLFunctions = QOpenGLFunctions_3_3_Core;
-
     /// Creates a new OpenglEngine.
     ///
     static QglEnginePtr create(const EngineCreateInfo& createInfo);
@@ -148,7 +151,7 @@ private:
     QOpenGLContext* ctx_ = nullptr;
     QOffscreenSurface* offscreenSurface_;
     bool isExternalCtx_ = false;
-    QOpenGLFunctions_3_3_Core* api_ = nullptr;
+    OpenGLFunctions* api_ = nullptr;
     QSurface* surface_ = nullptr;
 
     // state tracking

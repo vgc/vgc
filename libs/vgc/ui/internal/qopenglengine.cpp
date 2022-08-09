@@ -690,18 +690,18 @@ QglEngine::QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx) :
         format_ = ctx_->format();
     }
     else {
+        format_.setProfile(QSurfaceFormat::CoreProfile);
+        format_.setVersion(requiredOpenGLVersionMajor, requiredOpenGLVersionMinor);
+        //format_.setOption(QSurfaceFormat::DebugContext);
+
         // XXX only allow D24_S8 for now..
         format_.setDepthBufferSize(24);
         format_.setStencilBufferSize(8);
-        format_.setVersion(3, 3);
         format_.setSamples(createInfo.windowSwapChainFormat().numSamples());
         format_.setSwapInterval(0);
 
         // XXX use buffer count
         format_.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
-
-        //format_.setProfile(QSurfaceFormat::CoreProfile);
-        //format_.setOption(QSurfaceFormat::DebugContext);
     }
     QSurfaceFormat::setDefaultFormat(format_);
 
@@ -904,12 +904,16 @@ void QglEngine::initContext_()
 {
     //format.setSamples(8); // mandatory, Qt ignores the QWindow format...
 
+    VGC_CORE_ASSERT(format_.version() >= requiredOpenGLVersionQPair);
+
     if (!isExternalCtx_) {
         ctx_ = new QOpenGLContext();
         ctx_->setFormat(format_);
         [[maybe_unused]] bool ok = ctx_->create();
         VGC_CORE_ASSERT(ok);
     }
+    VGC_CORE_ASSERT(ctx_->isValid());
+    VGC_CORE_ASSERT(ctx_->format().version() >= requiredOpenGLVersionQPair);
 
     // must be create here since the QWindow constructor is not thread-safe
     // (can't construct windows is parallel threads)
@@ -917,7 +921,7 @@ void QglEngine::initContext_()
     offscreenSurface_->setFormat(format_);
     offscreenSurface_->create();
     VGC_CORE_ASSERT(offscreenSurface_->isValid());
-    VGC_CORE_ASSERT((format_.version() >= QPair<int, int>(3, 3)));
+    VGC_CORE_ASSERT(offscreenSurface_->format().version() >= requiredOpenGLVersionQPair);
 
     QSurface* surface = ctx_->surface();
     surface = surface ? surface : offscreenSurface_;
@@ -931,9 +935,9 @@ void QglEngine::initContext_()
 
     // Get API 3.3
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    api_ = ctx_->versionFunctions<QOpenGLFunctions_3_3_Core>();
+    api_ = ctx_->versionFunctions<OpenGLFunctions>();
 #else
-    api_ = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_3_3_Core>(ctx_);
+    api_ = QOpenGLVersionFunctionsFactory::get<OpenGLFunctions>(ctx_);
 #endif
     //
     VGC_CORE_ASSERT(api_ != nullptr);
