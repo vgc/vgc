@@ -122,4 +122,12 @@ QMatrix4x4 toQt(const geometry::Mat4f& m)
         m(3,0), m(3,1), m(3,2), m(3,3));
 }
 
+QMatrix4x4 toQt(const geometry::Mat4d& m) {
+    return QMatrix4x4(
+        static_cast<float>(m(0,0)), static_cast<float>(m(0,1)), static_cast<float>(m(0,2)), static_cast<float>(m(0,3)),
+        static_cast<float>(m(1,0)), static_cast<float>(m(1,1)), static_cast<float>(m(1,2)), static_cast<float>(m(1,3)),
+        static_cast<float>(m(2,0)), static_cast<float>(m(2,1)), static_cast<float>(m(2,2)), static_cast<float>(m(2,3)),
+        static_cast<float>(m(3,0)), static_cast<float>(m(3,1)), static_cast<float>(m(3,2)), static_cast<float>(m(3,3)));
+}
+
 } // namespace vgc::ui

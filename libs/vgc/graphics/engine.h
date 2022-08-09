@@ -31,7 +31,7 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/core/color.h>
-#include <vgc/core/enum.h>
+#include <vgc/core/flags.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/templateutil.h>
 #include <vgc/geometry/mat4f.h>

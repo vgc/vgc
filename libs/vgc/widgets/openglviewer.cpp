@@ -46,14 +46,6 @@ QString shaderPath_(const std::string& name) {
     return ui::toQt(path);
 }
 
-QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {
-    return QMatrix4x4(
-               static_cast<float>(m(0,0)), static_cast<float>(m(0,1)), static_cast<float>(m(0,2)), static_cast<float>(m(0,3)),
-               static_cast<float>(m(1,0)), static_cast<float>(m(1,1)), static_cast<float>(m(1,2)), static_cast<float>(m(1,3)),
-               static_cast<float>(m(2,0)), static_cast<float>(m(2,1)), static_cast<float>(m(2,2)), static_cast<float>(m(2,3)),
-               static_cast<float>(m(3,0)), static_cast<float>(m(3,1)), static_cast<float>(m(3,2)), static_cast<float>(m(3,3)));
-}
-
 double width_(const PointingDeviceEvent& event) {
     const double defaultWidth = 6.0;
     return event.hasPressure() ?
@@ -470,8 +462,8 @@ void OpenGLViewer::paintGL()
     shaderProgram_.bind();
 
     // Set uniform values
-    shaderProgram_.setUniformValue(projMatrixLoc_, toQtMatrix(camera_.projectionMatrix()));
-    shaderProgram_.setUniformValue(viewMatrixLoc_, toQtMatrix(camera_.viewMatrix()));
+    shaderProgram_.setUniformValue(projMatrixLoc_, ui::toQt(camera_.projectionMatrix()));
+    shaderProgram_.setUniformValue(viewMatrixLoc_, ui::toQt(camera_.viewMatrix()));
 
     // Draw triangles
     if (polygonMode_ > 0) {

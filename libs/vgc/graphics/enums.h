@@ -18,7 +18,7 @@
 #define VGC_GRAPHICS_ENUMS_H
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/core/enum.h>
+#include <vgc/core/flags.h>
 
 namespace vgc::graphics {
 
