@@ -79,6 +79,14 @@ public:
                 static_cast<double>(other[2]),
                 static_cast<double>(other[3])} {}
 
+    /// Returns a pointer to the underlying array of components.
+    ///
+    const double* data() const { return data_; }
+
+    /// Returns a pointer to the underlying array of components.
+    ///
+    double* data() { return data_; }
+
     /// Accesses the `i`-th coordinate of this `Vec4d`.
     ///
     constexpr const double& operator[](Int i) const { return data_[i]; }

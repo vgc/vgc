@@ -129,6 +129,14 @@ public:
     ///
     static const Mat3x identity;
 
+    /// Returns a pointer to the underlying (colum-major ordered) array of components.
+    ///
+    const float* data() const { return data_[0]; }
+
+    /// Returns a pointer to the underlying (colum-major ordered) array of components.
+    ///
+    float* data() { return data_[0]; }
+
     /// Accesses the component of the Mat3x the the i-th row and j-th column.
     ///
     const float& operator()(Int i, Int j) const { return data_[j][i]; }
