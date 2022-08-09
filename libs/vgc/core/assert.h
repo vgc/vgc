@@ -19,6 +19,9 @@
 
 #include <cassert>
 
+#include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
+
 // Deprecated
 #define VGC_CORE_ASSERT assert
 
