@@ -68,7 +68,7 @@ void UndoGroup::redo_()
 }
 
 History::History(core::StringId entrypointName)
-    : nodesCount_(0) // root doesn't count
+    : numNodes_(0) // root doesn't count
 {
     UndoGroup* ptr = new UndoGroup(entrypointName, this);
     this->appendChildObject_(ptr);
@@ -76,9 +76,9 @@ History::History(core::StringId entrypointName)
     head_ = ptr;
 }
 
-void History::setMaxLevelsCount(Int count)
+void History::setMaxLevels(Int n)
 {
-    maxLevels_ = std::max(count, Int(1));
+    maxLevels_ = std::max(n, Int(1));
     prune_();
 }
 
@@ -188,7 +188,7 @@ void History::undoOne_(bool forceAbort)
 
     head_->undo_(abort);
     if (!head_->openAncestor_) {
-        --levelsCount_;
+        --numLevels_;
     }
     if (abort) {
         head_->destroyObject_();
@@ -203,7 +203,7 @@ void History::redoOne_()
 
     child->redo_();
     if (!head_->openAncestor_) {
-        ++levelsCount_;
+        ++numLevels_;
     }
     head_ = child;
 }
@@ -247,8 +247,8 @@ bool History::closeUndoGroup_(UndoGroup* node)
     head_ = node;
 
     if (!node->openAncestor_) {
-        ++levelsCount_;
-        ++nodesCount_;
+        ++numLevels_;
+        ++numNodes_;
         prune_();
     }
 
@@ -258,27 +258,28 @@ bool History::closeUndoGroup_(UndoGroup* node)
         prune_();
     }
 
+    //dumpObjectTree();
     return true;
 }
 
 void History::prune_()
 {
     // requires maxLevels_ >= 1
-    Int extraLevelsCount = levelsCount_ - maxLevels_;
-    for (Int i = 0; i < extraLevelsCount; ++i) {
+    Int extraLevels = numLevels_ - maxLevels_;
+    for (Int i = 0; i < extraLevels; ++i) {
         Int size = root_->branchSize();
         UndoGroup* newRoot = root_->mainChild();
         size -= newRoot->branchSize();
         this->appendChildObject_(newRoot);
         root_->destroyObject_();
-        nodesCount_ -= size;
-        --levelsCount_;
+        numNodes_ -= size;
+        --numLevels_;
         root_ = newRoot;
     }
 
-    Int maxNodesCount = 4 * maxLevels_;
+    Int maxNodes = 4 * maxLevels_;
     // keeps the main branch intact, only able to destroy redos from the oldest branches.
-    while (nodesCount_ > maxNodesCount) {
+    while (numNodes_ > maxNodes) {
         UndoGroup* p = root_;
         while (UndoGroup* n = p->firstChild()) {
             p = n;
@@ -287,7 +288,7 @@ void History::prune_()
             break;
         }
         p->destroyObject_();
-        --nodesCount_;
+        --numNodes_;
     }
 }
 
