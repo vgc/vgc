@@ -21,6 +21,7 @@
 #include <QMouseEvent>
 #include <QOpenGLFunctions>
 
+#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/graphics/d3d11/d3d11engine.h>
@@ -33,6 +34,12 @@
 namespace vgc::ui {
 
 static constexpr bool debugEvents = false;
+
+#define VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
+
+#if defined(VGC_CORE_OS_WINDOWS) && !defined(VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+#define VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
+#endif
 
 Window::Window(ui::WidgetPtr widget) :
     QWindow(),
@@ -54,7 +61,7 @@ Window::Window(ui::WidgetPtr widget) :
     windowSwapChainFormat.setNumSamples(8);
     engineConfig.setMultithreadingEnabled(true);
 
-#if defined(VGC_CORE_COMPILER_MSVC) && FALSE
+#if defined(VGC_CORE_OS_WINDOWS) && FALSE
     // RasterSurface looks ok since Qt seems to not automatically create a backing store.
     setSurfaceType(QWindow::RasterSurface);
     QWindow::create();
@@ -208,7 +215,7 @@ void Window::resizeEvent(QResizeEvent* evt)
         VGC_DEBUG(LogVgcUi, core::format("resizeEvent({:04d}, {:04d})", w, h));
     }
 
-#if !defined(VGC_CORE_COMPILER_MSVC)
+#if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
     width_ = w;
     height_ = h;
     geometry::Camera2d c;
@@ -224,6 +231,7 @@ void Window::resizeEvent(QResizeEvent* evt)
     if (engine_) {
         engine_->resizeSwapChain(swapChain_, width_, height_);
         paint(true);
+        //requestUpdate();
         //qDebug() << "painted";
     }
 #endif
@@ -343,11 +351,14 @@ void Window::paint(bool sync) {
     frameIdx++;
 #endif
 
+    engine_->endFrame(); // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
     engine_->present(sync ? 1 : 0, [=](UInt64) {
             if (updateDeferred_) {
                 QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
             }
         });
+
+
 }
 
 bool Window::event(QEvent* e)
@@ -370,7 +381,8 @@ bool Window::event(QEvent* e)
     return QWindow::event(e);
 }
 
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+
 LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     Window* w = (Window*)::GetWindowLongPtr(hwnd, 19 * sizeof(LONG_PTR));
@@ -498,6 +510,7 @@ bool Window::nativeEvent(const QByteArray& eventType, void* message, NativeEvent
 #else
 bool Window::nativeEvent(const QByteArray& /*eventType*/, void* /*message*/, NativeEventResult* /*result*/)
 {
+    return false;
 }
 #endif
 

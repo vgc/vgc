@@ -736,11 +736,13 @@ void Engine::beginFrame(bool isStateDirty)
     if (isStateDirty) {
         setStateDirty();
     }
+
     // XXX check every stack has size one !
 }
 
 void Engine::endFrame()
 {
+    submitPendingCommandList_();
     if (!isMultithreadingEnabled()) {
         resourceRegistry_->releaseAndDeleteGarbagedResources(this);
     }
@@ -840,6 +842,13 @@ void Engine::init_()
         [](Engine* engine) {
             engine->initBuiltinResources_();
         });
+
+    // QglEngine::initContext_ is not thread-safe (static Qt create() functions
+    // related to OpenGL access a global context pointer that is not
+    // synchronized).
+    if (isMultithreadingEnabled()) {
+        finish();
+    }
 }
 
 void Engine::createBuiltinResources_()
@@ -935,10 +944,14 @@ void Engine::stopRenderThread_()
 UInt Engine::submitPendingCommandList_()
 {
     std::unique_lock<std::mutex> lock(mutex_);
-    bool notifyRenderThread = commandQueue_.isEmpty();
-    commandQueue_.emplaceLast(std::move(pendingCommands_));
-    pendingCommands_.clear();
-    UInt id = ++lastSubmittedCommandListId_;
+    bool notifyRenderThread = false;
+    UInt id = lastSubmittedCommandListId_;
+    if (!pendingCommands_.empty()) {
+        notifyRenderThread = commandQueue_.isEmpty();
+        commandQueue_.emplaceLast(std::move(pendingCommands_));
+        pendingCommands_.clear();
+        id = ++lastSubmittedCommandListId_;
+    }
     lock.unlock();
     if (notifyRenderThread) {
         wakeRenderThreadConditionVariable_.notify_all();

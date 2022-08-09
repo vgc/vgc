@@ -705,12 +705,6 @@ QglEngine::QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx) :
     }
     QSurfaceFormat::setDefaultFormat(format_);
 
-    // must be create here since the QWindow constructor is not thread-safe
-    // (can't construct windows is parallel threads)
-    offscreenSurface_ = new QOffscreenSurface();
-    offscreenSurface_->setFormat(format_);
-    offscreenSurface_->create();
-
     currentImageViews_.fill(nullptr);
     currentSamplerStates_.fill(nullptr);
     isTextureStateDirtyMap_.fill(true);
@@ -913,8 +907,17 @@ void QglEngine::initContext_()
     if (!isExternalCtx_) {
         ctx_ = new QOpenGLContext();
         ctx_->setFormat(format_);
-        VGC_CORE_ASSERT(ctx_->create());
+        [[maybe_unused]] bool ok = ctx_->create();
+        VGC_CORE_ASSERT(ok);
     }
+
+    // must be create here since the QWindow constructor is not thread-safe
+    // (can't construct windows is parallel threads)
+    offscreenSurface_ = new QOffscreenSurface();
+    offscreenSurface_->setFormat(format_);
+    offscreenSurface_->create();
+    VGC_CORE_ASSERT(offscreenSurface_->isValid());
+    VGC_CORE_ASSERT((format_.version() >= QPair<int, int>(3, 3)));
 
     QSurface* surface = ctx_->surface();
     surface = surface ? surface : offscreenSurface_;
@@ -934,7 +937,8 @@ void QglEngine::initContext_()
 #endif
     //
     VGC_CORE_ASSERT(api_ != nullptr);
-    api_->initializeOpenGLFunctions();
+    [[maybe_unused]] bool ok = api_->initializeOpenGLFunctions();
+    VGC_CORE_ASSERT(ok);
 }
 
 void QglEngine::initBuiltinResources_()
