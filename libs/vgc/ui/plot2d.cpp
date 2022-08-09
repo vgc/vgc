@@ -42,7 +42,7 @@ Plot2d::Plot2d()
     maxYText_->addStyleClass(core::StringId("foo"));
     minYText_->addStyleClass(core::StringId("foo"));
     minXText_->addStyleClass(core::StringId("foo"));
-    maxXText_->addStyleClass(core::StringId("foo"));
+    maxXText_->addStyleClass(core::StringId("Plot2d-label-right-aligned"));
     hintText_->addStyleClass(core::StringId("foo"));
 }
 
@@ -154,9 +154,9 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
                 core::FloatArray a = {};
                 // maxY text
                 {
-                    minYText_->setRect(geometry::Rect2f(xz[0], yz[0], xz[1], yz[1]));
-                    minYText_->setText(core::format("{}", bY + dY));
-                    minYText_->fill(a);
+                    maxYText_->setRect(geometry::Rect2f(xz[0], yz[0], xz[1], yz[1]));
+                    maxYText_->setText(core::format("{}", bY + dY));
+                    maxYText_->fill(a);
                 }
                 // minY text
                 {
@@ -166,15 +166,15 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
                 }
                 // minX text
                 {
-                    minYText_->setRect(geometry::Rect2f(xz[0], yz[3], xz[1], yz[4]));
-                    minYText_->setText(core::format("{}", bX));
-                    minYText_->fill(a);
+                    minXText_->setRect(geometry::Rect2f(xz[0], yz[3], xz[1], yz[4]));
+                    minXText_->setText(core::format("{}", bX));
+                    minXText_->fill(a);
                 }
                 // maxX text
                 {
-                    minYText_->setRect(geometry::Rect2f(xz[2], yz[3], xz[3], yz[4]));
-                    minYText_->setText(core::format("{}", bX + dX));
-                    minYText_->fill(a);
+                    maxXText_->setRect(geometry::Rect2f(xz[2], yz[3], xz[3], yz[4]));
+                    maxXText_->setText(core::format("{}", bX + dX));
+                    maxXText_->fill(a);
                 }
                 engine->updateVertexBufferData(plotTextGeom_, std::move(a));
             }

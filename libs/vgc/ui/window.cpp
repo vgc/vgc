@@ -35,7 +35,7 @@ namespace vgc::ui {
 
 static constexpr bool debugEvents = false;
 
-#define VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
+//#define VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
 
 #if defined(VGC_CORE_OS_WINDOWS) && !defined(VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
 #define VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
@@ -356,7 +356,7 @@ bool Window::event(QEvent* e)
 #if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
             if (deferredResize_) {
                 deferredResize_ = false;
-                
+
                 geometry::Camera2d c;
                 c.setViewportSize(width(), height());
                 proj_ = internal::toMat4f(c.projectionMatrix());

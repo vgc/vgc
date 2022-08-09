@@ -27,6 +27,10 @@
     border-radius: 3dp;
 }
 
+.Plot2d-label-right-aligned {
+    text-horizontal-align: right;
+}
+
 .Very.Special {
     background-color: rgb(144, 46, 47);
     border-radius: 3dp;
