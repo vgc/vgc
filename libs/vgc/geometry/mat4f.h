@@ -464,11 +464,11 @@ public:
     /// Returns a reference to this Mat4f.
     ///
     Mat4f& translate(float vx, float vy = 0, float vz = 0) {
-        Mat4f m(1, 0, 0, vx,
-                0, 1, 0, vy,
-                0, 0, 1, vz,
-                0, 0, 0, 1);
-        return (*this) *= m;
+        data_[3][0] += vx*data_[0][0] + vy*data_[1][0] + vz*data_[2][0];
+        data_[3][1] += vx*data_[0][1] + vy*data_[1][1] + vz*data_[2][1];
+        data_[3][2] += vx*data_[0][2] + vy*data_[1][2] + vz*data_[2][2];
+        data_[3][3] += vx*data_[0][3] + vy*data_[1][3] + vz*data_[2][3];
+        return *this;
     }
 
     /// Overloads `Mat4f::translate(float, float, float)`.
