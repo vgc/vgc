@@ -164,6 +164,7 @@ int main(int argc, char* argv[])
     int size = 10;
     for (int i = 0; i < size; ++i) {
         vgc::ui::Row* row = col->createChild<vgc::ui::Row>();
+        row->addStyleClass(vgc::core::StringId("inner"));
         for (int j = 0; j < size; ++j) {
             vgc::ui::LineEdit* lineEdit = row->createChild<vgc::ui::LineEdit>();
             size_t begin = randomBegin();

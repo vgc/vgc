@@ -226,7 +226,7 @@ public:
         return info_.offsets();
     }
 
-    const Int vertexSizeInBuffer(Int i) const
+    Int vertexSizeInBuffer(Int i) const
     {
         BuiltinGeometryLayout builtinLayout = info_.builtinGeometryLayout();
         if (builtinLayout != BuiltinGeometryLayout::NotBuiltin) {
@@ -243,7 +243,7 @@ public:
         return -1;
     }
 
-    const Int numVertices() const
+    Int numVertices() const
     {
         Int elementSize = vertexSizeInBuffer(0);
         return info_.vertexBuffers()[0]->lengthInBytes() / elementSize;

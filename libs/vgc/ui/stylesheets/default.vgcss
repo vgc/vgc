@@ -28,7 +28,13 @@
 }
 
 .Plot2d-label-right-aligned {
-    text-horizontal-align: right;
+    text-horizontal-align: center;
+    text-vertical-align: middle;
+}
+
+.Plot2d-label-center-aligned {
+    text-horizontal-align: center;
+    text-vertical-align: middle;
 }
 
 .Very.Special {
@@ -57,6 +63,13 @@
     padding-right: 5dp;
     padding-bottom: 5dp;
     padding-left: 5dp;
+}
+
+.Flex.inner {
+    padding-top: 0dp;
+    padding-right: 0dp;
+    padding-bottom: 0dp;
+    padding-left: 0dp;
 }
 
 .ColorPalette {

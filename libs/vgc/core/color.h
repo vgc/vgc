@@ -242,6 +242,14 @@ public:
     ///
     Colorf() {}
 
+    explicit Colorf(const Color& c)
+        : data_{
+            static_cast<float>(c.r()),
+            static_cast<float>(c.g()),
+            static_cast<float>(c.b()),
+            static_cast<float>(c.a()),
+        } {}
+
     /// Creates a Colorf from the given HSL values.
     ///
     /// ```cpp

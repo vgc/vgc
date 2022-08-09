@@ -933,7 +933,7 @@ void QglEngine::initContext_()
     // move to constructor with dummy context...
     hasAnisotropicFilteringSupport_ = ctx_->hasExtension("EXT_texture_filter_anisotropic");
 
-    // Get API 3.3
+    // Get API
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     api_ = ctx_->versionFunctions<OpenGLFunctions>();
 #else
