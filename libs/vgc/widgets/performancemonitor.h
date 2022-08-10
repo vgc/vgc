@@ -33,8 +33,7 @@ namespace widgets {
 /// \class vgc::widgets::PerformanceMonitor
 /// \brief A panel that displays performance information (rendering time, etc.)
 ///
-class VGC_WIDGETS_API PerformanceMonitor : public QWidget
-{
+class VGC_WIDGETS_API PerformanceMonitor : public QWidget {
 private:
     Q_OBJECT
     Q_DISABLE_COPY(PerformanceMonitor)

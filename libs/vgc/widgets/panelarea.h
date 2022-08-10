@@ -33,8 +33,10 @@ class Panel;
 /// \class vgc::widgets::PanelArea
 /// \brief An area where Panel widgets can be added or removed.
 ///
-class VGC_WIDGETS_API PanelArea : public QFrame // Note: QFrame defines the enum value QFrame::Panel.
-{                                               // Beware of name conflicts!
+// Note: QFrame defines the enum value QFrame::Panel. Beware of name conflicts!
+//
+class VGC_WIDGETS_API PanelArea : public QFrame {
+private:
     Q_OBJECT
 
 public:

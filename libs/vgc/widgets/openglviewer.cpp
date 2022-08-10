@@ -20,8 +20,9 @@
 #include <cmath>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-#include <QOpenGLVersionFunctionsFactory>
+#    include <QOpenGLVersionFunctionsFactory>
 #endif
+
 #include <QBitmap>
 #include <QMouseEvent>
 #include <QPainter>
@@ -30,13 +31,12 @@
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
-#include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/curve.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/ui/qtutil.h>
 
 namespace vgc {
 namespace widgets {
-
 
 namespace {
 
@@ -48,9 +48,7 @@ QString shaderPath_(const std::string& name) {
 
 double width_(const PointingDeviceEvent& event) {
     const double defaultWidth = 6.0;
-    return event.hasPressure() ?
-               2 * event.pressure() * defaultWidth :
-               defaultWidth;
+    return event.hasPressure() ? 2 * event.pressure() * defaultWidth : defaultWidth;
 }
 
 core::StringId PATH("path");
@@ -92,8 +90,7 @@ QCursor crossCursor() {
 
 } // namespace
 
-void OpenGLViewer::init()
-{
+void OpenGLViewer::init() {
     // Note:
     //
     // Performance seems to be significantly impacted by multisample
@@ -126,19 +123,19 @@ void OpenGLViewer::init()
     QSurfaceFormat::setDefaultFormat(format);
 }
 
-OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
-    QOpenGLWidget(parent),
-    document_(document),
-    mousePressed_(false),
-    tabletPressed_(false),
-    polygonMode_(2),
-    showControlPoints_(false),
-    requestedTesselationMode_(2),
-    currentTesselationMode_(2),
-    renderTask_("Render"),
-    updateTask_("Update"),
-    drawTask_("Draw")
-{
+OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent)
+    : QOpenGLWidget(parent)
+    , document_(document)
+    , mousePressed_(false)
+    , tabletPressed_(false)
+    , polygonMode_(2)
+    , showControlPoints_(false)
+    , requestedTesselationMode_(2)
+    , currentTesselationMode_(2)
+    , renderTask_("Render")
+    , updateTask_("Update")
+    , drawTask_("Draw") {
+
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
     setFocusPolicy(Qt::ClickFocus);
@@ -149,13 +146,10 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent) :
     setCursor(crossCursor());
 
     documentChangedConnectionHandle_ = document_->changed().connect(
-        [this](const dom::Diff& diff) {
-            this->onDocumentChanged_(diff);
-        });
+        [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
 }
 
-void OpenGLViewer::setDocument(dom::Document* document)
-{
+void OpenGLViewer::setDocument(dom::Document* document) {
     makeCurrent();
     cleanupGL();
     doneCurrent();
@@ -166,42 +160,35 @@ void OpenGLViewer::setDocument(dom::Document* document)
 
     document_ = document;
     documentChangedConnectionHandle_ = document_->changed().connect(
-        [this](const dom::Diff& diff) {
-            this->onDocumentChanged_(diff);
-        });
+        [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
 
     update();
 }
 
-OpenGLViewer::~OpenGLViewer()
-{
+OpenGLViewer::~OpenGLViewer() {
     // Make OpenGL context current and call cleanupGL()
     makeCurrent();
     cleanupGL();
     doneCurrent();
 }
 
-QSize OpenGLViewer::minimumSizeHint() const
-{
+QSize OpenGLViewer::minimumSizeHint() const {
     return QSize(160, 120);
 }
 
-void OpenGLViewer::startLoggingUnder(core::PerformanceLog* parent)
-{
+void OpenGLViewer::startLoggingUnder(core::PerformanceLog* parent) {
     core::PerformanceLog* renderLog = renderTask_.startLoggingUnder(parent);
     updateTask_.startLoggingUnder(renderLog);
     drawTask_.startLoggingUnder(renderLog);
 }
 
-void OpenGLViewer::stopLoggingUnder(core::PerformanceLog* parent)
-{
+void OpenGLViewer::stopLoggingUnder(core::PerformanceLog* parent) {
     core::PerformanceLogPtr renderLog = renderTask_.stopLoggingUnder(parent);
     updateTask_.stopLoggingUnder(renderLog.get());
     drawTask_.stopLoggingUnder(renderLog.get());
 }
 
-void OpenGLViewer::mousePressEvent(QMouseEvent* event)
-{
+void OpenGLViewer::mousePressEvent(QMouseEvent* event) {
     if (mousePressed_ || tabletPressed_) {
         return;
     }
@@ -210,16 +197,14 @@ void OpenGLViewer::mousePressEvent(QMouseEvent* event)
     pointingDevicePress(PointingDeviceEvent(event));
 }
 
-void OpenGLViewer::mouseMoveEvent(QMouseEvent* event)
-{
+void OpenGLViewer::mouseMoveEvent(QMouseEvent* event) {
     if (!mousePressed_) {
         return;
     }
     pointingDeviceMove(PointingDeviceEvent(event));
 }
 
-void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
-{
+void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event) {
     if (!mousePressed_ || pointingDeviceButtonAtPress_ != event->button()) {
         return;
     }
@@ -227,9 +212,8 @@ void OpenGLViewer::mouseReleaseEvent(QMouseEvent* event)
     mousePressed_ = false;
 }
 
-void OpenGLViewer::tabletEvent(QTabletEvent* event)
-{
-    switch(event->type()) {
+void OpenGLViewer::tabletEvent(QTabletEvent* event) {
+    switch (event->type()) {
     case QEvent::TabletPress:
         if (mousePressed_ || tabletPressed_) {
             return;
@@ -260,47 +244,38 @@ void OpenGLViewer::tabletEvent(QTabletEvent* event)
     }
 }
 
-void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event)
-{
+void OpenGLViewer::pointingDevicePress(const PointingDeviceEvent& event) {
     if (isSketching_ || isPanning_ || isRotating_ || isZooming_) {
         return;
     }
 
-    if (event.modifiers() == Qt::NoModifier &&
-        event.button() == Qt::LeftButton)
-    {
+    if (event.modifiers() == Qt::NoModifier && event.button() == Qt::LeftButton) {
         isSketching_ = true;
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
         geometry::Vec2d viewCoords = event.pos();
-        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
+        geometry::Vec2d worldCoords =
+            camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
         startCurve_(worldCoords, width_(event));
     }
-    else if (event.modifiers() == Qt::AltModifier &&
-             event.button() == Qt::LeftButton)
-    {
+    else if (event.modifiers() == Qt::AltModifier && event.button() == Qt::LeftButton) {
         isRotating_ = true;
         pointingDevicePosAtPress_ = event.pos();
         cameraAtPress_ = camera_;
     }
-    else if (event.modifiers() == Qt::AltModifier &&
-             event.button() == Qt::MiddleButton)
-    {
+    else if (event.modifiers() == Qt::AltModifier && event.button() == Qt::MiddleButton) {
         isPanning_ = true;
         pointingDevicePosAtPress_ = event.pos();
         cameraAtPress_ = camera_;
     }
-    else if (event.modifiers() == Qt::AltModifier &&
-             event.button() == Qt::RightButton)
-    {
+    else if (event.modifiers() == Qt::AltModifier && event.button() == Qt::RightButton) {
         isZooming_ = true;
         pointingDevicePosAtPress_ = event.pos();
         cameraAtPress_ = camera_;
     }
 }
 
-void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
-{
+void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event) {
     // Note: event.button() is always NoButton for move events. This is why
     // we use the variable isPanning_ and isSketching_ to remember the current
     // mouse action. In the future, we'll abstract this mechanism in a separate
@@ -310,7 +285,8 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
         // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
         // and should be cached), but let's keep it like this for now for testing.
         geometry::Vec2d viewCoords = event.pos();
-        geometry::Vec2d worldCoords = camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
+        geometry::Vec2d worldCoords =
+            camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
         continueCurve_(worldCoords, width_(event));
     }
     else if (isPanning_) {
@@ -331,8 +307,10 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
 
         // Set new camera center so that rotation center = mouse pos at press
         geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
-        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
+        geometry::Vec2d pivotWorldCoords =
+            cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
+        geometry::Vec2d pivotViewCoordsNow =
+            camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();
@@ -349,16 +327,17 @@ void OpenGLViewer::pointingDeviceMove(const PointingDeviceEvent& event)
 
         // Set new camera center so that zoom center = mouse pos at press
         geometry::Vec2d pivotViewCoords = pointingDevicePosAtPress_;
-        geometry::Vec2d pivotWorldCoords = cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
-        geometry::Vec2d pivotViewCoordsNow = camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
+        geometry::Vec2d pivotWorldCoords =
+            cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
+        geometry::Vec2d pivotViewCoordsNow =
+            camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
         camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
 
         update();
     }
 }
 
-void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&)
-{
+void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&) {
     isSketching_ = false;
     isRotating_ = false;
     isPanning_ = false;
@@ -370,8 +349,7 @@ void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&)
     }
 }
 
-void OpenGLViewer::keyPressEvent(QKeyEvent* event)
-{
+void OpenGLViewer::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
     case Qt::Key_N:
         polygonMode_ = 0;
@@ -409,8 +387,7 @@ void OpenGLViewer::keyPressEvent(QKeyEvent* event)
     // not handled here, including modifiers.
 }
 
-OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const
-{
+OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     return context()->versionFunctions<QOpenGLFunctions_3_2_Core>();
 #else
@@ -418,34 +395,33 @@ OpenGLViewer::OpenGLFunctions* OpenGLViewer::openGLFunctions() const
 #endif
 }
 
-void OpenGLViewer::initializeGL()
-{
+void OpenGLViewer::initializeGL() {
     OpenGLFunctions* f = openGLFunctions();
 
     // Initialize shader program
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, shaderPath_("shader.v.glsl"));
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, shaderPath_("shader.f.glsl"));
+    shaderProgram_.addShaderFromSourceFile(
+        QOpenGLShader::Vertex, shaderPath_("shader.v.glsl"));
+    shaderProgram_.addShaderFromSourceFile(
+        QOpenGLShader::Fragment, shaderPath_("shader.f.glsl"));
     shaderProgram_.link();
 
     // Get shader locations
     shaderProgram_.bind();
-    vertexLoc_     = shaderProgram_.attributeLocation("vertex");
+    vertexLoc_ = shaderProgram_.attributeLocation("vertex");
     projMatrixLoc_ = shaderProgram_.uniformLocation("projMatrix");
     viewMatrixLoc_ = shaderProgram_.uniformLocation("viewMatrix");
-    colorLoc_      = shaderProgram_.uniformLocation("color");
+    colorLoc_ = shaderProgram_.uniformLocation("color");
     shaderProgram_.release();
 
     // Set clear color
     f->glClearColor(1, 1, 1, 1);
 }
 
-void OpenGLViewer::resizeGL(int w, int h)
-{
+void OpenGLViewer::resizeGL(int w, int h) {
     camera_.setViewportSize(w, h);
 }
 
-void OpenGLViewer::paintGL()
-{
+void OpenGLViewer::paintGL() {
     // Measure rendering time
     renderTask_.start();
 
@@ -470,11 +446,11 @@ void OpenGLViewer::paintGL()
         f->glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
         for (CurveGLResources& r : curveGLResources_) {
             shaderProgram_.setUniformValue(
-                        colorLoc_,
-                        static_cast<float>(r.trianglesColor.r()),
-                        static_cast<float>(r.trianglesColor.g()),
-                        static_cast<float>(r.trianglesColor.b()),
-                        static_cast<float>(r.trianglesColor.a()));
+                colorLoc_,
+                static_cast<float>(r.trianglesColor.r()),
+                static_cast<float>(r.trianglesColor.g()),
+                static_cast<float>(r.trianglesColor.b()),
+                static_cast<float>(r.trianglesColor.a()));
             r.vaoTriangles->bind();
             f->glDrawArrays(GL_TRIANGLE_STRIP, 0, r.numVerticesTriangles);
             r.vaoTriangles->release();
@@ -503,8 +479,7 @@ void OpenGLViewer::paintGL()
     Q_EMIT renderCompleted();
 }
 
-void OpenGLViewer::cleanupGL()
-{
+void OpenGLViewer::cleanupGL() {
     for (CurveGLResources& r : curveGLResources_) {
         destroyCurveGLResources_(r);
     }
@@ -512,8 +487,7 @@ void OpenGLViewer::cleanupGL()
     curveGLResourcesMap_.clear();
 }
 
-void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff)
-{
+void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff) {
     for (dom::Node* node : diff.removedNodes()) {
         dom::Element* e = dom::Element::cast(node);
         if (!e) {
@@ -521,7 +495,8 @@ void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff)
         }
         auto it = curveGLResourcesMap_.find(e);
         if (it != curveGLResourcesMap_.end()) {
-            removedGLResources_.splice(removedGLResources_.begin(), curveGLResources_, it->second);
+            removedGLResources_.splice(
+                removedGLResources_.begin(), curveGLResources_, it->second);
             curveGLResourcesMap_.erase(it);
         }
     }
@@ -542,7 +517,8 @@ void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff)
         else {
             auto it = curveGLResourcesMap_.find(e);
             if (it != curveGLResourcesMap_.end()) {
-                removedGLResources_.splice(removedGLResources_.begin(), curveGLResources_, it->second);
+                removedGLResources_.splice(
+                    removedGLResources_.begin(), curveGLResources_, it->second);
                 curveGLResourcesMap_.erase(it);
             }
         }
@@ -589,7 +565,9 @@ void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff)
     // XXX it's possible that update is done twice if the element is both modified and reparented..
 
     const auto& modifiedElements = diff.modifiedElements();
-    for (CurveGLResourcesIterator it = curveGLResources_.begin(); it != curveGLResources_.end(); ++it) {
+    for (CurveGLResourcesIterator it = curveGLResources_.begin();
+         it != curveGLResources_.end();
+         ++it) {
         auto it2 = modifiedElements.find(it->element);
         if (it2 != modifiedElements.end()) {
             toUpdate_.insert(it);
@@ -600,8 +578,7 @@ void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff)
     update();
 }
 
-void OpenGLViewer::updateGLResources_()
-{
+void OpenGLViewer::updateGLResources_() {
     updateTask_.start();
 
     for (CurveGLResources& r : removedGLResources_) {
@@ -626,15 +603,15 @@ void OpenGLViewer::updateGLResources_()
     updateTask_.stop();
 }
 
-OpenGLViewer::CurveGLResourcesIterator OpenGLViewer::appendCurveGLResources_(dom::Element* element)
-{
-    auto it = curveGLResources_.emplace(curveGLResources_.end(), CurveGLResources(element));
+OpenGLViewer::CurveGLResourcesIterator
+OpenGLViewer::appendCurveGLResources_(dom::Element* element) {
+    auto it =
+        curveGLResources_.emplace(curveGLResources_.end(), CurveGLResources(element));
     curveGLResourcesMap_.emplace(element, it);
     return it;
 }
 
-void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
-{
+void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r) {
     if (!r.inited_) {
         OpenGLFunctions* f = openGLFunctions();
         GLuint vertexLoc = static_cast<GLuint>(vertexLoc_);
@@ -643,7 +620,7 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
         r.vboTriangles.create();
         r.vaoTriangles = new QOpenGLVertexArrayObject();
         r.vaoTriangles->create();
-        GLsizei stride  = sizeof(geometry::Vec2f);
+        GLsizei stride = sizeof(geometry::Vec2f);
         GLvoid* pointer = nullptr;
         r.vaoTriangles->bind();
         r.vboTriangles.bind();
@@ -654,7 +631,7 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
             GL_FLOAT,  // type of each component
             GL_FALSE,  // should it be normalized
             stride,    // byte offset between consecutive vertex attributes
-            pointer);  // byte offset between the first attribute and the pointer given to allocate()
+            pointer); // byte offset between the first attribute and the pointer given to allocate()
         r.vboTriangles.release();
         r.vaoTriangles->release();
 
@@ -671,7 +648,7 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
             GL_FLOAT,  // type of each component
             GL_FALSE,  // should it be normalized
             stride,    // byte offset between consecutive vertex attributes
-            pointer);  // byte offset between the first attribute and the pointer given to allocate()
+            pointer); // byte offset between the first attribute and the pointer given to allocate()
         r.vboControlPoints.release();
         r.vaoControlPoints->release();
         r.inited_ = true;
@@ -713,8 +690,8 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
         const core::DoubleArray& d = curve.positionData();
         Int ncp = core::int_cast<GLsizei>(d.length() / 2);
         for (Int j = 0; j < ncp; ++j) {
-            glVerticesControlPoints.append(geometry::Vec2f(static_cast<float>(d[2*j]),
-                static_cast<float>(d[2*j+1])));
+            glVerticesControlPoints.append(geometry::Vec2f(
+                static_cast<float>(d[2 * j]), static_cast<float>(d[2 * j + 1])));
         }
     }
     else { // simplest impl for perf comparison
@@ -747,9 +724,7 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
         for (Int j = 0; j < ncp; ++j) {
             const Vec2d& v = positions[j];
             glVerticesControlPoints.append(
-                geometry::Vec2f(
-                    static_cast<float>(v.x()),
-                    static_cast<float>(v.y())));
+                geometry::Vec2f(static_cast<float>(v.x()), static_cast<float>(v.y())));
         }
     }
 
@@ -762,19 +737,21 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
     //
     r.numVerticesTriangles = core::int_cast<GLsizei>(triangulation.length());
     geometry::Vec2fArray glVerticesTriangles;
-    for(const geometry::Vec2d& v: triangulation) {
-        glVerticesTriangles.append(geometry::Vec2f(static_cast<float>(v[0]),
-                                               static_cast<float>(v[1])));
+    for (const geometry::Vec2d& v : triangulation) {
+        glVerticesTriangles.append(
+            geometry::Vec2f(static_cast<float>(v[0]), static_cast<float>(v[1])));
     }
     r.vboTriangles.bind();
-    int n = core::int_cast<int>(r.numVerticesTriangles) * static_cast<int>(sizeof(geometry::Vec2f));
+    int n = core::int_cast<int>(r.numVerticesTriangles)
+            * static_cast<int>(sizeof(geometry::Vec2f));
     r.vboTriangles.allocate(glVerticesTriangles.data(), n);
     r.vboTriangles.release();
 
     // Transfer control points vertex data to GPU
     r.numVerticesControlPoints = glVerticesControlPoints.length();
     r.vboControlPoints.bind();
-    n = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(geometry::Vec2f));
+    n = core::int_cast<int>(r.numVerticesControlPoints)
+        * static_cast<int>(sizeof(geometry::Vec2f));
     r.vboControlPoints.allocate(glVerticesControlPoints.data(), n);
     r.vboControlPoints.release();
 
@@ -782,8 +759,7 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
     r.trianglesColor = color;
 }
 
-void OpenGLViewer::destroyCurveGLResources_(CurveGLResources& r)
-{
+void OpenGLViewer::destroyCurveGLResources_(CurveGLResources& r) {
     r.vaoTriangles->destroy();
     delete r.vaoTriangles;
     r.vboTriangles.destroy();
@@ -793,18 +769,16 @@ void OpenGLViewer::destroyCurveGLResources_(CurveGLResources& r)
     r.vboControlPoints.destroy();
 }
 
-void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
-{
+void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width) {
     // XXX CLEAN
     static core::StringId Draw_Curve("Draw Curve");
     drawCurveUndoGroup_ = document()->history()->createUndoGroup(Draw_Curve);
 
-    drawCurveUndoGroup_->undone().connect(
-        [this](core::UndoGroup*, bool /*isAbort*/) {
-            // isAbort should be true since we have no sub-group
-            isSketching_ = false;
-            drawCurveUndoGroup_ = nullptr;
-        });
+    drawCurveUndoGroup_->undone().connect([this](core::UndoGroup*, bool /*isAbort*/) {
+        // isAbort should be true since we have no sub-group
+        isSketching_ = false;
+        drawCurveUndoGroup_ = nullptr;
+    });
 
     dom::Element* root = document_->rootElement();
     dom::Element* path = dom::Element::create(root, PATH);
@@ -816,8 +790,7 @@ void OpenGLViewer::startCurve_(const geometry::Vec2d& p, double width)
     continueCurve_(p, width);
 }
 
-void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
-{
+void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width) {
     // XXX CLEAN
 
     dom::Element* root = document_->rootElement();
@@ -844,7 +817,6 @@ void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width)
         document()->emitPendingDiff();
     }
 }
-
 
 } // namespace widgets
 } // namespace vgc

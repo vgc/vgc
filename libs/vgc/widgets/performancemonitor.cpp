@@ -25,10 +25,10 @@
 namespace vgc {
 namespace widgets {
 
-PerformanceMonitor::PerformanceMonitor(QWidget* parent) :
-    QWidget(parent),
-    log_(core::PerformanceLog::create())
-{
+PerformanceMonitor::PerformanceMonitor(QWidget* parent)
+    : QWidget(parent)
+    , log_(core::PerformanceLog::create()) {
+
     // Grid layout for displaying the logs' values
     layout_ = new QGridLayout();
     layout_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
@@ -36,28 +36,24 @@ PerformanceMonitor::PerformanceMonitor(QWidget* parent) :
     setLayout(layout_);
 }
 
-PerformanceMonitor::~PerformanceMonitor()
-{
-
+PerformanceMonitor::~PerformanceMonitor() {
 }
 
 namespace {
 
 // Add some indentation to the log's name, and convert to a QString.
-QString captionText_(core::PerformanceLog* log, int indentLevel)
-{
+QString captionText_(core::PerformanceLog* log, int indentLevel) {
     QString res;
     for (int i = 0; i < indentLevel; ++i) {
         res += "  ";
     }
     res += ui::toQt(log->name());
-    return  res;
+    return res;
 }
 
 } // namespace
 
-void PerformanceMonitor::refresh()
-{
+void PerformanceMonitor::refresh() {
     const auto unit = core::TimeUnit::Milliseconds;
     const int decimals = 2;
 
@@ -77,7 +73,8 @@ void PerformanceMonitor::refresh()
         // Display the log (unless it's the root; we don't display the root)
         if (log != log_.get()) {
 
-            QString valueText = ui::toQt(core::secondsToString(log->lastTime(), unit, decimals));
+            QString valueText =
+                ui::toQt(core::secondsToString(log->lastTime(), unit, decimals));
 
             // If there was already something displayed for this index,
             // update the text of the QLabels
@@ -110,7 +107,6 @@ void PerformanceMonitor::refresh()
                 layout_->addWidget(d.value, index, 1);
             }
 
-
             // Increment index
             ++index;
             ++index_;
@@ -123,10 +119,9 @@ void PerformanceMonitor::refresh()
         }
 
         // Recurse on children
-        for (core::PerformanceLog* child = log->lastChild();
-             child != nullptr;
-             child = child->previousSibling())
-        {
+        for (core::PerformanceLog* child = log->lastChild(); //
+             child != nullptr;                               //
+             child = child->previousSibling()) {
             stack.push_back(std::make_pair(depth + 1, child));
         }
     }
@@ -139,8 +134,7 @@ void PerformanceMonitor::refresh()
     }
 }
 
-core::PerformanceLog* PerformanceMonitor::log() const
-{
+core::PerformanceLog* PerformanceMonitor::log() const {
     return log_.get();
 }
 

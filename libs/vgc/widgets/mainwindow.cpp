@@ -31,20 +31,15 @@
 namespace vgc {
 namespace widgets {
 
-MainWindow::MainWindow(
-    /*dom::Document* document,*/
-    core::PythonInterpreter* interpreter,
-    QWidget* parent) :
+MainWindow::MainWindow(core::PythonInterpreter* interpreter, QWidget* parent)
+    : QMainWindow(parent)
+    , interpreter_(interpreter) {
 
-    QMainWindow(parent),
-    /*document_(document),*/
-    interpreter_(interpreter)
-{
     document_ = vgc::dom::Document::create();
     vgc::dom::Element::create(document_.get(), "vgc");
     document_->enableHistory(vgc::dom::strings::New_Document);
     headChangedConnectionHandle_ = document_->history()->headChanged().connect(
-        [this](){ updateUndoRedoActionState_(); });
+        [this]() { updateUndoRedoActionState_(); });
 
     setupWidgets_();
     setupActions_();
@@ -56,28 +51,23 @@ MainWindow::MainWindow(
     viewer_->startLoggingUnder(performanceMonitor_->log());
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     viewer_->stopLoggingUnder(performanceMonitor_->log());
 }
 
-void MainWindow::onColorChanged(const core::Color& newColor)
-{
+void MainWindow::onColorChanged(const core::Color& newColor) {
     viewer_->setCurrentColor(newColor);
 }
 
-void MainWindow::onRenderCompleted_()
-{
+void MainWindow::onRenderCompleted_() {
     performanceMonitor_->refresh();
 }
 
-void MainWindow::open()
-{
+void MainWindow::open() {
     // Get which directory the dialog should display first
-    QString dir =
-        filename_.isEmpty() ?
-        QStandardPaths::writableLocation(QStandardPaths::HomeLocation) :
-        QFileInfo(filename_).dir().path();
+    QString dir = filename_.isEmpty()
+                      ? QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
+                      : QFileInfo(filename_).dir().path();
 
     // Set which existing files to show in the dialog
     QString extension = ".vgci";
@@ -109,11 +99,13 @@ void MainWindow::open()
                 open_();
             }
             else {
-                VGC_WARNING(LogVgcWidgetsFiles, "Empty file path selected; file not opened.");
+                VGC_WARNING(
+                    LogVgcWidgetsFiles, "Empty file path selected; file not opened.");
             }
         }
         else {
-            VGC_WARNING(LogVgcWidgetsFiles, "More than one file selected; file not opened.");
+            VGC_WARNING(
+                LogVgcWidgetsFiles, "More than one file selected; file not opened.");
         }
     }
     else {
@@ -122,8 +114,7 @@ void MainWindow::open()
     }
 }
 
-void MainWindow::save()
-{
+void MainWindow::save() {
     if (filename_.isEmpty()) {
         saveAs();
     }
@@ -132,13 +123,11 @@ void MainWindow::save()
     }
 }
 
-void MainWindow::saveAs()
-{
+void MainWindow::saveAs() {
     // Get which directory the dialog should display first
-    QString dir =
-        filename_.isEmpty() ?
-        QStandardPaths::writableLocation(QStandardPaths::HomeLocation) :
-        QFileInfo(filename_).dir().path();
+    QString dir = filename_.isEmpty()
+                      ? QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
+                      : QFileInfo(filename_).dir().path();
 
     // Set which existing files to show in the dialog
     QString extension = ".vgci";
@@ -181,11 +170,13 @@ void MainWindow::saveAs()
                 save_();
             }
             else {
-                VGC_WARNING(LogVgcWidgetsFiles, "Empty file path selected; file not saved.");
+                VGC_WARNING(
+                    LogVgcWidgetsFiles, "Empty file path selected; file not saved.");
             }
         }
         else {
-            VGC_WARNING(LogVgcWidgetsFiles, "More than one file selected; file not saved.");
+            VGC_WARNING(
+                LogVgcWidgetsFiles, "More than one file selected; file not saved.");
         }
     }
     else {
@@ -199,18 +190,15 @@ void MainWindow::saveAs()
     //   https://bugreports.qt.io/browse/QTBUG-56893
 }
 
-void MainWindow::undo()
-{
+void MainWindow::undo() {
     document()->history()->undo();
 }
 
-void MainWindow::redo()
-{
+void MainWindow::redo() {
     document()->history()->redo();
 }
 
-void MainWindow::new_()
-{
+void MainWindow::new_() {
     // XXX TODO ask save current document
 
     if (document_ && document_->history()) {
@@ -223,7 +211,7 @@ void MainWindow::new_()
         vgc::dom::Element::create(document_.get(), "vgc");
         document_->enableHistory(vgc::dom::strings::New_Document);
         headChangedConnectionHandle_ = document_->history()->headChanged().connect(
-            [this](){ updateUndoRedoActionState_(); });
+            [this]() { updateUndoRedoActionState_(); });
         updateUndoRedoActionState_();
 
         viewer_->setDocument(document());
@@ -233,8 +221,7 @@ void MainWindow::new_()
     }
 }
 
-void MainWindow::open_()
-{
+void MainWindow::open_() {
     // XXX TODO ask save current document
 
     if (document_ && document_->history()) {
@@ -246,7 +233,7 @@ void MainWindow::open_()
         document_ = dom::Document::open(ui::fromQt(filename_));
         document_->enableHistory(vgc::dom::strings::Open_Document);
         headChangedConnectionHandle_ = document_->history()->headChanged().connect(
-            [this](){ updateUndoRedoActionState_(); });
+            [this]() { updateUndoRedoActionState_(); });
         updateUndoRedoActionState_();
 
         viewer_->setDocument(document());
@@ -256,8 +243,7 @@ void MainWindow::open_()
     }
 }
 
-void MainWindow::save_()
-{
+void MainWindow::save_() {
     try {
         document_->save(ui::fromQt(filename_));
     }
@@ -266,16 +252,14 @@ void MainWindow::save_()
     }
 }
 
-void MainWindow::updateUndoRedoActionState_()
-{
+void MainWindow::updateUndoRedoActionState_() {
     if (document_ && document_->history()) {
         actionUndo_->setEnabled(document_->history()->canUndo());
         actionRedo_->setEnabled(document_->history()->canRedo());
     }
 }
 
-void MainWindow::setupWidgets_()
-{
+void MainWindow::setupWidgets_() {
     // OpenGLViewer
     viewer_ = new OpenGLViewer(document());
 
@@ -293,7 +277,8 @@ void MainWindow::setupWidgets_()
 
     // Performance Monitor
     performanceMonitor_ = new PerformanceMonitor();
-    performanceMonitorPanel_ = centralWidget_->addPanel(tr("Performance Monitor"), performanceMonitor_);
+    performanceMonitorPanel_ =
+        centralWidget_->addPanel(tr("Performance Monitor"), performanceMonitor_);
     performanceMonitorPanel_->toggleViewAction()->setChecked(false);
 
     // Set central widget
@@ -301,8 +286,7 @@ void MainWindow::setupWidgets_()
     //setCentralWidget(viewer_);
 }
 
-void MainWindow::setupActions_()
-{
+void MainWindow::setupActions_() {
     actionNew_ = new QAction(tr("&New"), this);
     actionNew_->setStatusTip(tr("Open a new document."));
     //actionNew_->setShortcut(QKeySequence::New);
@@ -348,9 +332,7 @@ void MainWindow::setupActions_()
     actionToggleConsoleView_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
 }
 
-
-void MainWindow::setupMenus_()
-{
+void MainWindow::setupMenus_() {
     MenuBar* menuBar_ = new MenuBar();
 
     menuFile_ = new QMenu(tr("&File"));
@@ -375,10 +357,9 @@ void MainWindow::setupMenus_()
     setMenuBar(menuBar_);
 }
 
-void MainWindow::setupConnections_()
-{
-    connect(viewer_, &OpenGLViewer::renderCompleted,
-            this, &MainWindow::onRenderCompleted_);
+void MainWindow::setupConnections_() {
+    connect(
+        viewer_, &OpenGLViewer::renderCompleted, this, &MainWindow::onRenderCompleted_);
 
     // XXX TODO
 

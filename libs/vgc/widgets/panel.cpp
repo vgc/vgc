@@ -32,14 +32,14 @@
 namespace vgc {
 namespace widgets {
 
-Panel::Panel(const QString& title, QWidget* widget, QWidget* parent) :
-    QFrame(parent),
-    widget_(widget)
-{
+Panel::Panel(const QString& title, QWidget* widget, QWidget* parent)
+    : QFrame(parent)
+    , widget_(widget) {
+
     titleBar_ = new PanelTitleBar(title);
     toggleViewAction_ = new ToggleViewAction(title, this, this);
 
-    QVBoxLayout* layout = new  QVBoxLayout();
+    QVBoxLayout* layout = new QVBoxLayout();
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     layout->addWidget(titleBar_);
@@ -49,13 +49,10 @@ Panel::Panel(const QString& title, QWidget* widget, QWidget* parent) :
     setWindowTitle(title);
 }
 
-Panel::~Panel()
-{
-
+Panel::~Panel() {
 }
 
-bool Panel::event(QEvent* event)
-{
+bool Panel::event(QEvent* event) {
     QEvent::Type type = event->type();
     if (type == QEvent::ShowToParent || type == QEvent::HideToParent) {
         Q_EMIT visibleToParentChanged();

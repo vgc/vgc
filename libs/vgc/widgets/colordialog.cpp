@@ -18,8 +18,8 @@
 #include <vgc/widgets/font.h>
 
 namespace {
-void setWindowFlag_(QWidget* w, Qt::WindowType flag, bool on)
-{
+
+void setWindowFlag_(QWidget* w, Qt::WindowType flag, bool on) {
     // Note: Since Qt 5.9, there is a method QWidget::setWindowFlag(), but at
     // the time of this writing we target Qt 5.6, reason why we use this.
     //
@@ -33,15 +33,16 @@ void setWindowFlag_(QWidget* w, Qt::WindowType flag, bool on)
         flags &= ~flag;
     w->setWindowFlags(flags);
 }
+
 } // namespace
 
 namespace vgc {
 namespace widgets {
 
-ColorDialog::ColorDialog(QWidget* parent) :
-    QColorDialog(parent),
-    isGeometrySaved_(false)
-{
+ColorDialog::ColorDialog(QWidget* parent)
+    : QColorDialog(parent)
+    , isGeometrySaved_(false) {
+
     // On KDE, The ColorDialog has a minimize button that I'd wish to see gone.
     // The line below was an attempt to remove it, but in fact, the
     // Qt::WindowMinimizeButtonHint was already set to false. Therefore, I
@@ -61,7 +62,7 @@ ColorDialog::ColorDialog(QWidget* parent) :
     // frame explicitly drawn using qDrawShadePanel(). See:
     // qtbase/src/widgets/dialogs/qcolordialog.cpp/QColorLuminancePicker::paintEvent
     //
-    Q_FOREACH(QObject* obj, children()) {
+    Q_FOREACH (QObject* obj, children()) {
         QWidget* w = qobject_cast<QWidget*>(obj);
         const QMetaObject* mobj = obj->metaObject();
         if (w && mobj && mobj->className() == QString("QColorLuminancePicker")) {
@@ -73,37 +74,31 @@ ColorDialog::ColorDialog(QWidget* parent) :
     }
 }
 
-void ColorDialog::closeEvent(QCloseEvent* event)
-{
+void ColorDialog::closeEvent(QCloseEvent* event) {
     saveGeometry_();
     QDialog::closeEvent(event);
 }
 
-void ColorDialog::hideEvent(QHideEvent* event)
-{
+void ColorDialog::hideEvent(QHideEvent* event) {
     saveGeometry_();
     QDialog::hideEvent(event);
 }
 
-void ColorDialog::showEvent(QShowEvent* event)
-{
+void ColorDialog::showEvent(QShowEvent* event) {
     restoreGeometry_();
     QDialog::showEvent(event);
 }
 
-void ColorDialog::onFinished_(int)
-{
+void ColorDialog::onFinished_(int) {
     saveGeometry_();
 }
 
-void ColorDialog::saveGeometry_()
-{
+void ColorDialog::saveGeometry_() {
     isGeometrySaved_ = true;
     savedGeometry_ = geometry();
 }
 
-void ColorDialog::restoreGeometry_()
-{
+void ColorDialog::restoreGeometry_() {
     if (isGeometrySaved_)
         setGeometry(savedGeometry_);
 }

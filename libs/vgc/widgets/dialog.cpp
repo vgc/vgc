@@ -19,44 +19,37 @@
 namespace vgc {
 namespace widgets {
 
-Dialog::Dialog(QWidget* parent) :
-    QDialog(parent),
-    isGeometrySaved_(false)
-{
+Dialog::Dialog(QWidget* parent)
+    : QDialog(parent)
+    , isGeometrySaved_(false) {
     connect(this, &QDialog::finished, this, &Dialog::onFinished_);
 }
 
-void Dialog::closeEvent(QCloseEvent* event)
-{
+void Dialog::closeEvent(QCloseEvent* event) {
     saveGeometry_();
     QDialog::closeEvent(event);
 }
 
-void Dialog::hideEvent(QHideEvent* event)
-{
+void Dialog::hideEvent(QHideEvent* event) {
     saveGeometry_();
     QDialog::hideEvent(event);
 }
 
-void Dialog::showEvent(QShowEvent* event)
-{
+void Dialog::showEvent(QShowEvent* event) {
     restoreGeometry_();
     QDialog::showEvent(event);
 }
 
-void Dialog::onFinished_(int)
-{
+void Dialog::onFinished_(int) {
     saveGeometry_();
 }
 
-void Dialog::saveGeometry_()
-{
+void Dialog::saveGeometry_() {
     isGeometrySaved_ = true;
     savedGeometry_ = geometry();
 }
 
-void Dialog::restoreGeometry_()
-{
+void Dialog::restoreGeometry_() {
     if (isGeometrySaved_)
         setGeometry(savedGeometry_);
 }

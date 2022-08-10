@@ -34,8 +34,8 @@ namespace widgets {
 /// another widget and passed to the ColorToolButton (for example, the same
 /// ColorDialog might be used by several ColorToolButton).
 ///
-class VGC_WIDGETS_API ColorToolButton : public QToolButton
-{
+class VGC_WIDGETS_API ColorToolButton : public QToolButton {
+private:
     Q_OBJECT
 
 public:
@@ -43,9 +43,9 @@ public:
     /// ColorToolButton will create and own a ColorDialog automatically.
     ///
     ColorToolButton(
-            const core::Color& initialColor = core::colors::black,
-            QWidget* parent = nullptr,
-            ColorDialog* colorDialog = nullptr);
+        const core::Color& initialColor = core::colors::black,
+        QWidget* parent = nullptr,
+        ColorDialog* colorDialog = nullptr);
 
     /// Returns the current color.
     ///
