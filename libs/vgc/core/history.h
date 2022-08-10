@@ -105,10 +105,11 @@ private:
 protected:
     friend History;
 
-    explicit UndoGroup(core::StringId name, History* history) :
-        name_(name),
-        history_(history),
-        index_(genUndoGroupIndex()) {}
+    explicit UndoGroup(core::StringId name, History* history)
+        : name_(name)
+        , history_(history)
+        , index_(genUndoGroupIndex()) {
+    }
 
 public:
     // non-copyable
@@ -197,7 +198,6 @@ private:
     void redo_();
 };
 
-
 class VGC_CORE_API History : public Object {
 private:
     VGC_OBJECT(History, Object)
@@ -210,7 +210,9 @@ protected:
     template<typename T>
     struct EnableConstruct : T {
         template<typename... UArgs>
-        EnableConstruct(UArgs&&... args) : T(std::forward<UArgs>(args)...) {}
+        EnableConstruct(UArgs&&... args)
+            : T(std::forward<UArgs>(args)...) {
+        }
     };
 
 public:
@@ -264,19 +266,23 @@ public:
 
     UndoGroup* createUndoGroup(core::StringId name);
 
-    template<typename TOperation, typename... Args,
-             VGC_REQUIRES(std::is_base_of_v<Operation, TOperation>)>
+    template<
+        typename TOperation,
+        typename... Args,
+        VGC_REQUIRES(std::is_base_of_v<Operation, TOperation>)>
     static void do_(History* history, Args&&... args) {
         if (history) {
             if (!history->head_->isOpen()) {
-                throw LogicError("Cannot perform the requested operation without an open undo group.");
+                throw LogicError(
+                    "Cannot perform the requested operation without an open undo group.");
             }
             if (history->head_->firstChild() != nullptr) {
-                throw LogicError("Cannot perform the requested operation since the current undo group has nested groups.");
-
+                throw LogicError("Cannot perform the requested operation since the "
+                                 "current undo group has nested groups.");
             }
             const std::unique_ptr<Operation>& op =
-                history->head_->operations_.emplaceLast(new EnableConstruct<TOperation>(std::forward<Args>(args)...));
+                history->head_->operations_.emplaceLast(
+                    new EnableConstruct<TOperation>(std::forward<Args>(args)...));
             op->do_();
         }
         else {
@@ -300,7 +306,6 @@ private:
 
     // Assumes head_->mainChild() exists.
     void redoOne_();
-
 
     bool closeUndoGroup_(UndoGroup* node);
     void prune_();

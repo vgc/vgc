@@ -24,19 +24,16 @@ UndoGroupIndex lastId = 0;
 
 } // namespace
 
-UndoGroupIndex genUndoGroupIndex()
-{
+UndoGroupIndex genUndoGroupIndex() {
     // XXX make this thread-safe ?
     return ++lastId;
 }
 
-bool UndoGroup::close()
-{
+bool UndoGroup::close() {
     return history_->closeUndoGroup_(this);
 }
 
-void UndoGroup::undo_(bool isAbort)
-{
+void UndoGroup::undo_(bool isAbort) {
 #ifdef VGC_DEBUG_BUILD
     if (isUndone_) {
         throw LogicError("Already undone.");
@@ -51,8 +48,7 @@ void UndoGroup::undo_(bool isAbort)
     undone().emit(this, isAbort);
 }
 
-void UndoGroup::redo_()
-{
+void UndoGroup::redo_() {
 #ifdef VGC_DEBUG_BUILD
     if (!isUndone_) {
         throw LogicError("Cannot redo if not undone first.");
@@ -76,14 +72,12 @@ History::History(core::StringId entrypointName)
     head_ = ptr;
 }
 
-void History::setMaxLevels(Int n)
-{
+void History::setMaxLevels(Int n) {
     maxLevels_ = std::max(n, Int(1));
     prune_();
 }
 
-bool History::abort()
-{
+bool History::abort() {
     if (head_->isOpen()) {
         undoOne_(true);
         return true;
@@ -91,8 +85,7 @@ bool History::abort()
     return false;
 }
 
-bool History::undo()
-{
+bool History::undo() {
     if (head_ != root_) {
         do {
             undoOne_();
@@ -103,8 +96,7 @@ bool History::undo()
     return false;
 }
 
-bool History::redo()
-{
+bool History::redo() {
     UndoGroup* child = head_->mainChild();
     if (child) {
         do {
@@ -116,8 +108,7 @@ bool History::redo()
     return false;
 }
 
-void History::goTo(UndoGroup* node)
-{
+void History::goTo(UndoGroup* node) {
     // The common ancestor of node and head_ is the first node that is not
     // undone in the path from node to root.
     // It always exists and it can be head_ itself.
@@ -149,13 +140,11 @@ void History::goTo(UndoGroup* node)
     headChanged().emit(head_);
 }
 
-UndoGroup* History::createUndoGroup(core::StringId name)
-{
+UndoGroup* History::createUndoGroup(core::StringId name) {
     // Check current ongoing node (if any) doesn't have recorded operations.
     if (head_->isOpen() && head_->numOperations()) {
-      throw LogicError(
-          "Cannot nest an undo group under another if the latter already contains operations."
-      );
+        throw LogicError("Cannot nest an undo group under another if the latter already "
+                         "contains operations.");
     }
 
     // Destroy first ongoing in main redos if present.
@@ -177,8 +166,7 @@ UndoGroup* History::createUndoGroup(core::StringId name)
     return raw;
 }
 
-void History::undoOne_(bool forceAbort)
-{
+void History::undoOne_(bool forceAbort) {
     UndoGroup* parent = head_->parent();
     bool abort = forceAbort;
 
@@ -196,9 +184,7 @@ void History::undoOne_(bool forceAbort)
     head_ = parent;
 }
 
-
-void History::redoOne_()
-{
+void History::redoOne_() {
     UndoGroup* child = head_->mainChild();
 
     child->redo_();
@@ -208,8 +194,7 @@ void History::redoOne_()
     head_ = child;
 }
 
-bool History::closeUndoGroup_(UndoGroup* node)
-{
+bool History::closeUndoGroup_(UndoGroup* node) {
     // Requirements:
     // - `node` is ongoing
     // - `node` is not undone (implies node is in main branch)
@@ -227,7 +212,8 @@ bool History::closeUndoGroup_(UndoGroup* node)
     // nested ongoing node.
     for (UndoGroup* x = head_; x != node; x = x->parent()) {
         if (x->isOpen()) {
-            throw LogicError("Cannot close an undo group before its nested ones are closed.");
+            throw LogicError(
+                "Cannot close an undo group before its nested ones are closed.");
         }
     }
 
@@ -262,8 +248,7 @@ bool History::closeUndoGroup_(UndoGroup* node)
     return true;
 }
 
-void History::prune_()
-{
+void History::prune_() {
     // requires maxLevels_ >= 1
     Int extraLevels = numLevels_ - maxLevels_;
     for (Int i = 0; i < extraLevels; ++i) {

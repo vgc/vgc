@@ -43,8 +43,7 @@ private:
     VGC_OBJECT(PythonInterpreter, Object)
 
 protected:
-    PythonInterpreter(const std::string& programName,
-                      const std::string& pythonHome);
+    PythonInterpreter(const std::string& programName, const std::string& pythonHome);
 
 public:
     /// Creates a PythonInterpreter, with the following settings:
@@ -69,9 +68,8 @@ public:
     /// the interpreter early in your main() functions, then pass it around to
     /// objects that need it.
     ///
-    static PythonInterpreterPtr create(
-        const std::string& programName,
-        const std::string& pythonHome);
+    static PythonInterpreterPtr
+    create(const std::string& programName, const std::string& pythonHome);
 
     /// Interprets the given string.
     ///
@@ -83,7 +81,7 @@ public:
 
     /// Set the given \p value to a variable called \p name.
     ///
-    template <typename T>
+    template<typename T>
     void setVariableValue(const char* name, const T& value) {
         main_.attr(name) = value;
     }
@@ -101,8 +99,7 @@ private:
     // Note: the scoped interpreter must be constructed first, and destructed
     // last, thus order of declaration of member variables matters.
     struct ScopedInterpreter_ {
-        ScopedInterpreter_(const std::string& programName,
-                           const std::string& pythonHome);
+        ScopedInterpreter_(const std::string& programName, const std::string& pythonHome);
         ~ScopedInterpreter_();
         wchar_t* programName_;
         wchar_t* pythonHome_;
@@ -114,9 +111,15 @@ private:
     // Exception-safe emission of runStarted and runFinished
     class ScopedRunSignalsEmitter_ {
         PythonInterpreter* p_;
+
     public:
-        ScopedRunSignalsEmitter_(PythonInterpreter* p) : p_(p) { p_->runStarted().emit(); }
-        ~ScopedRunSignalsEmitter_() { p_->runFinished().emit(); }
+        ScopedRunSignalsEmitter_(PythonInterpreter* p)
+            : p_(p) {
+            p_->runStarted().emit();
+        }
+        ~ScopedRunSignalsEmitter_() {
+            p_->runFinished().emit();
+        }
     };
 
     pybind11::module main_;

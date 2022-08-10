@@ -16,10 +16,10 @@
 
 #include <pybind11/functional.h>
 
-#include <vgc/core/wraps/common.h>
-#include <vgc/core/wraps/signal.h>
-#include <vgc/core/wraps/object.h>
 #include <vgc/core/object.h>
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
+#include <vgc/core/wraps/signal.h>
 
 namespace vgc::core::wraps {
 
@@ -39,7 +39,8 @@ Int getFunctionArity(py::handle inspect, const py::function& method) {
     for (auto it = py::iter(parameters); it != py::iterator::sentinel(); ++it) {
         py::handle kind = it->attr("kind");
         if (kind.not_equal(POSITIONAL_ONLY) && kind.not_equal(POSITIONAL_OR_KEYWORD)) {
-            throw py::value_error("Arity only apply to methods with no var-positional argument, nor kw-only arguments.");
+            throw py::value_error("Arity only apply to methods with no var-positional "
+                                  "argument, nor kw-only arguments.");
         }
         ++arity;
     }
@@ -60,12 +61,12 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
 
     Int arity = getFunctionArity(inspect, signalMethod);
     if (arity == 0) {
-        throw py::value_error("Python signal method expected to at least have 'self' parameter.");
+        throw py::value_error(
+            "Python signal method expected to at least have 'self' parameter.");
     }
     --arity;
     if (arity > VGC_CORE_MAX_SIGNAL_ARGS) {
-        throw py::value_error("Signals and slots are limited to "
-            VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
+        throw py::value_error("Signals and slots are limited to " VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
     }
 
     // Create a new unique ID for this signal.
@@ -86,7 +87,8 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
                 [=](py::args args) -> void {
                     // XXX add check enough args
                     using SignalArgRefsTuple = std::tuple<const py::args&>;
-                    core::internal::SignalHub::emitFwd<SignalArgRefsTuple>(this_, newId, args);
+                    core::internal::SignalHub::emitFwd<SignalArgRefsTuple>(
+                        this_, newId, args);
                 });
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, arity, emitFn);
             py::object pysref = py::cast(sref, py::return_value_policy::take_ownership);
@@ -119,8 +121,7 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
     }
     --arity;
     if (arity > VGC_CORE_MAX_SIGNAL_ARGS) {
-        throw py::value_error("Signals and slots are limited to "
-            VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
+        throw py::value_error("Signals and slots are limited to " VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
     }
 
     // Create a new unique ID for this slot.
@@ -145,75 +146,61 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
     return prop;
 }
 
-void wrapSignalAndSlotRefs(py::module& m)
-{
-    auto pyConnectionHandle =
-        py::class_<ConnectionHandle>(m, "ConnectionHandle");
+void wrapSignalAndSlotRefs(py::module& m) {
+    auto pyConnectionHandle = py::class_<ConnectionHandle>(m, "ConnectionHandle");
 
     // XXX provide a getter for id too ?
     //     could be interesting to expose signal/slot info/stats to python.
     auto pyAbstractSlotRef =
         py::class_<PyAbstractSlotRef>(m, "AbstractSlotRef")
             .def_property_readonly(
-                "object", [](PyAbstractSlotRef* this_) {
-                    return this_->object();
-                })
-        ;
+                "object", [](PyAbstractSlotRef* this_) { return this_->object(); });
 
-    auto pySlotRef =
-        py::class_<PyPySlotRef, PyAbstractSlotRef>(m, "PySlotRef")
-            .def(
-                /* calling slot calls its method. */
-                "__call__", [](py::object self, py::args args) {
-                    PyPySlotRef* this_ = self.cast<PyPySlotRef*>();
-                    this_->unboundPySlotFn()(this_->object(), *args);
-                })
-        ;
+    auto pySlotRef = py::class_<PyPySlotRef, PyAbstractSlotRef>(m, "PySlotRef")
+                         .def(
+                             /* calling slot calls its method. */
+                             "__call__",
+                             [](py::object self, py::args args) {
+                                 PyPySlotRef* this_ = self.cast<PyPySlotRef*>();
+                                 this_->unboundPySlotFn()(this_->object(), *args);
+                             });
 
     auto pySignalRef =
         py::class_<PyPySignalRef, PyAbstractSlotRef>(m, "PySignalRef")
             .def_property_readonly(
-                "emit", [](PyPySignalRef* this_){
-                    return this_->boundPyEmitFn(); 
-                })
+                "emit", [](PyPySignalRef* this_) { return this_->boundPyEmitFn(); })
             .def("connect", &PyPySignalRef::connect)
             .def("connect", &PyPySignalRef::connectCallback)
             .def("disconnect", &PyPySignalRef::disconnect)
             .def("disconnect", &PyPySignalRef::disconnectAll)
-            .def("disconnect", &PyPySignalRef::disconnectSlot)
-        ;
+            .def("disconnect", &PyPySignalRef::disconnectSlot);
 
     auto pyAbstractCppSlotRef =
-        py::class_<PyAbstractCppSlotRef, PyAbstractSlotRef>(m, "AbstractCppSlotRef")
-        ;
+        py::class_<PyAbstractCppSlotRef, PyAbstractSlotRef>(m, "AbstractCppSlotRef");
 
-    auto pyCppSlotRef =
-        py::class_<PyCppSlotRef, PyAbstractCppSlotRef>(m, "CppSlotRef")
-            .def(
-                "__call__", [](py::object self, py::args args) {
-                    PyCppSlotRef* this_ = self.cast<PyCppSlotRef*>();
-                    this_->unboundPySlotFn()(this_->object(), *args);
-                })
-        ;
+    auto pyCppSlotRef = py::class_<PyCppSlotRef, PyAbstractCppSlotRef>(m, "CppSlotRef")
+                            .def("__call__", [](py::object self, py::args args) {
+                                PyCppSlotRef* this_ = self.cast<PyCppSlotRef*>();
+                                this_->unboundPySlotFn()(this_->object(), *args);
+                            });
 
     auto pyCppSignalRef =
         py::class_<PyCppSignalRef, PyAbstractCppSlotRef>(m, "CppSignalRef")
             .def(
-                "emit", [](PyCppSignalRef* this_, py::args args) {
+                "emit",
+                [](PyCppSignalRef* this_, py::args args) {
                     return this_->unboundPySlotFn()(this_->object(), *args);
                 })
             .def("connect", &PyCppSignalRef::connect)
             .def("connect", &PyCppSignalRef::connectCallback)
             .def("disconnect", &PyCppSignalRef::disconnect)
             .def("disconnect", &PyCppSignalRef::disconnectAll)
-            .def("disconnect", &PyCppSignalRef::disconnectSlot)
-        ;
+            .def("disconnect", &PyCppSignalRef::disconnectSlot);
 }
 
 } // namespace vgc::core::wraps
 
-void wrap_signal(py::module& m)
-{
+void wrap_signal(py::module& m) {
     // ref types
     vgc::core::wraps::wrapSignalAndSlotRefs(m);
 
@@ -221,5 +208,3 @@ void wrap_signal(py::module& m)
     m.def("signal", &vgc::core::wraps::signalDecoratorFn);
     m.def("slot", &vgc::core::wraps::slotDecoratorFn);
 }
-
-

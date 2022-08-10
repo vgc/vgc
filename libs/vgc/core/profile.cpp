@@ -43,7 +43,10 @@ struct ProfilerEntry {
     Int correspondingIndex;
 
     ProfilerEntry(Time t, const char* name, Int i)
-        : timestamp(t), name(name), correspondingIndex(i) {}
+        : timestamp(t)
+        , name(name)
+        , correspondingIndex(i) {
+    }
 };
 
 std::string generateThreadName() {
@@ -69,14 +72,25 @@ thread_local ProfilerGlobals g;
 void printDuration(std::string& out, Clock::duration d) {
     using Nanoseconds = std::chrono::duration<vgc::Int64, std::nano>;
     Int64 ns = std::chrono::duration_cast<Nanoseconds>(d).count();
-    Int64 us = ns / 1000; ns -= us * 1000;
-    Int64 ms = us / 1000; us -= ms * 1000;
-    Int64  s = ms / 1000; ms -=  s * 1000;
+    Int64 us = ns / 1000;
+    ns -= us * 1000;
+    Int64 ms = us / 1000;
+    us -= ms * 1000;
+    Int64 s = ms / 1000;
+    ms -= s * 1000;
     auto out_ = std::back_inserter(out);
-    if      (s > 0)  { fmt::format_to(out_, "{:>6}s {:0>3}ms {:0>3}us {:0>3}ns", s, ms, us, ns); }
-    else if (ms > 0) { fmt::format_to(out_, "{:>6}  {:>3}ms {:0>3}us {:0>3}ns", ' ', ms, us, ns); }
-    else if (us > 0) { fmt::format_to(out_, "{:>6}  {:>3}   {:>3}us {:0>3}ns", ' ', ' ', us, ns); }
-    else             { fmt::format_to(out_, "{:>6}  {:>3}   {:>3}   {:>3}ns", ' ', ' ', ' ', ns); }
+    if (s > 0) {
+        fmt::format_to(out_, "{:>6}s {:0>3}ms {:0>3}us {:0>3}ns", s, ms, us, ns);
+    }
+    else if (ms > 0) {
+        fmt::format_to(out_, "{:>6}  {:>3}ms {:0>3}us {:0>3}ns", ' ', ms, us, ns);
+    }
+    else if (us > 0) {
+        fmt::format_to(out_, "{:>6}  {:>3}   {:>3}us {:0>3}ns", ' ', ' ', us, ns);
+    }
+    else {
+        fmt::format_to(out_, "{:>6}  {:>3}   {:>3}   {:>3}ns", ' ', ' ', ' ', ns);
+    }
 }
 
 void printIndent(std::string& out, Int indent) {
@@ -91,8 +105,8 @@ void printThreadName(std::string& out, const std::string& threadName) {
     out.append("]\n");
 }
 
-[[maybe_unused]]
-void printTimestamps(std::string& out, const Array<ProfilerEntry>& entries) {
+[[maybe_unused]] void
+printTimestamps(std::string& out, const Array<ProfilerEntry>& entries) {
     Int i = 0;
     Int indent = 0;
     for (const ProfilerEntry& entry : entries) {
@@ -113,8 +127,8 @@ void printTimestamps(std::string& out, const Array<ProfilerEntry>& entries) {
     }
 }
 
-[[maybe_unused]]
-void printDurations(std::string& out, const Array<ProfilerEntry>& entries) {
+[[maybe_unused]] void
+printDurations(std::string& out, const Array<ProfilerEntry>& entries) {
     Int i = 0;
     Int indent = 0;
     for (const ProfilerEntry& entry : entries) {
@@ -136,13 +150,13 @@ void printDurations(std::string& out, const Array<ProfilerEntry>& entries) {
 } // namespace
 
 ScopeProfiler::ScopeProfiler(const char* name)
-    : name_(name), correspondingIndex_(g.entries.length())
-{
+    : name_(name)
+    , correspondingIndex_(g.entries.length()) {
+
     g.entries.emplaceLast(Clock::now(), name_, -1);
 }
 
-ScopeProfiler::~ScopeProfiler()
-{
+ScopeProfiler::~ScopeProfiler() {
     constexpr bool timestampMode = false;
 
     Array<ProfilerEntry>& entries = g.entries;

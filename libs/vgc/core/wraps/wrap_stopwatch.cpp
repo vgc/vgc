@@ -14,17 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/core/stopwatch.h>
+#include <vgc/core/wraps/common.h>
 
 namespace py = pybind11;
 using vgc::core::Stopwatch;
 
-void wrap_stopwatch(py::module& m)
-{
+void wrap_stopwatch(py::module& m) {
     py::class_<Stopwatch>(m, "Stopwatch")
         .def(py::init<>())
         .def("restart", &Stopwatch::restart)
-        .def("elapsed", &Stopwatch::elapsed)
-    ;
+        .def("elapsed", &Stopwatch::elapsed);
 }

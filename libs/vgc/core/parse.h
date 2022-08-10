@@ -52,29 +52,25 @@ namespace core {
 /// '\n', '\r', or '\t'.
 ///
 VGC_CORE_API
-inline bool isWhitespace(char c)
-{
+inline bool isWhitespace(char c) {
     return c == ' ' || c == '\n' || c == '\r' || c == '\t';
 }
 
 /// Returns whether the given char is a digit character, that is, '0'-'9'.
 ///
 VGC_CORE_API
-inline bool isDigit(char c)
-{
-   return ('0' <= c && c <= '9' );
+inline bool isDigit(char c) {
+    return ('0' <= c && c <= '9');
 }
 
 /// Extracts the next character from the input stream. Raises
 /// ParseError if the stream ends.
 ///
 template<typename IStream>
-char readCharacter(IStream& in)
-{
+char readCharacter(IStream& in) {
     char c = -1; // dummy-initialization in order to silence warning
     if (!in.get(c)) {
-        throw ParseError(
-            "Unexpected end of stream. Expected a character.");
+        throw ParseError("Unexpected end of stream. Expected a character.");
     }
     return c;
 }
@@ -84,8 +80,7 @@ char readCharacter(IStream& in)
 /// ParseError if the stream ends before a non-whitespace character is found.
 ///
 template<typename IStream>
-char readFirstNonWhitespaceCharacter(IStream& in)
-{
+char readFirstNonWhitespaceCharacter(IStream& in) {
     bool found = false;
     char c = -1; // dummy-initialization in order to silence warning
     while (!found && in.get(c)) {
@@ -94,10 +89,9 @@ char readFirstNonWhitespaceCharacter(IStream& in)
         }
     }
     if (!found) {
-        throw ParseError(
-            "Unexpected end of stream while searching for a non-whitespace "
-            "character. Expected either a whitespace character (to be "
-            " skipped), or a non-whitespace character (to be returned).");
+        throw ParseError("Unexpected end of stream while searching for a non-whitespace "
+                         "character. Expected either a whitespace character (to be "
+                         " skipped), or a non-whitespace character (to be returned).");
     }
     return c;
 }
@@ -107,14 +101,13 @@ char readFirstNonWhitespaceCharacter(IStream& in)
 /// the stream ends.
 ///
 template<typename IStream, std::size_t N>
-char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
-{
+char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N]) {
     char c = readCharacter(in);
     bool allowed = false;
     for (std::size_t i = 0; i < N; ++i) {
         allowed = allowed || (c == allowedCharacters[i]);
     }
-    if (!allowed)  {
+    if (!allowed) {
         std::string allowedCharactersString;
         if constexpr (N > 0) {
             allowedCharactersString += "'";
@@ -127,8 +120,10 @@ char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
             allowedCharactersString += "'";
         }
         throw ParseError(
-            std::string("Unexpected '") + c + "'. Expected one of the "
-            "following characters: " + allowedCharactersString + "'.");
+            std::string("Unexpected '") + c
+            + "'. Expected one of the "
+              "following characters: "
+            + allowedCharactersString + "'.");
     }
     return c;
 }
@@ -136,8 +131,7 @@ char readExpectedCharacter(IStream& in, const char (&allowedCharacters)[N])
 /// Extracts all leading whitespace characters from the input stream.
 ///
 template<typename IStream>
-void skipWhitespaceCharacters(IStream& in)
-{
+void skipWhitespaceCharacters(IStream& in) {
     bool foundNonWhitespaceCharacter = false;
     char c = -1; // dummy-initialization in order to silence warning
     while (!foundNonWhitespaceCharacter && in.get(c)) {
@@ -154,12 +148,10 @@ void skipWhitespaceCharacters(IStream& in)
 /// this character is not the given character, or if the stream ends.
 ///
 template<typename IStream>
-void skipExpectedCharacter(IStream& in, char c)
-{
+void skipExpectedCharacter(IStream& in, char c) {
     char d = readCharacter(in);
-    if (d != c)  {
-        throw ParseError(
-            std::string("Unexpected '") + d + "'. Expected '" + c + "'.");
+    if (d != c) {
+        throw ParseError(std::string("Unexpected '") + d + "'. Expected '" + c + "'.");
     }
 }
 
@@ -167,8 +159,7 @@ void skipExpectedCharacter(IStream& in, char c)
 /// Raises ParseError if the input stream does not start with [begin, end).
 ///
 template<typename IStream, typename CharIterator>
-void skipExpectedString(IStream& in, CharIterator begin, CharIterator end)
-{
+void skipExpectedString(IStream& in, CharIterator begin, CharIterator end) {
     char c = -1;
     for (CharIterator it = begin; it < end; ++it) {
         if (!in.get(c)) {
@@ -186,7 +177,7 @@ void skipExpectedString(IStream& in, CharIterator begin, CharIterator end)
             message += "'.";
             throw ParseError(message);
         }
-        if (c != *it)  {
+        if (c != *it) {
             std::string message;
             message += "Unexpected '";
             message.append(begin, end);
@@ -203,8 +194,7 @@ void skipExpectedString(IStream& in, CharIterator begin, CharIterator end)
 /// Raises ParseError if the input stream does not start with s.
 ///
 template<typename IStream>
-void skipExpectedString(IStream& in, const std::string& s)
-{
+void skipExpectedString(IStream& in, const std::string& s) {
     skipExpectedString(in, s.begin(), s.end());
 }
 
@@ -212,8 +202,7 @@ void skipExpectedString(IStream& in, const std::string& s)
 /// Raises ParseError if the input stream does not start with s.
 ///
 template<typename IStream>
-void skipExpectedString(IStream& in, const char* s)
-{
+void skipExpectedString(IStream& in, const char* s) {
     skipExpectedString(in, s, s + std::strlen(s));
 }
 
@@ -221,13 +210,11 @@ void skipExpectedString(IStream& in, const char* s)
 /// none. Raises ParseError if the stream actually didn't end.
 ///
 template<typename IStream>
-void skipExpectedEof(IStream& in)
-{
+void skipExpectedEof(IStream& in) {
     char c = -1; // dummy-initialization in order to silence warning
     if (in.get(c)) {
         throw ParseError(
-            std::string("Unexpected character '") + c +
-            "'. Expected end of stream.");
+            std::string("Unexpected character '") + c + "'. Expected end of stream.");
     }
 }
 
@@ -241,8 +228,7 @@ void skipExpectedEof(IStream& in)
 /// ParseError is raised if a positive or negative signed is found.
 ///
 template<typename IntType, typename IStream, VGC_REQUIRES(std::is_integral_v<IntType>)>
-IntType readUnsignedInteger(IStream& in)
-{
+IntType readUnsignedInteger(IStream& in) {
     constexpr IntType n = core::tmax<IntType>;
     constexpr IntType m = n / 10;
     constexpr IntType k = n % 10;
@@ -253,12 +239,14 @@ IntType readUnsignedInteger(IStream& in)
         hasDigits = true;
         IntType j = static_cast<IntType>(c - '0');
         if (i < m || (i == m && j <= k)) {
-            i = 10*i + j;
+            i = 10 * i + j;
         }
         else {
             throw RangeError(core::format(
                 "The integer {}{} is outside the range of {}.",
-                i, c, int_typename<IntType>()));
+                i,
+                c,
+                int_typename<IntType>()));
         }
         if (!in.get(c)) { // end of stream
             return i;
@@ -267,7 +255,8 @@ IntType readUnsignedInteger(IStream& in)
     if (!hasDigits) {
         throw ParseError(core::format(
             "Unexpected '{}' before any digit of the integer was read. "
-            "Expected a digit [0-9].", c));
+            "Expected a digit [0-9].",
+            c));
     }
     in.unget(); // last read character wasn't a digit
     return i;
@@ -281,8 +270,7 @@ namespace internal {
 // SFINAE for dispatching.
 //
 template<typename SIntType, typename IStream, VGC_REQUIRES(isSignedInteger<SIntType>)>
-SIntType readSignedIntegerImpl(IStream& in)
-{
+SIntType readSignedIntegerImpl(IStream& in) {
     char c = readFirstNonWhitespaceCharacter(in);
     bool isPositive = true;
     if (c == '-' || c == '+') {
@@ -309,14 +297,14 @@ SIntType readSignedIntegerImpl(IStream& in)
         else {
             throw RangeError(core::format(
                 "The integer -{} is outside the range of {}.",
-                u, int_typename<SIntType>()));
+                u,
+                int_typename<SIntType>()));
         }
     }
 }
 
 template<typename UIntType, typename IStream, VGC_REQUIRES(isUnsignedInteger<UIntType>)>
-UIntType readSignedIntegerImpl(IStream& in)
-{
+UIntType readSignedIntegerImpl(IStream& in) {
     char c = readFirstNonWhitespaceCharacter(in);
     bool isPositive = true;
     if (c == '-' || c == '+') {
@@ -331,8 +319,7 @@ UIntType readSignedIntegerImpl(IStream& in)
     }
     else {
         throw RangeError(core::format(
-            "The integer -{} is outside the range of {}.",
-            u, int_typename<UIntType>()));
+            "The integer -{} is outside the range of {}.", u, int_typename<UIntType>()));
     }
 }
 
@@ -349,8 +336,7 @@ UIntType readSignedIntegerImpl(IStream& in)
 /// is raised for "-0".
 ///
 template<typename IntType, typename IStream, VGC_REQUIRES(std::is_integral_v<IntType>)>
-IntType readSignedInteger(IStream& in)
-{
+IntType readSignedInteger(IStream& in) {
     return internal::readSignedIntegerImpl<IntType>(in);
 }
 
@@ -363,7 +349,9 @@ VGC_CORE_API
 double computeDouble(bool isPositive, double a, int b, int n);
 
 // Computes (-1)^s * a
-inline double computeDouble(bool isPositive, double a) { return isPositive ? a : -a; }
+inline double computeDouble(bool isPositive, double a) {
+    return isPositive ? a : -a;
+}
 
 } // namespace internal
 
@@ -442,8 +430,7 @@ inline double computeDouble(bool isPositive, double a) { return isPositive ? a :
 /// takes as input a templated input stream.
 ///
 template<typename IStream>
-double readDoubleApprox(IStream& in)
-{
+double readDoubleApprox(IStream& in) {
     // TODO?
     // - Also define a non-throwing version, taking an error
     // code/string/struct as output argument.
@@ -571,12 +558,12 @@ double readDoubleApprox(IStream& in)
                 // End of stream; a non-zero integer was read, e.g., "042."
                 return internal::computeDouble(isPositive, a, -dotPosition, numDigits);
             }
-            else if (hasLeadingZeros)  {
+            else if (hasLeadingZeros) {
                 // End of stream; 0 or -0 was read, e.g.,  "00."
                 return internal::computeDouble(isPositive, 0.0);
             }
             else {
-                 // End of stream; we've only read "."
+                // End of stream; we've only read "."
                 throw ParseError(
                     "Unexpected end of stream while attempting to read the first "
                     "character following the decimal point of a number that has "
@@ -617,9 +604,10 @@ double readDoubleApprox(IStream& in)
     // Check that the integer+fractional part has at least one digit
     if (numDigits == 0 && !hasLeadingZeros) {
         throw ParseError(
-            std::string("Unexpected '") + c + "' in a number before any digit "
-            "was read. Expected a digit [0-9], a sign [+-], or a decimal "
-            "point '.'.");
+            std::string("Unexpected '") + c
+            + "' in a number before any digit "
+              "was read. Expected a digit [0-9], a sign [+-], or a decimal "
+              "point '.'.");
     }
 
     // Read exponent part
@@ -647,8 +635,8 @@ double readDoubleApprox(IStream& in)
             if (numDigits > 0) {
                 //^ Don't bother computing exponent if we already know that the
                 //  output will be 0
-                if (exponent - dotPosition + numDigits - 1 <= 307 ||
-                    exponent - dotPosition + numDigits - 1 >= -307) {
+                if (exponent - dotPosition + numDigits - 1 <= 307
+                    || exponent - dotPosition + numDigits - 1 >= -307) {
                     //^ Don't bother computing further if we already know that
                     //  the output will overflow or underflow. But don't throw
                     //  just yet: we still want to advance the stream until the
@@ -661,7 +649,8 @@ double readDoubleApprox(IStream& in)
             if (!in.get(c)) {
                 if (numDigits > 0) {
                     // End of stream; a non-zero number was read, e.g., "042.0140e050" or "042.0140e0"
-                    return internal::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
+                    return internal::computeDouble(
+                        isPositive, a, exponent - dotPosition, numDigits);
                 }
                 else {
                     // End of stream; 0 or -0 was read, e.g., "00.e050"
@@ -671,9 +660,10 @@ double readDoubleApprox(IStream& in)
         }
         if (!hasExponentDigits) {
             throw ParseError(
-                std::string("Unexpected '") + c + " in the exponent part of "
-                "a number before any digit of the exponent part was read. "
-                "Expected a digit [0-9], or a sign [+-].");
+                std::string("Unexpected '") + c
+                + " in the exponent part of "
+                  "a number before any digit of the exponent part was read. "
+                  "Expected a digit [0-9], or a sign [+-].");
         }
     }
 
@@ -696,8 +686,7 @@ double readDoubleApprox(IStream& in)
 /// (e.g., we've already reached the end).
 ///
 template<typename IStream>
-void readTo(char& c, IStream& in)
-{
+void readTo(char& c, IStream& in) {
     c = readCharacter(in);
 }
 
@@ -708,8 +697,7 @@ void readTo(char& c, IStream& in)
 /// the stream contains an integer but without the allowed range of IntType.
 ///
 template<typename SIntType, typename IStream, VGC_REQUIRES(isSignedInteger<SIntType>)>
-void readTo(SIntType& i, IStream& in)
-{
+void readTo(SIntType& i, IStream& in) {
     i = readSignedInteger<SIntType>(in);
 }
 
@@ -720,8 +708,7 @@ void readTo(SIntType& i, IStream& in)
 /// the stream contains an integer but without the allowed range of UIntType.
 ///
 template<typename UIntType, typename IStream, VGC_REQUIRES(isUnsignedInteger<UIntType>)>
-void readTo(UIntType& i, IStream& in)
-{
+void readTo(UIntType& i, IStream& in) {
     i = readUnsignedInteger<UIntType>(in);
 }
 
@@ -731,8 +718,7 @@ void readTo(UIntType& i, IStream& in)
 /// accepted input.
 ///
 template<typename IStream>
-void readTo(float& x, IStream& in)
-{
+void readTo(float& x, IStream& in) {
     x = static_cast<float>(readDoubleApprox(in));
 }
 
@@ -742,8 +728,7 @@ void readTo(float& x, IStream& in)
 /// accepted input.
 ///
 template<typename IStream>
-void readTo(double& x, IStream& in)
-{
+void readTo(double& x, IStream& in) {
     x = readDoubleApprox(in);
 }
 
@@ -762,8 +747,7 @@ void readTo(double& x, IStream& in)
 /// \sa StringReader::operator>>(), parse<T>()
 ///
 template<typename T, typename IStream>
-T read(IStream& in)
-{
+T read(IStream& in) {
     T x;
     readTo(x, in);
     return x;
@@ -814,21 +798,22 @@ public:
     /// Constructs a StringReader operating on the given string.
     /// The string must outlive this StringReader.
     ///
-    StringReader(const std::string& s) : s_(s), it_(s.begin()), fail_(false)
-    {
-
+    StringReader(const std::string& s)
+        : s_(s)
+        , it_(s.begin())
+        , fail_(false) {
     }
 
     /// Reads one character from the underlying string and stores it to \p c if
     /// available. Otherwise, leaves \p c unchanged and sets a fail flag
     /// causing the bool() operator to return false.
     ///
-    StringReader& get(char& c)
-    {
+    StringReader& get(char& c) {
         if (it_ != s_.end()) {
             c = *it_;
             ++it_;
-        } else {
+        }
+        else {
             fail_ = true;
         }
         return *this;
@@ -839,8 +824,7 @@ public:
     /// returns true after calling unget()). If the get() function was never
     /// called, nothing happens.
     ///
-    StringReader& unget()
-    {
+    StringReader& unget() {
         fail_ = false;
         if (it_ != s_.begin()) {
             --it_;
@@ -855,8 +839,7 @@ public:
     /// read yet, if the last call to get() was successful, or if unget() was
     /// called more recently than get().
     ///
-    explicit operator bool()
-    {
+    explicit operator bool() {
         return !fail_;
     }
 
@@ -879,8 +862,7 @@ private:
 /// \sa read(), parse<T>()
 ///
 template<typename T>
-inline StringReader& operator>>(StringReader& in, T& x)
-{
+inline StringReader& operator>>(StringReader& in, T& x) {
     readTo(x, in);
     return in;
 }
@@ -910,9 +892,8 @@ inline StringReader& operator>>(StringReader& in, T& x)
 ///
 /// \sa read(), StringReader::operator<<()
 ///
-template <typename T>
-T parse(const std::string& s)
-{
+template<typename T>
+T parse(const std::string& s) {
     T res;
     StringReader in(s);
     readTo(res, in);

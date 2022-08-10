@@ -18,6 +18,7 @@
 #define VGC_CORE_WRAPS_ARRAY_H
 
 #include <vgc/core/wraps/common.h>
+
 #include <pybind11/operators.h>
 
 namespace vgc::core::wraps {
@@ -53,16 +54,18 @@ namespace vgc::core::wraps {
 // IndexError if the input index is out of range in the Python sense.
 //
 template<typename This>
-vgc::Int wrapArrayIndex(This& a, vgc::Int i)
-{
+vgc::Int wrapArrayIndex(This& a, vgc::Int i) {
     if (a.isEmpty()) {
-        throw vgc::core::IndexError(vgc::core::format(
-            "Array index {} out of range (the array is empty)", i));
+        throw vgc::core::IndexError(
+            vgc::core::format("Array index {} out of range (the array is empty)", i));
     }
-    else if (i < - a.length() || i > a.length() - 1) {
+    else if (i < -a.length() || i > a.length() - 1) {
         throw vgc::core::IndexError(vgc::core::format(
             "Array index {} out of range [{}, {}] (array length is {})",
-            i, - a.length(), a.length() - 1, a.length()));
+            i,
+            -a.length(),
+            a.length() - 1,
+            a.length()));
     }
     else {
         if (i < 0) {
@@ -75,15 +78,15 @@ vgc::Int wrapArrayIndex(This& a, vgc::Int i)
 // Defines most methods required to wrap a given Array type.
 //
 template<typename This>
-void defineArrayCommonMethods(py::class_<This>& c)
-{
+void defineArrayCommonMethods(py::class_<This>& c) {
     using It = typename This::iterator;
     using T = typename This::value_type;
+    using rvp = py::return_value_policy;
 
     c.def(py::init<>());
-    c.def(py::init([](int size) { return This(size, vgc::core::zero<T>()); } ));
-    c.def(py::init([](int size, const T& value) { return This(size, value); } ));
-    c.def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ));
+    c.def(py::init([](int size) { return This(size, vgc::core::zero<T>()); }));
+    c.def(py::init([](int size, const T& value) { return This(size, value); }));
+    c.def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }));
     c.def(py::init<const This&>());
 
     c.def("__getitem__", [](const This& a, int i) {
@@ -98,18 +101,15 @@ void defineArrayCommonMethods(py::class_<This>& c)
 
     c.def("__len__", &This::size);
 
-    c.def("__iter__",
+    c.def(
+        "__iter__",
         [](This& a) {
-            return py::make_iterator
-                <py::return_value_policy::reference_internal,It, It, T&>
-                (a.begin(), a.end());
+            return py::make_iterator<rvp::reference_internal, It, It, T&>(
+                a.begin(), a.end());
         },
-        py::keep_alive<0, 1>()
-    );
+        py::keep_alive<0, 1>());
 
-    c.def("__contains__", [](This& a, const T& value) {
-        return a.contains(value);
-    });
+    c.def("__contains__", [](This& a, const T& value) { return a.contains(value); });
 
     c.def("append", [](This& a, const T& value) { a.append(value); });
     c.def("pop", [](This& a) { return a.pop(); });

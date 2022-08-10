@@ -27,12 +27,12 @@ namespace vgc::core {
 /// \class vgc::core::Color
 /// \brief Color + alpha represented as RBGA with double-precision floats.
 ///
-class VGC_CORE_API Color
-{
+class VGC_CORE_API Color {
 public:
     /// Creates an uninitialized Color.
     ///
-    Color() {}
+    Color() {
+    }
 
     /// Creates a Color from the given HSL values.
     ///
@@ -45,56 +45,80 @@ public:
     /// color), and the saturation and lightness should be given in [0, 1] and
     /// are implicitly clamped to this range.
     ///
-    static Color hsl(double h, double s,  double l);
+    static Color hsl(double h, double s, double l);
 
     /// Creates a Color initialized with the given r, g, b in [0, 1]. The alpha
     /// channel is set to 1.0.
     ///
-    Color(double r, double g,  double b) : data_{r, g, b, 1.0} {}
+    Color(double r, double g, double b)
+        : data_{r, g, b, 1.0} {
+    }
 
     /// Creates a Color initialized with the given r, g, b, a in [0, 1].
     ///
-    Color(double r, double g,  double b, double a) : data_{r, g, b, a} {}
+    Color(double r, double g, double b, double a)
+        : data_{r, g, b, a} {
+    }
 
     /// Accesses the i-th channel of the Color.
     ///
-    const double& operator[](int i) const { return data_[i]; }
+    const double& operator[](int i) const {
+        return data_[i];
+    }
 
     /// Mutates the i-th channel of the Color.
     ///
-    double& operator[](int i) { return data_[i]; }
+    double& operator[](int i) {
+        return data_[i];
+    }
 
     /// Accesses the red channel of the Color.
     ///
-    double r() const { return data_[0]; }
+    double r() const {
+        return data_[0];
+    }
 
     /// Accesses the green channel of the Color.
     ///
-    double g() const { return data_[1]; }
+    double g() const {
+        return data_[1];
+    }
 
     /// Accesses the blue channel of the Color.
     ///
-    double b() const { return data_[2]; }
+    double b() const {
+        return data_[2];
+    }
 
     /// Accesses the alpha channel of the Color.
     ///
-    double a() const { return data_[3]; }
+    double a() const {
+        return data_[3];
+    }
 
     /// Mutates the red channel of the Color.
     ///
-    void setR(double r) { data_[0] = r; }
+    void setR(double r) {
+        data_[0] = r;
+    }
 
     /// Mutates the green channel of the Color.
     ///
-    void setG(double g) { data_[1] = g; }
+    void setG(double g) {
+        data_[1] = g;
+    }
 
     /// Mutates the blue channel of the Color.
     ///
-    void setB(double b) { data_[2] = b; }
+    void setB(double b) {
+        data_[2] = b;
+    }
 
     /// Mutates the alpha channel of the Color.
     ///
-    void setA(double a) { data_[3] = a; }
+    void setA(double a) {
+        data_[3] = a;
+    }
 
     /// Adds in-place the \p other Color to this Color.
     /// This is a component-wise addition of all channels, including the alpha
@@ -182,10 +206,10 @@ public:
     /// Returns whether the two given Color \p c1 and \p c2 are equal.
     ///
     friend bool operator==(const Color& c1, const Color& c2) {
-        return c1.data_[0] == c2.data_[0] &&
-               c1.data_[1] == c2.data_[1] &&
-               c1.data_[2] == c2.data_[2] &&
-               c1.data_[3] == c2.data_[3];
+        return c1.data_[0] == c2.data_[0]    //
+               && c1.data_[1] == c2.data_[1] //
+               && c1.data_[2] == c2.data_[2] //
+               && c1.data_[3] == c2.data_[3];
     }
 
     /// Returns whether the two given Color \p c1 and \p c2 are different.
@@ -198,6 +222,7 @@ public:
     /// order.
     ///
     friend bool operator<(const Color& c1, const Color& c2) {
+        // clang-format off
         return ( (c1.data_[0] < c2.data_[0]) ||
                (!(c2.data_[0] < c1.data_[0]) &&
                ( (c1.data_[1] < c2.data_[1]) ||
@@ -205,6 +230,7 @@ public:
                ( (c1.data_[2] < c2.data_[2]) ||
                (!(c2.data_[2] < c1.data_[2]) &&
                ( (c1.data_[3] < c2.data_[3]))))))));
+        // clang-format on
     }
 
     /// Compares the two Color \p c1 and \p c2 using the lexicographic
@@ -235,20 +261,20 @@ private:
 /// \class vgc::core::Colorf
 /// \brief Color + alpha represented as RBGA with single-precision floats.
 ///
-class VGC_CORE_API Colorf
-{
+class VGC_CORE_API Colorf {
 public:
     /// Creates an uninitialized Colorf.
     ///
-    Colorf() {}
+    Colorf() {
+    }
 
     explicit Colorf(const Color& c)
         : data_{
             static_cast<float>(c.r()),
             static_cast<float>(c.g()),
             static_cast<float>(c.b()),
-            static_cast<float>(c.a()),
-        } {}
+            static_cast<float>(c.a())} {
+    }
 
     /// Creates a Colorf from the given HSL values.
     ///
@@ -261,56 +287,80 @@ public:
     /// color), and the saturation and lightness should be given in [0, 1] and
     /// are implicitly clamped to this range.
     ///
-    static Colorf hsl(float h, float s,  float l);
+    static Colorf hsl(float h, float s, float l);
 
     /// Creates a Colorf initialized with the given r, g, b in [0, 1]. The alpha
     /// channel is set to 1.0.
     ///
-    Colorf(float r, float g,  float b) : data_{r, g, b, 1.0} {}
+    Colorf(float r, float g, float b)
+        : data_{r, g, b, 1.0} {
+    }
 
     /// Creates a Colorf initialized with the given r, g, b, a in [0, 1].
     ///
-    Colorf(float r, float g,  float b, float a) : data_{r, g, b, a} {}
+    Colorf(float r, float g, float b, float a)
+        : data_{r, g, b, a} {
+    }
 
     /// Accesses the i-th channel of the Colorf.
     ///
-    const float& operator[](int i) const { return data_[i]; }
+    const float& operator[](int i) const {
+        return data_[i];
+    }
 
     /// Mutates the i-th channel of the Colorf.
     ///
-    float& operator[](int i) { return data_[i]; }
+    float& operator[](int i) {
+        return data_[i];
+    }
 
     /// Accesses the red channel of the Colorf.
     ///
-    float r() const { return data_[0]; }
+    float r() const {
+        return data_[0];
+    }
 
     /// Accesses the green channel of the Colorf.
     ///
-    float g() const { return data_[1]; }
+    float g() const {
+        return data_[1];
+    }
 
     /// Accesses the blue channel of the Colorf.
     ///
-    float b() const { return data_[2]; }
+    float b() const {
+        return data_[2];
+    }
 
     /// Accesses the alpha channel of the Colorf.
     ///
-    float a() const { return data_[3]; }
+    float a() const {
+        return data_[3];
+    }
 
     /// Mutates the red channel of the Colorf.
     ///
-    void setR(float r) { data_[0] = r; }
+    void setR(float r) {
+        data_[0] = r;
+    }
 
     /// Mutates the green channel of the Colorf.
     ///
-    void setG(float g) { data_[1] = g; }
+    void setG(float g) {
+        data_[1] = g;
+    }
 
     /// Mutates the blue channel of the Colorf.
     ///
-    void setB(float b) { data_[2] = b; }
+    void setB(float b) {
+        data_[2] = b;
+    }
 
     /// Mutates the alpha channel of the Colorf.
     ///
-    void setA(float a) { data_[3] = a; }
+    void setA(float a) {
+        data_[3] = a;
+    }
 
     /// Adds in-place the \p other Colorf to this Colorf.
     /// This is a component-wise addition of all channels, including the alpha
@@ -398,10 +448,10 @@ public:
     /// Returns whether the two given Colorf \p c1 and \p c2 are equal.
     ///
     friend bool operator==(const Colorf& c1, const Colorf& c2) {
-        return c1.data_[0] == c2.data_[0] &&
-            c1.data_[1] == c2.data_[1] &&
-            c1.data_[2] == c2.data_[2] &&
-            c1.data_[3] == c2.data_[3];
+        return c1.data_[0] == c2.data_[0]    //
+               && c1.data_[1] == c2.data_[1] //
+               && c1.data_[2] == c2.data_[2] //
+               && c1.data_[3] == c2.data_[3];
     }
 
     /// Returns whether the two given Colorf \p c1 and \p c2 are different.
@@ -414,13 +464,15 @@ public:
     /// order.
     ///
     friend bool operator<(const Colorf& c1, const Colorf& c2) {
+        // clang-format off
         return ( (c1.data_[0] < c2.data_[0]) ||
-                (!(c2.data_[0] < c1.data_[0]) &&
-                 ( (c1.data_[1] < c2.data_[1]) ||
-                  (!(c2.data_[1] < c1.data_[1]) &&
-                   ( (c1.data_[2] < c2.data_[2]) ||
-                    (!(c2.data_[2] < c1.data_[2]) &&
-                     ( (c1.data_[3] < c2.data_[3]))))))));
+               (!(c2.data_[0] < c1.data_[0]) &&
+               ( (c1.data_[1] < c2.data_[1]) ||
+               (!(c2.data_[1] < c1.data_[1]) &&
+               ( (c1.data_[2] < c2.data_[2]) ||
+               (!(c2.data_[2] < c1.data_[2]) &&
+               ( (c1.data_[3] < c2.data_[3]))))))));
+        // clang-format on
     }
 
     /// Compares the two Colorf \p c1 and \p c2 using the lexicographic
@@ -462,13 +514,16 @@ private:
 /// ```
 ///
 template<typename OStream>
-void write(OStream& out, const Color& c)
-{
+void write(OStream& out, const Color& c) {
     bool writeAlpha = (c.a() != 1.0);
     write(out, writeAlpha ? "rgba(" : "rgb(");
-    write(out, double01ToUint8(c.r()), ", ",
-               double01ToUint8(c.g()), ", ",
-               double01ToUint8(c.b()));
+    write(
+        out,
+        double01ToUint8(c.r()),
+        ", ",
+        double01ToUint8(c.g()),
+        ", ",
+        double01ToUint8(c.b()));
     if (writeAlpha) {
         write(out, ", ", c.a());
     }
@@ -480,9 +535,8 @@ void write(OStream& out, const Color& c)
 /// does not start with a Color. Raises RangeError if one of its coordinate is
 /// outside the representable range of an int or double.
 ///
-template <typename IStream>
-void readTo(Color& c, IStream& in)
-{
+template<typename IStream>
+void readTo(Color& c, IStream& in) {
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, 'r');
     skipExpectedCharacter(in, 'g');
@@ -514,7 +568,7 @@ void readTo(Color& c, IStream& in)
 
 } // namespace vgc::core
 
-template <>
+template<>
 struct fmt::formatter<vgc::core::Color> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -522,7 +576,7 @@ struct fmt::formatter<vgc::core::Color> {
             throw format_error("invalid format");
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::core::Color c, FormatContext& ctx) {
         vgc::UInt8 r = vgc::core::double01ToUint8(c.r());
         vgc::UInt8 g = vgc::core::double01ToUint8(c.g());

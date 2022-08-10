@@ -234,36 +234,31 @@ public:
 
     /// Returns the parent of log entry, if any.
     ///
-    PerformanceLog* parent() const
-    {
+    PerformanceLog* parent() const {
         return cast_(parentObject());
     }
 
     /// Returns the first child of this log, if any.
     ///
-    PerformanceLog* firstChild() const
-    {
+    PerformanceLog* firstChild() const {
         return cast_(firstChildObject());
     }
 
     /// Returns the last child of this log, if any.
     ///
-    PerformanceLog* lastChild() const
-    {
+    PerformanceLog* lastChild() const {
         return cast_(lastChildObject());
     }
 
     /// Returns the previous sibling of this log, if any.
     ///
-    PerformanceLog* previousSibling() const
-    {
+    PerformanceLog* previousSibling() const {
         return cast_(previousSiblingObject());
     }
 
     /// Returns the next sibling of this log, if any.
     ///
-    PerformanceLog* nextSibling() const
-    {
+    PerformanceLog* nextSibling() const {
         return cast_(nextSiblingObject());
     }
 

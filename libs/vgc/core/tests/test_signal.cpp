@@ -20,8 +20,7 @@
 
 using SignalTestObject = vgc::core::internal::SignalTestObject;
 
-TEST(TestSignal, Disconnect)
-{
+TEST(TestSignal, Disconnect) {
     auto o1 = SignalTestObject::create();
     auto o2 = SignalTestObject::create();
 
@@ -30,7 +29,7 @@ TEST(TestSignal, Disconnect)
     /*  (2) */ o1->signalIntFloat().connect(o2->slotInt());
     /*  (3) */ o1->signalIntFloat().connect(o2->signalInt());
     /*  (4) */ o1->signalIntFloat().connect(SignalTestObject::staticFuncInt);
-    /*  (5) */ o1->signalIntFloat().connect([&](int){ vref = true; });
+    /*  (5) */ o1->signalIntFloat().connect([&](int) { vref = true; });
     ASSERT_EQ(o1->numConnections(), 5);
 
     /*  (6) */ o1->signalInt().connect(SignalTestObject::staticFuncInt);
@@ -41,7 +40,7 @@ TEST(TestSignal, Disconnect)
     /* (11) */ o1->signalInt().connect(o2->slotNoArgs());
     /* (12) */ o1->signalInt().connect(o2->slotUInt());
     /* (13) */ auto h = o1->signalInt().connect(o1->slotInt());
-    /* (14) */ o1->signalInt().connect([&](int){ vref = true; });
+    /* (14) */ o1->signalInt().connect([&](int) { vref = true; });
     /* (15) */ o1->signalInt().connect(o1->slotInt());
     int expected = 15;
     ASSERT_EQ(o1->numConnections(), expected);
@@ -88,20 +87,18 @@ TEST(TestSignal, Disconnect)
     ASSERT_FALSE(o1->signalInt().disconnect());
 }
 
-TEST(TestSignal, EmitByRef)
-{
+TEST(TestSignal, EmitByRef) {
     auto o1 = SignalTestObject::create();
     auto o2 = SignalTestObject::create();
 
     o1->signalIntRef().connect(o2->slotIncIntRef());
-    o1->signalIntRef().connect([](int& a){ a += 10; });
+    o1->signalIntRef().connect([](int& a) { a += 10; });
     int a = 1;
     o1->signalIntRef().emit(a);
     ASSERT_EQ(a, 1 + 1 + 10);
 }
 
-TEST(TestSignal, SignalToSignal)
-{
+TEST(TestSignal, SignalToSignal) {
     auto o1 = SignalTestObject::create();
     auto o2 = SignalTestObject::create();
     auto o3 = SignalTestObject::create();
@@ -118,8 +115,7 @@ TEST(TestSignal, SignalToSignal)
     ASSERT_EQ(a, 42);
 }
 
-TEST(TestSignal, SameSlot)
-{
+TEST(TestSignal, SameSlot) {
     auto o1 = SignalTestObject::create();
     auto o2 = SignalTestObject::create();
 
@@ -138,8 +134,7 @@ void getTheAnswer(int& a) {
 }
 
 } // namespace
-TEST(TestSignal, SignalToFreeFunc)
-{
+TEST(TestSignal, SignalToFreeFunc) {
     auto o1 = SignalTestObject::create();
 
     o1->sfnIntCalled = false;
@@ -153,19 +148,17 @@ TEST(TestSignal, SignalToFreeFunc)
     ASSERT_EQ(theAnswer, 42);
 }
 
-TEST(TestSignal, SignalToLambda)
-{
+TEST(TestSignal, SignalToLambda) {
     auto o1 = SignalTestObject::create();
 
     int a = 0;
-    o1->signalInt().connect([&](int b){ a = b; });
+    o1->signalInt().connect([&](int b) { a = b; });
 
     o1->signalInt().emit(42);
     ASSERT_EQ(a, 42);
 }
 
-TEST(TestSignal, TruncateArgs)
-{
+TEST(TestSignal, TruncateArgs) {
     auto o1 = SignalTestObject::create();
     auto o2 = SignalTestObject::create();
 
@@ -179,20 +172,20 @@ TEST(TestSignal, TruncateArgs)
     ASSERT_EQ(o2->slotNoargsCallCount, 1);
 }
 
-TEST(TestSignal, SlotWithConvertibleArgs)
-{
+TEST(TestSignal, SlotWithConvertibleArgs) {
     auto o1 = SignalTestObject::create();
     auto o2 = SignalTestObject::create();
 
     o1->signalIntFloat().connect(o2->slotUInt());
 
+// C4244 = conversion from 'const int' to 'float', possible loss of data
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(push)
-#  pragma warning(disable: 4244) // conversion from 'const int' to 'float', possible loss of data
+#    pragma warning(push)
+#    pragma warning(disable : 4244)
 #endif
     o1->signalIntFloat().connect(o2->slotFloat());
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(pop)
+#    pragma warning(pop)
 #endif
 
     o1->signalIntFloat().emit(42, 1.f);
@@ -200,8 +193,7 @@ TEST(TestSignal, SlotWithConvertibleArgs)
     ASSERT_FLOAT_EQ(o2->sumFloat, 42.f);
 }
 
-TEST(TestSignal, CrossModuleSignals)
-{
+TEST(TestSignal, CrossModuleSignals) {
     // The idea of this test is to call connect() inside a shared lib,
     // then call emit() outside of the shared lib. The risk is that
     // connect() adds to the SignalHub a SignalId which is different
@@ -214,12 +206,11 @@ TEST(TestSignal, CrossModuleSignals)
     EXPECT_EQ(o2->slotNoargsCallCount, 1);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     // Mess up with ID generation for CrossModuleSignals test.
     // The idea is to check whether a call to  basically attempt to get
     const int biggerThanNumSignalsInCore = 1000;
-    for(int i = 0; i < biggerThanNumSignalsInCore; ++i) {
+    for (int i = 0; i < biggerThanNumSignalsInCore; ++i) {
         vgc::core::internal::genFunctionId();
     }
 

@@ -27,9 +27,9 @@ namespace vgc {
 namespace core {
 
 PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_(
-        const std::string& programName,
-        const std::string& pythonHome)
-{
+    const std::string& programName,
+    const std::string& pythonHome) {
+
     if (!Py_IsInitialized()) {
 
         // https://docs.python.org/3.8/c-api/init.html#c.Py_SetProgramName
@@ -132,8 +132,8 @@ PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_(
     }
 }
 
-PythonInterpreter::ScopedInterpreter_::~ScopedInterpreter_()
-{
+PythonInterpreter::ScopedInterpreter_::~ScopedInterpreter_() {
+
     // Finalize the interpreter.
     //
     // Note: there exists another variant, Py_FinalizeEx(), which can tell
@@ -161,40 +161,34 @@ PythonInterpreter::ScopedInterpreter_::~ScopedInterpreter_()
 }
 
 PythonInterpreter::PythonInterpreter(
-        const std::string& programName,
-        const std::string& pythonHome) :
+    const std::string& programName,
+    const std::string& pythonHome)
+    : scopedInterpreter_(programName, pythonHome) {
 
-    scopedInterpreter_(programName, pythonHome)
-{
     // Store useful Python objects
     main_ = pybind11::module::import("__main__");
     globals_ = main_.attr("__dict__");
     locals_ = globals_;
 
     // Add the VGC Python extension modules to the path
-    pybind11::module::import("sys").attr("path")
-        .cast<pybind11::list>().append(pythonPath());
+    pybind11::module::import("sys").attr("path").cast<pybind11::list>().append(
+        pythonPath());
 }
 
 /* static */
-PythonInterpreterPtr PythonInterpreter::create(
-    const std::string& programName,
-    const std::string& pythonHome)
-{
+PythonInterpreterPtr
+PythonInterpreter::create(const std::string& programName, const std::string& pythonHome) {
     return PythonInterpreterPtr(new PythonInterpreter(programName, pythonHome));
 }
 
-void PythonInterpreter::run(const std::string& str)
-{
+void PythonInterpreter::run(const std::string& str) {
     ScopedRunSignalsEmitter_ emitter(this);
 
     try {
         pybind11::eval<pybind11::eval_statements>(str, globals_, locals_);
     }
     catch (const pybind11::error_already_set& e) {
-        std::cout << "Python error:\n"
-                  << e.what()
-                  << std::endl;
+        std::cout << "Python error:\n" << e.what() << std::endl;
 
         // XXX using cout is temporary, better error handling
         // should come later.
@@ -202,11 +196,9 @@ void PythonInterpreter::run(const std::string& str)
         // the role of the widgets::console to display the error
         // as appropriate?
     }
-
 }
 
-void PythonInterpreter::run(const char* str)
-{
+void PythonInterpreter::run(const char* str) {
     run(std::string(str));
 
     // Note: the above implementation is inefficient but safe and maintainable:

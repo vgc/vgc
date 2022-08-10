@@ -38,8 +38,7 @@ FunctionId genFunctionId() {
     return ++lastId;
 }
 
-FunctionId genFunctionId(std::type_index ti)
-{
+FunctionId genFunctionId(std::type_index ti) {
     // XXX make this thread-safe ?
     FunctionId& id = typesMap[ti];
     if (id == 0) {

@@ -16,11 +16,10 @@
 
 #include <vgc/core/wraps/array.h>
 
-namespace  {
+namespace {
 
 template<typename This>
-void wrap_1darray(py::module& m, const std::string& valueTypeName)
-{
+void wrap_1darray(py::module& m, const std::string& valueTypeName) {
     using T = typename This::value_type;
     std::string thisTypeName = valueTypeName + "Array";
     py::class_<This> c(m, thisTypeName.c_str());
@@ -36,8 +35,7 @@ void wrap_1darray(py::module& m, const std::string& valueTypeName)
 
 } // namespace
 
-void wrap_arrays(py::module& m)
-{
+void wrap_arrays(py::module& m) {
     wrap_1darray<vgc::core::DoubleArray>(m, "Double");
     wrap_1darray<vgc::core::FloatArray>(m, "Float");
     wrap_1darray<vgc::core::IntArray>(m, "Int");

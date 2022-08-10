@@ -14,21 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/core/format.h>
+#include <vgc/core/wraps/common.h>
 
-void wrap_format(py::module& m)
-{
+void wrap_format(py::module& m) {
     py::enum_<vgc::core::TimeUnit>(m, "TimeUnit")
         .value("Seconds", vgc::core::TimeUnit::Seconds)
         .value("Milliseconds", vgc::core::TimeUnit::Milliseconds)
         .value("Microseconds", vgc::core::TimeUnit::Microseconds)
-        .value("Nanoseconds", vgc::core::TimeUnit::Nanoseconds)
-    ;
+        .value("Nanoseconds", vgc::core::TimeUnit::Nanoseconds);
 
-    m.def("secondsToString",
-          &vgc::core::secondsToString,
-          "t"_a,
-          "unit"_a = vgc::core::TimeUnit::Seconds,
-          "decimals"_a = 0);
+    m.def(
+        "secondsToString",
+        &vgc::core::secondsToString,
+        "t"_a,
+        "unit"_a = vgc::core::TimeUnit::Seconds,
+        "decimals"_a = 0);
 }

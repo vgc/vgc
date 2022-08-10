@@ -35,9 +35,9 @@
 /// \endcode
 ///
 
+#include <cstdio>  // fflush, fputc
 #include <cstring> // strlen
-#include <cstdio> // fflush, fputc
-#include <ios> // streamsize
+#include <ios>     // streamsize
 #include <limits>
 #include <string>
 #include <type_traits>
@@ -55,14 +55,14 @@
 //
 #include <vgc/core/compiler.h>
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(push)
-#  pragma warning(disable: 4275)
-#  pragma warning(disable: 4459)
-#  pragma warning(disable: 4189)
+#    pragma warning(push)
+#    pragma warning(disable : 4275)
+#    pragma warning(disable : 4459)
+#    pragma warning(disable : 4189)
 #endif
 #include <fmt/format.h>
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(pop)
+#    pragma warning(pop)
 #endif
 
 #include <vgc/core/api.h>
@@ -146,7 +146,7 @@ inline void println(const S& formatString, Args&&... args) {
 /// This function uses the {fmt} library under the hood. For more info on the
 /// format syntax, https://fmt.dev/latest/syntax.html
 ///
-template <typename S, typename... Args, typename Char = fmt::char_t<S>>
+template<typename S, typename... Args, typename Char = fmt::char_t<S>>
 inline std::basic_string<Char> format(const S& formatString, Args&&... args) {
     const auto& vargs = fmt::make_args_checked<Args...>(formatString, args...);
     return fmt::vformat(formatString, vargs);
@@ -180,8 +180,7 @@ inline std::basic_string<Char> format(const S& formatString, Args&&... args) {
 /// info.
 ///
 template<typename OStream>
-void write(OStream& out, char x)
-{
+void write(OStream& out, char x) {
     out.put(x);
 }
 
@@ -194,8 +193,7 @@ void write(OStream& out, char x)
 /// ```
 ///
 template<typename OStream>
-void write(OStream& out, const char* s)
-{
+void write(OStream& out, const char* s) {
     size_t n = std::strlen(s);
     out.write(s, static_cast<std::streamsize>(n));
 }
@@ -208,8 +206,7 @@ void write(OStream& out, const char* s)
 /// ```
 ///
 template<typename OStream>
-void write(OStream& out, const std::string& s)
-{
+void write(OStream& out, const std::string& s) {
     size_t n = s.size();
     out.write(s.data(), static_cast<std::streamsize>(n));
 }
@@ -251,10 +248,8 @@ void write(OStream& out, const std::string& s)
 /// `unsigned char`. Instead, we always use `Int8` or `UInt8`, and mean them to
 /// actually represent an 8-bit integer, not an ASCII character.
 ///
-template<typename OStream, typename IntType,
-         VGC_REQUIRES(std::is_integral_v<IntType>)>
-void write(OStream& out, IntType x)
-{
+template<typename OStream, typename IntType, VGC_REQUIRES(std::is_integral_v<IntType>)>
+void write(OStream& out, IntType x) {
     fmt::format_int f(x);
     out.write(f.data(), f.size());
 }
@@ -298,10 +293,11 @@ void write(OStream& out, IntType x)
 /// vgc::core::write(out, 1234567890123456.0f);  // write "1234570000000000"
 /// ```
 ///
-template<typename OStream, typename FloatType,
-         VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
-void write(OStream& out, FloatType x)
-{
+template<
+    typename OStream,
+    typename FloatType,
+    VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+void write(OStream& out, FloatType x) {
     // Shortcut for zero:
     //   0.0000000000004 -> "0"
     //   0.0000000000006 -> "0.000000000001"
@@ -326,7 +322,10 @@ void write(OStream& out, FloatType x)
     // Handle "nan", "inf", "-nan", and "-inf".
     // Note: we always convert "-nan" to "nan".
     if (b[1] == 'n' || b[1] == 'i' || (b[1] == '-' && (b[2] == 'n' || b[2] == 'i'))) {
-        if (b[3] == 'a') { ++begin; } // Convert "-nan" to "nan"
+        if (b[3] == 'a') {
+            // Convert "-nan" to "nan"
+            ++begin;
+        }
         out.write(begin, end - begin);
         return;
     }
@@ -335,19 +334,32 @@ void write(OStream& out, FloatType x)
     auto p = begin;
     int numSigDigits = 0;
     bool hasDecimalPoint = false;
-    if (p != end && *p == '-') { ++p; } // skip negative sign
+    if (p != end && *p == '-') {
+        // skip negative sign
+        ++p;
+    }
     while (numSigDigits == 0 && p != end) {
-        if      (*p == '.') { hasDecimalPoint = true; }
-        else if (*p != '0') { ++numSigDigits; }
-        else                { } // keep reading leading zeroes: 0.000...
+        if (*p == '.') {
+            hasDecimalPoint = true;
+        }
+        else if (*p != '0') {
+            ++numSigDigits;
+        }
+        else {
+            // keep reading leading zeroes: 0.000...
+        }
         ++p;
     }
 
     // Read up to (max + 1) number of significant digit.
     constexpr int maxSigDigits = std::numeric_limits<FloatType>::digits10;
     while (numSigDigits <= maxSigDigits && p != end) {
-        if (*p == '.') { hasDecimalPoint = true; }
-        else           { ++numSigDigits; }
+        if (*p == '.') {
+            hasDecimalPoint = true;
+        }
+        else {
+            ++numSigDigits;
+        }
         ++p;
     }
 
@@ -360,13 +372,31 @@ void write(OStream& out, FloatType x)
         auto q = p;
         while (roundUp) {
             --p;
-            if      (*p == '.') { }                                      // skip decimal point
-            else if (*p == '9') { *p = '0'; }                            // carry over
+            if (*p == '.') {
+                // skip decimal point
+            }
+            else if (*p == '9') {
+                // carry over
+                *p = '0';
+            }
             else {
-                roundUp = false;                                         // stop carrying over
-                if      (*p == ' ') { *p = '1'; begin = p; }             // handle leading space
-                else if (*p == '-') { *p = '1'; *--p = '-'; begin = p; } // handle negative sign
-                else                { *p += 1; }                         // handle normal case
+                // stop carrying over
+                roundUp = false;
+                if (*p == ' ') {
+                    // handle leading space
+                    *p = '1';
+                    begin = p;
+                }
+                else if (*p == '-') {
+                    // handle negative sign
+                    *p = '1';
+                    *--p = '-';
+                    begin = p;
+                }
+                else {
+                    // handle normal case
+                    *p += 1;
+                }
             }
         }
         p = q;
@@ -374,16 +404,26 @@ void write(OStream& out, FloatType x)
 
     // Change all digits after max significant digits to '0'.
     while (p != end) {
-        if (*p == '.') { hasDecimalPoint = true; }
-        else           { *p = '0'; }
+        if (*p == '.') {
+            hasDecimalPoint = true;
+        }
+        else {
+            *p = '0';
+        }
         ++p;
     }
 
     // Remove trailing zeros and trailing decimal point, if any.
     if (hasDecimalPoint) {
         --p;
-        while (*p == '0') { --p; } // remove trailing zeros
-        if (*p == '.')    { --p; } // remove trailing decimal point
+        while (*p == '0') {
+            // remove trailing zeros
+            --p;
+        }
+        if (*p == '.') {
+            // remove trailing decimal point
+            --p;
+        }
         ++p;
     }
 
@@ -408,8 +448,7 @@ void write(OStream& out, FloatType x)
 /// ```
 ///
 template<typename OStream, typename T1, typename T2, typename... Args>
-void write(OStream& out, T1 x1, T2 x2, Args... args)
-{
+void write(OStream& out, T1 x1, T2 x2, Args... args) {
     write(out, x1);
     write(out, x2, args...);
 }
@@ -465,15 +504,13 @@ public:
     /// Constructs a StringWriter operating on the given string.
     /// The string must outlive this StringWriter.
     ///
-    StringWriter(std::string& s) : s_(s)
-    {
-
+    StringWriter(std::string& s)
+        : s_(s) {
     }
 
     /// Appends a character to the underlying string.
     ///
-    StringWriter& put(char c)
-    {
+    StringWriter& put(char c) {
         s_.push_back(c);
         return *this;
     }
@@ -481,8 +518,7 @@ public:
     /// Appends multiple characters to the underlying string.
     /// The behavior is undefined if count < 0.
     ///
-    StringWriter& write(const char* s, std::streamsize count)
-    {
+    StringWriter& write(const char* s, std::streamsize count) {
         s_.append(s, static_cast<size_type>(count));
         return *this;
     }
@@ -492,8 +528,7 @@ public:
     /// add more characters to a string, unless we run out of memory which will
     /// cause other errors anyway.
     ///
-    explicit operator bool()
-    {
+    explicit operator bool() {
         return true;
     }
 
@@ -510,8 +545,7 @@ private:
 /// ```
 ///
 template<typename T>
-inline StringWriter& operator<<(StringWriter& sw, const T& x)
-{
+inline StringWriter& operator<<(StringWriter& sw, const T& x) {
     write(sw, x);
     return sw;
 }
@@ -541,8 +575,7 @@ inline StringWriter& operator<<(StringWriter& sw, const T& x)
 /// the given type T of the given value.
 ///
 template<typename T>
-std::string toString(const T& x)
-{
+std::string toString(const T& x) {
     std::string s;
     StringWriter out(s);
     write(out, x);
@@ -554,9 +587,8 @@ std::string toString(const T& x)
 ///
 /// \sa toAddressString(const T* x)
 ///
-template <typename T>
-const void* asAddress(const T* x)
-{
+template<typename T>
+const void* asAddress(const T* x) {
     return static_cast<const void*>(x);
 }
 
@@ -572,9 +604,8 @@ const void* asAddress(const T* x)
 /// https://github.com/fmtlib/fmt/issues/1248
 /// https://accu.org/index.php/journals/1539
 ///
-template <typename T>
-std::string toAddressString(const T* x)
-{
+template<typename T>
+std::string toAddressString(const T* x) {
     return core::format("{}", asAddress(x));
 }
 
@@ -593,7 +624,8 @@ enum class TimeUnit {
 /// number of decimal points.
 ///
 VGC_CORE_API
-std::string secondsToString(double t, TimeUnit unit = TimeUnit::Seconds, int decimals = 0);
+std::string
+secondsToString(double t, TimeUnit unit = TimeUnit::Seconds, int decimals = 0);
 
 } // namespace core
 } // namespace vgc

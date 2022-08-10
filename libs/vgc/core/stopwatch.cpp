@@ -18,54 +18,46 @@
 
 namespace vgc::core {
 
-Stopwatch::Stopwatch()
-{
+Stopwatch::Stopwatch() {
     start();
 }
 
-void Stopwatch::start()
-{
+void Stopwatch::start() {
     t_ = Clock_::now();
 }
 
-double Stopwatch::restart()
-{
+double Stopwatch::restart() {
     Time_ t2 = Clock_::now();
     std::chrono::duration<double> seconds = t2 - t_;
     t_ = t2;
     return seconds.count();
 }
 
-double Stopwatch::elapsed() const
-{
+double Stopwatch::elapsed() const {
     Time_ t2 = Clock_::now();
     std::chrono::duration<double> seconds = t2 - t_;
     return seconds.count();
 }
 
-Int64 Stopwatch::elapsedSeconds() const
-{
+Int64 Stopwatch::elapsedSeconds() const {
     Time_ t2 = Clock_::now();
     using Units = std::chrono::duration<Int64>;
     return std::chrono::duration_cast<Units>(t2 - t_).count();
 }
 
-Int64 Stopwatch::elapsedMilliseconds() const
-{
+Int64 Stopwatch::elapsedMilliseconds() const {
     Time_ t2 = Clock_::now();
     using Units = std::chrono::duration<Int64, std::milli>;
     return std::chrono::duration_cast<Units>(t2 - t_).count();
 }
 
-Int64 Stopwatch::elapsedMicroseconds() const
-{
+Int64 Stopwatch::elapsedMicroseconds() const {
     Time_ t2 = Clock_::now();
     using Units = std::chrono::duration<Int64, std::micro>;
     return std::chrono::duration_cast<Units>(t2 - t_).count();
 }
 
-Int64 Stopwatch::elapsedNanoseconds() const
-{
+Int64 Stopwatch::elapsedNanoseconds() const {
     Time_ t2 = Clock_::now();
     using Units = std::chrono::duration<Int64, std::nano>;
     return std::chrono::duration_cast<Units>(t2 - t_).count();
