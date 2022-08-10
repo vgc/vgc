@@ -9,7 +9,6 @@ vgc_add_library(widgets
 
     HEADER_FILES
         api.h
-        canvas.h
         centralwidget.h
         colordialog.h
         colortoolbutton.h
@@ -31,7 +30,6 @@ vgc_add_library(widgets
         uiwidget.h
 
     CPP_FILES
-        canvas.cpp
         centralwidget.cpp
         colordialog.cpp
         colortoolbutton.cpp

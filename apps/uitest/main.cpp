@@ -28,7 +28,6 @@
 #include <vgc/dom/document.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/lineedit.h>
-#include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
 #include <vgc/ui/window.h>
@@ -146,20 +145,6 @@ int main(int argc, char* argv[])
     vgc::core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
-    vgc::ui::Plot2d* plot2d = col->createChild<vgc::ui::Plot2d>();
-
-    vgc::core::Array<vgc::geometry::Vec2f> points;
-    points.emplaceLast(0.0f, 12.f);
-    points.emplaceLast(1.0f, 5.f);
-    points.emplaceLast(4.0f, 10.f);
-    points.emplaceLast(5.0f, 5.f);
-    points.emplaceLast(10.0f, 10.f);
-    points.emplaceLast(11.0f, 14.f);
-    points.emplaceLast(12.0f, 17.f);
-    points.emplaceLast(13.0f, 19.f);
-    points.emplaceLast(20.0f, 5.f);
-    points.emplaceLast(21.0f, 20.f);
-    plot2d->setData(std::move(points));
 
     int size = 10;
     for (int i = 0; i < size; ++i) {
@@ -180,9 +165,6 @@ int main(int argc, char* argv[])
     // Change style of first row
     vgc::ui::Widget* firstRow = col->firstChild();
     firstRow->setStyleSheet(".LineEdit { text-color: rgb(50, 232, 211); }");
-
-    QWindow* kghkj = new QWindow();
-    kghkj->create();
 
     vgc::ui::WindowPtr wnd = vgc::ui::Window::create(col);
     wnd->setTitle("VGC UI Test");
