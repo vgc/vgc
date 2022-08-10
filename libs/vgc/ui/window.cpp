@@ -327,8 +327,7 @@ void Window::paint(bool sync) {
 
     widget_->paint(engine_.get());
 
-
-#ifdef VGC_QOPENGL_EXPERIMENT
+#if defined(VGC_QOPENGL_EXPERIMENT)
     static int frameIdx = 0;
     auto fmt = format();
     OutputDebugString(core::format("Window swap behavior: {}\n", (int)fmt.swapBehavior()).c_str());

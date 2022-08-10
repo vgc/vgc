@@ -109,7 +109,7 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
                         strings::background_color_on_hover :
                         strings::background_color);
         float borderRadius = internal::getLength(this, strings::border_radius);
-#if defined(VGC_QOPENGL_EXPERIMENT) || 1
+#if defined(VGC_QOPENGL_EXPERIMENT)
         static core::Stopwatch sw = {};
         auto t = sw.elapsed() * 50.f;
         backgroundColor = core::Color::hsl(t, 0.6f, 0.3f);
