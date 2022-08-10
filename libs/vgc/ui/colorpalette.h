@@ -60,7 +60,7 @@ public:
 
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine) override;
+    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
@@ -79,7 +79,7 @@ private:
     Int hoveredHue_(const geometry::Vec2f& p);
     bool selectColorFromHovered_();
     core::Color selectedColor_;
-    graphics::TrianglesBufferPtr triangles_;
+    graphics::GeometryViewPtr triangles_;
     float oldWidth_;
     float oldHeight_;
     bool reload_;

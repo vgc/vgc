@@ -46,14 +46,6 @@ QString shaderPath_(const std::string& name) {
     return ui::toQt(path);
 }
 
-QMatrix4x4 toQtMatrix(const geometry::Mat4d& m) {
-    return QMatrix4x4(
-               static_cast<float>(m(0,0)), static_cast<float>(m(0,1)), static_cast<float>(m(0,2)), static_cast<float>(m(0,3)),
-               static_cast<float>(m(1,0)), static_cast<float>(m(1,1)), static_cast<float>(m(1,2)), static_cast<float>(m(1,3)),
-               static_cast<float>(m(2,0)), static_cast<float>(m(2,1)), static_cast<float>(m(2,2)), static_cast<float>(m(2,3)),
-               static_cast<float>(m(3,0)), static_cast<float>(m(3,1)), static_cast<float>(m(3,2)), static_cast<float>(m(3,3)));
-}
-
 double width_(const PointingDeviceEvent& event) {
     const double defaultWidth = 6.0;
     return event.hasPressure() ?
@@ -123,13 +115,14 @@ void OpenGLViewer::init()
     // setSamples(1) instead does NOT disable MSAA, but surprisingly gives the
     // same result as setSamples(2).
 
-    QSurfaceFormat format;
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
-    format.setVersion(3, 2);
+    format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::CoreProfile);
     format.setSamples(8);
     format.setSwapInterval(0);
+    format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     QSurfaceFormat::setDefaultFormat(format);
 }
 
@@ -469,8 +462,8 @@ void OpenGLViewer::paintGL()
     shaderProgram_.bind();
 
     // Set uniform values
-    shaderProgram_.setUniformValue(projMatrixLoc_, toQtMatrix(camera_.projectionMatrix()));
-    shaderProgram_.setUniformValue(viewMatrixLoc_, toQtMatrix(camera_.viewMatrix()));
+    shaderProgram_.setUniformValue(projMatrixLoc_, ui::toQt(camera_.projectionMatrix()));
+    shaderProgram_.setUniformValue(viewMatrixLoc_, ui::toQt(camera_.viewMatrix()));
 
     // Draw triangles
     if (polygonMode_ > 0) {
@@ -774,15 +767,15 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r)
                                                static_cast<float>(v[1])));
     }
     r.vboTriangles.bind();
-    int count = core::int_cast<int>(r.numVerticesTriangles) * static_cast<int>(sizeof(geometry::Vec2f));
-    r.vboTriangles.allocate(glVerticesTriangles.data(), count);
+    int n = core::int_cast<int>(r.numVerticesTriangles) * static_cast<int>(sizeof(geometry::Vec2f));
+    r.vboTriangles.allocate(glVerticesTriangles.data(), n);
     r.vboTriangles.release();
 
     // Transfer control points vertex data to GPU
     r.numVerticesControlPoints = glVerticesControlPoints.length();
     r.vboControlPoints.bind();
-    count = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(geometry::Vec2f));
-    r.vboControlPoints.allocate(glVerticesControlPoints.data(), count);
+    n = core::int_cast<int>(r.numVerticesControlPoints) * static_cast<int>(sizeof(geometry::Vec2f));
+    r.vboControlPoints.allocate(glVerticesControlPoints.data(), n);
     r.vboControlPoints.release();
 
     // Set color

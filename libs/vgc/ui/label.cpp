@@ -63,14 +63,14 @@ void Label::setText(const std::string& text)
 
 void Label::onPaintCreate(graphics::Engine* engine)
 {
-    triangles_ = engine->createTriangles();
+    triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Label::onPaintDraw(graphics::Engine*)
+void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 {
     if (reload_) {
         reload_ = false;
-        core::FloatArray a;        
+        core::FloatArray a = {};
         core::Color textColor = internal::getColor(this, strings::text_color);
         graphics::TextProperties textProperties(
                     graphics::TextHorizontalAlign::Center,
@@ -78,9 +78,10 @@ void Label::onPaintDraw(graphics::Engine*)
         graphics::TextCursor textCursor;
         bool hinting = style(strings::pixel_hinting) == strings::normal;
         internal::insertText(a, textColor, 0, 0, width(), height(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
-        triangles_->load(a.data(), a.length());
+        engine->updateVertexBufferData(triangles_, std::move(a));
     }
-    triangles_->draw();
+    engine->setProgram(graphics::BuiltinProgram::Simple);
+    engine->draw(triangles_, -1, 0);
 }
 
 void Label::onPaintDestroy(graphics::Engine*)

@@ -216,18 +216,22 @@ void Widget::repaint()
     }
 }
 
-void Widget::paint(graphics::Engine* engine)
+void Widget::preparePaint(graphics::Engine* engine, PaintOptions options)
 {
     if (engine != lastPaintEngine_) {
-        if (lastPaintEngine_) {
-            releaseEngine_();
-        }
-        lastPaintEngine_ = engine;
-        engine->aboutToBeDestroyed().connect(
-            onEngineAboutToBeDestroyed());
+        setEngine_(engine);
         onPaintCreate(engine);
     }
-    onPaintDraw(engine);
+    onPaintPrepare(engine, options);
+}
+
+void Widget::paint(graphics::Engine* engine, PaintOptions options)
+{
+    if (engine != lastPaintEngine_) {
+        setEngine_(engine);
+        onPaintCreate(engine);
+    }
+    onPaintDraw(engine, options);
 }
 
 void Widget::onPaintCreate(graphics::Engine* engine)
@@ -237,7 +241,14 @@ void Widget::onPaintCreate(graphics::Engine* engine)
     }
 }
 
-void Widget::onPaintDraw(graphics::Engine* engine)
+void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options)
+{
+    for (Widget* widget : children()) {
+        widget->preparePaint(engine, options);
+    }
+}
+
+void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options)
 {
     for (Widget* widget : children()) {
         engine->pushViewMatrix();
@@ -245,7 +256,7 @@ void Widget::onPaintDraw(graphics::Engine* engine)
         geometry::Vec2f pos = widget->position();
         m.translate(pos[0], pos[1]); // TODO: Mat4f.translate(const Vec2f&)
         engine->setViewMatrix(m);
-        widget->onPaintDraw(engine);
+        widget->paint(engine, options);
         engine->popViewMatrix();
     }
 }
@@ -302,7 +313,7 @@ bool Widget::onMouseMove(MouseEvent* event)
         mouseEnteredChild_ = nullptr;
     }
 
-    return false;    
+    return false;
 
     // TODO: We could (should?) factorize the code:
     //
@@ -371,10 +382,11 @@ bool Widget::onMouseEnter()
 bool Widget::onMouseLeave()
 {
     if (mouseEnteredChild_) {
-        mouseEnteredChild_->onMouseLeave();
+        bool handled = mouseEnteredChild_->onMouseLeave();
         mouseEnteredChild_ = nullptr;
+        return handled;
     }
-    return true;
+    return false;
 }
 
 void Widget::setTreeActive(bool active)
@@ -611,6 +623,16 @@ void Widget::releaseEngine_()
     lastPaintEngine_->aboutToBeDestroyed().disconnect(
         onEngineAboutToBeDestroyed());
     lastPaintEngine_ = nullptr;
+}
+
+void Widget::setEngine_(graphics::Engine* engine)
+{
+    if (lastPaintEngine_) {
+        releaseEngine_();
+    }
+    lastPaintEngine_ = engine;
+    engine->aboutToBeDestroyed().connect(
+        onEngineAboutToBeDestroyed());
 }
 
 } // namespace ui

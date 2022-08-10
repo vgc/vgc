@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     // ensure that resource sharing between contexts stays functional as all
     // internal contexts are created using the correct version and profile.
     //
-    vgc::widgets::OpenGLViewer::init();
+    //vgc::widgets::OpenGLViewer::init();
 
     // Creates the QApplication
     // XXX We should create a vgc::???::Application class for code sharing
@@ -145,9 +145,11 @@ int main(int argc, char* argv[])
     vgc::core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
+
     int size = 10;
     for (int i = 0; i < size; ++i) {
         vgc::ui::Row* row = col->createChild<vgc::ui::Row>();
+        row->addStyleClass(vgc::core::StringId("inner"));
         for (int j = 0; j < size; ++j) {
             vgc::ui::LineEdit* lineEdit = row->createChild<vgc::ui::LineEdit>();
             size_t begin = randomBegin();
@@ -162,11 +164,11 @@ int main(int argc, char* argv[])
 
     // Change style of first row
     vgc::ui::Widget* firstRow = col->firstChild();
-    firstRow->setStyleSheet(".LineEdit { text-color: rgb(255, 100, 100); }");
+    firstRow->setStyleSheet(".LineEdit { text-color: rgb(50, 232, 211); }");
 
     vgc::ui::WindowPtr wnd = vgc::ui::Window::create(col);
     wnd->setTitle("VGC UI Test");
-    wnd->resize(QSize(800, 600));
+    wnd->resize(QSize(1100, 800));
     wnd->setVisible(true);
 
     // Start event loop

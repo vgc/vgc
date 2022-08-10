@@ -95,10 +95,10 @@ void LineEdit::onResize()
 
 void LineEdit::onPaintCreate(graphics::Engine* engine)
 {
-    triangles_ = engine->createTriangles();
+    triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void LineEdit::onPaintDraw(graphics::Engine*)
+void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 {
     if (reload_) {
         reload_ = false;
@@ -109,7 +109,7 @@ void LineEdit::onPaintDraw(graphics::Engine*)
                         strings::background_color_on_hover :
                         strings::background_color);
         float borderRadius = internal::getLength(this, strings::border_radius);
-#ifdef VGC_QOPENGL_EXPERIMENT
+#if defined(VGC_QOPENGL_EXPERIMENT)
         static core::Stopwatch sw = {};
         auto t = sw.elapsed() * 50.f;
         backgroundColor = core::Color::hsl(t, 0.6f, 0.3f);
@@ -120,9 +120,10 @@ void LineEdit::onPaintDraw(graphics::Engine*)
         richText_->fill(a);
 
         // Load triangles data
-        triangles_->load(a.data(), a.length());
+        engine->updateVertexBufferData(triangles_, std::move(a));
     }
-    triangles_->draw();
+    engine->setProgram(graphics::BuiltinProgram::Simple);
+    engine->draw(triangles_, -1, 0);
 }
 
 void LineEdit::onPaintDestroy(graphics::Engine*)

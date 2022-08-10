@@ -11,16 +11,37 @@ vgc_add_library(graphics
 
     HEADER_FILES
         api.h
+        batch.h
+        blendstate.h
+        buffer.h
+        cliprect.h
+        colorgradient.h
+        constants.h
+        d3d11/d3d11engine.h
+        detail/command.h
+        detail/comptr.h
+        detail/pipelinestate.h
         engine.h
+        enums.h
         exceptions.h
         font.h
+        framebuffer.h
+        geometryview.h
         idgenerator.h
+        image.h
+        imageview.h
         logcategories.h
+        program.h
+        rasterizerstate.h
+        resource.h
         richtext.h
+        samplerstate.h
         strings.h
+        swapchain.h
         text.h
 
     CPP_FILES
+        d3d11/d3d11engine.cpp
         engine.cpp
         exceptions.cpp
         font.cpp

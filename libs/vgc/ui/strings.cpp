@@ -25,6 +25,7 @@ const core::StringId ColorPalette("ColorPalette");
 const core::StringId Flex("Flex");
 const core::StringId Label("Label");
 const core::StringId LineEdit("LineEdit");
+const core::StringId Plot2d("Plot2d");
 
 const core::StringId background_color("background-color");
 const core::StringId background_color_on_hover("background-color-on-hover");

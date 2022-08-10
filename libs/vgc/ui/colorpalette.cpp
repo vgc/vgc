@@ -119,7 +119,7 @@ void ColorPalette::setSelectedColor(const core::Color& color)
 
 void ColorPalette::onPaintCreate(graphics::Engine* engine)
 {
-    triangles_ = engine->createTriangles();
+    triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 namespace {
@@ -164,14 +164,14 @@ void insertCellHighlight(
 
 } // namespace
 
-void ColorPalette::onPaintDraw(graphics::Engine* engine)
+void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 {
     float eps = 1e-6f;
     if (reload_ || std::abs(oldWidth_ - width()) > eps || std::abs(oldHeight_ - height()) > eps) {
         reload_ = false;
         oldWidth_ = width();
         oldHeight_ = height();
-        core::FloatArray a;
+        core::FloatArray a = {};
 
         // Draw saturation/lightness selector
         // Terminology:
@@ -221,7 +221,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
         // color if selected color isn't an exact index.
         if (isSelectedColorExact_) {
             Int i = selectedLightnessIndex_;
-            Int j = selectedSaturationIndex_;            
+            Int j = selectedSaturationIndex_;
             float x1 = std::round(x0 + startOffset + i*dx);
             float x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
             float y1 = y0 + startOffset + j*dy;
@@ -323,10 +323,11 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine)
         }
 
         // Load triangles
-        triangles_->load(a.data(), a.length());
+        engine->updateVertexBufferData(triangles_, std::move(a));
     }
-    engine->clear(core::Color(0.337, 0.345, 0.353));
-    triangles_->draw();
+    //engine->clear(core::Color(0.337, 0.345, 0.353));
+    engine->setProgram(graphics::BuiltinProgram::Simple);
+    engine->draw(triangles_, -1, 0);
 }
 
 void ColorPalette::onPaintDestroy(graphics::Engine*)

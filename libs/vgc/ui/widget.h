@@ -47,6 +47,13 @@ VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(Widget);
 VGC_DECLARE_OBJECT(UiWidgetEngine);
 
+enum class PaintOption : UInt16 {
+    None = 0,
+    Resizing            = 0x0001,
+    LayoutViz           = 0x0002,
+};
+VGC_DEFINE_FLAGS(PaintOptions, PaintOption)
+
 /// \class vgc::ui::Widget
 /// \brief Base class of all elements in the user interface.
 ///
@@ -375,10 +382,15 @@ public:
     ///
     void repaint();
 
-    /// This function is called whenever the widget needs to be
-    /// repainted.
+    /// This function is called by the widget container whenever the widget
+    /// needs to prepare to be repainted for a frame.
     ///
-    void paint(graphics::Engine* engine);
+    void preparePaint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
+
+    /// This function is called by the widget container whenever the widget
+    /// needs to be repainted for a frame.
+    ///
+    void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
 
     /// This signal is emitted when someone requested this widget, or one of
     /// its descendent widgets, to be repainted.
@@ -577,16 +589,22 @@ public:
     Action* createAction(const Shortcut& shortcut);
 
     /// This virtual function is called once before the first call to
-    /// onPaintDraw(), and should be reimplemented to create required GPU
+    /// onPaintDraw(), and should be reimplemented to create required static GPU
     /// resources.
     ///
     virtual void onPaintCreate(graphics::Engine* engine);
+
+    /// This virtual function is called whenever the widget needs to prepare to
+    /// be repainted. Subclasses should reimplement this, typically to update
+    /// resources.
+    ///
+    virtual void onPaintPrepare(graphics::Engine* engine, PaintOptions flags);
 
     /// This virtual function is called whenever the widget needs to be
     /// repainted. Subclasses should reimplement this, typically by issuing
     /// draw calls.
     ///
-    virtual void onPaintDraw(graphics::Engine* engine);
+    virtual void onPaintDraw(graphics::Engine* engine, PaintOptions flags);
 
     /// This virtual function is called once after the last call to
     /// onPaintDraw(), for example before the widget is destructed, or if
@@ -648,6 +666,7 @@ private:
 
     graphics::Engine* lastPaintEngine_ = nullptr;
     void releaseEngine_();
+    void setEngine_(graphics::Engine* engine);
 
     VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_);
     VGC_SLOT(onWidgetAdded_, onWidgetAdded);

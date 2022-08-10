@@ -63,12 +63,12 @@ public:
 
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine) override;
+    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
     std::string text_;
-    graphics::TrianglesBufferPtr triangles_;
+    graphics::GeometryViewPtr triangles_;
     bool reload_;
 };
 

@@ -31,6 +31,7 @@
 
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
+#include <vgc/geometry/mat4d.h>
 #include <vgc/geometry/mat4f.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
@@ -91,6 +92,11 @@ MouseEventPtr fromQt(QMouseEvent* event);
 ///
 VGC_UI_API
 QMatrix4x4 toQt(const geometry::Mat4f& m);
+
+/// Converts the given geometry::Mat4d into a QMatrix4x4.
+///
+VGC_UI_API
+QMatrix4x4 toQt(const geometry::Mat4d& m);
 
 } // namespace vgc::ui
 

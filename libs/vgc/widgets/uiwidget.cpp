@@ -186,8 +186,29 @@ bool UiWidget::event(QEvent* e)
 
 void UiWidget::initializeGL()
 {
-    engine_ = vgc::ui::internal::QOpenglEngine::create(context());
-    engine_->setupContext();
+    {
+        graphics::EngineCreateInfo createInfo = {};
+        createInfo.setMultithreadingEnabled(false);
+        engine_ = vgc::ui::internal::QglEngine::create(createInfo, context());
+    }
+
+    QSurface* surface = context()->surface();
+    graphics::SwapChainPtr swapChain = engine_->createSwapChainFromSurface(surface);
+    engine_->setSwapChain(swapChain);
+
+    {
+        graphics::RasterizerStateCreateInfo createInfo = {};
+        rasterizerState_ = engine_->createRasterizerState(createInfo);
+    }
+
+    {
+        graphics::BlendStateCreateInfo createInfo = {};
+        createInfo.setEnabled(true);
+        createInfo.setEquationRGB(graphics::BlendOp::Add, graphics::BlendFactor::SourceAlpha, graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setEquationAlpha(graphics::BlendOp::Add, graphics::BlendFactor::One, graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
+        blendState_ = engine_->createBlendState(createInfo);
+    }
 
     // Initialize widget for painting.
     // Note that initializedGL() is never called if the widget is never visible.
@@ -220,18 +241,36 @@ void UiWidget::paintGL()
     }
 
     // setViewport & present is done by Qt
+    GLint vp[4];
+    engine_->api()->glGetIntegerv(GL_VIEWPORT, vp);
 
+    engine_->setRasterizerState(rasterizerState_);
+    engine_->setBlendState(blendState_, geometry::Vec4f{0.f, 0.f, 0.f, 0.f});
+    engine_->setViewport(vp[0], vp[1], vp[2], vp[3]);
+    engine_->beginFrame(true); // XXX split to beginFrame() and qopenglengine-only beginInlineFrame
+
+    //engine_->clear(core::Color(0., 0., 0.));
     engine_->clear(core::Color(0.337, 0.345, 0.353));
-    engine_->bindPaintShader();
+    engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
     widget_->paint(engine_.get());
-    engine_->releasePaintShader();
+
+    engine_->endFrame();
+    engine_->finish();
+
+    // make current in current thread again, engine has no immediate mode yet
+    context()->makeCurrent(context()->surface());
+
+    //engine_->releasePaintShader();
+    // XXX opengl only.. we need to add a flush/finish to submit ?
 }
 
 void UiWidget::cleanupGL()
 {
     if (isInitialized_) {
+        blendState_.reset();
+        rasterizerState_.reset();
         engine_ = nullptr;
         isInitialized_ = false;
     }
