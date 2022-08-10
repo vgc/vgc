@@ -28,5 +28,5 @@ PYBIND11_MODULE(dom, m) {
     wrap_xmlformattingstyle(m);
 
     wrap_document(m); // dependencies: node, xmlformattingstyle
-    wrap_element(m); // dependencies: node
+    wrap_element(m);  // dependencies: node
 }

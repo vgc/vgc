@@ -45,21 +45,17 @@ class VGC_DOM_API NodeRelatives {
 public:
     NodeRelatives() = default;
 
-    NodeRelatives(Node* node) :
-        NodeRelatives(
-            node->parent(),
-            node->previousSibling(),
-            node->nextSibling()) {}
+    NodeRelatives(Node* node)
+        : NodeRelatives(node->parent(), node->previousSibling(), node->nextSibling()) {
+    }
 
-    NodeRelatives(
-        Node* parent,
-        Node* previousSibling,
-        Node* nextSibling) :
-        parent_(parent),
-        previousSibling_(previousSibling),
-        nextSibling_(nextSibling) {}
+    NodeRelatives(Node* parent, Node* previousSibling, Node* nextSibling)
+        : parent_(parent)
+        , previousSibling_(previousSibling)
+        , nextSibling_(nextSibling) {
+    }
 
-    Node* parent()const  {
+    Node* parent() const {
         return parent_;
     }
 
@@ -79,16 +75,18 @@ private:
     Node* nextSibling_ = nullptr;
 };
 
-
 class VGC_DOM_API CreateElementOperation : public core::Operation {
 protected:
-    CreateElementOperation(Element* element, Node* parent, Node* nextSibling) :
-        element_(element), parent_(parent), nextSibling_(nextSibling) {}
+    CreateElementOperation(Element* element, Node* parent, Node* nextSibling)
+        : element_(element)
+        , parent_(parent)
+        , nextSibling_(nextSibling) {
+    }
 
     ~CreateElementOperation();
 
 public:
-    Element* element()const  {
+    Element* element() const {
         return element_.get();
     }
 
@@ -116,8 +114,9 @@ private:
 
 class VGC_DOM_API RemoveNodeOperation : public core::Operation {
 protected:
-    RemoveNodeOperation(Node* node) :
-        node_(node) {}
+    RemoveNodeOperation(Node* node)
+        : node_(node) {
+    }
 
     ~RemoveNodeOperation() {
         if (keepAlive_) {
@@ -126,7 +125,7 @@ protected:
     }
 
 public:
-    Node* node()const  {
+    Node* node() const {
         return node_.get();
     }
 
@@ -147,12 +146,13 @@ private:
 
 class VGC_DOM_API MoveNodeOperation : public core::Operation {
 protected:
-    MoveNodeOperation(Node* node, Node* newParent, Node* newNextSibling) :
-        node_(node),
-        newRelatives_(newParent, nullptr, newNextSibling) {}
+    MoveNodeOperation(Node* node, Node* newParent, Node* newNextSibling)
+        : node_(node)
+        , newRelatives_(newParent, nullptr, newNextSibling) {
+    }
 
 public:
-    Node* node()const  {
+    Node* node() const {
         return node_;
     }
 
@@ -179,16 +179,14 @@ class VGC_DOM_API SetAttributeOperation : public core::Operation {
 protected:
     friend Operation;
 
-    SetAttributeOperation(
-        Element* element,
-        core::StringId name,
-        Value value) :
-        element_(element),
-        name_(name),
-        newValue_(value) {}
+    SetAttributeOperation(Element* element, core::StringId name, Value value)
+        : element_(element)
+        , name_(name)
+        , newValue_(value) {
+    }
 
 public:
-    Element* element()const  {
+    Element* element() const {
         return element_;
     }
 
@@ -212,7 +210,8 @@ protected:
 private:
     Element* element_;
     core::StringId name_;
-    Int index_ = -1; // XXX would be difficult to keep this optimization when coalescing in finalize()..
+    Int index_ = -1; // XXX would be difficult to keep this
+                     // optimization when coalescing in finalize()..
     bool isNew_ = false;
     Value oldValue_;
     Value newValue_;
@@ -220,16 +219,14 @@ private:
 
 class VGC_DOM_API RemoveAuthoredAttributeOperation : public core::Operation {
 protected:
-    RemoveAuthoredAttributeOperation(
-        Element* element,
-        core::StringId name,
-        Int index) :
-        element_(element),
-        name_(name),
-        index_(index) {}
+    RemoveAuthoredAttributeOperation(Element* element, core::StringId name, Int index)
+        : element_(element)
+        , name_(name)
+        , index_(index) {
+    }
 
 public:
-    Element* element()const  {
+    Element* element() const {
         return element_;
     }
 
@@ -288,8 +285,7 @@ private:
     std::set<Node*> reparentedNodes_;
     std::set<Node*> childrenReorderedNodes_;
 
-    std::unordered_map<Element*, std::set<core::StringId>>
-        modifiedElements_;
+    std::unordered_map<Element*, std::set<core::StringId>> modifiedElements_;
 
     Diff() = default;
 
@@ -302,12 +298,11 @@ private:
     }
 
     bool isEmpty() const {
-        return (
-            createdNodes_.empty() &&
-            removedNodes_.empty() &&
-            reparentedNodes_.empty() &&
-            childrenReorderedNodes_.empty() &&
-            modifiedElements_.empty());
+        return createdNodes_.empty()              //
+               && removedNodes_.empty()           //
+               && reparentedNodes_.empty()        //
+               && childrenReorderedNodes_.empty() //
+               && modifiedElements_.empty();
     }
 };
 

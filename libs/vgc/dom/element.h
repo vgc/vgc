@@ -78,9 +78,9 @@ public:
     /// method over static_cast<Element*> or dynamic_cast<Element*>.
     ///
     static Element* cast(Node* node) {
-        return (node && node->nodeType() == NodeType::Element) ?
-               static_cast<Element*>(node) :
-               nullptr;
+        return (node && node->nodeType() == NodeType::Element)
+                   ? static_cast<Element*>(node)
+                   : nullptr;
     }
 
     /// Returns the name of the element. This is equivalent to tagName()
@@ -125,8 +125,7 @@ public:
     ///
     /// \sa lastChildElement(), previousSiblingElement(), and nextSiblingElement().
     ///
-    Element* firstChildElement() const
-    {
+    Element* firstChildElement() const {
         return static_cast<Element*>(firstChildObject());
     }
 
@@ -135,8 +134,7 @@ public:
     ///
     /// \sa firstChildElement(), previousSiblingElement(), and nextSiblingElement().
     ///
-    Element* lastChildElement() const
-    {
+    Element* lastChildElement() const {
         return static_cast<Element*>(lastChildObject());
     }
 
@@ -145,8 +143,7 @@ public:
     ///
     /// \sa nextSiblingElement(), firstChildElement(), and lastChildElement().
     ///
-    Element* previousSiblingElement() const
-    {
+    Element* previousSiblingElement() const {
         return static_cast<Element*>(previousSiblingObject());
     }
 
@@ -155,8 +152,7 @@ public:
     ///
     /// \sa previousSiblingElement(), firstChildElement(), and lastChildElement().
     ///
-    Element* nextSiblingElement() const
-    {
+    Element* nextSiblingElement() const {
         return static_cast<Element*>(nextSiblingObject());
     }
 
@@ -201,10 +197,10 @@ private:
 /// Foo::Foo() : Element(VGC_DOM_ELEMENT_GET_NAME(foo)) { }
 /// \endcode
 ///
-#define VGC_DOM_ELEMENT_DEFINE_NAME(key, name)                   \
-    static vgc::core::StringId VGC_DOM_ELEMENT_NAME_##key##_() { \
-        static vgc::core::StringId s(name);                      \
-        return s;                                                \
+#define VGC_DOM_ELEMENT_DEFINE_NAME(key, name)                                           \
+    static vgc::core::StringId VGC_DOM_ELEMENT_NAME_##key##_() {                         \
+        static vgc::core::StringId s(name);                                              \
+        return s;                                                                        \
     }
 
 /// Retrieves the element name defined via

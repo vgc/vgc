@@ -15,9 +15,3 @@
 // limitations under the License.
 
 #include <vgc/dom/xmlformattingstyle.h>
-
-namespace vgc {
-namespace dom {
-
-} // namespace dom
-} // namespace vgc

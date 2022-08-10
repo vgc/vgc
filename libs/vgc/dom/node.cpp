@@ -34,75 +34,96 @@ void destroyNode(Node* node) {
 
 } // namespace internal
 
-Node::Node(Document* document, NodeType nodeType) :
-    Object(),
-    document_(document),
-    nodeType_(nodeType)
-{
-
+Node::Node(Document* document, NodeType nodeType)
+    : Object()
+    , document_(document)
+    , nodeType_(nodeType) {
 }
 
-void Node::remove()
-{
+void Node::remove() {
     core::History::do_<RemoveNodeOperation>(document()->history(), this);
 }
 
 namespace {
-bool checkCanReparent_(Node* parent, Node* child, bool simulate = false, bool checkSecondRootElement = true)
-{
+
+bool checkCanReparent_(
+    Node* parent,
+    Node* child,
+    bool simulate = false,
+    bool checkSecondRootElement = true) {
+
     if (parent->document() != child->document()) {
-        if (simulate) return false;
-        else throw WrongDocumentError(parent, child);
+        if (simulate) {
+            return false;
+        }
+        else {
+            throw WrongDocumentError(parent, child);
+        }
     }
 
     if (child->nodeType() == NodeType::Document) {
-        if (simulate) return false;
-        else throw WrongChildTypeError(parent, child);
+        if (simulate) {
+            return false;
+        }
+        else {
+            throw WrongChildTypeError(parent, child);
+        }
     }
 
-    if (checkSecondRootElement &&
-        parent->nodeType() == NodeType::Document &&
-        child->nodeType() == NodeType::Element)
-    {
+    if (checkSecondRootElement && parent->nodeType() == NodeType::Document
+        && child->nodeType() == NodeType::Element) {
         Element* rootElement = Document::cast(parent)->rootElement();
         if (rootElement && rootElement != child) {
-            if (simulate) return false;
-            else throw SecondRootElementError(Document::cast(parent));
+            if (simulate) {
+                return false;
+            }
+            else {
+                throw SecondRootElementError(Document::cast(parent));
+            }
         }
     }
 
     if (parent->isDescendantObject(child)) {
-        if (simulate) return false;
-        else throw ChildCycleError(parent, child);
+        if (simulate) {
+            return false;
+        }
+        else {
+            throw ChildCycleError(parent, child);
+        }
     }
 
     return true;
 }
+
 } // namespace
 
-bool Node::canReparent(Node* newParent)
-{
+bool Node::canReparent(Node* newParent) {
     const bool simulate = true;
     return checkCanReparent_(newParent, this, simulate);
 }
 
-void Node::reparent(Node* newParent)
-{
+void Node::reparent(Node* newParent) {
     checkCanReparent_(newParent, this);
-    core::History::do_<MoveNodeOperation>(document()->history(), this, newParent, nullptr);
+    core::History::do_<MoveNodeOperation>(
+        document()->history(), this, newParent, nullptr);
 }
 
 namespace {
-bool checkCanReplace_(Node* oldNode, Node* newNode, bool simulate = false)
-{
+
+bool checkCanReplace_(Node* oldNode, Node* newNode, bool simulate = false) {
+
     // Avoid raising ReplaceDocumentError if oldNode == newNode (= Document node)
     if (oldNode == newNode) {
         return true;
     }
 
     if (oldNode->nodeType() == NodeType::Document) {
-        if (simulate) return false;
-        else throw ReplaceDocumentError(Document::cast(oldNode), newNode);
+        if (simulate) {
+            return false;
+        }
+        else {
+            throw ReplaceDocumentError(Document::cast(oldNode), newNode);
+        }
     }
     Node* oldNodeParent = oldNode->parent(); // guaranteed non-null
 
@@ -112,16 +133,15 @@ bool checkCanReplace_(Node* oldNode, Node* newNode, bool simulate = false)
     // All other checks are the same as for reparent(), so we delate.
     return checkCanReparent_(oldNodeParent, newNode, simulate, checkSecondRootElement);
 }
+
 } // namespace
 
-bool Node::canReplace(Node* oldNode)
-{
+bool Node::canReplace(Node* oldNode) {
     const bool simulate = true;
     return checkCanReplace_(oldNode, this, simulate);
 }
 
-void Node::replace(Node* oldNode)
-{
+void Node::replace(Node* oldNode) {
     // XXX record atomic operations
 
     // newChid = this

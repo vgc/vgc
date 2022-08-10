@@ -30,28 +30,26 @@
 namespace vgc {
 namespace dom {
 
-Document::Document() :
-    Node(this, NodeType::Document),
-    hasXmlDeclaration_(true),
-    hasXmlEncoding_(true),
-    hasXmlStandalone_(true),
-    xmlVersion_("1.0"),
-    xmlEncoding_("UTF-8"),
-    xmlStandalone_(false)
-{
+Document::Document()
+    : Node(this, NodeType::Document)
+    , hasXmlDeclaration_(true)
+    , hasXmlEncoding_(true)
+    , hasXmlStandalone_(true)
+    , xmlVersion_("1.0")
+    , xmlEncoding_("UTF-8")
+    , xmlStandalone_(false) {
+
     generateXmlDeclaration_();
 }
 
 /* static */
-DocumentPtr Document::create()
-{
+DocumentPtr Document::create() {
     return DocumentPtr(new Document());
 }
 
 namespace {
 
-bool isWhitespace_(char c)
-{
+bool isWhitespace_(char c) {
     // Reference: https://www.w3.org/TR/REC-xml/#NT-S
     //
     //   S ::= (#x20 | #x9 | #xD | #xA)+  [= (' ' | '\n' | '\r' | '\t')+]
@@ -71,8 +69,7 @@ bool isWhitespace_(char c)
     // TODO: remove '\r' characters or replace them with '\n' if encountered
 }
 
-bool isNameStartChar_(char c)
-{
+bool isNameStartChar_(char c) {
     // Reference: https://www.w3.org/TR/xml/#NT-NameStartChar
     //
     //   NameStartChar ::= ":" | [A-Z] | "_" | [a-z] |
@@ -83,11 +80,10 @@ bool isNameStartChar_(char c)
     // XML files are allowed to have quite fancy characters in names.
     // However, we disallow those in VGC files.
     //
-    return ('a' <= c && c <= 'z' ) || ('A' <= c && c <= 'Z' ) || c == ':'  || c == '_';
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == ':' || c == '_';
 }
 
-bool isNameChar_(char c)
-{
+bool isNameChar_(char c) {
     // Reference: https://www.w3.org/TR/xml/#NT-NameChar
     //
     //   NameChar ::= NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
@@ -97,14 +93,12 @@ bool isNameChar_(char c)
     // XML files are allowed to have quite fancy characters in names.
     // However, we disallow those in VGC files.
     //
-    return isNameStartChar_(c) || c == '-' || c == '.' || ('a' <= c && c <= 'z' );
+    return isNameStartChar_(c) || c == '-' || c == '.' || ('a' <= c && c <= 'z');
 }
 
-class Parser
-{
+class Parser {
 public:
-    static DocumentPtr parse(std::ifstream& in)
-    {
+    static DocumentPtr parse(std::ifstream& in) {
         DocumentPtr res = Document::create();
         Parser parser(in, res.get());
         parser.readAll_();
@@ -121,17 +115,16 @@ private:
     std::string referenceName_;
 
     // Create the parser object
-    Parser(std::ifstream& in, Document* document) :
-        in_(in),
-        currentNode_(document),
-        elementSpec_(nullptr)
-    {
+    Parser(std::ifstream& in, Document* document)
+        : in_(in)
+        , currentNode_(document)
+        , elementSpec_(nullptr) {
+
         readAll_();
     }
 
     // Main function. Nothing read yet.
-    void readAll_()
-    {
+    void readAll_() {
         char c;
         while (in_.get(c)) {
             if (c == '<') {
@@ -144,8 +137,7 @@ private:
     }
 
     // Read from '<' (not included) to matching '>' (included)
-    void readMarkup_()
-    {
+    void readMarkup_() {
         char c;
         if (in_.get(c)) {
             if (c == '?') {
@@ -155,18 +147,16 @@ private:
                 readEndTag_();
             }
             else if (c == '!') {
-                throw XmlSyntaxError(
-                    "Unexpected '<!': Comments, CDATA sections, and DOCTYPE "
-                    "declaration are not yet supported.");
+                throw XmlSyntaxError("Unexpected '<!': Comments, CDATA sections, and "
+                                     "DOCTYPE declaration are not yet supported.");
             }
             else {
                 readStartTag_(c);
             }
         }
         else {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file after reading '<' in markup. "
-                "Expected '?', '/', '!', or tag name.");
+            throw XmlSyntaxError("Unexpected end-of-file after reading '<' in markup. "
+                                 "Expected '?', '/', '!', or tag name.");
         }
     }
 
@@ -175,8 +165,7 @@ private:
     // technically not a PI. In the future, we may want to actually read the
     // content of the XML declaration, and check that it is valid and that
     // encoding is UTF-8 (the only encoding supported in VGC files).
-    void readProcessingInstruction_()
-    {
+    void readProcessingInstruction_() {
         // PI       ::= '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
         // PITarget ::= Name - (('X' | 'x') ('M' | 'm') ('L' | 'l'))
 
@@ -188,9 +177,8 @@ private:
             if (c == '?') {
                 if (!in_.get(c)) {
                     throw XmlSyntaxError(
-                        "Unexpected end-of-file after reading '?' in "
-                        "processing instruction. Expected '>' or further "
-                        "instructions.");
+                        "Unexpected end-of-file after reading '?' in processing "
+                        "instruction. Expected '>' or further instructions.");
                 }
                 else if (c == '>') {
                     isClosed = true;
@@ -204,15 +192,13 @@ private:
             }
         }
         if (!isClosed) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file while reading processing instruction. "
-                "Expected '?>' or further instructions.");
+            throw XmlSyntaxError("Unexpected end-of-file while reading processing "
+                                 "instruction. Expected '?>' or further instructions.");
         }
     }
 
     // Read from '<c' (not included) to matching '>' or '/>' (included)
-    void readStartTag_(char c)
-    {
+    void readStartTag_(char c) {
         bool isEmpty = false;
         bool isClosed = readTagName_(c, &isEmpty);
 
@@ -228,8 +214,8 @@ private:
                 // '/' must be immediately followed by '>'
                 if (!(in_.get(c))) {
                     throw XmlSyntaxError(
-                        "Unexpected end-of-file after reading '/' in start "
-                        "tag '" + tagName_ + "'. Expected '>'.");
+                        "Unexpected end-of-file after reading '/' in start tag '"
+                        + tagName_ + "'. Expected '>'.");
                 }
                 else if (c == '>') {
                     isClosed = true;
@@ -237,8 +223,9 @@ private:
                 }
                 else {
                     throw XmlSyntaxError(
-                        std::string("Unexpected '") + c + "' after reading '/' "
-                        "in start tag '" + tagName_ + "'. Expected '>'.");
+                        std::string("Unexpected '") + c
+                        + "' after reading '/' in start tag '" + tagName_
+                        + "'. Expected '>'.");
                 }
             }
             else if (isWhitespace_(c)) {
@@ -250,8 +237,8 @@ private:
         }
         if (!isClosed) {
             throw XmlSyntaxError(
-                "Unexpected end-of-file while reading start tag '" + tagName_ +
-                "'. Expected whitespaces, attribute name, '>', or '/>'");
+                "Unexpected end-of-file while reading start tag '" + tagName_
+                + "'. Expected whitespaces, attribute name, '>', or '/>'");
         }
 
         if (isEmpty) {
@@ -260,13 +247,11 @@ private:
     }
 
     // Read from '</' (not included) to matching '>' (included)
-    void readEndTag_()
-    {
+    void readEndTag_() {
         char c;
         if (!(in_.get(c))) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file after reading '</' in end tag. "
-                "Expected tag name.");
+            throw XmlSyntaxError("Unexpected end-of-file after reading '</' in end tag. "
+                                 "Expected tag name.");
         }
 
         bool isClosed = readTagName_(c);
@@ -280,15 +265,14 @@ private:
             }
             else {
                 throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading end "
-                    "tag '" + tagName_ + "'. Expected whitespaces or "
-                    "'>'.");
+                    std::string("Unexpected '") + c + "' while reading end tag '"
+                    + tagName_ + "'. Expected whitespaces or '>'.");
             }
         }
         if (!isClosed) {
             throw XmlSyntaxError(
-                "Unexpected end-of-file while reading end tag '" + tagName_ +
-                "'. Expected whitespaces or '>'.");
+                "Unexpected end-of-file while reading end tag '" + tagName_
+                + "'. Expected whitespaces or '>'.");
         }
 
         onEndTag_();
@@ -296,22 +280,21 @@ private:
 
     // Action to be performed when a start tag is encountered.
     // The name of the tag is available in tagName_.
-    void onStartTag_()
-    {
+    void onStartTag_() {
         elementSpec_ = schema().findElementSpec(tagName_);
         if (!elementSpec_) {
             throw VgcSyntaxError(
-                "Unknown element name '" + tagName_ + "'. Excepted an element "
-                "name defined in the VGC schema.");
+                "Unknown element name '" + tagName_
+                + "'. Excepted an element name defined in the VGC schema.");
         }
 
         if (currentNode_->nodeType() == NodeType::Document) {
             Document* doc = Document::cast(currentNode_);
             if (doc->rootElement()) {
                 throw XmlSyntaxError(
-                    "Unexpected second root element '" + tagName_ + "'. A root "
-                    "element '" + doc->rootElement()->name().string() + "' has "
-                    "already been defined, and there cannot be more than one.");
+                    "Unexpected second root element '" + tagName_ + "'. A root element '"
+                    + doc->rootElement()->name().string()
+                    + "' has already been defined, and there cannot be more than one.");
             }
             else {
                 currentNode_ = Element::create(doc, tagName_);
@@ -327,27 +310,27 @@ private:
             // in the schema which elements are allowed to be children of other
             // elements.
             throw XmlSyntaxError(
-                "Unexpected element '" + tagName_ + "'. Elements of this type "
-                "are not allowed as children of the current node type '" +
-                core::toString(currentNode_->nodeType()) + "'.");
+                "Unexpected element '" + tagName_
+                + "'. Elements of this type are not allowed as children of the current "
+                  "node type '"
+                + core::toString(currentNode_->nodeType()) + "'.");
         }
     }
 
     // Action to be performed when an end tag (or the closing '/>' of an empty
     // element tag) is encountered. The name of the tag is available in
     // tagName_.
-    void onEndTag_()
-    {
+    void onEndTag_() {
         if (!currentNode_ || currentNode_->nodeType() != NodeType::Element) {
             throw XmlSyntaxError(
-                "Unexpected end tag '" + tagName_ + "'. It does not have a "
-                "matching start tag.");
+                "Unexpected end tag '" + tagName_
+                + "'. It does not have a matching start tag.");
         }
         else if (tagName_ != Element::cast(currentNode_)->name().string()) {
             throw XmlSyntaxError(
-                "Unexpected end tag '" + tagName_ + "'. Its matching start "
-                " '" + Element::cast(currentNode_)->name().string() + "' has "
-                "a different name.");
+                "Unexpected end tag '" + tagName_ + "'. Its matching start '"
+                + Element::cast(currentNode_)->name().string()
+                + "' has a different name.");
         }
         else {
             currentNode_ = currentNode_->parent();
@@ -389,8 +372,7 @@ private:
     // return the first character after the tag name, and let the caller handle
     // this character?
     //
-    bool readTagName_(char c, bool* empty = nullptr)
-    {
+    bool readTagName_(char c, bool* empty = nullptr) {
         bool isClosed = false;
 
         tagName_.clear();
@@ -398,8 +380,9 @@ private:
 
         if (!isNameStartChar_(c)) {
             throw XmlSyntaxError(
-                std::string("Unexpected '") + c + "' while reading start "
-                "character of tag name. Expected valid name start character.");
+                std::string("Unexpected '") + c
+                + "' while reading start character of tag name. Expected valid name "
+                  "start character.");
         }
 
         bool done = false;
@@ -421,9 +404,8 @@ private:
             else if (c == '/') {
                 if (!empty) {
                     throw XmlSyntaxError(
-                        "Unexpected '/' while reading end tag name '" +
-                        tagName_ + "'. Expected valid name characters, "
-                        "whitespaces, or '>'."   );
+                        "Unexpected '/' while reading end tag name '" + tagName_
+                        + "'. Expected valid name characters, whitespaces, or '>'.");
                 }
                 if (in_.get(c)) {
                     if (c == '>') {
@@ -433,40 +415,39 @@ private:
                     }
                     else {
                         throw XmlSyntaxError(
-                            "Unexpected end-of-file after reading '/' after "
-                            "reading start tag name '" + tagName_ + "'. "
-                            "Expected '>'.");
+                            "Unexpected end-of-file after reading '/' after reading "
+                            "start tag name '"
+                            + tagName_ + "'. Expected '>'.");
                     }
                 }
                 else {
                     throw XmlSyntaxError(
-                        "Unexpected end-of-file after reading '/' after "
-                        "reading start tag name '" + tagName_ + "'. Expected "
-                        "'>'.");
+                        "Unexpected end-of-file after reading '/' after reading start "
+                        "tag name '"
+                        + tagName_ + "'. Expected '>'.");
                 }
             }
             else {
                 throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading " +
-                    (empty ? "start" : "end") + " tag name '" + tagName_ + "'. "
-                    "Expected valid name characters, whitespaces, " +
-                    (empty ? "'>', or '/>" : "or '>'") + "." );
+                    std::string("Unexpected '") + c + "' while reading "
+                    + (empty ? "start" : "end") + " tag name '" + tagName_
+                    + "'. Expected valid name characters, whitespaces, "
+                    + (empty ? "'>', or '/>" : "or '>'") + ".");
             }
         }
         if (!done) {
             throw XmlSyntaxError(
-                std::string("Unexpected end-of-file while reading ") +
-                (empty ? "start" : "end") + " tag name '" + tagName_ + "'. "
-                "Expected valid name characters, whitespaces, " +
-                (empty ? "'>', or '/>" : "or '>'") + "." );
+                std::string("Unexpected end-of-file while reading ")
+                + (empty ? "start" : "end") + " tag name '" + tagName_
+                + "'. Expected valid name characters, whitespaces, "
+                + (empty ? "'>', or '/>" : "or '>'") + ".");
         }
 
         return isClosed;
     }
 
     // Read from given first character \p c (not included) to '=' (included)
-    void readAttribute_(char c)
-    {
+    void readAttribute_(char c) {
         // Attribute ::= Name Eq AttValue
         // Eq        ::= S? '=' S?
         // AttValue  ::= '"' ([^<&"] | Reference)* '"'
@@ -478,16 +459,15 @@ private:
     }
 
     // Read from given first character \p c (not included) to '=' (included)
-    void readAttributeName_(char c)
-    {
+    void readAttributeName_(char c) {
         attributeName_.clear();
         attributeName_ += c;
 
         if (!isNameStartChar_(c)) {
             throw XmlSyntaxError(
-                std::string("Unexpected '") + c + "' while reading start "
-                "character of attribute name in start tag " + tagName_ + ". "
-                "Expected valid name start character.");
+                std::string("Unexpected '") + c
+                + "' while reading start character of attribute name in start tag "
+                + tagName_ + ". Expected valid name start character.");
         }
 
         bool isNameRead = false;
@@ -505,18 +485,16 @@ private:
             }
             else {
                 throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading "
-                    "attribute name '" + attributeName_ + "' in start tag '" +
-                    tagName_ + "'. Expected valid name characters, "
-                    "whitespaces, or '='.");
+                    std::string("Unexpected '") + c + "' while reading attribute name '"
+                    + attributeName_ + "' in start tag '" + tagName_
+                    + "'. Expected valid name characters, whitespaces, or '='.");
             }
         }
         if (!isNameRead) {
             throw XmlSyntaxError(
-                "Unexpected end-of-file while reading "
-                "attribute name '" + attributeName_ + "' in start tag '" +
-                tagName_ + "'. Expected valid name characters, "
-                "whitespaces, or '='.");
+                "Unexpected end-of-file while reading attribute name '" + attributeName_
+                + "' in start tag '" + tagName_
+                + "'. Expected valid name characters, whitespaces, or '='.");
         }
 
         while (!isEqRead && in_.get(c)) {
@@ -528,22 +506,20 @@ private:
             }
             else {
                 throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' after reading "
-                    "attribute name '" + attributeName_ + "' in start tag '" +
-                    tagName_ + "'. Expected whitespaces or '='.");
+                    std::string("Unexpected '") + c + "' after reading attribute name '"
+                    + attributeName_ + "' in start tag '" + tagName_
+                    + "'. Expected whitespaces or '='.");
             }
         }
         if (!isEqRead) {
             throw XmlSyntaxError(
-                "Unexpected end-of-file after reading "
-                "attribute name '" + attributeName_ + "' in start tag '" +
-                tagName_ + "'. Expected whitespaces or '='.");
+                "Unexpected end-of-file after reading attribute name '" + attributeName_
+                + "' in start tag '" + tagName_ + "'. Expected whitespaces or '='.");
         }
     }
 
     // Read from '=' (not included) to closing '\'' or '\"' (included)
-    void readAttributeValue_()
-    {
+    void readAttributeValue_() {
         attributeValue_.clear();
 
         char c;
@@ -557,18 +533,20 @@ private:
             }
             else {
                 throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' after reading '=' "
-                    "after reading attribute name '" + attributeName_ +
-                    "' in start tag '" + tagName_ + "'. Expected '\"' (double "
-                    " quote), or '\'' (single quote), or whitespaces.");
+                    std::string("Unexpected '") + c
+                    + "' after reading '=' after reading attribute name '"
+                    + attributeName_ + "' in start tag '" + tagName_
+                    + "'. Expected '\"' (double quote), or '\'' (single quote), or "
+                      "whitespaces.");
             }
         }
         if (!quoteSign) {
             throw XmlSyntaxError(
                 "Unexpected end-of-file after reading '=' "
-                "after reading attribute name '" + attributeName_ +
-                "' in start tag '" + tagName_ + "'. Expected '\"' (double "
-                " quote), or '\'' (single quote), or whitespaces.");
+                "after reading attribute name '"
+                + attributeName_ + "' in start tag '" + tagName_
+                + "'. Expected '\"' (double quote), or '\'' (single quote), or "
+                  "whitespaces.");
         }
 
         bool isClosed = false;
@@ -586,10 +564,10 @@ private:
                 // &lt; when saving back the file. It is quite unclear why did the
                 // W3C decide that '<' was illegal in attribute values.
                 throw XmlSyntaxError(
-                    "Unexpected '<' while reading value of attribute '" +
-                    attributeName_ + "' in start tag '" + tagName_ + "'. This "
-                    "character is now allowed in attribute values, please "
-                    "replace it with '&lt;'.");
+                    "Unexpected '<' while reading value of attribute '" + attributeName_
+                    + "' in start tag '" + tagName_
+                    + "'. This character is now allowed in attribute values, please "
+                      "replace it with '&lt;'.");
             }
             else {
                 attributeValue_ += c;
@@ -597,25 +575,24 @@ private:
         }
         if (!isClosed) {
             throw XmlSyntaxError(
-                "Unexpected end-of-file while reading value of attribute '" +
-                attributeName_ + "' in start tag '" + tagName_ + "'. Expected "
-                "more characters or the closing quote '" + quoteSign + "'.");
+                "Unexpected end-of-file while reading value of attribute '"
+                + attributeName_ + "' in start tag '" + tagName_
+                + "'. Expected more characters or the closing quote '" + quoteSign
+                + "'.");
         }
     }
 
     // Action to be performed when an element attribute is encountered. The
     // attribute name and string value are available in attributeName_ and
     // attributeValue_.
-    void onAttribute_()
-    {
+    void onAttribute_() {
         core::StringId name(attributeName_);
 
         const AttributeSpec* spec = elementSpec_->findAttributeSpec(name);
         if (!spec) {
             throw VgcSyntaxError(
-                "Unknown attribute '" + attributeName_ + "' for element '" +
-                tagName_ + "'. Excepted an attribute name defined in the VGC "
-                "schema.");
+                "Unknown attribute '" + attributeName_ + "' for element '" + tagName_
+                + "'. Excepted an attribute name defined in the VGC schema.");
         }
 
         Value value = parseValue(attributeValue_, spec->valueType());
@@ -632,8 +609,7 @@ private:
     // XXX We do not yet support character references, that is, unicode
     // codes such as '&#...;'
     // TODO support them
-    char readReference_()
-    {
+    char readReference_() {
         // Reference ::= EntityRef | CharRef
         // EntityRef ::= '&' Name ';'
         // CharRef   ::= '&#' [0-9]+ ';'
@@ -646,16 +622,15 @@ private:
             referenceName_ += c;
             if (!isNameStartChar_(c)) {
                 throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading start "
-                    "character of entity reference name. Expected valid name "
-                    "start character.");
+                    std::string("Unexpected '") + c
+                    + "' while reading start character of entity reference name. "
+                      "Expected valid name start character.");
             }
         }
         else {
             throw XmlSyntaxError(
-                "Unexpected end-of-file while reading start "
-                "character of entity reference name. Expected valid name start "
-                "character.");
+                "Unexpected end-of-file while reading start character of entity "
+                "reference name. Expected valid name start character.");
         }
 
         bool isSemicolonRead = false;
@@ -668,16 +643,15 @@ private:
             }
             else {
                 throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading "
-                    "entity reference name '" + referenceName_ + "'. "
-                    "Expected valid name characters or ';'.");
+                    std::string("Unexpected '") + c
+                    + "' while reading entity reference name '" + referenceName_
+                    + "'. Expected valid name characters or ';'.");
             }
         }
         if (!isSemicolonRead) {
             throw XmlSyntaxError(
-                "Unexpected end-of-file while reading "
-                "entity reference name '" + referenceName_ + "'. "
-                "Expected valid name characters or ';'.");
+                "Unexpected end-of-file while reading entity reference name '"
+                + referenceName_ + "'. Expected valid name characters or ';'.");
         }
 
         const std::vector<std::pair<const char*, char>> table = {
@@ -688,22 +662,20 @@ private:
             {"quot", '\"'},
         };
 
-        for (const auto& pair: table) {
+        for (const auto& pair : table) {
             if (referenceName_ == pair.first) {
                 return pair.second;
             }
         }
 
-        throw XmlSyntaxError(
-            "Unknown entity reference '&" + referenceName_ + ";'.");
+        throw XmlSyntaxError("Unknown entity reference '&" + referenceName_ + ";'.");
     }
 };
 
 } // namespace
 
 /* static */
-DocumentPtr Document::open(const std::string& filePath)
-{
+DocumentPtr Document::open(const std::string& filePath) {
     // Note: in the future, we want to be able to detect formatting style of
     // input XML files, and preserve this style, as well as existing
     // non-significant whitespaces, etc. This is why we write our own parser,
@@ -720,8 +692,7 @@ DocumentPtr Document::open(const std::string& filePath)
     return Parser::parse(in);
 }
 
-Element* Document::rootElement() const
-{
+Element* Document::rootElement() const {
     for (Node* node : children()) {
         if (node->nodeType() == NodeType::Element) {
             return Element::cast(node);
@@ -730,92 +701,77 @@ Element* Document::rootElement() const
     return nullptr;
 }
 
-std::string Document::xmlDeclaration() const
-{
+std::string Document::xmlDeclaration() const {
     return xmlDeclaration_;
 }
 
-bool Document::hasXmlDeclaration() const
-{
+bool Document::hasXmlDeclaration() const {
     return hasXmlDeclaration_;
 }
 
-void Document::setXmlDeclaration()
-{
+void Document::setXmlDeclaration() {
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
 }
 
-void Document::setNoXmlDeclaration()
-{
+void Document::setNoXmlDeclaration() {
     hasXmlDeclaration_ = false;
     generateXmlDeclaration_();
 }
 
-std::string Document::xmlVersion() const
-{
+std::string Document::xmlVersion() const {
     return xmlVersion_;
 }
 
-void Document::setXmlVersion(const std::string& version)
-{
+void Document::setXmlVersion(const std::string& version) {
     xmlVersion_ = version;
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
 }
 
-std::string Document::xmlEncoding() const
-{
+std::string Document::xmlEncoding() const {
     return xmlEncoding_;
 }
 
-bool Document::hasXmlEncoding() const
-{
+bool Document::hasXmlEncoding() const {
     return hasXmlEncoding_;
 }
 
-void Document::setXmlEncoding(const std::string& encoding)
-{
+void Document::setXmlEncoding(const std::string& encoding) {
     xmlEncoding_ = encoding;
     hasXmlEncoding_ = true;
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
 }
 
-void Document::setNoXmlEncoding()
-{
+void Document::setNoXmlEncoding() {
     xmlEncoding_ = "UTF-8";
     hasXmlEncoding_ = false;
     generateXmlDeclaration_();
 }
 
-bool Document::xmlStandalone() const
-{
+bool Document::xmlStandalone() const {
     return xmlStandalone_;
 }
 
-bool Document::hasXmlStandalone() const
-{
+bool Document::hasXmlStandalone() const {
     return hasXmlStandalone_;
 }
 
-void Document::setXmlStandalone(bool standalone)
-{
+void Document::setXmlStandalone(bool standalone) {
     xmlStandalone_ = standalone;
     hasXmlStandalone_ = true;
     hasXmlDeclaration_ = true;
     generateXmlDeclaration_();
 }
 
-void Document::setNoXmlStandalone()
-{
+void Document::setNoXmlStandalone() {
     xmlStandalone_ = false;
     hasXmlStandalone_ = false;
     generateXmlDeclaration_();
 }
 
-void Document::generateXmlDeclaration_()
-{
+void Document::generateXmlDeclaration_() {
     xmlDeclaration_.clear();
     if (hasXmlDeclaration_) {
         xmlDeclaration_.append("<?xml version=\"");
@@ -835,9 +791,7 @@ void Document::generateXmlDeclaration_()
     }
 }
 
-void Document::save(const std::string& filePath,
-                    const XmlFormattingStyle& style) const
-{
+void Document::save(const std::string& filePath, const XmlFormattingStyle& style) const {
     std::ofstream out(filePath);
     if (!out.is_open()) {
         throw FileError("Cannot save file " + filePath + ": " + std::strerror(errno));
@@ -847,16 +801,14 @@ void Document::save(const std::string& filePath,
     writeChildren(out, style, 0, this);
 }
 
-void Document::enableHistory(core::StringId entrypointName)
-{
+void Document::enableHistory(core::StringId entrypointName) {
     if (!history_) {
         history_ = core::History::create(entrypointName);
         history_->headChanged().connect(onHistoryHeadChanged());
     }
 }
 
-bool Document::emitPendingDiff()
-{
+bool Document::emitPendingDiff() {
     for (const auto& [node, oldRelatives] : previousRelativesMap_) {
         if (pendingDiff_.createdNodes_.contains(node)) {
             continue;
@@ -869,8 +821,9 @@ bool Document::emitPendingDiff()
         if (oldRelatives.parent_ != newRelatives.parent_) {
             pendingDiff_.reparentedNodes_.insert(node);
         }
-        else if (oldRelatives.nextSibling_ != newRelatives.nextSibling_ ||
-                 oldRelatives.previousSibling_ != newRelatives.previousSibling_) {
+        else if (
+            oldRelatives.nextSibling_ != newRelatives.nextSibling_
+            || oldRelatives.previousSibling_ != newRelatives.previousSibling_) {
             // this introduces false positives if old siblings were removed or
             // new siblings were added.
             pendingDiff_.childrenReorderedNodes_.insert(newRelatives.parent_);
@@ -905,28 +858,23 @@ bool Document::emitPendingDiff()
     return false;
 }
 
-void Document::onHistoryHeadChanged_()
-{
+void Document::onHistoryHeadChanged_() {
     emitPendingDiff();
 }
 
-void Document::onCreateNode_(Node* node)
-{
+void Document::onCreateNode_(Node* node) {
     pendingDiff_.createdNodes_.emplaceLast(node);
 }
 
-void Document::onRemoveNode_(Node* node)
-{
+void Document::onRemoveNode_(Node* node) {
     pendingDiff_.removedNodes_.emplaceLast(node);
 }
 
-void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives)
-{
+void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives) {
     previousRelativesMap_.try_emplace(node, savedRelatives);
 }
 
-void Document::onChangeAttribute_(Element* element, core::StringId name)
-{
+void Document::onChangeAttribute_(Element* element, core::StringId name) {
     pendingDiff_.modifiedElements_[element].insert(name);
 }
 
