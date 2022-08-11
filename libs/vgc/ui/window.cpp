@@ -37,16 +37,18 @@ static constexpr bool debugEvents = false;
 
 //#define VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
 
-#if defined(VGC_CORE_OS_WINDOWS) && !defined(VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
-#define VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
+#ifdef VGC_CORE_OS_WINDOWS
+#    ifndef VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
+#        define VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
+#    endif
 #endif
 
-Window::Window(ui::WidgetPtr widget) :
-    QWindow(),
-    widget_(widget),
-    proj_(geometry::Mat4f::identity),
-    clearColor_(0.337f, 0.345f, 0.353f, 1.f)
-{
+Window::Window(ui::WidgetPtr widget)
+    : QWindow()
+    , widget_(widget)
+    , proj_(geometry::Mat4f::identity)
+    , clearColor_(0.337f, 0.345f, 0.353f, 1.f) {
+
     connect((QWindow*)this, &QWindow::activeChanged, this, &Window::onActiveChanged_);
 
     //setMouseTracking(true);
@@ -56,7 +58,8 @@ Window::Window(ui::WidgetPtr widget) :
     graphics::SwapChainCreateInfo scd = {};
 
     graphics::EngineCreateInfo engineConfig = {};
-    graphics::WindowSwapChainFormat& windowSwapChainFormat = engineConfig.windowSwapChainFormat();
+    graphics::WindowSwapChainFormat& windowSwapChainFormat =
+        engineConfig.windowSwapChainFormat();
     windowSwapChainFormat.setNumBuffers(2);
     windowSwapChainFormat.setNumSamples(8);
     engineConfig.setMultithreadingEnabled(true);
@@ -81,19 +84,20 @@ Window::Window(ui::WidgetPtr widget) :
 
     // get window class info
 
-    WINDOWINFO wi = { sizeof(WINDOWINFO) };
+    WINDOWINFO wi = {sizeof(WINDOWINFO)};
     GetWindowInfo(hwnd, &wi);
     wchar_t className[400];
     GetClassNameW(hwnd, className, 400);
     HINSTANCE hinst = (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE);
-    WNDCLASSEXW wcex = { sizeof(WNDCLASSEXW) };
+    WNDCLASSEXW wcex = {sizeof(WNDCLASSEXW)};
     GetClassInfoExW(hinst, className, &wcex);
     std::wstring classNameW(className);
     std::string classNameA(classNameW.begin(), classNameW.end());
     //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
 #else
     engine_ = internal::QglEngine::create(engineConfig);
-    scd.setWindowNativeHandle(static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
+    scd.setWindowNativeHandle(
+        static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
 #endif
 
     swapChain_ = engine_->createSwapChain(scd);
@@ -106,8 +110,14 @@ Window::Window(ui::WidgetPtr widget) :
     {
         graphics::BlendStateCreateInfo createInfo = {};
         createInfo.setEnabled(true);
-        createInfo.setEquationRGB(graphics::BlendOp::Add, graphics::BlendFactor::SourceAlpha, graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setEquationAlpha(graphics::BlendOp::Add, graphics::BlendFactor::One, graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setEquationRGB(
+            graphics::BlendOp::Add,
+            graphics::BlendFactor::SourceAlpha,
+            graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setEquationAlpha(
+            graphics::BlendOp::Add,
+            graphics::BlendFactor::One,
+            graphics::BlendFactor::OneMinusSourceAlpha);
         createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
         blendState_ = engine_->createBlendState(createInfo);
     }
@@ -127,17 +137,14 @@ Window::Window(ui::WidgetPtr widget) :
     // accept text input.
     //
     //setAttribute(Qt::WA_InputMethodEnabled, true);
-
 }
 
-void Window::onDestroyed()
-{
+void Window::onDestroyed() {
     // Destroying the engine will stop it.
     engine_ = nullptr;
 }
 
-WindowPtr Window::create(ui::WidgetPtr widget)
-{
+WindowPtr Window::create(ui::WidgetPtr widget) {
     return WindowPtr(new Window(widget));
 }
 
@@ -168,20 +175,17 @@ WindowPtr Window::create(ui::WidgetPtr widget)
 //    return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
 //}
 
-void Window::mouseMoveEvent(QMouseEvent *event)
-{
+void Window::mouseMoveEvent(QMouseEvent* event) {
     ui::MouseEventPtr e = fromQt(event);
     event->setAccepted(widget_->onMouseMove(e.get()));
 }
 
-void Window::mousePressEvent(QMouseEvent *event)
-{
+void Window::mousePressEvent(QMouseEvent* event) {
     ui::MouseEventPtr e = fromQt(event);
     event->setAccepted(widget_->onMousePress(e.get()));
 }
 
-void Window::mouseReleaseEvent(QMouseEvent *event)
-{
+void Window::mouseReleaseEvent(QMouseEvent* event) {
     ui::MouseEventPtr e = fromQt(event);
     event->setAccepted(widget_->onMouseRelease(e.get()));
 }
@@ -196,19 +200,16 @@ void Window::mouseReleaseEvent(QMouseEvent *event)
 //    event->setAccepted(widget_->onMouseLeave());
 //}
 
-void Window::focusInEvent(QFocusEvent* /*event*/)
-{
+void Window::focusInEvent(QFocusEvent* /*event*/) {
     widget_->setTreeActive(true);
 }
 
-void Window::focusOutEvent(QFocusEvent* /*event*/)
-{
+void Window::focusOutEvent(QFocusEvent* /*event*/) {
     widget_->setTreeActive(false);
 }
 
-void Window::resizeEvent(QResizeEvent* evt)
-{
-    QSize size = evt->size();
+void Window::resizeEvent(QResizeEvent* event) {
+    QSize size = event->size();
     [[maybe_unused]] int w = size.width();
     [[maybe_unused]] int h = size.height();
     if (debugEvents) {
@@ -223,14 +224,12 @@ void Window::resizeEvent(QResizeEvent* evt)
 #endif
 }
 
-void Window::keyPressEvent(QKeyEvent* event)
-{
+void Window::keyPressEvent(QKeyEvent* event) {
     bool accepted = widget_->onKeyPress(event);
     event->setAccepted(accepted);
 }
 
-void Window::keyReleaseEvent(QKeyEvent* event)
-{
+void Window::keyReleaseEvent(QKeyEvent* event) {
     event->setAccepted(widget_->onKeyRelease(event));
 }
 
@@ -330,22 +329,24 @@ void Window::paint(bool sync) {
 #if defined(VGC_QOPENGL_EXPERIMENT)
     static int frameIdx = 0;
     auto fmt = format();
-    OutputDebugString(core::format("Window swap behavior: {}\n", (int)fmt.swapBehavior()).c_str());
-    OutputDebugString(core::format("Window swap interval: {}\n", fmt.swapInterval()).c_str());
+    OutputDebugString(
+        core::format("Window swap behavior: {}\n", (int)fmt.swapBehavior()).c_str());
+    OutputDebugString(
+        core::format("Window swap interval: {}\n", fmt.swapInterval()).c_str());
     OutputDebugString(core::format("frameIdx: {}\n", frameIdx).c_str());
     frameIdx++;
 #endif
 
-    engine_->endFrame(); // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
+    // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
+    engine_->endFrame();
     engine_->present(sync ? 1 : 0, [=](UInt64) {
-            if (updateDeferred_) {
-                QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
-            }
-        });
+        if (updateDeferred_) {
+            QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
+        }
+    });
 }
 
-bool Window::event(QEvent* e)
-{
+bool Window::event(QEvent* e) {
     switch (e->type()) {
     case QEvent::UpdateRequest:
         if (!activeSizemove_) {
@@ -364,7 +365,8 @@ bool Window::event(QEvent* e)
                 // silently rounds to the nearest integer representable as a float. See:
                 //   https://stackoverflow.com/a/60339495/1951907
                 // Should we issue a warning in these cases?
-                widget_->setGeometry(0, 0, static_cast<float>(width_), static_cast<float>(height_));
+                widget_->setGeometry(
+                    0, 0, static_cast<float>(width_), static_cast<float>(height_));
 
                 if (engine_) {
                     engine_->resizeSwapChain(swapChain_, width_, height_);
@@ -387,8 +389,7 @@ bool Window::event(QEvent* e)
 
 #if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
 
-LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
+LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     Window* w = (Window*)::GetWindowLongPtr(hwnd, 19 * sizeof(LONG_PTR));
     NativeEventResult res = {};
     MSG mmsg = {};
@@ -396,8 +397,7 @@ LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
     mmsg.hwnd = hwnd;
     mmsg.wParam = wParam;
     mmsg.lParam = lParam;
-    switch (msg)
-    {
+    switch (msg) {
     case WM_SIZE:
         w->nativeEvent(QByteArray("windows_generic_MSG"), &mmsg, &res);
         return 0;
@@ -412,8 +412,11 @@ LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
     return ::DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-bool Window::nativeEvent(const QByteArray& eventType, void* message, NativeEventResult* result)
-{
+bool Window::nativeEvent(
+    const QByteArray& eventType,
+    void* message,
+    NativeEventResult* result) {
+
     static HBRUSH hbrWhite, hbrGray;
     if (eventType == "windows_generic_MSG") {
         *result = 0;
@@ -425,7 +428,8 @@ bool Window::nativeEvent(const QByteArray& eventType, void* message, NativeEvent
             width_ = w;
             height_ = h;
             if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, core::format("WM_SIZE({:04d}, {:04d})", width_, height_));
+                VGC_DEBUG(
+                    LogVgcUi, core::format("WM_SIZE({:04d}, {:04d})", width_, height_));
             }
 
             geometry::Camera2d c;
@@ -512,15 +516,16 @@ bool Window::nativeEvent(const QByteArray& eventType, void* message, NativeEvent
     return false;
 }
 #else
-bool Window::nativeEvent(const QByteArray& /*eventType*/, void* /*message*/, NativeEventResult* /*result*/)
-{
+bool Window::nativeEvent(
+    const QByteArray& /*eventType*/,
+    void* /*message*/,
+    NativeEventResult* /*result*/) {
+
     return false;
 }
 #endif
 
-
-void Window::exposeEvent(QExposeEvent*)
-{
+void Window::exposeEvent(QExposeEvent*) {
     if (isExposed()) {
         if (activeSizemove_) {
             // On windows Expose events happen on both WM_PAINT and WM_ERASEBKGND
@@ -536,19 +541,16 @@ void Window::exposeEvent(QExposeEvent*)
     }
 }
 
-void Window::cleanup()
-{
+void Window::cleanup() {
     // XXX ?
 }
 
-void Window::onActiveChanged_()
-{
+void Window::onActiveChanged_() {
     bool active = isActive();
     widget_->setTreeActive(active);
 }
 
-void Window::onRepaintRequested_()
-{
+void Window::onRepaintRequested_() {
     if (engine_) {
         requestUpdate();
     }

@@ -24,27 +24,24 @@
 namespace vgc {
 namespace ui {
 
-Button::Button(const std::string& text) :
-    Widget(),
-    text_(text),
-    reload_(true),
-    isHovered_(false)
-{
+Button::Button(const std::string& text)
+    : Widget()
+    , text_(text)
+    , reload_(true)
+    , isHovered_(false) {
+
     addStyleClass(strings::Button);
 }
 
-ButtonPtr Button::create()
-{
+ButtonPtr Button::create() {
     return ButtonPtr(new Button(""));
 }
 
-ButtonPtr Button::create(const std::string& text)
-{
+ButtonPtr Button::create(const std::string& text) {
     return ButtonPtr(new Button(text));
 }
 
-void Button::setText(const std::string& text)
-{
+void Button::setText(const std::string& text) {
     if (text_ != text) {
         text_ = text;
         reload_ = true;
@@ -52,77 +49,68 @@ void Button::setText(const std::string& text)
     }
 }
 
-void Button::onResize()
-{
+void Button::onResize() {
     reload_ = true;
 }
 
-void Button::onPaintCreate(graphics::Engine* engine)
-{
-    triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+void Button::onPaintCreate(graphics::Engine* engine) {
+    triangles_ =
+        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
-{
+void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        core::Color backgroundColor = internal::getColor(this, isHovered_ ?
-                        strings::background_color_on_hover :
-                        strings::background_color);
+        core::Color backgroundColor = internal::getColor(
+            this,
+            isHovered_ ? strings::background_color_on_hover : strings::background_color);
         core::Color textColor = internal::getColor(this, strings::text_color);
         float borderRadius = internal::getLength(this, strings::border_radius);
         graphics::TextProperties textProperties(
-                    graphics::TextHorizontalAlign::Center,
-                    graphics::TextVerticalAlign::Middle);
+            graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
         graphics::TextCursor textCursor;
         bool hinting = style(strings::pixel_hinting) == strings::normal;
-        internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
-        internal::insertText(a, textColor, 0, 0, width(), height(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
+        internal::insertRect(a, backgroundColor, rect(), borderRadius);
+        internal::insertText(
+            a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
 }
 
-void Button::onPaintDestroy(graphics::Engine*)
-{
+void Button::onPaintDestroy(graphics::Engine*) {
     triangles_.reset();
 }
 
-bool Button::onMouseMove(MouseEvent* /*event*/)
-{
+bool Button::onMouseMove(MouseEvent* /*event*/) {
     return true;
 }
 
-bool Button::onMousePress(MouseEvent* /*event*/)
-{
+bool Button::onMousePress(MouseEvent* /*event*/) {
     return true;
 }
 
-bool Button::onMouseRelease(MouseEvent* /*event*/)
-{
+bool Button::onMouseRelease(MouseEvent* /*event*/) {
     return true;
 }
 
-bool Button::onMouseEnter()
-{
+bool Button::onMouseEnter() {
     isHovered_ = true;
     reload_ = true;
     repaint();
     return true;
 }
 
-bool Button::onMouseLeave()
-{
+bool Button::onMouseLeave() {
     isHovered_ = false;
     reload_ = true;
     repaint();
     return true;
 }
 
-geometry::Vec2f Button::computePreferredSize() const
-{
+geometry::Vec2f Button::computePreferredSize() const {
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();

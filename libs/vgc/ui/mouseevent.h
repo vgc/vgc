@@ -25,23 +25,25 @@ namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(MouseEvent);
 
+// clang-format off
+
 /// \class vgc::ui::MouseButton
 /// \brief Enumeration of all possible mouse buttons
 ///
 enum class MouseButton : UInt32 {
-    None =    0x00000000,
-    Left =    0x00000001,
-    Right =   0x00000002,
-    Middle =  0x00000004,
-    Extra1 =  0x00000008,
-    Extra2 =  0x00000010,
-    Extra3 =  0x00000020,
-    Extra4 =  0x00000040,
-    Extra5 =  0x00000080,
-    Extra6 =  0x00000100,
-    Extra7 =  0x00000200,
-    Extra8 =  0x00000400,
-    Extra9 =  0x00000800,
+    None    = 0x00000000,
+    Left    = 0x00000001,
+    Right   = 0x00000002,
+    Middle  = 0x00000004,
+    Extra1  = 0x00000008,
+    Extra2  = 0x00000010,
+    Extra3  = 0x00000020,
+    Extra4  = 0x00000040,
+    Extra5  = 0x00000080,
+    Extra6  = 0x00000100,
+    Extra7  = 0x00000200,
+    Extra8  = 0x00000400,
+    Extra9  = 0x00000800,
     Extra10 = 0x00001000,
     Extra11 = 0x00002000,
     Extra12 = 0x00004000,
@@ -58,6 +60,8 @@ enum class MouseButton : UInt32 {
     Extra23 = 0x02000000,
     Extra24 = 0x04000000
 };
+
+// clang-format on
 
 /// \class vgc::ui::MouseEvent
 /// \brief Class to handle mouse move, clicks, etc.
@@ -86,23 +90,20 @@ public:
     /// Returns the mouse button that caused a mouse press or mouse release event.
     /// Returns `MouseButton::None` for mouse move events.
     ///
-    MouseButton button() const
-    {
+    MouseButton button() const {
         return button_;
     }
 
     /// Sets the mouse button of this `MouseEvent`.
     ///
-    void setButton(MouseButton button)
-    {
+    void setButton(MouseButton button) {
         button_ = button;
     }
 
     /// Returns the position of the mouse cursor, in local coordinates, when
     /// the event occurs.
     ///
-    const geometry::Vec2f& position() const
-    {
+    const geometry::Vec2f& position() const {
         return position_;
     }
 
@@ -110,16 +111,14 @@ public:
     /// method should typically only be used when implementing mouse event
     /// propagation.
     ///
-    void setPosition(const geometry::Vec2f& position)
-    {
+    void setPosition(const geometry::Vec2f& position) {
         position_ = position;
     }
 
     /// Returns the X-coordinate of the position of the mouse cursor, in local
     /// coordinates, when the event occurs. This is equivalent to `pos()[0]`.
     ///
-    float x() const
-    {
+    float x() const {
         return position_[0];
     }
 
@@ -127,16 +126,14 @@ public:
     /// coordinates. This method should typically only be used when
     /// implementing mouse event propagation.
     ///
-    void setX(float x)
-    {
+    void setX(float x) {
         position_[0] = x;
     }
 
     /// Returns the Y-coordinate of the position of the mouse cursor, in local
     /// coordinates, when the event occurs. This is equivalent to `pos()[1]`.
     ///
-    float y() const
-    {
+    float y() const {
         return position_[1];
     }
 
@@ -144,23 +141,20 @@ public:
     /// coordinates. This method should typically only be used when
     /// implementing mouse event propagation.
     ///
-    void setY(float y)
-    {
+    void setY(float y) {
         position_[1] = y;
     }
 
     /// Returns the modifier keys (Ctrl, Shift, etc.) that were pressed
     /// when this even was generated.
     ///
-    ModifierKeys modifierKeys() const
-    {
+    ModifierKeys modifierKeys() const {
         return modifierKeys_;
     }
 
     /// Sets the modifier keys of this event.
     ///
-    void setModifierKeys(ModifierKeys modifierKeys)
-    {
+    void setModifierKeys(ModifierKeys modifierKeys) {
         modifierKeys_ = modifierKeys;
     }
 

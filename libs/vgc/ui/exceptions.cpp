@@ -24,8 +24,7 @@ namespace ui {
 
 namespace internal {
 
-std::string childCycleMsg(const Widget* parent, const Widget* child)
-{
+std::string childCycleMsg(const Widget* parent, const Widget* child) {
     return core::format(
         "Widget {} cannot be a child of Widget {}"
         " because the latter is a descendant of the former",

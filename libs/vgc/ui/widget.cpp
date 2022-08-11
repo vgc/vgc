@@ -28,72 +28,72 @@
 namespace vgc {
 namespace ui {
 
-Widget::Widget() :
-    StylableObject(),
-    children_(WidgetList::create(this)),
-    actions_(ActionList::create(this)),
-    preferredSize_(0.0f, 0.0f),
-    isPreferredSizeComputed_(false),
-    position_(0.0f, 0.0f),
-    size_(0.0f, 0.0f),
-    mousePressedChild_(nullptr),
-    mouseEnteredChild_(nullptr),
-    isTreeActive_(false),
-    focus_(nullptr)
-{
+Widget::Widget()
+    : StylableObject()
+    , children_(WidgetList::create(this))
+    , actions_(ActionList::create(this))
+    , preferredSize_(0.0f, 0.0f)
+    , isPreferredSizeComputed_(false)
+    , position_(0.0f, 0.0f)
+    , size_(0.0f, 0.0f)
+    , mousePressedChild_(nullptr)
+    , mouseEnteredChild_(nullptr)
+    , isTreeActive_(false)
+    , focus_(nullptr) {
+
     children_->childAdded().connect(onWidgetAdded_());
     children_->childRemoved().connect(onWidgetRemoved_());
 }
 
-void Widget::onDestroyed()
-{
-    if (lastPaintEngine_)
-    {
+void Widget::onDestroyed() {
+    if (lastPaintEngine_) {
         // XXX what to do ?
     }
 }
 
-WidgetPtr Widget::create()
-{
+WidgetPtr Widget::create() {
     return WidgetPtr(new Widget());
 }
 
 namespace {
-bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false)
-{
+bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false) {
     if (parent && parent->isDescendantObject(child)) {
-        if (simulate) return false;
-        else throw ChildCycleError(parent, child);
+        if (simulate) {
+            return false;
+        }
+        else {
+            throw ChildCycleError(parent, child);
+        }
     }
     return true;
 }
 } // namespace
 
-void Widget::addChild(Widget* child)
-{
+void Widget::addChild(Widget* child) {
     checkCanReparent_(this, child);
     children_->append(child);
 }
 
-bool Widget::canReparent(Widget* newParent)
-{
+bool Widget::canReparent(Widget* newParent) {
     const bool simulate = true;
     return checkCanReparent_(newParent, this, simulate);
 }
 
-void Widget::reparent(Widget* newParent)
-{
+void Widget::reparent(Widget* newParent) {
     checkCanReparent_(newParent, this);
     newParent->children_->append(this);
     appendObjectToParent_(newParent);
 }
 
 namespace {
-bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = false)
-{
+bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = false) {
     if (!oldWidget) {
-        if (simulate) return false;
-        else throw core::NullError();
+        if (simulate) {
+            return false;
+        }
+        else {
+            throw core::NullError();
+        }
     }
 
     if (oldWidget == newWidget) {
@@ -110,14 +110,12 @@ bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = fals
 }
 } // namespace
 
-bool Widget::canReplace(Widget* oldWidget)
-{
+bool Widget::canReplace(Widget* oldWidget) {
     const bool simulate = true;
     return checkCanReplace_(oldWidget, this, simulate);
 }
 
-void Widget::replace(Widget* oldWidget)
-{
+void Widget::replace(Widget* oldWidget) {
     checkCanReplace_(oldWidget, this);
     if (this == oldWidget) {
         // nothing to do
@@ -137,8 +135,7 @@ void Widget::replace(Widget* oldWidget)
     }
 }
 
-Widget* Widget::root() const
-{
+Widget* Widget::root() const {
     const Widget* res = this;
     const Widget* w = this;
     while (w) {
@@ -148,8 +145,7 @@ Widget* Widget::root() const
     return const_cast<Widget*>(res);
 }
 
-void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size)
-{
+void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size) {
     geometry::Vec2f oldSize = size_;
     position_ = position;
     size_ = size;
@@ -159,38 +155,31 @@ void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f&
     }
 }
 
-PreferredSize Widget::preferredWidth() const
-{
+PreferredSize Widget::preferredWidth() const {
     return style(strings::preferred_width).to<PreferredSize>();
 }
 
-float Widget::stretchWidth() const
-{
+float Widget::stretchWidth() const {
     return style(strings::stretch_width).toFloat();
 }
 
-float Widget::shrinkWidth() const
-{
+float Widget::shrinkWidth() const {
     return style(strings::shrink_width).toFloat();
 }
 
-PreferredSize Widget::preferredHeight() const
-{
+PreferredSize Widget::preferredHeight() const {
     return style(strings::preferred_height).to<PreferredSize>();
 }
 
-float Widget::stretchHeight() const
-{
+float Widget::stretchHeight() const {
     return style(strings::stretch_height).toFloat();
 }
 
-float Widget::shrinkHeight() const
-{
+float Widget::shrinkHeight() const {
     return style(strings::shrink_height).toFloat();
 }
 
-void Widget::updateGeometry()
-{
+void Widget::updateGeometry() {
     Widget* root = this;
     Widget* w = this;
     while (w) {
@@ -202,13 +191,10 @@ void Widget::updateGeometry()
     repaint();
 }
 
-void Widget::onResize()
-{
-
+void Widget::onResize() {
 }
 
-void Widget::repaint()
-{
+void Widget::repaint() {
     Widget* widget = this;
     while (widget) {
         widget->repaintRequested().emit();
@@ -216,8 +202,7 @@ void Widget::repaint()
     }
 }
 
-void Widget::preparePaint(graphics::Engine* engine, PaintOptions options)
-{
+void Widget::preparePaint(graphics::Engine* engine, PaintOptions options) {
     if (engine != lastPaintEngine_) {
         setEngine_(engine);
         onPaintCreate(engine);
@@ -225,8 +210,7 @@ void Widget::preparePaint(graphics::Engine* engine, PaintOptions options)
     onPaintPrepare(engine, options);
 }
 
-void Widget::paint(graphics::Engine* engine, PaintOptions options)
-{
+void Widget::paint(graphics::Engine* engine, PaintOptions options) {
     if (engine != lastPaintEngine_) {
         setEngine_(engine);
         onPaintCreate(engine);
@@ -234,22 +218,19 @@ void Widget::paint(graphics::Engine* engine, PaintOptions options)
     onPaintDraw(engine, options);
 }
 
-void Widget::onPaintCreate(graphics::Engine* engine)
-{
+void Widget::onPaintCreate(graphics::Engine* engine) {
     for (Widget* child : children()) {
         child->onPaintCreate(engine);
     }
 }
 
-void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options)
-{
+void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {
     for (Widget* widget : children()) {
         widget->preparePaint(engine, options);
     }
 }
 
-void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options)
-{
+void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     for (Widget* widget : children()) {
         engine->pushViewMatrix();
         geometry::Mat4f m = engine->viewMatrix();
@@ -261,15 +242,13 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options)
     }
 }
 
-void Widget::onPaintDestroy(graphics::Engine* engine)
-{
+void Widget::onPaintDestroy(graphics::Engine* engine) {
     for (Widget* child : children()) {
         child->onPaintDestroy(engine);
     }
 }
 
-bool Widget::onMouseMove(MouseEvent* event)
-{
+bool Widget::onMouseMove(MouseEvent* event) {
     // If we are in the middle of a press-move-release sequence, then we
     // automatically forward the move event to the pressed child. We also delay
     // emitting the leave event until the mouse is released (see implementation
@@ -288,7 +267,10 @@ bool Widget::onMouseMove(MouseEvent* event)
     //
     float x = event->x();
     float y = event->y();
-    for (Widget* child = lastChild(); child != nullptr; child = child->previousSibling()) {
+    for (Widget* child = lastChild(); //
+         child != nullptr;            //
+         child = child->previousSibling()) {
+
         float cx = child->x();
         float cy = child->y();
         float cw = child->width();
@@ -334,8 +316,7 @@ bool Widget::onMouseMove(MouseEvent* event)
     // that we can hangle non-rectangle or non-axis-aligned widgets.
 }
 
-bool Widget::onMousePress(MouseEvent* event)
-{
+bool Widget::onMousePress(MouseEvent* event) {
     // Note: we don't handle multiple clicks, that is, a left-button-pressed
     // must be released before we issue a right-button-press
     if (mouseEnteredChild_ && !mousePressedChild_) {
@@ -346,8 +327,7 @@ bool Widget::onMousePress(MouseEvent* event)
     return false;
 }
 
-bool Widget::onMouseRelease(MouseEvent* event)
-{
+bool Widget::onMouseRelease(MouseEvent* event) {
     if (mousePressedChild_) {
         geometry::Vec2f eventPos = event->position();
         event->setPosition(eventPos - mousePressedChild_->position());
@@ -374,13 +354,11 @@ bool Widget::onMouseRelease(MouseEvent* event)
     return false;
 }
 
-bool Widget::onMouseEnter()
-{
+bool Widget::onMouseEnter() {
     return false;
 }
 
-bool Widget::onMouseLeave()
-{
+bool Widget::onMouseLeave() {
     if (mouseEnteredChild_) {
         bool handled = mouseEnteredChild_->onMouseLeave();
         mouseEnteredChild_ = nullptr;
@@ -389,8 +367,7 @@ bool Widget::onMouseLeave()
     return false;
 }
 
-void Widget::setTreeActive(bool active)
-{
+void Widget::setTreeActive(bool active) {
     Widget* r = root();
     if (r->isTreeActive_ != active) {
         r->isTreeActive_ = active;
@@ -406,8 +383,7 @@ void Widget::setTreeActive(bool active)
     }
 }
 
-void Widget::setFocus()
-{
+void Widget::setFocus() {
     if (!isFocusedWidget()) {
         clearFocus();
         Widget* widget = this;
@@ -428,8 +404,7 @@ void Widget::setFocus()
     }
 }
 
-void Widget::clearFocus()
-{
+void Widget::clearFocus() {
     Widget* oldFocusedWidget = focusedWidget();
     Widget* ancestor = oldFocusedWidget;
     while (ancestor) {
@@ -441,8 +416,7 @@ void Widget::clearFocus()
     }
 }
 
-Widget* Widget::focusedWidget() const
-{
+Widget* Widget::focusedWidget() const {
     Widget* res = root()->focus_;
     while (res != nullptr) {
         if (res->isFocusedWidget()) {
@@ -455,18 +429,15 @@ Widget* Widget::focusedWidget() const
     return res;
 }
 
-bool Widget::onFocusIn()
-{
+bool Widget::onFocusIn() {
     return false;
 }
 
-bool Widget::onFocusOut()
-{
+bool Widget::onFocusOut() {
     return false;
 }
 
-bool Widget::onKeyPress(QKeyEvent* event)
-{
+bool Widget::onKeyPress(QKeyEvent* event) {
     Widget* fc = focusedChild();
     if (fc) {
         return fc->onKeyPress(event);
@@ -476,8 +447,7 @@ bool Widget::onKeyPress(QKeyEvent* event)
     }
 }
 
-bool Widget::onKeyRelease(QKeyEvent* event)
-{
+bool Widget::onKeyRelease(QKeyEvent* event) {
     Widget* fc = focusedChild();
     if (fc) {
         return fc->onKeyRelease(event);
@@ -487,42 +457,37 @@ bool Widget::onKeyRelease(QKeyEvent* event)
     }
 }
 
-Action* Widget::createAction(const Shortcut& shortcut)
-{
+Action* Widget::createAction(const Shortcut& shortcut) {
     ActionPtr action = Action::create(shortcut);
     actions_->append(action.get());
     return action.get();
 }
 
-geometry::Vec2f Widget::computePreferredSize() const
-{
+geometry::Vec2f Widget::computePreferredSize() const {
     // TODO: convert units if any.
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
-    return geometry::Vec2f(w.type() == auto_ ? 0 : w.value(),
-                           h.type() == auto_ ? 0 : h.value());
+    return geometry::Vec2f(
+        w.type() == auto_ ? 0 : w.value(), h.type() == auto_ ? 0 : h.value());
 }
 
-void Widget::updateChildrenGeometry()
-{
+void Widget::updateChildrenGeometry() {
     // nothing
 }
 
 namespace {
 
-using style::StyleValue;
-using style::StyleValueType;
 using style::StyleTokenIterator;
 using style::StyleTokenType;
+using style::StyleValue;
+using style::StyleValueType;
 
-StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin == end) {
         return StyleValue::invalid();
     }
-    else if (begin->type == StyleTokenType::Number &&
-             begin + 1 == end) {
+    else if (begin->type == StyleTokenType::Number && begin + 1 == end) {
         return StyleValue::number(begin->toFloat());
     }
     else {
@@ -530,20 +495,23 @@ StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end)
     }
 }
 
-StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end) {
     // For now, we only support 'auto' or a unique Dimension token with a "dp" unit
     if (begin == end) {
         return StyleValue::invalid();
     }
-    else if (begin->type == StyleTokenType::Identifier &&
-             begin->codePointsValue == strings::auto_ &&
-             begin + 1 == end) {
+    else if (
+        begin->type == StyleTokenType::Identifier   //
+        && begin->codePointsValue == strings::auto_ //
+        && begin + 1 == end) {
+
         return StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
     }
-    else if (begin->type == StyleTokenType::Dimension &&
-             begin->codePointsValue == "dp" &&
-             begin + 1 == end) {
+    else if (
+        begin->type == StyleTokenType::Dimension //
+        && begin->codePointsValue == "dp"        //
+        && begin + 1 == end) {
+
         return StyleValue::custom(PreferredSize(PreferredSizeType::Dp, begin->toFloat()));
     }
     else {
@@ -551,8 +519,10 @@ StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator 
     }
 }
 
-style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
-{
+// clang-format off
+
+style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
+
     auto autosize    = StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
     auto one         = StyleValue::number(1.0f);
 
@@ -572,8 +542,9 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
     return table;
 }
 
-const style::StylePropertySpecTablePtr& stylePropertySpecTable_()
-{
+// clang-format on
+
+const style::StylePropertySpecTablePtr& stylePropertySpecTable_() {
     static style::StylePropertySpecTablePtr table = createGlobalStylePropertySpecTable_();
     return table;
 }
@@ -586,53 +557,43 @@ style::StyleSheetPtr createGlobalStyleSheet_() {
 
 } // namespace
 
-const style::StyleSheet* Widget::defaultStyleSheet() const
-{
+const style::StyleSheet* Widget::defaultStyleSheet() const {
     static style::StyleSheetPtr s = createGlobalStyleSheet_();
     return s.get();
 }
 
-style::StylableObject* Widget::parentStylableObject() const
-{
+style::StylableObject* Widget::parentStylableObject() const {
     return static_cast<style::StylableObject*>(parent());
 }
 
-style::StylableObject* Widget::firstChildStylableObject() const
-{
+style::StylableObject* Widget::firstChildStylableObject() const {
     return static_cast<style::StylableObject*>(firstChild());
 }
 
-style::StylableObject* Widget::lastChildStylableObject() const
-{
+style::StylableObject* Widget::lastChildStylableObject() const {
     return static_cast<style::StylableObject*>(lastChild());
 }
 
-style::StylableObject* Widget::previousSiblingStylableObject() const
-{
+style::StylableObject* Widget::previousSiblingStylableObject() const {
     return static_cast<style::StylableObject*>(previousSibling());
 }
 
-style::StylableObject* Widget::nextSiblingStylableObject() const
-{
+style::StylableObject* Widget::nextSiblingStylableObject() const {
     return static_cast<style::StylableObject*>(nextSibling());
 }
 
-void Widget::releaseEngine_()
-{
+void Widget::releaseEngine_() {
     onPaintDestroy(lastPaintEngine_);
-    lastPaintEngine_->aboutToBeDestroyed().disconnect(
-        onEngineAboutToBeDestroyed());
+    lastPaintEngine_->aboutToBeDestroyed().disconnect(onEngineAboutToBeDestroyed());
     lastPaintEngine_ = nullptr;
 }
 
-void Widget::setEngine_(graphics::Engine* engine)
-{
+void Widget::setEngine_(graphics::Engine* engine) {
     if (lastPaintEngine_) {
         releaseEngine_();
     }
     lastPaintEngine_ = engine;
-    engine->aboutToBeDestroyed().connect(
-        onEngineAboutToBeDestroyed());
+    engine->aboutToBeDestroyed().connect(onEngineAboutToBeDestroyed());
 }
 
 } // namespace ui

@@ -22,6 +22,8 @@
 namespace vgc {
 namespace ui {
 
+// clang-format off
+
 /// \enum vgc::ui::Key
 /// \brief Represents a key on the keyboard.
 ///
@@ -532,6 +534,8 @@ enum class Key : UInt32 {
 
     Unknown                = 0x01ffffff
 };
+
+// clang-format on
 
 } // namespace ui
 } // namespace vgc

@@ -23,21 +23,18 @@ MouseEvent::MouseEvent(
     MouseButton button,
     const geometry::Vec2f& position,
     ModifierKeys modifierKeys)
-
     : Event()
     , button_(button)
     , position_(position)
-    , modifierKeys_(modifierKeys)
-{
-
+    , modifierKeys_(modifierKeys) {
 }
 
 /* static */
 MouseEventPtr MouseEvent::create(
     MouseButton button,
     const geometry::Vec2f& position,
-    ModifierKeys modifierKeys)
-{
+    ModifierKeys modifierKeys) {
+
     return MouseEventPtr(new MouseEvent(button, position, modifierKeys));
 }
 

@@ -23,6 +23,8 @@
 
 namespace vgc::ui {
 
+// clang-format off
+
 /// \enum vgc::ui::ModifierKey
 /// \brief Represents Shift, Ctrl, Alt, or Meta.
 ///
@@ -44,6 +46,8 @@ enum class ModifierKey : UInt8 {
     Meta  = 0x08
 };
 VGC_DEFINE_FLAGS(ModifierKeys, ModifierKey)
+
+// clang-format on
 
 } // namespace vgc::ui
 

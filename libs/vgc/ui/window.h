@@ -43,12 +43,13 @@ protected:
     void onDestroyed() override;
 
 public:
-
     static WindowPtr create(ui::WidgetPtr widget);
 
     /// Returns the contained vgc::ui::Widget
     ///
-    ui::Widget* widget() { return widget_.get(); }
+    ui::Widget* widget() {
+        return widget_.get();
+    }
 
 public:
     // overrides
@@ -69,10 +70,10 @@ protected:
     //void leaveEvent(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
-    void resizeEvent(QResizeEvent *ev) override;
+    void resizeEvent(QResizeEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
-    void exposeEvent(QExposeEvent *event) override;
+    void exposeEvent(QExposeEvent* event) override;
     //void inputMethodEvent(QInputMethodEvent* event) override;
     bool event(QEvent* e) override;
 
@@ -82,7 +83,10 @@ protected:
     using NativeEventResult = qintptr;
 #endif
 
-    bool nativeEvent(const QByteArray& eventType, void* message, NativeEventResult* result) override;
+    bool nativeEvent(
+        const QByteArray& eventType,
+        void* message,
+        NativeEventResult* result) override;
 
 private:
     ui::WidgetPtr widget_;
@@ -111,7 +115,6 @@ private:
 
     virtual void paint(bool sync = false);
     virtual void cleanup();
-
 };
 
 } // namespace vgc::ui

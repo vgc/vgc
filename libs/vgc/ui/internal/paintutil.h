@@ -22,6 +22,8 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/stringid.h>
+#include <vgc/geometry/rect2f.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
 
@@ -29,50 +31,97 @@ namespace vgc {
 namespace ui {
 namespace internal {
 
+// clang-format off
+
 void insertTriangle(
-        core::FloatArray& a,
-        float r, float g, float b,
-        float x1, float y1,
-        float x2, float y2,
-        float x3, float y3);
+    core::FloatArray& a,
+    float r, float g, float b,
+    float x1, float y1, float x2, float y2, float x3, float y3);
+
+void insertTriangle(
+    core::FloatArray& a,
+    const core::Colorf& color,
+    const geometry::Vec2f& v1,
+    const geometry::Vec2f& v2,
+    const geometry::Vec2f& v3);
 
 void insertRect(
-        core::FloatArray& a,
-        float r, float g, float b,
-        float x1, float y1, float x2, float y2);
+    core::FloatArray& a,
+    float r, float g, float b,
+    float x1, float y1, float x2, float y2);
 
 void insertRect(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2,
-        float borderRadius);
+    core::FloatArray& a,
+    const core::Colorf& color,
+    const geometry::Rect2f& rect);
 
 void insertRect(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2);
+    core::FloatArray& a,
+    const core::Color& color,
+    float x1, float y1, float x2, float y2,
+    float borderRadius);
+
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    float borderRadius);
+
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& color,
+    float x1, float y1, float x2, float y2);
+
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect);
 
 void insertText(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2,
-        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-        const std::string& text,
-        const graphics::TextProperties& textProperties,
-        const graphics::TextCursor& textCursor,
-        bool hinting,
-        float scrollLeft = 0.0f);
+    core::FloatArray& a,
+    const core::Color& color,
+    float x1, float y1, float x2, float y2,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const std::string& text,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft = 0.0f);
 
 void insertText(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2,
-        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-        const graphics::ShapedText& shapedText,
-        const graphics::TextProperties& textProperties,
-        const graphics::TextCursor& textCursor,
-        bool hinting,
-        float scrollLeft = 0.0f);
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const std::string& text,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft = 0.0f);
+
+void insertText(
+    core::FloatArray& a,
+    const core::Color& color,
+    float x1, float y1, float x2, float y2,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const graphics::ShapedText& shapedText,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft = 0.0f);
+
+void insertText(
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const graphics::ShapedText& shapedText,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft = 0.0f);
+
+// clang-format on
 
 core::Color getColor(const Widget* widget, core::StringId property);
 

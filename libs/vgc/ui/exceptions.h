@@ -45,8 +45,9 @@ private:
 public:
     /// Constructs a LogicError with the given \p reason.
     ///
-    explicit LogicError(const std::string& reason) :
-        core::LogicError(reason) {}
+    explicit LogicError(const std::string& reason)
+        : core::LogicError(reason) {
+    }
 };
 
 /// \class vgc::ui::ChildCycleError
@@ -66,8 +67,9 @@ public:
     /// Constructs a ChildCycleError informing that \p parent cannot have \p
     /// child as its child because \p parent is a descendant of \p child.
     ///
-    ChildCycleError(const Widget* parent, const Widget* child) :
-        LogicError(internal::childCycleMsg(parent, child)) {}
+    ChildCycleError(const Widget* parent, const Widget* child)
+        : LogicError(internal::childCycleMsg(parent, child)) {
+    }
 };
 
 /// \class vgc::ui::RuntimeError
@@ -84,8 +86,9 @@ private:
 public:
     /// Constructs a LogicError with the given \p reason.
     ///
-    explicit RuntimeError(const std::string& reason) :
-        core::RuntimeError(reason) {}
+    explicit RuntimeError(const std::string& reason)
+        : core::RuntimeError(reason) {
+    }
 };
 
 } // namespace ui

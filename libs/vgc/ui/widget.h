@@ -47,12 +47,16 @@ VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(Widget);
 VGC_DECLARE_OBJECT(UiWidgetEngine);
 
+// clang-format off
+
 enum class PaintOption : UInt16 {
-    None = 0,
-    Resizing            = 0x0001,
-    LayoutViz           = 0x0002,
+    None      = 0x00,
+    Resizing  = 0x01,
+    LayoutViz = 0x02,
 };
 VGC_DEFINE_FLAGS(PaintOptions, PaintOption)
+
+// clang-format on
 
 /// \class vgc::ui::Widget
 /// \brief Base class of all elements in the user interface.
@@ -62,7 +66,7 @@ private:
     VGC_OBJECT(Widget, style::StylableObject)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-protected :
+protected:
     /// Constructs a Widget. This constructor is an implementation detail only
     /// available to derived classes. In order to create a Widget, please use
     /// the following:
@@ -84,8 +88,7 @@ public:
     ///
     /// \sa vgc::core::Object::isAlive().
     ///
-    void destroy()
-    {
+    void destroy() {
         destroyObject_();
     }
 
@@ -94,8 +97,7 @@ public:
     ///
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
-    Widget* parent() const
-    {
+    Widget* parent() const {
         // TODO; the parent widget should actually be a member variable, to be
         // able to correctly handle the case of a root widget owned by another
         // object (that is, the widget would have a non-null parent object, but
@@ -111,8 +113,7 @@ public:
     ///
     /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
-    Widget* firstChild() const
-    {
+    Widget* firstChild() const {
         return children_->first();
     }
 
@@ -121,8 +122,7 @@ public:
     ///
     /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
     ///
-    Widget* lastChild() const
-    {
+    Widget* lastChild() const {
         return children_->last();
     }
 
@@ -131,8 +131,7 @@ public:
     ///
     /// \sa nextSibling(), parent(), firstChild(), and lastChild().
     ///
-    Widget* previousSibling() const
-    {
+    Widget* previousSibling() const {
         return static_cast<Widget*>(previousSiblingObject());
     }
 
@@ -141,8 +140,7 @@ public:
     ///
     /// \sa previousSibling(), parent(), firstChild(), and lastChild().
     ///
-    Widget* nextSibling() const
-    {
+    Widget* nextSibling() const {
         return static_cast<Widget*>(nextSiblingObject());
     }
 
@@ -156,8 +154,7 @@ public:
     /// }
     /// \endcode
     ///
-    WidgetListView children() const
-    {
+    WidgetListView children() const {
         return WidgetListView(children_);
     }
 
@@ -211,8 +208,7 @@ public:
     /// Returns whether this widget is a descendant of the given \p other widget.
     /// Returns true if this widget is equal to the \p other widget.
     ///
-    bool isDescendant(const Widget* other) const
-    {
+    bool isDescendant(const Widget* other) const {
         return isDescendantObject(other);
     }
 
@@ -223,22 +219,19 @@ public:
 
     /// Returns the position of the widget relative to its parent.
     ///
-    geometry::Vec2f position() const
-    {
+    geometry::Vec2f position() const {
         return position_;
     }
 
     /// Returns the X coordinate of the widget relative to its parent.
     ///
-    float x() const
-    {
+    float x() const {
         return position_[0];
     }
 
     /// Returns the Y coordinate of the widget relative to its parent.
     ///
-    float y() const
-    {
+    float y() const {
         return position_[1];
     }
 
@@ -246,8 +239,7 @@ public:
     ///
     /// This is equivalent to `Rect2f::fromPositionSize(position(), size())`.
     ///
-    geometry::Rect2f geometry() const
-    {
+    geometry::Rect2f geometry() const {
         return geometry::Rect2f::fromPositionSize(position_, size_);
     }
 
@@ -255,8 +247,7 @@ public:
     ///
     /// This is equivalent to `Rect2f::fromPositionSize(0, 0, size())`.
     ///
-    geometry::Rect2f rect() const
-    {
+    geometry::Rect2f rect() const {
         return geometry::Rect2f::fromPositionSize(0, 0, size_);
     }
 
@@ -276,8 +267,7 @@ public:
     ///
     void setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size);
     /// \overload
-    void setGeometry(float x, float y, float width, float height)
-    {
+    void setGeometry(float x, float y, float width, float height) {
         setGeometry(geometry::Vec2f(x, y), geometry::Vec2f(width, height));
     }
 
@@ -306,22 +296,19 @@ public:
 
     /// Returns the size of the widget.
     ///
-    geometry::Vec2f size() const
-    {
+    geometry::Vec2f size() const {
         return size_;
     }
 
     /// Returns the width of the widget.
     ///
-    float width() const
-    {
+    float width() const {
         return size_[0];
     }
 
     /// Returns the height of the widget.
     ///
-    float height() const
-    {
+    float height() const {
         return size_[1];
     }
 
@@ -622,8 +609,8 @@ public:
     const style::StyleSheet* defaultStyleSheet() const override;
 
 protected:
-    virtual void onWidgetAdded(Object*) {};
-    virtual void onWidgetRemoved(Object*) {};
+    virtual void onWidgetAdded(Object*){};
+    virtual void onWidgetRemoved(Object*){};
 
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its

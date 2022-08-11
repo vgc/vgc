@@ -27,63 +27,58 @@
 namespace vgc {
 namespace ui {
 
-ColorPalette::ColorPalette() :
-    Widget(),
-    selectedColor_(core::colors::black),
-    oldWidth_(0),
-    oldHeight_(0),
-    reload_(true),
-    margin_(15),
-    isContinuous_(false),
-    selectorBorderWidth_(2.0),
-    cellBorderWidth_(1.0),
-    borderColor_(core::colors::black),
-    numHueSteps_(12),
-    numSaturationSteps_(5),
-    numLightnessSteps_(7),
-    hoveredHueIndex_(-1),
-    hoveredSaturationIndex_(-1),
-    hoveredLightnessIndex_(-1),
-    scrubbedSelector_(SelectorType::None),
-    isSelectedColorExact_(true),
-    selectedHueIndex_(0),
-    selectedSaturationIndex_(0),
-    selectedLightnessIndex_(0),
-    oldSaturationIndex_(numSaturationSteps_ - 1),
-    oldLightnessIndex_(numLightnessSteps_ / 2)
-{
+ColorPalette::ColorPalette()
+    : Widget()
+    , selectedColor_(core::colors::black)
+    , oldWidth_(0)
+    , oldHeight_(0)
+    , reload_(true)
+    , margin_(15)
+    , isContinuous_(false)
+    , selectorBorderWidth_(2.0)
+    , cellBorderWidth_(1.0)
+    , borderColor_(core::colors::black)
+    , numHueSteps_(12)
+    , numSaturationSteps_(5)
+    , numLightnessSteps_(7)
+    , hoveredHueIndex_(-1)
+    , hoveredSaturationIndex_(-1)
+    , hoveredLightnessIndex_(-1)
+    , scrubbedSelector_(SelectorType::None)
+    , isSelectedColorExact_(true)
+    , selectedHueIndex_(0)
+    , selectedSaturationIndex_(0)
+    , selectedLightnessIndex_(0)
+    , oldSaturationIndex_(numSaturationSteps_ - 1)
+    , oldLightnessIndex_(numLightnessSteps_ / 2) {
+
     addStyleClass(strings::ColorPalette);
 }
 
 /* static */
-ColorPalettePtr ColorPalette::create()
-{
+ColorPalettePtr ColorPalette::create() {
     return ColorPalettePtr(new ColorPalette());
 }
 
 namespace {
 
 core::Color colorFromHslIndices(
-        Int numHueSteps,
-        Int numSaturationSteps,
-        Int numLightnessSteps,
-        Int hueIndex,
-        Int saturationIndex,
-        Int lightnessIndex)
-{
+    Int numHueSteps,
+    Int numSaturationSteps,
+    Int numLightnessSteps,
+    Int hueIndex,
+    Int saturationIndex,
+    Int lightnessIndex) {
+
     double dh = 360.0 / numHueSteps;
     double ds = 1.0 / (numSaturationSteps - 1);
     double dl = 1.0 / (numLightnessSteps - 1);
-    return core::Color::hsl(
-                hueIndex * dh,
-                saturationIndex * ds,
-                lightnessIndex * dl);
+    return core::Color::hsl(hueIndex * dh, saturationIndex * ds, lightnessIndex * dl);
 }
 
 } // namespace
 
-void ColorPalette::setSelectedColor(const core::Color& color)
-{
+void ColorPalette::setSelectedColor(const core::Color& color) {
     if (selectedColor_ != color) {
         // Note: ColorPalette currently allows selecting, say:
         //
@@ -107,9 +102,14 @@ void ColorPalette::setSelectedColor(const core::Color& color)
         // More info: https://github.com/vgc/vgc/issues/270#issuecomment-592041186
         //
         selectedColor_ = color;
-        isSelectedColorExact_ = (selectedColor_ == colorFromHslIndices(
-            numHueSteps_, numSaturationSteps_, numLightnessSteps_,
-            selectedHueIndex_, selectedSaturationIndex_, selectedLightnessIndex_));
+        core::Color selectedColorFromHsl = colorFromHslIndices(
+            numHueSteps_,
+            numSaturationSteps_,
+            numLightnessSteps_,
+            selectedHueIndex_,
+            selectedSaturationIndex_,
+            selectedLightnessIndex_);
+        isSelectedColorExact_ = (selectedColor_ == selectedColorFromHsl);
         reload_ = true;
         repaint();
         // TODO: find other indices if an exact match exist
@@ -117,19 +117,22 @@ void ColorPalette::setSelectedColor(const core::Color& color)
     }
 }
 
-void ColorPalette::onPaintCreate(graphics::Engine* engine)
-{
-    triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+void ColorPalette::onPaintCreate(graphics::Engine* engine) {
+    triangles_ =
+        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 namespace {
 
+// clang-format off
+
+
 void insertSmoothRect(
-        core::FloatArray& a,
-        const core::Color& cTopLeft, const core::Color& cTopRight,
-        const core::Color& cBottomLeft, const core::Color& cBottomRight,
-        float x1, float y1, float x2, float y2)
-{
+    core::FloatArray& a,
+    const core::Color& cTopLeft, const core::Color& cTopRight,
+    const core::Color& cBottomLeft, const core::Color& cBottomRight,
+    float x1, float y1, float x2, float y2) {
+
     float r1 = static_cast<float>(cTopLeft[0]);
     float g1 = static_cast<float>(cTopLeft[1]);
     float b1 = static_cast<float>(cTopLeft[2]);
@@ -142,7 +145,7 @@ void insertSmoothRect(
     float r4 = static_cast<float>(cBottomRight[0]);
     float g4 = static_cast<float>(cBottomRight[1]);
     float b4 = static_cast<float>(cBottomRight[2]);
-    a.insert(a.end(), {
+    a.extend({
         x1, y1, r1, g1, b1,
         x2, y1, r2, g2, b2,
         x1, y2, r3, g3, b3,
@@ -152,22 +155,27 @@ void insertSmoothRect(
 }
 
 void insertCellHighlight(
-        core::FloatArray& a,
-        const core::Color& cellColor,
-        float x1, float y1, float x2, float y2)
-{
+    core::FloatArray& a,
+    const core::Color& cellColor,
+    float x1, float y1, float x2, float y2) {
+
     // TODO: draw 4 lines (= thin rectangles) rather than 2 big rects?
     auto ch = core::Color(0.043, 0.322, 0.714); // VGC Blue
-    internal::insertRect(a, ch, x1-2, y1-2, x2+2, y2+2);
-    internal::insertRect(a, cellColor, x1+1, y1+1, x2-1, y2-1);
+    internal::insertRect(a, ch, x1 - 2, y1 - 2, x2 + 2, y2 + 2);
+    internal::insertRect(a, cellColor, x1 + 1, y1 + 1, x2 - 1, y2 - 1);
 }
+
+// clang-format on
 
 } // namespace
 
-void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
-{
+void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+
     float eps = 1e-6f;
-    if (reload_ || std::abs(oldWidth_ - width()) > eps || std::abs(oldHeight_ - height()) > eps) {
+    bool hasWidthChanged = std::abs(oldWidth_ - width()) > eps;
+    bool hasHeightChanged = std::abs(oldHeight_ - height()) > eps;
+    if (reload_ || hasWidthChanged || hasHeightChanged) {
+
         reload_ = false;
         oldWidth_ = width();
         oldHeight_ = height();
@@ -182,7 +190,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         // - cellOffset: distance between color cells
         float x0 = margin_;
         float y0 = margin_;
-        float w = width() - 2*margin_;
+        float w = width() - 2 * margin_;
         float startOffset = selectorBorderWidth_;
         float endOffset = selectorBorderWidth_ - cellBorderWidth_;
         float cellOffset = cellBorderWidth_;
@@ -190,25 +198,25 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         float dy = std::round(dx);
         float h = startOffset + endOffset + dy * numSaturationSteps_;
         if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
-            internal::insertRect(a, borderColor_, x0, y0, x0+w, y0+h);
+            internal::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
         }
         double dhue = 360.0 / numHueSteps_;
         double hue = selectedHueIndex_ * dhue;
         double dl = 1.0 / (numLightnessSteps_ - 1);
         double ds = 1.0 / (numSaturationSteps_ - 1);
         for (Int i = 0; i < numLightnessSteps_; ++i) {
-            float x1 = std::round(x0 + startOffset + i*dx);
-            float x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
-            double l = i*dl;
+            float x1 = std::round(x0 + startOffset + i * dx);
+            float x2 = std::round(x0 + startOffset + (i + 1) * dx) - cellOffset;
+            double l = i * dl;
             for (Int j = 0; j < numSaturationSteps_; ++j) {
-                float y1 = y0 + startOffset + j*dy;
+                float y1 = y0 + startOffset + j * dy;
                 float y2 = y1 + dy - cellOffset;
-                double s = j*ds;
+                double s = j * ds;
                 if (isContinuous_) {
                     auto c1 = core::Color::hsl(hue, s, l);
-                    auto c2 = core::Color::hsl(hue, s, l+dl);
-                    auto c3 = core::Color::hsl(hue, s+ds, l);
-                    auto c4 = core::Color::hsl(hue, s+ds, l+dl);
+                    auto c2 = core::Color::hsl(hue, s, l + dl);
+                    auto c3 = core::Color::hsl(hue, s + ds, l);
+                    auto c4 = core::Color::hsl(hue, s + ds, l + dl);
                     insertSmoothRect(a, c1, c2, c3, c4, x1, y1, x2, y2);
                 }
                 else {
@@ -222,24 +230,24 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         if (isSelectedColorExact_) {
             Int i = selectedLightnessIndex_;
             Int j = selectedSaturationIndex_;
-            float x1 = std::round(x0 + startOffset + i*dx);
-            float x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
-            float y1 = y0 + startOffset + j*dy;
+            float x1 = std::round(x0 + startOffset + i * dx);
+            float x2 = std::round(x0 + startOffset + (i + 1) * dx) - cellOffset;
+            float y1 = y0 + startOffset + j * dy;
             float y2 = y1 + dy - cellOffset;
-            double l = i*dl;
-            double s = j*ds;
+            double l = i * dl;
+            double s = j * ds;
             auto c = core::Color::hsl(hue, s, l);
             insertCellHighlight(a, c, x1, y1, x2, y2);
         }
         if (hoveredLightnessIndex_ != -1) {
             Int i = hoveredLightnessIndex_;
             Int j = hoveredSaturationIndex_;
-            float x1 = std::round(x0 + startOffset + i*dx);
-            float x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
-            float y1 = y0 + startOffset + j*dy;
+            float x1 = std::round(x0 + startOffset + i * dx);
+            float x2 = std::round(x0 + startOffset + (i + 1) * dx) - cellOffset;
+            float y1 = y0 + startOffset + j * dy;
             float y2 = y1 + dy - cellOffset;
-            double l = i*dl;
-            double s = j*ds;
+            double l = i * dl;
+            double s = j * ds;
             auto c = core::Color::hsl(hue, s, l);
             insertCellHighlight(a, c, x1, y1, x2, y2);
         }
@@ -251,24 +259,24 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         dy = std::round(dx);
         h = startOffset + endOffset + dy * 2;
         if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
-            internal::insertRect(a, borderColor_, x0, y0, x0+w, y0+h);
+            internal::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
         }
-        double l = oldLightnessIndex_*dl;
-        double s = oldSaturationIndex_*ds;
+        double l = oldLightnessIndex_ * dl;
+        double s = oldSaturationIndex_ * ds;
         for (Int i = 0; i < numHueSteps_; ++i) {
             float x1, y1, x2, y2;
-            double hue1 = i*dhue;
+            double hue1 = i * dhue;
             double hue2; // for continuous mode
             if (i < halfNumHueSteps) {
-                x1 = std::round(x0 + startOffset + i*dx);
-                x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+                x1 = std::round(x0 + startOffset + i * dx);
+                x2 = std::round(x0 + startOffset + (i + 1) * dx) - cellOffset;
                 y1 = y0 + startOffset;
                 y2 = y1 + dy - cellOffset;
                 hue2 = hue1 + dhue;
             }
             else {
-                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1)*dx);
-                x2 = std::round(x0 + startOffset + (numHueSteps_ - i)*dx) - cellOffset;
+                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1) * dx);
+                x2 = std::round(x0 + startOffset + (numHueSteps_ - i) * dx) - cellOffset;
                 y1 = y0 + startOffset + dy;
                 y2 = y1 + dy - cellOffset;
                 hue2 = hue1 - dhue;
@@ -286,16 +294,16 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         if (isSelectedColorExact_) {
             Int i = selectedHueIndex_;
             float x1, y1, x2, y2;
-            double shue = i*dhue;
+            double shue = i * dhue;
             if (i < halfNumHueSteps) {
-                x1 = std::round(x0 + startOffset + i*dx);
-                x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+                x1 = std::round(x0 + startOffset + i * dx);
+                x2 = std::round(x0 + startOffset + (i + 1) * dx) - cellOffset;
                 y1 = y0 + startOffset;
                 y2 = y1 + dy - cellOffset;
             }
             else {
-                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1)*dx);
-                x2 = std::round(x0 + startOffset + (numHueSteps_ - i)*dx) - cellOffset;
+                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1) * dx);
+                x2 = std::round(x0 + startOffset + (numHueSteps_ - i) * dx) - cellOffset;
                 y1 = y0 + startOffset + dy;
                 y2 = y1 + dy - cellOffset;
             }
@@ -305,16 +313,16 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         if (hoveredHueIndex_ != -1) {
             Int i = hoveredHueIndex_;
             float x1, y1, x2, y2;
-            double hhue = i*dhue;
+            double hhue = i * dhue;
             if (i < halfNumHueSteps) {
-                x1 = std::round(x0 + startOffset + i*dx);
-                x2 = std::round(x0 + startOffset + (i+1)*dx) - cellOffset;
+                x1 = std::round(x0 + startOffset + i * dx);
+                x2 = std::round(x0 + startOffset + (i + 1) * dx) - cellOffset;
                 y1 = y0 + startOffset;
                 y2 = y1 + dy - cellOffset;
             }
             else {
-                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1)*dx);
-                x2 = std::round(x0 + startOffset + (numHueSteps_ - i)*dx) - cellOffset;
+                x1 = std::round(x0 + startOffset + (numHueSteps_ - i - 1) * dx);
+                x2 = std::round(x0 + startOffset + (numHueSteps_ - i) * dx) - cellOffset;
                 y1 = y0 + startOffset + dy;
                 y2 = y1 + dy - cellOffset;
             }
@@ -330,15 +338,13 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
     engine->draw(triangles_, -1, 0);
 }
 
-void ColorPalette::onPaintDestroy(graphics::Engine*)
-{
+void ColorPalette::onPaintDestroy(graphics::Engine*) {
     triangles_.reset();
 }
 
-bool ColorPalette::onMouseMove(MouseEvent* event)
-{
-    // Determine relevant selector
+bool ColorPalette::onMouseMove(MouseEvent* event) {
 
+    // Determine relevant selector
     const geometry::Vec2f& p = event->position();
     SelectorType selector = scrubbedSelector_;
     if (selector == SelectorType::None) {
@@ -359,10 +365,10 @@ bool ColorPalette::onMouseMove(MouseEvent* event)
     }
 
     // Update
-    if (hoveredLightnessIndex_ != i ||
-        hoveredSaturationIndex_ != j ||
-        hoveredHueIndex_ != k)
-    {
+    if (hoveredLightnessIndex_ != i     //
+        || hoveredSaturationIndex_ != j //
+        || hoveredHueIndex_ != k) {
+
         hoveredLightnessIndex_ = i;
         hoveredSaturationIndex_ = j;
         hoveredHueIndex_ = k;
@@ -377,8 +383,7 @@ bool ColorPalette::onMouseMove(MouseEvent* event)
     return true;
 }
 
-bool ColorPalette::onMousePress(MouseEvent* /*event*/)
-{
+bool ColorPalette::onMousePress(MouseEvent* /*event*/) {
     if (hoveredLightnessIndex_ != -1) {
         scrubbedSelector_ = SelectorType::SaturationLightness;
     }
@@ -388,26 +393,23 @@ bool ColorPalette::onMousePress(MouseEvent* /*event*/)
     return selectColorFromHovered_();
 }
 
-bool ColorPalette::onMouseRelease(MouseEvent* /*event*/)
-{
+bool ColorPalette::onMouseRelease(MouseEvent* /*event*/) {
     scrubbedSelector_ = SelectorType::None;
     return true;
 }
 
-bool ColorPalette::onMouseEnter()
-{
+bool ColorPalette::onMouseEnter() {
     return true;
 }
 
-bool ColorPalette::onMouseLeave()
-{
+bool ColorPalette::onMouseLeave() {
     Int i = -1;
     Int j = -1;
     Int k = -1;
-    if (hoveredLightnessIndex_ != i ||
-        hoveredSaturationIndex_ != j ||
-        hoveredHueIndex_ != k)
-    {
+    if (hoveredLightnessIndex_ != i     //
+        || hoveredSaturationIndex_ != j //
+        || hoveredHueIndex_ != k) {
+
         hoveredLightnessIndex_ = i;
         hoveredSaturationIndex_ = j;
         hoveredHueIndex_ = k;
@@ -417,16 +419,15 @@ bool ColorPalette::onMouseLeave()
     return true;
 }
 
-ColorPalette::SelectorType ColorPalette::hoveredSelector_(const geometry::Vec2f& p)
-{
+ColorPalette::SelectorType ColorPalette::hoveredSelector_(const geometry::Vec2f& p) {
     float x0 = margin_;
     float y0 = margin_;
-    float w = width() - 2*margin_;
-    if (p[0] > x0 && p[0] < x0+w) {
+    float w = width() - 2 * margin_;
+    if (p[0] > x0 && p[0] < x0 + w) {
         float dx = (w - 1) / numLightnessSteps_;
         float dy = std::round(dx);
         float h = 1 + dy * numSaturationSteps_;
-        if (p[1] > y0 && p[1] < y0+h) {
+        if (p[1] > y0 && p[1] < y0 + h) {
             return SelectorType::SaturationLightness;
         }
         else {
@@ -435,7 +436,7 @@ ColorPalette::SelectorType ColorPalette::hoveredSelector_(const geometry::Vec2f&
             dx = (w - 1) / halfNumHueSteps;
             dy = std::round(dx);
             h = 1 + dy * 2;
-            if (p[1] > y0 && p[1] < y0+h) {
+            if (p[1] > y0 && p[1] < y0 + h) {
                 return SelectorType::Hue;
             }
         }
@@ -443,11 +444,10 @@ ColorPalette::SelectorType ColorPalette::hoveredSelector_(const geometry::Vec2f&
     return SelectorType::None;
 }
 
-std::pair<Int, Int> ColorPalette::hoveredSaturationLightness_(const geometry::Vec2f& p)
-{
+std::pair<Int, Int> ColorPalette::hoveredSaturationLightness_(const geometry::Vec2f& p) {
     float x0 = margin_;
     float y0 = margin_;
-    float w = width() - 2*margin_;
+    float w = width() - 2 * margin_;
     float dx = (w - 1) / numLightnessSteps_;
     float dy = std::round(dx);
     float h = 1 + dy * numSaturationSteps_;
@@ -460,11 +460,10 @@ std::pair<Int, Int> ColorPalette::hoveredSaturationLightness_(const geometry::Ve
     return {i, j};
 }
 
-Int ColorPalette::hoveredHue_(const geometry::Vec2f& p)
-{
+Int ColorPalette::hoveredHue_(const geometry::Vec2f& p) {
     float x0 = margin_;
     float y0 = margin_;
-    float w = width() - 2*margin_;
+    float w = width() - 2 * margin_;
     float dx = (w - 1) / numLightnessSteps_;
     float dy = std::round(dx);
     float h = 1 + dy * numSaturationSteps_;
@@ -483,16 +482,15 @@ Int ColorPalette::hoveredHue_(const geometry::Vec2f& p)
     return k;
 }
 
-bool ColorPalette::selectColorFromHovered_()
-{
+bool ColorPalette::selectColorFromHovered_() {
     bool accepted = false;
     if (hoveredLightnessIndex_ != -1) {
         selectedLightnessIndex_ = hoveredLightnessIndex_;
         selectedSaturationIndex_ = hoveredSaturationIndex_;
-        if (selectedSaturationIndex_ != 0 &&
-            selectedLightnessIndex_ != 0 &&
-            selectedLightnessIndex_ != numLightnessSteps_ -1)
-        {
+        if (selectedSaturationIndex_ != 0   //
+            && selectedLightnessIndex_ != 0 //
+            && selectedLightnessIndex_ != numLightnessSteps_ - 1) {
+
             // Remember L/S of last chromatic color selected
             oldSaturationIndex_ = selectedSaturationIndex_;
             oldLightnessIndex_ = selectedLightnessIndex_;
@@ -501,10 +499,9 @@ bool ColorPalette::selectColorFromHovered_()
     }
     else if (hoveredHueIndex_ != -1) {
         selectedHueIndex_ = hoveredHueIndex_;
-        if (selectedSaturationIndex_ == 0 ||
-            selectedLightnessIndex_ == 0 ||
-            selectedLightnessIndex_ == numLightnessSteps_ -1)
-        {
+        if (selectedSaturationIndex_ == 0   //
+            || selectedLightnessIndex_ == 0 //
+            || selectedLightnessIndex_ == numLightnessSteps_ - 1) {
             // When users click on the hue selector while the current color is
             // non-chromatic (black, white, greys), it's obviously to change to
             // a chromatic color. So we restore the saturation/lightness of the
@@ -520,8 +517,12 @@ bool ColorPalette::selectColorFromHovered_()
         reload_ = true;
         isSelectedColorExact_ = true;
         selectedColor_ = colorFromHslIndices(
-            numHueSteps_, numSaturationSteps_, numLightnessSteps_,
-            selectedHueIndex_, selectedSaturationIndex_, selectedLightnessIndex_);
+            numHueSteps_,
+            numSaturationSteps_,
+            numLightnessSteps_,
+            selectedHueIndex_,
+            selectedSaturationIndex_,
+            selectedLightnessIndex_);
         colorSelected().emit();
         repaint();
     }
