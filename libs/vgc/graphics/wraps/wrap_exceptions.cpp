@@ -21,8 +21,7 @@
 namespace vgc {
 namespace graphics {
 
-void wrap_exceptions(py::module& m)
-{
+void wrap_exceptions(py::module& m) {
     py::module core = py::module::import("vgc.core");
     VGC_CORE_WRAP_EXCEPTION(graphics, FontError, core, RuntimeError);
 }

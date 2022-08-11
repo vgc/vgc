@@ -22,8 +22,8 @@
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 
-#include <hb.h>
 #include <hb-ft.h>
+#include <hb.h>
 
 #include <vgc/core/paths.h>
 #include <vgc/graphics/exceptions.h>
@@ -34,16 +34,19 @@ namespace graphics {
 
 namespace {
 
-const char* errorMsg(FT_Error err)
-{
+// clang-format off
+
+const char* errorMsg(FT_Error err) {
     // https://www.freetype.org/freetype2/docs/reference/ft2-error_enumerations.html
     #undef __FTERRORS_H__
-    #define FT_ERROR_START_LIST     switch (err) {
-    #define FT_ERRORDEF(e, v, s)        case e: return s;
-    #define FT_ERROR_END_LIST       }
+    #define FT_ERROR_START_LIST  switch (err) {
+    #define FT_ERRORDEF(e, v, s)     case e: return s;
+    #define FT_ERROR_END_LIST    }
     #include FT_ERRORS_H
     return "unknown error";
 }
+
+// clang-format on
 
 } // namespace
 
@@ -55,8 +58,8 @@ public:
     Font* defaultFont;
 
     FontLibraryImpl()
-        : defaultFont(nullptr)
-    {
+        : defaultFont(nullptr) {
+
         FT_Error error = FT_Init_FreeType(&library);
         if (error) {
             throw FontError(errorMsg(error));
@@ -74,13 +77,12 @@ public:
         //   This function is only used from hb_buffer_guess_segment_properties() by
         //   HarfBuzz itself. »
         //
-        static std::mutex* mutex = new std::mutex; // leaky singleton (see vgc/core/stringid.cpp)
+        static std::mutex* mutex = new std::mutex; // trusty leaky singleton
         std::lock_guard<std::mutex> lock(*mutex);
         hb_language_get_default();
     }
 
-    ~FontLibraryImpl()
-    {
+    ~FontLibraryImpl() {
         FT_Error error = FT_Done_FreeType(library);
         if (error) {
             // Note: we print a warning rather than throwing, because throwing
@@ -92,17 +94,19 @@ public:
 
 namespace {
 
-void ftNewFace_(const std::string& filename,
-                Int index,
-                FT_Library ftLibrary,
-                FT_Face* ftFace)
-{
+void ftNewFace_(
+    const std::string& filename,
+    Int index,
+    FT_Library ftLibrary,
+    FT_Face* ftFace) {
+
     // Load the face.
     //
-    FT_Error error = FT_New_Face(ftLibrary, filename.c_str(), core::int_cast<FT_Long>(index), ftFace);
+    FT_Error error =
+        FT_New_Face(ftLibrary, filename.c_str(), core::int_cast<FT_Long>(index), ftFace);
     if (error) {
-        throw FontError(core::format(
-                            "Error loading font file {}: {}", filename, errorMsg(error)));
+        throw FontError(
+            core::format("Error loading font file {}: {}", filename, errorMsg(error)));
     }
 
     // Select a given charmap for character code to glyph index mapping.
@@ -123,29 +127,29 @@ void ftNewFace_(const std::string& filename,
     //
     FT_Face face = *ftFace;
     bool isCharmapSet = false;
-    for(FT_Int i = 0; i < face->num_charmaps; ++i) {
+    for (FT_Int i = 0; i < face->num_charmaps; ++i) {
         FT_CharMap c = face->charmaps[i];
-        if ((c->platform_id == 0 && c->encoding_id == 3) ||
-                (c->platform_id == 3 && c->encoding_id == 1))
-        {
+        if ((c->platform_id == 0 && c->encoding_id == 3)
+            || (c->platform_id == 3 && c->encoding_id == 1)) {
             error = FT_Set_Charmap(face, c);
             if (error) {
                 throw FontError(core::format(
-                                    "Error setting charmap for font file {}: {}",
-                                    filename, errorMsg(error)));
+                    "Error setting charmap for font file {}: {}",
+                    filename,
+                    errorMsg(error)));
             }
             isCharmapSet = true;
         }
     }
     if (!isCharmapSet) {
         throw FontError(core::format(
-                            "Error setting charmap for font file {}: {}",
-                            filename, "USC-2 charmap not found"));
+            "Error setting charmap for font file {}: {}",
+            filename,
+            "USC-2 charmap not found"));
     }
 }
 
-void ftDoneFace_(FT_Face ftFace)
-{
+void ftDoneFace_(FT_Face ftFace) {
     FT_Error error = FT_Done_Face(ftFace);
     if (error) {
         // Note: we print a warning rather than throwing, because throwing
@@ -167,22 +171,23 @@ public:
     std::mutex sizedFontsMutex;
     std::unordered_map<SizedFontParams, SizedFont*> sizedFontsMap;
 
-    FontImpl(const std::string& filename, Int index, FT_Library library) :
-        filename(filename), index(index), ftLibrary(library)
-    {
+    FontImpl(const std::string& filename, Int index, FT_Library library)
+        : filename(filename)
+        , index(index)
+        , ftLibrary(library) {
+
         ftNewFace_(filename, index, library, &ftFace);
     }
 
-    ~FontImpl()
-    {
+    ~FontImpl() {
         ftDoneFace_(ftFace);
     }
 };
 
-SizedFontImpl::SizedFontImpl(Font* font, const SizedFontParams& params_) :
-    params(params_)
-{
-    const std::string&filename = font->impl_->filename;
+SizedFontImpl::SizedFontImpl(Font* font, const SizedFontParams& params_)
+    : params(params_) {
+
+    const std::string& filename = font->impl_->filename;
     Int index = font->index();
     FT_Library ftLibrary = font->impl_->ftLibrary;
     ftNewFace_(filename, index, ftLibrary, &ftFace);
@@ -194,10 +199,14 @@ SizedFontImpl::SizedFontImpl(Font* font, const SizedFontParams& params_) :
     if (ppemWidth < 1 || ppemHeight < 1) {
         Int ppemWidth_ = (std::min)(Int(1), ppemWidth);
         Int ppemHeight_ = (std::min)(Int(1), ppemHeight);
-        VGC_WARNING(LogVgcGraphics,
-                    "Provided (ppemWidth, ppemHeight) = ({}, {}) must"
-                    " be at least 1. Using ({}, {}) instead.",
-                    ppemWidth, ppemHeight, ppemWidth_, ppemHeight_);
+        VGC_WARNING(
+            LogVgcGraphics,
+            "Provided (ppemWidth, ppemHeight) = ({}, {}) must"
+            " be at least 1. Using ({}, {}) instead.",
+            ppemWidth,
+            ppemHeight,
+            ppemWidth_,
+            ppemHeight_);
         params = SizedFontParams(ppemWidth_, ppemHeight_, hinting);
         ppemWidth = ppemWidth_;
         ppemHeight = ppemHeight_;
@@ -312,8 +321,7 @@ SizedFontImpl::SizedFontImpl(Font* font, const SizedFontParams& params_) :
     hbFont = hb_ft_font_create(ftFace, NULL);
 }
 
-SizedFontImpl::~SizedFontImpl()
-{
+SizedFontImpl::~SizedFontImpl() {
     hb_font_destroy(hbFont);
     ftDoneFace_(ftFace);
 }
@@ -321,13 +329,11 @@ SizedFontImpl::~SizedFontImpl()
 namespace {
 
 // Converts from fractional 26.6 to floating point.
-geometry::Vec2d f266ToVec2d(const FT_Vector* v)
-{
+geometry::Vec2d f266ToVec2d(const FT_Vector* v) {
     return internal::f266ToVec2d(v->x, v->y);
 }
 
-void closeLastCurveIfOpen(geometry::Curves2d& c)
-{
+void closeLastCurveIfOpen(geometry::Curves2d& c) {
     geometry::Curves2dCommandRange commands = c.commands();
     geometry::Curves2dCommandIterator it = commands.end();
     if (it != commands.begin()) {
@@ -338,37 +344,31 @@ void closeLastCurveIfOpen(geometry::Curves2d& c)
     }
 }
 
-int moveTo(const FT_Vector* to,
-           void* user)
-{
+int moveTo(const FT_Vector* to, void* user) {
     geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
     closeLastCurveIfOpen(*c);
     c->moveTo(f266ToVec2d(to));
     return 0;
 }
 
-int lineTo(const FT_Vector* to,
-           void* user)
-{
+int lineTo(const FT_Vector* to, void* user) {
     geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
     c->lineTo(f266ToVec2d(to));
     return 0;
 }
 
-int conicTo(const FT_Vector* control,
-            const FT_Vector* to,
-            void* user)
-{
+int conicTo(const FT_Vector* control, const FT_Vector* to, void* user) {
     geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
     c->quadraticBezierTo(f266ToVec2d(control), f266ToVec2d(to));
     return 0;
 }
 
-int cubicTo(const FT_Vector* control1,
-            const FT_Vector* control2,
-            const FT_Vector* to,
-            void* user)
-{
+int cubicTo(
+    const FT_Vector* control1,
+    const FT_Vector* control2,
+    const FT_Vector* to,
+    void* user) {
+
     geometry::Curves2d* c = static_cast<geometry::Curves2d*>(user);
     c->cubicBezierTo(f266ToVec2d(control1), f266ToVec2d(control2), f266ToVec2d(to));
     return 0;
@@ -384,8 +384,8 @@ public:
     geometry::Rect2f boundingBox = geometry::Rect2f::empty;
 
     SizedGlyphImpl(Glyph* glyph, FT_GlyphSlot slot)
-        : glyph(glyph)
-    {
+        : glyph(glyph) {
+
         // Note: hinting might already be baked in the given FT_GlyphSlot.
         // See implementation of SizedFont::getGlyphFromIndex(Int glyphIndex).
         int shift = 0;
@@ -401,68 +401,57 @@ public:
     }
 };
 
-void FontLibraryImplDeleter::operator()(FontLibraryImpl* p)
-{
+void FontLibraryImplDeleter::operator()(FontLibraryImpl* p) {
     delete p;
 }
 
-void FontImplDeleter::operator()(FontImpl* p)
-{
+void FontImplDeleter::operator()(FontImpl* p) {
     delete p;
 }
 
-void SizedFontImplDeleter::operator()(SizedFontImpl* p)
-{
+void SizedFontImplDeleter::operator()(SizedFontImpl* p) {
     delete p;
 }
 
-void SizedGlyphImplDeleter::operator()(SizedGlyphImpl* p)
-{
+void SizedGlyphImplDeleter::operator()(SizedGlyphImpl* p) {
     delete p;
 }
 
 } // namespace internal
 
-FontLibrary::FontLibrary() :
-    Object(),
-    impl_(new internal::FontLibraryImpl())
-{
-
+FontLibrary::FontLibrary()
+    : Object()
+    , impl_(new internal::FontLibraryImpl()) {
 }
 
 // static
-FontLibraryPtr FontLibrary::create()
-{
+FontLibraryPtr FontLibrary::create() {
     return FontLibraryPtr(new FontLibrary());
 }
 
-Font* FontLibrary::addFont(const std::string& filename, Int index)
-{
+Font* FontLibrary::addFont(const std::string& filename, Int index) {
     Font* res = new Font(this);
     res->impl_.reset(new internal::FontImpl(filename, index, impl_->library));
     return res;
 }
 
-Font* FontLibrary::defaultFont() const
-{
+Font* FontLibrary::defaultFont() const {
     return impl_->defaultFont;
 }
 
-void FontLibrary::setDefaultFont(Font* font)
-{
+void FontLibrary::setDefaultFont(Font* font) {
     impl_->defaultFont = font;
 }
 
-void FontLibrary::onDestroyed()
-{
+void FontLibrary::onDestroyed() {
     impl_.reset();
 }
 
 namespace {
 
-FontLibraryPtr createGlobalFontLibrary()
-{
-    std::string fontPath = core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
+FontLibraryPtr createGlobalFontLibrary() {
+    std::string fontPath =
+        core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
     graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
     graphics::Font* font = fontLibrary->addFont(fontPath); // XXX can this be nullptr?
     fontLibrary->setDefaultFont(font);
@@ -471,31 +460,27 @@ FontLibraryPtr createGlobalFontLibrary()
 
 } // namespace
 
-FontLibrary* fontLibrary()
-{
+FontLibrary* fontLibrary() {
     static FontLibraryPtr res = createGlobalFontLibrary();
     return res.get();
 }
 
-Font::Font(FontLibrary* library) :
-    Object(),
-    impl_()
-{
+Font::Font(FontLibrary* library)
+    : Object()
+    , impl_() {
     appendObjectToParent_(library);
 }
 
-FontLibrary* Font::library() const
-{
+FontLibrary* Font::library() const {
     return static_cast<FontLibrary*>(parentObject());
 }
 
-Int Font::index() const
-{
+Int Font::index() const {
     return impl_->index;
 }
 
-SizedFont* Font::getSizedFont(const SizedFontParams& params)
-{
+SizedFont* Font::getSizedFont(const SizedFontParams& params) {
+
     // Prevent two threads from modifying the glyphsMap at the same time
     const std::lock_guard<std::mutex> lock(impl_->sizedFontsMutex);
 
@@ -511,8 +496,7 @@ SizedFont* Font::getSizedFont(const SizedFontParams& params)
     return sizedFont;
 }
 
-Glyph* Font::getGlyphFromCodePoint(Int codePoint)
-{
+Glyph* Font::getGlyphFromCodePoint(Int codePoint) {
     if (Int index = getGlyphIndexFromCodePoint(codePoint)) {
         return getGlyphFromIndex(index);
     }
@@ -521,8 +505,8 @@ Glyph* Font::getGlyphFromCodePoint(Int codePoint)
     }
 }
 
-Glyph* Font::getGlyphFromIndex(Int glyphIndex)
-{
+Glyph* Font::getGlyphFromIndex(Int glyphIndex) {
+
     // Prevent two threads from modifying the glyphsMap at the same time
     const std::lock_guard<std::mutex> lock(impl_->glyphsMutex);
 
@@ -556,8 +540,7 @@ Glyph* Font::getGlyphFromIndex(Int glyphIndex)
     return glyph;
 }
 
-Int Font::getGlyphIndexFromCodePoint(Int codePoint)
-{
+Int Font::getGlyphIndexFromCodePoint(Int codePoint) {
     // Note: we assume the charmap is unicode
     FT_Face face = impl_->ftFace;
     FT_ULong charcode = core::int_cast<FT_ULong>(codePoint);
@@ -565,67 +548,58 @@ Int Font::getGlyphIndexFromCodePoint(Int codePoint)
     return core::int_cast<Int>(index);
 }
 
-void Font::onDestroyed()
-{
+void Font::onDestroyed() {
     impl_.reset();
 }
 
 Glyph::Glyph(Font* font, Int index, const std::string& name)
     : index_(index)
-    , name_(name)
-{
+    , name_(name) {
+
     appendObjectToParent_(font);
 }
 
-Font* Glyph::font() const
-{
+Font* Glyph::font() const {
     return static_cast<Font*>(parentObject());
 }
 
-SizedFont::SizedFont(Font* font) :
-    Object(),
-    impl_()
-{
+SizedFont::SizedFont(Font* font)
+    : Object()
+    , impl_() {
+
     appendObjectToParent_(font);
 }
 
 namespace {
 
-float fontUnitsToVerticalPixels(const internal::SizedFontImpl* impl, FT_Short u)
-{
+float fontUnitsToVerticalPixels(const internal::SizedFontImpl* impl, FT_Short u) {
     Int ppem = impl->params.ppemHeight();
     return static_cast<float>(u) * ppem / impl->ftFace->units_per_EM;
 }
 
 } // namespace
 
-Font* SizedFont::font() const
-{
+Font* SizedFont::font() const {
     return static_cast<Font*>(parentObject());
 }
 
-const SizedFontParams& SizedFont::params() const
-{
+const SizedFontParams& SizedFont::params() const {
     return impl_->params;
 }
 
-float SizedFont::ascent() const
-{
+float SizedFont::ascent() const {
     return fontUnitsToVerticalPixels(impl_.get(), impl_->ftFace->ascender);
 }
 
-float SizedFont::descent() const
-{
+float SizedFont::descent() const {
     return fontUnitsToVerticalPixels(impl_.get(), impl_->ftFace->descender);
 }
 
-float SizedFont::height() const
-{
+float SizedFont::height() const {
     return fontUnitsToVerticalPixels(impl_.get(), impl_->ftFace->height);
 }
 
-SizedGlyph* SizedFont::getSizedGlyphFromCodePoint(Int codePoint)
-{
+SizedGlyph* SizedFont::getSizedGlyphFromCodePoint(Int codePoint) {
     if (Int index = getGlyphIndexFromCodePoint(codePoint)) {
         return getSizedGlyphFromIndex(index);
     }
@@ -634,8 +608,8 @@ SizedGlyph* SizedFont::getSizedGlyphFromCodePoint(Int codePoint)
     }
 }
 
-SizedGlyph* SizedFont::getSizedGlyphFromIndex(Int glyphIndex)
-{
+SizedGlyph* SizedFont::getSizedGlyphFromIndex(Int glyphIndex) {
+
     // Prevent two threads from modifying the glyphsMap at the same time
     const std::lock_guard<std::mutex> lock(impl_->glyphsMutex);
 
@@ -682,8 +656,7 @@ SizedGlyph* SizedFont::getSizedGlyphFromIndex(Int glyphIndex)
     return sizedGlyph;
 }
 
-Int SizedFont::getGlyphIndexFromCodePoint(Int codePoint)
-{
+Int SizedFont::getGlyphIndexFromCodePoint(Int codePoint) {
     // Note: we assume the charmap is unicode
     FT_Face face = impl_->ftFace;
     FT_ULong charcode = core::int_cast<FT_ULong>(codePoint);
@@ -691,51 +664,43 @@ Int SizedFont::getGlyphIndexFromCodePoint(Int codePoint)
     return core::int_cast<Int>(index);
 }
 
-void SizedFont::onDestroyed()
-{
+void SizedFont::onDestroyed() {
     impl_.reset();
 }
 
-SizedGlyph::SizedGlyph(SizedFont* sizedFont) :
-    Object(),
-    impl_()
-{
+SizedGlyph::SizedGlyph(SizedFont* sizedFont)
+    : Object()
+    , impl_() {
+
     appendObjectToParent_(sizedFont);
 }
 
-SizedFont* SizedGlyph::sizedFont() const
-{
+SizedFont* SizedGlyph::sizedFont() const {
     return static_cast<SizedFont*>(parentObject());
 }
 
-Glyph* SizedGlyph::glyph() const
-{
+Glyph* SizedGlyph::glyph() const {
     return impl_->glyph;
 }
 
-Int SizedGlyph::index() const
-{
+Int SizedGlyph::index() const {
     return impl_->glyph->index();
 }
 
-const std::string& SizedGlyph::name() const
-{
+const std::string& SizedGlyph::name() const {
     return impl_->glyph->name();
 }
 
-const geometry::Curves2d& SizedGlyph::outline() const
-{
+const geometry::Curves2d& SizedGlyph::outline() const {
     return impl_->outline;
 }
 
-const geometry::Rect2f& SizedGlyph::boundingBox() const
-{
+const geometry::Rect2f& SizedGlyph::boundingBox() const {
     return impl_->boundingBox;
 }
 
-void SizedGlyph::fill(core::FloatArray& data,
-                     const geometry::Mat3f& transform) const
-{
+void SizedGlyph::fill(core::FloatArray& data, const geometry::Mat3f& transform) const {
+
     // Note: if the SizedGlyph have hinting enabled, it only makes sense to use
     // a `transform` that has a scale ratio of 1 or -1 in each axis, and use
     // integer values for the translate part. Also, even with hinting disabled,
@@ -760,9 +725,8 @@ void SizedGlyph::fill(core::FloatArray& data,
     }
 }
 
-void SizedGlyph::fill(core::FloatArray& data,
-                     const geometry::Vec2f& translation) const
-{
+void SizedGlyph::fill(core::FloatArray& data, const geometry::Vec2f& translation) const {
+
     Int numVertices = impl_->triangles.length() / 2;
     Int oldLength = data.length();
 
@@ -782,9 +746,10 @@ void SizedGlyph::fill(core::FloatArray& data,
     }
 }
 
-void SizedGlyph::fillYMirrored(core::FloatArray& data,
-                              const geometry::Vec2f& translation) const
-{
+void SizedGlyph::fillYMirrored( //
+    core::FloatArray& data,
+    const geometry::Vec2f& translation) const {
+
     Int numVertices = impl_->triangles.length() / 2;
     Int oldLength = data.length();
 
@@ -804,8 +769,7 @@ void SizedGlyph::fillYMirrored(core::FloatArray& data,
     }
 }
 
-void SizedGlyph::onDestroyed()
-{
+void SizedGlyph::onDestroyed() {
     impl_.reset();
 }
 

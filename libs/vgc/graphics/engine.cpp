@@ -24,8 +24,8 @@ namespace graphics {
 Engine::Engine(const EngineCreateInfo& createInfo)
     : Object()
     , resourceRegistry_(new detail::ResourceRegistry())
-    , createInfo_(createInfo)
-{
+    , createInfo_(createInfo) {
+
     framebufferStack_.emplaceLast();
 
     viewportStack_.emplaceLast(0, 0, 0, 0);
@@ -44,8 +44,8 @@ Engine::Engine(const EngineCreateInfo& createInfo)
     viewMatrixStack_.emplaceLast(geometry::Mat4f::identity);
 }
 
-void Engine::onDestroyed()
-{
+void Engine::onDestroyed() {
+
     swapChain_.reset();
 
     framebufferStack_.clear();
@@ -86,8 +86,8 @@ void Engine::onDestroyed()
     }
 }
 
-SwapChainPtr Engine::createSwapChain(const SwapChainCreateInfo& createInfo)
-{
+SwapChainPtr Engine::createSwapChain(const SwapChainCreateInfo& createInfo) {
+
     // sanitize create info
     SwapChainCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
@@ -95,25 +95,25 @@ SwapChainPtr Engine::createSwapChain(const SwapChainCreateInfo& createInfo)
     return constructSwapChain_(sanitizedCreateInfo);
 }
 
-FramebufferPtr Engine::createFramebuffer(const ImageViewPtr& colorImageView)
-{
+FramebufferPtr Engine::createFramebuffer(const ImageViewPtr& colorImageView) {
+
     // XXX should check bind flags compatibility here
 
     FramebufferPtr framebuffer = constructFramebuffer_(colorImageView);
     queueLambdaCommandWithParameters_<Framebuffer*>(
         "initFramebuffer",
-        [](Engine* engine, Framebuffer* p) {
-            engine->initFramebuffer_(p);
-        },
+        [](Engine* engine, Framebuffer* p) { engine->initFramebuffer_(p); },
         framebuffer.get());
     return framebuffer;
 }
 
-BufferPtr Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInBytes)
-{
+BufferPtr
+Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInBytes) {
+
     if (initialLengthInBytes < 0) {
         throw core::NegativeIntegerError(core::format(
-            "Negative initialLengthInBytes ({}) provided to Engine::createBuffer()", initialLengthInBytes));
+            "Negative initialLengthInBytes ({}) provided to Engine::createBuffer()",
+            initialLengthInBytes));
     }
 
     // sanitize create info
@@ -132,15 +132,17 @@ BufferPtr Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLe
         [](Engine* engine, const CommandParameters& p) {
             engine->initBuffer_(p.buffer, nullptr, p.initialLengthInBytes);
         },
-        buffer.get(), initialLengthInBytes);
+        buffer.get(),
+        initialLengthInBytes);
     return buffer;
 }
 
-BufferPtr Engine::createVertexBuffer(Int initialLengthInBytes)
-{
+BufferPtr Engine::createVertexBuffer(Int initialLengthInBytes) {
+
     if (initialLengthInBytes < 0) {
         throw core::NegativeIntegerError(core::format(
-            "Negative initialLengthInBytes ({}) provided to Engine::createVertexBuffer()", initialLengthInBytes));
+            "Negative initialLengthInBytes ({}) provided to Engine::createVertexBuffer()",
+            initialLengthInBytes));
     }
 
     BufferCreateInfo createInfo = {};
@@ -151,8 +153,8 @@ BufferPtr Engine::createVertexBuffer(Int initialLengthInBytes)
     return createBuffer(createInfo, initialLengthInBytes);
 }
 
-GeometryViewPtr Engine::createDynamicTriangleListView(BuiltinGeometryLayout vertexLayout)
-{
+GeometryViewPtr
+Engine::createDynamicTriangleListView(BuiltinGeometryLayout vertexLayout) {
     BufferPtr vertexBuffer = createVertexBuffer(0);
     GeometryViewCreateInfo createInfo = {};
     createInfo.setBuiltinGeometryLayout(vertexLayout);
@@ -161,14 +163,15 @@ GeometryViewPtr Engine::createDynamicTriangleListView(BuiltinGeometryLayout vert
     return createGeometryView(createInfo);
 }
 
-ImagePtr Engine::createImage(const ImageCreateInfo& createInfo)
-{
+ImagePtr Engine::createImage(const ImageCreateInfo& createInfo) {
+
     // sanitize create info
     ImageCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
 
     if (createInfo.usage() == Usage::Immutable) {
-        VGC_ERROR(LogVgcGraphics, "Cannot create an immutable image without initial data.");
+        VGC_ERROR(
+            LogVgcGraphics, "Cannot create an immutable image without initial data.");
         return nullptr;
     }
 
@@ -188,19 +191,26 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo)
     return image;
 }
 
-ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData)
-{
+ImagePtr
+Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData) {
+
     // sanitize create info
     ImageCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
 
     if (sanitizedCreateInfo.isMultisampled()) {
-        VGC_ERROR(LogVgcGraphics, "Initial data ignored: multisampled image cannot be initialized with data on creation.");
+        VGC_ERROR(
+            LogVgcGraphics,
+            "Initial data ignored: multisampled image cannot be initialized with data on "
+            "creation.");
         return createImage(sanitizedCreateInfo);
     }
 
     if (sanitizedCreateInfo.numMipLevels() == 0) {
-        VGC_ERROR(LogVgcGraphics, "Cannot create an image with initial data if the number of mip levels is 0 (automatic).");
+        VGC_ERROR(
+            LogVgcGraphics,
+            "Cannot create an image with initial data if the number of mip levels is 0 "
+            "(automatic).");
         return nullptr;
     }
 
@@ -215,15 +225,17 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initImage",
         [](Engine* engine, const CommandParameters& p) {
-            Span<const char> m0 = { p.initialData.data(), p.initialData.length() };
+            Span<const char> m0 = {p.initialData.data(), p.initialData.length()};
             engine->initImage_(p.image, &m0, 1);
         },
-        image.get(), std::move(initialData));
+        image.get(),
+        std::move(initialData));
     return image;
 }
 
-ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image)
-{
+ImageViewPtr
+Engine::createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image) {
+
     // sanitize create info
     ImageViewCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
@@ -231,90 +243,84 @@ ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, cons
     ImageViewPtr imageView = constructImageView_(sanitizedCreateInfo, image);
     queueLambdaCommandWithParameters_<ImageView*>(
         "initImageView",
-        [](Engine* engine, ImageView* p) {
-            engine->initImageView_(p);
-        },
+        [](Engine* engine, ImageView* p) { engine->initImageView_(p); },
         imageView.get());
     return imageView;
 }
 
-ImageViewPtr Engine::createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, Int numElements)
-{
+ImageViewPtr Engine::createImageView(
+    const ImageViewCreateInfo& createInfo,
+    const BufferPtr& buffer,
+    PixelFormat format,
+    Int numElements) {
+
     ImageViewCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
 
-    ImageViewPtr imageView = constructImageView_(sanitizedCreateInfo, buffer, format, core::int_cast<UInt32>(numElements));
+    ImageViewPtr imageView = constructImageView_(
+        sanitizedCreateInfo, buffer, format, core::int_cast<UInt32>(numElements));
     queueLambdaCommandWithParameters_<ImageView*>(
         "initBufferImageView",
-        [](Engine* engine, ImageView* p) {
-            engine->initImageView_(p);
-        },
+        [](Engine* engine, ImageView* p) { engine->initImageView_(p); },
         imageView.get());
     return imageView;
 }
 
-SamplerStatePtr Engine::createSamplerState(const SamplerStateCreateInfo& createInfo)
-{
+SamplerStatePtr Engine::createSamplerState(const SamplerStateCreateInfo& createInfo) {
+
     SamplerStateCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
 
     SamplerStatePtr samplerState = constructSamplerState_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<SamplerState*>(
         "initSamplerState",
-        [](Engine* engine, SamplerState* p) {
-            engine->initSamplerState_(p);
-        },
+        [](Engine* engine, SamplerState* p) { engine->initSamplerState_(p); },
         samplerState.get());
     return samplerState;
 }
 
-GeometryViewPtr Engine::createGeometryView(const GeometryViewCreateInfo& createInfo)
-{
+GeometryViewPtr Engine::createGeometryView(const GeometryViewCreateInfo& createInfo) {
+
     GeometryViewCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
 
     GeometryViewPtr geometryView = constructGeometryView_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<GeometryView*>(
         "initGeometryView",
-        [](Engine* engine, GeometryView* p) {
-            engine->initGeometryView_(p);
-        },
+        [](Engine* engine, GeometryView* p) { engine->initGeometryView_(p); },
         geometryView.get());
     return geometryView;
 }
 
-BlendStatePtr Engine::createBlendState(const BlendStateCreateInfo& createInfo)
-{
+BlendStatePtr Engine::createBlendState(const BlendStateCreateInfo& createInfo) {
+
     BlendStateCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
 
     BlendStatePtr blendState = constructBlendState_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<BlendState*>(
         "initBlendState",
-        [](Engine* engine, BlendState* p) {
-            engine->initBlendState_(p);
-        },
+        [](Engine* engine, BlendState* p) { engine->initBlendState_(p); },
         blendState.get());
     return blendState;
 }
 
-RasterizerStatePtr Engine::createRasterizerState(const RasterizerStateCreateInfo& createInfo)
-{
+RasterizerStatePtr
+Engine::createRasterizerState(const RasterizerStateCreateInfo& createInfo) {
+
     RasterizerStateCreateInfo sanitizedCreateInfo = createInfo;
     sanitize_(sanitizedCreateInfo);
 
     RasterizerStatePtr rasterizerState = constructRasterizerState_(sanitizedCreateInfo);
     queueLambdaCommandWithParameters_<RasterizerState*>(
         "initRasterizerState",
-        [](Engine* engine, RasterizerState* p) {
-            engine->initRasterizerState_(p);
-        },
+        [](Engine* engine, RasterizerState* p) { engine->initRasterizerState_(p); },
         rasterizerState.get());
     return rasterizerState;
 }
 
-void Engine::setSwapChain(const SwapChainPtr& swapChain)
-{
+void Engine::setSwapChain(const SwapChainPtr& swapChain) {
+
     if (swapChain && !checkResourceIsValid_(swapChain)) {
         return;
     }
@@ -329,8 +335,8 @@ void Engine::setSwapChain(const SwapChainPtr& swapChain)
     }
 }
 
-void Engine::setFramebuffer(const FramebufferPtr& framebuffer)
-{
+void Engine::setFramebuffer(const FramebufferPtr& framebuffer) {
+
     if (framebuffer && !checkResourceIsValid_(framebuffer)) {
         return;
     }
@@ -340,14 +346,13 @@ void Engine::setFramebuffer(const FramebufferPtr& framebuffer)
     }
 }
 
-void Engine::setViewport(Int x, Int y, Int width, Int height)
-{
+void Engine::setViewport(Int x, Int y, Int width, Int height) {
     viewportStack_.last() = Viewport(x, y, width, height);
     dirtyPipelineParameters_ |= PipelineParameter::Viewport;
 }
 
-void Engine::setProgram(BuiltinProgram builtinProgram)
-{
+void Engine::setProgram(BuiltinProgram builtinProgram) {
+
     ProgramPtr program = {};
     switch (builtinProgram) {
     case BuiltinProgram::Simple: {
@@ -360,18 +365,22 @@ void Engine::setProgram(BuiltinProgram builtinProgram)
     if (programStack_.last() != program) {
         programStack_.last() = program;
         if (true /*program->usesBuiltinConstants()*/) {
-            BufferPtr& constantBufferRef = constantBufferArrayStacks_[toIndex_(ShaderStage::Vertex)].last()[0];
+            BufferPtr& constantBufferRef =
+                constantBufferArrayStacks_[toIndex_(ShaderStage::Vertex)].last()[0];
             if (constantBufferRef != builtinConstantsBuffer_) {
                 constantBufferRef = builtinConstantsBuffer_;
-                dirtyPipelineParameters_ |= PipelineParameter::VertexShaderConstantBuffers;
+                dirtyPipelineParameters_ |=
+                    PipelineParameter::VertexShaderConstantBuffers;
             }
         }
         dirtyPipelineParameters_ |= PipelineParameter::Program;
     }
 }
 
-void Engine::setBlendState(const BlendStatePtr& state, const geometry::Vec4f& blendConstantFactor)
-{
+void Engine::setBlendState(
+    const BlendStatePtr& state,
+    const geometry::Vec4f& blendConstantFactor) {
+
     if (blendStateStack_.last() != state) {
         blendStateStack_.last() = state;
         dirtyPipelineParameters_ |= PipelineParameter::BlendState;
@@ -382,30 +391,37 @@ void Engine::setBlendState(const BlendStatePtr& state, const geometry::Vec4f& bl
     }
 }
 
-void Engine::setRasterizerState(const RasterizerStatePtr& state)
-{
+void Engine::setRasterizerState(const RasterizerStatePtr& state) {
     if (rasterizerStateStack_.last() != state) {
         rasterizerStateStack_.last() = state;
         dirtyPipelineParameters_ |= PipelineParameter::RasterizerState;
     }
 }
 
-void Engine::setStageConstantBuffers(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage)
-{
+void Engine::setStageConstantBuffers(
+    const BufferPtr* buffers,
+    Int startIndex,
+    Int count,
+    ShaderStage shaderStage) {
+
     size_t stageIndex = toIndex_(shaderStage);
-    StageConstantBufferArray& constantBufferArray = constantBufferArrayStacks_[stageIndex].emplaceLast();
+    StageConstantBufferArray& constantBufferArray =
+        constantBufferArrayStacks_[stageIndex].emplaceLast();
     for (Int i = 0; i < count; ++i) {
         constantBufferArray[startIndex + i] = buffers[i];
     }
     dirtyPipelineParameters_ |= std::array{
         PipelineParameter::VertexShaderConstantBuffers,
         PipelineParameter::GeometryShaderConstantBuffers,
-        PipelineParameter::PixelShaderConstantBuffers
-    }[stageIndex];
+        PipelineParameter::PixelShaderConstantBuffers}[stageIndex];
 }
 
-void Engine::setStageImageViews(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage)
-{
+void Engine::setStageImageViews(
+    const ImageViewPtr* views,
+    Int startIndex,
+    Int count,
+    ShaderStage shaderStage) {
+
     size_t stageIndex = toIndex_(shaderStage);
     StageImageViewArray& imageViewArray = imageViewArrayStacks_[stageIndex].emplaceLast();
     for (Int i = 0; i < count; ++i) {
@@ -414,26 +430,29 @@ void Engine::setStageImageViews(const ImageViewPtr* views, Int startIndex, Int c
     dirtyPipelineParameters_ |= std::array{
         PipelineParameter::VertexShaderImageViews,
         PipelineParameter::GeometryShaderImageViews,
-        PipelineParameter::PixelShaderImageViews
-    }[stageIndex];
+        PipelineParameter::PixelShaderImageViews}[stageIndex];
 }
 
-void Engine::setStageSamplers(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage)
-{
+void Engine::setStageSamplers(
+    const SamplerStatePtr* states,
+    Int startIndex,
+    Int count,
+    ShaderStage shaderStage) {
+
     size_t stageIndex = toIndex_(shaderStage);
-    StageSamplerStateArray& samplerStateArray = samplerStateArrayStacks_[stageIndex].emplaceLast();
+    StageSamplerStateArray& samplerStateArray =
+        samplerStateArrayStacks_[stageIndex].emplaceLast();
     for (Int i = 0; i < count; ++i) {
         samplerStateArray[startIndex + i] = states[i];
     }
     dirtyPipelineParameters_ |= std::array{
         PipelineParameter::VertexShaderSamplers,
         PipelineParameter::GeometryShaderSamplers,
-        PipelineParameter::PixelShaderSamplers
-    }[stageIndex];
+        PipelineParameter::PixelShaderSamplers}[stageIndex];
 }
 
-void Engine::pushPipelineParameters(PipelineParameters parameters)
-{
+void Engine::pushPipelineParameters(PipelineParameters parameters) {
+
     if (parameters & PipelineParameter::Framebuffer) {
         framebufferStack_.emplaceLast(framebufferStack_.last());
     }
@@ -501,8 +520,8 @@ void Engine::pushPipelineParameters(PipelineParameters parameters)
     }
 }
 
-void Engine::popPipelineParameters(PipelineParameters parameters)
-{
+void Engine::popPipelineParameters(PipelineParameters parameters) {
+
     if (parameters == PipelineParameter::None) {
         return;
     }
@@ -588,14 +607,23 @@ void Engine::popPipelineParameters(PipelineParameters parameters)
     }
 }
 
-void Engine::syncState_()
-{
+namespace {
+
+UInt32 toMilliseconds(const std::chrono::steady_clock::duration& d) {
+    using std::chrono::duration_cast;
+    using std::chrono::milliseconds;
+    return core::int_cast<UInt32>(duration_cast<milliseconds>(d).count());
+}
+
+} // namespace
+
+void Engine::syncState_() {
+
     if (dirtyBuiltinConstantBuffer_) {
         detail::BuiltinConstants constants = {};
         constants.projMatrix = projectionMatrixStack_.last();
         constants.viewMatrix = viewMatrixStack_.last();
-        constants.frameStartTimeInMs = core::int_cast<UInt32>(std::chrono::duration_cast<std::chrono::milliseconds>(
-            frameStartTime_ - engineStartTime_).count());
+        constants.frameStartTimeInMs = toMilliseconds(frameStartTime_ - engineStartTime_);
         struct CommandParameters {
             Buffer* buffer;
             detail::BuiltinConstants constants;
@@ -603,9 +631,11 @@ void Engine::syncState_()
         queueLambdaCommandWithParameters_<CommandParameters>(
             "updateBuiltinConstantBufferData",
             [](Engine* engine, const CommandParameters& p) {
-                engine->updateBufferData_(p.buffer, &p.constants, sizeof(detail::BuiltinConstants));
+                engine->updateBufferData_(
+                    p.buffer, &p.constants, sizeof(detail::BuiltinConstants));
             },
-            builtinConstantsBuffer_.get(), constants);
+            builtinConstantsBuffer_.get(),
+            constants);
         dirtyBuiltinConstantBuffer_ = false;
     }
 
@@ -617,13 +647,12 @@ void Engine::syncState_()
     if (parameters & PipelineParameter::Framebuffer) {
         FramebufferPtr framebuffer = framebufferStack_.last();
         if (!framebuffer) {
-            framebuffer = swapChain_ ? swapChain_->defaultFramebuffer() : FramebufferPtr();
+            framebuffer =
+                swapChain_ ? swapChain_->defaultFramebuffer() : FramebufferPtr();
         }
         queueLambdaCommandWithParameters_<FramebufferPtr>(
             "setFramebuffer",
-            [](Engine* engine, const FramebufferPtr& p) {
-                engine->setFramebuffer_(p);
-            },
+            [](Engine* engine, const FramebufferPtr& p) { engine->setFramebuffer_(p); },
             framebuffer);
     }
     if (parameters & PipelineParameter::Viewport) {
@@ -637,9 +666,7 @@ void Engine::syncState_()
     if (parameters & PipelineParameter::Program) {
         queueLambdaCommandWithParameters_<ProgramPtr>(
             "setProgram",
-            [](Engine* engine, const ProgramPtr& p) {
-                engine->setProgram_(p);
-            },
+            [](Engine* engine, const ProgramPtr& p) { engine->setProgram_(p); },
             programStack_.last());
     }
     if (parameters & PipelineParameter::BlendState) {
@@ -704,8 +731,7 @@ void Engine::syncState_()
     dirtyPipelineParameters_ = PipelineParameter::None;
 }
 
-void Engine::syncStageConstantBuffers_(ShaderStage shaderStage)
-{
+void Engine::syncStageConstantBuffers_(ShaderStage shaderStage) {
     struct CommandParameters {
         StageConstantBufferArray buffers;
         ShaderStage shaderStage;
@@ -713,14 +739,14 @@ void Engine::syncStageConstantBuffers_(ShaderStage shaderStage)
     queueLambdaCommandWithParameters_<CommandParameters>(
         "setStageConstantBuffers",
         [](Engine* engine, const CommandParameters& p) {
-            engine->setStageConstantBuffers_(p.buffers.data(), 0, p.buffers.size(), p.shaderStage);
+            engine->setStageConstantBuffers_(
+                p.buffers.data(), 0, p.buffers.size(), p.shaderStage);
         },
         constantBufferArrayStacks_[toIndex_(shaderStage)].last(),
         shaderStage);
 }
 
-void Engine::syncStageImageViews_(ShaderStage shaderStage)
-{
+void Engine::syncStageImageViews_(ShaderStage shaderStage) {
     struct CommandParameters {
         StageImageViewArray views;
         ShaderStage shaderStage;
@@ -734,8 +760,7 @@ void Engine::syncStageImageViews_(ShaderStage shaderStage)
         shaderStage);
 }
 
-void Engine::syncStageSamplers_(ShaderStage shaderStage)
-{
+void Engine::syncStageSamplers_(ShaderStage shaderStage) {
     struct CommandParameters {
         StageSamplerStateArray states;
         ShaderStage shaderStage;
@@ -749,8 +774,7 @@ void Engine::syncStageSamplers_(ShaderStage shaderStage)
         shaderStage);
 }
 
-void Engine::beginFrame(bool isStateDirty)
-{
+void Engine::beginFrame(bool isStateDirty) {
     frameStartTime_ = std::chrono::steady_clock::now();
     dirtyBuiltinConstantBuffer_ = true;
     if (isStateDirty) {
@@ -760,26 +784,23 @@ void Engine::beginFrame(bool isStateDirty)
     // XXX check every stack has size one !
 }
 
-void Engine::endFrame()
-{
+void Engine::endFrame() {
     submitPendingCommandList_();
     if (!isMultithreadingEnabled()) {
         resourceRegistry_->releaseAndDeleteGarbagedResources(this);
     }
 }
 
-void Engine::resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int height)
-{
+void Engine::resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int height) {
     if (!checkResourceIsValid_(swapChain)) {
         return;
     }
-
     finish();
-    resizeSwapChain_(swapChain.get(), core::int_cast<UInt32>(width), core::int_cast<UInt32>(height));
+    resizeSwapChain_(
+        swapChain.get(), core::int_cast<UInt32>(width), core::int_cast<UInt32>(height));
 }
 
-void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, Int numInstances)
-{
+void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, Int numInstances) {
     if (!checkResourceIsValid_(geometryView)) {
         return;
     }
@@ -787,7 +808,8 @@ void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, Int numIn
         return;
     }
     if (numInstances < 0) {
-        VGC_WARNING(LogVgcGraphics, "Negative numInstances ({}), skipping draw.", numInstances);
+        VGC_WARNING(
+            LogVgcGraphics, "Negative numInstances ({}), skipping draw.", numInstances);
         return;
     }
     syncState_();
@@ -795,35 +817,31 @@ void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, Int numIn
     UInt un = core::int_cast<UInt>(n);
     queueLambdaCommandWithParameters_<GeometryView*>(
         "draw",
-        [=](Engine* engine, GeometryView* gv) {
-            engine->draw_(gv, un, numInstances);
-        },
+        [=](Engine* engine, GeometryView* gv) { engine->draw_(gv, un, numInstances); },
         geometryView.get());
 }
 
-void Engine::clear(const core::Color& color)
-{
+void Engine::clear(const core::Color& color) {
     syncState_();
     queueLambdaCommandWithParameters_<core::Color>(
-        "clear",
-        [](Engine* engine, const core::Color& c) {
-            engine->clear_(c);
-        },
-        color);
+        "clear", [](Engine* engine, const core::Color& c) { engine->clear_(c); }, color);
 }
 
-void Engine::present(Int syncInterval,
-                     std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
-                     PresentFlags flags)
-{
+void Engine::present(
+    Int syncInterval,
+    std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
+    PresentFlags flags) {
+
     ++swapChain_->numPendingPresents_;
     bool shouldWait = syncInterval > 0;
 
-    if (!isMultithreadingEnabled() || (shouldWait && shouldPresentWaitFromSyncedUserThread_())) {
+    if (!isMultithreadingEnabled()
+        || (shouldWait && shouldPresentWaitFromSyncedUserThread_())) {
         // Preventing dead-locks
         // See https://docs.microsoft.com/en-us/windows/win32/api/DXGI1_2/nf-dxgi1_2-idxgiswapchain1-present1#remarks
         finish();
-        UInt64 timestamp = present_(swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags);
+        UInt64 timestamp =
+            present_(swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags);
         --swapChain_->numPendingPresents_;
         presentedCallback(timestamp);
     }
@@ -841,7 +859,10 @@ void Engine::present(Int syncInterval,
                 --p.swapChain->numPendingPresents_;
                 p.presentedCallback(timestamp);
             },
-            swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags, std::move(presentedCallback));
+            swapChain_.get(),
+            core::int_cast<UInt32>(syncInterval),
+            flags,
+            std::move(presentedCallback));
 
         if (shouldWait) {
             finish();
@@ -852,8 +873,8 @@ void Engine::present(Int syncInterval,
     }
 }
 
-void Engine::init_()
-{
+void Engine::init_() {
+
     engineStartTime_ = std::chrono::steady_clock::now();
     if (isMultithreadingEnabled()) {
         startRenderThread_();
@@ -863,10 +884,7 @@ void Engine::init_()
     }
     createBuiltinResources_();
     queueLambdaCommand_(
-        "initBuiltinResources",
-        [](Engine* engine) {
-            engine->initBuiltinResources_();
-        });
+        "initBuiltinResources", [](Engine* engine) { engine->initBuiltinResources_(); });
 
     // QglEngine::initContext_ is not thread-safe (static Qt create() functions
     // related to OpenGL access a global context pointer that is not
@@ -876,14 +894,14 @@ void Engine::init_()
     }
 }
 
-void Engine::createBuiltinResources_()
-{
+void Engine::createBuiltinResources_() {
     {
         BufferCreateInfo createInfo = {};
         createInfo.setUsage(Usage::Dynamic);
         createInfo.setBindFlags(BindFlag::ConstantBuffer);
         createInfo.setCpuAccessFlags(CpuAccessFlag::Write);
-        builtinConstantsBuffer_ = createBuffer(createInfo, sizeof(detail::BuiltinConstants));
+        builtinConstantsBuffer_ =
+            createBuffer(createInfo, sizeof(detail::BuiltinConstants));
     }
 
     createBuiltinShaders_();
@@ -892,15 +910,16 @@ void Engine::createBuiltinResources_()
 // -- render thread + sync --
 
 // XXX add try/catch ?
-void Engine::renderThreadProc_()
-{
+void Engine::renderThreadProc_() {
+
     initContext_();
     std::unique_lock<std::mutex> lock(mutex_, std::defer_lock);
     while (1) {
         lock.lock();
 
         // wait for work or stop request
-        wakeRenderThreadConditionVariable_.wait(lock, [&]{ return !commandQueue_.isEmpty() || stopRequested_; });
+        wakeRenderThreadConditionVariable_.wait(
+            lock, [&] { return !commandQueue_.isEmpty() || stopRequested_; });
 
         // userResourcesToSetAsInternalOnly_
 
@@ -939,19 +958,17 @@ void Engine::renderThreadProc_()
     }
 }
 
-void Engine::startRenderThread_()
-{
+void Engine::startRenderThread_() {
     if (stopRequested_) {
         throw core::LogicError("Engine: restarts are not supported.");
     }
     if (!isThreadRunning_) {
-        renderThread_ = std::thread([=]{ this->renderThreadProc_(); });
+        renderThread_ = std::thread([=] { this->renderThreadProc_(); });
         isThreadRunning_ = true;
     }
 }
 
-void Engine::stopRenderThread_()
-{
+void Engine::stopRenderThread_() {
     pendingCommands_.clear();
     swapChain_.reset();
     if (isThreadRunning_) {
@@ -966,8 +983,7 @@ void Engine::stopRenderThread_()
     }
 }
 
-UInt Engine::submitPendingCommandList_()
-{
+UInt Engine::submitPendingCommandList_() {
     std::unique_lock<std::mutex> lock(mutex_);
     bool notifyRenderThread = false;
     UInt id = lastSubmittedCommandListId_;
@@ -984,48 +1000,57 @@ UInt Engine::submitPendingCommandList_()
     return id;
 }
 
-void Engine::waitCommandListTranslationFinished_(Int commandListId)
-{
+void Engine::waitCommandListTranslationFinished_(Int commandListId) {
     std::unique_lock<std::mutex> lock(mutex_);
     if (commandListId == 0) {
         commandListId = lastSubmittedCommandListId_;
     }
-    renderThreadEventConditionVariable_.wait(lock, [&]{ return lastExecutedCommandListId_ == commandListId; });
+    renderThreadEventConditionVariable_.wait(
+        lock, [&] { return lastExecutedCommandListId_ == commandListId; });
     lock.unlock();
 }
 
-
-void Engine::sanitize_(SwapChainCreateInfo& /*createInfo*/)
-{
+void Engine::sanitize_(SwapChainCreateInfo& /*createInfo*/) {
     // XXX
 }
 
-void Engine::sanitize_(BufferCreateInfo& /*createInfo*/)
-{
+void Engine::sanitize_(BufferCreateInfo& /*createInfo*/) {
     // XXX
 }
 
-void Engine::sanitize_(ImageCreateInfo& createInfo)
-{
+void Engine::sanitize_(ImageCreateInfo& createInfo) {
+
     bool isMultisampled = createInfo.numSamples() > 1;
     if (isMultisampled) {
         if (createInfo.rank() == ImageRank::_1D) {
-            VGC_WARNING(LogVgcGraphics, "Number of samples ignored: multisampling is not available for 1D images.");
+            VGC_WARNING(
+                LogVgcGraphics,
+                "Number of samples ignored: multisampling is not available for 1D "
+                "images.");
             createInfo.setNumSamples(1);
         }
         if (createInfo.numMipLevels() != 1) {
-            VGC_WARNING(LogVgcGraphics, "Number of mip levels ignored: multisampled image can only have level 0.");
+            VGC_WARNING(
+                LogVgcGraphics,
+                "Number of mip levels ignored: multisampled image can only have level "
+                "0.");
             createInfo.setNumMipLevels(1);
         }
     }
     if (!createInfo.isMipGenerationEnabled() && createInfo.numMipLevels() == 0) {
-        VGC_WARNING(LogVgcGraphics, "Automatic number of mip levels resolves to 1 since mip generation is not enabled.");
+        VGC_WARNING(
+            LogVgcGraphics,
+            "Automatic number of mip levels resolves to 1 since mip generation is not "
+            "enabled.");
         createInfo.setNumMipLevels(1);
     }
 
     const Int width = createInfo.width();
     if (width <= 0 || width > maxImageWidth) {
-        std::string err = core::format("Requested image width ({}) should be in the range [1, {}].", width, maxImageWidth);
+        std::string err = core::format(
+            "Requested image width ({}) should be in the range [1, {}].",
+            width,
+            maxImageWidth);
         if (width <= 0) {
             throw core::RangeError(err);
         }
@@ -1035,12 +1060,16 @@ void Engine::sanitize_(ImageCreateInfo& createInfo)
     }
 
     const Int height = createInfo.height();
-    if (height != 0 && core::toUnderlying(createInfo.rank()) < core::toUnderlying(ImageRank::_2D)) {
+    if (height != 0
+        && core::toUnderlying(createInfo.rank()) < core::toUnderlying(ImageRank::_2D)) {
         VGC_WARNING(LogVgcGraphics, "Height ignored: image rank must be at least 2D.");
         createInfo.setHeight(0);
     }
     else if (height <= 0 || height > maxImageHeight) {
-        std::string err = core::format("Requested image height ({}) should be in the range [1, {}].", height, maxImageHeight);
+        std::string err = core::format(
+            "Requested image height ({}) should be in the range [1, {}].",
+            height,
+            maxImageHeight);
         if (height <= 0) {
             throw core::RangeError(err);
         }
@@ -1051,7 +1080,11 @@ void Engine::sanitize_(ImageCreateInfo& createInfo)
 
     const Int numLayers = createInfo.numLayers();
     if (numLayers <= 0 || numLayers > maxImageLayers) {
-        VGC_ERROR(LogVgcGraphics, "Requested number of image layers ({}) should be in the range [1, {}].", numLayers, maxImageLayers);
+        VGC_ERROR(
+            LogVgcGraphics,
+            "Requested number of image layers ({}) should be in the range [1, {}].",
+            numLayers,
+            maxImageLayers);
     }
 
     //const float numMipLevels = createInfo.numMipLevels();
@@ -1063,7 +1096,10 @@ void Engine::sanitize_(ImageCreateInfo& createInfo)
     const Int numSamples = createInfo.numSamples();
     if (numSamples <= 0 || numSamples > maxNumSamples) {
         static_assert(maxNumSamples == 8); // hard-coded list
-        VGC_ERROR(LogVgcGraphics, "Requested number of samples ({}) should be either 1, 2, 4, or 8.", numSamples);
+        VGC_ERROR(
+            LogVgcGraphics,
+            "Requested number of samples ({}) should be either 1, 2, 4, or 8.",
+            numSamples);
     }
 
     //usage
@@ -1072,31 +1108,25 @@ void Engine::sanitize_(ImageCreateInfo& createInfo)
     //resourceMiscFlags
 }
 
-void Engine::sanitize_(ImageViewCreateInfo& /*createInfo*/)
-{
+void Engine::sanitize_(ImageViewCreateInfo& /*createInfo*/) {
     // XXX should check bind flags compatibility here
 }
 
-void Engine::sanitize_(SamplerStateCreateInfo& /*createInfo*/)
-{
+void Engine::sanitize_(SamplerStateCreateInfo& /*createInfo*/) {
     // XXX
 }
 
-void Engine::sanitize_(GeometryViewCreateInfo& /*createInfo*/)
-{
+void Engine::sanitize_(GeometryViewCreateInfo& /*createInfo*/) {
     // XXX
 }
 
-void Engine::sanitize_(BlendStateCreateInfo& /*createInfo*/)
-{
+void Engine::sanitize_(BlendStateCreateInfo& /*createInfo*/) {
     // XXX
 }
 
-void Engine::sanitize_(RasterizerStateCreateInfo& /*createInfo*/)
-{
+void Engine::sanitize_(RasterizerStateCreateInfo& /*createInfo*/) {
     // XXX
 }
-
 
 } // namespace graphics
 } // namespace vgc

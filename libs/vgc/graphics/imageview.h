@@ -20,8 +20,8 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/enums.h>
-#include <vgc/graphics/resource.h>
 #include <vgc/graphics/image.h>
+#include <vgc/graphics/resource.h>
 
 namespace vgc::graphics {
 
@@ -34,8 +34,7 @@ class VGC_GRAPHICS_API ImageViewCreateInfo {
 public:
     constexpr ImageViewCreateInfo() noexcept = default;
 
-    Int firstLayer() const
-    {
+    Int firstLayer() const {
         return firstLayer_;
     }
 
@@ -46,8 +45,7 @@ public:
     //    firstLayer_ = firstLayer;
     //}
 
-    Int numLayers() const
-    {
+    Int numLayers() const {
         return numLayers_;
     }
 
@@ -58,14 +56,12 @@ public:
     //    numLayers_ = numLayers;
     //}
 
-    Int lastLayer() const
-    {
+    Int lastLayer() const {
         // XXX test overflow
         return firstLayer_ + numLayers_ - 1;
     }
 
-    Int firstMipLevel() const
-    {
+    Int firstMipLevel() const {
         return firstMipLevel_;
     }
 
@@ -75,8 +71,7 @@ public:
     //    firstMipLevel_ = firstMipLevel;
     //}
 
-    Int numMipLevels() const
-    {
+    Int numMipLevels() const {
         return numMipLevels_;
     }
 
@@ -88,19 +83,16 @@ public:
     //    numMipLevels_ = numMipLevels;
     //}
 
-    Int lastMipLevel() const
-    {
+    Int lastMipLevel() const {
         // XXX test overflow
         return firstMipLevel_ + numMipLevels_ - 1;
     }
 
-    ImageBindFlags bindFlags() const
-    {
+    ImageBindFlags bindFlags() const {
         return bindFlags_;
     }
 
-    void setBindFlags(ImageBindFlags bindFlags)
-    {
+    void setBindFlags(ImageBindFlags bindFlags) {
         bindFlags_ = bindFlags;
     }
 
@@ -130,20 +122,22 @@ class VGC_GRAPHICS_API ImageView : public Resource {
 protected:
     friend Engine;
 
-    ImageView(ResourceRegistry* registry,
-              const ImageViewCreateInfo& createInfo,
-              const ImagePtr& image)
+    ImageView(
+        ResourceRegistry* registry,
+        const ImageViewCreateInfo& createInfo,
+        const ImagePtr& image)
         : Resource(registry)
         , info_(createInfo)
         , viewedResource_(image)
         , pixelFormat_(image->pixelFormat()) {
     }
 
-    ImageView(ResourceRegistry* registry,
-              const ImageViewCreateInfo& createInfo,
-              const BufferPtr& buffer,
-              PixelFormat pixelFormat,
-              Int numBufferElements)
+    ImageView(
+        ResourceRegistry* registry,
+        const ImageViewCreateInfo& createInfo,
+        const BufferPtr& buffer,
+        PixelFormat pixelFormat,
+        Int numBufferElements)
         : Resource(registry)
         , info_(createInfo)
         , viewedResource_(buffer)
@@ -152,69 +146,56 @@ protected:
     }
 
 public:
-    Int firstLayer() const
-    {
+    Int firstLayer() const {
         return info_.firstLayer();
     }
 
-    Int numLayers() const
-    {
+    Int numLayers() const {
         return info_.numLayers();
     }
 
-    Int lastLayer() const
-    {
+    Int lastLayer() const {
         return info_.lastLayer();
     }
 
-    Int firstMipLevel() const
-    {
+    Int firstMipLevel() const {
         return info_.firstMipLevel();
     }
 
-    Int numMipLevels() const
-    {
+    Int numMipLevels() const {
         return info_.numMipLevels();
     }
 
-    Int lastMipLevel() const
-    {
+    Int lastMipLevel() const {
         return info_.lastMipLevel();
     }
 
-    ImageBindFlags bindFlags() const
-    {
+    ImageBindFlags bindFlags() const {
         return info_.bindFlags();
     }
 
-    PixelFormat pixelFormat() const
-    {
+    PixelFormat pixelFormat() const {
         return pixelFormat_;
     }
 
-    Int numBufferElements() const
-    {
+    Int numBufferElements() const {
         return static_cast<Int>(numBufferElements_);
     }
 
-    bool isBuffer() const
-    {
+    bool isBuffer() const {
         return numBufferElements_ > 0;
     }
 
-    ResourcePtr<Buffer> viewedBuffer() const
-    {
+    ResourcePtr<Buffer> viewedBuffer() const {
         return isBuffer() ? static_pointer_cast<Buffer>(viewedResource_) : nullptr;
     }
 
-    ResourcePtr<Image> viewedImage() const
-    {
+    ResourcePtr<Image> viewedImage() const {
         return isBuffer() ? nullptr : static_pointer_cast<Image>(viewedResource_);
     }
 
 protected:
-    void releaseSubResources_() override
-    {
+    void releaseSubResources_() override {
         viewedResource_.reset();
     }
 

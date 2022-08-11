@@ -33,73 +33,59 @@ class VGC_GRAPHICS_API RasterizerStateCreateInfo {
 public:
     constexpr RasterizerStateCreateInfo() noexcept = default;
 
-    FillMode fillMode() const
-    {
+    FillMode fillMode() const {
         return fillMode_;
     }
 
-    void setFillMode(FillMode fillMode)
-    {
+    void setFillMode(FillMode fillMode) {
         fillMode_ = fillMode;
     }
 
-    CullMode cullMode() const
-    {
+    CullMode cullMode() const {
         return cullMode_;
     }
 
-    void setCullMode(CullMode cullMode)
-    {
+    void setCullMode(CullMode cullMode) {
         cullMode_ = cullMode;
     }
 
-    bool isFrontCounterClockwise() const
-    {
+    bool isFrontCounterClockwise() const {
         return isFrontCounterClockwise_;
     }
 
-    void setFrontCounterClockwise_(bool isFrontCounterClockwise)
-    {
+    void setFrontCounterClockwise_(bool isFrontCounterClockwise) {
         isFrontCounterClockwise_ = isFrontCounterClockwise;
     }
 
-    bool isDepthClippingEnabled() const
-    {
+    bool isDepthClippingEnabled() const {
         return isDepthClippingEnabled_;
     }
 
-    void setDepthClippingEnabled(bool enabled)
-    {
+    void setDepthClippingEnabled(bool enabled) {
         isDepthClippingEnabled_ = enabled;
     }
 
-    bool isScissoringEnabled() const
-    {
+    bool isScissoringEnabled() const {
         return isScissoringEnabled_;
     }
 
-    void setScissoringEnabled(bool enabled)
-    {
+    void setScissoringEnabled(bool enabled) {
         isScissoringEnabled_ = enabled;
     }
 
-    bool isMultisamplingEnabled() const
-    {
+    bool isMultisamplingEnabled() const {
         return isMultisamplingEnabled_;
     }
 
-    void setMultisamplingEnabled(bool enabled)
-    {
+    void setMultisamplingEnabled(bool enabled) {
         isMultisamplingEnabled_ = enabled;
     }
 
-    bool isLineAntialiasingEnabled() const
-    {
+    bool isLineAntialiasingEnabled() const {
         return isLineAntialiasingEnabled_;
     }
 
-    void setLineAntialiasingEnabled(bool enabled)
-    {
+    void setLineAntialiasingEnabled(bool enabled) {
         isLineAntialiasingEnabled_ = enabled;
     }
 
@@ -122,43 +108,36 @@ private:
 class VGC_GRAPHICS_API RasterizerState : public Resource {
 protected:
     RasterizerState(ResourceRegistry* registry, const RasterizerStateCreateInfo& info)
-        : Resource(registry), info_(info)
-    {
+        : Resource(registry)
+        , info_(info) {
     }
 
 public:
-    FillMode fillMode() const
-    {
+    FillMode fillMode() const {
         return info_.fillMode();
     }
 
-    CullMode cullMode() const
-    {
+    CullMode cullMode() const {
         return info_.cullMode();
     }
 
-    bool isFrontCounterClockwise() const
-    {
+    bool isFrontCounterClockwise() const {
         return info_.isFrontCounterClockwise();
     }
 
-    bool isDepthClippingEnabled() const
-    {
+    bool isDepthClippingEnabled() const {
         return info_.isDepthClippingEnabled();
     }
 
-    bool isScissoringEnabled() const
-    {
+    bool isScissoringEnabled() const {
         return info_.isScissoringEnabled();
     }
 
-    bool isMultisamplingEnabled() const
-    {
+    bool isMultisamplingEnabled() const {
         return info_.isMultisamplingEnabled();
     }
 
-    bool isLineAntialiasingEnabled() const
-    {
+    bool isLineAntialiasingEnabled() const {
         return info_.isLineAntialiasingEnabled();
     }
 

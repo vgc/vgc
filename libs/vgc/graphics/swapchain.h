@@ -44,60 +44,51 @@ class VGC_GRAPHICS_API SwapChainCreateInfo {
 public:
     using FlagsType = UInt64;
 
-    Int width() const
-    {
+    Int width() const {
         return width_;
     }
 
-    void setWidth(Int width)
-    {
+    void setWidth(Int width) {
         width_ = width;
     }
 
-    Int height() const
-    {
+    Int height() const {
         return height_;
     }
 
-    void setHeight(Int height)
-    {
+    void setHeight(Int height) {
         height_ = height;
     }
 
-    void* windowNativeHandle() const
-    {
+    void* windowNativeHandle() const {
         return windowNativeHandle_;
     }
 
-    WindowNativeHandleType windowNativeHandleType() const
-    {
+    WindowNativeHandleType windowNativeHandleType() const {
         return windowNativeHandleType_;
     }
 
     void setWindowNativeHandle(
-        void* windowNativeHandle, WindowNativeHandleType windowNativeHandleType)
-    {
+        void* windowNativeHandle,
+        WindowNativeHandleType windowNativeHandleType) {
+
         windowNativeHandle_ = windowNativeHandle;
         windowNativeHandleType_ = windowNativeHandleType;
     }
 
-    bool isWindowed() const
-    {
+    bool isWindowed() const {
         return isWindowed_;
     }
 
-    void setWindowed(bool isWindowed)
-    {
+    void setWindowed(bool isWindowed) {
         isWindowed_ = isWindowed;
     }
 
-    FlagsType flags() const
-    {
+    FlagsType flags() const {
         return flags_;
     }
 
-    void setFlags(FlagsType flags)
-    {
+    void setFlags(FlagsType flags) {
         flags_ = flags;
     }
 
@@ -118,34 +109,31 @@ protected:
     friend Engine;
     using Resource::Resource;
 
-    SwapChain(ResourceRegistry* registry,
-              const SwapChainCreateInfo& createInfo,
-              const FramebufferPtr& defaultFramebuffer)
+    SwapChain(
+        ResourceRegistry* registry,
+        const SwapChainCreateInfo& createInfo,
+        const FramebufferPtr& defaultFramebuffer)
         : Resource(registry)
         , info_(createInfo)
         , defaultFramebuffer_(defaultFramebuffer) {
     }
 
 public:
-    const SwapChainCreateInfo& desc() const
-    {
+    const SwapChainCreateInfo& desc() const {
         return info_;
     }
 
-    Int numPendingPresents() const
-    {
+    Int numPendingPresents() const {
         // static_cast is safe because value is always small
         return static_cast<Int>(numPendingPresents_.load());
     }
 
-    const FramebufferPtr& defaultFramebuffer() const
-    {
+    const FramebufferPtr& defaultFramebuffer() const {
         return defaultFramebuffer_;
     }
 
 protected:
-    void releaseSubResources_() override
-    {
+    void releaseSubResources_() override {
         defaultFramebuffer_.reset();
     }
 

@@ -19,6 +19,7 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <list>
@@ -27,7 +28,6 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#include <chrono>
 
 #include <vgc/core/assert.h>
 #include <vgc/core/color.h>
@@ -70,25 +70,21 @@ struct BuiltinConstants {
 } // namespace detail
 
 // temporary impl
-template <typename T>
+template<typename T>
 struct Span {
-    T* data() const
-    {
+    T* data() const {
         return data_;
     }
 
-    Int length() const
-    {
+    Int length() const {
         return length_;
     }
 
-    T* begin() const
-    {
+    T* begin() const {
         return data_;
     }
 
-    T* end() const
-    {
+    T* end() const {
         return data_ + length_;
     }
 
@@ -100,43 +96,35 @@ class VGC_GRAPHICS_API WindowSwapChainFormat {
 public:
     using FlagsType = UInt64;
 
-    PixelFormat pixelFormat() const
-    {
+    PixelFormat pixelFormat() const {
         return pixelFormat_;
     }
 
-    void setPixelFormat(WindowPixelFormat pixelFormat)
-    {
+    void setPixelFormat(WindowPixelFormat pixelFormat) {
         pixelFormat_ = windowPixelFormatToPixelFormat(pixelFormat);
     }
 
-    Int numSamples() const
-    {
+    Int numSamples() const {
         return numSamples_;
     }
 
-    void setNumSamples(Int numSamples)
-    {
+    void setNumSamples(Int numSamples) {
         numSamples_ = numSamples;
     }
 
-    Int numBuffers() const
-    {
+    Int numBuffers() const {
         return numBuffers_;
     }
 
-    void setNumBuffers(Int numBuffers)
-    {
+    void setNumBuffers(Int numBuffers) {
         numBuffers_ = numBuffers;
     }
 
-    FlagsType flags() const
-    {
+    FlagsType flags() const {
         return flags_;
     }
 
-    void setFlags(FlagsType flags)
-    {
+    void setFlags(FlagsType flags) {
         flags_ = flags;
     }
 
@@ -149,23 +137,19 @@ private:
 
 class VGC_GRAPHICS_API EngineCreateInfo {
 public:
-    const WindowSwapChainFormat& windowSwapChainFormat() const
-    {
+    const WindowSwapChainFormat& windowSwapChainFormat() const {
         return windowSwapChainFormat_;
     }
 
-    WindowSwapChainFormat& windowSwapChainFormat()
-    {
+    WindowSwapChainFormat& windowSwapChainFormat() {
         return windowSwapChainFormat_;
     }
 
-    bool isMultithreadingEnabled() const
-    {
+    bool isMultithreadingEnabled() const {
         return isMultithreadingEnabled_;
     }
 
-    void setMultithreadingEnabled(bool enabled)
-    {
+    void setMultithreadingEnabled(bool enabled) {
         isMultithreadingEnabled_ = enabled;
     }
 
@@ -208,14 +192,11 @@ protected:
     void onDestroyed() override;
 
 public:
-
-    const WindowSwapChainFormat& windowSwapChainFormat() const
-    {
+    const WindowSwapChainFormat& windowSwapChainFormat() const {
         return createInfo_.windowSwapChainFormat();
     }
 
-    bool isMultithreadingEnabled() const
-    {
+    bool isMultithreadingEnabled() const {
         return createInfo_.isMultithreadingEnabled();
     }
 
@@ -230,7 +211,8 @@ public:
     BufferPtr createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInBytes);
 
     template<typename T>
-    BufferPtr createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialData);
+    BufferPtr
+    createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialData);
 
     BufferPtr createVertexBuffer(Int initialLengthInBytes);
 
@@ -241,11 +223,17 @@ public:
 
     ImagePtr createImage(const ImageCreateInfo& createInfo);
 
-    ImagePtr createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData);
+    ImagePtr
+    createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData);
 
-    ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image);
+    ImageViewPtr
+    createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image);
 
-    ImageViewPtr createImageView(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, Int numElements);
+    ImageViewPtr createImageView(
+        const ImageViewCreateInfo& createInfo,
+        const BufferPtr& buffer,
+        PixelFormat format,
+        Int numElements);
 
     SamplerStatePtr createSamplerState(const SamplerStateCreateInfo& createInfo);
 
@@ -267,15 +255,28 @@ public:
 
     void setProgram(BuiltinProgram builtinProgram);
 
-    void setBlendState(const BlendStatePtr& state, const geometry::Vec4f& blendConstantFactor);
+    void
+    setBlendState(const BlendStatePtr& state, const geometry::Vec4f& blendConstantFactor);
 
     void setRasterizerState(const RasterizerStatePtr& state);
 
-    void setStageConstantBuffers(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage);
+    void setStageConstantBuffers(
+        const BufferPtr* buffers,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage);
 
-    void setStageImageViews(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage);
+    void setStageImageViews(
+        const ImageViewPtr* views,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage);
 
-    void setStageSamplers(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage);
+    void setStageSamplers(
+        const SamplerStatePtr* states,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage);
 
     /// Returns the current projection matrix (top-most on the stack).
     ///
@@ -370,12 +371,12 @@ public:
 
     /// presentedCallback is called from an unspecified thread.
     //
-    void present(Int syncInterval,
-                 std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
-                 PresentFlags flags = PresentFlag::None);
+    void present(
+        Int syncInterval,
+        std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
+        PresentFlags flags = PresentFlag::None);
 
-    std::chrono::steady_clock::time_point engineStartTime() const
-    {
+    std::chrono::steady_clock::time_point engineStartTime() const {
         return engineStartTime_;
     }
 
@@ -392,16 +393,27 @@ protected:
     virtual FramebufferPtr constructFramebuffer_(const ImageViewPtr& colorImageView) = 0;
     virtual BufferPtr constructBuffer_(const BufferCreateInfo& createInfo) = 0;
     virtual ImagePtr constructImage_(const ImageCreateInfo& createInfo) = 0;
-    virtual ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image) = 0;
-    virtual ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements) = 0;
-    virtual SamplerStatePtr constructSamplerState_(const SamplerStateCreateInfo& createInfo) = 0;
-    virtual GeometryViewPtr constructGeometryView_(const GeometryViewCreateInfo& createInfo) = 0;
-    virtual BlendStatePtr constructBlendState_(const BlendStateCreateInfo& createInfo) = 0;
-    virtual RasterizerStatePtr constructRasterizerState_(const RasterizerStateCreateInfo& createInfo) = 0;
+    virtual ImageViewPtr
+    constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image) = 0;
+    virtual ImageViewPtr constructImageView_(
+        const ImageViewCreateInfo& createInfo,
+        const BufferPtr& buffer,
+        PixelFormat format,
+        UInt32 numElements) = 0;
+    virtual SamplerStatePtr
+    constructSamplerState_(const SamplerStateCreateInfo& createInfo) = 0;
+    virtual GeometryViewPtr
+    constructGeometryView_(const GeometryViewCreateInfo& createInfo) = 0;
+    virtual BlendStatePtr
+    constructBlendState_(const BlendStateCreateInfo& createInfo) = 0;
+    virtual RasterizerStatePtr
+    constructRasterizerState_(const RasterizerStateCreateInfo& createInfo) = 0;
 
     virtual void resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) = 0;
 
-    virtual bool shouldPresentWaitFromSyncedUserThread_() { return false; }
+    virtual bool shouldPresentWaitFromSyncedUserThread_() {
+        return false;
+    }
 
     // -- RENDER THREAD implementation functions --
 
@@ -410,7 +422,8 @@ protected:
 
     virtual void initFramebuffer_(Framebuffer* framebuffer) = 0;
     virtual void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) = 0;
-    virtual void initImage_(Image* image, const Span<const char>* mipLevelDataSpans, Int count) = 0;
+    virtual void
+    initImage_(Image* image, const Span<const char>* mipLevelDataSpans, Int count) = 0;
     virtual void initImageView_(ImageView* view) = 0;
     virtual void initSamplerState_(SamplerState* state) = 0;
     virtual void initGeometryView_(GeometryView* view) = 0;
@@ -421,22 +434,38 @@ protected:
     virtual void setFramebuffer_(const FramebufferPtr& framebuffer) = 0;
     virtual void setViewport_(Int x, Int y, Int width, Int height) = 0;
     virtual void setProgram_(const ProgramPtr& program) = 0;
-    virtual void setBlendState_(const BlendStatePtr& state, const geometry::Vec4f& blendConstantFactor) = 0;
+    virtual void setBlendState_(
+        const BlendStatePtr& state,
+        const geometry::Vec4f& blendConstantFactor) = 0;
     virtual void setRasterizerState_(const RasterizerStatePtr& state) = 0;
-    virtual void setStageConstantBuffers_(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage) = 0;
-    virtual void setStageImageViews_(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage) = 0;
-    virtual void setStageSamplers_(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage) = 0;
+    virtual void setStageConstantBuffers_(
+        const BufferPtr* buffers,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage) = 0;
+    virtual void setStageImageViews_(
+        const ImageViewPtr* views,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage) = 0;
+    virtual void setStageSamplers_(
+        const SamplerStatePtr* states,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage) = 0;
 
     // XXX virtual void setSwapChainDefaultFramebuffer_(const SwapChainPtr& swapChain, const FramebufferPtr& framebuffer) = 0;
 
-    virtual void updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) = 0;
+    virtual void
+    updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) = 0;
 
     virtual void draw_(GeometryView* view, UInt numPrimitives, UInt numInstances) = 0;
     virtual void clear_(const core::Color& color) = 0;
 
-    virtual UInt64 present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) = 0;
+    virtual UInt64
+    present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) = 0;
 
-    virtual void setStateDirty_() {};
+    virtual void setStateDirty_(){};
 
 protected:
     detail::ResourceRegistry* resourceRegistry_ = nullptr;
@@ -484,19 +513,16 @@ protected:
     std::list<CommandUPtr> pendingCommands_;
 
     template<typename TCommand, typename... Args>
-    void queueCommand_(Args&&... args)
-    {
+    void queueCommand_(Args&&... args) {
         if (!isMultithreadingEnabled()) {
             TCommand(std::forward<Args>(args)...).execute(this);
             return;
         }
-        pendingCommands_.emplace_back(
-            new TCommand(std::forward<Args>(args)...));
+        pendingCommands_.emplace_back(new TCommand(std::forward<Args>(args)...));
     };
 
     template<typename Lambda>
-    void queueLambdaCommand_(std::string_view name, Lambda&& lambda)
-    {
+    void queueLambdaCommand_(std::string_view name, Lambda&& lambda) {
         if (!isMultithreadingEnabled()) {
             lambda(this);
             return;
@@ -504,22 +530,25 @@ protected:
         pendingCommands_.emplace_back(
             // our deduction guide doesn't work on gcc 7.5.0
             // new detail::LambdaCommand(name, std::forward<Lambda>(lambda)));
-            new detail::LambdaCommand<std::decay_t<Lambda>>(name, std::forward<Lambda>(lambda)));
+            new detail::LambdaCommand<std::decay_t<Lambda>>(
+                name, std::forward<Lambda>(lambda)));
     };
 
     template<typename Data, typename Lambda, typename... Args>
-    void queueLambdaCommandWithParameters_(std::string_view name, Lambda&& lambda, Args&&... args)
-    {
+    void queueLambdaCommandWithParameters_(
+        std::string_view name,
+        Lambda&& lambda,
+        Args&&... args) {
         if (!isMultithreadingEnabled()) {
             lambda(this, Data{std::forward<Args>(args)...});
             return;
         }
         pendingCommands_.emplace_back(
-            new detail::LambdaCommandWithParameters<Data, std::decay_t<Lambda>>(name, std::forward<Lambda>(lambda), std::forward<Args>(args)...));
+            new detail::LambdaCommandWithParameters<Data, std::decay_t<Lambda>>(
+                name, std::forward<Lambda>(lambda), std::forward<Args>(args)...));
     };
 
-    static constexpr size_t toIndex_(ShaderStage stage)
-    {
+    static constexpr size_t toIndex_(ShaderStage stage) {
         return core::toUnderlying(stage);
     }
 
@@ -584,8 +613,7 @@ private:
 
     struct CommandList {
         CommandList(std::list<CommandUPtr>&& commands)
-            : commands(std::move(commands))
-        {
+            : commands(std::move(commands)) {
         }
 
         std::list<CommandUPtr> commands;
@@ -616,8 +644,7 @@ private:
 
     // -- checks --
 
-    bool checkResourceIsValid_(Resource* resource)
-    {
+    bool checkResourceIsValid_(Resource* resource) {
         if (!resource) {
             VGC_ERROR(LogVgcGraphics, "Unexpected null resource");
             return false;
@@ -634,75 +661,63 @@ private:
     }
 
     template<typename U>
-    bool checkResourceIsValid_(const ResourcePtr<U>& resource)
-    {
+    bool checkResourceIsValid_(const ResourcePtr<U>& resource) {
         return checkResourceIsValid_(resource.get());
     }
 };
 
-inline const geometry::Mat4f& Engine::projectionMatrix() const
-{
+inline const geometry::Mat4f& Engine::projectionMatrix() const {
     return projectionMatrixStack_.last();
 }
 
-inline void Engine::setProjectionMatrix(const geometry::Mat4f& projectionMatrix)
-{
+inline void Engine::setProjectionMatrix(const geometry::Mat4f& projectionMatrix) {
     projectionMatrixStack_.last() = projectionMatrix;
     dirtyBuiltinConstantBuffer_ = true;
 }
 
-inline void Engine::pushProjectionMatrix()
-{
+inline void Engine::pushProjectionMatrix() {
     projectionMatrixStack_.emplaceLast(projectionMatrixStack_.last());
 }
 
-inline void Engine::popProjectionMatrix()
-{
+inline void Engine::popProjectionMatrix() {
     projectionMatrixStack_.removeLast();
     dirtyBuiltinConstantBuffer_ = true;
 }
 
-inline const geometry::Mat4f& Engine::viewMatrix() const
-{
+inline const geometry::Mat4f& Engine::viewMatrix() const {
     return viewMatrixStack_.last();
 }
 
-inline void Engine::setViewMatrix(const geometry::Mat4f& viewMatrix)
-{
+inline void Engine::setViewMatrix(const geometry::Mat4f& viewMatrix) {
     viewMatrixStack_.last() = viewMatrix;
     dirtyBuiltinConstantBuffer_ = true;
 }
 
-inline void Engine::pushViewMatrix()
-{
+inline void Engine::pushViewMatrix() {
     viewMatrixStack_.emplaceLast(viewMatrixStack_.last());
 }
 
-inline void Engine::popViewMatrix()
-{
+inline void Engine::popViewMatrix() {
     viewMatrixStack_.removeLast();
     dirtyBuiltinConstantBuffer_ = true;
 }
 
-inline FramebufferPtr Engine::defaultFramebuffer()
-{
+inline FramebufferPtr Engine::defaultFramebuffer() {
     SwapChain* swapChain = swapChain_.get();
     return swapChain ? swapChain->defaultFramebuffer() : FramebufferPtr();
 }
 
-inline void Engine::setDefaultFramebuffer()
-{
+inline void Engine::setDefaultFramebuffer() {
     setFramebuffer(defaultFramebuffer());
 }
 
-inline SwapChainPtr Engine::swapChain()
-{
+inline SwapChainPtr Engine::swapChain() {
     return swapChain_;
 }
 
 template<typename T>
-inline BufferPtr Engine::createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialData)
-{
+inline BufferPtr
+Engine::createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialData) {
     BufferPtr buffer(constructBuffer_(createInfo));
     buffer->lengthInBytes_ = initialData.length() * sizeof(T);
 
@@ -713,15 +728,16 @@ inline BufferPtr Engine::createBuffer(const BufferCreateInfo& createInfo, core::
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initBuffer",
         [](Engine* engine, const CommandParameters& p) {
-            engine->initBuffer_(p.buffer, p.initialData.data(), p.initialData.length() * sizeof(T));
+            engine->initBuffer_(
+                p.buffer, p.initialData.data(), p.initialData.length() * sizeof(T));
         },
-        buffer.get(), std::move(initialData));
+        buffer.get(),
+        std::move(initialData));
     return buffer;
 }
 
 template<typename T>
-inline BufferPtr Engine::createVertexBuffer(core::Array<T> initialData, bool isDynamic)
-{
+inline BufferPtr Engine::createVertexBuffer(core::Array<T> initialData, bool isDynamic) {
     BufferCreateInfo createInfo = {};
     createInfo.setUsage(isDynamic ? Usage::Dynamic : Usage::Immutable);
     createInfo.setBindFlags(BindFlag::VertexBuffer);
@@ -731,8 +747,7 @@ inline BufferPtr Engine::createVertexBuffer(core::Array<T> initialData, bool isD
 }
 
 template<typename T>
-inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> data)
-{
+inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> data) {
     Buffer* buf = buffer.get();
     if (!checkResourceIsValid_(buf)) {
         return;
@@ -751,14 +766,16 @@ inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> dat
     queueLambdaCommandWithParameters_<CommandParameters>(
         "updateBufferData",
         [](Engine* engine, const CommandParameters& p) {
-            engine->updateBufferData_(p.buffer, p.data.data(), p.data.length() * sizeof(T));
+            engine->updateBufferData_(
+                p.buffer, p.data.data(), p.data.length() * sizeof(T));
         },
-        buf, std::move(data));
+        buf,
+        std::move(data));
 }
 
 template<typename T>
-inline void Engine::updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data)
-{
+inline void
+Engine::updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data) {
     GeometryView* geom = geometry.get();
     if (!checkResourceIsValid_(geom)) {
         return;
@@ -766,16 +783,14 @@ inline void Engine::updateVertexBufferData(const GeometryViewPtr& geometry, core
     updateBufferData(geom->vertexBuffer(0), std::move(data));
 }
 
-inline Int Engine::flush()
-{
+inline Int Engine::flush() {
     if (isMultithreadingEnabled()) {
         return static_cast<Int>(submitPendingCommandList_());
     }
     return 0;
 }
 
-inline void Engine::finish()
-{
+inline void Engine::finish() {
     if (isMultithreadingEnabled()) {
         UInt id = submitPendingCommandList_();
         waitCommandListTranslationFinished_(id);

@@ -22,17 +22,19 @@
 
 namespace vgc::graphics {
 
+// clang-format off
+
 // See https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_bind_flag
 //
 enum class BindFlag : UInt16 {
-    None = 0,
-    VertexBuffer = 1,
-    IndexBuffer = 2,
-    ConstantBuffer = 4,
-    ShaderResource = 8,
-    RenderTarget = 0x10,
-    DepthStencil = 0x20,
-    StreamOutput = 0x40,
+    None            = 0x00,
+    VertexBuffer    = 0x01,
+    IndexBuffer     = 0x02,
+    ConstantBuffer  = 0x04,
+    ShaderResource  = 0x08,
+    RenderTarget    = 0x10,
+    DepthStencil    = 0x20,
+    StreamOutput    = 0x40,
     UnorderedAccess = 0x80,
 };
 VGC_DEFINE_FLAGS(BindFlags, BindFlag)
@@ -40,10 +42,10 @@ VGC_DEFINE_FLAGS(BindFlags, BindFlag)
 /// Subset of `BindFlags` compatible with images.
 //
 enum class ImageBindFlag : UInt16 {
-    None = 0,
-    ShaderResource = 8,
-    RenderTarget = 0x10,
-    DepthStencil = 0x20,
+    None            = 0x00,
+    ShaderResource  = 0x08,
+    RenderTarget    = 0x10,
+    DepthStencil    = 0x20,
     UnorderedAccess = 0x80,
 };
 VGC_DEFINE_FLAGS(ImageBindFlags, ImageBindFlag)
@@ -51,12 +53,12 @@ VGC_DEFINE_FLAGS(ImageBindFlags, ImageBindFlag)
 // See https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_resource_misc_flag
 //
 enum class ResourceMiscFlag : UInt32 {
-    None = 0,
+    None = 0x00,
 
     /// Enables resource sharing between compatible engines.
     /// Unsupported at the moment.
     ///
-    Shared = 2,
+    Shared = 0x02,
 
     // requires OpenGL 4.0 / ES 3.1
     //DrawIndirectArgs = 0x10,
@@ -75,8 +77,8 @@ VGC_DEFINE_FLAGS(ResourceMiscFlags, ResourceMiscFlag)
 // See https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_cpu_access_flag
 //
 enum class CpuAccessFlag : UInt8 {
-    None = 0,
-    Read = 1,
+    None  = 0,
+    Read  = 1,
     Write = 2,
 };
 VGC_DEFINE_FLAGS(CpuAccessFlags, CpuAccessFlag)
@@ -204,13 +206,11 @@ enum class WindowPixelFormat : UInt8 {
     RGBA_8_UNORM_SRGB = core::toUnderlying(PixelFormat::RGBA_8_UNORM_SRGB),
 };
 
-inline constexpr PixelFormat windowPixelFormatToPixelFormat(WindowPixelFormat format)
-{
+inline constexpr PixelFormat windowPixelFormatToPixelFormat(WindowPixelFormat format) {
     return static_cast<PixelFormat>(core::toUnderlying(format));
 }
 
-inline constexpr UInt8 pixelFormatToElementSizeInBytes(PixelFormat format)
-{
+inline constexpr UInt8 pixelFormatToElementSizeInBytes(PixelFormat format) {
     switch (format) {
     case PixelFormat::D_16_UNORM:               return 2;
     case PixelFormat::D_32_FLOAT:               return 4;
@@ -327,13 +327,13 @@ inline constexpr UInt8 numBlendOps = static_cast<UInt8>(BlendOp::Max_) + 1;
 
 enum class BlendWriteMaskBit : UInt8 {
     None = 0,
-    R = 1,
-    G = 2,
-    B = 4,
-    A = 8,
-    RGB = R | G | B,
+    R    = 1,
+    G    = 2,
+    B    = 4,
+    A    = 8,
+    RGB  = R | G | B,
     RGBA = RGB | A,
-    All = RGBA,
+    All  = RGBA,
 };
 VGC_DEFINE_FLAGS(BlendWriteMask, BlendWriteMaskBit)
 
@@ -437,6 +437,8 @@ enum class PipelineParameter : UInt32 {
     All = Viewport | Program | BlendState | DepthStencilState | RasterizerState | AllShadersResources,
 };
 VGC_DEFINE_FLAGS(PipelineParameters, PipelineParameter)
+
+// clang-format on
 
 } // namespace vgc::graphics
 

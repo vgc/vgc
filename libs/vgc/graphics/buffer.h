@@ -50,43 +50,35 @@ class VGC_GRAPHICS_API BufferCreateInfo {
 public:
     constexpr BufferCreateInfo() noexcept = default;
 
-    Usage usage() const
-    {
+    Usage usage() const {
         return usage_;
     }
 
-    void setUsage(Usage usage)
-    {
+    void setUsage(Usage usage) {
         usage_ = usage;
     }
 
-    BindFlags bindFlags() const
-    {
+    BindFlags bindFlags() const {
         return bindFlags_;
     }
 
-    void setBindFlags(BindFlags bindFlags)
-    {
+    void setBindFlags(BindFlags bindFlags) {
         bindFlags_ = bindFlags;
     }
 
-    CpuAccessFlags cpuAccessFlags() const
-    {
+    CpuAccessFlags cpuAccessFlags() const {
         return cpuAccessFlags_;
     }
 
-    void setCpuAccessFlags(CpuAccessFlags cpuAccessFlags)
-    {
+    void setCpuAccessFlags(CpuAccessFlags cpuAccessFlags) {
         cpuAccessFlags_ = cpuAccessFlags;
     }
 
-    ResourceMiscFlags resourceMiscFlags() const
-    {
+    ResourceMiscFlags resourceMiscFlags() const {
         return resourceMiscFlags_;
     }
 
-    void setResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
-    {
+    void setResourceMiscFlags(ResourceMiscFlags resourceMiscFlags) {
         resourceMiscFlags_ = resourceMiscFlags;
     }
 
@@ -105,8 +97,10 @@ private:
 class VGC_GRAPHICS_API Buffer : public Resource {
 protected:
     Buffer(ResourceRegistry* registry, const BufferCreateInfo& info)
-        : Resource(registry), info_(info), lengthInBytes_(0)
-    {
+        : Resource(registry)
+        , info_(info)
+        , lengthInBytes_(0) {
+
         // Limitation of D3D11 impl
         const BindFlags bindFlags = this->bindFlags();
         if (bindFlags == BindFlag::None) {
@@ -114,34 +108,30 @@ protected:
         }
         if (bindFlags & BindFlag::ConstantBuffer) {
             if (bindFlags != BindFlag::ConstantBuffer) {
-                throw core::LogicError("BindFlags::UniformBuffer cannot be combined with any other bind flag");
+                throw core::LogicError("BindFlags::UniformBuffer cannot be combined with "
+                                       "any other bind flag");
             }
         }
     }
 
 public:
-    Int lengthInBytes() const
-    {
+    Int lengthInBytes() const {
         return lengthInBytes_;
     }
 
-    Usage usage() const
-    {
+    Usage usage() const {
         return info_.usage();
     }
 
-    BindFlags bindFlags() const
-    {
+    BindFlags bindFlags() const {
         return info_.bindFlags();
     }
 
-    CpuAccessFlags cpuAccessFlags() const
-    {
+    CpuAccessFlags cpuAccessFlags() const {
         return info_.cpuAccessFlags();
     }
 
-    ResourceMiscFlags resourceMiscFlags() const
-    {
+    ResourceMiscFlags resourceMiscFlags() const {
         return info_.resourceMiscFlags();
     }
 

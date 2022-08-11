@@ -25,7 +25,6 @@
 #include <vgc/graphics/enums.h>
 #include <vgc/graphics/resource.h>
 
-
 namespace vgc::graphics {
 
 /// \class vgc::graphics::SamplerStateCreateInfo
@@ -35,123 +34,99 @@ class VGC_GRAPHICS_API SamplerStateCreateInfo {
 public:
     constexpr SamplerStateCreateInfo() noexcept = default;
 
-    FilterMode magFilter() const
-    {
+    FilterMode magFilter() const {
         return magFilter_;
     }
 
-    void setMagFilter(FilterMode magFilter)
-    {
+    void setMagFilter(FilterMode magFilter) {
         magFilter_ = magFilter;
     }
 
-    FilterMode minFilter() const
-    {
+    FilterMode minFilter() const {
         return minFilter_;
     }
 
-    void setMinFilter(FilterMode minFilter)
-    {
+    void setMinFilter(FilterMode minFilter) {
         minFilter_ = minFilter;
     }
 
-    FilterMode mipFilter() const
-    {
+    FilterMode mipFilter() const {
         return mipFilter_;
     }
 
-    void setMipFilter(FilterMode mipFilter)
-    {
+    void setMipFilter(FilterMode mipFilter) {
         mipFilter_ = mipFilter;
     }
 
-    ImageWrapMode wrapModeU() const
-    {
+    ImageWrapMode wrapModeU() const {
         return wrapModeU_;
     }
 
-    void setWrapModeU(ImageWrapMode wrapModeU)
-    {
+    void setWrapModeU(ImageWrapMode wrapModeU) {
         wrapModeU_ = wrapModeU;
     }
 
-    ImageWrapMode wrapModeV() const
-    {
+    ImageWrapMode wrapModeV() const {
         return wrapModeV_;
     }
 
-    void setWrapModeV(ImageWrapMode wrapModeV)
-    {
+    void setWrapModeV(ImageWrapMode wrapModeV) {
         wrapModeV_ = wrapModeV;
     }
 
-    ImageWrapMode wrapModeW() const
-    {
+    ImageWrapMode wrapModeW() const {
         return wrapModeW_;
     }
 
-    void setWrapModeW(ImageWrapMode wrapModeW)
-    {
+    void setWrapModeW(ImageWrapMode wrapModeW) {
         wrapModeW_ = wrapModeW;
     }
 
-    ComparisonFunction comparisonFunction() const
-    {
+    ComparisonFunction comparisonFunction() const {
         return comparisonFunction_;
     }
 
-    void setComparisonFunction(ComparisonFunction comparisonFunction)
-    {
+    void setComparisonFunction(ComparisonFunction comparisonFunction) {
         comparisonFunction_ = comparisonFunction;
     }
 
-    Int maxAnisotropy() const
-    {
+    Int maxAnisotropy() const {
         return maxAnisotropy_;
     }
 
-    void setMaxAnisotropy(Int maxAnisotropy)
-    {
+    void setMaxAnisotropy(Int maxAnisotropy) {
         maxAnisotropy_ = maxAnisotropy;
     }
 
-    const geometry::Vec4f& wrapColor() const
-    {
+    const geometry::Vec4f& wrapColor() const {
         return wrapColor_;
     }
 
-    void setWrapColor(const geometry::Vec4f& wrapColor)
-    {
+    void setWrapColor(const geometry::Vec4f& wrapColor) {
         wrapColor_ = wrapColor;
     }
 
-    float mipLODBias() const
-    {
+    float mipLODBias() const {
         return mipLODBias_;
     }
 
-    void setMipLODBias(float mipLODBias)
-    {
+    void setMipLODBias(float mipLODBias) {
         mipLODBias_ = mipLODBias;
     }
 
-    float minLOD() const
-    {
+    float minLOD() const {
         return minLOD_;
     }
 
-    void setMinLOD(float minLOD)
-    {
+    void setMinLOD(float minLOD) {
         minLOD_ = minLOD;
     }
 
-    float maxLOD() const
-    {
+    float maxLOD() const {
         return maxLOD_;
     }
 
-    void setMaxLOD(float maxLOD)
-    {
+    void setMaxLOD(float maxLOD) {
         maxLOD_ = maxLOD;
     }
 
@@ -179,68 +154,56 @@ private:
 class VGC_GRAPHICS_API SamplerState : public Resource {
 protected:
     SamplerState(ResourceRegistry* registry, const SamplerStateCreateInfo& info)
-        : Resource(registry), info_(info)
-    {
+        : Resource(registry)
+        , info_(info) {
     }
 
 public:
-    FilterMode magFilter() const
-    {
+    FilterMode magFilter() const {
         return info_.magFilter();
     }
 
-    FilterMode minFilter() const
-    {
+    FilterMode minFilter() const {
         return info_.minFilter();
     }
 
-    FilterMode mipFilter() const
-    {
+    FilterMode mipFilter() const {
         return info_.mipFilter();
     }
 
-    Int maxAnisotropy() const
-    {
+    Int maxAnisotropy() const {
         return info_.maxAnisotropy();
     }
 
-    ImageWrapMode wrapModeU() const
-    {
+    ImageWrapMode wrapModeU() const {
         return info_.wrapModeU();
     }
 
-    ImageWrapMode wrapModeV() const
-    {
+    ImageWrapMode wrapModeV() const {
         return info_.wrapModeV();
     }
 
-    ImageWrapMode wrapModeW() const
-    {
+    ImageWrapMode wrapModeW() const {
         return info_.wrapModeW();
     }
 
-    ComparisonFunction comparisonFunction() const
-    {
+    ComparisonFunction comparisonFunction() const {
         return info_.comparisonFunction();
     }
 
-    const geometry::Vec4f& wrapColor() const
-    {
+    const geometry::Vec4f& wrapColor() const {
         return info_.wrapColor();
     }
 
-    float mipLODBias() const
-    {
+    float mipLODBias() const {
         return info_.mipLODBias();
     }
 
-    float minLOD() const
-    {
+    float minLOD() const {
         return info_.minLOD();
     }
 
-    float maxLOD() const
-    {
+    float maxLOD() const {
         return info_.maxLOD();
     }
 

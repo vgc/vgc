@@ -21,9 +21,3 @@
 // IdGenerator symbol which must be exported (despite the class being
 // all-inline). Not having this *.cpp file results in a linker error on
 // MSVC when trying to instanciate an IdGenerator from another DLL.
-
-namespace vgc {
-namespace graphics {
-
-} // namespace graphics
-} // namespace vgc

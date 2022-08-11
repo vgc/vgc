@@ -22,8 +22,8 @@
 #include <unordered_set>
 #include <utility>
 
-#include <vgc/core/array.h>
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/array.h>
 #include <vgc/core/object.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/logcategories.h>
@@ -67,8 +67,7 @@ private:
 
     ~ResourceRegistry() = default;
 
-    void registerResource_(Resource* resource)
-    {
+    void registerResource_(Resource* resource) {
         VGC_CORE_ASSERT(releasedByEngine_ == false);
         {
             std::lock_guard<std::mutex> lg(mutex_);
@@ -77,8 +76,7 @@ private:
         ++refCount_;
     }
 
-    void garbageResource_(Resource* resource)
-    {
+    void garbageResource_(Resource* resource) {
         {
             std::lock_guard<std::mutex> lg(mutex_);
             if (!resources_.erase(resource)) {
@@ -89,8 +87,7 @@ private:
         decRef_();
     }
 
-    void addRef_()
-    {
+    void addRef_() {
         ++refCount_;
     }
 
@@ -124,8 +121,7 @@ protected:
 
     // Should be called in the user thread, not the rendering thread.
     explicit Resource(ResourceRegistry* registry)
-        : registry_(registry)
-    {
+        : registry_(registry) {
         registry->registerResource_(this);
     }
 
@@ -152,7 +148,8 @@ protected:
     virtual ~Resource() {
 #ifdef VGC_DEBUG
         if (!released_) {
-            VGC_ERROR(LogVgcGraphics, "A resource has not been released before destruction");
+            VGC_ERROR(
+                LogVgcGraphics, "A resource has not been released before destruction");
         }
 #endif
     }
@@ -160,7 +157,8 @@ protected:
     // This function is called when the resource is being garbaged.
     // You must override it to reset all inner ResourcePtr.
     //
-    virtual void releaseSubResources_() {}
+    virtual void releaseSubResources_() {
+    }
 
     // This function is called only in the rendering thread.
     // You must override it to release the actual underlying data and objects.
@@ -172,8 +170,7 @@ protected:
     }
 
 private:
-    void initRef_()
-    {
+    void initRef_() {
         int64_t uninitializedValue = uninitializedCountValue_;
         if (refCount_ == uninitializedValue) {
             refCount_ = 1;
@@ -183,19 +180,17 @@ private:
         }
     }
 
-    void incRef_()
-    {
+    void incRef_() {
 #ifdef VGC_DEBUG
         if (refCount_ <= 0) {
-            throw core::LogicError(
-                "Resource: trying to take shared ownership of an already garbaged resource.");
+            throw core::LogicError("Resource: trying to take shared ownership of an "
+                                   "already garbaged resource.");
         }
 #endif
         ++refCount_;
     }
 
-    void decRef_()
-    {
+    void decRef_() {
         if (--refCount_ == 0) {
             releaseSubResources_();
             registry_->garbageResource_(this);
@@ -214,8 +209,7 @@ private:
 
 namespace detail {
 
-inline void ResourceRegistry::releaseAndDeleteGarbagedResources(Engine* engine)
-{
+inline void ResourceRegistry::releaseAndDeleteGarbagedResources(Engine* engine) {
     std::lock_guard<std::mutex> lg(mutex_);
     for (Resource* r : garbagedResources_) {
         r->release_(engine);
@@ -224,10 +218,10 @@ inline void ResourceRegistry::releaseAndDeleteGarbagedResources(Engine* engine)
     garbagedResources_.clear();
 }
 
-inline void ResourceRegistry::releaseAllResources(Engine* engine)
-{
+inline void ResourceRegistry::releaseAllResources(Engine* engine) {
     if (releasedByEngine_.exchange(true)) {
-        VGC_WARNING(LogVgcGraphics, "Trying to release a ResourceRegistry more than once.");
+        VGC_WARNING(
+            LogVgcGraphics, "Trying to release a ResourceRegistry more than once.");
         return;
     }
     {
@@ -244,8 +238,7 @@ inline void ResourceRegistry::releaseAllResources(Engine* engine)
     decRef_();
 }
 
-inline void ResourceRegistry::decRef_()
-{
+inline void ResourceRegistry::decRef_() {
     if (--refCount_ == 0) {
         VGC_CORE_ASSERT(resources_.empty());
         for (Resource* r : garbagedResources_) {
@@ -282,18 +275,15 @@ public:
         return static_cast<U*>(p_);
     }
 
-    explicit operator bool() const noexcept
-    {
+    explicit operator bool() const noexcept {
         return p_ != nullptr;
     }
 
-    T& operator*() const noexcept
-    {
+    T& operator*() const noexcept {
         return *p_;
     }
 
-    T* operator->() const noexcept
-    {
+    T* operator->() const noexcept {
         return p_;
     }
 
@@ -302,14 +292,12 @@ protected:
 };
 
 template<typename T, typename U>
-bool operator==(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept
-{
+bool operator==(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept {
     return lhs.get() == rhs.get();
 }
 
 template<typename T, typename U>
-bool operator!=(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept
-{
+bool operator!=(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept {
     return lhs.get() != rhs.get();
 }
 
@@ -336,8 +324,7 @@ protected:
 
     // For casts
     ResourcePtr(T* p, CastTag)
-        : Base(p)
-    {
+        : Base(p) {
         if (this->p_) {
             this->p_->incRef_();
         }
@@ -352,8 +339,7 @@ public:
     using Base::Base;
 
     explicit ResourcePtr(T* p)
-        : Base(p)
-    {
+        : Base(p) {
         if (this->p_) {
             this->p_->initRef_();
         }
@@ -365,8 +351,7 @@ public:
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr(const ResourcePtr<U>& other)
-        : Base(other.p_)
-    {
+        : Base(other.p_) {
         if (this->p_) {
             this->p_->incRef_();
         }
@@ -374,28 +359,24 @@ public:
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr(ResourcePtr<U>&& other) noexcept
-        : Base(other.p_)
-    {
+        : Base(other.p_) {
         other.p_ = nullptr;
     }
 
     ResourcePtr(const ResourcePtr& other)
-        : Base(other.p_)
-    {
+        : Base(other.p_) {
         if (this->p_) {
             this->p_->incRef_();
         }
     }
 
     ResourcePtr(ResourcePtr&& other) noexcept
-        : Base(other.p_)
-    {
+        : Base(other.p_) {
         other.p_ = nullptr;
     }
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
-    ResourcePtr& operator=(const ResourcePtr<U>& other)
-    {
+    ResourcePtr& operator=(const ResourcePtr<U>& other) {
         if (this->p_ != other.p_) {
             if (other.p_) {
                 other.p_->incRef_();
@@ -408,26 +389,22 @@ public:
         return *this;
     }
 
-    ResourcePtr& operator=(const ResourcePtr& other)
-    {
+    ResourcePtr& operator=(const ResourcePtr& other) {
         return operator=<T>(other);
     }
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
-    ResourcePtr& operator=(ResourcePtr<U>&& other)
-    {
+    ResourcePtr& operator=(ResourcePtr<U>&& other) {
         std::swap(this->p_, other.p_);
         return *this;
     }
 
-    ResourcePtr& operator=(ResourcePtr&& other) noexcept
-    {
+    ResourcePtr& operator=(ResourcePtr&& other) noexcept {
         std::swap(this->p_, other.p_);
         return *this;
     }
 
-    void reset()
-    {
+    void reset() {
         if (this->p_) {
             this->p_->decRef_();
 #ifdef VGC_DEBUG
@@ -436,8 +413,7 @@ public:
         }
     }
 
-    void reset(T* p)
-    {
+    void reset(T* p) {
         if (p) {
             p->initRef_();
         }
@@ -447,15 +423,13 @@ public:
         this->p_ = p;
     }
 
-    Int64 useCount() const
-    {
+    Int64 useCount() const {
         return this->p_ ? this->p_->useCount() : 0;
     }
 };
 
 template<typename T, typename U>
-ResourcePtr<T> static_pointer_cast(const ResourcePtr<U>& r) noexcept
-{
+ResourcePtr<T> static_pointer_cast(const ResourcePtr<U>& r) noexcept {
     return ResourcePtr<T>(static_cast<T*>(r.get()), typename ResourcePtr<T>::CastTag{});
 }
 
