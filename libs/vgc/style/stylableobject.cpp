@@ -18,49 +18,40 @@
 
 namespace vgc::style {
 
-StylableObject::StylableObject()
-{
+StylableObject::StylableObject() {
 }
 
-void StylableObject::setStyleSheet(StyleSheetPtr styleSheet)
-{
+void StylableObject::setStyleSheet(StyleSheetPtr styleSheet) {
     styleSheet_ = styleSheet;
     updateStyle_();
 }
 
-void StylableObject::setStyleSheet(std::string_view string)
-{
-    StyleSheetPtr styleSheet = StyleSheet::create(
-                defaultStyleSheet()->propertySpecs(),
-                string);
+void StylableObject::setStyleSheet(std::string_view string) {
+    StyleSheetPtr styleSheet =
+        StyleSheet::create(defaultStyleSheet()->propertySpecs(), string);
     setStyleSheet(styleSheet);
 }
 
-void StylableObject::addStyleClass(core::StringId class_)
-{
+void StylableObject::addStyleClass(core::StringId class_) {
     styleClasses_.add(class_);
     updateStyle_();
 }
 
-void StylableObject::removeStyleClass(core::StringId class_)
-{
+void StylableObject::removeStyleClass(core::StringId class_) {
     styleClasses_.remove(class_);
     updateStyle_();
 }
 
-void StylableObject::toggleStyleClass(core::StringId class_)
-{
+void StylableObject::toggleStyleClass(core::StringId class_) {
     styleClasses_.toggle(class_);
     updateStyle_();
 }
 
-StyleValue StylableObject::style(core::StringId property) const
-{
+StyleValue StylableObject::style(core::StringId property) const {
     return getStyleComputedValue_(property);
 }
 
-void StylableObject::updateStyle_()
-{
+void StylableObject::updateStyle_() {
     // In this function, we precompute which rule sets match this node and
     // precompute all "cascaded values". Note that "computed values" are
     // computed on the fly based on "cascaded values".
@@ -76,7 +67,10 @@ void StylableObject::updateStyle_()
 
     // Get all non-null stylesheets from this node to the root nodes
     StylableObject* root = this;
-    for (StylableObject* node = this; node != nullptr; node = node->parentStylableObject()) {
+    for (StylableObject* node = this; //
+         node != nullptr;             //
+         node = node->parentStylableObject()) {
+
         const StyleSheet* styleSheet = node->styleSheet();
         if (styleSheet) {
             styleCachedData_.ruleSetSpans.append({styleSheet, 0, 0});
@@ -114,11 +108,10 @@ void StylableObject::updateStyle_()
             }
         }
         it->end = styleCachedData_.ruleSetArray.length();
-        std::stable_sort(styleCachedData_.ruleSetArray.begin() + it->begin,
-                         styleCachedData_.ruleSetArray.begin() + it->end,
-                         [](const auto& p1, const auto& p2) {
-                             return p1.second < p2.second;
-                         });
+        std::stable_sort(
+            styleCachedData_.ruleSetArray.begin() + it->begin,
+            styleCachedData_.ruleSetArray.begin() + it->end,
+            [](const auto& p1, const auto& p2) { return p1.second < p2.second; });
     }
 
     // Compute cascaded values.
@@ -126,14 +119,17 @@ void StylableObject::updateStyle_()
     for (const auto& r : styleCachedData_.ruleSetArray) {
         StyleRuleSet* ruleSet = r.first;
         for (StyleDeclaration* declaration : ruleSet->declarations()) {
-            styleCachedData_.cascadedValues[declaration->property()] = declaration->value();
+            styleCachedData_.cascadedValues[declaration->property()] =
+                declaration->value();
         }
     }
 
     // Recursily update childen
     StylableObject* childBegin = firstChildStylableObject();
     StylableObject* childEnd = nullptr;
-    for (StylableObject* child = childBegin; child != childEnd; child = child->nextSiblingStylableObject()) {
+    for (StylableObject* child = childBegin; //
+         child != childEnd;                  //
+         child = child->nextSiblingStylableObject()) {
         child->updateStyle_();
     }
 
@@ -141,9 +137,9 @@ void StylableObject::updateStyle_()
     // (e.g., so that it can be re-rendered)
 }
 
-const StylePropertySpec* StylableObject::getStylePropertySpec_(core::StringId property) const
-{
-    for(const internal::RuleSetSpan& span : styleCachedData_.ruleSetSpans) {
+const StylePropertySpec*
+StylableObject::getStylePropertySpec_(core::StringId property) const {
+    for (const internal::RuleSetSpan& span : styleCachedData_.ruleSetSpans) {
         const StylePropertySpec* res = span.styleSheet->propertySpecs()->get(property);
         if (res) {
             return res;
@@ -168,8 +164,7 @@ const StylePropertySpec* StylableObject::getStylePropertySpec_(core::StringId pr
 // If there is no declared value for the given property, then
 // a value of type StyleValueType::None is returned.
 //
-StyleValue StylableObject::getStyleCascadedValue_(core::StringId property) const
-{
+StyleValue StylableObject::getStyleCascadedValue_(core::StringId property) const {
     auto search = styleCachedData_.cascadedValues.find(property);
     if (search != styleCachedData_.cascadedValues.end()) {
         return search->second;
@@ -189,8 +184,7 @@ StyleValue StylableObject::getStyleCascadedValue_(core::StringId property) const
 // default value for the given property (this can be the case for custom
 // properties which are missing from the stylesheet).
 //
-StyleValue StylableObject::getStyleComputedValue_(core::StringId property) const
-{
+StyleValue StylableObject::getStyleComputedValue_(core::StringId property) const {
     StyleValue v = getStyleCascadedValue_(property);
     if (v.type() == StyleValueType::None) {
         const StylePropertySpec* spec = getStylePropertySpec_(property);
