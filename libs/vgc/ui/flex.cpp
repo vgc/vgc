@@ -200,14 +200,14 @@ void stretchChild(
         isRow ? child->preferredSize().x() : child->preferredSize().y();
     float childStretch = getChildStretch(isRow, freeSpace, child, childStretchBonus);
     float childMainSize = childPreferredMainSize + extraSpacePerStretch * childStretch;
-    float paddingLeft = internal::getLength(this, strings::padding_left);
-    float paddingRight = internal::getLength(this, strings::padding_right);
-    float paddingTop = internal::getLength(this, strings::padding_top);
-    float paddingBottom = internal::getLength(this, strings::padding_bottom);
-    float childMainMarginBefore = isRow ? paddingLeft : paddingTop;
-    float childMainMarginAfter = isRow ? paddingRight : paddingBottom;
-    float childCrossMarginBefore = isRow ? paddingTop : paddingLeft;
-    float childCrossMarginAfter = isRow ? paddingBottom : paddingRight;
+    float marginLeft = internal::getLength(child, strings::margin_left);
+    float marginRight = internal::getLength(child, strings::margin_right);
+    float marginTop = internal::getLength(child, strings::margin_top);
+    float marginBottom = internal::getLength(child, strings::margin_bottom);
+    float childMainMarginBefore = isRow ? marginLeft : marginTop;
+    float childMainMarginAfter = isRow ? marginRight : marginBottom;
+    float childCrossMarginBefore = isRow ? marginTop : marginLeft;
+    float childCrossMarginAfter = isRow ? marginBottom : marginRight;
     float childCrossSize = crossSize - parentCrossPaddingBefore - parentCrossPaddingAfter
                            - childCrossMarginBefore - childCrossMarginAfter;
     float childCrossPosition = parentCrossPaddingBefore + childCrossMarginBefore;
