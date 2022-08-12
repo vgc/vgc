@@ -452,12 +452,12 @@ public:
 
 class Object;
 
-namespace internal {
+namespace detail {
 
 VGC_CORE_API std::string notAliveMsg(const Object* object);
 VGC_CORE_API std::string notAChildMsg(const Object* object, const Object* expectedParent);
 
-} // namespace internal
+} // namespace detail
 
 /// \class vgc::core::NotAliveError
 /// \brief Raised when attempting to use an Object which is not alive.
@@ -476,7 +476,7 @@ public:
     /// alive.
     ///
     NotAliveError(const Object* object)
-        : LogicError(internal::notAliveMsg(object)) {
+        : LogicError(detail::notAliveMsg(object)) {
     }
 };
 
@@ -500,7 +500,7 @@ public:
     /// child of the given \p expectedParent.
     ///
     NotAChildError(const Object* object, const Object* expectedParent)
-        : LogicError(internal::notAChildMsg(object, expectedParent)) {
+        : LogicError(detail::notAChildMsg(object, expectedParent)) {
     }
 };
 

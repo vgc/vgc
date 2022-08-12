@@ -26,7 +26,7 @@ namespace dom {
 class Node;
 class Document;
 
-namespace internal {
+namespace detail {
 
 VGC_DOM_API std::string notAliveMsg(const Node* node);
 VGC_DOM_API std::string wrongDocumentMsg(const Node* n1, const Node* n2);
@@ -35,7 +35,7 @@ VGC_DOM_API std::string secondRootElementMsg(const Document* document);
 VGC_DOM_API std::string childCycleMsg(const Node* parent, const Node* child);
 VGC_DOM_API std::string replaceDocumentMsg(const Document* oldNode, const Node* newNode);
 
-} // namespace internal
+} // namespace detail
 
 /// \class vgc::dom::LogicError
 /// \brief Raised when there is a logic error detected in vgc::dom.
@@ -88,7 +88,7 @@ public:
     /// Node \p n2 do not belong to the same Document.
     ///
     WrongDocumentError(const Node* n1, const Node* n2)
-        : LogicError(internal::wrongDocumentMsg(n1, n2)) {
+        : LogicError(detail::wrongDocumentMsg(n1, n2)) {
     }
 };
 
@@ -148,7 +148,7 @@ public:
     /// have \p child as its child due to incompatible node types.
     ///
     WrongChildTypeError(const Node* parent, const Node* child)
-        : HierarchyRequestError(internal::wrongChildTypeMsg(parent, child)) {
+        : HierarchyRequestError(detail::wrongChildTypeMsg(parent, child)) {
     }
 };
 
@@ -169,7 +169,7 @@ public:
     /// cannot have a second root element.
     ///
     SecondRootElementError(const Document* document)
-        : HierarchyRequestError(internal::secondRootElementMsg(document)) {
+        : HierarchyRequestError(detail::secondRootElementMsg(document)) {
     }
 };
 
@@ -191,7 +191,7 @@ public:
     /// child as its child because \p parent is a descendant of \p child.
     ///
     ChildCycleError(const Node* parent, const Node* child)
-        : HierarchyRequestError(internal::childCycleMsg(parent, child)) {
+        : HierarchyRequestError(detail::childCycleMsg(parent, child)) {
     }
 };
 
@@ -212,7 +212,7 @@ public:
     /// replace \p oldNode because \p oldNode is the Document node.
     ///
     ReplaceDocumentError(const Document* oldNode, const Node* newNode)
-        : HierarchyRequestError(internal::replaceDocumentMsg(oldNode, newNode)) {
+        : HierarchyRequestError(detail::replaceDocumentMsg(oldNode, newNode)) {
     }
 };
 

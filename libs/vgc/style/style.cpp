@@ -32,7 +32,7 @@ StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
     return StyleValue::invalid();
 }
 
-namespace internal {
+namespace detail {
 
 // https://www.w3.org/TR/css-syntax-3/#parsing
 //
@@ -500,7 +500,7 @@ private:
     }
 };
 
-} // namespace internal
+} // namespace detail
 
 StyleSheet::StyleSheet()
     : Object() {
@@ -512,7 +512,7 @@ StyleSheetPtr StyleSheet::create() {
 
 StyleSheetPtr
 StyleSheet::create(const StylePropertySpecTablePtr& specs, std::string_view s) {
-    return internal::StyleParser::parseStyleSheet(specs, s);
+    return detail::StyleParser::parseStyleSheet(specs, s);
 }
 
 StyleRuleSet::StyleRuleSet()

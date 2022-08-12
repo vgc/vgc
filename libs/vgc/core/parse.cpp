@@ -23,7 +23,7 @@
 namespace vgc {
 namespace core {
 
-namespace internal {
+namespace detail {
 
 double computeDouble(bool isPositive, double a, int b, int n) {
     if (b + n - 1 > 307) {
@@ -47,7 +47,7 @@ double computeDouble(bool isPositive, double a, int b, int n) {
     // TODO use precomputed powers of tens for better performance and higher accuracy.
 }
 
-} // namespace internal
+} // namespace detail
 
 } // namespace core
 } // namespace vgc

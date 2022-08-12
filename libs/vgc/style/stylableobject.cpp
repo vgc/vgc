@@ -139,7 +139,7 @@ void StylableObject::updateStyle_() {
 
 const StylePropertySpec*
 StylableObject::getStylePropertySpec_(core::StringId property) const {
-    for (const internal::RuleSetSpan& span : styleCachedData_.ruleSetSpans) {
+    for (const detail::RuleSetSpan& span : styleCachedData_.ruleSetSpans) {
         const StylePropertySpec* res = span.styleSheet->propertySpecs()->get(property);
         if (res) {
             return res;

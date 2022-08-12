@@ -262,7 +262,7 @@ IntType readUnsignedInteger(IStream& in) {
     return i;
 }
 
-namespace internal {
+namespace detail {
 
 // Implementation of readSignedInteger. We use this indirection to make
 // documentation easier: there is only one function in the public API, taking
@@ -323,7 +323,7 @@ UIntType readSignedIntegerImpl(IStream& in) {
     }
 }
 
-} // namespace internal
+} // namespace detail
 
 /// Reads a base-10 text representation of a signed integer from the input
 /// stream \p in. Leading whitespaces are allowed. A leading positive or
@@ -337,10 +337,10 @@ UIntType readSignedIntegerImpl(IStream& in) {
 ///
 template<typename IntType, typename IStream, VGC_REQUIRES(std::is_integral_v<IntType>)>
 IntType readSignedInteger(IStream& in) {
-    return internal::readSignedIntegerImpl<IntType>(in);
+    return detail::readSignedIntegerImpl<IntType>(in);
 }
 
-namespace internal {
+namespace detail {
 
 // Computes (-1)^s * a * 10^b, where a must be a double representing an integer
 // with n digits. This latter argument is used to guard against underflow and
@@ -353,7 +353,7 @@ inline double computeDouble(bool isPositive, double a) {
     return isPositive ? a : -a;
 }
 
-} // namespace internal
+} // namespace detail
 
 /// Reads a base-10 text representation of a number from the input stream \p
 /// in, and converts it approximately to a double, with a guaranteed precision
@@ -528,7 +528,7 @@ double readDoubleApprox(IStream& in) {
         hasLeadingZeros = true;
         if (!in.get(c)) {
             // End of stream; 0 or -0 was read, e.g., "00"
-            return internal::computeDouble(isPositive, 0.0);
+            return detail::computeDouble(isPositive, 0.0);
         }
     }
 
@@ -547,7 +547,7 @@ double readDoubleApprox(IStream& in) {
         }
         if (!in.get(c)) {
             // End of stream; a non-zero integer was read, e.g., "042"
-            return internal::computeDouble(isPositive, a, -dotPosition, numDigits);
+            return detail::computeDouble(isPositive, a, -dotPosition, numDigits);
         }
     }
 
@@ -556,11 +556,11 @@ double readDoubleApprox(IStream& in) {
         if (!in.get(c)) {
             if (numDigits > 0) {
                 // End of stream; a non-zero integer was read, e.g., "042."
-                return internal::computeDouble(isPositive, a, -dotPosition, numDigits);
+                return detail::computeDouble(isPositive, a, -dotPosition, numDigits);
             }
             else if (hasLeadingZeros) {
                 // End of stream; 0 or -0 was read, e.g.,  "00."
-                return internal::computeDouble(isPositive, 0.0);
+                return detail::computeDouble(isPositive, 0.0);
             }
             else {
                 // End of stream; we've only read "."
@@ -579,7 +579,7 @@ double readDoubleApprox(IStream& in) {
             dotPosition += 1;
             if (!in.get(c)) {
                 // End of stream; 0 or -0 was read, e.g., "00.00" or ".00"
-                return internal::computeDouble(isPositive, 0.0);
+                return detail::computeDouble(isPositive, 0.0);
             }
         }
     }
@@ -597,7 +597,7 @@ double readDoubleApprox(IStream& in) {
         }
         if (!in.get(c)) {
             // End of stream; a non-zero integer was read, e.g., "042.0140"
-            return internal::computeDouble(isPositive, a, -dotPosition, numDigits);
+            return detail::computeDouble(isPositive, a, -dotPosition, numDigits);
         }
     }
 
@@ -649,12 +649,12 @@ double readDoubleApprox(IStream& in) {
             if (!in.get(c)) {
                 if (numDigits > 0) {
                     // End of stream; a non-zero number was read, e.g., "042.0140e050" or "042.0140e0"
-                    return internal::computeDouble(
+                    return detail::computeDouble(
                         isPositive, a, exponent - dotPosition, numDigits);
                 }
                 else {
                     // End of stream; 0 or -0 was read, e.g., "00.e050"
-                    return internal::computeDouble(isPositive, 0.0);
+                    return detail::computeDouble(isPositive, 0.0);
                 }
             }
         }
@@ -673,11 +673,11 @@ double readDoubleApprox(IStream& in) {
     // Compute the result
     if (numDigits > 0) {
         // A non-zero number was read, e.g., "042.0140e050" or "042.0140e0"
-        return internal::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
+        return detail::computeDouble(isPositive, a, exponent - dotPosition, numDigits);
     }
     else {
         // 0 or -0 was read, e.g., "00.e050"
-        return internal::computeDouble(isPositive, 0.0);
+        return detail::computeDouble(isPositive, 0.0);
     }
 }
 

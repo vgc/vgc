@@ -19,7 +19,7 @@
 #include <vgc/core/array.h>
 #include <vgc/ui/strings.h>
 
-#include <vgc/ui/internal/paintutil.h>
+#include <vgc/ui/detail/paintutil.h>
 
 namespace vgc {
 namespace ui {
@@ -65,12 +65,12 @@ void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        core::Color textColor = internal::getColor(this, strings::text_color);
+        core::Color textColor = detail::getColor(this, strings::text_color);
         graphics::TextProperties textProperties(
             graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
         graphics::TextCursor textCursor;
         bool hinting = style(strings::pixel_hinting) == strings::normal;
-        internal::insertText(
+        detail::insertText(
             a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }

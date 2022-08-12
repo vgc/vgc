@@ -29,7 +29,7 @@ namespace vgc::dom {
 
 CreateElementOperation::~CreateElementOperation() {
     if (keepAlive_) {
-        internal::destroyNode(element_.get());
+        detail::destroyNode(element_.get());
     }
 }
 

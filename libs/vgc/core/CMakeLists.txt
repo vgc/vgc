@@ -37,8 +37,8 @@ vgc_add_library(core
         stringid.h
         templateutil.h
 
-        internal/containerutil.h
-        internal/signal.h
+        detail/containerutil.h
+        detail/signal.h
 
     CPP_FILES
         algorithm.cpp
@@ -59,7 +59,7 @@ vgc_add_library(core
         stopwatch.cpp
         stringid.cpp
 
-        internal/signal.cpp
+        detail/signal.cpp
 
     NATVIS_FILES
         tools/vgccore.natvis

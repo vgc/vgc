@@ -18,7 +18,7 @@
 
 #include <vgc/core/object.h>
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 ConnectionHandle ConnectionHandle::generate() {
     static ConnectionHandle s = {0};
@@ -47,4 +47,4 @@ FunctionId genFunctionId(std::type_index ti) {
     return id;
 }
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail

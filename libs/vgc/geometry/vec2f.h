@@ -598,8 +598,8 @@ private:
     Vec2f infdiff_(const Vec2f& b) const {
         const Vec2f& a = *this;
         return Vec2f(
-            core::internal::infdiff(a[0], b[0]),
-            core::internal::infdiff(a[1], b[1]));
+            core::detail::infdiff(a[0], b[0]),
+            core::detail::infdiff(a[1], b[1]));
     }
 };
 

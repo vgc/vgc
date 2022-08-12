@@ -313,7 +313,7 @@ void Object::insertChildObject_(Object* child, Object* nextSibling) {
 
         // Add refCount of child to new parent
         if (child->refCount_ > 0) {
-            internal::ObjPtrAccess::incref(this, child->refCount_);
+            detail::ObjPtrAccess::incref(this, child->refCount_);
         }
 
         // Set parent-child relationships
@@ -421,7 +421,7 @@ ObjectPtr Object::removeObjectFromParent_() {
             // The above test is important: we don't want to call decref()
             // if this call to detachObjectFromParent() already originates
             // from an earlier decref(). See implementation of decref().
-            internal::ObjPtrAccess::decref(parent, refCount_);
+            detail::ObjPtrAccess::decref(parent, refCount_);
         }
     }
     return ObjectPtr(this);
@@ -441,10 +441,10 @@ void Object::destroyObjectImpl_() {
     ObjectPtr p = removeObjectFromParent_();
     refCount_ = Int64Min + refCount_;
 
-    internal::SignalHub::disconnectSlots(this);
+    detail::SignalHub::disconnectSlots(this);
     onDestroyed();
     // Done after onDestroyed since someone could want to emit there.
-    internal::SignalHub::disconnectSignals(this);
+    detail::SignalHub::disconnectSignals(this);
 
     // Note 1: The second line switches isAlive() from true to false, while
     // keeping refCount() unchanged.
@@ -534,12 +534,12 @@ void Object::updateBranchSize_() const {
     }
 }
 
-namespace internal {
+namespace detail {
 
 void SignalTestObject::connectToOtherNoArgs(SignalTestObject* other) const {
     signalNoArgs().connect(other->slotNoArgs());
 }
 
-} // namespace internal
+} // namespace detail
 
 } // namespace vgc::core

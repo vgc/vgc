@@ -487,7 +487,7 @@ template<> inline std::string int_typename<UInt32>() { return "UInt32"; }
 template<> inline std::string int_typename<UInt64>() { return "UInt64"; }
 // clang-format on
 
-namespace internal {
+namespace detail {
 
 template<typename T, typename U>
 std::string intErrorReason(U value) {
@@ -505,7 +505,7 @@ void throwNegativeIntegerError(U value) {
     throw core::NegativeIntegerError(intErrorReason<T>(value));
 }
 
-} // namespace internal
+} // namespace detail
 
 // Implicit promotion/conversion rules between integer types are tricky:
 //
@@ -597,7 +597,7 @@ template<typename T, typename U, VGC_REQUIRES(
 T int_cast(U value) {
     if (value < tmin<T> || // (1)
         value > tmax<T>) { // (1)
-        internal::throwIntegerOverflowError<T>(value);
+        detail::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
@@ -614,7 +614,7 @@ template<typename T, typename U, VGC_REQUIRES(
     && tmax<T> < tmax<U>)>
 T int_cast(U value) {
     if (value > tmax<T>) { // (1)
-        internal::throwIntegerOverflowError<T>(value);
+        detail::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
@@ -645,7 +645,7 @@ template<typename T, typename U, VGC_REQUIRES(
     && tmax<T> < tmax<U>)> // (2)
 T int_cast(U value) {
     if (value > tmax<T>) { // (2)
-        internal::throwIntegerOverflowError<T>(value);
+        detail::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
@@ -662,7 +662,7 @@ template<typename T, typename U, VGC_REQUIRES(
     && tmax<T> >= tmax<U>)> // (2)
 T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
-        internal::throwNegativeIntegerError<T>(value);
+        detail::throwNegativeIntegerError<T>(value);
     }
     return static_cast<T>(value);
 }
@@ -679,10 +679,10 @@ template<typename T, typename U, VGC_REQUIRES(
     && tmax<T> < tmax<U>)> // (2)
 T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
-        internal::throwNegativeIntegerError<T>(value);
+        detail::throwNegativeIntegerError<T>(value);
     }
     else if (value > tmax<T>) { // (2)
-        internal::throwIntegerOverflowError<T>(value);
+        detail::throwIntegerOverflowError<T>(value);
     }
     return static_cast<T>(value);
 }
@@ -761,7 +761,7 @@ T zero() {
     return res;
 }
 
-namespace internal {
+namespace detail {
 
 // Computes the difference `a - b`, but where two infinities of the same sign
 // are considered exactly equal, so their difference is zero.
@@ -801,7 +801,7 @@ bool isNear(T a, T b, T absTol) {
     }
 }
 
-} // namespace internal
+} // namespace detail
 
 /// Returns whether two float values are almost equal within some relative
 /// tolerance. For example, set `relTol` to `0.05f` for testing if two values
@@ -890,7 +890,7 @@ bool isNear(T a, T b, T absTol) {
 ///
 VGC_CORE_API
 inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f) {
-    return internal::isClose(a, b, relTol, absTol);
+    return detail::isClose(a, b, relTol, absTol);
 }
 
 /// Returns whether two double values are almost equal within some relative
@@ -903,7 +903,7 @@ inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f)
 ///
 VGC_CORE_API
 inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.0) {
-    return internal::isClose(a, b, relTol, absTol);
+    return detail::isClose(a, b, relTol, absTol);
 }
 
 /// Returns whether the absolute difference between two float values is within
@@ -941,7 +941,7 @@ inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.
 ///
 VGC_CORE_API
 inline bool isNear(float a, float b, float absTol) {
-    return internal::isNear(a, b, absTol);
+    return detail::isNear(a, b, absTol);
 }
 
 /// Returns whether the absolute difference between two double values is within
@@ -950,7 +950,7 @@ inline bool isNear(float a, float b, float absTol) {
 ///
 VGC_CORE_API
 inline bool isNear(double a, double b, double absTol) {
-    return internal::isNear(a, b, absTol);
+    return detail::isNear(a, b, absTol);
 }
 
 /// Returns the given value clamped to the interval [min, max]. If max < min,

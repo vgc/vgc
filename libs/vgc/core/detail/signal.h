@@ -107,7 +107,7 @@ namespace vgc::core {
 
 class Object;
 
-namespace internal {
+namespace detail {
 
 template<typename T, typename SFINAE = void>
 struct HasObjectTypedefs : std::false_type {};
@@ -116,7 +116,7 @@ template<typename T>
 struct HasObjectTypedefs<T, RequiresValid<typename T::ThisClass, typename T::SuperClass>>
     : std::is_same<std::remove_const_t<T>, typename T::ThisClass> {};
 
-} // namespace internal
+} // namespace detail
 
 /// Type trait for isObject<T>.
 ///
@@ -128,7 +128,7 @@ struct IsObject<Object, void> : std::true_type {};
 
 template<typename T>
 struct IsObject<T, Requires<std::is_base_of_v<Object, T>>> : std::true_type {
-    static_assert(internal::HasObjectTypedefs<T>::value, "Missing VGC_OBJECT(..) in T.");
+    static_assert(detail::HasObjectTypedefs<T>::value, "Missing VGC_OBJECT(..) in T.");
 };
 
 /// Checks whether T is vgc::core::Object or derives from it.
@@ -141,10 +141,10 @@ inline constexpr bool isObject = IsObject<T>::value;
 ///
 #define VGC_CHECK_TYPE_IS_OBJECT(Type)                                                   \
     static_assert(                                                                       \
-        ::vgc::core::internal::isObject<Type>,                                           \
+        ::vgc::core::detail::isObject<Type>,                                             \
         #Type " should inherit from vgc::core::Object.");
 
-namespace internal {
+namespace detail {
 
 using FunctionId = Int;
 using ObjectSlotId = std::pair<Object*, FunctionId>;
@@ -1174,7 +1174,7 @@ protected:
     template<typename... Us>
     inline void emitFwd_(Us&&... args) const {
         static_assert(sizeof...(Us) == arity);
-        ::vgc::core::internal::SignalHub::emitFwd<ArgRefsTuple>(
+        ::vgc::core::detail::SignalHub::emitFwd<ArgRefsTuple>(
             object(), id(), std::forward<Us>(args)...);
     }
 
@@ -1182,7 +1182,7 @@ private:
     Obj* object_;
 };
 
-} // namespace internal
+} // namespace detail
 } // namespace vgc::core
 
 #define VGC_SIG_PTYPE2_(t, n) t
@@ -1223,7 +1223,7 @@ private:
         struct Tag {};                                                                   \
         using MyClass = std::remove_const_t<std::remove_pointer_t<decltype(this)>>;      \
         using ArgsTuple = std::tuple<VGC_PARAMS_TYPE_(__VA_ARGS__)>;                     \
-        using SignalRefT = ::vgc::core::internal::SignalRef<Tag, MyClass, ArgsTuple>;    \
+        using SignalRefT = ::vgc::core::detail::SignalRef<Tag, MyClass, ArgsTuple>;      \
         class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_               \
                                           "().emit()?")) SignalRef : public SignalRefT { \
         public:                                                                          \
@@ -1237,7 +1237,7 @@ private:
         return SignalRef(this);                                                          \
     }
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 template<typename T>
 struct IsSignal : std::false_type {};
@@ -1247,14 +1247,14 @@ struct IsSignal<TSignalRef (TObj::*)() const>
 template<typename T>
 inline constexpr bool isSignal = IsSignal<T>::value;
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail
 
 #define VGC_SLOT_ALIAS_(name_, funcName_)                                                \
     auto name_() {                                                                       \
         struct Tag {};                                                                   \
         using MyClass = std::remove_pointer_t<decltype(this)>;                           \
         using SlotMethod = decltype(&MyClass::funcName_);                                \
-        using SlotRefBase = ::vgc::core::internal::SlotRef<Tag, SlotMethod>;             \
+        using SlotRefBase = ::vgc::core::detail::SlotRef<Tag, SlotMethod>;               \
         class VGC_PP_EXPAND(                                                             \
             VGC_NODISCARD("Did you intend " #funcName_ "() instead of " #name_ "()?"))   \
             SlotRef : public SlotRefBase {                                               \
@@ -1296,7 +1296,7 @@ inline constexpr bool isSignal = IsSignal<T>::value;
     VGC_PP_EXPAND(VGC_SLOT_DISPATCH_(__VA_ARGS__, NOOVERLOAD, VGC_SLOT2_, VGC_SLOT1_)(   \
         __VA_ARGS__))
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 template<typename T>
 struct IsSlot : std::false_type {};
@@ -1306,6 +1306,6 @@ struct IsSlot<TSlotRef (TObj::*)()>
 template<typename T>
 inline constexpr bool isSlot = IsSlot<T>::value;
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail
 
 #endif // VGC_CORE_INTERNAL_SIGNAL_H

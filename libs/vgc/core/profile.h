@@ -21,7 +21,7 @@
 #include <vgc/core/compiler.h>
 #include <vgc/core/preprocessor.h>
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 class VGC_CORE_API ScopeProfiler {
 public:
@@ -35,7 +35,7 @@ private:
     Int correspondingIndex_;
 };
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail
 
 /// Measures the time taken for executing a scope.
 ///
@@ -82,7 +82,7 @@ private:
 /// typically less than 100 nanoseconds each.
 ///
 #define VGC_PROFILE_SCOPE(name)                                                          \
-    ::vgc::core::internal::ScopeProfiler VGC_PP_XCONCAT(VGC_PP_XCONCAT(vgcProfiler, __LINE__), _)(name);
+    ::vgc::core::detail::ScopeProfiler VGC_PP_XCONCAT(VGC_PP_XCONCAT(vgcProfiler, __LINE__), _)(name);
 
 /// Measures the time taken for executing a function.
 /// See VGC_PROFILE_SCOPE for details.

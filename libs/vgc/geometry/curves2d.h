@@ -503,7 +503,7 @@ public:
 private:
     friend Curves2dCommandRef;
     friend Curves2dCommandIterator;
-    internal::CurveCommandDataArray commandData_;
+    detail::CurveCommandDataArray commandData_;
     core::DoubleArray data_;
 };
 

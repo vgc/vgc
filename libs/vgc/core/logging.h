@@ -43,7 +43,7 @@ enum class LogLevel : uint8_t {
     Debug
 };
 
-namespace internal {
+namespace detail {
 
 VGC_CORE_API
 void appendPreambleToLogMessage(
@@ -92,7 +92,7 @@ log(const StringId& categoryName, LogLevel level, const StringId& stringId) {
     log(categoryName, level, "{}", stringId.string().c_str());
 }
 
-} // namespace internal
+} // namespace detail
 
 /// \class vgc::core::LogCategoryBase
 /// \brief Abstract base class for all log categories
@@ -247,7 +247,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
     if constexpr (                                                                       \
         static_cast<uint8_t>(level)                                                      \
         <= static_cast<uint8_t>(Category::compileTimeEnabledLevels)) {                   \
-        ::vgc::core::internal::log(Category::instance()->name(), level, __VA_ARGS__);    \
+        ::vgc::core::detail::log(Category::instance()->name(), level, __VA_ARGS__);      \
     }
 
 /// Prints a critical error message.
@@ -352,7 +352,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 ///
 #define VGC_DEBUG_TMP(...) VGC_DEBUG(::vgc::core::LogTmp, __VA_ARGS__)
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 template<typename T, VGC_REQUIRES(!std::is_pointer_v<T>)>
 const T& debugExprCast(const T& x) {
@@ -374,7 +374,7 @@ const void* debugExprCast(const std::shared_ptr<T>& p) {
     return fmt::ptr(p);
 }
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail
 
 /// Prints the result of an expression.
 ///
@@ -390,6 +390,6 @@ const void* debugExprCast(const std::shared_ptr<T>& p) {
 /// pointer type, which is required for proper formatting of pointer types.
 ///
 #define VGC_DEBUG_TMP_EXPR(expr)                                                         \
-    VGC_DEBUG_TMP(#expr " = {}", vgc::core::internal::debugExprCast(expr))
+    VGC_DEBUG_TMP(#expr " = {}", vgc::core::detail::debugExprCast(expr))
 
 #endif // VGC_CORE_LOGGING_H

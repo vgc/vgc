@@ -33,7 +33,7 @@
 
 namespace vgc::style {
 
-namespace internal {
+namespace detail {
 class StyleParser;
 }
 
@@ -233,7 +233,7 @@ using StylePropertyParser =
 VGC_STYLE_API
 StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
 
-namespace internal {
+namespace detail {
 class StylePropertySpecMaker;
 }
 
@@ -373,7 +373,7 @@ private:
     StylePropertySpecTablePtr propertySpecs_;
     StyleRuleSetArray ruleSets_;
 
-    friend class internal::StyleParser;
+    friend class detail::StyleParser;
     StyleSheet();
     static StyleSheetPtr create();
 };
@@ -399,7 +399,7 @@ private:
     StyleSelectorArray selectors_;
     StyleDeclarationArray declarations_;
 
-    friend class internal::StyleParser;
+    friend class detail::StyleParser;
     StyleRuleSet();
     static StyleRuleSetPtr create();
 };
@@ -482,7 +482,7 @@ public:
 private:
     core::Array<StyleSelectorItem> items_;
 
-    friend class internal::StyleParser;
+    friend class detail::StyleParser;
     StyleSelector();
     static StyleSelectorPtr create();
 };
@@ -519,7 +519,7 @@ private:
     std::string text_;
     StyleValue value_;
 
-    friend class internal::StyleParser;
+    friend class detail::StyleParser;
     StyleDeclaration();
     static StyleDeclarationPtr create();
 };

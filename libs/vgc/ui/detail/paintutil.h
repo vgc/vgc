@@ -29,7 +29,7 @@
 
 namespace vgc {
 namespace ui {
-namespace internal {
+namespace detail {
 
 // clang-format off
 
@@ -133,7 +133,7 @@ graphics::SizedFont* getDefaultSizedFont();
 graphics::SizedFont* getDefaultSizedFont(Int ppem);
 graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting);
 
-} // namespace internal
+} // namespace detail
 } // namespace ui
 } // namespace vgc
 

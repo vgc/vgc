@@ -26,13 +26,13 @@
 namespace vgc {
 namespace dom {
 
-namespace internal {
+namespace detail {
 
 void destroyNode(Node* node) {
     node->destroyObject_();
 }
 
-} // namespace internal
+} // namespace detail
 
 Node::Node(Document* document, NodeType nodeType)
     : Object()

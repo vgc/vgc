@@ -116,7 +116,7 @@ private:
     core::Array<core::StringId> a_;
 };
 
-namespace internal {
+namespace detail {
 
 using RuleSetArray = core::Array<std::pair<StyleRuleSet*, StyleSpecificity>>;
 
@@ -150,7 +150,7 @@ struct StyleCachedData {
     }
 };
 
-} // namespace internal
+} // namespace detail
 
 /// \typedef vgc::style::StylableObject
 /// \brief Base abstract that must be implemented to use the style engine.
@@ -258,7 +258,7 @@ protected:
 private:
     StyleSheetPtr styleSheet_;
     ClassSet styleClasses_;
-    internal::StyleCachedData styleCachedData_;
+    detail::StyleCachedData styleCachedData_;
 
     void updateStyle_();
     const StylePropertySpec* getStylePropertySpec_(core::StringId property) const;

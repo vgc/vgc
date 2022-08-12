@@ -29,7 +29,7 @@
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/qtutil.h>
 
-#include <vgc/ui/internal/qopenglengine.h>
+#include <vgc/ui/detail/qopenglengine.h>
 
 namespace vgc::ui {
 
@@ -95,7 +95,7 @@ Window::Window(ui::WidgetPtr widget)
     std::string classNameA(classNameW.begin(), classNameW.end());
     //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
 #else
-    engine_ = internal::QglEngine::create(engineConfig);
+    engine_ = detail::QglEngine::create(engineConfig);
     scd.setWindowNativeHandle(
         static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
 #endif
@@ -359,7 +359,7 @@ bool Window::event(QEvent* e) {
 
                 geometry::Camera2d c;
                 c.setViewportSize(width(), height());
-                proj_ = internal::toMat4f(c.projectionMatrix());
+                proj_ = detail::toMat4f(c.projectionMatrix());
 
                 // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
                 // silently rounds to the nearest integer representable as a float. See:
@@ -434,7 +434,7 @@ bool Window::nativeEvent(
 
             geometry::Camera2d c;
             c.setViewportSize(w, h);
-            proj_ = internal::toMat4f(c.projectionMatrix());
+            proj_ = detail::toMat4f(c.projectionMatrix());
 
             // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
             // silently rounds to the nearest integer representable as a float. See:

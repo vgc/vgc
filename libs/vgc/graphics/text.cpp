@@ -60,7 +60,7 @@ using Triangle2fArray = core::Array<Triangle2f>;
 
 } // namespace
 
-namespace internal {
+namespace detail {
 
 class ShapedTextImpl {
 public:
@@ -161,10 +161,9 @@ public:
             hb_glyph_position_t& pos = glyphPositions[i];
             SizedGlyph* glyph = facePtr->getSizedGlyphFromIndex(info.codepoint);
             Int bytePosition = core::int_cast<Int>(info.cluster);
-            geometry::Vec2f glyphOffset =
-                internal::f266ToVec2f(pos.x_offset, pos.y_offset);
+            geometry::Vec2f glyphOffset = detail::f266ToVec2f(pos.x_offset, pos.y_offset);
             geometry::Vec2f glyphAdvance =
-                internal::f266ToVec2f(pos.x_advance, pos.y_advance);
+                detail::f266ToVec2f(pos.x_advance, pos.y_advance);
             geometry::Vec2f glyphPosition = advance + glyphOffset;
             if (glyph) {
                 glyphs.append(ShapedGlyph(
@@ -275,7 +274,7 @@ private:
     friend class graphics::ShapedText;
 };
 
-} // namespace internal
+} // namespace detail
 
 // clang-format off
 
@@ -312,11 +311,11 @@ void ShapedGlyph::fill(core::FloatArray& data, const geometry::Vec2f& origin) co
 
 ShapedText::ShapedText(SizedFont* sizedFont, std::string_view text)
     : impl_() {
-    impl_ = new internal::ShapedTextImpl(sizedFont, text);
+    impl_ = new detail::ShapedTextImpl(sizedFont, text);
 }
 
 ShapedText::ShapedText(const ShapedText& other) {
-    impl_ = new internal::ShapedTextImpl(*(other.impl_));
+    impl_ = new detail::ShapedTextImpl(*(other.impl_));
 }
 
 ShapedText::ShapedText(ShapedText&& other) {

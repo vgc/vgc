@@ -28,12 +28,12 @@
 namespace vgc {
 namespace graphics {
 
-namespace internal {
+namespace detail {
 
 class ShapedTextImpl;
 class TextBoundaryIteratorImpl;
 
-} // namespace internal
+} // namespace detail
 
 /// \enum vgc::graphics::TextHorizontalAlign
 /// \brief How to align text horizontally
@@ -259,7 +259,7 @@ public:
     }
 
 private:
-    friend class internal::ShapedTextImpl;
+    friend class detail::ShapedTextImpl;
     Int glyphIndex_;
     Int byteIndex_;
     geometry::Vec2f advance_;
@@ -543,7 +543,7 @@ public:
     }
 
 private:
-    friend class internal::ShapedTextImpl;
+    friend class detail::ShapedTextImpl;
     Int glyphIndex_;
     geometry::Vec2f advance_;
     geometry::Vec2f position_;
@@ -823,7 +823,7 @@ public:
         bool clamp = true);
 
 private:
-    internal::ShapedTextImpl* impl_;
+    detail::ShapedTextImpl* impl_;
 };
 
 /// \class vgc::graphics::TextScroll

@@ -147,7 +147,7 @@ private:
     FontHinting hinting_;
 };
 
-namespace internal {
+namespace detail {
 
 class FontLibraryImpl;
 class FontImpl;
@@ -208,7 +208,7 @@ geometry::Vec2f f266ToVec2f(T x, T y) {
     return geometry::Vec2f(x / 64.0f, y / 64.0f);
 }
 
-} // namespace internal
+} // namespace detail
 
 /// \class vgc::graphics::FontLibrary
 /// \brief Manages a set of available fonts.
@@ -286,7 +286,7 @@ protected:
     void onDestroyed() override;
 
 private:
-    internal::FontLibraryPimpl impl_;
+    detail::FontLibraryPimpl impl_;
 };
 
 /// Returns the global font library.
@@ -371,10 +371,10 @@ protected:
     void onDestroyed() override;
 
 private:
-    internal::FontPimpl impl_;
+    detail::FontPimpl impl_;
     friend class FontLibrary;
-    friend class internal::FontLibraryImpl;
-    friend class internal::SizedFontImpl;
+    friend class detail::FontLibraryImpl;
+    friend class detail::SizedFontImpl;
 };
 
 /// \class vgc::graphics::Glyph
@@ -514,11 +514,11 @@ protected:
     void onDestroyed() override;
 
 private:
-    internal::SizedFontPimpl impl_;
+    detail::SizedFontPimpl impl_;
     friend class FontLibrary;
     friend class Font;
-    friend class internal::FontLibraryImpl;
-    friend class internal::ShapedTextImpl;
+    friend class detail::FontLibraryImpl;
+    friend class detail::ShapedTextImpl;
 };
 
 /// \class vgc::graphics::SizedGlyph
@@ -610,11 +610,11 @@ protected:
     void onDestroyed() override;
 
 private:
-    internal::SizedGlyphPimpl impl_;
+    detail::SizedGlyphPimpl impl_;
     friend class FontLibrary;
     friend class SizedFont;
-    friend class internal::FontLibraryImpl;
-    friend class internal::SizedFontImpl;
+    friend class detail::FontLibraryImpl;
+    friend class detail::SizedFontImpl;
 };
 
 } // namespace vgc::graphics

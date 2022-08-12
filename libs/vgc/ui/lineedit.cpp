@@ -26,7 +26,7 @@
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
 
-#include <vgc/ui/internal/paintutil.h>
+#include <vgc/ui/detail/paintutil.h>
 
 namespace vgc::ui {
 
@@ -72,10 +72,10 @@ style::StylableObject* LineEdit::lastChildStylableObject() const {
 void LineEdit::onResize() {
     // Compute contentRect
     // TODO: move to Widget::contentRect()
-    float paddingLeft = internal::getLength(this, strings::padding_left);
-    float paddingRight = internal::getLength(this, strings::padding_right);
-    float paddingTop = internal::getLength(this, strings::padding_top);
-    float paddingBottom = internal::getLength(this, strings::padding_bottom);
+    float paddingLeft = detail::getLength(this, strings::padding_left);
+    float paddingRight = detail::getLength(this, strings::padding_right);
+    float paddingTop = detail::getLength(this, strings::padding_top);
+    float paddingBottom = detail::getLength(this, strings::padding_bottom);
     geometry::Rect2f r = rect();
     geometry::Vec2f pMinOffset(paddingLeft, paddingTop);
     geometry::Vec2f pMaxOffset(paddingRight, paddingBottom);
@@ -98,16 +98,16 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         core::FloatArray a;
 
         // Draw background
-        core::Color backgroundColor = internal::getColor(
+        core::Color backgroundColor = detail::getColor(
             this,
             isHovered_ ? strings::background_color_on_hover : strings::background_color);
-        float borderRadius = internal::getLength(this, strings::border_radius);
+        float borderRadius = detail::getLength(this, strings::border_radius);
 #if defined(VGC_QOPENGL_EXPERIMENT)
         static core::Stopwatch sw = {};
         auto t = sw.elapsed() * 50.f;
         backgroundColor = core::Color::hsl(t, 0.6f, 0.3f);
 #endif
-        internal::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+        detail::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
 
         // Draw text
         richText_->fill(a);

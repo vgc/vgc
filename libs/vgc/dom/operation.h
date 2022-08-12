@@ -120,7 +120,7 @@ protected:
 
     ~RemoveNodeOperation() {
         if (keepAlive_) {
-            internal::destroyNode(node_.get());
+            detail::destroyNode(node_.get());
         }
     }
 

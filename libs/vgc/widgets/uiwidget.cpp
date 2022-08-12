@@ -173,7 +173,7 @@ void UiWidget::initializeGL() {
     {
         graphics::EngineCreateInfo createInfo = {};
         createInfo.setMultithreadingEnabled(false);
-        engine_ = vgc::ui::internal::QglEngine::create(createInfo, context());
+        engine_ = vgc::ui::detail::QglEngine::create(createInfo, context());
     }
 
     QSurface* surface = context()->surface();
