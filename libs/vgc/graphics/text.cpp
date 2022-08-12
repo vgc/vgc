@@ -161,8 +161,7 @@ public:
             hb_glyph_position_t& pos = glyphPositions[i];
             SizedGlyph* glyph = facePtr->getSizedGlyphFromIndex(info.codepoint);
             Int bytePosition = core::int_cast<Int>(info.cluster);
-            geometry::Vec2f glyphOffset =
-                detail::f266ToVec2f(pos.x_offset, pos.y_offset);
+            geometry::Vec2f glyphOffset = detail::f266ToVec2f(pos.x_offset, pos.y_offset);
             geometry::Vec2f glyphAdvance =
                 detail::f266ToVec2f(pos.x_advance, pos.y_advance);
             geometry::Vec2f glyphPosition = advance + glyphOffset;

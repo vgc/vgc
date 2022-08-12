@@ -141,7 +141,7 @@ inline constexpr bool isObject = IsObject<T>::value;
 ///
 #define VGC_CHECK_TYPE_IS_OBJECT(Type)                                                   \
     static_assert(                                                                       \
-        ::vgc::core::detail::isObject<Type>,                                           \
+        ::vgc::core::detail::isObject<Type>,                                             \
         #Type " should inherit from vgc::core::Object.");
 
 namespace detail {
@@ -1223,7 +1223,7 @@ private:
         struct Tag {};                                                                   \
         using MyClass = std::remove_const_t<std::remove_pointer_t<decltype(this)>>;      \
         using ArgsTuple = std::tuple<VGC_PARAMS_TYPE_(__VA_ARGS__)>;                     \
-        using SignalRefT = ::vgc::core::detail::SignalRef<Tag, MyClass, ArgsTuple>;    \
+        using SignalRefT = ::vgc::core::detail::SignalRef<Tag, MyClass, ArgsTuple>;      \
         class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_               \
                                           "().emit()?")) SignalRef : public SignalRefT { \
         public:                                                                          \
@@ -1254,7 +1254,7 @@ inline constexpr bool isSignal = IsSignal<T>::value;
         struct Tag {};                                                                   \
         using MyClass = std::remove_pointer_t<decltype(this)>;                           \
         using SlotMethod = decltype(&MyClass::funcName_);                                \
-        using SlotRefBase = ::vgc::core::detail::SlotRef<Tag, SlotMethod>;             \
+        using SlotRefBase = ::vgc::core::detail::SlotRef<Tag, SlotMethod>;               \
         class VGC_PP_EXPAND(                                                             \
             VGC_NODISCARD("Did you intend " #funcName_ "() instead of " #name_ "()?"))   \
             SlotRef : public SlotRefBase {                                               \

@@ -130,10 +130,7 @@ public:
     }
 
     // XXX prevent signatures with references to python immutables (int..)
-    template<
-        typename SlotT,
-        typename... Extra,
-        VGC_REQUIRES(core::detail::isSlot<SlotT>)>
+    template<typename SlotT, typename... Extra, VGC_REQUIRES(core::detail::isSlot<SlotT>)>
     ObjClass& def_slot(const char* name, SlotT slot, const Extra&... extra) {
         static_assert(
             std::is_invocable_v<SlotT, ObjT*>,

@@ -247,7 +247,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
     if constexpr (                                                                       \
         static_cast<uint8_t>(level)                                                      \
         <= static_cast<uint8_t>(Category::compileTimeEnabledLevels)) {                   \
-        ::vgc::core::detail::log(Category::instance()->name(), level, __VA_ARGS__);    \
+        ::vgc::core::detail::log(Category::instance()->name(), level, __VA_ARGS__);      \
     }
 
 /// Prints a critical error message.
