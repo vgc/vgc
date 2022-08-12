@@ -56,8 +56,8 @@ void runtimePatchQt() {
 }
 #endif
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
+
 #ifdef VGC_QOPENGL_EXPERIMENT
     QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
