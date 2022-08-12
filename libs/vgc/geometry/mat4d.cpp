@@ -17,14 +17,16 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/mat4x.cpp then run tools/generate.py.
 
+// clang-format off
+
 #include <vgc/geometry/mat4d.h>
 
 #include <limits>
 
 namespace vgc::geometry {
 
-Mat4d Mat4d::inverted(bool* isInvertible, double epsilon_) const
-{
+Mat4d Mat4d::inverted(bool* isInvertible, double epsilon_) const {
+
     Mat4d res;
 
     const auto& d = data_;

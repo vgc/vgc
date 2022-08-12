@@ -113,19 +113,27 @@ public:
 
     /// Returns the Type of the curve.
     ///
-    Type type() const { return type_; }
+    Type type() const {
+        return type_;
+    }
 
     /// Returns the position data of the curve.
     ///
-    const core::DoubleArray& positionData() const { return positionData_; }
+    const core::DoubleArray& positionData() const {
+        return positionData_;
+    }
 
     /// Returns the AttributeVariability of the width attribute.
     ///
-    AttributeVariability widthVariability() const { return widthVariability_; }
+    AttributeVariability widthVariability() const {
+        return widthVariability_;
+    }
 
     /// Returns the width data of the curve.
     ///
-    const core::DoubleArray& widthData() const { return widthData_; }
+    const core::DoubleArray& widthData() const {
+        return widthData_;
+    }
 
     /// Returns the width of the curve. If width is varying, then returns
     /// the average width;
@@ -208,10 +216,8 @@ public:
     /// control points, simply set maxAngle to any value, and set minQuads =
     /// maxQuads = number of desired quads.
     ///
-    Vec2dArray triangulate(
-            double maxAngle = 0.05,
-            Int minQuads = 1,
-            Int maxQuads = 64) const;
+    Vec2dArray
+    triangulate(double maxAngle = 0.05, Int minQuads = 1, Int maxQuads = 64) const;
 
     /// Sets the color of the curve.
     ///
@@ -223,11 +229,15 @@ public:
     // makes it complex for implementers too if too many features are supported.
     // For now, we only support constant colors, and postpone this discussion.
     //
-    void setColor(const core::Color& color) { color_ = color; }
+    void setColor(const core::Color& color) {
+        color_ = color;
+    }
 
     /// Returns the color of the curve.
     ///
-    core::Color color() const { return color_; }
+    core::Color color() const {
+        return color_;
+    }
 
 private:
     // Representation of the centerline of the curve

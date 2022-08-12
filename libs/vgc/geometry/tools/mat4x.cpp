@@ -17,14 +17,16 @@
 // This file is used to generate all the variants of this class.
 // You must manually run generate.py after any modification.
 
+// clang-format off
+
 #include "mat4x.h"
 
 #include <limits>
 
 namespace vgc::geometry {
 
-Mat4x Mat4x::inverted(bool* isInvertible, float epsilon_) const
-{
+Mat4x Mat4x::inverted(bool* isInvertible, float epsilon_) const {
+
     Mat4x res;
 
     const auto& d = data_;

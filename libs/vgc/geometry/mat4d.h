@@ -17,6 +17,8 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/mat4x.h then run tools/generate.py.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_MAT4D_H
 #define VGC_GEOMETRY_MAT4D_H
 
@@ -50,30 +52,34 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose, otherwise we couldn't define `identity`.
 //                     Instead, we manually export functions defined in the .cpp.
-class Mat4d
-{
+class Mat4d {
 public:
     using ScalarType = double;
     static constexpr Int dimension = 4;
 
     /// Creates an uninitialized `Mat4d`.
     ///
-    Mat4d(core::NoInit) {}
+    Mat4d(core::NoInit) {
+    }
 
     /// Creates a `Mat4d` initialized to the null matrix `Mat3d(0)`.
     ///
-    constexpr Mat4d() : Mat4d(0) {}
+    constexpr Mat4d()
+        : Mat4d(0) {
+    }
 
     /// Creates a Mat4d initialized with the given arguments.
     ///
-    constexpr Mat4d(double m11, double m12, double m13, double m14,
-                    double m21, double m22, double m23, double m24,
-                    double m31, double m32, double m33, double m34,
-                    double m41, double m42, double m43, double m44)
+    constexpr Mat4d(
+        double m11, double m12, double m13, double m14,
+        double m21, double m22, double m23, double m24,
+        double m31, double m32, double m33, double m34,
+        double m41, double m42, double m43, double m44)
         : data_{{m11, m21, m31, m41},
                 {m12, m22, m32, m42},
                 {m13, m23, m33, m43},
-                {m14, m24, m34, m44}} {}
+                {m14, m24, m34, m44}} {
+    }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat4d(0), and the identity
@@ -83,15 +89,17 @@ public:
         : data_{{d, 0, 0, 0},
                 {0, d, 0, 0},
                 {0, 0, d, 0},
-                {0, 0, 0, d}} {}
+                {0, 0, 0, d}} {
+    }
 
     /// Creates a `Mat4d` from another `Mat<4, T>` object by performing a
     /// `static_cast` on each of its elements.
     ///
-    template<typename TMat4, VGC_REQUIRES(
-                 isMat<TMat4> &&
-                 TMat4::dimension == 4 &&
-                 !std::is_same_v<TMat4, Mat4d>)>
+    template<typename TMat4,
+        VGC_REQUIRES(
+            isMat<TMat4>
+         && TMat4::dimension == 4
+         && !std::is_same_v<TMat4, Mat4d>)>
     explicit constexpr Mat4d(const TMat4& other)
         : data_{{static_cast<double>(other(0, 0)),
                  static_cast<double>(other(1, 0)),
@@ -112,10 +120,12 @@ public:
 
     /// Defines explicitely all the elements of the matrix
     ///
-    Mat4d& setElements(double m11, double m12, double m13, double m14,
-                       double m21, double m22, double m23, double m24,
-                       double m31, double m32, double m33, double m34,
-                       double m41, double m42, double m43, double m44) {
+    Mat4d& setElements(
+        double m11, double m12, double m13, double m14,
+        double m21, double m22, double m23, double m24,
+        double m31, double m32, double m33, double m34,
+        double m41, double m42, double m43, double m44) {
+
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31; data_[0][3] = m41;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32; data_[1][3] = m42;
         data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33; data_[2][3] = m43;
@@ -127,19 +137,24 @@ public:
     /// the given value.
     ///
     Mat4d& setToDiagonal(double d) {
-        return setElements(d, 0, 0, 0,
-                           0, d, 0, 0,
-                           0, 0, d, 0,
-                           0, 0, 0, d);
+        return setElements(
+            d, 0, 0, 0,
+            0, d, 0, 0,
+            0, 0, d, 0,
+            0, 0, 0, d);
     }
 
     /// Sets this Mat4d to the zero matrix.
     ///
-    Mat4d& setToZero() { return setToDiagonal(0); }
+    Mat4d& setToZero() {
+        return setToDiagonal(0);
+    }
 
     /// Sets this Mat4d to the identity matrix.
     ///
-    Mat4d& setToIdentity() { return setToDiagonal(1); }
+    Mat4d& setToIdentity() {
+        return setToDiagonal(1);
+    }
 
     /// The identity matrix Mat4d(1).
     ///
@@ -147,19 +162,27 @@ public:
 
     /// Returns a pointer to the underlying (colum-major ordered) array of components.
     ///
-    const double* data() const { return data_[0]; }
+    const double* data() const {
+        return data_[0];
+    }
 
     /// Returns a pointer to the underlying (colum-major ordered) array of components.
     ///
-    double* data() { return data_[0]; }
+    double* data() {
+        return data_[0];
+    }
 
     /// Accesses the component of the Mat4d the the i-th row and j-th column.
     ///
-    const double& operator()(Int i, Int j) const { return data_[j][i]; }
+    const double& operator()(Int i, Int j) const {
+        return data_[j][i];
+    }
 
     /// Mutates the component of the Mat4d the the i-th row and j-th column.
     ///
-    double& operator()(Int i, Int j) { return data_[j][i]; }
+    double& operator()(Int i, Int j) {
+        return data_[j][i];
+    }
 
     /// Adds in-place the \p other Mat4d to this Mat4d.
     ///
@@ -324,43 +347,43 @@ public:
     /// Returns whether the two given Mat4d \p m1 and \p m2 are equal.
     ///
     friend bool operator==(const Mat4d& m1, const Mat4d& m2) {
-        return m1.data_[0][0] == m2.data_[0][0] &&
-               m1.data_[0][1] == m2.data_[0][1] &&
-               m1.data_[0][2] == m2.data_[0][2] &&
-               m1.data_[0][3] == m2.data_[0][3] &&
-               m1.data_[1][0] == m2.data_[1][0] &&
-               m1.data_[1][1] == m2.data_[1][1] &&
-               m1.data_[1][2] == m2.data_[1][2] &&
-               m1.data_[1][3] == m2.data_[1][3] &&
-               m1.data_[2][0] == m2.data_[2][0] &&
-               m1.data_[2][1] == m2.data_[2][1] &&
-               m1.data_[2][2] == m2.data_[2][2] &&
-               m1.data_[2][3] == m2.data_[2][3] &&
-               m1.data_[3][0] == m2.data_[3][0] &&
-               m1.data_[3][1] == m2.data_[3][1] &&
-               m1.data_[3][2] == m2.data_[3][2] &&
-               m1.data_[3][3] == m2.data_[3][3];
+        return m1.data_[0][0] == m2.data_[0][0]
+            && m1.data_[0][1] == m2.data_[0][1]
+            && m1.data_[0][2] == m2.data_[0][2]
+            && m1.data_[0][3] == m2.data_[0][3]
+            && m1.data_[1][0] == m2.data_[1][0]
+            && m1.data_[1][1] == m2.data_[1][1]
+            && m1.data_[1][2] == m2.data_[1][2]
+            && m1.data_[1][3] == m2.data_[1][3]
+            && m1.data_[2][0] == m2.data_[2][0]
+            && m1.data_[2][1] == m2.data_[2][1]
+            && m1.data_[2][2] == m2.data_[2][2]
+            && m1.data_[2][3] == m2.data_[2][3]
+            && m1.data_[3][0] == m2.data_[3][0]
+            && m1.data_[3][1] == m2.data_[3][1]
+            && m1.data_[3][2] == m2.data_[3][2]
+            && m1.data_[3][3] == m2.data_[3][3];
     }
 
     /// Returns whether the two given Mat4d \p m1 and \p m2 are different.
     ///
     friend bool operator!=(const Mat4d& m1, const Mat4d& m2) {
-        return m1.data_[0][0] != m2.data_[0][0] ||
-               m1.data_[0][1] != m2.data_[0][1] ||
-               m1.data_[0][2] != m2.data_[0][2] ||
-               m1.data_[0][3] != m2.data_[0][3] ||
-               m1.data_[1][0] != m2.data_[1][0] ||
-               m1.data_[1][1] != m2.data_[1][1] ||
-               m1.data_[1][2] != m2.data_[1][2] ||
-               m1.data_[1][3] != m2.data_[1][3] ||
-               m1.data_[2][0] != m2.data_[2][0] ||
-               m1.data_[2][1] != m2.data_[2][1] ||
-               m1.data_[2][2] != m2.data_[2][2] ||
-               m1.data_[2][3] != m2.data_[2][3] ||
-               m1.data_[3][0] != m2.data_[3][0] ||
-               m1.data_[3][1] != m2.data_[3][1] ||
-               m1.data_[3][2] != m2.data_[3][2] ||
-               m1.data_[3][3] != m2.data_[3][3];
+        return m1.data_[0][0] != m2.data_[0][0]
+            || m1.data_[0][1] != m2.data_[0][1]
+            || m1.data_[0][2] != m2.data_[0][2]
+            || m1.data_[0][3] != m2.data_[0][3]
+            || m1.data_[1][0] != m2.data_[1][0]
+            || m1.data_[1][1] != m2.data_[1][1]
+            || m1.data_[1][2] != m2.data_[1][2]
+            || m1.data_[1][3] != m2.data_[1][3]
+            || m1.data_[2][0] != m2.data_[2][0]
+            || m1.data_[2][1] != m2.data_[2][1]
+            || m1.data_[2][2] != m2.data_[2][2]
+            || m1.data_[2][3] != m2.data_[2][3]
+            || m1.data_[3][0] != m2.data_[3][0]
+            || m1.data_[3][1] != m2.data_[3][1]
+            || m1.data_[3][2] != m2.data_[3][2]
+            || m1.data_[3][3] != m2.data_[3][3];
     }
 
     /// Returns the multiplication of this Mat4d by the given Vec4d \p v.
@@ -617,8 +640,9 @@ template <>
 struct fmt::formatter<vgc::geometry::Mat4d> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
+        if (it != end && *it != '}') {
             throw format_error("invalid format");
+        }
         return it;
     }
     template <typename FormatContext>

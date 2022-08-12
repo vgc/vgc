@@ -17,6 +17,8 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/vec2x.h then run tools/generate.py.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_VEC2F_H
 #define VGC_GEOMETRY_VEC2F_H
 
@@ -43,24 +45,28 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose.
 //                     If needed, manually export individual functions.
-class Vec2f
-{
+class Vec2f {
 public:
     using ScalarType = float;
     static constexpr Int dimension = 2;
 
     /// Creates an uninitialized `Vec2f`.
     ///
-    Vec2f(core::NoInit) {}
+    Vec2f(core::NoInit) {
+    }
 
     /// Creates a `Vec2f` initialized to (0, 0).
     ///
-    constexpr Vec2f() : data_{0, 0} {}
+    constexpr Vec2f()
+        : data_{0, 0} {
+    }
 
 
     /// Creates a `Vec2f` initialized with the given `x` and `y` coordinates.
     ///
-    constexpr Vec2f(float x, float y) : data_{x, y} {}
+    constexpr Vec2f(float x, float y)
+        : data_{x, y} {
+    }
 
     /// Creates a `Vec2f` from another `Vec<2, T>` object by performing a
     /// `static_cast` on each of its coordinates.
@@ -70,36 +76,51 @@ public:
     /// vgc::geometrt::Vec2f vf(vd); // cast from double to float
     /// ```
     ///
-    template<typename TVec2, VGC_REQUIRES(
-                 isVec<TVec2> &&
-                 TVec2::dimension == 2 &&
-                 !std::is_same_v<TVec2, Vec2f>)>
+    template<typename TVec2,
+        VGC_REQUIRES(
+            isVec<TVec2>
+         && TVec2::dimension == 2
+         && !std::is_same_v<TVec2, Vec2f>)>
     explicit constexpr Vec2f(const TVec2& other)
-        : data_{static_cast<float>(other[0]), static_cast<float>(other[1])} {}
+        : data_{static_cast<float>(other[0]),
+                static_cast<float>(other[1])} {
+    }
 
     /// Accesses the `i`-th coordinate of this `Vec2f`.
     ///
-    constexpr const float& operator[](Int i) const { return data_[i]; }
+    constexpr const float& operator[](Int i) const {
+        return data_[i];
+    }
 
     /// Mutates the `i`-th coordinate of this `Vec2f`.
     ///
-    constexpr float& operator[](Int i) { return data_[i]; }
+    constexpr float& operator[](Int i) {
+        return data_[i];
+    }
 
     /// Accesses the first coordinate of this `Vec2f`.
     ///
-    constexpr float x() const { return data_[0]; }
+    constexpr float x() const {
+        return data_[0];
+    }
 
     /// Accesses the second coordinate of this `Vec2f`.
     ///
-    constexpr float y() const { return data_[1]; }
+    constexpr float y() const {
+        return data_[1];
+    }
 
     /// Mutates the first coordinate of this `Vec2f`.
     ///
-    constexpr void setX(float x) { data_[0] = x; }
+    constexpr void setX(float x) {
+        data_[0] = x;
+    }
 
     /// Mutates the second coordinate of this `Vec2f`.
     ///
-    constexpr void setY(float y) { data_[1] = y; }
+    constexpr void setY(float y) {
+        data_[1] = y;
+    }
 
     /// Adds in-place `other` to this `Vec2f`.
     ///
@@ -178,15 +199,15 @@ public:
     /// Returns whether `v1` and `v2` are equal.
     ///
     friend constexpr bool operator==(const Vec2f& v1, const Vec2f& v2) {
-        return v1.data_[0] == v2.data_[0] &&
-               v1.data_[1] == v2.data_[1];
+        return v1.data_[0] == v2.data_[0]
+            && v1.data_[1] == v2.data_[1];
     }
 
     /// Returns whether `v1` and `v2` are different.
     ///
     friend constexpr bool operator!=(const Vec2f& v1, const Vec2f& v2) {
-        return v1.data_[0] != v2.data_[0] ||
-               v1.data_[1] != v2.data_[1];
+        return v1.data_[0] != v2.data_[0]
+            || v1.data_[1] != v2.data_[1];
     }
 
     /// Compares `v1` and `v2` using the lexicographic
@@ -430,9 +451,9 @@ public:
         else {
             float relTol2 = relTol * relTol;
             float absTol2 = absTol * absTol;
-            return diff2 <= relTol2 * b.squaredLength() ||
-                   diff2 <= relTol2 * a.squaredLength() ||
-                   diff2 <= absTol2;
+            return diff2 <= relTol2 * b.squaredLength()
+                || diff2 <= relTol2 * a.squaredLength()
+                || diff2 <= absTol2;
         }
     }
 
@@ -477,8 +498,8 @@ public:
     ///
     bool allClose(const Vec2f& b, float relTol = 1e-5f, float absTol = 0.0f) const {
         const Vec2f& a = *this;
-        return core::isClose(a[0], b[0], relTol, absTol) &&
-               core::isClose(a[1], b[1], relTol, absTol);
+        return core::isClose(a[0], b[0], relTol, absTol)
+            && core::isClose(a[1], b[1], relTol, absTol);
     }
 
     /// Returns whether the euclidean distance between this Vec2f `a` and the
@@ -567,18 +588,18 @@ public:
     ///
     bool allNear(const Vec2f& b, float absTol) const {
         const Vec2f& a = *this;
-        return core::isNear(a[0], b[0], absTol) &&
-               core::isNear(a[1], b[1], absTol);
+        return core::isNear(a[0], b[0], absTol)
+            && core::isNear(a[1], b[1], absTol);
     }
 
 private:
     float data_[2];
 
-    Vec2f infdiff_(const Vec2f& b) const
-    {
+    Vec2f infdiff_(const Vec2f& b) const {
         const Vec2f& a = *this;
-        return Vec2f(core::internal::infdiff(a[0], b[0]),
-                     core::internal::infdiff(a[1], b[1]));
+        return Vec2f(
+            core::internal::infdiff(a[0], b[0]),
+            core::internal::infdiff(a[1], b[1]));
     }
 };
 
@@ -693,8 +714,9 @@ template <>
 struct fmt::formatter<vgc::geometry::Vec2f> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
+        if (it != end && *it != '}') {
             throw format_error("invalid format");
+        }
         return it;
     }
     template <typename FormatContext>

@@ -63,13 +63,13 @@ namespace vgc::geometry {
 /// T& operator*(Scalar, const T&);
 /// \endcode
 ///
-template <typename T, typename Scalar = double>
-class BezierSpline
-{
+template<typename T, typename Scalar = double>
+class BezierSpline {
 public:
     /// Creates an empty BezierSpline.
     ///
-    BezierSpline() {}
+    BezierSpline() {
+    }
 
     /// Accesses the underlying data.
     ///
@@ -122,14 +122,14 @@ public:
         u *= n;
 
         // Get which segment to evaluate in [0 .. n-1]
-        int segmentIndex = core::clamp((int) std::floor(u), 0, n-1);
+        int segmentIndex = core::clamp((int)std::floor(u), 0, n - 1);
 
         // Get local parameterization
-        Scalar t  = u - segmentIndex;
-        Scalar t2 = t  * t;
+        Scalar t = u - segmentIndex;
+        Scalar t2 = t * t;
         Scalar t3 = t2 * t;
-        Scalar s  = 1 - t;
-        Scalar s2 = s  * s;
+        Scalar s = 1 - t;
+        Scalar s2 = s * s;
         Scalar s3 = s2 * s;
 
         // Get corresponding control points
@@ -139,6 +139,7 @@ public:
         const T& p3 = data_[segmentIndex + 3];
 
         // Evaluate
+        // clang-format off
         if (pos) {
             *pos =   s3          * p0
                    + 3 * s2 * t  * p1
@@ -150,6 +151,7 @@ public:
                    + 2 * s * t  * (p2 - p1)
                    + t2 * p2    * (p3 - p2);
         }
+        // clang-format on
     }
 
     /// Returns the position of a non-empty spline given u in [0, 1].

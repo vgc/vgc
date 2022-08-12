@@ -21,6 +21,8 @@
 
 namespace vgc::geometry {
 
+// clang-format off
+
 /// Returns the position at coordinate \p u of the cubic Bézier curve defined
 /// by the four control points \p p0, \p p1, \p p2, and \p p3.
 ///
@@ -35,12 +37,9 @@ namespace vgc::geometry {
 ///
 template <typename Scalar, typename T>
 T cubicBezier(
-        const T& p0,
-        const T& p1,
-        const T& p2,
-        const T& p3,
-        Scalar u)
-{
+    const T& p0, const T& p1, const T& p2, const T& p3,
+    Scalar u) {
+
     Scalar v  = 1 - u;
     Scalar u2 = u * u;
     Scalar v2 = v * v;
@@ -61,12 +60,9 @@ T cubicBezier(
 ///
 template <typename Scalar, typename T>
 T cubicBezierDer(
-        const T& p0,
-        const T& p1,
-        const T& p2,
-        const T& p3,
-        Scalar u)
-{
+    const T& p0, const T& p1, const T& p2, const T& p3,
+    Scalar u) {
+
     Scalar v  = 1 - u;
     Scalar u2 = u * u;
     Scalar v2 = v * v;
@@ -88,14 +84,11 @@ T cubicBezierDer(
 ///
 template <typename Scalar, typename T>
 T cubicBezierPosAndDer(
-        const T& p0,
-        const T& p1,
-        const T& p2,
-        const T& p3,
-        Scalar u,
-        T& pos,
-        T& der)
-{
+    const T& p0, const T& p1, const T& p2, const T& p3,
+    Scalar u,
+    T& pos,
+    T& der) {
+
     Scalar v  = 1 - u;
     Scalar u2 = u * u;
     Scalar v2 = v * v;
@@ -111,6 +104,8 @@ T cubicBezierPosAndDer(
            + 6 * v  * u  * (p2 - p1)
            + 3      * u2 * (p3 - p2);
 }
+
+// clang-format on
 
 } // namespace vgc::geometry
 

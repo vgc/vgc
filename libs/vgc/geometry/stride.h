@@ -33,39 +33,99 @@ template<typename T, typename U>
 class StrideIterator {
 public:
     using iterator_category = std::random_access_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = U;
-    using pointer           = U*;
-    using reference         = U&;
+    using difference_type = std::ptrdiff_t;
+    using value_type = U;
+    using pointer = U*;
+    using reference = U&;
 
     StrideIterator(T* p, Int stride)
-        : p_(p), stride_(core::int_cast<difference_type>(stride)) {}
+        : p_(p)
+        , stride_(core::int_cast<difference_type>(stride)) {
+    }
 
-    reference operator*()  const { return *reinterpret_cast<U*>(p_); }
-    pointer   operator->() const { return  reinterpret_cast<U*>(p_); }
+    reference operator*() const {
+        return *reinterpret_cast<U*>(p_);
+    }
 
-    reference operator[](difference_type n) const { return *reinterpret_cast<U*>(p_ + n * stride_); }
+    pointer operator->() const {
+        return reinterpret_cast<U*>(p_);
+    }
 
-    StrideIterator& operator++()    { p_ += stride_; return *this; }
-    StrideIterator& operator--()    { p_ -= stride_; return *this; }
-    StrideIterator  operator++(int) { StrideIterator tmp = *this; p_ += stride_; return tmp; }
-    StrideIterator  operator--(int) { StrideIterator tmp = *this; p_ -= stride_; return tmp; }
+    reference operator[](difference_type n) const {
+        return *reinterpret_cast<U*>(p_ + n * stride_);
+    }
 
-    StrideIterator& operator+=(difference_type n) { p_ += n * stride_; return *this; }
-    StrideIterator& operator-=(difference_type n) { p_ -= n * stride_; return *this; }
+    StrideIterator& operator++() {
+        p_ += stride_;
+        return *this;
+    }
 
-    StrideIterator operator+(difference_type n) const { return StrideIterator(p_ + n * stride_, stride_); }
-    StrideIterator operator-(difference_type n) const { return StrideIterator(p_ - n * stride_, stride_); }
-    friend StrideIterator operator+(difference_type n, const StrideIterator& rhs) { return rhs + n; }
+    StrideIterator& operator--() {
+        p_ -= stride_;
+        return *this;
+    }
 
-    difference_type operator-(const StrideIterator& rhs) const { return (p_ - rhs.p_) / stride_; }
+    StrideIterator operator++(int) {
+        StrideIterator tmp = *this;
+        p_ += stride_;
+        return tmp;
+    }
 
-    friend bool operator==(const StrideIterator& a, const StrideIterator& b) { return a.p_ == b.p_; }
-    friend bool operator!=(const StrideIterator& a, const StrideIterator& b) { return a.p_ != b.p_; }
-    friend bool operator< (const StrideIterator& a, const StrideIterator& b) { return a.p_ <  b.p_; }
-    friend bool operator<=(const StrideIterator& a, const StrideIterator& b) { return a.p_ <= b.p_; }
-    friend bool operator> (const StrideIterator& a, const StrideIterator& b) { return a.p_ >  b.p_; }
-    friend bool operator>=(const StrideIterator& a, const StrideIterator& b) { return a.p_ >= b.p_; }
+    StrideIterator operator--(int) {
+        StrideIterator tmp = *this;
+        p_ -= stride_;
+        return tmp;
+    }
+
+    StrideIterator& operator+=(difference_type n) {
+        p_ += n * stride_;
+        return *this;
+    }
+
+    StrideIterator& operator-=(difference_type n) {
+        p_ -= n * stride_;
+        return *this;
+    }
+
+    StrideIterator operator+(difference_type n) const {
+        return StrideIterator(p_ + n * stride_, stride_);
+    }
+
+    StrideIterator operator-(difference_type n) const {
+        return StrideIterator(p_ - n * stride_, stride_);
+    }
+
+    friend StrideIterator operator+(difference_type n, const StrideIterator& rhs) {
+        return rhs + n;
+    }
+
+    difference_type operator-(const StrideIterator& rhs) const {
+        return (p_ - rhs.p_) / stride_;
+    }
+
+    friend bool operator==(const StrideIterator& a, const StrideIterator& b) {
+        return a.p_ == b.p_;
+    }
+
+    friend bool operator!=(const StrideIterator& a, const StrideIterator& b) {
+        return a.p_ != b.p_;
+    }
+
+    friend bool operator<(const StrideIterator& a, const StrideIterator& b) {
+        return a.p_ < b.p_;
+    }
+
+    friend bool operator<=(const StrideIterator& a, const StrideIterator& b) {
+        return a.p_ <= b.p_;
+    }
+
+    friend bool operator>(const StrideIterator& a, const StrideIterator& b) {
+        return a.p_ > b.p_;
+    }
+
+    friend bool operator>=(const StrideIterator& a, const StrideIterator& b) {
+        return a.p_ >= b.p_;
+    }
 
 private:
     T* p_;
@@ -96,7 +156,9 @@ public:
     /// `stride` number of `T` elements.
     ///
     StrideSpan(T* begin, Int count, Int stride)
-        : begin_(begin), count_(count), stride_(stride) {
+        : begin_(begin)
+        , count_(count)
+        , stride_(stride) {
     }
 
     /// The begin iterator of the span.

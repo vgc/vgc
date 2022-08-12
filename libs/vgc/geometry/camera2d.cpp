@@ -15,24 +15,23 @@
 // limitations under the License.
 
 #include <vgc/geometry/camera2d.h>
+
 #include <cmath>
 
 namespace vgc::geometry {
 
-Camera2d::Camera2d() :
-    center_(0, 0),
-    zoom_(1),
-    rotation_(0),
-    viewportWidth_(1),
-    viewportHeight_(1),
-    nearPlane_(-1),
-    farPlane_(1)
-{
-
+Camera2d::Camera2d()
+    : center_(0, 0)
+    , zoom_(1)
+    , rotation_(0)
+    , viewportWidth_(1)
+    , viewportHeight_(1)
+    , nearPlane_(-1)
+    , farPlane_(1) {
 }
 
-Mat4d Camera2d::viewMatrix() const
-{
+Mat4d Camera2d::viewMatrix() const {
+
     const double cx = center().x();
     const double cy = center().y();
     const double w = viewportWidth();
@@ -46,17 +45,25 @@ Mat4d Camera2d::viewMatrix() const
     return res;
 }
 
-Mat4d Camera2d::projectionMatrix() const
-{
+Mat4d Camera2d::projectionMatrix() const {
+
     const double w = viewportWidth_;
     const double h = viewportHeight_;
     const double n = nearPlane_;
     const double f = farPlane_;
 
+    // clang-format off
     return Mat4d(2/w , 0    , 0       , -1          ,
-                 0   , -2/h , 0       , 1           ,  // Inversion of Y axis (SVG -> OpenGL conventions)
-                 0   , 0    , 2/(n-f) , (n+f)/(n-f) ,  // XXX I'm not 100% sure of the signs on this row. Try later: an object at (0, 0, 0.5) should obsure one at (0, 0, -0.5)
+                 0   , -2/h , 0       , 1           ,
+                 0   , 0    , 2/(n-f) , (n+f)/(n-f) ,
                  0   , 0    , 0       , 1           );
+    // clang-format on
+
+    // Notes:
+    // 1. In the second row of the matrix, we perform
+    //    the inversion of Y axis (SVG -> OpenGL conventions).
+    // 2. I'm not 100% sure of the signs on the 3rd row. We should
+    //    try with an object at (0, 0, 0.5) obsuring one at (0, 0, -0.5).
 }
 
 } // namespace vgc::geometry

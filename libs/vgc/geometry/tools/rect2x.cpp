@@ -17,6 +17,8 @@
 // This file is used to generate all the variants of this class.
 // You must manually run generate.py after any modification.
 
+// clang-format off
+
 #include "rect2x.h"
 
 namespace vgc::geometry {

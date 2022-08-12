@@ -17,6 +17,8 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/vec2x.cpp then run tools/generate.py.
 
+// clang-format off
+
 #include <vgc/geometry/vec2f.h>
 
 namespace vgc::geometry {

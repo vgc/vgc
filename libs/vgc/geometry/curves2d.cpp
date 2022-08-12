@@ -20,30 +20,25 @@
 
 namespace vgc::geometry {
 
-void Curves2d::close()
-{
+void Curves2d::close() {
     commandData_.append({CurveCommandType::Close, data_.length()});
 }
 
-void Curves2d::moveTo(const Vec2d& p)
-{
+void Curves2d::moveTo(const Vec2d& p) {
     moveTo(p[0], p[1]);
 }
 
-void Curves2d::moveTo(double x, double y)
-{
+void Curves2d::moveTo(double x, double y) {
     data_.append(x);
     data_.append(y);
     commandData_.append({CurveCommandType::MoveTo, data_.length()});
 }
 
-void Curves2d::lineTo(const Vec2d& p)
-{
+void Curves2d::lineTo(const Vec2d& p) {
     lineTo(p[0], p[1]);
 }
 
-void Curves2d::lineTo(double x, double y)
-{
+void Curves2d::lineTo(double x, double y) {
     // TODO (for all functions): support subcommands, that is, don't add a new
     // command if the last command is the same. We should simply add more params.
     data_.append(x);
@@ -51,15 +46,11 @@ void Curves2d::lineTo(double x, double y)
     commandData_.append({CurveCommandType::LineTo, data_.length()});
 }
 
-void Curves2d::quadraticBezierTo(const Vec2d& p1,
-                                 const Vec2d& p2)
-{
+void Curves2d::quadraticBezierTo(const Vec2d& p1, const Vec2d& p2) {
     quadraticBezierTo(p1[0], p1[1], p2[0], p2[1]);
 }
 
-void Curves2d::quadraticBezierTo(double x1, double y1,
-                                 double x2, double y2)
-{
+void Curves2d::quadraticBezierTo(double x1, double y1, double x2, double y2) {
     data_.append(x1);
     data_.append(y1);
     data_.append(x2);
@@ -67,17 +58,18 @@ void Curves2d::quadraticBezierTo(double x1, double y1,
     commandData_.append({CurveCommandType::QuadraticBezierTo, data_.length()});
 }
 
-void Curves2d::cubicBezierTo(const Vec2d& p1,
-                             const Vec2d& p2,
-                             const Vec2d& p3)
-{
+void Curves2d::cubicBezierTo(const Vec2d& p1, const Vec2d& p2, const Vec2d& p3) {
     cubicBezierTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
 }
 
-void Curves2d::cubicBezierTo(double x1, double y1,
-                             double x2, double y2,
-                             double x3, double y3)
-{
+void Curves2d::cubicBezierTo(
+    double x1,
+    double y1,
+    double x2,
+    double y2,
+    double x3,
+    double y3) {
+
     data_.append(x1);
     data_.append(y1);
     data_.append(x2);
@@ -102,38 +94,59 @@ struct SampleBuffer {
 
 struct QuadraticSegment {
     Vec2d p0, p1, p2;
-    Vec2d startPosition() const { return p0; }
-    Vec2d endPosition() const { return p2; }
-    Vec2d startTangent() const { return p1 - p0; }
-    Vec2d endTangent() const { return p2 - p1; }
+
+    Vec2d startPosition() const {
+        return p0;
+    }
+
+    Vec2d endPosition() const {
+        return p2;
+    }
+
+    Vec2d startTangent() const {
+        return p1 - p0;
+    }
+
+    Vec2d endTangent() const {
+        return p2 - p1;
+    }
+
     Vec2d operator()(double u) const {
-        return (1-u)*(1-u)*p0 +
-               2*u*(1-u)*p1 +
-               u*u*p2;
+        return (1 - u) * (1 - u) * p0 //
+               + 2 * u * (1 - u) * p1 //
+               + u * u * p2;
     }
 };
 
 struct CubicSegment {
     Vec2d p0, p1, p2, p3;
-    Vec2d startPosition() const { return p0; }
-    Vec2d endPosition() const { return p3; }
-    Vec2d startTangent() const { return p1 - p0; }
-    Vec2d endTangent() const { return p3 - p2; }
+    Vec2d startPosition() const {
+        return p0;
+    }
+    Vec2d endPosition() const {
+        return p3;
+    }
+    Vec2d startTangent() const {
+        return p1 - p0;
+    }
+    Vec2d endTangent() const {
+        return p3 - p2;
+    }
     Vec2d operator()(double u) const {
-        return (1-u)*(1-u)*(1-u)*p0 +
-               3*u*(1-u)*(1-u)*p1 +
-               3*u*u*(1-u)*p2 +
-               u*u*u*p3;
+        return (1 - u) * (1 - u) * (1 - u) * p0 //
+               + 3 * u * (1 - u) * (1 - u) * p1 //
+               + 3 * u * u * (1 - u) * p2       //
+               + u * u * u * p3;
     }
 };
 
 template<class SegmentType>
 void sampleSegment(
-        Curves2d& res,
-        SampleBuffer& buffer,
-        const Curves2dSampleParams& params,
-        SegmentType segment)
-{
+    Curves2d& res,
+    SampleBuffer& buffer,
+    const Curves2dSampleParams& params,
+    SegmentType segment) {
+
     double minDistanceSquared = params.minDistance() * params.minDistance();
     double maxAngle = params.maxAngle();
     Int maxSamplesPerSegment = params.maxSamplesPerSegment();
@@ -157,9 +170,11 @@ void sampleSegment(
         // longer than the minDistance.
         failed.clear();
         for (Int i = 1; i < samples.length() - 1; ++i) {
-            Vec2d a = samples[i].position - samples[i-1].position;
-            Vec2d b = samples[i+1].position - samples[i].position;
-            if (std::abs(a.angle(b)) > maxAngle && b.squaredLength() > minDistanceSquared) {
+            Vec2d a = samples[i].position - samples[i - 1].position;
+            Vec2d b = samples[i + 1].position - samples[i].position;
+            if (std::abs(a.angle(b)) > maxAngle
+                && b.squaredLength() > minDistanceSquared) {
+
                 failed.append(i);
             }
         }
@@ -179,7 +194,7 @@ void sampleSegment(
                 }
             }
             if (i != samples.length() - 2) {
-                added.append(i+1);
+                added.append(i + 1);
                 if (samples.length() + added.length() - 3 == maxSamplesPerSegment) {
                     break; // => stop adding samples (max reached)
                 }
@@ -203,7 +218,7 @@ void sampleSegment(
         // Compute new samples. Note that the above guarantees that new samples
         // are never consecutive, so we can do u[i] = (u[i-1] + u[i+1]) / 2.
         for (Int i : added) {
-            double u = 0.5 * (samples[i-1].u + samples[i+1].u);
+            double u = 0.5 * (samples[i - 1].u + samples[i + 1].u);
             samples[i].u = u;
             samples[i].position = segment(u);
         }
@@ -217,8 +232,8 @@ void sampleSegment(
 
 } // namespace
 
-Curves2d Curves2d::sample(const Curves2dSampleParams& params) const
-{
+Curves2d Curves2d::sample(const Curves2dSampleParams& params) const {
+
     Curves2d res;
     Vec2d p0, p1, p2, p3;
     SampleBuffer buffer;
@@ -264,22 +279,37 @@ namespace {
 //    o---------------->o
 //    b   right-side    d
 //
-void insertQuad(core::DoubleArray& data,
-                const Vec2d& a, const Vec2d& b,
-                const Vec2d& c, const Vec2d& d)
-{
+void insertQuad(
+    core::DoubleArray& data,
+    const Vec2d& a,
+    const Vec2d& b,
+    const Vec2d& c,
+    const Vec2d& d) {
+
     // Two triangles: ABC and CBD
-    data.insert(data.end(), {
-        a[0], a[1],   b[0], b[1],   c[0], c[1],
-        c[0], c[1],   b[0], b[1],   d[0], d[1]});
+    data.insert(
+        data.end(),
+        {a[0],
+         a[1],
+         b[0],
+         b[1],
+         c[0],
+         c[1], //
+         c[0],
+         c[1],
+         b[0],
+         b[1],
+         d[0],
+         d[1]});
 }
 
-void editQuadData(core::DoubleArray& data, Int i,
-                  const Vec2d& a, const Vec2d& b)
-{
-    data[i] = a[0]; data[i+1] = a[1];
-    data[i+2] = b[0]; data[i+3] = b[1];
-    data[i+8] = b[0]; data[i+9] = b[1];
+void editQuadData(core::DoubleArray& data, Int i, const Vec2d& a, const Vec2d& b) {
+    data[i + 0] = a[0];
+    data[i + 1] = a[1];
+    data[i + 2] = b[0];
+    data[i + 3] = b[1];
+    data[i + 8] = b[0];
+    data[i + 9] = b[1];
 }
 
 // Each of the "process" methods computes n1, l1, and r1 based
@@ -299,23 +329,32 @@ void editQuadData(core::DoubleArray& data, Int i,
 // For the last sample, we don't have c2.
 //
 void processFirstSample(
-        core::DoubleArray& /*data*/, double width,
-        const Vec2d& c1, const Vec2d& c2,
-        Vec2d& l1, Vec2d& r1,
-        Vec2d& n1)
-{
+    core::DoubleArray& /*data*/,
+    double width,
+    const Vec2d& c1,
+    const Vec2d& c2,
+    Vec2d& l1,
+    Vec2d& r1,
+    Vec2d& n1) {
+
     n1 = (c2 - c1).normalize().orthogonalized();
     l1 = c1 + 0.5 * width * n1;
     r1 = c1 - 0.5 * width * n1;
 }
 
 void processMiddleSample(
-        core::DoubleArray& data, double width,
-        const Vec2d& /*c0*/, const Vec2d& c1, const Vec2d& c2,
-        const Vec2d& l0, Vec2d& l1,
-        const Vec2d& r0, Vec2d& r1,
-        const Vec2d& n0, Vec2d& n1)
-{
+    core::DoubleArray& data,
+    double width,
+    const Vec2d& /*c0*/,
+    const Vec2d& c1,
+    const Vec2d& c2,
+    const Vec2d& l0,
+    Vec2d& l1,
+    const Vec2d& r0,
+    Vec2d& r1,
+    const Vec2d& n0,
+    Vec2d& n1) {
+
     // Compute n1
     n1 = (c2 - c1).normalize().orthogonalized();
 
@@ -328,7 +367,7 @@ void processMiddleSample(
     // and since n0 and n1 are normal vectors, cos(t) is just a dot product.
     //
     double cost = n0.dot(-n1);
-    double sint2 = std::sqrt(0.5*(1-cost));
+    double sint2 = std::sqrt(0.5 * (1 - cost));
     double miterLength = width / sint2; // TODO: handle miterclip (sint2 close to 0)
     Vec2d miterDir = (n0 + n1).normalized();
     l1 = c1 + 0.5 * miterLength * miterDir;
@@ -339,12 +378,16 @@ void processMiddleSample(
 }
 
 void processLastOpenSample(
-        core::DoubleArray& data, double width,
-        const Vec2d& c0, const Vec2d& c1,
-        const Vec2d& l0, Vec2d& l1,
-        const Vec2d& r0, Vec2d& r1,
-        const Vec2d& /*n0*/, Vec2d& n1)
-{
+    core::DoubleArray& data,
+    double width,
+    const Vec2d& c0,
+    const Vec2d& c1,
+    const Vec2d& l0,
+    Vec2d& l1,
+    const Vec2d& r0,
+    Vec2d& r1,
+    const Vec2d& /*n0*/,
+    Vec2d& n1) {
     n1 = (c1 - c0).normalize().orthogonalized();
     l1 = c1 + 0.5 * width * n1;
     r1 = c1 - 0.5 * width * n1;
@@ -353,8 +396,11 @@ void processLastOpenSample(
 
 } // namespace
 
-void Curves2d::stroke(core::DoubleArray& data, double width, const Curves2dSampleParams& params) const
-{
+void Curves2d::stroke(
+    core::DoubleArray& data,
+    double width,
+    const Curves2dSampleParams& params) const {
+
     // Compute adaptive sampling
     Curves2d samples = sample(params);
 
@@ -406,15 +452,15 @@ void Curves2d::stroke(core::DoubleArray& data, double width, const Curves2dSampl
 namespace {
 
 template<typename TFloat>
-void fill_(core::Array<TFloat>& data, const Curves2d& samples)
-{
+void fill_(core::Array<TFloat>& data, const Curves2d& samples) {
     // Triangulate using libtess2
     TESSalloc* alloc = nullptr; // Default allocator
     int vertexSize = 2;         // Number of coordinates per vertex (must be 2 or 3)
     int windingRule = TESS_WINDING_NONZERO; // Winding rule
-    int elementType = TESS_POLYGONS;  // Use sequence of polygons as output. Note: we could use
-                                      // TESS_CONNECTED_POLYGONS to detect which edges have no neighbor
-                                      // polygons, which can be useful for anti-aliasing.
+    int elementType = TESS_POLYGONS;
+    // ^ Use sequence of polygons as output. Note: we could use
+    // TESS_CONNECTED_POLYGONS to detect which edges have no neighbor
+    // polygons, which can be useful for anti-aliasing.
     int maxPolySize = 3;              // Triangles only
     const TESSreal* normal = nullptr; // Automatically compute polygon normal
     TESStesselator* tess = tessNewTess(alloc);
@@ -439,38 +485,41 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples)
         }
         else if (c.type() == CurveCommandType::Close) {
             if (coords.size() > 4) { // ignore contour if 2 points or less
-                tessAddContour(tess, vertexSize, coords.data(),
-                               sizeof(TESSreal) * vertexSize,
-                               core::int_cast<int>(coords.length()/2));
+                tessAddContour(
+                    tess,
+                    vertexSize,
+                    coords.data(),
+                    sizeof(TESSreal) * vertexSize,
+                    core::int_cast<int>(coords.length() / 2));
             }
         }
     }
-    int success = tessTesselate(tess, windingRule, elementType,
-                                maxPolySize, vertexSize, normal);
+    int success =
+        tessTesselate(tess, windingRule, elementType, maxPolySize, vertexSize, normal);
     if (success) {
         const TESSreal* vertices = tessGetVertices(tess);
         const TESSindex* polygons = tessGetElements(tess);
         const int numPolygons = tessGetElementCount(tess);
         Int numOutputVertices = 0;
         for (int i = 0; i < numPolygons; ++i) {
-            const TESSindex* p = &polygons[i*maxPolySize];
+            const TESSindex* p = &polygons[i * maxPolySize];
             int polySize = maxPolySize;
-            while (p[polySize-1] == TESS_UNDEF) {
+            while (p[polySize - 1] == TESS_UNDEF) {
                 --polySize;
             }
-            numOutputVertices += 6 * (polySize-2);
+            numOutputVertices += 6 * (polySize - 2);
         }
         data.reserve(data.length() + numOutputVertices);
         for (int i = 0; i < numPolygons; ++i) {
-            const TESSindex* p = &polygons[i*maxPolySize];
+            const TESSindex* p = &polygons[i * maxPolySize];
             int polySize = maxPolySize;
-            while (p[polySize-1] == TESS_UNDEF) {
+            while (p[polySize - 1] == TESS_UNDEF) {
                 --polySize;
             }
-            for (int j = 0; j < polySize-2; ++j) { // triangle fan
-                const TESSreal* v1 = &vertices[p[j]   * vertexSize];
-                const TESSreal* v2 = &vertices[p[j+1] * vertexSize];
-                const TESSreal* v3 = &vertices[p[j+2] * vertexSize];
+            for (int j = 0; j < polySize - 2; ++j) { // triangle fan
+                const TESSreal* v1 = &vertices[p[j] * vertexSize];
+                const TESSreal* v2 = &vertices[p[j + 1] * vertexSize];
+                const TESSreal* v3 = &vertices[p[j + 2] * vertexSize];
                 data.append(static_cast<TFloat>(v1[0]));
                 data.append(static_cast<TFloat>(v1[1]));
                 data.append(static_cast<TFloat>(v2[0]));
@@ -487,13 +536,11 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples)
 
 } // namespace
 
-void Curves2d::fill(core::DoubleArray& data, const Curves2dSampleParams& params) const
-{
+void Curves2d::fill(core::DoubleArray& data, const Curves2dSampleParams& params) const {
     fill_(data, sample(params));
 }
 
-void Curves2d::fill(core::FloatArray& data, const Curves2dSampleParams& params) const
-{
+void Curves2d::fill(core::FloatArray& data, const Curves2dSampleParams& params) const {
     fill_(data, sample(params));
 }
 

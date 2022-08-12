@@ -21,8 +21,8 @@
 using vgc::geometry::Curve;
 using vgc::geometry::Vec2d;
 
-void wrap_curve(py::module& m)
-{
+void wrap_curve(py::module& m) {
+
     py::class_<Curve>(m, "Curve")
 
         .def(py::init<>())
@@ -31,12 +31,16 @@ void wrap_curve(py::module& m)
         // overloads if we use C++14. See:
         // http://pybind11.readthedocs.io/en/latest/classes.html#overloaded-methods
 
-        .def("addControlPoint", (void (Curve::*)(double, double, double)) &Curve::addControlPoint)
-        .def("addControlPoint", (void (Curve::*)(const Vec2d&, double)) &Curve::addControlPoint)
+        .def(
+            "addControlPoint",
+            py::overload_cast<double, double, double>(&Curve::addControlPoint))
+        .def(
+            "addControlPoint",
+            py::overload_cast<const Vec2d&, double>(&Curve::addControlPoint))
 
         .def("__repr__", [](const Curve& c) {
-            return "<Curve containing "
-                    + std::to_string(c.positionData().size() / 2)
-                           + " control points>"; })
-    ;
+            return "<Curve containing "                          //
+                   + std::to_string(c.positionData().size() / 2) //
+                   + " control points>";
+        });
 }

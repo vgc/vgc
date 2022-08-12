@@ -48,14 +48,17 @@ TEST(TestArrays, ResizeNoInit) {
 namespace {
 
 void measureResizePerf(
-        Vec2dArray& array, void (Vec2dArray::* resizeFn)(Int),
-        Int n, double& elapsed, bool isWarmup)
-{
+    Vec2dArray& array,
+    void (Vec2dArray::*resizeFn)(Int),
+    Int n,
+    double& elapsed,
+    bool isWarmup) {
+
     vgc::core::Stopwatch s;
     (array.*resizeFn)(0);
-    EXPECT_EQ(array.length(), 0);   // Ensures that resize(0) isn't optimized out
+    EXPECT_EQ(array.length(), 0); // Ensures that resize(0) isn't optimized out
     (array.*resizeFn)(n);
-    EXPECT_EQ(array[n-1], Vec2d()); // Ensures that resize(n) isn't optimized out
+    EXPECT_EQ(array[n - 1], Vec2d()); // Ensures that resize(n) isn't optimized out
     if (!isWarmup) {
         elapsed += s.elapsed();
     }
@@ -86,7 +89,7 @@ TEST(TestArrays, ResizeNoInitPerf) {
 
 #endif // VGC_DEBUG_BUILD
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

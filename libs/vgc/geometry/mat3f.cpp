@@ -17,14 +17,16 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/mat3x.cpp then run tools/generate.py.
 
+// clang-format off
+
 #include <vgc/geometry/mat3f.h>
 
 #include <limits>
 
 namespace vgc::geometry {
 
-Mat3f Mat3f::inverted(bool* isInvertible, float epsilon_) const
-{
+Mat3f Mat3f::inverted(bool* isInvertible, float epsilon_) const {
+
     Mat3f res;
 
     const auto& d = data_;

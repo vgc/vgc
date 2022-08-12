@@ -19,11 +19,10 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/wraps/vec.h>
 
-namespace  {
+namespace {
 
 template<typename This>
-This normalizedOrThrow(const This& v)
-{
+This normalizedOrThrow(const This& v) {
     bool isNormalizable;
     This res = v.normalized(&isNormalizable);
     if (!isNormalizable) {
@@ -32,35 +31,50 @@ This normalizedOrThrow(const This& v)
     return res;
 }
 
-template<typename This, typename T, VGC_REQUIRES(std::is_same_v<typename This::ScalarType, T>)>
-void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
-{
-    auto self2 = py::self; // Fix https://github.com/pybind/pybind11/issues/1893
+template<
+    typename This,
+    typename T,
+    VGC_REQUIRES(std::is_same_v<typename This::ScalarType, T>)>
+void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol) {
+
+    // Fix https://github.com/pybind/pybind11/issues/1893
+    auto self2 = py::self;
 
     py::class_<This>(m, thisTypeName.c_str())
 
         .def(py::init<>())
         .def(py::init<T, T>())
-        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
-        .def(py::init([](py::tuple t) { return vgc::geometry::wraps::vecFromTuple<This>(t); }))
+        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }))
+        .def(py::init(
+            [](py::tuple t) { return vgc::geometry::wraps::vecFromTuple<This>(t); }))
         .def(py::init<This>())
 
-        .def("__getitem__", [](const This& v, int i) {
-            if (i < 0 || i >= 2) throw py::index_error();
-            return v[i]; })
-        .def("__setitem__", [](This& v, int i, T x) {
-            if (i < 0 || i >= 2) throw py::index_error();
-            v[i] = x; })
+        .def(
+            "__getitem__",
+            [](const This& v, int i) {
+                if (i < 0 || i >= 2) {
+                    throw py::index_error();
+                }
+                return v[i];
+            })
+        .def(
+            "__setitem__",
+            [](This& v, int i, T x) {
+                if (i < 0 || i >= 2) {
+                    throw py::index_error();
+                }
+                v[i] = x;
+            })
 
         .def_property("x", &This::x, &This::setX)
         .def_property("y", &This::y, &This::setY)
 
         .def(py::self += py::self)
         .def(py::self + py::self)
-        .def(+ py::self)
+        .def(+py::self)
         .def(self2 -= py::self)
         .def(py::self - py::self)
-        .def(- py::self)
+        .def(-py::self)
         .def(py::self *= T())
         .def(T() * py::self)
         .def(py::self * T())
@@ -83,18 +97,16 @@ void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol)
         .def("dot", &This::dot)
         .def("det", &This::det)
         .def("angle", &This::angle)
-        .def("isClose",  &This::isClose,  "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
+        .def("isClose", &This::isClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("allClose", &This::allClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
-        .def("isNear",   &This::isNear,   "b"_a, "absTol"_a)
-        .def("allNear",  &This::allNear,  "b"_a, "absTol"_a)
+        .def("isNear", &This::isNear, "b"_a, "absTol"_a)
+        .def("allNear", &This::allNear, "b"_a, "absTol"_a)
 
-        .def("__repr__", [](const This& v) { return vgc::core::toString(v); })
-    ;
+        .def("__repr__", [](const This& v) { return vgc::core::toString(v); });
 }
 
 template<typename This>
-void wrap_2darray(py::module& m, const std::string& valueTypeName)
-{
+void wrap_2darray(py::module& m, const std::string& valueTypeName) {
     using T = typename This::value_type; // Example: Vec2d
     using U = typename T::ScalarType;    // Example: double
     std::string thisTypeName = valueTypeName + "Array";
@@ -105,7 +117,8 @@ void wrap_2darray(py::module& m, const std::string& valueTypeName)
         for (auto it : s) {
             auto t = py::reinterpret_borrow<py::tuple>(it);
             if (t.size() != 2) {
-                throw py::value_error("Tuple length must be 2 for conversion to " + valueTypeName);
+                throw py::value_error(
+                    "Tuple length must be 2 for conversion to " + valueTypeName);
             }
             res.append(T(t[0].cast<U>(), t[1].cast<U>()));
         }
@@ -115,8 +128,7 @@ void wrap_2darray(py::module& m, const std::string& valueTypeName)
 
 } // namespace
 
-void wrap_vec(py::module& m)
-{
+void wrap_vec(py::module& m) {
     wrap_vec2x<vgc::geometry::Vec2d>(m, "Vec2d", 1e-9);
     wrap_vec2x<vgc::geometry::Vec2f>(m, "Vec2f", 1e-5f);
     wrap_2darray<vgc::geometry::Vec2dArray>(m, "Vec2d");

@@ -17,14 +17,16 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/mat2x.cpp then run tools/generate.py.
 
+// clang-format off
+
 #include <vgc/geometry/mat2d.h>
 
 #include <limits>
 
 namespace vgc::geometry {
 
-Mat2d Mat2d::inverted(bool* isInvertible, double epsilon_) const
-{
+Mat2d Mat2d::inverted(bool* isInvertible, double epsilon_) const {
+
     Mat2d res;
 
     const auto& d = data_;

@@ -17,6 +17,8 @@
 // This file is used to generate all the variants of this class.
 // You must manually run generate.py after any modification.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_VEC4X_H
 #define VGC_GEOMETRY_VEC4X_H
 
@@ -42,8 +44,7 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose.
 //                     If needed, manually export individual functions.
-class Vec4x
-{
+class Vec4x {
 public:
     using ScalarType = float;
     static constexpr Int dimension = 4;
@@ -54,12 +55,16 @@ public:
 
     /// Creates a `Vec4x` initialized to (0, 0, 0, 0).
     ///
-    constexpr Vec4x() : data_{0, 0, 0, 0} {}
+    constexpr Vec4x()
+        : data_{0, 0, 0, 0} {
+    }
 
 
     /// Creates a `Vec4x` initialized with the given `x`, `y`, `z`, `w` coordinates.
     ///
-    constexpr Vec4x(float x, float y, float z, float w) : data_{x, y, z, w} {}
+    constexpr Vec4x(float x, float y, float z, float w)
+        : data_{x, y, z, w} {
+    }
 
     /// Creates a `Vec4x` from another `Vec<2, T>` object by performing a
     /// `static_cast` on each of its coordinates.
@@ -69,63 +74,89 @@ public:
     /// vgc::geometrt::Vec4f vf(vd); // cast from double to float
     /// ```
     ///
-    template<typename TVec4, VGC_REQUIRES(
-                 isVec<TVec4> &&
-                 TVec4::dimension == 4 &&
-                 !std::is_same_v<TVec4, Vec4x>)>
+    template<typename TVec4,
+        VGC_REQUIRES(
+            isVec<TVec4>
+         && TVec4::dimension == 4
+         && !std::is_same_v<TVec4, Vec4x>)>
     explicit constexpr Vec4x(const TVec4& other)
         : data_{static_cast<float>(other[0]),
                 static_cast<float>(other[1]),
                 static_cast<float>(other[2]),
-                static_cast<float>(other[3])} {}
+                static_cast<float>(other[3])} {
+    }
 
     /// Returns a pointer to the underlying array of components.
     ///
-    const float* data() const { return data_; }
+    const float* data() const {
+        return data_;
+    }
 
     /// Returns a pointer to the underlying array of components.
     ///
-    float* data() { return data_; }
+    float* data() {
+        return data_;
+    }
 
     /// Accesses the `i`-th coordinate of this `Vec4x`.
     ///
-    constexpr const float& operator[](Int i) const { return data_[i]; }
+    constexpr const float& operator[](Int i) const {
+        return data_[i];
+    }
 
     /// Mutates the `i`-th coordinate of this `Vec4x`.
     ///
-    constexpr float& operator[](Int i) { return data_[i]; }
+    constexpr float& operator[](Int i) {
+        return data_[i];
+    }
 
     /// Accesses the first coordinate of this `Vec4x`.
     ///
-    constexpr float x() const { return data_[0]; }
+    constexpr float x() const {
+        return data_[0];
+    }
 
     /// Accesses the second coordinate of this `Vec4x`.
     ///
-    constexpr float y() const { return data_[1]; }
+    constexpr float y() const {
+        return data_[1];
+    }
 
     /// Accesses the third coordinate of this `Vec4x`.
     ///
-    constexpr float z() const { return data_[2]; }
+    constexpr float z() const {
+        return data_[2];
+    }
 
     /// Accesses the fourth coordinate of this `Vec4x`.
     ///
-    constexpr float w() const { return data_[3]; }
+    constexpr float w() const {
+        return data_[3];
+    }
 
     /// Mutates the first coordinate of this `Vec4x`.
     ///
-    constexpr void setX(float x) { data_[0] = x; }
+    constexpr void setX(float x) {
+        data_[0] = x;
+    }
 
     /// Mutates the second coordinate of this `Vec4x`.
     ///
-    constexpr void setY(float y) { data_[1] = y; }
+    constexpr void setY(float y) {
+        data_[1] = y;
+    }
 
     /// Mutates the third coordinate of this `Vec4x`.
     ///
-    constexpr void setZ(float z) { data_[2] = z; }
+    constexpr void setZ(float z) {
+        data_[2] = z;
+    }
 
     /// Mutates the fourth coordinate of this `Vec4x`.
     ///
-    constexpr void setW(float w) { data_[3] = w; }
+    constexpr void setW(float w) {
+        data_[3] = w;
+    }
 
     /// Adds in-place `other` to this `Vec4x`.
     ///
@@ -212,19 +243,19 @@ public:
     /// Returns whether `v1` and `v2` are equal.
     ///
     friend constexpr bool operator==(const Vec4x& v1, const Vec4x& v2) {
-        return v1.data_[0] == v2.data_[0] &&
-               v1.data_[1] == v2.data_[1] &&
-               v1.data_[2] == v2.data_[2] &&
-               v1.data_[3] == v2.data_[3];
+        return v1.data_[0] == v2.data_[0]
+            && v1.data_[1] == v2.data_[1]
+            && v1.data_[2] == v2.data_[2]
+            && v1.data_[3] == v2.data_[3];
     }
 
     /// Returns whether `v1` and `v2` are different.
     ///
     friend constexpr bool operator!=(const Vec4x& v1, const Vec4x& v2) {
-        return v1.data_[0] != v2.data_[0] ||
-               v1.data_[1] != v2.data_[1] ||
-               v1.data_[2] != v2.data_[2] ||
-               v1.data_[3] != v2.data_[3];
+        return v1.data_[0] != v2.data_[0]
+            || v1.data_[1] != v2.data_[1]
+            || v1.data_[2] != v2.data_[2]
+            || v1.data_[3] != v2.data_[3];
     }
 
     /// Compares `v1` and `v2` using the lexicographic
@@ -281,10 +312,10 @@ public:
     /// `v1.squaredLength() < v2.squaredLength()`.
     ///
     constexpr float squaredLength() const {
-        return data_[0] * data_[0] +
-               data_[1] * data_[1] +
-               data_[2] * data_[2] +
-               data_[3] * data_[3];
+        return data_[0] * data_[0]
+             + data_[1] * data_[1]
+             + data_[2] * data_[2]
+             + data_[3] * data_[3];
     }
 
     /// Makes this `Vec4x` a unit vector by dividing it by its length.
@@ -348,9 +379,9 @@ public:
         else {
             float relTol2 = relTol * relTol;
             float absTol2 = absTol * absTol;
-            return diff2 <= relTol2 * b.squaredLength() ||
-                   diff2 <= relTol2 * a.squaredLength() ||
-                   diff2 <= absTol2;
+            return diff2 <= relTol2 * b.squaredLength()
+                || diff2 <= relTol2 * a.squaredLength()
+                || diff2 <= absTol2;
         }
     }
 
@@ -360,10 +391,10 @@ public:
     ///
     bool allClose(const Vec4x& b, float relTol = 1e-5f, float absTol = 0.0f) const {
         const Vec4x& a = *this;
-        return core::isClose(a[0], b[0], relTol, absTol) &&
-               core::isClose(a[1], b[1], relTol, absTol) &&
-               core::isClose(a[2], b[2], relTol, absTol) &&
-               core::isClose(a[3], b[3], relTol, absTol);
+        return core::isClose(a[0], b[0], relTol, absTol)
+            && core::isClose(a[1], b[1], relTol, absTol)
+            && core::isClose(a[2], b[2], relTol, absTol)
+            && core::isClose(a[3], b[3], relTol, absTol);
     }
 
     /// Returns whether the euclidean distance between this Vec4x `a` and the
@@ -388,22 +419,22 @@ public:
     ///
     bool allNear(const Vec4x& b, float absTol) const {
         const Vec4x& a = *this;
-        return core::isNear(a[0], b[0], absTol) &&
-               core::isNear(a[1], b[1], absTol) &&
-               core::isNear(a[2], b[2], absTol) &&
-               core::isNear(a[3], b[3], absTol);
+        return core::isNear(a[0], b[0], absTol)
+            && core::isNear(a[1], b[1], absTol)
+            && core::isNear(a[2], b[2], absTol)
+            && core::isNear(a[3], b[3], absTol);
     }
 
 private:
     float data_[4];
 
-    Vec4x infdiff_(const Vec4x& b) const
-    {
+    Vec4x infdiff_(const Vec4x& b) const {
         const Vec4x& a = *this;
-        return Vec4x(core::internal::infdiff(a[0], b[0]),
-                     core::internal::infdiff(a[1], b[1]),
-                     core::internal::infdiff(a[2], b[2]),
-                     core::internal::infdiff(a[3], b[3]));
+        return Vec4x(
+            core::internal::infdiff(a[0], b[0]),
+            core::internal::infdiff(a[1], b[1]),
+            core::internal::infdiff(a[2], b[2]),
+            core::internal::infdiff(a[3], b[3]));
     }
 };
 
@@ -491,8 +522,9 @@ template <>
 struct fmt::formatter<vgc::geometry::Vec4x> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
+        if (it != end && *it != '}') {
             throw format_error("invalid format");
+        }
         return it;
     }
     template <typename FormatContext>
