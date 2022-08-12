@@ -25,8 +25,7 @@
 #include <vgc/widgets/panel.h>
 #include <vgc/widgets/panelarea.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 class CentralWidget;
 
@@ -275,7 +274,6 @@ private:
     std::vector<Splitter*> splitters_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_CENTRALWIDGET_H

@@ -20,8 +20,7 @@
 #include <vgc/core/colors.h>
 #include <vgc/geometry/vec2d.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 namespace {
 
@@ -95,8 +94,7 @@ const Schema& schema() {
     return *instance;
 }
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 // Note:
 //

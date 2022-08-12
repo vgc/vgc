@@ -28,8 +28,7 @@
 #include <vgc/widgets/logcategories.h>
 #include <vgc/widgets/menubar.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 MainWindow::MainWindow(core::PythonInterpreter* interpreter, QWidget* parent)
     : QMainWindow(parent)
@@ -403,5 +402,4 @@ void MainWindow::setupConnections_() {
         */
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

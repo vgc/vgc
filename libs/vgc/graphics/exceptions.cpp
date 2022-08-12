@@ -16,10 +16,8 @@
 
 #include <vgc/graphics/exceptions.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(FontError)
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics

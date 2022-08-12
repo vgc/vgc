@@ -23,8 +23,7 @@
 #include <vgc/dom/node.h>
 #include <vgc/dom/value.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
@@ -208,7 +207,6 @@ private:
 ///
 #define VGC_DOM_ELEMENT_GET_NAME(key) VGC_DOM_ELEMENT_NAME_##key##_()
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_ELEMENT_H

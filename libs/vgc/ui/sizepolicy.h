@@ -20,8 +20,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/ui/api.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 /// \enum vgc::ui::PreferredSizeType
 /// \brief Encode whether a PreferredSize is "auto", and if not, what unit is used.
@@ -320,7 +319,6 @@ inline bool operator!=(const SizePolicy& p1, const SizePolicy& p2) {
     return !(p1 == p2);
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_SIZEPOLICY_H

@@ -28,8 +28,7 @@
 
 #include <QHBoxLayout>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 PanelTitleBar::PanelTitleBar(const QString& title, QWidget* parent)
     : QFrame(parent) {
@@ -45,5 +44,4 @@ PanelTitleBar::PanelTitleBar(const QString& title, QWidget* parent)
 PanelTitleBar::~PanelTitleBar() {
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

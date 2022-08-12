@@ -18,8 +18,7 @@
 
 #include <cstdlib> // getenv
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 namespace {
 
@@ -65,5 +64,4 @@ std::string resourcePath(const std::string& name) {
     return resourcesPath() + "/" + name;
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

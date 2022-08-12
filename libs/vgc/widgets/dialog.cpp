@@ -16,8 +16,7 @@
 
 #include <vgc/widgets/dialog.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 Dialog::Dialog(QWidget* parent)
     : QDialog(parent)
@@ -54,5 +53,4 @@ void Dialog::restoreGeometry_() {
         setGeometry(savedGeometry_);
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

@@ -17,8 +17,7 @@
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 namespace detail {
 
@@ -48,5 +47,4 @@ VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RangeError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(IntegerOverflowError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(FileError)
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

@@ -24,8 +24,7 @@
 
 #include <vgc/ui/detail/paintutil.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 ColorPalette::ColorPalette()
     : Widget()
@@ -529,5 +528,4 @@ bool ColorPalette::selectColorFromHovered_() {
     return accepted;
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

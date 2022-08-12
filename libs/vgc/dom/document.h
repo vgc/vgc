@@ -28,8 +28,7 @@
 #include <vgc/dom/operation.h>
 #include <vgc/dom/xmlformattingstyle.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
@@ -388,7 +387,6 @@ private:
     void onChangeAttribute_(Element* element, core::StringId name);
 };
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_DOCUMENT_H

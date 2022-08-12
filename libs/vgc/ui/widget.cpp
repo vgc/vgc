@@ -25,8 +25,7 @@
 #include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 Widget::Widget()
     : StylableObject()
@@ -596,5 +595,4 @@ void Widget::setEngine_(graphics::Engine* engine) {
     engine->aboutToBeDestroyed().connect(onEngineAboutToBeDestroyed());
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

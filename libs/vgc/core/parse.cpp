@@ -20,8 +20,7 @@
 #include <iomanip>
 #include <sstream>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 namespace detail {
 
@@ -49,5 +48,4 @@ double computeDouble(bool isPositive, double a, int b, int n) {
 
 } // namespace detail
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

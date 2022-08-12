@@ -27,8 +27,7 @@
 class QGridLayout;
 class QLabel;
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::PerformanceMonitor
 /// \brief A panel that displays performance information (rendering time, etc.)
@@ -69,7 +68,6 @@ private:
     std::vector<DisplayedLog_> displayedLogs_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_PERFORMANCEMONITOR_H

@@ -18,8 +18,7 @@
 
 #include <vgc/core/algorithm.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 PerformanceLog::PerformanceLog(PerformanceLog* parent, const std::string& name)
     : Object()
@@ -127,8 +126,7 @@ void PerformanceLogTask::stop() {
     }
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 // Ideas for future work:
 //

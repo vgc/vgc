@@ -23,8 +23,7 @@
 #include <vgc/core/paths.h>
 #include <vgc/ui/qtutil.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 void setApplicationStyleSheet(const std::string& name) {
     if (qApp) {
@@ -49,5 +48,4 @@ void setApplicationStyleSheet(const std::string& name) {
     }
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

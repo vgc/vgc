@@ -20,8 +20,7 @@
 #include <vgc/core/array.h>
 #include <vgc/graphics/api.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 /// \class vgc::graphics::IdGenerator
 /// \brief Generates unique integers.
@@ -71,7 +70,6 @@ private:
     core::IntArray released_;
 };
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics
 
 #endif // VGC_GRAPHICS_IDGENERATOR_H

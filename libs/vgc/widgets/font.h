@@ -20,8 +20,7 @@
 #include <string>
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// Loads all the default fonts built-in the vgc::widgets library.
 ///
@@ -49,7 +48,6 @@ int addApplicationFont(const std::string& name);
 VGC_WIDGETS_API
 void printFontFamilyInfo(const std::string& family);
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_FONT_H

@@ -21,8 +21,7 @@
 #include <vgc/core/python.h>
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 class ConsoleMargin;
 
@@ -158,7 +157,6 @@ private:
     Console* console_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_CONSOLE_H

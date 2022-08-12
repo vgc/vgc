@@ -29,8 +29,7 @@
 #include <QEvent>
 #include <QVBoxLayout>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 PanelArea::PanelArea(QWidget* parent)
     : QFrame(parent) {
@@ -105,5 +104,4 @@ void PanelArea::updateVisibility_() {
     }
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

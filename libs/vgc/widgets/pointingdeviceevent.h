@@ -22,8 +22,7 @@
 #include <vgc/geometry/vec2d.h>
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::PointingDeviceEvent
 /// \brief Stores information about pointing device events such as mouse
@@ -160,7 +159,6 @@ private:
     double pressure_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_POINTINGDEVICEEVENT_H

@@ -20,8 +20,7 @@
 #include <string>
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// Sets the application stylesheet from a *.qss file specified by its resource
 /// \p name.
@@ -38,7 +37,6 @@ namespace widgets {
 VGC_WIDGETS_API
 void setApplicationStyleSheet(const std::string& name);
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_STYLESHEETS_H

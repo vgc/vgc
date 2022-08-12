@@ -35,8 +35,7 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/qtutil.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 namespace {
 
@@ -818,5 +817,4 @@ void OpenGLViewer::continueCurve_(const geometry::Vec2d& p, double width) {
     }
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

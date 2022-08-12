@@ -26,8 +26,7 @@
 
 #include <vgc/widgets/toolbar.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 Toolbar::Toolbar(QWidget* parent)
     : QToolBar(parent) {
@@ -97,5 +96,4 @@ void Toolbar::onColorPaletteColorSelected_() {
     // Note: setColor emits colorChanged()
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

@@ -22,8 +22,7 @@
 #include <vgc/dom/api.h>
 #include <vgc/dom/value.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 /// \class vgc::dom::AttributeSpec
 /// \brief Specifies the name and default value of a built-in attribute.
@@ -182,7 +181,6 @@ private:
 ///
 const Schema& schema();
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_SCHEMA_H

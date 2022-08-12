@@ -16,8 +16,7 @@
 
 #include <vgc/core/algorithm.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 std::string
 replace(const std::string& s, const std::string& from, const std::string& to) {
@@ -69,5 +68,4 @@ replace(const std::string& s, const std::string& from, const std::string& to) {
     return res;
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

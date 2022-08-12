@@ -19,8 +19,7 @@
 
 #include <QCursor>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 /// Pushes a mouse cursor to the cursor stack. This cursor becomes the
 /// currently active cursor.
@@ -49,7 +48,6 @@ void changeCursor(const QCursor& cursor);
 ///
 void popCursor();
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_CURSOR_H

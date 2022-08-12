@@ -20,8 +20,7 @@
 #include <QColorDialog>
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::ColorDialog
 /// \brief Dialog widget for selecting colors.
@@ -52,7 +51,6 @@ private:
     QRect savedGeometry_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_COLORDIALOG_H

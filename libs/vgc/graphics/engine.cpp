@@ -18,8 +18,7 @@
 
 #include <tuple> // std::tuple_size
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 Engine::Engine(const EngineCreateInfo& createInfo)
     : Object()
@@ -1128,5 +1127,4 @@ void Engine::sanitize_(RasterizerStateCreateInfo& /*createInfo*/) {
     // XXX
 }
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics

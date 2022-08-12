@@ -22,8 +22,7 @@
 #include <vgc/dom/api.h>
 #include <vgc/dom/exceptions.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 /// \enum vgc::dom::NodeType
 /// \brief Specifies the type of a Node.
@@ -301,7 +300,6 @@ private:
     friend void detail::destroyNode(Node* node);
 };
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_NODE_H

@@ -18,13 +18,11 @@
 #include <vgc/core/wraps/exceptions.h>
 #include <vgc/graphics/exceptions.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 void wrap_exceptions(py::module& m) {
     py::module core = py::module::import("vgc.core");
     VGC_CORE_WRAP_EXCEPTION(graphics, FontError, core, RuntimeError);
 }
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics

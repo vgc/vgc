@@ -68,8 +68,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/templateutil.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// Flushes the given `std::FILE`. If no argument is provided, flushes `stdout`.
 ///
@@ -627,7 +626,6 @@ VGC_CORE_API
 std::string
 secondsToString(double t, TimeUnit unit = TimeUnit::Seconds, int decimals = 0);
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_FORMAT_H

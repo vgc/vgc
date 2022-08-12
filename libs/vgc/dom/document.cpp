@@ -27,8 +27,7 @@
 #include <vgc/dom/schema.h>
 #include <vgc/dom/strings.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 Document::Document()
     : Node(this, NodeType::Document)
@@ -878,5 +877,4 @@ void Document::onChangeAttribute_(Element* element, core::StringId name) {
     pendingDiff_.modifiedElements_[element].insert(name);
 }
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom

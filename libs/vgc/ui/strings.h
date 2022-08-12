@@ -20,9 +20,7 @@
 #include <vgc/core/stringid.h>
 #include <vgc/ui/api.h>
 
-namespace vgc {
-namespace ui {
-namespace strings {
+namespace vgc::ui::strings {
 
 VGC_UI_API extern const core::StringId Button;
 VGC_UI_API extern const core::StringId ColorPalette;
@@ -56,8 +54,6 @@ VGC_UI_API extern const core::StringId inherit;
 VGC_UI_API extern const core::StringId normal;
 VGC_UI_API extern const core::StringId off;
 
-} // namespace strings
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui::strings
 
 #endif // VGC_UI_STRINGS_H

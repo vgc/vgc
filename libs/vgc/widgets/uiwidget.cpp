@@ -24,8 +24,7 @@
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/widget.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 namespace {
 
@@ -273,5 +272,4 @@ void UiWidget::onFocusRequested() {
     // Note: Under the hood, this calls setFocus(Qt::OtherFocusReason)
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

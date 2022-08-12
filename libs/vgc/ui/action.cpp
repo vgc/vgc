@@ -16,8 +16,7 @@
 
 #include <vgc/ui/action.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 Action::Action()
     : shortcut_() {
@@ -39,5 +38,4 @@ void Action::trigger() {
     triggered().emit();
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

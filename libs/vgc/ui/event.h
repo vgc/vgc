@@ -20,8 +20,7 @@
 #include <vgc/core/innercore.h>
 #include <vgc/ui/api.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Event);
 
@@ -44,7 +43,6 @@ public:
     static EventPtr create();
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_EVENT_H

@@ -19,8 +19,7 @@
 
 #include <vgc/ui/flex.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Column);
 
@@ -57,7 +56,6 @@ public:
     static ColumnPtr create();
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_COLUMNLAYOUT_H

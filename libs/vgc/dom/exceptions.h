@@ -20,8 +20,7 @@
 #include <vgc/core/exceptions.h>
 #include <vgc/dom/api.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 class Node;
 class Document;
@@ -327,7 +326,6 @@ public:
     }
 };
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_EXCEPTIONS_H

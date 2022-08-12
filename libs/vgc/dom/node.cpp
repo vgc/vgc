@@ -23,8 +23,7 @@
 #include <vgc/dom/element.h>
 #include <vgc/dom/strings.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 namespace detail {
 
@@ -169,5 +168,4 @@ void Node::replace(Node* oldNode) {
     parent->insertChildObject_(this, nextSibling);
 }
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom

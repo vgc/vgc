@@ -21,8 +21,7 @@
 #include <vgc/ui/key.h>
 #include <vgc/ui/modifierkey.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 /// \class vgc::ui::Shortcut
 /// \brief Represents a combination of keys that can trigger an action.
@@ -82,7 +81,6 @@ private:
     Key key_;
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_SHORTCUT_H

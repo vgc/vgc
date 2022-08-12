@@ -19,8 +19,7 @@
 #include <mutex>
 #include <unordered_set>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 StringId::StringId(const std::string& s) {
     using StringPool = std::unordered_set<std::string>;
@@ -59,5 +58,4 @@ StringId::StringId(const std::string& s) {
     stringPtr_ = &(*iterator);
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

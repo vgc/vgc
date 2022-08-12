@@ -26,8 +26,7 @@
 
 #include <vgc/core/detail/signal.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 class Object;
 using ConnectionHandle = detail::ConnectionHandle;
@@ -315,8 +314,7 @@ ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept {
     return ret;
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 /// This macro should appear within a private section of the class declaration
 /// of any Object subclass.
@@ -361,8 +359,7 @@ private:                                                                        
     using Object::insertObjectToParent_;                                                 \
     using Object::removeObjectFromParent_;
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 // Forward declaration needed for Object::childObjects()
 template<typename T>
@@ -1332,8 +1329,7 @@ inline Int Object::numChildObjects() const {
     return numChildObjects_;
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 /// Forward-declares the given object subclass, and define convenient name
 /// aliases for its related smart pointers and list classes. More specifically,

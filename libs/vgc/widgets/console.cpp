@@ -125,8 +125,7 @@ bool isFirstLineOfCodeBlock_(
 
 } // namespace
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 Console::Console(core::PythonInterpreter* interpreter, QWidget* parent)
     :
@@ -640,5 +639,4 @@ void ConsoleMargin::paintEvent(QPaintEvent* event) {
     console_->consoleMarginPaintEvent_(event);
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

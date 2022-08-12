@@ -21,8 +21,7 @@
 
 #include <vgc/ui/detail/paintutil.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 Label::Label()
     : Widget()
@@ -82,5 +81,4 @@ void Label::onPaintDestroy(graphics::Engine*) {
     triangles_.reset();
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

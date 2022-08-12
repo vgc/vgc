@@ -19,8 +19,7 @@
 
 #include <vgc/ui/widget.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 /// \enum vgc::ui::FlexDirection
 /// \brief The direction of a flex layout
@@ -100,7 +99,6 @@ private:
     FlexWrap wrap_;
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_FLEXLAYOUT_H

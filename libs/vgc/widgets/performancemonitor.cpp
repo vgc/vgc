@@ -22,8 +22,7 @@
 #include <vgc/core/format.h>
 #include <vgc/ui/qtutil.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 PerformanceMonitor::PerformanceMonitor(QWidget* parent)
     : QWidget(parent)
@@ -138,5 +137,4 @@ core::PerformanceLog* PerformanceMonitor::log() const {
     return log_.get();
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

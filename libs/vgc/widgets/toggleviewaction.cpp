@@ -16,8 +16,7 @@
 
 #include <vgc/widgets/toggleviewaction.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 ToggleViewAction::ToggleViewAction(const QString& text, QWidget* widget, QObject* parent)
     : QAction(text, parent)
@@ -42,5 +41,4 @@ void ToggleViewAction::onToggled_(bool checked) {
     widget_->setVisible(checked);
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

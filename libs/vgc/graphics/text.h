@@ -25,8 +25,7 @@
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/font.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 namespace detail {
 
@@ -909,7 +908,6 @@ private:
     Int bytePosition_;
 };
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics
 
 #endif // VGC_GRAPHICS_TEXT_H

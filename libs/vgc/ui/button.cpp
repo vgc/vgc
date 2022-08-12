@@ -21,8 +21,7 @@
 
 #include <vgc/ui/detail/paintutil.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 Button::Button(const std::string& text)
     : Widget()
@@ -132,5 +131,4 @@ geometry::Vec2f Button::computePreferredSize() const {
     return res;
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

@@ -19,8 +19,7 @@
 
 #include <vgc/dom/api.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 /// \enum vgc::dom::XmlIndentStyle
 /// \brief Whether tabs or spaces are used for indentation.
@@ -154,7 +153,6 @@ struct VGC_DOM_API XmlFormattingStyle {
     int attributeIndentSize = 4;
 };
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_XMLFORMATTINGSTYLE_H

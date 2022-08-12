@@ -19,8 +19,7 @@
 #include <vgc/core/format.h>
 #include <vgc/ui/widget.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 namespace detail {
 
@@ -38,5 +37,4 @@ VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ChildCycleError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RuntimeError)
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

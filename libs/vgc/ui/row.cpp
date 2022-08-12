@@ -16,8 +16,7 @@
 
 #include <vgc/ui/row.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 Row::Row()
     : Flex(FlexDirection::Row, FlexWrap::NoWrap) {
@@ -27,5 +26,4 @@ RowPtr Row::create() {
     return RowPtr(new Row());
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

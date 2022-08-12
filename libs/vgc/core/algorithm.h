@@ -34,8 +34,7 @@
 //
 #include <vgc/core/arithmetic.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// Returns the sum of all values in the given vector.
 /// Returns zero<T>() if the vector is empty.
@@ -153,7 +152,6 @@ int upper_bound(const std::vector<T>& v, const T& x) {
 VGC_CORE_API
 std::string replace(const std::string& s, const std::string& from, const std::string& to);
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_ALGORITHM_H

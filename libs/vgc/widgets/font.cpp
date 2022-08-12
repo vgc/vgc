@@ -24,8 +24,7 @@
 #include <vgc/ui/qtutil.h>
 #include <vgc/widgets/logcategories.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 namespace {
 
@@ -129,5 +128,4 @@ void printFontFamilyInfo(const std::string& family) {
     VGC_INFO(LogVgcWidgetsFonts, fontFamilyInfo(family));
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

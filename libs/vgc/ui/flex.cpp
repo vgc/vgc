@@ -20,8 +20,7 @@
 
 #include <vgc/ui/detail/paintutil.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 Flex::Flex(FlexDirection direction, FlexWrap wrap)
     : Widget()
@@ -297,5 +296,4 @@ void Flex::updateChildrenGeometry() {
     }
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

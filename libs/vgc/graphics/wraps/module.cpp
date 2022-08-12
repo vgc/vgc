@@ -16,14 +16,12 @@
 
 #include <vgc/core/wraps/common.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 void wrap_exceptions(py::module& m);
 void wrap_font(py::module& m);
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics
 
 PYBIND11_MODULE(graphics, m) {
     vgc::graphics::wrap_exceptions(m);

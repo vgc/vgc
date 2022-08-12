@@ -23,8 +23,7 @@
 #include <vgc/dom/node.h>
 #include <vgc/dom/xmlformattingstyle.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 /// Writes spaces and/or tabs to the given output stream \p out in order to
 /// correctly indent start/end XML tags, based on the given XML formatting \p
@@ -78,7 +77,6 @@ void writeChildren(
     }
 }
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_IO_H

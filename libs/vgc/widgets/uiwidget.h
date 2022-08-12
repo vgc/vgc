@@ -30,8 +30,7 @@
 #include <vgc/ui/window.h>
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 VGC_DECLARE_OBJECT(UiWidget);
 
@@ -106,7 +105,6 @@ private:
     bool isInitialized_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_UIWIDGET_H

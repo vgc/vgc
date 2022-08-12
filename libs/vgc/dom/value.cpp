@@ -18,8 +18,7 @@
 
 #include <vgc/dom/exceptions.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 const Value& Value::none() {
     // trusty leaky singleton
@@ -87,5 +86,4 @@ Value parseValue(const std::string& s, ValueType t) {
     return Value::invalid(); // Silence "not all control paths return a value" in MSVC
 }
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom

@@ -23,8 +23,7 @@
 
 #include <vgc/core/paths.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_(
     const std::string& programName,
@@ -207,5 +206,4 @@ void PythonInterpreter::run(const char* str) {
     // directly use the CPython API without using std::strings.
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

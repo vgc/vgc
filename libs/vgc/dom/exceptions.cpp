@@ -20,8 +20,7 @@
 #include <vgc/dom/document.h>
 #include <vgc/dom/node.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 namespace detail {
 
@@ -81,5 +80,4 @@ VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(XmlSyntaxError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(VgcSyntaxError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(FileError)
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
