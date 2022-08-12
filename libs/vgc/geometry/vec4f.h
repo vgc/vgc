@@ -431,10 +431,10 @@ private:
     Vec4f infdiff_(const Vec4f& b) const {
         const Vec4f& a = *this;
         return Vec4f(
-            core::internal::infdiff(a[0], b[0]),
-            core::internal::infdiff(a[1], b[1]),
-            core::internal::infdiff(a[2], b[2]),
-            core::internal::infdiff(a[3], b[3]));
+            core::detail::infdiff(a[0], b[0]),
+            core::detail::infdiff(a[1], b[1]),
+            core::detail::infdiff(a[2], b[2]),
+            core::detail::infdiff(a[3], b[3]));
     }
 };
 

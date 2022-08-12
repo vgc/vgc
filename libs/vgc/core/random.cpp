@@ -25,10 +25,10 @@ thread_local std::random_device randomDevice_;
 
 } // namespace
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 UInt32 hardwareRandom() {
     return randomDevice_();
 }
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail

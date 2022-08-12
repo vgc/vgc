@@ -18,7 +18,7 @@
 
 #include <vgc/ui/strings.h>
 
-#include <vgc/ui/internal/paintutil.h>
+#include <vgc/ui/detail/paintutil.h>
 
 namespace vgc {
 namespace ui {
@@ -56,23 +56,23 @@ void Flex::onWidgetRemoved(Object*) {
 namespace {
 
 float getLeftRightMargins(const Widget* widget) {
-    return internal::getLength(widget, strings::margin_left)
-           + internal::getLength(widget, strings::margin_right);
+    return detail::getLength(widget, strings::margin_left)
+           + detail::getLength(widget, strings::margin_right);
 }
 
 float getTopBottomMargins(const Widget* widget) {
-    return internal::getLength(widget, strings::margin_top)
-           + internal::getLength(widget, strings::margin_bottom);
+    return detail::getLength(widget, strings::margin_top)
+           + detail::getLength(widget, strings::margin_bottom);
 }
 
 float getLeftRightPadding(const Widget* widget) {
-    return internal::getLength(widget, strings::padding_left)
-           + internal::getLength(widget, strings::padding_right);
+    return detail::getLength(widget, strings::padding_left)
+           + detail::getLength(widget, strings::padding_right);
 }
 
 float getTopBottomPadding(const Widget* widget) {
-    return internal::getLength(widget, strings::padding_top)
-           + internal::getLength(widget, strings::padding_bottom);
+    return detail::getLength(widget, strings::padding_top)
+           + detail::getLength(widget, strings::padding_bottom);
 }
 
 } // namespace
@@ -200,10 +200,10 @@ void stretchChild(
         isRow ? child->preferredSize().x() : child->preferredSize().y();
     float childStretch = getChildStretch(isRow, freeSpace, child, childStretchBonus);
     float childMainSize = childPreferredMainSize + extraSpacePerStretch * childStretch;
-    float marginLeft = internal::getLength(child, strings::margin_left);
-    float marginRight = internal::getLength(child, strings::margin_right);
-    float marginTop = internal::getLength(child, strings::margin_top);
-    float marginBottom = internal::getLength(child, strings::margin_bottom);
+    float marginLeft = detail::getLength(child, strings::margin_left);
+    float marginRight = detail::getLength(child, strings::margin_right);
+    float marginTop = detail::getLength(child, strings::margin_top);
+    float marginBottom = detail::getLength(child, strings::margin_bottom);
     float childMainMarginBefore = isRow ? marginLeft : marginTop;
     float childMainMarginAfter = isRow ? marginRight : marginBottom;
     float childCrossMarginBefore = isRow ? marginTop : marginLeft;
@@ -246,10 +246,10 @@ void Flex::updateChildrenGeometry() {
         bool isReverse = (direction_ == FlexDirection::RowReverse)
                          || (direction_ == FlexDirection::ColumnReverse);
         bool hinting = (style(strings::pixel_hinting) == strings::normal);
-        float paddingLeft = internal::getLength(this, strings::padding_left);
-        float paddingRight = internal::getLength(this, strings::padding_right);
-        float paddingTop = internal::getLength(this, strings::padding_top);
-        float paddingBottom = internal::getLength(this, strings::padding_bottom);
+        float paddingLeft = detail::getLength(this, strings::padding_left);
+        float paddingRight = detail::getLength(this, strings::padding_right);
+        float paddingTop = detail::getLength(this, strings::padding_top);
+        float paddingBottom = detail::getLength(this, strings::padding_bottom);
         float preferredMainSize = isRow ? preferredSize().x() : preferredSize().y();
         float mainPaddingBefore = isRow ? paddingLeft : paddingTop;
         float crossPaddingBefore = isRow ? paddingTop : paddingLeft;

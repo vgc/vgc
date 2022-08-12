@@ -70,7 +70,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
     }
 
     // Create a new unique ID for this signal.
-    auto newId = core::internal::genFunctionId();
+    auto newId = core::detail::genFunctionId();
 
     // Create the property getter
     py::str signalName = signalMethod.attr("__name__");
@@ -87,7 +87,7 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
                 [=](py::args args) -> void {
                     // XXX add check enough args
                     using SignalArgRefsTuple = std::tuple<const py::args&>;
-                    core::internal::SignalHub::emitFwd<SignalArgRefsTuple>(
+                    core::detail::SignalHub::emitFwd<SignalArgRefsTuple>(
                         this_, newId, args);
                 });
             PyPySignalRef* sref = new PyPySignalRef(this_, newId, arity, emitFn);
@@ -125,7 +125,7 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
     }
 
     // Create a new unique ID for this slot.
-    auto newId = core::internal::genFunctionId();
+    auto newId = core::detail::genFunctionId();
 
     // Create the property getter
     py::str slotName = unboundSlotMethod.attr("__name__");

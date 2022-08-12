@@ -58,7 +58,7 @@ void write(OStream& out, CurveCommandType c) {
     }
 }
 
-namespace internal {
+namespace detail {
 
 // Stores the type and how to access the parameters of each command. Note that
 // the parameters themselves are stored in a separate DoubleArray (= `data`).
@@ -77,7 +77,7 @@ struct VGC_GEOMETRY_API CurveCommandData {
 
 using CurveCommandDataArray = core::Array<CurveCommandData>;
 
-} // namespace internal
+} // namespace detail
 
 } // namespace vgc::geometry
 

@@ -50,7 +50,7 @@ const char* errorMsg(FT_Error err) {
 
 } // namespace
 
-namespace internal {
+namespace detail {
 
 class FontLibraryImpl {
 public:
@@ -330,7 +330,7 @@ namespace {
 
 // Converts from fractional 26.6 to floating point.
 geometry::Vec2d f266ToVec2d(const FT_Vector* v) {
-    return internal::f266ToVec2d(v->x, v->y);
+    return detail::f266ToVec2d(v->x, v->y);
 }
 
 void closeLastCurveIfOpen(geometry::Curves2d& c) {
@@ -417,11 +417,11 @@ void SizedGlyphImplDeleter::operator()(SizedGlyphImpl* p) {
     delete p;
 }
 
-} // namespace internal
+} // namespace detail
 
 FontLibrary::FontLibrary()
     : Object()
-    , impl_(new internal::FontLibraryImpl()) {
+    , impl_(new detail::FontLibraryImpl()) {
 }
 
 // static
@@ -431,7 +431,7 @@ FontLibraryPtr FontLibrary::create() {
 
 Font* FontLibrary::addFont(const std::string& filename, Int index) {
     Font* res = new Font(this);
-    res->impl_.reset(new internal::FontImpl(filename, index, impl_->library));
+    res->impl_.reset(new detail::FontImpl(filename, index, impl_->library));
     return res;
 }
 
@@ -490,7 +490,7 @@ SizedFont* Font::getSizedFont(const SizedFontParams& params) {
     // If no existing SizedGlyph*, create it
     if (!sizedFont) {
         sizedFont = new SizedFont(this);
-        sizedFont->impl_.reset(new internal::SizedFontImpl(this, params));
+        sizedFont->impl_.reset(new detail::SizedFontImpl(this, params));
     }
 
     return sizedFont;
@@ -572,7 +572,7 @@ SizedFont::SizedFont(Font* font)
 
 namespace {
 
-float fontUnitsToVerticalPixels(const internal::SizedFontImpl* impl, FT_Short u) {
+float fontUnitsToVerticalPixels(const detail::SizedFontImpl* impl, FT_Short u) {
     Int ppem = impl->params.ppemHeight();
     return static_cast<float>(u) * ppem / impl->ftFace->units_per_EM;
 }
@@ -650,7 +650,7 @@ SizedGlyph* SizedFont::getSizedGlyphFromIndex(Int glyphIndex) {
         // Create SizedGlyph object and copy data to object
         sizedGlyph = new SizedGlyph(this);
         FT_GlyphSlot slot = face->glyph;
-        sizedGlyph->impl_.reset(new internal::SizedGlyphImpl(glyph, slot));
+        sizedGlyph->impl_.reset(new detail::SizedGlyphImpl(glyph, slot));
     }
 
     return sizedGlyph;

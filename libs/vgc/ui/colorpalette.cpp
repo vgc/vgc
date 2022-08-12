@@ -22,7 +22,7 @@
 #include <vgc/core/colors.h>
 #include <vgc/ui/strings.h>
 
-#include <vgc/ui/internal/paintutil.h>
+#include <vgc/ui/detail/paintutil.h>
 
 namespace vgc {
 namespace ui {
@@ -161,8 +161,8 @@ void insertCellHighlight(
 
     // TODO: draw 4 lines (= thin rectangles) rather than 2 big rects?
     auto ch = core::Color(0.043, 0.322, 0.714); // VGC Blue
-    internal::insertRect(a, ch, x1 - 2, y1 - 2, x2 + 2, y2 + 2);
-    internal::insertRect(a, cellColor, x1 + 1, y1 + 1, x2 - 1, y2 - 1);
+    detail::insertRect(a, ch, x1 - 2, y1 - 2, x2 + 2, y2 + 2);
+    detail::insertRect(a, cellColor, x1 + 1, y1 + 1, x2 - 1, y2 - 1);
 }
 
 // clang-format on
@@ -198,7 +198,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         float dy = std::round(dx);
         float h = startOffset + endOffset + dy * numSaturationSteps_;
         if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
-            internal::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
+            detail::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
         }
         double dhue = 360.0 / numHueSteps_;
         double hue = selectedHueIndex_ * dhue;
@@ -221,7 +221,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
                 }
                 else {
                     auto c = core::Color::hsl(hue, s, l);
-                    internal::insertRect(a, c, x1, y1, x2, y2);
+                    detail::insertRect(a, c, x1, y1, x2, y2);
                 }
             }
         }
@@ -259,7 +259,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         dy = std::round(dx);
         h = startOffset + endOffset + dy * 2;
         if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
-            internal::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
+            detail::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
         }
         double l = oldLightnessIndex_ * dl;
         double s = oldSaturationIndex_ * ds;
@@ -288,7 +288,7 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
             }
             else {
                 auto c = core::Color::hsl(hue1, s, l);
-                internal::insertRect(a, c, x1, y1, x2, y2);
+                detail::insertRect(a, c, x1, y1, x2, y2);
             }
         }
         if (isSelectedColorExact_) {

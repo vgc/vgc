@@ -20,7 +20,7 @@
 namespace vgc {
 namespace core {
 
-namespace internal {
+namespace detail {
 
 std::string notAliveMsg(const Object* object) {
     return core::format("Object {} is not alive", core::asAddress(object));
@@ -33,7 +33,7 @@ std::string notAChildMsg(const Object* object, const Object* expectedParent) {
         core::asAddress(expectedParent));
 }
 
-} // namespace internal
+} // namespace detail
 
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NegativeIntegerError)

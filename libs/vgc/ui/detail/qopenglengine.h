@@ -41,7 +41,7 @@
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
 
-namespace vgc::ui::internal {
+namespace vgc::ui::detail {
 
 inline geometry::Mat4f toMat4f(const geometry::Mat4d& m) {
     // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
@@ -238,6 +238,6 @@ private:
 using QglEngine = qopengl::QglEngine;
 using QglEnginePtr = qopengl::QglEnginePtr;
 
-} // namespace vgc::ui::internal
+} // namespace vgc::ui::detail
 
 #endif // VGC_UI_QOPENGLENGINE_H

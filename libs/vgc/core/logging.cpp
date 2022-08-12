@@ -34,7 +34,7 @@ void appendStringToLogMessage(fmt::memory_buffer& message, const char* string) {
 
 } // namespace
 
-namespace internal {
+namespace detail {
 
 void appendPreambleToLogMessage(
     fmt::memory_buffer& message,
@@ -72,7 +72,7 @@ void printLogMessageToStderr(fmt::memory_buffer& message) {
 #endif
 }
 
-} // namespace internal
+} // namespace detail
 
 LogCategoryRegistry::~LogCategoryRegistry() {
     for (const auto& it : map_) {

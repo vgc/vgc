@@ -23,7 +23,7 @@
 namespace vgc {
 namespace dom {
 
-namespace internal {
+namespace detail {
 
 std::string wrongDocumentMsg(const Node* n1, const Node* n2) {
     return core::format(
@@ -66,7 +66,7 @@ std::string replaceDocumentMsg(const Document* oldNode, const Node* newNode) {
         core::toAddressString(oldNode));
 }
 
-} // namespace internal
+} // namespace detail
 
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(WrongDocumentError)

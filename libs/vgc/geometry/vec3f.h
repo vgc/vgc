@@ -410,9 +410,9 @@ private:
     Vec3f infdiff_(const Vec3f& b) const {
         const Vec3f& a = *this;
         return Vec3f(
-            core::internal::infdiff(a[0], b[0]),
-            core::internal::infdiff(a[1], b[1]),
-            core::internal::infdiff(a[2], b[2]));
+            core::detail::infdiff(a[0], b[0]),
+            core::detail::infdiff(a[1], b[1]),
+            core::detail::infdiff(a[2], b[2]));
     }
 };
 

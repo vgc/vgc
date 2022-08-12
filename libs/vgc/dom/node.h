@@ -73,9 +73,9 @@ void write(OStream& out, NodeType type) {
 VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
 
-namespace internal {
+namespace detail {
 void destroyNode(Node* node);
-} // namespace internal
+} // namespace detail
 
 /// \class vgc::dom::Node
 /// \brief Represents a node of the document Node tree.
@@ -298,7 +298,7 @@ private:
     Document* document_;
     NodeType nodeType_;
 
-    friend void internal::destroyNode(Node* node);
+    friend void detail::destroyNode(Node* node);
 };
 
 } // namespace dom

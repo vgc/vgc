@@ -24,7 +24,7 @@
 
 namespace vgc::core {
 
-namespace internal {
+namespace detail {
 
 template<typename T, typename SFINAE = void>
 struct UniformDistribution_;
@@ -50,7 +50,7 @@ using UniformDistribution = typename UniformDistribution_<T>::type;
 VGC_CORE_API
 UInt32 generateRandomInteger();
 
-} // namespace internal
+} // namespace detail
 
 template<typename T>
 class PseudoRandomUniform {
@@ -60,7 +60,7 @@ public:
     /// seed (if available).
     ///
     PseudoRandomUniform(T min, T max)
-        : engine_(internal::generateRandomInteger())
+        : engine_(detail::generateRandomInteger())
         , distribution_(min, max) {
     }
 
@@ -86,7 +86,7 @@ public:
 
 private:
     std::mt19937 engine_;
-    internal::UniformDistribution<T> distribution_;
+    detail::UniformDistribution<T> distribution_;
 };
 
 } // namespace vgc::core

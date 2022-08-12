@@ -24,15 +24,15 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
 
-#include <vgc/core/internal/signal.h>
+#include <vgc/core/detail/signal.h>
 
 namespace vgc {
 namespace core {
 
 class Object;
-using ConnectionHandle = internal::ConnectionHandle;
+using ConnectionHandle = detail::ConnectionHandle;
 
-namespace internal {
+namespace detail {
 
 // This class is befriended by Object to allow ObjPtr<T> to access and modify
 // the refCount, and destruct the object. Please do not use unless in the
@@ -52,7 +52,7 @@ public:
     static void decref(const Object* obj, Int64 k = 1);
 };
 
-} // namespace internal
+} // namespace detail
 
 /// \class ObjPtr<T>
 /// \brief Smart pointer for managing the lifetime of Object instances.
@@ -105,14 +105,14 @@ public:
     ///
     ObjPtr(T* obj)
         : obj_(obj) {
-        internal::ObjPtrAccess::incref(obj_);
+        detail::ObjPtrAccess::incref(obj_);
     }
 
     /// Creates a copy of the given ObjPtr<T>.
     ///
     ObjPtr(const ObjPtr& other) noexcept
         : obj_(other.obj_) {
-        internal::ObjPtrAccess::incref(obj_);
+        detail::ObjPtrAccess::incref(obj_);
     }
 
     /// Creates a copy of the given ObjPtr<Y>. This template overload doesn't
@@ -122,16 +122,16 @@ public:
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr(const ObjPtr<Y>& other) noexcept
         : obj_(other.obj_) {
-        internal::ObjPtrAccess::incref(obj_);
+        detail::ObjPtrAccess::incref(obj_);
     }
 
     /// Assigns the given ObjPtr<T> to this ObjPtr<T>.
     ///
     ObjPtr& operator=(const ObjPtr& other) noexcept {
         if (obj_ != other.obj_) {
-            internal::ObjPtrAccess::decref(obj_);
+            detail::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
-            internal::ObjPtrAccess::incref(obj_);
+            detail::ObjPtrAccess::incref(obj_);
         }
         return *this;
     }
@@ -143,9 +143,9 @@ public:
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr& operator=(const ObjPtr<Y>& other) noexcept {
         if (obj_ != other.obj_) {
-            internal::ObjPtrAccess::decref(obj_);
+            detail::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
-            internal::ObjPtrAccess::incref(obj_);
+            detail::ObjPtrAccess::incref(obj_);
         }
         return *this;
     }
@@ -171,7 +171,7 @@ public:
     ///
     ObjPtr& operator=(ObjPtr&& other) noexcept {
         if (*this != other) {
-            internal::ObjPtrAccess::decref(obj_);
+            detail::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
             other.obj_ = nullptr;
         }
@@ -185,7 +185,7 @@ public:
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr& operator=(ObjPtr<Y>&& other) noexcept {
         if (*this != other) {
-            internal::ObjPtrAccess::decref(obj_);
+            detail::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
             other.obj_ = nullptr;
         }
@@ -196,7 +196,7 @@ public:
     /// count reaches zero.
     ///
     ~ObjPtr() {
-        internal::ObjPtrAccess::decref(obj_);
+        detail::ObjPtrAccess::decref(obj_);
     }
 
     /// Accesses a member of the object managed by this ObjPtr<T>. Throws
@@ -671,26 +671,26 @@ public:
     /// Returns true if the connection was present.
     ///
     bool disconnect(ConnectionHandle h) const {
-        return internal::SignalHub::disconnect(this, h);
+        return detail::SignalHub::disconnect(this, h);
     }
 
     /// Removes all the signal-slot connections between this and \p receiver.
     /// Returns true if the connection was present.
     ///
     bool disconnect(const Object* receiver) const {
-        return internal::SignalHub::disconnect(this, receiver);
+        return detail::SignalHub::disconnect(this, receiver);
     }
 
     /// Disconnects all signals bound to this object from any slots.
     ///
     void disconnect() const {
-        internal::SignalHub::disconnectSignals(this);
+        detail::SignalHub::disconnectSignals(this);
     }
 
     /// Returns the number of outbound signal-slot connections.
     ///
     Int numConnections() const {
-        return internal::SignalHub::numOutboundConnections(this);
+        return detail::SignalHub::numOutboundConnections(this);
     }
 
     /// This signal is emitted by this `object` just before it is destroyed.
@@ -1037,7 +1037,7 @@ private:
     //     isAlive() = false
     //     refCount() = refCount_ - Int64Min
     //
-    friend class internal::ObjPtrAccess;
+    friend class detail::ObjPtrAccess;
     mutable Int64 refCount_ = 0;
 
     // Parent-child relationship
@@ -1053,8 +1053,8 @@ private:
     Int branchSize_ = 0;
 
     // Signal-slot mechanism
-    friend class internal::SignalHub; // To access signalHub_
-    mutable internal::SignalHub signalHub_;
+    friend class detail::SignalHub; // To access signalHub_
+    mutable detail::SignalHub signalHub_;
 
     void destroyObjectImpl_();
 
@@ -1065,7 +1065,7 @@ private:
     void onChildRemoved_(Object* child);
 };
 
-namespace internal {
+namespace detail {
 
 // Required by signal.h
 constexpr SignalHub& SignalHub::access(const Object* o) {
@@ -1101,7 +1101,7 @@ inline void ObjPtrAccess::decref(const Object* obj, Int64 k) {
     }
 }
 
-} // namespace internal
+} // namespace detail
 
 /// \class vgc::core::ObjListIterator
 /// \brief Iterates over an ObjList
@@ -1384,7 +1384,7 @@ VGC_DECLARE_OBJECT(Object);
 
 } // namespace vgc::core
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 VGC_DECLARE_OBJECT(ConstructibleTestObject);
 
@@ -1471,6 +1471,6 @@ public:
     VGC_SLOT(slotIntFloat, slotIntFloat_);
 };
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail
 
 #endif // VGC_CORE_OBJECT_H

@@ -24,7 +24,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/logging.h>
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 namespace {
 
@@ -180,4 +180,4 @@ ScopeProfiler::~ScopeProfiler() {
     }
 }
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail

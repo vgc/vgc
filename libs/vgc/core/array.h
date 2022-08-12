@@ -32,7 +32,7 @@
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
 
-#include <vgc/core/internal/containerutil.h>
+#include <vgc/core/detail/containerutil.h>
 #include <vgc/core/templateutil.h>
 
 namespace vgc::core {
@@ -1233,7 +1233,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(internal::isCompatibleRange<Range, T>)>
+    template<typename Range, VGC_REQUIRES(detail::isCompatibleRange<Range, T>)>
     iterator insert(ConstIterator it, const Range& range) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
@@ -1330,7 +1330,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(internal::isCompatibleRange<Range, T>)>
+    template<typename Range, VGC_REQUIRES(detail::isCompatibleRange<Range, T>)>
     void insert(Int i, const Range& range) {
         checkInRangeForInsert_(i);
         insertRange_(i, range.begin(), range.end());
@@ -2371,7 +2371,7 @@ private:
     }
 
     iterator uninitializedFillN_(iterator first, const Int n, NoInit) {
-        if constexpr (internal::isNoInitConstructible<T>) {
+        if constexpr (detail::isNoInitConstructible<T>) {
             // Method 1, potentially dangerous:
             //    std::advance(unwrapIterator(first), n)
             // Method 2, safer: (but does the compiler really optimize?)

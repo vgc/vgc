@@ -23,7 +23,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/templateutil.h>
 
-namespace vgc::core::internal {
+namespace vgc::core::detail {
 
 // clang-format off
 
@@ -70,6 +70,6 @@ inline constexpr bool isNoInitConstructible = std::is_constructible_v<T, NoInit>
 
 // clang-format on
 
-} // namespace vgc::core::internal
+} // namespace vgc::core::detail
 
 #endif // VGC_CORE_INTERNAL_CONTAINERUTIL_H

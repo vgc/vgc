@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/internal/qopenglengine.h>
+#include <vgc/ui/detail/qopenglengine.h>
 
 #include <chrono>
 #include <limits>
@@ -29,7 +29,7 @@
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/qtutil.h>
 
-namespace vgc::ui::internal::qopengl {
+namespace vgc::ui::detail::qopengl {
 
 namespace {
 
@@ -1517,4 +1517,4 @@ void QglEngine::syncTextureStates_() {
     // XXX todo
 }
 
-} // namespace vgc::ui::internal::qopengl
+} // namespace vgc::ui::detail::qopengl

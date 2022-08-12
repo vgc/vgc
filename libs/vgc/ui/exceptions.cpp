@@ -22,7 +22,7 @@
 namespace vgc {
 namespace ui {
 
-namespace internal {
+namespace detail {
 
 std::string childCycleMsg(const Widget* parent, const Widget* child) {
     return core::format(
@@ -32,7 +32,7 @@ std::string childCycleMsg(const Widget* parent, const Widget* child) {
         core::toAddressString(parent));
 }
 
-} // namespace internal
+} // namespace detail
 
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(ChildCycleError)

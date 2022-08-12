@@ -19,7 +19,7 @@
 #include <vgc/core/array.h>
 #include <vgc/ui/strings.h>
 
-#include <vgc/ui/internal/paintutil.h>
+#include <vgc/ui/detail/paintutil.h>
 
 namespace vgc {
 namespace ui {
@@ -62,17 +62,17 @@ void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        core::Color backgroundColor = internal::getColor(
+        core::Color backgroundColor = detail::getColor(
             this,
             isHovered_ ? strings::background_color_on_hover : strings::background_color);
-        core::Color textColor = internal::getColor(this, strings::text_color);
-        float borderRadius = internal::getLength(this, strings::border_radius);
+        core::Color textColor = detail::getColor(this, strings::text_color);
+        float borderRadius = detail::getLength(this, strings::border_radius);
         graphics::TextProperties textProperties(
             graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
         graphics::TextCursor textCursor;
         bool hinting = style(strings::pixel_hinting) == strings::normal;
-        internal::insertRect(a, backgroundColor, rect(), borderRadius);
-        internal::insertText(
+        detail::insertRect(a, backgroundColor, rect(), borderRadius);
+        detail::insertText(
             a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }

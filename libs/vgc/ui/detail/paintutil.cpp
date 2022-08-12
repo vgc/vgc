@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/internal/paintutil.h>
+#include <vgc/ui/detail/paintutil.h>
 
 #include <vgc/graphics/font.h>
 
-namespace vgc::ui::internal {
+namespace vgc::ui::detail {
 
 // clang-format off
 
@@ -367,4 +367,4 @@ graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting
     return font->getSizedFont({ppem, hinting});
 }
 
-} // namespace vgc::ui::internal
+} // namespace vgc::ui::detail

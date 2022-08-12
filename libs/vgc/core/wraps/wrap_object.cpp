@@ -59,11 +59,11 @@ void wrap_object(py::module& m) {
 
     // test objects
 
-    using ConstructibleTestObject = vgc::core::internal::ConstructibleTestObject;
+    using ConstructibleTestObject = vgc::core::detail::ConstructibleTestObject;
     vgc::core::wraps::ObjClass<ConstructibleTestObject>(m, "ConstructibleTestObject")
         .def_create();
 
-    using SignalTestObject = vgc::core::internal::SignalTestObject;
+    using SignalTestObject = vgc::core::detail::SignalTestObject;
     vgc::core::wraps::ObjClass<SignalTestObject>(m, "CppSignalTestObject")
         .def_create()
         .def_signal("signalNoArgs", &SignalTestObject::signalNoArgs)

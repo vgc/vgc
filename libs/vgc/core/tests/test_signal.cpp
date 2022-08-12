@@ -18,7 +18,7 @@
 #include <memory>
 #include <vgc/core/object.h>
 
-using SignalTestObject = vgc::core::internal::SignalTestObject;
+using SignalTestObject = vgc::core::detail::SignalTestObject;
 
 TEST(TestSignal, Disconnect) {
     auto o1 = SignalTestObject::create();
@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
     // The idea is to check whether a call to  basically attempt to get
     const int biggerThanNumSignalsInCore = 1000;
     for (int i = 0; i < biggerThanNumSignalsInCore; ++i) {
-        vgc::core::internal::genFunctionId();
+        vgc::core::detail::genFunctionId();
     }
 
     ::testing::InitGoogleTest(&argc, argv);
