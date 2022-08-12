@@ -28,8 +28,8 @@ namespace widgets {
 /// \class vgc::widgets::PanelTitleBar
 /// \brief The title bar on top of each Panel.
 ///
-class VGC_WIDGETS_API PanelTitleBar : public QFrame
-{
+class VGC_WIDGETS_API PanelTitleBar : public QFrame {
+private:
     Q_OBJECT
 
 public:

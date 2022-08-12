@@ -31,8 +31,8 @@ namespace widgets {
 /// \class vgc::widgets::Toolbar
 /// \brief The toolbar
 ///
-class VGC_WIDGETS_API Toolbar : public QToolBar
-{
+class VGC_WIDGETS_API Toolbar : public QToolBar {
+private:
     Q_OBJECT
 
 public:

@@ -25,7 +25,7 @@
 // VGC_CORE_WRAP_BASE_EXCEPTION(core, LogicError);
 // ```
 //
-#define VGC_CORE_WRAP_BASE_EXCEPTION(libname, ErrorType) \
+#define VGC_CORE_WRAP_BASE_EXCEPTION(libname, ErrorType)                                 \
     py::register_exception<vgc::libname::ErrorType>(m, #ErrorType)
 
 // Wraps an exception class deriving from another exception class. If the
@@ -39,7 +39,8 @@
 // VGC_CORE_WRAP_EXCEPTION(dom, LogicError, core, LogicError);
 // ```
 //
-#define VGC_CORE_WRAP_EXCEPTION(libname, ErrorType, parentmodule, ParentErrorType) \
-    py::register_exception<vgc::libname::ErrorType>(m, #ErrorType, parentmodule.attr(#ParentErrorType).ptr())
+#define VGC_CORE_WRAP_EXCEPTION(libname, ErrorType, parentmodule, ParentErrorType)       \
+    py::register_exception<vgc::libname::ErrorType>(                                     \
+        m, #ErrorType, parentmodule.attr(#ParentErrorType).ptr())
 
 #endif // VGC_CORE_WRAPS_EXCEPTIONS_H

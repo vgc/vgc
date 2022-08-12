@@ -19,30 +19,23 @@
 namespace vgc {
 namespace ui {
 
-Action::Action() :
-    shortcut_()
-{
-
+Action::Action()
+    : shortcut_() {
 }
 
-Action::Action(const Shortcut& shortcut) :
-    shortcut_(shortcut)
-{
-
+Action::Action(const Shortcut& shortcut)
+    : shortcut_(shortcut) {
 }
 
-ActionPtr Action::create()
-{
+ActionPtr Action::create() {
     return ActionPtr(new Action());
 }
 
-ActionPtr Action::create(const Shortcut& shortcut)
-{
+ActionPtr Action::create(const Shortcut& shortcut) {
     return ActionPtr(new Action(shortcut));
 }
 
-void Action::trigger()
-{
+void Action::trigger() {
     triggered().emit();
 }
 

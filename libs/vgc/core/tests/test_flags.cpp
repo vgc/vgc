@@ -28,8 +28,7 @@ enum class MyEnum : vgc::UInt8 {
 };
 VGC_DEFINE_FLAGS(MyFlags, MyEnum);
 
-TEST(TestFlags, EnumOperators)
-{
+TEST(TestFlags, EnumOperators) {
     MyEnum none = MyEnum::None;
     MyEnum foo = MyEnum::Foo;
     MyEnum bar = MyEnum::Bar;
@@ -68,8 +67,7 @@ TEST(TestFlags, EnumOperators)
     EXPECT_EQ(bool(foo & bar), false);
 }
 
-TEST(TestFlags, Operators)
-{
+TEST(TestFlags, Operators) {
     MyFlags none = MyEnum::None;
     MyFlags foo = MyEnum::Foo;
     MyFlags bar = MyEnum::Bar;
@@ -120,8 +118,7 @@ TEST(TestFlags, Operators)
     }
 }
 
-TEST(TestFlags, Methods)
-{
+TEST(TestFlags, Methods) {
     MyFlags x(MyEnum::Foo);
     EXPECT_EQ(x, MyEnum::Foo);
     EXPECT_TRUE(x.has(MyEnum::Foo));
@@ -162,8 +159,7 @@ TEST(TestFlags, Methods)
     EXPECT_FALSE(x.has(MyEnum::Bar));
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

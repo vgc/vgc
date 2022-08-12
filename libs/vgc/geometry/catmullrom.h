@@ -82,11 +82,17 @@ namespace vgc::geometry {
 ///
 /// Which finishes the explanation why k = 1/6.
 ///
-template <typename T>
+template<typename T>
 void uniformCatmullRomToBezier(
-        const T& c0, const T& c1, const T& c2, const T& c3,
-        T& b0, T& b1, T& b2, T& b3)
-{
+    const T& c0,
+    const T& c1,
+    const T& c2,
+    const T& c3,
+    T& b0,
+    T& b1,
+    T& b2,
+    T& b3) {
+
     const double k = 0.166666666666666667; // = 1/6 up to double precision
     b0 = c1;
     b1 = c1 + k * (c2 - c0);

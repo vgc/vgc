@@ -25,15 +25,14 @@ namespace core {
 
 namespace internal {
 
-double computeDouble(bool isPositive, double a, int b, int n)
-{
-    if (b+n-1 > 307) {
+double computeDouble(bool isPositive, double a, int b, int n) {
+    if (b + n - 1 > 307) {
         throw RangeError(
-            std::string("The number ") + (isPositive ? "" : "-") + toString(a) +
-            "e" + toString(b) + " is too big to be represented as a double.");
+            std::string("The number ") + (isPositive ? "" : "-") + toString(a) + "e"
+            + toString(b) + " is too big to be represented as a double.");
     }
 
-    if (b+n-1 < -307) {
+    if (b + n - 1 < -307) {
         return isPositive ? 0.0 : -0.0;
     }
 

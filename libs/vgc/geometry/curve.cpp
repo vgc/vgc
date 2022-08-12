@@ -26,25 +26,31 @@ namespace vgc::geometry {
 
 namespace {
 
-template <typename ContainerType>
+template<typename ContainerType>
 void removeAllExceptLastElement(ContainerType& v) {
     v.first() = v.last();
     v.resize(1);
 }
 
-template <typename ContainerType>
+template<typename ContainerType>
 void appendUninitializedElement(ContainerType& v) {
     v.append(typename ContainerType::value_type());
 }
 
 void computeSample(
-        const Vec2d& q0, const Vec2d& q1, const Vec2d& q2, const Vec2d& q3,
-        double w0, double w1, double w2, double w3,
-        double u,
-        Vec2d& leftPosition,
-        Vec2d& rightPosition,
-        Vec2d& normal)
-{
+    const Vec2d& q0,
+    const Vec2d& q1,
+    const Vec2d& q2,
+    const Vec2d& q3,
+    double w0,
+    double w1,
+    double w2,
+    double w3,
+    double u,
+    Vec2d& leftPosition,
+    Vec2d& rightPosition,
+    Vec2d& normal) {
+
     // Compute position and normal
     Vec2d position = cubicBezier(q0, q1, q2, q3, u);
     Vec2d tangent = cubicBezierDer(q0, q1, q2, q3, u);
@@ -54,39 +60,34 @@ void computeSample(
     double halfwidth = 0.5 * cubicBezier(w0, w1, w2, w3, u);
 
     // Compute left and right positions
-    leftPosition  = position + halfwidth * normal;
+    leftPosition = position + halfwidth * normal;
     rightPosition = position - halfwidth * normal;
 }
 
 } // namespace
 
-Curve::Curve(Type type) :
-    type_(type),
-    positionData_(),
-    widthVariability_(AttributeVariability::PerControlPoint),
-    widthData_(),
-    color_(core::colors::black)
-{
-
+Curve::Curve(Type type)
+    : type_(type)
+    , positionData_()
+    , widthVariability_(AttributeVariability::PerControlPoint)
+    , widthData_()
+    , color_(core::colors::black) {
 }
 
-Curve::Curve(double constantWidth, Type type) :
-    type_(type),
-    positionData_(),
-    widthVariability_(AttributeVariability::Constant),
-    widthData_(1, constantWidth), // = vector containing a single element
-    color_(core::colors::black)
-{
-
+Curve::Curve(double constantWidth, Type type)
+    : type_(type)
+    , positionData_()
+    , widthVariability_(AttributeVariability::Constant)
+    , widthData_(1, constantWidth) // = vector containing a single element
+    , color_(core::colors::black) {
 }
 
-double Curve::width() const
-{
+double Curve::width() const {
     return core::average(widthData_);
 }
 
-void Curve::addControlPoint(double x, double y)
-{
+void Curve::addControlPoint(double x, double y) {
+
     // Set position
     positionData_.append(x);
     positionData_.append(y);
@@ -101,13 +102,12 @@ void Curve::addControlPoint(double x, double y)
     }
 }
 
-void Curve::addControlPoint(const Vec2d& position)
-{
+void Curve::addControlPoint(const Vec2d& position) {
     addControlPoint(position.x(), position.y());
 }
 
-void Curve::addControlPoint(double x, double y, double width)
-{
+void Curve::addControlPoint(double x, double y, double width) {
+
     // Set position
     positionData_.append(x);
     positionData_.append(y);
@@ -118,16 +118,12 @@ void Curve::addControlPoint(double x, double y, double width)
     }
 }
 
-void Curve::addControlPoint(const Vec2d& position, double width)
-{
+void Curve::addControlPoint(const Vec2d& position, double width) {
     addControlPoint(position.x(), position.y(), width);
 }
 
-Vec2dArray Curve::triangulate(
-        double maxAngle,
-        Int minQuads,
-        Int maxQuads) const
-{
+Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const {
+
     // Result of this computation.
     // Final size = 2 * nSamples
     //   where nSamples = nQuads + 1
@@ -163,39 +159,35 @@ Vec2dArray Curve::triangulate(
     }
 
     // Iterate over all segments
-    for (Int idx = 0; idx < numSegments; ++idx)
-    {
+    for (Int idx = 0; idx < numSegments; ++idx) {
         // Get indices of Catmull-Rom control points for current segment
         Int zero = 0;
-        Int i0 = core::clamp(idx-1, zero, numControlPoints-1);
-        Int i1 = core::clamp(idx  , zero, numControlPoints-1);
-        Int i2 = core::clamp(idx+1, zero, numControlPoints-1);
-        Int i3 = core::clamp(idx+2, zero, numControlPoints-1);
+        Int i0 = core::clamp(idx - 1, zero, numControlPoints - 1);
+        Int i1 = core::clamp(idx + 0, zero, numControlPoints - 1);
+        Int i2 = core::clamp(idx + 1, zero, numControlPoints - 1);
+        Int i3 = core::clamp(idx + 2, zero, numControlPoints - 1);
 
         // Get positions of Catmull-Rom control points
-        Vec2d p0(positionData_[2*i0], positionData_[2*i0+1]);
-        Vec2d p1(positionData_[2*i1], positionData_[2*i1+1]);
-        Vec2d p2(positionData_[2*i2], positionData_[2*i2+1]);
-        Vec2d p3(positionData_[2*i3], positionData_[2*i3+1]);
+        Vec2d p0(positionData_[2 * i0], positionData_[2 * i0 + 1]);
+        Vec2d p1(positionData_[2 * i1], positionData_[2 * i1 + 1]);
+        Vec2d p2(positionData_[2 * i2], positionData_[2 * i2 + 1]);
+        Vec2d p3(positionData_[2 * i3], positionData_[2 * i3 + 1]);
 
         // Convert positions from Catmull-Rom to Bézier
         Vec2d q0, q1, q2, q3;
-        uniformCatmullRomToBezier(p0, p1, p2, p3,
-                                  q0, q1, q2, q3);
+        uniformCatmullRomToBezier(p0, p1, p2, p3, q0, q1, q2, q3);
 
         // Convert widths from Constant or Catmull-Rom to Bézier. Note: we
         // could handle the 'Constant' case more efficiently, but we chose code
         // simplicity over performance here, over the assumption that it's unlikely
         // that width computation is a performance bottleneck.
         double w0, w1, w2, w3;
-        if (widthVariability() == AttributeVariability::PerControlPoint)
-        {
+        if (widthVariability() == AttributeVariability::PerControlPoint) {
             double v0 = widthData()[i0];
             double v1 = widthData()[i1];
             double v2 = widthData()[i2];
             double v3 = widthData()[i3];
-            uniformCatmullRomToBezier(v0, v1, v2, v3,
-                                      w0, w1, w2, w3);
+            uniformCatmullRomToBezier(v0, v1, v2, v3, w0, w1, w2, w3);
         }
         else // if (widthVariability() == AttributeVariability::Constant)
         {
@@ -212,10 +204,15 @@ Vec2dArray Curve::triangulate(
             appendUninitializedElement(leftPositions);
             appendUninitializedElement(rightPositions);
             appendUninitializedElement(normals);
-            computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
-                          leftPositions.last(),
-                          rightPositions.last(),
-                          normals.last());
+            // clang-format off
+            computeSample(
+                q0, q1, q2, q3,
+                w0, w1, w2, w3,
+                u,
+                leftPositions.last(),
+                rightPositions.last(),
+                normals.last());
+            // clang-format on
 
             // Add this sample to res right now. For all the other samples, we
             // need to wait until adaptive sampling is complete.
@@ -234,24 +231,27 @@ Vec2dArray Curve::triangulate(
         // Compute uniform samples for this segment
         Int numQuads = 0;
         double du = 1.0 / static_cast<double>(minQuads);
-        for (Int j = 1; j <= minQuads; ++j)
-        {
+        for (Int j = 1; j <= minQuads; ++j) {
             double u = j * du;
             appendUninitializedElement(leftPositions);
             appendUninitializedElement(rightPositions);
             appendUninitializedElement(normals);
-            computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
-                          leftPositions.last(),
-                          rightPositions.last(),
-                          normals.last());
+            // clang-format off
+            computeSample(
+                q0, q1, q2, q3,
+                w0, w1, w2, w3,
+                u,
+                leftPositions.last(),
+                rightPositions.last(),
+                normals.last());
+            // clang-format on
 
             uParams.append(u);
             ++numQuads;
         }
 
         // Compute adaptive samples for this segment
-        while (numQuads < maxQuads)
-        {
+        while (numQuads < maxQuads) {
             // Find quads that don't pass the angle test.
             //
             // Quads are indexed from 0 to numQuads-1. A quad of index i is
@@ -260,7 +260,7 @@ Vec2dArray Curve::triangulate(
             //
             failedQuads.clear();
             for (Int j = 0; j < numQuads; ++j) {
-                if (normals[j].dot(normals[j+1]) < cosMaxAngle) {
+                if (normals[j].dot(normals[j + 1]) < cosMaxAngle) {
                     failedQuads.append(j);
                 }
             }
@@ -289,19 +289,19 @@ Vec2dArray Curve::triangulate(
             //
             // The asterisks emphasize the two new samples.
             //
-            Int numSamplesBefore = uParams.length(); // 6
+            Int numSamplesBefore = uParams.length();                       // 6
             Int numSamplesAfter = uParams.length() + failedQuads.length(); // 8
             leftPositions.resize(numSamplesAfter);
             rightPositions.resize(numSamplesAfter);
             normals.resize(numSamplesAfter);
             uParams.resize(numSamplesAfter);
-            Int i = numSamplesBefore - 1; // 5
+            Int i = numSamplesBefore - 1;                         // 5
             for (Int j = failedQuads.length() - 1; j >= 0; --j) { // j = 1, then j = 0
                 Int k = failedQuads[j];                           // k = 3, then k = 1
 
                 // First, offset index of all samples after the failed quad
-                Int offset = j + 1;                   // offset = 2, then offset = 1
-                while (i > k) {                       // i = [5, 4], then i = [3, 2]
+                Int offset = j + 1; // offset = 2, then offset = 1
+                while (i > k) {     // i = [5, 4], then i = [3, 2]
                     leftPositions[i + offset] = leftPositions[i];
                     rightPositions[i + offset] = rightPositions[i];
                     normals[i + offset] = normals[i];
@@ -316,11 +316,16 @@ Vec2dArray Curve::triangulate(
                 // to ensure that new values are always computed from old
                 // values, not from already overwritten new values.
                 //
-                double u = 0.5 * (uParams[i] + uParams[i+1]); // u = 0.7, then u = 0.3
-                computeSample(q0, q1, q2, q3, w0, w1, w2, w3, u,
-                              leftPositions[i + offset],
-                              rightPositions[i + offset],
-                              normals[i + offset]);
+                double u = 0.5 * (uParams[i] + uParams[i + 1]); // u = 0.7, then u = 0.3
+                // clang-format off
+                computeSample(
+                    q0, q1, q2, q3,
+                    w0, w1, w2, w3,
+                    u,
+                    leftPositions[i + offset],
+                    rightPositions[i + offset],
+                    normals[i + offset]);
+                // clang-format on
                 uParams[i + offset] = u;
             }
         }

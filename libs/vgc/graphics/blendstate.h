@@ -35,22 +35,20 @@ public:
     constexpr BlendEquation() noexcept = default;
 
     BlendEquation(BlendOp operation, BlendFactor sourceFactor, BlendFactor targetFactor)
-        : operation_(operation), sourceFactor_(sourceFactor), targetFactor_(targetFactor)
-    {
+        : operation_(operation)
+        , sourceFactor_(sourceFactor)
+        , targetFactor_(targetFactor) {
     }
 
-    BlendOp operation() const
-    {
+    BlendOp operation() const {
         return operation_;
     }
 
-    BlendFactor sourceFactor() const
-    {
+    BlendFactor sourceFactor() const {
         return sourceFactor_;
     }
 
-    BlendFactor targetFactor() const
-    {
+    BlendFactor targetFactor() const {
         return targetFactor_;
     }
 
@@ -67,63 +65,59 @@ class VGC_GRAPHICS_API BlendStateCreateInfo {
 public:
     constexpr BlendStateCreateInfo() noexcept = default;
 
-    bool isAlphaToCoverageEnabled() const
-    {
+    bool isAlphaToCoverageEnabled() const {
         return isAlphaToCoverageEnabled_;
     }
 
-    void setAlphaToCoverageEnabled(bool enabled)
-    {
+    void setAlphaToCoverageEnabled(bool enabled) {
         isAlphaToCoverageEnabled_ = enabled;
     }
 
-    bool isEnabled() const
-    {
+    bool isEnabled() const {
         return isEnabled_;
     }
 
-    void setEnabled(bool enabled)
-    {
+    void setEnabled(bool enabled) {
         isEnabled_ = enabled;
     }
 
-    const BlendEquation& equationRGB() const
-    {
+    const BlendEquation& equationRGB() const {
         return equationRGB_;
     }
 
-    void setEquationRGB(const BlendEquation& equation)
-    {
+    void setEquationRGB(const BlendEquation& equation) {
         equationRGB_ = equation;
     }
 
-    void setEquationRGB(BlendOp operation, BlendFactor sourceFactor, BlendFactor targetFactor)
-    {
+    void setEquationRGB(
+        BlendOp operation,
+        BlendFactor sourceFactor,
+        BlendFactor targetFactor) {
+
         equationRGB_ = BlendEquation(operation, sourceFactor, targetFactor);
     }
 
-    const BlendEquation& equationAlpha() const
-    {
+    const BlendEquation& equationAlpha() const {
         return equationAlpha_;
     }
 
-    void setEquationAlpha(const BlendEquation& equation)
-    {
+    void setEquationAlpha(const BlendEquation& equation) {
         equationAlpha_ = equation;
     }
 
-    void setEquationAlpha(BlendOp operation, BlendFactor sourceFactor, BlendFactor targetFactor)
-    {
+    void setEquationAlpha(
+        BlendOp operation,
+        BlendFactor sourceFactor,
+        BlendFactor targetFactor) {
+
         equationAlpha_ = BlendEquation(operation, sourceFactor, targetFactor);
     }
 
-    BlendWriteMask writeMask() const
-    {
+    BlendWriteMask writeMask() const {
         return writeMask_;
     }
 
-    void setWriteMask(BlendWriteMask writeMask)
-    {
+    void setWriteMask(BlendWriteMask writeMask) {
         writeMask_ = writeMask;
     }
 
@@ -146,33 +140,28 @@ private:
 class VGC_GRAPHICS_API BlendState : public Resource {
 protected:
     BlendState(ResourceRegistry* registry, const BlendStateCreateInfo& info)
-        : Resource(registry), info_(info)
-    {
+        : Resource(registry)
+        , info_(info) {
     }
 
 public:
-    bool isAlphaToCoverageEnabled() const
-    {
+    bool isAlphaToCoverageEnabled() const {
         return info_.isAlphaToCoverageEnabled();
     }
 
-    bool isEnabled() const
-    {
+    bool isEnabled() const {
         return info_.isEnabled();
     }
 
-    const BlendEquation& equationRGB() const
-    {
+    const BlendEquation& equationRGB() const {
         return info_.equationRGB();
     }
 
-    const BlendEquation& equationAlpha() const
-    {
+    const BlendEquation& equationAlpha() const {
         return info_.equationAlpha();
     }
 
-    BlendWriteMask writeMask() const
-    {
+    BlendWriteMask writeMask() const {
         return info_.writeMask();
     }
 

@@ -18,8 +18,7 @@
 #include <vgc/core/wraps/exceptions.h>
 #include <vgc/dom/exceptions.h>
 
-void wrap_exceptions(py::module& m)
-{
+void wrap_exceptions(py::module& m) {
     py::module core = py::module::import("vgc.core");
 
     VGC_CORE_WRAP_EXCEPTION(dom, LogicError, core, LogicError);

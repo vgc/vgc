@@ -35,14 +35,12 @@
 
 namespace vgc::widgets {
 
-class VGC_WIDGETS_API MainWindow : public QMainWindow
-{
+class VGC_WIDGETS_API MainWindow : public QMainWindow {
+private:
     Q_OBJECT
 
 public:
-    MainWindow(/*dom::Document* document,*/
-               core::PythonInterpreter* interpreter,
-               QWidget* parent = nullptr);
+    MainWindow(core::PythonInterpreter* interpreter, QWidget* parent = nullptr);
 
     ~MainWindow();
 

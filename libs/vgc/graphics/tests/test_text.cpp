@@ -19,10 +19,12 @@
 
 using namespace vgc;
 using core::Array;
+using graphics::computeBoundaryMarkers;
 using graphics::TextBoundaryMarker;
 using graphics::TextBoundaryMarkers;
 using graphics::TextBoundaryMarkersArray;
-using graphics::computeBoundaryMarkers;
+
+// clang-format off
 
 std::string acute_e_singlepoint = "\xC3" "\xA9"; // U+00E9 é
 std::string acute_e_doublepoint = "\x65"         // U+0065 e
@@ -53,15 +55,16 @@ std::string family_man_woman_girl_boy =
         "\xE2" "\x80" "\x8D"         // U+200D  Zero Width Joiner
         "\xF0" "\x9F" "\x91" "\xA6"; // U+1F466 Boy
 
+// clang-format on
+
 std::string lazyredcat_english = "Lazy red cat";
 std::string lazyredcat_russian = "Ленивый рыжий кот";
-std::string lazyredcat_arabic  = "كسول الزنجبيل القط";
+std::string lazyredcat_arabic = "كسول الزنجبيل القط";
 std::string lazyredcat_chinese = "懒惰的红猫";
 
 std::string ff_ligature = "ff";
 
-Int numGraphemes(std::string_view text)
-{
+Int numGraphemes(std::string_view text) {
     TextBoundaryMarkersArray markersArray = computeBoundaryMarkers(text);
     Int res = -1;
     for (TextBoundaryMarkers markers : markersArray) {
@@ -72,8 +75,7 @@ Int numGraphemes(std::string_view text)
     return res;
 }
 
-TEST(TestText, TextBoundaryIterator)
-{
+TEST(TestText, TextBoundaryIterator) {
     EXPECT_EQ(numGraphemes(acute_e_singlepoint), 1);
     EXPECT_EQ(numGraphemes(acute_e_doublepoint), 1);
     EXPECT_EQ(numGraphemes(lazyredcat_english), 12);
@@ -87,8 +89,7 @@ TEST(TestText, TextBoundaryIterator)
     // EXPECT_EQ(numGraphemes(family_man_woman_girl_boy), 1);            // Returns 4 instead of 1. Positions = 0 7 14 21 25
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

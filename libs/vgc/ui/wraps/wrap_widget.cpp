@@ -22,11 +22,11 @@ using This = vgc::ui::Widget;
 using Holder = vgc::ui::WidgetPtr;
 using Parent = vgc::core::Object;
 
-void wrap_widget(py::module& m)
-{
+void wrap_widget(py::module& m) {
+
     vgc::core::wraps::wrapObjectCommon<This>(m, "Widget");
 
-    py::class_<This, Holder, Parent>(m, "Widget")
-        .def(py::init([]() { return This::create(); } ))
-    ;
+    py::class_<This, Holder, Parent>(m, "Widget").def(py::init([]() {
+        return This::create();
+    }));
 }

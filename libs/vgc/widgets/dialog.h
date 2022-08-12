@@ -30,8 +30,8 @@ namespace widgets {
 /// vgc::widgets::Dialog, the position of the dialog will be preserve, even
 /// after being moved by the user.
 ///
-class VGC_WIDGETS_API Dialog : public QDialog
-{
+class VGC_WIDGETS_API Dialog : public QDialog {
+private:
     Q_OBJECT
 
 public:

@@ -49,7 +49,8 @@ public:
     /// std::cout << "elpased time: " << t.elapsed() << "s\n";
     /// ```
     ///
-    Stopwatch(NoInit) {}
+    Stopwatch(NoInit) {
+    }
 
     /// Starts this Stopwatch.
     ///

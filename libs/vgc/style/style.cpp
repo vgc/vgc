@@ -22,8 +22,7 @@
 
 namespace vgc::style {
 
-StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
     if (end == begin + 1) {
         StyleTokenType t = begin->type;
         if (t == StyleTokenType::Identifier) {
@@ -51,8 +50,9 @@ class StyleParser {
 
 public:
     // https://www.w3.org/TR/css-syntax-3/#parse-stylesheet
-    static StyleSheetPtr parseStyleSheet(const StylePropertySpecTablePtr& specs,
-                                         std::string_view styleString) {
+    static StyleSheetPtr parseStyleSheet(
+        const StylePropertySpecTablePtr& specs,
+        std::string_view styleString) {
 
         // Tokenize
         std::string decoded = decodeStyleString(styleString);
@@ -80,7 +80,8 @@ public:
 private:
     // https://www.w3.org/TR/css-syntax-3/#consume-list-of-rules
     // Note: we use 'styleSheet != nullptr' as top-level flag
-    core::Array<StyleRuleSetPtr> consumeRuleList_(StyleTokenIterator& it, StyleTokenIterator end) {
+    core::Array<StyleRuleSetPtr>
+    consumeRuleList_(StyleTokenIterator& it, StyleTokenIterator end) {
         std::ignore = topLevel_; // suppress warning
         core::Array<StyleRuleSetPtr> res;
         while (true) {
@@ -164,7 +165,8 @@ private:
     // come across a use case were a qualifed rule should not be a style rule,
     // then we'll have to make this implementation more generic.
     //
-    StyleRuleSetPtr consumeQualifiedRule_(StyleTokenIterator& it, StyleTokenIterator end) {
+    StyleRuleSetPtr
+    consumeQualifiedRule_(StyleTokenIterator& it, StyleTokenIterator end) {
         StyleRuleSetPtr rule = StyleRuleSet::create();
         StyleTokenIterator preludeBegin = it;
         while (true) {
@@ -177,7 +179,8 @@ private:
                 ++it;
 
                 // Parse the prelude as a selector group
-                core::Array<StyleSelectorPtr> selectors = consumeSelectorGroup_(preludeBegin, preludeEnd);
+                core::Array<StyleSelectorPtr> selectors =
+                    consumeSelectorGroup_(preludeBegin, preludeEnd);
                 if (selectors.isEmpty()) {
                     // Parse error
                     return StyleRuleSetPtr();
@@ -191,7 +194,8 @@ private:
 
                 // Consume list of declarations
                 bool expectRightCurlyBracket = true;
-                core::Array<StyleDeclarationPtr> declarations = consumeDeclarationList_(it, end, expectRightCurlyBracket);
+                core::Array<StyleDeclarationPtr> declarations =
+                    consumeDeclarationList_(it, end, expectRightCurlyBracket);
                 for (const StyleDeclarationPtr& declaration : declarations) {
                     rule->appendChildObject_(declaration.get());
                     rule->declarations_.append(declaration.get());
@@ -217,7 +221,11 @@ private:
     // declarations as a second pass. Instead, we do both in one pass, so we
     // need to handle the possibility of a closing RightCurlyBracket.
     //
-    core::Array<StyleDeclarationPtr> consumeDeclarationList_(StyleTokenIterator& it, StyleTokenIterator end, bool expectRightCurlyBracket) {
+    core::Array<StyleDeclarationPtr> consumeDeclarationList_(
+        StyleTokenIterator& it,
+        StyleTokenIterator end,
+        bool expectRightCurlyBracket) {
+
         core::Array<StyleDeclarationPtr> res;
         while (true) {
             if (it == end) {
@@ -233,7 +241,7 @@ private:
             else if (it->type == StyleTokenType::Whitespace) {
                 ++it;
             }
-            else if  (it->type == StyleTokenType::Semicolon) {
+            else if (it->type == StyleTokenType::Semicolon) {
                 ++it;
             }
             else if (it->type == StyleTokenType::AtKeyword) {
@@ -244,9 +252,10 @@ private:
             else if (it->type == StyleTokenType::Identifier) {
                 StyleTokenIterator declarationBegin = it;
                 while (true) {
-                    if (it == end ||
-                        it->type == StyleTokenType::Semicolon ||
-                        (expectRightCurlyBracket && it->type == StyleTokenType::RightCurlyBracket)) {
+                    if (it == end                                //
+                        || it->type == StyleTokenType::Semicolon //
+                        || (expectRightCurlyBracket              //
+                            && it->type == StyleTokenType::RightCurlyBracket)) {
 
                         break;
                     }
@@ -255,21 +264,24 @@ private:
                     }
                 }
                 StyleTokenIterator declarationEnd = it;
-                StyleDeclarationPtr declaration = consumeDeclaration_(declarationBegin, declarationEnd);
+                StyleDeclarationPtr declaration =
+                    consumeDeclaration_(declarationBegin, declarationEnd);
                 if (declaration) {
                     res.append(declaration);
                 }
             }
-            else if (expectRightCurlyBracket && it->type == StyleTokenType::RightCurlyBracket) {
+            else if (
+                expectRightCurlyBracket
+                && it->type == StyleTokenType::RightCurlyBracket) {
                 ++it;
                 break;
             }
             else {
                 // Parse error: throw away component values until semicolon or eof
                 while (true) {
-                    if (it == end ||
-                        it->type == StyleTokenType::Semicolon ||
-                        (expectRightCurlyBracket && it->type == StyleTokenType::RightCurlyBracket)) {
+                    if (it == end || it->type == StyleTokenType::Semicolon
+                        || (expectRightCurlyBracket
+                            && it->type == StyleTokenType::RightCurlyBracket)) {
 
                         break;
                     }
@@ -285,7 +297,8 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-declaration
     // Assumes that the current token is the identifier.
     // May return a null pointer in case of parse errors.
-    StyleDeclarationPtr consumeDeclaration_(StyleTokenIterator& it, StyleTokenIterator end) {
+    StyleDeclarationPtr
+    consumeDeclaration_(StyleTokenIterator& it, StyleTokenIterator end) {
         StyleDeclarationPtr declaration = StyleDeclaration::create();
         declaration->property_ = core::StringId(it->codePointsValue);
         declaration->value_ = StyleValue::invalid();
@@ -315,13 +328,15 @@ private:
         // Remove trailing whitespaces from value
         // TODO: also remove "!important" from value and set it as flag, see (5) in:
         //       https://www.w3.org/TR/css-syntax-3/#consume-declaration
-        while (valueEnd != valueBegin && (valueEnd-1)->type == StyleTokenType::Whitespace) {
+        while (valueEnd != valueBegin
+               && (valueEnd - 1)->type == StyleTokenType::Whitespace) {
             --valueEnd;
         }
         // Parse value
         // XXX We should probably first check for global keywords like 'inherit' and
         // only call the custom parser if it's not a global keyword.
-        const StylePropertySpec* spec = specs_ ? specs_->get(declaration->property_) : nullptr;
+        const StylePropertySpec* spec =
+            specs_ ? specs_->get(declaration->property_) : nullptr;
         StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
         declaration->value_ = parser(valueBegin, valueEnd);
         if (declaration->value_.type() == StyleValueType::Invalid) {
@@ -334,9 +349,9 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-component-value
     // Assumes that `it` is not end
     void consumeComponentValue_(StyleTokenIterator& it, StyleTokenIterator end) {
-        if (it->type == StyleTokenType::LeftParenthesis ||
-            it->type == StyleTokenType::LeftCurlyBracket ||
-            it->type == StyleTokenType::LeftSquareBracket) {
+        if (it->type == StyleTokenType::LeftParenthesis
+            || it->type == StyleTokenType::LeftCurlyBracket
+            || it->type == StyleTokenType::LeftSquareBracket) {
 
             consumeSimpleBlock_(it, end);
             // TODO: return it
@@ -407,7 +422,8 @@ private:
 
     // https://www.w3.org/TR/selectors-3/#grouping
     // Returns an empty array if any of the selectors in the group is invalid.
-    core::Array<StyleSelectorPtr> consumeSelectorGroup_(StyleTokenIterator& it, StyleTokenIterator end) {
+    core::Array<StyleSelectorPtr>
+    consumeSelectorGroup_(StyleTokenIterator& it, StyleTokenIterator end) {
         core::Array<StyleSelectorPtr> res;
         while (true) {
             StyleTokenIterator selectorBegin = it;
@@ -416,7 +432,7 @@ private:
             }
             StyleSelectorPtr selector = consumeSelector_(selectorBegin, it);
             if (selector) {
-                 res.append(selector);
+                res.append(selector);
             }
             else {
                 // Syntax error
@@ -441,7 +457,7 @@ private:
         while (it != end && it->type == StyleTokenType::Whitespace) {
             ++it;
         }
-        while (it != end && (end-1)->type == StyleTokenType::Whitespace) {
+        while (it != end && (end - 1)->type == StyleTokenType::Whitespace) {
             --end;
         }
         if (it == end) {
@@ -461,7 +477,11 @@ private:
 
     // Consumes one item and appends it to the given array. Returns false in
     // case of parse errors, in which case the item is not appended.
-    bool consumeSelectorItem_(core::Array<StyleSelectorItem>& items, StyleTokenIterator& it, StyleTokenIterator end) {
+    bool consumeSelectorItem_(
+        core::Array<StyleSelectorItem>& items,
+        StyleTokenIterator& it,
+        StyleTokenIterator end) {
+
         if (it == end) {
             return false;
         }
@@ -471,8 +491,8 @@ private:
                 return false;
             }
             items.append(StyleSelectorItem(
-                             StyleSelectorItemType::ClassSelector,
-                             core::StringId(it->codePointsValue)));
+                StyleSelectorItemType::ClassSelector,
+                core::StringId(it->codePointsValue)));
             ++it;
             return true;
         }
@@ -480,38 +500,30 @@ private:
     }
 };
 
-} // namespace
+} // namespace internal
 
-StyleSheet::StyleSheet() :
-    Object()
-{
-
+StyleSheet::StyleSheet()
+    : Object() {
 }
 
-StyleSheetPtr StyleSheet::create()
-{
+StyleSheetPtr StyleSheet::create() {
     return StyleSheetPtr(new StyleSheet());
 }
 
-StyleSheetPtr StyleSheet::create(const StylePropertySpecTablePtr& specs,
-                                 std::string_view s)
-{
+StyleSheetPtr
+StyleSheet::create(const StylePropertySpecTablePtr& specs, std::string_view s) {
     return internal::StyleParser::parseStyleSheet(specs, s);
 }
 
-StyleRuleSet::StyleRuleSet() :
-    Object()
-{
-
+StyleRuleSet::StyleRuleSet()
+    : Object() {
 }
 
-StyleRuleSetPtr StyleRuleSet::create()
-{
+StyleRuleSetPtr StyleRuleSet::create() {
     return StyleRuleSetPtr(new StyleRuleSet());
 }
 
-bool StyleSelector::matches(StylableObject* node)
-{
+bool StyleSelector::matches(StylableObject* node) {
     if (items_.isEmpty()) {
         // Logic error, but let's silently return false
         return false;
@@ -529,25 +541,19 @@ bool StyleSelector::matches(StylableObject* node)
     return true;
 }
 
-StyleSelector::StyleSelector() :
-    Object()
-{
-
+StyleSelector::StyleSelector()
+    : Object() {
 }
 
-StyleSelectorPtr StyleSelector::create()
-{
+StyleSelectorPtr StyleSelector::create() {
     return StyleSelectorPtr(new StyleSelector());
 }
 
-StyleDeclaration::StyleDeclaration() :
-    Object()
-{
-
+StyleDeclaration::StyleDeclaration()
+    : Object() {
 }
 
-StyleDeclarationPtr StyleDeclaration::create()
-{
+StyleDeclarationPtr StyleDeclaration::create() {
     return StyleDeclarationPtr(new StyleDeclaration());
 }
 

@@ -17,8 +17,8 @@
 #ifndef VGC_CORE_LOGGING_H
 #define VGC_CORE_LOGGING_H
 
-#include <iostream> // ostream
 #include <cstdio>   // fflush, fputc, fputs
+#include <iostream> // ostream
 #include <map>
 #include <memory>
 #include <mutex>
@@ -46,8 +46,10 @@ enum class LogLevel : uint8_t {
 namespace internal {
 
 VGC_CORE_API
-void appendPreambleToLogMessage(fmt::memory_buffer& message,
-                                const StringId& categoryName, LogLevel level);
+void appendPreambleToLogMessage(
+    fmt::memory_buffer& message,
+    const StringId& categoryName,
+    LogLevel level);
 
 VGC_CORE_API
 void printLogMessageToStderr(fmt::memory_buffer& message);
@@ -62,23 +64,31 @@ void printLogMessageToStderr(fmt::memory_buffer& message);
 // handler such that the messages are displayed to the user in different ways
 // based on the log level.
 //
-template <typename... T>
-VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, fmt::format_string<T...> fmt, T&&... args) {
+template<typename... T>
+VGC_FORCE_INLINE void
+log(const StringId& categoryName,
+    LogLevel level,
+    fmt::format_string<T...> fmt,
+    T&&... args) {
+
     fmt::memory_buffer message;
     appendPreambleToLogMessage(message, categoryName, level);
     fmt::format_to(std::back_inserter(message), fmt, args...);
     printLogMessageToStderr(message);
 }
 
-VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, const char* cstring) {
+VGC_FORCE_INLINE void
+log(const StringId& categoryName, LogLevel level, const char* cstring) {
     log(categoryName, level, "{}", cstring);
 }
 
-VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, const std::string& string) {
+VGC_FORCE_INLINE void
+log(const StringId& categoryName, LogLevel level, const std::string& string) {
     log(categoryName, level, "{}", string.c_str());
 }
 
-VGC_FORCE_INLINE void log(const StringId& categoryName, LogLevel level, const StringId& stringId) {
+VGC_FORCE_INLINE void
+log(const StringId& categoryName, LogLevel level, const StringId& stringId) {
     log(categoryName, level, "{}", stringId.string().c_str());
 }
 
@@ -109,7 +119,9 @@ public:
 
 protected:
     friend class LogCategoryRegistry;
-    LogCategoryBase(const StringId& name) : name_(name) {}
+    LogCategoryBase(const StringId& name)
+        : name_(name) {
+    }
 
 private:
     StringId name_;
@@ -122,7 +134,9 @@ template<LogLevel compileTimeEnabledLevels_>
 class LogCategory : public LogCategoryBase {
 protected:
     friend class LogCategoryRegistry;
-    LogCategory(const StringId& name) : LogCategoryBase(name) {}
+    LogCategory(const StringId& name)
+        : LogCategoryBase(name) {
+    }
 
 public:
     static constexpr LogLevel compileTimeEnabledLevels = compileTimeEnabledLevels_;
@@ -136,7 +150,8 @@ private:
     struct ConstructorKey {};
 
 public:
-    LogCategoryRegistry(ConstructorKey) {}
+    LogCategoryRegistry(ConstructorKey) {
+    }
     ~LogCategoryRegistry();
 
     static LogCategoryRegistry* instance();
@@ -160,22 +175,26 @@ private:
 
 // Bits for VGC_DECLARE_LOG_CATEGORY
 
-#define VGC_DECLARE_LOG_CATEGORY_2(ClassName, compileTimeEnabledLevels)   \
-    class ClassName                                                       \
-    VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)
+#define VGC_DECLARE_LOG_CATEGORY_2(ClassName, compileTimeEnabledLevels)                  \
+    class ClassName VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)
 
-#define VGC_DECLARE_LOG_CATEGORY_3(API, ClassName, compileTimeEnabledLevels) \
-    class VGC_PP_EXPAND(API) ClassName                                       \
-    VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)
+#define VGC_DECLARE_LOG_CATEGORY_3(API, ClassName, compileTimeEnabledLevels)             \
+    class VGC_PP_EXPAND(API) ClassName VGC_DECLARE_LOG_CATEGORY_IMPL_(                   \
+        ClassName, compileTimeEnabledLevels)
 
-#define VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)                      \
-    : public ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels> {         \
-        friend class ::vgc::core::LogCategoryRegistry;                                           \
-        static ClassName* instance_;                                                             \
-        ClassName(const ::vgc::core::StringId& name)                                             \
-            : ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels>(name) {} \
-    public:                                                                                      \
-        static ClassName* instance() { return instance_; }                                       \
+#define VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)              \
+    : public ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels> { \
+        friend class ::vgc::core::LogCategoryRegistry;                                   \
+        static ClassName* instance_;                                                     \
+        ClassName(const ::vgc::core::StringId& name)                                     \
+            : ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels>( \
+                name) {                                                                  \
+        }                                                                                \
+                                                                                         \
+    public:                                                                              \
+        static ClassName* instance() {                                                   \
+            return instance_;                                                            \
+        }                                                                                \
     };
 
 /// Declares a log category of type `ClassName` whose enabled levels can be can
@@ -201,15 +220,14 @@ private:
 /// ```
 ///
 ///
-#define VGC_DECLARE_LOG_CATEGORY(...) \
+#define VGC_DECLARE_LOG_CATEGORY(...)                                                    \
     VGC_PP_EXPAND(VGC_PP_OVERLOAD(VGC_DECLARE_LOG_CATEGORY_, __VA_ARGS__)(__VA_ARGS__))
 
 /// Defines a log category. See `VGC_DECLARE_LOG_CATEGORY` for details.
 ///
-#define VGC_DEFINE_LOG_CATEGORY(ClassName, name)                              \
-    ClassName* ClassName::instance_ =                                         \
+#define VGC_DEFINE_LOG_CATEGORY(ClassName, name)                                         \
+    ClassName* ClassName::instance_ =                                                    \
         ::vgc::core::LogCategoryRegistry::createCategory<ClassName>(name);
-
 
 namespace vgc::core {
 
@@ -225,11 +243,11 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 ///
 /// \sa VGC_CRITICAL, VGC_ERROR, VGC_WARNING, VGC_INFO, VGC_DEBUG
 ///
-#define VGC_LOG(Category, level, ...)                                         \
-    if constexpr (static_cast<uint8_t>(level) <=                              \
-                  static_cast<uint8_t>(Category::compileTimeEnabledLevels)) { \
-        ::vgc::core::internal::log(                                           \
-            Category::instance()->name(), level, __VA_ARGS__);                \
+#define VGC_LOG(Category, level, ...)                                                    \
+    if constexpr (                                                                       \
+        static_cast<uint8_t>(level)                                                      \
+        <= static_cast<uint8_t>(Category::compileTimeEnabledLevels)) {                   \
+        ::vgc::core::internal::log(Category::instance()->name(), level, __VA_ARGS__);    \
     }
 
 /// Prints a critical error message.
@@ -241,7 +259,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 /// These are kept in release builds, and could be presented to the user via a
 /// popup dialog just before closing the application.
 ///
-#define VGC_CRITICAL(Category, ...) \
+#define VGC_CRITICAL(Category, ...)                                                      \
     VGC_LOG(Category, ::vgc::core::LogLevel::Critical, __VA_ARGS__)
 
 /// Prints an error.
@@ -258,7 +276,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 /// various ways, for example in a widget with a list of all the errors that
 /// have occured.
 ///
-#define VGC_ERROR(Category, ...) \
+#define VGC_ERROR(Category, ...)                                                         \
     VGC_LOG(Category, ::vgc::core::LogLevel::Error, __VA_ARGS__)
 
 /// Logs a warning.
@@ -286,7 +304,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 /// various ways, for example in a widget with a list of all the warnings that
 /// have occured.
 ///
-#define VGC_WARNING(Category, ...) \
+#define VGC_WARNING(Category, ...)                                                       \
     VGC_LOG(Category, ::vgc::core::LogLevel::Warning, __VA_ARGS__)
 
 /// Logs an informational message.
@@ -301,7 +319,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 /// various ways, for example printed to the console if any, or in a widget
 /// with a list of all available informational messages.
 ///
-#define VGC_INFO(Category, ...) \
+#define VGC_INFO(Category, ...)                                                          \
     VGC_LOG(Category, ::vgc::core::LogLevel::Info, __VA_ARGS__)
 
 /// Prints a debug message.
@@ -321,7 +339,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogTmp, Debug)
 /// For debug messages which are temporary and not meant to be commited (i.e.,
 /// short tests when trying to fix a bug), you can use VGC_DEBUG_TMP instead.
 ///
-#define VGC_DEBUG(Category, ...) \
+#define VGC_DEBUG(Category, ...)                                                         \
     VGC_LOG(Category, ::vgc::core::LogLevel::Debug, __VA_ARGS__)
 
 /// A convenient alias for VGC_DEBUG(vgc::core::LogTmp, ...)
@@ -348,12 +366,12 @@ const void* debugExprCast(T p) {
 
 template<typename T>
 const void* debugExprCast(const std::unique_ptr<T>& p) {
-  return fmt::ptr(p);
+    return fmt::ptr(p);
 }
 
 template<typename T>
 const void* debugExprCast(const std::shared_ptr<T>& p) {
-  return fmt::ptr(p);
+    return fmt::ptr(p);
 }
 
 } // namespace vgc::core::internal
@@ -371,7 +389,7 @@ const void* debugExprCast(const std::shared_ptr<T>& p) {
 /// an automatic cast to `void*` in the case where `expr` evaluates to a
 /// pointer type, which is required for proper formatting of pointer types.
 ///
-#define VGC_DEBUG_TMP_EXPR(expr) \
+#define VGC_DEBUG_TMP_EXPR(expr)                                                         \
     VGC_DEBUG_TMP(#expr " = {}", vgc::core::internal::debugExprCast(expr))
 
 #endif // VGC_CORE_LOGGING_H

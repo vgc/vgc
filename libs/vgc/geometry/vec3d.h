@@ -17,6 +17,8 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/vec3x.h then run tools/generate.py.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_VEC3D_H
 #define VGC_GEOMETRY_VEC3D_H
 
@@ -43,68 +45,90 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose.
 //                     If needed, manually export individual functions.
-class Vec3d
-{
+class Vec3d {
 public:
     using ScalarType = double;
     static constexpr Int dimension = 3;
 
     /// Creates an uninitialized `Vec3d`.
     ///
-    Vec3d(core::NoInit) {}
+    Vec3d(core::NoInit) {
+    }
 
     /// Creates a `Vec3d` initialized to (0, 0, 0).
     ///
-    constexpr Vec3d() : data_{0, 0, 0} {}
+    constexpr Vec3d()
+        : data_{0, 0, 0} {
+    }
 
 
     /// Creates a `Vec3d` initialized with the given `x`, `y`, and `z` coordinates.
     ///
-    constexpr Vec3d(double x, double y, double z) : data_{x, y, z} {}
+    constexpr Vec3d(double x, double y, double z)
+        : data_{x, y, z} {
+    }
 
     /// Creates a `Vec3d` from another `Vec<3, T>` object by performing a
     /// `static_cast` on each of its coordinates.
     ///
-    template<typename TVec3, VGC_REQUIRES(
-                 isVec<TVec3> &&
-                 TVec3::dimension == 3 &&
-                 !std::is_same_v<TVec3, Vec3d>)>
+    template<typename TVec3,
+        VGC_REQUIRES(
+            isVec<TVec3>
+         && TVec3::dimension == 3
+         && !std::is_same_v<TVec3, Vec3d>)>
     explicit constexpr Vec3d(const TVec3& other)
         : data_{static_cast<double>(other[0]),
                 static_cast<double>(other[1]),
-                static_cast<double>(other[2])} {}
+                static_cast<double>(other[2])} {
+    }
 
     /// Accesses the `i`-th coordinate of this `Vec3d`.
     ///
-    constexpr const double& operator[](Int i) const { return data_[i]; }
+    constexpr const double& operator[](Int i) const {
+        return data_[i];
+    }
 
     /// Mutates the `i`-th coordinate of this `Vec3d`.
     ///
-    constexpr double& operator[](Int i) { return data_[i]; }
+    constexpr double& operator[](Int i) {
+        return data_[i];
+    }
 
     /// Accesses the first coordinate of this `Vec3d`.
     ///
-    constexpr double x() const { return data_[0]; }
+    constexpr double x() const {
+        return data_[0];
+    }
 
     /// Accesses the second coordinate of this `Vec3d`.
     ///
-    constexpr double y() const { return data_[1]; }
+    constexpr double y() const {
+        return data_[1];
+    }
 
     /// Accesses the third coordinate of this `Vec3d`.
     ///
-    constexpr double z() const { return data_[2]; }
+    constexpr double z() const {
+        return data_[2];
+    }
 
     /// Mutates the first coordinate of this `Vec3d`.
     ///
-    constexpr void setX(double x) { data_[0] = x; }
+    constexpr void setX(double x) {
+        data_[0] = x;
+    }
 
     /// Mutates the second coordinate of this `Vec3d`.
     ///
-    constexpr void setY(double y) { data_[1] = y; }
+    constexpr void setY(double y) {
+        data_[1] = y;
+    }
 
     /// Mutates the third coordinate of this `Vec3d`.
     ///
-    constexpr void setZ(double z) { data_[2] = z; }
+    constexpr void setZ(double z) {
+        data_[2] = z;
+    }
 
     /// Adds in-place `other` to this `Vec3d`.
     ///
@@ -187,17 +211,17 @@ public:
     /// Returns whether `v1` and `v2` are equal.
     ///
     friend constexpr bool operator==(const Vec3d& v1, const Vec3d& v2) {
-        return v1.data_[0] == v2.data_[0] &&
-               v1.data_[1] == v2.data_[1] &&
-               v1.data_[2] == v2.data_[2];
+        return v1.data_[0] == v2.data_[0]
+            && v1.data_[1] == v2.data_[1]
+            && v1.data_[2] == v2.data_[2];
     }
 
     /// Returns whether `v1` and `v2` are different.
     ///
     friend constexpr bool operator!=(const Vec3d& v1, const Vec3d& v2) {
-        return v1.data_[0] != v2.data_[0] ||
-               v1.data_[1] != v2.data_[1] ||
-               v1.data_[2] != v2.data_[2];
+        return v1.data_[0] != v2.data_[0]
+            || v1.data_[1] != v2.data_[1]
+            || v1.data_[2] != v2.data_[2];
     }
 
     /// Compares `v1` and `v2` using the lexicographic
@@ -250,9 +274,9 @@ public:
     /// `v1.squaredLength() < v2.squaredLength()`.
     ///
     constexpr double squaredLength() const {
-        return data_[0] * data_[0] +
-               data_[1] * data_[1] +
-               data_[2] * data_[2];
+        return data_[0] * data_[0]
+             + data_[1] * data_[1]
+             + data_[2] * data_[2];
     }
 
     /// Makes this `Vec3d` a unit vector by dividing it by its length.
@@ -300,7 +324,10 @@ public:
     ///
     constexpr Vec3d cross(const Vec3d& b) const {
         const Vec3d& a = *this;
-        return Vec3d(a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]);
+        return Vec3d(
+            a[1]*b[2] - a[2]*b[1],
+            a[2]*b[0] - a[0]*b[2],
+            a[0]*b[1] - a[1]*b[0]);
     }
 
     /// Returns the angle, in radians and in the interval [0, π], between this
@@ -333,9 +360,9 @@ public:
         else {
             double relTol2 = relTol * relTol;
             double absTol2 = absTol * absTol;
-            return diff2 <= relTol2 * b.squaredLength() ||
-                   diff2 <= relTol2 * a.squaredLength() ||
-                   diff2 <= absTol2;
+            return diff2 <= relTol2 * b.squaredLength()
+                || diff2 <= relTol2 * a.squaredLength()
+                || diff2 <= absTol2;
         }
     }
 
@@ -345,9 +372,9 @@ public:
     ///
     bool allClose(const Vec3d& b, double relTol = 1e-9, double absTol = 0.0) const {
         const Vec3d& a = *this;
-        return core::isClose(a[0], b[0], relTol, absTol) &&
-               core::isClose(a[1], b[1], relTol, absTol) &&
-               core::isClose(a[2], b[2], relTol, absTol);
+        return core::isClose(a[0], b[0], relTol, absTol)
+            && core::isClose(a[1], b[1], relTol, absTol)
+            && core::isClose(a[2], b[2], relTol, absTol);
     }
 
     /// Returns whether the euclidean distance between this Vec3d `a` and the
@@ -372,20 +399,20 @@ public:
     ///
     bool allNear(const Vec3d& b, double absTol) const {
         const Vec3d& a = *this;
-        return core::isNear(a[0], b[0], absTol) &&
-               core::isNear(a[1], b[1], absTol) &&
-               core::isNear(a[2], b[2], absTol);
+        return core::isNear(a[0], b[0], absTol)
+            && core::isNear(a[1], b[1], absTol)
+            && core::isNear(a[2], b[2], absTol);
     }
 
 private:
     double data_[3];
 
-    Vec3d infdiff_(const Vec3d& b) const
-    {
+    Vec3d infdiff_(const Vec3d& b) const {
         const Vec3d& a = *this;
-        return Vec3d(core::internal::infdiff(a[0], b[0]),
-                     core::internal::infdiff(a[1], b[1]),
-                     core::internal::infdiff(a[2], b[2]));
+        return Vec3d(
+            core::internal::infdiff(a[0], b[0]),
+            core::internal::infdiff(a[1], b[1]),
+            core::internal::infdiff(a[2], b[2]));
     }
 };
 
@@ -469,8 +496,9 @@ template <>
 struct fmt::formatter<vgc::geometry::Vec3d> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
+        if (it != end && *it != '}') {
             throw format_error("invalid format");
+        }
         return it;
     }
     template <typename FormatContext>

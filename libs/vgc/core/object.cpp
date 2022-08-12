@@ -14,26 +14,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/object.h>
 #include <vgc/core/format.h>
+#include <vgc/core/object.h>
 
 namespace vgc::core {
 
 namespace {
 
 #ifdef VGC_CORE_OBJECT_DEBUG
-void printDebugInfo_(Object* obj, const char* s)
-{
+void printDebugInfo_(Object* obj, const char* s) {
     core::print("Object {} {}\n", core::asAddress(obj), s);
 }
 #else
-void printDebugInfo_(Object*, const char*) {}
+void printDebugInfo_(Object*, const char*) {
+}
 #endif
 
 // Returns whether the string s ends with the given suffix.
 //
-bool endsWith_(const std::string& s, const std::string& suffix)
-{
+bool endsWith_(const std::string& s, const std::string& suffix) {
     size_t n1 = s.length();
     size_t n2 = suffix.length();
     if (n1 < n2) {
@@ -41,7 +40,7 @@ bool endsWith_(const std::string& s, const std::string& suffix)
     }
     else {
         for (size_t i = 0; i < n2; ++i) {
-            if (s[n1-i] != suffix[n2-i]) {
+            if (s[n1 - i] != suffix[n2 - i]) {
                 return false;
             }
         }
@@ -53,16 +52,14 @@ bool endsWith_(const std::string& s, const std::string& suffix)
 // The behavior is undefined if s doesn't end with the
 // given suffix.
 //
-void removeSuffix_(std::string& s, const std::string& suffix)
-{
+void removeSuffix_(std::string& s, const std::string& suffix) {
     size_t n2 = suffix.length();
     for (size_t i = 0; i < n2; ++i) {
         s.pop_back();
     }
 }
 
-void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix)
-{
+void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix) {
     static const std::string I = "│ ";
     static const std::string T = "├ ";
     static const std::string L = "└ ";
@@ -101,10 +98,10 @@ void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix)
             prefix += W;
         }
 
-        for (Object* child = obj->firstChildObject();
-             child != nullptr;
-             child = child->nextSiblingObject())
-        {
+        for (Object* child = obj->firstChildObject(); //
+             child != nullptr;                        //
+             child = child->nextSiblingObject()) {
+
             // Indent
             if (child->nextSiblingObject()) {
                 prefix += T;
@@ -136,8 +133,7 @@ void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix)
 
 } // namespace
 
-bool Object::isDescendantObject(const Object* other) const
-{
+bool Object::isDescendantObject(const Object* other) const {
     // Fast path when other is nullptr
     if (!other) {
         return false;
@@ -154,53 +150,44 @@ bool Object::isDescendantObject(const Object* other) const
     return false;
 }
 
-void Object::dumpObjectTree() const
-{
+void Object::dumpObjectTree() const {
     std::string out;
     std::string prefix;
     dumpObjectTree_(this, out, prefix);
     core::print(out);
 }
 
-void Object::onDestroyed()
-{
+void Object::onDestroyed() {
     printDebugInfo_(this, "destroyed");
 }
 
-void Object::onChildAdded(Object*)
-{
+void Object::onChildAdded(Object*) {
 }
 
-void Object::onChildRemoved(Object*)
-{
+void Object::onChildRemoved(Object*) {
 }
 
-void Object::onChildAdded_(Object* child)
-{
+void Object::onChildAdded_(Object* child) {
     ++numChildObjects_;
     setBranchSizeDirty_();
     onChildAdded(child);
 }
 
-void Object::onChildRemoved_(Object* child)
-{
+void Object::onChildRemoved_(Object* child) {
     --numChildObjects_;
     setBranchSizeDirty_();
     onChildRemoved(child);
 }
 
-Object::Object()
-{
+Object::Object() {
     printDebugInfo_(this, "constructed");
 }
 
-Object::~Object()
-{
+Object::~Object() {
     printDebugInfo_(this, "destructed");
 }
 
-void Object::destroyObject_()
-{
+void Object::destroyObject_() {
     ObjectPtr p(this);
     destroyObjectImpl_();
 
@@ -266,8 +253,7 @@ void Object::destroyObject_()
     //   ---------
 }
 
-void Object::destroyAllChildObjects_()
-{
+void Object::destroyAllChildObjects_() {
     Object* x = this->firstChildObject_;
     while (x) {
         Object* next = x->nextSiblingObject_;
@@ -276,8 +262,7 @@ void Object::destroyAllChildObjects_()
     }
 }
 
-void Object::destroyChildObject_(Object* child)
-{
+void Object::destroyChildObject_(Object* child) {
     if (!child || child->parentObject_ != this) {
         throw core::NotAChildError(child, this);
     }
@@ -286,18 +271,15 @@ void Object::destroyChildObject_(Object* child)
     }
 }
 
-void Object::appendChildObject_(Object* child)
-{
+void Object::appendChildObject_(Object* child) {
     insertChildObject_(child, nullptr);
 }
 
-void Object::prependChildObject_(Object* child)
-{
+void Object::prependChildObject_(Object* child) {
     insertChildObject_(child, firstChildObject());
 }
 
-void Object::insertChildObject_(Object* child, Object* nextSibling)
-{
+void Object::insertChildObject_(Object* child, Object* nextSibling) {
     // Check that child is non-nullptr
     if (!child) {
         throw core::NullError();
@@ -350,7 +332,8 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
             firstChildObject_ = child->nextSiblingObject_;
         }
         if (child->nextSiblingObject_) {
-            child->nextSiblingObject_->previousSiblingObject_ = child->previousSiblingObject_;
+            child->nextSiblingObject_->previousSiblingObject_ =
+                child->previousSiblingObject_;
         }
         else {
             lastChildObject_ = child->previousSiblingObject_;
@@ -379,8 +362,7 @@ void Object::insertChildObject_(Object* child, Object* nextSibling)
     onChildAdded_(child);
 }
 
-ObjectPtr Object::removeChildObject_(Object* child)
-{
+ObjectPtr Object::removeChildObject_(Object* child) {
     if (!child || child->parentObject_ != this) {
         throw core::NotAChildError(child, this);
     }
@@ -389,8 +371,7 @@ ObjectPtr Object::removeChildObject_(Object* child)
     }
 }
 
-void Object::appendObjectToParent_(Object* parent)
-{
+void Object::appendObjectToParent_(Object* parent) {
     if (parent) {
         parent->appendChildObject_(this);
     }
@@ -399,8 +380,7 @@ void Object::appendObjectToParent_(Object* parent)
     }
 }
 
-void Object::prependObjectToParent_(Object* parent)
-{
+void Object::prependObjectToParent_(Object* parent) {
     if (parent) {
         parent->prependChildObject_(this);
     }
@@ -409,8 +389,7 @@ void Object::prependObjectToParent_(Object* parent)
     }
 }
 
-void Object::insertObjectToParent_(Object* parent, Object* nextSibling)
-{
+void Object::insertObjectToParent_(Object* parent, Object* nextSibling) {
     if (parent) {
         parent->insertChildObject_(this, nextSibling);
     }
@@ -419,8 +398,7 @@ void Object::insertObjectToParent_(Object* parent, Object* nextSibling)
     }
 }
 
-ObjectPtr Object::removeObjectFromParent_()
-{
+ObjectPtr Object::removeObjectFromParent_() {
     Object* parent = parentObject_;
     if (parent) {
         if (previousSiblingObject_) {
@@ -449,14 +427,12 @@ ObjectPtr Object::removeObjectFromParent_()
     return ObjectPtr(this);
 }
 
-Int Object::branchSize() const
-{
+Int Object::branchSize() const {
     updateBranchSize_();
     return branchSize_;
 }
 
-void Object::destroyObjectImpl_()
-{
+void Object::destroyObjectImpl_() {
     aboutToBeDestroyed().emit(this);
 
     while (firstChildObject_) {
@@ -501,8 +477,7 @@ void Object::destroyObjectImpl_()
     // https://stackoverflow.com/questions/755196/deleting-a-pointer-to-const-t-const
 }
 
-void Object::setBranchSizeDirty_()
-{
+void Object::setBranchSizeDirty_() {
     isBranchSizeDirty_ = true;
     Object* obj = parentObject_;
     while (obj && !obj->isBranchSizeDirty_) {
@@ -511,8 +486,7 @@ void Object::setBranchSizeDirty_()
     }
 }
 
-void Object::updateBranchSize_() const
-{
+void Object::updateBranchSize_() const {
     if (isBranchSizeDirty_) {
         Object* self = const_cast<Object*>(this);
         self->branchSize_ = 1;
@@ -562,11 +536,10 @@ void Object::updateBranchSize_() const
 
 namespace internal {
 
-void SignalTestObject::connectToOtherNoArgs(SignalTestObject* other) const
-{
+void SignalTestObject::connectToOtherNoArgs(SignalTestObject* other) const {
     signalNoArgs().connect(other->slotNoArgs());
 }
 
 } // namespace internal
 
-} // namespace core::vgc
+} // namespace vgc::core

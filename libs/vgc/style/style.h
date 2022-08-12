@@ -52,13 +52,13 @@ using StyleDeclarationArray = core::Array<StyleDeclaration*>;
 /// \brief The type of a StyleValue
 ///
 enum class StyleValueType : Int8 {
-    None,          ///< There is no value at all
-    Invalid,       ///< The value is invalid (e.g., parse error)
-    Inherit,       ///< The value should inherit from a parent StylableObject
-    Identifier,    ///< The value is an identifier
-    Number,        ///< The value is a number
-    String,        ///< The value is a string
-    Custom         ///< The value is a custom type
+    None,       ///< There is no value at all
+    Invalid,    ///< The value is invalid (e.g., parse error)
+    Inherit,    ///< The value should inherit from a parent StylableObject
+    Identifier, ///< The value is an identifier
+    Number,     ///< The value is a number
+    String,     ///< The value is a string
+    Custom      ///< The value is a custom type
 };
 
 /// \enum vgc::style::StyleValue
@@ -180,18 +180,16 @@ public:
     /// whose string value is equal the given string.
     ///
     bool operator==(const std::string& other) const {
-        return (type() == StyleValueType::Identifier ||
-                type() == StyleValueType::String) &&
-               std::any_cast<core::StringId>(value_) == other;
+        return (type() == StyleValueType::Identifier || type() == StyleValueType::String)
+               && std::any_cast<core::StringId>(value_) == other;
     }
 
     /// Returns whether this StyleValue is of type Identifier or String and
     /// whose string value is equal the given string.
     ///
     bool operator==(const core::StringId& other) const {
-        return (type() == StyleValueType::Identifier ||
-                type() == StyleValueType::String) &&
-               std::any_cast<core::StringId>(value_) == other;
+        return (type() == StyleValueType::Identifier || type() == StyleValueType::String)
+               && std::any_cast<core::StringId>(value_) == other;
     }
 
     /// Returns whether this `StyleValue` stores a value of type `TValue`.
@@ -221,7 +219,8 @@ private:
 /// \brief The type of a function that takes as input a token range
 ///        and outputs a StyleValue.
 ///
-using StylePropertyParser = StyleValue(*)(StyleTokenIterator begin, StyleTokenIterator end);
+using StylePropertyParser =
+    StyleValue (*)(StyleTokenIterator begin, StyleTokenIterator end);
 
 /// This is the default function used for parsing properties when no
 /// StylePropertySpec exists for the given property.
@@ -247,13 +246,14 @@ class StylePropertySpecMaker;
 /// https://www.w3.org/TR/CSS2/propidx.html
 ///
 class VGC_STYLE_API StylePropertySpec {
-public:    
+public:
     /// Creates a StylePropertySpec.
     ///
-    StylePropertySpec(core::StringId name,
-                      const StyleValue& initialValue,
-                      bool isInherited,
-                      StylePropertyParser parser)
+    StylePropertySpec(
+        core::StringId name,
+        const StyleValue& initialValue,
+        bool isInherited,
+        StylePropertyParser parser)
         : name_(name)
         , initialValue_(initialValue)
         , isInherited_(isInherited)
@@ -262,10 +262,11 @@ public:
 
     /// Creates a StylePropertySpec.
     ///
-    StylePropertySpec(const char* name,
-                      const StyleValue& initialValue,
-                      bool isInherited,
-                      StylePropertyParser parser)
+    StylePropertySpec(
+        const char* name,
+        const StyleValue& initialValue,
+        bool isInherited,
+        StylePropertyParser parser)
         : name_(name)
         , initialValue_(initialValue)
         , isInherited_(isInherited)
@@ -305,22 +306,26 @@ private:
 /// \brief Stores a table of multiple StylePropertySpec.
 ///
 class VGC_STYLE_API StylePropertySpecTable
-        : public std::enable_shared_from_this<StylePropertySpecTable> {
+    : public std::enable_shared_from_this<StylePropertySpecTable> {
 public:
-    StylePropertySpecTable() {}
+    StylePropertySpecTable() {
+    }
 
-    void insert(const char* name,
-                const StyleValue& initialValue,
-                bool isInherited,
-                StylePropertyParser parser) {
+    void insert(
+        const char* name,
+        const StyleValue& initialValue,
+        bool isInherited,
+        StylePropertyParser parser) {
         insert(core::StringId(name), initialValue, isInherited, parser);
     }
 
-    void insert(core::StringId name,
-                const StyleValue& initialValue,
-                bool isInherited,
-                StylePropertyParser parser) {
-        StylePropertySpec spec = StylePropertySpec(name, initialValue, isInherited, parser);
+    void insert(
+        core::StringId name,
+        const StyleValue& initialValue,
+        bool isInherited,
+        StylePropertyParser parser) {
+        StylePropertySpec spec =
+            StylePropertySpec(name, initialValue, isInherited, parser);
         map_.insert({name, spec});
     }
 
@@ -349,11 +354,10 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
-
     /// Creates a stylesheet from the given specs and string.
     ///
-    static StyleSheetPtr create(const StylePropertySpecTablePtr& specs,
-                                std::string_view s);
+    static StyleSheetPtr
+    create(const StylePropertySpecTablePtr& specs, std::string_view s);
 
     /// Returns all the rule sets of this stylesheet.
     ///
@@ -423,18 +427,24 @@ class VGC_STYLE_API StyleSelectorItem {
 public:
     /// Creates a StyleSelectorItem of the given type and given name.
     ///
-    StyleSelectorItem(StyleSelectorItemType type, core::StringId name) :
-        type_(type), name_(name) {}
+    StyleSelectorItem(StyleSelectorItemType type, core::StringId name)
+        : type_(type)
+        , name_(name) {
+    }
 
     /// Returns the type of this StyleSelectorItem.
     ///
-    StyleSelectorItemType type() const { return type_; }
+    StyleSelectorItemType type() const {
+        return type_;
+    }
 
     /// Returns the name of this StyleSelectorItem. What this names represents
     /// depends on the type of this item. In the case of a ClassSelector, this
     /// represent the class name.
     ///
-    core::StringId name() const { return name_; }
+    core::StringId name() const {
+        return name_;
+    }
 
 private:
     StyleSelectorItemType type_;

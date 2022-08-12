@@ -20,6 +20,8 @@
 #ifndef VGC_GEOMETRY_VEC_H
 #define VGC_GEOMETRY_VEC_H
 
+// clang-format off
+
 #include <vgc/core/templateutil.h>
 
 namespace vgc::geometry {
@@ -68,8 +70,8 @@ struct IsVec : std::false_type {};
 
 template<typename T>
 struct IsVec<T, core::Requires<
-        std::is_same_v<T, Vec<T::dimension, typename T::ScalarType>>>> :
-    std::true_type {};
+        std::is_same_v<T, Vec<T::dimension, typename T::ScalarType>>>>
+    : std::true_type {};
 
 /// Checks whether `T` is a `vgc::geometry::Vec` type.
 ///

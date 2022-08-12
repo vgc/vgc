@@ -54,8 +54,7 @@ namespace widgets {
 ///
 /// \sa QEvent, QInputEvent, QMouseEvent, QTabletEvent.
 ///
-class VGC_WIDGETS_API PointingDeviceEvent
-{
+class VGC_WIDGETS_API PointingDeviceEvent {
 public:
     /// Creates a PointingDeviceEvent from a non-null QMouseEvent \p event.
     ///

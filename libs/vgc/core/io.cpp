@@ -24,8 +24,7 @@
 namespace vgc {
 namespace core {
 
-std::string readFile(const std::string& filePath)
-{
+std::string readFile(const std::string& filePath) {
     // Open an input file stream that throws on badbit, and check that the
     // file stream was successfully opened.
     //

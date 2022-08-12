@@ -30,27 +30,25 @@ VGC_DECLARE_OBJECT(Engine);
 class VGC_GRAPHICS_API Viewport {
 public:
     Viewport(Int x, Int y, Int width, Int height)
-        : x_(x) , y_(y) , width_(width) , height_(height)
-    {
+        : x_(x)
+        , y_(y)
+        , width_(width)
+        , height_(height) {
     }
 
-    Int x() const
-    {
+    Int x() const {
         return x_;
     }
 
-    Int y() const
-    {
+    Int y() const {
         return y_;
     }
 
-    Int width() const
-    {
+    Int width() const {
         return width_;
     }
 
-    Int height() const
-    {
+    Int height() const {
         return height_;
     }
 
@@ -71,7 +69,8 @@ private:
 class VGC_GRAPHICS_API Framebuffer : public Resource {
 protected:
     Framebuffer(ResourceRegistry* registry)
-        : Resource(registry) {}
+        : Resource(registry) {
+    }
 
     using Resource::Resource;
 

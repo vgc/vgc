@@ -24,36 +24,31 @@
 namespace vgc {
 namespace ui {
 
-Label::Label() :
-    Widget(),
-    text_(""),
-    reload_(true)
-{
+Label::Label()
+    : Widget()
+    , text_("")
+    , reload_(true) {
+
     addStyleClass(strings::Label);
 }
 
-Label::Label(const std::string& text) :
-    Widget(),
-    text_(text),
-    reload_(true)
-{
-
+Label::Label(const std::string& text)
+    : Widget()
+    , text_(text)
+    , reload_(true) {
 }
 
 /* static */
-LabelPtr Label::create()
-{
+LabelPtr Label::create() {
     return LabelPtr(new Label());
 }
 
 /* static */
-LabelPtr Label::create(const std::string& text)
-{
+LabelPtr Label::create(const std::string& text) {
     return LabelPtr(new Label(text));
 }
 
-void Label::setText(const std::string& text)
-{
+void Label::setText(const std::string& text) {
     if (text_ != text) {
         text_ = text;
         reload_ = true;
@@ -61,31 +56,29 @@ void Label::setText(const std::string& text)
     }
 }
 
-void Label::onPaintCreate(graphics::Engine* engine)
-{
-    triangles_ = engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+void Label::onPaintCreate(graphics::Engine* engine) {
+    triangles_ =
+        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
-{
+void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
         core::Color textColor = internal::getColor(this, strings::text_color);
         graphics::TextProperties textProperties(
-                    graphics::TextHorizontalAlign::Center,
-                    graphics::TextVerticalAlign::Middle);
+            graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
         graphics::TextCursor textCursor;
         bool hinting = style(strings::pixel_hinting) == strings::normal;
-        internal::insertText(a, textColor, 0, 0, width(), height(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
+        internal::insertText(
+            a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
 }
 
-void Label::onPaintDestroy(graphics::Engine*)
-{
+void Label::onPaintDestroy(graphics::Engine*) {
     triangles_.reset();
 }
 

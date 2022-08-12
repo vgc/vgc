@@ -72,7 +72,8 @@ public:
     SizedFontParams(Int ppemWidth, Int ppemHeight, FontHinting hinting)
         : ppemWidth_(ppemWidth)
         , ppemHeight_(ppemHeight)
-        , hinting_(hinting) {}
+        , hinting_(hinting) {
+    }
 
     /// Creates a SizedFontParams with the given size (expressed in pixels per
     /// EM-square) and the given hinting parameters.
@@ -80,7 +81,8 @@ public:
     /// This is equivalent to `SizedFontParams(ppem, ppem, hinting)`.
     ///
     SizedFontParams(Int ppem, FontHinting hinting)
-        : SizedFontParams(ppem, ppem, hinting) {}
+        : SizedFontParams(ppem, ppem, hinting) {
+    }
 
     /// Creates a SizedFontParams with the given size in points (e.g., `12` for
     /// a 12pt font), screen dpi, and hinting parameters.
@@ -103,7 +105,8 @@ public:
     /// ppemHeight = fontSizeInPoints * vdpi / 72;
     /// ```
     ///
-    static SizedFontParams fromPoints(Int pointSize, Int hdpi, Int vdpi, FontHinting hinting) {
+    static SizedFontParams
+    fromPoints(Int pointSize, Int hdpi, Int vdpi, FontHinting hinting) {
         return SizedFontParams(pointSize * hdpi / 72, pointSize * vdpi / 72, hinting);
     }
 
@@ -128,8 +131,7 @@ public:
     /// Returns whether the two SizedFontParams are equal.
     ///
     bool operator==(const SizedFontParams& other) const {
-        return ppemWidth_ == other.ppemWidth_
-               && ppemHeight_ == other.ppemHeight_
+        return ppemWidth_ == other.ppemWidth_ && ppemHeight_ == other.ppemHeight_
                && hinting_ == other.hinting_;
     }
 
@@ -197,14 +199,12 @@ public:
 // - HarfBuzz: `typedef int32_t hb_position_t;`
 //
 template<class T>
-geometry::Vec2d f266ToVec2d(T x, T y)
-{
+geometry::Vec2d f266ToVec2d(T x, T y) {
     return geometry::Vec2d(x / 64.0, y / 64.0);
 }
 
 template<class T>
-geometry::Vec2f f266ToVec2f(T x, T y)
-{
+geometry::Vec2f f266ToVec2f(T x, T y) {
     return geometry::Vec2f(x / 64.0f, y / 64.0f);
 }
 
@@ -376,7 +376,6 @@ private:
     friend class internal::FontLibraryImpl;
     friend class internal::SizedFontImpl;
 };
-
 
 /// \class vgc::graphics::Glyph
 /// \brief A given glyph of a given Font.
@@ -583,8 +582,7 @@ public:
     ///
     ///  ...]
     ///
-    void fill(core::FloatArray& data,
-              const geometry::Mat3f& transform) const;
+    void fill(core::FloatArray& data, const geometry::Mat3f& transform) const;
 
     /// Same as fill(data, transform) but with only a translation part. This is
     /// equivalent (but faster) to:
@@ -594,8 +592,7 @@ public:
     /// transform.translate(translation);
     /// ```
     ///
-    void fill(core::FloatArray& data,
-              const geometry::Vec2f& translation) const;
+    void fill(core::FloatArray& data, const geometry::Vec2f& translation) const;
 
     /// Same as fill(data, transform) but with only a translation part as well as flipping the Y-coordinate. This is
     /// equivalent (but faster) to:
@@ -606,8 +603,7 @@ public:
     /// transform.scale(1, -1);
     /// ```
     ///
-    void fillYMirrored(core::FloatArray& data,
-                       const geometry::Vec2f& translation) const;
+    void fillYMirrored(core::FloatArray& data, const geometry::Vec2f& translation) const;
 
 protected:
     /// \reimp
@@ -625,10 +621,9 @@ private:
 
 namespace std {
 
-template <>
+template<>
 struct hash<vgc::graphics::SizedFontParams> {
-    std::size_t operator()(const vgc::graphics::SizedFontParams& p) const
-    {
+    std::size_t operator()(const vgc::graphics::SizedFontParams& p) const {
         // http://stackoverflow.com/a/1646913/126995
         std::size_t res = 17;
         res = res * 31 + hash<vgc::Int>()(p.ppemWidth());

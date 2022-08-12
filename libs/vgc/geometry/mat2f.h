@@ -17,6 +17,8 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/mat2x.h then run tools/generate.py.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_MAT2F_H
 #define VGC_GEOMETRY_MAT2F_H
 
@@ -41,26 +43,30 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose, otherwise we couldn't define `identity`.
 //                     Instead, we manually export functions defined in the .cpp.
-class Mat2f
-{
+class Mat2f {
 public:
     using ScalarType = float;
     static constexpr Int dimension = 2;
 
     /// Creates an uninitialized `Mat2f`.
     ///
-    Mat2f(core::NoInit) {}
+    Mat2f(core::NoInit) {
+    }
 
     /// Creates a `Mat2f` initialized to the null matrix `Mat2f(0)`.
     ///
-    constexpr Mat2f() : Mat2f(0) {}
+    constexpr Mat2f()
+        : Mat2f(0) {
+    }
 
     /// Creates a Mat2f initialized with the given arguments.
     ///
-    constexpr Mat2f(float m11, float m12,
-                    float m21, float m22)
+    constexpr Mat2f(
+        float m11, float m12,
+        float m21, float m22)
         : data_{{m11, m21},
-                {m12, m22}} {}
+                {m12, m22}} {
+    }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat2f(0), and the identity
@@ -68,25 +74,30 @@ public:
     ///
     explicit constexpr Mat2f(float d)
         : data_{{d, 0},
-                {0, d}} {}
+                {0, d}} {
+    }
 
     /// Creates a `Mat2f` from another `Mat<2, T>` object by performing a
     /// `static_cast` on each of its elements.
     ///
-    template<typename TMat2, VGC_REQUIRES(
-                 isMat<TMat2> &&
-                 TMat2::dimension == 2 &&
-                 !std::is_same_v<TMat2, Mat2f>)>
+    template<typename TMat2,
+        VGC_REQUIRES(
+            isMat<TMat2>
+         && TMat2::dimension == 2
+         && !std::is_same_v<TMat2, Mat2f>)>
     explicit constexpr Mat2f(const TMat2& other)
         : data_{{static_cast<float>(other(0, 0)),
                  static_cast<float>(other(1, 0))},
                 {static_cast<float>(other(0, 1)),
-                 static_cast<float>(other(1, 1))}} {}
+                 static_cast<float>(other(1, 1))}} {
+    }
 
     /// Defines explicitely all the elements of the matrix
     ///
-    Mat2f& setElements(float m11, float m12,
-                       float m21, float m22) {
+    Mat2f& setElements(
+        float m11, float m12,
+        float m21, float m22) {
+
         data_[0][0] = m11; data_[0][1] = m21;
         data_[1][0] = m12; data_[1][1] = m22;
         return *this;
@@ -96,17 +107,22 @@ public:
     /// the given value.
     ///
     Mat2f& setToDiagonal(float d) {
-        return setElements(d, 0,
-                           0, d);
+        return setElements(
+            d, 0,
+            0, d);
     }
 
     /// Sets this Mat2f to the zero matrix.
     ///
-    Mat2f& setToZero() { return setToDiagonal(0); }
+    Mat2f& setToZero() {
+        return setToDiagonal(0);
+    }
 
     /// Sets this Mat2f to the identity matrix.
     ///
-    Mat2f& setToIdentity() { return setToDiagonal(1); }
+    Mat2f& setToIdentity() {
+        return setToDiagonal(1);
+    }
 
     /// The identity matrix Mat2f(1).
     ///
@@ -114,11 +130,15 @@ public:
 
     /// Accesses the component of the Mat2f the the i-th row and j-th column.
     ///
-    const float& operator()(Int i, Int j) const { return data_[j][i]; }
+    const float& operator()(Int i, Int j) const {
+        return data_[j][i];
+    }
 
     /// Mutates the component of the Mat2f the the i-th row and j-th column.
     ///
-    float& operator()(Int i, Int j) { return data_[j][i]; }
+    float& operator()(Int i, Int j) {
+        return data_[j][i];
+    }
 
     /// Adds in-place the \p other Mat2f to this Mat2f.
     ///
@@ -223,19 +243,19 @@ public:
     /// Returns whether the two given Vec2f \p v1 and \p v2 are equal.
     ///
     friend bool operator==(const Mat2f& m1, const Mat2f& m2) {
-        return m1.data_[0][0] == m2.data_[0][0] &&
-               m1.data_[0][1] == m2.data_[0][1] &&
-               m1.data_[1][0] == m2.data_[1][0] &&
-               m1.data_[1][1] == m2.data_[1][1];
+        return m1.data_[0][0] == m2.data_[0][0]
+            && m1.data_[0][1] == m2.data_[0][1]
+            && m1.data_[1][0] == m2.data_[1][0]
+            && m1.data_[1][1] == m2.data_[1][1];
     }
 
     /// Returns whether the two given Vec2f \p v1 and \p v2 are different.
     ///
     friend bool operator!=(const Mat2f& m1, const Mat2f& m2) {
-        return m1.data_[0][0] != m2.data_[0][0] ||
-               m1.data_[0][1] != m2.data_[0][1] ||
-               m1.data_[1][0] != m2.data_[1][0] ||
-               m1.data_[1][1] != m2.data_[1][1];
+        return m1.data_[0][0] != m2.data_[0][0]
+            || m1.data_[0][1] != m2.data_[0][1]
+            || m1.data_[1][0] != m2.data_[1][0]
+            || m1.data_[1][1] != m2.data_[1][1];
     }
 
     /// Returns the multiplication of this Mat2f by the given Vec2f \p v.
@@ -348,8 +368,9 @@ template <>
 struct fmt::formatter<vgc::geometry::Mat2f> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
+        if (it != end && *it != '}') {
             throw format_error("invalid format");
+        }
         return it;
     }
     template <typename FormatContext>

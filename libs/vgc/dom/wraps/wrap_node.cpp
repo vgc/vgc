@@ -26,12 +26,10 @@ using Parent = vgc::core::Object;
 using vgc::dom::Node;
 using vgc::dom::NodeType;
 
-void wrap_node(py::module& m)
-{
+void wrap_node(py::module& m) {
     py::enum_<NodeType>(m, "NodeType")
         .value("Element", NodeType::Element)
-        .value("Document", NodeType::Document)
-    ;
+        .value("Document", NodeType::Document);
 
     vgc::core::wraps::wrapObjectCommon<This>(m, "Node");
 
@@ -50,6 +48,5 @@ void wrap_node(py::module& m)
         .def("reparent", &This::reparent)
         .def("canReplace", &This::canReplace)
         .def("replace", &This::replace)
-        .def("isDescendant", &This::isDescendant)
-    ;
+        .def("isDescendant", &This::isDescendant);
 }

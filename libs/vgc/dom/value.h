@@ -98,8 +98,7 @@ enum class ValueType {
 /// Writes the given ValueType to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, ValueType v)
-{
+void write(OStream& out, ValueType v) {
     switch (v) {
     case ValueType::None:
         write(out, "ValueType::None");
@@ -122,14 +121,12 @@ void write(OStream& out, ValueType v)
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
 ///
-class VGC_DOM_API Value
-{
+class VGC_DOM_API Value {
 public:
     /// Constructs an empty value, that is, whose ValueType is None.
     ///
-    constexpr Value() :
-        Value(ValueType::None) {
-
+    constexpr Value()
+        : Value(ValueType::None) {
     }
 
     /// Returns a const reference to an empty value. This is useful for error
@@ -144,42 +141,37 @@ public:
 
     /// Constructs a Value holding a Color.
     ///
-    Value(const core::Color& color) :
-        type_(ValueType::Color),
-        var_(color) {
-
+    Value(const core::Color& color)
+        : type_(ValueType::Color)
+        , var_(color) {
     }
 
     /// Constructs a Value holding a DoubleArray.
     ///
-    Value(const core::DoubleArray& doubleArray) :
-        type_(ValueType::DoubleArray),
-        var_(std::make_shared<core::DoubleArray>(doubleArray)) {
-
+    Value(const core::DoubleArray& doubleArray)
+        : type_(ValueType::DoubleArray)
+        , var_(std::make_shared<core::DoubleArray>(doubleArray)) {
     }
 
     /// Constructs a Value holding a DoubleArray.
     ///
-    Value(core::DoubleArray&& doubleArray) :
-        type_(ValueType::DoubleArray),
-        var_(std::make_shared<core::DoubleArray>(std::move(doubleArray))) {
-
+    Value(core::DoubleArray&& doubleArray)
+        : type_(ValueType::DoubleArray)
+        , var_(std::make_shared<core::DoubleArray>(std::move(doubleArray))) {
     }
 
     /// Constructs a Value holding a Vec2dArray.
     ///
-    Value(const geometry::Vec2dArray& vec2dArray) :
-        type_(ValueType::Vec2dArray),
-        var_(std::make_shared<geometry::Vec2dArray>(vec2dArray)) {
-
+    Value(const geometry::Vec2dArray& vec2dArray)
+        : type_(ValueType::Vec2dArray)
+        , var_(std::make_shared<geometry::Vec2dArray>(vec2dArray)) {
     }
 
     /// Constructs a Value holding a Vec2dArray.
     ///
-    Value(geometry::Vec2dArray&& vec2dArray) :
-        type_(ValueType::Vec2dArray),
-        var_(std::make_shared<geometry::Vec2dArray>(std::move(vec2dArray))) {
-
+    Value(geometry::Vec2dArray&& vec2dArray)
+        : type_(ValueType::Vec2dArray)
+        , var_(std::make_shared<geometry::Vec2dArray>(std::move(vec2dArray))) {
     }
 
     /// Returns the ValueType of this Value.
@@ -270,9 +262,9 @@ public:
 private:
     /// For the different valueless ValueType.
     ///
-    explicit constexpr Value(ValueType type) :
-        type_(type), var_() {
-
+    explicit constexpr Value(ValueType type)
+        : type_(type)
+        , var_() {
     }
 
     ValueType type_ = ValueType::Invalid;
@@ -280,21 +272,30 @@ private:
         std::monostate,
         core::Color,
         std::shared_ptr<core::DoubleArray>,
-        std::shared_ptr<geometry::Vec2dArray>
-    > var_;
+        std::shared_ptr<geometry::Vec2dArray>>
+        var_;
 };
 
 /// Writes the given Value to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const Value& v)
-{
+void write(OStream& out, const Value& v) {
     switch (v.type()) {
-    case ValueType::None:           write(out, "None");             break;
-    case ValueType::Invalid:        write(out, "Invalid");          break;
-    case ValueType::Color:          write(out, v.getColor());       break;
-    case ValueType::DoubleArray:    write(out, v.getDoubleArray()); break;
-    case ValueType::Vec2dArray:     write(out, v.getVec2dArray());  break;
+    case ValueType::None:
+        write(out, "None");
+        break;
+    case ValueType::Invalid:
+        write(out, "Invalid");
+        break;
+    case ValueType::Color:
+        write(out, v.getColor());
+        break;
+    case ValueType::DoubleArray:
+        write(out, v.getDoubleArray());
+        break;
+    case ValueType::Vec2dArray:
+        write(out, v.getVec2dArray());
+        break;
     }
 }
 

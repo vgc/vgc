@@ -39,7 +39,7 @@ enum class FlexDirection {
 /// be added in the future.
 ///
 enum class FlexWrap {
-    NoWrap//,
+    NoWrap //,
     //Wrap,
     //WrapReverse
 };
@@ -60,15 +60,14 @@ protected:
     /// This is an implementation details. Please use
     /// Flex::create() instead.
     ///
-    Flex(FlexDirection direction = FlexDirection::Row,
-         FlexWrap wrap = FlexWrap::NoWrap);
+    Flex(FlexDirection direction = FlexDirection::Row, FlexWrap wrap = FlexWrap::NoWrap);
 
 public:
     /// Creates a Row.
     ///
     static FlexPtr create(
-            FlexDirection direction = FlexDirection::Row,
-            FlexWrap wrap = FlexWrap::NoWrap);
+        FlexDirection direction = FlexDirection::Row,
+        FlexWrap wrap = FlexWrap::NoWrap);
 
     /// Returns the FlexDirection of this Flex.
     ///

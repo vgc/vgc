@@ -19,15 +19,25 @@
 namespace vgc {
 namespace core {
 
-std::string secondsToString(double t, TimeUnit unit, int decimals)
-{
+std::string secondsToString(double t, TimeUnit unit, int decimals) {
     std::string u;
     switch (unit) {
-    case TimeUnit::Seconds:                u = "s";  break;
-    case TimeUnit::Milliseconds: t *= 1e3; u = "ms"; break;
-    case TimeUnit::Microseconds: t *= 1e6; u = "µs"; break;
-    case TimeUnit::Nanoseconds:  t *= 1e9; u = "ns"; break;
-    }    
+    case TimeUnit::Seconds:
+        u = "s";
+        break;
+    case TimeUnit::Milliseconds:
+        t *= 1e3;
+        u = "ms";
+        break;
+    case TimeUnit::Microseconds:
+        t *= 1e6;
+        u = "µs";
+        break;
+    case TimeUnit::Nanoseconds:
+        t *= 1e9;
+        u = "ns";
+        break;
+    }
     return core::format("{:.{}f}{}", t, decimals, u);
 }
 

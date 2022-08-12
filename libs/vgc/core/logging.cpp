@@ -19,15 +19,14 @@
 #include <iostream>
 
 #ifdef VGC_CORE_OS_WINDOWS
-#include <Windows.h>
+#    include <Windows.h>
 #endif
 
 namespace vgc::core {
 
 namespace {
 
-void appendStringToLogMessage(fmt::memory_buffer& message, const char* string)
-{
+void appendStringToLogMessage(fmt::memory_buffer& message, const char* string) {
     for (const char* it = string; *it != '\0'; ++it) {
         message.push_back(*it);
     }
@@ -37,22 +36,31 @@ void appendStringToLogMessage(fmt::memory_buffer& message, const char* string)
 
 namespace internal {
 
-void appendPreambleToLogMessage(fmt::memory_buffer& message, const StringId& categoryName, LogLevel level)
-{
+void appendPreambleToLogMessage(
+    fmt::memory_buffer& message,
+    const StringId& categoryName,
+    LogLevel level) {
+
     if (!(categoryName == LogTmp::instance()->name())) {
         appendStringToLogMessage(message, categoryName.string().c_str());
         appendStringToLogMessage(message, ": ");
     }
-    switch(level) {
-    case LogLevel::Critical: appendStringToLogMessage(message, "Critical: "); break;
-    case LogLevel::Error:    appendStringToLogMessage(message, "Error: ");    break;
-    case LogLevel::Warning:  appendStringToLogMessage(message, "Warning: ");  break;
-    default: break;
+    switch (level) {
+    case LogLevel::Critical:
+        appendStringToLogMessage(message, "Critical: ");
+        break;
+    case LogLevel::Error:
+        appendStringToLogMessage(message, "Error: ");
+        break;
+    case LogLevel::Warning:
+        appendStringToLogMessage(message, "Warning: ");
+        break;
+    default:
+        break;
     }
 }
 
-void printLogMessageToStderr(fmt::memory_buffer& message)
-{
+void printLogMessageToStderr(fmt::memory_buffer& message) {
     message.push_back('\n');
     message.push_back('\0');
 #ifdef VGC_CORE_OS_WINDOWS
@@ -66,16 +74,14 @@ void printLogMessageToStderr(fmt::memory_buffer& message)
 
 } // namespace internal
 
-LogCategoryRegistry::~LogCategoryRegistry()
-{
+LogCategoryRegistry::~LogCategoryRegistry() {
     for (const auto& it : map_) {
         LogCategoryBase* category = it.second;
         delete category;
     }
 }
 
-LogCategoryRegistry* LogCategoryRegistry::instance()
-{
+LogCategoryRegistry* LogCategoryRegistry::instance() {
     static std::unique_ptr<LogCategoryRegistry> instance_;
     if (!instance_) {
         instance_ = std::make_unique<LogCategoryRegistry>(ConstructorKey{});

@@ -37,14 +37,15 @@ namespace vgc::graphics::detail {
 class VGC_GRAPHICS_API Command {
 protected:
     explicit Command(std::string_view name)
-        : name_(name) {}
+        : name_(name) {
+    }
 
 public:
     virtual ~Command() = default;
 
     virtual void execute(Engine* engine) = 0;
 
-    virtual std::string repr()  {
+    virtual std::string repr() {
         return std::string(name());
     }
 
@@ -61,7 +62,8 @@ class LambdaCommand : public Command, private Lambda {
 public:
     LambdaCommand(std::string_view name, Lambda&& lambda)
         : Command(name)
-        , Lambda(std::move(lambda)) {}
+        , Lambda(std::move(lambda)) {
+    }
 
     LambdaCommand(std::string_view, const Lambda&) = delete;
 
@@ -80,7 +82,8 @@ public:
     LambdaCommandWithParameters(std::string_view name, Lambda&& lambda, Args&&... args)
         : Command(name)
         , Lambda(std::move(lambda))
-        , data_{std::forward<Args>(args)...} {}
+        , data_{std::forward<Args>(args)...} {
+    }
 
     template<typename... Args>
     LambdaCommandWithParameters(std::string_view, const Lambda&, Args&&...) = delete;
@@ -100,7 +103,8 @@ private:
 };
 
 template<typename U, typename Lambda, typename Data>
-LambdaCommandWithParameters(U, Lambda, Data) -> LambdaCommandWithParameters<std::decay_t<Data>, std::decay_t<Lambda>>;
+LambdaCommandWithParameters(U, Lambda, Data)
+    -> LambdaCommandWithParameters<std::decay_t<Data>, std::decay_t<Lambda>>;
 
 } // namespace vgc::graphics::detail
 

@@ -178,9 +178,9 @@ public:
     /// method over static_cast<Document*> or dynamic_cast<Document*>.
     ///
     static Document* cast(Node* node) {
-        return (node && node->nodeType() == NodeType::Document) ?
-               static_cast<Document*>(node) :
-               nullptr;
+        return (node && node->nodeType() == NodeType::Document)
+                   ? static_cast<Document*>(node)
+                   : nullptr;
     }
 
     /// Returns the root element of this Document.
@@ -339,8 +339,9 @@ public:
     ///
     /// Raises a FileError exception if the document cannot be saved.
     ///
-    void save(const std::string& filePath,
-              const XmlFormattingStyle& style = XmlFormattingStyle()) const;
+    void save(
+        const std::string& filePath,
+        const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
     void enableHistory(core::StringId entrypointName);
 

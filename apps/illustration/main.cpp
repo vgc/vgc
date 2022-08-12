@@ -30,21 +30,22 @@
 
 namespace py = pybind11;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
+
 #ifdef VGC_DEBUG_BUILD
-#ifdef VGC_CORE_COMPILER_MSVC
+#    ifdef VGC_CORE_COMPILER_MSVC
     ::AllocConsole();
     ::SetConsoleCtrlHandler(nullptr, true);
     HWND hwnd = ::GetConsoleWindow();
-    if (hwnd != NULL)
-    {
+    if (hwnd != NULL) {
         HMENU hMenu = ::GetSystemMenu(hwnd, FALSE);
-        if (hMenu != NULL) ::DeleteMenu(hMenu, SC_CLOSE, MF_BYCOMMAND);
+        if (hMenu != NULL) {
+            ::DeleteMenu(hMenu, SC_CLOSE, MF_BYCOMMAND);
+        }
     }
     FILE* stream;
     freopen_s(&stream, "CONOUT$", "a+", stdout);
-#endif
+#    endif
 #endif
 
     // Conversion between QString and std::string.
@@ -116,7 +117,8 @@ int main(int argc, char* argv[])
 
     // Create the python interpreter
     std::string programName(argv[0]);
-    auto pythonInterpreter = vgc::core::PythonInterpreter::create(programName, pythonHome);
+    auto pythonInterpreter =
+        vgc::core::PythonInterpreter::create(programName, pythonHome);
 
     // Create the document + root element
     // -> Let's have the MainWindow be the owner of the document for now.

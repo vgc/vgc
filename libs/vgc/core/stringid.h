@@ -98,8 +98,7 @@ namespace vgc::core {
 /// - https://isocpp.org/wiki/faq/ctors#construct-on-first-use-v2
 /// - https://google.github.io/styleguide/cppguide.html#Static_and_Global_Variables
 ///
-class VGC_CORE_API StringId
-{
+class VGC_CORE_API StringId {
 public:
     /// Constructs a StringId representing the given string \p s.
     ///
@@ -113,7 +112,9 @@ public:
 
     /// Constructs a StringId representing the given string \p s.
     ///
-    explicit StringId(const char s[]) : StringId(std::string(s)) {}
+    explicit StringId(const char s[])
+        : StringId(std::string(s)) {
+    }
 
     /// Returns the string represented by this StringId.
     ///

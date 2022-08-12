@@ -19,15 +19,12 @@
 namespace vgc {
 namespace ui {
 
-Event::Event() :
-    Object()
-{
-
+Event::Event()
+    : Object() {
 }
 
 /* static */
-EventPtr Event::create()
-{
+EventPtr Event::create() {
     return EventPtr(new Event());
 }
 

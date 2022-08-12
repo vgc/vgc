@@ -44,9 +44,10 @@ class VGC_UI_API PreferredSize {
 public:
     /// Creates a PreferredSize with the given type and value.
     ///
-    PreferredSize(PreferredSizeType type = PreferredSizeType::Auto, float value = 0) :
-        type_(type), value_(value) {}
-
+    PreferredSize(PreferredSizeType type = PreferredSizeType::Auto, float value = 0)
+        : type_(type)
+        , value_(value) {
+    }
 
     /// Returns the PreferredSizeType of this PreferredSize.
     ///
@@ -95,9 +96,9 @@ private:
 inline bool operator==(const PreferredSize& p1, const PreferredSize& p2) {
     // XXX Should we instead use exact equality? And implement a separate isNear() method?
     const float eps = 1e-6f;
-    return p1.type() == p2.type() &&
-           (p1.type() == PreferredSizeType::Auto ||
-            core::isNear(p1.value(), p2.value(), eps));
+    return p1.type() == p2.type()
+           && (p1.type() == PreferredSizeType::Auto
+               || core::isNear(p1.value(), p2.value(), eps));
 }
 
 inline bool operator!=(const PreferredSize& p1, const PreferredSize& p2) {
@@ -161,10 +162,14 @@ public:
     /// auto p = SizePolicy::AutoFixed()
     /// ```
     ///
-    SizePolicy(PreferredSizeType type = PreferredSizeType::Auto, float value = 0,
-                 float stretch = 0, float shrink = 0) :
-        preferred_(type, value), stretch_(stretch), shrink_(shrink) {
-
+    SizePolicy(
+        PreferredSizeType type = PreferredSizeType::Auto,
+        float value = 0,
+        float stretch = 0,
+        float shrink = 0)
+        : preferred_(type, value)
+        , stretch_(stretch)
+        , shrink_(shrink) {
     }
 
     /// Creates a SizePolicy of type PreferredSizeType::Auto with the given stretch
@@ -202,24 +207,23 @@ public:
     /// is not Auto. If the type is auto, you may want to use AutoFlexible()
     /// instead: it is more concise and readable.
     ///
-    static SizePolicy Flexible(PreferredSizeType type, float value,
-                                 float stretch = 1, float shrink = 1) {
+    static SizePolicy
+    Flexible(PreferredSizeType type, float value, float stretch = 1, float shrink = 1) {
         return SizePolicy(type, value, stretch, shrink);
     }
 
     /// Creates a SizePolicy with the given type, the given stretch factor,
     /// and a shrink factor set to zero.
     ///
-    static SizePolicy Stretchable(PreferredSizeType type, float value,
-                                    float stretch = 1) {
+    static SizePolicy
+    Stretchable(PreferredSizeType type, float value, float stretch = 1) {
         return SizePolicy(type, value, stretch, 0);
     }
 
     /// Creates a SizePolicy with the given type, the given shrink factor,
     /// and a stretch factor set to zero.
     ///
-    static SizePolicy Shrinkable(PreferredSizeType type, float value,
-                                   float shrink = 1) {
+    static SizePolicy Shrinkable(PreferredSizeType type, float value, float shrink = 1) {
         return SizePolicy(type, value, 0, shrink);
     }
 
@@ -307,9 +311,9 @@ private:
 inline bool operator==(const SizePolicy& p1, const SizePolicy& p2) {
     // XXX Should we instead use exact equality? And implement a separate isNear() method?
     const float eps = 1e-6f;
-    return p1.preferredSize() == p2.preferredSize() &&
-           core::isNear(p1.stretch(), p2.stretch(), eps) &&
-           core::isNear(p1.shrink(), p2.shrink(), eps);
+    return p1.preferredSize() == p2.preferredSize()
+           && core::isNear(p1.stretch(), p2.stretch(), eps)
+           && core::isNear(p1.shrink(), p2.shrink(), eps);
 }
 
 inline bool operator!=(const SizePolicy& p1, const SizePolicy& p2) {

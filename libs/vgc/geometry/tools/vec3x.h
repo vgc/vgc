@@ -17,6 +17,8 @@
 // This file is used to generate all the variants of this class.
 // You must manually run generate.py after any modification.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_VEC3X_H
 #define VGC_GEOMETRY_VEC3X_H
 
@@ -43,68 +45,90 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose.
 //                     If needed, manually export individual functions.
-class Vec3x
-{
+class Vec3x {
 public:
     using ScalarType = float;
     static constexpr Int dimension = 3;
 
     /// Creates an uninitialized `Vec3x`.
     ///
-    Vec3x(core::NoInit) {}
+    Vec3x(core::NoInit) {
+    }
 
     /// Creates a `Vec3x` initialized to (0, 0, 0).
     ///
-    constexpr Vec3x() : data_{0, 0, 0} {}
+    constexpr Vec3x()
+        : data_{0, 0, 0} {
+    }
 
 
     /// Creates a `Vec3x` initialized with the given `x`, `y`, and `z` coordinates.
     ///
-    constexpr Vec3x(float x, float y, float z) : data_{x, y, z} {}
+    constexpr Vec3x(float x, float y, float z)
+        : data_{x, y, z} {
+    }
 
     /// Creates a `Vec3x` from another `Vec<3, T>` object by performing a
     /// `static_cast` on each of its coordinates.
     ///
-    template<typename TVec3, VGC_REQUIRES(
-                 isVec<TVec3> &&
-                 TVec3::dimension == 3 &&
-                 !std::is_same_v<TVec3, Vec3x>)>
+    template<typename TVec3,
+        VGC_REQUIRES(
+            isVec<TVec3>
+         && TVec3::dimension == 3
+         && !std::is_same_v<TVec3, Vec3x>)>
     explicit constexpr Vec3x(const TVec3& other)
         : data_{static_cast<float>(other[0]),
                 static_cast<float>(other[1]),
-                static_cast<float>(other[2])} {}
+                static_cast<float>(other[2])} {
+    }
 
     /// Accesses the `i`-th coordinate of this `Vec3x`.
     ///
-    constexpr const float& operator[](Int i) const { return data_[i]; }
+    constexpr const float& operator[](Int i) const {
+        return data_[i];
+    }
 
     /// Mutates the `i`-th coordinate of this `Vec3x`.
     ///
-    constexpr float& operator[](Int i) { return data_[i]; }
+    constexpr float& operator[](Int i) {
+        return data_[i];
+    }
 
     /// Accesses the first coordinate of this `Vec3x`.
     ///
-    constexpr float x() const { return data_[0]; }
+    constexpr float x() const {
+        return data_[0];
+    }
 
     /// Accesses the second coordinate of this `Vec3x`.
     ///
-    constexpr float y() const { return data_[1]; }
+    constexpr float y() const {
+        return data_[1];
+    }
 
     /// Accesses the third coordinate of this `Vec3x`.
     ///
-    constexpr float z() const { return data_[2]; }
+    constexpr float z() const {
+        return data_[2];
+    }
 
     /// Mutates the first coordinate of this `Vec3x`.
     ///
-    constexpr void setX(float x) { data_[0] = x; }
+    constexpr void setX(float x) {
+        data_[0] = x;
+    }
 
     /// Mutates the second coordinate of this `Vec3x`.
     ///
-    constexpr void setY(float y) { data_[1] = y; }
+    constexpr void setY(float y) {
+        data_[1] = y;
+    }
 
     /// Mutates the third coordinate of this `Vec3x`.
     ///
-    constexpr void setZ(float z) { data_[2] = z; }
+    constexpr void setZ(float z) {
+        data_[2] = z;
+    }
 
     /// Adds in-place `other` to this `Vec3x`.
     ///
@@ -187,17 +211,17 @@ public:
     /// Returns whether `v1` and `v2` are equal.
     ///
     friend constexpr bool operator==(const Vec3x& v1, const Vec3x& v2) {
-        return v1.data_[0] == v2.data_[0] &&
-               v1.data_[1] == v2.data_[1] &&
-               v1.data_[2] == v2.data_[2];
+        return v1.data_[0] == v2.data_[0]
+            && v1.data_[1] == v2.data_[1]
+            && v1.data_[2] == v2.data_[2];
     }
 
     /// Returns whether `v1` and `v2` are different.
     ///
     friend constexpr bool operator!=(const Vec3x& v1, const Vec3x& v2) {
-        return v1.data_[0] != v2.data_[0] ||
-               v1.data_[1] != v2.data_[1] ||
-               v1.data_[2] != v2.data_[2];
+        return v1.data_[0] != v2.data_[0]
+            || v1.data_[1] != v2.data_[1]
+            || v1.data_[2] != v2.data_[2];
     }
 
     /// Compares `v1` and `v2` using the lexicographic
@@ -250,9 +274,9 @@ public:
     /// `v1.squaredLength() < v2.squaredLength()`.
     ///
     constexpr float squaredLength() const {
-        return data_[0] * data_[0] +
-               data_[1] * data_[1] +
-               data_[2] * data_[2];
+        return data_[0] * data_[0]
+             + data_[1] * data_[1]
+             + data_[2] * data_[2];
     }
 
     /// Makes this `Vec3x` a unit vector by dividing it by its length.
@@ -300,7 +324,10 @@ public:
     ///
     constexpr Vec3x cross(const Vec3x& b) const {
         const Vec3x& a = *this;
-        return Vec3x(a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]);
+        return Vec3x(
+            a[1]*b[2] - a[2]*b[1],
+            a[2]*b[0] - a[0]*b[2],
+            a[0]*b[1] - a[1]*b[0]);
     }
 
     /// Returns the angle, in radians and in the interval [0, π], between this
@@ -333,9 +360,9 @@ public:
         else {
             float relTol2 = relTol * relTol;
             float absTol2 = absTol * absTol;
-            return diff2 <= relTol2 * b.squaredLength() ||
-                   diff2 <= relTol2 * a.squaredLength() ||
-                   diff2 <= absTol2;
+            return diff2 <= relTol2 * b.squaredLength()
+                || diff2 <= relTol2 * a.squaredLength()
+                || diff2 <= absTol2;
         }
     }
 
@@ -345,9 +372,9 @@ public:
     ///
     bool allClose(const Vec3x& b, float relTol = 1e-5f, float absTol = 0.0f) const {
         const Vec3x& a = *this;
-        return core::isClose(a[0], b[0], relTol, absTol) &&
-               core::isClose(a[1], b[1], relTol, absTol) &&
-               core::isClose(a[2], b[2], relTol, absTol);
+        return core::isClose(a[0], b[0], relTol, absTol)
+            && core::isClose(a[1], b[1], relTol, absTol)
+            && core::isClose(a[2], b[2], relTol, absTol);
     }
 
     /// Returns whether the euclidean distance between this Vec3x `a` and the
@@ -372,20 +399,20 @@ public:
     ///
     bool allNear(const Vec3x& b, float absTol) const {
         const Vec3x& a = *this;
-        return core::isNear(a[0], b[0], absTol) &&
-               core::isNear(a[1], b[1], absTol) &&
-               core::isNear(a[2], b[2], absTol);
+        return core::isNear(a[0], b[0], absTol)
+            && core::isNear(a[1], b[1], absTol)
+            && core::isNear(a[2], b[2], absTol);
     }
 
 private:
     float data_[3];
 
-    Vec3x infdiff_(const Vec3x& b) const
-    {
+    Vec3x infdiff_(const Vec3x& b) const {
         const Vec3x& a = *this;
-        return Vec3x(core::internal::infdiff(a[0], b[0]),
-                     core::internal::infdiff(a[1], b[1]),
-                     core::internal::infdiff(a[2], b[2]));
+        return Vec3x(
+            core::internal::infdiff(a[0], b[0]),
+            core::internal::infdiff(a[1], b[1]),
+            core::internal::infdiff(a[2], b[2]));
     }
 };
 
@@ -469,8 +496,9 @@ template <>
 struct fmt::formatter<vgc::geometry::Vec3x> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
+        if (it != end && *it != '}') {
             throw format_error("invalid format");
+        }
         return it;
     }
     template <typename FormatContext>

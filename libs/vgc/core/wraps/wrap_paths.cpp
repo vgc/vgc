@@ -14,11 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/core/paths.h>
+#include <vgc/core/wraps/common.h>
 
-void wrap_paths(py::module& m)
-{
+void wrap_paths(py::module& m) {
     m.def("setBasePath", &vgc::core::setBasePath);
     m.def("basePath", &vgc::core::basePath);
     m.def("pythonPath", &vgc::core::pythonPath);

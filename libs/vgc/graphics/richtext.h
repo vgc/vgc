@@ -80,8 +80,7 @@ public:
     ///
     /// \sa firstChild(), lastChild(), previousSibling(), and nextSibling().
     ///
-    RichTextSpan* parent() const
-    {
+    RichTextSpan* parent() const {
         return parent_;
     }
 
@@ -89,8 +88,7 @@ public:
     ///
     /// \sa parent().
     ///
-    RichTextSpan* root() const
-    {
+    RichTextSpan* root() const {
         return root_;
     }
 
@@ -99,8 +97,7 @@ public:
     ///
     /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
-    RichTextSpan* firstChild() const
-    {
+    RichTextSpan* firstChild() const {
         return children_->first();
     }
 
@@ -109,8 +106,7 @@ public:
     ///
     /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
     ///
-    RichTextSpan* lastChild() const
-    {
+    RichTextSpan* lastChild() const {
         return children_->last();
     }
 
@@ -120,11 +116,9 @@ public:
     ///
     /// \sa nextSibling(), parent(), firstChild(), and lastChild().
     ///
-    RichTextSpan* previousSibling() const
-    {
-        return (this == root_)
-                ? nullptr
-                : static_cast<RichTextSpan*>(previousSiblingObject());
+    RichTextSpan* previousSibling() const {
+        return (this == root_) ? nullptr
+                               : static_cast<RichTextSpan*>(previousSiblingObject());
     }
 
     /// Returns the next sibling of this `RichTextSpan`. Returns `nullptr` if
@@ -133,11 +127,9 @@ public:
     ///
     /// \sa previousSibling(), parent(), firstChild(), and lastChild().
     ///
-    RichTextSpan* nextSibling() const
-    {
-        return (this == root_)
-                ? nullptr
-                : static_cast<RichTextSpan*>(nextSiblingObject());
+    RichTextSpan* nextSibling() const {
+        return (this == root_) ? nullptr
+                               : static_cast<RichTextSpan*>(nextSiblingObject());
     }
 
     /// Returns all children of this `RichTextSpan` as an iterable range.
@@ -150,8 +142,7 @@ public:
     /// }
     /// \endcode
     ///
-    RichTextSpanListView children() const
-    {
+    RichTextSpanListView children() const {
         return RichTextSpanListView(children_);
     }
 
@@ -199,8 +190,7 @@ public:
 
     /// Returns the text of this `RichText`.
     ///
-    const std::string& text() const
-    {
+    const std::string& text() const {
         return text_;
     }
 
@@ -208,16 +198,14 @@ public:
     /// word-wrapping.
     ///
     ///
-    void setRect(const geometry::Rect2f& rect)
-    {
+    void setRect(const geometry::Rect2f& rect) {
         rect_ = rect;
         updateScroll_();
     }
 
     /// Returns the rectangle of this `RichText`.
     ///
-    const geometry::Rect2f& rect() const
-    {
+    const geometry::Rect2f& rect() const {
         return rect_;
     }
 
@@ -228,30 +216,26 @@ public:
 
     /// Returns whether the cursor is visible.
     ///
-    bool isCursorVisible() const
-    {
+    bool isCursorVisible() const {
         return isCursorVisible_;
     }
 
     /// Sets whether the cursor is visible.
     ///
-    void setCursorVisible(bool isVisible)
-    {
+    void setCursorVisible(bool isVisible) {
         isCursorVisible_ = isVisible;
         updateScroll_();
     }
 
     /// Returns whether the selection is visible.
     ///
-    bool isSelectionVisible() const
-    {
+    bool isSelectionVisible() const {
         return isSelectionVisible_;
     }
 
     /// Sets whether the selection is visible.
     ///
-    void setSelectionVisible(bool isVisible)
-    {
+    void setSelectionVisible(bool isVisible) {
         isSelectionVisible_ = isVisible;
         updateScroll_();
     }
@@ -265,10 +249,8 @@ public:
     /// the given `selectionIndex` specify which of the selections should be
     /// used.
     ///
-    Int movedPosition(
-        Int position,
-        RichTextMoveOperation operation,
-        Int selectionIndex = 0);
+    Int
+    movedPosition(Int position, RichTextMoveOperation operation, Int selectionIndex = 0);
 
     /// Moves the cursor according to the given operation. If `select` is false
     /// (the default), then the selection is cleared. If `select` is true, then
@@ -281,8 +263,7 @@ public:
     /// selections, the given `index` specify which of the selections
     /// should be used.
     ///
-    Int selectionStart([[maybe_unused]] Int index = 0) const
-    {
+    Int selectionStart([[maybe_unused]] Int index = 0) const {
         return selectionStart_;
     }
 
@@ -290,8 +271,7 @@ public:
     /// selections, the given `index` specify which of the selections
     /// should be used.
     ///
-    Int selectionEnd([[maybe_unused]] Int index = 0) const
-    {
+    Int selectionEnd([[maybe_unused]] Int index = 0) const {
         return selectionEnd_;
     }
 
@@ -299,8 +279,7 @@ public:
     /// selections, the given `index` specify which of the selections
     /// should be used.
     ///
-    void setSelectionStart(Int position, [[maybe_unused]] Int index = 0)
-    {
+    void setSelectionStart(Int position, [[maybe_unused]] Int index = 0) {
         selectionStart_ = position;
     }
 
@@ -308,8 +287,7 @@ public:
     /// selections, the given `index` specify which of the selections
     /// should be used.
     ///
-    void setSelectionEnd(Int position, [[maybe_unused]] Int index = 0)
-    {
+    void setSelectionEnd(Int position, [[maybe_unused]] Int index = 0) {
         selectionEnd_ = position;
         updateScroll_();
     }
@@ -317,22 +295,19 @@ public:
     /// Unselects any selected region, preserving the cursor where it
     /// previously was, that is, at the end of the selection.
     ///
-    void clearSelection()
-    {
+    void clearSelection() {
         selectionStart_ = selectionEnd_;
     }
 
     /// Returns whether there is at least one non-empty selected region.
     ///
-    bool hasSelection()
-    {
+    bool hasSelection() {
         return selectionStart_ != selectionEnd_;
     }
 
     /// Changes the selection such that the entire text is selected.
     ///
-    void selectAll()
-    {
+    void selectAll() {
         selectionStart_ = 0;
         selectionEnd_ = static_cast<Int>(text_.size());
     }
@@ -368,15 +343,13 @@ public:
 
     /// Returns the position in byte of the cursor.
     ///
-    Int cursorBytePosition() const
-    {
+    Int cursorBytePosition() const {
         return selectionEnd_;
     }
 
     /// Sets the position in byte of the cursor.
     ///
-    void setCursorBytePosition(Int bytePosition)
-    {
+    void setCursorBytePosition(Int bytePosition) {
         selectionStart_ = bytePosition;
         selectionEnd_ = bytePosition;
         updateScroll_();
@@ -386,8 +359,7 @@ public:
     /// default position. Scrolling is automatically performed in order to keep
     /// the cursor within `rect()`, whenever `isCursorVisible()` is true.
     ///
-    float horizontalScroll()
-    {
+    float horizontalScroll() {
         return horizontalScroll_;
     }
 
@@ -396,8 +368,7 @@ public:
     /// the new `horizontalScroll()` might be different than the requested
     /// scroll to ensure that the cursor stays within `rect()`.
     ///
-    void setHorizontalScroll(float horizontalScroll)
-    {
+    void setHorizontalScroll(float horizontalScroll) {
         horizontalScroll_ = horizontalScroll;
         updateScroll_();
     }
@@ -422,8 +393,7 @@ public:
         TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
 
     // reimplementation of StylableObject virtual methods
-    style::StylableObject* parentStylableObject() const override
-    {
+    style::StylableObject* parentStylableObject() const override {
         return parentStylableObject_;
     }
 

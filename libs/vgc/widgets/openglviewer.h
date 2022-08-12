@@ -35,12 +35,13 @@
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/pointingdeviceevent.h>
 
-namespace vgc::dom { class Element; }
+namespace vgc::dom {
+class Element;
+}
 
 namespace vgc::widgets {
 
-class VGC_WIDGETS_API OpenGLViewer : public QOpenGLWidget
-{
+class VGC_WIDGETS_API OpenGLViewer : public QOpenGLWidget {
 private:
     Q_OBJECT
     Q_DISABLE_COPY(OpenGLViewer)
@@ -136,18 +137,21 @@ private:
 
     // OpenGL resources
     struct CurveGLResources {
-        explicit CurveGLResources(dom::Element* element) :
-            element(element) {}
+        explicit CurveGLResources(dom::Element* element)
+            : element(element) {
+        }
 
         // Drawing triangles
         QOpenGLBuffer vboTriangles;
-        QOpenGLVertexArrayObject* vaoTriangles; // Pointer because copy of QOpenGLVertexArrayObject is disabled
+        QOpenGLVertexArrayObject*
+            vaoTriangles; // Pointer because copy of QOpenGLVertexArrayObject is disabled
         GLsizei numVerticesTriangles;
         core::Color trianglesColor;
 
         // Drawing control points
         QOpenGLBuffer vboControlPoints;
-        QOpenGLVertexArrayObject* vaoControlPoints; // Pointer because copy of QOpenGLVertexArrayObject is disabled
+        QOpenGLVertexArrayObject*
+            vaoControlPoints; // Pointer because copy of QOpenGLVertexArrayObject is disabled
         GLsizei numVerticesControlPoints;
 
         bool inited_ = false;
@@ -162,7 +166,9 @@ private:
 
     struct unwrapped_less {
         template<typename It>
-        bool operator()(const It& lh, const It& rh) const { return &*lh < &*rh; }
+        bool operator()(const It& lh, const It& rh) const {
+            return &*lh < &*rh;
+        }
     };
 
     std::set<CurveGLResourcesIterator, unwrapped_less> toUpdate_;
@@ -188,8 +194,10 @@ private:
     // 2. We ignore mouseReleaseEvent() if the value of event->button() is
     //    different from its value in mousePressEvent().
     //
-    bool mousePressed_; // whether there's been a mouse press event with no matching mouse release event.
-    bool tabletPressed_; // whether there's been a tablet press event with no matching tablet release event.
+    bool mousePressed_;  // whether there's been a mouse press event
+                         // with no matching mouse release event.
+    bool tabletPressed_; // whether there's been a tablet press event
+                         // with no matching tablet release event.
     Qt::MouseButton pointingDeviceButtonAtPress_; // value of event->button at press
 
     // Polygon mode. This is selected with the n/t/f keys.
@@ -222,8 +230,8 @@ private:
 
     // Performance logging
     core::PerformanceLogTask renderTask_;
-    core::PerformanceLogTask   updateTask_;
-    core::PerformanceLogTask   drawTask_;
+    core::PerformanceLogTask updateTask_;
+    core::PerformanceLogTask drawTask_;
 };
 
 } // namespace vgc::widgets

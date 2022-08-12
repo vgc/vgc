@@ -17,6 +17,8 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/mat3x.h then run tools/generate.py.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_MAT3D_H
 #define VGC_GEOMETRY_MAT3D_H
 
@@ -47,28 +49,32 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose, otherwise we couldn't define `identity`.
 //                     Instead, we manually export functions defined in the .cpp.
-class Mat3d
-{
+class Mat3d {
 public:
     using ScalarType = double;
     static constexpr Int dimension = 3;
 
     /// Creates an uninitialized `Mat3d`.
     ///
-    Mat3d(core::NoInit) {}
+    Mat3d(core::NoInit) {
+    }
 
     /// Creates a `Mat3d` initialized to the null matrix `Mat3d(0)`.
     ///
-    constexpr Mat3d() : Mat3d(0) {}
+    constexpr Mat3d()
+        : Mat3d(0) {
+    }
 
     /// Creates a Mat3d initialized with the given arguments.
     ///
-    constexpr Mat3d(double m11, double m12, double m13,
-                    double m21, double m22, double m23,
-                    double m31, double m32, double m33)
+    constexpr Mat3d(
+        double m11, double m12, double m13,
+        double m21, double m22, double m23,
+        double m31, double m32, double m33)
         : data_{{m11, m21, m31},
                 {m12, m22, m32},
-                {m13, m23, m33}} {}
+                {m13, m23, m33}} {
+    }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
     /// value. As specific cases, the null matrix is Mat3d(0), and the identity
@@ -77,15 +83,17 @@ public:
     explicit constexpr Mat3d(double d)
         : data_{{d, 0, 0},
                 {0, d, 0},
-                {0, 0, d}} {}
+                {0, 0, d}} {
+    }
 
     /// Creates a `Mat3d` from another `Mat<3, T>` object by performing a
     /// `static_cast` on each of its elements.
     ///
-    template<typename TMat3, VGC_REQUIRES(
-                 isMat<TMat3> &&
-                 TMat3::dimension == 3 &&
-                 !std::is_same_v<TMat3, Mat3d>)>
+    template<typename TMat3,
+        VGC_REQUIRES(
+            isMat<TMat3>
+         && TMat3::dimension == 3
+         && !std::is_same_v<TMat3, Mat3d>)>
     explicit constexpr Mat3d(const TMat3& other)
         : data_{{static_cast<double>(other(0, 0)),
                  static_cast<double>(other(1, 0)),
@@ -95,13 +103,16 @@ public:
                  static_cast<double>(other(2, 1))},
                 {static_cast<double>(other(0, 2)),
                  static_cast<double>(other(1, 2)),
-                 static_cast<double>(other(2, 2))}} {}
+                 static_cast<double>(other(2, 2))}} {
+    }
 
     /// Defines explicitely all the elements of the matrix
     ///
-    Mat3d& setElements(double m11, double m12, double m13,
-                       double m21, double m22, double m23,
-                       double m31, double m32, double m33) {
+    Mat3d& setElements(
+        double m11, double m12, double m13,
+        double m21, double m22, double m23,
+        double m31, double m32, double m33) {
+
         data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31;
         data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32;
         data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33;
@@ -112,18 +123,23 @@ public:
     /// the given value.
     ///
     Mat3d& setToDiagonal(double d) {
-        return setElements(d, 0, 0,
-                           0, d, 0,
-                           0, 0, d);
+        return setElements(
+            d, 0, 0,
+            0, d, 0,
+            0, 0, d);
     }
 
     /// Sets this Mat3d to the zero matrix.
     ///
-    Mat3d& setToZero() { return setToDiagonal(0); }
+    Mat3d& setToZero() {
+        return setToDiagonal(0);
+    }
 
     /// Sets this Mat3d to the identity matrix.
     ///
-    Mat3d& setToIdentity() { return setToDiagonal(1); }
+    Mat3d& setToIdentity() {
+        return setToDiagonal(1);
+    }
 
     /// The identity matrix Mat3d(1).
     ///
@@ -131,19 +147,27 @@ public:
 
     /// Returns a pointer to the underlying (colum-major ordered) array of components.
     ///
-    const double* data() const { return data_[0]; }
+    const double* data() const {
+        return data_[0];
+    }
 
     /// Returns a pointer to the underlying (colum-major ordered) array of components.
     ///
-    double* data() { return data_[0]; }
+    double* data() {
+        return data_[0];
+    }
 
     /// Accesses the component of the Mat3d the the i-th row and j-th column.
     ///
-    const double& operator()(Int i, Int j) const { return data_[j][i]; }
+    const double& operator()(Int i, Int j) const {
+        return data_[j][i];
+    }
 
     /// Mutates the component of the Mat3d the the i-th row and j-th column.
     ///
-    double& operator()(Int i, Int j) { return data_[j][i]; }
+    double& operator()(Int i, Int j) {
+        return data_[j][i];
+    }
 
     /// Adds in-place the \p other Mat3d to this Mat3d.
     ///
@@ -273,29 +297,29 @@ public:
     /// Returns whether the two given Mat3d \p m1 and \p m2 are equal.
     ///
     friend bool operator==(const Mat3d& m1, const Mat3d& m2) {
-        return m1.data_[0][0] == m2.data_[0][0] &&
-               m1.data_[0][1] == m2.data_[0][1] &&
-               m1.data_[0][2] == m2.data_[0][2] &&
-               m1.data_[1][0] == m2.data_[1][0] &&
-               m1.data_[1][1] == m2.data_[1][1] &&
-               m1.data_[1][2] == m2.data_[1][2] &&
-               m1.data_[2][0] == m2.data_[2][0] &&
-               m1.data_[2][1] == m2.data_[2][1] &&
-               m1.data_[2][2] == m2.data_[2][2];
+        return m1.data_[0][0] == m2.data_[0][0]
+            && m1.data_[0][1] == m2.data_[0][1]
+            && m1.data_[0][2] == m2.data_[0][2]
+            && m1.data_[1][0] == m2.data_[1][0]
+            && m1.data_[1][1] == m2.data_[1][1]
+            && m1.data_[1][2] == m2.data_[1][2]
+            && m1.data_[2][0] == m2.data_[2][0]
+            && m1.data_[2][1] == m2.data_[2][1]
+            && m1.data_[2][2] == m2.data_[2][2];
     }
 
     /// Returns whether the two given Mat3d \p m1 and \p m2 are different.
     ///
     friend bool operator!=(const Mat3d& m1, const Mat3d& m2) {
-        return m1.data_[0][0] != m2.data_[0][0] ||
-               m1.data_[0][1] != m2.data_[0][1] ||
-               m1.data_[0][2] != m2.data_[0][2] ||
-               m1.data_[1][0] != m2.data_[1][0] ||
-               m1.data_[1][1] != m2.data_[1][1] ||
-               m1.data_[1][2] != m2.data_[1][2] ||
-               m1.data_[2][0] != m2.data_[2][0] ||
-               m1.data_[2][1] != m2.data_[2][1] ||
-               m1.data_[2][2] != m2.data_[2][2];
+        return m1.data_[0][0] != m2.data_[0][0]
+            || m1.data_[0][1] != m2.data_[0][1]
+            || m1.data_[0][2] != m2.data_[0][2]
+            || m1.data_[1][0] != m2.data_[1][0]
+            || m1.data_[1][1] != m2.data_[1][1]
+            || m1.data_[1][2] != m2.data_[1][2]
+            || m1.data_[2][0] != m2.data_[2][0]
+            || m1.data_[2][1] != m2.data_[2][1]
+            || m1.data_[2][2] != m2.data_[2][2];
     }
 
     /// Returns the multiplication of this Mat3d by the given Vec3d \p v.
@@ -512,8 +536,9 @@ template <>
 struct fmt::formatter<vgc::geometry::Mat3d> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
+        if (it != end && *it != '}') {
             throw format_error("invalid format");
+        }
         return it;
     }
     template <typename FormatContext>

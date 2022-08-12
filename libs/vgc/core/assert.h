@@ -81,11 +81,13 @@
 /// unless specified otherwise. Therefore, in order to keep the code concise,
 /// there is no need to check this as a precondition.
 ///
-#define VGC_ASSERT(condition) \
-    if (!(condition)) { \
-        std::string error = core::format( \
-            "Failed to satisfy condition `" #condition "`"); \
-        throw core::LogicError(error); \
-    } else (void)0
+#define VGC_ASSERT(condition)                                                            \
+    do {                                                                                 \
+        if (!(condition)) {                                                              \
+            std::string error =                                                          \
+                core::format("Failed to satisfy condition `" #condition "`");            \
+            throw core::LogicError(error);                                               \
+        }                                                                                \
+    } while (0)
 
 #endif // VGC_CORE_ASSERT_H

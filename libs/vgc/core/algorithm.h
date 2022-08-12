@@ -41,17 +41,16 @@ namespace core {
 /// Returns zero<T>() if the vector is empty.
 ///
 template<typename ContainerType>
-typename ContainerType::value_type sum(const ContainerType& v)
-{
-    return std::accumulate(v.begin(), v.end(), zero<typename ContainerType::value_type>());
+typename ContainerType::value_type sum(const ContainerType& v) {
+    return std::accumulate(
+        v.begin(), v.end(), zero<typename ContainerType::value_type>());
 }
 
 /// Returns the average value of the given vector of values.
 /// Returns zero<T>() if the vector is empty.
 ///
 template<typename ContainerType>
-typename ContainerType::value_type average(const ContainerType& v)
-{
+typename ContainerType::value_type average(const ContainerType& v) {
     const size_t n = v.size();
 
     if (n > 0) {
@@ -66,8 +65,7 @@ typename ContainerType::value_type average(const ContainerType& v)
 /// or -1 if pos == v.end();
 ///
 template<typename T, typename It>
-int toIndex(const std::vector<T>& v, It pos)
-{
+int toIndex(const std::vector<T>& v, It pos) {
     return pos == v.end() ? -1 : pos - v.begin();
 }
 
@@ -75,9 +73,7 @@ int toIndex(const std::vector<T>& v, It pos)
 /// v.end() if i = -1.
 ///
 template<typename T>
-typename std::vector<T>::const_iterator
-toIterator(const std::vector<T>& v, int i)
-{
+typename std::vector<T>::const_iterator toIterator(const std::vector<T>& v, int i) {
     return i == -1 ? v.end() : v.begin() + i;
 }
 
@@ -85,8 +81,7 @@ toIterator(const std::vector<T>& v, int i)
 /// equal to \p x, or -1 if there is no such element.
 ///
 template<typename T>
-int find(const std::vector<T>& v, const T& x)
-{
+int find(const std::vector<T>& v, const T& x) {
     auto it = std::find(v.begin(), v.end(), x);
     return toIndex(v, it);
 }
@@ -96,8 +91,7 @@ int find(const std::vector<T>& v, const T& x)
 /// not contain \p x.
 ///
 template<typename T>
-bool contains(const std::vector<T>& v, const T& x, int& i)
-{
+bool contains(const std::vector<T>& v, const T& x, int& i) {
     i = find(v, x);
     return i != -1;
 }
@@ -105,8 +99,7 @@ bool contains(const std::vector<T>& v, const T& x, int& i)
 /// Returns whether the given vector \p v contains the given value \p x.
 ///
 template<typename T>
-bool contains(const std::vector<T>& v, const T& x)
-{
+bool contains(const std::vector<T>& v, const T& x) {
     int i;
     return contains(v, x, i);
 }
@@ -115,8 +108,7 @@ bool contains(const std::vector<T>& v, const T& x)
 /// x, if any. Returns whether an element was removed.
 ///
 template<typename T>
-bool removeOne(std::vector<T>& v, const T& x)
-{
+bool removeOne(std::vector<T>& v, const T& x) {
     int i;
     if (contains(v, x, i)) {
         v.erase(toIterator(v, i));
@@ -150,8 +142,7 @@ bool removeOne(std::vector<T>& v, const T& x)
 /// \endcode
 ///
 template<typename T>
-int upper_bound(const std::vector<T>& v, const T& x)
-{
+int upper_bound(const std::vector<T>& v, const T& x) {
     auto it = std::upper_bound(v.begin(), v.end(), x);
     return toIndex(v, it);
 }
@@ -160,9 +151,7 @@ int upper_bound(const std::vector<T>& v, const T& x)
 /// \p from are replaced by \p to.
 ///
 VGC_CORE_API
-std::string replace(const std::string& s,
-                    const std::string& from,
-                    const std::string& to);
+std::string replace(const std::string& s, const std::string& from, const std::string& to);
 
 } // namespace core
 } // namespace vgc

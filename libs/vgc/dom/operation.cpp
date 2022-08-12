@@ -33,21 +33,18 @@ CreateElementOperation::~CreateElementOperation() {
     }
 }
 
-void CreateElementOperation::do_()
-{
+void CreateElementOperation::do_() {
     redo_();
 }
 
-void CreateElementOperation::undo_()
-{
+void CreateElementOperation::undo_() {
     Document* document = element_->document();
     element_->removeObjectFromParent_();
     document->onRemoveNode_(element_.get());
     keepAlive_ = true;
 }
 
-void CreateElementOperation::redo_()
-{
+void CreateElementOperation::redo_() {
     Document* document = element_->document();
     element_->insertObjectToParent_(parent_, nextSibling_);
     document->onCreateNode_(element_.get());
@@ -58,54 +55,44 @@ Document* CreateElementOperation::document() const {
     return element_->document();
 }
 
-void RemoveNodeOperation::do_()
-{
+void RemoveNodeOperation::do_() {
     savedRelatives_ = NodeRelatives(node_.get());
     redo_();
 }
 
-void RemoveNodeOperation::undo_()
-{
+void RemoveNodeOperation::undo_() {
     Document* document = node_->document();
-    node_->insertObjectToParent_(
-        savedRelatives_.parent(), savedRelatives_.nextSibling());
+    node_->insertObjectToParent_(savedRelatives_.parent(), savedRelatives_.nextSibling());
     document->onCreateNode_(node_.get());
     keepAlive_ = false;
 }
 
-void RemoveNodeOperation::redo_()
-{
+void RemoveNodeOperation::redo_() {
     Document* document = node_->document();
     node_->removeObjectFromParent_();
     document->onRemoveNode_(node_.get());
     keepAlive_ = true;
 }
 
-void MoveNodeOperation::do_()
-{
+void MoveNodeOperation::do_() {
     oldRelatives_ = NodeRelatives(node_);
     redo_();
     newRelatives_ = NodeRelatives(node_);
 }
 
-void MoveNodeOperation::undo_()
-{
+void MoveNodeOperation::undo_() {
     Document* document = node_->document();
-    node_->insertObjectToParent_(
-        oldRelatives_.parent(), oldRelatives_.nextSibling());
+    node_->insertObjectToParent_(oldRelatives_.parent(), oldRelatives_.nextSibling());
     document->onMoveNode_(node_, newRelatives_);
 }
 
-void MoveNodeOperation::redo_()
-{
+void MoveNodeOperation::redo_() {
     Document* document = node_->document();
-    node_->insertObjectToParent_(
-        newRelatives_.parent(), newRelatives_.nextSibling());
+    node_->insertObjectToParent_(newRelatives_.parent(), newRelatives_.nextSibling());
     document->onMoveNode_(node_, oldRelatives_);
 }
 
-void SetAttributeOperation::do_()
-{
+void SetAttributeOperation::do_() {
     Document* document = element_->document();
     // If already authored, update the authored value
     if (AuthoredAttribute* authored = element_->findAuthoredAttribute_(name_)) {
@@ -123,8 +110,7 @@ void SetAttributeOperation::do_()
     document->onChangeAttribute_(element_, name_);
 }
 
-void SetAttributeOperation::undo_()
-{
+void SetAttributeOperation::undo_() {
     Document* document = element_->document();
     if (isNew_) {
         element_->authoredAttributes_.removeLast();
@@ -135,8 +121,7 @@ void SetAttributeOperation::undo_()
     document->onChangeAttribute_(element_, name_);
 }
 
-void SetAttributeOperation::redo_()
-{
+void SetAttributeOperation::redo_() {
     Document* document = element_->document();
     if (isNew_) {
         element_->authoredAttributes_.emplaceLast(name_, newValue_);
@@ -147,21 +132,18 @@ void SetAttributeOperation::redo_()
     document->onChangeAttribute_(element_, name_);
 }
 
-void RemoveAuthoredAttributeOperation::do_()
-{
+void RemoveAuthoredAttributeOperation::do_() {
     oldValue_ = element_->authoredAttributes_[index_].value();
     redo_();
 }
 
-void RemoveAuthoredAttributeOperation::undo_()
-{
+void RemoveAuthoredAttributeOperation::undo_() {
     Document* document = element_->document();
     element_->authoredAttributes_.emplace(index_, name_, oldValue_);
     document->onChangeAttribute_(element_, name_);
 }
 
-void RemoveAuthoredAttributeOperation::redo_()
-{
+void RemoveAuthoredAttributeOperation::redo_() {
     Document* document = element_->document();
     element_->authoredAttributes_.removeAt(index_);
     document->onChangeAttribute_(element_, name_);

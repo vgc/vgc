@@ -15,32 +15,39 @@
 // limitations under the License.
 
 #include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
 #include <vgc/core/color.h>
+#include <vgc/core/wraps/common.h>
 
 namespace py = pybind11;
 using This = vgc::core::Color;
 using vgc::core::Color;
 
-void wrap_color(py::module& m)
-{
+void wrap_color(py::module& m) {
     auto self2 = py::self; // Fix https://github.com/pybind/pybind11/issues/1893
 
     py::class_<Color>(m, "Color")
 
         // Note: in Python, Color() does (0,0,0,1)-initialization, unlike in C++
-        .def(py::init([]() { return Color(0, 0, 0); } ))
+        .def(py::init([]() { return Color(0, 0, 0); }))
         .def(py::init<double, double, double>())
         .def(py::init<double, double, double, double>())
-        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); } ))
+        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }))
         .def(py::init<Color>())
 
-        .def("__getitem__", [](const Color& v, int i) {
-            if (i < 0 || i >= 4) throw py::index_error();
-            return v[i]; })
-        .def("__setitem__", [](Color& v, int i, double x) {
-            if (i < 0 || i >= 4) throw py::index_error();
-            v[i] = x; })
+        .def(
+            "__getitem__",
+            [](const Color& v, int i) {
+                if (i < 0 || i >= 4)
+                    throw py::index_error();
+                return v[i];
+            })
+        .def(
+            "__setitem__",
+            [](Color& v, int i, double x) {
+                if (i < 0 || i >= 4)
+                    throw py::index_error();
+                v[i] = x;
+            })
 
         .def_property("r", &Color::r, &Color::setR)
         .def_property("g", &Color::g, &Color::setG)
@@ -65,5 +72,5 @@ void wrap_color(py::module& m)
 
         .def("__repr__", [](const Color& c) { return vgc::core::toString(c); })
 
-    ;
+        ;
 }

@@ -21,37 +21,37 @@
 namespace vgc {
 namespace dom {
 
-const Value& Value::none()
-{
+const Value& Value::none() {
     // trusty leaky singleton
     static const Value* v = new Value(ValueType::None);
     return *v;
 }
 
-const Value& Value::invalid()
-{
+const Value& Value::invalid() {
     // trusty leaky singleton
     static const Value* v = new Value(ValueType::Invalid);
     return *v;
 }
 
-void Value::clear()
-{
+void Value::clear() {
     type_ = ValueType::None;
     var_ = std::monostate{};
 }
 
-void Value::shrinkToFit()
-{
+void Value::shrinkToFit() {
     switch (type_) {
-    case ValueType::DoubleArray:    std::get<std::shared_ptr<core::DoubleArray>>(var_)->shrinkToFit(); break;
-    case ValueType::Vec2dArray:     std::get<std::shared_ptr<geometry::Vec2dArray>>(var_)->shrinkToFit(); break;
+    case ValueType::DoubleArray:
+        std::get<std::shared_ptr<core::DoubleArray>>(var_)->shrinkToFit();
+        break;
+    case ValueType::Vec2dArray:
+        std::get<std::shared_ptr<geometry::Vec2dArray>>(var_)->shrinkToFit();
+        break;
     default:
-         break;
+        break;
     }
 }
 
-namespace  {
+namespace {
 
 void checkExpectedString_(const std::string& s, const char* expected) {
     core::StringReader in(s);
@@ -62,8 +62,7 @@ void checkExpectedString_(const std::string& s, const char* expected) {
 
 } // namespace
 
-Value parseValue(const std::string& s, ValueType t)
-{
+Value parseValue(const std::string& s, ValueType t) {
     try {
         switch (t) {
         case ValueType::None:
@@ -82,12 +81,11 @@ Value parseValue(const std::string& s, ValueType t)
     }
     catch (const core::ParseError& e) {
         throw VgcSyntaxError(
-            "Failed to convert '" + s + "' into a Value of type " +
-             core::toString(t) + " for the following reason: " + e.what());
+            "Failed to convert '" + s + "' into a Value of type " + core::toString(t)
+            + " for the following reason: " + e.what());
     }
     return Value::invalid(); // Silence "not all control paths return a value" in MSVC
 }
 
 } // namespace dom
 } // namespace vgc
-

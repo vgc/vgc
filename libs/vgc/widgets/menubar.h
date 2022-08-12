@@ -18,7 +18,9 @@
 #define VGC_WIDGETS_MENUBAR_H
 
 #include <vector>
+
 #include <QMenuBar>
+
 #include <vgc/widgets/api.h>
 
 namespace vgc {
@@ -41,15 +43,16 @@ namespace widgets {
 /// paintEvent() and providing additional properties that can be specified in
 /// a stylesheet.
 ///
-class VGC_WIDGETS_API MenuBar : public QMenuBar
-{
+class VGC_WIDGETS_API MenuBar : public QMenuBar {
+private:
     Q_OBJECT
 
     // Additional properties that can be specified in a stylesheet. See:
     //
     // https://wiki.qt.io/Qt_Style_Sheets_and_Custom_Painting_Example
     //
-    Q_PROPERTY(QColor activeBorderBottomColor READ activeBorderBottomColor WRITE setActiveBorderBottomColor DESIGNABLE true)
+    Q_PROPERTY(QColor activeBorderBottomColor READ activeBorderBottomColor WRITE
+                   setActiveBorderBottomColor DESIGNABLE true)
 
 public:
     /// Constructs a MenuBar.

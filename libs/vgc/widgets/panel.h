@@ -34,8 +34,10 @@ namespace widgets {
 /// the overall interface design of VGC. Panels are typically created by calling
 /// CentralWidget::addPanel().
 ///
-class VGC_WIDGETS_API Panel : public QFrame // Note: QFrame defines the enum value QFrame::Panel.
-{                                           // Beware of name conflicts!
+// Note: QFrame defines the enum value QFrame::Panel. Beware of name conflicts!
+//
+class VGC_WIDGETS_API Panel : public QFrame {
+private:
     Q_OBJECT
 
 public:

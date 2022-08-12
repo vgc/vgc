@@ -29,8 +29,7 @@ namespace widgets {
 
 namespace {
 
-std::string fontFamilyInfo(const std::string& family)
-{
+std::string fontFamilyInfo(const std::string& family) {
     std::stringstream ss;
     QFontDatabase fd;
     ss << "Font Family: " << family << "\n";
@@ -38,6 +37,7 @@ std::string fontFamilyInfo(const std::string& family)
     QString f = ui::toQt(family);
     QStringList styles = fd.styles(f);
     Q_FOREACH (const QString& s, styles) {
+        // clang-format off
         ss << "    " << ui::fromQt(s) << ":\n";
         ss << "        weight:             " << fd.weight(f, s) << "\n";
         ss << "        bold:               " << (fd.bold(f, s)               ? "true" : "false") << "\n";
@@ -46,6 +46,7 @@ std::string fontFamilyInfo(const std::string& family)
         ss << "        isFixedPitch:       " << (fd.isFixedPitch(f, s)       ? "true" : "false") << "\n";
         ss << "        isScalable:         " << (fd.isScalable(f, s)         ? "true" : "false") << "\n";
         ss << "        isSmoothlyScalable: " << (fd.isSmoothlyScalable(f, s) ? "true" : "false") << "\n";
+        // clang-format on
         QList<int> pointSizes = fd.pointSizes(f, s);
         ss << "        pointSizes:         [";
         std::string delimiter = "";
@@ -68,9 +69,9 @@ std::string fontFamilyInfo(const std::string& family)
 
 } // namespace
 
-void addDefaultApplicationFonts()
-{
-    std::vector<std::pair<std::string, std::string>> fontNames {
+void addDefaultApplicationFonts() {
+    // clang-format off
+    std::vector<std::pair<std::string, std::string>> fontNames{
         {"SourceCodePro", "Black"},
         {"SourceCodePro", "BlackIt"},
         {"SourceCodePro", "Bold"},
@@ -98,6 +99,7 @@ void addDefaultApplicationFonts()
         {"SourceSansPro", "Semibold"},
         {"SourceSansPro", "SemiboldIt"},
     };
+    // clang-format on
 
     for (const auto& name : fontNames) {
         std::string fontExtension = ".ttf";
@@ -117,15 +119,13 @@ void addDefaultApplicationFonts()
     VGC_DEBUG(LogVgcWidgetsFonts, fontFamilyInfo("Source Code Pro"));
 }
 
-int addApplicationFont(const std::string& name)
-{
+int addApplicationFont(const std::string& name) {
     std::string fontPath = core::resourcePath(name);
     int id = QFontDatabase::addApplicationFont(ui::toQt(fontPath));
     return id;
 }
 
-void printFontFamilyInfo(const std::string& family)
-{
+void printFontFamilyInfo(const std::string& family) {
     VGC_INFO(LogVgcWidgetsFonts, fontFamilyInfo(family));
 }
 

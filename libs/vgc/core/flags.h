@@ -105,7 +105,7 @@ public:
         v_ = static_cast<Enum>(toUnderlying() | b.toUnderlying());
         return *this;
     }
-    
+
     constexpr Flags& operator&=(Flags b) noexcept {
         v_ = static_cast<Enum>(toUnderlying() & b.toUnderlying());
         return *this;
@@ -130,30 +130,30 @@ private:
 
 } // namespace vgc::core
 
-#define VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, Op)                                      \
-    inline constexpr ::vgc::core::Flags<Enum> operator Op(Enum a, Enum b) noexcept {    \
-        return ::vgc::core::Flags<Enum>(a) Op ::vgc::core::Flags<Enum>(b);              \
+#define VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, Op)                                       \
+    inline constexpr ::vgc::core::Flags<Enum> operator Op(Enum a, Enum b) noexcept {     \
+        return ::vgc::core::Flags<Enum>(a) Op ::vgc::core::Flags<Enum>(b);               \
     }
 
-#define VGC_DEFINE_FLAGS_BINARY_OPERATORS(Enum)                     \
-    VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, |)                       \
-    VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, &)                       \
+#define VGC_DEFINE_FLAGS_BINARY_OPERATORS(Enum)                                          \
+    VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, |)                                            \
+    VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, &)                                            \
     VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, ^)
 
-#define VGC_DEFINE_FLAGS_BITWISE_NEGATION_OPERATOR(Enum)            \
-    inline constexpr ::vgc::core::Flags<Enum> operator~(Enum value) noexcept {  \
-        return ~::vgc::core::Flags<Enum>(value);                                \
+#define VGC_DEFINE_FLAGS_BITWISE_NEGATION_OPERATOR(Enum)                                 \
+    inline constexpr ::vgc::core::Flags<Enum> operator~(Enum value) noexcept {           \
+        return ~::vgc::core::Flags<Enum>(value);                                         \
     }
 
-#define VGC_DEFINE_FLAGS_OPERATORS(Enum)                            \
-    VGC_DEFINE_FLAGS_BINARY_OPERATORS(Enum)                         \
+#define VGC_DEFINE_FLAGS_OPERATORS(Enum)                                                 \
+    VGC_DEFINE_FLAGS_BINARY_OPERATORS(Enum)                                              \
     VGC_DEFINE_FLAGS_BITWISE_NEGATION_OPERATOR(Enum)
 
-#define VGC_DEFINE_FLAGS_ALIAS(Enum, FlagsTypeName)                 \
+#define VGC_DEFINE_FLAGS_ALIAS(Enum, FlagsTypeName)                                      \
     using FlagsTypeName = ::vgc::core::Flags<Enum>;
 
-#define VGC_DEFINE_FLAGS(FlagsTypeName, EnumTypeName)               \
-    VGC_DEFINE_FLAGS_OPERATORS(EnumTypeName)                        \
+#define VGC_DEFINE_FLAGS(FlagsTypeName, EnumTypeName)                                    \
+    VGC_DEFINE_FLAGS_OPERATORS(EnumTypeName)                                             \
     VGC_DEFINE_FLAGS_ALIAS(EnumTypeName, FlagsTypeName)
 
 #endif // VGC_CORE_FLAGS_H

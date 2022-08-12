@@ -61,14 +61,16 @@ public:
     ///
     PseudoRandomUniform(T min, T max)
         : engine_(internal::generateRandomInteger())
-        , distribution_(min, max) {}
+        , distribution_(min, max) {
+    }
 
     /// Creates a pseudo-random number generator over a uniform distribution,
     /// initialized with the given seed.
     ///
     PseudoRandomUniform(T min, T max, UInt32 seed)
         : engine_(seed)
-        , distribution_(min, max) {}
+        , distribution_(min, max) {
+    }
 
     /// Initializes the pseudo-random engine with the given seed.
     ///

@@ -25,8 +25,7 @@ namespace dom {
 
 namespace internal {
 
-std::string wrongDocumentMsg(const Node* n1, const Node* n2)
-{
+std::string wrongDocumentMsg(const Node* n1, const Node* n2) {
     return core::format(
         "Node {} and Node {} belong to different documents"
         " (resp. Document {} and Document {})",
@@ -36,8 +35,7 @@ std::string wrongDocumentMsg(const Node* n1, const Node* n2)
         core::toAddressString(n2->document()));
 }
 
-std::string wrongChildTypeMsg(const Node* parent, const Node* child)
-{
+std::string wrongChildTypeMsg(const Node* parent, const Node* child) {
     return core::format(
         "Node {} (type = {}) cannot be a child of Node {} (type = {})",
         core::toAddressString(child),
@@ -46,16 +44,14 @@ std::string wrongChildTypeMsg(const Node* parent, const Node* child)
         core::toString(parent->nodeType()));
 }
 
-std::string secondRootElementMsg(const Document* document)
-{
+std::string secondRootElementMsg(const Document* document) {
     return core::format(
         "Document {} cannot have a second root element (existing Element is {})",
         core::toAddressString(document),
         core::toAddressString(document->rootElement()));
 }
 
-std::string childCycleMsg(const Node* parent, const Node* child)
-{
+std::string childCycleMsg(const Node* parent, const Node* child) {
     return core::format(
         "Node {} cannot be a child of Node {}"
         " because the latter is a descendant of the former",
@@ -63,8 +59,7 @@ std::string childCycleMsg(const Node* parent, const Node* child)
         core::toAddressString(parent));
 }
 
-std::string replaceDocumentMsg(const Document* oldNode, const Node* newNode)
-{
+std::string replaceDocumentMsg(const Document* oldNode, const Node* newNode) {
     return core::format(
         "Node {} cannot replace Document node {}",
         core::toAddressString(newNode),

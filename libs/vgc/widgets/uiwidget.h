@@ -42,8 +42,8 @@ VGC_DECLARE_OBJECT(UiWidget);
 /// which we will use while we haven't yet completely removed the dependency
 /// to QtWidgets.
 ///
-class VGC_WIDGETS_API UiWidget : public QOpenGLWidget
-{
+class VGC_WIDGETS_API UiWidget : public QOpenGLWidget {
+private:
     Q_OBJECT
 
 public:
@@ -59,7 +59,9 @@ public:
 
     /// Returns the underlying vgc::ui::Widget
     ///
-    ui::Widget* widget() { return widget_.get(); }
+    ui::Widget* widget() {
+        return widget_.get();
+    }
 
     // overrides
     QSize sizeHint() const override;

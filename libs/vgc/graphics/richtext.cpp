@@ -25,77 +25,71 @@ RichTextSpan::RichTextSpan(RichTextSpan* parent)
     : StylableObject()
     , parent_(parent)
     , root_(parent ? parent->root() : this)
-    , children_(RichTextSpanList::create(this))
-{
+    , children_(RichTextSpanList::create(this)) {
 }
 
-RichTextSpanPtr RichTextSpan::createRoot()
-{
+RichTextSpanPtr RichTextSpan::createRoot() {
     return RichTextSpanPtr(new RichTextSpan());
 }
 
-RichTextSpan* RichTextSpan::createChild()
-{
+RichTextSpan* RichTextSpan::createChild() {
     RichTextSpanPtr childPtr(new RichTextSpan(this));
     RichTextSpan* child = childPtr.get();
     children_->append(child);
     return child;
 }
 
-style::StylableObject* RichTextSpan::parentStylableObject() const
-{
+style::StylableObject* RichTextSpan::parentStylableObject() const {
     return static_cast<style::StylableObject*>(parent());
 }
 
-style::StylableObject* RichTextSpan::firstChildStylableObject() const
-{
+style::StylableObject* RichTextSpan::firstChildStylableObject() const {
     return static_cast<style::StylableObject*>(firstChild());
 }
 
-style::StylableObject* RichTextSpan::lastChildStylableObject() const
-{
+style::StylableObject* RichTextSpan::lastChildStylableObject() const {
     return static_cast<style::StylableObject*>(lastChild());
 }
 
-style::StylableObject* RichTextSpan::previousSiblingStylableObject() const
-{
+style::StylableObject* RichTextSpan::previousSiblingStylableObject() const {
     return static_cast<style::StylableObject*>(previousSibling());
 }
 
-style::StylableObject* RichTextSpan::nextSiblingStylableObject() const
-{
+style::StylableObject* RichTextSpan::nextSiblingStylableObject() const {
     return static_cast<style::StylableObject*>(nextSibling());
 }
 
 namespace {
 
-using style::StyleValue;
-using style::StyleValueType;
 using style::StyleTokenIterator;
 using style::StyleTokenType;
+using style::StyleValue;
+using style::StyleValueType;
 
-StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end) {
     try {
-        std::string str(begin->begin, (end-1)->end);
+        std::string str(begin->begin, (end - 1)->end);
         core::Color color = core::parse<core::Color>(str);
         return StyleValue::custom(color);
-    } catch (const core::ParseError&) {
+    }
+    catch (const core::ParseError&) {
         return StyleValue::invalid();
-    } catch (const core::RangeError&) {
+    }
+    catch (const core::RangeError&) {
         return StyleValue::invalid();
     }
 }
 
-StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end) {
     // For now, we only support a unique Dimension token with a "dp" unit
     if (begin == end) {
         return StyleValue::invalid();
     }
-    else if (begin->type == StyleTokenType::Dimension &&
-             begin->codePointsValue == "dp" &&
-             begin + 1 == end) {
+    else if (
+        begin->type == StyleTokenType::Dimension //
+        && begin->codePointsValue == "dp"        //
+        && begin + 1 == end) {
+
         return StyleValue::number(begin->toFloat());
     }
     else {
@@ -103,9 +97,11 @@ StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end)
     }
 }
 
-StyleValue parseIdentifierAmong(StyleTokenIterator begin, StyleTokenIterator end,
-                                std::initializer_list<core::StringId> list)
-{
+StyleValue parseIdentifierAmong(
+    StyleTokenIterator begin,
+    StyleTokenIterator end,
+    std::initializer_list<core::StringId> list) {
+
     if (end == begin + 1) {
         StyleTokenType t = begin->type;
         if (t == StyleTokenType::Identifier) {
@@ -119,26 +115,25 @@ StyleValue parseIdentifierAmong(StyleTokenIterator begin, StyleTokenIterator end
     return StyleValue::invalid();
 }
 
-StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {off, normal});
 }
 
-StyleValue parseTextHorizontalAlign(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parseTextHorizontalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {left, center, right});
 }
 
-StyleValue parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator end)
-{
+StyleValue parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {top, middle, bottom});
 }
 
-style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
-{
+// clang-format off
+
+style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
+
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
     auto black       = StyleValue::custom(core::colors::black);
     auto white       = StyleValue::custom(core::colors::white);
@@ -173,8 +168,9 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_()
     return table;
 }
 
-const style::StylePropertySpecTablePtr& stylePropertySpecTable_()
-{
+// clang-format on
+
+const style::StylePropertySpecTablePtr& stylePropertySpecTable_() {
     static style::StylePropertySpecTablePtr table = createGlobalStylePropertySpecTable_();
     return table;
 }
@@ -185,8 +181,7 @@ style::StyleSheetPtr createGlobalStyleSheet_() {
 
 } // namespace
 
-const style::StyleSheet* RichTextSpan::defaultStyleSheet() const
-{
+const style::StyleSheet* RichTextSpan::defaultStyleSheet() const {
     static style::StyleSheetPtr s = createGlobalStyleSheet_();
     return s.get();
 }
@@ -197,14 +192,12 @@ const style::StylePropertySpecTable* RichTextSpan::stylePropertySpecs() {
 
 namespace {
 
-graphics::SizedFont* getDefaultSizedFont_(Int ppem, graphics::FontHinting hinting)
-{
+graphics::SizedFont* getDefaultSizedFont_(Int ppem, graphics::FontHinting hinting) {
     graphics::Font* font = graphics::fontLibrary()->defaultFont();
     return font->getSizedFont({ppem, hinting});
 }
 
-graphics::SizedFont* getDefaultSizedFont_()
-{
+graphics::SizedFont* getDefaultSizedFont_() {
     return getDefaultSizedFont_(15, graphics::FontHinting::Native);
 }
 
@@ -231,18 +224,15 @@ RichText::RichText(std::string_view text)
     updateScroll_();
 }
 
-RichTextPtr RichText::create()
-{
+RichTextPtr RichText::create() {
     return RichTextPtr(new RichText());
 }
 
-RichTextPtr RichText::create(std::string_view text)
-{
+RichTextPtr RichText::create(std::string_view text) {
     return RichTextPtr(new RichText(text));
 }
 
-void RichText::setText(std::string_view text)
-{
+void RichText::setText(std::string_view text) {
     if (text_ != text) {
         Int oldSelectionEnd = selectionEnd_;
         text_.clear();
@@ -257,15 +247,18 @@ void RichText::setText(std::string_view text)
 
 namespace {
 
+// clang-format off
+
 void insertRect(
         core::FloatArray& a,
         const core::Color& c,
-        float x1, float y1, float x2, float y2)
-{
+        float x1, float y1, float x2, float y2) {
+
     float r = static_cast<float>(c[0]);
     float g = static_cast<float>(c[1]);
     float b = static_cast<float>(c[2]);
-    a.insert(a.end(), {
+
+    a.extend({
         x1, y1, r, g, b,
         x2, y1, r, g, b,
         x1, y2, r, g, b,
@@ -274,16 +267,13 @@ void insertRect(
         x1, y2, r, g, b});
 }
 
-void insertRect(
-        core::FloatArray& a,
-        const core::Color& c,
-        const geometry::Rect2f& r)
-{
+// clang-format on
+
+void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2f& r) {
     insertRect(a, c, r.xMin(), r.yMin(), r.xMax(), r.yMax());
 }
 
-core::Color getColor(const RichTextSpan* span, core::StringId property)
-{
+core::Color getColor(const RichTextSpan* span, core::StringId property) {
     core::Color res;
     style::StyleValue value = span->style(property);
     if (value.has<core::Color>()) {
@@ -292,13 +282,12 @@ core::Color getColor(const RichTextSpan* span, core::StringId property)
     return res;
 }
 
-bool getHinting(const RichTextSpan* span, core::StringId property)
-{
+bool getHinting(const RichTextSpan* span, core::StringId property) {
     return span->style(property) == strings::normal;
 }
 
-TextProperties getTextProperties(const RichTextSpan* span)
-{
+TextProperties getTextProperties(const RichTextSpan* span) {
+
     style::StyleValue hAlign = span->style(strings::text_horizontal_align);
     style::StyleValue vAlign = span->style(strings::text_vertical_align);
     TextProperties properties; // default = (Left, Top)
@@ -334,8 +323,8 @@ TextProperties getTextProperties(const RichTextSpan* span)
 
 } // namespace
 
-void RichText::fill(core::FloatArray& a)
-{
+void RichText::fill(core::FloatArray& a) {
+
     // Early return if nothing to draw
     if (shapedText_.text().length() == 0 && !isCursorVisible_) {
         return;
@@ -345,7 +334,8 @@ void RichText::fill(core::FloatArray& a)
     // TODO: cache this on style change
     core::Color caretColor = getColor(this, strings::caret_color);
     core::Color textColor = getColor(this, strings::text_color);
-    core::Color selectionBackgroundColor = getColor(this, strings::selection_background_color);
+    core::Color selectionBackgroundColor =
+        getColor(this, strings::selection_background_color);
     core::Color selectionTextColor = getColor(this, strings::selection_text_color);
     bool hinting = getHinting(this, strings::pixel_hinting);
     TextProperties textProperties = getTextProperties(this);
@@ -409,9 +399,9 @@ void RichText::fill(core::FloatArray& a)
     // Set clipping rectangle. For now, we clip at the rect.
     // This might be later disabled with overflow = true or other similar settings.
     geometry::Rect2f clipRect = rect_;
-    float clipLeft   = clipRect.xMin();
-    float clipRight  = clipRect.xMax();
-    float clipTop    = clipRect.yMin();
+    float clipLeft = clipRect.xMin();
+    float clipRight = clipRect.xMax();
+    float clipTop = clipRect.yMin();
     float clipBottom = clipRect.yMax();
 
     // Convert from byte positions to grapheme/glyphs indices and pixel offsets.
@@ -441,8 +431,11 @@ void RichText::fill(core::FloatArray& a)
 
     // Draw selection background
     if (hasVisibleSelection) {
-        geometry::Rect2f selectionRect(textLeft + selectionBeginAdvance, textTop,
-                                       textLeft + selectionEndAdvance, textTop + textHeight);
+        geometry::Rect2f selectionRect(
+            textLeft + selectionBeginAdvance,
+            textTop,
+            textLeft + selectionEndAdvance,
+            textTop + textHeight);
         selectionRect.normalize();
         selectionRect.intersectWith(clipRect);
         if (!selectionRect.isEmpty()) {
@@ -456,9 +449,17 @@ void RichText::fill(core::FloatArray& a)
         if (selectionBeginGlyph > selectionEndGlyph) {
             std::swap(selectionBeginGlyph, selectionEndGlyph);
         }
-        shapedText_.fill(a, origin, r, g, b, 0, selectionBeginGlyph, clipLeft, clipRight, clipTop, clipBottom);
-        shapedText_.fill(a, origin, sr, sg, sb, selectionBeginGlyph, selectionEndGlyph, clipLeft, clipRight, clipTop, clipBottom);
-        shapedText_.fill(a, origin, r, g, b, selectionEndGlyph, shapedText_.glyphs().length(), clipLeft, clipRight, clipTop, clipBottom);
+        // clang-format off
+        shapedText_.fill(
+            a, origin, r, g, b, 0, selectionBeginGlyph,
+            clipLeft, clipRight, clipTop, clipBottom);
+        shapedText_.fill(
+            a, origin, sr, sg, sb, selectionBeginGlyph, selectionEndGlyph,
+            clipLeft, clipRight, clipTop, clipBottom);
+        shapedText_.fill(
+            a, origin, r, g, b, selectionEndGlyph, shapedText_.glyphs().length(),
+            clipLeft, clipRight, clipTop, clipBottom);
+        // clang-format on
     }
     else {
         shapedText_.fill(a, origin, r, g, b, clipLeft, clipRight, clipTop, clipBottom);
@@ -493,9 +494,9 @@ void RichText::fill(core::FloatArray& a)
 }
 
 Int RichText::movedPosition(
-        Int position,
-        RichTextMoveOperation operation,
-        Int /* selectionIndex */) {
+    Int position,
+    RichTextMoveOperation operation,
+    Int /* selectionIndex */) {
 
     using Op = RichTextMoveOperation;
 
@@ -567,8 +568,7 @@ std::string_view RichText::selectedTextView() const {
     return res.substr(p1, p2 - p1);
 }
 
-void RichText::deleteSelectedText()
-{
+void RichText::deleteSelectedText() {
     if (hasSelection()) {
         if (selectionStart_ > selectionEnd_) {
             std::swap(selectionStart_, selectionEnd_);
@@ -586,16 +586,14 @@ void RichText::deleteSelectedText()
     }
 }
 
-void RichText::deleteFromCursor(RichTextMoveOperation operation)
-{
+void RichText::deleteFromCursor(RichTextMoveOperation operation) {
     if (!hasSelection()) {
         moveCursor(operation, true);
     }
     deleteSelectedText();
 }
 
-void RichText::insertText(std::string_view text)
-{
+void RichText::insertText(std::string_view text) {
     if (hasSelection()) {
         deleteSelectedText();
     }
@@ -605,8 +603,8 @@ void RichText::insertText(std::string_view text)
 
 Int RichText::positionFromPoint(
     const geometry::Vec2f& point,
-    TextBoundaryMarkers boundaryMarkers)
-{
+    TextBoundaryMarkers boundaryMarkers) {
+
     // TODO: take horizontal/vertical style alignment into account
     // (see implementation of fill())
     float x = point[0] + horizontalScroll_;
@@ -616,8 +614,7 @@ Int RichText::positionFromPoint(
 
 std::pair<Int, Int> RichText::positionPairFromPoint(
     const geometry::Vec2f& point,
-    TextBoundaryMarkers boundaryMarkers)
-{
+    TextBoundaryMarkers boundaryMarkers) {
     // TODO: take horizontal/vertical style alignment into account
     // (see implementation of fill())
     float x = point[0] + horizontalScroll_;
@@ -625,18 +622,15 @@ std::pair<Int, Int> RichText::positionPairFromPoint(
     return shapedText_.positionPairFromPoint({x, y}, boundaryMarkers);
 }
 
-geometry::Vec2f RichText::advance_(Int position) const
-{
+geometry::Vec2f RichText::advance_(Int position) const {
     return shapedText_.advance(position);
 }
 
-float RichText::maxCursorHorizontalAdvance_() const
-{
+float RichText::maxCursorHorizontalAdvance_() const {
     return shapedText_.advance()[0];
 }
 
-void RichText::updateScroll_()
-{
+void RichText::updateScroll_() {
     float textWidth = rect_.width();
     if (horizontalScroll_ > 0) {
         float textEndAdvance = maxCursorHorizontalAdvance_();
@@ -665,8 +659,8 @@ void RichText::updateScroll_()
 // Inserts text at the current cursor position. The new cursor position
 // becomes the end of the inserted text and the selection is cleared.
 //
-void RichText::insertText_(std::string_view textToInsert)
-{
+void RichText::insertText_(std::string_view textToInsert) {
+
     // Get number of bytes to insert after removing unsupported characters
     size_t numBytesToInsert = 0;
     for (char c : textToInsert) {

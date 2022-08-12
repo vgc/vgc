@@ -91,8 +91,7 @@ const char* toStringLiteral(StyleTokenType type);
 /// Writes the given StyleTokenType to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, StyleTokenType type)
-{
+void write(OStream& out, StyleTokenType type) {
     core::write(out, toStringLiteral(type));
 }
 
@@ -173,15 +172,19 @@ struct StyleToken {
 
     // Initializes a dummy token starting and ending at s.
     // All other fields are uninitialized.
-    StyleToken(const char* s) : begin(s), end(s), type(StyleTokenType::Delimiter) {}
+    StyleToken(const char* s)
+        : begin(s)
+        , end(s)
+        , type(StyleTokenType::Delimiter) {
+    }
 
     /// Returns the numericValue of this token as a float. Assumes the type of
     /// this token is either Number, Percentage, or Dimension.
     ///
     float toFloat() const {
-        return numericFlag() == StyleTokenNumericFlag::Integer ?
-                    static_cast<float>(numericValue.integer) :
-                    static_cast<float>(numericValue.floatingPoint);
+        return numericFlag() == StyleTokenNumericFlag::Integer
+                   ? static_cast<float>(numericValue.integer)
+                   : static_cast<float>(numericValue.floatingPoint);
     }
 
 private:
@@ -191,8 +194,7 @@ private:
 /// Writes the given StyleToken to the output stream.
 ///
 template<typename OStream>
-void write(OStream& out, const StyleToken& token)
-{
+void write(OStream& out, const StyleToken& token) {
     using core::write;
     write(out, token.type);
     switch (token.type) {

@@ -19,8 +19,8 @@
 #include <QMouseEvent>
 #include <QPainter>
 
-#include <vgc/core/arithmetic.h>
 #include <vgc/core/algorithm.h>
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/logging.h>
 #include <vgc/widgets/logcategories.h>
 #include <vgc/widgets/toggleviewaction.h>
@@ -29,23 +29,27 @@ namespace vgc {
 namespace widgets {
 
 Splitter::Splitter(
-        CentralWidget* parent, Direction direction, bool isResizable,
-        int length, int minimumLength, int maximumLength) :
-    QWidget(parent),
-    parent_(parent),
-    direction_(direction),
-    isResizable_(isResizable),
-    length_(length),
-    minimumLength_(minimumLength),
-    maximumLength_(maximumLength),
-    centerlineStartPos_(0, 0),
-    centerlineLength_(0),
-    grabWidth_(10),
-    highlightWidth_(4),
-    highlightColor_(Qt::transparent),
-    isHovered_(false),
-    isPressed_(false)
-{
+    CentralWidget* parent,
+    Direction direction,
+    bool isResizable,
+    int length,
+    int minimumLength,
+    int maximumLength)
+    : QWidget(parent)
+    , parent_(parent)
+    , direction_(direction)
+    , isResizable_(isResizable)
+    , length_(length)
+    , minimumLength_(minimumLength)
+    , maximumLength_(maximumLength)
+    , centerlineStartPos_(0, 0)
+    , centerlineLength_(0)
+    , grabWidth_(10)
+    , highlightWidth_(4)
+    , highlightColor_(Qt::transparent)
+    , isHovered_(false)
+    , isPressed_(false) {
+
     setAttribute(Qt::WA_Hover);
     setCursor_();
 
@@ -63,8 +67,7 @@ Splitter::Splitter(
     }
 }
 
-void Splitter::setResizable(bool isResizable)
-{
+void Splitter::setResizable(bool isResizable) {
     if (isResizable_ != isResizable) {
         isResizable_ = isResizable;
         setCursor_();
@@ -72,8 +75,7 @@ void Splitter::setResizable(bool isResizable)
     }
 }
 
-void Splitter::setLength(int length)
-{
+void Splitter::setLength(int length) {
     length = core::clamp(length, minimumLength_, maximumLength_);
     if (length_ != length) {
         length_ = length;
@@ -81,65 +83,78 @@ void Splitter::setLength(int length)
     }
 }
 
-void Splitter::setMinimumLength(int min)
-{
+void Splitter::setMinimumLength(int min) {
     int max = maximumLength();
     if (min < 0) {
-        VGC_WARNING(LogVgcWidgetsSplitter,
-                    "vgc::widgets::Splitter::setMinimumLength(min={}) "
-                    "called with min < 0.", min);
+        VGC_WARNING(
+            LogVgcWidgetsSplitter,
+            "vgc::widgets::Splitter::setMinimumLength(min={}) "
+            "called with min < 0.",
+            min);
         min = 0;
     }
     else if (min > max) {
-        VGC_WARNING(LogVgcWidgetsSplitter,
-                    "vgc::widgets::Splitter::setMinimumLength(min={}) "
-                    "called with min > maximumLength() (={}).", min, max);
+        VGC_WARNING(
+            LogVgcWidgetsSplitter,
+            "vgc::widgets::Splitter::setMinimumLength(min={}) "
+            "called with min > maximumLength() (={}).",
+            min,
+            max);
         min = max;
     }
     minimumLength_ = min;
     setLength(length_);
 }
 
-void Splitter::setMaximumLength(int max)
-{
+void Splitter::setMaximumLength(int max) {
     int min = minimumLength();
     if (max < min) {
-        VGC_WARNING(LogVgcWidgetsSplitter,
-                    "vgc::widgets::Splitter::setMaximumLength(max={}) "
-                    "called with max < minimumLength() (={}).", max, min);
+        VGC_WARNING(
+            LogVgcWidgetsSplitter,
+            "vgc::widgets::Splitter::setMaximumLength(max={}) "
+            "called with max < minimumLength() (={}).",
+            max,
+            min);
         max = min;
     }
     maximumLength_ = max;
     setLength(length_);
 }
 
-void Splitter::setLengthRange(int min, int max)
-{
+void Splitter::setLengthRange(int min, int max) {
     minimumLength_ = min;
     maximumLength_ = max;
     if (min < 0) {
-        VGC_WARNING(LogVgcWidgetsSplitter,
-                    "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
-                    "called with min < 0.", min, max);
+        VGC_WARNING(
+            LogVgcWidgetsSplitter,
+            "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
+            "called with min < 0.",
+            min,
+            max);
         minimumLength_ = 0;
     }
     if (max < 0) {
-        VGC_WARNING(LogVgcWidgetsSplitter,
-                    "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
-                    "called with max < 0.", min, max);
+        VGC_WARNING(
+            LogVgcWidgetsSplitter,
+            "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
+            "called with max < 0.",
+            min,
+            max);
         maximumLength_ = 0;
     }
     if (min > max) {
-        VGC_WARNING(LogVgcWidgetsSplitter,
-                    "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
-                    "called with min > max.", min, max);
+        VGC_WARNING(
+            LogVgcWidgetsSplitter,
+            "vgc::widgets::Splitter::setLengthRange(min={}, max={}) "
+            "called with min > max.",
+            min,
+            max);
         std::swap(minimumLength_, maximumLength_);
     }
     setLength(length_);
 }
 
-void Splitter::setGrabWidth(int width)
-{
+void Splitter::setGrabWidth(int width) {
     grabWidth_ = width;
     if (grabWidth_ < 0) {
         grabWidth_ = 0;
@@ -149,8 +164,7 @@ void Splitter::setGrabWidth(int width)
     }
 }
 
-void Splitter::setHighlightWidth(int width)
-{
+void Splitter::setHighlightWidth(int width) {
     highlightWidth_ = width;
     if (highlightWidth_ < 0) {
         highlightWidth_ = 0;
@@ -160,20 +174,17 @@ void Splitter::setHighlightWidth(int width)
     }
 }
 
-void Splitter::setHighlightColor(QColor color)
-{
+void Splitter::setHighlightColor(QColor color) {
     highlightColor_ = color;
 }
 
-void Splitter::setGeometryFromCenterline(int x, int y, int l)
-{
+void Splitter::setGeometryFromCenterline(int x, int y, int l) {
     centerlineStartPos_ = QPoint(x, y);
     centerlineLength_ = l;
     updateGeometry_();
 }
 
-void Splitter::updateGeometry_()
-{
+void Splitter::updateGeometry_() {
     if (isResizable()) {
         int x = centerlineStartPos_.x();
         int y = centerlineStartPos_.y();
@@ -198,13 +209,14 @@ void Splitter::updateGeometry_()
         setAttribute(Qt::WA_MouseNoMask, hasMask);
         if (hasMask) {
             if (orientation() == Qt::Horizontal) {
-                setContentsMargins(gw1-hw1, 0, gw2-hw2, 0);
+                setContentsMargins(gw1 - hw1, 0, gw2 - hw2, 0);
             }
             else {
-                setContentsMargins(0, gw1-hw1, 0, gw2-hw2);
+                setContentsMargins(0, gw1 - hw1, 0, gw2 - hw2);
             }
             setMask(QRegion(contentsRect()));
-        } else {
+        }
+        else {
             setContentsMargins(0, 0, 0, 0);
             clearMask();
         }
@@ -216,9 +228,8 @@ void Splitter::updateGeometry_()
     }
 }
 
-bool Splitter::event(QEvent* event)
-{
-    switch(event->type()) {
+bool Splitter::event(QEvent* event) {
+    switch (event->type()) {
     case QEvent::HoverEnter:
         isHovered_ = true;
         update();
@@ -233,16 +244,14 @@ bool Splitter::event(QEvent* event)
     return QWidget::event(event);
 }
 
-void Splitter::paintEvent(QPaintEvent*)
-{
+void Splitter::paintEvent(QPaintEvent*) {
     QPainter p(this);
     if (isHovered_) {
         p.fillRect(contentsRect(), highlightColor_);
     }
 }
 
-void Splitter::mousePressEvent(QMouseEvent* e)
-{
+void Splitter::mousePressEvent(QMouseEvent* e) {
     if (e->button() == Qt::LeftButton) {
         isPressed_ = true;
         lengthOnPress_ = length_;
@@ -251,8 +260,7 @@ void Splitter::mousePressEvent(QMouseEvent* e)
     }
 }
 
-void Splitter::mouseMoveEvent(QMouseEvent* e)
-{
+void Splitter::mouseMoveEvent(QMouseEvent* e) {
     if (e->buttons() & Qt::LeftButton) {
         int offset = z_(e->pos()) - zOnPress_;
         if (direction_ == Direction::Right || direction_ == Direction::Bottom) {
@@ -266,16 +274,14 @@ void Splitter::mouseMoveEvent(QMouseEvent* e)
     }
 }
 
-void Splitter::mouseReleaseEvent(QMouseEvent* e)
-{
+void Splitter::mouseReleaseEvent(QMouseEvent* e) {
     if (e->button() == Qt::LeftButton) {
         isPressed_ = false;
         update();
     }
 }
 
-void Splitter::setCursor_()
-{
+void Splitter::setCursor_() {
     if (isResizable()) {
         setCursor(orientation() == Qt::Horizontal ? Qt::SplitHCursor : Qt::SplitVCursor);
     }
@@ -285,25 +291,33 @@ void Splitter::setCursor_()
 }
 
 CentralWidget::CentralWidget(
-        QWidget* viewer,
-        QWidget* toolbar,
-        QWidget* console,
-        QWidget* parent) :
-    QWidget(parent),
-    viewer_(viewer),
-    toolbar_(toolbar),
-    console_(console),
-    panelArea_(new PanelArea(this)),
-    margin_(0)
-{
+    QWidget* viewer,
+    QWidget* toolbar,
+    QWidget* console,
+    QWidget* parent)
+    : QWidget(parent)
+    , viewer_(viewer)
+    , toolbar_(toolbar)
+    , console_(console)
+    , panelArea_(new PanelArea(this))
+    , margin_(0) {
+
     viewer_->setParent(this);
     toolbar->setParent(this);
     console->setParent(this);
 
-    consoleToggleViewAction_ = new ToggleViewAction(tr("Python Console"), console_, this); // TODO: set "Python Console" text somewhere else
-    connect(consoleToggleViewAction_, SIGNAL(toggled(bool)), this, SLOT(updateGeometries_()));
+    consoleToggleViewAction_ = new ToggleViewAction(
+        tr("Python Console"),
+        console_,
+        this); // TODO: set "Python Console" text somewhere else
+    connect(
+        consoleToggleViewAction_, SIGNAL(toggled(bool)), this, SLOT(updateGeometries_()));
 
-    connect(panelArea_, &PanelArea::visibleToParentChanged, this, &CentralWidget::updateGeometries_);
+    connect(
+        panelArea_,
+        &PanelArea::visibleToParentChanged,
+        this,
+        &CentralWidget::updateGeometries_);
 
     // Create splitters, which handle resize mouse events.
     //
@@ -350,18 +364,14 @@ CentralWidget::CentralWidget(
     updateGeometries_();
 }
 
-CentralWidget::~CentralWidget()
-{
-
+CentralWidget::~CentralWidget() {
 }
 
-QSize CentralWidget::sizeHint() const
-{
+QSize CentralWidget::sizeHint() const {
     return QSize(1920, 1080);
 }
 
-QSize CentralWidget::minimumSizeHint() const
-{
+QSize CentralWidget::minimumSizeHint() const {
     QSize res = QSize(2 * margin_, 2 * margin_);
     res += viewer_->minimumSizeHint();
     if (toolbar_->isVisibleTo(this)) {
@@ -376,24 +386,20 @@ QSize CentralWidget::minimumSizeHint() const
     return res;
 }
 
-Panel* CentralWidget::addPanel(const QString& title, QWidget* widget)
-{
+Panel* CentralWidget::addPanel(const QString& title, QWidget* widget) {
     Panel* panel = panelArea_->addPanel(title, widget);
     return panel;
 }
 
-Panel* CentralWidget::panel(QWidget* widget)
-{
+Panel* CentralWidget::panel(QWidget* widget) {
     return panelArea_->panel(widget);
 }
 
-void CentralWidget::resizeEvent(QResizeEvent*)
-{
+void CentralWidget::resizeEvent(QResizeEvent*) {
     updateGeometries_();
 }
 
-void CentralWidget::updateGeometries_()
-{
+void CentralWidget::updateGeometries_() {
     int M = margin_;
     int m1 = M / 2;
     int m2 = M - m1;
@@ -411,7 +417,7 @@ void CentralWidget::updateGeometries_()
     Splitter* s0 = splitters_[0];
     if (toolbar_->isVisibleTo(this)) {
         x2 += M + s0->length();
-        s0->setGeometryFromCenterline(x2, y1+m2, y3-y1-M);
+        s0->setGeometryFromCenterline(x2, y1 + m2, y3 - y1 - M);
         s0->show();
     }
     else {
@@ -423,7 +429,7 @@ void CentralWidget::updateGeometries_()
     Splitter* s1 = splitters_[1];
     if (panelArea_->isVisibleTo(this)) {
         x3 -= M + s1->length();
-        s1->setGeometryFromCenterline(x3, y1+m2, y3-y1-M);
+        s1->setGeometryFromCenterline(x3, y1 + m2, y3 - y1 - M);
         s1->show();
     }
     else {
@@ -435,7 +441,7 @@ void CentralWidget::updateGeometries_()
     Splitter* s2 = splitters_[2];
     if (console_->isVisibleTo(this)) {
         y2 -= M + s2->length();
-        s2->setGeometryFromCenterline(x2+m2, y2, x3-x2-M);
+        s2->setGeometryFromCenterline(x2 + m2, y2, x3 - x2 - M);
         s2->show();
     }
     else {
@@ -449,27 +455,27 @@ void CentralWidget::updateGeometries_()
     QSize vMinSize = viewer_->minimumSizeHint();
     for (int i = 0; i < 2; ++i) {
         if (toolbar_->isVisibleTo(this)) {
-            int max = x3-x1-2*M-vMinSize.width();
-            max = core::clamp(max, s0->minimumLength(), (std::numeric_limits<int>::max)());
+            int max = x3 - x1 - 2 * M - vMinSize.width();
+            max = core::clamp(max, s0->minimumLength(), core::tmax<int>);
             s0->setMaximumLength(max);
         }
         if (panelArea_->isVisibleTo(this)) {
-            int max = x4-x2-2*M-vMinSize.width();
-            max = core::clamp(max, s1->minimumLength(), (std::numeric_limits<int>::max)());
+            int max = x4 - x2 - 2 * M - vMinSize.width();
+            max = core::clamp(max, s1->minimumLength(), core::tmax<int>);
             s1->setMaximumLength(max);
         }
         if (console_->isVisibleTo(this)) {
-            int max = y3-y1-2*M-vMinSize.height();
-            max = core::clamp(max, s2->minimumLength(), (std::numeric_limits<int>::max)());
+            int max = y3 - y1 - 2 * M - vMinSize.height();
+            max = core::clamp(max, s2->minimumLength(), core::tmax<int>);
             s2->setMaximumLength(max);
         }
     }
 
     // Set geometry of actual useful widgets
-    toolbar_   -> setGeometry(x1+m2, y1+m2, x2-x1-M, y3-y1-M);
-    viewer_    -> setGeometry(x2+m2, y1+m2, x3-x2-M, y2-y1-M);
-    console_   -> setGeometry(x2+m2, y2+m2, x3-x2-M, y3-y2-M);
-    panelArea_ -> setGeometry(x3+m2, y1+m2, x4-x3-M, y3-y1-M);
+    toolbar_->setGeometry(x1 + m2, y1 + m2, x2 - x1 - M, y3 - y1 - M);
+    viewer_->setGeometry(x2 + m2, y1 + m2, x3 - x2 - M, y2 - y1 - M);
+    console_->setGeometry(x2 + m2, y2 + m2, x3 - x2 - M, y3 - y2 - M);
+    panelArea_->setGeometry(x3 + m2, y1 + m2, x4 - x3 - M, y3 - y1 - M);
 
     // Make sure that the window minimum size is increased
     // when making a new panel visible.

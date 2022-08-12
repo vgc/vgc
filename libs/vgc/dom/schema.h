@@ -39,10 +39,9 @@ class VGC_DOM_API AttributeSpec {
 public:
     /// Creates a built-in attribute.
     ///
-    AttributeSpec(const std::string& name, const Value& defaultValue) :
-        name_(core::StringId(name)),
-        defaultValue_(defaultValue) {
-
+    AttributeSpec(const std::string& name, const Value& defaultValue)
+        : name_(core::StringId(name))
+        , defaultValue_(defaultValue) {
     }
 
     /// Returns the name of this built-in attribute.
@@ -77,14 +76,12 @@ private:
 ///
 /// This is one of the building blocks that define a Schema.
 ///
-class ElementSpec
-{
+class ElementSpec {
 public:
     /// Creates an ElementSpec for the given Element \p name, with the given
     /// built-in \p attributes.
     ///
-    ElementSpec(const std::string& name,
-                const std::vector<AttributeSpec>& attributes);
+    ElementSpec(const std::string& name, const std::vector<AttributeSpec>& attributes);
 
     /// Returns the name of the Element specified by this ElementSpec.
     ///
@@ -162,8 +159,7 @@ private:
 /// <path data-vec2darray-mypositions="[]"/>
 /// \endcode
 ///
-class Schema
-{
+class Schema {
 public:
     /// Creates a Schema with the given \p element specifications.
     ///

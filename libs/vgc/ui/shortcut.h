@@ -31,20 +31,26 @@ namespace ui {
 ///
 class VGC_UI_API Shortcut {
 public:
-
     /// Creates an empty shortcut, that is, a shortcut whose key is set
     /// as Key::None.
     ///
-    Shortcut() : modifiers_(), key_(Key::None) {}
+    Shortcut()
+        : modifiers_()
+        , key_(Key::None) {
+    }
 
     /// Creates a Shortcut with the given modifier keys and key.
     ///
-    Shortcut(ModifierKeys modifiers, Key key) :
-        modifiers_(modifiers), key_(key) {}
+    Shortcut(ModifierKeys modifiers, Key key)
+        : modifiers_(modifiers)
+        , key_(key) {
+    }
 
     /// Returns the modifier keys of this shortcut.
     ///
-    ModifierKeys modifiers() const { return modifiers_; }
+    ModifierKeys modifiers() const {
+        return modifiers_;
+    }
 
     /// Sets the modifier keys of this shortcut.
     ///
@@ -54,7 +60,9 @@ public:
 
     /// Returns the key of this shortcut.
     ///
-    Key key() const { return key_; }
+    Key key() const {
+        return key_;
+    }
 
     /// Sets the key of this shortcut.
     ///

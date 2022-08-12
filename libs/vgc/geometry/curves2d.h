@@ -97,9 +97,9 @@ public:
     /// pointer-equality.
     ///
     friend bool operator==(const Curves2dCommandRef& c1, const Curves2dCommandRef& c2) {
-        return c1.curves_ == c2.curves_ &&
-               c1.commandIndex_ == c2.commandIndex_ &&
-               c1.paramIndex_ == c2.paramIndex_;
+        return c1.curves_ == c2.curves_                //
+               && c1.commandIndex_ == c2.commandIndex_ //
+               && c1.paramIndex_ == c2.paramIndex_;
     }
 
     /// Returns whether the two iterators Curves2dCommandRef are different,
@@ -118,8 +118,11 @@ private:
     Int paramIndex_;
 
     // Constructor. Reserved for Curves2dCommandIterator.
-    Curves2dCommandRef(const Curves2d* curves, Int commandIndex, Int paramIndex) :
-        curves_(curves), commandIndex_(commandIndex), paramIndex_(paramIndex) {}
+    Curves2dCommandRef(const Curves2d* curves, Int commandIndex, Int paramIndex)
+        : curves_(curves)
+        , commandIndex_(commandIndex)
+        , paramIndex_(paramIndex) {
+    }
 
     // Copy and move assignment. Reserved for Curves2dCommandIterator.
     // Alternatively, we could define public assignment operators which modify
@@ -207,13 +210,15 @@ public:
 
     /// Returns whether the two iterators are equal.
     ///
-    friend bool operator==(const Curves2dCommandIterator& i1, const Curves2dCommandIterator& i2) {
+    friend bool
+    operator==(const Curves2dCommandIterator& i1, const Curves2dCommandIterator& i2) {
         return i1.c_ == i2.c_;
     }
 
     /// Returns whether the two iterators are different.
     ///
-    friend bool operator!=(const Curves2dCommandIterator& i1, const Curves2dCommandIterator& i2) {
+    friend bool
+    operator!=(const Curves2dCommandIterator& i1, const Curves2dCommandIterator& i2) {
         return !(i1 == i2);
     }
 
@@ -221,8 +226,9 @@ private:
     friend class Curves2d;
     Curves2dCommandRef c_;
 
-    Curves2dCommandIterator(const Curves2d* curves, Int commandIndex, Int paramIndex) :
-        c_(curves, commandIndex, paramIndex) {}
+    Curves2dCommandIterator(const Curves2d* curves, Int commandIndex, Int paramIndex)
+        : c_(curves, commandIndex, paramIndex) {
+    }
 };
 
 /// \class vgc::geometry::Curves2dCommandRange
@@ -235,9 +241,9 @@ class VGC_GEOMETRY_API Curves2dCommandRange {
 public:
     /// Creates a Curves2dCommandRange with the two given iterators.
     ///
-    Curves2dCommandRange(Curves2dCommandIterator begin, Curves2dCommandIterator end) :
-        begin_(begin), end_(end) {
-
+    Curves2dCommandRange(Curves2dCommandIterator begin, Curves2dCommandIterator end)
+        : begin_(begin)
+        , end_(end) {
     }
 
     /// Returns the beginning of the range.
@@ -267,36 +273,31 @@ private:
 //
 class VGC_GEOMETRY_API Curves2dSampleParams {
 protected:
-    Curves2dSampleParams(double minDistance,
-                         double maxAngle,
-                         Int maxSamplesPerSegment)
+    Curves2dSampleParams(double minDistance, double maxAngle, Int maxSamplesPerSegment)
         : minDistance_(minDistance)
         , maxAngle_(maxAngle)
-        , maxSamplesPerSegment_(maxSamplesPerSegment) {}
+        , maxSamplesPerSegment_(maxSamplesPerSegment) {
+    }
 
 public:
     /// Creates a Curves2dSampleParams to be used for adaptive sampling.
     /// This sets `maxDistance()` to `0.0`.
     ///
-    static Curves2dSampleParams adaptive(double maxAngle = 0.05,
-                                         Int maxSamplesPerSegment = 64) {
-        return Curves2dSampleParams(
-                    0.0,
-                    maxAngle,
-                    maxSamplesPerSegment);
+    static Curves2dSampleParams
+    adaptive(double maxAngle = 0.05, Int maxSamplesPerSegment = 64) {
+        return Curves2dSampleParams(0.0, maxAngle, maxSamplesPerSegment);
     }
 
     /// Creates a Curves2dSampleParams to be used for adaptive sampling, but
     /// never adds a new sample between two samples if the distance between
     /// these two samples is already smaller than minDistance.
     ///
-    static Curves2dSampleParams semiAdaptive(double minDistance = 1.0,
-                                             double maxAngle = 0.05,
-                                             Int maxSamplesPerSegment = 64) {
-        return Curves2dSampleParams(
-                    minDistance,
-                    maxAngle,
-                    maxSamplesPerSegment);
+    static Curves2dSampleParams semiAdaptive(
+        double minDistance = 1.0,
+        double maxAngle = 0.05,
+        Int maxSamplesPerSegment = 64) {
+
+        return Curves2dSampleParams(minDistance, maxAngle, maxSamplesPerSegment);
     }
 
     /// Returns the minimum distance between two samples required for a new
@@ -354,7 +355,6 @@ public:
     /// Construct an empty sequence of curves.
     ///
     Curves2d() {
-
     }
 
     /// Returns a Curves2dCommandRange to iterate over all commands in this Curves2d.
@@ -409,25 +409,19 @@ public:
 
     /// Adds a new QuadraticBezierTo command.
     ///
-    void quadraticBezierTo(const Vec2d& p1,
-                           const Vec2d& p2);
+    void quadraticBezierTo(const Vec2d& p1, const Vec2d& p2);
 
     /// Adds a new QBezierTo command.
     ///
-    void quadraticBezierTo(double x1, double y1,
-                           double x2, double y2);
+    void quadraticBezierTo(double x1, double y1, double x2, double y2);
 
     /// Adds a new CBezierTo command.
     ///
-    void cubicBezierTo(const Vec2d& p1,
-                       const Vec2d& p2,
-                       const Vec2d& p3);
+    void cubicBezierTo(const Vec2d& p1, const Vec2d& p2, const Vec2d& p3);
 
     /// Adds a new CBezierTo command.
     ///
-    void cubicBezierTo(double x1, double y1,
-                       double x2, double y2,
-                       double x3, double y3);
+    void cubicBezierTo(double x1, double y1, double x2, double y2, double x3, double y3);
 
     /// Computes and returns an approximation of this Curves2d using line
     /// segments only (MoveTo, LineTo, and Close commands).
@@ -476,7 +470,10 @@ public:
     // could be some sort of CurveParamVec1d, while color could be CurveParamColor,
     // or something like that.
     //
-    void stroke(core::DoubleArray& data, double width, const Curves2dSampleParams& params) const;
+    void stroke( //
+        core::DoubleArray& data,
+        double width,
+        const Curves2dSampleParams& params) const;
 
     /// Fills this Curves2d, that is, triangulate the interior of the curves
     /// interpreted as contours of a polygon, using the non-zero winding rule.
@@ -510,49 +507,42 @@ private:
     core::DoubleArray data_;
 };
 
-inline CurveCommandType Curves2dCommandRef::type() const
-{
+inline CurveCommandType Curves2dCommandRef::type() const {
     return curves_->commandData_[commandIndex_].type;
 }
 
-inline Vec2d Curves2dCommandRef::p() const
-{
+inline Vec2d Curves2dCommandRef::p() const {
     // TODO: exception if Close?
     const double* d = &(curves_->data_[paramIndex_]);
-    return Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d + 1));
 }
 
-inline Vec2d Curves2dCommandRef::p1() const
-{
+inline Vec2d Curves2dCommandRef::p1() const {
     // TODO: exception if Close?
     const double* d = &(curves_->data_[paramIndex_]);
-    return Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d + 1));
 }
 
-inline Vec2d Curves2dCommandRef::p2() const
-{
+inline Vec2d Curves2dCommandRef::p2() const {
     // TODO: exception if Close, MoveTo, LineTo?
     const double* d = &(curves_->data_[paramIndex_ + 2]);
-    return Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d + 1));
 }
 
-inline Vec2d Curves2dCommandRef::p3() const
-{
+inline Vec2d Curves2dCommandRef::p3() const {
     // TODO: exception if Close, MoveTo, LineTo, QuadraticBezierTo?
     const double* d = &(curves_->data_[paramIndex_ + 4]);
-    return Vec2d(*d, *(d+1));
+    return Vec2d(*d, *(d + 1));
 }
 
-inline Curves2dCommandIterator& Curves2dCommandIterator::operator++()
-{
+inline Curves2dCommandIterator& Curves2dCommandIterator::operator++() {
     // TODO: support subcommands
     c_.paramIndex_ = c_.curves_->commandData_[c_.commandIndex_].endParamIndex;
     c_.commandIndex_ += 1;
     return *this;
 }
 
-inline Curves2dCommandIterator& Curves2dCommandIterator::operator--()
-{
+inline Curves2dCommandIterator& Curves2dCommandIterator::operator--() {
     // TODO: support subcommands
     c_.commandIndex_ -= 1;
     if (c_.commandIndex_ == 0) {

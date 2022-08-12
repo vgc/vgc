@@ -58,8 +58,7 @@ public:
 } // namespace vgc::graphics
 
 template<>
-struct std::hash<vgc::graphics::ColorGradient>
-{
+struct std::hash<vgc::graphics::ColorGradient> {
     size_t operator()(const vgc::graphics::ColorGradient& x) const noexcept {
         return x.hash();
     }

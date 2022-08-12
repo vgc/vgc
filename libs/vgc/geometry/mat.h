@@ -20,6 +20,8 @@
 #ifndef VGC_GEOMETRY_MAT_H
 #define VGC_GEOMETRY_MAT_H
 
+// clang-format off
+
 #include <vgc/core/templateutil.h>
 
 namespace vgc::geometry {
@@ -68,8 +70,8 @@ struct IsMat : std::false_type {};
 
 template<typename T>
 struct IsMat<T, core::Requires<
-        std::is_same_v<T, Mat<T::dimension, typename T::ScalarType>>>> :
-    std::true_type {};
+        std::is_same_v<T, Mat<T::dimension, typename T::ScalarType>>>>
+    : std::true_type {};
 
 /// Checks whether `T` is a `vgc::geometry::Mat` type.
 ///

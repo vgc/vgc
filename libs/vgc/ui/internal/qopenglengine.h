@@ -24,9 +24,9 @@
 #include <QOffscreenSurface>
 #include <QOpenGLBuffer>
 #include <QOpenGLContext>
+#include <QOpenGLFunctions>
 #include <QOpenGLFunctions_3_2_Core>
 #include <QOpenGLFunctions_3_3_Core>
-#include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QPointF>
@@ -46,10 +46,22 @@ namespace vgc::ui::internal {
 inline geometry::Mat4f toMat4f(const geometry::Mat4d& m) {
     // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
     return geometry::Mat4f(
-        (float)m(0,0), (float)m(0,1), (float)m(0,2), (float)m(0,3),
-        (float)m(1,0), (float)m(1,1), (float)m(1,2), (float)m(1,3),
-        (float)m(2,0), (float)m(2,1), (float)m(2,2), (float)m(2,3),
-        (float)m(3,0), (float)m(3,1), (float)m(3,2), (float)m(3,3));
+        (float)m(0, 0),
+        (float)m(0, 1),
+        (float)m(0, 2),
+        (float)m(0, 3),
+        (float)m(1, 0),
+        (float)m(1, 1),
+        (float)m(1, 2),
+        (float)m(1, 3),
+        (float)m(2, 0),
+        (float)m(2, 1),
+        (float)m(2, 2),
+        (float)m(2, 3),
+        (float)m(3, 0),
+        (float)m(3, 1),
+        (float)m(3, 2),
+        (float)m(3, 3));
 }
 
 namespace qopengl {
@@ -61,7 +73,8 @@ using namespace ::vgc::graphics;
 inline constexpr Int requiredOpenGLVersionMajor = 3;
 inline constexpr Int requiredOpenGLVersionMinor = 3;
 using OpenGLFunctions = QOpenGLFunctions_3_3_Core;
-inline constexpr QPair<int, int> requiredOpenGLVersionQPair(requiredOpenGLVersionMajor, requiredOpenGLVersionMinor);
+inline constexpr QPair<int, int>
+    requiredOpenGLVersionQPair(requiredOpenGLVersionMajor, requiredOpenGLVersionMinor);
 
 /// \class vgc::widget::QglEngine
 /// \brief The QtOpenGL-based graphics::Engine.
@@ -82,7 +95,8 @@ public:
     /// Creates a new OpenglEngine.
     ///
     static QglEnginePtr create(const EngineCreateInfo& createInfo);
-    static QglEnginePtr create(const EngineCreateInfo& createInfo, QOpenGLContext* externalCtx);
+    static QglEnginePtr
+    create(const EngineCreateInfo& createInfo, QOpenGLContext* externalCtx);
 
     // not part of the common interface
 
@@ -103,12 +117,21 @@ protected:
     FramebufferPtr constructFramebuffer_(const ImageViewPtr& colorImageView) override;
     BufferPtr constructBuffer_(const BufferCreateInfo& createInfo) override;
     ImagePtr constructImage_(const ImageCreateInfo& createInfo) override;
-    ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const ImagePtr& image) override;
-    ImageViewPtr constructImageView_(const ImageViewCreateInfo& createInfo, const BufferPtr& buffer, PixelFormat format, UInt32 numElements) override;
-    SamplerStatePtr constructSamplerState_(const SamplerStateCreateInfo& createInfo) override;
-    GeometryViewPtr constructGeometryView_(const GeometryViewCreateInfo& createInfo) override;
+    ImageViewPtr constructImageView_(
+        const ImageViewCreateInfo& createInfo,
+        const ImagePtr& image) override;
+    ImageViewPtr constructImageView_(
+        const ImageViewCreateInfo& createInfo,
+        const BufferPtr& buffer,
+        PixelFormat format,
+        UInt32 numElements) override;
+    SamplerStatePtr
+    constructSamplerState_(const SamplerStateCreateInfo& createInfo) override;
+    GeometryViewPtr
+    constructGeometryView_(const GeometryViewCreateInfo& createInfo) override;
     BlendStatePtr constructBlendState_(const BlendStateCreateInfo& createInfo) override;
-    RasterizerStatePtr constructRasterizerState_(const RasterizerStateCreateInfo& createInfo) override;
+    RasterizerStatePtr
+    constructRasterizerState_(const RasterizerStateCreateInfo& createInfo) override;
 
     void resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
 
@@ -119,7 +142,10 @@ protected:
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;
-    void initImage_(Image* image, const Span<const char>* mipLevelDataSpans, Int numMipLevels) override;
+    void initImage_(
+        Image* image,
+        const Span<const char>* mipLevelDataSpans,
+        Int numMipLevels) override;
     void initImageView_(ImageView* view) override;
     void initSamplerState_(SamplerState* state) override;
     void initGeometryView_(GeometryView* view) override;
@@ -130,18 +156,32 @@ protected:
     void setFramebuffer_(const FramebufferPtr& framebuffer) override;
     void setViewport_(Int x, Int y, Int width, Int height) override;
     void setProgram_(const ProgramPtr& program) override;
-    void setBlendState_(const BlendStatePtr& state, const geometry::Vec4f& blendFactor) override;
+    void setBlendState_(const BlendStatePtr& state, const geometry::Vec4f& blendFactor)
+        override;
     void setRasterizerState_(const RasterizerStatePtr& state) override;
-    void setStageConstantBuffers_(const BufferPtr* buffers, Int startIndex, Int count, ShaderStage shaderStage) override;
-    void setStageImageViews_(const ImageViewPtr* views, Int startIndex, Int count, ShaderStage shaderStage) override;
-    void setStageSamplers_(const SamplerStatePtr* states, Int startIndex, Int count, ShaderStage shaderStage) override;
+    void setStageConstantBuffers_(
+        const BufferPtr* buffers,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage) override;
+    void setStageImageViews_(
+        const ImageViewPtr* views,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage) override;
+    void setStageSamplers_(
+        const SamplerStatePtr* states,
+        Int startIndex,
+        Int count,
+        ShaderStage shaderStage) override;
 
     void updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) override;
 
     void draw_(GeometryView* view, UInt numIndices, UInt numInstances) override;
     void clear_(const core::Color& color) override;
 
-    UInt64 present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) override;
+    UInt64
+    present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) override;
 
     void setStateDirty_() override;
 
@@ -191,7 +231,6 @@ private:
             api_->glDisable(capability);
         }
     }
-
 };
 
 } // namespace qopengl

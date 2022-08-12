@@ -22,14 +22,11 @@ namespace core {
 
 namespace internal {
 
-std::string notAliveMsg(const Object* object)
-{
-    return core::format(
-        "Object {} is not alive", core::asAddress(object));
+std::string notAliveMsg(const Object* object) {
+    return core::format("Object {} is not alive", core::asAddress(object));
 }
 
-std::string notAChildMsg(const Object* object, const Object* expectedParent)
-{
+std::string notAChildMsg(const Object* object, const Object* expectedParent) {
     return core::format(
         "Object {} is not a child of {}",
         core::asAddress(object),

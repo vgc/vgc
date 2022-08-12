@@ -29,9 +29,9 @@
 namespace vgc {
 namespace widgets {
 
-Toolbar::Toolbar(QWidget* parent) :
-    QToolBar(parent)
-{
+Toolbar::Toolbar(QWidget* parent)
+    : QToolBar(parent) {
+
     int toolbarWidth = 150;
     int iconWidth = 64;
     int margin = 15;
@@ -70,29 +70,29 @@ Toolbar::Toolbar(QWidget* parent) :
     addWidget(colorPaletteq_);
 
     connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
-    connect(colorToolButton_, &ColorToolButton::colorChanged, this, &Toolbar::onColorToolButtonColorChanged_);
-    colorPalette_->colorSelected().connect([this](){ this->onColorPaletteColorSelected_(); });
+    connect(
+        colorToolButton_,
+        &ColorToolButton::colorChanged,
+        this,
+        &Toolbar::onColorToolButtonColorChanged_);
+    colorPalette_->colorSelected().connect(
+        [this]() { this->onColorPaletteColorSelected_(); });
 }
 
-Toolbar::~Toolbar()
-{
-
+Toolbar::~Toolbar() {
 }
 
-core::Color Toolbar::color() const
-{
+core::Color Toolbar::color() const {
     return colorPalette_->selectedColor();
 }
 
-void Toolbar::onColorToolButtonColorChanged_()
-{
+void Toolbar::onColorToolButtonColorChanged_() {
     colorPalette_->setSelectedColor(colorToolButton_->color());
     Q_EMIT colorChanged(color());
     // Note: setSelectedColor does not emit colorSelected.
 }
 
-void Toolbar::onColorPaletteColorSelected_()
-{
+void Toolbar::onColorPaletteColorSelected_() {
     colorToolButton_->setColor(colorPalette_->selectedColor());
     // Note: setColor emits colorChanged()
 }

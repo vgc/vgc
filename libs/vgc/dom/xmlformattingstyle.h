@@ -83,8 +83,7 @@ enum class XmlIndentStyle {
 // Note: here is a good resource for inspiration for when to extend this class:
 // https://www.jetbrains.com/help/resharper/EditorConfig_XML_XmlCodeStylePageSchema.html
 //
-struct VGC_DOM_API XmlFormattingStyle
-{
+struct VGC_DOM_API XmlFormattingStyle {
     /// Whether tabs or spaces are used for indentation of XML nodes. The
     /// default value is XmlIndentStyle::Spaces.
     ///

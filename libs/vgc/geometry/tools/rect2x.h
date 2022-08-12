@@ -17,6 +17,8 @@
 // This file is used to generate all the variants of this class.
 // You must manually run generate.py after any modification.
 
+// clang-format off
+
 #ifndef VGC_GEOMETRY_RECT2X_H
 #define VGC_GEOMETRY_RECT2X_H
 
@@ -67,21 +69,24 @@ namespace vgc::geometry {
 ///
 // VGC_GEOMETRY_API <- Omitted on purpose.
 //                     If needed, manually export individual functions.
-class Rect2x
-{
+class Rect2x {
 public:
     using ScalarType = float;
     static constexpr Int dimension = 2;
 
     /// Creates an uninitialized `Rect2x`.
     ///
-    Rect2x(core::NoInit) {}
+    Rect2x(core::NoInit) {
+    }
 
     /// Creates a zero-initialized `Rect2x`.
     ///
     /// This is equivalent to `Rect2x(0, 0, 0, 0)`.
     ///
-    constexpr Rect2x() : pMin_(), pMax_() {}
+    constexpr Rect2x()
+        : pMin_()
+        , pMax_() {
+    }
 
     /// Creates a `Rect2x` defined by the two points `pMin` and `pMax`.
     ///
@@ -94,8 +99,10 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this constructor.
     ///
-    constexpr Rect2x(const Vec2x& pMin, const Vec2x& pMax) :
-        pMin_(pMin), pMax_(pMax) {}
+    constexpr Rect2x(const Vec2x& pMin, const Vec2x& pMax)
+        : pMin_(pMin)
+        , pMax_(pMax) {
+    }
 
     /// Creates a `Rect2x` defined by the two points (`xMin`, `yMin`) and
     /// (`xMax`, `yMax`).
@@ -109,8 +116,10 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this constructor.
     ///
-    constexpr Rect2x(float xMin, float yMin, float xMax, float yMax) :
-        pMin_(xMin, yMin), pMax_(xMax, yMax) {}
+    constexpr Rect2x(float xMin, float yMin, float xMax, float yMax)
+        : pMin_(xMin, yMin)
+        , pMax_(xMax, yMax) {
+    }
 
     /// Creates a `Rect2x` from a `position` and `size`.
     ///
@@ -122,7 +131,9 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this function.
     ///
-    static constexpr Rect2x fromPositionSize(const Vec2x& position, const Vec2x& size) {
+    static constexpr Rect2x fromPositionSize(
+        const Vec2x& position, const Vec2x& size) {
+
         return Rect2x(position, position + size);
     }
 
@@ -136,7 +147,9 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this function.
     ///
-    static constexpr Rect2x fromPositionSize(const Vec2x& position, float width, float height) {
+    static constexpr Rect2x fromPositionSize(
+        const Vec2x& position, float width, float height) {
+
         return Rect2x(position, position + Vec2x(width, height));
     }
 
@@ -150,7 +163,9 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this function.
     ///
-    static constexpr Rect2x fromPositionSize(float x, float y, const Vec2x& size) {
+    static constexpr Rect2x fromPositionSize(
+        float x, float y, const Vec2x& size) {
+
         return Rect2x(x, y, x + size[0], y + size[1]);
     }
 
@@ -165,7 +180,9 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this function.
     ///
-    static constexpr Rect2x fromPositionSize(float x, float y, float width, float height) {
+    static constexpr Rect2x fromPositionSize(
+        float x, float y, float width, float height) {
+
         return Rect2x(x, y, x + width, y + height);
     }
 
@@ -196,8 +213,12 @@ public:
     /// yMax()`.
     ///
     constexpr Rect2x& normalize() {
-        if (pMin_[0] > pMax_[0]) std::swap(pMin_[0], pMax_[0]);
-        if (pMin_[1] > pMax_[1]) std::swap(pMin_[1], pMax_[1]);
+        if (pMin_[0] > pMax_[0]) {
+            std::swap(pMin_[0], pMax_[0]);
+        }
+        if (pMin_[1] > pMax_[1]) {
+            std::swap(pMin_[1], pMax_[1]);
+        }
         return *this;
     }
 
@@ -423,8 +444,8 @@ public:
     /// Returns whether the two rectangles `r1` and `r2` are equal.
     ///
     friend constexpr bool operator==(const Rect2x& r1, const Rect2x& r2) {
-        return r1.pMin_ == r2.pMin_ &&
-               r1.pMax_ == r2.pMax_;
+        return r1.pMin_ == r2.pMin_
+            && r1.pMax_ == r2.pMax_;
     }
 
     /// Returns whether the two rectangles `r1` and `r2` are different.
@@ -443,8 +464,8 @@ public:
     /// instead.
     ///
     bool isClose(const Rect2x& other, float relTol = 1e-5f, float absTol = 0.0f) const {
-        return pMin_.isClose(other.pMin_, relTol, absTol) &&
-               pMax_.isClose(other.pMax_, relTol, absTol);
+        return pMin_.isClose(other.pMin_, relTol, absTol)
+            && pMax_.isClose(other.pMax_, relTol, absTol);
     }
 
     /// Returns whether the euclidean distances between the corners of this
@@ -458,8 +479,8 @@ public:
     /// should use `isClose()` instead.
     ///
     bool isNear(const Rect2x& other, float absTol) const {
-        return pMin_.isNear(other.pMin_, absTol) &&
-               pMax_.isNear(other.pMax_, absTol);
+        return pMin_.isNear(other.pMin_, absTol)
+            && pMax_.isNear(other.pMax_, absTol);
     }
 
     /// Returns whether all coordinates in this rectangle are within some
@@ -474,8 +495,8 @@ public:
     /// should use `isClose()` instead.
     ///
     bool allNear(const Rect2x& other, float absTol) const {
-        return pMin_.allNear(other.pMin_, absTol) &&
-               pMax_.allNear(other.pMax_, absTol);
+        return pMin_.allNear(other.pMin_, absTol)
+            && pMax_.allNear(other.pMax_, absTol);
     }
 
     /// Returns the smallest rectangle that contains both this rectangle
@@ -524,10 +545,11 @@ public:
     /// you can rely on it for your algorithms.
     ///
     constexpr Rect2x unitedWith(const Rect2x& other) const {
-        return Rect2x((std::min)(pMin_[0], other.pMin_[0]),
-                      (std::min)(pMin_[1], other.pMin_[1]),
-                      (std::max)(pMax_[0], other.pMax_[0]),
-                      (std::max)(pMax_[1], other.pMax_[1]));
+        return Rect2x(
+            (std::min)(pMin_[0], other.pMin_[0]),
+            (std::min)(pMin_[1], other.pMin_[1]),
+            (std::max)(pMax_[0], other.pMax_[0]),
+            (std::max)(pMax_[1], other.pMax_[1]));
     }
 
     /// Returns the smallest rectangle that contains both this rectangle
@@ -543,10 +565,11 @@ public:
     /// rectangle reduced to just the point.
     ///
     constexpr Rect2x unitedWith(const Vec2x& point) const {
-        return Rect2x((std::min)(pMin_[0], point[0]),
-                      (std::min)(pMin_[1], point[1]),
-                      (std::max)(pMax_[0], point[0]),
-                      (std::max)(pMax_[1], point[1]));
+        return Rect2x(
+            (std::min)(pMin_[0], point[0]),
+            (std::min)(pMin_[1], point[1]),
+            (std::max)(pMax_[0], point[0]),
+            (std::max)(pMax_[1], point[1]));
     }
 
     /// Unites this rectangle in-place with the `other` rectangle.
@@ -600,10 +623,11 @@ public:
     /// with an empty rectangle always results in an empty rectangle.
     ///
     constexpr Rect2x intersectedWith(const Rect2x& other) const {
-        return Rect2x((std::max)(pMin_[0], other.pMin_[0]),
-                      (std::max)(pMin_[1], other.pMin_[1]),
-                      (std::min)(pMax_[0], other.pMax_[0]),
-                      (std::min)(pMax_[1], other.pMax_[1]));
+        return Rect2x(
+            (std::max)(pMin_[0], other.pMin_[0]),
+            (std::max)(pMin_[1], other.pMin_[1]),
+            (std::min)(pMax_[0], other.pMax_[0]),
+            (std::min)(pMax_[1], other.pMax_[1]));
     }
 
     /// Intersects this rectangle in-place with the `other` rectangle.
@@ -622,10 +646,10 @@ public:
     /// with `Rect2x::empty`.
     ///
     constexpr bool intersects(const Rect2x& other) const {
-        return other.pMin_[0] <= pMax_[0] &&
-               other.pMin_[1] <= pMax_[1] &&
-               pMin_[0] <= other.pMax_[0] &&
-               pMin_[1] <= other.pMax_[1];
+        return other.pMin_[0] <= pMax_[0]
+            && other.pMin_[1] <= pMax_[1]
+            && pMin_[0] <= other.pMax_[0]
+            && pMin_[1] <= other.pMax_[1];
     }
 
     /// Returns whether this rectangle entirely contains the `other` rectangle.
@@ -634,10 +658,10 @@ public:
     /// with `Rect2x::empty`.
     ///
     constexpr bool contains(const Rect2x& other) const {
-        return other.pMax_[0] <= pMax_[0] &&
-               other.pMax_[1] <= pMax_[1] &&
-               pMin_[0] <= other.pMin_[0] &&
-               pMin_[1] <= other.pMin_[1];
+        return other.pMax_[0] <= pMax_[0]
+            && other.pMax_[1] <= pMax_[1]
+            && pMin_[0] <= other.pMin_[0]
+            && pMin_[1] <= other.pMin_[1];
     }
 
     /// Returns whether this rectangle contains the given `point`.
@@ -645,10 +669,10 @@ public:
     /// If this rectangle is an empty rectangle, then this method always return false.
     ///
     constexpr bool contains(const Vec2x& point) const {
-        return point[0] <= pMax_[0] &&
-               point[1] <= pMax_[1] &&
-               pMin_[0] <= point[0] &&
-               pMin_[1] <= point[1];
+        return point[0] <= pMax_[0]
+            && point[1] <= pMax_[1]
+            && pMin_[0] <= point[0]
+            && pMin_[1] <= point[1];
     }
 
     /// Returns whether this rectangle contains the given point (`x`, `y`).
@@ -665,8 +689,8 @@ private:
 };
 
 inline constexpr Rect2x Rect2x::empty = Rect2x(
-      core::infinity<float>,   core::infinity<float>,
-    - core::infinity<float>, - core::infinity<float>);
+     core::infinity<float>,  core::infinity<float>,
+    -core::infinity<float>, -core::infinity<float>);
 
 /// Alias for `vgc::core::Array<vgc::core::Rect2x>`.
 ///
@@ -729,7 +753,8 @@ struct fmt::formatter<vgc::geometry::Rect2x> {
     }
     template <typename FormatContext>
     auto format(const vgc::geometry::Rect2x r, FormatContext& ctx) {
-        return format_to(ctx.out(),"({}, {}, {}, {})", r.xMin(), r.yMin(), r.xMax(), r.yMax());
+        return format_to(ctx.out(),"({}, {}, {}, {})",
+                         r.xMin(), r.yMin(), r.xMax(), r.yMax());
     }
 };
 

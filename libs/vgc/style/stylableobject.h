@@ -74,7 +74,7 @@ public:
     /// Adds a class.
     ///
     void add(core::StringId class_) {
-        if(!contains(class_)) {
+        if (!contains(class_)) {
             a_.append(class_);
         }
     }
@@ -205,7 +205,7 @@ public:
 
     /// Removes the given style class to this `StylableObject`.
     ///
-    void removeStyleClass(core::StringId class_) ;
+    void removeStyleClass(core::StringId class_);
 
     /// Toggles the given style class to this `StylableObject`.
     ///
@@ -252,7 +252,7 @@ public:
     ///
     virtual const StyleSheet* defaultStyleSheet() const = 0;
 
-protected :
+protected:
     StylableObject();
 
 private:

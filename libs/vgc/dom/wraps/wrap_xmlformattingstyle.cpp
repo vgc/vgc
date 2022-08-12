@@ -17,20 +17,17 @@
 #include <vgc/core/wraps/common.h>
 #include <vgc/dom/xmlformattingstyle.h>
 
-using vgc::dom::XmlIndentStyle;
 using vgc::dom::XmlFormattingStyle;
+using vgc::dom::XmlIndentStyle;
 
-void wrap_xmlformattingstyle(py::module& m)
-{
+void wrap_xmlformattingstyle(py::module& m) {
     py::enum_<XmlIndentStyle>(m, "XmlIndentStyle")
         .value("Spaces", XmlIndentStyle::Spaces)
-        .value("Tabs", XmlIndentStyle::Tabs)
-    ;
+        .value("Tabs", XmlIndentStyle::Tabs);
 
     py::class_<XmlFormattingStyle>(m, "XmlFormattingStyle")
         .def(py::init<>())
         .def_readwrite("indentStyle", &XmlFormattingStyle::indentStyle)
         .def_readwrite("indentSize", &XmlFormattingStyle::indentSize)
-        .def_readwrite("attributeIndentSize", &XmlFormattingStyle::attributeIndentSize)
-    ;
+        .def_readwrite("attributeIndentSize", &XmlFormattingStyle::attributeIndentSize);
 }

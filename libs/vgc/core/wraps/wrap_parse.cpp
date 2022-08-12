@@ -14,10 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/core/parse.h>
+#include <vgc/core/wraps/common.h>
 
-void wrap_parse(py::module& /*m*/)
-{
-
+void wrap_parse(py::module& /*m*/) {
 }

@@ -24,8 +24,7 @@
 // TODO: Use Google Benchmark and separate benchmarks from unit tests
 #include <vgc/core/stopwatch.h>
 
-TEST(TestFormat, WriteChar)
-{
+TEST(TestFormat, WriteChar) {
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << 'a';
@@ -33,8 +32,7 @@ TEST(TestFormat, WriteChar)
     EXPECT_EQ(s, "ab");
 }
 
-TEST(TestFormat, WriteCString)
-{
+TEST(TestFormat, WriteCString) {
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << "Hello";
@@ -42,12 +40,11 @@ TEST(TestFormat, WriteCString)
     EXPECT_EQ(s, "Hello World!");
 }
 
-TEST(TestFormat, WriteInt8)
-{
-    signed char   c = 'A';
+TEST(TestFormat, WriteInt8) {
+    signed char c = 'A';
     unsigned char d = 'A';
-    vgc::Int8     i = 65;
-    vgc::UInt8    j = 65;
+    vgc::Int8 i = 65;
+    vgc::UInt8 j = 65;
 
     std::ostringstream oss;
     oss << c << d << i << j;
@@ -60,8 +57,7 @@ TEST(TestFormat, WriteInt8)
 }
 
 template<typename T>
-void testWriteInteger(T x)
-{
+void testWriteInteger(T x) {
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << x;
@@ -69,15 +65,13 @@ void testWriteInteger(T x)
 }
 
 template<typename T>
-void testWriteIntegers()
-{
+void testWriteIntegers() {
     testWriteInteger<T>(0);
     testWriteInteger<T>(vgc::core::tmin<T>);
     testWriteInteger<T>(vgc::core::tmax<T>);
 }
 
-TEST(TestFormat, WriteIntegers)
-{
+TEST(TestFormat, WriteIntegers) {
     testWriteIntegers<vgc::Int>();
     testWriteIntegers<vgc::Int8>();
     testWriteIntegers<vgc::Int16>();
@@ -91,8 +85,7 @@ TEST(TestFormat, WriteIntegers)
 }
 
 template<typename T, VGC_REQUIRES(std::is_floating_point_v<T>)>
-void writeFloat(T x, const char* expected)
-{
+void writeFloat(T x, const char* expected) {
     std::string s;
     vgc::core::StringWriter sw(s);
     sw << x;
@@ -100,12 +93,11 @@ void writeFloat(T x, const char* expected)
 }
 
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(push)
-#  pragma warning(disable: 4723) // potential divide by 0
+#    pragma warning(push)
+#    pragma warning(disable : 4723) // potential divide by 0
 #endif
 template<typename T>
-void writeFloatsCreatedViaDivideByZero()
-{
+void writeFloatsCreatedViaDivideByZero() {
     T zero = static_cast<T>(0);
     T one = static_cast<T>(1);
     writeFloat(one / zero, "inf");
@@ -114,12 +106,11 @@ void writeFloatsCreatedViaDivideByZero()
     writeFloat(-zero / zero, "nan");
 }
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(pop)
+#    pragma warning(pop)
 #endif
 
 template<typename T>
-void writeFloats()
-{
+void writeFloats() {
     T zero = static_cast<T>(0);
     T inf = std::numeric_limits<T>::infinity();
     writeFloat(zero, "0");
@@ -127,30 +118,29 @@ void writeFloats()
     writeFloat(inf, "inf");
     writeFloat(-inf, "-inf");
     writeFloatsCreatedViaDivideByZero<T>();
-    writeFloat(static_cast<T>( 42.0),               "42");
-    writeFloat(static_cast<T>( 420.0),              "420");
-    writeFloat(static_cast<T>( 1988.42),            "1988.42");
-    writeFloat(static_cast<T>( 0.000010),           "0.00001");
-    writeFloat(static_cast<T>( 0.0000000000004),    "0");
-    writeFloat(static_cast<T>( 0.0000000000006),    "0.000000000001");
-    writeFloat(static_cast<T>( 41.99999999999999),  "42");
-    writeFloat(static_cast<T>(-42.0),              "-42");
-    writeFloat(static_cast<T>(-420.0),             "-420");
-    writeFloat(static_cast<T>(-1988.42),           "-1988.42");
-    writeFloat(static_cast<T>(-0.000010),          "-0.00001");
-    writeFloat(static_cast<T>(-0.0000000000004),    "0");
-    writeFloat(static_cast<T>(-0.0000000000006),   "-0.000000000001");
+    writeFloat(static_cast<T>(42.0), "42");
+    writeFloat(static_cast<T>(420.0), "420");
+    writeFloat(static_cast<T>(1988.42), "1988.42");
+    writeFloat(static_cast<T>(0.000010), "0.00001");
+    writeFloat(static_cast<T>(0.0000000000004), "0");
+    writeFloat(static_cast<T>(0.0000000000006), "0.000000000001");
+    writeFloat(static_cast<T>(41.99999999999999), "42");
+    writeFloat(static_cast<T>(-42.0), "-42");
+    writeFloat(static_cast<T>(-420.0), "-420");
+    writeFloat(static_cast<T>(-1988.42), "-1988.42");
+    writeFloat(static_cast<T>(-0.000010), "-0.00001");
+    writeFloat(static_cast<T>(-0.0000000000004), "0");
+    writeFloat(static_cast<T>(-0.0000000000006), "-0.000000000001");
     writeFloat(static_cast<T>(-41.99999999999999), "-42");
 }
 
-TEST(TestFormat, WriteFloats)
-{
+TEST(TestFormat, WriteFloats) {
     writeFloats<float>();
 
     writeFloat(0.1234567890123456f, "0.123457");
     writeFloat(0.012345601f, "0.0123456");
     writeFloat(0.012345641f, "0.0123456");
-//  writeFloat(0.012345651f, unspecified);
+    //  writeFloat(0.012345651f, unspecified);
     writeFloat(0.012345661f, "0.0123457");
     writeFloat(0.012345691f, "0.0123457");
     writeFloat(0.012345991f, "0.012346");
@@ -160,33 +150,33 @@ TEST(TestFormat, WriteFloats)
     writeFloat(0.019999991f, "0.02");
     writeFloat(0.099999991f, "0.1");
     writeFloat(0.999999991f, "1");
-    writeFloat(12345601.f,  "12345600");
-    writeFloat(12345641.f,  "12345600");
-//  writeFloat(12345651.f,  unspecified);
-    writeFloat(12345661.f,  "12345700");
-    writeFloat(12345691.f,  "12345700");
-    writeFloat(12345991.f,  "12346000");
-    writeFloat(12349991.f,  "12350000");
-    writeFloat(12399991.f,  "12400000");
-    writeFloat(12999991.f,  "13000000");
-    writeFloat(19999991.f,  "20000000");
+    writeFloat(12345601.f, "12345600");
+    writeFloat(12345641.f, "12345600");
+    //  writeFloat(12345651.f,  unspecified);
+    writeFloat(12345661.f, "12345700");
+    writeFloat(12345691.f, "12345700");
+    writeFloat(12345991.f, "12346000");
+    writeFloat(12349991.f, "12350000");
+    writeFloat(12399991.f, "12400000");
+    writeFloat(12999991.f, "13000000");
+    writeFloat(19999991.f, "20000000");
     writeFloat(99999991.f, "100000000");
-    writeFloat(1234.5601f,  "1234.56");
-    writeFloat(1234.5641f,  "1234.56");
-//  writeFloat(1234.5651f,  unspecified);
-    writeFloat(1234.5661f,  "1234.57");
-    writeFloat(1234.5691f,  "1234.57");
-    writeFloat(1234.5991f,  "1234.6");
-    writeFloat(1234.9991f,  "1235");
-    writeFloat(1239.9991f,  "1240");
-    writeFloat(1299.9991f,  "1300");
-    writeFloat(1999.9991f,  "2000");
+    writeFloat(1234.5601f, "1234.56");
+    writeFloat(1234.5641f, "1234.56");
+    //  writeFloat(1234.5651f,  unspecified);
+    writeFloat(1234.5661f, "1234.57");
+    writeFloat(1234.5691f, "1234.57");
+    writeFloat(1234.5991f, "1234.6");
+    writeFloat(1234.9991f, "1235");
+    writeFloat(1239.9991f, "1240");
+    writeFloat(1299.9991f, "1300");
+    writeFloat(1999.9991f, "2000");
     writeFloat(9999.9991f, "10000");
 
     writeFloat(-0.1234567890123456f, "-0.123457");
     writeFloat(-0.012345601f, "-0.0123456");
     writeFloat(-0.012345641f, "-0.0123456");
-//  writeFloat(-0.012345651f, unspecified);
+    //  writeFloat(-0.012345651f, unspecified);
     writeFloat(-0.012345661f, "-0.0123457");
     writeFloat(-0.012345691f, "-0.0123457");
     writeFloat(-0.012345991f, "-0.012346");
@@ -196,59 +186,57 @@ TEST(TestFormat, WriteFloats)
     writeFloat(-0.019999991f, "-0.02");
     writeFloat(-0.099999991f, "-0.1");
     writeFloat(-0.999999991f, "-1");
-    writeFloat(-12345601.f,  "-12345600");
-    writeFloat(-12345641.f,  "-12345600");
-//  writeFloat(-12345651.f,  unspecified);
-    writeFloat(-12345661.f,  "-12345700");
-    writeFloat(-12345691.f,  "-12345700");
-    writeFloat(-12345991.f,  "-12346000");
-    writeFloat(-12349991.f,  "-12350000");
-    writeFloat(-12399991.f,  "-12400000");
-    writeFloat(-12999991.f,  "-13000000");
-    writeFloat(-19999991.f,  "-20000000");
+    writeFloat(-12345601.f, "-12345600");
+    writeFloat(-12345641.f, "-12345600");
+    //  writeFloat(-12345651.f,  unspecified);
+    writeFloat(-12345661.f, "-12345700");
+    writeFloat(-12345691.f, "-12345700");
+    writeFloat(-12345991.f, "-12346000");
+    writeFloat(-12349991.f, "-12350000");
+    writeFloat(-12399991.f, "-12400000");
+    writeFloat(-12999991.f, "-13000000");
+    writeFloat(-19999991.f, "-20000000");
     writeFloat(-99999991.f, "-100000000");
-    writeFloat(-1234.5601f,  "-1234.56");
-    writeFloat(-1234.5641f,  "-1234.56");
-//  writeFloat(-1234.5651f,  unspecified);
-    writeFloat(-1234.5661f,  "-1234.57");
-    writeFloat(-1234.5691f,  "-1234.57");
-    writeFloat(-1234.5991f,  "-1234.6");
-    writeFloat(-1234.9991f,  "-1235");
-    writeFloat(-1239.9991f,  "-1240");
-    writeFloat(-1299.9991f,  "-1300");
-    writeFloat(-1999.9991f,  "-2000");
+    writeFloat(-1234.5601f, "-1234.56");
+    writeFloat(-1234.5641f, "-1234.56");
+    //  writeFloat(-1234.5651f,  unspecified);
+    writeFloat(-1234.5661f, "-1234.57");
+    writeFloat(-1234.5691f, "-1234.57");
+    writeFloat(-1234.5991f, "-1234.6");
+    writeFloat(-1234.9991f, "-1235");
+    writeFloat(-1239.9991f, "-1240");
+    writeFloat(-1299.9991f, "-1300");
+    writeFloat(-1999.9991f, "-2000");
     writeFloat(-9999.9991f, "-10000");
 }
 
-TEST(TestFormat, WriteDoubles)
-{
+TEST(TestFormat, WriteDoubles) {
     writeFloats<double>();
 
-    writeFloat(0.1234567890123456,   "0.123456789012");
-    writeFloat(0.1234567890124,      "0.123456789012");
-//  writeFloat(0.1234567890125,      unspecified);
-    writeFloat(0.1234567890126,      "0.123456789013");
-    writeFloat(0.9999999999994,      "0.999999999999");
-    writeFloat(0.9999999999996,      "1");
+    writeFloat(0.1234567890123456, "0.123456789012");
+    writeFloat(0.1234567890124, "0.123456789012");
+    //  writeFloat(0.1234567890125,      unspecified);
+    writeFloat(0.1234567890126, "0.123456789013");
+    writeFloat(0.9999999999994, "0.999999999999");
+    writeFloat(0.9999999999996, "1");
     writeFloat(1234567890.123456789, "1234567890.12346");
-    writeFloat(999999999999999.,     "999999999999999");
-    writeFloat(9999999999999994.,    "9999999999999990");
-    writeFloat(9999999999999996.,    "10000000000000000");
+    writeFloat(999999999999999., "999999999999999");
+    writeFloat(9999999999999994., "9999999999999990");
+    writeFloat(9999999999999996., "10000000000000000");
 
-    writeFloat(-0.1234567890123456,   "-0.123456789012");
-    writeFloat(-0.1234567890124,      "-0.123456789012");
-//  writeFloat(-0.1234567890125,      unspecified);
-    writeFloat(-0.1234567890126,      "-0.123456789013");
-    writeFloat(-0.9999999999994,      "-0.999999999999");
-    writeFloat(-0.9999999999996,      "-1");
+    writeFloat(-0.1234567890123456, "-0.123456789012");
+    writeFloat(-0.1234567890124, "-0.123456789012");
+    //  writeFloat(-0.1234567890125,      unspecified);
+    writeFloat(-0.1234567890126, "-0.123456789013");
+    writeFloat(-0.9999999999994, "-0.999999999999");
+    writeFloat(-0.9999999999996, "-1");
     writeFloat(-1234567890.123456789, "-1234567890.12346");
-    writeFloat(-999999999999999.,     "-999999999999999");
-    writeFloat(-9999999999999994.,    "-9999999999999990");
-    writeFloat(-9999999999999996.,    "-10000000000000000");
+    writeFloat(-999999999999999., "-999999999999999");
+    writeFloat(-9999999999999994., "-9999999999999990");
+    writeFloat(-9999999999999996., "-10000000000000000");
 }
 
-TEST(TestFormat, WriteMixed)
-{
+TEST(TestFormat, WriteMixed) {
     vgc::Int x = 42;
     std::string s;
     vgc::core::StringWriter sw(s);
@@ -256,8 +244,7 @@ TEST(TestFormat, WriteMixed)
     EXPECT_EQ(s, "The value of x is: 42\n");
 }
 
-TEST(TestFormat, WriteVariadic)
-{
+TEST(TestFormat, WriteVariadic) {
     int x = 42;
     double y = 1.5;
     std::string s;
@@ -266,19 +253,18 @@ TEST(TestFormat, WriteVariadic)
     EXPECT_EQ(s, "(42, 1.5)");
 }
 
-TEST(TestFormat, Benchmark)
-{
+TEST(TestFormat, Benchmark) {
     vgc::core::Stopwatch t;
     int n = 1000000;
     std::vector<int> v;
     v.reserve(n);
-    for (int i = 0; i < n ; ++i) {
+    for (int i = 0; i < n; ++i) {
         v.push_back(i);
     }
 
     t.restart();
     std::string s1a;
-    s1a.reserve(6*n);
+    s1a.reserve(6 * n);
     vgc::core::StringWriter sw1a(s1a);
     for (int x : v) {
         sw1a << x;
@@ -303,7 +289,7 @@ TEST(TestFormat, Benchmark)
 
     t.restart();
     std::string s3a;
-    s3a.reserve(6*n);
+    s3a.reserve(6 * n);
     for (int x : v) {
         s3a += vgc::core::toString(x);
     }
@@ -318,7 +304,7 @@ TEST(TestFormat, Benchmark)
 
     t.restart();
     std::string s4a;
-    s4a.reserve(6*n);
+    s4a.reserve(6 * n);
     for (int x : v) {
         s4a += std::to_string(x);
     }
@@ -342,13 +328,20 @@ TEST(TestFormat, Benchmark)
     // Print timings. These normally don't show up if the test
     // succeeds, but you can manually run the test binary.
     auto unit = vgc::core::TimeUnit::Microseconds;
-    std::cout << "StringWriter (reserved) ........... " << std::setw(10) << vgc::core::secondsToString(t1a, unit) << "\n";
-    std::cout << "StringWriter (not reserved) ....... " << std::setw(10) << vgc::core::secondsToString(t1b, unit) << "\n";
-    std::cout << "std::ostringstream (N/A) .......... " << std::setw(10) << vgc::core::secondsToString(t2, unit)  << "\n";
-    std::cout << "toString(x) (reserved) ............ " << std::setw(10) << vgc::core::secondsToString(t3a, unit) << "\n";
-    std::cout << "toString(x) (not reserved) ........ " << std::setw(10) << vgc::core::secondsToString(t3b, unit) << "\n";
-    std::cout << "std::to_string(x) (reserved) ...... " << std::setw(10) << vgc::core::secondsToString(t4a, unit) << "\n";
-    std::cout << "std::to_string(x) (not reserved) .. " << std::setw(10) << vgc::core::secondsToString(t4b, unit) << "\n";
+    std::cout << "StringWriter (reserved) ........... " << std::setw(10)
+              << vgc::core::secondsToString(t1a, unit) << "\n";
+    std::cout << "StringWriter (not reserved) ....... " << std::setw(10)
+              << vgc::core::secondsToString(t1b, unit) << "\n";
+    std::cout << "std::ostringstream (N/A) .......... " << std::setw(10)
+              << vgc::core::secondsToString(t2, unit) << "\n";
+    std::cout << "toString(x) (reserved) ............ " << std::setw(10)
+              << vgc::core::secondsToString(t3a, unit) << "\n";
+    std::cout << "toString(x) (not reserved) ........ " << std::setw(10)
+              << vgc::core::secondsToString(t3b, unit) << "\n";
+    std::cout << "std::to_string(x) (reserved) ...... " << std::setw(10)
+              << vgc::core::secondsToString(t4a, unit) << "\n";
+    std::cout << "std::to_string(x) (not reserved) .. " << std::setw(10)
+              << vgc::core::secondsToString(t4b, unit) << "\n";
 
     // Example output (Intel i7-7700K, 32GM RAM, Ubuntu 18.04, gcc 7.4.0 with -O3 -DNDEBUG):
     //
@@ -361,8 +354,7 @@ TEST(TestFormat, Benchmark)
     // std::to_string(x) (not reserved) ..   60112µs
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

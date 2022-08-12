@@ -18,7 +18,6 @@
 
 namespace vgc::dom::strings {
 
-
 const core::StringId New_Document("New Document");
 const core::StringId Open_Document("Open Document");
 

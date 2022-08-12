@@ -29,15 +29,14 @@ class ConsoleMargin;
 /// \class vgc::core::Console
 /// \brief GUI around the Python interpreter
 ///
-class VGC_WIDGETS_API Console : public QPlainTextEdit
-{
+class VGC_WIDGETS_API Console : public QPlainTextEdit {
+private:
     Q_OBJECT
 
 public:
     /// Constructs a Console.
     ///
-    Console(core::PythonInterpreter* interpreter,
-            QWidget* parent = nullptr);
+    Console(core::PythonInterpreter* interpreter, QWidget* parent = nullptr);
 
     /// Destructs a Console.
     ///
@@ -133,8 +132,8 @@ private:
 /// via Console::margin. However, it was unclear how to achieve this in the
 /// given time constraints, which is why we adopted this simpler solution.
 ///
-class VGC_WIDGETS_API ConsoleMargin : public QWidget
-{
+class VGC_WIDGETS_API ConsoleMargin : public QWidget {
+private:
     Q_OBJECT
 
 public:

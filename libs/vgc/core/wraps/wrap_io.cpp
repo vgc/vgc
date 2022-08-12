@@ -14,10 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/core/io.h>
+#include <vgc/core/wraps/common.h>
 
-void wrap_io(py::module& m)
-{
+void wrap_io(py::module& m) {
     m.def("readFile", &vgc::core::readFile);
 }

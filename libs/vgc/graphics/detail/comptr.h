@@ -24,15 +24,13 @@ class ComPtr {
 public:
     ComPtr() noexcept = default;
     ComPtr(T* p)
-        : p_(p)
-    {
+        : p_(p) {
         if (p_) {
             p_->AddRef();
         }
     }
 
-    ~ComPtr()
-    {
+    ~ComPtr() {
         if (p_) {
             p_->Release();
         }
@@ -40,16 +38,14 @@ public:
 
     template<typename U>
     ComPtr(const ComPtr<U>& other)
-        : p_(other.p_)
-    {
+        : p_(other.p_) {
         if (p_) {
             p_->AddRef();
         }
     }
 
     ComPtr(const ComPtr& other)
-        : p_(other.p_)
-    {
+        : p_(other.p_) {
         if (p_) {
             p_->AddRef();
         }
@@ -57,14 +53,12 @@ public:
 
     template<typename U>
     ComPtr(ComPtr<U>&& other) noexcept
-        : p_(other.p_)
-    {
+        : p_(other.p_) {
         other.p_ = nullptr;
     }
 
     ComPtr(ComPtr&& other) noexcept
-        : p_(other.p_)
-    {
+        : p_(other.p_) {
         other.p_ = nullptr;
     }
 
@@ -82,26 +76,22 @@ public:
         return *this;
     }
 
-    ComPtr& operator=(const ComPtr& other)
-    {
+    ComPtr& operator=(const ComPtr& other) {
         return operator=<T>(other);
     }
 
     template<typename U>
-    ComPtr& operator=(ComPtr<U>&& other)
-    {
+    ComPtr& operator=(ComPtr<U>&& other) {
         std::swap(p_, other.p_);
         return *this;
     }
 
-    ComPtr& operator=(ComPtr&& other)
-    {
+    ComPtr& operator=(ComPtr&& other) {
         std::swap(p_, other.p_);
         return *this;
     }
 
-    ComPtr& operator=(T* p)
-    {
+    ComPtr& operator=(T* p) {
         reset();
         p_ = p;
         if (p_) {
@@ -110,42 +100,35 @@ public:
         return *this;
     }
 
-    T* get() const
-    {
+    T* get() const {
         return p_;
     }
 
-    void reset()
-    {
+    void reset() {
         if (p_) {
             p_->Release();
             p_ = nullptr;
         }
     }
 
-    T** releaseAndGetAddressOf()
-    {
+    T** releaseAndGetAddressOf() {
         reset();
         return &p_;
     }
 
-    explicit operator bool() const noexcept
-    {
+    explicit operator bool() const noexcept {
         return p_ != nullptr;
     }
 
-    T& operator*() const noexcept
-    {
+    T& operator*() const noexcept {
         return *p_;
     }
 
-    T* operator->() const noexcept
-    {
+    T* operator->() const noexcept {
         return p_;
     }
 
-    T* const* operator&()
-    {
+    T* const* operator&() {
         return &p_;
     }
 

@@ -26,8 +26,8 @@ namespace widgets {
 /// \class vgc::widgets::ColorDialog
 /// \brief Dialog widget for selecting colors.
 ///
-class VGC_WIDGETS_API ColorDialog : public QColorDialog
-{
+class VGC_WIDGETS_API ColorDialog : public QColorDialog {
+private:
     Q_OBJECT
 
 public:

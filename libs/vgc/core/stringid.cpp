@@ -22,8 +22,7 @@
 namespace vgc {
 namespace core {
 
-StringId::StringId(const std::string& s)
-{
+StringId::StringId(const std::string& s) {
     using StringPool = std::unordered_set<std::string>;
 
     // Declare a global string pool with static storage duration. We

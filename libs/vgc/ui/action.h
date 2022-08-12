@@ -34,7 +34,7 @@ private:
     VGC_OBJECT(Action, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-protected :
+protected:
     Action();
     explicit Action(const Shortcut& shortcut);
 
@@ -63,11 +63,12 @@ public:
     /// Returns the shortcut associated with this action. This can be an empty
     /// shortcut if this action has no associated shortcut.
     ///
-    const Shortcut& shortcut() const { return shortcut_; }
+    const Shortcut& shortcut() const {
+        return shortcut_;
+    }
 
 private:
     Shortcut shortcut_;
-
 };
 
 } // namespace ui

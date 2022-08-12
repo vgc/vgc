@@ -16,7 +16,7 @@
 
 #include <vgc/style/token.h>
 
-#include <string.h> // strcmp
+#include <string.h>         // strcmp
 #include <vgc/core/parse.h> // readTo double and integer
 
 namespace vgc::style {
@@ -46,7 +46,7 @@ const char* toStringLiteral(StyleTokenType type) {
         "LeftParenthesis",
         "RightParenthesis",
         "LeftCurlyBracket",
-        "RightCurlyBracket"
+        "RightCurlyBracket",
     };
     return s[static_cast<Int8>(type)];
 }
@@ -66,22 +66,17 @@ const char eof = '\0';
 const char* replacementCharacter = u8"\uFFFD";
 
 // https://www.w3.org/TR/css-syntax-3/#digit
-bool isDigit_(char c)
-{
+bool isDigit_(char c) {
     return (c >= '0' && c <= '9');
 }
 
 // https://www.w3.org/TR/css-syntax-3/#hex-digit
-bool isHexDigit_(char c)
-{
-    return (c >= '0' && c <= '9') ||
-           (c >= 'A' && c <= 'F') ||
-           (c >= 'a' && c <= 'f');
+bool isHexDigit_(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }
 
 // https://www.w3.org/TR/css-syntax-3/#hex-digit
-UInt32 hexDigitToUInt32_(char c)
-{
+UInt32 hexDigitToUInt32_(char c) {
     if (c >= '0' && c <= '9') {
         return c - '0';
     }
@@ -94,67 +89,54 @@ UInt32 hexDigitToUInt32_(char c)
 }
 
 // https://infra.spec.whatwg.org/#surrogate
-bool isSurrogateCodePoint_(UInt32 c)
-{
+bool isSurrogateCodePoint_(UInt32 c) {
     return c >= 0xD800 && c <= 0xDFFF;
 }
 
 // https://www.w3.org/TR/css-syntax-3/#maximum-allowed-code-point
-bool isGreaterThanMaximumAllowedCodePoint_(UInt32 c)
-{
+bool isGreaterThanMaximumAllowedCodePoint_(UInt32 c) {
     return c > 0x10FFFF;
 }
 
 // https://www.w3.org/TR/css-syntax-3/#uppercase-letter
-bool isUppercaseLetter_(char c)
-{
+bool isUppercaseLetter_(char c) {
     return (c >= 'A' && c <= 'Z');
 }
 
 // https://www.w3.org/TR/css-syntax-3/#lowercase-letter
-bool isLowercaseLetter_(char c)
-{
+bool isLowercaseLetter_(char c) {
     return (c >= 'a' && c <= 'z');
 }
 
 // https://www.w3.org/TR/css-syntax-3/#letter
-bool isLetter_(char c)
-{
+bool isLetter_(char c) {
     return isUppercaseLetter_(c) || isLowercaseLetter_(c);
 }
 
 // https://www.w3.org/TR/css-syntax-3/#non-ascii-code-point
-bool isNonAsciiCodePoint_(char c)
-{
+bool isNonAsciiCodePoint_(char c) {
     unsigned char c_ = static_cast<char>(c);
     return c_ >= 0x80;
 }
 
 // https://www.w3.org/TR/css-syntax-3/#name-start-code-point
-bool isNameStartCodePoint_(char c)
-{
+bool isNameStartCodePoint_(char c) {
     return isLetter_(c) || isNonAsciiCodePoint_(c) || c == '_';
 }
 
 // https://www.w3.org/TR/css-syntax-3/#name-code-point
-bool isNameCodePoint_(char c)
-{
+bool isNameCodePoint_(char c) {
     return isNameStartCodePoint_(c) || isDigit_(c) || c == '-';
 }
 
 // https://www.w3.org/TR/css-syntax-3/#non-printable-code-point
-bool isNonPrintableCodePoint_(char c)
-{
+bool isNonPrintableCodePoint_(char c) {
     unsigned char c_ = static_cast<char>(c);
-    return c_ <= 0x08 ||
-           c_ == 0x0B ||
-           (c_ >= 0x0E && c_ <= 0x1F) ||
-           c_ == 0x7F;
+    return c_ <= 0x08 || c_ == 0x0B || (c_ >= 0x0E && c_ <= 0x1F) || c_ == 0x7F;
 }
 
 // https://www.w3.org/TR/css-syntax-3/#whitespace
-bool isWhitespace_(char c)
-{
+bool isWhitespace_(char c) {
     return c == '\n' || c == '\t' || c == ' ';
 }
 
@@ -201,12 +183,13 @@ public:
     // character range must outlive the TokenStream, since the tokens point to
     // characters in the range. The given character range is assumed to be
     // already "decoded" and contain a final '\0' character.
-    TokenStream(const char* s) :
-        c1p_(nullptr),
-        c1_(eof),
-        c2_(*s),
-        token_(s),
-        hasNext_(false) {}
+    TokenStream(const char* s)
+        : c1p_(nullptr)
+        , c1_(eof)
+        , c2_(*s)
+        , token_(s)
+        , hasNext_(false) {
+    }
 
     // Consumes and returns the next token. The behavior is undefined if the
     // previous token was 'Eof'.
@@ -231,14 +214,14 @@ public:
 private:
     // https://www.w3.org/TR/css-syntax-3/#current-input-code-point
     // https://www.w3.org/TR/css-syntax-3/#next-input-code-point
-    const char* c1p_; // pointer to first byte of current input code point
-    char c1_;         // == *c1p_
-    char c2_;         // == *token_.end
-    char c3_;         // == *(token_.end+1)    (or eof if c2_ is eof)
-    char c4_;         // == *(token_.end+2)    (or eof if c3_ is eof)
+    const char* c1p_;  // pointer to first byte of current input code point
+    char c1_;          // == *c1p_
+    char c2_;          // == *token_.end
+    char c3_;          // == *(token_.end+1)    (or eof if c2_ is eof)
+    char c4_;          // == *(token_.end+2)    (or eof if c3_ is eof)
     StyleToken token_; // Last consumed token or currently being consumed token
-                  // token_.end: pointer to first byte of next input code point
-    bool hasNext_; // Whether the next token is already computed
+                       // token_.end: pointer to first byte of next input code point
+    bool hasNext_;     // Whether the next token is already computed
 
     // Consumes the next input code point. This advances token_.end by one
     // UTF-8 encoded code point, and sets c1_ and c1_ accordingly.
@@ -305,7 +288,7 @@ private:
     // Add the current code point to the token value
     //
     void appendCurrentCodePointToTokenValue_() {
-        for(const char* c = c1p_; c != token_.end; ++c) {
+        for (const char* c = c1p_; c != token_.end; ++c) {
             token_.codePointsValue += *c;
         }
     }
@@ -565,10 +548,7 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#would-start-an-identifier
     bool startsIdentifier_(char c1, char c2, char c3) {
         if (c1 == '-') {
-            if (isNameStartCodePoint_(c2) ||
-                c2 == '-' ||
-                startsValidEscape_(c2, c3))
-            {
+            if (isNameStartCodePoint_(c2) || c2 == '-' || startsValidEscape_(c2, c3)) {
                 return true;
             }
             else {
@@ -613,7 +593,7 @@ private:
             // Consume as many hex digits as possible (max 6)
             int numDigits = 1;
             UInt32 codePoint = hexDigitToUInt32_(c1_);
-            while (numDigits < 6 && isHexDigit_(c2_ )) {
+            while (numDigits < 6 && isHexDigit_(c2_)) {
                 codePoint = 16 * codePoint + hexDigitToUInt32_(c2_);
                 ++numDigits;
                 consumeInput_();
@@ -625,10 +605,10 @@ private:
                 // See https://github.com/w3c/csswg-drafts/issues/5835
             }
             // Convert code point to UTF-8 bytes
-            if (codePoint == 0 ||
-                isSurrogateCodePoint_(codePoint) ||
-                isGreaterThanMaximumAllowedCodePoint_(codePoint))
-            {
+            if (codePoint == 0                      //
+                || isSurrogateCodePoint_(codePoint) //
+                || isGreaterThanMaximumAllowedCodePoint_(codePoint)) {
+
                 token_.codePointsValue += replacementCharacter;
             }
             else if (codePoint < 0x80) {
@@ -767,10 +747,10 @@ private:
         char c1 = token_.codePointsValue[0];
         char c2 = token_.codePointsValue[1];
         char c3 = token_.codePointsValue[2];
-        return (c1 == 'u' || c1 == 'U') &&
-               (c2 == 'r' || c2 == 'R') &&
-               (c3 == 'l' || c3 == 'L') &&
-               c2_ == '(';
+        return (c1 == 'u' || c1 == 'U')    //
+               && (c2 == 'r' || c2 == 'R') //
+               && (c3 == 'l' || c3 == 'L') //
+               && c2_ == '(';
     }
 
     // https://www.w3.org/TR/css-syntax-3/#consume-ident-like-token
@@ -785,9 +765,10 @@ private:
             while (isWhitespace_(c2_) && isWhitespace_(c3_)) {
                 consumeInput_();
             }
-            if (c2_ == '\"' || c2_ == '\'' ||
-                    (isWhitespace_(c2_) && (c3_ == '\"' || c3_ == '\'')))
-            {
+            if (c2_ == '\"'    //
+                || c2_ == '\'' //
+                || (isWhitespace_(c2_) && (c3_ == '\"' || c3_ == '\''))) {
+
                 token_.type = StyleTokenType::Function;
             }
             else {
@@ -854,9 +835,7 @@ private:
                 }
                 return;
             }
-            else if (c1_ == '\"' || c1_ == '\'' ||
-                     isNonPrintableCodePoint_(c1_))
-            {
+            else if (c1_ == '\"' || c1_ == '\'' || isNonPrintableCodePoint_(c1_)) {
                 // Parse error.
                 consumeBadUrlRemnants_();
                 return;
@@ -899,8 +878,7 @@ private:
 
 } // namespace
 
-std::string decodeStyleString(std::string_view s)
-{
+std::string decodeStyleString(std::string_view s) {
     std::string res;
     if (s.size() == 0) {
         // Nothing
@@ -979,8 +957,7 @@ std::string decodeStyleString(std::string_view s)
     return res;
 }
 
-StyleTokenArray tokenizeStyleString(const char* s)
-{
+StyleTokenArray tokenizeStyleString(const char* s) {
     StyleTokenArray res;
     TokenStream stream(s);
     while (true) {

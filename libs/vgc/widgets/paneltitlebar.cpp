@@ -31,9 +31,9 @@
 namespace vgc {
 namespace widgets {
 
-PanelTitleBar::PanelTitleBar(const QString& title, QWidget* parent) :
-    QFrame(parent)
-{
+PanelTitleBar::PanelTitleBar(const QString& title, QWidget* parent)
+    : QFrame(parent) {
+
     title_ = new QLabel(title);
     QHBoxLayout* layout = new QHBoxLayout();
     layout->setSpacing(0);
@@ -42,9 +42,7 @@ PanelTitleBar::PanelTitleBar(const QString& title, QWidget* parent) :
     setLayout(layout);
 }
 
-PanelTitleBar::~PanelTitleBar()
-{
-
+PanelTitleBar::~PanelTitleBar() {
 }
 
 } // namespace widgets

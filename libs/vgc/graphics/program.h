@@ -32,8 +32,8 @@ protected:
     using Resource::Resource;
 
     Program(ResourceRegistry* registry, BuiltinProgram builtinId)
-        : Resource(registry), builtinId_(builtinId)
-    {
+        : Resource(registry)
+        , builtinId_(builtinId) {
     }
 
 public:

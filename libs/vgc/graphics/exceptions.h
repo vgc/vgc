@@ -33,7 +33,9 @@ private:
 public:
     /// Constructs a FontError with the given \p reason.
     ///
-    explicit FontError(const std::string& reason) : core::RuntimeError(reason) {}
+    explicit FontError(const std::string& reason)
+        : core::RuntimeError(reason) {
+    }
 };
 
 } // namespace graphics

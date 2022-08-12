@@ -81,10 +81,12 @@ class VGC_GRAPHICS_API TextProperties {
 public:
     /// Constructs a TextProperties with the given alignment.
     ///
-    TextProperties(TextHorizontalAlign horizontalAlign = TextHorizontalAlign::Left,
-                   TextVerticalAlign verticalAlign = TextVerticalAlign::Top) :
-        horizontalAlign_(horizontalAlign),
-        verticalAlign_(verticalAlign) {}
+    TextProperties(
+        TextHorizontalAlign horizontalAlign = TextHorizontalAlign::Left,
+        TextVerticalAlign verticalAlign = TextVerticalAlign::Top)
+        : horizontalAlign_(horizontalAlign)
+        , verticalAlign_(verticalAlign) {
+    }
 
     /// Returns the horizontal alignment.
     ///
@@ -114,6 +116,8 @@ private:
     TextHorizontalAlign horizontalAlign_;
     TextVerticalAlign verticalAlign_;
 };
+
+// clang-format off
 
 /// \enum vgc::graphics::TextBoundaryMarker
 /// \brief Stores or queries boundary information about text positions.
@@ -186,6 +190,8 @@ enum class TextBoundaryMarker : UInt16 {
 };
 VGC_DEFINE_FLAGS(TextBoundaryMarkers, TextBoundaryMarker);
 
+// clang-format on
+
 using TextBoundaryMarkersArray = core::Array<TextBoundaryMarkers>;
 
 /// Computes boundary markers for the given UTF-8 encoded text.
@@ -202,14 +208,16 @@ class ShapedTextPositionInfo {
 public:
     /// Creates a ShapedTextPosition.
     ///
-    ShapedTextPositionInfo(Int glyphIndex,
-                           Int byteIndex,
-                           const geometry::Vec2f& advance,
-                           TextBoundaryMarkers boundaryMarkers) :
-        glyphIndex_(glyphIndex),
-        byteIndex_(byteIndex),
-        advance_(advance),
-        boundaryMarkers_(boundaryMarkers) {}
+    ShapedTextPositionInfo(
+        Int glyphIndex,
+        Int byteIndex,
+        const geometry::Vec2f& advance,
+        TextBoundaryMarkers boundaryMarkers)
+        : glyphIndex_(glyphIndex)
+        , byteIndex_(byteIndex)
+        , advance_(advance)
+        , boundaryMarkers_(boundaryMarkers) {
+    }
 
     /// Returns the index of the ShapedGlyph just after this position.
     ///
@@ -282,18 +290,19 @@ class VGC_GRAPHICS_API ShapedGlyph {
 public:
     /// Creates a ShapedGlyph.
     ///
-    ShapedGlyph(SizedGlyph* sizedGlyph,
-                const geometry::Vec2f& offset,
-                const geometry::Vec2f& advance,
-                const geometry::Vec2f& position,
-                Int bytePosition) :
-        sizedGlyph_(sizedGlyph),
-        offset_(offset),
-        advance_(advance),
-        position_(position),
-        bytePosition_(bytePosition),
-        boundingBox_(core::NoInit{})
-    {
+    ShapedGlyph(
+        SizedGlyph* sizedGlyph,
+        const geometry::Vec2f& offset,
+        const geometry::Vec2f& advance,
+        const geometry::Vec2f& position,
+        Int bytePosition)
+        : sizedGlyph_(sizedGlyph)
+        , offset_(offset)
+        , advance_(advance)
+        , position_(position)
+        , bytePosition_(bytePosition)
+        , boundingBox_(core::NoInit{}) {
+
         // Convert bounding box from SizedGlyph coords to ShapedText coords
         geometry::Rect2f bbox = sizedGlyph->boundingBox();
         geometry::Vec2f positionf(position);
@@ -370,6 +379,8 @@ public:
         return boundingBox_;
     }
 
+    // clang-format off
+
     /// Fills this ShapedGlyph, taking into account its relative position() and
     /// the given origin:
     ///
@@ -403,10 +414,13 @@ public:
     /// the Y coordinate to follow the VGC convention of having the Y-axis
     /// pointing down, and takes care of translating the glyph to its correct
     /// position.
-    ///
-    void fill(core::FloatArray& data,
-              const geometry::Vec2f& origin,
-              float r, float g, float b) const;
+    /// 
+    void fill(
+        core::FloatArray& data,
+        const geometry::Vec2f& origin,
+        float r, float g, float b) const;
+
+    // clang-format on
 
     /// Overload of fill that doesn't output color information, that is, the
     /// output triangles are appended to the given output parameter `data` in
@@ -423,8 +437,7 @@ public:
     ///
     ///  ...]
     ///
-    void fill(core::FloatArray& data,
-              const geometry::Vec2f& origin) const;
+    void fill(core::FloatArray& data, const geometry::Vec2f& origin) const;
 
 private:
     SizedGlyph* sizedGlyph_;
@@ -470,14 +483,16 @@ class VGC_GRAPHICS_API ShapedGrapheme {
 public:
     /// Creates a ShapedGrapheme.
     ///
-    ShapedGrapheme(Int glyphIndex,
-                   const geometry::Vec2f& advance,
-                   const geometry::Vec2f& position,
-                   Int bytePosition) :
-        glyphIndex_(glyphIndex),
-        advance_(advance),
-        position_(position),
-        bytePosition_(bytePosition) {}
+    ShapedGrapheme(
+        Int glyphIndex,
+        const geometry::Vec2f& advance,
+        const geometry::Vec2f& position,
+        Int bytePosition)
+        : glyphIndex_(glyphIndex)
+        , advance_(advance)
+        , position_(position)
+        , bytePosition_(bytePosition) {
+    }
 
     /// Returns the index of the ShapedGlyph  corresponding to this grapheme.
     ///
@@ -651,6 +666,8 @@ public:
     //
     geometry::Vec2f advance(Int position) const;
 
+    // clang-format off
+
     /// Fills this ShapedText at the given origin:
     ///
     /// ```
@@ -682,9 +699,10 @@ public:
     /// pointing down, so in the example ASCII art above, if origin = (0, 0),
     /// then all the Y-coordinates of the triangle vertices will be negative.
     ///
-    void fill(core::FloatArray& data,
-              const geometry::Vec2f& origin,
-              float r, float g, float b) const;
+    void fill(
+        core::FloatArray& data,
+        const geometry::Vec2f& origin,
+        float r, float g, float b) const;
 
     /// Fills this ShapedText from glyph index `start` (included) to glyph
     /// index `end` (excluded).
@@ -692,10 +710,11 @@ public:
     /// See the other overloads of fill() for documentation of the remaining
     /// arguments.
     ///
-    void fill(core::FloatArray& data,
-              const geometry::Vec2f& origin,
-              float r, float g, float b,
-              Int start, Int end) const;
+    void fill(
+        core::FloatArray& data,
+        const geometry::Vec2f& origin,
+        float r, float g, float b,
+        Int start, Int end) const;
 
     /// Fills this ShapedText, clipping it to the rectangle given by `clipLeft`,
     /// `clipRight`, `clipTop`, and `clipBottom`.
@@ -703,11 +722,11 @@ public:
     /// See the other overloads of fill() for documentation of the remaining
     /// arguments.
     ///
-    void fill(core::FloatArray& data,
-              const geometry::Vec2f& origin,
-              float r, float g, float b,
-              float clipLeft, float clipRight,
-              float clipTop, float clipBottom) const;
+    void fill(
+        core::FloatArray& data,
+        const geometry::Vec2f& origin,
+        float r, float g, float b,
+        float clipLeft, float clipRight, float clipTop, float clipBottom) const;
 
     /// Fills this ShapedText from glyph index `start` (included) to glyph
     /// index `end` (excluded), clipping it to the rectangle given by
@@ -716,12 +735,14 @@ public:
     /// See the other overloads of fill() for documentation of the remaining
     /// arguments.
     ///
-    void fill(core::FloatArray& data,
-              const geometry::Vec2f& origin,
-              float r, float g, float b,
-              Int start, Int end,
-              float clipLeft, float clipRight,
-              float clipTop, float clipBottom) const;
+    void fill(
+        core::FloatArray& data,
+        const geometry::Vec2f& origin,
+        float r, float g, float b,
+        Int start, Int end,
+        float clipLeft, float clipRight, float clipTop, float clipBottom) const;
+
+    // clang-format on
 
     /// Returns the smallest text position whose UTF-8 byte index is greater or
     /// equal than the given `byteIndex`.
@@ -756,10 +777,8 @@ public:
     /// - if `clamp` is true (the default), returns `numPositions() - 1`
     /// - if `clamp` is false, returns `-1`
     ///
-    Int nextBoundary(
-        Int position,
-        TextBoundaryMarkers boundaryMarkers,
-        bool clamp = true);
+    Int
+    nextBoundary(Int position, TextBoundaryMarkers boundaryMarkers, bool clamp = true);
 
     /// Returns the smallest position with all the given `boundaryMarkers` that
     /// is located at or after the given `position`.
@@ -812,13 +831,13 @@ private:
 ///
 class VGC_GRAPHICS_API TextScroll {
 public:
-
     /// Creates a TextScroll with the given horizontal scrolling `x` and
     /// vertical scrolling `y`.
     ///
-    TextScroll(Int x = 0, Int y = 0) :
-        x_(x),
-        y_(y) {}
+    TextScroll(Int x = 0, Int y = 0)
+        : x_(x)
+        , y_(y) {
+    }
 
     /// Returns the horizontal scrolling.
     ///
@@ -856,10 +875,10 @@ class VGC_GRAPHICS_API TextCursor {
 public:
     /// Creates a TextCursor.
     ///
-    TextCursor(bool isVisible = false,
-               Int bytePosition = 0) :
-        isVisible_(isVisible),
-        bytePosition_(bytePosition) {}
+    TextCursor(bool isVisible = false, Int bytePosition = 0)
+        : isVisible_(isVisible)
+        , bytePosition_(bytePosition) {
+    }
 
     /// Returns whether the TextCursor is visible.
     ///

@@ -255,16 +255,16 @@ public:
     // size_t, despite most our API working with signed integers. Finally, note
     // that for now, our iterators are raw pointers.
     //
-    using value_type             = T;
-    using reference              = T&;
-    using const_reference        = const T&;
-    using pointer                = T*;
-    using const_pointer          = const T*;
-    using size_type              = size_t;
-    using difference_type        = ptrdiff_t;
-    using iterator               = pointer;
-    using const_iterator         = const_pointer;
-    using reverse_iterator       = std::reverse_iterator<iterator>;
+    using value_type = T;
+    using reference = T&;
+    using const_reference = const T&;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using iterator = pointer;
+    using const_iterator = const_pointer;
+    using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     // The iterator and const_iterator types are currently typedefs of pointers.
@@ -279,8 +279,12 @@ public:
     // Thus replacing f(const_iterator) with f(ConstIterator) is enough to lift the
     // ambiguity as the compiler will then prefer f(Int) when compiling a call f(0).
     struct ConstIterator {
-        ConstIterator(const_iterator it) : it(it) {}
-        operator const_iterator() { return it; }
+        ConstIterator(const_iterator it)
+            : it(it) {
+        }
+        operator const_iterator() {
+            return it;
+        }
         const_iterator it;
     };
 
@@ -292,7 +296,8 @@ public:
     /// a.isEmpty();  // => true
     /// ```
     ///
-    Array() noexcept {}
+    Array() noexcept {
+    }
 
     /// Creates an `Array` of given `length` whose elements are
     /// [value-initialized](https://en.cppreference.com/w/cpp/language/value_initialization).
@@ -432,7 +437,8 @@ public:
     /// Copy-constructs from `other`.
     ///
     Array(const Array& other)
-        : Array(other.begin(), other.end()) {}
+        : Array(other.begin(), other.end()) {
+    }
 
     /// Move-constructs from `other`.
     ///
@@ -714,7 +720,7 @@ public:
     /// default, removing elements from an `Array` keeps the memory allocated in
     /// order to make adding them back efficient.
     ///
-    void shrinkToFit()  {
+    void shrinkToFit() {
         shrinkToFit_();
     }
 
@@ -846,8 +852,7 @@ public:
     ///
     T& first() {
         if (isEmpty()) {
-            throw IndexError(
-                "Attempting to access the first element of an empty Array.");
+            throw IndexError("Attempting to access the first element of an empty Array.");
         }
         return *begin();
     }
@@ -865,8 +870,7 @@ public:
     ///
     const T& first() const {
         if (isEmpty()) {
-            throw IndexError(
-                "Attempting to access the first element of an empty Array.");
+            throw IndexError("Attempting to access the first element of an empty Array.");
         }
         return *begin();
     }
@@ -885,8 +889,7 @@ public:
     ///
     T& last() {
         if (isEmpty()) {
-            throw IndexError(
-                "Attempting to access the last element of an empty Array.");
+            throw IndexError("Attempting to access the last element of an empty Array.");
         }
         return *(end() - 1);
     }
@@ -904,8 +907,7 @@ public:
     ///
     const T& last() const {
         if (isEmpty()) {
-            throw IndexError(
-                "Attempting to access the last element of an empty Array.");
+            throw IndexError("Attempting to access the last element of an empty Array.");
         }
         return *(end() - 1);
     }
@@ -1036,7 +1038,7 @@ public:
     /// Returns an iterator to the first element for which `predicate(element)`
     /// returns `true`, or the end iterator if there is no such element.
     ///
-    template <typename UnaryPredicate>
+    template<typename UnaryPredicate>
     iterator find(UnaryPredicate predicate) {
         T* p = data_;
         T* end = p + length_;
@@ -1052,7 +1054,7 @@ public:
     /// `predicate(element)` returns `true`, or the end const iterator if there
     /// is no such element.
     ///
-    template <typename UnaryPredicate>
+    template<typename UnaryPredicate>
     const_iterator find(UnaryPredicate predicate) const {
         return const_cast<Array*>(this)->search(predicate);
     }
@@ -1081,7 +1083,7 @@ public:
     /// Returns a pointer to the first element for which `predicate(element)`
     /// returns `true`, or `nullptr` if there is no such element.
     ///
-    template <typename UnaryPredicate>
+    template<typename UnaryPredicate>
     T* search(UnaryPredicate predicate) {
         T* p = data_;
         T* end = p + length_;
@@ -1097,7 +1099,7 @@ public:
     /// `predicate(element)` returns `true`, or `nullptr` if there is no such
     /// element.
     ///
-    template <typename UnaryPredicate>
+    template<typename UnaryPredicate>
     const T* search(UnaryPredicate predicate) const {
         return const_cast<Array*>(this)->search(predicate);
     }
@@ -1120,7 +1122,7 @@ public:
     /// Returns the index of the first element for which `predicate(element)`
     /// returns `true`, or `-1` if there is no such element.
     ///
-    template <typename UnaryPredicate>
+    template<typename UnaryPredicate>
     Int index(UnaryPredicate predicate) const {
         const T* p = data_;
         const T* end = p + length_;
@@ -1357,7 +1359,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template <typename... Args>
+    template<typename... Args>
     iterator emplace(ConstIterator it, Args&&... args) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
@@ -1372,7 +1374,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template <typename... Args>
+    template<typename... Args>
     void emplace(Int i, Args&&... args) {
         checkInRangeForInsert_(i);
         emplaceAt_(i, std::forward<Args>(args)...);
@@ -1706,11 +1708,10 @@ public:
     ///
     void removeFirst() {
         if (isEmpty()) {
-            throw IndexError(
-                "Attempting to remove the first element of an empty Array.");
+            throw IndexError("Attempting to remove the first element of an empty Array.");
         }
         erase_(Int(0));
-    }    
+    }
 
     /// Removes the first `count` elements from the container.
     /// All subsequent elements are shifted to the left.
@@ -1745,8 +1746,7 @@ public:
     ///
     void removeLast() {
         if (isEmpty()) {
-            throw IndexError(
-                "Attempting to remove the last element of an empty Array.");
+            throw IndexError("Attempting to remove the last element of an empty Array.");
         }
         erase_(length_ - 1);
     }
@@ -1869,7 +1869,8 @@ private:
     //
     template<typename InputIt>
     void rangeConstruct_(InputIt first, InputIt last) {
-        using iterator_category = typename std::iterator_traits<InputIt>::iterator_category;
+        using iterator_category =
+            typename std::iterator_traits<InputIt>::iterator_category;
 
         if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
             const auto dist = std::distance(first, last);
@@ -2051,7 +2052,8 @@ private:
     //
     template<typename InputIt>
     void assignRange_(InputIt first, InputIt last) {
-        using iterator_category = typename std::iterator_traits<InputIt>::iterator_category;
+        using iterator_category =
+            typename std::iterator_traits<InputIt>::iterator_category;
         const Int oldLen = length_;
 
         if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
@@ -2395,10 +2397,10 @@ private:
     template<typename IntType>
     void throwNotInRange_(IntType i) const {
         throw IndexError(
-            "Array index " + toString(i) + " out of range " +
-            (isEmpty() ? "(the array is empty)" :
-                         ("[0, " + toString(size() - 1) + "] " +
-                         "(array length is " + toString(size()) + ").")));
+            "Array index " + toString(i) + " out of range "
+            + (isEmpty() ? "(the array is empty)"
+                         : ("[0, " + toString(size() - 1) + "] " + "(array length is "
+                            + toString(size()) + ").")));
     }
     void checkInRange_(size_type i) const {
         // Note: we compare as an unsigned int with size(), rather than as a
@@ -2426,8 +2428,8 @@ private:
         if constexpr (std::is_signed_v<IntType>) {
             if (length < 0) {
                 throw NegativeIntegerError(
-                    "Cannot reserve a length of " + toString(length) +
-                    " elements: the reserved length cannot be negative.");
+                    "Cannot reserve a length of " + toString(length)
+                    + " elements: the reserved length cannot be negative.");
             }
         }
     }
@@ -2440,8 +2442,8 @@ private:
         if constexpr (std::is_signed_v<IntType>) {
             if (length < 0) {
                 throw NegativeIntegerError(
-                    "Cannot create an Array with " + toString(length) +
-                    " elements: the number of elements cannot be negative.");
+                    "Cannot create an Array with " + toString(length)
+                    + " elements: the number of elements cannot be negative.");
             }
         }
     }
@@ -2454,8 +2456,9 @@ private:
         if constexpr (std::is_signed_v<IntType>) {
             if (length < 0) {
                 throw NegativeIntegerError(
-                    "Cannot insert " + toString(length) +
-                    " elements in the Array: the number of elements cannot be negative.");
+                    "Cannot insert " + toString(length)
+                    + " elements in the Array: the number of elements cannot be "
+                      "negative.");
             }
         }
     }
@@ -2464,11 +2467,11 @@ private:
     //
     template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     void checkNoMoreThanMaxLengthForReserve_([[maybe_unused]] IntType length) const {
-        if constexpr (tmax<IntType> > IntMax) {
+        if constexpr ((tmax<IntType>) > IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
                 throw LengthError(
-                            "Cannot reserve a length of " + toString(length) +
-                            " elements: it would exceed the maximum allowed length.");
+                    "Cannot reserve a length of " + toString(length)
+                    + " elements: it would exceed the maximum allowed length.");
             }
         }
     }
@@ -2478,8 +2481,8 @@ private:
     void checkNoMoreThanMaxLengthForReserve_(size_type length) const {
         if (length > static_cast<size_type>(IntMax)) {
             throw LengthError(
-                        "Cannot reserve a length of " + toString(length) +
-                        " elements: it would exceed the maximum allowed length.");
+                "Cannot reserve a length of " + toString(length)
+                + " elements: it would exceed the maximum allowed length.");
         }
     }
 
@@ -2487,11 +2490,11 @@ private:
     //
     template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     void checkNoMoreThanMaxLengthForInit_([[maybe_unused]] IntType length) const {
-        if constexpr (tmax<IntType> > IntMax) {
+        if constexpr (tmax < IntType >> IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
                 throw LengthError(
-                            "Cannot create an Array with " + toString(length) +
-                            " elements: it would exceed the maximum allowed length.");
+                    "Cannot create an Array with " + toString(length)
+                    + " elements: it would exceed the maximum allowed length.");
             }
         }
     }
@@ -2501,8 +2504,8 @@ private:
     void checkNoMoreThanMaxLengthForInit_(size_type length) const {
         if (length > static_cast<size_type>(IntMax)) {
             throw LengthError(
-                        "Cannot create an Array with " + toString(length) +
-                        " elements: it would exceed the maximum allowed length.");
+                "Cannot create an Array with " + toString(length)
+                + " elements: it would exceed the maximum allowed length.");
         }
     }
 
@@ -2510,11 +2513,12 @@ private:
     //
     template<typename IntType, VGC_REQUIRES(isSignedInteger<IntType>)>
     void checkNoMoreThanMaxLengthForInsert_([[maybe_unused]] IntType length) const {
-        if constexpr (tmax<IntType> > IntMax) {
+        if constexpr (tmax < IntType >> IntMax) {
             if (length > IntMax) { // same-signedness => safe implicit conversion
                 throw LengthError(
-                            "Cannot insert " + toString(length) +
-                            " elements in the Array: it would exceed the maximum allowed length.");
+                    "Cannot insert " + toString(length)
+                    + " elements in the Array: it would exceed the maximum allowed "
+                      "length.");
             }
         }
     }
@@ -2524,17 +2528,17 @@ private:
     void checkNoMoreThanMaxLengthForInsert_(size_type length) const {
         if (length > static_cast<size_type>(IntMax)) {
             throw LengthError(
-                        "Cannot insert " + toString(length) +
-                        " elements in the Array: it would exceed the maximum allowed length.");
+                "Cannot insert " + toString(length)
+                + " elements in the Array: it would exceed the maximum allowed length.");
         }
     }
 
     template<typename IntType>
     void throwLengthErrorAdd_(IntType current, TypeIdentity<IntType> addend) const {
-        throw LengthError("Cannot insert " + toString(addend) +
-                          " elements in this Array (current length = " +
-                          toString(current) +
-                          "): it would exceed the maximum allowed length.");
+        throw LengthError(
+            "Cannot insert " + toString(addend)
+            + " elements in this Array (current length = " + toString(current)
+            + "): it would exceed the maximum allowed length.");
     }
 
     // Throws NegativeIntegerError if length is negative.
@@ -2576,9 +2580,10 @@ private:
     template<typename IntType>
     void throwNotInRange_(IntType i1, IntType i2) const {
         throw IndexError(
-            "Array index range [" + toString(i1) + ", " + toString(i2) + ") " +
-            (i1 > i2 ? "invalid (second index must be greater or equal than first index)" :
-                       "out of range [0, " + toString(size()) + ")."));
+            "Array index range [" + toString(i1) + ", " + toString(i2) + ") "
+            + (i1 > i2
+                   ? "invalid (second index must be greater or equal than first index)"
+                   : "out of range [0, " + toString(size()) + ")."));
     }
     void checkInRange_(Int i1, Int i2) const {
         const bool inRange = (0 <= i1) && (i1 <= i2) && (i2 <= length());
@@ -2596,14 +2601,18 @@ private:
     void checkInRangeForInsert_(const_iterator it) const {
         difference_type i = std::distance(begin(), it);
         if (i < 0 || static_cast<size_type>(i) > size()) {
-            throw IndexError("Array index " + toString(i) + " out of range for insertion (array length is " +
-                              toString(size()) + ").");
+            throw IndexError(
+                "Array index " + toString(i)
+                + " out of range for insertion (array length is " + toString(size())
+                + ").");
         }
     }
     void checkInRangeForInsert_(Int i) const {
         if (i < 0 || i > length()) {
-            throw IndexError("Array index " + toString(i) + " out of range for insertion (array length is " +
-                              toString(length()) + ").");
+            throw IndexError(
+                "Array index " + toString(i)
+                + " out of range for insertion (array length is " + toString(length())
+                + ").");
         }
     }
 
@@ -2613,7 +2622,7 @@ private:
     // that handles negative input without introducing an "if".
     Int wrap_(Int i) const {
         Int n = length();
-        return (n + (i%n)) % n;
+        return (n + (i % n)) % n;
         // Examples:
         // n = 10, i = 11:   (10 + (11%10))  % 10 = (10 + 1)  % 10 = 1
         // n = 10, i = -11:  (10 + (-11%10)) % 10 = (10 + -1) % 10 = 9
@@ -2622,7 +2631,6 @@ private:
         // implementations (the behavior for negative inputs wasn't
         // clearly specified, and varied across implementations).
     }
-
 };
 
 /// Returns whether the arrays `a1` and `a2` are equal, that is, whether they
@@ -2630,8 +2638,7 @@ private:
 ///
 template<typename T>
 bool operator==(const Array<T>& a1, const Array<T>& a2) {
-    return a1.size() == a2.size() &&
-           std::equal(a1.begin(), a1.end(), a2.begin());
+    return a1.size() == a2.size() && std::equal(a1.begin(), a1.end(), a2.begin());
 }
 
 /// Returns whether the arrays `a1` and `a2` are different, that is, whether
@@ -2647,9 +2654,7 @@ bool operator!=(const Array<T>& a1, const Array<T>& a2) {
 ///
 template<typename T>
 bool operator<(const Array<T>& a1, const Array<T>& a2) {
-    return std::lexicographical_compare(
-                a1.begin(), a1.end(),
-                a2.begin(), a2.end());
+    return std::lexicographical_compare(a1.begin(), a1.end(), a2.begin(), a2.end());
 }
 
 /// Compares the two arrays `a1` and `a2` in lexicographic order.
@@ -2683,15 +2688,14 @@ void swap(Array<T>& a1, Array<T>& a2) {
 /// Writes the given `Array<T>` to the output stream.
 ///
 template<typename OStream, typename T>
-void write(OStream& out, const Array<T>& a)
-{
+void write(OStream& out, const Array<T>& a) {
     if (a.isEmpty()) {
         write(out, "[]");
     }
     else {
         write(out, '[');
         auto it = a.cbegin();
-        auto last = a.cend()-1;
+        auto last = a.cend() - 1;
         write(out, *it);
         while (it != last) {
             write(out, ", ", *++it);
@@ -2707,9 +2711,8 @@ void write(OStream& out, const Array<T>& a)
 /// Throws `RangeError` if one of the values in the array is outside of the
 /// representable range of its type.
 ///
-template <typename IStream, typename T>
-void readTo(Array<T>& a, IStream& in)
-{
+template<typename IStream, typename T>
+void readTo(Array<T>& a, IStream& in) {
     a.clear();
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, '[');
@@ -2740,8 +2743,6 @@ using FloatArray = Array<float>;
 using DoubleArray = Array<double>;
 
 } // namespace vgc::core
-
-#endif // VGC_CORE_ARRAY_H
 
 // # C++ concept requirements
 //
@@ -2829,3 +2830,5 @@ using DoubleArray = Array<double>;
 //   capacity(), resize(n), reserve(n), shrink_to_fit()
 //   data()
 //
+
+#endif // VGC_CORE_ARRAY_H

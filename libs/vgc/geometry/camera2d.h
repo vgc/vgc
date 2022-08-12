@@ -17,9 +17,9 @@
 #ifndef VGC_GEOMETRY_CAMERA2D_H
 #define VGC_GEOMETRY_CAMERA2D_H
 
+#include <vgc/geometry/api.h>
 #include <vgc/geometry/mat4d.h>
 #include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/api.h>
 
 namespace vgc::geometry {
 
@@ -124,8 +124,7 @@ namespace vgc::geometry {
 ///    -------
 /// \endverbatim
 ///
-class VGC_GEOMETRY_API Camera2d
-{
+class VGC_GEOMETRY_API Camera2d {
 public:
     /// Construct a 2D Camera centered at the world origin, without zoom or rotation.
     ///
@@ -136,13 +135,17 @@ public:
     ///
     /// \sa setCenter()
     ///
-    const Vec2d& center() const { return center_; }
+    const Vec2d& center() const {
+        return center_;
+    }
 
     /// Sets the center of the camera.
     ///
     /// \sa center()
     ///
-    void setCenter(const Vec2d& center) { center_ = center; }
+    void setCenter(const Vec2d& center) {
+        center_ = center;
+    }
 
     /// Returns the zoom of the camera. This is the ratio between the size of
     /// an object in view coordinates (i.e., in pixels), and its size in world
@@ -151,13 +154,17 @@ public:
     ///
     /// \sa setZoom()
     ///
-    double zoom() const { return zoom_; }
+    double zoom() const {
+        return zoom_;
+    }
 
     /// Sets the zoom of the camera.
     ///
     /// \sa zoom()
     ///
-    void setZoom(double zoom) { zoom_ = zoom; }
+    void setZoom(double zoom) {
+        zoom_ = zoom;
+    }
 
     /// Returns the rotation of the camera. This is the angle, in radian,
     /// between world coordinates and view coordinates. Example: if angle =
@@ -165,37 +172,49 @@ public:
     ///
     /// \sa setRotation()
     ///
-    double rotation() const { return rotation_; }
+    double rotation() const {
+        return rotation_;
+    }
 
     /// Sets the rotation of the camera.
     ///
     /// \sa rotation()
     ///
-    void setRotation(double rotation) { rotation_ = rotation; }
+    void setRotation(double rotation) {
+        rotation_ = rotation;
+    }
 
     /// Returns the width of the viewport, in pixels.
     ///
     /// \sa setViewportWidth()
     ///
-    double viewportWidth() const { return viewportWidth_; }
+    double viewportWidth() const {
+        return viewportWidth_;
+    }
 
     /// Sets the viewport width.
     ///
     /// \sa viewportWidth()
     ///
-    void setViewportWidth(double width) { viewportWidth_ = width; }
+    void setViewportWidth(double width) {
+        viewportWidth_ = width;
+    }
 
     /// Returns the height of the viewport, in pixels.
     ///
     /// \sa setViewportHeight()
     ///
-    double viewportHeight() const { return viewportHeight_; }
+    double viewportHeight() const {
+        return viewportHeight_;
+    }
 
     /// Sets the viewport height.
     ///
     /// \sa viewportHeight()
     ///
-    void setViewportHeight(double height) { viewportHeight_ = height; }
+    void setViewportHeight(double height) {
+        viewportHeight_ = height;
+    }
 
     /// Sets the viewport size.
     ///
@@ -211,26 +230,34 @@ public:
     ///
     /// \sa setNearPlane()
     ///
-    double nearPlane() const { return nearPlane_; }
+    double nearPlane() const {
+        return nearPlane_;
+    }
 
     /// Sets the near plane of the camera.
     ///
     /// \sa nearPlane()
     ///
-    void setNearPlane(double nearPlane) { nearPlane_ = nearPlane; }
+    void setNearPlane(double nearPlane) {
+        nearPlane_ = nearPlane;
+    }
 
     /// Returns the far plane of the camera. This is the value above which
     /// z-coordinates are clipped. Default is 1.0.
     ///
     /// \sa setFarPlane()
     ///
-    double farPlane() const { return farPlane_; }
+    double farPlane() const {
+        return farPlane_;
+    }
 
     /// Sets the far plane of the camera.
     ///
     /// \sa farPlane()
     ///
-    void setFarPlane(double farPlane) { farPlane_ = farPlane; }
+    void setFarPlane(double farPlane) {
+        farPlane_ = farPlane;
+    }
 
     /// Returns the 4x4 view matrix corresponding to the camera.
     ///

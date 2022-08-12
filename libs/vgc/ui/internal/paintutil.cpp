@@ -20,25 +20,38 @@
 
 namespace vgc::ui::internal {
 
+// clang-format off
+
 void insertTriangle(
-        core::FloatArray& a,
-        float r, float g, float b,
-        float x1, float y1,
-        float x2, float y2,
-        float x3, float y3)
-{
-    a.insert(a.end(), {
+    core::FloatArray& a,
+    float r, float g, float b,
+    float x1, float y1, float x2, float y2, float x3, float y3) {
+
+    a.extend({
         x1, y1, r, g, b,
         x2, y2, r, g, b,
         x3, y3, r, g, b});
 }
 
+void insertTriangle(
+    core::FloatArray& a,
+    const core::Colorf& color,
+    const geometry::Vec2f& v1,
+    const geometry::Vec2f& v2,
+    const geometry::Vec2f& v3) {
+
+    insertTriangle(
+        a,
+        color.r(), color.g(), color.b(),
+        v1.x(), v1.y(), v2.x(),v2.y(), v3.x(), v3.y());
+}
+
 void insertRect(
-        core::FloatArray& a,
-        float r, float g, float b,
-        float x1, float y1, float x2, float y2)
-{
-    a.insert(a.end(), {
+    core::FloatArray& a,
+    float r, float g, float b,
+    float x1, float y1, float x2, float y2) {
+    
+    a.extend({
         x1, y1, r, g, b,
         x2, y1, r, g, b,
         x1, y2, r, g, b,
@@ -48,19 +61,30 @@ void insertRect(
 }
 
 void insertRect(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2,
-        float borderRadius)
-{
+    core::FloatArray& a,
+    const core::Colorf& color,
+    const geometry::Rect2f& rect) {
+
+    insertRect(
+        a,
+        color.r(), color.g(), color.b(),
+        rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax());
+}
+
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& c,
+    float x1, float y1, float x2, float y2,
+    float borderRadius) {
+
     float r = static_cast<float>(c[0]);
     float g = static_cast<float>(c[1]);
     float b = static_cast<float>(c[2]);
-    float maxBorderRadius = 0.5f * std::min(std::abs(x2-x1), std::abs(y2-y1));
+    float maxBorderRadius = 0.5f * std::min(std::abs(x2 - x1), std::abs(y2 - y1));
     borderRadius = core::clamp(borderRadius, 0.0f, maxBorderRadius);
     Int32 numCornerTriangles = core::ifloor<Int32>(borderRadius);
     if (numCornerTriangles < 1) {
-        a.insert(a.end(), {
+        a.extend({
             x1, y1, r, g, b,
             x2, y1, r, g, b,
             x1, y2, r, g, b,
@@ -100,40 +124,57 @@ void insertRect(
 }
 
 void insertRect(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2)
-{
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    float borderRadius) {
+
+    insertRect(
+        a,
+        color,
+        rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax(),
+        borderRadius);
+}
+
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& c,
+    float x1, float y1, float x2, float y2) {
+
     float r = static_cast<float>(c[0]);
     float g = static_cast<float>(c[1]);
     float b = static_cast<float>(c[2]);
-    a.insert(a.end(), {
-        x1, y1, r, g, b,
-        x2, y1, r, g, b,
-        x1, y2, r, g, b,
-        x2, y1, r, g, b,
-        x2, y2, r, g, b,
-        x1, y2, r, g, b});
+    insertRect(a, r, g, b, x1, y1, x2, y2);
 }
 
-graphics::ShapedText shapeText(const std::string& text)
-{
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect) {
+
+    insertRect(
+        a,
+        color,
+        rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax());
+}
+
+graphics::ShapedText shapeText(const std::string& text) {
     graphics::SizedFont* sizedFont = getDefaultSizedFont();
     return graphics::ShapedText(sizedFont, text);
 }
 
 // x1, y1, x2, y2 is the text box to center the text into
 void insertText(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2,
-        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-        const graphics::ShapedText& shapedText,
-        const graphics::TextProperties& textProperties,
-        const graphics::TextCursor& textCursor,
-        bool hinting,
-        float scrollLeft)
-{
+    core::FloatArray& a,
+    const core::Color& c,
+    float x1, float y1, float x2, float y2,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const graphics::ShapedText& shapedText,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft) {
+
     graphics::SizedFont* sizedFont = shapedText.sizedFont();
     if (shapedText.text().length() > 0 || textCursor.isVisible()) {
         float r = static_cast<float>(c[0]);
@@ -192,9 +233,9 @@ void insertText(
         //
         constexpr bool clipAtPadding = true;
         geometry::Vec2f origin(textLeft, baseline);
-        float clipLeft   = x1 + (clipAtPadding ? paddingLeft   : 0);
-        float clipRight  = x2 - (clipAtPadding ? paddingRight  : 0);
-        float clipTop    = y1 + (clipAtPadding ? paddingTop    : 0);
+        float clipLeft = x1 + (clipAtPadding ? paddingLeft : 0);
+        float clipRight = x2 - (clipAtPadding ? paddingRight : 0);
+        float clipTop = y1 + (clipAtPadding ? paddingTop : 0);
         float clipBottom = y2 - (clipAtPadding ? paddingBottom : 0);
         shapedText.fill(a, origin, r, g, b, clipLeft, clipRight, clipTop, clipBottom);
 
@@ -202,7 +243,7 @@ void insertText(
         if (textCursor.isVisible()) {
             const graphics::ShapedGraphemeArray& graphemes = shapedText.graphemes();
             Int cursorBytePosition = textCursor.bytePosition();
-            float cursorAdvance = - scrollLeft;
+            float cursorAdvance = -scrollLeft;
             for (const graphics::ShapedGrapheme& grapheme : graphemes) {
                 if (grapheme.bytePosition() >= cursorBytePosition) {
                     break;
@@ -238,26 +279,64 @@ void insertText(
     }
 }
 
-// x1, y1, x2, y2 is the text box to center the text into
 void insertText(
-        core::FloatArray& a,
-        const core::Color& c,
-        float x1, float y1, float x2, float y2,
-        float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-        const std::string& text,
-        const graphics::TextProperties& textProperties,
-        const graphics::TextCursor& textCursor,
-        bool hinting,
-        float scrollLeft)
-{
-    graphics::ShapedText shapedText = shapeText(text);
-    insertText(a, c, x1, y1, x2, y2,
-               paddingLeft, paddingRight, paddingTop, paddingBottom,
-               shapedText, textProperties, textCursor, hinting, scrollLeft);
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const std::string& text,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft) {
+
+    insertText(
+        a, color,
+        rect.xMin(), rect.yMin(), rect.xMin(), rect.yMin(),
+        paddingLeft, paddingRight, paddingTop, paddingBottom,
+        text, textProperties, textCursor, hinting, scrollLeft);
 }
 
-core::Color getColor(const Widget* widget, core::StringId property)
-{
+// x1, y1, x2, y2 is the text box to center the text into
+void insertText(
+    core::FloatArray& a,
+    const core::Color& color,
+    float x1, float y1, float x2, float y2,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const std::string& text,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft) {
+
+    graphics::ShapedText shapedText = shapeText(text);
+    insertText(
+        a, color, x1, y1, x2, y2,
+        paddingLeft, paddingRight, paddingTop, paddingBottom,
+        shapedText, textProperties, textCursor, hinting, scrollLeft);
+}
+
+void insertText(
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
+    const graphics::ShapedText& shapedText,
+    const graphics::TextProperties& textProperties,
+    const graphics::TextCursor& textCursor,
+    bool hinting,
+    float scrollLeft) {
+
+    insertText(
+        a, color,
+        rect.xMin(), rect.yMin(), rect.xMin(), rect.yMin(),
+        paddingLeft, paddingRight, paddingTop, paddingBottom,
+        shapedText, textProperties, textCursor, hinting, scrollLeft);
+}
+
+// clang-format on
+
+core::Color getColor(const Widget* widget, core::StringId property) {
     core::Color res;
     style::StyleValue value = widget->style(property);
     if (value.has<core::Color>()) {
@@ -266,8 +345,7 @@ core::Color getColor(const Widget* widget, core::StringId property)
     return res;
 }
 
-float getLength(const Widget* widget, core::StringId property)
-{
+float getLength(const Widget* widget, core::StringId property) {
     float res = 0;
     style::StyleValue value = widget->style(property);
     if (value.type() == style::StyleValueType::Number) {
@@ -276,18 +354,15 @@ float getLength(const Widget* widget, core::StringId property)
     return res;
 }
 
-graphics::SizedFont* getDefaultSizedFont()
-{
+graphics::SizedFont* getDefaultSizedFont() {
     return getDefaultSizedFont(15, graphics::FontHinting::Native);
 }
 
-graphics::SizedFont* getDefaultSizedFont(Int ppem)
-{
+graphics::SizedFont* getDefaultSizedFont(Int ppem) {
     return getDefaultSizedFont(ppem, graphics::FontHinting::Native);
 }
 
-graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting)
-{
+graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting) {
     graphics::Font* font = graphics::fontLibrary()->defaultFont();
     return font->getSizedFont({ppem, hinting});
 }

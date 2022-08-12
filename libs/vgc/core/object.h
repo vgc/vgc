@@ -83,17 +83,16 @@ private:
     struct DontIncRefTag {};
 
     // For move casts
-    ObjPtr(T* obj, DontIncRefTag) : obj_(obj)
-    {
+    ObjPtr(T* obj, DontIncRefTag)
+        : obj_(obj) {
     }
 
 public:
     /// Creates a null ObjPtr<T>, that is, an ObjPtr<T> which doesn't manage any
     /// Object.
     ///
-    ObjPtr() noexcept : obj_(nullptr)
-    {
-
+    ObjPtr() noexcept
+        : obj_(nullptr) {
     }
 
     /// Creates an ObjPtr<T> managing the given Object.
@@ -104,16 +103,15 @@ public:
     /// implementation may implement referencing counting via
     /// separately-allocated counter blocks, whose memory allocation may throw.
     ///
-    ObjPtr(T* obj) : obj_(obj)
-    {
+    ObjPtr(T* obj)
+        : obj_(obj) {
         internal::ObjPtrAccess::incref(obj_);
     }
 
     /// Creates a copy of the given ObjPtr<T>.
     ///
-    ObjPtr(const ObjPtr& other) noexcept :
-        obj_(other.obj_)
-    {
+    ObjPtr(const ObjPtr& other) noexcept
+        : obj_(other.obj_) {
         internal::ObjPtrAccess::incref(obj_);
     }
 
@@ -122,17 +120,15 @@ public:
     /// to T*.
     ///
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
-    ObjPtr(const ObjPtr<Y>& other) noexcept :
-        obj_(other.obj_)
-    {
+    ObjPtr(const ObjPtr<Y>& other) noexcept
+        : obj_(other.obj_) {
         internal::ObjPtrAccess::incref(obj_);
     }
 
     /// Assigns the given ObjPtr<T> to this ObjPtr<T>.
     ///
-    ObjPtr& operator=(const ObjPtr& other) noexcept
-    {
-        if(obj_ != other.obj_) {
+    ObjPtr& operator=(const ObjPtr& other) noexcept {
+        if (obj_ != other.obj_) {
             internal::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
             internal::ObjPtrAccess::incref(obj_);
@@ -145,9 +141,8 @@ public:
     /// convertible to T*.
     ///
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
-    ObjPtr& operator=(const ObjPtr<Y>& other) noexcept
-    {
-        if(obj_ != other.obj_) {
+    ObjPtr& operator=(const ObjPtr<Y>& other) noexcept {
+        if (obj_ != other.obj_) {
             internal::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
             internal::ObjPtrAccess::incref(obj_);
@@ -157,8 +152,8 @@ public:
 
     /// Moves the given ObjPtr<T> to a new ObjPtr<T>.
     ///
-    ObjPtr(ObjPtr&& other) noexcept : obj_(other.obj_)
-    {
+    ObjPtr(ObjPtr&& other) noexcept
+        : obj_(other.obj_) {
         other.obj_ = nullptr;
     }
 
@@ -167,15 +162,14 @@ public:
     /// convertible to T*.
     ///
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
-    ObjPtr(ObjPtr<Y>&& other) noexcept : obj_(other.obj_)
-    {
+    ObjPtr(ObjPtr<Y>&& other) noexcept
+        : obj_(other.obj_) {
         other.obj_ = nullptr;
     }
 
     /// Moves the given ObjPtr<T> to this ObjPtr<T>.
     ///
-    ObjPtr& operator=(ObjPtr&& other) noexcept
-    {
+    ObjPtr& operator=(ObjPtr&& other) noexcept {
         if (*this != other) {
             internal::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
@@ -189,8 +183,7 @@ public:
     /// convertible to T*.
     ///
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
-    ObjPtr& operator=(ObjPtr<Y>&& other) noexcept
-    {
+    ObjPtr& operator=(ObjPtr<Y>&& other) noexcept {
         if (*this != other) {
             internal::ObjPtrAccess::decref(obj_);
             obj_ = other.obj_;
@@ -202,40 +195,35 @@ public:
     /// Destroys this ObjPtr<T>, destroying the managed object if its reference
     /// count reaches zero.
     ///
-    ~ObjPtr()
-    {
+    ~ObjPtr() {
         internal::ObjPtrAccess::decref(obj_);
     }
 
     /// Accesses a member of the object managed by this ObjPtr<T>. Throws
     /// NotAliveError if this ObjPtr is null or references a not-alive Object.
     ///
-    T* operator->() const
-    {
+    T* operator->() const {
         return getAlive_();
     }
 
     /// Returns a reference to the object managed by this ObjPtr<T>. Throws
     /// NotAliveError if this ObjPtr is null or references a not-alive Object.
     ///
-    T& operator*() const
-    {
+    T& operator*() const {
         return *getAlive_();
     }
 
     /// Returns a pointer to the object managed by this ObjPtr<T>. This method
     /// doesn't throw, buy may return a null pointer or a not-alive object.
     ///
-    T* get() const noexcept
-    {
+    T* get() const noexcept {
         return obj_;
     }
 
     /// Returns whether the object managed by this ObjPtr<T> is a non-null and
     /// alive object. This method doesn't throw.
     ///
-    bool isAlive() const noexcept
-    {
+    bool isAlive() const noexcept {
         return obj_ && obj_->isAlive();
     }
 
@@ -243,16 +231,14 @@ public:
     /// alive object. This is equivalent to isAlive(), and is provided for
     /// convenience for use in boolean expression. This method doesn't throw.
     ///
-    operator bool() const noexcept
-    {
+    operator bool() const noexcept {
         return obj_ && obj_->isAlive();
     }
 
     /// Returns the refCount of the object managed by this ObjPtr<T>. Returns
     /// -1 if this ObjPtr<T> is null. This method doesn't throw.
     ///
-    Int64 refCount() const noexcept
-    {
+    Int64 refCount() const noexcept {
         return obj_ ? obj_->refCount() : -1;
     }
 
@@ -263,8 +249,7 @@ private:
     // Throws NotAliveError if this ObjPtr is null or references
     // a not-alive Object.
     //
-    T* getAlive_() const
-    {
+    T* getAlive_() const {
         if (isAlive()) {
             return obj_;
         }
@@ -280,43 +265,36 @@ private:
 /// Returns whether the two given ObjPtrs manage the same object.
 ///
 template<typename T, typename U>
-inline bool operator==(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
-{
+inline bool operator==(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept {
     return a.get() == b.get();
 }
 
 /// Returns whether the two given ObjPtrs manage a different object.
 ///
 template<typename T, typename U>
-inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept
-{
+inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept {
     return a.get() != b.get();
 }
 
-
 template<typename T, typename U>
-ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept
-{
+ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept {
     return ObjPtr<T>(static_cast<T*>(r.get()));
 }
 
 template<typename T, typename U>
-ObjPtr<T> static_pointer_cast(ObjPtr<U>&& r) noexcept
-{
+ObjPtr<T> static_pointer_cast(ObjPtr<U>&& r) noexcept {
     ObjPtr<T> ret(static_cast<T*>(r.get()), typename ObjPtr<T>::DontIncRefTag{});
     r.obj_ = nullptr;
     return ret;
 }
 
 template<typename T, typename U>
-ObjPtr<T> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept
-{
+ObjPtr<T> dynamic_pointer_cast(const ObjPtr<U>& r) noexcept {
     return ObjPtr<T>(dynamic_cast<T*>(r.get()));
 }
 
 template<typename T, typename U>
-ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept
-{
+ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept {
     T* p = dynamic_cast<T*>(r.get());
     if (p) {
         r.obj_ = nullptr;
@@ -326,14 +304,12 @@ ObjPtr<T> dynamic_pointer_cast(ObjPtr<U>&& r) noexcept
 }
 
 template<typename T, typename U>
-ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept
-{
+ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept {
     return ObjPtr<T>(const_cast<T*>(r.get()));
 }
 
 template<typename T, typename U>
-ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept
-{
+ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept {
     ObjPtr<T> ret(const_cast<T*>(r.get()), typename ObjPtr<T>::DontIncRefTag{});
     r.obj_ = nullptr;
     return ret;
@@ -353,40 +329,44 @@ ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept
 /// };
 /// ```
 ///
-#define VGC_OBJECT(T, S)                                                        \
-    public:                                                                     \
-        using ThisClass = T;                                                    \
-        using SuperClass = S;                                                   \
-        /*static_assert(std::is_base_of_v<SuperClass, ThisClass>,             */\
-        /*    "ThisClass is expected to inherit from SuperClass.");           */\
-        static_assert(::vgc::core::isObject<SuperClass>,                        \
-            "Superclass must inherit from Object and use VGC_OBJECT(..).");     \
-    protected:                                                                  \
-        ~T() = default;                                                         \
-    private:
+#define VGC_OBJECT(T, S)                                                                 \
+public:                                                                                  \
+    using ThisClass = T;                                                                 \
+    using SuperClass = S;                                                                \
+    /*static_assert(std::is_base_of_v<SuperClass, ThisClass>,             */             \
+    /*    "ThisClass is expected to inherit from SuperClass.");           */             \
+    static_assert(                                                                       \
+        ::vgc::core::isObject<SuperClass>,                                               \
+        "Superclass must inherit from Object and use VGC_OBJECT(..).");                  \
+                                                                                         \
+protected:                                                                               \
+    ~T() = default;                                                                      \
+                                                                                         \
+private:
 
 /// This macro ensures that unsafe base protected methods are not accessible in
 /// subclasses. This macro should typically be added to a private section of
 /// direct sublasses of Object, but not to indirect subclasses.
 ///
-#define VGC_PRIVATIZE_OBJECT_TREE_MUTATORS                 \
-    private:                                               \
-        using Object::destroyObject_;                      \
-        using Object::destroyChildObject_;                 \
-        using Object::appendChildObject_;                  \
-        using Object::prependChildObject_;                 \
-        using Object::insertChildObject_;                  \
-        using Object::removeChildObject_;                  \
-        using Object::appendObjectToParent_;               \
-        using Object::prependObjectToParent_;              \
-        using Object::insertObjectToParent_;               \
-        using Object::removeObjectFromParent_;
+#define VGC_PRIVATIZE_OBJECT_TREE_MUTATORS                                               \
+private:                                                                                 \
+    using Object::destroyObject_;                                                        \
+    using Object::destroyChildObject_;                                                   \
+    using Object::appendChildObject_;                                                    \
+    using Object::prependChildObject_;                                                   \
+    using Object::insertChildObject_;                                                    \
+    using Object::removeChildObject_;                                                    \
+    using Object::appendObjectToParent_;                                                 \
+    using Object::prependObjectToParent_;                                                \
+    using Object::insertObjectToParent_;                                                 \
+    using Object::removeObjectFromParent_;
 
 namespace vgc {
 namespace core {
 
 // Forward declaration needed for Object::childObjects()
-template<typename T> class ObjListView;
+template<typename T>
+class ObjListView;
 using ObjectListView = ObjListView<Object>;
 
 // Define the ObjectPtr name alias (we use it in the definition of Object).
@@ -604,8 +584,7 @@ public:
     /// is likely to cause cyclic references, but it's okay since the garbage
     /// collector of Python will detect those and prevent memory leaks.
     ///
-    Int64 refCount() const
-    {
+    Int64 refCount() const {
         if (refCount_ >= 0) {
             return refCount_;
         }
@@ -622,8 +601,7 @@ public:
     /// Note that it is possible and even common for child Objects to be alive
     /// and have a refCount of zero.
     ///
-    bool isAlive() const
-    {
+    bool isAlive() const {
         return refCount_ >= 0;
     }
 
@@ -631,40 +609,35 @@ public:
     /// parent. An Object without parent is called a "root Object". An Object
     /// with a parent is called a "child Object".
     ///
-    Object* parentObject() const
-    {
+    Object* parentObject() const {
         return parentObject_;
     }
 
     /// Returns the first child of this Object, of nullptr if this object has
     /// no children.
     ///
-    Object* firstChildObject() const
-    {
+    Object* firstChildObject() const {
         return firstChildObject_;
     }
 
     /// Returns the last child of this Object, of nullptr if this object has
     /// no children.
     ///
-    Object* lastChildObject() const
-    {
+    Object* lastChildObject() const {
         return lastChildObject_;
     }
 
     /// Returns the next sibling of this Object, of nullptr if this Object has
     /// no parent or is the last child of its parent.
     ///
-    Object* nextSiblingObject() const
-    {
+    Object* nextSiblingObject() const {
         return nextSiblingObject_;
     }
 
     /// Returns the previous sibling of this Object, of nullptr if this Object has
     /// no parent or is the first child of its parent.
     ///
-    Object* previousSiblingObject() const
-    {
+    Object* previousSiblingObject() const {
         return previousSiblingObject_;
     }
 
@@ -1051,10 +1024,21 @@ protected:
     Int branchSize() const;
 
 private:
-    // Reference counting
-    friend class internal::ObjPtrAccess; // To access refCount_
-    mutable Int64 refCount_ = 0; // If >= 0: isAlive = true, refCount = refCount_
-                                 // If < 0:  isAlive = false, refCount = refCount_ - Int64Min
+    // Reference counting.
+    //
+    // Note that `refCount_` is used to store both `refCount()` and `isAlive()`,
+    // which are semantically independent variables.
+    //
+    // If refCount_ >= 0, then:
+    //     isAlive() = true
+    //     refCount() = refCount_
+    //
+    // If refCount_ < 0, then:
+    //     isAlive() = false
+    //     refCount() = refCount_ - Int64Min
+    //
+    friend class internal::ObjPtrAccess;
+    mutable Int64 refCount_ = 0;
 
     // Parent-child relationship
     Object* parentObject_ = nullptr;
@@ -1088,16 +1072,14 @@ constexpr SignalHub& SignalHub::access(const Object* o) {
     return const_cast<Object*>(o)->signalHub_;
 }
 
-inline void ObjPtrAccess::incref(const Object* obj, Int64 k)
-{
+inline void ObjPtrAccess::incref(const Object* obj, Int64 k) {
     while (obj) {
         obj->refCount_ += k;
         obj = obj->parentObject_;
     }
 }
 
-inline void ObjPtrAccess::decref(const Object* obj, Int64 k)
-{
+inline void ObjPtrAccess::decref(const Object* obj, Int64 k) {
     const Object* root = nullptr;
     while (obj) {
         root = obj;
@@ -1130,19 +1112,19 @@ public:
     typedef T* value_type;
     typedef Int difference_type;
     typedef const value_type& reference; // 'const' => non-mutable forward iterator
-    typedef const value_type* pointer;;  // 'const' => non-mutable forward iterator
+    typedef const value_type* pointer;   // 'const' => non-mutable forward iterator
     typedef std::forward_iterator_tag iterator_category;
 
     /// Constructs an invalid `ObjListIterator`.
     ///
-    ObjListIterator() : p_(nullptr) {
-
+    ObjListIterator()
+        : p_(nullptr) {
     }
 
     /// Constructs an iterator pointing to the given object.
     ///
-    explicit ObjListIterator(T* p) : p_(p) {
-
+    explicit ObjListIterator(T* p)
+        : p_(p) {
     }
 
     /// Prefix-increments this iterator.
@@ -1214,8 +1196,9 @@ class ObjListView {
 public:
     /// Constructs an ObjListView from the given ObjList.
     ///
-    ObjListView(ObjList<T>* list) : begin_(list->first()), end_(nullptr) {
-
+    ObjListView(ObjList<T>* list)
+        : begin_(list->first())
+        , end_(nullptr) {
     }
 
     /// Constructs a range of sibling objects from \p begin to \p end. The
@@ -1225,8 +1208,9 @@ public:
     /// and \p end are null, then the range is empty. The behavior is undefined
     /// if \p begin is null but \p end is not.
     ///
-    ObjListView(T* begin, T* end) : begin_(begin), end_(end) {
-
+    ObjListView(T* begin, T* end)
+        : begin_(begin)
+        , end_(end) {
     }
 
     /// Returns the begin of the range.
@@ -1291,7 +1275,8 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    ObjList() {}
+    ObjList() {
+    }
 
 public:
     static ObjList* create(Object* parent) {
@@ -1339,13 +1324,11 @@ public:
     VGC_SIGNAL(childRemoved, (T*, child));
 };
 
-inline ObjectListView Object::childObjects() const
-{
+inline ObjectListView Object::childObjects() const {
     return ObjectListView(firstChildObject(), nullptr);
 }
 
-inline Int Object::numChildObjects() const
-{
+inline Int Object::numChildObjects() const {
     return numChildObjects_;
 }
 
@@ -1387,13 +1370,13 @@ inline Int Object::numChildObjects() const
 /// }
 /// ```
 ///
-#define VGC_DECLARE_OBJECT(T)                              \
-    class T;                                               \
-    using T##Ptr          = vgc::core::ObjPtr<T>;          \
-    using T##ConstPtr     = vgc::core::ObjPtr<const T>;    \
-    using T##List         = vgc::core::ObjList<T>;         \
-    using T##ListIterator = vgc::core::ObjListIterator<T>; \
-    using T##ListView     = vgc::core::ObjListView<T>
+#define VGC_DECLARE_OBJECT(T)                                                            \
+    class T;                                                                             \
+    using T##Ptr = vgc::core::ObjPtr<T>;                                                 \
+    using T##ConstPtr = vgc::core::ObjPtr<const T>;                                      \
+    using T##List = vgc::core::ObjList<T>;                                               \
+    using T##ListIterator = vgc::core::ObjListIterator<T>;                               \
+    using T##ListView = vgc::core::ObjListView<T>
 
 namespace vgc::core {
 
@@ -1410,8 +1393,7 @@ class ConstructibleTestObject : public Object {
     VGC_OBJECT(ConstructibleTestObject, Object)
 
 public:
-    static ConstructibleTestObjectPtr create()
-    {
+    static ConstructibleTestObjectPtr create() {
         return new ConstructibleTestObject();
     }
 };

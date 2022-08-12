@@ -1,0 +1,71 @@
+# How to apply: find . -iname *.h -o -iname *.cpp | xargs clang-format -i
+# For comparison: `find . -iname *.h -o -iname *.cpp | xargs clang-format -i` && git meld
+# Reapply from clean project: git restore . && `find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i` && git meld
+---
+BasedOnStyle: LLVM
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: AlwaysBreak
+AlignOperands: Align
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+AttributeMacros:
+  - VGC_NODISCARD
+  - Q_SLOTS
+BinPackArguments: false
+BinPackParameters: false
+BraceWrapping:
+  AfterCaseLabel:  false
+  AfterClass:      false
+  AfterControlStatement: Never
+  AfterEnum:       false
+  AfterFunction:   false
+  AfterNamespace:  false
+  AfterObjCDeclaration: false
+  AfterStruct:     false
+  AfterUnion:      false
+  AfterExternBlock: false
+  BeforeCatch:     true
+  BeforeElse:      true
+  BeforeLambdaBody: false
+  BeforeWhile:     false
+  IndentBraces:    false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+BreakConstructorInitializers: BeforeComma
+ColumnLimit: 90
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+DerivePointerAlignment: false
+ForEachMacros:
+  - foreach
+  - Q_FOREACH
+IndentPPDirectives: AfterHash
+IndentWidth: 4
+PointerAlignment: Left
+ReflowComments:  false
+SpaceAfterTemplateKeyword: false
+StatementAttributeLikeMacros:
+  - emit
+  - Q_EMIT
+StatementMacros:
+  - Q_UNUSED
+  - QT_REQUIRE_VERSION
+TypenameMacros:
+  - VGC_REQUIRES
+WhitespaceSensitiveMacros:
+  - VGC_PP_STR
+  - VGC_PP_XSTR
+  - VGC_PP_CONCAT
+  - VGC_PP_XCONCAT
+...

@@ -14,12 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/core/exceptions.h>
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/exceptions.h>
-#include <vgc/core/exceptions.h>
 
-void wrap_exceptions(py::module& m)
-{
+void wrap_exceptions(py::module& m) {
     VGC_CORE_WRAP_BASE_EXCEPTION(core, LogicError);
     VGC_CORE_WRAP_EXCEPTION(core, NegativeIntegerError, m, LogicError);
     VGC_CORE_WRAP_EXCEPTION(core, IndexError, m, LogicError);

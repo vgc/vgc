@@ -71,83 +71,83 @@ using ullong = unsigned long long;
 
 TEST(TestInt, DefineZero) {
 
-    EXPECT_EQ(bool(0),     0);
-    EXPECT_EQ(short(0),    0);
-    EXPECT_EQ(int(0),      0);
-    EXPECT_EQ(long(0),     0);
-    EXPECT_EQ(llong(0),    0);
-    EXPECT_EQ(ushort(0),   0);
-    EXPECT_EQ(uint(0),     0);
-    EXPECT_EQ(ulong(0),    0);
-    EXPECT_EQ(ullong(0),   0);
-    EXPECT_EQ(char(0),     0);
-    EXPECT_EQ(schar(0),    0);
-    EXPECT_EQ(uchar(0),    0);
-    EXPECT_EQ(wchar_t(0),  0);
+    EXPECT_EQ(bool(0), 0);
+    EXPECT_EQ(short(0), 0);
+    EXPECT_EQ(int(0), 0);
+    EXPECT_EQ(long(0), 0);
+    EXPECT_EQ(llong(0), 0);
+    EXPECT_EQ(ushort(0), 0);
+    EXPECT_EQ(uint(0), 0);
+    EXPECT_EQ(ulong(0), 0);
+    EXPECT_EQ(ullong(0), 0);
+    EXPECT_EQ(char(0), 0);
+    EXPECT_EQ(schar(0), 0);
+    EXPECT_EQ(uchar(0), 0);
+    EXPECT_EQ(wchar_t(0), 0);
     EXPECT_EQ(char16_t(0), 0);
     EXPECT_EQ(char32_t(0), 0);
-    EXPECT_EQ(Int(0),      0);
-    EXPECT_EQ(Int8(0),     0);
-    EXPECT_EQ(Int16(0),    0);
-    EXPECT_EQ(Int32(0),    0);
-    EXPECT_EQ(Int64(0),    0);
-    EXPECT_EQ(UInt(0),     0);
-    EXPECT_EQ(UInt8(0),    0);
-    EXPECT_EQ(UInt16(0),   0);
-    EXPECT_EQ(UInt32(0),   0);
-    EXPECT_EQ(UInt64(0),   0);
+    EXPECT_EQ(Int(0), 0);
+    EXPECT_EQ(Int8(0), 0);
+    EXPECT_EQ(Int16(0), 0);
+    EXPECT_EQ(Int32(0), 0);
+    EXPECT_EQ(Int64(0), 0);
+    EXPECT_EQ(UInt(0), 0);
+    EXPECT_EQ(UInt8(0), 0);
+    EXPECT_EQ(UInt16(0), 0);
+    EXPECT_EQ(UInt32(0), 0);
+    EXPECT_EQ(UInt64(0), 0);
 
-    EXPECT_EQ(core::int_cast<bool>(0),     0);
-    EXPECT_EQ(core::int_cast<short>(0),    0);
-    EXPECT_EQ(core::int_cast<int>(0),      0);
-    EXPECT_EQ(core::int_cast<long>(0),     0);
-    EXPECT_EQ(core::int_cast<llong>(0),    0);
-    EXPECT_EQ(core::int_cast<ushort>(0),   0);
-    EXPECT_EQ(core::int_cast<uint>(0),     0);
-    EXPECT_EQ(core::int_cast<ulong>(0),    0);
-    EXPECT_EQ(core::int_cast<ullong>(0),   0);
-    EXPECT_EQ(core::int_cast<char>(0),     0);
-    EXPECT_EQ(core::int_cast<schar>(0),    0);
-    EXPECT_EQ(core::int_cast<uchar>(0),    0);
-    EXPECT_EQ(core::int_cast<wchar_t>(0),  0);
+    EXPECT_EQ(core::int_cast<bool>(0), 0);
+    EXPECT_EQ(core::int_cast<short>(0), 0);
+    EXPECT_EQ(core::int_cast<int>(0), 0);
+    EXPECT_EQ(core::int_cast<long>(0), 0);
+    EXPECT_EQ(core::int_cast<llong>(0), 0);
+    EXPECT_EQ(core::int_cast<ushort>(0), 0);
+    EXPECT_EQ(core::int_cast<uint>(0), 0);
+    EXPECT_EQ(core::int_cast<ulong>(0), 0);
+    EXPECT_EQ(core::int_cast<ullong>(0), 0);
+    EXPECT_EQ(core::int_cast<char>(0), 0);
+    EXPECT_EQ(core::int_cast<schar>(0), 0);
+    EXPECT_EQ(core::int_cast<uchar>(0), 0);
+    EXPECT_EQ(core::int_cast<wchar_t>(0), 0);
     EXPECT_EQ(core::int_cast<char16_t>(0), 0);
     EXPECT_EQ(core::int_cast<char32_t>(0), 0);
-    EXPECT_EQ(core::int_cast<Int>(0),      0);
-    EXPECT_EQ(core::int_cast<Int8>(0),     0);
-    EXPECT_EQ(core::int_cast<Int16>(0),    0);
-    EXPECT_EQ(core::int_cast<Int32>(0),    0);
-    EXPECT_EQ(core::int_cast<Int64>(0),    0);
-    EXPECT_EQ(core::int_cast<UInt>(0),     0);
-    EXPECT_EQ(core::int_cast<UInt8>(0),    0);
-    EXPECT_EQ(core::int_cast<UInt16>(0),   0);
-    EXPECT_EQ(core::int_cast<UInt32>(0),   0);
-    EXPECT_EQ(core::int_cast<UInt64>(0),   0);
+    EXPECT_EQ(core::int_cast<Int>(0), 0);
+    EXPECT_EQ(core::int_cast<Int8>(0), 0);
+    EXPECT_EQ(core::int_cast<Int16>(0), 0);
+    EXPECT_EQ(core::int_cast<Int32>(0), 0);
+    EXPECT_EQ(core::int_cast<Int64>(0), 0);
+    EXPECT_EQ(core::int_cast<UInt>(0), 0);
+    EXPECT_EQ(core::int_cast<UInt8>(0), 0);
+    EXPECT_EQ(core::int_cast<UInt16>(0), 0);
+    EXPECT_EQ(core::int_cast<UInt32>(0), 0);
+    EXPECT_EQ(core::int_cast<UInt64>(0), 0);
 
-    EXPECT_EQ(core::int_cast<bool>(0),     bool(0));
-    EXPECT_EQ(core::int_cast<short>(0),    short(0));
-    EXPECT_EQ(core::int_cast<int>(0),      int(0));
-    EXPECT_EQ(core::int_cast<long>(0),     long(0));
-    EXPECT_EQ(core::int_cast<llong>(0),    llong(0));
-    EXPECT_EQ(core::int_cast<ushort>(0),   ushort(0));
-    EXPECT_EQ(core::int_cast<uint>(0),     uint(0));
-    EXPECT_EQ(core::int_cast<ulong>(0),    ulong(0));
-    EXPECT_EQ(core::int_cast<ullong>(0),   ullong(0));
-    EXPECT_EQ(core::int_cast<char>(0),     char(0));
-    EXPECT_EQ(core::int_cast<schar>(0),    schar(0));
-    EXPECT_EQ(core::int_cast<uchar>(0),    uchar(0));
-    EXPECT_EQ(core::int_cast<wchar_t>(0),  wchar_t(0));
+    EXPECT_EQ(core::int_cast<bool>(0), bool(0));
+    EXPECT_EQ(core::int_cast<short>(0), short(0));
+    EXPECT_EQ(core::int_cast<int>(0), int(0));
+    EXPECT_EQ(core::int_cast<long>(0), long(0));
+    EXPECT_EQ(core::int_cast<llong>(0), llong(0));
+    EXPECT_EQ(core::int_cast<ushort>(0), ushort(0));
+    EXPECT_EQ(core::int_cast<uint>(0), uint(0));
+    EXPECT_EQ(core::int_cast<ulong>(0), ulong(0));
+    EXPECT_EQ(core::int_cast<ullong>(0), ullong(0));
+    EXPECT_EQ(core::int_cast<char>(0), char(0));
+    EXPECT_EQ(core::int_cast<schar>(0), schar(0));
+    EXPECT_EQ(core::int_cast<uchar>(0), uchar(0));
+    EXPECT_EQ(core::int_cast<wchar_t>(0), wchar_t(0));
     EXPECT_EQ(core::int_cast<char16_t>(0), char16_t(0));
     EXPECT_EQ(core::int_cast<char32_t>(0), char32_t(0));
-    EXPECT_EQ(core::int_cast<Int>(0),      Int(0));
-    EXPECT_EQ(core::int_cast<Int8>(0),     Int8(0));
-    EXPECT_EQ(core::int_cast<Int16>(0),    Int16(0));
-    EXPECT_EQ(core::int_cast<Int32>(0),    Int32(0));
-    EXPECT_EQ(core::int_cast<Int64>(0),    Int64(0));
-    EXPECT_EQ(core::int_cast<UInt>(0),     UInt(0));
-    EXPECT_EQ(core::int_cast<UInt8>(0),    UInt8(0));
-    EXPECT_EQ(core::int_cast<UInt16>(0),   UInt16(0));
-    EXPECT_EQ(core::int_cast<UInt32>(0),   UInt32(0));
-    EXPECT_EQ(core::int_cast<UInt64>(0),   UInt64(0));
+    EXPECT_EQ(core::int_cast<Int>(0), Int(0));
+    EXPECT_EQ(core::int_cast<Int8>(0), Int8(0));
+    EXPECT_EQ(core::int_cast<Int16>(0), Int16(0));
+    EXPECT_EQ(core::int_cast<Int32>(0), Int32(0));
+    EXPECT_EQ(core::int_cast<Int64>(0), Int64(0));
+    EXPECT_EQ(core::int_cast<UInt>(0), UInt(0));
+    EXPECT_EQ(core::int_cast<UInt8>(0), UInt8(0));
+    EXPECT_EQ(core::int_cast<UInt16>(0), UInt16(0));
+    EXPECT_EQ(core::int_cast<UInt32>(0), UInt32(0));
+    EXPECT_EQ(core::int_cast<UInt64>(0), UInt64(0));
 }
 
 // TODO: DefineMin/DefineMax
@@ -159,31 +159,31 @@ TEST(TestInt, DefineZero) {
 
 TEST(TestInt, EqCastZero) {
 
-    EXPECT_EQ(core::int_cast<bool>     (bool(0)),     bool(0));
-    EXPECT_EQ(core::int_cast<short>    (short(0)),    short(0));
-    EXPECT_EQ(core::int_cast<int>      (int(0)),      int(0));
-    EXPECT_EQ(core::int_cast<long>     (long(0)),     long(0));
-    EXPECT_EQ(core::int_cast<llong>    (llong(0)),    llong(0));
-    EXPECT_EQ(core::int_cast<ushort>   (ushort(0)),   ushort(0));
-    EXPECT_EQ(core::int_cast<uint>     (uint(0)),     uint(0));
-    EXPECT_EQ(core::int_cast<ulong>    (ulong(0)),    ulong(0));
-    EXPECT_EQ(core::int_cast<ullong>   (ullong(0)),   ullong(0));
-    EXPECT_EQ(core::int_cast<char>     (char(0)),     char(0));
-    EXPECT_EQ(core::int_cast<schar>    (schar(0)),    schar(0));
-    EXPECT_EQ(core::int_cast<uchar>    (uchar(0)),    uchar(0));
-    EXPECT_EQ(core::int_cast<wchar_t>  (wchar_t(0)),  wchar_t(0));
-    EXPECT_EQ(core::int_cast<char16_t> (char16_t(0)), char16_t(0));
-    EXPECT_EQ(core::int_cast<char32_t> (char32_t(0)), char32_t(0));
-    EXPECT_EQ(core::int_cast<Int>      (Int(0)),      Int(0));
-    EXPECT_EQ(core::int_cast<Int8>     (Int8(0)),     Int8(0));
-    EXPECT_EQ(core::int_cast<Int16>    (Int16(0)),    Int16(0));
-    EXPECT_EQ(core::int_cast<Int32>    (Int32(0)),    Int32(0));
-    EXPECT_EQ(core::int_cast<Int64>    (Int64(0)),    Int64(0));
-    EXPECT_EQ(core::int_cast<UInt>     (UInt(0)),     UInt(0));
-    EXPECT_EQ(core::int_cast<UInt8>    (UInt8(0)),    UInt8(0));
-    EXPECT_EQ(core::int_cast<UInt16>   (UInt16(0)),   UInt16(0));
-    EXPECT_EQ(core::int_cast<UInt32>   (UInt32(0)),   UInt32(0));
-    EXPECT_EQ(core::int_cast<UInt64>   (UInt64(0)),   UInt64(0));
+    EXPECT_EQ(core::int_cast<bool>(bool(0)), bool(0));
+    EXPECT_EQ(core::int_cast<short>(short(0)), short(0));
+    EXPECT_EQ(core::int_cast<int>(int(0)), int(0));
+    EXPECT_EQ(core::int_cast<long>(long(0)), long(0));
+    EXPECT_EQ(core::int_cast<llong>(llong(0)), llong(0));
+    EXPECT_EQ(core::int_cast<ushort>(ushort(0)), ushort(0));
+    EXPECT_EQ(core::int_cast<uint>(uint(0)), uint(0));
+    EXPECT_EQ(core::int_cast<ulong>(ulong(0)), ulong(0));
+    EXPECT_EQ(core::int_cast<ullong>(ullong(0)), ullong(0));
+    EXPECT_EQ(core::int_cast<char>(char(0)), char(0));
+    EXPECT_EQ(core::int_cast<schar>(schar(0)), schar(0));
+    EXPECT_EQ(core::int_cast<uchar>(uchar(0)), uchar(0));
+    EXPECT_EQ(core::int_cast<wchar_t>(wchar_t(0)), wchar_t(0));
+    EXPECT_EQ(core::int_cast<char16_t>(char16_t(0)), char16_t(0));
+    EXPECT_EQ(core::int_cast<char32_t>(char32_t(0)), char32_t(0));
+    EXPECT_EQ(core::int_cast<Int>(Int(0)), Int(0));
+    EXPECT_EQ(core::int_cast<Int8>(Int8(0)), Int8(0));
+    EXPECT_EQ(core::int_cast<Int16>(Int16(0)), Int16(0));
+    EXPECT_EQ(core::int_cast<Int32>(Int32(0)), Int32(0));
+    EXPECT_EQ(core::int_cast<Int64>(Int64(0)), Int64(0));
+    EXPECT_EQ(core::int_cast<UInt>(UInt(0)), UInt(0));
+    EXPECT_EQ(core::int_cast<UInt8>(UInt8(0)), UInt8(0));
+    EXPECT_EQ(core::int_cast<UInt16>(UInt16(0)), UInt16(0));
+    EXPECT_EQ(core::int_cast<UInt32>(UInt32(0)), UInt32(0));
+    EXPECT_EQ(core::int_cast<UInt64>(UInt64(0)), UInt64(0));
 }
 
 TEST(TestInt, UpCastZero) {
@@ -231,29 +231,28 @@ TEST(TestInt, DownCastMinUnsigned) {
 TEST(TestInt, MiscNoThrow) {
 
     // TODO: classify and complete
-    EXPECT_EQ(core::int_cast<UInt8>(Int8(127)),          UInt8(127));
-    EXPECT_EQ(core::int_cast<UInt8>(Int16(255)),         UInt8(255));
+    EXPECT_EQ(core::int_cast<UInt8>(Int8(127)), UInt8(127));
+    EXPECT_EQ(core::int_cast<UInt8>(Int16(255)), UInt8(255));
     EXPECT_EQ(core::int_cast<UInt32>(Int32(2147483647)), UInt32(2147483647));
     EXPECT_EQ(core::int_cast<UInt32>(Int64(4294967295)), UInt32(4294967295));
-    EXPECT_EQ(core::int_cast<Int8>(UInt8(127)),          Int8(127));
-    EXPECT_EQ(core::int_cast<Int8>(Int16(127)),          Int8(127));
-    EXPECT_EQ(core::int_cast<UInt8>(UInt16(255)),        UInt8(255));
+    EXPECT_EQ(core::int_cast<Int8>(UInt8(127)), Int8(127));
+    EXPECT_EQ(core::int_cast<Int8>(Int16(127)), Int8(127));
+    EXPECT_EQ(core::int_cast<UInt8>(UInt16(255)), UInt8(255));
 }
 
 TEST(TestInt, MiscThrow) {
 
     // TODO: classify and complete
-    EXPECT_THROW(core::int_cast<UInt8>(Int8(-1))          , core::NegativeIntegerError);
-    EXPECT_THROW(core::int_cast<UInt8>(Int16(256))        , core::IntegerOverflowError);
-    EXPECT_THROW(core::int_cast<UInt32>(Int32(-1))        , core::NegativeIntegerError);
+    EXPECT_THROW(core::int_cast<UInt8>(Int8(-1)), core::NegativeIntegerError);
+    EXPECT_THROW(core::int_cast<UInt8>(Int16(256)), core::IntegerOverflowError);
+    EXPECT_THROW(core::int_cast<UInt32>(Int32(-1)), core::NegativeIntegerError);
     EXPECT_THROW(core::int_cast<UInt32>(Int64(4294967296)), core::IntegerOverflowError);
-    EXPECT_THROW(core::int_cast<Int8>(UInt8(128))         , core::IntegerOverflowError);
-    EXPECT_THROW(core::int_cast<Int8>(Int16(128))         , core::IntegerOverflowError);
-    EXPECT_THROW(core::int_cast<UInt8>(UInt16(256))       , core::IntegerOverflowError);
+    EXPECT_THROW(core::int_cast<Int8>(UInt8(128)), core::IntegerOverflowError);
+    EXPECT_THROW(core::int_cast<Int8>(Int16(128)), core::IntegerOverflowError);
+    EXPECT_THROW(core::int_cast<UInt8>(UInt16(256)), core::IntegerOverflowError);
 }
 
-
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

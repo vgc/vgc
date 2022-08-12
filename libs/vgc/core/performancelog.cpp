@@ -21,88 +21,68 @@
 namespace vgc {
 namespace core {
 
-PerformanceLog::PerformanceLog(
-        PerformanceLog* parent,
-        const std::string& name) :
+PerformanceLog::PerformanceLog(PerformanceLog* parent, const std::string& name)
+    : Object()
+    , params_(nullptr)
+    , name_(name)
+    , time_(0.0) {
 
-    Object(),
-
-    params_(nullptr),
-    name_(name),
-    time_(0.0)
-{
     if (parent) {
         appendObjectToParent_(parent);
     }
 }
 
 /* static */
-PerformanceLogPtr PerformanceLog::create(const std::string& name)
-{
+PerformanceLogPtr PerformanceLog::create(const std::string& name) {
     return PerformanceLogPtr(new PerformanceLog(nullptr, name));
 }
 
-PerformanceLog* PerformanceLog::createChild(const std::string& name)
-{
+PerformanceLog* PerformanceLog::createChild(const std::string& name) {
     return new PerformanceLog(this, name);
 }
 
-PerformanceLogParams* PerformanceLog::params() const
-{
+PerformanceLogParams* PerformanceLog::params() const {
     return params_.get();
 }
 
-std::string PerformanceLog::name() const
-{
+std::string PerformanceLog::name() const {
     return name_;
 }
 
-void PerformanceLog::start()
-{
+void PerformanceLog::start() {
     stopwatch_.restart();
 }
 
-void PerformanceLog::stop()
-{
+void PerformanceLog::stop() {
     log(stopwatch_.elapsed());
 }
 
-void PerformanceLog::log(double time)
-{
+void PerformanceLog::log(double time) {
     time_ = time;
 }
 
-double PerformanceLog::lastTime() const
-{
+double PerformanceLog::lastTime() const {
     return time_;
 }
 
-PerformanceLogParams::PerformanceLogParams() :
-
-    Object()
-{
-
+PerformanceLogParams::PerformanceLogParams()
+    : Object() {
 }
 
 /* static */
-PerformanceLogParamsPtr PerformanceLogParams::create()
-{
+PerformanceLogParamsPtr PerformanceLogParams::create() {
     return PerformanceLogParamsPtr(new PerformanceLogParams());
 }
 
-PerformanceLogTask::PerformanceLogTask(const std::string& name) :
-    name_(name)
-{
-
+PerformanceLogTask::PerformanceLogTask(const std::string& name)
+    : name_(name) {
 }
 
-std::string PerformanceLogTask::name() const
-{
+std::string PerformanceLogTask::name() const {
     return name_;
 }
 
-PerformanceLog* PerformanceLogTask::startLoggingUnder(PerformanceLog* parent)
-{
+PerformanceLog* PerformanceLogTask::startLoggingUnder(PerformanceLog* parent) {
     PerformanceLog* log = getLogUnder(parent);
     if (!log) {
         logs_.push_back(parent->createChild(name_));
@@ -111,8 +91,7 @@ PerformanceLog* PerformanceLogTask::startLoggingUnder(PerformanceLog* parent)
     return log;
 }
 
-PerformanceLogPtr PerformanceLogTask::stopLoggingUnder(PerformanceLog* parent)
-{
+PerformanceLogPtr PerformanceLogTask::stopLoggingUnder(PerformanceLog* parent) {
     using std::swap;
 
     PerformanceLogPtr res;
@@ -128,8 +107,7 @@ PerformanceLogPtr PerformanceLogTask::stopLoggingUnder(PerformanceLog* parent)
     return res;
 }
 
-PerformanceLog* PerformanceLogTask::getLogUnder(PerformanceLog* parent) const
-{
+PerformanceLog* PerformanceLogTask::getLogUnder(PerformanceLog* parent) const {
     for (const auto& log : logs_) {
         if (log->parent() == parent) {
             return log.get();
@@ -138,13 +116,11 @@ PerformanceLog* PerformanceLogTask::getLogUnder(PerformanceLog* parent) const
     return nullptr;
 }
 
-void PerformanceLogTask::start()
-{
+void PerformanceLogTask::start() {
     stopwatch_.restart();
 }
 
-void PerformanceLogTask::stop()
-{
+void PerformanceLogTask::stop() {
     double time = stopwatch_.elapsed();
     for (const auto& log : logs_) {
         log->log(time);

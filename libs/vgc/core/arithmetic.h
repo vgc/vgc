@@ -115,9 +115,9 @@
 /// haven't done it yet.
 ///
 
-#include <cmath> // fabs, nextafter
+#include <cmath>   // fabs, nextafter
 #include <cstdint> // int32_t, etc.
-#include <limits> // min, max, infinity
+#include <limits>  // min, max, infinity
 #include <type_traits>
 
 #include <vgc/core/exceptions.h>
@@ -166,9 +166,9 @@ using UInt64 = std::uint64_t;
 /// such as array sizes and indices.
 ///
 #ifdef VGC_CORE_USE_32BIT_INT
-    using Int = Int32;
+using Int = Int32;
 #else
-    using Int = Int64;
+using Int = Int64;
 #endif
 
 /// An unsigned integer type of same width as vgc::Int (at least 32bit).
@@ -178,9 +178,9 @@ using UInt64 = std::uint64_t;
 /// and indices.
 ///
 #ifdef VGC_CORE_USE_32BIT_INT
-    using UInt = UInt32;
+using UInt = UInt32;
 #else
-    using UInt = UInt64;
+using UInt = UInt64;
 #endif
 
 } // namespace vgc
@@ -196,7 +196,8 @@ namespace vgc::core {
 ///
 template<typename T>
 struct TMax {
-    static_assert(std::is_arithmetic_v<T>,
+    static_assert(
+        std::is_arithmetic_v<T>,
         "vgc::core::TMax<T> is only defined for arithmetic types.");
     static constexpr T value = (std::numeric_limits<T>::max)();
 };
@@ -216,7 +217,8 @@ struct TMax {
 ///
 template<typename T, typename SFINAE = void>
 struct TMin {
-    static_assert(std::is_arithmetic_v<T>,
+    static_assert(
+        std::is_arithmetic_v<T>,
         "vgc::core::TMin<T> is only defined for arithmetic types.");
 };
 template<typename T>
@@ -225,7 +227,7 @@ struct TMin<T, Requires<std::is_integral_v<T>>> {
 };
 template<typename T>
 struct TMin<T, Requires<std::is_floating_point_v<T>>> {
-    static constexpr T value = - (std::numeric_limits<T>::max)();
+    static constexpr T value = -(std::numeric_limits<T>::max)();
 };
 
 /// The type trait `SmallestNormal<T>` defines a public member typedef
@@ -239,7 +241,8 @@ struct TMin<T, Requires<std::is_floating_point_v<T>>> {
 ///
 template<typename T>
 struct SmallestNormal {
-    static_assert(std::is_floating_point_v<T>,
+    static_assert(
+        std::is_floating_point_v<T>,
         "vgc::core::SmallestNormal<T> is only defined for floating point types.");
     static constexpr T value = (std::numeric_limits<T>::min)();
 };
@@ -252,7 +255,8 @@ struct SmallestNormal {
 ///
 template<typename T>
 struct Infinity {
-    static_assert(std::is_floating_point_v<T>,
+    static_assert(
+        std::is_floating_point_v<T>,
         "vgc::core::Infinity<T> is only defined for floating point types.");
     static constexpr T value = std::numeric_limits<T>::infinity();
 };
@@ -464,9 +468,13 @@ inline constexpr double DoubleInfinity = infinity<double>;
 /// Note how "char" is a separate type from both "signed char" (= Int8) and
 /// "unsigned char" (= UInt8).
 ///
-template<typename T, VGC_REQUIRES(std::is_integral_v<T>)>
-inline std::string int_typename() { return "UnknownInt"; }
 
+template<typename T, VGC_REQUIRES(std::is_integral_v<T>)>
+inline std::string int_typename() {
+    return "UnknownInt";
+}
+
+// clang-format off
 template<> inline std::string int_typename<bool>() { return "Bool"; }
 template<> inline std::string int_typename<char>() { return "Char"; }
 template<> inline std::string int_typename<Int8>() { return "Int8"; }
@@ -477,12 +485,14 @@ template<> inline std::string int_typename<UInt8>() { return "UInt8"; }
 template<> inline std::string int_typename<UInt16>() { return "UInt16"; }
 template<> inline std::string int_typename<UInt32>() { return "UInt32"; }
 template<> inline std::string int_typename<UInt64>() { return "UInt64"; }
+// clang-format on
 
 namespace internal {
 
 template<typename T, typename U>
 std::string intErrorReason(U value) {
-    return core::format("Cannot convert {}({}) to type {}", int_typename<U>(), value, int_typename<T>());
+    return core::format(
+        "Cannot convert {}({}) to type {}", int_typename<U>(), value, int_typename<T>());
 }
 
 template<typename T, typename U>
@@ -555,19 +565,21 @@ void throwNegativeIntegerError(U value) {
 // So we simply silence the warning.
 //
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(push)
-#  pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#    pragma warning(push)
+#    pragma warning(disable : 4804) // unsafe use of type 'bool' in operation
 #endif
+
+// clang-format off
 
 // int_cast from from U to T when:
 // - U and T are both signed or both unsigned
 // - The range of T includes the range of U.
 //
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_signed_v<T> == std::is_signed_v<U> &&
-        tmax<T> >= tmax<U>)> // (1)
+    std::is_integral_v<T>
+    && std::is_integral_v<U>
+    && std::is_signed_v<T> == std::is_signed_v<U>
+    && tmax<T> >= tmax<U>)> // (1)
 T int_cast(U value) {
     return static_cast<T>(value);
 }
@@ -577,11 +589,11 @@ T int_cast(U value) {
 // - The range of T does not include the range of U.
 //
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_signed_v<T> &&
-        std::is_signed_v<U> &&
-        tmax<T> < tmax<U>)>
+    std::is_integral_v<T>
+    && std::is_integral_v<U>
+    && std::is_signed_v<T>
+    && std::is_signed_v<U>
+    && tmax<T> < tmax<U>)>
 T int_cast(U value) {
     if (value < tmin<T> || // (1)
         value > tmax<T>) { // (1)
@@ -595,11 +607,11 @@ T int_cast(U value) {
 // - The range of T does not include the range of U.
 //
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_unsigned_v<T> &&
-        std::is_unsigned_v<U> &&
-        tmax<T> < tmax<U>)>
+    std::is_integral_v<T>
+    && std::is_integral_v<U>
+    && std::is_unsigned_v<T>
+    && std::is_unsigned_v<U>
+    && tmax<T> < tmax<U>)>
 T int_cast(U value) {
     if (value > tmax<T>) { // (1)
         internal::throwIntegerOverflowError<T>(value);
@@ -612,11 +624,11 @@ T int_cast(U value) {
 // - The range of T includes the range of U
 //
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_signed_v<T> &&
-        std::is_unsigned_v<U> &&
-        tmax<T> >= tmax<U>)> // (2)
+    std::is_integral_v<T>
+    && std::is_integral_v<U>
+    && std::is_signed_v<T>
+    && std::is_unsigned_v<U>
+    && tmax<T> >= tmax<U>)> // (2)
 T int_cast(U value) {
     return static_cast<T>(value);
 }
@@ -626,11 +638,11 @@ T int_cast(U value) {
 // - The range of T does not include the range of U
 //
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_signed_v<T> &&
-        std::is_unsigned_v<U> &&
-        tmax<T> < tmax<U>)> // (2)
+    std::is_integral_v<T>
+    && std::is_integral_v<U>
+    && std::is_signed_v<T>
+    && std::is_unsigned_v<U>
+    && tmax<T> < tmax<U>)> // (2)
 T int_cast(U value) {
     if (value > tmax<T>) { // (2)
         internal::throwIntegerOverflowError<T>(value);
@@ -643,11 +655,11 @@ T int_cast(U value) {
 // - The range of T includes the positive range of U
 //
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_unsigned_v<T> &&
-        std::is_signed_v<U> &&
-        tmax<T> >= tmax<U>)> // (2)
+    std::is_integral_v<T>
+    && std::is_integral_v<U>
+    && std::is_unsigned_v<T>
+    && std::is_signed_v<U>
+    && tmax<T> >= tmax<U>)> // (2)
 T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
         internal::throwNegativeIntegerError<T>(value);
@@ -660,11 +672,11 @@ T int_cast(U value) {
 // - The range of T does not include the positive range of U
 //
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_unsigned_v<T> &&
-        std::is_signed_v<U> &&
-        tmax<T> < tmax<U>)> // (2)
+    std::is_integral_v<T>
+    && std::is_integral_v<U> 
+    && std::is_unsigned_v<T>
+    && std::is_signed_v<U>
+    && tmax<T> < tmax<U>)> // (2)
 T int_cast(U value) {
     if (value < 0) { // 0 is promoted to int => (1)
         internal::throwNegativeIntegerError<T>(value);
@@ -675,8 +687,10 @@ T int_cast(U value) {
     return static_cast<T>(value);
 }
 
+// clang-format on
+
 #if defined(VGC_CORE_COMPILER_MSVC)
-#  pragma warning(pop)
+#    pragma warning(pop)
 #endif
 
 /// Sets the given bool, character, integer or floating-point number to zero.
@@ -771,9 +785,8 @@ bool isClose(T a, T b, T relTol, T absTol) {
         return false; // opposite infinities or finite/infinite mismatch
     }
     else {
-        return diff <= std::fabs(relTol * b) ||
-               diff <= std::fabs(relTol * a) ||
-               diff <= absTol;
+        return diff <= std::fabs(relTol * b) || diff <= std::fabs(relTol * a)
+               || diff <= absTol;
     }
 }
 
@@ -946,8 +959,12 @@ inline bool isNear(double a, double b, double absTol) {
 template<typename T>
 const T& clamp(const T& value, const TypeIdentity<T>& min, const TypeIdentity<T>& max) {
     if (max < min) {
-        VGC_WARNING(LogVgcCore, "vgc::core::clamp(value={}, min={}, max={}) called with max < min.",
-                    value, min, max);
+        VGC_WARNING(
+            LogVgcCore,
+            "vgc::core::clamp(value={}, min={}, max={}) called with max < min.",
+            value,
+            min,
+            max);
         return (value < max) ? max : (min < value) ? min : value;
     }
     else {
@@ -998,11 +1015,11 @@ FloatType nextbefore(FloatType x) {
 /// floating point to integer conversions, since floating points are subject to
 /// rounding errors which are less predictible than arithmetic on integers.
 ///
-template<typename IntType, typename FloatType, VGC_REQUIRES(
-        std::is_floating_point_v<FloatType> &&
-        std::is_integral_v<IntType>)>
-IntType ifloor(FloatType x)
-{
+// clang-format off
+template<typename IntType, typename FloatType,
+    VGC_REQUIRES(std::is_floating_point_v<FloatType> && std::is_integral_v<IntType>)>
+// clang-format on
+IntType ifloor(FloatType x) {
     constexpr IntType tmini = tmin<IntType>;
     constexpr IntType tmaxi = tmax<IntType>;
     constexpr FloatType tminf = static_cast<FloatType>(tmin<IntType>);
@@ -1012,12 +1029,18 @@ IntType ifloor(FloatType x)
         if (x < tminf) {
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Min = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmini));
+                int_typename<IntType>(),
+                x,
+                int_typename<IntType>(),
+                tmini));
         }
         else if (x >= 1 + tmaxf) {
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Max = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmaxi));
+                int_typename<IntType>(),
+                x,
+                int_typename<IntType>(),
+                tmaxi));
         }
         else {
             return static_cast<IntType>(std::floor(x));
@@ -1027,12 +1050,18 @@ IntType ifloor(FloatType x)
         if (x < tminf) {
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Min = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmini));
+                int_typename<IntType>(),
+                x,
+                int_typename<IntType>(),
+                tmini));
         }
         else if (x >= tmaxf) { // See test_arithmetic.cpp for why "+1" is unnecessary
             throw IntegerOverflowError(core::format(
                 "Call to vgc::core::ifloor<{}>({:.1f}) overflows ({}Max = {})",
-                int_typename<IntType>(), x, int_typename<IntType>(), tmaxi));
+                int_typename<IntType>(),
+                x,
+                int_typename<IntType>(),
+                tmaxi));
         }
         else {
             return static_cast<IntType>(std::floor(x));

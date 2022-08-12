@@ -16,46 +16,35 @@
 
 #include <vgc/widgets/menubar.h>
 
-#include <QPainter>
 #include <QPaintEvent>
+#include <QPainter>
 
 namespace vgc {
 namespace widgets {
 
-MenuBar::MenuBar(QWidget* parent) :
-    QMenuBar(parent),
-    activeBorderBottomColor_(Qt::transparent)
-{
-
+MenuBar::MenuBar(QWidget* parent)
+    : QMenuBar(parent)
+    , activeBorderBottomColor_(Qt::transparent) {
 }
 
-MenuBar::~MenuBar()
-{
-
+MenuBar::~MenuBar() {
 }
 
-QColor MenuBar::activeBorderBottomColor() const
-{
+QColor MenuBar::activeBorderBottomColor() const {
     return activeBorderBottomColor_;
 }
 
-void MenuBar::setActiveBorderBottomColor(QColor c)
-{
+void MenuBar::setActiveBorderBottomColor(QColor c) {
     activeBorderBottomColor_ = c;
 }
 
-void MenuBar::paintEvent(QPaintEvent* e)
-{
+void MenuBar::paintEvent(QPaintEvent* e) {
     if (e->rect().height() < height()) {
         // By default, the border-bottom of the QMenuBar is not included in
         // the redrawn area when hovering on a menu item. Since we do desire
         // to change the color of the border-bottom in this case, we need to
         // extend the redrawn area a little.
-        update(
-            e->rect().x(),
-            e->rect().y(),
-            e->rect().width(),
-            height());
+        update(e->rect().x(), e->rect().y(), e->rect().width(), height());
     }
     else {
         // Draw the QMenuBar as usual

@@ -19,14 +19,11 @@
 namespace vgc {
 namespace ui {
 
-Column::Column() :
-    Flex(FlexDirection::Column, FlexWrap::NoWrap)
-{
-
+Column::Column()
+    : Flex(FlexDirection::Column, FlexWrap::NoWrap) {
 }
 
-ColumnPtr Column::create()
-{
+ColumnPtr Column::create() {
     return ColumnPtr(new Column());
 }
 

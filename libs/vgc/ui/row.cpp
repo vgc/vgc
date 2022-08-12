@@ -19,14 +19,11 @@
 namespace vgc {
 namespace ui {
 
-Row::Row() :
-    Flex(FlexDirection::Row, FlexWrap::NoWrap)
-{
-
+Row::Row()
+    : Flex(FlexDirection::Row, FlexWrap::NoWrap) {
 }
 
-RowPtr Row::create()
-{
+RowPtr Row::create() {
     return RowPtr(new Row());
 }
 

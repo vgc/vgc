@@ -16,15 +16,6 @@
 
 #include <vgc/dom/attribute.h>
 
-#include <vgc/core/logging.h>
-#include <vgc/dom/element.h>
-
-namespace vgc {
-namespace dom {
-
-} // namespace dom
-} // namespace vgc
-
 /*
 
 Implementation notes:

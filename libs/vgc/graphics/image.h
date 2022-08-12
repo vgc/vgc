@@ -37,128 +37,103 @@ class VGC_GRAPHICS_API ImageCreateInfo {
 public:
     constexpr ImageCreateInfo() noexcept = default;
 
-    Int width() const
-    {
+    Int width() const {
         return width_;
     }
 
-    void setWidth(Int width)
-    {
+    void setWidth(Int width) {
         width_ = width;
     }
 
-    Int height() const
-    {
+    Int height() const {
         return height_;
     }
 
-    void setHeight(Int height)
-    {
+    void setHeight(Int height) {
         height_ = height;
     }
 
-    ImageRank rank() const
-    {
+    ImageRank rank() const {
         return rank_;
     }
 
-    void setRank(ImageRank rank)
-    {
+    void setRank(ImageRank rank) {
         rank_ = rank;
     }
 
-    PixelFormat pixelFormat() const
-    {
+    PixelFormat pixelFormat() const {
         return pixelFormat_;
     }
 
-    void setPixelFormat(PixelFormat pixelFormat)
-    {
+    void setPixelFormat(PixelFormat pixelFormat) {
         pixelFormat_ = pixelFormat;
     }
 
-    Int numLayers() const
-    {
+    Int numLayers() const {
         return numLayers_;
     }
 
-    void setNumLayers(Int numLayers)
-    {
+    void setNumLayers(Int numLayers) {
         numLayers_ = numLayers;
     }
 
-    Int numMipLevels() const
-    {
+    Int numMipLevels() const {
         return numMipLevels_;
     }
 
-    void setNumMipLevels(Int numMipLevels)
-    {
+    void setNumMipLevels(Int numMipLevels) {
         numMipLevels_ = numMipLevels;
     }
 
-    Int numSamples() const
-    {
+    Int numSamples() const {
         return numSamples_;
     }
 
-    bool isMultisampled() const
-    {
+    bool isMultisampled() const {
         return numSamples_ > 1;
     }
 
-    void setNumSamples(Int numSamples)
-    {
+    void setNumSamples(Int numSamples) {
         numSamples_ = numSamples;
     }
 
-    bool isMipGenerationEnabled() const
-    {
+    bool isMipGenerationEnabled() const {
         return isMipGenerationEnabled_;
     }
 
-    void setMipGenerationEnabled(bool enabled)
-    {
+    void setMipGenerationEnabled(bool enabled) {
         isMipGenerationEnabled_ = enabled;
     }
 
-    Usage usage() const
-    {
+    Usage usage() const {
         return usage_;
     }
 
-    void setUsage(Usage usage)
-    {
+    void setUsage(Usage usage) {
         usage_ = usage;
     }
 
-    ImageBindFlags bindFlags() const
-    {
+    ImageBindFlags bindFlags() const {
         return bindFlags_;
     }
 
-    void setBindFlags(ImageBindFlags bindFlags)
-    {
+    void setBindFlags(ImageBindFlags bindFlags) {
         bindFlags_ = bindFlags;
     }
 
-    ResourceMiscFlags resourceMiscFlags() const
-    {
+    ResourceMiscFlags resourceMiscFlags() const {
         return resourceMiscFlags_;
     }
 
-    void setResourceMiscFlags(ResourceMiscFlags resourceMiscFlags)
-    {
+    void setResourceMiscFlags(ResourceMiscFlags resourceMiscFlags) {
         resourceMiscFlags_ = resourceMiscFlags;
     }
 
-    CpuAccessFlags cpuAccessFlags() const
-    {
+    CpuAccessFlags cpuAccessFlags() const {
         return cpuAccessFlags_;
     }
 
-    void setCpuAccessFlags(CpuAccessFlags cpuAccessFlags)
-    {
+    void setCpuAccessFlags(CpuAccessFlags cpuAccessFlags) {
         cpuAccessFlags_ = cpuAccessFlags;
     }
 
@@ -182,71 +157,57 @@ private:
 ///
 class VGC_GRAPHICS_API Image : public Resource {
 protected:
-    Image(ResourceRegistry* registry,
-          const ImageCreateInfo& info)
+    Image(ResourceRegistry* registry, const ImageCreateInfo& info)
         : Resource(registry)
-        , info_(info)
-    {
+        , info_(info) {
     }
 
 public:
-    Int width() const
-    {
+    Int width() const {
         return info_.width();
     }
 
-    Int height() const
-    {
+    Int height() const {
         return info_.height();
     }
 
-    ImageRank rank() const
-    {
+    ImageRank rank() const {
         return info_.rank();
     }
 
-    PixelFormat pixelFormat() const
-    {
+    PixelFormat pixelFormat() const {
         return info_.pixelFormat();
     }
 
-    Int numLayers() const
-    {
+    Int numLayers() const {
         return info_.numLayers();
     }
 
-    Int numMipLevels() const
-    {
+    Int numMipLevels() const {
         return info_.numMipLevels();
     }
 
-    Int numSamples() const
-    {
+    Int numSamples() const {
         return info_.numSamples();
     }
 
-    bool isMipGenerationEnabled() const
-    {
+    bool isMipGenerationEnabled() const {
         return info_.isMipGenerationEnabled();
     }
 
-    Usage usage() const
-    {
+    Usage usage() const {
         return info_.usage();
     }
 
-    ImageBindFlags bindFlags() const
-    {
+    ImageBindFlags bindFlags() const {
         return info_.bindFlags();
     }
 
-    CpuAccessFlags cpuAccessFlags() const
-    {
+    CpuAccessFlags cpuAccessFlags() const {
         return info_.cpuAccessFlags();
     }
 
-    ResourceMiscFlags resourceMiscFlags() const
-    {
+    ResourceMiscFlags resourceMiscFlags() const {
         return info_.resourceMiscFlags();
     }
 

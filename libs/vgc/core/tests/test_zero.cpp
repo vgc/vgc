@@ -15,8 +15,12 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+
 #include <memory>
+
 #include <vgc/core/arithmetic.h>
+
+// clang-format off
 
 namespace foo {
 
@@ -48,17 +52,23 @@ void setZero(F& x) { x.m = 0; }
 // Update 2020-12-14: Even the less aggressive EXPECT_NE(a.m, 0) fails when
 // testing on the GitHub Actions Ubuntu machines. Therefore, we comment them out.
 //
-#define FILL { int m = 42; EXPECT_EQ(m, 42); }
+#define FILL                                                                             \
+    {                                                                                    \
+        int m = 42;                                                                      \
+        EXPECT_EQ(m, 42);                                                                \
+    }
 
 // We use this macro to fill heap memory with something else than 0, before
 // doing a placement new at that same exact location. Subsequent calls to
 // EXPECT_EQ(a->m, 42) are undefined behavior in theory, but pass in practice,
 // and help illustrate that `a->m` is indeed not initialized to zero.
 //
-#define FILLH(b) std::unique_ptr<int> bp(new int(42)); int* b = bp.get(); EXPECT_EQ(*b, 42)
+#define FILLH(b)                                                                         \
+    std::unique_ptr<int> bp(new int(42));                                                \
+    int* b = bp.get();                                                                   \
+    EXPECT_EQ(*b, 42)
 
-TEST(TestZero, StackDefaultInitialization)
-{
+TEST(TestZero, StackDefaultInitialization) {
     // { FILL; foo::A a; EXPECT_NE(a.m, 0); } // UB!
     // { FILL; foo::B a; EXPECT_NE(a.m, 0); } // UB!
     { FILL; foo::C a; EXPECT_EQ(a.m, 0); }
@@ -67,8 +77,7 @@ TEST(TestZero, StackDefaultInitialization)
     // { FILL; foo::F a; EXPECT_NE(a.m, 0); } // UB!
 }
 
-TEST(TestZero, StackValueInitialization)
-{
+TEST(TestZero, StackValueInitialization) {
     { FILL; foo::A a = foo::A(); EXPECT_EQ(a.m, 0); }
     { FILL; foo::B a = foo::B(); EXPECT_EQ(a.m, 0); }
     { FILL; foo::C a = foo::C(); EXPECT_EQ(a.m, 0); }
@@ -77,8 +86,7 @@ TEST(TestZero, StackValueInitialization)
     // { FILL; foo::F a = foo::F(); EXPECT_NE(a.m, 0); } // UB!
 }
 
-TEST(TestZero, StackListInitialization)
-{
+TEST(TestZero, StackListInitialization) {
     { FILL; foo::A a{}; EXPECT_EQ(a.m, 0); }
     { FILL; foo::B a{}; EXPECT_EQ(a.m, 0); }
     { FILL; foo::C a{}; EXPECT_EQ(a.m, 0); }
@@ -87,8 +95,7 @@ TEST(TestZero, StackListInitialization)
     // { FILL; foo::F a{}; EXPECT_NE(a.m, 0); } // UB!
 }
 
-TEST(TestZero, StackExplicitZero)
-{
+TEST(TestZero, StackExplicitZero) {
     { FILL; foo::A a = vgc::core::zero<foo::A>(); EXPECT_EQ(a.m, 0); }
     { FILL; foo::B a = vgc::core::zero<foo::B>(); EXPECT_EQ(a.m, 0); }
     { FILL; foo::C a = vgc::core::zero<foo::C>(); EXPECT_EQ(a.m, 0); }
@@ -97,8 +104,7 @@ TEST(TestZero, StackExplicitZero)
     { FILL; foo::F a = vgc::core::zero<foo::F>(); EXPECT_EQ(a.m, 0); }
 }
 
-TEST(TestZero, HeapDefaultInitialization)
-{
+TEST(TestZero, HeapDefaultInitialization) {
     { FILLH(b); foo::A* a = new (b) foo::A; EXPECT_EQ(a->m, 42); } // ~UB
     { FILLH(b); foo::B* a = new (b) foo::B; EXPECT_EQ(a->m, 42); } // ~UB
     { FILLH(b); foo::C* a = new (b) foo::C; EXPECT_EQ(a->m, 0);  }
@@ -107,8 +113,7 @@ TEST(TestZero, HeapDefaultInitialization)
     { FILLH(b); foo::F* a = new (b) foo::F; EXPECT_EQ(a->m, 42); } // ~UB
 }
 
-TEST(TestZero, HeapValueInitialization)
-{
+TEST(TestZero, HeapValueInitialization) {
     { FILLH(b); foo::A* a = new (b) foo::A(); EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::B* a = new (b) foo::B(); EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::C* a = new (b) foo::C(); EXPECT_EQ(a->m, 0);  }
@@ -117,8 +122,7 @@ TEST(TestZero, HeapValueInitialization)
     { FILLH(b); foo::F* a = new (b) foo::F(); EXPECT_EQ(a->m, 42); } // ~UB
 }
 
-TEST(TestZero, HeapListInitialization)
-{
+TEST(TestZero, HeapListInitialization) {
     { FILLH(b); foo::A* a = new (b) foo::A{}; EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::B* a = new (b) foo::B{}; EXPECT_EQ(a->m, 0);  }
     { FILLH(b); foo::C* a = new (b) foo::C{}; EXPECT_EQ(a->m, 0);  }
@@ -127,8 +131,7 @@ TEST(TestZero, HeapListInitialization)
     { FILLH(b); foo::F* a = new (b) foo::F{}; EXPECT_EQ(a->m, 42); } // ~UB
 }
 
-TEST(TestZero, HeapExplicitZero)
-{
+TEST(TestZero, HeapExplicitZero) {
     { FILLH(b); foo::A* a = new (b) foo::A(vgc::core::zero<foo::A>()); EXPECT_EQ(a->m, 0); }
     { FILLH(b); foo::B* a = new (b) foo::B(vgc::core::zero<foo::B>()); EXPECT_EQ(a->m, 0); }
     { FILLH(b); foo::C* a = new (b) foo::C(vgc::core::zero<foo::C>()); EXPECT_EQ(a->m, 0); }
@@ -137,8 +140,9 @@ TEST(TestZero, HeapExplicitZero)
     { FILLH(b); foo::F* a = new (b) foo::F(vgc::core::zero<foo::F>()); EXPECT_EQ(a->m, 0); }
 }
 
-int main(int argc, char **argv)
-{
+// clang-format on
+
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

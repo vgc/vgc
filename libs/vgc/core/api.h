@@ -31,10 +31,10 @@
 #    define VGC_CORE_API_EXCEPTION
 #else
 #    if defined(VGC_CORE_EXPORTS)
-#        define VGC_CORE_API           VGC_CORE_DLL_EXPORT
+#        define VGC_CORE_API VGC_CORE_DLL_EXPORT
 #        define VGC_CORE_API_EXCEPTION VGC_CORE_DLL_EXPORT_EXCEPTION
 #    else
-#        define VGC_CORE_API           VGC_CORE_DLL_IMPORT
+#        define VGC_CORE_API VGC_CORE_DLL_IMPORT
 #        define VGC_CORE_API_EXCEPTION VGC_CORE_DLL_IMPORT_EXCEPTION
 #    endif
 #    define VGC_CORE_API_HIDDEN VGC_CORE_DLL_HIDDEN
