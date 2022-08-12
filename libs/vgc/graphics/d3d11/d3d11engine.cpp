@@ -817,9 +817,9 @@ void D3d11Engine::createBuiltinShaders_() {
         ComPtr<ID3DBlob> pixelShaderBlob;
 
         HRESULT hres = D3DCompile(
-            vertexShaderSrc, strlen(vertexShaderSrc),
+            pixelShaderSrc, strlen(pixelShaderSrc),
             NULL, NULL, NULL, "main", "vs_4_0", 0, 0,
-            vertexShaderBlob.releaseAndGetAddressOf(),
+            pixelShaderBlob.releaseAndGetAddressOf(),
             errorBlob.releaseAndGetAddressOf());
 
         if (hres < 0)
