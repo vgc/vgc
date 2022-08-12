@@ -4,6 +4,8 @@ If something is not addressed here, follow the
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
 If something is not addressed there, favor readability.
 
+VGC uses clang-format to automatically format the code. See the `.clang-format` file in the `libs` and `apps` directory. We recommend to set up your IDE such that it automatically calls `clang-format` on save.
+
 ## Header Files
 
 Headers should be self-contained (i.e., they must be compilable by themselves).
@@ -23,21 +25,39 @@ Try to avoid forward declarations as much as possible.
 
 Always use angle brackets and the full path for header includes: `#include <vgc/libname/headername.h>`
 
-In header files, include other header files in this order:
+Organize headers in the following groups, and include them in the following order:
+- If in a `*.cpp` file: Corresponding `.h` file
 - Standard library headers
 - Headers from third-party libraries
 - VGC headers
-- VGC internal headers
+- VGC `detail` headers
 
-In a .cpp file, include its corresponding .h first, then follow the same order as above.
+Separate groups with a blank line. Within each group, order alphabetically.
+Note that clang-format reorders automatically, so make sure to separate groups by a blank line even
+if there is only one header in a given group.
 
-Within each category of includes (e.g., "VGC headers"), order alphabetically.
+```cpp
+// In lineedit.cpp:
+
+#include <vgc/ui/lineedit.h>
+
+#include <algorithm>
+
+#include <QClipboard>
+#include <QGuiApplication>
+
+#include <vgc/core/array.h>
+#include <vgc/core/colors.h>
+#include <vgc/core/performancelog.h>
+#include <vgc/ui/cursor.h>
+#include <vgc/ui/strings.h>
+
+#include <vgc/ui/detail/paintutil.h>
+```
 
 Don't rely on includes from other headers. For example, if you need both
 `vgc::geometry::Curve` and `vgc::geometry::Vec2d`, include both
-`<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`. Exception: there is no
-need to explicitly include headers which are already in
-`<vgc/core/innercore.h>`.
+`<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`.
 
 Never use `using lib::foo;` or `using namespace lib;` in a header file at
 global or namespace scope (where `lib` is any namespace, including `std`,
@@ -53,8 +73,7 @@ Always scope public API under two namespaces, and comment closing bracket for re
 ```cpp
 namespace vgc::mylib {
 
-class MyClass
-{
+class MyClass {
     ...
 };
 
@@ -81,23 +100,22 @@ struct HelperStruct_ {
 } // namespace
 ```
 
-In .h files, encapsulate implementation details in an `internal` namespace.
-There is no need to use the `_` suffix for names in the `internal` namespace:
+In .h files, encapsulate implementation details in a `detail` namespace.
+There is no need to use the `_` suffix for names in the `detail` namespace:
 
 ```cpp
-namespace internal {
+namespace detail {
 
 struct HelperStruct {
     int x;
     int y;
 };
 
-} // namespace internal
+} // namespace detail
 ```
 
-Internal .h files may be placed in a separate `internal` folder:
-`<vgc/mylib/internal/foo.h>`.
-
+Internal .h files may be placed in a separate `detail` folder:
+`<vgc/mylib/detail/foo.h>`.
 
 Prefer `enum class` rather than C-style `enum`.
 
@@ -127,9 +145,11 @@ enum class EnumName {
 };
 ```
 
+When using acronyms, do not capitalize the whole acronym. In order words, use `XmlClass` instead of `XMLClass`.
+
 ## Formatting
 
-Indent with 4 spaces. No tabs.
+Indent with 4 spaces. No tabs. Wrap lines at 90 characters.
 
 Function declarations:
 
@@ -144,68 +164,84 @@ void byRValue(Foo&& foo);
 Function definition:
 
 ```cpp
-void largeOrNonInlineFunction()
-{
-    thisIsPreferred();
-}
-
-void shortInlineFunction() {
-    thisIsOkay();
-}
-
-void veryShortInlineFunction() { thisIsOkay(); }
-```
-
-Constructors:
-
-```cpp
-LargeOrNonInlineConstructor::LargeOrNonInlineConstructor(
-    int veryLongParam1,
-    int veryLongParam2) :
-    
-    BaseClass(),
-    veryLongParam1_(veryLongParam1),
-    veryLongParam2_(veryLongParam2)
-{
-    doSomething();
-}
-
-LargeOrNonInlineConstructor::LargeOrNonInlineConstructor(int shortParam1, int shortParam2) :
-    BaseClass(),
-    shortParam1_(shortParam1), shortParam2_(shortParam2)
-{
-    doSomething();
-}
-
-LargeOrNonInlineConstructor::LargeOrNonInlineConstructor(int shortParam1, int shortParam2) :
-    shortParam1_(shortParam1), shortParam2_(shortParam2)
-{
-    doSomething();
-}
-
-NonInlineConstructorWithoutBody::NonInlineConstructorWithoutBody(int x) :
-    x_(x)
-{
-    
-}
-    
-InlineConstructorWithLongParams(int x, int y, int z, int w) :
-    x_(x), y_(y), z_(z), w_(w)
-{
-    doSomething();
-}
-
-InlineConstructorWithLongParamsWithoutBody(int x, int y, int z, int w) :
-    x_(x), y_(y), z_(z), w_(w) {}
-
-InlineConstructorWithShortParams(int x) : x_(x) {
+void someFunction() {
     doSomething();
     doSomethingElse();
 }
+```
 
-InlineConstructorWithShortParamsAndShortBody(double x) : x_(x) { doSomething(); }
+```cpp
+void fuctionWithoutBody() {
+}
+```
 
-InlineConstructorWithShortParamsWithoutBody(double x) : x_(x) {}
+If the function params do not all fit in one line, then each should be in a separate line,
+and the function body (if there is one) should be separated with a blank line:
+
+```cpp
+void functionWithLongParams(
+    int longParam1,
+    int longParam2,
+    int longParam3) {
+    
+    doSomething();
+}
+```
+
+If the function signature is on a single line and the function body doesn't
+have any blank lines, then do not add a blank line between the function signature 
+and its body:
+
+```cpp
+void functionSignatureFitsInOneLine(int x, int y) {
+    noBlankLinesHere(x);
+    noBlankLinesHere(y);
+}
+```
+
+Otherwise (i.e., if the functions params do not fit in one line, or if there are blank
+lines in the function body), then you should add a blank line (otherwise, the first "block"
+in the body looks like function params).
+
+```cpp
+void functionWhoseBodyHasNewlines() {   
+
+    // First pass
+    doSomething();
+    doSomethingElse();
+    
+    // Second pass
+    redoSomething();
+    redoSomethingElse();
+}
+```
+
+Constructor initializer lists:
+
+Each initialization is on a separate line.
+Use a blank line to separate the initializer list from the function body (if any).
+If the function parameters do not fit on a single line,
+use a blank line to separate the function parameters and the initializer list.
+
+```cpp
+SomeConstructor()
+    : i_(0) {
+}
+
+SomeConstructor(int param1, int param2)
+    : param1_(param1)
+    , param2_(param2) {
+}
+
+SomeVeryLongConstructor(
+    int veryLongParam1,
+    int veryLongParam2)
+    
+    : veryLongParam1_(veryLongParam1)
+    , veryLongParam2_(veryLongParam2) {
+    
+    doSomething();
+}
 ```
 
 Conditional blocks:
@@ -252,19 +288,19 @@ case Enum::Value2:
 default:
    break;
 }
+```
 
-if (veryShortOneLiner1) thisIsOkay();
-if (veryShortOneLiner2) whenMoreReadable();
-if (veryShortOneLiner3) inRareCases();
-if (veryShortOneLiner4) whereYouHave();
-if (veryShortOneLiner5) manyOfThem();
+Conditional blocks without braces are forbidden. Conditional blocks that could fit in one line should still use 3 lines instead:
 
-if (longBody ||
-    multilineCondition)
-{
-    putBracketOnItsOwnLine();
+```
+if (!valid()) {
+    return;
 }
 ```
+
+In very exceptional cases, derogations to these rules can be made when it significantly 
+improves readability, such as data-oriented code, in which case one surround the code 
+with `// clang-format off` and `// clang-format on`.
 
 Class definitions (typical layout):
 
@@ -291,14 +327,11 @@ private: // the VGC_OBJECT macro goes first
     VGC_OBJECT(Flex, Widget)
 
 protected: // then protected constructors                   
-    Flex(FlexDirection direction = FlexDirection::Row,
-         FlexWrap wrap = FlexWrap::NoWrap);
+    Flex(FlexDirection direction = FlexDirection::Row);
 
 public:
     // then create(...) static functions
-    static FlexPtr create(
-            FlexDirection direction = FlexDirection::Row,
-            FlexWrap wrap = FlexWrap::NoWrap);
+    static FlexPtr create(FlexDirection direction = FlexDirection::Row);
             
     // then other public methods
     FlexDirection direction() const { 
@@ -311,7 +344,6 @@ protected: // then other protected methods
 
 private:: // then private member variables and methods
     FlexDirection direction_;
-    FlexWrap wrap_;
 }
 ```
 
@@ -322,28 +354,32 @@ brackets `<>` as you would parenthesis in a function declaration.
 
 ```cpp
 template<typename T>
-T add(const T& x, const T& y)
-{
+T add(const T& x, const T& y) {
     return x + y;
 }
 ```
 
-In general, try to conform to the style found in `vgc/core/templateutil.h`, `vgc/core/arithmetic.h` or `vgc/core/array.h`.
+Template metaprogramming code is more prone to become less readable when
+formatted with `clang-format`, so use `clang-format off` whenever relevant.
+In general, try to conform to the style found in `vgc/core/templateutil.h`, 
+`vgc/core/arithmetic.h` or `vgc/core/array.h`, but it's okay to deviate a
+little if it improves readability.
 
-Examples:
+Examples of style you should try to adhere to:
 
 ```cpp
 template<typename T, typename SFINAE = void>
-struct IsSignedInteger : std::false_type {};
+struct IsForwardIterator : std::false_type {};
 
 template<typename T>
-struct IsSignedInteger<T, Requires<
-        std::is_integral_v<T> &&
-        std::is_signed_v<T>>> :
-    std::true_type {};
+struct IsForwardIterator<T, Requires<
+    std::is_convertible_v<
+        typename std::iterator_traits<T>::iterator_category,
+        std::forward_iterator_tag>>>
+    : std::true_type {};
 
 template<typename T>
-inline constexpr bool isSignedInteger = IsSignedInteger<T>::value;
+inline constexpr bool isForwardIterator = IsForwardIterator<T>::value;
 
 template<typename T>
 class Array {
@@ -358,18 +394,15 @@ class Array {
 };
 
 template<typename T, typename U, VGC_REQUIRES(
-        std::is_integral_v<T> &&
-        std::is_integral_v<U> &&
-        std::is_signed_v<T> &&
-        std::is_unsigned_v<U> &&
-        tmax<T> >= tmax<U>)
+    std::is_integral_v<T>
+    && std::is_integral_v<U>
+    && std::is_signed_v<T>
+    && std::is_unsigned_v<U>
+    && tmax<T> >= tmax<U>)> // (2)
 T int_cast(U value) {
     return static_cast<T>(value);
 }
 ```
-
-However, we recognize that templated code can easily get complicated, so it's 
-okay to deviate a little from the recommended style if it increases readability.
 
 ## Polymorphic Classes
 
