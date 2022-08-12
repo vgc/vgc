@@ -23,8 +23,7 @@
 #include <vgc/widgets/paneltitlebar.h>
 #include <vgc/widgets/toggleviewaction.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::Panel
 /// \brief A widget that can be added to a PanelArea, typically on the side
@@ -87,7 +86,6 @@ private:
     ToggleViewAction* toggleViewAction_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_PANEL_H

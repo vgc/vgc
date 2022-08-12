@@ -20,8 +20,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/color.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \namespace colors
 /// \brief Defines predefined colors.
@@ -39,7 +38,6 @@ const Color blue = Color(0, 0, 1); ///< Predefined color equals to Color(0, 0, 1
 
 } // namespace colors
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_COLORS_H

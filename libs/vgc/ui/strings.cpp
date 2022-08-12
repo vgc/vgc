@@ -16,9 +16,7 @@
 
 #include <vgc/ui/strings.h>
 
-namespace vgc {
-namespace ui {
-namespace strings {
+namespace vgc::ui::strings {
 
 const core::StringId Button("Button");
 const core::StringId ColorPalette("ColorPalette");
@@ -52,6 +50,4 @@ const core::StringId inherit("inherit");
 const core::StringId normal("normal");
 const core::StringId off("off");
 
-} // namespace strings
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui::strings

@@ -16,8 +16,7 @@
 
 #include <vgc/ui/mouseevent.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 MouseEvent::MouseEvent(
     MouseButton button,
@@ -38,5 +37,4 @@ MouseEventPtr MouseEvent::create(
     return MouseEventPtr(new MouseEvent(button, position, modifierKeys));
 }
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui

@@ -20,8 +20,7 @@
 #include <string>
 #include <vgc/core/api.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// Returns as a std::string the content of the file given by its \p filePath.
 ///
@@ -31,7 +30,6 @@ namespace core {
 VGC_CORE_API
 std::string readFile(const std::string& filePath);
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_IO_H

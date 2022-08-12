@@ -23,8 +23,7 @@
 #include <vgc/core/object.h>
 #include <vgc/core/stopwatch.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 VGC_DECLARE_OBJECT(PerformanceLog);
 VGC_DECLARE_OBJECT(PerformanceLogParams);
@@ -345,7 +344,6 @@ private:
     Stopwatch stopwatch_;
 };
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_PERFORMANCELOG_H

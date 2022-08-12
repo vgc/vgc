@@ -26,8 +26,7 @@
 
 #include <vgc/geometry/vec2f.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 namespace {
 
@@ -972,5 +971,4 @@ TextBoundaryMarkersArray computeBoundaryMarkers(std::string_view text) {
     return markers;
 }
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics

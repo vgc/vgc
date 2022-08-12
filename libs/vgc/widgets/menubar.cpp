@@ -19,8 +19,7 @@
 #include <QPaintEvent>
 #include <QPainter>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 MenuBar::MenuBar(QWidget* parent)
     : QMenuBar(parent)
@@ -66,5 +65,4 @@ void MenuBar::paintEvent(QPaintEvent* e) {
     }
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

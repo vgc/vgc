@@ -29,8 +29,7 @@
 #include <QEvent>
 #include <QVBoxLayout>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 Panel::Panel(const QString& title, QWidget* widget, QWidget* parent)
     : QFrame(parent)
@@ -60,5 +59,4 @@ bool Panel::event(QEvent* event) {
     return QFrame::event(event);
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

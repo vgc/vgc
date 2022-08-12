@@ -25,8 +25,7 @@
 #include <vgc/dom/api.h>
 #include <vgc/geometry/vec2d.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 /// \enum vgc::dom::ValueType
 /// \brief Specifies the type of an attribute Value
@@ -305,7 +304,6 @@ void write(OStream& out, const Value& v) {
 VGC_DOM_API
 Value parseValue(const std::string& s, ValueType t);
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom
 
 #endif // VGC_DOM_VALUE_H

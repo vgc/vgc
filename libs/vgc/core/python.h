@@ -30,8 +30,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/object.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 VGC_DECLARE_OBJECT(PythonInterpreter);
 
@@ -127,7 +126,6 @@ private:
     pybind11::object globals_;
 };
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_PYTHON_H

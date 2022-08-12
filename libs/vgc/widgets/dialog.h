@@ -20,8 +20,7 @@
 #include <QDialog>
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::Dialog
 /// \brief Subclass of QDialog specialized for VGC software
@@ -55,7 +54,6 @@ private:
     QRect savedGeometry_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_DIALOG_H

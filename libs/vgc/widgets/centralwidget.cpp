@@ -25,8 +25,7 @@
 #include <vgc/widgets/logcategories.h>
 #include <vgc/widgets/toggleviewaction.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 Splitter::Splitter(
     CentralWidget* parent,
@@ -482,5 +481,4 @@ void CentralWidget::updateGeometries_() {
     updateGeometry();
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

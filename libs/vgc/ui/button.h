@@ -20,8 +20,7 @@
 #include <vgc/core/color.h>
 #include <vgc/ui/widget.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Button);
 
@@ -78,7 +77,6 @@ private:
     bool isHovered_;
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_BUTTON_H

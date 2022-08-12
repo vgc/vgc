@@ -27,9 +27,7 @@
 #include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
 
-namespace vgc {
-namespace ui {
-namespace detail {
+namespace vgc::ui::detail {
 
 // clang-format off
 
@@ -133,8 +131,6 @@ graphics::SizedFont* getDefaultSizedFont();
 graphics::SizedFont* getDefaultSizedFont(Int ppem);
 graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting);
 
-} // namespace detail
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui::detail
 
 #endif // VGC_UI_INTERNAL_PAINTUTIL_H

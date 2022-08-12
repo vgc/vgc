@@ -25,8 +25,7 @@
 #include <vgc/widgets/api.h>
 #include <vgc/widgets/panel.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 class Panel;
 
@@ -78,7 +77,6 @@ private:
     void updateVisibility_();
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_PANELAREA_H

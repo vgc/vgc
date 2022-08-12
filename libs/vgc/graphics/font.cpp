@@ -29,8 +29,7 @@
 #include <vgc/graphics/exceptions.h>
 #include <vgc/graphics/logcategories.h>
 
-namespace vgc {
-namespace graphics {
+namespace vgc::graphics {
 
 namespace {
 
@@ -773,5 +772,4 @@ void SizedGlyph::onDestroyed() {
     impl_.reset();
 }
 
-} // namespace graphics
-} // namespace vgc
+} // namespace vgc::graphics

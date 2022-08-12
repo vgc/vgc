@@ -16,8 +16,7 @@
 
 #include <vgc/core/color.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 Color Color::hsl(double h, double s, double l) {
     // Wrap h to [0, 360] range, and clamp s, l to [0, 1]
@@ -127,8 +126,7 @@ Colorf Colorf::hsl(float h, float s, float l) {
     return Colorf(r1 + m, g1 + m, b1 + m);
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 // Note 1: In the future, we'd like to have the class "Color" be more flexible.
 // Notably, there should be control on:

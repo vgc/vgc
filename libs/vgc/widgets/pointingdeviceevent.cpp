@@ -20,8 +20,7 @@
 
 #include <vgc/ui/qtutil.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 PointingDeviceEvent::PointingDeviceEvent(QMouseEvent* event)
     : type_(event->type())
@@ -100,5 +99,4 @@ double PointingDeviceEvent::pressure() const {
     return pressure_;
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

@@ -22,8 +22,7 @@
 
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::ToggleViewAction
 /// \brief A subclass of QAction to toggle visibility of a QWidget.
@@ -47,7 +46,6 @@ private:
     QWidget* widget_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_TOGGLEVIEWACTION_H

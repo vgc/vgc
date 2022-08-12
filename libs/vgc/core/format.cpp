@@ -16,8 +16,7 @@
 
 #include <vgc/core/format.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 std::string secondsToString(double t, TimeUnit unit, int decimals) {
     std::string u;
@@ -41,5 +40,4 @@ std::string secondsToString(double t, TimeUnit unit, int decimals) {
     return core::format("{:.{}f}{}", t, decimals, u);
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core

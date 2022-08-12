@@ -19,8 +19,7 @@
 
 #include <vgc/ui/flex.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Row);
 
@@ -56,7 +55,6 @@ public:
     static RowPtr create();
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_ROWLAYOUT_H

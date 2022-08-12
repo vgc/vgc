@@ -21,8 +21,7 @@
 
 #include <vgc/ui/qtutil.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 ColorToolButton::ColorToolButton(
     const core::Color& initialColor,
@@ -125,5 +124,4 @@ void ColorToolButton::onColorDialogFinished_(int result) {
     }
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

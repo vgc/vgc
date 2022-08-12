@@ -125,8 +125,7 @@
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)
 #endif
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// \class vgc::core::LogicError
 /// \brief Base class for all logic errors
@@ -668,7 +667,6 @@ public:
     }
 };
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_EXCEPTIONS_H

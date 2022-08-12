@@ -36,8 +36,7 @@ void setWindowFlag_(QWidget* w, Qt::WindowType flag, bool on) {
 
 } // namespace
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 ColorDialog::ColorDialog(QWidget* parent)
     : QColorDialog(parent)
@@ -103,5 +102,4 @@ void ColorDialog::restoreGeometry_() {
         setGeometry(savedGeometry_);
 }
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets

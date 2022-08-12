@@ -20,8 +20,7 @@
 #include <vgc/core/exceptions.h>
 #include <vgc/ui/api.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 class Widget;
 
@@ -91,7 +90,6 @@ public:
     }
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_EXCEPTIONS_H

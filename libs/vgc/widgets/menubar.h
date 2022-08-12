@@ -23,8 +23,7 @@
 
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::MenuBar
 /// \brief A subclass of QMenuBar for increased customizability.
@@ -137,7 +136,6 @@ private:
     QColor activeBorderBottomColor_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_MENUBAR_H

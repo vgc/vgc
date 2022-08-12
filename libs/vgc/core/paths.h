@@ -20,8 +20,7 @@
 #include <string>
 #include <vgc/core/api.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// Sets the absolute path of the base directory of this VGC installation. This
 /// must be called before any other call to VGC functions, so that they can
@@ -82,7 +81,6 @@ std::string resourcesPath();
 VGC_CORE_API
 std::string resourcePath(const std::string& name);
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_PATHS_H

@@ -21,8 +21,7 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/shortcut.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Action);
 
@@ -71,7 +70,6 @@ private:
     Shortcut shortcut_;
 };
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_ACTION_H

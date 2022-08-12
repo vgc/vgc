@@ -45,8 +45,7 @@
 #include <vgc/core/format.h>
 #include <vgc/core/templateutil.h>
 
-namespace vgc {
-namespace core {
+namespace vgc::core {
 
 /// Returns whether the given char is a whitespace character, that is, ' ',
 /// '\n', '\r', or '\t'.
@@ -902,7 +901,6 @@ T parse(const std::string& s) {
     return res;
 }
 
-} // namespace core
-} // namespace vgc
+} // namespace vgc::core
 
 #endif // VGC_CORE_PARSE_H

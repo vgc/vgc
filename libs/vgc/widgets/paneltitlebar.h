@@ -22,8 +22,7 @@
 
 #include <vgc/widgets/api.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::PanelTitleBar
 /// \brief The title bar on top of each Panel.
@@ -45,7 +44,6 @@ private:
     QLabel* title_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_PANELTITLEBAR_H

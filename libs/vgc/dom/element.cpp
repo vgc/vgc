@@ -22,8 +22,7 @@
 #include <vgc/dom/operation.h>
 #include <vgc/dom/strings.h>
 
-namespace vgc {
-namespace dom {
+namespace vgc::dom {
 
 Element::Element(Document* document, core::StringId name)
     : Node(document, NodeType::Element)
@@ -90,5 +89,4 @@ const AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) co
     return const_cast<Element*>(this)->findAuthoredAttribute_(name);
 }
 
-} // namespace dom
-} // namespace vgc
+} // namespace vgc::dom

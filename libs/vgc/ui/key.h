@@ -19,8 +19,7 @@
 
 #include <vgc/core/arithmetic.h>
 
-namespace vgc {
-namespace ui {
+namespace vgc::ui {
 
 // clang-format off
 
@@ -537,7 +536,6 @@ enum class Key : UInt32 {
 
 // clang-format on
 
-} // namespace ui
-} // namespace vgc
+} // namespace vgc::ui
 
 #endif // VGC_UI_KEY_H

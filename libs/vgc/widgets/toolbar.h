@@ -25,8 +25,7 @@
 #include <vgc/widgets/colortoolbutton.h>
 #include <vgc/widgets/uiwidget.h>
 
-namespace vgc {
-namespace widgets {
+namespace vgc::widgets {
 
 /// \class vgc::widgets::Toolbar
 /// \brief The toolbar
@@ -64,7 +63,6 @@ private:
     UiWidget* colorPaletteq_;
 };
 
-} // namespace widgets
-} // namespace vgc
+} // namespace vgc::widgets
 
 #endif // VGC_WIDGETS_TOOLBAR_H
