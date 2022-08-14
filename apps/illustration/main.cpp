@@ -30,7 +30,8 @@
 
 namespace py = pybind11;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
 
 #ifdef VGC_DEBUG_BUILD
 #    ifdef VGC_CORE_COMPILER_MSVC
