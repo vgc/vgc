@@ -33,7 +33,7 @@ replace(const std::string& s, const std::string& from, const std::string& to) {
 
     size_t i = 0;
     size_t k = 0;
-    while (i + k <= ns) {
+    while (i+k <= ns) {
         // Invariants:
         // 0 <= k <= from.size()
         // 0 <= i+k <= s.size()
