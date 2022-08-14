@@ -1,0 +1,66 @@
+name: Clang-Format Comment
+
+on:
+  workflow_run:
+    workflows: ["Clang-Format Check"]
+    types:
+      - completed
+
+jobs:
+  comment:
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Print conclusiont
+        run: echo ${{ github.event.workflow_run.conclusion }}
+
+      - name: Download artifacts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            var artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: ${{github.event.workflow_run.id}},
+            });
+            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "clang_format_artifacts"
+            })[0];
+            var download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            var fs = require('fs');
+            fs.writeFileSync('${{github.workspace}}/clang_format_artifacts.zip', Buffer.from(download.data));
+      - run: unzip clang_format_artifacts.zip
+
+      - name: Comment on PR
+        uses: actions/github-script@v6
+        with:
+          script: |
+            var fs = require('fs');
+            var issue_number = Number(fs.readFileSync('./pr_number.txt'));
+            var patch = fs.readFileSync('./clang_format.patch');
+            var body = "Thank you for your contribution! "
+                     + "This is an automated message to let you know that there are a few formatting changes "
+                     + "that should be made in order to adhere to our [C++ Style Guide](https://github.com/vgc/vgc/blob/master/cppstyleguide.md).\n\n"
+                     + "You can either:\n\n"
+                     + "1. call `clang-format -i somefile.cpp` on each of the `*.cpp` and `*.h` files that you changed, or\n"
+                     + "2. copy-paste the patch below in a text file (make sure that it ends with a newline), save it and call `git apply clangformat.patch`\n\n"
+                     + "Then make a new commit that contains the formatting changes, and push again.\n\n"
+                     + "If clang-format makes your code ugly, it can usually be solved with minimal refactoring, such as using temporary variables or helper functions to make lines of code shorter. "
+                     + "For a better user experience, we recommend to configure your IDE such that clang-format is automatically called on save, or via a dedicated shortcut. "
+                     + "This allows you to get instant feedback and should avoid this automated message in the future.\n\n"
+                     + "Thank you in advance for helping us keep our codebase as readable as possible :)\n\n"
+                     + "**clangformat.patch:**\n\n"
+                     + "```diff\n"
+                     + patch
+                     + "\n```\n";
+            await github.rest.issues.createComment({
+              issue_number: issue_number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            })

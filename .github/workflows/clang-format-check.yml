@@ -1,0 +1,42 @@
+name: Clang-Format Check
+
+on: pull_request
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Run clang-format
+        run: |
+          cd libs
+          find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
+          cd ../apps
+          find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
+          cd ..
+
+      - name: Compute and save diff
+        run: |
+          mkdir artifacts
+          git --no-pager diff > artifacts/clang_format.patch
+
+      - name: Print diff
+        run: |
+          cat artifacts/clang_format.patch
+
+      - name: Save PR number
+        run: |
+          echo ${{ github.event.number }} > ./artifacts/pr_number.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: clang_format_artifacts
+          path: artifacts/
+
+      - name: Fail if diff is not empty
+        run: |
+          if [ -s artifacts/clang_format.patch ]; then exit 1; fi
