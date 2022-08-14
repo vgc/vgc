@@ -6,3 +6,4 @@ CMakeLists.txt.user*
 .directory
 CMakeSettings.json
 __pycache__
+/*.patch
