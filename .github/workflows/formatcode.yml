@@ -1,0 +1,29 @@
+name: Format Code
+
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    - name: Run clang-format
+      run: |
+        cd $GITHUB_WORKSPACE
+        cd libs
+        find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
+        cd ../apps
+        find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
+
+    - name: Print diff
+      run: |
+        cd $GITHUB_WORKSPACE
+        git --no-pager diff
