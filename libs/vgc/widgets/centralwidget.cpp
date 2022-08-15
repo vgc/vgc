@@ -34,6 +34,7 @@ Splitter::Splitter(
     int length,
     int minimumLength,
     int maximumLength)
+
     : QWidget(parent)
     , parent_(parent)
     , direction_(direction)
@@ -294,6 +295,7 @@ CentralWidget::CentralWidget(
     QWidget* toolbar,
     QWidget* console,
     QWidget* parent)
+
     : QWidget(parent)
     , viewer_(viewer)
     , toolbar_(toolbar)

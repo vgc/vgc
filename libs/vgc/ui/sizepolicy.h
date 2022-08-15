@@ -166,6 +166,7 @@ public:
         float value = 0,
         float stretch = 0,
         float shrink = 0)
+
         : preferred_(type, value)
         , stretch_(stretch)
         , shrink_(shrink) {

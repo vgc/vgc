@@ -22,6 +22,7 @@
 #include <utility>
 
 #include <vgc/core/format.h>
+#include <vgc/core/object.h>
 #include <vgc/graphics/api.h>
 
 namespace vgc::graphics {

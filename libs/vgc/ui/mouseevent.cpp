@@ -22,6 +22,7 @@ MouseEvent::MouseEvent(
     MouseButton button,
     const geometry::Vec2f& position,
     ModifierKeys modifierKeys)
+
     : Event()
     , button_(button)
     , position_(position)

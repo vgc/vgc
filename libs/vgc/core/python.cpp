@@ -162,6 +162,7 @@ PythonInterpreter::ScopedInterpreter_::~ScopedInterpreter_() {
 PythonInterpreter::PythonInterpreter(
     const std::string& programName,
     const std::string& pythonHome)
+
     : scopedInterpreter_(programName, pythonHome) {
 
     // Store useful Python objects

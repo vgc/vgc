@@ -114,8 +114,10 @@ private:
     public:
         ScopedRunSignalsEmitter_(PythonInterpreter* p)
             : p_(p) {
+
             p_->runStarted().emit();
         }
+
         ~ScopedRunSignalsEmitter_() {
             p_->runFinished().emit();
         }

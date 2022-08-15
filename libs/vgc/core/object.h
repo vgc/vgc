@@ -104,6 +104,7 @@ public:
     ///
     ObjPtr(T* obj)
         : obj_(obj) {
+
         detail::ObjPtrAccess::incref(obj_);
     }
 
@@ -111,6 +112,7 @@ public:
     ///
     ObjPtr(const ObjPtr& other) noexcept
         : obj_(other.obj_) {
+
         detail::ObjPtrAccess::incref(obj_);
     }
 
@@ -121,6 +123,7 @@ public:
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr(const ObjPtr<Y>& other) noexcept
         : obj_(other.obj_) {
+
         detail::ObjPtrAccess::incref(obj_);
     }
 
@@ -153,6 +156,7 @@ public:
     ///
     ObjPtr(ObjPtr&& other) noexcept
         : obj_(other.obj_) {
+
         other.obj_ = nullptr;
     }
 
@@ -163,6 +167,7 @@ public:
     template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
     ObjPtr(ObjPtr<Y>&& other) noexcept
         : obj_(other.obj_) {
+
         other.obj_ = nullptr;
     }
 

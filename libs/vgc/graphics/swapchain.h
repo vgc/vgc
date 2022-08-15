@@ -113,6 +113,7 @@ protected:
         ResourceRegistry* registry,
         const SwapChainCreateInfo& createInfo,
         const FramebufferPtr& defaultFramebuffer)
+
         : Resource(registry)
         , info_(createInfo)
         , defaultFramebuffer_(defaultFramebuffer) {

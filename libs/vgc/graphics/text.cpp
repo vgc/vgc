@@ -38,6 +38,7 @@ public:
         const geometry::Vec2f& a,
         const geometry::Vec2f& b,
         const geometry::Vec2f& c)
+
         : d_({a, b, c}) {
     }
 
@@ -103,6 +104,7 @@ public:
         , positions()
         , advance(0, 0)
         , buf(hb_buffer_create()) {
+
         setText(text);
     }
 
@@ -310,6 +312,7 @@ void ShapedGlyph::fill(core::FloatArray& data, const geometry::Vec2f& origin) co
 
 ShapedText::ShapedText(SizedFont* sizedFont, std::string_view text)
     : impl_() {
+
     impl_ = new detail::ShapedTextImpl(sizedFont, text);
 }
 

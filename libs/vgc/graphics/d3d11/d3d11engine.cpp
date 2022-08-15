@@ -110,6 +110,7 @@ protected:
         ResourceRegistry* registry,
         const ImageViewCreateInfo& createInfo,
         const ImagePtr& image)
+
         : ImageView(registry, createInfo, image) {
     }
 
@@ -119,6 +120,7 @@ protected:
         const BufferPtr& buffer,
         PixelFormat format,
         UInt32 numBufferElements)
+
         : ImageView(registry, createInfo, buffer, format, numBufferElements) {
 
         d3dBuffer_ = buffer.get_static_cast<D3d11Buffer>();
@@ -292,6 +294,7 @@ protected:
         const D3d11ImageViewPtr& colorView,
         const D3d11ImageViewPtr& depthStencilView,
         bool isDefault)
+
         : Framebuffer(registry)
         , colorView_(colorView)
         , depthStencilView_(depthStencilView)
@@ -395,6 +398,7 @@ protected:
         ResourceRegistry* registry,
         const SwapChainCreateInfo& desc,
         const FramebufferPtr& framebuffer)
+
         : SwapChain(registry, desc, framebuffer) {
     }
 

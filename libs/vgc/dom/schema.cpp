@@ -40,6 +40,7 @@ const T* find_(const std::map<core::StringId, T>& map, core::StringId name) {
 ElementSpec::ElementSpec(
     const std::string& name,
     const std::vector<AttributeSpec>& attributes)
+
     : name_(core::StringId(name))
     , attributes_() {
 
@@ -65,6 +66,7 @@ ValueType ElementSpec::valueType(core::StringId name) const {
 
 Schema::Schema(const std::vector<ElementSpec>& elements)
     : elements_() {
+
     for (const ElementSpec& element : elements) {
         elements_.emplace(element.name(), element);
     }

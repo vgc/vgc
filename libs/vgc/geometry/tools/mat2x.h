@@ -64,6 +64,7 @@ public:
     constexpr Mat2x(
         float m11, float m12,
         float m21, float m22)
+
         : data_{{m11, m21},
                 {m12, m22}} {
     }

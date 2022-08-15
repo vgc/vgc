@@ -64,6 +64,7 @@ public:
     constexpr Mat2d(
         double m11, double m12,
         double m21, double m22)
+
         : data_{{m11, m21},
                 {m12, m22}} {
     }

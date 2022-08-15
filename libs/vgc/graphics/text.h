@@ -83,6 +83,7 @@ public:
     TextProperties(
         TextHorizontalAlign horizontalAlign = TextHorizontalAlign::Left,
         TextVerticalAlign verticalAlign = TextVerticalAlign::Top)
+
         : horizontalAlign_(horizontalAlign)
         , verticalAlign_(verticalAlign) {
     }
@@ -212,6 +213,7 @@ public:
         Int byteIndex,
         const geometry::Vec2f& advance,
         TextBoundaryMarkers boundaryMarkers)
+
         : glyphIndex_(glyphIndex)
         , byteIndex_(byteIndex)
         , advance_(advance)
@@ -295,6 +297,7 @@ public:
         const geometry::Vec2f& advance,
         const geometry::Vec2f& position,
         Int bytePosition)
+
         : sizedGlyph_(sizedGlyph)
         , offset_(offset)
         , advance_(advance)
@@ -487,6 +490,7 @@ public:
         const geometry::Vec2f& advance,
         const geometry::Vec2f& position,
         Int bytePosition)
+
         : glyphIndex_(glyphIndex)
         , advance_(advance)
         , position_(position)

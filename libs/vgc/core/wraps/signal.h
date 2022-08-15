@@ -204,6 +204,7 @@ protected:
         const Id id,
         py::function unboundPySlotFn,
         std::tuple<ArgRefs...>* /*sig*/)
+
         : PyAbstractSlotRef(obj, id, sizeof...(ArgRefs))
         , parameters_({std::type_index(typeid(ArgRefs))...})
         , unboundPySlotFn_(unboundPySlotFn) {
@@ -377,6 +378,7 @@ protected:
         const SignalRefT& signalRef,
         Obj* object,
         std::tuple<ArgRefs...>* sig)
+
         : PyCppSignalRef(
             object,
             signalRef.id(),
