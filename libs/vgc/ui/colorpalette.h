@@ -84,8 +84,6 @@ private:
     bool reload_;
     float margin_;
     bool isContinuous_;
-    float selectorBorderWidth_;
-    float cellBorderWidth_;
     core::Color borderColor_;
     Int numHueSteps_;        // >= 2 and even
     Int numSaturationSteps_; // >= 2

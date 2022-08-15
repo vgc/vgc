@@ -20,7 +20,9 @@ namespace vgc::graphics::strings {
 
 const core::StringId background_color("background-color");
 const core::StringId background_color_on_hover("background-color-on-hover");
+const core::StringId border_color("border-color");
 const core::StringId border_radius("border-radius");
+const core::StringId border_width("border-width");
 const core::StringId caret_color("caret-color");
 const core::StringId margin_bottom("margin-bottom");
 const core::StringId margin_left("margin-left");

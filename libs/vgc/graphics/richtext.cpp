@@ -148,7 +148,9 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto table = std::make_shared<style::StylePropertySpecTable>();
     table->insert("background-color",           transparent, false, &parseStyleColor);
     table->insert("background-color-on-hover",  transparent, false, &parseStyleColor);
+    table->insert("border-color",               black,       false, &parseStyleColor);
     table->insert("border-radius",              zero,        false, &parseStyleLength);
+    table->insert("border-width",               zero,        false, &parseStyleLength);
     table->insert("caret-color",                black,       true,  &parseStyleColor);
     table->insert("margin-bottom",              zero,        false, &parseStyleLength);
     table->insert("margin-left",                zero,        false, &parseStyleLength);

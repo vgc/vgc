@@ -24,7 +24,9 @@ namespace vgc::graphics::strings {
 
 VGC_GRAPHICS_API extern const core::StringId background_color;
 VGC_GRAPHICS_API extern const core::StringId background_color_on_hover;
+VGC_GRAPHICS_API extern const core::StringId border_color;
 VGC_GRAPHICS_API extern const core::StringId border_radius;
+VGC_GRAPHICS_API extern const core::StringId border_width;
 VGC_GRAPHICS_API extern const core::StringId caret_color;
 VGC_GRAPHICS_API extern const core::StringId margin_bottom;
 VGC_GRAPHICS_API extern const core::StringId margin_left;

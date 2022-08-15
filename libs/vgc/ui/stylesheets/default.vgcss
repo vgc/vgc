@@ -37,16 +37,6 @@
     text-vertical-align: middle;
 }
 
-.Very.Special {
-    background-color: rgb(144, 46, 47);
-    border-radius: 3dp;
-    text-color: rgb(221, 221, 221);
-    preferred-width: auto;
-    preferred-height: 28dp;
-    padding-left: 5dp;
-    padding-right: 5dp;
-}
-
 .LineEdit {
     background-color: rgb(44, 46, 47);
     border-radius: 3dp;
@@ -73,6 +63,8 @@
 }
 
 .ColorPalette {
+    border-color: rgb(40, 40, 40);
+    border-width: 1dp;
     preferred-width: 100dp;
     preferred-height: 200dp;
 }

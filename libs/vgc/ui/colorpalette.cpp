@@ -20,6 +20,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
+#include <vgc/graphics/strings.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -34,9 +35,6 @@ ColorPalette::ColorPalette()
     , reload_(true)
     , margin_(15)
     , isContinuous_(false)
-    , selectorBorderWidth_(2.0)
-    , cellBorderWidth_(1.0)
-    , borderColor_(core::colors::black)
     , numHueSteps_(12)
     , numSaturationSteps_(5)
     , numLightnessSteps_(7)
@@ -180,6 +178,11 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         oldHeight_ = height();
         core::FloatArray a = {};
 
+        core::Color borderColor = detail::getColor(this, graphics::strings::border_color);
+        float borderWidth = detail::getLength(this, graphics::strings::border_width);
+        float cellBorderWidth = borderWidth;
+        float selectorBorderWidth = borderWidth;
+
         // Draw saturation/lightness selector
         // Terminology:
         // - x0: position of selector including border
@@ -190,14 +193,14 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         float x0 = margin_;
         float y0 = margin_;
         float w = width() - 2 * margin_;
-        float startOffset = selectorBorderWidth_;
-        float endOffset = selectorBorderWidth_ - cellBorderWidth_;
-        float cellOffset = cellBorderWidth_;
+        float startOffset = selectorBorderWidth;
+        float endOffset = selectorBorderWidth - cellBorderWidth;
+        float cellOffset = cellBorderWidth;
         float dx = (w - startOffset - endOffset) / numLightnessSteps_;
         float dy = std::round(dx);
         float h = startOffset + endOffset + dy * numSaturationSteps_;
-        if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
-            detail::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
+        if (cellBorderWidth > 0 || selectorBorderWidth > 0) {
+            detail::insertRect(a, borderColor, x0, y0, x0 + w, y0 + h);
         }
         double dhue = 360.0 / numHueSteps_;
         double hue = selectedHueIndex_ * dhue;
@@ -257,8 +260,8 @@ void ColorPalette::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*
         dx = (w - startOffset - endOffset) / halfNumHueSteps;
         dy = std::round(dx);
         h = startOffset + endOffset + dy * 2;
-        if (cellBorderWidth_ > 0 || selectorBorderWidth_ > 0) {
-            detail::insertRect(a, borderColor_, x0, y0, x0 + w, y0 + h);
+        if (cellBorderWidth > 0 || selectorBorderWidth > 0) {
+            detail::insertRect(a, borderColor, x0, y0, x0 + w, y0 + h);
         }
         double l = oldLightnessIndex_ * dl;
         double s = oldSaturationIndex_ * ds;
