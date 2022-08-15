@@ -467,6 +467,7 @@ FontLibrary* fontLibrary() {
 Font::Font(FontLibrary* library)
     : Object()
     , impl_() {
+
     appendObjectToParent_(library);
 }
 

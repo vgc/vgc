@@ -21,6 +21,7 @@ namespace vgc::widgets {
 Dialog::Dialog(QWidget* parent)
     : QDialog(parent)
     , isGeometrySaved_(false) {
+
     connect(this, &QDialog::finished, this, &Dialog::onFinished_);
 }
 

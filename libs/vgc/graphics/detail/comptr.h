@@ -17,6 +17,8 @@
 #ifndef VGC_GRAPHICS_DETAIL_COMPTR_H
 #define VGC_GRAPHICS_DETAIL_COMPTR_H
 
+#include <utility> // swap
+
 namespace vgc::graphics {
 
 template<typename T>
@@ -25,6 +27,7 @@ public:
     ComPtr() noexcept = default;
     ComPtr(T* p)
         : p_(p) {
+
         if (p_) {
             p_->AddRef();
         }
@@ -39,6 +42,7 @@ public:
     template<typename U>
     ComPtr(const ComPtr<U>& other)
         : p_(other.p_) {
+
         if (p_) {
             p_->AddRef();
         }
@@ -46,6 +50,7 @@ public:
 
     ComPtr(const ComPtr& other)
         : p_(other.p_) {
+
         if (p_) {
             p_->AddRef();
         }
@@ -54,11 +59,13 @@ public:
     template<typename U>
     ComPtr(ComPtr<U>&& other) noexcept
         : p_(other.p_) {
+
         other.p_ = nullptr;
     }
 
     ComPtr(ComPtr&& other) noexcept
         : p_(other.p_) {
+
         other.p_ = nullptr;
     }
 

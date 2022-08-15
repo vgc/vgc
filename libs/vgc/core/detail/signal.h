@@ -537,6 +537,7 @@ struct IsTupleConvertible<
     std::tuple<Ts...>,
     std::tuple<Us...>,
     Requires<sizeof...(Ts) == sizeof...(Us)>>
+
     : std::conjunction<std::is_convertible<Ts, Us>...> {};
 
 template<
@@ -550,6 +551,7 @@ struct IsCompatibleReEmit<
     std::tuple<SignalArgRefs...>,
     std::tuple<SignalSlotArgRefs...>,
     Requires<sizeof...(SignalArgRefs) >= sizeof...(SignalSlotArgRefs)>>
+
     : IsTupleConvertible<
           SubTuple<0, sizeof...(SignalSlotArgRefs), std::tuple<SignalArgRefs...>>,
           std::tuple<SignalSlotArgRefs...>> {};
@@ -572,6 +574,7 @@ private:
             ConnectionHandle handle,
             SignalId from,
             To&& to)
+
             : transmitter(std::move(transmitter))
             , handle(handle)
             , from(from)

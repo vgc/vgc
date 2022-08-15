@@ -71,6 +71,7 @@ public:
         float m11, float m12, float m13,
         float m21, float m22, float m23,
         float m31, float m32, float m33)
+
         : data_{{m11, m21, m31},
                 {m12, m22, m32},
                 {m13, m23, m33}} {

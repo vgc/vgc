@@ -27,6 +27,7 @@ ColorToolButton::ColorToolButton(
     const core::Color& initialColor,
     QWidget* parent,
     ColorDialog* colorDialog)
+
     : QToolButton(parent)
     , color_(initialColor)
     , colorDialog_(colorDialog) {

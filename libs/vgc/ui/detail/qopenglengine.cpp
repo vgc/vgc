@@ -177,6 +177,7 @@ protected:
         ResourceRegistry* registry,
         const ImageViewCreateInfo& createInfo,
         const ImagePtr& image)
+
         : ImageView(registry, createInfo, image) {
 
         samplerStatePtrAddress_ = &image.get_static_cast<QglImage>()->samplerState_;
@@ -188,6 +189,7 @@ protected:
         const BufferPtr& buffer,
         PixelFormat format,
         UInt32 numBufferElements)
+
         : ImageView(registry, createInfo, buffer, format, numBufferElements) {
 
         samplerStatePtrAddress_ = &viewSamplerState_;
@@ -381,6 +383,7 @@ protected:
         ResourceRegistry* registry,
         const SwapChainCreateInfo& desc,
         const FramebufferPtr& framebuffer)
+
         : SwapChain(registry, desc, framebuffer) {
     }
 

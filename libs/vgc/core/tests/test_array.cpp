@@ -51,21 +51,25 @@ public:
 
     TestObject()
         : i_(0) {
+
         init_();
     }
 
     TestObject(int i)
         : i_(i) {
+
         init_();
     }
 
     TestObject(const TestObject& other)
         : i_(other.i_) {
+
         init_();
     }
 
     TestObject(TestObject&& other)
         : i_(other.i_) {
+
         init_();
     }
 

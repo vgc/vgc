@@ -18,6 +18,7 @@
 #define VGC_GRAPHICS_PROGRAM_H
 
 #include <vgc/graphics/api.h>
+#include <vgc/graphics/enums.h>
 #include <vgc/graphics/resource.h>
 
 namespace vgc::graphics {

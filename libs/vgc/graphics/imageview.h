@@ -19,6 +19,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/graphics/api.h>
+#include <vgc/graphics/buffer.h>
 #include <vgc/graphics/enums.h>
 #include <vgc/graphics/image.h>
 #include <vgc/graphics/resource.h>
@@ -126,6 +127,7 @@ protected:
         ResourceRegistry* registry,
         const ImageViewCreateInfo& createInfo,
         const ImagePtr& image)
+
         : Resource(registry)
         , info_(createInfo)
         , viewedResource_(image)
@@ -138,6 +140,7 @@ protected:
         const BufferPtr& buffer,
         PixelFormat pixelFormat,
         Int numBufferElements)
+
         : Resource(registry)
         , info_(createInfo)
         , viewedResource_(buffer)

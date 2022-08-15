@@ -122,6 +122,7 @@ protected:
     // Should be called in the user thread, not the rendering thread.
     explicit Resource(ResourceRegistry* registry)
         : registry_(registry) {
+
         registry->registerResource_(this);
     }
 
@@ -325,6 +326,7 @@ protected:
     // For casts
     ResourcePtr(T* p, CastTag)
         : Base(p) {
+
         if (this->p_) {
             this->p_->incRef_();
         }
@@ -340,6 +342,7 @@ public:
 
     explicit ResourcePtr(T* p)
         : Base(p) {
+
         if (this->p_) {
             this->p_->initRef_();
         }
@@ -352,6 +355,7 @@ public:
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr(const ResourcePtr<U>& other)
         : Base(other.p_) {
+
         if (this->p_) {
             this->p_->incRef_();
         }
@@ -360,11 +364,13 @@ public:
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr(ResourcePtr<U>&& other) noexcept
         : Base(other.p_) {
+
         other.p_ = nullptr;
     }
 
     ResourcePtr(const ResourcePtr& other)
         : Base(other.p_) {
+
         if (this->p_) {
             this->p_->incRef_();
         }
@@ -372,6 +378,7 @@ public:
 
     ResourcePtr(ResourcePtr&& other) noexcept
         : Base(other.p_) {
+
         other.p_ = nullptr;
     }
 

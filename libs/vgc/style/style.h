@@ -254,6 +254,7 @@ public:
         const StyleValue& initialValue,
         bool isInherited,
         StylePropertyParser parser)
+
         : name_(name)
         , initialValue_(initialValue)
         , isInherited_(isInherited)
@@ -267,6 +268,7 @@ public:
         const StyleValue& initialValue,
         bool isInherited,
         StylePropertyParser parser)
+
         : name_(name)
         , initialValue_(initialValue)
         , isInherited_(isInherited)
