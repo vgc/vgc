@@ -94,6 +94,7 @@ private:
 
     ui::WidgetPtr widget_;
     ui::detail::QglEnginePtr engine_;
+    graphics::SwapChainPtr swapChain_;
     graphics::RasterizerStatePtr rasterizerState_;
     graphics::BlendStatePtr blendState_;
 

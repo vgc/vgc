@@ -24,6 +24,16 @@ namespace vgc::graphics {
 
 // clang-format off
 
+enum class FrameKind : UInt8 {
+    Window,
+    Hook, // QWidget
+};
+
+enum class PresentFlag : UInt32 {
+    None,
+};
+VGC_DEFINE_FLAGS(PresentFlags, PresentFlag)
+
 // See https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_bind_flag
 //
 enum class BindFlag : UInt16 {
@@ -113,11 +123,6 @@ enum class PrimitiveType : UInt8 {
     Max_ = TriangleStrip,
 };
 inline constexpr UInt8 numPrimitiveTypes = static_cast<UInt8>(PrimitiveType::Max_) + 1;
-
-enum class PresentFlag : UInt32 {
-    None,
-};
-VGC_DEFINE_FLAGS(PresentFlags, PresentFlag)
 
 enum class ImageRank : UInt8 {
     _1D,

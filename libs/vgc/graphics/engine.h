@@ -243,10 +243,6 @@ public:
 
     RasterizerStatePtr createRasterizerState(const RasterizerStateCreateInfo& createInfo);
 
-    /// Sets the swapchain to be used by the default framebuffer.
-    ///
-    void setSwapChain(const SwapChainPtr& swapChain);
-
     /// Sets the framebuffer to be drawn to.
     ///
     void setFramebuffer(const FramebufferPtr& framebuffer = nullptr);
@@ -335,8 +331,13 @@ public:
     ///
     SwapChainPtr swapChain();
 
-    void beginFrame(bool isStateDirty = false);
-    void endFrame();
+    void setPresentCallback(std::function<void(UInt64 /*timestamp*/)>&& presentCallback);
+
+    bool beginFrame(const SwapChainPtr& swapChain, FrameKind kind = FrameKind::Window);
+
+    /// presentedCallback is called from an unspecified thread.
+    ///
+    void endFrame(Int syncInterval = 0, PresentFlags flags = PresentFlag::None);
 
     void resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int height);
 
@@ -367,14 +368,7 @@ public:
     /// Submits the current command list if present then waits for all submitted
     /// command lists to finish being translated to GPU commands.
     ///
-    void finish();
-
-    /// presentedCallback is called from an unspecified thread.
-    //
-    void present(
-        Int syncInterval,
-        std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
-        PresentFlags flags = PresentFlag::None);
+    void flushWait();
 
     std::chrono::steady_clock::time_point engineStartTime() const {
         return engineStartTime_;
@@ -610,6 +604,7 @@ private:
     Int lastSubmittedCommandListId_ = 0;
     bool isThreadRunning_ = false;
     bool stopRequested_ = false;
+    std::function<void(UInt64 /*timestamp*/)> presentCallback_;
 
     struct CommandList {
         CommandList(std::list<CommandUPtr>&& commands)
@@ -702,17 +697,24 @@ inline void Engine::popViewMatrix() {
     dirtyBuiltinConstantBuffer_ = true;
 }
 
-inline FramebufferPtr Engine::defaultFramebuffer() {
-    SwapChain* swapChain = swapChain_.get();
-    return swapChain ? swapChain->defaultFramebuffer() : FramebufferPtr();
-}
+//inline FramebufferPtr Engine::defaultFramebuffer() {
+//    SwapChain* swapChain = swapChain_.get();
+//    return swapChain ? swapChain->framebuffer() : FramebufferPtr();
+//}
 
 inline void Engine::setDefaultFramebuffer() {
-    setFramebuffer(defaultFramebuffer());
+    //setFramebuffer(defaultFramebuffer());
+    setFramebuffer(nullptr);
 }
 
 inline SwapChainPtr Engine::swapChain() {
     return swapChain_;
+}
+
+inline void
+Engine::setPresentCallback(std::function<void(UInt64 /*timestamp*/)>&& presentCallback) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    presentCallback_ = presentCallback;
 }
 
 template<typename T>
@@ -790,7 +792,7 @@ inline Int Engine::flush() {
     return 0;
 }
 
-inline void Engine::finish() {
+inline void Engine::flushWait() {
     if (isMultithreadingEnabled()) {
         UInt id = submitPendingCommandList_();
         waitCommandListTranslationFinished_(id);

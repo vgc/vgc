@@ -318,22 +318,6 @@ Engine::createRasterizerState(const RasterizerStateCreateInfo& createInfo) {
     return rasterizerState;
 }
 
-void Engine::setSwapChain(const SwapChainPtr& swapChain) {
-
-    if (swapChain && !checkResourceIsValid_(swapChain)) {
-        return;
-    }
-    if (swapChain_ != swapChain) {
-        swapChain_ = swapChain;
-        queueLambdaCommandWithParameters_<SwapChainPtr>(
-            "setSwapChain",
-            [](Engine* engine, const SwapChainPtr& swapChain) {
-                engine->setSwapChain_(swapChain);
-            },
-            swapChain);
-    }
-}
-
 void Engine::setFramebuffer(const FramebufferPtr& framebuffer) {
 
     if (framebuffer && !checkResourceIsValid_(framebuffer)) {
@@ -645,10 +629,6 @@ void Engine::syncState_() {
 
     if (parameters & PipelineParameter::Framebuffer) {
         FramebufferPtr framebuffer = framebufferStack_.last();
-        if (!framebuffer) {
-            framebuffer =
-                swapChain_ ? swapChain_->defaultFramebuffer() : FramebufferPtr();
-        }
         queueLambdaCommandWithParameters_<FramebufferPtr>(
             "setFramebuffer",
             [](Engine* engine, const FramebufferPtr& p) { engine->setFramebuffer_(p); },
@@ -773,17 +753,87 @@ void Engine::syncStageSamplers_(ShaderStage shaderStage) {
         shaderStage);
 }
 
-void Engine::beginFrame(bool isStateDirty) {
+bool Engine::beginFrame(const SwapChainPtr& swapChain, FrameKind kind) {
+
+    if (swapChain && !checkResourceIsValid_(swapChain)) {
+        return false;
+    }
+
     frameStartTime_ = std::chrono::steady_clock::now();
     dirtyBuiltinConstantBuffer_ = true;
-    if (isStateDirty) {
+    if (kind == FrameKind::Hook) {
         setStateDirty();
     }
 
     // XXX check every stack has size one !
+
+    if (swapChain_ != swapChain) {
+        swapChain_ = swapChain;
+        queueLambdaCommandWithParameters_<SwapChainPtr>(
+            "setSwapChain",
+            [](Engine* engine, const SwapChainPtr& swapChain) {
+                engine->setSwapChain_(swapChain);
+            },
+            swapChain);
+    }
+
+    setDefaultFramebuffer();
+    // force dirty
+    dirtyPipelineParameters_ |= PipelineParameter::Framebuffer;
+    return true;
 }
 
-void Engine::endFrame() {
+void Engine::endFrame(Int syncInterval, PresentFlags flags) {
+
+    // check syncInterval >= 0
+    syncInterval = syncInterval > 0 ? syncInterval : 0;
+    UInt32 uSyncInterval = core::int_cast<UInt32>(syncInterval);
+
+    ++swapChain_->numPendingPresents_;
+    bool shouldWait = syncInterval > 0;
+
+    if (!isMultithreadingEnabled()) {
+        UInt64 timestamp = present_(swapChain_.get(), uSyncInterval, flags);
+        --swapChain_->numPendingPresents_;
+        presentCallback_(timestamp);
+    }
+    else if (shouldWait && shouldPresentWaitFromSyncedUserThread_()) {
+        // Preventing dead-locks
+        // See https://docs.microsoft.com/en-us/windows/win32/api/DXGI1_2/nf-dxgi1_2-idxgiswapchain1-present1#remarks
+        flushWait();
+        UInt64 timestamp =
+            present_(swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags);
+        --swapChain_->numPendingPresents_;
+        presentCallback_(timestamp);
+    }
+    else {
+        struct CommandParameters {
+            SwapChain* swapChain;
+            UInt32 syncInterval;
+            PresentFlags flags;
+        };
+        queueLambdaCommandWithParameters_<CommandParameters>(
+            "present",
+            [](Engine* engine, const CommandParameters& p) {
+                UInt64 timestamp = engine->present_(p.swapChain, p.syncInterval, p.flags);
+                --p.swapChain->numPendingPresents_;
+
+                if (engine->presentCallback_) {
+                    engine->presentCallback_(timestamp);
+                }
+            },
+            swapChain_.get(),
+            core::int_cast<UInt32>(syncInterval),
+            flags);
+
+        if (shouldWait) {
+            flushWait();
+        }
+        else {
+            submitPendingCommandList_();
+        }
+    }
+
     submitPendingCommandList_();
     if (!isMultithreadingEnabled()) {
         resourceRegistry_->releaseAndDeleteGarbagedResources(this);
@@ -794,7 +844,7 @@ void Engine::resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int heigh
     if (!checkResourceIsValid_(swapChain)) {
         return;
     }
-    finish();
+    flushWait();
     resizeSwapChain_(
         swapChain.get(), core::int_cast<UInt32>(width), core::int_cast<UInt32>(height));
 }
@@ -826,52 +876,6 @@ void Engine::clear(const core::Color& color) {
         "clear", [](Engine* engine, const core::Color& c) { engine->clear_(c); }, color);
 }
 
-void Engine::present(
-    Int syncInterval,
-    std::function<void(UInt64 /*timestamp*/)>&& presentedCallback,
-    PresentFlags flags) {
-
-    ++swapChain_->numPendingPresents_;
-    bool shouldWait = syncInterval > 0;
-
-    if (!isMultithreadingEnabled()
-        || (shouldWait && shouldPresentWaitFromSyncedUserThread_())) {
-        // Preventing dead-locks
-        // See https://docs.microsoft.com/en-us/windows/win32/api/DXGI1_2/nf-dxgi1_2-idxgiswapchain1-present1#remarks
-        finish();
-        UInt64 timestamp =
-            present_(swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags);
-        --swapChain_->numPendingPresents_;
-        presentedCallback(timestamp);
-    }
-    else {
-        struct CommandParameters {
-            SwapChain* swapChain;
-            UInt32 syncInterval;
-            PresentFlags flags;
-            std::function<void(UInt64 /*timestamp*/)> presentedCallback;
-        };
-        queueLambdaCommandWithParameters_<CommandParameters>(
-            "present",
-            [](Engine* engine, const CommandParameters& p) {
-                UInt64 timestamp = engine->present_(p.swapChain, p.syncInterval, p.flags);
-                --p.swapChain->numPendingPresents_;
-                p.presentedCallback(timestamp);
-            },
-            swapChain_.get(),
-            core::int_cast<UInt32>(syncInterval),
-            flags,
-            std::move(presentedCallback));
-
-        if (shouldWait) {
-            finish();
-        }
-        else {
-            submitPendingCommandList_();
-        }
-    }
-}
-
 void Engine::init_() {
 
     engineStartTime_ = std::chrono::steady_clock::now();
@@ -889,7 +893,7 @@ void Engine::init_() {
     // related to OpenGL access a global context pointer that is not
     // synchronized).
     if (isMultithreadingEnabled()) {
-        finish();
+        flushWait();
     }
 }
 
