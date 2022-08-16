@@ -357,12 +357,12 @@ bool operator!=(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
 
 template<typename T>
 bool operator<(const SmartPtrBase_<T>& lhs, std::nullptr_t) noexcept {
-    std::less<T*>()(lhs.get(), nullptr);
+    return std::less<T*>()(lhs.get(), nullptr);
 }
 
 template<typename T>
 bool operator<(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
-    std::less<T*>()(nullptr, rhs.get());
+    return std::less<T*>()(nullptr, rhs.get());
 }
 
 template<typename T>
