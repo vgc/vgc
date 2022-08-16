@@ -1455,10 +1455,6 @@ void QglEngine::setStateDirty_() {
 
 // Private methods
 
-void QglEngine::initBuiltinShaders_() {
-    // no-op atm
-}
-
 void QglEngine::makeCurrent_() {
     ctx_->makeCurrent(ctx_->surface());
 }
