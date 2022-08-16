@@ -1441,7 +1441,6 @@ UInt64 QglEngine::present_(
 }
 
 void QglEngine::setStateDirty_() {
-    makeCurrent_();
     boundFramebuffer_ = badGLuint;
     boundBlendState_.reset();
     currentBlendFactor_.reset();
@@ -1455,6 +1454,10 @@ void QglEngine::setStateDirty_() {
 }
 
 // Private methods
+
+void QglEngine::initBuiltinShaders_() {
+    // no-op atm
+}
 
 void QglEngine::makeCurrent_() {
     ctx_->makeCurrent(ctx_->surface());

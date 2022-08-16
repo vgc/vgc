@@ -1777,10 +1777,6 @@ D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags /*
 
 // Private methods
 
-void D3d11Engine::initBuiltinShaders_() {
-    // no-op atm, everything was done on create
-}
-
 bool D3d11Engine::loadBuffer_(D3d11Buffer* buffer, const void* data, Int dataSize) {
     ComPtr<ID3D11Buffer>& object = buffer->object_;
     D3D11_BUFFER_DESC& desc = buffer->desc_;

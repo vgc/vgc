@@ -466,12 +466,6 @@ protected:
 
     void init_();
 
-    // wrapper engines may not know about the host state at some point
-    void setStateDirty() {
-        dirtyPipelineParameters_ = PipelineParameter::All;
-        setStateDirty_();
-    }
-
     // -- builtins --
 
     ProgramPtr simpleProgram_; // (created by api-specific engine implementations)

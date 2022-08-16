@@ -227,14 +227,11 @@ void UiWidget::paintGL() {
     }
 
     // setViewport & present is done by Qt
-    GLint vp[4];
-    engine_->api()->glGetIntegerv(GL_VIEWPORT, vp);
 
-    engine_->beginFrame(swapChain_, graphics::FrameKind::Hook);
+    engine_->beginFrame(swapChain_, graphics::FrameKind::QWidget);
 
     engine_->setRasterizerState(rasterizerState_);
     engine_->setBlendState(blendState_, geometry::Vec4f{0.f, 0.f, 0.f, 0.f});
-    engine_->setViewport(vp[0], vp[1], vp[2], vp[3]);
 
     // XXX split to beginFrame() and qopenglengine-only beginInlineFrame
 

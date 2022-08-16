@@ -761,8 +761,11 @@ bool Engine::beginFrame(const SwapChainPtr& swapChain, FrameKind kind) {
 
     frameStartTime_ = std::chrono::steady_clock::now();
     dirtyBuiltinConstantBuffer_ = true;
-    if (kind == FrameKind::Hook) {
-        setStateDirty();
+    if (kind == FrameKind::QWidget) {
+        dirtyPipelineParameters_ |= PipelineParameter::All;
+        dirtyPipelineParameters_.unset(PipelineParameter::Framebuffer);
+        dirtyPipelineParameters_.unset(PipelineParameter::Viewport);
+        setStateDirty_();
     }
 
     // XXX check every stack has size one !
@@ -777,9 +780,11 @@ bool Engine::beginFrame(const SwapChainPtr& swapChain, FrameKind kind) {
             swapChain);
     }
 
-    setDefaultFramebuffer();
-    // force dirty
-    dirtyPipelineParameters_ |= PipelineParameter::Framebuffer;
+    if (kind != FrameKind::QWidget) {
+        setDefaultFramebuffer();
+        dirtyPipelineParameters_ |= PipelineParameter::Framebuffer;
+    }
+
     return true;
 }
 

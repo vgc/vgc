@@ -173,7 +173,6 @@ private:
         return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 
-    void initBuiltinShaders_();
     bool loadBuffer_(class D3d11Buffer* buffer, const void* data, Int dataSize);
     void onBufferRecreated_(class D3d11Buffer* buffer);
     bool writeBufferReserved_(ID3D11Buffer* object, const void* data, Int dataSize);

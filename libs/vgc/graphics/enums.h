@@ -26,7 +26,7 @@ namespace vgc::graphics {
 
 enum class FrameKind : UInt8 {
     Window,
-    Hook, // QWidget
+    QWidget,
 };
 
 enum class PresentFlag : UInt32 {
@@ -439,7 +439,7 @@ enum class PipelineParameter : UInt32 {
 
     AllShadersResources = AllShadersConstantBuffers | AllShadersImageViews | AllShadersSamplers,
 
-    All = Viewport | Program | BlendState | DepthStencilState | RasterizerState | AllShadersResources,
+    All = Framebuffer | Viewport | Program | BlendState | DepthStencilState | RasterizerState | AllShadersResources,
 };
 VGC_DEFINE_FLAGS(PipelineParameters, PipelineParameter)
 
