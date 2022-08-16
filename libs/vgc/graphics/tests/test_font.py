@@ -34,26 +34,22 @@ def someFontPath():
     return resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
 
 
-def someFont():
-    library = FontLibrary()
+def someFont(library):
     return library.addFont(someFontPath())
 
 
-def someGlyph():
-    font = someFont()
+def someGlyph(font):
     return font.getGlyphFromCodePoint(0x41)
 
 
-def someSizedFont():
-    font = someFont()
+def someSizedFont(font):
     ppem = 15
     hinting = FontHinting.Native
     params = SizedFontParams(ppem, hinting)
     return font.getSizedFont(params)
 
 
-def someSizedGlyph():
-    sizedFont = someSizedFont()
+def someSizedGlyph(sizedFont):
     return sizedFont.getSizedGlyphFromCodePoint(0x41)
 
 
@@ -87,11 +83,13 @@ class TestFont(unittest.TestCase):
         self.assertEqual(font.library, library)
 
     def testIndex(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         self.assertEqual(font.index, 0)
 
     def testGetSizedFont(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         ppem = 15
         hinting = FontHinting.Native
         params = SizedFontParams(ppem, hinting)
@@ -99,35 +97,41 @@ class TestFont(unittest.TestCase):
         self.assertEqual(sizedFont.params, params)
 
     def testGetGlyphFromCodePoint(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         glyph = font.getGlyphFromCodePoint(0x41)
         self.assertEqual(glyph.name, "A")
 
     def testGetGlyphFromCodePointZero(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         glyph = font.getGlyphFromCodePoint(0x0)
         self.assertIsNone(glyph)
 
     def testGetGlyphFromIndex(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         index = font.getGlyphIndexFromCodePoint(0x41)
         glyph = font.getGlyphFromIndex(index)
         self.assertEqual(glyph.index, index)
         self.assertEqual(glyph.name, "A")
 
     def testGetGlyphFromIndexZero(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         glyph = font.getGlyphFromIndex(0)
         self.assertEqual(glyph.index, 0)
         self.assertEqual(glyph.name, ".notdef")
 
     def testGetGlyphFromIndexInvalid(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         with self.assertRaises(FontError):
             glyph = font.getGlyphFromIndex(12345)
 
     def testGetGlyphIndexFromCodePoint(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         index = font.getGlyphIndexFromCodePoint(0x41)
         self.assertNotEqual(index, 0)
 
@@ -139,19 +143,23 @@ class TestGlyph(unittest.TestCase):
             glyph = Glyph()
 
     def testFont(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         index = font.getGlyphIndexFromCodePoint(0x41)
         glyph = font.getGlyphFromIndex(index)
         self.assertEqual(glyph.font, font)
 
     def testIndex(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         index = font.getGlyphIndexFromCodePoint(0x41)
         glyph = font.getGlyphFromIndex(index)
         self.assertEqual(glyph.index, index)
 
     def testName(self):
-        glyph = someGlyph()
+        library = FontLibrary()
+        font = someFont(library)
+        glyph = someGlyph(font)
         self.assertEqual(glyph.name, "A")
 
 
@@ -162,7 +170,8 @@ class TestSizedFont(unittest.TestCase):
             sizedFont = SizedFont()
 
     def testFont(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         ppem = 15
         hinting = FontHinting.Native
         params = SizedFontParams(ppem, hinting)
@@ -170,7 +179,8 @@ class TestSizedFont(unittest.TestCase):
         self.assertEqual(sizedFont.font, font)
 
     def testParams(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         ppem = 15
         hinting = FontHinting.Native
         params = SizedFontParams(ppem, hinting)
@@ -178,50 +188,68 @@ class TestSizedFont(unittest.TestCase):
         self.assertEqual(sizedFont.params, params)
 
     def testAscent(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         self.assertGreater(sizedFont.ascent, 14)
         self.assertLess(sizedFont.ascent, 15)
 
     def testDescent(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         self.assertGreater(sizedFont.descent, -5)
         self.assertLess(sizedFont.descent, -4)
 
     def testHeight(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         self.assertGreater(sizedFont.height, 18)
         self.assertLess(sizedFont.height, 19)
 
     def testGetSizedGlyphFromCodePoint(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         sizedGlyph = sizedFont.getSizedGlyphFromCodePoint(0x41)
         self.assertEqual(sizedGlyph.name, "A")
 
     def testGetGlyphFromCodePointZero(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         sizedGlyph = sizedFont.getSizedGlyphFromCodePoint(0x0)
         self.assertIsNone(sizedGlyph)
 
     def testGetGlyphFromIndex(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         index = sizedFont.getGlyphIndexFromCodePoint(0x41)
         sizedGlyph = sizedFont.getSizedGlyphFromIndex(index)
         self.assertEqual(sizedGlyph.index, index)
         self.assertEqual(sizedGlyph.name, "A")
 
     def testGetGlyphFromIndexZero(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         sizedGlyph = sizedFont.getSizedGlyphFromIndex(0)
         self.assertEqual(sizedGlyph.index, 0)
         self.assertEqual(sizedGlyph.name, ".notdef")
 
     def testGetGlyphFromIndexInvalid(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         with self.assertRaises(FontError):
             sizedGlyph = sizedFont.getSizedGlyphFromIndex(12345)
 
     def testGetGlyphIndexFromCodePoint(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         index = sizedFont.getGlyphIndexFromCodePoint(0x41)
         self.assertNotEqual(index, 0)
 
@@ -233,7 +261,8 @@ class TestSizedGlyph(unittest.TestCase):
             sizedGlyph = SizedGlyph()
 
     def testGlyph(self):
-        font = someFont()
+        library = FontLibrary()
+        font = someFont(library)
         glyph = font.getGlyphFromCodePoint(0x41)
         ppem = 15
         hinting = FontHinting.Native
@@ -243,13 +272,18 @@ class TestSizedGlyph(unittest.TestCase):
         self.assertEqual(sizedGlyph.glyph, glyph)
 
     def testIndex(self):
-        sizedFont = someSizedFont()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
         index = sizedFont.getGlyphIndexFromCodePoint(0x41)
         sizedGlyph = sizedFont.getSizedGlyphFromIndex(index)
         self.assertEqual(sizedGlyph.index, index)
 
     def testName(self):
-        sizedGlyph = someSizedGlyph()
+        library = FontLibrary()
+        font = someFont(library)
+        sizedFont = someSizedFont(font)
+        sizedGlyph = someSizedGlyph(sizedFont)
         self.assertEqual(sizedGlyph.name, "A")
 
 if __name__ == '__main__':

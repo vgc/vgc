@@ -457,39 +457,37 @@ using ObjectPtr = ObjPtr<Object>;
 /// Ownership model
 /// ---------------
 ///
-/// The ownership model of Object instances is a little peculiar: child objects
-/// are uniquely owned by their parent, but the ownership or root objects is
-/// shared among all ObjPtrs referencing them or any of their descendants.
+/// The ownership of root objects is shared among all ObjPtrs referencing them,
+/// but child objects are uniquely owned by their parent.
 ///
-/// One of the main reasons behind this design is to improve interoperability
-/// between C++ (which doesn't have a garbage collector), and Python (which
-/// does have a garbage collector).
+/// This means that if a root object is destroyed, then all its children are
+/// also destroyed, even if there was ObjPtrs referencing these children. This
+/// design make it possible to create data structures with strong hierarchical
+/// invariants. For example, some objects can have a guarantee that, if alive,
+/// they always have a parent.
+///
+/// An ObjPtr to a child object behaves like a weak pointer: it doesn't keep
+/// the child alive, but it keeps some of its memory allocated in order to be
+/// able to check whether it is still alive. When trying to dereference an
+/// ObjPtr whose referenced object has already already been destroyed, a
+/// NotAliveError is raised.
 ///
 /// In Python, all variables bound to VGC objects are using ObjPtrs under the
-/// hood. This ensures that a root object isn't destroyed as long as at least
-/// one of its descendant (including itself) is still referenced:
+/// hood. This ensures that attempting to use a destroyed child in Python never
+/// crashes the program (segmentation fault), but instead raises an exception:
 ///
 /// ```python
 /// root = vgc.ui.Widget()
 /// child = vgc.ui.Widget(root)
-/// root = None     # Both root and child are kept alive
-/// child = None    # Destroys child, then destroys root
+/// root = None        # Both root and child are destroyed
+/// w = child.width()  # NotAlive exception raised
 /// ```
-///
-/// However, note that an ObjPtr referencing a child object doesn't guarantee
-/// that the child object itself is kept alive: it only guarantees that its
-/// root is kept alive. This is because parents have unique ownership of their
-/// children, which means that they have full power to destroy any of their
-/// children if they want to.
-///
-/// When trying to dereference an ObjPtr whose underlying object has already
-/// been destroyed by its parent, a NotAliveError is raised.
 ///
 /// Calling Conventions
 /// -------------------
 ///
-/// Functions manipulating instances of vgc::core::Object should be passed
-/// these objects by raw pointers (that is, unless they participate in
+/// If a function needs an instance of vgc::core::Object as argument, it is
+/// recommended to pass this object by raw pointer (unless they participate in
 /// ownership, which is rare). Unless stated otherwise, any function that takes
 /// an Object* as argument assumes that the following is true:
 ///
@@ -538,37 +536,20 @@ private:
     Object& operator=(Object&&) = delete;
 
 public:
-    /// Returns how many ObjPtrs are currently referencing this Object or any
-    /// of its descendants.
+    /// Returns how many ObjPtrs are currently referencing this Object.
     ///
-    /// Below is an example of an Object tree consisting of 8 Objects, where 6
-    /// ObjPtrs are referencing some Object in the tree. Each `[i]` represents
-    /// an Object whose refCount is `i`.
+    /// If this Object is a root object, then the refCount represents a "strong
+    /// reference count". The root object is kept alive as long as its refCount
+    /// is greater than zero, and the root object is automatically destructed
+    /// when its refCount becomes zero.
     ///
-    /// ```
-    /// [6]         <- ObjPtr
-    ///  ├─[3]
-    ///  │  ├─[1]   <- ObjPtr
-    ///  │  ├─[2]   <- ObjPtr <- ObjPtr
-    ///  │  └─[0]
-    ///  ├─[0]
-    ///  └─[2]      <- ObjPtr
-    ///     └─[1]   <- ObjPtr
-    /// ```
-    ///
-    /// The refCount of an Object is always equal to the number of ObjPtrs
-    /// referencing this Object, plus the sum of the refCounts of all of its
-    /// direct children.
-    ///
-    /// Note that the role of ObjPtrs is two-fold:
-    /// 1. Keep root Objects alive.
-    /// 2. Throw an exception when trying to access a non-alive Object.
-    ///
-    /// However, the role of ObjPtrs is NOT to keep child Objects alive.
-    /// Instead, child Objects are uniquely owned by their parent. This means
-    /// that parent Objects can decide to destroy their children regardless of
-    /// their refCount, and child Objects aren't automatically destroyed when
-    /// their refCount reaches zero.
+    /// If this Object is a child object, then the refCount represents a "weak
+    /// reference count". The child object is uniquely owned by its parent:
+    /// this means it can be "destroyed" (i.e., isAlive() becomes false) even
+    /// if its refCount is greater than zero. However, the C++ object is not
+    /// actually destructed until the refCount becomes zero, so that observers
+    /// holding an `ObjPtr` to the child object can safely check the value of
+    /// `isAlive()`.
     ///
     /// One way to think about this ownership model is:
     /// - An ObjPtr is acting like an std::shared_ptr for root Objects.
@@ -580,11 +561,12 @@ public:
     ///
     /// - In C++, just use raw pointers everywhere, except for root Objects
     /// where you should use an ObjPtr. You must avoid cyclic references of
-    /// ObjPtr, otherwise it will cause memory leaks.
+    /// ObjPtr of root objects, otherwise it will cause memory leaks.
     ///
     /// - In Python, all Objects are under the hood wrapped in an ObjPtr. This
-    /// is likely to cause cyclic references, but it's okay since the garbage
-    /// collector of Python will detect those and prevent memory leaks.
+    /// is more likely to cause cyclic references of root objects, but it's
+    /// okay since the garbage collector of Python will detect those and
+    /// prevent memory leaks.
     ///
     Int64 refCount() const {
         if (refCount_ >= 0) {
@@ -1075,30 +1057,27 @@ constexpr SignalHub& SignalHub::access(const Object* o) {
 }
 
 inline void ObjPtrAccess::incref(const Object* obj, Int64 k) {
-    while (obj) {
+    if (obj) {
         obj->refCount_ += k;
-        obj = obj->parentObject_;
     }
 }
 
 inline void ObjPtrAccess::decref(const Object* obj, Int64 k) {
-    const Object* root = nullptr;
-    while (obj) {
-        root = obj;
+    if (obj) {
         obj->refCount_ -= k;
-        obj = obj->parentObject_;
-    }
-    if (root) {
-        if (root->refCount_ == 0) {
-            // Here, isAlive() == true and refCount() == 0.
-            // See implementation of destroyObjectImpl_() for details on the
-            // const-cast and other subtleties of the following two lines.
-            Object* root_ = const_cast<Object*>(root);
-            root_->destroyObjectImpl_();
-        }
-        else if (root->refCount_ == Int64Min) {
-            // Here, isAlive() == false and refCount() == 0.
-            delete root;
+        bool isRoot = (obj->parentObject_ == nullptr);
+        if (isRoot) {
+            if (obj->refCount_ == 0) {
+                // Here, isAlive() == true and refCount() == 0.
+                // See implementation of destroyObjectImpl_() for details on the
+                // const-cast and other subtleties of the following two lines.
+                Object* root_ = const_cast<Object*>(obj);
+                root_->destroyObjectImpl_();
+            }
+            else if (obj->refCount_ == Int64Min) {
+                // Here, isAlive() == false and refCount() == 0.
+                delete obj;
+            }
         }
     }
 }

@@ -121,15 +121,11 @@ class TestNode(unittest.TestCase):
         self.assertTrue(n3.isAlive())
 
         doc = None
-        self.assertTrue(n3.isAlive())
-        n3.document.remove()
         self.assertFalse(n3.isAlive())
 
         doc = Document()
         n1 = Element(doc, "n1")
         del doc
-        self.assertTrue(n1.isAlive())
-        n1.document.remove()
         self.assertFalse(n1.isAlive())
 
         doc = Document()

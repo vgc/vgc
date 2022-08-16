@@ -188,69 +188,7 @@ Object::~Object() {
 }
 
 void Object::destroyObject_() {
-    ObjectPtr p(this);
     destroyObjectImpl_();
-
-    // Note: The creation of an ObjectPtr before calling destroyObjectImpl_()
-    // is important to prevent calling destroyObjectImpl_() twice on this
-    // object, in the case where all remaining ObjectPtr are descendants of
-    // this object. For example, consider the following situation:
-    //
-    //     ObjectPtr ptr = Object::create();
-    //     Object* a = ptr.get();
-    //     Object* b = Object::create(a);
-    //     Object* c = Object::create(b);
-    //     ptr = ObjectPtr(c);
-    //
-    //     //  [1]        <- Object* a
-    //     //   └─[1]     <- Object* b
-    //     //      └─[1]  <- Object* c  <- ObjectPtr ptr
-    //
-    //     b->destroyObject_();
-    //
-    // Here is what happens, where [i] means alive and (i) means not-alive:
-    //
-    //   ---------
-    //   [1]
-    //    └─[1]      b->destroyObject_();
-    //       └─[1]   │
-    //   ---------   │
-    //   [2]         │
-    //    └─[2]      ├─ ObjectPtr p(b);
-    //       └─[1]   │
-    //   ---------   │
-    //   [2]         ├─ b->destroyObjectImpl_();
-    //    └─[2]      │  ├─ c->destroyObjectImpl_();
-    //         (1)   │  │  ├─ set not-alive + detach from parent
-    //   ---------   │  │  │
-    //   [1]         │  │  └─ decref(parent=b): without ObjectPtr p(b),
-    //    └─[1]      │  │     this would have called a->destroyObjectImpl_() which
-    //         (1)   │  │     would have called b->destroyObjectImpl_() again.
-    //   ---------   │  │
-    //   [1]         │  │
-    //      (1)      │  ├─ set not-alive + detach from parent
-    //         (1)   │  │
-    //   ---------   │  │
-    //   [0]         │  └─ decref(parent=a)
-    //      (1)      │     │
-    //         (1)   │     │
-    //   ---------   │     │
-    //   (0)         │     └─ a->destroyObjectImpl_(): okay now since b is detached
-    //      (1)      │        ├─ set not-alive + detach from parent
-    //         (1)   │        │
-    //   ---------   │        │
-    //               │        └─ delete a
-    //      (1)      │
-    //         (1)   │
-    //   ---------   │
-    //               └─ p.~ObjectPtr(); (implicit)
-    //      (0)         └─ decref(b)
-    //         (1)         │
-    //   ---------         │
-    //                     │
-    //                     └─ delete b
-    //         (1)
-    //   ---------
 }
 
 void Object::destroyAllChildObjects_() {
@@ -301,19 +239,15 @@ void Object::insertChildObject_(Object* child, Object* nextSibling) {
 
     ObjectPtr p;
     if (!sameParent) {
+
         // Detach child from current parent if any. Note that it would be safe to
-        // unconditionally do `ObjectPtr p = child->detachObjectFromParent();`, but
+        // unconditionally do `ObjectPtr p = child->removeObjectFromParent_();`, but
         // it would cause unnecessary incref and decref in the common case where the
         // given child doesn't have a parent yet.
-
+        //
         if (oldParent) {
             ObjectPtr q = child->removeObjectFromParent_();
             p = std::move(q);
-        }
-
-        // Add refCount of child to new parent
-        if (child->refCount_ > 0) {
-            detail::ObjPtrAccess::incref(this, child->refCount_);
         }
 
         // Set parent-child relationships
@@ -417,12 +351,6 @@ ObjectPtr Object::removeObjectFromParent_() {
         nextSiblingObject_ = nullptr;
         parentObject_ = nullptr;
         parent->onChildRemoved_(this);
-        if (refCount_ > 0) {
-            // The above test is important: we don't want to call decref()
-            // if this call to detachObjectFromParent() already originates
-            // from an earlier decref(). See implementation of decref().
-            detail::ObjPtrAccess::decref(parent, refCount_);
-        }
     }
     return ObjectPtr(this);
 }
