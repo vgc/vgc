@@ -795,7 +795,9 @@ void Engine::endFrame(Int syncInterval, PresentFlags flags) {
     if (!isMultithreadingEnabled()) {
         UInt64 timestamp = present_(swapChain_.get(), uSyncInterval, flags);
         --swapChain_->numPendingPresents_;
-        presentCallback_(timestamp);
+        if (presentCallback_) {
+            presentCallback_(timestamp);
+        }
     }
     else if (shouldWait && shouldPresentWaitFromSyncedUserThread_()) {
         // Preventing dead-locks
@@ -804,7 +806,9 @@ void Engine::endFrame(Int syncInterval, PresentFlags flags) {
         UInt64 timestamp =
             present_(swapChain_.get(), core::int_cast<UInt32>(syncInterval), flags);
         --swapChain_->numPendingPresents_;
-        presentCallback_(timestamp);
+        if (presentCallback_) {
+            presentCallback_(timestamp);
+        }
     }
     else {
         struct CommandParameters {
