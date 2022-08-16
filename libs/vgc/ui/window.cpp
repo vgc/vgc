@@ -122,8 +122,11 @@ Window::Window(ui::WidgetPtr widget)
         blendState_ = engine_->createBlendState(createInfo);
     }
 
-    engine_->setSwapChain(swapChain_);
-    engine_->setDefaultFramebuffer();
+    engine_->setPresentCallback([=](UInt64) {
+        if (updateDeferred_) {
+            QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
+        }
+    });
 
     // Handle dead keys and complex input methods.
     //
@@ -295,12 +298,12 @@ void Window::paint(bool sync) {
     }
     updateDeferred_ = false;
 
-    engine_->beginFrame();
+    engine_->beginFrame(swapChain_, graphics::FrameKind::Window);
+
     engine_->setRasterizerState(rasterizerState_);
     engine_->setBlendState(blendState_, geometry::Vec4f());
     engine_->setViewport(0, 0, width_, height_);
     engine_->clear(clearColor_);
-
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
@@ -338,12 +341,7 @@ void Window::paint(bool sync) {
 #endif
 
     // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
-    engine_->endFrame();
-    engine_->present(sync ? 1 : 0, [=](UInt64) {
-        if (updateDeferred_) {
-            QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
-        }
-    });
+    engine_->endFrame(sync ? 1 : 0);
 }
 
 bool Window::event(QEvent* e) {
@@ -443,6 +441,7 @@ bool Window::nativeEvent(
 
             widget_->setGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
             if (engine_ && swapChain_) {
+                // quite slow with msaa on, will probably be better when we have a compositor.
                 engine_->resizeSwapChain(swapChain_, w, h);
                 //Sleep(50);
                 paint(true);

@@ -292,13 +292,11 @@ protected:
     D3d11Framebuffer(
         ResourceRegistry* registry,
         const D3d11ImageViewPtr& colorView,
-        const D3d11ImageViewPtr& depthStencilView,
-        bool isDefault)
+        const D3d11ImageViewPtr& depthStencilView)
 
         : Framebuffer(registry)
         , colorView_(colorView)
-        , depthStencilView_(depthStencilView)
-        , isDefault_(isDefault) {
+        , depthStencilView_(depthStencilView) {
 
         if (colorView_) {
             colorView_->dependentD3dFramebuffers_.append(this);
@@ -311,10 +309,6 @@ protected:
     }
 
 public:
-    bool isDefault() const {
-        return isDefault_;
-    }
-
     ID3D11RenderTargetView* rtvObject() const {
         return colorView_ ? static_cast<ID3D11RenderTargetView*>(colorView_->rtvObject())
                           : nullptr;
@@ -337,8 +331,6 @@ protected:
 private:
     D3d11ImageViewPtr colorView_;
     D3d11ImageViewPtr depthStencilView_;
-
-    bool isDefault_ = false;
 
     bool isBoundToD3D_ = false;
 
@@ -390,34 +382,37 @@ void D3d11Framebuffer::release_(Engine* engine) {
     }
 }
 
+#    ifdef USE_DXGI_VERSION_1_2
+using IDXGISwapChainX = IDXGISwapChain1;
+#    else
+using IDXGISwapChainX = IDXGISwapChain;
+#    endif
+
 class D3d11SwapChain : public SwapChain {
 protected:
     friend D3d11Engine;
 
-    D3d11SwapChain(
-        ResourceRegistry* registry,
-        const SwapChainCreateInfo& desc,
-        const FramebufferPtr& framebuffer)
-
-        : SwapChain(registry, desc, framebuffer) {
-    }
+    using SwapChain::SwapChain;
 
 public:
-    IDXGISwapChain* dxgiSwapChain() const {
+    IDXGISwapChainX* dxgiSwapChain() const {
         return dxgiSwapChain_.get();
     }
 
-    D3d11Framebuffer* d3dDefaultFramebuffer() {
-        return defaultFramebuffer().get_static_cast<D3d11Framebuffer>();
+    ID3D11RenderTargetView* rtvObject() {
+        return rtv_.get();
     }
 
 protected:
     void release_(Engine* engine) override {
         SwapChain::release_(engine);
+        rtv_.reset();
+        dxgiSwapChain_.reset();
     }
 
 private:
-    ComPtr<IDXGISwapChain> dxgiSwapChain_;
+    ComPtr<IDXGISwapChainX> dxgiSwapChain_;
+    ComPtr<ID3D11RenderTargetView> rtv_;
 };
 
 // ENUM CONVERSIONS
@@ -769,8 +764,10 @@ void D3d11Engine::createBuiltinShaders_() {
             errorBlob.releaseAndGetAddressOf());
 
         if (hres < 0) {
-            auto errString = static_cast<const char*>(errorBlob->GetBufferPointer());
-            throw core::RuntimeError(errString);
+            std::string errString =
+                (errorBlob ? std::string(
+                     static_cast<const char*>(errorBlob->GetBufferPointer()))
+                           : core::format("unknown D3DCompile error (0x{:X}).", hres));
         }
         errorBlob.reset();
 
@@ -797,7 +794,7 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShaderBlob->GetBufferSize(),
             inputLayout.releaseAndGetAddressOf());
 
-        Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGB);
+        constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGB);
         simpleProgram->builtinLayouts_[layoutIndex] = inputLayout;
     }
 
@@ -822,13 +819,15 @@ void D3d11Engine::createBuiltinShaders_() {
 
         HRESULT hres = D3DCompile(
             pixelShaderSrc, strlen(pixelShaderSrc),
-            NULL, NULL, NULL, "main", "vs_4_0", 0, 0,
+            NULL, NULL, NULL, "main", "ps_4_0", 0, 0,
             pixelShaderBlob.releaseAndGetAddressOf(),
             errorBlob.releaseAndGetAddressOf());
 
-        if (hres < 0)
-        {
-            auto errString = static_cast<const char*>(errorBlob->GetBufferPointer());
+        if (hres < 0) {
+            std::string errString =
+                (errorBlob ? std::string(
+                     static_cast<const char*>(errorBlob->GetBufferPointer()))
+                           : core::format("unknown D3DCompile error (0x{:X}).", hres));
             throw core::RuntimeError(errString);
         }
         errorBlob.reset();
@@ -871,80 +870,81 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
     }
 
     const WindowSwapChainFormat& wscFormat = windowSwapChainFormat();
-
     UINT width = static_cast<UINT>(createInfo.width());
     UINT height = static_cast<UINT>(createInfo.height());
     UINT numSamples = static_cast<UINT>(wscFormat.numSamples());
     UINT numBuffers = static_cast<UINT>(wscFormat.numBuffers());
+    PixelFormat wpFormat = wscFormat.pixelFormat();
+    HWND hWnd = static_cast<HWND>(createInfo.windowNativeHandle());
 
-    DXGI_SWAP_CHAIN_DESC sd;
-    ZeroMemory(&sd, sizeof(sd));
+    ComPtr<IDXGISwapChainX> dxgiSwapChain;
+
+#    ifdef USE_DXGI_VERSION_1_2
+    DXGI_SWAP_CHAIN_DESC1 sd = {};
+    sd.Width = width;
+    sd.Height = height;
+    sd.Format = pixelFormatToDxgiFormat(wpFormat);
+    sd.Stereo = FALSE;
+    if (numSamples > 1) {
+        VGC_WARNING(
+            LogVgcGraphics, "Flip model swapchains do not support multisampling.");
+    }
+    sd.SampleDesc.Count = 1;
+    sd.SampleDesc.Quality = 0;
+    // do we need DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT ?
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.BufferCount = numBuffers;
+    sd.Scaling = DXGI_SCALING_NONE; // not supported on windows 7
+    sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    sd.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+    if (factory_->CreateSwapChainForHwnd(
+            device_.get(), hWnd, &sd, NULL, NULL, dxgiSwapChain.releaseAndGetAddressOf())
+        != S_OK) {
+        throw core::LogicError("D3d11Engine: could not create DXGI_1.2 swap chain");
+    }
+#    else
+    DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferCount = numBuffers;
     sd.BufferDesc.Width = width;
     sd.BufferDesc.Height = height;
-
-    PixelFormat wpFormat = wscFormat.pixelFormat();
-
     sd.BufferDesc.Format = pixelFormatToDxgiFormat(wpFormat);
     sd.BufferDesc.RefreshRate.Numerator = 0;
     sd.BufferDesc.RefreshRate.Denominator = 1;
     sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
     // do we need DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT ?
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = static_cast<HWND>(createInfo.windowNativeHandle());
+    sd.OutputWindow = hWnd;
     sd.SampleDesc.Count = numSamples;
     sd.SampleDesc.Quality = 0;
     sd.Windowed = true;
-    //sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     sd.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
 
-    ComPtr<IDXGISwapChain> dxgiSwapChain;
     if (factory_->CreateSwapChain(
             device_.get(), &sd, dxgiSwapChain.releaseAndGetAddressOf())
         < 0) {
-        throw core::LogicError("D3d11Engine: could not create swap chain");
+        throw core::LogicError("D3d11Engine: could not create DXGI_1.0 swap chain");
     }
+#    endif
 
     ComPtr<ID3D11Texture2D> backBuffer;
     dxgiSwapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.releaseAndGetAddressOf()));
 
-    D3D11_TEXTURE2D_DESC backBufferDesc = {};
-    backBuffer->GetDesc(&backBufferDesc);
-
-    ImageCreateInfo imageCreateInfo = {};
-    imageCreateInfo.setRank(ImageRank::_2D);
-    imageCreateInfo.setPixelFormat(wpFormat);
-    // XXX fill it using backBufferDesc
-
-    D3d11ImagePtr backBufferImage(new D3d11Image(resourceRegistry_, imageCreateInfo));
-    backBufferImage->object_ = backBuffer;
-
-    ImageViewCreateInfo viewCreateInfo = {};
-    viewCreateInfo.setBindFlags(ImageBindFlag::RenderTarget);
-    D3d11ImageViewPtr colorView(
-        new D3d11ImageView(resourceRegistry_, viewCreateInfo, backBufferImage));
-
     ComPtr<ID3D11RenderTargetView> backBufferView;
     device_->CreateRenderTargetView(
         backBuffer.get(), NULL, backBufferView.releaseAndGetAddressOf());
-    colorView->rtv_ = backBufferView.get();
 
-    D3d11FramebufferPtr defaultFramebuffer(
-        new D3d11Framebuffer(resourceRegistry_, colorView, D3d11ImageViewPtr(), true));
-
-    auto swapChain =
-        makeUnique<D3d11SwapChain>(resourceRegistry_, createInfo, defaultFramebuffer);
+    auto swapChain = makeUnique<D3d11SwapChain>(resourceRegistry_, createInfo);
     swapChain->dxgiSwapChain_ = dxgiSwapChain;
+    swapChain->rtv_ = backBufferView;
 
     return SwapChainPtr(swapChain.release());
 }
 
 FramebufferPtr D3d11Engine::constructFramebuffer_(const ImageViewPtr& colorImageView) {
     auto framebuffer = makeUnique<D3d11Framebuffer>(
-        resourceRegistry_,
-        static_pointer_cast<D3d11ImageView>(colorImageView),
-        nullptr,
-        false);
+        resourceRegistry_, static_pointer_cast<D3d11ImageView>(colorImageView), nullptr);
     return FramebufferPtr(framebuffer.release());
 }
 
@@ -1067,7 +1067,6 @@ D3d11Engine::constructGeometryView_(const GeometryViewCreateInfo& createInfo) {
 }
 
 BlendStatePtr D3d11Engine::constructBlendState_(const BlendStateCreateInfo& createInfo) {
-
     auto state = makeUnique<D3d11BlendState>(resourceRegistry_, createInfo);
     return BlendStatePtr(state.release());
 }
@@ -1080,14 +1079,9 @@ D3d11Engine::constructRasterizerState_(const RasterizerStateCreateInfo& createIn
 
 void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) {
     D3d11SwapChain* d3dSwapChain = static_cast<D3d11SwapChain*>(swapChain);
-    IDXGISwapChain* dxgiSwapChain = d3dSwapChain->dxgiSwapChain();
+    IDXGISwapChainX* dxgiSwapChain = d3dSwapChain->dxgiSwapChain();
 
-    D3d11Framebuffer* defaultFramebuffer = d3dSwapChain->d3dDefaultFramebuffer();
-    D3d11ImageView* oldColorView = defaultFramebuffer->d3dColorView_;
-    oldColorView->rtv_.reset();
-    oldColorView->viewedImage().get_static_cast<D3d11Image>()->object_.reset();
-    oldColorView->dependentD3dFramebuffers_.removeOne(defaultFramebuffer);
-
+    d3dSwapChain->rtv_.reset();
     HRESULT hres = dxgiSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
     if (hres < 0) {
         throw core::LogicError("D3d11Engine: could not resize swap chain buffers");
@@ -1096,34 +1090,14 @@ void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 he
     ComPtr<ID3D11Texture2D> backBuffer;
     dxgiSwapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.releaseAndGetAddressOf()));
 
-    D3D11_TEXTURE2D_DESC backBufferDesc = {};
-    backBuffer->GetDesc(&backBufferDesc);
-
-    ImageCreateInfo imageCreateInfo = {};
-    imageCreateInfo.setRank(ImageRank::_2D);
-    imageCreateInfo.setPixelFormat(windowSwapChainFormat().pixelFormat());
-    // XXX fill it using backBufferDesc
-
-    D3d11ImagePtr backBufferImage(new D3d11Image(resourceRegistry_, imageCreateInfo));
-    backBufferImage->object_ = backBuffer;
-
-    ImageViewCreateInfo viewCreateInfo = {};
-    viewCreateInfo.setBindFlags(ImageBindFlag::RenderTarget);
-    D3d11ImageViewPtr colorView(
-        new D3d11ImageView(resourceRegistry_, viewCreateInfo, backBufferImage));
-
     ComPtr<ID3D11RenderTargetView> backBufferView;
     device_->CreateRenderTargetView(
         backBuffer.get(), NULL, backBufferView.releaseAndGetAddressOf());
-    colorView->rtv_ = backBufferView.get();
 
-    defaultFramebuffer->colorView_ = colorView;
-    defaultFramebuffer->d3dColorView_ = colorView.get();
-    colorView->dependentD3dFramebuffers_.append(defaultFramebuffer);
+    d3dSwapChain->rtv_ = backBufferView.get();
 
-    if (defaultFramebuffer == boundFramebuffer_.get()) {
-        boundFramebuffer_.reset();
-        setFramebuffer_(d3dSwapChain->defaultFramebuffer());
+    if (d3dSwapChain == currentSwapchain_.get() && !boundFramebuffer_) {
+        setFramebuffer_(nullptr);
     }
 }
 
@@ -1519,7 +1493,12 @@ void D3d11Engine::initRasterizerState_(RasterizerState* state) {
         &desc, d3dRasterizerState->object_.releaseAndGetAddressOf());
 }
 
-void D3d11Engine::setSwapChain_(const SwapChainPtr& /*swapChain*/) {
+void D3d11Engine::setSwapChain_(const SwapChainPtr& swapChain) {
+
+    if (swapChain != currentSwapchain_ && !boundFramebuffer_) {
+        currentSwapchain_ = swapChain;
+        setFramebuffer_(nullptr);
+    }
     deviceCtx_->OMSetDepthStencilState(depthStencilState_.get(), 0);
     deviceCtx_->HSSetShader(NULL, NULL, 0);
     deviceCtx_->DSSetShader(NULL, NULL, 0);
@@ -1528,7 +1507,11 @@ void D3d11Engine::setSwapChain_(const SwapChainPtr& /*swapChain*/) {
 
 void D3d11Engine::setFramebuffer_(const FramebufferPtr& framebuffer) {
     if (!framebuffer) {
-        deviceCtx_->OMSetRenderTargets(0, NULL, NULL);
+        D3d11SwapChain* d3dSwapChain =
+            currentSwapchain_.get_static_cast<D3d11SwapChain>();
+        ID3D11RenderTargetView* rtvArray[1] = {
+            d3dSwapChain ? d3dSwapChain->rtvObject() : NULL};
+        deviceCtx_->OMSetRenderTargets(1, rtvArray, NULL);
         boundFramebuffer_.reset();
         return;
     }
@@ -1793,10 +1776,6 @@ D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags /*
 }
 
 // Private methods
-
-void D3d11Engine::initBuiltinShaders_() {
-    // no-op atm, everything was done on create
-}
 
 bool D3d11Engine::loadBuffer_(D3d11Buffer* buffer, const void* data, Int dataSize) {
     ComPtr<ID3D11Buffer>& object = buffer->object_;

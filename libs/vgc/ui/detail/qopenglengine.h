@@ -216,7 +216,6 @@ private:
         return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 
-    void initBuiltinShaders_();
     void makeCurrent_();
     bool loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize);
     void syncTextureStates_();

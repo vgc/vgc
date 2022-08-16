@@ -109,18 +109,14 @@ protected:
     friend Engine;
     using Resource::Resource;
 
-    SwapChain(
-        ResourceRegistry* registry,
-        const SwapChainCreateInfo& createInfo,
-        const FramebufferPtr& defaultFramebuffer)
+    SwapChain(ResourceRegistry* registry, const SwapChainCreateInfo& createInfo)
 
         : Resource(registry)
-        , info_(createInfo)
-        , defaultFramebuffer_(defaultFramebuffer) {
+        , info_(createInfo) {
     }
 
 public:
-    const SwapChainCreateInfo& desc() const {
+    const SwapChainCreateInfo& createInfo() const {
         return info_;
     }
 
@@ -129,18 +125,8 @@ public:
         return static_cast<Int>(numPendingPresents_.load());
     }
 
-    const FramebufferPtr& defaultFramebuffer() const {
-        return defaultFramebuffer_;
-    }
-
-protected:
-    void releaseSubResources_() override {
-        defaultFramebuffer_.reset();
-    }
-
 private:
     SwapChainCreateInfo info_;
-    FramebufferPtr defaultFramebuffer_;
 
     std::atomic_uint32_t numPendingPresents_ = 0; // to limit queuing in the Engine.
 };

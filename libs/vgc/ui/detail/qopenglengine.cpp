@@ -379,13 +379,7 @@ class QglSwapChain : public SwapChain {
 protected:
     friend QglEngine;
 
-    QglSwapChain(
-        ResourceRegistry* registry,
-        const SwapChainCreateInfo& desc,
-        const FramebufferPtr& framebuffer)
-
-        : SwapChain(registry, desc, framebuffer) {
-    }
+    using SwapChain::SwapChain;
 
 protected:
     void release_(Engine* engine) override {
@@ -748,11 +742,7 @@ SwapChainPtr QglEngine::createSwapChainFromSurface(QSurface* surface) {
     SwapChainCreateInfo createInfo = {};
     // XXX fill from surface format
 
-    QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
-    framebuffer->isDefault_ = true;
-    framebuffer->object_ = 0;
-
-    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo, framebuffer);
+    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo);
     swapChain->window_ = nullptr;
     swapChain->surface_ = surface;
     swapChain->isExternal_ = true;
@@ -784,11 +774,7 @@ SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInf
     wnd->setFormat(format_);
     wnd->create();
 
-    QglFramebufferPtr framebuffer(new QglFramebuffer(resourceRegistry_));
-    framebuffer->isDefault_ = true;
-    framebuffer->object_ = 0;
-
-    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo, framebuffer);
+    auto swapChain = makeUnique<QglSwapChain>(resourceRegistry_, createInfo);
     swapChain->window_ = wnd;
     swapChain->surface_ = wnd;
     swapChain->isExternal_ = false;
@@ -1455,7 +1441,6 @@ UInt64 QglEngine::present_(
 }
 
 void QglEngine::setStateDirty_() {
-    makeCurrent_();
     boundFramebuffer_ = badGLuint;
     boundBlendState_.reset();
     currentBlendFactor_.reset();

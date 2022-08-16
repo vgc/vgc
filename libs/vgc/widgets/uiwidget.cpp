@@ -176,8 +176,7 @@ void UiWidget::initializeGL() {
     }
 
     QSurface* surface = context()->surface();
-    graphics::SwapChainPtr swapChain = engine_->createSwapChainFromSurface(surface);
-    engine_->setSwapChain(swapChain);
+    swapChain_ = engine_->createSwapChainFromSurface(surface);
 
     {
         graphics::RasterizerStateCreateInfo createInfo = {};
@@ -228,13 +227,12 @@ void UiWidget::paintGL() {
     }
 
     // setViewport & present is done by Qt
-    GLint vp[4];
-    engine_->api()->glGetIntegerv(GL_VIEWPORT, vp);
+
+    engine_->beginFrame(swapChain_, graphics::FrameKind::QWidget);
 
     engine_->setRasterizerState(rasterizerState_);
     engine_->setBlendState(blendState_, geometry::Vec4f{0.f, 0.f, 0.f, 0.f});
-    engine_->setViewport(vp[0], vp[1], vp[2], vp[3]);
-    engine_->beginFrame(true);
+
     // XXX split to beginFrame() and qopenglengine-only beginInlineFrame
 
     //engine_->clear(core::Color(0., 0., 0.));
@@ -245,7 +243,6 @@ void UiWidget::paintGL() {
     widget_->paint(engine_.get());
 
     engine_->endFrame();
-    engine_->finish();
 
     // make current in current thread again, engine has no immediate mode yet
     context()->makeCurrent(context()->surface());

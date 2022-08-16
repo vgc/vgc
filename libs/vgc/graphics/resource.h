@@ -267,28 +267,41 @@ public:
         : p_(nullptr) {
     }
 
-    T* get() const {
+    constexpr T* get() const {
         return p_;
     }
 
     template<typename U>
-    U* get_static_cast() const {
+    constexpr U* get_static_cast() const {
         return static_cast<U*>(p_);
     }
 
-    explicit operator bool() const noexcept {
+    constexpr explicit operator bool() const noexcept {
         return p_ != nullptr;
     }
 
-    T& operator*() const noexcept {
+    constexpr T& operator*() const noexcept {
         return *p_;
     }
 
-    T* operator->() const noexcept {
+    constexpr T* operator->() const noexcept {
         return p_;
     }
 
 protected:
+    constexpr void set_(T* p) {
+        p_ = p;
+    }
+
+    template<typename U>
+    void swap_(SmartPtrBase_<U>& other) {
+        std::swap(p_, other.p_);
+    }
+
+    void swap_(SmartPtrBase_& other) noexcept {
+        std::swap(p_, other.p_);
+    }
+
     T* p_ = nullptr;
 };
 
@@ -300,6 +313,86 @@ bool operator==(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexce
 template<typename T, typename U>
 bool operator!=(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept {
     return lhs.get() != rhs.get();
+}
+
+template<typename T, typename U>
+bool operator<(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept {
+    return std::less<std::common_type_t<T, U>>()(lhs.get(), rhs.get());
+}
+
+template<typename T, typename U>
+bool operator>(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept {
+    return rhs < lhs;
+}
+
+template<typename T, typename U>
+bool operator<=(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept {
+    return !(rhs < lhs);
+}
+
+template<typename T, typename U>
+bool operator>=(const SmartPtrBase_<T>& lhs, const SmartPtrBase_<U>& rhs) noexcept {
+    return !(lhs < rhs);
+}
+
+template<typename T>
+bool operator==(const SmartPtrBase_<T>& lhs, std::nullptr_t) noexcept {
+    return !lhs.get();
+}
+
+template<typename T>
+bool operator==(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
+    return !rhs.get();
+}
+
+template<typename T>
+bool operator!=(const SmartPtrBase_<T>& lhs, std::nullptr_t) noexcept {
+    return !!lhs.get();
+}
+
+template<typename T>
+bool operator!=(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
+    return !!rhs.get();
+}
+
+template<typename T>
+bool operator<(const SmartPtrBase_<T>& lhs, std::nullptr_t) noexcept {
+    return std::less<T*>()(lhs.get(), nullptr);
+}
+
+template<typename T>
+bool operator<(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
+    return std::less<T*>()(nullptr, rhs.get());
+}
+
+template<typename T>
+bool operator>(const SmartPtrBase_<T>& lhs, std::nullptr_t) noexcept {
+    return nullptr < lhs;
+}
+
+template<typename T>
+bool operator>(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
+    return rhs < nullptr;
+}
+
+template<typename T>
+bool operator<=(const SmartPtrBase_<T>& lhs, std::nullptr_t) noexcept {
+    return !(nullptr < lhs);
+}
+
+template<typename T>
+bool operator<=(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
+    return !(rhs < nullptr);
+}
+
+template<typename T>
+bool operator>=(const SmartPtrBase_<T>& lhs, std::nullptr_t) noexcept {
+    return !(lhs < nullptr);
+}
+
+template<typename T>
+bool operator>=(std::nullptr_t, const SmartPtrBase_<T>& rhs) noexcept {
+    return !(nullptr < rhs);
 }
 
 } // namespace detail
@@ -321,14 +414,14 @@ protected:
     template<typename S, typename U>
     friend ResourcePtr<S> static_pointer_cast(const ResourcePtr<U>& r) noexcept;
 
-    struct CastTag {};
+    struct AlreadySharedTag {};
 
     // For casts
-    ResourcePtr(T* p, CastTag)
+    ResourcePtr(T* p, AlreadySharedTag)
         : Base(p) {
 
-        if (this->p_) {
-            this->p_->incRef_();
+        if (p) {
+            p->incRef_();
         }
     }
 
@@ -343,8 +436,8 @@ public:
     explicit ResourcePtr(T* p)
         : Base(p) {
 
-        if (this->p_) {
-            this->p_->initRef_();
+        if (p) {
+            p->initRef_();
         }
     }
 
@@ -354,11 +447,7 @@ public:
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr(const ResourcePtr<U>& other)
-        : Base(other.p_) {
-
-        if (this->p_) {
-            this->p_->incRef_();
-        }
+        : ResourcePtr(other.p_, AlreadySharedTag{}) {
     }
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
@@ -369,11 +458,7 @@ public:
     }
 
     ResourcePtr(const ResourcePtr& other)
-        : Base(other.p_) {
-
-        if (this->p_) {
-            this->p_->incRef_();
-        }
+        : ResourcePtr(other.p_, AlreadySharedTag{}) {
     }
 
     ResourcePtr(ResourcePtr&& other) noexcept
@@ -384,14 +469,15 @@ public:
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr& operator=(const ResourcePtr<U>& other) {
-        if (this->p_ != other.p_) {
+        T* prev = Base::get();
+        if (prev != other.p_) {
             if (other.p_) {
                 other.p_->incRef_();
             }
-            if (this->p_) {
-                this->p_->decRef_();
+            if (prev) {
+                prev->decRef_();
             }
-            this->p_ = other.p_;
+            Base::set_(other.p_);
         }
         return *this;
     }
@@ -402,20 +488,21 @@ public:
 
     template<typename U, VGC_REQUIRES(isCompatible_<U>)>
     ResourcePtr& operator=(ResourcePtr<U>&& other) {
-        std::swap(this->p_, other.p_);
+        Base::swap_(other);
         return *this;
     }
 
     ResourcePtr& operator=(ResourcePtr&& other) noexcept {
-        std::swap(this->p_, other.p_);
+        Base::swap_(other);
         return *this;
     }
 
     void reset() {
-        if (this->p_) {
-            this->p_->decRef_();
+        T* p = Base::get();
+        if (p) {
+            p->decRef_();
 #ifdef VGC_DEBUG
-            this->p_ = nullptr;
+            Base::set_(nullptr);
 #endif
         }
     }
@@ -424,20 +511,23 @@ public:
         if (p) {
             p->initRef_();
         }
-        if (this->p_) {
-            this->p_->decRef_();
+        T* prev = Base::get();
+        if (prev) {
+            prev->decRef_();
         }
-        this->p_ = p;
+        Base::set_(p);
     }
 
     Int64 useCount() const {
-        return this->p_ ? this->p_->useCount() : 0;
+        T* p = Base::get();
+        return p ? p->useCount() : 0;
     }
 };
 
 template<typename T, typename U>
 ResourcePtr<T> static_pointer_cast(const ResourcePtr<U>& r) noexcept {
-    return ResourcePtr<T>(static_cast<T*>(r.get()), typename ResourcePtr<T>::CastTag{});
+    return ResourcePtr<T>(
+        static_cast<T*>(r.get()), typename ResourcePtr<T>::AlreadySharedTag{});
 }
 
 } // namespace vgc::graphics
