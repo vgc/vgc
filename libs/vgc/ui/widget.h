@@ -328,6 +328,22 @@ public:
     ///
     PreferredSize preferredHeight() const;
 
+    /// Returns the preferred width of the widget for a given height.
+    ///
+    /// By default, this returns `preferredSize()[0]`, regardless of the given
+    /// height. Re-implement this function in subclasses if the preferred width
+    /// of your widget depends on its height.
+    ///
+    virtual float preferredWidthForHeight(float height) const;
+
+    /// Returns the preferred height of the widget for a given width.
+    ///
+    /// By default, this returns `preferredSize()[1]`, regardless of the given
+    /// width. Re-implement this function in subclasses if the preferred height
+    /// of your widget depends on its width.
+    ///
+    virtual float preferredHeightForWidth(float width) const;
+
     /// Returns the height stretch factor of this widget.
     ///
     float stretchHeight() const;

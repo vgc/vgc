@@ -88,6 +88,10 @@ public:
     ///
     void setWrap(FlexWrap wrap);
 
+    // reimpl
+    float preferredWidthForHeight(float height) const override;
+    float preferredHeightForWidth(float width) const override;
+
 protected:
     void onWidgetAdded(Object* child) override;
     void onWidgetRemoved(Object* child) override;
