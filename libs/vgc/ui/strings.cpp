@@ -20,6 +20,7 @@ namespace vgc::ui::strings {
 
 const core::StringId Button("Button");
 const core::StringId ColorPalette("ColorPalette");
+const core::StringId ColorPaletteSelector("ColorPaletteSelector");
 const core::StringId Flex("Flex");
 const core::StringId Label("Label");
 const core::StringId LineEdit("LineEdit");
@@ -28,6 +29,7 @@ const core::StringId Plot2d("Plot2d");
 const core::StringId background_color("background-color");
 const core::StringId background_color_on_hover("background-color-on-hover");
 const core::StringId border_radius("border-radius");
+const core::StringId column_gap("column-gap");
 const core::StringId margin_bottom("margin-bottom");
 const core::StringId margin_left("margin-left");
 const core::StringId margin_right("margin-right");
@@ -39,6 +41,7 @@ const core::StringId padding_top("padding-top");
 const core::StringId pixel_hinting("pixel-hinting");
 const core::StringId preferred_height("preferred-height");
 const core::StringId preferred_width("preferred-width");
+const core::StringId row_gap("row-gap");
 const core::StringId shrink_height("shrink-height");
 const core::StringId shrink_width("shrink-width");
 const core::StringId stretch_height("stretch-height");

@@ -502,6 +502,23 @@ StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
+StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end) {
+    // For now, we only support a unique Dimension token with a "dp" unit
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (
+        begin->type == StyleTokenType::Dimension //
+        && begin->codePointsValue == "dp"        //
+        && begin + 1 == end) {
+
+        return StyleValue::number(begin->toFloat());
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
 StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end) {
     // For now, we only support 'auto' or a unique Dimension token with a "dp" unit
     if (begin == end) {
@@ -531,6 +548,7 @@ StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator 
 style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     auto autosize    = StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
+    auto zero        = StyleValue::number(0.0f);
     auto one         = StyleValue::number(1.0f);
 
     // Start with the same specs as RichTextSpan
@@ -539,8 +557,10 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     // Insert additional specs
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
+    table->insert("column-gap",       zero,     false, &parseStyleLength);
     table->insert("preferred-height", autosize, false, &parseStylePreferredSize);
     table->insert("preferred-width",  autosize, false, &parseStylePreferredSize);
+    table->insert("row-gap",          zero,     false, &parseStyleLength);
     table->insert("shrink-height",    one,      false, &parseStyleNumber);
     table->insert("shrink-width",     one,      false, &parseStyleNumber);
     table->insert("stretch-height",   one,      false, &parseStyleNumber);
