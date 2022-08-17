@@ -76,57 +76,142 @@ float getTopBottomPadding(const Widget* widget) {
 
 } // namespace
 
-geometry::Vec2f Flex::computePreferredSize() const {
+float Flex::preferredWidthForHeight(float height) const {
     bool isRow =
         (direction_ == FlexDirection::Row) || (direction_ == FlexDirection::RowReverse);
-    geometry::Vec2f res(0, 0);
+    float width = 0.0f;
+    if (isRow) {
+        float flexTopBottomPadding = getTopBottomPadding(this);
+        float flexPaddedHeight = height - flexTopBottomPadding;
+        for (Widget* child : children()) {
+            float childLeftRightMargins = getLeftRightMargins(child);
+            float childTopBottomMargins = getTopBottomMargins(child);
+            float childHeight = std::max(0.0f, flexPaddedHeight - childTopBottomMargins);
+            float childPreferredWidth = child->preferredWidthForHeight(childHeight);
+            width += childPreferredWidth + childLeftRightMargins;
+        }
+    }
+    else {
+        for (Widget* child : children()) {
+            float childLeftRightMargins = getLeftRightMargins(child);
+            float childPreferredWidth = child->preferredSize().x();
+            width = std::max(width, childPreferredWidth + childLeftRightMargins);
+        }
+    }
+    width += getLeftRightPadding(this);
+    return width;
+}
+
+float Flex::preferredHeightForWidth(float width) const {
+    bool isRow =
+        (direction_ == FlexDirection::Row) || (direction_ == FlexDirection::RowReverse);
+    float height = 0.0f;
+    if (isRow) {
+        for (Widget* child : children()) {
+            float childTopBottomMargins = getTopBottomMargins(child);
+            float childPreferredHeight = child->preferredSize().y();
+            height = std::max(height, childPreferredHeight + childTopBottomMargins);
+        }
+    }
+    else {
+        float flexLeftRightPadding = getLeftRightPadding(this);
+        float flexPaddedWidth = width - flexLeftRightPadding;
+        for (Widget* child : children()) {
+            float childLeftRightMargins = getLeftRightMargins(child);
+            float childTopBottomMargins = getTopBottomMargins(child);
+            float childWidth = std::max(0.0f, flexPaddedWidth - childLeftRightMargins);
+            float childPreferredHeight = child->preferredHeightForWidth(childWidth);
+            height += childPreferredHeight + childTopBottomMargins;
+        }
+    }
+    height += getTopBottomPadding(this);
+    return height;
+}
+
+geometry::Vec2f Flex::computePreferredSize() const {
+
+    bool isRow =
+        (direction_ == FlexDirection::Row) || (direction_ == FlexDirection::RowReverse);
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
-    if (w.type() != auto_) {
-        res[0] = w.value();
-    }
-    else {
-        if (isRow) {
-            for (Widget* child : children()) {
-                res[0] += child->preferredSize().x() + getLeftRightMargins(child);
+
+    geometry::Vec2f res;
+    if (w.type() == auto_) {
+        if (h.type() == auto_) {
+
+            // Compute preferred height not knowing any width
+            float height = 0;
+            if (!isRow) {
+                for (Widget* child : children()) {
+                    height += child->preferredSize().y() + getTopBottomMargins(child);
+                }
             }
+            else {
+                for (Widget* child : children()) {
+                    height = std::max(
+                        height, child->preferredSize().y() + getTopBottomMargins(child));
+                }
+            }
+            height += getTopBottomPadding(this);
+
+            // Compute preferred width not knowing any height
+            float width = 0;
+            if (isRow) {
+                for (Widget* child : children()) {
+                    width += child->preferredSize().x() + getLeftRightMargins(child);
+                }
+            }
+            else {
+                for (Widget* child : children()) {
+                    width = std::max(
+                        width, child->preferredSize().x() + getLeftRightMargins(child));
+                }
+            }
+            width += getLeftRightPadding(this);
+
+            res = {width, height};
         }
         else {
-            // For now, we use the max preferred width of all widgets as
-            // preferred width for the column. In the future, we could compute
-            // minimum/maximum widths based on the stretch and shrink
-            // factors of the children, compute an average preferred width
-            // (possibly weighted by the stretch/shrink factors?), and clamp
-            // using the min/max widths.
-            for (Widget* child : children()) {
-                res[0] = std::max(
-                    res[0], child->preferredSize().x() + getLeftRightMargins(child));
-            }
+            // (auto, fixed)
+            float height = h.value();
+            float width = preferredWidthForHeight(height);
+            res = {width, height};
         }
-        res[0] += getLeftRightPadding(this);
-    }
-    if (h.type() != PreferredSizeType::Auto) {
-        res[1] = h.value();
     }
     else {
-        if (!isRow) {
-            for (Widget* child : children()) {
-                res[1] += child->preferredSize().y() + getTopBottomMargins(child);
-            }
+        if (h.type() == auto_) {
+            // (fixed, auto)
+            float width = w.value();
+            float height = preferredHeightForWidth(width);
+            res = {width, height};
         }
         else {
-            for (Widget* child : children()) {
-                res[1] = std::max(
-                    res[1], child->preferredSize().y() + getTopBottomMargins(child));
-            }
+            // (fixed, fixed)
+            res = {w.value(), h.value()};
         }
-        res[1] += getTopBottomPadding(this);
     }
+
     return res;
 }
 
 namespace {
+
+// Returns the preferred mainSize (margin excluded) of a child, assuming its
+// crossSize (margin included) is paddedCrossSize.
+//
+float getChildPreferredMainSize(float isRow, float paddedCrossSize, Widget* child) {
+    if (isRow) {
+        float childCrossMargins = getTopBottomMargins(child);
+        float childCrossSize = std::max(0.0f, paddedCrossSize - childCrossMargins);
+        return child->preferredWidthForHeight(childCrossSize);
+    }
+    else {
+        float childCrossMargins = getLeftRightMargins(child);
+        float childCrossSize = std::max(0.0f, paddedCrossSize - childCrossMargins);
+        return child->preferredHeightForWidth(childCrossSize);
+    }
+}
 
 // If freeSpace >= 0, returns the stretch factor of this child, otherwise
 // returned its scaled shrink factor. Note that we always ensure that stretch
@@ -141,6 +226,7 @@ namespace {
 //
 float getChildStretch(
     bool isRow,
+    float paddedCrossSize,
     float freeSpace,
     Widget* child,
     float childStretchBonus) {
@@ -158,8 +244,7 @@ float getChildStretch(
         // items, so that they reach a zero-size at the same time. This is the
         // same behavior as CSS.
         childAuthoredStretch = isRow ? child->shrinkWidth() : child->shrinkHeight();
-        childStretchMultiplier =
-            isRow ? child->preferredSize().x() : child->preferredSize().y();
+        childStretchMultiplier = getChildPreferredMainSize(isRow, paddedCrossSize, child);
     }
     childAuthoredStretch = std::max(childAuthoredStretch, 0.0f);
     childStretchMultiplier = std::max(childStretchMultiplier, 0.0f);
@@ -168,13 +253,15 @@ float getChildStretch(
 
 float computeTotalStretch(
     bool isRow,
+    float paddedCrossSize,
     float freeSpace,
     Widget* parent,
     float childStretchBonus) {
 
     float totalStretch = 0;
     for (Widget* child : parent->children()) {
-        totalStretch += getChildStretch(isRow, freeSpace, child, childStretchBonus);
+        totalStretch +=
+            getChildStretch(isRow, paddedCrossSize, freeSpace, child, childStretchBonus);
     }
     return totalStretch;
 }
@@ -195,10 +282,6 @@ void stretchChild(
     float parentCrossPaddingAfter,
     bool hinting) {
 
-    float childPreferredMainSize =
-        isRow ? child->preferredSize().x() : child->preferredSize().y();
-    float childStretch = getChildStretch(isRow, freeSpace, child, childStretchBonus);
-    float childMainSize = childPreferredMainSize + extraSpacePerStretch * childStretch;
     float marginLeft = detail::getLength(child, strings::margin_left);
     float marginRight = detail::getLength(child, strings::margin_right);
     float marginTop = detail::getLength(child, strings::margin_top);
@@ -207,8 +290,19 @@ void stretchChild(
     float childMainMarginAfter = isRow ? marginRight : marginBottom;
     float childCrossMarginBefore = isRow ? marginTop : marginLeft;
     float childCrossMarginAfter = isRow ? marginBottom : marginRight;
-    float childCrossSize = crossSize - parentCrossPaddingBefore - parentCrossPaddingAfter
-                           - childCrossMarginBefore - childCrossMarginAfter;
+    float childCrossMargins = childCrossMarginBefore + childCrossMarginAfter;
+
+    float parentCrossPadding = parentCrossPaddingBefore + parentCrossPaddingAfter;
+    float paddedCrossSize = crossSize - parentCrossPadding;
+    float childCrossSize = paddedCrossSize - childCrossMargins;
+
+    float childPreferredMainSize =
+        getChildPreferredMainSize(isRow, paddedCrossSize, child);
+
+    float childStretch =
+        getChildStretch(isRow, paddedCrossSize, freeSpace, child, childStretchBonus);
+
+    float childMainSize = childPreferredMainSize + extraSpacePerStretch * childStretch;
     float childCrossPosition = parentCrossPaddingBefore + childCrossMarginBefore;
     childMainPosition += childMainMarginBefore;
     float hChildMainPosition = hinted(childMainPosition, hinting);
@@ -217,6 +311,7 @@ void stretchChild(
         hinted(childMainPosition + childMainSize, hinting) - hChildMainPosition;
     float hChildCrossSize =
         hinted(childCrossPosition + childCrossSize, hinting) - hChildCrossPosition;
+
     if (isRow) {
         child->setGeometry(
             hChildMainPosition, hChildCrossPosition, hChildMainSize, hChildCrossSize);
@@ -225,6 +320,7 @@ void stretchChild(
         child->setGeometry(
             hChildCrossPosition, hChildMainPosition, hChildCrossSize, hChildMainSize);
     }
+
     childMainPosition += childMainSize + childMainMarginAfter;
 }
 
@@ -249,12 +345,14 @@ void Flex::updateChildrenGeometry() {
         float paddingRight = detail::getLength(this, strings::padding_right);
         float paddingTop = detail::getLength(this, strings::padding_top);
         float paddingBottom = detail::getLength(this, strings::padding_bottom);
-        float preferredMainSize = isRow ? preferredSize().x() : preferredSize().y();
+        float mainSize = isRow ? width() : height();
+        float crossSize = isRow ? height() : width();
+        float preferredMainSize = isRow ? preferredWidthForHeight(crossSize)
+                                        : preferredHeightForWidth(crossSize);
         float mainPaddingBefore = isRow ? paddingLeft : paddingTop;
         float crossPaddingBefore = isRow ? paddingTop : paddingLeft;
         float crossPaddingAfter = isRow ? paddingBottom : paddingRight;
-        float mainSize = isRow ? width() : height();
-        float crossSize = isRow ? height() : width();
+        float paddedCrossSize = crossSize - crossPaddingBefore - crossPaddingAfter;
         float freeSpace = mainSize - preferredMainSize;
         float eps = 1e-6f;
         // TODO: have a loop to resolve constraint violations, as per 9.7.4:
@@ -266,15 +364,16 @@ void Flex::updateChildrenGeometry() {
         // but the lost space due to clamping isn't redistributed to other items,
         // causing an overflow.
         float childStretchBonus = 0;
-        float totalStretch =
-            computeTotalStretch(isRow, freeSpace, this, childStretchBonus);
+        float totalStretch = computeTotalStretch(
+            isRow, paddedCrossSize, freeSpace, this, childStretchBonus);
         if (totalStretch < eps) {
             // For now, we stretch evenly as if all childStretch were equal to
             // one. Later, we should instead insert empty space between the items,
             // based on alignment properties, see:
             // https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Box_Alignment
             childStretchBonus = 1;
-            totalStretch = computeTotalStretch(isRow, freeSpace, this, childStretchBonus);
+            totalStretch = computeTotalStretch(
+                isRow, paddedCrossSize, freeSpace, this, childStretchBonus);
         }
         float extraSpacePerStretch = freeSpace / totalStretch;
         float childMainPosition = mainPaddingBefore;

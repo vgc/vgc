@@ -170,6 +170,14 @@ PreferredSize Widget::preferredHeight() const {
     return style(strings::preferred_height).to<PreferredSize>();
 }
 
+float Widget::preferredWidthForHeight(float) const {
+    return preferredSize()[0];
+}
+
+float Widget::preferredHeightForWidth(float) const {
+    return preferredSize()[1];
+}
+
 float Widget::stretchHeight() const {
     return style(strings::stretch_height).toFloat();
 }
