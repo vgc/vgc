@@ -100,6 +100,10 @@ namespace vgc::core {
 ///
 class VGC_CORE_API StringId {
 public:
+    // Constructs a StringId representing the empty string.
+    //
+    StringId();
+
     /// Constructs a StringId representing the given string \p s.
     ///
     /// This constructor is explicit in order to avoid interning strings by
@@ -108,7 +112,7 @@ public:
     /// to call foo(std::string) without explicit cast, you need to explicitly
     /// define foo(std::string) and explicitly perform the cast there.
     ///
-    explicit StringId(const std::string& s = "");
+    explicit StringId(const std::string& s);
 
     /// Constructs a StringId representing the given string \p s.
     ///
@@ -167,6 +171,12 @@ private:
     friend struct std::hash<StringId>;
     const std::string* stringPtr_;
 };
+
+namespace strings {
+
+VGC_CORE_API extern const StringId empty;
+
+} // namespace strings
 
 /// Returns whether the given std::string is equal to the given StringId.
 ///

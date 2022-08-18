@@ -450,9 +450,8 @@ private:
 
     // https://www.w3.org/TR/selectors-3/#selector-syntax
     // Returns null if the selector is invalid.
-    // For now, we only accepts a single class selector as valid selector.
     StyleSelectorPtr consumeSelector_(StyleTokenIterator& it, StyleTokenIterator end) {
-        StyleSelectorPtr selector = StyleSelector::create();
+        core::Array<StyleSelectorItem> selectorItems;
         // Trim whitespaces at both ends
         while (it != end && it->type == StyleTokenType::Whitespace) {
             ++it;
@@ -466,13 +465,13 @@ private:
         }
         // Consume items
         while (it != end) {
-            bool ok = consumeSelectorItem_(selector->items_, it, end);
+            bool ok = consumeSelectorItem_(selectorItems, it, end);
             if (!ok) {
                 // Parse error
                 return StyleSelectorPtr();
             }
         }
-        return selector;
+        return StyleSelector::create(std::move(selectorItems));
     }
 
     // Consumes one item and appends it to the given array. Returns false in
@@ -490,10 +489,29 @@ private:
             if (it == end || it->type != StyleTokenType::Identifier) {
                 return false;
             }
-            items.append(StyleSelectorItem(
+            items.emplaceLast(
                 StyleSelectorItemType::ClassSelector,
-                core::StringId(it->codePointsValue)));
+                core::StringId(it->codePointsValue));
             ++it;
+            return true;
+        }
+        else if (it->type == StyleTokenType::Whitespace) {
+            while (it->type == StyleTokenType::Whitespace) {
+                ++it;
+                if (it == end) {
+                    return false;
+                }
+            }
+            if (it->type == StyleTokenType::Delimiter && it->codePointsValue == ">") {
+                items.emplaceLast(StyleSelectorItemType::ChildCombinator);
+                ++it;
+            }
+            else {
+                items.emplaceLast(StyleSelectorItemType::DescendantCombinator);
+            }
+            while (it != end && it->type == StyleTokenType::Whitespace) {
+                ++it;
+            }
             return true;
         }
         return false;
@@ -523,30 +541,148 @@ StyleRuleSetPtr StyleRuleSet::create() {
     return StyleRuleSetPtr(new StyleRuleSet());
 }
 
-bool StyleSelector::matches(StylableObject* node) {
-    if (items_.isEmpty()) {
-        // Logic error, but let's silently return false
-        return false;
-    }
+namespace {
+
+using StyleSelectorItemIterator = core::Array<StyleSelectorItem>::iterator;
+
+// Returns whether the given StylableObject matches the given
+// selector group. A selector group is a sublist of items between
+// two combinators.
+//
+bool matchesGroup_(
+    StylableObject* node,
+    StyleSelectorItemIterator begin,
+    StyleSelectorItemIterator end) {
 
     // For now, we only support a sequence of class selectors, that is,
-    // something like ".class1.class2.class3". No combinators, pseudo-classes,
-    // etc.. so the implementation is super easy : the node simply has to
-    // have all classes.
-    for (const StyleSelectorItem& item : items_) {
-        if (!node->hasStyleClass(item.name())) {
+    // something like ".class1.class2.class3". No pseudo-classes, etc... so the
+    // implementation is super easy : the node simply has to have all classes.
+    //
+    for (StyleSelectorItemIterator it = begin; it < end; ++it) {
+        if (!node->hasStyleClass(it->name())) {
             return false;
         }
     }
     return true;
 }
 
-StyleSelector::StyleSelector()
-    : Object() {
+} // namespace
+
+bool StyleSelector::matches(StylableObject* node) {
+
+    // TODO: Should we pre-validate the selector during parsing (thus, never
+    // create an invalid StyleSelector), and in this function, raise a
+    // LogicError instead of returning false when the selector isn't valid?
+    // Should the whole ruleset be discarded if any of its selectors is
+    // invalid?
+    //
+    // Should we precompute and cache the groups?
+    //
+
+    // Check that the selector item array isn't empty.
+    //
+    StyleSelectorItemIterator begin = items_.begin();
+    StyleSelectorItemIterator end = items_.end();
+    if (begin == end) {
+        // Invalid selector: items is empty
+        return false;
+    }
+
+    // We process the array of items by splitting it into "groups" separated by
+    // a combinator, and iterating from the last group down to the first group.
+    //
+    StyleSelectorItemIterator groupBegin = end;
+    StyleSelectorItemIterator groupEnd = end;
+
+    // Find right-most group
+    while (groupBegin != begin && !(groupBegin - 1)->isCombinator()) {
+        --groupBegin;
+    }
+    if (groupBegin == groupEnd) {
+        // Invalid selector: last item is a combinator
+        return false;
+    }
+
+    // Check if the node matches the last group
+    if (matchesGroup_(node, groupBegin, groupEnd)) {
+
+        // The node matches the last group. Now we check the other constraints.
+        StylableObject* currentNode = node;
+        while (groupBegin != begin) {
+
+            // No matter the combinator, if there is no parent, then it's
+            // impossible to match the selector.
+            //
+            StylableObject* parent = currentNode->parentStylableObject();
+            if (!parent) {
+                return false;
+            }
+
+            // Get combinator type
+            --groupBegin;
+            StyleSelectorItemType combinatorType = groupBegin->type();
+
+            // Get previous group
+            groupEnd = groupBegin;
+            while (groupBegin != begin && !(groupBegin - 1)->isCombinator()) {
+                --groupBegin;
+            }
+            if (groupBegin == groupEnd) {
+                // Invalid selector: two successive combinators, or
+                // first item is a combinator
+                return false;
+            }
+
+            // Apply combinator
+            if (combinatorType == StyleSelectorItemType::ChildCombinator) {
+                if (matchesGroup_(parent, groupBegin, groupEnd)) {
+                    currentNode = parent;
+                }
+                else {
+                    return false;
+                }
+            }
+            else if (combinatorType == StyleSelectorItemType::DescendantCombinator) {
+                while (parent && !matchesGroup_(parent, groupBegin, groupEnd)) {
+                    parent = parent->parentStylableObject();
+                }
+                if (parent) {
+                    currentNode = parent;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                std::string message = core::format(
+                    "StyleSelectorItemType {} was supposed to be a combinator but isn't.",
+                    combinatorType);
+                throw core::LogicError(message);
+            }
+        }
+        return true;
+    }
+    else {
+        // Selector doesn't match
+        return false;
+    }
 }
 
-StyleSelectorPtr StyleSelector::create() {
-    return StyleSelectorPtr(new StyleSelector());
+StyleSelector::StyleSelector(core::Array<StyleSelectorItem>&& items)
+    : Object()
+    , items_(std::move(items))
+    , specificity_(0) {
+
+    // Compute specificity
+    for (StyleSelectorItem& item : items_) {
+        if (item.type() == StyleSelectorItemType::ClassSelector) {
+            ++specificity_;
+        }
+    }
+}
+
+StyleSelectorPtr StyleSelector::create(core::Array<StyleSelectorItem>&& items) {
+    return StyleSelectorPtr(new StyleSelector(std::move(items)));
 }
 
 StyleDeclaration::StyleDeclaration()
