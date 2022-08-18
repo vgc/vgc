@@ -21,6 +21,10 @@
 
 namespace vgc::core {
 
+StringId::StringId() {
+    stringPtr_ = strings::empty.stringPtr_;
+}
+
 StringId::StringId(const std::string& s) {
     using StringPool = std::unordered_set<std::string>;
 
@@ -57,5 +61,11 @@ StringId::StringId(const std::string& s) {
     auto iterator = ret.first;
     stringPtr_ = &(*iterator);
 }
+
+namespace strings {
+
+const StringId empty("");
+
+} // namespace strings
 
 } // namespace vgc::core

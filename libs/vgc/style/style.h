@@ -24,8 +24,10 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
+#include <vgc/core/format.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
+#include <vgc/core/templateutil.h>
 
 #include <vgc/style/api.h>
 #include <vgc/style/strings.h>
@@ -410,23 +412,62 @@ private:
 /// \brief The type of a StyleSelectorItem
 ///
 enum class StyleSelectorItemType : Int8 {
-    ClassSelector
+    // Non-combinator items don't have the 0x10 bit set
+    ClassSelector = 0x01,
+
+    // Combinator items have the 0x10 bit set
+    DescendantCombinator = 0x10,
+    ChildCombinator = 0x11
 };
+
+} // namespace vgc::style
+
+template<>
+struct fmt::formatter<vgc::style::StyleSelectorItemType>
+    : fmt::formatter<std::string_view> {
+
+    using T = vgc::style::StyleSelectorItemType;
+
+    template<typename FormatContext>
+    auto format(T type, FormatContext& ctx) {
+        std::string_view name = "UnknownStyleSelectorItemType";
+        switch (type) {
+        case T::ClassSelector:
+            name = "ClassSelector";
+            break;
+        case T::DescendantCombinator:
+            name = "DescendantCombinator";
+            break;
+        case T::ChildCombinator:
+            name = "ChildCombinator";
+            break;
+        }
+        return fmt::formatter<std::string_view>::format(name, ctx);
+    }
+};
+
+namespace vgc::style {
 
 /// \class vgc::style::StyleSelectorItem
 /// \brief One item of a StyleSelector.
 ///
-/// A style selector consists of a sequence of "items". For now, the only
-/// available item is "class selector".
+/// A style selector consists of a sequence of "items", such as class selectors and combinators.
 ///
-/// In the future, more items should be supported, such as the universal
-/// selector, combinators, pseudo classes, and perhaps attribute selectors and
-/// pseudo-elements. See:
+/// Note for now, we do not support the universal selector, the adjacent or
+/// siblings combinators, pseudo-classes, pseudo-elements, and attribute
+/// selectors, but this could be added in the future.
 ///
 /// https://www.w3.org/TR/selectors-3/#selector-syntax
 ///
 class VGC_STYLE_API StyleSelectorItem {
 public:
+    /// Creates a StyleSelectorItem of the given type and an empty name.
+    ///
+    StyleSelectorItem(StyleSelectorItemType type)
+        : type_(type)
+        , name_() {
+    }
+
     /// Creates a StyleSelectorItem of the given type and given name.
     ///
     StyleSelectorItem(StyleSelectorItemType type, core::StringId name)
@@ -446,6 +487,12 @@ public:
     ///
     core::StringId name() const {
         return name_;
+    }
+
+    /// Returns whether this item is a combinator selector item
+    ///
+    bool isCombinator() const {
+        return core::toUnderlying(type_) & 0x10;
     }
 
 private:
@@ -468,25 +515,19 @@ public:
     ///
     bool matches(StylableObject* node);
 
-    /// Returns the specificy of the selector
+    /// Returns the specificy of the selector.
     ///
     StyleSpecificity specificity() const {
-        // TODO: compute actual specificity based on id/class/etc.
-        // It could be computed as:
-        //    2^48 * numIDs
-        //  + 2^32 * numClasses
-        //  + numTypes
-        // (note: inline styles are treated as separate layers and thus don't need
-        //        to be given higher specificity)
-        return core::int_cast<StyleSpecificity>(items_.size());
+        return specificity_;
     }
 
 private:
     core::Array<StyleSelectorItem> items_;
+    StyleSpecificity specificity_;
 
     friend class detail::StyleParser;
-    StyleSelector();
-    static StyleSelectorPtr create();
+    StyleSelector(core::Array<StyleSelectorItem>&& items);
+    static StyleSelectorPtr create(core::Array<StyleSelectorItem>&& items);
 };
 
 /// \class vgc::style::StyleDeclaration
