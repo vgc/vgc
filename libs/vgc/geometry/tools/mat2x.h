@@ -129,13 +129,13 @@ public:
     ///
     static const Mat2x identity;
 
-    /// Accesses the component of the Mat2x the the i-th row and j-th column.
+    /// Accesses the component of the Mat2x at the `i`-th row and `j`-th column.
     ///
     const float& operator()(Int i, Int j) const {
         return data_[j][i];
     }
 
-    /// Mutates the component of the Mat2x the the i-th row and j-th column.
+    /// Mutates the component of the Mat2x at the `i`-th row and `j`-th column.
     ///
     float& operator()(Int i, Int j) {
         return data_[j][i];

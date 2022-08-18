@@ -158,13 +158,13 @@ public:
         return data_[0];
     }
 
-    /// Accesses the component of the Mat3f the the i-th row and j-th column.
+    /// Accesses the component of the Mat3f at the `i`-th row and `j`-th column.
     ///
     const float& operator()(Int i, Int j) const {
         return data_[j][i];
     }
 
-    /// Mutates the component of the Mat3f the the i-th row and j-th column.
+    /// Mutates the component of the Mat3f at the `i`-th row and `j`-th column.
     ///
     float& operator()(Int i, Int j) {
         return data_[j][i];

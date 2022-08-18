@@ -482,7 +482,7 @@ void RichText::fill(core::FloatArray& a) {
         clipLeft -= cursorW;
         clipRight += cursorW;
         // Clip and draw cursor. Note that whenever the cursor is at least
-        // partially visible in the horizontal direction, we draw it full-legth
+        // partially visible in the horizontal direction, we draw it full-length
         if (clipLeft <= cursorX && cursorX <= clipRight) {
             float cursorY = textTop;
             float cursorH = textHeight;
