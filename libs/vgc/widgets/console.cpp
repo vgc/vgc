@@ -218,7 +218,7 @@ void Console::paintEvent(QPaintEvent* event) {
             QBrush backgroundBrush = blockFormat.background();
             if (backgroundBrush != Qt::NoBrush) {
                 QRectF backgroundRect = blockRect;
-                backgroundRect.setWidth(std::max(blockWidth, backgroundMaxWidth));
+                backgroundRect.setWidth((std::max)(blockWidth, backgroundMaxWidth));
                 painter.fillRect(backgroundRect, backgroundBrush);
             }
 
@@ -229,7 +229,7 @@ void Console::paintEvent(QPaintEvent* event) {
                 && isFirstLineOfCodeBlock_(lineNumber, codeBlocks_, codeBlockIndexHint)) {
                 double y = blockTop - 1;
                 double x1 = blockLeft;
-                double x2 = x1 + std::max(blockWidth, backgroundMaxWidth);
+                double x2 = x1 + (std::max)(blockWidth, backgroundMaxWidth);
                 QLineF line(x1, y, x2, y);
                 painter.save();
                 painter.setPen(codeBlockSeparatorsPen);
@@ -617,7 +617,7 @@ void Console::consoleMarginPaintEvent_(QPaintEvent* event) {
 
 void Console::computeConsoleMarginWidth_() {
     int padding = 4;
-    int promptWidth = std::max(
+    int promptWidth = (std::max)(
         fontMetrics().horizontalAdvance(primaryPromptString_),
         fontMetrics().horizontalAdvance(secondaryPromptString_));
     consoleMarginWidth_ = promptWidth + 2 * padding;

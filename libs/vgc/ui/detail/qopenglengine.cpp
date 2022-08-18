@@ -46,8 +46,8 @@ struct XYRGBVertex {
 } // namespace
 
 inline constexpr GLuint nullGLuint = 0;
-inline constexpr GLuint badGLuint = std::numeric_limits<GLuint>::max();
-inline constexpr GLenum badGLenum = std::numeric_limits<GLenum>::max();
+inline constexpr GLuint badGLuint = (std::numeric_limits<GLuint>::max)();
+inline constexpr GLenum badGLenum = (std::numeric_limits<GLenum>::max)();
 
 struct GlFormat {
     GLenum internalFormat = 0;

@@ -100,7 +100,7 @@ void StylableObject::updateStyle_() {
             for (StyleSelector* selector : rule->selectors()) {
                 if (selector->matches(this)) {
                     matches = true;
-                    maxSpecificity = std::max(maxSpecificity, selector->specificity());
+                    maxSpecificity = (std::max)(maxSpecificity, selector->specificity());
                 }
             }
             if (matches) {

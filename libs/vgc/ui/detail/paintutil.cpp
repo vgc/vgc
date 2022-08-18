@@ -80,7 +80,7 @@ void insertRect(
     float r = static_cast<float>(c[0]);
     float g = static_cast<float>(c[1]);
     float b = static_cast<float>(c[2]);
-    float maxBorderRadius = 0.5f * std::min(std::abs(x2 - x1), std::abs(y2 - y1));
+    float maxBorderRadius = 0.5f * (std::min)(std::abs(x2 - x1), std::abs(y2 - y1));
     borderRadius = core::clamp(borderRadius, 0.0f, maxBorderRadius);
     Int32 numCornerTriangles = core::ifloor<Int32>(borderRadius);
     if (numCornerTriangles < 1) {
@@ -269,8 +269,8 @@ void insertText(
             if (clipLeft <= cursorX && cursorX <= clipRight) {
                 float cursorY = textTop;
                 float cursorH = textHeight;
-                float cursorY1 = std::max(cursorY, clipTop);
-                float cursorY2 = std::min(cursorY + cursorH, clipBottom);
+                float cursorY1 = (std::max)(cursorY, clipTop);
+                float cursorY2 = (std::min)(cursorY + cursorH, clipBottom);
                 if (cursorY2 > cursorY1) {
                     insertRect(a, c, cursorX, cursorY1, cursorX + cursorW, cursorY2);
                 }

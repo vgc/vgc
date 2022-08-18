@@ -190,7 +190,7 @@ namespace vgc::core {
 /// The type trait `TMax<T>` defines a public member typedef `TMax<T>::value`
 /// equal to the maximum finite value representable by the arithmetic type `T`.
 ///
-/// This value is equivalent to `std::numeric_limits<T>::max()`.
+/// This value is equivalent to `(std::numeric_limits<T>::max)()`.
 ///
 /// \sa `tmax<T>`, `TMin<T>`, and `Infinity<T>`.
 ///
@@ -211,7 +211,7 @@ struct TMax {
 ///
 /// For [floating-point types](https://en.cppreference.com/w/cpp/types/is_floating_point)
 /// (float, double, etc.), this value is equivalent to
-/// `- std::numeric_limits<T>::max()`.
+/// `- (std::numeric_limits<T>::max)()`.
 ///
 /// \sa `tmin<T>`, `TMax<T>`, and `SmallestNormal<T>`.
 ///

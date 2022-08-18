@@ -188,7 +188,7 @@ private:
         *pc++ = x;
         Int yCount = static_cast<Int>(ys.size());
         // XXX check ys.size() <= numYs
-        yCount = std::min(numYs, yCount);
+        yCount = (std::min)(numYs, yCount);
         const double* py = ys.begin();
         for (Int i = 0; i < yCount; ++i) {
             *pc++ = *py++;

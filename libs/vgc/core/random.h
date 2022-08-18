@@ -43,7 +43,7 @@ template<typename T>
 using UniformDistribution = typename UniformDistribution_<T>::type;
 
 // Generates a non-deterministic uniformly-distributed random value
-// in the range std::random_device::min() and std::random_device::max().
+// in the range `(std::random_device::min)()` and `(std::random_device::max)()`.
 //
 // This simply calls operator() on a thread-local instance of std::random_device.
 //
