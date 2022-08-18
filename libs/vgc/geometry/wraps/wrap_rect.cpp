@@ -100,8 +100,6 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
             "position"_a,
             "size"_a)
 
-        .def(py::init<TRect2>())
-
         .def_property_readonly_static(
             "empty", [](py::object) -> TRect2 { return TRect2::empty; })
         .def("isEmpty", &TRect2::isEmpty)
