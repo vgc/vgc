@@ -43,7 +43,7 @@ namespace vgc::geometry {
 /// -  `Rect2d(double xMin, double xMax, double yMin, double yMax)`
 ///
 /// If `xMin > xMax` or `yMin > yMax`, then the rectangle is considered empty
-/// (`isEmpty()` will return false), and the `unitedWith()` operation may not
+/// (`isEmpty()` will return true), and the `unitedWith()` operation may not
 /// work as you may expect, see its documentation for more details.
 ///
 /// Alternatively, you can create a `Rect2d` by providing its `position` and
@@ -62,7 +62,7 @@ namespace vgc::geometry {
 ///
 /// If you want to make sure that a rectangle isn't empty, you can create a
 /// `Rect2d` then call `normalize()` or `normalized()`, which swaps the min and
-/// max coordinates such that `xMin <= xMax` and `yMin <= yMax`.
+/// max coordinates such that `xMin() <= xMax()` and `yMin() <= yMax()`.
 ///
 /// Note that a rectangle with `xMin() == xMax()` or `yMin() == yMax()` isn't
 /// considered empty: it is simply reduced to a segment or a point.

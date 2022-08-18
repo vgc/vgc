@@ -129,13 +129,13 @@ public:
     ///
     static const Mat2d identity;
 
-    /// Accesses the component of the Mat2d the the i-th row and j-th column.
+    /// Accesses the component of the Mat2d at the `i`-th row and `j`-th column.
     ///
     const double& operator()(Int i, Int j) const {
         return data_[j][i];
     }
 
-    /// Mutates the component of the Mat2d the the i-th row and j-th column.
+    /// Mutates the component of the Mat2d at the `i`-th row and `j`-th column.
     ///
     double& operator()(Int i, Int j) {
         return data_[j][i];
