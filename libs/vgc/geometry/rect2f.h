@@ -752,7 +752,7 @@ struct fmt::formatter<vgc::geometry::Rect2f> {
         return it;
     }
     template <typename FormatContext>
-    auto format(const vgc::geometry::Rect2f r, FormatContext& ctx) {
+    auto format(const vgc::geometry::Rect2f& r, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {}, {}, {})",
                          r.xMin(), r.yMin(), r.xMax(), r.yMax());
     }

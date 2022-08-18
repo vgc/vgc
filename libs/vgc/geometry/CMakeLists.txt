@@ -24,6 +24,8 @@ vgc_add_library(geometry
         mat3f.h
         mat4d.h
         mat4f.h
+        range1d.h
+        range1f.h
         rect2d.h
         rect2f.h
         stride.h
@@ -46,6 +48,8 @@ vgc_add_library(geometry
         mat3f.cpp
         mat4d.cpp
         mat4f.cpp
+        range1d.cpp
+        range1f.cpp
         rect2d.cpp
         rect2f.cpp
         vec2d.cpp

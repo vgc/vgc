@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,18 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
+// This file was automatically generated, please do not edit directly.
+// Instead, edit tools/range1x.cpp then run tools/generate.py.
 
-void wrap_curve(py::module& m);
-void wrap_mat(py::module& m);
-void wrap_range(py::module& m);
-void wrap_rect(py::module& m);
-void wrap_vec(py::module& m);
+// clang-format off
 
-PYBIND11_MODULE(geometry, m) {
-    wrap_curve(m);
-    wrap_mat(m);
-    wrap_range(m);
-    wrap_rect(m);
-    wrap_vec(m);
-}
+#include <vgc/geometry/range1d.h>
+
+namespace vgc::geometry {
+
+} // namespace vgc::geometry
