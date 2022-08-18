@@ -74,6 +74,17 @@ float getTopBottomPadding(const Widget* widget) {
            + detail::getLength(widget, strings::padding_bottom);
 }
 
+float getGap(bool isRow, const Widget* widget) {
+    // - row-gap means the gap between rows, so should be used by Column.
+    // - column-gap means the gap between columns, so should be used by Row.
+    if (isRow) {
+        return detail::getLength(widget, strings::column_gap);
+    }
+    else {
+        return detail::getLength(widget, strings::row_gap);
+    }
+}
+
 } // namespace
 
 float Flex::preferredWidthForHeight(float height) const {
@@ -83,6 +94,8 @@ float Flex::preferredWidthForHeight(float height) const {
     if (isRow) {
         float flexTopBottomPadding = getTopBottomPadding(this);
         float flexPaddedHeight = height - flexTopBottomPadding;
+        float gap = getGap(isRow, this);
+        bool isFirst = true;
         for (Widget* child : children()) {
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
@@ -90,6 +103,12 @@ float Flex::preferredWidthForHeight(float height) const {
                 (std::max)(0.0f, flexPaddedHeight - childTopBottomMargins);
             float childPreferredWidth = child->preferredWidthForHeight(childHeight);
             width += childPreferredWidth + childLeftRightMargins;
+            if (isFirst) {
+                isFirst = false;
+            }
+            else {
+                width += gap;
+            }
         }
     }
     else {
@@ -117,12 +136,20 @@ float Flex::preferredHeightForWidth(float width) const {
     else {
         float flexLeftRightPadding = getLeftRightPadding(this);
         float flexPaddedWidth = width - flexLeftRightPadding;
+        float gap = getGap(isRow, this);
+        bool isFirst = true;
         for (Widget* child : children()) {
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
             float childWidth = (std::max)(0.0f, flexPaddedWidth - childLeftRightMargins);
             float childPreferredHeight = child->preferredHeightForWidth(childWidth);
             height += childPreferredHeight + childTopBottomMargins;
+            if (isFirst) {
+                isFirst = false;
+            }
+            else {
+                height += gap;
+            }
         }
     }
     height += getTopBottomPadding(this);
@@ -141,11 +168,20 @@ geometry::Vec2f Flex::computePreferredSize() const {
     if (w.type() == auto_) {
         if (h.type() == auto_) {
 
+            float gap = getGap(isRow, this);
+            bool isFirst = true;
+
             // Compute preferred height not knowing any width
             float height = 0;
             if (!isRow) {
                 for (Widget* child : children()) {
                     height += child->preferredSize().y() + getTopBottomMargins(child);
+                    if (isFirst) {
+                        isFirst = false;
+                    }
+                    else {
+                        height += gap;
+                    }
                 }
             }
             else {
@@ -161,6 +197,12 @@ geometry::Vec2f Flex::computePreferredSize() const {
             if (isRow) {
                 for (Widget* child : children()) {
                     width += child->preferredSize().x() + getLeftRightMargins(child);
+                    if (isFirst) {
+                        isFirst = false;
+                    }
+                    else {
+                        height += gap;
+                    }
                 }
             }
             else {
@@ -281,6 +323,7 @@ void stretchChild(
     float& childMainPosition,
     float parentCrossPaddingBefore,
     float parentCrossPaddingAfter,
+    float gap,
     bool hinting) {
 
     float marginLeft = detail::getLength(child, strings::margin_left);
@@ -322,7 +365,7 @@ void stretchChild(
             hChildCrossPosition, hChildMainPosition, hChildCrossSize, hChildMainSize);
     }
 
-    childMainPosition += childMainSize + childMainMarginAfter;
+    childMainPosition += childMainSize + childMainMarginAfter + gap;
 }
 
 } // namespace
@@ -348,6 +391,7 @@ void Flex::updateChildrenGeometry() {
         float paddingBottom = detail::getLength(this, strings::padding_bottom);
         float mainSize = isRow ? width() : height();
         float crossSize = isRow ? height() : width();
+        float gap = getGap(isRow, this);
         float preferredMainSize = isRow ? preferredWidthForHeight(crossSize)
                                         : preferredHeightForWidth(crossSize);
         float mainPaddingBefore = isRow ? paddingLeft : paddingTop;
@@ -390,6 +434,7 @@ void Flex::updateChildrenGeometry() {
                 childMainPosition,
                 crossPaddingBefore,
                 crossPaddingAfter,
+                gap,
                 hinting);
             child = isReverse ? child->previousSibling() : child->nextSibling();
         }
