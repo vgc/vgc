@@ -86,7 +86,8 @@ float Flex::preferredWidthForHeight(float height) const {
         for (Widget* child : children()) {
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
-            float childHeight = std::max(0.0f, flexPaddedHeight - childTopBottomMargins);
+            float childHeight =
+                (std::max)(0.0f, flexPaddedHeight - childTopBottomMargins);
             float childPreferredWidth = child->preferredWidthForHeight(childHeight);
             width += childPreferredWidth + childLeftRightMargins;
         }
@@ -95,7 +96,7 @@ float Flex::preferredWidthForHeight(float height) const {
         for (Widget* child : children()) {
             float childLeftRightMargins = getLeftRightMargins(child);
             float childPreferredWidth = child->preferredSize().x();
-            width = std::max(width, childPreferredWidth + childLeftRightMargins);
+            width = (std::max)(width, childPreferredWidth + childLeftRightMargins);
         }
     }
     width += getLeftRightPadding(this);
@@ -110,7 +111,7 @@ float Flex::preferredHeightForWidth(float width) const {
         for (Widget* child : children()) {
             float childTopBottomMargins = getTopBottomMargins(child);
             float childPreferredHeight = child->preferredSize().y();
-            height = std::max(height, childPreferredHeight + childTopBottomMargins);
+            height = (std::max)(height, childPreferredHeight + childTopBottomMargins);
         }
     }
     else {
@@ -119,7 +120,7 @@ float Flex::preferredHeightForWidth(float width) const {
         for (Widget* child : children()) {
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
-            float childWidth = std::max(0.0f, flexPaddedWidth - childLeftRightMargins);
+            float childWidth = (std::max)(0.0f, flexPaddedWidth - childLeftRightMargins);
             float childPreferredHeight = child->preferredHeightForWidth(childWidth);
             height += childPreferredHeight + childTopBottomMargins;
         }
@@ -149,7 +150,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
             }
             else {
                 for (Widget* child : children()) {
-                    height = std::max(
+                    height = (std::max)(
                         height, child->preferredSize().y() + getTopBottomMargins(child));
                 }
             }
@@ -164,7 +165,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
             }
             else {
                 for (Widget* child : children()) {
-                    width = std::max(
+                    width = (std::max)(
                         width, child->preferredSize().x() + getLeftRightMargins(child));
                 }
             }
@@ -203,12 +204,12 @@ namespace {
 float getChildPreferredMainSize(float isRow, float paddedCrossSize, Widget* child) {
     if (isRow) {
         float childCrossMargins = getTopBottomMargins(child);
-        float childCrossSize = std::max(0.0f, paddedCrossSize - childCrossMargins);
+        float childCrossSize = (std::max)(0.0f, paddedCrossSize - childCrossMargins);
         return child->preferredWidthForHeight(childCrossSize);
     }
     else {
         float childCrossMargins = getLeftRightMargins(child);
-        float childCrossSize = std::max(0.0f, paddedCrossSize - childCrossMargins);
+        float childCrossSize = (std::max)(0.0f, paddedCrossSize - childCrossMargins);
         return child->preferredHeightForWidth(childCrossSize);
     }
 }
@@ -246,8 +247,8 @@ float getChildStretch(
         childAuthoredStretch = isRow ? child->shrinkWidth() : child->shrinkHeight();
         childStretchMultiplier = getChildPreferredMainSize(isRow, paddedCrossSize, child);
     }
-    childAuthoredStretch = std::max(childAuthoredStretch, 0.0f);
-    childStretchMultiplier = std::max(childStretchMultiplier, 0.0f);
+    childAuthoredStretch = (std::max)(childAuthoredStretch, 0.0f);
+    childStretchMultiplier = (std::max)(childStretchMultiplier, 0.0f);
     return (childAuthoredStretch + childStretchBonus) * childStretchMultiplier;
 }
 

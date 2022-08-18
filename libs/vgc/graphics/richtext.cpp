@@ -486,8 +486,8 @@ void RichText::fill(core::FloatArray& a) {
         if (clipLeft <= cursorX && cursorX <= clipRight) {
             float cursorY = textTop;
             float cursorH = textHeight;
-            float cursorY1 = std::max(cursorY, clipTop);
-            float cursorY2 = std::min(cursorY + cursorH, clipBottom);
+            float cursorY1 = (std::max)(cursorY, clipTop);
+            float cursorY2 = (std::min)(cursorY + cursorH, clipBottom);
             if (cursorY2 > cursorY1) {
                 insertRect(a, caretColor, cursorX, cursorY1, cursorX + cursorW, cursorY2);
             }

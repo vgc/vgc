@@ -49,7 +49,7 @@ replace(const std::string& s, const std::string& from, const std::string& to) {
             // Not found, let's copy s into res.
             // In most loop iteration, we end up here, and k == 0, that
             // is, we copy one more character from s to res.
-            size_t imax = std::min(i + k, ns - 1);
+            size_t imax = (std::min)(i + k, ns - 1);
             while (i <= imax) {
                 res += s[i];
                 ++i;

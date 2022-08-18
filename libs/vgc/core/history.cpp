@@ -73,7 +73,7 @@ History::History(core::StringId entrypointName)
 }
 
 void History::setMaxLevels(Int n) {
-    maxLevels_ = std::max(n, Int(1));
+    maxLevels_ = (std::max)(n, Int(1));
     prune_();
 }
 
