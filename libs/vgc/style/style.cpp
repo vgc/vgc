@@ -674,6 +674,7 @@ StyleSelector::StyleSelector(core::Array<StyleSelectorItem>&& items)
     , specificity_(0) {
 
     // Compute specificity
+    //
     for (StyleSelectorItem& item : items_) {
         if (item.type() == StyleSelectorItemType::ClassSelector) {
             ++specificity_;
