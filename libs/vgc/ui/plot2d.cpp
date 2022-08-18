@@ -277,7 +277,7 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
                     float prevX =
                         baseX + static_cast<float>(cx * (colData[0] - minXAxis));
-                    VGC_WARNING(LogVgcUi, "loop");
+
                     for (Int i = 1; i < numXs_; ++i) {
                         colData = getXComponentPtr_(i);
                         initYs(ys1, colData);

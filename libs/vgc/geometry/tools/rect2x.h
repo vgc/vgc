@@ -456,7 +456,7 @@ public:
 
     /// Returns whether this rectangle and the given `other` rectangle are
     /// almost equal within some relative tolerance, that is, if all their
-    /// respective corners are close to each others in the sense of
+    /// respective corners are close to each other in the sense of
     /// `Vec2x::isClose()`.
     ///
     /// If you need an absolute tolerance (which is especially important some of
