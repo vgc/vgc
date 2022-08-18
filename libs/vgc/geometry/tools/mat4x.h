@@ -647,7 +647,7 @@ struct fmt::formatter<vgc::geometry::Mat4x> {
         return it;
     }
     template <typename FormatContext>
-    auto format(const vgc::geometry::Mat4x m, FormatContext& ctx) {
+    auto format(const vgc::geometry::Mat4x& m, FormatContext& ctx) {
         return format_to(ctx.out(),"[{}, {}, {}, {},"
                                    " {}, {}, {}, {},"
                                    " {}, {}, {}, {},"

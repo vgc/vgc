@@ -502,7 +502,7 @@ struct fmt::formatter<vgc::geometry::Vec3d> {
         return it;
     }
     template <typename FormatContext>
-    auto format(const vgc::geometry::Vec3d v, FormatContext& ctx) {
+    auto format(const vgc::geometry::Vec3d& v, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {}, {})", v[0], v[1], v[2]);
     }
 };
