@@ -184,6 +184,10 @@ public:
         parentStylableObject_ = parent;
     }
 
+    /// Makes the text empty
+    ///
+    void clear();
+
     /// Sets the text of this `RichText`.
     ///
     void setText(std::string_view text);
