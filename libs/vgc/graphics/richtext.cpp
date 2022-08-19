@@ -234,11 +234,30 @@ RichTextPtr RichText::create(std::string_view text) {
     return RichTextPtr(new RichText(text));
 }
 
+void RichText::clear() {
+    setText("");
+}
+
+// Note: this function preserves the old cursor position
+// when possible
 void RichText::setText(std::string_view text) {
     if (text_ != text) {
+
+        // Remembers old cursor position
         Int oldSelectionEnd = selectionEnd_;
+
+        // Set text empty. We need to provide a valid selection as it is a
+        // precondition of insertText_(). However, we don't need to set
+        // shapedText_.setText() now since it is done anyway by insertText_().
+        //
         text_.clear();
+        selectionStart_ = 0;
+        selectionEnd_ = 0;
+
+        // Delegate insertion to insertText_()
         insertText_(text);
+
+        // Rollback cursor position
         Int minPosition = shapedText_.minPosition();
         Int maxPosition = shapedText_.maxPosition();
         selectionEnd_ = core::clamp(oldSelectionEnd, minPosition, maxPosition);
@@ -676,9 +695,19 @@ void RichText::insertText_(std::string_view textToInsert) {
         // Get byte index where to insert the text
         Int oldByteIndex = shapedText_.positionInfo(selectionEnd_).byteIndex();
         size_t insertPos = static_cast<size_t>(oldByteIndex);
+        size_t oldSize = text_.size();
+        if (insertPos > oldSize) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "Attempting to insert text at position {} while max position is {}. "
+                "Inserting at position {} instead.",
+                insertPos,
+                oldSize,
+                oldSize);
+            insertPos = oldSize;
+        }
 
         // Resize text_, making space for the text to insert
-        size_t oldSize = text_.size();
         size_t numBytesToShift = oldSize - insertPos;
         text_.resize(oldSize + numBytesToInsert);
         size_t newSize = text_.size();
