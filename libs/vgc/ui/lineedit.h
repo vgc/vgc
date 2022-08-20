@@ -61,6 +61,13 @@ public:
     ///
     void setText(std::string_view text);
 
+    /// Moves the cursor according to the given operation. If `select` is false
+    /// (the default), then the selection is cleared. If `select` is true, then
+    /// the current selection is modified to integrate the given operation
+    /// (typically, this mode is used when a user presses `Shift`).
+    ///
+    void moveCursor(graphics::RichTextMoveOperation operation, bool select = false);
+
     // Reimplementation of StylableObject virtual methods
     style::StylableObject* firstChildStylableObject() const override;
     style::StylableObject* lastChildStylableObject() const override;
@@ -78,6 +85,17 @@ public:
     bool onFocusIn() override;
     bool onFocusOut() override;
     bool onKeyPress(QKeyEvent* event) override;
+
+    /// This signal is emitted whenever the Enter or Return key is pressed or
+    /// the line edit loses focus.
+    ///
+    VGC_SIGNAL(editingFinished)
+
+    /// This signal is emitted whenever the text in the line edit has been
+    /// edited graphically. This signal is not emitted when the text is changed
+    /// programatically, for example via setText() or clear().
+    ///
+    VGC_SIGNAL(textEdited)
 
 protected:
     geometry::Vec2f computePreferredSize() const override;

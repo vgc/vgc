@@ -30,15 +30,7 @@ namespace vgc::ui {
 Widget::Widget()
     : StylableObject()
     , children_(WidgetList::create(this))
-    , actions_(ActionList::create(this))
-    , preferredSize_(0.0f, 0.0f)
-    , isPreferredSizeComputed_(false)
-    , position_(0.0f, 0.0f)
-    , size_(0.0f, 0.0f)
-    , mousePressedChild_(nullptr)
-    , mouseEnteredChild_(nullptr)
-    , isTreeActive_(false)
-    , focus_(nullptr) {
+    , actions_(ActionList::create(this)) {
 
     children_->childAdded().connect(onWidgetAdded_());
     children_->childRemoved().connect(onWidgetRemoved_());
@@ -256,6 +248,7 @@ void Widget::onPaintDestroy(graphics::Engine* engine) {
 }
 
 bool Widget::onMouseMove(MouseEvent* event) {
+
     // If we are in the middle of a press-move-release sequence, then we
     // automatically forward the move event to the pressed child. We also delay
     // emitting the leave event until the mouse is released (see implementation
@@ -272,17 +265,11 @@ bool Widget::onMouseMove(MouseEvent* event) {
     // if a widget A is on top of a sibling widget B, then the widget B doesn't
     // receive the mouse event.
     //
-    float x = event->x();
-    float y = event->y();
     for (Widget* child = lastChild(); //
          child != nullptr;            //
          child = child->previousSibling()) {
 
-        float cx = child->x();
-        float cy = child->y();
-        float cw = child->width();
-        float ch = child->height();
-        if (cx <= x && x <= cx + cw && cy <= y && y <= cy + ch) {
+        if (child->geometry().contains(event->position())) {
             if (mouseEnteredChild_ != child) {
                 if (mouseEnteredChild_) {
                     mouseEnteredChild_->onMouseLeave();
@@ -304,33 +291,57 @@ bool Widget::onMouseMove(MouseEvent* event) {
 
     return false;
 
-    // TODO: We could (should?) factorize the code:
-    //
-    //   if (cx <= x && x <= cx + cw && cy <= y && y <= cy + ch) {
-    //       ...
-    //   }
-    //
-    // into something along the lines of:
-    //
-    //   if (child->rect().contains(event->pos())) {
-    //       ...
-    //   }
-    //
-    // However, what if we allow rotated widgets? Or if the widget isn't shaped
-    // as a rectangle, for example a circle? Perhaps a more generic approach
-    // would be, instead of a "rect()" method, to have a boundingRect() method,
-    // complemented by a virtual bool isUnderMouse(const Vec2f& p) method, so
-    // that we can hangle non-rectangle or non-axis-aligned widgets.
+    // Note: if in the future we allow non-rectangle or rotated widgets, we
+    // could replace `if (child->geometry().contains(event->position()))` by a
+    // more generic approach. For example, a `boundingGeometry()` method
+    // complemented by a virtual `bool isUnderMouse(const Vec2f& p)` method.
 }
 
+namespace {
+
+// Clears focus if:
+// - there is a focused widget in the widget tree of parent, and
+// - the focused widget is not parent nor the given child or any of its descendant, and
+// - the focused widget isn't sticky
+//
+// parent must be non-null, but child can be null.
+//
+void clearNonStickyNonChildFocus_(Widget* parent, Widget* child) {
+    if (parent->root()->hasFocusedWidget()) {
+        bool childHasFocusedWidget = child && child->hasFocusedWidget();
+        if (!parent->isFocusedWidget() && !childHasFocusedWidget) {
+            Widget* focusedWidget = parent->focusedWidget();
+            if (!focusedWidget->focusPolicy().has(FocusPolicy::Sticky)) {
+                parent->clearFocus();
+            }
+        }
+    }
+}
+
+} // namespace
+
 bool Widget::onMousePress(MouseEvent* event) {
+
     // Note: we don't handle multiple clicks, that is, a left-button-pressed
     // must be released before we issue a right-button-press
-    if (mouseEnteredChild_ && !mousePressedChild_) {
-        mousePressedChild_ = mouseEnteredChild_;
-        event->setPosition(event->position() - mousePressedChild_->position());
-        return mousePressedChild_->onMousePress(event);
+    if (!mousePressedChild_) {
+        if (mouseEnteredChild_) {
+            mousePressedChild_ = mouseEnteredChild_;
+            event->setPosition(event->position() - mousePressedChild_->position());
+
+            if (mousePressedChild_->focusPolicy().has(FocusPolicy::Click)) {
+                mousePressedChild_->setFocus();
+            }
+            else {
+                clearNonStickyNonChildFocus_(this, mousePressedChild_);
+            }
+            return mousePressedChild_->onMousePress(event);
+        }
+        else {
+            clearNonStickyNonChildFocus_(this, nullptr);
+        }
     }
+
     return false;
 }
 
@@ -342,13 +353,7 @@ bool Widget::onMouseRelease(MouseEvent* event) {
 
         // Emit the mouse leave event now if the mouse exited the widget during
         // the press-move-release sequence.
-        float x = eventPos[0];
-        float y = eventPos[1];
-        float cx = mousePressedChild_->x();
-        float cy = mousePressedChild_->y();
-        float cw = mousePressedChild_->width();
-        float ch = mousePressedChild_->height();
-        if (!(cx <= x && x <= cx + cw && cy <= y && y <= cy + ch)) {
+        if (!mousePressedChild_->geometry().contains(eventPos)) {
             if (mouseEnteredChild_ != mousePressedChild_) {
                 throw core::LogicError("mouseEnteredChild_ != mousePressedChild_");
             }
@@ -423,17 +428,21 @@ void Widget::clearFocus() {
     }
 }
 
+// Class invariant: for any widget w, if w->focus_ is non-null then:
+// 1. w->focus_->focus_ is also non-null, and
+// 2. w->focus_ points to either w or a child of w
+
 Widget* Widget::focusedWidget() const {
     Widget* res = root()->focus_;
-    while (res != nullptr) {
-        if (res->isFocusedWidget()) {
-            return res;
+    if (res) {                       // If this widget tree has a focused widget,
+        while (res->focus_ != res) { // then while res is not the focused widget,
+            res = res->focus_;       // keep iterating down the tree
         }
-        else {
-            res = res->focus_;
-        }
+        return res;
     }
-    return res;
+    else {
+        return nullptr;
+    }
 }
 
 bool Widget::onFocusIn() {

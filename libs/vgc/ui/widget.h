@@ -56,6 +56,22 @@ enum class PaintOption : UInt16 {
 };
 VGC_DEFINE_FLAGS(PaintOptions, PaintOption)
 
+
+/// \enum vgc::ui::FocusPolicy
+/// \brief Specifies how a widget accepts keyboard focus.
+///
+enum class FocusPolicy : UInt8 {
+    Never     = 0x00, ///< Never accept focus.
+    Click     = 0x01, ///< Accept focus by clicking on the widget.
+    Wheel     = 0x02, ///< Accept focus by using the mouse wheel over the widget.
+    Tab       = 0x04, ///< Accept focus by cycling through widgets with the tab key.
+
+    /// Preserve focus even when clicking on another widget that does not
+    /// accept click focus.
+    Sticky    = 0x80,
+};
+VGC_DEFINE_FLAGS(FocusPolicyFlags, FocusPolicy)
+
 // clang-format on
 
 /// \class vgc::ui::Widget
@@ -452,6 +468,18 @@ public:
     ///
     void setTreeActive(bool active);
 
+    /// Gets the focus policy of this widget.
+    ///
+    FocusPolicyFlags focusPolicy() const {
+        return focusPolicy_;
+    }
+
+    /// Sets the focus policy of this widget.
+    ///
+    void setFocusPolicy(FocusPolicyFlags policy) {
+        focusPolicy_ = policy;
+    }
+
     /// This signal is emitted when someone requested this widget, or one of
     /// its descendent widgets, to be focused.
     ///
@@ -504,6 +532,15 @@ public:
         return isFocusedWidget() ? nullptr : focus_;
     }
 
+    /// Returns whether the focused widget is this widget or any of its descendants.
+    ///
+    /// If you wish to know whether the whole widget tree has a focused widget,
+    /// you can call root()->hasFocusedWidget();
+    ///
+    bool hasFocusedWidget() const {
+        return focus_ != nullptr;
+    }
+
     /// Returns the focused widget of this widget tree, if any.
     ///
     Widget* focusedWidget() const;
@@ -521,7 +558,7 @@ public:
         return isFocusedWidget() && isTreeActive();
     }
 
-    /// Returns whether this widget or any of its descendant is the focused
+    /// Returns whether this widget or any of its descendants is the focused
     /// widget, and this widget tree is active.
     ///
     bool hasFocusWithin() const {
@@ -654,19 +691,31 @@ protected:
     virtual void updateChildrenGeometry();
 
 private:
-    WidgetList* children_;
-    ActionList* actions_;
-    mutable geometry::Vec2f preferredSize_;
-    mutable bool isPreferredSizeComputed_;
-    geometry::Vec2f position_;
-    geometry::Vec2f size_;
-    Widget* mousePressedChild_;
-    Widget* mouseEnteredChild_;
-    bool isTreeActive_;
-    Widget* focus_; // This can be: nullptr   (when no focused widget)
-                    //              this      (when this is the focused widget)
-                    //              child ptr (when a descendant is the focused widget)
+    WidgetList* children_ = nullptr;
+    ActionList* actions_ = nullptr;
 
+    // Layout
+    mutable geometry::Vec2f preferredSize_ = {};
+    mutable bool isPreferredSizeComputed_ = false;
+    geometry::Vec2f position_ = {};
+    geometry::Vec2f size_ = {};
+
+    // Mouse
+    Widget* mousePressedChild_ = nullptr;
+    Widget* mouseEnteredChild_ = nullptr;
+
+    // Keyboard focus
+    //
+    // focus_ can have the following values:
+    // - nullptr: this means that there is no focused widget in this branch
+    // - this: the focused widget is this widget
+    // - child ptr: the focused widget is a descendant of this widget
+    //
+    bool isTreeActive_ = false;
+    FocusPolicyFlags focusPolicy_ = FocusPolicy::Never;
+    Widget* focus_ = nullptr;
+
+    // Engine
     graphics::Engine* lastPaintEngine_ = nullptr;
     void releaseEngine_();
     void setEngine_(graphics::Engine* engine);
