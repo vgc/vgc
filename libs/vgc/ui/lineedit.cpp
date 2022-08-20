@@ -30,6 +30,27 @@
 
 namespace vgc::ui {
 
+namespace {
+
+void copyToClipboard_(
+    std::string_view text,
+    QClipboard::Mode mode = QClipboard::Clipboard) {
+
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    size_t size = core::clamp(text.size(), 0, core::tmax<int>);
+    QString qtext = QString::fromUtf8(text.data(), static_cast<int>(size));
+    clipboard->setText(qtext, mode);
+}
+
+void copyToX11SelectionClipboard_(graphics::RichText* richText) {
+    static bool supportsSelection = QGuiApplication::clipboard()->supportsSelection();
+    if (supportsSelection && richText->hasSelection()) {
+        copyToClipboard_(richText->selectedTextView(), QClipboard::Selection);
+    }
+}
+
+} // namespace
+
 LineEdit::LineEdit(std::string_view text)
     : Widget()
     , richText_(graphics::RichText::create())
@@ -40,6 +61,7 @@ LineEdit::LineEdit(std::string_view text)
     , mouseSelectionMarkers_(graphics::TextBoundaryMarker::Grapheme)
     , mouseSelectionInitialPair_(0, 0) {
 
+    setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
     addStyleClass(strings::LineEdit);
     setText(text);
     richText_->setParentStylableObject(this);
@@ -59,6 +81,16 @@ void LineEdit::setText(std::string_view text) {
         reload_ = true;
         repaint();
     }
+}
+
+void LineEdit::moveCursor(graphics::RichTextMoveOperation operation, bool select) {
+    richText_->moveCursor(operation, select);
+    if (select) {
+        copyToX11SelectionClipboard_(richText_.get());
+    }
+    resetSelectionInitialPair_();
+    reload_ = true;
+    repaint();
 }
 
 style::StylableObject* LineEdit::firstChildStylableObject() const {
@@ -229,31 +261,9 @@ bool LineEdit::onMousePress(MouseEvent* event) {
     }
 
     reload_ = true;
-    setFocus();
     repaint();
     return true;
 }
-
-namespace {
-
-void copyToClipboard_(
-    std::string_view text,
-    QClipboard::Mode mode = QClipboard::Clipboard) {
-
-    QClipboard* clipboard = QGuiApplication::clipboard();
-    size_t size = core::clamp(text.size(), 0, core::tmax<int>);
-    QString qtext = QString::fromUtf8(text.data(), static_cast<int>(size));
-    clipboard->setText(qtext, mode);
-}
-
-void copyToX11SelectionClipboard_(graphics::RichText* richText) {
-    static bool supportsSelection = QGuiApplication::clipboard()->supportsSelection();
-    if (supportsSelection && richText->hasSelection()) {
-        copyToClipboard_(richText->selectedTextView(), QClipboard::Selection);
-    }
-}
-
-} // namespace
 
 bool LineEdit::onMouseRelease(MouseEvent* event) {
     // Only support one mouse button at a time
@@ -299,6 +309,7 @@ bool LineEdit::onFocusOut() {
     richText_->setCursorVisible(false);
     reload_ = true;
     repaint();
+    editingFinished().emit();
     return true;
 }
 
@@ -314,6 +325,10 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
     bool needsRepaint = true;
     bool isMoveOperation = false;
 
+    if (key == Qt::Key_Enter || key == Qt::Key_Return) {
+        needsRepaint = true;
+        editingFinished().emit();
+    }
     if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
         if (key == Qt::Key_Delete) {
             richText_->deleteFromCursor(ctrl ? Op::NextWord : Op::NextCharacter);
@@ -401,6 +416,11 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
         reload_ = true;
         repaint();
     }
+
+    if (handled && !isMoveOperation) {
+        textEdited().emit();
+    }
+
     return handled;
 }
 
