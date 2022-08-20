@@ -76,6 +76,16 @@ QSize UiWidget::sizeHint() const {
     return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
 }
 
+bool UiWidget::hasHeightForWidth() const {
+    return true;
+}
+
+int UiWidget::heightForWidth(int w) const {
+    float width = static_cast<float>(w);
+    float height = widget_->preferredHeightForWidth(width);
+    return core::ifloor<int>(height);
+}
+
 void UiWidget::mouseMoveEvent(QMouseEvent* event) {
     ui::MouseEventPtr e = ui::fromQt(event);
     event->setAccepted(widget_->onMouseMove(e.get()));
@@ -208,6 +218,7 @@ void UiWidget::initializeGL() {
 }
 
 void UiWidget::resizeGL(int w, int h) {
+
     geometry::Camera2d c;
     c.setViewportSize(w, h);
     proj_ = toMat4f(c.projectionMatrix());

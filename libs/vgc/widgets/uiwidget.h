@@ -65,6 +65,8 @@ public:
     // overrides
     QSize sizeHint() const override;
     QVariant inputMethodQuery(Qt::InputMethodQuery querty) const override;
+    bool hasHeightForWidth() const override;
+    int heightForWidth(int w) const override;
 
 protected:
     void mouseMoveEvent(QMouseEvent* event) override;
