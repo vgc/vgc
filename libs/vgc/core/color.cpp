@@ -72,6 +72,23 @@ Color Color::hsl(double h, double s, double l) {
     return Color(r1 + m, g1 + m, b1 + m);
 }
 
+namespace {
+
+double round8b_(double x) {
+    x = std::round(x * 255.0) / 255.0;
+    return core::clamp(x, 0.0, 1.0);
+}
+
+} // namespace
+
+Color& Color::round8b() {
+    data_[0] = round8b_(data_[0]);
+    data_[1] = round8b_(data_[1]);
+    data_[2] = round8b_(data_[2]);
+    data_[3] = round8b_(data_[3]);
+    return *this;
+}
+
 Colorf Colorf::hsl(float h, float s, float l) {
     // Wrap h to [0, 360] range, and clamp s, l to [0, 1]
     h = std::fmod(h, 360.0f);

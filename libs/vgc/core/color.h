@@ -120,6 +120,18 @@ public:
         data_[3] = a;
     }
 
+    /// Rounds the current color to the nearest RGB value representable as an
+    /// 8bit 0-255 value.
+    ///
+    Color& round8b();
+
+    /// Returns a color rounded to the nearest RGB value representable as an
+    /// 8-bit value in the range 0-255.
+    ///
+    Color rounded8b() {
+        return Color(*this).round8b();
+    }
+
     /// Adds in-place the \p other Color to this Color.
     /// This is a component-wise addition of all channels, including the alpha
     /// channel.
