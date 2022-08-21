@@ -203,12 +203,14 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
 //    event->setAccepted(widget_->onMouseLeave());
 //}
 
-void Window::focusInEvent(QFocusEvent* /*event*/) {
-    widget_->setTreeActive(true);
+void Window::focusInEvent(QFocusEvent* event) {
+    ui::FocusReason reason = static_cast<ui::FocusReason>(event->reason());
+    widget_->setTreeActive(true, reason);
 }
 
-void Window::focusOutEvent(QFocusEvent* /*event*/) {
-    widget_->setTreeActive(false);
+void Window::focusOutEvent(QFocusEvent* event) {
+    ui::FocusReason reason = static_cast<ui::FocusReason>(event->reason());
+    widget_->setTreeActive(false, reason);
 }
 
 void Window::resizeEvent(QResizeEvent* event) {
@@ -546,7 +548,7 @@ void Window::cleanup() {
 
 void Window::onActiveChanged_() {
     bool active = isActive();
-    widget_->setTreeActive(active);
+    widget_->setTreeActive(active, FocusReason::Window);
 }
 
 void Window::onRepaintRequested_() {

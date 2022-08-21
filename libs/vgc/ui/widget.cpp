@@ -312,7 +312,7 @@ void clearNonStickyNonChildFocus_(Widget* parent, Widget* child) {
         if (!parent->isFocusedWidget() && !childHasFocusedWidget) {
             Widget* focusedWidget = parent->focusedWidget();
             if (!focusedWidget->focusPolicy().has(FocusPolicy::Sticky)) {
-                parent->clearFocus();
+                parent->clearFocus(FocusReason::Mouse);
             }
         }
     }
@@ -330,7 +330,7 @@ bool Widget::onMousePress(MouseEvent* event) {
             event->setPosition(event->position() - mousePressedChild_->position());
 
             if (mousePressedChild_->focusPolicy().has(FocusPolicy::Click)) {
-                mousePressedChild_->setFocus();
+                mousePressedChild_->setFocus(FocusReason::Mouse);
             }
             else {
                 clearNonStickyNonChildFocus_(this, mousePressedChild_);
@@ -379,25 +379,25 @@ bool Widget::onMouseLeave() {
     return false;
 }
 
-void Widget::setTreeActive(bool active) {
+void Widget::setTreeActive(bool active, FocusReason reason) {
     Widget* r = root();
     if (r->isTreeActive_ != active) {
         r->isTreeActive_ = active;
         Widget* f = focusedWidget();
         if (f) {
             if (active) {
-                f->onFocusIn();
+                f->onFocusIn(reason);
             }
             else {
-                f->onFocusOut();
+                f->onFocusOut(reason);
             }
         }
     }
 }
 
-void Widget::setFocus() {
+void Widget::setFocus(FocusReason reason) {
     if (!isFocusedWidget()) {
-        clearFocus();
+        clearFocus(reason);
         Widget* widget = this;
         Widget* focus = this;
         while (widget) {
@@ -406,7 +406,7 @@ void Widget::setFocus() {
             widget = widget->parent();
         }
         if (isTreeActive()) {
-            onFocusIn();
+            onFocusIn(reason);
         }
     }
     Widget* widget = this;
@@ -416,7 +416,7 @@ void Widget::setFocus() {
     }
 }
 
-void Widget::clearFocus() {
+void Widget::clearFocus(FocusReason reason) {
     Widget* oldFocusedWidget = focusedWidget();
     Widget* ancestor = oldFocusedWidget;
     while (ancestor) {
@@ -424,7 +424,7 @@ void Widget::clearFocus() {
         ancestor = ancestor->parent();
     }
     if (oldFocusedWidget && isTreeActive()) {
-        oldFocusedWidget->onFocusOut();
+        oldFocusedWidget->onFocusOut(reason);
     }
 }
 
@@ -445,11 +445,11 @@ Widget* Widget::focusedWidget() const {
     }
 }
 
-bool Widget::onFocusIn() {
+bool Widget::onFocusIn(FocusReason) {
     return false;
 }
 
-bool Widget::onFocusOut() {
+bool Widget::onFocusOut(FocusReason) {
     return false;
 }
 

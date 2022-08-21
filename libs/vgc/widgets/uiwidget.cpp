@@ -114,12 +114,14 @@ void UiWidget::leaveEvent(QEvent* event) {
     event->setAccepted(widget_->onMouseLeave());
 }
 
-void UiWidget::focusInEvent(QFocusEvent* /*event*/) {
-    widget_->setTreeActive(true);
+void UiWidget::focusInEvent(QFocusEvent* event) {
+    ui::FocusReason reason = static_cast<ui::FocusReason>(event->reason());
+    widget_->setTreeActive(true, reason);
 }
 
-void UiWidget::focusOutEvent(QFocusEvent* /*event*/) {
-    widget_->setTreeActive(false);
+void UiWidget::focusOutEvent(QFocusEvent* event) {
+    ui::FocusReason reason = static_cast<ui::FocusReason>(event->reason());
+    widget_->setTreeActive(false, reason);
 }
 
 void UiWidget::keyPressEvent(QKeyEvent* event) {
