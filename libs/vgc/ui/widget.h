@@ -56,7 +56,6 @@ enum class PaintOption : UInt16 {
 };
 VGC_DEFINE_FLAGS(PaintOptions, PaintOption)
 
-
 /// \enum vgc::ui::FocusPolicy
 /// \brief Specifies how a widget accepts keyboard focus.
 ///
@@ -64,13 +63,27 @@ enum class FocusPolicy : UInt8 {
     Never     = 0x00, ///< Never accept focus.
     Click     = 0x01, ///< Accept focus by clicking on the widget.
     Wheel     = 0x02, ///< Accept focus by using the mouse wheel over the widget.
-    Tab       = 0x04, ///< Accept focus by cycling through widgets with the tab key.
+    Tab       = 0x04, ///< Accept focus by cycling through widgets with the Tab key.
 
     /// Preserve focus even when clicking on another widget that does not
     /// accept click focus.
     Sticky    = 0x80,
 };
 VGC_DEFINE_FLAGS(FocusPolicyFlags, FocusPolicy)
+
+/// \enum vgc::ui::FocusReason
+/// \brief Specifies why a widget receives or loses keyboard focus.
+///
+enum class FocusReason : UInt8 {
+    Mouse    = 0, ///<  A mouse click or wheel event occurred.
+    Tab      = 1, ///<  The user cycled through widgets with the Tab key.
+    Backtab  = 2, ///<  The user cycled through widgets, in reverse order, with the Tab key (e.g., Shift+Tab).
+    Window   = 3, ///<  The window became active or inactive.
+    Popup    = 4, ///<  A popup grabbed or released the keyboard focus.
+    Shortcut = 5, ///<  A widget gained focus via its label's buddy shortcut
+    Menu     = 6, ///<  A menu bar grabbed or released the keyboard focus.
+    Other    = 7, ///<  Another reason.
+};
 
 // clang-format on
 
@@ -466,7 +479,7 @@ public:
     ///
     /// \sa isTreeActive()
     ///
-    void setTreeActive(bool active);
+    void setTreeActive(bool active, FocusReason reason);
 
     /// Gets the focus policy of this widget.
     ///
@@ -508,7 +521,7 @@ public:
     ///
     /// \sa isTreeActive(), clearFocus(), focusedWidget()
     ///
-    void setFocus();
+    void setFocus(FocusReason reason);
 
     /// Removes the focus from the focused widget, if any. If the tree is
     /// active, the focused widget will receive a FocusOut event, and from now
@@ -516,7 +529,7 @@ public:
     ///
     /// Does nothing if focusedWidget() is nullptr.
     ///
-    void clearFocus();
+    void clearFocus(FocusReason reason);
 
     /// Returns which child of this widget is part of the focus branch (see
     /// setFocus() for details). The returned widget is the only child of this
@@ -578,7 +591,7 @@ public:
     ///
     /// \sa onFocusOut(), setFocus(), clearFocus(), isTreeActive()
     ///
-    virtual bool onFocusIn();
+    virtual bool onFocusIn(FocusReason reason);
 
     /// Override this function if you wish to handle FocusOut events. You must
     /// return true if the event was handled, false otherwise. The default
@@ -597,7 +610,7 @@ public:
     ///
     /// \sa onFocusIn(), setFocus(), clearFocus(), isTreeActive()
     ///
-    virtual bool onFocusOut();
+    virtual bool onFocusOut(FocusReason reason);
 
     /// Override this function if you wish to handle key press events. You must
     /// return true if the event was handled, false otherwise.

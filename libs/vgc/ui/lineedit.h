@@ -82,8 +82,8 @@ public:
     bool onMouseRelease(MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
-    bool onFocusIn() override;
-    bool onFocusOut() override;
+    bool onFocusIn(FocusReason reason) override;
+    bool onFocusOut(FocusReason reason) override;
     bool onKeyPress(QKeyEvent* event) override;
 
     /// This signal is emitted whenever the Enter or Return key is pressed or

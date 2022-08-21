@@ -289,7 +289,7 @@ bool LineEdit::onMouseLeave() {
     return true;
 }
 
-bool LineEdit::onFocusIn() {
+bool LineEdit::onFocusIn(FocusReason) {
     richText_->setSelectionVisible(true);
     richText_->setCursorVisible(true);
     reload_ = true;
@@ -297,13 +297,12 @@ bool LineEdit::onFocusIn() {
     return true;
 }
 
-bool LineEdit::onFocusOut() {
-    // Focus out can occur in two different situations:
-    // 1. Another widget in the same window gained the focus. In this
-    //    case, we want to clear the selection and make the cursor invisible.
-    // 2. Another window gained the focus. In this case, we keep the
-    //    selection, and simply make the cursor invisible.
-    if (!isFocusedWidget()) {
+bool LineEdit::onFocusOut(FocusReason reason) {
+
+    if (reason != FocusReason::Window  //
+        && reason != FocusReason::Menu //
+        && reason != FocusReason::Popup) {
+
         richText_->clearSelection();
     }
     richText_->setCursorVisible(false);
