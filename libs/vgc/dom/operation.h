@@ -281,7 +281,6 @@ private:
 
     core::Array<Node*> createdNodes_;
     core::Array<Node*> removedNodes_;
-
     std::set<Node*> reparentedNodes_;
     std::set<Node*> childrenReorderedNodes_;
 

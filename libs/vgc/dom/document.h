@@ -377,6 +377,7 @@ private:
 
     core::HistoryPtr history_;
     Diff pendingDiff_;
+    core::Array<NodePtr> pendingDiffKeepAllocPointers_;
     std::unordered_map<Node*, NodeRelatives> previousRelativesMap_;
 
     void onHistoryHeadChanged_();

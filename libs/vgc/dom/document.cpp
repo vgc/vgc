@@ -851,6 +851,7 @@ bool Document::emitPendingDiff() {
 
         changed().emit(pendingDiff_);
         pendingDiff_.reset();
+        pendingDiffKeepAllocPointers_.clear();
         return true;
     }
 
@@ -867,6 +868,7 @@ void Document::onCreateNode_(Node* node) {
 
 void Document::onRemoveNode_(Node* node) {
     pendingDiff_.removedNodes_.emplaceLast(node);
+    pendingDiffKeepAllocPointers_.emplaceLast(node);
 }
 
 void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives) {
