@@ -255,6 +255,10 @@ public:
 protected:
     StylableObject();
 
+    /// This callback is called whenever the style changes.
+    ///
+    virtual void onStyleChanged();
+
 private:
     StyleSheetPtr styleSheet_;
     ClassSet styleClasses_;
