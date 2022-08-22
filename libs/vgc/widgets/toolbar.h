@@ -52,6 +52,9 @@ Q_SIGNALS:
     ///
     void colorChanged(const core::Color& newColor);
 
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
 private Q_SLOTS:
     void onColorToolButtonColorChanged_();
     void onColorPaletteColorSelected_();
