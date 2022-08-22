@@ -156,7 +156,7 @@ graphics::SizedFont* getDefaultSizedFont_(Int ppem, graphics::FontHinting hintin
 }
 
 graphics::SizedFont* getDefaultSizedFont_() {
-    return getDefaultSizedFont_(15, graphics::FontHinting::Native);
+    return getDefaultSizedFont_(14, graphics::FontHinting::Native);
 }
 
 } // namespace

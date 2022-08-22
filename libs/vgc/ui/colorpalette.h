@@ -17,18 +17,22 @@
 #ifndef VGC_UI_COLORPALETTE_H
 #define VGC_UI_COLORPALETTE_H
 
+#include <vgc/geometry/rect2f.h>
+#include <vgc/ui/column.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(ColorPalette);
+VGC_DECLARE_OBJECT(ColorPaletteSelector);
+VGC_DECLARE_OBJECT(LineEdit);
 
 /// \class vgc::ui::ColorPalette
 /// \brief Allow users to select a color.
 ///
-class VGC_UI_API ColorPalette : public Widget {
+class VGC_UI_API ColorPalette : public Column {
 private:
-    VGC_OBJECT(ColorPalette, Widget)
+    VGC_OBJECT(ColorPalette, Column)
 
 protected:
     /// This is an implementation details. Please use
@@ -40,6 +44,56 @@ public:
     /// Creates a ColorPalette.
     ///
     static ColorPalettePtr create();
+
+    /// Returns the selected color.
+    ///
+    core::Color selectedColor() const {
+        return selectedColor_;
+    }
+
+    /// Sets the selected color.
+    ///
+    void setSelectedColor(const core::Color& color);
+
+    /// This signal is emitted whenever the selected color changed as a result
+    /// of user interaction with the color palette. The signal isn't emitted
+    /// when the selected color is set programatically via setSelectedColor().
+    ///
+    VGC_SIGNAL(colorSelected)
+
+private:
+    void onSelectorSelectedColor_();
+    VGC_SLOT(onSelectorSelectedColorSlot_, onSelectorSelectedColor_)
+
+    void onRgbEdited_();
+    VGC_SLOT(onRgbEditedSlot_, onRgbEdited_)
+
+    core::Color selectedColor_;
+    ColorPaletteSelector* selector_;
+    LineEdit* rLineEdit_;
+    LineEdit* gLineEdit_;
+    LineEdit* bLineEdit_;
+
+    void setSelectedColorNoCheckNoEmit_(const core::Color& color);
+};
+
+/// \class vgc::ui::ColorPaletteSelector
+/// \brief Allow users to select a color.
+///
+class VGC_UI_API ColorPaletteSelector : public Widget {
+private:
+    VGC_OBJECT(ColorPaletteSelector, Widget)
+
+protected:
+    /// This is an implementation details. Please use
+    /// ColorPalette::create() instead.
+    ///
+    ColorPaletteSelector();
+
+public:
+    /// Creates a ColorPalette.
+    ///
+    static ColorPaletteSelectorPtr create();
 
     /// Returns the selected color.
     ///
@@ -67,22 +121,23 @@ public:
     bool onMouseEnter() override;
     bool onMouseLeave() override;
 
+protected:
+    float preferredWidthForHeight(float height) const override;
+    float preferredHeightForWidth(float width) const override;
+    geometry::Vec2f computePreferredSize() const override;
+
 private:
     enum class SelectorType {
         None,
         Hue,
         SaturationLightness
     };
-    SelectorType hoveredSelector_(const geometry::Vec2f& p);
-    std::pair<Int, Int> hoveredSaturationLightness_(const geometry::Vec2f& p);
-    Int hoveredHue_(const geometry::Vec2f& p);
-    bool selectColorFromHovered_();
+    mutable float lastWidthOnComputePreferredSize_;
     core::Color selectedColor_;
     graphics::GeometryViewPtr triangles_;
     float oldWidth_;
     float oldHeight_;
     bool reload_;
-    float margin_;
     bool isContinuous_;
     core::Color borderColor_;
     Int numHueSteps_;        // >= 2 and even
@@ -98,6 +153,36 @@ private:
     Int selectedLightnessIndex_;
     Int oldSaturationIndex_; // "old" = last chromatic color selected
     Int oldLightnessIndex_;
+
+    struct Metrics {
+        float paddingLeft;
+        float paddingRight;
+        float paddingTop;
+        float paddingBottom;
+        float rowGap;
+        float borderWidth;
+        float cellBorderWidth;
+        float selectorBorderWidth;
+        float cellOffset;
+        float startOffset;
+        float endOffset;
+        float hueDx;
+        float hueDy;
+        float slDx;
+        float slDy;
+        float width;
+        float height;
+        geometry::Rect2f saturationLightnessRect;
+        geometry::Rect2f hueRect;
+    };
+    mutable Metrics metrics_;
+
+    Metrics computeMetricsFromWidth_(float width) const;
+    void updateMetrics_() const;
+    SelectorType hoveredSelector_(const geometry::Vec2f& p);
+    std::pair<Int, Int> hoveredSaturationLightness_(const geometry::Vec2f& p);
+    Int hoveredHue_(const geometry::Vec2f& p);
+    bool selectColorFromHovered_();
 };
 
 } // namespace vgc::ui

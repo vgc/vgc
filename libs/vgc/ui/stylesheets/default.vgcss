@@ -1,24 +1,76 @@
+.Flex {
+    padding-top: 10dp;
+    padding-right: 10dp;
+    padding-bottom: 10dp;
+    padding-left: 10dp;
+    row-gap: 10dp;
+    column-gap: 10dp;
+}
+
+.Flex .Flex {
+    padding-top: 0dp;
+    padding-right: 0dp;
+    padding-bottom: 0dp;
+    padding-left: 0dp;
+}
+
 .Button,
 .Label,
 .LineEdit,
 .Plot2d {
-    margin-top: 5dp;
-    margin-right: 5dp;
-    margin-bottom: 5dp;
-    margin-left: 5dp;
     pixel-hinting: normal;
     caret-color: rgb(221, 221, 221);
     text-color: rgb(221, 221, 221);
-    selection-text-color: rgb(221, 221, 221);
-    selection-background-color: rgb(11, 82, 172);
+    text-selection-color: rgb(221, 221, 221);
+    text-selection-background-color: rgb(11, 82, 172);
+}
+
+.Button,
+.Label,
+.LineEdit {
+    preferred-width: auto;
+    preferred-height: 22dp;
+    text-vertical-align: middle;
+    text-horizontal-align: center;
+}
+
+.LineEdit {
+    text-horizontal-align: left;
+}
+
+.Button,
+.LineEdit {
+    background-color: rgb(44, 46, 47);
+    border-radius: 3dp;
 }
 
 .Button {
-    background-color: rgb(44, 46, 47);
     background-color-on-hover: rgb(11, 82, 172);
-    border-radius: 3dp;
-    preferred-width: auto;
-    preferred-height: 28dp;
+}
+
+.LineEdit {
+    padding-right: 5dp;
+    padding-left: 5dp;
+}
+
+.ColorPaletteSelector {
+    row-gap: 10dp;
+}
+
+.ColorPaletteSelector {
+    border-color: rgb(40, 40, 40);
+    border-width: 1dp;
+    vertical-stretch: 0;
+}
+
+.ColorPalette .Flex {
+    column-gap: 2dp;
+}
+
+.ColorPalette .Flex .Label {
+    preferred-width: 30dp;
+    horizontal-stretch: 0;
+    text-horizontal-align: left;
 }
 
 .Plot2d {
@@ -29,7 +81,7 @@
     padding-right: 3dp;
     padding-bottom: 3dp;
     padding-left: 3dp;
-    stretch-height: 10;
+    vertical-stretch: 10;
 }
 
 .Plot2d-label-right-aligned {
@@ -40,36 +92,4 @@
 .Plot2d-label-center-aligned {
     text-horizontal-align: center;
     text-vertical-align: middle;
-}
-
-.LineEdit {
-    background-color: rgb(44, 46, 47);
-    border-radius: 3dp;
-    text-horizontal-align: left;
-    text-vertical-align: middle;
-    preferred-width: auto;
-    preferred-height: 28dp;
-    padding-left: 5dp;
-    padding-right: 5dp;
-}
-
-.Flex {
-    padding-top: 5dp;
-    padding-right: 5dp;
-    padding-bottom: 5dp;
-    padding-left: 5dp;
-}
-
-.Flex.inner {
-    padding-top: 0dp;
-    padding-right: 0dp;
-    padding-bottom: 0dp;
-    padding-left: 0dp;
-}
-
-.ColorPalette {
-    border-color: rgb(40, 40, 40);
-    border-width: 1dp;
-    preferred-width: 100dp;
-    preferred-height: 200dp;
 }
