@@ -355,7 +355,7 @@ float getLength(const Widget* widget, core::StringId property) {
 }
 
 graphics::SizedFont* getDefaultSizedFont() {
-    return getDefaultSizedFont(15, graphics::FontHinting::Native);
+    return getDefaultSizedFont(14, graphics::FontHinting::Native);
 }
 
 graphics::SizedFont* getDefaultSizedFont(Int ppem) {
