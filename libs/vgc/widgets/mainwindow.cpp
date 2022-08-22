@@ -206,14 +206,15 @@ void MainWindow::new_() {
     }
 
     try {
-        document_ = vgc::dom::Document::create();
-        vgc::dom::Element::create(document_.get(), "vgc");
-        document_->enableHistory(vgc::dom::strings::New_Document);
-        headChangedConnectionHandle_ = document_->history()->headChanged().connect(
+        dom::DocumentPtr tmp = vgc::dom::Document::create();
+        vgc::dom::Element::create(tmp.get(), "vgc");
+        tmp->enableHistory(vgc::dom::strings::New_Document);
+        headChangedConnectionHandle_ = tmp->history()->headChanged().connect(
             [this]() { updateUndoRedoActionState_(); });
         updateUndoRedoActionState_();
 
-        viewer_->setDocument(document());
+        viewer_->setDocument(tmp.get());
+        document_ = tmp;
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Creating New File", e.what());
@@ -229,13 +230,14 @@ void MainWindow::open_() {
     }
 
     try {
-        document_ = dom::Document::open(ui::fromQt(filename_));
-        document_->enableHistory(vgc::dom::strings::Open_Document);
-        headChangedConnectionHandle_ = document_->history()->headChanged().connect(
+        dom::DocumentPtr tmp = dom::Document::open(ui::fromQt(filename_));
+        tmp->enableHistory(vgc::dom::strings::Open_Document);
+        headChangedConnectionHandle_ = tmp->history()->headChanged().connect(
             [this]() { updateUndoRedoActionState_(); });
         updateUndoRedoActionState_();
 
-        viewer_->setDocument(document());
+        viewer_->setDocument(tmp.get());
+        document_ = tmp;
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Opening File", e.what());
