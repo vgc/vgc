@@ -17,6 +17,7 @@
 #include <vgc/ui/label.h>
 
 #include <vgc/core/array.h>
+#include <vgc/graphics/strings.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -61,14 +62,17 @@ void Label::onPaintCreate(graphics::Engine* engine) {
 }
 
 void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+
+    namespace gs = graphics::strings;
+
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        core::Color textColor = detail::getColor(this, strings::text_color);
+        core::Color textColor = detail::getColor(this, gs::text_color);
         graphics::TextProperties textProperties(
             graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
         graphics::TextCursor textCursor;
-        bool hinting = style(strings::pixel_hinting) == strings::normal;
+        bool hinting = style(gs::pixel_hinting) == gs::normal;
         detail::insertText(
             a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
         engine->updateVertexBufferData(triangles_, std::move(a));

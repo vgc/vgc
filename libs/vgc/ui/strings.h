@@ -26,36 +26,23 @@ VGC_UI_API extern const core::StringId Button;
 VGC_UI_API extern const core::StringId ColorPalette;
 VGC_UI_API extern const core::StringId ColorPaletteSelector;
 VGC_UI_API extern const core::StringId Flex;
+VGC_UI_API extern const core::StringId Grid;
 VGC_UI_API extern const core::StringId Label;
 VGC_UI_API extern const core::StringId LineEdit;
+VGC_UI_API extern const core::StringId Menu;
+VGC_UI_API extern const core::StringId MenuBar;
 VGC_UI_API extern const core::StringId Plot2d;
 
-VGC_UI_API extern const core::StringId background_color;
-VGC_UI_API extern const core::StringId background_color_on_hover;
-VGC_UI_API extern const core::StringId border_radius;
-VGC_UI_API extern const core::StringId column_gap;
-VGC_UI_API extern const core::StringId margin_bottom;
-VGC_UI_API extern const core::StringId margin_left;
-VGC_UI_API extern const core::StringId margin_right;
-VGC_UI_API extern const core::StringId margin_top;
-VGC_UI_API extern const core::StringId padding_bottom;
-VGC_UI_API extern const core::StringId padding_left;
-VGC_UI_API extern const core::StringId padding_right;
-VGC_UI_API extern const core::StringId padding_top;
-VGC_UI_API extern const core::StringId pixel_hinting;
-VGC_UI_API extern const core::StringId preferred_height;
 VGC_UI_API extern const core::StringId preferred_width;
+VGC_UI_API extern const core::StringId preferred_height;
+VGC_UI_API extern const core::StringId column_gap;
 VGC_UI_API extern const core::StringId row_gap;
-VGC_UI_API extern const core::StringId shrink_height;
-VGC_UI_API extern const core::StringId shrink_width;
-VGC_UI_API extern const core::StringId stretch_height;
-VGC_UI_API extern const core::StringId stretch_width;
-VGC_UI_API extern const core::StringId text_color;
-
-VGC_UI_API extern const core::StringId auto_;
-VGC_UI_API extern const core::StringId inherit;
-VGC_UI_API extern const core::StringId normal;
-VGC_UI_API extern const core::StringId off;
+VGC_UI_API extern const core::StringId grid_auto_columns;
+VGC_UI_API extern const core::StringId grid_auto_rows;
+VGC_UI_API extern const core::StringId horizontal_stretch;
+VGC_UI_API extern const core::StringId horizontal_shrink;
+VGC_UI_API extern const core::StringId vertical_stretch;
+VGC_UI_API extern const core::StringId vertical_shrink;
 
 } // namespace vgc::ui::strings
 

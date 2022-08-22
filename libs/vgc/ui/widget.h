@@ -347,11 +347,11 @@ public:
 
     /// Returns the width stretch factor of this widget.
     ///
-    float stretchWidth() const;
+    float horizontalStretch() const;
 
     /// Returns the width shrink factor of this widget.
     ///
-    float shrinkWidth() const;
+    float horizontalShrink() const;
 
     /// Returns the preferred height of this widget.
     ///
@@ -375,11 +375,11 @@ public:
 
     /// Returns the height stretch factor of this widget.
     ///
-    float stretchHeight() const;
+    float verticalStretch() const;
 
     /// Returns the height shrink factor of this widget.
     ///
-    float shrinkHeight() const;
+    float verticalShrink() const;
 
     /// This method should be called when the size policy or preferred size of
     /// this widget changed, to inform its parent that its geometry should be

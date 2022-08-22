@@ -17,6 +17,7 @@
 #include <vgc/ui/button.h>
 
 #include <vgc/core/array.h>
+#include <vgc/graphics/strings.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -58,18 +59,18 @@ void Button::onPaintCreate(graphics::Engine* engine) {
 }
 
 void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+    namespace gs = graphics::strings;
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
         core::Color backgroundColor = detail::getColor(
-            this,
-            isHovered_ ? strings::background_color_on_hover : strings::background_color);
-        core::Color textColor = detail::getColor(this, strings::text_color);
-        float borderRadius = detail::getLength(this, strings::border_radius);
+            this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
+        core::Color textColor = detail::getColor(this, gs::text_color);
+        float borderRadius = detail::getLength(this, gs::border_radius);
         graphics::TextProperties textProperties(
             graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
         graphics::TextCursor textCursor;
-        bool hinting = style(strings::pixel_hinting) == strings::normal;
+        bool hinting = style(gs::pixel_hinting) == gs::normal;
         detail::insertRect(a, backgroundColor, rect(), borderRadius);
         detail::insertText(
             a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);

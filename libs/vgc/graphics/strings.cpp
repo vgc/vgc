@@ -18,36 +18,61 @@
 
 namespace vgc::graphics::strings {
 
+// Properties
+// ----------
+
+// non-inherited
 const core::StringId background_color("background-color");
 const core::StringId background_color_on_hover("background-color-on-hover");
-const core::StringId border_color("border-color");
-const core::StringId border_radius("border-radius");
-const core::StringId border_width("border-width");
-const core::StringId caret_color("caret-color");
+
+// Margins & Padding currently only accepts <length> and in the future we may accept <percentage>.
+//
+// In HTML CSS, percentage are relative to the containing block.
+// See https://developer.mozilla.org/en-US/docs/Web/CSS/Containing_block.
+//
+// In our case, we probably want to do something different and consider this:
+// - a percentage for a margin would be relative to size + result margin.
+// - a percentage for a padding would be relative to size (size includes padding).
+const core::StringId margin_top("margin-top");
+const core::StringId margin_right("margin-right");
 const core::StringId margin_bottom("margin-bottom");
 const core::StringId margin_left("margin-left");
-const core::StringId margin_right("margin-right");
-const core::StringId margin_top("margin-top");
+const core::StringId padding_top("padding-top");
+const core::StringId padding_right("padding-right");
 const core::StringId padding_bottom("padding-bottom");
 const core::StringId padding_left("padding-left");
-const core::StringId padding_right("padding-right");
-const core::StringId padding_top("padding-top");
+
+const core::StringId border_width("border-width");
+const core::StringId border_color("border-color");
+const core::StringId border_radius("border-radius");
+
+// inherited
 const core::StringId pixel_hinting("pixel-hinting");
-const core::StringId selection_background_color("selection-background-color");
-const core::StringId selection_text_color("selection-text-color");
 const core::StringId text_color("text-color");
+const core::StringId text_selection_color("text-selection-color");
+const core::StringId text_selection_background_color("text-selection-background-color");
 const core::StringId text_horizontal_align("text-horizontal-align");
 const core::StringId text_vertical_align("text-vertical-align");
+const core::StringId caret_color("caret-color");
 
+// Values
+// ------
+
+// generic
 const core::StringId auto_("auto");
-const core::StringId bottom("bottom");
-const core::StringId center("center");
-const core::StringId inherit("inherit");
+
+// text-horizontal-align:
 const core::StringId left("left");
+const core::StringId center("center");
+const core::StringId right("right");
+
+// text-vertical-align:
+const core::StringId top("top");
 const core::StringId middle("middle");
+const core::StringId bottom("bottom");
+
+// pixel-hinting:
 const core::StringId normal("normal");
 const core::StringId off("off");
-const core::StringId right("right");
-const core::StringId top("top");
 
 } // namespace vgc::graphics::strings
