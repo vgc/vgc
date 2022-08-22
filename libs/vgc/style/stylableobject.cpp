@@ -51,6 +51,9 @@ StyleValue StylableObject::style(core::StringId property) const {
     return getStyleComputedValue_(property);
 }
 
+void StylableObject::onStyleChanged() {
+}
+
 void StylableObject::updateStyle_() {
     // In this function, we precompute which rule sets match this node and
     // precompute all "cascaded values". Note that "computed values" are
@@ -133,8 +136,8 @@ void StylableObject::updateStyle_() {
         child->updateStyle_();
     }
 
-    // TODO: notify the object of the change of style?
-    // (e.g., so that it can be re-rendered)
+    // Notify the object of the change of style
+    onStyleChanged();
 }
 
 const StylePropertySpec*

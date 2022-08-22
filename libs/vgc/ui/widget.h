@@ -675,6 +675,7 @@ public:
     const style::StyleSheet* defaultStyleSheet() const override;
 
 protected:
+    void onStyleChanged() override;
     virtual void onWidgetAdded(Object*){};
     virtual void onWidgetRemoved(Object*){};
 

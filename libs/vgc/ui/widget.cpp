@@ -624,6 +624,10 @@ style::StylableObject* Widget::nextSiblingStylableObject() const {
     return static_cast<style::StylableObject*>(nextSibling());
 }
 
+void Widget::onStyleChanged() {
+    isPreferredSizeComputed_ = false;
+}
+
 void Widget::releaseEngine_() {
     onPaintDestroy(lastPaintEngine_);
     lastPaintEngine_->aboutToBeDestroyed().disconnect(onEngineAboutToBeDestroyed());
