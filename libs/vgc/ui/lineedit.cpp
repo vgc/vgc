@@ -23,6 +23,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
 #include <vgc/core/performancelog.h>
+#include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
 
@@ -102,12 +103,15 @@ style::StylableObject* LineEdit::lastChildStylableObject() const {
 }
 
 void LineEdit::onResize() {
+
+    namespace gs = graphics::strings;
+
     // Compute contentRect
     // TODO: move to Widget::contentRect()
-    float paddingLeft = detail::getLength(this, strings::padding_left);
-    float paddingRight = detail::getLength(this, strings::padding_right);
-    float paddingTop = detail::getLength(this, strings::padding_top);
-    float paddingBottom = detail::getLength(this, strings::padding_bottom);
+    float paddingLeft = detail::getLength(this, gs::padding_left);
+    float paddingRight = detail::getLength(this, gs::padding_right);
+    float paddingTop = detail::getLength(this, gs::padding_top);
+    float paddingBottom = detail::getLength(this, gs::padding_bottom);
     geometry::Rect2f r = rect();
     geometry::Vec2f pMinOffset(paddingLeft, paddingTop);
     geometry::Vec2f pMaxOffset(paddingRight, paddingBottom);
@@ -125,15 +129,17 @@ void LineEdit::onPaintCreate(graphics::Engine* engine) {
 }
 
 void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+
+    namespace gs = graphics::strings;
+
     if (reload_) {
         reload_ = false;
         core::FloatArray a;
 
         // Draw background
         core::Color backgroundColor = detail::getColor(
-            this,
-            isHovered_ ? strings::background_color_on_hover : strings::background_color);
-        float borderRadius = detail::getLength(this, strings::border_radius);
+            this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
+        float borderRadius = detail::getLength(this, gs::border_radius);
 #if defined(VGC_QOPENGL_EXPERIMENT)
         static core::Stopwatch sw = {};
         auto t = sw.elapsed() * 50.f;

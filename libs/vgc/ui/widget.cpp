@@ -21,6 +21,7 @@
 #include <vgc/core/paths.h>
 
 #include <vgc/graphics/richtext.h>
+#include <vgc/graphics/strings.h>
 
 #include <vgc/ui/action.h>
 #include <vgc/ui/strings.h>
@@ -150,12 +151,12 @@ PreferredSize Widget::preferredWidth() const {
     return style(strings::preferred_width).to<PreferredSize>();
 }
 
-float Widget::stretchWidth() const {
-    return style(strings::stretch_width).toFloat();
+float Widget::horizontalStretch() const {
+    return style(strings::horizontal_stretch).toFloat();
 }
 
-float Widget::shrinkWidth() const {
-    return style(strings::shrink_width).toFloat();
+float Widget::horizontalShrink() const {
+    return style(strings::horizontal_shrink).toFloat();
 }
 
 PreferredSize Widget::preferredHeight() const {
@@ -170,12 +171,12 @@ float Widget::preferredHeightForWidth(float) const {
     return preferredSize()[1];
 }
 
-float Widget::stretchHeight() const {
-    return style(strings::stretch_height).toFloat();
+float Widget::verticalStretch() const {
+    return style(strings::vertical_stretch).toFloat();
 }
 
-float Widget::shrinkHeight() const {
-    return style(strings::shrink_height).toFloat();
+float Widget::verticalShrink() const {
+    return style(strings::vertical_shrink).toFloat();
 }
 
 void Widget::updateGeometry() {
@@ -534,8 +535,8 @@ StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator 
         return StyleValue::invalid();
     }
     else if (
-        begin->type == StyleTokenType::Identifier   //
-        && begin->codePointsValue == strings::auto_ //
+        begin->type == StyleTokenType::Identifier             //
+        && begin->codePointsValue == graphics::strings::auto_ //
         && begin + 1 == end) {
 
         return StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
@@ -556,6 +557,8 @@ StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator 
 
 style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
+    using namespace strings;
+
     auto autosize    = StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
     auto zero        = StyleValue::number(0.0f);
     auto one         = StyleValue::number(1.0f);
@@ -566,14 +569,17 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     // Insert additional specs
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
-    table->insert("column-gap",       zero,     false, &parseStyleLength);
-    table->insert("preferred-height", autosize, false, &parseStylePreferredSize);
-    table->insert("preferred-width",  autosize, false, &parseStylePreferredSize);
-    table->insert("row-gap",          zero,     false, &parseStyleLength);
-    table->insert("shrink-height",    one,      false, &parseStyleNumber);
-    table->insert("shrink-width",     one,      false, &parseStyleNumber);
-    table->insert("stretch-height",   one,      false, &parseStyleNumber);
-    table->insert("stretch-width",    one,      false, &parseStyleNumber);
+
+    table->insert(preferred_height,     autosize, false, &parseStylePreferredSize);
+    table->insert(preferred_width,      autosize, false, &parseStylePreferredSize);
+    table->insert(column_gap,           zero,     false, &parseStyleLength);
+    table->insert(row_gap,              zero,     false, &parseStyleLength);
+    table->insert(grid_auto_columns,    autosize, false, &parseStylePreferredSize);
+    table->insert(grid_auto_rows,       autosize, false, &parseStylePreferredSize);
+    table->insert(horizontal_stretch,   one,      false, &parseStyleNumber);
+    table->insert(horizontal_shrink,    one,      false, &parseStyleNumber);
+    table->insert(vertical_stretch,     one,      false, &parseStyleNumber);
+    table->insert(vertical_shrink,      one,      false, &parseStyleNumber);
 
     return table;
 }

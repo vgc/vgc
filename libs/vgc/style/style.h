@@ -212,6 +212,18 @@ public:
         return std::any_cast<TValue>(value_);
     }
 
+    /// Returns the value stored as a `TValue`. An default constructed value is
+    /// returned if the stored value is not of type `TValue`.
+    ///
+    /// Note that an `Identifier` and `String` is
+    /// stored as a `StringId`, and a `Number` is stored as a double (for now).
+    ///
+    template<typename TValue>
+    TValue valueOrDefault(const TValue& defaultValue = TValue{}) const {
+        TValue* v = std::any_cast<TValue>(&value_);
+        return v ? *v : defaultValue;
+    }
+
 private:
     StyleValueType type_;
     std::any value_;

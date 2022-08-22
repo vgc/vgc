@@ -6,12 +6,14 @@ vgc_add_library(style
 
     HEADER_FILES
         api.h
+        parse.h
         strings.h
         stylableobject.h
         style.h
         token.h
 
     CPP_FILES
+        parse.cpp
         strings.cpp
         stylableobject.cpp
         style.cpp

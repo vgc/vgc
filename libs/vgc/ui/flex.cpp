@@ -16,6 +16,7 @@
 
 #include <vgc/ui/flex.h>
 
+#include <vgc/graphics/strings.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -55,23 +56,23 @@ void Flex::onWidgetRemoved(Object*) {
 namespace {
 
 float getLeftRightMargins(const Widget* widget) {
-    return detail::getLength(widget, strings::margin_left)
-           + detail::getLength(widget, strings::margin_right);
+    return detail::getLength(widget, graphics::strings::margin_left)
+           + detail::getLength(widget, graphics::strings::margin_right);
 }
 
 float getTopBottomMargins(const Widget* widget) {
-    return detail::getLength(widget, strings::margin_top)
-           + detail::getLength(widget, strings::margin_bottom);
+    return detail::getLength(widget, graphics::strings::margin_top)
+           + detail::getLength(widget, graphics::strings::margin_bottom);
 }
 
 float getLeftRightPadding(const Widget* widget) {
-    return detail::getLength(widget, strings::padding_left)
-           + detail::getLength(widget, strings::padding_right);
+    return detail::getLength(widget, graphics::strings::padding_left)
+           + detail::getLength(widget, graphics::strings::padding_right);
 }
 
 float getTopBottomPadding(const Widget* widget) {
-    return detail::getLength(widget, strings::padding_top)
-           + detail::getLength(widget, strings::padding_bottom);
+    return detail::getLength(widget, graphics::strings::padding_top)
+           + detail::getLength(widget, graphics::strings::padding_bottom);
 }
 
 float getGap(bool isRow, const Widget* widget) {
@@ -277,7 +278,8 @@ float getChildStretch(
     float childAuthoredStretch = 0;
     float childStretchMultiplier = 1;
     if (freeSpace >= 0) {
-        childAuthoredStretch = isRow ? child->stretchWidth() : child->stretchHeight();
+        childAuthoredStretch =
+            isRow ? child->horizontalStretch() : child->verticalStretch();
         childStretchMultiplier = 1;
     }
     else {
@@ -286,7 +288,8 @@ float getChildStretch(
         // same authored shrink factor) large items shrink faster than small
         // items, so that they reach a zero-size at the same time. This is the
         // same behavior as CSS.
-        childAuthoredStretch = isRow ? child->shrinkWidth() : child->shrinkHeight();
+        childAuthoredStretch =
+            isRow ? child->horizontalShrink() : child->verticalShrink();
         childStretchMultiplier = getChildPreferredMainSize(isRow, paddedCrossSize, child);
     }
     childAuthoredStretch = (std::max)(childAuthoredStretch, 0.0f);
@@ -326,10 +329,10 @@ void stretchChild(
     float gap,
     bool hinting) {
 
-    float marginLeft = detail::getLength(child, strings::margin_left);
-    float marginRight = detail::getLength(child, strings::margin_right);
-    float marginTop = detail::getLength(child, strings::margin_top);
-    float marginBottom = detail::getLength(child, strings::margin_bottom);
+    float marginLeft = detail::getLength(child, graphics::strings::margin_left);
+    float marginRight = detail::getLength(child, graphics::strings::margin_right);
+    float marginTop = detail::getLength(child, graphics::strings::margin_top);
+    float marginBottom = detail::getLength(child, graphics::strings::margin_bottom);
     float childMainMarginBefore = isRow ? marginLeft : marginTop;
     float childMainMarginAfter = isRow ? marginRight : marginBottom;
     float childCrossMarginBefore = isRow ? marginTop : marginLeft;
@@ -372,6 +375,8 @@ void stretchChild(
 
 void Flex::updateChildrenGeometry() {
 
+    namespace gs = graphics::strings;
+
     // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
     // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
     Int numChildren = 0; // TODO: have a (possibly constant-time) numChildren() method
@@ -384,11 +389,11 @@ void Flex::updateChildrenGeometry() {
                      || (direction_ == FlexDirection::RowReverse);
         bool isReverse = (direction_ == FlexDirection::RowReverse)
                          || (direction_ == FlexDirection::ColumnReverse);
-        bool hinting = (style(strings::pixel_hinting) == strings::normal);
-        float paddingLeft = detail::getLength(this, strings::padding_left);
-        float paddingRight = detail::getLength(this, strings::padding_right);
-        float paddingTop = detail::getLength(this, strings::padding_top);
-        float paddingBottom = detail::getLength(this, strings::padding_bottom);
+        bool hinting = (style(gs::pixel_hinting) == gs::normal);
+        float paddingLeft = detail::getLength(this, gs::padding_left);
+        float paddingRight = detail::getLength(this, gs::padding_right);
+        float paddingTop = detail::getLength(this, gs::padding_top);
+        float paddingBottom = detail::getLength(this, gs::padding_bottom);
         float mainSize = isRow ? width() : height();
         float crossSize = isRow ? height() : width();
         float gap = getGap(isRow, this);

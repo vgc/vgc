@@ -22,37 +22,52 @@
 
 namespace vgc::graphics::strings {
 
+// Properties
+// ----------
+
+// non-inherited
 VGC_GRAPHICS_API extern const core::StringId background_color;
 VGC_GRAPHICS_API extern const core::StringId background_color_on_hover;
-VGC_GRAPHICS_API extern const core::StringId border_color;
-VGC_GRAPHICS_API extern const core::StringId border_radius;
-VGC_GRAPHICS_API extern const core::StringId border_width;
-VGC_GRAPHICS_API extern const core::StringId caret_color;
+VGC_GRAPHICS_API extern const core::StringId margin_top;
+VGC_GRAPHICS_API extern const core::StringId margin_right;
 VGC_GRAPHICS_API extern const core::StringId margin_bottom;
 VGC_GRAPHICS_API extern const core::StringId margin_left;
-VGC_GRAPHICS_API extern const core::StringId margin_right;
-VGC_GRAPHICS_API extern const core::StringId margin_top;
+VGC_GRAPHICS_API extern const core::StringId padding_top;
+VGC_GRAPHICS_API extern const core::StringId padding_right;
 VGC_GRAPHICS_API extern const core::StringId padding_bottom;
 VGC_GRAPHICS_API extern const core::StringId padding_left;
-VGC_GRAPHICS_API extern const core::StringId padding_right;
-VGC_GRAPHICS_API extern const core::StringId padding_top;
+VGC_GRAPHICS_API extern const core::StringId border_width;
+VGC_GRAPHICS_API extern const core::StringId border_color;
+VGC_GRAPHICS_API extern const core::StringId border_radius;
+
+// inherited
 VGC_GRAPHICS_API extern const core::StringId pixel_hinting;
-VGC_GRAPHICS_API extern const core::StringId selection_background_color;
-VGC_GRAPHICS_API extern const core::StringId selection_text_color;
 VGC_GRAPHICS_API extern const core::StringId text_color;
+VGC_GRAPHICS_API extern const core::StringId text_selection_color;
+VGC_GRAPHICS_API extern const core::StringId text_selection_background_color;
 VGC_GRAPHICS_API extern const core::StringId text_horizontal_align;
 VGC_GRAPHICS_API extern const core::StringId text_vertical_align;
+VGC_GRAPHICS_API extern const core::StringId caret_color;
 
+// Values
+// ------
+
+// generic
 VGC_GRAPHICS_API extern const core::StringId auto_;
-VGC_GRAPHICS_API extern const core::StringId bottom;
-VGC_GRAPHICS_API extern const core::StringId center;
-VGC_GRAPHICS_API extern const core::StringId inherit;
+
+// text-horizontal-align:
 VGC_GRAPHICS_API extern const core::StringId left;
+VGC_GRAPHICS_API extern const core::StringId center;
+VGC_GRAPHICS_API extern const core::StringId right;
+
+// text-vertical-align:
+VGC_GRAPHICS_API extern const core::StringId top;
 VGC_GRAPHICS_API extern const core::StringId middle;
+VGC_GRAPHICS_API extern const core::StringId bottom;
+
+// pixel-hinting:
 VGC_GRAPHICS_API extern const core::StringId normal;
 VGC_GRAPHICS_API extern const core::StringId off;
-VGC_GRAPHICS_API extern const core::StringId right;
-VGC_GRAPHICS_API extern const core::StringId top;
 
 } // namespace vgc::graphics::strings
 

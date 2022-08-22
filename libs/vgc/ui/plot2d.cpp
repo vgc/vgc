@@ -18,6 +18,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/rect2f.h>
+#include <vgc/graphics/strings.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/strings.h>
 
@@ -113,17 +114,20 @@ void Plot2d::onPaintCreate(graphics::Engine* engine) {
 }
 
 void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+
+    namespace gs = graphics::strings;
+
     if (dirtyPlot_ || dirtyHint_) {
         // XXX cache these
-        core::Color backgroundColor = detail::getColor(this, strings::background_color);
+        core::Color backgroundColor = detail::getColor(this, gs::background_color);
         core::Color hoveredBackgroundColor =
-            detail::getColor(this, strings::background_color_on_hover);
-        core::Color textColor = detail::getColor(this, strings::text_color);
-        float borderRadius = detail::getLength(this, strings::border_radius);
-        float paddingBottom = detail::getLength(this, strings::padding_bottom);
-        float paddingLeft = detail::getLength(this, strings::padding_left);
-        float paddingRight = detail::getLength(this, strings::padding_right);
-        float paddingTop = detail::getLength(this, strings::padding_top);
+            detail::getColor(this, gs::background_color_on_hover);
+        core::Color textColor = detail::getColor(this, gs::text_color);
+        float borderRadius = detail::getLength(this, gs::border_radius);
+        float paddingBottom = detail::getLength(this, gs::padding_bottom);
+        float paddingLeft = detail::getLength(this, gs::padding_left);
+        float paddingRight = detail::getLength(this, gs::padding_right);
+        float paddingTop = detail::getLength(this, gs::padding_top);
 
         const Int numYs = this->numYs();
         //const Int numComponents = (1 + numYs);

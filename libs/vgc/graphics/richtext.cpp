@@ -18,6 +18,7 @@
 
 #include <vgc/core/colors.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/style/parse.h>
 
 namespace vgc::graphics {
 
@@ -66,55 +67,6 @@ using style::StyleTokenType;
 using style::StyleValue;
 using style::StyleValueType;
 
-StyleValue parseStyleColor(StyleTokenIterator begin, StyleTokenIterator end) {
-    try {
-        std::string str(begin->begin, (end - 1)->end);
-        core::Color color = core::parse<core::Color>(str);
-        return StyleValue::custom(color);
-    }
-    catch (const core::ParseError&) {
-        return StyleValue::invalid();
-    }
-    catch (const core::RangeError&) {
-        return StyleValue::invalid();
-    }
-}
-
-StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end) {
-    // For now, we only support a unique Dimension token with a "dp" unit
-    if (begin == end) {
-        return StyleValue::invalid();
-    }
-    else if (
-        begin->type == StyleTokenType::Dimension //
-        && begin->codePointsValue == "dp"        //
-        && begin + 1 == end) {
-
-        return StyleValue::number(begin->toFloat());
-    }
-    else {
-        return StyleValue::invalid();
-    }
-}
-
-StyleValue parseIdentifierAmong(
-    StyleTokenIterator begin,
-    StyleTokenIterator end,
-    std::initializer_list<core::StringId> list) {
-
-    if (end == begin + 1) {
-        StyleTokenType t = begin->type;
-        if (t == StyleTokenType::Identifier) {
-            for (core::StringId id : list) {
-                if (id == begin->codePointsValue) {
-                    return StyleValue::identifier(begin->codePointsValue);
-                }
-            }
-        }
-    }
-    return StyleValue::invalid();
-}
-
 StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {off, normal});
@@ -134,38 +86,42 @@ StyleValue parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator e
 
 style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
+    using namespace strings;
+
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
-    auto black       = StyleValue::custom(core::colors::black);
-    auto white       = StyleValue::custom(core::colors::white);
-    auto blueish     = StyleValue::custom(core::Color(0.20, 0.56, 1.0));
-    auto transparent = StyleValue::custom(core::colors::transparent);
-    auto zero        = StyleValue::number(0.0f);
-    auto one         = StyleValue::number(1.0f);
-    auto normal      = StyleValue::identifier(strings::normal);
-    auto left        = StyleValue::identifier(strings::left);
-    auto top         = StyleValue::identifier(strings::top);
+    auto black_         = StyleValue::custom(core::colors::black);
+    auto white_         = StyleValue::custom(core::colors::white);
+    auto blueish_       = StyleValue::custom(core::Color(0.20, 0.56, 1.0));
+    auto transparent_   = StyleValue::custom(core::colors::transparent);
+    auto zero_          = StyleValue::number(0.0f);
+    auto one_           = StyleValue::number(1.0f);
+    auto normal_        = StyleValue::identifier(strings::normal);
+    auto left_          = StyleValue::identifier(strings::left);
+    auto top_           = StyleValue::identifier(strings::top);
 
     auto table = std::make_shared<style::StylePropertySpecTable>();
-    table->insert("background-color",           transparent, false, &parseStyleColor);
-    table->insert("background-color-on-hover",  transparent, false, &parseStyleColor);
-    table->insert("border-color",               black,       false, &parseStyleColor);
-    table->insert("border-radius",              zero,        false, &parseStyleLength);
-    table->insert("border-width",               zero,        false, &parseStyleLength);
-    table->insert("caret-color",                black,       true,  &parseStyleColor);
-    table->insert("margin-bottom",              zero,        false, &parseStyleLength);
-    table->insert("margin-left",                zero,        false, &parseStyleLength);
-    table->insert("margin-right",               zero,        false, &parseStyleLength);
-    table->insert("margin-top",                 zero,        false, &parseStyleLength);
-    table->insert("padding-bottom",             zero,        false, &parseStyleLength);
-    table->insert("padding-left",               zero,        false, &parseStyleLength);
-    table->insert("padding-right",              zero,        false, &parseStyleLength);
-    table->insert("padding-top",                zero,        false, &parseStyleLength);
-    table->insert("pixel-hinting",              normal,      true,  &parsePixelHinting);
-    table->insert("selection-background-color", blueish,     true,  &parseStyleColor);
-    table->insert("selection-text-color",       white,       true,  &parseStyleColor);
-    table->insert("text-color",                 black,       true,  &parseStyleColor);
-    table->insert("text-horizontal-align",      left,        true,  &parseTextHorizontalAlign);
-    table->insert("text-vertical-align",        top,         true,  &parseTextVerticalAlign);
+
+    table->insert(background_color,                 transparent_,   false, &style::parseColor);
+    table->insert(background_color_on_hover,        transparent_,   false, &style::parseColor);
+    table->insert(margin_top,                       zero_,          false, &style::parseLength);
+    table->insert(margin_right,                     zero_,          false, &style::parseLength);
+    table->insert(margin_bottom,                    zero_,          false, &style::parseLength);
+    table->insert(margin_left,                      zero_,          false, &style::parseLength);
+    table->insert(padding_top,                      zero_,          false, &style::parseLength);
+    table->insert(padding_right,                    zero_,          false, &style::parseLength);
+    table->insert(padding_bottom,                   zero_,          false, &style::parseLength);
+    table->insert(padding_left,                     zero_,          false, &style::parseLength);
+    table->insert(border_width,                     zero_,          false, &style::parseLength);
+    table->insert(border_color,                     black_,         false, &style::parseColor);
+    table->insert(border_radius,                    zero_,          false, &style::parseLength);
+
+    table->insert(pixel_hinting,                    normal_,        true,  &parsePixelHinting);
+    table->insert(text_color,                       black_,         true,  &style::parseColor);
+    table->insert(text_selection_color,             white_,         true,  &style::parseColor);
+    table->insert(text_selection_background_color,  blueish_,       true,  &style::parseColor);
+    table->insert(text_horizontal_align,            left_,          true,  &parseTextHorizontalAlign);
+    table->insert(text_vertical_align,              top_,           true,  &parseTextVerticalAlign);
+    table->insert(caret_color,                      black_,         true,  &style::parseColor);
 
     return table;
 }
@@ -356,8 +312,8 @@ void RichText::fill(core::FloatArray& a) {
     core::Color caretColor = getColor(this, strings::caret_color);
     core::Color textColor = getColor(this, strings::text_color);
     core::Color selectionBackgroundColor =
-        getColor(this, strings::selection_background_color);
-    core::Color selectionTextColor = getColor(this, strings::selection_text_color);
+        getColor(this, strings::text_selection_background_color);
+    core::Color selectionTextColor = getColor(this, strings::text_selection_color);
     bool hinting = getHinting(this, strings::pixel_hinting);
     TextProperties textProperties = getTextProperties(this);
     float r = static_cast<float>(textColor[0]);
