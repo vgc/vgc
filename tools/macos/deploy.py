@@ -694,7 +694,7 @@ if __name__ == "__main__":
     parser.add_argument("srcDir", help="path to the source directory")
     parser.add_argument("buildDir", help="path to the build directory")
     parser.add_argument("config", help="build configuration (empty string in mono-config builds, or 'Release', 'Debug', etc. in multi-config builds)")
-    parser.add_argument("qtDir", help="path the the Qt library, e.g.: '/Users/boris/Qt/5.12.5/clang_64'")
+    parser.add_argument("qtDir", help="path to the Qt library, e.g.: '/Users/boris/Qt/5.12.5/clang_64'")
     args = parser.parse_args()
     globals().update(vars(args))
 
