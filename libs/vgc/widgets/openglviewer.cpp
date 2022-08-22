@@ -424,8 +424,6 @@ void OpenGLViewer::paintGL() {
     // Measure rendering time
     renderTask_.start();
 
-    VGC_DEBUG_TMP("elem count: {}", document()->firstChild()->numChildObjects());
-
     OpenGLFunctions* f = openGLFunctions();
 
     updateGLResources_();
