@@ -97,7 +97,7 @@ Int parseInt_(LineEdit* lineEdit) {
             return core::parse<Int>(text);
         }
     }
-    catch (const core::ParseError& error) {
+    catch (const core::ParseError&) {
         return -1;
     }
 }
@@ -147,7 +147,6 @@ void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
 
 ColorPaletteSelector::ColorPaletteSelector()
     : Widget()
-    , lastWidthOnComputePreferredSize_(0)
     , selectedColor_(core::colors::black)
     , oldWidth_(0)
     , oldHeight_(0)

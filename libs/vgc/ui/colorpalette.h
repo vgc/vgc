@@ -132,7 +132,6 @@ private:
         Hue,
         SaturationLightness
     };
-    mutable float lastWidthOnComputePreferredSize_;
     core::Color selectedColor_;
     graphics::GeometryViewPtr triangles_;
     float oldWidth_;
