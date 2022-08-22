@@ -28,11 +28,16 @@
 
 namespace vgc::graphics {
 
-VGC_GRAPHICS_API style::StyleValue
+VGC_GRAPHICS_API
+style::StyleValue
 parsePixelHinting(style::StyleTokenIterator begin, style::StyleTokenIterator end);
-VGC_GRAPHICS_API style::StyleValue
+
+VGC_GRAPHICS_API
+style::StyleValue
 parseTextHorizontalAlign(style::StyleTokenIterator begin, style::StyleTokenIterator end);
-VGC_GRAPHICS_API style::StyleValue
+
+VGC_GRAPHICS_API
+style::StyleValue
 parseTextVerticalAlign(style::StyleTokenIterator begin, style::StyleTokenIterator end);
 
 VGC_DECLARE_OBJECT(RichText);
