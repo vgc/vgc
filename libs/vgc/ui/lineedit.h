@@ -17,12 +17,11 @@
 #ifndef VGC_UI_LINEEDIT_H
 #define VGC_UI_LINEEDIT_H
 
+#include <string>
 #include <string_view>
 
-#include <vgc/core/color.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/graphics/richtext.h>
-#include <vgc/graphics/text.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -103,20 +102,21 @@ protected:
 private:
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
-    bool reload_;
-    bool isHovered_;
-    ui::MouseButton mouseButton_; // == `None` if no mouse button pressed
+    bool reload_ = true;
+    bool isHovered_ = false;
+    ui::MouseButton mouseButton_ = ui::MouseButton::None;
 
     // Handle double/triple clicks
     core::Stopwatch leftMouseButtonStopwatch_;
-    Int numLeftMouseButtonClicks_;
+    Int numLeftMouseButtonClicks_ = 0;
     geometry::Vec2f mousePositionOnPress_;
 
     // Handle snapping to word/line boundaries on mouse move after double/triple-click
     // and extending the selection with shift+click
     void extendSelection_(const geometry::Vec2f& point);
     void resetSelectionInitialPair_();
-    graphics::TextBoundaryMarkers mouseSelectionMarkers_;
+    graphics::TextBoundaryMarkers mouseSelectionMarkers_ =
+        graphics::TextBoundaryMarker::Grapheme;
     std::pair<Int, Int> mouseSelectionInitialPair_;
 };
 

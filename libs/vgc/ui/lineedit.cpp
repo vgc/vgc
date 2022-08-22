@@ -21,8 +21,8 @@
 #include <QKeyEvent>
 
 #include <vgc/core/array.h>
+#include <vgc/core/color.h>
 #include <vgc/core/colors.h>
-#include <vgc/core/performancelog.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
@@ -54,13 +54,7 @@ void copyToX11SelectionClipboard_(graphics::RichText* richText) {
 
 LineEdit::LineEdit(std::string_view text)
     : Widget()
-    , richText_(graphics::RichText::create())
-    , reload_(true)
-    , isHovered_(false)
-    , mouseButton_(MouseButton::None)
-    , numLeftMouseButtonClicks_(0)
-    , mouseSelectionMarkers_(graphics::TextBoundaryMarker::Grapheme)
-    , mouseSelectionInitialPair_(0, 0) {
+    , richText_(graphics::RichText::create()) {
 
     setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
     addStyleClass(strings::LineEdit);
@@ -145,7 +139,9 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         auto t = sw.elapsed() * 50.f;
         backgroundColor = core::Color::hsl(t, 0.6f, 0.3f);
 #endif
-        detail::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+        if (backgroundColor.a() > 0) {
+            detail::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+        }
 
         // Draw text
         richText_->fill(a);
@@ -435,14 +431,14 @@ geometry::Vec2f LineEdit::computePreferredSize() const {
     PreferredSize h = preferredHeight();
     geometry::Vec2f res(0, 0);
     if (w.type() == auto_) {
-        res[0] = 100;
+        res[0] = 5;
         // TODO: compute appropriate width based on text length
     }
     else {
         res[0] = w.value();
     }
     if (h.type() == auto_) {
-        res[1] = 26;
+        res[1] = 5;
         // TODO: compute appropriate height based on font size?
     }
     else {

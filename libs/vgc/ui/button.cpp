@@ -24,12 +24,12 @@
 
 namespace vgc::ui {
 
-Button::Button(const std::string& text)
+Button::Button(std::string_view text)
     : Widget()
-    , text_(text)
-    , reload_(true)
-    , isHovered_(false) {
+    , richText_(graphics::RichText::create()) {
 
+    setText(text);
+    richText_->setParentStylableObject(this);
     addStyleClass(strings::Button);
 }
 
@@ -37,19 +37,44 @@ ButtonPtr Button::create() {
     return ButtonPtr(new Button(""));
 }
 
-ButtonPtr Button::create(const std::string& text) {
+ButtonPtr Button::create(std::string_view text) {
     return ButtonPtr(new Button(text));
 }
 
-void Button::setText(const std::string& text) {
-    if (text_ != text) {
-        text_ = text;
+void Button::setText(std::string_view text) {
+    if (text != richText_->text()) {
+        richText_->setText(text);
         reload_ = true;
         repaint();
     }
 }
 
+style::StylableObject* Button::firstChildStylableObject() const {
+    return richText_.get();
+}
+
+style::StylableObject* Button::lastChildStylableObject() const {
+    return richText_.get();
+}
+
 void Button::onResize() {
+
+    namespace gs = graphics::strings;
+
+    // Compute contentRect
+    // TODO: move to Widget::contentRect()
+    float paddingLeft = detail::getLength(this, gs::padding_left);
+    float paddingRight = detail::getLength(this, gs::padding_right);
+    float paddingTop = detail::getLength(this, gs::padding_top);
+    float paddingBottom = detail::getLength(this, gs::padding_bottom);
+    geometry::Rect2f r = rect();
+    geometry::Vec2f pMinOffset(paddingLeft, paddingTop);
+    geometry::Vec2f pMaxOffset(paddingRight, paddingBottom);
+    geometry::Rect2f contentRect(r.pMin() + pMinOffset, r.pMax() - pMaxOffset);
+
+    // Set appropriate size for the RichText
+    richText_->setRect(contentRect);
+
     reload_ = true;
 }
 
@@ -59,21 +84,25 @@ void Button::onPaintCreate(graphics::Engine* engine) {
 }
 
 void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+
     namespace gs = graphics::strings;
+
     if (reload_) {
         reload_ = false;
-        core::FloatArray a = {};
+        core::FloatArray a;
+
+        // Draw background
         core::Color backgroundColor = detail::getColor(
             this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
-        core::Color textColor = detail::getColor(this, gs::text_color);
         float borderRadius = detail::getLength(this, gs::border_radius);
-        graphics::TextProperties textProperties(
-            graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
-        graphics::TextCursor textCursor;
-        bool hinting = style(gs::pixel_hinting) == gs::normal;
-        detail::insertRect(a, backgroundColor, rect(), borderRadius);
-        detail::insertText(
-            a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
+        if (backgroundColor.a() > 0) {
+            detail::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+        }
+
+        // Draw text
+        richText_->fill(a);
+
+        // Load triangles data
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -116,14 +145,14 @@ geometry::Vec2f Button::computePreferredSize() const {
     PreferredSize h = preferredHeight();
     geometry::Vec2f res(0, 0);
     if (w.type() == auto_) {
-        res[0] = 100;
+        res[0] = 5;
         // TODO: compute appropriate width based on text length
     }
     else {
         res[0] = w.value();
     }
     if (h.type() == auto_) {
-        res[1] = 26;
+        res[1] = 5;
         // TODO: compute appropriate height based on font size?
     }
     else {
