@@ -26,14 +26,18 @@
 
 #include <vgc/widgets/toolbar.h>
 
+namespace {
+
+int iconWidth = 64;
+int margin = 15;
+
+} // namespace
+
 namespace vgc::widgets {
 
 Toolbar::Toolbar(QWidget* parent)
     : QToolBar(parent) {
 
-    int toolbarWidth = 150;
-    int iconWidth = 64;
-    int margin = 15;
     QSize iconSize(iconWidth, iconWidth);
 
     setOrientation(Qt::Vertical);
@@ -41,7 +45,7 @@ Toolbar::Toolbar(QWidget* parent)
     setIconSize(iconSize);
 
     QWidget* topMargin = new QWidget();
-    topMargin->setMinimumSize(toolbarWidth, margin);
+    topMargin->setMinimumSize(0, margin);
     topMargin->setStyleSheet("background-color: none");
     addWidget(topMargin);
 
@@ -49,7 +53,7 @@ Toolbar::Toolbar(QWidget* parent)
     colorToolButton_->setToolTip(tr("Current color (C)"));
     colorToolButton_->setStatusTip(tr("Click to open the color selector"));
     colorToolButton_->setIconSize(iconSize);
-    colorToolButton_->setMinimumSize(toolbarWidth, iconWidth);
+    colorToolButton_->setMinimumSize(0, iconWidth);
     colorToolButton_->updateIcon();
 
     colorToolButtonAction_ = addWidget(colorToolButton_);
@@ -65,7 +69,6 @@ Toolbar::Toolbar(QWidget* parent)
     // Note: it would be nice to std::move() the shared ptr instead of the
     // above copy. This requires implementing UiWidget(WidgetPtr&&),
     // but probably not worth it as this is temporary code anyway.
-    colorPaletteq_->setMinimumSize(toolbarWidth, 300);
     addWidget(colorPaletteq_);
 
     connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
@@ -83,6 +86,19 @@ Toolbar::~Toolbar() {
 
 core::Color Toolbar::color() const {
     return colorPalette_->selectedColor();
+}
+
+void Toolbar::resizeEvent(QResizeEvent* event) {
+
+    // Manually update minimumHeight of the color palette,
+    // otherwise QToolbar doesn't update the height of its
+    // children, even if heightForWidth() returns a different
+    // value for the current toolbar's width().
+    //
+    colorToolButton_->setMinimumSize(width(), iconWidth);
+    colorPaletteq_->setMinimumHeight(colorPaletteq_->heightForWidth(width()));
+    colorPaletteq_->show();
+    QToolBar::resizeEvent(event);
 }
 
 void Toolbar::onColorToolButtonColorChanged_() {
