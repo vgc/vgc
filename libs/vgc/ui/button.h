@@ -17,7 +17,10 @@
 #ifndef VGC_UI_BUTTON_H
 #define VGC_UI_BUTTON_H
 
-#include <vgc/core/color.h>
+#include <string>
+#include <string_view>
+
+#include <vgc/graphics/richtext.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -35,7 +38,7 @@ protected:
     /// This is an implementation details. Please use
     /// Button::create(text) instead.
     ///
-    Button(const std::string& text);
+    Button(std::string_view text);
 
 public:
     /// Creates a Button.
@@ -44,19 +47,23 @@ public:
 
     /// Creates a Button with the given text.
     ///
-    static ButtonPtr create(const std::string& text);
+    static ButtonPtr create(std::string_view text);
 
     /// Returns the Button's text.
     ///
     const std::string& text() const {
-        return text_;
+        return richText_->text();
     }
 
     /// Sets the Button's text.
     ///
-    void setText(const std::string& text);
+    void setText(std::string_view text);
 
-    // reimpl
+    // Reimplementation of StylableObject virtual methods
+    style::StylableObject* firstChildStylableObject() const override;
+    style::StylableObject* lastChildStylableObject() const override;
+
+    // Reimplementation of Widget virtual methods
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
@@ -71,10 +78,10 @@ protected:
     geometry::Vec2f computePreferredSize() const override;
 
 private:
-    std::string text_;
+    graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
-    bool reload_;
-    bool isHovered_;
+    bool reload_ = true;
+    bool isHovered_ = false;
 };
 
 } // namespace vgc::ui

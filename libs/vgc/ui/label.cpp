@@ -24,36 +24,58 @@
 
 namespace vgc::ui {
 
-Label::Label()
+Label::Label(std::string_view text)
     : Widget()
-    , text_("")
-    , reload_(true) {
+    , richText_(graphics::RichText::create()) {
 
     addStyleClass(strings::Label);
+    setText(text);
+    richText_->setParentStylableObject(this);
 }
 
-Label::Label(const std::string& text)
-    : Widget()
-    , text_(text)
-    , reload_(true) {
-}
-
-/* static */
 LabelPtr Label::create() {
-    return LabelPtr(new Label());
+    return LabelPtr(new Label(""));
 }
 
-/* static */
-LabelPtr Label::create(const std::string& text) {
+LabelPtr Label::create(std::string_view text) {
     return LabelPtr(new Label(text));
 }
 
-void Label::setText(const std::string& text) {
-    if (text_ != text) {
-        text_ = text;
+void Label::setText(std::string_view text) {
+    if (text != richText_->text()) {
+        richText_->setText(text);
         reload_ = true;
         repaint();
     }
+}
+
+style::StylableObject* Label::firstChildStylableObject() const {
+    return richText_.get();
+}
+
+style::StylableObject* Label::lastChildStylableObject() const {
+    return richText_.get();
+}
+
+void Label::onResize() {
+
+    namespace gs = graphics::strings;
+
+    // Compute contentRect
+    // TODO: move to Widget::contentRect()
+    float paddingLeft = detail::getLength(this, gs::padding_left);
+    float paddingRight = detail::getLength(this, gs::padding_right);
+    float paddingTop = detail::getLength(this, gs::padding_top);
+    float paddingBottom = detail::getLength(this, gs::padding_bottom);
+    geometry::Rect2f r = rect();
+    geometry::Vec2f pMinOffset(paddingLeft, paddingTop);
+    geometry::Vec2f pMaxOffset(paddingRight, paddingBottom);
+    geometry::Rect2f contentRect(r.pMin() + pMinOffset, r.pMax() - pMaxOffset);
+
+    // Set appropriate size for the RichText
+    richText_->setRect(contentRect);
+
+    reload_ = true;
 }
 
 void Label::onPaintCreate(graphics::Engine* engine) {
@@ -67,14 +89,20 @@ void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     if (reload_) {
         reload_ = false;
-        core::FloatArray a = {};
-        core::Color textColor = detail::getColor(this, gs::text_color);
-        graphics::TextProperties textProperties(
-            graphics::TextHorizontalAlign::Center, graphics::TextVerticalAlign::Middle);
-        graphics::TextCursor textCursor;
-        bool hinting = style(gs::pixel_hinting) == gs::normal;
-        detail::insertText(
-            a, textColor, rect(), 0, 0, 0, 0, text_, textProperties, textCursor, hinting);
+        core::FloatArray a;
+
+        // Draw background
+        core::Color backgroundColor = detail::getColor(
+            this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
+        float borderRadius = detail::getLength(this, gs::border_radius);
+        if (backgroundColor.a() > 0) {
+            detail::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+        }
+
+        // Draw text
+        richText_->fill(a);
+
+        // Load triangles data
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -83,6 +111,42 @@ void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
 void Label::onPaintDestroy(graphics::Engine*) {
     triangles_.reset();
+}
+
+bool Label::onMouseEnter() {
+    isHovered_ = true;
+    reload_ = true;
+    repaint();
+    return true;
+}
+
+bool Label::onMouseLeave() {
+    isHovered_ = false;
+    reload_ = true;
+    repaint();
+    return true;
+}
+
+geometry::Vec2f Label::computePreferredSize() const {
+    PreferredSizeType auto_ = PreferredSizeType::Auto;
+    PreferredSize w = preferredWidth();
+    PreferredSize h = preferredHeight();
+    geometry::Vec2f res(0, 0);
+    if (w.type() == auto_) {
+        res[0] = 5;
+        // TODO: compute appropriate width based on text length
+    }
+    else {
+        res[0] = w.value();
+    }
+    if (h.type() == auto_) {
+        res[1] = 5;
+        // TODO: compute appropriate height based on font size?
+    }
+    else {
+        res[1] = h.value();
+    }
+    return res;
 }
 
 } // namespace vgc::ui
