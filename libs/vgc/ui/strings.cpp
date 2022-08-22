@@ -46,8 +46,4 @@ const core::StringId horizontal_shrink("horizontal-shrink");
 const core::StringId vertical_stretch("vertical-stretch");
 const core::StringId vertical_shrink("vertical-shrink");
 
-// Values
-// ------
-
-
 } // namespace vgc::ui::strings

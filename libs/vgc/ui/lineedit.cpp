@@ -138,8 +138,7 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
         // Draw background
         core::Color backgroundColor = detail::getColor(
-            this,
-            isHovered_ ? gs::background_color_on_hover : gs::background_color);
+            this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
         float borderRadius = detail::getLength(this, gs::border_radius);
 #if defined(VGC_QOPENGL_EXPERIMENT)
         static core::Stopwatch sw = {};
