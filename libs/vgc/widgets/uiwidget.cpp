@@ -249,7 +249,7 @@ void UiWidget::paintGL() {
     // XXX split to beginFrame() and qopenglengine-only beginInlineFrame
 
     //engine_->clear(core::Color(0., 0., 0.));
-    engine_->clear(core::Color(0.337, 0.345, 0.353));
+    engine_->clear(core::Color(0.251, 0.259, 0.267));
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);

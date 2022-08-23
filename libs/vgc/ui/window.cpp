@@ -47,7 +47,7 @@ Window::Window(ui::WidgetPtr widget)
     : QWindow()
     , widget_(widget)
     , proj_(geometry::Mat4f::identity)
-    , clearColor_(0.337f, 0.345f, 0.353f, 1.f) {
+    , clearColor_(0.251f, 0.259f, 0.267f, 1.f) {
 
     connect((QWindow*)this, &QWindow::activeChanged, this, &Window::onActiveChanged_);
 
