@@ -48,8 +48,14 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent)
     , isInitialized_(false) {
 
     setMouseTracking(true);
+
     widget_->repaintRequested().connect([this]() { this->onRepaintRequested(); });
-    widget_->focusRequested().connect([this]() { this->onFocusRequested(); });
+
+    widget_->focusSet().connect(
+        [this](ui::FocusReason reason) { this->onFocusSet(reason); });
+
+    widget_->focusCleared().connect(
+        [this](ui::FocusReason reason) { this->onFocusCleared(reason); });
 
     // Handle dead keys and complex input methods.
     //
@@ -277,9 +283,13 @@ void UiWidget::onRepaintRequested() {
     update();
 }
 
-void UiWidget::onFocusRequested() {
-    setFocus();
-    // Note: Under the hood, this calls setFocus(Qt::OtherFocusReason)
+void UiWidget::onFocusSet(ui::FocusReason reason) {
+    Qt::FocusReason qreason = static_cast<Qt::FocusReason>(reason);
+    setFocus(qreason);
+}
+
+void UiWidget::onFocusCleared(ui::FocusReason) {
+    clearFocus();
 }
 
 } // namespace vgc::widgets

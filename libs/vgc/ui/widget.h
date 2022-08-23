@@ -427,7 +427,7 @@ public:
     /// This signal is emitted when someone requested this widget, or one of
     /// its descendent widgets, to be repainted.
     ///
-    VGC_SIGNAL(repaintRequested);
+    VGC_SIGNAL(repaintRequested)
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
@@ -493,10 +493,15 @@ public:
         focusPolicy_ = policy;
     }
 
-    /// This signal is emitted when someone requested this widget, or one of
-    /// its descendent widgets, to be focused.
+    /// This signal is emitted whenever this widget, or any of its descendants,
+    /// became the focused widget.
     ///
-    VGC_SIGNAL(focusRequested);
+    VGC_SIGNAL(focusSet, (FocusReason, reason))
+
+    /// This signal is emitted whenever this widget, or any of its descendants,
+    /// was the focused widget but isn't anymore.
+    ///
+    VGC_SIGNAL(focusCleared, (FocusReason, reason))
 
     /// Makes this widget the focused widget of this widget tree, and emits the
     /// focusRequested signal.
@@ -734,9 +739,9 @@ private:
     void releaseEngine_();
     void setEngine_(graphics::Engine* engine);
 
-    VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_);
-    VGC_SLOT(onWidgetAdded_, onWidgetAdded);
-    VGC_SLOT(onWidgetRemoved_, onWidgetRemoved);
+    VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_)
+    VGC_SLOT(onWidgetAdded_, onWidgetAdded)
+    VGC_SLOT(onWidgetRemoved_, onWidgetRemoved)
 };
 
 } // namespace vgc::ui
