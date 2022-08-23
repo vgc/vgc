@@ -39,8 +39,9 @@
 }
 
 .Button,
-.LineEdit {
-    background-color: rgb(44, 46, 47);
+.LineEdit,
+.Plot2d {
+    background-color: rgb(34, 36, 37);
     border-radius: 3dp;
 }
 
@@ -74,9 +75,7 @@
 }
 
 .Plot2d {
-    background-color: rgb(44, 46, 47);
     background-color-on-hover: rgb(54, 56, 57);
-    border-radius: 3dp;
     padding-top: 3dp;
     padding-right: 3dp;
     padding-bottom: 3dp;

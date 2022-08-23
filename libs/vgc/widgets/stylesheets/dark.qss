@@ -122,7 +122,7 @@ QMenu::indicator:non-exclusive:checked {
 vgc--widgets--PanelArea,
 QToolBar,
 QToolButton {
-    background: #56585a;
+    background: #404244;
 }
 
 vgc--widgets--Panel {
