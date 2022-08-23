@@ -43,6 +43,7 @@ Toolbar::Toolbar(QWidget* parent)
     setOrientation(Qt::Vertical);
     setMovable(false);
     setIconSize(iconSize);
+    setFocusPolicy(Qt::ClickFocus);
 
     QWidget* topMargin = new QWidget();
     topMargin->setMinimumSize(0, margin);
