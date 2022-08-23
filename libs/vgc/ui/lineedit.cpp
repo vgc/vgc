@@ -388,7 +388,8 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
         richText_->selectAll();
     }
     else if (key == Qt::Key_Escape) {
-        handled = false;
+        clearFocus(FocusReason::Other);
+        handled = true;
     }
     else if (key == Qt::Key_Tab) {
         handled = false;
