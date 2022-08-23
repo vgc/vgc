@@ -25,7 +25,7 @@
 
 namespace {
 int to256(double x) {
-    int i = static_cast<int>(std::round(x * 256));
+    int i = static_cast<int>(std::round(x * 255));
     return vgc::core::clamp(i, 0, 255);
 }
 } // namespace
