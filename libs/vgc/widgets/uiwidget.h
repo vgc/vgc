@@ -92,7 +92,8 @@ private:
     void cleanupGL();
 
     void onRepaintRequested();
-    void onFocusRequested();
+    void onFocusSet(ui::FocusReason reason);
+    void onFocusCleared(ui::FocusReason reason);
 
     ui::WidgetPtr widget_;
     ui::detail::QglEnginePtr engine_;

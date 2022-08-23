@@ -412,7 +412,7 @@ void Widget::setFocus(FocusReason reason) {
     }
     Widget* widget = this;
     while (widget) {
-        widget->focusRequested().emit();
+        widget->focusSet().emit(reason);
         widget = widget->parent();
     }
 }
@@ -426,6 +426,11 @@ void Widget::clearFocus(FocusReason reason) {
     }
     if (oldFocusedWidget && isTreeActive()) {
         oldFocusedWidget->onFocusOut(reason);
+    }
+    Widget* widget = this;
+    while (widget) {
+        widget->focusCleared().emit(reason);
+        widget = widget->parent();
     }
 }
 
