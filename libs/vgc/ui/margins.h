@@ -168,7 +168,7 @@ public:
         return v_ != other.v_;
     }
 
-    /// Strecthes each margin by the given `offset`.
+    /// Stretches each margin by the given `offset`.
     ///
     /// Returns a reference to `this`.
     ///
