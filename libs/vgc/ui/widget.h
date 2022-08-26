@@ -704,8 +704,8 @@ public:
 
 protected:
     void onStyleChanged() override;
-    
-    /// Override this function if you wish to handle the addition of 
+
+    /// Override this function if you wish to handle the addition of
     /// child widgets to this widget.
     virtual void onWidgetAdded(Widget*) {
     }
