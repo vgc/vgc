@@ -93,8 +93,8 @@ public:
     float preferredHeightForWidth(float width) const override;
 
 protected:
-    void onWidgetAdded(Object* child) override;
-    void onWidgetRemoved(Object* child) override;
+    void onWidgetAdded(Widget* child) override;
+    void onWidgetRemoved(Widget* child) override;
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
 

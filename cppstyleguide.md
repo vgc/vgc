@@ -339,8 +339,8 @@ public:
     }
     
 protected: // then other protected methods
-    void onWidgetAdded(Object* child) override;
-    void onWidgetRemoved(Object* child) override;
+    void onWidgetAdded(Widget* child) override;
+    void onWidgetRemoved(Widget* child) override;
 
 private:: // then private member variables and methods
     FlexDirection direction_;
