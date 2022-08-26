@@ -29,7 +29,6 @@
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
 #include <vgc/ui/lineedit.h>
-#include <vgc/ui/menubar.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
