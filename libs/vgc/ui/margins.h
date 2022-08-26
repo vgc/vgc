@@ -285,8 +285,7 @@ inline geometry::Rect2f operator+(const geometry::Rect2f& rect, const Margins& m
         rect.xMin() - margins.left(),
         rect.yMin() - margins.top(),
         rect.xMax() + margins.right(),
-        rect.yMax() + margins.bottom()
-    );
+        rect.yMax() + margins.bottom());
 }
 
 /// Returns a copy of `rect` shrinked (offsetted inwards) by `margins`.
@@ -298,8 +297,7 @@ inline geometry::Rect2f operator-(const geometry::Rect2f& rect, const Margins& m
         rect.xMin() + margins.left(),
         rect.yMin() + margins.top(),
         rect.xMax() - margins.right(),
-        rect.yMax() - margins.bottom()
-    );
+        rect.yMax() - margins.bottom());
 }
 
 } // namespace vgc::ui
