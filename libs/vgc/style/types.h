@@ -71,6 +71,95 @@ private:
     LengthUnit unit_ = LengthUnit::Dp;
 };
 
+/// \class vgc::style::Percentage
+/// \brief A percentage value of a style property.
+///
+class VGC_STYLE_API Percentage {
+public:
+    /// Constructs a percentage of `0%`.
+    ///
+    Percentage() {
+    }
+
+    /// Constructs a percentage with the given value.
+    ///
+    Percentage(double value)
+        : value_(value) {
+    }
+
+    /// Returns the numerical value of the percentage.
+    ///
+    double value() const {
+        return value_;
+    }
+
+    /// Parses the given range of `StyleToken`s as a `Percentage`.
+    ///
+    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
+    /// valid `Percentage`. Otherwise, return a `StyleValue` holding a `Percentage`.
+    ///
+    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+
+private:
+    double value_ = 0;
+};
+
+/// \class vgc::style::LengthOrPercentage
+/// \brief The value and unit of a style property that can be a length or a percentage.
+///
+class VGC_STYLE_API LengthOrPercentage {
+public:
+    /// Constructs a length of `0dp`.
+    ///
+    LengthOrPercentage() {
+    }
+
+    /// Constructs a length with the given value and unit.
+    ///
+    LengthOrPercentage(double value, LengthUnit unit)
+        : value_(value)
+        , unit_(unit) {
+    }
+
+    /// Constructs a percentage with the given value.
+    ///
+    LengthOrPercentage(double value)
+        : value_(value)
+        , isPercentage_(true) {
+    }
+
+    /// Returns the numerical value of the length or percentage.
+    ///
+    double value() const {
+        return value_;
+    }
+
+    /// Returns the unit of the length.
+    ///
+    LengthUnit unit() const {
+        return unit_;
+    }
+
+    /// Returns whether this is a percentage.
+    ///
+    bool isPercentage() const {
+        return isPercentage_;
+    }
+
+    /// Parses the given range of `StyleToken`s as a `LengthOrPercentage`.
+    ///
+    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrPercentage`. Otherwise, return a `StyleValue` holding a
+    /// `LengthOrPercentage`.
+    ///
+    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+
+private:
+    double value_ = 0;
+    LengthUnit unit_ = LengthUnit::Dp;
+    bool isPercentage_ = false;
+};
+
 /// \class vgc::style::LengthOrAuto
 /// \brief A value which is either a `Length` or the keyword `auto`.
 ///
@@ -124,6 +213,60 @@ private:
     bool isAuto_ = true;
 };
 
+/// \class vgc::style::BorderRadius
+/// \brief A pair of LengthOrPercentage used to represent a rounded corner.
+///
+class VGC_STYLE_API BorderRadius {
+public:
+    /// Constructs a `BorderRadius` with both values set to `0dp`.
+    ///
+    BorderRadius() {
+    }
+
+    /// Constructs a `BorderRadius` with both values set to the given
+    /// `LengthOrPercentage`
+    ///
+    BorderRadius(const LengthOrPercentage& value)
+        : horizontalRadius_(value)
+        , verticalRadius_(value) {
+    }
+
+    /// Constructs a `BorderRadius` with the two given horizontal and vertical
+    /// `LengthOrPercentage` radius values.
+    ///
+    BorderRadius(
+        const LengthOrPercentage& horizontalRadius,
+        const LengthOrPercentage& verticalRadius)
+
+        : horizontalRadius_(horizontalRadius)
+        , verticalRadius_(verticalRadius) {
+    }
+
+    /// Returns the horizontal radius of this border radius.
+    ///
+    LengthOrPercentage horizontalRadius() const {
+        return horizontalRadius_;
+    }
+
+    /// Returns the vertical radius of this border radius.
+    ///
+    LengthOrPercentage verticalRadius() const {
+        return verticalRadius_;
+    }
+
+    /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
+    ///
+    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrAuto`. Otherwise, return a `StyleValue` holding a
+    /// `LengthOrAuto`.
+    ///
+    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+
+private:
+    LengthOrPercentage horizontalRadius_;
+    LengthOrPercentage verticalRadius_;
+};
+
 } // namespace vgc::style
 
-#endif // VGC_STYLE_STYLE_H
+#endif // VGC_STYLE_TYPES_H

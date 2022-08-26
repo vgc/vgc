@@ -50,6 +50,39 @@ StyleValue Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
+StyleValue Percentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+    if (begin + 1 != end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Percentage) {
+        return StyleValue::custom(Percentage(begin->toDouble()));
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue LengthOrPercentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+    if (begin + 1 != end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Percentage) {
+        return StyleValue::custom(LengthOrPercentage(begin->toDouble()));
+    }
+    else if (begin->type == StyleTokenType::Dimension) {
+        LengthUnit unit;
+        if (isValidLengthUnit(begin->codePointsValue, unit)) {
+            return StyleValue::custom(LengthOrPercentage(begin->toDouble(), unit));
+        }
+        else {
+            return StyleValue::invalid();
+        }
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
 StyleValue LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
         return StyleValue::invalid();
@@ -73,6 +106,40 @@ StyleValue LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end)
     }
     else {
         return StyleValue::invalid();
+    }
+}
+
+StyleValue BorderRadius::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+    if (begin == end) {
+        return StyleValue::invalid();
+    }
+    else if (begin + 1 == end) {
+        StyleValue v = LengthOrPercentage::parse(begin, end);
+        if (v.isValid()) {
+            LengthOrPercentage lp = v.to<LengthOrPercentage>();
+            return StyleValue::custom(BorderRadius(lp));
+        }
+        else {
+            return StyleValue::invalid();
+        }
+    }
+    else {
+        // Middle tokens should all be whitespaces
+        for (StyleTokenIterator it = begin + 1; it != (end - 1); ++it) {
+            if (it->type != StyleTokenType::Whitespace) {
+                return StyleValue::invalid();
+            }
+        }
+        StyleValue v1 = LengthOrPercentage::parse(begin, begin + 1);
+        StyleValue v2 = LengthOrPercentage::parse(end - 1, end);
+        if (v1.isValid() && v2.isValid()) {
+            LengthOrPercentage lp1 = v1.to<LengthOrPercentage>();
+            LengthOrPercentage lp2 = v2.to<LengthOrPercentage>();
+            return StyleValue::custom(BorderRadius(lp1, lp2));
+        }
+        else {
+            return StyleValue::invalid();
+        }
     }
 }
 

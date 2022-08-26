@@ -83,6 +83,10 @@
     text-horizontal-align: left;
 }
 
+.ColorPalette .Flex .LineEdit {
+    border-top-right-radius: 10dp 5dp;
+}
+
 .Plot2d {
     background-color-on-hover: rgb(54, 56, 57);
     padding-top: 3dp;

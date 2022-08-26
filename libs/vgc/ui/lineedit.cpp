@@ -24,6 +24,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/colors.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/style/types.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/strings.h>
 
@@ -134,6 +135,13 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         core::Color backgroundColor = detail::getColor(
             this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
         float borderRadius = detail::getLength(this, gs::border_radius);
+
+        style::BorderRadius topRightRadius =
+            style(gs::border_top_right_radius).to<style::BorderRadius>();
+
+        VGC_DEBUG_TMP_EXPR(topRightRadius.horizontalRadius().value());
+        VGC_DEBUG_TMP_EXPR(topRightRadius.verticalRadius().value());
+
 #if defined(VGC_QOPENGL_EXPERIMENT)
         static core::Stopwatch sw = {};
         auto t = sw.elapsed() * 50.f;

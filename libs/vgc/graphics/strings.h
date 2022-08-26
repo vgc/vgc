@@ -39,6 +39,10 @@ VGC_GRAPHICS_API extern const core::StringId padding_left;
 VGC_GRAPHICS_API extern const core::StringId border_width;
 VGC_GRAPHICS_API extern const core::StringId border_color;
 VGC_GRAPHICS_API extern const core::StringId border_radius;
+VGC_GRAPHICS_API extern const core::StringId border_top_left_radius;
+VGC_GRAPHICS_API extern const core::StringId border_top_right_radius;
+VGC_GRAPHICS_API extern const core::StringId border_bottom_right_radius;
+VGC_GRAPHICS_API extern const core::StringId border_bottom_left_radius;
 
 // inherited
 VGC_GRAPHICS_API extern const core::StringId pixel_hinting;
