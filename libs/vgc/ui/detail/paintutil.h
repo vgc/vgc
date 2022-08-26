@@ -75,61 +75,11 @@ void insertRect(
     const core::Color& color,
     const geometry::Rect2f& rect);
 
-void insertText(
-    core::FloatArray& a,
-    const core::Color& color,
-    float x1, float y1, float x2, float y2,
-    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-    const std::string& text,
-    const graphics::TextProperties& textProperties,
-    const graphics::TextCursor& textCursor,
-    bool hinting,
-    float scrollLeft = 0.0f);
-
-void insertText(
-    core::FloatArray& a,
-    const core::Color& color,
-    const geometry::Rect2f& rect,
-    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-    const std::string& text,
-    const graphics::TextProperties& textProperties,
-    const graphics::TextCursor& textCursor,
-    bool hinting,
-    float scrollLeft = 0.0f);
-
-void insertText(
-    core::FloatArray& a,
-    const core::Color& color,
-    float x1, float y1, float x2, float y2,
-    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-    const graphics::ShapedText& shapedText,
-    const graphics::TextProperties& textProperties,
-    const graphics::TextCursor& textCursor,
-    bool hinting,
-    float scrollLeft = 0.0f);
-
-void insertText(
-    core::FloatArray& a,
-    const core::Color& color,
-    const geometry::Rect2f& rect,
-    float paddingLeft, float paddingRight, float paddingTop, float paddingBottom,
-    const graphics::ShapedText& shapedText,
-    const graphics::TextProperties& textProperties,
-    const graphics::TextCursor& textCursor,
-    bool hinting,
-    float scrollLeft = 0.0f);
-
 // clang-format on
 
 core::Color getColor(const Widget* widget, core::StringId property);
 
 float getLength(const Widget* widget, core::StringId property);
-
-// Note: we don't use default arguments to avoid recompiling everything
-// when we want to change them for testing
-graphics::SizedFont* getDefaultSizedFont();
-graphics::SizedFont* getDefaultSizedFont(Int ppem);
-graphics::SizedFont* getDefaultSizedFont(Int ppem, graphics::FontHinting hinting);
 
 } // namespace vgc::ui::detail
 
