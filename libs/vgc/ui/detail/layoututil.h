@@ -46,7 +46,7 @@ public:
             return elementRef_;
         }
 
-        const Int elementIndex() const {
+        Int elementIndex() const {
             return elementIndex_;
         }
 
