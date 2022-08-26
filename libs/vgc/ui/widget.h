@@ -707,11 +707,13 @@ protected:
 
     /// Override this function if you wish to handle the addition of
     /// child widgets to this widget.
+    ///
     virtual void onWidgetAdded(Widget*) {
     }
 
     /// Override this function if you wish to handle the removal of
     /// child widgets from this widget.
+    ///
     virtual void onWidgetRemoved(Widget*) {
     }
 
