@@ -474,9 +474,11 @@ void Grid::updateChildrenGeometry() {
                         shrinkedSize = minSizeH;
                         minSizeReached = true;
                     }
-                    else if (hint) {
+                    else {
                         shrinkedSize = static_cast<float>(shrinkedSizeD);
-                        //hinter.append(&track, index, shrinkedSizeD, shrinkFactorD);
+                        if (hint) {
+                            hinter.append(&track, index, shrinkedSizeD, shrinkFactorD);
+                        }
                     }
                 }
                 track.size = shrinkedSize;
