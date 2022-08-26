@@ -23,6 +23,14 @@
 
 namespace vgc::graphics {
 
+using style::Length;
+using style::LengthOrAuto;
+using style::LengthUnit;
+using style::StyleTokenIterator;
+using style::StyleTokenType;
+using style::StyleValue;
+using style::StyleValueType;
+
 RichTextSpan::RichTextSpan(RichTextSpan* parent)
     : StylableObject()
     , parent_(parent)
@@ -63,13 +71,6 @@ style::StylableObject* RichTextSpan::nextSiblingStylableObject() const {
 
 namespace {
 
-using style::Length;
-using style::LengthUnit;
-using style::StyleTokenIterator;
-using style::StyleTokenType;
-using style::StyleValue;
-using style::StyleValueType;
-
 StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {off, normal});
@@ -99,6 +100,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto zero_          = StyleValue::number(0.0f);
     auto one_           = StyleValue::number(1.0f);
     auto twelve_        = StyleValue::custom(Length(12.0f, LengthUnit::Dp));
+    auto auto_          = StyleValue::custom(LengthOrAuto());
     auto normal_        = StyleValue::identifier(strings::normal);
     auto left_          = StyleValue::identifier(strings::left);
     auto top_           = StyleValue::identifier(strings::top);
@@ -121,8 +123,8 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     table->insert(pixel_hinting,                    normal_,        true,  &parsePixelHinting);
     table->insert(font_size,                        twelve_,        true,  &style::Length::parse);
-    table->insert(font_ascent,                      black_,         true,  &style::parseLength);
-    table->insert(font_descent,                     black_,         true,  &style::parseLength);
+    table->insert(font_ascent,                      auto_,          true,  &style::LengthOrAuto::parse);
+    table->insert(font_descent,                     auto_,          true,  &style::LengthOrAuto::parse);
     table->insert(text_color,                       black_,         true,  &style::parseColor);
     table->insert(text_selection_color,             white_,         true,  &style::parseColor);
     table->insert(text_selection_background_color,  blueish_,       true,  &style::parseColor);
@@ -157,12 +159,12 @@ const style::StylePropertySpecTable* RichTextSpan::stylePropertySpecs() {
 
 namespace {
 
-graphics::SizedFont* getDefaultSizedFont_(Int ppem, FontHinting hinting) {
+SizedFont* getDefaultSizedFont_(Int ppem, FontHinting hinting) {
     Font* font = fontLibrary()->defaultFont();
     return font->getSizedFont({ppem, hinting});
 }
 
-graphics::SizedFont* getDefaultSizedFont_() {
+SizedFont* getDefaultSizedFont_() {
     return getDefaultSizedFont_(14, FontHinting::Native);
 }
 
@@ -257,14 +259,35 @@ void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2
     insertRect(a, c, r.xMin(), r.yMin(), r.xMax(), r.yMax());
 }
 
-float getLengthInDp(const RichTextSpan* span, core::StringId property) {
+float convertToPx(double value, LengthUnit unit) {
+    // TODO: use dpiFactor to scale dp to px.
+    // As of 2022-08-26, Widget::width() is assumed to be in dp. However, we
+    // will change this design such that Widget::width() is in (physical) px
+    // instead. For this reason, we already use "px" in this function name in
+    // anticipation of this change.
+    switch (unit) {
+    case LengthUnit::Dp:
+        return static_cast<float>(value);
+    }
+    return 0.0f;
+}
+
+float getLengthInPx(const RichTextSpan* span, core::StringId property) {
     Length length = span->style(property).to<Length>();
-    if (length.unit() == LengthUnit::Dp) {
-        return static_cast<float>(length.value());
+    return convertToPx(length.value(), length.unit());
+}
+
+float getLengthOrAutoInPx(
+    const RichTextSpan* span,
+    core::StringId property,
+    float valueIfAuto) {
+
+    LengthOrAuto length = span->style(property).to<LengthOrAuto>();
+    if (length.isAuto()) {
+        return valueIfAuto;
     }
     else {
-        // TODO: convert units
-        return 0.0f;
+        return convertToPx(length.value(), length.unit());
     }
 }
 
@@ -316,6 +339,14 @@ TextProperties getTextProperties(const RichTextSpan* span) {
     return properties;
 }
 
+float getAscent(const RichTextSpan* span, SizedFont* sizedFont) {
+    return getLengthOrAutoInPx(span, strings::font_ascent, sizedFont->ascent());
+}
+
+float getDescent(const RichTextSpan* span, SizedFont* sizedFont) {
+    return -getLengthOrAutoInPx(span, strings::font_descent, -sizedFont->descent());
+}
+
 } // namespace
 
 void RichText::fill(core::FloatArray& a) {
@@ -348,10 +379,10 @@ void RichText::fill(core::FloatArray& a) {
     // Compute text geometry
     // TODO: cache this on text change, rect change, or style change
     // Vertical centering
-    graphics::SizedFont* sizedFont = shapedText_.sizedFont();
+    SizedFont* sizedFont = shapedText_.sizedFont();
     float height = (rect_.yMax() - paddingBottom) - (rect_.yMin() + paddingTop);
-    float ascent = sizedFont->ascent();
-    float descent = sizedFont->descent();
+    float ascent = getAscent(this, sizedFont);
+    float descent = getDescent(this, sizedFont);
     if (hinting) {
         ascent = std::round(ascent);
         descent = std::round(descent);
@@ -359,13 +390,13 @@ void RichText::fill(core::FloatArray& a) {
     float textHeight = ascent - descent;
     float textTop = 0;
     switch (textProperties.verticalAlign()) {
-    case graphics::TextVerticalAlign::Top:
+    case TextVerticalAlign::Top:
         textTop = rect_.yMin() + paddingTop;
         break;
-    case graphics::TextVerticalAlign::Middle:
+    case TextVerticalAlign::Middle:
         textTop = rect_.yMin() + paddingTop + 0.5f * (height - textHeight);
         break;
-    case graphics::TextVerticalAlign::Bottom:
+    case TextVerticalAlign::Bottom:
         textTop = rect_.yMin() + paddingTop + (height - textHeight);
         break;
     }
@@ -379,13 +410,13 @@ void RichText::fill(core::FloatArray& a) {
     float advance = static_cast<float>(shapedText_.advance()[0]);
     float textLeft = 0;
     switch (textProperties.horizontalAlign()) {
-    case graphics::TextHorizontalAlign::Left:
+    case TextHorizontalAlign::Left:
         textLeft = rect_.xMin() + paddingLeft;
         break;
-    case graphics::TextHorizontalAlign::Center:
+    case TextHorizontalAlign::Center:
         textLeft = rect_.xMin() + paddingLeft + 0.5f * (width - advance);
         break;
-    case graphics::TextHorizontalAlign::Right:
+    case TextHorizontalAlign::Right:
         textLeft = rect_.xMin() + paddingLeft + (width - advance);
         break;
     }
@@ -415,7 +446,7 @@ void RichText::fill(core::FloatArray& a) {
     float selectionBeginAdvance = 0;
     float selectionEndAdvance = 0;
     if (isCursorVisible_ || hasVisibleSelection) {
-        using Info = graphics::ShapedTextPositionInfo;
+        using Info = ShapedTextPositionInfo;
         Info infoBegin = shapedText_.positionInfo(selectionStart_);
         Info infoEnd = shapedText_.positionInfo(selectionEnd_);
         selectionBeginGlyph = infoBegin.glyphIndex();
@@ -619,7 +650,7 @@ std::pair<Int, Int> RichText::positionPairFromPoint(
 
 void RichText::onStyleChanged() {
 
-    float fontSize_ = getLengthInDp(this, strings::font_size);
+    float fontSize_ = getLengthInPx(this, strings::font_size);
     Int newPpem = (std::max)((Int)1, core::ifloor<Int>(fontSize_));
     Int oldPpem = shapedText_.sizedFont()->params().ppemHeight();
     if (newPpem != oldPpem) {

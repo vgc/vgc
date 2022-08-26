@@ -19,7 +19,15 @@
 .LineEdit,
 .Plot2d {
     pixel-hinting: normal;
+
+    /* With SourceSansPro @ 14dp, both cap-height and num-height are equal to 9dp.
+     * So we ensure that font-ascent - 9dp == font-descent so that number and capital
+     * letters are perfectly centered in the rectangle of selection.
+     */
     font-size: 14dp;
+    font-ascent: 12dp;
+    font-descent: 3dp;
+
     caret-color: rgb(221, 221, 221);
     text-color: rgb(221, 221, 221);
     text-selection-color: rgb(221, 221, 221);
@@ -30,7 +38,7 @@
 .Label,
 .LineEdit {
     preferred-width: auto;
-    preferred-height: 22dp;
+    preferred-height: 21dp;
     text-vertical-align: middle;
     text-horizontal-align: center;
 }
