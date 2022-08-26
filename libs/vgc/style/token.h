@@ -190,7 +190,7 @@ struct StyleToken {
     /// Returns the numericValue of this token as a double. Assumes the type of
     /// this token is either Number, Percentage, or Dimension.
     ///
-    float toDouble() const {
+    double toDouble() const {
         return numericFlag() == StyleTokenNumericFlag::Integer
                    ? static_cast<double>(numericValue.integer)
                    : static_cast<double>(numericValue.floatingPoint);
