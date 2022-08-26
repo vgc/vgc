@@ -81,10 +81,6 @@ namespace {
 using Length = double;
 using Number = double;
 
-float getLen(const Widget* w, core::StringId id) {
-    return static_cast<float>(w->style(id).valueOrDefault<Length>());
-}
-
 float getNum(const Widget* w, core::StringId id) {
     return static_cast<float>(w->style(id).valueOrDefault<Number>());
 }
