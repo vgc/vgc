@@ -18,13 +18,54 @@
 
 namespace vgc::style {
 
+namespace {
+
+bool isValidLengthUnit(std::string_view unitString, LengthUnit& unitEnum) {
+    if (unitString == "dp") {
+        unitEnum = LengthUnit::Dp;
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+} // namespace
+
 StyleValue Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
-    if (begin == end) {
+    if (begin + 1 != end) {
         return StyleValue::invalid();
     }
-    else if (begin->type == StyleTokenType::Dimension && begin + 1 == end) {
-        if (begin->codePointsValue == "dp") {
-            return StyleValue::custom(Length(begin->toDouble(), LengthUnit::Dp));
+    else if (begin->type == StyleTokenType::Dimension) {
+        LengthUnit unit;
+        if (isValidLengthUnit(begin->codePointsValue, unit)) {
+            return StyleValue::custom(Length(begin->toDouble(), unit));
+        }
+        else {
+            return StyleValue::invalid();
+        }
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+    if (begin + 1 != end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Identifier) {
+        if (begin->codePointsValue == "auto") {
+            return StyleValue::custom(LengthOrAuto());
+        }
+        else {
+            return StyleValue::invalid();
+        }
+    }
+    else if (begin->type == StyleTokenType::Dimension) {
+        LengthUnit unit;
+        if (isValidLengthUnit(begin->codePointsValue, unit)) {
+            return StyleValue::custom(LengthOrAuto(begin->toDouble(), unit));
         }
         else {
             return StyleValue::invalid();
