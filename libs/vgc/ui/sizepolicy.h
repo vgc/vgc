@@ -75,7 +75,7 @@ public:
     /// Returns true if the PreferredSizeType of this PreferredSize is
     /// PreferredSizeType::Auto.
     ///
-    bool isAuto() const{
+    bool isAuto() const {
         return type_ == PreferredSizeType::Auto;
     }
 
