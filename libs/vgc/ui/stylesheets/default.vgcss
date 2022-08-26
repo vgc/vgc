@@ -44,6 +44,7 @@
 }
 
 .LineEdit {
+    preferred-width: 100dp;
     text-horizontal-align: left;
 }
 

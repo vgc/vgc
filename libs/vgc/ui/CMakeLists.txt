@@ -15,6 +15,7 @@ vgc_add_library(ui
         event.h
         exceptions.h
         flex.h
+        grid.h
         key.h
         label.h
         lineedit.h
@@ -43,6 +44,7 @@ vgc_add_library(ui
         event.cpp
         exceptions.cpp
         flex.cpp
+        grid.cpp
         label.cpp
         lineedit.cpp
         logcategories.cpp

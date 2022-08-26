@@ -72,6 +72,13 @@ public:
         value_ = value;
     }
 
+    /// Returns true if the PreferredSizeType of this PreferredSize is
+    /// PreferredSizeType::Auto.
+    ///
+    bool isAuto() const{
+        return type_ == PreferredSizeType::Auto;
+    }
+
     /// Returns whether the two PreferredSize are equal.
     ///
     /// Two PreferredSize are considered equal if and only if:

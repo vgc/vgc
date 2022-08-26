@@ -27,7 +27,9 @@
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
 #include <vgc/ui/column.h>
+#include <vgc/ui/grid.h>
 #include <vgc/ui/lineedit.h>
+#include <vgc/ui/menubar.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
@@ -146,8 +148,44 @@ int main(int argc, char* argv[]) {
     vgc::core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
 
     vgc::ui::ColumnPtr col = vgc::ui::Column::create();
-    vgc::ui::Plot2d* plot2d = col->createChild<vgc::ui::Plot2d>();
 
+    //vgc::ui::MenuBar* menuBar = col->createChild<vgc::ui::MenuBar>();
+
+    vgc::ui::Grid* gridTest = col->createChild<vgc::ui::Grid>();
+    gridTest->setStyleSheet(".Grid { column-gap: 30dp; row-gap: 10dp; }");
+    for (vgc::Int i = 0; i < 2; ++i) {
+        for (vgc::Int j = 0; j < 3; ++j) {
+            vgc::ui::LineEditPtr le = vgc::ui::LineEdit::create();
+            std::string sheet(
+                ".LineEdit { text-color: rgb(50, 232, 211); preferred-width: ");
+            sheet += vgc::core::toString(1 + j);
+            sheet += "00dp; horizontal-stretch: ";
+            sheet += vgc::core::toString(j + 1);
+            sheet += "; vertical-stretch: 0; }";
+            le->setStyleSheet(sheet);
+            le->setText("test");
+            gridTest->setWidgetAt(le.get(), i, j);
+        }
+    }
+    gridTest->widgetAt(0, 0)->setStyleSheet(
+        ".LineEdit { text-color: rgb(255, 255, 50); vertical-stretch: 0; "
+        "preferred-width: 127dp; padding-left: 30dp; margin-left: 80dp; "
+        "horizontal-stretch: 0; horizontal-shrink: 1; }");
+    gridTest->widgetAt(0, 1)->setStyleSheet(
+        ".LineEdit { text-color: rgb(40, 255, 150); vertical-stretch: 0; "
+        "preferred-width: 128dp; horizontal-stretch: 20; }");
+    gridTest->widgetAt(1, 0)->setStyleSheet(
+        ".LineEdit { text-color: rgb(40, 255, 150); vertical-stretch: 0; "
+        "preferred-width: 127dp; horizontal-shrink: 1;}");
+    gridTest->widgetAt(1, 1)->setStyleSheet(
+        ".LineEdit { text-color: rgb(255, 255, 50); vertical-stretch: 0; "
+        "preferred-width: 128dp; padding-left: 30dp; horizontal-stretch: 0; }");
+    gridTest->widgetAt(0, 2)->setStyleSheet(
+        ".LineEdit { text-color: rgb(255, 100, 80); vertical-stretch: 0; "
+        "preferred-width: 231dp; horizontal-stretch: 2; }");
+    gridTest->updateGeometry();
+
+    vgc::ui::Plot2d* plot2d = col->createChild<vgc::ui::Plot2d>();
     plot2d->setNumYs(16);
     // clang-format off
     plot2d->appendDataPoint( 0.0f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  4.f,  5.f, 11.f,  4.f,  4.f,  5.f, 11.f,  4.f);
@@ -181,6 +219,9 @@ int main(int argc, char* argv[]) {
             lineEdit->setText(std::string_view(lipsum).substr(begin, count));
         }
     }
+
+    // XXX we need this until styles get better auto-update behavior
+    col->addStyleClass(vgc::core::StringId("force-update-style"));
 
     vgc::ui::WindowPtr wnd = vgc::ui::Window::create(col);
     wnd->setTitle("VGC UI Test");
