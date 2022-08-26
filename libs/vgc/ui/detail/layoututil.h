@@ -78,8 +78,27 @@ public:
         entries_.emplaceLast(std::move(elementRef), elementIndex, stretchedSize, pace);
     }
 
-    void doHint() {
+    void doHint(bool allowSizeWobbling = false) {
         if (entries_.empty()) {
+            return;
+        }
+
+        // size-wobbling is when elements occasionally get smaller while increasing
+        // the shared space. It is a better choice when there is a wide element
+        // next to a lot of smaller ones.
+        //
+        if (allowSizeWobbling) {
+            // this is a simple algorithm with a max size-wobbling of 1px per element.
+            // (align from nonHinted to nearest pixel)
+            double hintedSum = 0;
+            double inputSum = 0;
+            for (ElementEntry& e : entries_) {
+                inputSum += e.inputSize_;
+                double newHintedSum = std::round(inputSum);
+                double hintedSize = newHintedSum - hintedSum;
+                hintedSum = newHintedSum;
+                e.size_ = static_cast<Int>(hintedSize);
+            }
             return;
         }
 
