@@ -42,6 +42,9 @@ VGC_GRAPHICS_API extern const core::StringId border_radius;
 
 // inherited
 VGC_GRAPHICS_API extern const core::StringId pixel_hinting;
+VGC_GRAPHICS_API extern const core::StringId font_size;
+VGC_GRAPHICS_API extern const core::StringId font_ascent;
+VGC_GRAPHICS_API extern const core::StringId font_descent;
 VGC_GRAPHICS_API extern const core::StringId text_color;
 VGC_GRAPHICS_API extern const core::StringId text_selection_color;
 VGC_GRAPHICS_API extern const core::StringId text_selection_background_color;

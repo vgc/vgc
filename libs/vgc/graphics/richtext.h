@@ -414,6 +414,9 @@ public:
         return parentStylableObject_;
     }
 
+protected:
+    void onStyleChanged() override;
+
 private:
     style::StylableObject* parentStylableObject_;
     std::string text_;

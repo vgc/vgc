@@ -11,6 +11,7 @@ vgc_add_library(style
         stylableobject.h
         style.h
         token.h
+        types.h
 
     CPP_FILES
         parse.cpp
@@ -18,6 +19,7 @@ vgc_add_library(style
         stylableobject.cpp
         style.cpp
         token.cpp
+        types.cpp
 
     COMPILE_DEFINITIONS
 )

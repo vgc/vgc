@@ -76,8 +76,8 @@ public:
     //     the reference counts? Shouldn't we make the reference counts atomic,
     //     or else protect the assignment to this facePtr by a mutex?
     //
-    SizedFontPtr facePtr;
-    std::string text;
+    SizedFontPtr sizedFont_;
+    std::string text_;
 
     // Output of shaping
     //
@@ -96,21 +96,21 @@ public:
     //
     hb_buffer_t* buf;
 
-    ShapedTextImpl(SizedFont* face, std::string_view text)
-        : facePtr(face)
-        , text()
+    ShapedTextImpl(SizedFont* sizedFont, std::string_view text)
+        : sizedFont_(sizedFont)
+        , text_(text)
         , glyphs()
         , graphemes()
         , positions()
         , advance(0, 0)
         , buf(hb_buffer_create()) {
 
-        setText(text);
+        update();
     }
 
     ShapedTextImpl(const ShapedTextImpl& other)
-        : facePtr(other.facePtr)
-        , text(other.text)
+        : sizedFont_(other.sizedFont_)
+        , text_(other.text_)
         , glyphs(other.glyphs)
         , graphemes(other.graphemes)
         , positions(other.positions)
@@ -120,8 +120,8 @@ public:
 
     ShapedTextImpl& operator=(const ShapedTextImpl& other) {
         if (this != &other) {
-            facePtr = other.facePtr;
-            text = other.text;
+            sizedFont_ = other.sizedFont_;
+            text_ = other.text_;
             glyphs = other.glyphs;
             graphemes = other.graphemes;
             positions = other.positions;
@@ -134,11 +134,21 @@ public:
         hb_buffer_destroy(buf);
     }
 
-    void setText(std::string_view text_) {
-        // HarfBuzz input
-        text = text_;
-        const char* data = text.data();
-        int dataLength = core::int_cast<int>(text.size());
+    void setSizedFont(SizedFont* sizedFont) {
+        sizedFont_ = sizedFont;
+        update();
+    }
+
+    void setText(std::string_view text) {
+        text_ = text;
+        update();
+    }
+
+    void update() {
+
+        // Prepare input
+        const char* data = text_.data();
+        int dataLength = core::int_cast<int>(text_.size());
         unsigned int firstChar = 0;
         int numChars = dataLength;
 
@@ -147,7 +157,7 @@ public:
         hb_buffer_set_cluster_level(buf, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS);
         hb_buffer_add_utf8(buf, data, dataLength, firstChar, numChars);
         hb_buffer_guess_segment_properties(buf);
-        hb_shape(facePtr->impl_->hbFont, buf, nullptr, 0);
+        hb_shape(sizedFont_->impl_->hbFont, buf, nullptr, 0);
 
         // HarfBuzz output
         unsigned int n;
@@ -160,7 +170,7 @@ public:
         for (unsigned int i = 0; i < n; ++i) {
             hb_glyph_info_t& info = glyphInfos[i];
             hb_glyph_position_t& pos = glyphPositions[i];
-            SizedGlyph* glyph = facePtr->getSizedGlyphFromIndex(info.codepoint);
+            SizedGlyph* glyph = sizedFont_->getSizedGlyphFromIndex(info.codepoint);
             Int bytePosition = core::int_cast<Int>(info.cluster);
             geometry::Vec2f glyphOffset = detail::f266ToVec2f(pos.x_offset, pos.y_offset);
             geometry::Vec2f glyphAdvance =
@@ -179,7 +189,7 @@ public:
         }
 
         // Create grapheme and position info objects with temporary values
-        TextBoundaryMarkersArray markersArray = computeBoundaryMarkers(text);
+        TextBoundaryMarkersArray markersArray = computeBoundaryMarkers(text_);
         graphemes.clear();
         positions.clear();
         for (Int byteIndex = 0; byteIndex < markersArray.length(); ++byteIndex) {
@@ -200,7 +210,7 @@ public:
         if (numGraphemes > 0 && numGlyphs > 0) {
             Int graphemeIndex = 0;
             Int glyphIndex = 0;
-            Int numBytes = core::int_cast<Int>(text.size());
+            Int numBytes = core::int_cast<Int>(text_.size());
             for (Int p = 0; p < numBytes; ++p) {
                 while (glyphs[glyphIndex].bytePosition() < p //
                        && glyphIndex + 1 < numGlyphs         //
@@ -345,11 +355,15 @@ ShapedText::~ShapedText() {
 }
 
 SizedFont* ShapedText::sizedFont() const {
-    return impl_->facePtr.get();
+    return impl_->sizedFont_.get();
+}
+
+void ShapedText::setSizedFont(SizedFont* sizedFont) {
+    impl_->setSizedFont(sizedFont);
 }
 
 const std::string& ShapedText::text() const {
-    return impl_->text;
+    return impl_->text_;
 }
 
 void ShapedText::setText(std::string_view text) {

@@ -609,6 +609,12 @@ public:
     ///
     SizedFont* sizedFont() const;
 
+    /// Modifies the sizedFont of this ShapedText. This automatically
+    /// recomputes the glyphs, and there is no guarantee that the number of
+    /// glyph is unchanged, even if using the same font on a different size.
+    ///
+    void setSizedFont(SizedFont* sizedFont);
+
     /// Returns the input text string of this ShapedText.
     ///
     const std::string& text() const;
