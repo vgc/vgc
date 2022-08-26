@@ -100,7 +100,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto zero_          = StyleValue::number(0.0f);
     auto one_           = StyleValue::number(1.0f);
     auto twelve_        = StyleValue::custom(Length(12.0f, LengthUnit::Dp));
-    auto auto_          = StyleValue::custom(LengthOrAuto());
+    auto autol_          = StyleValue::custom(LengthOrAuto());
     auto normal_        = StyleValue::identifier(strings::normal);
     auto left_          = StyleValue::identifier(strings::left);
     auto top_           = StyleValue::identifier(strings::top);
@@ -123,8 +123,8 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     table->insert(pixel_hinting,                    normal_,        true,  &parsePixelHinting);
     table->insert(font_size,                        twelve_,        true,  &style::Length::parse);
-    table->insert(font_ascent,                      auto_,          true,  &style::LengthOrAuto::parse);
-    table->insert(font_descent,                     auto_,          true,  &style::LengthOrAuto::parse);
+    table->insert(font_ascent,                      autol_,         true,  &style::LengthOrAuto::parse);
+    table->insert(font_descent,                     autol_,         true,  &style::LengthOrAuto::parse);
     table->insert(text_color,                       black_,         true,  &style::parseColor);
     table->insert(text_selection_color,             white_,         true,  &style::parseColor);
     table->insert(text_selection_background_color,  blueish_,       true,  &style::parseColor);
