@@ -113,11 +113,11 @@ void UiWidget::enterEvent(QEvent* event)
 void UiWidget::enterEvent(QEnterEvent* event)
 #endif
 {
-    event->setAccepted(widget_->onMouseEnter());
+    event->setAccepted(widget_->setHovered(true));
 }
 
 void UiWidget::leaveEvent(QEvent* event) {
-    event->setAccepted(widget_->onMouseLeave());
+    event->setAccepted(widget_->setHovered(false));
 }
 
 void UiWidget::focusInEvent(QFocusEvent* event) {

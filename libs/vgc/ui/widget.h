@@ -49,7 +49,7 @@ VGC_DECLARE_OBJECT(UiWidgetEngine);
 
 // clang-format off
 
-enum class PaintOption : UInt16 {
+enum class PaintOption : UInt64 {
     None      = 0x00,
     Resizing  = 0x01,
     LayoutViz = 0x02,
@@ -444,15 +444,34 @@ public:
     ///
     virtual bool onMouseRelease(MouseEvent* event);
 
-    /// Override this function if you wish to handle MouseEnter events. You
-    /// must return true if the event was handled, false otherwise.
-    ///
-    virtual bool onMouseEnter();
+    bool isInHoveredRow() const {
+        return isInHoveredRow_;
+    }
 
-    /// Override this function if you wish to handle MouseLeave events. You
-    /// must return true if the event was handled, false otherwise.
+    void setInHoveredRow(bool isInHoveredRow) {
+        isInHoveredRow_ = isInHoveredRow;
+    }
+
+    bool isInHoveredColumn() const {
+        return isInHoveredColumn_;
+    }
+
+    void setInHoveredColumn(bool isInHoveredColumn) {
+        isInHoveredColumn_ = isInHoveredColumn;
+    }
+
+    bool isHovered() const {
+        return isHovered_;
+    }
+
+    /// Sets the hovered state of this widget and calls `onMouseEnter` or
+    /// `onMouseLeave` accordingly.
+    /// Returns true if the event was handled.
     ///
-    virtual bool onMouseLeave();
+    bool setHovered(bool hovered) {
+        isHovered_ = hovered;
+        return hovered ? onMouseEnter() : onMouseLeave();
+    }
 
     /// Returns whether this widget tree is active, that is, whether it
     /// receives key press and focus events.
@@ -641,6 +660,10 @@ public:
         return ActionListView(actions_);
     }
 
+    /// Creates an Action, adds it to this widget, and returns the action.
+    ///
+    Action* createAction();
+
     /// Creates an Action with the given shortcut, adds it to this widget, and
     /// returns the action.
     ///
@@ -681,8 +704,28 @@ public:
 
 protected:
     void onStyleChanged() override;
-    virtual void onWidgetAdded(Object*){};
-    virtual void onWidgetRemoved(Object*){};
+
+    /// Override this function if you wish to handle the addition of
+    /// child widgets to this widget.
+    ///
+    virtual void onWidgetAdded(Widget*) {
+    }
+
+    /// Override this function if you wish to handle the removal of
+    /// child widgets from this widget.
+    ///
+    virtual void onWidgetRemoved(Widget*) {
+    }
+
+    /// Override this function if you wish to handle MouseEnter events. You
+    /// must return true if the event was handled, false otherwise.
+    ///
+    virtual bool onMouseEnter();
+
+    /// Override this function if you wish to handle MouseLeave events. You
+    /// must return true if the event was handled, false otherwise.
+    ///
+    virtual bool onMouseLeave();
 
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its
@@ -722,6 +765,9 @@ private:
     // Mouse
     Widget* mousePressedChild_ = nullptr;
     Widget* mouseEnteredChild_ = nullptr;
+    bool isHovered_ = false;
+    bool isInHoveredRow_ = false;
+    bool isInHoveredColumn_ = false;
 
     // Keyboard focus
     //

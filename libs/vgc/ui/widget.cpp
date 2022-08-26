@@ -479,6 +479,12 @@ bool Widget::onKeyRelease(QKeyEvent* event) {
     }
 }
 
+Action* Widget::createAction() {
+    ActionPtr action = Action::create();
+    actions_->append(action.get());
+    return action.get();
+}
+
 Action* Widget::createAction(const Shortcut& shortcut) {
     ActionPtr action = Action::create(shortcut);
     actions_->append(action.get());

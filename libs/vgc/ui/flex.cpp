@@ -45,11 +45,11 @@ void Flex::setWrap(FlexWrap wrap) {
     updateGeometry();
 }
 
-void Flex::onWidgetAdded(Object*) {
+void Flex::onWidgetAdded(Widget*) {
     updateGeometry();
 }
 
-void Flex::onWidgetRemoved(Object*) {
+void Flex::onWidgetRemoved(Widget*) {
     updateGeometry();
 }
 
