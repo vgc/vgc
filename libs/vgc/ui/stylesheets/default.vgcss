@@ -19,6 +19,7 @@
 .LineEdit,
 .Plot2d {
     pixel-hinting: normal;
+    font-size: 14dp;
     caret-color: rgb(221, 221, 221);
     text-color: rgb(221, 221, 221);
     text-selection-color: rgb(221, 221, 221);

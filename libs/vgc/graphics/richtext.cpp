@@ -19,6 +19,7 @@
 #include <vgc/core/colors.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/style/parse.h>
+#include <vgc/style/types.h>
 
 namespace vgc::graphics {
 
@@ -62,6 +63,8 @@ style::StylableObject* RichTextSpan::nextSiblingStylableObject() const {
 
 namespace {
 
+using style::Length;
+using style::LengthUnit;
 using style::StyleTokenIterator;
 using style::StyleTokenType;
 using style::StyleValue;
@@ -95,6 +98,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto transparent_   = StyleValue::custom(core::colors::transparent);
     auto zero_          = StyleValue::number(0.0f);
     auto one_           = StyleValue::number(1.0f);
+    auto twelve_        = StyleValue::custom(Length(12.0f, LengthUnit::Dp));
     auto normal_        = StyleValue::identifier(strings::normal);
     auto left_          = StyleValue::identifier(strings::left);
     auto top_           = StyleValue::identifier(strings::top);
@@ -116,6 +120,9 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     table->insert(border_radius,                    zero_,          false, &style::parseLength);
 
     table->insert(pixel_hinting,                    normal_,        true,  &parsePixelHinting);
+    table->insert(font_size,                        twelve_,        true,  &style::Length::parse);
+    table->insert(font_ascent,                      black_,         true,  &style::parseLength);
+    table->insert(font_descent,                     black_,         true,  &style::parseLength);
     table->insert(text_color,                       black_,         true,  &style::parseColor);
     table->insert(text_selection_color,             white_,         true,  &style::parseColor);
     table->insert(text_selection_background_color,  blueish_,       true,  &style::parseColor);
@@ -150,13 +157,13 @@ const style::StylePropertySpecTable* RichTextSpan::stylePropertySpecs() {
 
 namespace {
 
-graphics::SizedFont* getDefaultSizedFont_(Int ppem, graphics::FontHinting hinting) {
-    graphics::Font* font = graphics::fontLibrary()->defaultFont();
+graphics::SizedFont* getDefaultSizedFont_(Int ppem, FontHinting hinting) {
+    Font* font = fontLibrary()->defaultFont();
     return font->getSizedFont({ppem, hinting});
 }
 
 graphics::SizedFont* getDefaultSizedFont_() {
-    return getDefaultSizedFont_(14, graphics::FontHinting::Native);
+    return getDefaultSizedFont_(14, FontHinting::Native);
 }
 
 } // namespace
@@ -248,6 +255,17 @@ void insertRect(
 
 void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2f& r) {
     insertRect(a, c, r.xMin(), r.yMin(), r.xMax(), r.yMax());
+}
+
+float getLengthInDp(const RichTextSpan* span, core::StringId property) {
+    Length length = span->style(property).to<Length>();
+    if (length.unit() == LengthUnit::Dp) {
+        return static_cast<float>(length.value());
+    }
+    else {
+        // TODO: convert units
+        return 0.0f;
+    }
 }
 
 core::Color getColor(const RichTextSpan* span, core::StringId property) {
@@ -597,6 +615,26 @@ std::pair<Int, Int> RichText::positionPairFromPoint(
     float x = point[0] + horizontalScroll_;
     float y = point[1];
     return shapedText_.positionPairFromPoint({x, y}, boundaryMarkers);
+}
+
+void RichText::onStyleChanged() {
+
+    float fontSize_ = getLengthInDp(this, strings::font_size);
+    Int newPpem = (std::max)((Int)1, core::ifloor<Int>(fontSize_));
+    Int oldPpem = shapedText_.sizedFont()->params().ppemHeight();
+    if (newPpem != oldPpem) {
+
+        // Reshape with new font
+        SizedFont* sizedFont = getDefaultSizedFont_(newPpem, FontHinting::Native);
+        shapedText_.setSizedFont(sizedFont);
+
+        // Update cursor position
+        Int minPosition = shapedText_.minPosition();
+        Int maxPosition = shapedText_.maxPosition();
+        selectionStart_ = core::clamp(selectionStart_, minPosition, maxPosition);
+        selectionEnd_ = core::clamp(selectionEnd_, minPosition, maxPosition);
+        updateScroll_();
+    }
 }
 
 geometry::Vec2f RichText::advance_(Int position) const {

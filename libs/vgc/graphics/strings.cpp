@@ -48,6 +48,9 @@ const core::StringId border_radius("border-radius");
 
 // inherited
 const core::StringId pixel_hinting("pixel-hinting");
+const core::StringId font_size("font-size");
+const core::StringId font_ascent("font-ascent");
+const core::StringId font_descent("font-descent");
 const core::StringId text_color("text-color");
 const core::StringId text_selection_color("text-selection-color");
 const core::StringId text_selection_background_color("text-selection-background-color");
