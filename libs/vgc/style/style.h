@@ -220,7 +220,7 @@ public:
     ///
     template<typename TValue>
     TValue valueOrDefault(const TValue& defaultValue = TValue{}) const {
-        TValue* v = std::any_cast<TValue>(&value_);
+        const TValue* v = std::any_cast<TValue>(&value_);
         return v ? *v : defaultValue;
     }
 
