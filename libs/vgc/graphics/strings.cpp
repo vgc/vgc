@@ -44,7 +44,10 @@ const core::StringId padding_left("padding-left");
 
 const core::StringId border_width("border-width");
 const core::StringId border_color("border-color");
-const core::StringId border_radius("border-radius");
+const core::StringId border_top_left_radius("border-top-left-radius");
+const core::StringId border_top_right_radius("border-top-right-radius");
+const core::StringId border_bottom_right_radius("border-bottom-right-radius");
+const core::StringId border_bottom_left_radius("border-bottom-left-radius");
 
 // inherited
 const core::StringId pixel_hinting("pixel-hinting");

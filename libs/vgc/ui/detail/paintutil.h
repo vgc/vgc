@@ -25,6 +25,7 @@
 #include <vgc/geometry/rect2f.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/text.h>
+#include <vgc/style/types.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui::detail {
@@ -33,6 +34,13 @@ namespace vgc::ui::detail {
 
 void insertTriangle(
     core::FloatArray& a,
+    float r, float g, float b,
+    float x1, float y1, float x2, float y2, float x3, float y3);
+
+// replaces values from a[i] to a[i + 14] with the given triangle
+//
+void writeTriangleAt(
+    core::FloatArray& a, Int i,
     float r, float g, float b,
     float x1, float y1, float x2, float y2, float x3, float y3);
 
@@ -70,16 +78,25 @@ void insertRect(
     const core::Color& color,
     float x1, float y1, float x2, float y2);
 
+// clang-format on
+
 void insertRect(
     core::FloatArray& a,
     const core::Color& color,
     const geometry::Rect2f& rect);
 
-// clang-format on
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    const style::BorderRadiuses& borderRadiuses,
+    float pixelSize = 1.0f);
 
 core::Color getColor(const Widget* widget, core::StringId property);
 
 float getLength(const Widget* widget, core::StringId property);
+
+style::BorderRadiuses getBorderRadiuses(Widget* widget);
 
 } // namespace vgc::ui::detail
 

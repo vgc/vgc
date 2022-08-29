@@ -23,9 +23,6 @@
 
 namespace vgc::graphics {
 
-using style::Length;
-using style::LengthOrAuto;
-using style::LengthUnit;
 using style::StyleTokenIterator;
 using style::StyleTokenType;
 using style::StyleValue;
@@ -99,8 +96,9 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto transparent_   = StyleValue::custom(core::colors::transparent);
     auto zero_          = StyleValue::number(0.0f);
     auto one_           = StyleValue::number(1.0f);
-    auto twelve_        = StyleValue::custom(Length(12.0f, LengthUnit::Dp));
-    auto autol_         = StyleValue::custom(LengthOrAuto());
+    auto zerobr_        = StyleValue::custom(style::BorderRadius());
+    auto twelve_        = StyleValue::custom(style::Length(12.0f, style::LengthUnit::Dp));
+    auto autol_         = StyleValue::custom(style::LengthOrAuto());
     auto normal_        = StyleValue::identifier(strings::normal);
     auto left_          = StyleValue::identifier(strings::left);
     auto top_           = StyleValue::identifier(strings::top);
@@ -119,7 +117,10 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     table->insert(padding_left,                     zero_,          false, &style::parseLength);
     table->insert(border_width,                     zero_,          false, &style::parseLength);
     table->insert(border_color,                     black_,         false, &style::parseColor);
-    table->insert(border_radius,                    zero_,          false, &style::parseLength);
+    table->insert(border_top_left_radius,           zerobr_,        false, &style::BorderRadius::parse);
+    table->insert(border_top_right_radius,          zerobr_,        false, &style::BorderRadius::parse);
+    table->insert(border_bottom_right_radius,       zerobr_,        false, &style::BorderRadius::parse);
+    table->insert(border_bottom_left_radius,        zerobr_,        false, &style::BorderRadius::parse);
 
     table->insert(pixel_hinting,                    normal_,        true,  &parsePixelHinting);
     table->insert(font_size,                        twelve_,        true,  &style::Length::parse);
@@ -259,21 +260,21 @@ void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2
     insertRect(a, c, r.xMin(), r.yMin(), r.xMax(), r.yMax());
 }
 
-float convertToPx(double value, LengthUnit unit) {
+float convertToPx(double value, style::LengthUnit unit) {
     // TODO: use dpiFactor to scale dp to px.
     // As of 2022-08-26, Widget::width() is assumed to be in dp. However, we
     // will change this design such that Widget::width() is in (physical) px
     // instead. For this reason, we already use "px" in this function name in
     // anticipation of this change.
     switch (unit) {
-    case LengthUnit::Dp:
+    case style::LengthUnit::Dp:
         return static_cast<float>(value);
     }
     return 0.0f;
 }
 
 float getLengthInPx(const RichTextSpan* span, core::StringId property) {
-    Length length = span->style(property).to<Length>();
+    style::Length length = span->style(property).to<style::Length>();
     return convertToPx(length.value(), length.unit());
 }
 
@@ -282,7 +283,7 @@ float getLengthOrAutoInPx(
     core::StringId property,
     float valueIfAuto) {
 
-    LengthOrAuto length = span->style(property).to<LengthOrAuto>();
+    style::LengthOrAuto length = span->style(property).to<style::LengthOrAuto>();
     if (length.isAuto()) {
         return valueIfAuto;
     }

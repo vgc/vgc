@@ -94,9 +94,9 @@ void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         // Draw background
         core::Color backgroundColor = detail::getColor(
             this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
-        float borderRadius = detail::getLength(this, gs::border_radius);
         if (backgroundColor.a() > 0) {
-            detail::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+            style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
+            detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
         }
 
         // Draw text

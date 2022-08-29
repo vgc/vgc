@@ -150,6 +150,12 @@ public:
         return type_;
     }
 
+    /// Returns whether the value is valid.
+    ///
+    bool isValid() const {
+        return type_ != StyleValueType::Invalid;
+    }
+
     /// Returns the StyleValue as a `float`. The behavior is undefined
     /// if the type isn't Number.
     ///

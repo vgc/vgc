@@ -33,6 +33,14 @@
 
 namespace vgc::ui {
 
+namespace {
+
+core::StringId horizontal_group("horizontal-group");
+core::StringId first("first");
+core::StringId middle("middle");
+core::StringId last("last");
+
+} // namespace
 ColorPalette::ColorPalette()
     : Column() {
 
@@ -43,6 +51,12 @@ ColorPalette::ColorPalette()
     rLineEdit_ = rgbRow->createChild<LineEdit>();
     gLineEdit_ = rgbRow->createChild<LineEdit>();
     bLineEdit_ = rgbRow->createChild<LineEdit>();
+    rLineEdit_->addStyleClass(horizontal_group);
+    gLineEdit_->addStyleClass(horizontal_group);
+    bLineEdit_->addStyleClass(horizontal_group);
+    rLineEdit_->addStyleClass(first);
+    gLineEdit_->addStyleClass(middle);
+    bLineEdit_->addStyleClass(last);
 
     selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
     rLineEdit_->textEdited().connect(onRgbEditedSlot_());
