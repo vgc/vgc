@@ -203,7 +203,6 @@ geometry::Vec2f getCorner(const geometry::Rect2f& rect) {
     else if constexpr (cornerType == BottomLeft) {
         return geometry::Vec2f(rect.xMin(), rect.yMax());
     }
-    return geometry::Vec2f(); // silence warning
 }
 
 float getRadiusInPx(const style::LengthOrPercentage radius, float side) {
@@ -241,7 +240,6 @@ getRadiusInPx(const style::BorderRadiuses& radiuses, const geometry::Rect2f& rec
     else if constexpr (cornerType == BottomLeft) {
         return getRadiusInPx(radiuses.bottomLeft(), rect);
     }
-    return geometry::Vec2f(); // silence warning
 }
 
 inline constexpr float halfPi = static_cast<float>(core::pi);
