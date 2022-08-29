@@ -123,7 +123,6 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         core::Color hoveredBackgroundColor =
             detail::getColor(this, gs::background_color_on_hover);
         core::Color textColor = detail::getColor(this, gs::text_color);
-        float borderRadius = detail::getLength(this, gs::border_radius);
         float paddingBottom = detail::getLength(this, gs::padding_bottom);
         float paddingLeft = detail::getLength(this, gs::padding_left);
         float paddingRight = detail::getLength(this, gs::padding_right);
@@ -149,7 +148,11 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
             dirtyPlot_ = false;
 
             core::FloatArray a = {};
-            detail::insertRect(a, backgroundColor, 0, 0, width(), height(), borderRadius);
+
+            if (backgroundColor.a() > 0) {
+                style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
+                detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
+            }
 
             // content only if we have data and the padded area is not empty
             if (numXs_ > 1 && (width() > paddingLeft + paddingRight)

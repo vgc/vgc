@@ -51,7 +51,27 @@
 .LineEdit,
 .Plot2d {
     background-color: rgb(34, 36, 37);
-    border-radius: 3dp;
+    border-top-left-radius: 3dp;
+    border-top-right-radius: 3dp;
+    border-bottom-right-radius: 3dp;
+    border-bottom-left-radius: 3dp;
+}
+
+.LineEdit.horizontal-group.first {
+    border-top-right-radius: 0dp;
+    border-bottom-right-radius: 0dp;
+}
+
+.LineEdit.horizontal-group.middle {
+    border-top-left-radius: 0dp;
+    border-top-right-radius: 0dp;
+    border-bottom-right-radius: 0dp;
+    border-bottom-left-radius: 0dp;
+}
+
+.LineEdit.horizontal-group.last {
+    border-top-left-radius: 0dp;
+    border-bottom-left-radius: 0dp;
 }
 
 .Button {
@@ -74,17 +94,13 @@
 }
 
 .ColorPalette .Flex {
-    column-gap: 2dp;
+    column-gap: 1dp;
 }
 
 .ColorPalette .Flex .Label {
-    preferred-width: 30dp;
+    preferred-width: 34dp;
     horizontal-stretch: 0;
     text-horizontal-align: left;
-}
-
-.ColorPalette .Flex .LineEdit {
-    border-top-right-radius: 10dp 5dp;
 }
 
 .Plot2d {

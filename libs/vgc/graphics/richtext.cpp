@@ -117,7 +117,6 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     table->insert(padding_left,                     zero_,          false, &style::parseLength);
     table->insert(border_width,                     zero_,          false, &style::parseLength);
     table->insert(border_color,                     black_,         false, &style::parseColor);
-    table->insert(border_radius,                    zero_,          false, &style::parseLength);
     table->insert(border_top_left_radius,           zerobr_,        false, &style::BorderRadius::parse);
     table->insert(border_top_right_radius,          zerobr_,        false, &style::BorderRadius::parse);
     table->insert(border_bottom_right_radius,       zerobr_,        false, &style::BorderRadius::parse);

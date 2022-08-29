@@ -17,6 +17,7 @@
 #include <vgc/ui/detail/paintutil.h>
 
 #include <vgc/graphics/font.h>
+#include <vgc/graphics/strings.h>
 
 namespace vgc::ui::detail {
 
@@ -31,6 +32,25 @@ void insertTriangle(
         x1, y1, r, g, b,
         x2, y2, r, g, b,
         x3, y3, r, g, b});
+}
+
+void writeTriangleAt(
+    core::FloatArray& a, Int i,
+    float r, float g, float b,
+    float x1, float y1, float x2, float y2, float x3, float y3) {
+
+    constexpr Int numFloatsPerTriangle = 15;
+    if (i < 0 || i + numFloatsPerTriangle > a.length()) {
+        throw core::IndexError(
+            core::format(
+                "Cannot write triangle at index {}: "
+                "array length is {} and {} floats must be written",
+                i, a.length(), numFloatsPerTriangle));
+    }
+    float* p = &a.getUnchecked(i);
+    *p     = x1; *(++p) = y1; *(++p) = r; *(++p) = g; *(++p) = b;
+    *(++p) = x2; *(++p) = y2; *(++p) = r; *(++p) = g; *(++p) = b;
+    *(++p) = x3; *(++p) = y3; *(++p) = r; *(++p) = g; *(++p) = b;
 }
 
 void insertTriangle(
@@ -160,6 +180,177 @@ void insertRect(
 
 // clang-format on
 
+namespace {
+
+enum CornerType {
+    TopLeft,
+    TopRight,
+    BottomRight,
+    BottomLeft
+};
+
+template<CornerType cornerType>
+geometry::Vec2f getCorner(const geometry::Rect2f& rect) {
+    if constexpr (cornerType == TopLeft) {
+        return geometry::Vec2f(rect.xMin(), rect.yMin());
+    }
+    else if constexpr (cornerType == TopRight) {
+        return geometry::Vec2f(rect.xMax(), rect.yMin());
+    }
+    else if constexpr (cornerType == BottomRight) {
+        return geometry::Vec2f(rect.xMax(), rect.yMax());
+    }
+    else if constexpr (cornerType == BottomLeft) {
+        return geometry::Vec2f(rect.xMin(), rect.yMax());
+    }
+    return geometry::Vec2f(); // silence warning
+}
+
+float getRadiusInPx(const style::LengthOrPercentage radius, float side) {
+    float res;
+    if (radius.isPercentage()) {
+        res = side * radius.valuef() / 100.0f;
+    }
+    else {
+        // TODO: convert to px
+        res = radius.valuef();
+    }
+    return core::clamp(res, 0.0f, 0.5 * side);
+}
+
+geometry::Vec2f
+getRadiusInPx(const style::BorderRadius& radius, const geometry::Rect2f& rect) {
+
+    return geometry::Vec2f(
+        getRadiusInPx(radius.horizontalRadius(), rect.width()),
+        getRadiusInPx(radius.verticalRadius(), rect.height()));
+}
+
+template<CornerType cornerType>
+geometry::Vec2f
+getRadiusInPx(const style::BorderRadiuses& radiuses, const geometry::Rect2f& rect) {
+    if constexpr (cornerType == TopLeft) {
+        return getRadiusInPx(radiuses.topLeft(), rect);
+    }
+    else if constexpr (cornerType == TopRight) {
+        return getRadiusInPx(radiuses.topRight(), rect);
+    }
+    else if constexpr (cornerType == BottomRight) {
+        return getRadiusInPx(radiuses.bottomRight(), rect);
+    }
+    else if constexpr (cornerType == BottomLeft) {
+        return getRadiusInPx(radiuses.bottomLeft(), rect);
+    }
+    return geometry::Vec2f(); // silence warning
+}
+
+inline constexpr float halfPi = static_cast<float>(core::pi);
+
+struct QuarterEllipseParams {
+    float eps;
+    float invPixelSize;
+};
+
+// For now, we insert both the first and last point.
+// In the future, we want to omit them if equal to already inserted point.
+template<CornerType cornerType>
+void insertQuarterEllipse(
+    core::FloatArray& a,
+    const geometry::Rect2f& rect,
+    const style::BorderRadiuses& borderRadiuses,
+    const QuarterEllipseParams& params) {
+
+    geometry::Vec2f corner = getCorner<cornerType>(rect);
+    geometry::Vec2f radius = getRadiusInPx<cornerType>(borderRadiuses, rect);
+
+    if (radius.x() < params.eps || radius.y() < params.eps) {
+        a.extend({corner.x(), corner.y()});
+    }
+    else {
+        // Note: the compiler should be able to optimize out multiplications by zero.
+        // Even if it doesn't, it should be negligible compared to cos/sin computation.
+        geometry::Vec2f sourceAxis;
+        geometry::Vec2f targetAxis;
+        if constexpr (cornerType == TopLeft) {
+            sourceAxis = {-radius.x(), 0};
+            targetAxis = {0, -radius.y()};
+        }
+        else if constexpr (cornerType == TopRight) {
+            sourceAxis = {0, -radius.y()};
+            targetAxis = {radius.x(), 0};
+        }
+        else if constexpr (cornerType == BottomRight) {
+            sourceAxis = {radius.x(), 0};
+            targetAxis = {0, radius.y()};
+        }
+        else if constexpr (cornerType == BottomLeft) {
+            sourceAxis = {0, radius.y()};
+            targetAxis = {-radius.x(), 0};
+        }
+        geometry::Vec2f center = corner - sourceAxis - targetAxis;
+
+        float minRadius = (std::min)(radius.x(), radius.y());
+        Int numSegments =
+            core::clamp(core::ifloor<Int>(minRadius * params.invPixelSize), 1, 64);
+
+        float dt = halfPi / numSegments;
+        geometry::Vec2f p = center + sourceAxis;
+        a.extend({p.x(), p.y()});
+        for (Int i = 1; i < numSegments; ++i) {
+            float t = i * dt;
+            p = center + std::cos(t) * sourceAxis + std::sin(t) * targetAxis;
+            a.extend({p.x(), p.y()});
+        }
+        p = center + targetAxis;
+        a.extend({p.x(), p.y()});
+    }
+}
+
+} // namespace
+
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& color,
+    const geometry::Rect2f& rect,
+    const style::BorderRadiuses& radiuses,
+    float pixelSize) {
+
+    if (rect.isEmpty()) {
+        return;
+    }
+
+    QuarterEllipseParams params;
+    params.eps = 1e-3f * pixelSize;
+    params.invPixelSize = 1.0f / pixelSize;
+
+    float r = static_cast<float>(color[0]);
+    float g = static_cast<float>(color[1]);
+    float b = static_cast<float>(color[2]);
+
+    // Compute polygon as (x, y) data points, appending them to `a`
+    Int oldLength = a.length();
+    insertQuarterEllipse<TopLeft>(a, rect, radiuses, params);
+    insertQuarterEllipse<TopRight>(a, rect, radiuses, params);
+    insertQuarterEllipse<BottomRight>(a, rect, radiuses, params);
+    insertQuarterEllipse<BottomLeft>(a, rect, radiuses, params);
+    Int newLength = a.length();
+
+    // Convert to triangle fan
+    Int numPoints = (newLength - oldLength) / 2;
+    Int numTriangles = numPoints - 2;
+    VGC_ASSERT(numTriangles > 1);
+    a.resize(oldLength + numTriangles * 15);
+    float* p = &a.getUnchecked(oldLength);
+    float x0 = *p;
+    float y0 = *(p + 1);
+    p = &a.getUnchecked(newLength) - 2;
+    for (Int i = numTriangles - 1; i >= 0; --i) {
+        p -= 2;
+        writeTriangleAt(
+            a, oldLength + 15 * i, r, g, b, x0, y0, *p, *(p + 1), *(p + 2), *(p + 3));
+    }
+}
+
 core::Color getColor(const Widget* widget, core::StringId property) {
     core::Color res;
     style::StyleValue value = widget->style(property);
@@ -176,6 +367,25 @@ float getLength(const Widget* widget, core::StringId property) {
         res = value.toFloat();
     }
     return res;
+}
+
+style::BorderRadiuses getBorderRadiuses(Widget* widget) {
+
+    namespace gs = graphics::strings;
+
+    style::BorderRadius topLeft =
+        widget->style(gs::border_top_left_radius).to<style::BorderRadius>();
+
+    style::BorderRadius topRight =
+        widget->style(gs::border_top_right_radius).to<style::BorderRadius>();
+
+    style::BorderRadius bottomRight =
+        widget->style(gs::border_bottom_right_radius).to<style::BorderRadius>();
+
+    style::BorderRadius bottomLeft =
+        widget->style(gs::border_bottom_left_radius).to<style::BorderRadius>();
+
+    return style::BorderRadiuses(topLeft, topRight, bottomRight, bottomLeft);
 }
 
 } // namespace vgc::ui::detail

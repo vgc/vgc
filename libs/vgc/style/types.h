@@ -53,6 +53,12 @@ public:
         return value_;
     }
 
+    /// Returns the numerical value of the length as a `float`.
+    ///
+    float valuef() const {
+        return static_cast<float>(value_);
+    }
+
     /// Returns the unit of the length.
     ///
     LengthUnit unit() const {
@@ -91,6 +97,12 @@ public:
     ///
     double value() const {
         return value_;
+    }
+
+    /// Returns the numerical value of the percentage as a `float`.
+    ///
+    float valuef() const {
+        return static_cast<float>(value_);
     }
 
     /// Parses the given range of `StyleToken`s as a `Percentage`.
@@ -132,6 +144,12 @@ public:
     ///
     double value() const {
         return value_;
+    }
+
+    /// Returns the numerical value of the length or percentage as a `float`.
+    ///
+    float valuef() const {
+        return static_cast<float>(value_);
     }
 
     /// Returns the unit of the length.
@@ -190,6 +208,13 @@ public:
     ///
     double value() const {
         return value_;
+    }
+
+    /// Returns the numerical value of the length as a `float`. This function
+    /// assumes that `isAuto()` returns false.
+    ///
+    float valuef() const {
+        return static_cast<float>(value_);
     }
 
     /// Returns the unit of the length. This function assumes that
@@ -265,6 +290,80 @@ public:
 private:
     LengthOrPercentage horizontalRadius_;
     LengthOrPercentage verticalRadius_;
+};
+
+/// \class vgc::style::BorderRadiuses
+/// \brief The border radiuses for the four corners
+///
+class VGC_STYLE_API BorderRadiuses {
+public:
+    /// Constructs a `BorderRadiuses` with the four given `BorderRadius`.
+    ///
+    BorderRadiuses(
+        const BorderRadius& topLeft,
+        const BorderRadius& topRight,
+        const BorderRadius& bottomRight,
+        const BorderRadius& bottomLeft)
+
+        : topLeft_(topLeft)
+        , topRight_(topRight)
+        , bottomRight_(bottomRight)
+        , bottomLeft_(bottomLeft) {
+    }
+
+    /// Returns the top left border radius.
+    ///
+    const BorderRadius& topLeft() const {
+        return topLeft_;
+    }
+
+    /// Returns the top right border radius.
+    ///
+    const BorderRadius& topRight() const {
+        return topRight_;
+    }
+
+    /// Returns the bottom right border radius.
+    ///
+    const BorderRadius& bottomRight() const {
+        return bottomRight_;
+    }
+
+    /// Return thes bottom left border radius.
+    ///
+    const BorderRadius& bottomLeft() const {
+        return bottomLeft_;
+    }
+
+    /// Sets the top left border radius.
+    ///
+    void setTopLeft(const BorderRadius& topLeft) {
+        topLeft_ = topLeft;
+    }
+
+    /// Sets the top right border radius.
+    ///
+    void setTopRight(const BorderRadius& topRight) {
+        topRight_ = topRight;
+    }
+
+    /// Sets the bottom right border radius.
+    ///
+    void setBottomRight(const BorderRadius& bottomRight) {
+        bottomRight_ = bottomRight;
+    }
+
+    /// Sets the bottom left border radius.
+    ///
+    void setBottomLeft(const BorderRadius& bottomLeft) {
+        bottomLeft_ = bottomLeft;
+    }
+
+private:
+    BorderRadius topLeft_;
+    BorderRadius topRight_;
+    BorderRadius bottomRight_;
+    BorderRadius bottomLeft_;
 };
 
 } // namespace vgc::style
