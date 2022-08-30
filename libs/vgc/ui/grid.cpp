@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -273,9 +273,9 @@ geometry::Vec2f Grid::computePreferredSize() const {
         // compute and cache all metrics
         // -----
 
-        // zero track metrics
+        // clear track metrics
         for (const Track& track : tracks_) {
-            track.zeroMetrics();
+            track.clearMetrics();
         }
 
         for (Int i = 0; i < numRows; ++i) {

@@ -74,11 +74,13 @@ public:
         Int elementIndex,
         double stretchedSize,
         float stretchFactor) {
+
         const float pace = stretchFactor > 0 ? 1.f / stretchFactor : core::tmax<float>;
         entries_.emplaceLast(std::move(elementRef), elementIndex, stretchedSize, pace);
     }
 
     void doHint(bool allowSizeWobbling = false) {
+
         if (entries_.empty()) {
             return;
         }

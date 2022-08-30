@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2022 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -77,7 +77,7 @@ struct GridCell {
         return metrics_[dirIndex].widgetShrink > 0;
     }
 
-    constexpr void zeroMetrics() const {
+    constexpr void clearMetrics() const {
         metrics_[DirIndex::Horizontal] = {};
         metrics_[DirIndex::Vertical] = {};
     }
@@ -86,7 +86,7 @@ struct GridCell {
         widget = nullptr;
         margins = {};
         borderBox = {};
-        zeroMetrics();
+        clearMetrics();
     }
 };
 
@@ -212,7 +212,7 @@ struct GridTrack {
         return metrics_.fixedMarginSizeH;
     }
 
-    constexpr void zeroMetrics() const {
+    constexpr void clearMetrics() const {
         metrics_.widgetPreferredSizeRange = geometry::Range1f(core::FloatInfinity, 0);
         metrics_.widgetMinSizeRange = geometry::Range1f(core::FloatInfinity, 0);
         metrics_.cellPreferredSizeRangeH = geometry::Range1f(core::FloatInfinity, 0);
