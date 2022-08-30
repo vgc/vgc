@@ -41,6 +41,7 @@ core::StringId middle("middle");
 core::StringId last("last");
 
 } // namespace
+
 ColorPalette::ColorPalette()
     : Column() {
 
@@ -58,10 +59,25 @@ ColorPalette::ColorPalette()
     gLineEdit_->addStyleClass(middle);
     bLineEdit_->addStyleClass(last);
 
+    Row* hslRow = createChild<Row>();
+    hslRow->createChild<Label>("HSL:");
+    hLineEdit_ = hslRow->createChild<LineEdit>();
+    sLineEdit_ = hslRow->createChild<LineEdit>();
+    lLineEdit_ = hslRow->createChild<LineEdit>();
+    hLineEdit_->addStyleClass(horizontal_group);
+    sLineEdit_->addStyleClass(horizontal_group);
+    lLineEdit_->addStyleClass(horizontal_group);
+    hLineEdit_->addStyleClass(first);
+    sLineEdit_->addStyleClass(middle);
+    lLineEdit_->addStyleClass(last);
+
     selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
-    rLineEdit_->textEdited().connect(onRgbEditedSlot_());
-    gLineEdit_->textEdited().connect(onRgbEditedSlot_());
-    bLineEdit_->textEdited().connect(onRgbEditedSlot_());
+    rLineEdit_->editingFinished().connect(onRgbEditedSlot_());
+    gLineEdit_->editingFinished().connect(onRgbEditedSlot_());
+    bLineEdit_->editingFinished().connect(onRgbEditedSlot_());
+    hLineEdit_->editingFinished().connect(onHslEditedSlot_());
+    sLineEdit_->editingFinished().connect(onHslEditedSlot_());
+    lLineEdit_->editingFinished().connect(onHslEditedSlot_());
 
     setSelectedColorNoCheckNoEmit_(core::colors::black);
 
@@ -88,15 +104,16 @@ void ColorPalette::onSelectorSelectedColor_() {
 
 namespace {
 
-bool isValid8b_(Int x) {
-    return 0 <= x && x < 256;
-}
-
-// If the lineEdit is empty, sets it to "0" and return `0`.
-// Otherwise, if the lineEdit is a valid integer, returns the integer.
-// Otherwise, returns -1.
+// If the lineEdit is empty, this function sets it to "0", keeps `isValid`
+// unchanged, and returns `0`.
 //
-Int parseInt_(LineEdit* lineEdit) {
+// If the lineEdit is non-empty and is a valid integer, this function keeps the
+// line edit and `isValid` unchanged, and returns the integer.
+//
+// If the lineEdit is non-empty and is not a valid integer, this function sets `isValid` to false,
+// leaves the line edit unchanged, and returns `0`.
+//
+Int parseInt_(LineEdit* lineEdit, bool& isValid) {
     try {
         const std::string& text = lineEdit->text();
         if (text.empty()) {
@@ -112,7 +129,8 @@ Int parseInt_(LineEdit* lineEdit) {
         }
     }
     catch (const core::ParseError&) {
-        return -1;
+        isValid = false;
+        return 0;
     }
 }
 
@@ -122,18 +140,56 @@ void ColorPalette::onRgbEdited_() {
 
     // Try to parse the new color from the line edit.
     //
-    Int r_ = parseInt_(rLineEdit_);
-    Int g_ = parseInt_(gLineEdit_);
-    Int b_ = parseInt_(bLineEdit_);
+    bool isValid = true;
+    Int r_ = parseInt_(rLineEdit_, isValid);
+    Int g_ = parseInt_(gLineEdit_, isValid);
+    Int b_ = parseInt_(bLineEdit_, isValid);
 
     // Check if the input was valid.
     //
     core::Color color = selectedColor_;
-    if (isValid8b_(r_) && isValid8b_(g_) && isValid8b_(b_)) {
+    if (isValid) {
         double r = core::uint8ToDouble01(r_);
         double g = core::uint8ToDouble01(g_);
         double b = core::uint8ToDouble01(b_);
         color = core::Color(r, g, b);
+        color.round8b();
+    }
+
+    // Set `color` as the new `selectedColor_` unconditionally, and update
+    // child widgets accordingly. This rollbacks the line edits to previous
+    // valid values, in case invalid values where entered (letters, leading
+    // zeros, etc.).
+    //
+    core::Color oldColor = selectedColor_;
+    setSelectedColorNoCheckNoEmit_(color);
+
+    // Emit the signal only if the color actually changed.
+    //
+    if (selectedColor_ != oldColor) {
+        colorSelected().emit();
+    }
+}
+
+void ColorPalette::onHslEdited_() {
+
+    // Try to parse the new color from the line edit.
+    //
+    bool isValid = true;
+    Int h_ = parseInt_(hLineEdit_, isValid);
+    Int s_ = parseInt_(sLineEdit_, isValid);
+    Int l_ = parseInt_(lLineEdit_, isValid);
+
+    // Check if the input was valid.
+    //
+    core::Color color = selectedColor_;
+    if (isValid) {
+        // Note: Color::hsl() already does mod-360 hue
+        double h = static_cast<double>(h_);
+        double s = core::uint8ToDouble01(s_);
+        double l = core::uint8ToDouble01(l_);
+        color = core::Color::hsl(h, s, l);
+        color.round8b();
     }
 
     // Set `color` as the new `selectedColor_` unconditionally, and update
@@ -152,11 +208,27 @@ void ColorPalette::onRgbEdited_() {
 }
 
 void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
+
     selectedColor_ = color;
+
+    // Update selector
     selector_->setSelectedColor(selectedColor_);
+
+    // Update RGB line edits
     rLineEdit_->setText(core::toString(color.r() * 255));
     gLineEdit_->setText(core::toString(color.g() * 255));
     bLineEdit_->setText(core::toString(color.b() * 255));
+
+    // Update HSL line edits
+    // For now, we round to the nearest integer. Later, we may
+    // want to show the first digit
+    auto [h, s, l] = color.toHsl();
+    hLineEdit_->setText(core::toString(static_cast<int>(std::round(h))));
+    sLineEdit_->setText(core::toString(static_cast<int>(std::round(s * 255))));
+    lLineEdit_->setText(core::toString(static_cast<int>(std::round(l * 255))));
+    // hLineEdit_->setText(core::format("{:.1f}", h));
+    // sLineEdit_->setText(core::format("{:.1f}", s * 255));
+    // lLineEdit_->setText(core::format("{:.1f}", l * 255));
 }
 
 ColorPaletteSelector::ColorPaletteSelector()
@@ -207,7 +279,7 @@ core::Color colorFromHslIndices(
         saturationIndex * ds,
         lightnessIndex * dl);
 
-    return color.round8b();
+    return color.rounded8b();
 }
 
 } // namespace

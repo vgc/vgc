@@ -17,6 +17,8 @@
 #ifndef VGC_CORE_COLOR_H
 #define VGC_CORE_COLOR_H
 
+#include <array>
+
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/format.h>
@@ -119,6 +121,10 @@ public:
     void setA(double a) {
         data_[3] = a;
     }
+
+    /// Returns the current color converted to an HSL representation.
+    ///
+    std::array<double, 3> toHsl() const;
 
     /// Rounds the current color to the nearest RGB value representable as an
     /// 8bit 0-255 value.
@@ -372,6 +378,22 @@ public:
     ///
     void setA(float a) {
         data_[3] = a;
+    }
+
+    /// Returns the current color converted to an HSL representation.
+    ///
+    std::array<float, 3> toHsl() const;
+
+    /// Rounds the current color to the nearest RGB value representable as an
+    /// 8bit 0-255 value.
+    ///
+    Colorf& round8b();
+
+    /// Returns a color rounded to the nearest RGB value representable as an
+    /// 8-bit value in the range 0-255.
+    ///
+    Colorf rounded8b() {
+        return Colorf(*this).round8b();
     }
 
     /// Adds in-place the \p other Colorf to this Colorf.

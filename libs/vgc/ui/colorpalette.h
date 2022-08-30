@@ -62,17 +62,23 @@ public:
     VGC_SIGNAL(colorSelected)
 
 private:
+    core::Color selectedColor_;
+    ColorPaletteSelector* selector_;
+    LineEdit* rLineEdit_;
+    LineEdit* gLineEdit_;
+    LineEdit* bLineEdit_;
+    LineEdit* hLineEdit_;
+    LineEdit* sLineEdit_;
+    LineEdit* lLineEdit_;
+
     void onSelectorSelectedColor_();
     VGC_SLOT(onSelectorSelectedColorSlot_, onSelectorSelectedColor_)
 
     void onRgbEdited_();
     VGC_SLOT(onRgbEditedSlot_, onRgbEdited_)
 
-    core::Color selectedColor_;
-    ColorPaletteSelector* selector_;
-    LineEdit* rLineEdit_;
-    LineEdit* gLineEdit_;
-    LineEdit* bLineEdit_;
+    void onHslEdited_();
+    VGC_SLOT(onHslEditedSlot_, onHslEdited_)
 
     void setSelectedColorNoCheckNoEmit_(const core::Color& color);
 };
