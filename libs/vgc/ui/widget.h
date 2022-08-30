@@ -761,11 +761,6 @@ protected:
     ///
     virtual void updateChildrenGeometry();
 
-    /// Returns the position of this widget relative to root.
-    /// Sets `*outRoot` to the root widget pointer if `outRoot` is not nullptr.
-    ///
-    geometry::Vec2f positionInRoot(const Widget** outRoot = nullptr) const;
-
 private:
     WidgetList* children_ = nullptr;
     ActionList* actions_ = nullptr;

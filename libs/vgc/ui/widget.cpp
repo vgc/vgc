@@ -78,6 +78,7 @@ void Widget::reparent(Widget* newParent) {
 }
 
 namespace {
+
 bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = false) {
     if (!oldWidget) {
         if (simulate) {
@@ -100,6 +101,7 @@ bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = fals
         return true;
     }
 }
+
 } // namespace
 
 bool Widget::canReplace(Widget* oldWidget) {
@@ -137,13 +139,32 @@ Widget* Widget::root() const {
     return const_cast<Widget*>(res);
 }
 
+namespace {
+
+geometry::Vec2f positionInRoot(const Widget* widget, const Widget** outRoot) {
+    geometry::Vec2f pos = widget->position();
+    const Widget* root = const_cast<Widget*>(widget);
+    const Widget* w = widget->parent();
+    while (w) {
+        root = w;
+        pos += w->position();
+        w = w->parent();
+    }
+    if (outRoot) {
+        *outRoot = root;
+    }
+    return pos;
+}
+
+} // namespace
+
 geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) const {
 
     // XXX could use any common ancestor
     const Widget* thisRoot = nullptr;
-    geometry::Vec2f thisPosInRoot = positionInRoot(&thisRoot);
+    geometry::Vec2f thisPosInRoot = positionInRoot(this, &thisRoot);
     const Widget* otherRoot = nullptr;
-    geometry::Vec2f otherPosInRoot = other->positionInRoot(&otherRoot);
+    geometry::Vec2f otherPosInRoot = positionInRoot(other, &otherRoot);
 
     if (thisRoot != otherRoot) {
         throw core::LogicError(
@@ -519,21 +540,6 @@ geometry::Vec2f Widget::computePreferredSize() const {
 
 void Widget::updateChildrenGeometry() {
     // nothing
-}
-
-geometry::Vec2f Widget::positionInRoot(const Widget** outRoot) const {
-    geometry::Vec2f pos = position();
-    const Widget* root = const_cast<Widget*>(this);
-    const Widget* w = this->parent();
-    while (w) {
-        root = w;
-        pos += w->position();
-        w = w->parent();
-    }
-    if (outRoot) {
-        *outRoot = root;
-    }
-    return pos;
 }
 
 namespace {
