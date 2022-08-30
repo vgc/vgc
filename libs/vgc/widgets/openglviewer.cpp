@@ -161,6 +161,7 @@ void OpenGLViewer::setDocument(dom::Document* document) {
     documentChangedConnectionHandle_ = document_->changed().connect(
         [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
 
+    document->emitPendingDiff();
     update();
 }
 
