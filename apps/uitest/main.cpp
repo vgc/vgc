@@ -151,8 +151,7 @@ int main(int argc, char* argv[]) {
     //vgc::ui::MenuBar* menuBar = col->createChild<vgc::ui::MenuBar>();
 
     vgc::ui::Grid* gridTest = col->createChild<vgc::ui::Grid>();
-    gridTest->setStyleSheet(
-        ".Grid { column-gap: 30dp; row-gap: 10dp; pixel-hinting: off; }");
+    gridTest->setStyleSheet(".Grid { column-gap: 30dp; row-gap: 10dp; }");
     for (vgc::Int i = 0; i < 2; ++i) {
         for (vgc::Int j = 0; j < 3; ++j) {
             vgc::ui::LineEditPtr le = vgc::ui::LineEdit::create();
