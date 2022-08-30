@@ -127,7 +127,7 @@ OpenGLViewer::OpenGLViewer(dom::Document* document, QWidget* parent)
     , document_(document)
     , mousePressed_(false)
     , tabletPressed_(false)
-    , polygonMode_(2)
+    , polygonMode_(0)
     , showControlPoints_(false)
     , requestedTesselationMode_(2)
     , currentTesselationMode_(2)
@@ -350,28 +350,12 @@ void OpenGLViewer::pointingDeviceRelease(const PointingDeviceEvent&) {
 
 void OpenGLViewer::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
-    case Qt::Key_N:
-        polygonMode_ = 0;
-        update();
-        break;
     case Qt::Key_T:
-        polygonMode_ = 1;
-        update();
-        break;
-    case Qt::Key_F:
-        polygonMode_ = 2;
+        polygonMode_ = polygonMode_ ? 0 : 1;
         update();
         break;
     case Qt::Key_I:
-        requestedTesselationMode_ = 0;
-        update();
-        break;
-    case Qt::Key_U:
-        requestedTesselationMode_ = 1;
-        update();
-        break;
-    case Qt::Key_A:
-        requestedTesselationMode_ = 2;
+        requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 3;
         update();
         break;
     case Qt::Key_P:
@@ -441,19 +425,17 @@ void OpenGLViewer::paintGL() {
     shaderProgram_.setUniformValue(viewMatrixLoc_, ui::toQt(camera_.viewMatrix()));
 
     // Draw triangles
-    if (polygonMode_ > 0) {
-        f->glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
-        for (CurveGLResources& r : curveGLResources_) {
-            shaderProgram_.setUniformValue(
-                colorLoc_,
-                static_cast<float>(r.trianglesColor.r()),
-                static_cast<float>(r.trianglesColor.g()),
-                static_cast<float>(r.trianglesColor.b()),
-                static_cast<float>(r.trianglesColor.a()));
-            r.vaoTriangles->bind();
-            f->glDrawArrays(GL_TRIANGLE_STRIP, 0, r.numVerticesTriangles);
-            r.vaoTriangles->release();
-        }
+    f->glPolygonMode(GL_FRONT_AND_BACK, (polygonMode_ == 1) ? GL_LINE : GL_FILL);
+    for (CurveGLResources& r : curveGLResources_) {
+        shaderProgram_.setUniformValue(
+            colorLoc_,
+            static_cast<float>(r.trianglesColor.r()),
+            static_cast<float>(r.trianglesColor.g()),
+            static_cast<float>(r.trianglesColor.b()),
+            static_cast<float>(r.trianglesColor.a()));
+        r.vaoTriangles->bind();
+        f->glDrawArrays(GL_TRIANGLE_STRIP, 0, r.numVerticesTriangles);
+        r.vaoTriangles->release();
     }
 
     // Draw control points

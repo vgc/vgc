@@ -203,7 +203,7 @@ private:
     // Polygon mode. This is selected with the n/t/f keys.
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
-    int polygonMode_; // 0: none; 1: lines; 2: fill (i.e., not exactly like OpenGL)
+    int polygonMode_; // 0: fill; 1: lines (i.e., not exactly like OpenGL)
 
     // Show control points. This is toggled with the "p" key.
     // XXX This is a temporary quick method to switch between
