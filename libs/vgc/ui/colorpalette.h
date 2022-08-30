@@ -70,6 +70,7 @@ private:
     LineEdit* hLineEdit_;
     LineEdit* sLineEdit_;
     LineEdit* lLineEdit_;
+    LineEdit* hexLineEdit_;
 
     void onSelectorSelectedColor_();
     VGC_SLOT(onSelectorSelectedColorSlot_, onSelectorSelectedColor_)
@@ -79,6 +80,9 @@ private:
 
     void onHslEdited_();
     VGC_SLOT(onHslEditedSlot_, onHslEdited_)
+
+    void onHexEdited_();
+    VGC_SLOT(onHexEditedSlot_, onHexEdited_)
 
     void setSelectedColorNoCheckNoEmit_(const core::Color& color);
 };

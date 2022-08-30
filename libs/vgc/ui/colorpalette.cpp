@@ -71,6 +71,10 @@ ColorPalette::ColorPalette()
     sLineEdit_->addStyleClass(middle);
     lLineEdit_->addStyleClass(last);
 
+    Row* hexRow = createChild<Row>();
+    hexRow->createChild<Label>("Hex:");
+    hexLineEdit_ = hexRow->createChild<LineEdit>();
+
     selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
     rLineEdit_->editingFinished().connect(onRgbEditedSlot_());
     gLineEdit_->editingFinished().connect(onRgbEditedSlot_());
@@ -78,6 +82,7 @@ ColorPalette::ColorPalette()
     hLineEdit_->editingFinished().connect(onHslEditedSlot_());
     sLineEdit_->editingFinished().connect(onHslEditedSlot_());
     lLineEdit_->editingFinished().connect(onHslEditedSlot_());
+    hexLineEdit_->editingFinished().connect(onHexEditedSlot_());
 
     setSelectedColorNoCheckNoEmit_(core::colors::black);
 
@@ -131,6 +136,22 @@ Int parseInt_(LineEdit* lineEdit, bool& isValid) {
     catch (const core::ParseError&) {
         isValid = false;
         return 0;
+    }
+}
+
+// If the lineEdit is a valid hex color, this keeps `isValid` unchanged and
+// returns the corresponding color.
+//
+// Otherwise this function sets `isValid` to false and returns `Color()`.
+//
+core::Color parseHex_(LineEdit* lineEdit, bool& isValid) {
+    try {
+        const std::string& text = lineEdit->text();
+        return core::Color::fromHex(text);
+    }
+    catch (const core::ParseError&) {
+        isValid = false;
+        return core::Color();
     }
 }
 
@@ -207,6 +228,23 @@ void ColorPalette::onHslEdited_() {
     }
 }
 
+void ColorPalette::onHexEdited_() {
+
+    core::Color newColor = selectedColor_;
+    core::Color oldColor = selectedColor_;
+
+    bool isValid = true;
+    core::Color parsedColor = parseHex_(hexLineEdit_, isValid);
+    if (isValid) {
+        newColor = parsedColor;
+    }
+
+    setSelectedColorNoCheckNoEmit_(newColor);
+    if (selectedColor_ != oldColor) {
+        colorSelected().emit();
+    }
+}
+
 void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
 
     selectedColor_ = color;
@@ -215,20 +253,23 @@ void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
     selector_->setSelectedColor(selectedColor_);
 
     // Update RGB line edits
-    rLineEdit_->setText(core::toString(color.r() * 255));
-    gLineEdit_->setText(core::toString(color.g() * 255));
-    bLineEdit_->setText(core::toString(color.b() * 255));
+    rLineEdit_->setText(core::toString(static_cast<Int>(std::round(color.r() * 255))));
+    gLineEdit_->setText(core::toString(static_cast<Int>(std::round(color.g() * 255))));
+    bLineEdit_->setText(core::toString(static_cast<Int>(std::round(color.b() * 255))));
 
     // Update HSL line edits
     // For now, we round to the nearest integer. Later, we may
     // want to show the first digit
     auto [h, s, l] = color.toHsl();
-    hLineEdit_->setText(core::toString(static_cast<int>(std::round(h))));
-    sLineEdit_->setText(core::toString(static_cast<int>(std::round(s * 255))));
-    lLineEdit_->setText(core::toString(static_cast<int>(std::round(l * 255))));
+    hLineEdit_->setText(core::toString(static_cast<Int>(std::round(h))));
+    sLineEdit_->setText(core::toString(static_cast<Int>(std::round(s * 255))));
+    lLineEdit_->setText(core::toString(static_cast<Int>(std::round(l * 255))));
     // hLineEdit_->setText(core::format("{:.1f}", h));
     // sLineEdit_->setText(core::format("{:.1f}", s * 255));
     // lLineEdit_->setText(core::format("{:.1f}", l * 255));
+
+    // Update Hex line edit
+    hexLineEdit_->setText(color.toHex());
 }
 
 ColorPaletteSelector::ColorPaletteSelector()

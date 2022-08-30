@@ -40,6 +40,7 @@
 #include <ios>     // streamsize
 #include <limits>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -625,6 +626,15 @@ enum class TimeUnit {
 VGC_CORE_API
 std::string
 secondsToString(double t, TimeUnit unit = TimeUnit::Seconds, int decimals = 0);
+
+/// Converts an integer in the range [0..255] to a pair of characters in [0-9a-z].
+///
+/// ```cpp
+/// std::string_view hex = toHexPair(42); // => "2a"
+/// ```
+///
+VGC_CORE_API
+std::string_view toHexPair(unsigned char x);
 
 } // namespace vgc::core
 

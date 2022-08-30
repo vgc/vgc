@@ -62,6 +62,15 @@ public:
         : data_{r, g, b, a} {
     }
 
+    /// Creates a Color from the given hexadecimal string.
+    ///
+    /// ```cpp
+    /// core::Color c = core::Color::fromHex("#f375a3");
+    /// core::Color c = core::Color::fromHex("#d4c"); // same as "#dd44cc"
+    /// ```
+    ///
+    static Color fromHex(std::string_view hex);
+
     /// Accesses the i-th channel of the Color.
     ///
     const double& operator[](int i) const {
@@ -125,6 +134,10 @@ public:
     /// Returns the current color converted to an HSL representation.
     ///
     std::array<double, 3> toHsl() const;
+
+    /// Returns the current color as an hexadecimal string.
+    ///
+    std::string toHex() const;
 
     /// Rounds the current color to the nearest RGB value representable as an
     /// 8bit 0-255 value.
