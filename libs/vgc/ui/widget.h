@@ -264,6 +264,11 @@ public:
         return position_[1];
     }
 
+    /// Translates the given `position` from the coordinate system of this widget to
+    /// the system of `other`.
+    ///
+    geometry::Vec2f mapTo(Widget* other, const geometry::Vec2f& position) const;
+
     /// Returns the geometry of the widget relative to its parent.
     ///
     /// This is equivalent to `Rect2f::fromPositionSize(position(), size())`.
@@ -298,6 +303,10 @@ public:
     /// \overload
     void setGeometry(float x, float y, float width, float height) {
         setGeometry(geometry::Vec2f(x, y), geometry::Vec2f(width, height));
+    }
+    /// \overload
+    void setGeometry(const geometry::Rect2f& geometry) {
+        setGeometry(geometry.position(), geometry.size());
     }
 
     /// Returns the preferred size of this widget, that is, the size that
@@ -751,6 +760,11 @@ protected:
     /// and height of this widget.
     ///
     virtual void updateChildrenGeometry();
+
+    /// Returns the position of this widget relative to root.
+    /// Sets `*outRoot` to the root widget pointer if `outRoot` is not nullptr.
+    ///
+    geometry::Vec2f positionInRoot(const Widget** outRoot = nullptr) const;
 
 private:
     WidgetList* children_ = nullptr;

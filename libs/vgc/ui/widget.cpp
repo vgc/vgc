@@ -137,6 +137,23 @@ Widget* Widget::root() const {
     return const_cast<Widget*>(res);
 }
 
+geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) const {
+
+    // XXX could use any common ancestor
+    const Widget* thisRoot = nullptr;
+    geometry::Vec2f thisPosInRoot = positionInRoot(&thisRoot);
+    const Widget* otherRoot = nullptr;
+    geometry::Vec2f otherPosInRoot = other->positionInRoot(&otherRoot);
+
+    if (thisRoot != otherRoot) {
+        throw core::LogicError(
+            "Cannot map a position between two widget coordinate systems if the widgets"
+            "don't have the same root");
+    }
+
+    return position + thisPosInRoot - otherPosInRoot;
+}
+
 void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size) {
     geometry::Vec2f oldSize = size_;
     position_ = position;
@@ -502,6 +519,21 @@ geometry::Vec2f Widget::computePreferredSize() const {
 
 void Widget::updateChildrenGeometry() {
     // nothing
+}
+
+geometry::Vec2f Widget::positionInRoot(const Widget** outRoot) const {
+    geometry::Vec2f pos = position();
+    const Widget* root = const_cast<Widget*>(this);
+    const Widget* w = this->parent();
+    while (w) {
+        root = w;
+        pos += w->position();
+        w = w->parent();
+    }
+    if (outRoot) {
+        *outRoot = root;
+    }
+    return pos;
 }
 
 namespace {
