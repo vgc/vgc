@@ -49,6 +49,11 @@ void Button::setText(std::string_view text) {
     }
 }
 
+void Button::click(const geometry::Vec2f& pos) {
+    clicked().emit();
+    clickedAt().emit(this, pos);
+}
+
 style::StylableObject* Button::firstChildStylableObject() const {
     return richText_.get();
 }
@@ -93,7 +98,7 @@ void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
         // Draw background
         core::Color backgroundColor = detail::getColor(
-            this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
+            this, isHovered() ? gs::background_color_on_hover : gs::background_color);
         if (backgroundColor.a() > 0) {
             style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
             detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
@@ -117,7 +122,8 @@ bool Button::onMouseMove(MouseEvent* /*event*/) {
     return true;
 }
 
-bool Button::onMousePress(MouseEvent* /*event*/) {
+bool Button::onMousePress(MouseEvent* event) {
+    click(event->position());
     return true;
 }
 
@@ -126,14 +132,12 @@ bool Button::onMouseRelease(MouseEvent* /*event*/) {
 }
 
 bool Button::onMouseEnter() {
-    isHovered_ = true;
     reload_ = true;
     repaint();
     return true;
 }
 
 bool Button::onMouseLeave() {
-    isHovered_ = false;
     reload_ = true;
     repaint();
     return true;
