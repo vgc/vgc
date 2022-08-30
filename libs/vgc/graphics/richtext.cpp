@@ -350,7 +350,7 @@ float getDescent(const RichTextSpan* span, SizedFont* sizedFont) {
 
 } // namespace
 
-void RichText::fill(core::FloatArray& a) {
+void RichText::fill(core::FloatArray& a) const {
 
     // Early return if nothing to draw
     if (shapedText_.text().length() == 0 && !isCursorVisible_) {
@@ -523,7 +523,7 @@ void RichText::fill(core::FloatArray& a) {
 Int RichText::movedPosition(
     Int position,
     RichTextMoveOperation operation,
-    Int /* selectionIndex */) {
+    Int /* selectionIndex */) const {
 
     using Op = RichTextMoveOperation;
 
@@ -630,7 +630,7 @@ void RichText::insertText(std::string_view text) {
 
 Int RichText::positionFromPoint(
     const geometry::Vec2f& point,
-    TextBoundaryMarkers boundaryMarkers) {
+    TextBoundaryMarkers boundaryMarkers) const {
 
     // TODO: take horizontal/vertical style alignment into account
     // (see implementation of fill())
@@ -641,12 +641,35 @@ Int RichText::positionFromPoint(
 
 std::pair<Int, Int> RichText::positionPairFromPoint(
     const geometry::Vec2f& point,
-    TextBoundaryMarkers boundaryMarkers) {
+    TextBoundaryMarkers boundaryMarkers) const {
+
     // TODO: take horizontal/vertical style alignment into account
     // (see implementation of fill())
     float x = point[0] + horizontalScroll_;
     float y = point[1];
     return shapedText_.positionPairFromPoint({x, y}, boundaryMarkers);
+}
+
+geometry::Vec2f RichText::preferredSize() const {
+
+    // TODO: for now, RichText does not support padding. When we do,
+    // we need to add it to preferredSize.
+    bool hinting = getHinting(this, strings::pixel_hinting);
+
+    // Compute text geometry
+    // TODO: cache this on text change, rect change, or style change
+    SizedFont* sizedFont = shapedText_.sizedFont();
+    float ascent = getAscent(this, sizedFont);
+    float descent = getDescent(this, sizedFont);
+    float textHeight = ascent - descent;
+    float textWidth = shapedText_.advance().x();
+    if (hinting) {
+        ascent = std::round(ascent);
+        descent = std::round(descent);
+        textWidth = std::ceil(textWidth);
+    }
+
+    return geometry::Vec2f(textWidth, textHeight);
 }
 
 void RichText::onStyleChanged() {

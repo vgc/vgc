@@ -428,20 +428,30 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
 }
 
 geometry::Vec2f LineEdit::computePreferredSize() const {
+
+    namespace gs = graphics::strings;
+
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
+
     geometry::Vec2f res(0, 0);
+    geometry::Vec2f textPreferredSize(0, 0);
+    if (w.type() == auto_ || h.type() == auto_) {
+        textPreferredSize = richText_->preferredSize();
+    }
     if (w.type() == auto_) {
-        res[0] = 5;
-        // TODO: compute appropriate width based on text length
+        float paddingLeft = detail::getLength(this, gs::padding_left);
+        float paddingRight = detail::getLength(this, gs::padding_right);
+        res[0] = textPreferredSize[0] + paddingLeft + paddingRight;
     }
     else {
         res[0] = w.value();
     }
     if (h.type() == auto_) {
-        res[1] = 5;
-        // TODO: compute appropriate height based on font size?
+        float paddingTop = detail::getLength(this, gs::padding_top);
+        float paddingBottom = detail::getLength(this, gs::padding_bottom);
+        res[1] = textPreferredSize[1] + paddingTop + paddingBottom;
     }
     else {
         res[1] = h.value();

@@ -229,7 +229,7 @@ public:
     /// Inserts to the given `FloatArray` a list of triangles that can be used to draw
     /// this `RichText`.
     ///
-    void fill(core::FloatArray& a);
+    void fill(core::FloatArray& a) const;
 
     /// Returns whether the cursor is visible.
     ///
@@ -266,8 +266,10 @@ public:
     /// the given `selectionIndex` specify which of the selections should be
     /// used.
     ///
-    Int
-    movedPosition(Int position, RichTextMoveOperation operation, Int selectionIndex = 0);
+    Int movedPosition(
+        Int position,
+        RichTextMoveOperation operation,
+        Int selectionIndex = 0) const;
 
     /// Moves the cursor according to the given operation. If `select` is false
     /// (the default), then the selection is cleared. If `select` is true, then
@@ -318,7 +320,7 @@ public:
 
     /// Returns whether there is at least one non-empty selected region.
     ///
-    bool hasSelection() {
+    bool hasSelection() const {
         return selectionStart_ != selectionEnd_;
     }
 
@@ -376,7 +378,7 @@ public:
     /// default position. Scrolling is automatically performed in order to keep
     /// the cursor within `rect()`, whenever `isCursorVisible()` is true.
     ///
-    float horizontalScroll() {
+    float horizontalScroll() const {
         return horizontalScroll_;
     }
 
@@ -395,7 +397,7 @@ public:
     ///
     Int positionFromPoint(
         const geometry::Vec2f& point,
-        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
+        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme) const;
 
     /// Returns the pair of positions enclosing the given 2D `point` that has
     /// all the given `boundaryMarkers`.
@@ -407,7 +409,12 @@ public:
     ///
     std::pair<Int, Int> positionPairFromPoint(
         const geometry::Vec2f& point,
-        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
+        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme) const;
+
+    /// Returns the preferred size of the RichText, that is, the minimum size
+    /// that can contain the text without wrapping or cropping.
+    ///
+    geometry::Vec2f preferredSize() const;
 
     // reimplementation of StylableObject virtual methods
     style::StylableObject* parentStylableObject() const override {

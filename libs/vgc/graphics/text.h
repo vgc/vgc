@@ -758,14 +758,14 @@ public:
     ///
     /// Returns maxPosition() if no such position exists.
     ///
-    Int positionFromByte(Int byteIndex);
+    Int positionFromByte(Int byteIndex) const;
 
     /// Returns the text position closest to the given 2D `point` that has
     /// all the given `boundaryMarkers`.
     ///
     Int positionFromPoint(
         const geometry::Vec2f& point,
-        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
+        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme) const;
 
     /// Returns the pair of positions enclosing the given 2D `point` that has
     /// all the given `boundaryMarkers`.
@@ -777,7 +777,7 @@ public:
     ///
     std::pair<Int, Int> positionPairFromPoint(
         const geometry::Vec2f& point,
-        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme);
+        TextBoundaryMarkers boundaryMarkers = TextBoundaryMarker::Grapheme) const;
 
     /// Returns the smallest position with all the given `boundaryMarkers` that
     /// is located strictly after the given `position`.
@@ -786,8 +786,8 @@ public:
     /// - if `clamp` is true (the default), returns `numPositions() - 1`
     /// - if `clamp` is false, returns `-1`
     ///
-    Int
-    nextBoundary(Int position, TextBoundaryMarkers boundaryMarkers, bool clamp = true);
+    Int nextBoundary(Int position, TextBoundaryMarkers boundaryMarkers, bool clamp = true)
+        const;
 
     /// Returns the smallest position with all the given `boundaryMarkers` that
     /// is located at or after the given `position`.
@@ -802,7 +802,7 @@ public:
     Int nextOrEqualBoundary(
         Int position,
         TextBoundaryMarkers boundaryMarkers,
-        bool clamp = true);
+        bool clamp = true) const;
 
     /// Returns the largest position with all the given `boundaryMarkers` that
     /// is located strictly before the given `position`.
@@ -814,7 +814,7 @@ public:
     Int previousBoundary(
         Int position,
         TextBoundaryMarkers boundaryMarkers,
-        bool clamp = true);
+        bool clamp = true) const;
 
     /// Returns the largest position with all the given `boundaryMarkers` that
     /// is located at or before the given `position`.
@@ -829,7 +829,7 @@ public:
     Int previousOrEqualBoundary(
         Int position,
         TextBoundaryMarkers boundaryMarkers,
-        bool clamp = true);
+        bool clamp = true) const;
 
 private:
     detail::ShapedTextImpl* impl_;
