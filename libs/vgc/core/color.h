@@ -17,7 +17,7 @@
 #ifndef VGC_CORE_COLOR_H
 #define VGC_CORE_COLOR_H
 
-#include <tuple>
+#include <array>
 
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
