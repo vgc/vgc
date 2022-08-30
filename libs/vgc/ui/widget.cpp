@@ -33,6 +33,7 @@ Widget::Widget()
     , children_(WidgetList::create(this))
     , actions_(ActionList::create(this)) {
 
+    addStyleClass(strings::Widget);
     children_->childAdded().connect(onWidgetAdded_());
     children_->childRemoved().connect(onWidgetRemoved_());
 }

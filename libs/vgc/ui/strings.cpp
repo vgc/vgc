@@ -31,6 +31,7 @@ const core::StringId LineEdit("LineEdit");
 const core::StringId Menu("Menu");
 const core::StringId MenuBar("MenuBar");
 const core::StringId Plot2d("Plot2d");
+const core::StringId Widget("Widget");
 
 // Properties
 // ----------

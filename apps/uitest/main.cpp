@@ -26,9 +26,12 @@
 #include <vgc/core/python.h>
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
+#include <vgc/ui/button.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
+#include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
+#include <vgc/ui/overlayablearea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
@@ -198,6 +201,28 @@ int main(int argc, char* argv[]) {
     plot2d->appendDataPoint(20.0f,  5.f,  6.f,  4.f,  5.f,  5.f,  6.f,  4.f,  5.f,  5.f,  4.f,  6.f,  5.f,  5.f,  4.f,  6.f,  5.f);
     plot2d->appendDataPoint(21.0f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f);
     // clang-format on
+
+    // tests OverlayArea, Button, mapTo()
+    {
+        vgc::ui::OverlayArea* overlayTest = col->createChild<vgc::ui::OverlayArea>();
+        vgc::ui::Label* label =
+            overlayTest->createOverlayWidget<vgc::ui::Label>("you clicked here!");
+        label->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
+                             "background-color-on-hover: rgb(20, 130, 130); }");
+        vgc::ui::Grid* grid = overlayTest->createAreaWidget<vgc::ui::Grid>();
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                vgc::ui::ButtonPtr button = vgc::ui::Button::create("click me");
+                grid->setWidgetAt(button.get(), i, j);
+                button->clickedAt().connect(
+                    [=](vgc::ui::Button* button, const vgc::geometry::Vec2f& pos) {
+                        vgc::geometry::Vec2f p = button->mapTo(overlayTest, pos);
+                        label->setGeometry(p, vgc::geometry::Vec2f(120.f, 25.f));
+                        label->updateGeometry();
+                    });
+            }
+        }
+    }
 
     int size = 10;
     for (int i = 0; i < size; ++i) {

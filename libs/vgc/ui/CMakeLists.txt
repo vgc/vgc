@@ -23,6 +23,7 @@ vgc_add_library(ui
         margins.h
         modifierkey.h
         mouseevent.h
+        overlayablearea.h
         plot2d.h
         qtutil.h
         row.h
@@ -50,6 +51,7 @@ vgc_add_library(ui
         logcategories.cpp
         margins.cpp
         mouseevent.cpp
+        overlayablearea.cpp
         plot2d.cpp
         qtutil.cpp
         row.cpp

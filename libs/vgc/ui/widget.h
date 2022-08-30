@@ -193,7 +193,8 @@ public:
     ///
     template<typename WidgetClass, typename... Args>
     WidgetClass* createChild(Args&&... args) {
-        core::ObjPtr<WidgetClass> child = WidgetClass::create(args...);
+        core::ObjPtr<WidgetClass> child =
+            WidgetClass::create(std::forward<Args>(args)...);
         addChild(child.get());
         return child.get();
     }
