@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 
+#include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/richtext.h>
 #include <vgc/ui/widget.h>
 
@@ -59,6 +60,28 @@ public:
     ///
     void setText(std::string_view text);
 
+    /// Clicks the button at position `pos` in local coordinates.
+    ///
+    /// This will cause the clicked signal to be emitted.
+    ///
+    /// \sa clicked, clickedAt
+    ///
+    void click(const geometry::Vec2f& pos);
+
+    /// This signal is emitted whenever the button is clicked by the user, or
+    /// when the click() method is called.
+    ///
+    /// \sa click()
+    ///
+    VGC_SIGNAL(clicked);
+
+    /// This signal is emitted whenever the button is clicked by the user, or
+    /// when the click() method is called.
+    ///
+    /// \sa click()
+    ///
+    VGC_SIGNAL(clickedAt, (Button*, button), (const geometry::Vec2f&, pos));
+
     // Reimplementation of StylableObject virtual methods
     style::StylableObject* firstChildStylableObject() const override;
     style::StylableObject* lastChildStylableObject() const override;
@@ -81,7 +104,6 @@ private:
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
     bool reload_ = true;
-    bool isHovered_ = false;
 };
 
 } // namespace vgc::ui
