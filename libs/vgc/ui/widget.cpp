@@ -278,9 +278,9 @@ bool Widget::onMouseMove(MouseEvent* event) {
         if (child->geometry().contains(event->position())) {
             if (mouseEnteredChild_ != child) {
                 if (mouseEnteredChild_) {
-                    mouseEnteredChild_->onMouseLeave();
+                    mouseEnteredChild_->setHovered(false);
                 }
-                child->onMouseEnter();
+                child->setHovered(true);
                 mouseEnteredChild_ = child;
             }
             event->setPosition(event->position() - child->position());
@@ -291,7 +291,7 @@ bool Widget::onMouseMove(MouseEvent* event) {
     // Emit leave event if we're not anymore in previously entered widget.
     //
     if (mouseEnteredChild_) {
-        mouseEnteredChild_->onMouseLeave();
+        mouseEnteredChild_->setHovered(false);
         mouseEnteredChild_ = nullptr;
     }
 
@@ -363,7 +363,7 @@ bool Widget::onMouseRelease(MouseEvent* event) {
             if (mouseEnteredChild_ != mousePressedChild_) {
                 throw core::LogicError("mouseEnteredChild_ != mousePressedChild_");
             }
-            mouseEnteredChild_->onMouseLeave();
+            mouseEnteredChild_->setHovered(false);
             mouseEnteredChild_ = nullptr;
         }
         mousePressedChild_ = nullptr;
@@ -378,7 +378,7 @@ bool Widget::onMouseEnter() {
 
 bool Widget::onMouseLeave() {
     if (mouseEnteredChild_) {
-        bool handled = mouseEnteredChild_->onMouseLeave();
+        bool handled = mouseEnteredChild_->setHovered(false);
         mouseEnteredChild_ = nullptr;
         return handled;
     }
