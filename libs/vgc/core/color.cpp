@@ -18,21 +18,24 @@
 
 namespace vgc::core {
 
-Color Color::hsl(double h, double s, double l) {
+namespace {
+
+template<typename Float>
+std::array<Float, 3> rgbFromHsl(Float h, Float s, Float l) {
     // Wrap h to [0, 360] range, and clamp s, l to [0, 1]
-    h = std::fmod(h, 360.0);
+    h = std::fmod(h, 360);
     if (h < 0) {
         h += 360;
     }
-    s = core::clamp(s, 0.0, 1.0);
-    l = core::clamp(l, 0.0, 1.0);
+    s = core::clamp(s, 0, 1);
+    l = core::clamp(l, 0, 1);
 
     // HSL to RGB
-    double c = (1 - std::abs(2 * l - 1)) * s;
-    double hp = h / 60;
-    double x = c * (1 - std::abs(std::fmod(hp, 2.0) - 1));
+    Float c = (1 - std::abs(2 * l - 1)) * s;
+    Float hp = h / 60;
+    Float x = c * (1 - std::abs(std::fmod(hp, 2) - 1));
     int hi = core::ifloor<int>(hp + 1); // in theory, we should use iceil instead
-    double r1, g1, b1;
+    Float r1, g1, b1;
     if (hi == 1) {
         r1 = c;
         g1 = x;
@@ -68,18 +71,101 @@ Color Color::hsl(double h, double s, double l) {
         g1 = 0;
         b1 = 0;
     }
-    double m = l - 0.5 * c;
-    return Color(r1 + m, g1 + m, b1 + m);
+    Float m = l - 0.5 * c;
+    return {r1 + m, g1 + m, b1 + m};
 }
 
-namespace {
+enum class Channel : UInt8 {
+    Red,
+    Green,
+    Blue
+};
 
-double round8b_(double x) {
-    x = std::round(x * 255.0) / 255.0;
-    return core::clamp(x, 0.0, 1.0);
+template<typename Float>
+std::array<Float, 3> hslFromRgb(Float r, Float g, Float b) {
+    r = core::clamp(r, 0, 1);
+    g = core::clamp(g, 0, 1);
+    b = core::clamp(b, 0, 1);
+    Float min;
+    Float max;
+    Channel maxChannel;
+    if (r < g) {
+        if (g < b) { // r < g < b
+            min = r;
+            max = b;
+            maxChannel = Channel::Blue;
+        }
+        else if (r < b) { // r < b < g
+            min = r;
+            max = g;
+            maxChannel = Channel::Green;
+        }
+        else { // b < r < g
+            min = b;
+            max = g;
+            maxChannel = Channel::Green;
+        }
+    }
+    else {           // g < r
+        if (r < b) { // g < r < b
+            min = g;
+            max = b;
+            maxChannel = Channel::Blue;
+        }
+        else if (g < b) { // g < b < r
+            min = g;
+            max = r;
+            maxChannel = Channel::Red;
+        }
+        else { // b < g < r
+            min = b;
+            max = r;
+            maxChannel = Channel::Red;
+        }
+    }
+    Float c = max - min;
+    Float h = 0;
+    if (c > 0) {
+        switch (maxChannel) {
+        case Channel::Red:
+            h = (g - b) / c;
+            if (h < 0) {
+                h += 6;
+            }
+            break;
+        case Channel::Green:
+            h = (b - r) / c + 2;
+            break;
+        case Channel::Blue:
+            h = (r - g) / c + 4;
+            break;
+        }
+        h *= 60;
+    }
+    Float l = (min + max) / 2;
+    Float s = 0;
+    if (0 < l && l < 1) {
+        s = c / (1 - std::abs(2 * l - 1));
+    }
+    return {h, s, l};
+}
+
+template<typename Float>
+Float round8b_(Float x) {
+    x = std::round(x * 255) / 255;
+    return core::clamp(x, 0, 1);
 }
 
 } // namespace
+
+Color Color::hsl(double h, double s, double l) {
+    auto [r, g, b] = rgbFromHsl(h, s, l);
+    return Color(r, g, b);
+}
+
+std::array<double, 3> Color::toHsl() const {
+    return hslFromRgb(r(), g(), b());
+}
 
 Color& Color::round8b() {
     data_[0] = round8b_(data_[0]);
@@ -90,57 +176,20 @@ Color& Color::round8b() {
 }
 
 Colorf Colorf::hsl(float h, float s, float l) {
-    // Wrap h to [0, 360] range, and clamp s, l to [0, 1]
-    h = std::fmod(h, 360.0f);
-    if (h < 0) {
-        h += 360;
-    }
-    s = core::clamp(s, 0.0f, 1.0f);
-    l = core::clamp(l, 0.0f, 1.0f);
+    auto [r, g, b] = rgbFromHsl(h, s, l);
+    return Colorf(r, g, b);
+}
 
-    // HSL to RGB
-    float c = (1 - std::abs(2 * l - 1)) * s;
-    float hp = h / 60;
-    float x = c * (1 - std::abs(std::fmod(hp, 2.0f) - 1));
-    int hi = core::ifloor<int>(hp + 1); // in theory, we should use iceil instead
-    float r1, g1, b1;
-    if (hi == 1) {
-        r1 = c;
-        g1 = x;
-        b1 = 0;
-    }
-    else if (hi == 2) {
-        r1 = x;
-        g1 = c;
-        b1 = 0;
-    }
-    else if (hi == 3) {
-        r1 = 0;
-        g1 = c;
-        b1 = x;
-    }
-    else if (hi == 4) {
-        r1 = 0;
-        g1 = x;
-        b1 = c;
-    }
-    else if (hi == 5) {
-        r1 = x;
-        g1 = 0;
-        b1 = c;
-    }
-    else if (hi == 6) {
-        r1 = c;
-        g1 = 0;
-        b1 = x;
-    }
-    else {
-        r1 = 0;
-        g1 = 0;
-        b1 = 0;
-    }
-    float m = l - 0.5f * c;
-    return Colorf(r1 + m, g1 + m, b1 + m);
+std::array<float, 3> Colorf::toHsl() const {
+    return hslFromRgb(r(), g(), b());
+}
+
+Colorf& Colorf::round8b() {
+    data_[0] = round8b_(data_[0]);
+    data_[1] = round8b_(data_[1]);
+    data_[2] = round8b_(data_[2]);
+    data_[3] = round8b_(data_[3]);
+    return *this;
 }
 
 } // namespace vgc::core
