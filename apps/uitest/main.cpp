@@ -31,7 +31,7 @@
 #include <vgc/ui/grid.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
-#include <vgc/ui/overlayablearea.h>
+#include <vgc/ui/overlayarea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>

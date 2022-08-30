@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/overlayablearea.h>
+#include <vgc/ui/overlayarea.h>
 
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/strings.h>

@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_OVERLAYABLEAREA_H
-#define VGC_UI_OVERLAYABLEAREA_H
+#ifndef VGC_UI_OVERLAYAREA_H
+#define VGC_UI_OVERLAYAREA_H
 
 #include <vgc/ui/widget.h>
 
@@ -38,7 +38,7 @@ protected:
     OverlayArea();
 
 public:
-    /// Creates an overlayable area.
+    /// Creates an overlay area.
     ///
     static OverlayAreaPtr create();
 
@@ -77,4 +77,4 @@ private:
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_OVERLAYABLEAREA_H
+#endif // VGC_UI_OVERLAYAREA_H
