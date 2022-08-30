@@ -83,6 +83,7 @@ void Widget::reparent(Widget* newParent) {
 }
 
 namespace {
+
 bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = false) {
     if (!oldWidget) {
         if (simulate) {
@@ -105,6 +106,7 @@ bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = fals
         return true;
     }
 }
+
 } // namespace
 
 bool Widget::canReplace(Widget* oldWidget) {
@@ -140,6 +142,42 @@ Widget* Widget::root() const {
         w = w->parent();
     }
     return const_cast<Widget*>(res);
+}
+
+namespace {
+
+geometry::Vec2f positionInRoot(const Widget* widget, const Widget** outRoot) {
+    geometry::Vec2f pos = widget->position();
+    const Widget* root = const_cast<Widget*>(widget);
+    const Widget* w = widget->parent();
+    while (w) {
+        root = w;
+        pos += w->position();
+        w = w->parent();
+    }
+    if (outRoot) {
+        *outRoot = root;
+    }
+    return pos;
+}
+
+} // namespace
+
+geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) const {
+
+    // XXX could use any common ancestor
+    const Widget* thisRoot = nullptr;
+    geometry::Vec2f thisPosInRoot = positionInRoot(this, &thisRoot);
+    const Widget* otherRoot = nullptr;
+    geometry::Vec2f otherPosInRoot = positionInRoot(other, &otherRoot);
+
+    if (thisRoot != otherRoot) {
+        throw core::LogicError(
+            "Cannot map a position between two widget coordinate systems if the widgets"
+            "don't have the same root");
+    }
+
+    return position + thisPosInRoot - otherPosInRoot;
 }
 
 void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size) {
