@@ -290,7 +290,7 @@ void MainWindow::setupWidgets_() {
 void MainWindow::setupActions_() {
     actionNew_ = new QAction(tr("&New"), this);
     actionNew_->setStatusTip(tr("Open a new document."));
-    //actionNew_->setShortcut(QKeySequence::New);
+    actionNew_->setShortcut(QKeySequence::New);
     connect(actionNew_, SIGNAL(triggered()), this, SLOT(new_()));
 
     actionOpen_ = new QAction(tr("&Open"), this);
