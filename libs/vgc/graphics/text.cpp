@@ -654,7 +654,7 @@ void ShapedText::fill(core::FloatArray& data,
 
 // clang-format on
 
-Int ShapedText::positionFromByte(Int byteIndex) {
+Int ShapedText::positionFromByte(Int byteIndex) const {
     auto first = impl_->positions.cbegin();
     auto last = impl_->positions.cend();
     auto comp = [](const ShapedTextPositionInfo& info, Int byteIndex) {
@@ -671,7 +671,7 @@ Int ShapedText::positionFromByte(Int byteIndex) {
 
 Int ShapedText::positionFromPoint(
     const geometry::Vec2f& point,
-    TextBoundaryMarkers boundaryMarkers) {
+    TextBoundaryMarkers boundaryMarkers) const {
 
     std::pair<Int, Int> pair = positionPairFromPoint(point, boundaryMarkers);
 
@@ -691,7 +691,7 @@ Int ShapedText::positionFromPoint(
 
 std::pair<Int, Int> ShapedText::positionPairFromPoint(
     const geometry::Vec2f& point,
-    TextBoundaryMarkers boundaryMarkers) {
+    TextBoundaryMarkers boundaryMarkers) const {
 
     // Find smallest text position after the given mouse position
     float x = point[0];
@@ -726,7 +726,7 @@ std::pair<Int, Int> ShapedText::positionPairFromPoint(
 Int ShapedText::nextBoundary(
     Int position,
     TextBoundaryMarkers boundaryMarkers,
-    bool clamp) {
+    bool clamp) const {
 
     return nextOrEqualBoundary(position + 1, boundaryMarkers, clamp);
 }
@@ -734,7 +734,7 @@ Int ShapedText::nextBoundary(
 Int ShapedText::nextOrEqualBoundary(
     Int position,
     TextBoundaryMarkers boundaryMarkers,
-    bool clamp) {
+    bool clamp) const {
 
     Int minPosition = 0;
     Int maxPosition = numPositions() - 1;
@@ -758,7 +758,7 @@ Int ShapedText::nextOrEqualBoundary(
 Int ShapedText::previousBoundary(
     Int position,
     TextBoundaryMarkers boundaryMarkers,
-    bool clamp) {
+    bool clamp) const {
 
     return previousOrEqualBoundary(position - 1, boundaryMarkers, clamp);
 }
@@ -766,7 +766,7 @@ Int ShapedText::previousBoundary(
 Int ShapedText::previousOrEqualBoundary(
     Int position,
     TextBoundaryMarkers boundaryMarkers,
-    bool clamp) {
+    bool clamp) const {
 
     Int minPosition = 0;
     Int maxPosition = numPositions() - 1;
