@@ -23,7 +23,7 @@ namespace {
 template<typename Float>
 std::array<Float, 3> rgbFromHsl(Float h, Float s, Float l) {
     // Wrap h to [0, 360] range, and clamp s, l to [0, 1]
-    h = std::fmod(h, 360);
+    h = std::fmod(h, static_cast<Float>(360));
     if (h < 0) {
         h += 360;
     }
@@ -33,7 +33,7 @@ std::array<Float, 3> rgbFromHsl(Float h, Float s, Float l) {
     // HSL to RGB
     Float c = (1 - std::abs(2 * l - 1)) * s;
     Float hp = h / 60;
-    Float x = c * (1 - std::abs(std::fmod(hp, 2) - 1));
+    Float x = c * (1 - std::abs(std::fmod(hp, static_cast<Float>(2)) - 1));
     int hi = core::ifloor<int>(hp + 1); // in theory, we should use iceil instead
     Float r1, g1, b1;
     if (hi == 1) {
@@ -71,7 +71,7 @@ std::array<Float, 3> rgbFromHsl(Float h, Float s, Float l) {
         g1 = 0;
         b1 = 0;
     }
-    Float m = l - 0.5 * c;
+    Float m = l - c / 2;
     return {r1 + m, g1 + m, b1 + m};
 }
 
