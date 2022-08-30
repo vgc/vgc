@@ -1282,6 +1282,17 @@ public:
         insertChildObject_(child, nextSibling);
     }
 
+    void insertAt(Int i, T* child) {
+        if (i < 0 || i > numChildObjects()) {
+            throw IndexError(core::format("Cannot insert child in list at index {}.", i));
+        }
+        Object* nextSibling = firstChildObject();
+        for (; i > 0; --i) {
+            nextSibling = nextSibling->nextSiblingObject();
+        }
+        insertChildObject_(child, nextSibling);
+    }
+
     core::ObjPtr<T> remove(T* child) {
         core::ObjPtr<Object> removed = removeChildObject_(child);
         core::ObjPtr<T> res(static_cast<T*>(removed.get()));
