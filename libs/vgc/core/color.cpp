@@ -156,6 +156,30 @@ Float round8b_(Float x) {
     return core::clamp(x, 0, 1);
 }
 
+UInt8 hexByteToUint8(char d) {
+    constexpr UInt8 c0 = static_cast<UInt8>('0');
+    constexpr UInt8 c9 = static_cast<UInt8>('9');
+    constexpr UInt8 ca = static_cast<UInt8>('a');
+    constexpr UInt8 cf = static_cast<UInt8>('f');
+    constexpr UInt8 cA = static_cast<UInt8>('A');
+    constexpr UInt8 cF = static_cast<UInt8>('F');
+    constexpr UInt8 i10 = static_cast<UInt8>(10);
+    UInt8 c = static_cast<UInt8>(d);
+
+    if (c >= c0 && c <= c9) {
+        return c - c0;
+    }
+    else if (c >= ca && c <= cf) {
+        return i10 + c - ca;
+    }
+    else if (c >= cA && c <= cF) {
+        return i10 + c - cA;
+    }
+    else {
+        throw core::ParseError(core::format("Invalid hexadecimal digit: '{}'.", d));
+    }
+}
+
 } // namespace
 
 Color Color::hsl(double h, double s, double l) {
@@ -163,8 +187,50 @@ Color Color::hsl(double h, double s, double l) {
     return Color(r, g, b);
 }
 
+Color Color::fromHex(std::string_view hex) {
+    size_t s = hex.size();
+    if (!(s == 4 || s == 7) || hex[0] != '#') {
+        throw core::ParseError(core::format("Invalid hexadecimal color: \"{}\".", hex));
+    }
+    UInt8 r0, g0, b0;
+    UInt8 r1, g1, b1;
+    if (s == 4) {
+        r0 = hexByteToUint8(hex[1]);
+        r1 = r0;
+        g0 = hexByteToUint8(hex[2]);
+        g1 = g0;
+        b0 = hexByteToUint8(hex[3]);
+        b1 = b0;
+    }
+    else { // s == 7
+        r0 = hexByteToUint8(hex[1]);
+        r1 = hexByteToUint8(hex[2]);
+        g0 = hexByteToUint8(hex[3]);
+        g1 = hexByteToUint8(hex[4]);
+        b0 = hexByteToUint8(hex[5]);
+        b1 = hexByteToUint8(hex[6]);
+    }
+    double r = core::uint8ToDouble01(16 * r0 + r1);
+    double g = core::uint8ToDouble01(16 * g0 + g1);
+    double b = core::uint8ToDouble01(16 * b0 + b1);
+    return Color(r, g, b);
+}
+
 std::array<double, 3> Color::toHsl() const {
     return hslFromRgb(r(), g(), b());
+}
+
+std::string Color::toHex() const {
+    UInt8 r8 = core::double01ToUint8(r());
+    UInt8 g8 = core::double01ToUint8(g());
+    UInt8 b8 = core::double01ToUint8(b());
+    std::string res;
+    res.reserve(7);
+    res.append("#");
+    res.append(core::toHexPair(r8));
+    res.append(core::toHexPair(g8));
+    res.append(core::toHexPair(b8));
+    return res;
 }
 
 Color& Color::round8b() {
