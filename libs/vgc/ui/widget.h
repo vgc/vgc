@@ -202,6 +202,10 @@ public:
     ///
     void addChild(Widget* child);
 
+    /// Adds the given `widget` to this widget children at position `i`.
+    ///
+    void insertChildAt(Int i, Widget* widget);
+
     /// Returns whether this Widget can be reparented with the given \p newParent.
     /// See reparent() for details.
     ///

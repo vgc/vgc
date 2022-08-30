@@ -66,6 +66,11 @@ void Widget::addChild(Widget* child) {
     children_->append(child);
 }
 
+void Widget::insertChildAt(Int i, Widget* child) {
+    checkCanReparent_(this, child);
+    children_->insertAt(i, child);
+}
+
 bool Widget::canReparent(Widget* newParent) {
     const bool simulate = true;
     return checkCanReparent_(newParent, this, simulate);
