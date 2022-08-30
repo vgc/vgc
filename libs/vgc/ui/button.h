@@ -62,7 +62,7 @@ public:
 
     /// Clicks the button at position `pos` in local coordinates.
     ///
-    /// This will cause the clicked signal to be emitted.
+    /// This will cause the clicked signals to be emitted.
     ///
     /// \sa clicked, clickedAt
     ///
