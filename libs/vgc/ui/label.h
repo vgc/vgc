@@ -78,7 +78,6 @@ private:
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
     bool reload_ = true;
-    bool isHovered_ = false;
 };
 
 } // namespace vgc::ui

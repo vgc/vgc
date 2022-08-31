@@ -103,7 +103,6 @@ private:
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
     bool reload_ = true;
-    bool isHovered_ = false;
     ui::MouseButton mouseButton_ = ui::MouseButton::None;
 
     // Handle double/triple clicks

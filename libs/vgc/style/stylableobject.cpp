@@ -33,13 +33,17 @@ void StylableObject::setStyleSheet(std::string_view string) {
 }
 
 void StylableObject::addStyleClass(core::StringId class_) {
-    styleClasses_.add(class_);
-    updateStyle_();
+    if (!styleClasses_.contains(class_)) {
+        styleClasses_.add(class_);
+        updateStyle_();
+    }
 }
 
 void StylableObject::removeStyleClass(core::StringId class_) {
-    styleClasses_.remove(class_);
-    updateStyle_();
+    if (styleClasses_.contains(class_)) {
+        styleClasses_.remove(class_);
+        updateStyle_();
+    }
 }
 
 void StylableObject::toggleStyleClass(core::StringId class_) {

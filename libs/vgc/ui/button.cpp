@@ -96,8 +96,7 @@ void Button::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         core::FloatArray a;
 
         // Draw background
-        core::Color backgroundColor = detail::getColor(
-            this, isHovered() ? gs::background_color_on_hover : gs::background_color);
+        core::Color backgroundColor = detail::getColor(this, gs::background_color);
         if (backgroundColor.a() > 0) {
             style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
             detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
@@ -117,13 +116,36 @@ void Button::onPaintDestroy(graphics::Engine*) {
     triangles_.reset();
 }
 
-bool Button::onMouseMove(MouseEvent* /*event*/) {
-    return true;
+bool Button::onMouseMove(MouseEvent* event) {
+    if (isPressed_) {
+        if (rect().contains(event->position())) {
+            if (!hasStyleClass(strings::pressed)) {
+                addStyleClass(strings::pressed);
+                reload_ = true;
+                repaint();
+            }
+        }
+        else {
+            if (hasStyleClass(strings::pressed)) {
+                removeStyleClass(strings::pressed);
+                reload_ = true;
+                repaint();
+            }
+        }
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 bool Button::onMousePress(MouseEvent* event) {
     if (event->button() == MouseButton::Left) {
         pressed().emit(this, event->position());
+        addStyleClass(strings::pressed);
+        isPressed_ = true;
+        reload_ = true;
+        repaint();
         return true;
     }
     else {
@@ -137,6 +159,10 @@ bool Button::onMouseRelease(MouseEvent* event) {
         if (rect().contains(event->position())) {
             click(event->position());
         }
+        removeStyleClass(strings::pressed);
+        isPressed_ = false;
+        reload_ = true;
+        repaint();
         return true;
     }
     else {
@@ -145,12 +171,14 @@ bool Button::onMouseRelease(MouseEvent* event) {
 }
 
 bool Button::onMouseEnter() {
+    addStyleClass(strings::hovered);
     reload_ = true;
     repaint();
     return true;
 }
 
 bool Button::onMouseLeave() {
+    removeStyleClass(strings::hovered);
     reload_ = true;
     repaint();
     return true;

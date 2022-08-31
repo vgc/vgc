@@ -132,8 +132,7 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         core::FloatArray a;
 
         // Draw background
-        core::Color backgroundColor = detail::getColor(
-            this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
+        core::Color backgroundColor = detail::getColor(this, gs::background_color);
 #if defined(VGC_QOPENGL_EXPERIMENT)
         static core::Stopwatch sw = {};
         auto t = sw.elapsed() * 50.f;

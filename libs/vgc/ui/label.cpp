@@ -92,8 +92,7 @@ void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         core::FloatArray a;
 
         // Draw background
-        core::Color backgroundColor = detail::getColor(
-            this, isHovered_ ? gs::background_color_on_hover : gs::background_color);
+        core::Color backgroundColor = detail::getColor(this, gs::background_color);
         if (backgroundColor.a() > 0) {
             style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
             detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
@@ -114,14 +113,12 @@ void Label::onPaintDestroy(graphics::Engine*) {
 }
 
 bool Label::onMouseEnter() {
-    isHovered_ = true;
     reload_ = true;
     repaint();
     return true;
 }
 
 bool Label::onMouseLeave() {
-    isHovered_ = false;
     reload_ = true;
     repaint();
     return true;

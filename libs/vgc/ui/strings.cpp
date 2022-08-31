@@ -47,4 +47,10 @@ const core::StringId horizontal_shrink("horizontal-shrink");
 const core::StringId vertical_stretch("vertical-stretch");
 const core::StringId vertical_shrink("vertical-shrink");
 
+// Style classes / pseudo-classes
+// ------------------------------
+
+const core::StringId hovered("hovered");
+const core::StringId pressed("pressed");
+
 } // namespace vgc::ui::strings

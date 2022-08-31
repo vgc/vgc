@@ -120,8 +120,7 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     if (dirtyPlot_ || dirtyHint_) {
         // XXX cache these
         core::Color backgroundColor = detail::getColor(this, gs::background_color);
-        core::Color hoveredBackgroundColor =
-            detail::getColor(this, gs::background_color_on_hover);
+        // TODO
         core::Color textColor = detail::getColor(this, gs::text_color);
         float paddingBottom = detail::getLength(this, gs::padding_bottom);
         float paddingLeft = detail::getLength(this, gs::padding_left);
@@ -245,12 +244,6 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                     static_cast<float>(backgroundColor.g()),
                     static_cast<float>(backgroundColor.b()),
                     static_cast<float>(backgroundColor.a()));
-
-                core::Colorf hoveredBackgroundColorf(
-                    static_cast<float>(hoveredBackgroundColor.r()),
-                    static_cast<float>(hoveredBackgroundColor.g()),
-                    static_cast<float>(hoveredBackgroundColor.b()),
-                    static_cast<float>(hoveredBackgroundColor.a()));
 
                 core::Colorf textColorf(
                     static_cast<float>(textColor.r()),

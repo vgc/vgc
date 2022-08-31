@@ -27,7 +27,6 @@ namespace vgc::graphics::strings {
 
 // non-inherited
 VGC_GRAPHICS_API extern const core::StringId background_color;
-VGC_GRAPHICS_API extern const core::StringId background_color_on_hover;
 VGC_GRAPHICS_API extern const core::StringId margin_top;
 VGC_GRAPHICS_API extern const core::StringId margin_right;
 VGC_GRAPHICS_API extern const core::StringId margin_bottom;

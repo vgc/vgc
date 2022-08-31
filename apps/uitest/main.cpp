@@ -210,6 +210,7 @@ int main(int argc, char* argv[]) {
         label->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
                              "background-color-on-hover: rgb(20, 130, 130); }");
         vgc::ui::Grid* grid = overlayTest->createAreaWidget<vgc::ui::Grid>();
+        grid->setStyleSheet(".Grid { column-gap: 10dp; row-gap: 10dp; }");
         for (int i = 0; i < 2; ++i) {
             for (int j = 0; j < 4; ++j) {
                 vgc::ui::ButtonPtr button = vgc::ui::Button::create("click me");
