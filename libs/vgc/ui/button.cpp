@@ -123,11 +123,39 @@ bool Button::onMouseMove(MouseEvent* /*event*/) {
 }
 
 bool Button::onMousePress(MouseEvent* event) {
-    click(event->position());
+
+    // Only support one mouse button at a time
+    //
+    // TODO: we might want to emit pressed/released/clicked/etc.
+    // only when the user is using the left mouse button. It could
+    // be configurable, e.g. button->setAcceptedMouseButtons(..)
+    //
+    if (mouseButton_ != MouseButton::None) {
+        return false;
+    }
+    mouseButton_ = event->button();
+
+    pressed().emit();
+    pressedAt().emit(this, event->position());
+
     return true;
 }
 
-bool Button::onMouseRelease(MouseEvent* /*event*/) {
+bool Button::onMouseRelease(MouseEvent* event) {
+
+    // Only support one mouse button at a time
+    if (mouseButton_ != event->button()) {
+        return false;
+    }
+    mouseButton_ = MouseButton::None;
+
+    released().emit();
+    releasedAt().emit(this, event->position());
+
+    if (rect().contains(event->position())) {
+        click(event->position());
+    }
+
     return true;
 }
 

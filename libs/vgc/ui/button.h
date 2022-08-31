@@ -68,19 +68,43 @@ public:
     ///
     void click(const geometry::Vec2f& pos);
 
-    /// This signal is emitted whenever the button is clicked by the user, or
-    /// when the click() method is called.
+    /// This signal is emitted when:
     ///
-    /// \sa click()
+    /// - the button is clicked by the user (i.e., a mouse press
+    ///   was followed by a mouse release within the button), or
+    ///
+    /// - the click() method is called.
+    ///
+    /// \sa pressed(), released(), clickedAt(), click()
     ///
     VGC_SIGNAL(clicked);
 
-    /// This signal is emitted whenever the button is clicked by the user, or
-    /// when the click() method is called.
-    ///
-    /// \sa click()
+    /// This signal is emitted at the same time as clicked(), providing more
+    /// information.
     ///
     VGC_SIGNAL(clickedAt, (Button*, button), (const geometry::Vec2f&, pos));
+
+    /// This signal is emitted when the button is pressed.
+    ///
+    /// \sa released(), clicked(), pressedAt()
+    ///
+    VGC_SIGNAL(pressed);
+
+    /// This signal is emitted at the same time as pressed(), providing more
+    /// information.
+    ///
+    VGC_SIGNAL(pressedAt, (Button*, button), (const geometry::Vec2f&, pos));
+
+    /// This signal is emitted when the button is released.
+    ///
+    /// \sa pressed(), clicked(), releasedAt()
+    ///
+    VGC_SIGNAL(released);
+
+    /// This signal is emitted at the same time as released(), providing more
+    /// information.
+    ///
+    VGC_SIGNAL(releasedAt, (Button*, button), (const geometry::Vec2f&, pos));
 
     // Reimplementation of StylableObject virtual methods
     style::StylableObject* firstChildStylableObject() const override;
@@ -104,6 +128,7 @@ private:
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
     bool reload_ = true;
+    ui::MouseButton mouseButton_ = ui::MouseButton::None;
 };
 
 } // namespace vgc::ui
