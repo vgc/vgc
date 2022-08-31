@@ -50,8 +50,7 @@ void Button::setText(std::string_view text) {
 }
 
 void Button::click(const geometry::Vec2f& pos) {
-    clicked().emit();
-    clickedAt().emit(this, pos);
+    clicked().emit(this, pos);
 }
 
 style::StylableObject* Button::firstChildStylableObject() const {
@@ -123,12 +122,26 @@ bool Button::onMouseMove(MouseEvent* /*event*/) {
 }
 
 bool Button::onMousePress(MouseEvent* event) {
-    click(event->position());
-    return true;
+    if (event->button() == MouseButton::Left) {
+        pressed().emit(this, event->position());
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
-bool Button::onMouseRelease(MouseEvent* /*event*/) {
-    return true;
+bool Button::onMouseRelease(MouseEvent* event) {
+    if (event->button() == MouseButton::Left) {
+        released().emit(this, event->position());
+        if (rect().contains(event->position())) {
+            click(event->position());
+        }
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 bool Button::onMouseEnter() {

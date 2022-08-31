@@ -62,25 +62,34 @@ public:
 
     /// Clicks the button at position `pos` in local coordinates.
     ///
-    /// This will cause the clicked signals to be emitted.
+    /// This will cause the clicked signal to be emitted.
     ///
-    /// \sa clicked, clickedAt
+    /// \sa clicked()
     ///
     void click(const geometry::Vec2f& pos);
 
-    /// This signal is emitted whenever the button is clicked by the user, or
-    /// when the click() method is called.
+    /// This signal is emitted when:
     ///
-    /// \sa click()
+    /// - the button is clicked by the user (i.e., a mouse press
+    ///   was followed by a mouse release within the button), or
     ///
-    VGC_SIGNAL(clicked);
+    /// - the click() method is called.
+    ///
+    /// \sa pressed(), released()
+    ///
+    VGC_SIGNAL(clicked, (Button*, button), (const geometry::Vec2f&, pos));
 
-    /// This signal is emitted whenever the button is clicked by the user, or
-    /// when the click() method is called.
+    /// This signal is emitted when the button is pressed.
     ///
-    /// \sa click()
+    /// \sa released(), clicked()
     ///
-    VGC_SIGNAL(clickedAt, (Button*, button), (const geometry::Vec2f&, pos));
+    VGC_SIGNAL(pressed, (Button*, button), (const geometry::Vec2f&, pos));
+
+    /// This signal is emitted when the button is released.
+    ///
+    /// \sa pressed(), clicked()
+    ///
+    VGC_SIGNAL(released, (Button*, button), (const geometry::Vec2f&, pos));
 
     // Reimplementation of StylableObject virtual methods
     style::StylableObject* firstChildStylableObject() const override;
