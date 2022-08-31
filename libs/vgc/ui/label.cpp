@@ -113,14 +113,12 @@ void Label::onPaintDestroy(graphics::Engine*) {
 }
 
 bool Label::onMouseEnter() {
-    isHovered_ = true;
     reload_ = true;
     repaint();
     return true;
 }
 
 bool Label::onMouseLeave() {
-    isHovered_ = false;
     reload_ = true;
     repaint();
     return true;
