@@ -45,6 +45,9 @@ VGC_UI_API extern const core::StringId horizontal_shrink;
 VGC_UI_API extern const core::StringId vertical_stretch;
 VGC_UI_API extern const core::StringId vertical_shrink;
 
+VGC_UI_API extern const core::StringId hovered;
+VGC_UI_API extern const core::StringId pressed;
+
 } // namespace vgc::ui::strings
 
 #endif // VGC_UI_STRINGS_H

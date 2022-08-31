@@ -189,7 +189,7 @@ public:
 
     /// Returns the style classes of this object.
     ///
-    ClassSet styleClasses() {
+    const ClassSet& styleClasses() const {
         return styleClasses_;
     }
 

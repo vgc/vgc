@@ -23,7 +23,6 @@ namespace vgc::graphics::strings {
 
 // non-inherited
 const core::StringId background_color("background-color");
-const core::StringId background_color_on_hover("background-color-on-hover");
 
 // Margins & Padding currently only accepts <length> and in the future we may accept <percentage>.
 //
