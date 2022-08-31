@@ -62,9 +62,9 @@ public:
 
     /// Clicks the button at position `pos` in local coordinates.
     ///
-    /// This will cause the clicked signals to be emitted.
+    /// This will cause the clicked signal to be emitted.
     ///
-    /// \sa clicked, clickedAt
+    /// \sa clicked()
     ///
     void click(const geometry::Vec2f& pos);
 
@@ -75,36 +75,21 @@ public:
     ///
     /// - the click() method is called.
     ///
-    /// \sa pressed(), released(), clickedAt(), click()
+    /// \sa pressed(), released()
     ///
-    VGC_SIGNAL(clicked);
-
-    /// This signal is emitted at the same time as clicked(), providing more
-    /// information.
-    ///
-    VGC_SIGNAL(clickedAt, (Button*, button), (const geometry::Vec2f&, pos));
+    VGC_SIGNAL(clicked, (Button*, button), (const geometry::Vec2f&, pos));
 
     /// This signal is emitted when the button is pressed.
     ///
-    /// \sa released(), clicked(), pressedAt()
+    /// \sa released(), clicked()
     ///
-    VGC_SIGNAL(pressed);
-
-    /// This signal is emitted at the same time as pressed(), providing more
-    /// information.
-    ///
-    VGC_SIGNAL(pressedAt, (Button*, button), (const geometry::Vec2f&, pos));
+    VGC_SIGNAL(pressed, (Button*, button), (const geometry::Vec2f&, pos));
 
     /// This signal is emitted when the button is released.
     ///
-    /// \sa pressed(), clicked(), releasedAt()
+    /// \sa pressed(), clicked()
     ///
-    VGC_SIGNAL(released);
-
-    /// This signal is emitted at the same time as released(), providing more
-    /// information.
-    ///
-    VGC_SIGNAL(releasedAt, (Button*, button), (const geometry::Vec2f&, pos));
+    VGC_SIGNAL(released, (Button*, button), (const geometry::Vec2f&, pos));
 
     // Reimplementation of StylableObject virtual methods
     style::StylableObject* firstChildStylableObject() const override;

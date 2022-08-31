@@ -214,7 +214,7 @@ int main(int argc, char* argv[]) {
             for (int j = 0; j < 4; ++j) {
                 vgc::ui::ButtonPtr button = vgc::ui::Button::create("click me");
                 grid->setWidgetAt(button.get(), i, j);
-                button->clickedAt().connect(
+                button->clicked().connect(
                     [=](vgc::ui::Button* button, const vgc::geometry::Vec2f& pos) {
                         vgc::geometry::Vec2f p = button->mapTo(overlayTest, pos);
                         label->setGeometry(p, vgc::geometry::Vec2f(120.f, 25.f));
