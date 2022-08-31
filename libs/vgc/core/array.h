@@ -2683,7 +2683,7 @@ bool operator>=(const Array<T>& a1, const Array<T>& a2) {
 template<typename T>
 void swap(Array<T>& a1, Array<T>& a2) {
     a1.swap(a2);
-};
+}
 
 /// Writes the given `Array<T>` to the output stream.
 ///
