@@ -113,7 +113,6 @@ private:
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
     bool reload_ = true;
-    ui::MouseButton mouseButton_ = ui::MouseButton::None;
 };
 
 } // namespace vgc::ui
