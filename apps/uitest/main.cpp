@@ -185,7 +185,7 @@ int main(int argc, char* argv[]) {
     gridTest->widgetAt(0, 2)->setStyleSheet(
         ".LineEdit { text-color: rgb(255, 100, 80); vertical-stretch: 0; "
         "preferred-width: 231dp; horizontal-stretch: 2; }");
-    gridTest->updateGeometry();
+    gridTest->requestGeometryUpdate();
 
     vgc::ui::Plot2d* plot2d = col->createChild<vgc::ui::Plot2d>();
     plot2d->setNumYs(16);
@@ -218,8 +218,7 @@ int main(int argc, char* argv[]) {
                 button->clicked().connect(
                     [=](vgc::ui::Button* button, const vgc::geometry::Vec2f& pos) {
                         vgc::geometry::Vec2f p = button->mapTo(overlayTest, pos);
-                        label->setGeometry(p, vgc::geometry::Vec2f(120.f, 25.f));
-                        label->updateGeometry();
+                        label->updateGeometry(p, vgc::geometry::Vec2f(120.f, 25.f));
                     });
             }
         }

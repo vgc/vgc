@@ -53,7 +53,7 @@ void OverlayArea::addOverlayWidget(Widget* w) {
 
 void OverlayArea::onWidgetAdded(Widget* w) {
     if (w == areaWidget_) {
-        updateGeometry();
+        requestGeometryUpdate();
     }
 }
 
@@ -61,7 +61,7 @@ void OverlayArea::onWidgetRemoved(Widget* w) {
     if (w == areaWidget_) {
         areaWidget_ = nullptr;
     }
-    updateGeometry();
+    requestGeometryUpdate();
 }
 
 float OverlayArea::preferredWidthForHeight(float height) const {
@@ -78,7 +78,8 @@ geometry::Vec2f OverlayArea::computePreferredSize() const {
 
 void OverlayArea::updateChildrenGeometry() {
     if (areaWidget_) {
-        areaWidget_->setGeometry(geometry::Vec2f(), geometry::Vec2f(width(), height()));
+        areaWidget_->updateGeometry(
+            geometry::Vec2f(), geometry::Vec2f(width(), height()));
     }
 }
 
