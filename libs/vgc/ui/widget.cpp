@@ -181,13 +181,31 @@ geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) co
     return position + thisPosInRoot - otherPosInRoot;
 }
 
-void Widget::setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size) {
-    geometry::Vec2f oldSize = size_;
+void Widget::updateGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size) {
     position_ = position;
-    size_ = size;
-    updateChildrenGeometry();
-    if (!oldSize.allNear(size_, 1e-6f)) {
+    bool resized = false;
+    if (!size_.allNear(size, 1e-6f)) {
+        size_ = size;
+        resized = true;
+    }
+    if (isGeometryUpdateRequested_ || resized) {
+        isGeometryUpdateRequested_ = false;
+        updateChildrenGeometry();
+    }
+    if (resized) {
         onResize();
+    }
+}
+
+void Widget::updateGeometry(const geometry::Vec2f& position) {
+    position_ = position;
+    updateGeometry();
+}
+
+void Widget::updateGeometry() {
+    if (isGeometryUpdateRequested_) {
+        isGeometryUpdateRequested_ = false;
+        updateChildrenGeometry();
     }
 }
 
@@ -223,42 +241,53 @@ float Widget::verticalShrink() const {
     return style(strings::vertical_shrink).toFloat();
 }
 
-void Widget::updateGeometry() {
-    Widget* root = this;
-    Widget* w = this;
-    while (w) {
-        w->isPreferredSizeComputed_ = false;
-        root = w;
-        w = w->parent();
+void Widget::requestGeometryUpdate() {
+    Widget* widget = this;
+    while (widget) {
+        // (not isPreferredSizeComputed_) => isGeometryUpdateRequested_
+        // (not isGeometryUpdateRequested_) => isPreferredSizeComputed_
+        // isGeometryUpdateRequested_ => isRepaintRequested_
+        if (!widget->isGeometryUpdateRequested_) {
+            widget->isGeometryUpdateRequested_ = true;
+            // repaint request 
+            if (!widget->isRepaintRequested_) {
+                widget->isRepaintRequested_ = true;
+                widget->repaintRequested().emit();
+            }
+        }
+        else if (!widget->isPreferredSizeComputed_) {
+            // isGeometryUpdateRequested_
+            // && isRepaintRequested_
+            // && !isPreferredSizeComputed_
+            break;
+        }
+        widget->isPreferredSizeComputed_ = false;
+        widget = widget->parent();
     }
-    root->updateChildrenGeometry();
-    repaint();
 }
 
 void Widget::onResize() {
 }
 
-void Widget::repaint() {
+void Widget::requestRepaint() {
     Widget* widget = this;
-    while (widget) {
+    while (widget && !widget->isRepaintRequested_) {
+        widget->isRepaintRequested_ = true;
         widget->repaintRequested().emit();
         widget = widget->parent();
     }
 }
 
 void Widget::preparePaint(graphics::Engine* engine, PaintOptions options) {
-    if (engine != lastPaintEngine_) {
-        setEngine_(engine);
-        onPaintCreate(engine);
-    }
+    prePaintUpdateGeometry_();
+    prePaintUpdateEngine_(engine);
     onPaintPrepare(engine, options);
 }
 
 void Widget::paint(graphics::Engine* engine, PaintOptions options) {
-    if (engine != lastPaintEngine_) {
-        setEngine_(engine);
-        onPaintCreate(engine);
-    }
+    prePaintUpdateGeometry_();
+    prePaintUpdateEngine_(engine);
+    isRepaintRequested_ = false;
     onPaintDraw(engine, options);
 }
 
@@ -680,7 +709,20 @@ style::StylableObject* Widget::nextSiblingStylableObject() const {
 }
 
 void Widget::onStyleChanged() {
-    isPreferredSizeComputed_ = false;
+    requestGeometryUpdate();
+}
+
+void Widget::prePaintUpdateGeometry_() {
+    if (!parent()) {
+        // Calling updateRootGeometry_() could indirectly call requestRepaint() from 
+        // resized chidlren.
+        // However we are already painting so we don't want to emit a request from
+        // the root now.
+        // Setting isRepaintRequested_ to true makes requestRepaint() a no-op for
+        // this widget.
+        isRepaintRequested_ = true;
+        updateGeometry();
+    }
 }
 
 void Widget::releaseEngine_() {
@@ -696,5 +738,13 @@ void Widget::setEngine_(graphics::Engine* engine) {
     lastPaintEngine_ = engine;
     engine->aboutToBeDestroyed().connect(onEngineAboutToBeDestroyed());
 }
+
+void Widget::prePaintUpdateEngine_(graphics::Engine* engine) {
+    if (engine != lastPaintEngine_) {
+        setEngine_(engine);
+        onPaintCreate(engine);
+    }
+}
+
 
 } // namespace vgc::ui

@@ -254,18 +254,21 @@ public:
     /// Returns the position of the widget relative to its parent.
     ///
     geometry::Vec2f position() const {
+        updateRootGeometry_();
         return position_;
     }
 
     /// Returns the X coordinate of the widget relative to its parent.
     ///
     float x() const {
+        updateRootGeometry_();
         return position_[0];
     }
 
     /// Returns the Y coordinate of the widget relative to its parent.
     ///
     float y() const {
+        updateRootGeometry_();
         return position_[1];
     }
 
@@ -279,6 +282,7 @@ public:
     /// This is equivalent to `Rect2f::fromPositionSize(position(), size())`.
     ///
     geometry::Rect2f geometry() const {
+        updateRootGeometry_();
         return geometry::Rect2f::fromPositionSize(position_, size_);
     }
 
@@ -287,6 +291,7 @@ public:
     /// This is equivalent to `Rect2f::fromPositionSize(0, 0, size())`.
     ///
     geometry::Rect2f rect() const {
+        updateRootGeometry_();
         return geometry::Rect2f::fromPositionSize(0, 0, size_);
     }
 
@@ -295,8 +300,8 @@ public:
     ///
     /// Unless this widget is the root widget, this method should only be
     /// called by the parent of this widget, inside updateChildrenGeometry().
-    /// In other words, setGeometry() calls updateChildrenGeometry(), which
-    /// calls setGeometry() on all its children, etc.
+    /// In other words, updateGeometry() calls updateChildrenGeometry(), which
+    /// calls updateGeometry() on all its children, etc.
     ///
     /// In order to prevent infinite loops, this function does not
     /// automatically triggers a repaint nor informs the parent widget that the
@@ -304,15 +309,23 @@ public:
     /// already knows, since it is the object that called this function in the
     /// first place.
     ///
-    void setGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size);
+    void updateGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size);
     /// \overload
-    void setGeometry(float x, float y, float width, float height) {
-        setGeometry(geometry::Vec2f(x, y), geometry::Vec2f(width, height));
+    void updateGeometry(float x, float y, float width, float height) {
+        updateGeometry(geometry::Vec2f(x, y), geometry::Vec2f(width, height));
     }
     /// \overload
-    void setGeometry(const geometry::Rect2f& geometry) {
-        setGeometry(geometry.position(), geometry.size());
+    void updateGeometry(const geometry::Rect2f& geometry) {
+        updateGeometry(geometry.position(), geometry.size());
     }
+    /// \overload (keeps current size)
+    void updateGeometry(const geometry::Vec2f& position);
+    /// \overload (keeps current size)
+    void updateGeometry(float x, float y) {
+        updateGeometry(geometry::Vec2f(x, y));
+    }
+    /// \overload (keeps current position and size)
+    void updateGeometry();
 
     /// Returns the preferred size of this widget, that is, the size that
     /// layout classes will try to assign to this widget. However, note this
@@ -330,28 +343,28 @@ public:
     /// widget content.
     ///
     geometry::Vec2f preferredSize() const {
-        if (!isPreferredSizeComputed_) {
-            preferredSize_ = computePreferredSize();
-            isPreferredSizeComputed_ = true;
-        }
+        updatePreferredSize_();
         return preferredSize_;
     }
 
     /// Returns the size of the widget.
     ///
     geometry::Vec2f size() const {
+        updateRootGeometry_();
         return size_;
     }
 
     /// Returns the width of the widget.
     ///
     float width() const {
+        updateRootGeometry_();
         return size_[0];
     }
 
     /// Returns the height of the widget.
     ///
     float height() const {
+        updateRootGeometry_();
         return size_[1];
     }
 
@@ -399,7 +412,7 @@ public:
     /// this widget changed, to inform its parent that its geometry should be
     /// recomputed.
     ///
-    void updateGeometry();
+    void requestGeometryUpdate();
 
     /// This virtual function is called each time the widget is resized. When
     /// this function is called, the widget already has its new size.
@@ -426,7 +439,18 @@ public:
     /// Note how in this scenario, the repainted view is unrelated to the
     /// button which initially handled the event.
     ///
-    void repaint();
+    void requestRepaint();
+
+    /// Deprecated, renamed to `requestRepaint`
+    ///
+    void repaint() {
+        requestRepaint();
+    }
+
+    /// This signal is emitted when someone requested this widget, or one of
+    /// its descendent widgets, to be repainted.
+    ///
+    VGC_SIGNAL(repaintRequested)
 
     /// This function is called by the widget container whenever the widget
     /// needs to prepare to be repainted for a frame.
@@ -437,11 +461,6 @@ public:
     /// needs to be repainted for a frame.
     ///
     void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
-
-    /// This signal is emitted when someone requested this widget, or one of
-    /// its descendent widgets, to be repainted.
-    ///
-    VGC_SIGNAL(repaintRequested)
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
@@ -683,31 +702,6 @@ public:
     ///
     Action* createAction(const Shortcut& shortcut);
 
-    /// This virtual function is called once before the first call to
-    /// onPaintDraw(), and should be reimplemented to create required static GPU
-    /// resources.
-    ///
-    virtual void onPaintCreate(graphics::Engine* engine);
-
-    /// This virtual function is called whenever the widget needs to prepare to
-    /// be repainted. Subclasses should reimplement this, typically to update
-    /// resources.
-    ///
-    virtual void onPaintPrepare(graphics::Engine* engine, PaintOptions flags);
-
-    /// This virtual function is called whenever the widget needs to be
-    /// repainted. Subclasses should reimplement this, typically by issuing
-    /// draw calls.
-    ///
-    virtual void onPaintDraw(graphics::Engine* engine, PaintOptions flags);
-
-    /// This virtual function is called once after the last call to
-    /// onPaintDraw(), for example before the widget is destructed, or if
-    /// switching graphics engine. It should be reimplemented to destroy the
-    /// created GPU resources.
-    ///
-    virtual void onPaintDestroy(graphics::Engine* engine);
-
     // Implements StylableObject interface
     style::StylableObject* parentStylableObject() const override;
     style::StylableObject* firstChildStylableObject() const override;
@@ -761,10 +755,35 @@ protected:
     virtual geometry::Vec2f computePreferredSize() const;
 
     /// Updates the position and size of children of this widget (by calling
-    /// the setGeometry() methods of the children), based on the current width
-    /// and height of this widget.
+    /// the updateGeometry() methods of the children), based on the current
+    /// width and height of this widget.
     ///
     virtual void updateChildrenGeometry();
+
+    /// This virtual function is called once before the first call to
+    /// onPaintDraw(), and should be reimplemented to create required static GPU
+    /// resources.
+    ///
+    virtual void onPaintCreate(graphics::Engine* engine);
+
+    /// This virtual function is called whenever the widget needs to prepare to
+    /// be repainted. Subclasses should reimplement this, typically to update
+    /// resources.
+    ///
+    virtual void onPaintPrepare(graphics::Engine* engine, PaintOptions flags);
+
+    /// This virtual function is called whenever the widget needs to be
+    /// repainted. Subclasses should reimplement this, typically by issuing
+    /// draw calls.
+    ///
+    virtual void onPaintDraw(graphics::Engine* engine, PaintOptions flags);
+
+    /// This virtual function is called once after the last call to
+    /// onPaintDraw(), for example before the widget is destructed, or if
+    /// switching graphics engine. It should be reimplemented to destroy the
+    /// created GPU resources.
+    ///
+    virtual void onPaintDestroy(graphics::Engine* engine);
 
 private:
     WidgetList* children_ = nullptr;
@@ -773,8 +792,25 @@ private:
     // Layout
     mutable geometry::Vec2f preferredSize_ = {};
     mutable bool isPreferredSizeComputed_ = false;
+    mutable bool isGeometryUpdateRequested_ = false;
+    bool isRepaintRequested_ = false;
     geometry::Vec2f position_ = {};
     geometry::Vec2f size_ = {};
+    geometry::Vec2f lastResizeEventSize_ = {};
+
+    void updatePreferredSize_() const {
+        if (!isPreferredSizeComputed_) {
+            preferredSize_ = computePreferredSize();
+            isPreferredSizeComputed_ = true;
+        }
+    }
+
+    void updateRootGeometry_() const {
+        Widget* root_ = root();
+        root_->updateGeometry();
+    }
+
+    void prePaintUpdateGeometry_();
 
     // Mouse
     Widget* mousePressedChild_ = nullptr;
@@ -798,6 +834,7 @@ private:
     graphics::Engine* lastPaintEngine_ = nullptr;
     void releaseEngine_();
     void setEngine_(graphics::Engine* engine);
+    void prePaintUpdateEngine_(graphics::Engine* engine);
 
     VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_)
     VGC_SLOT(onWidgetAdded_, onWidgetAdded)

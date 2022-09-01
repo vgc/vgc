@@ -235,7 +235,7 @@ void UiWidget::resizeGL(int w, int h) {
     // silently rounds to the nearest integer representable as a float. See:
     //   https://stackoverflow.com/a/60339495/1951907
     // Should we issue a warning in these cases?
-    widget()->setGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
+    widget()->updateGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
 
     // Note: paintGL will automatically be called after this
 }

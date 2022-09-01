@@ -37,20 +37,20 @@ FlexPtr Flex::create(FlexDirection direction, FlexWrap wrap) {
 
 void Flex::setDirection(FlexDirection direction) {
     direction_ = direction;
-    updateGeometry();
+    requestGeometryUpdate();
 }
 
 void Flex::setWrap(FlexWrap wrap) {
     wrap_ = wrap;
-    updateGeometry();
+    requestGeometryUpdate();
 }
 
 void Flex::onWidgetAdded(Widget*) {
-    updateGeometry();
+    requestGeometryUpdate();
 }
 
 void Flex::onWidgetRemoved(Widget*) {
-    updateGeometry();
+    requestGeometryUpdate();
 }
 
 namespace {
@@ -360,11 +360,11 @@ void stretchChild(
         hinted(childCrossPosition + childCrossSize, hinting) - hChildCrossPosition;
 
     if (isRow) {
-        child->setGeometry(
+        child->updateGeometry(
             hChildMainPosition, hChildCrossPosition, hChildMainSize, hChildCrossSize);
     }
     else {
-        child->setGeometry(
+        child->updateGeometry(
             hChildCrossPosition, hChildMainPosition, hChildCrossSize, hChildMainSize);
     }
 

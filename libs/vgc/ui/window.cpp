@@ -365,7 +365,7 @@ bool Window::event(QEvent* e) {
                 // silently rounds to the nearest integer representable as a float. See:
                 //   https://stackoverflow.com/a/60339495/1951907
                 // Should we issue a warning in these cases?
-                widget_->setGeometry(
+                widget_->updateGeometry(
                     0, 0, static_cast<float>(width_), static_cast<float>(height_));
 
                 if (engine_) {
@@ -441,7 +441,7 @@ bool Window::nativeEvent(
             //   https://stackoverflow.com/a/60339495/1951907
             // Should we issue a warning in these cases?
 
-            widget_->setGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
+            widget_->updateGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
             if (engine_ && swapChain_) {
                 // quite slow with msaa on, will probably be better when we have a compositor.
                 engine_->resizeSwapChain(swapChain_, w, h);

@@ -46,7 +46,7 @@ void Grid::setWidgetAt(Widget* widget, Int i, Int j) {
         resizeUpTo_(i, j);
         cellAt_(i, j).widget = widget;
         addChild(widget);
-        updateGeometry();
+        requestGeometryUpdate();
     }
 }
 
@@ -60,7 +60,7 @@ Widget* Grid::widgetAt(Int i, Int j) const {
 WidgetPtr Grid::clearCell(Int i, Int j) {
     WidgetPtr w = widgetAt(i, j);
     if (w) {
-        // this indirectly calls erase_(w) and updateGeometry()
+        // this indirectly calls erase_(w) and requestGeometryUpdate()
         // see onWidgetRemoved()
         //
         w->reparent(nullptr);
@@ -73,7 +73,7 @@ void Grid::onWidgetAdded(Widget*) {
 
 void Grid::onWidgetRemoved(Widget* widget) {
     erase_(widget);
-    updateGeometry();
+    requestGeometryUpdate();
 }
 
 namespace {
@@ -540,7 +540,7 @@ void Grid::updateChildrenGeometry() {
             }
             if (isOutOfSpace) {
                 // XXX setVisible(false) ?
-                w->setGeometry(0, 0, 0, 0);
+                w->updateGeometry(0, 0, 0, 0);
                 continue;
             }
 
@@ -626,7 +626,7 @@ void Grid::updateChildrenGeometry() {
                 dirTracks[Vertical]->sizeH);
             cell.borderBox = cellBox - (cell.extraMargins + cell.margins);
 
-            w->setGeometry(
+            w->updateGeometry(
                 cell.borderBox.xMin(),
                 cell.borderBox.yMin(),
                 cell.borderBox.width(),
