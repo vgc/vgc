@@ -78,7 +78,8 @@ geometry::Vec2f OverlayArea::computePreferredSize() const {
 
 void OverlayArea::updateChildrenGeometry() {
     if (areaWidget_) {
-        areaWidget_->updateGeometry(geometry::Vec2f(), geometry::Vec2f(width(), height()));
+        areaWidget_->updateGeometry(
+            geometry::Vec2f(), geometry::Vec2f(width(), height()));
     }
 }
 

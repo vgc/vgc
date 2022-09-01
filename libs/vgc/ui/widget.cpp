@@ -181,7 +181,10 @@ geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) co
     return position + thisPosInRoot - otherPosInRoot;
 }
 
-void Widget::updateGeometry(const geometry::Vec2f& position, const geometry::Vec2f& size) {
+void Widget::updateGeometry(
+    const geometry::Vec2f& position,
+    const geometry::Vec2f& size) {
+
     position_ = position;
     bool resized = false;
     if (!size_.allNear(size, 1e-6f)) {
@@ -249,7 +252,7 @@ void Widget::requestGeometryUpdate() {
         // isGeometryUpdateRequested_ => isRepaintRequested_
         if (!widget->isGeometryUpdateRequested_) {
             widget->isGeometryUpdateRequested_ = true;
-            // repaint request 
+            // repaint request
             if (!widget->isRepaintRequested_) {
                 widget->isRepaintRequested_ = true;
                 widget->repaintRequested().emit();
@@ -714,7 +717,7 @@ void Widget::onStyleChanged() {
 
 void Widget::prePaintUpdateGeometry_() {
     if (!parent()) {
-        // Calling updateRootGeometry_() could indirectly call requestRepaint() from 
+        // Calling updateRootGeometry_() could indirectly call requestRepaint() from
         // resized chidlren.
         // However we are already painting so we don't want to emit a request from
         // the root now.
@@ -745,6 +748,5 @@ void Widget::prePaintUpdateEngine_(graphics::Engine* engine) {
         onPaintCreate(engine);
     }
 }
-
 
 } // namespace vgc::ui
