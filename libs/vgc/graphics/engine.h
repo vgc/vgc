@@ -507,7 +507,7 @@ protected:
             return;
         }
         pendingCommands_.emplace_back(new TCommand(std::forward<Args>(args)...));
-    };
+    }
 
     template<typename Lambda>
     void queueLambdaCommand_(std::string_view name, Lambda&& lambda) {
@@ -520,7 +520,7 @@ protected:
             // new detail::LambdaCommand(name, std::forward<Lambda>(lambda)));
             new detail::LambdaCommand<std::decay_t<Lambda>>(
                 name, std::forward<Lambda>(lambda)));
-    };
+    }
 
     template<typename Data, typename Lambda, typename... Args>
     void queueLambdaCommandWithParameters_(
@@ -534,7 +534,7 @@ protected:
         pendingCommands_.emplace_back(
             new detail::LambdaCommandWithParameters<Data, std::decay_t<Lambda>>(
                 name, std::forward<Lambda>(lambda), std::forward<Args>(args)...));
-    };
+    }
 
     static constexpr size_t toIndex_(ShaderStage stage) {
         return core::toUnderlying(stage);

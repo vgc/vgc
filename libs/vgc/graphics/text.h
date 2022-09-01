@@ -188,7 +188,7 @@ enum class TextBoundaryMarker : UInt16 {
 
     // TODO: add other useful boundaries: script, bidi, span, etc.
 };
-VGC_DEFINE_FLAGS(TextBoundaryMarkers, TextBoundaryMarker);
+VGC_DEFINE_FLAGS(TextBoundaryMarkers, TextBoundaryMarker)
 
 // clang-format on
 
