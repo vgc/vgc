@@ -26,7 +26,7 @@ enum class MyEnum : vgc::UInt8 {
     Bar = 0x02,
     FooBar = Foo | Bar
 };
-VGC_DEFINE_FLAGS(MyFlags, MyEnum);
+VGC_DEFINE_FLAGS(MyFlags, MyEnum)
 
 TEST(TestFlags, EnumOperators) {
     MyEnum none = MyEnum::None;

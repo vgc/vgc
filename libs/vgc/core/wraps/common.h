@@ -30,6 +30,6 @@ using namespace py::literals;
 // the underlying pointer, which throws if the underlying pointer is null, or
 // if the object isn't alive.
 //
-PYBIND11_DECLARE_HOLDER_TYPE(T, vgc::core::ObjPtr<T>, true);
+PYBIND11_DECLARE_HOLDER_TYPE(T, vgc::core::ObjPtr<T>, true)
 
 #endif // VGC_CORE_WRAPS_COMMON_H
