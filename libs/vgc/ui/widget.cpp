@@ -247,15 +247,21 @@ float Widget::verticalShrink() const {
 void Widget::requestGeometryUpdate() {
     Widget* widget = this;
     while (widget) {
+        Widget* parent = widget->parent();
         // (not isPreferredSizeComputed_) => isGeometryUpdateRequested_
         // (not isGeometryUpdateRequested_) => isPreferredSizeComputed_
         // isGeometryUpdateRequested_ => isRepaintRequested_
         if (!widget->isGeometryUpdateRequested_) {
             widget->isGeometryUpdateRequested_ = true;
+            if (!parent) {
+                widget->geometryUpdateRequested().emit();
+            }
             // repaint request
             if (!widget->isRepaintRequested_) {
                 widget->isRepaintRequested_ = true;
-                widget->repaintRequested().emit();
+                if (!parent) {
+                    widget->repaintRequested().emit();
+                }
             }
         }
         else if (!widget->isPreferredSizeComputed_) {
@@ -276,8 +282,11 @@ void Widget::requestRepaint() {
     Widget* widget = this;
     while (widget && !widget->isRepaintRequested_) {
         widget->isRepaintRequested_ = true;
-        widget->repaintRequested().emit();
-        widget = widget->parent();
+        Widget* parent = widget->parent();
+        if (!parent) {
+            widget->repaintRequested().emit();
+        }
+        widget = parent;
     }
 }
 
@@ -718,7 +727,7 @@ void Widget::onStyleChanged() {
 void Widget::prePaintUpdateGeometry_() {
     if (!parent()) {
         // Calling updateRootGeometry_() could indirectly call requestRepaint() from
-        // resized chidlren.
+        // resized children.
         // However we are already painting so we don't want to emit a request from
         // the root now.
         // Setting isRepaintRequested_ to true makes requestRepaint() a no-op for

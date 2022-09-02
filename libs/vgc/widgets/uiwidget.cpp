@@ -23,6 +23,7 @@
 #include <vgc/geometry/camera2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/widget.h>
+#include <vgc/widgets/toolbar.h>
 
 namespace vgc::widgets {
 
@@ -49,7 +50,11 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent)
 
     setMouseTracking(true);
 
-    widget_->repaintRequested().connect([this]() { this->onRepaintRequested(); });
+    widget_->geometryUpdateRequested().connect(
+        [this]() { this->onGeometryUpdateRequested(); });
+
+    widget_->repaintRequested().connect( //
+        [this]() { this->onRepaintRequested(); });
 
     widget_->focusSet().connect(
         [this](ui::FocusReason reason) { this->onFocusSet(reason); });
@@ -227,14 +232,12 @@ void UiWidget::initializeGL() {
 
 void UiWidget::resizeGL(int w, int h) {
 
+    // Compute new projection matrix
     geometry::Camera2d c;
     c.setViewportSize(w, h);
     proj_ = toMat4f(c.projectionMatrix());
 
-    // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
-    // silently rounds to the nearest integer representable as a float. See:
-    //   https://stackoverflow.com/a/60339495/1951907
-    // Should we issue a warning in these cases?
+    // Set new widget geometry
     widget()->updateGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
 
     // Note: paintGL will automatically be called after this
@@ -276,6 +279,22 @@ void UiWidget::cleanupGL() {
         rasterizerState_.reset();
         engine_ = nullptr;
         isInitialized_ = false;
+    }
+}
+
+void UiWidget::onGeometryUpdateRequested() {
+    updateGeometry();
+    QWidget* p = parentWidget();
+    if (p && qobject_cast<Toolbar*>(p)) {
+        // Hack to force a parent->resizeEvent() if the parent is a Toolbar.
+        // This is necessary because unlike other layouts, QToolBarLayout
+        // ignores the heightForWidth() of its children. As a workaround, we
+        // reimplemented QToolbar::resizeEvent() in our Toolbar subclass, which
+        // set the heightForWidth() of its children as minimum height.
+        QRect oldGeometry = parentWidget()->geometry();
+        QRect tempGeometry = oldGeometry.adjusted(0, 0, 0, 1);
+        parentWidget()->setGeometry(tempGeometry);
+        parentWidget()->setGeometry(oldGeometry);
     }
 }
 
