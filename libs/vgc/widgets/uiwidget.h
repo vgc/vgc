@@ -83,6 +83,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
     void inputMethodEvent(QInputMethodEvent* event) override;
+    void showEvent(QShowEvent* event) override;
     bool event(QEvent* e) override;
 
 private:
@@ -108,6 +109,9 @@ private:
     // Ensure that we don't call onPaintDestroy() if onPaintCreate()
     // has not been called
     bool isInitialized_;
+
+    // Ensure that we call paint() is repaint was requested.
+    bool isRepaintRequested_ = false;
 };
 
 } // namespace vgc::widgets
