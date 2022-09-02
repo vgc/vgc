@@ -184,6 +184,34 @@ void UiWidget::inputMethodEvent(QInputMethodEvent* event) {
     }
 }
 
+void UiWidget::showEvent(QShowEvent*) {
+
+    // In UiWidget::onRepaintRequested(), we call update().
+    //
+    // Usually, this causes paintGL() to be called, which calls
+    // ui::Widget::paint().
+    //
+    // However, if the UiWidget isn't visible, then Qt will in fact not call
+    // paintGL(), not even when the widget becomes visible again (i.e., Qt
+    // "forgets" about the update()).
+    //
+    // By default, this causes the ui::Widget to never be repainted again, because
+    // by design, ui::Widget never emits another repaintRequested() as long as
+    // paint() isn't called. So the widget appears broken / frozen: clicking
+    // on it doesn't repaint the widget, because its requestRepaint() doesn't
+    // propagate to the root.
+    //
+    // The solution is to manually call update() again when the UiWidget
+    // becomes visible, if there is a pending repaint request. This will cause
+    // paintGL() to be called, which calls ui::Widget::paint(), clearing the
+    // dirty flags, so any further user interactions will cause
+    // repaintRequested() to be emitted again.
+    //
+    if (isRepaintRequested_) {
+        update();
+    }
+}
+
 bool UiWidget::event(QEvent* e) {
     if (e->type() == QEvent::ShortcutOverride) {
         e->accept();
@@ -263,7 +291,7 @@ void UiWidget::paintGL() {
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
     widget_->paint(engine_.get());
-
+    isRepaintRequested_ = false;
     engine_->endFrame();
 
     // make current in current thread again, engine has no immediate mode yet
@@ -299,6 +327,7 @@ void UiWidget::onGeometryUpdateRequested() {
 }
 
 void UiWidget::onRepaintRequested() {
+    isRepaintRequested_ = true;
     update();
 }
 
