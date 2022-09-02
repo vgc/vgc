@@ -414,6 +414,35 @@ public:
     ///
     void requestGeometryUpdate();
 
+    /// This signal is emitted if:
+    ///
+    /// 1. this widget is a root widget, and
+    ///
+    /// 2. this widget or any of its descendants requested its geometry to be
+    /// updated via `requestGeometryUpdate()`.
+    ///
+    /// If this signal is emitted, this means that some layout recomputation is
+    /// required somewhere in the tree, and in particular that
+    /// `preferredSize()` may have changed.
+    ///
+    /// This signal should typically be listened to by the owner of the widget
+    /// tree, for example a `Window`, or a third-party widget tree (e.g., Qt)
+    /// embedding a `vgc::ui::Widget` subtree. The typical response to the
+    /// signal is to determine an appropriate new position and size of the
+    /// widget based on its new `preferredSize()`, then call
+    /// `updateGeometry(newPosition, newSize)`.
+    ///
+    /// Note that it is best practice to defer the call to
+    /// `updateGeometry(newPosition, newSize)` until you actually need to
+    /// repaint the widget, in order to avoid multiple layout recomputations
+    /// between two consecutive repaints. If the position and size of the
+    /// widget shouldn't change, you can even skip calling `updateGeometry()`
+    /// entirely, since the `paint()` method does it automatically if a
+    /// geometry update was requested, but `updateGeometry()` hasn't been
+    /// called yet.
+    ///
+    VGC_SIGNAL(geometryUpdateRequested)
+
     /// This virtual function is called each time the widget is resized. When
     /// this function is called, the widget already has its new size.
     ///
@@ -447,8 +476,21 @@ public:
         requestRepaint();
     }
 
-    /// This signal is emitted when someone requested this widget, or one of
-    /// its descendent widgets, to be repainted.
+    /// This signal is emitted if:
+    ///
+    /// 1. this widget is a root widget, and
+    ///
+    /// 2. this widget or any of its descendants requested to be repainted,
+    /// either directly via `requestRepaint()`, or indirectly via
+    /// `requestGeometryUpdate()`.
+    ///
+    /// This signal should typically be listened to by the owner of the widget
+    /// tree, for example a `Window`, or a third-party widget tree (e.g., Qt)
+    /// embedding a `vgc::ui::Widget` subtree. The typical response to the
+    /// signal is to perform some graphics engine initialization then call
+    /// `Widget::paint()` whenever possible. In a multithreaded rendering
+    /// architecture, this could mean as soon as the current render (if any) is
+    /// finished, or perhaps until the next V-Sync.
     ///
     VGC_SIGNAL(repaintRequested)
 

@@ -91,6 +91,7 @@ private:
     void paintGL() override;
     void cleanupGL();
 
+    void onGeometryUpdateRequested();
     void onRepaintRequested();
     void onFocusSet(ui::FocusReason reason);
     void onFocusCleared(ui::FocusReason reason);
