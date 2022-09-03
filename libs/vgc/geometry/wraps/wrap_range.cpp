@@ -21,8 +21,6 @@
 
 namespace {
 
-// Provides Rect2 alias template
-
 template<typename T>
 struct Range1_ {};
 

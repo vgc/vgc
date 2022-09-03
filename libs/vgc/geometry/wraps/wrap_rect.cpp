@@ -22,8 +22,6 @@
 
 namespace {
 
-// Provides Rect2 alias template
-
 template<typename T>
 struct Rect2_ {};
 
@@ -39,8 +37,6 @@ struct Rect2_<double> {
 
 template<typename T>
 using Rect2 = typename Rect2_<T>::type;
-
-// Provides vector alias template
 
 template<typename T>
 struct Vec2_ {};
