@@ -30,7 +30,24 @@ bool isValidLengthUnit(std::string_view unitString, LengthUnit& unitEnum) {
     }
 }
 
+template<typename T>
+T convertToPx(T value, style::LengthUnit unit, T scaleFactor) {
+    switch (unit) {
+    case style::LengthUnit::Dp:
+        return value * scaleFactor;
+    }
+    return 0;
+}
+
 } // namespace
+
+double Length::toPx(double scaleFactor) const {
+    return convertToPx(value(), unit(), scaleFactor);
+}
+
+float Length::toPx(float scaleFactor) const {
+    return convertToPx(static_cast<float>(value()), unit(), scaleFactor);
+}
 
 StyleValue Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
@@ -80,6 +97,24 @@ StyleValue LengthOrPercentage::parse(StyleTokenIterator begin, StyleTokenIterato
     }
     else {
         return StyleValue::invalid();
+    }
+}
+
+double LengthOrAuto::toPx(double scaleFactor, double valueIfAuto) const {
+    if (isAuto()) {
+        return valueIfAuto;
+    }
+    else {
+        return convertToPx(value(), unit(), scaleFactor);
+    }
+}
+
+float LengthOrAuto::toPx(float scaleFactor, float valueIfAuto) const {
+    if (isAuto()) {
+        return valueIfAuto;
+    }
+    else {
+        return convertToPx(static_cast<float>(value()), unit(), scaleFactor);
     }
 }
 

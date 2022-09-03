@@ -65,6 +65,18 @@ public:
         return unit_;
     }
 
+    /// Returns the length converted to physical pixels, as a double. The
+    /// `scaleFactor` argument represents how many physical pixels there is in
+    /// a device-independent pixel (dp).
+    ///
+    double toPx(double scaleFactor) const;
+
+    /// Returns the length converted to physical pixels, as a float. The
+    /// `scaleFactor` argument represents how many physical pixels there is in
+    /// a device-independent pixel (dp).
+    ///
+    float toPx(float scaleFactor) const;
+
     /// Parses the given range of `StyleToken`s as a `Length`.
     ///
     /// Returns `StyleValue::invalid()` if the given tokens do not represent a
@@ -223,6 +235,20 @@ public:
     LengthUnit unit() const {
         return unit_;
     }
+
+    /// Returns the length converted to physical pixels, as a double. The
+    /// `scaleFactor` argument represents how many physical pixels there is in
+    /// a device-independent pixel (dp). The `valueIfAuto` is the value that
+    /// should be returned if `isAuto()` is true;
+    ///
+    double toPx(double scaleFactor, double valueIfAuto) const;
+
+    /// Returns the length converted to physical pixels, as a float. The
+    /// `scaleFactor` argument represents how many physical pixels there is in
+    /// a device-independent pixel (dp). The `valueIfAuto` is the value that
+    /// should be returned if `isAuto()` is true;
+    ///
+    float toPx(float scaleFactor, float valueIfAuto) const;
 
     /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
     ///
