@@ -259,22 +259,9 @@ void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2
     insertRect(a, c, r.xMin(), r.yMin(), r.xMax(), r.yMax());
 }
 
-float convertToPx(double value, style::LengthUnit unit) {
-    // TODO: use dpiFactor to scale dp to px.
-    // As of 2022-08-26, Widget::width() is assumed to be in dp. However, we
-    // will change this design such that Widget::width() is in (physical) px
-    // instead. For this reason, we already use "px" in this function name in
-    // anticipation of this change.
-    switch (unit) {
-    case style::LengthUnit::Dp:
-        return static_cast<float>(value);
-    }
-    return 0.0f;
-}
-
 float getLengthInPx(const RichTextSpan* span, core::StringId property) {
-    style::Length length = span->style(property).to<style::Length>();
-    return convertToPx(length.value(), length.unit());
+    float scaleFactor = 1.0f;
+    return span->style(property).to<style::Length>().toPx(scaleFactor);
 }
 
 float getLengthOrAutoInPx(
@@ -282,13 +269,8 @@ float getLengthOrAutoInPx(
     core::StringId property,
     float valueIfAuto) {
 
-    style::LengthOrAuto length = span->style(property).to<style::LengthOrAuto>();
-    if (length.isAuto()) {
-        return valueIfAuto;
-    }
-    else {
-        return convertToPx(length.value(), length.unit());
-    }
+    float scaleFactor = 1.0f;
+    return span->style(property).to<style::LengthOrAuto>().toPx(scaleFactor, valueIfAuto);
 }
 
 core::Color getColor(const RichTextSpan* span, core::StringId property) {
