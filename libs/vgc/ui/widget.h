@@ -462,22 +462,16 @@ public:
     /// changed as a result of the event. Such call can be indirect, below is a
     /// example scenario:
     ///
-    /// 1. The user clicks on a "Add Circle" button.
+    /// 1. The user clicks on an "Add Circle" button.
     /// 2. The event handler of the button emits the "clicked" signal.
     /// 3. A listener of this signal calls scene->addCircle().
     /// 4. This modifies the scene, which emits a "changed" signal.
-    /// 5. A view of the scene detects the change, and calls this->repaint().
+    /// 5. A view of the scene detects the change, and calls this->requestRepaint().
     ///
     /// Note how in this scenario, the repainted view is unrelated to the
     /// button which initially handled the event.
     ///
     void requestRepaint();
-
-    /// Deprecated, renamed to `requestRepaint`
-    ///
-    void repaint() {
-        requestRepaint();
-    }
 
     /// This signal is emitted if:
     ///

@@ -721,11 +721,11 @@ bool ColorPaletteSelector::onMouseMove(MouseEvent* event) {
         hoveredSaturationIndex_ = j;
         hoveredHueIndex_ = k;
         if (scrubbedSelector_ != SelectorType::None) {
-            selectColorFromHovered_(); // -> already emit repaint()
+            selectColorFromHovered_(); // -> includes requestRepaint()
         }
         else {
             reload_ = true;
-            repaint();
+            requestRepaint();
         }
     }
     return true;
@@ -762,7 +762,7 @@ bool ColorPaletteSelector::onMouseLeave() {
         hoveredSaturationIndex_ = j;
         hoveredHueIndex_ = k;
         reload_ = true;
-        repaint();
+        requestRepaint();
     }
     return true;
 }
@@ -877,7 +877,7 @@ bool ColorPaletteSelector::selectColorFromHovered_() {
             selectedSaturationIndex_,
             selectedLightnessIndex_);
         colorSelected().emit();
-        repaint();
+        requestRepaint();
     }
     return accepted;
 }
@@ -1134,7 +1134,7 @@ bool ColorListView::onMouseLeave() {
     if (hoveredColorIndex_ != -1) {
         hoveredColorIndex_ = -1;
         reload_ = true;
-        repaint();
+        requestRepaint();
     }
     return true;
 }
