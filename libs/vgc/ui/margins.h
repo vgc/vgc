@@ -73,6 +73,19 @@ public:
         : v_(v) {
     }
 
+    /// Constructs a `Margins` as the space between an outer rectangle and an inner rectangle.
+    ///
+    constexpr Margins(
+        const geometry::Rect2f& outerRect,
+        const geometry::Rect2f& innerRect)
+
+        : v_(
+            innerRect.yMin() - outerRect.yMin(),
+            outerRect.xMax() - innerRect.xMax(),
+            outerRect.yMax() - innerRect.yMax(),
+            innerRect.xMin() - outerRect.xMin()) {
+    }
+
     /// Returns the margins as `Vec4f(top, right, bottom, left)`.
     ///
     constexpr const geometry::Vec4f& toVec4f() const {

@@ -23,6 +23,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/rect2f.h>
+#include <vgc/geometry/triangle2f.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/text.h>
 #include <vgc/style/types.h>
@@ -43,6 +44,13 @@ void writeTriangleAt(
     core::FloatArray& a, Int i,
     float r, float g, float b,
     float x1, float y1, float x2, float y2, float x3, float y3);
+
+// replaces values from a[i] to a[i + 14] with the given triangle
+//
+void writeTriangleAt(
+    core::FloatArray& a, Int i,
+    float r, float g, float b,
+    const geometry::Triangle2f& t);
 
 void insertTriangle(
     core::FloatArray& a,
@@ -92,11 +100,25 @@ void insertRect(
     const style::BorderRadiuses& borderRadiuses,
     float pixelSize = 1.0f);
 
-core::Color getColor(const Widget* widget, core::StringId property);
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& fillColor,
+    const core::Color& borderColor,
+    const geometry::Rect2f& outerRect,
+    const style::BorderRadiuses& outerRadiuses_,
+    float borderWidth,
+    float pixelSize = 1.0f);
 
-float getLength(const Widget* widget, core::StringId property);
+core::Color getColor(const style::StylableObject* obj, core::StringId property);
 
-style::BorderRadiuses getBorderRadiuses(Widget* widget);
+// DEPRECATED: this is a function to be used with style properties
+// parsed using the now-deprecated function style::parseLength.
+// The recommended approach is now to use style::Length::parse in
+// combination with style::Length::toPx(scaleFactor).
+//
+float getLength(const style::StylableObject* obj, core::StringId property);
+
+style::BorderRadiuses getBorderRadiuses(const style::StylableObject* obj);
 
 } // namespace vgc::ui::detail
 
