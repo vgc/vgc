@@ -103,8 +103,6 @@
 }
 
 .ColorPaletteSelector {
-    border-color: rgb(40, 40, 40);
-    border-width: 1dp;
     vertical-stretch: 0;
 }
 
@@ -116,6 +114,29 @@
     preferred-width: 34dp;
     horizontal-stretch: 0;
     text-horizontal-align: left;
+}
+
+.ColorListView {
+    preferred-width: auto;
+    preferred-height: 34dp;
+    vertical-stretch: 0;
+}
+
+.ColorListViewItem {
+    preferred-width: 22dp;
+    preferred-height: auto;
+    border-top-left-radius: 25%;
+    border-top-right-radius: 25%;
+    border-bottom-right-radius: 25%;
+    border-bottom-left-radius: 25%;
+}
+
+.ColorPaletteSelector,
+.ColorListViewItem {
+    /* simulates semi-transparent gray on top of colored cells */
+    pixel-hinting: normal;
+    border-width: 0.5dp;
+    border-color: rgb(50, 50, 50);
 }
 
 .Plot2d {
