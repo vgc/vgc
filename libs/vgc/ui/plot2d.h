@@ -126,7 +126,7 @@ public:
         appendDataPoint_(x, {static_cast<double>(ys)...});
         dirtyPlot_ = true;
         dirtyHint_ = true;
-        repaint();
+        requestRepaint();
     }
 
     // reimpl

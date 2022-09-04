@@ -75,7 +75,7 @@ void LineEdit::setText(std::string_view text) {
     if (text != richText_->text()) {
         richText_->setText(text);
         reload_ = true;
-        repaint();
+        requestRepaint();
     }
 }
 
@@ -86,7 +86,7 @@ void LineEdit::moveCursor(graphics::RichTextMoveOperation operation, bool select
     }
     resetSelectionInitialPair_();
     reload_ = true;
-    repaint();
+    requestRepaint();
 }
 
 style::StylableObject* LineEdit::firstChildStylableObject() const {
@@ -190,7 +190,7 @@ bool LineEdit::onMouseMove(MouseEvent* event) {
         geometry::Vec2f point = mousePosition - mouseOffset;
         extendSelection_(point);
         reload_ = true;
-        repaint();
+        requestRepaint();
     }
     return true;
 }
@@ -263,7 +263,7 @@ bool LineEdit::onMousePress(MouseEvent* event) {
     }
 
     reload_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 
@@ -295,7 +295,7 @@ bool LineEdit::onFocusIn(FocusReason) {
     richText_->setSelectionVisible(true);
     richText_->setCursorVisible(true);
     reload_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 
@@ -309,7 +309,7 @@ bool LineEdit::onFocusOut(FocusReason reason) {
     }
     richText_->setCursorVisible(false);
     reload_ = true;
-    repaint();
+    requestRepaint();
     editingFinished().emit();
     return true;
 }
@@ -416,7 +416,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
     if (handled && needsRepaint) {
         resetSelectionInitialPair_();
         reload_ = true;
-        repaint();
+        requestRepaint();
     }
 
     if (handled && !isMoveOperation) {

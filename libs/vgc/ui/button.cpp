@@ -45,7 +45,7 @@ void Button::setText(std::string_view text) {
     if (text != richText_->text()) {
         richText_->setText(text);
         reload_ = true;
-        repaint();
+        requestRepaint();
     }
 }
 
@@ -122,14 +122,14 @@ bool Button::onMouseMove(MouseEvent* event) {
             if (!hasStyleClass(strings::pressed)) {
                 addStyleClass(strings::pressed);
                 reload_ = true;
-                repaint();
+                requestRepaint();
             }
         }
         else {
             if (hasStyleClass(strings::pressed)) {
                 removeStyleClass(strings::pressed);
                 reload_ = true;
-                repaint();
+                requestRepaint();
             }
         }
         return true;
@@ -145,7 +145,7 @@ bool Button::onMousePress(MouseEvent* event) {
         addStyleClass(strings::pressed);
         isPressed_ = true;
         reload_ = true;
-        repaint();
+        requestRepaint();
         return true;
     }
     else {
@@ -162,7 +162,7 @@ bool Button::onMouseRelease(MouseEvent* event) {
         removeStyleClass(strings::pressed);
         isPressed_ = false;
         reload_ = true;
-        repaint();
+        requestRepaint();
         return true;
     }
     else {
@@ -173,14 +173,14 @@ bool Button::onMouseRelease(MouseEvent* event) {
 bool Button::onMouseEnter() {
     addStyleClass(strings::hovered);
     reload_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 
 bool Button::onMouseLeave() {
     removeStyleClass(strings::hovered);
     reload_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 

@@ -402,7 +402,7 @@ bool Plot2d::onMouseMove(MouseEvent* event) {
     mpos_ = event->position();
     dirtyPlot_ = true;
     dirtyHint_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 
@@ -418,7 +418,7 @@ bool Plot2d::onMouseEnter() {
     isHovered_ = true;
     dirtyPlot_ = true;
     dirtyHint_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 
@@ -427,7 +427,7 @@ bool Plot2d::onMouseLeave() {
     mpos_ = {0, 0};
     dirtyPlot_ = true;
     dirtyHint_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 

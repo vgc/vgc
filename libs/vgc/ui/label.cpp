@@ -45,7 +45,7 @@ void Label::setText(std::string_view text) {
     if (text != richText_->text()) {
         richText_->setText(text);
         reload_ = true;
-        repaint();
+        requestRepaint();
     }
 }
 
@@ -114,13 +114,13 @@ void Label::onPaintDestroy(graphics::Engine*) {
 
 bool Label::onMouseEnter() {
     reload_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 
 bool Label::onMouseLeave() {
     reload_ = true;
-    repaint();
+    requestRepaint();
     return true;
 }
 
