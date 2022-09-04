@@ -421,6 +421,9 @@ public:
     /// 2. this widget or any of its descendants requested its geometry to be
     /// updated via `requestGeometryUpdate()`.
     ///
+    /// This signal will never be re-emitted as long as updateGeometry() is not
+    /// called.
+    ///
     /// If this signal is emitted, this means that some layout recomputation is
     /// required somewhere in the tree, and in particular that
     /// `preferredSize()` may have changed.
@@ -483,6 +486,9 @@ public:
     /// 2. this widget or any of its descendants requested to be repainted,
     /// either directly via `requestRepaint()`, or indirectly via
     /// `requestGeometryUpdate()`.
+    ///
+    /// This signal will never be re-emitted as long as paint() is not
+    /// called.
     ///
     /// This signal should typically be listened to by the owner of the widget
     /// tree, for example a `Window`, or a third-party widget tree (e.g., Qt)
