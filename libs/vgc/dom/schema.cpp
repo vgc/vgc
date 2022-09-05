@@ -82,10 +82,19 @@ const Schema& schema() {
     // trusty leaky singleton
     // clang-format off
     static const Schema* instance = new Schema{{
+        { "color", {
+            // No attributes
+        }},
+        { "colorpalette", {
+            // No attributes
+        }},
         { "path", {
             {"color", core::colors::black},
             {"positions", geometry::Vec2dArray()},
             {"widths", core::DoubleArray()}
+        }},
+        { "user", {
+            // No attributes
         }},
         { "vgc", {
             // No attributes
