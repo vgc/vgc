@@ -57,6 +57,12 @@ public:
     ///
     void setSelectedColor(const core::Color& color);
 
+    /// Returns the color list view
+    ///
+    ColorListView* colorListView() const {
+        return colorListView_;
+    }
+
     /// This signal is emitted whenever the selected color changed as a result
     /// of user interaction with the color palette. The signal isn't emitted
     /// when the selected color is set programatically via setSelectedColor().
@@ -302,6 +308,10 @@ public:
     /// Appends a new color to the list of colors.
     ///
     void appendColor(const core::Color& color);
+
+    /// Sets all the colors.
+    ///
+    void setColors(const core::Array<core::Color>& colors);
 
     /// This signal is emitted when the selected color index changed, either as
     /// a result of user interaction or because `setSelectedColorIndex()` was

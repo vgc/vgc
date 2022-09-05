@@ -82,8 +82,8 @@ const Schema& schema() {
     // trusty leaky singleton
     // clang-format off
     static const Schema* instance = new Schema{{
-        { "color", {
-            // No attributes
+        { "colorpaletteitem", {
+            {"color", core::colors::black}
         }},
         { "colorpalette", {
             // No attributes

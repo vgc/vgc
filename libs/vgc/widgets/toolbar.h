@@ -47,6 +47,12 @@ public:
     ///
     core::Color color() const;
 
+    /// Returns the color palette.
+    ///
+    ui::ColorPalette* colorPalette() const {
+        return colorPalette_;
+    }
+
 Q_SIGNALS:
     /// This signal is emitted when the color changed.
     ///
@@ -60,10 +66,10 @@ private Q_SLOTS:
     void onColorPaletteColorSelected_();
 
 private:
-    ColorToolButton* colorToolButton_;
-    QAction* colorToolButtonAction_;
-    ui::ColorPalette* colorPalette_;
-    UiWidget* colorPaletteq_;
+    ColorToolButton* colorToolButton_ = nullptr;
+    QAction* colorToolButtonAction_ = nullptr;
+    ui::ColorPalette* colorPalette_ = nullptr;
+    UiWidget* colorPaletteq_ = nullptr;
 };
 
 } // namespace vgc::widgets

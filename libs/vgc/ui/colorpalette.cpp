@@ -982,6 +982,39 @@ void ColorListView::appendColor(const core::Color& color) {
     requestGeometryUpdate();
 }
 
+void ColorListView::setColors(const core::Array<core::Color>& colors) {
+
+    // Update selected color index
+    bool hasSelectedColorChanged = false;
+    Int oldSelectedColorIndex = selectedColorIndex_;
+    if (oldSelectedColorIndex >= 0) {
+        if (oldSelectedColorIndex >= colors.length()) {
+            hasSelectedColorChanged = true;
+            selectedColorIndex_ = -1;
+        }
+        else if (colors[selectedColorIndex_] == colors_[selectedColorIndex_]) {
+            hasSelectedColorChanged = false;
+        }
+        else {
+            hasSelectedColorChanged = true;
+        }
+    }
+
+    // Update colors
+    colors_ = colors;
+
+    // Emit signals
+    reload_ = true;
+    colorsChanged().emit();
+    if (hasSelectedColorChanged) {
+        selectedColorChanged().emit();
+    }
+    if (selectedColorIndex_ != oldSelectedColorIndex) {
+        selectedColorIndexChanged().emit();
+    }
+    requestGeometryUpdate();
+}
+
 void ColorListView::onResize() {
     reload_ = true;
 }
