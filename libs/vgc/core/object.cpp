@@ -210,14 +210,14 @@ void Object::destroyChildObject_(Object* child) {
 }
 
 void Object::appendChildObject_(Object* child) {
-    insertChildObject_(child, nullptr);
+    insertChildObject_(nullptr, child);
 }
 
 void Object::prependChildObject_(Object* child) {
-    insertChildObject_(child, firstChildObject());
+    insertChildObject_(firstChildObject(), child);
 }
 
-void Object::insertChildObject_(Object* child, Object* nextSibling) {
+void Object::insertChildObject_(Object* nextSibling, Object* child) {
     // Check that child is non-nullptr
     if (!child) {
         throw core::NullError();
@@ -325,7 +325,7 @@ void Object::prependObjectToParent_(Object* parent) {
 
 void Object::insertObjectToParent_(Object* parent, Object* nextSibling) {
     if (parent) {
-        parent->insertChildObject_(this, nextSibling);
+        parent->insertChildObject_(nextSibling, this);
     }
     else {
         removeObjectFromParent_();

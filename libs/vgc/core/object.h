@@ -887,7 +887,7 @@ protected:
     /// using appendChildObject_() in Foo to modify a hierachies of dom::Nodes
     /// would break these invariants.
     ///
-    void insertChildObject_(Object* child, Object* nextSibling = nullptr);
+    void insertChildObject_(Object* nextSibling, Object* child);
 
     /// Removes the given Object from the list of children of this Object.
     /// Returns an ObjPtr<Object> managing the given Object which is now a root
@@ -1278,8 +1278,8 @@ public:
         appendChildObject_(child);
     }
 
-    void insert(T* child, T* nextSibling) {
-        insertChildObject_(child, nextSibling);
+    void insert(T* nextSibling, T* child) {
+        insertChildObject_(nextSibling, child);
     }
 
     void insertAt(Int i, T* child) {
@@ -1290,7 +1290,7 @@ public:
         for (; i > 0; --i) {
             nextSibling = nextSibling->nextSiblingObject();
         }
-        insertChildObject_(child, nextSibling);
+        insertChildObject_(nextSibling, child);
     }
 
     core::ObjPtr<T> remove(T* child) {
