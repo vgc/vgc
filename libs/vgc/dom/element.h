@@ -28,6 +28,111 @@ namespace vgc::dom {
 VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
+/// \class vgc::dom::NamedElementIterator
+/// \brief Iterates over sibling elements with a given name.
+///
+class VGC_DOM_API NamedElementIterator {
+public:
+    typedef Element* value_type;
+    typedef Int difference_type;
+    typedef const value_type& reference; // 'const' => non-mutable forward iterator
+    typedef const value_type* pointer;   // 'const' => non-mutable forward iterator
+    typedef std::forward_iterator_tag iterator_category;
+
+    /// Constructs an invalid `ElementIterator`.
+    ///
+    NamedElementIterator()
+        : p_(nullptr) {
+    }
+
+    /// Constructs `NamedElementIterator` starting at the given element, and
+    /// iterating over its siblings with the given `name`.
+    ///
+    explicit NamedElementIterator(Element* element, core::StringId name)
+        : p_(element)
+        , name_(name) {
+    }
+
+    /// Prefix-increments this iterator.
+    ///
+    NamedElementIterator& operator++();
+
+    /// Postfix-increments this iterator.
+    ///
+    NamedElementIterator operator++(int) {
+        NamedElementIterator res(*this);
+        operator++();
+        return res;
+    }
+
+    /// Dereferences this iterator with the star operator.
+    ///
+    const value_type& operator*() const {
+        return p_;
+    }
+
+    /// Dereferences this iterator with the arrow operator.
+    ///
+    const value_type* operator->() const {
+        return &p_;
+    }
+
+    /// Returns whether the two iterators are equal.
+    ///
+    bool operator==(const NamedElementIterator& other) const {
+        return p_ == other.p_;
+    }
+
+    /// Returns whether the two iterators are different.
+    ///
+    bool operator!=(const NamedElementIterator& other) const {
+        return p_ != other.p_;
+    }
+
+private:
+    Element* p_;
+    core::StringId name_;
+};
+
+/// \class vgc::dom::NamedElementRange
+/// \brief A range of sibling elements with a given name.
+///
+class VGC_DOM_API NamedElementRange {
+public:
+    /// Constructs a `NamedElementRange` iterating forward over elements
+    /// between `begin` (included) and `end` (excluded) with the given `name`.
+    ///
+    NamedElementRange(Element* begin, Element* end, core::StringId name)
+        : begin_(begin, name)
+        , end_(end, name) {
+    }
+
+    /// Returns the begin of the range.
+    ///
+    const NamedElementIterator& begin() const {
+        return begin_;
+    }
+
+    /// Returns the end of the range.
+    ///
+    const NamedElementIterator& end() const {
+        return end_;
+    }
+
+    /// Returns the number of objects in the range.
+    ///
+    /// Note that this function is slow (linear complexity), because it has to
+    /// iterate over all objects in the range.
+    ///
+    Int length() const {
+        return std::distance(begin_, end_);
+    }
+
+private:
+    NamedElementIterator begin_;
+    NamedElementIterator end_;
+};
+
 /// \class vgc::dom::Element
 /// \brief Represents an element of the DOM.
 ///
@@ -125,7 +230,17 @@ public:
     /// \sa lastChildElement(), previousSiblingElement(), and nextSiblingElement().
     ///
     Element* firstChildElement() const {
-        return static_cast<Element*>(firstChildObject());
+        return findElementNext_(firstChild());
+    }
+
+    /// Returns the first child `Element` of this `Element` that has the given
+    /// `name`. Returns nullptr if this `Element` has no child `Element` with
+    /// the given `name`.
+    ///
+    /// \sa lastChildElement(), previousSiblingElement(), and nextSiblingElement().
+    ///
+    Element* firstChildElement(core::StringId name) const {
+        return findElementNext_(firstChild(), name);
     }
 
     /// Returns the last child `Element` of this `Element`.
@@ -134,16 +249,36 @@ public:
     /// \sa firstChildElement(), previousSiblingElement(), and nextSiblingElement().
     ///
     Element* lastChildElement() const {
-        return static_cast<Element*>(lastChildObject());
+        return findElementPrevious_(lastChild());
+    }
+
+    /// Returns the last child `Element` of this `Element` that has the given
+    /// `name`. Returns nullptr if this `Element` has no child `Element` with
+    /// the given `name`.
+    ///
+    /// \sa lastChildElement(), previousSiblingElement(), and nextSiblingElement().
+    ///
+    Element* lastChildElement(core::StringId name) const {
+        return findElementPrevious_(lastChild(), name);
     }
 
     /// Returns the previous sibling of this `Element`.
-    /// Returns nullptr if this `Element` is the last child `Element` of its parent.
+    /// Returns nullptr if this `Element` is the first child `Element` of its parent.
     ///
     /// \sa nextSiblingElement(), firstChildElement(), and lastChildElement().
     ///
     Element* previousSiblingElement() const {
-        return static_cast<Element*>(previousSiblingObject());
+        return findElementPrevious_(previousSibling());
+    }
+
+    /// Returns the previous sibling of this `Element` that has the given
+    /// `name`. Returns nullptr if this `Element` is the first child `Element`
+    /// of its parent with the given `name`.
+    ///
+    /// \sa nextSiblingElement(), firstChildElement(), and lastChildElement().
+    ///
+    Element* previousSiblingElement(core::StringId name) const {
+        return findElementPrevious_(previousSibling(), name);
     }
 
     /// Returns the next sibling of this `Element`.
@@ -152,7 +287,23 @@ public:
     /// \sa previousSiblingElement(), firstChildElement(), and lastChildElement().
     ///
     Element* nextSiblingElement() const {
-        return static_cast<Element*>(nextSiblingObject());
+        return findElementNext_(nextSibling());
+    }
+
+    /// Returns the next sibling of this `Element` that has the given `name`.
+    /// Returns nullptr if this `Element` is the last child `Element` of its
+    /// parent with the given `name`.
+    ///
+    /// \sa previousSiblingElement(), firstChildElement(), and lastChildElement().
+    ///
+    Element* nextSiblingElement(core::StringId name) const {
+        return findElementNext_(nextSibling(), name);
+    }
+
+    /// Iterates over all child elements with the given `name`.
+    ///
+    NamedElementRange childElements(core::StringId name) {
+        return NamedElementRange(firstChildElement(name), nullptr, name);
     }
 
 private:
@@ -180,7 +331,44 @@ private:
     // Helper functions to find attributes. Return nullptr if not found.
     AuthoredAttribute* findAuthoredAttribute_(core::StringId name);
     const AuthoredAttribute* findAuthoredAttribute_(core::StringId name) const;
+
+    Element* findElementNext_(Node* node) const {
+        while (node && node->nodeType() != NodeType::Element) {
+            node = node->nextSibling();
+        }
+        return static_cast<Element*>(node);
+    }
+
+    Element* findElementPrevious_(Node* node) const {
+        while (node && node->nodeType() != NodeType::Element) {
+            node = node->previousSibling();
+        }
+        return static_cast<Element*>(node);
+    }
+
+    Element* findElementNext_(Node* node, core::StringId name) const {
+        while (node
+               && (node->nodeType() != NodeType::Element
+                   || static_cast<Element*>(node)->name() != name)) {
+            node = node->nextSibling();
+        }
+        return static_cast<Element*>(node);
+    }
+
+    Element* findElementPrevious_(Node* node, core::StringId name) const {
+        while (node
+               && (node->nodeType() != NodeType::Element
+                   || static_cast<Element*>(node)->name() != name)) {
+            node = node->previousSibling();
+        }
+        return static_cast<Element*>(node);
+    }
 };
+
+inline NamedElementIterator& NamedElementIterator::operator++() {
+    p_ = p_->nextSiblingElement(name_);
+    return *this;
+}
 
 /// Defines the name of an element, retrievable via the
 /// VGC_DOM_ELEMENT_GET_NAME(key) macro. This must only be used in .cpp files
