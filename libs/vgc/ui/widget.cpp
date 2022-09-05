@@ -128,7 +128,7 @@ void Widget::replace(Widget* oldWidget) {
     core::ObjectPtr self = removeObjectFromParent_();
     oldWidget->destroyObject_();
     if (parent) {
-        parent->children_->insert(this, nextSibling);
+        parent->children_->insert(nextSibling, this);
     }
     else {
         // nothing to do

@@ -165,7 +165,7 @@ void Node::replace(Node* oldNode) {
     oldNode->destroyObject_();
     //oldNode->removeObjectFromParent_();
 
-    parent->insertChildObject_(this, nextSibling);
+    parent->insertChildObject_(nextSibling, this);
 }
 
 } // namespace vgc::dom
