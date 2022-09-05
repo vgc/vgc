@@ -272,59 +272,63 @@ core::Array<core::Color> getColorPalette_(dom::Document* doc) {
     return colors;
 }
 
-void saveColorPaletteBegin_(Toolbar* toolbar, dom::Document* doc) {
+class ColorPaletteSaver {
+public:
+    ColorPaletteSaver(const ColorPaletteSaver&) = delete;
+    ColorPaletteSaver& operator=(const ColorPaletteSaver&) = delete;
 
-    if (!toolbar) {
-        return;
+    ColorPaletteSaver(Toolbar* toolbar, dom::Document* doc)
+        : isUndoOpened_(false)
+        , doc_(doc) {
+
+        if (!toolbar) {
+            return;
+        }
+
+        ui::ColorPalette* palette = toolbar->colorPalette();
+        if (!palette) {
+            return;
+        }
+
+        ui::ColorListView* listView = palette->colorListView();
+        if (!listView) {
+            return;
+        }
+
+        // The current implementation adds the colors to the DOM now, save, then
+        // abort the "add color" operation so that it doesn't appear as an undo.
+        //
+        // Ideally, we should instead add the color to the DOM directly when the
+        // user clicks the "add to palette" button (so it would be an undoable
+        // action), and the color list view should listen to DOM changes to update
+        // the color list. This way, even plugins could populate the color palette
+        // by modifying the DOM.
+        //
+        static core::StringId Add_to_Palette("Add to Palette");
+        doc->history()->createUndoGroup(Add_to_Palette);
+        isUndoOpened_ = true;
+
+        // TODO: reuse existing colorpalette element instead of creating new one.
+        dom::Element* root = doc->rootElement();
+        dom::Element* user = dom::Element::create(root, user_);
+        dom::Element* colorpalette = dom::Element::create(user, colorpalette_);
+        for (Int i = 0; i < listView->numColors(); ++i) {
+            const core::Color& color = listView->colorAt(i);
+            dom::Element* item = dom::Element::create(colorpalette, colorpaletteitem_);
+            item->setAttribute(color_, color);
+        }
     }
 
-    ui::ColorPalette* palette = toolbar->colorPalette();
-    if (!palette) {
-        return;
+    ~ColorPaletteSaver() {
+        if (isUndoOpened_) {
+            doc_->history()->abort();
+        }
     }
 
-    ui::ColorListView* listView = palette->colorListView();
-    if (!listView) {
-        return;
-    }
-
-    // The current implementation adds the colors to the DOM now, save, then
-    // abort the "add color" operation so that it doesn't appear as an undo.
-    //
-    // Ideally, we should instead add the color to the DOM directly when the
-    // user clicks the "add to palette" button (so it would be an undoable
-    // action), and the color list view should listen to DOM changes to update
-    // the color list. This way, even plugins could populate the color palette
-    // by modifying the DOM.
-    //
-    static core::StringId Add_to_Palette("Add to Palette");
-    doc->history()->createUndoGroup(Add_to_Palette);
-
-    // TODO: reuse existing colorpalette element instead of creating new one.
-    dom::Element* root = doc->rootElement();
-    dom::Element* user = dom::Element::create(root, user_);
-    dom::Element* colorpalette = dom::Element::create(user, colorpalette_);
-    for (Int i = 0; i < listView->numColors(); ++i) {
-        const core::Color& color = listView->colorAt(i);
-        dom::Element* item = dom::Element::create(colorpalette, colorpaletteitem_);
-        item->setAttribute(color_, color);
-    }
-}
-
-void saveColorPaletteEnd_(Toolbar* toolbar, dom::Document* doc) {
-    if (!toolbar) {
-        return;
-    }
-    ui::ColorPalette* palette = toolbar->colorPalette();
-    if (!palette) {
-        return;
-    }
-    ui::ColorListView* listView = palette->colorListView();
-    if (!listView) {
-        return;
-    }
-    doc->history()->abort();
-}
+private:
+    bool isUndoOpened_;
+    dom::Document* doc_;
+};
 
 } // namespace
 
@@ -362,9 +366,8 @@ void MainWindow::open_() {
 
 void MainWindow::save_() {
     try {
-        saveColorPaletteBegin_(toolbar_, document_.get());
+        ColorPaletteSaver saver(toolbar_, document_.get());
         document_->save(ui::fromQt(filename_));
-        saveColorPaletteEnd_(toolbar_, document_.get());
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Saving File", e.what());
