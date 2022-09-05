@@ -30,6 +30,15 @@
 
 namespace vgc::widgets {
 
+namespace {
+
+core::StringId user_("user");
+core::StringId colorpalette_("colorpalette");
+core::StringId colorpaletteitem_("colorpaletteitem");
+core::StringId color_("color");
+
+} // namespace
+
 MainWindow::MainWindow(core::PythonInterpreter* interpreter, QWidget* parent)
     : QMainWindow(parent)
     , interpreter_(interpreter) {
@@ -221,6 +230,108 @@ void MainWindow::new_() {
     }
 }
 
+namespace {
+
+void loadColorPalette_(Toolbar* toolbar, const core::Array<core::Color>& colors) {
+    if (!toolbar) {
+        return;
+    }
+    ui::ColorPalette* palette = toolbar->colorPalette();
+    if (!palette) {
+        return;
+    }
+    ui::ColorListView* listView = palette->colorListView();
+    if (!listView) {
+        return;
+    }
+    listView->setColors(colors);
+}
+
+core::Array<core::Color> getColorPalette_(dom::Document* doc) {
+
+    // Get colors
+    core::Array<core::Color> colors;
+    dom::Element* root = doc->rootElement();
+    for (dom::Element* user : root->childElements(user_)) {
+        for (dom::Element* colorpalette : user->childElements(colorpalette_)) {
+            for (dom::Element* item : colorpalette->childElements(colorpaletteitem_)) {
+                core::Color color = item->getAttribute(color_).getColor();
+                colors.append(color);
+            }
+        }
+    }
+
+    // Delete <user> element
+    dom::Element* user = root->firstChildElement(user_);
+    while (user) {
+        dom::Element* nextUser = user->nextSiblingElement(user_);
+        user->remove();
+        user = nextUser;
+    }
+
+    return colors;
+}
+
+class ColorPaletteSaver {
+public:
+    ColorPaletteSaver(const ColorPaletteSaver&) = delete;
+    ColorPaletteSaver& operator=(const ColorPaletteSaver&) = delete;
+
+    ColorPaletteSaver(Toolbar* toolbar, dom::Document* doc)
+        : isUndoOpened_(false)
+        , doc_(doc) {
+
+        if (!toolbar) {
+            return;
+        }
+
+        ui::ColorPalette* palette = toolbar->colorPalette();
+        if (!palette) {
+            return;
+        }
+
+        ui::ColorListView* listView = palette->colorListView();
+        if (!listView) {
+            return;
+        }
+
+        // The current implementation adds the colors to the DOM now, save, then
+        // abort the "add color" operation so that it doesn't appear as an undo.
+        //
+        // Ideally, we should instead add the color to the DOM directly when the
+        // user clicks the "add to palette" button (so it would be an undoable
+        // action), and the color list view should listen to DOM changes to update
+        // the color list. This way, even plugins could populate the color palette
+        // by modifying the DOM.
+        //
+        static core::StringId Add_to_Palette("Add to Palette");
+        doc->history()->createUndoGroup(Add_to_Palette);
+        isUndoOpened_ = true;
+
+        // TODO: reuse existing colorpalette element instead of creating new one.
+        dom::Element* root = doc->rootElement();
+        dom::Element* user = dom::Element::create(root, user_);
+        dom::Element* colorpalette = dom::Element::create(user, colorpalette_);
+        for (Int i = 0; i < listView->numColors(); ++i) {
+            const core::Color& color = listView->colorAt(i);
+            dom::Element* item = dom::Element::create(colorpalette, colorpaletteitem_);
+            item->setAttribute(color_, color);
+        }
+    }
+
+    ~ColorPaletteSaver() {
+        if (isUndoOpened_) {
+            doc_->history()->abort();
+        }
+    }
+
+private:
+    bool isUndoOpened_;
+    dom::Document* doc_;
+};
+
+} // namespace
+
 void MainWindow::open_() {
     // XXX TODO ask save current document
 
@@ -230,14 +341,23 @@ void MainWindow::open_() {
     }
 
     try {
-        dom::DocumentPtr tmp = dom::Document::open(ui::fromQt(filename_));
-        tmp->enableHistory(vgc::dom::strings::Open_Document);
-        headChangedConnectionHandle_ = tmp->history()->headChanged().connect(
+        // Open document from file, get its color palette, and remove it from
+        // the DOM before enabling history
+        dom::DocumentPtr doc = dom::Document::open(ui::fromQt(filename_));
+        core::Array<core::Color> colors = getColorPalette_(doc.get());
+        doc->enableHistory(vgc::dom::strings::Open_Document);
+        headChangedConnectionHandle_ = doc->history()->headChanged().connect(
             [this]() { updateUndoRedoActionState_(); });
         updateUndoRedoActionState_();
 
-        viewer_->setDocument(tmp.get());
-        document_ = tmp;
+        // Set viewer document (must happen before old document is destroyed)
+        viewer_->setDocument(doc.get());
+
+        // Destroy old document and set new document as current
+        document_ = doc;
+
+        // Load color palette
+        loadColorPalette_(toolbar_, colors);
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Opening File", e.what());
@@ -246,6 +366,7 @@ void MainWindow::open_() {
 
 void MainWindow::save_() {
     try {
+        ColorPaletteSaver saver(toolbar_, document_.get());
         document_->save(ui::fromQt(filename_));
     }
     catch (const dom::FileError& e) {
