@@ -326,10 +326,7 @@ public:
 
     /// Changes the selection such that the entire text is selected.
     ///
-    void selectAll() {
-        selectionStart_ = 0;
-        selectionEnd_ = static_cast<Int>(text_.size());
-    }
+    void selectAll();
 
     /// Returns the subset of `text()` that is selected, as an 'std::string`.
     ///
@@ -359,20 +356,6 @@ public:
     /// the library, tabs and newlines may be supported.
     ///
     void insertText(std::string_view text);
-
-    /// Returns the position in byte of the cursor.
-    ///
-    Int cursorBytePosition() const {
-        return selectionEnd_;
-    }
-
-    /// Sets the position in byte of the cursor.
-    ///
-    void setCursorBytePosition(Int bytePosition) {
-        selectionStart_ = bytePosition;
-        selectionEnd_ = bytePosition;
-        updateScroll_();
-    }
 
     /// Returns how much the text is scrolled horizontally relative to its
     /// default position. Scrolling is automatically performed in order to keep

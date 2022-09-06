@@ -560,6 +560,12 @@ void RichText::moveCursor(RichTextMoveOperation operation, bool select) {
     updateScroll_();
 }
 
+void RichText::selectAll() {
+    selectionStart_ = shapedText_.minPosition();
+    selectionEnd_ = shapedText_.maxPosition();
+    updateScroll_();
+}
+
 std::string RichText::selectedText() const {
     return std::string(selectedTextView());
 }
