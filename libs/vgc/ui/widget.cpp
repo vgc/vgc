@@ -49,6 +49,7 @@ WidgetPtr Widget::create() {
 }
 
 namespace {
+
 bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false) {
     if (parent && parent->isDescendantObject(child)) {
         if (simulate) {
@@ -60,6 +61,7 @@ bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false) {
     }
     return true;
 }
+
 } // namespace
 
 void Widget::addChild(Widget* child) {
@@ -330,6 +332,25 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 void Widget::onPaintDestroy(graphics::Engine* engine) {
     for (Widget* child : children()) {
         child->onPaintDestroy(engine);
+    }
+}
+
+void Widget::startMouseCapture() {
+    // TODO: after we implement WidgetTree, make it safer
+    // by listening to mouseCaptor deletion or change of tree
+    Widget* r = root();
+    if (r->mouseCaptor_ && r->mouseCaptor_ != this) {
+        r->mouseCaptor_->stopMouseCapture();
+    }
+    r->mouseCaptor_ = this;
+    r->mouseCaptureStarted().emit();
+}
+
+void Widget::stopMouseCapture() {
+    Widget* r = root();
+    if (r->mouseCaptor_ == this) {
+        r->mouseCaptor_ = nullptr;
+        r->mouseCaptureStopped().emit();
     }
 }
 

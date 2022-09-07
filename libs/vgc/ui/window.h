@@ -106,8 +106,12 @@ private:
 
     void onActiveChanged_();
     void onRepaintRequested_();
+    void onMouseCaptureStarted_();
+    void onMouseCaptureStopped_();
 
-    VGC_SLOT(onRepaintRequested, onRepaintRequested_);
+    VGC_SLOT(onRepaintRequestedSlot_, onRepaintRequested_);
+    VGC_SLOT(onMouseCaptureStartedSlot_, onMouseCaptureStarted_);
+    VGC_SLOT(onMouseCaptureStoppedSlot_, onMouseCaptureStopped_);
 
     /////////////////////////////
     // TO FACTOR OUT

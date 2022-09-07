@@ -27,6 +27,7 @@
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
 #include <vgc/ui/button.h>
+#include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
 #include <vgc/ui/label.h>
@@ -223,6 +224,9 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+
+    // Test mouse capture
+    col->createChild<vgc::ui::ScreenColorPickerButton>("Pick Screen Color");
 
     int size = 10;
     for (int i = 0; i < size; ++i) {

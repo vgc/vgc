@@ -94,6 +94,8 @@ private:
 
     void onGeometryUpdateRequested();
     void onRepaintRequested();
+    void onMouseCaptureStarted();
+    void onMouseCaptureStopped();
     void onFocusSet(ui::FocusReason reason);
     void onFocusCleared(ui::FocusReason reason);
 
