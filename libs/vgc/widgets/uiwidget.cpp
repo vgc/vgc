@@ -62,6 +62,12 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent)
     widget_->mouseCaptureStopped().connect( //
         [this]() { this->onMouseCaptureStopped(); });
 
+    widget_->keyboardCaptureStarted().connect( //
+        [this]() { this->onKeyboardCaptureStarted(); });
+
+    widget_->keyboardCaptureStopped().connect( //
+        [this]() { this->onKeyboardCaptureStopped(); });
+
     widget_->focusSet().connect(
         [this](ui::FocusReason reason) { this->onFocusSet(reason); });
 
@@ -159,13 +165,29 @@ void UiWidget::focusOutEvent(QFocusEvent* event) {
     widget_->setTreeActive(false, reason);
 }
 
+namespace {
+
+std::pair<ui::Widget*, QKeyEvent*>
+prepareKeyboardEvent(ui::Widget* root, QKeyEvent* event) {
+    ui::Widget* keyboardCaptor = root->keyboardCaptor();
+    if (keyboardCaptor) {
+        return {keyboardCaptor, event};
+    }
+    else {
+        return {root, event};
+    }
+}
+
+} // namespace
+
 void UiWidget::keyPressEvent(QKeyEvent* event) {
-    bool accepted = widget_->onKeyPress(event);
-    event->setAccepted(accepted);
+    auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
+    event->setAccepted(receiver->onKeyPress(vgcEvent));
 }
 
 void UiWidget::keyReleaseEvent(QKeyEvent* event) {
-    event->setAccepted(widget_->onKeyRelease(event));
+    auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
+    event->setAccepted(receiver->onKeyRelease(vgcEvent));
 }
 
 QVariant UiWidget::inputMethodQuery(Qt::InputMethodQuery) const {
@@ -361,6 +383,14 @@ void UiWidget::onMouseCaptureStarted() {
 
 void UiWidget::onMouseCaptureStopped() {
     releaseMouse();
+}
+
+void UiWidget::onKeyboardCaptureStarted() {
+    grabKeyboard();
+}
+
+void UiWidget::onKeyboardCaptureStopped() {
+    releaseKeyboard();
 }
 
 void UiWidget::onFocusSet(ui::FocusReason reason) {

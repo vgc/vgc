@@ -55,6 +55,8 @@ Window::Window(ui::WidgetPtr widget)
     widget_->repaintRequested().connect(onRepaintRequestedSlot_());
     widget_->mouseCaptureStarted().connect(onMouseCaptureStartedSlot_());
     widget_->mouseCaptureStopped().connect(onMouseCaptureStoppedSlot_());
+    widget_->keyboardCaptureStarted().connect(onKeyboardCaptureStartedSlot_());
+    widget_->keyboardCaptureStopped().connect(onKeyboardCaptureStoppedSlot_());
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
 
     graphics::SwapChainCreateInfo scd = {};
@@ -249,13 +251,29 @@ void Window::resizeEvent(QResizeEvent* event) {
 #endif
 }
 
+namespace {
+
+std::pair<ui::Widget*, QKeyEvent*>
+prepareKeyboardEvent(ui::Widget* root, QKeyEvent* event) {
+    ui::Widget* keyboardCaptor = root->keyboardCaptor();
+    if (keyboardCaptor) {
+        return {keyboardCaptor, event};
+    }
+    else {
+        return {root, event};
+    }
+}
+
+} // namespace
+
 void Window::keyPressEvent(QKeyEvent* event) {
-    bool accepted = widget_->onKeyPress(event);
-    event->setAccepted(accepted);
+    auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
+    event->setAccepted(receiver->onKeyPress(vgcEvent));
 }
 
 void Window::keyReleaseEvent(QKeyEvent* event) {
-    event->setAccepted(widget_->onKeyRelease(event));
+    auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
+    event->setAccepted(receiver->onKeyRelease(vgcEvent));
 }
 
 //QVariant Window::inputMethodQuery(Qt::InputMethodQuery) const
@@ -583,6 +601,14 @@ void Window::onMouseCaptureStarted_() {
 
 void Window::onMouseCaptureStopped_() {
     setMouseGrabEnabled(false);
+}
+
+void Window::onKeyboardCaptureStarted_() {
+    setKeyboardGrabEnabled(true);
+}
+
+void Window::onKeyboardCaptureStopped_() {
+    setKeyboardGrabEnabled(false);
 }
 
 } // namespace vgc::ui
