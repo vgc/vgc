@@ -354,6 +354,25 @@ void Widget::stopMouseCapture() {
     }
 }
 
+void Widget::startKeyboardCapture() {
+    // TODO: after we implement WidgetTree, make it safer
+    // by listening to keyboardCaptor deletion or change of tree
+    Widget* r = root();
+    if (r->keyboardCaptor_ && r->keyboardCaptor_ != this) {
+        r->keyboardCaptor_->stopKeyboardCapture();
+    }
+    r->keyboardCaptor_ = this;
+    r->keyboardCaptureStarted().emit();
+}
+
+void Widget::stopKeyboardCapture() {
+    Widget* r = root();
+    if (r->keyboardCaptor_ == this) {
+        r->keyboardCaptor_ = nullptr;
+        r->keyboardCaptureStopped().emit();
+    }
+}
+
 bool Widget::onMouseMove(MouseEvent* event) {
 
     // If we are in the middle of a press-move-release sequence, then we

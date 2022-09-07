@@ -96,6 +96,8 @@ private:
     void onRepaintRequested();
     void onMouseCaptureStarted();
     void onMouseCaptureStopped();
+    void onKeyboardCaptureStarted();
+    void onKeyboardCaptureStopped();
     void onFocusSet(ui::FocusReason reason);
     void onFocusCleared(ui::FocusReason reason);
 

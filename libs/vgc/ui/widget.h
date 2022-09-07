@@ -524,7 +524,8 @@ public:
     /// from interacting with other applications, so it should be used with
     /// extreme care.
     ///
-    /// \sa stopMouseCapture(), mouseCaptor().
+    /// \sa stopMouseCapture(), mouseCaptor(), mouseCaptureStarted(),
+    ///     startKeyboardCapture().
     ///
     void startMouseCapture();
 
@@ -534,7 +535,8 @@ public:
     /// `mouseCaptor()`. If you want to stop the mouse capture from another
     /// widget, you must call `mouseCaptor()->stopMouseCapture()`.
     ///
-    /// \sa startMouseCapture(), mouseCaptor().
+    /// \sa startMouseCapture(), mouseCaptor(), mouseCaptureStopped(),
+    ///     stopKeyboardCapture().
     ///
     void stopMouseCapture();
 
@@ -550,6 +552,8 @@ public:
     /// redirect all mouse events to the `mouseCaptor()` instead of the root
     /// widget.
     ///
+    /// \sa mouseCaptureStopped(), startMouseCapture(), keyboardCaptureStarted().
+    ///
     VGC_SIGNAL(mouseCaptureStarted)
 
     /// This signal is emitted if:
@@ -563,12 +567,81 @@ public:
     /// embedding a `vgc::ui::Widget` subtree. The typical response is to stop
     /// redirecting all mouse events to the `mouseCaptor()`.
     ///
+    /// \sa mouseCaptureStarted(), stopMouseCapture(), keyboardCaptureStopped().
+    ///
     VGC_SIGNAL(mouseCaptureStopped)
 
-    /// Returns the widget the captures the mouse, if any.
+    /// Returns the widget that captures the mouse, if any.
+    ///
+    /// \sa startMouseCapture(), stopMouseCapture(), keyboardCaptor().
     ///
     Widget* mouseCaptor() const {
         return root()->mouseCaptor_;
+    }
+
+    /// Starts capturing the keyboard.
+    ///
+    /// After calling this method, and until `stopKeyboardCapture()` is called,
+    /// all system keyboard events are redirected to this widget instead of any
+    /// other widgets or applications.
+    ///
+    /// Calling this function is a system-wide behavior that prevents the user
+    /// from interacting with other applications, so it should be used with
+    /// extreme care.
+    ///
+    /// \sa stopKeyboardCapture(), keyboardCaptor(), keyboardCaptureStarted(),
+    ///     startMouseCapture().
+    ///
+    void startKeyboardCapture();
+
+    /// Stops the keyboard capture.
+    ///
+    /// Note that this method has no effect if this widget is not the
+    /// `keyboardCaptor()`. If you want to stop the keyboard capture from
+    /// another widget, you must call `keyboardCaptor()->stopKeyboardCapture()`.
+    ///
+    /// \sa startKeyboardCapture(), keyboardCaptor(), keyboardCaptureStopped(),
+    ///     stopMouseCapture().
+    ///
+    void stopKeyboardCapture();
+
+    /// This signal is emitted if:
+    ///
+    /// 1. this widget is a root widget, and
+    ///
+    /// 2. this widget or any of its descendants called `startKeyboardCapture()`
+    ///
+    /// This signal should typically be listened to by the owner of the widget
+    /// tree, for example a `Window`, or a third-party widget tree (e.g., Qt)
+    /// embedding a `vgc::ui::Widget` subtree. The typical response is to
+    /// redirect all keyboard events to the `keyboardCaptor()` instead of the root
+    /// widget.
+    ///
+    /// \sa keyboardCaptureStopped(), startKeyboardCapture(), mouseCaptureStarted().
+    ///
+    VGC_SIGNAL(keyboardCaptureStarted)
+
+    /// This signal is emitted if:
+    ///
+    /// 1. this widget is a root widget, and
+    ///
+    /// 2. this widget or any of its descendants called `stopKeyboardCapture()`
+    ///
+    /// This signal should typically be listened to by the owner of the widget
+    /// tree, for example a `Window`, or a third-party widget tree (e.g., Qt)
+    /// embedding a `vgc::ui::Widget` subtree. The typical response is to stop
+    /// redirecting all keyboard events to the `keyboardCaptor()`.
+    ///
+    /// \sa keyboardCaptureStarted(), stopKeyboardCapture(), mouseCaptureStopped().
+    ///
+    VGC_SIGNAL(keyboardCaptureStopped)
+
+    /// Returns the widget the captures the keyboard, if any.
+    ///
+    /// \sa startKeyboardCapture(), stopKeyboardCapture(), mouseCaptor().
+    ///
+    Widget* keyboardCaptor() const {
+        return root()->keyboardCaptor_;
     }
 
     /// Override this function if you wish to handle MouseMove events. You must
@@ -929,7 +1002,7 @@ private:
     bool isInHoveredColumn_ = false;
     Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
 
-    // Keyboard focus
+    // Keyboard
     //
     // focus_ can have the following values:
     // - nullptr: this means that there is no focused widget in this branch
@@ -939,6 +1012,7 @@ private:
     bool isTreeActive_ = false; // TODO: move to future class WidgetTree
     FocusPolicyFlags focusPolicy_ = FocusPolicy::Never;
     Widget* focus_ = nullptr;
+    Widget* keyboardCaptor_ = nullptr; // TODO: move to future class WidgetTree
 
     // Engine
     graphics::Engine* lastPaintEngine_ = nullptr;
