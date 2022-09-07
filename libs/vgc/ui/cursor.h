@@ -19,6 +19,9 @@
 
 #include <QCursor>
 
+#include <vgc/core/color.h>
+#include <vgc/geometry/vec2f.h>
+
 namespace vgc::ui {
 
 /// Pushes a mouse cursor to the cursor stack. This cursor becomes the
@@ -47,6 +50,18 @@ void changeCursor(const QCursor& cursor);
 /// \sa pushCursor() and changeCursor()
 ///
 void popCursor();
+
+/// Returns the global position of the mouse cursor in device-independent
+/// pixels.
+///
+geometry::Vec2f globalCursorPosition();
+
+/// Returns the color under the mouse cursor. Returns a black color in
+/// case of errors (e.g., failed to queried which screen was under the cursor).
+///
+/// Warning: this can be an expensive operation.
+///
+core::Color colorUnderCursor();
 
 } // namespace vgc::ui
 

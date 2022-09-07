@@ -24,6 +24,7 @@
 #include <vgc/core/parse.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/button.h>
+#include <vgc/ui/cursor.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/margins.h>
@@ -46,13 +47,11 @@ core::Color highlightColor = core::Color(0.043, 0.322, 0.714); // VGC Blue
 } // namespace
 
 void ScreenColorPickerButton::onClicked_() {
-    if (mouseCaptor() == this) {
-        stopMouseCapture();
-    }
-    else {
-        startMouseCapture();
-        setHovered(false);
-    }
+    setHovered(false);
+    isPicking_ = true;
+    hoveredColor_ = colorUnderCursor();
+    pushCursor(Qt::CrossCursor); // TODO: custom picker-shaped cursor
+    startMouseCapture();
 }
 
 ScreenColorPickerButtonPtr ScreenColorPickerButton::create(std::string_view name) {
@@ -66,8 +65,7 @@ ScreenColorPickerButton::ScreenColorPickerButton(std::string_view name)
 }
 
 bool ScreenColorPickerButton::onMousePress(MouseEvent* event) {
-    if (mouseCaptor() == this) {
-        VGC_DEBUG_TMP("Captured mouse PRESS   at {}", event->position());
+    if (isPicking_) {
         return true;
     }
     else {
@@ -76,8 +74,9 @@ bool ScreenColorPickerButton::onMousePress(MouseEvent* event) {
 }
 
 bool ScreenColorPickerButton::onMouseMove(MouseEvent* event) {
-    if (mouseCaptor() == this) {
-        VGC_DEBUG_TMP("Captured mouse MOVE    at {}", event->position());
+    if (isPicking_) {
+        hoveredColor_ = colorUnderCursor();
+        colorHovered().emit(hoveredColor_);
         return true;
     }
     else {
@@ -86,9 +85,11 @@ bool ScreenColorPickerButton::onMouseMove(MouseEvent* event) {
 }
 
 bool ScreenColorPickerButton::onMouseRelease(MouseEvent* event) {
-    if (mouseCaptor() == this) {
-        VGC_DEBUG_TMP("Captured mouse RELEASE at {}", event->position());
+    if (isPicking_) {
+        isPicking_ = false;
         stopMouseCapture();
+        popCursor();
+        colorClicked().emit(hoveredColor_);
         return true;
     }
     else {
@@ -129,8 +130,8 @@ ColorPalette::ColorPalette()
     hexRow->createChild<Label>("Hex:");
     hexLineEdit_ = hexRow->createChild<LineEdit>();
 
-    // Button* pickScreenColorButton =
-    //     createChild<ScreenColorPickerButton>("Pick Screen Color");
+    ScreenColorPickerButton* pickScreenColorButton =
+        createChild<ScreenColorPickerButton>("Pick Screen Color");
 
     Button* addToPaletteButton = createChild<Button>("Add to Palette");
 
@@ -145,6 +146,7 @@ ColorPalette::ColorPalette()
     lLineEdit_->editingFinished().connect(onHslEditedSlot_());
     hexLineEdit_->editingFinished().connect(onHexEditedSlot_());
     addToPaletteButton->clicked().connect(onAddToPaletteClickedSlot_());
+    pickScreenColorButton->colorHovered().connect(onScreenColorHoveredSlot_());
     colorListView_->colorSelected().connect(onColorListViewSelectedColorSlot_());
 
     setSelectedColorNoCheckNoEmit_(core::colors::black);
@@ -311,6 +313,14 @@ void ColorPalette::onHexEdited_() {
     }
 
     setSelectedColorNoCheckNoEmit_(newColor);
+    if (selectedColor_ != oldColor) {
+        colorSelected().emit();
+    }
+}
+
+void ColorPalette::onScreenColorHovered_(const core::Color& color) {
+    core::Color oldColor = selectedColor_;
+    setSelectedColorNoCheckNoEmit_(color);
     if (selectedColor_ != oldColor) {
         colorSelected().emit();
     }
