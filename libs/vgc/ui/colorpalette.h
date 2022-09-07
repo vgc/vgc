@@ -51,7 +51,13 @@ public:
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
 
+    VGC_SIGNAL(colorHovered, (const core::Color&, color))
+    VGC_SIGNAL(colorClicked, (const core::Color&, color))
+    VGC_SIGNAL(canceled)
+
 private:
+    bool isPicking_ = false;
+    core::Color hoveredColor_;
     void onClicked_();
     VGC_SLOT(onClickedSlot_, onClicked_)
 };
@@ -122,6 +128,9 @@ private:
 
     void onHexEdited_();
     VGC_SLOT(onHexEditedSlot_, onHexEdited_)
+
+    void onScreenColorHovered_(const core::Color& color);
+    VGC_SLOT(onScreenColorHoveredSlot_, onScreenColorHovered_)
 
     void onAddToPaletteClicked_();
     VGC_SLOT(onAddToPaletteClickedSlot_, onAddToPaletteClicked_)

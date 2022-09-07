@@ -17,6 +17,11 @@
 #include <vgc/ui/cursor.h>
 
 #include <QGuiApplication>
+#include <QPixmap>
+#include <QScreen>
+
+#include <vgc/core/colors.h>
+#include <vgc/ui/qtutil.h>
 
 namespace vgc::ui {
 
@@ -30,6 +35,27 @@ void changeCursor(const QCursor& cursor) {
 
 void popCursor() {
     QGuiApplication::restoreOverrideCursor();
+}
+
+geometry::Vec2f globalCursorPosition() {
+    QPoint globalPos = QCursor::pos();
+    return fromQtf(globalPos);
+}
+
+core::Color colorUnderCursor() {
+    if (!qApp) {
+        return core::colors::black;
+    }
+    QPoint globalPos = QCursor::pos();
+    QScreen* screen = qApp->screenAt(globalPos);
+    if (!screen) {
+        return core::colors::black;
+    }
+    QPoint screenPos = globalPos - screen->geometry().topLeft();
+    QPixmap pixmap = screen->grabWindow(0, screenPos.x(), screenPos.y(), 1, 1);
+    QImage image = pixmap.toImage();
+    QColor qcolor = image.pixelColor(0, 0);
+    return fromQt(qcolor);
 }
 
 } // namespace vgc::ui
