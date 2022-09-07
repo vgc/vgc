@@ -50,16 +50,22 @@ public:
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
+    bool onKeyPress(QKeyEvent* event) override;
+    bool onKeyRelease(QKeyEvent* event) override;
+
+    VGC_SIGNAL(pickingStarted)
+    VGC_SIGNAL(pickingStopped)
+    VGC_SIGNAL(pickingCancelled)
 
     VGC_SIGNAL(colorHovered, (const core::Color&, color))
     VGC_SIGNAL(colorClicked, (const core::Color&, color))
-    VGC_SIGNAL(canceled)
 
 private:
     bool isPicking_ = false;
     core::Color hoveredColor_;
-    void onClicked_();
-    VGC_SLOT(onClickedSlot_, onClicked_)
+    void startPicking_();
+    void stopPicking_();
+    VGC_SLOT(startPickingSlot_, startPicking_)
 };
 
 /// \class vgc::ui::ColorPalette
@@ -104,6 +110,7 @@ public:
 
 private:
     core::Color selectedColor_;
+    core::Color selectedColorOnPickScreenStarted_;
     ColorPaletteSelector* selector_;
     LineEdit* rLineEdit_;
     LineEdit* gLineEdit_;
@@ -129,12 +136,19 @@ private:
     void onHexEdited_();
     VGC_SLOT(onHexEditedSlot_, onHexEdited_)
 
-    void onScreenColorHovered_(const core::Color& color);
-    VGC_SLOT(onScreenColorHoveredSlot_, onScreenColorHovered_)
+    void onPickScreenStarted_();
+    VGC_SLOT(onPickScreenStartedSlot_, onPickScreenStarted_)
+
+    void onPickScreenCancelled_();
+    VGC_SLOT(onPickScreenCancelledSlot_, onPickScreenCancelled_)
+
+    void onPickScreenColorHovered_(const core::Color& color);
+    VGC_SLOT(onPickScreenColorHoveredSlot_, onPickScreenColorHovered_)
 
     void onAddToPaletteClicked_();
     VGC_SLOT(onAddToPaletteClickedSlot_, onAddToPaletteClicked_)
 
+    void selectColor_(const core::Color& color);
     void setSelectedColorNoCheckNoEmit_(const core::Color& color);
 };
 
