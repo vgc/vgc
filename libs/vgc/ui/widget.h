@@ -249,7 +249,17 @@ public:
     /// Returns the root widget of this widget, that is, the ancestor of this
     /// widget which has no parent widget itself.
     ///
+    /// \sa isRoot()
+    ///
     Widget* root() const;
+
+    /// Returns whether this widget is the root widget (i.e., it has no `parent()`).
+    ///
+    /// \sa root().
+    ///
+    bool isRoot() const {
+        return !parent();
+    }
 
     /// Returns the position of the widget relative to its parent.
     ///
@@ -503,6 +513,63 @@ public:
     /// needs to be repainted for a frame.
     ///
     void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
+
+    /// Starts capturing the mouse.
+    ///
+    /// After calling this method, and until `stopMouseCapture()` is called,
+    /// all system mouse events are redirected to this widget instead of any
+    /// other widgets or applications.
+    ///
+    /// Calling this function is a system-wide behavior that prevents the user
+    /// from interacting with other applications, so it should be used with
+    /// extreme care.
+    ///
+    /// \sa stopMouseCapture(), mouseCaptor().
+    ///
+    void startMouseCapture();
+
+    /// Stops the mouse capture.
+    ///
+    /// Note that this method has no effect if this widget is not the
+    /// `mouseCaptor()`. If you want to stop the mouse capture from another
+    /// widget, you must call `mouseCaptor()->stopMouseCapture()`.
+    ///
+    /// \sa startMouseCapture(), mouseCaptor().
+    ///
+    void stopMouseCapture();
+
+    /// This signal is emitted if:
+    ///
+    /// 1. this widget is a root widget, and
+    ///
+    /// 2. this widget or any of its descendants called `startMouseCapture()`
+    ///
+    /// This signal should typically be listened to by the owner of the widget
+    /// tree, for example a `Window`, or a third-party widget tree (e.g., Qt)
+    /// embedding a `vgc::ui::Widget` subtree. The typical response is to
+    /// redirect all mouse events to the `mouseCaptor()` instead of the root
+    /// widget.
+    ///
+    VGC_SIGNAL(mouseCaptureStarted)
+
+    /// This signal is emitted if:
+    ///
+    /// 1. this widget is a root widget, and
+    ///
+    /// 2. this widget or any of its descendants called `stopMouseCapture()`
+    ///
+    /// This signal should typically be listened to by the owner of the widget
+    /// tree, for example a `Window`, or a third-party widget tree (e.g., Qt)
+    /// embedding a `vgc::ui::Widget` subtree. The typical response is to stop
+    /// redirecting all mouse events to the `mouseCaptor()`.
+    ///
+    VGC_SIGNAL(mouseCaptureStopped)
+
+    /// Returns the widget the captures the mouse, if any.
+    ///
+    Widget* mouseCaptor() const {
+        return root()->mouseCaptor_;
+    }
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
@@ -860,6 +927,7 @@ private:
     bool isHovered_ = false;
     bool isInHoveredRow_ = false;
     bool isInHoveredColumn_ = false;
+    Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
 
     // Keyboard focus
     //
@@ -868,7 +936,7 @@ private:
     // - this: the focused widget is this widget
     // - child ptr: the focused widget is a descendant of this widget
     //
-    bool isTreeActive_ = false;
+    bool isTreeActive_ = false; // TODO: move to future class WidgetTree
     FocusPolicyFlags focusPolicy_ = FocusPolicy::Never;
     Widget* focus_ = nullptr;
 

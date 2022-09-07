@@ -45,6 +45,57 @@ core::Color highlightColor = core::Color(0.043, 0.322, 0.714); // VGC Blue
 
 } // namespace
 
+void ScreenColorPickerButton::onClicked_() {
+    if (mouseCaptor() == this) {
+        stopMouseCapture();
+    }
+    else {
+        startMouseCapture();
+        setHovered(false);
+    }
+}
+
+ScreenColorPickerButtonPtr ScreenColorPickerButton::create(std::string_view name) {
+    return ScreenColorPickerButtonPtr(new ScreenColorPickerButton(name));
+}
+
+ScreenColorPickerButton::ScreenColorPickerButton(std::string_view name)
+    : Button(name) {
+
+    clicked().connect(onClickedSlot_());
+}
+
+bool ScreenColorPickerButton::onMousePress(MouseEvent* event) {
+    if (mouseCaptor() == this) {
+        VGC_DEBUG_TMP("Captured mouse PRESS   at {}", event->position());
+        return true;
+    }
+    else {
+        return Button::onMousePress(event);
+    }
+}
+
+bool ScreenColorPickerButton::onMouseMove(MouseEvent* event) {
+    if (mouseCaptor() == this) {
+        VGC_DEBUG_TMP("Captured mouse MOVE    at {}", event->position());
+        return true;
+    }
+    else {
+        return Button::onMouseMove(event);
+    }
+}
+
+bool ScreenColorPickerButton::onMouseRelease(MouseEvent* event) {
+    if (mouseCaptor() == this) {
+        VGC_DEBUG_TMP("Captured mouse RELEASE at {}", event->position());
+        stopMouseCapture();
+        return true;
+    }
+    else {
+        return Button::onMouseRelease(event);
+    }
+}
+
 ColorPalette::ColorPalette()
     : Column() {
 
@@ -77,6 +128,9 @@ ColorPalette::ColorPalette()
     Row* hexRow = createChild<Row>();
     hexRow->createChild<Label>("Hex:");
     hexLineEdit_ = hexRow->createChild<LineEdit>();
+
+    // Button* pickScreenColorButton =
+    //     createChild<ScreenColorPickerButton>("Pick Screen Color");
 
     Button* addToPaletteButton = createChild<Button>("Add to Palette");
 

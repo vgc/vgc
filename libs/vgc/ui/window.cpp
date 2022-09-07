@@ -52,7 +52,9 @@ Window::Window(ui::WidgetPtr widget)
     connect((QWindow*)this, &QWindow::activeChanged, this, &Window::onActiveChanged_);
 
     //setMouseTracking(true);
-    widget_->repaintRequested().connect(onRepaintRequested());
+    widget_->repaintRequested().connect(onRepaintRequestedSlot_());
+    widget_->mouseCaptureStarted().connect(onMouseCaptureStartedSlot_());
+    widget_->mouseCaptureStopped().connect(onMouseCaptureStoppedSlot_());
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
 
     graphics::SwapChainCreateInfo scd = {};
@@ -178,19 +180,37 @@ WindowPtr Window::create(ui::WidgetPtr widget) {
 //    return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
 //}
 
+namespace {
+
+std::pair<ui::Widget*, ui::MouseEventPtr>
+prepareMouseEvent(ui::Widget* root, QMouseEvent* event) {
+    ui::MouseEventPtr vgcEvent = ui::fromQt(event);
+    ui::Widget* mouseCaptor = root->mouseCaptor();
+    if (mouseCaptor) {
+        geometry::Vec2f position = root->mapTo(mouseCaptor, vgcEvent->position());
+        vgcEvent->setPosition(position);
+        return {mouseCaptor, vgcEvent};
+    }
+    else {
+        return {root, vgcEvent};
+    }
+}
+
+} // namespace
+
 void Window::mouseMoveEvent(QMouseEvent* event) {
-    ui::MouseEventPtr e = fromQt(event);
-    event->setAccepted(widget_->onMouseMove(e.get()));
+    auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
+    event->setAccepted(receiver->onMouseMove(vgcEvent.get()));
 }
 
 void Window::mousePressEvent(QMouseEvent* event) {
-    ui::MouseEventPtr e = fromQt(event);
-    event->setAccepted(widget_->onMousePress(e.get()));
+    auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
+    event->setAccepted(receiver->onMousePress(vgcEvent.get()));
 }
 
 void Window::mouseReleaseEvent(QMouseEvent* event) {
-    ui::MouseEventPtr e = fromQt(event);
-    event->setAccepted(widget_->onMouseRelease(e.get()));
+    auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
+    event->setAccepted(receiver->onMouseRelease(vgcEvent.get()));
 }
 
 //void Window::enterEvent(QEvent* event)
@@ -555,6 +575,14 @@ void Window::onRepaintRequested_() {
     if (engine_) {
         requestUpdate();
     }
+}
+
+void Window::onMouseCaptureStarted_() {
+    setMouseGrabEnabled(true);
+}
+
+void Window::onMouseCaptureStopped_() {
+    setMouseGrabEnabled(false);
 }
 
 } // namespace vgc::ui

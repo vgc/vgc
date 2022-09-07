@@ -56,6 +56,12 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent)
     widget_->repaintRequested().connect( //
         [this]() { this->onRepaintRequested(); });
 
+    widget_->mouseCaptureStarted().connect( //
+        [this]() { this->onMouseCaptureStarted(); });
+
+    widget_->mouseCaptureStopped().connect( //
+        [this]() { this->onMouseCaptureStopped(); });
+
     widget_->focusSet().connect(
         [this](ui::FocusReason reason) { this->onFocusSet(reason); });
 
@@ -97,19 +103,37 @@ int UiWidget::heightForWidth(int w) const {
     return core::ifloor<int>(height);
 }
 
+namespace {
+
+std::pair<ui::Widget*, ui::MouseEventPtr>
+prepareMouseEvent(ui::Widget* root, QMouseEvent* event) {
+    ui::MouseEventPtr vgcEvent = ui::fromQt(event);
+    ui::Widget* mouseCaptor = root->mouseCaptor();
+    if (mouseCaptor) {
+        geometry::Vec2f position = root->mapTo(mouseCaptor, vgcEvent->position());
+        vgcEvent->setPosition(position);
+        return {mouseCaptor, vgcEvent};
+    }
+    else {
+        return {root, vgcEvent};
+    }
+}
+
+} // namespace
+
 void UiWidget::mouseMoveEvent(QMouseEvent* event) {
-    ui::MouseEventPtr e = ui::fromQt(event);
-    event->setAccepted(widget_->onMouseMove(e.get()));
+    auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
+    event->setAccepted(receiver->onMouseMove(vgcEvent.get()));
 }
 
 void UiWidget::mousePressEvent(QMouseEvent* event) {
-    ui::MouseEventPtr e = ui::fromQt(event);
-    event->setAccepted(widget_->onMousePress(e.get()));
+    auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
+    event->setAccepted(receiver->onMousePress(vgcEvent.get()));
 }
 
 void UiWidget::mouseReleaseEvent(QMouseEvent* event) {
-    ui::MouseEventPtr e = ui::fromQt(event);
-    event->setAccepted(widget_->onMouseRelease(e.get()));
+    auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
+    event->setAccepted(receiver->onMouseRelease(vgcEvent.get()));
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -329,6 +353,14 @@ void UiWidget::onGeometryUpdateRequested() {
 void UiWidget::onRepaintRequested() {
     isRepaintRequested_ = true;
     update();
+}
+
+void UiWidget::onMouseCaptureStarted() {
+    grabMouse();
+}
+
+void UiWidget::onMouseCaptureStopped() {
+    releaseMouse();
 }
 
 void UiWidget::onFocusSet(ui::FocusReason reason) {

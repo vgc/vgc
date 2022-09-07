@@ -18,6 +18,7 @@
 #define VGC_UI_COLORPALETTE_H
 
 #include <vgc/geometry/rect2f.h>
+#include <vgc/ui/button.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/widget.h>
 
@@ -28,6 +29,32 @@ VGC_DECLARE_OBJECT(ColorListViewItem);
 VGC_DECLARE_OBJECT(ColorPalette);
 VGC_DECLARE_OBJECT(ColorPaletteSelector);
 VGC_DECLARE_OBJECT(LineEdit);
+VGC_DECLARE_OBJECT(ScreenColorPickerButton);
+
+/// \class vgc::ui::ScreenColorPickerButton
+/// \brief Allow users to pick a screen color.
+///
+class VGC_UI_API ScreenColorPickerButton : public Button {
+private:
+    VGC_OBJECT(ScreenColorPickerButton, Button)
+
+protected:
+    ScreenColorPickerButton(std::string_view name);
+
+public:
+    /// Creates a `ScreenColorPickerButton`.
+    ///
+    static ScreenColorPickerButtonPtr create(std::string_view name);
+
+    // Reimplementation of `Widget` virtual methods
+    bool onMouseMove(MouseEvent* event) override;
+    bool onMousePress(MouseEvent* event) override;
+    bool onMouseRelease(MouseEvent* event) override;
+
+private:
+    void onClicked_();
+    VGC_SLOT(onClickedSlot_, onClicked_)
+};
 
 /// \class vgc::ui::ColorPalette
 /// \brief Allow users to select a color.
