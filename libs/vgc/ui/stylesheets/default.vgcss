@@ -116,6 +116,18 @@
     text-horizontal-align: left;
 }
 
+.ColorPalette .Flex .LineEdit {
+    /* not using 'preferred-width: auto' ensures that all line edits
+       have the same width regardless of the value entered */
+    preferred-width: 10dp;
+    horizontal-stretch: 1;
+    text-horizontal-align: left;
+}
+
+.ColorPalette .Flex.steps .Label {
+    preferred-width: 42dp;
+}
+
 .ColorListView {
     preferred-width: auto;
     preferred-height: 34dp;
