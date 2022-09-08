@@ -123,7 +123,13 @@ public:
     /// Returns the string represented by this StringId.
     ///
     const std::string& string() const {
-        return *stringPtr_;
+        static const std::string empty;
+        if (stringPtr_) {
+            return *stringPtr_;
+        }
+        else {
+            return empty;
+        }
     }
 
     /// Allows implicit conversion from StringId to std::string.
@@ -152,7 +158,7 @@ public:
     bool operator==(const std::string& other) const {
         // Note: comparing two std::strings is typically faster than building
         // a StringId from an std::string, so we choose to do the former.
-        return *stringPtr_ == other;
+        return string() == other;
     }
 
     /// Returns whether the two StringId are different.
@@ -164,19 +170,13 @@ public:
     /// Returns whether this StringId is different from the given string.
     ///
     bool operator!=(const std::string& other) const {
-        return *stringPtr_ != other;
+        return string() != other;
     }
 
 private:
     friend struct std::hash<StringId>;
     const std::string* stringPtr_;
 };
-
-namespace strings {
-
-VGC_CORE_API extern const StringId empty;
-
-} // namespace strings
 
 /// Returns whether the given std::string is equal to the given StringId.
 ///
@@ -201,14 +201,16 @@ OutputStream& operator<<(OutputStream& out, vgc::core::StringId stringId) {
     return out;
 }
 
-// Implement hash function to make StringId compatible with std::unordered_map
 namespace std {
+
+// Implement hash function to make StringId compatible with std::unordered_map
 template<>
 struct hash<vgc::core::StringId> {
     std::size_t operator()(const vgc::core::StringId& s) const {
         return std::hash<const std::string*>()(s.stringPtr_);
     }
 };
+
 } // namespace std
 
 #endif // VGC_CORE_STRINGID_H

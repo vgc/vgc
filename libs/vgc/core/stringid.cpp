@@ -21,11 +21,18 @@
 
 namespace vgc::core {
 
+core::StringId str;
+
 StringId::StringId() {
-    stringPtr_ = strings::empty.stringPtr_;
+    stringPtr_ = nullptr;
 }
 
 StringId::StringId(const std::string& s) {
+    if (s.empty()) {
+        stringPtr_ = nullptr;
+        return;
+    }
+
     using StringPool = std::unordered_set<std::string>;
 
     // Declare a global string pool with static storage duration. We
@@ -61,11 +68,5 @@ StringId::StringId(const std::string& s) {
     auto iterator = ret.first;
     stringPtr_ = &(*iterator);
 }
-
-namespace strings {
-
-const StringId empty("");
-
-} // namespace strings
 
 } // namespace vgc::core
