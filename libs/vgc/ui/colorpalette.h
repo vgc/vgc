@@ -112,6 +112,9 @@ private:
     core::Color selectedColor_;
     core::Color selectedColorOnPickScreenStarted_;
     ColorPaletteSelector* selector_;
+    LineEdit* numHStepsLineEdit_;
+    LineEdit* numSStepsLineEdit_;
+    LineEdit* numLStepsLineEdit_;
     LineEdit* rLineEdit_;
     LineEdit* gLineEdit_;
     LineEdit* bLineEdit_;
@@ -126,6 +129,9 @@ private:
 
     void onColorListViewSelectedColor_();
     VGC_SLOT(onColorListViewSelectedColorSlot_, onColorListViewSelectedColor_)
+
+    void onStepsEdited_();
+    VGC_SLOT(onStepsEditedSlot_, onStepsEdited_)
 
     void onRgbEdited_();
     VGC_SLOT(onRgbEditedSlot_, onRgbEdited_)
@@ -148,6 +154,7 @@ private:
     void onAddToPaletteClicked_();
     VGC_SLOT(onAddToPaletteClickedSlot_, onAddToPaletteClicked_)
 
+    void updateStepsLineEdits_();
     void selectColor_(const core::Color& color);
     void setSelectedColorNoCheckNoEmit_(const core::Color& color);
 };
@@ -192,6 +199,28 @@ public:
     ///
     VGC_SIGNAL(colorSelected)
 
+    /// Returns the number of hue steps.
+    ///
+    Int numHueSteps() const {
+        return numHueSteps_;
+    }
+
+    /// Returns the number of saturation steps.
+    ///
+    Int numSaturationSteps() const {
+        return numSaturationSteps_;
+    }
+
+    /// Returns the number of lightness steps.
+    ///
+    Int numLightnessSteps() const {
+        return numLightnessSteps_;
+    }
+
+    /// Returns the number of lightness steps.
+    ///
+    void setHslSteps(Int hue, Int saturation, Int lightness);
+
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
@@ -222,7 +251,7 @@ private:
     core::Color borderColor_;
     Int numHueSteps_;        // >= 2 and even
     Int numSaturationSteps_; // >= 2
-    Int numLightnessSteps_;  // >= 2
+    Int numLightnessSteps_;  // >= 3
     Int hoveredHueIndex_;
     Int hoveredSaturationIndex_;
     Int hoveredLightnessIndex_;
@@ -241,10 +270,6 @@ private:
         float paddingBottom;
         float rowGap;
         float borderWidth;
-        float cellBorderWidth;
-        float selectorBorderWidth;
-        float cellOffset;
-        float startOffset;
         float endOffset;
         float hueDx;
         float hueDy;
@@ -258,11 +283,14 @@ private:
     };
     mutable Metrics metrics_;
 
+    void computeSlSubMetrics_(float width, Metrics& m) const;
+    void computeHueSubMetrics_(float width, Metrics& m) const;
     Metrics computeMetricsFromWidth_(float width) const;
     void updateMetrics_() const;
     SelectorType hoveredSelector_(const geometry::Vec2f& p);
     std::pair<Int, Int> hoveredSaturationLightness_(const geometry::Vec2f& p);
     Int hoveredHue_(const geometry::Vec2f& p);
+    void setSelectedColor_(const core::Color& color);
     bool selectColorFromHovered_();
 };
 

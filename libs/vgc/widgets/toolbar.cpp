@@ -91,13 +91,14 @@ core::Color Toolbar::color() const {
 
 void Toolbar::resizeEvent(QResizeEvent* event) {
 
-    // Manually update minimumHeight of the color palette,
-    // otherwise QToolbar doesn't update the height of its
-    // children, even if heightForWidth() returns a different
-    // value for the current toolbar's width().
+    // Manually update height of the color palette, because QToolbar doesn't
+    // automatically update the height of its children, even if they called
+    // updateGeometry() and their sizeHint() or heightForWidth() changed.
     //
     colorToolButton_->setMinimumSize(width(), iconWidth);
-    colorPaletteq_->setMinimumHeight(colorPaletteq_->heightForWidth(width()));
+    float colorPaletteHeight = colorPaletteq_->heightForWidth(width());
+    colorPaletteq_->setMinimumHeight(colorPaletteHeight);
+    colorPaletteq_->setMaximumHeight(colorPaletteHeight);
     colorPaletteq_->show();
     QToolBar::resizeEvent(event);
 }
