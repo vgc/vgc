@@ -47,6 +47,14 @@ VGC_UI_API extern const core::StringId horizontal_shrink;
 VGC_UI_API extern const core::StringId vertical_stretch;
 VGC_UI_API extern const core::StringId vertical_shrink;
 
+VGC_UI_API extern const core::StringId uncheckable;
+VGC_UI_API extern const core::StringId checkable;
+VGC_UI_API extern const core::StringId bistate;
+VGC_UI_API extern const core::StringId tristate;
+VGC_UI_API extern const core::StringId unchecked;
+VGC_UI_API extern const core::StringId checked;
+VGC_UI_API extern const core::StringId indeterminate;
+
 VGC_UI_API extern const core::StringId hovered;
 VGC_UI_API extern const core::StringId pressed;
 

@@ -58,19 +58,19 @@
     border-bottom-left-radius: 3dp;
 }
 
-.LineEdit.horizontal-group.first {
+.horizontal-group.first {
     border-top-right-radius: 0dp;
     border-bottom-right-radius: 0dp;
 }
 
-.LineEdit.horizontal-group.middle {
+.horizontal-group.middle {
     border-top-left-radius: 0dp;
     border-top-right-radius: 0dp;
     border-bottom-right-radius: 0dp;
     border-bottom-left-radius: 0dp;
 }
 
-.LineEdit.horizontal-group.last {
+.horizontal-group.last {
     border-top-left-radius: 0dp;
     border-bottom-left-radius: 0dp;
 }
@@ -91,6 +91,18 @@
 
 .Button.pressed {
     background-color: rgb(120, 124, 128);
+}
+
+.Button.checked {
+    background-color: rgb(11, 82, 172);
+}
+
+.Button.checked.hovered {
+    background-color: rgb(31, 102, 192);
+}
+
+.Button.checked.pressed {
+    background-color: rgb(41, 112, 202);
 }
 
 .LineEdit {
