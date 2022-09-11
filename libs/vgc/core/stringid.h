@@ -19,7 +19,9 @@
 
 #include <functional> // hash
 #include <string>
+
 #include <vgc/core/api.h>
+#include <vgc/core/format.h>
 
 namespace vgc::core {
 
@@ -102,7 +104,9 @@ class VGC_CORE_API StringId {
 public:
     // Constructs a StringId representing the empty string.
     //
-    StringId();
+    StringId() noexcept
+        : stringPtr_(nullptr) {
+    }
 
     /// Constructs a StringId representing the given string \p s.
     ///
@@ -112,12 +116,22 @@ public:
     /// to call foo(std::string) without explicit cast, you need to explicitly
     /// define foo(std::string) and explicitly perform the cast there.
     ///
-    explicit StringId(const std::string& s);
+    explicit StringId(const std::string& s)
+        : stringPtr_(nullptr) {
+
+        if (!s.empty()) {
+            init_(s);
+        }
+    }
 
     /// Constructs a StringId representing the given string \p s.
     ///
     explicit StringId(const char s[])
-        : StringId(std::string(s)) {
+        : stringPtr_(nullptr) {
+
+        if (s && s[0] != '\0') {
+            init_(std::string(s));
+        }
     }
 
     /// Returns the string represented by this StringId.
@@ -176,6 +190,7 @@ public:
 private:
     friend struct std::hash<StringId>;
     const std::string* stringPtr_;
+    void init_(const std::string& s);
 };
 
 /// Returns whether the given std::string is equal to the given StringId.
@@ -212,5 +227,19 @@ struct hash<vgc::core::StringId> {
 };
 
 } // namespace std
+
+template<>
+struct fmt::formatter<vgc::core::StringId> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+            throw format_error("invalid format");
+        return it;
+    }
+    template<typename FormatContext>
+    auto format(const vgc::core::StringId& stringId, FormatContext& ctx) {
+        return format_to(ctx.out(), "{}", stringId.string());
+    }
+};
 
 #endif // VGC_CORE_STRINGID_H

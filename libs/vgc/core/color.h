@@ -624,7 +624,7 @@ struct fmt::formatter<vgc::core::Color> {
         return it;
     }
     template<typename FormatContext>
-    auto format(const vgc::core::Color c, FormatContext& ctx) {
+    auto format(const vgc::core::Color& c, FormatContext& ctx) {
         vgc::UInt8 r = vgc::core::double01ToUint8(c.r());
         vgc::UInt8 g = vgc::core::double01ToUint8(c.g());
         vgc::UInt8 b = vgc::core::double01ToUint8(c.b());
