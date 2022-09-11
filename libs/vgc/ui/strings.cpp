@@ -52,6 +52,14 @@ const core::StringId vertical_shrink("vertical-shrink");
 // Style classes / pseudo-classes
 // ------------------------------
 
+const core::StringId uncheckable("uncheckable");
+const core::StringId checkable("checkable");
+const core::StringId bistate("bistate");
+const core::StringId tristate("tristate");
+const core::StringId unchecked("unchecked");
+const core::StringId checked("checked");
+const core::StringId indeterminate("indeterminate");
+
 const core::StringId hovered("hovered");
 const core::StringId pressed("pressed");
 

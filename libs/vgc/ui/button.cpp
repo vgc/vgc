@@ -18,6 +18,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/logcategories.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -49,7 +50,75 @@ void Button::setText(std::string_view text) {
     }
 }
 
+void Button::setCheckMode(CheckMode newMode) {
+    if (checkMode_ != newMode) {
+        CheckMode oldMode = checkMode_;
+        checkMode_ = newMode;
+
+        // Update state if current state is now unsupported
+        if (!supportsCheckState(checkState_)) {
+            setCheckStateNoEmit_(CheckState::Unchecked);
+        }
+
+        // Update other buttons in the same group
+        if (group()) {
+            group()->enforcePolicyNoEmit_(this);
+        }
+
+        // Prevent destructing object then emit state changes
+        ButtonPtr thisPtr(this);
+        if (group()) {
+            group()->emitPendingCheckStates_();
+        }
+        else {
+            emitPendingCheckState_();
+        }
+
+        // Update CheckMode style
+        if (oldMode == CheckMode::Uncheckable) {
+            addStyleClass(strings::checkable);
+        }
+        else if (newMode == CheckMode::Uncheckable) {
+            removeStyleClass(strings::checkable);
+        }
+        replaceStyleClass(
+            detail::modeToStringId(oldMode), detail::modeToStringId(newMode));
+    }
+}
+
+bool Button::supportsCheckState(CheckState checkState) const {
+    if (checkMode_ == CheckMode::Uncheckable) {
+        return checkState == CheckState::Unchecked;
+    }
+    else if (checkMode_ == CheckMode::Bistate) {
+        return checkState != CheckState::Indeterminate;
+    }
+    else {
+        return true;
+    }
+}
+
+void Button::setCheckState(CheckState newState) {
+    if (checkState_ != newState) {
+        if (!supportsCheckState(newState)) {
+            VGC_WARNING(
+                LogVgcUi,
+                "Cannot assign {} state to {} button.",
+                detail::stateToStringId(newState),
+                detail::modeToStringId(checkMode_));
+            return;
+        }
+        ButtonGroup::setCheckState_(group(), this, newState);
+    }
+}
+
+void Button::toggle() {
+    ButtonGroup::toggle_(group(), this);
+}
+
 void Button::click(const geometry::Vec2f& pos) {
+    ButtonPtr thisPtr;
+    toggle();
     clicked().emit(this, pos);
 }
 
@@ -214,6 +283,51 @@ geometry::Vec2f Button::computePreferredSize() const {
         res[1] = h.value();
     }
     return res;
+}
+
+void Button::setCheckStateNoEmit_(CheckState newState) {
+    checkState_ = newState;
+}
+
+void Button::emitPendingCheckState_() {
+    if (lastEmittedCheckState_ != checkState_) {
+
+        // In case of nested emits, remember who is the first emitter. If we're
+        // the first emitter, we're responsible for not destructing the button,
+        // as well as updating the style once all nested emits are done.
+        //
+        bool isFirstEmitter = !emitting_;
+        emitting_ = true;
+        ButtonPtr thisPtr;
+        core::StringId oldStyleClass;
+        if (isFirstEmitter) {
+            thisPtr = this;
+            oldStyleClass = detail::stateToStringId(lastEmittedCheckState_);
+        }
+
+        // The first emitter is responsible for updating the style, after all
+        // nested emits are done. Here, we remember the current style.
+        //
+        if (isFirstEmitter) {
+            oldStyleClass = detail::stateToStringId(lastEmittedCheckState_);
+        }
+
+        // Emit the checkStateChanged() signal. This may cause nested emits.
+        //
+        reload_ = true;
+        lastEmittedCheckState_ = checkState_;
+        checkStateChanged().emit(this, checkState_);
+
+        // Update style. Note that here, checkState_ may be different from the
+        // one emitted above, but that's intended: we want to set the style of
+        // the nested-most emit.
+        //
+        if (isFirstEmitter) {
+            const core::StringId newStyleClass = detail::stateToStringId(checkState_);
+            emitting_ = false;
+            replaceStyleClass(oldStyleClass, newStyleClass);
+        }
+    }
 }
 
 } // namespace vgc::ui

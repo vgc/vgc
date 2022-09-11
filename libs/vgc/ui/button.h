@@ -22,6 +22,7 @@
 
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/richtext.h>
+#include <vgc/ui/buttongroup.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -60,6 +61,126 @@ public:
     ///
     void setText(std::string_view text);
 
+    /// Returns the `CheckMode` of the button.
+    ///
+    /// \sa `setCheckMode()`, `isCheckable()`.
+    ///
+    CheckMode checkMode() const {
+        return checkMode_;
+    }
+
+    /// Sets the `CheckMode` of the `Button`.
+    ///
+    /// \sa `checkMode()`, `setCheckable()`.
+    ///
+    void setCheckMode(CheckMode checkMode);
+    VGC_SLOT(setCheckMode)
+
+    /// Returns `true` if the `checkMode()` of the `Button` is either
+    /// `Bistate` or `Tristate`. Otherwise, return `false`.
+    ///
+    /// \sa `setCheckable()`, `checkMode()`.
+    ///
+    bool isCheckable() const {
+        return checkMode_ != CheckMode::Uncheckable;
+    }
+
+    /// Sets the button's `CheckMode` to either `Bistate` (if `isCheckable`
+    /// is true), or `Uncheckable` (if `isCheckable` is false).
+    ///
+    /// \sa `isCheckable()`, `setCheckMode()`.
+    ///
+    void setCheckable(bool isCheckable) {
+        setCheckMode(isCheckable ? CheckMode::Bistate : CheckMode::Uncheckable);
+    }
+    VGC_SLOT(setCheckable)
+
+    /// Returns the `CheckState` of the button.
+    ///
+    /// \sa `setCheckState()`, `isChecked()`.
+    ///
+    CheckState checkState() const {
+        return checkState_;
+    }
+
+    /// Returns whether the button supports the given state.
+    ///
+    /// For `Uncheckable` buttons, the only supported state is `Unchecked`.
+    ///
+    /// For `Bistate` buttons, the supported states are `Unchecked` and `Checked`.
+    ///
+    /// For `Tristate` buttons, the supported states are `Unchecked`, `Checked`, and
+    /// `Indeterminate`.
+    ///
+    /// \sa `checkState()`, `checkMode()`.
+    ///
+    bool supportsCheckState(CheckState checkState) const;
+
+    /// Sets the `CheckState` of the button.
+    ///
+    /// If the button doesn't support the given state (see
+    /// `supportsCheckState()`), then the state isn't changed and a warning is
+    /// emitted.
+    ///
+    /// \sa `checkState()`, `setChecked()`.
+    ///
+    void setCheckState(CheckState checkState);
+    VGC_SLOT(setCheckState)
+
+    /// Returns whether the button's `CheckState` is `Checked`.
+    ///
+    /// \sa `setChecked()`, `checkState()`.
+    ///
+    bool isChecked() const {
+        return checkState_ == CheckState::Checked;
+    }
+
+    /// Sets the button's `CheckState` to either `Checked` (if `isChecked`
+    /// is true), or `Unchecked` (if `isChecked` is false).
+    ///
+    /// \sa `isChecked()`, `setCheckState()`.
+    ///
+    void setChecked(bool isChecked) {
+        setCheckState(isChecked ? CheckState::Checked : CheckState::Unchecked);
+    }
+    VGC_SLOT(setChecked)
+
+    /// Toggles the check state of the `Button`.
+    ///
+    /// This has different meaning depending on the `CheckMode` of the button
+    /// as well as the button's group `CheckPolicy`.
+    ///
+    /// If the button is `Uncheckable` then this function does nothing.
+    ///
+    /// If the button is `Bistate` then this function switches between
+    /// `Checked` and `Unchecked`, unless the button is part of a group whose
+    /// policy is `ExactlyOne`, in which case the button stays `Checked` if it
+    /// was already `Checked`.
+    ///
+    /// If the button is `Tristate`:
+    /// - If its state is `Indeterminate`, then this function changes its state
+    ///   to `Checked`.
+    /// - If its state is `Checked` or `Unchecked`, then this function behaves
+    ///   as if the button was `Bistate`.
+    ///
+    /// Note that after calling this function (or clicking on a button), the
+    /// button state will never be `Indeterminate`. The `Indeterminate` state
+    /// can only be set programatically via `setCheckState()`.
+    ///
+    /// \sa `setCheckState()`, `setChecked()`.
+    ///
+    void toggle();
+    VGC_SLOT(toggle)
+
+    /// Returns the `ButtonGroup` this `Button` belongs to. Returns `nullptr`
+    /// if this `Button` doesn't belong to any `ButtonGroup`.
+    ///
+    /// \sa `ButtonGroup::addButton()`, `ButtonGroup::removeButton()`.
+    ///
+    ButtonGroup* group() const {
+        return group_;
+    }
+
     /// Clicks the button at position `pos` in local coordinates.
     ///
     /// This will cause the clicked signal to be emitted.
@@ -91,6 +212,12 @@ public:
     ///
     VGC_SIGNAL(released, (Button*, button), (const geometry::Vec2f&, pos));
 
+    /// This signal is emitted when the button check state changed.
+    ///
+    /// \sa setCheckState(), checkState().
+    ///
+    VGC_SIGNAL(checkStateChanged, (Button*, button), (CheckState, checkState));
+
     // Reimplementation of StylableObject virtual methods
     style::StylableObject* firstChildStylableObject() const override;
     style::StylableObject* lastChildStylableObject() const override;
@@ -110,10 +237,25 @@ protected:
     geometry::Vec2f computePreferredSize() const override;
 
 private:
+    friend class ButtonGroup;
+
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
+    ui::ButtonGroup* group_ = nullptr;
     bool reload_ = true;
     bool isPressed_ = false;
+    CheckMode checkMode_ = CheckMode::Uncheckable;
+    CheckState checkState_ = CheckState::Unchecked;
+    CheckState lastEmittedCheckState_ = CheckState::Unchecked;
+    bool emitting_ = false;
+
+    // Directly sets the new state, ignoring policy and emitting no signals
+    void setCheckStateNoEmit_(CheckState newState);
+
+    // Informs the world about the new state:
+    // - updates style classes
+    // - emits checkStateChanged
+    void emitPendingCheckState_();
 };
 
 } // namespace vgc::ui
