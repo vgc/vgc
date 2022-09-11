@@ -20,11 +20,16 @@
 
 namespace vgc::ui {
 
-ButtonGroup::ButtonGroup() {
+ButtonGroup::ButtonGroup(CheckPolicy checkPolicy)
+    : checkPolicy_(checkPolicy) {
 }
 
 ButtonGroupPtr ButtonGroup::create() {
-    return ButtonGroupPtr(new ButtonGroup());
+    return ButtonGroupPtr(new ButtonGroup(CheckPolicy::ZeroOrMore));
+}
+
+ButtonGroupPtr ButtonGroup::create(CheckPolicy checkPolicy) {
+    return ButtonGroupPtr(new ButtonGroup(checkPolicy));
 }
 
 void ButtonGroup::clear() {

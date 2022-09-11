@@ -113,12 +113,17 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    ButtonGroup();
+    ButtonGroup(CheckPolicy checkPolicy);
 
 public:
-    /// Creates a `ButtonGroup`.
+    /// Creates a non-exclusive `ButtonGroup`, that is, a group with the policy
+    /// `CheckPolicy::ZeroOrMore`.
     ///
     static ButtonGroupPtr create();
+
+    /// Creates a `ButtonGroup` with the given `checkPolicy`.
+    ///
+    static ButtonGroupPtr create(CheckPolicy checkPolicy);
 
     /// Removes all buttons in the group.
     ///
