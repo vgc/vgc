@@ -21,18 +21,13 @@
 
 namespace vgc::core {
 
-core::StringId str;
+void core::StringId::init_(const std::string& s) {
 
-StringId::StringId() {
-    stringPtr_ = nullptr;
-}
-
-StringId::StringId(const std::string& s) {
-    if (s.empty()) {
-        stringPtr_ = nullptr;
-        return;
-    }
-
+    // TODO: we might want to use a custom data structure here, so that we
+    // could query whether the pool of std::string contains a given
+    // std::string_view, without having to first convert the std::string_view
+    // to an std::string.
+    //
     using StringPool = std::unordered_set<std::string>;
 
     // Declare a global string pool with static storage duration. We
