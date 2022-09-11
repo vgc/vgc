@@ -20,11 +20,16 @@
 
 namespace vgc::ui {
 
-ButtonGroup::ButtonGroup() {
+ButtonGroup::ButtonGroup(CheckPolicy checkPolicy)
+    : checkPolicy_(checkPolicy) {
 }
 
 ButtonGroupPtr ButtonGroup::create() {
-    return ButtonGroupPtr(new ButtonGroup());
+    return ButtonGroupPtr(new ButtonGroup(CheckPolicy::ZeroOrMore));
+}
+
+ButtonGroupPtr ButtonGroup::create(CheckPolicy checkPolicy) {
+    return ButtonGroupPtr(new ButtonGroup(checkPolicy));
 }
 
 void ButtonGroup::clear() {
@@ -50,11 +55,7 @@ void ButtonGroup::removeButton(Button* button) {
     buttons_.removeOne(button);
     if (oldNumButtons != numButtons()) {
         disconnectButton_(button);
-        if (checkPolicy_ == CheckPolicy::ExactlyOne) {
-            if (numCheckedButtons() == 0) {
-                checkFirstCheckable_();
-            }
-        }
+        enforcePolicy_();
     }
 }
 
@@ -71,11 +72,7 @@ Int ButtonGroup::numCheckedButtons() const {
 void ButtonGroup::setCheckPolicy(CheckPolicy checkPolicy) {
     if (checkPolicy_ != checkPolicy) {
         checkPolicy_ = checkPolicy;
-        enforcePolicyNoEmit_(nullptr);
-        emitPendingCheckStates_();
-
-        if (checkPolicy == CheckPolicy::ExactlyOne) {
-        }
+        enforcePolicy_();
     }
 }
 
@@ -101,8 +98,7 @@ void ButtonGroup::disconnectButton_(Button* button) {
 
 void ButtonGroup::onButtonDestroyed_(Object* button) {
     buttons_.removeOne(static_cast<Button*>(button));
-
-    // This is similar to the implementation of removeButton()
+    enforcePolicy_();
 }
 
 void ButtonGroup::toggle_(ButtonGroup* group, Button* button) {
