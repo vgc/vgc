@@ -211,6 +211,19 @@ public:
     ///
     void toggleStyleClass(core::StringId class_);
 
+    /// Removes the given `oldClass` and adds the given `newClass` in one operation.
+    ///
+    /// This is equivalent to:
+    ///
+    /// ```cpp
+    /// removeStyleClass(oldClass);
+    /// addStyleClass(newClass);
+    /// ```
+    ///
+    /// But using `replaceStyleClass` is faster because it causes fewer tree updates.
+    ///
+    void replaceStyleClass(core::StringId oldClass, core::StringId newClass);
+
     /// Returns the computed value of a given style property of this `StylableObject`.
     ///
     StyleValue style(core::StringId property) const;

@@ -33,22 +33,41 @@ void StylableObject::setStyleSheet(std::string_view string) {
 }
 
 void StylableObject::addStyleClass(core::StringId class_) {
-    if (!styleClasses_.contains(class_)) {
+    if (isAlive() && !styleClasses_.contains(class_)) {
         styleClasses_.add(class_);
         updateStyle_();
     }
 }
 
 void StylableObject::removeStyleClass(core::StringId class_) {
-    if (styleClasses_.contains(class_)) {
+    if (isAlive() && styleClasses_.contains(class_)) {
         styleClasses_.remove(class_);
         updateStyle_();
     }
 }
 
 void StylableObject::toggleStyleClass(core::StringId class_) {
-    styleClasses_.toggle(class_);
-    updateStyle_();
+    if (isAlive()) {
+        styleClasses_.toggle(class_);
+        updateStyle_();
+    }
+}
+
+void StylableObject::replaceStyleClass(core::StringId oldClass, core::StringId newClass) {
+    if (isAlive()) {
+        bool changed = false;
+        if (styleClasses_.contains(oldClass)) {
+            styleClasses_.remove(oldClass);
+            changed = true;
+        }
+        if (!styleClasses_.contains(newClass)) {
+            styleClasses_.add(newClass);
+            changed = true;
+        }
+        if (changed) {
+            updateStyle_();
+        }
+    }
 }
 
 StyleValue StylableObject::style(core::StringId property) const {
