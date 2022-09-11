@@ -202,21 +202,22 @@ private:
     // Assumes that the current state of the button is different than newState.
     static void setCheckState_(ButtonGroup* group, Button* button, CheckState state);
 
-    // Tries to enforce the checked policy, knowing that `newButton` is a newly
-    // added button. `newButton` can be nullptr.
-    void enforcePolicyNoEmit_(Button* newButton);
-    void enforcePolicy_(Button* newButton);
+    // Tries to enforce the checked policy. If `newButton` is not `nullptr`, it
+    // is assumed to be a newly added button and prioritize checking/unchecking
+    // this button over other buttons.
+    void enforcePolicyNoEmit_(Button* newButton = nullptr);
+    void enforcePolicy_(Button* newButton = nullptr);
 
     // Sets all `Checked` buttons in this group (other than `button`) to `Unchecked`.
     // Leaves `Indeterminate` buttons unchanged.
-    void unckeckOthersNoEmit_(Button* button);
+    void unckeckOthersNoEmit_(Button* button = nullptr);
 
     // Sets the first checkable button in this group to `Checked`.
     void checkFirstCheckable_();
 
     // Sets the first checkable button in this group (other than `button`) to `Checked`.
     // Note that this might be a previously `Indeterminate` button.
-    void checkFirstOtherCheckableNoEmit_(Button* button);
+    void checkFirstOtherCheckableNoEmit_(Button* button = nullptr);
 
     // Informs the world about the new state:
     // - emits checkStateChanged
