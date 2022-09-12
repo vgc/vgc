@@ -323,6 +323,46 @@ private:
 ///
 class VGC_STYLE_API BorderRadiuses {
 public:
+    /// Constructs a `BorderRadiuses` with all radiuses set to the given
+    /// `BorderRadius`.
+    ///
+    BorderRadiuses(const BorderRadius& radius)
+        : topLeft_(radius)
+        , topRight_(radius)
+        , bottomRight_(radius)
+        , bottomLeft_(radius) {
+    }
+
+    /// Constructs a `BorderRadiuses` with the top-left and bottom-right
+    /// radiuses set to `topLeftAndBottomRight`, and the top-right and
+    /// bottom-left radiuses set to `topRightAndBottomLeft`.
+    ///
+    BorderRadiuses(
+        const BorderRadius& topLeftAndBottomRight,
+        const BorderRadius& topRightAndBottomLeft)
+
+        : topLeft_(topLeftAndBottomRight)
+        , topRight_(topRightAndBottomLeft)
+        , bottomRight_(topLeftAndBottomRight)
+        , bottomLeft_(topRightAndBottomLeft) {
+    }
+
+    /// Constructs a `BorderRadiuses` with the top-left radius set to
+    /// `topLeft`, the top-right and bottom-left radiuses set to
+    /// `topRightAndBottomLeft`, and the bottom-right radius set to
+    /// `bottomRight`.
+    ///
+    BorderRadiuses(
+        const BorderRadius& topLeft,
+        const BorderRadius& topRightAndBottomLeft,
+        const BorderRadius& bottomRight)
+
+        : topLeft_(topLeft)
+        , topRight_(topRightAndBottomLeft)
+        , bottomRight_(bottomRight)
+        , bottomLeft_(topRightAndBottomLeft) {
+    }
+
     /// Constructs a `BorderRadiuses` with the four given `BorderRadius`.
     ///
     BorderRadiuses(
