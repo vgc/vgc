@@ -26,6 +26,7 @@
 #include <vgc/core/parse.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/button.h>
+#include <vgc/ui/buttongroup.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
@@ -140,83 +141,110 @@ bool ScreenColorPickerButton::onKeyRelease(QKeyEvent* event) {
     }
 }
 
+namespace {
+
+void setupHorizontalGroup_(Widget* first, Widget* middle, Widget* last) {
+    first->addStyleClass(strings_::horizontal_group);
+    first->addStyleClass(strings_::first);
+    last->addStyleClass(strings_::horizontal_group);
+    last->addStyleClass(strings_::last);
+    if (middle) {
+        middle->addStyleClass(strings_::horizontal_group);
+        middle->addStyleClass(strings_::middle);
+    }
+}
+
+void createThreeLineEdits_(
+    Widget* parent,
+    core::StringId styleClass,
+    std::string_view labelText,
+    LineEdit*& a,
+    LineEdit*& b,
+    LineEdit*& c) {
+
+    Row* row = parent->createChild<Row>();
+    row->addStyleClass(styleClass);
+    row->createChild<Label>(labelText);
+    a = row->createChild<LineEdit>();
+    b = row->createChild<LineEdit>();
+    c = row->createChild<LineEdit>();
+    setupHorizontalGroup_(a, b, c);
+}
+
+void createOneLineEdit_(
+    Widget* parent,
+    core::StringId styleClass,
+    std::string_view labelText,
+    LineEdit*& a) {
+
+    Row* row = parent->createChild<Row>();
+    row->addStyleClass(styleClass);
+    row->createChild<Label>(labelText);
+    a = row->createChild<LineEdit>();
+}
+
+Button* createCheckableButton_(Widget* parent, std::string_view text) {
+    Button* res = parent->createChild<Button>(text);
+    res->setCheckable(true);
+    return res;
+}
+
+} // namespace
+
 ColorPalette::ColorPalette()
     : Column() {
 
-    Row* stepsRow = createChild<Row>();
-    stepsRow->addStyleClass(strings_::steps);
-    stepsRow->createChild<Label>("Steps:");
-    numHStepsLineEdit_ = stepsRow->createChild<LineEdit>();
-    numSStepsLineEdit_ = stepsRow->createChild<LineEdit>();
-    numLStepsLineEdit_ = stepsRow->createChild<LineEdit>();
-    numHStepsLineEdit_->addStyleClass(strings_::horizontal_group);
-    numSStepsLineEdit_->addStyleClass(strings_::horizontal_group);
-    numLStepsLineEdit_->addStyleClass(strings_::horizontal_group);
-    numHStepsLineEdit_->addStyleClass(strings_::first);
-    numSStepsLineEdit_->addStyleClass(strings_::middle);
-    numLStepsLineEdit_->addStyleClass(strings_::last);
+    // Continuous vs. Steps
+    Row* stepsModeRow = createChild<Row>();
+    stepsButton_ = createCheckableButton_(stepsModeRow, "Steps");
+    continuousButton_ = createCheckableButton_(stepsModeRow, "Continuous");
+    setupHorizontalGroup_(stepsButton_, nullptr, continuousButton_);
+    stepsButtonGroup_ = ButtonGroup::create(CheckPolicy::ExactlyOne);
+    stepsButtonGroup_->addButton(stepsButton_);
+    stepsButtonGroup_->addButton(continuousButton_);
+    createThreeLineEdits_(
+        this, strings_::steps, "Steps:", hStepsEdit_, sStepsEdit_, lStepsEdit_);
 
+    // Main color selector
     selector_ = createChild<ColorPaletteSelector>();
 
-    Row* rgbRow = createChild<Row>();
-    rgbRow->addStyleClass(strings_::rgb);
-    rgbRow->createChild<Label>("RGB:");
-    rLineEdit_ = rgbRow->createChild<LineEdit>();
-    gLineEdit_ = rgbRow->createChild<LineEdit>();
-    bLineEdit_ = rgbRow->createChild<LineEdit>();
-    rLineEdit_->addStyleClass(strings_::horizontal_group);
-    gLineEdit_->addStyleClass(strings_::horizontal_group);
-    bLineEdit_->addStyleClass(strings_::horizontal_group);
-    rLineEdit_->addStyleClass(strings_::first);
-    gLineEdit_->addStyleClass(strings_::middle);
-    bLineEdit_->addStyleClass(strings_::last);
+    // Color line edits
+    createThreeLineEdits_(this, strings_::rgb, "RGB:", rEdit_, gEdit_, bEdit_);
+    createThreeLineEdits_(this, strings_::hsl, "HSL:", hEdit_, sEdit_, lEdit_);
+    createOneLineEdit_(this, strings_::hex, "Hex:", hexEdit_);
 
-    Row* hslRow = createChild<Row>();
-    hslRow->addStyleClass(strings_::hsl);
-    hslRow->createChild<Label>("HSL:");
-    hLineEdit_ = hslRow->createChild<LineEdit>();
-    sLineEdit_ = hslRow->createChild<LineEdit>();
-    lLineEdit_ = hslRow->createChild<LineEdit>();
-    hLineEdit_->addStyleClass(strings_::horizontal_group);
-    sLineEdit_->addStyleClass(strings_::horizontal_group);
-    lLineEdit_->addStyleClass(strings_::horizontal_group);
-    hLineEdit_->addStyleClass(strings_::first);
-    sLineEdit_->addStyleClass(strings_::middle);
-    lLineEdit_->addStyleClass(strings_::last);
-
-    Row* hexRow = createChild<Row>();
-    hexRow->addStyleClass(strings_::hex);
-    hexRow->createChild<Label>("Hex:");
-    hexLineEdit_ = hexRow->createChild<LineEdit>();
-    hLineEdit_->addStyleClass(strings_::hex);
-
+    // Pick screen
     ScreenColorPickerButton* pickScreenButton =
         createChild<ScreenColorPickerButton>("Pick Screen Color");
 
+    // Palette
     Button* addToPaletteButton = createChild<Button>("Add to Palette");
-
     colorListView_ = createChild<ColorListView>();
 
+    // Connections
+    continuousButton_->checkStateChanged().connect(onContinuousChangedSlot_());
+    hStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
+    sStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
+    lStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
     selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
-    numHStepsLineEdit_->editingFinished().connect(onStepsEditedSlot_());
-    numSStepsLineEdit_->editingFinished().connect(onStepsEditedSlot_());
-    numLStepsLineEdit_->editingFinished().connect(onStepsEditedSlot_());
-    rLineEdit_->editingFinished().connect(onRgbEditedSlot_());
-    gLineEdit_->editingFinished().connect(onRgbEditedSlot_());
-    bLineEdit_->editingFinished().connect(onRgbEditedSlot_());
-    hLineEdit_->editingFinished().connect(onHslEditedSlot_());
-    sLineEdit_->editingFinished().connect(onHslEditedSlot_());
-    lLineEdit_->editingFinished().connect(onHslEditedSlot_());
-    hexLineEdit_->editingFinished().connect(onHexEditedSlot_());
+    rEdit_->editingFinished().connect(onRgbEditedSlot_());
+    gEdit_->editingFinished().connect(onRgbEditedSlot_());
+    bEdit_->editingFinished().connect(onRgbEditedSlot_());
+    hEdit_->editingFinished().connect(onHslEditedSlot_());
+    sEdit_->editingFinished().connect(onHslEditedSlot_());
+    lEdit_->editingFinished().connect(onHslEditedSlot_());
+    hexEdit_->editingFinished().connect(onHexEditedSlot_());
     addToPaletteButton->clicked().connect(onAddToPaletteClickedSlot_());
     pickScreenButton->pickingStarted().connect(onPickScreenStartedSlot_());
     pickScreenButton->pickingCancelled().connect(onPickScreenCancelledSlot_());
     pickScreenButton->colorHovered().connect(onPickScreenColorHoveredSlot_());
     colorListView_->colorSelected().connect(onColorListViewSelectedColorSlot_());
 
+    // Init
     updateStepsLineEdits_();
     setSelectedColorNoCheckNoEmit_(core::colors::black);
 
+    // Style class
     addStyleClass(strings::ColorPalette);
 }
 
@@ -288,14 +316,19 @@ core::Color parseHex_(LineEdit* lineEdit, bool& isValid) {
 
 } // namespace
 
+void ColorPalette::onContinuousChanged_() {
+    bool isContinuous = continuousButton_->isChecked();
+    selector_->setContinuous(isContinuous);
+}
+
 void ColorPalette::onStepsEdited_() {
 
     // Try to parse the new steps from the line edits.
     //
     bool isValid = true;
-    Int numHueSteps = parseInt_(numHStepsLineEdit_, isValid);
-    Int numSaturationSteps = parseInt_(numSStepsLineEdit_, isValid);
-    Int numLightnessSteps = parseInt_(numLStepsLineEdit_, isValid);
+    Int numHueSteps = parseInt_(hStepsEdit_, isValid);
+    Int numSaturationSteps = parseInt_(sStepsEdit_, isValid);
+    Int numLightnessSteps = parseInt_(lStepsEdit_, isValid);
 
     // Check if the input was valid.
     //
@@ -310,9 +343,9 @@ void ColorPalette::onRgbEdited_() {
     // Try to parse the new color from the line edit.
     //
     bool isValid = true;
-    Int r_ = parseInt_(rLineEdit_, isValid);
-    Int g_ = parseInt_(gLineEdit_, isValid);
-    Int b_ = parseInt_(bLineEdit_, isValid);
+    Int r_ = parseInt_(rEdit_, isValid);
+    Int g_ = parseInt_(gEdit_, isValid);
+    Int b_ = parseInt_(bEdit_, isValid);
 
     // Check if the input was valid.
     //
@@ -345,9 +378,9 @@ void ColorPalette::onHslEdited_() {
     // Try to parse the new color from the line edit.
     //
     bool isValid = true;
-    Int h_ = parseInt_(hLineEdit_, isValid);
-    Int s_ = parseInt_(sLineEdit_, isValid);
-    Int l_ = parseInt_(lLineEdit_, isValid);
+    Int h_ = parseInt_(hEdit_, isValid);
+    Int s_ = parseInt_(sEdit_, isValid);
+    Int l_ = parseInt_(lEdit_, isValid);
 
     // Check if the input was valid.
     //
@@ -382,7 +415,7 @@ void ColorPalette::onHexEdited_() {
     core::Color oldColor = selectedColor_;
 
     bool isValid = true;
-    core::Color parsedColor = parseHex_(hexLineEdit_, isValid);
+    core::Color parsedColor = parseHex_(hexEdit_, isValid);
     if (isValid) {
         newColor = parsedColor;
     }
@@ -411,9 +444,9 @@ void ColorPalette::onAddToPaletteClicked_() {
 }
 
 void ColorPalette::updateStepsLineEdits_() {
-    numHStepsLineEdit_->setText(core::toString(selector_->numHueSteps()));
-    numSStepsLineEdit_->setText(core::toString(selector_->numSaturationSteps()));
-    numLStepsLineEdit_->setText(core::toString(selector_->numLightnessSteps()));
+    hStepsEdit_->setText(core::toString(selector_->numHueSteps()));
+    sStepsEdit_->setText(core::toString(selector_->numSaturationSteps()));
+    lStepsEdit_->setText(core::toString(selector_->numLightnessSteps()));
 }
 
 // This function is the same as setSelectedColor(), except that it
@@ -434,23 +467,23 @@ void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
     selector_->setSelectedColor(selectedColor_);
 
     // Update RGB line edits
-    rLineEdit_->setText(core::toString(static_cast<Int>(std::round(color.r() * 255))));
-    gLineEdit_->setText(core::toString(static_cast<Int>(std::round(color.g() * 255))));
-    bLineEdit_->setText(core::toString(static_cast<Int>(std::round(color.b() * 255))));
+    rEdit_->setText(core::toString(static_cast<Int>(std::round(color.r() * 255))));
+    gEdit_->setText(core::toString(static_cast<Int>(std::round(color.g() * 255))));
+    bEdit_->setText(core::toString(static_cast<Int>(std::round(color.b() * 255))));
 
     // Update HSL line edits
     // For now, we round to the nearest integer. Later, we may
     // want to show the first digit
     auto [h, s, l] = color.toHsl();
-    hLineEdit_->setText(core::toString(static_cast<Int>(std::round(h))));
-    sLineEdit_->setText(core::toString(static_cast<Int>(std::round(s * 255))));
-    lLineEdit_->setText(core::toString(static_cast<Int>(std::round(l * 255))));
+    hEdit_->setText(core::toString(static_cast<Int>(std::round(h))));
+    sEdit_->setText(core::toString(static_cast<Int>(std::round(s * 255))));
+    lEdit_->setText(core::toString(static_cast<Int>(std::round(l * 255))));
     // hLineEdit_->setText(core::format("{:.1f}", h));
     // sLineEdit_->setText(core::format("{:.1f}", s * 255));
     // lLineEdit_->setText(core::format("{:.1f}", l * 255));
 
     // Update Hex line edit
-    hexLineEdit_->setText(color.toHex());
+    hexEdit_->setText(color.toHex());
 
     // Update color palette list view
     colorListView_->setSelectedColor(selectedColor_);
@@ -512,6 +545,7 @@ core::Color colorFromHslIndices(
 void ColorPaletteSelector::setSelectedColor(const core::Color& color) {
 
     if (selectedColor_ != color) {
+        selectionOrigin_ = SelectionOrigin::External;
         setSelectedColor_(color);
 
         // Emit signals
@@ -545,6 +579,12 @@ void ColorPaletteSelector::setHslSteps(Int hue, Int saturation, Int lightness) {
     // Repaint
     reload_ = true;
     requestGeometryUpdate();
+}
+
+void ColorPaletteSelector::setContinuous(bool isContinuous) {
+    isContinuous_ = isContinuous;
+    reload_ = true;
+    requestRepaint();
 }
 
 void ColorPaletteSelector::onPaintCreate(graphics::Engine* engine) {
@@ -625,24 +665,44 @@ void ColorPaletteSelector::onPaintDraw(
         updateMetrics_(); // TODO: only update if we know that they have changed
         const Metrics& m = metrics_;
 
+        // Get misc color info
+        Int lSteps = numLightnessSteps_;
+        Int sSteps = numSaturationSteps_;
+        Int hSteps = numHueSteps_;
+        if (isContinuous_) {
+            lSteps = 16;
+            sSteps = 16;
+            hSteps = 96;
+        }
+        double dhue = 360.0 / hSteps;
+        double hue = isContinuous_ ? selectedHue_ : selectedHueIndex_ * dhue;
+
         // draw saturation/lightness selector
         if (m.borderWidth > 0) {
             detail::insertRect(a, borderColor, m.saturationLightnessRect);
         }
         float x0 = m.saturationLightnessRect.xMin();
         float y0 = m.saturationLightnessRect.yMin();
-        double dhue = 360.0 / numHueSteps_;
-        double hue = selectedHueIndex_ * dhue;
-        double dl = 1.0 / (numLightnessSteps_ - 1);
-        double ds = 1.0 / (numSaturationSteps_ - 1);
-        for (Int i = 0; i < numLightnessSteps_; ++i) {
-            float x1 = hint(x0 + m.borderWidth + i * m.slDx, m.hinting);
-            float x2 =
-                hint(x0 + m.borderWidth + (i + 1) * m.slDx, m.hinting) - m.borderWidth;
+        double dl = 1.0 / (isContinuous_ ? lSteps : lSteps - 1);
+        double ds = 1.0 / (isContinuous_ ? sSteps : sSteps - 1);
+        double slDx = m.slDx;
+        double slDy = m.slDy;
+        if (isContinuous_) {
+            slDx = (m.saturationLightnessRect.width() - 2 * m.borderWidth) / lSteps;
+            slDy = (m.saturationLightnessRect.height() - 2 * m.borderWidth) / sSteps;
+        }
+        for (Int i = 0; i < lSteps; ++i) {
+            float x1 = x0 + m.borderWidth + i * slDx;
+            float x2 = x0 + m.borderWidth + (i + 1) * slDx;
             double l = i * dl;
-            for (Int j = 0; j < numSaturationSteps_; ++j) {
-                float y1 = y0 + m.borderWidth + j * m.slDy;
-                float y2 = y1 + m.slDy - m.borderWidth;
+            if (!isContinuous_) {
+                x1 = hint(x1, m.hinting);
+                x2 = hint(x2, m.hinting);
+                x2 -= m.borderWidth;
+            }
+            for (Int j = 0; j < sSteps; ++j) {
+                float y1 = y0 + m.borderWidth + j * slDy;
+                float y2 = y1 + slDy;
                 double s = j * ds;
                 if (isContinuous_) {
                     auto c1 = core::Color::hsl(hue, s, l);
@@ -652,27 +712,14 @@ void ColorPaletteSelector::onPaintDraw(
                     insertSmoothRect(a, c1, c2, c3, c4, x1, y1, x2, y2);
                 }
                 else {
+                    y2 -= m.borderWidth;
                     auto c = core::Color::hsl(hue, s, l).round8b();
                     detail::insertRect(a, c, x1, y1, x2, y2);
                 }
             }
         }
-        // TODO: draw small disk indicating continuous current
-        // color if selected color isn't an exact index.
-        if (isSelectedColorExact_) {
-            Int i = selectedLightnessIndex_;
-            Int j = selectedSaturationIndex_;
-            float x1 = hint(x0 + m.borderWidth + i * m.slDx, m.hinting);
-            float x2 =
-                hint(x0 + m.borderWidth + (i + 1) * m.slDx, m.hinting) - m.borderWidth;
-            float y1 = y0 + m.borderWidth + j * m.slDy;
-            float y2 = y1 + m.slDy - m.borderWidth;
-            double l = i * dl;
-            double s = j * ds;
-            auto c = core::Color::hsl(hue, s, l).round8b();
-            insertCellHighlight(a, c, x1, y1, x2, y2);
-        }
-        if (hoveredLightnessIndex_ != -1) {
+        // Draw highlighted color in steps mode
+        if (!isContinuous_ && hoveredLightnessIndex_ != -1) {
             Int i = hoveredLightnessIndex_;
             Int j = hoveredSaturationIndex_;
             float x1 = hint(x0 + m.borderWidth + i * m.slDx, m.hinting);
@@ -685,34 +732,87 @@ void ColorPaletteSelector::onPaintDraw(
             auto c = core::Color::hsl(hue, s, l).round8b();
             insertCellHighlight(a, c, x1, y1, x2, y2);
         }
+        // Draw selected color
+        if (isContinuous_ || !isSelectedColorExact_) {
+            float hmargins = m.borderWidth;
+            float vmargins = m.borderWidth;
+            if (!isContinuous_) {
+                // remove more margins so that the continuous color
+                // corresponding to a quantized-selectable color is centered in
+                // the corresponding cell.
+                hmargins += 0.5f * slDx;
+                vmargins += 0.5f * slDy;
+            }
+            geometry::Rect2f rect =
+                m.saturationLightnessRect - Margins(vmargins, hmargins);
+            float radius = 7;
+            float x = rect.xMin() + selectedLightness_ * rect.width();
+            float y = rect.yMin() + selectedSaturation_ * rect.height();
+            float x1 = x - radius;
+            float x2 = x + radius;
+            float y1 = y - radius;
+            float y2 = y + radius;
+            style::BorderRadius radiusStyle(style::LengthOrPercentage(50));
+            style::BorderRadiuses radiusesStyle(radiusStyle);
+            detail::insertRect(
+                a,
+                selectedColor_,
+                highlightColor,
+                geometry::Rect2f(x1, y1, x2, y2),
+                radiusesStyle,
+                3);
+        }
+        else {
+            Int i = selectedLightnessIndex_;
+            Int j = selectedSaturationIndex_;
+            float x1 = hint(x0 + m.borderWidth + i * m.slDx, m.hinting);
+            float x2 =
+                hint(x0 + m.borderWidth + (i + 1) * m.slDx, m.hinting) - m.borderWidth;
+            float y1 = y0 + m.borderWidth + j * m.slDy;
+            float y2 = y1 + m.slDy - m.borderWidth;
+            double l = i * dl;
+            double s = j * ds;
+            auto c = core::Color::hsl(hue, s, l).round8b();
+            insertCellHighlight(a, c, x1, y1, x2, y2);
+        }
 
         // Draw hue selector
-        Int halfNumHueSteps = numHueSteps_ / 2;
+        Int halfHSteps = hSteps / 2;
         y0 = m.hueRect.yMin();
         if (m.borderWidth > 0) {
             detail::insertRect(a, borderColor, m.hueRect);
         }
-        double l = oldLightnessIndex_ * dl;
-        double s = oldSaturationIndex_ * ds;
-        for (Int i = 0; i < numHueSteps_; ++i) {
+        double l = isContinuous_ ? selectedLightness_ : oldLightnessIndex_ * dl;
+        double s = isContinuous_ ? selectedSaturation_ : oldSaturationIndex_ * ds;
+        double hueDx = isContinuous_
+                           ? (m.hueRect.width() - 2 * m.borderWidth) / halfHSteps
+                           : m.hueDx;
+        for (Int i = 0; i < hSteps; ++i) {
             float x1, y1, x2, y2;
             double hue1 = i * dhue;
             double hue2; // for continuous mode
-            if (i < halfNumHueSteps) {
-                x1 = hint(x0 + m.borderWidth + i * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (i + 1) * m.hueDx, m.hinting)
-                     - m.borderWidth;
+            if (i < halfHSteps) {
+                x1 = x0 + m.borderWidth + i * hueDx;
+                x2 = x0 + m.borderWidth + (i + 1) * hueDx;
                 y1 = y0 + m.borderWidth;
                 y2 = y1 + m.hueDy - m.borderWidth;
+                if (!isContinuous_) {
+                    x1 = hint(x1, m.hinting);
+                    x2 = hint(x2, m.hinting);
+                    x2 -= m.borderWidth;
+                }
                 hue2 = hue1 + dhue;
             }
             else {
-                x1 = hint(
-                    x0 + m.borderWidth + (numHueSteps_ - i - 1) * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (numHueSteps_ - i) * m.hueDx, m.hinting)
-                     - m.borderWidth;
+                x1 = x0 + m.borderWidth + (hSteps - i - 1) * hueDx;
+                x2 = x0 + m.borderWidth + (hSteps - i) * hueDx;
                 y1 = y0 + m.borderWidth + m.hueDy;
                 y2 = y1 + m.hueDy - m.borderWidth;
+                if (!isContinuous_) {
+                    x1 = hint(x1, m.hinting);
+                    x2 = hint(x2, m.hinting);
+                    x2 -= m.borderWidth;
+                }
                 hue2 = hue1 - dhue;
             }
             if (isContinuous_) {
@@ -725,33 +825,12 @@ void ColorPaletteSelector::onPaintDraw(
                 detail::insertRect(a, c, x1, y1, x2, y2);
             }
         }
-        if (isSelectedColorExact_) {
-            Int i = selectedHueIndex_;
-            float x1, y1, x2, y2;
-            double shue = i * dhue;
-            if (i < halfNumHueSteps) {
-                x1 = hint(x0 + m.borderWidth + i * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (i + 1) * m.hueDx, m.hinting)
-                     - m.borderWidth;
-                y1 = y0 + m.borderWidth;
-                y2 = y1 + m.hueDy - m.borderWidth;
-            }
-            else {
-                x1 = hint(
-                    x0 + m.borderWidth + (numHueSteps_ - i - 1) * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (numHueSteps_ - i) * m.hueDx, m.hinting)
-                     - m.borderWidth;
-                y1 = y0 + m.borderWidth + m.hueDy;
-                y2 = y1 + m.hueDy - m.borderWidth;
-            }
-            auto c = core::Color::hsl(shue, s, l).round8b();
-            insertCellHighlight(a, c, x1, y1, x2, y2);
-        }
-        if (hoveredHueIndex_ != -1) {
+        // Draw highlighted color in steps mode
+        if (!isContinuous_ && hoveredHueIndex_ != -1) {
             Int i = hoveredHueIndex_;
             float x1, y1, x2, y2;
             double hhue = i * dhue;
-            if (i < halfNumHueSteps) {
+            if (i < halfHSteps) {
                 x1 = hint(x0 + m.borderWidth + i * m.hueDx, m.hinting);
                 x2 = hint(x0 + m.borderWidth + (i + 1) * m.hueDx, m.hinting)
                      - m.borderWidth;
@@ -769,11 +848,73 @@ void ColorPaletteSelector::onPaintDraw(
             auto c = core::Color::hsl(hhue, s, l).round8b();
             insertCellHighlight(a, c, x1, y1, x2, y2);
         }
+        // Draw selected color
+        if (isContinuous_ || !isSelectedColorExact_) {
+            float hmargins = m.borderWidth;
+            float vmargins = m.borderWidth;
+            float shiftedHue = selectedHue_;
+            if (!isContinuous_) {
+                // In steps mode, pure red is not at x = 0, but slightly
+                // shifted to the right, in the middle of the cell
+                shiftedHue += 0.5 * dhue;
+                if (shiftedHue > 360) {
+                    shiftedHue -= 360;
+                }
+            }
+            geometry::Rect2f rect = m.hueRect - Margins(vmargins, hmargins);
+            double cursorBorderRadius = 3;
+            double cursorBorderWidth = 3;
+            float cursorHalfWidth = 6;
+            float x, y1, y2;
+            if (shiftedHue < 180) {
+                x = rect.xMin() + (shiftedHue / 180) * rect.width();
+                y1 = y0 + m.borderWidth - cursorBorderWidth + 1;
+                y2 = y1 + m.hueDy - m.borderWidth + 2 * cursorBorderWidth - 2;
+            }
+            else {
+                x = rect.xMin() + (2 - shiftedHue / 180) * rect.width();
+                y1 = y0 + m.borderWidth + m.hueDy - cursorBorderWidth + 1;
+                y2 = y1 + m.hueDy - m.borderWidth + 2 * cursorBorderWidth - 2;
+            }
+            float x1 = x - cursorHalfWidth;
+            float x2 = x + cursorHalfWidth;
+            style::BorderRadius radiusStyle(
+                style::LengthOrPercentage(cursorBorderRadius, style::LengthUnit::Dp));
+            style::BorderRadiuses radiusesStyle(radiusStyle);
+            detail::insertRect(
+                a,
+                selectedColor_,
+                highlightColor,
+                geometry::Rect2f(x1, y1, x2, y2),
+                radiusesStyle,
+                3);
+        }
+        else {
+            Int i = selectedHueIndex_;
+            float x1, y1, x2, y2;
+            double shue = i * dhue;
+            if (i < halfHSteps) {
+                x1 = hint(x0 + m.borderWidth + i * m.hueDx, m.hinting);
+                x2 = hint(x0 + m.borderWidth + (i + 1) * m.hueDx, m.hinting)
+                     - m.borderWidth;
+                y1 = y0 + m.borderWidth;
+                y2 = y1 + m.hueDy - m.borderWidth;
+            }
+            else {
+                x1 = hint(
+                    x0 + m.borderWidth + (numHueSteps_ - i - 1) * m.hueDx, m.hinting);
+                x2 = hint(x0 + m.borderWidth + (numHueSteps_ - i) * m.hueDx, m.hinting)
+                     - m.borderWidth;
+                y1 = y0 + m.borderWidth + m.hueDy;
+                y2 = y1 + m.hueDy - m.borderWidth;
+            }
+            auto c = core::Color::hsl(shue, s, l).round8b();
+            insertCellHighlight(a, c, x1, y1, x2, y2);
+        }
 
         // Load triangles
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
-    //engine->clear(core::Color(0.337, 0.345, 0.353));
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
 }
@@ -853,53 +994,73 @@ void ColorPaletteSelector::onPaintDestroy(graphics::Engine*) {
 
 bool ColorPaletteSelector::onMouseMove(MouseEvent* event) {
 
-    // Determine relevant selector
     const geometry::Vec2f& p = event->position();
-    SelectorType selector = scrubbedSelector_;
-    if (selector == SelectorType::None) {
-        selector = hoveredSelector_(p);
-    }
 
-    // Determine hovered cell
-    Int i = -1;
-    Int j = -1;
-    Int k = -1;
-    if (selector == SelectorType::SaturationLightness) {
-        auto sl = hoveredSaturationLightness_(p);
-        i = sl.first;
-        j = sl.second;
-    }
-    else if (selector == SelectorType::Hue) {
-        k = hoveredHue_(p);
-    }
-
-    // Update
-    if (hoveredLightnessIndex_ != i     //
-        || hoveredSaturationIndex_ != j //
-        || hoveredHueIndex_ != k) {
-
-        hoveredLightnessIndex_ = i;
-        hoveredSaturationIndex_ = j;
-        hoveredHueIndex_ = k;
+    if (isContinuous_) {
         if (scrubbedSelector_ != SelectorType::None) {
-            selectColorFromHovered_(); // -> includes requestRepaint()
+            selectContinuousColorFromPosition_(p);
         }
-        else {
-            reload_ = true;
-            requestRepaint();
+    }
+    else {
+        // Determine relevant selector
+        SelectorType selector = scrubbedSelector_;
+        if (selector == SelectorType::None) {
+            selector = hoveredSelector_(p);
+        }
+
+        // Determine hovered cell
+        Int i = -1;
+        Int j = -1;
+        Int k = -1;
+        if (selector == SelectorType::SaturationLightness) {
+            auto sl = hoveredSaturationLightness_(p);
+            i = sl.first;
+            j = sl.second;
+        }
+        else if (selector == SelectorType::Hue) {
+            k = hoveredHue_(p);
+        }
+
+        // Update
+        if (hoveredLightnessIndex_ != i     //
+            || hoveredSaturationIndex_ != j //
+            || hoveredHueIndex_ != k) {
+
+            hoveredLightnessIndex_ = i;
+            hoveredSaturationIndex_ = j;
+            hoveredHueIndex_ = k;
+            if (scrubbedSelector_ != SelectorType::None) {
+                selectColorFromHovered_(); // -> includes requestRepaint()
+            }
+            else {
+                reload_ = true;
+                requestRepaint();
+            }
         }
     }
     return true;
 }
 
-bool ColorPaletteSelector::onMousePress(MouseEvent* /*event*/) {
-    if (hoveredLightnessIndex_ != -1) {
-        scrubbedSelector_ = SelectorType::SaturationLightness;
+bool ColorPaletteSelector::onMousePress(MouseEvent* event) {
+    if (isContinuous_) {
+        geometry::Vec2f position = event->position();
+        if (metrics_.saturationLightnessRect.contains(position)) {
+            scrubbedSelector_ = SelectorType::SaturationLightness;
+        }
+        else if (metrics_.hueRect.contains(position)) {
+            scrubbedSelector_ = SelectorType::Hue;
+        }
+        return selectContinuousColorFromPosition_(position);
     }
-    else if (hoveredHueIndex_ != -1) {
-        scrubbedSelector_ = SelectorType::Hue;
+    else {
+        if (hoveredLightnessIndex_ != -1) {
+            scrubbedSelector_ = SelectorType::SaturationLightness;
+        }
+        else if (hoveredHueIndex_ != -1) {
+            scrubbedSelector_ = SelectorType::Hue;
+        }
+        return selectColorFromHovered_();
     }
-    return selectColorFromHovered_();
 }
 
 bool ColorPaletteSelector::onMouseRelease(MouseEvent* /*event*/) {
@@ -997,11 +1158,46 @@ Int ColorPaletteSelector::hoveredHue_(const geometry::Vec2f& p) {
 }
 
 void ColorPaletteSelector::setSelectedColor_(const core::Color& color) {
-
     selectedColor_ = color;
+    if (selectionOrigin_ != SelectionOrigin::Continuous) {
+        updateContinuousFromSelectedColor_();
+    }
+    if (selectionOrigin_ != SelectionOrigin::Steps) {
+        // Note: the function below relies on the continuous HSL values, so
+        // must be done after updateContinuousFromSelectedColor_().
+        updateStepsFromSelectedColor_();
+    }
+}
+
+void ColorPaletteSelector::updateContinuousFromSelectedColor_() {
+    if (selectionOrigin_ == SelectionOrigin::Steps) {
+        double dh = 360.0 / numHueSteps_;
+        double ds = 1.0 / (numSaturationSteps_ - 1);
+        double dl = 1.0 / (numLightnessSteps_ - 1);
+        selectedHue_ = selectedHueIndex_ * dh;
+        selectedSaturation_ = selectedSaturationIndex_ * ds;
+        selectedLightness_ = selectedLightnessIndex_ * dl;
+    }
+    else {
+        auto [h, s, l] = selectedColor_.toHsl();
+        bool isChromatic = (l > 0 && l < 1 && s > 0);
+        if (isChromatic) { // == has meaningful hue
+            selectedHue_ = h;
+        }
+        bool hasMeaningfulSaturation = (l > 0 && l < 1);
+        if (hasMeaningfulSaturation) {
+            selectedSaturation_ = s;
+        }
+        selectedLightness_ = l;
+    }
+}
+
+void ColorPaletteSelector::updateStepsFromSelectedColor_() {
 
     // Find closest user-selectable color
-    auto [h, s, l] = color.toHsl();
+    double h = selectedHue_;
+    double s = selectedSaturation_;
+    double l = selectedLightness_;
     Int hueIndex = static_cast<Int>(std::round(h * numHueSteps_ / 360.0));
     Int saturationIndex = static_cast<Int>(std::round(s * (numSaturationSteps_ - 1)));
     Int lightnessIndex = static_cast<Int>(std::round(l * (numLightnessSteps_ - 1)));
@@ -1014,7 +1210,7 @@ void ColorPaletteSelector::setSelectedColor_(const core::Color& color) {
         lightnessIndex);
 
     // Detect whether there is an exact match
-    isSelectedColorExact_ = (closestSelectableColor == color);
+    isSelectedColorExact_ = (closestSelectableColor == selectedColor_);
 
     // Set indices based on closest user-selectable color, regardless
     // of whether there is an exact match or not
@@ -1066,17 +1262,50 @@ bool ColorPaletteSelector::selectColorFromHovered_() {
     if (accepted) {
         reload_ = true;
         isSelectedColorExact_ = true;
-        selectedColor_ = colorFromHslIndices(
+        core::Color color = colorFromHslIndices(
             numHueSteps_,
             numSaturationSteps_,
             numLightnessSteps_,
             selectedHueIndex_,
             selectedSaturationIndex_,
             selectedLightnessIndex_);
+
+        selectionOrigin_ = SelectionOrigin::Steps;
+        setSelectedColor_(color);
+        reload_ = true;
         colorSelected().emit();
+        selectedColorChanged().emit();
         requestRepaint();
+        return true;
     }
     return accepted;
+}
+
+bool ColorPaletteSelector::selectContinuousColorFromPosition_(const geometry::Vec2f& p) {
+    if (scrubbedSelector_ == SelectorType::SaturationLightness) {
+        const geometry::Rect2f& r = metrics_.saturationLightnessRect;
+        selectedLightness_ = core::clamp((p.x() - r.xMin()) / r.width(), 0, 1);
+        selectedSaturation_ = core::clamp((p.y() - r.yMin()) / r.height(), 0, 1);
+    }
+    else if (scrubbedSelector_ == SelectorType::Hue) {
+        const geometry::Rect2f& r = metrics_.hueRect;
+        float t = core::clamp((p.x() - r.xMin()) / r.width(), 0, 1);
+        if (p.y() < 0.5 * (r.yMin() + r.yMax())) {
+            selectedHue_ = t * 180;
+        }
+        else {
+            selectedHue_ = 360 - (t * 180);
+        }
+    }
+    core::Color color =
+        core::Color::hsl(selectedHue_, selectedSaturation_, selectedLightness_);
+    selectionOrigin_ = SelectionOrigin::Continuous;
+    setSelectedColor_(color);
+    reload_ = true;
+    colorSelected().emit();
+    selectedColorChanged().emit();
+    requestRepaint();
+    return true;
 }
 
 ColorListViewItem::ColorListViewItem(ColorListView* view)
