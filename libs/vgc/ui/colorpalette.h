@@ -111,17 +111,20 @@ public:
 private:
     core::Color selectedColor_;
     core::Color selectedColorOnPickScreenStarted_;
+    ButtonGroupPtr stepsButtonGroup_;
+    Button* stepsButton_;
+    Button* continuousButton_;
     ColorPaletteSelector* selector_;
-    LineEdit* numHStepsLineEdit_;
-    LineEdit* numSStepsLineEdit_;
-    LineEdit* numLStepsLineEdit_;
-    LineEdit* rLineEdit_;
-    LineEdit* gLineEdit_;
-    LineEdit* bLineEdit_;
-    LineEdit* hLineEdit_;
-    LineEdit* sLineEdit_;
-    LineEdit* lLineEdit_;
-    LineEdit* hexLineEdit_;
+    LineEdit* hStepsEdit_;
+    LineEdit* sStepsEdit_;
+    LineEdit* lStepsEdit_;
+    LineEdit* rEdit_;
+    LineEdit* gEdit_;
+    LineEdit* bEdit_;
+    LineEdit* hEdit_;
+    LineEdit* sEdit_;
+    LineEdit* lEdit_;
+    LineEdit* hexEdit_;
     ColorListView* colorListView_;
 
     void onSelectorSelectedColor_();
@@ -129,6 +132,9 @@ private:
 
     void onColorListViewSelectedColor_();
     VGC_SLOT(onColorListViewSelectedColorSlot_, onColorListViewSelectedColor_)
+
+    void onContinuousChanged_();
+    VGC_SLOT(onContinuousChangedSlot_, onContinuousChanged_)
 
     void onStepsEdited_();
     VGC_SLOT(onStepsEditedSlot_, onStepsEdited_)
@@ -221,6 +227,16 @@ public:
     ///
     void setHslSteps(Int hue, Int saturation, Int lightness);
 
+    /// Returns whether the selector is in continuous mode.
+    ///
+    bool isContinuous() const {
+        return isContinuous_;
+    }
+
+    /// Sets whether the selector is in continuous mode.
+    ///
+    void setContinuous(bool isContinuous);
+
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
@@ -262,6 +278,11 @@ private:
     Int selectedLightnessIndex_;
     Int oldSaturationIndex_; // "old" = last chromatic color selected
     Int oldLightnessIndex_;
+    // Continuous mode. Note that these values can be different
+    // from selectedColor_.toHsl() in case of non-chromatic colors.
+    float selectedHue_ = 0;
+    float selectedSaturation_ = 0;
+    float selectedLightness_ = 0;
 
     struct Metrics {
         float paddingLeft;
@@ -283,6 +304,13 @@ private:
     };
     mutable Metrics metrics_;
 
+    enum class SelectionOrigin {
+        External,
+        Steps,
+        Continuous
+    };
+    SelectionOrigin selectionOrigin_ = SelectionOrigin::External;
+
     void computeSlSubMetrics_(float width, Metrics& m) const;
     void computeHueSubMetrics_(float width, Metrics& m) const;
     Metrics computeMetricsFromWidth_(float width) const;
@@ -291,7 +319,10 @@ private:
     std::pair<Int, Int> hoveredSaturationLightness_(const geometry::Vec2f& p);
     Int hoveredHue_(const geometry::Vec2f& p);
     void setSelectedColor_(const core::Color& color);
+    void updateStepsFromSelectedColor_();
+    void updateContinuousFromSelectedColor_();
     bool selectColorFromHovered_();
+    bool selectContinuousColorFromPosition_(const geometry::Vec2f& position);
 };
 
 /// \class vgc::ui::ColorListViewItem
