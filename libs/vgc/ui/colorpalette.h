@@ -311,6 +311,7 @@ private:
     };
     SelectionOrigin selectionOrigin_ = SelectionOrigin::External;
 
+    void drawHueSelector_(core::FloatArray& a);
     void computeSlSubMetrics_(float width, Metrics& m) const;
     void computeHueSubMetrics_(float width, Metrics& m) const;
     Metrics computeMetricsFromWidth_(float width) const;

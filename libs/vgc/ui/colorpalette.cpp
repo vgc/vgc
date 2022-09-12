@@ -777,6 +777,9 @@ void ColorPaletteSelector::onPaintDraw(
         }
 
         // Draw hue selector
+        drawHueSelector_(a);
+
+        /*
         Int halfHSteps = hSteps / 2;
         y0 = m.hueRect.yMin();
         if (m.borderWidth > 0) {
@@ -911,12 +914,225 @@ void ColorPaletteSelector::onPaintDraw(
             auto c = core::Color::hsl(shue, s, l).round8b();
             insertCellHighlight(a, c, x1, y1, x2, y2);
         }
+        */
 
         // Load triangles
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
+
+    graphics::RasterizerStateCreateInfo info;
+    //info.setFillMode(graphics::FillMode::Wireframe);
+    static graphics::RasterizerStatePtr wireframe = engine->createRasterizerState(info);
+
+    engine->pushPipelineParameters(graphics::PipelineParameter::RasterizerState);
+    engine->setRasterizerState(wireframe);
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
+    engine->popPipelineParameters(graphics::PipelineParameter::RasterizerState);
+
+    //engine->setProgram(graphics::BuiltinProgram::Simple);
+    //engine->draw(triangles_, -1, 0);
+}
+
+namespace {
+
+// Starts at (-1, 0) then go clockwise (assuming y axis points down).
+// Repeats the first and last sample: returned array length is numSamples + 1.
+//
+geometry::Vec2fArray makeUnitCircle_(Int numSamples) {
+    geometry::Vec2fArray res;
+    res.reserve(numSamples + 1);
+    double dt = 2.0 * core::pi / numSamples;
+    for (Int i = 0; i < numSamples; ++i) {
+        double t = i * dt;
+        float cost = std::cos(t);
+        float sint = std::sin(t);
+        res.emplaceLast(-cost, -sint);
+    }
+    res.append(res.first());
+    return res;
+}
+
+// repeats first and last
+//
+geometry::Vec2fArray makeHuePolygon_(
+    const geometry::Vec2f& p,
+    const geometry::Vec2f& q,
+    float r,
+    Int numHorizontalSamples) {
+
+    constexpr Int numQuarterCircleSamples = 8;
+    constexpr Int numCircleSamples = 4 * numQuarterCircleSamples;
+    constexpr Int circleLeftIndexBegin = 0;
+    constexpr Int circleTopIndex = numQuarterCircleSamples;
+    //constexpr Int circleRightIndex = 2 * numQuarterCircleSamples;
+    constexpr Int circleBottomIndex = 3 * numQuarterCircleSamples;
+    constexpr Int circleLeftIndexEnd = 4 * numQuarterCircleSamples;
+    static geometry::Vec2fArray unitCircle = makeUnitCircle_(numCircleSamples);
+
+    float dx = (q.x() - p.x()) / numHorizontalSamples;
+
+    geometry::Vec2fArray res;
+    res.reserve(numCircleSamples + 2);
+    for (Int i = circleLeftIndexBegin; i <= circleTopIndex; ++i) {
+        res.append(p + r * unitCircle[i]);
+    }
+    for (Int i = 1; i < numHorizontalSamples; ++i) {
+        res.append(p + geometry::Vec2f(i * dx, -r));
+    }
+    for (Int i = circleTopIndex; i <= circleBottomIndex; ++i) {
+        res.append(q + r * unitCircle[i]);
+    }
+    for (Int i = 1; i < numHorizontalSamples; ++i) {
+        res.append(q - geometry::Vec2f(i * dx, -r));
+    }
+    for (Int i = circleBottomIndex; i <= circleLeftIndexEnd; ++i) {
+        res.append(p + r * unitCircle[i]);
+    }
+    return res;
+}
+
+core::FloatArray computeHues_(
+    const geometry::Vec2f& p,
+    const geometry::Vec2f& q,
+    float r,
+    Int numHorizontalSamples) {
+
+    geometry::Vec2fArray mid = makeHuePolygon_(p, q, 0.5 * r, numHorizontalSamples);
+    Int numSamples = mid.length();
+    core::FloatArray res;
+    float s = 0;
+    res.reserve(numSamples);
+    res.append(s);
+    for (Int i = 0; i < numSamples - 1; ++i) {
+        float ds = (mid[i + 1] - mid[i]).length();
+        s += ds;
+        res.append(s);
+    }
+    float multiplier = 360 / s;
+    for (Int i = 1; i < numSamples; ++i) {
+        res[i] *= multiplier;
+    }
+    return res;
+}
+
+void insertHueQuad_(
+    core::FloatArray& a,
+    const geometry::Vec2f& p1,
+    const geometry::Vec2f& q1,
+    const core::Colorf& c1,
+    const geometry::Vec2f& p2,
+    const geometry::Vec2f& q2,
+    const core::Colorf& c2) {
+
+    float p1x = p1.x();
+    float p1y = p1.y();
+    float q1x = q1.x();
+    float q1y = q1.y();
+    float r1 = c1.r();
+    float g1 = c1.g();
+    float b1 = c1.b();
+
+    float p2x = p2.x();
+    float p2y = p2.y();
+    float q2x = q2.x();
+    float q2y = q2.y();
+    float r2 = c2.r();
+    float g2 = c2.g();
+    float b2 = c2.b();
+
+    // clang-format off
+    a.extend({
+        p1x, p1y, r1, g1, b1,
+        q1x, q1y, r1, g1, b1,
+        p2x, p2y, r2, g2, b2,
+        p2x, p2y, r2, g2, b2,
+        q1x, q1y, r1, g1, b1,
+        q2x, q2y, r2, g2, b2});
+    // clang-format on
+}
+
+void insertHueQuadStrip_(
+    core::FloatArray& a,
+    const geometry::Vec2fArray& inner,
+    const geometry::Vec2fArray& outer,
+    const core::FloatArray& hues,
+    float saturation,
+    float lightness) {
+
+    Int numSamples = outer.length() - 1;
+    for (Int i = 0; i < numSamples; ++i) {
+        const geometry::Vec2f& p1 = inner[i];
+        const geometry::Vec2f& q1 = outer[i];
+        core::Colorf c1 = core::Colorf::hsl(hues[i], saturation, lightness);
+        const geometry::Vec2f& p2 = inner[i + 1];
+        const geometry::Vec2f& q2 = outer[i + 1];
+        core::Colorf c2 = core::Colorf::hsl(hues[i + 1], saturation, lightness);
+        insertHueQuad_(a, p1, q1, c1, p2, q2, c2);
+    }
+}
+
+} // namespace
+
+void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
+
+    // The hue selector is made of two half-disks and one rectangle.
+    // The diameter of each half-disk is the same as the height of the rectangle.
+    //
+    //        .──┬───────────────────────┬──.      ^
+    //       '   │                       │   `.    │
+    //      │    ┼ p                   q ┼    │    │ height
+    //      `    │                       │   .'    │
+    //       ` ──┴───────────────────────┴──`      v
+    //       ^              ^                ^
+    //   half-disk      rectangle        half-disk
+    //
+
+    const core::Colorf borderColor(255, 255, 255); // temp
+
+    const Metrics& m = metrics_;
+    const geometry::Rect2f& rect = m.hueRect;
+
+    float height = rect.height();
+    //float width = rect.width();
+    float right = rect.xMax();
+    float left = rect.xMin();
+    float top = rect.yMin();
+    float r = 0.5f * height;
+
+    geometry::Vec2f p(left + r, top + r);
+    geometry::Vec2f q(right - r, top + r);
+
+    const Int numHSamples = 32;
+
+    float borderWidth = 1.0f;
+    float outerWidth = 6.0f;
+    float holeRadius = 3.0f;
+
+    float r1 = r;
+    float r2 = r1 - borderWidth;
+    float r3 = r1 - outerWidth;
+    float r4 = holeRadius + borderWidth;
+    float r5 = holeRadius;
+
+    geometry::Vec2fArray s1 = makeHuePolygon_(p, q, r1, numHSamples);
+    geometry::Vec2fArray s2 = makeHuePolygon_(p, q, r2, numHSamples);
+    geometry::Vec2fArray s3 = makeHuePolygon_(p, q, r3, numHSamples);
+    geometry::Vec2fArray s4 = makeHuePolygon_(p, q, r4, numHSamples);
+    geometry::Vec2fArray s5 = makeHuePolygon_(p, q, r5, numHSamples);
+
+    core::FloatArray hues = computeHues_(p, q, r, numHSamples);
+
+    // without borders
+    insertHueQuadStrip_(a, s1, s3, hues, 1.0f, 0.5f);
+    insertHueQuadStrip_(a, s3, s5, hues, selectedSaturation_, selectedLightness_);
+
+    /* With borders
+    insertHueQuadStrip_(a, s1, s2, hues, 1.0f, 0.2f);
+    insertHueQuadStrip_(a, s2, s3, hues, 1.0f, 0.5f);
+    insertHueQuadStrip_(a, s3, s4, hues, selectedSaturation_, selectedLightness_);
+    insertHueQuadStrip_(a, s4, s5, hues, selectedSaturation_, 0.5 * selectedLightness_);
+*/
 }
 
 void ColorPaletteSelector::computeSlSubMetrics_(float width, Metrics& m) const {
