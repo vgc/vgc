@@ -687,7 +687,7 @@ public:
     /// on mouse `position`. This method is used by the default mouse event
     /// handlers when they want to update the hover chain.
     ///
-    virtual Widget* Widget::computeHoverChainChild(geometry::Vec2f position);
+    virtual Widget* computeHoverChainChild(geometry::Vec2f position);
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
