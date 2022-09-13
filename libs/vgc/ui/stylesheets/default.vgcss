@@ -158,9 +158,12 @@
 .ColorPaletteSelector,
 .ColorListViewItem {
     /* simulates semi-transparent gray on top of colored cells */
+    /*
     pixel-hinting: normal;
     border-width: 0.5dp;
     border-color: rgb(50, 50, 50);
+    */
+    border-width: 0dp;
 }
 
 .Plot2d {
