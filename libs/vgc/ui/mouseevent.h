@@ -17,6 +17,7 @@
 #ifndef VGC_UI_MOUSEEVENT_H
 #define VGC_UI_MOUSEEVENT_H
 
+#include <vgc/core/flags.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/event.h>
 #include <vgc/ui/modifierkey.h>
@@ -60,6 +61,7 @@ enum class MouseButton : UInt32 {
     Extra23 = 0x02000000,
     Extra24 = 0x04000000
 };
+VGC_DEFINE_FLAGS(MouseButtons, MouseButton)
 
 // clang-format on
 
