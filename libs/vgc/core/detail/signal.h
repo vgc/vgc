@@ -597,7 +597,9 @@ private:
     SignalHub& operator=(const SignalHub&) = delete;
 
 public:
-    SignalHub() = default;
+    explicit SignalHub(Object* owner)
+        : owner_(owner) {
+    }
 
 #ifdef VGC_DEBUG_BUILD
     ~SignalHub() noexcept {
@@ -615,26 +617,16 @@ public:
     // Defined in object.h
     static constexpr SignalHub& access(const Object* o);
 
-    // Must be called during receiver destruction.
+    // Must be called before receiver `onDestroyed()` call.
     static void disconnectSlots(const Object* receiver) {
         auto& hub = access(receiver);
         for (ListenedObjectInfo_& info : hub.listenedObjectInfos_) {
-            if (info.numInboundConnections > 0) {
-                [[maybe_unused]] Int count =
-                    SignalHub::eraseConnections_(info.object, receiver);
-#ifdef VGC_DEBUG_BUILD
-                if (count != info.numInboundConnections) {
-                    throw LogicError(
-                        "Erased connections count != info.numInboundConnections.");
-                }
-#endif
-                info.numInboundConnections = 0;
-            }
+            SignalHub::disconnectListenedObject_(receiver, info);
         }
         hub.listenedObjectInfos_.clear();
     }
 
-    // Must be called during sender destruction.
+    // Must be called after sender `onDestroyed()` call.
     static void disconnectSignals(const Object* sender) {
         auto& hub = access(sender);
         // We sort connections by receiver so that we can fully disconnect each
@@ -722,15 +714,12 @@ public:
     }
 
     static bool disconnect(const Object* sender, const Object* receiver) {
-        Int count = eraseConnections_(sender, receiver);
-        auto& info = access(receiver).getListenedObjectInfoRef_(sender);
-#ifdef VGC_DEBUG_BUILD
-        if (count != info.numInboundConnections) {
-            throw LogicError("Erased connections count != info.numInboundConnections.");
+        auto* info = access(receiver).getListenedObjectInfo_(sender);
+        if (info) {
+            Int count = disconnectListenedObject_(receiver, *info);
+            return count > 0;
         }
-#endif
-        info.numInboundConnections = 0;
-        return count > 0;
+        return false;
     }
 
     template<typename SignalArgRefsTuple, typename... Us>
@@ -792,28 +781,54 @@ protected:
         return connections_.length();
     }
 
-    // Used in onDestroy(), receiver is about to be destroyed.
-    // This does NOT update the numInboundConnections in the sender info stored in receiver.
+    // Used when receiver is about to be destroyed.
     //
-    static Int eraseConnections_(const Object* sender, const Object* receiver) {
+    static Int disconnectListenedObject_(const Object* receiver, ListenedObjectInfo_& info) {
+        if (info.numInboundConnections <= 0) {
+            return 0;
+        }
+
+        const Object* sender = info.object;
         auto& hub = access(sender);
-        auto it = std::remove_if(
-            hub.connections_.begin(), hub.connections_.end(), [=](const Connection_& c) {
-                return std::holds_alternative<ObjectSlotId>(c.to)
-                       && std::get<ObjectSlotId>(c.to).first == receiver;
-            });
-        Int count = std::distance(it, hub.connections_.end());
-        hub.connections_.erase(it, hub.connections_.end());
+        Int count = 0;
+        for (auto& c : hub.connections_) {
+            bool shouldRemove = std::holds_alternative<ObjectSlotId>(c.to)
+                                && std::get<ObjectSlotId>(c.to).first == receiver;
+            if (shouldRemove && !c.pendingRemoval) {
+                c.pendingRemoval = true;
+                ++count;
+            }
+        }
+        if (count > 0) {
+            hub.pendingRemovals_ = true;
+        }
+
+#ifdef VGC_DEBUG_BUILD
+        if (count != info.numInboundConnections) {
+            throw LogicError(
+                "Erased connections count != info.numInboundConnections.");
+        }
+#endif
+
+        info.numInboundConnections = 0;
         return count;
     }
 
-    ListenedObjectInfo_& getListenedObjectInfoRef_(const Object* object) {
+    ListenedObjectInfo_* getListenedObjectInfo_(const Object* object) {
         for (ListenedObjectInfo_& x : listenedObjectInfos_) {
             if (x.object == object) {
-                return x;
+                return &x;
             }
         }
-        throw LogicError("Info should be present.");
+        return nullptr;
+    }
+
+    ListenedObjectInfo_& getListenedObjectInfoRef_(const Object* object) {
+        ListenedObjectInfo_* info = getListenedObjectInfo_(object);
+        if (!info) {
+            throw LogicError("Info should be present.");
+        }
+        return *info;
     }
 
     ListenedObjectInfo_& findOrCreateListenedObjectInfo_(const Object* object) {
@@ -835,27 +850,7 @@ protected:
         return !connections_.isEmpty();
     }
 
-    void emit_(SignalId from, const TransmitArgs& args) {
-        auto& connections = connections_;
-        bool outermostEmit = (emitting_ == false);
-        emitting_ = true;
-        // We do it by index because connect() can happen in transmit..
-        for (Int i = 0; i < connections.length(); ++i) {
-            const Connection_& c = connections[i];
-            if ((c.from == from) && !c.pendingRemoval) {
-                c.transmitter.transmit(args);
-            }
-        }
-        if (outermostEmit) {
-            // In a second pass if we are the outermost emit of this signal
-            // we remove connections that have been disconnected and pending for removal.
-            if (pendingRemovals_) {
-                connections.removeIf(
-                    [](const Connection_& c) { return c.pendingRemoval; });
-            }
-            emitting_ = false;
-        }
-    }
+    VGC_CORE_API void emit_(SignalId from, const TransmitArgs& args);
 
     template<typename SignalArgRefsTuple, typename... Us>
     inline void emitFwd_(SignalId from, Us&&... args) {
@@ -890,6 +885,7 @@ private:
     // Used to auto-disconnect on destroy.
     Array<ListenedObjectInfo_> listenedObjectInfos_;
 
+    Object* owner_ = nullptr;
     bool emitting_ = false;
     bool pendingRemovals_ = false;
 
@@ -907,7 +903,6 @@ private:
                 Connection_& c = *it;
                 if (!c.pendingRemoval) {
                     c.pendingRemoval = true;
-                    hub.pendingRemovals_ = true;
                     ++count;
                     if (std::holds_alternative<ObjectSlotId>(c.to)) {
                         // Decrement numInboundConnections in the receiver's info about sender.
@@ -919,7 +914,11 @@ private:
             }
             ++it;
         }
-        return count > 0;
+        if (count > 0) {
+            hub.pendingRemovals_ = true;
+            return true;
+        }
+        return false;
     }
 };
 

@@ -47,4 +47,32 @@ FunctionId genFunctionId(std::type_index ti) {
     return id;
 }
 
+void SignalHub::emit_(SignalId from, const TransmitArgs& args) {
+    auto& connections = connections_;
+    bool outermostEmit = (emitting_ == false);
+    emitting_ = true;
+    // Keep weak pointer on owner to detect our own death (`this` becomes dangling).
+    ObjectPtr ownerPtr(owner_);
+    // We do it by index because connect() can happen in transmit..
+    for (Int i = 0; i < connections.length(); ++i) {
+        const Connection_& c = connections[i];
+        if ((c.from == from) && !c.pendingRemoval) {
+            c.transmitter.transmit(args);
+        }
+        if (owner_->isDestroyed()) {
+            // We got killed.
+            return;
+        }
+    }
+    if (outermostEmit) {
+        // In a second pass if this is the outermost emit of this signal hub
+        // we remove connections that have been disconnected and pending for removal.
+        if (pendingRemovals_) {
+            connections.removeIf(
+                [](const Connection_& c) { return c.pendingRemoval; });
+        }
+        emitting_ = false;
+    }
+}
+
 } // namespace vgc::core::detail

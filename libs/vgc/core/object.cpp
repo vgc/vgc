@@ -179,7 +179,8 @@ void Object::onChildRemoved_(Object* child) {
     onChildRemoved(child);
 }
 
-Object::Object() {
+Object::Object()
+    : signalHub_(this) {
     printDebugInfo_(this, "constructed");
 }
 
@@ -361,6 +362,11 @@ Int Object::branchSize() const {
 }
 
 void Object::destroyObjectImpl_() {
+    if (isDestroyRequested_) {
+        return;
+    }
+    isDestroyRequested_ = true;
+
     aboutToBeDestroyed().emit(this);
 
     while (firstChildObject_) {
@@ -371,8 +377,9 @@ void Object::destroyObjectImpl_() {
 
     detail::SignalHub::disconnectSlots(this);
     onDestroyed();
-    // Done after onDestroyed since someone could want to emit there.
+    // Done after onDestroyed since someone could want to emit in there.
     detail::SignalHub::disconnectSignals(this);
+    isDestroyed_ = true;
 
     // Note 1: The second line switches isAlive() from true to false, while
     // keeping refCount() unchanged.

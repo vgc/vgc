@@ -589,6 +589,16 @@ public:
         return refCount_ >= 0;
     }
 
+    /// Returns whether this Object is destroyed. An `Object` becomes destroyed
+    /// after its `onDestroyed()` function is called. During the `onDestroyed()`
+    /// call both `isAlive()` and `isDestroyed()` return false.
+    ///
+    /// \sa isAlive().
+    ///
+    bool isDestroyed() const {
+        return isDestroyed_;
+    }
+
     /// Returns the parent of this Object, or nullptr if this object has no
     /// parent. An Object without parent is called a "root Object". An Object
     /// with a parent is called a "child Object".
@@ -685,23 +695,26 @@ public:
     VGC_SIGNAL(aboutToBeDestroyed, (Object*, object));
 
 protected:
-    // This callback method is invoked when this object has just been
-    // destroyed, that is, just after isAlive() has switched from true to
-    // false. However, note that its C++ destructor has not been called yet:
-    // the destructor will be called when refCount() reaches zero, and for now
-    // refCount() is still at least one.
-    //
-    // Implementing this callback is useful when you can release expensive
-    // resources early. For example, it is often a good idea to release
-    // allocated memory here: there is no need to keep it around until the
-    // destructor is called. The destructor will be called when all
-    // ObjectPtr observers (for example, a python variable pointing to this
-    // object) are themselves destroyed.
-    //
-    // Note that when this method is called, all the children of this Object
-    // have already been destroyed, and if this Object previsouly had a parent,
-    // then it has already been removed from this parent.
-    //
+    /// This callback method is invoked when this object has just been
+    /// destroyed, that is, just after `isAlive()` has switched from true to
+    /// false. However, note that its C++ destructor has not been called yet:
+    /// the destructor will be called when `refCount()` reaches zero, and for
+    /// now `refCount()` is still at least one.
+    ///
+    /// Implementing this callback is useful when you can release expensive
+    /// resources early. For example, it is often a good idea to release
+    /// allocated memory here: there is no need to keep it around until the
+    /// destructor is called. The destructor will be called when all
+    /// `ObjectPtr` observers (for example, a python variable pointing to this
+    /// object) are themselves destroyed.
+    ///
+    /// Note that when this method is called, all the children of this `Object`
+    /// have already been destroyed, and if this `Object` previsouly had a parent,
+    /// then it has already been removed from this parent.
+    ///
+    /// If you override this method, do not forget to call `onDestroyed()` of the
+    /// base class, preferrably at the end.
+    ///
     virtual void onDestroyed();
 
     /// This callback method is invoked whenever a child has been added to this
