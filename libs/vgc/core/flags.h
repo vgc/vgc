@@ -41,6 +41,14 @@ public:
         return toUnderlying() != 0;
     }
 
+    constexpr bool operator!() const noexcept {
+        return toUnderlying() == 0;
+    }
+
+    constexpr void clear() noexcept {
+        v_ = static_cast<Enum>(0);
+    }
+
     /// Returns whether this set of flags contains the given `flag`.
     ///
     /// If `flag` has more than one bit set to 1, this function returns true if `this` has all these bits set to 1.
@@ -50,6 +58,10 @@ public:
     ///
     constexpr bool has(Enum flag) const noexcept {
         return hasAll(flag);
+    }
+
+    constexpr bool isEmpty() const noexcept {
+        return toUnderlying() == 0;
     }
 
     constexpr bool hasAny(Flags flags) const noexcept {
