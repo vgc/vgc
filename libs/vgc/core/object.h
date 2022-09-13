@@ -1045,6 +1045,15 @@ private:
     Object* nextSiblingObject_ = nullptr;
     Int numChildObjects_ = 0;
 
+    // Prevent infinite destruction loops
+    bool isDestroyRequested_ = false;
+
+    // We want to allow signals to be emitted until the onDestroyed() returns.
+    // However `isAlive()` becomes `false` before calling it so we need another
+    // state to use as a condition for our emits.
+    //
+    bool isDestroyed_ = false;
+
     // Deferred values
     mutable bool isBranchSizeDirty_ = false;
     Int branchSize_ = 0;
