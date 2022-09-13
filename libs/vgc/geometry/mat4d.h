@@ -497,6 +497,12 @@ public:
 
     /// Overloads `Mat4d::translate(double, double, double)`.
     ///
+    Mat4d& translate(const Vec2d& v) {
+        return translate(v.x(), v.y());
+    }
+
+    /// Overloads `Mat4d::translate(double, double, double)`.
+    ///
     Mat4d& translate(const Vec3d& v) {
         return translate(v.x(), v.y(), v.z());
     }

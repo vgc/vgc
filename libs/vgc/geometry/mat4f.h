@@ -497,6 +497,12 @@ public:
 
     /// Overloads `Mat4f::translate(float, float, float)`.
     ///
+    Mat4f& translate(const Vec2f& v) {
+        return translate(v.x(), v.y());
+    }
+
+    /// Overloads `Mat4f::translate(float, float, float)`.
+    ///
     Mat4f& translate(const Vec3f& v) {
         return translate(v.x(), v.y(), v.z());
     }
