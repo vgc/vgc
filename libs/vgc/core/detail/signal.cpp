@@ -68,8 +68,7 @@ void SignalHub::emit_(SignalId from, const TransmitArgs& args) {
         // In a second pass if this is the outermost emit of this signal hub
         // we remove connections that have been disconnected and pending for removal.
         if (pendingRemovals_) {
-            connections.removeIf(
-                [](const Connection_& c) { return c.pendingRemoval; });
+            connections.removeIf([](const Connection_& c) { return c.pendingRemoval; });
         }
         emitting_ = false;
     }

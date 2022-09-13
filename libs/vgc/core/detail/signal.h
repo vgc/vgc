@@ -783,7 +783,8 @@ protected:
 
     // Used when receiver is about to be destroyed.
     //
-    static Int disconnectListenedObject_(const Object* receiver, ListenedObjectInfo_& info) {
+    static Int
+    disconnectListenedObject_(const Object* receiver, ListenedObjectInfo_& info) {
         if (info.numInboundConnections <= 0) {
             return 0;
         }
@@ -805,8 +806,7 @@ protected:
 
 #ifdef VGC_DEBUG_BUILD
         if (count != info.numInboundConnections) {
-            throw LogicError(
-                "Erased connections count != info.numInboundConnections.");
+            throw LogicError("Erased connections count != info.numInboundConnections.");
         }
 #endif
 
