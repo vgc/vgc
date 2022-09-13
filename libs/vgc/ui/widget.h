@@ -44,8 +44,9 @@ class QKeyEvent;
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Action);
-VGC_DECLARE_OBJECT(Widget);
+VGC_DECLARE_OBJECT(OverlayArea);
 VGC_DECLARE_OBJECT(UiWidgetEngine);
+VGC_DECLARE_OBJECT(Widget);
 
 // clang-format off
 
@@ -70,6 +71,20 @@ enum class FocusPolicy : UInt8 {
     Sticky    = 0x80,
 };
 VGC_DEFINE_FLAGS(FocusPolicyFlags, FocusPolicy)
+
+enum class Visibility : bool {
+
+    /// Means "not invisible". A widget with such visibility could also be
+    /// "not visible" if any widget in its parent chain is `Invisible`.
+    /// A root widget with `Inherit` visibility can be considered visible.
+    ///
+    Inherit,
+
+    /// An `Invisible` widget is explicitly "not visible" and its children
+    /// are by inheritance "not visible" either.
+    ///
+    Invisible
+};
 
 /// \enum vgc::ui::FocusReason
 /// \brief Specifies why a widget receives or loses keyboard focus.
@@ -106,6 +121,11 @@ protected:
     ///
     Widget();
 
+    /// Reimplements `Object::onDestroyed()`.
+    ///
+    /// If you override this method, do not forget to call `onDestroyed()` of your
+    /// base class, preferrably at the end.
+    ///
     void onDestroyed() override;
 
 public:
@@ -203,9 +223,13 @@ public:
     ///
     void addChild(Widget* child);
 
+    /// Adds the given `widget` to this widget children at `position`.
+    ///
+    void insertChild(Widget* position, Widget* widget);
+
     /// Adds the given `widget` to this widget children at position `i`.
     ///
-    void insertChildAt(Int i, Widget* widget);
+    void insertChild(Int i, Widget* widget);
 
     /// Returns whether this Widget can be reparented with the given \p newParent.
     /// See reparent() for details.
@@ -261,6 +285,11 @@ public:
         return !parent();
     }
 
+    /// Returns the furthest ancestor OverlayArea widget of this widget, if it exists.
+    /// Otherwise returns nullptr.
+    ///
+    OverlayArea* topmostOverlayArea() const;
+
     /// Returns the position of the widget relative to its parent.
     ///
     geometry::Vec2f position() const {
@@ -284,6 +313,10 @@ public:
 
     /// Translates the given `position` from the coordinate system of this widget to
     /// the system of `other`.
+    ///
+    /// It is fast if `this` is the parent of `other`. Otherwise the operation involves
+    /// at most N intermediate operations where N is the tree path length from `this` to
+    /// `other` passing through root.
     ///
     geometry::Vec2f mapTo(Widget* other, const geometry::Vec2f& position) const;
 
@@ -417,6 +450,12 @@ public:
     /// Returns the height shrink factor of this widget.
     ///
     float verticalShrink() const;
+
+    /// Returns whether a geometry update request is pending for this widget.
+    ///
+    bool isGeometryUpdateRequested() const {
+        return isGeometryUpdateRequested_;
+    }
 
     /// This method should be called when the size policy or preferred size of
     /// this widget changed, to inform its parent that its geometry should be
@@ -644,6 +683,12 @@ public:
         return root()->keyboardCaptor_;
     }
 
+    /// Override this function if you wish particular widgets to be hovered based
+    /// on mouse `position`. This method is used by the default mouse event
+    /// handlers when they want to update the hover chain.
+    ///
+    virtual Widget* Widget::computeHoverChainChild(geometry::Vec2f position);
+
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
     ///
@@ -658,6 +703,77 @@ public:
     /// must return true if the event was handled, false otherwise.
     ///
     virtual bool onMouseRelease(MouseEvent* event);
+
+    /// Returns whether this widget is hovered.
+    ///
+    /// During a mouse event sequence handled by a target widget, the chain
+    /// of hovered widgets (the hover-chain) can be locked.
+    ///
+    bool isHovered() const {
+        return isHovered_;
+    }
+
+    /// Sets the hovered state of this widget and calls `onMouseEnter` or
+    /// `onMouseLeave` accordingly. Its children and the hovered chain are
+    /// also updated.
+    ///
+    /// Returns true on success.
+    ///
+    bool setHovered(bool hovered);
+
+    /// If `this` is hovered, it makes the given `newHoverChainChild` the
+    /// hover-chain child of `this`.
+    ///
+    /// Returns true on success. That is, if `this` is now the hover-chain parent
+    /// of `newHoverChainChild` and both widgets are still alive.
+    ///
+    bool setHoverChainChild(Widget* newHoverChainChild);
+
+    /// Returns the widget that is hovered inside this widget.
+    /// If this widget is not hovered, it does not have an hover-chain child.
+    ///
+    /// The returned widget is not always a child widget of this widget.
+    ///
+    Widget* hoverChainChild() {
+        return hoverChainChild_;
+    }
+
+    /// Returns whether this widget is hover-locked.
+    ///
+    /// A widget that is hover-locked will keep its place in the hover-chain
+    /// at least until the next mouse event.
+    ///
+    /// It allows a widget to keep receiving mouse events as long as it wants
+    /// as well as keep the widgets in the hover-chain in a mouse entered state.
+    /// However a hover-locked widget has to delegate handling to its hover-chain
+    /// child first if it is itself hover-locked.
+    ///
+    bool isHoverLocked() const {
+        return isHoverLocked_;
+    }
+
+    /// Sets this widget's hover-lock state.
+    ///
+    /// A widget that is hover-locked will keep its place in the hover-chain
+    /// at least until the next mouse event.
+    ///
+    void setHoverLocked(bool isHoverLocked) {
+        if (isHoverLocked_ == isHoverLocked) {
+            return;
+        }
+
+        isHoverLocked_ = isHoverLocked;
+        if (!isHoverLocked) {
+            // This is necessary if a widget is arbitrarily hover-unlocking
+            // itself while its hover-child is still hover-locked.
+            Widget* w = hoverChainChild_;
+            while (w) {
+                w->isHoverLocked_ = false;
+                w->pressedButtons_.clear();
+                w = w->hoverChainChild_;
+            }
+        }
+    }
 
     bool isInHoveredRow() const {
         return isInHoveredRow_;
@@ -675,17 +791,55 @@ public:
         isInHoveredColumn_ = isInHoveredColumn;
     }
 
-    bool isHovered() const {
-        return isHovered_;
+    const MouseButtons& pressedButtons() const {
+        return pressedButtons_;
     }
 
-    /// Sets the hovered state of this widget and calls `onMouseEnter` or
-    /// `onMouseLeave` accordingly.
-    /// Returns true if the event was handled.
+    /// Returns the visibility of this widget.
     ///
-    bool setHovered(bool hovered) {
-        isHovered_ = hovered;
-        return hovered ? onMouseEnter() : onMouseLeave();
+    /// See `Visibility` enumerators for more details.
+    ///
+    Visibility visibility() const {
+        return visibility_;
+    }
+
+    /// Sets the visibility of this widget.
+    ///
+    /// See `Visibility` enumerators for more details.
+    ///
+    void setVisibility(Visibility visibility);
+
+    /// Returns the computed visibility. It is true only if all widgets
+    /// up to the root have `visibility()` set to `Visibility::Inherit`;
+    ///
+    bool isVisible() const {
+        return computedVisibility_;
+    }
+
+    /// Sets the visibility to `Inherit`.
+    ///
+    /// Note that this does not imply `isVisible() == true` after being called.
+    ///
+    /// If this causes `isVisible()` to change from `false` to `true`, then
+    /// `onVisible()` is called.
+    ///
+    /// \sa onVisible(), isVisible()
+    ///
+    void show() {
+        setVisibility(Visibility::Inherit);
+    }
+
+    /// Sets the visibility to `Invisible`.
+    ///
+    /// This implies `isVisible() == false` after being called.
+    ///
+    /// If this causes `isVisible()` to change from `true` to `false`, then
+    /// `onHidden()` is called.
+    ///
+    /// \sa onHidden(), isVisible()
+    ///
+    void hide() {
+        setVisibility(Visibility::Invisible);
     }
 
     /// Returns whether this widget tree is active, that is, whether it
@@ -877,12 +1031,12 @@ public:
 
     /// Creates an Action, adds it to this widget, and returns the action.
     ///
-    Action* createAction();
-
-    /// Creates an Action with the given shortcut, adds it to this widget, and
-    /// returns the action.
-    ///
-    Action* createAction(const Shortcut& shortcut);
+    template<typename... Args>
+    Action* createAction(Args&&... args) {
+        ActionPtr action = Action::create(std::forward<Args>(args)...);
+        actions_->append(action.get());
+        return action.get();
+    }
 
     // Implements StylableObject interface
     style::StylableObject* parentStylableObject() const override;
@@ -893,19 +1047,22 @@ public:
     const style::StyleSheet* defaultStyleSheet() const override;
 
 protected:
+    /// Useful for onMousePress
+    void setPressedButtons(const MouseButtons& buttons) {
+        pressedButtons_ = buttons;
+    }
+
     void onStyleChanged() override;
 
     /// Override this function if you wish to handle the addition of
     /// child widgets to this widget.
     ///
-    virtual void onWidgetAdded(Widget*) {
-    }
+    virtual void onWidgetAdded(Widget*);
 
     /// Override this function if you wish to handle the removal of
     /// child widgets from this widget.
     ///
-    virtual void onWidgetRemoved(Widget*) {
-    }
+    virtual void onWidgetRemoved(Widget*);
 
     /// Override this function if you wish to handle MouseEnter events. You
     /// must return true if the event was handled, false otherwise.
@@ -916,6 +1073,10 @@ protected:
     /// must return true if the event was handled, false otherwise.
     ///
     virtual bool onMouseLeave();
+
+    virtual void onVisible();
+
+    virtual void onHidden();
 
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its
@@ -971,6 +1132,9 @@ private:
     WidgetList* children_ = nullptr;
     ActionList* actions_ = nullptr;
 
+    void onWidgetAdded_(Widget* widget);
+    void onWidgetRemoved_(Widget* widget);
+
     // Layout
     mutable geometry::Vec2f preferredSize_ = {};
     mutable bool isPreferredSizeComputed_ = false;
@@ -979,6 +1143,8 @@ private:
     geometry::Vec2f position_ = {};
     geometry::Vec2f size_ = {};
     geometry::Vec2f lastResizeEventSize_ = {};
+
+    void resendPendingRequests_();
 
     void updatePreferredSize_() const {
         if (!isPreferredSizeComputed_) {
@@ -995,12 +1161,22 @@ private:
     void prePaintUpdateGeometry_();
 
     // Mouse
-    Widget* mousePressedChild_ = nullptr;
-    Widget* mouseEnteredChild_ = nullptr;
+    Widget* hoverChainParent_ = nullptr;
+    Widget* hoverChainChild_ = nullptr;
     bool isHovered_ = false;
+    bool isHoverLocked_ = false;
     bool isInHoveredRow_ = false;
     bool isInHoveredColumn_ = false;
+    bool isVisible_ = true;
+    MouseButtons pressedButtons_ = {};
     Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
+
+    // Status
+    Visibility visibility_ = Visibility::Inherit;
+    bool computedVisibility_ = true;
+
+    void updateComputedVisibility_();
+    void setComputedVisibility_(bool isVisible);
 
     // Keyboard
     //
@@ -1020,9 +1196,9 @@ private:
     void setEngine_(graphics::Engine* engine);
     void prePaintUpdateEngine_(graphics::Engine* engine);
 
-    VGC_SLOT(onEngineAboutToBeDestroyed, releaseEngine_)
-    VGC_SLOT(onWidgetAdded_, onWidgetAdded)
-    VGC_SLOT(onWidgetRemoved_, onWidgetRemoved)
+    VGC_SLOT(onEngineAboutToBeDestroyed_, releaseEngine_)
+    VGC_SLOT(onWidgetAddedSlot_, onWidgetAdded_)
+    VGC_SLOT(onWidgetRemovedSlot_, onWidgetRemoved_)
 };
 
 } // namespace vgc::ui

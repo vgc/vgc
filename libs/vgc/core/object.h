@@ -217,6 +217,13 @@ public:
         return *getAlive_();
     }
 
+    /// Returns a pointer to the object managed by this ObjPtr<T> if it is alive.
+    /// Otherwise returns a null pointer.
+    ///
+    T* getIfAlive() const noexcept {
+        return isAlive() ? obj_ : nullptr;
+    }
+
     /// Returns a pointer to the object managed by this ObjPtr<T>. This method
     /// doesn't throw, buy may return a null pointer or a not-alive object.
     ///
@@ -1304,7 +1311,7 @@ public:
         insertChildObject_(nextSibling, child);
     }
 
-    void insertAt(Int i, T* child) {
+    void insert(Int i, T* child) {
         if (i < 0 || i > numChildObjects()) {
             throw IndexError(core::format("Cannot insert child in list at index {}.", i));
         }

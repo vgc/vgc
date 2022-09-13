@@ -24,6 +24,8 @@
 #include <vgc/graphics/strings.h>
 
 #include <vgc/ui/action.h>
+#include <vgc/ui/logcategories.h>
+#include <vgc/ui/overlayarea.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc::ui {
@@ -34,14 +36,31 @@ Widget::Widget()
     , actions_(ActionList::create(this)) {
 
     addStyleClass(strings::Widget);
-    children_->childAdded().connect(onWidgetAdded_());
-    children_->childRemoved().connect(onWidgetRemoved_());
+    children_->childAdded().connect(onWidgetAddedSlot_());
+    children_->childRemoved().connect(onWidgetRemovedSlot_());
 }
 
 void Widget::onDestroyed() {
-    if (lastPaintEngine_) {
-        // XXX what to do ?
+    // Auto-reconnect hover chain
+    Widget* p = hoverChainParent_;
+    Widget* c = hoverChainChild_;
+    if (p) {
+        p->hoverChainChild_ = c;
     }
+    if (c) {
+        c->hoverChainParent_ = p;
+    }
+    // Reset values to improve debuggability
+    children_ = nullptr;
+    actions_ = nullptr;
+    hoverChainParent_ = nullptr;
+    hoverChainChild_ = nullptr;
+    isHovered_ = false;
+    pressedButtons_.clear();
+    computedVisibility_ = false;
+    focus_ = nullptr;
+    // Call parent destructor
+    Object::onDestroyed();
 }
 
 WidgetPtr Widget::create() {
@@ -69,9 +88,14 @@ void Widget::addChild(Widget* child) {
     children_->append(child);
 }
 
-void Widget::insertChildAt(Int i, Widget* child) {
+void Widget::insertChild(Widget* position, Widget* child) {
     checkCanReparent_(this, child);
-    children_->insertAt(i, child);
+    children_->insert(position, child);
+}
+
+void Widget::insertChild(Int i, Widget* child) {
+    checkCanReparent_(this, child);
+    children_->insert(i, child);
 }
 
 bool Widget::canReparent(Widget* newParent) {
@@ -82,7 +106,6 @@ bool Widget::canReparent(Widget* newParent) {
 void Widget::reparent(Widget* newParent) {
     checkCanReparent_(newParent, this);
     newParent->children_->append(this);
-    appendObjectToParent_(newParent);
 }
 
 namespace {
@@ -147,6 +170,19 @@ Widget* Widget::root() const {
     return const_cast<Widget*>(res);
 }
 
+OverlayArea* Widget::topmostOverlayArea() const {
+    const OverlayArea* res = nullptr;
+    const Widget* w = this;
+    while (w) {
+        const OverlayArea* oa = dynamic_cast<const OverlayArea*>(w);
+        if (oa) {
+            res = oa;
+        }
+        w = w->parent();
+    }
+    return const_cast<OverlayArea*>(res);
+}
+
 namespace {
 
 geometry::Vec2f positionInRoot(const Widget* widget, const Widget** outRoot) {
@@ -167,6 +203,11 @@ geometry::Vec2f positionInRoot(const Widget* widget, const Widget** outRoot) {
 } // namespace
 
 geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) const {
+
+    // fast path
+    if (other->parent() == this) {
+        return position - other->position();
+    }
 
     // XXX could use any common ancestor
     const Widget* thisRoot = nullptr;
@@ -196,6 +237,11 @@ void Widget::updateGeometry(
     if (isGeometryUpdateRequested_ || resized) {
         isGeometryUpdateRequested_ = false;
         updateChildrenGeometry();
+        if (isGeometryUpdateRequested_) {
+            VGC_WARNING(
+                LogVgcUi,
+                "A geometry update has been requested during a geometry update.");
+        }
     }
     if (resized) {
         onResize();
@@ -211,6 +257,11 @@ void Widget::updateGeometry() {
     if (isGeometryUpdateRequested_) {
         isGeometryUpdateRequested_ = false;
         updateChildrenGeometry();
+        if (isGeometryUpdateRequested_) {
+            VGC_WARNING(
+                LogVgcUi,
+                "A geometry update has been requested during a geometry update.");
+        }
     }
 }
 
@@ -261,19 +312,22 @@ void Widget::requestGeometryUpdate() {
             // repaint request
             if (!widget->isRepaintRequested_) {
                 widget->isRepaintRequested_ = true;
+
                 if (!parent) {
                     widget->repaintRequested().emit();
                 }
             }
         }
         else if (!widget->isPreferredSizeComputed_) {
+            VGC_ASSERT(isRepaintRequested_);
             // isGeometryUpdateRequested_
             // && isRepaintRequested_
             // && !isPreferredSizeComputed_
             break;
         }
         widget->isPreferredSizeComputed_ = false;
-        widget = widget->parent();
+        // don't forward to parent if child is not visible
+        widget = widget->computedVisibility_ ? parent : nullptr;
     }
 }
 
@@ -281,15 +335,21 @@ void Widget::onResize() {
 }
 
 void Widget::requestRepaint() {
+    if (isRepaintRequested_) {
+        return;
+    }
+
     Widget* widget = this;
-    while (widget && !widget->isRepaintRequested_) {
+    do {
         widget->isRepaintRequested_ = true;
         Widget* parent = widget->parent();
         if (!parent) {
             widget->repaintRequested().emit();
         }
-        widget = parent;
-    }
+        // don't forward to parent if child is not visible
+        widget = widget->computedVisibility_ ? parent : nullptr;
+
+    } while (widget && !widget->isRepaintRequested_);
 }
 
 void Widget::preparePaint(graphics::Engine* engine, PaintOptions options) {
@@ -299,8 +359,17 @@ void Widget::preparePaint(graphics::Engine* engine, PaintOptions options) {
 }
 
 void Widget::paint(graphics::Engine* engine, PaintOptions options) {
+    if (!isVisible()) {
+        return;
+    }
     prePaintUpdateGeometry_();
     prePaintUpdateEngine_(engine);
+    if (isGeometryUpdateRequested_) {
+        VGC_WARNING(
+            LogVgcUi,
+            "A child widget geometry was not updated by its parent before draw.");
+        updateGeometry();
+    }
     isRepaintRequested_ = false;
     onPaintDraw(engine, options);
 }
@@ -319,6 +388,9 @@ void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {
 
 void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     for (Widget* widget : children()) {
+        if (!widget->isVisible()) {
+            continue;
+        }
         engine->pushViewMatrix();
         geometry::Mat4f m = engine->viewMatrix();
         geometry::Vec2f pos = widget->position();
@@ -373,54 +445,86 @@ void Widget::stopKeyboardCapture() {
     }
 }
 
-bool Widget::onMouseMove(MouseEvent* event) {
-
-    // If we are in the middle of a press-move-release sequence, then we
-    // automatically forward the move event to the pressed child. We also delay
-    // emitting the leave event until the mouse is released (see implementation
-    // of onMouseRelease).
-    //
-    if (mousePressedChild_) {
-        event->setPosition(event->position() - mousePressedChild_->position());
-        return mousePressedChild_->onMouseMove(event);
-    }
-
-    // Otherwise, we iterate over all child widgets. Note that we iterate in
-    // reverse order, so that widgets drawn last receive the event first. Also
-    // note that for now, widget are always "opaque for mouse events", that is,
-    // if a widget A is on top of a sibling widget B, then the widget B doesn't
-    // receive the mouse event.
+Widget* Widget::computeHoverChainChild(geometry::Vec2f position) {
+    // We iterate over all child widgets in reverse order, so that widgets drawn
+    // last receive the event first. Also note that for now, widget are always
+    // "opaque for mouse events", that is, if a widget A is on top of a sibling
+    // widget B, then the widget B doesn't receive the mouse event.
     //
     for (Widget* child = lastChild(); //
          child != nullptr;            //
          child = child->previousSibling()) {
 
-        if (child->geometry().contains(event->position())) {
-            if (mouseEnteredChild_ != child) {
-                if (mouseEnteredChild_) {
-                    mouseEnteredChild_->setHovered(false);
-                }
-                child->setHovered(true);
-                mouseEnteredChild_ = child;
-            }
-            event->setPosition(event->position() - child->position());
-            return child->onMouseMove(event);
+        if (!child->isVisible()) {
+            continue;
+        }
+
+        // Note: if in the future we allow non-rectangle or rotated widgets, we
+        // could replace `if (child->geometry().contains(event->position()))` by a
+        // more generic approach. For example, a `boundingGeometry()` method
+        // complemented by a virtual `bool isUnderMouse(const Vec2f& p)` method.
+        if (child->geometry().contains(position)) {
+            return child;
         }
     }
 
-    // Emit leave event if we're not anymore in previously entered widget.
-    //
-    if (mouseEnteredChild_) {
-        mouseEnteredChild_->setHovered(false);
-        mouseEnteredChild_ = nullptr;
+    return nullptr;
+}
+
+bool Widget::onMouseMove(MouseEvent* event) {
+
+    geometry::Vec2f eventPos = event->position();
+    const bool isPressed = bool(pressedButtons());
+
+    // By default, a widget does not handle any mouse move.
+    bool handled = false;
+
+    if (!isHovered_ && !parent()) {
+        isHovered_ = geometry().contains(eventPos);
     }
 
-    return false;
+    WidgetPtr thisPtr = this;
+    Widget* newHoverChainChild = nullptr;
+    Widget* hcc = hoverChainChild();
+    if (hcc && hcc->isHoverLocked()) {
+        // The hover-locked child widget keeps the hover.
+        newHoverChainChild = hcc;
+    }
+    else if (isPressed) {
+        // When a button is pressed we keep the same hovered child.
+        newHoverChainChild = hcc;
+    }
+    else {
+        // Compute hover-chain child
+        newHoverChainChild = computeHoverChainChild(eventPos);
+        // Check for dead widgets
+        if (!thisPtr.isAlive()) {
+            return true; // Killing is a kind of handling.
+        }
+    }
 
-    // Note: if in the future we allow non-rectangle or rotated widgets, we
-    // could replace `if (child->geometry().contains(event->position()))` by a
-    // more generic approach. For example, a `boundingGeometry()` method
-    // complemented by a virtual `bool isUnderMouse(const Vec2f& p)` method.
+    if (!setHoverChainChild(newHoverChainChild)) {
+        // A failure is a reaction.
+        return true;
+    }
+
+    VGC_ASSERT(hoverChainChild() == newHoverChainChild);
+    if (newHoverChainChild) {
+        // Prepare against widget killers
+        WidgetPtr childPtr = newHoverChainChild;
+        // Notify mouse move
+        event->setPosition(mapTo(newHoverChainChild, eventPos));
+        handled = newHoverChainChild->onMouseMove(event);
+        // Check for dead widgets
+        if (!thisPtr.isAlive() || !childPtr.isAlive()) {
+            return true; // Killing is a kind of handling.
+        }
+        if (newHoverChainChild->isHoverLocked()) {
+            isHoverLocked_ = true;
+        }
+    }
+
+    return handled;
 }
 
 namespace {
@@ -448,48 +552,305 @@ void clearNonStickyNonChildFocus_(Widget* parent, Widget* child) {
 
 bool Widget::onMousePress(MouseEvent* event) {
 
-    // Note: we don't handle multiple clicks, that is, a left-button-pressed
-    // must be released before we issue a right-button-press
-    if (!mousePressedChild_) {
-        if (mouseEnteredChild_) {
-            mousePressedChild_ = mouseEnteredChild_;
-            event->setPosition(event->position() - mousePressedChild_->position());
+    const geometry::Vec2f eventPos = event->position();
+    const bool isNewlyPressed = !pressedButtons_;
+    pressedButtons_.set(event->button());
 
-            if (mousePressedChild_->focusPolicy().has(FocusPolicy::Click)) {
-                mousePressedChild_->setFocus(FocusReason::Mouse);
-            }
-            else {
-                clearNonStickyNonChildFocus_(this, mousePressedChild_);
-            }
-            return mousePressedChild_->onMousePress(event);
+    // By default, a widget does not handle any button press.
+    bool handled = false;
+
+    // Become hover-locked if root because no one gave it to us.
+    if (!parent()) {
+        isHoverLocked_ = true;
+    }
+
+    WidgetPtr thisPtr(this);
+    bool forwardEvent = false;
+    if (hoverChainChild_ && hoverChainChild_->isHoverLocked_) {
+        // The hover-locked child widget captures the event.
+        forwardEvent = true;
+    }
+    else if (!isNewlyPressed) {
+        // `this` is capturing the events.
+        // XXX should we clear focus ??
+    }
+    else if (hoverChainChild_) {
+        // Mouse is over a child and it's a new press.
+        if (hoverChainChild_->focusPolicy().has(FocusPolicy::Click)) {
+            hoverChainChild_->setFocus(FocusReason::Mouse);
         }
         else {
-            clearNonStickyNonChildFocus_(this, nullptr);
+            clearNonStickyNonChildFocus_(this, hoverChainChild_);
+        }
+        // Return if `this` died with the focus update.
+        if (!thisPtr.isAlive()) {
+            return true; // Killing is a kind of handling.
+        }
+        // By default, we hover-lock the child during press-move-release sequences.
+        if (hoverChainChild_) { // Child could have disappeared with the focus update.
+            hoverChainChild_->isHoverLocked_ = true;
+            forwardEvent = true;
+        }
+    }
+    else {
+        // Mouse is not over a child and it's the first mouse button to be pressed.
+        clearNonStickyNonChildFocus_(this, nullptr);
+    }
+
+    if (forwardEvent) {
+        WidgetPtr childPtr(hoverChainChild_);
+
+        // Let the child try to handle the event
+        event->setPosition(mapTo(hoverChainChild_, eventPos));
+        handled = hoverChainChild_->onMousePress(event);
+        if (!thisPtr.isAlive()) {
+            // `this` died but the hover chain has been fixed by onDestroyed().
+            return true; // Killing is a kind of handling.
+        }
+        if (!childPtr.isAlive()) {
+            handled = true; // Death of the child is a reaction.
+        }
+        // If a sequence start is not handled, we hover-unlock the child.
+        if (!handled && isNewlyPressed && hoverChainChild_) {
+            hoverChainChild_->setHoverLocked(false);
+            // Clear pressed buttons of the child.
+            hoverChainChild_->pressedButtons_.clear();
         }
     }
 
-    return false;
+    return handled;
 }
 
 bool Widget::onMouseRelease(MouseEvent* event) {
-    if (mousePressedChild_) {
-        geometry::Vec2f eventPos = event->position();
-        event->setPosition(eventPos - mousePressedChild_->position());
-        bool accepted = mousePressedChild_->onMouseRelease(event);
 
-        // Emit the mouse leave event now if the mouse exited the widget during
-        // the press-move-release sequence.
-        if (!mousePressedChild_->geometry().contains(eventPos)) {
-            if (mouseEnteredChild_ != mousePressedChild_) {
-                throw core::LogicError("mouseEnteredChild_ != mousePressedChild_");
-            }
-            mouseEnteredChild_->setHovered(false);
-            mouseEnteredChild_ = nullptr;
+    const geometry::Vec2f eventPos = event->position();
+    //const bool wasPressed = bool(pressedButtons_);
+    pressedButtons_.unset(event->button());
+    //const bool isStillPressed = bool(pressedButtons_);
+
+    // By default, a widget does not handle any button release.
+    bool handled = false;
+
+    if (hoverChainChild_ && hoverChainChild_->isHoverLocked_) {
+
+        WidgetPtr thisPtr = this;
+        WidgetPtr childPtr = hoverChainChild_;
+        // By default, hover-unlock the child.
+        hoverChainChild_->isHoverLocked_ = false;
+        // Let the child try to handle the event
+        event->setPosition(mapTo(hoverChainChild_, eventPos));
+        handled = hoverChainChild_->onMouseRelease(event);
+        if (!thisPtr.isAlive()) {
+            return true; // Killing is a kind of handling.
         }
-        mousePressedChild_ = nullptr;
-        return accepted;
+        if (!childPtr.isAlive()) {
+            handled = true; // Death of the child is a reaction.
+        }
+        // We hover-unlock ourselves if the child did not choose to remain hover-locked.
+        if (hoverChainChild_) {
+            if (hoverChainChild_->isHoverLocked_) {
+                // stay hover-locked
+                isHoverLocked_ = true;
+            }
+            else {
+                setHoverLocked(false);
+                // Emit the mouse leave event now if the mouse exited the widget during
+                // the press-move-release sequence.
+                Widget* newHoverChainChild = computeHoverChainChild(eventPos);
+                // Check for dead widgets
+                if (!thisPtr.isAlive()) {
+                    return true; // Killing is a kind of handling.
+                }
+                setHoverChainChild(newHoverChainChild);
+                if (!thisPtr.isAlive()) {
+                    return true; // Killing is a kind of handling.
+                }
+            }
+        }
     }
-    return false;
+
+    return handled;
+}
+
+bool Widget::setHovered(bool hovered) {
+
+    if (isHovered_ == hovered) {
+        // Nothing to do.
+    }
+    else if (hovered) {
+        VGC_ASSERT(!hoverChainParent_);
+
+        // Trivial cases
+        // -------------
+        {
+            Widget* p = parent();
+            if (!p) {
+                // This is the root.
+                isHovered_ = true;
+            }
+            else if (p->isHovered()) {
+                return p->setHoverChainChild(this);
+            }
+        }
+
+        // Generic case
+        // ------------
+        // Handlers of onMouseEnter and onMouseLeave could
+        // modify the hierarchy while we fix the hover chain
+        // so let's compute it first.
+        core::Array<WidgetPtr> path; // XXX small array would be nice.
+        path.append(this);
+        {
+            Widget* p = parent();
+            while (p) {
+                path.append(p);
+                if (p->isHovered()) {
+                    break;
+                }
+                p = p->parent();
+            }
+        }
+        auto it = path.rbegin();
+        WidgetPtr thisPtr = this;
+        WidgetPtr currentParentPtr = *(it++);
+        Widget* p = currentParentPtr.get();
+        Widget* c = nullptr;
+        // If first parent is root, it could be not hovered yet.
+        p->isHovered_ = true;
+        // From here, let's be carefull about dangling pointers.
+        bool aborted = false;
+        for (; it != path.rend(); ++it) {
+            c = it->getIfAlive();
+            if (!c) {
+                continue;
+            }
+
+            if (!p->setHoverChainChild(c)) {
+                // Check our pointers to see if we can recover from this failure.
+                p = currentParentPtr.getIfAlive();
+                c = it->getIfAlive();
+                if (!p) {
+                    // Let's abort if current parent has died.
+                    // Otherwise it could infinite loop..
+                    aborted = true;
+                    break;
+                }
+                if (!c) {
+                    // Let's skip this child.
+                    // XXX Opinion ?
+                    continue;
+                }
+                // Unexpected conflict in setHoverChainChild().
+                // Let's abort.
+                aborted = true;
+                break;
+            }
+
+            // Current child is the next parent.
+            currentParentPtr = c;
+            p = c;
+        }
+        return !aborted;
+    }
+    else {
+        WidgetPtr thisPtr = this;
+
+        // Unhover chain child
+        if (hoverChainChild_) {
+            hoverChainChild_->setHovered(false);
+        }
+        if (!thisPtr.isAlive()) {
+            return true;
+        }
+
+        // We could fake releasing buttons here with pressedButtons_ if desired.
+        /**/
+
+        // Notify leave
+        onMouseLeave();
+        if (!thisPtr.isAlive()) {
+            return true;
+        }
+
+        // Unlink from hover-chain
+        if (hoverChainParent_) {
+            Widget* p = hoverChainParent_;
+            p->hoverChainChild_ = nullptr;
+            hoverChainParent_ = nullptr;
+        }
+        isHovered_ = false;
+        isHoverLocked_ = false;
+
+        // Clear pressed buttons
+        pressedButtons_.clear();
+    }
+
+    return true;
+}
+
+bool Widget::setHoverChainChild(Widget* newHoverChainChild) {
+
+    if (!isHovered_) {
+        VGC_WARNING(
+            LogVgcUi,
+            "Cannot set the hovered child of a widget that is not itself hovered");
+        return false;
+    }
+    if (hoverChainChild_ == newHoverChainChild) {
+        return true;
+    }
+
+    WidgetPtr thisPtr = this;
+    if (!newHoverChainChild) {
+        return setHovered(false) && thisPtr.isAlive();
+    }
+
+    WidgetPtr newChildPtr = newHoverChainChild;
+
+    // Unhover child's children
+    if (hoverChainChild_) {
+        hoverChainChild_->setHovered(false);
+        if (!thisPtr.isAlive()) {
+            return false;
+        }
+        VGC_ASSERT(hoverChainChild_ == nullptr);
+        if (!newChildPtr.isAlive()) {
+            return false;
+        }
+    }
+
+    // Abort if the new child is already hovered, it would create a cycle.
+    if (newHoverChainChild->isHovered_) {
+        return false;
+    }
+
+    // Link parent and child.
+    hoverChainChild_ = newHoverChainChild;
+    newHoverChainChild->hoverChainParent_ = this;
+    newHoverChainChild->isHovered_ = true;
+
+    // Notify enter
+    hoverChainChild_->onMouseEnter();
+
+    // Returns whether the requested state is set or not.
+    return thisPtr.isAlive() && newChildPtr.isAlive()
+           && hoverChainChild_ == newHoverChainChild;
+}
+
+void Widget::setVisibility(Visibility visibility) {
+    if (visibility == visibility_) {
+        return;
+    }
+    visibility_ = visibility;
+    updateComputedVisibility_();
+}
+
+void Widget::onWidgetAdded(Widget*) {
+    // no-op
+}
+
+void Widget::onWidgetRemoved(Widget*) {
+    // no-op
 }
 
 bool Widget::onMouseEnter() {
@@ -497,12 +858,15 @@ bool Widget::onMouseEnter() {
 }
 
 bool Widget::onMouseLeave() {
-    if (mouseEnteredChild_) {
-        bool handled = mouseEnteredChild_->setHovered(false);
-        mouseEnteredChild_ = nullptr;
-        return handled;
-    }
     return false;
+}
+
+void Widget::onVisible() {
+    // no-op
+}
+
+void Widget::onHidden() {
+    // no-op
 }
 
 void Widget::setTreeActive(bool active, FocusReason reason) {
@@ -604,18 +968,6 @@ bool Widget::onKeyRelease(QKeyEvent* event) {
     }
 }
 
-Action* Widget::createAction() {
-    ActionPtr action = Action::create();
-    actions_->append(action.get());
-    return action.get();
-}
-
-Action* Widget::createAction(const Shortcut& shortcut) {
-    ActionPtr action = Action::create(shortcut);
-    actions_->append(action.get());
-    return action.get();
-}
-
 geometry::Vec2f Widget::computePreferredSize() const {
     // TODO: convert units if any.
     PreferredSizeType auto_ = PreferredSizeType::Auto;
@@ -626,7 +978,12 @@ geometry::Vec2f Widget::computePreferredSize() const {
 }
 
 void Widget::updateChildrenGeometry() {
-    // nothing
+    // No default layout.
+    for (auto c : children()) {
+        if (c->isGeometryUpdateRequested()) {
+            c->updateGeometry();
+        }
+    }
 }
 
 namespace {
@@ -764,6 +1121,33 @@ void Widget::onStyleChanged() {
     requestGeometryUpdate();
 }
 
+void Widget::onWidgetAdded_(Widget* widget) {
+    onWidgetAdded(widget);
+    // may call onVisible, and resume pending requests
+    widget->updateComputedVisibility_();
+    // XXX temporary bug fix, sometimes pending requests are not resent..
+    if (widget->isVisible()) {
+        widget->resendPendingRequests_();
+    }
+}
+
+void Widget::onWidgetRemoved_(Widget* widget) {
+    onWidgetRemoved(widget);
+}
+
+void Widget::resendPendingRequests_() {
+    // transmit pending requests
+    Widget* p = parent();
+    if (p) {
+        if (isGeometryUpdateRequested_) {
+            p->requestGeometryUpdate();
+        }
+        if (isRepaintRequested_) {
+            p->requestRepaint();
+        }
+    }
+}
+
 void Widget::prePaintUpdateGeometry_() {
     if (!parent()) {
         // Calling updateRootGeometry_() could indirectly call requestRepaint() from
@@ -777,9 +1161,44 @@ void Widget::prePaintUpdateGeometry_() {
     }
 }
 
+void Widget::updateComputedVisibility_() {
+    const Widget* p = parent();
+    if (visibility_ == Visibility::Invisible) {
+        setComputedVisibility_(false);
+    }
+    else if (!p || p->isVisible()) {
+        setComputedVisibility_(true);
+    }
+}
+
+void Widget::setComputedVisibility_(bool isVisible) {
+
+    if (computedVisibility_ == isVisible) {
+        return;
+    }
+    computedVisibility_ = isVisible;
+
+    if (isVisible) {
+        // set visible the children which inherit visibility
+        for (Widget* w : children()) {
+            if (w->visibility() == Visibility::Inherit) {
+                w->setComputedVisibility_(true);
+            }
+        }
+        resendPendingRequests_();
+        onVisible();
+    }
+    else {
+        for (Widget* w : children()) {
+            w->setComputedVisibility_(false);
+        }
+        onHidden();
+    }
+}
+
 void Widget::releaseEngine_() {
     onPaintDestroy(lastPaintEngine_);
-    lastPaintEngine_->aboutToBeDestroyed().disconnect(onEngineAboutToBeDestroyed());
+    lastPaintEngine_->aboutToBeDestroyed().disconnect(onEngineAboutToBeDestroyed_());
     lastPaintEngine_ = nullptr;
 }
 
@@ -788,7 +1207,7 @@ void Widget::setEngine_(graphics::Engine* engine) {
         releaseEngine_();
     }
     lastPaintEngine_ = engine;
-    engine->aboutToBeDestroyed().connect(onEngineAboutToBeDestroyed());
+    engine->aboutToBeDestroyed().connect(onEngineAboutToBeDestroyed_());
 }
 
 void Widget::prePaintUpdateEngine_(graphics::Engine* engine) {
