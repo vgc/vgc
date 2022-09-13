@@ -1167,7 +1167,6 @@ private:
     bool isHoverLocked_ = false;
     bool isInHoveredRow_ = false;
     bool isInHoveredColumn_ = false;
-    bool isVisible_ = true;
     MouseButtons pressedButtons_ = {};
     Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
 
