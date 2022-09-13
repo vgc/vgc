@@ -20,6 +20,9 @@
 namespace vgc::style {
 
 StyleValue parseColor(StyleTokenIterator begin, StyleTokenIterator end) {
+    if (end == begin + 1 && begin->type == StyleTokenType::Identifier && begin->codePointsValue == "inherit") {
+        return StyleValue::inherit();
+    }
     try {
         std::string str(begin->begin, (end - 1)->end);
         core::Color color = core::parse<core::Color>(str);
