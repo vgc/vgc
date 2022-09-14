@@ -77,6 +77,14 @@ protected:
     //void inputMethodEvent(QInputMethodEvent* event) override;
     bool event(QEvent* e) override;
 
+    /// Handles mouse enter events.
+    ///
+    virtual void enterEvent(QEvent* event);
+
+    /// Handles mouse leave events.
+    ///
+    virtual void leaveEvent(QEvent* event);
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     using NativeEventResult = long;
 #else
