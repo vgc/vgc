@@ -260,6 +260,18 @@ class TestRect(unittest.TestCase):
             self.assertEqual(r.pMax, Vec2(7, 8))
             self.assertEqual(r.size, Vec2(6, 6))
 
+    def testCorner(self):
+        for Rect2, Vec2 in Rect2Vec2Types:
+            r = Rect2(1, 2, 4, 6)
+            self.assertEqual(r.corner(0, 0), Vec2(1, 2))
+            self.assertEqual(r.corner(1, 0), Vec2(4, 2))
+            self.assertEqual(r.corner(1, 1), Vec2(4, 6))
+            self.assertEqual(r.corner(0, 1), Vec2(1, 6))
+            self.assertEqual(r.corner(0), Vec2(1, 2))
+            self.assertEqual(r.corner(1), Vec2(4, 2))
+            self.assertEqual(r.corner(2), Vec2(4, 6))
+            self.assertEqual(r.corner(3), Vec2(1, 6))
+
     def testIsClose(self):
         for Rect2 in Rect2Types:
             self.assertTrue(Rect2(0, 0, 1, 1).isClose(Rect2(0, 0, 1, 1)))

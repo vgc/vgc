@@ -441,6 +441,50 @@ public:
         pMax_[1] = yMax;
     }
 
+    /// Returns the position of one of the four corners of the rectangle.
+    ///
+    /// The two given indices must be either `0` or `1`, where `0` means "min"
+    /// and `1` means "max".
+    ///
+    /// ```cpp
+    /// // Example assuming the Y axis is pointing down
+    /// geometry::Vec2d topLeft = rect.corner(0, 0);
+    /// geometry::Vec2d topRight = rect.corner(1, 0);
+    /// geometry::Vec2d bottomRight = rect.corner(1, 1);
+    /// geometry::Vec2d bottomLeft = rect.corner(0, 1);
+    /// ```
+    ///
+    constexpr geometry::Vec2d corner(Int xIndex, Int yIndex) {
+        return geometry::Vec2d(
+            xIndex ? xMax() : xMin(),
+            yIndex ? yMax() : yMin());
+    }
+
+    /// Returns the position of one of the four corners of the rectangle.
+    ///
+    /// The given index must be either `0`, `1`, `2`, or `3`.
+    ///
+    /// ```cpp
+    /// // Example assuming the Y axis is pointing down
+    /// geometry::Vec2d topLeft = rect.corner(0);
+    /// geometry::Vec2d topRight = rect.corner(1);
+    /// geometry::Vec2d bottomRight = rect.corner(2);
+    /// geometry::Vec2d bottomLeft = rect.corner(3);
+    /// ```
+    ///
+    constexpr geometry::Vec2d corner(Int index) {
+        switch (index) {
+        case 0:
+            return geometry::Vec2d(xMin(), yMin());
+        case 1:
+            return geometry::Vec2d(xMax(), yMin());
+        case 2:
+            return geometry::Vec2d(xMax(), yMax());
+        default:
+            return geometry::Vec2d(xMin(), yMax());
+        }
+    }
+
     /// Returns whether the two rectangles `r1` and `r2` are equal.
     ///
     friend constexpr bool operator==(const Rect2d& r1, const Rect2d& r2) {
