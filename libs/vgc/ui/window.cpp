@@ -215,15 +215,17 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
     event->setAccepted(receiver->onMouseRelease(vgcEvent.get()));
 }
 
-//void Window::enterEvent(QEvent* event)
-//{
-//    event->setAccepted(widget_->onMouseEnter());
-//}
-//
-//void Window::leaveEvent(QEvent* event)
-//{
-//    event->setAccepted(widget_->onMouseLeave());
-//}
+// Note: enterEvent() and leaveEvent() are part of QWidget, but not of QWindow.
+// Therefore, the methods below are not overriden from QWindow, but are instead
+// custom methods that we explicitly call from Window::event().
+
+void Window::enterEvent(QEvent* event) {
+    event->setAccepted(widget_->setHovered(true));
+}
+
+void Window::leaveEvent(QEvent* event) {
+    event->setAccepted(widget_->setHovered(false));
+}
 
 void Window::focusInEvent(QFocusEvent* event) {
     ui::FocusReason reason = static_cast<ui::FocusReason>(event->reason());
@@ -386,6 +388,12 @@ void Window::paint(bool sync) {
 
 bool Window::event(QEvent* e) {
     switch (e->type()) {
+    case QEvent::Enter:
+        enterEvent(e);
+        return true;
+    case QEvent::Leave:
+        leaveEvent(e);
+        return true;
     case QEvent::UpdateRequest:
         if (!activeSizemove_) {
             if (debugEvents) {
