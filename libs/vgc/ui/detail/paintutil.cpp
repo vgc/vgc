@@ -494,6 +494,11 @@ void insertRect(
     if (outerRect.isEmpty()) {
         return;
     }
+    bool hasFill = fillColor.a() > 0;
+    bool hasBorder = borderColor.a() > 0;
+    if (!hasFill && !hasBorder) {
+        return;
+    }
 
     // Compute inner rect, clamping border-[top|right|bottom|left]-width
     ui::Margins inputBorderWidths = ui::Margins(borderWidth);
@@ -547,54 +552,53 @@ void insertRect(
     //
     Int numSamples = (samplesEndIndex - samplesBeginIndex) / 4;
     VGC_ASSERT(numSamples >= 4);
-    Int numTrianglesInFan = numSamples - 2;
-    Int numTrianglesInQuadStrip = 2 * numSamples;
+    Int numTrianglesInFan = hasFill ? numSamples - 2 : 0;
+    Int numTrianglesInQuadStrip = hasBorder ? 2 * numSamples : 0;
     Int numTriangles = numTrianglesInFan + numTrianglesInQuadStrip;
     a.resize(samplesBeginIndex + numTriangles * 15);
     float* p = &a.getUnchecked(samplesBeginIndex);
     float inX0 = *p;
     float inY0 = *(p + 1);
-    p = &a.getUnchecked(samplesEndIndex - 4);
-    float inXN = *p;
-    float inYN = *(p + 1);
-    float outXN = *(p + 2);
-    float outYN = *(p + 3);
-
-    // Get colors as float
-    float rf = static_cast<float>(fillColor[0]);
-    float gf = static_cast<float>(fillColor[1]);
-    float bf = static_cast<float>(fillColor[2]);
-    float rb = static_cast<float>(borderColor[0]);
-    float gb = static_cast<float>(borderColor[1]);
-    float bb = static_cast<float>(borderColor[2]);
+    float outX0 = *(p + 2);
+    float outY0 = *(p + 3);
 
     // Fill quad strip
-    Int quadStripBeginIndex = samplesBeginIndex + numTrianglesInFan * 15;
-    geometry::Vec2f inP_(inXN, inYN);
-    geometry::Vec2f outP_(outXN, outYN);
-    p = &a.getUnchecked(samplesBeginIndex);
-    for (Int i = 0; i < numSamples; ++i) {
-        geometry::Vec2f inP(*p, *(p + 1));
-        geometry::Vec2f outP(*(p + 2), *(p + 3));
-        geometry::Triangle2f t1(outP_, inP_, inP);
-        geometry::Triangle2f t2(outP_, inP, outP);
-        writeTriangleAt(a, quadStripBeginIndex + 15 * (2 * i), rb, gb, bb, t1);
-        writeTriangleAt(a, quadStripBeginIndex + 15 * (2 * i + 1), rb, gb, bb, t2);
-        p += 4;
-        inP_ = inP;
-        outP_ = outP;
+    if (hasBorder) {
+        float rb = static_cast<float>(borderColor[0]);
+        float gb = static_cast<float>(borderColor[1]);
+        float bb = static_cast<float>(borderColor[2]);
+        Int quadStripBeginIndex = samplesBeginIndex + numTrianglesInFan * 15;
+        geometry::Vec2f inP_(inX0, inY0);
+        geometry::Vec2f outP_(outX0, outY0);
+        p = &a.getUnchecked(samplesEndIndex);
+        for (Int i = numSamples - 1; i >= 0; --i) {
+            p -= 4;
+            geometry::Vec2f inP(*p, *(p + 1));
+            geometry::Vec2f outP(*(p + 2), *(p + 3));
+            geometry::Triangle2f t1(outP_, inP_, inP);
+            geometry::Triangle2f t2(outP_, inP, outP);
+            writeTriangleAt(a, quadStripBeginIndex + 15 * (2 * i), rb, gb, bb, t1);
+            writeTriangleAt(a, quadStripBeginIndex + 15 * (2 * i + 1), rb, gb, bb, t2);
+            inP_ = inP;
+            outP_ = outP;
+        }
     }
 
     // Fill triangle fan
-    Int fanBeginIndex = samplesBeginIndex;
-    geometry::Triangle2f triangle(core::NoInit{});
-    triangle.setA(inX0, inY0);
-    p = &a.getUnchecked(samplesEndIndex) - 4;
-    for (Int i = numTrianglesInFan - 1; i >= 0; --i) {
-        p -= 4;
-        triangle.setB(*p, *(p + 1));
-        triangle.setC(*(p + 4), *(p + 5));
-        writeTriangleAt(a, fanBeginIndex + 15 * i, rf, gf, bf, triangle);
+    if (hasFill) {
+        float rf = static_cast<float>(fillColor[0]);
+        float gf = static_cast<float>(fillColor[1]);
+        float bf = static_cast<float>(fillColor[2]);
+        Int fanBeginIndex = samplesBeginIndex;
+        geometry::Triangle2f triangle(core::NoInit{});
+        triangle.setA(inX0, inY0);
+        p = &a.getUnchecked(samplesEndIndex) - 4;
+        for (Int i = numTrianglesInFan - 1; i >= 0; --i) {
+            p -= 4;
+            triangle.setB(*p, *(p + 1));
+            triangle.setC(*(p + 4), *(p + 5));
+            writeTriangleAt(a, fanBeginIndex + 15 * i, rf, gf, bf, triangle);
+        }
     }
 }
 

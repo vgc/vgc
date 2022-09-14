@@ -544,6 +544,26 @@ core::Color colorFromHslIndices(
     return color.rounded8b();
 }
 
+core::Colorf colorfFromHslIndices(
+    Int numHueSteps,
+    Int numSaturationSteps,
+    Int numLightnessSteps,
+    Int hueIndex,
+    Int saturationIndex,
+    Int lightnessIndex) {
+
+    float dh = 360.0f / numHueSteps;
+    double ds = 1.0f / (numSaturationSteps - 1);
+    double dl = 1.0f / (numLightnessSteps - 1);
+
+    core::Colorf color = core::Colorf::hsl( //
+        hueIndex * dh,
+        saturationIndex * ds,
+        lightnessIndex * dl);
+
+    return color.rounded8b();
+}
+
 } // namespace
 
 void ColorPaletteSelector::setSelectedColor(const core::Color& color) {
@@ -598,6 +618,36 @@ void ColorPaletteSelector::onPaintCreate(graphics::Engine* engine) {
 
 namespace {
 
+constexpr Int numQuarterCircleSamples = 8;
+constexpr Int numCircleSamples = 4 * numQuarterCircleSamples;
+constexpr Int circleLeftIndexBegin = 0;
+constexpr Int circleTopIndex = numQuarterCircleSamples;
+//constexpr Int circleRightIndex = 2 * numQuarterCircleSamples;
+constexpr Int circleBottomIndex = 3 * numQuarterCircleSamples;
+constexpr Int circleLeftIndexEnd = 4 * numQuarterCircleSamples;
+
+// Starts at (-1, 0) then go clockwise (assuming y axis points down).
+// Repeats the first and last sample: returned array length is numSamples + 1.
+//
+geometry::Vec2fArray computeUnitCircle_(Int numSamples) {
+    geometry::Vec2fArray res;
+    res.reserve(numSamples + 1);
+    double dt = 2.0 * core::pi / numSamples;
+    for (Int i = 0; i < numSamples; ++i) {
+        double t = i * dt;
+        float cost = std::cos(t);
+        float sint = std::sin(t);
+        res.emplaceLast(-cost, -sint);
+    }
+    res.append(res.first());
+    return res;
+}
+
+const geometry::Vec2fArray& unitCircle_() {
+    static geometry::Vec2fArray unitCircle = computeUnitCircle_(numCircleSamples);
+    return unitCircle;
+}
+
 // clang-format off
 
 
@@ -628,14 +678,135 @@ void insertSmoothRect(
         x1, y2, r3, g3, b3});
 }
 
-void insertCellHighlight(
+void insertQuad_(
+    core::FloatArray& a,
+    const geometry::Vec2f& p1,
+    const geometry::Vec2f& q1,
+    const geometry::Vec2f& p2,
+    const geometry::Vec2f& q2,
+    const core::Colorf& c) {
+
+    float p1x = p1.x();
+    float p1y = p1.y();
+    float q1x = q1.x();
+    float q1y = q1.y();
+
+    float p2x = p2.x();
+    float p2y = p2.y();
+    float q2x = q2.x();
+    float q2y = q2.y();
+
+    float r = c.r();
+    float g = c.g();
+    float b = c.b();
+
+    // clang-format off
+    a.extend({
+              p1x, p1y, r, g, b,
+              q1x, q1y, r, g, b,
+              p2x, p2y, r, g, b,
+              p2x, p2y, r, g, b,
+              q1x, q1y, r, g, b,
+              q2x, q2y, r, g, b});
+    // clang-format on
+}
+
+// Insert a quad-shaped cursor for the SL selector.
+//
+void insertSLCursorQuad_(
     core::FloatArray& a,
     const core::Color& cellColor,
-    float x1, float y1, float x2, float y2) {
+    float x1,
+    float y1,
+    float x2,
+    float y2) {
 
-    // TODO: draw 4 lines (= thin rectangles) rather than 2 big rects?
-    detail::insertRect(a, highlightColor, x1 - 2, y1 - 2, x2 + 2, y2 + 2);
-    detail::insertRect(a, cellColor, x1 + 1, y1 + 1, x2 - 1, y2 - 1);
+    core::Colorf color(cellColor.r(), cellColor.g(), cellColor.b());
+
+    geometry::Rect2f rect1(x1, y1, x2, y2);
+    geometry::Rect2f rect2 = rect1 + Margins(1);
+    geometry::Rect2f rect3 = rect2 + Margins(1);
+
+    // outer quad
+    geometry::Vec2f p1 = rect3.corner(0);
+    geometry::Vec2f p2 = rect3.corner(1);
+    geometry::Vec2f p3 = rect3.corner(2);
+    geometry::Vec2f p4 = rect3.corner(3);
+
+    // mid quad
+    geometry::Vec2f q1 = rect2.corner(0);
+    geometry::Vec2f q2 = rect2.corner(1);
+    geometry::Vec2f q3 = rect2.corner(2);
+    geometry::Vec2f q4 = rect2.corner(3);
+
+    // inner quad
+    geometry::Vec2f r1 = rect1.corner(0);
+    geometry::Vec2f r2 = rect1.corner(1);
+    geometry::Vec2f r3 = rect1.corner(2);
+    geometry::Vec2f r4 = rect1.corner(3);
+
+    // outer quad strip
+    insertQuad_(a, p1, q1, p2, q2, cursorOuterColor);
+    insertQuad_(a, p2, q2, p3, q3, cursorOuterColor);
+    insertQuad_(a, p3, q3, p4, q4, cursorOuterColor);
+    insertQuad_(a, p4, q4, p1, q1, cursorOuterColor);
+
+    // inner quad strip
+    insertQuad_(a, q1, r1, q2, r2, cursorInnerColor);
+    insertQuad_(a, q2, r2, q3, r3, cursorInnerColor);
+    insertQuad_(a, q3, r3, q4, r4, cursorInnerColor);
+    insertQuad_(a, q4, r4, q1, r1, cursorInnerColor);
+
+    // fill
+    insertQuad_(a, r1, r2, r4, r3, color);
+}
+
+void insertCircle_(
+    core::FloatArray& a,
+    const core::Colorf& color,
+    const geometry::Vec2f& center,
+    float radius) {
+
+    const geometry::Vec2fArray& unitCircle = unitCircle_();
+    geometry::Vec2f p0 = center + radius * unitCircle[0];
+    geometry::Vec2f p1 = center + radius * unitCircle[1];
+    for (Int i = 2; i < numCircleSamples - 2; ++i) {
+        geometry::Vec2f p2 = center + radius * unitCircle[i];
+        detail::insertTriangle(a, color, p0, p1, p2);
+        p1 = p2;
+    }
+}
+
+void insertCircleBorder_(
+    core::FloatArray& a,
+    const core::Colorf& color,
+    const geometry::Vec2f& center,
+    float radius,
+    float borderWidth) {
+
+    const geometry::Vec2fArray& unitCircle = unitCircle_();
+    for (Int i = 0; i < numCircleSamples; ++i) {
+        geometry::Vec2f v1 = unitCircle[i];
+        geometry::Vec2f v2 = unitCircle[i + 1];
+        geometry::Vec2f p1 = center + radius * v1;
+        geometry::Vec2f q1 = center + (radius + borderWidth) * v1;
+        geometry::Vec2f p2 = center + radius * v2;
+        geometry::Vec2f q2 = center + (radius + borderWidth) * v2;
+        insertQuad_(a, p1, q1, p2, q2, color);
+    }
+}
+
+// Insert a circle-shaped cursor for the SL selector.
+//
+void insertSLCursorCircle_(
+    core::FloatArray& a,
+    const core::Colorf& fillColor,
+    const geometry::Vec2f& center,
+    float radius) {
+
+    insertCircleBorder_(a, cursorOuterColor, center, radius + 1, 1);
+    insertCircleBorder_(a, cursorInnerColor, center, radius, 1);
+    insertCircle_(a, fillColor, center, radius);
 }
 
 // clang-format on
@@ -668,6 +839,9 @@ void ColorPaletteSelector::onPaintDraw(
         core::Color borderColor = detail::getColor(this, graphics::strings::border_color);
         updateMetrics_(); // TODO: only update if we know that they have changed
         const Metrics& m = metrics_;
+
+        core::Colorf selectedColorf(
+            selectedColor_.r(), selectedColor_.g(), selectedColor_.b());
 
         // Get misc color info
         Int lSteps = numLightnessSteps_;
@@ -734,7 +908,7 @@ void ColorPaletteSelector::onPaintDraw(
             double l = i * dl;
             double s = j * ds;
             auto c = core::Color::hsl(hue, s, l).round8b();
-            insertCellHighlight(a, c, x1, y1, x2, y2);
+            insertSLCursorQuad_(a, c, x1, y1, x2, y2);
         }
         // Draw selected color
         if (isContinuous_ || !isSelectedColorExact_) {
@@ -749,13 +923,13 @@ void ColorPaletteSelector::onPaintDraw(
             }
             geometry::Rect2f rect =
                 m.saturationLightnessRect - Margins(vmargins, hmargins);
-            float radius = 7;
-            float x = rect.xMin() + selectedLightness_ * rect.width();
-            float y = rect.yMin() + selectedSaturation_ * rect.height();
-            float x1 = x - radius;
-            float x2 = x + radius;
-            float y1 = y - radius;
-            float y2 = y + radius;
+            float radius = 5;
+            geometry::Vec2f center(
+                rect.xMin() + selectedLightness_ * rect.width(),
+                rect.yMin() + selectedSaturation_ * rect.height());
+            insertSLCursorCircle_(a, selectedColorf, center, radius);
+
+            /*
             style::BorderRadius radiusStyle(style::LengthOrPercentage(50));
             style::BorderRadiuses radiusesStyle(radiusStyle);
             detail::insertRect(
@@ -765,6 +939,7 @@ void ColorPaletteSelector::onPaintDraw(
                 geometry::Rect2f(x1, y1, x2, y2),
                 radiusesStyle,
                 3);
+*/
         }
         else {
             Int i = selectedLightnessIndex_;
@@ -777,7 +952,7 @@ void ColorPaletteSelector::onPaintDraw(
             double l = i * dl;
             double s = j * ds;
             auto c = core::Color::hsl(hue, s, l).round8b();
-            insertCellHighlight(a, c, x1, y1, x2, y2);
+            insertSLCursorQuad_(a, c, x1, y1, x2, y2);
         }
 
         // Draw hue selector
@@ -940,36 +1115,6 @@ void ColorPaletteSelector::onPaintDraw(
 
 namespace {
 
-constexpr Int numQuarterCircleSamples = 8;
-constexpr Int numCircleSamples = 4 * numQuarterCircleSamples;
-constexpr Int circleLeftIndexBegin = 0;
-constexpr Int circleTopIndex = numQuarterCircleSamples;
-//constexpr Int circleRightIndex = 2 * numQuarterCircleSamples;
-constexpr Int circleBottomIndex = 3 * numQuarterCircleSamples;
-constexpr Int circleLeftIndexEnd = 4 * numQuarterCircleSamples;
-
-// Starts at (-1, 0) then go clockwise (assuming y axis points down).
-// Repeats the first and last sample: returned array length is numSamples + 1.
-//
-geometry::Vec2fArray computeUnitCircle_(Int numSamples) {
-    geometry::Vec2fArray res;
-    res.reserve(numSamples + 1);
-    double dt = 2.0 * core::pi / numSamples;
-    for (Int i = 0; i < numSamples; ++i) {
-        double t = i * dt;
-        float cost = std::cos(t);
-        float sint = std::sin(t);
-        res.emplaceLast(-cost, -sint);
-    }
-    res.append(res.first());
-    return res;
-}
-
-const geometry::Vec2fArray& unitCircle_() {
-    static geometry::Vec2fArray unitCircle = computeUnitCircle_(numCircleSamples);
-    return unitCircle;
-}
-
 // repeats first and last
 //
 geometry::Vec2fArray computeHuePolygon_(
@@ -1032,7 +1177,7 @@ core::Array<HueVec> computeHueVecs_(
 }
 
 // Compute the hue corresponding to each sample.
-// This is based on the arclength of the ellipsoid at distance r.
+// This is based on the arclength of the capsule at distance r.
 // So if you want the hue to "stetch more" in the half-disk parts of the
 // hue selector, you can use a lower value of r.
 core::FloatArray computeHues_(
@@ -1057,39 +1202,6 @@ core::FloatArray computeHues_(
         res[i] *= multiplier;
     }
     return res;
-}
-
-void insertQuad_(
-    core::FloatArray& a,
-    const geometry::Vec2f& p1,
-    const geometry::Vec2f& q1,
-    const geometry::Vec2f& p2,
-    const geometry::Vec2f& q2,
-    const core::Colorf& c) {
-
-    float p1x = p1.x();
-    float p1y = p1.y();
-    float q1x = q1.x();
-    float q1y = q1.y();
-
-    float p2x = p2.x();
-    float p2y = p2.y();
-    float q2x = q2.x();
-    float q2y = q2.y();
-
-    float r = c.r();
-    float g = c.g();
-    float b = c.b();
-
-    // clang-format off
-    a.extend({
-              p1x, p1y, r, g, b,
-              q1x, q1y, r, g, b,
-              p2x, p2y, r, g, b,
-              p2x, p2y, r, g, b,
-              q1x, q1y, r, g, b,
-              q2x, q2y, r, g, b});
-    // clang-format on
 }
 
 void insertHueQuad_(
@@ -1340,10 +1452,11 @@ struct HueCursorStyle {
 
 // Insert a quad-shaped cursor for the hue selector.
 //
-void insertCursorQuad_(
+void insertHueCursorQuad_(
     core::FloatArray& a,
     const core::FloatArray& hues,
     const core::Array<HueVec>& hueVecs,
+    const core::Colorf& fillColor,
     float hue,
     float startHeight,
     float endHeight,
@@ -1392,6 +1505,9 @@ void insertCursorQuad_(
     insertQuad_(a, q2, r2, q3, r3, style.innerColor);
     insertQuad_(a, q3, r3, q4, r4, style.innerColor);
     insertQuad_(a, q4, r4, q1, r1, style.innerColor);
+
+    // fill
+    insertQuad_(a, r1, r2, r4, r3, fillColor);
 }
 
 // Insert a pie-shaped cursor for the hue selector.
@@ -1400,6 +1516,7 @@ void insertCursorPie_(
     core::FloatArray& a,
     const core::FloatArray& hues,
     const core::Array<HueVec>& hueVecs,
+    const core::Colorf& fillColor,
     float hue1,
     float hue2,
     float startHeight,
@@ -1409,8 +1526,9 @@ void insertCursorPie_(
     // shorter names to make function calls fit in one line
     const float h1 = startHeight;
     const float h2 = endHeight;
-    const core::Colorf& co = style.outerColor;
-    const core::Colorf& ci = style.innerColor;
+    const core::Colorf& fc = fillColor;
+    const core::Colorf& oc = style.outerColor;
+    const core::Colorf& ic = style.innerColor;
     const float vd1 = style.vd1;
     const float vd2 = style.vd2;
     const float vd3 = style.vd3;
@@ -1418,17 +1536,22 @@ void insertCursorPie_(
     const float hd2 = style.hd2;
     const float hd3 = style.hd3;
 
+    // Draw fill color
+    insertHuePie_(a, hues, hueVecs, hue1, hue2, fc, h1 - vd1, h2 + vd1);
+
     // Draw horizontal (or arc-shaped) bars
-    insertHuePie_(a, hues, hueVecs, hue1, hue2, co, h2 + vd2, h2 + vd3);
-    insertHuePie_(a, hues, hueVecs, hue1, hue2, ci, h2 + vd1, h2 + vd2);
-    insertHuePie_(a, hues, hueVecs, hue1, hue2, ci, h1 - vd2, h1 - vd1);
-    insertHuePie_(a, hues, hueVecs, hue1, hue2, co, h1 - vd3, h1 - vd2);
+    insertHuePie_(a, hues, hueVecs, hue1, hue2, oc, h2 + vd2, h2 + vd3);
+    insertHuePie_(a, hues, hueVecs, hue1, hue2, ic, h2 + vd1, h2 + vd2);
+    insertHuePie_(a, hues, hueVecs, hue1, hue2, ic, h1 - vd2, h1 - vd1);
+    insertHuePie_(a, hues, hueVecs, hue1, hue2, oc, h1 - vd3, h1 - vd2);
 
     // Draw vertical bars
-    insertHueQuad_(a, hues, hueVecs, hue1, co, -hd3, -hd2, h1 - vd3, h2 + vd3);
-    insertHueQuad_(a, hues, hueVecs, hue1, ci, -hd2, -hd1, h1 - vd2, h2 + vd2);
-    insertHueQuad_(a, hues, hueVecs, hue2, ci, +hd1, +hd2, h1 - vd2, h2 + vd2);
-    insertHueQuad_(a, hues, hueVecs, hue2, co, +hd2, +hd3, h1 - vd3, h2 + vd3);
+    insertHueQuad_(a, hues, hueVecs, hue1, oc, -hd3, -hd2, h1 - vd3, h2 + vd3);
+    insertHueQuad_(a, hues, hueVecs, hue1, ic, -hd2, -hd1, h1 - vd2, h2 + vd2);
+    insertHueQuad_(a, hues, hueVecs, hue2, ic, +hd1, +hd2, h1 - vd2, h2 + vd2);
+    insertHueQuad_(a, hues, hueVecs, hue2, oc, +hd2, +hd3, h1 - vd3, h2 + vd3);
+
+    // TODO: draw fill color
 }
 
 float hueFromMousePosition_(
@@ -1507,7 +1630,7 @@ float hueFromMousePosition_(
     return hue;
 }
 
-std::array<geometry::Vec2f, 2> getHueEllipsoidCenters_(const geometry::Rect2f& rect) {
+std::array<geometry::Vec2f, 2> getHueCapsuleCenters_(const geometry::Rect2f& rect) {
     float height = rect.height();
     float right = rect.xMax();
     float left = rect.xMin();
@@ -1519,7 +1642,7 @@ std::array<geometry::Vec2f, 2> getHueEllipsoidCenters_(const geometry::Rect2f& r
 }
 
 // Number of samples in the top and bottom of the "rectangle" part of the hue
-// ellipsoid. The given `rect` is the whole hue selector rectangle.
+// capsule. The given `rect` is the whole hue selector rectangle.
 //
 Int getNumHSamples_(const geometry::Rect2f&) {
     // For now it's constant, but it may make sense to have
@@ -1531,7 +1654,7 @@ Int getNumHSamples_(const geometry::Rect2f&) {
 
 void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
 
-    // The hue selector is an "ellipsoid" made of two half-disks and one rectangle.
+    // The hue selector is an "capsule" made of two half-disks and one rectangle.
     // The diameter of each half-disk is the same as the height of the rectangle.
     //
     //        .──┬───────────────────────┬──.      ^
@@ -1550,12 +1673,12 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     float height = rect.height();
     float r = 0.5f * height;
 
-    auto [p, q] = getHueEllipsoidCenters_(rect);
+    auto [p, q] = getHueCapsuleCenters_(rect);
 
     const Int numHSamples = getNumHSamples_(rect);
 
     float borderWidth = 1.0f;
-    float outerWidth = 8.0f;
+    float outerWidth = 3.0f;
     float holeRadius = 4.0f;
 
     float r1 = holeRadius;
@@ -1584,8 +1707,16 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
             float hue = i * dhue;
             float hue1 = hue - 0.5f * dhue;
             float hue2 = hue1 + dhue;
-            core::Colorf color1 =
-                core::Colorf::hsl(hue, selectedSaturation_, selectedLightness_);
+
+            core::Colorf color1 = colorfFromHslIndices(
+                numHueSteps_,
+                numSaturationSteps_,
+                numLightnessSteps_,
+                i,
+                selectedSaturationIndex_,
+                selectedLightnessIndex_);
+
+            core::Colorf::hsl(hue, selectedSaturation_, selectedLightness_);
             core::Colorf color2 = core::Colorf::hsl(hue, 1.0f, 0.5f);
             insertHuePie_(a, hues_, hueVecs, hue1, hue2, color1, r1, r3);
             insertHuePie_(a, hues_, hueVecs, hue1, hue2, color2, r3, r5);
@@ -1595,71 +1726,6 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     // XXX Fix bug where selectedHue_ was == 2010 after changing the number of hue steps
     // from a high number to a low number. Presumably a big hueIndex wasn't updated and
     // now meant a huge selectedHue_ after multiplying by 360 / newNumHueSteps.
-
-    /*
-    HueCursorStyle continuousStyle;
-    continuousStyle.innerColor = cursorInnerColor;
-    continuousStyle.outerColor = cursorOuterColor;
-    continuousStyle.vd1 = -1;
-    continuousStyle.vd2 = 0;
-    continuousStyle.vd3 = 1;
-    continuousStyle.hd1 = 0;
-    continuousStyle.hd2 = 1;
-    continuousStyle.hd3 = 2;
-
-    HueCursorStyle stepsStyle;
-    stepsStyle.innerColor = cursorInnerColor;
-    stepsStyle.outerColor = cursorOuterColor;
-    stepsStyle.vd1 = -1;
-    stepsStyle.vd2 = 0;
-    stepsStyle.vd3 = 1;
-    stepsStyle.hd1 = -2;
-    stepsStyle.hd2 = -1;
-    stepsStyle.hd3 = 0;
-
-    HueCursorStyle stepsStyleHighlight;
-    stepsStyleHighlight.innerColor = cursorInnerColor;
-    stepsStyleHighlight.outerColor = cursorInnerColor;
-    stepsStyleHighlight.vd1 = -1;
-    stepsStyleHighlight.vd2 = 0;
-    stepsStyleHighlight.vd3 = 1;
-    stepsStyleHighlight.hd1 = -2;
-    stepsStyleHighlight.hd2 = -1;
-    stepsStyleHighlight.hd3 = 0;
-
-*/
-
-    /*
-    HueCursorStyle continuousStyle;
-    continuousStyle.innerColor = cursorInnerColor;
-    continuousStyle.outerColor = cursorOuterColor;
-    continuousStyle.vd1 = -3;
-    continuousStyle.vd2 = -1;
-    continuousStyle.vd3 = 0;
-    continuousStyle.hd1 = 0;
-    continuousStyle.hd2 = 2;
-    continuousStyle.hd3 = 3;
-
-    HueCursorStyle stepsStyle;
-    stepsStyle.innerColor = cursorInnerColor;
-    stepsStyle.outerColor = cursorOuterColor;
-    stepsStyle.vd1 = -3;
-    stepsStyle.vd2 = -1;
-    stepsStyle.vd3 = 0;
-    stepsStyle.hd1 = -3;
-    stepsStyle.hd2 = -1;
-    stepsStyle.hd3 = 0;
-
-    HueCursorStyle stepsStyleHighlight;
-    stepsStyleHighlight.innerColor = cursorInnerColor;
-    stepsStyleHighlight.outerColor = cursorOuterColor;
-    stepsStyleHighlight.vd1 = -3;
-    stepsStyleHighlight.vd2 = -1;
-    stepsStyleHighlight.vd3 = 0;
-    stepsStyleHighlight.hd1 = -3;
-    stepsStyleHighlight.hd2 = -1;
-    stepsStyleHighlight.hd3 = 0;
-*/
 
     HueCursorStyle continuousStyle;
     continuousStyle.innerColor = cursorInnerColor;
@@ -1691,28 +1757,69 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     stepsStyleHighlight.hd2 = -1;
     stepsStyleHighlight.hd3 = 0;
 
+    float cursorStart = r1 + 2;
+    float cursorEnd = r3 - 2;
+
     // Draw highlighted color cursor
     if (!isContinuous_ && hoveredHueIndex_ != -1) {
         float dhue = 360.0f / numHueSteps_;
         float hue = hoveredHueIndex_ * dhue;
         float hue1 = hue - 0.5f * dhue;
         float hue2 = hue1 + dhue;
-        insertCursorPie_(a, hues_, hueVecs, hue1, hue2, r1, r5, stepsStyleHighlight);
+
+        core::Colorf color = colorfFromHslIndices(
+            numHueSteps_,
+            numSaturationSteps_,
+            numLightnessSteps_,
+            hoveredHueIndex_,
+            selectedSaturationIndex_,
+            selectedLightnessIndex_);
+
+        insertCursorPie_(
+            a,
+            hues_,
+            hueVecs,
+            color,
+            hue1,
+            hue2,
+            cursorStart,
+            cursorEnd,
+            stepsStyleHighlight);
     }
 
     // Draw selected color cursor
+    core::Colorf selectedColorf(
+        selectedColor_.r(), selectedColor_.g(), selectedColor_.b());
     if (isContinuous_ || !isSelectedColorExact_) {
-        bool usePieSelectionForContinuous = false;
+        bool usePieSelectionForContinuous = true;
         if (usePieSelectionForContinuous) {
-            float dhue = 5;
+            float dhue = 10;
             float hue = selectedHue_;
             float hue1 = hue - 0.5f * dhue;
             float hue2 = hue1 + dhue;
-            insertCursorPie_(a, hues_, hueVecs, hue1, hue2, r1, r5, continuousStyle);
+            insertCursorPie_(
+                a,
+                hues_,
+                hueVecs,
+                selectedColorf,
+                hue1,
+                hue2,
+                cursorStart,
+                cursorEnd,
+                continuousStyle);
         }
         else {
-            insertCursorQuad_(
-                a, hues_, hueVecs, selectedHue_, r1, r5, -3, 3, continuousStyle);
+            insertHueCursorQuad_(
+                a,
+                hues_,
+                hueVecs,
+                selectedColorf,
+                selectedHue_,
+                cursorStart,
+                cursorEnd,
+                -3,
+                3,
+                continuousStyle);
         }
     }
     else {
@@ -1720,7 +1827,17 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
         float hue = selectedHueIndex_ * dhue;
         float hue1 = hue - 0.5f * dhue;
         float hue2 = hue1 + dhue;
-        insertCursorPie_(a, hues_, hueVecs, hue1, hue2, r1, r5, stepsStyle);
+
+        core::Colorf color = colorfFromHslIndices(
+            numHueSteps_,
+            numSaturationSteps_,
+            numLightnessSteps_,
+            selectedHueIndex_,
+            selectedSaturationIndex_,
+            selectedLightnessIndex_);
+
+        insertCursorPie_(
+            a, hues_, hueVecs, color, hue1, hue2, cursorStart, cursorEnd, stepsStyle);
     }
 }
 
@@ -1953,7 +2070,7 @@ ColorPaletteSelector::hoveredSaturationLightness_(const geometry::Vec2f& p) {
 
 Int ColorPaletteSelector::hoveredHue_(const geometry::Vec2f& p) {
     const geometry::Rect2f& r = metrics_.hueRect;
-    auto [p_, q_] = getHueEllipsoidCenters_(r);
+    auto [p_, q_] = getHueCapsuleCenters_(r);
     float hue = hueFromMousePosition_(p, p_, q_, hues_);
     float dhue = 360.0f / numHueSteps_;
     Int k = std::round(hue / dhue);
@@ -2100,7 +2217,7 @@ bool ColorPaletteSelector::selectContinuousColorFromPosition_(const geometry::Ve
         }
         else {
             const geometry::Rect2f& r = metrics_.hueRect;
-            auto [p_, q_] = getHueEllipsoidCenters_(r);
+            auto [p_, q_] = getHueCapsuleCenters_(r);
             selectedHue_ = hueFromMousePosition_(p, p_, q_, hues_);
         }
     }
@@ -2302,13 +2419,26 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
                 x1 = hint(x1, m.hinting);
                 x2 = hint(x2, m.hinting);
                 geometry::Rect2f itemRect(x1, y1, x2, y2);
+
                 if (i == hoveredColorIndex_ || i == selectedColorIndex_) {
-                    borderColor_ = highlightColor;
-                    borderWidth_ += 2;
-                    itemRect = itemRect + ui::Margins(2);
+                    geometry::Rect2f borderRect2 = itemRect + ui::Margins(2);
+                    detail::insertRect(
+                        a,
+                        core::colors::transparent,
+                        core::colors::black,
+                        borderRect2,
+                        radiuses,
+                        1);
+                    geometry::Rect2f borderRect1 = itemRect + ui::Margins(1);
+                    detail::insertRect(
+                        a,
+                        core::colors::transparent,
+                        core::colors::white,
+                        borderRect1,
+                        radiuses,
+                        1);
                 }
-                detail::insertRect(
-                    a, color, borderColor_, itemRect, radiuses, borderWidth_);
+                detail::insertRect(a, color, itemRect, radiuses);
             }
         }
         engine->updateVertexBufferData(triangles_, std::move(a));
