@@ -731,6 +731,20 @@ public:
     ///
     virtual bool onMouseRelease(MouseEvent* event);
 
+    /// Returns whether this widget children are allowed to be hovered or not.
+    ///
+    bool isChildHoverEnabled() const {
+        return isChildHoverEnabled_;
+    }
+
+    /// Sets whether this widget children are allowed to be hovered or not.
+    ///
+    /// It is reset to true whenever the widget is hover-unlocked.
+    ///
+    void setChildHoverEnabled(bool enabled) {
+        isChildHoverEnabled_ = enabled;
+    }
+
     /// Returns whether this widget is hovered.
     ///
     /// During a mouse event sequence handled by a target widget, the chain
@@ -1072,6 +1086,8 @@ protected:
         pressedButtons_ = buttons;
     }
 
+    /// Override this function if you wish to handle changes of style.
+    ///
     void onStyleChanged() override;
 
     /// Override this function if you wish to handle the addition of
@@ -1094,8 +1110,16 @@ protected:
     ///
     virtual bool onMouseLeave();
 
+    /// Override this function if you wish to do something when the widget
+    /// becomes visible. "Visible" here means not invisible nor invisible by
+    /// inheritance, and it can still be occluded.
+    ///
     virtual void onVisible();
 
+    /// Override this function if you wish to do something when the widget
+    /// becomes hidden. "Hidden" here means invisible or invisible by
+    /// inheritance. An occluded widget is not hidden.
+    ///
     virtual void onHidden();
 
     /// Computes the preferred size of this widget based on its size policy, as

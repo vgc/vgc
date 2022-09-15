@@ -447,17 +447,26 @@ void Widget::stopKeyboardCapture() {
 }
 
 bool Widget::mouseMove(MouseEvent* event) {
-    VGC_ASSERT(isRoot());
+    if (!isRoot()) {
+        VGC_WARNING(LogVgcUi, "mouseMove() can only be called on a root widget.");
+        return false;
+    }
     return mouseMove_(event);
 }
 
 bool Widget::mousePress(MouseEvent* event) {
-    VGC_ASSERT(isRoot());
+    if (!isRoot()) {
+        VGC_WARNING(LogVgcUi, "mousePress() can only be called on a root widget.");
+        return false;
+    }
     return mousePress_(event);
 }
 
 bool Widget::mouseRelease(MouseEvent* event) {
-    VGC_ASSERT(isRoot());
+    if (!isRoot()) {
+        VGC_WARNING(LogVgcUi, "mouseRelease() can only be called on a root widget.");
+        return false;
+    }
     return mouseRelease_(event);
 }
 
