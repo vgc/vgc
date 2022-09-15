@@ -454,7 +454,7 @@ public:
     /// geometry::Vec2f bottomLeft = rect.corner(0, 1);
     /// ```
     ///
-    constexpr geometry::Vec2f corner(Int xIndex, Int yIndex) {
+    constexpr geometry::Vec2f corner(Int xIndex, Int yIndex) const {
         return geometry::Vec2f(
             xIndex ? xMax() : xMin(),
             yIndex ? yMax() : yMin());
@@ -472,7 +472,7 @@ public:
     /// geometry::Vec2f bottomLeft = rect.corner(3);
     /// ```
     ///
-    constexpr geometry::Vec2f corner(Int index) {
+    constexpr geometry::Vec2f corner(Int index) const {
         switch (index) {
         case 0:
             return geometry::Vec2f(xMin(), yMin());
