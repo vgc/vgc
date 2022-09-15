@@ -320,7 +320,9 @@ void Widget::requestGeometryUpdate() {
             }
         }
         else if (!widget->isPreferredSizeComputed_) {
-            VGC_ASSERT(isRepaintRequested_);
+            if (!isRepaintRequested_) {
+                VGC_ERROR(LogVgcUi, "Widget seems to have been repainted before its geometry was updated.");
+            }
             // isGeometryUpdateRequested_
             // && isRepaintRequested_
             // && !isPreferredSizeComputed_
