@@ -50,6 +50,9 @@ VGC_DECLARE_OBJECT(Widget);
 
 // clang-format off
 
+/// \enum vgc::ui::PaintOption
+/// \brief Specifies widget paint options.
+///
 enum class PaintOption : UInt64 {
     None      = 0x00,
     Resizing  = 0x01,
@@ -72,6 +75,9 @@ enum class FocusPolicy : UInt8 {
 };
 VGC_DEFINE_FLAGS(FocusPolicyFlags, FocusPolicy)
 
+/// \enum vgc::ui::Visibility
+/// \brief Specifies widget visibility.
+///
 enum class Visibility : bool {
 
     /// Means "not invisible". A widget with such visibility could also be
@@ -84,6 +90,17 @@ enum class Visibility : bool {
     /// are by inheritance "not visible" either.
     ///
     Invisible
+};
+
+/// \enum vgc::ui::HandledEventPolicy
+/// \brief Specifies widget policy about already handled events.
+///
+/// Specifies whether the widget wants to receive events in the
+/// bubbling phase even if one of their children already handled it.
+/// 
+enum class HandledEventPolicy : bool {
+    Receive,
+    Skip
 };
 
 /// \enum vgc::ui::FocusReason
@@ -552,6 +569,26 @@ public:
     /// needs to be repainted for a frame.
     ///
     void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
+
+    /// Returns the widget policy regarding handled events.
+    ///
+    /// The default value is HandledEventPolicy::Skip.
+    ///
+    /// \sa HandledEventPolicy.
+    ///
+    HandledEventPolicy handledEventPolicy() const {
+        return handledEventPolicy_;
+    }
+
+    /// Sets the widget policy regarding handled events.
+    ///
+    /// The default value is HandledEventPolicy::Skip.
+    ///
+    /// \sa HandledEventPolicy.
+    ///
+    void setHandledEventPolicy(HandledEventPolicy handledEventPolicy) {
+        handledEventPolicy_ = handledEventPolicy;
+    }
 
     /// Starts capturing the mouse.
     ///
@@ -1204,6 +1241,9 @@ private:
 
     void prePaintUpdateGeometry_();
 
+    // Events
+    HandledEventPolicy handledEventPolicy_ = HandledEventPolicy::Skip;
+
     // Mouse
     Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
     Widget* hoverChainParent_ = nullptr;
@@ -1215,9 +1255,10 @@ private:
     bool isChildHoverEnabled_ = true;
     MouseButtons pressedButtons_ = {};
 
-    bool mouseMove_(MouseEvent* event);
-    bool mousePress_(MouseEvent* event);
-    bool mouseRelease_(MouseEvent* event);
+    bool checkAlreadyHovered_();
+    void mouseMove_(MouseEvent* event);
+    void mousePress_(MouseEvent* event);
+    void mouseRelease_(MouseEvent* event);
 
     void onUnhover_();
 

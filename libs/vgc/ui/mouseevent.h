@@ -175,16 +175,11 @@ public:
         modifierKeys_ = modifierKeys;
     }
 
-    bool isStopPropagationRequested() const {
-        return stopPropagation_;
-    }
-
-    /// Tells the mouse event system to stop propagating this event.
+    /// Returns the hover-lock policy that should be used when this event
+    /// is returned from a handler in the bubbling phase.
     ///
-    void stopPropagation() {
-        stopPropagation_ = true;
-    }
-
+    /// \sa HoverLockPolicy.
+    ///
     HoverLockPolicy hoverLockPolicy() const {
         return hoverLockPolicy_;
     }
@@ -202,7 +197,6 @@ private:
     MouseButton button_;
     geometry::Vec2f position_;
     ModifierKeys modifierKeys_;
-    bool stopPropagation_ = false;
     HoverLockPolicy hoverLockPolicy_ = {};
 };
 

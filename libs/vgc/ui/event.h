@@ -23,6 +23,7 @@
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Event);
+VGC_DECLARE_OBJECT(Widget);
 
 /// \class vgc::ui::Event
 /// \brief Base class of all events handled in the user interface.
@@ -41,6 +42,30 @@ public:
     /// Creates an Event.
     ///
     static EventPtr create();
+
+    /// Returns whether a handler requested to stop propagating this event.
+    ///
+    bool isStopPropagationRequested() const {
+        return stopPropagation_;
+    }
+
+    /// Tells the mouse event system to stop propagating this event.
+    ///
+    void stopPropagation() {
+        stopPropagation_ = true;
+    }
+
+    /// Returns whether a handler already handled this event.
+    ///
+    bool isHandled() const {
+        return handled_;
+    }
+
+private:
+    friend Widget;
+
+    bool stopPropagation_ = false;
+    bool handled_ = false;
 };
 
 } // namespace vgc::ui

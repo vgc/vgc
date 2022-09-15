@@ -451,7 +451,8 @@ bool Widget::mouseMove(MouseEvent* event) {
         VGC_WARNING(LogVgcUi, "mouseMove() can only be called on a root widget.");
         return false;
     }
-    return mouseMove_(event);
+    mouseMove_(event);
+    return event->isHandled();
 }
 
 bool Widget::mousePress(MouseEvent* event) {
@@ -459,7 +460,8 @@ bool Widget::mousePress(MouseEvent* event) {
         VGC_WARNING(LogVgcUi, "mousePress() can only be called on a root widget.");
         return false;
     }
-    return mousePress_(event);
+    mousePress_(event);
+    return event->isHandled();
 }
 
 bool Widget::mouseRelease(MouseEvent* event) {
@@ -467,7 +469,8 @@ bool Widget::mouseRelease(MouseEvent* event) {
         VGC_WARNING(LogVgcUi, "mouseRelease() can only be called on a root widget.");
         return false;
     }
-    return mouseRelease_(event);
+    mouseRelease_(event);
+    return event->isHandled();
 }
 
 void Widget::preMouseMove(MouseEvent* /*event*/) {
@@ -494,34 +497,40 @@ bool Widget::onMouseRelease(MouseEvent* /*event*/) {
     return false;
 }
 
-bool Widget::mouseMove_(MouseEvent* event) {
-
-    bool handled = false; // By default, a widget does not handle this mouse event.
-    geometry::Vec2f eventPos = event->position();
-
+bool Widget::checkAlreadyHovered_() {
     if (!isHovered_) {
+        WidgetPtr thisPtr = this;
         VGC_WARNING(
             LogVgcUi,
             "Widget should have been hovered prior to receiving a mouse event.");
-        // XXX temporary fix until Window does mouseEnter and mouseLeave on root.
-        if (!parent()) {
-            isHovered_ = geometry().contains(eventPos);
-        }
-        if (!isHovered_) {
+        setHovered(true);
+        if (!thisPtr.isAlive()) {
             return false;
         }
+    }
+    return true;
+}
+
+void Widget::mouseMove_(MouseEvent* event) {
+
+    geometry::Vec2f eventPos = event->position();
+
+    if (!checkAlreadyHovered_()) {
+        return;
     }
 
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
     preMouseMove(event);
     if (!thisPtr.isAlive()) {
-        return true; // Widget got killed. Event can be considered handled.
+        // Widget got killed. Event can be considered handled.
+        event->handled_ = true;
+        return;
     }
 
     // Handle stop propagation.
     if (event->isStopPropagationRequested()) {
-        return false;
+        return;
     }
 
     // Get hover-chain child.
@@ -531,11 +540,14 @@ bool Widget::mouseMove_(MouseEvent* event) {
         hcChild = computeHoverChainChild(eventPos);
         if (!setHoverChainChild(hcChild)) {
             // Exceptionnal things happened. Event can be considered handled.
-            handled = true;
+            hcChild = nullptr;
+            event->handled_ = true;
         }
         // Check for deaths.
         if (!thisPtr.isAlive()) {
-            return true; // Widget got killed. Event can be considered handled.
+            // Widget got killed. Event can be considered handled.
+            event->handled_ = true;
+            return;
         }
     }
 
@@ -545,49 +557,49 @@ bool Widget::mouseMove_(MouseEvent* event) {
         WidgetPtr hcChildPtr = hcChild;
         // Call handler.
         event->setPosition(mapTo(hcChild, eventPos));
-        handled = hcChild->mouseMove_(event);
+        hcChild->mouseMove_(event);
         // Check for deaths.
         if (!thisPtr.isAlive() || !hcChildPtr.isAlive()) {
             // Widget got killed. Event can be considered handled.
-            return true;
+            event->handled_ = true;
+            return;
         }
         // Handle stop propagation.
         if (event->isStopPropagationRequested()) {
-            return handled;
+            return;
         }
         // Restore event position.
         event->setPosition(eventPos);
     }
 
-    // Reset the hover-lock policy.
-    event->setHoverLockPolicy(HoverLockPolicy::Default);
+    HoverLockPolicy hoverLockPolicy = HoverLockPolicy::Default;
 
-    // User-defined bubble phase handler.
-    onMouseMove(event);
-    if (!thisPtr.isAlive()) {
-        return true; // Widget got killed. Event can be considered handled.
+    if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
+        event->setHoverLockPolicy(HoverLockPolicy::Default);
+        // User-defined bubble phase handler.
+        event->handled_ |= onMouseMove(event);
+        if (!thisPtr.isAlive()) {
+            // Widget got killed. Event can be considered handled.
+            event->handled_ = true;
+            return;
+        }
+        hoverLockPolicy = event->hoverLockPolicy();
     }
 
     // Update hover-lock state based on the given policy.
     // By default, we keep current state.
-    switch (event->hoverLockPolicy()) {
-    case HoverLockPolicy::ForceUnlock: {
+    switch (hoverLockPolicy) {
+    case HoverLockPolicy::ForceUnlock:
         unlockHover_(); // It also releases pressed buttons.
         break;
-    }
-    case HoverLockPolicy::ForceLock: {
+    case HoverLockPolicy::ForceLock:
         lockHover_();
         break;
-    }
     case HoverLockPolicy::Default:
-    default: {
+    default:
         // Keep currrent hover-lock state.
         break;
     }
-    }
-
-    // Let our parent handle any stop propagation request.
-    return handled;
 }
 
 namespace {
@@ -613,22 +625,27 @@ void clearNonStickyNonChildFocus_(Widget* parent, Widget* child) {
 
 } // namespace
 
-bool Widget::mousePress_(MouseEvent* event) {
+void Widget::mousePress_(MouseEvent* event) {
 
-    bool handled = false; // By default, a widget does not handle this mouse event.
     const geometry::Vec2f eventPos = event->position();
     const bool otherWasPressed = !pressedButtons_.isEmpty();
+
+    if (!checkAlreadyHovered_()) {
+        return;
+    }
 
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
     preMousePress(event);
     if (!thisPtr.isAlive()) {
-        return true; // Widget got killed. Event can be considered handled.
+        // Widget got killed. Event can be considered handled.
+        event->handled_ = true;
+        return;
     }
 
     // Handle stop propagation.
     if (event->isStopPropagationRequested()) {
-        return false;
+        return;
     }
 
     // Get hover-chain child without update.
@@ -652,7 +669,8 @@ bool Widget::mousePress_(MouseEvent* event) {
         // Check for deaths.
         if (!thisPtr.isAlive()) {
             // Widget got killed. Event can be considered handled.
-            return true;
+            event->handled_ = true;
+            return;
         }
     }
 
@@ -662,15 +680,16 @@ bool Widget::mousePress_(MouseEvent* event) {
         WidgetPtr hcChildPtr = hcChild;
         // Call handler.
         event->setPosition(mapTo(hcChild, eventPos));
-        handled = hcChild->mousePress_(event);
+        hcChild->mousePress_(event);
         // Check for deaths.
         if (!thisPtr.isAlive() || !hcChildPtr.isAlive()) {
             // Widget got killed. Event can be considered handled.
-            return true;
+            event->handled_ = true;
+            return;
         }
         // Handle stop propagation.
         if (event->isStopPropagationRequested()) {
-            return handled;
+            return;
         }
         // Restore event position.
         event->setPosition(eventPos);
@@ -683,63 +702,55 @@ bool Widget::mousePress_(MouseEvent* event) {
         isChildHoverEnabled_ = false;
     }
 
-    // Reset the hover-lock policy.
-    event->setHoverLockPolicy(HoverLockPolicy::Default);
+    HoverLockPolicy hoverLockPolicy = HoverLockPolicy::Default;
 
-    // User-defined bubble phase handler.
-    onMousePress(event);
-    if (!thisPtr.isAlive()) {
-        return true; // Widget got killed. Event can be considered handled.
+    if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
+        event->setHoverLockPolicy(HoverLockPolicy::Default);
+        // User-defined bubble phase handler.
+        event->handled_ |= onMousePress(event);
+        if (!thisPtr.isAlive()) {
+            // Widget got killed. Event can be considered handled.
+            event->handled_ = true;
+            return;
+        }
+        hoverLockPolicy = event->hoverLockPolicy();
     }
 
     // Update hover-lock state based on the given policy.
     // By default, we hover-lock the widget to capture the "press-move-release"
     // sequence.
-    switch (event->hoverLockPolicy()) {
-    case HoverLockPolicy::ForceUnlock: {
+    switch (hoverLockPolicy) {
+    case HoverLockPolicy::ForceUnlock:
         unlockHover_(); // It also releases pressed buttons.
         break;
-    }
     case HoverLockPolicy::ForceLock:
     case HoverLockPolicy::Default:
-    default: {
+    default:
         lockHover_();
         break;
     }
-    }
-
-    // Let our parent handle any stop propagation request.
-    return handled;
 }
 
-bool Widget::mouseRelease_(MouseEvent* event) {
+void Widget::mouseRelease_(MouseEvent* event) {
 
-    bool handled = false; // By default, a widget does not handle this mouse event.
     geometry::Vec2f eventPos = event->position();
 
-    if (!isHovered_) {
-        VGC_WARNING(
-            LogVgcUi,
-            "Widget should have been hovered prior to receiving a mouse event.");
-        // XXX temporary fix until Window does mouseEnter and mouseLeave on root.
-        if (!parent()) {
-            isHovered_ = geometry().contains(eventPos);
-        }
-        if (!isHovered_) {
-            return false;
-        }
+    if (!checkAlreadyHovered_()) {
+        return;
     }
 
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
     preMouseRelease(event);
     if (!thisPtr.isAlive()) {
-        return true; // Widget got killed. Event can be considered handled.
+        // Widget got killed. Event can be considered handled.
+        event->handled_ = true;
+        return;
     }
 
     // Handle stop propagation.
     if (event->isStopPropagationRequested()) {
-        return false;
+        return;
     }
 
     // Get hover-chain child without update.
@@ -755,46 +766,49 @@ bool Widget::mouseRelease_(MouseEvent* event) {
         WidgetPtr hcChildPtr = hcChild;
         // Call handler.
         event->setPosition(mapTo(hcChild, eventPos));
-        handled = hcChild->mouseRelease_(event);
+        hcChild->mouseRelease_(event);
         // Check for deaths.
         if (!thisPtr.isAlive() || !hcChildPtr.isAlive()) {
             // Widget got killed. Event can be considered handled.
-            return true;
+            event->handled_ = true;
+            return;
         }
         // Handle stop propagation.
         if (event->isStopPropagationRequested()) {
-            return handled;
+            return;
         }
         // Restore event position.
         event->setPosition(eventPos);
     }
 
-    // Reset the hover-lock policy.
-    event->setHoverLockPolicy(HoverLockPolicy::Default);
+    HoverLockPolicy hoverLockPolicy = HoverLockPolicy::Default;
 
-    // User-defined bubble phase handler.
-    onMouseRelease(event);
-    if (!thisPtr.isAlive()) {
-        return true; // Widget got killed. Event can be considered handled.
+    if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
+        event->setHoverLockPolicy(HoverLockPolicy::Default);
+        // User-defined bubble phase handler.
+        event->handled_ |= onMouseRelease(event);
+        if (!thisPtr.isAlive()) {
+            // Widget got killed. Event can be considered handled.
+            event->handled_ = true;
+            return;
+        }
+        hoverLockPolicy = event->hoverLockPolicy();
     }
 
     // Update hover-lock state based on the given policy.
     // By default, we keep the hover locked if buttons are still pressed,
     // otherwise unlock the hover.
     bool shouldLock = false;
-    switch (event->hoverLockPolicy()) {
-    case HoverLockPolicy::ForceUnlock: {
+    switch (hoverLockPolicy) {
+    case HoverLockPolicy::ForceUnlock:
         break;
-    }
-    case HoverLockPolicy::ForceLock: {
+    case HoverLockPolicy::ForceLock:
         shouldLock = true;
         break;
-    }
     case HoverLockPolicy::Default:
-    default: {
+    default:
         shouldLock = otherStillPressed;
         break;
-    }
     }
 
     if (shouldLock) {
@@ -816,7 +830,7 @@ bool Widget::mouseRelease_(MouseEvent* event) {
                 hcChild = computeHoverChainChild(relPos);
                 if (!hcParent->setHoverChainChild(hcChild)) {
                     // Exceptionnal things happened. Event can be considered handled.
-                    handled = true;
+                    event->handled_ = true;
                     break;
                 }
                 relPos = hcParent->mapTo(hcChild, relPos);
@@ -824,13 +838,12 @@ bool Widget::mouseRelease_(MouseEvent* event) {
             }
             // Check for deaths.
             if (!thisPtr.isAlive()) {
-                return true; // Widget got killed. Event can be considered handled.
+                // Widget got killed. Event can be considered handled.
+                event->handled_ = true;
+                return;
             }
         }
     }
-
-    // Let our parent handle any stop propagation request.
-    return handled;
 }
 
 Widget* Widget::computeHoverChainChild(geometry::Vec2f position) {
