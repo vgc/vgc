@@ -202,17 +202,46 @@ prepareMouseEvent(ui::Widget* root, QMouseEvent* event) {
 
 void Window::mouseMoveEvent(QMouseEvent* event) {
     auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
-    event->setAccepted(receiver->onMouseMove(vgcEvent.get()));
+
+    if (!widget_->isHovered()) {
+        if (widget_->geometry().contains(vgcEvent->position())) {
+            widget_->setHovered(true);
+            entered_ = true;
+        }
+        else {
+            return;
+        }
+    }
+
+    if (receiver != widget_.get()) {
+        // mouse captor
+        event->setAccepted(receiver->onMouseMove(vgcEvent.get()));
+    }
+    else {
+        event->setAccepted(receiver->mouseMove(vgcEvent.get()));
+    }
 }
 
 void Window::mousePressEvent(QMouseEvent* event) {
     auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
-    event->setAccepted(receiver->onMousePress(vgcEvent.get()));
+    if (receiver != widget_.get()) {
+        // mouse captor
+        event->setAccepted(receiver->onMousePress(vgcEvent.get()));
+    }
+    else {
+        event->setAccepted(receiver->mousePress(vgcEvent.get()));
+    }
 }
 
 void Window::mouseReleaseEvent(QMouseEvent* event) {
     auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
-    event->setAccepted(receiver->onMouseRelease(vgcEvent.get()));
+    if (receiver != widget_.get()) {
+        // mouse captor
+        event->setAccepted(receiver->onMouseRelease(vgcEvent.get()));
+    }
+    else {
+        event->setAccepted(receiver->mouseRelease(vgcEvent.get()));
+    }
 }
 
 // Note: enterEvent() and leaveEvent() are part of QWidget, but not of QWindow.
@@ -220,10 +249,12 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
 // custom methods that we explicitly call from Window::event().
 
 void Window::enterEvent(QEvent* event) {
+    entered_ = true;
     event->setAccepted(widget_->setHovered(true));
 }
 
 void Window::leaveEvent(QEvent* event) {
+    entered_ = false;
     event->setAccepted(widget_->setHovered(false));
 }
 
@@ -368,6 +399,10 @@ void Window::paint(bool sync) {
     static auto textBuf = engine_->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
     engine_->updateBufferData(textBuf.get(), [a = std::move(a)](){ return a.data(); }, a.length() * 4);
     engine_->drawPrimitives(textBuf.get(), graphics::PrimitiveType::TriangleList);*/
+
+    if (widget_->isGeometryUpdateRequested()) {
+        widget_->updateGeometry();
+    }
 
     widget_->paint(engine_.get());
 

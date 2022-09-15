@@ -683,11 +683,38 @@ public:
         return root()->keyboardCaptor_;
     }
 
-    /// Override this function if you wish particular widgets to be hovered based
-    /// on mouse `position`. This method is used by the default mouse event
-    /// handlers when they want to update the hover chain.
+    /// Propagates a mouse move event through the widget hierarchy.
     ///
-    virtual Widget* computeHoverChainChild(geometry::Vec2f position);
+    /// It can only be called on the root widget.
+    ///
+    bool mouseMove(MouseEvent* event);
+
+    /// Propagates a mouse press event through the widget hierarchy.
+    ///
+    /// It can only be called on the root widget.
+    ///
+    bool mousePress(MouseEvent* event);
+
+    /// Propagates a mouse release event through the widget hierarchy.
+    ///
+    /// It can only be called on the root widget.
+    ///
+    bool mouseRelease(MouseEvent* event);
+
+    /// Override this function if you wish to handle MouseMove events during the
+    /// capture phase (from root to leaf).
+    ///
+    virtual void preMouseMove(MouseEvent* event);
+
+    /// Override this function if you wish to handle MousePress events during the
+    /// capture phase (from root to leaf).
+    ///
+    virtual void preMousePress(MouseEvent* event);
+
+    /// Override this function if you wish to handle MouseRelease events during the
+    /// capture phase (from root to leaf).
+    ///
+    virtual void preMouseRelease(MouseEvent* event);
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
@@ -721,11 +748,18 @@ public:
     ///
     bool setHovered(bool hovered);
 
+    /// Override this function if you wish particular widgets to be hovered based
+    /// on mouse `position`. This method is used by the mouse event system
+    /// when it needs to update the hover chain child (on move and release events
+    /// if there is no hover-locked hover-chain child).
+    ///
+    virtual Widget* computeHoverChainChild(geometry::Vec2f position);
+
     /// If `this` is hovered, it makes the given `newHoverChainChild` the
     /// hover-chain child of `this`.
     ///
     /// Returns true on success. That is, if `this` is now the hover-chain parent
-    /// of `newHoverChainChild` and both widgets are still alive.
+    /// of `newHoverChainChild` and both widgets in question are still alive.
     ///
     bool setHoverChainChild(Widget* newHoverChainChild);
 
@@ -736,6 +770,15 @@ public:
     ///
     Widget* hoverChainChild() {
         return hoverChainChild_;
+    }
+
+    /// Returns the widget that this widget is hovered inside of.
+    /// If this widget is not hovered, it does not have an hover-chain parent.
+    ///
+    /// The returned widget is not always the parent widget of this widget.
+    ///
+    Widget* hoverChainParent() {
+        return hoverChainParent_;
     }
 
     /// Returns whether this widget is hover-locked.
@@ -750,29 +793,6 @@ public:
     ///
     bool isHoverLocked() const {
         return isHoverLocked_;
-    }
-
-    /// Sets this widget's hover-lock state.
-    ///
-    /// A widget that is hover-locked will keep its place in the hover-chain
-    /// at least until the next mouse event.
-    ///
-    void setHoverLocked(bool isHoverLocked) {
-        if (isHoverLocked_ == isHoverLocked) {
-            return;
-        }
-
-        isHoverLocked_ = isHoverLocked;
-        if (!isHoverLocked) {
-            // This is necessary if a widget is arbitrarily hover-unlocking
-            // itself while its hover-child is still hover-locked.
-            Widget* w = hoverChainChild_;
-            while (w) {
-                w->isHoverLocked_ = false;
-                w->pressedButtons_.clear();
-                w = w->hoverChainChild_;
-            }
-        }
     }
 
     bool isInHoveredRow() const {
@@ -1161,14 +1181,25 @@ private:
     void prePaintUpdateGeometry_();
 
     // Mouse
+    Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
     Widget* hoverChainParent_ = nullptr;
     Widget* hoverChainChild_ = nullptr;
     bool isHovered_ = false;
-    bool isHoverLocked_ = false;
     bool isInHoveredRow_ = false;
     bool isInHoveredColumn_ = false;
+    bool isHoverLocked_ = false;
+    bool isChildHoverEnabled_ = true;
     MouseButtons pressedButtons_ = {};
-    Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
+
+    bool mouseMove_(MouseEvent* event);
+    bool mousePress_(MouseEvent* event);
+    bool mouseRelease_(MouseEvent* event);
+
+    void onUnhover_();
+
+    void lockHover_();
+    void unlockHover_();
+    void onHoverUnlocked_();
 
     // Status
     Visibility visibility_ = Visibility::Inherit;

@@ -106,6 +106,7 @@ private:
     int height_ = 0;
     bool activeSizemove_ = false;
     bool deferredResize_ = false;
+    bool entered_ = false;
 
     geometry::Mat4f proj_;
     core::Color clearColor_;

@@ -129,17 +129,35 @@ prepareMouseEvent(ui::Widget* root, QMouseEvent* event) {
 
 void UiWidget::mouseMoveEvent(QMouseEvent* event) {
     auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
-    event->setAccepted(receiver->onMouseMove(vgcEvent.get()));
+    if (receiver != widget_.get()) {
+        // mouse captor
+        event->setAccepted(receiver->onMouseMove(vgcEvent.get()));
+    }
+    else {
+        event->setAccepted(receiver->mouseMove(vgcEvent.get()));
+    }
 }
 
 void UiWidget::mousePressEvent(QMouseEvent* event) {
     auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
-    event->setAccepted(receiver->onMousePress(vgcEvent.get()));
+    if (receiver != widget_.get()) {
+        // mouse captor
+        event->setAccepted(receiver->onMousePress(vgcEvent.get()));
+    }
+    else {
+        event->setAccepted(receiver->mousePress(vgcEvent.get()));
+    }
 }
 
 void UiWidget::mouseReleaseEvent(QMouseEvent* event) {
     auto [receiver, vgcEvent] = prepareMouseEvent(widget_.get(), event);
-    event->setAccepted(receiver->onMouseRelease(vgcEvent.get()));
+    if (receiver != widget_.get()) {
+        // mouse captor
+        event->setAccepted(receiver->onMouseRelease(vgcEvent.get()));
+    }
+    else {
+        event->setAccepted(receiver->mouseRelease(vgcEvent.get()));
+    }
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
