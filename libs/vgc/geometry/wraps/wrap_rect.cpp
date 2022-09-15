@@ -122,8 +122,8 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
         .def_property("xMax", &TRect2::xMax, &TRect2::setXMax)
         .def_property("yMax", &TRect2::yMax, &TRect2::setYMax)
 
-        .def("corner", py::overload_cast<vgc::Int>(&TRect2::corner))
-        .def("corner", py::overload_cast<vgc::Int, vgc::Int>(&TRect2::corner))
+        .def("corner", py::overload_cast<vgc::Int>(&TRect2::corner, py::const_))
+        .def("corner", py::overload_cast<vgc::Int, vgc::Int>(&TRect2::corner, py::const_))
 
         .def("isClose", &TRect2::isClose, "other"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("isNear", &TRect2::isNear, "other"_a, "absTol"_a)
