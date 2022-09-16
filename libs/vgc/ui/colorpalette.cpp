@@ -24,6 +24,7 @@
 #include <vgc/core/colors.h>
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
+#include <vgc/geometry/mat3f.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/buttongroup.h>
@@ -64,6 +65,171 @@ core::StringId hsl("hsl");
 core::StringId hex("hex");
 
 } // namespace strings_
+
+// Converts a gamma-corrected sRGB color channel to its linear RGB value.
+//
+float srgbGammaToLinear(float v) {
+    if (v <= 0.04045f) {
+        return v / 12.92f;
+    }
+    else {
+        return std::pow(((v + 0.055f) / 1.055f), 2.4f);
+    }
+}
+
+// Converts a gamma-corrected sRGB color to its linear RGB value.
+//
+geometry::Vec3f srgbGammaToLinear(const core::Colorf& c) {
+    return {srgbGammaToLinear(c.r()), srgbGammaToLinear(c.g()), srgbGammaToLinear(c.b())};
+}
+
+// Converts a linear RGB color channel to its gamma-corrected sRGB value.
+//
+float srgbLinearToGamma(float v) {
+    if (v <= 0.0031308f) {
+        return v * 12.92f;
+    }
+    else {
+        return std::pow(v, 1.0f / 2.4f) * 1.055f - 0.055f;
+    }
+}
+
+// Converts a gamma-corrected sRGB color to its linear RGB value.
+//
+core::Colorf srgbLinearToGamma(const geometry::Vec3f& c) {
+    return {srgbLinearToGamma(c.x()), srgbLinearToGamma(c.y()), srgbLinearToGamma(c.z())};
+}
+
+// Converts an sRGB color to XYZ
+//
+geometry::Vec3f srgbToXyz(const core::Colorf& c) {
+    // clang-format off
+    static geometry::Mat3f m = {
+        0.4124, 0.3576, 0.1805,
+        0.2126, 0.7152, 0.0722,
+        0.0193, 0.1192, 0.9505
+    };
+    // clang-format on
+    return m * srgbGammaToLinear(c);
+}
+
+// Converts an XYZ color to sRGB
+//
+core::Colorf xyzToSrgb(const geometry::Vec3f& c) {
+    // clang-format off
+    static geometry::Mat3f m = {
+        0.4124, 0.3576, 0.1805,
+        0.2126, 0.7152, 0.0722,
+        0.0193, 0.1192, 0.9505
+    };
+    // clang-format on
+    static geometry::Mat3f invM = m.inverted();
+    return srgbLinearToGamma(invM * c);
+}
+
+float labFn(float t) {
+    constexpr float d = 6.0f / 29;
+    constexpr float e = 4.0f / 29;
+    constexpr float d2 = d * d;
+    constexpr float d3 = d * d * d;
+    constexpr float inv3d2 = 1.0f / (3 * d2);
+    constexpr float inv3 = 1.0f / 3.0f;
+    if (t > d3) {
+        return std::pow(t, inv3);
+    }
+    else {
+        return t * inv3d2 + e;
+    }
+}
+
+namespace lab {
+
+constexpr float xn = 95.0489 / 100;
+constexpr float yn = 100 / 100;
+constexpr float zn = 108.8840 / 100;
+
+} // namespace lab
+
+geometry::Vec3f xyzToLabD65(const geometry::Vec3f& c) {
+    float fx = labFn(c.x() / lab::xn);
+    float fy = labFn(c.y() / lab::yn);
+    float fz = labFn(c.z() / lab::zn);
+    return {116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)};
+}
+
+float invLabFn(float t) {
+    constexpr float d = 6.0f / 29;
+    constexpr float e = 4.0f / 29;
+    constexpr float _3d2 = 3 * d * d;
+    if (t > d) {
+        return t * t * t;
+    }
+    else {
+        return _3d2 * (t - e);
+    }
+}
+
+geometry::Vec3f labD65ToXyz(const geometry::Vec3f& c) {
+    constexpr float inv116 = 1.0f / 116;
+    constexpr float inv200 = 1.0f / 200;
+    constexpr float inv500 = 1.0f / 500;
+    float l = c.x();
+    float a = c.y();
+    float b = c.z();
+    float l_ = inv116 * (l + 16);
+    return {
+        lab::xn * invLabFn(l_ + inv500 * a),
+        lab::yn * invLabFn(l_),
+        lab::zn * invLabFn(l_ - inv200 * b)};
+}
+
+core::Colorf labD65ToSrgb(const geometry::Vec3f& c) {
+    return xyzToSrgb(labD65ToXyz(c));
+}
+
+geometry::Vec3f srgbToLabD65(const core::Colorf& c) {
+    return xyzToLabD65(srgbToXyz(c));
+}
+
+// Returns a color (H, S', L') with the same hue as the given color (H, S, L),
+// but a slightly different saturation and lightness so that users can perceive
+// the difference.
+//
+// Note thatthis function is not continuous. Have a continuous function is
+
+// this would require to map somegive a hue
+//
+core::Colorf computeHighlightColor(const core::Colorf& c) {
+
+    // Remember original hue
+    auto [h, s_, l_] = c.toHsl();
+
+    // Convert to Lab space, which is a perceptual color space. This means that
+    // increasing the luminance by a fixed amount in this space does looks like
+    // a fixed amount to the human eye (at least, approximately).
+    geometry::Vec3f lab = srgbToLabD65(c);
+
+    // Slightly alter the luminance in Lab space. This comes from trial and
+    // error.
+    float l = lab[0];
+    if (l < 50) {
+        l = 25 + 0.8 * l;
+    }
+    else {
+        l -= 20;
+    }
+    lab[0] = l;
+
+    // Convert back to sRGB
+    core::Colorf labSpaceContrasted = labD65ToSrgb(lab);
+
+    // Apply back the original hue, because modifying the
+    // luminance in Lab
+    auto [newH, newS, newL] = labSpaceContrasted.toHsl();
+    core::Colorf res = core::Colorf::hsl(h, newS, newL);
+
+    return res;
+}
 
 } // namespace
 
@@ -251,6 +417,7 @@ ColorPalette::ColorPalette()
     colorListView_->colorSelected().connect(onColorListViewSelectedColorSlot_());
 
     // Init
+    onContinuousChanged_();
     updateStepsLineEdits_();
     setSelectedColorNoCheckNoEmit_(initialColor.rounded8b());
 
@@ -911,8 +1078,17 @@ void ColorPaletteSelector::onPaintDraw(
             float y2 = y1 + m.slDy - m.borderWidth;
             double l = i * dl;
             double s = j * ds;
-            auto c = core::Color::hsl(hue, s, l).round8b();
-            insertSLCursorQuad_(a, c, x1, y1, x2, y2);
+            auto hoveredColor = core::Color::hsl(hue, s, l).round8b();
+            core::Colorf hoveredColorf(hoveredColor);
+            core::Colorf highlightColorf = computeHighlightColor(hoveredColorf);
+            core::Color highlightColor = highlightColorf.toDouble();
+
+            geometry::Rect2f rect(x1, y1, x2, y2);
+            style::BorderRadiuses radius(style::BorderRadius(0));
+            float borderWidth = 1;
+
+            detail::insertRect(
+                a, hoveredColor, highlightColor, rect, radius, borderWidth);
         }
         // Draw selected color
         if (isContinuous_ || !isSelectedColorExact_) {
@@ -931,7 +1107,9 @@ void ColorPaletteSelector::onPaintDraw(
             geometry::Vec2f center(
                 rect.xMin() + selectedLightness_ * rect.width(),
                 rect.yMin() + selectedSaturation_ * rect.height());
+
             insertSLCursorCircle_(a, selectedColorf, center, radius);
+            //insertCircle_(a, computeHighlightColor(selectedColorf), center, radius);
 
             /*
             style::BorderRadius radiusStyle(style::LengthOrPercentage(50));
@@ -2454,7 +2632,6 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     // themselves. For now, we decide to stretch the items. In the
     // future, we may want to make it configurable in the stylesheet.
 
-    float INCREASE_HEIGHT_DEBUG = 300;
     Metrics m;
     m.hinting = (style(gs::pixel_hinting) == gs::normal);
     m.itemPreferredWidth = getItemLengthInPx(item_.get(), strings::preferred_width);
@@ -2465,8 +2642,7 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     m.itemHeight = hint(m.itemWidth, m.hinting);
     m.numRows = (numColors() + m.numColumns - 1) / m.numColumns;
     m.width = width;
-    m.height =
-        (m.numRows - 1) * (m.itemHeight + m.gap) + m.itemHeight + INCREASE_HEIGHT_DEBUG;
+    m.height = (m.numRows - 1) * (m.itemHeight + m.gap) + m.itemHeight;
     return m;
 }
 
