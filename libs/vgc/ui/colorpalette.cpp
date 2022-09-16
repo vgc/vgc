@@ -516,9 +516,7 @@ ColorPaletteSelector::ColorPaletteSelector()
     , isSelectedColorExact_(true)
     , selectedHueIndex_(0)
     , selectedSaturationIndex_(0)
-    , selectedLightnessIndex_(0)
-    , oldSaturationIndex_(numSaturationSteps_ - 1)
-    , oldLightnessIndex_(numLightnessSteps_ / 2) {
+    , selectedLightnessIndex_(0) {
 
     addStyleClass(strings::ColorPaletteSelector);
 }
@@ -599,7 +597,7 @@ void ColorPaletteSelector::setHslSteps(Int hue, Int saturation, Int lightness) {
     //   huge rendering time.
     // - Two digits makes them fit in smaller line edits.
     //
-    numHueSteps_ = core::clamp((numHueSteps_ / 2) * 2, 2, 98);
+    numHueSteps_ = core::clamp(numHueSteps_, 2, 98);
     numSaturationSteps_ = core::clamp(numSaturationSteps_, 2, 99);
     numLightnessSteps_ = core::clamp(numLightnessSteps_, 3, 99);
 
@@ -2010,15 +2008,6 @@ void ColorPaletteSelector::updateStepsFromSelectedColor_() {
     selectedHueIndex_ = hueIndex % numHueSteps_;
     selectedSaturationIndex_ = core::clamp(saturationIndex, 0, numSaturationSteps_ - 1);
     selectedLightnessIndex_ = core::clamp(lightnessIndex, 0, numLightnessSteps_ - 1);
-
-    // Remember L/S of last chromatic color selected
-    if (selectedSaturationIndex_ != 0   //
-        && selectedLightnessIndex_ != 0 //
-        && selectedLightnessIndex_ != numLightnessSteps_ - 1) {
-
-        oldSaturationIndex_ = selectedSaturationIndex_;
-        oldLightnessIndex_ = selectedLightnessIndex_;
-    }
 }
 
 bool ColorPaletteSelector::selectColorFromHovered_() {
@@ -2026,29 +2015,10 @@ bool ColorPaletteSelector::selectColorFromHovered_() {
     if (hoveredLightnessIndex_ != -1) {
         selectedLightnessIndex_ = hoveredLightnessIndex_;
         selectedSaturationIndex_ = hoveredSaturationIndex_;
-        if (selectedSaturationIndex_ != 0   //
-            && selectedLightnessIndex_ != 0 //
-            && selectedLightnessIndex_ != numLightnessSteps_ - 1) {
-
-            // Remember L/S of last chromatic color selected
-            oldSaturationIndex_ = selectedSaturationIndex_;
-            oldLightnessIndex_ = selectedLightnessIndex_;
-        }
         accepted = true;
     }
     else if (hoveredHueIndex_ != -1) {
         selectedHueIndex_ = hoveredHueIndex_;
-        if (selectedSaturationIndex_ == 0   //
-            || selectedLightnessIndex_ == 0 //
-            || selectedLightnessIndex_ == numLightnessSteps_ - 1) {
-            // When users click on the hue selector while the current color is
-            // non-chromatic (black, white, greys), it's obviously to change to
-            // a chromatic color. So we restore the saturation/lightness of the
-            // last chromatic color selected, which gives the color currently
-            // displayed by the hue selector
-            selectedSaturationIndex_ = oldSaturationIndex_;
-            selectedLightnessIndex_ = oldLightnessIndex_;
-        }
         accepted = true;
     }
 
