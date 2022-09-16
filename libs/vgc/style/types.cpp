@@ -46,7 +46,7 @@ double Length::toPx(double scaleFactor) const {
 }
 
 float Length::toPx(float scaleFactor) const {
-    return convertToPx(static_cast<float>(value()), unit(), scaleFactor);
+    return convertToPx(valuef(), unit(), scaleFactor);
 }
 
 StyleValue Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
@@ -97,24 +97,6 @@ StyleValue LengthOrPercentage::parse(StyleTokenIterator begin, StyleTokenIterato
     }
     else {
         return StyleValue::invalid();
-    }
-}
-
-double LengthOrAuto::toPx(double scaleFactor, double valueIfAuto) const {
-    if (isAuto()) {
-        return valueIfAuto;
-    }
-    else {
-        return convertToPx(value(), unit(), scaleFactor);
-    }
-}
-
-float LengthOrAuto::toPx(float scaleFactor, float valueIfAuto) const {
-    if (isAuto()) {
-        return valueIfAuto;
-    }
-    else {
-        return convertToPx(static_cast<float>(value()), unit(), scaleFactor);
     }
 }
 
