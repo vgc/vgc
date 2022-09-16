@@ -524,21 +524,10 @@ void Widget::mouseMove_(MouseEvent* event) {
         return;
     }
 
-    // User-defined capture phase handler.
+    // Prepare against death of `this`
     WidgetPtr thisPtr = this;
-    preMouseMove(event);
-    if (!thisPtr.isAlive()) {
-        // Widget got killed. Event can be considered handled.
-        event->handled_ = true;
-        return;
-    }
 
-    // Handle stop propagation.
-    if (event->isStopPropagationRequested()) {
-        return;
-    }
-
-    // Get hover-chain child.
+    // Get or update hover-chain child.
     Widget* hcChild = hoverChainChild();
     const bool hasNoHoverLockedChild = !hcChild || !hcChild->isHoverLocked();
     if (isChildHoverEnabled_ && hasNoHoverLockedChild) {
@@ -555,6 +544,22 @@ void Widget::mouseMove_(MouseEvent* event) {
             return;
         }
     }
+
+    // User-defined capture phase handler.
+    preMouseMove(event);
+    if (!thisPtr.isAlive()) {
+        // Widget got killed. Event can be considered handled.
+        event->handled_ = true;
+        return;
+    }
+
+    // Handle stop propagation.
+    if (event->isStopPropagationRequested()) {
+        return;
+    }
+
+    // Get final hover-chain child (possibly changed in preMouseMove).
+    hcChild = hoverChainChild();
 
     // Call hover-chain child's handler.
     if (hcChild) {
