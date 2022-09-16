@@ -349,6 +349,10 @@ public:                                                                         
         ::vgc::core::isObject<SuperClass>,                                               \
         "Superclass must inherit from Object and use VGC_OBJECT(..).");                  \
                                                                                          \
+    std::string_view className() override {                                              \
+        return #T;                                                                       \
+    }                                                                                    \
+                                                                                         \
 protected:                                                                               \
     ~T() = default;                                                                      \
                                                                                          \
@@ -543,6 +547,10 @@ private:
     Object& operator=(Object&&) = delete;
 
 public:
+    virtual std::string_view className() {
+        return "Object";
+    }
+
     /// Returns how many ObjPtrs are currently referencing this Object.
     ///
     /// If this Object is a root object, then the refCount represents a "strong
