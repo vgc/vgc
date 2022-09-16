@@ -290,7 +290,7 @@ private:
 /// \brief Stores border radius information in physical pixels.
 ///
 template<typename Float>
-class VGC_STYLE_API BorderRadiusInPx {
+class BorderRadiusInPx {
 public:
     /// Constructs a `BorderRadiusInPx` with both values set to `0dp`.
     ///
@@ -415,7 +415,7 @@ private:
 /// \brief The border radiuses for the four corners in physical pixels
 ///
 template<typename Float>
-class VGC_STYLE_API BorderRadiusesInPx {
+class BorderRadiusesInPx {
 public:
     /// Constructs a `BorderRadiusesInPx` with all radiuses set to the given
     /// `BorderRadiusesInPx`.
