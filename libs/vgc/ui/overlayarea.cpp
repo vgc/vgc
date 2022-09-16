@@ -81,6 +81,11 @@ void OverlayArea::updateChildrenGeometry() {
         areaWidget_->updateGeometry(
             geometry::Vec2f(), geometry::Vec2f(width(), height()));
     }
+    for (auto c : children()) {
+        if (c != areaWidget_) {
+            c->updateGeometry();
+        }
+    }
 }
 
 } // namespace vgc::ui

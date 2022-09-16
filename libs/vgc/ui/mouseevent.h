@@ -17,6 +17,7 @@
 #ifndef VGC_UI_MOUSEEVENT_H
 #define VGC_UI_MOUSEEVENT_H
 
+#include <vgc/core/flags.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/event.h>
 #include <vgc/ui/modifierkey.h>
@@ -60,8 +61,24 @@ enum class MouseButton : UInt32 {
     Extra23 = 0x02000000,
     Extra24 = 0x04000000
 };
+VGC_DEFINE_FLAGS(MouseButtons, MouseButton)
 
 // clang-format on
+
+/// \class vgc::ui::HoverLockPolicy
+/// \brief Specifies hover-locking behavior.
+///
+/// A policy for widgets to control the behavior of the mouse event system about
+/// their hover-lock state. Typically child widgets are by default hover-locked on
+/// mouse press and hover-unlocked on mouse release. This means that they keep
+/// receiving mouse moves even if the mouse leaves their geometry. This default
+/// behavior can be overriden using `ForceLock` or `ForceUnlock`.
+///
+enum class HoverLockPolicy {
+    Default,
+    ForceLock,
+    ForceUnlock
+};
 
 /// \class vgc::ui::MouseEvent
 /// \brief Class to handle mouse move, clicks, etc.
@@ -158,10 +175,29 @@ public:
         modifierKeys_ = modifierKeys;
     }
 
+    /// Returns the hover-lock policy that should be used when this event
+    /// is returned from a handler in the bubbling phase.
+    ///
+    /// \sa HoverLockPolicy.
+    ///
+    HoverLockPolicy hoverLockPolicy() const {
+        return hoverLockPolicy_;
+    }
+
+    /// Sets the hover-lock policy that should be used when this event
+    /// is returned from a handler in the bubbling phase.
+    ///
+    /// \sa HoverLockPolicy.
+    ///
+    void setHoverLockPolicy(HoverLockPolicy hoverLockPolicy) {
+        hoverLockPolicy_ = hoverLockPolicy;
+    }
+
 private:
     MouseButton button_;
     geometry::Vec2f position_;
     ModifierKeys modifierKeys_;
+    HoverLockPolicy hoverLockPolicy_ = {};
 };
 
 } // namespace vgc::ui
