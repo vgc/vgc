@@ -46,6 +46,12 @@ core::Color highlightColor = core::Color(0.043, 0.322, 0.714); // VGC Blue
 core::Colorf cursorOuterColor(0.15, 0.2, 0.3);
 core::Colorf cursorInnerColor(1.0, 1.0, 1.0);
 
+core::Color
+    cursorOuterColord(cursorOuterColor.r(), cursorOuterColor.g(), cursorOuterColor.b());
+
+core::Color
+    cursorInnerColord(cursorInnerColor.r(), cursorInnerColor.g(), cursorInnerColor.b());
+
 namespace strings_ {
 
 core::StringId horizontal_group("horizontal-group");
@@ -957,143 +963,6 @@ void ColorPaletteSelector::onPaintDraw(
 
         // Draw hue selector
         drawHueSelector_(a);
-
-        /*
-        Int halfHSteps = hSteps / 2;
-        y0 = m.hueRect.yMin();
-        if (m.borderWidth > 0) {
-            detail::insertRect(a, borderColor, m.hueRect);
-        }
-        double l = isContinuous_ ? selectedLightness_ : oldLightnessIndex_ * dl;
-        double s = isContinuous_ ? selectedSaturation_ : oldSaturationIndex_ * ds;
-        double hueDx = isContinuous_
-                           ? (m.hueRect.width() - 2 * m.borderWidth) / halfHSteps
-                           : m.hueDx;
-        for (Int i = 0; i < hSteps; ++i) {
-            float x1, y1, x2, y2;
-            double hue1 = i * dhue;
-            double hue2; // for continuous mode
-            if (i < halfHSteps) {
-                x1 = x0 + m.borderWidth + i * hueDx;
-                x2 = x0 + m.borderWidth + (i + 1) * hueDx;
-                y1 = y0 + m.borderWidth;
-                y2 = y1 + m.hueDy - m.borderWidth;
-                if (!isContinuous_) {
-                    x1 = hint(x1, m.hinting);
-                    x2 = hint(x2, m.hinting);
-                    x2 -= m.borderWidth;
-                }
-                hue2 = hue1 + dhue;
-            }
-            else {
-                x1 = x0 + m.borderWidth + (hSteps - i - 1) * hueDx;
-                x2 = x0 + m.borderWidth + (hSteps - i) * hueDx;
-                y1 = y0 + m.borderWidth + m.hueDy;
-                y2 = y1 + m.hueDy - m.borderWidth;
-                if (!isContinuous_) {
-                    x1 = hint(x1, m.hinting);
-                    x2 = hint(x2, m.hinting);
-                    x2 -= m.borderWidth;
-                }
-                hue2 = hue1 - dhue;
-            }
-            if (isContinuous_) {
-                auto c1 = core::Color::hsl(hue1, s, l);
-                auto c2 = core::Color::hsl(hue2, s, l);
-                insertSmoothRect(a, c1, c2, c1, c2, x1, y1, x2, y2);
-            }
-            else {
-                auto c = core::Color::hsl(hue1, s, l).round8b();
-                detail::insertRect(a, c, x1, y1, x2, y2);
-            }
-        }
-        // Draw highlighted color in steps mode
-        if (!isContinuous_ && hoveredHueIndex_ != -1) {
-            Int i = hoveredHueIndex_;
-            float x1, y1, x2, y2;
-            double hhue = i * dhue;
-            if (i < halfHSteps) {
-                x1 = hint(x0 + m.borderWidth + i * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (i + 1) * m.hueDx, m.hinting)
-                     - m.borderWidth;
-                y1 = y0 + m.borderWidth;
-                y2 = y1 + m.hueDy - m.borderWidth;
-            }
-            else {
-                x1 = hint(
-                    x0 + m.borderWidth + (numHueSteps_ - i - 1) * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (numHueSteps_ - i) * m.hueDx, m.hinting)
-                     - m.borderWidth;
-                y1 = y0 + m.borderWidth + m.hueDy;
-                y2 = y1 + m.hueDy - m.borderWidth;
-            }
-            auto c = core::Color::hsl(hhue, s, l).round8b();
-            insertCellHighlight(a, c, x1, y1, x2, y2);
-        }
-        // Draw selected color
-        if (isContinuous_ || !isSelectedColorExact_) {
-            float hmargins = m.borderWidth;
-            float vmargins = m.borderWidth;
-            float shiftedHue = selectedHue_;
-            if (!isContinuous_) {
-                // In steps mode, pure red is not at x = 0, but slightly
-                // shifted to the right, in the middle of the cell
-                shiftedHue += 0.5 * dhue;
-                if (shiftedHue > 360) {
-                    shiftedHue -= 360;
-                }
-            }
-            geometry::Rect2f rect = m.hueRect - Margins(vmargins, hmargins);
-            double cursorBorderRadius = 3;
-            double cursorBorderWidth = 3;
-            float cursorHalfWidth = 6;
-            float x, y1, y2;
-            if (shiftedHue < 180) {
-                x = rect.xMin() + (shiftedHue / 180) * rect.width();
-                y1 = y0 + m.borderWidth - cursorBorderWidth + 1;
-                y2 = y1 + m.hueDy - m.borderWidth + 2 * cursorBorderWidth - 2;
-            }
-            else {
-                x = rect.xMin() + (2 - shiftedHue / 180) * rect.width();
-                y1 = y0 + m.borderWidth + m.hueDy - cursorBorderWidth + 1;
-                y2 = y1 + m.hueDy - m.borderWidth + 2 * cursorBorderWidth - 2;
-            }
-            float x1 = x - cursorHalfWidth;
-            float x2 = x + cursorHalfWidth;
-            style::BorderRadius radiusStyle(
-                style::LengthOrPercentage(cursorBorderRadius, style::LengthUnit::Dp));
-            style::BorderRadiuses radiusesStyle(radiusStyle);
-            detail::insertRect(
-                a,
-                selectedColor_,
-                highlightColor,
-                geometry::Rect2f(x1, y1, x2, y2),
-                radiusesStyle,
-                3);
-        }
-        else {
-            Int i = selectedHueIndex_;
-            float x1, y1, x2, y2;
-            double shue = i * dhue;
-            if (i < halfHSteps) {
-                x1 = hint(x0 + m.borderWidth + i * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (i + 1) * m.hueDx, m.hinting)
-                     - m.borderWidth;
-                y1 = y0 + m.borderWidth;
-                y2 = y1 + m.hueDy - m.borderWidth;
-            }
-            else {
-                x1 = hint(
-                    x0 + m.borderWidth + (numHueSteps_ - i - 1) * m.hueDx, m.hinting);
-                x2 = hint(x0 + m.borderWidth + (numHueSteps_ - i) * m.hueDx, m.hinting)
-                     - m.borderWidth;
-                y1 = y0 + m.borderWidth + m.hueDy;
-                y2 = y1 + m.hueDy - m.borderWidth;
-            }
-            auto c = core::Color::hsl(shue, s, l).round8b();
-            insertCellHighlight(a, c, x1, y1, x2, y2);
-        }
-        */
 
         // Load triangles
         engine->updateVertexBufferData(triangles_, std::move(a));
@@ -2400,9 +2269,12 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
             updateMetrics_();
             const Metrics& m = metrics_;
 
+            float scaleFactor = 1;
             float borderWidth = detail::getLength(item_.get(), gs::border_width);
             core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
             style::BorderRadiuses radiuses = detail::getBorderRadiuses(item_.get());
+
+            detail::getBorderRadiuses(item_.get());
 
             geometry::Vec2f itemSize(m.itemWidth, m.itemHeight);
 
@@ -2421,21 +2293,34 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
                 geometry::Rect2f itemRect(x1, y1, x2, y2);
 
                 if (i == hoveredColorIndex_ || i == selectedColorIndex_) {
-                    geometry::Rect2f borderRect2 = itemRect + ui::Margins(2);
+
+                    style::BorderRadiusesInPx<float> refRadiuses =
+                        radiuses.toPx(scaleFactor, itemRect.width(), itemRect.height());
+
+                    geometry::Rect2f itemRect1 = itemRect + ui::Margins(1);
+                    style::BorderRadiusesInPx<float> radiuses1 =
+                        refRadiuses.offsetted(1, 1, 1, 1);
+
+                    geometry::Rect2f itemRect2 = itemRect + ui::Margins(2);
+                    style::BorderRadiusesInPx<float> radiuses2 =
+                        refRadiuses.offsetted(2, 2, 2, 2);
+
                     detail::insertRect(
                         a,
                         core::colors::transparent,
-                        core::colors::black,
-                        borderRect2,
-                        radiuses,
+                        cursorInnerColord,
+                        itemRect1,
+                        radiuses1,
+                        refRadiuses,
                         1);
-                    geometry::Rect2f borderRect1 = itemRect + ui::Margins(1);
+
                     detail::insertRect(
                         a,
                         core::colors::transparent,
-                        core::colors::white,
-                        borderRect1,
-                        radiuses,
+                        cursorOuterColord,
+                        itemRect2,
+                        radiuses2,
+                        refRadiuses,
                         1);
                 }
                 detail::insertRect(a, color, itemRect, radiuses);
@@ -2443,7 +2328,22 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
         }
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
+    /*
+    graphics::RasterizerStateCreateInfo info;
+    info.setFillMode(graphics::FillMode::Wireframe);
+    static graphics::RasterizerStatePtr wireframe = engine->createRasterizerState(info);
 
+    engine->pushViewMatrix();
+    geometry::Mat4f m = engine->viewMatrix();
+    m.scale(10);
+    engine->setViewMatrix(m);
+    engine->pushPipelineParameters(graphics::PipelineParameter::RasterizerState);
+    engine->setRasterizerState(wireframe);
+    engine->setProgram(graphics::BuiltinProgram::Simple);
+    engine->draw(triangles_, -1, 0);
+    engine->popPipelineParameters(graphics::PipelineParameter::RasterizerState);
+    engine->popViewMatrix();
+*/
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
 }
@@ -2584,17 +2484,19 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     // themselves. For now, we decide to stretch the items. In the
     // future, we may want to make it configurable in the stylesheet.
 
+    float INCREASE_HEIGHT_DEBUG = 300;
     Metrics m;
     m.hinting = (style(gs::pixel_hinting) == gs::normal);
     m.itemPreferredWidth = getItemLengthInPx(item_.get(), strings::preferred_width);
     m.numColumns = static_cast<Int>(std::round(width / m.itemPreferredWidth));
     m.numColumns = (std::max)(Int(1), m.numColumns);
-    m.gap = 3;
+    m.gap = 4;
     m.itemWidth = (width - (m.numColumns - 1) * m.gap) / m.numColumns;
     m.itemHeight = hint(m.itemWidth, m.hinting);
     m.numRows = (numColors() + m.numColumns - 1) / m.numColumns;
     m.width = width;
-    m.height = (m.numRows - 1) * (m.itemHeight + m.gap) + m.itemHeight;
+    m.height =
+        (m.numRows - 1) * (m.itemHeight + m.gap) + m.itemHeight + INCREASE_HEIGHT_DEBUG;
     return m;
 }
 
