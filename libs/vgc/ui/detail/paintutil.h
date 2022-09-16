@@ -109,6 +109,20 @@ void insertRect(
     float borderWidth,
     float pixelSize = 1.0f);
 
+// refRadiuses is used to determine the number of samples.
+// this is useful if you want to add a border to an existing
+// rounded rectangle: you want to use the same number of samples
+// so that the quad strips match perfectly.
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& fillColor,
+    const core::Color& borderColor,
+    const geometry::Rect2f& outerRect,
+    const style::BorderRadiusesInPx<float>& outerRadiuses_,
+    const style::BorderRadiusesInPx<float>& refRadiuses_,
+    float borderWidth,
+    float pixelSize = 1.0f);
+
 core::Color getColor(const style::StylableObject* obj, core::StringId property);
 
 // DEPRECATED: this is a function to be used with style properties

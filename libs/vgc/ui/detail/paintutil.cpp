@@ -230,56 +230,6 @@ geometry::Vec2f getCorner(const geometry::Rect2f& rect) {
     }
 }
 
-float getRadiusInPx(const style::LengthOrPercentage radius, float side) {
-    float res;
-    if (radius.isPercentage()) {
-        res = side * radius.valuef() / 100.0f;
-    }
-    else {
-        // TODO: convert to px
-        res = radius.valuef();
-    }
-    return core::clamp(res, 0.0f, 0.5 * side);
-}
-
-geometry::Vec2f
-getRadiusInPx(const style::BorderRadius& radius, const geometry::Rect2f& rect) {
-
-    return geometry::Vec2f(
-        getRadiusInPx(radius.horizontalRadius(), rect.width()),
-        getRadiusInPx(radius.verticalRadius(), rect.height()));
-}
-
-template<CornerType cornerType>
-geometry::Vec2f
-getRadiusInPx(const style::BorderRadiuses& radiuses, const geometry::Rect2f& rect) {
-    if constexpr (cornerType == TopLeft) {
-        return getRadiusInPx(radiuses.topLeft(), rect);
-    }
-    else if constexpr (cornerType == TopRight) {
-        return getRadiusInPx(radiuses.topRight(), rect);
-    }
-    else if constexpr (cornerType == BottomRight) {
-        return getRadiusInPx(radiuses.bottomRight(), rect);
-    }
-    else if constexpr (cornerType == BottomLeft) {
-        return getRadiusInPx(radiuses.bottomLeft(), rect);
-    }
-}
-
-using BorderRadiusesInPx = std::array<geometry::Vec2f, 4>;
-
-BorderRadiusesInPx getRadiusesInPx( //
-    const style::BorderRadiuses& radiuses,
-    const geometry::Rect2f& rect) {
-
-    geometry::Vec2f topLeft = getRadiusInPx(radiuses.topLeft(), rect);
-    geometry::Vec2f topRight = getRadiusInPx(radiuses.topRight(), rect);
-    geometry::Vec2f bottomLeft = getRadiusInPx(radiuses.bottomLeft(), rect);
-    geometry::Vec2f bottomRight = getRadiusInPx(radiuses.bottomRight(), rect);
-    return {topLeft, topRight, bottomLeft, bottomRight};
-}
-
 inline constexpr float halfPi = 0.5f * static_cast<float>(core::pi);
 
 struct QuarterEllipseParams {
@@ -287,19 +237,21 @@ struct QuarterEllipseParams {
     float invPixelSize;
 };
 
-// For now, we insert both the first and last point.
-// In the future, we want to omit them if equal to already inserted point.
+// Note: for now, in insertQuarterEllipse, we insert both the first and last
+// point. In the future, we want to omit them if equal to already inserted
+// point.
+
 template<CornerType cornerType>
 void insertQuarterEllipse(
     core::FloatArray& a,
     const geometry::Rect2f& rect,
-    const style::BorderRadiuses& borderRadiuses,
+    const style::BorderRadiusesInPx<float>& radiuses,
     const QuarterEllipseParams& params) {
 
-    geometry::Vec2f corner = getCorner<cornerType>(rect);
-    geometry::Vec2f radius = getRadiusInPx<cornerType>(borderRadiuses, rect);
+    geometry::Vec2f corner = rect.corner(cornerType);
+    style::BorderRadiusInPx<float> radius = radiuses[cornerType];
 
-    if (radius.x() < params.eps || radius.y() < params.eps) {
+    if (radius.horizontalRadius() < params.eps || radius.verticalRadius() < params.eps) {
         a.extend({corner.x(), corner.y()});
     }
     else {
@@ -308,24 +260,24 @@ void insertQuarterEllipse(
         geometry::Vec2f sourceAxis;
         geometry::Vec2f targetAxis;
         if constexpr (cornerType == TopLeft) {
-            sourceAxis = {-radius.x(), 0};
-            targetAxis = {0, -radius.y()};
+            sourceAxis = {-radius.horizontalRadius(), 0};
+            targetAxis = {0, -radius.verticalRadius()};
         }
         else if constexpr (cornerType == TopRight) {
-            sourceAxis = {0, -radius.y()};
-            targetAxis = {radius.x(), 0};
+            sourceAxis = {0, -radius.verticalRadius()};
+            targetAxis = {radius.horizontalRadius(), 0};
         }
         else if constexpr (cornerType == BottomRight) {
-            sourceAxis = {radius.x(), 0};
-            targetAxis = {0, radius.y()};
+            sourceAxis = {radius.horizontalRadius(), 0};
+            targetAxis = {0, radius.verticalRadius()};
         }
         else if constexpr (cornerType == BottomLeft) {
-            sourceAxis = {0, radius.y()};
-            targetAxis = {-radius.x(), 0};
+            sourceAxis = {0, radius.verticalRadius()};
+            targetAxis = {-radius.horizontalRadius(), 0};
         }
         geometry::Vec2f center = corner - sourceAxis - targetAxis;
 
-        float minRadius = (std::min)(radius.x(), radius.y());
+        float minRadius = (std::min)(radius.horizontalRadius(), radius.verticalRadius());
         Int numSegments =
             core::clamp(core::ifloor<Int>(minRadius * params.invPixelSize), 1, 64);
 
@@ -342,24 +294,65 @@ void insertQuarterEllipse(
     }
 }
 
-// For now, we insert both the first and last point.
-// In the future, we want to omit them if equal to already inserted point.
 template<CornerType cornerType>
 void insertQuarterEllipseWithBorder(
     core::FloatArray& a,
     const geometry::Rect2f& innerRect,
     const geometry::Rect2f& outerRect,
-    const BorderRadiusesInPx& innerRadiuses,
-    const BorderRadiusesInPx& outerRadiuses,
+    const style::BorderRadiusesInPx<float>& innerRadiuses,
+    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const style::BorderRadiusesInPx<float>& refRadiuses,
+    const QuarterEllipseParams& params) {
+
+    style::BorderRadiusInPx<float> radius = refRadiuses[cornerType];
+
+    float minRadius = (std::min)(radius.horizontalRadius(), radius.verticalRadius());
+    Int numSegments =
+        core::clamp(core::ifloor<Int>(minRadius * params.invPixelSize), 1, 64);
+
+    insertQuarterEllipseWithBorder<cornerType>(
+        a, innerRect, outerRect, innerRadiuses, outerRadiuses, numSegments, params);
+}
+
+template<CornerType cornerType>
+void insertQuarterEllipseWithBorder(
+    core::FloatArray& a,
+    const geometry::Rect2f& innerRect,
+    const geometry::Rect2f& outerRect,
+    const style::BorderRadiusesInPx<float>& innerRadiuses,
+    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const QuarterEllipseParams& params) {
+
+    style::BorderRadiusInPx<float> outerRadius = outerRadiuses[cornerType];
+
+    float minOuterRadius =
+        (std::min)(outerRadius.horizontalRadius(), outerRadius.verticalRadius());
+    Int numSegments =
+        core::clamp(core::ifloor<Int>(minOuterRadius * params.invPixelSize), 1, 64);
+
+    insertQuarterEllipseWithBorder<cornerType>(
+        a, innerRect, outerRect, innerRadiuses, outerRadiuses, numSegments, params);
+}
+
+template<CornerType cornerType>
+void insertQuarterEllipseWithBorder(
+    core::FloatArray& a,
+    const geometry::Rect2f& innerRect,
+    const geometry::Rect2f& outerRect,
+    const style::BorderRadiusesInPx<float>& innerRadiuses,
+    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const Int numSegments,
     const QuarterEllipseParams& params) {
 
     geometry::Vec2f innerCorner = getCorner<cornerType>(innerRect);
     geometry::Vec2f outerCorner = getCorner<cornerType>(outerRect);
-    geometry::Vec2f innerRadius = innerRadiuses[cornerType];
-    geometry::Vec2f outerRadius = outerRadiuses[cornerType];
+    style::BorderRadiusInPx<float> innerRadius = innerRadiuses[cornerType];
+    style::BorderRadiusInPx<float> outerRadius = outerRadiuses[cornerType];
 
-    if (outerRadius.x() < params.eps || outerRadius.y() < params.eps) {
-        a.extend({innerCorner.x(), innerCorner.y(), outerRadius.x(), outerRadius.y()});
+    if (outerRadius.horizontalRadius() < params.eps
+        || outerRadius.verticalRadius() < params.eps) {
+
+        a.extend({innerCorner.x(), innerCorner.y(), outerCorner.x(), outerCorner.y()});
     }
     else {
         // Note: the compiler should be able to optimize out multiplications by zero.
@@ -369,35 +362,31 @@ void insertQuarterEllipseWithBorder(
         geometry::Vec2f outerSourceAxis;
         geometry::Vec2f outerTargetAxis;
         if constexpr (cornerType == TopLeft) {
-            innerSourceAxis = {-innerRadius.x(), 0};
-            innerTargetAxis = {0, -innerRadius.y()};
-            outerSourceAxis = {-outerRadius.x(), 0};
-            outerTargetAxis = {0, -outerRadius.y()};
+            innerSourceAxis = {-innerRadius.horizontalRadius(), 0};
+            innerTargetAxis = {0, -innerRadius.verticalRadius()};
+            outerSourceAxis = {-outerRadius.horizontalRadius(), 0};
+            outerTargetAxis = {0, -outerRadius.verticalRadius()};
         }
         else if constexpr (cornerType == TopRight) {
-            innerSourceAxis = {0, -innerRadius.y()};
-            innerTargetAxis = {innerRadius.x(), 0};
-            outerSourceAxis = {0, -outerRadius.y()};
-            outerTargetAxis = {outerRadius.x(), 0};
+            innerSourceAxis = {0, -innerRadius.verticalRadius()};
+            innerTargetAxis = {innerRadius.horizontalRadius(), 0};
+            outerSourceAxis = {0, -outerRadius.verticalRadius()};
+            outerTargetAxis = {outerRadius.horizontalRadius(), 0};
         }
         else if constexpr (cornerType == BottomRight) {
-            innerSourceAxis = {innerRadius.x(), 0};
-            innerTargetAxis = {0, innerRadius.y()};
-            outerSourceAxis = {outerRadius.x(), 0};
-            outerTargetAxis = {0, outerRadius.y()};
+            innerSourceAxis = {innerRadius.horizontalRadius(), 0};
+            innerTargetAxis = {0, innerRadius.verticalRadius()};
+            outerSourceAxis = {outerRadius.horizontalRadius(), 0};
+            outerTargetAxis = {0, outerRadius.verticalRadius()};
         }
         else if constexpr (cornerType == BottomLeft) {
-            innerSourceAxis = {0, innerRadius.y()};
-            innerTargetAxis = {-innerRadius.x(), 0};
-            outerSourceAxis = {0, outerRadius.y()};
-            outerTargetAxis = {-outerRadius.x(), 0};
+            innerSourceAxis = {0, innerRadius.verticalRadius()};
+            innerTargetAxis = {-innerRadius.horizontalRadius(), 0};
+            outerSourceAxis = {0, outerRadius.verticalRadius()};
+            outerTargetAxis = {-outerRadius.horizontalRadius(), 0};
         }
         geometry::Vec2f innerCenter = innerCorner - innerSourceAxis - innerTargetAxis;
         geometry::Vec2f outerCenter = outerCorner - outerSourceAxis - outerTargetAxis;
-
-        float minOuterRadius = (std::min)(outerRadius.x(), outerRadius.y());
-        Int numSegments =
-            core::clamp(core::ifloor<Int>(minOuterRadius * params.invPixelSize), 1, 64);
 
         float dt = halfPi / numSegments;
         geometry::Vec2f innerPoint = innerCenter + innerSourceAxis;
@@ -423,7 +412,7 @@ void insertRect(
     core::FloatArray& a,
     const core::Color& color,
     const geometry::Rect2f& rect,
-    const style::BorderRadiuses& radiuses,
+    const style::BorderRadiuses& radiuses_,
     float pixelSize) {
 
     if (rect.isEmpty()) {
@@ -433,6 +422,10 @@ void insertRect(
     QuarterEllipseParams params;
     params.eps = 1e-3f * pixelSize;
     params.invPixelSize = 1.0f / pixelSize;
+
+    float scaleFactor = 1;
+    style::BorderRadiusesInPx radiuses =
+        radiuses_.toPx(scaleFactor, rect.width(), rect.height());
 
     float r = static_cast<float>(color[0]);
     float g = static_cast<float>(color[1]);
@@ -474,12 +467,33 @@ void insertRect(
     float borderWidth,
     float pixelSize) {
 
+    float scaleFactor = 1;
+    style::BorderRadiusesInPx<float> outerRadiuses =
+        outerRadiuses_.toPx(scaleFactor, outerRect.width(), outerRect.height());
+    insertRect(
+        a,
+        fillColor,
+        borderColor,
+        outerRect,
+        outerRadiuses,
+        outerRadiuses,
+        borderWidth,
+        pixelSize);
+}
+
+void insertRect(
+    core::FloatArray& a,
+    const core::Color& fillColor,
+    const core::Color& borderColor,
+    const geometry::Rect2f& outerRect,
+    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const style::BorderRadiusesInPx<float>& refRadiuses,
+    float borderWidth,
+    float pixelSize) {
+
     if (outerRect.isEmpty()) {
         return;
     }
-
-    // Convert outer radiuses to px
-    BorderRadiusesInPx outerRadiuses = getRadiusesInPx(outerRadiuses_, outerRect);
 
     // Compute inner rect, clamping border-[top|right|bottom|left]-width
     ui::Margins inputBorderWidths = ui::Margins(borderWidth);
@@ -497,19 +511,11 @@ void insertRect(
     ui::Margins borderWidths(outerRect, innerRect);
 
     // Compute inner radiuses in px
-    BorderRadiusesInPx innerRadiuses = {
-        geometry::Vec2f(
-            (std::max)(0.0f, outerRadiuses[TopLeft][HAxis] - borderWidths.left()),
-            (std::max)(0.0f, outerRadiuses[TopLeft][VAxis] - borderWidths.top())),
-        geometry::Vec2f(
-            (std::max)(0.0f, outerRadiuses[TopRight][HAxis] - borderWidths.right()),
-            (std::max)(0.0f, outerRadiuses[TopRight][VAxis] - borderWidths.top())),
-        geometry::Vec2f(
-            (std::max)(0.0f, outerRadiuses[BottomRight][HAxis] - borderWidths.right()),
-            (std::max)(0.0f, outerRadiuses[BottomRight][VAxis] - borderWidths.bottom())),
-        geometry::Vec2f(
-            (std::max)(0.0f, outerRadiuses[BottomLeft][HAxis] - borderWidths.left()),
-            (std::max)(0.0f, outerRadiuses[BottomLeft][VAxis] - borderWidths.bottom()))};
+    style::BorderRadiusesInPx<float> innerRadiuses = outerRadiuses.offsetted(
+        -borderWidths.top(),
+        -borderWidths.right(),
+        -borderWidths.bottom(),
+        -borderWidths.left());
 
     // Compute point-pair samples (innerX, innerY, outerX, outerY), appending them to `a`
     QuarterEllipseParams params;
@@ -517,13 +523,13 @@ void insertRect(
     params.invPixelSize = 1.0f / pixelSize;
     Int samplesBeginIndex = a.length();
     insertQuarterEllipseWithBorder<TopLeft>(
-        a, innerRect, outerRect, innerRadiuses, outerRadiuses, params);
+        a, innerRect, outerRect, innerRadiuses, outerRadiuses, refRadiuses, params);
     insertQuarterEllipseWithBorder<TopRight>(
-        a, innerRect, outerRect, innerRadiuses, outerRadiuses, params);
+        a, innerRect, outerRect, innerRadiuses, outerRadiuses, refRadiuses, params);
     insertQuarterEllipseWithBorder<BottomRight>(
-        a, innerRect, outerRect, innerRadiuses, outerRadiuses, params);
+        a, innerRect, outerRect, innerRadiuses, outerRadiuses, refRadiuses, params);
     insertQuarterEllipseWithBorder<BottomLeft>(
-        a, innerRect, outerRect, innerRadiuses, outerRadiuses, params);
+        a, innerRect, outerRect, innerRadiuses, outerRadiuses, refRadiuses, params);
     Int samplesEndIndex = a.length();
 
     // Compute how many triangles in total we will need:
