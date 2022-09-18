@@ -217,16 +217,6 @@ core::Colorf computeHighlightColor(const core::Colorf& c) {
     // based on luminance makes the discontinuity quite surprising in some
     // typical scenarios and does not look as good.
     //
-    /*
-    float luminance = lab[0];
-    if (luminance < 0.8) {
-        luminance = 25 + 0.8 * luminance;
-    }
-    else {
-        luminance -= 20;
-    }
-    lab[0] = lum;
-    */
     float luminance = lab[0];
     if (lightness < 0.4) {
         luminance = 25 + 0.8 * luminance;
