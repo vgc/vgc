@@ -775,6 +775,7 @@ void ColorPaletteSelector::setHslSteps(Int hue, Int saturation, Int lightness) {
     numLightnessSteps_ = core::clamp(numLightnessSteps_, 3, 99);
 
     // Update hovered indices and isSelectedColorExact_ based on new steps
+    selectionOrigin_ = SelectionOrigin::External;
     setSelectedColor_(selectedColor_);
 
     // Repaint
@@ -1743,10 +1744,6 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
             insertHuePie_(a, hues_, hueVecs, hue1, hue2, color2, r3, r5, m.hinting);
         }
     }
-
-    // XXX Fix bug where selectedHue_ was == 2010 after changing the number of hue steps
-    // from a high number to a low number. Presumably a big hueIndex wasn't updated and
-    // now meant a huge selectedHue_ after multiplying by 360 / newNumHueSteps.
 
     HueCursorStyle continuousStyle;
     continuousStyle.innerColor = cursorInnerColor;
