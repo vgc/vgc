@@ -202,23 +202,39 @@ geometry::Vec3f srgbToLabD65(const core::Colorf& c) {
 core::Colorf computeHighlightColor(const core::Colorf& c) {
 
     // Remember original hue
-    auto [h, s_, l_] = c.toHsl();
+    auto [h, s, lightness] = c.toHsl();
 
     // Convert to Lab space, which is a perceptual color space. This means that
     // increasing the luminance by a fixed amount in this space does looks like
     // a fixed amount to the human eye (at least, approximately).
     geometry::Vec3f lab = srgbToLabD65(c);
 
-    // Slightly alter the luminance in Lab space. This comes from trial and
-    // error.
-    float l = lab[0];
-    if (l < 50) {
-        l = 25 + 0.8 * l;
+    // Slightly increase or decrease the luminance in Lab space, based on a
+    // lightness threshold.
+    //
+    // Note that in theory, it would make more sense to also use luminance
+    // (instead of lightness) for the threshold. In practice, switching modes
+    // based on luminance makes the discontinuity quite surprising in some
+    // typical scenarios and does not look as good.
+    //
+    /*
+    float luminance = lab[0];
+    if (luminance < 0.8) {
+        luminance = 25 + 0.8 * luminance;
     }
     else {
-        l -= 20;
+        luminance -= 20;
     }
-    lab[0] = l;
+    lab[0] = lum;
+    */
+    float luminance = lab[0];
+    if (lightness < 0.4) {
+        luminance = 25 + 0.8 * luminance;
+    }
+    else {
+        luminance -= 20;
+    }
+    lab[0] = luminance;
 
     // Convert back to sRGB
     core::Colorf labSpaceContrasted = labD65ToSrgb(lab);
@@ -1068,28 +1084,51 @@ void ColorPaletteSelector::onPaintDraw(
             }
         }
         // Draw highlighted color in steps mode
-        if (!isContinuous_ && hoveredLightnessIndex_ != -1) {
-            Int i = hoveredLightnessIndex_;
-            Int j = hoveredSaturationIndex_;
-            float x1 = hint(x0 + m.borderWidth + i * m.slDx, m.hinting);
-            float x2 =
-                hint(x0 + m.borderWidth + (i + 1) * m.slDx, m.hinting) - m.borderWidth;
-            float y1 = y0 + m.borderWidth + j * m.slDy;
-            float y2 = y1 + m.slDy - m.borderWidth;
-            double l = i * dl;
-            double s = j * ds;
-            auto hoveredColor = core::Color::hsl(hue, s, l).round8b();
-            core::Colorf hoveredColorf(hoveredColor);
-            core::Colorf highlightColorf = computeHighlightColor(hoveredColorf);
-            core::Color highlightColor = highlightColorf.toDouble();
+        if (isContinuous_) {
+            if (hoveredLightness_ != -1) {
+                float hmargins = m.borderWidth;
+                float vmargins = m.borderWidth;
+                geometry::Rect2f rect =
+                    m.saturationLightnessRect - Margins(vmargins, hmargins);
 
-            geometry::Rect2f rect(x1, y1, x2, y2);
-            style::BorderRadiuses radius(style::BorderRadius(0));
-            float borderWidth = 1;
+                float radius = 5;
+                geometry::Vec2f center(
+                    rect.xMin() + hoveredLightness_ * rect.width(),
+                    rect.yMin() + hoveredSaturation_ * rect.height());
+                float circleBorderWidth = 1;
 
-            detail::insertRect(
-                a, hoveredColor, highlightColor, rect, radius, borderWidth);
+                core::Colorf hoveredColorf = core::Colorf::hsl(
+                    selectedHue_, hoveredSaturation_, hoveredLightness_);
+                core::Colorf highlightColorf = computeHighlightColor(hoveredColorf);
+                insertCircleBorder_(
+                    a, highlightColorf, center, radius, circleBorderWidth);
+            }
         }
+        else {
+            if (hoveredLightnessIndex_ != -1) {
+                Int i = hoveredLightnessIndex_;
+                Int j = hoveredSaturationIndex_;
+                float x1 = hint(x0 + m.borderWidth + i * m.slDx, m.hinting);
+                float x2 = hint(x0 + m.borderWidth + (i + 1) * m.slDx, m.hinting)
+                           - m.borderWidth;
+                float y1 = y0 + m.borderWidth + j * m.slDy;
+                float y2 = y1 + m.slDy - m.borderWidth;
+                double l = i * dl;
+                double s = j * ds;
+                auto hoveredColor = core::Color::hsl(hue, s, l).round8b();
+                core::Colorf hoveredColorf(hoveredColor);
+                core::Colorf highlightColorf = computeHighlightColor(hoveredColorf);
+                core::Color highlightColor = highlightColorf.toDouble();
+
+                geometry::Rect2f rect(x1, y1, x2, y2);
+                style::BorderRadiuses radius(style::BorderRadius(0));
+                float borderWidth = 1;
+
+                detail::insertRect(
+                    a, hoveredColor, highlightColor, rect, radius, borderWidth);
+            }
+        }
+
         // Draw selected color
         if (isContinuous_ || !isSelectedColorExact_) {
             float hmargins = m.borderWidth;
@@ -1109,19 +1148,6 @@ void ColorPaletteSelector::onPaintDraw(
                 rect.yMin() + selectedSaturation_ * rect.height());
 
             insertSLCursorCircle_(a, selectedColorf, center, radius);
-            //insertCircle_(a, computeHighlightColor(selectedColorf), center, radius);
-
-            /*
-            style::BorderRadius radiusStyle(style::LengthOrPercentage(50));
-            style::BorderRadiuses radiusesStyle(radiusStyle);
-            detail::insertRect(
-                a,
-                selectedColor_,
-                highlightColor,
-                geometry::Rect2f(x1, y1, x2, y2),
-                radiusesStyle,
-                3);
-*/
         }
         else {
             Int i = selectedLightnessIndex_;
@@ -1599,6 +1625,32 @@ void insertCursorPie_(
     // TODO: draw fill color
 }
 
+// Insert a pie-shaped border (border width = 1).
+//
+void insertCursorPieBorder_(
+    core::FloatArray& a,
+    const core::FloatArray& hues,
+    const core::Array<HueVec>& hueVecs,
+    const core::Colorf& color,
+    float hue1,
+    float hue2,
+    float startHeight,
+    float endHeight) {
+
+    // shorter names to make function calls fit in one line
+    const float h1 = startHeight;
+    const float h2 = endHeight;
+    const core::Colorf& c = color;
+
+    // Draw horizontal (or arc-shaped) bars
+    insertHuePie_(a, hues, hueVecs, hue1, hue2, c, startHeight, startHeight + 1);
+    insertHuePie_(a, hues, hueVecs, hue1, hue2, c, endHeight - 1, endHeight);
+
+    // Draw vertical bars
+    insertHueQuad_(a, hues, hueVecs, hue1, c, 0, 1, startHeight, endHeight);
+    insertHueQuad_(a, hues, hueVecs, hue2, c, -1, 0, startHeight, endHeight);
+}
+
 float hueFromMousePosition_(
     const geometry::Vec2f& pos,
     const geometry::Vec2f& p,
@@ -1802,70 +1854,63 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     stepsStyleHighlight.hd2 = -1;
     stepsStyleHighlight.hd3 = 0;
 
-    float cursorStart = r1 + 2;
-    float cursorEnd = r3 - 2;
+    float cursorStart = r1;
+    float cursorEnd = r3;
 
     // Draw highlighted color cursor
-    if (!isContinuous_ && hoveredHueIndex_ != -1) {
-        float dhue = 360.0f / numHueSteps_;
-        float hue = hoveredHueIndex_ * dhue;
-        float hue1 = hue - 0.5f * dhue;
-        float hue2 = hue1 + dhue;
+    if (isContinuous_) {
+        if (hoveredHue_ != -1) {
+            float dhue = 10;
+            float hue = hoveredHue_;
+            float hue1 = hue - 0.5f * dhue;
+            float hue2 = hue1 + dhue;
 
-        core::Colorf color = colorfFromHslIndices(
-            numHueSteps_,
-            numSaturationSteps_,
-            numLightnessSteps_,
-            hoveredHueIndex_,
-            selectedSaturationIndex_,
-            selectedLightnessIndex_);
+            core::Colorf color =
+                core::Colorf::hsl(hue, selectedSaturation_, selectedLightness_);
+            core::Colorf highlightColor = computeHighlightColor(color);
+            insertCursorPieBorder_(
+                a, hues_, hueVecs, highlightColor, hue1, hue2, cursorStart, cursorEnd);
+        }
+    }
+    else {
+        if (hoveredHueIndex_ != -1) {
+            float dhue = 360.0f / numHueSteps_;
+            float hue = hoveredHueIndex_ * dhue;
+            float hue1 = hue - 0.5f * dhue;
+            float hue2 = hue1 + dhue;
 
-        insertCursorPie_(
-            a,
-            hues_,
-            hueVecs,
-            color,
-            hue1,
-            hue2,
-            cursorStart,
-            cursorEnd,
-            stepsStyleHighlight);
+            core::Colorf color = colorfFromHslIndices(
+                numHueSteps_,
+                numSaturationSteps_,
+                numLightnessSteps_,
+                hoveredHueIndex_,
+                selectedSaturationIndex_,
+                selectedLightnessIndex_);
+
+            core::Colorf highlightColor = computeHighlightColor(color);
+            insertCursorPieBorder_(
+                a, hues_, hueVecs, highlightColor, hue1, hue2, cursorStart, cursorEnd);
+        }
     }
 
     // Draw selected color cursor
     core::Colorf selectedColorf(
         selectedColor_.r(), selectedColor_.g(), selectedColor_.b());
     if (isContinuous_ || !isSelectedColorExact_) {
-        bool usePieSelectionForContinuous = true;
-        if (usePieSelectionForContinuous) {
-            float dhue = 10;
-            float hue = selectedHue_;
-            float hue1 = hue - 0.5f * dhue;
-            float hue2 = hue1 + dhue;
-            insertCursorPie_(
-                a,
-                hues_,
-                hueVecs,
-                selectedColorf,
-                hue1,
-                hue2,
-                cursorStart,
-                cursorEnd,
-                continuousStyle);
-        }
-        else {
-            insertHueCursorQuad_(
-                a,
-                hues_,
-                hueVecs,
-                selectedColorf,
-                selectedHue_,
-                cursorStart,
-                cursorEnd,
-                -3,
-                3,
-                continuousStyle);
-        }
+        float dhue = 10;
+        float hue = selectedHue_;
+        float hue1 = hue - 0.5f * dhue;
+        float hue2 = hue1 + dhue;
+        insertCursorPie_(
+            a,
+            hues_,
+            hueVecs,
+            selectedColorf,
+            hue1,
+            hue2,
+            cursorStart,
+            cursorEnd,
+            continuousStyle);
     }
     else {
         float dhue = 360.0f / numHueSteps_;
@@ -1961,18 +2006,31 @@ void ColorPaletteSelector::onPaintDestroy(graphics::Engine*) {
 
 bool ColorPaletteSelector::onMouseMove(MouseEvent* event) {
 
-    const geometry::Vec2f& p = event->position();
+    const geometry::Vec2f& position = event->position();
 
     if (isContinuous_) {
+        hoveredHue_ = -1;
+        hoveredSaturation_ = -1;
+        hoveredLightness_ = -1;
         if (scrubbedSelector_ != SelectorType::None) {
-            selectContinuousColorFromPosition_(p);
+            selectContinuousColor_(position);
         }
+        else if (metrics_.saturationLightnessRect.contains(position)) {
+            auto sl = getContinuousHoveredSaturationLightness_(position);
+            hoveredSaturation_ = sl.first;
+            hoveredLightness_ = sl.second;
+        }
+        else if (metrics_.hueRect.contains(position)) {
+            hoveredHue_ = getContinuousHoveredHue_(position);
+        }
+        reload_ = true;
+        requestRepaint();
     }
     else {
         // Determine relevant selector
         SelectorType selector = scrubbedSelector_;
         if (selector == SelectorType::None) {
-            selector = hoveredSelector_(p);
+            selector = hoveredSelector_(position);
         }
 
         // Determine hovered cell
@@ -1980,12 +2038,12 @@ bool ColorPaletteSelector::onMouseMove(MouseEvent* event) {
         Int j = -1;
         Int k = -1;
         if (selector == SelectorType::SaturationLightness) {
-            auto sl = hoveredSaturationLightness_(p);
+            auto sl = getHoveredSaturationLightness_(position);
             i = sl.first;
             j = sl.second;
         }
         else if (selector == SelectorType::Hue) {
-            k = hoveredHue_(p);
+            k = getHoveredHueIndex_(position);
         }
 
         // Update
@@ -2017,7 +2075,7 @@ bool ColorPaletteSelector::onMousePress(MouseEvent* event) {
         else if (metrics_.hueRect.contains(position)) {
             scrubbedSelector_ = SelectorType::Hue;
         }
-        return selectContinuousColorFromPosition_(position);
+        return selectContinuousColor_(position);
     }
     else {
         if (hoveredLightnessIndex_ != -1) {
@@ -2040,19 +2098,14 @@ bool ColorPaletteSelector::onMouseEnter() {
 }
 
 bool ColorPaletteSelector::onMouseLeave() {
-    Int i = -1;
-    Int j = -1;
-    Int k = -1;
-    if (hoveredLightnessIndex_ != i     //
-        || hoveredSaturationIndex_ != j //
-        || hoveredHueIndex_ != k) {
-
-        hoveredLightnessIndex_ = i;
-        hoveredSaturationIndex_ = j;
-        hoveredHueIndex_ = k;
-        reload_ = true;
-        requestRepaint();
-    }
+    hoveredLightnessIndex_ = -1;
+    hoveredSaturationIndex_ = -1;
+    hoveredHueIndex_ = -1;
+    hoveredLightness_ = -1;
+    hoveredSaturation_ = -1;
+    hoveredHue_ = -1;
+    reload_ = true;
+    requestRepaint();
     return true;
 }
 
@@ -2104,7 +2157,7 @@ ColorPaletteSelector::hoveredSelector_(const geometry::Vec2f& p) {
 }
 
 std::pair<Int, Int>
-ColorPaletteSelector::hoveredSaturationLightness_(const geometry::Vec2f& p) {
+ColorPaletteSelector::getHoveredSaturationLightness_(const geometry::Vec2f& p) {
     const geometry::Rect2f& r = metrics_.saturationLightnessRect;
     float i_ = numLightnessSteps_ * (p.x() - r.xMin()) / r.width();
     float j_ = numSaturationSteps_ * (p.y() - r.yMin()) / r.height();
@@ -2113,7 +2166,7 @@ ColorPaletteSelector::hoveredSaturationLightness_(const geometry::Vec2f& p) {
     return {i, j};
 }
 
-Int ColorPaletteSelector::hoveredHue_(const geometry::Vec2f& p) {
+Int ColorPaletteSelector::getHoveredHueIndex_(const geometry::Vec2f& p) {
     const geometry::Rect2f& r = metrics_.hueRect;
     auto [p_, q_] = getHueCapsuleCenters_(r);
     float hue = hueFromMousePosition_(p, p_, q_, hues_);
@@ -2222,21 +2275,33 @@ bool ColorPaletteSelector::selectColorFromHovered_() {
     return accepted;
 }
 
-bool ColorPaletteSelector::selectContinuousColorFromPosition_(const geometry::Vec2f& p) {
+float ColorPaletteSelector::getContinuousHoveredHue_(const geometry::Vec2f& position) {
+    if (hues_.isEmpty()) {
+        return 0;
+    }
+    else {
+        const geometry::Rect2f& r = metrics_.hueRect;
+        auto [p_, q_] = getHueCapsuleCenters_(r);
+        return hueFromMousePosition_(position, p_, q_, hues_);
+    }
+}
+
+std::pair<float, float> ColorPaletteSelector::getContinuousHoveredSaturationLightness_(
+    const geometry::Vec2f& position) {
+    const geometry::Rect2f& r = metrics_.saturationLightnessRect;
+    float lightness = core::clamp((position.x() - r.xMin()) / r.width(), 0, 1);
+    float saturation = core::clamp((position.y() - r.yMin()) / r.height(), 0, 1);
+    return {saturation, lightness};
+}
+
+bool ColorPaletteSelector::selectContinuousColor_(const geometry::Vec2f& p) {
     if (scrubbedSelector_ == SelectorType::SaturationLightness) {
-        const geometry::Rect2f& r = metrics_.saturationLightnessRect;
-        selectedLightness_ = core::clamp((p.x() - r.xMin()) / r.width(), 0, 1);
-        selectedSaturation_ = core::clamp((p.y() - r.yMin()) / r.height(), 0, 1);
+        auto sl = getContinuousHoveredSaturationLightness_(p);
+        selectedSaturation_ = sl.first;
+        selectedLightness_ = sl.second;
     }
     else if (scrubbedSelector_ == SelectorType::Hue) {
-        if (hues_.isEmpty()) {
-            selectedHue_ = 0;
-        }
-        else {
-            const geometry::Rect2f& r = metrics_.hueRect;
-            auto [p_, q_] = getHueCapsuleCenters_(r);
-            selectedHue_ = hueFromMousePosition_(p, p_, q_, hues_);
-        }
+        selectedHue_ = getContinuousHoveredHue_(p);
     }
     core::Color color =
         core::Color::hsl(selectedHue_, selectedSaturation_, selectedLightness_);
