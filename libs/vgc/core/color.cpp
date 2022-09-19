@@ -182,9 +182,13 @@ UInt8 hexByteToUint8(char d) {
 
 } // namespace
 
-Color Color::hsl(double h, double s, double l) {
+Color Color::hsl(float h, float s, float l) {
     auto [r, g, b] = rgbFromHsl(h, s, l);
     return Color(r, g, b);
+}
+
+std::array<float, 3> Color::toHsl() const {
+    return hslFromRgb(r(), g(), b());
 }
 
 Color Color::fromHex(std::string_view hex) {
@@ -210,20 +214,16 @@ Color Color::fromHex(std::string_view hex) {
         b0 = hexByteToUint8(hex[5]);
         b1 = hexByteToUint8(hex[6]);
     }
-    double r = core::uint8ToDouble01(16 * r0 + r1);
-    double g = core::uint8ToDouble01(16 * g0 + g1);
-    double b = core::uint8ToDouble01(16 * b0 + b1);
+    float r = mapFrom255(16 * r0 + r1);
+    float g = mapFrom255(16 * g0 + g1);
+    float b = mapFrom255(16 * b0 + b1);
     return Color(r, g, b);
 }
 
-std::array<double, 3> Color::toHsl() const {
-    return hslFromRgb(r(), g(), b());
-}
-
 std::string Color::toHex() const {
-    UInt8 r8 = core::double01ToUint8(r());
-    UInt8 g8 = core::double01ToUint8(g());
-    UInt8 b8 = core::double01ToUint8(b());
+    UInt8 r8 = mapTo255(r());
+    UInt8 g8 = mapTo255(g());
+    UInt8 b8 = mapTo255(b());
     std::string res;
     res.reserve(7);
     res.append("#");
@@ -234,23 +234,6 @@ std::string Color::toHex() const {
 }
 
 Color& Color::round8b() {
-    data_[0] = round8b_(data_[0]);
-    data_[1] = round8b_(data_[1]);
-    data_[2] = round8b_(data_[2]);
-    data_[3] = round8b_(data_[3]);
-    return *this;
-}
-
-Colorf Colorf::hsl(float h, float s, float l) {
-    auto [r, g, b] = rgbFromHsl(h, s, l);
-    return Colorf(r, g, b);
-}
-
-std::array<float, 3> Colorf::toHsl() const {
-    return hslFromRgb(r(), g(), b());
-}
-
-Colorf& Colorf::round8b() {
     data_[0] = round8b_(data_[0]);
     data_[1] = round8b_(data_[1]);
     data_[2] = round8b_(data_[2]);
@@ -284,17 +267,7 @@ Colorf& Colorf::round8b() {
 // files where the FileDefault can't be inferred (or only partially inferred),
 // then "FileDefault" should be determined via user preference.
 
-// Note 2: Currently, for simplicity and genericity, the Color class is
-// actually quite heavy: 4x64bits (and later: + metadata). This is okay for
-// single colors, but would make a large vector<Color> very inefficient. This
-// is why the type ColorArray shouldn't just be a vector<Color>, but instead a
-// vector<char> + metadata, so that the metadata is shared, and only the
-// required number of bytes is used. In fact, even the Color class might be a
-// vector<char>, that is, use dynamic allocation to save memory. It isn't clear
-// at the moment whether it's better to have a heavy Color class, or a Color
-// class doing dynamic allocation to save memory.
-
-// Note 3: ideally, we think it makes more sense if the alpha channel was
+// Note 2: ideally, we think it makes more sense if the alpha channel was
 // formatted as a 8bit integer by default (like the other color channels are),
 // instead of a floating point between [0, 1]. However, we decided to stick to
 // the existing SVG and CSS standards:
@@ -323,7 +296,7 @@ Colorf& Colorf::round8b() {
 // alpha values, we haven't decided yet the best way to allow both, although
 // a separate "opacity" attribute is probably enough in most use cases.
 
-// Note 4: when the color is read as rgb(int8, int8, int8, double), the alpha
+// Note 3: when the color is read as rgb(int8, int8, int8, double), the alpha
 // channel should actually simply be stored as a 8-bit integer, especially in
 // a large ColorArray. This is because if each color channel is 8-bit anyway,
 // there's probably no need for more precision than 8-bit for the alpha channel

@@ -27,13 +27,22 @@
 namespace vgc::core {
 
 /// \class vgc::core::Color
-/// \brief Color + alpha represented as RBGA with double-precision floats.
+/// \brief A class to represent a given color and opacity.
+///
+/// For now, the color is stored as RBGA with single-precision floats in [0, 1].
+/// In the future, we could choose to store HSL
 ///
 class VGC_CORE_API Color {
 public:
     /// Creates an uninitialized Color.
     ///
-    Color() {
+    Color(core::NoInit) {
+    }
+
+    /// Creates a Color initialized to black.
+    ///
+    Color()
+        : data_{0.0f, 0.0f, 0.0f, 1.0f} {
     }
 
     /// Creates a Color from the given HSL values.
@@ -47,18 +56,18 @@ public:
     /// color), and the saturation and lightness should be given in [0, 1] and
     /// are implicitly clamped to this range.
     ///
-    static Color hsl(double h, double s, double l);
+    static Color hsl(float h, float s, float l);
 
     /// Creates a Color initialized with the given r, g, b in [0, 1]. The alpha
     /// channel is set to 1.0.
     ///
-    Color(double r, double g, double b)
-        : data_{r, g, b, 1.0} {
+    Color(float r, float g, float b)
+        : data_{r, g, b, 1.0f} {
     }
 
     /// Creates a Color initialized with the given r, g, b, a in [0, 1].
     ///
-    Color(double r, double g, double b, double a)
+    Color(float r, float g, float b, float a)
         : data_{r, g, b, a} {
     }
 
@@ -73,67 +82,67 @@ public:
 
     /// Accesses the i-th channel of the Color.
     ///
-    const double& operator[](int i) const {
+    const float& operator[](int i) const {
         return data_[i];
     }
 
     /// Mutates the i-th channel of the Color.
     ///
-    double& operator[](int i) {
+    float& operator[](int i) {
         return data_[i];
     }
 
     /// Accesses the red channel of the Color.
     ///
-    double r() const {
+    float r() const {
         return data_[0];
     }
 
     /// Accesses the green channel of the Color.
     ///
-    double g() const {
+    float g() const {
         return data_[1];
     }
 
     /// Accesses the blue channel of the Color.
     ///
-    double b() const {
+    float b() const {
         return data_[2];
     }
 
     /// Accesses the alpha channel of the Color.
     ///
-    double a() const {
+    float a() const {
         return data_[3];
     }
 
     /// Mutates the red channel of the Color.
     ///
-    void setR(double r) {
+    void setR(float r) {
         data_[0] = r;
     }
 
     /// Mutates the green channel of the Color.
     ///
-    void setG(double g) {
+    void setG(float g) {
         data_[1] = g;
     }
 
     /// Mutates the blue channel of the Color.
     ///
-    void setB(double b) {
+    void setB(float b) {
         data_[2] = b;
     }
 
     /// Mutates the alpha channel of the Color.
     ///
-    void setA(double a) {
+    void setA(float a) {
         data_[3] = a;
     }
 
     /// Returns the current color converted to an HSL representation.
     ///
-    std::array<double, 3> toHsl() const;
+    std::array<float, 3> toHsl() const;
 
     /// Returns the current color as an hexadecimal string.
     ///
@@ -194,7 +203,7 @@ public:
     /// Multiplies in-place this Color by the given scalar \p s.
     /// This multiplies all channels, including the alpha channel.
     ///
-    Color& operator*=(double s) {
+    Color& operator*=(float s) {
         data_[0] *= s;
         data_[1] *= s;
         data_[2] *= s;
@@ -205,21 +214,21 @@ public:
     /// Returns the multiplication of this Color by the given scalar \p s.
     /// This multiplies all channels, including the alpha channel.
     ///
-    Color operator*(double s) const {
+    Color operator*(float s) const {
         return Color(*this) *= s;
     }
 
     /// Returns the multiplication of the scalar \p s with the Color \p c.
     /// This multiplies all channels, including the alpha channel.
     ///
-    friend Color operator*(double s, const Color& c) {
+    friend Color operator*(float s, const Color& c) {
         return c * s;
     }
 
     /// Divides in-place this Color by the given scalar \p s.
     /// This divides all channels, including the alpha channel.
     ///
-    Color& operator/=(double s) {
+    Color& operator/=(float s) {
         data_[0] /= s;
         data_[1] /= s;
         data_[2] /= s;
@@ -230,7 +239,7 @@ public:
     /// Returns the division of this Color by the given scalar \p s.
     /// This divides all channels, including the alpha channel.
     ///
-    Color operator/(double s) const {
+    Color operator/(float s) const {
         return Color(*this) /= s;
     }
 
@@ -285,266 +294,18 @@ public:
         return !(c1 < c2);
     }
 
-private:
-    double data_[4];
-};
-
-/// \class vgc::core::Colorf
-/// \brief Color + alpha represented as RBGA with single-precision floats.
-///
-class VGC_CORE_API Colorf {
-public:
-    /// Creates an uninitialized Colorf.
+    /// Converts a floating point in [0, 1] to an integer in [0..255].
     ///
-    Colorf() {
+    static UInt8 mapTo255(float x) {
+        float y = std::round(clamp(x, 0.0f, 1.0f) * 255.0f);
+        return static_cast<UInt8>(y);
     }
 
-    explicit Colorf(const Color& c)
-        : data_{
-            static_cast<float>(c.r()),
-            static_cast<float>(c.g()),
-            static_cast<float>(c.b()),
-            static_cast<float>(c.a())} {
-    }
-
-    core::Color toDouble() const {
-        return core::Color(r(), g(), b(), a());
-    }
-
-    /// Creates a Colorf from the given HSL values.
+    /// Converts an integer in [0..255] to a floating point in [0, 1].
     ///
-    /// ```cpp
-    /// core::Colorf c = core::Colorf::hsl(270, 0.6, 0.7);
-    /// ```
-    ///
-    /// The hue should be given in degrees and implicitly wraps around (e.g.,
-    /// adding or substrating any multiple of 360 doesn't change the returned
-    /// color), and the saturation and lightness should be given in [0, 1] and
-    /// are implicitly clamped to this range.
-    ///
-    static Colorf hsl(float h, float s, float l);
-
-    /// Creates a Colorf initialized with the given r, g, b in [0, 1]. The alpha
-    /// channel is set to 1.0.
-    ///
-    Colorf(float r, float g, float b)
-        : data_{r, g, b, 1.0} {
-    }
-
-    /// Creates a Colorf initialized with the given r, g, b, a in [0, 1].
-    ///
-    Colorf(float r, float g, float b, float a)
-        : data_{r, g, b, a} {
-    }
-
-    /// Accesses the i-th channel of the Colorf.
-    ///
-    const float& operator[](int i) const {
-        return data_[i];
-    }
-
-    /// Mutates the i-th channel of the Colorf.
-    ///
-    float& operator[](int i) {
-        return data_[i];
-    }
-
-    /// Accesses the red channel of the Colorf.
-    ///
-    float r() const {
-        return data_[0];
-    }
-
-    /// Accesses the green channel of the Colorf.
-    ///
-    float g() const {
-        return data_[1];
-    }
-
-    /// Accesses the blue channel of the Colorf.
-    ///
-    float b() const {
-        return data_[2];
-    }
-
-    /// Accesses the alpha channel of the Colorf.
-    ///
-    float a() const {
-        return data_[3];
-    }
-
-    /// Mutates the red channel of the Colorf.
-    ///
-    void setR(float r) {
-        data_[0] = r;
-    }
-
-    /// Mutates the green channel of the Colorf.
-    ///
-    void setG(float g) {
-        data_[1] = g;
-    }
-
-    /// Mutates the blue channel of the Colorf.
-    ///
-    void setB(float b) {
-        data_[2] = b;
-    }
-
-    /// Mutates the alpha channel of the Colorf.
-    ///
-    void setA(float a) {
-        data_[3] = a;
-    }
-
-    /// Returns the current color converted to an HSL representation.
-    ///
-    std::array<float, 3> toHsl() const;
-
-    /// Rounds the current color to the nearest RGB value representable as an
-    /// 8bit 0-255 value.
-    ///
-    Colorf& round8b();
-
-    /// Returns a color rounded to the nearest RGB value representable as an
-    /// 8-bit value in the range 0-255.
-    ///
-    Colorf rounded8b() {
-        return Colorf(*this).round8b();
-    }
-
-    /// Adds in-place the \p other Colorf to this Colorf.
-    /// This is a component-wise addition of all channels, including the alpha
-    /// channel.
-    ///
-    Colorf& operator+=(const Colorf& other) {
-        data_[0] += other[0];
-        data_[1] += other[1];
-        data_[2] += other[2];
-        data_[3] += other[3];
-        return *this;
-    }
-
-    /// Returns the addition of the Colorf \p c1 and the Colorf \p c2.
-    /// This is a component-wise addition of all channels, including the alpha
-    /// channel.
-    ///
-    friend Colorf operator+(const Colorf& c1, const Colorf& c2) {
-        return Colorf(c1) += c2;
-    }
-
-    /// Substracts in-place the \p other Colorf to this Colorf.
-    /// This is a component-wise substraction of all channels, including the
-    /// alpha channel.
-    ///
-    Colorf& operator-=(const Colorf& other) {
-        data_[0] -= other[0];
-        data_[1] -= other[1];
-        data_[2] -= other[2];
-        data_[3] -= other[3];
-        return *this;
-    }
-
-    /// Returns the substraction of the Colorf \p c1 and the Colorf \p c2.
-    /// This is a component-wise substraction of all channels, including the
-    /// alpha channel.
-    ///
-    friend Colorf operator-(const Colorf& c1, const Colorf& c2) {
-        return Colorf(c1) -= c2;
-    }
-
-    /// Multiplies in-place this Colorf by the given scalar \p s.
-    /// This multiplies all channels, including the alpha channel.
-    ///
-    Colorf& operator*=(float s) {
-        data_[0] *= s;
-        data_[1] *= s;
-        data_[2] *= s;
-        data_[3] *= s;
-        return *this;
-    }
-
-    /// Returns the multiplication of this Colorf by the given scalar \p s.
-    /// This multiplies all channels, including the alpha channel.
-    ///
-    Colorf operator*(float s) const {
-        return Colorf(*this) *= s;
-    }
-
-    /// Returns the multiplication of the scalar \p s with the Colorf \p c.
-    /// This multiplies all channels, including the alpha channel.
-    ///
-    friend Colorf operator*(float s, const Colorf& c) {
-        return c * s;
-    }
-
-    /// Divides in-place this Colorf by the given scalar \p s.
-    /// This divides all channels, including the alpha channel.
-    ///
-    Colorf& operator/=(float s) {
-        data_[0] /= s;
-        data_[1] /= s;
-        data_[2] /= s;
-        data_[3] /= s;
-        return *this;
-    }
-
-    /// Returns the division of this Colorf by the given scalar \p s.
-    /// This divides all channels, including the alpha channel.
-    ///
-    Colorf operator/(float s) const {
-        return Colorf(*this) /= s;
-    }
-
-    /// Returns whether the two given Colorf \p c1 and \p c2 are equal.
-    ///
-    friend bool operator==(const Colorf& c1, const Colorf& c2) {
-        return c1.data_[0] == c2.data_[0]    //
-               && c1.data_[1] == c2.data_[1] //
-               && c1.data_[2] == c2.data_[2] //
-               && c1.data_[3] == c2.data_[3];
-    }
-
-    /// Returns whether the two given Colorf \p c1 and \p c2 are different.
-    ///
-    friend bool operator!=(const Colorf& c1, const Colorf& c2) {
-        return !(c1 == c2);
-    }
-
-    /// Compares the two Colorf \p c1 and \p c2 using the lexicographic
-    /// order.
-    ///
-    friend bool operator<(const Colorf& c1, const Colorf& c2) {
-        // clang-format off
-        return ( (c1.data_[0] < c2.data_[0]) ||
-               (!(c2.data_[0] < c1.data_[0]) &&
-               ( (c1.data_[1] < c2.data_[1]) ||
-               (!(c2.data_[1] < c1.data_[1]) &&
-               ( (c1.data_[2] < c2.data_[2]) ||
-               (!(c2.data_[2] < c1.data_[2]) &&
-               ( (c1.data_[3] < c2.data_[3]))))))));
-        // clang-format on
-    }
-
-    /// Compares the two Colorf \p c1 and \p c2 using the lexicographic
-    /// order.
-    ///
-    friend bool operator<=(const Colorf& c1, const Colorf& c2) {
-        return !(c2 < c1);
-    }
-
-    /// Compares the two Colorf \p c1 and \p c2 using the lexicographic
-    /// order.
-    ///
-    friend bool operator>(const Colorf& c1, const Colorf& c2) {
-        return c2 < c1;
-    }
-
-    /// Compares the two Colorf \p c1 and \p c2 using the lexicographic
-    /// order.
-    ///
-    friend bool operator>=(const Colorf& c1, const Colorf& c2) {
-        return !(c1 < c2);
+    static float mapFrom255(Int x) {
+        Int y = clamp(x, Int(0), Int(255));
+        return static_cast<float>(y) / 255.0f;
     }
 
 private:
@@ -570,11 +331,11 @@ void write(OStream& out, const Color& c) {
     write(out, writeAlpha ? "rgba(" : "rgb(");
     write(
         out,
-        double01ToUint8(c.r()),
+        Color::mapTo255(c.r()),
         ", ",
-        double01ToUint8(c.g()),
+        Color::mapTo255(c.g()),
         ", ",
-        double01ToUint8(c.b()));
+        Color::mapTo255(c.b()));
     if (writeAlpha) {
         write(out, ", ", c.a());
     }
@@ -598,13 +359,13 @@ void readTo(Color& c, IStream& in) {
         hasAlpha = true;
         skipExpectedCharacter(in, '(');
     }
-    c[0] = uint8ToDouble01(read<Int>(in));
+    c[0] = Color::mapFrom255(read<Int>(in));
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, ',');
-    c[1] = uint8ToDouble01(read<Int>(in));
+    c[1] = Color::mapFrom255(read<Int>(in));
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, ',');
-    c[2] = uint8ToDouble01(read<Int>(in));
+    c[2] = Color::mapFrom255(read<Int>(in));
     skipWhitespaceCharacters(in);
     if (hasAlpha) {
         skipExpectedCharacter(in, ',');
@@ -629,32 +390,9 @@ struct fmt::formatter<vgc::core::Color> {
     }
     template<typename FormatContext>
     auto format(const vgc::core::Color& c, FormatContext& ctx) {
-        vgc::UInt8 r = vgc::core::double01ToUint8(c.r());
-        vgc::UInt8 g = vgc::core::double01ToUint8(c.g());
-        vgc::UInt8 b = vgc::core::double01ToUint8(c.b());
-        double a = c.a();
-        if (a == 1.0) {
-            return format_to(ctx.out(), "rgb({}, {}, {})", r, g, b);
-        }
-        else {
-            return format_to(ctx.out(), "rgba({}, {}, {}, {})", r, g, b, a);
-        }
-    }
-};
-
-template<>
-struct fmt::formatter<vgc::core::Colorf> {
-    constexpr auto parse(format_parse_context& ctx) {
-        auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-        return it;
-    }
-    template<typename FormatContext>
-    auto format(const vgc::core::Colorf& c, FormatContext& ctx) {
-        vgc::UInt8 r = vgc::core::double01ToUint8(c.r());
-        vgc::UInt8 g = vgc::core::double01ToUint8(c.g());
-        vgc::UInt8 b = vgc::core::double01ToUint8(c.b());
+        vgc::UInt8 r = vgc::core::Color::mapTo255(c.r());
+        vgc::UInt8 g = vgc::core::Color::mapTo255(c.g());
+        vgc::UInt8 b = vgc::core::Color::mapTo255(c.b());
         double a = c.a();
         if (a == 1.0) {
             return format_to(ctx.out(), "rgb({}, {}, {})", r, g, b);

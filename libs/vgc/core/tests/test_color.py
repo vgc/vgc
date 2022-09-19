@@ -32,15 +32,15 @@ class TestColor(unittest.TestCase):
         self.assertEqual(c[3], 1)
 
     def testInitializingConstructor(self):
-        c1 = Color(0.2, 0.3, 0.9)
-        self.assertEqual(c1[0], 0.2)
-        self.assertEqual(c1[1], 0.3)
-        self.assertEqual(c1[2], 0.9)
+        c1 = Color(0.25, 0.375, 0.875)
+        self.assertEqual(c1[0], 0.25)
+        self.assertEqual(c1[1], 0.375)
+        self.assertEqual(c1[2], 0.875)
         self.assertEqual(c1[3], 1.0)
-        c2 = Color(0.2, 0.3, 0.9, 0.5)
-        self.assertEqual(c2[0], 0.2)
-        self.assertEqual(c2[1], 0.3)
-        self.assertEqual(c2[2], 0.9)
+        c2 = Color(0.25, 0.375, 0.875, 0.5)
+        self.assertEqual(c2[0], 0.25)
+        self.assertEqual(c2[1], 0.375)
+        self.assertEqual(c2[2], 0.875)
         self.assertEqual(c2[3], 0.5)
 
     def testCopyByReference(self):
@@ -66,10 +66,10 @@ class TestColor(unittest.TestCase):
         self.assertNotEqual(c1, c2)
 
     def testBracketOperator(self):
-        c = Color(12.5, 42, 0.6, 0.5)
+        c = Color(12.5, 42, 0.75, 0.5)
         self.assertEqual(c[0], 12.5)
         self.assertEqual(c[1], 42)
-        self.assertEqual(c[2], 0.6)
+        self.assertEqual(c[2], 0.75)
         self.assertEqual(c[3], 0.5)
         c[0] = 13.5
         c[1] += 1
@@ -77,14 +77,14 @@ class TestColor(unittest.TestCase):
         c[3] += 3
         self.assertEqual(c[0], 13.5)
         self.assertEqual(c[1], 43)
-        self.assertEqual(c[2], 2.6)
+        self.assertEqual(c[2], 2.75)
         self.assertEqual(c[3], 3.5)
 
     def testNamedComponents(self):
-        c = Color(12.5, 42, 0.6, 0.5)
+        c = Color(12.5, 42, 0.75, 0.5)
         self.assertEqual(c.r, 12.5)
         self.assertEqual(c.g, 42)
-        self.assertEqual(c.b, 0.6)
+        self.assertEqual(c.b, 0.75)
         self.assertEqual(c.a, 0.5)
         c.r = 13.5
         c.g += 1
@@ -92,7 +92,7 @@ class TestColor(unittest.TestCase):
         c.a += 3
         self.assertEqual(c.r, 13.5)
         self.assertEqual(c.g, 43)
-        self.assertEqual(c.b, 2.6)
+        self.assertEqual(c.b, 2.75)
         self.assertEqual(c.a, 3.5)
 
     def testArithmeticOperators(self):

@@ -27,10 +27,9 @@ void wrap_color(py::module& m) {
 
     py::class_<Color>(m, "Color")
 
-        // Note: in Python, Color() does (0,0,0,1)-initialization, unlike in C++
-        .def(py::init([]() { return Color(0, 0, 0); }))
-        .def(py::init<double, double, double>())
-        .def(py::init<double, double, double, double>())
+        .def(py::init([]() { return Color(); }))
+        .def(py::init<float, float, float>())
+        .def(py::init<float, float, float, float>())
         .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }))
         .def(py::init<Color>())
 
@@ -43,7 +42,7 @@ void wrap_color(py::module& m) {
             })
         .def(
             "__setitem__",
-            [](Color& v, int i, double x) {
+            [](Color& v, int i, float x) {
                 if (i < 0 || i >= 4)
                     throw py::index_error();
                 v[i] = x;
@@ -58,11 +57,11 @@ void wrap_color(py::module& m) {
         .def(py::self + py::self)
         .def(self2 -= py::self)
         .def(py::self - py::self)
-        .def(py::self *= double())
-        .def(double() * py::self)
-        .def(py::self * double())
-        .def(py::self /= double())
-        .def(py::self / double())
+        .def(py::self *= float())
+        .def(float() * py::self)
+        .def(py::self * float())
+        .def(py::self /= float())
+        .def(py::self / float())
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def(py::self < py::self)

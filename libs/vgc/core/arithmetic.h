@@ -1069,25 +1069,6 @@ IntType ifloor(FloatType x) {
     }
 }
 
-/// Maps a double \p x in the range [0, 1] to an 8-bit unsigned integer in
-/// the range [0..255]. More precisely, the returned value is the integer in
-/// [0..255] which is closest to 255*x.
-///
-VGC_CORE_API
-inline UInt8 double01ToUint8(double x) {
-    double y = std::round(vgc::core::clamp(x, 0.0, 1.0) * 255.0);
-    return static_cast<UInt8>(y);
-}
-
-/// Maps an integer \p x in the range [0..255] to a double in the range [0, 1].
-/// If the integer is not initially in the range [0..255], then it is first
-/// clamped to this range.
-///
-VGC_CORE_API
-inline double uint8ToDouble01(Int x) {
-    return vgc::core::clamp(x, Int(0), Int(255)) / 255.0;
-}
-
 /// \struct vgc::core::NoInit
 /// \brief Tag to select a function overload that doesn't perform initialization.
 ///

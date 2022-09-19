@@ -41,13 +41,9 @@ namespace vgc::ui {
 
 namespace {
 
-core::Color initialColor = core::Color(0.416, 0.416, 0.918);
-
-core::Colorf cursorOuterColor(0.15f, 0.2f, 0.3f);
-core::Colorf cursorInnerColor(1.0f, 1.0f, 1.0f);
-
-core::Color cursorOuterColord = cursorOuterColor.toDouble();
-core::Color cursorInnerColord = cursorInnerColor.toDouble();
+core::Color initialColor(0.416f, 0.416f, 0.918f);
+core::Color cursorOuterColor(0.15f, 0.2f, 0.3f);
+core::Color cursorInnerColor(1.0f, 1.0f, 1.0f);
 
 namespace strings_ {
 
@@ -75,7 +71,7 @@ float srgbGammaToLinear(float v) {
 
 // Converts a gamma-corrected sRGB color to its linear RGB value.
 //
-geometry::Vec3f srgbGammaToLinear(const core::Colorf& c) {
+geometry::Vec3f srgbGammaToLinear(const core::Color& c) {
     return {srgbGammaToLinear(c.r()), srgbGammaToLinear(c.g()), srgbGammaToLinear(c.b())};
 }
 
@@ -92,13 +88,13 @@ float srgbLinearToGamma(float v) {
 
 // Converts a gamma-corrected sRGB color to its linear RGB value.
 //
-core::Colorf srgbLinearToGamma(const geometry::Vec3f& c) {
+core::Color srgbLinearToGamma(const geometry::Vec3f& c) {
     return {srgbLinearToGamma(c.x()), srgbLinearToGamma(c.y()), srgbLinearToGamma(c.z())};
 }
 
 // Converts an sRGB color to XYZ.
 //
-geometry::Vec3f srgbToXyz(const core::Colorf& c) {
+geometry::Vec3f srgbToXyz(const core::Color& c) {
     // clang-format off
     static geometry::Mat3f m = {
         0.4124f, 0.3576f, 0.1805f,
@@ -111,7 +107,7 @@ geometry::Vec3f srgbToXyz(const core::Colorf& c) {
 
 // Converts an XYZ color to sRGB.
 //
-core::Colorf xyzToSrgb(const geometry::Vec3f& c) {
+core::Color xyzToSrgb(const geometry::Vec3f& c) {
     // clang-format off
     static geometry::Mat3f m = {
         0.4124f, 0.3576f, 0.1805f,
@@ -188,13 +184,13 @@ geometry::Vec3f labD65ToXyz(const geometry::Vec3f& c) {
 
 // Converts an sRGB color to Lab D65.
 //
-geometry::Vec3f srgbToLabD65(const core::Colorf& c) {
+geometry::Vec3f srgbToLabD65(const core::Color& c) {
     return xyzToLabD65(srgbToXyz(c));
 }
 
 // Converts a Lab D65 color to sRGB.
 //
-core::Colorf labD65ToSrgb(const geometry::Vec3f& c) {
+core::Color labD65ToSrgb(const geometry::Vec3f& c) {
     return xyzToSrgb(labD65ToXyz(c));
 }
 
@@ -211,9 +207,8 @@ enum class HighlightStyle {
 // but a slightly different saturation and lightness so that users can perceive
 // the difference.
 //
-core::Colorf computeHighlightColor(
-    const core::Colorf& c,
-    HighlightStyle style = HighlightStyle::Auto) {
+core::Color
+computeHighlightColor(const core::Color& c, HighlightStyle style = HighlightStyle::Auto) {
 
     // Convert to HSL
     auto [h, s, lightness] = c.toHsl();
@@ -250,13 +245,13 @@ core::Colorf computeHighlightColor(
     lab[0] = luminance;
 
     // Convert back to sRGB
-    core::Colorf labSpaceContrasted = labD65ToSrgb(lab);
+    core::Color labSpaceContrasted = labD65ToSrgb(lab);
 
     // Apply back the original hue. Indeed, modifying the luminance in Lab
     // space alters the hue, which sometimes look weird for an highlight.
     auto [newH, newS, newL] = labSpaceContrasted.toHsl();
     std::ignore = newH;
-    core::Colorf res = core::Colorf::hsl(h, newS, newL);
+    core::Color res = core::Color::hsl(h, newS, newL);
 
     return res;
 }
@@ -558,9 +553,9 @@ void ColorPalette::onRgbEdited_() {
     //
     core::Color color = selectedColor_;
     if (isValid) {
-        double r = core::uint8ToDouble01(r_);
-        double g = core::uint8ToDouble01(g_);
-        double b = core::uint8ToDouble01(b_);
+        float r = core::Color::mapFrom255(r_);
+        float g = core::Color::mapFrom255(g_);
+        float b = core::Color::mapFrom255(b_);
         color = core::Color(r, g, b);
         color.round8b();
     }
@@ -594,9 +589,9 @@ void ColorPalette::onHslEdited_() {
     core::Color color = selectedColor_;
     if (isValid) {
         // Note: Color::hsl() already does mod-360 hue
-        double h = static_cast<double>(h_);
-        double s = core::uint8ToDouble01(s_);
-        double l = core::uint8ToDouble01(l_);
+        float h = static_cast<float>(h_);
+        float s = core::Color::mapFrom255(s_);
+        float l = core::Color::mapFrom255(l_);
         color = core::Color::hsl(h, s, l);
         color.round8b();
     }
@@ -730,31 +725,11 @@ core::Color colorFromHslIndices(
     Int saturationIndex,
     Int lightnessIndex) {
 
-    double dh = 360.0 / numHueSteps;
-    double ds = 1.0 / (numSaturationSteps - 1);
-    double dl = 1.0 / (numLightnessSteps - 1);
-
-    core::Color color = core::Color::hsl( //
-        hueIndex * dh,
-        saturationIndex * ds,
-        lightnessIndex * dl);
-
-    return color.rounded8b();
-}
-
-core::Colorf colorfFromHslIndices(
-    Int numHueSteps,
-    Int numSaturationSteps,
-    Int numLightnessSteps,
-    Int hueIndex,
-    Int saturationIndex,
-    Int lightnessIndex) {
-
     float dh = 360.0f / numHueSteps;
     float ds = 1.0f / (numSaturationSteps - 1);
     float dl = 1.0f / (numLightnessSteps - 1);
 
-    core::Colorf color = core::Colorf::hsl( //
+    core::Color color = core::Color::hsl( //
         hueIndex * dh,
         saturationIndex * ds,
         lightnessIndex * dl);
@@ -831,11 +806,11 @@ constexpr Int circleLeftIndexEnd = 4 * numQuarterCircleSamples;
 geometry::Vec2fArray computeUnitCircle_(Int numSamples) {
     geometry::Vec2fArray res;
     res.reserve(numSamples + 1);
-    double dt = 2.0f * core::pi / numSamples;
+    float dt = 2.0f * static_cast<float>(core::pi) / numSamples;
     for (Int i = 0; i < numSamples; ++i) {
-        double t = i * dt;
-        float cost = static_cast<float>(std::cos(t));
-        float sint = static_cast<float>(std::sin(t));
+        float t = i * dt;
+        float cost = std::cos(t);
+        float sint = std::sin(t);
         res.emplaceLast(-cost, -sint);
     }
     res.append(res.first());
@@ -849,25 +824,24 @@ const geometry::Vec2fArray& unitCircle_() {
 
 // clang-format off
 
-
 void insertSmoothRect(
     core::FloatArray& a,
     const core::Color& cTopLeft, const core::Color& cTopRight,
     const core::Color& cBottomLeft, const core::Color& cBottomRight,
     float x1, float y1, float x2, float y2) {
 
-    float r1 = static_cast<float>(cTopLeft[0]);
-    float g1 = static_cast<float>(cTopLeft[1]);
-    float b1 = static_cast<float>(cTopLeft[2]);
-    float r2 = static_cast<float>(cTopRight[0]);
-    float g2 = static_cast<float>(cTopRight[1]);
-    float b2 = static_cast<float>(cTopRight[2]);
-    float r3 = static_cast<float>(cBottomLeft[0]);
-    float g3 = static_cast<float>(cBottomLeft[1]);
-    float b3 = static_cast<float>(cBottomLeft[2]);
-    float r4 = static_cast<float>(cBottomRight[0]);
-    float g4 = static_cast<float>(cBottomRight[1]);
-    float b4 = static_cast<float>(cBottomRight[2]);
+    float r1 = cTopLeft[0];
+    float g1 = cTopLeft[1];
+    float b1 = cTopLeft[2];
+    float r2 = cTopRight[0];
+    float g2 = cTopRight[1];
+    float b2 = cTopRight[2];
+    float r3 = cBottomLeft[0];
+    float g3 = cBottomLeft[1];
+    float b3 = cBottomLeft[2];
+    float r4 = cBottomRight[0];
+    float g4 = cBottomRight[1];
+    float b4 = cBottomRight[2];
     a.extend({
         x1, y1, r1, g1, b1,
         x2, y1, r2, g2, b2,
@@ -883,7 +857,7 @@ void insertQuad_(
     const geometry::Vec2f& q1,
     const geometry::Vec2f& p2,
     const geometry::Vec2f& q2,
-    const core::Colorf& c) {
+    const core::Color& c) {
 
     float p1x = p1.x();
     float p1y = p1.y();
@@ -920,7 +894,7 @@ void insertSLCursorQuad_(
     float x2,
     float y2) {
 
-    core::Colorf color(cellColor);
+    core::Color color(cellColor);
 
     geometry::Rect2f rect1(x1, y1, x2, y2);
     geometry::Rect2f rect2 = rect1 + Margins(1);
@@ -962,7 +936,7 @@ void insertSLCursorQuad_(
 
 void insertCircle_(
     core::FloatArray& a,
-    const core::Colorf& color,
+    const core::Color& color,
     const geometry::Vec2f& center,
     float radius) {
 
@@ -978,7 +952,7 @@ void insertCircle_(
 
 void insertCircleBorder_(
     core::FloatArray& a,
-    const core::Colorf& color,
+    const core::Color& color,
     const geometry::Vec2f& center,
     float radius,
     float borderWidth) {
@@ -999,7 +973,7 @@ void insertCircleBorder_(
 //
 void insertSLCursorCircle_(
     core::FloatArray& a,
-    const core::Colorf& fillColor,
+    const core::Color& fillColor,
     const geometry::Vec2f& center,
     float radius) {
 
@@ -1039,8 +1013,6 @@ void ColorPaletteSelector::onPaintDraw(
         updateMetrics_(); // TODO: only update if we know that they have changed
         const Metrics& m = metrics_;
 
-        core::Colorf selectedColorf(selectedColor_);
-
         // Get misc color info
         Int lSteps = numLightnessSteps_;
         Int sSteps = numSaturationSteps_;
@@ -1050,8 +1022,8 @@ void ColorPaletteSelector::onPaintDraw(
             sSteps = 16;
             hSteps = 96;
         }
-        double dhue = 360.0 / hSteps;
-        double hue = isContinuous_ ? selectedHue_ : selectedHueIndex_ * dhue;
+        float dhue = 360.0f / hSteps;
+        float hue = isContinuous_ ? selectedHue_ : selectedHueIndex_ * dhue;
 
         // draw saturation/lightness selector
         if (m.borderWidth > 0) {
@@ -1059,8 +1031,8 @@ void ColorPaletteSelector::onPaintDraw(
         }
         float x0 = m.saturationLightnessRect.xMin();
         float y0 = m.saturationLightnessRect.yMin();
-        double dl = 1.0 / (isContinuous_ ? lSteps : lSteps - 1);
-        double ds = 1.0 / (isContinuous_ ? sSteps : sSteps - 1);
+        float dl = 1.0f / (isContinuous_ ? lSteps : lSteps - 1);
+        float ds = 1.0f / (isContinuous_ ? sSteps : sSteps - 1);
         float slDx = m.slDx;
         float slDy = m.slDy;
         if (isContinuous_) {
@@ -1070,7 +1042,7 @@ void ColorPaletteSelector::onPaintDraw(
         for (Int i = 0; i < lSteps; ++i) {
             float x1 = x0 + m.borderWidth + i * slDx;
             float x2 = x0 + m.borderWidth + (i + 1) * slDx;
-            double l = i * dl;
+            float l = i * dl;
             if (!isContinuous_) {
                 x1 = hint(x1, m.hinting);
                 x2 = hint(x2, m.hinting);
@@ -1079,7 +1051,7 @@ void ColorPaletteSelector::onPaintDraw(
             for (Int j = 0; j < sSteps; ++j) {
                 float y1 = y0 + m.borderWidth + j * slDy;
                 float y2 = y1 + slDy;
-                double s = j * ds;
+                float s = j * ds;
                 if (isContinuous_) {
                     auto c1 = core::Color::hsl(hue, s, l);
                     auto c2 = core::Color::hsl(hue, s, l + dl);
@@ -1108,11 +1080,10 @@ void ColorPaletteSelector::onPaintDraw(
                     rect.yMin() + hoveredSaturation_ * rect.height());
                 float circleBorderWidth = 1;
 
-                core::Colorf hoveredColorf = core::Colorf::hsl(
-                    selectedHue_, hoveredSaturation_, hoveredLightness_);
-                core::Colorf highlightColorf = computeHighlightColor(hoveredColorf);
-                insertCircleBorder_(
-                    a, highlightColorf, center, radius, circleBorderWidth);
+                core::Color hoveredColor =
+                    core::Color::hsl(selectedHue_, hoveredSaturation_, hoveredLightness_);
+                core::Color highlightColor = computeHighlightColor(hoveredColor);
+                insertCircleBorder_(a, highlightColor, center, radius, circleBorderWidth);
             }
         }
         else {
@@ -1124,12 +1095,10 @@ void ColorPaletteSelector::onPaintDraw(
                            - m.borderWidth;
                 float y1 = y0 + m.borderWidth + j * m.slDy;
                 float y2 = y1 + m.slDy - m.borderWidth;
-                double l = i * dl;
-                double s = j * ds;
-                auto hoveredColor = core::Color::hsl(hue, s, l).round8b();
-                core::Colorf hoveredColorf(hoveredColor);
-                core::Colorf highlightColorf = computeHighlightColor(hoveredColorf);
-                core::Color highlightColor = highlightColorf.toDouble();
+                float l = i * dl;
+                float s = j * ds;
+                core::Color hoveredColor = core::Color::hsl(hue, s, l).round8b();
+                core::Color highlightColor = computeHighlightColor(hoveredColor);
 
                 geometry::Rect2f rect(x1, y1, x2, y2);
                 style::BorderRadiuses radius(style::BorderRadius(0));
@@ -1158,7 +1127,7 @@ void ColorPaletteSelector::onPaintDraw(
                 rect.xMin() + selectedLightness_ * rect.width(),
                 rect.yMin() + selectedSaturation_ * rect.height());
 
-            insertSLCursorCircle_(a, selectedColorf, center, radius);
+            insertSLCursorCircle_(a, selectedColor_, center, radius);
         }
         else {
             Int i = selectedLightnessIndex_;
@@ -1168,8 +1137,8 @@ void ColorPaletteSelector::onPaintDraw(
                 hint(x0 + m.borderWidth + (i + 1) * m.slDx, m.hinting) - m.borderWidth;
             float y1 = y0 + m.borderWidth + j * m.slDy;
             float y2 = y1 + m.slDy - m.borderWidth;
-            double l = i * dl;
-            double s = j * ds;
+            float l = i * dl;
+            float s = j * ds;
             auto c = core::Color::hsl(hue, s, l).round8b();
             insertSLCursorQuad_(a, c, x1, y1, x2, y2);
         }
@@ -1279,10 +1248,10 @@ void insertHueQuad_(
     core::FloatArray& a,
     const geometry::Vec2f& p1,
     const geometry::Vec2f& q1,
-    const core::Colorf& c1,
+    const core::Color& c1,
     const geometry::Vec2f& p2,
     const geometry::Vec2f& q2,
-    const core::Colorf& c2) {
+    const core::Color& c2) {
 
     float p1x = p1.x();
     float p1y = p1.y();
@@ -1323,10 +1292,10 @@ void insertHueQuadStrip_(
     for (Int i = 0; i < numSamples; ++i) {
         const geometry::Vec2f& p1 = inner[i];
         const geometry::Vec2f& q1 = outer[i];
-        core::Colorf c1 = core::Colorf::hsl(hues[i], saturation, lightness);
+        core::Color c1 = core::Color::hsl(hues[i], saturation, lightness);
         const geometry::Vec2f& p2 = inner[i + 1];
         const geometry::Vec2f& q2 = outer[i + 1];
-        core::Colorf c2 = core::Colorf::hsl(hues[i + 1], saturation, lightness);
+        core::Color c2 = core::Color::hsl(hues[i + 1], saturation, lightness);
         insertHueQuad_(a, p1, q1, c1, p2, q2, c2);
     }
 }
@@ -1412,7 +1381,7 @@ void insertHueQuad_(
     const core::FloatArray& hues,
     const core::Array<HueVec>& hueVecs,
     float hue,
-    const core::Colorf& color,
+    const core::Color& color,
     float leftOffset,
     float rightOffset,
     float startHeight,
@@ -1432,7 +1401,7 @@ void insertHuePieSection_(
     core::FloatArray& a,
     const HueVec& hv1,
     const HueVec& hv2,
-    const core::Colorf& color,
+    const core::Color& color,
     float startHeight,
     float endHeight,
     bool hinting) {
@@ -1451,7 +1420,7 @@ void insertHuePie_(
     const core::Array<HueVec>& hueVecs,
     float hue1,
     float hue2,
-    const core::Colorf& color,
+    const core::Color& color,
     float startHeight,
     float endHeight,
     bool hinting) {
@@ -1498,8 +1467,8 @@ void insertHuePie_(
 
 struct HueCursorStyle {
 
-    core::Colorf innerColor;
-    core::Colorf outerColor;
+    core::Color innerColor;
+    core::Color outerColor;
 
     // vertical offset distances
     float vd1 = 0;
@@ -1520,7 +1489,7 @@ void insertCursorPie_(
     core::FloatArray& a,
     const core::FloatArray& hues,
     const core::Array<HueVec>& hueVecs,
-    const core::Colorf& fillColor,
+    const core::Color& fillColor,
     float hue1,
     float hue2,
     float startHeight,
@@ -1530,9 +1499,9 @@ void insertCursorPie_(
     // shorter names to make function calls fit in one line
     const float h1 = startHeight;
     const float h2 = endHeight;
-    const core::Colorf& fc = fillColor;
-    const core::Colorf& oc = style.outerColor;
-    const core::Colorf& ic = style.innerColor;
+    const core::Color& fc = fillColor;
+    const core::Color& oc = style.outerColor;
+    const core::Color& ic = style.innerColor;
     const float vd1 = style.vd1;
     const float vd2 = style.vd2;
     const float vd3 = style.vd3;
@@ -1565,7 +1534,7 @@ void insertCursorPieBorder_(
     core::FloatArray& a,
     const core::FloatArray& hues,
     const core::Array<HueVec>& hueVecs,
-    const core::Colorf& color,
+    const core::Color& color,
     float hue1,
     float hue2,
     float startHeight,
@@ -1573,7 +1542,7 @@ void insertCursorPieBorder_(
     bool hinting) {
 
     // shorter names to make function calls fit in one line
-    const core::Colorf& c = color;
+    const core::Color& c = color;
 
     // Draw horizontal (or arc-shaped) bars
     insertHuePie_(a, hues, hueVecs, hue1, hue2, c, startHeight, startHeight + 1, hinting);
@@ -1693,7 +1662,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     //   half-disk      rectangle        half-disk
     //
 
-    const core::Colorf borderColor(255, 255, 255); // temp
+    const core::Color borderColor(255, 255, 255); // temp
 
     const Metrics& m = metrics_;
     const geometry::Rect2f& rect = m.hueRect;
@@ -1736,7 +1705,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
             float hue1 = hue - 0.5f * dhue;
             float hue2 = hue1 + dhue;
 
-            core::Colorf color1 = colorfFromHslIndices(
+            core::Color color1 = colorFromHslIndices(
                 numHueSteps_,
                 numSaturationSteps_,
                 numLightnessSteps_,
@@ -1744,8 +1713,8 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
                 selectedSaturationIndex_,
                 selectedLightnessIndex_);
 
-            core::Colorf::hsl(hue, selectedSaturation_, selectedLightness_);
-            core::Colorf color2 = core::Colorf::hsl(hue, 1.0f, 0.5f);
+            core::Color::hsl(hue, selectedSaturation_, selectedLightness_);
+            core::Color color2 = core::Color::hsl(hue, 1.0f, 0.5f);
             insertHuePie_(a, hues_, hueVecs, hue1, hue2, color1, r1, r3, m.hinting);
             insertHuePie_(a, hues_, hueVecs, hue1, hue2, color2, r3, r5, m.hinting);
         }
@@ -1795,9 +1764,9 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
             float hue1 = hue - 0.5f * dhue;
             float hue2 = hue1 + dhue;
 
-            core::Colorf color =
-                core::Colorf::hsl(hue, selectedSaturation_, selectedLightness_);
-            core::Colorf highlightColor = computeHighlightColor(color);
+            core::Color color =
+                core::Color::hsl(hue, selectedSaturation_, selectedLightness_);
+            core::Color highlightColor = computeHighlightColor(color);
             insertCursorPieBorder_(
                 a,
                 hues_,
@@ -1817,7 +1786,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
             float hue1 = hue - 0.5f * dhue;
             float hue2 = hue1 + dhue;
 
-            core::Colorf color = colorfFromHslIndices(
+            core::Color color = colorFromHslIndices(
                 numHueSteps_,
                 numSaturationSteps_,
                 numLightnessSteps_,
@@ -1825,7 +1794,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
                 selectedSaturationIndex_,
                 selectedLightnessIndex_);
 
-            core::Colorf highlightColor = computeHighlightColor(color);
+            core::Color highlightColor = computeHighlightColor(color);
             insertCursorPieBorder_(
                 a,
                 hues_,
@@ -1840,7 +1809,6 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     }
 
     // Draw selected color cursor
-    core::Colorf selectedColorf(selectedColor_);
     if (isContinuous_ || !isSelectedColorExact_) {
         float dhue = 10;
         float hue = selectedHue_;
@@ -1850,7 +1818,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
             a,
             hues_,
             hueVecs,
-            selectedColorf,
+            selectedColor_,
             hue1,
             hue2,
             cursorStart,
@@ -1863,7 +1831,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
         float hue1 = hue - 0.5f * dhue;
         float hue2 = hue1 + dhue;
 
-        core::Colorf color = colorfFromHslIndices(
+        core::Color color = colorFromHslIndices(
             numHueSteps_,
             numSaturationSteps_,
             numLightnessSteps_,
@@ -2138,34 +2106,34 @@ void ColorPaletteSelector::setSelectedColor_(const core::Color& color) {
 
 void ColorPaletteSelector::updateContinuousFromSelectedColor_() {
     if (selectionOrigin_ == SelectionOrigin::Steps) {
-        double dh = 360.0 / numHueSteps_;
-        double ds = 1.0 / (numSaturationSteps_ - 1);
-        double dl = 1.0 / (numLightnessSteps_ - 1);
-        selectedHue_ = static_cast<float>(selectedHueIndex_ * dh);
-        selectedSaturation_ = static_cast<float>(selectedSaturationIndex_ * ds);
-        selectedLightness_ = static_cast<float>(selectedLightnessIndex_ * dl);
+        float dh = 360.0f / numHueSteps_;
+        float ds = 1.0f / (numSaturationSteps_ - 1);
+        float dl = 1.0f / (numLightnessSteps_ - 1);
+        selectedHue_ = selectedHueIndex_ * dh;
+        selectedSaturation_ = selectedSaturationIndex_ * ds;
+        selectedLightness_ = selectedLightnessIndex_ * dl;
     }
     else {
         auto [h, s, l] = selectedColor_.toHsl();
         bool isChromatic = (l > 0 && l < 1 && s > 0);
         if (isChromatic) { // == has meaningful hue
-            selectedHue_ = static_cast<float>(h);
+            selectedHue_ = h;
         }
         bool hasMeaningfulSaturation = (l > 0 && l < 1);
         if (hasMeaningfulSaturation) {
-            selectedSaturation_ = static_cast<float>(s);
+            selectedSaturation_ = s;
         }
-        selectedLightness_ = static_cast<float>(l);
+        selectedLightness_ = l;
     }
 }
 
 void ColorPaletteSelector::updateStepsFromSelectedColor_() {
 
     // Find closest user-selectable color
-    double h = selectedHue_;
-    double s = selectedSaturation_;
-    double l = selectedLightness_;
-    Int hueIndex = static_cast<Int>(std::round(h * numHueSteps_ / 360.0));
+    float h = selectedHue_;
+    float s = selectedSaturation_;
+    float l = selectedLightness_;
+    Int hueIndex = static_cast<Int>(std::round(h * numHueSteps_ / 360.0f));
     Int saturationIndex = static_cast<Int>(std::round(s * (numSaturationSteps_ - 1)));
     Int lightnessIndex = static_cast<Int>(std::round(l * (numLightnessSteps_ - 1)));
     core::Color closestSelectableColor = colorFromHslIndices(
@@ -2462,18 +2430,12 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
                         refRadiuses.offsetted(2, 2, 2, 2);
 
                     detail::insertRect(
-                        a,
-                        color,
-                        cursorInnerColord,
-                        itemRect1,
-                        radiuses1,
-                        refRadiuses,
-                        1);
+                        a, color, cursorInnerColor, itemRect1, radiuses1, refRadiuses, 1);
 
                     detail::insertRect(
                         a,
                         core::colors::transparent,
-                        cursorOuterColord,
+                        cursorOuterColor,
                         itemRect2,
                         radiuses2,
                         refRadiuses,
@@ -2483,11 +2445,9 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
                     HighlightStyle style = (i == hoveredColorIndex_)
                                                ? HighlightStyle::LightenOnly
                                                : HighlightStyle::DarkenOnly;
-                    core::Colorf colorf(color);
-                    core::Colorf highlightedColorf = computeHighlightColor(colorf, style);
-                    core::Color hightlightedColor = highlightedColorf.toDouble();
+                    core::Color highlightColor = computeHighlightColor(color, style);
                     detail::insertRect(
-                        a, color, hightlightedColor, itemRect, radiuses, borderWidth);
+                        a, color, highlightColor, itemRect, radiuses, borderWidth);
                 }
             }
         }

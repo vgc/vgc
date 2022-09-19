@@ -75,7 +75,7 @@ void writeTriangleAt(
 
 void insertTriangle(
     core::FloatArray& a,
-    const core::Colorf& color,
+    const core::Color& color,
     const geometry::Vec2f& v1,
     const geometry::Vec2f& v2,
     const geometry::Vec2f& v3) {
@@ -102,7 +102,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
-    const core::Colorf& color,
+    const core::Color& color,
     const geometry::Rect2f& rect) {
 
     insertRect(
@@ -185,17 +185,6 @@ void insertRect(
     float g = static_cast<float>(c[1]);
     float b = static_cast<float>(c[2]);
     insertRect(a, r, g, b, x1, y1, x2, y2);
-}
-
-void insertRect(
-    core::FloatArray& a,
-    const core::Color& color,
-    const geometry::Rect2f& rect) {
-
-    insertRect(
-        a,
-        color,
-        rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax());
 }
 
 // clang-format on
