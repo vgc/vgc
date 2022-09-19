@@ -428,7 +428,8 @@ void Grid::updateChildrenGeometry() {
                 const float stretchWeight = track.stretchWeight() + bonusStretchWeight;
                 float stretchedSize = preferredSizeH;
                 if (stretchWeight > 0) {
-                    double stretchFactor = stretchWeight / totalStretchD;
+                    double stretchFactorD = stretchWeight / totalStretchD;
+                    float stretchFactor = static_cast<float>(stretchFactorD);
                     double delta = stretchFactor * underflowH;
                     double stretchedSizeD = preferredSizeH + delta;
                     if (hint) {
@@ -468,6 +469,7 @@ void Grid::updateChildrenGeometry() {
                 bool minSizeReached = false;
                 if (shrinkWeight > 0) {
                     double shrinkFactorD = shrinkWeight / remainingTotalShrinkD;
+                    float shrinkFactor = static_cast<float>(shrinkFactorD);
                     double deltaD = shrinkFactorD * remainingOverflowH;
                     double shrinkedSizeD = preferredSizeH - deltaD;
                     if (shrinkedSize < minSizeH) {
@@ -477,7 +479,7 @@ void Grid::updateChildrenGeometry() {
                     else {
                         shrinkedSize = static_cast<float>(shrinkedSizeD);
                         if (hint) {
-                            hinter.append(&track, index, shrinkedSizeD, shrinkFactorD);
+                            hinter.append(&track, index, shrinkedSizeD, shrinkFactor);
                         }
                     }
                 }
@@ -495,12 +497,13 @@ void Grid::updateChildrenGeometry() {
             VGC_ASSERT(contentMinSizeH > 0);
 
             const double shrinkFactorD = givenContentSizeH / contentMinSizeH;
+            const float shrinkFactor = static_cast<float>(shrinkFactorD);
             for (Int i = 0; i < nTracks; ++i) {
                 Track& track = trackAt_(i, dir);
                 const float minSizeH = track.minSizeH();
                 double shrinkedSizeD = shrinkFactorD * minSizeH;
                 if (hint) {
-                    hinter.append(&track, i, shrinkedSizeD, shrinkFactorD);
+                    hinter.append(&track, i, shrinkedSizeD, shrinkFactor);
                 }
                 float shrinkedSize = static_cast<float>(shrinkedSizeD);
                 track.size = shrinkedSize;
