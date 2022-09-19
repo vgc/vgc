@@ -741,6 +741,11 @@ public:
     /// Override this function if you wish to handle MouseMove events during the
     /// capture phase (from root to leaf).
     ///
+    /// The hover-chain child is automatically updated (if it is not hover-locked)
+    /// prior to calling this function using `computeHoverChainChild()`.
+    /// However you can change it again in this function using `setHoverChainChild()`.
+    /// This let's you override a hover-locked hover-chain child.
+    ///
     virtual void preMouseMove(MouseEvent* event);
 
     /// Override this function if you wish to handle MousePress events during the
