@@ -44,8 +44,8 @@ namespace {
 core::Color initialColor = core::Color(0.416, 0.416, 0.918);   // steps-selectable blue
 core::Color highlightColor = core::Color(0.043, 0.322, 0.714); // VGC Blue
 
-core::Colorf cursorOuterColor(0.15, 0.2, 0.3);
-core::Colorf cursorInnerColor(1.0, 1.0, 1.0);
+core::Colorf cursorOuterColor(0.15f, 0.2f, 0.3f);
+core::Colorf cursorInnerColor(1.0f, 1.0f, 1.0f);
 
 core::Color
     cursorOuterColord(cursorOuterColor.r(), cursorOuterColor.g(), cursorOuterColor.b());
@@ -105,9 +105,9 @@ core::Colorf srgbLinearToGamma(const geometry::Vec3f& c) {
 geometry::Vec3f srgbToXyz(const core::Colorf& c) {
     // clang-format off
     static geometry::Mat3f m = {
-        0.4124, 0.3576, 0.1805,
-        0.2126, 0.7152, 0.0722,
-        0.0193, 0.1192, 0.9505
+        0.4124f, 0.3576f, 0.1805f,
+        0.2126f, 0.7152f, 0.0722f,
+        0.0193f, 0.1192f, 0.9505f
     };
     // clang-format on
     return m * srgbGammaToLinear(c);
@@ -118,9 +118,9 @@ geometry::Vec3f srgbToXyz(const core::Colorf& c) {
 core::Colorf xyzToSrgb(const geometry::Vec3f& c) {
     // clang-format off
     static geometry::Mat3f m = {
-        0.4124, 0.3576, 0.1805,
-        0.2126, 0.7152, 0.0722,
-        0.0193, 0.1192, 0.9505
+        0.4124f, 0.3576f, 0.1805f,
+        0.2126f, 0.7152f, 0.0722f,
+        0.0193f, 0.1192f, 0.9505f
     };
     // clang-format on
     static geometry::Mat3f invM = m.inverted();
@@ -159,9 +159,9 @@ float invLabFn(float t) {
 namespace lab {
 
 // Achromatic reference for standard illuminant D65
-constexpr float xn = 95.0489 / 100;
-constexpr float yn = 100 / 100;
-constexpr float zn = 108.8840 / 100;
+constexpr float xn = 0.950489f;
+constexpr float yn = 1.000000f;
+constexpr float zn = 1.088840f;
 
 } // namespace lab
 
@@ -246,10 +246,10 @@ core::Colorf computeHighlightColor(
     if (style == HighlightStyle::LightenOnly
         || (style == HighlightStyle::Auto && lightness < 0.4)) {
 
-        luminance = 25 + 0.8 * luminance;
+        luminance = 25 + 0.8f * luminance;
     }
     else {
-        luminance = 75 - (0.9 * (100 - luminance));
+        luminance = 75 - (0.9f * (100 - luminance));
     }
     lab[0] = luminance;
 
@@ -755,8 +755,8 @@ core::Colorf colorfFromHslIndices(
     Int lightnessIndex) {
 
     float dh = 360.0f / numHueSteps;
-    double ds = 1.0f / (numSaturationSteps - 1);
-    double dl = 1.0f / (numLightnessSteps - 1);
+    float ds = 1.0f / (numSaturationSteps - 1);
+    float dl = 1.0f / (numLightnessSteps - 1);
 
     core::Colorf color = core::Colorf::hsl( //
         hueIndex * dh,
@@ -835,11 +835,11 @@ constexpr Int circleLeftIndexEnd = 4 * numQuarterCircleSamples;
 geometry::Vec2fArray computeUnitCircle_(Int numSamples) {
     geometry::Vec2fArray res;
     res.reserve(numSamples + 1);
-    double dt = 2.0 * core::pi / numSamples;
+    double dt = 2.0f * core::pi / numSamples;
     for (Int i = 0; i < numSamples; ++i) {
         double t = i * dt;
-        float cost = std::cos(t);
-        float sint = std::sin(t);
+        float cost = static_cast<float>(std::cos(t));
+        float sint = static_cast<float>(std::sin(t));
         res.emplaceLast(-cost, -sint);
     }
     res.append(res.first());
@@ -924,7 +924,7 @@ void insertSLCursorQuad_(
     float x2,
     float y2) {
 
-    core::Colorf color(cellColor.r(), cellColor.g(), cellColor.b());
+    core::Colorf color(cellColor);
 
     geometry::Rect2f rect1(x1, y1, x2, y2);
     geometry::Rect2f rect2 = rect1 + Margins(1);
@@ -1043,8 +1043,7 @@ void ColorPaletteSelector::onPaintDraw(
         updateMetrics_(); // TODO: only update if we know that they have changed
         const Metrics& m = metrics_;
 
-        core::Colorf selectedColorf(
-            selectedColor_.r(), selectedColor_.g(), selectedColor_.b());
+        core::Colorf selectedColorf(selectedColor_);
 
         // Get misc color info
         Int lSteps = numLightnessSteps_;
@@ -1066,8 +1065,8 @@ void ColorPaletteSelector::onPaintDraw(
         float y0 = m.saturationLightnessRect.yMin();
         double dl = 1.0 / (isContinuous_ ? lSteps : lSteps - 1);
         double ds = 1.0 / (isContinuous_ ? sSteps : sSteps - 1);
-        double slDx = m.slDx;
-        double slDy = m.slDy;
+        float slDx = m.slDx;
+        float slDy = m.slDy;
         if (isContinuous_) {
             slDx = (m.saturationLightnessRect.width() - 2 * m.borderWidth) / lSteps;
             slDy = (m.saturationLightnessRect.height() - 2 * m.borderWidth) / sSteps;
@@ -1729,7 +1728,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     geometry::Vec2fArray s5 = computeHuePolygon_(p, q, r5, numHSamples);
 
     // Precomputation of hues and hueVecs
-    hues_ = computeHues_(p, q, 0.7 * r, numHSamples);
+    hues_ = computeHues_(p, q, 0.7f * r, numHSamples);
     core::Array<HueVec> hueVecs = computeHueVecs_(p, q, numHSamples);
 
     // Draw hue selector
@@ -1848,8 +1847,7 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     }
 
     // Draw selected color cursor
-    core::Colorf selectedColorf(
-        selectedColor_.r(), selectedColor_.g(), selectedColor_.b());
+    core::Colorf selectedColorf(selectedColor_);
     if (isContinuous_ || !isSelectedColorExact_) {
         float dhue = 10;
         float hue = selectedHue_;
@@ -2125,7 +2123,7 @@ Int ColorPaletteSelector::getHoveredHueIndex_(const geometry::Vec2f& p) {
     auto [p_, q_] = getHueCapsuleCenters_(r);
     float hue = hueFromMousePosition_(p, p_, q_, hues_);
     float dhue = 360.0f / numHueSteps_;
-    Int k = std::round(hue / dhue);
+    Int k = static_cast<Int>(std::round(hue / dhue));
     k = core::clamp(k, 0, numHueSteps_);
     if (k == numHueSteps_) {
         k = 0;
@@ -2150,21 +2148,21 @@ void ColorPaletteSelector::updateContinuousFromSelectedColor_() {
         double dh = 360.0 / numHueSteps_;
         double ds = 1.0 / (numSaturationSteps_ - 1);
         double dl = 1.0 / (numLightnessSteps_ - 1);
-        selectedHue_ = selectedHueIndex_ * dh;
-        selectedSaturation_ = selectedSaturationIndex_ * ds;
-        selectedLightness_ = selectedLightnessIndex_ * dl;
+        selectedHue_ = static_cast<float>(selectedHueIndex_ * dh);
+        selectedSaturation_ = static_cast<float>(selectedSaturationIndex_ * ds);
+        selectedLightness_ = static_cast<float>(selectedLightnessIndex_ * dl);
     }
     else {
         auto [h, s, l] = selectedColor_.toHsl();
         bool isChromatic = (l > 0 && l < 1 && s > 0);
         if (isChromatic) { // == has meaningful hue
-            selectedHue_ = h;
+            selectedHue_ = static_cast<float>(h);
         }
         bool hasMeaningfulSaturation = (l > 0 && l < 1);
         if (hasMeaningfulSaturation) {
-            selectedSaturation_ = s;
+            selectedSaturation_ = static_cast<float>(s);
         }
-        selectedLightness_ = l;
+        selectedLightness_ = static_cast<float>(l);
     }
 }
 
