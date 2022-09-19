@@ -221,6 +221,7 @@ core::Colorf computeHighlightColor(
 
     // Convert to HSL
     auto [h, s, lightness] = c.toHsl();
+    std::ignore = s;
 
     // Convert to Lab space, which is a perceptual color space. This means that
     // increasing the luminance by a fixed amount in this space looks like an
@@ -258,6 +259,7 @@ core::Colorf computeHighlightColor(
     // Apply back the original hue. Indeed, modifying the luminance in Lab
     // space alters the hue, which sometimes look weird for an highlight.
     auto [newH, newS, newL] = labSpaceContrasted.toHsl();
+    std::ignore = newH;
     core::Colorf res = core::Colorf::hsl(h, newS, newL);
 
     return res;
