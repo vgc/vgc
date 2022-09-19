@@ -419,7 +419,9 @@ ColorPalette::ColorPalette()
         createChild<ScreenColorPickerButton>("Pick Screen Color");
 
     // Palette
-    Button* addToPaletteButton = createChild<Button>("Add to Palette");
+    Row* paletteButtons = createChild<Row>();
+    Button* addToPaletteButton = paletteButtons->createChild<Button>("Add to Palette");
+    Button* removeFromPaletteButton = paletteButtons->createChild<Button>("-");
     colorListView_ = createChild<ColorListView>();
 
     // Connections
@@ -436,10 +438,11 @@ ColorPalette::ColorPalette()
     lEdit_->editingFinished().connect(onHslEditedSlot_());
     hexEdit_->editingFinished().connect(onHexEditedSlot_());
     addToPaletteButton->clicked().connect(onAddToPaletteClickedSlot_());
+    removeFromPaletteButton->clicked().connect(onRemoveFromPaletteClickedSlot_());
     pickScreenButton->pickingStarted().connect(onPickScreenStartedSlot_());
     pickScreenButton->pickingCancelled().connect(onPickScreenCancelledSlot_());
     pickScreenButton->colorHovered().connect(onPickScreenColorHoveredSlot_());
-    colorListView_->colorSelected().connect(onColorListViewSelectedColorSlot_());
+    colorListView_->selectedColorChanged().connect(onColorListViewSelectedColorSlot_());
 
     // Init
     onContinuousChanged_();
@@ -465,7 +468,9 @@ void ColorPalette::onSelectorSelectedColor_() {
 }
 
 void ColorPalette::onColorListViewSelectedColor_() {
-    selectColor_(colorListView_->selectedColor());
+    if (colorListView_->hasSelectedColor()) {
+        selectColor_(colorListView_->selectedColor());
+    }
 }
 
 namespace {
@@ -643,6 +648,13 @@ void ColorPalette::onPickScreenColorHovered_(const core::Color& color) {
 void ColorPalette::onAddToPaletteClicked_() {
     colorListView_->appendColor(selectedColor());
     colorListView_->setSelectedColorIndex(colorListView_->numColors() - 1);
+}
+
+void ColorPalette::onRemoveFromPaletteClicked_() {
+    Int selectedColorIndex = colorListView_->selectedColorIndex();
+    if (selectedColorIndex != -1) {
+        colorListView_->removeColorAt(selectedColorIndex);
+    }
 }
 
 void ColorPalette::updateStepsLineEdits_() {
@@ -2324,6 +2336,28 @@ void ColorListView::appendColor(const core::Color& color) {
     colors_.append(color);
     reload_ = true;
     colorsChanged().emit();
+    requestGeometryUpdate();
+}
+
+void ColorListView::removeColorAt(Int index) {
+    core::Color oldSelectedColor = selectedColor();
+    Int oldSelectedColorIndex = selectedColorIndex();
+    colors_.removeAt(index);
+    if (oldSelectedColorIndex >= numColors()) {
+        selectedColorIndex_ = numColors() - 1;
+    }
+    bool hasSelectedColorIndexChanged = (oldSelectedColorIndex != selectedColorIndex_);
+    bool hasSelectedColorChanged = (oldSelectedColor != selectedColor());
+    if (hasSelectedColorIndexChanged || hasSelectedColorChanged) {
+        reload_ = true;
+    }
+    colorsChanged().emit();
+    if (hasSelectedColorIndexChanged) {
+        selectedColorIndexChanged().emit();
+    }
+    if (hasSelectedColorChanged) {
+        selectedColorChanged().emit();
+    }
     requestGeometryUpdate();
 }
 
