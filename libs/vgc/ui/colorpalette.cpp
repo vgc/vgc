@@ -100,7 +100,7 @@ core::Colorf srgbLinearToGamma(const geometry::Vec3f& c) {
     return {srgbLinearToGamma(c.x()), srgbLinearToGamma(c.y()), srgbLinearToGamma(c.z())};
 }
 
-// Converts an sRGB color to XYZ
+// Converts an sRGB color to XYZ.
 //
 geometry::Vec3f srgbToXyz(const core::Colorf& c) {
     // clang-format off
@@ -113,7 +113,7 @@ geometry::Vec3f srgbToXyz(const core::Colorf& c) {
     return m * srgbGammaToLinear(c);
 }
 
-// Converts an XYZ color to sRGB
+// Converts an XYZ color to sRGB.
 //
 core::Colorf xyzToSrgb(const geometry::Vec3f& c) {
     // clang-format off
@@ -127,6 +127,7 @@ core::Colorf xyzToSrgb(const geometry::Vec3f& c) {
     return srgbLinearToGamma(invM * c);
 }
 
+// Helper function for xyz to lab
 float labFn(float t) {
     constexpr float d = 6.0f / 29;
     constexpr float e = 4.0f / 29;
@@ -142,21 +143,7 @@ float labFn(float t) {
     }
 }
 
-namespace lab {
-
-constexpr float xn = 95.0489 / 100;
-constexpr float yn = 100 / 100;
-constexpr float zn = 108.8840 / 100;
-
-} // namespace lab
-
-geometry::Vec3f xyzToLabD65(const geometry::Vec3f& c) {
-    float fx = labFn(c.x() / lab::xn);
-    float fy = labFn(c.y() / lab::yn);
-    float fz = labFn(c.z() / lab::zn);
-    return {116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)};
-}
-
+// Helper function for lab to xyz
 float invLabFn(float t) {
     constexpr float d = 6.0f / 29;
     constexpr float e = 4.0f / 29;
@@ -169,6 +156,26 @@ float invLabFn(float t) {
     }
 }
 
+namespace lab {
+
+// Achromatic reference for standard illuminant D65
+constexpr float xn = 95.0489 / 100;
+constexpr float yn = 100 / 100;
+constexpr float zn = 108.8840 / 100;
+
+} // namespace lab
+
+// Converts an XYZ color to Lab D65.
+//
+geometry::Vec3f xyzToLabD65(const geometry::Vec3f& c) {
+    float fx = labFn(c.x() / lab::xn);
+    float fy = labFn(c.y() / lab::yn);
+    float fz = labFn(c.z() / lab::zn);
+    return {116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)};
+}
+
+// Converts a Lab D65 color to XYZ.
+//
 geometry::Vec3f labD65ToXyz(const geometry::Vec3f& c) {
     constexpr float inv116 = 1.0f / 116;
     constexpr float inv200 = 1.0f / 200;
@@ -183,30 +190,42 @@ geometry::Vec3f labD65ToXyz(const geometry::Vec3f& c) {
         lab::zn * invLabFn(l_ - inv200 * b)};
 }
 
+// Converts an sRGB color to Lab D65.
+//
+geometry::Vec3f srgbToLabD65(const core::Colorf& c) {
+    return xyzToLabD65(srgbToXyz(c));
+}
+
+// Converts a Lab D65 color to sRGB.
+//
 core::Colorf labD65ToSrgb(const geometry::Vec3f& c) {
     return xyzToSrgb(labD65ToXyz(c));
 }
 
-geometry::Vec3f srgbToLabD65(const core::Colorf& c) {
-    return xyzToLabD65(srgbToXyz(c));
-}
+// Whether to darken or lighten (or let the algorithm choose) a given color
+// when asked to compute its corresponding highlight color.
+//
+enum class HighlightStyle {
+    DarkenOnly,
+    LightenOnly,
+    Auto
+};
 
 // Returns a color (H, S', L') with the same hue as the given color (H, S, L),
 // but a slightly different saturation and lightness so that users can perceive
 // the difference.
 //
-// Note thatthis function is not continuous. Have a continuous function is
+core::Colorf computeHighlightColor(
+    const core::Colorf& c,
+    HighlightStyle style = HighlightStyle::Auto) {
 
-// this would require to map somegive a hue
-//
-core::Colorf computeHighlightColor(const core::Colorf& c) {
-
-    // Remember original hue
+    // Convert to HSL
     auto [h, s, lightness] = c.toHsl();
 
     // Convert to Lab space, which is a perceptual color space. This means that
-    // increasing the luminance by a fixed amount in this space does looks like
-    // a fixed amount to the human eye (at least, approximately).
+    // increasing the luminance by a fixed amount in this space looks like an
+    // increase by a fixed amount to the human eye (at least, approximately).
+    //
     geometry::Vec3f lab = srgbToLabD65(c);
 
     // Slightly increase or decrease the luminance in Lab space, based on a
@@ -217,20 +236,27 @@ core::Colorf computeHighlightColor(const core::Colorf& c) {
     // based on luminance makes the discontinuity quite surprising in some
     // typical scenarios and does not look as good.
     //
+    // Also, in theory, applying a fixed offset should be enough, but in
+    // practice, this does not lighten enough very dark colors or darken enough
+    // very light colors. So we give a bigger offset to colors whose luminance
+    // are close to 0 or 100.
+    //
     float luminance = lab[0];
-    if (lightness < 0.4) {
+    if (style == HighlightStyle::LightenOnly
+        || (style == HighlightStyle::Auto && lightness < 0.4)) {
+
         luminance = 25 + 0.8 * luminance;
     }
     else {
-        luminance -= 20;
+        luminance = 75 - (0.9 * (100 - luminance));
     }
     lab[0] = luminance;
 
     // Convert back to sRGB
     core::Colorf labSpaceContrasted = labD65ToSrgb(lab);
 
-    // Apply back the original hue, because modifying the
-    // luminance in Lab
+    // Apply back the original hue. Indeed, modifying the luminance in Lab
+    // space alters the hue, which sometimes look weird for an highlight.
     auto [newH, newS, newL] = labSpaceContrasted.toHsl();
     core::Colorf res = core::Colorf::hsl(h, newS, newL);
 
@@ -661,9 +687,6 @@ void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
     hEdit_->setText(core::toString(static_cast<Int>(std::round(h))));
     sEdit_->setText(core::toString(static_cast<Int>(std::round(s * 255))));
     lEdit_->setText(core::toString(static_cast<Int>(std::round(l * 255))));
-    // hLineEdit_->setText(core::format("{:.1f}", h));
-    // sLineEdit_->setText(core::format("{:.1f}", s * 255));
-    // lLineEdit_->setText(core::format("{:.1f}", l * 255));
 
     // Update Hex line edit
     hexEdit_->setText(color.toHex());
@@ -1160,19 +1183,8 @@ void ColorPaletteSelector::onPaintDraw(
         // Load triangles
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
-
-    graphics::RasterizerStateCreateInfo info;
-    //info.setFillMode(graphics::FillMode::Wireframe);
-    static graphics::RasterizerStatePtr wireframe = engine->createRasterizerState(info);
-
-    engine->pushPipelineParameters(graphics::PipelineParameter::RasterizerState);
-    engine->setRasterizerState(wireframe);
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
-    engine->popPipelineParameters(graphics::PipelineParameter::RasterizerState);
-
-    //engine->setProgram(graphics::BuiltinProgram::Simple);
-    //engine->draw(triangles_, -1, 0);
 }
 
 namespace {
@@ -2423,7 +2435,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
             const Metrics& m = metrics_;
 
             float scaleFactor = 1;
-            //float borderWidth = detail::getLength(item_.get(), gs::border_width);
+            float borderWidth = detail::getLength(item_.get(), gs::border_width);
             //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
             style::BorderRadiuses radiuses = detail::getBorderRadiuses(item_.get());
 
@@ -2443,7 +2455,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
                 x2 = hint(x2, m.hinting);
                 geometry::Rect2f itemRect(x1, y1, x2, y2);
 
-                if (i == hoveredColorIndex_ || i == selectedColorIndex_) {
+                if (i == selectedColorIndex_) {
 
                     style::BorderRadiusesInPx<float> refRadiuses =
                         radiuses.toPx(scaleFactor, itemRect.width(), itemRect.height());
@@ -2458,7 +2470,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
 
                     detail::insertRect(
                         a,
-                        core::colors::transparent,
+                        color,
                         cursorInnerColord,
                         itemRect1,
                         radiuses1,
@@ -2474,27 +2486,20 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
                         refRadiuses,
                         1);
                 }
-                detail::insertRect(a, color, itemRect, radiuses);
+                else {
+                    HighlightStyle style = (i == hoveredColorIndex_)
+                                               ? HighlightStyle::LightenOnly
+                                               : HighlightStyle::DarkenOnly;
+                    core::Colorf colorf(color);
+                    core::Colorf highlightedColorf = computeHighlightColor(colorf, style);
+                    core::Color hightlightedColor = highlightedColorf.toDouble();
+                    detail::insertRect(
+                        a, color, hightlightedColor, itemRect, radiuses, borderWidth);
+                }
             }
         }
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
-    /*
-    graphics::RasterizerStateCreateInfo info;
-    info.setFillMode(graphics::FillMode::Wireframe);
-    static graphics::RasterizerStatePtr wireframe = engine->createRasterizerState(info);
-
-    engine->pushViewMatrix();
-    geometry::Mat4f m = engine->viewMatrix();
-    m.scale(10);
-    engine->setViewMatrix(m);
-    engine->pushPipelineParameters(graphics::PipelineParameter::RasterizerState);
-    engine->setRasterizerState(wireframe);
-    engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(triangles_, -1, 0);
-    engine->popPipelineParameters(graphics::PipelineParameter::RasterizerState);
-    engine->popViewMatrix();
-*/
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(triangles_, -1, 0);
 }
