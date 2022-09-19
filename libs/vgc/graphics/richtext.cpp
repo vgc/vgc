@@ -92,7 +92,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
     auto black_         = StyleValue::custom(core::colors::black);
     auto white_         = StyleValue::custom(core::colors::white);
-    auto blueish_       = StyleValue::custom(core::Color(0.20, 0.56, 1.0));
+    auto blueish_       = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
     auto transparent_   = StyleValue::custom(core::colors::transparent);
     auto zero_          = StyleValue::number(0.0f);
     auto one_           = StyleValue::number(1.0f);
