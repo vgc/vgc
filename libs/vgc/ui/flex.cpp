@@ -244,7 +244,7 @@ namespace {
 // Returns the preferred mainSize (margin excluded) of a child, assuming its
 // crossSize (margin included) is paddedCrossSize.
 //
-float getChildPreferredMainSize(float isRow, float paddedCrossSize, Widget* child) {
+float getChildPreferredMainSize(bool isRow, float paddedCrossSize, Widget* child) {
     if (isRow) {
         float childCrossMargins = getTopBottomMargins(child);
         float childCrossSize = (std::max)(0.0f, paddedCrossSize - childCrossMargins);
