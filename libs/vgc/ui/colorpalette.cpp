@@ -41,17 +41,13 @@ namespace vgc::ui {
 
 namespace {
 
-core::Color initialColor = core::Color(0.416, 0.416, 0.918);   // steps-selectable blue
-core::Color highlightColor = core::Color(0.043, 0.322, 0.714); // VGC Blue
+core::Color initialColor = core::Color(0.416, 0.416, 0.918);
 
 core::Colorf cursorOuterColor(0.15f, 0.2f, 0.3f);
 core::Colorf cursorInnerColor(1.0f, 1.0f, 1.0f);
 
-core::Color
-    cursorOuterColord(cursorOuterColor.r(), cursorOuterColor.g(), cursorOuterColor.b());
-
-core::Color
-    cursorInnerColord(cursorInnerColor.r(), cursorInnerColor.g(), cursorInnerColor.b());
+core::Color cursorOuterColord = cursorOuterColor.toDouble();
+core::Color cursorInnerColord = cursorInnerColor.toDouble();
 
 namespace strings_ {
 
@@ -1596,9 +1592,6 @@ float hueFromMousePosition_(
 
     constexpr float pi_ = static_cast<float>(core::pi);
     constexpr float twoOverPi = 2.0f / pi_;
-
-    constexpr Int numQuarterCircleSamples = 8;
-    constexpr Int numCircleSamples = 4 * numQuarterCircleSamples;
 
     const Int numHSamples = (hues.length() - 1 - numCircleSamples) / 2;
     const Int leftBegin = 0;
