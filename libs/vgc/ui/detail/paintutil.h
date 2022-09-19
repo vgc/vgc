@@ -54,7 +54,7 @@ void writeTriangleAt(
 
 void insertTriangle(
     core::FloatArray& a,
-    const core::Colorf& color,
+    const core::Color& color,
     const geometry::Vec2f& v1,
     const geometry::Vec2f& v2,
     const geometry::Vec2f& v3);
@@ -66,7 +66,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
-    const core::Colorf& color,
+    const core::Color& color,
     const geometry::Rect2f& rect);
 
 void insertRect(
@@ -87,11 +87,6 @@ void insertRect(
     float x1, float y1, float x2, float y2);
 
 // clang-format on
-
-void insertRect(
-    core::FloatArray& a,
-    const core::Color& color,
-    const geometry::Rect2f& rect);
 
 void insertRect(
     core::FloatArray& a,

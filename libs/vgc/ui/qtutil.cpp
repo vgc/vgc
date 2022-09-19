@@ -23,13 +23,6 @@
 #include <vgc/core/algorithm.h>
 #include <vgc/ui/mouseevent.h>
 
-namespace {
-int to256(double x) {
-    int i = static_cast<int>(std::round(x * 255));
-    return vgc::core::clamp(i, 0, 255);
-}
-} // namespace
-
 namespace vgc::ui {
 
 QString toQt(const std::string& s) {
@@ -44,11 +37,19 @@ std::string fromQt(const QString& s) {
 }
 
 QColor toQt(const core::Color& c) {
-    return QColor(to256(c.r()), to256(c.g()), to256(c.b()), to256(c.a()));
+    return QColor(
+        core::Color::mapTo255(c.r()),
+        core::Color::mapTo255(c.g()),
+        core::Color::mapTo255(c.b()),
+        core::Color::mapTo255(c.a()));
 }
 
 core::Color fromQt(const QColor& c) {
-    return core::Color(c.redF(), c.greenF(), c.blueF(), c.alphaF());
+    return core::Color(
+        static_cast<float>(c.redF()),
+        static_cast<float>(c.greenF()),
+        static_cast<float>(c.blueF()),
+        static_cast<float>(c.alphaF()));
 }
 
 QPointF toQt(const geometry::Vec2d& v) {

@@ -31,7 +31,7 @@ namespace xyrgb {
 inline void appendPoint(
     core::Array<float>& data,
     const geometry::Vec2f& p,
-    const core::Colorf& color) {
+    const core::Color& color) {
     data.extend({p.x(), p.y(), color.r(), color.g(), color.b()});
 }
 
@@ -40,7 +40,7 @@ void appendTriangle(
     const geometry::Vec2f& p0,
     const geometry::Vec2f& p1,
     const geometry::Vec2f& p2,
-    const core::Colorf& color) {
+    const core::Color& color) {
     appendPoint(data, p0, color);
     appendPoint(data, p1, color);
     appendPoint(data, p2, color);
@@ -50,7 +50,7 @@ void appendLineOpaqueNoAA(
     core::Array<float>& data,
     const geometry::Vec2f& p0,
     const geometry::Vec2f& p1,
-    const core::Colorf& color,
+    const core::Color& color,
     const float width = 1.0f) {
     const float hw = width / 2;
     geometry::Vec2f v = (p1 - p0).normalized();
@@ -130,12 +130,12 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         const Int numYs = this->numYs();
         //const Int numComponents = (1 + numYs);
 
-        core::Array<core::Colorf> colors(numYs);
+        core::Array<core::Color> colors(numYs);
         const float hueDelta = (360.f / ((numYs + 2) / 3 * 3));
         for (Int i = 0; i < numYs; ++i) {
             int quo = 0;
             Int mod = std::remquo(i, 3, &quo);
-            colors[i] = core::Colorf::hsl(60.f + quo * hueDelta + mod * 210.f, 1.f, 0.5f);
+            colors[i] = core::Color::hsl(60.f + quo * hueDelta + mod * 210.f, 1.f, 0.5f);
         }
 
         [[maybe_unused]] Int hoveredIdx = -1;
@@ -239,18 +239,6 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                 const float cy = contentRect.height() / (maxYAxis - minYAxis);
                 const float cx = contentRect.width() / (maxXAxis - minXAxis);
 
-                core::Colorf backgroundColorf(
-                    static_cast<float>(backgroundColor.r()),
-                    static_cast<float>(backgroundColor.g()),
-                    static_cast<float>(backgroundColor.b()),
-                    static_cast<float>(backgroundColor.a()));
-
-                core::Colorf textColorf(
-                    static_cast<float>(textColor.r()),
-                    static_cast<float>(textColor.g()),
-                    static_cast<float>(textColor.b()),
-                    static_cast<float>(textColor.a()));
-
                 // plots
                 if (isStacked_) {
                     core::Array<float> ys(numYs * 2);
@@ -291,7 +279,7 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                         // DBA
 
                         for (Int j = numYs - 1; j >= 1; --j) {
-                            core::Colorf color = colors[j];
+                            core::Color color = colors[j];
                             a.extend({prevX, ys0[j], color.r(), color.g(), color.b()});
                             a.extend(
                                 {prevX, ys0[j - 1], color.r(), color.g(), color.b()});
@@ -303,10 +291,10 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                                 a,
                                 geometry::Vec2f(prevX, ys0[j] + 0.5f),
                                 geometry::Vec2f(x, ys1[j] + 0.5f),
-                                backgroundColorf,
+                                backgroundColor,
                                 1.3f);
                         }
-                        core::Colorf color = colors[0];
+                        core::Color color = colors[0];
                         a.extend({prevX, ys0[0], color.r(), color.g(), color.b()});
                         a.extend({prevX, baseY, color.r(), color.g(), color.b()});
                         a.extend({x, baseY, color.r(), color.g(), color.b()});
@@ -317,7 +305,7 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                             a,
                             geometry::Vec2f(prevX, ys0[0] + 0.5f),
                             geometry::Vec2f(x, ys1[0] + 0.5f),
-                            backgroundColorf,
+                            backgroundColor,
                             1.3f);
 
                         float midX = (prevX + x) * 0.5f;
@@ -350,7 +338,7 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                             a,
                             geometry::Vec2f(x, baseY),
                             geometry::Vec2f(x, topY),
-                            textColorf,
+                            textColor,
                             2.4f);
                     }
                 }
