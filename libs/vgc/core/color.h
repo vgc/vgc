@@ -307,6 +307,10 @@ public:
             static_cast<float>(c.a())} {
     }
 
+    core::Color toDouble() const {
+        return core::Color(r(), g(), b(), a());
+    }
+
     /// Creates a Colorf from the given HSL values.
     ///
     /// ```cpp
@@ -625,6 +629,29 @@ struct fmt::formatter<vgc::core::Color> {
     }
     template<typename FormatContext>
     auto format(const vgc::core::Color& c, FormatContext& ctx) {
+        vgc::UInt8 r = vgc::core::double01ToUint8(c.r());
+        vgc::UInt8 g = vgc::core::double01ToUint8(c.g());
+        vgc::UInt8 b = vgc::core::double01ToUint8(c.b());
+        double a = c.a();
+        if (a == 1.0) {
+            return format_to(ctx.out(), "rgb({}, {}, {})", r, g, b);
+        }
+        else {
+            return format_to(ctx.out(), "rgba({}, {}, {}, {})", r, g, b, a);
+        }
+    }
+};
+
+template<>
+struct fmt::formatter<vgc::core::Colorf> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+            throw format_error("invalid format");
+        return it;
+    }
+    template<typename FormatContext>
+    auto format(const vgc::core::Colorf& c, FormatContext& ctx) {
         vgc::UInt8 r = vgc::core::double01ToUint8(c.r());
         vgc::UInt8 g = vgc::core::double01ToUint8(c.g());
         vgc::UInt8 b = vgc::core::double01ToUint8(c.b());

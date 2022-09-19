@@ -265,7 +265,7 @@ private:
     bool reload_;
     bool isContinuous_;
     core::Color borderColor_;
-    Int numHueSteps_;        // >= 2 and even
+    Int numHueSteps_;        // >= 2
     Int numSaturationSteps_; // >= 2
     Int numLightnessSteps_;  // >= 3
     Int hoveredHueIndex_;
@@ -276,13 +276,14 @@ private:
     Int selectedHueIndex_;
     Int selectedSaturationIndex_;
     Int selectedLightnessIndex_;
-    Int oldSaturationIndex_; // "old" = last chromatic color selected
-    Int oldLightnessIndex_;
     // Continuous mode. Note that these values can be different
     // from selectedColor_.toHsl() in case of non-chromatic colors.
     float selectedHue_ = 0;
     float selectedSaturation_ = 0;
     float selectedLightness_ = 0;
+    float hoveredHue_ = -1;
+    float hoveredSaturation_ = -1;
+    float hoveredLightness_ = -1;
 
     struct Metrics {
         float paddingLeft;
@@ -311,18 +312,25 @@ private:
     };
     SelectionOrigin selectionOrigin_ = SelectionOrigin::External;
 
+    // Cache hue values for hue selector
+    core::FloatArray hues_;
+
+    void drawHueSelector_(core::FloatArray& a);
     void computeSlSubMetrics_(float width, Metrics& m) const;
     void computeHueSubMetrics_(float width, Metrics& m) const;
     Metrics computeMetricsFromWidth_(float width) const;
     void updateMetrics_() const;
     SelectorType hoveredSelector_(const geometry::Vec2f& p);
-    std::pair<Int, Int> hoveredSaturationLightness_(const geometry::Vec2f& p);
-    Int hoveredHue_(const geometry::Vec2f& p);
+    std::pair<Int, Int> getHoveredSaturationLightness_(const geometry::Vec2f& p);
+    Int getHoveredHueIndex_(const geometry::Vec2f& p);
     void setSelectedColor_(const core::Color& color);
     void updateStepsFromSelectedColor_();
     void updateContinuousFromSelectedColor_();
     bool selectColorFromHovered_();
-    bool selectContinuousColorFromPosition_(const geometry::Vec2f& position);
+    float getContinuousHoveredHue_(const geometry::Vec2f& position);
+    std::pair<float, float>
+    getContinuousHoveredSaturationLightness_(const geometry::Vec2f& position);
+    bool selectContinuousColor_(const geometry::Vec2f& position);
 };
 
 /// \class vgc::ui::ColorListViewItem
