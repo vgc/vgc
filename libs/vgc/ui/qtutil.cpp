@@ -65,7 +65,7 @@ geometry::Vec2d fromQtd(const QPointF& v) {
 }
 
 geometry::Vec2f fromQtf(const QPointF& v) {
-    return geometry::Vec2f(v.x(), v.y());
+    return geometry::Vec2f(static_cast<float>(v.x()), static_cast<float>(v.y()));
 }
 
 MouseEventPtr fromQt(QMouseEvent* event) {

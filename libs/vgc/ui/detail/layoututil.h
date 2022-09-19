@@ -68,7 +68,6 @@ public:
         double inputSize_ = 0;
     };
 
-    template<typename... Args>
     void append(
         TElementRef elementRef,
         Int elementIndex,

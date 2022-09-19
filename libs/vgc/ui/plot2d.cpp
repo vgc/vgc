@@ -133,9 +133,10 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         core::Array<core::Color> colors(numYs);
         const float hueDelta = (360.f / ((numYs + 2) / 3 * 3));
         for (Int i = 0; i < numYs; ++i) {
-            int quo = 0;
-            Int mod = std::remquo(i, 3, &quo);
-            colors[i] = core::Color::hsl(60.f + quo * hueDelta + mod * 210.f, 1.f, 0.5f);
+            auto div = std::div(i, Int(3));
+            Int quot = div.quot;
+            Int rem = div.rem;
+            colors[i] = core::Color::hsl(60.f + quot * hueDelta + rem * 210.f, 1.f, 0.5f);
         }
 
         [[maybe_unused]] Int hoveredIdx = -1;
@@ -236,8 +237,10 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
                 // grid, simple background for now
                 //internal::insertRect(a, hoveredBackgroundColor, contentRect.xMin(), contentRect.yMin(), contentRect.xMax(), contentRect.yMax(), 0.f);
-                const float cy = contentRect.height() / (maxYAxis - minYAxis);
-                const float cx = contentRect.width() / (maxXAxis - minXAxis);
+                const float yAxisExtent = static_cast<float>(maxYAxis - minYAxis);
+                const float xAxisExtent = static_cast<float>(maxXAxis - minXAxis);
+                const float cy = contentRect.height() / yAxisExtent;
+                const float cx = contentRect.width() / xAxisExtent;
 
                 // plots
                 if (isStacked_) {

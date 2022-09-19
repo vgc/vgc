@@ -96,7 +96,8 @@ void Toolbar::resizeEvent(QResizeEvent* event) {
     // updateGeometry() and their sizeHint() or heightForWidth() changed.
     //
     colorToolButton_->setMinimumSize(width(), iconWidth);
-    float colorPaletteHeight = colorPaletteq_->heightForWidth(width());
+    float colorPaletteHeight_ = colorPaletteq_->heightForWidth(width());
+    int colorPaletteHeight = static_cast<int>(colorPaletteHeight_);
     colorPaletteq_->setMinimumHeight(colorPaletteHeight);
     colorPaletteq_->setMaximumHeight(colorPaletteHeight);
     colorPaletteq_->show();

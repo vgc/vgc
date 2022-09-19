@@ -345,11 +345,11 @@ void UiWidget::paintGL() {
     engine_->beginFrame(swapChain_, graphics::FrameKind::QWidget);
 
     engine_->setRasterizerState(rasterizerState_);
-    engine_->setBlendState(blendState_, geometry::Vec4f{0.f, 0.f, 0.f, 0.f});
+    engine_->setBlendState(blendState_, geometry::Vec4f());
 
     // XXX split to beginFrame() and qopenglengine-only beginInlineFrame
 
-    //engine_->clear(core::Color(0., 0., 0.));
+    //engine_->clear(core::Color(0.f, 0.f, 0.f));
     engine_->clear(core::Color(0.251f, 0.259f, 0.267f));
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
