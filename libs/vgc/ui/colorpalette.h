@@ -160,6 +160,9 @@ private:
     void onAddToPaletteClicked_();
     VGC_SLOT(onAddToPaletteClickedSlot_, onAddToPaletteClicked_)
 
+    void onRemoveFromPaletteClicked_();
+    VGC_SLOT(onRemoveFromPaletteClickedSlot_, onRemoveFromPaletteClicked_)
+
     void updateStepsLineEdits_();
     void selectColor_(const core::Color& color);
     void setSelectedColorNoCheckNoEmit_(const core::Color& color);
@@ -425,6 +428,11 @@ public:
     /// Appends a new color to the list of colors.
     ///
     void appendColor(const core::Color& color);
+
+    /// Removes the color at the given index. Throws `IndexError` if the given
+    /// index is not between `0` and `numColors() - 1`.
+    ///
+    void removeColorAt(Int index);
 
     /// Sets all the colors.
     ///
