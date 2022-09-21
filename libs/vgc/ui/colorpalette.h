@@ -28,6 +28,7 @@ VGC_DECLARE_OBJECT(ColorListView);
 VGC_DECLARE_OBJECT(ColorListViewItem);
 VGC_DECLARE_OBJECT(ColorPalette);
 VGC_DECLARE_OBJECT(ColorPaletteSelector);
+VGC_DECLARE_OBJECT(ColorPreview);
 VGC_DECLARE_OBJECT(LineEdit);
 VGC_DECLARE_OBJECT(ScreenColorPickerButton);
 
@@ -111,6 +112,7 @@ public:
 private:
     core::Color selectedColor_;
     core::Color selectedColorOnPickScreenStarted_;
+    ColorPreviewPtr colorPreview_;
     ButtonGroupPtr stepsButtonGroup_;
     Button* stepsButton_;
     Button* continuousButton_;
@@ -359,6 +361,47 @@ public:
 
 private:
     ColorListView* view_;
+};
+
+/// \class vgc::ui::ColorPreview
+/// \brief Display a color.
+///
+class VGC_UI_API ColorPreview : public Widget {
+private:
+    VGC_OBJECT(ColorPreview, Widget)
+
+protected:
+    ColorPreview();
+
+public:
+    /// Creates a ColorPreview.
+    ///
+    static ColorPreviewPtr create();
+
+    /// Returns the color.
+    ///
+    const core::Color& color() const {
+        return color_;
+    }
+
+    /// Sets the color.
+    ///
+    void setColor(const core::Color& color);
+
+    /// This signal is emitted when the color changed.
+    ///
+    VGC_SIGNAL(colorChanged)
+
+    // Implement Widget interface
+    void onResize() override;
+    void onPaintCreate(graphics::Engine* engine) override;
+    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDestroy(graphics::Engine* engine) override;
+
+private:
+    core::Color color_;
+    graphics::GeometryViewPtr triangles_;
+    bool reload_ = true;
 };
 
 /// \class vgc::ui::ColorListView
