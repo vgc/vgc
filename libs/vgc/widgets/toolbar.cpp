@@ -29,7 +29,6 @@
 namespace {
 
 int iconWidth = 64;
-int margin = 15;
 
 } // namespace
 
