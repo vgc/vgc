@@ -395,6 +395,9 @@ Button* createCheckableButton_(Widget* parent, std::string_view text) {
 ColorPalette::ColorPalette()
     : Column() {
 
+    // Color preview
+    colorPreview_ = createChild<ColorPreview>();
+
     // Continuous vs. Steps
     Row* stepsModeRow = createChild<Row>();
     stepsButton_ = createCheckableButton_(stepsModeRow, "Steps");
@@ -676,6 +679,9 @@ void ColorPalette::selectColor_(const core::Color& color) {
 void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
 
     selectedColor_ = color;
+
+    // Update color preview
+    colorPreview_->setColor(selectedColor_);
 
     // Update selector
     selector_->setSelectedColor(selectedColor_);
@@ -2271,6 +2277,52 @@ style::StylableObject* ColorListViewItem::nextSiblingStylableObject() const {
 
 const style::StyleSheet* ColorListViewItem::defaultStyleSheet() const {
     return nullptr;
+}
+
+ColorPreview::ColorPreview() {
+    addStyleClass(strings::ColorPreview);
+}
+
+ColorPreviewPtr ColorPreview::create() {
+    return ColorPreviewPtr(new ColorPreview());
+}
+
+void ColorPreview::setColor(const core::Color& color) {
+    if (color_ != color) {
+        color_ = color;
+        reload_ = true;
+        colorChanged().emit();
+        requestRepaint();
+    }
+}
+
+void ColorPreview::onResize() {
+    reload_ = true;
+}
+
+void ColorPreview::onPaintCreate(graphics::Engine* engine) {
+    triangles_ =
+        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+}
+
+void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions) {
+    namespace gs = graphics::strings;
+    if (reload_) {
+        reload_ = false;
+        core::FloatArray a = {};
+        float borderWidth = detail::getLength(this, gs::border_width);
+        core::Color borderColor =
+            computeHighlightColor(color_, HighlightStyle::DarkenOnly);
+        style::BorderRadiuses radiuses = detail::getBorderRadiuses(this);
+        detail::insertRect(a, color_, borderColor, rect(), radiuses, borderWidth);
+        engine->updateVertexBufferData(triangles_, std::move(a));
+    }
+    engine->setProgram(graphics::BuiltinProgram::Simple);
+    engine->draw(triangles_, -1, 0);
+}
+
+void ColorPreview::onPaintDestroy(graphics::Engine*) {
+    triangles_.reset();
 }
 
 ColorListView::ColorListView()

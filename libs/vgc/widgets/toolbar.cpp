@@ -45,25 +45,6 @@ Toolbar::Toolbar(QWidget* parent)
     setIconSize(iconSize);
     setFocusPolicy(Qt::ClickFocus);
 
-    QWidget* topMargin = new QWidget();
-    topMargin->setMinimumSize(0, margin);
-    topMargin->setStyleSheet("background-color: none");
-    addWidget(topMargin);
-
-    colorToolButton_ = new ColorToolButton();
-    colorToolButton_->setToolTip(tr("Current color (C)"));
-    colorToolButton_->setStatusTip(tr("Click to open the color selector"));
-    colorToolButton_->setIconSize(iconSize);
-    colorToolButton_->setMinimumSize(0, iconWidth);
-    colorToolButton_->updateIcon();
-
-    colorToolButtonAction_ = addWidget(colorToolButton_);
-    colorToolButtonAction_->setText(tr("Color"));
-    colorToolButtonAction_->setToolTip(tr("Color (C)"));
-    colorToolButtonAction_->setStatusTip(tr("Click to open the color selector"));
-    colorToolButtonAction_->setShortcut(QKeySequence(Qt::Key_C));
-    colorToolButtonAction_->setShortcutContext(Qt::ApplicationShortcut);
-
     auto colorPalettePtr = ui::ColorPalette::create();
     colorPalette_ = colorPalettePtr.get();
     colorPaletteq_ = new UiWidget(colorPalettePtr, this);
@@ -72,12 +53,6 @@ Toolbar::Toolbar(QWidget* parent)
     // but probably not worth it as this is temporary code anyway.
     addWidget(colorPaletteq_);
 
-    connect(colorToolButtonAction_, SIGNAL(triggered()), colorToolButton_, SLOT(click()));
-    connect(
-        colorToolButton_,
-        &ColorToolButton::colorChanged,
-        this,
-        &Toolbar::onColorToolButtonColorChanged_);
     colorPalette_->colorSelected().connect(
         [this]() { this->onColorPaletteColorSelected_(); });
 }
@@ -95,7 +70,6 @@ void Toolbar::resizeEvent(QResizeEvent* event) {
     // automatically update the height of its children, even if they called
     // updateGeometry() and their sizeHint() or heightForWidth() changed.
     //
-    colorToolButton_->setMinimumSize(width(), iconWidth);
     float colorPaletteHeight_ = colorPaletteq_->heightForWidth(width());
     int colorPaletteHeight = static_cast<int>(colorPaletteHeight_);
     colorPaletteq_->setMinimumHeight(colorPaletteHeight);
@@ -104,15 +78,8 @@ void Toolbar::resizeEvent(QResizeEvent* event) {
     QToolBar::resizeEvent(event);
 }
 
-void Toolbar::onColorToolButtonColorChanged_() {
-    colorPalette_->setSelectedColor(colorToolButton_->color());
-    Q_EMIT colorChanged(color());
-    // Note: setSelectedColor does not emit colorSelected.
-}
-
 void Toolbar::onColorPaletteColorSelected_() {
-    colorToolButton_->setColor(colorPalette_->selectedColor());
-    // Note: setColor emits colorChanged()
+    Q_EMIT colorChanged(color());
 }
 
 } // namespace vgc::widgets

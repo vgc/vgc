@@ -62,12 +62,9 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
 
 private Q_SLOTS:
-    void onColorToolButtonColorChanged_();
     void onColorPaletteColorSelected_();
 
 private:
-    ColorToolButton* colorToolButton_ = nullptr;
-    QAction* colorToolButtonAction_ = nullptr;
     ui::ColorPalette* colorPalette_ = nullptr;
     UiWidget* colorPaletteq_ = nullptr;
 };

@@ -27,6 +27,7 @@ VGC_UI_API extern const core::StringId ColorListView;
 VGC_UI_API extern const core::StringId ColorListViewItem;
 VGC_UI_API extern const core::StringId ColorPalette;
 VGC_UI_API extern const core::StringId ColorPaletteSelector;
+VGC_UI_API extern const core::StringId ColorPreview;
 VGC_UI_API extern const core::StringId Flex;
 VGC_UI_API extern const core::StringId Grid;
 VGC_UI_API extern const core::StringId Label;
