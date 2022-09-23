@@ -45,7 +45,7 @@ void Flex::setWrap(FlexWrap wrap) {
     requestGeometryUpdate();
 }
 
-void Flex::onWidgetAdded(Widget*) {
+void Flex::onWidgetAdded(Widget*, bool) {
     requestGeometryUpdate();
 }
 

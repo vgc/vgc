@@ -349,7 +349,7 @@ public:                                                                         
         ::vgc::core::isObject<SuperClass>,                                               \
         "Superclass must inherit from Object and use VGC_OBJECT(..).");                  \
                                                                                          \
-    std::string_view className() override {                                              \
+    std::string_view className() const override {                                        \
         return #T;                                                                       \
     }                                                                                    \
                                                                                          \
@@ -365,6 +365,7 @@ private:
 #define VGC_PRIVATIZE_OBJECT_TREE_MUTATORS                                               \
 private:                                                                                 \
     using Object::destroyObject_;                                                        \
+    using Object::destroyAllChildObjects_;                                               \
     using Object::destroyChildObject_;                                                   \
     using Object::appendChildObject_;                                                    \
     using Object::prependChildObject_;                                                   \
@@ -547,7 +548,7 @@ private:
     Object& operator=(Object&&) = delete;
 
 public:
-    virtual std::string_view className() {
+    virtual std::string_view className() const {
         return "Object";
     }
 
@@ -736,7 +737,9 @@ protected:
     /// Object. When this method is called, the child has already been added
     /// to its parent, that is, `child->parent() == this`
     ///
-    virtual void onChildAdded(Object* child);
+    /// `wasOnlyReordered` is true if it was already a child but got reordered.
+    ///
+    virtual void onChildAdded(Object* child, bool wasOnlyReordered);
 
     /// This callback method is invoked whenever a child has been removed from
     /// this Object. When this function is called, the child has already been removed
@@ -1082,7 +1085,7 @@ private:
     void setBranchSizeDirty_();
     void updateBranchSize_() const;
 
-    void onChildAdded_(Object* child);
+    void onChildAdded_(Object* child, bool wasOnlyReordered);
     void onChildRemoved_(Object* child);
 };
 
@@ -1341,16 +1344,17 @@ public:
         // works since our core::ObjPtr use intrusive reference counting.
     }
 
-    void onChildAdded(Object* child) override {
-        childAdded().emit(static_cast<T*>(child));
+    VGC_SIGNAL(childAdded, (T*, child), (bool, wasOnlyReordered));
+    VGC_SIGNAL(childRemoved, (T*, child));
+
+protected:
+    void onChildAdded(Object* child, bool wasOnlyReordered) override {
+        childAdded().emit(static_cast<T*>(child), wasOnlyReordered);
     }
 
     void onChildRemoved(Object* child) override {
         childRemoved().emit(static_cast<T*>(child));
     }
-
-    VGC_SIGNAL(childAdded, (T*, child));
-    VGC_SIGNAL(childRemoved, (T*, child));
 };
 
 inline ObjectListView Object::childObjects() const {

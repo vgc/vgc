@@ -280,7 +280,7 @@ public:
     WidgetPtr clearCell(Int i, Int j);
 
 protected:
-    void onWidgetAdded(Widget* child) override;
+    void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onWidgetRemoved(Widget* child) override;
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;

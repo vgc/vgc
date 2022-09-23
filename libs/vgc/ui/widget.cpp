@@ -1098,7 +1098,7 @@ void Widget::setVisibility(Visibility visibility) {
     updateComputedVisibility_();
 }
 
-void Widget::onWidgetAdded(Widget*) {
+void Widget::onWidgetAdded(Widget*, bool) {
     // no-op
 }
 

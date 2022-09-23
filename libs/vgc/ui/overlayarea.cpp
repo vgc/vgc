@@ -51,7 +51,7 @@ void OverlayArea::addOverlayWidget(Widget* w) {
     addChild(w);
 }
 
-void OverlayArea::onWidgetAdded(Widget* w) {
+void OverlayArea::onWidgetAdded(Widget* w, bool /*wasOnlyReordered*/) {
     if (w == areaWidget_) {
         requestGeometryUpdate();
     }
