@@ -30,6 +30,7 @@ namespace vgc::ui {
 
 namespace {
 
+/*
 FlexDirection orthoDir(FlexDirection dir) {
     switch (dir) {
     case FlexDirection::Row:
@@ -41,6 +42,7 @@ FlexDirection orthoDir(FlexDirection dir) {
         return FlexDirection::Row;
     }
 }
+*/
 
 } // namespace
 
