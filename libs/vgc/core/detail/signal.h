@@ -157,6 +157,8 @@ using SignalId = FunctionId;
 VGC_CORE_API FunctionId genFunctionId();
 VGC_CORE_API FunctionId genFunctionId(std::type_index ti);
 
+VGC_CORE_API Object* currentEmitter();
+
 /// A handle to a signal/slot connection.
 /// It is returned by SignalRef's connect functions and can be used in disconnect functions.
 class ConnectionHandle {

@@ -676,6 +676,12 @@ public:
     ///
     void dumpObjectTree() const;
 
+    /// Returns the source of the current nested-most signal `emit()` call.
+    ///
+    static Object* emitter() {
+        return detail::currentEmitter();
+    }
+
     /// Disconnects the signal-slot connection represented by \p h.
     /// Returns true if the connection was present.
     ///

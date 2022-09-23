@@ -30,6 +30,7 @@ namespace {
 
 FunctionId lastId = 0;
 std::unordered_map<std::type_index, FunctionId> typesMap;
+thread_local Object* emitter = nullptr;
 
 } // namespace
 
@@ -47,12 +48,19 @@ FunctionId genFunctionId(std::type_index ti) {
     return id;
 }
 
+// thread-local value
+Object* currentEmitter() {
+    return emitter;
+}
+
 void SignalHub::emit_(SignalId from, const TransmitArgs& args) {
     auto& connections = connections_;
     bool outermostEmit = (emitting_ == false);
     emitting_ = true;
     // Keep weak pointer on owner to detect our own death (`this` becomes dangling).
     ObjectPtr ownerPtr(owner_);
+    Object* outerEmitter = emitter;
+    emitter = owner_;
     // We do it by index because connect() can happen in transmit..
     for (Int i = 0; i < connections.length(); ++i) {
         const Connection_& c = connections[i];
@@ -61,6 +69,7 @@ void SignalHub::emit_(SignalId from, const TransmitArgs& args) {
         }
         if (owner_->isDestroyed()) {
             // We got killed.
+            emitter = outerEmitter;
             return;
         }
     }
@@ -72,6 +81,7 @@ void SignalHub::emit_(SignalId from, const TransmitArgs& args) {
         }
         emitting_ = false;
     }
+    emitter = outerEmitter;
 }
 
 } // namespace vgc::core::detail
