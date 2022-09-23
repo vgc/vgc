@@ -828,22 +828,25 @@ void Widget::mouseRelease_(MouseEvent* event) {
         unlockHover_(); // It also releases pressed buttons.
     }
 
+    // XXX Maybe we should update based on "wasLocked".
     // We update the hover-unlocked part of the hover-chain now if we are hover-locked
     // but our child is not.
-    if (isHoverLocked() && isChildHoverEnabled_) {
+    if ((isHoverLocked() || !parent()) && isChildHoverEnabled_) {
         Widget* hcParent = this;
         hcChild = hoverChainChild();
         const bool hasNoHoverLockedChild = !hcChild || !hcChild->isHoverLocked();
         if (hasNoHoverLockedChild) {
             geometry::Vec2f relPos = eventPos;
             while (hcParent) {
-                hcChild = computeHoverChainChild(relPos);
+                hcChild = hcParent->computeHoverChainChild(relPos);
                 if (!hcParent->setHoverChainChild(hcChild)) {
                     // Exceptionnal things happened. Event can be considered handled.
                     event->handled_ = true;
                     break;
                 }
-                relPos = hcParent->mapTo(hcChild, relPos);
+                if (hcChild) {
+                    relPos = hcParent->mapTo(hcChild, relPos);
+                }
                 hcParent = hcChild;
             }
             // Check for deaths.
