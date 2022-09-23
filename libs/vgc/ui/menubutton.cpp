@@ -368,11 +368,11 @@ void MenuButton::updateChildrenGeometry() {
         float y4 = y0 + hc;
         float hr = hc;
         float hArrow = allocSize(arrowSize, hr);
-        float hGap3 = hArrow ? allocSize(gapH, hr) : 0.f;
+        float hGap3 = (hArrow > 0.f) ? allocSize(gapH, hr) : 0.f;
         float hIcon = allocSize(iconSize.y(), hr);
-        float hGap1 = hIcon ? allocSize(gapH, hr) : 0.f;
+        float hGap1 = (hIcon > 0.f) ? allocSize(gapH, hr) : 0.f;
         float hShortcut = allocSize(scutSize.y(), hr);
-        float hGap2 = hShortcut ? allocSize(gapH, hr) : 0.f;
+        float hGap2 = (hShortcut > 0.f) ? allocSize(gapH, hr) : 0.f;
         float hText = hr;
         float y = y0;
         if (!reverse) {
@@ -409,11 +409,11 @@ void MenuButton::updateChildrenGeometry() {
         float x4 = x0 + wc;
         float wr = wc;
         float wArrow = allocSize(arrowSize, wr);
-        float wGap3 = wArrow ? allocSize(gapH, wr) : 0.f;
+        float wGap3 = (wArrow > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wIcon = allocSize(iconSize.x(), wr);
-        float wGap1 = wIcon ? allocSize(gapH, wr) : 0.f;
+        float wGap1 = (wIcon > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wShortcut = allocSize(scutSize.x(), wr);
-        float wGap2 = wShortcut ? allocSize(gapH, wr) : 0.f;
+        float wGap2 = (wShortcut > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wText = wr;
         float x = x0;
         if (!reverse) {

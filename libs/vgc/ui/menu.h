@@ -288,7 +288,6 @@ private:
     bool isPopupEnabled_ = true;
     bool isOpenAsPopup_ = false;
     bool reload_ = true;
-    bool isOpeningSubMenuOnHover_ = false;
     //float subMenuOpenDelay_ = 0.f;
 };
 
