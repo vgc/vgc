@@ -1134,7 +1134,7 @@ public:
 protected:
     // Reimplementation of Object virtual methods.
     void onChildRemoved(Object* child) override;
-    
+
     /// Useful for onMousePress
     void setPressedButtons(const MouseButtons& buttons) {
         pressedButtons_ = buttons;
