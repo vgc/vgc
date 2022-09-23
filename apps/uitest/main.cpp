@@ -150,7 +150,9 @@ int main(int argc, char* argv[]) {
     vgc::core::PseudoRandomUniform<size_t> randomBegin(0, lipsumSize32, seed1);
     vgc::core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
 
-    vgc::ui::ColumnPtr col = vgc::ui::Column::create();
+    vgc::ui::OverlayAreaPtr overlay = vgc::ui::OverlayArea::create();
+    vgc::ui::ColumnPtr col = overlay->createChild<vgc::ui::Column>();
+    overlay->setAreaWidget(col.get());
 
     //vgc::ui::MenuBar* menuBar = col->createChild<vgc::ui::MenuBar>();
 
@@ -206,8 +208,8 @@ int main(int argc, char* argv[]) {
     // tests OverlayArea, Button, mapTo()
     {
         vgc::ui::OverlayArea* overlayTest = col->createChild<vgc::ui::OverlayArea>();
-        vgc::ui::Label* label =
-            overlayTest->createOverlayWidget<vgc::ui::Label>("you clicked here!");
+        vgc::ui::Label* label = overlayTest->createOverlayWidget<vgc::ui::Label>(
+            vgc::ui::OverlayResizePolicy::None, "you clicked here!");
         label->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
                              "background-color-on-hover: rgb(20, 130, 130); }");
         vgc::ui::Grid* grid = overlayTest->createAreaWidget<vgc::ui::Grid>();
@@ -249,9 +251,9 @@ int main(int argc, char* argv[]) {
     }
 
     // XXX we need this until styles get better auto-update behavior
-    col->addStyleClass(vgc::core::StringId("force-update-style"));
+    overlay->addStyleClass(vgc::core::StringId("force-update-style"));
 
-    vgc::ui::WindowPtr wnd = vgc::ui::Window::create(col);
+    vgc::ui::WindowPtr wnd = vgc::ui::Window::create(overlay);
     wnd->setTitle("VGC UI Test");
     wnd->resize(QSize(1100, 800));
     wnd->setVisible(true);

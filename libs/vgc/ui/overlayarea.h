@@ -23,6 +23,15 @@ namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(OverlayArea);
 
+enum class OverlayResizePolicy {
+    None,
+    //Fill,
+    Stretch,
+    //Center,
+    //PositionStretch,
+    //Suicide,
+};
+
 /// \class vgc::ui::OverlayArea
 /// \brief Allows the area of a widget to be overlaid by other
 /// widgets.
@@ -43,7 +52,9 @@ public:
     static OverlayAreaPtr create();
 
     void setAreaWidget(Widget* w);
-    void addOverlayWidget(Widget* w);
+    void addOverlayWidget(
+        Widget* w,
+        OverlayResizePolicy resizePolicy = OverlayResizePolicy::None);
 
     template<typename WidgetClass, typename... Args>
     WidgetClass* createAreaWidget(Args&&... args) {
@@ -54,10 +65,11 @@ public:
     }
 
     template<typename WidgetClass, typename... Args>
-    WidgetClass* createOverlayWidget(Args&&... args) {
+    WidgetClass* createOverlayWidget(OverlayResizePolicy resizePolicy, Args&&... args) {
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
-        addOverlayWidget(child.get());
+        addOverlayWidget(child.get(), resizePolicy);
+
         return child.get();
     }
 
@@ -66,6 +78,7 @@ public:
     float preferredHeightForWidth(float width) const override;
 
 protected:
+    void onResize() override;
     void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onWidgetRemoved(Widget* child) override;
     geometry::Vec2f computePreferredSize() const override;
@@ -73,6 +86,29 @@ protected:
 
 private:
     Widget* areaWidget_ = nullptr;
+
+    class OverlayDesc {
+    public:
+        OverlayDesc(Widget* widget, OverlayResizePolicy resizePolicy)
+            : widget_(widget)
+            , resizePolicy_(resizePolicy) {
+        }
+
+        Widget* widget() const {
+            return widget_;
+        }
+
+        OverlayResizePolicy resizePolicy() const {
+            return resizePolicy_;
+        }
+
+    private:
+        Widget* widget_ = nullptr;
+        OverlayResizePolicy resizePolicy_ = {};
+    };
+
+    // order does not matter
+    core::Array<OverlayDesc> overlays_ = {};
 };
 
 } // namespace vgc::ui
