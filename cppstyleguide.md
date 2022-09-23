@@ -339,7 +339,7 @@ public:
     }
     
 protected: // then other protected methods
-    void onWidgetAdded(Widget* child) override;
+    void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onWidgetRemoved(Widget* child) override;
 
 private:: // then private member variables and methods

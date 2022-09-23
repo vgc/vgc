@@ -1374,8 +1374,8 @@ void Widget::onStyleChanged() {
     requestGeometryUpdate();
 }
 
-void Widget::onWidgetAdded_(Widget* widget) {
-    onWidgetAdded(widget);
+void Widget::onWidgetAdded_(Widget* widget, bool wasOnlyReordered) {
+    onWidgetAdded(widget, wasOnlyReordered);
     // may call onVisible, and resume pending requests
     widget->updateComputedVisibility_();
     // XXX temporary bug fix, sometimes pending requests are not resent..
