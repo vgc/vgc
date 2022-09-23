@@ -1129,6 +1129,7 @@ bool Widget::mouseEnter_() {
 }
 
 bool Widget::mouseLeave_() {
+    // isHovered_ is set to false in setHovered()
     return onMouseLeave();
 }
 
