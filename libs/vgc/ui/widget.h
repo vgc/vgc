@@ -180,7 +180,7 @@ public:
     /// \sa lastChild(), previousSibling(), nextSibling(), and parent().
     ///
     Widget* firstChild() const {
-        return children_->first();
+        return children_ ? children_->first() : nullptr;
     }
 
     /// Returns the last child Widget of this Widget. Returns nullptr if this
@@ -189,7 +189,7 @@ public:
     /// \sa firstChild(), previousSibling(), nextSibling(), and parent().
     ///
     Widget* lastChild() const {
-        return children_->last();
+        return children_ ? children_->last() : nullptr;
     }
 
     /// Returns the previous sibling of this Widget. Returns nullptr if this
@@ -336,6 +336,15 @@ public:
     /// `other` passing through root.
     ///
     geometry::Vec2f mapTo(Widget* other, const geometry::Vec2f& position) const;
+
+    /// Translates the given `rect` from the coordinate system of this widget to
+    /// the system of `other`.
+    ///
+    /// It is fast if `this` is the parent of `other`. Otherwise the operation involves
+    /// at most N intermediate operations where N is the tree path length from `this` to
+    /// `other` passing through root.
+    ///
+    geometry::Rect2f mapTo(Widget* other, const geometry::Rect2f& rect) const;
 
     /// Returns the geometry of the widget relative to its parent.
     ///
@@ -809,7 +818,7 @@ public:
     /// when it needs to update the hover chain child (on move and release events
     /// if there is no hover-locked hover-chain child).
     ///
-    virtual Widget* computeHoverChainChild(geometry::Vec2f position);
+    virtual Widget* computeHoverChainChild(const geometry::Vec2f& position);
 
     /// If `this` is hovered, it makes the given `newHoverChainChild` the
     /// hover-chain child of `this`.
@@ -1123,14 +1132,21 @@ public:
     const style::StyleSheet* defaultStyleSheet() const override;
 
 protected:
+    // Reimplementation of Object virtual methods.
+    void onChildRemoved(Object* child) override;
+    
     /// Useful for onMousePress
     void setPressedButtons(const MouseButtons& buttons) {
         pressedButtons_ = buttons;
     }
 
-    /// Override this function if you wish to handle changes of style.
-    ///
+    // Reimplementation of StylableObject virtual methods.
     void onStyleChanged() override;
+
+    /// Override this function if you wish to handle the reparenting of
+    /// this widget under a new parent widget.
+    ///
+    virtual void onParentWidgetChanged(Widget* newParent);
 
     /// Override this function if you wish to handle the addition of
     /// child widgets to this widget.
@@ -1266,6 +1282,9 @@ private:
     void mouseMove_(MouseEvent* event);
     void mousePress_(MouseEvent* event);
     void mouseRelease_(MouseEvent* event);
+
+    bool mouseEnter_();
+    bool mouseLeave_();
 
     void onUnhover_();
 
