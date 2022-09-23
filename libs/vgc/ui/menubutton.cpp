@@ -283,7 +283,7 @@ geometry::Vec2f MenuButton::computePreferredSize() const {
             s1 = std::max(s1, scutSize[centerDim]);
             ++count;
         }
-        if (arrowSizeOverride_) {
+        if (arrowSizeOverride_ > 0.f) {
             s0 += arrowSizeOverride_;
             s1 = std::max(s1, arrowSizeOverride_);
             ++count;
