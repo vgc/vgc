@@ -1135,7 +1135,9 @@ protected:
     /// Override this function if you wish to handle the addition of
     /// child widgets to this widget.
     ///
-    virtual void onWidgetAdded(Widget*);
+    /// `wasOnlyReordered` is true if it was already a child but got reordered.
+    ///
+    virtual void onWidgetAdded(Widget*, bool wasOnlyReordered);
 
     /// Override this function if you wish to handle the removal of
     /// child widgets from this widget.
@@ -1218,7 +1220,7 @@ private:
     WidgetList* children_ = nullptr;
     ActionList* actions_ = nullptr;
 
-    void onWidgetAdded_(Widget* widget);
+    void onWidgetAdded_(Widget* widget, bool wasOnlyReordered);
     void onWidgetRemoved_(Widget* widget);
 
     // Layout

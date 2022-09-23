@@ -161,16 +161,18 @@ void Object::onDestroyed() {
     printDebugInfo_(this, "destroyed");
 }
 
-void Object::onChildAdded(Object*) {
+void Object::onChildAdded(Object*, bool) {
 }
 
 void Object::onChildRemoved(Object*) {
 }
 
-void Object::onChildAdded_(Object* child) {
-    ++numChildObjects_;
-    setBranchSizeDirty_();
-    onChildAdded(child);
+void Object::onChildAdded_(Object* child, bool wasOnlyReordered) {
+    if (!wasOnlyReordered) {
+        ++numChildObjects_;
+        setBranchSizeDirty_();
+    }
+    onChildAdded(child, wasOnlyReordered);
 }
 
 void Object::onChildRemoved_(Object* child) {
@@ -229,6 +231,11 @@ void Object::insertChildObject_(Object* nextSibling, Object* child) {
         throw core::NotAChildError(nextSibling, this);
     }
 
+    // Check trivial case
+    if (nextSibling == child) {
+        return;
+    }
+
     // If parent is different we have to detach and reattach.
     Object* oldParent = child->parentObject();
     bool sameParent = oldParent == this;
@@ -258,14 +265,13 @@ void Object::insertChildObject_(Object* nextSibling, Object* child) {
     }
     else {
         // Detach from current siblings
-        child->nextSiblingObject_->previousSiblingObject_ = child->previousSiblingObject_;
-
         if (child->previousSiblingObject_) {
             child->previousSiblingObject_->nextSiblingObject_ = child->nextSiblingObject_;
         }
         else {
             firstChildObject_ = child->nextSiblingObject_;
         }
+
         if (child->nextSiblingObject_) {
             child->nextSiblingObject_->previousSiblingObject_ =
                 child->previousSiblingObject_;
@@ -294,7 +300,7 @@ void Object::insertChildObject_(Object* nextSibling, Object* child) {
 
     // XXX May be better to have both general and fine grained events.
     // e.g.: onChildrenChanged, onChildReordered, onChildAdded, onChildRemoved.
-    onChildAdded_(child);
+    onChildAdded_(child, sameParent);
 }
 
 ObjectPtr Object::removeChildObject_(Object* child) {

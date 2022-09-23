@@ -68,7 +68,7 @@ WidgetPtr Grid::clearCell(Int i, Int j) {
     return w;
 }
 
-void Grid::onWidgetAdded(Widget*) {
+void Grid::onWidgetAdded(Widget*, bool) {
 }
 
 void Grid::onWidgetRemoved(Widget* widget) {

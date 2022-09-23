@@ -93,7 +93,7 @@ public:
     float preferredHeightForWidth(float width) const override;
 
 protected:
-    void onWidgetAdded(Widget* child) override;
+    void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onWidgetRemoved(Widget* child) override;
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
