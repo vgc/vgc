@@ -212,7 +212,7 @@ protected:
     void onParentWidgetChanged(Widget* newParent) override;
     void onWidgetRemoved(Widget* widget) override;
     void preMouseMove(MouseEvent* event) override;
-    void preMousePress(MouseEvent* event);
+    void preMousePress(MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
     void onVisible() override;
