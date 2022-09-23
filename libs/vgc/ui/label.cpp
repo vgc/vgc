@@ -124,6 +124,11 @@ bool Label::onMouseLeave() {
     return true;
 }
 
+void Label::onStyleChanged() {
+    reload_ = true;
+    SuperClass::onStyleChanged();
+}
+
 geometry::Vec2f Label::computePreferredSize() const {
 
     namespace gs = graphics::strings;
