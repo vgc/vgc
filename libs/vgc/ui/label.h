@@ -70,6 +70,7 @@ public:
     void onPaintDestroy(graphics::Engine* engine) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
+    void onStyleChanged() override;
 
 protected:
     geometry::Vec2f computePreferredSize() const override;
