@@ -251,7 +251,7 @@ geometry::Vec2f MenuButton::computePreferredSize() const {
         applySizeOverrides(iconSize, iconSizeOverrides_);
         geometry::Vec2f scutSize = shortcutLabel()->preferredSize();
         applySizeOverrides(scutSize, shortcutSizeOverrides_);
-        float arrowSize = 0.f;
+
         int concatDim = 0;
         switch (direction()) {
         case FlexDirection::Column:
