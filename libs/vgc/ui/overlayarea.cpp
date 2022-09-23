@@ -32,36 +32,57 @@ OverlayAreaPtr OverlayArea::create() {
 }
 
 void OverlayArea::setAreaWidget(Widget* w) {
-    Widget* oldAreaWidget = areaWidget_;
-    areaWidget_ = w;
-    if (oldAreaWidget) {
-        w->replace(oldAreaWidget);
+    if (w != areaWidget_) {
+        if (areaWidget_) {
+            areaWidget_->replace(w);
+        }
+        areaWidget_ = w;
     }
-    else {
-        addChild(w);
-    }
+    insertChild(firstChild(), areaWidget_);
 }
 
-void OverlayArea::addOverlayWidget(Widget* w) {
-    if (!areaWidget_) {
-        WidgetPtr placeholder = Widget::create();
-        areaWidget_ = placeholder.get();
-        addChild(placeholder.get());
-    }
+void OverlayArea::addOverlayWidget(Widget* w, OverlayResizePolicy resizePolicy) {
     addChild(w);
+    overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == w; });
+    overlays_.emplaceLast(w, resizePolicy);
+    switch (resizePolicy) {
+    case OverlayResizePolicy::Stretch: {
+        w->updateGeometry(rect());
+        break;
+    }
+    case OverlayResizePolicy::None:
+    default:
+        break;
+    }
+    requestRepaint();
+}
+
+void OverlayArea::onResize() {
+    // no-op
 }
 
 void OverlayArea::onWidgetAdded(Widget* w, bool /*wasOnlyReordered*/) {
+    // If area is no longer first, move to first.
+    if (areaWidget_ && areaWidget_->previousSibling()) {
+        insertChild(firstChild(), w);
+    }
     if (w == areaWidget_) {
         requestGeometryUpdate();
+    }
+    else {
+        requestRepaint();
     }
 }
 
 void OverlayArea::onWidgetRemoved(Widget* w) {
     if (w == areaWidget_) {
         areaWidget_ = nullptr;
+        requestGeometryUpdate();
     }
-    requestGeometryUpdate();
+    else {
+        overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == w; });
+        requestRepaint();
+    }
 }
 
 float OverlayArea::preferredWidthForHeight(float height) const {
@@ -77,9 +98,21 @@ geometry::Vec2f OverlayArea::computePreferredSize() const {
 }
 
 void OverlayArea::updateChildrenGeometry() {
+    geometry::Rect2f areaRect = rect();
     if (areaWidget_) {
-        areaWidget_->updateGeometry(
-            geometry::Vec2f(), geometry::Vec2f(width(), height()));
+        areaWidget_->updateGeometry(areaRect);
+    }
+    for (OverlayDesc& od : overlays_) {
+        switch (od.resizePolicy()) {
+        case OverlayResizePolicy::Stretch: {
+            od.widget()->updateGeometry(areaRect);
+            break;
+        }
+        case OverlayResizePolicy::None:
+        default:
+            od.widget()->updateGeometry();
+            break;
+        }
     }
     for (auto c : children()) {
         if (c != areaWidget_) {

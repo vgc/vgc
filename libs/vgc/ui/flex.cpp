@@ -98,6 +98,9 @@ float Flex::preferredWidthForHeight(float height) const {
         float gap = getGap(isRow, this);
         bool isFirst = true;
         for (Widget* child : children()) {
+            if (child->visibility() == Visibility::Invisible) {
+                continue;
+            }
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
             float childHeight =
@@ -114,6 +117,9 @@ float Flex::preferredWidthForHeight(float height) const {
     }
     else {
         for (Widget* child : children()) {
+            if (child->visibility() == Visibility::Invisible) {
+                continue;
+            }
             float childLeftRightMargins = getLeftRightMargins(child);
             float childPreferredWidth = child->preferredSize().x();
             width = (std::max)(width, childPreferredWidth + childLeftRightMargins);
@@ -129,6 +135,9 @@ float Flex::preferredHeightForWidth(float width) const {
     float height = 0.0f;
     if (isRow) {
         for (Widget* child : children()) {
+            if (child->visibility() == Visibility::Invisible) {
+                continue;
+            }
             float childTopBottomMargins = getTopBottomMargins(child);
             float childPreferredHeight = child->preferredSize().y();
             height = (std::max)(height, childPreferredHeight + childTopBottomMargins);
@@ -140,6 +149,9 @@ float Flex::preferredHeightForWidth(float width) const {
         float gap = getGap(isRow, this);
         bool isFirst = true;
         for (Widget* child : children()) {
+            if (child->visibility() == Visibility::Invisible) {
+                continue;
+            }
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
             float childWidth = (std::max)(0.0f, flexPaddedWidth - childLeftRightMargins);
@@ -176,6 +188,9 @@ geometry::Vec2f Flex::computePreferredSize() const {
             float height = 0;
             if (!isRow) {
                 for (Widget* child : children()) {
+                    if (child->visibility() == Visibility::Invisible) {
+                        continue;
+                    }
                     height += child->preferredSize().y() + getTopBottomMargins(child);
                     if (isFirst) {
                         isFirst = false;
@@ -187,6 +202,9 @@ geometry::Vec2f Flex::computePreferredSize() const {
             }
             else {
                 for (Widget* child : children()) {
+                    if (child->visibility() == Visibility::Invisible) {
+                        continue;
+                    }
                     height = (std::max)(
                         height, child->preferredSize().y() + getTopBottomMargins(child));
                 }
@@ -197,6 +215,9 @@ geometry::Vec2f Flex::computePreferredSize() const {
             float width = 0;
             if (isRow) {
                 for (Widget* child : children()) {
+                    if (child->visibility() == Visibility::Invisible) {
+                        continue;
+                    }
                     width += child->preferredSize().x() + getLeftRightMargins(child);
                     if (isFirst) {
                         isFirst = false;
@@ -208,6 +229,9 @@ geometry::Vec2f Flex::computePreferredSize() const {
             }
             else {
                 for (Widget* child : children()) {
+                    if (child->visibility() == Visibility::Invisible) {
+                        continue;
+                    }
                     width = (std::max)(
                         width, child->preferredSize().x() + getLeftRightMargins(child));
                 }
@@ -306,6 +330,9 @@ float computeTotalStretch(
 
     float totalStretch = 0;
     for (Widget* child : parent->children()) {
+        if (child->visibility() == Visibility::Invisible) {
+            continue;
+        }
         totalStretch +=
             getChildStretch(isRow, paddedCrossSize, freeSpace, child, childStretchBonus);
     }
@@ -379,12 +406,14 @@ void Flex::updateChildrenGeometry() {
 
     // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
     // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
-    Int numChildren = 0; // TODO: have a (possibly constant-time) numChildren() method
+    bool hasVisibleChild = false;
     for (Widget* child : children()) {
-        (void)child; // Unused
-        numChildren += 1;
+        if (child->visibility() != Visibility::Invisible) {
+            hasVisibleChild = true;
+            break;
+        }
     }
-    if (numChildren > 0) {
+    if (hasVisibleChild) {
         bool isRow = (direction_ == FlexDirection::Row)
                      || (direction_ == FlexDirection::RowReverse);
         bool isReverse = (direction_ == FlexDirection::RowReverse)
@@ -429,18 +458,20 @@ void Flex::updateChildrenGeometry() {
         float childMainPosition = mainPaddingBefore;
         Widget* child = isReverse ? lastChild() : firstChild();
         while (child) {
-            stretchChild(
-                isRow,
-                freeSpace,
-                crossSize,
-                extraSpacePerStretch,
-                child,
-                childStretchBonus,
-                childMainPosition,
-                crossPaddingBefore,
-                crossPaddingAfter,
-                gap,
-                hinting);
+            if (child->visibility() != Visibility::Invisible) {
+                stretchChild(
+                    isRow,
+                    freeSpace,
+                    crossSize,
+                    extraSpacePerStretch,
+                    child,
+                    childStretchBonus,
+                    childMainPosition,
+                    crossPaddingBefore,
+                    crossPaddingAfter,
+                    gap,
+                    hinting);
+            }
             child = isReverse ? child->previousSibling() : child->nextSibling();
         }
     }

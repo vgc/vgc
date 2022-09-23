@@ -113,7 +113,7 @@ float getSpacing(const Widget* w, core::StringId id, bool hint) {
 } // namespace
 
 void detail::GridCell::DirMetrics::init(const Widget* w, Int dirIndex, bool hint) {
-    if (!w) {
+    if (!w || w->visibility() == Visibility::Invisible) {
         return;
     }
 
@@ -635,6 +635,11 @@ void Grid::updateChildrenGeometry() {
                 cell.borderBox.width(),
                 cell.borderBox.height());
         }
+    }
+
+    // Handle hijackers
+    for (auto c : children()) {
+        c->updateGeometry();
     }
 }
 
