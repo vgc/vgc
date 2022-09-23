@@ -53,6 +53,7 @@ void Widget::onDestroyed() {
     // Reset values to improve debuggability
     children_ = nullptr;
     actions_ = nullptr;
+    mouseCaptor_ = nullptr;
     hoverChainParent_ = nullptr;
     hoverChainChild_ = nullptr;
     isHovered_ = false;
@@ -60,6 +61,7 @@ void Widget::onDestroyed() {
     pressedButtons_.clear();
     computedVisibility_ = false;
     focus_ = nullptr;
+    keyboardCaptor_ = nullptr;
     // Call parent destructor
     Object::onDestroyed();
 }
@@ -205,6 +207,10 @@ geometry::Vec2f positionInRoot(const Widget* widget, const Widget** outRoot) {
 
 geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) const {
 
+    if (!other) {
+        throw core::NullError();
+    }
+
     // fast path
     if (other->parent() == this) {
         return position - other->position();
@@ -218,11 +224,17 @@ geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) co
 
     if (thisRoot != otherRoot) {
         throw core::LogicError(
-            "Cannot map a position between two widget coordinate systems if the widgets"
-            "don't have the same root");
+            "Cannot map a position between two widget coordinate systems if the widgets "
+            "don't have the same root.");
     }
 
     return position + thisPosInRoot - otherPosInRoot;
+}
+
+geometry::Rect2f Widget::mapTo(Widget* other, const geometry::Rect2f& rect) const {
+    geometry::Rect2f res = rect;
+    res.setPosition(mapTo(other, rect.position()));
+    return res;
 }
 
 void Widget::updateGeometry(
@@ -859,7 +871,7 @@ void Widget::mouseRelease_(MouseEvent* event) {
     }
 }
 
-Widget* Widget::computeHoverChainChild(geometry::Vec2f position) {
+Widget* Widget::computeHoverChainChild(const geometry::Vec2f& position) {
 
     // Return null if child hovering is disabled.
     if (!isChildHoverEnabled_) {
@@ -906,8 +918,7 @@ bool Widget::setHovered(bool hovered) {
             if (!p) {
                 // This is the root.
                 if (!isHovered_) {
-                    isHovered_ = true;
-                    onMouseEnter();
+                    mouseEnter_();
                 }
             }
             else if (p->isHovered()) {
@@ -939,8 +950,7 @@ bool Widget::setHovered(bool hovered) {
         Widget* c = nullptr;
         // If first parent is root, it could be not hovered yet.
         if (!p->isHovered_) {
-            p->isHovered_ = true;
-            p->onMouseEnter();
+            p->mouseEnter_();
         }
 
         // From here, let's be carefull about dangling pointers.
@@ -993,7 +1003,7 @@ bool Widget::setHovered(bool hovered) {
         /**/
 
         // Notify leave
-        onMouseLeave();
+        mouseLeave_();
 
         if (!thisPtr.isAlive()) {
             return true;
@@ -1054,10 +1064,9 @@ bool Widget::setHoverChainChild(Widget* newHoverChainChild) {
     // Link parent and child.
     hoverChainChild_ = newHoverChainChild;
     newHoverChainChild->hoverChainParent_ = this;
-    newHoverChainChild->isHovered_ = true;
 
     // Notify enter
-    hoverChainChild_->onMouseEnter();
+    hoverChainChild_->mouseEnter_();
 
     // Returns whether the requested state is set or not.
     return thisPtr.isAlive() && newChildPtr.isAlive()
@@ -1099,6 +1108,14 @@ void Widget::setVisibility(Visibility visibility) {
     }
     visibility_ = visibility;
     updateComputedVisibility_();
+    Widget* p = parent();
+    if (p) {
+        requestGeometryUpdate();
+    }
+}
+
+void Widget::onParentWidgetChanged(Widget*) {
+    // no-op
 }
 
 void Widget::onWidgetAdded(Widget*, bool) {
@@ -1107,6 +1124,16 @@ void Widget::onWidgetAdded(Widget*, bool) {
 
 void Widget::onWidgetRemoved(Widget*) {
     // no-op
+}
+
+bool Widget::mouseEnter_() {
+    isHovered_ = true;
+    return onMouseEnter();
+}
+
+bool Widget::mouseLeave_() {
+    // isHovered_ is set to false in setHovered()
+    return onMouseLeave();
 }
 
 bool Widget::onMouseEnter() {
@@ -1373,12 +1400,24 @@ style::StylableObject* Widget::nextSiblingStylableObject() const {
     return static_cast<style::StylableObject*>(nextSibling());
 }
 
+void Widget::onChildRemoved(Object* child) {
+    if (child == children_) {
+        children_ = nullptr;
+    }
+    else if (child == actions_) {
+        actions_ = nullptr;
+    }
+}
+
 void Widget::onStyleChanged() {
     requestGeometryUpdate();
 }
 
 void Widget::onWidgetAdded_(Widget* widget, bool wasOnlyReordered) {
     onWidgetAdded(widget, wasOnlyReordered);
+    if (!wasOnlyReordered) {
+        widget->onParentWidgetChanged(this);
+    }
     // may call onVisible, and resume pending requests
     widget->updateComputedVisibility_();
     // XXX temporary bug fix, sometimes pending requests are not resent..
