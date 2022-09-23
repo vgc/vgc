@@ -125,8 +125,8 @@ bool Label::onMouseLeave() {
 }
 
 void Label::onStyleChanged() {
-    Widget::onStyleChanged();
     reload_ = true;
+    SuperClass::onStyleChanged();
 }
 
 geometry::Vec2f Label::computePreferredSize() const {
