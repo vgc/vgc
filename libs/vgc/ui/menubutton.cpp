@@ -198,8 +198,7 @@ MenuButtonPtr MenuButton::create(Action* action, FlexDirection layoutDirection) 
     return MenuButtonPtr(new MenuButton(action, layoutDirection));
 }
 
-bool MenuButton::closeMenuPopup()
-{
+bool MenuButton::closeMenuPopup() {
     Menu* menu = menuPopup();
     return menu && menu->close();
 }
@@ -242,8 +241,7 @@ geometry::Vec2f MenuButton::computePreferredSize() const {
 
     const bool hint = (style(gs::pixel_hinting) == gs::normal);
     const geometry::Vec2f gapH = geometry::Vec2f(
-        getSpacing(this, column_gap, hint),
-        getSpacing(this, row_gap, hint));
+        getSpacing(this, column_gap, hint), getSpacing(this, row_gap, hint));
 
     Margins padding;
     geometry::Vec2f contentSize = {};

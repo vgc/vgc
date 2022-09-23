@@ -27,7 +27,6 @@
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
 #include <vgc/ui/action.h>
-#include <vgc/ui/menubutton.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
@@ -35,6 +34,7 @@
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/menu.h>
+#include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>

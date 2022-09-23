@@ -27,7 +27,7 @@ VGC_DECLARE_OBJECT(PopupLayer);
 
 /// \class vgc::ui::PopupLayer
 /// \brief A helper widget for popup initiators.
-/// 
+///
 /// PopupLayer is a widget that covers an overlay area and prevent
 /// clicks from reaching underneath except for a given underlying widget.
 /// It also destroys itself if the underlying widget is destroyed.
@@ -72,9 +72,7 @@ protected:
 private:
     Widget* underlyingWidget_ = nullptr;
 
-    VGC_SLOT(
-        onUnderlyingWidgetAboutToBeDestroyedSlot_,
-        destroy);
+    VGC_SLOT(onUnderlyingWidgetAboutToBeDestroyedSlot_, destroy);
 };
 
 } // namespace vgc::ui
