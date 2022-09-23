@@ -7,11 +7,22 @@
     column-gap: 10dp;
 }
 
-.Flex .Flex {
-    padding-top: 0dp;
+.Menu {
+    padding-top: 7dp;
     padding-right: 0dp;
-    padding-bottom: 0dp;
+    padding-bottom: 7dp;
     padding-left: 0dp;
+    row-gap: 0dp;
+    column-gap: 0dp;
+}
+
+.MenuButton {
+    padding-top: 3dp;
+    padding-right: 10dp;
+    padding-bottom: 3dp;
+    padding-left: 10dp;
+    row-gap: 10dp;
+    column-gap: 10dp;
 }
 
 .Flex,
@@ -51,7 +62,8 @@
 
 .Button,
 .LineEdit,
-.Plot2d {
+.Plot2d,
+.Menu {
     border-top-left-radius: 3dp;
     border-top-right-radius: 3dp;
     border-bottom-right-radius: 3dp;
@@ -103,6 +115,31 @@
 
 .Button.checked.pressed {
     background-color: rgb(41, 112, 202);
+}
+
+.Menu {
+    background-color: rgb(49, 51, 53);
+    horizontal-stretch: 0;
+}
+
+.MenuButton {
+    background-color: rgb(49, 51, 53);
+}
+
+.MenuButton.hovered {
+    background-color: rgb(11, 82, 172);
+}
+
+.MenuButton.active {
+    background-color: rgb(11, 82, 172);
+}
+
+.MenuButton > .Text {
+    text-horizontal-align: left;
+}
+
+.MenuButton > .Shortcut {
+    text-horizontal-align: left;
 }
 
 .LineEdit {

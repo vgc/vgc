@@ -22,10 +22,13 @@ vgc_add_library(ui
         lineedit.h
         logcategories.h
         margins.h
+        menu.h
+        menubutton.h
         modifierkey.h
         mouseevent.h
         overlayarea.h
         plot2d.h
+        popuplayer.h
         qtutil.h
         row.h
         shortcut.h
@@ -52,9 +55,12 @@ vgc_add_library(ui
         lineedit.cpp
         logcategories.cpp
         margins.cpp
+        menu.cpp
+        menubutton.cpp
         mouseevent.cpp
         overlayarea.cpp
         plot2d.cpp
+        popuplayer.cpp
         qtutil.cpp
         row.cpp
         strings.cpp

@@ -26,16 +26,20 @@
 #include <vgc/core/python.h>
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
+#include <vgc/ui/action.h>
+#include <vgc/ui/menubutton.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
+#include <vgc/ui/menu.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
+#include <vgc/ui/shortcut.h>
 #include <vgc/ui/window.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
@@ -205,7 +209,7 @@ int main(int argc, char* argv[]) {
     plot2d->appendDataPoint(21.0f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f);
     // clang-format on
 
-    // tests OverlayArea, Button, mapTo()
+    // tests OverlayArea, Menu, MenuButton, Button, mapTo()
     {
         vgc::ui::OverlayArea* overlayTest = col->createChild<vgc::ui::OverlayArea>();
         vgc::ui::Label* label = overlayTest->createOverlayWidget<vgc::ui::Label>(
@@ -224,6 +228,33 @@ int main(int argc, char* argv[]) {
                         label->updateGeometry(p, vgc::geometry::Vec2f(120.f, 25.f));
                     });
             }
+        }
+        {
+            using namespace vgc::ui;
+            Menu* menu = grid->createChild<Menu>("Menu");
+            menu->setDirection(FlexDirection::Row);
+
+            Menu* menu1 = menu->createSubMenu("Menu 1");
+            Menu* menu2 = menu->createSubMenu("Menu 2");
+            menu->setPopupEnabled(false);
+            grid->setWidgetAt(menu, 2, 0);
+
+            menu1->addItem(col->createAction("Make it Boo1", Shortcut({}, Key::B)));
+            Menu* menu1a = menu1->createSubMenu("Menu 1a");
+            Menu* menu1b = menu1->createSubMenu("Menu 1b");
+            menu1->setVisibility(Visibility::Invisible);
+
+            menu1a->addItem(col->createAction("Go to Bar", Shortcut({}, Key::G)));
+            menu1a->addItem(
+                col->createAction("Bazz Laitnin", Shortcut(ModifierKey::Ctrl, Key::L)));
+            menu1a->setVisibility(Visibility::Invisible);
+
+            menu1b->addItem(col->createAction("Do Foo", Shortcut({}, Key::F)));
+            menu1b->addItem(
+                col->createAction("Boo Ts", Shortcut(ModifierKey::Ctrl, Key::K)));
+            menu1b->setVisibility(Visibility::Invisible);
+
+            menu2->addItem(col->createAction("Make it Boo2", Shortcut({}, Key::B)));
         }
     }
 
