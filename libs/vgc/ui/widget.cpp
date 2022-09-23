@@ -224,7 +224,7 @@ geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) co
 
     if (thisRoot != otherRoot) {
         throw core::LogicError(
-            "Cannot map a position between two widget coordinate systems if the widgets"
+            "Cannot map a position between two widget coordinate systems if the widgets "
             "don't have the same root.");
     }
 
@@ -232,9 +232,9 @@ geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) co
 }
 
 geometry::Rect2f Widget::mapTo(Widget* other, const geometry::Rect2f& rect) const {
-    geometry::Rect2f ret = rect;
-    ret.setPosition(mapTo(other, rect.position()));
-    return ret;
+    geometry::Rect2f res = rect;
+    res.setPosition(mapTo(other, rect.position()));
+    return res;
 }
 
 void Widget::updateGeometry(
