@@ -152,7 +152,6 @@ bool placeMenuFit(
     int dropDir) {
 
     const geometry::Vec2f menuSize = menuRect.size();
-    const geometry::Vec2f anchorSize = anchorRect.size();
     const int crossDir = dropDir ? 0 : 1;
 
     const geometry::Vec2f areaMin = areaRect.pMin();
@@ -161,11 +160,11 @@ bool placeMenuFit(
     const geometry::Vec2f anchorMax = anchorRect.pMax();
     geometry::Vec2f resultPos;
 
-    if (anchorMax[dropDir] + menuSize[dropDir] <= areaRect.pMax()[dropDir]) {
+    if (anchorMax[dropDir] + menuSize[dropDir] <= areaMax[dropDir]) {
         // Enough space on the Right/Bottom
         resultPos[dropDir] = anchorMax[dropDir];
     }
-    else if (anchorMin[dropDir] - menuSize[dropDir] >= areaRect.pMin()[dropDir]) {
+    else if (anchorMin[dropDir] - menuSize[dropDir] >= areaMin[dropDir]) {
         // Enough space on the Left/Top
         resultPos[dropDir] = anchorMin[dropDir] - menuSize[dropDir];
     }
@@ -174,14 +173,12 @@ bool placeMenuFit(
     }
 
     float delta = menuSize[crossDir];
-    if (anchorMin[crossDir] + delta + fixedCrossAlignShifts[1]
-        <= areaRect.pMax()[crossDir]) {
+    if (anchorMin[crossDir] + delta + fixedCrossAlignShifts[1] <= areaMax[crossDir]) {
         // Enough space Bottom/Right
         resultPos[crossDir] = anchorMin[crossDir] + fixedCrossAlignShifts[1];
     }
     else if (
-        anchorMax[crossDir] - delta - fixedCrossAlignShifts[0]
-        >= areaRect.pMin()[crossDir]) {
+        anchorMax[crossDir] - delta - fixedCrossAlignShifts[0] >= areaMin[crossDir]) {
         // Enough space Top/Left
         resultPos[crossDir] = anchorMax[crossDir] - delta - fixedCrossAlignShifts[0];
     }
