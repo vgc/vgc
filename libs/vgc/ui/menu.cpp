@@ -468,8 +468,14 @@ void Menu::onSubMenuPopupClosed_(Action* triggeredAction) {
         subMenuPopup_->aboutToBeDestroyed().disconnect(onSubMenuPopupDestroySlot_());
         subMenuPopup_ = nullptr;
         // Cascaded close.
-        if (triggeredAction && isOpenAsPopup_) {
-            close_(triggeredAction);
+        if (triggeredAction) {
+            if (isOpenAsPopup_) {
+                close_(triggeredAction);
+            }
+            else {
+                // Top-level menu removes its protective layer.
+                onLayerCatch_();
+            }
         }
     }
 }
