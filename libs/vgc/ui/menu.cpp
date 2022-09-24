@@ -503,9 +503,15 @@ void Menu::preMouseMove(MouseEvent* event) {
     }
 
     geometry::Vec2f newHoverPos = event->position();
+    if (isFirstMoveSinceEnter_) {
+        // Hover discontinuity (leave/enter).
+        lastHoverPos_ = newHoverPos;
+    }
+
     geometry::Vec2f delta = newHoverPos - lastHoverPos_;
     float sqDist = delta.squaredLength();
     bool moved = sqDist > 15.f; // ~4 pixels
+
     const bool hasOpenSubmenuPopup = subMenuPopup_;
 
     // A menu is either docked (menu bar) or popup (dropdown).
@@ -516,12 +522,6 @@ void Menu::preMouseMove(MouseEvent* event) {
 
     MenuButton* button = dynamic_cast<MenuButton*>(hcc);
     const bool isHccMenu = button && button->isMenu();
-
-    if (isFirstMoveSinceEnter_) {
-        // Hover discontinuity (leave/enter).
-        lastHoverPos_ = newHoverPos;
-        moved = false;
-    }
 
     bool doNothing = false;
     if (shouldProtectOpenSubMenu && subMenuPopup_ && !isFirstMoveSinceEnter_) {
@@ -575,10 +575,16 @@ void Menu::preMouseMove(MouseEvent* event) {
     }
 
     if (hcc && !doNothing) {
-        if (subMenuPopup_ != hcc) {
+        // We have no pointer to our current active button atm.
+        // But we can check if the hovered button's open popup
+        // menu is our open sub-menu.
+        Menu* hccMenuPopup = button ? button->menuPopup() : nullptr;
+        if (!subMenuPopup_ || subMenuPopup_ != hccMenuPopup) {
             closeSubMenu();
             if (isHccMenu && shouldOpenSubmenuOnHover) {
                 button->click();
+                // Update move origin now.
+                lastHoverPos_ = newHoverPos;
             }
         }
     }
@@ -603,6 +609,8 @@ void Menu::preMousePress(MouseEvent* event) {
             event->stopPropagation();
         }
     }
+    // Update move origin now.
+    lastHoverPos_ = event->position();
 }
 
 bool Menu::onMouseEnter() {
