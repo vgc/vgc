@@ -517,15 +517,14 @@ void Menu::preMouseMove(MouseEvent* event) {
     MenuButton* button = dynamic_cast<MenuButton*>(hcc);
     const bool isHccMenu = button && button->isMenu();
 
-    if (skipMove) {
+    if (isFirstMoveSinceEnter_) {
         // Hover discontinuity (leave/enter).
         lastHoverPos_ = newHoverPos;
         moved = false;
-        skipMove = false;
     }
 
     bool doNothing = false;
-    if (shouldProtectOpenSubMenu && subMenuPopup_) {
+    if (shouldProtectOpenSubMenu && subMenuPopup_ && !isFirstMoveSinceEnter_) {
         if (!moved) {
             // Move was too small, let's keep the sub-menu open.
             doNothing = true;
@@ -587,6 +586,7 @@ void Menu::preMouseMove(MouseEvent* event) {
     if (moved) {
         lastHoverPos_ = newHoverPos;
     }
+    isFirstMoveSinceEnter_ = false;
 }
 
 void Menu::preMousePress(MouseEvent* event) {
@@ -606,7 +606,7 @@ void Menu::preMousePress(MouseEvent* event) {
 }
 
 bool Menu::onMouseEnter() {
-    skipMove = true;
+    isFirstMoveSinceEnter_ = true;
     return false;
 }
 

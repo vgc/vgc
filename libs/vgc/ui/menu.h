@@ -262,7 +262,7 @@ private:
     Menu* subMenuPopup_ = nullptr;
     bool isDeferringOpen_ = true;
     geometry::Vec2f lastHoverPos_ = {};
-    bool skipMove = false;
+    bool isFirstMoveSinceEnter_ = true;
     geometry::Rect2f subMenuPopupHitRect_ = {};
 
     bool openAsPopup_(Widget* from);
