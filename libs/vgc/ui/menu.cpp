@@ -534,7 +534,6 @@ void Menu::preMouseMove(MouseEvent* event) {
             geometry::Vec2f dir = newHoverPos - origin;
             dir.normalize();
             // Assumes pos is out of the popup rect.
-            geometry::Vec2f planes = {};
             int hitPlaneDim = -1;
             float hitDist = 0.f;
             for (int i = 0; i < 2; ++i) {
@@ -560,7 +559,6 @@ void Menu::preMouseMove(MouseEvent* event) {
                 }
             }
             if (hitPlaneDim >= 0) {
-                const float margin = 50.f;
                 int hitCrossDim = hitPlaneDim ? 0 : 1;
                 float vHit = origin[hitCrossDim] + hitDist * dir[hitCrossDim];
                 geometry::Vec2f hitBounds = geometry::Vec2f(
