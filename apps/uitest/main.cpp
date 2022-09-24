@@ -234,27 +234,32 @@ int main(int argc, char* argv[]) {
             Menu* menu = grid->createChild<Menu>("Menu");
             menu->setDirection(FlexDirection::Row);
 
-            Menu* menu1 = menu->createSubMenu("Menu 1");
-            Menu* menu2 = menu->createSubMenu("Menu 2");
+            Menu* menuA = menu->createSubMenu("Menu A");
+            Menu* menuB = menu->createSubMenu("Menu B");
             menu->setPopupEnabled(false);
             grid->setWidgetAt(menu, 2, 0);
 
-            menu1->addItem(col->createAction("Make it Boo1", Shortcut({}, Key::B)));
-            Menu* menu1a = menu1->createSubMenu("Menu 1a");
-            Menu* menu1b = menu1->createSubMenu("Menu 1b");
-            menu1->setVisibility(Visibility::Invisible);
+            menuA->addItem(col->createAction("Action #A.1", Shortcut({}, Key::B)));
+            Menu* menu1 = menuA->createSubMenu("Menu 1a");
+            Menu* menu2 = menuA->createSubMenu("Menu 1b");
+            Menu* menu3 = menuA->createSubMenu("Menu 1c");
 
-            menu1a->addItem(col->createAction("Go to Bar", Shortcut({}, Key::G)));
-            menu1a->addItem(
-                col->createAction("Bazz Laitnin", Shortcut(ModifierKey::Ctrl, Key::L)));
-            menu1a->setVisibility(Visibility::Invisible);
+            menu1->addItem(col->createAction("Action #1.1", Shortcut({}, Key::G)));
+            menu1->addItem(
+                col->createAction("Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
+            menu1->addItem(col->createAction("Action #1.3"));
+            menu1->addItem(col->createAction("Action #1.4"));
+            menu1->addItem(col->createAction("Action #1.5"));
+            menu1->addItem(col->createAction("Action #1.6"));
+            menu1->addItem(col->createAction("Action #1.7"));
 
-            menu1b->addItem(col->createAction("Do Foo", Shortcut({}, Key::F)));
-            menu1b->addItem(
-                col->createAction("Boo Ts", Shortcut(ModifierKey::Ctrl, Key::K)));
-            menu1b->setVisibility(Visibility::Invisible);
+            menu2->addItem(col->createAction("Action #2.1", Shortcut({}, Key::F)));
+            menu2->addItem(
+                col->createAction("Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
 
-            menu2->addItem(col->createAction("Make it Boo2", Shortcut({}, Key::B)));
+            menu3->addItem(col->createAction("Action #3.1"));
+
+            menuB->addItem(col->createAction("Action #B.1", Shortcut({}, Key::B)));
         }
     }
 

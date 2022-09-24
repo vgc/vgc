@@ -262,7 +262,8 @@ private:
     Menu* subMenuPopup_ = nullptr;
     bool isDeferringOpen_ = true;
     geometry::Vec2f lastHoverPos_ = {};
-    geometry::Rect2f subMenuPopupRect_ = {};
+    bool skipMove = false;
+    geometry::Rect2f subMenuPopupHitRect_ = {};
 
     bool openAsPopup_(Widget* from);
     bool close_(Action* triggeredAction);

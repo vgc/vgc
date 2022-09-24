@@ -30,7 +30,9 @@
 .Button,
 .Label,
 .LineEdit,
-.Plot2d {
+.Plot2d
+.Menu,
+.MenuButton {
     pixel-hinting: normal;
 
     /* With SourceSansPro @ 14dp, both cap-height and num-height are equal to 9dp.

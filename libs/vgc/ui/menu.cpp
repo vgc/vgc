@@ -285,58 +285,6 @@ void Menu::closeLayer() {
     }
 }
 
-//bool Menu::close_(bool cascade) {
-//    closeSubMenu();
-//    bool wasVisible = isVisible();
-//    if (isPopupEnabled_) {
-//        if (popinParent_) {
-//            reparent(popinParent_);
-//        }
-//        popupLayer_ = nullptr;
-//        isOpenAsPopup_ = false;
-//    }
-//    else if (cascade) {
-//        return false;
-//    }
-//
-//    hide();
-//    if (wasVisible) {
-//        closed().emit(cascade);
-//        return true;
-//    }
-//
-//    return false;
-//}
-//
-//void Menu::onActionDeath_(Object* action) {
-//    items_.removeIf([=](const MenuItem& item) { return item.action() == action; });
-//}
-
-//void Menu::onButtonClicked_(MenuButton* button) {
-//    if (button->openedPopupMenu()) {
-//        // Close other popups
-//        for (auto& item : items_) {
-//            MenuButton* menuButton = item.menuButton();
-//            if (menuButton == button) {
-//                continue;
-//            }
-//            // XXX move in MenuButton directly ?
-//            menuButton->closeMenu();
-//        }
-//    }
-//    else {
-//        close_(true);
-//    }
-//}
-//
-//void Menu::onPopupClosed_(bool triggered) {
-//    if (triggered) {
-//        if (isPopupEnabled_) {
-//            close_(true);
-//        }
-//    }
-//}
-
 void Menu::onItemAdded_(const MenuItem& item) {
     MenuButton* button = item.button();
     if (button) {
@@ -471,7 +419,24 @@ void Menu::onItemActionTriggered_(Widget* from) {
         newPopup->popupClosed().connect(onSubMenuPopupClosedSlot_());
         newPopup->aboutToBeDestroyed().connect(onSubMenuPopupDestroySlot_());
         subMenuPopup_ = newPopup;
-        subMenuPopupRect_ = newPopup->mapTo(this, newPopup->rect());
+        subMenuPopupHitRect_ = newPopup->mapTo(this, newPopup->rect());
+
+        // Add margins to popup hit rect when applicable (no overlap with our buttons).
+        geometry::Rect2f itemsRect = rect() - padding_;
+        const float hitMargin = 25.f;
+        Margins hitMargins = {};
+        if (subMenuPopupHitRect_.xMin() >= itemsRect.xMax()
+            || subMenuPopupHitRect_.xMax() <= itemsRect.xMin()) {
+            hitMargins.setTop(hitMargin);
+            hitMargins.setBottom(hitMargin);
+        }
+        if (subMenuPopupHitRect_.yMin() >= itemsRect.yMax()
+            || subMenuPopupHitRect_.yMax() <= itemsRect.yMin()) {
+            hitMargins.setRight(hitMargin);
+            hitMargins.setLeft(hitMargin);
+        }
+        subMenuPopupHitRect_ = subMenuPopupHitRect_ + hitMargins;
+
         isDeferringOpen_ = false;
         if (!isOpenAsPopup_) {
             if (!popupLayer_) {
@@ -534,78 +499,77 @@ void Menu::preMouseMove(MouseEvent* event) {
     geometry::Vec2f newHoverPos = event->position();
     geometry::Vec2f delta = newHoverPos - lastHoverPos_;
     float sqDist = delta.squaredLength();
-    const bool moved = sqDist > 15.f; // ~4 pixels
+    bool moved = sqDist > 15.f; // ~4 pixels
     const bool hasOpenSubmenuPopup = subMenuPopup_;
 
     // A menu is either docked (menu bar) or popup (dropdown).
     // A drop-down menu always opens sub-menus on hover.
     // A menu bar opens its sub-menus on hover only if one is already open.
     const bool shouldOpenSubmenuOnHover = isOpenAsPopup_ || hasOpenSubmenuPopup;
+    const bool shouldProtectOpenSubMenu = isOpenAsPopup_;
 
     MenuButton* button = dynamic_cast<MenuButton*>(hcc);
     const bool isHccMenu = button && button->isMenu();
 
-    //if (subMenuPopup_) {
-    //    if (moved) {
-    //        geometry::Vec2f origin = lastHoverPos_;
-    //        geometry::Vec2f dir = newHoverPos - origin;
-    //        dir.normalize();
-    //        // Assumes pos is out of the popup rect.
-    //        geometry::Vec2f planes = {};
-    //        geometry::Vec2f hits = {-1.f, -1.f};
-    //        int hitPlaneDim = -1;
-    //        float hitDist = 0.f;
-    //        for (int i = 0; i < 2; ++i) {
-    //            float c = dir[i];
-    //            // Check parallelism.
-    //            if (c == 0.f) {
-    //                continue;
-    //            }
-    //            float o = origin[i];
-    //            // Find candidate plane.
-    //            float plane = subMenuPopupRect_.pMin()[i];
-    //            if (newHoverPos[i] > plane) {
-    //                plane = subMenuPopupRect_.pMax()[i];
-    //                if (newHoverPos[i] < plane) {
-    //                    continue;
-    //                }
-    //            }
-    //            // Calculate dist.
-    //            float d = (plane - o) / c;
-    //            if (d > hitDist) {
-    //                hitPlaneDim = i;
-    //                hitDist = d;
-    //            }
-    //        }
-    //        if (hitPlaneDim >= 0) {
-    //            const float margin = 50.f;
-    //            int hitCrossDim = hitPlaneDim ? 0 : 1;
-    //            float vHit = origin[hitCrossDim] + hitDist * dir[hitCrossDim];
-    //            geometry::Vec2f hitBounds = geometry::Vec2f(
-    //                subMenuPopupRect_.pMin()[hitCrossDim] - margin,
-    //                subMenuPopupRect_.pMax()[hitCrossDim] + margin
-    //            );
-    //            if (vHit < hitBounds[0] || vHit > hitBounds[1]) {
-    //                // not directed to open popup -> trigger current
-    //                if (isMenu) {
-    //                    button->click();
-    //                }
-    //                else {
-    //                    closeSubMenu();
-    //                }
-    //            }
-    //        } else {
-    //            // Probably an error since we are inside the popup rect.
-    //        }
-    //    }
-    //}
-    //else if (!isDeferringOpen_) {
-    //    if (isMenu) {
-    //        button->click();
-    //    }
-    //}
+    if (skipMove) {
+        // Hover discontinuity (leave/enter).
+        lastHoverPos_ = newHoverPos;
+        moved = false;
+        skipMove = false;
+    }
 
-    if (hcc) {
+    bool doNothing = false;
+    if (shouldProtectOpenSubMenu && subMenuPopup_) {
+        if (!moved) {
+            // Move was too small, let's keep the sub-menu open.
+            doNothing = true;
+        }
+        else {
+            geometry::Vec2f origin = lastHoverPos_;
+            geometry::Vec2f dir = newHoverPos - origin;
+            dir.normalize();
+            // Assumes pos is out of the popup rect.
+            geometry::Vec2f planes = {};
+            int hitPlaneDim = -1;
+            float hitDist = 0.f;
+            for (int i = 0; i < 2; ++i) {
+                float c = dir[i];
+                // Check parallelism.
+                if (c == 0.f) {
+                    continue;
+                }
+                float o = origin[i];
+                // Find candidate plane.
+                float plane = subMenuPopupHitRect_.pMin()[i];
+                if (newHoverPos[i] > plane) {
+                    plane = subMenuPopupHitRect_.pMax()[i];
+                    if (newHoverPos[i] < plane) {
+                        continue;
+                    }
+                }
+                // Calculate dist.
+                float d = (plane - o) / c;
+                if (d > hitDist) {
+                    hitPlaneDim = i;
+                    hitDist = d;
+                }
+            }
+            if (hitPlaneDim >= 0) {
+                const float margin = 50.f;
+                int hitCrossDim = hitPlaneDim ? 0 : 1;
+                float vHit = origin[hitCrossDim] + hitDist * dir[hitCrossDim];
+                geometry::Vec2f hitBounds = geometry::Vec2f(
+                    subMenuPopupHitRect_.pMin()[hitCrossDim],
+                    subMenuPopupHitRect_.pMax()[hitCrossDim]);
+                // If hit, let's do nothing on hover.
+                if (vHit >= hitBounds[0] && vHit <= hitBounds[1]) {
+                    doNothing = true;
+                }
+            }
+        }
+    }
+
+    if (hcc && !doNothing) {
         if (subMenuPopup_ != hcc) {
             closeSubMenu();
             if (isHccMenu && shouldOpenSubmenuOnHover) {
@@ -636,6 +600,7 @@ void Menu::preMousePress(MouseEvent* event) {
 }
 
 bool Menu::onMouseEnter() {
+    skipMove = true;
     return false;
 }
 
