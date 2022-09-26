@@ -170,7 +170,7 @@ public:
 
     geometry::Vec2f preferredArrowSize() const {
         // XXX todo
-        return isEnabled() ?  geometry::Vec2f(10.f, 10.f) : geometry::Vec2f();
+        return isEnabled() ? geometry::Vec2f(10.f, 10.f) : geometry::Vec2f();
     }
 
     /// Returns the icon size overrides.
