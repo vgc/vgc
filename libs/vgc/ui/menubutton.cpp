@@ -198,28 +198,28 @@ MenuButtonPtr MenuButton::create(Action* action, FlexDirection layoutDirection) 
     return MenuButtonPtr(new MenuButton(action, layoutDirection));
 }
 
-bool MenuButton::closeMenuPopup() {
-    Menu* menu = menuPopup();
+bool MenuButton::closePopupMenu() {
+    Menu* menu = popupMenu();
     return menu && menu->close();
 }
 
 void MenuButton::onMenuPopupOpened_(Menu* menu) {
-    if (menuPopup_ == menu) {
+    if (popupMenu_ == menu) {
         return;
     }
-    if (menuPopup_) {
-        closeMenuPopup();
+    if (popupMenu_) {
+        closePopupMenu();
     }
-    menuPopup_ = menu;
-    menuPopup_->popupClosed().connect(onMenuPopupClosedSlot_());
+    popupMenu_ = menu;
+    popupMenu_->popupClosed().connect(onMenuPopupClosedSlot_());
     setActive(true);
     menuPopupOpened().emit();
 }
 
 void MenuButton::onMenuPopupClosed_(Action* triggeredAction) {
     setActive(false);
-    menuPopup_->popupClosed().disconnect(onMenuPopupClosedSlot_());
-    menuPopup_ = nullptr;
+    popupMenu_->popupClosed().disconnect(onMenuPopupClosedSlot_());
+    popupMenu_ = nullptr;
     menuPopupClosed().emit(triggeredAction);
 }
 

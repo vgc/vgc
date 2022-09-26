@@ -66,7 +66,7 @@ public:
     /// This signal is emitted whenever the action properties are changed (shortcut,
     /// text, icon, ...).
     ///
-    VGC_SIGNAL(changed, (Action*, action))
+    VGC_SIGNAL(changed)
 
     /// Returns the descriptive text for this action.
     ///
@@ -78,7 +78,7 @@ public:
     ///
     void setText(std::string_view text) {
         text_ = text;
-        changed().emit(this);
+        changed().emit();
     }
 
     /// Returns the shortcut associated with this action. This can be an empty
@@ -92,22 +92,25 @@ public:
     ///
     void setShortcut(const Shortcut& shortcut) {
         shortcut_ = shortcut;
-        changed().emit(this);
+        changed().emit();
     }
 
-    VGC_SIGNAL(disabled, (Action*, action))
+    VGC_SIGNAL(enabledChanged, (bool, enabled))
 
-    /// Returns whether this action is disabled or not.
+    /// Returns whether this action is enabled or not.
     ///
-    bool isDisabled() const {
-        return isDisabled_;
+    bool isEnabled() const {
+        return isEnabled_;
     }
 
     /// Sets the disabled state of this action.
     ///
-    void setDisabled(bool disabled) {
-        isDisabled_ = disabled;
-        this->disabled().emit(this);
+    void setEnabled(bool enabled) {
+        if (isEnabled_ == enabled) {
+            return;
+        }
+        isEnabled_ = enabled;
+        this->enabledChanged().emit(enabled);
     }
 
     /// Returns whether this action is to open a menu.
@@ -135,7 +138,7 @@ public:
 private:
     std::string text_;
     Shortcut shortcut_;
-    bool isDisabled_ = false;
+    bool isEnabled_ = true;
     bool isMenu_ = false;
 };
 

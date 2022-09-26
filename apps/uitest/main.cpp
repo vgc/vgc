@@ -240,9 +240,9 @@ int main(int argc, char* argv[]) {
             grid->setWidgetAt(menu, 2, 0);
 
             menuA->addItem(col->createAction("Action #A.1", Shortcut({}, Key::B)));
-            Menu* menu1 = menuA->createSubMenu("Menu 1a");
-            Menu* menu2 = menuA->createSubMenu("Menu 1b");
-            Menu* menu3 = menuA->createSubMenu("Menu 1c");
+            Menu* menu1 = menuA->createSubMenu("Menu 1");
+            Menu* menu2 = menuA->createSubMenu("Menu 2");
+            Menu* menu3 = menuA->createSubMenu("Menu 3");
 
             menu1->addItem(col->createAction("Action #1.1", Shortcut({}, Key::G)));
             menu1->addItem(
@@ -252,6 +252,15 @@ int main(int argc, char* argv[]) {
             menu1->addItem(col->createAction("Action #1.5"));
             menu1->addItem(col->createAction("Action #1.6"));
             menu1->addItem(col->createAction("Action #1.7"));
+            Menu* menu1b = menu1->createSubMenu("Menu 1.8");
+
+            menu1b->addItem(col->createAction("Action #1.8.1"));
+            menu1b->addItem(col->createAction("Action #1.8.2"));
+            menu1b->addItem(col->createAction("Action #1.8.3"));
+            menu1b->addItem(col->createAction("Action #1.8.4"));
+            menu1b->addItem(col->createAction("Action #1.8.5"));
+            menu1b->addItem(col->createAction("Action #1.8.6"));
+            menu1b->addItem(col->createAction("Action #1.8.7"));
 
             menu2->addItem(col->createAction("Action #2.1", Shortcut({}, Key::F)));
             menu2->addItem(
@@ -266,7 +275,7 @@ int main(int argc, char* argv[]) {
     // Test mouse capture
     col->createChild<vgc::ui::ScreenColorPickerButton>("Pick Screen Color");
 
-    int size = 10;
+    int size = 3;
     for (int i = 0; i < size; ++i) {
         vgc::ui::Row* row = col->createChild<vgc::ui::Row>();
         row->addStyleClass(vgc::core::StringId("inner"));
@@ -274,7 +283,7 @@ int main(int argc, char* argv[]) {
         if (i == 0) {
             row->setStyleSheet(".LineEdit { text-color: rgb(50, 232, 211); }");
         }
-        for (int j = 0; j < size; ++j) {
+        for (int j = 0; j < size + 1; ++j) {
             vgc::ui::LineEdit* lineEdit = row->createChild<vgc::ui::LineEdit>();
             size_t begin = randomBegin();
             size_t count = randomCount();

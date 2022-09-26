@@ -53,7 +53,7 @@ ActionPtr Action::create(const std::string& text, const Shortcut& shortcut) {
 }
 
 bool Action::trigger(Widget* from) {
-    if (isDisabled_) {
+    if (!isEnabled_) {
         return false;
     }
     triggered().emit(from);

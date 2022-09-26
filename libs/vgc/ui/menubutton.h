@@ -58,8 +58,8 @@ public:
         return action_;
     }
 
-    bool isDisabled() const {
-        return action_ ? action_->isDisabled() : true;
+    bool isEnabled() const {
+        return action_ ? action_->isEnabled() : false;
     }
 
     bool isMenu() const {
@@ -152,8 +152,8 @@ public:
     static MenuButtonPtr
     create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
 
-    MenuDropDirection menuDropDir() const {
-        return menuDropDir_;
+    MenuDropDirection menuDropDirection() const {
+        return menuDropDirection_;
     }
 
     geometry::Vec2f preferredIconSize() const {
@@ -170,7 +170,7 @@ public:
 
     geometry::Vec2f preferredArrowSize() const {
         // XXX todo
-        return isDisabled() ? geometry::Vec2f() : geometry::Vec2f(10.f, 10.f);
+        return isEnabled() ?  geometry::Vec2f(10.f, 10.f) : geometry::Vec2f();
     }
 
     /// Returns the icon size overrides.
@@ -209,11 +209,11 @@ public:
         return parentMenu_;
     };
 
-    Menu* menuPopup() const {
-        return menuPopup_;
+    Menu* popupMenu() const {
+        return popupMenu_;
     };
 
-    bool closeMenuPopup();
+    bool closePopupMenu();
 
     VGC_SIGNAL(menuPopupOpened);
     VGC_SIGNAL(menuPopupClosed, (Action*, triggeredAction));
@@ -230,9 +230,9 @@ private:
     geometry::Vec2f textSizeOverrides_ = {-1.f, -1.f};
     geometry::Vec2f shortcutSizeOverrides_ = {-1.f, -1.f};
     float arrowSizeOverride_ = 0.f;
-    MenuDropDirection menuDropDir_ = MenuDropDirection::Horizontal;
+    MenuDropDirection menuDropDirection_ = MenuDropDirection::Horizontal;
     Menu* parentMenu_ = nullptr;
-    Menu* menuPopup_ = nullptr;
+    Menu* popupMenu_ = nullptr;
 
     // The menu calls this when it opens as a popup.
     void onMenuPopupOpened_(Menu* menu);

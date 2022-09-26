@@ -200,7 +200,7 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
     MenuDropDirection dropDir =
-        button ? button->menuDropDir() : MenuDropDirection::Horizontal;
+        button ? button->menuDropDirection() : MenuDropDirection::Horizontal;
     if (parentMenu) {
         switch (parentMenu->direction()) {
         case FlexDirection::Row:
@@ -282,6 +282,7 @@ void Menu::removeItem(Widget* widget) {
 void Menu::closeLayer() {
     if (popupLayer_) {
         popupLayer_->destroy();
+        popupLayer_ = nullptr;
     }
 }
 
@@ -298,7 +299,7 @@ void Menu::onItemAdded_(const MenuItem& item) {
 void Menu::preItemRemoved_(const MenuItem& item) {
     MenuButton* button = item.button();
     if (button) {
-        button->closeMenuPopup();
+        button->closePopupMenu();
         button->parentMenu_ = nullptr;
     }
     item.action()->triggered().disconnect(onItemActionTriggeredSlot_());
@@ -407,12 +408,12 @@ void Menu::onItemActionTriggered_(Widget* from) {
         MenuButton* button = item.button();
         if (item.widget() == from) {
             if (button) {
-                newPopup = button->menuPopup();
+                newPopup = button->popupMenu();
             }
         }
         else if (button) {
             // close other menus
-            button->closeMenuPopup();
+            button->closePopupMenu();
         }
     }
     if (newPopup) {
@@ -576,7 +577,7 @@ void Menu::preMouseMove(MouseEvent* event) {
         // We have no pointer to our current active button atm.
         // But we can check if the hovered button's open popup
         // menu is our open sub-menu.
-        Menu* hccMenuPopup = button ? button->menuPopup() : nullptr;
+        Menu* hccMenuPopup = button ? button->popupMenu() : nullptr;
         if (!subMenuPopup_ || subMenuPopup_ != hccMenuPopup) {
             closeSubMenu();
             if (isHccMenu && shouldOpenSubmenuOnHover) {
