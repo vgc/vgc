@@ -16,14 +16,24 @@
 
 #include <vgc/ui/action.h>
 
+#include <vgc/ui/menu.h>
+
 namespace vgc::ui {
 
-Action::Action()
-    : shortcut_() {
+Action::Action() {
 }
 
 Action::Action(const Shortcut& shortcut)
     : shortcut_(shortcut) {
+}
+
+Action::Action(const std::string& text)
+    : text_(text) {
+}
+
+Action::Action(const std::string& text, const Shortcut& shortcut)
+    : text_(text)
+    , shortcut_(shortcut) {
 }
 
 ActionPtr Action::create() {
@@ -34,8 +44,20 @@ ActionPtr Action::create(const Shortcut& shortcut) {
     return ActionPtr(new Action(shortcut));
 }
 
-void Action::trigger() {
-    triggered().emit();
+ActionPtr Action::create(const std::string& text) {
+    return ActionPtr(new Action(text));
+}
+
+ActionPtr Action::create(const std::string& text, const Shortcut& shortcut) {
+    return ActionPtr(new Action(text, shortcut));
+}
+
+bool Action::trigger(Widget* from) {
+    if (!isEnabled_) {
+        return false;
+    }
+    triggered().emit(from);
+    return true;
 }
 
 } // namespace vgc::ui

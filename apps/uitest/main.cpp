@@ -26,16 +26,20 @@
 #include <vgc/core/python.h>
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
+#include <vgc/ui/action.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
+#include <vgc/ui/menu.h>
+#include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
+#include <vgc/ui/shortcut.h>
 #include <vgc/ui/window.h>
 #include <vgc/widgets/font.h>
 #include <vgc/widgets/mainwindow.h>
@@ -205,7 +209,7 @@ int main(int argc, char* argv[]) {
     plot2d->appendDataPoint(21.0f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f);
     // clang-format on
 
-    // tests OverlayArea, Button, mapTo()
+    // tests OverlayArea, Menu, MenuButton, Button, mapTo()
     {
         vgc::ui::OverlayArea* overlayTest = col->createChild<vgc::ui::OverlayArea>();
         vgc::ui::Label* label = overlayTest->createOverlayWidget<vgc::ui::Label>(
@@ -225,12 +229,53 @@ int main(int argc, char* argv[]) {
                     });
             }
         }
+        {
+            using namespace vgc::ui;
+            Menu* menu = grid->createChild<Menu>("Menu");
+            menu->setDirection(FlexDirection::Row);
+
+            Menu* menuA = menu->createSubMenu("Menu A");
+            Menu* menuB = menu->createSubMenu("Menu B");
+            menu->setPopupEnabled(false);
+            grid->setWidgetAt(menu, 2, 0);
+
+            menuA->addItem(col->createAction("Action #A.1", Shortcut({}, Key::B)));
+            Menu* menu1 = menuA->createSubMenu("Menu 1");
+            Menu* menu2 = menuA->createSubMenu("Menu 2");
+            Menu* menu3 = menuA->createSubMenu("Menu 3");
+
+            menu1->addItem(col->createAction("Action #1.1", Shortcut({}, Key::G)));
+            menu1->addItem(
+                col->createAction("Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
+            menu1->addItem(col->createAction("Action #1.3"));
+            menu1->addItem(col->createAction("Action #1.4"));
+            menu1->addItem(col->createAction("Action #1.5"));
+            menu1->addItem(col->createAction("Action #1.6"));
+            menu1->addItem(col->createAction("Action #1.7"));
+            Menu* menu1b = menu1->createSubMenu("Menu 1.8");
+
+            menu1b->addItem(col->createAction("Action #1.8.1"));
+            menu1b->addItem(col->createAction("Action #1.8.2"));
+            menu1b->addItem(col->createAction("Action #1.8.3"));
+            menu1b->addItem(col->createAction("Action #1.8.4"));
+            menu1b->addItem(col->createAction("Action #1.8.5"));
+            menu1b->addItem(col->createAction("Action #1.8.6"));
+            menu1b->addItem(col->createAction("Action #1.8.7"));
+
+            menu2->addItem(col->createAction("Action #2.1", Shortcut({}, Key::F)));
+            menu2->addItem(
+                col->createAction("Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
+
+            menu3->addItem(col->createAction("Action #3.1"));
+
+            menuB->addItem(col->createAction("Action #B.1", Shortcut({}, Key::B)));
+        }
     }
 
     // Test mouse capture
     col->createChild<vgc::ui::ScreenColorPickerButton>("Pick Screen Color");
 
-    int size = 10;
+    int size = 3;
     for (int i = 0; i < size; ++i) {
         vgc::ui::Row* row = col->createChild<vgc::ui::Row>();
         row->addStyleClass(vgc::core::StringId("inner"));
@@ -238,7 +283,7 @@ int main(int argc, char* argv[]) {
         if (i == 0) {
             row->setStyleSheet(".LineEdit { text-color: rgb(50, 232, 211); }");
         }
-        for (int j = 0; j < size; ++j) {
+        for (int j = 0; j < size + 1; ++j) {
             vgc::ui::LineEdit* lineEdit = row->createChild<vgc::ui::LineEdit>();
             size_t begin = randomBegin();
             size_t count = randomCount();

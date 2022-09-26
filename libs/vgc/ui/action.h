@@ -17,13 +17,19 @@
 #ifndef VGC_UI_ACTION_H
 #define VGC_UI_ACTION_H
 
+#include <string>
+#include <string_view>
+
 #include <vgc/core/innercore.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/shortcut.h>
 
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Action);
+VGC_DECLARE_OBJECT(Widget);
+VGC_DECLARE_OBJECT(Menu);
 
 /// \class vgc::ui::Action
 /// \brief Represents an action that can be triggered via menu items, shorctuts, etc.
@@ -32,10 +38,13 @@ class VGC_UI_API Action : public core::Object {
 private:
     VGC_OBJECT(Action, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
+    friend Menu;
 
 protected:
     Action();
     explicit Action(const Shortcut& shortcut);
+    explicit Action(const std::string& text);
+    Action(const std::string& text, const Shortcut& shortcut);
 
 public:
     /// Creates an action.
@@ -46,18 +55,31 @@ public:
     ///
     static ActionPtr create(const Shortcut& shortcut);
 
-    /// Triggers the action. This will cause the triggered signal to be emitted.
+    /// Creates an action with the given text.
     ///
-    /// \sa triggered
-    ///
-    void trigger();
+    static ActionPtr create(const std::string& text);
 
-    /// This signal is emitted whenever the action is activated by the user (for example, clicking
-    /// on an associated button), or when the trigger() method is called.
+    /// Creates an action with the given text and shortcut.
     ///
-    /// \sa trigger()
+    static ActionPtr create(const std::string& text, const Shortcut& shortcut);
+
+    /// This signal is emitted whenever the action properties are changed (shortcut,
+    /// text, icon, ...).
     ///
-    VGC_SIGNAL(triggered);
+    VGC_SIGNAL(changed)
+
+    /// Returns the descriptive text for this action.
+    ///
+    const std::string& text() const {
+        return text_;
+    }
+
+    /// Sets the descriptive text for this action.
+    ///
+    void setText(std::string_view text) {
+        text_ = text;
+        changed().emit();
+    }
 
     /// Returns the shortcut associated with this action. This can be an empty
     /// shortcut if this action has no associated shortcut.
@@ -66,8 +88,58 @@ public:
         return shortcut_;
     }
 
+    /// Sets the shortcut associated with this action.
+    ///
+    void setShortcut(const Shortcut& shortcut) {
+        shortcut_ = shortcut;
+        changed().emit();
+    }
+
+    VGC_SIGNAL(enabledChanged, (bool, enabled))
+
+    /// Returns whether this action is enabled or not.
+    ///
+    bool isEnabled() const {
+        return isEnabled_;
+    }
+
+    /// Sets the disabled state of this action.
+    ///
+    void setEnabled(bool enabled) {
+        if (isEnabled_ == enabled) {
+            return;
+        }
+        isEnabled_ = enabled;
+        this->enabledChanged().emit(enabled);
+    }
+
+    /// Returns whether this action is to open a menu.
+    ///
+    bool isMenu() const {
+        return isMenu_;
+    }
+
+    /// If the action is not disabled, triggers the action and returns true.
+    /// Otherwise returns false.
+    ///
+    /// This will cause the triggered signal to be emitted.
+    ///
+    /// \sa triggered
+    ///
+    bool trigger(Widget* from = nullptr);
+
+    /// This signal is emitted whenever the action is activated by the user (for example,
+    /// clicking on an associated button), or when the trigger() method is called.
+    ///
+    /// \sa trigger()
+    ///
+    VGC_SIGNAL(triggered, (Widget*, from))
+
 private:
+    std::string text_;
     Shortcut shortcut_;
+    bool isEnabled_ = true;
+    bool isMenu_ = false;
 };
 
 } // namespace vgc::ui

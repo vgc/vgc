@@ -34,6 +34,7 @@ VGC_UI_API extern const core::StringId Label;
 VGC_UI_API extern const core::StringId LineEdit;
 VGC_UI_API extern const core::StringId Menu;
 VGC_UI_API extern const core::StringId MenuBar;
+VGC_UI_API extern const core::StringId MenuButton;
 VGC_UI_API extern const core::StringId Plot2d;
 VGC_UI_API extern const core::StringId Widget;
 
@@ -58,6 +59,8 @@ VGC_UI_API extern const core::StringId indeterminate;
 
 VGC_UI_API extern const core::StringId hovered;
 VGC_UI_API extern const core::StringId pressed;
+VGC_UI_API extern const core::StringId active;
+VGC_UI_API extern const core::StringId disabled;
 
 } // namespace vgc::ui::strings
 

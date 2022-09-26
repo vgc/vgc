@@ -33,6 +33,7 @@ const core::StringId Label("Label");
 const core::StringId LineEdit("LineEdit");
 const core::StringId Menu("Menu");
 const core::StringId MenuBar("MenuBar");
+const core::StringId MenuButton("MenuButton");
 const core::StringId Plot2d("Plot2d");
 const core::StringId Widget("Widget");
 
@@ -63,5 +64,7 @@ const core::StringId indeterminate("indeterminate");
 
 const core::StringId hovered("hovered");
 const core::StringId pressed("pressed");
+const core::StringId active("active");
+const core::StringId disabled("disabled");
 
 } // namespace vgc::ui::strings
