@@ -84,6 +84,18 @@ public:
     ///
     static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
 
+    /// Returns whether the two given `Length` are equal.
+    ///
+    friend bool operator==(const Length& l1, const Length& l2) {
+        return l1.unit_ == l2.unit_ && l1.value_ == l2.value_;
+    }
+
+    /// Returns whether the two given `Length` are different.
+    ///
+    friend bool operator!=(const Length& l1, const Length& l2) {
+        return !(l1 == l2);
+    }
+
 private:
     double value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
@@ -131,6 +143,18 @@ public:
     /// valid `Percentage`. Otherwise, return a `StyleValue` holding a `Percentage`.
     ///
     static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+
+    /// Returns whether the two given `Percentage` are equal.
+    ///
+    friend bool operator==(const Percentage& p1, const Percentage& p2) {
+        return p1.value_ == p2.value_;
+    }
+
+    /// Returns whether the two given `Percentage` are different.
+    ///
+    friend bool operator!=(const Percentage& p1, const Percentage& p2) {
+        return !(p1 == p2);
+    }
 
 private:
     double value_ = 0;
@@ -210,6 +234,20 @@ public:
     ///
     static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
 
+    /// Returns whether the two given `LengthOrPercentage` are equal.
+    ///
+    friend bool operator==(const LengthOrPercentage& v1, const LengthOrPercentage& v2) {
+        return v1.isPercentage_ == v2.isPercentage_                //
+               && (v1.isPercentage_ ? v1.unit_ == v2.unit_ : true) //
+               && v1.value_ == v2.value_;
+    }
+
+    /// Returns whether the two given `LengthOrPercentage` are different.
+    ///
+    friend bool operator!=(const LengthOrPercentage& v1, const LengthOrPercentage& v2) {
+        return !(v1 == v2);
+    }
+
 private:
     double value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
@@ -280,6 +318,21 @@ public:
     ///
     static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
 
+    /// Returns whether the two given `LengthOrAuto` are equal.
+    ///
+    friend bool operator==(const LengthOrAuto& v1, const LengthOrAuto& v2) {
+        return v1.isAuto_ == v2.isAuto_
+               && (v1.isAuto_
+                       ? true
+                       : Length(v1.value_, v1.unit_) == Length(v2.value_, v2.unit_));
+    }
+
+    /// Returns whether the two given `LengthOrAuto` are different.
+    ///
+    friend bool operator!=(const LengthOrAuto& v1, const LengthOrAuto& v2) {
+        return !(v1 == v2);
+    }
+
 private:
     double value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
@@ -336,6 +389,18 @@ public:
         return BorderRadiusInPx(
             (std::max)(static_cast<Float>(0), radius_[0] + horizontal),
             (std::max)(static_cast<Float>(0), radius_[1] + vertical));
+    }
+
+    /// Returns whether the two given `BorderRadiusInPx` are equal.
+    ///
+    friend bool operator==(const BorderRadiusInPx& v1, const BorderRadiusInPx& v2) {
+        return v1.radius_ == v2.radius_;
+    }
+
+    /// Returns whether the two given `BorderRadiusInPx` are different.
+    ///
+    friend bool operator!=(const BorderRadiusInPx& v1, const BorderRadiusInPx& v2) {
+        return !(v1 == v2);
     }
 
 private:
@@ -405,6 +470,19 @@ public:
     /// `LengthOrAuto`.
     ///
     static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+
+    /// Returns whether the two given `BorderRadius` are equal.
+    ///
+    friend bool operator==(const BorderRadius& v1, const BorderRadius& v2) {
+        return v1.horizontalRadius_ == v2.horizontalRadius_
+               && v1.verticalRadius_ == v2.verticalRadius_;
+    }
+
+    /// Returns whether the two given `BorderRadius` are different.
+    ///
+    friend bool operator!=(const BorderRadius& v1, const BorderRadius& v2) {
+        return !(v1 == v2);
+    }
 
 private:
     LengthOrPercentage horizontalRadius_;
@@ -546,6 +624,18 @@ public:
             bottomLeft().offsetted(left, bottom));
     }
 
+    /// Returns whether the two given `BorderRadiusesInPx` are equal.
+    ///
+    friend bool operator==(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
+        return v1.radiuses_ == v2.radiuses_;
+    }
+
+    /// Returns whether the two given `BorderRadiusesInPx` are different.
+    ///
+    friend bool operator!=(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
+        return !(v1 == v2);
+    }
+
 private:
     std::array<BorderRadiusInPx<Float>, 4> radiuses_;
 };
@@ -555,6 +645,15 @@ private:
 ///
 class VGC_STYLE_API BorderRadiuses {
 public:
+    /// Constructs a `BorderRadiuses` with all radiuses set to (0dp, 0dp).
+    ///
+    BorderRadiuses()
+        : topLeft_()
+        , topRight_()
+        , bottomRight_()
+        , bottomLeft_() {
+    }
+
     /// Constructs a `BorderRadiuses` with all radiuses set to the given
     /// `BorderRadius`.
     ///
@@ -672,6 +771,21 @@ public:
             topRight_.toPx(scaleFactor, horizontalRefLength, verticalRefLength),
             bottomRight_.toPx(scaleFactor, horizontalRefLength, verticalRefLength),
             bottomLeft_.toPx(scaleFactor, horizontalRefLength, verticalRefLength));
+    }
+
+    /// Returns whether the two given `BorderRadiuses` are equal.
+    ///
+    friend bool operator==(const BorderRadiuses& v1, const BorderRadiuses& v2) {
+        return v1.topLeft_ == v2.topLeft_            //
+               && v1.topRight_ == v2.topRight_       //
+               && v1.bottomRight_ == v2.bottomRight_ //
+               && v1.bottomLeft_ == v2.bottomLeft_;
+    }
+
+    /// Returns whether the two given `BorderRadiuses` are different.
+    ///
+    friend bool operator!=(const BorderRadiuses& v1, const BorderRadiuses& v2) {
+        return !(v1 == v2);
     }
 
 private:
