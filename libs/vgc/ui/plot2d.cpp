@@ -98,11 +98,13 @@ Plot2dPtr Plot2d::create(Int numYs, Int maxXs) {
 }
 
 void Plot2d::onResize() {
+    SuperClass::onResize();
     dirtyPlot_ = true;
     //dirtyHint_ = true;
 }
 
 void Plot2d::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
     plotGeom_ =
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
     plotTextGeom_ =
@@ -113,13 +115,13 @@ void Plot2d::onPaintCreate(graphics::Engine* engine) {
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+
+    SuperClass::onPaintDraw(engine, options);
 
     namespace gs = graphics::strings;
 
     if (dirtyPlot_ || dirtyHint_) {
-        // XXX cache these
-        core::Color backgroundColor = detail::getColor(this, gs::background_color);
         // TODO
         core::Color textColor = detail::getColor(this, gs::text_color);
         float paddingBottom = detail::getLength(this, gs::padding_bottom);
@@ -148,11 +150,6 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
             dirtyPlot_ = false;
 
             core::FloatArray a = {};
-
-            if (backgroundColor.a() > 0) {
-                style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
-                detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
-            }
 
             // content only if we have data and the padded area is not empty
             if (numXs_ > 1 && (width() > paddingLeft + paddingRight)
@@ -294,7 +291,7 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                                 a,
                                 geometry::Vec2f(prevX, ys0[j] + 0.5f),
                                 geometry::Vec2f(x, ys1[j] + 0.5f),
-                                backgroundColor,
+                                backgroundColor(),
                                 1.3f);
                         }
                         core::Color color = colors[0];
@@ -308,7 +305,7 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                             a,
                             geometry::Vec2f(prevX, ys0[0] + 0.5f),
                             geometry::Vec2f(x, ys1[0] + 0.5f),
-                            backgroundColor,
+                            backgroundColor(),
                             1.3f);
 
                         float midX = (prevX + x) * 0.5f;
@@ -382,7 +379,8 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     engine->draw(hintTextGeom_, -1, 0);
 }
 
-void Plot2d::onPaintDestroy(graphics::Engine*) {
+void Plot2d::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     plotGeom_.reset();
     plotTextGeom_.reset();
     hintBgGeom_.reset();

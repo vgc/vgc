@@ -59,6 +59,8 @@ style::StylableObject* Label::lastChildStylableObject() const {
 
 void Label::onResize() {
 
+    SuperClass::onResize();
+
     namespace gs = graphics::strings;
 
     // Compute contentRect
@@ -79,24 +81,20 @@ void Label::onResize() {
 }
 
 void Label::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
     triangles_ =
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+void Label::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+
+    SuperClass::onPaintDraw(engine, options);
 
     namespace gs = graphics::strings;
 
     if (reload_) {
         reload_ = false;
         core::FloatArray a;
-
-        // Draw background
-        core::Color backgroundColor = detail::getColor(this, gs::background_color);
-        if (backgroundColor.a() > 0) {
-            style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
-            detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
-        }
 
         // Draw text
         richText_->fill(a);
@@ -108,7 +106,8 @@ void Label::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     engine->draw(triangles_, -1, 0);
 }
 
-void Label::onPaintDestroy(graphics::Engine*) {
+void Label::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     triangles_.reset();
 }
 

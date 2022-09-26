@@ -93,46 +93,8 @@ bool ActionButton::onMousePress(MouseEvent* /*event*/) {
     return tryClick_();
 }
 
-void ActionButton::onResize() {
-    reload_ = true;
-}
-
 void ActionButton::onStyleChanged() {
     SuperClass::onStyleChanged();
-    reload_ = true;
-}
-
-void ActionButton::onPaintCreate(graphics::Engine* engine) {
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
-}
-
-void ActionButton::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
-
-    namespace gs = graphics::strings;
-
-    if (reload_) {
-        reload_ = false;
-        core::FloatArray a;
-
-        // Background
-        core::Color backgroundColor = detail::getColor(this, gs::background_color);
-        if (backgroundColor.a() > 0) {
-            style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
-            detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
-        }
-
-        // Load triangles data
-        engine->updateVertexBufferData(triangles_, std::move(a));
-    }
-    engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(triangles_, -1, 0);
-
-    SuperClass::onPaintDraw(engine, options);
-}
-
-void ActionButton::onPaintDestroy(graphics::Engine*) {
-    triangles_.reset();
 }
 
 void ActionButton::onClicked() {
@@ -164,7 +126,7 @@ void ActionButton::onActionChanged_() {
     textLabel_->setText(action_->text());
     shortcutLabel_->setText(core::format("shortcutFor({})", action_->text()));
     requestGeometryUpdate();
-    reload_ = true;
+    requestRepaint();
 }
 
 //---------------------------------------------------------------------------------------

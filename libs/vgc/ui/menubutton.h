@@ -83,11 +83,7 @@ protected:
     bool onMouseEnter() override;
     bool onMouseLeave() override;
     bool onMousePress(MouseEvent* event) override;
-    void onResize() override;
     void onStyleChanged() override;
-    void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
-    void onPaintDestroy(graphics::Engine* engine) override;
 
     virtual void onClicked();
 
@@ -114,10 +110,6 @@ private:
 
     // Style
     bool isActive_ = false;
-
-    // Background
-    graphics::GeometryViewPtr triangles_;
-    bool reload_ = true;
 
     // Behavior
     bool tryClick_();

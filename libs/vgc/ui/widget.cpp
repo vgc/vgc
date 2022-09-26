@@ -28,6 +28,8 @@
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/strings.h>
 
+#include <vgc/ui/detail/paintutil.h>
+
 namespace vgc::ui {
 
 Widget::Widget()
@@ -350,6 +352,7 @@ void Widget::requestGeometryUpdate() {
 }
 
 void Widget::onResize() {
+    backgroundChanged_ = true;
 }
 
 void Widget::requestRepaint() {
@@ -393,6 +396,9 @@ void Widget::paint(graphics::Engine* engine, PaintOptions options) {
 }
 
 void Widget::onPaintCreate(graphics::Engine* engine) {
+    triangles_ =
+        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+
     for (Widget* child : children()) {
         child->onPaintCreate(engine);
     }
@@ -405,14 +411,23 @@ void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {
 }
 
 void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+    if (backgroundColor_.a() > 0) {
+        if (backgroundChanged_) {
+            backgroundChanged_ = false;
+            core::FloatArray a;
+            detail::insertRect(a, backgroundColor_, rect(), borderRadiuses_);
+            engine->updateVertexBufferData(triangles_, std::move(a));
+        }
+        engine->setProgram(graphics::BuiltinProgram::Simple);
+        engine->draw(triangles_, -1, 0);
+    }
     for (Widget* widget : children()) {
         if (!widget->isVisible()) {
             continue;
         }
         engine->pushViewMatrix();
         geometry::Mat4f m = engine->viewMatrix();
-        geometry::Vec2f pos = widget->position();
-        m.translate(pos[0], pos[1]); // TODO: Mat4f.translate(const Vec2f&)
+        m.translate(widget->position());
         engine->setViewMatrix(m);
         widget->paint(engine, options);
         engine->popViewMatrix();
@@ -420,6 +435,7 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 }
 
 void Widget::onPaintDestroy(graphics::Engine* engine) {
+    triangles_.reset();
     for (Widget* child : children()) {
         child->onPaintDestroy(engine);
     }
@@ -1410,7 +1426,19 @@ void Widget::onChildRemoved(Object* child) {
 }
 
 void Widget::onStyleChanged() {
+
+    core::Color oldBackgroundColor = backgroundColor_;
+    style::BorderRadiuses oldBorderRadiuses = borderRadiuses_;
+
+    backgroundColor_ = detail::getColor(this, graphics::strings::background_color);
+    borderRadiuses_ = detail::getBorderRadiuses(this);
+
+    if (oldBackgroundColor != backgroundColor_ || oldBorderRadiuses != borderRadiuses_) {
+        backgroundChanged_ = true;
+    }
+
     requestGeometryUpdate();
+    requestRepaint();
 }
 
 void Widget::onWidgetAdded_(Widget* widget, bool wasOnlyReordered) {

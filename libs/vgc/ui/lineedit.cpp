@@ -99,6 +99,8 @@ style::StylableObject* LineEdit::lastChildStylableObject() const {
 
 void LineEdit::onResize() {
 
+    SuperClass::onResize();
+
     namespace gs = graphics::strings;
 
     // Compute contentRect
@@ -119,29 +121,20 @@ void LineEdit::onResize() {
 }
 
 void LineEdit::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
     triangles_ =
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+
+    SuperClass::onPaintDraw(engine, options);
 
     namespace gs = graphics::strings;
 
     if (reload_) {
         reload_ = false;
         core::FloatArray a;
-
-        // Draw background
-        core::Color backgroundColor = detail::getColor(this, gs::background_color);
-#if defined(VGC_QOPENGL_EXPERIMENT)
-        static core::Stopwatch sw = {};
-        auto t = sw.elapsed() * 50.f;
-        backgroundColor = core::Color::hsl(t, 0.6f, 0.3f);
-#endif
-        if (backgroundColor.a() > 0) {
-            style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
-            detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
-        }
 
         // Draw text
         richText_->fill(a);
@@ -153,7 +146,8 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     engine->draw(triangles_, -1, 0);
 }
 
-void LineEdit::onPaintDestroy(graphics::Engine*) {
+void LineEdit::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     triangles_.reset();
 }
 

@@ -7,13 +7,31 @@
     column-gap: 10dp;
 }
 
-.Menu {
-    padding-top: 7dp;
+.Flex.inner {
+    padding-top: 0dp;
     padding-right: 0dp;
-    padding-bottom: 7dp;
+    padding-bottom: 0dp;
+    padding-left: 0dp;
+}
+
+.Menu {
+    padding-top: 5dp;
+    padding-right: 0dp;
+    padding-bottom: 5dp;
     padding-left: 0dp;
     row-gap: 0dp;
     column-gap: 0dp;
+    horizontal-shrink: 1;
+    horizontal-stretch: 1;
+    vertical-shrink: 0;
+    vertical-stretch: 0;
+}
+
+.Menu.horizontal {
+    padding-top: 0dp;
+    padding-right: 5dp;
+    padding-bottom: 0dp;
+    padding-left: 5dp;
 }
 
 .MenuButton {
@@ -23,6 +41,10 @@
     padding-left: 10dp;
     row-gap: 10dp;
     column-gap: 10dp;
+    horizontal-shrink: 0;
+    horizontal-stretch: 0;
+    vertical-shrink: 0;
+    vertical-stretch: 0;
 }
 
 .Flex,
@@ -70,6 +92,13 @@
     border-top-right-radius: 3dp;
     border-bottom-right-radius: 3dp;
     border-bottom-left-radius: 3dp;
+}
+
+.Menu.horizontal {
+    border-top-left-radius: 0dp;
+    border-top-right-radius: 0dp;
+    border-bottom-right-radius: 0dp;
+    border-bottom-left-radius: 0dp;
 }
 
 .horizontal-group.first {
@@ -121,11 +150,10 @@
 
 .Menu {
     background-color: rgb(49, 51, 53);
-    horizontal-stretch: 0;
 }
 
 .MenuButton {
-    background-color: rgb(49, 51, 53);
+    /* background-color drawn by .Menu */
 }
 
 .MenuButton.hovered {

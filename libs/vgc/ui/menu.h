@@ -217,12 +217,8 @@ protected:
     bool onMouseLeave() override;
     void onVisible() override;
     void onHidden() override;
-    void onResize() override;
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
-    void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
-    void onPaintDestroy(graphics::Engine* engine) override;
     //
 
     // Returns a position relative to area.
@@ -245,9 +241,6 @@ private:
 
     void onItemAdded_(const MenuItem& item);
     void preItemRemoved_(const MenuItem& item);
-
-    // Background
-    graphics::GeometryViewPtr triangles_;
 
     // Style
     mutable float iconTrackSize_ = -1.f;
@@ -288,7 +281,6 @@ private:
     mutable bool isShortcutTrackEnabled_ = true;
     bool isPopupEnabled_ = true;
     bool isOpenAsPopup_ = false;
-    bool reload_ = true;
     //float subMenuOpenDelay_ = 0.f;
 };
 

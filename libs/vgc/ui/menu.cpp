@@ -424,7 +424,7 @@ void Menu::onItemActionTriggered_(Widget* from) {
 
         // Add margins to popup hit rect when applicable (no overlap with our buttons).
         geometry::Rect2f itemsRect = rect() - padding_;
-        const float hitMargin = 25.f;
+        const float hitMargin = 5.f;
         Margins hitMargins = {};
         if (subMenuPopupHitRect_.xMin() >= itemsRect.xMax()
             || subMenuPopupHitRect_.xMax() <= itemsRect.xMin()) {
@@ -522,7 +522,7 @@ void Menu::preMouseMove(MouseEvent* event) {
     const bool shouldProtectOpenSubMenu = isOpenAsPopup_;
 
     MenuButton* button = dynamic_cast<MenuButton*>(hcc);
-    const bool isHccMenu = button && button->isMenu();
+    const bool isHccMenu = button && button->isMenu() && button->isEnabled();
 
     bool doNothing = false;
     if (shouldProtectOpenSubMenu && subMenuPopup_ && !isFirstMoveSinceEnter_) {
@@ -579,7 +579,9 @@ void Menu::preMouseMove(MouseEvent* event) {
         // menu is our open sub-menu.
         Menu* hccMenuPopup = button ? button->popupMenu() : nullptr;
         if (!subMenuPopup_ || subMenuPopup_ != hccMenuPopup) {
-            closeSubMenu();
+            if (isOpenAsPopup_ || isHccMenu) {
+                closeSubMenu();
+            }
             if (isHccMenu && shouldOpenSubmenuOnHover) {
                 button->click();
                 // Update move origin now.
@@ -599,11 +601,7 @@ void Menu::preMousePress(MouseEvent* event) {
     // is already active.
     if (!isOpenAsPopup_ && subMenuPopup_) {
         Widget* hcc = hoverChainChild();
-        if (hcc && hcc->parent() != this) {
-            return;
-        }
-        MenuButton* button = dynamic_cast<MenuButton*>(hcc);
-        if (button && button->isMenu()) {
+        if (!hcc || !hcc->isHoverLocked()) {
             onLayerCatch_();
             event->stopPropagation();
         }
@@ -634,10 +632,6 @@ void Menu::onHidden() {
     }
 }
 
-void Menu::onResize() {
-    reload_ = true;
-}
-
 geometry::Vec2f Menu::computePreferredSize() const {
     setupWidthOverrides_();
     geometry::Vec2f ret = Flex::computePreferredSize();
@@ -654,44 +648,6 @@ geometry::Vec2f Menu::computePreferredSize() const {
 void Menu::updateChildrenGeometry() {
     setupWidthOverrides_();
     Flex::updateChildrenGeometry();
-}
-
-void Menu::onPaintCreate(graphics::Engine* engine) {
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
-}
-
-void Menu::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
-
-    namespace gs = graphics::strings;
-
-    if (reload_) {
-        reload_ = false;
-        core::FloatArray a;
-
-        // Draw background
-        core::Color backgroundColor = detail::getColor(this, gs::background_color);
-
-        if (backgroundColor.a() > 0) {
-            style::BorderRadiuses borderRadiuses = detail::getBorderRadiuses(this);
-            detail::insertRect(a, backgroundColor, rect(), borderRadiuses);
-        }
-
-        // Load triangles data
-        engine->updateVertexBufferData(triangles_, std::move(a));
-    }
-
-    // Background if needed
-    if (isPopupEnabled_) {
-        engine->setProgram(graphics::BuiltinProgram::Simple);
-        engine->draw(triangles_, -1, 0);
-    }
-
-    SuperClass::onPaintDraw(engine, options);
-}
-
-void Menu::onPaintDestroy(graphics::Engine*) {
-    triangles_.reset();
 }
 
 } // namespace vgc::ui

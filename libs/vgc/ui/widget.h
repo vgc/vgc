@@ -32,6 +32,7 @@
 #include <vgc/graphics/engine.h>
 #include <vgc/graphics/idgenerator.h>
 #include <vgc/style/stylableobject.h>
+#include <vgc/style/types.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
@@ -578,6 +579,18 @@ public:
     /// needs to be repainted for a frame.
     ///
     void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
+
+    /// Returns the `background-color` style attribute of this widget.
+    ///
+    /// This is equivalent to:
+    ///
+    /// ```cpp
+    /// style(graphics::strings::background_color).to<core::Color>()
+    /// ```
+    ///
+    const core::Color& backgroundColor() {
+        return backgroundColor_;
+    }
 
     /// Returns the widget policy regarding handled events.
     ///
@@ -1263,6 +1276,13 @@ private:
     }
 
     void prePaintUpdateGeometry_();
+
+    // Background
+    graphics::GeometryViewPtr triangles_;
+    core::Color backgroundColor_;
+    style::BorderRadiuses borderRadiuses_;
+    bool backgroundChanged_ = true;
+    // TODO: border width/style
 
     // Events
     HandledEventPolicy handledEventPolicy_ = HandledEventPolicy::Skip;
