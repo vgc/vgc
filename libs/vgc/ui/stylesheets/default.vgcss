@@ -172,6 +172,10 @@
 
 .ColorPalette .Flex {
     column-gap: 1dp;
+    padding-top: 0dp;
+    padding-right: 0dp;
+    padding-bottom: 0dp;
+    padding-left: 0dp;
 }
 
 .ColorPalette .Flex .Label {
