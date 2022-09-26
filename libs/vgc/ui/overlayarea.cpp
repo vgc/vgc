@@ -58,7 +58,7 @@ void OverlayArea::addOverlayWidget(Widget* w, OverlayResizePolicy resizePolicy) 
 }
 
 void OverlayArea::onResize() {
-    // no-op
+    SuperClass::onResize();
 }
 
 void OverlayArea::onWidgetAdded(Widget* w, bool /*wasOnlyReordered*/) {

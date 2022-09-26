@@ -43,8 +43,8 @@ void PopupLayer::onWidgetAdded(Widget* child, bool /*wasOnlyReordered*/) {
 }
 
 void PopupLayer::onResize() {
-    resized().emit();
     SuperClass::onResize();
+    resized().emit();
 }
 
 Widget* PopupLayer::computeHoverChainChild(const geometry::Vec2f& position) {

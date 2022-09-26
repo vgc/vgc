@@ -804,6 +804,7 @@ void ColorPaletteSelector::setContinuous(bool isContinuous) {
 }
 
 void ColorPaletteSelector::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
     triangles_ =
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
@@ -1013,9 +1014,9 @@ float hint(float value, bool hinting) {
 
 } // namespace
 
-void ColorPaletteSelector::onPaintDraw(
-    graphics::Engine* engine,
-    PaintOptions /*options*/) {
+void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+
+    SuperClass::onPaintDraw(engine, options);
 
     float eps = 1e-6f;
     bool hasWidthChanged = std::abs(oldWidth_ - width()) > eps;
@@ -1931,7 +1932,8 @@ void ColorPaletteSelector::updateMetrics_() const {
     metrics_ = computeMetricsFromWidth_(width());
 }
 
-void ColorPaletteSelector::onPaintDestroy(graphics::Engine*) {
+void ColorPaletteSelector::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     triangles_.reset();
 }
 
@@ -2297,15 +2299,18 @@ void ColorPreview::setColor(const core::Color& color) {
 }
 
 void ColorPreview::onResize() {
+    SuperClass::onResize();
     reload_ = true;
 }
 
 void ColorPreview::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
     triangles_ =
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions) {
+void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+    SuperClass::onPaintDraw(engine, options);
     namespace gs = graphics::strings;
     if (reload_) {
         reload_ = false;
@@ -2321,7 +2326,8 @@ void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions) {
     engine->draw(triangles_, -1, 0);
 }
 
-void ColorPreview::onPaintDestroy(graphics::Engine*) {
+void ColorPreview::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     triangles_.reset();
 }
 
@@ -2400,9 +2406,6 @@ void ColorListView::removeColorAt(Int index) {
     }
     bool hasSelectedColorIndexChanged = (oldSelectedColorIndex != selectedColorIndex_);
     bool hasSelectedColorChanged = (oldSelectedColor != selectedColor());
-    if (hasSelectedColorIndexChanged || hasSelectedColorChanged) {
-        reload_ = true;
-    }
     colorsChanged().emit();
     if (hasSelectedColorIndexChanged) {
         selectedColorIndexChanged().emit();
@@ -2410,7 +2413,9 @@ void ColorListView::removeColorAt(Int index) {
     if (hasSelectedColorChanged) {
         selectedColorChanged().emit();
     }
+    reload_ = true;
     requestGeometryUpdate();
+    requestRepaint();
 }
 
 void ColorListView::setColors(const core::Array<core::Color>& colors) {
@@ -2447,10 +2452,12 @@ void ColorListView::setColors(const core::Array<core::Color>& colors) {
 }
 
 void ColorListView::onResize() {
+    SuperClass::onResize();
     reload_ = true;
 }
 
 void ColorListView::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
     triangles_ =
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
@@ -2470,7 +2477,9 @@ float getItemLengthInPx(style::StylableObject* item, core::StringId property) {
 
 } // namespace
 
-void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
+void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+
+    SuperClass::onPaintDraw(engine, options);
 
     namespace gs = graphics::strings;
 
@@ -2543,7 +2552,8 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions) {
     engine->draw(triangles_, -1, 0);
 }
 
-void ColorListView::onPaintDestroy(graphics::Engine*) {
+void ColorListView::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     triangles_.reset();
 }
 
