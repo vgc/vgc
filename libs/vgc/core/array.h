@@ -1797,6 +1797,87 @@ public:
         return res;
     }
 
+    /// Relocates the element at index `i` just before the element at index
+    /// `dest`, shifting all the elements inbetween by one index.
+    ///
+    /// Returns the new index of the relocated element, which is either `dest`
+    /// or `dest - 1`, depending on whether `dest` is before or after `i`.
+    ///
+    /// Throws `IndexError` if `i` does not belong to [`0`, `length() - 1`] or
+    /// `dest` does not belong to [`0`, `length()`].
+    ///
+    /// Does nothing if `dest == i` or `dest == i + 1`.
+    ///
+    /// ```cpp
+    /// vgc::core::Array<double> a = {18, 10, 42, 12, 15};
+    /// a.relocate(2, 0);      // => [42, 18, 10, 12, 15]
+    ///                        //     ^ return value = 0
+    ///
+    /// vgc::core::Array<double> b = {18, 10, 42, 12, 15};
+    /// b.relocate(2, 1);      // => [18, 42, 10, 12, 15]
+    ///                        //         ^ return value = 1
+    ///
+    /// vgc::core::Array<double> c = {18, 10, 42, 12, 15};
+    /// c.relocate(2, 2);      // => [18, 10, 42, 12, 15]
+    ///                        //             ^ return value = 2
+    ///
+    /// vgc::core::Array<double> d = {18, 10, 42, 12, 15};
+    /// d.relocate(2, 3);      // => [18, 10, 42, 12, 15]
+    ///                        //             ^ return value = 2
+    ///
+    /// vgc::core::Array<double> d = {18, 10, 42, 12, 15};
+    /// e.relocate(2, 4);      // => [18, 10, 12, 42, 15]
+    ///                        //                 ^ return value = 3
+    ///
+    /// vgc::core::Array<double> d = {18, 10, 42, 12, 15};
+    /// f.relocate(2, 5);      // => [18, 10, 12, 15, 42]
+    ///                        //                     ^ return value = 4
+    ///
+    Int relocate(Int i, Int dest) {
+        checkInRangeForRelocate_(i, dest);
+        iterator newLocation = relocate(data_ + i, data_ + dest);
+        return static_cast<Int>(std::distance(data_, newLocation));
+    }
+
+    /// Relocates the element referred to by the iterator `it` just before the
+    /// element referred to by the iterator `dest`, shifting all the elements
+    /// inbetween by one index.
+    ///
+    /// Returns an iterator pointing to the relocated element, which is either
+    /// `dest` or `dest - 1`, depending on whether `dest` is before or after
+    /// `i`.
+    ///
+    iterator relocate(ConstIterator it, ConstIterator dest) {
+        pointer it_ = unwrapIterator(it);
+        pointer dest_ = unwrapIterator(dest);
+        if (dest_ > it_ + 1) {
+            // rotate-left by one
+            T tmp(std::move(*it_));
+            pointer next = it_ + 1;
+            while (next != dest_) {
+                *it_ = std::move(*next);
+                ++it_;
+                ++next;
+            }
+            *it_ = std::move(tmp);
+        }
+        else if (dest_ < it_) {
+            // rotate-right by one
+            T tmp(std::move(*it_));
+            pointer prev = it_ - 1;
+            while (it_ != dest_) {
+                *it_ = std::move(*prev);
+                --it_;
+                --prev;
+            }
+            *it_ = std::move(tmp);
+        }
+        else {
+            // no-op
+        }
+        return makeIterator(it_);
+    }
+
 private:
     T* data_ = nullptr;
     Int length_ = 0;
@@ -2612,6 +2693,20 @@ private:
             throw IndexError(
                 "Array index " + toString(i)
                 + " out of range for insertion (array length is " + toString(length())
+                + ").");
+        }
+    }
+    void checkInRangeForRelocate_(Int i, Int j) const {
+        if (i < 0 || i >= length()) {
+            throw IndexError(
+                "Array source index " + toString(i)
+                + " out of range for relocate (array length is " + toString(length())
+                + ").");
+        }
+        if (j < 0 || j > length()) {
+            throw IndexError(
+                "Array destination index " + toString(i)
+                + " out of range for relocate (array length is " + toString(length())
                 + ").");
         }
     }
