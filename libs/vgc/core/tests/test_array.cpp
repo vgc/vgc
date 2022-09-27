@@ -1349,6 +1349,44 @@ TEST(TestArray, Index) {
     EXPECT_EQ(a.index([](const int& v) { return v > 100; }), -1);
 }
 
+TEST(TestArray, Relocate) {
+    Array<int> s = {18, 10, 42, 12, 15};
+    Array<int> a = {42, 18, 10, 12, 15};
+    Array<int> b = {18, 42, 10, 12, 15};
+    Array<int> c = {18, 10, 42, 12, 15};
+    Array<int> d = {18, 10, 42, 12, 15};
+    Array<int> e = {18, 10, 12, 42, 15};
+    Array<int> f = {18, 10, 12, 15, 42};
+    Array<int> r;
+
+    r = s;
+    EXPECT_EQ(r.relocate(2, 0), 0);
+    EXPECT_EQ(r, a);
+
+    r = s;
+    EXPECT_EQ(r.relocate(2, 1), 1);
+    EXPECT_EQ(r, b);
+
+    r = s;
+    EXPECT_EQ(r.relocate(2, 2), 2);
+    EXPECT_EQ(r, c);
+
+    r = s;
+    EXPECT_EQ(r.relocate(2, 3), 2);
+    EXPECT_EQ(r, d);
+
+    r = s;
+    EXPECT_EQ(r.relocate(2, 4), 3);
+    EXPECT_EQ(r, e);
+
+    r = s;
+    EXPECT_EQ(r.relocate(2, 5), 4);
+    EXPECT_EQ(r, f);
+
+    EXPECT_THROW(s.relocate(2, -1), IndexError);
+    EXPECT_THROW(s.relocate(2, 6), IndexError);
+}
+
 TEST(TestArray, ToString) {
     Array<int> a = {1, 2};
     EXPECT_EQ(toString(a), "[1, 2]");
