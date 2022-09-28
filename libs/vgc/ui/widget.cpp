@@ -887,7 +887,7 @@ void Widget::mouseRelease_(MouseEvent* event) {
     }
 }
 
-Widget* Widget::computeHoverChainChild(const geometry::Vec2f& position) {
+Widget* Widget::computeHoverChainChild(const geometry::Vec2f& position) const {
 
     // Return null if child hovering is disabled.
     if (!isChildHoverEnabled_) {

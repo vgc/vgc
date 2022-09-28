@@ -66,7 +66,7 @@ protected:
     // Reimplementation of Widget virtual methods
     void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onResize() override;
-    Widget* computeHoverChainChild(const geometry::Vec2f& position) override;
+    Widget* computeHoverChainChild(const geometry::Vec2f& position) const override;
     bool onMousePress(MouseEvent* event) override;
 
 private:

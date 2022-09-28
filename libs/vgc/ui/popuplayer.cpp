@@ -47,7 +47,7 @@ void PopupLayer::onResize() {
     resized().emit();
 }
 
-Widget* PopupLayer::computeHoverChainChild(const geometry::Vec2f& position) {
+Widget* PopupLayer::computeHoverChainChild(const geometry::Vec2f& position) const {
     if (underlyingWidget_) {
         geometry::Vec2f posInTarget = mapTo(underlyingWidget_, position);
         if (underlyingWidget_->rect().contains(posInTarget)) {

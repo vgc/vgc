@@ -831,7 +831,7 @@ public:
     /// when it needs to update the hover chain child (on move and release events
     /// if there is no hover-locked hover-chain child).
     ///
-    virtual Widget* computeHoverChainChild(const geometry::Vec2f& position);
+    virtual Widget* computeHoverChainChild(const geometry::Vec2f& position) const;
 
     /// If `this` is hovered, it makes the given `newHoverChainChild` the
     /// hover-chain child of `this`.
