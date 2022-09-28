@@ -115,7 +115,7 @@ protected:
     void onWidgetRemoved(Widget* child) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
-    Widget* computeHoverChainChild(const geometry::Vec2f& position) const override;
+    Widget* computeHoverChainChild(MouseEvent* event) const override;
     void preMouseMove(MouseEvent* event) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;

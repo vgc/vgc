@@ -25,6 +25,7 @@
 
 #include <vgc/ui/action.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/mouseevent.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/strings.h>
 
@@ -249,17 +250,17 @@ void Widget::updateGeometry(
         size_ = size;
         resized = true;
     }
+    bool updated = false;
     if (isGeometryUpdateRequested_ || resized) {
-        isGeometryUpdateRequested_ = false;
-        updateChildrenGeometry();
-        if (isGeometryUpdateRequested_) {
-            VGC_WARNING(
-                LogVgcUi,
-                "A geometry update has been requested during a geometry update.");
-        }
+        updateGeometry_();
+        updated = true;
     }
     if (resized) {
         onResize();
+    }
+
+    if (updated && !parent()) {
+        updateHoverChain();
     }
 }
 
@@ -269,14 +270,14 @@ void Widget::updateGeometry(const geometry::Vec2f& position) {
 }
 
 void Widget::updateGeometry() {
+    bool updated = false;
     if (isGeometryUpdateRequested_) {
-        isGeometryUpdateRequested_ = false;
-        updateChildrenGeometry();
-        if (isGeometryUpdateRequested_) {
-            VGC_WARNING(
-                LogVgcUi,
-                "A geometry update has been requested during a geometry update.");
-        }
+        updateGeometry_();
+        updated = true;
+    }
+
+    if (updated && !parent()) {
+        updateHoverChain();
     }
 }
 
@@ -484,8 +485,16 @@ bool Widget::mouseMove(MouseEvent* event) {
         VGC_WARNING(LogVgcUi, "mouseMove() can only be called on a root widget.");
         return false;
     }
-    mouseMove_(event);
-    return event->isHandled();
+    lastMousePosition_ = event->position();
+    lastModifierKeys_ = event->modifierKeys();
+    WidgetPtr thisPtr = this;
+    bool chainChanged = updateHoverChain();
+    if (isAlive()) {
+        // XXX should we set event as handled if chainChanged is true ?
+        mouseMove_(event);
+        return event->isHandled();
+    }
+    return chainChanged;
 }
 
 bool Widget::mousePress(MouseEvent* event) {
@@ -493,8 +502,15 @@ bool Widget::mousePress(MouseEvent* event) {
         VGC_WARNING(LogVgcUi, "mousePress() can only be called on a root widget.");
         return false;
     }
+    lastMousePosition_ = event->position();
+    lastModifierKeys_ = event->modifierKeys();
+    WidgetPtr thisPtr = this;
     mousePress_(event);
-    return event->isHandled();
+    bool handled = event->isHandled();
+    if (isAlive()) {
+        handled |= updateHoverChain();
+    }
+    return handled;
 }
 
 bool Widget::mouseRelease(MouseEvent* event) {
@@ -502,8 +518,15 @@ bool Widget::mouseRelease(MouseEvent* event) {
         VGC_WARNING(LogVgcUi, "mouseRelease() can only be called on a root widget.");
         return false;
     }
+    lastMousePosition_ = event->position();
+    lastModifierKeys_ = event->modifierKeys();
+    WidgetPtr thisPtr = this;
     mouseRelease_(event);
-    return event->isHandled();
+    bool handled = event->isHandled();
+    if (isAlive()) {
+        handled |= updateHoverChain();
+    }
+    return handled;
 }
 
 void Widget::preMouseMove(MouseEvent* /*event*/) {
@@ -537,7 +560,7 @@ bool Widget::checkAlreadyHovered_() {
             LogVgcUi,
             "Widget should have been hovered prior to receiving a mouse event.");
         setHovered(true);
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             return false;
         }
     }
@@ -555,27 +578,9 @@ void Widget::mouseMove_(MouseEvent* event) {
     // Prepare against death of `this`
     WidgetPtr thisPtr = this;
 
-    // Get or update hover-chain child.
-    Widget* hcChild = hoverChainChild();
-    const bool hasNoHoverLockedChild = !hcChild || !hcChild->isHoverLocked();
-    if (isChildHoverEnabled_ && hasNoHoverLockedChild) {
-        hcChild = computeHoverChainChild(eventPos);
-        if (!setHoverChainChild(hcChild)) {
-            // Exceptionnal things happened. Event can be considered handled.
-            hcChild = nullptr;
-            event->handled_ = true;
-        }
-        // Check for deaths.
-        if (!thisPtr.isAlive()) {
-            // Widget got killed. Event can be considered handled.
-            event->handled_ = true;
-            return;
-        }
-    }
-
     // User-defined capture phase handler.
     preMouseMove(event);
-    if (!thisPtr.isAlive()) {
+    if (!isAlive()) {
         // Widget got killed. Event can be considered handled.
         event->handled_ = true;
         return;
@@ -586,8 +591,8 @@ void Widget::mouseMove_(MouseEvent* event) {
         return;
     }
 
-    // Get final hover-chain child (possibly changed in preMouseMove).
-    hcChild = hoverChainChild();
+    // Get hover-chain child (possibly changed in preMouseMove).
+    Widget* hcChild = hoverChainChild();
 
     // Call hover-chain child's handler.
     if (hcChild) {
@@ -597,7 +602,7 @@ void Widget::mouseMove_(MouseEvent* event) {
         event->setPosition(mapTo(hcChild, eventPos));
         hcChild->mouseMove_(event);
         // Check for deaths.
-        if (!thisPtr.isAlive() || !hcChildPtr.isAlive()) {
+        if (!isAlive() || !hcChild->isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;
@@ -616,7 +621,7 @@ void Widget::mouseMove_(MouseEvent* event) {
         event->setHoverLockPolicy(HoverLockPolicy::Default);
         // User-defined bubble phase handler.
         event->handled_ |= onMouseMove(event);
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;
@@ -675,7 +680,7 @@ void Widget::mousePress_(MouseEvent* event) {
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
     preMousePress(event);
-    if (!thisPtr.isAlive()) {
+    if (!isAlive()) {
         // Widget got killed. Event can be considered handled.
         event->handled_ = true;
         return;
@@ -705,7 +710,7 @@ void Widget::mousePress_(MouseEvent* event) {
             clearNonStickyNonChildFocus_(this, hcChild);
         }
         // Check for deaths.
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;
@@ -720,7 +725,7 @@ void Widget::mousePress_(MouseEvent* event) {
         event->setPosition(mapTo(hcChild, eventPos));
         hcChild->mousePress_(event);
         // Check for deaths.
-        if (!thisPtr.isAlive() || !hcChildPtr.isAlive()) {
+        if (!isAlive() || !hcChildPtr.isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;
@@ -746,7 +751,7 @@ void Widget::mousePress_(MouseEvent* event) {
         event->setHoverLockPolicy(HoverLockPolicy::Default);
         // User-defined bubble phase handler.
         event->handled_ |= onMousePress(event);
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;
@@ -780,7 +785,7 @@ void Widget::mouseRelease_(MouseEvent* event) {
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
     preMouseRelease(event);
-    if (!thisPtr.isAlive()) {
+    if (!isAlive()) {
         // Widget got killed. Event can be considered handled.
         event->handled_ = true;
         return;
@@ -806,7 +811,7 @@ void Widget::mouseRelease_(MouseEvent* event) {
         event->setPosition(mapTo(hcChild, eventPos));
         hcChild->mouseRelease_(event);
         // Check for deaths.
-        if (!thisPtr.isAlive() || !hcChildPtr.isAlive()) {
+        if (!isAlive() || !hcChild->isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;
@@ -825,7 +830,7 @@ void Widget::mouseRelease_(MouseEvent* event) {
         event->setHoverLockPolicy(HoverLockPolicy::Default);
         // User-defined bubble phase handler.
         event->handled_ |= onMouseRelease(event);
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;
@@ -855,39 +860,9 @@ void Widget::mouseRelease_(MouseEvent* event) {
     else {
         unlockHover_(); // It also releases pressed buttons.
     }
-
-    // XXX Maybe we should update based on "wasLocked".
-    // We update the hover-unlocked part of the hover-chain now if we are hover-locked
-    // but our child is not.
-    if ((isHoverLocked() || !parent()) && isChildHoverEnabled_) {
-        Widget* hcParent = this;
-        hcChild = hoverChainChild();
-        const bool hasNoHoverLockedChild = !hcChild || !hcChild->isHoverLocked();
-        if (hasNoHoverLockedChild) {
-            geometry::Vec2f relPos = eventPos;
-            while (hcParent) {
-                hcChild = hcParent->computeHoverChainChild(relPos);
-                if (!hcParent->setHoverChainChild(hcChild)) {
-                    // Exceptionnal things happened. Event can be considered handled.
-                    event->handled_ = true;
-                    break;
-                }
-                if (hcChild) {
-                    relPos = hcParent->mapTo(hcChild, relPos);
-                }
-                hcParent = hcChild;
-            }
-            // Check for deaths.
-            if (!thisPtr.isAlive()) {
-                // Widget got killed. Event can be considered handled.
-                event->handled_ = true;
-                return;
-            }
-        }
-    }
 }
 
-Widget* Widget::computeHoverChainChild(const geometry::Vec2f& position) const {
+Widget* Widget::computeHoverChainChild(MouseEvent* event) const {
 
     // Return null if child hovering is disabled.
     if (!isChildHoverEnabled_) {
@@ -911,7 +886,7 @@ Widget* Widget::computeHoverChainChild(const geometry::Vec2f& position) const {
         // could replace `if (child->geometry().contains(event->position()))` by a
         // more generic approach. For example, a `boundingGeometry()` method
         // complemented by a virtual `bool isUnderMouse(const Vec2f& p)` method.
-        if (child->geometry().contains(position)) {
+        if (child->geometry().contains(event->position())) {
             return child;
         }
     }
@@ -1011,7 +986,7 @@ bool Widget::setHovered(bool hovered) {
         if (hoverChainChild_) {
             hoverChainChild_->setHovered(false);
         }
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             return true;
         }
 
@@ -1021,7 +996,7 @@ bool Widget::setHovered(bool hovered) {
         // Notify leave
         mouseLeave_();
 
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             return true;
         }
 
@@ -1055,19 +1030,19 @@ bool Widget::setHoverChainChild(Widget* newHoverChainChild) {
         if (!hoverChainChild_->setHovered(false)) {
             return false;
         }
-        return thisPtr.isAlive();
+        return isAlive();
     }
 
-    WidgetPtr newChildPtr = newHoverChainChild;
+    WidgetPtr newHoverChainChildPtr = newHoverChainChild;
 
     // Unhover child's children
     if (hoverChainChild_) {
         hoverChainChild_->setHovered(false);
-        if (!thisPtr.isAlive()) {
+        if (!isAlive()) {
             return false;
         }
         VGC_ASSERT(hoverChainChild_ == nullptr);
-        if (!newChildPtr.isAlive()) {
+        if (!newHoverChainChild->isAlive()) {
             return false;
         }
     }
@@ -1085,7 +1060,7 @@ bool Widget::setHoverChainChild(Widget* newHoverChainChild) {
     hoverChainChild_->mouseEnter_();
 
     // Returns whether the requested state is set or not.
-    return thisPtr.isAlive() && newChildPtr.isAlive()
+    return isAlive() && newHoverChainChild->isAlive()
            && hoverChainChild_ == newHoverChainChild;
 }
 
@@ -1158,6 +1133,51 @@ bool Widget::onMouseEnter() {
 
 bool Widget::onMouseLeave() {
     return false;
+}
+
+bool Widget::updateHoverChainChild(MouseEvent* event) {
+    Widget* hcChild = computeHoverChainChild(event);
+    return setHoverChainChild(hcChild);
+}
+
+bool Widget::updateHoverChain() {
+    if (!isHovered()) {
+        return false;
+    }
+    // Prepare for death.
+
+    Widget* root_ = root();
+    Widget* hcParent = this;
+    Widget* hcChild = hoverChainChild();
+    // Find end of hover-locked part.
+    while (hcChild && hcChild->isHoverLocked()) {
+        hcParent = hcChild;
+        hcChild = hcParent->hoverChainChild();
+    }
+    // Compute mouse position relative to hcParent.
+    geometry::Vec2f relPos = root_->mapTo(hcParent, root_->lastMousePosition_);
+
+    bool changed = false;
+    while (hcParent && hcParent->isChildHoverEnabled_) {
+        WidgetPtr hcParentPtr = hcParent;
+        Widget* oldChild = hcChild;
+        MouseEventPtr updateEvent =
+            MouseEvent::create(MouseButton::None, relPos, root_->lastModifierKeys_);
+        bool updated = hcParent->updateHoverChainChild(updateEvent.get());
+        if (!updated || !hcParent->isAlive()) {
+            return true;
+        }
+        hcChild = hcParent->hoverChainChild();
+        if (hcChild != oldChild) {
+            changed = true;
+        }
+        if (hcChild) {
+            relPos = hcParent->mapTo(hcChild, relPos);
+        }
+        hcParent = hcChild;
+    }
+
+    return changed;
 }
 
 void Widget::onVisible() {
@@ -1468,6 +1488,17 @@ void Widget::resendPendingRequests_() {
         if (isRepaintRequested_) {
             p->requestRepaint();
         }
+    }
+}
+
+void Widget::updateGeometry_() {
+    isGeometryUpdateRequested_ = false;
+    isGeometryUpdateOngoing_ = true;
+    updateChildrenGeometry();
+    isGeometryUpdateOngoing_ = false;
+    if (isGeometryUpdateRequested_) {
+        VGC_WARNING(
+            LogVgcUi, "A geometry update has been requested during a geometry update.");
     }
 }
 
