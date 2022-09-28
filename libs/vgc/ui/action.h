@@ -22,6 +22,7 @@
 
 #include <vgc/core/innercore.h>
 #include <vgc/geometry/vec2f.h>
+#include <vgc/ui/actiongroup.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/shortcut.h>
 
@@ -95,8 +96,6 @@ public:
         changed().emit();
     }
 
-    VGC_SIGNAL(enabledChanged, (bool, enabled))
-
     /// Returns whether this action is enabled or not.
     ///
     bool isEnabled() const {
@@ -105,18 +104,143 @@ public:
 
     /// Sets the disabled state of this action.
     ///
-    void setEnabled(bool enabled) {
-        if (isEnabled_ == enabled) {
-            return;
-        }
-        isEnabled_ = enabled;
-        this->enabledChanged().emit(enabled);
-    }
+    void setEnabled(bool enabled);
+    VGC_SLOT(setEnabled)
+
+    /// This signal is emitted whenever `isEnabled()` changes.
+    ///
+    VGC_SIGNAL(enabledChanged, (bool, enabled))
 
     /// Returns whether this action is to open a menu.
     ///
     bool isMenu() const {
         return isMenu_;
+    }
+
+    /// Returns the `CheckMode` of the action.
+    ///
+    /// \sa `setCheckMode()`, `isCheckable()`.
+    ///
+    CheckMode checkMode() const {
+        return checkMode_;
+    }
+
+    /// Sets the `CheckMode` of the `Action`.
+    ///
+    /// \sa `checkMode()`, `setCheckable()`.
+    ///
+    void setCheckMode(CheckMode checkMode);
+    VGC_SLOT(setCheckMode)
+
+    /// Returns `true` if the `checkMode()` of the `Action` is either
+    /// `Bistate` or `Tristate`. Otherwise, return `false`.
+    ///
+    /// \sa `setCheckable()`, `checkMode()`.
+    ///
+    bool isCheckable() const {
+        return checkMode_ != CheckMode::Uncheckable;
+    }
+
+    /// Sets the action's `CheckMode` to either `Bistate` (if `isCheckable`
+    /// is true), or `Uncheckable` (if `isCheckable` is false).
+    ///
+    /// \sa `isCheckable()`, `setCheckMode()`.
+    ///
+    void setCheckable(bool isCheckable) {
+        setCheckMode(isCheckable ? CheckMode::Bistate : CheckMode::Uncheckable);
+    }
+    VGC_SLOT(setCheckable)
+
+    /// Returns the `CheckState` of the action.
+    ///
+    /// \sa `setCheckState()`, `isChecked()`.
+    ///
+    CheckState checkState() const {
+        return checkState_;
+    }
+
+    /// Returns whether the action supports the given state.
+    ///
+    /// For `Uncheckable` actions, the only supported state is `Unchecked`.
+    ///
+    /// For `Bistate` actions, the supported states are `Unchecked` and `Checked`.
+    ///
+    /// For `Tristate` actions, the supported states are `Unchecked`, `Checked`, and
+    /// `Indeterminate`.
+    ///
+    /// \sa `checkState()`, `checkMode()`.
+    ///
+    bool supportsCheckState(CheckState checkState) const;
+
+    /// Sets the `CheckState` of the action.
+    ///
+    /// If the action doesn't support the given state (see
+    /// `supportsCheckState()`), then the state isn't changed and a warning is
+    /// emitted.
+    ///
+    /// \sa `checkState()`, `setChecked()`.
+    ///
+    void setCheckState(CheckState checkState);
+    VGC_SLOT(setCheckState)
+
+    /// This signal is emitted when the action check state changed.
+    ///
+    /// \sa setCheckState(), checkState().
+    ///
+    VGC_SIGNAL(checkStateChanged, (Action*, action), (CheckState, checkState));
+
+    /// Returns whether the action's `CheckState` is `Checked`.
+    ///
+    /// \sa `setChecked()`, `checkState()`.
+    ///
+    bool isChecked() const {
+        return checkState_ == CheckState::Checked;
+    }
+
+    /// Sets the action's `CheckState` to either `Checked` (if `isChecked`
+    /// is true), or `Unchecked` (if `isChecked` is false).
+    ///
+    /// \sa `isChecked()`, `setCheckState()`.
+    ///
+    void setChecked(bool isChecked) {
+        setCheckState(isChecked ? CheckState::Checked : CheckState::Unchecked);
+    }
+    VGC_SLOT(setChecked)
+
+    /// Toggles the check state of the `Action`.
+    ///
+    /// This has different meaning depending on the `CheckMode` of the action
+    /// as well as the action's group `CheckPolicy`.
+    ///
+    /// If the action is `Uncheckable` then this function does nothing.
+    ///
+    /// If the action is `Bistate` then this function switches between
+    /// `Checked` and `Unchecked`, unless the action is part of a group whose
+    /// policy is `ExactlyOne`, in which case the action stays `Checked` if it
+    /// was already `Checked`.
+    ///
+    /// If the action is `Tristate`:
+    /// - If its state is `Indeterminate`, then this function changes its state
+    ///   to `Checked`.
+    /// - If its state is `Checked` or `Unchecked`, then this function behaves
+    ///   as if the action was `Bistate`.
+    ///
+    /// Note that after calling this function (or clicking on a action), the
+    /// action state will never be `Indeterminate`. The `Indeterminate` state
+    /// can only be set programatically via `setCheckState()`.
+    ///
+    /// \sa `setCheckState()`, `setChecked()`.
+    ///
+    void toggle();
+    VGC_SLOT(toggle)
+
+    /// Returns the `ActionGroup` this `Action` belongs to. Returns `nullptr`
+    /// if this `Action` doesn't belong to any `ActionGroup`.
+    ///
+    /// \sa `ActionGroup::addAction()`, `ActionGroup::removeAction()`.
+    ///
+    ActionGroup* group() const {
+        return group_;
     }
 
     /// If the action is not disabled, triggers the action and returns true.
@@ -129,17 +253,32 @@ public:
     bool trigger(Widget* from = nullptr);
 
     /// This signal is emitted whenever the action is activated by the user (for example,
-    /// clicking on an associated button), or when the trigger() method is called.
+    /// clicking on an associated action), or when the trigger() method is called.
     ///
     /// \sa trigger()
     ///
     VGC_SIGNAL(triggered, (Widget*, from))
 
 private:
+    friend class ActionGroup;
+
     std::string text_;
     Shortcut shortcut_;
+    ui::ActionGroup* group_ = nullptr;
     bool isEnabled_ = true;
     bool isMenu_ = false;
+    CheckMode checkMode_ = CheckMode::Uncheckable;
+    CheckState checkState_ = CheckState::Unchecked;
+    CheckState lastEmittedCheckState_ = CheckState::Unchecked;
+    bool emitting_ = false;
+
+    // Directly sets the new state, ignoring policy and emitting no signals
+    void setCheckStateNoEmit_(CheckState newState);
+
+    // Informs the world about the new state:
+    // - updates style classes
+    // - emits checkStateChanged
+    void emitPendingCheckState_();
 };
 
 } // namespace vgc::ui

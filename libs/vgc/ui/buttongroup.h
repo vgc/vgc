@@ -24,85 +24,11 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/object.h>
+#include <vgc/ui/actiongroup.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc::ui {
-
-/// \class vgc::ui::CheckMode
-/// \brief Whether a button is uncheckable or checkable (possibly tristate).
-///
-enum class CheckMode : UInt8 {
-
-    /// The button is not checkable.
-    ///
-    Uncheckable,
-
-    /// The button is checkable with two possible states: `Unchecked` and
-    /// `Checked`.
-    ///
-    Bistate,
-
-    /// The button is checkable with three possible states: `Unchecked`,
-    /// `Checked`, and `Indeterminate`.
-    ///
-    Tristate
-};
-
-/// \class vgc::ui::CheckState
-/// \brief The possible check states of a button.
-///
-enum class CheckState : UInt8 {
-    Unchecked,
-    Checked,
-    Indeterminate
-};
-
-/// \class vgc::ui::CheckPolicy
-/// \brief How many buttons in a group can be checked at a time.
-///
-/// In a group of checkable buttons, this specifies how many buttons can be
-/// checked (`isChecked() == true`) at any given time.
-///
-/// Note that an `Indeterminate` button is considered not checked for the
-/// policy. For example, a group whose policy is `ExactlyOne` must have exactly
-/// one button whose state is `Checked`, but can have zero or more buttons
-/// whose state is `Indeterminate` or `Unchecked`.
-///
-enum class CheckPolicy : UInt8 {
-    ZeroOrMore,
-    // OneOrMore,
-    // ZeroOrOne,
-    ExactlyOne
-};
-
-namespace detail {
-
-inline core::StringId modeToStringId(CheckMode mode) {
-    switch (mode) {
-    case CheckMode::Uncheckable:
-        return strings::uncheckable;
-    case CheckMode::Bistate:
-        return strings::bistate;
-    case CheckMode::Tristate:
-        return strings::tristate;
-    }
-    return core::StringId(); // silence warning
-}
-
-inline core::StringId stateToStringId(CheckState state) {
-    switch (state) {
-    case CheckState::Unchecked:
-        return strings::unchecked;
-    case CheckState::Checked:
-        return strings::checked;
-    case CheckState::Indeterminate:
-        return strings::indeterminate;
-    }
-    return core::StringId(); // silence warning
-}
-
-} // namespace detail
 
 VGC_DECLARE_OBJECT(ButtonGroup);
 VGC_DECLARE_OBJECT(Button);
