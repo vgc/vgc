@@ -827,11 +827,10 @@ public:
     bool setHovered(bool hovered);
 
     /// Override this function if you wish particular widgets to be hovered based
-    /// on mouse `position`. This method is used by the mouse event system
-    /// when it needs to update the hover chain child (on move and release events
-    /// if there is no hover-locked hover-chain child).
+    /// on mouse `position`. This method is used by the default implementation
+    /// of `updateHoverChainChild()`.
     ///
-    virtual Widget* computeHoverChainChild(const geometry::Vec2f& position) const;
+    virtual Widget* computeHoverChainChild(MouseEvent* event) const;
 
     /// If `this` is hovered, it makes the given `newHoverChainChild` the
     /// hover-chain child of `this`.
@@ -1183,6 +1182,22 @@ protected:
     ///
     virtual bool onMouseLeave();
 
+    /// Override this function if you wish to handle the update of your
+    /// hover-chain child yourself.
+    ///
+    /// Returns true on success.
+    ///
+    /// This method is used by the mouse event system when it needs to update
+    /// the hover chain child (on all mouse events if there is no
+    /// hover-locked hover-chain child).
+    ///
+    virtual bool updateHoverChainChild(MouseEvent* event);
+
+    /// Update the hover-chain starting from this widget.
+    /// Returns whether the hover-chain changed or not.
+    ///
+    bool updateHoverChain();
+
     /// Override this function if you wish to do something when the widget
     /// becomes visible. "Visible" here means not invisible nor invisible by
     /// inheritance, and it can still be occluded.
@@ -1256,10 +1271,14 @@ private:
     mutable geometry::Vec2f preferredSize_ = {};
     mutable bool isPreferredSizeComputed_ = false;
     mutable bool isGeometryUpdateRequested_ = false;
+    bool isGeometryUpdateOngoing_ = false;
     bool isRepaintRequested_ = false;
     geometry::Vec2f position_ = {};
     geometry::Vec2f size_ = {};
     geometry::Vec2f lastResizeEventSize_ = {};
+    // XXX only valid for root. to be moved to WidgetTree data.
+    geometry::Vec2f lastMousePosition_ = {};
+    ModifierKeys lastModifierKeys_ = {};
 
     void resendPendingRequests_();
 
@@ -1269,6 +1288,9 @@ private:
             isPreferredSizeComputed_ = true;
         }
     }
+
+    // Assumes a geometry update is necessary.
+    void updateGeometry_();
 
     void updateRootGeometry_() const {
         Widget* root_ = root();

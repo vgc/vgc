@@ -92,16 +92,17 @@ bool PanelArea::onMouseLeave() {
     return true;
 }
 
-Widget* PanelArea::computeHoverChainChild(const geometry::Vec2f& position) const {
-    Int hoveredSplitHandle = computeHoveredSplitHandle_(position);
+Widget* PanelArea::computeHoverChainChild(MouseEvent* event) const {
+
+    Int hoveredSplitHandle = computeHoveredSplitHandle_(event->position());
     if (hoveredSplitHandle != -1) {
         return nullptr;
     }
-    return Widget::computeHoverChainChild(position);
+    return Widget::computeHoverChainChild(event);
 }
 
 void PanelArea::preMouseMove(MouseEvent* event) {
-    if (draggedSplitHandle_ == -1) {
+    if (!isHoverLocked() && draggedSplitHandle_ == -1) {
         updateHoveredSplitHandle_(event->position());
     }
     else {
