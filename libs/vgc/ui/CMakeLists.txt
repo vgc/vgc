@@ -27,6 +27,8 @@ vgc_add_library(ui
         modifierkey.h
         mouseevent.h
         overlayarea.h
+        panel.h
+        panelarea.h
         plot2d.h
         popuplayer.h
         qtutil.h
@@ -59,6 +61,8 @@ vgc_add_library(ui
         menubutton.cpp
         mouseevent.cpp
         overlayarea.cpp
+        panel.cpp
+        panelarea.cpp
         plot2d.cpp
         popuplayer.cpp
         qtutil.cpp

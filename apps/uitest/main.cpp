@@ -36,6 +36,8 @@
 #include <vgc/ui/menu.h>
 #include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
+#include <vgc/ui/panel.h>
+#include <vgc/ui/panelarea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
@@ -164,6 +166,12 @@ void createMenu(ui::Widget* parent) {
     menu->createChild<ui::Widget>();
 }
 
+void createColorPalette(ui::Widget* parent) {
+    ui::ColorPalette* palette = parent->createChild<ui::ColorPalette>();
+    palette->setStyleSheet(".ColorPalette { vertical-stretch: 0; }");
+    parent->createChild<ui::Widget>(); // vertical-stretch: 1
+}
+
 void createGrid(ui::Widget* parent) {
     ui::Grid* gridTest = parent->createChild<ui::Grid>();
     gridTest->setStyleSheet(".Grid { column-gap: 30dp; row-gap: 10dp; }");
@@ -244,10 +252,6 @@ void createClickMePopups(ui::Widget* parent) {
     }
 }
 
-void createScreenColorPicker(ui::Widget* parent) {
-    parent->createChild<ui::ScreenColorPickerButton>("Pick Screen Color");
-}
-
 void createLineEdits(ui::Widget* parent) {
 
     std::string lipsum =
@@ -322,13 +326,27 @@ int main(int argc, char* argv[]) {
     // Create menubar
     createMenu(mainLayout);
 
-    // Create other test widgets
-    ui::Column* centralWidget = mainLayout->createChild<ui::Column>();
-    createGrid(centralWidget);
-    createPlot2d(centralWidget);
-    createClickMePopups(centralWidget);
-    createScreenColorPicker(centralWidget);
-    createLineEdits(centralWidget);
+    // Create panel areas
+    ui::PanelArea* mainArea = ui::PanelArea::createHorizontalSplit(mainLayout);
+    ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
+    ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
+    ui::PanelArea* rightArea = ui::PanelArea::createTabs(mainArea);
+    ui::PanelArea* middleTopArea = ui::PanelArea::createTabs(middleArea);
+    ui::PanelArea* middleBottomArea = ui::PanelArea::createTabs(middleArea);
+
+    // Create panels
+    // XXX actually create Panel instances as children of Tabs areas
+    ui::Column* leftAreaWidget = leftArea->createChild<ui::Column>();
+    ui::Column* middleTopAreaWidget = middleTopArea->createChild<ui::Column>();
+    ui::Column* middleBottomAreaWidget = middleBottomArea->createChild<ui::Column>();
+    ui::Column* rightAreaWidget = rightArea->createChild<ui::Column>();
+
+    // Create widgets
+    createColorPalette(leftAreaWidget);
+    createPlot2d(middleTopAreaWidget);
+    createGrid(middleBottomAreaWidget);
+    createClickMePopups(rightAreaWidget);
+    createLineEdits(rightAreaWidget);
 
     // XXX we need this until styles get better auto-update behavior
     overlay->addStyleClass(core::StringId("force-update-style"));
