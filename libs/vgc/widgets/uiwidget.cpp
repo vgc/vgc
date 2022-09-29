@@ -74,6 +74,8 @@ UiWidget::UiWidget(ui::WidgetPtr widget, QWidget* parent)
     widget_->focusCleared().connect(
         [this](ui::FocusReason reason) { this->onFocusCleared(reason); });
 
+    widget_->addStyleClass(ui::strings::root);
+
     // Handle dead keys and complex input methods.
     //
     // Also see:

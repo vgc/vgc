@@ -56,6 +56,8 @@ const core::StringId vertical_shrink("vertical-shrink");
 // Style classes / pseudo-classes
 // ------------------------------
 
+const core::StringId root("root");
+
 const core::StringId uncheckable("uncheckable");
 const core::StringId checkable("checkable");
 const core::StringId bistate("bistate");

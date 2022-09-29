@@ -28,6 +28,7 @@
 #include <vgc/graphics/text.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/qtutil.h>
+#include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/qopenglengine.h>
 
@@ -131,6 +132,8 @@ Window::Window(ui::WidgetPtr widget)
             QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
         }
     });
+
+    widget_->addStyleClass(strings::root);
 
     // Handle dead keys and complex input methods.
     //
