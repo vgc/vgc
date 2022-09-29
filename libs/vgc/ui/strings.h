@@ -51,6 +51,8 @@ VGC_UI_API extern const core::StringId horizontal_shrink;
 VGC_UI_API extern const core::StringId vertical_stretch;
 VGC_UI_API extern const core::StringId vertical_shrink;
 
+VGC_UI_API extern const core::StringId root;
+
 VGC_UI_API extern const core::StringId uncheckable;
 VGC_UI_API extern const core::StringId checkable;
 VGC_UI_API extern const core::StringId bistate;
