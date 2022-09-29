@@ -241,13 +241,13 @@ void createClickMePopups(ui::Widget* parent) {
     grid->setStyleSheet(".Grid { column-gap: 10dp; row-gap: 10dp; }");
     for (int i = 0; i < 2; ++i) {
         for (int j = 0; j < 4; ++j) {
-            ui::ButtonPtr button = ui::Button::create("click me");
+            ui::Action* action = parent->createAction("click me");
+            ui::ButtonPtr button = ui::Button::create(action);
             grid->setWidgetAt(button.get(), i, j);
-            button->clicked().connect(
-                [=](ui::Button* button, const geometry::Vec2f& pos) {
-                    geometry::Vec2f p = button->mapTo(overlayArea, pos);
-                    label->updateGeometry(p, geometry::Vec2f(120.f, 25.f));
-                });
+            action->triggered().connect([=](ui::Widget* from) {
+                geometry::Vec2f p = from->mapTo(overlayArea, geometry::Vec2f(0.f, 0.f));
+                label->updateGeometry(p, geometry::Vec2f(120.f, 25.f));
+            });
         }
     }
 }

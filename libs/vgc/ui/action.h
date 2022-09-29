@@ -44,8 +44,8 @@ private:
 protected:
     Action();
     explicit Action(const Shortcut& shortcut);
-    explicit Action(const std::string& text);
-    Action(const std::string& text, const Shortcut& shortcut);
+    explicit Action(const std::string_view& text);
+    Action(const std::string_view& text, const Shortcut& shortcut);
 
 public:
     /// Creates an action.
@@ -58,11 +58,11 @@ public:
 
     /// Creates an action with the given text.
     ///
-    static ActionPtr create(const std::string& text);
+    static ActionPtr create(const std::string_view& text);
 
     /// Creates an action with the given text and shortcut.
     ///
-    static ActionPtr create(const std::string& text, const Shortcut& shortcut);
+    static ActionPtr create(const std::string_view& text, const Shortcut& shortcut);
 
     /// This signal is emitted whenever the action properties are changed (shortcut,
     /// text, icon, ...).
@@ -71,7 +71,7 @@ public:
 
     /// Returns the descriptive text for this action.
     ///
-    const std::string& text() const {
+    std::string_view text() const {
         return text_;
     }
 
@@ -231,7 +231,7 @@ public:
     ///
     /// \sa `setCheckState()`, `setChecked()`.
     ///
-    void toggle();
+    bool toggle();
     VGC_SLOT(toggle)
 
     /// Returns the `ActionGroup` this `Action` belongs to. Returns `nullptr`

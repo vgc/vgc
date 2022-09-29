@@ -28,11 +28,11 @@ Action::Action(const Shortcut& shortcut)
     : shortcut_(shortcut) {
 }
 
-Action::Action(const std::string& text)
+Action::Action(const std::string_view& text)
     : text_(text) {
 }
 
-Action::Action(const std::string& text, const Shortcut& shortcut)
+Action::Action(const std::string_view& text, const Shortcut& shortcut)
     : text_(text)
     , shortcut_(shortcut) {
 }
@@ -45,11 +45,11 @@ ActionPtr Action::create(const Shortcut& shortcut) {
     return ActionPtr(new Action(shortcut));
 }
 
-ActionPtr Action::create(const std::string& text) {
+ActionPtr Action::create(const std::string_view& text) {
     return ActionPtr(new Action(text));
 }
 
-ActionPtr Action::create(const std::string& text, const Shortcut& shortcut) {
+ActionPtr Action::create(const std::string_view& text, const Shortcut& shortcut) {
     return ActionPtr(new Action(text, shortcut));
 }
 
@@ -127,8 +127,8 @@ void Action::setCheckState(CheckState newState) {
     }
 }
 
-void Action::toggle() {
-    ActionGroup::toggle_(group(), this);
+bool Action::toggle() {
+    return ActionGroup::toggle_(group(), this);
 }
 
 bool Action::trigger(Widget* from) {

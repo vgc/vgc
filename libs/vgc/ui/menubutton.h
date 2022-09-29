@@ -25,6 +25,7 @@
 #include <vgc/graphics/richtext.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/button.h>
 #include <vgc/ui/flex.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/margins.h>
@@ -32,10 +33,12 @@
 
 namespace vgc::ui {
 
-VGC_DECLARE_OBJECT(ActionButton);
 VGC_DECLARE_OBJECT(Menu);
 VGC_DECLARE_OBJECT(MenuButton);
 
+using ActionButton = Button;
+
+/*
 /// \class vgc::ui::ActionButton
 /// \brief A clickable widget that represents an action and triggers it on click/hover.
 ///
@@ -118,6 +121,7 @@ private:
     VGC_SLOT(onActionChangedSlot_, onActionChanged_);
     VGC_SLOT(onActionAboutToBeDestroyed_, destroy);
 };
+*/
 
 /// \enum vgc::ui::MenuDropDirection
 /// \brief The direction in which a dropdown menu should appear.
@@ -162,7 +166,7 @@ public:
 
     geometry::Vec2f preferredArrowSize() const {
         // XXX todo
-        return isEnabled() ? geometry::Vec2f(10.f, 10.f) : geometry::Vec2f();
+        return isActionEnabled() ? geometry::Vec2f(10.f, 10.f) : geometry::Vec2f();
     }
 
     /// Returns the icon size overrides.

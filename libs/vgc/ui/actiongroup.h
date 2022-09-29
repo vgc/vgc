@@ -195,9 +195,11 @@ private:
     void onActionDestroyed_(Object* action);
     VGC_SLOT(onActionDestroyedSlot_, onActionDestroyed_)
 
-    // Implements toggle() logic.
-    // `group` can be null. `action` must be non-null.
-    static void toggle_(ActionGroup* group, Action* action);
+    // Implements toggle() logic. `group` can be null. `action` must be
+    // non-null. Returns whether a change happens (nothing may happen if the
+    // button is not checkable, or if is is already checked and part of an
+    // exclusive group.
+    static bool toggle_(ActionGroup* group, Action* action);
 
     // Implements setCheckState() logic.
     // `group` can be null. `action` must be non-null.

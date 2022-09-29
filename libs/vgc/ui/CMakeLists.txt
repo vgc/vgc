@@ -10,7 +10,6 @@ vgc_add_library(ui
         actiongroup.h
         api.h
         button.h
-        buttongroup.h
         colorpalette.h
         column.h
         cursor.h
@@ -47,7 +46,6 @@ vgc_add_library(ui
         action.cpp
         actiongroup.cpp
         button.cpp
-        buttongroup.cpp
         colorpalette.cpp
         column.cpp
         cursor.cpp

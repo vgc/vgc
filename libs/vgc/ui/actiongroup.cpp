@@ -17,6 +17,7 @@
 #include <vgc/ui/actiongroup.h>
 
 #include <vgc/ui/action.h>
+#include <vgc/ui/logcategories.h>
 
 namespace vgc::ui {
 
@@ -40,6 +41,10 @@ void ActionGroup::clear() {
 }
 
 void ActionGroup::addAction(Action* action) {
+    if (!action) {
+        VGC_WARNING(LogVgcUi, "Attempting to add a null action to an ActionGroup.");
+        return;
+    }
     if (!actions_.contains(action)) {
         if (action->group_) {
             action->group_->removeAction(action);
@@ -101,7 +106,10 @@ void ActionGroup::onActionDestroyed_(Object* action) {
     enforcePolicy_();
 }
 
-void ActionGroup::toggle_(ActionGroup* group, Action* action) {
+bool ActionGroup::toggle_(ActionGroup* group, Action* action) {
+    if (!action->isEnabled()) {
+        return false;
+    }
     CheckPolicy policy = group ? group->checkPolicy() : CheckPolicy::ZeroOrMore;
     if (policy == CheckPolicy::ExactlyOne) {
         if (action->isCheckable() && !action->isChecked()) {
@@ -111,7 +119,7 @@ void ActionGroup::toggle_(ActionGroup* group, Action* action) {
         }
         else {
             // action is uncheckable or already checked => do nothing
-            return;
+            return false;
         }
     }
     else {
@@ -126,9 +134,10 @@ void ActionGroup::toggle_(ActionGroup* group, Action* action) {
         }
         else {
             // action is uncheckable => do nothing
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 void ActionGroup::setCheckState_(ActionGroup* group, Action* action, CheckState state) {

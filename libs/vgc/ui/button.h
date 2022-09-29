@@ -22,7 +22,8 @@
 
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/richtext.h>
-#include <vgc/ui/buttongroup.h>
+#include <vgc/ui/flex.h>
+#include <vgc/ui/label.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -30,19 +31,31 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(Button);
 
 /// \class vgc::ui::Button
-/// \brief A button widget.
+/// \brief A clickable widget that represents an action and triggers it on click/hover.
 ///
-class VGC_UI_API Button : public Widget {
+/// A button is a clickable widget that triggers an action on click/hover.
+///
+/// Note that a button can only exist with respect to an action, and therefore
+/// self-destroy itself if the action is destroyed.
+///
+class VGC_UI_API Button : public Flex {
 private:
-    VGC_OBJECT(Button, Widget)
+    VGC_OBJECT(Button, Flex)
 
 protected:
-    /// This is an implementation details. Please use
-    /// Button::create(text) instead.
-    ///
-    Button(std::string_view text);
+    Button(Action* action, FlexDirection layoutDirection);
 
 public:
+    /// Creates a Button associated with the given `action`.
+    ///
+    /// If you do not wish this button to be associated with an action, or if
+    /// you want to provide the action later, you can pass `nullptr` to this
+    /// function, and later call `setAction()`.
+    ///
+    static ButtonPtr
+    create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
+
+    /*
     /// Creates a Button.
     ///
     static ButtonPtr create();
@@ -50,57 +63,76 @@ public:
     /// Creates a Button with the given text.
     ///
     static ButtonPtr create(std::string_view text);
+    */
+
+    /// Returns the action associated with this button.
+    /// The is the action that will be trigerred when the button is clicked.
+    ///
+    Action* action() const {
+        return action_;
+    }
+
+    /// Sets the action associated with this button.
+    ///
+    void setAction(Action* action);
+
+    /// Returns whether this button has an action and this action is enabled.
+    ///
+    bool isActionEnabled() const {
+        return action_ && action_->isEnabled();
+    }
+
+    /// Returns whether this button is clickable.
+    ///
+    /// For now, this is equivalent to `isActionEnabled()`.
+    ///
+    /// In the future, we are planning to implement `Widget::isEnabled()`, and
+    /// a button will be clickable if and only if it is enabled (as a Widget)
+    /// and the button's action is enabled.
+    ///
+    bool isClickable() const {
+        return isActionEnabled(); // Later: && Widget::isEnabled();
+    }
+
+    /// Returns whether the associated action of this button is a menu action.
+    ///
+    bool isMenu() const {
+        return action_ && action_->isMenu();
+    }
 
     /// Returns the Button's text.
     ///
-    const std::string& text() const {
-        return richText_->text();
+    std::string_view text() const {
+        return action_ ? action_->text() : "";
     }
 
-    /// Sets the Button's text.
+    /// Returns the `CheckMode` of the button's action.
     ///
-    void setText(std::string_view text);
-
-    /// Returns the `CheckMode` of the button.
+    /// Returns `Unckeckable` if the button has no associated action.
     ///
-    /// \sa `setCheckMode()`, `isCheckable()`.
+    /// \sa `Action::setCheckMode()`, `isCheckable()`.
     ///
     CheckMode checkMode() const {
-        return checkMode_;
+        return action_ ? action_->checkMode() : CheckMode::Uncheckable;
     }
-
-    /// Sets the `CheckMode` of the `Button`.
-    ///
-    /// \sa `checkMode()`, `setCheckable()`.
-    ///
-    void setCheckMode(CheckMode checkMode);
-    VGC_SLOT(setCheckMode)
 
     /// Returns `true` if the `checkMode()` of the `Button` is either
     /// `Bistate` or `Tristate`. Otherwise, return `false`.
     ///
-    /// \sa `setCheckable()`, `checkMode()`.
+    /// \sa `Action::setCheckable()`, `checkMode()`.
     ///
     bool isCheckable() const {
-        return checkMode_ != CheckMode::Uncheckable;
+        return checkMode() != CheckMode::Uncheckable;
     }
-
-    /// Sets the button's `CheckMode` to either `Bistate` (if `isCheckable`
-    /// is true), or `Uncheckable` (if `isCheckable` is false).
-    ///
-    /// \sa `isCheckable()`, `setCheckMode()`.
-    ///
-    void setCheckable(bool isCheckable) {
-        setCheckMode(isCheckable ? CheckMode::Bistate : CheckMode::Uncheckable);
-    }
-    VGC_SLOT(setCheckable)
 
     /// Returns the `CheckState` of the button.
+    ///
+    /// Returns `Unckecked` if the button has no associated action.
     ///
     /// \sa `setCheckState()`, `isChecked()`.
     ///
     CheckState checkState() const {
-        return checkState_;
+        return action_ ? action_->checkState() : CheckState::Unchecked;
     }
 
     /// Returns whether the button supports the given state.
@@ -114,80 +146,48 @@ public:
     ///
     /// \sa `checkState()`, `checkMode()`.
     ///
-    bool supportsCheckState(CheckState checkState) const;
-
-    /// Sets the `CheckState` of the button.
-    ///
-    /// If the button doesn't support the given state (see
-    /// `supportsCheckState()`), then the state isn't changed and a warning is
-    /// emitted.
-    ///
-    /// \sa `checkState()`, `setChecked()`.
-    ///
-    void setCheckState(CheckState checkState);
-    VGC_SLOT(setCheckState)
+    bool supportsCheckState(CheckState checkState) const {
+        return checkState == CheckState::Unchecked
+               || (action_ && action_->supportsCheckState(checkState));
+    }
 
     /// Returns whether the button's `CheckState` is `Checked`.
     ///
     /// \sa `setChecked()`, `checkState()`.
     ///
     bool isChecked() const {
-        return checkState_ == CheckState::Checked;
+        return checkState() == CheckState::Checked;
     }
-
-    /// Sets the button's `CheckState` to either `Checked` (if `isChecked`
-    /// is true), or `Unchecked` (if `isChecked` is false).
-    ///
-    /// \sa `isChecked()`, `setCheckState()`.
-    ///
-    void setChecked(bool isChecked) {
-        setCheckState(isChecked ? CheckState::Checked : CheckState::Unchecked);
-    }
-    VGC_SLOT(setChecked)
 
     /// Toggles the check state of the `Button`.
     ///
-    /// This has different meaning depending on the `CheckMode` of the button
-    /// as well as the button's group `CheckPolicy`.
+    /// Returns true if the check state of the button was indeed changed as a
+    /// result of calling this function. Examples why the check state doesn't
+    /// change are:
     ///
-    /// If the button is `Uncheckable` then this function does nothing.
+    /// - The button is disabled, or
+    /// - The button's action is disabled, or
+    /// - the button's action is not checkable, or
+    /// - the button's action is already checked and part of an exclusive group.
     ///
-    /// If the button is `Bistate` then this function switches between
-    /// `Checked` and `Unchecked`, unless the button is part of a group whose
-    /// policy is `ExactlyOne`, in which case the button stays `Checked` if it
-    /// was already `Checked`.
+    /// \sa `Action::toggle()`, `setCheckState()`, `setChecked()`.
     ///
-    /// If the button is `Tristate`:
-    /// - If its state is `Indeterminate`, then this function changes its state
-    ///   to `Checked`.
-    /// - If its state is `Checked` or `Unchecked`, then this function behaves
-    ///   as if the button was `Bistate`.
-    ///
-    /// Note that after calling this function (or clicking on a button), the
-    /// button state will never be `Indeterminate`. The `Indeterminate` state
-    /// can only be set programatically via `setCheckState()`.
-    ///
-    /// \sa `setCheckState()`, `setChecked()`.
-    ///
-    void toggle();
+    bool toggle();
     VGC_SLOT(toggle)
-
-    /// Returns the `ButtonGroup` this `Button` belongs to. Returns `nullptr`
-    /// if this `Button` doesn't belong to any `ButtonGroup`.
-    ///
-    /// \sa `ButtonGroup::addButton()`, `ButtonGroup::removeButton()`.
-    ///
-    ButtonGroup* group() const {
-        return group_;
-    }
 
     /// Clicks the button at position `pos` in local coordinates.
     ///
     /// This will cause the clicked signal to be emitted.
     ///
+    /// Returns true if the click was effective, that is, if the button was
+    /// clickable.
+    ///
     /// \sa clicked()
     ///
-    void click(const geometry::Vec2f& pos);
+    // Later: "if the button was clickable" (\sa `isClickable()`).
+    //
+    bool click(const geometry::Vec2f& pos);
+    VGC_SLOT(click)
 
     /// This signal is emitted when:
     ///
@@ -219,14 +219,14 @@ public:
     VGC_SIGNAL(checkStateChanged, (Button*, button), (CheckState, checkState));
 
     // Reimplementation of StylableObject virtual methods
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
+    //style::StylableObject* firstChildStylableObject() const override;
+    //style::StylableObject* lastChildStylableObject() const override;
 
     // Reimplementation of Widget virtual methods
-    void onResize() override;
-    void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
-    void onPaintDestroy(graphics::Engine* engine) override;
+    //void onResize() override;
+    //void onPaintCreate(graphics::Engine* engine) override;
+    //void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    //void onPaintDestroy(graphics::Engine* engine) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
@@ -234,28 +234,56 @@ public:
     bool onMouseLeave() override;
 
 protected:
-    geometry::Vec2f computePreferredSize() const override;
+    //geometry::Vec2f computePreferredSize() const override;
 
 private:
-    friend class ButtonGroup;
-
-    graphics::RichTextPtr richText_;
-    graphics::GeometryViewPtr triangles_;
-    ui::ButtonGroup* group_ = nullptr;
     bool reload_ = true;
     bool isPressed_ = false;
-    CheckMode checkMode_ = CheckMode::Uncheckable;
-    CheckState checkState_ = CheckState::Unchecked;
-    CheckState lastEmittedCheckState_ = CheckState::Unchecked;
-    bool emitting_ = false;
 
-    // Directly sets the new state, ignoring policy and emitting no signals
-    void setCheckStateNoEmit_(CheckState newState);
+    // Below is the implementation copy-pasted from ActionButton; to be refactored
+protected:
+    // Reimplementation of Object virtual methods
+    void onDestroyed() override;
 
-    // Informs the world about the new state:
-    // - updates style classes
-    // - emits checkStateChanged
-    void emitPendingCheckState_();
+    // Reimplementation of Widget virtual methods
+    void onWidgetRemoved(Widget* child) override;
+    //bool onMouseEnter() override;
+    //bool onMouseLeave() override;
+    //bool onMousePress(MouseEvent* event) override;
+    //void onStyleChanged() override;
+
+    //virtual void onClicked();
+
+    Widget* iconWidget() const {
+        return iconWidget_;
+    }
+
+    Label* textLabel() const {
+        return textLabel_;
+    }
+
+    Label* shortcutLabel() const {
+        return shortcutLabel_;
+    }
+
+    void setActive(bool isActive);
+
+private:
+    // Components
+    Action* action_ = nullptr;
+    Widget* iconWidget_ = nullptr;
+    Label* textLabel_ = nullptr;
+    Label* shortcutLabel_ = nullptr;
+
+    // Style
+    bool isActive_ = false;
+
+    // Behavior
+    //bool tryClick_();
+    void onActionChanged_();
+
+    VGC_SLOT(onActionChangedSlot_, onActionChanged_);
+    VGC_SLOT(onActionAboutToBeDestroyed_, destroy);
 };
 
 } // namespace vgc::ui
