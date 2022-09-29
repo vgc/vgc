@@ -223,7 +223,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
                         isFirst = false;
                     }
                     else {
-                        height += gap;
+                        width += gap;
                     }
                 }
             }
@@ -259,7 +259,6 @@ geometry::Vec2f Flex::computePreferredSize() const {
             res = {w.value(), h.value()};
         }
     }
-
     return res;
 }
 
