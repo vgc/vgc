@@ -48,8 +48,9 @@ namespace strings_ {
 
 core::StringId horizontal("horizontal");
 core::StringId first("first");
-core::StringId middle("middle");
 core::StringId last("last");
+core::StringId not_first("not-first");
+core::StringId not_last("not-last");
 core::StringId steps("steps");
 core::StringId rgb("rgb");
 core::StringId hsl("hsl");
@@ -380,7 +381,7 @@ Widget* createFieldRowLabelAndGroup(
     return group;
 }
 
-void addFirstMiddleLast_(std::initializer_list<Widget*> widgets) {
+void addFirstLastStyleClasses_(std::initializer_list<Widget*> widgets) {
     const size_t n = widgets.size();
     size_t i = 0;
     for (Widget* widget : widgets) {
@@ -389,11 +390,14 @@ void addFirstMiddleLast_(std::initializer_list<Widget*> widgets) {
         if (isFirst) {
             widget->addStyleClass(strings_::first);
         }
+        else {
+            widget->addStyleClass(strings_::not_first);
+        }
         if (isLast) {
             widget->addStyleClass(strings_::last);
         }
-        if (!isFirst && !isLast) {
-            widget->addStyleClass(strings_::middle);
+        else {
+            widget->addStyleClass(strings_::not_last);
         }
         ++i;
     }
@@ -411,7 +415,7 @@ void createThreeLineEdits_(
     a = group->createChild<LineEdit>();
     b = group->createChild<LineEdit>();
     c = group->createChild<LineEdit>();
-    addFirstMiddleLast_({a, b, c});
+    addFirstLastStyleClasses_({a, b, c});
 }
 
 void createOneLineEdit_(
@@ -422,7 +426,7 @@ void createOneLineEdit_(
 
     Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
     a = group->createChild<LineEdit>();
-    addFirstMiddleLast_({a});
+    addFirstLastStyleClasses_({a});
 }
 
 Button* createCheckableButton_(Widget* parent, std::string_view text) {
@@ -445,7 +449,7 @@ ColorPalette::ColorPalette()
     stepsModeRow->addStyleClass(strings_::field_group);
     stepsButton_ = createCheckableButton_(stepsModeRow, "Steps");
     continuousButton_ = createCheckableButton_(stepsModeRow, "Continuous");
-    addFirstMiddleLast_({stepsButton_, continuousButton_});
+    addFirstLastStyleClasses_({stepsButton_, continuousButton_});
     stepsActionGroup_ = ActionGroup::create(CheckPolicy::ExactlyOne);
     stepsActionGroup_->addAction(stepsButton_->action());
     stepsActionGroup_->addAction(continuousButton_->action());

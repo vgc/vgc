@@ -1,10 +1,13 @@
 .PanelArea > .Flex,
-.PanelArea > .Flex > .Flex {
+.PanelArea > .Flex > .Flex,
+.root.Flex,
+.root.Flex > .Flex {
     row-gap: 10dp;
     column-gap: 10dp;
 }
 
-.PanelArea > .Flex {
+.PanelArea > .Flex,
+.root.Flex {
     padding-top: 10dp;
     padding-right: 10dp;
     padding-bottom: 10dp;
@@ -101,29 +104,23 @@
     border-bottom-left-radius: 0dp;
 }
 
-.field-row {
-    column-gap: 10dp;
-}
-
-.field-group {
+/* We use .Flex.Flex as a hack to increase specificity,
+   otherwise `.root.Flex > .Flex` is more specific */
+.Flex.Flex.field-row,
+.Flex.Flex.field-group {
+    vertical-stretch: 0;
+    vertical-shrink: 0;
     column-gap: 1dp;
 }
 
-.field-group > .first {
-    border-top-right-radius: 0dp;
-    border-bottom-right-radius: 0dp;
-}
-
-.field-group > .middle {
+.field-group > .not-first {
     border-top-left-radius: 0dp;
-    border-top-right-radius: 0dp;
-    border-bottom-right-radius: 0dp;
     border-bottom-left-radius: 0dp;
 }
 
-.field-group > .last {
-    border-top-left-radius: 0dp;
-    border-bottom-left-radius: 0dp;
+.field-group > .not-last {
+    border-top-right-radius: 0dp;
+    border-bottom-right-radius: 0dp;
 }
 
 .LineEdit,
