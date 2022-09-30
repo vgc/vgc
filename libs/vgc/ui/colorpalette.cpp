@@ -478,7 +478,7 @@ ColorPalette::ColorPalette()
     colorListView_ = createChild<ColorListView>();
 
     // Connections
-    continuousButton_->checkStateChanged().connect(onContinuousChangedSlot_());
+    continuousButton_->action()->checkStateChanged().connect(onContinuousChangedSlot_());
     hStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
     sStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
     lStepsEdit_->editingFinished().connect(onStepsEditedSlot_());

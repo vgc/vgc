@@ -55,16 +55,6 @@ public:
     static ButtonPtr
     create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
 
-    /*
-    /// Creates a Button.
-    ///
-    static ButtonPtr create();
-
-    /// Creates a Button with the given text.
-    ///
-    static ButtonPtr create(std::string_view text);
-    */
-
     /// Returns the action associated with this button.
     /// The is the action that will be trigerred when the button is clicked.
     ///
@@ -231,21 +221,7 @@ public:
     ///
     VGC_SIGNAL(released, (Button*, button), (const geometry::Vec2f&, pos));
 
-    /// This signal is emitted when the button check state changed.
-    ///
-    /// \sa setCheckState(), checkState().
-    ///
-    VGC_SIGNAL(checkStateChanged, (Button*, button), (CheckState, checkState));
-
-    // Reimplementation of StylableObject virtual methods
-    //style::StylableObject* firstChildStylableObject() const override;
-    //style::StylableObject* lastChildStylableObject() const override;
-
     // Reimplementation of Widget virtual methods
-    //void onResize() override;
-    //void onPaintCreate(graphics::Engine* engine) override;
-    //void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
-    //void onPaintDestroy(graphics::Engine* engine) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
@@ -253,24 +229,8 @@ public:
     bool onMouseLeave() override;
 
 protected:
-    //geometry::Vec2f computePreferredSize() const override;
-
-private:
-    bool reload_ = true;
-    bool isPressed_ = false;
-
-    // Below is the implementation copy-pasted from ActionButton; to be refactored
-protected:
     // Reimplementation of Object virtual methods
     void onDestroyed() override;
-
-    // Reimplementation of Widget virtual methods
-    //bool onMouseEnter() override;
-    //bool onMouseLeave() override;
-    //bool onMousePress(MouseEvent* event) override;
-    //void onStyleChanged() override;
-
-    //virtual void onClicked();
 
     Widget* iconWidget() const {
         return iconWidget_;
@@ -294,13 +254,13 @@ private:
     Label* shortcutLabel_ = nullptr;
 
     // Style
+    bool isPressed_ = false;
     bool isActive_ = false;
     core::StringId checkStateStyleClass_;
     core::StringId checkableStyleClass_;
     core::StringId checkModeStyleClass_;
 
     // Behavior
-    //bool tryClick_();
     void connectNewAction_();
     void disconnectOldAction_();
     void updateWidgetsBasedOnAction_();

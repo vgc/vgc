@@ -113,15 +113,11 @@ bool Button::onMouseMove(MouseEvent* event) {
         if (rect().contains(event->position())) {
             if (!hasStyleClass(strings::pressed)) {
                 addStyleClass(strings::pressed);
-                reload_ = true;
-                requestRepaint();
             }
         }
         else {
             if (hasStyleClass(strings::pressed)) {
                 removeStyleClass(strings::pressed);
-                reload_ = true;
-                requestRepaint();
             }
         }
         return true;
@@ -136,8 +132,6 @@ bool Button::onMousePress(MouseEvent* event) {
         pressed().emit(this, event->position());
         addStyleClass(strings::pressed);
         isPressed_ = true;
-        reload_ = true;
-        requestRepaint();
         return true;
     }
     else {
@@ -153,8 +147,6 @@ bool Button::onMouseRelease(MouseEvent* event) {
         }
         removeStyleClass(strings::pressed);
         isPressed_ = false;
-        reload_ = true;
-        requestRepaint();
         return true;
     }
     else {
