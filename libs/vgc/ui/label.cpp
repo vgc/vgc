@@ -45,6 +45,7 @@ void Label::setText(std::string_view text) {
     if (text != richText_->text()) {
         richText_->setText(text);
         reload_ = true;
+        requestGeometryUpdate();
         requestRepaint();
     }
 }

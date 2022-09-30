@@ -76,6 +76,19 @@ public:
     ///
     void setAction(Action* action);
 
+    /// This signal is emitted whenever the action associated with this button
+    /// changed.
+    ///
+    /// This can happen either because the properties of the action changed
+    /// (e.g., as a result of `action()->setText()`), or because the button is
+    /// now associated with another action (e.g., as a result of `setAction()`
+    /// was called).
+    ///
+    /// Note that the `action` parameter of this signal is null if this signal
+    /// is a result of setting a null action to the button.
+    ///
+    VGC_SIGNAL(actionChanged, (Action*, action))
+
     /// Returns whether this button has an action and this action is enabled.
     ///
     bool isActionEnabled() const {
@@ -104,6 +117,12 @@ public:
     ///
     std::string_view text() const {
         return action_ ? action_->text() : "";
+    }
+
+    /// Returns the Button's shortcut.
+    ///
+    Shortcut shortcut() const {
+        return action_ ? action_->shortcut() : Shortcut();
     }
 
     /// Returns the `CheckMode` of the button's action.
@@ -246,7 +265,6 @@ protected:
     void onDestroyed() override;
 
     // Reimplementation of Widget virtual methods
-    void onWidgetRemoved(Widget* child) override;
     //bool onMouseEnter() override;
     //bool onMouseLeave() override;
     //bool onMousePress(MouseEvent* event) override;
@@ -277,13 +295,22 @@ private:
 
     // Style
     bool isActive_ = false;
+    core::StringId checkStateStyleClass_;
+    core::StringId checkableStyleClass_;
+    core::StringId checkModeStyleClass_;
 
     // Behavior
     //bool tryClick_();
-    void onActionChanged_();
+    void connectNewAction_();
+    void disconnectOldAction_();
+    void updateWidgetsBasedOnAction_();
+    void onActionAboutToBeDestroyed_();
+    void onActionPropertiesChanged_();
+    void onActionCheckStateChanged_();
 
-    VGC_SLOT(onActionChangedSlot_, onActionChanged_);
-    VGC_SLOT(onActionAboutToBeDestroyed_, destroy);
+    VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
+    VGC_SLOT(onActionPropertiesChangedSlot_, onActionPropertiesChanged_);
+    VGC_SLOT(onActionCheckStateChangedSlot_, onActionCheckStateChanged_);
 };
 
 } // namespace vgc::ui

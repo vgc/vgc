@@ -63,7 +63,6 @@ void Action::setEnabled(bool enabled) {
 
 void Action::setCheckMode(CheckMode newMode) {
     if (checkMode_ != newMode) {
-        //CheckMode oldMode = checkMode_;
         checkMode_ = newMode;
 
         // Update state if current state is now unsupported
@@ -85,19 +84,8 @@ void Action::setCheckMode(CheckMode newMode) {
             emitPendingCheckState_();
         }
 
-        // Update CheckMode style
-        // XXX TODO: have Button listen to its underlying action and
-        //           update its style classes appropriately
-        /*
-        if (oldMode == CheckMode::Uncheckable) {
-            addStyleClass(strings::checkable);
-        }
-        else if (newMode == CheckMode::Uncheckable) {
-            removeStyleClass(strings::checkable);
-        }
-        replaceStyleClass(
-            detail::modeToStringId(oldMode), detail::modeToStringId(newMode));
-        */
+        // Emit properties changed
+        propertiesChanged().emit();
     }
 }
 
@@ -145,42 +133,8 @@ void Action::setCheckStateNoEmit_(CheckState newState) {
 
 void Action::emitPendingCheckState_() {
     if (lastEmittedCheckState_ != checkState_) {
-
-        // In case of nested emits, remember who is the first emitter. If we're
-        // the first emitter, we're responsible for not destructing the action,
-        // as well as updating the style once all nested emits are done.
-        //
-        bool isFirstEmitter = !emitting_;
-        emitting_ = true;
-        ActionPtr thisPtr;
-        core::StringId oldStyleClass;
-        if (isFirstEmitter) {
-            thisPtr = this;
-            oldStyleClass = detail::stateToStringId(lastEmittedCheckState_);
-        }
-
-        // The first emitter is responsible for updating the style, after all
-        // nested emits are done. Here, we remember the current style.
-        //
-        if (isFirstEmitter) {
-            oldStyleClass = detail::stateToStringId(lastEmittedCheckState_);
-        }
-
-        // Emit the checkStateChanged() signal. This may cause nested emits.
-        //
-        //reload_ = true;
         lastEmittedCheckState_ = checkState_;
         checkStateChanged().emit(this, checkState_);
-
-        // Update style. Note that here, checkState_ may be different from the
-        // one emitted above, but that's intended: we want to set the style of
-        // the nested-most emit.
-        //
-        if (isFirstEmitter) {
-            //const core::StringId newStyleClass = detail::stateToStringId(checkState_);
-            emitting_ = false;
-            //replaceStyleClass(oldStyleClass, newStyleClass);
-        }
     }
 }
 

@@ -52,33 +52,19 @@ void Button::setAction(Action* action) {
     if (action_ == action) {
         return;
     }
-    if (action_) {
-        // Remove connections with current action
-        action_->aboutToBeDestroyed().disconnect(onActionAboutToBeDestroyed_());
-        action_->changed().disconnect(onActionChangedSlot_());
-    }
+    disconnectOldAction_();
     action_ = action;
-    if (action_) {
-        // Set new connections
-        action_->aboutToBeDestroyed().connect(onActionAboutToBeDestroyed_());
-        action_->changed().connect(onActionChangedSlot_());
-
-        // Update subwidgets
-        onActionChanged_();
-    }
+    connectNewAction_();
+    updateWidgetsBasedOnAction_();
+    actionChanged().emit(action);
 }
 
 void Button::onDestroyed() {
-    // TODO: others?
     action_ = nullptr;
     iconWidget_ = nullptr;
     textLabel_ = nullptr;
     shortcutLabel_ = nullptr;
     SuperClass::onDestroyed();
-}
-
-void Button::onWidgetRemoved(Widget* /*child*/) {
-    destroy();
 }
 
 void Button::setActive(bool isActive) {
@@ -145,25 +131,6 @@ bool Button::onMouseMove(MouseEvent* event) {
     }
 }
 
-/*
-// From ActionButton
-bool Button::onMousePress(MouseEvent*) {
-    return tryClick_();
-}
-*/
-
-// From ActionButton
-/*
-bool Button::tryClick_() {
-    if (action_ && action_->trigger(this)) {
-        onClicked();
-        clicked().emit();
-        return true;
-    }
-    return false;
-}
-*/
-
 bool Button::onMousePress(MouseEvent* event) {
     if (event->button() == MouseButton::Left) {
         pressed().emit(this, event->position());
@@ -172,8 +139,6 @@ bool Button::onMousePress(MouseEvent* event) {
         reload_ = true;
         requestRepaint();
         return true;
-
-        // TODO: click now if clickOnPress is true
     }
     else {
         return false;
@@ -200,26 +165,68 @@ bool Button::onMouseRelease(MouseEvent* event) {
 bool Button::onMouseEnter() {
     addStyleClass(strings::hovered);
     return false;
-
-    // From original Button
-    // requestRepaint();
-    // return true;
 }
 
 bool Button::onMouseLeave() {
     removeStyleClass(strings::hovered);
     return false;
-
-    // From original Button
-    // requestRepaint();
-    // return true;
 }
 
-void Button::onActionChanged_() {
-    textLabel_->setText(action_->text());
-    shortcutLabel_->setText(core::format("shortcutFor({})", action_->text()));
-    requestGeometryUpdate();
-    requestRepaint();
+void Button::connectNewAction_() {
+    if (action_) {
+        action_->aboutToBeDestroyed().connect(onActionAboutToBeDestroyedSlot_());
+        action_->propertiesChanged().connect(onActionPropertiesChangedSlot_());
+        action_->checkStateChanged().connect(onActionCheckStateChangedSlot_());
+    }
+}
+
+void Button::disconnectOldAction_() {
+    if (action_) {
+        action_->aboutToBeDestroyed().disconnect(onActionAboutToBeDestroyedSlot_());
+        action_->propertiesChanged().disconnect(onActionPropertiesChangedSlot_());
+        action_->checkStateChanged().disconnect(onActionCheckStateChangedSlot_());
+    }
+}
+
+void Button::updateWidgetsBasedOnAction_() {
+    std::string_view text_ = text();
+    std::string shortcutText = core::format("shortcutFor({})", text_);
+    textLabel_->setText(text_);
+    shortcutLabel_->setText(shortcutText);
+
+    // Update `unchecked`, `checked`, `indeterminate` style class
+    core::StringId newCheckStateStyleClass = detail::stateToStringId(checkState());
+    replaceStyleClass(checkStateStyleClass_, newCheckStateStyleClass);
+    checkStateStyleClass_ = newCheckStateStyleClass;
+
+    // Update `uncheckable`, `bistate`, `tristate` style class
+    core::StringId newCheckModeStyleClass = detail::modeToStringId(checkMode());
+    replaceStyleClass(checkModeStyleClass_, newCheckModeStyleClass);
+    checkModeStyleClass_ = newCheckModeStyleClass;
+
+    // Update `checkable` style class
+    core::StringId newCheckableStyleClass;
+    if (isCheckable()) {
+        newCheckableStyleClass = strings::checkable;
+    }
+    replaceStyleClass(checkableStyleClass_, newCheckableStyleClass);
+    checkableStyleClass_ = newCheckableStyleClass;
+}
+
+void Button::onActionAboutToBeDestroyed_() {
+    if (!hasReachedStage(core::ObjectStage::AboutToBeDestroyed)) {
+        setAction(nullptr);
+    }
+}
+
+void Button::onActionPropertiesChanged_() {
+    updateWidgetsBasedOnAction_();
+    actionChanged().emit(action_);
+}
+
+void Button::onActionCheckStateChanged_() {
+    updateWidgetsBasedOnAction_();
+    actionChanged().emit(action_);
 }
 
 } // namespace vgc::ui

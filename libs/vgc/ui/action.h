@@ -39,7 +39,6 @@ class VGC_UI_API Action : public core::Object {
 private:
     VGC_OBJECT(Action, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
-    friend Menu;
 
 protected:
     Action();
@@ -64,10 +63,15 @@ public:
     ///
     static ActionPtr create(const std::string_view& text, const Shortcut& shortcut);
 
-    /// This signal is emitted whenever the action properties are changed (shortcut,
-    /// text, icon, ...).
+    /// This signal is emitted whenever the action "properties" have changed,
+    /// which are: `shortcut()`, `text()`, `icon()`, `checkableMode()`, `isMenu()`.
     ///
-    VGC_SIGNAL(changed)
+    /// Note that this signal is NOT emitted when `checkState()` changes or
+    /// `isEnabled()` changes, since these are not considered "properties" of the
+    /// action, but rather its current state. In order to listen for these
+    /// changes, use `checkStateChanged()` and `enabledChanged()` instead.
+    ///
+    VGC_SIGNAL(propertiesChanged)
 
     /// Returns the descriptive text for this action.
     ///
@@ -79,7 +83,7 @@ public:
     ///
     void setText(std::string_view text) {
         text_ = text;
-        changed().emit();
+        propertiesChanged().emit();
     }
 
     /// Returns the shortcut associated with this action. This can be an empty
@@ -93,7 +97,7 @@ public:
     ///
     void setShortcut(const Shortcut& shortcut) {
         shortcut_ = shortcut;
-        changed().emit();
+        propertiesChanged().emit();
     }
 
     /// Returns whether this action is enabled or not.
@@ -260,7 +264,8 @@ public:
     VGC_SIGNAL(triggered, (Widget*, from))
 
 private:
-    friend class ActionGroup;
+    friend Menu;
+    friend ActionGroup;
 
     std::string text_;
     Shortcut shortcut_;
@@ -270,14 +275,11 @@ private:
     CheckMode checkMode_ = CheckMode::Uncheckable;
     CheckState checkState_ = CheckState::Unchecked;
     CheckState lastEmittedCheckState_ = CheckState::Unchecked;
-    bool emitting_ = false;
 
     // Directly sets the new state, ignoring policy and emitting no signals
     void setCheckStateNoEmit_(CheckState newState);
 
-    // Informs the world about the new state:
-    // - updates style classes
-    // - emits checkStateChanged
+    // Emits checkStateChanged() if current state != last emitted state
     void emitPendingCheckState_();
 };
 
