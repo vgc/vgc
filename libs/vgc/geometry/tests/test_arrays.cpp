@@ -80,7 +80,7 @@ TEST(TestArrays, ResizeNoInitPerf) {
     }
     vgc::core::print("Resize with init    = {:.7f} sec.\n", elapsedInit);
     vgc::core::print("Resize without init = {:.7f} sec.\n", elapsedNoInit);
-    EXPECT_LT(elapsedNoInit, 0.01 * elapsedInit);
+    EXPECT_LT(elapsedNoInit, 0.1 * elapsedInit);
 
     // Performance results on DELL Precision 3561, i7-11850H, 32GB RAM:
     //    Resize with init    = 0.0343690 sec.
