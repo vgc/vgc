@@ -393,6 +393,66 @@ using ObjectListView = ObjListView<Object>;
 //
 using ObjectPtr = ObjPtr<Object>;
 
+/// \enum vgc::core::ObjectStage
+/// \brief The different stages of construction / destruction of an Object
+///
+/// This enum describes the ordered sequence of stages an `Object` goes through
+/// during its lifetime.
+///
+/// Note that the integer value of `Object::stage()` is guaranteed to be
+/// increasing for a given object, so in order to test whether an object is at
+/// least at a given stage, you can use expressions such as:
+///
+/// ```cpp
+/// if (stage() >= ObjectStage::ChildrenDestroyed) {
+///     ...
+/// }
+/// ```
+///
+/// Or equivalently, you can simply use
+/// `hasReachedStage(ObjectStage::ChildrenDestroyed)`.
+///
+/// # Description of the different stages
+///
+/// Initially, an `Object` is `Constructed`.
+///
+/// When its `destroyObject_()` method is called (or equivalently, if it is a
+/// root object, when its refCount reaches zero), then the object is
+/// immediately marked as `AboutToBeDestroyed`, and the signal
+/// `aboutToBeDestroyed()` is emitted.
+///
+/// Then, its child objects are recursively destroyed, each of them going
+/// through all the stages of destruction.
+///
+/// Once all its child objects are `Destroyed`, the object is
+/// marked as `ChildrenDestroyed`.
+///
+/// Then, all incoming signals are disconnected.
+///
+/// Then, the `onDestroyed()` virtual method is called.
+///
+/// Finally, all outgoing signals are disconnected, and the object is marked as
+/// `Destroyed`.
+///
+/// # Signals and slots
+///
+/// Note that up to the `ChildrenDestroyed` stage, all the signal-slot
+/// connections of an object are kept intact. In particular, this means that
+/// during its own destruction, an object can still receive the
+/// aboutToBeDestroyed() signals from its children.
+///
+/// Therefore, if you implement an object (A) that listens to the
+/// aboutToBeDestroyed() signal of one of its children (B), make sure
+/// to take into account the fact that the signal can be received while
+/// (A) is already partially destructed.
+///
+enum class ObjectStage : UInt8 {
+    Constructed = 0,
+    AboutToBeDestroyed,
+    ChildrenDestroyed,
+    Destroyed
+};
+
 /// \class vgc::core::Object
 /// \brief Provides a common API for object-based tree hierarchies.
 ///
@@ -585,34 +645,48 @@ public:
     /// prevent memory leaks.
     ///
     Int64 refCount() const {
-        if (refCount_ >= 0) {
-            return refCount_;
-        }
-        else {
-            return refCount_ - Int64Min;
-        }
+        return refCount_;
     }
 
-    /// Returns whether this Object is alive. An Object becomes non-alive
-    /// either when it is has no parent and its refCount reaches zero, it when
-    /// it is explicitly destroyed (for example, via `node->destroy()` in the
-    /// case of dom::Node, but not all Object subclasses provide such API).
+    /// Returns the current `ObjectStage` of this object.
     ///
-    /// Note that it is possible and even common for child Objects to be alive
-    /// and have a refCount of zero.
+    /// \sa `hasReachedStage()`, `isAlive()`, `isDestroyed()`.
+    ///
+    ObjectStage stage() const {
+        return stage_;
+    }
+
+    /// Returns whether the current `ObjectStage` of this object
+    /// at least the given stage.
+    ///
+    /// \sa `stage()`, `isAlive()`, `isDestroyed()`.
+    ///
+    bool hasReachedStage(ObjectStage stage) const {
+        return stage_ >= stage;
+    }
+
+    /// Returns whether this `Object` is alive. An `Object` becomes not-alive
+    /// just before the `onDestroyed()` method is called. During the
+    /// `onDestroyed()` call both `isAlive()` and `isDestroyed()` return false.
+    ///
+    /// This is equivalent to `!hasReachedStage(ObjectStage::ChildrenDestroyed)`.
+    ///
+    /// \sa `stage()`, `hasReachedStaged()`, `isDestroyed()`.
     ///
     bool isAlive() const {
-        return refCount_ >= 0;
+        return !hasReachedStage(ObjectStage::ChildrenDestroyed);
     }
 
-    /// Returns whether this Object is destroyed. An `Object` becomes destroyed
-    /// after its `onDestroyed()` function is called. During the `onDestroyed()`
-    /// call both `isAlive()` and `isDestroyed()` return false.
+    /// Returns whether this `Object` is destroyed. An `Object` becomes
+    /// destroyed just after its `onDestroyed()` method is called. During the
+    /// `onDestroyed()` call both `isAlive()` and `isDestroyed()` return false.
     ///
-    /// \sa isAlive().
+    /// This is equivalent to `hasReachedStage(ObjectStage::Destroyed)`.
+    ///
+    /// \sa `stage()`, `hasReachedStaged()`, `isAlive()`.
     ///
     bool isDestroyed() const {
-        return isDestroyed_;
+        return hasReachedStage(ObjectStage::Destroyed);
     }
 
     /// Returns the parent of this Object, or nullptr if this object has no
@@ -1060,6 +1134,7 @@ private:
     //
     friend class detail::ObjPtrAccess;
     mutable Int64 refCount_ = 0;
+    ObjectStage stage_ = ObjectStage::Constructed;
 
     // Parent-child relationship
     Object* parentObject_ = nullptr;
@@ -1068,15 +1143,6 @@ private:
     Object* previousSiblingObject_ = nullptr;
     Object* nextSiblingObject_ = nullptr;
     Int numChildObjects_ = 0;
-
-    // Prevent infinite destruction loops
-    bool isDestroyRequested_ = false;
-
-    // We want to allow signals to be emitted until the onDestroyed() returns.
-    // However `isAlive()` becomes `false` before calling it so we need another
-    // state to use as a condition for our emits.
-    //
-    bool isDestroyed_ = false;
 
     // Deferred values
     mutable bool isBranchSizeDirty_ = false;
@@ -1112,16 +1178,14 @@ inline void ObjPtrAccess::decref(const Object* obj, Int64 k) {
     if (obj) {
         obj->refCount_ -= k;
         bool isRoot = (obj->parentObject_ == nullptr);
-        if (isRoot) {
-            if (obj->refCount_ == 0) {
-                // Here, isAlive() == true and refCount() == 0.
+        if (isRoot && obj->refCount_ == 0) {
+            if (obj->isAlive()) {
                 // See implementation of destroyObjectImpl_() for details on the
                 // const-cast and other subtleties of the following two lines.
                 Object* root_ = const_cast<Object*>(obj);
                 root_->destroyObjectImpl_();
             }
-            else if (obj->refCount_ == Int64Min) {
-                // Here, isAlive() == false and refCount() == 0.
+            else {
                 delete obj;
             }
         }

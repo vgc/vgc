@@ -368,44 +368,34 @@ Int Object::branchSize() const {
 }
 
 void Object::destroyObjectImpl_() {
-    if (isDestroyRequested_) {
+
+    // Prevent infinite loops and inform others that we're about to be destroyed
+    if (hasReachedStage(ObjectStage::AboutToBeDestroyed)) {
         return;
     }
-    isDestroyRequested_ = true;
-
+    stage_ = ObjectStage::AboutToBeDestroyed;
     aboutToBeDestroyed().emit(this);
 
+    // Recursively destroy children
     while (firstChildObject_) {
         firstChildObject_->destroyObjectImpl_();
     }
-    ObjectPtr p = removeObjectFromParent_();
-    refCount_ = Int64Min + refCount_;
+    ObjectPtr p = removeObjectFromParent_(); // refCount() becomes >= 1
+    stage_ = ObjectStage::ChildrenDestroyed; // isAlive() becomes false
 
+    // Disconnect slots, then call onDestroyed(), then disconnect signals. This
+    // order ensures that the object won't receive signals in the middle of its
+    // onDestroyed() call, while allowing it to still emit signals in there.
     detail::SignalHub::disconnectSlots(this);
     onDestroyed();
-    // Done after onDestroyed since someone could want to emit in there.
     detail::SignalHub::disconnectSignals(this);
-    isDestroyed_ = true;
+    stage_ = ObjectStage::Destroyed;
 
-    // Note 1: The second line switches isAlive() from true to false, while
-    // keeping refCount() unchanged.
-    //
-    // Note 2: At the end of this scope, p is destructed, which deletes this
-    // Object if refCount() reaches 0, i.e., if refCount_ == INT64_MIN.
-    //
-    // Note 3: if the call to this destroyObjectImpl_() function originates
-    // from ObjPtrAccess::decref(), then we know that `root` and all its
-    // descendants have refCount_ == 0. Therefore, we know that
-    // removeObjectFromParent_() will not indirectly call decref() and cause an
-    // infinite loop.
-    //
-    // Note 4: if the call to this destroyObjectImpl_() function originates
-    // from ObjPtrAccess::decref(), then when p is created, the refCount_
-    // increases from 0 to 1. Then in the next line, the refCount_ becomes
-    // Int64Min + 1. When p is destructed, decref() is called, which changes
-    // the refCount_ to Int64Min, and then calls `delete root`.
-    //
-    // Note 5: in C++, constness is only meant to indicate immutability while
+    // Note 1: at the end of this scope, the ObjectPtr p is destructed, which
+    // causes a call to decref(), calling `delete obj` if the refCount becomes
+    // zero.
+
+    // Note 2: in C++, constness is only meant to indicate immutability while
     // the object is alive. For example, destructors are allowed to call
     // non-const methods, and calling `delete p` is allowed even if p is a
     // `const T*`. This is why we decided that onDestroyed() should be a
