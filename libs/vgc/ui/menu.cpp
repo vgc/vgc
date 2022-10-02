@@ -522,7 +522,8 @@ void Menu::preMouseMove(MouseEvent* event) {
     const bool shouldProtectOpenSubMenu = isOpenAsPopup_;
 
     MenuButton* button = dynamic_cast<MenuButton*>(hcc);
-    const bool isHccMenu = button && button->isMenu() && button->isActionEnabled();
+    Action* action = button ? button->action() : nullptr;
+    const bool isHccMenu = action && action->isMenu_ && action->isEnabled();
 
     bool doNothing = false;
     if (shouldProtectOpenSubMenu && subMenuPopup_ && !isFirstMoveSinceEnter_) {

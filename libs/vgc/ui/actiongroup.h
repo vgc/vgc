@@ -123,24 +123,29 @@ public:
     ///
     static ActionGroupPtr create(CheckPolicy checkPolicy);
 
-    /// Removes all actions in the group.
+    /// Removes all actions in this group.
     ///
     void clear();
 
-    /// Adds an action to the group.
+    /// Adds an action to this group.
     ///
-    /// Does nothing if the action is already in the group.
+    /// Does nothing if the action is already in this group.
     ///
-    /// If the action was already part of another group, it is first removed
-    /// from this other group
+    /// If the action was already part of another group, it is automatically
+    /// removed from the other group prior to being added to this group.
     ///
     void addAction(Action* action);
 
-    /// Removes an action from the group.
+    /// Removes an action from this group.
     ///
     /// Does nothing if the action is not already in the group.
     ///
     void removeAction(Action* action);
+
+    /// This signal is emitted whenever an action is added or removed from the
+    /// group.
+    ///
+    VGC_SIGNAL(actionsChanged)
 
     /// Removes the list of all actions in the group, by order of insertion.
     ///
@@ -194,6 +199,10 @@ private:
     void disconnectAction_(Action* action);
     void onActionDestroyed_(Object* action);
     VGC_SLOT(onActionDestroyedSlot_, onActionDestroyed_)
+
+    // Same as addAction() and removeAction(), but without emitting signals
+    void addActionNoEmit_(Action* action);
+    void removeActionNoEmit_(Action* action);
 
     // Implements toggle() logic. `group` can be null. `action` must be
     // non-null. Returns whether a change happens (nothing may happen if the

@@ -36,93 +36,6 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(Menu);
 VGC_DECLARE_OBJECT(MenuButton);
 
-using ActionButton = Button;
-
-/*
-/// \class vgc::ui::ActionButton
-/// \brief A clickable widget that represents an action and triggers it on click/hover.
-///
-/// It destroys itself whenever its action gets destroyed.
-///
-class VGC_UI_API ActionButton : public Flex {
-private:
-    VGC_OBJECT(ActionButton, Flex)
-
-protected:
-    ActionButton(Action* action, FlexDirection layoutDirection);
-
-public:
-    /// Creates an MenuButton with the given `action`.
-    ///
-    static ActionButtonPtr
-    create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
-
-    Action* action() const {
-        return action_;
-    }
-
-    bool isEnabled() const {
-        return action_ ? action_->isEnabled() : false;
-    }
-
-    bool isMenu() const {
-        return action_ ? action_->isMenu() : false;
-    }
-
-    bool click() {
-        return tryClick_();
-    }
-
-    /// This signal is emitted when the button is clicked and is not disabled.
-    ///
-    VGC_SIGNAL(clicked);
-
-protected:
-    // Reimplementation of Object virtual methods
-    void onDestroyed() override;
-
-    // Reimplementation of Widget virtual methods
-    void onWidgetRemoved(Widget* child) override;
-    bool onMouseEnter() override;
-    bool onMouseLeave() override;
-    bool onMousePress(MouseEvent* event) override;
-    void onStyleChanged() override;
-
-    virtual void onClicked();
-
-    Widget* iconWidget() const {
-        return iconWidget_;
-    }
-
-    Label* textLabel() const {
-        return textLabel_;
-    }
-
-    Label* shortcutLabel() const {
-        return shortcutLabel_;
-    }
-
-    void setActive(bool isActive);
-
-private:
-    // Components
-    Action* action_ = nullptr;
-    Widget* iconWidget_ = nullptr;
-    Label* textLabel_ = nullptr;
-    Label* shortcutLabel_ = nullptr;
-
-    // Style
-    bool isActive_ = false;
-
-    // Behavior
-    bool tryClick_();
-    void onActionChanged_();
-
-    VGC_SLOT(onActionChangedSlot_, onActionChanged_);
-    VGC_SLOT(onActionAboutToBeDestroyed_, destroy);
-};
-*/
-
 /// \enum vgc::ui::MenuDropDirection
 /// \brief The direction in which a dropdown menu should appear.
 ///
@@ -134,9 +47,9 @@ enum class MenuDropDirection {
 /// \class vgc::ui::MenuButton
 /// \brief A button with a special layout for Menus.
 ///
-class VGC_UI_API MenuButton : public ActionButton {
+class VGC_UI_API MenuButton : public Button {
 private:
-    VGC_OBJECT(MenuButton, ActionButton)
+    VGC_OBJECT(MenuButton, Button)
     friend Menu;
 
 protected:

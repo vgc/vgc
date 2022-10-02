@@ -76,6 +76,19 @@ public:
         return key() == Key::None;
     }
 
+    /// Returns whether the two shortcuts `s1` and `s2` are equal.
+    ///
+    friend constexpr bool operator==(const Shortcut& s1, const Shortcut& s2) {
+        return s1.modifiers_ == s2.modifiers_ //
+               && s1.key_ == s2.key_;
+    }
+
+    /// Returns whether the two shortcuts `s1` and `s2` are different.
+    ///
+    friend constexpr bool operator!=(const Shortcut& s1, const Shortcut& s2) {
+        return !(s1 == s2);
+    }
+
 private:
     ModifierKeys modifiers_;
     Key key_;

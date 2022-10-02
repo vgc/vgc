@@ -45,23 +45,32 @@ void ActionGroup::addAction(Action* action) {
         VGC_WARNING(LogVgcUi, "Attempting to add a null action to an ActionGroup.");
         return;
     }
-    if (!actions_.contains(action)) {
-        if (action->group_) {
-            action->group_->removeAction(action);
-        }
-        actions_.append(action);
-        connectAction_(action);
-        enforcePolicy_(action);
+    if (action->group() == this) {
+        return;
     }
+    ActionGroup* oldGroup = action->group();
+    addActionNoEmit_(action);
+    action->groupChanged().emit(this);
+    if (oldGroup) {
+        oldGroup->actionsChanged().emit();
+        oldGroup->emitPendingCheckStates_();
+    }
+    actionsChanged().emit();
+    emitPendingCheckStates_();
 }
 
 void ActionGroup::removeAction(Action* action) {
-    Int oldNumActions = numActions();
-    actions_.removeOne(action);
-    if (oldNumActions != numActions()) {
-        disconnectAction_(action);
-        enforcePolicy_();
+    if (!action) {
+        VGC_WARNING(LogVgcUi, "Attempting to remove a null action from an ActionGroup.");
+        return;
     }
+    if (action->group() != this) {
+        return;
+    }
+    removeActionNoEmit_(action);
+    action->groupChanged().emit(nullptr);
+    actionsChanged().emit();
+    emitPendingCheckStates_();
 }
 
 Int ActionGroup::numCheckedActions() const {
@@ -75,10 +84,11 @@ Int ActionGroup::numCheckedActions() const {
 }
 
 void ActionGroup::setCheckPolicy(CheckPolicy checkPolicy) {
-    if (checkPolicy_ != checkPolicy) {
-        checkPolicy_ = checkPolicy;
-        enforcePolicy_();
+    if (checkPolicy_ == checkPolicy) {
+        return;
     }
+    checkPolicy_ = checkPolicy;
+    enforcePolicy_();
 }
 
 bool ActionGroup::isCheckPolicySatisfied() {
@@ -104,6 +114,26 @@ void ActionGroup::disconnectAction_(Action* action) {
 void ActionGroup::onActionDestroyed_(Object* action) {
     actions_.removeOne(static_cast<Action*>(action));
     enforcePolicy_();
+}
+
+void ActionGroup::addActionNoEmit_(Action* action) {
+    if (!actions_.contains(action)) {
+        if (action->group_) {
+            action->group_->removeActionNoEmit_(action);
+        }
+        actions_.append(action);
+        connectAction_(action);
+        enforcePolicyNoEmit_(action);
+    }
+}
+
+void ActionGroup::removeActionNoEmit_(Action* action) {
+    Int oldNumActions = numActions();
+    actions_.removeOne(action);
+    if (oldNumActions != numActions()) {
+        disconnectAction_(action);
+        enforcePolicyNoEmit_();
+    }
 }
 
 bool ActionGroup::toggle_(ActionGroup* group, Action* action) {

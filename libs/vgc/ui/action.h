@@ -20,8 +20,7 @@
 #include <string>
 #include <string_view>
 
-#include <vgc/core/innercore.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/core/object.h>
 #include <vgc/ui/actiongroup.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/shortcut.h>
@@ -63,15 +62,7 @@ public:
     ///
     static ActionPtr create(const std::string_view& text, const Shortcut& shortcut);
 
-    /// This signal is emitted whenever the action "properties" have changed,
-    /// which are: `shortcut()`, `text()`, `icon()`, `checkableMode()`, `isMenu()`.
-    ///
-    /// Note that this signal is NOT emitted when `checkState()` changes or
-    /// `isEnabled()` changes, since these are not considered "properties" of the
-    /// action, but rather its current state. In order to listen for these
-    /// changes, use `checkStateChanged()` and `enabledChanged()` instead.
-    ///
-    VGC_SIGNAL(propertiesChanged)
+    // ----------------------- Action Properties -------------------------------
 
     /// Returns the descriptive text for this action.
     ///
@@ -81,10 +72,7 @@ public:
 
     /// Sets the descriptive text for this action.
     ///
-    void setText(std::string_view text) {
-        text_ = text;
-        propertiesChanged().emit();
-    }
+    void setText(std::string_view text);
 
     /// Returns the shortcut associated with this action. This can be an empty
     /// shortcut if this action has no associated shortcut.
@@ -95,31 +83,7 @@ public:
 
     /// Sets the shortcut associated with this action.
     ///
-    void setShortcut(const Shortcut& shortcut) {
-        shortcut_ = shortcut;
-        propertiesChanged().emit();
-    }
-
-    /// Returns whether this action is enabled or not.
-    ///
-    bool isEnabled() const {
-        return isEnabled_;
-    }
-
-    /// Sets the disabled state of this action.
-    ///
-    void setEnabled(bool enabled);
-    VGC_SLOT(setEnabled)
-
-    /// This signal is emitted whenever `isEnabled()` changes.
-    ///
-    VGC_SIGNAL(enabledChanged, (bool, enabled))
-
-    /// Returns whether this action is to open a menu.
-    ///
-    bool isMenu() const {
-        return isMenu_;
-    }
+    void setShortcut(const Shortcut& shortcut);
 
     /// Returns the `CheckMode` of the action.
     ///
@@ -154,6 +118,64 @@ public:
         setCheckMode(isCheckable ? CheckMode::Bistate : CheckMode::Uncheckable);
     }
     VGC_SLOT(setCheckable)
+
+    /// This signal is emitted whenever the action "properties" have changed,
+    /// which are: `text()`, `shortcut()`, and `checkMode()`.
+    ///
+    /// Note that this signal is NOT emitted when `group()`, `isEnabled()`, or
+    /// `checkState()` changes or changes. If you wish to listen for these
+    /// changes, use `groupChanged()`, `enabledChanged()`, and
+    /// `checkStateChanged()` instead.
+    ///
+    VGC_SIGNAL(propertiesChanged)
+
+    // -------------------------- Action Group ---------------------------------
+
+    /// Returns the `ActionGroup` this `Action` belongs to. Returns `nullptr`
+    /// if this `Action` doesn't belong to any `ActionGroup`.
+    ///
+    ///\sa `setGroup()`, `groupChanged()`, `ActionGroup::addAction()`,
+    /// `ActionGroup::removeAction()`.
+    ///
+    ActionGroup* group() const {
+        return group_;
+    }
+
+    /// Sets the `ActionGroup` this `Action` belongs to.
+    ///
+    /// This is equivalent to removing the action from its current group
+    /// via `ActionGroup::removeAction(this)`, then adding it to its new group
+    /// via `ActionGroup::addAction(this)`.
+    ///
+    ///\sa `group()`, `groupChanged()`, `ActionGroup::addAction()`,
+    /// `ActionGroup::removeAction()`.
+    ///
+    void setGroup(ActionGroup* group);
+
+    /// This signal is emitted whenever the `group()` of this action changed.
+    /// Note that the new group will be `nullptr` if the action isn't part of
+    /// any group after the change.
+    ///
+    /// \sa `group()`, `setGroup()`.
+    ///
+    VGC_SIGNAL(groupChanged, (ActionGroup*, group))
+
+    // ------------------------- Action State ---------------------------------
+
+    /// Returns whether this action is enabled or not.
+    ///
+    bool isEnabled() const {
+        return isEnabled_;
+    }
+
+    /// Sets the disabled state of this action.
+    ///
+    void setEnabled(bool enabled);
+    VGC_SLOT(setEnabled)
+
+    /// This signal is emitted whenever `isEnabled()` changes.
+    ///
+    VGC_SIGNAL(enabledChanged, (bool, enabled))
 
     /// Returns the `CheckState` of the action.
     ///
@@ -238,15 +260,6 @@ public:
     bool toggle();
     VGC_SLOT(toggle)
 
-    /// Returns the `ActionGroup` this `Action` belongs to. Returns `nullptr`
-    /// if this `Action` doesn't belong to any `ActionGroup`.
-    ///
-    /// \sa `ActionGroup::addAction()`, `ActionGroup::removeAction()`.
-    ///
-    ActionGroup* group() const {
-        return group_;
-    }
-
     /// If the action is not disabled, triggers the action and returns true.
     /// Otherwise returns false.
     ///
@@ -255,9 +268,11 @@ public:
     /// \sa triggered
     ///
     bool trigger(Widget* from = nullptr);
+    VGC_SLOT(trigger)
 
-    /// This signal is emitted whenever the action is activated by the user (for example,
-    /// clicking on an associated action), or when the trigger() method is called.
+    /// This signal is emitted whenever the action is activated by the user
+    /// (for example, clicking on a button associated with this action), or
+    /// when the trigger() method is called.
     ///
     /// \sa trigger()
     ///

@@ -97,12 +97,6 @@ public:
         return isActionEnabled(); // Later: && Widget::isEnabled();
     }
 
-    /// Returns whether the associated action of this button is a menu action.
-    ///
-    bool isMenu() const {
-        return action_ && action_->isMenu();
-    }
-
     /// Returns the Button's text.
     ///
     std::string_view text() const {

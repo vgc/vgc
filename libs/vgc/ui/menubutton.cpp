@@ -65,7 +65,7 @@ float allocSize(float requested, float& remaining) {
 } // namespace
 
 MenuButton::MenuButton(Action* action, FlexDirection layoutDirection)
-    : ActionButton(action, layoutDirection) {
+    : Button(action, layoutDirection) {
 
     addStyleClass(strings::MenuButton);
 }

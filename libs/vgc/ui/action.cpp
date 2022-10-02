@@ -53,12 +53,20 @@ ActionPtr Action::create(const std::string_view& text, const Shortcut& shortcut)
     return ActionPtr(new Action(text, shortcut));
 }
 
-void Action::setEnabled(bool enabled) {
-    if (isEnabled_ == enabled) {
+void Action::setText(std::string_view text) {
+    if (text_ == text) {
         return;
     }
-    isEnabled_ = enabled;
-    this->enabledChanged().emit(enabled);
+    text_ = text;
+    propertiesChanged().emit();
+}
+
+void Action::setShortcut(const Shortcut& shortcut) {
+    if (shortcut_ == shortcut) {
+        return;
+    }
+    shortcut_ = shortcut;
+    propertiesChanged().emit();
 }
 
 void Action::setCheckMode(CheckMode newMode) {
@@ -87,6 +95,25 @@ void Action::setCheckMode(CheckMode newMode) {
         // Emit properties changed
         propertiesChanged().emit();
     }
+}
+
+void Action::setGroup(ActionGroup* group) {
+    if (group) {
+        // Add action to new group, automatically removing it from current group
+        group->addAction(this);
+    }
+    else if (group_) {
+        // Remove action from current group
+        group_->removeAction(this);
+    }
+}
+
+void Action::setEnabled(bool enabled) {
+    if (isEnabled_ == enabled) {
+        return;
+    }
+    isEnabled_ = enabled;
+    this->enabledChanged().emit(enabled);
 }
 
 bool Action::supportsCheckState(CheckState checkState) const {
