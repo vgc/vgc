@@ -40,7 +40,7 @@ private:
     VGC_OBJECT(ScreenColorPickerButton, Button)
 
 protected:
-    ScreenColorPickerButton(std::string_view name);
+    ScreenColorPickerButton(Action* action);
 
 public:
     /// Creates a `ScreenColorPickerButton`.
@@ -113,7 +113,7 @@ private:
     core::Color selectedColor_;
     core::Color selectedColorOnPickScreenStarted_;
     ColorPreviewPtr colorPreview_;
-    ButtonGroupPtr stepsButtonGroup_;
+    ActionGroupPtr stepsActionGroup_;
     Button* stepsButton_;
     Button* continuousButton_;
     ColorPaletteSelector* selector_;
@@ -159,11 +159,11 @@ private:
     void onPickScreenColorHovered_(const core::Color& color);
     VGC_SLOT(onPickScreenColorHoveredSlot_, onPickScreenColorHovered_)
 
-    void onAddToPaletteClicked_();
-    VGC_SLOT(onAddToPaletteClickedSlot_, onAddToPaletteClicked_)
+    void onAddToPalette_();
+    VGC_SLOT(onAddToPaletteSlot_, onAddToPalette_)
 
-    void onRemoveFromPaletteClicked_();
-    VGC_SLOT(onRemoveFromPaletteClickedSlot_, onRemoveFromPaletteClicked_)
+    void onRemoveFromPalette_();
+    VGC_SLOT(onRemoveFromPaletteSlot_, onRemoveFromPalette_)
 
     void updateStepsLineEdits_();
     void selectColor_(const core::Color& color);

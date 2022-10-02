@@ -27,7 +27,6 @@
 #include <vgc/geometry/mat3f.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/button.h>
-#include <vgc/ui/buttongroup.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
@@ -47,14 +46,19 @@ core::Color cursorInnerColor(1.0f, 1.0f, 1.0f);
 
 namespace strings_ {
 
-core::StringId horizontal_group("horizontal-group");
+core::StringId horizontal("horizontal");
 core::StringId first("first");
-core::StringId middle("middle");
 core::StringId last("last");
+core::StringId not_first("not-first");
+core::StringId not_last("not-last");
 core::StringId steps("steps");
 core::StringId rgb("rgb");
 core::StringId hsl("hsl");
 core::StringId hex("hex");
+core::StringId button_group("button-group");
+core::StringId field_group("field-group");
+core::StringId field_label("field-label");
+core::StringId field_row("field-row");
 
 } // namespace strings_
 
@@ -277,13 +281,16 @@ void ScreenColorPickerButton::stopPicking_() {
 }
 
 ScreenColorPickerButtonPtr ScreenColorPickerButton::create(std::string_view name) {
-    return ScreenColorPickerButtonPtr(new ScreenColorPickerButton(name));
+    Action* action = nullptr;
+    ScreenColorPickerButtonPtr button = new ScreenColorPickerButton(action);
+    action = button->createAction(name);
+    button->setAction(action);
+    action->triggered().connect(button->startPickingSlot_());
+    return button;
 }
 
-ScreenColorPickerButton::ScreenColorPickerButton(std::string_view name)
-    : Button(name) {
-
-    clicked().connect(startPickingSlot_());
+ScreenColorPickerButton::ScreenColorPickerButton(Action* action)
+    : Button(action, FlexDirection::Row) {
 }
 
 bool ScreenColorPickerButton::onMousePress(MouseEvent* event) {
@@ -344,14 +351,55 @@ bool ScreenColorPickerButton::onKeyRelease(QKeyEvent* event) {
 
 namespace {
 
-void setupHorizontalGroup_(Widget* first, Widget* middle, Widget* last) {
-    first->addStyleClass(strings_::horizontal_group);
-    first->addStyleClass(strings_::first);
-    last->addStyleClass(strings_::horizontal_group);
-    last->addStyleClass(strings_::last);
-    if (middle) {
-        middle->addStyleClass(strings_::horizontal_group);
-        middle->addStyleClass(strings_::middle);
+Widget* createFieldRow(Widget* parent, core::StringId styleClass) {
+    Row* row = parent->createChild<Row>();
+    row->addStyleClass(strings_::field_row);
+    row->addStyleClass(styleClass);
+    return row;
+}
+
+Widget* createFieldRowAndLabel(
+    Widget* parent,
+    core::StringId styleClass,
+    std::string_view labelText) {
+
+    Widget* row = createFieldRow(parent, styleClass);
+    Label* label = row->createChild<Label>(labelText);
+    label->addStyleClass(strings_::field_label);
+    return row;
+}
+
+Widget* createFieldRowLabelAndGroup(
+    Widget* parent,
+    core::StringId styleClass,
+    std::string_view labelText) {
+
+    Widget* row = createFieldRowAndLabel(parent, styleClass, labelText);
+    Row* group = row->createChild<Row>();
+    group->addStyleClass(strings_::field_group);
+    group->addStyleClass(strings_::horizontal);
+    return group;
+}
+
+void addFirstLastStyleClasses_(std::initializer_list<Widget*> widgets) {
+    const size_t n = widgets.size();
+    size_t i = 0;
+    for (Widget* widget : widgets) {
+        bool isFirst = (i == 0);
+        bool isLast = (i == n - 1);
+        if (isFirst) {
+            widget->addStyleClass(strings_::first);
+        }
+        else {
+            widget->addStyleClass(strings_::not_first);
+        }
+        if (isLast) {
+            widget->addStyleClass(strings_::last);
+        }
+        else {
+            widget->addStyleClass(strings_::not_last);
+        }
+        ++i;
     }
 }
 
@@ -363,13 +411,11 @@ void createThreeLineEdits_(
     LineEdit*& b,
     LineEdit*& c) {
 
-    Row* row = parent->createChild<Row>();
-    row->addStyleClass(styleClass);
-    row->createChild<Label>(labelText);
-    a = row->createChild<LineEdit>();
-    b = row->createChild<LineEdit>();
-    c = row->createChild<LineEdit>();
-    setupHorizontalGroup_(a, b, c);
+    Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
+    a = group->createChild<LineEdit>();
+    b = group->createChild<LineEdit>();
+    c = group->createChild<LineEdit>();
+    addFirstLastStyleClasses_({a, b, c});
 }
 
 void createOneLineEdit_(
@@ -378,15 +424,15 @@ void createOneLineEdit_(
     std::string_view labelText,
     LineEdit*& a) {
 
-    Row* row = parent->createChild<Row>();
-    row->addStyleClass(styleClass);
-    row->createChild<Label>(labelText);
-    a = row->createChild<LineEdit>();
+    Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
+    a = group->createChild<LineEdit>();
+    addFirstLastStyleClasses_({a});
 }
 
 Button* createCheckableButton_(Widget* parent, std::string_view text) {
-    Button* res = parent->createChild<Button>(text);
-    res->setCheckable(true);
+    Action* action = parent->createAction(text);
+    action->setCheckable(true);
+    Button* res = parent->createChild<Button>(action);
     return res;
 }
 
@@ -400,12 +446,13 @@ ColorPalette::ColorPalette()
 
     // Continuous vs. Steps
     Row* stepsModeRow = createChild<Row>();
+    stepsModeRow->addStyleClass(strings_::field_group);
     stepsButton_ = createCheckableButton_(stepsModeRow, "Steps");
     continuousButton_ = createCheckableButton_(stepsModeRow, "Continuous");
-    setupHorizontalGroup_(stepsButton_, nullptr, continuousButton_);
-    stepsButtonGroup_ = ButtonGroup::create(CheckPolicy::ExactlyOne);
-    stepsButtonGroup_->addButton(stepsButton_);
-    stepsButtonGroup_->addButton(continuousButton_);
+    addFirstLastStyleClasses_({stepsButton_, continuousButton_});
+    stepsActionGroup_ = ActionGroup::create(CheckPolicy::ExactlyOne);
+    stepsActionGroup_->addAction(stepsButton_->action());
+    stepsActionGroup_->addAction(continuousButton_->action());
     createThreeLineEdits_(
         this, strings_::steps, "Steps:", hStepsEdit_, sStepsEdit_, lStepsEdit_);
 
@@ -423,12 +470,15 @@ ColorPalette::ColorPalette()
 
     // Palette
     Row* paletteButtons = createChild<Row>();
-    Button* addToPaletteButton = paletteButtons->createChild<Button>("Add to Palette");
-    Button* removeFromPaletteButton = paletteButtons->createChild<Button>("-");
+    paletteButtons->addStyleClass(strings_::field_row);
+    Action* addToPaletteAction = createAction("Add to Palette");
+    paletteButtons->createChild<Button>(addToPaletteAction);
+    Action* removeFromPaletteAction = createAction("-");
+    paletteButtons->createChild<Button>(removeFromPaletteAction);
     colorListView_ = createChild<ColorListView>();
 
     // Connections
-    continuousButton_->checkStateChanged().connect(onContinuousChangedSlot_());
+    continuousButton_->action()->checkStateChanged().connect(onContinuousChangedSlot_());
     hStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
     sStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
     lStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
@@ -440,8 +490,8 @@ ColorPalette::ColorPalette()
     sEdit_->editingFinished().connect(onHslEditedSlot_());
     lEdit_->editingFinished().connect(onHslEditedSlot_());
     hexEdit_->editingFinished().connect(onHexEditedSlot_());
-    addToPaletteButton->clicked().connect(onAddToPaletteClickedSlot_());
-    removeFromPaletteButton->clicked().connect(onRemoveFromPaletteClickedSlot_());
+    addToPaletteAction->triggered().connect(onAddToPaletteSlot_());
+    removeFromPaletteAction->triggered().connect(onRemoveFromPaletteSlot_());
     pickScreenButton->pickingStarted().connect(onPickScreenStartedSlot_());
     pickScreenButton->pickingCancelled().connect(onPickScreenCancelledSlot_());
     pickScreenButton->colorHovered().connect(onPickScreenColorHoveredSlot_());
@@ -648,12 +698,12 @@ void ColorPalette::onPickScreenColorHovered_(const core::Color& color) {
     selectColor_(color);
 }
 
-void ColorPalette::onAddToPaletteClicked_() {
+void ColorPalette::onAddToPalette_() {
     colorListView_->appendColor(selectedColor());
     colorListView_->setSelectedColorIndex(colorListView_->numColors() - 1);
 }
 
-void ColorPalette::onRemoveFromPaletteClicked_() {
+void ColorPalette::onRemoveFromPalette_() {
     Int selectedColorIndex = colorListView_->selectedColorIndex();
     if (selectedColorIndex != -1) {
         colorListView_->removeColorAt(selectedColorIndex);

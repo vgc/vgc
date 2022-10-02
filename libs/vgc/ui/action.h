@@ -20,8 +20,8 @@
 #include <string>
 #include <string_view>
 
-#include <vgc/core/innercore.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/core/object.h>
+#include <vgc/ui/actiongroup.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/shortcut.h>
 
@@ -38,13 +38,12 @@ class VGC_UI_API Action : public core::Object {
 private:
     VGC_OBJECT(Action, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
-    friend Menu;
 
 protected:
     Action();
     explicit Action(const Shortcut& shortcut);
-    explicit Action(const std::string& text);
-    Action(const std::string& text, const Shortcut& shortcut);
+    explicit Action(const std::string_view& text);
+    Action(const std::string_view& text, const Shortcut& shortcut);
 
 public:
     /// Creates an action.
@@ -57,29 +56,23 @@ public:
 
     /// Creates an action with the given text.
     ///
-    static ActionPtr create(const std::string& text);
+    static ActionPtr create(const std::string_view& text);
 
     /// Creates an action with the given text and shortcut.
     ///
-    static ActionPtr create(const std::string& text, const Shortcut& shortcut);
+    static ActionPtr create(const std::string_view& text, const Shortcut& shortcut);
 
-    /// This signal is emitted whenever the action properties are changed (shortcut,
-    /// text, icon, ...).
-    ///
-    VGC_SIGNAL(changed)
+    // ----------------------- Action Properties -------------------------------
 
     /// Returns the descriptive text for this action.
     ///
-    const std::string& text() const {
+    std::string_view text() const {
         return text_;
     }
 
     /// Sets the descriptive text for this action.
     ///
-    void setText(std::string_view text) {
-        text_ = text;
-        changed().emit();
-    }
+    void setText(std::string_view text);
 
     /// Returns the shortcut associated with this action. This can be an empty
     /// shortcut if this action has no associated shortcut.
@@ -90,12 +83,84 @@ public:
 
     /// Sets the shortcut associated with this action.
     ///
-    void setShortcut(const Shortcut& shortcut) {
-        shortcut_ = shortcut;
-        changed().emit();
+    void setShortcut(const Shortcut& shortcut);
+
+    /// Returns the `CheckMode` of the action.
+    ///
+    /// \sa `setCheckMode()`, `isCheckable()`.
+    ///
+    CheckMode checkMode() const {
+        return checkMode_;
     }
 
-    VGC_SIGNAL(enabledChanged, (bool, enabled))
+    /// Sets the `CheckMode` of the `Action`.
+    ///
+    /// \sa `checkMode()`, `setCheckable()`.
+    ///
+    void setCheckMode(CheckMode checkMode);
+    VGC_SLOT(setCheckMode)
+
+    /// Returns `true` if the `checkMode()` of the `Action` is either
+    /// `Bistate` or `Tristate`. Otherwise, return `false`.
+    ///
+    /// \sa `setCheckable()`, `checkMode()`.
+    ///
+    bool isCheckable() const {
+        return checkMode_ != CheckMode::Uncheckable;
+    }
+
+    /// Sets the action's `CheckMode` to either `Bistate` (if `isCheckable`
+    /// is true), or `Uncheckable` (if `isCheckable` is false).
+    ///
+    /// \sa `isCheckable()`, `setCheckMode()`.
+    ///
+    void setCheckable(bool isCheckable) {
+        setCheckMode(isCheckable ? CheckMode::Bistate : CheckMode::Uncheckable);
+    }
+    VGC_SLOT(setCheckable)
+
+    /// This signal is emitted whenever the action "properties" have changed,
+    /// which are: `text()`, `shortcut()`, and `checkMode()`.
+    ///
+    /// Note that this signal is NOT emitted when `group()`, `isEnabled()`, or
+    /// `checkState()` changes or changes. If you wish to listen for these
+    /// changes, use `groupChanged()`, `enabledChanged()`, and
+    /// `checkStateChanged()` instead.
+    ///
+    VGC_SIGNAL(propertiesChanged)
+
+    // -------------------------- Action Group ---------------------------------
+
+    /// Returns the `ActionGroup` this `Action` belongs to. Returns `nullptr`
+    /// if this `Action` doesn't belong to any `ActionGroup`.
+    ///
+    ///\sa `setGroup()`, `groupChanged()`, `ActionGroup::addAction()`,
+    /// `ActionGroup::removeAction()`.
+    ///
+    ActionGroup* group() const {
+        return group_;
+    }
+
+    /// Sets the `ActionGroup` this `Action` belongs to.
+    ///
+    /// This is equivalent to removing the action from its current group
+    /// via `ActionGroup::removeAction(this)`, then adding it to its new group
+    /// via `ActionGroup::addAction(this)`.
+    ///
+    ///\sa `group()`, `groupChanged()`, `ActionGroup::addAction()`,
+    /// `ActionGroup::removeAction()`.
+    ///
+    void setGroup(ActionGroup* group);
+
+    /// This signal is emitted whenever the `group()` of this action changed.
+    /// Note that the new group will be `nullptr` if the action isn't part of
+    /// any group after the change.
+    ///
+    /// \sa `group()`, `setGroup()`.
+    ///
+    VGC_SIGNAL(groupChanged, (ActionGroup*, group))
+
+    // ------------------------- Action State ---------------------------------
 
     /// Returns whether this action is enabled or not.
     ///
@@ -105,19 +170,95 @@ public:
 
     /// Sets the disabled state of this action.
     ///
-    void setEnabled(bool enabled) {
-        if (isEnabled_ == enabled) {
-            return;
-        }
-        isEnabled_ = enabled;
-        this->enabledChanged().emit(enabled);
+    void setEnabled(bool enabled);
+    VGC_SLOT(setEnabled)
+
+    /// This signal is emitted whenever `isEnabled()` changes.
+    ///
+    VGC_SIGNAL(enabledChanged, (bool, enabled))
+
+    /// Returns the `CheckState` of the action.
+    ///
+    /// \sa `setCheckState()`, `isChecked()`.
+    ///
+    CheckState checkState() const {
+        return checkState_;
     }
 
-    /// Returns whether this action is to open a menu.
+    /// Returns whether the action supports the given state.
     ///
-    bool isMenu() const {
-        return isMenu_;
+    /// For `Uncheckable` actions, the only supported state is `Unchecked`.
+    ///
+    /// For `Bistate` actions, the supported states are `Unchecked` and `Checked`.
+    ///
+    /// For `Tristate` actions, the supported states are `Unchecked`, `Checked`, and
+    /// `Indeterminate`.
+    ///
+    /// \sa `checkState()`, `checkMode()`.
+    ///
+    bool supportsCheckState(CheckState checkState) const;
+
+    /// Sets the `CheckState` of the action.
+    ///
+    /// If the action doesn't support the given state (see
+    /// `supportsCheckState()`), then the state isn't changed and a warning is
+    /// emitted.
+    ///
+    /// \sa `checkState()`, `setChecked()`.
+    ///
+    void setCheckState(CheckState checkState);
+    VGC_SLOT(setCheckState)
+
+    /// This signal is emitted when the action check state changed.
+    ///
+    /// \sa setCheckState(), checkState().
+    ///
+    VGC_SIGNAL(checkStateChanged, (Action*, action), (CheckState, checkState));
+
+    /// Returns whether the action's `CheckState` is `Checked`.
+    ///
+    /// \sa `setChecked()`, `checkState()`.
+    ///
+    bool isChecked() const {
+        return checkState_ == CheckState::Checked;
     }
+
+    /// Sets the action's `CheckState` to either `Checked` (if `isChecked`
+    /// is true), or `Unchecked` (if `isChecked` is false).
+    ///
+    /// \sa `isChecked()`, `setCheckState()`.
+    ///
+    void setChecked(bool isChecked) {
+        setCheckState(isChecked ? CheckState::Checked : CheckState::Unchecked);
+    }
+    VGC_SLOT(setChecked)
+
+    /// Toggles the check state of the `Action`.
+    ///
+    /// This has different meaning depending on the `CheckMode` of the action
+    /// as well as the action's group `CheckPolicy`.
+    ///
+    /// If the action is `Uncheckable` then this function does nothing.
+    ///
+    /// If the action is `Bistate` then this function switches between
+    /// `Checked` and `Unchecked`, unless the action is part of a group whose
+    /// policy is `ExactlyOne`, in which case the action stays `Checked` if it
+    /// was already `Checked`.
+    ///
+    /// If the action is `Tristate`:
+    /// - If its state is `Indeterminate`, then this function changes its state
+    ///   to `Checked`.
+    /// - If its state is `Checked` or `Unchecked`, then this function behaves
+    ///   as if the action was `Bistate`.
+    ///
+    /// Note that after calling this function (or clicking on a action), the
+    /// action state will never be `Indeterminate`. The `Indeterminate` state
+    /// can only be set programatically via `setCheckState()`.
+    ///
+    /// \sa `setCheckState()`, `setChecked()`.
+    ///
+    bool toggle();
+    VGC_SLOT(toggle)
 
     /// If the action is not disabled, triggers the action and returns true.
     /// Otherwise returns false.
@@ -127,19 +268,34 @@ public:
     /// \sa triggered
     ///
     bool trigger(Widget* from = nullptr);
+    VGC_SLOT(trigger)
 
-    /// This signal is emitted whenever the action is activated by the user (for example,
-    /// clicking on an associated button), or when the trigger() method is called.
+    /// This signal is emitted whenever the action is activated by the user
+    /// (for example, clicking on a button associated with this action), or
+    /// when the trigger() method is called.
     ///
     /// \sa trigger()
     ///
     VGC_SIGNAL(triggered, (Widget*, from))
 
 private:
+    friend Menu;
+    friend ActionGroup;
+
     std::string text_;
     Shortcut shortcut_;
+    ui::ActionGroup* group_ = nullptr;
     bool isEnabled_ = true;
     bool isMenu_ = false;
+    CheckMode checkMode_ = CheckMode::Uncheckable;
+    CheckState checkState_ = CheckState::Unchecked;
+    CheckState lastEmittedCheckState_ = CheckState::Unchecked;
+
+    // Directly sets the new state, ignoring policy and emitting no signals
+    void setCheckStateNoEmit_(CheckState newState);
+
+    // Emits checkStateChanged() if current state != last emitted state
+    void emitPendingCheckState_();
 };
 
 } // namespace vgc::ui

@@ -54,6 +54,9 @@ void StylableObject::toggleStyleClass(core::StringId class_) {
 }
 
 void StylableObject::replaceStyleClass(core::StringId oldClass, core::StringId newClass) {
+    if (oldClass == newClass) {
+        return;
+    }
     if (isAlive()) {
         bool changed = false;
         if (styleClasses_.contains(oldClass)) {

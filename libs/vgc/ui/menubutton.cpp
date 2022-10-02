@@ -45,92 +45,6 @@ float getSpacing(const Widget* w, core::StringId id, bool hint) {
 
 } // namespace
 
-ActionButton::ActionButton(Action* action, FlexDirection layoutDirection)
-    : Flex(layoutDirection, FlexWrap::NoWrap)
-    , action_(action) {
-
-    action_->aboutToBeDestroyed().connect(onActionAboutToBeDestroyed_());
-    action_->changed().connect(onActionChangedSlot_());
-    iconWidget_ = createChild<Widget>();
-    iconWidget_->addStyleClass(core::StringId("Icon"));
-    textLabel_ = createChild<Label>(action_->text());
-    textLabel_->addStyleClass(core::StringId("Text"));
-    shortcutLabel_ = createChild<Label>(core::format("shortcutFor({})", action_->text()));
-    shortcutLabel_->addStyleClass(core::StringId("Shortcut"));
-
-    // XXX temporary
-    shortcutLabel_->hide();
-    iconWidget_->hide();
-}
-
-ActionButtonPtr ActionButton::create(Action* action, FlexDirection layoutDirection) {
-    return ActionButtonPtr(new ActionButton(action, layoutDirection));
-}
-
-void ActionButton::onDestroyed() {
-    action_ = nullptr;
-    iconWidget_ = nullptr;
-    textLabel_ = nullptr;
-    shortcutLabel_ = nullptr;
-    SuperClass::onDestroyed();
-}
-
-void ActionButton::onWidgetRemoved(Widget* /*child*/) {
-    destroy();
-}
-
-bool ActionButton::onMouseEnter() {
-    addStyleClass(strings::hovered);
-    return false;
-}
-
-bool ActionButton::onMouseLeave() {
-    removeStyleClass(strings::hovered);
-    return false;
-}
-
-bool ActionButton::onMousePress(MouseEvent* /*event*/) {
-    return tryClick_();
-}
-
-void ActionButton::onStyleChanged() {
-    SuperClass::onStyleChanged();
-}
-
-void ActionButton::onClicked() {
-}
-
-void ActionButton::setActive(bool isActive) {
-    if (isActive_ == isActive) {
-        return;
-    }
-    isActive_ = isActive;
-    if (isActive) {
-        addStyleClass(strings::active);
-    }
-    else {
-        removeStyleClass(strings::active);
-    }
-}
-
-bool ActionButton::tryClick_() {
-    if (action_ && action_->trigger(this)) {
-        onClicked();
-        clicked().emit();
-        return true;
-    }
-    return false;
-}
-
-void ActionButton::onActionChanged_() {
-    textLabel_->setText(action_->text());
-    shortcutLabel_->setText(core::format("shortcutFor({})", action_->text()));
-    requestGeometryUpdate();
-    requestRepaint();
-}
-
-//---------------------------------------------------------------------------------------
-
 namespace {
 
 void applySizeOverrides(geometry::Vec2f& size, const geometry::Vec2f& overrides) {
@@ -151,7 +65,7 @@ float allocSize(float requested, float& remaining) {
 } // namespace
 
 MenuButton::MenuButton(Action* action, FlexDirection layoutDirection)
-    : ActionButton(action, layoutDirection) {
+    : Button(action, layoutDirection) {
 
     addStyleClass(strings::MenuButton);
 }

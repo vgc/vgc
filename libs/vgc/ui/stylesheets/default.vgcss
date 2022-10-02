@@ -1,17 +1,17 @@
-.Flex {
-    padding-top: 10dp;
-    padding-right: 10dp;
-    padding-bottom: 10dp;
-    padding-left: 10dp;
+.PanelArea > .Flex,
+.PanelArea > .Flex > .Flex,
+.root.Flex,
+.root.Flex > .Flex {
     row-gap: 10dp;
     column-gap: 10dp;
 }
 
-.Flex.inner {
-    padding-top: 0dp;
-    padding-right: 0dp;
-    padding-bottom: 0dp;
-    padding-left: 0dp;
+.PanelArea > .Flex,
+.root.Flex {
+    padding-top: 10dp;
+    padding-right: 10dp;
+    padding-bottom: 10dp;
+    padding-left: 10dp;
 }
 
 .Menu {
@@ -35,12 +35,10 @@
 }
 
 .MenuButton {
-    padding-top: 3dp;
+    padding-top: 0dp;
     padding-right: 10dp;
-    padding-bottom: 3dp;
+    padding-bottom: 0dp;
     padding-left: 10dp;
-    row-gap: 10dp;
-    column-gap: 10dp;
     horizontal-shrink: 0;
     horizontal-stretch: 0;
     vertical-shrink: 0;
@@ -80,6 +78,10 @@
     text-horizontal-align: center;
 }
 
+.MenuButton {
+    preferred-height: 25dp;
+}
+
 .LineEdit {
     text-horizontal-align: left;
 }
@@ -94,6 +96,7 @@
     border-bottom-left-radius: 3dp;
 }
 
+.MenuButton,
 .Menu.horizontal {
     border-top-left-radius: 0dp;
     border-top-right-radius: 0dp;
@@ -101,21 +104,23 @@
     border-bottom-left-radius: 0dp;
 }
 
-.horizontal-group.first {
-    border-top-right-radius: 0dp;
-    border-bottom-right-radius: 0dp;
+/* We use .Flex.Flex as a hack to increase specificity,
+   otherwise `.root.Flex > .Flex` is more specific */
+.Flex.Flex.field-row,
+.Flex.Flex.field-group {
+    vertical-stretch: 0;
+    vertical-shrink: 0;
+    column-gap: 1dp;
 }
 
-.horizontal-group.middle {
+.field-group > .not-first {
     border-top-left-radius: 0dp;
-    border-top-right-radius: 0dp;
-    border-bottom-right-radius: 0dp;
     border-bottom-left-radius: 0dp;
 }
 
-.horizontal-group.last {
-    border-top-left-radius: 0dp;
-    border-bottom-left-radius: 0dp;
+.field-group > .not-last {
+    border-top-right-radius: 0dp;
+    border-bottom-right-radius: 0dp;
 }
 
 .LineEdit,
@@ -153,6 +158,7 @@
 }
 
 .MenuButton {
+    background-color: rgb(49, 51, 53);
     /* background-color drawn by .Menu */
 }
 
@@ -198,30 +204,22 @@
     vertical-stretch: 0;
 }
 
-.ColorPalette .Flex {
-    column-gap: 1dp;
-    padding-top: 0dp;
-    padding-right: 0dp;
-    padding-bottom: 0dp;
-    padding-left: 0dp;
-}
-
-.ColorPalette .Flex .Label {
+.ColorPalette .field-row > .field-label {
     preferred-width: 34dp;
     horizontal-stretch: 0;
     text-horizontal-align: left;
 }
 
-.ColorPalette .Flex .LineEdit {
+.ColorPalette .field-row.steps > .field-label {
+    preferred-width: 42dp;
+}
+
+.ColorPalette .field-group > .LineEdit {
     /* not using 'preferred-width: auto' ensures that all line edits
        have the same width regardless of the value entered */
     preferred-width: 10dp;
     horizontal-stretch: 1;
     text-horizontal-align: left;
-}
-
-.ColorPalette .Flex.steps .Label {
-    preferred-width: 42dp;
 }
 
 .ColorListView {
