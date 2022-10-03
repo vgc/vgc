@@ -229,16 +229,10 @@ struct hash<vgc::core::StringId> {
 } // namespace std
 
 template<>
-struct fmt::formatter<vgc::core::StringId> {
-    constexpr auto parse(format_parse_context& ctx) {
-        auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
-            throw format_error("invalid format");
-        return it;
-    }
+struct fmt::formatter<vgc::core::StringId> : fmt::formatter<std::string_view> {
     template<typename FormatContext>
-    auto format(const vgc::core::StringId& stringId, FormatContext& ctx) {
-        return format_to(ctx.out(), "{}", stringId.string());
+    auto format(vgc::core::StringId s, FormatContext& ctx) {
+        return fmt::formatter<std::string_view>::format(s.string(), ctx);
     }
 };
 

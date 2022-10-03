@@ -636,6 +636,36 @@ secondsToString(double t, TimeUnit unit = TimeUnit::Seconds, int decimals = 0);
 VGC_CORE_API
 std::string_view toHexPair(unsigned char x);
 
+/// \class vgc::core::EnumeratorStrings
+/// \brief Stores strings related to an enumerator of an `enum` or `enum class`.
+///
+/// \sa EnumFormatter
+///
+class VGC_CORE_API EnumeratorStrings {
+public:
+    EnumeratorStrings(std::string_view name)
+        : name_(name) {
+    }
+
+    std::string_view name() const {
+        return name_;
+    }
+
+private:
+    std::string name_;
+};
+
+/// \class vgc::core::EnumFormatter
+/// \brief Helper class to define custom formatters for enum classes
+///
+template<typename Enum>
+struct EnumFormatter : fmt::formatter<std::string_view> {
+    template<typename FormatContext>
+    auto format(Enum v, FormatContext& ctx) {
+        return fmt::formatter<std::string_view>::format(enumeratorStrings(v).name(), ctx);
+    }
+};
+
 } // namespace vgc::core
 
 #endif // VGC_CORE_FORMAT_H
