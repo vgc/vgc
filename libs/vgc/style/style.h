@@ -440,29 +440,15 @@ enum class StyleSelectorItemType : Int8 {
 
 } // namespace vgc::style
 
+namespace vgc::style {
+
+const vgc::core::EnumeratorStrings& enumeratorStrings(StyleSelectorItemType value);
+
+} // namespace vgc::style
+
 template<>
 struct fmt::formatter<vgc::style::StyleSelectorItemType>
-    : fmt::formatter<std::string_view> {
-
-    using T = vgc::style::StyleSelectorItemType;
-
-    template<typename FormatContext>
-    auto format(T type, FormatContext& ctx) {
-        std::string_view name = "UnknownStyleSelectorItemType";
-        switch (type) {
-        case T::ClassSelector:
-            name = "ClassSelector";
-            break;
-        case T::DescendantCombinator:
-            name = "DescendantCombinator";
-            break;
-        case T::ChildCombinator:
-            name = "ChildCombinator";
-            break;
-        }
-        return fmt::formatter<std::string_view>::format(name, ctx);
-    }
-};
+    : vgc::core::EnumFormatter<vgc::style::StyleSelectorItemType> {};
 
 namespace vgc::style {
 
