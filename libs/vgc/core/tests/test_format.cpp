@@ -354,6 +354,30 @@ TEST(TestFormat, Benchmark) {
     // std::to_string(x) (not reserved) ..   60112µs
 }
 
+namespace vgc::foo {
+
+enum class MyEnum {
+    MyValue,
+    MyOtherValue
+};
+
+} // namespace vgc::foo
+
+VGC_DECLARE_SCOPED_ENUM_FORMATTER((vgc, foo), MyEnum)
+
+VGC_DEFINE_SCOPED_ENUM_FORMATTER(
+    (vgc, foo),
+    MyEnum,
+    (MyValue, "My Value"),
+    (MyOtherValue, "My Other Value"))
+
+TEST(TestFormat, Enum) {
+    std::string s1 = vgc::core::format("{:-^29}", vgc::foo::MyEnum::MyValue);
+    std::string_view s2 = enumeratorStrings(vgc::foo::MyEnum::MyOtherValue).prettyName();
+    EXPECT_EQ(s1, "--vgc::foo::MyEnum::MyValue--");
+    EXPECT_EQ(s2, "My Other Value");
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

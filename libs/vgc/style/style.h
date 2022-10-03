@@ -440,15 +440,7 @@ enum class StyleSelectorItemType : Int8 {
 
 } // namespace vgc::style
 
-namespace vgc::style {
-
-const vgc::core::EnumeratorStrings& enumeratorStrings(StyleSelectorItemType value);
-
-} // namespace vgc::style
-
-template<>
-struct fmt::formatter<vgc::style::StyleSelectorItemType>
-    : vgc::core::EnumFormatter<vgc::style::StyleSelectorItemType> {};
+VGC_DECLARE_SCOPED_ENUM_FORMATTER((vgc, style), StyleSelectorItemType)
 
 namespace vgc::style {
 

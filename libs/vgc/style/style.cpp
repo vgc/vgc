@@ -20,33 +20,12 @@
 #include <vgc/style/strings.h>
 #include <vgc/style/stylableobject.h>
 
-#include <unordered_map>
-
-namespace vgc::style {
-
-const ::vgc::core::EnumeratorStrings& enumeratorStrings(StyleSelectorItemType value) {
-    using T = StyleSelectorItemType;
-    using S = ::vgc::core::EnumeratorStrings;
-    using Map = std::unordered_map<T, S>;
-    auto createMap = []() {
-        Map res;
-        res.insert({T::ClassSelector, S("ClassSelector")});
-        res.insert({T::DescendantCombinator, S("DescendantCombinator")});
-        res.insert({T::ChildCombinator, S("ChildCombinator")});
-        return res;
-    };
-    static const S unknown = S("Unknown_StyleSelectorItemType");
-    static const Map map = createMap();
-    auto search = map.find(value);
-    if (search != map.end()) {
-        return search->second;
-    }
-    else {
-        return unknown;
-    }
-}
-
-} // namespace vgc::style
+VGC_DEFINE_SCOPED_ENUM_FORMATTER(
+    (vgc, style),
+    StyleSelectorItemType,
+    (ClassSelector, "Class Selector"),
+    (DescendantCombinator, "Descendant Combinator"),
+    (ChildCombinator, "Child Combinator"))
 
 namespace vgc::style {
 
