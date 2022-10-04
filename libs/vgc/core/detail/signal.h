@@ -1211,11 +1211,11 @@ private:
 /// ```
 ///
 #define VGC_SIGNAL(...) VGC_PP_EXPAND(VGC_SIGNAL_X_(__VA_ARGS__, ~))
-#define VGC_SIGNAL_X_(name_, ...)                                                          \
+#define VGC_SIGNAL_X_(name_, ...)                                                        \
     auto name_() const {                                                                 \
         struct Tag {};                                                                   \
         using MyClass = std::remove_const_t<std::remove_pointer_t<decltype(this)>>;      \
-        using ArgsTuple = std::tuple<VGC_PARAMS_TYPE_X_(__VA_ARGS__)>;                     \
+        using ArgsTuple = std::tuple<VGC_PARAMS_TYPE_X_(__VA_ARGS__)>;                   \
         using SignalRefT = ::vgc::core::detail::SignalRef<Tag, MyClass, ArgsTuple>;      \
         class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_               \
                                           "().emit()?")) SignalRef : public SignalRefT { \
@@ -1223,8 +1223,8 @@ private:
             SignalRef(const MyClass* object)                                             \
                 : SignalRefT(object) {                                                   \
             }                                                                            \
-            void emit(VGC_PARAMS_X_(__VA_ARGS__)) const {                                  \
-                this->emitFwd_(VGC_PARAMS_NAME_X_(__VA_ARGS__));                           \
+            void emit(VGC_PARAMS_X_(__VA_ARGS__)) const {                                \
+                this->emitFwd_(VGC_PARAMS_NAME_X_(__VA_ARGS__));                         \
             }                                                                            \
         };                                                                               \
         return SignalRef(this);                                                          \
