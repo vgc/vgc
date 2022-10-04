@@ -447,8 +447,8 @@ public:
             "The slot signature cannot be longer than the signal signature.");
         static_assert(
             std::tuple_size_v<SignalArgRefsTuple> < VGC_CORE_MAX_SIGNAL_ARGS,
-            "Signals and slots are limited to "
-            VGC_PP_STR(VGC_CORE_MAX_SIGNAL_ARGS)
+            "Signals and slots are limited to "  //
+            VGC_PP_STR(VGC_CORE_MAX_SIGNAL_ARGS) //
             " parameters.");
 
         if constexpr (isMethod<RemoveCVRef<SlotCallable>>) {

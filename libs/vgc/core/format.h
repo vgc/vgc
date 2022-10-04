@@ -614,7 +614,8 @@ std::string toAddressString(const T* x) {
 /// \enum vgc::core::TimeUnit
 /// \brief Enumeration of all possible time units
 ///
-enum class TimeUnit {
+enum class TimeUnit
+{
     Seconds,
     Milliseconds,
     Microseconds,
@@ -705,8 +706,8 @@ struct EnumFormatter : fmt::formatter<std::string_view> {
             using E = Enum;                                                              \
             using S = ::vgc::core::EnumeratorStrings;                                    \
             using Map = std::unordered_map<E, S>;                                        \
-            static const char* namespace_ = VGC_PP_STR(VGC_NAMESPACE Namespace);   \
-            static const char* enum_ = VGC_PP_STR(Enum);                           \
+            static const char* namespace_ = VGC_PP_STR(VGC_NAMESPACE Namespace);         \
+            static const char* enum_ = VGC_PP_STR(Enum);                                 \
             static auto createMap = []() {                                               \
                 Map map;                                                                 \
                 VGC_PP_EXPAND(VGC_PP_FOREACH_X(                                          \
