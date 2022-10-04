@@ -66,7 +66,10 @@ py::object signalDecoratorFn(const py::function& signalMethod) {
     }
     --arity;
     if (arity > VGC_CORE_MAX_SIGNAL_ARGS) {
-        throw py::value_error("Signals and slots are limited to " VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
+        throw py::value_error(
+            "Signals and slots are limited to "
+            VGC_PP_STR(VGC_CORE_MAX_SIGNAL_ARGS)
+            " arguments.");
     }
 
     // Create a new unique ID for this signal.
@@ -121,7 +124,10 @@ py::object slotDecoratorFn(py::function unboundSlotMethod) {
     }
     --arity;
     if (arity > VGC_CORE_MAX_SIGNAL_ARGS) {
-        throw py::value_error("Signals and slots are limited to " VGC_PP_XSTR(VGC_CORE_MAX_SIGNAL_ARGS) " arguments.");
+        throw py::value_error(
+            "Signals and slots are limited to "
+            VGC_PP_STR(VGC_CORE_MAX_SIGNAL_ARGS)
+            " arguments.");
     }
 
     // Create a new unique ID for this slot.

@@ -19,16 +19,50 @@
 
 // clang-format off
 
-#define VGC_PP_STR(x) #x
-#define VGC_PP_XSTR(x) VGC_PP_STR(x)
+/// Converts the given argument to a string literal, after performing macro
+/// expansion.
+///
+#define VGC_PP_STR(x) VGC_PP_STR_(x)
+#define VGC_PP_STR_(x) #x
 
-#define VGC_PP_CONCAT(x, y) x##y
-#define VGC_PP_XCONCAT(x, y) VGC_PP_CONCAT(x,y)
+/// Concatenates the two given arguments after performing macro expansion.
+///
+#define VGC_PP_CAT(x, y) VGC_PP_CAT_(x, y)
+#define VGC_PP_CAT_(x, y) x ## y
 
+/// Expands the given argument before further macro processing.
+/// 
+/// Such expansion is required in some compilers (e.g., MSVC) whenever
+/// you need to call a macro whose arguments are themselves macros or __VA_ARGS__.
+/// 
+/// Example (on MSVC 2019): 
+///
+/// ```cpp
+/// #define ADD(x, y) x + y
+/// #define APPLY_OP_BUG(op, ...) op(__VA_ARGS__)
+/// #define APPLY_OP_FIX(op, ...) VGC_PP_EXPAND(op(__VA_ARGS__))
+/// 
+/// int x = APPLY_OP_BUG(ADD, 1, 2); // Expands to `1, 2 +` => compile error
+/// int y = APPLY_OP_FIX(ADD, 1, 2); // Expands to `1 + 2`  => ok
+/// ```
+/// 
+/// Note: the similar Boost macro BOOST_PP_EXPAND performs double-expansion, while
+/// our macro VGC_PP_EXPAND only performs single-expansion, which seems enough
+/// in all our use cases (compiling with MSVC, GCC, and Clang). If double-expansion
+/// is required, you can use VGC_PP_EXPAND_TWICE.
+/// 
 #define VGC_PP_EXPAND(x) x
-#define VGC_PP_EXPAND2(x) VGC_PP_EXPAND(x)
 
+/// Expands the given argument twice before further macro processing.
+///
+#define VGC_PP_EXPAND_TWICE(x) VGC_PP_EXPAND(x)
+
+/// Returns the first argument of the two given arguments.
+//
 #define VGC_PP_PAIR_FIRST(x, y) x
+
+/// Returns the second argument of the two given arguments.
+//
 #define VGC_PP_PAIR_SECOND(x, y) y
 
 // Bits of VGC_PP_TRIM_VAEND.
@@ -133,7 +167,7 @@
 /// // => Now you can use either FOO(x) or FOO(x, y)
 /// ```
 ///
-#define VGC_PP_OVERLOAD(prefix, ...) VGC_PP_XCONCAT(prefix, VGC_PP_NUM_ARGS(__VA_ARGS__))
+#define VGC_PP_OVERLOAD(prefix, ...) VGC_PP_CAT(prefix, VGC_PP_NUM_ARGS(__VA_ARGS__))
 
 /// The macro `VGC_PP_FOREACH(F, x, t1, t2, ...)` expands to `F(x, t1) F(x, t2) ...`.
 ///
@@ -151,7 +185,7 @@
 /// ```
 ///
 #define VGC_PP_FOREACH_X(...) VGC_PP_EXPAND(VGC_PP_OVERLOAD(VGC_PP_FOREACH_X_,__VA_ARGS__)(__VA_ARGS__))
-#define VGC_PP_FOREACH(...) VGC_PP_FOREACH_X(__VA_ARGS__, ~)
+#define VGC_PP_FOREACH(...) VGC_PP_EXPAND(VGC_PP_FOREACH_X(__VA_ARGS__, ~))
 
 #define VGC_PP_FOREACH_X_1(_)
 #define VGC_PP_FOREACH_X_2(F, _)
