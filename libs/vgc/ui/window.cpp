@@ -526,12 +526,6 @@ bool Window::event(QEvent* event) {
     case QEvent::Leave:
         leaveEvent(event);
         return true;
-    case QEvent::TabletEnterProximity:
-        tabletInProximity_ = true;
-        return true;
-    case QEvent::TabletLeaveProximity:
-        tabletInProximity_ = false;
-        return true;
     case QEvent::UpdateRequest:
         if (!activeSizemove_) {
             if (debugEvents) {
@@ -580,6 +574,8 @@ bool Window::eventFilter(QObject* obj, QEvent* event) {
     case QEvent::TabletLeaveProximity:
         timeSinceLastTableEvent_.restart();
         tabletInProximity_ = false;
+        // XXX should we do this ?
+        // pressedTabletButtons_.clear();
         break;
     default:
         break;
