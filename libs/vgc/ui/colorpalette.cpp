@@ -577,6 +577,9 @@ core::Color parseHex_(LineEdit* lineEdit, bool& isValid) {
 } // namespace
 
 void ColorPalette::onContinuousChanged_() {
+    if (hasReachedStage(core::ObjectStage::AboutToBeDestroyed)) {
+        return;
+    }
     bool isContinuous = continuousButton_->isChecked();
     selector_->setContinuous(isContinuous);
 }
