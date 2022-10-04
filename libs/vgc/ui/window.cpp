@@ -215,12 +215,12 @@ void Window::mousePressEvent(QMouseEvent* event) {
         event->setAccepted(true);
         return;
     }
-    pressedMouseButtons_.set(button);
     if (pressedTabletButtons_.has(button)) {
         // Already pressed on tablet: ignore event.
         event->setAccepted(true);
         return;
     }
+    pressedMouseButtons_.set(button);
     Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
     event->setAccepted(mousePressEvent_(receiver, vgcEvent.get()));
 }
@@ -257,12 +257,12 @@ void Window::tabletEvent(QTabletEvent* event) {
             event->setAccepted(true);
             break;
         }
-        pressedTabletButtons_.set(button);
         if (pressedMouseButtons_.has(button)) {
             // Already pressed on mouse: ignore event.
             event->setAccepted(true);
             break;
         }
+        pressedTabletButtons_.set(button);
         Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
         mousePressEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
