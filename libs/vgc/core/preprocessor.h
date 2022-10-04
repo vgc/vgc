@@ -65,68 +65,9 @@
 //
 #define VGC_PP_PAIR_SECOND(x, y) y
 
-// Bits of VGC_PP_TRIM_VAEND.
-#define VGC_PP_TVE_0_(_)
-#define VGC_PP_TVE_1_(x, _) x
-#define VGC_PP_TVE_2_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_1_(__VA_ARGS__))
-#define VGC_PP_TVE_3_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_2_(__VA_ARGS__))
-#define VGC_PP_TVE_4_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_3_(__VA_ARGS__))
-#define VGC_PP_TVE_5_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_4_(__VA_ARGS__))
-#define VGC_PP_TVE_6_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_5_(__VA_ARGS__))
-#define VGC_PP_TVE_7_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_6_(__VA_ARGS__))
-#define VGC_PP_TVE_8_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_7_(__VA_ARGS__))
-#define VGC_PP_TVE_9_(x, ...) x, VGC_PP_EXPAND(VGC_PP_TVE_8_(__VA_ARGS__))
-#define VGC_PP_TVE_DISPATCH_(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, S, ...) S
-
-/// Helper macro to trim VaEnd from __VA_ARGS__.
-/// Input list must end with VaEnd.
-///
-#define VGC_PP_TRIM_VAEND(...)                                                           \
-    VGC_PP_EXPAND(VGC_PP_TVE_DISPATCH_(                                                  \
-        __VA_ARGS__,                                                                     \
-        VGC_PP_TVE_9_,                                                                   \
-        VGC_PP_TVE_8_,                                                                   \
-        VGC_PP_TVE_7_,                                                                   \
-        VGC_PP_TVE_6_,                                                                   \
-        VGC_PP_TVE_5_,                                                                   \
-        VGC_PP_TVE_4_,                                                                   \
-        VGC_PP_TVE_3_,                                                                   \
-        VGC_PP_TVE_2_,                                                                   \
-        VGC_PP_TVE_1_,                                                                   \
-        VGC_PP_TVE_0_)(__VA_ARGS__))
-
-// Bits of VGC_TRANSFORM_.
-// XXX check that the VGC_EXPAND fix for msvc works with all F
+/// Returns both arguments of a pair, separated by a whitespace.
 //
-#define VGC_PP_TF_0_(F, _) VaEnd
-#define VGC_PP_TF_1_(F, x, ...) F(x), VaEnd
-#define VGC_PP_TF_2_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_1_(F, __VA_ARGS__))
-#define VGC_PP_TF_3_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_2_(F, __VA_ARGS__))
-#define VGC_PP_TF_4_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_3_(F, __VA_ARGS__))
-#define VGC_PP_TF_5_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_4_(F, __VA_ARGS__))
-#define VGC_PP_TF_6_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_5_(F, __VA_ARGS__))
-#define VGC_PP_TF_7_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_6_(F, __VA_ARGS__))
-#define VGC_PP_TF_8_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_7_(F, __VA_ARGS__))
-#define VGC_PP_TF_9_(F, x, ...) F(x), VGC_PP_EXPAND(VGC_PP_TF_8_(F, __VA_ARGS__))
-#define VGC_PP_TF_DISPATCH_(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, S, ...) S
-
-/// Macro to transform a list of token. Applies F on each token except VaEnd.
-/// (t0, t1, .., t3, VaEnd) -> (F(t0), F(t1), .., F(t3), VaEnd).
-/// Input list must end with VaEnd.
-///
-#define VGC_PP_TRANSFORM(F, ...)                                                         \
-    VGC_PP_EXPAND(VGC_PP_TF_DISPATCH_(                                                   \
-        __VA_ARGS__,                                                                     \
-        VGC_PP_TF_9_,                                                                    \
-        VGC_PP_TF_8_,                                                                    \
-        VGC_PP_TF_7_,                                                                    \
-        VGC_PP_TF_6_,                                                                    \
-        VGC_PP_TF_5_,                                                                    \
-        VGC_PP_TF_4_,                                                                    \
-        VGC_PP_TF_3_,                                                                    \
-        VGC_PP_TF_2_,                                                                    \
-        VGC_PP_TF_1_,                                                                    \
-        VGC_PP_TF_0_)(F, __VA_ARGS__))
+#define VGC_PP_PAIR_BOTH(x, y) x y
 
 /// Returns the number of arguments of a macro.
 ///
@@ -287,6 +228,112 @@
 #define VGC_PP_FOREACH_X_98(F, x, t, ...)  F(x, t) VGC_PP_EXPAND(VGC_PP_FOREACH_X_97(F, x, __VA_ARGS__))
 #define VGC_PP_FOREACH_X_99(F, x, t, ...)  F(x, t) VGC_PP_EXPAND(VGC_PP_FOREACH_X_98(F, x, __VA_ARGS__))
 #define VGC_PP_FOREACH_X_100(F, x, t, ...) F(x, t) VGC_PP_EXPAND(VGC_PP_FOREACH_X_99(F, x, __VA_ARGS__))
+
+/// The macro `VGC_PP_TRANSFORM(F, x, t1, t2, ...)` expands to `F(x, t1), F(x, t2) ...`.
+///
+#define VGC_PP_TRANSFORM_X(...) VGC_PP_EXPAND(VGC_PP_OVERLOAD(VGC_PP_TRANSFORM_X_,__VA_ARGS__)(__VA_ARGS__))
+#define VGC_PP_TRANSFORM(...) VGC_PP_EXPAND(VGC_PP_TRANSFORM_X(__VA_ARGS__, ~))
+
+#define VGC_PP_TRANSFORM_X_1(_)
+#define VGC_PP_TRANSFORM_X_2(F, _)
+#define VGC_PP_TRANSFORM_X_3(F, x, _)
+#define VGC_PP_TRANSFORM_X_4(F, x, t, ...)   F(x, t)
+#define VGC_PP_TRANSFORM_X_5(F, x, t, ...)   F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_4(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_6(F, x, t, ...)   F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_5(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_7(F, x, t, ...)   F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_6(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_8(F, x, t, ...)   F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_7(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_9(F, x, t, ...)   F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_8(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_10(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_9(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_11(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_10(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_12(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_11(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_13(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_12(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_14(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_13(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_15(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_14(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_16(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_15(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_17(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_16(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_18(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_17(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_19(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_18(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_20(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_19(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_21(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_20(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_22(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_21(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_23(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_22(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_24(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_23(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_25(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_24(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_26(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_25(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_27(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_26(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_28(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_27(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_29(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_28(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_30(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_29(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_31(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_30(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_32(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_31(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_33(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_32(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_34(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_33(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_35(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_34(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_36(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_35(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_37(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_36(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_38(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_37(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_39(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_38(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_40(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_39(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_41(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_40(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_42(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_41(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_43(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_42(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_44(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_43(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_45(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_44(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_46(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_45(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_47(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_46(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_48(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_47(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_49(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_48(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_50(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_49(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_51(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_50(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_52(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_51(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_53(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_52(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_54(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_53(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_55(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_54(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_56(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_55(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_57(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_56(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_58(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_57(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_59(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_58(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_60(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_49(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_61(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_60(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_62(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_61(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_63(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_62(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_64(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_63(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_65(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_64(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_66(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_65(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_67(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_66(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_68(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_67(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_69(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_68(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_70(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_69(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_71(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_70(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_72(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_71(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_73(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_72(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_74(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_73(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_75(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_74(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_76(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_75(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_77(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_76(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_78(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_77(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_79(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_78(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_80(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_79(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_81(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_80(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_82(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_81(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_83(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_82(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_84(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_83(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_85(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_84(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_86(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_85(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_87(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_86(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_88(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_87(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_89(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_88(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_90(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_89(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_91(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_90(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_92(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_91(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_93(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_92(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_94(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_93(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_95(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_94(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_96(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_95(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_97(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_96(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_98(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_97(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_99(F, x, t, ...)  F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_98(F, x, __VA_ARGS__))
+#define VGC_PP_TRANSFORM_X_100(F, x, t, ...) F(x, t), VGC_PP_EXPAND(VGC_PP_TRANSFORM_X_99(F, x, __VA_ARGS__))
 
 /// The macro `VGC_NAMESPACE(ns1, ns2, ...)` expands to `ns1::ns2::...`.
 ///
