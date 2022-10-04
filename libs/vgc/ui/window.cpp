@@ -297,6 +297,26 @@ void Window::tabletEvent(QTabletEvent* event) {
     }
 }
 
+// Qt tablet event handling is buggy.
+// Tablet proximity events may not happen in some cases according to some Qt user reports.
+// Also, the documentation says accepting a tablet event prevents it from being resent
+// through as a mouse event (fallback mechanism for apps not handling tablet events).
+// However we tested this and still had an especially bad result on windows:
+// Real input:
+//    - tablet press
+//    - tablet release
+// Received events:
+//    - tablet press
+//    - tablet release
+//    - mouse press
+//    - mouse release
+// To filter those spurious events out we use an additional timer.
+//
+bool Window::isTabletInUse_() const {
+    return pressedTabletButtons_ || tabletInProximity_
+           || timeSinceLastTableEvent_.elapsed() < 1.0;
+}
+
 bool Window::mouseMoveEvent_(Widget* receiver, MouseEvent* event) {
     if (!widget_->isHovered()) {
         if (widget_->geometry().contains(event->position())) {
@@ -565,6 +585,9 @@ bool Window::event(QEvent* event) {
     return QWindow::event(event);
 }
 
+// These events may not exist on some Qt versions and OSs.
+// Also, see isTabletInUse_() for the workaround.
+//
 bool Window::eventFilter(QObject* obj, QEvent* event) {
     switch (event->type()) {
     case QEvent::TabletEnterProximity:

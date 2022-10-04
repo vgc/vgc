@@ -117,10 +117,7 @@ private:
     bool tabletInProximity_ = false;
     core::Stopwatch timeSinceLastTableEvent_ = {};
 
-    bool isTabletInUse_() const {
-        return pressedTabletButtons_ || tabletInProximity_
-               || timeSinceLastTableEvent_.elapsed() < 1.0;
-    }
+    bool isTabletInUse_() const;
 
     bool mouseMoveEvent_(Widget* receiver, MouseEvent* event);
     bool mousePressEvent_(Widget* receiver, MouseEvent* event);
