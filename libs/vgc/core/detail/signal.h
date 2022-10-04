@@ -1191,26 +1191,13 @@ private:
 } // namespace detail
 } // namespace vgc::core
 
-#define VGC_SIG_PTYPE2_(t, n) t
-#define VGC_SIG_PNAME2_(t, n) n
-#define VGC_SIG_PBOTH2_(t, n) t n
-#define VGC_SIG_PTYPE_(x) VGC_SIG_PTYPE2_ x
-#define VGC_SIG_PNAME_(x) VGC_SIG_PNAME2_ x
-#define VGC_SIG_PBOTH_(x) VGC_SIG_PBOTH2_ x
-#define VGC_SIG_FWD2_(t, n) std::forward<t>(n)
-#define VGC_SIG_FWD_(x) VGC_SIG_FWD2_ x
+#define VGC_SIG_PTYPE_(x, t) VGC_PP_PAIR_FIRST t
+#define VGC_SIG_PNAME_(x, t) VGC_PP_PAIR_SECOND t
+#define VGC_SIG_PBOTH_(x, t) VGC_PP_PAIR_BOTH t
 
-// ... must end with VaEnd
-#define VGC_PARAMS_TYPE_(...)                                                            \
-    VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PTYPE_, __VA_ARGS__))
-// ... must end with VaEnd
-#define VGC_PARAMS_NAME_(...)                                                            \
-    VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PNAME_, __VA_ARGS__))
-// ... must end with VaEnd
-#define VGC_PARAMS_(...) VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_PBOTH_, __VA_ARGS__))
-// ... must end with VaEnd
-#define VGC_PARAMS_FWD_(...)                                                             \
-    VGC_PP_TRIM_VAEND(VGC_PP_TRANSFORM(VGC_SIG_FWD_, __VA_ARGS__))
+#define VGC_PARAMS_TYPE_X_(...) VGC_PP_TRANSFORM_X(VGC_SIG_PTYPE_, _, __VA_ARGS__)
+#define VGC_PARAMS_NAME_X_(...) VGC_PP_TRANSFORM_X(VGC_SIG_PNAME_, _, __VA_ARGS__)
+#define VGC_PARAMS_X_(...) VGC_PP_TRANSFORM_X(VGC_SIG_PBOTH_, _, __VA_ARGS__)
 
 /// Macro to define Object signals.
 ///
@@ -1223,12 +1210,12 @@ private:
 /// };
 /// ```
 ///
-#define VGC_SIGNAL(...) VGC_PP_EXPAND(VGC_SIGNAL_(__VA_ARGS__, VaEnd))
-#define VGC_SIGNAL_(name_, ...)                                                          \
+#define VGC_SIGNAL(...) VGC_PP_EXPAND(VGC_SIGNAL_X_(__VA_ARGS__, ~))
+#define VGC_SIGNAL_X_(name_, ...)                                                          \
     auto name_() const {                                                                 \
         struct Tag {};                                                                   \
         using MyClass = std::remove_const_t<std::remove_pointer_t<decltype(this)>>;      \
-        using ArgsTuple = std::tuple<VGC_PARAMS_TYPE_(__VA_ARGS__)>;                     \
+        using ArgsTuple = std::tuple<VGC_PARAMS_TYPE_X_(__VA_ARGS__)>;                     \
         using SignalRefT = ::vgc::core::detail::SignalRef<Tag, MyClass, ArgsTuple>;      \
         class VGC_PP_EXPAND(VGC_NODISCARD("Did you intend to call " #name_               \
                                           "().emit()?")) SignalRef : public SignalRefT { \
@@ -1236,8 +1223,8 @@ private:
             SignalRef(const MyClass* object)                                             \
                 : SignalRefT(object) {                                                   \
             }                                                                            \
-            void emit(VGC_PARAMS_(__VA_ARGS__)) const {                                  \
-                this->emitFwd_(VGC_PARAMS_NAME_(__VA_ARGS__));                           \
+            void emit(VGC_PARAMS_X_(__VA_ARGS__)) const {                                  \
+                this->emitFwd_(VGC_PARAMS_NAME_X_(__VA_ARGS__));                           \
             }                                                                            \
         };                                                                               \
         return SignalRef(this);                                                          \
