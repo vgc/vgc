@@ -17,8 +17,8 @@
 #include <string>
 #include <string_view>
 
-#include <QGuiApplication>
 #include <QDir>
+#include <QGuiApplication>
 #include <QSettings>
 #include <QTimer>
 
