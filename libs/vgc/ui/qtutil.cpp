@@ -18,7 +18,9 @@
 
 #include <cmath>
 
+#include <QGuiApplication>
 #include <QMouseEvent>
+#include <QTabletEvent>
 
 #include <vgc/core/algorithm.h>
 #include <vgc/ui/mouseevent.h>
@@ -68,20 +70,7 @@ geometry::Vec2f fromQtf(const QPointF& v) {
     return geometry::Vec2f(static_cast<float>(v.x()), static_cast<float>(v.y()));
 }
 
-MouseEventPtr fromQt(QMouseEvent* event) {
-    // Button
-    Qt::MouseButton qbutton = event->button();
-    MouseButton button = static_cast<MouseButton>(qbutton);
-
-    // Position
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const QPointF& p = event->localPos();
-#else
-    const QPointF& p = event->position();
-#endif
-
-    // Modidier keys
-    Qt::KeyboardModifiers modifiers = event->modifiers();
+ModifierKeys fromQt(const Qt::KeyboardModifiers& modifiers) {
     ModifierKeys modifierKeys;
     if (modifiers.testFlag(Qt::ShiftModifier)) {
         modifierKeys.set(ModifierKey::Shift);
@@ -95,8 +84,49 @@ MouseEventPtr fromQt(QMouseEvent* event) {
     if (modifiers.testFlag(Qt::MetaModifier)) {
         modifierKeys.set(ModifierKey::Meta);
     }
+    return modifierKeys;
+}
+
+MouseEventPtr fromQt(QMouseEvent* event) {
+    // Button
+    Qt::MouseButton qbutton = event->button();
+    MouseButton button = static_cast<MouseButton>(qbutton);
+
+    // Position
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const QPointF& p = event->localPos();
+#else
+    const QPointF& p = event->position();
+#endif
+
+    // Modidier keys
+    ModifierKeys modifierKeys = fromQt(event->modifiers());
 
     return MouseEvent::create(button, fromQtf(p), modifierKeys);
+}
+
+MouseEventPtr fromQt(QTabletEvent* event) {
+    // Button
+    Qt::MouseButton qbutton = event->button();
+    MouseButton button = static_cast<MouseButton>(qbutton);
+
+    // Position
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const QPointF& p = event->posF();
+#else
+    const QPointF& p = event->position();
+#endif
+
+    // Modidier keys
+    // Note: we don't use event->modifiers() or QGuiApplication::keyboardModifiers()
+    // because they're broken for tablet events; at least in Qt 5.6 and Linux/X11,
+    // they always returns NoModifier.
+    ModifierKeys modifierKeys = fromQt(QGuiApplication::queryKeyboardModifiers());
+
+    // Pressure
+    double pressure = event->pressure();
+
+    return MouseEvent::create(button, fromQtf(p), modifierKeys, 0, pressure);
 }
 
 // clang-format off

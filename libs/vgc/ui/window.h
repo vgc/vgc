@@ -36,18 +36,18 @@ class VGC_UI_API Window : public core::Object, public QWindow {
 protected:
     /// Constructs a Window containing the given vgc::ui::Widget.
     ///
-    Window(ui::WidgetPtr widget);
+    Window(WidgetPtr widget);
 
     /// Destructs the Window.
     ///
     void onDestroyed() override;
 
 public:
-    static WindowPtr create(ui::WidgetPtr widget);
+    static WindowPtr create(WidgetPtr widget);
 
     /// Returns the contained vgc::ui::Widget
     ///
-    ui::Widget* widget() {
+    Widget* widget() {
         return widget_.get();
     }
 
@@ -64,10 +64,8 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void tabletEvent(QTabletEvent* event) override;
 
-    // try filtering event()..
-    //void enterEvent(QEvent* event) override;
-    //void leaveEvent(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
@@ -97,7 +95,7 @@ protected:
         NativeEventResult* result) override;
 
 private:
-    ui::WidgetPtr widget_;
+    WidgetPtr widget_;
     graphics::EnginePtr engine_;
     graphics::SwapChainPtr swapChain_;
     graphics::RasterizerStatePtr rasterizerState_;
@@ -112,6 +110,13 @@ private:
     core::Color clearColor_;
 
     bool updateDeferred_ = false;
+
+    MouseButtons pressedMouseButtons_;
+    MouseButtons pressedTabletButtons_;
+
+    bool mouseMoveEvent_(Widget* receiver, MouseEvent* event);
+    bool mousePressEvent_(Widget* receiver, MouseEvent* event);
+    bool mouseReleaseEvent_(Widget* receiver, MouseEvent* event);
 
     void onActiveChanged_();
     void onRepaintRequested_();
