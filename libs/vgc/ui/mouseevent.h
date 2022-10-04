@@ -17,6 +17,8 @@
 #ifndef VGC_UI_MOUSEEVENT_H
 #define VGC_UI_MOUSEEVENT_H
 
+#include <vgc/core/arithmetic.h>
+
 #include <vgc/core/flags.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/event.h>
@@ -94,7 +96,9 @@ protected:
     MouseEvent(
         MouseButton button,
         const geometry::Vec2f& position,
-        ModifierKeys modifierKeys);
+        ModifierKeys modifierKeys,
+        uint64_t timestamp,
+        double pressure);
 
 public:
     /// Creates a MouseEvent.
@@ -102,7 +106,9 @@ public:
     static MouseEventPtr create(
         MouseButton button,
         const geometry::Vec2f& position,
-        ModifierKeys modifierKeys);
+        ModifierKeys modifierKeys,
+        uint64_t timestamp = 0,
+        double pressure = -1.0);
 
     /// Returns the mouse button that caused a mouse press or mouse release event.
     /// Returns `MouseButton::None` for mouse move events.
@@ -175,6 +181,29 @@ public:
         modifierKeys_ = modifierKeys;
     }
 
+    /// Returns the window system's timestamp at which this event is processed.
+    /// It will normally be in milliseconds since some arbitrary point in time,
+    /// such as the time when the system was started.
+    ///
+    // XXX Make this a true timestamp (poll time) when possible.
+    //
+    uint64_t timestamp() const {
+        return timestamp_;
+    }
+
+    /// Returns whether there is pressure data associated with this event.
+    ///
+    bool hasPressure() const {
+        return hasPressure_;
+    }
+
+    /// Returns the pressure of this tablet event. Returns 0 whenever
+    /// hasPressure() is false.
+    ///
+    double pressure() const {
+        return pressure_;
+    }
+
     /// Returns the hover-lock policy that should be used when this event
     /// is returned from a handler in the bubbling phase.
     ///
@@ -194,10 +223,13 @@ public:
     }
 
 private:
-    MouseButton button_;
-    geometry::Vec2f position_;
+    MouseButton button_ = {};
+    geometry::Vec2f position_ = {};
     ModifierKeys modifierKeys_;
     HoverLockPolicy hoverLockPolicy_ = {};
+    uint64_t timestamp_ = 0;
+    double pressure_ = 0.f;
+    bool hasPressure_ = false;
 };
 
 } // namespace vgc::ui
