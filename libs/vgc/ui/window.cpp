@@ -199,7 +199,6 @@ Widget* prepareMouseEvent(Widget* root, MouseEvent* event) {
 } // namespace
 
 void Window::mouseMoveEvent(QMouseEvent* event) {
-    //VGC_DEBUG_TMP("mouseMoveEvent");
     if (pressedTabletButtons_) {
         return;
     }
@@ -221,7 +220,6 @@ void Window::mousePressEvent(QMouseEvent* event) {
         event->setAccepted(true);
         return;
     }
-    VGC_DEBUG_TMP("mousePressEvent: {}", event->spontaneous());
     pressedMouseButtons_.set(button);
     Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
     event->setAccepted(mousePressEvent_(receiver, vgcEvent.get()));
@@ -235,7 +233,6 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
         event->setAccepted(true);
         return;
     }
-    VGC_DEBUG_TMP("mouseReleaseEvent: {}", event->spontaneous());
     pressedMouseButtons_.unset(button);
     Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
     event->setAccepted(mouseReleaseEvent_(receiver, vgcEvent.get()));
@@ -253,7 +250,6 @@ void Window::tabletEvent(QTabletEvent* event) {
         break;
     }
     case QEvent::TabletPress: {
-        VGC_DEBUG_TMP("TabletPress");
         MouseEventPtr vgcEvent = fromQt(event);
         MouseButton button = vgcEvent->button();
         if (pressedTabletButtons_.has(button)) {
@@ -275,7 +271,6 @@ void Window::tabletEvent(QTabletEvent* event) {
         break;
     }
     case QEvent::TabletRelease: {
-        VGC_DEBUG_TMP("TabletRelease");
         MouseEventPtr vgcEvent = fromQt(event);
         MouseButton button = vgcEvent->button();
         if (!pressedTabletButtons_.has(button)) {
