@@ -199,6 +199,7 @@ Widget* prepareMouseEvent(Widget* root, MouseEvent* event) {
 } // namespace
 
 void Window::mouseMoveEvent(QMouseEvent* event) {
+    //VGC_DEBUG_TMP("mouseMoveEvent");
     if (pressedTabletButtons_) {
         return;
     }
@@ -215,11 +216,12 @@ void Window::mousePressEvent(QMouseEvent* event) {
         event->setAccepted(true);
         return;
     }
-    if (pressedTabletButtons_.has(button)) {
-        // Already pressed on tablet: ignore event.
+    if (pressedTabletButtons_.has(button) || isTabletInUse_()) {
+        // Already hovered/pressed on tablet: ignore event.
         event->setAccepted(true);
         return;
     }
+    VGC_DEBUG_TMP("mousePressEvent: {}", event->spontaneous());
     pressedMouseButtons_.set(button);
     Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
     event->setAccepted(mousePressEvent_(receiver, vgcEvent.get()));
@@ -233,6 +235,7 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
         event->setAccepted(true);
         return;
     }
+    VGC_DEBUG_TMP("mouseReleaseEvent: {}", event->spontaneous());
     pressedMouseButtons_.unset(button);
     Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
     event->setAccepted(mouseReleaseEvent_(receiver, vgcEvent.get()));
@@ -241,15 +244,16 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
 void Window::tabletEvent(QTabletEvent* event) {
     switch (event->type()) {
     case QEvent::TabletMove: {
-        if (!pressedTabletButtons_) {
-            break;
-        }
         MouseEventPtr vgcEvent = fromQt(event);
         Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
-        event->setAccepted(mouseMoveEvent_(receiver, vgcEvent.get()));
+        mouseMoveEvent_(receiver, vgcEvent.get());
+        // Always accept to prevent Qt from retrying as a mouse event.
+        event->setAccepted(true);
+        timeSinceLastTableEvent_.restart();
         break;
     }
     case QEvent::TabletPress: {
+        VGC_DEBUG_TMP("TabletPress");
         MouseEventPtr vgcEvent = fromQt(event);
         MouseButton button = vgcEvent->button();
         if (pressedTabletButtons_.has(button)) {
@@ -267,9 +271,11 @@ void Window::tabletEvent(QTabletEvent* event) {
         mousePressEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
+        timeSinceLastTableEvent_.restart();
         break;
     }
     case QEvent::TabletRelease: {
+        VGC_DEBUG_TMP("TabletRelease");
         MouseEventPtr vgcEvent = fromQt(event);
         MouseButton button = vgcEvent->button();
         if (!pressedTabletButtons_.has(button)) {
@@ -282,6 +288,7 @@ void Window::tabletEvent(QTabletEvent* event) {
         mouseReleaseEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
+        timeSinceLastTableEvent_.restart();
         break;
     }
     default:
@@ -511,13 +518,19 @@ void Window::paint(bool sync) {
     engine_->endFrame(sync ? 1 : 0);
 }
 
-bool Window::event(QEvent* e) {
-    switch (e->type()) {
+bool Window::event(QEvent* event) {
+    switch (event->type()) {
     case QEvent::Enter:
-        enterEvent(e);
+        enterEvent(event);
         return true;
     case QEvent::Leave:
-        leaveEvent(e);
+        leaveEvent(event);
+        return true;
+    case QEvent::TabletEnterProximity:
+        tabletInProximity_ = true;
+        return true;
+    case QEvent::TabletLeaveProximity:
+        tabletInProximity_ = false;
         return true;
     case QEvent::UpdateRequest:
         if (!activeSizemove_) {
@@ -550,12 +563,28 @@ bool Window::event(QEvent* e) {
         }
         return true;
     case QEvent::ShortcutOverride:
-        e->accept();
+        event->accept();
         break;
     default:
         break;
     }
-    return QWindow::event(e);
+    return QWindow::event(event);
+}
+
+bool Window::eventFilter(QObject* obj, QEvent* event) {
+    switch (event->type()) {
+    case QEvent::TabletEnterProximity:
+        timeSinceLastTableEvent_.restart();
+        tabletInProximity_ = true;
+        break;
+    case QEvent::TabletLeaveProximity:
+        timeSinceLastTableEvent_.restart();
+        tabletInProximity_ = false;
+        break;
+    default:
+        break;
+    }
+    return QWindow::eventFilter(obj, event);
 }
 
 #if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)

@@ -20,6 +20,7 @@
 #include <QWindow>
 
 #include <vgc/core/array.h>
+#include <vgc/core/stopwatch.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/widget.h>
 
@@ -72,8 +73,8 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
     void exposeEvent(QExposeEvent* event) override;
-    //void inputMethodEvent(QInputMethodEvent* event) override;
-    bool event(QEvent* e) override;
+    bool event(QEvent* event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
     /// Handles mouse enter events.
     ///
@@ -113,6 +114,13 @@ private:
 
     MouseButtons pressedMouseButtons_;
     MouseButtons pressedTabletButtons_;
+    bool tabletInProximity_ = false;
+    core::Stopwatch timeSinceLastTableEvent_ = {};
+
+    bool isTabletInUse_() const {
+        return pressedTabletButtons_ || tabletInProximity_
+               || timeSinceLastTableEvent_.elapsed() < 1.0;
+    }
 
     bool mouseMoveEvent_(Widget* receiver, MouseEvent* event);
     bool mousePressEvent_(Widget* receiver, MouseEvent* event);
