@@ -82,7 +82,8 @@ private:
 /// typically less than 100 nanoseconds each.
 ///
 #define VGC_PROFILE_SCOPE(name)                                                          \
-    ::vgc::core::detail::ScopeProfiler VGC_PP_XCONCAT(VGC_PP_XCONCAT(vgcProfiler, __LINE__), _)(name);
+    ::vgc::core::detail::ScopeProfiler /**/                                              \
+        VGC_PP_CAT(VGC_PP_CAT(vgcProfiler, __LINE__), _)(name);
 
 /// Measures the time taken for executing a function.
 /// See VGC_PROFILE_SCOPE for details.

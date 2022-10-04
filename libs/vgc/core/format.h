@@ -42,6 +42,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 // Include <fmt/format.h>, suppressing the following two warnings:
@@ -67,6 +68,7 @@
 #endif
 
 #include <vgc/core/api.h>
+#include <vgc/core/preprocessor.h>
 #include <vgc/core/templateutil.h>
 
 namespace vgc::core {
@@ -643,16 +645,37 @@ std::string_view toHexPair(unsigned char x);
 ///
 class VGC_CORE_API EnumeratorStrings {
 public:
-    EnumeratorStrings(std::string_view name)
-        : name_(name) {
+    EnumeratorStrings(
+        std::string_view namespace_,
+        std::string_view enum_,
+        std::string_view name,
+        std::string_view prettyName) {
+
+        prefixSize_ = namespace_.size() + enum_.size() + 4;
+        fullName_ = namespace_;
+        fullName_.append("::");
+        fullName_.append(enum_);
+        fullName_.append("::");
+        fullName_.append(name);
+        prettyName_ = prettyName;
     }
 
-    std::string_view name() const {
-        return name_;
+    std::string_view shortName() const {
+        return std::string_view(fullName_).substr(prefixSize_);
+    }
+
+    std::string_view fullName() const {
+        return fullName_;
+    }
+
+    std::string_view prettyName() const {
+        return prettyName_;
     }
 
 private:
-    std::string name_;
+    size_t prefixSize_;
+    std::string fullName_;
+    std::string prettyName_;
 };
 
 /// \class vgc::core::EnumFormatter
@@ -662,10 +685,56 @@ template<typename Enum>
 struct EnumFormatter : fmt::formatter<std::string_view> {
     template<typename FormatContext>
     auto format(Enum v, FormatContext& ctx) {
-        return fmt::formatter<std::string_view>::format(enumeratorStrings(v).name(), ctx);
+        return fmt::formatter<std::string_view>::format(
+            enumeratorStrings(v).fullName(), ctx);
     }
 };
 
 } // namespace vgc::core
+
+#define VGC_DEFINE_SCOPED_ENUM_FORMATTER_ITEM2_(name, prettyName)                        \
+    map.insert({E::name, S(namespace_, enum_, VGC_PP_STR(name), prettyName)});
+
+#define VGC_DEFINE_SCOPED_ENUM_FORMATTER_ITEM_(x, t)                                     \
+    VGC_DEFINE_SCOPED_ENUM_FORMATTER_ITEM2_(                                             \
+        VGC_PP_EXPAND(VGC_PP_PAIR_FIRST t), VGC_PP_EXPAND(VGC_PP_PAIR_SECOND t))
+
+#define VGC_DEFINE_SCOPED_ENUM_FORMATTER_X(Namespace, Enum, ...)                         \
+    namespace VGC_PP_EXPAND(VGC_NAMESPACE Namespace) {                                   \
+        const ::vgc::core::EnumeratorStrings& enumeratorStrings(Enum value) {            \
+            using E = Enum;                                                              \
+            using S = ::vgc::core::EnumeratorStrings;                                    \
+            using Map = std::unordered_map<E, S>;                                        \
+            static const char* namespace_ = VGC_PP_STR(VGC_NAMESPACE Namespace);         \
+            static const char* enum_ = VGC_PP_STR(Enum);                                 \
+            static auto createMap = []() {                                               \
+                Map map;                                                                 \
+                VGC_PP_EXPAND(VGC_PP_FOREACH_X(                                          \
+                    VGC_DEFINE_SCOPED_ENUM_FORMATTER_ITEM_, Enum, __VA_ARGS__))          \
+                return map;                                                              \
+            };                                                                           \
+            static const S unknown =                                                     \
+                S(namespace_, enum_, "Unknown_" #Enum, "Unknown " #Enum);                \
+            static const Map map = createMap();                                          \
+            auto search = map.find(value);                                               \
+            if (search != map.end()) {                                                   \
+                return search->second;                                                   \
+            }                                                                            \
+            else {                                                                       \
+                return unknown;                                                          \
+            }                                                                            \
+        }                                                                                \
+    }
+
+#define VGC_DEFINE_SCOPED_ENUM_FORMATTER(...)                                            \
+    VGC_PP_EXPAND(VGC_DEFINE_SCOPED_ENUM_FORMATTER_X(__VA_ARGS__, ~))
+
+#define VGC_DECLARE_SCOPED_ENUM_FORMATTER(Namespace, Enum)                               \
+    namespace VGC_PP_EXPAND(VGC_NAMESPACE Namespace) {                                   \
+        const ::vgc::core::EnumeratorStrings& enumeratorStrings(Enum value);             \
+    }                                                                                    \
+    template<>                                                                           \
+    struct fmt::formatter<VGC_PP_EXPAND(VGC_NAMESPACE Namespace)::Enum>                  \
+        : ::vgc::core::EnumFormatter<VGC_PP_EXPAND(VGC_NAMESPACE Namespace)::Enum> {};
 
 #endif // VGC_CORE_FORMAT_H

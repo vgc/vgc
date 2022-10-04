@@ -61,8 +61,6 @@ StatementMacros:
 TypenameMacros:
   - VGC_REQUIRES
 WhitespaceSensitiveMacros:
-  - VGC_PP_STR
-  - VGC_PP_XSTR
-  - VGC_PP_CONCAT
-  - VGC_PP_XCONCAT
+  - VGC_PP_STR_
+  - VGC_PP_CAT_
 ...
