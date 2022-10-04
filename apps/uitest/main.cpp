@@ -17,8 +17,8 @@
 #include <string>
 #include <string_view>
 
-#include <QApplication>
 #include <QDir>
+#include <QGuiApplication>
 #include <QSettings>
 #include <QTimer>
 
@@ -302,9 +302,10 @@ int main(int argc, char* argv[]) {
 #ifdef VGC_QOPENGL_EXPERIMENT
     QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
+    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
 
     // Various initializations
-    QApplication application(argc, argv);
+    QGuiApplication application(argc, argv);
     setBasePath();
 
     // Set window icon
@@ -356,6 +357,8 @@ int main(int argc, char* argv[]) {
     wnd->setTitle("VGC UI Test");
     wnd->resize(QSize(1100, 800));
     wnd->setVisible(true);
+
+    application.installEventFilter(wnd.get());
 
     // Start event loop
     return application.exec();

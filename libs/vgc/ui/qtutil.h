@@ -38,6 +38,7 @@
 #include <vgc/ui/api.h>
 
 class QMouseEvent;
+class QTabletEvent;
 
 namespace vgc::ui {
 
@@ -87,6 +88,11 @@ geometry::Vec2f fromQtf(const QPointF& v);
 ///
 VGC_UI_API
 MouseEventPtr fromQt(QMouseEvent* event);
+
+/// Converts the given QMouseEvent into a vgc::ui::MouseEvent.
+///
+VGC_UI_API
+MouseEventPtr fromQt(QTabletEvent* event);
 
 /// Converts the given geometry::Mat4f into a QMatrix4x4.
 ///
