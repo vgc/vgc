@@ -294,6 +294,7 @@ void Menu::onItemAdded_(const MenuItem& item) {
         button->setDirection(FlexDirection::Row);
     }
     item.action()->triggered().connect(onItemActionTriggeredSlot_());
+    item.action()->aboutToBeDestroyed().connect(onItemActionAboutToBeDestroyedSlot_());
 }
 
 void Menu::preItemRemoved_(const MenuItem& item) {
@@ -302,7 +303,10 @@ void Menu::preItemRemoved_(const MenuItem& item) {
         button->closePopupMenu();
         button->parentMenu_ = nullptr;
     }
-    item.action()->triggered().disconnect(onItemActionTriggeredSlot_());
+    Action* action = item.action();
+    if (action) {
+        action->triggered().disconnect(onItemActionTriggeredSlot_());
+    }
 }
 
 void Menu::setupWidthOverrides_() const {
@@ -484,6 +488,16 @@ void Menu::onSubMenuPopupClosed_(Action* triggeredAction) {
 void Menu::onSubMenuPopupDestroy_() {
     if (subMenuPopup_ == emitter()) {
         subMenuPopup_ = nullptr;
+    }
+}
+
+void Menu::onItemActionAboutToBeDestroyed_() {
+    Action* action = static_cast<Action*>(emitter());
+    for (auto it = items_.begin(); it != items_.end(); ++it) {
+        MenuItem& item = *it;
+        if (item.action_ == action) {
+            item.action_ = nullptr;
+        }
     }
 }
 

@@ -276,6 +276,9 @@ private:
     void onSubMenuPopupDestroy_();
     VGC_SLOT(onSubMenuPopupDestroySlot_, onSubMenuPopupDestroy_);
 
+    void onItemActionAboutToBeDestroyed_();
+    VGC_SLOT(onItemActionAboutToBeDestroyedSlot_, onItemActionAboutToBeDestroyed_);
+
     // Flags
     mutable bool isIconTrackEnabled_ = true;
     mutable bool isShortcutTrackEnabled_ = true;
