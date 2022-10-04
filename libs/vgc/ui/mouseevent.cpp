@@ -21,21 +21,29 @@ namespace vgc::ui {
 MouseEvent::MouseEvent(
     MouseButton button,
     const geometry::Vec2f& position,
-    ModifierKeys modifierKeys)
+    ModifierKeys modifierKeys,
+    uint64_t timestamp,
+    double pressure)
 
     : Event()
     , button_(button)
     , position_(position)
-    , modifierKeys_(modifierKeys) {
+    , modifierKeys_(modifierKeys)
+    , timestamp_(timestamp)
+    , pressure_((std::max)(0.0, pressure))
+    , hasPressure_(pressure >= 0.0) {
 }
 
 /* static */
 MouseEventPtr MouseEvent::create(
     MouseButton button,
     const geometry::Vec2f& position,
-    ModifierKeys modifierKeys) {
+    ModifierKeys modifierKeys,
+    uint64_t timestamp,
+    double pressure) {
 
-    return MouseEventPtr(new MouseEvent(button, position, modifierKeys));
+    return MouseEventPtr(
+        new MouseEvent(button, position, modifierKeys, timestamp, pressure));
 }
 
 } // namespace vgc::ui
