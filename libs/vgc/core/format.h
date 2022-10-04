@@ -614,8 +614,7 @@ std::string toAddressString(const T* x) {
 /// \enum vgc::core::TimeUnit
 /// \brief Enumeration of all possible time units
 ///
-enum class TimeUnit
-{
+enum class TimeUnit {
     Seconds,
     Milliseconds,
     Microseconds,
