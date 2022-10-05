@@ -20,7 +20,7 @@
 #include <vgc/style/strings.h>
 #include <vgc/style/stylableobject.h>
 
-VGC_DEFINE_SCOPED_ENUM_FORMATTER(
+VGC_DEFINE_ENUM(
     (vgc, style),
     StyleSelectorItemType,
     (ClassSelector, "Class Selector"),
