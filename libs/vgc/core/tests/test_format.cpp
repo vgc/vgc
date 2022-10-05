@@ -361,6 +361,7 @@ enum class MyEnum {
     MyValue,
     MyOtherValue
 };
+VGC_DECLARE_ENUM(MyEnum)
 
 // clang-format off
 
@@ -379,6 +380,7 @@ enum class LongEnum {
     V110, V111, V112, V113, V114, V115, V116, V117, V118, V119,
     V120, V121, V122
 };
+VGC_DECLARE_ENUM(LongEnum)
 
 enum class VeryLongEnum {
     V1 = 1, V2, V3, V4, V5, V6, V7, V8, V9,
@@ -404,24 +406,15 @@ enum class VeryLongEnum {
     V200
 };
 
+VGC_DECLARE_ENUM(VeryLongEnum)
+
 // clang-format on
 
-} // namespace vgc::foo
-
-VGC_DECLARE_ENUM((vgc, foo), MyEnum)
-
-VGC_DEFINE_ENUM(
-    (vgc, foo),
-    MyEnum,
-    (MyValue, "My Value"),
-    (MyOtherValue, "My Other Value"))
-
-VGC_DECLARE_ENUM((vgc, foo), LongEnum)
+VGC_DEFINE_ENUM(MyEnum, (MyValue, "My Value"), (MyOtherValue, "My Other Value"))
 
 // clang-format off
 
 VGC_DEFINE_ENUM(
-    (vgc, foo),
     LongEnum,
     (V1, "v1"), (V2, "v2"), (V3, "v3"), (V4, "v4"), (V5, "v5"), (V6, "v6"), (V7, "v7"), (V8, "v8"), (V9, "v9"),
     (V10, "v10"), (V11, "v11"), (V12, "v12"), (V13, "v13"), (V14, "v14"), (V15, "v15"), (V16, "v16"), (V17, "v17"), (V18, "v18"), (V19, "v19"),
@@ -437,9 +430,7 @@ VGC_DEFINE_ENUM(
     (V110, "v110"), (V111, "v111"), (V112, "v112"), (V113, "v113"), (V114, "v114"), (V115, "v115"), (V116, "v116"), (V117, "v117"), (V118, "v118"), (V119, "v119"),
     (V120, "v120"), (V121, "v121"), (V122, "v122"))
 
-// clang-format on
-
-VGC_DEFINE_ENUM_BEGIN((vgc, foo), VeryLongEnum)
+VGC_DEFINE_ENUM_BEGIN(VeryLongEnum)
     VGC_ENUMERATOR(V1, "v1")
     VGC_ENUMERATOR(V2, "v2")
     VGC_ENUMERATOR(V3, "v3")
@@ -641,6 +632,10 @@ VGC_DEFINE_ENUM_BEGIN((vgc, foo), VeryLongEnum)
     VGC_ENUMERATOR(V199, "v199")
     VGC_ENUMERATOR(V200, "v200")
 VGC_DEFINE_ENUM_END()
+
+// clang-format on
+
+} // namespace vgc::foo
 
 TEST(TestFormat, Enum) {
     using vgc::core::Enum;

@@ -20,14 +20,13 @@
 #include <vgc/style/strings.h>
 #include <vgc/style/stylableobject.h>
 
+namespace vgc::style {
+
 VGC_DEFINE_ENUM(
-    (vgc, style),
     StyleSelectorItemType,
     (ClassSelector, "Class Selector"),
     (DescendantCombinator, "Descendant Combinator"),
     (ChildCombinator, "Child Combinator"))
-
-namespace vgc::style {
 
 StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
     if (end == begin + 1) {

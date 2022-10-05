@@ -18,27 +18,53 @@
 #define VGC_CORE_ENUM_H
 
 #include <vgc/core/format.h>
+#include <vgc/core/templateutil.h>
 
 namespace vgc::core {
 
 namespace detail {
 
+// Parses VGC_PRETTY_FUNCTION of enumData_() to get fully-qualified enum name
+// as string.
+inline std::string_view fullEnum(std::string_view enumDataFunctionName) {
+
+    const auto& s = enumDataFunctionName;
+
+    // Find closing parenthesis
+    size_t j = s.size();
+    while (j > 0 && s[j] != ')') {
+        --j;
+    }
+
+    // Find opening parenthesis or whitespace
+    size_t i = j;
+    while (i > 0 && s[i] != '(' && s[i] != ' ') {
+        --i;
+    }
+    ++i;
+
+    if (j > i) {
+        return s.substr(i, j - i);
+    }
+    else {
+        return "";
+    }
+}
+
 // Stores strings related to an enumerator of an `enum` or `enum class`
 class EnumData {
 public:
     EnumData(
-        std::string_view namespace_,
-        std::string_view enum_,
+        std::string_view fullEnum,
+        std::string_view /*enum_*/,
         std::string_view name,
         std::string_view prettyName) {
 
-        prefixSize_ = namespace_.size() + enum_.size() + 4;
-        fullName_ = namespace_;
-        fullName_.append("::");
-        fullName_.append(enum_);
+        fullName_ = fullEnum;
         fullName_.append("::");
         fullName_.append(name);
         prettyName_ = prettyName;
+        prefixSize_ = fullName_.size() - name.size();
     }
 
     std::string_view shortName() const {
@@ -104,13 +130,13 @@ private:
 /// on the number of enumerators:
 ///
 /// ```cpp
-///
 /// VGC_DEFINE_ENUM_BEGIN((lib, foo), MyEnum)
 ///     VGC_ENUMERATOR(Value1, "Value 1")
 ///     VGC_ENUMERATOR(Value2, "Value 2")
 ///     ...
 ///     VGC_ENUMERATOR(ValueN, "Value N")
 /// VGC_DEFINE_ENUM_END()
+/// ```
 ///
 class Enum {
 public:
@@ -130,9 +156,8 @@ public:
     }
 };
 
-/// \class vgc::core::EnumFormatter
-/// \brief Helper class to define custom formatters for enum classes
-///
+namespace detail {
+
 template<typename EnumType>
 struct EnumFormatter : fmt::formatter<std::string_view> {
     template<typename FormatContext>
@@ -141,39 +166,43 @@ struct EnumFormatter : fmt::formatter<std::string_view> {
     }
 };
 
+} // namespace detail
+
 } // namespace vgc::core
+
+// specialize fmt formatter for all enum types that define an enumData_
+// overload.
+
+template<typename T>
+struct fmt::formatter<T, char, vgc::core::RequiresValid<decltype(enumData_(T()))>>
+    : ::vgc::core::detail::EnumFormatter<T> {};
 
 // clang-format off
 
 /// Declares a scoped enum. See `Enum` for more details.
 ///
-#define VGC_DECLARE_ENUM(Namespace, Enum)                                                \
-    namespace VGC_PP_EXPAND(VGC_NAMESPACE Namespace) {                                   \
-    const ::vgc::core::detail::EnumData& enumData_(Enum value);                          \
-    }                                                                                    \
-    template<>                                                                           \
-    struct fmt::formatter<VGC_PP_EXPAND(VGC_NAMESPACE Namespace)::Enum>                  \
-        : ::vgc::core::EnumFormatter<VGC_PP_EXPAND(VGC_NAMESPACE Namespace)::Enum> {};
+#define VGC_DECLARE_ENUM(Enum)                                                           \
+    const ::vgc::core::detail::EnumData& enumData_(Enum value);
 
 /// Starts the definition of a scoped enum. See `Enum` for more details.
 ///
-#define VGC_DEFINE_ENUM_BEGIN(Namespace, Enum)                                           \
-    namespace VGC_PP_EXPAND(VGC_NAMESPACE Namespace) {                                   \
+#define VGC_DEFINE_ENUM_BEGIN(Enum)                                           \
     const ::vgc::core::detail::EnumData& enumData_(Enum value) {                         \
         using E = Enum;                                                                  \
         using S = ::vgc::core::detail::EnumData;                                         \
         using Map = std::unordered_map<E, S>;                                            \
-        static const char* namespace_ = VGC_PP_STR(VGC_NAMESPACE Namespace);             \
+        std::string fn = VGC_PRETTY_FUNCTION; \
+        static const std::string_view fenum = ::vgc::core::detail::fullEnum(fn); \
         static const char* enum_ = VGC_PP_STR(Enum);                                     \
         static const S unknown =                                                         \
-            S(namespace_, enum_, "Unknown_" #Enum, "Unknown " #Enum);                    \
+            S(fenum, enum_, "Unknown_" #Enum, "Unknown " #Enum);                    \
         static auto createMap = []() {                                                   \
             Map map;
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_ENUMERATOR(name, prettyName)                                                 \
-            map.insert({E::name, S(namespace_, enum_, VGC_PP_STR(name), prettyName)});
+            map.insert({E::name, S(fenum, enum_, VGC_PP_STR(name), prettyName)});
 
 /// Ends the definition of a scoped enum. See `Enum` for more details.
 ///
@@ -188,8 +217,7 @@ struct EnumFormatter : fmt::formatter<std::string_view> {
         else {                                                                           \
             return unknown;                                                              \
         }                                                                                \
-    }                                                                                    \
-    } // namespace
+    }
 
 // clang-format on
 
@@ -197,8 +225,8 @@ struct EnumFormatter : fmt::formatter<std::string_view> {
     VGC_ENUMERATOR(                                                                      \
         VGC_PP_EXPAND(VGC_PP_PAIR_FIRST t), VGC_PP_EXPAND(VGC_PP_PAIR_SECOND t))
 
-#define VGC_DEFINE_ENUM_X_(Namespace, Enum, ...)                                         \
-    VGC_DEFINE_ENUM_BEGIN(Namespace, Enum)                                               \
+#define VGC_DEFINE_ENUM_X_(Enum, ...)                                                    \
+    VGC_DEFINE_ENUM_BEGIN(Enum)                                                          \
         VGC_PP_EXPAND(VGC_PP_FOREACH_X(VGC_ENUMERATOR_, Enum, __VA_ARGS__))              \
     VGC_DEFINE_ENUM_END()
 

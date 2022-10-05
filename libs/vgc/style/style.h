@@ -439,11 +439,8 @@ enum class StyleSelectorItemType : Int8 {
     ChildCombinator = 0x11
 };
 
-} // namespace vgc::style
-
-VGC_DECLARE_ENUM((vgc, style), StyleSelectorItemType)
-
-namespace vgc::style {
+VGC_STYLE_API
+VGC_DECLARE_ENUM(StyleSelectorItemType)
 
 /// \class vgc::style::StyleSelectorItem
 /// \brief One item of a StyleSelector.
