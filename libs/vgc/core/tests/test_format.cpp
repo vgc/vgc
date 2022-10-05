@@ -361,6 +361,26 @@ enum class MyEnum {
     MyOtherValue
 };
 
+// clang-format off
+
+enum class LongEnum {
+    V1 = 1, V2, V3, V4, V5, V6, V7, V8, V9,
+    V10, V11, V12, V13, V14, V15, V16, V17, V18, V19,
+    V20, V21, V22, V23, V24, V25, V26, V27, V28, V29,
+    V30, V31, V32, V33, V34, V35, V36, V37, V38, V39,
+    V40, V41, V42, V43, V44, V45, V46, V47, V48, V49,
+    V50, V51, V52, V53, V54, V55, V56, V57, V58, V59,
+    V60, V61, V62, V63, V64, V65, V66, V67, V68, V69,
+    V70, V71, V72, V73, V74, V75, V76, V77, V78, V79,
+    V80, V81, V82, V83, V84, V85, V86, V87, V88, V89,
+    V90, V91, V92, V93, V94, V95, V96, V97, V98, V99,
+    V100, V101, V102, V103, V104, V105, V106, V107, V108,
+    V109, V110, V111, V112, V113, V114, V115, V116, V117,
+    V118, V119, V120, V121, V122
+};
+
+// clang-format on
+
 } // namespace vgc::foo
 
 VGC_DECLARE_SCOPED_ENUM_FORMATTER((vgc, foo), MyEnum)
@@ -371,11 +391,44 @@ VGC_DEFINE_SCOPED_ENUM_FORMATTER(
     (MyValue, "My Value"),
     (MyOtherValue, "My Other Value"))
 
+VGC_DECLARE_SCOPED_ENUM_FORMATTER((vgc, foo), LongEnum)
+
+// clang-format off
+
+VGC_DEFINE_SCOPED_ENUM_FORMATTER(
+    (vgc, foo),
+    LongEnum,
+    (V1, "v1"), (V2, "v2"), (V3, "v3"), (V4, "v4"), (V5, "v5"), (V6, "v6"), (V7, "v7"), (V8, "v8"), (V9, "v9"),
+    (V10, "v10"), (V11, "v11"), (V12, "v12"), (V13, "v13"), (V14, "v14"), (V15, "v15"), (V16, "v16"), (V17, "v17"), (V18, "v18"), (V19, "v19"),
+    (V20, "v20"), (V21, "v21"), (V22, "v22"), (V23, "v23"), (V24, "v24"), (V25, "v25"), (V26, "v26"), (V27, "v27"), (V28, "v28"), (V29, "v29"),
+    (V30, "v30"), (V31, "v31"), (V32, "v32"), (V33, "v33"), (V34, "v34"), (V35, "v35"), (V36, "v36"), (V37, "v37"), (V38, "v38"), (V39, "v39"),
+    (V40, "v40"), (V41, "v41"), (V42, "v42"), (V43, "v43"), (V44, "v44"), (V45, "v45"), (V46, "v46"), (V47, "v47"), (V48, "v48"), (V49, "v49"),
+    (V50, "v50"), (V51, "v51"), (V52, "v52"), (V53, "v53"), (V54, "v54"), (V55, "v55"), (V56, "v56"), (V57, "v57"), (V58, "v58"), (V59, "v59"),
+    (V60, "v60"), (V61, "v61"), (V62, "v62"), (V63, "v63"), (V64, "v64"), (V65, "v65"), (V66, "v66"), (V67, "v67"), (V68, "v68"), (V69, "v69"),
+    (V70, "v70"), (V71, "v71"), (V72, "v72"), (V73, "v73"), (V74, "v74"), (V75, "v75"), (V76, "v76"), (V77, "v77"), (V78, "v78"), (V79, "v79"),
+    (V80, "v80"), (V81, "v81"), (V82, "v82"), (V83, "v83"), (V84, "v84"), (V85, "v85"), (V86, "v86"), (V87, "v87"), (V88, "v88"), (V89, "v89"),
+    (V90, "v90"), (V91, "v91"), (V92, "v92"), (V93, "v93"), (V94, "v94"), (V95, "v95"), (V96, "v96"), (V97, "v97"), (V98, "v98"), (V99, "v99"),
+    (V100, "v100"), (V101, "v101"), (V102, "v102"), (V103, "v103"), (V104, "v104"), (V105, "v105"), (V106, "v106"), (V107, "v107"), (V108, "v108"), (V109, "v109"),
+    (V110, "v110"), (V111, "v111"), (V112, "v112"), (V113, "v113"), (V114, "v114"), (V115, "v115"), (V116, "v116"), (V117, "v117"), (V118, "v118"), (V119, "v119"),
+    (V120, "v120"), (V121, "v121"), (V122, "v122"))
+
+// clang-format on
+
 TEST(TestFormat, Enum) {
     std::string s1 = vgc::core::format("{:-^29}", vgc::foo::MyEnum::MyValue);
     std::string_view s2 = enumeratorStrings(vgc::foo::MyEnum::MyOtherValue).prettyName();
+    std::string_view s3 = enumeratorStrings(vgc::foo::LongEnum::V1).prettyName();
+    std::string_view s4 = enumeratorStrings(vgc::foo::LongEnum::V122).prettyName();
     EXPECT_EQ(s1, "--vgc::foo::MyEnum::MyValue--");
     EXPECT_EQ(s2, "My Other Value");
+    EXPECT_EQ(s3, "v1");
+    EXPECT_EQ(s4, "v122");
+    for (int i = 2; i < 122; ++i) {
+        std::string v = "v";
+        std::string_view prettyName =
+            enumeratorStrings(static_cast<vgc::foo::LongEnum>(i)).prettyName();
+        EXPECT_EQ(prettyName, vgc::core::format("v{}", i));
+    }
 }
 
 int main(int argc, char** argv) {
