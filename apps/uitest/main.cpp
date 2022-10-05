@@ -31,6 +31,7 @@
 #include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
+#include <vgc/ui/imagebox.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/menu.h>
@@ -331,23 +332,27 @@ int main(int argc, char* argv[]) {
     ui::PanelArea* mainArea = ui::PanelArea::createHorizontalSplit(mainLayout);
     ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
     ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
-    ui::PanelArea* rightArea = ui::PanelArea::createTabs(mainArea);
+    ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
     ui::PanelArea* middleTopArea = ui::PanelArea::createTabs(middleArea);
     ui::PanelArea* middleBottomArea = ui::PanelArea::createTabs(middleArea);
+    ui::PanelArea* rightTopArea = ui::PanelArea::createTabs(rightArea);
+    ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
 
     // Create panels
     // XXX actually create Panel instances as children of Tabs areas
     ui::Column* leftAreaWidget = leftArea->createChild<ui::Column>();
     ui::Column* middleTopAreaWidget = middleTopArea->createChild<ui::Column>();
     ui::Column* middleBottomAreaWidget = middleBottomArea->createChild<ui::Column>();
-    ui::Column* rightAreaWidget = rightArea->createChild<ui::Column>();
+    ui::Column* rightTopAreaWidget = rightTopArea->createChild<ui::Column>();
+    ui::Column* rightBottomAreaWidget = rightBottomArea->createChild<ui::Column>();
 
     // Create widgets
     createColorPalette(leftAreaWidget);
-    createPlot2d(middleTopAreaWidget);
     createGrid(middleBottomAreaWidget);
-    createClickMePopups(rightAreaWidget);
-    createLineEdits(rightAreaWidget);
+    createPlot2d(rightTopAreaWidget);
+    createClickMePopups(rightBottomAreaWidget);
+    createLineEdits(rightBottomAreaWidget);
+    rightBottomAreaWidget->createChild<ui::ImageBox>(iconPath);
 
     // XXX we need this until styles get better auto-update behavior
     overlay->addStyleClass(core::StringId("force-update-style"));

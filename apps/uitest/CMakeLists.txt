@@ -4,4 +4,7 @@ vgc_add_app(uitest
 
     CPP_FILES
         main.cpp
+
+    RESOURCE_FILES
+        icons/512.png
 )
