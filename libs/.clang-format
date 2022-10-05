@@ -63,4 +63,6 @@ TypenameMacros:
 WhitespaceSensitiveMacros:
   - VGC_PP_STR
   - VGC_PP_CAT
+MacroBlockBegin: "^VGC_DEFINE_SCOPED_ENUM_FORMATTER_BEGIN$"
+MacroBlockEnd: "^VGC_DEFINE_SCOPED_ENUM_FORMATTER_END$"
 ...
