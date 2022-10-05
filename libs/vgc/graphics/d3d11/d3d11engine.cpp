@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <filesystem>
 
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -37,10 +38,35 @@ namespace vgc::graphics {
 
 namespace {
 
+// Returns the file path of a shader file as a QString
+std::filesystem::path shaderPath_(const std::string& name) {
+    return std::filesystem::path(core::resourcePath("graphics/shaders/d3d11/" + name));
+}
+
 // core::resourcePath("graphics/d3d11/" + name);
 
-struct XYRGBVertex {
+struct Vertex_XY {
+    float x, y;
+};
+
+struct Vertex_XYUV {
+    float x, y, u, v;
+};
+
+struct Vertex_XYRGB {
     float x, y, r, g, b;
+};
+
+struct Vertex_XYRGBA {
+    float x, y, r, g, b, a;
+};
+
+struct Vertex_XYUVRGBA {
+    float x, y, u, v, r, g, b, a;
+};
+
+struct Vertex_RGBA {
+    float r, g, b, a;
 };
 
 } // namespace
@@ -417,73 +443,33 @@ private:
 
 // ENUM CONVERSIONS
 
-// clang-format off
+DXGI_FORMAT pixelFormatToDxgiFormat(PixelFormat format) {
 
-DXGI_FORMAT pixelFormatToDxgiFormat(PixelFormat format)
-{
-    switch (format) {
-        // Depth
-    case PixelFormat::D_16_UNORM:               return DXGI_FORMAT_D16_UNORM;
-    case PixelFormat::D_32_FLOAT:               return DXGI_FORMAT_D32_FLOAT;
-        // Depth + Stencil
-    case PixelFormat::DS_24_UNORM_8_UINT:       return DXGI_FORMAT_D24_UNORM_S8_UINT;
-    case PixelFormat::DS_32_FLOAT_8_UINT_24_X:  return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-        // Red
-    case PixelFormat::R_8_UNORM:                return DXGI_FORMAT_R8_UNORM;
-    case PixelFormat::R_8_SNORM:                return DXGI_FORMAT_R8_SNORM;
-    case PixelFormat::R_8_UINT:                 return DXGI_FORMAT_R8_UINT;
-    case PixelFormat::R_8_SINT:                 return DXGI_FORMAT_R8_SINT;
-    case PixelFormat::R_16_UNORM:               return DXGI_FORMAT_R16_UNORM;
-    case PixelFormat::R_16_SNORM:               return DXGI_FORMAT_R16_SNORM;
-    case PixelFormat::R_16_UINT:                return DXGI_FORMAT_R16_UINT;
-    case PixelFormat::R_16_SINT:                return DXGI_FORMAT_R16_SINT;
-    case PixelFormat::R_16_FLOAT:               return DXGI_FORMAT_R16_FLOAT;
-    case PixelFormat::R_32_UINT:                return DXGI_FORMAT_R32_UINT;
-    case PixelFormat::R_32_SINT:                return DXGI_FORMAT_R32_SINT;
-    case PixelFormat::R_32_FLOAT:               return DXGI_FORMAT_R32_FLOAT;
-        // RG
-    case PixelFormat::RG_8_UNORM:               return DXGI_FORMAT_R8G8_UNORM;
-    case PixelFormat::RG_8_SNORM:               return DXGI_FORMAT_R8G8_SNORM;
-    case PixelFormat::RG_8_UINT:                return DXGI_FORMAT_R8G8_UINT;
-    case PixelFormat::RG_8_SINT:                return DXGI_FORMAT_R8G8_SINT;
-    case PixelFormat::RG_16_UNORM:              return DXGI_FORMAT_R16G16_UNORM;
-    case PixelFormat::RG_16_SNORM:              return DXGI_FORMAT_R16G16_SNORM;
-    case PixelFormat::RG_16_UINT:               return DXGI_FORMAT_R16G16_UINT;
-    case PixelFormat::RG_16_SINT:               return DXGI_FORMAT_R16G16_SINT;
-    case PixelFormat::RG_16_FLOAT:              return DXGI_FORMAT_R16G16_FLOAT;
-    case PixelFormat::RG_32_UINT:               return DXGI_FORMAT_R32G32_UINT;
-    case PixelFormat::RG_32_SINT:               return DXGI_FORMAT_R32G32_SINT;
-    case PixelFormat::RG_32_FLOAT:              return DXGI_FORMAT_R32G32_FLOAT;
-        // RGB
-    case PixelFormat::RGB_11_11_10_FLOAT:       return DXGI_FORMAT_R11G11B10_FLOAT;
-    case PixelFormat::RGB_32_UINT:              return DXGI_FORMAT_R32G32B32_UINT;
-    case PixelFormat::RGB_32_SINT:              return DXGI_FORMAT_R32G32B32_SINT;
-    case PixelFormat::RGB_32_FLOAT:             return DXGI_FORMAT_R32G32B32_FLOAT;
-        // RGBA
-    case PixelFormat::RGBA_8_UNORM:             return DXGI_FORMAT_R8G8B8A8_UNORM;
-    case PixelFormat::RGBA_8_UNORM_SRGB:        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    case PixelFormat::RGBA_8_SNORM:             return DXGI_FORMAT_R8G8B8A8_SNORM;
-    case PixelFormat::RGBA_8_UINT:              return DXGI_FORMAT_R8G8B8A8_UINT;
-    case PixelFormat::RGBA_8_SINT:              return DXGI_FORMAT_R8G8B8A8_SINT;
-    case PixelFormat::RGBA_10_10_10_2_UNORM:    return DXGI_FORMAT_R10G10B10A2_UNORM;
-    case PixelFormat::RGBA_10_10_10_2_UINT:     return DXGI_FORMAT_R10G10B10A2_UINT;
-    case PixelFormat::RGBA_16_UNORM:            return DXGI_FORMAT_R16G16B16A16_UNORM;
-    case PixelFormat::RGBA_16_UINT:             return DXGI_FORMAT_R16G16B16A16_UINT;
-    case PixelFormat::RGBA_16_SINT:             return DXGI_FORMAT_R16G16B16A16_SINT;
-    case PixelFormat::RGBA_16_FLOAT:            return DXGI_FORMAT_R16G16B16A16_FLOAT;
-    case PixelFormat::RGBA_32_UINT:             return DXGI_FORMAT_R32G32B32A32_UINT;
-    case PixelFormat::RGBA_32_SINT:             return DXGI_FORMAT_R32G32B32A32_SINT;
-    case PixelFormat::RGBA_32_FLOAT:            return DXGI_FORMAT_R32G32B32A32_FLOAT;
-    default:
-        break;
+    constexpr size_t numPixelFormats = VGC_ENUM_COUNT(PixelFormat);
+    static_assert(numPixelFormats == 47);
+    static constexpr std::array<DXGI_FORMAT, numPixelFormats> map = {
+#    define VGC_PIXEL_FORMAT_MACRO_(                                                     \
+        Enumerator,                                                                      \
+        ElemSizeInBytes,                                                                 \
+        DXGIFormat,                                                                      \
+        OpenGLInternalFormat,                                                            \
+        OpenGLPixelType,                                                                 \
+        OpenGLPixelFormat)                                                               \
+        DXGIFormat,
+#    include <vgc/graphics/detail/pixelformats.h>
+    };
+
+    const UInt index = core::toUnderlying(format);
+    if (index == 0 || index >= numPixelFormats) {
+        throw core::LogicError("D3d11Engine: invalid PixelFormat enum value.");
     }
-    return DXGI_FORMAT_UNKNOWN;
-}
 
-// clang-format on
+    return map[index];
+}
 
 D3D_PRIMITIVE_TOPOLOGY primitiveTypeToD3DPrimitiveTopology(PrimitiveType type) {
 
+    constexpr size_t numPrimitiveTypes = VGC_ENUM_COUNT(PrimitiveType);
     static_assert(numPrimitiveTypes == 6);
     static constexpr std::array<D3D_PRIMITIVE_TOPOLOGY, numPrimitiveTypes> map = {
         D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,     // Undefined,
@@ -496,26 +482,28 @@ D3D_PRIMITIVE_TOPOLOGY primitiveTypeToD3DPrimitiveTopology(PrimitiveType type) {
 
     const UInt index = core::toUnderlying(type);
     if (index == 0 || index >= numPrimitiveTypes) {
-        throw core::LogicError("D3d11Engine: invalid PrimitiveType enum value");
+        throw core::LogicError("D3d11Engine: invalid PrimitiveType enum value.");
     }
 
     return map[index];
 }
 
 D3D11_USAGE usageToD3DUsage(Usage usage) {
-    switch (usage) {
-    case Usage::Default:
-        return D3D11_USAGE_DEFAULT;
-    case Usage::Immutable:
-        return D3D11_USAGE_IMMUTABLE;
-    case Usage::Dynamic:
-        return D3D11_USAGE_DYNAMIC;
-    case Usage::Staging:
-        return D3D11_USAGE_STAGING;
-    default:
-        break;
+    constexpr size_t numUsages = VGC_ENUM_COUNT(Usage);
+    static_assert(numUsages == 4);
+    static constexpr std::array<D3D11_USAGE, numUsages> map = {
+        D3D11_USAGE_DEFAULT,   // Default
+        D3D11_USAGE_IMMUTABLE, // Immutable
+        D3D11_USAGE_DYNAMIC,   // Dynamic
+        D3D11_USAGE_STAGING,   // Staging
+    };
+
+    const UInt index = core::toUnderlying(usage);
+    if (index >= numUsages) {
+        throw core::LogicError("D3d11Engine: invalid Usage enum value.");
     }
-    throw core::LogicError("D3d11Engine: unsupported usage");
+
+    return map[index];
 }
 
 UINT resourceMiscFlagsToD3DResourceMiscFlags(ResourceMiscFlags resourceMiscFlags) {
@@ -543,6 +531,7 @@ UINT resourceMiscFlagsToD3DResourceMiscFlags(ResourceMiscFlags resourceMiscFlags
 
 D3D11_TEXTURE_ADDRESS_MODE imageWrapModeToD3DTextureAddressMode(ImageWrapMode mode) {
 
+    constexpr size_t numImageWrapModes = VGC_ENUM_COUNT(ImageWrapMode);
     static_assert(numImageWrapModes == 5);
     static constexpr std::array<D3D11_TEXTURE_ADDRESS_MODE, numImageWrapModes> map = {
         D3D11_TEXTURE_ADDRESS_MODE(0), // Undefined
@@ -554,7 +543,7 @@ D3D11_TEXTURE_ADDRESS_MODE imageWrapModeToD3DTextureAddressMode(ImageWrapMode mo
 
     const UInt index = core::toUnderlying(mode);
     if (index == 0 || index >= numImageWrapModes) {
-        throw core::LogicError("D3d11Engine: invalid ImageWrapMode enum value");
+        throw core::LogicError("D3d11Engine: invalid ImageWrapMode enum value.");
     }
 
     return map[index];
@@ -562,10 +551,11 @@ D3D11_TEXTURE_ADDRESS_MODE imageWrapModeToD3DTextureAddressMode(ImageWrapMode mo
 
 D3D11_COMPARISON_FUNC comparisonFunctionToD3DComparisonFunc(ComparisonFunction func) {
 
+    constexpr size_t numComparisonFunctions = VGC_ENUM_COUNT(ComparisonFunction);
     static_assert(numComparisonFunctions == 10);
     static constexpr std::array<D3D11_COMPARISON_FUNC, numComparisonFunctions> map = {
         D3D11_COMPARISON_FUNC(0),       // Undefined
-        D3D11_COMPARISON_NEVER,         // Disabled
+        D3D11_COMPARISON_ALWAYS,        // Disabled
         D3D11_COMPARISON_ALWAYS,        // Always
         D3D11_COMPARISON_NEVER,         // Never
         D3D11_COMPARISON_EQUAL,         // Equal
@@ -578,7 +568,7 @@ D3D11_COMPARISON_FUNC comparisonFunctionToD3DComparisonFunc(ComparisonFunction f
 
     const UInt index = core::toUnderlying(func);
     if (index == 0 || index >= numComparisonFunctions) {
-        throw core::LogicError("D3d11Engine: invalid ComparisonFunction enum value");
+        throw core::LogicError("D3d11Engine: invalid ComparisonFunction enum value.");
     }
 
     return map[index];
@@ -586,6 +576,7 @@ D3D11_COMPARISON_FUNC comparisonFunctionToD3DComparisonFunc(ComparisonFunction f
 
 D3D11_BLEND blendFactorToD3DBlend(BlendFactor factor) {
 
+    constexpr size_t numBlendFactors = VGC_ENUM_COUNT(BlendFactor);
     static_assert(numBlendFactors == 18);
     static constexpr std::array<D3D11_BLEND, numBlendFactors> map = {
         D3D11_BLEND(0),               // Undefined
@@ -610,7 +601,7 @@ D3D11_BLEND blendFactorToD3DBlend(BlendFactor factor) {
 
     const UInt index = core::toUnderlying(factor);
     if (index == 0 || index >= numBlendFactors) {
-        throw core::LogicError("D3d11Engine: invalid BlendFactor enum value");
+        throw core::LogicError("D3d11Engine: invalid BlendFactor enum value.");
     }
 
     return map[index];
@@ -618,6 +609,7 @@ D3D11_BLEND blendFactorToD3DBlend(BlendFactor factor) {
 
 D3D11_BLEND_OP blendOpToD3DBlendOp(BlendOp op) {
 
+    constexpr size_t numBlendOps = VGC_ENUM_COUNT(BlendOp);
     static_assert(numBlendOps == 6);
     static constexpr std::array<D3D11_BLEND_OP, numBlendOps> map = {
         D3D11_BLEND_OP(0),           // Undefined
@@ -630,7 +622,7 @@ D3D11_BLEND_OP blendOpToD3DBlendOp(BlendOp op) {
 
     const UInt index = core::toUnderlying(op);
     if (index == 0 || index >= numBlendOps) {
-        throw core::LogicError("D3d11Engine: invalid BlendOp enum value");
+        throw core::LogicError("D3d11Engine: invalid BlendOp enum value.");
     }
 
     return map[index];
@@ -638,6 +630,7 @@ D3D11_BLEND_OP blendOpToD3DBlendOp(BlendOp op) {
 
 D3D11_FILL_MODE fillModeToD3DFillMode(FillMode mode) {
 
+    constexpr size_t numFillModes = VGC_ENUM_COUNT(FillMode);
     static_assert(numFillModes == 3);
     static constexpr std::array<D3D11_FILL_MODE, numFillModes> map = {
         D3D11_FILL_MODE(0),   // Undefined
@@ -647,7 +640,7 @@ D3D11_FILL_MODE fillModeToD3DFillMode(FillMode mode) {
 
     const UInt index = core::toUnderlying(mode);
     if (index == 0 || index >= numFillModes) {
-        throw core::LogicError("D3d11Engine: invalid FillMode enum value");
+        throw core::LogicError("D3d11Engine: invalid FillMode enum value.");
     }
 
     return map[index];
@@ -655,6 +648,7 @@ D3D11_FILL_MODE fillModeToD3DFillMode(FillMode mode) {
 
 D3D11_CULL_MODE cullModeToD3DCullMode(CullMode mode) {
 
+    constexpr size_t numCullModes = VGC_ENUM_COUNT(CullMode);
     static_assert(numCullModes == 4);
     static constexpr std::array<D3D11_CULL_MODE, numCullModes> map = {
         D3D11_CULL_MODE(0), // Undefined
@@ -665,7 +659,7 @@ D3D11_CULL_MODE cullModeToD3DCullMode(CullMode mode) {
 
     const UInt index = core::toUnderlying(mode);
     if (index == 0 || index >= numCullModes) {
-        throw core::LogicError("D3d11Engine: invalid CullMode enum value");
+        throw core::LogicError("D3d11Engine: invalid CullMode enum value.");
     }
 
     return map[index];
@@ -723,43 +717,14 @@ void D3d11Engine::createBuiltinShaders_() {
         new D3d11Program(resourceRegistry_, BuiltinProgram::Simple));
     simpleProgram_ = simpleProgram;
 
-    // Create the simple shader
+    // Create the simple shader (vertex)
     {
-        static const char* vertexShaderSrc = R"hlsl(
-
-            cbuffer vertexBuffer : register(b0)
-            {
-                float4x4 projMatrix;
-                float4x4 viewMatrix;
-                unsigned int frameStartTimeInMs;
-            };
-            struct VS_INPUT
-            {
-                float2 pos : POSITION;
-                float4 col : COLOR0;
-            };
-            struct PS_INPUT
-            {
-                float4 pos : SV_POSITION;
-                float4 col : COLOR0;
-            };
-
-            PS_INPUT main(VS_INPUT input)
-            {
-                PS_INPUT output;
-                float4 viewPos = mul(viewMatrix, float4(input.pos.xy, 0.f, 1.f));
-                output.pos = mul(projMatrix, viewPos);
-                output.col = input.col;
-                return output;
-            }
-
-        )hlsl";
-
+        D3d11Program* program = simpleProgram.get();
         ComPtr<ID3DBlob> errorBlob;
         ComPtr<ID3DBlob> vertexShaderBlob;
-        HRESULT hres = D3DCompile(
-            vertexShaderSrc, strlen(vertexShaderSrc),
-            NULL, NULL, NULL, "main", "vs_4_0", 0, 0,
+        HRESULT hres = D3DCompileFromFile(
+            shaderPath_("simple.v.hlsl").wstring().c_str(),
+            NULL, NULL, "main", "vs_4_0", 0, 0,
             vertexShaderBlob.releaseAndGetAddressOf(),
             errorBlob.releaseAndGetAddressOf());
 
@@ -777,49 +742,71 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShaderBlob->GetBufferSize(),
             NULL,
             vertexShader.releaseAndGetAddressOf());
-        simpleProgram->vertexShader_ = vertexShader;
+        program->vertexShader_ = vertexShader;
 
-        // Create the input layout
-        ComPtr<ID3D11InputLayout> inputLayout;
-        UINT xOffset = static_cast<UINT>(offsetof(XYRGBVertex, x));
-        UINT rOffset = static_cast<UINT>(offsetof(XYRGBVertex, r));
-        D3D11_INPUT_CLASSIFICATION slotClass = D3D11_INPUT_PER_VERTEX_DATA;
-        D3D11_INPUT_ELEMENT_DESC layout[] = {
-            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, xOffset, slotClass, 0},
-            {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, rOffset, slotClass, 0},
-        };
-        device_->CreateInputLayout(
-            layout, 2,
-            vertexShaderBlob->GetBufferPointer(),
-            vertexShaderBlob->GetBufferSize(),
-            inputLayout.releaseAndGetAddressOf());
+        // Create Input Layout for XYRGB
+        {
+            ComPtr<ID3D11InputLayout> inputLayout;
+            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGB, r));
+            D3D11_INPUT_ELEMENT_DESC layout[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            };
+            device_->CreateInputLayout(
+                layout, 2,
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize(),
+                inputLayout.releaseAndGetAddressOf());
 
-        constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGB);
-        simpleProgram->builtinLayouts_[layoutIndex] = inputLayout;
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGB);
+            program->builtinLayouts_[layoutIndex] = inputLayout;
+        }
+
+        // Create Input Layout for XYRGBA
+        {
+            ComPtr<ID3D11InputLayout> inputLayout;
+            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGBA, r));
+            D3D11_INPUT_ELEMENT_DESC layout[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            };
+            device_->CreateInputLayout(
+                layout, 2,
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize(),
+                inputLayout.releaseAndGetAddressOf());
+
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGBA);
+            program->builtinLayouts_[layoutIndex] = inputLayout;
+        }
+
+        // Create Input Layout for XY_iRGBA
+        {
+            ComPtr<ID3D11InputLayout> inputLayout;
+            D3D11_INPUT_ELEMENT_DESC layout[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0, D3D11_INPUT_PER_VERTEX_DATA,   0},
+                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA, 0},
+            };
+            device_->CreateInputLayout(
+                layout, 2,
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize(),
+                inputLayout.releaseAndGetAddressOf());
+
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XY_iRGBA);
+            program->builtinLayouts_[layoutIndex] = inputLayout;
+        }
     }
 
-    // Create the paint pixel shader
+    // Create the simple shader (fragment)
     {
-        static const char* pixelShaderSrc = R"hlsl(
-            struct PS_INPUT
-            {
-                float4 pos : SV_POSITION;
-                float4 col : COLOR0;
-            };
-
-            float4 main(PS_INPUT input) : SV_Target
-            {
-                return input.col;
-            }
-
-        )hlsl";
-
+        D3d11Program* program = simpleProgram.get();
         ComPtr<ID3DBlob> errorBlob;
         ComPtr<ID3DBlob> pixelShaderBlob;
 
-        HRESULT hres = D3DCompile(
-            pixelShaderSrc, strlen(pixelShaderSrc),
-            NULL, NULL, NULL, "main", "ps_4_0", 0, 0,
+        HRESULT hres = D3DCompileFromFile(
+            shaderPath_("simple.f.hlsl").wstring().c_str(),
+            NULL, NULL, "main", "ps_4_0", 0, 0,
             pixelShaderBlob.releaseAndGetAddressOf(),
             errorBlob.releaseAndGetAddressOf());
 
@@ -838,7 +825,109 @@ void D3d11Engine::createBuiltinShaders_() {
             pixelShaderBlob->GetBufferSize(),
             NULL,
             pixelShader.releaseAndGetAddressOf());
-        simpleProgram->pixelShader_ = pixelShader;
+        program->pixelShader_ = pixelShader;
+    }
+
+    D3d11ProgramPtr simpleTexturedProgram(
+        new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTextured));
+    simpleTexturedProgram_ = simpleTexturedProgram;
+
+    // Create the simple textured shader (vertex)
+    {
+        D3d11Program* program = simpleTexturedProgram.get();
+
+        ComPtr<ID3DBlob> errorBlob;
+        ComPtr<ID3DBlob> vertexShaderBlob;
+        HRESULT hres = D3DCompileFromFile(
+            shaderPath_("simple_textured.v.hlsl").wstring().c_str(),
+            NULL, NULL, "main", "vs_4_0", 0, 0,
+            vertexShaderBlob.releaseAndGetAddressOf(),
+            errorBlob.releaseAndGetAddressOf());
+
+        if (hres < 0) {
+            std::string errString =
+                (errorBlob ? std::string(
+                    static_cast<const char*>(errorBlob->GetBufferPointer()))
+                    : core::format("unknown D3DCompile error (0x{:X}).", hres));
+        }
+        errorBlob.reset();
+
+        ComPtr<ID3D11VertexShader> vertexShader;
+        device_->CreateVertexShader(
+            vertexShaderBlob->GetBufferPointer(),
+            vertexShaderBlob->GetBufferSize(),
+            NULL,
+            vertexShader.releaseAndGetAddressOf());
+        program->vertexShader_ = vertexShader;
+
+        // Create Input Layout for XYUVRGBA
+        {
+            ComPtr<ID3D11InputLayout> inputLayout;
+            UINT uOffset = static_cast<UINT>(offsetof(Vertex_XYUVRGBA, u));
+            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYUVRGBA, r));
+            D3D11_INPUT_ELEMENT_DESC layout[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, uOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            };
+            device_->CreateInputLayout(
+                layout, 3,
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize(),
+                inputLayout.releaseAndGetAddressOf());
+
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYUVRGBA);
+            program->builtinLayouts_[layoutIndex] = inputLayout;
+        }
+
+        // Create Input Layout for XYUV_iRGBA
+        {
+            ComPtr<ID3D11InputLayout> inputLayout;
+            UINT uOffset = static_cast<UINT>(offsetof(Vertex_XYUV, u));
+            D3D11_INPUT_ELEMENT_DESC layout[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,       D3D11_INPUT_PER_VERTEX_DATA,   0},
+                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, uOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
+                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,       D3D11_INPUT_PER_INSTANCE_DATA, 0},
+            };
+            device_->CreateInputLayout(
+                layout, 3,
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize(),
+                inputLayout.releaseAndGetAddressOf());
+
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYUV_iRGBA);
+            program->builtinLayouts_[layoutIndex] = inputLayout;
+        }
+    }
+
+    // Create the simple textured shader (fragment)
+    {
+        D3d11Program* program = simpleTexturedProgram.get();
+        ComPtr<ID3DBlob> errorBlob;
+        ComPtr<ID3DBlob> pixelShaderBlob;
+
+        HRESULT hres = D3DCompileFromFile(
+            shaderPath_("simple_textured.f.hlsl").wstring().c_str(),
+            NULL, NULL, "main", "ps_4_0", 0, 0,
+            pixelShaderBlob.releaseAndGetAddressOf(),
+            errorBlob.releaseAndGetAddressOf());
+
+        if (hres < 0) {
+            std::string errString =
+                (errorBlob ? std::string(
+                    static_cast<const char*>(errorBlob->GetBufferPointer()))
+                    : core::format("unknown D3DCompile error (0x{:X}).", hres));
+            throw core::RuntimeError(errString);
+        }
+        errorBlob.reset();
+
+        ComPtr<ID3D11PixelShader> pixelShader;
+        device_->CreatePixelShader(
+            pixelShaderBlob->GetBufferPointer(),
+            pixelShaderBlob->GetBufferSize(),
+            NULL,
+            pixelShader.releaseAndGetAddressOf());
+        program->pixelShader_ = pixelShader;
     }
 
     // Create depth-stencil State
@@ -902,7 +991,7 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
     if (factory_->CreateSwapChainForHwnd(
             device_.get(), hWnd, &sd, NULL, NULL, dxgiSwapChain.releaseAndGetAddressOf())
         != S_OK) {
-        throw core::LogicError("D3d11Engine: could not create DXGI_1.2 swap chain");
+        throw core::LogicError("D3d11Engine: could not create DXGI_1.2 swap chain.");
     }
 #    else
     DXGI_SWAP_CHAIN_DESC sd = {};
@@ -924,7 +1013,7 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
     if (factory_->CreateSwapChain(
             device_.get(), &sd, dxgiSwapChain.releaseAndGetAddressOf())
         < 0) {
-        throw core::LogicError("D3d11Engine: could not create DXGI_1.0 swap chain");
+        throw core::LogicError("D3d11Engine: could not create DXGI_1.0 swap chain.");
     }
 #    endif
 
@@ -960,7 +1049,7 @@ BufferPtr D3d11Engine::constructBuffer_(const BufferCreateInfo& createInfo) {
         desc.BindFlags |= D3D11_BIND_FLAG::D3D11_BIND_CONSTANT_BUFFER;
         if (bindFlags != BindFlag::ConstantBuffer) {
             throw core::LogicError("D3d11Buffer: BindFlag::UniformBuffer cannot be "
-                                   "combined with any other bind flag");
+                                   "combined with any other bind flag.");
         }
     }
     else {
@@ -1008,7 +1097,7 @@ ImagePtr D3d11Engine::constructImage_(const ImageCreateInfo& createInfo) {
 
     DXGI_FORMAT dxgiFormat = pixelFormatToDxgiFormat(createInfo.pixelFormat());
     if (dxgiFormat == DXGI_FORMAT_UNKNOWN) {
-        throw core::LogicError("D3d11: unknown image format");
+        throw core::LogicError("D3d11: unknown image format.");
     }
 
     auto image = makeUnique<D3d11Image>(resourceRegistry_, createInfo);
@@ -1037,7 +1126,7 @@ ImageViewPtr D3d11Engine::constructImageView_(
 
     DXGI_FORMAT dxgiFormat = pixelFormatToDxgiFormat(format);
     if (dxgiFormat == DXGI_FORMAT_UNKNOWN) {
-        throw core::LogicError("D3d11: unknown image format");
+        throw core::LogicError("D3d11: unknown image format.");
     }
 
     auto view = makeUnique<D3d11ImageView>(
@@ -1058,7 +1147,7 @@ D3d11Engine::constructGeometryView_(const GeometryViewCreateInfo& createInfo) {
     D3D_PRIMITIVE_TOPOLOGY topology =
         primitiveTypeToD3DPrimitiveTopology(createInfo.primitiveType());
     if (topology == D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED) {
-        throw core::LogicError("D3d11: unknown primitive type");
+        throw core::LogicError("D3d11: unknown primitive type.");
     }
 
     auto view = makeUnique<D3d11GeometryView>(resourceRegistry_, createInfo);
@@ -1077,14 +1166,14 @@ D3d11Engine::constructRasterizerState_(const RasterizerStateCreateInfo& createIn
     return RasterizerStatePtr(state.release());
 }
 
-void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) {
+void D3d11Engine::onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) {
     D3d11SwapChain* d3dSwapChain = static_cast<D3d11SwapChain*>(swapChain);
     IDXGISwapChainX* dxgiSwapChain = d3dSwapChain->dxgiSwapChain();
 
     d3dSwapChain->rtv_.reset();
     HRESULT hres = dxgiSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
     if (hres < 0) {
-        throw core::LogicError("D3d11Engine: could not resize swap chain buffers");
+        throw core::LogicError("D3d11Engine: could not resize swap chain buffers.");
     }
 
     ComPtr<ID3D11Texture2D> backBuffer;
@@ -1097,11 +1186,20 @@ void D3d11Engine::resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 he
     d3dSwapChain->rtv_ = backBufferView.get();
 
     if (d3dSwapChain == currentSwapchain_.get() && !boundFramebuffer_) {
+        // rebind rtv
         setFramebuffer_(nullptr);
     }
 }
 
 // -- RENDER THREAD functions --
+
+void D3d11Engine::initContext_() {
+    // no-op
+}
+
+void D3d11Engine::initBuiltinResources_() {
+    // no-op
+}
 
 void D3d11Engine::initFramebuffer_(Framebuffer* /*framebuffer*/) {
     // no-op
@@ -1121,10 +1219,7 @@ void D3d11Engine::initImage_(
 
     D3d11Image* image = static_cast<D3d11Image*>(image_);
 
-    if (count <= 0) {
-        mipLevelDataSpans = nullptr;
-    }
-    else {
+    if (count > 0) {
         VGC_CORE_ASSERT(mipLevelDataSpans);
     }
 
@@ -1136,9 +1231,11 @@ void D3d11Engine::initImage_(
 
     [[maybe_unused]] bool isImmutable = image->usage() == Usage::Immutable;
     [[maybe_unused]] bool isMultisampled = numSamples > 1;
-    bool isMipmapGenEnabled = image->isMipGenerationEnabled();
+    bool isMipmapGenEnabled =
+        image->resourceMiscFlags().has(ResourceMiscFlag::GenerateMips);
 
-    VGC_CORE_ASSERT(isMipmapGenEnabled || (numMipLevels > 0));
+    // Engine does assign full-set level count if it is 0 in createInfo.
+    VGC_CORE_ASSERT(numMipLevels > 0);
 
     D3D11_USAGE d3dUsage = usageToD3DUsage(image->usage());
 
@@ -1172,11 +1269,13 @@ void D3d11Engine::initImage_(
     // see https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createtexture1d
     // see https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createtexture2d
     core::Array<D3D11_SUBRESOURCE_DATA> initData(numMipLevels * numLayers);
-    if (mipLevelDataSpans) {
-        // XXX let's consider for now that we are provided full mips or nothing
-        VGC_CORE_ASSERT(numMipLevels == count);
+    if (count > 0) {
+        VGC_CORE_ASSERT(count <= 1 || count == numMipLevels);
         VGC_CORE_ASSERT(numMipLevels > 0);
         initData.resize(numMipLevels * numLayers);
+        UINT levelWidth = width;
+        UINT levelHeight = height;
+        UINT bpp = image->bytesPerPixel();
         for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
             const Span<const char>& mipLevelDataSpan = mipLevelDataSpans[mipLevel];
             // each span has all layers
@@ -1184,8 +1283,24 @@ void D3d11Engine::initImage_(
             VGC_CORE_ASSERT(layerStride * numLayers == mipLevelDataSpan.length());
             for (Int layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
                 // layer0_mip0..layer0_mipN..layerN_mip0..layerN_mipN
-                initData[layerIdx * numMipLevels + mipLevel].pSysMem =
-                    mipLevelDataSpan.data() + layerStride * layerIdx;
+                D3D11_SUBRESOURCE_DATA& initialData =
+                    initData[layerIdx * numMipLevels + mipLevel];
+                initialData.pSysMem = mipLevelDataSpan.data() + layerStride * layerIdx;
+                initialData.SysMemPitch = levelWidth * bpp;
+                // XXX check span size !!!
+            }
+            // compute next level size
+            levelWidth /= 2;
+            levelHeight /= 2;
+            if (levelWidth > 0) {
+                if (levelHeight == 0) {
+                    levelHeight = 1;
+                }
+            }
+            else if (levelHeight > 0) {
+                if (levelWidth == 0) {
+                    levelWidth = 1;
+                }
             }
         }
     }
@@ -1209,13 +1324,20 @@ void D3d11Engine::initImage_(
         ComPtr<ID3D11Texture1D> texture;
         device_->CreateTexture1D(
             &desc,
-            initData.size() ? initData.data() : nullptr,
+            (count == numMipLevels) ? initData.data() : nullptr,
             texture.releaseAndGetAddressOf());
         image->object_ = texture;
+        if (count < numMipLevels) {
+            for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
+                const D3D11_SUBRESOURCE_DATA& initialData = initData[mipLevel];
+                deviceCtx_->UpdateSubresource(
+                    texture.get(), 0, 0, initialData.pSysMem, initialData.SysMemPitch, 0);
+            }
+        }
     }
     else {
         VGC_CORE_ASSERT(image->rank() == ImageRank::_2D);
-        VGC_CORE_ASSERT(!isMultisampled || !mipLevelDataSpans);
+        VGC_CORE_ASSERT(!isMultisampled || count == 0);
 
         D3D11_TEXTURE2D_DESC desc = {};
         desc.Width = width;
@@ -1232,9 +1354,16 @@ void D3d11Engine::initImage_(
         ComPtr<ID3D11Texture2D> texture;
         device_->CreateTexture2D(
             &desc,
-            initData.size() ? initData.data() : nullptr,
+            (count == numMipLevels) ? initData.data() : nullptr,
             texture.releaseAndGetAddressOf());
         image->object_ = texture;
+        if (count < numMipLevels) {
+            for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
+                const D3D11_SUBRESOURCE_DATA& initialData = initData[mipLevel];
+                deviceCtx_->UpdateSubresource(
+                    texture.get(), 0, 0, initialData.pSysMem, initialData.SysMemPitch, 0);
+            }
+        }
     }
 }
 
@@ -1247,6 +1376,10 @@ void D3d11Engine::initImageView_(ImageView* view) {
     UINT firstMipLevel = static_cast<UINT>(d3dImageView->firstMipLevel());
     UINT numMipLevels = static_cast<UINT>(d3dImageView->numMipLevels());
     UINT numBufferElements = static_cast<UINT>(d3dImageView->numBufferElements());
+
+    if (numMipLevels == 0) {
+        numMipLevels = static_cast<UINT>(-1);
+    }
 
     if (d3dImageView->bindFlags() & ImageBindFlag::ShaderResource) {
         D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
@@ -1291,7 +1424,7 @@ void D3d11Engine::initImageView_(ImageView* view) {
                 break;
             }
             default:
-                throw core::LogicError("D3d11: unknown image rank");
+                throw core::LogicError("D3d11: unknown image rank.");
                 break;
             }
         }
@@ -1339,7 +1472,7 @@ void D3d11Engine::initImageView_(ImageView* view) {
                 break;
             }
             default:
-                throw core::LogicError("D3d11: unknown image rank");
+                throw core::LogicError("D3d11: unknown image rank.");
                 break;
             }
         }
@@ -1352,7 +1485,7 @@ void D3d11Engine::initImageView_(ImageView* view) {
         D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
         desc.Format = d3dImageView->dxgiFormat();
         if (view->isBuffer()) {
-            throw core::LogicError("D3d11: buffer cannot be bound as Depth Stencil");
+            throw core::LogicError("D3d11: buffer cannot be bound as Depth Stencil.");
         }
         else {
             ImagePtr image = view->viewedImage();
@@ -1384,7 +1517,7 @@ void D3d11Engine::initImageView_(ImageView* view) {
                 break;
             }
             default:
-                throw core::LogicError("D3d11: unknown image rank");
+                throw core::LogicError("D3d11: unknown image rank.");
                 break;
             }
         }
@@ -1401,42 +1534,47 @@ void D3d11Engine::initSamplerState_(SamplerState* state) {
     UINT filter = 0;
 
     if (d3dSamplerState->magFilter() == FilterMode::Undefined) {
-        throw core::LogicError("D3d11: undefined mag filter");
+        throw core::LogicError("D3d11: undefined mag filter.");
     }
     if (d3dSamplerState->minFilter() == FilterMode::Undefined) {
-        throw core::LogicError("D3d11: undefined min filter");
+        throw core::LogicError("D3d11: undefined min filter.");
     }
     if (d3dSamplerState->mipFilter() == FilterMode::Undefined) {
-        throw core::LogicError("D3d11: undefined mip filter");
+        throw core::LogicError("D3d11: undefined mip filter.");
     }
 
-    if (d3dSamplerState->maxAnisotropy() >= 1) {
+    if (d3dSamplerState->maxAnisotropy() > 1) {
+        // This enum value is equivalent to a "ANISOTROPIC" flag.
         filter = D3D11_FILTER_ANISOTROPIC;
     }
     else {
         if (d3dSamplerState->magFilter() == FilterMode::Linear) {
+            // This enum value is equivalent to a "MAG_LINEAR" flag.
             filter |= D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
         }
         if (d3dSamplerState->minFilter() == FilterMode::Linear) {
+            // This enum value is equivalent to a "MIN_LINEAR" flag.
             filter |= D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
         }
         if (d3dSamplerState->mipFilter() == FilterMode::Linear) {
+            // This enum value is equivalent to a "MIP_LINEAR" flag.
             filter |= D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
         }
     }
     if (d3dSamplerState->comparisonFunction() != ComparisonFunction::Disabled) {
+        // This enum value is equivalent to the "COMPARISON" flag.
         filter |= D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
     }
     desc.Filter = static_cast<D3D11_FILTER>(filter);
     desc.AddressU = imageWrapModeToD3DTextureAddressMode(d3dSamplerState->wrapModeU());
     desc.AddressV = imageWrapModeToD3DTextureAddressMode(d3dSamplerState->wrapModeV());
     desc.AddressW = imageWrapModeToD3DTextureAddressMode(d3dSamplerState->wrapModeW());
-    desc.MipLODBias = d3dSamplerState->mipLODBias();
     desc.MaxAnisotropy = static_cast<UINT>(d3dSamplerState->maxAnisotropy());
     desc.ComparisonFunc =
         comparisonFunctionToD3DComparisonFunc(d3dSamplerState->comparisonFunction());
     // XXX add data() in vec4f
     memcpy(desc.BorderColor, &d3dSamplerState->wrapColor(), 4 * sizeof(float));
+    desc.MipLODBias = d3dSamplerState->mipLODBias();
     desc.MinLOD = d3dSamplerState->minLOD();
     desc.MaxLOD = d3dSamplerState->maxLOD();
     device_->CreateSamplerState(&desc, d3dSamplerState->object_.releaseAndGetAddressOf());
@@ -1534,24 +1672,42 @@ void D3d11Engine::setViewport_(Int x, Int y, Int width, Int height) {
 
 void D3d11Engine::setProgram_(const ProgramPtr& program) {
     D3d11Program* d3dProgram = program.get_static_cast<D3d11Program>();
-    deviceCtx_->VSSetShader(d3dProgram->vertexShader_.get(), NULL, 0);
-    deviceCtx_->PSSetShader(d3dProgram->pixelShader_.get(), NULL, 0);
-    deviceCtx_->GSSetShader(d3dProgram->geometryShader_.get(), NULL, 0);
-    builtinLayouts_ = d3dProgram->builtinLayouts_;
+    if (d3dProgram) {
+        deviceCtx_->VSSetShader(d3dProgram->vertexShader_.get(), NULL, 0);
+        deviceCtx_->PSSetShader(d3dProgram->pixelShader_.get(), NULL, 0);
+        deviceCtx_->GSSetShader(d3dProgram->geometryShader_.get(), NULL, 0);
+        builtinLayouts_ = d3dProgram->builtinLayouts_;
+    }
+    else {
+        deviceCtx_->VSSetShader(NULL, NULL, 0);
+        deviceCtx_->PSSetShader(NULL, NULL, 0);
+        deviceCtx_->GSSetShader(NULL, NULL, 0);
+        builtinLayouts_.fill(nullptr);
+    }
 }
 
 void D3d11Engine::setBlendState_(
     const BlendStatePtr& state,
-    const geometry::Vec4f& blendFactor) {
+    const geometry::Vec4f& constantFactors) {
 
     D3d11BlendState* d3dBlendState = state.get_static_cast<D3d11BlendState>();
-    deviceCtx_->OMSetBlendState(d3dBlendState->object(), blendFactor.data(), 0xFFFFFFFF);
+    deviceCtx_->OMSetBlendState(
+        d3dBlendState->object(), constantFactors.data(), 0xFFFFFFFF);
 }
 
 void D3d11Engine::setRasterizerState_(const RasterizerStatePtr& state) {
     D3d11RasterizerState* d3dRasterizerState =
         state.get_static_cast<D3d11RasterizerState>();
     deviceCtx_->RSSetState(d3dRasterizerState->object());
+}
+
+void D3d11Engine::setScissorRect_(const geometry::Rect2f& rect) {
+    D3D11_RECT r = {};
+    r.left = static_cast<LONG>(std::round(rect.xMin()));
+    r.top = static_cast<LONG>(std::round(rect.yMin()));
+    r.right = static_cast<LONG>(std::round(rect.xMax()));
+    r.bottom = static_cast<LONG>(std::round(rect.yMax()));
+    deviceCtx_->RSSetScissorRects(1, &r);
 }
 
 void D3d11Engine::setStageConstantBuffers_(
@@ -1671,6 +1827,17 @@ void D3d11Engine::updateBufferData_(
 
     D3d11Buffer* buffer = static_cast<D3d11Buffer*>(aBuffer);
     loadBuffer_(buffer, data, lengthInBytes);
+}
+
+void D3d11Engine::generateMips_(const ImageViewPtr& aImageView) {
+    D3d11ImageView* d3dView = aImageView.get_static_cast<D3d11ImageView>();
+    ID3D11ShaderResourceView* srv = d3dView->srvObject();
+    if (srv) {
+        deviceCtx_->GenerateMips(srv);
+    }
+    else {
+        VGC_ERROR(LogVgcGraphics, "Null resource view.");
+    }
 }
 
 void D3d11Engine::draw_(GeometryView* view, UInt numIndices, UInt numInstances) {

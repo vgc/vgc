@@ -131,9 +131,9 @@ public:
     }
 
 private:
-    FilterMode magFilter_ = FilterMode::Point;
-    FilterMode minFilter_ = FilterMode::Point;
-    FilterMode mipFilter_ = FilterMode::Point;
+    FilterMode magFilter_ = FilterMode::Linear;
+    FilterMode minFilter_ = FilterMode::Linear;
+    FilterMode mipFilter_ = FilterMode::Linear;
     ImageWrapMode wrapModeU_ = ImageWrapMode::ClampToConstantColor;
     ImageWrapMode wrapModeV_ = ImageWrapMode::ClampToConstantColor;
     ImageWrapMode wrapModeW_ = ImageWrapMode::ClampToConstantColor;
@@ -141,11 +141,11 @@ private:
     ComparisonFunction comparisonFunction_ = ComparisonFunction::Disabled;
     // enables anisotropic filtering if >= 1, max is 16.
     // has precedence over user-defined filter modes.
-    Int maxAnisotropy_ = 0;
+    Int maxAnisotropy_ = 1;
     geometry::Vec4f wrapColor_ = {0.f, 0.f, 0.f, 0.f};
     float mipLODBias_ = 0.f;
     float minLOD_ = 0.f;
-    float maxLOD_ = 0.f;
+    float maxLOD_ = 1000.f;
 };
 
 /// \class vgc::graphics::SamplerState

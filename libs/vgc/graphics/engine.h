@@ -26,6 +26,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -35,6 +36,8 @@
 #include <vgc/core/innercore.h>
 #include <vgc/core/templateutil.h>
 #include <vgc/geometry/mat4f.h>
+#include <vgc/geometry/rect2f.h>
+#include <vgc/geometry/vec4f.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/batch.h>
 #include <vgc/graphics/blendstate.h>
@@ -158,6 +161,10 @@ private:
     bool isMultithreadingEnabled_ = false;
 };
 
+inline Int calculateMaxMipLevels(Int width, Int height) {
+    return static_cast<Int>(std::floor(std::log2((std::max)(width, height)))) + 1;
+}
+
 // XXX add something to limit the number of pending frames for each swapchain..
 
 /// \class vgc::graphics::Engine
@@ -219,7 +226,23 @@ public:
     template<typename T>
     BufferPtr createVertexBuffer(core::Array<T> initialData, bool isDynamic);
 
-    GeometryViewPtr createDynamicTriangleListView(BuiltinGeometryLayout vertexLayout);
+    BufferPtr createIndexBuffer(IndexFormat indexFormat, Int initialIndexCount);
+
+    template<IndexFormat Format>
+    BufferPtr
+    createIndexBuffer(core::Array<IndexFormatType<Format>> initialData, bool isDynamic);
+
+    GeometryViewPtr createDynamicGeometryView(
+        PrimitiveType primitiveType,
+        BuiltinGeometryLayout vertexLayout,
+        IndexFormat indexFormat = IndexFormat::None);
+
+    GeometryViewPtr createDynamicTriangleListView(
+        BuiltinGeometryLayout vertexLayout,
+        IndexFormat indexFormat = IndexFormat::None);
+    GeometryViewPtr createDynamicTriangleStripView(
+        BuiltinGeometryLayout vertexLayout,
+        IndexFormat indexFormat = IndexFormat::None);
 
     ImagePtr createImage(const ImageCreateInfo& createInfo);
 
@@ -235,6 +258,8 @@ public:
         PixelFormat format,
         Int numElements);
 
+    void generateMips(const ImageViewPtr& imageView);
+
     SamplerStatePtr createSamplerState(const SamplerStateCreateInfo& createInfo);
 
     GeometryViewPtr createGeometryView(const GeometryViewCreateInfo& createInfo);
@@ -246,15 +271,41 @@ public:
     /// Sets the framebuffer to be drawn to.
     ///
     void setFramebuffer(const FramebufferPtr& framebuffer = nullptr);
+    void pushFramebuffer(const FramebufferPtr& framebuffer = nullptr);
+    void popFramebuffer();
 
     void setViewport(Int x, Int y, Int width, Int height);
+    void setViewport(const Viewport& viewport);
+    void pushViewport(const Viewport& viewport);
+    void popViewport();
 
+    /// This sets the current program.
+    ///
     void setProgram(BuiltinProgram builtinProgram);
 
-    void
-    setBlendState(const BlendStatePtr& state, const geometry::Vec4f& blendConstantFactor);
+    /// This pushes and sets the current program.
+    ///
+    void pushProgram(BuiltinProgram builtinProgram);
+
+    void setProgram(const ProgramPtr& program);
+    void pushProgram(const ProgramPtr& program);
+    void popProgram();
+
+    void setBlendState(
+        const BlendStatePtr& state, //
+        const geometry::Vec4f& constantFactors);
+    void pushBlendState(
+        const BlendStatePtr& state, //
+        const geometry::Vec4f& constantFactors);
+    void popBlendState();
 
     void setRasterizerState(const RasterizerStatePtr& state);
+    void pushRasterizerState(const RasterizerStatePtr& state);
+    void popRasterizerState();
+
+    void setScissorRect(const geometry::Rect2f& rect);
+    void pushScissorRect(const geometry::Rect2f& rect);
+    void popScissorRect();
 
     void setStageConstantBuffers(
         const BufferPtr* buffers,
@@ -287,6 +338,11 @@ public:
     ///
     void pushProjectionMatrix();
 
+    /// Appends `m` as the top-most matrix of the projection matrix stack.
+    /// `m` becomes the current projection matrix.
+    ///
+    void pushProjectionMatrix(const geometry::Mat4f& projectionMatrix);
+
     /// Removes the top-most matrix of the projection matrix stack.
     /// The new top-most matrix becomes the current projection matrix.
     ///
@@ -307,6 +363,11 @@ public:
     /// Duplicates the top-most matrix on the view matrix stack.
     ///
     void pushViewMatrix();
+
+    /// Appends `m` as the top-most matrix of the view matrix stack.
+    /// `m` becomes the current view matrix.
+    ///
+    void pushViewMatrix(const geometry::Mat4f& viewMatrix);
 
     /// Removes the top-most matrix of the view matrix stack.
     /// The new top-most matrix becomes the current view matrix.
@@ -339,7 +400,7 @@ public:
     ///
     void endFrame(Int syncInterval = 0, PresentFlags flags = PresentFlag::None);
 
-    void resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int height);
+    void onWindowResize(const SwapChainPtr& swapChain, Int width, Int height);
 
     template<typename T>
     void updateBufferData(const BufferPtr& buffer, core::Array<T> data);
@@ -347,7 +408,7 @@ public:
     template<typename T>
     void updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data);
 
-    void draw(const GeometryViewPtr& geometryView, Int numIndices, Int numInstances);
+    void draw(const GeometryViewPtr& geometry, Int numIndices = -1, Int numInstances = 0);
 
     //void createTextAtlasResource();
 
@@ -403,7 +464,7 @@ protected:
     virtual RasterizerStatePtr
     constructRasterizerState_(const RasterizerStateCreateInfo& createInfo) = 0;
 
-    virtual void resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) = 0;
+    virtual void onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) = 0;
 
     virtual bool shouldPresentWaitFromSyncedUserThread_() {
         return false;
@@ -430,8 +491,9 @@ protected:
     virtual void setProgram_(const ProgramPtr& program) = 0;
     virtual void setBlendState_(
         const BlendStatePtr& state,
-        const geometry::Vec4f& blendConstantFactor) = 0;
+        const geometry::Vec4f& constantFactors) = 0;
     virtual void setRasterizerState_(const RasterizerStatePtr& state) = 0;
+    virtual void setScissorRect_(const geometry::Rect2f& rect) = 0;
     virtual void setStageConstantBuffers_(
         const BufferPtr* buffers,
         Int startIndex,
@@ -453,6 +515,8 @@ protected:
     virtual void
     updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) = 0;
 
+    virtual void generateMips_(const ImageViewPtr& imageView) = 0;
+
     virtual void draw_(GeometryView* view, UInt numPrimitives, UInt numInstances) = 0;
     virtual void clear_(const core::Color& color) = 0;
 
@@ -469,6 +533,7 @@ protected:
     // -- builtins --
 
     ProgramPtr simpleProgram_; // (created by api-specific engine implementations)
+    ProgramPtr simpleTexturedProgram_; // (created by api-specific engine implementations)
     BlendStatePtr defaultBlendState_;
     RasterizerStatePtr defaultRasterizerState_;
 
@@ -537,7 +602,36 @@ protected:
     }
 
     static constexpr size_t toIndex_(ShaderStage stage) {
-        return core::toUnderlying(stage);
+        return static_cast<size_t>(core::toUnderlying(stage));
+    }
+
+    static size_t toIndexSafe_(ShaderStage stage) {
+        Int i = core::toUnderlying(stage);
+        if (i < 0 || i >= numShaderStages) {
+            throw core::LogicError("Engine: invalid ShaderStage enum value.");
+        }
+        return static_cast<size_t>(i);
+    }
+
+    static constexpr PipelineParameter stageConstantBuffersParameter_(ShaderStage stage) {
+        return std::array{
+            PipelineParameter::VertexShaderConstantBuffers,
+            PipelineParameter::GeometryShaderConstantBuffers,
+            PipelineParameter::PixelShaderConstantBuffers}[toIndex_(stage)];
+    }
+
+    static constexpr PipelineParameter stageImageViewsParameter_(ShaderStage stage) {
+        return std::array{
+            PipelineParameter::VertexShaderImageViews,
+            PipelineParameter::GeometryShaderImageViews,
+            PipelineParameter::PixelShaderImageViews}[toIndex_(stage)];
+    }
+
+    static constexpr PipelineParameter stageSamplersParameter_(ShaderStage stage) {
+        return std::array{
+            PipelineParameter::VertexShaderSamplers,
+            PipelineParameter::GeometryShaderSamplers,
+            PipelineParameter::PixelShaderSamplers}[toIndex_(stage)];
     }
 
 private:
@@ -547,24 +641,87 @@ private:
 
     // -- pipeline state on the user thread --
 
+    template<typename T>
+    class Stack : public core::Array<T> {
+    private:
+        using Container = core::Array<T>;
+
+    public:
+        using Container::Container;
+
+        void pushTop() {
+            // XXX add specific warning if empty
+            Container::emplaceLast(Container::last());
+        }
+
+        void push(const T& value) {
+            Container::emplaceLast(value);
+        }
+
+        void push(T&& value) {
+            Container::emplaceLast(std::move(value));
+        }
+
+        void pop() {
+            // XXX add specific warning if empty
+            Container::removeLast();
+        }
+
+        const T& top() const {
+            // XXX add specific warning if empty
+            return Container::last();
+        }
+
+        T& top() {
+            // XXX add specific warning if empty
+            return Container::last();
+        }
+    };
+
     SwapChainPtr swapChain_;
-    core::Array<FramebufferPtr> framebufferStack_;
 
-    // pushable pipeline parameters
-    core::Array<Viewport> viewportStack_;
-    core::Array<ProgramPtr> programStack_;
-    core::Array<BlendStatePtr> blendStateStack_;
-    core::Array<geometry::Vec4f> blendConstantFactorStack_;
-    core::Array<RasterizerStatePtr> rasterizerStateStack_;
+    struct BlendStateAndConstant {
+        BlendStateAndConstant() = default;
+        BlendStateAndConstant(
+            const BlendStatePtr& statePtr,
+            const geometry::Vec4f& constantFactors)
+            : statePtr(statePtr)
+            , constantFactors(constantFactors) {
+        }
 
-    using StageConstantBufferArrayStack = core::Array<StageConstantBufferArray>;
+        BlendStatePtr statePtr = {};
+        geometry::Vec4f constantFactors = {};
+    };
+
+    Stack<FramebufferPtr> framebufferStack_;
+    Stack<Viewport> viewportStack_;
+    Stack<ProgramPtr> programStack_;
+    Stack<BlendStateAndConstant> blendStateStack_;
+    Stack<RasterizerStatePtr> rasterizerStateStack_;
+    Stack<geometry::Rect2f> scissorRectStack_;
+
+    // clang-format on
+
+    using StageConstantBufferArrayStack = Stack<StageConstantBufferArray>;
     std::array<StageConstantBufferArrayStack, numShaderStages> constantBufferArrayStacks_;
+    constexpr StageConstantBufferArrayStack&
+    stageConstantBufferArrayStack_(ShaderStage shaderStage) {
+        return constantBufferArrayStacks_[toIndex_(shaderStage)];
+    }
 
-    using StageImageViewArrayStack = core::Array<StageImageViewArray>;
+    using StageImageViewArrayStack = Stack<StageImageViewArray>;
     std::array<StageImageViewArrayStack, numShaderStages> imageViewArrayStacks_;
+    constexpr StageImageViewArrayStack&
+    stageImageViewArrayStack_(ShaderStage shaderStage) {
+        return imageViewArrayStacks_[toIndex_(shaderStage)];
+    }
 
-    using StageSamplerStateArrayStack = core::Array<StageSamplerStateArray>;
+    using StageSamplerStateArrayStack = Stack<StageSamplerStateArray>;
     std::array<StageSamplerStateArrayStack, numShaderStages> samplerStateArrayStacks_;
+    constexpr StageSamplerStateArrayStack&
+    stageSamplerStateArrayStack_(ShaderStage shaderStage) {
+        return samplerStateArrayStacks_[toIndex_(shaderStage)];
+    }
 
     PipelineParameters dirtyPipelineParameters_ = PipelineParameter::None;
 
@@ -579,14 +736,14 @@ private:
     std::chrono::steady_clock::time_point engineStartTime_;
     std::chrono::steady_clock::time_point frameStartTime_;
     BufferPtr builtinConstantsBuffer_;
-    core::Array<geometry::Mat4f> projectionMatrixStack_;
-    core::Array<geometry::Mat4f> viewMatrixStack_;
+    Stack<geometry::Mat4f> projectionMatrixStack_;
+    Stack<geometry::Mat4f> viewMatrixStack_;
     bool dirtyBuiltinConstantBuffer_ = false;
 
     // -- builtin batching early impl --
 
-    void flushBuiltinBatches_();
-    void prependBuiltinBatchesResourceUpdates_();
+    //void flushBuiltinBatches_();
+    //void prependBuiltinBatchesResourceUpdates_();
 
     // -- render thread + sync --
 
@@ -656,38 +813,48 @@ private:
 };
 
 inline const geometry::Mat4f& Engine::projectionMatrix() const {
-    return projectionMatrixStack_.last();
+    return projectionMatrixStack_.top();
 }
 
 inline void Engine::setProjectionMatrix(const geometry::Mat4f& projectionMatrix) {
-    projectionMatrixStack_.last() = projectionMatrix;
+    projectionMatrixStack_.top() = projectionMatrix;
     dirtyBuiltinConstantBuffer_ = true;
 }
 
 inline void Engine::pushProjectionMatrix() {
-    projectionMatrixStack_.emplaceLast(projectionMatrixStack_.last());
+    projectionMatrixStack_.pushTop();
+}
+
+inline void Engine::pushProjectionMatrix(const geometry::Mat4f& projectionMatrix) {
+    projectionMatrixStack_.push(projectionMatrix);
+    dirtyBuiltinConstantBuffer_ = true;
 }
 
 inline void Engine::popProjectionMatrix() {
-    projectionMatrixStack_.removeLast();
+    projectionMatrixStack_.pop();
     dirtyBuiltinConstantBuffer_ = true;
 }
 
 inline const geometry::Mat4f& Engine::viewMatrix() const {
-    return viewMatrixStack_.last();
+    return viewMatrixStack_.top();
 }
 
 inline void Engine::setViewMatrix(const geometry::Mat4f& viewMatrix) {
-    viewMatrixStack_.last() = viewMatrix;
+    viewMatrixStack_.top() = viewMatrix;
     dirtyBuiltinConstantBuffer_ = true;
 }
 
 inline void Engine::pushViewMatrix() {
-    viewMatrixStack_.emplaceLast(viewMatrixStack_.last());
+    viewMatrixStack_.pushTop();
+}
+
+inline void Engine::pushViewMatrix(const geometry::Mat4f& viewMatrix) {
+    viewMatrixStack_.push(viewMatrix);
+    dirtyBuiltinConstantBuffer_ = true;
 }
 
 inline void Engine::popViewMatrix() {
-    viewMatrixStack_.removeLast();
+    viewMatrixStack_.pop();
     dirtyBuiltinConstantBuffer_ = true;
 }
 
@@ -734,11 +901,16 @@ Engine::createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialD
 
 template<typename T>
 inline BufferPtr Engine::createVertexBuffer(core::Array<T> initialData, bool isDynamic) {
-    BufferCreateInfo createInfo = {};
-    createInfo.setUsage(isDynamic ? Usage::Dynamic : Usage::Immutable);
-    createInfo.setBindFlags(BindFlag::VertexBuffer);
-    createInfo.setCpuAccessFlags(isDynamic ? CpuAccessFlag::Write : CpuAccessFlag::None);
-    createInfo.setResourceMiscFlags(ResourceMiscFlag::None);
+    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::VertexBuffer, isDynamic);
+    return createBuffer(createInfo, std::move(initialData));
+}
+
+template<IndexFormat Format>
+inline BufferPtr Engine::createIndexBuffer(
+    core::Array<IndexFormatType<Format>> initialData,
+    bool isDynamic) {
+
+    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::IndexBuffer, isDynamic);
     return createBuffer(createInfo, std::move(initialData));
 }
 

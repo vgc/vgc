@@ -562,10 +562,10 @@ bool Window::event(QEvent* event) {
                     0, 0, static_cast<float>(width_), static_cast<float>(height_));
 
                 if (engine_) {
-                    engine_->resizeSwapChain(swapChain_, width_, height_);
+                    engine_->onWindowResize(swapChain_, width_, height_);
                 }
 
-                engine_->resizeSwapChain(swapChain_, width_, height_);
+                engine_->onWindowResize(swapChain_, width_, height_);
             }
 #endif
             paint(true);
@@ -658,7 +658,7 @@ bool Window::nativeEvent(
             widget_->updateGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
             if (engine_ && swapChain_) {
                 // quite slow with msaa on, will probably be better when we have a compositor.
-                engine_->resizeSwapChain(swapChain_, w, h);
+                engine_->onWindowResize(swapChain_, w, h);
                 //Sleep(50);
                 paint(true);
                 //qDebug() << "painted";

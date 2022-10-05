@@ -1,9 +1,10 @@
 #version 330 core
 
-in vec4 fcol;
+in vec4 fCol;
+
 out highp vec4 fragColor;
 
 void main()
 {
-   fragColor = fcol;
+   fragColor = fCol;
 }

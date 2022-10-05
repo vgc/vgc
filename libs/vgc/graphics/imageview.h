@@ -67,6 +67,7 @@ public:
     }
 
     // texture views are not supported by Opengl until core 4.3
+    //
     //void setFirstMipLevel(UInt8 firstMipLevel)
     //{
     //    firstMipLevel_ = firstMipLevel;
@@ -86,7 +87,7 @@ public:
 
     Int lastMipLevel() const {
         // XXX test overflow
-        return firstMipLevel_ + numMipLevels_ - 1;
+        return (numMipLevels_ ? firstMipLevel_ + numMipLevels_ - 1 : firstMipLevel_);
     }
 
     ImageBindFlags bindFlags() const {
@@ -98,10 +99,12 @@ public:
     }
 
 private:
+    friend Engine;
+
     Int firstLayer_ = 0;
     Int numLayers_ = 1;
     Int firstMipLevel_ = 0;
-    Int numMipLevels_ = 1;
+    Int numMipLevels_ = 0;
 
     ImageBindFlags bindFlags_ = ImageBindFlag::None;
 };
