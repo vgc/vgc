@@ -692,6 +692,8 @@ struct EnumFormatter : fmt::formatter<std::string_view> {
 
 } // namespace vgc::core
 
+// clang-format off
+
 #define VGC_DECLARE_SCOPED_ENUM_FORMATTER(Namespace, Enum)                               \
     namespace VGC_PP_EXPAND(VGC_NAMESPACE Namespace) {                                   \
     const ::vgc::core::EnumeratorStrings& enumeratorStrings(Enum value);                 \
@@ -699,8 +701,6 @@ struct EnumFormatter : fmt::formatter<std::string_view> {
     template<>                                                                           \
     struct fmt::formatter<VGC_PP_EXPAND(VGC_NAMESPACE Namespace)::Enum>                  \
         : ::vgc::core::EnumFormatter<VGC_PP_EXPAND(VGC_NAMESPACE Namespace)::Enum> {};
-
-// clang-format off
 
 #define VGC_DEFINE_SCOPED_ENUM_FORMATTER_BEGIN(Namespace, Enum)                          \
     namespace VGC_PP_EXPAND(VGC_NAMESPACE Namespace) {                                   \
@@ -740,8 +740,8 @@ struct EnumFormatter : fmt::formatter<std::string_view> {
 
 #define VGC_DEFINE_SCOPED_ENUM_FORMATTER_X(Namespace, Enum, ...)                         \
     VGC_DEFINE_SCOPED_ENUM_FORMATTER_BEGIN(Namespace, Enum)                              \
-    VGC_PP_EXPAND(                                                                       \
-        VGC_PP_FOREACH_X(VGC_DEFINE_SCOPED_ENUM_FORMATTER_ITEM_, Enum, __VA_ARGS__))     \
+        VGC_PP_EXPAND(                                                                   \
+            VGC_PP_FOREACH_X(VGC_DEFINE_SCOPED_ENUM_FORMATTER_ITEM_, Enum, __VA_ARGS__)) \
     VGC_DEFINE_SCOPED_ENUM_FORMATTER_END()
 
 #define VGC_DEFINE_SCOPED_ENUM_FORMATTER(...)                                            \
