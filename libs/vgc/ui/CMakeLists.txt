@@ -39,6 +39,7 @@ vgc_add_library(ui
         widget.h
         window.h
 
+        detail/layoututil.h
         detail/paintutil.h
         detail/qopenglengine.h
 
