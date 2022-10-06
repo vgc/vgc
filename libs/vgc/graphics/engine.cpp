@@ -311,7 +311,8 @@ void Engine::generateMips(const ImageViewPtr& imageView) {
         if (!buffer->resourceMiscFlags().has(ResourceMiscFlag::GenerateMips)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "MIP generation ignored: the given Buffer Resource does not have it enabled.");
+                "MIP generation ignored: the given Buffer Resource was not created with "
+                "ResourceMiscFlag::GenerateMips.");
             return;
         }
     }
@@ -320,15 +321,14 @@ void Engine::generateMips(const ImageViewPtr& imageView) {
         if (!image->resourceMiscFlags().has(ResourceMiscFlag::GenerateMips)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "MIP generation ignored: the given Image Resource does not have it enabled.");
+                "MIP generation ignored: the given Image Resource was not created with "
+                "ResourceMiscFlag::GenerateMips.");
             return;
         }
     }
     queueLambdaCommandWithParameters_<ImageViewPtr>(
         "generateMips",
-        [](Engine* engine, const ImageViewPtr& p) {
-            engine->generateMips_(p);
-        },
+        [](Engine* engine, const ImageViewPtr& p) { engine->generateMips_(p); },
         imageView);
 }
 
@@ -1232,14 +1232,16 @@ void Engine::sanitize_(BufferCreateInfo& createInfo) {
         if (!bindFlags.has(BindFlag::RenderTarget)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "BindFlag::RenderTarget is not set but ResourceMiscFlag::GenerateMips is. "
+                "BindFlag::RenderTarget is not set but ResourceMiscFlag::GenerateMips "
+                "is. "
                 "The BindFlag in question is being set automatically.");
             bindFlags.set(BindFlag::RenderTarget);
         }
         if (!bindFlags.has(BindFlag::ShaderResource)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "BindFlag::ShaderResource is not set but ResourceMiscFlag::GenerateMips is. "
+                "BindFlag::ShaderResource is not set but ResourceMiscFlag::GenerateMips "
+                "is. "
                 "The BindFlag in question is being set automatically.");
             bindFlags.set(BindFlag::ShaderResource);
         }
@@ -1273,7 +1275,8 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
             VGC_WARNING(
                 LogVgcGraphics,
                 "ResourceMiscFlag::GenerateMips is set but usage is Usage::Immutable. "
-                "The ResourceMiscFlag in question is being unset automatically, and numMipLevels is set to 1 if it was 0.");
+                "The ResourceMiscFlag in question is being unset automatically, and "
+                "numMipLevels is set to 1 if it was 0.");
             ResourceMiscFlags resourceMiscFlags = createInfo.resourceMiscFlags();
             resourceMiscFlags.unset(ResourceMiscFlag::GenerateMips);
             createInfo.setResourceMiscFlags(resourceMiscFlags);
@@ -1288,14 +1291,16 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
         if (!bindFlags.has(ImageBindFlag::RenderTarget)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "ImageBindFlag::RenderTarget is not set but ResourceMiscFlag::GenerateMips is. "
+                "ImageBindFlag::RenderTarget is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
                 "The ImageBindFlag in question is being set automatically.");
             bindFlags.set(ImageBindFlag::RenderTarget);
         }
         if (!bindFlags.has(ImageBindFlag::ShaderResource)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "ImageBindFlag::ShaderResource is not set but ResourceMiscFlag::GenerateMips is. "
+                "ImageBindFlag::ShaderResource is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
                 "The ImageBindFlag in question is being set automatically.");
             bindFlags.set(ImageBindFlag::ShaderResource);
         }
@@ -1354,7 +1359,11 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
     const Int numMipLevels = createInfo.numMipLevels();
     const Int maxMipLevels = calculateMaxMipLevels(width, height);
     if (numMipLevels < 0 || numMipLevels > maxMipLevels) {
-        VGC_ERROR(LogVgcGraphics, "Requested number of mip levels ({}) should be in the range [0, {}]", numLayers, maxMipLevels);
+        VGC_ERROR(
+            LogVgcGraphics,
+            "Requested number of mip levels ({}) should be in the range [0, {}]",
+            numLayers,
+            maxMipLevels);
     }
     if (numMipLevels == 0) {
         createInfo.setNumMipLevels(maxMipLevels);

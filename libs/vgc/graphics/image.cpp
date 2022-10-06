@@ -22,8 +22,15 @@ UInt8 pixelFormatToBytesPerPixel(PixelFormat format) {
 
     constexpr size_t numPixelFormats = VGC_ENUM_COUNT(PixelFormat);
     static constexpr std::array<UInt8, numPixelFormats> map = {
-#define VGC_PIXEL_FORMAT_MACRO_(Enumerator, ElemSizeInBytes, DXGIFormat, OpenGLInternalFormat, OpenGLPixelType, OpenGLPixelFormat) \
-        ElemSizeInBytes,
+#define VGC_PIXEL_FORMAT_MACRO_(                                                         \
+    Enumerator,                                                                          \
+    ElemSizeInBytes,                                                                     \
+    DXGIFormat,                                                                          \
+    OpenGLInternalFormat,                                                                \
+    OpenGLPixelType,                                                                     \
+    OpenGLPixelFormat)                                                                   \
+                                                                                         \
+    ElemSizeInBytes,
 #include <vgc/graphics/detail/pixelformats.h>
     };
 

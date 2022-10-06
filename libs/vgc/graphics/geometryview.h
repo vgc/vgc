@@ -149,17 +149,18 @@ protected:
 
         static_assert(numBuiltinGeometryLayouts == 6);
         static constexpr std::array<VertexSizes, numBuiltinGeometryLayouts> map = {
-            VertexSizes{4 * 2, 0    }, // XY
-            VertexSizes{4 * 5, 0    }, // XYRGB
-            VertexSizes{4 * 6, 0    }, // XYRGBA
-            VertexSizes{4 * 8, 0    }, // XYUVRGBA
+            VertexSizes{4 * 2, 0},     // XY
+            VertexSizes{4 * 5, 0},     // XYRGB
+            VertexSizes{4 * 6, 0},     // XYRGBA
+            VertexSizes{4 * 8, 0},     // XYUVRGBA
             VertexSizes{4 * 2, 4 * 4}, // XY_iRGBA
             VertexSizes{4 * 4, 4 * 4}, // XYUV_iRGBA
         };
 
         const UInt index = core::toUnderlying(layout);
         if (index == 0 || index >= numBuiltinGeometryLayouts) {
-            throw core::LogicError("GeometryView: invalid BuiltinGeometryLayout enum value.");
+            throw core::LogicError(
+                "GeometryView: invalid BuiltinGeometryLayout enum value.");
         }
 
         return map[index];

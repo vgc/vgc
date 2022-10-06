@@ -17,6 +17,8 @@
 #ifndef VGC_GRAPHICS_ENUMS_H
 #define VGC_GRAPHICS_ENUMS_H
 
+#include <type_traits>
+
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/flags.h>
 

@@ -54,7 +54,6 @@ public:
         : usage_(isDynamic ? Usage::Dynamic : Usage::Immutable)
         , bindFlags_(bindFlags)
         , cpuAccessFlags_(isDynamic ? CpuAccessFlag::Write : CpuAccessFlag::None) {
-
     }
 
     Usage usage() const {
