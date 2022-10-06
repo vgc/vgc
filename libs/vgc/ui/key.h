@@ -18,6 +18,9 @@
 #define VGC_UI_KEY_H
 
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/enum.h>
+
+#include <vgc/ui/api.h>
 
 namespace vgc::ui {
 
@@ -535,6 +538,9 @@ enum class Key : UInt32 {
 };
 
 // clang-format on
+
+VGC_UI_API
+VGC_DECLARE_ENUM(Key)
 
 } // namespace vgc::ui
 

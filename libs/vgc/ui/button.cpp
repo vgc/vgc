@@ -37,7 +37,6 @@ Button::Button(Action* action, FlexDirection layoutDirection)
     shortcutLabel_ = createChild<Label>();
     shortcutLabel_->addStyleClass(core::StringId("Shortcut"));
 
-    // XXX temporary
     shortcutLabel_->hide();
     iconWidget_->hide();
 
@@ -77,6 +76,13 @@ void Button::setActive(bool isActive) {
     }
     else {
         removeStyleClass(strings::active);
+    }
+}
+
+void Button::setShortcutVisible(bool visible) {
+    if (shortcutLabel_) {
+        shortcutLabel_->setVisibility(
+            visible ? Visibility::Inherit : Visibility::Invisible);
     }
 }
 
@@ -182,7 +188,7 @@ void Button::disconnectOldAction_() {
 
 void Button::updateWidgetsBasedOnAction_() {
     std::string_view text_ = text();
-    std::string shortcutText = core::format("shortcutFor({})", text_);
+    std::string shortcutText = core::format("{}", shortcut());
     textLabel_->setText(text_);
     shortcutLabel_->setText(shortcutText);
 

@@ -18,6 +18,7 @@
 #define VGC_UI_MODIFIERKEY_H
 
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/enum.h>
 #include <vgc/core/flags.h>
 #include <vgc/ui/api.h>
 
@@ -46,6 +47,9 @@ enum class ModifierKey : UInt8 {
     Meta  = 0x08
 };
 VGC_DEFINE_FLAGS(ModifierKeys, ModifierKey)
+
+VGC_UI_API
+VGC_DECLARE_ENUM(ModifierKey)
 
 // clang-format on
 

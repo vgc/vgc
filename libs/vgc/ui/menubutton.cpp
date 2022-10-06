@@ -68,6 +68,7 @@ MenuButton::MenuButton(Action* action, FlexDirection layoutDirection)
     : Button(action, layoutDirection) {
 
     addStyleClass(strings::MenuButton);
+    setShortcutVisible(true);
 }
 
 MenuButtonPtr MenuButton::create(Action* action, FlexDirection layoutDirection) {

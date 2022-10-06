@@ -59,12 +59,14 @@ vgc_add_library(ui
         flex.cpp
         grid.cpp
         imagebox.cpp
+        key.cpp
         label.cpp
         lineedit.cpp
         logcategories.cpp
         margins.cpp
         menu.cpp
         menubutton.cpp
+        modifierkey.cpp
         mouseevent.cpp
         overlayarea.cpp
         panel.cpp
@@ -73,6 +75,7 @@ vgc_add_library(ui
         popuplayer.cpp
         qtutil.cpp
         row.cpp
+        shortcut.cpp
         strings.cpp
         widget.cpp
         window.cpp

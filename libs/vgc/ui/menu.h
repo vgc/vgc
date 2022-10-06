@@ -196,12 +196,7 @@ public:
     }
 
     // temporary, will be a style prop
-    void setShortcutTrackEnabled(bool enabled) {
-        if (isShortcutTrackEnabled_ != enabled) {
-            isShortcutTrackEnabled_ = enabled;
-            requestGeometryUpdate();
-        }
-    }
+    void setShortcutTrackEnabled(bool enabled);
 
     VGC_SIGNAL(changed);
     VGC_SIGNAL(popupOpened);
