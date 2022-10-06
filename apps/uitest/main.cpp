@@ -333,7 +333,6 @@ int main(int argc, char* argv[]) {
     ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
     ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
     ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
-    ui::PanelArea* middleTopArea = ui::PanelArea::createTabs(middleArea);
     ui::PanelArea* middleBottomArea = ui::PanelArea::createTabs(middleArea);
     ui::PanelArea* rightTopArea = ui::PanelArea::createTabs(rightArea);
     ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
@@ -341,7 +340,6 @@ int main(int argc, char* argv[]) {
     // Create panels
     // XXX actually create Panel instances as children of Tabs areas
     ui::Column* leftAreaWidget = leftArea->createChild<ui::Column>();
-    ui::Column* middleTopAreaWidget = middleTopArea->createChild<ui::Column>();
     ui::Column* middleBottomAreaWidget = middleBottomArea->createChild<ui::Column>();
     ui::Column* rightTopAreaWidget = rightTopArea->createChild<ui::Column>();
     ui::Column* rightBottomAreaWidget = rightBottomArea->createChild<ui::Column>();
