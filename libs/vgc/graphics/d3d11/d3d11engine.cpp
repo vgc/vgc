@@ -1360,7 +1360,8 @@ void D3d11Engine::initImage_(
                 const D3D11_SUBRESOURCE_DATA& initialData = initData[subresIndex];
                 deviceCtx_->UpdateSubresource(
                     image->object_.get(),
-                    subresIndex,
+                    // No need for int_cast, unlikely to overflow.
+                    static_cast<UINT>(subresIndex),
                     0,
                     initialData.pSysMem,
                     initialData.SysMemPitch,
