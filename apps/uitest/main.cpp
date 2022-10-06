@@ -26,8 +26,10 @@
 #include <vgc/core/python.h>
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
+#include <vgc/dom/strings.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/button.h>
+#include <vgc/ui/canvas.h>
 #include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
@@ -167,10 +169,22 @@ void createMenu(ui::Widget* parent) {
     menu->createChild<ui::Widget>();
 }
 
-void createColorPalette(ui::Widget* parent) {
+ui::ColorPalette* createColorPalette(ui::Widget* parent) {
     ui::ColorPalette* palette = parent->createChild<ui::ColorPalette>();
     palette->setStyleSheet(".ColorPalette { vertical-stretch: 0; }");
     parent->createChild<ui::Widget>(); // vertical-stretch: 1
+    return palette;
+}
+
+vgc::dom::DocumentPtr createDocument() {
+    vgc::dom::DocumentPtr document = vgc::dom::Document::create();
+    vgc::dom::Element::create(document.get(), "vgc");
+    document->enableHistory(vgc::dom::strings::New_Document);
+    return document;
+}
+
+ui::Canvas* createCanvas(ui::Widget* parent, vgc::dom::Document* document) {
+    return parent->createChild<ui::Canvas>(document);
 }
 
 void createGrid(ui::Widget* parent) {
@@ -333,6 +347,7 @@ int main(int argc, char* argv[]) {
     ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
     ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
     ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
+    ui::PanelArea* middleTopArea = ui::PanelArea::createTabs(middleArea);
     ui::PanelArea* middleBottomArea = ui::PanelArea::createTabs(middleArea);
     ui::PanelArea* rightTopArea = ui::PanelArea::createTabs(rightArea);
     ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
@@ -340,17 +355,26 @@ int main(int argc, char* argv[]) {
     // Create panels
     // XXX actually create Panel instances as children of Tabs areas
     ui::Column* leftAreaWidget = leftArea->createChild<ui::Column>();
+    ui::Column* middleTopAreaWidget = middleTopArea->createChild<ui::Column>();
     ui::Column* middleBottomAreaWidget = middleBottomArea->createChild<ui::Column>();
     ui::Column* rightTopAreaWidget = rightTopArea->createChild<ui::Column>();
     ui::Column* rightBottomAreaWidget = rightBottomArea->createChild<ui::Column>();
 
     // Create widgets
-    createColorPalette(leftAreaWidget);
+    ui::ColorPalette* palette = createColorPalette(leftAreaWidget);
     createGrid(middleBottomAreaWidget);
     createPlot2d(rightTopAreaWidget);
     createClickMePopups(rightBottomAreaWidget);
     createLineEdits(rightBottomAreaWidget);
     rightBottomAreaWidget->createChild<ui::ImageBox>(iconPath);
+
+    // Create canvas
+    vgc::dom::DocumentPtr document = createDocument();
+    ui::Canvas* canvas = createCanvas(middleTopAreaWidget, document.get());
+
+    // Connections
+    palette->colorSelected().connect(
+        [=]() { canvas->setCurrentColor(palette->selectedColor()); });
 
     // XXX we need this until styles get better auto-update behavior
     overlay->addStyleClass(core::StringId("force-update-style"));

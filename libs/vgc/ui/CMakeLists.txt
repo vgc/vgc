@@ -4,12 +4,14 @@ vgc_add_library(ui
 
     VGC_DEPENDENCIES
         graphics
+        dom
 
     HEADER_FILES
         action.h
         actiongroup.h
         api.h
         button.h
+        canvas.h
         colorpalette.h
         column.h
         cursor.h
@@ -48,6 +50,7 @@ vgc_add_library(ui
         action.cpp
         actiongroup.cpp
         button.cpp
+        canvas.cpp
         colorpalette.cpp
         column.cpp
         cursor.cpp
