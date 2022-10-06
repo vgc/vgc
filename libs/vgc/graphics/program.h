@@ -42,6 +42,10 @@ public:
         return builtinId_;
     }
 
+    bool isBuiltin() const noexcept {
+        return builtinId_ != BuiltinProgram::NotBuiltin;
+    }
+
 private:
     BuiltinProgram builtinId_ = BuiltinProgram::NotBuiltin;
 };

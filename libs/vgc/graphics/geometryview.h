@@ -86,7 +86,7 @@ public:
         size_t idx = core::int_cast<size_t>(i);
         if (idx >= vertexBuffers_.size()) {
             throw core::IndexError(core::format(
-                "Vertex buffer index {} is out of range [0, {}]",
+                "Vertex buffer index {} is out of range [0, {}].",
                 i,
                 vertexBuffers_.size() - 1));
         }
@@ -101,7 +101,7 @@ public:
         size_t idx = core::int_cast<size_t>(i);
         if (idx >= strides_.size()) {
             throw core::IndexError(core::format(
-                "Stride index {} is out of range [0, {}]", i, strides_.size() - 1));
+                "Stride index {} is out of range [0, {}].", i, strides_.size() - 1));
         }
         strides_[idx] = stride;
     }
@@ -114,7 +114,7 @@ public:
         size_t idx = core::int_cast<size_t>(i);
         if (idx >= offsets_.size()) {
             throw core::IndexError(core::format(
-                "Offset index {} is out of range [0, {}]", i, offsets_.size() - 1));
+                "Offset index {} is out of range [0, {}].", i, offsets_.size() - 1));
         }
         offsets_[idx] = offset;
     }
@@ -143,6 +143,28 @@ private:
 class VGC_GRAPHICS_API GeometryView : public Resource {
 protected:
     friend Engine;
+    using VertexSizes = std::array<UInt32, 2>;
+
+    static VertexSizes vertexSizes(BuiltinGeometryLayout layout) {
+
+        static_assert(numBuiltinGeometryLayouts == 6);
+        static constexpr std::array<VertexSizes, numBuiltinGeometryLayouts> map = {
+            VertexSizes{4 * 2, 0},     // XY
+            VertexSizes{4 * 5, 0},     // XYRGB
+            VertexSizes{4 * 6, 0},     // XYRGBA
+            VertexSizes{4 * 8, 0},     // XYUVRGBA
+            VertexSizes{4 * 2, 4 * 4}, // XY_iRGBA
+            VertexSizes{4 * 4, 4 * 4}, // XYUV_iRGBA
+        };
+
+        const UInt index = core::toUnderlying(layout);
+        if (index == 0 || index >= numBuiltinGeometryLayouts) {
+            throw core::LogicError(
+                "GeometryView: invalid BuiltinGeometryLayout enum value.");
+        }
+
+        return map[index];
+    }
 
     GeometryView(ResourceRegistry* registry, const GeometryViewCreateInfo& info)
         : Resource(registry)
@@ -153,24 +175,23 @@ protected:
         for (const BufferPtr& vb : info_.vertexBuffers()) {
             if (vb && !(vb->bindFlags() & BindFlag::VertexBuffer)) {
                 throw core::LogicError("Buffer needs BindFlag::VertexBuffer flag to be "
-                                       "used as a vertex buffer");
+                                       "used as a vertex buffer.");
             }
         }
         const BufferPtr& ib = info_.indexBuffer();
         if (ib && !(ib->bindFlags() & BindFlag::IndexBuffer)) {
             throw core::LogicError(
-                "Buffer needs BindFlag::IndexBuffer flag to be used as an index buffer");
+                "Buffer needs BindFlag::IndexBuffer flag to be used as an index buffer.");
         }
 
         BuiltinGeometryLayout builtinLayout = info.builtinGeometryLayout();
         if (builtinLayout != BuiltinGeometryLayout::NotBuiltin) {
-            Int layoutIndex = core::toUnderlying(builtinLayout);
+            VertexSizes s = vertexSizes(builtinLayout);
             if (info_.strides_[0] == 0) {
-                info_.strides_[0] = std::array{
-                    2 * 4, // XY
-                    5 * 4, // XYRGB
-                    3 * 4, // XYZ
-                }[layoutIndex];
+                info_.strides_[0] = s[0];
+            }
+            if (info_.strides_[1] == 0) {
+                info_.strides_[1] = s[1];
             }
         }
     }
@@ -208,24 +229,8 @@ public:
         return info_.offsets();
     }
 
-    Int vertexSizeInBuffer(Int i) const {
-        BuiltinGeometryLayout builtinLayout = info_.builtinGeometryLayout();
-        if (builtinLayout != BuiltinGeometryLayout::NotBuiltin) {
-            Int layoutIndex = core::toUnderlying(builtinLayout);
-            if (i == 0) {
-                return std::array{
-                    2 * 4, // XY
-                    5 * 4, // XYRGB
-                    3 * 4, // XYZ
-                }[layoutIndex];
-            }
-            return 0;
-        }
-        return -1;
-    }
-
     Int numVertices() const {
-        Int elementSize = vertexSizeInBuffer(0);
+        Int elementSize = info_.strides()[0];
         return info_.vertexBuffers()[0]->lengthInBytes() / elementSize;
     }
 

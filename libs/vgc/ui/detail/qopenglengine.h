@@ -133,7 +133,7 @@ protected:
     RasterizerStatePtr
     constructRasterizerState_(const RasterizerStateCreateInfo& createInfo) override;
 
-    void resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
+    void onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
 
     //--  RENDER THREAD implementation functions --
 
@@ -159,6 +159,7 @@ protected:
     void setBlendState_(const BlendStatePtr& state, const geometry::Vec4f& blendFactor)
         override;
     void setRasterizerState_(const RasterizerStatePtr& state) override;
+    void setScissorRect_(const geometry::Rect2f& rect) override;
     void setStageConstantBuffers_(
         const BufferPtr* buffers,
         Int startIndex,
@@ -177,6 +178,8 @@ protected:
 
     void updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) override;
 
+    void generateMips_(const ImageViewPtr& imageView) override;
+
     void draw_(GeometryView* view, UInt numIndices, UInt numInstances) override;
     void clear_(const core::Color& color) override;
 
@@ -184,6 +187,8 @@ protected:
     present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) override;
 
     void setStateDirty_() override;
+
+    void updateViewportAndScissorRect_(GLsizei rtHeight);
 
 private:
     // XXX keep only format of first chain and compare against new windows ?
@@ -195,10 +200,20 @@ private:
     QSurface* surface_ = nullptr;
 
     // state tracking
-
+    SwapChainPtr boundSwapChain_;
+    GLsizei rtHeight_ = 0;
+    GLsizei scHeight_ = 0;
     GLuint boundFramebuffer_ = 0;
+    struct GLRect {
+        GLint x;
+        GLint y;
+        GLsizei w;
+        GLsizei h;
+    };
+    GLRect viewportRect_;
+    GLRect scissorRect_;
     BlendStatePtr boundBlendState_;
-    std::optional<geometry::Vec4f> currentBlendFactor_;
+    std::optional<geometry::Vec4f> currentBlendConstantFactors_;
     RasterizerStatePtr boundRasterizerState_;
     ProgramPtr boundProgram_;
 
@@ -206,8 +221,6 @@ private:
     static_assert(maxSamplersPerStage == maxImageViewsPerStage);
     std::array<ImageViewPtr, numTextureUnits> currentImageViews_;
     std::array<SamplerStatePtr, numTextureUnits> currentSamplerStates_;
-    std::array<bool, numTextureUnits> isTextureStateDirtyMap_;
-    bool isAnyTextureStateDirty_ = true;
 
     // helpers
 
@@ -218,9 +231,9 @@ private:
 
     void makeCurrent_();
     bool loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize);
-    void syncTextureStates_();
 
     bool hasAnisotropicFilteringSupport_ = false;
+    float maxTextureMaxAnisotropy = 0;
 
     void setEnabled_(GLenum capability, bool isEnabled) {
         if (isEnabled) {

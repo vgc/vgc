@@ -26,12 +26,11 @@ Engine::Engine(const EngineCreateInfo& createInfo)
     , createInfo_(createInfo) {
 
     framebufferStack_.emplaceLast();
-
     viewportStack_.emplaceLast(0, 0, 0, 0);
     programStack_.emplaceLast();
     blendStateStack_.emplaceLast();
-    blendConstantFactorStack_.emplaceLast();
     rasterizerStateStack_.emplaceLast();
+    scissorRectStack_.emplaceLast();
 
     for (Int i = 0; i < numShaderStages; ++i) {
         constantBufferArrayStacks_[i].emplaceLast();
@@ -48,12 +47,11 @@ void Engine::onDestroyed() {
     swapChain_.reset();
 
     framebufferStack_.clear();
-
     viewportStack_.clear();
     programStack_.clear();
     blendStateStack_.clear();
-    blendConstantFactorStack_.clear();
     rasterizerStateStack_.clear();
+    scissorRectStack_.clear();
 
     for (Int i = 0; i < numShaderStages; ++i) {
         constantBufferArrayStacks_[i].clear();
@@ -111,7 +109,7 @@ Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInByte
 
     if (initialLengthInBytes < 0) {
         throw core::NegativeIntegerError(core::format(
-            "Negative initialLengthInBytes ({}) provided to Engine::createBuffer()",
+            "Negative initialLengthInBytes ({}) provided to Engine::createBuffer().",
             initialLengthInBytes));
     }
 
@@ -140,26 +138,73 @@ BufferPtr Engine::createVertexBuffer(Int initialLengthInBytes) {
 
     if (initialLengthInBytes < 0) {
         throw core::NegativeIntegerError(core::format(
-            "Negative initialLengthInBytes ({}) provided to Engine::createVertexBuffer()",
+            "Negative initialLengthInBytes ({}) provided to "
+            "Engine::createVertexBuffer().",
             initialLengthInBytes));
     }
 
-    BufferCreateInfo createInfo = {};
-    createInfo.setUsage(Usage::Dynamic);
-    createInfo.setBindFlags(BindFlag::VertexBuffer);
-    createInfo.setCpuAccessFlags(CpuAccessFlag::Write);
-    createInfo.setResourceMiscFlags(ResourceMiscFlag::None);
+    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::VertexBuffer, true);
     return createBuffer(createInfo, initialLengthInBytes);
 }
 
-GeometryViewPtr
-Engine::createDynamicTriangleListView(BuiltinGeometryLayout vertexLayout) {
+BufferPtr Engine::createIndexBuffer(IndexFormat indexFormat, Int initialIndexCount) {
+    if (initialIndexCount < 0) {
+        throw core::NegativeIntegerError(core::format(
+            "Negative initialIndexCount ({}) provided to Engine::createIndexBuffer().",
+            initialIndexCount));
+    }
+
+    size_t indexSize = 0;
+    switch (indexFormat) {
+    case IndexFormat::UInt16:
+        indexSize = sizeof(uint16_t);
+        break;
+    case IndexFormat::UInt32:
+        indexSize = sizeof(uint32_t);
+        break;
+    default:
+        throw core::LogicError(
+            "Engine::createIndexBuffer(): invalid IndexFormat enum value.");
+    }
+
+    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::IndexBuffer, true);
+    return createBuffer(createInfo, initialIndexCount * indexSize);
+}
+
+GeometryViewPtr Engine::createDynamicGeometryView(
+    PrimitiveType primitiveType,
+    BuiltinGeometryLayout vertexLayout,
+    IndexFormat indexFormat) {
+
     BufferPtr vertexBuffer = createVertexBuffer(0);
     GeometryViewCreateInfo createInfo = {};
     createInfo.setBuiltinGeometryLayout(vertexLayout);
-    createInfo.setPrimitiveType(PrimitiveType::TriangleList);
+    createInfo.setPrimitiveType(primitiveType);
     createInfo.setVertexBuffer(0, vertexBuffer);
+    if (vertexLayout >= BuiltinGeometryLayout::XY_iRGBA) {
+        BufferPtr instanceBuffer = createVertexBuffer(0);
+        createInfo.setVertexBuffer(1, instanceBuffer);
+    }
+    if (indexFormat != IndexFormat::None) {
+        BufferPtr indexBuffer = createIndexBuffer(indexFormat, 0);
+        createInfo.setIndexBuffer(indexBuffer);
+        createInfo.setIndexFormat(indexFormat);
+    }
     return createGeometryView(createInfo);
+}
+
+GeometryViewPtr Engine::createDynamicTriangleListView(
+    BuiltinGeometryLayout vertexLayout,
+    IndexFormat indexFormat) {
+    return createDynamicGeometryView(
+        PrimitiveType::TriangleList, vertexLayout, indexFormat);
+}
+
+GeometryViewPtr Engine::createDynamicTriangleStripView(
+    BuiltinGeometryLayout vertexLayout,
+    IndexFormat indexFormat) {
+    return createDynamicGeometryView(
+        PrimitiveType::TriangleStrip, vertexLayout, indexFormat);
 }
 
 ImagePtr Engine::createImage(const ImageCreateInfo& createInfo) {
@@ -203,14 +248,6 @@ Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initial
             "Initial data ignored: multisampled image cannot be initialized with data on "
             "creation.");
         return createImage(sanitizedCreateInfo);
-    }
-
-    if (sanitizedCreateInfo.numMipLevels() == 0) {
-        VGC_ERROR(
-            LogVgcGraphics,
-            "Cannot create an image with initial data if the number of mip levels is 0 "
-            "(automatic).");
-        return nullptr;
     }
 
     // construct
@@ -263,6 +300,36 @@ ImageViewPtr Engine::createImageView(
         [](Engine* engine, ImageView* p) { engine->initImageView_(p); },
         imageView.get());
     return imageView;
+}
+
+void Engine::generateMips(const ImageViewPtr& imageView) {
+    if (!imageView) {
+        return;
+    }
+    if (imageView->isBuffer()) {
+        BufferPtr buffer = imageView->viewedBuffer();
+        if (!buffer->resourceMiscFlags().has(ResourceMiscFlag::GenerateMips)) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "MIP generation ignored: the given Buffer Resource was not created with "
+                "ResourceMiscFlag::GenerateMips.");
+            return;
+        }
+    }
+    else {
+        ImagePtr image = imageView->viewedImage();
+        if (!image->resourceMiscFlags().has(ResourceMiscFlag::GenerateMips)) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "MIP generation ignored: the given Image Resource was not created with "
+                "ResourceMiscFlag::GenerateMips.");
+            return;
+        }
+    }
+    queueLambdaCommandWithParameters_<ImageViewPtr>(
+        "generateMips",
+        [](Engine* engine, const ImageViewPtr& p) { engine->generateMips_(p); },
+        imageView);
 }
 
 SamplerStatePtr Engine::createSamplerState(const SamplerStateCreateInfo& createInfo) {
@@ -319,23 +386,53 @@ Engine::createRasterizerState(const RasterizerStateCreateInfo& createInfo) {
 }
 
 void Engine::setFramebuffer(const FramebufferPtr& framebuffer) {
-
     if (framebuffer && !checkResourceIsValid_(framebuffer)) {
         return;
     }
-    if (framebufferStack_.last() != framebuffer) {
-        framebufferStack_.last() = framebuffer;
+    if (framebufferStack_.top() != framebuffer) {
+        framebufferStack_.top() = framebuffer;
+        dirtyPipelineParameters_ |= PipelineParameter::Framebuffer;
+    }
+}
+
+void Engine::pushFramebuffer(const FramebufferPtr& framebuffer) {
+    if (framebuffer && !checkResourceIsValid_(framebuffer)) {
+        return;
+    }
+    if (framebufferStack_.top() != framebuffer) {
+        dirtyPipelineParameters_ |= PipelineParameter::Framebuffer;
+    }
+    framebufferStack_.push(framebuffer);
+}
+
+void Engine::popFramebuffer() {
+    FramebufferPtr oldTop = framebufferStack_.last();
+    framebufferStack_.pop();
+    if (framebufferStack_.top() != oldTop) {
         dirtyPipelineParameters_ |= PipelineParameter::Framebuffer;
     }
 }
 
 void Engine::setViewport(Int x, Int y, Int width, Int height) {
-    viewportStack_.last() = Viewport(x, y, width, height);
+    setViewport(Viewport(x, y, width, height));
+}
+
+void Engine::setViewport(const Viewport& viewport) {
+    viewportStack_.top() = viewport;
+    dirtyPipelineParameters_ |= PipelineParameter::Viewport;
+}
+
+void Engine::pushViewport(const Viewport& viewport) {
+    viewportStack_.push(viewport);
+    dirtyPipelineParameters_ |= PipelineParameter::Viewport;
+}
+
+void Engine::popViewport() {
+    viewportStack_.pop();
     dirtyPipelineParameters_ |= PipelineParameter::Viewport;
 }
 
 void Engine::setProgram(BuiltinProgram builtinProgram) {
-
     ProgramPtr program = {};
     switch (builtinProgram) {
     case BuiltinProgram::Simple: {
@@ -345,16 +442,55 @@ void Engine::setProgram(BuiltinProgram builtinProgram) {
     default:
         break;
     }
-    if (programStack_.last() != program) {
-        programStack_.last() = program;
-        if (true /*program->usesBuiltinConstants()*/) {
-            BufferPtr& constantBufferRef =
-                constantBufferArrayStacks_[toIndex_(ShaderStage::Vertex)].last()[0];
-            if (constantBufferRef != builtinConstantsBuffer_) {
-                constantBufferRef = builtinConstantsBuffer_;
-                dirtyPipelineParameters_ |=
-                    PipelineParameter::VertexShaderConstantBuffers;
-            }
+    setProgram(program);
+}
+
+void Engine::pushProgram(BuiltinProgram builtinProgram) {
+    ProgramPtr program = {};
+    switch (builtinProgram) {
+    case BuiltinProgram::Simple: {
+        program = simpleProgram_;
+        break;
+    }
+    case BuiltinProgram::SimpleTextured: {
+        program = simpleTexturedProgram_;
+        break;
+    }
+    default:
+        break;
+    }
+    pushProgram(program);
+}
+
+void Engine::setProgram(const ProgramPtr& program) {
+    ProgramPtr oldTop = programStack_.top();
+    if (program != oldTop) {
+        if (program && (!oldTop || !program->isBuiltin() != oldTop->isBuiltin())) {
+            dirtyPipelineParameters_ |= PipelineParameter::VertexShaderConstantBuffers;
+        }
+        programStack_.top() = program;
+        dirtyPipelineParameters_ |= PipelineParameter::Program;
+    }
+}
+
+void Engine::pushProgram(const ProgramPtr& program) {
+    ProgramPtr oldTop = programStack_.top();
+    if (program != oldTop) {
+        if (program && (!oldTop || !program->isBuiltin() != oldTop->isBuiltin())) {
+            dirtyPipelineParameters_ |= PipelineParameter::VertexShaderConstantBuffers;
+        }
+        dirtyPipelineParameters_ |= PipelineParameter::Program;
+    }
+    programStack_.push(program);
+}
+
+void Engine::popProgram() {
+    ProgramPtr oldTop = programStack_.top();
+    programStack_.pop();
+    ProgramPtr newTop = programStack_.top();
+    if (newTop != oldTop) {
+        if (newTop && (!oldTop || newTop->isBuiltin() != oldTop->isBuiltin())) {
+            dirtyPipelineParameters_ |= PipelineParameter::VertexShaderConstantBuffers;
         }
         dirtyPipelineParameters_ |= PipelineParameter::Program;
     }
@@ -362,23 +498,75 @@ void Engine::setProgram(BuiltinProgram builtinProgram) {
 
 void Engine::setBlendState(
     const BlendStatePtr& state,
-    const geometry::Vec4f& blendConstantFactor) {
+    const geometry::Vec4f& constantFactors) {
 
-    if (blendStateStack_.last() != state) {
-        blendStateStack_.last() = state;
+    BlendStateAndConstant& top = blendStateStack_.top();
+    if (top.statePtr != state) {
+        top.statePtr = state;
         dirtyPipelineParameters_ |= PipelineParameter::BlendState;
     }
-    if (blendConstantFactorStack_.last() != blendConstantFactor) {
-        blendConstantFactorStack_.last() = blendConstantFactor;
+    if (top.constantFactors != constantFactors) {
+        top.constantFactors = constantFactors;
+        dirtyPipelineParameters_ |= PipelineParameter::BlendState;
+    }
+}
+
+void Engine::pushBlendState(
+    const BlendStatePtr& state,
+    const geometry::Vec4f& constantFactors) {
+
+    const BlendStateAndConstant& oldTop = blendStateStack_.top();
+    if ((oldTop.statePtr != state) || (oldTop.constantFactors != constantFactors)) {
+        dirtyPipelineParameters_ |= PipelineParameter::BlendState;
+    }
+    blendStateStack_.emplaceLast(state, constantFactors);
+}
+
+void Engine::popBlendState() {
+    const BlendStateAndConstant& oldTop = blendStateStack_.top();
+    blendStateStack_.pop();
+    const BlendStateAndConstant& top = blendStateStack_.top();
+    if ((top.statePtr != oldTop.statePtr)
+        || (top.constantFactors != oldTop.constantFactors)) {
         dirtyPipelineParameters_ |= PipelineParameter::BlendState;
     }
 }
 
 void Engine::setRasterizerState(const RasterizerStatePtr& state) {
-    if (rasterizerStateStack_.last() != state) {
-        rasterizerStateStack_.last() = state;
+    if (rasterizerStateStack_.top() != state) {
+        rasterizerStateStack_.top() = state;
         dirtyPipelineParameters_ |= PipelineParameter::RasterizerState;
     }
+}
+
+void Engine::pushRasterizerState(const RasterizerStatePtr& state) {
+    rasterizerStateStack_.push(state);
+    if (rasterizerStateStack_.top() != state) {
+        dirtyPipelineParameters_ |= PipelineParameter::RasterizerState;
+    }
+}
+
+void Engine::popRasterizerState() {
+    RasterizerStatePtr oldTop = rasterizerStateStack_.top();
+    rasterizerStateStack_.pop();
+    if (rasterizerStateStack_.top() != oldTop) {
+        dirtyPipelineParameters_ |= PipelineParameter::RasterizerState;
+    }
+}
+
+void Engine::setScissorRect(const geometry::Rect2f& rect) {
+    scissorRectStack_.top() = rect;
+    dirtyPipelineParameters_ |= PipelineParameter::ScissorRect;
+}
+
+void Engine::pushScissorRect(const geometry::Rect2f& rect) {
+    scissorRectStack_.push(rect);
+    dirtyPipelineParameters_ |= PipelineParameter::ScissorRect;
+}
+
+void Engine::popScissorRect() {
+    scissorRectStack_.pop();
+    dirtyPipelineParameters_ |= PipelineParameter::ScissorRect;
 }
 
 void Engine::setStageConstantBuffers(
@@ -387,16 +575,17 @@ void Engine::setStageConstantBuffers(
     Int count,
     ShaderStage shaderStage) {
 
-    size_t stageIndex = toIndex_(shaderStage);
+    if (shaderStage == ShaderStage::None) {
+        return;
+    }
+
+    size_t stageIndex = toIndexSafe_(shaderStage);
     StageConstantBufferArray& constantBufferArray =
         constantBufferArrayStacks_[stageIndex].emplaceLast();
     for (Int i = 0; i < count; ++i) {
         constantBufferArray[startIndex + i] = buffers[i];
     }
-    dirtyPipelineParameters_ |= std::array{
-        PipelineParameter::VertexShaderConstantBuffers,
-        PipelineParameter::GeometryShaderConstantBuffers,
-        PipelineParameter::PixelShaderConstantBuffers}[stageIndex];
+    dirtyPipelineParameters_ |= stageConstantBuffersParameter_(shaderStage);
 }
 
 void Engine::setStageImageViews(
@@ -405,15 +594,26 @@ void Engine::setStageImageViews(
     Int count,
     ShaderStage shaderStage) {
 
-    size_t stageIndex = toIndex_(shaderStage);
+    if (shaderStage == ShaderStage::None) {
+        return;
+    }
+
+    for (Int i = 0; i < count; ++i) {
+        if (!views[i]->bindFlags().has(ImageBindFlag::ShaderResource)) {
+            VGC_ERROR(
+                LogVgcGraphics,
+                "All views given to setStageImageViews() should have the flag "
+                "ImageBindFlag::ShaderResource set.");
+            return;
+        }
+    }
+
+    size_t stageIndex = toIndexSafe_(shaderStage);
     StageImageViewArray& imageViewArray = imageViewArrayStacks_[stageIndex].emplaceLast();
     for (Int i = 0; i < count; ++i) {
         imageViewArray[startIndex + i] = views[i];
     }
-    dirtyPipelineParameters_ |= std::array{
-        PipelineParameter::VertexShaderImageViews,
-        PipelineParameter::GeometryShaderImageViews,
-        PipelineParameter::PixelShaderImageViews}[stageIndex];
+    dirtyPipelineParameters_ |= stageImageViewsParameter_(shaderStage);
 }
 
 void Engine::setStageSamplers(
@@ -422,169 +622,142 @@ void Engine::setStageSamplers(
     Int count,
     ShaderStage shaderStage) {
 
-    size_t stageIndex = toIndex_(shaderStage);
+    if (shaderStage == ShaderStage::None) {
+        return;
+    }
+
+    size_t stageIndex = toIndexSafe_(shaderStage);
     StageSamplerStateArray& samplerStateArray =
         samplerStateArrayStacks_[stageIndex].emplaceLast();
     for (Int i = 0; i < count; ++i) {
         samplerStateArray[startIndex + i] = states[i];
     }
-    dirtyPipelineParameters_ |= std::array{
-        PipelineParameter::VertexShaderSamplers,
-        PipelineParameter::GeometryShaderSamplers,
-        PipelineParameter::PixelShaderSamplers}[stageIndex];
+    dirtyPipelineParameters_ |= stageSamplersParameter_(shaderStage);
 }
 
 void Engine::pushPipelineParameters(PipelineParameters parameters) {
-
-    if (parameters & PipelineParameter::Framebuffer) {
-        framebufferStack_.emplaceLast(framebufferStack_.last());
-    }
-    if (parameters & PipelineParameter::Viewport) {
-        viewportStack_.emplaceLast(viewportStack_.last());
-    }
-    if (parameters & PipelineParameter::Program) {
-        programStack_.emplaceLast(programStack_.last());
-    }
-    if (parameters & PipelineParameter::BlendState) {
-        blendStateStack_.emplaceLast(blendStateStack_.last());
-    }
-    if (parameters & PipelineParameter::DepthStencilState) {
-        // todo
-    }
-    if (parameters & PipelineParameter::RasterizerState) {
-        rasterizerStateStack_.emplaceLast(rasterizerStateStack_.last());
-    }
-    if (parameters & PipelineParameter::AllShadersResources) {
-        if (parameters & PipelineParameter::VertexShaderConstantBuffers) {
-            StageConstantBufferArrayStack& constantBufferArrayStack =
-                constantBufferArrayStacks_[toIndex_(ShaderStage::Vertex)];
-            constantBufferArrayStack.emplaceLast(constantBufferArrayStack.last());
-        }
-        if (parameters & PipelineParameter::VertexShaderImageViews) {
-            StageImageViewArrayStack& imageViewArrayStack =
-                imageViewArrayStacks_[toIndex_(ShaderStage::Vertex)];
-            imageViewArrayStack.emplaceLast(imageViewArrayStack.last());
-        }
-        if (parameters & PipelineParameter::VertexShaderSamplers) {
-            StageSamplerStateArrayStack& samplerStateArrayStack =
-                samplerStateArrayStacks_[toIndex_(ShaderStage::Vertex)];
-            samplerStateArrayStack.emplaceLast(samplerStateArrayStack.last());
-        }
-        if (parameters & PipelineParameter::GeometryShaderConstantBuffers) {
-            StageConstantBufferArrayStack& constantBufferArrayStack =
-                constantBufferArrayStacks_[toIndex_(ShaderStage::Geometry)];
-            constantBufferArrayStack.emplaceLast(constantBufferArrayStack.last());
-        }
-        if (parameters & PipelineParameter::GeometryShaderImageViews) {
-            StageImageViewArrayStack& imageViewArrayStack =
-                imageViewArrayStacks_[toIndex_(ShaderStage::Geometry)];
-            imageViewArrayStack.emplaceLast(imageViewArrayStack.last());
-        }
-        if (parameters & PipelineParameter::GeometryShaderSamplers) {
-            StageSamplerStateArrayStack& samplerStateArrayStack =
-                samplerStateArrayStacks_[toIndex_(ShaderStage::Geometry)];
-            samplerStateArrayStack.emplaceLast(samplerStateArrayStack.last());
-        }
-        if (parameters & PipelineParameter::PixelShaderConstantBuffers) {
-            StageConstantBufferArrayStack& constantBufferArrayStack =
-                constantBufferArrayStacks_[toIndex_(ShaderStage::Pixel)];
-            constantBufferArrayStack.emplaceLast(constantBufferArrayStack.last());
-        }
-        if (parameters & PipelineParameter::PixelShaderImageViews) {
-            StageImageViewArrayStack& imageViewArrayStack =
-                imageViewArrayStacks_[toIndex_(ShaderStage::Pixel)];
-            imageViewArrayStack.emplaceLast(imageViewArrayStack.last());
-        }
-        if (parameters & PipelineParameter::PixelShaderSamplers) {
-            StageSamplerStateArrayStack& samplerStateArrayStack =
-                samplerStateArrayStacks_[toIndex_(ShaderStage::Pixel)];
-            samplerStateArrayStack.emplaceLast(samplerStateArrayStack.last());
-        }
-    }
-}
-
-void Engine::popPipelineParameters(PipelineParameters parameters) {
-
     if (parameters == PipelineParameter::None) {
         return;
     }
 
     if (parameters & PipelineParameter::Framebuffer) {
-        framebufferStack_.removeLast();
+        framebufferStack_.pushTop();
+    }
+    if (parameters & PipelineParameter::Viewport) {
+        viewportStack_.pushTop();
+    }
+    if (parameters & PipelineParameter::Program) {
+        programStack_.pushTop();
+    }
+    if (parameters & PipelineParameter::BlendState) {
+        blendStateStack_.pushTop();
+    }
+    if (parameters & PipelineParameter::DepthStencilState) {
+        // todo
+    }
+    if (parameters & PipelineParameter::RasterizerState) {
+        rasterizerStateStack_.pushTop();
+    }
+    if (parameters & PipelineParameter::ScissorRect) {
+        scissorRectStack_.pushTop();
+    }
+    if (parameters & PipelineParameter::AllShadersResources) {
+        if (parameters & PipelineParameter::VertexShaderConstantBuffers) {
+            stageConstantBufferArrayStack_(ShaderStage::Vertex).pushTop();
+        }
+        if (parameters & PipelineParameter::VertexShaderImageViews) {
+            stageImageViewArrayStack_(ShaderStage::Vertex).pushTop();
+        }
+        if (parameters & PipelineParameter::VertexShaderSamplers) {
+            stageSamplerStateArrayStack_(ShaderStage::Vertex).pushTop();
+        }
+        if (parameters & PipelineParameter::GeometryShaderConstantBuffers) {
+            stageConstantBufferArrayStack_(ShaderStage::Geometry).pushTop();
+        }
+        if (parameters & PipelineParameter::GeometryShaderImageViews) {
+            stageImageViewArrayStack_(ShaderStage::Geometry).pushTop();
+        }
+        if (parameters & PipelineParameter::GeometryShaderSamplers) {
+            stageSamplerStateArrayStack_(ShaderStage::Geometry).pushTop();
+        }
+        if (parameters & PipelineParameter::PixelShaderConstantBuffers) {
+            stageConstantBufferArrayStack_(ShaderStage::Pixel).pushTop();
+        }
+        if (parameters & PipelineParameter::PixelShaderImageViews) {
+            stageImageViewArrayStack_(ShaderStage::Pixel).pushTop();
+        }
+        if (parameters & PipelineParameter::PixelShaderSamplers) {
+            stageSamplerStateArrayStack_(ShaderStage::Pixel).pushTop();
+        }
+    }
+}
+
+void Engine::popPipelineParameters(PipelineParameters parameters) {
+    if (parameters == PipelineParameter::None) {
+        return;
+    }
+    if (parameters & PipelineParameter::Framebuffer) {
+        framebufferStack_.pop();
         dirtyPipelineParameters_ |= PipelineParameter::Framebuffer;
     }
     if (parameters & PipelineParameter::Viewport) {
-        viewportStack_.removeLast();
+        viewportStack_.pop();
         dirtyPipelineParameters_ |= PipelineParameter::Viewport;
     }
     if (parameters & PipelineParameter::Program) {
-        programStack_.removeLast();
+        programStack_.pop();
         dirtyPipelineParameters_ |= PipelineParameter::Program;
     }
     if (parameters & PipelineParameter::BlendState) {
-        blendStateStack_.removeLast();
+        blendStateStack_.pop();
         dirtyPipelineParameters_ |= PipelineParameter::BlendState;
     }
     if (parameters & PipelineParameter::DepthStencilState) {
         //dirtyPipelineParameters_ |= PipelineParameter::DepthStencilState;
     }
     if (parameters & PipelineParameter::RasterizerState) {
-        rasterizerStateStack_.removeLast();
+        rasterizerStateStack_.pop();
         dirtyPipelineParameters_ |= PipelineParameter::RasterizerState;
+    }
+    if (parameters & PipelineParameter::ScissorRect) {
+        scissorRectStack_.pop();
+        dirtyPipelineParameters_ |= PipelineParameter::ScissorRect;
     }
     if (parameters & PipelineParameter::AllShadersResources) {
         if (parameters & PipelineParameter::VertexShaderConstantBuffers) {
-            StageConstantBufferArrayStack& constantBufferArrayStack =
-                constantBufferArrayStacks_[toIndex_(ShaderStage::Vertex)];
-            constantBufferArrayStack.removeLast();
+            stageConstantBufferArrayStack_(ShaderStage::Vertex).pop();
             dirtyPipelineParameters_ |= PipelineParameter::VertexShaderConstantBuffers;
         }
         if (parameters & PipelineParameter::VertexShaderImageViews) {
-            StageImageViewArrayStack& imageViewArrayStack =
-                imageViewArrayStacks_[toIndex_(ShaderStage::Vertex)];
-            imageViewArrayStack.removeLast();
+            stageImageViewArrayStack_(ShaderStage::Vertex).pop();
             dirtyPipelineParameters_ |= PipelineParameter::VertexShaderImageViews;
         }
         if (parameters & PipelineParameter::VertexShaderSamplers) {
-            StageSamplerStateArrayStack& samplerStateArrayStack =
-                samplerStateArrayStacks_[toIndex_(ShaderStage::Vertex)];
-            samplerStateArrayStack.removeLast();
+            stageSamplerStateArrayStack_(ShaderStage::Vertex).pop();
             dirtyPipelineParameters_ |= PipelineParameter::VertexShaderSamplers;
         }
         if (parameters & PipelineParameter::GeometryShaderConstantBuffers) {
-            StageConstantBufferArrayStack& constantBufferArrayStack =
-                constantBufferArrayStacks_[toIndex_(ShaderStage::Geometry)];
-            constantBufferArrayStack.removeLast();
+            stageConstantBufferArrayStack_(ShaderStage::Geometry).pop();
             dirtyPipelineParameters_ |= PipelineParameter::GeometryShaderConstantBuffers;
         }
         if (parameters & PipelineParameter::GeometryShaderImageViews) {
-            StageImageViewArrayStack& imageViewArrayStack =
-                imageViewArrayStacks_[toIndex_(ShaderStage::Geometry)];
-            imageViewArrayStack.removeLast();
+            stageImageViewArrayStack_(ShaderStage::Geometry).pop();
             dirtyPipelineParameters_ |= PipelineParameter::GeometryShaderImageViews;
         }
         if (parameters & PipelineParameter::GeometryShaderSamplers) {
-            StageSamplerStateArrayStack& samplerStateArrayStack =
-                samplerStateArrayStacks_[toIndex_(ShaderStage::Geometry)];
-            samplerStateArrayStack.removeLast();
+            stageSamplerStateArrayStack_(ShaderStage::Geometry).pop();
             dirtyPipelineParameters_ |= PipelineParameter::GeometryShaderSamplers;
         }
         if (parameters & PipelineParameter::PixelShaderConstantBuffers) {
-            StageConstantBufferArrayStack& constantBufferArrayStack =
-                constantBufferArrayStacks_[toIndex_(ShaderStage::Pixel)];
-            constantBufferArrayStack.removeLast();
+            stageConstantBufferArrayStack_(ShaderStage::Pixel).pop();
             dirtyPipelineParameters_ |= PipelineParameter::PixelShaderConstantBuffers;
         }
         if (parameters & PipelineParameter::PixelShaderImageViews) {
-            StageImageViewArrayStack& imageViewArrayStack =
-                imageViewArrayStacks_[toIndex_(ShaderStage::Pixel)];
-            imageViewArrayStack.removeLast();
+            stageImageViewArrayStack_(ShaderStage::Pixel).pop();
             dirtyPipelineParameters_ |= PipelineParameter::PixelShaderImageViews;
         }
         if (parameters & PipelineParameter::PixelShaderSamplers) {
-            StageSamplerStateArrayStack& samplerStateArrayStack =
-                samplerStateArrayStacks_[toIndex_(ShaderStage::Pixel)];
-            samplerStateArrayStack.removeLast();
+            stageSamplerStateArrayStack_(ShaderStage::Pixel).pop();
             dirtyPipelineParameters_ |= PipelineParameter::PixelShaderSamplers;
         }
     }
@@ -599,159 +772,6 @@ UInt32 toMilliseconds(const std::chrono::steady_clock::duration& d) {
 }
 
 } // namespace
-
-void Engine::syncState_() {
-
-    if (dirtyBuiltinConstantBuffer_) {
-        detail::BuiltinConstants constants = {};
-        constants.projMatrix = projectionMatrixStack_.last();
-        constants.viewMatrix = viewMatrixStack_.last();
-        constants.frameStartTimeInMs = toMilliseconds(frameStartTime_ - engineStartTime_);
-        struct CommandParameters {
-            Buffer* buffer;
-            detail::BuiltinConstants constants;
-        };
-        queueLambdaCommandWithParameters_<CommandParameters>(
-            "updateBuiltinConstantBufferData",
-            [](Engine* engine, const CommandParameters& p) {
-                engine->updateBufferData_(
-                    p.buffer, &p.constants, sizeof(detail::BuiltinConstants));
-            },
-            builtinConstantsBuffer_.get(),
-            constants);
-        dirtyBuiltinConstantBuffer_ = false;
-    }
-
-    const PipelineParameters parameters = dirtyPipelineParameters_;
-    if (parameters == PipelineParameter::None) {
-        return;
-    }
-
-    if (parameters & PipelineParameter::Framebuffer) {
-        FramebufferPtr framebuffer = framebufferStack_.last();
-        queueLambdaCommandWithParameters_<FramebufferPtr>(
-            "setFramebuffer",
-            [](Engine* engine, const FramebufferPtr& p) { engine->setFramebuffer_(p); },
-            framebuffer);
-    }
-    if (parameters & PipelineParameter::Viewport) {
-        queueLambdaCommandWithParameters_<Viewport>(
-            "setViewport",
-            [](Engine* engine, const Viewport& vp) {
-                engine->setViewport_(vp.x(), vp.y(), vp.width(), vp.height());
-            },
-            viewportStack_.last());
-    }
-    if (parameters & PipelineParameter::Program) {
-        queueLambdaCommandWithParameters_<ProgramPtr>(
-            "setProgram",
-            [](Engine* engine, const ProgramPtr& p) { engine->setProgram_(p); },
-            programStack_.last());
-    }
-    if (parameters & PipelineParameter::BlendState) {
-        struct CommandParameters {
-            BlendStatePtr blendState;
-            geometry::Vec4f blendConstantFactor;
-        };
-        queueLambdaCommandWithParameters_<CommandParameters>(
-            "setBlendState",
-            [](Engine* engine, const CommandParameters& p) {
-                engine->setBlendState_(p.blendState, p.blendConstantFactor);
-            },
-            blendStateStack_.last(),
-            blendConstantFactorStack_.last());
-    }
-    if (parameters & PipelineParameter::DepthStencilState) {
-        //dirtyPipelineParameters_ |= PipelineParameter::DepthStencilState;
-    }
-    if (parameters & PipelineParameter::RasterizerState) {
-        queueLambdaCommandWithParameters_<RasterizerStatePtr>(
-            "setRasterizerState",
-            [](Engine* engine, const RasterizerStatePtr& p) {
-                engine->setRasterizerState_(p);
-            },
-            rasterizerStateStack_.last());
-    }
-    if (parameters & PipelineParameter::AllShadersResources) {
-
-        // XXX should prevent the use of the same image-view twice because
-        // OpenGL couples the concepts of view and sampler under the concept
-        // of texture.
-
-        if (parameters & PipelineParameter::VertexShaderConstantBuffers) {
-            syncStageConstantBuffers_(ShaderStage::Vertex);
-        }
-        if (parameters & PipelineParameter::VertexShaderImageViews) {
-            syncStageImageViews_(ShaderStage::Vertex);
-        }
-        if (parameters & PipelineParameter::VertexShaderSamplers) {
-            syncStageSamplers_(ShaderStage::Vertex);
-        }
-        if (parameters & PipelineParameter::GeometryShaderConstantBuffers) {
-            syncStageConstantBuffers_(ShaderStage::Geometry);
-        }
-        if (parameters & PipelineParameter::GeometryShaderImageViews) {
-            syncStageImageViews_(ShaderStage::Geometry);
-        }
-        if (parameters & PipelineParameter::GeometryShaderSamplers) {
-            syncStageSamplers_(ShaderStage::Geometry);
-        }
-        if (parameters & PipelineParameter::PixelShaderConstantBuffers) {
-            syncStageConstantBuffers_(ShaderStage::Pixel);
-        }
-        if (parameters & PipelineParameter::PixelShaderImageViews) {
-            syncStageImageViews_(ShaderStage::Pixel);
-        }
-        if (parameters & PipelineParameter::PixelShaderSamplers) {
-            syncStageSamplers_(ShaderStage::Pixel);
-        }
-    }
-
-    dirtyPipelineParameters_ = PipelineParameter::None;
-}
-
-void Engine::syncStageConstantBuffers_(ShaderStage shaderStage) {
-    struct CommandParameters {
-        StageConstantBufferArray buffers;
-        ShaderStage shaderStage;
-    };
-    queueLambdaCommandWithParameters_<CommandParameters>(
-        "setStageConstantBuffers",
-        [](Engine* engine, const CommandParameters& p) {
-            engine->setStageConstantBuffers_(
-                p.buffers.data(), 0, p.buffers.size(), p.shaderStage);
-        },
-        constantBufferArrayStacks_[toIndex_(shaderStage)].last(),
-        shaderStage);
-}
-
-void Engine::syncStageImageViews_(ShaderStage shaderStage) {
-    struct CommandParameters {
-        StageImageViewArray views;
-        ShaderStage shaderStage;
-    };
-    queueLambdaCommandWithParameters_<CommandParameters>(
-        "setStageImageViews",
-        [](Engine* engine, const CommandParameters& p) {
-            engine->setStageImageViews_(p.views.data(), 0, p.views.size(), p.shaderStage);
-        },
-        imageViewArrayStacks_[toIndex_(shaderStage)].last(),
-        shaderStage);
-}
-
-void Engine::syncStageSamplers_(ShaderStage shaderStage) {
-    struct CommandParameters {
-        StageSamplerStateArray states;
-        ShaderStage shaderStage;
-    };
-    queueLambdaCommandWithParameters_<CommandParameters>(
-        "setStageSamplers",
-        [](Engine* engine, const CommandParameters& p) {
-            engine->setStageSamplers_(p.states.data(), 0, p.states.size(), p.shaderStage);
-        },
-        samplerStateArrayStacks_[toIndex_(shaderStage)].last(),
-        shaderStage);
-}
 
 bool Engine::beginFrame(const SwapChainPtr& swapChain, FrameKind kind) {
 
@@ -770,15 +790,14 @@ bool Engine::beginFrame(const SwapChainPtr& swapChain, FrameKind kind) {
 
     // XXX check every stack has size one !
 
-    if (swapChain_ != swapChain) {
-        swapChain_ = swapChain;
-        queueLambdaCommandWithParameters_<SwapChainPtr>(
-            "setSwapChain",
-            [](Engine* engine, const SwapChainPtr& swapChain) {
-                engine->setSwapChain_(swapChain);
-            },
-            swapChain);
-    }
+    swapChain_ = swapChain;
+    // do this unconditionally since the swapchain size may have changed.
+    queueLambdaCommandWithParameters_<SwapChainPtr>(
+        "setSwapChain",
+        [](Engine* engine, const SwapChainPtr& swapChain) {
+            engine->setSwapChain_(swapChain);
+        },
+        swapChain);
 
     if (kind != FrameKind::QWidget) {
         setDefaultFramebuffer();
@@ -849,12 +868,12 @@ void Engine::endFrame(Int syncInterval, PresentFlags flags) {
     }
 }
 
-void Engine::resizeSwapChain(const SwapChainPtr& swapChain, Int width, Int height) {
+void Engine::onWindowResize(const SwapChainPtr& swapChain, Int width, Int height) {
     if (!checkResourceIsValid_(swapChain)) {
         return;
     }
     flushWait();
-    resizeSwapChain_(
+    onWindowResize_(
         swapChain.get(), core::int_cast<UInt32>(width), core::int_cast<UInt32>(height));
 }
 
@@ -917,6 +936,174 @@ void Engine::createBuiltinResources_() {
     }
 
     createBuiltinShaders_();
+}
+
+void Engine::syncState_() {
+
+    if (dirtyBuiltinConstantBuffer_) {
+        detail::BuiltinConstants constants = {};
+        constants.projMatrix = projectionMatrixStack_.top();
+        constants.viewMatrix = viewMatrixStack_.top();
+        constants.frameStartTimeInMs = toMilliseconds(frameStartTime_ - engineStartTime_);
+        struct CommandParameters {
+            Buffer* buffer;
+            detail::BuiltinConstants constants;
+        };
+        queueLambdaCommandWithParameters_<CommandParameters>(
+            "updateBuiltinConstantBufferData",
+            [](Engine* engine, const CommandParameters& p) {
+                engine->updateBufferData_(
+                    p.buffer, &p.constants, sizeof(detail::BuiltinConstants));
+            },
+            builtinConstantsBuffer_.get(),
+            constants);
+        dirtyBuiltinConstantBuffer_ = false;
+    }
+
+    const PipelineParameters parameters = dirtyPipelineParameters_;
+    if (parameters == PipelineParameter::None) {
+        return;
+    }
+
+    if (parameters & PipelineParameter::Framebuffer) {
+        FramebufferPtr framebuffer = framebufferStack_.top();
+        queueLambdaCommandWithParameters_<FramebufferPtr>(
+            "setFramebuffer",
+            [](Engine* engine, const FramebufferPtr& p) { engine->setFramebuffer_(p); },
+            framebuffer);
+    }
+    if (parameters & PipelineParameter::Viewport) {
+        queueLambdaCommandWithParameters_<Viewport>(
+            "setViewport",
+            [](Engine* engine, const Viewport& vp) {
+                engine->setViewport_(vp.x(), vp.y(), vp.width(), vp.height());
+            },
+            viewportStack_.top());
+    }
+    if (parameters & PipelineParameter::Program) {
+        queueLambdaCommandWithParameters_<ProgramPtr>(
+            "setProgram",
+            [](Engine* engine, const ProgramPtr& p) { engine->setProgram_(p); },
+            programStack_.top());
+    }
+    if (parameters & PipelineParameter::BlendState) {
+        struct CommandParameters {
+            BlendStatePtr blendState;
+            geometry::Vec4f blendConstantFactors;
+        };
+        const BlendStateAndConstant& top = blendStateStack_.top();
+        queueLambdaCommandWithParameters_<CommandParameters>(
+            "setBlendState",
+            [](Engine* engine, const CommandParameters& p) {
+                engine->setBlendState_(p.blendState, p.blendConstantFactors);
+            },
+            top.statePtr,
+            top.constantFactors);
+    }
+    if (parameters & PipelineParameter::DepthStencilState) {
+        //dirtyPipelineParameters_ |= PipelineParameter::DepthStencilState;
+    }
+    if (parameters & PipelineParameter::RasterizerState) {
+        queueLambdaCommandWithParameters_<RasterizerStatePtr>(
+            "setRasterizerState",
+            [](Engine* engine, const RasterizerStatePtr& p) {
+                engine->setRasterizerState_(p);
+            },
+            rasterizerStateStack_.top());
+    }
+    if (parameters & PipelineParameter::ScissorRect) {
+        queueLambdaCommandWithParameters_<geometry::Rect2f>(
+            "setScissorRect",
+            [](Engine* engine, const geometry::Rect2f& sr) {
+                engine->setScissorRect_(sr);
+            },
+            scissorRectStack_.top());
+    }
+    if (parameters & PipelineParameter::AllShadersResources) {
+
+        // XXX should prevent the use of the same image-view twice because
+        // OpenGL couples the concepts of view and sampler under the concept
+        // of texture.
+
+        if (parameters & PipelineParameter::VertexShaderConstantBuffers) {
+            syncStageConstantBuffers_(ShaderStage::Vertex);
+        }
+        if (parameters & PipelineParameter::VertexShaderImageViews) {
+            syncStageImageViews_(ShaderStage::Vertex);
+        }
+        if (parameters & PipelineParameter::VertexShaderSamplers) {
+            syncStageSamplers_(ShaderStage::Vertex);
+        }
+        if (parameters & PipelineParameter::GeometryShaderConstantBuffers) {
+            syncStageConstantBuffers_(ShaderStage::Geometry);
+        }
+        if (parameters & PipelineParameter::GeometryShaderImageViews) {
+            syncStageImageViews_(ShaderStage::Geometry);
+        }
+        if (parameters & PipelineParameter::GeometryShaderSamplers) {
+            syncStageSamplers_(ShaderStage::Geometry);
+        }
+        if (parameters & PipelineParameter::PixelShaderConstantBuffers) {
+            syncStageConstantBuffers_(ShaderStage::Pixel);
+        }
+        if (parameters & PipelineParameter::PixelShaderImageViews) {
+            syncStageImageViews_(ShaderStage::Pixel);
+        }
+        if (parameters & PipelineParameter::PixelShaderSamplers) {
+            syncStageSamplers_(ShaderStage::Pixel);
+        }
+    }
+
+    dirtyPipelineParameters_ = PipelineParameter::None;
+}
+
+void Engine::syncStageConstantBuffers_(ShaderStage shaderStage) {
+    struct CommandParameters {
+        StageConstantBufferArray buffers;
+        ShaderStage shaderStage;
+    };
+    CommandParameters params = {};
+    params.buffers = constantBufferArrayStacks_[toIndex_(shaderStage)].top();
+    params.shaderStage = shaderStage;
+    Program* program = programStack_.top().get();
+    if (program && program->isBuiltin()) {
+        params.buffers[0] = builtinConstantsBuffer_;
+    }
+    queueLambdaCommandWithParameters_<CommandParameters>(
+        "setStageConstantBuffers",
+        [](Engine* engine, const CommandParameters& p) {
+            engine->setStageConstantBuffers_(
+                p.buffers.data(), 0, p.buffers.size(), p.shaderStage);
+        },
+        std::move(params));
+}
+
+void Engine::syncStageImageViews_(ShaderStage shaderStage) {
+    struct CommandParameters {
+        StageImageViewArray views;
+        ShaderStage shaderStage;
+    };
+    queueLambdaCommandWithParameters_<CommandParameters>(
+        "setStageImageViews",
+        [](Engine* engine, const CommandParameters& p) {
+            engine->setStageImageViews_(p.views.data(), 0, p.views.size(), p.shaderStage);
+        },
+        imageViewArrayStacks_[toIndex_(shaderStage)].last(),
+        shaderStage);
+}
+
+void Engine::syncStageSamplers_(ShaderStage shaderStage) {
+    struct CommandParameters {
+        StageSamplerStateArray states;
+        ShaderStage shaderStage;
+    };
+    queueLambdaCommandWithParameters_<CommandParameters>(
+        "setStageSamplers",
+        [](Engine* engine, const CommandParameters& p) {
+            engine->setStageSamplers_(p.states.data(), 0, p.states.size(), p.shaderStage);
+        },
+        samplerStateArrayStacks_[toIndex_(shaderStage)].last(),
+        shaderStage);
 }
 
 // -- render thread + sync --
@@ -1026,8 +1213,41 @@ void Engine::sanitize_(SwapChainCreateInfo& /*createInfo*/) {
     // XXX
 }
 
-void Engine::sanitize_(BufferCreateInfo& /*createInfo*/) {
-    // XXX
+void Engine::sanitize_(BufferCreateInfo& createInfo) {
+
+    Usage usage = createInfo.usage();
+    if (usage == Usage::Immutable) {
+        if (createInfo.isMipGenerationEnabled()) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "ResourceMiscFlag::GenerateMips is set but usage is Usage::Immutable. "
+                "The ResourceMiscFlag in question is being unset automatically.");
+            ResourceMiscFlags resourceMiscFlags = createInfo.resourceMiscFlags();
+            resourceMiscFlags.unset(ResourceMiscFlag::GenerateMips);
+            createInfo.setResourceMiscFlags(resourceMiscFlags);
+        }
+    }
+
+    BindFlags bindFlags = createInfo.bindFlags();
+    if (createInfo.isMipGenerationEnabled()) {
+        if (!bindFlags.has(BindFlag::RenderTarget)) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "BindFlag::RenderTarget is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
+                "The BindFlag in question is being set automatically.");
+            bindFlags.set(BindFlag::RenderTarget);
+        }
+        if (!bindFlags.has(BindFlag::ShaderResource)) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "BindFlag::ShaderResource is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
+                "The BindFlag in question is being set automatically.");
+            bindFlags.set(BindFlag::ShaderResource);
+        }
+        createInfo.setBindFlags(bindFlags);
+    }
 }
 
 void Engine::sanitize_(ImageCreateInfo& createInfo) {
@@ -1049,7 +1269,45 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
             createInfo.setNumMipLevels(1);
         }
     }
-    if (!createInfo.isMipGenerationEnabled() && createInfo.numMipLevels() == 0) {
+
+    Usage usage = createInfo.usage();
+    if (usage == Usage::Immutable) {
+        if (createInfo.isMipGenerationEnabled()) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "ResourceMiscFlag::GenerateMips is set but usage is Usage::Immutable. "
+                "The ResourceMiscFlag in question is being unset automatically, and "
+                "numMipLevels is set to 1 if it was 0.");
+            ResourceMiscFlags resourceMiscFlags = createInfo.resourceMiscFlags();
+            resourceMiscFlags.unset(ResourceMiscFlag::GenerateMips);
+            createInfo.setResourceMiscFlags(resourceMiscFlags);
+            if (createInfo.numMipLevels() == 0) {
+                createInfo.setNumMipLevels(1);
+            }
+        }
+    }
+
+    ImageBindFlags bindFlags = createInfo.bindFlags();
+    if (createInfo.isMipGenerationEnabled()) {
+        if (!bindFlags.has(ImageBindFlag::RenderTarget)) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "ImageBindFlag::RenderTarget is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
+                "The ImageBindFlag in question is being set automatically.");
+            bindFlags.set(ImageBindFlag::RenderTarget);
+        }
+        if (!bindFlags.has(ImageBindFlag::ShaderResource)) {
+            VGC_WARNING(
+                LogVgcGraphics,
+                "ImageBindFlag::ShaderResource is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
+                "The ImageBindFlag in question is being set automatically.");
+            bindFlags.set(ImageBindFlag::ShaderResource);
+        }
+        createInfo.setBindFlags(bindFlags);
+    }
+    else if (createInfo.numMipLevels() == 0) {
         VGC_WARNING(
             LogVgcGraphics,
             "Automatic number of mip levels resolves to 1 since mip generation is not "
@@ -1099,10 +1357,18 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
             maxImageLayers);
     }
 
-    //const float numMipLevels = createInfo.numMipLevels();
-    //if (numMipLevels <= 0 || numMipLevels > maxImageLayers) {
-    //    VGC_ERROR(LogVgcGraphics, "Requested image layers ({}) should be in the range [1, {}]", numLayers, maxImageLayers);
-    //}
+    const Int numMipLevels = createInfo.numMipLevels();
+    const Int maxMipLevels = calculateMaxMipLevels(width, height);
+    if (numMipLevels < 0 || numMipLevels > maxMipLevels) {
+        VGC_ERROR(
+            LogVgcGraphics,
+            "Requested number of mip levels ({}) should be in the range [0, {}]",
+            numLayers,
+            maxMipLevels);
+    }
+    if (numMipLevels == 0) {
+        createInfo.setNumMipLevels(maxMipLevels);
+    }
 
     // XXX check is power of 2
     const Int numSamples = createInfo.numSamples();
@@ -1124,8 +1390,10 @@ void Engine::sanitize_(ImageViewCreateInfo& /*createInfo*/) {
     // XXX should check bind flags compatibility here
 }
 
-void Engine::sanitize_(SamplerStateCreateInfo& /*createInfo*/) {
-    // XXX
+void Engine::sanitize_(SamplerStateCreateInfo& createInfo) {
+    if (createInfo.maxAnisotropy() <= 1) {
+        createInfo.setMaxAnisotropy(1);
+    }
 }
 
 void Engine::sanitize_(GeometryViewCreateInfo& /*createInfo*/) {

@@ -17,10 +17,6 @@ vgc_add_library(graphics
         cliprect.h
         colorgradient.h
         constants.h
-        d3d11/d3d11engine.h
-        detail/command.h
-        detail/comptr.h
-        detail/pipelinestate.h
         engine.h
         enums.h
         exceptions.h
@@ -40,16 +36,25 @@ vgc_add_library(graphics
         swapchain.h
         text.h
 
+        d3d11/d3d11engine.h
+
+        detail/command.h
+        detail/comptr.h
+        detail/pipelinestate.h
+        detail/pixelformats.h
+
     CPP_FILES
-        d3d11/d3d11engine.cpp
         engine.cpp
         exceptions.cpp
         font.cpp
         idgenerator.cpp
+        image.cpp
         logcategories.cpp
         richtext.cpp
         strings.cpp
         text.cpp
+
+        d3d11/d3d11engine.cpp
 
     RESOURCE_FILES
         fonts/SourceSansPro/LICENSE.md
@@ -65,10 +70,16 @@ vgc_add_library(graphics
         fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf
         fonts/SourceSansPro/TTF/SourceSansPro-Semibold.ttf
         fonts/SourceSansPro/TTF/SourceSansPro-SemiboldIt.ttf
-        opengl/iv4fcol.f.glsl
-        opengl/iv4pos_iv4col_um4proj_um4view_ov4fcol.v.glsl
-        opengl/shader.f.glsl
-        opengl/shader.v.glsl
+        shaders/opengl/shader.f.glsl
+        shaders/opengl/shader.v.glsl
+        shaders/opengl/simple.f.glsl
+        shaders/opengl/simple.v.glsl
+        shaders/opengl/simple_textured.f.glsl
+        shaders/opengl/simple_textured.v.glsl
+        shaders/d3d11/simple.f.hlsl
+        shaders/d3d11/simple.v.hlsl
+        shaders/d3d11/simple_textured.f.hlsl
+        shaders/d3d11/simple_textured.v.hlsl
 )
 
 add_subdirectory(wraps)

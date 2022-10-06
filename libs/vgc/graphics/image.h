@@ -24,6 +24,8 @@
 
 namespace vgc::graphics {
 
+VGC_GRAPHICS_API UInt8 pixelFormatToBytesPerPixel(PixelFormat format);
+
 // Concept mapping:
 //  D3D11  -> Image
 //  OpenGL -> Image (within Texture)
@@ -50,6 +52,11 @@ public:
     }
 
     void setHeight(Int height) {
+        height_ = height;
+    }
+
+    void setSize(Int width, Int height) {
+        width_ = width;
         height_ = height;
     }
 
@@ -97,14 +104,6 @@ public:
         numSamples_ = numSamples;
     }
 
-    bool isMipGenerationEnabled() const {
-        return isMipGenerationEnabled_;
-    }
-
-    void setMipGenerationEnabled(bool enabled) {
-        isMipGenerationEnabled_ = enabled;
-    }
-
     Usage usage() const {
         return usage_;
     }
@@ -129,6 +128,10 @@ public:
         resourceMiscFlags_ = resourceMiscFlags;
     }
 
+    bool isMipGenerationEnabled() const {
+        return resourceMiscFlags_.has(ResourceMiscFlag::GenerateMips);
+    }
+
     CpuAccessFlags cpuAccessFlags() const {
         return cpuAccessFlags_;
     }
@@ -145,7 +148,6 @@ private:
     Int numLayers_ = 1;
     Int numMipLevels_ = 1;
     Int numSamples_ = 1;
-    bool isMipGenerationEnabled_ = true;
     Usage usage_ = Usage::Default;
     ImageBindFlags bindFlags_ = ImageBindFlag::ShaderResource;
     CpuAccessFlags cpuAccessFlags_ = CpuAccessFlag::None;
@@ -159,7 +161,8 @@ class VGC_GRAPHICS_API Image : public Resource {
 protected:
     Image(ResourceRegistry* registry, const ImageCreateInfo& info)
         : Resource(registry)
-        , info_(info) {
+        , info_(info)
+        , bpp_(pixelFormatToBytesPerPixel(info.pixelFormat())) {
     }
 
 public:
@@ -191,10 +194,6 @@ public:
         return info_.numSamples();
     }
 
-    bool isMipGenerationEnabled() const {
-        return info_.isMipGenerationEnabled();
-    }
-
     Usage usage() const {
         return info_.usage();
     }
@@ -211,8 +210,17 @@ public:
         return info_.resourceMiscFlags();
     }
 
+    bool isMipGenerationEnabled() const {
+        return info_.isMipGenerationEnabled();
+    }
+
+    UInt8 bytesPerPixel() const {
+        return bpp_;
+    }
+
 private:
     ImageCreateInfo info_;
+    UInt8 bpp_ = 0;
 };
 using ImagePtr = ResourcePtr<Image>;
 

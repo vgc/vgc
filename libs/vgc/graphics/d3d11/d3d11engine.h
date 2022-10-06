@@ -94,15 +94,12 @@ protected:
     RasterizerStatePtr
     constructRasterizerState_(const RasterizerStateCreateInfo& createInfo) override;
 
-    void resizeSwapChain_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
+    void onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
 
     //--  RENDER THREAD implementation functions --
 
-    void initContext_() override {
-    }
-
-    void initBuiltinResources_() override {
-    }
+    void initContext_() override;
+    void initBuiltinResources_() override;
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
     void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;
@@ -125,9 +122,10 @@ protected:
 
     void setBlendState_( //
         const BlendStatePtr& state,
-        const geometry::Vec4f& blendFactor) override;
+        const geometry::Vec4f& constantFactors) override;
 
     void setRasterizerState_(const RasterizerStatePtr& state) override;
+    void setScissorRect_(const geometry::Rect2f& rect) override;
 
     void setStageConstantBuffers_(
         const BufferPtr* buffers,
@@ -148,6 +146,8 @@ protected:
         ShaderStage shaderStage) override;
 
     void updateBufferData_(Buffer* buffer, const void* data, Int lengthInBytes) override;
+
+    void generateMips_(const ImageViewPtr& imageView) override;
 
     void draw_(GeometryView* view, UInt numIndices, UInt numInstances) override;
     void clear_(const core::Color& color) override;

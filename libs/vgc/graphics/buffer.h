@@ -50,6 +50,12 @@ class VGC_GRAPHICS_API BufferCreateInfo {
 public:
     constexpr BufferCreateInfo() noexcept = default;
 
+    constexpr BufferCreateInfo(BindFlags bindFlags, bool isDynamic) noexcept
+        : usage_(isDynamic ? Usage::Dynamic : Usage::Immutable)
+        , bindFlags_(bindFlags)
+        , cpuAccessFlags_(isDynamic ? CpuAccessFlag::Write : CpuAccessFlag::None) {
+    }
+
     Usage usage() const {
         return usage_;
     }
@@ -80,6 +86,10 @@ public:
 
     void setResourceMiscFlags(ResourceMiscFlags resourceMiscFlags) {
         resourceMiscFlags_ = resourceMiscFlags;
+    }
+
+    bool isMipGenerationEnabled() const {
+        return resourceMiscFlags_.has(ResourceMiscFlag::GenerateMips);
     }
 
 private:
@@ -133,6 +143,10 @@ public:
 
     ResourceMiscFlags resourceMiscFlags() const {
         return info_.resourceMiscFlags();
+    }
+
+    bool isMipGenerationEnabled() const {
+        return info_.isMipGenerationEnabled();
     }
 
 protected:
