@@ -1065,7 +1065,8 @@ void Engine::syncStageConstantBuffers_(ShaderStage shaderStage) {
     CommandParameters params = {};
     params.buffers = constantBufferArrayStacks_[toIndex_(shaderStage)].top();
     params.shaderStage = shaderStage;
-    if (programStack_.top()->isBuiltin()) {
+    Program* program = programStack_.top().get();
+    if (program && program->isBuiltin()) {
         params.buffers[0] = builtinConstantsBuffer_;
     }
     queueLambdaCommandWithParameters_<CommandParameters>(
