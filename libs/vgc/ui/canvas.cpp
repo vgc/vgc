@@ -56,12 +56,6 @@ CanvasPtr Canvas::create(dom::Document* document) {
 
 namespace {
 
-// Returns the file path of a shader file as a QString
-QString shaderPath_(const std::string& name) {
-    std::string path = core::resourcePath("graphics/opengl/" + name);
-    return toQt(path);
-}
-
 double width_(const MouseEvent* event) {
     const double defaultWidth = 6.0;
     return event->hasPressure() ? 2 * event->pressure() * defaultWidth : defaultWidth;
