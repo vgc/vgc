@@ -153,9 +153,10 @@ public:
             auto start = beg + 1;
             auto it = std::upper_bound(start, end, e, ElementEntryIncCostLess());
             if (it != start) {
-                std::rotate(beg, start, it);
+                ElementEntry begCopy = std::move(*beg);
+                auto last = std::move(start, it, beg);
+                *last = std::move(begCopy);
             }
-
             --pixelUnderflow;
         }
     }
