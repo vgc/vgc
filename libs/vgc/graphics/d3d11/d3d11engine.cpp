@@ -1097,7 +1097,7 @@ ImagePtr D3d11Engine::constructImage_(const ImageCreateInfo& createInfo) {
 
     DXGI_FORMAT dxgiFormat = pixelFormatToDxgiFormat(createInfo.pixelFormat());
     if (dxgiFormat == DXGI_FORMAT_UNKNOWN) {
-        throw core::LogicError("D3d11: unknown image format.");
+        throw core::LogicError("D3d11: unknown image pixel format.");
     }
 
     auto image = makeUnique<D3d11Image>(resourceRegistry_, createInfo);
@@ -1126,7 +1126,7 @@ ImageViewPtr D3d11Engine::constructImageView_(
 
     DXGI_FORMAT dxgiFormat = pixelFormatToDxgiFormat(format);
     if (dxgiFormat == DXGI_FORMAT_UNKNOWN) {
-        throw core::LogicError("D3d11: unknown image format.");
+        throw core::LogicError("D3d11: unknown image pixel format.");
     }
 
     auto view = makeUnique<D3d11ImageView>(
@@ -1270,7 +1270,6 @@ void D3d11Engine::initImage_(
     // see https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createtexture2d
     core::Array<D3D11_SUBRESOURCE_DATA> initData(numMipLevels * numLayers);
     if (count > 0) {
-        VGC_CORE_ASSERT(count <= 1 || count == numMipLevels);
         VGC_CORE_ASSERT(numMipLevels > 0);
         initData.resize(numMipLevels * numLayers);
         UINT levelWidth = width;
@@ -1283,8 +1282,8 @@ void D3d11Engine::initImage_(
             VGC_CORE_ASSERT(layerStride * numLayers == mipLevelDataSpan.length());
             for (Int layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
                 // layer0_mip0..layer0_mipN..layerN_mip0..layerN_mipN
-                D3D11_SUBRESOURCE_DATA& initialData =
-                    initData[layerIdx * numMipLevels + mipLevel];
+                UINT subresIndex = D3D11CalcSubresource(mipLevel, layerIdx, numMipLevels);
+                D3D11_SUBRESOURCE_DATA& initialData = initData[subresIndex];
                 initialData.pSysMem = mipLevelDataSpan.data() + layerStride * layerIdx;
                 initialData.SysMemPitch = levelWidth * bpp;
                 // XXX check span size !!!
@@ -1327,13 +1326,6 @@ void D3d11Engine::initImage_(
             (count == numMipLevels) ? initData.data() : nullptr,
             texture.releaseAndGetAddressOf());
         image->object_ = texture;
-        if (count < numMipLevels) {
-            for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
-                const D3D11_SUBRESOURCE_DATA& initialData = initData[mipLevel];
-                deviceCtx_->UpdateSubresource(
-                    texture.get(), 0, 0, initialData.pSysMem, initialData.SysMemPitch, 0);
-            }
-        }
     }
     else {
         VGC_CORE_ASSERT(image->rank() == ImageRank::_2D);
@@ -1357,11 +1349,21 @@ void D3d11Engine::initImage_(
             (count == numMipLevels) ? initData.data() : nullptr,
             texture.releaseAndGetAddressOf());
         image->object_ = texture;
-        if (count < numMipLevels) {
-            for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
-                const D3D11_SUBRESOURCE_DATA& initialData = initData[mipLevel];
+    }
+
+    if (count < numMipLevels) {
+        for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
+            for (Int layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
+                UINT subresIndex =
+                    D3D11CalcSubresource(mipLevel, layerIdx, numMipLevels);
+                const D3D11_SUBRESOURCE_DATA& initialData = initData[subresIndex];
                 deviceCtx_->UpdateSubresource(
-                    texture.get(), 0, 0, initialData.pSysMem, initialData.SysMemPitch, 0);
+                    image->object_.get(),
+                    subresIndex,
+                    0,
+                    initialData.pSysMem,
+                    initialData.SysMemPitch,
+                    0);
             }
         }
     }
@@ -1572,8 +1574,7 @@ void D3d11Engine::initSamplerState_(SamplerState* state) {
     desc.MaxAnisotropy = static_cast<UINT>(d3dSamplerState->maxAnisotropy());
     desc.ComparisonFunc =
         comparisonFunctionToD3DComparisonFunc(d3dSamplerState->comparisonFunction());
-    // XXX add data() in vec4f
-    memcpy(desc.BorderColor, &d3dSamplerState->wrapColor(), 4 * sizeof(float));
+    memcpy(desc.BorderColor, d3dSamplerState->wrapColor().data(), 4 * sizeof(float));
     desc.MipLODBias = d3dSamplerState->mipLODBias();
     desc.MinLOD = d3dSamplerState->minLOD();
     desc.MaxLOD = d3dSamplerState->maxLOD();
@@ -1702,6 +1703,10 @@ void D3d11Engine::setRasterizerState_(const RasterizerStatePtr& state) {
 }
 
 void D3d11Engine::setScissorRect_(const geometry::Rect2f& rect) {
+    // "By convention, the right and bottom edges of the rectangle are normally considered exclusive."
+    // See https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d11-rect
+    //     https://learn.microsoft.com/en-us/previous-versions//dd162897(v=vs.85)
+    //
     D3D11_RECT r = {};
     r.left = static_cast<LONG>(std::round(rect.xMin()));
     r.top = static_cast<LONG>(std::round(rect.yMin()));
