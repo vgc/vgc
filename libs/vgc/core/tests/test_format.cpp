@@ -25,6 +25,21 @@
 // TODO: Use Google Benchmark and separate benchmarks from unit tests
 #include <vgc/core/stopwatch.h>
 
+TEST(TestFormat, Format) {
+    double x = 12;
+    double y = 42;
+    std::string s = vgc::core::format("position = ({}, {})", x, y);
+    EXPECT_EQ(s, "position = (12, 42)");
+}
+
+TEST(TestFormat, FormatTo) {
+    double x = 12;
+    double y = 42;
+    std::string out = "the position is: ";
+    vgc::core::formatTo(std::back_inserter(out), "({}, {})", x, y);
+    EXPECT_EQ(out, "the position is: (12, 42)");
+}
+
 TEST(TestFormat, WriteChar) {
     std::string s;
     vgc::core::StringWriter sw(s);
@@ -657,14 +672,14 @@ TEST(TestFormat, Enum) {
     for (int i = 1; i <= 122; ++i) {
         std::string v = "v";
         std::string_view prettyName = Enum::prettyName(static_cast<LongEnum>(i));
-        EXPECT_EQ(prettyName, vgc::core::format("v{}", i));
+        EXPECT_EQ(prettyName, format("v{}", i));
     }
     EXPECT_EQ(s5, "v1");
     EXPECT_EQ(s6, "v200");
     for (int i = 1; i <= 200; ++i) {
         std::string v = "v";
         std::string_view prettyName = Enum::prettyName(static_cast<VeryLongEnum>(i));
-        EXPECT_EQ(prettyName, vgc::core::format("v{}", i));
+        EXPECT_EQ(prettyName, format("v{}", i));
     }
 }
 
