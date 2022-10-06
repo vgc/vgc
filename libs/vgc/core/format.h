@@ -148,10 +148,31 @@ inline void println(const S& formatString, Args&&... args) {
 /// This function uses the {fmt} library under the hood. For more info on the
 /// format syntax, https://fmt.dev/latest/syntax.html
 ///
-template<typename S, typename... Args, typename Char = fmt::char_t<S>>
-inline std::basic_string<Char> format(const S& formatString, Args&&... args) {
-    const auto& vargs = fmt::make_args_checked<Args...>(formatString, args...);
-    return fmt::vformat(formatString, vargs);
+/// \sa formatTo()
+///
+
+template<typename... T>
+VGC_FORCE_INLINE std::string format(fmt::format_string<T...> fmtString, T&&... args) {
+    return fmt::vformat(fmtString, fmt::make_format_args(args...));
+}
+
+/// Formats arguments and appends the result to the given output iterator.
+///
+/// ```cpp
+/// vgc::geometry::Vec2d v(12, 42);
+/// std::string out = "The position is: "
+/// vgc::core::formatTo(std::back_inserter(out), "{}", v);
+/// ```
+///
+/// \sa format()
+///
+template<
+    typename OutputIt,
+    typename... T,
+    VGC_REQUIRES(fmt::detail::is_output_iterator<OutputIt, char>::value)>
+VGC_FORCE_INLINE OutputIt
+formatTo(OutputIt out, fmt::format_string<T...> fmtString, T&&... args) {
+    return fmt::vformat_to(out, fmtString, fmt::make_format_args(args...));
 }
 
 /// Writes the given `char` to the given output stream.
@@ -317,7 +338,7 @@ void write(OStream& out, FloatType x) {
     //   9999999.f -> " 9999999.000000000000" (after calling fmt::format_to)
     //             -> "10000000             " (after our post-processing)
     fmt::memory_buffer b;
-    fmt::format_to(std::back_inserter(b), " {:.12f}", x);
+    formatTo(std::back_inserter(b), " {:.12f}", x);
     auto begin = b.begin() + 1;
     auto end = b.end();
 

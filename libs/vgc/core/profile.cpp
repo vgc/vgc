@@ -80,16 +80,16 @@ void printDuration(std::string& out, Clock::duration d) {
     ms -= s * 1000;
     auto out_ = std::back_inserter(out);
     if (s > 0) {
-        fmt::format_to(out_, "{:>6}s {:0>3}ms {:0>3}us {:0>3}ns", s, ms, us, ns);
+        formatTo(out_, "{:>6}s {:0>3}ms {:0>3}us {:0>3}ns", s, ms, us, ns);
     }
     else if (ms > 0) {
-        fmt::format_to(out_, "{:>6}  {:>3}ms {:0>3}us {:0>3}ns", ' ', ms, us, ns);
+        formatTo(out_, "{:>6}  {:>3}ms {:0>3}us {:0>3}ns", ' ', ms, us, ns);
     }
     else if (us > 0) {
-        fmt::format_to(out_, "{:>6}  {:>3}   {:>3}us {:0>3}ns", ' ', ' ', us, ns);
+        formatTo(out_, "{:>6}  {:>3}   {:>3}us {:0>3}ns", ' ', ' ', us, ns);
     }
     else {
-        fmt::format_to(out_, "{:>6}  {:>3}   {:>3}   {:>3}ns", ' ', ' ', ' ', ns);
+        formatTo(out_, "{:>6}  {:>3}   {:>3}   {:>3}ns", ' ', ' ', ' ', ns);
     }
 }
 
