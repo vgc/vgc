@@ -1282,7 +1282,8 @@ void D3d11Engine::initImage_(
             VGC_CORE_ASSERT(layerStride * numLayers == mipLevelDataSpan.length());
             for (Int layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
                 // layer0_mip0..layer0_mipN..layerN_mip0..layerN_mipN
-                UINT subresIndex = D3D11CalcSubresource(mipLevel, layerIdx, numMipLevels);
+                // equivalent to D3D11CalcSubresource:
+                Int subresIndex = mipLevel + layerIdx * numMipLevels;
                 D3D11_SUBRESOURCE_DATA& initialData = initData[subresIndex];
                 initialData.pSysMem = mipLevelDataSpan.data() + layerStride * layerIdx;
                 initialData.SysMemPitch = levelWidth * bpp;
@@ -1354,7 +1355,8 @@ void D3d11Engine::initImage_(
     if (count < numMipLevels) {
         for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
             for (Int layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
-                UINT subresIndex = D3D11CalcSubresource(mipLevel, layerIdx, numMipLevels);
+                // equivalent to D3D11CalcSubresource:
+                Int subresIndex = mipLevel + layerIdx * numMipLevels;
                 const D3D11_SUBRESOURCE_DATA& initialData = initData[subresIndex];
                 deviceCtx_->UpdateSubresource(
                     image->object_.get(),
