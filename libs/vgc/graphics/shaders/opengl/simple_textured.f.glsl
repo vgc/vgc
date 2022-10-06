@@ -7,7 +7,6 @@ in vec2 fUv;
 
 out highp vec4 fragColor;
 
-void main()
-{
+void main() {
    fragColor = fCol * texture(tex0f, fUv);
 }

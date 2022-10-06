@@ -13,8 +13,7 @@ layout(std140) uniform BuiltinConstants {
 out vec4 fCol;
 out vec2 fUv;
 
-void main()
-{
+void main() {
     gl_Position = proj * view * pos;
     fCol = col;
     fUv = uv;

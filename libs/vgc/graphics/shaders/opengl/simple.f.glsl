@@ -4,7 +4,6 @@ in vec4 fCol;
 
 out highp vec4 fragColor;
 
-void main()
-{
+void main() {
    fragColor = fCol;
 }
