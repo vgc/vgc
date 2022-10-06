@@ -41,13 +41,6 @@ ImageBoxPtr ImageBox::create(std::string_view relativePath) {
     return ImageBoxPtr(new ImageBox(relativePath));
 }
 
-void ImageBox::setImage(std::string_view /*relativePath*/) {
-    //if (...) {
-    //    reload_ = true;
-    //    requestRepaint();
-    //}
-}
-
 void ImageBox::onResize() {
     SuperClass::onResize();
     reload_ = true;

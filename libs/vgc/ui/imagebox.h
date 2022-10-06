@@ -43,10 +43,6 @@ public:
     ///
     static ImageBoxPtr create(std::string_view relativePath);
 
-    /// Sets the ImageBox's image.
-    ///
-    void setImage(std::string_view relativePath);
-
     // Reimplementation of Widget virtual methods
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
