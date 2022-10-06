@@ -559,7 +559,7 @@ GLenum comparisonFunctionToGLenum(ComparisonFunction func) {
     static_assert(numComparisonFunctions == 10);
     static constexpr std::array<GLenum, numComparisonFunctions> map = {
         badGLenum,   // Undefined
-        GL_NEVER,    // Disabled
+        GL_ALWAYS,   // Disabled
         GL_ALWAYS,   // Always
         GL_NEVER,    // Never
         GL_EQUAL,    // Equal
