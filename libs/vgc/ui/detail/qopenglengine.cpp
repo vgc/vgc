@@ -1219,6 +1219,11 @@ void QglEngine::initImage_(
     [[maybe_unused]] bool isMipmapGenEnabled = image->isMipGenerationEnabled();
     [[maybe_unused]] bool isArray = numLayers > 1;
 
+    if (count > 0) {
+        VGC_CORE_ASSERT(mipLevelDataSpans);
+        // XXX let's consider for now that we are provided full mips or base level only.
+        VGC_CORE_ASSERT(count == 1 || count == numMipLevels);
+    }
     // Engine does assign full-set level count if it is 0 in createInfo.
     VGC_CORE_ASSERT(numMipLevels > 0);
 
@@ -1227,11 +1232,6 @@ void QglEngine::initImage_(
     image->object_ = object;
 
     GLenum target = badGLenum;
-
-    if (count > 0) {
-        // XXX let's consider for now that we are provided full mips or nothing
-        VGC_CORE_ASSERT(count <= 1 || count == numMipLevels);
-    }
 
     GlFormat glFormat = image->glFormat();
 

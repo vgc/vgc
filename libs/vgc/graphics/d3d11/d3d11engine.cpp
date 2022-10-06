@@ -1219,23 +1219,24 @@ void D3d11Engine::initImage_(
 
     D3d11Image* image = static_cast<D3d11Image*>(image_);
 
-    if (count > 0) {
-        VGC_CORE_ASSERT(mipLevelDataSpans);
-    }
-
     const UINT width = static_cast<UINT>(image->width());
     const UINT height = static_cast<UINT>(image->height());
     const UINT numSamples = static_cast<UINT>(image->numSamples());
     const UINT numLayers = static_cast<UINT>(image->numLayers());
     const UINT numMipLevels = static_cast<UINT>(image->numMipLevels());
 
+    if (count > 0) {
+        VGC_CORE_ASSERT(mipLevelDataSpans);
+        // XXX let's consider for now that we are provided full mips or base level only.
+        VGC_CORE_ASSERT(count == 1 || count == numMipLevels);
+    }
+    // Engine does assign full-set level count if it is 0 in createInfo.
+    VGC_CORE_ASSERT(numMipLevels > 0);
+
     [[maybe_unused]] bool isImmutable = image->usage() == Usage::Immutable;
     [[maybe_unused]] bool isMultisampled = numSamples > 1;
     bool isMipmapGenEnabled =
         image->resourceMiscFlags().has(ResourceMiscFlag::GenerateMips);
-
-    // Engine does assign full-set level count if it is 0 in createInfo.
-    VGC_CORE_ASSERT(numMipLevels > 0);
 
     D3D11_USAGE d3dUsage = usageToD3DUsage(image->usage());
 
