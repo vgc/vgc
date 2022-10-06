@@ -1354,8 +1354,7 @@ void D3d11Engine::initImage_(
     if (count < numMipLevels) {
         for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
             for (Int layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
-                UINT subresIndex =
-                    D3D11CalcSubresource(mipLevel, layerIdx, numMipLevels);
+                UINT subresIndex = D3D11CalcSubresource(mipLevel, layerIdx, numMipLevels);
                 const D3D11_SUBRESOURCE_DATA& initialData = initData[subresIndex];
                 deviceCtx_->UpdateSubresource(
                     image->object_.get(),
