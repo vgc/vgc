@@ -95,24 +95,22 @@ float Flex::preferredWidthForHeight(float height) const {
     if (isRow) {
         float flexTopBottomPadding = getTopBottomPadding(this);
         float flexPaddedHeight = height - flexTopBottomPadding;
-        float gap = getGap(isRow, this);
-        bool isFirst = true;
+        Int numVisibleChildren = 0;
         for (Widget* child : children()) {
             if (child->visibility() == Visibility::Invisible) {
                 continue;
             }
+            ++numVisibleChildren;
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
             float childHeight =
                 (std::max)(0.0f, flexPaddedHeight - childTopBottomMargins);
             float childPreferredWidth = child->preferredWidthForHeight(childHeight);
             width += childPreferredWidth + childLeftRightMargins;
-            if (isFirst) {
-                isFirst = false;
-            }
-            else {
-                width += gap;
-            }
+        }
+        if (numVisibleChildren > 0) {
+            float gap = getGap(isRow, this);
+            width += (numVisibleChildren - 1) * gap;
         }
     }
     else {
@@ -146,23 +144,21 @@ float Flex::preferredHeightForWidth(float width) const {
     else {
         float flexLeftRightPadding = getLeftRightPadding(this);
         float flexPaddedWidth = width - flexLeftRightPadding;
-        float gap = getGap(isRow, this);
-        bool isFirst = true;
+        Int numVisibleChildren = 0;
         for (Widget* child : children()) {
             if (child->visibility() == Visibility::Invisible) {
                 continue;
             }
+            ++numVisibleChildren;
             float childLeftRightMargins = getLeftRightMargins(child);
             float childTopBottomMargins = getTopBottomMargins(child);
             float childWidth = (std::max)(0.0f, flexPaddedWidth - childLeftRightMargins);
             float childPreferredHeight = child->preferredHeightForWidth(childWidth);
             height += childPreferredHeight + childTopBottomMargins;
-            if (isFirst) {
-                isFirst = false;
-            }
-            else {
-                height += gap;
-            }
+        }
+        if (numVisibleChildren > 0) {
+            float gap = getGap(isRow, this);
+            height += (numVisibleChildren - 1) * gap;
         }
     }
     height += getTopBottomPadding(this);
@@ -181,9 +177,6 @@ geometry::Vec2f Flex::computePreferredSize() const {
     if (w.type() == auto_) {
         if (h.type() == auto_) {
 
-            float gap = getGap(isRow, this);
-            bool isFirst = true;
-
             // Compute preferred height not knowing any width
             float height = 0;
             if (!isRow) {
@@ -192,12 +185,6 @@ geometry::Vec2f Flex::computePreferredSize() const {
                         continue;
                     }
                     height += child->preferredSize().y() + getTopBottomMargins(child);
-                    if (isFirst) {
-                        isFirst = false;
-                    }
-                    else {
-                        height += gap;
-                    }
                 }
             }
             else {
@@ -219,12 +206,6 @@ geometry::Vec2f Flex::computePreferredSize() const {
                         continue;
                     }
                     width += child->preferredSize().x() + getLeftRightMargins(child);
-                    if (isFirst) {
-                        isFirst = false;
-                    }
-                    else {
-                        width += gap;
-                    }
                 }
             }
             else {
@@ -237,6 +218,24 @@ geometry::Vec2f Flex::computePreferredSize() const {
                 }
             }
             width += getLeftRightPadding(this);
+
+            // Add gap
+            Int numVisibleChildren = 0;
+            for (Widget* child : children()) {
+                if (child->visibility() != Visibility::Invisible) {
+                    ++numVisibleChildren;
+                }
+            }
+            if (numVisibleChildren > 0) {
+                float gap = getGap(isRow, this);
+                float totalGap = (numVisibleChildren - 1) * gap;
+                if (isRow) {
+                    width += totalGap;
+                }
+                else {
+                    height += totalGap;
+                }
+            }
 
             res = {width, height};
         }
