@@ -55,7 +55,8 @@ void ImageBox::onResize() {
 
 void ImageBox::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    quad_ = engine->createDynamicTriangleStripView(graphics::BuiltinGeometryLayout::XYUVRGBA);
+    quad_ =
+        engine->createDynamicTriangleStripView(graphics::BuiltinGeometryLayout::XYUVRGBA);
 }
 
 void ImageBox::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
@@ -82,7 +83,9 @@ void ImageBox::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
             info.setRank(graphics::ImageRank::_2D);
             info.setPixelFormat(graphics::PixelFormat::RGBA_8_UNORM);
             info.setUsage(graphics::Usage::Default);
-            info.setBindFlags(graphics::ImageBindFlag::ShaderResource | graphics::ImageBindFlag::RenderTarget);
+            info.setBindFlags(
+                graphics::ImageBindFlag::ShaderResource
+                | graphics::ImageBindFlag::RenderTarget);
             info.setCpuAccessFlags(graphics::CpuAccessFlag::None);
             // enable mips
             info.setResourceMiscFlags(graphics::ResourceMiscFlag::GenerateMips);
