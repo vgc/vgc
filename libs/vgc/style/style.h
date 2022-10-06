@@ -24,6 +24,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
+#include <vgc/core/enum.h>
 #include <vgc/core/format.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
@@ -438,11 +439,8 @@ enum class StyleSelectorItemType : Int8 {
     ChildCombinator = 0x11
 };
 
-} // namespace vgc::style
-
-VGC_DECLARE_SCOPED_ENUM_FORMATTER((vgc, style), StyleSelectorItemType)
-
-namespace vgc::style {
+VGC_STYLE_API
+VGC_DECLARE_ENUM(StyleSelectorItemType)
 
 /// \class vgc::style::StyleSelectorItem
 /// \brief One item of a StyleSelector.
