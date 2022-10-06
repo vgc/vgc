@@ -1232,16 +1232,16 @@ void Engine::sanitize_(BufferCreateInfo& createInfo) {
         if (!bindFlags.has(BindFlag::RenderTarget)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "BindFlag::RenderTarget is not set but ResourceMiscFlag::GenerateMips "
-                "is. "
+                "BindFlag::RenderTarget is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
                 "The BindFlag in question is being set automatically.");
             bindFlags.set(BindFlag::RenderTarget);
         }
         if (!bindFlags.has(BindFlag::ShaderResource)) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "BindFlag::ShaderResource is not set but ResourceMiscFlag::GenerateMips "
-                "is. "
+                "BindFlag::ShaderResource is not set but "
+                "ResourceMiscFlag::GenerateMips is. "
                 "The BindFlag in question is being set automatically.");
             bindFlags.set(BindFlag::ShaderResource);
         }
