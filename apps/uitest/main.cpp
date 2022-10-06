@@ -128,15 +128,28 @@ void createMenu(ui::Widget* parent) {
     Menu* menu = parent->createChild<Menu>("Menu");
     menu->setDirection(ui::FlexDirection::Row);
     menu->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex and/or Menu.
+    menu->setShortcutTrackEnabled(false);
 
-    Menu* menuA = menu->createSubMenu("Menu A");
-    Menu* menuB = menu->createSubMenu("Menu B");
+    Menu* fileMenu = menu->createSubMenu("File");
+    Menu* editMenu = menu->createSubMenu("Edit");
+    Menu* testMenu = menu->createSubMenu("Test");
     menu->setPopupEnabled(false);
 
-    menuA->addItem(parent->createAction("Action #A.1", Shortcut({}, Key::B)));
-    Menu* menu1 = menuA->createSubMenu("Menu 1");
-    Menu* menu2 = menuA->createSubMenu("Menu 2");
-    Menu* menu3 = menuA->createSubMenu("Menu 3");
+    fileMenu->addItem(parent->createAction("New", Shortcut(ModifierKey::Ctrl, Key::N)));
+    fileMenu->addItem(parent->createAction("Open", Shortcut(ModifierKey::Ctrl, Key::O)));
+    fileMenu->addItem(parent->createAction("Save", Shortcut(ModifierKey::Ctrl, Key::S)));
+    fileMenu->addItem(parent->createAction(
+        "Save As...", Shortcut(ModifierKey::Ctrl | ModifierKey::Shift, Key::S)));
+    fileMenu->addItem(parent->createAction(
+        "Quit", Shortcut(ModifierKey::Ctrl, Key::Q))); // TODO: Alt+F4 on Windows
+
+    editMenu->addItem(parent->createAction("Undo", Shortcut(ModifierKey::Ctrl, Key::Z)));
+    editMenu->addItem(parent->createAction(
+        "Redo", Shortcut(ModifierKey::Ctrl | ModifierKey::Shift, Key::Z)));
+
+    Menu* menu1 = testMenu->createSubMenu("Menu 1");
+    Menu* menu2 = testMenu->createSubMenu("Menu 2");
+    Menu* menu3 = testMenu->createSubMenu("Menu 3");
 
     menu1->addItem(parent->createAction("Action #1.1", Shortcut({}, Key::G)));
     menu1->addItem(
@@ -161,8 +174,6 @@ void createMenu(ui::Widget* parent) {
         parent->createAction("Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
 
     menu3->addItem(parent->createAction("Action #3.1"));
-
-    menuB->addItem(parent->createAction("Action #B.1", Shortcut({}, Key::B)));
 
     // stretch at the right-side of the Flex
     // TODO: implement AlignLeft in Flex to achieve the same without the extra child

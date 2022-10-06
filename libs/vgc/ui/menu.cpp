@@ -144,6 +144,19 @@ void Menu::setPopupEnabled(bool enabled) {
     isPopupEnabled_ = enabled;
 }
 
+void Menu::setShortcutTrackEnabled(bool enabled) {
+    if (isShortcutTrackEnabled_ != enabled) {
+        isShortcutTrackEnabled_ = enabled;
+        for (const MenuItem& item : items_) {
+            MenuButton* button = item.button();
+            if (button) {
+                button->setShortcutVisible(enabled);
+            }
+        }
+        requestGeometryUpdate();
+    }
+}
+
 namespace detail {
 
 bool placeMenuFit(
@@ -292,6 +305,7 @@ void Menu::onItemAdded_(const MenuItem& item) {
         button->parentMenu_ = this;
         //button->setDirection(orthoDir(direction()));
         button->setDirection(FlexDirection::Row);
+        button->setShortcutVisible(isShortcutTrackEnabled_);
     }
     item.action()->triggered().connect(onItemActionTriggeredSlot_());
     item.action()->aboutToBeDestroyed().connect(onItemActionAboutToBeDestroyedSlot_());

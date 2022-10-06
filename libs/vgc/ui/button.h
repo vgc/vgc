@@ -109,6 +109,17 @@ public:
         return action_ ? action_->shortcut() : Shortcut();
     }
 
+    /// Returns whether the shortcut is visible.
+    ///
+    bool isShortcutVisible() const {
+        return shortcutLabel_ ? shortcutLabel_->visibility() == Visibility::Inherit
+                              : false;
+    }
+
+    /// Sets whether the shortcut is visible. By default, it is hidden.
+    ///
+    void setShortcutVisible(bool visible);
+
     /// Returns the `CheckMode` of the button's action.
     ///
     /// Returns `Unckeckable` if the button has no associated action.

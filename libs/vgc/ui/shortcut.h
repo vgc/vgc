@@ -17,6 +17,7 @@
 #ifndef VGC_UI_SHORTCUT_H
 #define VGC_UI_SHORTCUT_H
 
+#include <vgc/core/format.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/key.h>
 #include <vgc/ui/modifierkey.h>
@@ -94,6 +95,21 @@ private:
     Key key_;
 };
 
+namespace detail {
+
+std::string toString(const Shortcut& shortcut);
+
+}
+
 } // namespace vgc::ui
+
+template<>
+struct fmt::formatter<vgc::ui::Shortcut> : fmt::formatter<std::string_view> {
+    template<typename FormatContext>
+    auto format(const vgc::ui::Shortcut& shortcut, FormatContext& ctx) {
+        std::string res = vgc::ui::detail::toString(shortcut);
+        return fmt::formatter<std::string_view>::format(res, ctx);
+    }
+};
 
 #endif // VGC_UI_SHORTCUT_H

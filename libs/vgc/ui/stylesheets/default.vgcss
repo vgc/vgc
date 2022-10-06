@@ -158,6 +158,7 @@
 }
 
 .MenuButton {
+    column-gap: 10dp;
     background-color: rgb(49, 51, 53);
     /* background-color drawn by .Menu */
 }
