@@ -217,7 +217,7 @@ private:
     };
 
     std::set<CurveGraphicsIterator, unwrapped_less> toUpdate_;
-    bool needsSort_ = false;
+    //bool needsSort_ = false;
 
     void clearGraphics_();
     void updateCurveGraphics_(graphics::Engine* engine);
