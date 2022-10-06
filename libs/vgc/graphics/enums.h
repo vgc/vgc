@@ -330,46 +330,37 @@ using IndexFormatType = typename detail::IndexFormatType_<Format>::type;
 enum class PipelineParameter : UInt32 {
     None = 0,
 
-    Framebuffer = 0x00000001,
-    Viewport = 0x00000002,
-    Program = 0x00000004,
-    BlendState = 0x00000008,
-    DepthStencilState = 0x00000010,
-    RasterizerState = 0x00000020,
-    ScissorRect = 0x00000040,
+    Framebuffer                     = 0x00000001,
+    Viewport                        = 0x00000002,
+    Program                         = 0x00000004,
+    BlendState                      = 0x00000008,
+    DepthStencilState               = 0x00000010,
+    RasterizerState                 = 0x00000020,
+    ScissorRect                     = 0x00000040,
 
-    VertexShaderConstantBuffers = 0x00001000,
-    VertexShaderImageViews = 0x00010000,
-    VertexShaderSamplers = 0x00100000,
+    VertexShaderConstantBuffers     = 0x00001000,
+    VertexShaderImageViews          = 0x00010000,
+    VertexShaderSamplers            = 0x00100000,
 
-    GeometryShaderConstantBuffers = 0x00002000,
-    GeometryShaderImageViews = 0x00020000,
-    GeometryShaderSamplers = 0x00200000,
+    GeometryShaderConstantBuffers   = 0x00002000,
+    GeometryShaderImageViews        = 0x00020000,
+    GeometryShaderSamplers          = 0x00200000,
 
-    PixelShaderConstantBuffers = 0x00004000,
-    PixelShaderImageViews = 0x00040000,
-    PixelShaderSamplers = 0x00400000,
+    PixelShaderConstantBuffers      = 0x00004000,
+    PixelShaderImageViews           = 0x00040000,
+    PixelShaderSamplers             = 0x00400000,
 
-    VertexShaderResources =
-        VertexShaderConstantBuffers | VertexShaderImageViews | VertexShaderSamplers,
-    GeometryShaderResources =
-        GeometryShaderConstantBuffers | GeometryShaderImageViews | GeometryShaderSamplers,
-    PixelShaderResources =
-        PixelShaderConstantBuffers | PixelShaderImageViews | PixelShaderSamplers,
+    VertexShaderResources       = VertexShaderConstantBuffers   | VertexShaderImageViews    | VertexShaderSamplers,
+    GeometryShaderResources     = GeometryShaderConstantBuffers | GeometryShaderImageViews  | GeometryShaderSamplers,
+    PixelShaderResources        = PixelShaderConstantBuffers    | PixelShaderImageViews     | PixelShaderSamplers,
 
-    AllShadersConstantBuffers = VertexShaderConstantBuffers
-                                | GeometryShaderConstantBuffers
-                                | PixelShaderConstantBuffers,
-    AllShadersImageViews =
-        VertexShaderImageViews | GeometryShaderImageViews | PixelShaderImageViews,
-    AllShadersSamplers =
-        VertexShaderSamplers | GeometryShaderSamplers | PixelShaderSamplers,
+    AllShadersConstantBuffers   = VertexShaderConstantBuffers   | GeometryShaderConstantBuffers | PixelShaderConstantBuffers,
+    AllShadersImageViews        = VertexShaderImageViews        | GeometryShaderImageViews      | PixelShaderImageViews,
+    AllShadersSamplers          = VertexShaderSamplers          | GeometryShaderSamplers        | PixelShaderSamplers,
 
-    AllShadersResources =
-        AllShadersConstantBuffers | AllShadersImageViews | AllShadersSamplers,
+    AllShadersResources = AllShadersConstantBuffers | AllShadersImageViews | AllShadersSamplers,
 
-    All = Framebuffer | Viewport | Program | BlendState | DepthStencilState
-          | RasterizerState | AllShadersResources,
+    All = Framebuffer | Viewport | Program | BlendState | DepthStencilState | RasterizerState | ScissorRect | AllShadersResources,
 };
 VGC_DEFINE_FLAGS(PipelineParameters, PipelineParameter)
 
