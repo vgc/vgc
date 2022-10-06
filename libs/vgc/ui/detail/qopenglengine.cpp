@@ -1394,7 +1394,8 @@ void QglEngine::initSamplerState_(SamplerState* aState) {
     api_->glSamplerParameteri(object, GL_TEXTURE_WRAP_R, state->wrapR_);
     api_->glSamplerParameteri(
         object, GL_TEXTURE_COMPARE_FUNC, state->comparisonFunctionGL_);
-    api_->glSamplerParameterf(object, GL_TEXTURE_MAX_ANISOTROPY_EXT, state->maxAnisotropyGL_);
+    api_->glSamplerParameterf(
+        object, GL_TEXTURE_MAX_ANISOTROPY_EXT, state->maxAnisotropyGL_);
     api_->glSamplerParameterf(object, GL_TEXTURE_LOD_BIAS, state->mipLODBias());
     api_->glSamplerParameterf(object, GL_TEXTURE_MIN_LOD, state->minLOD());
     api_->glSamplerParameterf(object, GL_TEXTURE_MAX_LOD, state->maxLOD());
