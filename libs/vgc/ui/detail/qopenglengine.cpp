@@ -655,10 +655,10 @@ GLenum cullModeToGLenum(CullMode mode) {
     constexpr size_t numCullModes = VGC_ENUM_COUNT(CullMode);
     static_assert(numCullModes == 4);
     static constexpr std::array<GLenum, numCullModes> map = {
-        badGLenum,         // Undefined
-        GL_FRONT_AND_BACK, // None -> must disable culling
-        GL_FRONT,          // Front
-        GL_BACK,           // Back
+        badGLenum, // Undefined
+        0,         // None -> must disable culling
+        GL_FRONT,  // Front
+        GL_BACK,   // Back
     };
 
     const UInt index = core::toUnderlying(mode);
@@ -1549,8 +1549,19 @@ void QglEngine::setRasterizerState_(const RasterizerStatePtr& aState) {
             api_->glPolygonMode(GL_FRONT_AND_BACK, fillModeGL);
         }
 
-        if (!oldState || cullModeGL != oldState->cullModeGL_) {
-            api_->glCullFace(cullModeGL);
+        if (cullModeGL == 0) {
+            if (!oldState || oldState->cullModeGL_ != 0) {
+                api_->glDisable(GL_CULL_FACE);
+            }
+        }
+        else {
+            if (!oldState || oldState->cullModeGL_ == 0) {
+                api_->glCullFace(cullModeGL);
+                api_->glEnable(GL_CULL_FACE);
+            }
+            else if (cullModeGL != oldState->cullModeGL_) {
+                api_->glCullFace(cullModeGL);
+            }
         }
 
         if (!oldState || isFrontCounterClockwise != oldState->isFrontCounterClockwise()) {
