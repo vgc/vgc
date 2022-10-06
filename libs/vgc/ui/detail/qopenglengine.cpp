@@ -1453,7 +1453,7 @@ void QglEngine::setViewport_(Int x, Int y, Int width, Int height) {
     viewportRect_.h = static_cast<GLsizei>(height);
     api_->glViewport(
         viewportRect_.x,
-        scHeight_ - (viewportRect_.y + viewportRect_.h),
+        rtHeight_ - (viewportRect_.y + viewportRect_.h),
         viewportRect_.w,
         viewportRect_.h);
 }
@@ -1588,7 +1588,7 @@ void QglEngine::setScissorRect_(const geometry::Rect2f& rect) {
     scissorRect_.h = y2 - scissorRect_.y;
     api_->glScissor(
         scissorRect_.x,
-        scHeight_ - (scissorRect_.y + scissorRect_.h),
+        rtHeight_ - (scissorRect_.y + scissorRect_.h),
         scissorRect_.w,
         scissorRect_.h);
 }
@@ -1790,16 +1790,16 @@ void QglEngine::setStateDirty_() {
 }
 
 void QglEngine::updateViewportAndScissorRect_(GLsizei scHeight) {
-    if (scHeight != scHeight_) {
-        scHeight_ = scHeight;
+    if (scHeight != rtHeight_) {
+        rtHeight_ = scHeight;
         api_->glViewport(
             viewportRect_.x,
-            scHeight_ - (viewportRect_.y + viewportRect_.h),
+            rtHeight_ - (viewportRect_.y + viewportRect_.h),
             viewportRect_.w,
             viewportRect_.h);
         api_->glScissor(
             scissorRect_.x,
-            scHeight_ - (scissorRect_.y + scissorRect_.h),
+            rtHeight_ - (scissorRect_.y + scissorRect_.h),
             scissorRect_.w,
             scissorRect_.h);
     }
