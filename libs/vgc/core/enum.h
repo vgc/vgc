@@ -17,6 +17,7 @@
 #ifndef VGC_CORE_ENUM_H
 #define VGC_CORE_ENUM_H
 
+#include <vgc/core/compiler.h>
 #include <vgc/core/format.h>
 #include <vgc/core/templateutil.h>
 
@@ -24,11 +25,14 @@ namespace vgc::core {
 
 namespace detail {
 
-// Parses VGC_PRETTY_FUNCTION of enumData_() to get fully-qualified enum name
-// as string.
-inline std::string_view fullEnum(std::string_view enumDataFunctionName) {
+// Extracts the fully-qualified name of the enum class (e.g., `vgc::ui::Key`)
+// from the platform-dependent VGC_PRETTY_FUNCTION output of enumData_, e.g.:
+//
+// `const class vgc::core::detail::EnumData &__cdecl vgc::ui::enumData_(enum vgc::ui::Key)`
+//
+inline std::string_view fullEnumClassName(std::string_view enumDataPrettyFunction) {
 
-    const auto& s = enumDataFunctionName;
+    const auto& s = enumDataPrettyFunction;
 
     // Find closing parenthesis
     size_t j = s.size();
@@ -43,6 +47,7 @@ inline std::string_view fullEnum(std::string_view enumDataFunctionName) {
     }
     ++i;
 
+    // Return substring if there is a match, otherwise return the empty string
     if (j > i) {
         return s.substr(i, j - i);
     }
@@ -51,133 +56,138 @@ inline std::string_view fullEnum(std::string_view enumDataFunctionName) {
     }
 }
 
-// Stores strings related to an enumerator of an `enum` or `enum class`
+// Stores strings related to an enum item
 class EnumData {
 public:
     EnumData(
-        std::string_view fullEnum,
-        std::string_view /*enum_*/,
-        std::string_view name,
-        std::string_view prettyName) {
+        std::string_view fullEnumClassName,    // "vgc::ui::Key"
+        std::string_view shortEnumItemName,    // "Digit0"
+        std::string_view enumItemPrettyName) { // "0"
 
-        fullName_ = fullEnum;
-        fullName_.append("::");
-        fullName_.append(name);
-        prettyName_ = prettyName;
-        prefixSize_ = fullName_.size() - name.size();
+        fullEnumItemName_ = fullEnumClassName;
+        fullEnumItemName_.append("::");
+        fullEnumItemName_.append(shortEnumItemName);
+        enumItemPrettyName_ = enumItemPrettyName;
+        prefixSize_ = fullEnumItemName_.size() - shortEnumItemName.size();
     }
 
     std::string_view shortName() const {
-        return std::string_view(fullName_).substr(prefixSize_);
+        return std::string_view(fullEnumItemName_).substr(prefixSize_);
     }
 
     std::string_view fullName() const {
-        return fullName_;
+        return fullEnumItemName_;
     }
 
     std::string_view prettyName() const {
-        return prettyName_;
+        return enumItemPrettyName_;
     }
 
 private:
-    size_t prefixSize_;
-    std::string fullName_;
-    std::string prettyName_;
+    std::string fullEnumItemName_;   // "vgc::ui::Key::Digit0"
+    std::string enumItemPrettyName_; // "0"
+    size_t prefixSize_;              // "vgc::ui::Key::".size()
 };
 
 } // namespace detail
 
 /// \class vgc::core::Enum
-/// \brief Query metadata about enums
+/// \brief Query metadata about registered enum items
 ///
-/// Strings related to a scoped enum can be defined via the following function:
+/// In order to provide introspection and easy printing of enum items (=
+/// "enumerator"), each enum item and its "pretty name" can be registered using
+/// the `VGC_DECLARE_ENUM` and `VGC_DEFINE_ENUM` macros, as such:
 ///
 /// ```cpp
 /// // In the .h file
 ///
-/// namespace lib::foo {
+/// namespace vgc::foo {
+///
 /// enum class MyEnum {
 ///     Value1,
 ///     Value2
 /// };
-/// }
 ///
-/// VGC_DECLARE_ENUM((lib, foo), MyEnum)
+/// VGC_FOO_API
+/// VGC_DECLARE_ENUM(MyEnum)
+///
+/// } // namespace lib::foo
+///
 ///
 /// // In the .cpp file
 ///
+/// namespace vgc::foo {
+///
 /// VGC_DEFINE_ENUM(
-///     (lib, foo),
 ///     MyEnum,
 ///     (Value1, "Value 1"),
 ///     (Value2, "Value 2"))
+///
+/// } // namespace lib::foo
+///
 /// ```
 ///
-/// Once defined, this allow you to query strings via the following static
-/// functions of `vgc::core::Enum`:
+/// Once registered, you can query various strings about the enum items via the
+/// following static functions of `vgc::core::Enum`:
 ///
-/// - `shortName()`: for example, `Value1`
-/// - `fullName()`: for example, `lib::foo::MyEnum::Value1`
-/// - `prettyName()`: for example, `Value `
+/// - `Enum::shortName(item)`: for example, `"Value1"`
+/// - `Enum::fullName(item)`: for example, `"vgc::foo::MyEnum::Value1"`
+/// - `Enum::prettyName(item)`: for example, `"Value 1"`
 ///
-/// Note that due to technical reasons (template specialization of
-/// `fmt::formatter`), the macros `VGC_DECLARE_ENUM` and `VGC_DEFINE_ENUM` must
-/// appear at the global namespace scope.
-///
-/// Also note that due to compiler macro limitations, `VGC_DEFINE_ENUM` only
-/// supports up to 122 enumerators. If you need more, you can use the following
-/// long-form version, which is a little more verbose but doesn't have limits
-/// on the number of enumerators:
+/// Note that due to compiler limits (maximum number of macro arguments
+/// allowed), `VGC_DEFINE_ENUM` only supports up to 122 enum items. If you
+/// need more, you can use the following long-form version, which is a little
+/// more verbose but doesn't have limits on the number of enum items:
 ///
 /// ```cpp
-/// VGC_DEFINE_ENUM_BEGIN((lib, foo), MyEnum)
-///     VGC_ENUMERATOR(Value1, "Value 1")
-///     VGC_ENUMERATOR(Value2, "Value 2")
+/// VGC_DEFINE_ENUM_BEGIN(MyEnum)
+///     VGC_ENUM_ITEM(Value1, "Value 1")
+///     VGC_ENUM_ITEM(Value2, "Value 2")
 ///     ...
-///     VGC_ENUMERATOR(ValueN, "Value N")
+///     VGC_ENUM_ITEM(ValueN, "Value N")
 /// VGC_DEFINE_ENUM_END()
 /// ```
 ///
 class Enum {
 public:
     template<typename EnumType>
-    static std::string_view shortName(EnumType enumerator) {
-        return enumData_(enumerator).shortName();
+    static std::string_view shortName(EnumType item) {
+        return enumData_(item).shortName();
     }
 
     template<typename EnumType>
-    static std::string_view fullName(EnumType enumerator) {
-        return enumData_(enumerator).fullName();
+    static std::string_view fullName(EnumType item) {
+        return enumData_(item).fullName();
     }
 
     template<typename EnumType>
-    static std::string_view prettyName(EnumType enumerator) {
-        return enumData_(enumerator).prettyName();
+    static std::string_view prettyName(EnumType item) {
+        return enumData_(item).prettyName();
     }
 };
-
-namespace detail {
-
-template<typename EnumType>
-struct EnumFormatter : fmt::formatter<std::string_view> {
-    template<typename FormatContext>
-    auto format(EnumType v, FormatContext& ctx) {
-        return fmt::formatter<std::string_view>::format(Enum::fullName(v), ctx);
-    }
-};
-
-} // namespace detail
 
 } // namespace vgc::core
 
-// specialize fmt formatter for all enum types that define an enumData_
-// overload.
-
-template<typename T>
-struct fmt::formatter<T, char, vgc::core::RequiresValid<decltype(enumData_(T()))>>
-    : ::vgc::core::detail::EnumFormatter<T> {};
-
 // clang-format off
+
+// Partial specialization of fmt::formatter for registered enum types. This
+// relies on SFINAE and ADL: we SFINAE-test whether enumData_(item) is valid
+// code, which is true for registered enum types since the function enumData_()
+// is found via Argument-Dependent Lookup. Note that for this reason, we cannot
+// move the function enumData_() to a separate namespace, e.g., `detail`.
+//
+template<typename EnumType>
+struct fmt::formatter<
+        EnumType, char,
+        vgc::core::RequiresValid<decltype(enumData_(EnumType()))>>
+    : fmt::formatter<std::string_view> {
+
+    template<typename FormatContext>
+    auto format(EnumType item, FormatContext& ctx) {
+        return fmt::formatter<std::string_view>::format(
+            vgc::core::Enum::fullName(item), ctx);
+    }
+};
 
 /// Declares a scoped enum. See `Enum` for more details.
 ///
@@ -186,23 +196,22 @@ struct fmt::formatter<T, char, vgc::core::RequiresValid<decltype(enumData_(T()))
 
 /// Starts the definition of a scoped enum. See `Enum` for more details.
 ///
-#define VGC_DEFINE_ENUM_BEGIN(Enum)                                           \
+#define VGC_DEFINE_ENUM_BEGIN(Enum)                                                      \
     const ::vgc::core::detail::EnumData& enumData_(Enum value) {                         \
         using E = Enum;                                                                  \
         using S = ::vgc::core::detail::EnumData;                                         \
         using Map = std::unordered_map<E, S>;                                            \
-        std::string fn = VGC_PRETTY_FUNCTION; \
-        static const std::string_view fenum = ::vgc::core::detail::fullEnum(fn); \
-        static const char* enum_ = VGC_PP_STR(Enum);                                     \
+        std::string pf = VGC_PRETTY_FUNCTION;                                            \
+        static const std::string_view fecn = ::vgc::core::detail::fullEnumClassName(pf); \
         static const S unknown =                                                         \
-            S(fenum, enum_, "Unknown_" #Enum, "Unknown " #Enum);                    \
+            S(fecn, "Unknown_" #Enum, "Unknown " #Enum);                                 \
         static auto createMap = []() {                                                   \
             Map map;
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
-#define VGC_ENUMERATOR(name, prettyName)                                                 \
-            map.insert({E::name, S(fenum, enum_, VGC_PP_STR(name), prettyName)});
+#define VGC_ENUM_ITEM(name, prettyName)                                                  \
+            map.insert({E::name, S(fecn, VGC_PP_STR(name), prettyName)});
 
 /// Ends the definition of a scoped enum. See `Enum` for more details.
 ///
@@ -219,19 +228,20 @@ struct fmt::formatter<T, char, vgc::core::RequiresValid<decltype(enumData_(T()))
         }                                                                                \
     }
 
-// clang-format on
-
-#define VGC_ENUMERATOR_(x, t)                                                            \
-    VGC_ENUMERATOR(                                                                      \
-        VGC_PP_EXPAND(VGC_PP_PAIR_FIRST t), VGC_PP_EXPAND(VGC_PP_PAIR_SECOND t))
+#define VGC_ENUM_ITEM_(x, t)                                                             \
+    VGC_ENUM_ITEM(                                                                       \
+        VGC_PP_EXPAND(VGC_PP_PAIR_FIRST t),                                              \
+        VGC_PP_EXPAND(VGC_PP_PAIR_SECOND t))
 
 #define VGC_DEFINE_ENUM_X_(Enum, ...)                                                    \
     VGC_DEFINE_ENUM_BEGIN(Enum)                                                          \
-        VGC_PP_EXPAND(VGC_PP_FOREACH_X(VGC_ENUMERATOR_, Enum, __VA_ARGS__))              \
+        VGC_PP_EXPAND(VGC_PP_FOREACH_X(VGC_ENUM_ITEM_, Enum, __VA_ARGS__))               \
     VGC_DEFINE_ENUM_END()
 
 /// Defines a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DEFINE_ENUM(...) VGC_PP_EXPAND(VGC_DEFINE_ENUM_X_(__VA_ARGS__, ~))
+
+// clang-format on
 
 #endif // VGC_CORE_ENUM_H
