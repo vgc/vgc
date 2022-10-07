@@ -86,11 +86,12 @@
 #define VGC_PP_PAIR_BOTH(x, y) x y
 
 /// Returns the number of arguments of a macro. This only works up to 125
-/// arguments, due to compiler limits. Also, calling this function with zero
-/// arguments is undefined (in most compilers, it would return 1)
+/// arguments, due to compiler limits.
 ///
-/// Note that you must not call this function, since variadic macros with
-/// zero arguments are not allowed (until C++20).
+/// Note that currently, calling this macro with zero arguments is undefined
+/// (typically, it will return either 0 or 1, and possibly produce a warning).
+/// With the introduction of __VA_OPT__ in C++20, we will be able to property
+/// support this case, but we have not implemented this yet.
 ///
 #define VGC_PP_NUM_ARGS(...)                                                             \
     VGC_PP_EXPAND(VGC_PP_NUM_ARGS_DISPATCH(                                              \
