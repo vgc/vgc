@@ -24,6 +24,9 @@
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/widget.h>
 
+class QInputMethodEvent;
+class QInputMethodQueryEvent;
+
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Window);
@@ -52,11 +55,6 @@ public:
         return widget_.get();
     }
 
-public:
-    // overrides
-    //QSize sizeHint() const override;
-    //QVariant inputMethodQuery(Qt::InputMethodQuery querty) const override;
-
 protected:
 #if defined(VGC_CORE_COMPILER_MSVC)
     HWND hwnd_ = {};
@@ -83,6 +81,12 @@ protected:
     /// Handles mouse leave events.
     ///
     virtual void leaveEvent(QEvent* event);
+
+    // Handles input methods (dead keys, Asian characters, virtual keyboards, etc.)
+    //
+    virtual void inputMethodQueryEvent(QInputMethodQueryEvent* event);
+    virtual void inputMethodEvent(QInputMethodEvent* event);
+    virtual QVariant inputMethodQuery(Qt::InputMethodQuery query);
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     using NativeEventResult = long;
