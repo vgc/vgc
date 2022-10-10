@@ -21,20 +21,92 @@
 #include <QScreen>
 
 #include <vgc/core/colors.h>
+#include <vgc/ui/logcategories.h>
 #include <vgc/ui/qtutil.h>
 
 namespace vgc::ui {
 
-void pushCursor(const QCursor& cursor) {
-    QGuiApplication::setOverrideCursor(cursor);
+namespace {
+
+class CursorStack {
+public:
+    static CursorStack* instance() {
+        static CursorStack* instance_ = new CursorStack();
+        return instance_;
+    }
+
+    Int push(const QCursor& cursor) {
+        Int id = stack_.isEmpty() ? 0 : stack_.last().id + 1;
+        stack_.append({cursor, id});
+        if (stack_.size() == 1) {
+            QGuiApplication::setOverrideCursor(cursor);
+        }
+        else {
+            QGuiApplication::changeOverrideCursor(cursor);
+        }
+        return id;
+    }
+
+    void pop(Int id) {
+        auto found = stack_.search([=](const Item& item) { return item.id == id; });
+        if (found) {
+            bool wasTopmostCursor = (found == stack_.end() - 1);
+            stack_.erase(found);
+            if (stack_.size() == 0) {
+                QGuiApplication::restoreOverrideCursor();
+            }
+            else if (wasTopmostCursor) {
+                QGuiApplication::changeOverrideCursor(stack_.last().cursor);
+            }
+            else {
+                // nothing to do if we removed a cursor in the middle of the stack
+            }
+        }
+        else {
+            VGC_WARNING(
+                LogVgcUi,
+                "Attempting to pop cursor index {} which is not in the cursor stack.",
+                id);
+        }
+    }
+
+private:
+    struct Item {
+        QCursor cursor;
+        Int id;
+    };
+    core::Array<Item> stack_;
+
+    CursorStack() {
+    }
+};
+
+} // namespace
+
+Int pushCursor(const QCursor& cursor) {
+    return CursorStack::instance()->push(cursor);
 }
 
-void changeCursor(const QCursor& cursor) {
-    QGuiApplication::changeOverrideCursor(cursor);
+void popCursor(Int id) {
+    CursorStack::instance()->pop(id);
 }
 
-void popCursor() {
-    QGuiApplication::restoreOverrideCursor();
+void CursorChanger::set(const QCursor& cursor) {
+    // Note: pushing before popping is more efficient since it may perform
+    // a single call to QGuiApplication::changeOverrideCursor(), see the
+    // "nothing to do" branch in the implementation of CursorChanger::pop().
+    Int oldId = id_;
+    id_ = pushCursor(cursor);
+    if (oldId != -1) {
+        popCursor(oldId);
+    }
+}
+
+void CursorChanger::clear() {
+    if (id_ != -1) {
+        popCursor(id_);
+        id_ = -1;
+    }
 }
 
 geometry::Vec2f globalCursorPosition() {

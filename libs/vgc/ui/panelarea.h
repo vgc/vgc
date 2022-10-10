@@ -17,6 +17,7 @@
 #ifndef VGC_UI_PANELAREA_H
 #define VGC_UI_PANELAREA_H
 
+#include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -134,6 +135,7 @@ private:
     SplitDataArray splitData_; // size = num child widgets
 
     graphics::GeometryViewPtr triangles_;
+    CursorChanger cursorChanger_;
     Int hoveredSplitHandle_ = -1;
     Int draggedSplitHandle_ = -1;
     float dragStartMousePosition_;

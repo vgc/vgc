@@ -28,6 +28,7 @@
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -139,6 +140,9 @@ protected:
 private:
     // Flags
     bool reload_ = true;
+
+    // Cursor
+    CursorChanger cursorChanger_;
 
     // Camera (provides view matrix + projection matrix)
     geometry::Camera2d camera_;

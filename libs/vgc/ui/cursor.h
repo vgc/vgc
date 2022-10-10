@@ -25,31 +25,44 @@
 namespace vgc::ui {
 
 /// Pushes a mouse cursor to the cursor stack. This cursor becomes the
-/// currently active cursor.
+/// currently active cursor. Returns a unique non-negative ID to be able to pop
+/// it from the stack later (even if another cursor becomes the top-most
+/// cursor).
 ///
 /// A typical usage is for example to push a cursor when the mouse is hovering
 /// a certain UI element, and pop it back when the mouse is leaving the
 /// element, thus restoring the previously active cursor.
 ///
-/// \sa changeCursor() and popCursor()
+/// \sa popCursor(), CursorChanger
 ///
-void pushCursor(const QCursor& cursor);
+VGC_NODISCARD("You need to store the cursor id in order to be able to pop it later.")
+Int pushCursor(const QCursor& cursor);
 
-/// Changes the currently active cursor, that is, the one on top of the cursor
-/// stack.
+/// Pops the given cursor ID from the cursor stack.
 ///
-/// Note that in most cases, you should use pushCursor() and popCursor() rather
-/// than this function.
+/// \sa pushCursor(), CursorChanger
 ///
-/// \sa pushCursor() and popCursor()
-///
-void changeCursor(const QCursor& cursor);
+void popCursor(Int id);
 
-/// Pops the currently active cursor from the cursor stack.
+/// \class vgc::ui::CursorChanger
+/// \brief A helper class to push/pop cursors
 ///
-/// \sa pushCursor() and changeCursor()
-///
-void popCursor();
+class CursorChanger {
+public:
+    /// Changes the current cursor to the given cursor.
+    ///
+    /// This automatically pops any cursor previously pushed by this
+    /// `CursorChanger`, then pushes a new cursor on the cursor stack.
+    ///
+    void set(const QCursor& cursor);
+
+    /// Pops any cursor previously pushed by this `CursorChanger`.
+    ///
+    void clear();
+
+private:
+    Int id_ = -1;
+};
 
 /// Returns the global position of the mouse cursor in device-independent
 /// pixels.

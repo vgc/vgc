@@ -266,7 +266,7 @@ void ScreenColorPickerButton::startPicking_() {
     setHovered(false);
     isPicking_ = true;
     hoveredColor_ = colorUnderCursor();
-    pushCursor(Qt::CrossCursor); // TODO: custom picker-shaped cursor
+    cursorChanger_.set(Qt::CrossCursor); // TODO: custom picker-shaped cursor
     startMouseCapture();
     startKeyboardCapture();
     pickingStarted().emit();
@@ -276,7 +276,7 @@ void ScreenColorPickerButton::stopPicking_() {
     isPicking_ = false;
     stopMouseCapture();
     stopKeyboardCapture();
-    popCursor();
+    cursorChanger_.clear();
     pickingStopped().emit();
 }
 

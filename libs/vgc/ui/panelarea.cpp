@@ -93,7 +93,6 @@ bool PanelArea::onMouseLeave() {
 }
 
 Widget* PanelArea::computeHoverChainChild(MouseEvent* event) const {
-
     Int hoveredSplitHandle = computeHoveredSplitHandle_(event->position());
     if (hoveredSplitHandle != -1) {
         return nullptr;
@@ -382,13 +381,13 @@ void PanelArea::setHoveredSplitHandle_(Int hoveredSplitHandle) {
     if (hoveredSplitHandle_ != hoveredSplitHandle) {
         hoveredSplitHandle_ = hoveredSplitHandle;
         if (hoveredSplitHandle_ == -1) {
-            popCursor();
+            cursorChanger_.clear();
         }
         else {
             Qt::CursorShape cursor = (type() == PanelAreaType::HorizontalSplit)
                                          ? Qt::SplitHCursor
                                          : Qt::SplitVCursor;
-            pushCursor(cursor);
+            cursorChanger_.set(cursor);
         }
         requestRepaint();
     }

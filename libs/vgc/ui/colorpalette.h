@@ -20,6 +20,7 @@
 #include <vgc/geometry/rect2f.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/column.h>
+#include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -63,6 +64,8 @@ public:
 
 private:
     bool isPicking_ = false;
+
+    ui::CursorChanger cursorChanger_;
     core::Color hoveredColor_;
     void startPicking_();
     void stopPicking_();
