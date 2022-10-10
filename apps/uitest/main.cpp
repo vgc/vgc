@@ -323,6 +323,11 @@ void createLineEdits(ui::Widget* parent) {
 
 int main(int argc, char* argv[]) {
 
+    qDebug() << QGuiApplication::testAttribute(Qt::AA_EnableHighDpiScaling);
+    qDebug() << QGuiApplication::testAttribute(Qt::AA_DisableHighDpiScaling);
+    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+    QGuiApplication::setAttribute(Qt::AA_DisableHighDpiScaling, true);
+
     using vgc::Int;
     using vgc::UInt32;
 

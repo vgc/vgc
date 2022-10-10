@@ -21,6 +21,8 @@
 #include <QMouseEvent>
 #include <QOpenGLFunctions>
 
+#include <QScreen>
+
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/geometry/camera2d.h>
@@ -377,6 +379,14 @@ void Window::focusOutEvent(QFocusEvent* event) {
 }
 
 void Window::resizeEvent(QResizeEvent* event) {
+    // Here, we get the size in virtual pixels.
+    qDebug() << "dpi ratio = " << devicePixelRatio();
+    qDebug() << "event size = " << event->size();
+    qDebug() << "size = " << size();
+    qDebug() << "screen physical size = " << screen()->physicalSize();
+    qDebug() << "screen size = " << screen()->size();
+    qDebug() << "screen dpi ratio = " << screen()->devicePixelRatio();
+    qDebug() << "logical dots per inch = " << screen()->logicalDotsPerInch();
     QSize size = event->size();
     [[maybe_unused]] int w = size.width();
     [[maybe_unused]] int h = size.height();
