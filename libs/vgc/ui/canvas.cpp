@@ -75,7 +75,7 @@ void drawCrossCursor(QPainter& painter) {
     painter.drawPoint(16, 16);
 }
 
-QCursor crossCursor() {
+QCursor createCrossCursor() {
 
     // Draw bitmap
     QBitmap bitmap(32, 32);
@@ -96,6 +96,11 @@ QCursor crossCursor() {
 
     // Create and return cursor
     return QCursor(bitmap, mask);
+}
+
+QCursor crossCursor() {
+    static QCursor res = createCrossCursor();
+    return res;
 }
 
 } // namespace
@@ -593,12 +598,12 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
 }
 
 bool Canvas::onMouseEnter() {
-    ui::pushCursor(crossCursor());
+    cursorChanger_.set(crossCursor());
     return false;
 }
 
 bool Canvas::onMouseLeave() {
-    ui::popCursor();
+    cursorChanger_.clear();
     return false;
 }
 

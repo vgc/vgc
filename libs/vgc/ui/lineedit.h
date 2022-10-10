@@ -22,6 +22,7 @@
 
 #include <vgc/core/stopwatch.h>
 #include <vgc/graphics/richtext.h>
+#include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -103,6 +104,7 @@ private:
     graphics::RichTextPtr richText_;
     graphics::GeometryViewPtr triangles_;
     bool reload_ = true;
+    ui::CursorChanger cursorChanger_;
     ui::MouseButton mouseButton_ = ui::MouseButton::None;
 
     // Handle double/triple clicks

@@ -276,12 +276,12 @@ bool LineEdit::onMouseRelease(MouseEvent* event) {
 }
 
 bool LineEdit::onMouseEnter() {
-    pushCursor(Qt::IBeamCursor);
+    cursorChanger_.set(Qt::IBeamCursor);
     return true;
 }
 
 bool LineEdit::onMouseLeave() {
-    popCursor();
+    cursorChanger_.clear();
     return true;
 }
 
