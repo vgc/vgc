@@ -170,9 +170,4 @@ BorderRadiuses::BorderRadiuses(const StylableObject* obj)
         obj->style(strings::border_bottom_left_radius).to<BorderRadius>()) {
 }
 
-geometry::Vec2f
-toBorderBox(const geometry::Vec2f& contentBox, StylableObject* obj, float scaleFactor) {
-    StyleValue paddingTop = obj->style(strings::padding_top);
-}
-
 } // namespace vgc::style
