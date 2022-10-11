@@ -133,7 +133,7 @@ void ImageBox::onPaintDestroy(graphics::Engine* engine) {
 
 geometry::Vec2f ImageBox::computePreferredSize() const {
 
-    namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
@@ -145,16 +145,16 @@ geometry::Vec2f ImageBox::computePreferredSize() const {
         imgPreferredSize = geometry::Vec2f{100, 100};
     }
     if (w.type() == auto_) {
-        float paddingLeft = detail::getLength(this, gs::padding_left);
-        float paddingRight = detail::getLength(this, gs::padding_right);
+        float paddingLeft = detail::getLength(this, ss::padding_left);
+        float paddingRight = detail::getLength(this, ss::padding_right);
         res[0] = imgPreferredSize[0] + paddingLeft + paddingRight;
     }
     else {
         res[0] = w.value();
     }
     if (h.type() == auto_) {
-        float paddingTop = detail::getLength(this, gs::padding_top);
-        float paddingBottom = detail::getLength(this, gs::padding_bottom);
+        float paddingTop = detail::getLength(this, ss::padding_top);
+        float paddingBottom = detail::getLength(this, ss::padding_bottom);
         res[1] = imgPreferredSize[1] + paddingTop + paddingBottom;
     }
     else {

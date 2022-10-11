@@ -18,6 +18,7 @@
 #define VGC_STYLE_TYPES_H
 
 #include <vgc/core/arithmetic.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/style/api.h>
 #include <vgc/style/style.h>
 
@@ -707,6 +708,11 @@ public:
         , bottomRight_(bottomRight)
         , bottomLeft_(bottomLeft) {
     }
+
+    /// Constructs a `BorderRadiuses` from the `border-radius` style properties
+    /// of the given `StylableObject`.
+    ///
+    BorderRadiuses(const StylableObject* obj);
 
     /// Returns the top left border radius.
     ///

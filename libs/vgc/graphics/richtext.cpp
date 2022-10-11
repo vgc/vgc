@@ -88,6 +88,7 @@ StyleValue parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator e
 style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     using namespace strings;
+    using namespace style::strings;
 
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
     auto black_         = StyleValue::custom(core::colors::black);

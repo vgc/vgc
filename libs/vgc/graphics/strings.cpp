@@ -24,30 +24,6 @@ namespace vgc::graphics::strings {
 // non-inherited
 const core::StringId background_color("background-color");
 
-// Margins & Padding currently only accepts <length> and in the future we may accept <percentage>.
-//
-// In HTML CSS, percentage are relative to the containing block.
-// See https://developer.mozilla.org/en-US/docs/Web/CSS/Containing_block.
-//
-// In our case, we probably want to do something different and consider this:
-// - a percentage for a margin would be relative to size + result margin.
-// - a percentage for a padding would be relative to size (size includes padding).
-const core::StringId margin_top("margin-top");
-const core::StringId margin_right("margin-right");
-const core::StringId margin_bottom("margin-bottom");
-const core::StringId margin_left("margin-left");
-const core::StringId padding_top("padding-top");
-const core::StringId padding_right("padding-right");
-const core::StringId padding_bottom("padding-bottom");
-const core::StringId padding_left("padding-left");
-
-const core::StringId border_width("border-width");
-const core::StringId border_color("border-color");
-const core::StringId border_top_left_radius("border-top-left-radius");
-const core::StringId border_top_right_radius("border-top-right-radius");
-const core::StringId border_bottom_right_radius("border-bottom-right-radius");
-const core::StringId border_bottom_left_radius("border-bottom-left-radius");
-
 // inherited
 const core::StringId pixel_hinting("pixel-hinting");
 const core::StringId font_size("font-size");

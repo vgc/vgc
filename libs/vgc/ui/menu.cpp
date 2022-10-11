@@ -17,7 +17,7 @@
 #include <vgc/ui/menu.h>
 
 #include <vgc/core/array.h>
-#include <vgc/graphics/strings.h>
+#include <vgc/style/strings.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
@@ -665,10 +665,10 @@ geometry::Vec2f Menu::computePreferredSize() const {
     setupWidthOverrides_();
     geometry::Vec2f ret = Flex::computePreferredSize();
 
-    const float padL = detail::getLength(this, graphics::strings::padding_left);
-    const float padR = detail::getLength(this, graphics::strings::padding_right);
-    const float padT = detail::getLength(this, graphics::strings::padding_top);
-    const float padB = detail::getLength(this, graphics::strings::padding_bottom);
+    const float padL = detail::getLength(this, style::strings::padding_left);
+    const float padR = detail::getLength(this, style::strings::padding_right);
+    const float padT = detail::getLength(this, style::strings::padding_top);
+    const float padB = detail::getLength(this, style::strings::padding_bottom);
     padding_ = Margins(padT, padR, padB, padL);
 
     return ret;

@@ -19,6 +19,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/rect2f.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/style/strings.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/strings.h>
 
@@ -120,14 +121,15 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     SuperClass::onPaintDraw(engine, options);
 
     namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     if (dirtyPlot_ || dirtyHint_) {
         // TODO
         core::Color textColor = detail::getColor(this, gs::text_color);
-        float paddingBottom = detail::getLength(this, gs::padding_bottom);
-        float paddingLeft = detail::getLength(this, gs::padding_left);
-        float paddingRight = detail::getLength(this, gs::padding_right);
-        float paddingTop = detail::getLength(this, gs::padding_top);
+        float paddingBottom = detail::getLength(this, ss::padding_bottom);
+        float paddingLeft = detail::getLength(this, ss::padding_left);
+        float paddingRight = detail::getLength(this, ss::padding_right);
+        float paddingTop = detail::getLength(this, ss::padding_top);
 
         const Int numYs = this->numYs();
         //const Int numComponents = (1 + numYs);
