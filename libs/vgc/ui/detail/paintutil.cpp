@@ -609,23 +609,4 @@ float getLength(const style::StylableObject* obj, core::StringId property) {
     return res;
 }
 
-style::BorderRadiuses getBorderRadiuses(const style::StylableObject* obj) {
-
-    namespace gs = graphics::strings;
-
-    style::BorderRadius topLeft =
-        obj->style(gs::border_top_left_radius).to<style::BorderRadius>();
-
-    style::BorderRadius topRight =
-        obj->style(gs::border_top_right_radius).to<style::BorderRadius>();
-
-    style::BorderRadius bottomRight =
-        obj->style(gs::border_bottom_right_radius).to<style::BorderRadius>();
-
-    style::BorderRadius bottomLeft =
-        obj->style(gs::border_bottom_left_radius).to<style::BorderRadius>();
-
-    return style::BorderRadiuses(topLeft, topRight, bottomRight, bottomLeft);
-}
-
 } // namespace vgc::ui::detail

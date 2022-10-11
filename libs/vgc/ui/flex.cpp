@@ -17,6 +17,7 @@
 #include <vgc/ui/flex.h>
 
 #include <vgc/graphics/strings.h>
+#include <vgc/style/strings.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -56,23 +57,23 @@ void Flex::onWidgetRemoved(Widget*) {
 namespace {
 
 float getLeftRightMargins(const Widget* widget) {
-    return detail::getLength(widget, graphics::strings::margin_left)
-           + detail::getLength(widget, graphics::strings::margin_right);
+    return detail::getLength(widget, style::strings::margin_left)
+           + detail::getLength(widget, style::strings::margin_right);
 }
 
 float getTopBottomMargins(const Widget* widget) {
-    return detail::getLength(widget, graphics::strings::margin_top)
-           + detail::getLength(widget, graphics::strings::margin_bottom);
+    return detail::getLength(widget, style::strings::margin_top)
+           + detail::getLength(widget, style::strings::margin_bottom);
 }
 
 float getLeftRightPadding(const Widget* widget) {
-    return detail::getLength(widget, graphics::strings::padding_left)
-           + detail::getLength(widget, graphics::strings::padding_right);
+    return detail::getLength(widget, style::strings::padding_left)
+           + detail::getLength(widget, style::strings::padding_right);
 }
 
 float getTopBottomPadding(const Widget* widget) {
-    return detail::getLength(widget, graphics::strings::padding_top)
-           + detail::getLength(widget, graphics::strings::padding_bottom);
+    return detail::getLength(widget, style::strings::padding_top)
+           + detail::getLength(widget, style::strings::padding_bottom);
 }
 
 float getGap(bool isRow, const Widget* widget) {
@@ -354,10 +355,10 @@ void stretchChild(
     float gap,
     bool hinting) {
 
-    float marginLeft = detail::getLength(child, graphics::strings::margin_left);
-    float marginRight = detail::getLength(child, graphics::strings::margin_right);
-    float marginTop = detail::getLength(child, graphics::strings::margin_top);
-    float marginBottom = detail::getLength(child, graphics::strings::margin_bottom);
+    float marginLeft = detail::getLength(child, style::strings::margin_left);
+    float marginRight = detail::getLength(child, style::strings::margin_right);
+    float marginTop = detail::getLength(child, style::strings::margin_top);
+    float marginBottom = detail::getLength(child, style::strings::margin_bottom);
     float childMainMarginBefore = isRow ? marginLeft : marginTop;
     float childMainMarginAfter = isRow ? marginRight : marginBottom;
     float childCrossMarginBefore = isRow ? marginTop : marginLeft;
@@ -401,6 +402,7 @@ void stretchChild(
 void Flex::updateChildrenGeometry() {
 
     namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
     // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
@@ -417,10 +419,10 @@ void Flex::updateChildrenGeometry() {
         bool isReverse = (direction_ == FlexDirection::RowReverse)
                          || (direction_ == FlexDirection::ColumnReverse);
         bool hinting = (style(gs::pixel_hinting) == gs::normal);
-        float paddingLeft = detail::getLength(this, gs::padding_left);
-        float paddingRight = detail::getLength(this, gs::padding_right);
-        float paddingTop = detail::getLength(this, gs::padding_top);
-        float paddingBottom = detail::getLength(this, gs::padding_bottom);
+        float paddingLeft = detail::getLength(this, ss::padding_left);
+        float paddingRight = detail::getLength(this, ss::padding_right);
+        float paddingTop = detail::getLength(this, ss::padding_top);
+        float paddingBottom = detail::getLength(this, ss::padding_bottom);
         float mainSize = isRow ? width() : height();
         float crossSize = isRow ? height() : width();
         float gap = getGap(isRow, this);

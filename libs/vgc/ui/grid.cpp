@@ -22,6 +22,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/style/strings.h>
 #include <vgc/ui/detail/layoututil.h>
 #include <vgc/ui/strings.h>
 
@@ -117,21 +118,22 @@ void detail::GridCell::DirMetrics::init(const Widget* w, Int dirIndex, bool hint
         return;
     }
 
+    namespace ss = style::strings;
     namespace gs = graphics::strings;
 
     using namespace detail::DirIndex;
 
     // fixedMargins + stretch + shrink
     if (dirIndex == Horizontal) {
-        const float marginL = getSpacing(w, gs::margin_left, hint);
-        const float marginR = getSpacing(w, gs::margin_right, hint);
+        const float marginL = getSpacing(w, ss::margin_left, hint);
+        const float marginR = getSpacing(w, ss::margin_right, hint);
         fixedMarginsH = {marginL, marginR};
         widgetStretch = getNum(w, strings::horizontal_stretch);
         widgetShrink = getNum(w, strings::horizontal_shrink);
     }
     else {
-        const float marginT = getSpacing(w, gs::margin_top, hint);
-        const float marginB = getSpacing(w, gs::margin_bottom, hint);
+        const float marginT = getSpacing(w, ss::margin_top, hint);
+        const float marginB = getSpacing(w, ss::margin_bottom, hint);
         fixedMarginsH = {marginT, marginB};
         widgetStretch = getNum(w, strings::vertical_stretch);
         widgetShrink = getNum(w, strings::vertical_shrink);
@@ -233,6 +235,7 @@ void detail::GridTrack::Metrics::finalizeUpdate(bool hint) {
 geometry::Vec2f Grid::computePreferredSize() const {
 
     namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     using namespace strings;
     using namespace detail::DirIndex;
@@ -248,16 +251,16 @@ geometry::Vec2f Grid::computePreferredSize() const {
     const Int numRows = numRows_();
 
     {
-        const float paddingR = getSpacing(this, gs::padding_right, hint);
-        const float paddingL = getSpacing(this, gs::padding_left, hint);
+        const float paddingR = getSpacing(this, ss::padding_right, hint);
+        const float paddingL = getSpacing(this, ss::padding_left, hint);
         hMetrics.fixedPaddingH = {paddingL, paddingR};
         hMetrics.gapSizeH = getSpacing(this, column_gap, hint);
         hMetrics.autoSize = getPreferredSize(this, grid_auto_columns);
     }
 
     {
-        const float paddingT = getSpacing(this, gs::padding_top, hint);
-        const float paddingB = getSpacing(this, gs::padding_bottom, hint);
+        const float paddingT = getSpacing(this, ss::padding_top, hint);
+        const float paddingB = getSpacing(this, ss::padding_bottom, hint);
         vMetrics.fixedPaddingH = {paddingT, paddingB};
         vMetrics.gapSizeH = getSpacing(this, row_gap, hint);
         vMetrics.autoSize = getPreferredSize(this, grid_auto_rows);

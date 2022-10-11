@@ -1451,7 +1451,7 @@ void Widget::onStyleChanged() {
     style::BorderRadiuses oldBorderRadiuses = borderRadiuses_;
 
     backgroundColor_ = detail::getColor(this, graphics::strings::background_color);
-    borderRadiuses_ = detail::getBorderRadiuses(this);
+    borderRadiuses_ = style::BorderRadiuses(this);
 
     if (oldBackgroundColor != backgroundColor_ || oldBorderRadiuses != borderRadiuses_) {
         backgroundChanged_ = true;

@@ -18,6 +18,7 @@
 #define VGC_STYLE_TYPES_H
 
 #include <vgc/core/arithmetic.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/style/api.h>
 #include <vgc/style/style.h>
 
@@ -708,6 +709,11 @@ public:
         , bottomLeft_(bottomLeft) {
     }
 
+    /// Constructs a `BorderRadiuses` from the `border-radius` style properties
+    /// of the given `StylableObject`.
+    ///
+    BorderRadiuses(const StylableObject* obj);
+
     /// Returns the top left border radius.
     ///
     const BorderRadius& topLeft() const {
@@ -794,6 +800,54 @@ private:
     BorderRadius bottomRight_;
     BorderRadius bottomLeft_;
 };
+
+/// Computes the size of the border box after applying the padding and border
+/// style (of the given stylable object) to a given content box.
+///
+/// Note that when padding is expressed as a percentage, it is meant as a percentage of the border box.
+/// So computing padding given a border box is easy: `padding = borderBox * percentage`. However, this
+/// function needs to do the opposite : computing a padding given a content box. So the formula is
+///
+/// ```
+/// padding = borderBox                       * percentage
+///         = (contentBox + border + padding) * percentage
+///         = (contentBox + border) * percentage / (1 - percentage)
+///
+///         = (contentBox + border + padding) * percentage
+/// Example:
+///
+/// ```css
+/// .my-style {
+///     border-top-width: 0dp;
+///     border-right-width: 0dp;
+///     border-bottom-width: 0dp;
+///     border-left-width: 0dp;
+///     padding-top: 5%;
+///     padding-right: 10dp;
+///     padding-bottom: 5%;
+///     padding-left: 10dp;
+/// }
+/// ```
+///
+/// ```cpp
+/// float scaleFactor = 2;
+/// float wc = 100; // width of content box in px
+/// float hc = 90;  // height of content box in px
+/// vgc::core::Vec2f contentBox = {wc, hc};
+/// vgc::core::Vec2f borderBox = vgc::style::toBorderBox(contentBox, this, scaleFactor);
+/// // => borderBox = {140, 100}
+/// //
+/// // Indeed:
+/// // - padding-left + padding-right = (10dp + 10dp) * scaleFactor = 40px
+/// // - padding-top + padding-bottom = 90px * (5% + 5%) / (1 - (5% + 5%))
+/// //                                = 90px * 0.1 / 0.9
+/// //                                = 10px
+/// ```
+///
+geometry::Vec2f toBorderBox(
+    const geometry::Vec2f& contentBox,
+    const StylableObject* obj,
+    float scaleFactor);
 
 } // namespace vgc::style
 

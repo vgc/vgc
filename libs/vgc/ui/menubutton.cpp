@@ -111,6 +111,7 @@ geometry::Vec2f MenuButton::computePreferredSize() const {
     // we must return preferred size without the layouting overrides
 
     namespace gs = graphics::strings;
+    namespace ss = style::strings;
     using namespace strings;
 
     PreferredSize w = preferredWidth();
@@ -172,10 +173,10 @@ geometry::Vec2f MenuButton::computePreferredSize() const {
 
         // XXX profile perf of querying this.
         padding = Margins(
-            detail::getLength(this, gs::padding_top),
-            detail::getLength(this, gs::padding_right),
-            detail::getLength(this, gs::padding_bottom),
-            detail::getLength(this, gs::padding_left));
+            detail::getLength(this, ss::padding_top),
+            detail::getLength(this, ss::padding_right),
+            detail::getLength(this, ss::padding_bottom),
+            detail::getLength(this, ss::padding_left));
     }
 
     geometry::Vec2f res(0, 0);
@@ -197,6 +198,7 @@ geometry::Vec2f MenuButton::computePreferredSize() const {
 // XXX use flex gap
 void MenuButton::updateChildrenGeometry() {
     namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     using namespace strings;
 
@@ -204,10 +206,10 @@ void MenuButton::updateChildrenGeometry() {
 
     const bool hint = (style(gs::pixel_hinting) == gs::normal);
     const Margins padding(
-        getSpacing(this, gs::padding_top, hint),
-        getSpacing(this, gs::padding_right, hint),
-        getSpacing(this, gs::padding_bottom, hint),
-        getSpacing(this, gs::padding_left, hint));
+        getSpacing(this, ss::padding_top, hint),
+        getSpacing(this, ss::padding_right, hint),
+        getSpacing(this, ss::padding_bottom, hint),
+        getSpacing(this, ss::padding_left, hint));
 
     const geometry::Rect2f contentBox = geometry::Rect2f({}, size) - padding;
     if (contentBox.width() <= 0 || contentBox.height() <= 0) {
@@ -258,7 +260,7 @@ void MenuButton::updateChildrenGeometry() {
             textLabel()->updateGeometry(xc, y, wc, hText);
             y += hText + hGap2;
             shortcutLabel()->updateGeometry(xc, y, wc, hShortcut);
-            y += hShortcut + hGap3;
+            // y += hShortcut + hGap3;
             // XXX arrow, todo
         }
         else {
@@ -299,7 +301,7 @@ void MenuButton::updateChildrenGeometry() {
             textLabel()->updateGeometry(x, yc, wText, hc);
             x += wText + wGap2;
             shortcutLabel()->updateGeometry(x, yc, wShortcut, hc);
-            x += wShortcut + wGap3;
+            // x += wShortcut + wGap3;
             // XXX arrow, todo
         }
         else {

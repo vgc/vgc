@@ -26,6 +26,7 @@
 #include <vgc/core/parse.h>
 #include <vgc/geometry/mat3f.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/style/strings.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/label.h>
@@ -1081,7 +1082,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
         oldHeight_ = height();
         core::FloatArray a = {};
 
-        core::Color borderColor = detail::getColor(this, graphics::strings::border_color);
+        core::Color borderColor = detail::getColor(this, style::strings::border_color);
         updateMetrics_(); // TODO: only update if we know that they have changed
         const Metrics& m = metrics_;
 
@@ -1966,13 +1967,14 @@ void ColorPaletteSelector::computeHueSubMetrics_(float /* width */, Metrics& m) 
 ColorPaletteSelector::Metrics
 ColorPaletteSelector::computeMetricsFromWidth_(float width) const {
     namespace gs = graphics::strings;
+    namespace ss = style::strings;
     Metrics m;
     m.hinting = (style(gs::pixel_hinting) == gs::normal);
-    m.borderWidth = detail::getLength(this, gs::border_width);
-    m.paddingTop = detail::getLength(this, gs::padding_top);
-    m.paddingRight = detail::getLength(this, gs::padding_right);
-    m.paddingBottom = detail::getLength(this, gs::padding_bottom);
-    m.paddingLeft = detail::getLength(this, gs::padding_left);
+    m.borderWidth = detail::getLength(this, ss::border_width);
+    m.paddingTop = detail::getLength(this, ss::padding_top);
+    m.paddingRight = detail::getLength(this, ss::padding_right);
+    m.paddingBottom = detail::getLength(this, ss::padding_bottom);
+    m.paddingLeft = detail::getLength(this, ss::padding_left);
     m.rowGap = detail::getLength(this, ui::strings::row_gap);
     computeSlSubMetrics_(width, m);
     computeHueSubMetrics_(width, m);
@@ -2364,14 +2366,14 @@ void ColorPreview::onPaintCreate(graphics::Engine* engine) {
 
 void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     SuperClass::onPaintDraw(engine, options);
-    namespace gs = graphics::strings;
+    namespace ss = style::strings;
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        float borderWidth = detail::getLength(this, gs::border_width);
+        float borderWidth = detail::getLength(this, ss::border_width);
         core::Color borderColor =
             computeHighlightColor(color_, HighlightStyle::DarkenOnly);
-        style::BorderRadiuses radiuses = detail::getBorderRadiuses(this);
+        style::BorderRadiuses radiuses = style::BorderRadiuses(this);
         detail::insertRect(a, color_, borderColor, rect(), radiuses, borderWidth);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
@@ -2534,7 +2536,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
 
     SuperClass::onPaintDraw(engine, options);
 
-    namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     if (reload_) {
         reload_ = false;
@@ -2544,11 +2546,9 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
             const Metrics& m = metrics_;
 
             float scaleFactor = 1;
-            float borderWidth = detail::getLength(item_.get(), gs::border_width);
+            float borderWidth = detail::getLength(item_.get(), ss::border_width);
             //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
-            style::BorderRadiuses radiuses = detail::getBorderRadiuses(item_.get());
-
-            detail::getBorderRadiuses(item_.get());
+            style::BorderRadiuses radiuses = style::BorderRadiuses(item_.get());
 
             geometry::Vec2f itemSize(m.itemWidth, m.itemHeight);
 

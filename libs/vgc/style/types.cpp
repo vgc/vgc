@@ -16,6 +16,8 @@
 
 #include <vgc/style/types.h>
 
+#include <vgc/style/stylableobject.h>
+
 namespace vgc::style {
 
 namespace {
@@ -158,6 +160,19 @@ StyleValue BorderRadius::parse(StyleTokenIterator begin, StyleTokenIterator end)
             return StyleValue::invalid();
         }
     }
+}
+
+BorderRadiuses::BorderRadiuses(const StylableObject* obj)
+    : BorderRadiuses(
+        obj->style(strings::border_top_left_radius).to<BorderRadius>(),
+        obj->style(strings::border_top_right_radius).to<BorderRadius>(),
+        obj->style(strings::border_bottom_right_radius).to<BorderRadius>(),
+        obj->style(strings::border_bottom_left_radius).to<BorderRadius>()) {
+}
+
+geometry::Vec2f
+toBorderBox(const geometry::Vec2f& contentBox, StylableObject* obj, float scaleFactor) {
+    StyleValue paddingTop = obj->style(strings::padding_top);
 }
 
 } // namespace vgc::style

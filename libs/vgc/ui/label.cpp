@@ -17,7 +17,7 @@
 #include <vgc/ui/label.h>
 
 #include <vgc/core/array.h>
-#include <vgc/graphics/strings.h>
+#include <vgc/style/strings.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -62,14 +62,14 @@ void Label::onResize() {
 
     SuperClass::onResize();
 
-    namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     // Compute contentRect
     // TODO: move to Widget::contentRect()
-    float paddingLeft = detail::getLength(this, gs::padding_left);
-    float paddingRight = detail::getLength(this, gs::padding_right);
-    float paddingTop = detail::getLength(this, gs::padding_top);
-    float paddingBottom = detail::getLength(this, gs::padding_bottom);
+    float paddingLeft = detail::getLength(this, ss::padding_left);
+    float paddingRight = detail::getLength(this, ss::padding_right);
+    float paddingTop = detail::getLength(this, ss::padding_top);
+    float paddingBottom = detail::getLength(this, ss::padding_bottom);
     geometry::Rect2f r = rect();
     geometry::Vec2f pMinOffset(paddingLeft, paddingTop);
     geometry::Vec2f pMaxOffset(paddingRight, paddingBottom);
@@ -90,8 +90,6 @@ void Label::onPaintCreate(graphics::Engine* engine) {
 void Label::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
-
-    namespace gs = graphics::strings;
 
     if (reload_) {
         reload_ = false;
@@ -131,7 +129,7 @@ void Label::onStyleChanged() {
 
 geometry::Vec2f Label::computePreferredSize() const {
 
-    namespace gs = graphics::strings;
+    namespace ss = style::strings;
 
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
@@ -143,16 +141,16 @@ geometry::Vec2f Label::computePreferredSize() const {
         textPreferredSize = richText_->preferredSize();
     }
     if (w.type() == auto_) {
-        float paddingLeft = detail::getLength(this, gs::padding_left);
-        float paddingRight = detail::getLength(this, gs::padding_right);
+        float paddingLeft = detail::getLength(this, ss::padding_left);
+        float paddingRight = detail::getLength(this, ss::padding_right);
         res[0] = textPreferredSize[0] + paddingLeft + paddingRight;
     }
     else {
         res[0] = w.value();
     }
     if (h.type() == auto_) {
-        float paddingTop = detail::getLength(this, gs::padding_top);
-        float paddingBottom = detail::getLength(this, gs::padding_bottom);
+        float paddingTop = detail::getLength(this, ss::padding_top);
+        float paddingBottom = detail::getLength(this, ss::padding_bottom);
         res[1] = textPreferredSize[1] + paddingTop + paddingBottom;
     }
     else {

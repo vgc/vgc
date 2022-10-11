@@ -127,8 +127,6 @@ core::Color getColor(const style::StylableObject* obj, core::StringId property);
 //
 float getLength(const style::StylableObject* obj, core::StringId property);
 
-style::BorderRadiuses getBorderRadiuses(const style::StylableObject* obj);
-
 } // namespace vgc::ui::detail
 
 #endif // VGC_UI_INTERNAL_PAINTUTIL_H

@@ -27,20 +27,6 @@ namespace vgc::graphics::strings {
 
 // non-inherited
 VGC_GRAPHICS_API extern const core::StringId background_color;
-VGC_GRAPHICS_API extern const core::StringId margin_top;
-VGC_GRAPHICS_API extern const core::StringId margin_right;
-VGC_GRAPHICS_API extern const core::StringId margin_bottom;
-VGC_GRAPHICS_API extern const core::StringId margin_left;
-VGC_GRAPHICS_API extern const core::StringId padding_top;
-VGC_GRAPHICS_API extern const core::StringId padding_right;
-VGC_GRAPHICS_API extern const core::StringId padding_bottom;
-VGC_GRAPHICS_API extern const core::StringId padding_left;
-VGC_GRAPHICS_API extern const core::StringId border_width;
-VGC_GRAPHICS_API extern const core::StringId border_color;
-VGC_GRAPHICS_API extern const core::StringId border_top_left_radius;
-VGC_GRAPHICS_API extern const core::StringId border_top_right_radius;
-VGC_GRAPHICS_API extern const core::StringId border_bottom_right_radius;
-VGC_GRAPHICS_API extern const core::StringId border_bottom_left_radius;
 
 // inherited
 VGC_GRAPHICS_API extern const core::StringId pixel_hinting;

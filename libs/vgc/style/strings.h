@@ -24,6 +24,24 @@ namespace vgc::style::strings {
 
 VGC_STYLE_API extern const core::StringId inherit;
 
+VGC_STYLE_API extern const core::StringId margin_top;
+VGC_STYLE_API extern const core::StringId margin_right;
+VGC_STYLE_API extern const core::StringId margin_bottom;
+VGC_STYLE_API extern const core::StringId margin_left;
+
+VGC_STYLE_API extern const core::StringId padding_top;
+VGC_STYLE_API extern const core::StringId padding_right;
+VGC_STYLE_API extern const core::StringId padding_bottom;
+VGC_STYLE_API extern const core::StringId padding_left;
+
+VGC_STYLE_API extern const core::StringId border_width;
+VGC_STYLE_API extern const core::StringId border_color;
+
+VGC_STYLE_API extern const core::StringId border_top_left_radius;
+VGC_STYLE_API extern const core::StringId border_top_right_radius;
+VGC_STYLE_API extern const core::StringId border_bottom_right_radius;
+VGC_STYLE_API extern const core::StringId border_bottom_left_radius;
+
 } // namespace vgc::style::strings
 
 #endif // VGC_STYLE_STRINGS_H
