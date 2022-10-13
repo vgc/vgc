@@ -90,11 +90,7 @@ private:
         }
     }
 
-#ifdef VGC_DEBUG_BUILD
     std::array<T, Size> values_;
-#else
-    T values_[Size];
-#endif
 };
 
 // clang-format off
