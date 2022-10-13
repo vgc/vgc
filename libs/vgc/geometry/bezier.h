@@ -41,10 +41,10 @@ static_assert(deCasteljauTreeSize<3> == 3 + 2 + 1);
 
 } // namespace detail
 
-template<typename T, typename Scalar, size_t degree>
+template<typename T, typename Scalar, size_t degree_>
 class DeCasteljauTree {
 public:
-    static constexpr size_t degree = degree;
+    static constexpr size_t degree = degree_;
     static constexpr size_t size = detail::deCasteljauTreeSize<degree>;
 
     void compute(const std::array<T, degree + 1>& controlPoints, Scalar u) {
