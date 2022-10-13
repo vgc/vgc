@@ -36,6 +36,10 @@ inline std::string_view fullEnumClassName(std::string_view enumDataPrettyFunctio
 
     // Find closing parenthesis
     size_t j = s.size();
+    if (j == 0) {
+        return "";
+    }
+    --j;
     while (j > 0 && s[j] != ')') {
         --j;
     }
