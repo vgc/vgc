@@ -281,6 +281,7 @@ enum class BuiltinProgram : Int8 {
     NotBuiltin = -1,
     Simple = 0,
     SimpleTextured,
+    SreenSpaceDisplacement,
     // XXX publicize ?
     //GlyphAtlas,
     //IconsAtlas,
@@ -297,6 +298,7 @@ enum class BuiltinGeometryLayout : Int8 {
     XYUVRGBA,
     XY_iRGBA,
     XYUV_iRGBA,
+    XYDxDy_iXYRGBA,
     VGC_ENUM_ENDMAX
 };
 inline constexpr auto numBuiltinGeometryLayouts = VGC_ENUM_COUNT(BuiltinGeometryLayout);

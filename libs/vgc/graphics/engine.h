@@ -535,6 +535,7 @@ protected:
 
     ProgramPtr simpleProgram_;         // (created by api-specific engine implementations)
     ProgramPtr simpleTexturedProgram_; // (created by api-specific engine implementations)
+    ProgramPtr sreenSpaceDisplacementProgram_; // (created by api-specific engine implementations)
     BlendStatePtr defaultBlendState_;
     RasterizerStatePtr defaultRasterizerState_;
 

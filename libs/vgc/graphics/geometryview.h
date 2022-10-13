@@ -147,7 +147,7 @@ protected:
 
     static VertexSizes vertexSizes(BuiltinGeometryLayout layout) {
 
-        static_assert(numBuiltinGeometryLayouts == 6);
+        static_assert(numBuiltinGeometryLayouts == 7);
         static constexpr std::array<VertexSizes, numBuiltinGeometryLayouts> map = {
             VertexSizes{4 * 2, 0},     // XY
             VertexSizes{4 * 5, 0},     // XYRGB
@@ -155,6 +155,7 @@ protected:
             VertexSizes{4 * 8, 0},     // XYUVRGBA
             VertexSizes{4 * 2, 4 * 4}, // XY_iRGBA
             VertexSizes{4 * 4, 4 * 4}, // XYUV_iRGBA
+            VertexSizes{4 * 4, 4 * 6}, // XYDxDy_iXYRGBA
         };
 
         const UInt index = core::toUnderlying(layout);
