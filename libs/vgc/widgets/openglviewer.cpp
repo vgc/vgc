@@ -670,11 +670,12 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r) {
         }
         triangulation = curve.triangulate(maxAngle, minQuads, maxQuads);
 
-        const core::DoubleArray& d = curve.positionData();
-        Int ncp = core::int_cast<GLsizei>(d.length() / 2);
+        const geometry::Vec2dArray& d = curve.positionData();
+        Int ncp = core::int_cast<GLsizei>(d.length());
         for (Int j = 0; j < ncp; ++j) {
+            geometry::Vec2d dp = d[j];
             glVerticesControlPoints.append(geometry::Vec2f(
-                static_cast<float>(d[2 * j]), static_cast<float>(d[2 * j + 1])));
+                static_cast<float>(dp.x()), static_cast<float>(dp.y())));
         }
     }
     else { // simplest impl for perf comparison

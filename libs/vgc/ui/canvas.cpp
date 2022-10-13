@@ -171,7 +171,7 @@ bool Canvas::onKeyPress(QKeyEvent* event) {
         requestRepaint();
         break;
     case Qt::Key_I:
-        requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 3;
+        requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 4;
         requestRepaint();
         break;
     case Qt::Key_P:
@@ -326,8 +326,6 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
         r.inited_ = true;
     }
 
-    geometry::Vec2dArray triangulation;
-
     dom::Element* path = r.element;
     geometry::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
     core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
@@ -345,39 +343,36 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
     }
 
     // Triangulate the curve
+    geometry::Vec2fArray glVerticesTriangles;
     double maxAngle = 0.05;
     int minQuads = 1;
     int maxQuads = 64;
-    if (requestedTesselationMode_ == 0) {
-        maxQuads = 1;
+    if (requestedTesselationMode_ <= 2) {
+        if (requestedTesselationMode_ == 0) {
+            maxQuads = 1;
+        }
+        else if (requestedTesselationMode_ == 1) {
+            minQuads = 10;
+            maxQuads = 10;
+        }
+        geometry::CurveSamplingParameters samplingParams = {};
+        samplingParams.setMaxAngle(maxAngle * 0.5); // matches triangulate()
+        samplingParams.setMinIntraSegmentSamples(minQuads - 1);
+        samplingParams.setMaxIntraSegmentSamples(maxQuads - 1);
+        core::Array<geometry::CurveSample> samples;
+        curve.sampleRange(samplingParams, samples);
+        for (const geometry::CurveSample& s : samples) {
+            geometry::Vec2d p0 = s.leftPoint();
+            glVerticesTriangles.emplaceLast(geometry::Vec2f(p0));
+            geometry::Vec2d p1 = s.rightPoint();
+            glVerticesTriangles.emplaceLast(geometry::Vec2f(p1));
+        }
     }
-    else if (requestedTesselationMode_ == 1) {
-        minQuads = 10;
-        maxQuads = 10;
-    }
-    triangulation = curve.triangulate(maxAngle, minQuads, maxQuads);
-
-    const core::DoubleArray& d = curve.positionData();
-    geometry::Vec2fArray glVerticesControlPoints;
-    Int ncp = core::int_cast<GLsizei>(d.length() / 2);
-    for (Int j = 0; j < ncp; ++j) {
-        glVerticesControlPoints.append(geometry::Vec2f(
-            static_cast<float>(d[2 * j]), static_cast<float>(d[2 * j + 1])));
-    }
-
-    // Convert triangles to single-precision and transfer to GPU
-    //
-    // XXX For the doubles to floats, we should either:
-    //     - have a public helper function to do this
-    //     - directly compute the triangulation using floats (although
-    //       using doubles is more precise for intersection tests)
-    //
-    //const UInt numVerticesTriangles = core::int_cast<UInt>(triangulation.length());
-
-    geometry::Vec2fArray glVerticesTriangles;
-    for (const geometry::Vec2d& v : triangulation) {
-        glVerticesTriangles.append(
-            geometry::Vec2f(static_cast<float>(v[0]), static_cast<float>(v[1])));
+    else {
+        geometry::Vec2dArray triangles = curve.triangulate(maxAngle, 1, 64);
+        for (const geometry::Vec2d& p : triangles) {
+            glVerticesTriangles.emplaceLast(geometry::Vec2f(p));
+        }
     }
 
     engine->updateVertexBufferData(r.strokeGeometry_, std::move(glVerticesTriangles));
@@ -385,6 +380,14 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
         r.strokeGeometry_->vertexBuffer(1), //
         core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
 
+    const geometry::Vec2dArray& d = curve.positionData();
+    geometry::Vec2fArray glVerticesControlPoints;
+    Int ncp = core::int_cast<GLsizei>(d.length());
+    for (Int j = 0; j < ncp; ++j) {
+        geometry::Vec2d dp = d[j];
+        glVerticesControlPoints.emplaceLast(
+            static_cast<float>(dp.x()), static_cast<float>(dp.y()));
+    }
     engine->updateVertexBufferData(r.pointsGeometry_, std::move(glVerticesControlPoints));
     engine->updateBufferData(
         r.pointsGeometry_->vertexBuffer(1), //

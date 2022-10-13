@@ -17,6 +17,7 @@
 #ifndef VGC_GEOMETRY_CURVE_H
 #define VGC_GEOMETRY_CURVE_H
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
@@ -24,6 +25,122 @@
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
+
+class Curve;
+
+class CurveSample {
+public:
+    CurveSample() = default;
+
+    CurveSample(core::NoInit)
+        : position_(core::NoInit{})
+        , normal_(core::NoInit{})
+        , radius_(0) {
+    }
+
+    CurveSample(Vec2d position, Vec2d normal, double radius)
+        : position_(position)
+        , normal_(normal)
+        , radius_(radius) {
+    }
+
+    const Vec2d& position() const {
+        return position_;
+    }
+
+    void setPosition(const Vec2d& position) {
+        position_ = position;
+    }
+
+    // ┌─── x
+    // │ ─segment─→
+    // y  ↓ normal
+    //
+    const Vec2d& normal() const {
+        return normal_;
+    }
+
+    // ┌─── x
+    // │ ─segment─→
+    // y  ↓ normal
+    //
+    void setNormal(const Vec2d& normal) {
+        normal_ = normal;
+    }
+
+    double radius() const {
+        return radius_;
+    }
+
+    void setRadius(double radius) {
+        radius_ = radius;
+    }
+
+    // ┌─── x
+    // │  ↑ left
+    // │ ─segment─→
+    // y  ↓ right
+    //
+    Vec2d rightPoint() const {
+        return position_ + normal_ * radius_;
+    }
+
+    // ┌─── x
+    // │  ↑ left
+    // │ ─segment─→
+    // y  ↓ right
+    //
+    Vec2d leftPoint() const {
+        return position_ - normal_ * radius_;
+    }
+
+private:
+    Vec2d position_;
+    Vec2d normal_;
+    double radius_;
+};
+
+class CurveSamplingParameters {
+public:
+    CurveSamplingParameters() = default;
+    explicit CurveSamplingParameters(
+        double maxAngle,
+        Int minIntraSegmentSamples,
+        Int maxIntraSegmentSamples)
+        : maxAngle_(maxAngle)
+        , minIntraSegmentSamples_(minIntraSegmentSamples)
+        , maxIntraSegmentSamples_(maxIntraSegmentSamples) {
+    }
+
+    double maxAngle() const {
+        return maxAngle_;
+    }
+
+    void setMaxAngle(double maxAngle) {
+        maxAngle_ = maxAngle;
+    }
+
+    Int minIntraSegmentSamples() const {
+        return minIntraSegmentSamples_;
+    }
+
+    void setMinIntraSegmentSamples(Int minIntraSegmentSamples) {
+        minIntraSegmentSamples_ = minIntraSegmentSamples;
+    }
+
+    Int maxIntraSegmentSamples() const {
+        return maxIntraSegmentSamples_;
+    }
+
+    void setMaxIntraSegmentSamples(Int maxIntraSegmentSamples) {
+        maxIntraSegmentSamples_ = maxIntraSegmentSamples;
+    }
+
+private:
+    double maxAngle_ = 0.05;
+    Int minIntraSegmentSamples_ = 1;
+    Int maxIntraSegmentSamples_ = 64;
+};
 
 /// \class vgc::geometry::Curve
 /// \brief Represents a 2D curve with variable width.
@@ -117,9 +234,15 @@ public:
         return type_;
     }
 
+    /// Returns the number of control points of the curve.
+    ///
+    Int numControlPoints() const {
+        return positionData_.length();
+    }
+
     /// Returns the position data of the curve.
     ///
-    const core::DoubleArray& positionData() const {
+    const Vec2dArray& positionData() const {
         return positionData_;
     }
 
@@ -219,6 +342,42 @@ public:
     Vec2dArray
     triangulate(double maxAngle = 0.05, Int minQuads = 1, Int maxQuads = 64) const;
 
+    /// Computes and returns a sampling of this curve as a sequence of samples
+    /// with position and normal.
+    ///
+    /// Using the default parameters, the sampling is "adaptive". This means
+    /// that the number of samples generated between two control points depends
+    /// on the curvature of the curve and curve outline. The higher the curvature,
+    /// the more samples are generated to ensure that consecutive segments never
+    /// have an angle more than \p maxAngle (expressed in radian).
+    /// This is what makes sure that the curve looks "smooth" at any zoom level.
+    ///
+    /// \verbatim
+    ///                    _o p3
+    ///                 _-`
+    ///              _-` } maxAngle
+    /// o----------o`- - - - - - - - -
+    /// p1         p2
+    /// \endverbatim
+    ///
+    /// In the case where the curve is a straight line between two control points,
+    /// no samples are needed. However, you can use use \p minIntraSegmentSamples_
+    /// if you wish to have at least a certain number of quads uniformly generated
+    /// between any two control points. Also, you can use \p maxIntraSegmentSamples_
+    /// to limit how many samples are generated between any two control points.
+    /// This is necessary to break infinite loops in case the curve contains a
+    /// cusp between two control points.
+    ///
+    /// If you wish to uniformly generate a fixed number of samples between
+    /// control points, simply set maxAngle to any value, and set minQuads =
+    /// maxQuads = number of desired samples in the parameters.
+    ///
+    void sampleRange(
+        const CurveSamplingParameters& parameters,
+        core::Array<CurveSample>& outAppend,
+        Int start = 0,
+        Int end = -1) const;
+
     /// Sets the color of the curve.
     ///
     // XXX Think aboutvariability for colors too. Does it make sense
@@ -242,7 +401,7 @@ public:
 private:
     // Representation of the centerline of the curve
     Type type_;
-    core::DoubleArray positionData_;
+    Vec2dArray positionData_;
 
     // Representation of the width of the curve
     AttributeVariability widthVariability_;

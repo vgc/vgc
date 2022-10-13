@@ -16,6 +16,9 @@
 
 #include <vgc/geometry/curve.h>
 
+#include <array>
+#include <optional>
+
 #include <vgc/core/algorithm.h>
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
@@ -25,6 +28,8 @@
 namespace vgc::geometry {
 
 namespace {
+
+using core::DoubleArray;
 
 template<typename ContainerType>
 void removeAllExceptLastElement(ContainerType& v) {
@@ -89,8 +94,7 @@ double Curve::width() const {
 void Curve::addControlPoint(double x, double y) {
 
     // Set position
-    positionData_.append(x);
-    positionData_.append(y);
+    positionData_.emplaceLast(x, y);
 
     // Set width
     if (widthVariability() == AttributeVariability::PerControlPoint) {
@@ -109,8 +113,7 @@ void Curve::addControlPoint(const Vec2d& position) {
 void Curve::addControlPoint(double x, double y, double width) {
 
     // Set position
-    positionData_.append(x);
-    positionData_.append(y);
+    positionData_.emplaceLast(x, y);
 
     // Set width
     if (widthVariability() == AttributeVariability::PerControlPoint) {
@@ -152,8 +155,8 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     double cosMaxAngle = std::cos(maxAngle);
 
     // Early return if not enough segments
-    Int numControlPoints = positionData_.length() / 2;
-    Int numSegments = numControlPoints - 1;
+    Int numCPs = numControlPoints();
+    Int numSegments = numCPs - 1;
     if (numSegments < 1) {
         return res;
     }
@@ -162,20 +165,22 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     for (Int idx = 0; idx < numSegments; ++idx) {
         // Get indices of Catmull-Rom control points for current segment
         Int zero = 0;
-        Int i0 = core::clamp(idx - 1, zero, numControlPoints - 1);
-        Int i1 = core::clamp(idx + 0, zero, numControlPoints - 1);
-        Int i2 = core::clamp(idx + 1, zero, numControlPoints - 1);
-        Int i3 = core::clamp(idx + 2, zero, numControlPoints - 1);
+        Int i0 = core::clamp(idx - 1, zero, numSegments - 1);
+        Int i1 = core::clamp(idx + 0, zero, numSegments - 1);
+        Int i2 = core::clamp(idx + 1, zero, numSegments - 1);
+        Int i3 = core::clamp(idx + 2, zero, numSegments - 1);
 
         // Get positions of Catmull-Rom control points
-        Vec2d p0(positionData_[2 * i0], positionData_[2 * i0 + 1]);
-        Vec2d p1(positionData_[2 * i1], positionData_[2 * i1 + 1]);
-        Vec2d p2(positionData_[2 * i2], positionData_[2 * i2 + 1]);
-        Vec2d p3(positionData_[2 * i3], positionData_[2 * i3 + 1]);
+        std::array<Vec2d, 4> points = {
+            positionData_[i0], positionData_[i1], positionData_[i2], positionData_[i3]};
 
         // Convert positions from Catmull-Rom to Bézier
         Vec2d q0, q1, q2, q3;
-        uniformCatmullRomToBezier(p0, p1, p2, p3, q0, q1, q2, q3);
+        uniformCatmullRomToBezierCappedInPlace(points.data());
+        q0 = points[0];
+        q1 = points[1];
+        q2 = points[2];
+        q3 = points[3];
 
         // Convert widths from Constant or Catmull-Rom to Bézier. Note: we
         // could handle the 'Constant' case more efficiently, but we chose code
@@ -349,6 +354,269 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     }
 
     return res;
+}
+
+struct IterativeSamplingSample {
+    IterativeSamplingSample()
+        : pos(core::NoInit{})
+        , normal(core::NoInit{})
+        , tangent(core::NoInit{})
+        , rightPoint(core::NoInit{})
+        , leftPoint(core::NoInit{})
+        , rightPointNormal(core::NoInit{})
+        , leftPointNormal(core::NoInit{}) {
+    }
+
+    Vec2d pos;
+    Vec2d normal;
+    Vec2d tangent;
+    Vec2d rightPoint;
+    Vec2d leftPoint;
+    Vec2d rightPointNormal;
+    Vec2d leftPointNormal;
+    double radius;
+    double u;
+    double radiusDer;
+    Int subdivLevel = 0;
+
+    void computeFrom(
+        const std::array<Vec2d, 4>& controlPoints,
+        const std::array<double, 4>& radii,
+        double u_,
+        bool isWidthUniform) {
+
+        u = u_;
+        cubicBezierPosAndDerCasteljau<Vec2d>(controlPoints, u_, pos, tangent);
+        if (!isWidthUniform) {
+            cubicBezierPosAndDerCasteljau(radii, u, radius, radiusDer);
+        }
+        else {
+            radius = radii[0];
+            radiusDer = 0;
+        }
+        normal = tangent.normalized().orthogonalized();
+        computeExtra_();
+    }
+
+    void computeFrom(
+        const Vec2d& pos_,
+        const Vec2d& tangent_,
+        double radius_,
+        double radiusDer_,
+        double u_) {
+
+        u = u_;
+        pos = pos_;
+        tangent = tangent_;
+        radius = radius_;
+        radiusDer = radiusDer_;
+        normal = tangent.normalized().orthogonalized();
+        computeExtra_();
+    }
+
+private:
+    void computeExtra_() {
+        if (radiusDer != 0) {
+            Vec2d dr = radiusDer * normal;
+            rightPointNormal = (tangent + dr).normalized().orthogonalized();
+            leftPointNormal = -(tangent - dr).normalized().orthogonalized();
+        }
+        else {
+            rightPointNormal = normal;
+            leftPointNormal = -normal;
+        }
+        Vec2d orthoRadius = radius * normal;
+        rightPoint = pos + orthoRadius;
+        leftPoint = pos - orthoRadius;
+    }
+};
+
+struct IterativeSamplingCache {
+    std::optional<IterativeSamplingSample> previousSampleN;
+    Int segmentIndex = 0;
+    double cosMaxAngle;
+    core::Array<IterativeSamplingSample> sampleStack;
+};
+
+bool testLine_(
+    const IterativeSamplingSample& s0,
+    const IterativeSamplingSample& s1,
+    double cosMaxAngle,
+    bool isWidthUniform) {
+    // Test angle between curve normals and center segment normal.
+    geometry::Vec2d l = s1.pos - s0.pos;
+    geometry::Vec2d n = l.normalized().orthogonalized();
+    if (n.dot(s0.normal) < cosMaxAngle) {
+        return false;
+    }
+    if (n.dot(s1.normal) < cosMaxAngle) {
+        return false;
+    }
+    if (isWidthUniform) {
+        return true;
+    }
+    // Test angle between curve normals and outline segments normal.
+    geometry::Vec2d ll = s1.leftPoint - s0.leftPoint;
+    geometry::Vec2d lln = -ll.normalized().orthogonalized();
+    if (lln.dot(s0.leftPointNormal) < cosMaxAngle) {
+        return false;
+    }
+    if (lln.dot(s1.leftPointNormal) < cosMaxAngle) {
+        return false;
+    }
+    geometry::Vec2d rl = s1.rightPoint - s0.rightPoint;
+    geometry::Vec2d rln = rl.normalized().orthogonalized();
+    if (rln.dot(s0.rightPointNormal) < cosMaxAngle) {
+        return false;
+    }
+    if (rln.dot(s1.rightPointNormal) < cosMaxAngle) {
+        return false;
+    }
+    return true;
+}
+
+bool sampleIter_(
+    const Curve* curve,
+    const CurveSamplingParameters& params,
+    IterativeSamplingCache& data,
+    core::Array<CurveSample>& outAppend) {
+
+    const Int idx = data.segmentIndex;
+
+    // Get indices of Catmull-Rom control points for current segment.
+    const Int numCPs = curve->numControlPoints();
+    Int i0 = (std::max)(idx - 1, Int(0));
+    Int i1 = idx;
+    Int i2 = idx + 1;
+    Int i3 = (std::min)(idx + 2, numCPs - 1);
+
+    // Return now if idx is not a valid segment index.
+    if (i1 < 0 || i2 >= numCPs) {
+        return false;
+    }
+
+    // Get positions of Catmull-Rom control points.
+    const Vec2dArray& positionData = curve->positionData();
+    std::array<Vec2d, 4> cps = {
+        positionData[i0], positionData[i1], positionData[i2], positionData[i3]};
+
+    // Convert positions from Catmull-Rom to Bézier.
+    uniformCatmullRomToBezierCappedInPlace(cps.data());
+
+    // Convert widths from Catmull-Rom to Bézier if not uniform.
+    const core::DoubleArray& widthData = curve->widthData();
+    std::array<double, 4> radii = {
+        widthData[i0] * 0.5,
+        widthData[i1] * 0.5,
+        widthData[i2] * 0.5,
+        widthData[i3] * 0.5};
+    const bool isWidthUniform =
+        (curve->widthVariability() == Curve::AttributeVariability::Constant);
+    if (!isWidthUniform) {
+        uniformCatmullRomToBezierInPlace(radii.data());
+    }
+
+    IterativeSamplingSample s0 = {};
+    IterativeSamplingSample sN = {};
+
+    // Compute first sample of segment.
+    if (!data.previousSampleN.has_value()) {
+        double radiusDer = isWidthUniform ? 0 : radii[1] - radii[0];
+        s0.computeFrom(cps[0], 3 * (cps[1] - cps[0]), radii[0], radiusDer, 0);
+        outAppend.emplaceLast(s0.pos, s0.normal, s0.radius);
+    }
+    else {
+        // Re-use last sample of previous segment.
+        s0 = *data.previousSampleN;
+        s0.u = 0;
+    }
+
+    // Compute last sample of segment.
+    {
+        double radiusDer = isWidthUniform ? 0 : radii[3] - radii[2];
+        sN.computeFrom(cps[3], 3 * (cps[3] - cps[2]), radii[3], radiusDer, 1);
+    }
+
+    const double cosMaxAngle = data.cosMaxAngle;
+    const Int minISS = params.minIntraSegmentSamples();
+    const Int maxISS = params.maxIntraSegmentSamples();
+    const Int minSamples = (std::max)(Int(0), minISS) + 2;
+    const Int maxSamples = (std::max)(minISS, maxISS) + 2;
+    const Int extraSamples = maxSamples - minSamples;
+    const Int level0Lines = minSamples - 1;
+
+    const Int extraSamplesPerLevel0Line =
+        static_cast<Int>(std::floor(static_cast<float>(extraSamples) / level0Lines));
+    const Int maxSubdivLevels =
+        1 + static_cast<Int>(std::floor(std::log2(extraSamplesPerLevel0Line + 1)));
+
+    core::Array<IterativeSamplingSample>& sampleStack = data.sampleStack;
+    sampleStack.resize(0);
+    sampleStack.reserve(extraSamplesPerLevel0Line + 1);
+
+    double duLevel0 = 1.0 / static_cast<double>(minSamples - 1);
+    for (Int i = 1; i < minSamples; ++i) {
+        // Uniform sample
+        IterativeSamplingSample* s = &sampleStack.emplaceLast();
+        if (i == minSamples - 1) {
+            *s = sN;
+        }
+        else {
+            double u = i * duLevel0;
+            s->computeFrom(cps, radii, u, isWidthUniform);
+        }
+        while (s != nullptr) {
+            // Adaptive sampling
+            Int subdivLevel = (std::max)(s0.subdivLevel, s->subdivLevel);
+            if (subdivLevel < maxSubdivLevels
+                && !testLine_(s0, *s, cosMaxAngle, isWidthUniform)) {
+
+                double u = (s0.u + s->u) * 0.5;
+                s = &sampleStack.emplaceLast();
+                s->computeFrom(cps, radii, u, isWidthUniform);
+                s->subdivLevel = subdivLevel + 1;
+            }
+            else {
+                s0 = *s;
+                outAppend.emplaceLast(s0.pos, s0.normal, s0.radius);
+                sampleStack.pop();
+                s = sampleStack.isEmpty() ? nullptr : &sampleStack.last();
+            }
+        }
+    }
+
+    data.segmentIndex += 1;
+    data.previousSampleN = sN;
+    return true;
+}
+
+void Curve::sampleRange(
+    const CurveSamplingParameters& parameters,
+    core::Array<CurveSample>& outAppend,
+    Int start,
+    Int end) const {
+
+    Int numSegs = (std::max)(Int(0), numControlPoints() - 1);
+    if (start < 0) {
+        start = (std::max)(Int(0), numSegs - start);
+    }
+    else if (start > numSegs - 1) {
+        return;
+    }
+    if (end < 0 || end > numSegs) {
+        end = numSegs;
+    }
+
+    const Int minSegmentSamples =
+        (std::max)(Int(0), parameters.minIntraSegmentSamples()) + 1;
+    outAppend.reserve(outAppend.length() + 1 + (end - start) * minSegmentSamples);
+
+    IterativeSamplingCache data = {};
+    data.cosMaxAngle = std::cos(parameters.maxAngle());
+    data.segmentIndex = start;
+    for (Int i = start; i < end; ++i) {
+        sampleIter_(this, parameters, data, outAppend);
+    }
 }
 
 } // namespace vgc::geometry

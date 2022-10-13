@@ -18,6 +18,7 @@
 #define VGC_GEOMETRY_CATMULLROM_H
 
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
 
@@ -98,6 +99,56 @@ void uniformCatmullRomToBezier(
     b1 = c1 + k * (c2 - c0);
     b2 = c2 - k * (c3 - c1);
     b3 = c2;
+}
+
+/// Overload of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
+/// of 4 control points in input and output.
+///
+template<typename T>
+void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
+
+    const double k = 0.166666666666666667; // = 1/6 up to double precision
+    outFourPoints[0] = inFourPoints[1];
+    outFourPoints[1] = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
+    outFourPoints[2] = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
+    outFourPoints[3] = inFourPoints[2];
+}
+
+/// Variant of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
+/// of 4 control points and performs the operation in-place.
+///
+template<typename T>
+void uniformCatmullRomToBezierInPlace(T* inoutFourPoints) {
+
+    const double k = 0.166666666666666667; // = 1/6 up to double precision
+    T p1 = inoutFourPoints[1] + k * (inoutFourPoints[2] - inoutFourPoints[0]);
+    T p2 = inoutFourPoints[2] - k * (inoutFourPoints[3] - inoutFourPoints[1]);
+    inoutFourPoints[0] = inoutFourPoints[1];
+    inoutFourPoints[3] = inoutFourPoints[2];
+    inoutFourPoints[1] = p1;
+    inoutFourPoints[2] = p2;
+}
+
+/// Variant of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
+/// of 4 control points and performs the operation in-place.
+/// Also the tangents are capped to prevent p0p1 and p2p3 from intersecting.
+///
+inline void uniformCatmullRomToBezierCappedInPlace(Vec2d* inoutFourPoints) {
+
+    const double k = 0.166666666666666667; // = 1/6 up to double precision
+    const double maxMagnitude = k * 2 * (inoutFourPoints[2] - inoutFourPoints[1]).length();
+    Vec2d t0 = inoutFourPoints[2] - inoutFourPoints[0];
+    Vec2d t1 = inoutFourPoints[3] - inoutFourPoints[1];
+    const double kd0 = k * t0.length();
+    const double kd1 = k * t1.length();
+    Vec2d pt0 = inoutFourPoints[1]
+                + t0.normalized() * (std::min)(maxMagnitude, kd0);
+    Vec2d pt1 = inoutFourPoints[2]
+                - t1.normalized() * (std::min)(maxMagnitude, kd1);
+    inoutFourPoints[0] = inoutFourPoints[1];
+    inoutFourPoints[3] = inoutFourPoints[2];
+    inoutFourPoints[1] = pt0;
+    inoutFourPoints[2] = pt1;
 }
 
 } // namespace vgc::geometry
