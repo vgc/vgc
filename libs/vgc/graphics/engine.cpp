@@ -940,11 +940,19 @@ void Engine::createBuiltinResources_() {
 
 void Engine::syncState_() {
 
-    if (dirtyBuiltinConstantBuffer_) {
+    const PipelineParameters parameters = dirtyPipelineParameters_;
+
+    if (dirtyBuiltinConstantBuffer_ || (parameters & PipelineParameter::Viewport)) {
         detail::BuiltinConstants constants = {};
         constants.projMatrix = projectionMatrixStack_.top();
         constants.viewMatrix = viewMatrixStack_.top();
         constants.frameStartTimeInMs = toMilliseconds(frameStartTime_ - engineStartTime_);
+        const Viewport& vp = viewportStack_.top();
+        constants.viewport = geometry::Vec4f(
+            static_cast<float>(vp.x()),
+            static_cast<float>(vp.y()),
+            static_cast<float>(vp.width()),
+            static_cast<float>(vp.height()));
         struct CommandParameters {
             Buffer* buffer;
             detail::BuiltinConstants constants;
@@ -960,7 +968,6 @@ void Engine::syncState_() {
         dirtyBuiltinConstantBuffer_ = false;
     }
 
-    const PipelineParameters parameters = dirtyPipelineParameters_;
     if (parameters == PipelineParameter::None) {
         return;
     }
