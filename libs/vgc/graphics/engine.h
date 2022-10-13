@@ -638,6 +638,8 @@ protected:
 private:
     void createBuiltinResources_();
 
+    ProgramPtr builtinProgram(BuiltinProgram builtinProgram);
+
     EngineCreateInfo createInfo_;
 
     // -- pipeline state on the user thread --

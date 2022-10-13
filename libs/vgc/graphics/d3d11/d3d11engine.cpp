@@ -733,6 +733,7 @@ void D3d11Engine::createBuiltinShaders_() {
                 (errorBlob ? std::string(
                      static_cast<const char*>(errorBlob->GetBufferPointer()))
                            : core::format("unknown D3DCompile error (0x{:X}).", hres));
+            throw core::RuntimeError(errString);
         }
         errorBlob.reset();
 
@@ -849,6 +850,7 @@ void D3d11Engine::createBuiltinShaders_() {
                 (errorBlob ? std::string(
                     static_cast<const char*>(errorBlob->GetBufferPointer()))
                     : core::format("unknown D3DCompile error (0x{:X}).", hres));
+            throw core::RuntimeError(errString);
         }
         errorBlob.reset();
 
