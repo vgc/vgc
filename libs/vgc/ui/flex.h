@@ -25,10 +25,10 @@ namespace vgc::ui {
 /// \brief The direction of a flex layout
 ///
 enum class FlexDirection {
-    Row,
-    RowReverse,
-    Column,
-    ColumnReverse
+    Row = 0,
+    RowReverse = 1,
+    Column = 2,
+    ColumnReverse = 3
 };
 
 /// \enum vgc::ui::FlexWrap
@@ -77,6 +77,13 @@ public:
     /// Sets the FlexDirection of this Flex.
     ///
     void setDirection(FlexDirection direction);
+
+    /// Returns `0` if the flex direction is `Row` or `RowReverse`,
+    /// and `1` if the flex direction is `Column` or `ColumnReverse`.
+    ///
+    Int mainDirectionIndex() const {
+        return core::toUnderlying(direction()) > 1;
+    }
 
     /// Returns the FlexWrap of this Flex.
     ///

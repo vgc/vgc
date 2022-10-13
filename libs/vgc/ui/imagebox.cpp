@@ -21,6 +21,7 @@
 #include <vgc/core/array.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -132,35 +133,10 @@ void ImageBox::onPaintDestroy(graphics::Engine* engine) {
 }
 
 geometry::Vec2f ImageBox::computePreferredSize() const {
-
-    namespace ss = style::strings;
-
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-
-    geometry::Vec2f res(0, 0);
-    geometry::Vec2f imgPreferredSize(0, 0);
-    if (w.type() == auto_ || h.type() == auto_) {
-        imgPreferredSize = geometry::Vec2f{100, 100};
-    }
-    if (w.type() == auto_) {
-        float paddingLeft = detail::getLength(this, ss::padding_left);
-        float paddingRight = detail::getLength(this, ss::padding_right);
-        res[0] = imgPreferredSize[0] + paddingLeft + paddingRight;
-    }
-    else {
-        res[0] = w.value();
-    }
-    if (h.type() == auto_) {
-        float paddingTop = detail::getLength(this, ss::padding_top);
-        float paddingBottom = detail::getLength(this, ss::padding_bottom);
-        res[1] = imgPreferredSize[1] + paddingTop + paddingBottom;
-    }
-    else {
-        res[1] = h.value();
-    }
-    return res;
+    PreferredSizeCalculator calc(this);
+    calc.add(geometry::Vec2f(100, 100));
+    calc.addPaddingAndBorder();
+    return calc.compute();
 }
 
 } // namespace vgc::ui

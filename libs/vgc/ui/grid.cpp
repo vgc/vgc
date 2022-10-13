@@ -104,11 +104,20 @@ float hintSpacing(float spacing) {
 
 float getSpacing(const Widget* w, core::StringId id, bool hint) {
     style::StyleValue spacing = w->style(id);
-    if (spacing.has<Length>()) {
-        float value = static_cast<float>(spacing.to<Length>());
-        return hint ? hintSpacing(value) : value;
+    float scaleFactor = w->styleMetrics().scaleFactor();
+    float value = 0.0f;
+    if (spacing.has<style::Length>()) {
+        value = spacing.to<style::Length>().toPx(scaleFactor);
     }
-    return 0;
+    else if (spacing.has<style::LengthOrPercentage>()) {
+        // TODO: handle percentages instead of returning 0
+        style::LengthOrPercentage l = spacing.to<style::LengthOrPercentage>();
+        if (!l.isPercentage()) {
+            float dummyRefLength = 1.0f;
+            value = l.toPx(scaleFactor, dummyRefLength);
+        }
+    }
+    return hint ? hintSpacing(value) : value;
 }
 
 } // namespace

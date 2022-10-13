@@ -25,6 +25,7 @@
 
 #include <vgc/ui/action.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/margins.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/strings.h>
@@ -237,6 +238,32 @@ geometry::Vec2f Widget::mapTo(Widget* other, const geometry::Vec2f& position) co
 geometry::Rect2f Widget::mapTo(Widget* other, const geometry::Rect2f& rect) const {
     geometry::Rect2f res = rect;
     res.setPosition(mapTo(other, rect.position()));
+    return res;
+}
+
+geometry::Rect2f Widget::contentRect() const {
+    namespace ss = style::strings;
+    using detail::getLengthInPx;
+    using detail::getLengthOrPercentageInPx;
+    float h = height();
+    float w = width();
+    Margins border(getLengthInPx(this, ss::border_width));
+    Margins padding(
+        getLengthOrPercentageInPx(this, ss::padding_top, h),
+        getLengthOrPercentageInPx(this, ss::padding_right, w),
+        getLengthOrPercentageInPx(this, ss::padding_bottom, h),
+        getLengthOrPercentageInPx(this, ss::padding_left, w));
+    geometry::Rect2f res = rect() - border - padding;
+    if (res.xMin() > res.xMax()) {
+        float x = 0.5 * (res.xMin() + res.xMax());
+        res.setXMin(x);
+        res.setXMax(x);
+    }
+    if (res.yMin() > res.yMax()) {
+        float y = 0.5 * (res.yMin() + res.yMax());
+        res.setYMin(y);
+        res.setYMax(y);
+    }
     return res;
 }
 
@@ -1292,6 +1319,9 @@ geometry::Vec2f Widget::computePreferredSize() const {
     PreferredSizeType auto_ = PreferredSizeType::Auto;
     PreferredSize w = preferredWidth();
     PreferredSize h = preferredHeight();
+    if (w.type() != auto_ && h.type() != auto_) {
+        return geometry::Vec2f();
+    }
     return geometry::Vec2f(
         w.type() == auto_ ? 0 : w.value(), h.type() == auto_ ? 0 : h.value());
 }
@@ -1384,8 +1414,8 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     table->insert(preferred_height,     autosize, false, &parseStylePreferredSize);
     table->insert(preferred_width,      autosize, false, &parseStylePreferredSize);
-    table->insert(column_gap,           zero,     false, &parseStyleLength);
-    table->insert(row_gap,              zero,     false, &parseStyleLength);
+    table->insert(column_gap,           zero,     false, &style::LengthOrPercentage::parse);
+    table->insert(row_gap,              zero,     false, &style::LengthOrPercentage::parse);
     table->insert(grid_auto_columns,    autosize, false, &parseStylePreferredSize);
     table->insert(grid_auto_rows,       autosize, false, &parseStylePreferredSize);
     table->insert(horizontal_stretch,   one,      false, &parseStyleNumber);

@@ -1968,14 +1968,22 @@ ColorPaletteSelector::Metrics
 ColorPaletteSelector::computeMetricsFromWidth_(float width) const {
     namespace gs = graphics::strings;
     namespace ss = style::strings;
+    using detail::getLengthInPx;
+    using detail::getLengthOrPercentageInPx;
+
+    // TODO: handle case where padding/gap is a percentage. It's unlikely
+    // (doesn't make much sense), but ideally we should support it. For
+    // now we simply return 0 if a percentage is given.
+    float refLength = 0;
+
     Metrics m;
     m.hinting = (style(gs::pixel_hinting) == gs::normal);
-    m.borderWidth = detail::getLength(this, ss::border_width);
-    m.paddingTop = detail::getLength(this, ss::padding_top);
-    m.paddingRight = detail::getLength(this, ss::padding_right);
-    m.paddingBottom = detail::getLength(this, ss::padding_bottom);
-    m.paddingLeft = detail::getLength(this, ss::padding_left);
-    m.rowGap = detail::getLength(this, ui::strings::row_gap);
+    m.borderWidth = getLengthInPx(this, ss::border_width);
+    m.paddingTop = getLengthOrPercentageInPx(this, ss::padding_top, refLength);
+    m.paddingRight = getLengthOrPercentageInPx(this, ss::padding_right, refLength);
+    m.paddingBottom = getLengthOrPercentageInPx(this, ss::padding_bottom, refLength);
+    m.paddingLeft = getLengthOrPercentageInPx(this, ss::padding_left, refLength);
+    m.rowGap = getLengthOrPercentageInPx(this, ui::strings::row_gap, refLength);
     computeSlSubMetrics_(width, m);
     computeHueSubMetrics_(width, m);
     m.width = width;
@@ -2370,7 +2378,7 @@ void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        float borderWidth = detail::getLength(this, ss::border_width);
+        float borderWidth = detail::getLengthInPx(this, ss::border_width);
         core::Color borderColor =
             computeHighlightColor(color_, HighlightStyle::DarkenOnly);
         style::BorderRadiuses radiuses = style::BorderRadiuses(this);
@@ -2546,7 +2554,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
             const Metrics& m = metrics_;
 
             float scaleFactor = 1;
-            float borderWidth = detail::getLength(item_.get(), ss::border_width);
+            float borderWidth = detail::getLengthInPx(item_.get(), ss::border_width);
             //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
             style::BorderRadiuses radiuses = style::BorderRadiuses(item_.get());
 

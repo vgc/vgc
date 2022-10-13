@@ -120,6 +120,34 @@ enum class FocusReason : UInt8 {
 
 // clang-format on
 
+class PreferredContentSize {
+public:
+    PreferredContentSize(const geometry::Vec2f& sizeInPx)
+        : sizeInPx_(sizeInPx)
+        , sizeInPercentage_() {
+    }
+
+    PreferredContentSize(
+        const geometry::Vec2f& sizeInPx,
+        const geometry::Vec2f& sizeInPercentage)
+
+        : sizeInPx_(sizeInPx)
+        , sizeInPercentage_(sizeInPercentage) {
+    }
+
+    const geometry::Vec2f& sizeInPx() const {
+        return sizeInPx_;
+    }
+
+    const geometry::Vec2f& sizeInPercentage() const {
+        return sizeInPercentage_;
+    }
+
+private:
+    geometry::Vec2f sizeInPx_;
+    geometry::Vec2f sizeInPercentage_;
+};
+
 /// \class vgc::ui::Widget
 /// \brief Base class of all elements in the user interface.
 ///
@@ -364,6 +392,11 @@ public:
         updateRootGeometry_();
         return geometry::Rect2f::fromPositionSize(0, 0, size_);
     }
+
+    /// Returns the content rect of this widget. This is equal to `rect()` with
+    /// border and padding removed.
+    ///
+    geometry::Rect2f contentRect() const;
 
     /// Sets the new position and size of this widget (relative to its parent),
     /// then calls updateChildrenGeometry().

@@ -18,6 +18,7 @@
 
 #include <vgc/graphics/font.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/logcategories.h>
 #include <vgc/ui/margins.h>
 
 namespace vgc::ui::detail {
@@ -600,13 +601,49 @@ core::Color getColor(const style::StylableObject* obj, core::StringId property) 
     return res;
 }
 
-float getLength(const style::StylableObject* obj, core::StringId property) {
-    float res = 0;
+style::Length getLength(const style::StylableObject* obj, core::StringId property) {
     style::StyleValue value = obj->style(property);
-    if (value.type() == style::StyleValueType::Number) {
-        res = value.toFloat();
+    if (value.has<style::Length>()) {
+        return value.to<style::Length>();
     }
-    return res;
+    else {
+        VGC_WARNING(
+            LogVgcUi,
+            "Calling getLength() with property {} which isn't of type Length. "
+            "Returning 0dp.",
+            property);
+        return style::Length();
+    }
+}
+
+style::LengthOrPercentage
+getLengthOrPercentage(const style::StylableObject* obj, core::StringId property) {
+    style::StyleValue value = obj->style(property);
+    if (value.has<style::LengthOrPercentage>()) {
+        return value.to<style::LengthOrPercentage>();
+    }
+    else {
+        VGC_WARNING(
+            LogVgcUi,
+            "Calling getLengthOrPercentage() with property {} which isn't of type "
+            "LengthOrPercentage. Returning 0dp.",
+            property);
+        return style::LengthOrPercentage();
+    }
+}
+
+float getLengthInPx(const style::StylableObject* obj, core::StringId property) {
+    float scaleFactor = obj->styleMetrics().scaleFactor();
+    return getLength(obj, property).toPx(scaleFactor);
+}
+
+float getLengthOrPercentageInPx(
+    const style::StylableObject* obj,
+    core::StringId property,
+    float refLength) {
+
+    float scaleFactor = obj->styleMetrics().scaleFactor();
+    return getLengthOrPercentage(obj, property).toPx(scaleFactor, refLength);
 }
 
 } // namespace vgc::ui::detail

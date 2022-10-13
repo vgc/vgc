@@ -57,33 +57,51 @@ void Flex::onWidgetRemoved(Widget*) {
 namespace {
 
 float getLeftRightMargins(const Widget* widget) {
-    return detail::getLength(widget, style::strings::margin_left)
-           + detail::getLength(widget, style::strings::margin_right);
+    // TODO: handle percentages
+    float refLength = 0;
+    return detail::getLengthOrPercentageInPx(
+               widget, style::strings::margin_left, refLength)
+           + detail::getLengthOrPercentageInPx(
+               widget, style::strings::margin_right, refLength);
 }
 
 float getTopBottomMargins(const Widget* widget) {
-    return detail::getLength(widget, style::strings::margin_top)
-           + detail::getLength(widget, style::strings::margin_bottom);
+    // TODO: handle percentages
+    float refLength = 0;
+    return detail::getLengthOrPercentageInPx(
+               widget, style::strings::margin_top, refLength)
+           + detail::getLengthOrPercentageInPx(
+               widget, style::strings::margin_bottom, refLength);
 }
 
 float getLeftRightPadding(const Widget* widget) {
-    return detail::getLength(widget, style::strings::padding_left)
-           + detail::getLength(widget, style::strings::padding_right);
+    // TODO: handle percentages
+    float refLength = 0;
+    return detail::getLengthOrPercentageInPx(
+               widget, style::strings::padding_left, refLength)
+           + detail::getLengthOrPercentageInPx(
+               widget, style::strings::padding_right, refLength);
 }
 
 float getTopBottomPadding(const Widget* widget) {
-    return detail::getLength(widget, style::strings::padding_top)
-           + detail::getLength(widget, style::strings::padding_bottom);
+    // TODO: handle percentages
+    float refLength = 0;
+    return detail::getLengthOrPercentageInPx(
+               widget, style::strings::padding_top, refLength)
+           + detail::getLengthOrPercentageInPx(
+               widget, style::strings::padding_bottom, refLength);
 }
 
 float getGap(bool isRow, const Widget* widget) {
     // - row-gap means the gap between rows, so should be used by Column.
     // - column-gap means the gap between columns, so should be used by Row.
+    // TODO: handle percentages
+    float refLength = 0;
     if (isRow) {
-        return detail::getLength(widget, strings::column_gap);
+        return detail::getLengthOrPercentageInPx(widget, strings::column_gap, refLength);
     }
     else {
-        return detail::getLength(widget, strings::row_gap);
+        return detail::getLengthOrPercentageInPx(widget, strings::row_gap, refLength);
     }
 }
 
@@ -355,10 +373,16 @@ void stretchChild(
     float gap,
     bool hinting) {
 
-    float marginLeft = detail::getLength(child, style::strings::margin_left);
-    float marginRight = detail::getLength(child, style::strings::margin_right);
-    float marginTop = detail::getLength(child, style::strings::margin_top);
-    float marginBottom = detail::getLength(child, style::strings::margin_bottom);
+    // TODO: handle percentages
+    float refLength = 0;
+    float marginLeft =
+        detail::getLengthOrPercentageInPx(child, style::strings::margin_left, refLength);
+    float marginRight =
+        detail::getLengthOrPercentageInPx(child, style::strings::margin_right, refLength);
+    float marginTop =
+        detail::getLengthOrPercentageInPx(child, style::strings::margin_top, refLength);
+    float marginBottom = detail::getLengthOrPercentageInPx(
+        child, style::strings::margin_bottom, refLength);
     float childMainMarginBefore = isRow ? marginLeft : marginTop;
     float childMainMarginAfter = isRow ? marginRight : marginBottom;
     float childCrossMarginBefore = isRow ? marginTop : marginLeft;
@@ -419,10 +443,14 @@ void Flex::updateChildrenGeometry() {
         bool isReverse = (direction_ == FlexDirection::RowReverse)
                          || (direction_ == FlexDirection::ColumnReverse);
         bool hinting = (style(gs::pixel_hinting) == gs::normal);
-        float paddingLeft = detail::getLength(this, ss::padding_left);
-        float paddingRight = detail::getLength(this, ss::padding_right);
-        float paddingTop = detail::getLength(this, ss::padding_top);
-        float paddingBottom = detail::getLength(this, ss::padding_bottom);
+        float paddingLeft =
+            detail::getLengthOrPercentageInPx(this, ss::padding_left, width());
+        float paddingRight =
+            detail::getLengthOrPercentageInPx(this, ss::padding_right, width());
+        float paddingTop =
+            detail::getLengthOrPercentageInPx(this, ss::padding_top, height());
+        float paddingBottom =
+            detail::getLengthOrPercentageInPx(this, ss::padding_bottom, height());
         float mainSize = isRow ? width() : height();
         float crossSize = isRow ? height() : width();
         float gap = getGap(isRow, this);

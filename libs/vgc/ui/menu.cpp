@@ -665,10 +665,10 @@ geometry::Vec2f Menu::computePreferredSize() const {
     setupWidthOverrides_();
     geometry::Vec2f ret = Flex::computePreferredSize();
 
-    const float padL = detail::getLength(this, style::strings::padding_left);
-    const float padR = detail::getLength(this, style::strings::padding_right);
-    const float padT = detail::getLength(this, style::strings::padding_top);
-    const float padB = detail::getLength(this, style::strings::padding_bottom);
+    const float padL = detail::getLengthOrPercentageInPx(this, style::strings::padding_left);
+    const float padR = detail::getLengthOrPercentageInPx(this, style::strings::padding_right);
+    const float padT = detail::getLengthOrPercentageInPx(this, style::strings::padding_top);
+    const float padB = detail::getLengthOrPercentageInPx(this, style::strings::padding_bottom);
     padding_ = Margins(padT, padR, padB, padL);
 
     return ret;

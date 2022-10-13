@@ -107,15 +107,15 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto table = std::make_shared<style::StylePropertySpecTable>();
 
     table->insert(background_color,                 transparent_,   false, &style::parseColor);
-    table->insert(margin_top,                       zero_,          false, &style::parseLength);
-    table->insert(margin_right,                     zero_,          false, &style::parseLength);
-    table->insert(margin_bottom,                    zero_,          false, &style::parseLength);
-    table->insert(margin_left,                      zero_,          false, &style::parseLength);
-    table->insert(padding_top,                      zero_,          false, &style::parseLength);
-    table->insert(padding_right,                    zero_,          false, &style::parseLength);
-    table->insert(padding_bottom,                   zero_,          false, &style::parseLength);
-    table->insert(padding_left,                     zero_,          false, &style::parseLength);
-    table->insert(border_width,                     zero_,          false, &style::parseLength);
+    table->insert(margin_top,                       zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(margin_right,                     zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(margin_bottom,                    zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(margin_left,                      zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(padding_top,                      zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(padding_right,                    zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(padding_bottom,                   zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(padding_left,                     zero_,          false, &style::LengthOrPercentage::parse);
+    table->insert(border_width,                     zero_,          false, &style::Length::parse);
     table->insert(border_color,                     black_,         false, &style::parseColor);
     table->insert(border_top_left_radius,           zerobr_,        false, &style::BorderRadius::parse);
     table->insert(border_top_right_radius,          zerobr_,        false, &style::BorderRadius::parse);
@@ -261,7 +261,7 @@ void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2
 }
 
 float getLengthInPx(const RichTextSpan* span, core::StringId property) {
-    float scaleFactor = 1.0f;
+    float scaleFactor = span->styleMetrics().scaleFactor();
     return span->style(property).to<style::Length>().toPx(scaleFactor);
 }
 
@@ -270,7 +270,7 @@ float getLengthOrAutoInPx(
     core::StringId property,
     float valueIfAuto) {
 
-    float scaleFactor = 1.0f;
+    float scaleFactor = span->styleMetrics().scaleFactor();
     return span->style(property).to<style::LengthOrAuto>().toPx(scaleFactor, valueIfAuto);
 }
 

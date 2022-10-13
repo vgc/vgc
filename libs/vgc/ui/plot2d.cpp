@@ -21,6 +21,7 @@
 #include <vgc/graphics/strings.h>
 #include <vgc/style/strings.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -126,10 +127,6 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     if (dirtyPlot_ || dirtyHint_) {
         // TODO
         core::Color textColor = detail::getColor(this, gs::text_color);
-        float paddingBottom = detail::getLength(this, ss::padding_bottom);
-        float paddingLeft = detail::getLength(this, ss::padding_left);
-        float paddingRight = detail::getLength(this, ss::padding_right);
-        float paddingTop = detail::getLength(this, ss::padding_top);
 
         const Int numYs = this->numYs();
         //const Int numComponents = (1 + numYs);
@@ -152,15 +149,10 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
             dirtyPlot_ = false;
 
             core::FloatArray a = {};
+            geometry::Rect2f contentRect_ = contentRect();
 
             // content only if we have data and the padded area is not empty
-            if (numXs_ > 1 && (width() > paddingLeft + paddingRight)
-                && (height() > paddingLeft + paddingRight)) {
-                geometry::Rect2f contentRect(
-                    paddingLeft,
-                    paddingTop,
-                    width() - paddingRight,
-                    height() - paddingBottom);
+            if (numXs_ > 1 && contentRect_.width() > 0 && contentRect_.height() > 0) {
 
                 // get data hull
                 // XXX impl an iterator ?
@@ -208,27 +200,27 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
                 double minXAxis = minX;
 
                 // left labels
-                if ((lblw * 2.f <= contentRect.width())
-                    && (lblh * 2.f <= contentRect.width())) {
+                if ((lblw * 2.f <= contentRect_.width())
+                    && (lblh * 2.f <= contentRect_.width())) {
                     areLeftLabelsVisible_ = true;
 
                     core::FloatArray txt = {};
 
                     geometry::Rect2f maxYLabelRect = geometry::Rect2f::fromPositionSize(
-                        contentRect.x(), contentRect.y(), lblw, lblh);
+                        contentRect_.x(), contentRect_.y(), lblw, lblh);
                     maxYText_->setRect(maxYLabelRect);
                     maxYText_->setText(core::format(yFormat, maxYAxis));
                     maxYText_->fill(txt);
 
                     geometry::Rect2f minYLabelRect = geometry::Rect2f::fromPositionSize(
-                        contentRect.x(), contentRect.yMax() - lblh, lblw, lblh);
+                        contentRect_.x(), contentRect_.yMax() - lblh, lblw, lblh);
                     minYText_->setRect(minYLabelRect);
                     minYText_->setText(core::format(yFormat, minYAxis));
                     minYText_->fill(txt);
 
                     engine->updateVertexBufferData(plotTextGeom_, std::move(txt));
 
-                    contentRect.setXMin(contentRect.xMin() + lblw);
+                    contentRect_.setXMin(contentRect_.xMin() + lblw);
                 }
                 else {
                     areLeftLabelsVisible_ = false;
@@ -238,17 +230,17 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
                 //internal::insertRect(a, hoveredBackgroundColor, contentRect.xMin(), contentRect.yMin(), contentRect.xMax(), contentRect.yMax(), 0.f);
                 const float yAxisExtent = static_cast<float>(maxYAxis - minYAxis);
                 const float xAxisExtent = static_cast<float>(maxXAxis - minXAxis);
-                const float cy = contentRect.height() / yAxisExtent;
-                const float cx = contentRect.width() / xAxisExtent;
+                const float cy = contentRect_.height() / yAxisExtent;
+                const float cx = contentRect_.width() / xAxisExtent;
 
                 // plots
                 if (isStacked_) {
                     core::Array<float> ys(numYs * 2);
                     float* ys0 = ys.data();
                     float* ys1 = ys.data() + numYs;
-                    float baseX = contentRect.xMin();
-                    float baseY = contentRect.yMax();
-                    float topY = contentRect.yMin();
+                    float baseX = contentRect_.xMin();
+                    float baseY = contentRect_.yMax();
+                    float topY = contentRect_.yMin();
 
                     auto initYs = [&](float* ysI, double* colData) {
                         ysI[0] = baseY - static_cast<float>(cy * (colData[1] - minYAxis));
@@ -423,25 +415,12 @@ bool Plot2d::onMouseLeave() {
 }
 
 geometry::Vec2f Plot2d::computePreferredSize() const {
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-    geometry::Vec2f res(0, 0);
-    if (w.type() == auto_) {
-        res[0] = 100;
-        // TODO: compute appropriate width based on data
-    }
-    else {
-        res[0] = w.value();
-    }
-    if (h.type() == auto_) {
-        res[1] = 40;
-        // TODO: compute appropriate height based on data
-    }
-    else {
-        res[1] = h.value();
-    }
-    return res;
+    // TODO: compute appropriate content size based on data
+    geometry::Vec2f contentSizeIfAuto(100, 40);
+    PreferredSizeCalculator calc(this);
+    calc.add(contentSizeIfAuto);
+    calc.addPaddingAndBorder();
+    return calc.compute();
 }
 
 } // namespace vgc::ui
