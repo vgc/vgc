@@ -1187,7 +1187,8 @@ void QglEngine::initBuiltinResources_() {
 
     // Initialize the simple instanced shader
     {
-        QglProgram* program = sreenSpaceDisplacementProgram_.get_static_cast<QglProgram>();
+        QglProgram* program =
+            sreenSpaceDisplacementProgram_.get_static_cast<QglProgram>();
         program->prog_.reset(new QOpenGLShaderProgram());
         QOpenGLShaderProgram* prog = program->prog_.get();
         prog->addShaderFromSourceFile(
