@@ -94,7 +94,7 @@ void uniformCatmullRomToBezier(
     T& b2,
     T& b3) {
 
-    constexpr double k = 0.166666666666666667; // = 1/6 up to double precision
+    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
     b0 = c1;
     b1 = c1 + k * (c2 - c0);
     b2 = c2 - k * (c3 - c1);
@@ -107,7 +107,7 @@ void uniformCatmullRomToBezier(
 template<typename T>
 void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
 
-    constexpr double k = 0.166666666666666667; // = 1/6 up to double precision
+    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
     outFourPoints[0] = inFourPoints[1];
     outFourPoints[1] = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
     outFourPoints[2] = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
@@ -120,7 +120,7 @@ void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
 template<typename T>
 void uniformCatmullRomToBezierInPlace(T* inoutFourPoints) {
 
-    constexpr double k = 0.166666666666666667; // = 1/6 up to double precision
+    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
     T p1 = inoutFourPoints[1] + k * (inoutFourPoints[2] - inoutFourPoints[0]);
     T p2 = inoutFourPoints[2] - k * (inoutFourPoints[3] - inoutFourPoints[1]);
     inoutFourPoints[0] = inoutFourPoints[1];
@@ -135,7 +135,7 @@ void uniformCatmullRomToBezierInPlace(T* inoutFourPoints) {
 ///
 inline void uniformCatmullRomToBezierCappedInPlace(Vec2d* inoutFourPoints) {
 
-    constexpr double k = 0.166666666666666667; // = 1/6 up to double precision
+    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
     const double maxMagnitude =
         k * 2 * (inoutFourPoints[2] - inoutFourPoints[1]).length();
     Vec2d t0 = inoutFourPoints[2] - inoutFourPoints[0];
