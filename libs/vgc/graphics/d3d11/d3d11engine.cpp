@@ -50,7 +50,7 @@ struct Vertex_XY {
 };
 
 struct Vertex_XYDxDy {
-    float x, y, xDisp, yDisp;
+    float x, y, dx, dy;
 };
 
 struct Vertex_XYUV {
@@ -972,13 +972,13 @@ void D3d11Engine::createBuiltinShaders_() {
         // Create Input Layout for XYXoffYoff_iXYRGBA
         {
             ComPtr<ID3D11InputLayout> inputLayout;
-            UINT dOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, xDisp));
+            UINT dxOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, dx));
             UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGBA, r));
             D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,       D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"DISPLACEMENT", 0, DXGI_FORMAT_R32G32_FLOAT,       0, dOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"POSITION",     1, DXGI_FORMAT_R32G32_FLOAT,       1, 0,       D3D11_INPUT_PER_INSTANCE_DATA, 1},
-                {"COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, rOffset, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+                {"POSITION",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,        D3D11_INPUT_PER_VERTEX_DATA,   0},
+                {"DISPLACEMENT", 0, DXGI_FORMAT_R32G32_FLOAT,       0, dxOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
+                {"POSITION",     1, DXGI_FORMAT_R32G32_FLOAT,       1, 0,        D3D11_INPUT_PER_INSTANCE_DATA, 1},
+                {"COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, rOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
             };
             device_->CreateInputLayout(
                 layout, 4,

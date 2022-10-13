@@ -44,7 +44,7 @@ struct Vertex_XY {
 };
 
 struct Vertex_XYDxDy {
-    float x, y, xDisp, yDisp;
+    float x, y, dx, dy;
 };
 
 struct Vertex_XYUV {
@@ -1225,7 +1225,7 @@ void QglEngine::initBuiltinResources_() {
             dispDesc.elementType = GL_FLOAT;
             dispDesc.normalized = false;
             dispDesc.stride = sizeof(Vertex_XYDxDy);
-            dispDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYDxDy, xDisp));
+            dispDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYDxDy, dx));
             dispDesc.bufferIndex = 0;
             GlAttribPointerDesc& xyiDesc = layout.emplaceLast();
             xyiDesc.index = xyiLoc_;
