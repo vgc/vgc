@@ -432,33 +432,13 @@ void Engine::popViewport() {
     dirtyPipelineParameters_ |= PipelineParameter::Viewport;
 }
 
-void Engine::setProgram(BuiltinProgram builtinProgram) {
-    ProgramPtr program = {};
-    switch (builtinProgram) {
-    case BuiltinProgram::Simple: {
-        program = simpleProgram_;
-        break;
-    }
-    default:
-        break;
-    }
+void Engine::setProgram(BuiltinProgram builtinProgram_) {
+    ProgramPtr program = builtinProgram(builtinProgram_);
     setProgram(program);
 }
 
-void Engine::pushProgram(BuiltinProgram builtinProgram) {
-    ProgramPtr program = {};
-    switch (builtinProgram) {
-    case BuiltinProgram::Simple: {
-        program = simpleProgram_;
-        break;
-    }
-    case BuiltinProgram::SimpleTextured: {
-        program = simpleTexturedProgram_;
-        break;
-    }
-    default:
-        break;
-    }
+void Engine::pushProgram(BuiltinProgram builtinProgram_) {
+    ProgramPtr program = builtinProgram(builtinProgram_);
     pushProgram(program);
 }
 
@@ -936,6 +916,19 @@ void Engine::createBuiltinResources_() {
     }
 
     createBuiltinShaders_();
+}
+
+ProgramPtr Engine::builtinProgram(BuiltinProgram builtinProgram) {
+    ProgramPtr program = {};
+    switch (builtinProgram) {
+    case BuiltinProgram::Simple:
+        return simpleProgram_;
+    case BuiltinProgram::SimpleTextured:
+        return simpleTexturedProgram_;
+    default:
+        break;
+    }
+    return ProgramPtr();
 }
 
 void Engine::syncState_() {
