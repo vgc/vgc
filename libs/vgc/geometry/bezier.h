@@ -25,68 +25,68 @@ namespace vgc::geometry {
 
 namespace detail {
 
-// Sum of Ai for i in [1, N] with (Ai = A1 + i(D - 1) = Ai-1 + D for i > 1).
-template<Int A1, Int D, Int N>
-inline constexpr Int ArithmeticSeries = (N * (A1 + A1 + (N - 1) * D)) / 2;
-static_assert(ArithmeticSeries<3, 2, 3> == 3 + 5 + 7);
+// Sum of ai for i in [1, n] with (ai = a1 + i(d - 1) = ai-1 + d for i > 1).
+template<Int a1, Int d, Int n>
+inline constexpr Int arithmeticSeries = (n * (a1 + a1 + (n - 1) * d)) / 2;
+static_assert(arithmeticSeries<3, 2, 3> == 3 + 5 + 7);
 
-// Sum of N consecutive integers starting from A.
-template<Int A, Int N>
-inline constexpr Int IotaSeries = ArithmeticSeries<A, 1, N>;
-static_assert(IotaSeries<2, 3> == 2 + 3 + 4);
+// Sum of n consecutive integers starting from a.
+template<Int a, Int n>
+inline constexpr Int iotaSeries = arithmeticSeries<a, 1, n>;
+static_assert(iotaSeries<2, 3> == 2 + 3 + 4);
 
-template<size_t Degree>
-inline constexpr size_t DeCasteljauTreeSize = static_cast<size_t>(IotaSeries<1, Degree>);
-static_assert(DeCasteljauTreeSize<3> == 3 + 2 + 1);
+template<size_t degree>
+inline constexpr size_t deCasteljauTreeSize = static_cast<size_t>(iotaSeries<1, degree>);
+static_assert(deCasteljauTreeSize<3> == 3 + 2 + 1);
 
 } // namespace detail
 
-template<typename T, typename Scalar, size_t Degree_>
+template<typename T, typename Scalar, size_t degree>
 class DeCasteljauTree {
 public:
-    static constexpr size_t Degree = Degree_;
-    static constexpr size_t Size = detail::DeCasteljauTreeSize<Degree>;
+    static constexpr size_t degree = degree;
+    static constexpr size_t size = detail::deCasteljauTreeSize<degree>;
 
-    void compute(const std::array<T, Degree + 1>& controlPoints, Scalar u) {
+    void compute(const std::array<T, degree + 1>& controlPoints, Scalar u) {
         Scalar oneMinusU = Scalar(1) - u;
-        for (size_t i = 0; i < Degree; ++i) {
+        for (size_t i = 0; i < degree; ++i) {
             values_[i] = oneMinusU * controlPoints[i] + u * controlPoints[i + 1];
         }
-        if constexpr (Degree > 1) {
+        if constexpr (degree > 1) {
             computeRec<2>(u, oneMinusU);
         }
     }
 
-    template<VGC_REQUIRES(Degree >= 1)>
+    template<VGC_REQUIRES(degree >= 1)>
     const T& position() {
-        return values_[Size - 1];
+        return values_[size - 1];
     }
 
-    template<VGC_REQUIRES(Degree >= 2)>
+    template<VGC_REQUIRES(degree >= 2)>
     T derivative() {
-        constexpr size_t i = LevelOffset_<Degree - 1>;
-        return Scalar(Degree) * (values_[i + 1] - values_[i]);
+        constexpr size_t i = levelOffset_<degree - 1>;
+        return Scalar(degree) * (values_[i + 1] - values_[i]);
     }
 
 private:
     // Tree starts at level 1.
-    template<size_t Level, VGC_REQUIRES(Level > 0)>
-    static constexpr size_t LevelSize_ = Degree - (Level - 1);
+    template<size_t level, VGC_REQUIRES(level > 0)>
+    static constexpr size_t levelSize_ = degree - (level - 1);
 
     // Tree starts at level 1.
-    template<size_t Level, VGC_REQUIRES(Level > 0)>
-    static constexpr size_t LevelOffset_ =
-        (Size - static_cast<size_t>(detail::IotaSeries<1, LevelSize_<Level>>));
+    template<size_t level, VGC_REQUIRES(level > 0)>
+    static constexpr size_t levelOffset_ =
+        (size - static_cast<size_t>(detail::iotaSeries<1, levelSize_<level>>));
 
-    template<size_t Level, VGC_REQUIRES(Level > 1 && Level <= Degree)>
+    template<size_t level, VGC_REQUIRES(level > 1 && level <= degree)>
     void computeRec(Scalar u, Scalar oneMinusU) {
-        constexpr size_t a = LevelOffset_<Level - 1>;
-        constexpr size_t b = LevelOffset_<Level>;
-        for (size_t i = 0; i < LevelSize_<Level>; ++i) {
+        constexpr size_t a = levelOffset_<level - 1>;
+        constexpr size_t b = levelOffset_<level>;
+        for (size_t i = 0; i < levelSize_<level>; ++i) {
             values_[b + i] = oneMinusU * values_[a + i] + u * values_[a + i + 1];
         }
-        if constexpr (Level < Degree) {
-            computeRec<Level + 1>(u, oneMinusU);
+        if constexpr (level < degree) {
+            computeRec<level + 1>(u, oneMinusU);
         }
     }
 
@@ -170,7 +170,7 @@ T cubicBezierDer(
     Scalar u) {
 
     // expected to be inlined
-    return cubicBezierDer(
+    return cubicBezierDer<Scalar, T>(
         fourPoints[0], fourPoints[1], fourPoints[2], fourPoints[3],
         u);
 }
