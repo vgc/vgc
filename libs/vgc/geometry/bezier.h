@@ -90,7 +90,7 @@ private:
         }
     }
 
-    std::array<T, Size> values_;
+    std::array<T, size> values_;
 };
 
 // clang-format off
