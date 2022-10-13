@@ -268,8 +268,8 @@ enum class FilterMode : UInt8 {
 enum class ShaderStage : Int8 {
     None = -1,
     Vertex = 0,
-    Geometry = 1,
-    Pixel = 2,
+    Geometry,
+    Pixel,
     //Hull,
     //Domain,
     //Compute,
@@ -279,7 +279,7 @@ inline constexpr auto numShaderStages = VGC_ENUM_COUNT(ShaderStage);
 
 enum class BuiltinProgram : Int8 {
     NotBuiltin = -1,
-    Simple,
+    Simple = 0,
     SimpleTextured,
     // XXX publicize ?
     //GlyphAtlas,
@@ -292,11 +292,11 @@ inline constexpr auto numBuiltinPrograms = VGC_ENUM_COUNT(BuiltinProgram);
 enum class BuiltinGeometryLayout : Int8 {
     NotBuiltin = -1,
     XY = 0,
-    XYRGB = 1,
-    XYRGBA = 2,
-    XYUVRGBA = 3,
-    XY_iRGBA = 4,
-    XYUV_iRGBA = 5,
+    XYRGB,
+    XYRGBA,
+    XYUVRGBA,
+    XY_iRGBA,
+    XYUV_iRGBA,
     VGC_ENUM_ENDMAX
 };
 inline constexpr auto numBuiltinGeometryLayouts = VGC_ENUM_COUNT(BuiltinGeometryLayout);
