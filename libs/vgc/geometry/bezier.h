@@ -49,7 +49,7 @@ public:
 
     void compute(const std::array<T, Degree + 1>& controlPoints, Scalar u) {
         Scalar oneMinusU = Scalar(1) - u;
-        for (int i = 0; i < Degree; ++i) {
+        for (size_t i = 0; i < Degree; ++i) {
             values_[i] = oneMinusU * controlPoints[i] + u * controlPoints[i + 1];
         }
         if constexpr (Degree > 1) {
@@ -82,7 +82,7 @@ private:
     void computeRec(Scalar u, Scalar oneMinusU) {
         constexpr size_t a = LevelOffset_<Level - 1>;
         constexpr size_t b = LevelOffset_<Level>;
-        for (int i = 0; i < LevelSize_<Level>; ++i) {
+        for (size_t i = 0; i < LevelSize_<Level>; ++i) {
             values_[b + i] = oneMinusU * values_[a + i] + u * values_[a + i + 1];
         }
         if constexpr (Level < Degree) {
