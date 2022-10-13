@@ -103,10 +103,12 @@ private:
 class CurveSamplingParameters {
 public:
     CurveSamplingParameters() = default;
-    explicit CurveSamplingParameters(
+
+    CurveSamplingParameters(
         double maxAngle,
         Int minIntraSegmentSamples,
         Int maxIntraSegmentSamples)
+
         : maxAngle_(maxAngle)
         , minIntraSegmentSamples_(minIntraSegmentSamples)
         , maxIntraSegmentSamples_(maxIntraSegmentSamples) {
