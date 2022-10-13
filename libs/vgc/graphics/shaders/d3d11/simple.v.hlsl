@@ -2,6 +2,7 @@
 cbuffer vertexBuffer : register(b0) {
     float4x4 projMatrix;
     float4x4 viewMatrix;
+    float4 viewport;
     unsigned int frameStartTimeInMs;
 };
 

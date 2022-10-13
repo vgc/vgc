@@ -67,6 +67,7 @@ namespace detail {
 struct BuiltinConstants {
     geometry::Mat4f projMatrix;
     geometry::Mat4f viewMatrix;
+    geometry::Vec4f viewport;
     UInt32 frameStartTimeInMs = 0;
 };
 

@@ -7,6 +7,7 @@ in vec4 col;
 layout(std140) uniform BuiltinConstants {
     mat4 proj;
     mat4 view;
+    vec4 viewport;
     uint frameStartTimeInMs;
 };
 
