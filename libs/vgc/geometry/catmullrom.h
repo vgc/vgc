@@ -136,15 +136,14 @@ void uniformCatmullRomToBezierInPlace(T* inoutFourPoints) {
 inline void uniformCatmullRomToBezierCappedInPlace(Vec2d* inoutFourPoints) {
 
     const double k = 0.166666666666666667; // = 1/6 up to double precision
-    const double maxMagnitude = k * 2 * (inoutFourPoints[2] - inoutFourPoints[1]).length();
+    const double maxMagnitude =
+        k * 2 * (inoutFourPoints[2] - inoutFourPoints[1]).length();
     Vec2d t0 = inoutFourPoints[2] - inoutFourPoints[0];
     Vec2d t1 = inoutFourPoints[3] - inoutFourPoints[1];
     const double kd0 = k * t0.length();
     const double kd1 = k * t1.length();
-    Vec2d pt0 = inoutFourPoints[1]
-                + t0.normalized() * (std::min)(maxMagnitude, kd0);
-    Vec2d pt1 = inoutFourPoints[2]
-                - t1.normalized() * (std::min)(maxMagnitude, kd1);
+    Vec2d pt0 = inoutFourPoints[1] + t0.normalized() * (std::min)(maxMagnitude, kd0);
+    Vec2d pt1 = inoutFourPoints[2] - t1.normalized() * (std::min)(maxMagnitude, kd1);
     inoutFourPoints[0] = inoutFourPoints[1];
     inoutFourPoints[3] = inoutFourPoints[2];
     inoutFourPoints[1] = pt0;

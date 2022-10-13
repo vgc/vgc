@@ -674,8 +674,8 @@ void OpenGLViewer::updateCurveGLResources_(CurveGLResources& r) {
         Int ncp = core::int_cast<GLsizei>(d.length());
         for (Int j = 0; j < ncp; ++j) {
             geometry::Vec2d dp = d[j];
-            glVerticesControlPoints.append(geometry::Vec2f(
-                static_cast<float>(dp.x()), static_cast<float>(dp.y())));
+            glVerticesControlPoints.emplaceLast(
+                static_cast<float>(dp.x()), static_cast<float>(dp.y()));
         }
     }
     else { // simplest impl for perf comparison
