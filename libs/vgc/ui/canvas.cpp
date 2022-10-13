@@ -667,47 +667,25 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     engine->setRasterizerState((polygonMode_ == 1) ? wireframeRS_ : fillRS_);
 
     geometry::Mat4f vm = engine->viewMatrix();
-
-    //geometry::Mat4d projMat = camera_.projectionMatrix();
-    //geometry::Mat4f projMatf(
-    //    static_cast<float>(projMat(0, 1)),
-    //    static_cast<float>(projMat(0, 2)),
-    //    static_cast<float>(projMat(0, 3)),
-    //    static_cast<float>(projMat(0, 3)),
-    //    static_cast<float>(projMat(1, 1)),
-    //    static_cast<float>(projMat(1, 2)),
-    //    static_cast<float>(projMat(1, 3)),
-    //    static_cast<float>(projMat(1, 3)),
-    //    static_cast<float>(projMat(2, 1)),
-    //    static_cast<float>(projMat(2, 2)),
-    //    static_cast<float>(projMat(2, 3)),
-    //    static_cast<float>(projMat(2, 3)),
-    //    static_cast<float>(projMat(3, 1)),
-    //    static_cast<float>(projMat(3, 2)),
-    //    static_cast<float>(projMat(3, 3)),
-    //    static_cast<float>(projMat(3, 3))
-    //);
-    //engine->pushProjectionMatrix(projMatf);
-
-    geometry::Mat4d viewMat = camera_.viewMatrix();
-    geometry::Mat4f viewMatf(
-        static_cast<float>(viewMat(0, 0)),
-        static_cast<float>(viewMat(0, 1)),
-        static_cast<float>(viewMat(0, 2)),
-        static_cast<float>(viewMat(0, 3)),
-        static_cast<float>(viewMat(1, 0)),
-        static_cast<float>(viewMat(1, 1)),
-        static_cast<float>(viewMat(1, 2)),
-        static_cast<float>(viewMat(1, 3)),
-        static_cast<float>(viewMat(2, 0)),
-        static_cast<float>(viewMat(2, 1)),
-        static_cast<float>(viewMat(2, 2)),
-        static_cast<float>(viewMat(2, 3)),
-        static_cast<float>(viewMat(3, 0)),
-        static_cast<float>(viewMat(3, 1)),
-        static_cast<float>(viewMat(3, 2)),
-        static_cast<float>(viewMat(3, 3)));
-    engine->pushViewMatrix(viewMatf * vm);
+    geometry::Mat4d cameraView = camera_.viewMatrix();
+    geometry::Mat4f cameraViewf(
+        static_cast<float>(cameraView(0, 0)),
+        static_cast<float>(cameraView(0, 1)),
+        static_cast<float>(cameraView(0, 2)),
+        static_cast<float>(cameraView(0, 3)),
+        static_cast<float>(cameraView(1, 0)),
+        static_cast<float>(cameraView(1, 1)),
+        static_cast<float>(cameraView(1, 2)),
+        static_cast<float>(cameraView(1, 3)),
+        static_cast<float>(cameraView(2, 0)),
+        static_cast<float>(cameraView(2, 1)),
+        static_cast<float>(cameraView(2, 2)),
+        static_cast<float>(cameraView(2, 3)),
+        static_cast<float>(cameraView(3, 0)),
+        static_cast<float>(cameraView(3, 1)),
+        static_cast<float>(cameraView(3, 2)),
+        static_cast<float>(cameraView(3, 3)));
+    engine->pushViewMatrix(vm * cameraViewf);
 
     // Draw triangles
 
