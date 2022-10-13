@@ -533,8 +533,11 @@ protected:
 
     // -- builtins --
 
-    ProgramPtr simpleProgram_;         // (created by api-specific engine implementations)
-    ProgramPtr simpleTexturedProgram_; // (created by api-specific engine implementations)
+    // The builtin programs are created by api-specific engine implementations.
+    ProgramPtr simpleProgram_;
+    ProgramPtr simpleTexturedProgram_;
+    ProgramPtr sreenSpaceDisplacementProgram_;
+
     BlendStatePtr defaultBlendState_;
     RasterizerStatePtr defaultRasterizerState_;
 

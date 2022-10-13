@@ -43,6 +43,10 @@ struct Vertex_XY {
     float x, y;
 };
 
+struct Vertex_XYDxDy {
+    float x, y, dx, dy;
+};
+
 struct Vertex_XYUV {
     float x, y, u, v;
 };
@@ -804,6 +808,10 @@ void QglEngine::createBuiltinShaders_() {
     QglProgramPtr simpleTexturedProgram(
         new QglProgram(resourceRegistry_, BuiltinProgram::SimpleTextured));
     simpleTexturedProgram_ = simpleTexturedProgram;
+
+    QglProgramPtr sreenSpaceDisplacementProgram(
+        new QglProgram(resourceRegistry_, BuiltinProgram::SreenSpaceDisplacement));
+    sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
 }
 
 SwapChainPtr QglEngine::constructSwapChain_(const SwapChainCreateInfo& createInfo) {
@@ -1172,6 +1180,69 @@ void QglEngine::initBuiltinResources_() {
             rgbaDesc.normalized = false;
             rgbaDesc.stride = sizeof(Vertex_RGBA);
             rgbaDesc.offset = 0;
+            rgbaDesc.bufferIndex = 1;
+            rgbaDesc.isPerInstance = true;
+        }
+    }
+
+    // Initialize the sreen-space displacement shader
+    {
+        QglProgram* program =
+            sreenSpaceDisplacementProgram_.get_static_cast<QglProgram>();
+        program->prog_.reset(new QOpenGLShaderProgram());
+        QOpenGLShaderProgram* prog = program->prog_.get();
+        prog->addShaderFromSourceFile(
+            QOpenGLShader::Vertex, shaderPath_("screen_space_displacement.v.glsl"));
+        prog->addShaderFromSourceFile(
+            QOpenGLShader::Fragment, shaderPath_("simple.f.glsl"));
+        prog->link();
+        prog->bind();
+        int xyLoc_ = prog->attributeLocation("pos");
+        int dispLoc_ = prog->attributeLocation("disp");
+        int xyiLoc_ = prog->attributeLocation("ipos");
+        int rgbaLoc_ = prog->attributeLocation("col");
+        api_->glUniformBlockBinding(prog->programId(), 0, 0);
+
+        prog->release();
+
+        // Create Input Layout for XYXoffYoff_iXYRGBA
+        {
+            constexpr Int8 layoutIndex =
+                core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRGBA);
+            core::Array<GlAttribPointerDesc>& layout =
+                program->builtinLayouts_[layoutIndex];
+            GlAttribPointerDesc& xyDesc = layout.emplaceLast();
+            xyDesc.index = xyLoc_;
+            xyDesc.numElements = 2;
+            xyDesc.elementType = GL_FLOAT;
+            xyDesc.normalized = false;
+            xyDesc.stride = sizeof(Vertex_XYDxDy);
+            xyDesc.offset = 0;
+            xyDesc.bufferIndex = 0;
+            GlAttribPointerDesc& dispDesc = layout.emplaceLast();
+            dispDesc.index = dispLoc_;
+            dispDesc.numElements = 2;
+            dispDesc.elementType = GL_FLOAT;
+            dispDesc.normalized = false;
+            dispDesc.stride = sizeof(Vertex_XYDxDy);
+            dispDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYDxDy, dx));
+            dispDesc.bufferIndex = 0;
+            GlAttribPointerDesc& xyiDesc = layout.emplaceLast();
+            xyiDesc.index = xyiLoc_;
+            xyiDesc.numElements = 2;
+            xyiDesc.elementType = GL_FLOAT;
+            xyiDesc.normalized = false;
+            xyiDesc.stride = sizeof(Vertex_XYRGBA);
+            xyiDesc.offset = 0;
+            xyiDesc.bufferIndex = 1;
+            xyiDesc.isPerInstance = true;
+            GlAttribPointerDesc& rgbaDesc = layout.emplaceLast();
+            rgbaDesc.index = rgbaLoc_;
+            rgbaDesc.numElements = 4;
+            rgbaDesc.elementType = GL_FLOAT;
+            rgbaDesc.normalized = false;
+            rgbaDesc.stride = sizeof(Vertex_XYRGBA);
+            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRGBA, r));
             rgbaDesc.bufferIndex = 1;
             rgbaDesc.isPerInstance = true;
         }

@@ -49,6 +49,10 @@ struct Vertex_XY {
     float x, y;
 };
 
+struct Vertex_XYDxDy {
+    float x, y, dx, dy;
+};
+
 struct Vertex_XYUV {
     float x, y, u, v;
 };
@@ -930,6 +934,66 @@ void D3d11Engine::createBuiltinShaders_() {
             NULL,
             pixelShader.releaseAndGetAddressOf());
         program->pixelShader_ = pixelShader;
+    }
+
+    D3d11ProgramPtr sreenSpaceDisplacementProgram(
+        new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTextured));
+    sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
+
+    // Create the sreen-space displacement shader (vertex)
+    {
+        D3d11Program* program = sreenSpaceDisplacementProgram.get();
+
+        ComPtr<ID3DBlob> errorBlob;
+        ComPtr<ID3DBlob> vertexShaderBlob;
+        HRESULT hres = D3DCompileFromFile(
+            shaderPath_("screen_space_displacement.v.hlsl").wstring().c_str(),
+            NULL, NULL, "main", "vs_4_0", 0, 0,
+            vertexShaderBlob.releaseAndGetAddressOf(),
+            errorBlob.releaseAndGetAddressOf());
+
+        if (hres < 0) {
+            std::string errString =
+                (errorBlob ? std::string(
+                    static_cast<const char*>(errorBlob->GetBufferPointer()))
+                    : core::format("unknown D3DCompile error (0x{:X}).", hres));
+            throw core::RuntimeError(errString);
+        }
+        errorBlob.reset();
+
+        ComPtr<ID3D11VertexShader> vertexShader;
+        device_->CreateVertexShader(
+            vertexShaderBlob->GetBufferPointer(),
+            vertexShaderBlob->GetBufferSize(),
+            NULL,
+            vertexShader.releaseAndGetAddressOf());
+        program->vertexShader_ = vertexShader;
+
+        // Create Input Layout for XYXoffYoff_iXYRGBA
+        {
+            ComPtr<ID3D11InputLayout> inputLayout;
+            UINT dxOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, dx));
+            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGBA, r));
+            D3D11_INPUT_ELEMENT_DESC layout[] = {
+                {"POSITION",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,        D3D11_INPUT_PER_VERTEX_DATA,   0},
+                {"DISPLACEMENT", 0, DXGI_FORMAT_R32G32_FLOAT,       0, dxOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
+                {"POSITION",     1, DXGI_FORMAT_R32G32_FLOAT,       1, 0,        D3D11_INPUT_PER_INSTANCE_DATA, 1},
+                {"COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, rOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
+            };
+            device_->CreateInputLayout(
+                layout, 4,
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize(),
+                inputLayout.releaseAndGetAddressOf());
+
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRGBA);
+            program->builtinLayouts_[layoutIndex] = inputLayout;
+        }
+    }
+
+    // Create the simple instanced shader (fragment)
+    {
+        sreenSpaceDisplacementProgram->pixelShader_ = simpleProgram->pixelShader_;
     }
 
     // Create depth-stencil State
