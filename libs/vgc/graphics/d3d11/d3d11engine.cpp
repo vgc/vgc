@@ -940,7 +940,7 @@ void D3d11Engine::createBuiltinShaders_() {
         new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTextured));
     sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
 
-    // Create the simple instanced shader (vertex)
+    // Create the sreen-space displacement shader (vertex)
     {
         D3d11Program* program = sreenSpaceDisplacementProgram.get();
 

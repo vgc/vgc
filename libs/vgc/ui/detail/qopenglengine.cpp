@@ -1185,7 +1185,7 @@ void QglEngine::initBuiltinResources_() {
         }
     }
 
-    // Initialize the simple instanced shader
+    // Initialize the sreen-space displacement shader
     {
         QglProgram* program =
             sreenSpaceDisplacementProgram_.get_static_cast<QglProgram>();
