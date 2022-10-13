@@ -375,8 +375,8 @@ struct IterativeSamplingSample {
     Vec2d rightPointNormal;
     Vec2d leftPointNormal;
     double radius;
-    double u;
     double radiusDer;
+    double u;
     Int subdivLevel = 0;
 
     void computeFrom(
