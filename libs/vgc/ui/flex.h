@@ -78,11 +78,42 @@ public:
     ///
     void setDirection(FlexDirection direction);
 
-    /// Returns `0` if the flex direction is `Row` or `RowReverse`,
-    /// and `1` if the flex direction is `Column` or `ColumnReverse`.
+    /// Returns true if the flex direction is `Row` or `RowReverse`. Otherwise
+    /// returns false.
+    ///
+    bool isRow() const {
+        return core::toUnderlying(direction()) <= 1;
+    }
+
+    /// Returns true if the flex direction is `Column` or `ColumnReverse`.
+    /// Otherwise returns false.
+    ///
+    bool isColumn() const {
+        return core::toUnderlying(direction()) > 1;
+    }
+
+    /// Returns `0` if the flex direction is `Row` or `RowReverse`.
+    ///
+    /// Returns `1` if the flex direction is `Column` or `ColumnReverse`.
     ///
     Int mainDirectionIndex() const {
+        return isColumn();
+    }
+
+    /// Returns `1` if the flex direction is `Row` or `RowReverse`.
+    ///
+    /// Returns `0` if the flex direction is `Column` or `ColumnReverse`.
+    ///
+    Int crossDirectionIndex() const {
         return core::toUnderlying(direction()) > 1;
+    }
+
+    /// Returns true if the flex direction is `RowReverse` or `ColumnReverse`.
+    /// Otherwise returns flase.
+    ///
+    bool isReverse() const {
+        return direction() == FlexDirection::RowReverse
+               || direction() == FlexDirection::ColumnReverse;
     }
 
     /// Returns the FlexWrap of this Flex.

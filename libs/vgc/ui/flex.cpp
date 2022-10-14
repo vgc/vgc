@@ -108,10 +108,9 @@ float getGap(bool isRow, const Widget* widget) {
 } // namespace
 
 float Flex::preferredWidthForHeight(float height) const {
-    bool isRow =
-        (direction_ == FlexDirection::Row) || (direction_ == FlexDirection::RowReverse);
+    bool isRow_ = isRow();
     float width = 0.0f;
-    if (isRow) {
+    if (isRow_) {
         float flexTopBottomPadding = getTopBottomPadding(this);
         float flexPaddedHeight = height - flexTopBottomPadding;
         Int numVisibleChildren = 0;
@@ -128,7 +127,7 @@ float Flex::preferredWidthForHeight(float height) const {
             width += childPreferredWidth + childLeftRightMargins;
         }
         if (numVisibleChildren > 0) {
-            float gap = getGap(isRow, this);
+            float gap = getGap(isRow_, this);
             width += (numVisibleChildren - 1) * gap;
         }
     }
@@ -147,10 +146,9 @@ float Flex::preferredWidthForHeight(float height) const {
 }
 
 float Flex::preferredHeightForWidth(float width) const {
-    bool isRow =
-        (direction_ == FlexDirection::Row) || (direction_ == FlexDirection::RowReverse);
+    bool isRow_ = isRow();
     float height = 0.0f;
-    if (isRow) {
+    if (isRow_) {
         for (Widget* child : children()) {
             if (child->visibility() == Visibility::Invisible) {
                 continue;
@@ -176,7 +174,7 @@ float Flex::preferredHeightForWidth(float width) const {
             height += childPreferredHeight + childTopBottomMargins;
         }
         if (numVisibleChildren > 0) {
-            float gap = getGap(isRow, this);
+            float gap = getGap(isRow_, this);
             height += (numVisibleChildren - 1) * gap;
         }
     }
@@ -185,20 +183,15 @@ float Flex::preferredHeightForWidth(float width) const {
 }
 
 geometry::Vec2f Flex::computePreferredSize() const {
-
-    bool isRow =
-        (direction_ == FlexDirection::Row) || (direction_ == FlexDirection::RowReverse);
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-
+    style::LengthOrPercentageOrAuto w = preferredWidth();
+    style::LengthOrPercentageOrAuto h = preferredHeight();
     geometry::Vec2f res;
-    if (w.type() == auto_) {
-        if (h.type() == auto_) {
+    if (w.isAuto()) {
+        if (h.isAuto()) {
 
             // Compute preferred height not knowing any width
             float height = 0;
-            if (!isRow) {
+            if (isColumn()) {
                 for (Widget* child : children()) {
                     if (child->visibility() == Visibility::Invisible) {
                         continue;
@@ -219,7 +212,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
 
             // Compute preferred width not knowing any height
             float width = 0;
-            if (isRow) {
+            if (isRow()) {
                 for (Widget* child : children()) {
                     if (child->visibility() == Visibility::Invisible) {
                         continue;
@@ -246,9 +239,9 @@ geometry::Vec2f Flex::computePreferredSize() const {
                 }
             }
             if (numVisibleChildren > 0) {
-                float gap = getGap(isRow, this);
+                float gap = getGap(isRow(), this);
                 float totalGap = (numVisibleChildren - 1) * gap;
-                if (isRow) {
+                if (isRow()) {
                     width += totalGap;
                 }
                 else {
@@ -260,21 +253,32 @@ geometry::Vec2f Flex::computePreferredSize() const {
         }
         else {
             // (auto, fixed)
-            float height = h.value();
+            // TODO: support percentages
+            float refLength = 0.0f;
+            float valueIfAuto = 0.0f;
+            float height = h.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
             float width = preferredWidthForHeight(height);
             res = {width, height};
         }
     }
     else {
-        if (h.type() == auto_) {
+        if (h.isAuto()) {
             // (fixed, auto)
-            float width = w.value();
+            // TODO: support percentages
+            float refLength = 0.0f;
+            float valueIfAuto = 0.0f;
+            float width = w.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
             float height = preferredHeightForWidth(width);
             res = {width, height};
         }
         else {
             // (fixed, fixed)
-            res = {w.value(), h.value()};
+            // TODO: support percentages
+            float refLength = 0.0f;
+            float valueIfAuto = 0.0f;
+            float width = w.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
+            float height = h.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
+            res = {width, height};
         }
     }
     return res;
@@ -438,10 +442,8 @@ void Flex::updateChildrenGeometry() {
         }
     }
     if (hasVisibleChild) {
-        bool isRow = (direction_ == FlexDirection::Row)
-                     || (direction_ == FlexDirection::RowReverse);
-        bool isReverse = (direction_ == FlexDirection::RowReverse)
-                         || (direction_ == FlexDirection::ColumnReverse);
+        bool isRow_ = isRow();
+        bool isReverse_ = isReverse();
         bool hinting = (style(gs::pixel_hinting) == gs::normal);
         float paddingLeft =
             detail::getLengthOrPercentageInPx(this, ss::padding_left, width());
@@ -451,14 +453,14 @@ void Flex::updateChildrenGeometry() {
             detail::getLengthOrPercentageInPx(this, ss::padding_top, height());
         float paddingBottom =
             detail::getLengthOrPercentageInPx(this, ss::padding_bottom, height());
-        float mainSize = isRow ? width() : height();
-        float crossSize = isRow ? height() : width();
-        float gap = getGap(isRow, this);
-        float preferredMainSize = isRow ? preferredWidthForHeight(crossSize)
-                                        : preferredHeightForWidth(crossSize);
-        float mainPaddingBefore = isRow ? paddingLeft : paddingTop;
-        float crossPaddingBefore = isRow ? paddingTop : paddingLeft;
-        float crossPaddingAfter = isRow ? paddingBottom : paddingRight;
+        float mainSize = isRow_ ? width() : height();
+        float crossSize = isRow_ ? height() : width();
+        float gap = getGap(isRow_, this);
+        float preferredMainSize = isRow_ ? preferredWidthForHeight(crossSize)
+                                         : preferredHeightForWidth(crossSize);
+        float mainPaddingBefore = isRow_ ? paddingLeft : paddingTop;
+        float crossPaddingBefore = isRow_ ? paddingTop : paddingLeft;
+        float crossPaddingAfter = isRow_ ? paddingBottom : paddingRight;
         float paddedCrossSize = crossSize - crossPaddingBefore - crossPaddingAfter;
         float freeSpace = mainSize - preferredMainSize;
         float eps = 1e-6f;
@@ -472,7 +474,7 @@ void Flex::updateChildrenGeometry() {
         // causing an overflow.
         float childStretchBonus = 0;
         float totalStretch = computeTotalStretch(
-            isRow, paddedCrossSize, freeSpace, this, childStretchBonus);
+            isRow_, paddedCrossSize, freeSpace, this, childStretchBonus);
         if (totalStretch < eps) {
             // For now, we stretch evenly as if all childStretch were equal to
             // one. Later, we should instead insert empty space between the items,
@@ -480,15 +482,15 @@ void Flex::updateChildrenGeometry() {
             // https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Box_Alignment
             childStretchBonus = 1;
             totalStretch = computeTotalStretch(
-                isRow, paddedCrossSize, freeSpace, this, childStretchBonus);
+                isRow_, paddedCrossSize, freeSpace, this, childStretchBonus);
         }
         float extraSpacePerStretch = freeSpace / totalStretch;
         float childMainPosition = mainPaddingBefore;
-        Widget* child = isReverse ? lastChild() : firstChild();
+        Widget* child = isReverse_ ? lastChild() : firstChild();
         while (child) {
             if (child->visibility() != Visibility::Invisible) {
                 stretchChild(
-                    isRow,
+                    isRow_,
                     freeSpace,
                     crossSize,
                     extraSpacePerStretch,
@@ -500,7 +502,7 @@ void Flex::updateChildrenGeometry() {
                     gap,
                     hinting);
             }
-            child = isReverse ? child->previousSibling() : child->nextSibling();
+            child = isReverse_ ? child->previousSibling() : child->nextSibling();
         }
     }
 }

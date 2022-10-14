@@ -86,8 +86,8 @@ float getNum(const Widget* w, core::StringId id) {
     return static_cast<float>(w->style(id).valueOrDefault<Number>());
 }
 
-PreferredSize getPreferredSize(const Widget* w, core::StringId id) {
-    return w->style(id).valueOrDefault<PreferredSize>();
+style::LengthOrPercentageOrAuto getPreferredSize(const Widget* w, core::StringId id) {
+    return w->style(id).valueOrDefault<style::LengthOrPercentageOrAuto>();
 }
 
 // UI coordinates are always in pixels
@@ -209,7 +209,10 @@ void detail::GridTrack::Metrics::stepUpdate(const GridCell::DirMetrics& cellMetr
     }
 }
 
-void detail::GridTrack::Metrics::finalizeUpdate(bool hint) {
+void detail::GridTrack::Metrics::finalizeUpdate(
+    const style::Metrics& styleMetrics,
+    bool hint) {
+
     if (widgetPreferredSizeRange.isEmpty()) {
         widgetPreferredSizeRange = {};
     }
@@ -230,7 +233,11 @@ void detail::GridTrack::Metrics::finalizeUpdate(bool hint) {
         minSizeH = cellMinSizeRangeH.pMax();
     }
     else {
-        preferredSizeH = customSize.value();
+        // TODO: handle percentages
+        float scaleFactor = styleMetrics.scaleFactor();
+        float refLength = 0.0f;
+        float valueIfAuto = 0.0f;
+        preferredSizeH = customSize.toPx(scaleFactor, refLength, valueIfAuto);
         minSizeH = preferredSizeH;
         if (hint) {
             preferredSizeH = std::ceil(preferredSizeH);
@@ -249,10 +256,11 @@ geometry::Vec2f Grid::computePreferredSize() const {
     using namespace strings;
     using namespace detail::DirIndex;
 
-    const PreferredSize hPrefSize = preferredWidth();
-    const PreferredSize vPrefSize = preferredHeight();
+    const style::LengthOrPercentageOrAuto hPrefSize = preferredWidth();
+    const style::LengthOrPercentageOrAuto vPrefSize = preferredHeight();
     DirMetrics& hMetrics = metrics_[Horizontal];
     DirMetrics& vMetrics = metrics_[Vertical];
+    const style::Metrics& sMetrics = styleMetrics();
 
     const bool hint = (style(gs::pixel_hinting) == gs::normal);
 
@@ -324,7 +332,7 @@ geometry::Vec2f Grid::computePreferredSize() const {
         }
 
         for (const Track& track : tracks_) {
-            track.metrics_.finalizeUpdate(hint);
+            track.metrics_.finalizeUpdate(sMetrics, hint);
         }
 
         for (Int dir = 0; dir < 2; ++dir) {

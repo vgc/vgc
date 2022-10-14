@@ -51,6 +51,10 @@ float Length::toPx(float scaleFactor) const {
     return convertToPx(valuef(), unit(), scaleFactor);
 }
 
+float Length::toPx(const Metrics& metrics) const {
+    return convertToPx(valuef(), unit(), metrics.scaleFactor());
+}
+
 StyleValue Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
         return StyleValue::invalid();
@@ -118,6 +122,36 @@ StyleValue LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end)
         LengthUnit unit;
         if (isValidLengthUnit(begin->codePointsValue, unit)) {
             return StyleValue::custom(LengthOrAuto(begin->toDouble(), unit));
+        }
+        else {
+            return StyleValue::invalid();
+        }
+    }
+    else {
+        return StyleValue::invalid();
+    }
+}
+
+StyleValue
+LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+    if (begin + 1 != end) {
+        return StyleValue::invalid();
+    }
+    else if (begin->type == StyleTokenType::Percentage) {
+        return StyleValue::custom(LengthOrPercentageOrAuto(begin->toDouble()));
+    }
+    else if (begin->type == StyleTokenType::Identifier) {
+        if (begin->codePointsValue == "auto") {
+            return StyleValue::custom(LengthOrPercentageOrAuto());
+        }
+        else {
+            return StyleValue::invalid();
+        }
+    }
+    else if (begin->type == StyleTokenType::Dimension) {
+        LengthUnit unit;
+        if (isValidLengthUnit(begin->codePointsValue, unit)) {
+            return StyleValue::custom(LengthOrPercentageOrAuto(begin->toDouble(), unit));
         }
         else {
             return StyleValue::invalid();

@@ -340,8 +340,8 @@ private:
     const Widget* widget_;
     detail::LengthContributions widthContributions_;
     detail::LengthContributions heightContributions_;
-    PreferredSize preferredWidth_;
-    PreferredSize preferredHeight_;
+    style::LengthOrPercentageOrAuto preferredWidth_;
+    style::LengthOrPercentageOrAuto preferredHeight_;
     bool hint_;
 };
 

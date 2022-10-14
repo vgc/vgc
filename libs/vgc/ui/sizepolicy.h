@@ -22,8 +22,9 @@
 
 namespace vgc::ui {
 
+/*
 /// \enum vgc::ui::PreferredSizeType
-/// \brief Encode whether a PreferredSize is "auto", and if not, what unit is used.
+/// \brief Encode whether a style::LengthOrPercentageOrAuto is "auto", and if not, what unit is used.
 ///
 // TODO: support "Percentage" and all the dimension units of Android, they are great:
 // https://developer.android.com/guide/topics/resources/more-resources.html#Dimension
@@ -36,70 +37,70 @@ enum class PreferredSizeType {
     Dp
 };
 
-/// \class vgc::ui:::PreferredSize
+/// \class vgc::ui:::style::LengthOrPercentageOrAuto
 /// \brief Encode the value of "preferred-width" or "preferred-height".
 ///
-class VGC_UI_API PreferredSize {
+class VGC_UI_API style::LengthOrPercentageOrAuto {
 public:
-    /// Creates a PreferredSize with the given type and value.
+    /// Creates a style::LengthOrPercentageOrAuto with the given type and value.
     ///
-    PreferredSize(PreferredSizeType type = PreferredSizeType::Auto, float value = 0)
+    style::LengthOrPercentageOrAuto(PreferredSizeType type = PreferredSizeType::Auto, float value = 0)
         : type_(type)
         , value_(value) {
     }
 
-    /// Returns the PreferredSizeType of this PreferredSize.
+    /// Returns the PreferredSizeType of this style::LengthOrPercentageOrAuto.
     ///
     PreferredSizeType type() const {
         return type_;
     }
 
-    /// Sets the PreferredSizeType of this PreferredSize.
+    /// Sets the PreferredSizeType of this style::LengthOrPercentageOrAuto.
     ///
     void setType(PreferredSizeType type) {
         type_ = type;
     }
 
-    /// Returns the value of this PreferredSize.
+    /// Returns the value of this style::LengthOrPercentageOrAuto.
     ///
     float value() const {
         return value_;
     }
 
-    /// Sets the value of this PreferredSize.
+    /// Sets the value of this style::LengthOrPercentageOrAuto.
     ///
     void setValue(float value) {
         value_ = value;
     }
 
-    /// Returns true if the PreferredSizeType of this PreferredSize is
+    /// Returns true if the PreferredSizeType of this style::LengthOrPercentageOrAuto is
     /// PreferredSizeType::Auto.
     ///
     bool isAuto() const {
         return type_ == PreferredSizeType::Auto;
     }
 
-    /// Returns whether the two PreferredSize are equal.
+    /// Returns whether the two style::LengthOrPercentageOrAuto are equal.
     ///
-    /// Two PreferredSize are considered equal if and only if:
+    /// Two style::LengthOrPercentageOrAuto are considered equal if and only if:
     /// 1. they have the same type, and
     /// 2. if the type is not Auto, they have the same value.
     ///
     /// In particular, note that no unit conversion in performed to determined
     /// equality.
     ///
-    friend bool operator==(const PreferredSize& p1, const PreferredSize& p2);
+    friend bool operator==(const style::LengthOrPercentageOrAuto& p1, const style::LengthOrPercentageOrAuto& p2);
 
     /// Returns whether the two SizePolicy are different.
     ///
-    friend bool operator!=(const PreferredSize& p1, const PreferredSize& p2);
+    friend bool operator!=(const style::LengthOrPercentageOrAuto& p1, const style::LengthOrPercentageOrAuto& p2);
 
 private:
     PreferredSizeType type_;
     float value_;
 };
 
-inline bool operator==(const PreferredSize& p1, const PreferredSize& p2) {
+inline bool operator==(const style::LengthOrPercentageOrAuto& p1, const style::LengthOrPercentageOrAuto& p2) {
     // XXX Should we instead use exact equality? And implement a separate isNear() method?
     const float eps = 1e-6f;
     return p1.type() == p2.type()
@@ -107,7 +108,7 @@ inline bool operator==(const PreferredSize& p1, const PreferredSize& p2) {
                || core::isNear(p1.value(), p2.value(), eps));
 }
 
-inline bool operator!=(const PreferredSize& p1, const PreferredSize& p2) {
+inline bool operator!=(const style::LengthOrPercentageOrAuto& p1, const style::LengthOrPercentageOrAuto& p2) {
     return !(p1 == p2);
 }
 
@@ -241,15 +242,15 @@ public:
         return SizePolicy(type, value, 0, 0);
     }
 
-    /// Returns the PreferredSize of this SizePolicy.
+    /// Returns the style::LengthOrPercentageOrAuto of this SizePolicy.
     ///
-    PreferredSize preferredSize() const {
+    style::LengthOrPercentageOrAuto preferredSize() const {
         return preferred_;
     }
 
-    /// Sets the PreferredSize of this SizePolicy.
+    /// Sets the style::LengthOrPercentageOrAuto of this SizePolicy.
     ///
-    void setPreferredSize(PreferredSize preferred) {
+    void setPreferredSize(style::LengthOrPercentageOrAuto preferred) {
         preferred_ = preferred;
     }
 
@@ -265,13 +266,13 @@ public:
         preferred_.setType(type);
     }
 
-    /// Returns the PreferredSize's value of this SizePolicy.
+    /// Returns the style::LengthOrPercentageOrAuto's value of this SizePolicy.
     ///
     float preferredSizeValue() const {
         return preferred_.value();
     }
 
-    /// Sets the PreferredSize's value of this SizePolicy.
+    /// Sets the style::LengthOrPercentageOrAuto's value of this SizePolicy.
     ///
     void setPreferredSizeValue(float value) {
         preferred_.setValue(value);
@@ -310,7 +311,7 @@ public:
     friend bool operator!=(const SizePolicy& p1, const SizePolicy& p2);
 
 private:
-    PreferredSize preferred_;
+    style::LengthOrPercentageOrAuto preferred_;
     float stretch_;
     float shrink_;
 };
@@ -326,7 +327,7 @@ inline bool operator==(const SizePolicy& p1, const SizePolicy& p2) {
 inline bool operator!=(const SizePolicy& p1, const SizePolicy& p2) {
     return !(p1 == p2);
 }
-
+*/
 } // namespace vgc::ui
 
 #endif // VGC_UI_SIZEPOLICY_H

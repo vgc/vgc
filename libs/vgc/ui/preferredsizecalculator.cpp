@@ -83,15 +83,19 @@ namespace {
 
 float compute_(
     const style::Metrics& metrics,
-    const PreferredSize& preferredSize,
+    const style::LengthOrPercentageOrAuto& preferredSize,
     const detail::LengthContributions& contributions) {
 
-    // TODO: Change PreferredSize to LengthOrAuto, and use the toPx() function
+    // TODO: Change style::LengthOrPercentageOrAuto to LengthOrAuto, and use the toPx() function
     if (preferredSize.isAuto()) {
         return contributions.compute();
     }
     else {
-        return metrics.scaleFactor() * preferredSize.value();
+        // TODO: support percentages
+        float scaleFactor = metrics.scaleFactor();
+        float refLength = 0.0f;
+        float valueIfAuto = 0.0f;
+        return preferredSize.toPx(scaleFactor, refLength, valueIfAuto);
     }
 }
 

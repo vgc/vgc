@@ -115,7 +115,7 @@ public:
     Calculator(const MenuButton* button)
         : calc_(button)
         , mainDir_(button->mainDirectionIndex())
-        , crossDir_(1 - mainDir_) {
+        , crossDir_(button->crossDirectionIndex()) {
     }
 
     void addTrackIfVisible(Widget* item, const geometry::Vec2f& overrides) {
@@ -144,6 +144,7 @@ public:
             core::StringId gap = (mainDir_ == 0) ? strings::column_gap : strings::row_gap;
             calc_.addTo(mainDir_, gap, numTracks_ - 1);
         }
+        //calc_.addPaddingAndBorder();
         return calc_.compute();
     }
 
@@ -177,14 +178,10 @@ void MenuButton::updateChildrenGeometry() {
     const geometry::Vec2f size = this->size();
 
     const bool hint = (style(gs::pixel_hinting) == gs::normal);
-    const Margins padding(
-        getSpacing(this, ss::padding_top, hint),
-        getSpacing(this, ss::padding_right, hint),
-        getSpacing(this, ss::padding_bottom, hint),
-        getSpacing(this, ss::padding_left, hint));
 
-    const geometry::Rect2f contentBox = geometry::Rect2f({}, size) - padding;
-    if (contentBox.width() <= 0 || contentBox.height() <= 0) {
+    const geometry::Rect2f contentRect_ = contentRect();
+    const Margins paddingAndBorder(rect(), contentRect_);
+    if (contentRect_.width() <= 0 || contentRect_.height() <= 0) {
         iconWidget()->updateGeometry(0, 0, 0, 0);
         textLabel()->updateGeometry(0, 0, 0, 0);
         shortcutLabel()->updateGeometry(0, 0, 0, 0);
@@ -211,11 +208,11 @@ void MenuButton::updateChildrenGeometry() {
         [[fallthrough]];
     case FlexDirection::Column: {
         // vertical layout
-        const float gapH = getSpacing(this, column_gap, hint);
-        float wc = contentBox.width();
-        float hc = contentBox.height();
-        float xc = padding.left();
-        float y0 = padding.top();
+        const float gapH = detail::getLengthOrPercentageInPx(this, row_gap, height());
+        float wc = contentRect_.width();
+        float hc = contentRect_.height();
+        float xc = paddingAndBorder.left();
+        float y0 = paddingAndBorder.top();
         float y4 = y0 + hc;
         float hr = hc;
         float hArrow = allocSize(arrowSize, hr);
@@ -252,19 +249,19 @@ void MenuButton::updateChildrenGeometry() {
     case FlexDirection::Row:
     default: {
         // horizontal layout
-        const float gapH = getSpacing(this, column_gap, hint);
-        float wc = contentBox.width();
-        float hc = contentBox.height();
-        float yc = padding.top();
-        float x0 = padding.left();
+        const float gapW = detail::getLengthOrPercentageInPx(this, column_gap, width());
+        float wc = contentRect_.width();
+        float hc = contentRect_.height();
+        float yc = paddingAndBorder.top();
+        float x0 = paddingAndBorder.left();
         float x4 = x0 + wc;
         float wr = wc;
         float wArrow = allocSize(arrowSize, wr);
-        float wGap3 = (wArrow > 0.f) ? allocSize(gapH, wr) : 0.f;
+        float wGap3 = (wArrow > 0.f) ? allocSize(gapW, wr) : 0.f;
         float wIcon = allocSize(iconSize.x(), wr);
-        float wGap1 = (wIcon > 0.f) ? allocSize(gapH, wr) : 0.f;
+        float wGap1 = (wIcon > 0.f) ? allocSize(gapW, wr) : 0.f;
         float wShortcut = allocSize(shortcutSize.x(), wr);
-        float wGap2 = (wShortcut > 0.f) ? allocSize(gapH, wr) : 0.f;
+        float wGap2 = (wShortcut > 0.f) ? allocSize(gapW, wr) : 0.f;
         float wText = wr;
         float x = x0;
         if (!reverse) {

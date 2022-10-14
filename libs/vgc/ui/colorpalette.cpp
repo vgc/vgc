@@ -2116,25 +2116,32 @@ float ColorPaletteSelector::preferredHeightForWidth(float width) const {
 }
 
 geometry::Vec2f ColorPaletteSelector::computePreferredSize() const {
+
     geometry::Vec2f res(0, 0);
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-    if (w.type() != auto_) {
-        res[0] = w.value();
-    }
-    else {
+    style::LengthOrPercentageOrAuto w = preferredWidth();
+    style::LengthOrPercentageOrAuto h = preferredHeight();
+    float scaleFactor = styleMetrics().scaleFactor();
+    float refLength = 0.0f;
+    float valueIfAuto = 0.0f;
+
+    if (w.isAuto()) {
         // TODO: something better , e.g., based on the number of
         // hue/saturation/lightness steps?
-        res[0] = 100.0f;
-    }
-    if (h.type() != auto_) {
-        res[1] = h.value();
+        style::Length autoWidth(100.0f, style::LengthUnit::Dp);
+        res[0] = autoWidth.toPx(scaleFactor);
     }
     else {
+        res[0] = w.toPx(scaleFactor, refLength, valueIfAuto);
+    }
+
+    if (h.isAuto()) {
         Metrics m = computeMetricsFromWidth_(res[0]);
         res[1] = m.height;
     }
+    else {
+        res[1] = h.toPx(scaleFactor, refLength, valueIfAuto);
+    }
+
     return res;
 }
 
@@ -2528,14 +2535,17 @@ void ColorListView::onPaintCreate(graphics::Engine* engine) {
 namespace {
 
 float getItemLengthInPx(style::StylableObject* item, core::StringId property) {
-    PreferredSize p = item->style(property).to<PreferredSize>();
-    if (p.isAuto()) {
-        return 10.0f;
-    }
-    else {
-        // TODO: convert units
-        return p.value();
-    }
+
+    const style::Length lengthIfAuto(10.0f, style::LengthUnit::Dp);
+    const style::Metrics& metrics = item->styleMetrics();
+
+    style::LengthOrPercentageOrAuto p =
+        item->style(property).to<style::LengthOrPercentageOrAuto>();
+
+    // TODO: handle percentages
+    float refLength = 0.0f;
+    float valueIfAuto = lengthIfAuto.toPx(metrics);
+    return p.toPx(metrics, refLength, valueIfAuto);
 }
 
 } // namespace
@@ -2553,7 +2563,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
             updateMetrics_();
             const Metrics& m = metrics_;
 
-            float scaleFactor = 1;
+            float scaleFactor = styleMetrics().scaleFactor();
             float borderWidth = detail::getLengthInPx(item_.get(), ss::border_width);
             //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
             style::BorderRadiuses radiuses = style::BorderRadiuses(item_.get());
@@ -2720,30 +2730,38 @@ float ColorListView::preferredHeightForWidth(float width) const {
 }
 
 geometry::Vec2f ColorListView::computePreferredSize() const {
+
     geometry::Vec2f res(0, 0);
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-    if (w.type() != auto_) {
-        res[0] = w.value();
-    }
-    else {
+    style::LengthOrPercentageOrAuto w = preferredWidth();
+    style::LengthOrPercentageOrAuto h = preferredHeight();
+    float scaleFactor = styleMetrics().scaleFactor();
+    float refLength = 0.0f;
+    float valueIfAuto = 0.0f;
+
+    if (w.isAuto()) {
         // TODO: something better?
-        res[0] = 100.0f;
-    }
-    if (h.type() != auto_) {
-        res[1] = h.value();
+        style::Length autoWidth(100.0f, style::LengthUnit::Dp);
+        res[0] = autoWidth.toPx(scaleFactor);
     }
     else {
+        res[0] = w.toPx(scaleFactor, refLength, valueIfAuto);
+    }
+
+    if (h.isAuto()) {
         Metrics m = computeMetricsFromWidth_(res[0]);
         res[1] = m.height;
     }
+    else {
+        res[1] = h.toPx(scaleFactor, refLength, valueIfAuto);
+    }
+
     return res;
 }
 
 ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) const {
 
     namespace gs = graphics::strings;
+    const style::Length gap(4.0f, style::LengthUnit::Dp);
 
     // Note: in order to fill the available width while being "justified", we
     // need to stretch either the gap between the items, or the items
@@ -2755,7 +2773,7 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     m.itemPreferredWidth = getItemLengthInPx(item_.get(), strings::preferred_width);
     m.numColumns = static_cast<Int>(std::round(width / m.itemPreferredWidth));
     m.numColumns = (std::max)(Int(1), m.numColumns);
-    m.gap = 4;
+    m.gap = gap.toPx(styleMetrics());
     m.itemWidth = (width - (m.numColumns - 1) * m.gap) / m.numColumns;
     m.itemHeight = hint(m.itemWidth, m.hinting);
     m.numRows = (numColors() + m.numColumns - 1) / m.numColumns;

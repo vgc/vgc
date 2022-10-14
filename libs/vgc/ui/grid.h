@@ -98,7 +98,7 @@ struct GridTrack {
     struct Metrics {
         // size defined by grid-template-rows, grid-template-columns
         //              or grid-auto-rows, grid-auto-columns.
-        PreferredSize customSize;
+        style::LengthOrPercentageOrAuto customSize;
 
         // sizes below are cross track
         //----------------------------
@@ -129,7 +129,7 @@ struct GridTrack {
         float shrinkWeight = 0;
 
         void stepUpdate(const GridCell::DirMetrics& cellMetrics);
-        void finalizeUpdate(bool hint);
+        void finalizeUpdate(const style::Metrics& styleMetrics, bool hint);
     };
     mutable Metrics metrics_;
 
@@ -295,7 +295,7 @@ private:
     struct DirMetrics {
         // hinted if hinting is on
         geometry::Vec2f fixedPaddingH = {};
-        PreferredSize autoSize = {};
+        style::LengthOrPercentageOrAuto autoSize = {};
         float gapSizeH = 0;
         float autoPreferredSizeH = 0;
     };

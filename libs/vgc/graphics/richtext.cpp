@@ -95,8 +95,8 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto white_         = StyleValue::custom(core::colors::white);
     auto blueish_       = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
     auto transparent_   = StyleValue::custom(core::colors::transparent);
-    auto zero_          = StyleValue::number(0.0f);
-    auto one_           = StyleValue::number(1.0f);
+    auto zerol_         = StyleValue::custom(style::Length());
+    auto zerolp_        = StyleValue::custom(style::LengthOrPercentage());
     auto zerobr_        = StyleValue::custom(style::BorderRadius());
     auto twelve_        = StyleValue::custom(style::Length(12.0f, style::LengthUnit::Dp));
     auto autol_         = StyleValue::custom(style::LengthOrAuto());
@@ -107,15 +107,15 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto table = std::make_shared<style::StylePropertySpecTable>();
 
     table->insert(background_color,                 transparent_,   false, &style::parseColor);
-    table->insert(margin_top,                       zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(margin_right,                     zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(margin_bottom,                    zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(margin_left,                      zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(padding_top,                      zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(padding_right,                    zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(padding_bottom,                   zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(padding_left,                     zero_,          false, &style::LengthOrPercentage::parse);
-    table->insert(border_width,                     zero_,          false, &style::Length::parse);
+    table->insert(margin_top,                       zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(margin_right,                     zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(margin_bottom,                    zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(margin_left,                      zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_top,                      zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_right,                    zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_bottom,                   zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_left,                     zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(border_width,                     zerol_,         false, &style::Length::parse);
     table->insert(border_color,                     black_,         false, &style::parseColor);
     table->insert(border_top_left_radius,           zerobr_,        false, &style::BorderRadius::parse);
     table->insert(border_top_right_radius,          zerobr_,        false, &style::BorderRadius::parse);

@@ -255,12 +255,12 @@ geometry::Rect2f Widget::contentRect() const {
         getLengthOrPercentageInPx(this, ss::padding_left, w));
     geometry::Rect2f res = rect() - border - padding;
     if (res.xMin() > res.xMax()) {
-        float x = 0.5 * (res.xMin() + res.xMax());
+        float x = 0.5f * (res.xMin() + res.xMax());
         res.setXMin(x);
         res.setXMax(x);
     }
     if (res.yMin() > res.yMax()) {
-        float y = 0.5 * (res.yMin() + res.yMax());
+        float y = 0.5f * (res.yMin() + res.yMax());
         res.setYMin(y);
         res.setYMax(y);
     }
@@ -308,8 +308,8 @@ void Widget::updateGeometry() {
     }
 }
 
-PreferredSize Widget::preferredWidth() const {
-    return style(strings::preferred_width).to<PreferredSize>();
+style::LengthOrPercentageOrAuto Widget::preferredWidth() const {
+    return style(strings::preferred_width).to<style::LengthOrPercentageOrAuto>();
 }
 
 float Widget::horizontalStretch() const {
@@ -320,8 +320,8 @@ float Widget::horizontalShrink() const {
     return style(strings::horizontal_shrink).toFloat();
 }
 
-PreferredSize Widget::preferredHeight() const {
-    return style(strings::preferred_height).to<PreferredSize>();
+style::LengthOrPercentageOrAuto Widget::preferredHeight() const {
+    return style(strings::preferred_height).to<style::LengthOrPercentageOrAuto>();
 }
 
 float Widget::preferredWidthForHeight(float) const {
@@ -1315,15 +1315,14 @@ bool Widget::onKeyRelease(QKeyEvent* event) {
 }
 
 geometry::Vec2f Widget::computePreferredSize() const {
-    // TODO: convert units if any.
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-    if (w.type() != auto_ && h.type() != auto_) {
-        return geometry::Vec2f();
-    }
+    float scaleFactor = styleMetrics().scaleFactor();
+    float refLength = 0.0f;
+    float valueIfAuto = 0.0f;
+    style::LengthOrPercentageOrAuto w = preferredWidth();
+    style::LengthOrPercentageOrAuto h = preferredHeight();
     return geometry::Vec2f(
-        w.type() == auto_ ? 0 : w.value(), h.type() == auto_ ? 0 : h.value());
+        w.toPx(scaleFactor, refLength, valueIfAuto),
+        h.toPx(scaleFactor, refLength, valueIfAuto));
 }
 
 void Widget::updateChildrenGeometry() {
@@ -1371,38 +1370,14 @@ StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
-StyleValue parseStylePreferredSize(StyleTokenIterator begin, StyleTokenIterator end) {
-    // For now, we only support 'auto' or a unique Dimension token with a "dp" unit
-    if (begin == end) {
-        return StyleValue::invalid();
-    }
-    else if (
-        begin->type == StyleTokenType::Identifier             //
-        && begin->codePointsValue == graphics::strings::auto_ //
-        && begin + 1 == end) {
-
-        return StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
-    }
-    else if (
-        begin->type == StyleTokenType::Dimension //
-        && begin->codePointsValue == "dp"        //
-        && begin + 1 == end) {
-
-        return StyleValue::custom(PreferredSize(PreferredSizeType::Dp, begin->toFloat()));
-    }
-    else {
-        return StyleValue::invalid();
-    }
-}
-
 // clang-format off
 
 style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     using namespace strings;
 
-    auto autosize    = StyleValue::custom(PreferredSize(PreferredSizeType::Auto));
-    auto zero        = StyleValue::number(0.0f);
+    auto autosize    = StyleValue::custom(style::LengthOrPercentageOrAuto());
+    auto zerolp      = StyleValue::custom(style::LengthOrPercentage());
     auto one         = StyleValue::number(1.0f);
 
     // Start with the same specs as RichTextSpan
@@ -1412,12 +1387,12 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     // Insert additional specs
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
 
-    table->insert(preferred_height,     autosize, false, &parseStylePreferredSize);
-    table->insert(preferred_width,      autosize, false, &parseStylePreferredSize);
-    table->insert(column_gap,           zero,     false, &style::LengthOrPercentage::parse);
-    table->insert(row_gap,              zero,     false, &style::LengthOrPercentage::parse);
-    table->insert(grid_auto_columns,    autosize, false, &parseStylePreferredSize);
-    table->insert(grid_auto_rows,       autosize, false, &parseStylePreferredSize);
+    table->insert(preferred_height,     autosize, false, &style::LengthOrPercentageOrAuto::parse);
+    table->insert(preferred_width,      autosize, false, &style::LengthOrPercentageOrAuto::parse);
+    table->insert(column_gap,           zerolp,   false, &style::LengthOrPercentage::parse);
+    table->insert(row_gap,              zerolp,   false, &style::LengthOrPercentage::parse);
+    table->insert(grid_auto_columns,    autosize, false, &style::LengthOrPercentageOrAuto::parse);
+    table->insert(grid_auto_rows,       autosize, false, &style::LengthOrPercentageOrAuto::parse);
     table->insert(horizontal_stretch,   one,      false, &parseStyleNumber);
     table->insert(horizontal_shrink,    one,      false, &parseStyleNumber);
     table->insert(vertical_stretch,     one,      false, &parseStyleNumber);

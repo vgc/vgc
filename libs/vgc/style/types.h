@@ -20,6 +20,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/style/api.h>
+#include <vgc/style/metrics.h>
 #include <vgc/style/style.h>
 
 namespace vgc::style {
@@ -77,6 +78,10 @@ public:
     /// a device-independent pixel (dp).
     ///
     float toPx(float scaleFactor) const;
+
+    /// Returns the length converted to physical pixels, as a float.
+    ///
+    float toPx(const Metrics& metrics) const;
 
     /// Parses the given range of `StyleToken`s as a `Length`.
     ///
@@ -301,10 +306,11 @@ public:
         return unit_;
     }
 
-    /// Returns the length converted to physical pixels, as a double. The
-    /// `scaleFactor` argument represents how many physical pixels there is in
-    /// a device-independent pixel (dp). The `valueIfAuto` is the value that
-    /// should be returned if `isAuto()` is true;
+    /// Returns the length converted to `px`.
+    ///
+    /// The `scaleFactor` argument is used to convert a `Length` from `dp` to `px`.
+    ///
+    /// The `refLength` is used to convert a `Percentage` to `px`.
     ///
     template<typename Float>
     Float toPx(Float scaleFactor, Float valueIfAuto) const {
@@ -338,6 +344,149 @@ private:
     double value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
     bool isAuto_ = true;
+};
+
+/// \class vgc::style::LengthOrPercentageOrAuto
+/// \brief A value which is either a `Length`, a `Percentage`, or the keyword `auto`.
+///
+class VGC_STYLE_API LengthOrPercentageOrAuto {
+public:
+    /// Constructs a `LengthOrPercentageOrAuto` initialized to a length with
+    /// the given value and unit.
+    ///
+    LengthOrPercentageOrAuto(double value, LengthUnit unit)
+        : value_(value)
+        , unit_(unit)
+        , type_(Type_::Length) {
+    }
+
+    /// Constructs a `LengthOrPercentageOrAuto` initialized to a percentage
+    /// with the given value.
+    ///
+    LengthOrPercentageOrAuto(double value)
+        : value_(value)
+        , type_(Type_::Percentage) {
+    }
+
+    /// Constructs a `LengthOrPercentageOrAuto` initialized to `auto`.
+    ///
+    LengthOrPercentageOrAuto()
+        : type_(Type_::Auto) {
+    }
+
+    /// Returns whether this `LengthOrPercentageOrAuto` is a length.
+    ///
+    bool isLength() const {
+        return type_ == Type_::Length;
+    }
+
+    /// Returns whether this `LengthOrPercentageOrAuto` is a percentage.
+    ///
+    bool isPercentage() const {
+        return type_ == Type_::Percentage;
+    }
+
+    /// Returns whether this `LengthOrPercentageOrAuto` is `auto`.
+    ///
+    bool isAuto() const {
+        return type_ == Type_::Auto;
+    }
+
+    /// Returns the numerical value of the length or percentage. This function
+    /// assumes that `isAuto()` returns false.
+    ///
+    double value() const {
+        return value_;
+    }
+
+    /// Returns the numerical value of the length or percentage as a `float`.
+    /// This function assumes that `isAuto()` returns false.
+    ///
+    float valuef() const {
+        return static_cast<float>(value_);
+    }
+
+    /// Returns the unit of the length. This function assumes that
+    /// `isLength()` returns true.
+    ///
+    LengthUnit unit() const {
+        return unit_;
+    }
+
+    /// Converts this `LengthOrPercentageOrAuto` to a value in 'px'.
+    ///
+    /// The `scaleFactor` argument is used to convert a `Length` from `dp` to `px`.
+    ///
+    /// The `refLength` is used to convert a `Percentage` to `px`.
+    ///
+    /// The `valueIfAuto` is the value that is returned if `isAuto()` is true.
+    ///
+    template<typename Float>
+    Float toPx(Float scaleFactor, Float refLength, Float valueIfAuto) const {
+        switch (type_) {
+        case Type_::Length:
+            return Length(value_, unit_).toPx(scaleFactor);
+        case Type_::Percentage:
+            return Percentage(value_).toPx(refLength);
+        case Type_::Auto:
+            return valueIfAuto;
+        }
+        return valueIfAuto; // silence warning
+    }
+
+    /// Converts this `LengthOrPercentageOrAuto` to a value in 'px'.
+    ///
+    /// The `scaleFactor` argument is used to convert a `Length` from `dp` to `px`.
+    ///
+    /// The `refLength` is used to convert a `Percentage` to `px`.
+    ///
+    /// The `valueIfAuto` is the value that is returned if `isAuto()` is true.
+    ///
+    float toPx(const Metrics& metrics, float refLength, float valueIfAuto) const {
+        return toPx(metrics.scaleFactor(), refLength, valueIfAuto);
+    }
+
+    /// Parses the given range of `StyleToken`s as a `LengthOrPercentageOrAuto`.
+    ///
+    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrPercentageOrAuto`. Otherwise, return a `StyleValue`
+    /// holding a `LengthOrPercentageOrAuto`.
+    ///
+    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+
+    /// Returns whether the two given `LengthOrAuto` are equal.
+    ///
+    friend bool
+    operator==(const LengthOrPercentageOrAuto& v1, const LengthOrPercentageOrAuto& v2) {
+        switch (v1.type_) {
+        case Type_::Length:
+            return v2.isLength()
+                   && Length(v1.value_, v1.unit_) == Length(v2.value_, v2.unit_);
+        case Type_::Percentage:
+            return v2.isPercentage() && Percentage(v1.value_) == Percentage(v2.value_);
+        case Type_::Auto:
+            return v2.isAuto();
+        }
+        return false; // silence warning
+    }
+
+    /// Returns whether the two given `LengthOrPercentageOrAuto` are different.
+    ///
+    friend bool
+    operator!=(const LengthOrPercentageOrAuto& v1, const LengthOrPercentageOrAuto& v2) {
+        return !(v1 == v2);
+    }
+
+private:
+    enum class Type_ : Int8 {
+        Length,
+        Percentage,
+        Auto
+    };
+
+    double value_ = 0;
+    LengthUnit unit_ = LengthUnit::Dp;
+    Type_ type_ = Type_::Auto;
 };
 
 /// \class vgc::style::BorderRadiusInPx

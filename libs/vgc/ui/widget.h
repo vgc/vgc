@@ -473,7 +473,7 @@ public:
 
     /// Returns the preferred width of this widget.
     ///
-    PreferredSize preferredWidth() const;
+    style::LengthOrPercentageOrAuto preferredWidth() const;
 
     /// Returns the width stretch factor of this widget.
     ///
@@ -485,7 +485,7 @@ public:
 
     /// Returns the preferred height of this widget.
     ///
-    PreferredSize preferredHeight() const;
+    style::LengthOrPercentageOrAuto preferredHeight() const;
 
     /// Returns the preferred width of the widget for a given height.
     ///
@@ -612,19 +612,6 @@ public:
     /// needs to be repainted for a frame.
     ///
     void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
-
-    /// Returns the widget's scale factor. This is the factor to be used to
-    /// convert from `dp` units to `px` units.
-    ///
-    float scaleFactor() {
-        return root()->scaleFactor_;
-    }
-
-    /// Sets the scale factor. This should only be called on the root.
-    ///
-    void setScaleFactor(float s) {
-        root()->scaleFactor_ = s;
-    }
 
     /// Returns the `background-color` style attribute of this widget.
     ///
@@ -1351,10 +1338,6 @@ private:
     style::BorderRadiuses borderRadiuses_;
     bool backgroundChanged_ = true;
     // TODO: border width/style
-
-    // Scaling factor. Only valid for root.
-    // TODO: move to WidgetTree
-    float scaleFactor_ = 1.0;
 
     // Events
     HandledEventPolicy handledEventPolicy_ = HandledEventPolicy::Skip;
