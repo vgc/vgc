@@ -105,7 +105,7 @@ public:
     /// Returns `0` if the flex direction is `Column` or `ColumnReverse`.
     ///
     Int crossDirectionIndex() const {
-        return core::toUnderlying(direction()) > 1;
+        return isRow();
     }
 
     /// Returns true if the flex direction is `RowReverse` or `ColumnReverse`.

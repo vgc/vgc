@@ -144,11 +144,11 @@ public:
             core::StringId gap = (mainDir_ == 0) ? strings::column_gap : strings::row_gap;
             calc_.addTo(mainDir_, gap, numTracks_ - 1);
         }
-        //calc_.addPaddingAndBorder();
+        calc_.addPaddingAndBorder();
         return calc_.compute();
     }
 
-private:
+    //private:
     PreferredSizeCalculator calc_;
     Int mainDir_;
     Int crossDir_;
@@ -160,11 +160,17 @@ private:
 
 geometry::Vec2f MenuButton::computePreferredSize() const {
     // we must return preferred size without the layouting overrides
+    static int i = 0;
+    ++i;
+    if (i == 8) {
+        VGC_DEBUG_TMP("i == 8");
+    }
     Calculator calc(this);
     calc.addTrackIfVisible(iconWidget(), iconSizeOverrides_);
     calc.addTrackIfVisible(textLabel(), textSizeOverrides_);
     calc.addTrackIfVisible(shortcutLabel(), shortcutSizeOverrides_);
     calc.addTrackIfPositive(arrowSizeOverride_);
+    VGC_DEBUG_TMP("i = {}, numTracks = {}", i, calc.numTracks_);
     return calc.compute();
 }
 
@@ -175,12 +181,12 @@ void MenuButton::updateChildrenGeometry() {
 
     using namespace strings;
 
-    const geometry::Vec2f size = this->size();
-
     const bool hint = (style(gs::pixel_hinting) == gs::normal);
 
     const geometry::Rect2f contentRect_ = contentRect();
     const Margins paddingAndBorder(rect(), contentRect_);
+    VGC_DEBUG_TMP_EXPR(contentRect_);
+    //VGC_DEBUG_TMP("menu button margins: {}", paddingAndBorder);
     if (contentRect_.width() <= 0 || contentRect_.height() <= 0) {
         iconWidget()->updateGeometry(0, 0, 0, 0);
         textLabel()->updateGeometry(0, 0, 0, 0);
