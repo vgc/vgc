@@ -235,11 +235,11 @@ template<CornerType cornerType>
 void insertQuarterEllipse(
     core::FloatArray& a,
     const geometry::Rect2f& rect,
-    const style::BorderRadiusesInPx<float>& radiuses,
+    const style::BorderRadiusesInPx& radiuses,
     const QuarterEllipseParams& params) {
 
     geometry::Vec2f corner = rect.corner(cornerType);
-    style::BorderRadiusInPx<float> radius = radiuses[cornerType];
+    style::BorderRadiusInPx radius = radiuses[cornerType];
 
     if (radius.horizontalRadius() < params.eps || radius.verticalRadius() < params.eps) {
         a.extend({corner.x(), corner.y()});
@@ -289,12 +289,12 @@ void insertQuarterEllipseWithBorder(
     core::FloatArray& a,
     const geometry::Rect2f& innerRect,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& innerRadiuses,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
-    const style::BorderRadiusesInPx<float>& refRadiuses,
+    const style::BorderRadiusesInPx& innerRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
+    const style::BorderRadiusesInPx& refRadiuses,
     const QuarterEllipseParams& params) {
 
-    style::BorderRadiusInPx<float> radius = refRadiuses[cornerType];
+    style::BorderRadiusInPx radius = refRadiuses[cornerType];
 
     float minRadius = (std::min)(radius.horizontalRadius(), radius.verticalRadius());
     Int numSegments =
@@ -309,11 +309,11 @@ void insertQuarterEllipseWithBorder(
     core::FloatArray& a,
     const geometry::Rect2f& innerRect,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& innerRadiuses,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const style::BorderRadiusesInPx& innerRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
     const QuarterEllipseParams& params) {
 
-    style::BorderRadiusInPx<float> outerRadius = outerRadiuses[cornerType];
+    style::BorderRadiusInPx outerRadius = outerRadiuses[cornerType];
 
     float minOuterRadius =
         (std::min)(outerRadius.horizontalRadius(), outerRadius.verticalRadius());
@@ -329,15 +329,15 @@ void insertQuarterEllipseWithBorder(
     core::FloatArray& a,
     const geometry::Rect2f& innerRect,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& innerRadiuses,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const style::BorderRadiusesInPx& innerRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
     const Int numSegments,
     const QuarterEllipseParams& params) {
 
     geometry::Vec2f innerCorner = getCorner<cornerType>(innerRect);
     geometry::Vec2f outerCorner = getCorner<cornerType>(outerRect);
-    style::BorderRadiusInPx<float> innerRadius = innerRadiuses[cornerType];
-    style::BorderRadiusInPx<float> outerRadius = outerRadiuses[cornerType];
+    style::BorderRadiusInPx innerRadius = innerRadiuses[cornerType];
+    style::BorderRadiusInPx outerRadius = outerRadiuses[cornerType];
 
     if (outerRadius.horizontalRadius() < params.eps
         || outerRadius.verticalRadius() < params.eps) {
@@ -458,7 +458,7 @@ void insertRect(
     float borderWidth,
     float pixelSize) {
 
-    style::BorderRadiusesInPx<float> outerRadiuses =
+    style::BorderRadiusesInPx outerRadiuses =
         outerRadiuses_.toPx(styleMetrics, outerRect.width(), outerRect.height());
     insertRect(
         a,
@@ -476,8 +476,8 @@ void insertRect(
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
-    const style::BorderRadiusesInPx<float>& refRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
+    const style::BorderRadiusesInPx& refRadiuses,
     float borderWidth,
     float pixelSize) {
 
@@ -506,7 +506,7 @@ void insertRect(
     ui::Margins borderWidths(outerRect, innerRect);
 
     // Compute inner radiuses in px
-    style::BorderRadiusesInPx<float> innerRadiuses = outerRadiuses.offsetted(
+    style::BorderRadiusesInPx innerRadiuses = outerRadiuses.offsetted(
         -borderWidths.top(),
         -borderWidths.right(),
         -borderWidths.bottom(),

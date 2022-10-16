@@ -2610,16 +2610,16 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
 
                 if (i == selectedColorIndex_) {
 
-                    style::BorderRadiusesInPx<float> refRadiuses = radiuses.toPx(
+                    style::BorderRadiusesInPx refRadiuses = radiuses.toPx(
                         styleMetrics(), itemRect.width(), itemRect.height());
 
                     // XXX should offset be in dp rather than px?
                     geometry::Rect2f itemRect1 = itemRect + ui::Margins(1);
-                    style::BorderRadiusesInPx<float> radiuses1 =
+                    style::BorderRadiusesInPx radiuses1 =
                         refRadiuses.offsetted(1, 1, 1, 1);
 
                     geometry::Rect2f itemRect2 = itemRect + ui::Margins(2);
-                    style::BorderRadiusesInPx<float> radiuses2 =
+                    style::BorderRadiusesInPx radiuses2 =
                         refRadiuses.offsetted(2, 2, 2, 2);
 
                     detail::insertRect(

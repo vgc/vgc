@@ -115,8 +115,8 @@ void insertRect(
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& outerRadiuses_,
-    const style::BorderRadiusesInPx<float>& refRadiuses_,
+    const style::BorderRadiusesInPx& outerRadiuses_,
+    const style::BorderRadiusesInPx& refRadiuses_,
     float borderWidth,
     float pixelSize = 1.0f);
 

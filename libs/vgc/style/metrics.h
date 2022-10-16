@@ -37,7 +37,7 @@ public:
 
     /// Creates a `Metrics` with the given scale factor.
     ///
-    Metrics(float scaleFactor)
+    explicit Metrics(float scaleFactor)
         : scaleFactor_(scaleFactor) {
     }
 
