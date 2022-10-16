@@ -400,6 +400,7 @@ void insertQuarterEllipseWithBorder(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& color,
     const geometry::Rect2f& rect,
     const style::BorderRadiuses& radiuses_,
@@ -413,9 +414,8 @@ void insertRect(
     params.eps = 1e-3f * pixelSize;
     params.invPixelSize = 1.0f / pixelSize;
 
-    float scaleFactor = 1;
     style::BorderRadiusesInPx radiuses =
-        radiuses_.toPx(scaleFactor, rect.width(), rect.height());
+        radiuses_.toPx(styleMetrics, rect.width(), rect.height());
 
     float r = static_cast<float>(color[0]);
     float g = static_cast<float>(color[1]);
@@ -450,6 +450,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
@@ -457,9 +458,8 @@ void insertRect(
     float borderWidth,
     float pixelSize) {
 
-    float scaleFactor = 1;
     style::BorderRadiusesInPx<float> outerRadiuses =
-        outerRadiuses_.toPx(scaleFactor, outerRect.width(), outerRect.height());
+        outerRadiuses_.toPx(styleMetrics, outerRect.width(), outerRect.height());
     insertRect(
         a,
         fillColor,
@@ -632,18 +632,25 @@ getLengthOrPercentage(const style::StylableObject* obj, core::StringId property)
     }
 }
 
-float getLengthInPx(const style::StylableObject* obj, core::StringId property) {
-    float scaleFactor = obj->styleMetrics().scaleFactor();
-    return getLength(obj, property).toPx(scaleFactor);
+float getLengthInPx(
+    const style::StylableObject* obj,
+    core::StringId property,
+    bool hinted) {
+
+    const style::Metrics& metrics = obj->styleMetrics();
+    float res = getLength(obj, property).toPx(metrics);
+    return hinted ? std::round(res) : res;
 }
 
 float getLengthOrPercentageInPx(
     const style::StylableObject* obj,
     core::StringId property,
-    float refLength) {
+    float refLength,
+    bool hinted) {
 
-    float scaleFactor = obj->styleMetrics().scaleFactor();
-    return getLengthOrPercentage(obj, property).toPx(scaleFactor, refLength);
+    const style::Metrics& metrics = obj->styleMetrics();
+    float res = getLengthOrPercentage(obj, property).toPx(metrics, refLength);
+    return hinted ? std::round(res) : res;
 }
 
 } // namespace vgc::ui::detail

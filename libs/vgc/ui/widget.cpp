@@ -443,7 +443,8 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         if (backgroundChanged_) {
             backgroundChanged_ = false;
             core::FloatArray a;
-            detail::insertRect(a, backgroundColor_, rect(), borderRadiuses_);
+            detail::insertRect(
+                a, styleMetrics(), backgroundColor_, rect(), borderRadiuses_);
             engine->updateVertexBufferData(triangles_, std::move(a));
         }
         engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -1315,14 +1316,13 @@ bool Widget::onKeyRelease(QKeyEvent* event) {
 }
 
 geometry::Vec2f Widget::computePreferredSize() const {
-    float scaleFactor = styleMetrics().scaleFactor();
     float refLength = 0.0f;
     float valueIfAuto = 0.0f;
     style::LengthOrPercentageOrAuto w = preferredWidth();
     style::LengthOrPercentageOrAuto h = preferredHeight();
     return geometry::Vec2f(
-        w.toPx(scaleFactor, refLength, valueIfAuto),
-        h.toPx(scaleFactor, refLength, valueIfAuto));
+        w.toPx(styleMetrics(), refLength, valueIfAuto),
+        h.toPx(styleMetrics(), refLength, valueIfAuto));
 }
 
 void Widget::updateChildrenGeometry() {

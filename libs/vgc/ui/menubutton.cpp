@@ -26,28 +26,6 @@ namespace vgc::ui {
 
 namespace {
 
-using Length = double;
-
-float hintSpacing(float spacing) {
-    if (spacing <= 0) {
-        return 0;
-    }
-    return (std::max)(1.f, (std::round)(spacing));
-}
-
-float getSpacing(const Widget* w, core::StringId id, bool hint) {
-    style::StyleValue spacing = w->style(id);
-    if (spacing.has<Length>()) {
-        float value = static_cast<float>(spacing.to<Length>());
-        return hint ? hintSpacing(value) : value;
-    }
-    return 0;
-}
-
-} // namespace
-
-namespace {
-
 void applySizeOverrides(geometry::Vec2f& size, const geometry::Vec2f& overrides) {
     if (overrides.x() >= 0) {
         size.setX(overrides.x());
@@ -205,7 +183,8 @@ void MenuButton::updateChildrenGeometry() {
         [[fallthrough]];
     case FlexDirection::Column: {
         // vertical layout
-        const float gapH = detail::getLengthOrPercentageInPx(this, row_gap, height());
+        const float gapH =
+            detail::getLengthOrPercentageInPx(this, row_gap, height(), hint);
         float wc = contentRect_.width();
         float hc = contentRect_.height();
         float xc = paddingAndBorder.left();
@@ -246,7 +225,8 @@ void MenuButton::updateChildrenGeometry() {
     case FlexDirection::Row:
     default: {
         // horizontal layout
-        const float gapW = detail::getLengthOrPercentageInPx(this, column_gap, width());
+        const float gapH =
+            detail::getLengthOrPercentageInPx(this, column_gap, width(), hint);
         float wc = contentRect_.width();
         float hc = contentRect_.height();
         float yc = paddingAndBorder.top();
@@ -254,11 +234,11 @@ void MenuButton::updateChildrenGeometry() {
         float x4 = x0 + wc;
         float wr = wc;
         float wArrow = allocSize(arrowSize, wr);
-        float wGap3 = (wArrow > 0.f) ? allocSize(gapW, wr) : 0.f;
+        float wGap3 = (wArrow > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wIcon = allocSize(iconSize.x(), wr);
-        float wGap1 = (wIcon > 0.f) ? allocSize(gapW, wr) : 0.f;
+        float wGap1 = (wIcon > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wShortcut = allocSize(shortcutSize.x(), wr);
-        float wGap2 = (wShortcut > 0.f) ? allocSize(gapW, wr) : 0.f;
+        float wGap2 = (wShortcut > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wText = wr;
         float x = x0;
         if (!reverse) {

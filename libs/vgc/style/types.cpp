@@ -43,14 +43,6 @@ T convertToPx(T value, style::LengthUnit unit, T scaleFactor) {
 
 } // namespace
 
-double Length::toPx(double scaleFactor) const {
-    return convertToPx(value(), unit(), scaleFactor);
-}
-
-float Length::toPx(float scaleFactor) const {
-    return convertToPx(valuef(), unit(), scaleFactor);
-}
-
 float Length::toPx(const Metrics& metrics) const {
     return convertToPx(valuef(), unit(), metrics.scaleFactor());
 }

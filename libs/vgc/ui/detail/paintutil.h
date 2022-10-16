@@ -90,6 +90,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& color,
     const geometry::Rect2f& rect,
     const style::BorderRadiuses& borderRadiuses,
@@ -97,6 +98,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
@@ -125,12 +127,16 @@ style::Length getLength(const style::StylableObject* obj, core::StringId propert
 style::LengthOrPercentage
 getLengthOrPercentage(const style::StylableObject* obj, core::StringId property);
 
-float getLengthInPx(const style::StylableObject* obj, core::StringId property);
+float getLengthInPx(
+    const style::StylableObject* obj,
+    core::StringId property,
+    bool hinted = false);
 
 float getLengthOrPercentageInPx(
     const style::StylableObject* obj,
     core::StringId property,
-    float refLength);
+    float refLength,
+    bool hinted = false);
 
 } // namespace vgc::ui::detail
 

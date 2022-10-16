@@ -261,8 +261,8 @@ void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2
 }
 
 float getLengthInPx(const RichTextSpan* span, core::StringId property) {
-    float scaleFactor = span->styleMetrics().scaleFactor();
-    return span->style(property).to<style::Length>().toPx(scaleFactor);
+    const style::Metrics& metrics = span->styleMetrics();
+    return span->style(property).to<style::Length>().toPx(metrics);
 }
 
 float getLengthOrAutoInPx(
@@ -270,8 +270,8 @@ float getLengthOrAutoInPx(
     core::StringId property,
     float valueIfAuto) {
 
-    float scaleFactor = span->styleMetrics().scaleFactor();
-    return span->style(property).to<style::LengthOrAuto>().toPx(scaleFactor, valueIfAuto);
+    const style::Metrics& metrics = span->styleMetrics();
+    return span->style(property).to<style::LengthOrAuto>().toPx(metrics, valueIfAuto);
 }
 
 core::Color getColor(const RichTextSpan* span, core::StringId property) {

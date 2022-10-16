@@ -67,18 +67,6 @@ public:
         return unit_;
     }
 
-    /// Returns the length converted to physical pixels, as a double. The
-    /// `scaleFactor` argument represents how many physical pixels there is in
-    /// a device-independent pixel (dp).
-    ///
-    double toPx(double scaleFactor) const;
-
-    /// Returns the length converted to physical pixels, as a float. The
-    /// `scaleFactor` argument represents how many physical pixels there is in
-    /// a device-independent pixel (dp).
-    ///
-    float toPx(float scaleFactor) const;
-
     /// Returns the length converted to physical pixels, as a float.
     ///
     float toPx(const Metrics& metrics) const;
@@ -106,6 +94,14 @@ private:
     double value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
 };
+
+namespace literals {
+
+inline Length operator"" _dp(long double x) {
+    return Length(static_cast<double>(x), LengthUnit::Dp);
+}
+
+} // namespace literals
 
 /// \class vgc::style::Percentage
 /// \brief A percentage value of a style property.
@@ -232,6 +228,17 @@ public:
                              : Length(value_, unit_).toPx(scaleFactor);
     }
 
+    /// Returns the `LengthOrPercentage` converted to physical pixels.
+    ///
+    /// The given `metrics` is used to convert a `Length` to `px`.
+    ///
+    /// The given `refLength` is used to convert a `Percentage` to `px`.
+    ///
+    float toPx(const Metrics& metrics, float refLength) const {
+        return isPercentage_ ? Percentage(value_).toPx(refLength)
+                             : Length(value_, unit_).toPx(metrics);
+    }
+
     /// Parses the given range of `StyleToken`s as a `LengthOrPercentage`.
     ///
     /// Returns `StyleValue::invalid()` if the given tokens do not represent a
@@ -315,6 +322,16 @@ public:
     template<typename Float>
     Float toPx(Float scaleFactor, Float valueIfAuto) const {
         return isAuto_ ? valueIfAuto : Length(value_, unit_).toPx(scaleFactor);
+    }
+
+    /// Returns the length converted to `px`.
+    ///
+    /// The `metrics` argument is used to convert a `Length` from to `px`.
+    ///
+    /// The `refLength` is used to convert a `Percentage` to `px`.
+    ///
+    float toPx(const Metrics& metrics, float valueIfAuto) const {
+        return isAuto_ ? valueIfAuto : Length(value_, unit_).toPx(metrics);
     }
 
     /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
@@ -611,6 +628,22 @@ public:
         return BorderRadiusInPx<Float>(
             horizontalRadius_.toPx(scaleFactor, horizontalRefLength),
             verticalRadius_.toPx(scaleFactor, verticalRefLength));
+    }
+
+    /// Converts the `BorderRadius` to physical pixels.
+    ///
+    /// The given `metrics` is used to convert non-percentage units to `px`, and the given
+    /// `horizontalRefLength` (resp. `verticalRefLength`) is used to convert
+    /// the horizontal radius (resp. vertical radius) when it is specified as a
+    /// percentage.
+    ///
+    BorderRadiusInPx<float> toPx(
+        const Metrics& metrics,
+        float horizontalRefLength,
+        float verticalRefLength) const {
+        return BorderRadiusInPx<float>(
+            horizontalRadius_.toPx(metrics, horizontalRefLength),
+            verticalRadius_.toPx(metrics, verticalRefLength));
     }
 
     /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
@@ -926,6 +959,24 @@ public:
             topRight_.toPx(scaleFactor, horizontalRefLength, verticalRefLength),
             bottomRight_.toPx(scaleFactor, horizontalRefLength, verticalRefLength),
             bottomLeft_.toPx(scaleFactor, horizontalRefLength, verticalRefLength));
+    }
+
+    /// Converts the `BorderRadius` to physical pixels.
+    ///
+    /// The given `metrics` is used to convert non-percentage units to `px`,
+    /// and the given `horizontalRefLength` (resp. `verticalRefLength`) is used
+    /// to convert horizontal radiuses (resp. vertical radiuses) when it is
+    /// specified as a percentage.
+    ///
+    BorderRadiusesInPx<float> toPx(
+        const Metrics& metrics,
+        float horizontalRefLength,
+        float verticalRefLength) const {
+        return BorderRadiusesInPx<float>(
+            topLeft_.toPx(metrics, horizontalRefLength, verticalRefLength),
+            topRight_.toPx(metrics, horizontalRefLength, verticalRefLength),
+            bottomRight_.toPx(metrics, horizontalRefLength, verticalRefLength),
+            bottomLeft_.toPx(metrics, horizontalRefLength, verticalRefLength));
     }
 
     /// Returns whether the two given `BorderRadiuses` are equal.

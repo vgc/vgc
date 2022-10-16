@@ -79,7 +79,6 @@ void Grid::onWidgetRemoved(Widget* widget) {
 
 namespace {
 
-using Length = double;
 using Number = double;
 
 float getNum(const Widget* w, core::StringId id) {
@@ -104,17 +103,17 @@ float hintSpacing(float spacing) {
 
 float getSpacing(const Widget* w, core::StringId id, bool hint) {
     style::StyleValue spacing = w->style(id);
-    float scaleFactor = w->styleMetrics().scaleFactor();
+    const style::Metrics& metrics = w->styleMetrics();
     float value = 0.0f;
     if (spacing.has<style::Length>()) {
-        value = spacing.to<style::Length>().toPx(scaleFactor);
+        value = spacing.to<style::Length>().toPx(metrics);
     }
     else if (spacing.has<style::LengthOrPercentage>()) {
         // TODO: handle percentages instead of returning 0
         style::LengthOrPercentage l = spacing.to<style::LengthOrPercentage>();
         if (!l.isPercentage()) {
             float dummyRefLength = 1.0f;
-            value = l.toPx(scaleFactor, dummyRefLength);
+            value = l.toPx(metrics, dummyRefLength);
         }
     }
     return hint ? hintSpacing(value) : value;
@@ -234,10 +233,9 @@ void detail::GridTrack::Metrics::finalizeUpdate(
     }
     else {
         // TODO: handle percentages
-        float scaleFactor = styleMetrics.scaleFactor();
         float refLength = 0.0f;
         float valueIfAuto = 0.0f;
-        preferredSizeH = customSize.toPx(scaleFactor, refLength, valueIfAuto);
+        preferredSizeH = customSize.toPx(styleMetrics, refLength, valueIfAuto);
         minSizeH = preferredSizeH;
         if (hint) {
             preferredSizeH = std::ceil(preferredSizeH);
@@ -347,19 +345,10 @@ geometry::Vec2f Grid::computePreferredSize() const {
         }
     }
 
-    geometry::Vec2f res(0, 0);
-    if (hPrefSize.isAuto()) {
-        res[0] = hMetrics.autoPreferredSizeH;
-    }
-    else {
-        res[0] = hPrefSize.value();
-    }
-    if (vPrefSize.isAuto()) {
-        res[1] = vMetrics.autoPreferredSizeH;
-    }
-    else {
-        res[1] = vPrefSize.value();
-    }
+    float refLength = 0.0f;
+    geometry::Vec2f res(
+        hPrefSize.toPx(styleMetrics(), refLength, hMetrics.autoPreferredSizeH),
+        vPrefSize.toPx(styleMetrics(), refLength, vMetrics.autoPreferredSizeH));
 
     if (hint) {
         res[0] = std::ceil(res[0]);

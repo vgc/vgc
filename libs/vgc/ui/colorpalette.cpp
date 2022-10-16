@@ -1178,7 +1178,13 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 float borderWidth = 1;
 
                 detail::insertRect(
-                    a, hoveredColor, highlightColor, rect, radius, borderWidth);
+                    a,
+                    styleMetrics(),
+                    hoveredColor,
+                    highlightColor,
+                    rect,
+                    radius,
+                    borderWidth);
             }
         }
 
@@ -1918,12 +1924,20 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
 }
 
 void ColorPaletteSelector::computeSlSubMetrics_(float width, Metrics& m) const {
-    const float minCellWidth = 0.0f;
-    const float maxCellWidth = core::FloatInfinity;
-    const float minCellHeight = 20.0f; // can be overidden to fit maxHeight
-    const float maxCellHeight = 30.0f;
 
-    float maxHeight = 300.0f; // TODO: multiply by scaleFactor
+    using namespace style::literals;
+    const style::Length minCellWidth_ = 1.0_dp;
+    const style::Length maxCellWidth_(core::FloatInfinity, style::LengthUnit::Dp);
+    const style::Length minCellHeight_ = 20.0_dp; // can be overidden to fit maxHeight
+    const style::Length maxCellHeight_ = 30.0_dp;
+    const style::Length maxHeight_ = 300.0_dp;
+
+    const float minCellWidth = minCellWidth_.toPx(styleMetrics());
+    const float maxCellWidth = maxCellWidth_.toPx(styleMetrics());
+    const float minCellHeight = minCellHeight_.toPx(styleMetrics());
+    const float maxCellHeight = maxCellHeight_.toPx(styleMetrics());
+    const float maxHeight = maxHeight_.toPx(styleMetrics());
+
     float maxSlDy =
         (std::min)((maxHeight - m.borderWidth) / numSaturationSteps_, maxCellHeight);
     if (maxSlDy >= 2) {
@@ -2120,7 +2134,7 @@ geometry::Vec2f ColorPaletteSelector::computePreferredSize() const {
     geometry::Vec2f res(0, 0);
     style::LengthOrPercentageOrAuto w = preferredWidth();
     style::LengthOrPercentageOrAuto h = preferredHeight();
-    float scaleFactor = styleMetrics().scaleFactor();
+    const style::Metrics& sMetrics = styleMetrics();
     float refLength = 0.0f;
     float valueIfAuto = 0.0f;
 
@@ -2128,10 +2142,10 @@ geometry::Vec2f ColorPaletteSelector::computePreferredSize() const {
         // TODO: something better , e.g., based on the number of
         // hue/saturation/lightness steps?
         style::Length autoWidth(100.0f, style::LengthUnit::Dp);
-        res[0] = autoWidth.toPx(scaleFactor);
+        res[0] = autoWidth.toPx(sMetrics);
     }
     else {
-        res[0] = w.toPx(scaleFactor, refLength, valueIfAuto);
+        res[0] = w.toPx(sMetrics, refLength, valueIfAuto);
     }
 
     if (h.isAuto()) {
@@ -2139,7 +2153,7 @@ geometry::Vec2f ColorPaletteSelector::computePreferredSize() const {
         res[1] = m.height;
     }
     else {
-        res[1] = h.toPx(scaleFactor, refLength, valueIfAuto);
+        res[1] = h.toPx(sMetrics, refLength, valueIfAuto);
     }
 
     return res;
@@ -2389,7 +2403,8 @@ void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         core::Color borderColor =
             computeHighlightColor(color_, HighlightStyle::DarkenOnly);
         style::BorderRadiuses radiuses = style::BorderRadiuses(this);
-        detail::insertRect(a, color_, borderColor, rect(), radiuses, borderWidth);
+        detail::insertRect(
+            a, styleMetrics(), color_, borderColor, rect(), radiuses, borderWidth);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -2563,7 +2578,6 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
             updateMetrics_();
             const Metrics& m = metrics_;
 
-            float scaleFactor = styleMetrics().scaleFactor();
             float borderWidth = detail::getLengthInPx(item_.get(), ss::border_width);
             //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
             style::BorderRadiuses radiuses = style::BorderRadiuses(item_.get());
@@ -2584,9 +2598,10 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
 
                 if (i == selectedColorIndex_) {
 
-                    style::BorderRadiusesInPx<float> refRadiuses =
-                        radiuses.toPx(scaleFactor, itemRect.width(), itemRect.height());
+                    style::BorderRadiusesInPx<float> refRadiuses = radiuses.toPx(
+                        styleMetrics(), itemRect.width(), itemRect.height());
 
+                    // XXX should offset be in dp rather than px?
                     geometry::Rect2f itemRect1 = itemRect + ui::Margins(1);
                     style::BorderRadiusesInPx<float> radiuses1 =
                         refRadiuses.offsetted(1, 1, 1, 1);
@@ -2613,7 +2628,13 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
                                                : HighlightStyle::DarkenOnly;
                     core::Color highlightColor = computeHighlightColor(color, style);
                     detail::insertRect(
-                        a, color, highlightColor, itemRect, radiuses, borderWidth);
+                        a,
+                        styleMetrics(),
+                        color,
+                        highlightColor,
+                        itemRect,
+                        radiuses,
+                        borderWidth);
                 }
             }
         }
@@ -2734,17 +2755,17 @@ geometry::Vec2f ColorListView::computePreferredSize() const {
     geometry::Vec2f res(0, 0);
     style::LengthOrPercentageOrAuto w = preferredWidth();
     style::LengthOrPercentageOrAuto h = preferredHeight();
-    float scaleFactor = styleMetrics().scaleFactor();
     float refLength = 0.0f;
     float valueIfAuto = 0.0f;
 
     if (w.isAuto()) {
         // TODO: something better?
-        style::Length autoWidth(100.0f, style::LengthUnit::Dp);
-        res[0] = autoWidth.toPx(scaleFactor);
+        using namespace style::literals;
+        style::Length autoWidth = 100.0_dp;
+        res[0] = autoWidth.toPx(styleMetrics());
     }
     else {
-        res[0] = w.toPx(scaleFactor, refLength, valueIfAuto);
+        res[0] = w.toPx(styleMetrics(), refLength, valueIfAuto);
     }
 
     if (h.isAuto()) {
@@ -2752,7 +2773,7 @@ geometry::Vec2f ColorListView::computePreferredSize() const {
         res[1] = m.height;
     }
     else {
-        res[1] = h.toPx(scaleFactor, refLength, valueIfAuto);
+        res[1] = h.toPx(styleMetrics(), refLength, valueIfAuto);
     }
 
     return res;

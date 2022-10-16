@@ -37,12 +37,12 @@ void LengthContributions::add(
         }
         else {
             float dummyRefLength = 1.0f;
-            addAbsolute(l.toPx(metrics.scaleFactor(), dummyRefLength), count);
+            addAbsolute(l.toPx(metrics, dummyRefLength), count);
         }
     }
     else if (value.has<style::Length>()) {
         style::Length l = value.to<style::Length>();
-        addAbsolute(l.toPx(metrics.scaleFactor()), count);
+        addAbsolute(l.toPx(metrics), count);
     }
 }
 
@@ -86,16 +86,14 @@ float compute_(
     const style::LengthOrPercentageOrAuto& preferredSize,
     const detail::LengthContributions& contributions) {
 
-    // TODO: Change style::LengthOrPercentageOrAuto to LengthOrAuto, and use the toPx() function
     if (preferredSize.isAuto()) {
         return contributions.compute();
     }
     else {
         // TODO: support percentages
-        float scaleFactor = metrics.scaleFactor();
         float refLength = 0.0f;
         float valueIfAuto = 0.0f;
-        return preferredSize.toPx(scaleFactor, refLength, valueIfAuto);
+        return preferredSize.toPx(metrics, refLength, valueIfAuto);
     }
 }
 

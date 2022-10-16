@@ -256,7 +256,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
             // TODO: support percentages
             float refLength = 0.0f;
             float valueIfAuto = 0.0f;
-            float height = h.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
+            float height = h.toPx(styleMetrics(), refLength, valueIfAuto);
             float width = preferredWidthForHeight(height);
             res = {width, height};
         }
@@ -267,7 +267,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
             // TODO: support percentages
             float refLength = 0.0f;
             float valueIfAuto = 0.0f;
-            float width = w.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
+            float width = w.toPx(styleMetrics(), refLength, valueIfAuto);
             float height = preferredHeightForWidth(width);
             res = {width, height};
         }
@@ -276,8 +276,8 @@ geometry::Vec2f Flex::computePreferredSize() const {
             // TODO: support percentages
             float refLength = 0.0f;
             float valueIfAuto = 0.0f;
-            float width = w.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
-            float height = h.toPx(styleMetrics().scaleFactor(), refLength, valueIfAuto);
+            float width = w.toPx(styleMetrics(), refLength, valueIfAuto);
+            float height = h.toPx(styleMetrics(), refLength, valueIfAuto);
             res = {width, height};
         }
     }
