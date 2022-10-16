@@ -38,7 +38,6 @@ vgc_add_library(ui
         qtutil.h
         row.h
         shortcut.h
-        sizepolicy.h
         strings.h
         widget.h
         window.h

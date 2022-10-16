@@ -2153,8 +2153,9 @@ geometry::Vec2f ColorPaletteSelector::computePreferredSize() const {
     if (w.isAuto()) {
         // TODO: something better , e.g., based on the number of
         // hue/saturation/lightness steps?
-        style::Length autoWidth(100.0f, style::LengthUnit::Dp);
-        res[0] = autoWidth.toPx(sMetrics);
+        using namespace style::literals;
+        style::Length preferredWidthIfAuto = 100.0_dp;
+        res[0] = preferredWidthIfAuto.toPx(sMetrics);
     }
     else {
         res[0] = w.toPx(sMetrics, refLength, valueIfAuto);
@@ -2563,7 +2564,8 @@ namespace {
 
 float getItemLengthInPx(style::StylableObject* item, core::StringId property) {
 
-    const style::Length lengthIfAuto(10.0f, style::LengthUnit::Dp);
+    using namespace style::literals;
+    const style::Length lengthIfAuto = 10.0_dp;
     const style::Metrics& metrics = item->styleMetrics();
 
     style::LengthOrPercentageOrAuto p =
@@ -2794,7 +2796,9 @@ geometry::Vec2f ColorListView::computePreferredSize() const {
 ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) const {
 
     namespace gs = graphics::strings;
-    const style::Length gap(4.0f, style::LengthUnit::Dp);
+    using namespace style::literals;
+
+    const style::Length gap = 4.0_dp;
 
     // Note: in order to fill the available width while being "justified", we
     // need to stretch either the gap between the items, or the items

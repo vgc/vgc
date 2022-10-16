@@ -89,6 +89,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     using namespace strings;
     using namespace style::strings;
+    using namespace style::literals;
 
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
     auto black_         = StyleValue::custom(core::colors::black);
@@ -98,7 +99,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto zerol_         = StyleValue::custom(style::Length());
     auto zerolp_        = StyleValue::custom(style::LengthOrPercentage());
     auto zerobr_        = StyleValue::custom(style::BorderRadius());
-    auto twelve_        = StyleValue::custom(style::Length(12.0f, style::LengthUnit::Dp));
+    auto twelve_        = StyleValue::custom(style::Length(12.0_dp));
     auto autol_         = StyleValue::custom(style::LengthOrAuto());
     auto normal_        = StyleValue::identifier(strings::normal);
     auto left_          = StyleValue::identifier(strings::left);

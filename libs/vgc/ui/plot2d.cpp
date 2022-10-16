@@ -415,10 +415,14 @@ bool Plot2d::onMouseLeave() {
 }
 
 geometry::Vec2f Plot2d::computePreferredSize() const {
+
     // TODO: compute appropriate content size based on data
-    geometry::Vec2f contentSizeIfAuto(100, 40);
+    using namespace style::literals;
+    const style::Length preferredContentWidthIfAuto_ = 100.0_dp;
+    const style::Length preferredContentHeightIfAuto_ = 100.0_dp;
+
     PreferredSizeCalculator calc(this);
-    calc.add(contentSizeIfAuto);
+    calc.add(preferredContentWidthIfAuto_, preferredContentHeightIfAuto_);
     calc.addPaddingAndBorder();
     return calc.compute();
 }

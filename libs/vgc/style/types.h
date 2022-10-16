@@ -516,8 +516,8 @@ public:
     ///
     BorderRadiusInPx offsetted(float horizontal, float vertical) const {
         return BorderRadiusInPx(
-            (std::max)(static_cast<float>(0), radius_[0] + horizontal),
-            (std::max)(static_cast<float>(0), radius_[1] + vertical));
+            (std::max)(0.0f, radius_[0] + horizontal),
+            (std::max)(0.0f, radius_[1] + vertical));
     }
 
     /// Returns whether the two given `BorderRadiusInPx` are equal.
@@ -579,10 +579,10 @@ public:
 
     /// Converts the `BorderRadius` to physical pixels.
     ///
-    /// The given `metrics` is used to convert non-percentage units to `px`, and the given
-    /// `horizontalRefLength` (resp. `verticalRefLength`) is used to convert
-    /// the horizontal radius (resp. vertical radius) when it is specified as a
-    /// percentage.
+    /// The given `metrics` is used to convert non-percentage units to `px`,
+    /// and the given `horizontalRefLength` (resp. `verticalRefLength`) is used
+    /// to convert the horizontal radius (resp. vertical radius) when it is
+    /// specified as a percentage.
     ///
     BorderRadiusInPx toPx(
         const Metrics& metrics,

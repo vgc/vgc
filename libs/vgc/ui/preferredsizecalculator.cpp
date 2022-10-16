@@ -46,6 +46,14 @@ void LengthContributions::add(
     }
 }
 
+void LengthContributions::addAbsolute(
+    const style::Metrics& metrics,
+    const style::Length& length,
+    float count) {
+
+    addAbsolute(length.toPx(metrics), count);
+}
+
 float LengthContributions::compute() const {
     constexpr float maxRelative = 0.99f;
     float r = core::clamp(relative_, 0.f, maxRelative);

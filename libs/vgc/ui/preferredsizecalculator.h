@@ -17,12 +17,11 @@
 #ifndef VGC_UI_PREFERREDSIZECALCULATOR_H
 #define VGC_UI_PREFERREDSIZECALCULATOR_H
 
-#include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/style/metrics.h>
+#include <vgc/style/types.h>
 #include <vgc/ui/api.h>
-#include <vgc/ui/sizepolicy.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -34,7 +33,15 @@ struct VGC_UI_API LengthContributions {
 public:
     LengthContributions() = default;
 
-    void add(const style::Metrics& metrics, const style::StyleValue& value, float count);
+    void
+    add(const style::Metrics& metrics,
+        const style::StyleValue& value,
+        float count = 1.0f);
+
+    void addAbsolute(
+        const style::Metrics& metrics,
+        const style::Length& value,
+        float count = 1.0f);
 
     void addAbsolute(float absolute) {
         absolute_ += absolute;
@@ -167,6 +174,39 @@ public:
         heightContributions_.addAbsolute(absoluteSize[1]);
     }
 
+    /// Adds the given `absoluteWidth` and `absoluteHeight` to the "absolute"
+    /// part of the preferred size. The `Length` values are converted to `px`
+    /// using the given style metrics.
+    ///
+    void
+    add(const style::Metrics& metrics,
+        const style::Length& absoluteWidth,
+        const style::Length& absoluteHeight) {
+
+        widthContributions_.addAbsolute(metrics, absoluteWidth);
+        heightContributions_.addAbsolute(metrics, absoluteHeight);
+    }
+
+    /// Adds the given `absoluteWidth` and `absoluteHeight` to the "absolute"
+    /// part of the preferred size. The `Length` values are converted to `px`
+    /// using the style metrics of the given stylable object `obj`.
+    ///
+    void
+    add(const style::StylableObject* obj,
+        const style::Length& absoluteWidth,
+        const style::Length& absoluteHeight) {
+
+        add(obj->styleMetrics(), absoluteWidth, absoluteHeight);
+    }
+
+    /// Adds the given `absoluteWidth` and `absoluteHeight` to the "absolute"
+    /// part of the preferred size. The `Length` values are converted to `px`
+    /// using the style metrics of `widget()`.
+    ///
+    void add(const style::Length& absoluteWidth, const style::Length& absoluteHeight) {
+        add(widget(), absoluteWidth, absoluteHeight);
+    }
+
     /// Adds the given value in px to the "absolute" part of the preferred
     /// width.
     ///
@@ -251,6 +291,7 @@ public:
         const style::StylableObject* obj,
         core::StringId property,
         float count = 1.0f) {
+
         addWidth(obj->styleMetrics(), obj->style(property), count);
     }
 
@@ -279,6 +320,7 @@ public:
         const style::StylableObject* obj,
         core::StringId property,
         float count = 1.0f) {
+
         addHeight(obj->styleMetrics(), obj->style(property), count);
     }
 

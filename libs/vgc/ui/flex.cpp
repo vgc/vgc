@@ -58,38 +58,34 @@ namespace {
 
 float getLeftRightMargins(const Widget* widget) {
     // TODO: handle percentages
+    using namespace style::strings;
     float refLength = 0;
-    return detail::getLengthOrPercentageInPx(
-               widget, style::strings::margin_left, refLength)
-           + detail::getLengthOrPercentageInPx(
-               widget, style::strings::margin_right, refLength);
+    return detail::getLengthOrPercentageInPx(widget, margin_left, refLength)
+           + detail::getLengthOrPercentageInPx(widget, margin_right, refLength);
 }
 
 float getTopBottomMargins(const Widget* widget) {
     // TODO: handle percentages
+    using namespace style::strings;
     float refLength = 0;
-    return detail::getLengthOrPercentageInPx(
-               widget, style::strings::margin_top, refLength)
-           + detail::getLengthOrPercentageInPx(
-               widget, style::strings::margin_bottom, refLength);
+    return detail::getLengthOrPercentageInPx(widget, margin_top, refLength)
+           + detail::getLengthOrPercentageInPx(widget, margin_bottom, refLength);
 }
 
 float getLeftRightPadding(const Widget* widget) {
     // TODO: handle percentages
+    using namespace style::strings;
     float refLength = 0;
-    return detail::getLengthOrPercentageInPx(
-               widget, style::strings::padding_left, refLength)
-           + detail::getLengthOrPercentageInPx(
-               widget, style::strings::padding_right, refLength);
+    return detail::getLengthOrPercentageInPx(widget, padding_left, refLength)
+           + detail::getLengthOrPercentageInPx(widget, padding_right, refLength);
 }
 
 float getTopBottomPadding(const Widget* widget) {
     // TODO: handle percentages
+    using namespace style::strings;
     float refLength = 0;
-    return detail::getLengthOrPercentageInPx(
-               widget, style::strings::padding_top, refLength)
-           + detail::getLengthOrPercentageInPx(
-               widget, style::strings::padding_bottom, refLength);
+    return detail::getLengthOrPercentageInPx(widget, padding_top, refLength)
+           + detail::getLengthOrPercentageInPx(widget, padding_bottom, refLength);
 }
 
 float getGap(bool isRow, const Widget* widget) {
@@ -377,16 +373,15 @@ void stretchChild(
     float gap,
     bool hinting) {
 
+    namespace ss = style::strings;
+    using detail::getLengthOrPercentageInPx;
+
     // TODO: handle percentages
     float refLength = 0;
-    float marginLeft =
-        detail::getLengthOrPercentageInPx(child, style::strings::margin_left, refLength);
-    float marginRight =
-        detail::getLengthOrPercentageInPx(child, style::strings::margin_right, refLength);
-    float marginTop =
-        detail::getLengthOrPercentageInPx(child, style::strings::margin_top, refLength);
-    float marginBottom = detail::getLengthOrPercentageInPx(
-        child, style::strings::margin_bottom, refLength);
+    float marginLeft = getLengthOrPercentageInPx(child, ss::margin_left, refLength);
+    float marginRight = getLengthOrPercentageInPx(child, ss::margin_right, refLength);
+    float marginTop = getLengthOrPercentageInPx(child, ss::margin_top, refLength);
+    float marginBottom = getLengthOrPercentageInPx(child, ss::margin_bottom, refLength);
     float childMainMarginBefore = isRow ? marginLeft : marginTop;
     float childMainMarginAfter = isRow ? marginRight : marginBottom;
     float childCrossMarginBefore = isRow ? marginTop : marginLeft;
@@ -431,6 +426,7 @@ void Flex::updateChildrenGeometry() {
 
     namespace gs = graphics::strings;
     namespace ss = style::strings;
+    using detail::getLengthOrPercentageInPx;
 
     // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
     // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
@@ -445,22 +441,18 @@ void Flex::updateChildrenGeometry() {
         bool isRow_ = isRow();
         bool isReverse_ = isReverse();
         bool hinting = (style(gs::pixel_hinting) == gs::normal);
-        float paddingLeft =
-            detail::getLengthOrPercentageInPx(this, ss::padding_left, width());
-        float paddingRight =
-            detail::getLengthOrPercentageInPx(this, ss::padding_right, width());
-        float paddingTop =
-            detail::getLengthOrPercentageInPx(this, ss::padding_top, height());
-        float paddingBottom =
-            detail::getLengthOrPercentageInPx(this, ss::padding_bottom, height());
+        float paddingL = getLengthOrPercentageInPx(this, ss::padding_left, width());
+        float paddingR = getLengthOrPercentageInPx(this, ss::padding_right, width());
+        float paddingT = getLengthOrPercentageInPx(this, ss::padding_top, height());
+        float paddingB = getLengthOrPercentageInPx(this, ss::padding_bottom, height());
         float mainSize = isRow_ ? width() : height();
         float crossSize = isRow_ ? height() : width();
         float gap = getGap(isRow_, this);
         float preferredMainSize = isRow_ ? preferredWidthForHeight(crossSize)
                                          : preferredHeightForWidth(crossSize);
-        float mainPaddingBefore = isRow_ ? paddingLeft : paddingTop;
-        float crossPaddingBefore = isRow_ ? paddingTop : paddingLeft;
-        float crossPaddingAfter = isRow_ ? paddingBottom : paddingRight;
+        float mainPaddingBefore = isRow_ ? paddingL : paddingT;
+        float crossPaddingBefore = isRow_ ? paddingT : paddingL;
+        float crossPaddingAfter = isRow_ ? paddingB : paddingR;
         float paddedCrossSize = crossSize - crossPaddingBefore - crossPaddingAfter;
         float freeSpace = mainSize - preferredMainSize;
         float eps = 1e-6f;

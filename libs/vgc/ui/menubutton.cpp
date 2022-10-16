@@ -126,7 +126,7 @@ public:
         return calc_.compute();
     }
 
-    //private:
+private:
     PreferredSizeCalculator calc_;
     Int mainDir_;
     Int crossDir_;

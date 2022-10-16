@@ -133,8 +133,12 @@ void ImageBox::onPaintDestroy(graphics::Engine* engine) {
 }
 
 geometry::Vec2f ImageBox::computePreferredSize() const {
+
+    using namespace style::literals;
+    const style::Length preferredContentSizeIfAuto_ = 100.0_dp;
+
     PreferredSizeCalculator calc(this);
-    calc.add(geometry::Vec2f(100, 100));
+    calc.add(preferredContentSizeIfAuto_, preferredContentSizeIfAuto_);
     calc.addPaddingAndBorder();
     return calc.compute();
 }

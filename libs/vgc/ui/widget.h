@@ -38,7 +38,6 @@
 #include <vgc/ui/exceptions.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/shortcut.h>
-#include <vgc/ui/sizepolicy.h>
 
 class QKeyEvent;
 
