@@ -32,7 +32,7 @@ public:
     /// Creates a `Metrics` with a scale factor of 1.
     ///
     Metrics()
-        : scaleFactor_(2) {
+        : scaleFactor_(1) {
     }
 
     /// Creates a `Metrics` with the given scale factor.
@@ -44,7 +44,7 @@ public:
     /// Returns the scale factor, that is how many `px` is there in one `dp`:
     ///
     /// ```cpp
-    /// float valueInPx = metrics.scaleFactor() * valueInDp
+    /// float valueInPx = metrics.scaleFactor() * valueInDp;
     /// ```
     ///
     float scaleFactor() const {
