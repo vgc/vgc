@@ -120,34 +120,6 @@ enum class FocusReason : UInt8 {
 
 // clang-format on
 
-class PreferredContentSize {
-public:
-    PreferredContentSize(const geometry::Vec2f& sizeInPx)
-        : sizeInPx_(sizeInPx)
-        , sizeInPercentage_() {
-    }
-
-    PreferredContentSize(
-        const geometry::Vec2f& sizeInPx,
-        const geometry::Vec2f& sizeInPercentage)
-
-        : sizeInPx_(sizeInPx)
-        , sizeInPercentage_(sizeInPercentage) {
-    }
-
-    const geometry::Vec2f& sizeInPx() const {
-        return sizeInPx_;
-    }
-
-    const geometry::Vec2f& sizeInPercentage() const {
-        return sizeInPercentage_;
-    }
-
-private:
-    geometry::Vec2f sizeInPx_;
-    geometry::Vec2f sizeInPercentage_;
-};
-
 /// \class vgc::ui::Widget
 /// \brief Base class of all elements in the user interface.
 ///
