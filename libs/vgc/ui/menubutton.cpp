@@ -160,21 +160,14 @@ public:
 
 geometry::Vec2f MenuButton::computePreferredSize() const {
     // we must return preferred size without the layouting overrides
-    static int i = 0;
-    ++i;
-    if (i == 8) {
-        VGC_DEBUG_TMP("i == 8");
-    }
     Calculator calc(this);
     calc.addTrackIfVisible(iconWidget(), iconSizeOverrides_);
     calc.addTrackIfVisible(textLabel(), textSizeOverrides_);
     calc.addTrackIfVisible(shortcutLabel(), shortcutSizeOverrides_);
     calc.addTrackIfPositive(arrowSizeOverride_);
-    VGC_DEBUG_TMP("i = {}, numTracks = {}", i, calc.numTracks_);
     return calc.compute();
 }
 
-// XXX use flex gap
 void MenuButton::updateChildrenGeometry() {
     namespace gs = graphics::strings;
     namespace ss = style::strings;
@@ -185,8 +178,6 @@ void MenuButton::updateChildrenGeometry() {
 
     const geometry::Rect2f contentRect_ = contentRect();
     const Margins paddingAndBorder(rect(), contentRect_);
-    VGC_DEBUG_TMP_EXPR(contentRect_);
-    //VGC_DEBUG_TMP("menu button margins: {}", paddingAndBorder);
     if (contentRect_.width() <= 0 || contentRect_.height() <= 0) {
         iconWidget()->updateGeometry(0, 0, 0, 0);
         textLabel()->updateGeometry(0, 0, 0, 0);
