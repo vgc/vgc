@@ -1353,23 +1353,6 @@ StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
-StyleValue parseStyleLength(StyleTokenIterator begin, StyleTokenIterator end) {
-    // For now, we only support a unique Dimension token with a "dp" unit
-    if (begin == end) {
-        return StyleValue::invalid();
-    }
-    else if (
-        begin->type == StyleTokenType::Dimension //
-        && begin->codePointsValue == "dp"        //
-        && begin + 1 == end) {
-
-        return StyleValue::number(begin->toFloat());
-    }
-    else {
-        return StyleValue::invalid();
-    }
-}
-
 // clang-format off
 
 style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
