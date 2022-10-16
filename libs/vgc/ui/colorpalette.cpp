@@ -1752,9 +1752,14 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
 
     const Int numHSamples = getNumHSamples_(rect);
 
-    float borderWidth = 1.0f;
-    float outerWidth = 3.0f;
-    float holeRadius = 4.0f;
+    using namespace style::literals;
+    const style::Length borderWidth_ = 1.0_dp;
+    const style::Length outerWidth_ = 3.0_dp;
+    const style::Length holeRadius_ = 4.0_dp;
+
+    float borderWidth = borderWidth_.toPx(styleMetrics());
+    float outerWidth = outerWidth_.toPx(styleMetrics());
+    float holeRadius = holeRadius_.toPx(styleMetrics());
 
     float r1 = holeRadius;
     float r2 = holeRadius + borderWidth;
@@ -1960,10 +1965,17 @@ void ColorPaletteSelector::computeSlSubMetrics_(float width, Metrics& m) const {
 }
 
 void ColorPaletteSelector::computeHueSubMetrics_(float /* width */, Metrics& m) const {
-    const float minCellWidth = 0.0f;
-    const float maxCellWidth = core::FloatInfinity;
-    const float minCellHeight = 20.0f;
-    const float maxCellHeight = 30.0f;
+
+    using namespace style::literals;
+    const style::Length minCellWidth_ = 0.0_dp;
+    const style::Length maxCellWidth_(core::FloatInfinity, style::LengthUnit::Dp);
+    const style::Length minCellHeight_ = 20.0_dp; // can be overidden to fit maxHeight
+    const style::Length maxCellHeight_ = 30.0_dp;
+
+    const float minCellWidth = minCellWidth_.toPx(styleMetrics());
+    const float maxCellWidth = maxCellWidth_.toPx(styleMetrics());
+    const float minCellHeight = minCellHeight_.toPx(styleMetrics());
+    const float maxCellHeight = maxCellHeight_.toPx(styleMetrics());
 
     Int halfNumHueSteps = numHueSteps_ / 2;
     float xMin = m.saturationLightnessRect.xMin();
