@@ -20,6 +20,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/style/api.h>
+#include <vgc/style/metrics.h>
 #include <vgc/style/style.h>
 
 namespace vgc::style {
@@ -66,17 +67,9 @@ public:
         return unit_;
     }
 
-    /// Returns the length converted to physical pixels, as a double. The
-    /// `scaleFactor` argument represents how many physical pixels there is in
-    /// a device-independent pixel (dp).
+    /// Returns the length converted to physical pixels, as a float.
     ///
-    double toPx(double scaleFactor) const;
-
-    /// Returns the length converted to physical pixels, as a float. The
-    /// `scaleFactor` argument represents how many physical pixels there is in
-    /// a device-independent pixel (dp).
-    ///
-    float toPx(float scaleFactor) const;
+    float toPx(const Metrics& metrics) const;
 
     /// Parses the given range of `StyleToken`s as a `Length`.
     ///
@@ -101,6 +94,14 @@ private:
     double value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
 };
+
+namespace literals {
+
+inline Length operator"" _dp(long double x) {
+    return Length(static_cast<double>(x), LengthUnit::Dp);
+}
+
+} // namespace literals
 
 /// \class vgc::style::Percentage
 /// \brief A percentage value of a style property.
@@ -133,9 +134,8 @@ public:
     /// Returns the `Percentage` converted to physical pixels, by multiplying
     /// the percentage with the given reference length.
     ///
-    template<typename Float>
-    Float toPx(Float refLength) const {
-        return static_cast<Float>(value_) * refLength * static_cast<Float>(0.01);
+    float toPx(float refLength) const {
+        return valuef() * refLength * 0.01f;
     }
 
     /// Parses the given range of `StyleToken`s as a `Percentage`.
@@ -217,14 +217,13 @@ public:
 
     /// Returns the `LengthOrPercentage` converted to physical pixels.
     ///
-    /// The `scaleFactor` argument is used to convert a `Length` from `dp` to `px`.
+    /// The given `metrics` is used to convert a `Length` to `px`.
     ///
-    /// The`refLength` is used to convert a `Percentage` to `px`.
+    /// The given `refLength` is used to convert a `Percentage` to `px`.
     ///
-    template<typename Float>
-    Float toPx(Float scaleFactor, Float refLength) const {
+    float toPx(const Metrics& metrics, float refLength) const {
         return isPercentage_ ? Percentage(value_).toPx(refLength)
-                             : Length(value_, unit_).toPx(scaleFactor);
+                             : Length(value_, unit_).toPx(metrics);
     }
 
     /// Parses the given range of `StyleToken`s as a `LengthOrPercentage`.
@@ -301,14 +300,14 @@ public:
         return unit_;
     }
 
-    /// Returns the length converted to physical pixels, as a double. The
-    /// `scaleFactor` argument represents how many physical pixels there is in
-    /// a device-independent pixel (dp). The `valueIfAuto` is the value that
-    /// should be returned if `isAuto()` is true;
+    /// Returns the length converted to `px`.
     ///
-    template<typename Float>
-    Float toPx(Float scaleFactor, Float valueIfAuto) const {
-        return isAuto_ ? valueIfAuto : Length(value_, unit_).toPx(scaleFactor);
+    /// The `metrics` argument is used to convert a `Length` from to `px`.
+    ///
+    /// The `refLength` is used to convert a `Percentage` to `px`.
+    ///
+    float toPx(const Metrics& metrics, float valueIfAuto) const {
+        return isAuto_ ? valueIfAuto : Length(value_, unit_).toPx(metrics);
     }
 
     /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
@@ -340,10 +339,139 @@ private:
     bool isAuto_ = true;
 };
 
+/// \class vgc::style::LengthOrPercentageOrAuto
+/// \brief A value which is either a `Length`, a `Percentage`, or the keyword `auto`.
+///
+class VGC_STYLE_API LengthOrPercentageOrAuto {
+public:
+    /// Constructs a `LengthOrPercentageOrAuto` initialized to a length with
+    /// the given value and unit.
+    ///
+    LengthOrPercentageOrAuto(double value, LengthUnit unit)
+        : value_(value)
+        , unit_(unit)
+        , type_(Type_::Length) {
+    }
+
+    /// Constructs a `LengthOrPercentageOrAuto` initialized to a percentage
+    /// with the given value.
+    ///
+    LengthOrPercentageOrAuto(double value)
+        : value_(value)
+        , type_(Type_::Percentage) {
+    }
+
+    /// Constructs a `LengthOrPercentageOrAuto` initialized to `auto`.
+    ///
+    LengthOrPercentageOrAuto()
+        : type_(Type_::Auto) {
+    }
+
+    /// Returns whether this `LengthOrPercentageOrAuto` is a length.
+    ///
+    bool isLength() const {
+        return type_ == Type_::Length;
+    }
+
+    /// Returns whether this `LengthOrPercentageOrAuto` is a percentage.
+    ///
+    bool isPercentage() const {
+        return type_ == Type_::Percentage;
+    }
+
+    /// Returns whether this `LengthOrPercentageOrAuto` is `auto`.
+    ///
+    bool isAuto() const {
+        return type_ == Type_::Auto;
+    }
+
+    /// Returns the numerical value of the length or percentage. This function
+    /// assumes that `isAuto()` returns false.
+    ///
+    double value() const {
+        return value_;
+    }
+
+    /// Returns the numerical value of the length or percentage as a `float`.
+    /// This function assumes that `isAuto()` returns false.
+    ///
+    float valuef() const {
+        return static_cast<float>(value_);
+    }
+
+    /// Returns the unit of the length. This function assumes that
+    /// `isLength()` returns true.
+    ///
+    LengthUnit unit() const {
+        return unit_;
+    }
+
+    /// Converts this `LengthOrPercentageOrAuto` to a value in 'px'.
+    ///
+    /// The `scaleFactor` argument is used to convert a `Length` from `to `px`.
+    ///
+    /// The `refLength` is used to convert a `Percentage` to `px`.
+    ///
+    /// The `valueIfAuto` is the value that is returned if `isAuto()` is true.
+    ///
+    float toPx(const Metrics& metrics, float refLength, float valueIfAuto) const {
+        switch (type_) {
+        case Type_::Length:
+            return Length(value_, unit_).toPx(metrics);
+        case Type_::Percentage:
+            return Percentage(value_).toPx(refLength);
+        case Type_::Auto:
+            return valueIfAuto;
+        }
+        return valueIfAuto; // silence warning
+    }
+
+    /// Parses the given range of `StyleToken`s as a `LengthOrPercentageOrAuto`.
+    ///
+    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrPercentageOrAuto`. Otherwise, return a `StyleValue`
+    /// holding a `LengthOrPercentageOrAuto`.
+    ///
+    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+
+    /// Returns whether the two given `LengthOrAuto` are equal.
+    ///
+    friend bool
+    operator==(const LengthOrPercentageOrAuto& v1, const LengthOrPercentageOrAuto& v2) {
+        switch (v1.type_) {
+        case Type_::Length:
+            return v2.isLength()
+                   && Length(v1.value_, v1.unit_) == Length(v2.value_, v2.unit_);
+        case Type_::Percentage:
+            return v2.isPercentage() && Percentage(v1.value_) == Percentage(v2.value_);
+        case Type_::Auto:
+            return v2.isAuto();
+        }
+        return false; // silence warning
+    }
+
+    /// Returns whether the two given `LengthOrPercentageOrAuto` are different.
+    ///
+    friend bool
+    operator!=(const LengthOrPercentageOrAuto& v1, const LengthOrPercentageOrAuto& v2) {
+        return !(v1 == v2);
+    }
+
+private:
+    enum class Type_ : Int8 {
+        Length,
+        Percentage,
+        Auto
+    };
+
+    double value_ = 0;
+    LengthUnit unit_ = LengthUnit::Dp;
+    Type_ type_ = Type_::Auto;
+};
+
 /// \class vgc::style::BorderRadiusInPx
 /// \brief Stores border radius information in physical pixels.
 ///
-template<typename Float>
 class BorderRadiusInPx {
 public:
     /// Constructs a `BorderRadiusInPx` with both values set to `0dp`.
@@ -354,42 +482,42 @@ public:
     /// Constructs a `BorderRadiusInPx` with both horizontal and vertical
     /// radius values set to the given `radius`.
     ///
-    BorderRadiusInPx(Float radius)
+    BorderRadiusInPx(float radius)
         : radius_{radius, radius} {
     }
 
     /// Constructs a `BorderRadiusInPx` with the two given horizontal and vertical
     /// radius values.
     ///
-    BorderRadiusInPx(Float horizontalRadius, Float verticalRadius)
+    BorderRadiusInPx(float horizontalRadius, float verticalRadius)
         : radius_{horizontalRadius, verticalRadius} {
     }
 
     /// Returns the horizontal radius of this border radius.
     ///
-    Float horizontalRadius() const {
+    float horizontalRadius() const {
         return radius_[0];
     }
 
     /// Returns the vertical radius of this border radius.
     ///
-    Float verticalRadius() const {
+    float verticalRadius() const {
         return radius_[1];
     }
 
     /// Returns the horizontal radius if `index` is `0`, and the vertical radius
     /// if `index` is `1`.
     ///
-    Float operator[](Int index) const {
+    float operator[](Int index) const {
         return radius_[static_cast<size_t>(index)];
     }
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    BorderRadiusInPx offsetted(Float horizontal, Float vertical) const {
+    BorderRadiusInPx offsetted(float horizontal, float vertical) const {
         return BorderRadiusInPx(
-            (std::max)(static_cast<Float>(0), radius_[0] + horizontal),
-            (std::max)(static_cast<Float>(0), radius_[1] + vertical));
+            (std::max)(0.0f, radius_[0] + horizontal),
+            (std::max)(0.0f, radius_[1] + vertical));
     }
 
     /// Returns whether the two given `BorderRadiusInPx` are equal.
@@ -405,7 +533,7 @@ public:
     }
 
 private:
-    std::array<Float, 2> radius_;
+    std::array<float, 2> radius_;
 };
 
 /// \class vgc::style::BorderRadius
@@ -451,17 +579,19 @@ public:
 
     /// Converts the `BorderRadius` to physical pixels.
     ///
-    /// The given `scaleFactor` is used to convert `dp` units to `px`, and the given
-    /// `horizontalRefLength` (resp. `verticalRefLength`) is used to convert
-    /// the horizontal radius (resp. vertical radius) when it is specified as a
-    /// percentage.
+    /// The given `metrics` is used to convert non-percentage units to `px`,
+    /// and the given `horizontalRefLength` (resp. `verticalRefLength`) is used
+    /// to convert the horizontal radius (resp. vertical radius) when it is
+    /// specified as a percentage.
     ///
-    template<typename Float>
-    BorderRadiusInPx<Float>
-    toPx(Float scaleFactor, Float horizontalRefLength, Float verticalRefLength) const {
-        return BorderRadiusInPx<Float>(
-            horizontalRadius_.toPx(scaleFactor, horizontalRefLength),
-            verticalRadius_.toPx(scaleFactor, verticalRefLength));
+    BorderRadiusInPx toPx(
+        const Metrics& metrics,
+        float horizontalRefLength,
+        float verticalRefLength) const {
+
+        return BorderRadiusInPx(
+            horizontalRadius_.toPx(metrics, horizontalRefLength),
+            verticalRadius_.toPx(metrics, verticalRefLength));
     }
 
     /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
@@ -493,13 +623,12 @@ private:
 /// \class vgc::style::BorderRadiusesInPx
 /// \brief The border radiuses for the four corners in physical pixels
 ///
-template<typename Float>
 class BorderRadiusesInPx {
 public:
     /// Constructs a `BorderRadiusesInPx` with all radiuses set to the given
     /// `BorderRadiusesInPx`.
     ///
-    BorderRadiusesInPx(const BorderRadiusInPx<Float>& radius)
+    BorderRadiusesInPx(const BorderRadiusInPx& radius)
         : radiuses_{radius, radius, radius, radius} {
     }
 
@@ -508,8 +637,8 @@ public:
     /// bottom-left radiuses set to `topRightAndBottomLeft`.
     ///
     BorderRadiusesInPx(
-        const BorderRadiusInPx<Float>& topLeftAndBottomRight,
-        const BorderRadiusInPx<Float>& topRightAndBottomLeft)
+        const BorderRadiusInPx& topLeftAndBottomRight,
+        const BorderRadiusInPx& topRightAndBottomLeft)
 
         : radiuses_{
             topLeftAndBottomRight,
@@ -524,9 +653,9 @@ public:
     /// `bottomRight`.
     ///
     BorderRadiusesInPx(
-        const BorderRadiusInPx<Float>& topLeft,
-        const BorderRadiusInPx<Float>& topRightAndBottomLeft,
-        const BorderRadiusInPx<Float>& bottomRight)
+        const BorderRadiusInPx& topLeft,
+        const BorderRadiusInPx& topRightAndBottomLeft,
+        const BorderRadiusInPx& bottomRight)
 
         : radiuses_{
             topLeft, //
@@ -538,59 +667,59 @@ public:
     /// Constructs a `BorderRadiuses` with the four given `BorderRadius`.
     ///
     BorderRadiusesInPx(
-        const BorderRadiusInPx<Float>& topLeft,
-        const BorderRadiusInPx<Float>& topRight,
-        const BorderRadiusInPx<Float>& bottomRight,
-        const BorderRadiusInPx<Float>& bottomLeft)
+        const BorderRadiusInPx& topLeft,
+        const BorderRadiusInPx& topRight,
+        const BorderRadiusInPx& bottomRight,
+        const BorderRadiusInPx& bottomLeft)
 
         : radiuses_{topLeft, topRight, bottomRight, bottomLeft} {
     }
 
     /// Returns the top left border radius.
     ///
-    const BorderRadiusInPx<Float>& topLeft() const {
+    const BorderRadiusInPx& topLeft() const {
         return radiuses_[0];
     }
 
     /// Returns the top right border radius.
     ///
-    const BorderRadiusInPx<Float>& topRight() const {
+    const BorderRadiusInPx& topRight() const {
         return radiuses_[1];
     }
 
     /// Returns the bottom right border radius.
     ///
-    const BorderRadiusInPx<Float>& bottomRight() const {
+    const BorderRadiusInPx& bottomRight() const {
         return radiuses_[2];
     }
 
     /// Return thes bottom left border radius.
     ///
-    const BorderRadiusInPx<Float>& bottomLeft() const {
+    const BorderRadiusInPx& bottomLeft() const {
         return radiuses_[3];
     }
 
     /// Sets the top left border radius.
     ///
-    void setTopLeft(const BorderRadiusInPx<Float>& topLeft) {
+    void setTopLeft(const BorderRadiusInPx& topLeft) {
         radiuses_[0] = topLeft;
     }
 
     /// Sets the top right border radius.
     ///
-    void setTopRight(const BorderRadiusInPx<Float>& topRight) {
+    void setTopRight(const BorderRadiusInPx& topRight) {
         radiuses_[1] = topRight;
     }
 
     /// Sets the bottom right border radius.
     ///
-    void setBottomRight(const BorderRadiusInPx<Float>& bottomRight) {
+    void setBottomRight(const BorderRadiusInPx& bottomRight) {
         radiuses_[2] = bottomRight;
     }
 
     /// Sets the bottom left border radius.
     ///
-    void setBottomLeft(const BorderRadiusInPx<Float>& bottomLeft) {
+    void setBottomLeft(const BorderRadiusInPx& bottomLeft) {
         radiuses_[3] = bottomLeft;
     }
 
@@ -601,13 +730,13 @@ public:
     /// - If `index` is `2`, returns the bottom-right radius.
     /// - If `index` is `3`, returns the bottom-left radius.
     ///
-    const BorderRadiusInPx<Float>& operator[](Int index) const {
+    const BorderRadiusInPx& operator[](Int index) const {
         return radiuses_[static_cast<size_t>(index)];
     }
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    BorderRadiusesInPx offsetted(Float horizontal, Float vertical) const {
+    BorderRadiusesInPx offsetted(float horizontal, float vertical) const {
         return BorderRadiusesInPx(
             radiuses_[0].offsetted(horizontal, vertical),
             radiuses_[1].offsetted(horizontal, vertical),
@@ -617,7 +746,7 @@ public:
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    BorderRadiusesInPx offsetted(Float top, Float right, Float bottom, Float left) const {
+    BorderRadiusesInPx offsetted(float top, float right, float bottom, float left) const {
         return BorderRadiusesInPx(
             topLeft().offsetted(left, top),
             topRight().offsetted(right, top),
@@ -638,7 +767,7 @@ public:
     }
 
 private:
-    std::array<BorderRadiusInPx<Float>, 4> radiuses_;
+    std::array<BorderRadiusInPx, 4> radiuses_;
 };
 
 /// \class vgc::style::BorderRadiuses
@@ -764,19 +893,20 @@ public:
 
     /// Converts the `BorderRadius` to physical pixels.
     ///
-    /// The given `scaleFactor` is used to convert `dp` units to `px`, and the given
-    /// `horizontalRefLength` (resp. `verticalRefLength`) is used to convert
-    /// horizontal radiuses (resp. vertical radiuses) when it is specified as a
-    /// percentage.
+    /// The given `metrics` is used to convert non-percentage units to `px`,
+    /// and the given `horizontalRefLength` (resp. `verticalRefLength`) is used
+    /// to convert horizontal radiuses (resp. vertical radiuses) when it is
+    /// specified as a percentage.
     ///
-    template<typename Float>
-    BorderRadiusesInPx<Float>
-    toPx(Float scaleFactor, Float horizontalRefLength, Float verticalRefLength) const {
-        return BorderRadiusesInPx<Float>(
-            topLeft_.toPx(scaleFactor, horizontalRefLength, verticalRefLength),
-            topRight_.toPx(scaleFactor, horizontalRefLength, verticalRefLength),
-            bottomRight_.toPx(scaleFactor, horizontalRefLength, verticalRefLength),
-            bottomLeft_.toPx(scaleFactor, horizontalRefLength, verticalRefLength));
+    BorderRadiusesInPx toPx(
+        const Metrics& metrics,
+        float horizontalRefLength,
+        float verticalRefLength) const {
+        return BorderRadiusesInPx(
+            topLeft_.toPx(metrics, horizontalRefLength, verticalRefLength),
+            topRight_.toPx(metrics, horizontalRefLength, verticalRefLength),
+            bottomRight_.toPx(metrics, horizontalRefLength, verticalRefLength),
+            bottomLeft_.toPx(metrics, horizontalRefLength, verticalRefLength));
     }
 
     /// Returns whether the two given `BorderRadiuses` are equal.

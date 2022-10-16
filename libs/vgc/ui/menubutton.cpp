@@ -19,31 +19,10 @@
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/detail/paintutil.h>
 #include <vgc/ui/menu.h>
+#include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc::ui {
-
-namespace {
-
-using Length = double;
-
-float hintSpacing(float spacing) {
-    if (spacing <= 0) {
-        return 0;
-    }
-    return (std::max)(1.f, (std::round)(spacing));
-}
-
-float getSpacing(const Widget* w, core::StringId id, bool hint) {
-    style::StyleValue spacing = w->style(id);
-    if (spacing.has<Length>()) {
-        float value = static_cast<float>(spacing.to<Length>());
-        return hint ? hintSpacing(value) : value;
-    }
-    return 0;
-}
-
-} // namespace
 
 namespace {
 
@@ -107,112 +86,77 @@ void MenuButton::onParentWidgetChanged(Widget* newParent) {
     parentMenu_ = dynamic_cast<Menu*>(newParent);
 }
 
+namespace {
+
+class Calculator {
+public:
+    Calculator(const MenuButton* button)
+        : calc_(button)
+        , mainDir_(button->mainDirectionIndex())
+        , crossDir_(button->crossDirectionIndex()) {
+    }
+
+    void addTrackIfVisible(Widget* item, const geometry::Vec2f& overrides) {
+        if (item->visibility() != Visibility::Invisible) {
+            geometry::Vec2f size = item->preferredSize();
+            applySizeOverrides(size, overrides);
+            addTrack(size);
+        }
+    }
+
+    void addTrackIfPositive(float value) {
+        if (value > 0.f) {
+            addTrack({value, value});
+        }
+    }
+
+    void addTrack(const geometry::Vec2f& size) {
+        calc_.addTo(mainDir_, size[mainDir_]);
+        maxCrossDir_ = std::max(maxCrossDir_, size[crossDir_]);
+        ++numTracks_;
+    }
+
+    geometry::Vec2f compute() {
+        calc_.addTo(crossDir_, maxCrossDir_);
+        if (numTracks_ > 0) {
+            core::StringId gap = (mainDir_ == 0) ? strings::column_gap : strings::row_gap;
+            calc_.addTo(mainDir_, gap, numTracks_ - 1);
+        }
+        calc_.addPaddingAndBorder();
+        return calc_.compute();
+    }
+
+private:
+    PreferredSizeCalculator calc_;
+    Int mainDir_;
+    Int crossDir_;
+    Int numTracks_ = 0;
+    float maxCrossDir_ = 0.f;
+};
+
+} // namespace
+
 geometry::Vec2f MenuButton::computePreferredSize() const {
     // we must return preferred size without the layouting overrides
-
-    namespace gs = graphics::strings;
-    namespace ss = style::strings;
-    using namespace strings;
-
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-
-    const bool hint = (style(gs::pixel_hinting) == gs::normal);
-    const geometry::Vec2f gapH = geometry::Vec2f(
-        getSpacing(this, column_gap, hint), getSpacing(this, row_gap, hint));
-
-    Margins padding;
-    geometry::Vec2f contentSize = {};
-    if (w.isAuto() || h.isAuto()) {
-        geometry::Vec2f textSize = textLabel()->preferredSize();
-        geometry::Vec2f iconSize = iconWidget()->preferredSize();
-        applySizeOverrides(iconSize, iconSizeOverrides_);
-        geometry::Vec2f scutSize = shortcutLabel()->preferredSize();
-        applySizeOverrides(scutSize, shortcutSizeOverrides_);
-
-        int concatDim = 0;
-        switch (direction()) {
-        case FlexDirection::Column:
-        case FlexDirection::ColumnReverse:
-            concatDim = 1;
-            break;
-        case FlexDirection::Row:
-        case FlexDirection::RowReverse:
-        default:
-            break;
-        }
-        int centerDim = concatDim ? 0 : 1;
-
-        float s0 = 0;
-        float s1 = 0;
-        int count = 0;
-        if (iconWidget()->visibility() != Visibility::Invisible) {
-            s0 += iconSize[concatDim];
-            s1 = std::max(s1, iconSize[centerDim]);
-            ++count;
-        }
-        if (textLabel()->visibility() != Visibility::Invisible) {
-            s0 += textSize[concatDim];
-            s1 = std::max(s1, textSize[centerDim]);
-            ++count;
-        }
-        if (shortcutLabel()->visibility() != Visibility::Invisible) {
-            s0 += scutSize[concatDim];
-            s1 = std::max(s1, scutSize[centerDim]);
-            ++count;
-        }
-        if (arrowSizeOverride_ > 0.f) {
-            s0 += arrowSizeOverride_;
-            s1 = std::max(s1, arrowSizeOverride_);
-            ++count;
-        }
-        s0 += std::max(0, count - 1) * gapH[concatDim];
-
-        contentSize[concatDim] = s0;
-        contentSize[centerDim] = s1;
-
-        // XXX profile perf of querying this.
-        padding = Margins(
-            detail::getLength(this, ss::padding_top),
-            detail::getLength(this, ss::padding_right),
-            detail::getLength(this, ss::padding_bottom),
-            detail::getLength(this, ss::padding_left));
-    }
-
-    geometry::Vec2f res(0, 0);
-    if (w.isAuto()) {
-        res[0] = contentSize[0] + padding.horizontalSum();
-    }
-    else {
-        res[0] = w.value();
-    }
-    if (h.isAuto()) {
-        res[1] = contentSize[1] + padding.verticalSum();
-    }
-    else {
-        res[1] = h.value();
-    }
-    return res;
+    Calculator calc(this);
+    calc.addTrackIfVisible(iconWidget(), iconSizeOverrides_);
+    calc.addTrackIfVisible(textLabel(), textSizeOverrides_);
+    calc.addTrackIfVisible(shortcutLabel(), shortcutSizeOverrides_);
+    calc.addTrackIfPositive(arrowSizeOverride_);
+    return calc.compute();
 }
 
-// XXX use flex gap
 void MenuButton::updateChildrenGeometry() {
     namespace gs = graphics::strings;
     namespace ss = style::strings;
 
     using namespace strings;
 
-    const geometry::Vec2f size = this->size();
-
     const bool hint = (style(gs::pixel_hinting) == gs::normal);
-    const Margins padding(
-        getSpacing(this, ss::padding_top, hint),
-        getSpacing(this, ss::padding_right, hint),
-        getSpacing(this, ss::padding_bottom, hint),
-        getSpacing(this, ss::padding_left, hint));
 
-    const geometry::Rect2f contentBox = geometry::Rect2f({}, size) - padding;
-    if (contentBox.width() <= 0 || contentBox.height() <= 0) {
+    const geometry::Rect2f contentRect_ = contentRect();
+    const Margins paddingAndBorder(rect(), contentRect_);
+    if (contentRect_.width() <= 0 || contentRect_.height() <= 0) {
         iconWidget()->updateGeometry(0, 0, 0, 0);
         textLabel()->updateGeometry(0, 0, 0, 0);
         shortcutLabel()->updateGeometry(0, 0, 0, 0);
@@ -220,15 +164,15 @@ void MenuButton::updateChildrenGeometry() {
     }
 
     geometry::Vec2f iconSize = {};
-    geometry::Vec2f scutSize = {};
+    geometry::Vec2f shortcutSize = {};
 
     if (iconWidget()->visibility() != Visibility::Invisible) {
         iconSize = iconWidget()->preferredSize();
         applySizeOverrides(iconSize, iconSizeOverrides_);
     }
     if (shortcutLabel()->visibility() != Visibility::Invisible) {
-        scutSize = shortcutLabel()->preferredSize();
-        applySizeOverrides(scutSize, shortcutSizeOverrides_);
+        shortcutSize = shortcutLabel()->preferredSize();
+        applySizeOverrides(shortcutSize, shortcutSizeOverrides_);
     }
     float arrowSize = arrowSizeOverride_ >= 0 ? arrowSizeOverride_ : 0.f;
 
@@ -239,18 +183,19 @@ void MenuButton::updateChildrenGeometry() {
         [[fallthrough]];
     case FlexDirection::Column: {
         // vertical layout
-        const float gapH = getSpacing(this, column_gap, hint);
-        float wc = contentBox.width();
-        float hc = contentBox.height();
-        float xc = padding.left();
-        float y0 = padding.top();
+        const float gapH =
+            detail::getLengthOrPercentageInPx(this, row_gap, height(), hint);
+        float wc = contentRect_.width();
+        float hc = contentRect_.height();
+        float xc = paddingAndBorder.left();
+        float y0 = paddingAndBorder.top();
         float y4 = y0 + hc;
         float hr = hc;
         float hArrow = allocSize(arrowSize, hr);
         float hGap3 = (hArrow > 0.f) ? allocSize(gapH, hr) : 0.f;
         float hIcon = allocSize(iconSize.y(), hr);
         float hGap1 = (hIcon > 0.f) ? allocSize(gapH, hr) : 0.f;
-        float hShortcut = allocSize(scutSize.y(), hr);
+        float hShortcut = allocSize(shortcutSize.y(), hr);
         float hGap2 = (hShortcut > 0.f) ? allocSize(gapH, hr) : 0.f;
         float hText = hr;
         float y = y0;
@@ -280,18 +225,19 @@ void MenuButton::updateChildrenGeometry() {
     case FlexDirection::Row:
     default: {
         // horizontal layout
-        const float gapH = getSpacing(this, column_gap, hint);
-        float wc = contentBox.width();
-        float hc = contentBox.height();
-        float yc = padding.top();
-        float x0 = padding.left();
+        const float gapH =
+            detail::getLengthOrPercentageInPx(this, column_gap, width(), hint);
+        float wc = contentRect_.width();
+        float hc = contentRect_.height();
+        float yc = paddingAndBorder.top();
+        float x0 = paddingAndBorder.left();
         float x4 = x0 + wc;
         float wr = wc;
         float wArrow = allocSize(arrowSize, wr);
         float wGap3 = (wArrow > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wIcon = allocSize(iconSize.x(), wr);
         float wGap1 = (wIcon > 0.f) ? allocSize(gapH, wr) : 0.f;
-        float wShortcut = allocSize(scutSize.x(), wr);
+        float wShortcut = allocSize(shortcutSize.x(), wr);
         float wGap2 = (wShortcut > 0.f) ? allocSize(gapH, wr) : 0.f;
         float wText = wr;
         float x = x0;

@@ -38,7 +38,6 @@
 #include <vgc/ui/exceptions.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/shortcut.h>
-#include <vgc/ui/sizepolicy.h>
 
 class QKeyEvent;
 
@@ -365,6 +364,11 @@ public:
         return geometry::Rect2f::fromPositionSize(0, 0, size_);
     }
 
+    /// Returns the content rect of this widget. This is equal to `rect()` with
+    /// border and padding removed.
+    ///
+    geometry::Rect2f contentRect() const;
+
     /// Sets the new position and size of this widget (relative to its parent),
     /// then calls updateChildrenGeometry().
     ///
@@ -440,7 +444,7 @@ public:
 
     /// Returns the preferred width of this widget.
     ///
-    PreferredSize preferredWidth() const;
+    style::LengthOrPercentageOrAuto preferredWidth() const;
 
     /// Returns the width stretch factor of this widget.
     ///
@@ -452,7 +456,7 @@ public:
 
     /// Returns the preferred height of this widget.
     ///
-    PreferredSize preferredHeight() const;
+    style::LengthOrPercentageOrAuto preferredHeight() const;
 
     /// Returns the preferred width of the widget for a given height.
     ///
@@ -579,19 +583,6 @@ public:
     /// needs to be repainted for a frame.
     ///
     void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
-
-    /// Returns the widget's scale factor. This is the factor to be used to
-    /// convert from `dp` units to `px` units.
-    ///
-    float scaleFactor() {
-        return root()->scaleFactor_;
-    }
-
-    /// Sets the scale factor. This should only be called on the root.
-    ///
-    void setScaleFactor(float s) {
-        root()->scaleFactor_ = s;
-    }
 
     /// Returns the `background-color` style attribute of this widget.
     ///
@@ -1318,10 +1309,6 @@ private:
     style::BorderRadiuses borderRadiuses_;
     bool backgroundChanged_ = true;
     // TODO: border width/style
-
-    // Scaling factor. Only valid for root.
-    // TODO: move to WidgetTree
-    float scaleFactor_ = 1.0;
 
     // Events
     HandledEventPolicy handledEventPolicy_ = HandledEventPolicy::Skip;

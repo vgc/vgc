@@ -157,7 +157,7 @@ void Menu::setShortcutTrackEnabled(bool enabled) {
     }
 }
 
-namespace detail {
+namespace {
 
 bool placeMenuFit(
     geometry::Rect2f& menuRect,
@@ -205,29 +205,31 @@ bool placeMenuFit(
     return true;
 }
 
-} // namespace detail
+MenuDropDirection getMenuDropDirection(Menu* parentMenu, MenuButton* button) {
+    if (parentMenu) {
+        if (parentMenu->isRow()) {
+            return MenuDropDirection::Vertical;
+        }
+        else {
+            return MenuDropDirection::Horizontal;
+        }
+    }
+    else if (button) {
+        return button->menuDropDirection();
+    }
+    else {
+        return MenuDropDirection::Horizontal;
+    }
+}
+
+} // namespace
 
 geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
 
     MenuButton* button = dynamic_cast<MenuButton*>(opener);
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
-    MenuDropDirection dropDir =
-        button ? button->menuDropDirection() : MenuDropDirection::Horizontal;
-    if (parentMenu) {
-        switch (parentMenu->direction()) {
-        case FlexDirection::Row:
-        case FlexDirection::RowReverse:
-            dropDir = MenuDropDirection::Vertical;
-            break;
-        case FlexDirection::Column:
-        case FlexDirection::ColumnReverse:
-            dropDir = MenuDropDirection::Horizontal;
-            break;
-        default:
-            break;
-        }
-    }
+    MenuDropDirection dropDir = getMenuDropDirection(parentMenu, button);
 
     geometry::Rect2f anchorRect = opener->mapTo(area, opener->rect());
     geometry::Rect2f areaRect = area->rect();
@@ -237,16 +239,16 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
     const int sideDir = preferLeftRight ? 0 : 1;
     const int crossDir = preferLeftRight ? 1 : 0;
 
+    Margins paddingAndBorder(rect(), contentRect());
     std::array<geometry::Vec2f, 2> fixedShifts = {
-        geometry::Vec2f{-padding_.bottom(), -padding_.top()},
-        geometry::Vec2f{-padding_.right(), -padding_.left()}};
+        geometry::Vec2f{-paddingAndBorder.bottom(), -paddingAndBorder.top()},
+        geometry::Vec2f{-paddingAndBorder.right(), -paddingAndBorder.left()}};
 
     float crossShift = anchorRect.size()[sideDir] * 0.2f;
     fixedShifts[crossDir] = geometry::Vec2f(crossShift, crossShift);
 
-    if (!detail::placeMenuFit(
-            menuRect, fixedShifts[sideDir], areaRect, anchorRect, sideDir)) {
-        if (!detail::placeMenuFit(
+    if (!placeMenuFit(menuRect, fixedShifts[sideDir], areaRect, anchorRect, sideDir)) {
+        if (!placeMenuFit(
                 menuRect, fixedShifts[crossDir], areaRect, anchorRect, crossDir)) {
             // doesn't fit at aligned locations, fallback
             menuRect.setPosition(anchorRect.pMax());
@@ -269,9 +271,6 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
         }
     }
     return menuRect.position();
-
-    //geometry::Vec2f pos = opener->mapTo(area, opener->size());
-    //return pos;
 }
 
 void Menu::notifyChanged(bool geometryChanged) {
@@ -441,7 +440,7 @@ void Menu::onItemActionTriggered_(Widget* from) {
         subMenuPopupHitRect_ = newPopup->mapTo(this, newPopup->rect());
 
         // Add margins to popup hit rect when applicable (no overlap with our buttons).
-        geometry::Rect2f itemsRect = rect() - padding_;
+        geometry::Rect2f itemsRect = contentRect();
         const float hitMargin = 5.f;
         Margins hitMargins = {};
         if (subMenuPopupHitRect_.xMin() >= itemsRect.xMax()
@@ -664,13 +663,6 @@ void Menu::onHidden() {
 geometry::Vec2f Menu::computePreferredSize() const {
     setupWidthOverrides_();
     geometry::Vec2f ret = Flex::computePreferredSize();
-
-    const float padL = detail::getLength(this, style::strings::padding_left);
-    const float padR = detail::getLength(this, style::strings::padding_right);
-    const float padT = detail::getLength(this, style::strings::padding_top);
-    const float padB = detail::getLength(this, style::strings::padding_bottom);
-    padding_ = Margins(padT, padR, padB, padL);
-
     return ret;
 }
 

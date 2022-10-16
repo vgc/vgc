@@ -34,10 +34,10 @@ vgc_add_library(ui
         panelarea.h
         plot2d.h
         popuplayer.h
+        preferredsizecalculator.h
         qtutil.h
         row.h
         shortcut.h
-        sizepolicy.h
         strings.h
         widget.h
         window.h
@@ -73,6 +73,7 @@ vgc_add_library(ui
         panelarea.cpp
         plot2d.cpp
         popuplayer.cpp
+        preferredsizecalculator.cpp
         qtutil.cpp
         row.cpp
         shortcut.cpp

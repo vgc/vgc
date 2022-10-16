@@ -6,6 +6,7 @@ vgc_add_library(style
 
     HEADER_FILES
         api.h
+        metrics.h
         parse.h
         strings.h
         stylableobject.h

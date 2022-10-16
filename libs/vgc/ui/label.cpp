@@ -18,6 +18,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/style/strings.h>
+#include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -59,25 +60,8 @@ style::StylableObject* Label::lastChildStylableObject() const {
 }
 
 void Label::onResize() {
-
     SuperClass::onResize();
-
-    namespace ss = style::strings;
-
-    // Compute contentRect
-    // TODO: move to Widget::contentRect()
-    float paddingLeft = detail::getLength(this, ss::padding_left);
-    float paddingRight = detail::getLength(this, ss::padding_right);
-    float paddingTop = detail::getLength(this, ss::padding_top);
-    float paddingBottom = detail::getLength(this, ss::padding_bottom);
-    geometry::Rect2f r = rect();
-    geometry::Vec2f pMinOffset(paddingLeft, paddingTop);
-    geometry::Vec2f pMaxOffset(paddingRight, paddingBottom);
-    geometry::Rect2f contentRect(r.pMin() + pMinOffset, r.pMax() - pMaxOffset);
-
-    // Set appropriate size for the RichText
-    richText_->setRect(contentRect);
-
+    richText_->setRect(contentRect());
     reload_ = true;
 }
 
@@ -128,35 +112,10 @@ void Label::onStyleChanged() {
 }
 
 geometry::Vec2f Label::computePreferredSize() const {
-
-    namespace ss = style::strings;
-
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-
-    geometry::Vec2f res(0, 0);
-    geometry::Vec2f textPreferredSize(0, 0);
-    if (w.type() == auto_ || h.type() == auto_) {
-        textPreferredSize = richText_->preferredSize();
-    }
-    if (w.type() == auto_) {
-        float paddingLeft = detail::getLength(this, ss::padding_left);
-        float paddingRight = detail::getLength(this, ss::padding_right);
-        res[0] = textPreferredSize[0] + paddingLeft + paddingRight;
-    }
-    else {
-        res[0] = w.value();
-    }
-    if (h.type() == auto_) {
-        float paddingTop = detail::getLength(this, ss::padding_top);
-        float paddingBottom = detail::getLength(this, ss::padding_bottom);
-        res[1] = textPreferredSize[1] + paddingTop + paddingBottom;
-    }
-    else {
-        res[1] = h.value();
-    }
-    return res;
+    PreferredSizeCalculator calc(this);
+    calc.add(richText_->preferredSize());
+    calc.addPaddingAndBorder();
+    return calc.compute();
 }
 
 } // namespace vgc::ui

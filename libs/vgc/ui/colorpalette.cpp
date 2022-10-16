@@ -1178,7 +1178,13 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 float borderWidth = 1;
 
                 detail::insertRect(
-                    a, hoveredColor, highlightColor, rect, radius, borderWidth);
+                    a,
+                    styleMetrics(),
+                    hoveredColor,
+                    highlightColor,
+                    rect,
+                    radius,
+                    borderWidth);
             }
         }
 
@@ -1746,9 +1752,14 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
 
     const Int numHSamples = getNumHSamples_(rect);
 
-    float borderWidth = 1.0f;
-    float outerWidth = 3.0f;
-    float holeRadius = 4.0f;
+    using namespace style::literals;
+    const style::Length borderWidth_ = 1.0_dp;
+    const style::Length outerWidth_ = 3.0_dp;
+    const style::Length holeRadius_ = 4.0_dp;
+
+    float borderWidth = borderWidth_.toPx(styleMetrics());
+    float outerWidth = outerWidth_.toPx(styleMetrics());
+    float holeRadius = holeRadius_.toPx(styleMetrics());
 
     float r1 = holeRadius;
     float r2 = holeRadius + borderWidth;
@@ -1918,12 +1929,20 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
 }
 
 void ColorPaletteSelector::computeSlSubMetrics_(float width, Metrics& m) const {
-    const float minCellWidth = 0.0f;
-    const float maxCellWidth = core::FloatInfinity;
-    const float minCellHeight = 20.0f; // can be overidden to fit maxHeight
-    const float maxCellHeight = 30.0f;
 
-    float maxHeight = 300.0f; // TODO: multiply by scaleFactor
+    using namespace style::literals;
+    const style::Length minCellWidth_ = 1.0_dp;
+    const style::Length maxCellWidth_(core::FloatInfinity, style::LengthUnit::Dp);
+    const style::Length minCellHeight_ = 20.0_dp; // can be overidden to fit maxHeight
+    const style::Length maxCellHeight_ = 30.0_dp;
+    const style::Length maxHeight_ = 300.0_dp;
+
+    const float minCellWidth = minCellWidth_.toPx(styleMetrics());
+    const float maxCellWidth = maxCellWidth_.toPx(styleMetrics());
+    const float minCellHeight = minCellHeight_.toPx(styleMetrics());
+    const float maxCellHeight = maxCellHeight_.toPx(styleMetrics());
+    const float maxHeight = maxHeight_.toPx(styleMetrics());
+
     float maxSlDy =
         (std::min)((maxHeight - m.borderWidth) / numSaturationSteps_, maxCellHeight);
     if (maxSlDy >= 2) {
@@ -1946,10 +1965,17 @@ void ColorPaletteSelector::computeSlSubMetrics_(float width, Metrics& m) const {
 }
 
 void ColorPaletteSelector::computeHueSubMetrics_(float /* width */, Metrics& m) const {
-    const float minCellWidth = 0.0f;
-    const float maxCellWidth = core::FloatInfinity;
-    const float minCellHeight = 20.0f;
-    const float maxCellHeight = 30.0f;
+
+    using namespace style::literals;
+    const style::Length minCellWidth_ = 0.0_dp;
+    const style::Length maxCellWidth_(core::FloatInfinity, style::LengthUnit::Dp);
+    const style::Length minCellHeight_ = 20.0_dp; // can be overidden to fit maxHeight
+    const style::Length maxCellHeight_ = 30.0_dp;
+
+    const float minCellWidth = minCellWidth_.toPx(styleMetrics());
+    const float maxCellWidth = maxCellWidth_.toPx(styleMetrics());
+    const float minCellHeight = minCellHeight_.toPx(styleMetrics());
+    const float maxCellHeight = maxCellHeight_.toPx(styleMetrics());
 
     Int halfNumHueSteps = numHueSteps_ / 2;
     float xMin = m.saturationLightnessRect.xMin();
@@ -1968,14 +1994,22 @@ ColorPaletteSelector::Metrics
 ColorPaletteSelector::computeMetricsFromWidth_(float width) const {
     namespace gs = graphics::strings;
     namespace ss = style::strings;
+    using detail::getLengthInPx;
+    using detail::getLengthOrPercentageInPx;
+
+    // TODO: handle case where padding/gap is a percentage. It's unlikely
+    // (doesn't make much sense), but ideally we should support it. For
+    // now we simply return 0 if a percentage is given.
+    float refLength = 0;
+
     Metrics m;
     m.hinting = (style(gs::pixel_hinting) == gs::normal);
-    m.borderWidth = detail::getLength(this, ss::border_width);
-    m.paddingTop = detail::getLength(this, ss::padding_top);
-    m.paddingRight = detail::getLength(this, ss::padding_right);
-    m.paddingBottom = detail::getLength(this, ss::padding_bottom);
-    m.paddingLeft = detail::getLength(this, ss::padding_left);
-    m.rowGap = detail::getLength(this, ui::strings::row_gap);
+    m.borderWidth = getLengthInPx(this, ss::border_width);
+    m.paddingTop = getLengthOrPercentageInPx(this, ss::padding_top, refLength);
+    m.paddingRight = getLengthOrPercentageInPx(this, ss::padding_right, refLength);
+    m.paddingBottom = getLengthOrPercentageInPx(this, ss::padding_bottom, refLength);
+    m.paddingLeft = getLengthOrPercentageInPx(this, ss::padding_left, refLength);
+    m.rowGap = getLengthOrPercentageInPx(this, ui::strings::row_gap, refLength);
     computeSlSubMetrics_(width, m);
     computeHueSubMetrics_(width, m);
     m.width = width;
@@ -2108,25 +2142,33 @@ float ColorPaletteSelector::preferredHeightForWidth(float width) const {
 }
 
 geometry::Vec2f ColorPaletteSelector::computePreferredSize() const {
+
     geometry::Vec2f res(0, 0);
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-    if (w.type() != auto_) {
-        res[0] = w.value();
-    }
-    else {
+    style::LengthOrPercentageOrAuto w = preferredWidth();
+    style::LengthOrPercentageOrAuto h = preferredHeight();
+    const style::Metrics& sMetrics = styleMetrics();
+    float refLength = 0.0f;
+    float valueIfAuto = 0.0f;
+
+    if (w.isAuto()) {
         // TODO: something better , e.g., based on the number of
         // hue/saturation/lightness steps?
-        res[0] = 100.0f;
-    }
-    if (h.type() != auto_) {
-        res[1] = h.value();
+        using namespace style::literals;
+        style::Length preferredWidthIfAuto = 100.0_dp;
+        res[0] = preferredWidthIfAuto.toPx(sMetrics);
     }
     else {
+        res[0] = w.toPx(sMetrics, refLength, valueIfAuto);
+    }
+
+    if (h.isAuto()) {
         Metrics m = computeMetricsFromWidth_(res[0]);
         res[1] = m.height;
     }
+    else {
+        res[1] = h.toPx(sMetrics, refLength, valueIfAuto);
+    }
+
     return res;
 }
 
@@ -2370,11 +2412,12 @@ void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        float borderWidth = detail::getLength(this, ss::border_width);
+        float borderWidth = detail::getLengthInPx(this, ss::border_width);
         core::Color borderColor =
             computeHighlightColor(color_, HighlightStyle::DarkenOnly);
         style::BorderRadiuses radiuses = style::BorderRadiuses(this);
-        detail::insertRect(a, color_, borderColor, rect(), radiuses, borderWidth);
+        detail::insertRect(
+            a, styleMetrics(), color_, borderColor, rect(), radiuses, borderWidth);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -2520,14 +2563,18 @@ void ColorListView::onPaintCreate(graphics::Engine* engine) {
 namespace {
 
 float getItemLengthInPx(style::StylableObject* item, core::StringId property) {
-    PreferredSize p = item->style(property).to<PreferredSize>();
-    if (p.isAuto()) {
-        return 10.0f;
-    }
-    else {
-        // TODO: convert units
-        return p.value();
-    }
+
+    using namespace style::literals;
+    const style::Length lengthIfAuto = 10.0_dp;
+    const style::Metrics& metrics = item->styleMetrics();
+
+    style::LengthOrPercentageOrAuto p =
+        item->style(property).to<style::LengthOrPercentageOrAuto>();
+
+    // TODO: handle percentages
+    float refLength = 0.0f;
+    float valueIfAuto = lengthIfAuto.toPx(metrics);
+    return p.toPx(metrics, refLength, valueIfAuto);
 }
 
 } // namespace
@@ -2545,8 +2592,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
             updateMetrics_();
             const Metrics& m = metrics_;
 
-            float scaleFactor = 1;
-            float borderWidth = detail::getLength(item_.get(), ss::border_width);
+            float borderWidth = detail::getLengthInPx(item_.get(), ss::border_width);
             //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
             style::BorderRadiuses radiuses = style::BorderRadiuses(item_.get());
 
@@ -2566,15 +2612,16 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
 
                 if (i == selectedColorIndex_) {
 
-                    style::BorderRadiusesInPx<float> refRadiuses =
-                        radiuses.toPx(scaleFactor, itemRect.width(), itemRect.height());
+                    style::BorderRadiusesInPx refRadiuses = radiuses.toPx(
+                        styleMetrics(), itemRect.width(), itemRect.height());
 
+                    // XXX should offset be in dp rather than px?
                     geometry::Rect2f itemRect1 = itemRect + ui::Margins(1);
-                    style::BorderRadiusesInPx<float> radiuses1 =
+                    style::BorderRadiusesInPx radiuses1 =
                         refRadiuses.offsetted(1, 1, 1, 1);
 
                     geometry::Rect2f itemRect2 = itemRect + ui::Margins(2);
-                    style::BorderRadiusesInPx<float> radiuses2 =
+                    style::BorderRadiusesInPx radiuses2 =
                         refRadiuses.offsetted(2, 2, 2, 2);
 
                     detail::insertRect(
@@ -2595,7 +2642,13 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
                                                : HighlightStyle::DarkenOnly;
                     core::Color highlightColor = computeHighlightColor(color, style);
                     detail::insertRect(
-                        a, color, highlightColor, itemRect, radiuses, borderWidth);
+                        a,
+                        styleMetrics(),
+                        color,
+                        highlightColor,
+                        itemRect,
+                        radiuses,
+                        borderWidth);
                 }
             }
         }
@@ -2712,30 +2765,40 @@ float ColorListView::preferredHeightForWidth(float width) const {
 }
 
 geometry::Vec2f ColorListView::computePreferredSize() const {
+
     geometry::Vec2f res(0, 0);
-    PreferredSizeType auto_ = PreferredSizeType::Auto;
-    PreferredSize w = preferredWidth();
-    PreferredSize h = preferredHeight();
-    if (w.type() != auto_) {
-        res[0] = w.value();
-    }
-    else {
+    style::LengthOrPercentageOrAuto w = preferredWidth();
+    style::LengthOrPercentageOrAuto h = preferredHeight();
+    float refLength = 0.0f;
+    float valueIfAuto = 0.0f;
+
+    if (w.isAuto()) {
         // TODO: something better?
-        res[0] = 100.0f;
-    }
-    if (h.type() != auto_) {
-        res[1] = h.value();
+        using namespace style::literals;
+        style::Length autoWidth = 100.0_dp;
+        res[0] = autoWidth.toPx(styleMetrics());
     }
     else {
+        res[0] = w.toPx(styleMetrics(), refLength, valueIfAuto);
+    }
+
+    if (h.isAuto()) {
         Metrics m = computeMetricsFromWidth_(res[0]);
         res[1] = m.height;
     }
+    else {
+        res[1] = h.toPx(styleMetrics(), refLength, valueIfAuto);
+    }
+
     return res;
 }
 
 ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) const {
 
     namespace gs = graphics::strings;
+    using namespace style::literals;
+
+    const style::Length gap = 4.0_dp;
 
     // Note: in order to fill the available width while being "justified", we
     // need to stretch either the gap between the items, or the items
@@ -2747,7 +2810,7 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     m.itemPreferredWidth = getItemLengthInPx(item_.get(), strings::preferred_width);
     m.numColumns = static_cast<Int>(std::round(width / m.itemPreferredWidth));
     m.numColumns = (std::max)(Int(1), m.numColumns);
-    m.gap = 4;
+    m.gap = gap.toPx(styleMetrics());
     m.itemWidth = (width - (m.numColumns - 1) * m.gap) / m.numColumns;
     m.itemHeight = hint(m.itemWidth, m.hinting);
     m.numRows = (numColors() + m.numColumns - 1) / m.numColumns;

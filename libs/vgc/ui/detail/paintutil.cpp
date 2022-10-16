@@ -18,6 +18,7 @@
 
 #include <vgc/graphics/font.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/logcategories.h>
 #include <vgc/ui/margins.h>
 
 namespace vgc::ui::detail {
@@ -234,11 +235,11 @@ template<CornerType cornerType>
 void insertQuarterEllipse(
     core::FloatArray& a,
     const geometry::Rect2f& rect,
-    const style::BorderRadiusesInPx<float>& radiuses,
+    const style::BorderRadiusesInPx& radiuses,
     const QuarterEllipseParams& params) {
 
     geometry::Vec2f corner = rect.corner(cornerType);
-    style::BorderRadiusInPx<float> radius = radiuses[cornerType];
+    style::BorderRadiusInPx radius = radiuses[cornerType];
 
     if (radius.horizontalRadius() < params.eps || radius.verticalRadius() < params.eps) {
         a.extend({corner.x(), corner.y()});
@@ -288,12 +289,12 @@ void insertQuarterEllipseWithBorder(
     core::FloatArray& a,
     const geometry::Rect2f& innerRect,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& innerRadiuses,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
-    const style::BorderRadiusesInPx<float>& refRadiuses,
+    const style::BorderRadiusesInPx& innerRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
+    const style::BorderRadiusesInPx& refRadiuses,
     const QuarterEllipseParams& params) {
 
-    style::BorderRadiusInPx<float> radius = refRadiuses[cornerType];
+    style::BorderRadiusInPx radius = refRadiuses[cornerType];
 
     float minRadius = (std::min)(radius.horizontalRadius(), radius.verticalRadius());
     Int numSegments =
@@ -308,11 +309,11 @@ void insertQuarterEllipseWithBorder(
     core::FloatArray& a,
     const geometry::Rect2f& innerRect,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& innerRadiuses,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const style::BorderRadiusesInPx& innerRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
     const QuarterEllipseParams& params) {
 
-    style::BorderRadiusInPx<float> outerRadius = outerRadiuses[cornerType];
+    style::BorderRadiusInPx outerRadius = outerRadiuses[cornerType];
 
     float minOuterRadius =
         (std::min)(outerRadius.horizontalRadius(), outerRadius.verticalRadius());
@@ -328,15 +329,15 @@ void insertQuarterEllipseWithBorder(
     core::FloatArray& a,
     const geometry::Rect2f& innerRect,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& innerRadiuses,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
+    const style::BorderRadiusesInPx& innerRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
     const Int numSegments,
     const QuarterEllipseParams& params) {
 
     geometry::Vec2f innerCorner = getCorner<cornerType>(innerRect);
     geometry::Vec2f outerCorner = getCorner<cornerType>(outerRect);
-    style::BorderRadiusInPx<float> innerRadius = innerRadiuses[cornerType];
-    style::BorderRadiusInPx<float> outerRadius = outerRadiuses[cornerType];
+    style::BorderRadiusInPx innerRadius = innerRadiuses[cornerType];
+    style::BorderRadiusInPx outerRadius = outerRadiuses[cornerType];
 
     if (outerRadius.horizontalRadius() < params.eps
         || outerRadius.verticalRadius() < params.eps) {
@@ -399,6 +400,7 @@ void insertQuarterEllipseWithBorder(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& color,
     const geometry::Rect2f& rect,
     const style::BorderRadiuses& radiuses_,
@@ -412,9 +414,8 @@ void insertRect(
     params.eps = 1e-3f * pixelSize;
     params.invPixelSize = 1.0f / pixelSize;
 
-    float scaleFactor = 1;
     style::BorderRadiusesInPx radiuses =
-        radiuses_.toPx(scaleFactor, rect.width(), rect.height());
+        radiuses_.toPx(styleMetrics, rect.width(), rect.height());
 
     float r = static_cast<float>(color[0]);
     float g = static_cast<float>(color[1]);
@@ -449,6 +450,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
@@ -456,9 +458,8 @@ void insertRect(
     float borderWidth,
     float pixelSize) {
 
-    float scaleFactor = 1;
-    style::BorderRadiusesInPx<float> outerRadiuses =
-        outerRadiuses_.toPx(scaleFactor, outerRect.width(), outerRect.height());
+    style::BorderRadiusesInPx outerRadiuses =
+        outerRadiuses_.toPx(styleMetrics, outerRect.width(), outerRect.height());
     insertRect(
         a,
         fillColor,
@@ -475,8 +476,8 @@ void insertRect(
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& outerRadiuses,
-    const style::BorderRadiusesInPx<float>& refRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses,
+    const style::BorderRadiusesInPx& refRadiuses,
     float borderWidth,
     float pixelSize) {
 
@@ -505,7 +506,7 @@ void insertRect(
     ui::Margins borderWidths(outerRect, innerRect);
 
     // Compute inner radiuses in px
-    style::BorderRadiusesInPx<float> innerRadiuses = outerRadiuses.offsetted(
+    style::BorderRadiusesInPx innerRadiuses = outerRadiuses.offsetted(
         -borderWidths.top(),
         -borderWidths.right(),
         -borderWidths.bottom(),
@@ -600,13 +601,56 @@ core::Color getColor(const style::StylableObject* obj, core::StringId property) 
     return res;
 }
 
-float getLength(const style::StylableObject* obj, core::StringId property) {
-    float res = 0;
+style::Length getLength(const style::StylableObject* obj, core::StringId property) {
     style::StyleValue value = obj->style(property);
-    if (value.type() == style::StyleValueType::Number) {
-        res = value.toFloat();
+    if (value.has<style::Length>()) {
+        return value.to<style::Length>();
     }
-    return res;
+    else {
+        VGC_WARNING(
+            LogVgcUi,
+            "Calling getLength() with property {} which isn't of type Length. "
+            "Returning 0dp.",
+            property);
+        return style::Length();
+    }
+}
+
+style::LengthOrPercentage
+getLengthOrPercentage(const style::StylableObject* obj, core::StringId property) {
+    style::StyleValue value = obj->style(property);
+    if (value.has<style::LengthOrPercentage>()) {
+        return value.to<style::LengthOrPercentage>();
+    }
+    else {
+        VGC_WARNING(
+            LogVgcUi,
+            "Calling getLengthOrPercentage() with property {} which isn't of type "
+            "LengthOrPercentage. Returning 0dp.",
+            property);
+        return style::LengthOrPercentage();
+    }
+}
+
+float getLengthInPx(
+    const style::StylableObject* obj,
+    core::StringId property,
+    bool hinted) {
+
+    const style::Metrics& metrics = obj->styleMetrics();
+    float res = getLength(obj, property).toPx(metrics);
+    return hinted ? std::round(res) : res;
+}
+
+float getLengthOrPercentageInPx(
+    const style::StylableObject* obj,
+    core::StringId property,
+    float refLength,
+    bool hinted) {
+
+    const style::Metrics& metrics = obj->styleMetrics();
+    float res = getLengthOrPercentage(obj, property).toPx(metrics, refLength);
+    return hinted ? std::round(res) : res;
 }
 
 } // namespace vgc::ui::detail

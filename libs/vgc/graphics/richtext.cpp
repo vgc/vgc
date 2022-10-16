@@ -89,16 +89,17 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
     using namespace strings;
     using namespace style::strings;
+    using namespace style::literals;
 
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
     auto black_         = StyleValue::custom(core::colors::black);
     auto white_         = StyleValue::custom(core::colors::white);
     auto blueish_       = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
     auto transparent_   = StyleValue::custom(core::colors::transparent);
-    auto zero_          = StyleValue::number(0.0f);
-    auto one_           = StyleValue::number(1.0f);
+    auto zerol_         = StyleValue::custom(style::Length());
+    auto zerolp_        = StyleValue::custom(style::LengthOrPercentage());
     auto zerobr_        = StyleValue::custom(style::BorderRadius());
-    auto twelve_        = StyleValue::custom(style::Length(12.0f, style::LengthUnit::Dp));
+    auto twelve_        = StyleValue::custom(style::Length(12.0_dp));
     auto autol_         = StyleValue::custom(style::LengthOrAuto());
     auto normal_        = StyleValue::identifier(strings::normal);
     auto left_          = StyleValue::identifier(strings::left);
@@ -107,15 +108,15 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto table = std::make_shared<style::StylePropertySpecTable>();
 
     table->insert(background_color,                 transparent_,   false, &style::parseColor);
-    table->insert(margin_top,                       zero_,          false, &style::parseLength);
-    table->insert(margin_right,                     zero_,          false, &style::parseLength);
-    table->insert(margin_bottom,                    zero_,          false, &style::parseLength);
-    table->insert(margin_left,                      zero_,          false, &style::parseLength);
-    table->insert(padding_top,                      zero_,          false, &style::parseLength);
-    table->insert(padding_right,                    zero_,          false, &style::parseLength);
-    table->insert(padding_bottom,                   zero_,          false, &style::parseLength);
-    table->insert(padding_left,                     zero_,          false, &style::parseLength);
-    table->insert(border_width,                     zero_,          false, &style::parseLength);
+    table->insert(margin_top,                       zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(margin_right,                     zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(margin_bottom,                    zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(margin_left,                      zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_top,                      zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_right,                    zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_bottom,                   zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(padding_left,                     zerolp_,        false, &style::LengthOrPercentage::parse);
+    table->insert(border_width,                     zerol_,         false, &style::Length::parse);
     table->insert(border_color,                     black_,         false, &style::parseColor);
     table->insert(border_top_left_radius,           zerobr_,        false, &style::BorderRadius::parse);
     table->insert(border_top_right_radius,          zerobr_,        false, &style::BorderRadius::parse);
@@ -261,8 +262,8 @@ void insertRect(core::FloatArray& a, const core::Color& c, const geometry::Rect2
 }
 
 float getLengthInPx(const RichTextSpan* span, core::StringId property) {
-    float scaleFactor = 1.0f;
-    return span->style(property).to<style::Length>().toPx(scaleFactor);
+    const style::Metrics& metrics = span->styleMetrics();
+    return span->style(property).to<style::Length>().toPx(metrics);
 }
 
 float getLengthOrAutoInPx(
@@ -270,8 +271,8 @@ float getLengthOrAutoInPx(
     core::StringId property,
     float valueIfAuto) {
 
-    float scaleFactor = 1.0f;
-    return span->style(property).to<style::LengthOrAuto>().toPx(scaleFactor, valueIfAuto);
+    const style::Metrics& metrics = span->styleMetrics();
+    return span->style(property).to<style::LengthOrAuto>().toPx(metrics, valueIfAuto);
 }
 
 core::Color getColor(const RichTextSpan* span, core::StringId property) {

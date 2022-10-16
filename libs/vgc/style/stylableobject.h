@@ -22,6 +22,7 @@
 #include <vgc/core/stringid.h>
 
 #include <vgc/style/api.h>
+#include <vgc/style/metrics.h>
 #include <vgc/style/style.h>
 
 namespace vgc::style {
@@ -265,6 +266,18 @@ public:
     ///
     virtual const StyleSheet* defaultStyleSheet() const = 0;
 
+    /// Returns the style metrics of this stylable object.
+    ///
+    const Metrics& styleMetrics() const {
+        return styleMetrics_;
+    };
+
+    /// Sets the style metrics of this stylable object.
+    ///
+    void setStyleMetrics(const Metrics& metrics) {
+        styleMetrics_ = metrics;
+    };
+
 protected:
     StylableObject();
 
@@ -276,6 +289,7 @@ private:
     StyleSheetPtr styleSheet_;
     ClassSet styleClasses_;
     detail::StyleCachedData styleCachedData_;
+    Metrics styleMetrics_;
 
     void updateStyle_();
     const StylePropertySpec* getStylePropertySpec_(core::StringId property) const;

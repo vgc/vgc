@@ -90,6 +90,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& color,
     const geometry::Rect2f& rect,
     const style::BorderRadiuses& borderRadiuses,
@@ -97,6 +98,7 @@ void insertRect(
 
 void insertRect(
     core::FloatArray& a,
+    const style::Metrics& styleMetrics,
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
@@ -113,19 +115,28 @@ void insertRect(
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx<float>& outerRadiuses_,
-    const style::BorderRadiusesInPx<float>& refRadiuses_,
+    const style::BorderRadiusesInPx& outerRadiuses_,
+    const style::BorderRadiusesInPx& refRadiuses_,
     float borderWidth,
     float pixelSize = 1.0f);
 
 core::Color getColor(const style::StylableObject* obj, core::StringId property);
 
-// DEPRECATED: this is a function to be used with style properties
-// parsed using the now-deprecated function style::parseLength.
-// The recommended approach is now to use style::Length::parse in
-// combination with style::Length::toPx(scaleFactor).
-//
-float getLength(const style::StylableObject* obj, core::StringId property);
+style::Length getLength(const style::StylableObject* obj, core::StringId property);
+
+style::LengthOrPercentage
+getLengthOrPercentage(const style::StylableObject* obj, core::StringId property);
+
+float getLengthInPx(
+    const style::StylableObject* obj,
+    core::StringId property,
+    bool hinted = false);
+
+float getLengthOrPercentageInPx(
+    const style::StylableObject* obj,
+    core::StringId property,
+    float refLength,
+    bool hinted = false);
 
 } // namespace vgc::ui::detail
 
