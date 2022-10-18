@@ -379,14 +379,9 @@ void Window::focusOutEvent(QFocusEvent* event) {
 }
 
 void Window::resizeEvent(QResizeEvent* event) {
-    // Here, we get the size in virtual pixels.
-    qDebug() << "dpi ratio = " << devicePixelRatio();
-    qDebug() << "event size = " << event->size();
-    qDebug() << "size = " << size();
-    qDebug() << "screen physical size = " << screen()->physicalSize();
-    qDebug() << "screen size = " << screen()->size();
-    qDebug() << "screen dpi ratio = " << screen()->devicePixelRatio();
-    qDebug() << "logical dots per inch = " << screen()->logicalDotsPerInch();
+
+    updateScreenScaleRatio_();
+
     QSize size = event->size();
     [[maybe_unused]] int w = size.width();
     [[maybe_unused]] int h = size.height();
@@ -781,6 +776,25 @@ void Window::exposeEvent(QExposeEvent*) {
                 VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
             }
             paint(true);
+        }
+    }
+}
+
+void Window::updateScreenScaleRatio_() {
+
+#ifdef VGC_CORE_OS_MACOS
+    float unscaledDpi = 72.0f;
+#else
+    float unscaledDpi = 96.0f;
+#endif
+    float newScreenScaleRatio = static_cast<float>(screen()->logicalDotsPerInch())
+                                * static_cast<float>(screen()->devicePixelRatio())
+                                / unscaledDpi;
+    if (screenScaleRatio_ != newScreenScaleRatio) {
+        if (widget_) {
+            screenScaleRatio_ = newScreenScaleRatio;
+            style::Metrics metrics(screenScaleRatio_);
+            widget_->setStyleMetrics(metrics);
         }
     }
 }

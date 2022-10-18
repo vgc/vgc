@@ -252,9 +252,7 @@ public:
 
     /// Sets the style metrics of this stylable object.
     ///
-    void setStyleMetrics(const Metrics& metrics) {
-        styleMetrics_ = metrics;
-    };
+    void setStyleMetrics(const Metrics& metrics);
 
     /// Returns the `SpecTable` of this stylable object.
     ///

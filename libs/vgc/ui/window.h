@@ -111,6 +111,9 @@ private:
     bool deferredResize_ = false;
     bool entered_ = false;
 
+    float screenScaleRatio_ = 1.0;
+    void updateScreenScaleRatio_();
+
     geometry::Mat4f proj_;
     core::Color clearColor_;
 

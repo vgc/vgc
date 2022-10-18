@@ -127,6 +127,11 @@ void StylableObject::populateStyleSpecTable(SpecTable*) {
     // nothing
 }
 
+void StylableObject::setStyleMetrics(const Metrics& metrics) {
+    styleMetrics_ = metrics;
+    updateStyle_();
+};
+
 void StylableObject::updateStyle_() {
     // In this function, we precompute which rule sets match this node and
     // precompute all "cascaded values". Note that "computed values" are
@@ -141,6 +146,8 @@ void StylableObject::updateStyle_() {
     // Clear previous data
     styleCachedData_.clear();
 
+    StylableObject* parent = parentStylableObject();
+
     // Ensure that we use the same spec table as our parent,
     // and that the object is properly registered in the spec table.
     //
@@ -149,12 +156,16 @@ void StylableObject::updateStyle_() {
     // object is fully constructed, and therefore the virtuall call to
     // populateStyleSpecTable() is properly dispatched to the subclass.
     //
-    if (parentStylableObject()
-        && parentStylableObject()->styleSpecTable() != styleSpecTable()) {
-
+    if (parent && parent->styleSpecTable() != styleSpecTable()) {
         styleSpecTable_ = parentStylableObject()->styleSpecTable_;
     }
     populateStyleSpecTableVirtual(styleSpecTable_.get());
+
+    // Update style metrics
+    if (parent) {
+        styleMetrics_ = parent->styleMetrics();
+        // Note: don't call setStyleMetrics() to avoid recursion
+    }
 
     // Get all non-null stylesheets from this node to the root nodes
     for (StylableObject* node = this; //
