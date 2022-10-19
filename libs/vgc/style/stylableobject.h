@@ -161,6 +161,10 @@ private:
     VGC_OBJECT(StylableObject, core::Object)
 
 public:
+    /// Creates a root StylableObject.
+    ///
+    static StylableObjectPtr create();
+
     /// Returns the parent `StylableObject` of this `StylableObject`.
     ///
     StylableObject* parentStylableObject() const {
@@ -246,7 +250,7 @@ public:
     ///
     /// This method must be implemented by subclasses.
     ///
-    virtual const StyleSheet* defaultStyleSheet() const = 0;
+    virtual const StyleSheet* defaultStyleSheet() const;
 
     /// Returns the style metrics of this stylable object.
     ///

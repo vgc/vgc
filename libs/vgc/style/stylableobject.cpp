@@ -23,6 +23,10 @@ namespace vgc::style {
 StylableObject::StylableObject() {
 }
 
+StylableObjectPtr StylableObject::create() {
+    return StylableObjectPtr(new StylableObject);
+}
+
 void StylableObject::setStyleSheet(StyleSheetPtr styleSheet) {
     styleSheet_ = styleSheet;
     updateStyle_();
@@ -77,6 +81,10 @@ void StylableObject::replaceStyleClass(core::StringId oldClass, core::StringId n
 
 StyleValue StylableObject::style(core::StringId property) const {
     return getStyleComputedValue_(property);
+}
+
+const StyleSheet* StylableObject::defaultStyleSheet() const {
+    return nullptr;
 }
 
 void StylableObject::appendChildStylableObject(StylableObject* child) {
