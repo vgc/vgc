@@ -24,6 +24,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
+#include <vgc/core/stringid.h>
 
 #include <vgc/core/detail/signal.h>
 
@@ -350,8 +351,9 @@ public:                                                                         
         ::vgc::core::isObject<SuperClass>,                                               \
         "Superclass must inherit from Object and use VGC_OBJECT(..).");                  \
                                                                                          \
-    std::string_view className() const override {                                        \
-        return #T;                                                                       \
+    core::StringId className() const override {                                          \
+        static core::StringId res(#T);                                                   \
+        return res;                                                                      \
     }                                                                                    \
                                                                                          \
 protected:                                                                               \
@@ -609,8 +611,9 @@ private:
     Object& operator=(Object&&) = delete;
 
 public:
-    virtual std::string_view className() const {
-        return "Object";
+    virtual core::StringId className() const {
+        static core::StringId res("Object");
+        return res;
     }
 
     /// Returns how many ObjPtrs are currently referencing this Object.
