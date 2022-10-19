@@ -88,8 +88,8 @@ Plot2d::Plot2d(Int numYs, Int maxXs)
     addStyleClass(strings::Plot2d);
     maxYText_ = graphics::RichText::create();
     minYText_ = graphics::RichText::create();
-    maxYText_->setParentStylableObject(this);
-    minYText_->setParentStylableObject(this);
+    appendChildStylableObject(maxYText_.get());
+    appendChildStylableObject(minYText_.get());
     // temporary, we have to force update the cache atm
     maxYText_->addStyleClass(core::StringId("Plot2d-label-right-aligned"));
     minYText_->addStyleClass(core::StringId("Plot2d-label-right-aligned"));

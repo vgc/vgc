@@ -161,6 +161,18 @@ private:
     VGC_OBJECT(StylableObject, core::Object)
 
 public:
+    /// Returns the parent `StylableObject` of this `StylableObject`.
+    ///
+    StylableObject* parentStylableObject() const {
+        return parentStylableObject_;
+    }
+
+    /// Returns the list of child `StylableObject`s of this `StylableObject`.
+    ///
+    const core::Array<StylableObject*>& childStylableObjects() const {
+        return childStylableObjects_;
+    }
+
     /// Sets the `StyleSheet` of this `StylableObject`.
     ///
     /// This style sheet affects both this object and all its descendants.
@@ -229,36 +241,6 @@ public:
     ///
     StyleValue style(core::StringId property) const;
 
-    /// Returns the parent `StylableObject` of this `StylableObject`.
-    ///
-    /// This method must be implemented by subclasses.
-    ///
-    virtual StylableObject* parentStylableObject() const = 0;
-
-    /// Returns the first child `StylableObject` of this `StylableObject`.
-    ///
-    /// This method must be implemented by subclasses.
-    ///
-    virtual StylableObject* firstChildStylableObject() const = 0;
-
-    /// Returns the last child `StylableObject` of this `StylableObject`.
-    ///
-    /// This method must be implemented by subclasses.
-    ///
-    virtual StylableObject* lastChildStylableObject() const = 0;
-
-    /// Returns the previous sibling `StylableObject` of this `StylableObject`.
-    ///
-    /// This method must be implemented by subclasses.
-    ///
-    virtual StylableObject* previousSiblingStylableObject() const = 0;
-
-    /// Return the next sibling `StylableObject` of this `StylableObject`.
-    ///
-    /// This method must be implemented by subclasses.
-    ///
-    virtual StylableObject* nextSiblingStylableObject() const = 0;
-
     /// Returns the style sheet that is used by default in case no other style
     /// sheet provides a value for a queried property.
     ///
@@ -281,11 +263,22 @@ public:
 protected:
     StylableObject();
 
+    /// Adds a `StylableObject` child to this `StylableObject`.
+    ///
+    void appendChildStylableObject(StylableObject* child);
+
+    /// Removes the `StylableObject` child from this `StylableObject`.
+    ///
+    void removeChildStylableObject(StylableObject* child);
+
     /// This callback is called whenever the style changes.
     ///
     virtual void onStyleChanged();
 
 private:
+    StylableObject* parentStylableObject_ = nullptr;
+    core::Array<StylableObject*> childStylableObjects_;
+
     StyleSheetPtr styleSheet_;
     ClassSet styleClasses_;
     detail::StyleCachedData styleCachedData_;

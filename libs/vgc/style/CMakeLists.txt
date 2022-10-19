@@ -6,6 +6,7 @@ vgc_add_library(style
 
     HEADER_FILES
         api.h
+        logcategories.h
         metrics.h
         parse.h
         strings.h
@@ -15,6 +16,7 @@ vgc_add_library(style
         types.h
 
     CPP_FILES
+        logcategories.cpp
         parse.cpp
         strings.cpp
         stylableobject.cpp

@@ -16,6 +16,8 @@
 
 #include <vgc/style/stylableobject.h>
 
+#include <vgc/style/logcategories.h>
+
 namespace vgc::style {
 
 StylableObject::StylableObject() {
@@ -75,6 +77,31 @@ void StylableObject::replaceStyleClass(core::StringId oldClass, core::StringId n
 
 StyleValue StylableObject::style(core::StringId property) const {
     return getStyleComputedValue_(property);
+}
+
+void StylableObject::appendChildStylableObject(StylableObject* child) {
+    StylableObject* oldParent = child->parentStylableObject();
+    StylableObject* newParent = this;
+    if (oldParent) {
+        oldParent->removeChildStylableObject(child);
+    }
+    childStylableObjects_.append(child);
+    child->parentStylableObject_ = newParent;
+    child->updateStyle_();
+}
+
+void StylableObject::removeChildStylableObject(StylableObject* child) {
+    if (child->parentStylableObject_ != this) {
+        VGC_WARNING(
+            LogVgcStyle,
+            "Cannot remove child StylableObject {}: it isn't a child of {}",
+            ptr(child),
+            ptr(this));
+        return;
+    }
+    childStylableObjects_.removeOne(child);
+    child->parentStylableObject_ = nullptr;
+    child->updateStyle_();
 }
 
 void StylableObject::onStyleChanged() {
@@ -154,11 +181,7 @@ void StylableObject::updateStyle_() {
     }
 
     // Recursily update childen
-    StylableObject* childBegin = firstChildStylableObject();
-    StylableObject* childEnd = nullptr;
-    for (StylableObject* child = childBegin; //
-         child != childEnd;                  //
-         child = child->nextSiblingStylableObject()) {
+    for (StylableObject* child : childStylableObjects_) {
         child->updateStyle_();
     }
 

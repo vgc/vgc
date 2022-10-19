@@ -355,11 +355,6 @@ private:
 
 public:
     // implements StylableObject interface
-    style::StylableObject* parentStylableObject() const override;
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
-    style::StylableObject* previousSiblingStylableObject() const override;
-    style::StylableObject* nextSiblingStylableObject() const override;
     const style::StyleSheet* defaultStyleSheet() const override;
 
 private:
@@ -517,10 +512,6 @@ public:
     bool onMouseRelease(MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
-
-    // Implement StylableObject interface
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
 
 protected:
     float preferredWidthForHeight(float height) const override;

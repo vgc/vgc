@@ -159,12 +159,6 @@ public:
         return RichTextSpanListView(children_);
     }
 
-    // implements StylableObject interface
-    style::StylableObject* parentStylableObject() const override;
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
-    style::StylableObject* previousSiblingStylableObject() const override;
-    style::StylableObject* nextSiblingStylableObject() const override;
     const style::StyleSheet* defaultStyleSheet() const override;
 
     static const style::StylePropertySpecTable* stylePropertySpecs();
@@ -187,15 +181,6 @@ private:
 public:
     static RichTextPtr create();
     static RichTextPtr create(std::string_view text);
-
-    /// Manually specifies a parent `StylableObject` for this `RichText`.
-    ///
-    /// This can be used to make this RichText part of an existing hierarchy of
-    /// `StylableObject`, for example, a widget tree.
-    ///
-    void setParentStylableObject(style::StylableObject* parent) {
-        parentStylableObject_ = parent;
-    }
 
     /// Makes the text empty
     ///
@@ -399,16 +384,10 @@ public:
     ///
     geometry::Vec2f preferredSize() const;
 
-    // reimplementation of StylableObject virtual methods
-    style::StylableObject* parentStylableObject() const override {
-        return parentStylableObject_;
-    }
-
 protected:
     void onStyleChanged() override;
 
 private:
-    style::StylableObject* parentStylableObject_;
     std::string text_;
     geometry::Rect2f rect_;
     graphics::ShapedText shapedText_;

@@ -59,10 +59,6 @@ public:
     ///
     void setText(std::string_view text);
 
-    // Reimplementation of StylableObject virtual methods
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
-
     // Reimplementation of Widget virtual methods
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;

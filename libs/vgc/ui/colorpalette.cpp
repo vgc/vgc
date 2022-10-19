@@ -2354,26 +2354,6 @@ ColorListViewItemPtr ColorListViewItem::create(ColorListView* view) {
     return ColorListViewItemPtr(new ColorListViewItem(view));
 }
 
-style::StylableObject* ColorListViewItem::parentStylableObject() const {
-    return view_;
-}
-
-style::StylableObject* ColorListViewItem::firstChildStylableObject() const {
-    return nullptr;
-}
-
-style::StylableObject* ColorListViewItem::lastChildStylableObject() const {
-    return nullptr;
-}
-
-style::StylableObject* ColorListViewItem::previousSiblingStylableObject() const {
-    return nullptr;
-}
-
-style::StylableObject* ColorListViewItem::nextSiblingStylableObject() const {
-    return nullptr;
-}
-
 const style::StyleSheet* ColorListViewItem::defaultStyleSheet() const {
     return nullptr;
 }
@@ -2432,6 +2412,7 @@ void ColorPreview::onPaintDestroy(graphics::Engine* engine) {
 ColorListView::ColorListView()
     : item_(ColorListViewItem::create(this)) {
 
+    appendChildStylableObject(item_.get());
     addStyleClass(strings::ColorListView);
 }
 
@@ -2744,14 +2725,6 @@ bool ColorListView::onMouseLeave() {
         requestRepaint();
     }
     return true;
-}
-
-style::StylableObject* ColorListView::firstChildStylableObject() const {
-    return nullptr;
-}
-
-style::StylableObject* ColorListView::lastChildStylableObject() const {
-    return nullptr;
 }
 
 float ColorListView::preferredWidthForHeight(float /* height */) const {

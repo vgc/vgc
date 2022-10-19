@@ -1404,26 +1404,6 @@ const style::StyleSheet* Widget::defaultStyleSheet() const {
     return s.get();
 }
 
-style::StylableObject* Widget::parentStylableObject() const {
-    return static_cast<style::StylableObject*>(parent());
-}
-
-style::StylableObject* Widget::firstChildStylableObject() const {
-    return static_cast<style::StylableObject*>(firstChild());
-}
-
-style::StylableObject* Widget::lastChildStylableObject() const {
-    return static_cast<style::StylableObject*>(lastChild());
-}
-
-style::StylableObject* Widget::previousSiblingStylableObject() const {
-    return static_cast<style::StylableObject*>(previousSibling());
-}
-
-style::StylableObject* Widget::nextSiblingStylableObject() const {
-    return static_cast<style::StylableObject*>(nextSibling());
-}
-
 void Widget::onChildRemoved(Object* child) {
     if (child == children_) {
         children_ = nullptr;
@@ -1450,6 +1430,25 @@ void Widget::onStyleChanged() {
 }
 
 void Widget::onWidgetAdded_(Widget* widget, bool wasOnlyReordered) {
+    if (!wasOnlyReordered) {
+
+        // TODO: insert at a more appropriate location rather than at the end.
+        // It doesn't matter for now since StylableObject child index doesn't
+        // influence style, but it might in the future if/when we implement the
+        // CSS nth-child pseudo class, see:
+        //
+        //  https://developer.mozilla.org/en-US/docs/Web/CSS/:nth-child)
+        //
+        // One question is where to insert the child widgets relative to the "extra"
+        // stylable objects manually inserted? One idea might be to have a concept
+        // of layers: child widgets would be on layer 0, and extra child stylable
+        // objets would be on different layers (1, 2, ...), so they would have
+        // independent indexing. The API would be something like this:
+        //
+        //     appendChildStylableObject(child, layerIndex).
+        //
+        appendChildStylableObject(widget);
+    }
     onWidgetAdded(widget, wasOnlyReordered);
     if (!wasOnlyReordered) {
         widget->onParentWidgetChanged(this);
@@ -1463,6 +1462,7 @@ void Widget::onWidgetAdded_(Widget* widget, bool wasOnlyReordered) {
 }
 
 void Widget::onWidgetRemoved_(Widget* widget) {
+    removeChildStylableObject(widget);
     onWidgetRemoved(widget);
 }
 
