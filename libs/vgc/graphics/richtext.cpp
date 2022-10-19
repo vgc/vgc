@@ -46,26 +46,6 @@ RichTextSpan* RichTextSpan::createChild() {
     return child;
 }
 
-style::StylableObject* RichTextSpan::parentStylableObject() const {
-    return static_cast<style::StylableObject*>(parent());
-}
-
-style::StylableObject* RichTextSpan::firstChildStylableObject() const {
-    return static_cast<style::StylableObject*>(firstChild());
-}
-
-style::StylableObject* RichTextSpan::lastChildStylableObject() const {
-    return static_cast<style::StylableObject*>(lastChild());
-}
-
-style::StylableObject* RichTextSpan::previousSiblingStylableObject() const {
-    return static_cast<style::StylableObject*>(previousSibling());
-}
-
-style::StylableObject* RichTextSpan::nextSiblingStylableObject() const {
-    return static_cast<style::StylableObject*>(nextSibling());
-}
-
 namespace {
 
 StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end) {
@@ -174,7 +154,6 @@ SizedFont* getDefaultSizedFont_() {
 
 RichText::RichText()
     : RichTextSpan()
-    , parentStylableObject_(nullptr)
     , text_()
     , shapedText_(getDefaultSizedFont_(), "")
     , isSelectionVisible_(false)

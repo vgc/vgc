@@ -1140,11 +1140,6 @@ public:
     }
 
     // Implements StylableObject interface
-    style::StylableObject* parentStylableObject() const override;
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
-    style::StylableObject* previousSiblingStylableObject() const override;
-    style::StylableObject* nextSiblingStylableObject() const override;
     const style::StyleSheet* defaultStyleSheet() const override;
 
 protected:

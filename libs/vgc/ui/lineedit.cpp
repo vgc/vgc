@@ -60,8 +60,8 @@ LineEdit::LineEdit(std::string_view text)
 
     setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
     addStyleClass(strings::LineEdit);
+    appendChildStylableObject(richText_.get());
     setText(text);
-    richText_->setParentStylableObject(this);
 }
 
 LineEditPtr LineEdit::create() {
@@ -88,14 +88,6 @@ void LineEdit::moveCursor(graphics::RichTextMoveOperation operation, bool select
     resetSelectionInitialPair_();
     reload_ = true;
     requestRepaint();
-}
-
-style::StylableObject* LineEdit::firstChildStylableObject() const {
-    return richText_.get();
-}
-
-style::StylableObject* LineEdit::lastChildStylableObject() const {
-    return richText_.get();
 }
 
 void LineEdit::onResize() {

@@ -341,31 +341,6 @@ private:
     bool selectContinuousColor_(const geometry::Vec2f& position);
 };
 
-/// \class vgc::ui::ColorListViewItem
-/// \brief A StylableObject used for styling items in a ColorListView.
-///
-class VGC_UI_API ColorListViewItem : public style::StylableObject {
-private:
-    VGC_OBJECT(ColorListViewItem, style::StylableObject)
-    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
-
-    friend class ColorListView;
-    ColorListViewItem(ColorListView* view);
-    static ColorListViewItemPtr create(ColorListView* view);
-
-public:
-    // implements StylableObject interface
-    style::StylableObject* parentStylableObject() const override;
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
-    style::StylableObject* previousSiblingStylableObject() const override;
-    style::StylableObject* nextSiblingStylableObject() const override;
-    const style::StyleSheet* defaultStyleSheet() const override;
-
-private:
-    ColorListView* view_;
-};
-
 /// \class vgc::ui::ColorPreview
 /// \brief Display a color.
 ///
@@ -518,10 +493,6 @@ public:
     bool onMouseEnter() override;
     bool onMouseLeave() override;
 
-    // Implement StylableObject interface
-    style::StylableObject* firstChildStylableObject() const override;
-    style::StylableObject* lastChildStylableObject() const override;
-
 protected:
     float preferredWidthForHeight(float height) const override;
     float preferredHeightForWidth(float width) const override;
@@ -545,7 +516,7 @@ private:
     Int selectedColorIndex_ = -1;
     core::Array<core::Color> colors_;
     graphics::GeometryViewPtr triangles_;
-    ColorListViewItemPtr item_;
+    style::StylableObjectPtr item_;
     bool isScrubbing_ = false;
     bool reload_ = true;
 

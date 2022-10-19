@@ -30,8 +30,8 @@ Label::Label(std::string_view text)
     , richText_(graphics::RichText::create()) {
 
     addStyleClass(strings::Label);
+    appendChildStylableObject(richText_.get());
     setText(text);
-    richText_->setParentStylableObject(this);
 }
 
 LabelPtr Label::create() {
@@ -49,14 +49,6 @@ void Label::setText(std::string_view text) {
         requestGeometryUpdate();
         requestRepaint();
     }
-}
-
-style::StylableObject* Label::firstChildStylableObject() const {
-    return richText_.get();
-}
-
-style::StylableObject* Label::lastChildStylableObject() const {
-    return richText_.get();
 }
 
 void Label::onResize() {
