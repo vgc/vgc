@@ -19,6 +19,7 @@
 
 #include <functional> // hash
 #include <string>
+#include <string_view>
 
 #include <vgc/core/api.h>
 #include <vgc/core/format.h>
@@ -32,58 +33,58 @@ namespace vgc::core {
 ///
 /// https://en.wikipedia.org/wiki/String_interning
 ///
-/// The idea is that for fixed string values which you expect to use very
-/// frequently (e.g., XML element names), it is quite inefficient to store and
-/// compare multiple copies of the same exact std::string. Instead, it may be
-/// preferable to store the std::string only once in a global pool, and then
-/// simply keep a pointer to this std::string. This is what StringId does for
-/// you.
+/// The idea is that for fixed string values which are expected to be used and
+/// compared frequently (e.g., XML element names), it is inefficient to store
+/// and compare multiple copies of the same exact `std::string`. Instead, you
+/// can use a `StringId`, which instanciates a `std::string` in a global pool
+/// the first time it encounters a new string value, and then simply keep a
+/// pointer to this `std::string`.
 ///
-/// StringId instances are extremely fast to compare and cheap to copy, but are
-/// slower to instanciate than a regular std::string, due to the need of a
-/// lookup in the global pool and a mutex lock for thread safety.
+/// `StringId` instances are extremely fast to compare and cheap to copy, but
+/// are slower to instanciate than a regular `std::string`, due to the need of
+/// a lookup in the global pool and a mutex lock for thread safety.
 ///
-/// Please keep in mind that in most cases, you should simply use an
-/// std::string instead of a StringId. In particular, you should NOT use a
-/// StringId to store temporary strings generated at run-time. Indeed, the
-/// underlying std::string will never be deallocated, that is, the global pool
-/// of strings only keeps growing, making further instanciations of StringId
-/// slower.
+/// Keep in mind that in many cases, using a `std::string` instead of a
+/// `StringId` is still the best choice. In particular, you should NOT use a
+/// `StringId` to store temporary strings generated at run-time. Indeed, the
+/// underlying `std::string` will never be deallocated, that is, the global
+/// pool of strings only keeps growing, making further instanciations of
+/// `StringId` slower.
 ///
-/// A StringId can be constructed as follows:
+/// A `StringId` can be constructed as follows:
 ///
-/// \code
+/// ```cpp
 /// StringId s("my string");
-/// \endcode
+/// ```
 ///
-/// The underlying std::string referred to by the StringId can be accessed via
-/// StringId::string().
+/// The underlying `std::string` referred to by the StringId can be accessed via
+/// `StringId::string()`.
 ///
-/// StringId instances can be safely copied and assigned, like so:
+/// `StringId` instances can be safely copied and assigned, like so:
 ///
-/// \code
+/// ```cpp
 /// StringId s1("some string");
 /// StringId s2(s1);
 /// StringId s3 = s1;
-/// \endcode
+/// ```
 ///
-/// StringId instances can also be compared like so:
+/// `StringId` instances can also be compared like so:
 ///
-/// \code
+/// ```cpp
 /// StringId s1("some string");
 /// StringId s2("some other string");
 /// StringId s3("some string");
 /// assert(s1 != s2);
 /// assert(s1 == s3);
-/// \endcode
+/// ```
 ///
-/// Since constructing StringId instances is slow, but copying and comparing
-/// them is extremely fast, it is a good practice to define StringId instances
+/// Since constructing `StringId` instances is slow, but copying and comparing
+/// them is extremely fast, it is a good practice to define `StringId` instances
 /// with static storage duration (= "global variables") and re-use them. In order
 /// to prevent the "static initialization order fiasco", the safe way to do this
 /// is via static local objects:
 ///
-/// \code
+/// ```cpp
 /// // foo.h
 /// StringId someString();
 ///
@@ -92,9 +93,9 @@ namespace vgc::core {
 ///     static StringId s("some string");
 ///     return s;
 /// }
-/// \endcode
+/// ```
 ///
-/// Note that StringId is trivially destructible, therefore there is no need to
+/// Note that `StringId` is trivially destructible, therefore there is no need to
 /// worry about static destruction order, which is why the above code is safe,
 /// and even thread-safe since C++11. See the following for details:
 /// - https://isocpp.org/wiki/faq/ctors#construct-on-first-use-v2
@@ -102,21 +103,21 @@ namespace vgc::core {
 ///
 class VGC_CORE_API StringId {
 public:
-    // Constructs a StringId representing the empty string.
+    // Constructs a `StringId` representing the empty string.
     //
     StringId() noexcept
         : stringPtr_(nullptr) {
     }
 
-    /// Constructs a StringId representing the given string \p s.
+    /// Constructs a `StringId` representing the given string_view `s`.
     ///
     /// This constructor is explicit in order to avoid interning strings by
-    /// mistake, and resolve ambiguity of overloaded operator<<. This means
-    /// that if you define a function foo(StringId), and wish to allow clients
-    /// to call foo(std::string) without explicit cast, you need to explicitly
-    /// define foo(std::string) and explicitly perform the cast there.
+    /// mistake, and resolve ambiguity of overloaded `operator<<`. This means
+    /// that if you define a function `foo(StringId)`, and wish to allow clients
+    /// to call `foo(std::string)` without explicit cast, you need to explicitly
+    /// define `foo(std::string)` and explicitly perform the cast there.
     ///
-    explicit StringId(const std::string& s)
+    explicit StringId(const std::string_view& s)
         : stringPtr_(nullptr) {
 
         if (!s.empty()) {
@@ -124,19 +125,9 @@ public:
         }
     }
 
-    /// Constructs a StringId representing the given string \p s.
+    /// Returns the string represented by this `StringId`.
     ///
-    explicit StringId(const char s[])
-        : stringPtr_(nullptr) {
-
-        if (s && s[0] != '\0') {
-            init_(std::string(s));
-        }
-    }
-
-    /// Returns the string represented by this StringId.
-    ///
-    const std::string& string() const {
+    const std::string& string() const noexcept {
         static const std::string empty;
         if (stringPtr_) {
             return *stringPtr_;
@@ -146,75 +137,75 @@ public:
         }
     }
 
-    /// Allows implicit conversion from StringId to std::string.
+    /// Allows implicit conversion from `StringId` to `std::string_view`.
     ///
-    operator const std::string&() const {
+    operator std::string_view() const noexcept {
         return string();
     }
 
-    /// Compares the two StringId. This doesn't have any meaning and is
-    /// typically only useful for storing StringId instances in a map. This is
+    /// Compares the two `StringId`. This doesn't have any meaning and is
+    /// typically only useful for storing `StringId` instances in a map. This is
     /// NOT the alphabetical order.
     ///
-    bool operator<(const StringId& other) const {
+    bool operator<(const StringId& other) const noexcept {
         return stringPtr_ < other.stringPtr_;
     }
 
-    /// Returns whether the two StringId are equal. This is equivalent to
+    /// Returns whether the two `StringId` are equal. This is equivalent to
     /// whether their underlying strings are equals.
     ///
-    bool operator==(const StringId& other) const {
+    bool operator==(const StringId& other) const noexcept {
         return stringPtr_ == other.stringPtr_;
     }
 
-    /// Returns whether this StringId is equal to the given string.
+    /// Returns whether this `StringId` is equal to the given `std::string_view`.
     ///
-    bool operator==(const std::string& other) const {
+    bool operator==(std::string_view other) const noexcept {
         // Note: comparing two std::strings is typically faster than building
         // a StringId from an std::string, so we choose to do the former.
         return string() == other;
     }
 
-    /// Returns whether the two StringId are different.
+    /// Returns whether the two `StringId` are different.
     ///
-    bool operator!=(const StringId& other) const {
+    bool operator!=(const StringId& other) const noexcept {
         return stringPtr_ != other.stringPtr_;
     }
 
-    /// Returns whether this StringId is different from the given string.
+    /// Returns whether this `StringId` is different from the given `std::string_view`.
     ///
-    bool operator!=(const std::string& other) const {
+    bool operator!=(std::string_view other) const noexcept {
         return string() != other;
     }
 
 private:
     friend struct std::hash<StringId>;
     const std::string* stringPtr_;
-    void init_(const std::string& s);
+    void init_(std::string_view s);
 };
 
-/// Returns whether the given std::string is equal to the given StringId.
+/// Returns whether the given `std::string_view` is equal to the given `StringId`.
 ///
-inline bool operator==(const std::string& s1, const StringId& s2) {
+inline bool operator==(std::string_view s1, const StringId& s2) noexcept {
     return s2 == s1;
 }
 
-/// Returns whether the given std::string is different from the given StringId.
+/// Returns whether the given `std::string_view` is different from the given `StringId`.
 ///
-inline bool operator!=(const std::string& s1, const StringId& s2) {
+inline bool operator!=(std::string_view s1, const StringId& s2) noexcept {
     return s2 != s1;
 }
 
-} // namespace vgc::core
-
-/// Writes the underlying string of the given \p stringId to the given output
-/// stream \p out.
+/// Writes the underlying string of the given `stringId` to the given output
+/// stream `out`.
 ///
 template<typename OutputStream>
-OutputStream& operator<<(OutputStream& out, vgc::core::StringId stringId) {
+OutputStream& operator<<(OutputStream& out, StringId stringId) {
     out << stringId.string();
     return out;
 }
+
+} // namespace vgc::core
 
 namespace std {
 
