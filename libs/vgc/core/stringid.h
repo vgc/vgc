@@ -113,9 +113,10 @@ public:
     ///
     /// This constructor is explicit in order to avoid interning strings by
     /// mistake, and resolve ambiguity of overloaded `operator<<`. This means
-    /// that if you define a function `foo(StringId)`, and wish to allow clients
-    /// to call `foo(std::string)` without explicit cast, you need to explicitly
-    /// define `foo(std::string)` and explicitly perform the cast there.
+    /// that if you define a function `foo(StringId)`, but also want this
+    /// function to be callable by passing an `std::string_view`, you need to
+    /// explicitly define the overload `foo(std::string_view)`, otherwise
+    /// clients have to perform the explicit cast themselves.
     ///
     explicit StringId(const std::string_view& s)
         : stringPtr_(nullptr) {
