@@ -341,6 +341,7 @@ void Object::insertObjectToParent_(Object* parent, Object* nextSibling) {
 
 ObjectPtr Object::removeObjectFromParent_() {
     Object* parent = parentObject_;
+    ObjectPtr res(this);
     if (parent) {
         if (previousSiblingObject_) {
             previousSiblingObject_->nextSiblingObject_ = nextSiblingObject_;
@@ -359,7 +360,7 @@ ObjectPtr Object::removeObjectFromParent_() {
         parentObject_ = nullptr;
         parent->onChildRemoved_(this);
     }
-    return ObjectPtr(this);
+    return res;
 }
 
 Int Object::branchSize() const {
