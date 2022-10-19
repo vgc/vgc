@@ -21,7 +21,7 @@
 
 namespace vgc::core {
 
-void core::StringId::init_(const std::string& s) {
+void core::StringId::init_(std::string_view s) {
 
     // TODO: we might want to use a custom data structure here, so that we
     // could query whether the pool of std::string contains a given
@@ -57,7 +57,7 @@ void core::StringId::init_(const std::string& s) {
 
     // Insert in pool. Note: insertions in an unordered_set invalidates
     // iterators but does not invalidate pointers to elements.
-    auto ret = pool->insert(s);
+    auto ret = pool->emplace(s);
 
     // Store pointer to std:string.
     auto iterator = ret.first;
