@@ -467,6 +467,17 @@ void Object::updateBranchSize_() const {
 
 namespace detail {
 
+// Note: implementing this create() function in the *.cpp file rather than
+// inline in the *.h file is preferable, because hiding the "new" in the
+// implementation avoids the following clang-tidy false positive warning:
+//
+//   warning: Potential leak of memory pointed to by field '_obj'
+//   [clang-analyzer-cplusplus.NewDeleteLeaks]
+//
+ConstructibleTestObjectPtr ConstructibleTestObject::create() {
+    return new ConstructibleTestObject();
+}
+
 void SignalTestObject::connectToOtherNoArgs(SignalTestObject* other) const {
     signalNoArgs().connect(other->slotNoArgs());
 }

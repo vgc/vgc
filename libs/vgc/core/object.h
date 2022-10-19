@@ -23,6 +23,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
 
 #include <vgc/core/detail/signal.h>
 
@@ -1161,6 +1162,152 @@ private:
     void onChildRemoved_(Object* child);
 };
 
+/// \class vgc::core::ObjRawPtr<T>
+/// \brief A non-smart pointer holding an `Object*` without ownership.
+///
+/// This template class is useful whenever you'd like to pass a raw pointer
+/// `Object*` (or a subclass) to a template function, but said template
+/// function disallows the use of raw pointers (e.g., `format()`).
+///
+/// By wrapping the raw pointer inside an `ObjRawPtr<T>`, it becomes an
+/// instance of a separate non-pointer type for which template specializations
+/// can be defined.
+///
+/// \sa `ptr(const Object*)`.
+///
+template<typename T>
+class ObjRawPtr {
+private:
+    template<typename Y>
+    static constexpr bool isCompatible_ = std::is_convertible_v<Y*, T*>;
+
+public:
+    /// Create an `ObjRawPtr<T>` storing the given object pointer.
+    ///
+    ObjRawPtr(T* obj)
+        : obj_(obj) {
+    }
+
+    /// Creates a copy of the given `ObjRawPtr<Y>` as a `ObjRawPtr<T>`. This
+    /// template overload doesn't participate in overload resolution if `Y*` is
+    /// not implicitly convertible to `T*`.
+    ///
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
+    ObjRawPtr(const ObjPtr<Y>& other) noexcept
+        : obj_(other.obj_) {
+    }
+
+    /// Returns the stored object pointer.
+    ///
+    T* get() const {
+        return obj_;
+    }
+
+    /// Accesses a member of the stored object pointer. This is undefined
+    /// behavior if the stored object pointer is `nullptr` or dangling.
+    ///
+    T* operator->() const {
+        return obj_;
+    }
+
+    /// Returns a reference to the stored object pointer. This is undefined
+    /// behavior if the stored object pointer is `nullptr` or dangling.
+    ///
+    T& operator*() const {
+        return *obj_;
+    }
+
+private:
+    T* obj_;
+};
+
+/// Returns whether the two given `ObjRawPtr` point the same object.
+///
+template<typename T, typename U>
+inline bool operator==(const ObjRawPtr<T>& a, const ObjRawPtr<U>& b) noexcept {
+    return a.get() == b.get();
+}
+
+/// Returns whether the two given `ObjRawPtr` point to different objects.
+///
+template<typename T, typename U>
+inline bool operator!=(const ObjRawPtr<T>& a, const ObjRawPtr<U>& b) noexcept {
+    return a.get() != b.get();
+}
+
+/// Performs a static cast between `ObjRawPtr` types.
+///
+template<typename T, typename U>
+ObjRawPtr<T> static_pointer_cast(const ObjRawPtr<U>& r) noexcept {
+    return ObjRawPtr<T>(static_cast<T*>(r.get()));
+}
+
+/// Performs a dynamic cast between `ObjRawPtr` types.
+///
+template<typename T, typename U>
+ObjRawPtr<T> dynamic_pointer_cast(const ObjRawPtr<U>& r) noexcept {
+    return ObjRawPtr<T>(dynamic_cast<T*>(r.get()));
+}
+
+/// Performs a const cast between `ObjRawPtr` types.
+///
+template<typename T, typename U>
+ObjRawPtr<T> const_pointer_cast(const ObjRawPtr<U>& r) noexcept {
+    return ObjRawPtr<T>(const_cast<T*>(r.get()));
+}
+
+using ObjectRawPtr = ObjRawPtr<Object>;
+using ObjectConstRawPtr = ObjRawPtr<const Object>;
+
+/// Wraps the given `const Object*` in an `ObjectConstRawPtr`.
+///
+/// This function is useful for string formatting, since `fmt::formatter`
+/// cannot be specialized for actual raw pointers, so as a workaround we
+/// specialized it for `ObjectConstRawPtr` instead.
+///
+/// ```cpp
+/// Object* obj = getSomeObject();
+/// Object* parent = obj ? obj->parentObject() : nullptr;
+/// print("The parent of {} is {}", ptr(obj), ptr(parent));
+/// ```
+///
+/// Possible output:
+///
+/// ```
+/// "The parent of <Button @ 0x7fca717ed080> is <Null Object>"
+/// ```
+///
+/// \sa `ptr(const ObjPtr<T>&)`
+///
+VGC_CORE_API
+inline ObjectConstRawPtr ptr(const Object* obj) {
+    return ObjectConstRawPtr(obj);
+}
+
+/// \overload
+template<typename T>
+ObjectConstRawPtr ptr(const ObjPtr<T>& objPtr) {
+    return ptr(objPtr.get());
+}
+
+} // namespace vgc::core
+
+template<>
+struct fmt::formatter<vgc::core::ObjectConstRawPtr> : fmt::formatter<std::string_view> {
+    // TODO: add formatting options, e.g., "{:a}" to only print the address
+    template<typename FormatContext>
+    auto format(vgc::core::ObjectConstRawPtr objPtr, FormatContext& ctx) {
+        std::string res = "<Null Object>";
+        const vgc::core::Object* obj = objPtr.get();
+        if (obj) {
+            res = fmt::format("<{} @ {}>", obj->className(), fmt::ptr(obj));
+        }
+        return fmt::formatter<std::string_view>::format(res, ctx);
+    }
+};
+
+namespace vgc::core {
+
 namespace detail {
 
 // Required by signal.h
@@ -1491,13 +1638,14 @@ namespace vgc::core::detail {
 VGC_DECLARE_OBJECT(ConstructibleTestObject);
 
 // XXX add a create() in Object directly?
-class ConstructibleTestObject : public Object {
+class VGC_CORE_API ConstructibleTestObject : public Object {
     VGC_OBJECT(ConstructibleTestObject, Object)
 
+protected:
+    ConstructibleTestObject() = default;
+
 public:
-    static ConstructibleTestObjectPtr create() {
-        return new ConstructibleTestObject();
-    }
+    static ConstructibleTestObjectPtr create();
 };
 
 VGC_DECLARE_OBJECT(SignalTestObject);

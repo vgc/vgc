@@ -18,7 +18,7 @@
 #include <memory>
 #include <vgc/core/object.h>
 
-using SignalTestObject = vgc::core::detail::SignalTestObject;
+using vgc::core::detail::SignalTestObject;
 
 TEST(TestSignal, Disconnect) {
     auto o1 = SignalTestObject::create();

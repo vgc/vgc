@@ -5,6 +5,7 @@ vgc_test_library(core
         test_flags.cpp
         test_format.cpp
         test_int.cpp
+        test_object.cpp
         test_parse.cpp
         test_preprocessor.cpp
         test_signal.cpp
