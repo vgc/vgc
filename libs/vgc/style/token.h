@@ -264,7 +264,12 @@ using StyleTokenArray = core::Array<StyleToken>;
 ///
 /// \sa StyleTokenArray, StyleToken
 ///
-using StyleTokenIterator = core::Array<StyleToken>::iterator;
+using StyleTokenIterator = core::Array<StyleToken>::const_iterator;
+
+struct TokenizedFragment {
+    std::string string;
+    StyleTokenArray tokens;
+};
 
 // Decodes the input style string. This is a pre-processing step that must be
 // run before calling tokenizeStyleString(). It cleans up any invalid

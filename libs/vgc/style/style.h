@@ -21,6 +21,7 @@
 #include <memory>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
@@ -37,8 +38,12 @@
 namespace vgc::style {
 
 namespace detail {
+
 class StyleParser;
-}
+
+} // namespace detail
+
+class StylePropertySpec;
 
 VGC_DECLARE_OBJECT(StylableObject);
 
@@ -56,6 +61,7 @@ using StyleDeclarationArray = core::Array<StyleDeclaration*>;
 ///
 enum class StyleValueType : Int8 {
     None,       ///< There is no value at all
+    Unparsed,   ///< The value hasn't been parsed yet
     Invalid,    ///< The value is invalid (e.g., parse error)
     Inherit,    ///< The value should inherit from a parent StylableObject
     Identifier, ///< The value is an identifier
@@ -95,6 +101,11 @@ public:
     static StyleValue none() {
         return StyleValue(StyleValueType::None);
     }
+
+    /// Creates a StyleValue of type Unparsed. This is a temporary value
+    /// while waiting for the parse(StylableObject*) for
+    ///
+    static StyleValue unparsed(StyleTokenIterator begin, StyleTokenIterator end);
 
     /// Creates a StyleValue of type Invalid
     ///
@@ -234,6 +245,9 @@ public:
 private:
     StyleValueType type_;
     std::any value_;
+
+    friend class StylableObject;
+    void parse_(const StylePropertySpec* spec);
 };
 
 /// \typedef vgc::style::StylePropertyParser
@@ -253,10 +267,6 @@ using StylePropertyParser =
 ///
 VGC_STYLE_API
 StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
-
-namespace detail {
-class StylePropertySpecMaker;
-}
 
 /// \class vgc::style::StylePropertySpec
 /// \brief Specifies the name, initial value, and inheritability of a given
@@ -325,35 +335,45 @@ private:
     StylePropertyParser parser_;
 };
 
-/// \class vgc::style::StylePropertySpecTable
+/// \class vgc::style::SpecTable
 /// \brief Stores a table of multiple StylePropertySpec.
 ///
-class VGC_STYLE_API StylePropertySpecTable
-    : public std::enable_shared_from_this<StylePropertySpecTable> {
+class VGC_STYLE_API SpecTable : public std::enable_shared_from_this<SpecTable> {
+
 public:
-    StylePropertySpecTable() {
+    /// Creates an empty `SpecTable`.
+    ///
+    SpecTable() {
     }
 
+    /// Inserts a `StylePropertySpec` with the given values to this table.
+    ///
+    /// Emits a warning and does not perform the insertion if there is already
+    /// a spec for the given `attributeName`.
+    ///
     void insert(
-        const char* name,
+        core::StringId attributeName,
+        const StyleValue& initialValue,
+        bool isInherited,
+        StylePropertyParser parser);
+
+    /// \overload
+    void insert(
+        std::string_view attributeName,
         const StyleValue& initialValue,
         bool isInherited,
         StylePropertyParser parser) {
-        insert(core::StringId(name), initialValue, isInherited, parser);
+
+        insert(core::StringId(attributeName), initialValue, isInherited, parser);
     }
 
-    void insert(
-        core::StringId name,
-        const StyleValue& initialValue,
-        bool isInherited,
-        StylePropertyParser parser) {
-        StylePropertySpec spec =
-            StylePropertySpec(name, initialValue, isInherited, parser);
-        map_.insert({name, spec});
-    }
-
-    const StylePropertySpec* get(core::StringId name) {
-        auto search = map_.find(name);
+    /// Returns the `StylePropertySpec` associated with the given `attributeName`.
+    ///
+    /// Returns `nullptr` if the table does not contain a spec for the given
+    /// `attributeName`.
+    ///
+    const StylePropertySpec* get(core::StringId attributeName) const {
+        auto search = map_.find(attributeName);
         if (search == map_.end()) {
             return nullptr;
         }
@@ -362,11 +382,25 @@ public:
         }
     }
 
+    /// Returns whether the style properties relative to the `StylableObject`
+    /// with the given `className` are already registered.
+    ///
+    bool isRegistered(core::StringId className) const {
+        return registeredClassNames_.find(className) != registeredClassNames_.end();
+    }
+
+    /// Attempts to insert the given `className` in the set of registered class
+    /// names. Returns true if the name was actually inserted, that is, if the
+    /// name wasn't already registered.
+    ///
+    bool setRegistered(core::StringId className);
+
 private:
+    std::unordered_set<core::StringId> registeredClassNames_;
     std::unordered_map<core::StringId, StylePropertySpec> map_;
 };
 
-using StylePropertySpecTablePtr = std::shared_ptr<StylePropertySpecTable>;
+using SpecTablePtr = std::shared_ptr<SpecTable>;
 
 /// \class vgc::style::StyleSheet
 /// \brief Parses and stores a VGCSS stylesheet.
@@ -379,8 +413,7 @@ private:
 public:
     /// Creates a stylesheet from the given specs and string.
     ///
-    static StyleSheetPtr
-    create(const StylePropertySpecTablePtr& specs, std::string_view s);
+    static StyleSheetPtr create(std::string_view s);
 
     /// Returns all the rule sets of this stylesheet.
     ///
@@ -388,12 +421,7 @@ public:
         return ruleSets_;
     }
 
-    const StylePropertySpecTablePtr& propertySpecs() const {
-        return propertySpecs_;
-    }
-
 private:
-    StylePropertySpecTablePtr propertySpecs_;
     StyleRuleSetArray ruleSets_;
 
     friend class detail::StyleParser;

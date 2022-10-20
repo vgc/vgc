@@ -1355,7 +1355,7 @@ StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
 
 // clang-format off
 
-style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
+style::SpecTablePtr createGlobalSpecTable_() {
 
     using namespace strings;
 
@@ -1364,7 +1364,7 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
     auto one         = StyleValue::number(1.0f);
 
     // Start with the same specs as RichTextSpan
-    auto table = std::make_shared<style::StylePropertySpecTable>();
+    auto table = std::make_shared<style::SpecTable>();
     *table.get() = *graphics::RichTextSpan::stylePropertySpecs();
 
     // Insert additional specs
@@ -1386,22 +1386,50 @@ style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
 
 // clang-format on
 
-const style::StylePropertySpecTablePtr& stylePropertySpecTable_() {
-    static style::StylePropertySpecTablePtr table = createGlobalStylePropertySpecTable_();
+const style::SpecTablePtr& stylePropertySpecTable_() {
+    static style::SpecTablePtr table = createGlobalSpecTable_();
     return table;
 }
 
 style::StyleSheetPtr createGlobalStyleSheet_() {
     std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
     std::string s = core::readFile(path);
-    return style::StyleSheet::create(stylePropertySpecTable_(), s);
+    return style::StyleSheet::create(s);
 }
 
 } // namespace
 
-const style::StyleSheet* Widget::defaultStyleSheet() const {
-    static style::StyleSheetPtr s = createGlobalStyleSheet_();
-    return s.get();
+void Widget::doPopulateStyleSpecTable(style::SpecTable* table) {
+
+    if (!table->setRegistered(staticClassName())) {
+        return;
+    }
+
+    // TODO: RichTextSpan::doPopulate...
+
+    using namespace strings;
+    using LP = style::LengthOrPercentage;
+    using LPA = style::LengthOrPercentageOrAuto;
+
+    auto auto_lpa = StyleValue::custom(LPA());
+    auto zero_lp = StyleValue::custom(LP());
+    auto one_n = StyleValue::number(1.0f);
+
+    // Reference: https://www.w3.org/TR/CSS21/propidx.html
+    // clang-format off
+    table->insert(preferred_height,   auto_lpa, false, &LPA::parse);
+    table->insert(preferred_width,    auto_lpa, false, &LPA::parse);
+    table->insert(column_gap,         zero_lp,  false, &LP::parse);
+    table->insert(row_gap,            zero_lp,  false, &LP::parse);
+    table->insert(grid_auto_columns,  auto_lpa, false, &LPA::parse);
+    table->insert(grid_auto_rows,     auto_lpa, false, &LPA::parse);
+    table->insert(horizontal_stretch, one_n,    false, &parseStyleNumber);
+    table->insert(horizontal_shrink,  one_n,    false, &parseStyleNumber);
+    table->insert(vertical_stretch,   one_n,    false, &parseStyleNumber);
+    table->insert(vertical_shrink,    one_n,    false, &parseStyleNumber);
+    // clang-format on
+
+    SuperClass::doPopulateStyleSpecTable(table);
 }
 
 void Widget::onChildRemoved(Object* child) {

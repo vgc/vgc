@@ -142,13 +142,17 @@ struct StyleCachedData {
     // Stores all cascaded values for a given StylableObject
     // TODO: share this data across all StylableObject that
     // have the same ruleSetArray and ruleSetSpans.
-    std::unordered_map<core::StringId, StyleValue> cascadedValues;
+    std::unordered_map<core::StringId, const StyleValue*> cascadedValues;
 
     void clear() {
         ruleSetArray.clear();
         ruleSetSpans.clear();
         cascadedValues.clear();
     }
+};
+
+struct TreeData {
+    StylableObject* root;
 };
 
 } // namespace detail
@@ -193,7 +197,7 @@ public:
     void setStyleSheet(StyleSheetPtr styleSheet);
 
     /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a style
-    /// sheet from the given string and uses the same `StylePropertySpecTable`
+    /// sheet from the given string and uses the same `SpecTable`
     /// as the `defaultStyleSheet()`.
     ///
     void setStyleSheet(std::string_view string);
@@ -250,6 +254,8 @@ public:
     ///
     /// This method must be implemented by subclasses.
     ///
+    // XXX remove this, it was initially required for accessing the spec table,
+    // but the spec table architecture is now different.
     virtual const StyleSheet* defaultStyleSheet() const;
 
     /// Returns the style metrics of this stylable object.
@@ -263,6 +269,22 @@ public:
     void setStyleMetrics(const Metrics& metrics) {
         styleMetrics_ = metrics;
     };
+
+    /// Returns the `SpecTable` of this stylable object.
+    ///
+    const SpecTable* styleSpecTable() const {
+        return styleSpecTable_.get();
+    }
+
+    /// Implementation of populateStyleSpecTable() as a static function.
+    ///
+    static void doPopulateStyleSpecTable(SpecTable* table);
+
+    /// Inserts the attribute specs relative to this `StylableObject` class.
+    ///
+    virtual void populateStyleSpecTable(SpecTable* table) {
+        doPopulateStyleSpecTable(table);
+    }
 
 protected:
     StylableObject();
@@ -280,18 +302,20 @@ protected:
     virtual void onStyleChanged();
 
 private:
+    // Tree of stylable objects
     StylableObject* parentStylableObject_ = nullptr;
     core::Array<StylableObject*> childStylableObjects_;
 
-    StyleSheetPtr styleSheet_;
-    ClassSet styleClasses_;
-    detail::StyleCachedData styleCachedData_;
-    Metrics styleMetrics_;
+    // Style information
+    SpecTablePtr styleSpecTable_;             // "global" table shared between trees
+    StyleSheetPtr styleSheet_;                // rules for this object and descendants
+    ClassSet styleClasses_;                   // style classes of this object
+    detail::StyleCachedData styleCachedData_; // cache of cascaded values of this object
+    Metrics styleMetrics_;                    // how to convert `dp` (and others) to `px`
 
     void updateStyle_();
-    const StylePropertySpec* getStylePropertySpec_(core::StringId property) const;
-    StyleValue getStyleCascadedValue_(core::StringId property) const;
-    StyleValue getStyleComputedValue_(core::StringId property) const;
+    const StyleValue* getStyleCascadedValue_(core::StringId property) const;
+    const StyleValue& getStyleComputedValue_(core::StringId property) const;
 };
 
 } // namespace vgc::style

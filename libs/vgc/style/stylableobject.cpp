@@ -21,6 +21,8 @@
 namespace vgc::style {
 
 StylableObject::StylableObject() {
+    styleSpecTable_ = std::make_shared<style::SpecTable>();
+    populateStyleSpecTable(styleSpecTable_.get());
 }
 
 StylableObjectPtr StylableObject::create() {
@@ -33,9 +35,7 @@ void StylableObject::setStyleSheet(StyleSheetPtr styleSheet) {
 }
 
 void StylableObject::setStyleSheet(std::string_view string) {
-    StyleSheetPtr styleSheet =
-        StyleSheet::create(defaultStyleSheet()->propertySpecs(), string);
-    setStyleSheet(styleSheet);
+    setStyleSheet(StyleSheet::create(string));
 }
 
 void StylableObject::addStyleClass(core::StringId class_) {
@@ -115,6 +115,10 @@ void StylableObject::removeChildStylableObject(StylableObject* child) {
 void StylableObject::onStyleChanged() {
 }
 
+void StylableObject::doPopulateStyleSpecTable(SpecTable*) {
+    // nothing
+}
+
 void StylableObject::updateStyle_() {
     // In this function, we precompute which rule sets match this node and
     // precompute all "cascaded values". Note that "computed values" are
@@ -184,7 +188,7 @@ void StylableObject::updateStyle_() {
         StyleRuleSet* ruleSet = r.first;
         for (StyleDeclaration* declaration : ruleSet->declarations()) {
             styleCachedData_.cascadedValues[declaration->property()] =
-                declaration->value();
+                &declaration->value();
         }
     }
 
@@ -195,17 +199,6 @@ void StylableObject::updateStyle_() {
 
     // Notify the object of the change of style
     onStyleChanged();
-}
-
-const StylePropertySpec*
-StylableObject::getStylePropertySpec_(core::StringId property) const {
-    for (const detail::RuleSetSpan& span : styleCachedData_.ruleSetSpans) {
-        const StylePropertySpec* res = span.styleSheet->propertySpecs()->get(property);
-        if (res) {
-            return res;
-        }
-    }
-    return nullptr;
 }
 
 // Returns the cascaded value of the given property, that is,
@@ -224,13 +217,17 @@ StylableObject::getStylePropertySpec_(core::StringId property) const {
 // If there is no declared value for the given property, then
 // a value of type StyleValueType::None is returned.
 //
-StyleValue StylableObject::getStyleCascadedValue_(core::StringId property) const {
+const StyleValue* StylableObject::getStyleCascadedValue_(core::StringId property) const {
+
+    // Defines a `None` value that we can return as const pointer
+    static StyleValue noneValue = StyleValue::none();
+
     auto search = styleCachedData_.cascadedValues.find(property);
     if (search != styleCachedData_.cascadedValues.end()) {
         return search->second;
     }
     else {
-        return StyleValue::none();
+        return &noneValue;
     }
 }
 
@@ -244,38 +241,54 @@ StyleValue StylableObject::getStyleCascadedValue_(core::StringId property) const
 // default value for the given property (this can be the case for custom
 // properties which are missing from the stylesheet).
 //
-StyleValue StylableObject::getStyleComputedValue_(core::StringId property) const {
-    StyleValue v = getStyleCascadedValue_(property);
-    if (v.type() == StyleValueType::None) {
-        const StylePropertySpec* spec = getStylePropertySpec_(property);
+const StyleValue& StylableObject::getStyleComputedValue_(core::StringId property) const {
+
+    // Defines values that we can return as const ref
+    static StyleValue noneValue = StyleValue::none();
+    static StyleValue inheritValue = StyleValue::none();
+
+    // Get the cascaded value
+    const StyleValue* res = getStyleCascadedValue_(property);
+
+    // Parse the value if not yet parsed, becomes `None` if parsing fails
+    if (res->type() == StyleValueType::Unparsed) {
+        StyleValue* mutableValue = const_cast<StyleValue*>(res);
+        mutableValue->parse_(styleSpecTable()->get(property));
+    }
+
+    // If there is no cascaded value, try to see if we should inherit
+    if (res->type() == StyleValueType::None) {
+        const StylePropertySpec* spec = styleSpecTable()->get(property);
         if (spec) {
             if (spec->isInherited()) {
-                v = StyleValue::inherit();
+                res = &inheritValue;
             }
             else {
-                v = spec->initialValue();
+                res = &spec->initialValue();
             }
         }
         else {
-            return v;
+            return *res;
         }
     }
-    if (v.type() == StyleValueType::Inherit) { // Not a `else if` on purpose
+
+    // Get value from ancestors if inherited
+    if (res->type() == StyleValueType::Inherit) {
         StylableObject* parent = parentStylableObject();
         if (parent) {
-            v = parent->getStyleComputedValue_(property);
+            res = &parent->getStyleComputedValue_(property);
         }
         else {
-            const StylePropertySpec* spec = getStylePropertySpec_(property);
+            const StylePropertySpec* spec = styleSpecTable()->get(property);
             if (spec) {
-                v = spec->initialValue();
+                res = &spec->initialValue();
             }
             else {
-                v = StyleValue::none();
+                res = &noneValue;
             }
         }
     }
-    return v;
+    return *res;
 }
 
 } // namespace vgc::style

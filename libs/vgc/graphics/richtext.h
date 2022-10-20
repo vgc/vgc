@@ -159,9 +159,15 @@ public:
         return RichTextSpanListView(children_);
     }
 
-    const style::StyleSheet* defaultStyleSheet() const override;
+    // Implementation of StylableObject interface
+    static void doPopulateStyleSpecTable(style::SpecTable* table);
+    void populateStyleSpecTable(style::SpecTable* table) override {
+        doPopulateStyleSpecTable(table);
+    }
 
-    static const style::StylePropertySpecTable* stylePropertySpecs();
+    // deprecated
+    const style::StyleSheet* defaultStyleSheet() const override;
+    static const style::SpecTable* stylePropertySpecs();
 
 private:
     RichTextSpan* parent_;
