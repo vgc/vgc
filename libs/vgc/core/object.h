@@ -351,9 +351,13 @@ public:                                                                         
         ::vgc::core::isObject<SuperClass>,                                               \
         "Superclass must inherit from Object and use VGC_OBJECT(..).");                  \
                                                                                          \
-    core::StringId className() const override {                                          \
+    static core::StringId staticClassName() {                                            \
         static core::StringId res(#T);                                                   \
         return res;                                                                      \
+    }                                                                                    \
+                                                                                         \
+    core::StringId className() const override {                                          \
+        return ThisClass::staticClassName();                                             \
     }                                                                                    \
                                                                                          \
 protected:                                                                               \
@@ -611,9 +615,13 @@ private:
     Object& operator=(Object&&) = delete;
 
 public:
-    virtual core::StringId className() const {
+    static core::StringId staticClassName() {
         static core::StringId res("Object");
         return res;
+    }
+
+    virtual core::StringId className() const {
+        return ThisClass::staticClassName();
     }
 
     /// Returns how many ObjPtrs are currently referencing this Object.
