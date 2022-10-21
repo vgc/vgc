@@ -28,18 +28,6 @@
 
 namespace vgc::graphics {
 
-VGC_GRAPHICS_API
-style::StyleValue
-parsePixelHinting(style::StyleTokenIterator begin, style::StyleTokenIterator end);
-
-VGC_GRAPHICS_API
-style::StyleValue
-parseTextHorizontalAlign(style::StyleTokenIterator begin, style::StyleTokenIterator end);
-
-VGC_GRAPHICS_API
-style::StyleValue
-parseTextVerticalAlign(style::StyleTokenIterator begin, style::StyleTokenIterator end);
-
 VGC_DECLARE_OBJECT(RichText);
 VGC_DECLARE_OBJECT(RichTextSpan);
 
@@ -160,14 +148,10 @@ public:
     }
 
     // Implementation of StylableObject interface
-    static void doPopulateStyleSpecTable(style::SpecTable* table);
-    void populateStyleSpecTable(style::SpecTable* table) override {
-        doPopulateStyleSpecTable(table);
+    static void populateStyleSpecTable(style::SpecTable* table);
+    void populateStyleSpecTableVirtual(style::SpecTable* table) override {
+        populateStyleSpecTable(table);
     }
-
-    // deprecated
-    const style::StyleSheet* defaultStyleSheet() const override;
-    static const style::SpecTable* stylePropertySpecs();
 
 private:
     RichTextSpan* parent_;

@@ -151,10 +151,6 @@ struct StyleCachedData {
     }
 };
 
-struct TreeData {
-    StylableObject* root;
-};
-
 } // namespace detail
 
 /// \typedef vgc::style::StylableObject
@@ -196,9 +192,8 @@ public:
     ///
     void setStyleSheet(StyleSheetPtr styleSheet);
 
-    /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a style
-    /// sheet from the given string and uses the same `SpecTable`
-    /// as the `defaultStyleSheet()`.
+    /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a
+    /// style sheet from the given string.
     ///
     void setStyleSheet(std::string_view string);
 
@@ -249,15 +244,6 @@ public:
     ///
     StyleValue style(core::StringId property) const;
 
-    /// Returns the style sheet that is used by default in case no other style
-    /// sheet provides a value for a queried property.
-    ///
-    /// This method must be implemented by subclasses.
-    ///
-    // XXX remove this, it was initially required for accessing the spec table,
-    // but the spec table architecture is now different.
-    virtual const StyleSheet* defaultStyleSheet() const;
-
     /// Returns the style metrics of this stylable object.
     ///
     const Metrics& styleMetrics() const {
@@ -272,18 +258,50 @@ public:
 
     /// Returns the `SpecTable` of this stylable object.
     ///
+    /// This spec table is automatically created and shared with all objects in
+    /// the tree. Its content is automatically populated via the
+    /// `populateStyleSpecTable()` methods whenever new objects are added to
+    /// the tree.
+    ///
     const SpecTable* styleSpecTable() const {
         return styleSpecTable_.get();
     }
 
-    /// Implementation of populateStyleSpecTable() as a static function.
+    /// Inserts to the given `SpecTable` all the style property specifications
+    /// which are required by this class.
     ///
-    static void doPopulateStyleSpecTable(SpecTable* table);
+    /// Subclasses can add custom style property specifications by implementing
+    /// a similar static function, and overriding `populateStyleSpecTableVirtual`
+    /// such that it calls the static function, like so:
+    ///
+    /// ```cpp
+    /// class FancyStylableObject : public StylableObject {
+    ///     VGC_OBJECT(FancyStylableObject, StylableObject)
+    ///
+    /// public:
+    ///     static void populateStyleSpecTable(SpecTable* table);
+    ///
+    ///     void populateStyleSpecTableVirtual(SpecTable* table) override {
+    ///         populateStyleSpecTable(table);
+    ///     }
+    /// };
+    ///
+    /// void FancyStylableObject::populateStyleSpecTable(SpecTable* table) {
+    ///     if (!table->setRegistered(staticClassName())) {
+    ///         return;
+    ///     }
+    ///     auto fortyTwo = StyleValue::custom(Length(12.0_dp));
+    ///     table->insert(StringId("fancy-length"), fortyTwo, false, &Length::parse);
+    ///     SuperClass::populateStyleSpecTable(table);
+    /// }
+    /// ```
+    ///
+    static void populateStyleSpecTable(SpecTable* table);
 
-    /// Inserts the attribute specs relative to this `StylableObject` class.
+    /// Virtual version of  `populateStyleSpecTable()`
     ///
-    virtual void populateStyleSpecTable(SpecTable* table) {
-        doPopulateStyleSpecTable(table);
+    virtual void populateStyleSpecTableVirtual(SpecTable* table) {
+        populateStyleSpecTable(table);
     }
 
 protected:

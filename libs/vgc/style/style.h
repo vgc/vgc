@@ -70,6 +70,9 @@ enum class StyleValueType : Int8 {
     Custom      ///< The value is a custom type
 };
 
+VGC_STYLE_API
+VGC_DECLARE_ENUM(StyleValueType)
+
 /// \enum vgc::style::StyleValue
 /// \brief Stores the value of a style attribute.
 ///
@@ -102,8 +105,8 @@ public:
         return StyleValue(StyleValueType::None);
     }
 
-    /// Creates a StyleValue of type Unparsed. This is a temporary value
-    /// while waiting for the parse(StylableObject*) for
+    /// Creates a StyleValue of type Unparsed. This allows to defer parsing the
+    /// value until the `SpecTable` of the tree is properly populated.
     ///
     static StyleValue unparsed(StyleTokenIterator begin, StyleTokenIterator end);
 

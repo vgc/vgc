@@ -24,6 +24,17 @@
 namespace vgc::style {
 
 VGC_DEFINE_ENUM(
+    StyleValueType,
+    (None, "None"),
+    (Unparsed, "Unparsed"),
+    (Invalid, "Invalid"),
+    (Inherit, "Inherit"),
+    (Identifier, "Identifier"),
+    (Number, "Number"),
+    (String, "String"),
+    (Custom, "Custom"))
+
+VGC_DEFINE_ENUM(
     StyleSelectorItemType,
     (ClassSelector, "Class Selector"),
     (DescendantCombinator, "Descendant Combinator"),
@@ -31,10 +42,24 @@ VGC_DEFINE_ENUM(
 
 namespace {
 
+// Stores the unparsed string of the value as well its tokenized version.
+//
+// Note that the tokens contain pointers to characters in the string, so these
+// pointers must be properly updated whenever the string is copied.
+//
 class UnparsedValue {
+    static std::string initRawString(StyleTokenIterator begin, StyleTokenIterator end) {
+        if (begin == end) {
+            return "";
+        }
+        else {
+            return std::string(begin->begin, (end - 1)->end);
+        }
+    }
+
 public:
     UnparsedValue(StyleTokenIterator begin, StyleTokenIterator end)
-        : rawString_(begin->begin, end->begin)
+        : rawString_(initRawString(begin, end))
         , tokens_(begin, end) {
 
         remapPointers_();
@@ -95,7 +120,7 @@ private:
         if (!tokens_.isEmpty()) {
             const char* oldBegin = tokens_.begin()->begin;
             const char* newBegin = rawString_.data();
-            auto offset = std::distance(newBegin, oldBegin);
+            std::ptrdiff_t offset = newBegin - oldBegin;
             if (offset != 0) {
                 for (StyleToken& token : tokens_) {
                     token.begin += offset;
@@ -125,7 +150,7 @@ void StyleValue::parse_(const StylePropertySpec* spec) {
         *this = StyleValue::none();
     }
     else {
-        value_ = parsed;
+        *this = parsed;
     }
 }
 

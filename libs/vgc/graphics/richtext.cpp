@@ -65,9 +65,11 @@ StyleValue parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator e
 
 } // namespace
 
-void RichTextSpan::doPopulateStyleSpecTable(style::SpecTable* table) {
+// clang-format off
 
-    if (!table->setRegistered(RichTextSpan::staticClassName())) {
+void RichTextSpan::populateStyleSpecTable(style::SpecTable* table) {
+
+    if (!table->setRegistered(staticClassName())) {
         return;
     }
 
@@ -80,53 +82,54 @@ void RichTextSpan::doPopulateStyleSpecTable(style::SpecTable* table) {
     using style::LengthOrPercentage;
     using style::LengthOrPercentageOrAuto;
 
-    // clang-format off
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
 
-    auto cBlack = StyleValue::custom(core::colors::black);
-    auto cWhite = StyleValue::custom(core::colors::white);
-    auto cBlue = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
-    auto cTransp = StyleValue::custom(core::colors::transparent);
-    auto lZero = StyleValue::custom(Length());
-    auto lpZero = StyleValue::custom(LengthOrPercentage());
-    auto brZero = StyleValue::custom(BorderRadius());
-    auto lTwelve = StyleValue::custom(Length(12.0_dp));
-    auto laAuto = StyleValue::custom(LengthOrAuto());
-    auto iNormal = StyleValue::identifier(strings::normal);
-    auto iLeft = StyleValue::identifier(strings::left);
-    auto iTop = StyleValue::identifier(strings::top);
+    auto black    = StyleValue::custom(core::colors::black);
+    auto white    = StyleValue::custom(core::colors::white);
+    auto blue     = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
+    auto transp   = StyleValue::custom(core::colors::transparent);
 
-    table->insert(background_color, cTransp, false, &style::parseColor);
-    table->insert(margin_top, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(margin_right, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(margin_bottom, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(margin_left, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(padding_top, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(padding_right, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(padding_bottom, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(padding_left, lpZero, false, &LengthOrPercentage::parse);
-    table->insert(border_width, lZero, false, &Length::parse);
-    table->insert(border_color, cBlack, false, &style::parseColor);
-    table->insert(border_top_left_radius, brZero, false, &BorderRadius::parse);
-    table->insert(border_top_right_radius, brZero, false, &BorderRadius::parse);
-    table->insert(border_bottom_right_radius, brZero, false, &BorderRadius::parse);
-    table->insert(border_bottom_left_radius, brZero, false, &BorderRadius::parse);
+    auto zero_l   = StyleValue::custom(Length());
+    auto zero_lp  = StyleValue::custom(LengthOrPercentage());
+    auto zero_br  = StyleValue::custom(BorderRadius());
+    auto auto_la  = StyleValue::custom(LengthOrAuto());
+    auto twelve_l = StyleValue::custom(Length(12.0_dp));
 
-    //table->insert(pixel_hinting, iNormal, true, &parsePixelHinting);
-    table->insert(font_size, lTwelve, true, &Length::parse);
-    table->insert(font_ascent, laAuto, true, &LengthOrAuto::parse);
-    table->insert(font_descent, laAuto, true, &LengthOrAuto::parse);
-    table->insert(text_color, cBlack, true, &style::parseColor);
-    table->insert(text_selection_color, cWhite, true, &style::parseColor);
-    table->insert(text_selection_background_color, cBlue, true, &style::parseColor);
-    //table->insert(text_horizontal_align, iLeft, true, &parseTextHorizontalAlign);
-    //table->insert(text_vertical_align, iTop, true, &parseTextVerticalAlign);
-    table->insert(caret_color, cBlack, true, &style::parseColor);
+    auto normal_i = StyleValue::identifier(normal);
+    auto left_i   = StyleValue::identifier(left);
+    auto top_i    = StyleValue::identifier(top);
 
-    // clang-format on
+    table->insert(background_color,           transp,  false, &style::parseColor);
+    table->insert(margin_top,                 zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(margin_right,               zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(margin_bottom,              zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(margin_left,                zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_top,                zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_right,              zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_bottom,             zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_left,               zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(border_width,               zero_l,  false, &Length::parse);
+    table->insert(border_color,               black,   false, &style::parseColor);
+    table->insert(border_top_left_radius,     zero_br, false, &BorderRadius::parse);
+    table->insert(border_top_right_radius,    zero_br, false, &BorderRadius::parse);
+    table->insert(border_bottom_right_radius, zero_br, false, &BorderRadius::parse);
+    table->insert(border_bottom_left_radius,  zero_br, false, &BorderRadius::parse);
 
-    SuperClass::doPopulateStyleSpecTable(table);
+    table->insert(pixel_hinting,                   normal_i, true, &parsePixelHinting);
+    table->insert(font_size,                       twelve_l, true, &Length::parse);
+    table->insert(font_ascent,                     auto_la,  true, &LengthOrAuto::parse);
+    table->insert(font_descent,                    auto_la,  true, &LengthOrAuto::parse);
+    table->insert(text_color,                      black,    true, &style::parseColor);
+    table->insert(text_selection_color,            white,    true, &style::parseColor);
+    table->insert(text_selection_background_color, blue,     true, &style::parseColor);
+    table->insert(text_horizontal_align,           left_i,   true, &parseTextHorizontalAlign);
+    table->insert(text_vertical_align,             top_i,    true, &parseTextVerticalAlign);
+    table->insert(caret_color,                     black,    true, &style::parseColor);
+
+    SuperClass::populateStyleSpecTable(table);
 }
+
+// clang-format on
 
 namespace {
 
@@ -740,7 +743,5 @@ void RichText::insertText_(std::string_view textToInsert) {
     // Clear selection
     selectionStart_ = selectionEnd_;
 }
-
-namespace detail {} // namespace detail
 
 } // namespace vgc::graphics

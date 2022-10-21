@@ -21,8 +21,13 @@
 namespace vgc::style {
 
 StylableObject::StylableObject() {
+
+    // Create the spec table. Note that we do not populate it here since
+    // calling the populateStyleSpecTableVirtual() would be pointless: it would
+    // not be dispatched to the subclass implementation. We populate instead in
+    // updateStyle_().
+    //
     styleSpecTable_ = std::make_shared<style::SpecTable>();
-    populateStyleSpecTable(styleSpecTable_.get());
 }
 
 StylableObjectPtr StylableObject::create() {
@@ -83,18 +88,21 @@ StyleValue StylableObject::style(core::StringId property) const {
     return getStyleComputedValue_(property);
 }
 
-const StyleSheet* StylableObject::defaultStyleSheet() const {
-    return nullptr;
-}
-
 void StylableObject::appendChildStylableObject(StylableObject* child) {
+
     StylableObject* oldParent = child->parentStylableObject();
     StylableObject* newParent = this;
+
+    // Remove from previous parent if any
     if (oldParent) {
         oldParent->removeChildStylableObject(child);
     }
+
+    // Update hierarchy
     childStylableObjects_.append(child);
     child->parentStylableObject_ = newParent;
+
+    // Update style (which will indirectly merge the spec tables)
     child->updateStyle_();
 }
 
@@ -115,7 +123,7 @@ void StylableObject::removeChildStylableObject(StylableObject* child) {
 void StylableObject::onStyleChanged() {
 }
 
-void StylableObject::doPopulateStyleSpecTable(SpecTable*) {
+void StylableObject::populateStyleSpecTable(SpecTable*) {
     // nothing
 }
 
@@ -133,8 +141,22 @@ void StylableObject::updateStyle_() {
     // Clear previous data
     styleCachedData_.clear();
 
+    // Ensure that we use the same spec table as our parent,
+    // and that the object is properly registered in the spec table.
+    //
+    // Note that it's best to do this is and not sooner (e.g., in the
+    // constructor of `StylableObject`), because here it's more likely that the
+    // object is fully constructed, and therefore the virtuall call to
+    // populateStyleSpecTable() is properly dispatched to the subclass.
+    //
+    if (parentStylableObject()
+        && parentStylableObject()->styleSpecTable() != styleSpecTable()) {
+
+        styleSpecTable_ = parentStylableObject()->styleSpecTable_;
+    }
+    populateStyleSpecTableVirtual(styleSpecTable_.get());
+
     // Get all non-null stylesheets from this node to the root nodes
-    StylableObject* root = this;
     for (StylableObject* node = this; //
          node != nullptr;             //
          node = node->parentStylableObject()) {
@@ -143,11 +165,6 @@ void StylableObject::updateStyle_() {
         if (styleSheet) {
             styleCachedData_.ruleSetSpans.append({styleSheet, 0, 0});
         }
-        root = node;
-    }
-    const StyleSheet* defaultStyleSheet = root->defaultStyleSheet();
-    if (defaultStyleSheet) {
-        styleCachedData_.ruleSetSpans.append({defaultStyleSheet, 0, 0});
     }
 
     // Iterate over all stylesheets from the root node to this node, that is,
@@ -245,7 +262,7 @@ const StyleValue& StylableObject::getStyleComputedValue_(core::StringId property
 
     // Defines values that we can return as const ref
     static StyleValue noneValue = StyleValue::none();
-    static StyleValue inheritValue = StyleValue::none();
+    static StyleValue inheritValue = StyleValue::inherit();
 
     // Get the cascaded value
     const StyleValue* res = getStyleCascadedValue_(property);
@@ -288,6 +305,7 @@ const StyleValue& StylableObject::getStyleComputedValue_(core::StringId property
             }
         }
     }
+
     return *res;
 }
 

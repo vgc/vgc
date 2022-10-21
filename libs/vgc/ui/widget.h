@@ -1140,9 +1140,9 @@ public:
     }
 
     // Implementation of StylableObject interface
-    static void doPopulateStyleSpecTable(style::SpecTable* table);
-    void populateStyleSpecTable(style::SpecTable* table) override {
-        doPopulateStyleSpecTable(table);
+    static void populateStyleSpecTable(style::SpecTable* table);
+    void populateStyleSpecTableVirtual(style::SpecTable* table) override {
+        populateStyleSpecTable(table);
     }
 
 protected:
