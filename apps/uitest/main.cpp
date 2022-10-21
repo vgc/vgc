@@ -346,14 +346,14 @@ int main(int argc, char* argv[]) {
     mainLayout->addStyleClass(core::StringId("main-layout"));
 
     std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
-    std::string stylesheet = core::readFile(path);
-    stylesheet += ".main-layout { "
+    std::string styleSheet = core::readFile(path);
+    styleSheet += ".main-layout { "
                   "    row-gap: 0dp; "
                   "    padding-top: 0dp; "
                   "    padding-right: 0dp; "
                   "    padding-bottom: 0dp; "
                   "    padding-left: 0dp; }";
-    mainLayout->setStyleSheet(stylesheet);
+    mainLayout->setStyleSheet(styleSheet);
 
     // Create menubar
     createMenu(mainLayout);

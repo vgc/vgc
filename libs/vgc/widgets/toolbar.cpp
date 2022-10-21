@@ -26,6 +26,8 @@
 
 #include <vgc/widgets/toolbar.h>
 
+#include <vgc/core/io.h>
+
 namespace {
 
 int iconWidth = 64;
@@ -45,6 +47,10 @@ Toolbar::Toolbar(QWidget* parent)
     setFocusPolicy(Qt::ClickFocus);
 
     auto colorPalettePtr = ui::ColorPalette::create();
+    std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
+    std::string styleSheet = core::readFile(path);
+    colorPalettePtr->setStyleSheet(styleSheet);
+
     colorPalette_ = colorPalettePtr.get();
     colorPaletteq_ = new UiWidget(colorPalettePtr, this);
     // Note: it would be nice to std::move() the shared ptr instead of the
