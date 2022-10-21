@@ -63,81 +63,73 @@ StyleValue parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator e
     return parseIdentifierAmong(begin, end, {top, middle, bottom});
 }
 
+} // namespace
+
 // clang-format off
 
-style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
+void RichTextSpan::populateStyleSpecTable(style::SpecTable* table) {
+
+    if (!table->setRegistered(staticClassName())) {
+        return;
+    }
 
     using namespace strings;
     using namespace style::strings;
     using namespace style::literals;
+    using style::BorderRadius;
+    using style::Length;
+    using style::LengthOrAuto;
+    using style::LengthOrPercentage;
+    using style::LengthOrPercentageOrAuto;
 
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
-    auto black_         = StyleValue::custom(core::colors::black);
-    auto white_         = StyleValue::custom(core::colors::white);
-    auto blueish_       = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
-    auto transparent_   = StyleValue::custom(core::colors::transparent);
-    auto zerol_         = StyleValue::custom(style::Length());
-    auto zerolp_        = StyleValue::custom(style::LengthOrPercentage());
-    auto zerobr_        = StyleValue::custom(style::BorderRadius());
-    auto twelve_        = StyleValue::custom(style::Length(12.0_dp));
-    auto autol_         = StyleValue::custom(style::LengthOrAuto());
-    auto normal_        = StyleValue::identifier(strings::normal);
-    auto left_          = StyleValue::identifier(strings::left);
-    auto top_           = StyleValue::identifier(strings::top);
 
-    auto table = std::make_shared<style::StylePropertySpecTable>();
+    auto black    = StyleValue::custom(core::colors::black);
+    auto white    = StyleValue::custom(core::colors::white);
+    auto blue     = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
+    auto transp   = StyleValue::custom(core::colors::transparent);
 
-    table->insert(background_color,                 transparent_,   false, &style::parseColor);
-    table->insert(margin_top,                       zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(margin_right,                     zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(margin_bottom,                    zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(margin_left,                      zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(padding_top,                      zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(padding_right,                    zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(padding_bottom,                   zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(padding_left,                     zerolp_,        false, &style::LengthOrPercentage::parse);
-    table->insert(border_width,                     zerol_,         false, &style::Length::parse);
-    table->insert(border_color,                     black_,         false, &style::parseColor);
-    table->insert(border_top_left_radius,           zerobr_,        false, &style::BorderRadius::parse);
-    table->insert(border_top_right_radius,          zerobr_,        false, &style::BorderRadius::parse);
-    table->insert(border_bottom_right_radius,       zerobr_,        false, &style::BorderRadius::parse);
-    table->insert(border_bottom_left_radius,        zerobr_,        false, &style::BorderRadius::parse);
+    auto zero_l   = StyleValue::custom(Length());
+    auto zero_lp  = StyleValue::custom(LengthOrPercentage());
+    auto zero_br  = StyleValue::custom(BorderRadius());
+    auto auto_la  = StyleValue::custom(LengthOrAuto());
+    auto twelve_l = StyleValue::custom(Length(12.0_dp));
 
-    table->insert(pixel_hinting,                    normal_,        true,  &parsePixelHinting);
-    table->insert(font_size,                        twelve_,        true,  &style::Length::parse);
-    table->insert(font_ascent,                      autol_,         true,  &style::LengthOrAuto::parse);
-    table->insert(font_descent,                     autol_,         true,  &style::LengthOrAuto::parse);
-    table->insert(text_color,                       black_,         true,  &style::parseColor);
-    table->insert(text_selection_color,             white_,         true,  &style::parseColor);
-    table->insert(text_selection_background_color,  blueish_,       true,  &style::parseColor);
-    table->insert(text_horizontal_align,            left_,          true,  &parseTextHorizontalAlign);
-    table->insert(text_vertical_align,              top_,           true,  &parseTextVerticalAlign);
-    table->insert(caret_color,                      black_,         true,  &style::parseColor);
+    auto normal_i = StyleValue::identifier(normal);
+    auto left_i   = StyleValue::identifier(left);
+    auto top_i    = StyleValue::identifier(top);
 
-    return table;
+    table->insert(background_color,           transp,  false, &style::parseColor);
+    table->insert(margin_top,                 zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(margin_right,               zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(margin_bottom,              zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(margin_left,                zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_top,                zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_right,              zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_bottom,             zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(padding_left,               zero_lp, false, &LengthOrPercentage::parse);
+    table->insert(border_width,               zero_l,  false, &Length::parse);
+    table->insert(border_color,               black,   false, &style::parseColor);
+    table->insert(border_top_left_radius,     zero_br, false, &BorderRadius::parse);
+    table->insert(border_top_right_radius,    zero_br, false, &BorderRadius::parse);
+    table->insert(border_bottom_right_radius, zero_br, false, &BorderRadius::parse);
+    table->insert(border_bottom_left_radius,  zero_br, false, &BorderRadius::parse);
+
+    table->insert(pixel_hinting,                   normal_i, true, &parsePixelHinting);
+    table->insert(font_size,                       twelve_l, true, &Length::parse);
+    table->insert(font_ascent,                     auto_la,  true, &LengthOrAuto::parse);
+    table->insert(font_descent,                    auto_la,  true, &LengthOrAuto::parse);
+    table->insert(text_color,                      black,    true, &style::parseColor);
+    table->insert(text_selection_color,            white,    true, &style::parseColor);
+    table->insert(text_selection_background_color, blue,     true, &style::parseColor);
+    table->insert(text_horizontal_align,           left_i,   true, &parseTextHorizontalAlign);
+    table->insert(text_vertical_align,             top_i,    true, &parseTextVerticalAlign);
+    table->insert(caret_color,                     black,    true, &style::parseColor);
+
+    SuperClass::populateStyleSpecTable(table);
 }
 
 // clang-format on
-
-const style::StylePropertySpecTablePtr& stylePropertySpecTable_() {
-    static style::StylePropertySpecTablePtr table = createGlobalStylePropertySpecTable_();
-    return table;
-}
-
-style::StyleSheetPtr createGlobalStyleSheet_() {
-    return style::StyleSheet::create(stylePropertySpecTable_(), "");
-}
-
-} // namespace
-
-const style::StyleSheet* RichTextSpan::defaultStyleSheet() const {
-    static style::StyleSheetPtr s = createGlobalStyleSheet_();
-    return s.get();
-}
-
-const style::StylePropertySpecTable* RichTextSpan::stylePropertySpecs() {
-    return stylePropertySpecTable_().get();
-}
 
 namespace {
 

@@ -17,16 +17,142 @@
 #include <vgc/style/style.h>
 
 #include <vgc/core/colors.h>
+#include <vgc/style/logcategories.h>
 #include <vgc/style/strings.h>
 #include <vgc/style/stylableobject.h>
 
 namespace vgc::style {
 
 VGC_DEFINE_ENUM(
+    StyleValueType,
+    (None, "None"),
+    (Unparsed, "Unparsed"),
+    (Invalid, "Invalid"),
+    (Inherit, "Inherit"),
+    (Identifier, "Identifier"),
+    (Number, "Number"),
+    (String, "String"),
+    (Custom, "Custom"))
+
+VGC_DEFINE_ENUM(
     StyleSelectorItemType,
     (ClassSelector, "Class Selector"),
     (DescendantCombinator, "Descendant Combinator"),
     (ChildCombinator, "Child Combinator"))
+
+namespace {
+
+// Stores the unparsed string of the value as well its tokenized version.
+//
+// Note that the tokens contain pointers to characters in the string, so these
+// pointers must be properly updated whenever the string is copied.
+//
+class UnparsedValue {
+    static std::string initRawString(StyleTokenIterator begin, StyleTokenIterator end) {
+        if (begin == end) {
+            return "";
+        }
+        else {
+            return std::string(begin->begin, (end - 1)->end);
+        }
+    }
+
+public:
+    UnparsedValue(StyleTokenIterator begin, StyleTokenIterator end)
+        : rawString_(initRawString(begin, end))
+        , tokens_(begin, end) {
+
+        remapPointers_();
+    }
+
+    UnparsedValue(const UnparsedValue& other)
+        : rawString_(other.rawString_)
+        , tokens_(other.tokens_) {
+
+        remapPointers_();
+    }
+
+    UnparsedValue(UnparsedValue&& other)
+        : rawString_(std::move(other.rawString_))
+        , tokens_(std::move(other.tokens_)) {
+
+        remapPointers_();
+    }
+
+    UnparsedValue& operator=(const UnparsedValue& other) {
+        if (this != &other) {
+            rawString_ = other.rawString_;
+            tokens_ = other.tokens_;
+            remapPointers_();
+        }
+        return *this;
+    }
+
+    UnparsedValue& operator=(UnparsedValue&& other) {
+        if (this != &other) {
+            rawString_ = std::move(other.rawString_);
+            tokens_ = std::move(other.tokens_);
+            remapPointers_();
+        }
+        return *this;
+    }
+
+    const std::string& rawString() const {
+        return rawString_;
+    }
+
+    const StyleTokenArray& tokens() const {
+        return tokens_;
+    }
+
+private:
+    std::string rawString_;
+    StyleTokenArray tokens_;
+
+    // Ensures that the `const char*` pointers in `tokens_` points to the
+    // copied data in `rawString_`.
+    //
+    // Note that remapping is still needed even for the move constructor and
+    // move assignment operator, due to small-string optimization: a moved
+    // string may still have its data at a new location.
+    //
+    void remapPointers_() {
+        if (!tokens_.isEmpty()) {
+            const char* oldBegin = tokens_.begin()->begin;
+            const char* newBegin = rawString_.data();
+            std::ptrdiff_t offset = newBegin - oldBegin;
+            if (offset != 0) {
+                for (StyleToken& token : tokens_) {
+                    token.begin += offset;
+                    token.end += offset;
+                }
+            }
+        }
+    }
+};
+
+} // namespace
+
+StyleValue StyleValue::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
+    return StyleValue(StyleValueType::Unparsed, UnparsedValue(begin, end));
+}
+
+void StyleValue::parse_(const StylePropertySpec* spec) {
+    const UnparsedValue* v = std::any_cast<UnparsedValue>(&value_);
+    StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
+    StyleValue parsed = parser(v->tokens().begin(), v->tokens().end());
+    if (parsed.type() == StyleValueType::Invalid) {
+        VGC_WARNING(
+            LogVgcStyle,
+            "Failed to parse attribute '{}' defined as '{}'.",
+            spec->name(),
+            v->rawString());
+        *this = StyleValue::none();
+    }
+    else {
+        *this = parsed;
+    }
+}
 
 StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
     if (end == begin + 1) {
@@ -47,18 +173,14 @@ namespace detail {
 // befriend this class, instead of befriending all the free functions.
 //
 class StyleParser {
-    StylePropertySpecTablePtr specs_;
     bool topLevel_;
-    StyleParser(const StylePropertySpecTablePtr& specs, bool topLevel)
-        : specs_(specs)
-        , topLevel_(topLevel) {
+    StyleParser(bool topLevel)
+        : topLevel_(topLevel) {
     }
 
 public:
     // https://www.w3.org/TR/css-syntax-3/#parse-stylesheet
-    static StyleSheetPtr parseStyleSheet(
-        const StylePropertySpecTablePtr& specs,
-        std::string_view styleString) {
+    static StyleSheetPtr parseStyleSheet(std::string_view styleString) {
 
         // Tokenize
         std::string decoded = decodeStyleString(styleString);
@@ -66,13 +188,12 @@ public:
 
         // Parse
         bool topLevel = true;
-        StyleParser parser(specs, topLevel);
+        StyleParser parser(topLevel);
         StyleTokenIterator it = tokens.begin();
         core::Array<StyleRuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
 
         // Create StyleSheet
         StyleSheetPtr styleSheet = StyleSheet::create();
-        styleSheet->propertySpecs_ = specs;
         for (const StyleRuleSetPtr& rule : rules) {
             styleSheet->appendChildObject_(rule.get());
             styleSheet->ruleSets_.append(rule.get());
@@ -305,14 +426,17 @@ private:
     // May return a null pointer in case of parse errors.
     StyleDeclarationPtr
     consumeDeclaration_(StyleTokenIterator& it, StyleTokenIterator end) {
+
         StyleDeclarationPtr declaration = StyleDeclaration::create();
         declaration->property_ = core::StringId(it->codePointsValue);
         declaration->value_ = StyleValue::invalid();
         ++it;
+
         // Consume whitespaces
         while (it != end && it->type == StyleTokenType::Whitespace) {
             ++it;
         }
+
         // Ensure first non-whitespace token is a Colon
         if (it == end || it->type != StyleTokenType::Colon) {
             // Parse error: return nothing
@@ -321,16 +445,19 @@ private:
         else {
             ++it;
         }
+
         // Consume whitespaces
         while (it != end && it->type == StyleTokenType::Whitespace) {
             ++it;
         }
+
         // Consume value components
         StyleTokenIterator valueBegin = it;
         while (it != end) {
             consumeComponentValue_(it, end);
         }
         StyleTokenIterator valueEnd = it;
+
         // Remove trailing whitespaces from value
         // TODO: also remove "!important" from value and set it as flag, see (5) in:
         //       https://www.w3.org/TR/css-syntax-3/#consume-declaration
@@ -338,17 +465,14 @@ private:
                && (valueEnd - 1)->type == StyleTokenType::Whitespace) {
             --valueEnd;
         }
-        // Parse value
-        // XXX We should probably first check for global keywords like 'inherit' and
-        // only call the custom parser if it's not a global keyword.
-        const StylePropertySpec* spec =
-            specs_ ? specs_->get(declaration->property_) : nullptr;
-        StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
-        declaration->value_ = parser(valueBegin, valueEnd);
-        if (declaration->value_.type() == StyleValueType::Invalid) {
-            // Parse error: return nothing
-            return StyleDeclarationPtr();
-        }
+
+        // Store unparsed value. Parsing is defer until the attribute is
+        // actually queried, that is, until we have an appropriate SpecTable.
+        //
+        // XXX We might still want to check here for global keywords like 'inherit'/etc.
+        //
+        declaration->value_ = StyleValue::unparsed(valueBegin, valueEnd);
+
         return declaration;
     }
 
@@ -526,6 +650,29 @@ private:
 
 } // namespace detail
 
+void SpecTable::insert(
+    core::StringId attributeName,
+    const StyleValue& initialValue,
+    bool isInherited,
+    StylePropertyParser parser) {
+
+    if (get(attributeName)) {
+        VGC_WARNING(
+            LogVgcStyle,
+            "Attempting to insert a property spec for the attribute '{}', which is "
+            "already registered. Aborted.",
+            attributeName);
+        return;
+    }
+    StylePropertySpec spec(attributeName, initialValue, isInherited, parser);
+    map_.insert({attributeName, spec});
+}
+
+bool SpecTable::setRegistered(core::StringId className) {
+    auto res = registeredClassNames_.insert(className);
+    return res.second;
+}
+
 StyleSheet::StyleSheet()
     : Object() {
 }
@@ -534,9 +681,8 @@ StyleSheetPtr StyleSheet::create() {
     return StyleSheetPtr(new StyleSheet());
 }
 
-StyleSheetPtr
-StyleSheet::create(const StylePropertySpecTablePtr& specs, std::string_view s) {
-    return detail::StyleParser::parseStyleSheet(specs, s);
+StyleSheetPtr StyleSheet::create(std::string_view s) {
+    return detail::StyleParser::parseStyleSheet(s);
 }
 
 StyleRuleSet::StyleRuleSet()

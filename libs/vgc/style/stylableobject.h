@@ -142,7 +142,7 @@ struct StyleCachedData {
     // Stores all cascaded values for a given StylableObject
     // TODO: share this data across all StylableObject that
     // have the same ruleSetArray and ruleSetSpans.
-    std::unordered_map<core::StringId, StyleValue> cascadedValues;
+    std::unordered_map<core::StringId, const StyleValue*> cascadedValues;
 
     void clear() {
         ruleSetArray.clear();
@@ -192,9 +192,8 @@ public:
     ///
     void setStyleSheet(StyleSheetPtr styleSheet);
 
-    /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a style
-    /// sheet from the given string and uses the same `StylePropertySpecTable`
-    /// as the `defaultStyleSheet()`.
+    /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a
+    /// style sheet from the given string.
     ///
     void setStyleSheet(std::string_view string);
 
@@ -245,13 +244,6 @@ public:
     ///
     StyleValue style(core::StringId property) const;
 
-    /// Returns the style sheet that is used by default in case no other style
-    /// sheet provides a value for a queried property.
-    ///
-    /// This method must be implemented by subclasses.
-    ///
-    virtual const StyleSheet* defaultStyleSheet() const;
-
     /// Returns the style metrics of this stylable object.
     ///
     const Metrics& styleMetrics() const {
@@ -263,6 +255,54 @@ public:
     void setStyleMetrics(const Metrics& metrics) {
         styleMetrics_ = metrics;
     };
+
+    /// Returns the `SpecTable` of this stylable object.
+    ///
+    /// This spec table is automatically created and shared with all objects in
+    /// the tree. Its content is automatically populated via the
+    /// `populateStyleSpecTable()` methods whenever new objects are added to
+    /// the tree.
+    ///
+    const SpecTable* styleSpecTable() const {
+        return styleSpecTable_.get();
+    }
+
+    /// Inserts to the given `SpecTable` all the style property specifications
+    /// which are required by this class.
+    ///
+    /// Subclasses can add custom style property specifications by implementing
+    /// a similar static function, and overriding `populateStyleSpecTableVirtual`
+    /// such that it calls the static function, like so:
+    ///
+    /// ```cpp
+    /// class FancyStylableObject : public StylableObject {
+    ///     VGC_OBJECT(FancyStylableObject, StylableObject)
+    ///
+    /// public:
+    ///     static void populateStyleSpecTable(SpecTable* table);
+    ///
+    ///     void populateStyleSpecTableVirtual(SpecTable* table) override {
+    ///         populateStyleSpecTable(table);
+    ///     }
+    /// };
+    ///
+    /// void FancyStylableObject::populateStyleSpecTable(SpecTable* table) {
+    ///     if (!table->setRegistered(staticClassName())) {
+    ///         return;
+    ///     }
+    ///     auto fortyTwo = StyleValue::custom(Length(12.0_dp));
+    ///     table->insert(StringId("fancy-length"), fortyTwo, false, &Length::parse);
+    ///     SuperClass::populateStyleSpecTable(table);
+    /// }
+    /// ```
+    ///
+    static void populateStyleSpecTable(SpecTable* table);
+
+    /// Virtual version of  `populateStyleSpecTable()`
+    ///
+    virtual void populateStyleSpecTableVirtual(SpecTable* table) {
+        populateStyleSpecTable(table);
+    }
 
 protected:
     StylableObject();
@@ -280,18 +320,20 @@ protected:
     virtual void onStyleChanged();
 
 private:
+    // Tree of stylable objects
     StylableObject* parentStylableObject_ = nullptr;
     core::Array<StylableObject*> childStylableObjects_;
 
-    StyleSheetPtr styleSheet_;
-    ClassSet styleClasses_;
-    detail::StyleCachedData styleCachedData_;
-    Metrics styleMetrics_;
+    // Style information
+    SpecTablePtr styleSpecTable_;             // "global" table shared between trees
+    StyleSheetPtr styleSheet_;                // rules for this object and descendants
+    ClassSet styleClasses_;                   // style classes of this object
+    detail::StyleCachedData styleCachedData_; // cache of cascaded values of this object
+    Metrics styleMetrics_;                    // how to convert `dp` (and others) to `px`
 
     void updateStyle_();
-    const StylePropertySpec* getStylePropertySpec_(core::StringId property) const;
-    StyleValue getStyleCascadedValue_(core::StringId property) const;
-    StyleValue getStyleComputedValue_(core::StringId property) const;
+    const StyleValue* getStyleCascadedValue_(core::StringId property) const;
+    const StyleValue& getStyleComputedValue_(core::StringId property) const;
 };
 
 } // namespace vgc::style

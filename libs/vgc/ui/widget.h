@@ -1139,8 +1139,11 @@ public:
         return action.get();
     }
 
-    // Implements StylableObject interface
-    const style::StyleSheet* defaultStyleSheet() const override;
+    // Implementation of StylableObject interface
+    static void populateStyleSpecTable(style::SpecTable* table);
+    void populateStyleSpecTableVirtual(style::SpecTable* table) override {
+        populateStyleSpecTable(table);
+    }
 
 protected:
     // Reimplementation of Object virtual methods.

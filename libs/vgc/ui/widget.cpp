@@ -1353,56 +1353,42 @@ StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
+} // namespace
+
 // clang-format off
 
-style::StylePropertySpecTablePtr createGlobalStylePropertySpecTable_() {
+void Widget::populateStyleSpecTable(style::SpecTable* table) {
+
+    if (!table->setRegistered(staticClassName())) {
+        return;
+    }
+
+    graphics::RichTextSpan::populateStyleSpecTable(table);
 
     using namespace strings;
+    using style::LengthOrPercentage;
+    using style::LengthOrPercentageOrAuto;
 
-    auto autosize    = StyleValue::custom(style::LengthOrPercentageOrAuto());
-    auto zerolp      = StyleValue::custom(style::LengthOrPercentage());
-    auto one         = StyleValue::number(1.0f);
+    auto auto_lpa = StyleValue::custom(LengthOrPercentageOrAuto());
+    auto zero_lp =  StyleValue::custom(LengthOrPercentage());
+    auto one_n =    StyleValue::number(1.0f);
 
-    // Start with the same specs as RichTextSpan
-    auto table = std::make_shared<style::StylePropertySpecTable>();
-    *table.get() = *graphics::RichTextSpan::stylePropertySpecs();
-
-    // Insert additional specs
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
+    table->insert(preferred_height,   auto_lpa, false, &LengthOrPercentageOrAuto::parse);
+    table->insert(preferred_width,    auto_lpa, false, &LengthOrPercentageOrAuto::parse);
+    table->insert(column_gap,         zero_lp,  false, &LengthOrPercentage::parse);
+    table->insert(row_gap,            zero_lp,  false, &LengthOrPercentage::parse);
+    table->insert(grid_auto_columns,  auto_lpa, false, &LengthOrPercentageOrAuto::parse);
+    table->insert(grid_auto_rows,     auto_lpa, false, &LengthOrPercentageOrAuto::parse);
+    table->insert(horizontal_stretch, one_n,    false, &parseStyleNumber);
+    table->insert(horizontal_shrink,  one_n,    false, &parseStyleNumber);
+    table->insert(vertical_stretch,   one_n,    false, &parseStyleNumber);
+    table->insert(vertical_shrink,    one_n,    false, &parseStyleNumber);
 
-    table->insert(preferred_height,     autosize, false, &style::LengthOrPercentageOrAuto::parse);
-    table->insert(preferred_width,      autosize, false, &style::LengthOrPercentageOrAuto::parse);
-    table->insert(column_gap,           zerolp,   false, &style::LengthOrPercentage::parse);
-    table->insert(row_gap,              zerolp,   false, &style::LengthOrPercentage::parse);
-    table->insert(grid_auto_columns,    autosize, false, &style::LengthOrPercentageOrAuto::parse);
-    table->insert(grid_auto_rows,       autosize, false, &style::LengthOrPercentageOrAuto::parse);
-    table->insert(horizontal_stretch,   one,      false, &parseStyleNumber);
-    table->insert(horizontal_shrink,    one,      false, &parseStyleNumber);
-    table->insert(vertical_stretch,     one,      false, &parseStyleNumber);
-    table->insert(vertical_shrink,      one,      false, &parseStyleNumber);
-
-    return table;
+    SuperClass::populateStyleSpecTable(table);
 }
 
 // clang-format on
-
-const style::StylePropertySpecTablePtr& stylePropertySpecTable_() {
-    static style::StylePropertySpecTablePtr table = createGlobalStylePropertySpecTable_();
-    return table;
-}
-
-style::StyleSheetPtr createGlobalStyleSheet_() {
-    std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
-    std::string s = core::readFile(path);
-    return style::StyleSheet::create(stylePropertySpecTable_(), s);
-}
-
-} // namespace
-
-const style::StyleSheet* Widget::defaultStyleSheet() const {
-    static style::StyleSheetPtr s = createGlobalStyleSheet_();
-    return s.get();
-}
 
 void Widget::onChildRemoved(Object* child) {
     if (child == children_) {

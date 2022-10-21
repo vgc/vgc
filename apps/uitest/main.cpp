@@ -22,6 +22,7 @@
 #include <QSettings>
 #include <QTimer>
 
+#include <vgc/core/io.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/core/random.h>
@@ -343,12 +344,16 @@ int main(int argc, char* argv[]) {
     ui::Column* mainLayout = overlay->createChild<ui::Column>();
     overlay->setAreaWidget(mainLayout);
     mainLayout->addStyleClass(core::StringId("main-layout"));
-    mainLayout->setStyleSheet(".main-layout { "
-                              "    row-gap: 0dp; "
-                              "    padding-top: 0dp; "
-                              "    padding-right: 0dp; "
-                              "    padding-bottom: 0dp; "
-                              "    padding-left: 0dp; }");
+
+    std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
+    std::string styleSheet = core::readFile(path);
+    styleSheet += ".main-layout { "
+                  "    row-gap: 0dp; "
+                  "    padding-top: 0dp; "
+                  "    padding-right: 0dp; "
+                  "    padding-bottom: 0dp; "
+                  "    padding-left: 0dp; }";
+    mainLayout->setStyleSheet(styleSheet);
 
     // Create menubar
     createMenu(mainLayout);
