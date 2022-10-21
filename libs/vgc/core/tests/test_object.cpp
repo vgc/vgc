@@ -17,25 +17,37 @@
 #include <gtest/gtest.h>
 #include <vgc/core/object.h>
 
-using vgc::core::format;
 using vgc::core::Object;
+using vgc::core::ObjectPtr;
 using vgc::core::detail::ConstructibleTestObject;
 using vgc::core::detail::ConstructibleTestObjectPtr;
 
+TEST(TestObject, StaticClassName) {
+    ASSERT_EQ(Object::staticClassName(), "Object");
+    ASSERT_EQ(ConstructibleTestObject::staticClassName(), "ConstructibleTestObject");
+
+    ConstructibleTestObjectPtr derived = ConstructibleTestObject::create();
+    ObjectPtr base = vgc::core::static_pointer_cast<Object>(derived);
+    ASSERT_EQ(base->staticClassName(), "Object");
+    ASSERT_EQ(derived->staticClassName(), "ConstructibleTestObject");
+}
+
 TEST(TestObject, ClassName) {
-    ConstructibleTestObjectPtr obj = ConstructibleTestObject::create();
-    ASSERT_EQ(obj->className(), "ConstructibleTestObject");
+    ConstructibleTestObjectPtr derived = ConstructibleTestObject::create();
+    ObjectPtr base = vgc::core::static_pointer_cast<Object>(derived);
+    ASSERT_EQ(base->className(), "ConstructibleTestObject");
+    ASSERT_EQ(derived->className(), "ConstructibleTestObject");
 }
 
 TEST(TestObject, Format) {
     ConstructibleTestObjectPtr obj = ConstructibleTestObject::create();
     Object* parent = obj->parentObject();
 
-    std::string objAddress = format("{}", fmt::ptr(obj.get()));
+    std::string objAddress = vgc::core::format("{}", fmt::ptr(obj.get()));
     ASSERT_GT(objAddress.size(), 2);
     ASSERT_EQ(objAddress.substr(0, 2), "0x");
 
-    std::string s = format("The parent of {} is {}", ptr(obj), ptr(parent));
+    std::string s = vgc::core::format("The parent of {} is {}", ptr(obj), ptr(parent));
 
     std::string expectedResult = "The parent of <ConstructibleTestObject @ ";
     expectedResult += objAddress;
