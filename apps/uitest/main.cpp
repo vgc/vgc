@@ -353,7 +353,7 @@ int main(int argc, char* argv[]) {
                   "    padding-right: 0dp; "
                   "    padding-bottom: 0dp; "
                   "    padding-left: 0dp; }";
-    mainLayout->setStyleSheet(styleSheet);
+    overlay->setStyleSheet(styleSheet);
 
     // Create menubar
     createMenu(mainLayout);
