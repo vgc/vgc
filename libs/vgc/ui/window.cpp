@@ -181,10 +181,17 @@ WindowPtr Window::create(WidgetPtr widget) {
 
 namespace {
 
-Widget* prepareMouseEvent(Widget* root, MouseEvent* event) {
+Widget* prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window) {
+
+    // Apply device pixel ratio
+    geometry::Vec2f position = event->position();
+    position *= static_cast<float>(window->screen()->devicePixelRatio());
+    event->setPosition(position);
+
+    // Handle mouse captor
     Widget* mouseCaptor = root->mouseCaptor();
     if (mouseCaptor) {
-        geometry::Vec2f position = root->mapTo(mouseCaptor, event->position());
+        position = root->mapTo(mouseCaptor, position);
         event->setPosition(position);
         return mouseCaptor;
     }
@@ -200,7 +207,7 @@ void Window::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     MouseEventPtr vgcEvent = fromQt(event);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mouseMoveEvent_(receiver, vgcEvent.get()));
 }
 
@@ -218,7 +225,7 @@ void Window::mousePressEvent(QMouseEvent* event) {
         return;
     }
     pressedMouseButtons_.set(button);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mousePressEvent_(receiver, vgcEvent.get()));
 }
 
@@ -231,7 +238,7 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
         return;
     }
     pressedMouseButtons_.unset(button);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mouseReleaseEvent_(receiver, vgcEvent.get()));
 }
 
@@ -239,7 +246,7 @@ void Window::tabletEvent(QTabletEvent* event) {
     switch (event->type()) {
     case QEvent::TabletMove: {
         MouseEventPtr vgcEvent = fromQt(event);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
         mouseMoveEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
@@ -260,7 +267,7 @@ void Window::tabletEvent(QTabletEvent* event) {
             break;
         }
         pressedTabletButtons_.set(button);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
         mousePressEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
@@ -276,7 +283,7 @@ void Window::tabletEvent(QTabletEvent* event) {
             return;
         }
         pressedTabletButtons_.unset(button);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
         mouseReleaseEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
@@ -380,11 +387,19 @@ void Window::focusOutEvent(QFocusEvent* event) {
 
 void Window::resizeEvent(QResizeEvent* event) {
 
+    // Update DPI scaling metrics
     updateScreenScaleRatio_();
 
+    // Get new window size
     QSize size = event->size();
     [[maybe_unused]] int w = size.width();
     [[maybe_unused]] int h = size.height();
+
+    // Apply device pixel ratio.
+    // On Macbooks (retina screens), this is an integer often equal to 2.
+    qreal r = screen()->devicePixelRatio();
+    w = static_cast<int>(std::round(static_cast<qreal>(w) * r));
+    h = static_cast<int>(std::round(static_cast<qreal>(h) * r));
     if (debugEvents) {
         VGC_DEBUG(LogVgcUi, core::format("resizeEvent({:04d}, {:04d})", w, h));
     }
@@ -575,7 +590,7 @@ bool Window::event(QEvent* event) {
                 deferredResize_ = false;
 
                 geometry::Camera2d c;
-                c.setViewportSize(width(), height());
+                c.setViewportSize(width_, height_);
                 proj_ = detail::toMat4f(c.projectionMatrix());
 
                 // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
@@ -782,14 +797,27 @@ void Window::exposeEvent(QExposeEvent*) {
 
 void Window::updateScreenScaleRatio_() {
 
+    // Examples of hiDpi configurations:
+    //
+    //                     Kubuntu/X11    macOS
+    //                       at 125%     (Retina)
+    //
+    // logicalDotsPerInch()    120         72
+    //                    (= 96 * 1.25)
+    //
+    // devicePixelRatio()      1           2
+    //
+
 #ifdef VGC_CORE_OS_MACOS
-    float unscaledDpi = 72.0f;
+    float baseLogicalDpi = 72.0f;
 #else
-    float unscaledDpi = 96.0f;
+    float baseLogicalDpi = 96.0f;
 #endif
+
     float newScreenScaleRatio = static_cast<float>(screen()->logicalDotsPerInch())
                                 * static_cast<float>(screen()->devicePixelRatio())
-                                / unscaledDpi;
+                                / baseLogicalDpi;
+
     if (screenScaleRatio_ != newScreenScaleRatio) {
         if (widget_) {
             screenScaleRatio_ = newScreenScaleRatio;
