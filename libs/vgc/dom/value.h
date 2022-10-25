@@ -18,14 +18,22 @@
 #define VGC_DOM_VALUE_H
 
 #include <memory>
+#include <string>
+#include <tuple>
 #include <variant>
+#include <type_traits>
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
+#include <vgc/core/enum.h>
+#include <vgc/core/format.h>
+#include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::dom {
+
+class Value;
 
 /// \enum vgc::dom::ValueType
 /// \brief Specifies the type of an attribute Value
@@ -89,33 +97,73 @@ enum class ValueType {
     // XXX TODO: complete the list of types
     None,
     Invalid,
-    Color,
+    String,
+    StringId,
+    Int,
+    IntArray,
+    Double,
     DoubleArray,
+    Color,
+    ColorArray,
+    Vec2d,
     Vec2dArray,
 };
 
-/// Writes the given ValueType to the output stream.
-///
-template<typename OStream>
-void write(OStream& out, ValueType v) {
-    switch (v) {
-    case ValueType::None:
-        write(out, "ValueType::None");
-        break;
-    case ValueType::Invalid:
-        write(out, "ValueType::Invalid");
-        break;
-    case ValueType::Color:
-        write(out, "ValueType::Color");
-        break;
-    case ValueType::DoubleArray:
-        write(out, "ValueType::DoubleArray");
-        break;
-    case ValueType::Vec2dArray:
-        write(out, "ValueType::Vec2dArray");
-        break;
-    }
+VGC_DOM_API
+VGC_DECLARE_ENUM(ValueType)
+
+namespace detail {
+
+template<typename T>
+using CowDataPtr = std::shared_ptr<const T>;
+
+static_assert(std::is_copy_constructible_v<CowDataPtr<char>>);
+static_assert(std::is_copy_assignable_v<CowDataPtr<char>>);
+
+template<typename T>
+struct CowDataPtrTraits {};
+
+template<typename T>
+struct CowDataPtrTraits<CowDataPtr<T>> {
+    using innerType = T;
+};
+
+template<typename T>
+struct isCowDataPtr_ : std::integral_constant<bool, false> {};
+
+template<typename T>
+struct isCowDataPtr_<CowDataPtr<T>> : std::integral_constant<bool, true> {};
+
+template<typename T>
+constexpr bool isCowDataPtr = isCowDataPtr_<T>::value;
+
+template<typename T>
+CowDataPtr<std::remove_reference_t<T>> makeCowDataPtr(T&& x) {
+    return std::make_shared<const std::remove_reference_t<T>>(std::forward<T>(x));
 }
+
+template<typename T>
+using CowArrayPtr = CowDataPtr<core::Array<T>>;
+
+using ValueVariantType = std::variant<
+    std::monostate,
+    std::string,
+    core::StringId,
+    Int,
+    CowArrayPtr<Int>,
+    double,
+    CowArrayPtr<double>,
+    core::Color,
+    CowArrayPtr<core::Color>,
+    geometry::Vec2d,
+    CowArrayPtr<geometry::Vec2d>>;
+
+static_assert(std::is_copy_constructible_v<ValueVariantType>);
+static_assert(std::is_copy_assignable_v<ValueVariantType>);
+static_assert(std::is_move_constructible_v<ValueVariantType>);
+static_assert(std::is_move_assignable_v<ValueVariantType>);
+
+} // namespace detail
 
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
@@ -125,52 +173,94 @@ public:
     /// Constructs an empty value, that is, whose ValueType is None.
     ///
     constexpr Value()
-        : Value(ValueType::None) {
+        : type_(ValueType::None) {
     }
 
     /// Returns a const reference to an empty value. This is useful for error
-    /// handling in methods that must return a Value by const reference.
+    /// handling in methods that must return a `Value` by const reference.
     ///
     static const Value& none();
 
     /// Returns a const reference to an invalid value. This is useful for error
-    /// handling in methods that must return a Value by const reference.
+    /// handling in methods that must return a `Value` by const reference.
     ///
     static const Value& invalid();
 
-    /// Constructs a Value holding a Color.
+    /// Constructs a `Value` holding a `std::string`.
     ///
-    Value(const core::Color& color)
+    Value(std::string_view string)
+        : type_(ValueType::String)
+        , var_(std::string(string)) {
+    }
+
+    /// Constructs a `Value` holding a `std::string`.
+    ///
+    Value(std::string&& string)
+        : type_(ValueType::String)
+        , var_(std::move(string)) {
+    }
+
+    /// Constructs a `Value` holding a `std::string`.
+    ///
+    Value(core::StringId stringId)
+        : type_(ValueType::StringId)
+        , var_(stringId) {
+    }
+
+    /// Constructs a `Value` holding an `Int`.
+    ///
+    Value(Int value)
+        : type_(ValueType::Int)
+        , var_(value) {
+    }
+
+    /// Constructs a `Value` holding an array of `Int`.
+    ///
+    Value(core::Array<Int> intArray)
+        : type_(ValueType::IntArray)
+        , var_(detail::makeCowDataPtr(std::move(intArray))) {
+    }
+
+    /// Constructs a `Value` holding a `double`.
+    ///
+    Value(double value)
+        : type_(ValueType::Double)
+        , var_(value) {
+    }
+
+    /// Constructs a `Value` holding an array of `double`.
+    ///
+    Value(core::Array<double> doubleArray)
+        : type_(ValueType::DoubleArray)
+        , var_(detail::makeCowDataPtr(std::move(doubleArray))) {
+    }
+
+    /// Constructs a `Value` holding a `Color`.
+    ///
+    Value(core::Color color)
         : type_(ValueType::Color)
-        , var_(color) {
+        , var_(std::move(color)) {
     }
 
-    /// Constructs a Value holding a DoubleArray.
+    /// Constructs a `Value` holding an array of `Color`.
     ///
-    Value(const core::DoubleArray& doubleArray)
-        : type_(ValueType::DoubleArray)
-        , var_(std::make_shared<core::DoubleArray>(doubleArray)) {
+    Value(core::Array<core::Color> colorArray)
+        : type_(ValueType::ColorArray)
+        , var_(detail::makeCowDataPtr(std::move(colorArray))) {
     }
 
-    /// Constructs a Value holding a DoubleArray.
+    /// Constructs a `Value` holding a `Vec2d`.
     ///
-    Value(core::DoubleArray&& doubleArray)
-        : type_(ValueType::DoubleArray)
-        , var_(std::make_shared<core::DoubleArray>(std::move(doubleArray))) {
+    Value(geometry::Vec2d vec2d)
+        : type_(ValueType::Vec2d)
+        , var_(vec2d) {
     }
 
-    /// Constructs a Value holding a Vec2dArray.
+    /// Constructs a `Value` holding a `Vec2dArray`.
     ///
-    Value(const geometry::Vec2dArray& vec2dArray)
+    Value(geometry::Vec2dArray vec2dArray)
         : type_(ValueType::Vec2dArray)
-        , var_(std::make_shared<geometry::Vec2dArray>(vec2dArray)) {
-    }
-
-    /// Constructs a Value holding a Vec2dArray.
-    ///
-    Value(geometry::Vec2dArray&& vec2dArray)
-        : type_(ValueType::Vec2dArray)
-        , var_(std::make_shared<geometry::Vec2dArray>(std::move(vec2dArray))) {
+        , var_(detail::makeCowDataPtr(std::move(vec2dArray))) {
     }
 
     /// Returns the ValueType of this Value.
@@ -179,7 +269,7 @@ public:
         return type_;
     }
 
-    /// Returns whether this Value is Valid, that is, whether type() is not
+    /// Returns whether this `Value` is Valid, that is, whether type() is not
     /// ValueType::Invalid, which means that it does hold one of the correct
     /// values.
     ///
@@ -187,75 +277,219 @@ public:
         return type() != ValueType::Invalid;
     }
 
-    /// Stops holding any Value. This makes this Value empty.
+    bool hasValue() const {
+        return type() > ValueType::Invalid;
+    }
+
+    /// Stops holding any Value. This makes this `Value` empty.
     ///
     void clear();
 
-    /// Reclaims unused memory.
+    /// Returns the item held by the container in this `Value` at the given `index`.
+    /// This returns an empty value if `type() != ValueType::Array..` or index is out
+    /// of container wrap range [-length, length).
     ///
-    void shrinkToFit();
+    // XXX what to do when index is out of range ?
+    Value getItemWrapped(Int index) {
+        return std::visit(
+            [&](auto&& arg) -> Value {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::isCowDataPtr<T>) {
+                    const T& a = std::get<T>(var_);
+                    const Int n = a->length();
+                    if (index >= -n && index < n) {
+                        return Value(a->getWrapped(index));
+                    }
+                }
+                return Value();
+            },
+            var_);
+    }
 
-    /// Returns the Color held by this Value.
-    /// The behavior is undefined if type() != ValueType::Color.
+    /// Returns the length of the held array.
+    /// Returns 0 if this value is not an array.
     ///
-    core::Color getColor() const {
+    Int arrayLength() {
+        return std::visit(
+            [&](auto&& arg) -> Int {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::isCowDataPtr<T>) {
+                    const T& a = std::get<T>(var_);
+                    return a->length();
+                }
+                else {
+                    return 0;
+                }
+            },
+            var_);
+    }
+
+    /// Returns the string held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::String`.
+    ///
+    const std::string& getString() const {
+        return std::get<std::string>(var_);
+    }
+
+    /// Sets this `Value` to the given string `s`.
+    ///
+    void set(std::string s) {
+        type_ = ValueType::String;
+        var_ = std::move(s);
+    }
+
+    /// Returns the string identifier held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::StringId`.
+    ///
+    core::StringId getStringId() const {
+        return std::get<core::StringId>(var_);
+    }
+
+    /// Sets this `Value` to the given string `s`.
+    ///
+    void set(core::StringId s) {
+        type_ = ValueType::StringId;
+        var_ = std::move(s);
+    }
+
+    /// Returns the integer held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::Int`.
+    ///
+    Int getInt() const {
+        return std::get<Int>(var_);
+    }
+
+    /// Sets this `Value` to the given integer `value`.
+    ///
+    void set(Int value) {
+        type_ = ValueType::Int;
+        var_ = value;
+    }
+
+    /// Returns the `core::Array<Int>` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::IntArray`.
+    ///
+    const core::Array<Int>& getIntArray() const {
+        return *std::get<detail::CowArrayPtr<Int>>(var_);
+    }
+
+    /// Sets this `Value` to the given `intArray`.
+    ///
+    void set(core::Array<Int> intArray) {
+        type_ = ValueType::IntArray;
+        var_ = detail::makeCowDataPtr(std::move(intArray));
+    }
+
+    /// Returns the double held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::Double`.
+    ///
+    double getDouble() const {
+        return std::get<double>(var_);
+    }
+
+    /// Sets this `Value` to the given double `value`.
+    ///
+    void set(double value) {
+        type_ = ValueType::Double;
+        var_ = value;
+    }
+
+    /// Returns the `core::Array<double>` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::DoubleArray`.
+    ///
+    const core::Array<double>& getDoubleArray() const {
+        return *std::get<detail::CowArrayPtr<double>>(var_);
+    }
+
+    /// Sets this `Value` to the given `doubleArray`.
+    ///
+    void set(core::Array<double> doubleArray) {
+        type_ = ValueType::DoubleArray;
+        var_ = detail::makeCowDataPtr(std::move(doubleArray));
+    }
+
+    /// Returns the `core::Color` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::Color`.
+    ///
+    const core::Color& getColor() const {
         return std::get<core::Color>(var_);
     }
 
-    /// Copies the Color held by this Value to \p color.
-    /// The behavior is undefined if type() != ValueType::Color.
-    ///
-    void get(core::Color& color) const {
-        color = std::get<core::Color>(var_);
-    }
-
-    /// Sets this Value to the given \p color.
+    /// Sets this `Value` to the given `color`.
     ///
     void set(const core::Color& color) {
         type_ = ValueType::Color;
         var_ = color;
     }
 
-    /// Returns the Vec2dArray held by this Value.
-    /// The behavior is undefined if type() != ValueType::Vec2dArray.
+    /// Returns the `core::Array<core::Color>` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::ColorArray`.
     ///
-    const geometry::Vec2dArray& getVec2dArray() const {
-        return *std::get<std::shared_ptr<geometry::Vec2dArray>>(var_);
+    const core::Array<core::Color>& getColorArray() const {
+        return *std::get<detail::CowArrayPtr<core::Color>>(var_);
     }
 
-    /// Copies the Vec2dArray held by this Value to \p doubleArray.
-    /// The behavior is undefined if type() != ValueType::Vec2dArray.
+    /// Sets this `Value` to the given `colorArray`.
     ///
-    void get(geometry::Vec2dArray& vec2dArray) const {
-        vec2dArray = getVec2dArray();
+    void set(core::Array<core::Color> colorArray) {
+        type_ = ValueType::ColorArray;
+        var_ = detail::makeCowDataPtr(std::move(colorArray));
     }
 
-    /// Sets this value to the given \p vec2dArray.
+    /// Returns the `geometry::Vec2d` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::Vec2d`.
     ///
-    void set(const geometry::Vec2dArray& vec2dArray) {
+    const geometry::Vec2d& getVec2d() const {
+        return std::get<geometry::Vec2d>(var_);
+    }
+
+    /// Sets this `Value` to the given `vec2d`.
+    ///
+    void set(const geometry::Vec2d& vec2d) {
+        type_ = ValueType::Vec2d;
+        var_ = vec2d;
+    }
+
+    /// Returns the `core::Array<geometry::Vec2d>` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::Vec2dArray`.
+    ///
+    const core::Array<geometry::Vec2d>& getVec2dArray() const {
+        return *std::get<detail::CowArrayPtr<geometry::Vec2d>>(var_);
+    }
+
+    /// Sets this `Value` to the given `vec2dArray`.
+    ///
+    void set(core::Array<geometry::Vec2d> vec2dArray) {
         type_ = ValueType::Vec2dArray;
-        var_ = std::make_shared<geometry::Vec2dArray>(vec2dArray);
+        var_ = detail::makeCowDataPtr(std::move(vec2dArray));
     }
 
-    /// Returns the DoubleArray held by this Value.
-    /// The behavior is undefined if type() != ValueType::DoubleArray.
-    ///
-    const core::DoubleArray& getDoubleArray() const {
-        return *std::get<std::shared_ptr<core::DoubleArray>>(var_);
-    }
-
-    /// Copies the DoubleArray held by this Value to \p doubleArray.
-    /// The behavior is undefined if type() != ValueType::DoubleArray.
-    ///
-    void get(core::DoubleArray& doubleArray) const {
-        doubleArray = getDoubleArray();
-    }
-
-    /// Sets this value to the given \p vec2dArray.
-    ///
-    void set(const core::DoubleArray& doubleArray) {
-        type_ = ValueType::DoubleArray;
-        var_ = std::make_shared<core::DoubleArray>(doubleArray);
+    template<typename OStream>
+    void writeTo(OStream& out) const {
+        switch (type_) {
+        case ValueType::None:
+            write(out, "None");
+            break;
+        case ValueType::Invalid:
+            write(out, "Invalid");
+            break;
+        default:
+            std::visit(
+                [&](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, std::monostate>) {
+                        write(out, "None");
+                    }
+                    else if constexpr (detail::isCowDataPtr<T>) {
+                        write(out, *arg);
+                    }
+                    else {
+                        write(out, arg);
+                    }
+                },
+                var_);
+            break;
+        }
     }
 
 private:
@@ -267,39 +501,18 @@ private:
     }
 
     ValueType type_ = ValueType::Invalid;
-    std::variant<
-        std::monostate,
-        core::Color,
-        std::shared_ptr<core::DoubleArray>,
-        std::shared_ptr<geometry::Vec2dArray>>
-        var_;
+    detail::ValueVariantType var_;
 };
 
 /// Writes the given Value to the output stream.
 ///
 template<typename OStream>
 void write(OStream& out, const Value& v) {
-    switch (v.type()) {
-    case ValueType::None:
-        write(out, "None");
-        break;
-    case ValueType::Invalid:
-        write(out, "Invalid");
-        break;
-    case ValueType::Color:
-        write(out, v.getColor());
-        break;
-    case ValueType::DoubleArray:
-        write(out, v.getDoubleArray());
-        break;
-    case ValueType::Vec2dArray:
-        write(out, v.getVec2dArray());
-        break;
-    }
+    v.writeTo(out);
 }
 
 /// Converts the given string into a Value. Raises vgc::dom::VgcSyntaxError if
-/// the given string does not represent a Value of the given ValueType.
+/// the given string does not represent a `Value` of the given ValueType.
 ///
 VGC_DOM_API
 Value parseValue(const std::string& s, ValueType t);

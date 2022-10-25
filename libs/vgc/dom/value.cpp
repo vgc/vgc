@@ -20,6 +20,20 @@
 
 namespace vgc::dom {
 
+VGC_DEFINE_ENUM(
+    ValueType,
+    (None, "None"),
+    (Invalid, "Invalid"),
+    (String, "String"),
+    (Int, "Int"),
+    (IntArray, "IntArray"),
+    (Double, "Double"),
+    (DoubleArray, "DoubleArray"),
+    (Color, "Color"),
+    (ColorArray, "ColorArray"),
+    (Vec2d, "Vec2d"),
+    (Vec2dArray, "Vec2dArray"))
+
 const Value& Value::none() {
     // trusty leaky singleton
     static const Value* v = new Value(ValueType::None);
@@ -35,19 +49,6 @@ const Value& Value::invalid() {
 void Value::clear() {
     type_ = ValueType::None;
     var_ = std::monostate{};
-}
-
-void Value::shrinkToFit() {
-    switch (type_) {
-    case ValueType::DoubleArray:
-        std::get<std::shared_ptr<core::DoubleArray>>(var_)->shrinkToFit();
-        break;
-    case ValueType::Vec2dArray:
-        std::get<std::shared_ptr<geometry::Vec2dArray>>(var_)->shrinkToFit();
-        break;
-    default:
-        break;
-    }
 }
 
 namespace {
@@ -70,18 +71,31 @@ Value parseValue(const std::string& s, ValueType t) {
         case ValueType::Invalid:
             checkExpectedString_(s, "Invalid");
             return Value::invalid();
-        case ValueType::Color:
-            return Value(core::parse<core::Color>(s));
+        case ValueType::String:
+            return Value(s);
+        case ValueType::StringId:
+            return Value(core::StringId(s));
+        case ValueType::Int:
+            return Value(core::parse<Int>(s));
+        case ValueType::IntArray:
+            return Value(core::parse<core::IntArray>(s));
+        case ValueType::Double:
+            return Value(core::parse<double>(s));
         case ValueType::DoubleArray:
             return Value(core::parse<core::DoubleArray>(s));
+        case ValueType::Color:
+            return Value(core::parse<core::Color>(s));
+        case ValueType::ColorArray:
+            return Value(core::parse<core::Array<core::Color>>(s));
+        case ValueType::Vec2d:
+            return Value(core::parse<geometry::Vec2d>(s));
         case ValueType::Vec2dArray:
             return Value(core::parse<geometry::Vec2dArray>(s));
         }
     }
     catch (const core::ParseError& e) {
-        throw VgcSyntaxError(
-            "Failed to convert '" + s + "' into a Value of type " + core::toString(t)
-            + " for the following reason: " + e.what());
+        throw VgcSyntaxError(core::format(
+            "Failed to convert '{}' into a Value of type {} for the following reason: {}", s, t, e.what()));
     }
     return Value::invalid(); // Silence "not all control paths return a value" in MSVC
 }

@@ -20,10 +20,12 @@ void wrap_document(py::module& m);
 void wrap_element(py::module& m);
 void wrap_exceptions(py::module& m);
 void wrap_node(py::module& m);
+void wrap_value(py::module& m);
 void wrap_xmlformattingstyle(py::module& m);
 
 PYBIND11_MODULE(dom, m) {
     wrap_exceptions(m);
+    wrap_value(m);
     wrap_node(m);
     wrap_xmlformattingstyle(m);
 
