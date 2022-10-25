@@ -21,6 +21,8 @@
 #include <QMouseEvent>
 #include <QOpenGLFunctions>
 
+#include <QScreen>
+
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/geometry/camera2d.h>
@@ -179,10 +181,17 @@ WindowPtr Window::create(WidgetPtr widget) {
 
 namespace {
 
-Widget* prepareMouseEvent(Widget* root, MouseEvent* event) {
+Widget* prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window) {
+
+    // Apply device pixel ratio
+    geometry::Vec2f position = event->position();
+    position *= static_cast<float>(window->devicePixelRatio());
+    event->setPosition(position);
+
+    // Handle mouse captor
     Widget* mouseCaptor = root->mouseCaptor();
     if (mouseCaptor) {
-        geometry::Vec2f position = root->mapTo(mouseCaptor, event->position());
+        position = root->mapTo(mouseCaptor, position);
         event->setPosition(position);
         return mouseCaptor;
     }
@@ -198,7 +207,7 @@ void Window::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     MouseEventPtr vgcEvent = fromQt(event);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mouseMoveEvent_(receiver, vgcEvent.get()));
 }
 
@@ -216,7 +225,7 @@ void Window::mousePressEvent(QMouseEvent* event) {
         return;
     }
     pressedMouseButtons_.set(button);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mousePressEvent_(receiver, vgcEvent.get()));
 }
 
@@ -229,7 +238,7 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
         return;
     }
     pressedMouseButtons_.unset(button);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mouseReleaseEvent_(receiver, vgcEvent.get()));
 }
 
@@ -237,7 +246,7 @@ void Window::tabletEvent(QTabletEvent* event) {
     switch (event->type()) {
     case QEvent::TabletMove: {
         MouseEventPtr vgcEvent = fromQt(event);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
         mouseMoveEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
@@ -258,7 +267,7 @@ void Window::tabletEvent(QTabletEvent* event) {
             break;
         }
         pressedTabletButtons_.set(button);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
         mousePressEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
@@ -274,7 +283,7 @@ void Window::tabletEvent(QTabletEvent* event) {
             return;
         }
         pressedTabletButtons_.unset(button);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get());
+        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
         mouseReleaseEvent_(receiver, vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
@@ -377,16 +386,34 @@ void Window::focusOutEvent(QFocusEvent* event) {
 }
 
 void Window::resizeEvent(QResizeEvent* event) {
+
+    // Remember old size
+    [[maybe_unused]] int oldWidth = width_;
+    [[maybe_unused]] int oldHeight = height_;
+
+    // Get new unscaled size
     QSize size = event->size();
-    [[maybe_unused]] int w = size.width();
-    [[maybe_unused]] int h = size.height();
+    int unscaledWidth = size.width();
+    int unscaledHeight = size.height();
+
+    // Compute and set new scale ratio and scaled size
+    updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
+
     if (debugEvents) {
-        VGC_DEBUG(LogVgcUi, core::format("resizeEvent({:04d}, {:04d})", w, h));
+        VGC_DEBUG(
+            LogVgcUi,
+            "resizeEvent({:04d}, {:04d}) -> ({}, {})",
+            unscaledWidth,
+            unscaledHeight,
+            width_,
+            height_);
     }
 
-#if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
-    width_ = w;
-    height_ = h;
+#if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+    // Wait until WM_SIZE native event to actually set new window size
+    width_ = oldWidth;
+    height_ = oldHeight;
+#else
     deferredResize_ = true;
     requestUpdate();
 #endif
@@ -568,23 +595,7 @@ bool Window::event(QEvent* event) {
 #if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
             if (deferredResize_) {
                 deferredResize_ = false;
-
-                geometry::Camera2d c;
-                c.setViewportSize(width(), height());
-                proj_ = detail::toMat4f(c.projectionMatrix());
-
-                // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
-                // silently rounds to the nearest integer representable as a float. See:
-                //   https://stackoverflow.com/a/60339495/1951907
-                // Should we issue a warning in these cases?
-                widget_->updateGeometry(
-                    0, 0, static_cast<float>(width_), static_cast<float>(height_));
-
-                if (engine_) {
-                    engine_->onWindowResize(swapChain_, width_, height_);
-                }
-
-                engine_->onWindowResize(swapChain_, width_, height_);
+                updateViewportSize_();
             }
 #endif
             paint(true);
@@ -650,23 +661,31 @@ bool Window::nativeEvent(
     void* message,
     NativeEventResult* result) {
 
-    static HBRUSH hbrWhite, hbrGray;
     if (eventType == "windows_generic_MSG") {
         *result = 0;
         MSG* msg = reinterpret_cast<MSG*>(message);
         switch (msg->message) {
         case WM_SIZE: {
-            UINT w = LOWORD(msg->lParam);
-            UINT h = HIWORD(msg->lParam);
-            width_ = w;
-            height_ = h;
+
+            // Get new unscaled size
+            int unscaledWidth = static_cast<int>(LOWORD(msg->lParam));
+            int unscaledHeight = static_cast<int>(HIWORD(msg->lParam));
+
+            // Compute and set new scale ratio and scaled size
+            updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
+
             if (debugEvents) {
                 VGC_DEBUG(
-                    LogVgcUi, core::format("WM_SIZE({:04d}, {:04d})", width_, height_));
+                    LogVgcUi,
+                    "WM_SIZE({:04d}, {:04d}) -> ({}, {})",
+                    unscaledWidth,
+                    unscaledHeight,
+                    width_,
+                    height_);
             }
 
             geometry::Camera2d c;
-            c.setViewportSize(w, h);
+            c.setViewportSize(width_, height_);
             proj_ = detail::toMat4f(c.projectionMatrix());
 
             // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
@@ -674,10 +693,11 @@ bool Window::nativeEvent(
             //   https://stackoverflow.com/a/60339495/1951907
             // Should we issue a warning in these cases?
 
-            widget_->updateGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
+            widget_->updateGeometry(
+                0, 0, static_cast<float>(width_), static_cast<float>(height_));
             if (engine_ && swapChain_) {
                 // quite slow with msaa on, will probably be better when we have a compositor.
-                engine_->onWindowResize(swapChain_, w, h);
+                engine_->onWindowResize(swapChain_, width_, height_);
                 //Sleep(50);
                 paint(true);
                 //qDebug() << "painted";
@@ -762,7 +782,7 @@ bool Window::nativeEvent(
 void Window::exposeEvent(QExposeEvent*) {
     if (isExposed()) {
         if (activeSizemove_) {
-            // On windows Expose events happen on both WM_PAINT and WM_ERASEBKGND
+            // On Windows, Expose events happen on both WM_PAINT and WM_ERASEBKGND
             // but in the case of a resize we already redraw properly.
             requestUpdate();
         }
@@ -770,8 +790,90 @@ void Window::exposeEvent(QExposeEvent*) {
             if (debugEvents) {
                 VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
             }
+            // On macOS, moving a window between monitors with different devicePixelRatios
+            // calls exposeEvent() but doesn't call resize(). So we need to fake a resize
+            // here if the size in px of the window change, even though the "QWindow size"
+            // (in device-independent scale) doesn't change.
+            //
+            float oldScaledWidth = width_;
+            float oldScaledHeight = height_;
+            int unscaledWidth_ = width();
+            int unscaledHeight_ = height();
+            updateScreenScaleRatioAndWindowSize_(unscaledWidth_, unscaledHeight_);
+            if (oldScaledWidth != width_ || oldScaledHeight != height_) {
+                updateViewportSize_();
+            }
             paint(true);
         }
+    }
+}
+
+bool Window::updateScreenScaleRatio_() {
+
+    // Update DPI scaling info. Examples of hiDpi configurations:
+    //
+    //                     macOS     Windows    Kubuntu/X11
+    //                    (Retina)   at 125%     at 125%
+    //
+    // logicalDotsPerInch   72         120         120      (Note: 120 = 96 * 1.25)
+    //
+    // devicePixelRatio     2           1           1
+    //
+    if (screen()) {
+        logicalDotsPerInch_ = static_cast<float>(screen()->logicalDotsPerInch());
+    }
+    devicePixelRatio_ = static_cast<float>(devicePixelRatio());
+
+    // Compute suitable screen scale ratio based on queried info
+    float s = logicalDotsPerInch_ * devicePixelRatio_ / detail::baseLogicalDpi;
+
+    // Update style metrics if changed
+    if (screenScaleRatio_ != s) {
+        screenScaleRatio_ = s;
+        if (widget_) {
+            style::Metrics metrics(screenScaleRatio_);
+            widget_->setStyleMetrics(metrics);
+        }
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+void Window::updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight) {
+
+    // Update screen scale ratio
+    bool screenScaleRatioChanged = updateScreenScaleRatio_();
+
+    // Update window size
+    float w = static_cast<float>(unscaledWidth);
+    float h = static_cast<float>(unscaledHeight);
+    width_ = static_cast<int>(std::round(w * devicePixelRatio_));
+    height_ = static_cast<int>(std::round(h * devicePixelRatio_));
+
+    // Redraw when switching from two monitors with different DPI scaling on Windows.
+    //
+    // Under most circumstances, there is no need to explicitly call paint() in
+    // this function, since updateScreenScaleRatio_() calls
+    // widget_->setStyleMetrics() which calls requestUpdate(). However, when
+    // when activeSizemove_ is true, update requests are ignored, so we have to
+    // call paint() explicitly for a repaint to actually happen.
+    //
+    if (screenScaleRatioChanged && activeSizemove_) {
+        paint(true);
+    }
+}
+
+void Window::updateViewportSize_() {
+    geometry::Camera2d c;
+    c.setViewportSize(width_, height_);
+    proj_ = detail::toMat4f(c.projectionMatrix());
+    if (widget_) {
+        widget_->updateGeometry(0, 0, width_, height_);
+    }
+    if (engine_) {
+        engine_->onWindowResize(swapChain_, width_, height_);
     }
 }
 

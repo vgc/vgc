@@ -332,6 +332,7 @@ int main(int argc, char* argv[]) {
     QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
 
     // Various initializations
+    QGuiApplication::setAttribute(Qt::AA_DisableHighDpiScaling, true);
     QGuiApplication application(argc, argv);
     setBasePath();
 
