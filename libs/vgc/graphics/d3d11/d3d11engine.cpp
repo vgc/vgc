@@ -973,7 +973,7 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShader.releaseAndGetAddressOf());
         program->vertexShader_ = vertexShader;
 
-        // Create Input Layout for XYXoffYoff_iXYRGBA
+        // Create Input Layout for XYDxDy_iXYRotRGBA
         {
             ComPtr<ID3D11InputLayout> inputLayout;
             UINT dxOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, dx));
