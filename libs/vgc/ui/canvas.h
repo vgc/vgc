@@ -200,6 +200,10 @@ private:
 
         // Control Points
         graphics::GeometryViewPtr pointsGeometry_;
+        Int numPoints = 0;
+
+        // Line
+        graphics::GeometryViewPtr dispLineGeometry_;
 
         bool inited_ = false;
         dom::Element* element;
