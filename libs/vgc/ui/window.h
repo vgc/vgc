@@ -20,6 +20,7 @@
 #include <QWindow>
 
 #include <vgc/core/array.h>
+#include <vgc/core/os.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/widget.h>
@@ -28,6 +29,16 @@ class QInputMethodEvent;
 class QInputMethodQueryEvent;
 
 namespace vgc::ui {
+
+namespace detail {
+
+#ifdef VGC_CORE_OS_MACOS
+constexpr float baseLogicalDpi = 72.0f;
+#else
+constexpr float baseLogicalDpi = 96.0f;
+#endif
+
+} // namespace detail
 
 VGC_DECLARE_OBJECT(Window);
 
@@ -56,7 +67,7 @@ public:
     }
 
 protected:
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_CORE_OS_WINDOWS)
     HWND hwnd_ = {};
     static LRESULT WINAPI WndProc(HWND, UINT, WPARAM, LPARAM);
 #endif
@@ -111,8 +122,11 @@ private:
     bool deferredResize_ = false;
     bool entered_ = false;
 
+    float logicalDotsPerInch_ = detail::baseLogicalDpi;
+    float devicePixelRatio_ = 1.0;
     float screenScaleRatio_ = 1.0;
     void updateScreenScaleRatio_();
+    void updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight);
 
     geometry::Mat4f proj_;
     core::Color clearColor_;

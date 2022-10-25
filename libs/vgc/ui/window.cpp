@@ -387,26 +387,33 @@ void Window::focusOutEvent(QFocusEvent* event) {
 
 void Window::resizeEvent(QResizeEvent* event) {
 
-    // Update DPI scaling metrics
-    updateScreenScaleRatio_();
+    // Remember old size
+    int oldWidth = width_;
+    int oldHeight = height_;
 
-    // Get new window size
+    // Get new unscaled size
     QSize size = event->size();
-    [[maybe_unused]] int w = size.width();
-    [[maybe_unused]] int h = size.height();
+    int unscaledWidth = size.width();
+    int unscaledHeight = size.height();
 
-    // Apply device pixel ratio.
-    // On Macbooks (retina screens), this is an integer often equal to 2.
-    qreal r = screen()->devicePixelRatio();
-    w = static_cast<int>(std::round(static_cast<qreal>(w) * r));
-    h = static_cast<int>(std::round(static_cast<qreal>(h) * r));
+    // Compute and set new scale ratio and scaled size
+    updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
+
     if (debugEvents) {
-        VGC_DEBUG(LogVgcUi, core::format("resizeEvent({:04d}, {:04d})", w, h));
+        VGC_DEBUG(
+            LogVgcUi,
+            "resizeEvent({:04d}, {:04d}) -> ({}, {})",
+            unscaledWidth,
+            unscaledHeight,
+            width_,
+            height_);
     }
 
-#if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
-    width_ = w;
-    height_ = h;
+#if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+    // Wait until WM_SIZE native event to actually set new window size
+    width_ = oldWidth;
+    height_ = oldHeight;
+#else
     deferredResize_ = true;
     requestUpdate();
 #endif
@@ -670,23 +677,31 @@ bool Window::nativeEvent(
     void* message,
     NativeEventResult* result) {
 
-    static HBRUSH hbrWhite, hbrGray;
     if (eventType == "windows_generic_MSG") {
         *result = 0;
         MSG* msg = reinterpret_cast<MSG*>(message);
         switch (msg->message) {
         case WM_SIZE: {
-            UINT w = LOWORD(msg->lParam);
-            UINT h = HIWORD(msg->lParam);
-            width_ = w;
-            height_ = h;
+
+            // Get new unscaled size
+            int unscaledWidth = static_cast<int>(LOWORD(msg->lParam));
+            int unscaledHeight = static_cast<int>(HIWORD(msg->lParam));
+
+            // Compute and set new scale ratio and scaled size
+            updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
+
             if (debugEvents) {
                 VGC_DEBUG(
-                    LogVgcUi, core::format("WM_SIZE({:04d}, {:04d})", width_, height_));
+                    LogVgcUi,
+                    "WM_SIZE({:04d}, {:04d}) -> ({}, {})",
+                    unscaledWidth,
+                    unscaledHeight,
+                    width_,
+                    height_);
             }
 
             geometry::Camera2d c;
-            c.setViewportSize(w, h);
+            c.setViewportSize(width_, height_);
             proj_ = detail::toMat4f(c.projectionMatrix());
 
             // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
@@ -694,10 +709,11 @@ bool Window::nativeEvent(
             //   https://stackoverflow.com/a/60339495/1951907
             // Should we issue a warning in these cases?
 
-            widget_->updateGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
+            widget_->updateGeometry(
+                0, 0, static_cast<float>(width_), static_cast<float>(height_));
             if (engine_ && swapChain_) {
                 // quite slow with msaa on, will probably be better when we have a compositor.
-                engine_->onWindowResize(swapChain_, w, h);
+                engine_->onWindowResize(swapChain_, width_, height_);
                 //Sleep(50);
                 paint(true);
                 //qDebug() << "painted";
@@ -797,34 +813,45 @@ void Window::exposeEvent(QExposeEvent*) {
 
 void Window::updateScreenScaleRatio_() {
 
-    // Examples of hiDpi configurations:
+    // Update DPI scaling info. Examples of hiDpi configurations:
     //
-    //                     Kubuntu/X11    macOS
-    //                       at 125%     (Retina)
+    //                     macOS     Windows    Kubuntu/X11
+    //                    (Retina)   at 125%     at 125%
     //
-    // logicalDotsPerInch()    120         72
-    //                    (= 96 * 1.25)
+    // logicalDotsPerInch   72         120         120      (Note: 120 = 96 * 1.25)
     //
-    // devicePixelRatio()      1           2
+    // devicePixelRatio     2           1           1
     //
+    if (screen()) {
+        logicalDotsPerInch_ = static_cast<float>(screen()->logicalDotsPerInch());
+    }
+    devicePixelRatio_ = static_cast<float>(devicePixelRatio());
 
-#ifdef VGC_CORE_OS_MACOS
-    float baseLogicalDpi = 72.0f;
-#else
-    float baseLogicalDpi = 96.0f;
-#endif
+    // Compute suitable screen scale ratio based on queried info
+    float s = logicalDotsPerInch_ * devicePixelRatio_ / detail::baseLogicalDpi;
 
-    float newScreenScaleRatio = static_cast<float>(screen()->logicalDotsPerInch())
-                                * static_cast<float>(screen()->devicePixelRatio())
-                                / baseLogicalDpi;
-
-    if (screenScaleRatio_ != newScreenScaleRatio) {
+    // Update style metrics if changed
+    if (screenScaleRatio_ != s) {
+        screenScaleRatio_ = s;
         if (widget_) {
-            screenScaleRatio_ = newScreenScaleRatio;
             style::Metrics metrics(screenScaleRatio_);
             widget_->setStyleMetrics(metrics);
         }
+        if (activeSizemove_) {
+            // widget_->setStyleMetrics() calls requestUpdate(), but update
+            // requests are ignored when activeSizemove_ is true, so we need to
+            // explicitly call paint() here for a repaint to actually happen.
+            paint(true);
+        }
     }
+}
+
+void Window::updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight) {
+    updateScreenScaleRatio_();
+    float w = static_cast<float>(unscaledWidth);
+    float h = static_cast<float>(unscaledHeight);
+    width_ = static_cast<int>(std::round(w * devicePixelRatio_));
+    height_ = static_cast<int>(std::round(h * devicePixelRatio_));
 }
 
 void Window::cleanup() {
