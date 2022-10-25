@@ -74,6 +74,26 @@ char readCharacter(IStream& in) {
     return c;
 }
 
+/// Extracts a string up to the given character from the input stream. Raises
+/// ParseError if the stream ends.
+///
+template<typename IStream>
+std::string readStringUntilExpectedCharacter(IStream& in, char endChar) {
+    std::string s;
+    try {
+        char c = readCharacter(in);
+        while (c != endChar) {
+            s.push_back(c);
+            c = readCharacter(in);
+        }
+    }
+    catch (const ParseError&) {
+        throw ParseError(
+            core::format("Unexpected end of stream. Expected character '{}'.", endChar));
+    }
+    return s;
+}
+
 /// Extracts characters from the input stream one by one until a non-whitespace
 /// character is extracted, and returns this non-whitespace character. Raises
 /// ParseError if the stream ends before a non-whitespace character is found.
@@ -179,8 +199,8 @@ void skipExpectedString(IStream& in, CharIterator begin, CharIterator end) {
         if (c != *it) {
             std::string message;
             message += "Unexpected '";
-            message.append(begin, end);
-            message += *it;
+            message.append(begin, it);
+            message += c;
             message += "'. Expected '";
             message.append(begin, end);
             message += "'.";

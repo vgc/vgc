@@ -221,6 +221,17 @@ void write(OStream& out, const char* s) {
     out.write(s, static_cast<std::streamsize>(n));
 }
 
+/// Writes the given char range to the given output stream.
+///
+/// ```cpp
+/// vgc::core::write(out, s.begin(), s.size());
+/// ```
+///
+template<typename OStream>
+void write(OStream& out, const char* begin, std::streamsize ssize) {
+    out.write(begin, ssize);
+}
+
 /// Writes the given string to the given output stream.
 ///
 /// ```cpp
