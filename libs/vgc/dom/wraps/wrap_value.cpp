@@ -71,16 +71,14 @@ void wrap_value(py::module& m) {
         .def("set", py::overload_cast<const vgc::geometry::Vec2d&>(&This::set))
         .def("getVec2dArray", &This::getVec2dArray)
         .def("set", py::overload_cast<vgc::core::Array<vgc::geometry::Vec2d>>(&This::set))
-        .def(
-            "__str__",
-            [](const This& self) -> std::string {
-                fmt::memory_buffer mbuf;
-                mbuf.append(std::string_view("<Value: "));
-                std::string s;
-                vgc::core::StringWriter sw(s);
-                self.writeTo(sw);
-                mbuf.append(s);
-                mbuf.push_back('>');
-                return std::string(mbuf.begin(), mbuf.size());
-            });
+        .def("__str__", [](const This& self) -> std::string {
+            fmt::memory_buffer mbuf;
+            mbuf.append(std::string_view("<Value: "));
+            std::string s;
+            vgc::core::StringWriter sw(s);
+            self.writeTo(sw);
+            mbuf.append(s);
+            mbuf.push_back('>');
+            return std::string(mbuf.begin(), mbuf.size());
+        });
 }

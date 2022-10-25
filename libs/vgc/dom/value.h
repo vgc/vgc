@@ -20,8 +20,8 @@
 #include <memory>
 #include <string>
 #include <tuple>
-#include <variant>
 #include <type_traits>
+#include <variant>
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>

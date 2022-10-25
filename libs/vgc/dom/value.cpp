@@ -95,7 +95,10 @@ Value parseValue(const std::string& s, ValueType t) {
     }
     catch (const core::ParseError& e) {
         throw VgcSyntaxError(core::format(
-            "Failed to convert '{}' into a Value of type {} for the following reason: {}", s, t, e.what()));
+            "Failed to convert '{}' into a Value of type {} for the following reason: {}",
+            s,
+            t,
+            e.what()));
     }
     return Value::invalid(); // Silence "not all control paths return a value" in MSVC
 }
