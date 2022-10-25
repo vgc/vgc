@@ -185,7 +185,7 @@ Widget* prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window)
 
     // Apply device pixel ratio
     geometry::Vec2f position = event->position();
-    position *= static_cast<float>(window->screen()->devicePixelRatio());
+    position *= static_cast<float>(window->devicePixelRatio());
     event->setPosition(position);
 
     // Handle mouse captor
