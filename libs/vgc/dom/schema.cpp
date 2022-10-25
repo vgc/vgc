@@ -38,16 +38,27 @@ const T* find_(const std::map<core::StringId, T>& map, core::StringId name) {
 } // namespace
 
 ElementSpec::ElementSpec(
-    const std::string& tagName,
+    std::string_view tagName,
     const std::vector<AttributeSpec>& attributes)
 
     : tagName_(core::StringId(tagName))
+    , defaultIdPrefix_()
     , attributes_() {
 
     for (const AttributeSpec& attr : attributes) {
         attributes_.emplace(attr.name(), attr);
     }
     // TODO: use move semantics for performance
+}
+
+ElementSpec::ElementSpec(
+    std::string_view tagName,
+    std::string_view defaultIdPrefix,
+    const std::vector<AttributeSpec>& attributes)
+
+    : ElementSpec(tagName, attributes) {
+
+    defaultIdPrefix_ = core::StringId(defaultIdPrefix);
 }
 
 const AttributeSpec* ElementSpec::findAttributeSpec(core::StringId name) const {
@@ -64,13 +75,12 @@ ValueType ElementSpec::valueType(core::StringId name) const {
     return attr ? attr->valueType() : ValueType::Invalid;
 }
 
-Schema::Schema(const std::vector<ElementSpec>& elements)
+Schema::Schema(std::initializer_list<ElementSpec> elements)
     : elements_() {
 
     for (const ElementSpec& element : elements) {
         elements_.emplace(element.tagName(), element);
     }
-    // TODO: use move semantics for performance
 }
 
 const ElementSpec* Schema::findElementSpec(core::StringId name) const {
@@ -81,17 +91,17 @@ const Schema& schema() {
 
     // trusty leaky singleton
     // clang-format off
-    static const Schema* instance = new Schema{{
+    static const Schema* instance = new Schema{
         { "colorpaletteitem", {
             {"color", core::colors::black}
         }},
         { "colorpalette", {
             // No attributes
         }},
-        { "path", {
+        { "path", "p", {
             {"color", core::colors::black},
             {"positions", geometry::Vec2dArray()},
-            {"widths", core::DoubleArray()}
+            {"widths", core::DoubleArray()},
         }},
         { "user", {
             // No attributes
@@ -99,7 +109,7 @@ const Schema& schema() {
         { "vgc", {
             // No attributes
         }}
-    }};
+    };
     // clang-format on
 
     return *instance;

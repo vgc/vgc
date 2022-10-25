@@ -21,12 +21,21 @@
 #include <vgc/dom/logcategories.h>
 #include <vgc/dom/operation.h>
 #include <vgc/dom/strings.h>
+#include <vgc/dom/schema.h>
 
 namespace vgc::dom {
 
 Element::Element(Document* document, core::StringId tagName)
     : Node(document, NodeType::Element)
     , tagName_(tagName) {
+}
+
+void Element::onDestroyed() {
+    if (uniqueId_ != core::StringId()) {
+        document()->elementByIdMap_.erase(uniqueId_);
+        uniqueId_ = core::StringId();
+    }
+    SuperClass::onDestroyed();
 }
 
 /* static */
@@ -50,6 +59,34 @@ Element* Element::create(Document* parent, core::StringId tagName) {
 /* static */
 Element* Element::create(Element* parent, core::StringId tagName) {
     return create_(parent, tagName);
+}
+
+core::StringId Element::getOrCreateId() const {
+    if (uniqueId_ == core::StringId()) {
+        // create a new id !
+        const ElementSpec* es = schema().findElementSpec(tagName_);
+        core::StringId prefix = tagName_;
+        if (es && es->defaultIdPrefix() != core::StringId()) {
+            prefix = es->defaultIdPrefix();
+        }
+        auto& elementByIdMap = document()->elementByIdMap_;
+        for (Int i = 0; i < core::IntMax; ++i) {
+            core::StringId id = core::StringId(core::format("{}{}", prefix, i));
+            if (elementByIdMap.find(id) == elementByIdMap.end()) {
+                Element* ncThis = const_cast<Element*>(this);
+                ncThis->setAttribute(strings::id, id);
+                break;
+            }
+        }
+    }
+    return uniqueId_;
+}
+
+const Value& Element::getAuthoredAttribute(core::StringId name) const {
+    if (const AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
+        return authored->value();
+    }
+    return Value::invalid();
 }
 
 const Value& Element::getAttribute(core::StringId name) const {
@@ -87,6 +124,24 @@ AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) {
 
 const AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) const {
     return const_cast<Element*>(this)->findAuthoredAttribute_(name);
+}
+
+void Element::onAttributeChanged_(core::StringId name, const Value& oldValue, const Value& newValue) {
+    if (name == strings::name) {
+        name_ = newValue.hasValue() ? newValue.getStringId() : core::StringId();
+    }
+    else if (name == strings::id) {
+        auto& elementByIdMap = document()->elementByIdMap_;
+        if (uniqueId_ != core::StringId()) {
+            elementByIdMap.erase(uniqueId_);
+            uniqueId_ = core::StringId();
+        }
+        if (newValue.hasValue()) {
+            uniqueId_ = newValue.getStringId();
+            elementByIdMap[uniqueId_] = this;
+        }
+    }
+    attributeChanged().emit(name, oldValue, newValue);
 }
 
 } // namespace vgc::dom
