@@ -414,10 +414,11 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
     // clang-format on
 
     const geometry::Vec2dArray& d = curve.positionData();
-    Int ncp = core::int_cast<GLsizei>(d.length());
-    for (Int j = 0; j < ncp; ++j) {
+    Int numPoints = core::int_cast<GLsizei>(d.length());
+    const float dl = 1.f / numPoints;
+    for (Int j = 0; j < numPoints; ++j) {
         geometry::Vec2d dp = d[j];
-        float l = static_cast<float>(j) / ncp;
+        float l = j * dl;
         pointInstData.extend(
             {static_cast<float>(dp.x()),
              static_cast<float>(dp.y()),
@@ -427,7 +428,7 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
              (l < 0.5f ? 2 * l : 1.f),
              1.f});
     }
-    r.numPoints = ncp;
+    r.numPoints = numPoints;
 
     engine->updateBufferData(
         r.pointsGeometry_->vertexBuffer(0), std::move(pointVertices));
