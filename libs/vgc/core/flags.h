@@ -145,7 +145,8 @@ private:
 template<typename Enum>
 struct std::hash<vgc::core::Flags<Enum>> {
     std::size_t operator()(const vgc::core::Flags<Enum>& p) const noexcept {
-        return std::hash<vgc::core::Flags<Enum>::UnderlyingType>()(p.toUnderlying());
+        return std::hash<typename vgc::core::Flags<Enum>::UnderlyingType>()(
+            p.toUnderlying());
     }
 };
 
