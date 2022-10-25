@@ -351,7 +351,7 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
     core::Array<geometry::Vec4f> lineVertices;
     core::FloatArray lineInstData;
 
-    float ptHalfSize = 5.f;
+    float pointHalfSize = 5.f;
     float lineHalfSize = 2.f;
 
     double maxAngle = 0.05;
@@ -407,10 +407,10 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
 
     // clang-format off
     pointVertices.extend({
-        {0, 0, -ptHalfSize, -ptHalfSize},
-        {0, 0, -ptHalfSize,  ptHalfSize},
-        {0, 0,  ptHalfSize, -ptHalfSize},
-        {0, 0,  ptHalfSize,  ptHalfSize} });
+        {0, 0, -pointHalfSize, -pointHalfSize},
+        {0, 0, -pointHalfSize,  pointHalfSize},
+        {0, 0,  pointHalfSize, -pointHalfSize},
+        {0, 0,  pointHalfSize,  pointHalfSize} });
     // clang-format on
 
     const geometry::Vec2dArray& d = curve.positionData();
