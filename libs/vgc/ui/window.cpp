@@ -595,23 +595,7 @@ bool Window::event(QEvent* event) {
 #if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
             if (deferredResize_) {
                 deferredResize_ = false;
-
-                geometry::Camera2d c;
-                c.setViewportSize(width_, height_);
-                proj_ = detail::toMat4f(c.projectionMatrix());
-
-                // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
-                // silently rounds to the nearest integer representable as a float. See:
-                //   https://stackoverflow.com/a/60339495/1951907
-                // Should we issue a warning in these cases?
-                widget_->updateGeometry(
-                    0, 0, static_cast<float>(width_), static_cast<float>(height_));
-
-                if (engine_) {
-                    engine_->onWindowResize(swapChain_, width_, height_);
-                }
-
-                engine_->onWindowResize(swapChain_, width_, height_);
+                updateViewportSize_();
             }
 #endif
             paint(true);
@@ -795,10 +779,10 @@ bool Window::nativeEvent(
 }
 #endif
 
-void Window::exposeEvent(QExposeEvent*) {
+void Window::exposeEvent(QExposeEvent* event) {
     if (isExposed()) {
         if (activeSizemove_) {
-            // On windows Expose events happen on both WM_PAINT and WM_ERASEBKGND
+            // On Windows, Expose events happen on both WM_PAINT and WM_ERASEBKGND
             // but in the case of a resize we already redraw properly.
             requestUpdate();
         }
@@ -806,12 +790,25 @@ void Window::exposeEvent(QExposeEvent*) {
             if (debugEvents) {
                 VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
             }
+            // On macOS, moving a window between monitors with different devicePixelRatios
+            // calls exposeEvent() but doesn't call resize(). So we need to fake a resize
+            // here if the size in px of the window change, even though the "QWindow size"
+            // (in device-independent scale) doesn't change.
+            //
+            float oldScaledWidth = width_;
+            float oldScaledHeight = height_;
+            int unscaledWidth_ = width();
+            int unscaledHeight_ = height();
+            updateScreenScaleRatioAndWindowSize_(unscaledWidth_, unscaledHeight_);
+            if (oldScaledWidth != width_ || oldScaledHeight != height_) {
+                updateViewportSize_();
+            }
             paint(true);
         }
     }
 }
 
-void Window::updateScreenScaleRatio_() {
+bool Window::updateScreenScaleRatio_() {
 
     // Update DPI scaling info. Examples of hiDpi configurations:
     //
@@ -837,21 +834,47 @@ void Window::updateScreenScaleRatio_() {
             style::Metrics metrics(screenScaleRatio_);
             widget_->setStyleMetrics(metrics);
         }
-        if (activeSizemove_) {
-            // widget_->setStyleMetrics() calls requestUpdate(), but update
-            // requests are ignored when activeSizemove_ is true, so we need to
-            // explicitly call paint() here for a repaint to actually happen.
-            paint(true);
-        }
+        return true;
+    }
+    else {
+        return false;
     }
 }
 
 void Window::updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight) {
-    updateScreenScaleRatio_();
+
+    // Update screen scale ratio
+    bool screenScaleRatioChanged = updateScreenScaleRatio_();
+
+    // Update window size
     float w = static_cast<float>(unscaledWidth);
     float h = static_cast<float>(unscaledHeight);
     width_ = static_cast<int>(std::round(w * devicePixelRatio_));
     height_ = static_cast<int>(std::round(h * devicePixelRatio_));
+
+    // Redraw when switching from two monitors with different DPI scaling on Windows.
+    //
+    // Under most circumstances, there is no need to explicitly call paint() in
+    // this function, since updateScreenScaleRatio_() calls
+    // widget_->setStyleMetrics() which calls requestUpdate(). However, when
+    // when activeSizemove_ is true, update requests are ignored, so we have to
+    // call paint() explicitly for a repaint to actually happen.
+    //
+    if (screenScaleRatioChanged && activeSizemove_) {
+        paint(true);
+    }
+}
+
+void Window::updateViewportSize_() {
+    geometry::Camera2d c;
+    c.setViewportSize(width_, height_);
+    proj_ = detail::toMat4f(c.projectionMatrix());
+    if (widget_) {
+        widget_->updateGeometry(0, 0, width_, height_);
+    }
+    if (engine_) {
+        engine_->onWindowResize(swapChain_, width_, height_);
+    }
 }
 
 void Window::cleanup() {

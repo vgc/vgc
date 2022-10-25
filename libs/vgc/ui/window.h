@@ -125,8 +125,9 @@ private:
     float logicalDotsPerInch_ = detail::baseLogicalDpi;
     float devicePixelRatio_ = 1.0;
     float screenScaleRatio_ = 1.0;
-    void updateScreenScaleRatio_();
+    bool updateScreenScaleRatio_();
     void updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight);
+    void updateViewportSize_();
 
     geometry::Mat4f proj_;
     core::Color clearColor_;
