@@ -33,7 +33,7 @@ from vgc.dom import (
 )
 
 def getChildNames(node):
-    return [child.name for child in node.children]
+    return [child.tagName for child in node.children]
 
 class TestNodeType(unittest.TestCase):
 

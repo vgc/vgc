@@ -27,17 +27,17 @@ class TestElement(unittest.TestCase):
         n1 = Element(doc, "n1")
         self.assertEqual(n1.nodeType, NodeType.Element)
         self.assertEqual(n1.parent, doc)
-        self.assertEqual(n1.name, "n1")
+        self.assertEqual(n1.tagName, "n1")
 
         n2 = Element(n1, "n2")
         self.assertEqual(n2.nodeType, NodeType.Element)
         self.assertEqual(n2.parent, n1)
-        self.assertEqual(n2.name, "n2")
+        self.assertEqual(n2.tagName, "n2")
 
         n3 = Element(n1, "n3")
         self.assertEqual(n3.nodeType, NodeType.Element)
         self.assertEqual(n3.parent, n1)
-        self.assertEqual(n3.name, "n3")
+        self.assertEqual(n3.tagName, "n3")
 
         with self.assertRaises(SecondRootElementError):
             n4 = Element(doc, "n4")

@@ -24,32 +24,32 @@
 
 namespace vgc::dom {
 
-Element::Element(Document* document, core::StringId name)
+Element::Element(Document* document, core::StringId tagName)
     : Node(document, NodeType::Element)
-    , name_(name) {
+    , tagName_(tagName) {
 }
 
 /* static */
-Element* Element::create_(Node* parent, core::StringId name) {
+Element* Element::create_(Node* parent, core::StringId tagName) {
     Document* document = parent->document();
-    Element* e = new Element(document, name);
+    Element* e = new Element(document, tagName);
     core::History::do_<CreateElementOperation>(
         parent->document()->history(), e, parent, nullptr);
     return e;
 }
 
 /* static */
-Element* Element::create(Document* parent, core::StringId name) {
+Element* Element::create(Document* parent, core::StringId tagName) {
     if (parent->rootElement()) {
         throw SecondRootElementError(parent);
     }
 
-    return create_(parent, name);
+    return create_(parent, tagName);
 }
 
 /* static */
-Element* Element::create(Element* parent, core::StringId name) {
-    return create_(parent, name);
+Element* Element::create(Element* parent, core::StringId tagName) {
+    return create_(parent, tagName);
 }
 
 const Value& Element::getAttribute(core::StringId name) const {

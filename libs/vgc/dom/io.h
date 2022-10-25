@@ -63,7 +63,7 @@ void writeChildren(
     for (Node* child : node->children()) {
         if (Element* element = Element::cast(child)) {
             writeIndent(out, style, indentLevel);
-            out << '<' << element->name();
+            out << '<' << element->tagName();
             for (const AuthoredAttribute& a : element->authoredAttributes()) {
                 out << '\n';
                 writeAttributeIndent(out, style, indentLevel);
@@ -72,7 +72,7 @@ void writeChildren(
             out << ">\n";
             writeChildren(out, style, indentLevel + 1, child);
             writeIndent(out, style, indentLevel);
-            out << "</" << element->name() << ">\n";
+            out << "</" << element->tagName() << ">\n";
         }
     }
 }

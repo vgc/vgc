@@ -38,10 +38,10 @@ const T* find_(const std::map<core::StringId, T>& map, core::StringId name) {
 } // namespace
 
 ElementSpec::ElementSpec(
-    const std::string& name,
+    const std::string& tagName,
     const std::vector<AttributeSpec>& attributes)
 
-    : name_(core::StringId(name))
+    : tagName_(core::StringId(tagName))
     , attributes_() {
 
     for (const AttributeSpec& attr : attributes) {
@@ -68,7 +68,7 @@ Schema::Schema(const std::vector<ElementSpec>& elements)
     : elements_() {
 
     for (const ElementSpec& element : elements) {
-        elements_.emplace(element.name(), element);
+        elements_.emplace(element.tagName(), element);
     }
     // TODO: use move semantics for performance
 }

@@ -472,7 +472,7 @@ void OpenGLViewer::cleanupGL() {
 void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff) {
     for (dom::Node* node : diff.removedNodes()) {
         dom::Element* e = dom::Element::cast(node);
-        if (!(e && e->name() == PATH)) {
+        if (!(e && e->tagName() == PATH)) {
             continue;
         }
         auto it = curveGLResourcesMap_.find(e);
@@ -488,7 +488,7 @@ void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff) {
     dom::Element* root = document_->rootElement();
     for (dom::Node* node : diff.reparentedNodes()) {
         dom::Element* e = dom::Element::cast(node);
-        if (!(e && e->name() == PATH)) {
+        if (!(e && e->tagName() == PATH)) {
             continue;
         }
         if (e->parent() == root) {
@@ -508,7 +508,7 @@ void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff) {
 
     for (dom::Node* node : diff.createdNodes()) {
         dom::Element* e = dom::Element::cast(node);
-        if (!(e && e->name() == PATH)) {
+        if (!(e && e->tagName() == PATH)) {
             continue;
         }
         if (e->parent() == root) {
@@ -531,7 +531,7 @@ void OpenGLViewer::onDocumentChanged_(const dom::Diff& diff) {
         auto insert = curveGLResources_.begin();
         for (dom::Node* node : root->children()) {
             dom::Element* e = dom::Element::cast(node);
-            if (!(e && e->name() == PATH)) {
+            if (!(e && e->tagName() == PATH)) {
                 continue;
             }
             auto it = curveGLResourcesMap_[e]; // works unless there is a bug
