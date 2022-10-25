@@ -38,6 +38,8 @@ void wrap_stringid(py::module& m) {
         .def(std::string_view() != py::self)
         .def("__str__", &StringId::string)
         .def("__repr__", [](const This& self) -> std::string {
-            return vgc::core::format("vgc.core.StringId(\"{}\")", self.string());
+            py::str s = py::cast(self.string());
+            std::string r = py::cast<std::string>(s.attr("__repr__")());
+            return vgc::core::format("vgc.core.StringId({})", r);
         });
 }

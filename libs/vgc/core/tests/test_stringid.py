@@ -45,7 +45,7 @@ class TestStringId(unittest.TestCase):
 
     def testRepr(self):
         sid = StringId("test")
-        self.assertEqual(repr(sid), 'vgc.core.StringId("test")')
+        self.assertEqual(repr(sid), "vgc.core.StringId('test')")
 
 if __name__ == '__main__':
     unittest.main()
