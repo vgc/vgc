@@ -23,8 +23,8 @@ TEST(TestPreprocessor, Str) {
     const char* a = "ADD(1, 2)";
     const char* b = VGC_PP_STR(ADD(1, 2));
     EXPECT_EQ(a[0], 'A');
-    EXPECT_EQ(a, "ADD(1, 2)");
-    EXPECT_EQ(b, "1 + 2");
+    EXPECT_STREQ(a, "ADD(1, 2)");
+    EXPECT_STREQ(b, "1 + 2");
 }
 
 #define ANSWER() 42
