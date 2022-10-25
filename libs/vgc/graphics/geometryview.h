@@ -155,7 +155,7 @@ protected:
             VertexSizes{4 * 8, 0},     // XYUVRGBA
             VertexSizes{4 * 2, 4 * 4}, // XY_iRGBA
             VertexSizes{4 * 4, 4 * 4}, // XYUV_iRGBA
-            VertexSizes{4 * 4, 4 * 6}, // XYDxDy_iXYRGBA
+            VertexSizes{4 * 4, 4 * 7}, // XYDxDy_iXYRotRGBA
         };
 
         const UInt index = core::toUnderlying(layout);

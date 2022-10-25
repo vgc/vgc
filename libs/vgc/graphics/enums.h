@@ -298,7 +298,8 @@ enum class BuiltinGeometryLayout : Int8 {
     XYUVRGBA,
     XY_iRGBA,
     XYUV_iRGBA,
-    XYDxDy_iXYRGBA,
+    // Rot is a "float" boolean to enable the rotation of the displacement by the view matrix.
+    XYDxDy_iXYRotRGBA,
     VGC_ENUM_ENDMAX
 };
 inline constexpr auto numBuiltinGeometryLayouts = VGC_ENUM_COUNT(BuiltinGeometryLayout);

@@ -65,6 +65,10 @@ struct Vertex_XYRGBA {
     float x, y, r, g, b, a;
 };
 
+struct Vertex_XYRotRGBA {
+    float x, y, rot, r, g, b, a;
+};
+
 struct Vertex_XYUVRGBA {
     float x, y, u, v, r, g, b, a;
 };
@@ -969,15 +973,15 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShader.releaseAndGetAddressOf());
         program->vertexShader_ = vertexShader;
 
-        // Create Input Layout for XYXoffYoff_iXYRGBA
+        // Create Input Layout for XYDxDy_iXYRotRGBA
         {
             ComPtr<ID3D11InputLayout> inputLayout;
             UINT dxOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, dx));
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGBA, r));
+            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRotRGBA, r));
             D3D11_INPUT_ELEMENT_DESC layout[] = {
                 {"POSITION",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,        D3D11_INPUT_PER_VERTEX_DATA,   0},
                 {"DISPLACEMENT", 0, DXGI_FORMAT_R32G32_FLOAT,       0, dxOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"POSITION",     1, DXGI_FORMAT_R32G32_FLOAT,       1, 0,        D3D11_INPUT_PER_INSTANCE_DATA, 1},
+                {"POSITION",     1, DXGI_FORMAT_R32G32B32_FLOAT,    1, 0,        D3D11_INPUT_PER_INSTANCE_DATA, 1},
                 {"COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, rOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
             };
             device_->CreateInputLayout(
@@ -986,7 +990,7 @@ void D3d11Engine::createBuiltinShaders_() {
                 vertexShaderBlob->GetBufferSize(),
                 inputLayout.releaseAndGetAddressOf());
 
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRGBA);
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotRGBA);
             program->builtinLayouts_[layoutIndex] = inputLayout;
         }
     }
