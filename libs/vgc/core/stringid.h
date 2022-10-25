@@ -206,6 +206,13 @@ OutputStream& operator<<(OutputStream& out, StringId stringId) {
     return out;
 }
 
+/// Writes the given StringId to the output stream.
+///
+template<typename OStream>
+void write(OStream& out, StringId x) {
+    write(out, std::string_view(x));
+}
+
 } // namespace vgc::core
 
 namespace std {
