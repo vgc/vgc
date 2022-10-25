@@ -142,6 +142,13 @@ private:
 
 } // namespace vgc::core
 
+template<typename Enum>
+struct std::hash<vgc::core::Flags<Enum>> {
+    std::size_t operator()(const vgc::core::Flags<Enum>& p) const noexcept {
+        return std::hash<vgc::core::Flags<Enum>::UnderlyingType>()(p.toUnderlying());
+    }
+};
+
 #define VGC_DEFINE_FLAGS_BINARY_OPERATOR(Enum, Op)                                       \
     inline constexpr ::vgc::core::Flags<Enum> operator Op(Enum a, Enum b) noexcept {     \
         return ::vgc::core::Flags<Enum>(a) Op ::vgc::core::Flags<Enum>(b);               \
