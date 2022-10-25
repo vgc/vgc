@@ -298,7 +298,7 @@ enum class BuiltinGeometryLayout : Int8 {
     XYUVRGBA,
     XY_iRGBA,
     XYUV_iRGBA,
-    XYDxDy_iXYRGBA,
+    XYDxDy_iXYRotRGBA,
     VGC_ENUM_ENDMAX
 };
 inline constexpr auto numBuiltinGeometryLayouts = VGC_ENUM_COUNT(BuiltinGeometryLayout);

@@ -59,6 +59,10 @@ struct Vertex_XYRGBA {
     float x, y, r, g, b, a;
 };
 
+struct Vertex_XYRotRGBA {
+    float x, y, rot, r, g, b, a;
+};
+
 struct Vertex_XYUVRGBA {
     float x, y, u, v, r, g, b, a;
 };
@@ -1208,7 +1212,7 @@ void QglEngine::initBuiltinResources_() {
         // Create Input Layout for XYXoffYoff_iXYRGBA
         {
             constexpr Int8 layoutIndex =
-                core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRGBA);
+                core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotRGBA);
             core::Array<GlAttribPointerDesc>& layout =
                 program->builtinLayouts_[layoutIndex];
             GlAttribPointerDesc& xyDesc = layout.emplaceLast();
@@ -1229,10 +1233,10 @@ void QglEngine::initBuiltinResources_() {
             dispDesc.bufferIndex = 0;
             GlAttribPointerDesc& xyiDesc = layout.emplaceLast();
             xyiDesc.index = xyiLoc_;
-            xyiDesc.numElements = 2;
+            xyiDesc.numElements = 3;
             xyiDesc.elementType = GL_FLOAT;
             xyiDesc.normalized = false;
-            xyiDesc.stride = sizeof(Vertex_XYRGBA);
+            xyiDesc.stride = sizeof(Vertex_XYRotRGBA);
             xyiDesc.offset = 0;
             xyiDesc.bufferIndex = 1;
             xyiDesc.isPerInstance = true;
@@ -1241,8 +1245,8 @@ void QglEngine::initBuiltinResources_() {
             rgbaDesc.numElements = 4;
             rgbaDesc.elementType = GL_FLOAT;
             rgbaDesc.normalized = false;
-            rgbaDesc.stride = sizeof(Vertex_XYRGBA);
-            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRGBA, r));
+            rgbaDesc.stride = sizeof(Vertex_XYRotRGBA);
+            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRotRGBA, r));
             rgbaDesc.bufferIndex = 1;
             rgbaDesc.isPerInstance = true;
         }
