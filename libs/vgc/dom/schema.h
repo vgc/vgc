@@ -77,49 +77,49 @@ private:
 ///
 class ElementSpec {
 public:
-    /// Creates an ElementSpec for the given Element \p name, with the given
-    /// built-in \p attributes.
+    /// Creates an `ElementSpec` for the given Element `tagName`, with the given
+    /// built-in `attributes`.
     ///
-    ElementSpec(const std::string& name, const std::vector<AttributeSpec>& attributes);
+    ElementSpec(const std::string& tagName, const std::vector<AttributeSpec>& attributes);
 
-    /// Returns the name of the Element specified by this ElementSpec.
+    /// Returns the tag name of the `Element` specified by this `ElementSpec`.
     ///
-    core::StringId name() const {
-        return name_;
+    core::StringId tagName() const {
+        return tagName_;
     }
 
-    /// Finds the AttributeSpec for the given attribute \p name. Returns
-    /// nullptr if the given \p name is not a built-in attribute of this
-    /// Element type.
+    /// Finds the `AttributeSpec` for the given attribute `attrName`. Returns
+    /// nullptr if the given `attrName` is not a built-in attribute of this
+    /// `Element` type.
     ///
-    const AttributeSpec* findAttributeSpec(core::StringId name) const;
+    const AttributeSpec* findAttributeSpec(core::StringId attrName) const;
     /// \overload
-    const AttributeSpec* findAttributeSpec(const std::string& name) const {
-        return findAttributeSpec(core::StringId(name));
+    const AttributeSpec* findAttributeSpec(const std::string& attrName) const {
+        return findAttributeSpec(core::StringId(attrName));
     }
 
-    /// Returns the default value of the built-in attribute given by its \p
-    /// name. Returns an invalid value if the given \p name is not a built-in
-    /// attribute of this Element type.
+    /// Returns the default value of the built-in attribute given by its
+    /// `attrName`. Returns an invalid value if the given `attrName` is not a
+    /// built-in attribute of this `Element` type.
     ///
-    const Value& defaultValue(core::StringId name) const;
+    const Value& defaultValue(core::StringId attrName) const;
     /// \overload
-    const Value& defaultValue(const std::string& name) const {
-        return defaultValue(core::StringId(name));
+    const Value& defaultValue(const std::string& attrName) const {
+        return defaultValue(core::StringId(attrName));
     }
 
-    /// Returns the ValueType of the built-in attribute given by its \p name.
-    /// Returns ValueType::Invalid if the given \p name is not a built-in
-    /// attribute of this Element type.
+    /// Returns the `ValueType` of the built-in attribute given by its
+    /// `attrName`. Returns `ValueType::Invalid` if the given `attrName`
+    /// is not a built-in attribute of this `Element` type.
     ///
-    ValueType valueType(core::StringId name) const;
+    ValueType valueType(core::StringId attrName) const;
     /// \overload
-    ValueType valueType(const std::string& name) const {
-        return valueType(core::StringId(name));
+    ValueType valueType(const std::string& attrName) const {
+        return valueType(core::StringId(attrName));
     }
 
 private:
-    core::StringId name_;
+    core::StringId tagName_;
     std::map<core::StringId, AttributeSpec> attributes_;
 };
 
@@ -164,13 +164,13 @@ public:
     ///
     Schema(const std::vector<ElementSpec>& elements);
 
-    /// Finds the ElementSpec for the given Element \p name. Returns nullptr
-    /// if the given \p name is not defined in the Schema.
+    /// Finds the `ElementSpec` for the given element `tagName`.
+    /// Returns `nullptr` if the given `tagName` is not defined in the Schema.
     ///
-    const ElementSpec* findElementSpec(core::StringId name) const;
+    const ElementSpec* findElementSpec(core::StringId tagName) const;
     /// \overload
-    const ElementSpec* findElementSpec(const std::string& name) const {
-        return findElementSpec(core::StringId(name));
+    const ElementSpec* findElementSpec(const std::string& tagName) const {
+        return findElementSpec(core::StringId(tagName));
     }
 
 private:

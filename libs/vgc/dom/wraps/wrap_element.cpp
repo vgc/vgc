@@ -16,6 +16,9 @@
 
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/object.h>
+
+#include <string>
+
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 
@@ -32,5 +35,5 @@ void wrap_element(py::module& m) {
         //.def(py::init([](Document* parent, const std::string& name) { return This::create(parent, name); } ))
         //.def(py::init([](Element* parent, const std::string& name) { return This::create(parent, name); } ))
         .def_property_readonly(
-            "name", [](const This& self) { return self.name().string(); });
+            "tagName", [](const This& self) { return self.tagName().string(); });
 }

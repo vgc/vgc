@@ -49,8 +49,8 @@ class TestDocument(unittest.TestCase):
         doc = None
 
         doc = Document.open(filePath)
-        self.assertEqual(doc.rootElement.name, "vgc")
-        self.assertEqual(doc.rootElement.firstChild.name, "path")
+        self.assertEqual(doc.rootElement.tagName, "vgc")
+        self.assertEqual(doc.rootElement.firstChild.tagName, "path")
 
 if __name__ == '__main__':
     unittest.main()
