@@ -256,9 +256,9 @@ public:
         , var_(vec2d) {
     }
 
-    /// Constructs a `Value` holding a `Vec2dArray`.
+    /// Constructs a `Value` holding an array of `Vec2d`.
     ///
-    Value(geometry::Vec2dArray vec2dArray)
+    Value(core::Array<geometry::Vec2d> vec2dArray)
         : type_(ValueType::Vec2dArray)
         , var_(detail::makeCowDataPtr(std::move(vec2dArray))) {
     }
