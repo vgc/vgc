@@ -779,7 +779,7 @@ bool Window::nativeEvent(
 }
 #endif
 
-void Window::exposeEvent(QExposeEvent* event) {
+void Window::exposeEvent(QExposeEvent*) {
     if (isExposed()) {
         if (activeSizemove_) {
             // On Windows, Expose events happen on both WM_PAINT and WM_ERASEBKGND
