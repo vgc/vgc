@@ -16,4 +16,5 @@ vgc_wrap_library(core
     wrap_paths.cpp
     wrap_signal.cpp
     wrap_stopwatch.cpp
+    wrap_stringid.cpp
 )

@@ -27,6 +27,7 @@ void wrap_parse(py::module& m);
 void wrap_paths(py::module& m);
 void wrap_signal(py::module& m);
 void wrap_stopwatch(py::module& m);
+void wrap_stringid(py::module& m);
 
 PYBIND11_MODULE(core, m) {
     wrap_arithmetic(m);
@@ -40,4 +41,5 @@ PYBIND11_MODULE(core, m) {
     wrap_paths(m);
     wrap_signal(m);
     wrap_stopwatch(m);
+    wrap_stringid(m);
 }

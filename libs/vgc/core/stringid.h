@@ -105,7 +105,7 @@ class VGC_CORE_API StringId {
 public:
     // Constructs a `StringId` representing the empty string.
     //
-    StringId() noexcept
+    constexpr StringId() noexcept
         : stringPtr_(nullptr) {
     }
 
@@ -118,7 +118,7 @@ public:
     /// explicitly define the overload `foo(std::string_view)`, otherwise
     /// clients have to perform the explicit cast themselves.
     ///
-    explicit StringId(const std::string_view& s)
+    explicit StringId(std::string_view s)
         : stringPtr_(nullptr) {
 
         if (!s.empty()) {
