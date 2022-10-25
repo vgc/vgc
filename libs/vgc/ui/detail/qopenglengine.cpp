@@ -1209,7 +1209,7 @@ void QglEngine::initBuiltinResources_() {
 
         prog->release();
 
-        // Create Input Layout for XYXoffYoff_iXYRGBA
+        // Create Input Layout for XYDxDy_iXYRotRGBA
         {
             constexpr Int8 layoutIndex =
                 core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotRGBA);
