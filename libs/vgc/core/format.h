@@ -240,7 +240,7 @@ void write(OStream& out, const char* begin, std::streamsize ssize) {
 /// ```
 ///
 template<typename OStream>
-void write(OStream& out, const std::string& s) {
+void write(OStream& out, std::string_view s) {
     size_t n = s.size();
     out.write(s.data(), static_cast<std::streamsize>(n));
 }
