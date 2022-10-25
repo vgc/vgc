@@ -388,8 +388,8 @@ void Window::focusOutEvent(QFocusEvent* event) {
 void Window::resizeEvent(QResizeEvent* event) {
 
     // Remember old size
-    int oldWidth = width_;
-    int oldHeight = height_;
+    [[maybe_unused]] int oldWidth = width_;
+    [[maybe_unused]] int oldHeight = height_;
 
     // Get new unscaled size
     QSize size = event->size();
