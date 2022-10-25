@@ -27,6 +27,7 @@ PS_INPUT main(VS_INPUT input) {
     float4 viewPos = mul(viewMatrix, float4(input.pos + input.ipos.xy, 0.f, 1.f));
     float dispMag = length(input.disp);
     float2 dispDir = input.disp;
+    // input.ipos.z is "Rot" and is a "float" boolean to enable the rotation of the displacement by the view matrix.
     if (input.ipos.z > 0) {
         dispDir = mul(viewMatrix, float4(dispDir, 0.f, 0.f)).xy;
     }
