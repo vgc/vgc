@@ -361,13 +361,13 @@ void Window::focusOutEvent(QFocusEvent* event) {
 void Window::resizeEvent(QResizeEvent* event) {
 
     // Remember old size
-    [[maybe_unused]] int oldWidth = width_;
-    [[maybe_unused]] int oldHeight = height_;
+    [[maybe_unused]] Int oldWidth = width_;
+    [[maybe_unused]] Int oldHeight = height_;
 
     // Get new unscaled size
     QSize size = event->size();
-    int unscaledWidth = size.width();
-    int unscaledHeight = size.height();
+    Int unscaledWidth = size.width();
+    Int unscaledHeight = size.height();
 
     // Compute and set new scale ratio and scaled size
     updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
@@ -626,8 +626,8 @@ bool Window::nativeEvent(
         case WM_SIZE: {
 
             // Get new unscaled size
-            int unscaledWidth = static_cast<int>(LOWORD(msg->lParam));
-            int unscaledHeight = static_cast<int>(HIWORD(msg->lParam));
+            Int unscaledWidth = static_cast<Int>(LOWORD(msg->lParam));
+            Int unscaledHeight = static_cast<Int>(HIWORD(msg->lParam));
 
             // Compute and set new scale ratio and scaled size
             updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
@@ -737,10 +737,10 @@ void Window::exposeEvent(QExposeEvent*) {
             // here if the size in px of the window change, even though the "QWindow size"
             // (in device-independent scale) doesn't change.
             //
-            float oldScaledWidth = width_;
-            float oldScaledHeight = height_;
-            int unscaledWidth_ = width();
-            int unscaledHeight_ = height();
+            Int oldScaledWidth = width_;
+            Int oldScaledHeight = height_;
+            Int unscaledWidth_ = width();
+            Int unscaledHeight_ = height();
             updateScreenScaleRatioAndWindowSize_(unscaledWidth_, unscaledHeight_);
             if (oldScaledWidth != width_ || oldScaledHeight != height_) {
                 updateViewportSize_();
@@ -783,7 +783,7 @@ bool Window::updateScreenScaleRatio_() {
     }
 }
 
-void Window::updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight) {
+void Window::updateScreenScaleRatioAndWindowSize_(Int unscaledWidth, Int unscaledHeight) {
 
     // Update screen scale ratio
     bool screenScaleRatioChanged = updateScreenScaleRatio_();
@@ -791,8 +791,8 @@ void Window::updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscale
     // Update window size
     float w = static_cast<float>(unscaledWidth);
     float h = static_cast<float>(unscaledHeight);
-    width_ = static_cast<int>(std::round(w * devicePixelRatio_));
-    height_ = static_cast<int>(std::round(h * devicePixelRatio_));
+    width_ = static_cast<Int>(std::round(w * devicePixelRatio_));
+    height_ = static_cast<Int>(std::round(h * devicePixelRatio_));
 
     // Redraw when switching from two monitors with different DPI scaling on Windows.
     //
@@ -808,14 +808,26 @@ void Window::updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscale
 }
 
 void Window::updateViewportSize_() {
+
+    float w = static_cast<float>(width_);
+    float h = static_cast<float>(height_);
+
+    // Update projection matrix
     geometry::Camera2d c;
-    c.setViewportSize(width_, height_);
+    c.setViewportSize(w, h);
     proj_ = detail::toMat4f(c.projectionMatrix());
+
+    // Update size of root widget
     if (widget_) {
-        widget_->updateGeometry(0, 0, width_, height_);
+        widget_->updateGeometry(0, 0, w, h);
     }
+
+    // Update size of GPU resources: render targets, framebuffers, etc.
+    //
+    // Note: this can be quite slow with MSAA on. It will probably be better
+    // when we have a compositor.
+    //
     if (engine_ && swapChain_) {
-        // quite slow with msaa on, will probably be better when we have a compositor.
         engine_->onWindowResize(swapChain_, width_, height_);
     }
 }

@@ -116,8 +116,8 @@ private:
     graphics::SwapChainPtr swapChain_;
     graphics::RasterizerStatePtr rasterizerState_;
     graphics::BlendStatePtr blendState_;
-    int width_ = 0;
-    int height_ = 0;
+    Int width_ = 0;
+    Int height_ = 0;
     bool activeSizemove_ = false;
     bool deferredResize_ = false;
     bool entered_ = false;
@@ -126,7 +126,7 @@ private:
     float devicePixelRatio_ = 1.0;
     float screenScaleRatio_ = 1.0;
     bool updateScreenScaleRatio_();
-    void updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight);
+    void updateScreenScaleRatioAndWindowSize_(Int unscaledWidth, Int unscaledHeight);
     void updateViewportSize_();
 
     geometry::Mat4f proj_;
