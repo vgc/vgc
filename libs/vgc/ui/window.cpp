@@ -152,33 +152,6 @@ WindowPtr Window::create(WidgetPtr widget) {
     return WindowPtr(new Window(widget));
 }
 
-//void Window::setEngine() {
-//
-//    // Initialize widget for painting.
-//    // Note that initializedGL() is never called if the widget is never visible.
-//    // Therefore it's important to keep track whether it has been called, so that
-//    // we don't call onPaintDestroy() without first calling onPaintCreate()
-//    isInitialized_ = true;
-//    if (widget_) {
-//        //m_context->makeCurrent(this);
-//
-//        engine_->glViewport(0, 0, width(), height());
-//
-//        oglf_->glClearColor(1.f, 0, 0, 1.f);
-//        oglf_->glClear(GL_COLOR_BUFFER_BIT);
-//
-//        m_context->swapBuffers(this);
-//        widget_->onPaintCreate(engine_.get());
-//    }
-//
-//}
-
-//QSize Window::sizeHint() const
-//{
-//    geometry::Vec2f s = widget_->preferredSize();
-//    return QSize(core::ifloor<int>(s[0]), core::ifloor<int>(s[1]));
-//}
-
 namespace {
 
 Widget* prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window) {
@@ -533,25 +506,6 @@ void Window::paint(bool sync) {
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
 
-    /*static float triangle[15] = {
-         20.f,  20.f, 1.f, 0.f, 0.f,
-        160.f,  50.f, 0.f, 1.f, 0.f,
-         50.f, 160.f, 0.f, 0.f, 1.f,
-    };
-    static auto bptr = engine_->createPrimitiveBuffer([]{ return triangle; }, 15*4, false);
-    engine_->drawPrimitives(bptr.get(), graphics::PrimitiveType::TriangleList);*/
-
-    /*static int i = 0;
-    static graphics::ShapedText shapedText(graphics::fontLibrary()->defaultFont()->getSizedFont(), "text");
-    std::string s = core::format("{:d} {:04d} {:04d}x{:04d} {:04d}x{:04d}", swapChain_->numPendingPresents(), ++i, width_, height_, width(), height());
-    shapedText.setText(s);
-    VGC_DEBUG(LogVgcUi, s);
-    core::Array<float> a;
-    shapedText.fill(a, geometry::Vec2f(60.f, 60.f), 0.f, 0.f, 0.f, 0.f, 1000.f, 0.f, 1000.f);
-    static auto textBuf = engine_->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
-    engine_->updateBufferData(textBuf.get(), [a = std::move(a)](){ return a.data(); }, a.length() * 4);
-    engine_->drawPrimitives(textBuf.get(), graphics::PrimitiveType::TriangleList);*/
-
     if (widget_->isGeometryUpdateRequested()) {
         widget_->updateGeometry();
     }
@@ -875,10 +829,6 @@ void Window::updateViewportSize_() {
     if (engine_) {
         engine_->onWindowResize(swapChain_, width_, height_);
     }
-}
-
-void Window::cleanup() {
-    // XXX ?
 }
 
 void Window::onActiveChanged_() {

@@ -158,12 +158,7 @@ private:
     VGC_SLOT(onKeyboardCaptureStartedSlot_, onKeyboardCaptureStarted_);
     VGC_SLOT(onKeyboardCaptureStoppedSlot_, onKeyboardCaptureStopped_);
 
-    /////////////////////////////
-    // TO FACTOR OUT
-    ////////////////////////////
-
     virtual void paint(bool sync = false);
-    virtual void cleanup();
 };
 
 } // namespace vgc::ui
