@@ -489,6 +489,10 @@ void Window::paint(bool sync) {
         throw LogicError("engine_ is null.");
     }
 
+    if (!swapChain_) {
+        throw LogicError("swapChain_ is null.");
+    }
+
     if (swapChain_->numPendingPresents() > 0 && !sync) {
         // race condition possible but unlikely here.
         updateDeferred_ = true;
@@ -638,24 +642,8 @@ bool Window::nativeEvent(
                     height_);
             }
 
-            geometry::Camera2d c;
-            c.setViewportSize(width_, height_);
-            proj_ = detail::toMat4f(c.projectionMatrix());
-
-            // Set new widget geometry. Note: if w or h is > 16777216 (=2^24), then static_cast
-            // silently rounds to the nearest integer representable as a float. See:
-            //   https://stackoverflow.com/a/60339495/1951907
-            // Should we issue a warning in these cases?
-
-            widget_->updateGeometry(
-                0, 0, static_cast<float>(width_), static_cast<float>(height_));
-            if (engine_ && swapChain_) {
-                // quite slow with msaa on, will probably be better when we have a compositor.
-                engine_->onWindowResize(swapChain_, width_, height_);
-                //Sleep(50);
-                paint(true);
-                //qDebug() << "painted";
-            }
+            updateViewportSize_();
+            paint(true);
 
             return false;
         }
@@ -826,7 +814,8 @@ void Window::updateViewportSize_() {
     if (widget_) {
         widget_->updateGeometry(0, 0, width_, height_);
     }
-    if (engine_) {
+    if (engine_ && swapChain_) {
+        // quite slow with msaa on, will probably be better when we have a compositor.
         engine_->onWindowResize(swapChain_, width_, height_);
     }
 }
