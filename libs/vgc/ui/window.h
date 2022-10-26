@@ -51,14 +51,14 @@ class VGC_UI_API Window : public core::Object, public QWindow {
 protected:
     /// Constructs a Window containing the given vgc::ui::Widget.
     ///
-    Window(WidgetPtr widget);
+    Window(const WidgetPtr& widget);
 
     /// Destructs the Window.
     ///
     void onDestroyed() override;
 
 public:
-    static WindowPtr create(WidgetPtr widget);
+    static WindowPtr create(const WidgetPtr& widget);
 
     /// Returns the contained vgc::ui::Widget
     ///
@@ -66,25 +66,9 @@ public:
         return widget_.get();
     }
 
+    // ===================== Handle mouse/tablet input ========================
+
 protected:
-#if defined(VGC_CORE_OS_WINDOWS)
-    HWND hwnd_ = {};
-    static LRESULT WINAPI WndProc(HWND, UINT, WPARAM, LPARAM);
-#endif
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void tabletEvent(QTabletEvent* event) override;
-
-    void focusInEvent(QFocusEvent* event) override;
-    void focusOutEvent(QFocusEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
-    void keyReleaseEvent(QKeyEvent* event) override;
-    void exposeEvent(QExposeEvent* event) override;
-    bool event(QEvent* event) override;
-    bool eventFilter(QObject* obj, QEvent* event) override;
-
     /// Handles mouse enter events.
     ///
     virtual void enterEvent(QEvent* event);
@@ -93,57 +77,135 @@ protected:
     ///
     virtual void leaveEvent(QEvent* event);
 
-    // Handles input methods (dead keys, Asian characters, virtual keyboards, etc.)
-    //
-    virtual void inputMethodQueryEvent(QInputMethodQueryEvent* event);
+    // QWindow overrides
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void tabletEvent(QTabletEvent* event) override;
+
+private:
+    bool isTabletInUse_() const;
+    bool mouseMoveEvent_(Widget* receiver, MouseEvent* event);
+    bool mousePressEvent_(Widget* receiver, MouseEvent* event);
+    bool mouseReleaseEvent_(Widget* receiver, MouseEvent* event);
+
+    // ==================== Handle keyboard input =============================
+
+protected:
+    // QWindow overrides
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
+
+    /// Handles complex keyboard input events, such as:
+    /// - composing accentuated characters via dead keys
+    /// - composing Asian characters via Input Method Editors (Pinyin, etc.)
+    /// - composing text via virtual keyboards
+    ///
     virtual void inputMethodEvent(QInputMethodEvent* event);
+
+    /// Handles input method query events.
+    ///
+    /// This corresponds to a request from the operating system or IME for the
+    /// information it needs in order to perform its task. For example, an IME
+    /// needs to know when should a virtual keyboard appear, at what location,
+    /// what are the characters surrounding the in-app cursor, etc.
+    ///
+    /// The default implementation executes the following code for each
+    /// `Qt::InputMethodQuery` in `event->queries()`:
+    ///
+    /// ```cpp
+    /// QVariant value = inputMethodQuery(query);
+    /// event->setValue(query, value);
+    /// ```
+    ///
+    /// \sa `inputMethodQuery()`
+    ///
+    virtual void inputMethodQueryEvent(QInputMethodQueryEvent* event);
+
+    /// Answers to a given input method query.
+    ///
+    /// \sa `inputMethodQueryEvent()`.
+    ///
     virtual QVariant inputMethodQuery(Qt::InputMethodQuery query);
 
+    // ===================== Handle redraw and resize =========================
+
+private:
+    bool updateScreenScaleRatio_();
+    void updateScreenScaleRatioAndWindowSize_(Int unscaledWidth, Int unscaledHeight);
+    void updateViewportSize_();
+
+protected:
+    // QWindow overrides
+    void exposeEvent(QExposeEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+
+    /// Handles `QEvent::UpdateRequest` events.
+    ///
+    virtual void updateRequestEvent(QEvent* event);
+
+    /// Repaints the window.
+    ///
+    virtual void paint(bool sync = false);
+
+    // ============== Dispatching and platform-specific events ================
+
+protected:
+    // Defines which type to use for `result` in `nativeEvent()` (depends on Qt version).
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     using NativeEventResult = long;
 #else
     using NativeEventResult = qintptr;
 #endif
 
+    // QWindow overrides
+    bool event(QEvent* event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
     bool nativeEvent(
         const QByteArray& eventType,
         void* message,
         NativeEventResult* result) override;
 
 private:
+#if defined(VGC_CORE_OS_WINDOWS)
+    HWND hwnd_ = {};
+    static LRESULT WINAPI WndProc(HWND, UINT, WPARAM, LPARAM);
+#endif
+
+    // ============== Data members ================
+
+private:
     WidgetPtr widget_;
+
+    Int width_ = 0;
+    Int height_ = 0;
+    float logicalDotsPerInch_ = detail::baseLogicalDpi;
+    float devicePixelRatio_ = 1.0;
+    float screenScaleRatio_ = 1.0;
+
     graphics::EnginePtr engine_;
     graphics::SwapChainPtr swapChain_;
     graphics::RasterizerStatePtr rasterizerState_;
     graphics::BlendStatePtr blendState_;
-    int width_ = 0;
-    int height_ = 0;
-    bool activeSizemove_ = false;
-    bool deferredResize_ = false;
-    bool entered_ = false;
-
-    float logicalDotsPerInch_ = detail::baseLogicalDpi;
-    float devicePixelRatio_ = 1.0;
-    float screenScaleRatio_ = 1.0;
-    bool updateScreenScaleRatio_();
-    void updateScreenScaleRatioAndWindowSize_(int unscaledWidth, int unscaledHeight);
-    void updateViewportSize_();
-
     geometry::Mat4f proj_;
     core::Color clearColor_;
 
-    bool updateDeferred_ = false;
-
     MouseButtons pressedMouseButtons_;
     MouseButtons pressedTabletButtons_;
-    bool tabletInProximity_ = false;
     core::Stopwatch timeSinceLastTableEvent_ = {};
+    bool tabletInProximity_ = false;
 
-    bool isTabletInUse_() const;
+    bool activeSizemove_ = false;
+    bool deferredResize_ = false;
+    bool updateDeferred_ = false;
+    bool entered_ = false;
 
-    bool mouseMoveEvent_(Widget* receiver, MouseEvent* event);
-    bool mousePressEvent_(Widget* receiver, MouseEvent* event);
-    bool mouseReleaseEvent_(Widget* receiver, MouseEvent* event);
+    // ============== Other helper methods ================
+
+private:
+    void initEngine_();
 
     void onActiveChanged_();
     void onRepaintRequested_();
@@ -157,13 +219,6 @@ private:
     VGC_SLOT(onMouseCaptureStoppedSlot_, onMouseCaptureStopped_);
     VGC_SLOT(onKeyboardCaptureStartedSlot_, onKeyboardCaptureStarted_);
     VGC_SLOT(onKeyboardCaptureStoppedSlot_, onKeyboardCaptureStopped_);
-
-    /////////////////////////////
-    // TO FACTOR OUT
-    ////////////////////////////
-
-    virtual void paint(bool sync = false);
-    virtual void cleanup();
 };
 
 } // namespace vgc::ui
