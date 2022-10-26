@@ -45,7 +45,7 @@ static constexpr bool debugEvents = false;
 #    endif
 #endif
 
-Window::Window(WidgetPtr widget)
+Window::Window(const WidgetPtr& widget)
     : QWindow()
     , widget_(widget)
     , proj_(geometry::Mat4f::identity)
@@ -61,78 +61,7 @@ Window::Window(WidgetPtr widget)
     widget_->keyboardCaptureStopped().connect(onKeyboardCaptureStoppedSlot_());
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
 
-    graphics::SwapChainCreateInfo scd = {};
-
-    graphics::EngineCreateInfo engineConfig = {};
-    graphics::WindowSwapChainFormat& windowSwapChainFormat =
-        engineConfig.windowSwapChainFormat();
-    windowSwapChainFormat.setNumBuffers(2);
-    windowSwapChainFormat.setNumSamples(8);
-    engineConfig.setMultithreadingEnabled(true);
-
-#if defined(VGC_CORE_OS_WINDOWS) && TRUE
-    // RasterSurface looks ok since Qt seems to not automatically create a backing store.
-    setSurfaceType(QWindow::RasterSurface);
-    QWindow::create();
-    engine_ = graphics::D3d11Engine::create(engineConfig);
-
-    HWND hwnd = (HWND)QWindow::winId();
-    hwnd_ = hwnd;
-    scd.setWindowNativeHandle(hwnd, graphics::WindowNativeHandleType::Win32);
-
-    //WNDCLASSEXW wc = { sizeof(WNDCLASSEXW), CS_CLASSDC, Window::WndProc, 0L, 20 * sizeof(LONG_PTR), ::GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"Win32 Window", NULL };
-    //::RegisterClassExW(&wc);
-    //HWND hwnd = ::CreateWindowExW(0L, wc.lpszClassName, L"Win32 Window", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
-    //::SetWindowLongPtrW(hwnd, 19 * sizeof(LONG_PTR), (LONG_PTR)(Window*)this);
-    //scd.setWindowNativeHandle(hwnd, graphics::WindowNativeHandleType::Win32);
-    //::ShowWindow(hwnd, SW_SHOWDEFAULT);
-    //::UpdateWindow(hwnd);
-
-    // get window class info
-
-    WINDOWINFO wi = {sizeof(WINDOWINFO)};
-    GetWindowInfo(hwnd, &wi);
-    wchar_t className[400];
-    GetClassNameW(hwnd, className, 400);
-    HINSTANCE hinst = (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE);
-    WNDCLASSEXW wcex = {sizeof(WNDCLASSEXW)};
-    GetClassInfoExW(hinst, className, &wcex);
-    std::wstring classNameW(className);
-    std::string classNameA(classNameW.begin(), classNameW.end());
-    //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
-#else
-    engine_ = detail::QglEngine::create(engineConfig);
-    scd.setWindowNativeHandle(
-        static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
-#endif
-
-    swapChain_ = engine_->createSwapChain(scd);
-
-    {
-        graphics::RasterizerStateCreateInfo createInfo = {};
-        rasterizerState_ = engine_->createRasterizerState(createInfo);
-    }
-
-    {
-        graphics::BlendStateCreateInfo createInfo = {};
-        createInfo.setEnabled(true);
-        createInfo.setEquationRGB(
-            graphics::BlendOp::Add,
-            graphics::BlendFactor::SourceAlpha,
-            graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setEquationAlpha(
-            graphics::BlendOp::Add,
-            graphics::BlendFactor::One,
-            graphics::BlendFactor::OneMinusSourceAlpha);
-        createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
-        blendState_ = engine_->createBlendState(createInfo);
-    }
-
-    engine_->setPresentCallback([=](UInt64) {
-        if (updateDeferred_) {
-            QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
-        }
-    });
+    initEngine_();
 
     // Handle dead keys and complex input methods.
     //
@@ -148,8 +77,18 @@ void Window::onDestroyed() {
     engine_ = nullptr;
 }
 
-WindowPtr Window::create(WidgetPtr widget) {
+WindowPtr Window::create(const WidgetPtr& widget) {
     return WindowPtr(new Window(widget));
+}
+
+void Window::enterEvent(QEvent* event) {
+    entered_ = true;
+    event->setAccepted(widget_->setHovered(true));
+}
+
+void Window::leaveEvent(QEvent* event) {
+    entered_ = false;
+    event->setAccepted(widget_->setHovered(false));
 }
 
 namespace {
@@ -263,6 +202,18 @@ void Window::tabletEvent(QTabletEvent* event) {
         timeSinceLastTableEvent_.restart();
         break;
     }
+    case QEvent::TabletEnterProximity: {
+        timeSinceLastTableEvent_.restart();
+        tabletInProximity_ = true;
+        break;
+    }
+    case QEvent::TabletLeaveProximity: {
+        timeSinceLastTableEvent_.restart();
+        tabletInProximity_ = false;
+        // XXX should we do this ?
+        // pressedTabletButtons_.clear();
+        break;
+    }
     default:
         // nothing
         break;
@@ -334,20 +285,6 @@ bool Window::mouseReleaseEvent_(Widget* receiver, MouseEvent* event) {
     return handled;
 }
 
-// Note: enterEvent() and leaveEvent() are part of QWidget, but not of QWindow.
-// Therefore, the methods below are not overriden from QWindow, but are instead
-// custom methods that we explicitly call from Window::event().
-
-void Window::enterEvent(QEvent* event) {
-    entered_ = true;
-    event->setAccepted(widget_->setHovered(true));
-}
-
-void Window::leaveEvent(QEvent* event) {
-    entered_ = false;
-    event->setAccepted(widget_->setHovered(false));
-}
-
 void Window::focusInEvent(QFocusEvent* event) {
     FocusReason reason = static_cast<FocusReason>(event->reason());
     widget_->setTreeActive(true, reason);
@@ -356,40 +293,6 @@ void Window::focusInEvent(QFocusEvent* event) {
 void Window::focusOutEvent(QFocusEvent* event) {
     FocusReason reason = static_cast<FocusReason>(event->reason());
     widget_->setTreeActive(false, reason);
-}
-
-void Window::resizeEvent(QResizeEvent* event) {
-
-    // Remember old size
-    [[maybe_unused]] Int oldWidth = width_;
-    [[maybe_unused]] Int oldHeight = height_;
-
-    // Get new unscaled size
-    QSize size = event->size();
-    Int unscaledWidth = size.width();
-    Int unscaledHeight = size.height();
-
-    // Compute and set new scale ratio and scaled size
-    updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
-
-    if (debugEvents) {
-        VGC_DEBUG(
-            LogVgcUi,
-            "resizeEvent({:04d}, {:04d}) -> ({}, {})",
-            unscaledWidth,
-            unscaledHeight,
-            width_,
-            height_);
-    }
-
-#if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
-    // Wait until WM_SIZE native event to actually set new window size
-    width_ = oldWidth;
-    height_ = oldHeight;
-#else
-    deferredResize_ = true;
-    requestUpdate();
-#endif
 }
 
 namespace {
@@ -416,18 +319,6 @@ void Window::keyReleaseEvent(QKeyEvent* event) {
     event->setAccepted(receiver->onKeyRelease(vgcEvent));
 }
 
-void Window::inputMethodQueryEvent(QInputMethodQueryEvent* event) {
-    Qt::InputMethodQueries queries = event->queries();
-    for (UInt32 i = 0; i < 32; ++i) {
-        Qt::InputMethodQuery query = static_cast<Qt::InputMethodQuery>(1 << i);
-        if (queries.testFlag(query)) {
-            QVariant value = inputMethodQuery(query);
-            event->setValue(query, value);
-        }
-    }
-    event->accept();
-}
-
 void Window::inputMethodEvent(QInputMethodEvent* event) {
 
     // For now, we only use a very simple implementation that, at the very
@@ -440,6 +331,18 @@ void Window::inputMethodEvent(QInputMethodEvent* event) {
         QKeyEvent keyEvent(QEvent::KeyPress, 0, Qt::NoModifier, event->commitString());
         keyPressEvent(&keyEvent);
     }
+}
+
+void Window::inputMethodQueryEvent(QInputMethodQueryEvent* event) {
+    Qt::InputMethodQueries queries = event->queries();
+    for (UInt32 i = 0; i < 32; ++i) {
+        Qt::InputMethodQuery query = static_cast<Qt::InputMethodQuery>(1 << i);
+        if (queries.testFlag(query)) {
+            QVariant value = inputMethodQuery(query);
+            event->setValue(query, value);
+        }
+    }
+    event->accept();
 }
 
 QVariant Window::inputMethodQuery(Qt::InputMethodQuery query) {
@@ -473,280 +376,6 @@ QVariant Window::inputMethodQuery(Qt::InputMethodQuery query) {
     else {
         // TODO: handle other queries more appropriately.
         return QVariant();
-    }
-}
-
-void Window::paint(bool sync) {
-    if (debugEvents) {
-        VGC_DEBUG(LogVgcUi, "paint({})", sync);
-    }
-
-    if (!isExposed()) {
-        return;
-    }
-
-    if (!engine_) {
-        throw LogicError("engine_ is null.");
-    }
-
-    if (!swapChain_) {
-        throw LogicError("swapChain_ is null.");
-    }
-
-    if (swapChain_->numPendingPresents() > 0 && !sync) {
-        // race condition possible but unlikely here.
-        updateDeferred_ = true;
-        return;
-    }
-    updateDeferred_ = false;
-
-    engine_->beginFrame(swapChain_, graphics::FrameKind::Window);
-
-    engine_->setRasterizerState(rasterizerState_);
-    engine_->setBlendState(blendState_, geometry::Vec4f());
-    engine_->setViewport(0, 0, width_, height_);
-    engine_->clear(clearColor_);
-    engine_->setProgram(graphics::BuiltinProgram::Simple);
-    engine_->setProjectionMatrix(proj_);
-    engine_->setViewMatrix(geometry::Mat4f::identity);
-
-    if (widget_->isGeometryUpdateRequested()) {
-        widget_->updateGeometry();
-    }
-
-    widget_->paint(engine_.get());
-
-#if defined(VGC_QOPENGL_EXPERIMENT)
-    static int frameIdx = 0;
-    auto fmt = format();
-    OutputDebugString(
-        core::format("Window swap behavior: {}\n", (int)fmt.swapBehavior()).c_str());
-    OutputDebugString(
-        core::format("Window swap interval: {}\n", fmt.swapInterval()).c_str());
-    OutputDebugString(core::format("frameIdx: {}\n", frameIdx).c_str());
-    frameIdx++;
-#endif
-
-    // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
-    engine_->endFrame(sync ? 1 : 0);
-}
-
-bool Window::event(QEvent* event) {
-    switch (event->type()) {
-    case QEvent::InputMethodQuery:
-        inputMethodQueryEvent(static_cast<QInputMethodQueryEvent*>(event));
-        return true;
-    case QEvent::InputMethod:
-        inputMethodEvent(static_cast<QInputMethodEvent*>(event));
-        return true;
-    case QEvent::Enter:
-        enterEvent(event);
-        return true;
-    case QEvent::Leave:
-        leaveEvent(event);
-        return true;
-    case QEvent::UpdateRequest:
-        if (!activeSizemove_) {
-            if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, "paint from UpdateRequest");
-            }
-#if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
-            if (deferredResize_) {
-                deferredResize_ = false;
-                updateViewportSize_();
-            }
-#endif
-            paint(true);
-        }
-        return true;
-    case QEvent::ShortcutOverride:
-        event->accept();
-        break;
-    default:
-        break;
-    }
-    return QWindow::event(event);
-}
-
-// These events may not exist on some Qt versions and OSs.
-// Also, see isTabletInUse_() for the workaround.
-//
-bool Window::eventFilter(QObject* obj, QEvent* event) {
-    switch (event->type()) {
-    case QEvent::TabletEnterProximity:
-        timeSinceLastTableEvent_.restart();
-        tabletInProximity_ = true;
-        break;
-    case QEvent::TabletLeaveProximity:
-        timeSinceLastTableEvent_.restart();
-        tabletInProximity_ = false;
-        // XXX should we do this ?
-        // pressedTabletButtons_.clear();
-        break;
-    default:
-        break;
-    }
-    return QWindow::eventFilter(obj, event);
-}
-
-#if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
-
-LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    Window* w = (Window*)::GetWindowLongPtr(hwnd, 19 * sizeof(LONG_PTR));
-    NativeEventResult res = {};
-    MSG mmsg = {};
-    mmsg.message = msg;
-    mmsg.hwnd = hwnd;
-    mmsg.wParam = wParam;
-    mmsg.lParam = lParam;
-    switch (msg) {
-    case WM_SIZE:
-        w->nativeEvent(QByteArray("windows_generic_MSG"), &mmsg, &res);
-        return 0;
-    case WM_SYSCOMMAND:
-        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
-            return 0;
-        break;
-    case WM_DESTROY:
-        ::PostQuitMessage(0);
-        return 0;
-    }
-    return ::DefWindowProcW(hwnd, msg, wParam, lParam);
-}
-
-bool Window::nativeEvent(
-    const QByteArray& eventType,
-    void* message,
-    NativeEventResult* result) {
-
-    if (eventType == "windows_generic_MSG") {
-        *result = 0;
-        MSG* msg = reinterpret_cast<MSG*>(message);
-        switch (msg->message) {
-        case WM_SIZE: {
-
-            // Get new unscaled size
-            Int unscaledWidth = static_cast<Int>(LOWORD(msg->lParam));
-            Int unscaledHeight = static_cast<Int>(HIWORD(msg->lParam));
-
-            // Compute and set new scale ratio and scaled size
-            updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
-
-            if (debugEvents) {
-                VGC_DEBUG(
-                    LogVgcUi,
-                    "WM_SIZE({:04d}, {:04d}) -> ({}, {})",
-                    unscaledWidth,
-                    unscaledHeight,
-                    width_,
-                    height_);
-            }
-
-            updateViewportSize_();
-            paint(true);
-
-            return false;
-        }
-        /*case WM_MOVING: {
-            VGC_DEBUG(LogVgcUi, "WM_MOVING");
-            return false;
-        }
-        case WM_MOVE: {
-            VGC_DEBUG(LogVgcUi, "WM_MOVE");
-            return false;
-        }
-        case WM_WINDOWPOSCHANGING: {
-            VGC_DEBUG(LogVgcUi, "WM_WINDOWPOSCHANGING");
-            return false;
-        }
-        case WM_WINDOWPOSCHANGED: {
-            VGC_DEBUG(LogVgcUi, "WM_WINDOWPOSCHANGED");
-            return false;
-        }
-        case WM_GETMINMAXINFO: {
-            VGC_DEBUG(LogVgcUi, "WM_GETMINMAXINFO");
-            return false;
-        }*/
-        case WM_ENTERSIZEMOVE: {
-            activeSizemove_ = true;
-            return false;
-        }
-        case WM_EXITSIZEMOVE: {
-            activeSizemove_ = false;
-            // If the last render was downgraded for performance during WM_MOVE
-            // we should ask for a redraw now.
-            requestUpdate();
-            return false;
-        }
-        case WM_ERASEBKGND: {
-            static int i = 0;
-            if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, "WM_ERASEBKGND {}", ++i);
-            }
-            //if (activeSizemove_) {
-            //    paint(true);
-            //}
-
-            // test get DC
-
-            //*result = 1;
-            //return true;
-            return false;
-        }
-        case WM_PAINT: {
-            static int i = 0;
-            if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, "WM_PAINT {}", ++i);
-            }
-            if (activeSizemove_) {
-                paint(true);
-            }
-            return false;
-        }
-        default:
-            break;
-        }
-    }
-    //*result = ::DefWindowProcW(msg->hwnd, msg->message, msg->wParam, msg->lParam);
-    //return true;
-    return false;
-}
-#else
-bool Window::nativeEvent(
-    const QByteArray& /*eventType*/,
-    void* /*message*/,
-    NativeEventResult* /*result*/) {
-
-    return false;
-}
-#endif
-
-void Window::exposeEvent(QExposeEvent*) {
-    if (isExposed()) {
-        if (activeSizemove_) {
-            // On Windows, Expose events happen on both WM_PAINT and WM_ERASEBKGND
-            // but in the case of a resize we already redraw properly.
-            requestUpdate();
-        }
-        else {
-            if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
-            }
-            // On macOS, moving a window between monitors with different devicePixelRatios
-            // calls exposeEvent() but doesn't call resize(). So we need to fake a resize
-            // here if the size in px of the window change, even though the "QWindow size"
-            // (in device-independent scale) doesn't change.
-            //
-            Int oldScaledWidth = width_;
-            Int oldScaledHeight = height_;
-            Int unscaledWidth_ = width();
-            Int unscaledHeight_ = height();
-            updateScreenScaleRatioAndWindowSize_(unscaledWidth_, unscaledHeight_);
-            if (oldScaledWidth != width_ || oldScaledHeight != height_) {
-                updateViewportSize_();
-            }
-            paint(true);
-        }
     }
 }
 
@@ -830,6 +459,395 @@ void Window::updateViewportSize_() {
     if (engine_ && swapChain_) {
         engine_->onWindowResize(swapChain_, width_, height_);
     }
+}
+
+void Window::exposeEvent(QExposeEvent*) {
+    if (isExposed()) {
+        if (activeSizemove_) {
+            // On Windows, Expose events happen on both WM_PAINT and WM_ERASEBKGND
+            // but in the case of a resize we already redraw properly.
+            requestUpdate();
+        }
+        else {
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
+            }
+            // On macOS, moving a window between monitors with different devicePixelRatios
+            // calls exposeEvent() but doesn't call resize(). So we need to fake a resize
+            // here if the size in px of the window change, even though the "QWindow size"
+            // (in device-independent scale) doesn't change.
+            //
+            Int oldScaledWidth = width_;
+            Int oldScaledHeight = height_;
+            Int unscaledWidth_ = width();
+            Int unscaledHeight_ = height();
+            updateScreenScaleRatioAndWindowSize_(unscaledWidth_, unscaledHeight_);
+            if (oldScaledWidth != width_ || oldScaledHeight != height_) {
+                updateViewportSize_();
+            }
+            paint(true);
+        }
+    }
+}
+
+void Window::resizeEvent(QResizeEvent* event) {
+
+    // Remember old size
+    [[maybe_unused]] Int oldWidth = width_;
+    [[maybe_unused]] Int oldHeight = height_;
+
+    // Get new unscaled size
+    QSize size = event->size();
+    Int unscaledWidth = size.width();
+    Int unscaledHeight = size.height();
+
+    // Compute and set new scale ratio and scaled size
+    updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
+
+    if (debugEvents) {
+        VGC_DEBUG(
+            LogVgcUi,
+            "resizeEvent({:04d}, {:04d}) -> ({}, {})",
+            unscaledWidth,
+            unscaledHeight,
+            width_,
+            height_);
+    }
+
+#if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+    // Wait until WM_SIZE native event to actually set new window size
+    width_ = oldWidth;
+    height_ = oldHeight;
+#else
+    deferredResize_ = true;
+    requestUpdate();
+#endif
+}
+
+void Window::updateRequestEvent(QEvent*) {
+    if (!activeSizemove_) {
+        if (debugEvents) {
+            VGC_DEBUG(LogVgcUi, "paint from UpdateRequest");
+        }
+#if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+        if (deferredResize_) {
+            deferredResize_ = false;
+            updateViewportSize_();
+        }
+#endif
+        paint(true);
+    }
+}
+
+void Window::paint(bool sync) {
+    if (debugEvents) {
+        VGC_DEBUG(LogVgcUi, "paint({})", sync);
+    }
+
+    if (!isExposed()) {
+        return;
+    }
+
+    if (!engine_) {
+        throw LogicError("engine_ is null.");
+    }
+
+    if (!swapChain_) {
+        throw LogicError("swapChain_ is null.");
+    }
+
+    if (swapChain_->numPendingPresents() > 0 && !sync) {
+        // race condition possible but unlikely here.
+        updateDeferred_ = true;
+        return;
+    }
+    updateDeferred_ = false;
+
+    engine_->beginFrame(swapChain_, graphics::FrameKind::Window);
+
+    engine_->setRasterizerState(rasterizerState_);
+    engine_->setBlendState(blendState_, geometry::Vec4f());
+    engine_->setViewport(0, 0, width_, height_);
+    engine_->clear(clearColor_);
+    engine_->setProgram(graphics::BuiltinProgram::Simple);
+    engine_->setProjectionMatrix(proj_);
+    engine_->setViewMatrix(geometry::Mat4f::identity);
+
+    if (widget_->isGeometryUpdateRequested()) {
+        widget_->updateGeometry();
+    }
+
+    widget_->paint(engine_.get());
+
+#if defined(VGC_QOPENGL_EXPERIMENT)
+    static int frameIdx = 0;
+    auto fmt = format();
+    OutputDebugString(
+        core::format("Window swap behavior: {}\n", (int)fmt.swapBehavior()).c_str());
+    OutputDebugString(
+        core::format("Window swap interval: {}\n", fmt.swapInterval()).c_str());
+    OutputDebugString(core::format("frameIdx: {}\n", frameIdx).c_str());
+    frameIdx++;
+#endif
+
+    // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
+    engine_->endFrame(sync ? 1 : 0);
+}
+
+bool Window::event(QEvent* event) {
+    switch (event->type()) {
+    case QEvent::InputMethodQuery:
+        inputMethodQueryEvent(static_cast<QInputMethodQueryEvent*>(event));
+        return true;
+    case QEvent::InputMethod:
+        inputMethodEvent(static_cast<QInputMethodEvent*>(event));
+        return true;
+    case QEvent::Enter:
+        enterEvent(event);
+        return true;
+    case QEvent::Leave:
+        leaveEvent(event);
+        return true;
+    case QEvent::UpdateRequest:
+        updateRequestEvent(event);
+        return true;
+    case QEvent::ShortcutOverride:
+        event->accept();
+        break;
+    default:
+        break;
+    }
+    return QWindow::event(event);
+}
+
+// These events may not exist on some Qt versions and OSs.
+// Also, see isTabletInUse_() for the workaround.
+//
+bool Window::eventFilter(QObject* obj, QEvent* event) {
+    switch (event->type()) {
+    case QEvent::TabletEnterProximity:
+        tabletEvent(static_cast<QTabletEvent*>(event));
+        break;
+    case QEvent::TabletLeaveProximity:
+        tabletEvent(static_cast<QTabletEvent*>(event));
+        break;
+    default:
+        break;
+    }
+    return QWindow::eventFilter(obj, event);
+}
+
+bool Window::nativeEvent(
+    const QByteArray& eventType,
+    void* message,
+    NativeEventResult* result) {
+
+#if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
+
+    if (eventType == "windows_generic_MSG") {
+        *result = 0;
+        MSG* msg = reinterpret_cast<MSG*>(message);
+        switch (msg->message) {
+        case WM_SIZE: {
+
+            // Get new unscaled size
+            Int unscaledWidth = static_cast<Int>(LOWORD(msg->lParam));
+            Int unscaledHeight = static_cast<Int>(HIWORD(msg->lParam));
+
+            // Compute and set new scale ratio and scaled size
+            updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
+
+            if (debugEvents) {
+                VGC_DEBUG(
+                    LogVgcUi,
+                    "WM_SIZE({:04d}, {:04d}) -> ({}, {})",
+                    unscaledWidth,
+                    unscaledHeight,
+                    width_,
+                    height_);
+            }
+
+            updateViewportSize_();
+            paint(true);
+
+            return false;
+        }
+        /*case WM_MOVING: {
+            VGC_DEBUG(LogVgcUi, "WM_MOVING");
+            return false;
+        }
+        case WM_MOVE: {
+            VGC_DEBUG(LogVgcUi, "WM_MOVE");
+            return false;
+        }
+        case WM_WINDOWPOSCHANGING: {
+            VGC_DEBUG(LogVgcUi, "WM_WINDOWPOSCHANGING");
+            return false;
+        }
+        case WM_WINDOWPOSCHANGED: {
+            VGC_DEBUG(LogVgcUi, "WM_WINDOWPOSCHANGED");
+            return false;
+        }
+        case WM_GETMINMAXINFO: {
+            VGC_DEBUG(LogVgcUi, "WM_GETMINMAXINFO");
+            return false;
+        }*/
+        case WM_ENTERSIZEMOVE: {
+            activeSizemove_ = true;
+            return false;
+        }
+        case WM_EXITSIZEMOVE: {
+            activeSizemove_ = false;
+            // If the last render was downgraded for performance during WM_MOVE
+            // we should ask for a redraw now.
+            requestUpdate();
+            return false;
+        }
+        case WM_ERASEBKGND: {
+            static int i = 0;
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, "WM_ERASEBKGND {}", ++i);
+            }
+            //if (activeSizemove_) {
+            //    paint(true);
+            //}
+
+            // Try using GetDC()?
+            // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
+
+            //*result = 1;
+            //return true;
+            return false;
+        }
+        case WM_PAINT: {
+            static int i = 0;
+            if (debugEvents) {
+                VGC_DEBUG(LogVgcUi, "WM_PAINT {}", ++i);
+            }
+            if (activeSizemove_) {
+                paint(true);
+            }
+            return false;
+        }
+        default:
+            break;
+        }
+    }
+    //*result = ::DefWindowProcW(msg->hwnd, msg->message, msg->wParam, msg->lParam);
+    //return true;
+
+#endif
+
+    return false;
+}
+
+#if defined(VGC_CORE_OS_WINDOWS)
+
+LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    Window* w = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, 19 * sizeof(LONG_PTR)));
+    NativeEventResult res = {};
+    MSG mmsg = {};
+    mmsg.message = msg;
+    mmsg.hwnd = hwnd;
+    mmsg.wParam = wParam;
+    mmsg.lParam = lParam;
+    switch (msg) {
+    case WM_SIZE:
+        w->nativeEvent(QByteArray("windows_generic_MSG"), &mmsg, &res);
+        return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+            return 0;
+        break;
+    case WM_DESTROY:
+        ::PostQuitMessage(0);
+        return 0;
+    }
+    return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+#endif
+
+void Window::initEngine_() {
+
+    graphics::SwapChainCreateInfo swapChainCreatInfo = {};
+
+    graphics::EngineCreateInfo engineCreateInfo = {};
+    graphics::WindowSwapChainFormat& windowSwapChainFormat =
+        engineCreateInfo.windowSwapChainFormat();
+    windowSwapChainFormat.setNumBuffers(2);
+    windowSwapChainFormat.setNumSamples(8);
+    engineCreateInfo.setMultithreadingEnabled(true);
+
+#if defined(VGC_CORE_OS_WINDOWS) && TRUE
+    // RasterSurface looks ok since Qt seems to not automatically create a backing store.
+    setSurfaceType(QWindow::RasterSurface);
+    QWindow::create();
+    engine_ = graphics::D3d11Engine::create(engineCreateInfo);
+
+    HWND hwnd = (HWND)QWindow::winId();
+    hwnd_ = hwnd;
+    swapChainCreatInfo.setWindowNativeHandle(
+        hwnd, graphics::WindowNativeHandleType::Win32);
+
+    //WNDCLASSEXW wc = { sizeof(WNDCLASSEXW), CS_CLASSDC, Window::WndProc, 0L, 20 * sizeof(LONG_PTR), ::GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"Win32 Window", NULL };
+    //::RegisterClassExW(&wc);
+    //HWND hwnd = ::CreateWindowExW(0L, wc.lpszClassName, L"Win32 Window", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    //::SetWindowLongPtrW(hwnd, 19 * sizeof(LONG_PTR), (LONG_PTR)(Window*)this);
+    //scd.setWindowNativeHandle(hwnd, graphics::WindowNativeHandleType::Win32);
+    //::ShowWindow(hwnd, SW_SHOWDEFAULT);
+    //::UpdateWindow(hwnd);
+
+    // get window class info
+
+    WINDOWINFO windowInfo = {};
+    windowInfo.cbSize = sizeof(WINDOWINFO);
+    GetWindowInfo(hwnd, &windowInfo);
+
+    wchar_t className[400];
+    GetClassNameW(hwnd, className, 400);
+
+    HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE);
+    WNDCLASSEXW wndClassExW = {};
+    wndClassExW.cbSize = sizeof(WNDCLASSEXW);
+    GetClassInfoExW(hInstance, className, &wndClassExW);
+
+    std::wstring classNameW(className);
+    std::string classNameA(classNameW.begin(), classNameW.end());
+    //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
+#else
+    engine_ = detail::QglEngine::create(engineCreateInfo);
+    swapChainCreatInfo.setWindowNativeHandle(
+        static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
+#endif
+
+    swapChain_ = engine_->createSwapChain(swapChainCreatInfo);
+
+    {
+        graphics::RasterizerStateCreateInfo createInfo = {};
+        rasterizerState_ = engine_->createRasterizerState(createInfo);
+    }
+
+    {
+        graphics::BlendStateCreateInfo createInfo = {};
+        createInfo.setEnabled(true);
+        createInfo.setEquationRGB(
+            graphics::BlendOp::Add,
+            graphics::BlendFactor::SourceAlpha,
+            graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setEquationAlpha(
+            graphics::BlendOp::Add,
+            graphics::BlendFactor::One,
+            graphics::BlendFactor::OneMinusSourceAlpha);
+        createInfo.setWriteMask(graphics::BlendWriteMaskBit::All);
+        blendState_ = engine_->createBlendState(createInfo);
+    }
+
+    engine_->setPresentCallback([=](UInt64) {
+        if (updateDeferred_) {
+            QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
+        }
+    });
 }
 
 void Window::onActiveChanged_() {
