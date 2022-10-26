@@ -638,9 +638,9 @@ bool Window::eventFilter(QObject* obj, QEvent* event) {
 }
 
 bool Window::nativeEvent(
-    const QByteArray& eventType,
-    void* message,
-    NativeEventResult* result) {
+    [[maybe_unused]] const QByteArray& eventType,
+    [[maybe_unused]] void* message,
+    [[maybe_unused]] NativeEventResult* result) {
 
 #if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
 
