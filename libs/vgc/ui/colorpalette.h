@@ -52,8 +52,8 @@ public:
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
-    bool onKeyPress(QKeyEvent* event) override;
-    bool onKeyRelease(QKeyEvent* event) override;
+    bool onKeyPress(KeyEvent* event) override;
+    bool onKeyRelease(KeyEvent* event) override;
 
     VGC_SIGNAL(pickingStarted)
     VGC_SIGNAL(pickingStopped)

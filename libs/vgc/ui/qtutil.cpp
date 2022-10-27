@@ -23,6 +23,7 @@
 #include <QTabletEvent>
 
 #include <vgc/core/algorithm.h>
+#include <vgc/ui/keyevent.h>
 #include <vgc/ui/mouseevent.h>
 
 namespace vgc::ui {
@@ -88,6 +89,7 @@ ModifierKeys fromQt(const Qt::KeyboardModifiers& modifiers) {
 }
 
 MouseEventPtr fromQt(QMouseEvent* event) {
+
     // Button
     Qt::MouseButton qbutton = event->button();
     MouseButton button = static_cast<MouseButton>(qbutton);
@@ -106,6 +108,7 @@ MouseEventPtr fromQt(QMouseEvent* event) {
 }
 
 MouseEventPtr fromQt(QTabletEvent* event) {
+
     // Button
     Qt::MouseButton qbutton = event->button();
     MouseButton button = static_cast<MouseButton>(qbutton);
@@ -127,6 +130,21 @@ MouseEventPtr fromQt(QTabletEvent* event) {
     double pressure = event->pressure();
 
     return MouseEvent::create(button, fromQtf(p), modifierKeys, 0, pressure);
+}
+
+KeyEventPtr fromQt(QKeyEvent* event) {
+
+    // Key
+    int qkey = event->key();
+    Key key = static_cast<Key>(qkey);
+
+    // Text
+    std::string text = event->text().toStdString();
+
+    // Modidier keys
+    ModifierKeys modifierKeys = fromQt(event->modifiers());
+
+    return KeyEvent::create(key, std::move(text), modifierKeys);
 }
 
 // clang-format off

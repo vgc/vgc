@@ -21,6 +21,7 @@ vgc_add_library(ui
         grid.h
         imagebox.h
         key.h
+        keyevent.h
         label.h
         lineedit.h
         logcategories.h
@@ -60,6 +61,7 @@ vgc_add_library(ui
         grid.cpp
         imagebox.cpp
         key.cpp
+        keyevent.cpp
         label.cpp
         lineedit.cpp
         logcategories.cpp

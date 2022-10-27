@@ -18,8 +18,6 @@
 
 #include <cstdlib> // abs
 
-#include <QKeyEvent>
-
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
 #include <vgc/core/format.h>
@@ -325,9 +323,9 @@ bool ScreenColorPickerButton::onMouseRelease(MouseEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onKeyPress(QKeyEvent* event) {
+bool ScreenColorPickerButton::onKeyPress(KeyEvent* event) {
     if (isPicking_) {
-        if (event->key() == Qt::Key_Escape) {
+        if (event->key() == Key::Escape) {
             pickingCancelled().emit();
             stopPicking_();
             return true;
@@ -341,7 +339,7 @@ bool ScreenColorPickerButton::onKeyPress(QKeyEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onKeyRelease(QKeyEvent* event) {
+bool ScreenColorPickerButton::onKeyRelease(KeyEvent* event) {
     if (isPicking_) {
         return false;
     }
