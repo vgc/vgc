@@ -95,7 +95,6 @@ class Value;
 /// data-Vec2dArray-myCoords="[]"
 ///
 enum class ValueType {
-    // XXX TODO: complete the list of types
     None,
     Invalid,
     String,
