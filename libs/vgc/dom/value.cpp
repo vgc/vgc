@@ -91,7 +91,7 @@ Value parseValue(const std::string& s, ValueType t) {
         case ValueType::Vec2dArray:
             return Value(core::parse<geometry::Vec2dArray>(s));
         case ValueType::End_:
-            return Value();
+            return Value::invalid();
         }
     }
     catch (const core::ParseError& e) {
