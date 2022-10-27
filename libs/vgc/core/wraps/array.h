@@ -84,17 +84,17 @@ void defineArrayCommonMethods(py::class_<This>& c) {
     using rvp = py::return_value_policy;
 
     c.def(py::init<>());
-    c.def(py::init([](int size) { return This(size, vgc::core::zero<T>()); }));
-    c.def(py::init([](int size, const T& value) { return This(size, value); }));
+    c.def(py::init<Int>());
+    c.def(py::init<Int, const T&>());
     c.def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }));
     c.def(py::init<const This&>());
 
-    c.def("__getitem__", [](const This& a, int i) {
+    c.def("__getitem__", [](const This& a, Int i) {
         vgc::Int j = wrapArrayIndex(a, i);
         return a.getUnchecked(j);
     });
 
-    c.def("__setitem__", [](This& a, int i, const T& value) {
+    c.def("__setitem__", [](This& a, Int i, const T& value) {
         vgc::Int j = wrapArrayIndex(a, i);
         a.getUnchecked(j) = value;
     });
@@ -111,8 +111,17 @@ void defineArrayCommonMethods(py::class_<This>& c) {
 
     c.def("__contains__", [](This& a, const T& value) { return a.contains(value); });
 
-    c.def("append", [](This& a, const T& value) { a.append(value); });
-    c.def("pop", [](This& a) { return a.pop(); });
+    c.def("index", static_cast<Int (This::*)(const T&) const>(&This::index));
+
+    c.def("prepend", py::overload_cast<const T&>(&This::prepend));
+    c.def("append", py::overload_cast<const T&>(&This::append));
+
+    c.def("insert", [](This& a, vgc::Int i, const T& x) {
+        vgc::Int j = wrapArrayIndex(a, i);
+        return a.insert(j, x);
+    });
+
+    c.def("pop", py::overload_cast<>(&This::pop));
     c.def("pop", [](This& a, vgc::Int i) {
         vgc::Int j = wrapArrayIndex(a, i);
         return a.pop(j);
@@ -120,7 +129,14 @@ void defineArrayCommonMethods(py::class_<This>& c) {
 
     c.def(py::self == py::self);
     c.def(py::self != py::self);
+    c.def(py::self < py::self);
+    c.def(py::self <= py::self);
+    c.def(py::self > py::self);
+    c.def(py::self >= py::self);
 
+    c.def("__str__", [](const This& a) { return toString(a); });
+
+    // XXX this should output a working expression.
     c.def("__repr__", [](const This& a) { return toString(a); });
 }
 
