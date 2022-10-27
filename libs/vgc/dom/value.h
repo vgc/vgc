@@ -111,23 +111,23 @@ enum class ValueType {
 VGC_DOM_API
 VGC_DECLARE_ENUM(ValueType)
 
-struct NoneValue {
+namespace detail {
+
+struct ValueMonostate {
+    // clang-format off
     constexpr bool operator==(const NoneValue&) const { return true; }
     constexpr bool operator!=(const NoneValue&) const { return false; }
-    constexpr bool operator<(const NoneValue&) const { return false; }
-    constexpr bool operator>(const NoneValue&) const { return false; }
+    constexpr bool operator<( const NoneValue&) const { return false; }
+    constexpr bool operator>( const NoneValue&) const { return false; }
     constexpr bool operator<=(const NoneValue&) const { return true; }
     constexpr bool operator>=(const NoneValue&) const { return true; }
+    // clang-format on
 };
 
-struct InvalidValue {
-    constexpr bool operator==(const InvalidValue&) const { return true; }
-    constexpr bool operator!=(const InvalidValue&) const { return false; }
-    constexpr bool operator<(const InvalidValue&) const { return false; }
-    constexpr bool operator>(const InvalidValue&) const { return false; }
-    constexpr bool operator<=(const InvalidValue&) const { return true; }
-    constexpr bool operator>=(const InvalidValue&) const { return true; }
-};
+} // namespace detail
+
+struct NoneValue : detail::ValueMonostate {};
+struct InvalidValue : detail::ValueMonostate {};
 
 namespace detail {
 
