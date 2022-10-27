@@ -139,7 +139,7 @@ void defineArrayCommonMethods(py::class_<This>& c) {
     c.def("__repr__", [](const This& a) {
         py::object pyStr = py::cast(toString(a));
         std::string pyStrRepr = py::cast<std::string>(pyStr.attr("__repr__")());
-        return vgc::core::format("vgc.dom.Value({})", pyStrRepr);
+        return vgc::core::format("vgc.core.Array({})", pyStrRepr);
     });
 }
 
