@@ -19,7 +19,6 @@
 
 #include <memory>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -138,7 +137,7 @@ template<typename T>
 struct isCowDataPtr_<CowDataPtr<T>> : std::true_type {};
 
 template<typename T>
-constexpr bool isCowDataPtr = isCowDataPtr_<T>::value;
+inline constexpr bool isCowDataPtr = isCowDataPtr_<T>::value;
 
 template<typename T>
 CowDataPtr<std::remove_reference_t<T>> makeCowDataPtr(T&& x) {
@@ -300,43 +299,32 @@ public:
     ///
     void clear();
 
-    /// Returns the item held by the container in this `Value` at the given `index`.
-    /// This returns an empty value if `type() != ValueType::Array..` or index is out
-    /// of container wrap range [-length, length).
+    /// Returns the item held by the container in this `Value` at the given `index`
+    /// wrapped. This returns an empty value if `type() != ValueType::Array..`.
     ///
-    // XXX what to do when index is out of range ?
     Value getItemWrapped(Int index) {
-        return std::visit(
-            [&](auto&& arg) -> Value {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (detail::isCowDataPtr<T>) {
-                    const T& a = std::get<T>(var_);
-                    const Int n = a->length();
-                    if (index >= -n && index < n) {
-                        return Value(a->getWrapped(index));
-                    }
-                }
-                return Value();
-            },
-            var_);
+        return visit([&](auto&& arg) -> Value {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (core::isArray<T>) {
+                return Value(arg.getWrapped(index));
+            }
+            return Value();
+        });
     }
 
     /// Returns the length of the held array.
     /// Returns 0 if this value is not an array.
     ///
     Int arrayLength() {
-        return std::visit(
-            [&](auto&& arg) -> Int {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (detail::isCowDataPtr<T>) {
-                    const T& a = std::get<T>(var_);
-                    return a->length();
-                }
-                else {
-                    return 0;
-                }
-            },
-            var_);
+        return visit([&](auto&& arg) -> Int {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (core::isArray<T>) {
+                return arg.length();
+            }
+            else {
+                return 0;
+            }
+        });
     }
 
     /// Returns the string held by this `Value`.
