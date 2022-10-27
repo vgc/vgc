@@ -47,21 +47,46 @@ struct LambdaSfinae {
     }
 };
 
+// Note: we write our own implementation of `std::void_t` because it doesn't
+// properly SFINAE on some versions of Clang and produces redefinition errors.
+//
+template<typename... Ts>
+struct MakeVoid_ {
+    using type = void;
+};
+
+template<typename... Ts>
+struct MakeInt_ {
+    using type = int;
+};
+
 } // namespace detail
+
+/// Same as `std::void_t` without the bugs in some versions of Clang.
+///
+template<typename... Ts>
+using MakeVoid = typename detail::MakeVoid_<Ts...>::type;
+
+/// Similar as `std::void_t` but resolves to the type `int`.
+///
+template<typename... Ts>
+using MakeInt = typename detail::MakeInt_<Ts...>::type;
 
 /// Evaluates at compile-time whether `&cls::id` is a valid expression.
 ///
 #define VGC_CONSTEXPR_IS_ID_ADDRESSABLE_IN_CLASS(cls, id)                                \
-    ::vgc::core::detail::LambdaSfinae<cls*>::check(                                    \
-        [](auto* v) -> std::void_t<decltype(&std::remove_pointer_t<decltype(v)>::id)> {  \
-    })
+    ::vgc::core::detail::LambdaSfinae<cls*>::check(                                      \
+        [](auto* v) ->                                                                   \
+            ::vgc::core::MakeVoid<decltype(&std::remove_pointer_t<decltype(v)>::id)> {   \
+        })
 
 /// Evaluates at compile-time whether `cls::tname` is a valid type.
 ///
 #define VGC_CONSTEXPR_IS_TYPE_DECLARED_IN_CLASS(cls, tname)                              \
-    ::vgc::core::detail::LambdaSfinae<cls*>::check(                                    \
-        [](auto* v) -> std::void_t<typename std::remove_pointer_t<decltype(v)>::tname> { \
-    })
+    ::vgc::core::detail::LambdaSfinae<cls*>::check(                                      \
+        [](auto* v) ->                                                                   \
+            ::vgc::core::MakeVoid<typename std::remove_pointer_t<decltype(v)>::tname> {  \
+        })
 
 namespace detail {
 
@@ -196,17 +221,16 @@ using Requires = std::enable_if_t<B>;
 ///
 #define VGC_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int> = 0
 
-namespace detail {
-
-// Note: we write our own implementation of std::void_t because it doesn't
-// properly SFINAE on some versions of Clang and produces redefinition errors.
-//
-template<typename... Ts>
-struct MakeVoid {
-    using type = void;
-};
-
-} // namespace detail
+  /// Defines SFINAE-based requirements for function template overloads.
+  ///
+  /// ```cpp
+  /// template<typename T, VGC_REQUIRES_VALID(T::iterator, T::value_type)>
+  /// void foo(T x) {
+  ///     // function overload only defined for types with iterators
+  /// }
+  /// ```
+  ///
+#define VGC_REQUIRES_VALID(...) ::vgc::core::MakeInt<__VA_ARGS__> = 0
 
 /// If any of the given template arguments are ill-formed, then `RequiresValid<...>`
 /// is also ill-formed. Otherwise, `RequiresValid<...>` is an alias for `void`.
@@ -217,7 +241,7 @@ struct MakeVoid {
 /// `RequiresValid<...>` is equivalent to `std::void_t<...>`.
 ///
 template<typename... Ts>
-using RequiresValid = typename detail::MakeVoid<Ts...>::type;
+using RequiresValid = MakeVoid<Ts...>;
 
 namespace detail {
 

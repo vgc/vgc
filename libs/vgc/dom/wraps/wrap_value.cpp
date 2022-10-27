@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <pybind11/operators.h>
 #include <vgc/core/wraps/common.h>
 
 #include <vgc/core/format.h>
@@ -22,6 +23,14 @@
 using This = vgc::dom::Value;
 
 using vgc::dom::ValueType;
+
+template<typename T>
+void defineValueComparisonMethods(py::class_<This>& c) {
+    c.def(py::self == T());
+    c.def(T() == py::self);
+    c.def(py::self != T());
+    c.def(T() != py::self);
+}
 
 void wrap_value(py::module& m) {
     py::enum_<ValueType>(m, "ValueType")
@@ -37,8 +46,8 @@ void wrap_value(py::module& m) {
         .value("Vec2d", ValueType::Vec2d)
         .value("Vec2dArray", ValueType::Vec2dArray);
 
-    py::class_<This>(m, "Value")
-        .def(py::init<>())
+    py::class_<This> c(m, "Value");
+    c.def(py::init<>())
         .def(py::init<std::string>())
         .def(py::init<vgc::Int>())
         .def(py::init<vgc::core::Array<vgc::Int>>())
@@ -80,6 +89,13 @@ void wrap_value(py::module& m) {
         .def("getVec2dArray", &This::getVec2dArray)
         .def("set", py::overload_cast<vgc::geometry::Vec2dArray>(&This::set))
 
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def(py::self < py::self)
+        //.def(py::self > py::self)
+        //.def(py::self <= py::self)
+        //.def(py::self >= py::self)
+
         .def(
             "__str__",
             [](const This& self) -> std::string {
@@ -108,4 +124,15 @@ void wrap_value(py::module& m) {
             })
 
         ;
+
+    defineValueComparisonMethods<std::string>(c);
+    defineValueComparisonMethods<vgc::core::StringId>(c);
+    defineValueComparisonMethods<vgc::Int>(c);
+    defineValueComparisonMethods<vgc::core::IntArray>(c);
+    defineValueComparisonMethods<double>(c);
+    defineValueComparisonMethods<vgc::core::DoubleArray>(c);
+    defineValueComparisonMethods<vgc::core::Color>(c);
+    defineValueComparisonMethods<vgc::core::ColorArray>(c);
+    defineValueComparisonMethods<vgc::geometry::Vec2d>(c);
+    defineValueComparisonMethods<vgc::geometry::Vec2dArray>(c);
 }

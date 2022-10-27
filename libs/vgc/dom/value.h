@@ -111,8 +111,23 @@ enum class ValueType {
 VGC_DOM_API
 VGC_DECLARE_ENUM(ValueType)
 
-struct NoneValue {};
-struct InvalidValue {};
+struct NoneValue {
+    constexpr bool operator==(const NoneValue&) const { return true; }
+    constexpr bool operator!=(const NoneValue&) const { return false; }
+    constexpr bool operator<(const NoneValue&) const { return false; }
+    constexpr bool operator>(const NoneValue&) const { return false; }
+    constexpr bool operator<=(const NoneValue&) const { return true; }
+    constexpr bool operator>=(const NoneValue&) const { return true; }
+};
+
+struct InvalidValue {
+    constexpr bool operator==(const InvalidValue&) const { return true; }
+    constexpr bool operator!=(const InvalidValue&) const { return false; }
+    constexpr bool operator<(const InvalidValue&) const { return false; }
+    constexpr bool operator>(const InvalidValue&) const { return false; }
+    constexpr bool operator<=(const InvalidValue&) const { return true; }
+    constexpr bool operator>=(const InvalidValue&) const { return true; }
+};
 
 namespace detail {
 
@@ -123,12 +138,25 @@ static_assert(std::is_copy_constructible_v<CowDataPtr<char>>);
 static_assert(std::is_copy_assignable_v<CowDataPtr<char>>);
 
 template<typename T>
-struct CowDataPtrTraits {};
+struct CowDataPtrTraits;
 
 template<typename T>
 struct CowDataPtrTraits<CowDataPtr<T>> {
     using elementType = T;
 };
+
+template<typename T>
+struct RemoveCowDataPtr_ {
+    using type = T;
+};
+
+template<typename T>
+struct RemoveCowDataPtr_<CowDataPtr<T>> {
+    using type = T;
+};
+
+template<typename T>
+using RemoveCowDataPtr = typename RemoveCowDataPtr_<T>::type;
 
 template<typename T>
 struct isCowDataPtr_ : std::false_type {};
@@ -148,12 +176,22 @@ template<typename T>
 using CowArrayPtr = CowDataPtr<core::Array<T>>;
 
 template<ValueType valueType>
-struct ValueTypeType_ {};
+struct ValueTypeTraits_ {};
 
-#define VGC_DOM_VALUETYPE_TYPE_(enumerator, Type)                                        \
+template<typename T>
+struct ValueTypeTraitsFromPublicType_ {};
+
+#define VGC_DOM_VALUETYPE_TYPE_(enumerator, InternalType_)                               \
     template<>                                                                           \
-    struct ValueTypeType_<ValueType::enumerator> {                                       \
-        using type = Type;                                                               \
+    struct ValueTypeTraits_<ValueType::enumerator> {                                     \
+        using type = RemoveCowDataPtr<InternalType_>;                                    \
+        using InternalType = InternalType_;                                              \
+    };                                                                                   \
+    template<>                                                                           \
+    struct ValueTypeTraitsFromPublicType_<RemoveCowDataPtr<InternalType_>> {             \
+        static constexpr ValueType value = ValueType::enumerator;                        \
+        static constexpr size_t index = core::toUnderlying(value);                       \
+        using InternalType = InternalType_;                                              \
     };
 // clang-format off
 VGC_DOM_VALUETYPE_TYPE_(None,          NoneValue)
@@ -172,21 +210,24 @@ VGC_DOM_VALUETYPE_TYPE_(Vec2dArray,    CowArrayPtr<geometry::Vec2d>)
 #undef VGC_DOM_VALUETYPE_TYPE_
 
 template<typename Seq>
-struct ValueVariantType_;
+struct ValueVariant_;
 
 template<size_t... Is>
-struct ValueVariantType_<std::index_sequence<Is...>> {
-    using type =
-        std::variant<typename ValueTypeType_<static_cast<ValueType>(Is)>::type...>;
+struct ValueVariant_<std::index_sequence<Is...>> {
+    using type = std::variant<
+        typename ValueTypeTraits_<static_cast<ValueType>(Is)>::InternalType...>;
 };
 
-using ValueVariantType =
-    typename ValueVariantType_<std::make_index_sequence<VGC_ENUM_COUNT(ValueType)>>::type;
+using ValueVariant =
+    typename ValueVariant_<std::make_index_sequence<VGC_ENUM_COUNT(ValueType)>>::type;
 
-static_assert(std::is_copy_constructible_v<ValueVariantType>);
-static_assert(std::is_copy_assignable_v<ValueVariantType>);
-static_assert(std::is_move_constructible_v<ValueVariantType>);
-static_assert(std::is_move_assignable_v<ValueVariantType>);
+static_assert(std::is_copy_constructible_v<ValueVariant>);
+static_assert(std::is_copy_assignable_v<ValueVariant>);
+static_assert(std::is_move_constructible_v<ValueVariant>);
+static_assert(std::is_move_assignable_v<ValueVariant>);
+
+template<typename T>
+using ValueInternalType = typename ValueTypeTraitsFromPublicType_<T>::InternalType;
 
 } // namespace detail
 
@@ -476,12 +517,71 @@ public:
             var_);
     }
 
+    constexpr bool operator==(const Value& other) const noexcept {
+        return var_ == other.var_;
+    }
+
+    constexpr bool operator!=(const Value& other) const noexcept {
+        return var_ != other.var_;
+    }
+
+    constexpr bool operator<(const Value& other) const noexcept {
+        return var_ < other.var_;
+    }
+
+    //constexpr bool operator>(const Value& other) const noexcept {
+    //    return var_ > other.var_;
+    //}
+
+    //constexpr bool operator<=(const Value& other) const noexcept {
+    //    return var_ <= other.var_;
+    //}
+
+    //constexpr bool operator>=(const Value& other) const noexcept {
+    //    return var_ >= other.var_;
+    //}
+
+    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    friend constexpr bool operator==(const Value& a, const T& b) noexcept {
+        return a.has<T>() && a.getInternal_<detail::ValueInternalType<T>>() == b;
+    }
+
+    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    friend constexpr bool operator==(const T& a, const Value& b) noexcept {
+        return b.has<T>() && a == b.getInternal_<detail::ValueInternalType<T>>();
+    }
+
+    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    friend constexpr bool operator!=(const Value& a, const T& b) noexcept {
+        return !(a == b);
+    }
+
+    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    friend constexpr bool operator!=(const T& a, const Value& b) noexcept {
+        return !(a == b);
+    }
+
+    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    constexpr bool has() const {
+        return var_.index() == detail::ValueTypeTraitsFromPublicType_<T>::index;
+    }
+
 private:
     explicit constexpr Value(InvalidValue x)
         : var_(x) {
     }
 
-    detail::ValueVariantType var_;
+    template<typename T>
+    const detail::RemoveCowDataPtr<T>& getInternal_() const {
+        if constexpr (detail::isCowDataPtr<T>) {
+            return *std::get<T>(var_);
+        }
+        else {
+            return std::get<T>(var_);
+        }
+    }
+
+    detail::ValueVariant var_;
 };
 
 /// Writes the given Value to the output stream.
