@@ -2929,8 +2929,7 @@ using DoubleArray = Array<double>;
 template<typename T>
 struct fmt::formatter<vgc::core::Array<T>> : fmt::formatter<T> {
     template<typename FormatContext>
-    auto format(const vgc::core::Array<T>& x, FormatContext& ctx)
-        -> decltype(ctx.out()) {
+    auto format(const vgc::core::Array<T>& x, FormatContext& ctx) -> decltype(ctx.out()) {
 
         auto out = ctx.out();
         if (x.isEmpty()) {
