@@ -1319,6 +1319,14 @@ bool Widget::keyRelease(KeyEvent* event) {
     return handled;
 }
 
+void Widget::preKeyPress(KeyEvent*) {
+    // no-op
+}
+
+void Widget::preKeyRelease(KeyEvent*) {
+    // no-op
+}
+
 bool Widget::onKeyPress(KeyEvent*) {
     return false;
 }
@@ -1329,21 +1337,24 @@ bool Widget::onKeyRelease(KeyEvent*) {
 
 void Widget::keyEvent_(KeyEvent* event, bool isKeyPress) {
 
-    // TODO handle stopPropagation.
-
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
-    //preKeyPress(event) or preKeyRelease(event);
-    //if (!isAlive()) {
-    //    // Widget got killed. Event can be considered handled.
-    //    event->handled_ = true;
-    //    return;
-    //}
+    if (isKeyPress) {
+        preKeyPress(event);
+    }
+    else {
+        preKeyRelease(event);
+    }
+    if (!isAlive()) {
+        // Widget got killed. Event can be considered handled.
+        event->handled_ = true;
+        return;
+    }
 
     // Handle stop propagation.
-    //if (event->isStopPropagationRequested()) {
-    //    return;
-    //}
+    if (event->isStopPropagationRequested()) {
+        return;
+    }
 
     // Get focused child
     Widget* fChild = focusedChild();
@@ -1357,22 +1368,21 @@ void Widget::keyEvent_(KeyEvent* event, bool isKeyPress) {
         // Check for deaths.
         if (!isAlive() || !fChildPtr.isAlive()) {
             // Widget got killed. Event can be considered handled.
-            //event->handled_ = true;
+            event->handled_ = true;
             return;
         }
         // Handle stop propagation.
-        //if (event->isStopPropagationRequested()) {
-        //    return;
-        //}
+        if (event->isStopPropagationRequested()) {
+            return;
+        }
     }
 
-    bool eventHandled = false; // = event->handled_;
-    if (!eventHandled || handledEventPolicy_ == HandledEventPolicy::Receive) {
+    if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
         // User-defined bubble phase handler.
-        eventHandled |= isKeyPress ? onKeyPress(event) : onKeyRelease(event);
+        event->handled_ |= isKeyPress ? onKeyPress(event) : onKeyRelease(event);
         if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
-            //event->handled_ = true;
+            event->handled_ = true;
             return;
         }
     }

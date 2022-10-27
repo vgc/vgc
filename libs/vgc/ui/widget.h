@@ -1117,7 +1117,15 @@ public:
     ///
     bool keyRelease(KeyEvent* event);
 
-    // TODO: preKeyPress, preKeyRelease (see preMousePress)
+    /// Override this function if you wish to handle KeyPress events during the
+    /// capture phase (from root to leaf).
+    ///
+    virtual void preKeyPress(KeyEvent* event);
+
+    /// Override this function if you wish to handle KeyRelease events during the
+    /// capture phase (from root to leaf).
+    ///
+    virtual void preKeyRelease(KeyEvent* event);
 
     /// Override this function if you wish to handle key press events. You must
     /// return true if the event was handled, false otherwise.
