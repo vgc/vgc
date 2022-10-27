@@ -237,7 +237,7 @@ public:
 
     /// Constructs a `Value` holding an array of `Int`.
     ///
-    Value(core::Array<Int> intArray)
+    Value(core::IntArray intArray)
         : var_(detail::makeCowDataPtr(std::move(intArray))) {
     }
 
@@ -249,7 +249,7 @@ public:
 
     /// Constructs a `Value` holding an array of `double`.
     ///
-    Value(core::Array<double> doubleArray)
+    Value(core::DoubleArray doubleArray)
         : var_(detail::makeCowDataPtr(std::move(doubleArray))) {
     }
 
@@ -261,7 +261,7 @@ public:
 
     /// Constructs a `Value` holding an array of `Color`.
     ///
-    Value(core::Array<core::Color> colorArray)
+    Value(core::ColorArray colorArray)
         : var_(detail::makeCowDataPtr(std::move(colorArray))) {
     }
 
@@ -273,7 +273,7 @@ public:
 
     /// Constructs a `Value` holding an array of `Vec2d`.
     ///
-    Value(core::Array<geometry::Vec2d> vec2dArray)
+    Value(geometry::Vec2dArray vec2dArray)
         : var_(detail::makeCowDataPtr(std::move(vec2dArray))) {
     }
 
@@ -368,16 +368,16 @@ public:
         var_ = value;
     }
 
-    /// Returns the `core::Array<Int>` held by this `Value`.
+    /// Returns the `core::IntArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::IntArray`.
     ///
-    const core::Array<Int>& getIntArray() const {
+    const core::IntArray& getIntArray() const {
         return *std::get<detail::CowArrayPtr<Int>>(var_);
     }
 
     /// Sets this `Value` to the given `intArray`.
     ///
-    void set(core::Array<Int> intArray) {
+    void set(core::IntArray intArray) {
         var_ = detail::makeCowDataPtr(std::move(intArray));
     }
 
@@ -394,16 +394,16 @@ public:
         var_ = value;
     }
 
-    /// Returns the `core::Array<double>` held by this `Value`.
+    /// Returns the `core::DoubleArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::DoubleArray`.
     ///
-    const core::Array<double>& getDoubleArray() const {
+    const core::DoubleArray& getDoubleArray() const {
         return *std::get<detail::CowArrayPtr<double>>(var_);
     }
 
     /// Sets this `Value` to the given `doubleArray`.
     ///
-    void set(core::Array<double> doubleArray) {
+    void set(core::DoubleArray doubleArray) {
         var_ = detail::makeCowDataPtr(std::move(doubleArray));
     }
 
@@ -420,16 +420,16 @@ public:
         var_ = color;
     }
 
-    /// Returns the `core::Array<core::Color>` held by this `Value`.
+    /// Returns the `core::ColorArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::ColorArray`.
     ///
-    const core::Array<core::Color>& getColorArray() const {
+    const core::ColorArray& getColorArray() const {
         return *std::get<detail::CowArrayPtr<core::Color>>(var_);
     }
 
     /// Sets this `Value` to the given `colorArray`.
     ///
-    void set(core::Array<core::Color> colorArray) {
+    void set(core::ColorArray colorArray) {
         var_ = detail::makeCowDataPtr(std::move(colorArray));
     }
 
@@ -446,16 +446,16 @@ public:
         var_ = vec2d;
     }
 
-    /// Returns the `core::Array<geometry::Vec2d>` held by this `Value`.
+    /// Returns the `geometry::Vec2dArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::Vec2dArray`.
     ///
-    const core::Array<geometry::Vec2d>& getVec2dArray() const {
+    const geometry::Vec2dArray& getVec2dArray() const {
         return *std::get<detail::CowArrayPtr<geometry::Vec2d>>(var_);
     }
 
     /// Sets this `Value` to the given `vec2dArray`.
     ///
-    void set(core::Array<geometry::Vec2d> vec2dArray) {
+    void set(geometry::Vec2dArray vec2dArray) {
         var_ = detail::makeCowDataPtr(std::move(vec2dArray));
     }
 
