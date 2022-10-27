@@ -39,7 +39,7 @@ struct LambdaSfinae {
         return false;
     }
 
-    template<class Lambda>
+    template<typename Lambda>
     static constexpr auto check(Lambda lambda)
         -> decltype(lambda(std::declval<ArgType>()), bool{}) {
 
@@ -285,7 +285,7 @@ inline constexpr bool isAmong = IsAmong<T, Us...>::value;
 
 namespace detail {
 
-template<class F, class ArgsTuple, std::size_t... Is>
+template<typename F, typename ArgsTuple, std::size_t... Is>
 constexpr decltype(auto) applyPartial_(F&& f, ArgsTuple&& t, std::index_sequence<Is...>) {
     return std::invoke(
         std::forward<F>(f),

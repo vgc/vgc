@@ -459,7 +459,7 @@ public:
         var_ = detail::makeCowDataPtr(std::move(vec2dArray));
     }
 
-    template<class Visitor>
+    template<typename Visitor>
     constexpr decltype(std::invoke(std::declval<Visitor>(), std::declval<NoneValue>()))
     visit(Visitor&& visitor) const {
         return std::visit(

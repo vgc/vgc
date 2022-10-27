@@ -198,12 +198,12 @@ public:
 // - FreeType: `typedef signed long FT_Pos;`
 // - HarfBuzz: `typedef int32_t hb_position_t;`
 //
-template<class T>
+template<typename T>
 geometry::Vec2d f266ToVec2d(T x, T y) {
     return geometry::Vec2d(x / 64.0, y / 64.0);
 }
 
-template<class T>
+template<typename T>
 geometry::Vec2f f266ToVec2f(T x, T y) {
     return geometry::Vec2f(x / 64.0f, y / 64.0f);
 }

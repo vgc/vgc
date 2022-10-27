@@ -140,7 +140,7 @@ struct CubicSegment {
     }
 };
 
-template<class SegmentType>
+template<typename SegmentType>
 void sampleSegment(
     Curves2d& res,
     SampleBuffer& buffer,
