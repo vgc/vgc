@@ -546,8 +546,7 @@ struct fmt::formatter<vgc::dom::Value> {
         return it;
     }
     template<typename FormatContext>
-    auto format(const vgc::dom::Value& v, FormatContext& ctx)
-        -> decltype(ctx.out()) {
+    auto format(const vgc::dom::Value& v, FormatContext& ctx) -> decltype(ctx.out()) {
 
         return v.visit([&](auto&& arg) {
             return fmt::format_to(ctx.out(), "{}", std::forward<decltype(arg)>(arg));
