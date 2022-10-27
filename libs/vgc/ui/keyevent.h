@@ -63,16 +63,14 @@ public:
     }
 
     /// Returns the text associated with this key event. This could for example
-    /// be composed characters via dead keys or other comples input methods
+    /// be composed characters via dead keys or other complex input methods
     /// events.
     ///
     const std::string& text() const {
         return text_;
     }
 
-    /// Sets the position of the mouse cursor, in local coordinates. This
-    /// method should typically only be used when implementing mouse event
-    /// propagation.
+    /// Sets the text associated with this key event.
     ///
     void setText(std::string text) {
         text_ = text;
