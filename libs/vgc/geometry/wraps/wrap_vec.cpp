@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/core/format.h>
 #include <vgc/core/wraps/array.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
@@ -111,7 +112,9 @@ void wrap_2darray(py::module& m, const std::string& valueTypeName) {
     using U = typename T::ScalarType;    // Example: double
     std::string thisTypeName = valueTypeName + "Array";
     py::class_<This> c(m, thisTypeName.c_str());
-    vgc::core::wraps::defineArrayCommonMethods(c);
+    std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
+    vgc::core::wraps::defineArrayCommonMethods(
+        c, vgc::core::format("{}.{}", moduleFullName, thisTypeName));
     c.def(py::init([valueTypeName](py::sequence s) {
         This res;
         for (auto it : s) {

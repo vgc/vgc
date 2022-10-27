@@ -65,6 +65,12 @@ def testListInitializingConstructor_(self, Array, values):
     a = Array(values)
     assertArrayEqualToList_(self, a, values)
 
+def testPrepend_(self, Array, values):
+    a = Array()
+    for v in values[::-1]:
+        a.prepend(v)
+    assertArrayEqualToList_(self, a, values)
+
 def testAppend_(self, Array, values):
     a = Array()
     for v in values:
@@ -154,11 +160,28 @@ class Test1DArrays(unittest.TestCase):
         for Array, values in zip(Arrays, valuess):
            testListInitializingConstructor_(self, Array, values)
 
+    def testIndex(self):
+        a = DoubleArray("[3.5, 4, 42.5, 1]")
+        self.assertEqual(a.index(42.5), 2)
+
+    def testPrepend(self):
+        Arrays = get1DArrayClasses()
+        valuess = get1DValuess()
+        for Array, values in zip(Arrays, valuess):
+           testPrepend_(self, Array, values)
+
     def testAppend(self):
         Arrays = get1DArrayClasses()
         valuess = get1DValuess()
         for Array, values in zip(Arrays, valuess):
            testAppend_(self, Array, values)
+
+    def testInsert(self):
+        a = DoubleArray("[3.5, 4, 42.5, 1]")
+        a.insert(2, 42)
+        a.insert(-4, 1)
+        b = DoubleArray("[3.5, 1, 4, 42, 42.5, 1]")
+        self.assertEqual(a, b)
 
     def testPop(self):
         Arrays = get1DArrayClasses()
@@ -180,6 +203,9 @@ class Test1DArrays(unittest.TestCase):
         a = DoubleArray("  [ \n]   ")
         self.assertEqual(a, DoubleArray())
 
+    def testFormat(self):
+        a = DoubleArray("[3.5, 42, 1]")
+        self.assertEqual(str(a), "[3.5, 42, 1]")
 
 if __name__ == '__main__':
     unittest.main()
