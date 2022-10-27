@@ -85,7 +85,7 @@ Value parseValue(const std::string& s, ValueType t) {
         case ValueType::Color:
             return Value(core::parse<core::Color>(s));
         case ValueType::ColorArray:
-            return Value(core::parse<core::Array<core::Color>>(s));
+            return Value(core::parse<core::ColorArray>(s));
         case ValueType::Vec2d:
             return Value(core::parse<geometry::Vec2d>(s));
         case ValueType::Vec2dArray:
