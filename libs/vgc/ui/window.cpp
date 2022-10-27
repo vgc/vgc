@@ -520,6 +520,7 @@ void Window::resizeEvent(QResizeEvent* event) {
     height_ = oldHeight;
 #else
     deferredResize_ = true;
+    updateViewportSize_();
     requestUpdate();
 #endif
 }
