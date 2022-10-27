@@ -308,7 +308,9 @@ public:
             if constexpr (core::isArray<T>) {
                 return Value(arg.getWrapped(index));
             }
-            return Value();
+            else {
+                return Value();
+            }
         });
     }
 
