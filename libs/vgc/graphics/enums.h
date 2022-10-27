@@ -20,10 +20,8 @@
 #include <type_traits>
 
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/enum.h>
 #include <vgc/core/flags.h>
-
-#define VGC_ENUM_ENDMAX End_, Max_ = End_ - 1
-#define VGC_ENUM_COUNT(enum_) static_cast<std::underlying_type_t<enum_>>(enum_::End_)
 
 namespace vgc::graphics {
 

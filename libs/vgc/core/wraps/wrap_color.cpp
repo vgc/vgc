@@ -15,8 +15,10 @@
 // limitations under the License.
 
 #include <pybind11/operators.h>
-#include <vgc/core/color.h>
+#include <vgc/core/wraps/array.h>
 #include <vgc/core/wraps/common.h>
+
+#include <vgc/core/color.h>
 
 namespace py = pybind11;
 using This = vgc::core::Color;
@@ -72,4 +74,6 @@ void wrap_color(py::module& m) {
         .def("__repr__", [](const Color& c) { return vgc::core::toString(c); })
 
         ;
+
+    vgc::core::wraps::wrap_1darray<vgc::core::ColorArray>(m, "Color");
 }

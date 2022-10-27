@@ -124,6 +124,21 @@ void defineArrayCommonMethods(py::class_<This>& c) {
     c.def("__repr__", [](const This& a) { return toString(a); });
 }
 
+template<typename This>
+void wrap_1darray(py::module& m, const std::string& valueTypeName) {
+    using T = typename This::value_type;
+    std::string thisTypeName = valueTypeName + "Array";
+    py::class_<This> c(m, thisTypeName.c_str());
+    vgc::core::wraps::defineArrayCommonMethods(c);
+    c.def(py::init([](py::sequence s) {
+        This res;
+        for (auto x : s) {
+            res.append(x.cast<T>());
+        }
+        return res;
+    }));
+}
+
 } // namespace vgc::core::wraps
 
 #endif // VGC_CORE_WRAPS_ARRAY_H

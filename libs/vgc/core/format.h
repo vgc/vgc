@@ -175,6 +175,23 @@ formatTo(OutputIt out, fmt::format_string<T...> fmtString, T&&... args) {
     return fmt::vformat_to(out, fmtString, fmt::make_format_args(args...));
 }
 
+/// Copies the string `s` to the output iterator `out`.
+///
+/// ```cpp
+/// std::string out = "Hello";
+/// vgc::core::copyStringTo(std::back_inserter(out), " World!");
+/// ```
+///
+/// \sa format()
+///
+template<typename OutputIt>
+VGC_FORCE_INLINE OutputIt copyStringTo(OutputIt out, std::string_view s) {
+    for (char c : s) {
+        *out++ = c;
+    }
+    return out;
+}
+
 /// Writes the given `char` to the given output stream.
 ///
 /// ```cpp
