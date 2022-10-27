@@ -520,7 +520,6 @@ template<>
 struct fmt::formatter<vgc::dom::InvalidValue> : fmt::formatter<std::string_view> {
     template<typename FormatContext>
     auto format(const vgc::dom::InvalidValue&, FormatContext& ctx) {
-
         return fmt::formatter<std::string_view>::format("Invalid", ctx);
     }
 };
@@ -536,7 +535,6 @@ struct fmt::formatter<vgc::dom::Value> {
     }
     template<typename FormatContext>
     auto format(const vgc::dom::Value& v, FormatContext& ctx) -> decltype(ctx.out()) {
-
         return v.visit([&](auto&& arg) {
             return fmt::format_to(ctx.out(), "{}", std::forward<decltype(arg)>(arg));
         });
