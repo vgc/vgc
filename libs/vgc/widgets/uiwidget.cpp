@@ -202,12 +202,12 @@ prepareKeyboardEvent(ui::Widget* root, QKeyEvent* event) {
 
 void UiWidget::keyPressEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->onKeyPress(vgcEvent));
+    event->setAccepted(receiver->keyPress(vgcEvent));
 }
 
 void UiWidget::keyReleaseEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->onKeyRelease(vgcEvent));
+    event->setAccepted(receiver->keyRelease(vgcEvent));
 }
 
 QVariant UiWidget::inputMethodQuery(Qt::InputMethodQuery) const {

@@ -1106,21 +1106,27 @@ public:
     ///
     virtual bool onFocusOut(FocusReason reason);
 
+    /// Propagates a key press event through the widget hierarchy.
+    ///
+    /// It can only be called on the root widget.
+    ///
+    bool keyPress(QKeyEvent* event);
+
+    /// Propagates a key release event through the widget hierarchy.
+    ///
+    /// It can only be called on the root widget.
+    ///
+    bool keyRelease(QKeyEvent* event);
+
+    // TODO: preKeyPress, preKeyRelease (see preMousePress)
+
     /// Override this function if you wish to handle key press events. You must
     /// return true if the event was handled, false otherwise.
-    ///
-    /// The default implementation recursively calls onKeyPress() on the
-    /// focusedChild(), if any. If there is no focusedChild(), the default
-    /// implementation returns false.
     ///
     virtual bool onKeyPress(QKeyEvent* event);
 
     /// Override this function if you wish to handle key release events. You must
     /// return true if the event was handled, false otherwise.
-    ///
-    /// The default implementation recursively calls onKeyRelease() on the
-    /// focusedChild(), if any. If there is no focusedChild(), the default
-    /// implementation returns false.
     ///
     virtual bool onKeyRelease(QKeyEvent* event);
 
@@ -1354,6 +1360,8 @@ private:
     FocusPolicyFlags focusPolicy_ = FocusPolicy::Never;
     Widget* focus_ = nullptr;
     Widget* keyboardCaptor_ = nullptr; // TODO: move to future class WidgetTree
+
+    void keyEvent_(QKeyEvent* event, bool isPress);
 
     // Engine
     graphics::Engine* lastPaintEngine_ = nullptr;
