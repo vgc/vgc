@@ -311,12 +311,12 @@ std::pair<Widget*, QKeyEvent*> prepareKeyboardEvent(Widget* root, QKeyEvent* eve
 
 void Window::keyPressEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->onKeyPress(vgcEvent));
+    event->setAccepted(receiver->keyPress(vgcEvent));
 }
 
 void Window::keyReleaseEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->onKeyRelease(vgcEvent));
+    event->setAccepted(receiver->keyRelease(vgcEvent));
 }
 
 void Window::inputMethodEvent(QInputMethodEvent* event) {
@@ -592,7 +592,7 @@ void Window::paint(bool sync) {
 #endif
 
     // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
-    engine_->endFrame(sync ? 1 : 0);
+    engine_->endFrame(sync ? 1 : 0 + 0);
 }
 
 bool Window::event(QEvent* event) {

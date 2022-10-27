@@ -1295,23 +1295,86 @@ bool Widget::onFocusOut(FocusReason) {
     return false;
 }
 
-bool Widget::onKeyPress(QKeyEvent* event) {
-    Widget* fc = focusedChild();
-    if (fc) {
-        return fc->onKeyPress(event);
-    }
-    else {
+bool Widget::keyPress(QKeyEvent* event) {
+    if (!isRoot()) {
+        VGC_WARNING(LogVgcUi, "keyPress() can only be called on a root widget.");
         return false;
     }
+    WidgetPtr thisPtr = this;
+    bool isKeyPress = true;
+    keyEvent_(event, isKeyPress);
+    bool handled = true; // = event->isHandled();
+    return handled;
 }
 
-bool Widget::onKeyRelease(QKeyEvent* event) {
-    Widget* fc = focusedChild();
-    if (fc) {
-        return fc->onKeyRelease(event);
-    }
-    else {
+bool Widget::keyRelease(QKeyEvent* event) {
+    if (!isRoot()) {
+        VGC_WARNING(LogVgcUi, "keyRelease() can only be called on a root widget.");
         return false;
+    }
+    WidgetPtr thisPtr = this;
+    bool isKeyPress = false;
+    keyEvent_(event, isKeyPress);
+    bool handled = true; // = event->isHandled();
+    return handled;
+}
+
+bool Widget::onKeyPress(QKeyEvent*) {
+    return false;
+}
+
+bool Widget::onKeyRelease(QKeyEvent*) {
+    return false;
+}
+
+void Widget::keyEvent_(QKeyEvent* event, bool isKeyPress) {
+
+    // TODO after changing QKeyEvent to KeyEvent: handle stopPropagation.
+
+    // User-defined capture phase handler.
+    WidgetPtr thisPtr = this;
+    //preKeyPress(event) or preKeyRelease(event);
+    //if (!isAlive()) {
+    //    // Widget got killed. Event can be considered handled.
+    //    event->handled_ = true;
+    //    return;
+    //}
+
+    // Handle stop propagation.
+    //if (event->isStopPropagationRequested()) {
+    //    return;
+    //}
+
+    // Get focused child
+    Widget* fChild = focusedChild();
+
+    // Call focused child's handler.
+    if (fChild) {
+        // Prepare against widget killers.
+        WidgetPtr fChildPtr = fChild;
+        // Call handler.
+        fChild->keyEvent_(event, isKeyPress);
+        // Check for deaths.
+        if (!isAlive() || !fChildPtr.isAlive()) {
+            // Widget got killed. Event can be considered handled.
+            //event->handled_ = true;
+            return;
+        }
+        // Handle stop propagation.
+        //if (event->isStopPropagationRequested()) {
+        //    return;
+        //}
+    }
+
+    bool eventHandled = false; // = event->handled_;
+    if (!eventHandled || handledEventPolicy_ == HandledEventPolicy::Receive) {
+        // User-defined bubble phase handler.
+        eventHandled |= isKeyPress ? onKeyPress(event) : onKeyRelease(event);
+        if (!isAlive()) {
+            // Widget got killed. Event can be considered handled.
+            //event->handled_ = true;
+            return;
+        }
     }
 }
 
