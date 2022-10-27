@@ -136,7 +136,6 @@ void defineArrayCommonMethods(py::class_<This>& c) {
 
     c.def("__str__", [](const This& a) { return toString(a); });
 
-    // XXX this should output a working expression.
     c.def("__repr__", [](const This& a) {
         py::object pyStr = py::cast(toString(a));
         std::string pyStrRepr = py::cast<std::string>(pyStr.attr("__repr__")());
