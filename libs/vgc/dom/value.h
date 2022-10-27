@@ -132,10 +132,10 @@ struct CowDataPtrTraits<CowDataPtr<T>> {
 };
 
 template<typename T>
-struct isCowDataPtr_ : std::integral_constant<bool, false> {};
+struct isCowDataPtr_ : std::false_type {};
 
 template<typename T>
-struct isCowDataPtr_<CowDataPtr<T>> : std::integral_constant<bool, true> {};
+struct isCowDataPtr_<CowDataPtr<T>> : std::true_type {};
 
 template<typename T>
 constexpr bool isCowDataPtr = isCowDataPtr_<T>::value;
