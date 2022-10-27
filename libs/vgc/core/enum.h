@@ -246,6 +246,9 @@ struct fmt::formatter<
 ///
 #define VGC_DEFINE_ENUM(...) VGC_PP_EXPAND(VGC_DEFINE_ENUM_X_(__VA_ARGS__, ~))
 
+#define VGC_ENUM_ENDMAX End_, Max_ = End_ - 1
+#define VGC_ENUM_COUNT(enum_) static_cast<std::underlying_type_t<enum_>>(enum_::End_)
+
 // clang-format on
 
 #endif // VGC_CORE_ENUM_H

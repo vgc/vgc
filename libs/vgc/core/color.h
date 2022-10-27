@@ -21,6 +21,7 @@
 
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/array.h>
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
 
@@ -311,6 +312,10 @@ public:
 private:
     float data_[4];
 };
+
+/// Alias for `vgc::core::Array<vgc::core::Color>`.
+///
+using ColorArray = Array<Color>;
 
 /// Writes the given Color to the output stream.
 ///

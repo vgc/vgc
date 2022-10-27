@@ -2926,4 +2926,32 @@ using DoubleArray = Array<double>;
 //   data()
 //
 
+template<typename T>
+struct fmt::formatter<vgc::core::Array<T>> : fmt::formatter<T> {
+    template<typename FormatContext>
+    auto format(const vgc::core::Array<T>& x, FormatContext& ctx)
+        -> decltype(ctx.out()) {
+
+        auto out = ctx.out();
+        if (x.isEmpty()) {
+            out = vgc::core::copyStringTo(out, "[]");
+        }
+        else {
+            *out++ = '[';
+            auto it = x.cbegin();
+            auto last = x.cend() - 1;
+            out = vgc::core::formatTo(out, "{}", *it);
+            while (it != last) {
+                out = vgc::core::copyStringTo(out, ", ");
+                ctx.advance_to(out);
+                out = fmt::formatter<T>::format(*++it, ctx);
+            }
+            *out++ = ']';
+        }
+
+        ctx.advance_to(out);
+        return out;
+    }
+};
+
 #endif // VGC_CORE_ARRAY_H
