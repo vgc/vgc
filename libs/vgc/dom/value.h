@@ -21,6 +21,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 #include <vgc/core/array.h>
@@ -107,10 +108,13 @@ enum class ValueType {
     ColorArray,
     Vec2d,
     Vec2dArray,
+    VGC_ENUM_ENDMAX
 };
-
 VGC_DOM_API
 VGC_DECLARE_ENUM(ValueType)
+
+struct NoneValue {};
+struct InvalidValue {};
 
 namespace detail {
 
@@ -125,7 +129,7 @@ struct CowDataPtrTraits {};
 
 template<typename T>
 struct CowDataPtrTraits<CowDataPtr<T>> {
-    using innerType = T;
+    using elementType = T;
 };
 
 template<typename T>
@@ -145,18 +149,41 @@ CowDataPtr<std::remove_reference_t<T>> makeCowDataPtr(T&& x) {
 template<typename T>
 using CowArrayPtr = CowDataPtr<core::Array<T>>;
 
-using ValueVariantType = std::variant<
-    std::monostate,
-    std::string,
-    core::StringId,
-    Int,
-    CowArrayPtr<Int>,
-    double,
-    CowArrayPtr<double>,
-    core::Color,
-    CowArrayPtr<core::Color>,
-    geometry::Vec2d,
-    CowArrayPtr<geometry::Vec2d>>;
+template<ValueType valueType>
+struct ValueTypeType_ {};
+
+#define VGC_DECL_VALUETYPE_TYPE_(enumerator, Type)                                       \
+    template<>                                                                           \
+    struct ValueTypeType_<ValueType::enumerator> {                                       \
+        using type = Type;                                                               \
+    };
+// clang-format off
+VGC_DECL_VALUETYPE_TYPE_(None,          NoneValue)
+VGC_DECL_VALUETYPE_TYPE_(Invalid,       InvalidValue)
+VGC_DECL_VALUETYPE_TYPE_(String,        std::string)
+VGC_DECL_VALUETYPE_TYPE_(StringId,      core::StringId)
+VGC_DECL_VALUETYPE_TYPE_(Int,           Int)
+VGC_DECL_VALUETYPE_TYPE_(IntArray,      CowArrayPtr<Int>)
+VGC_DECL_VALUETYPE_TYPE_(Double,        double)
+VGC_DECL_VALUETYPE_TYPE_(DoubleArray,   CowArrayPtr<double>)
+VGC_DECL_VALUETYPE_TYPE_(Color,         core::Color)
+VGC_DECL_VALUETYPE_TYPE_(ColorArray,    CowArrayPtr<core::Color>)
+VGC_DECL_VALUETYPE_TYPE_(Vec2d,         geometry::Vec2d)
+VGC_DECL_VALUETYPE_TYPE_(Vec2dArray,    CowArrayPtr<geometry::Vec2d>)
+// clang-format on
+#undef VGC_DECL_VALUETYPE_TYPE_
+
+template<typename Seq>
+struct ValueVariantType_;
+
+template<size_t... Is>
+struct ValueVariantType_<std::index_sequence<Is...>> {
+    using type =
+        std::variant<typename ValueTypeType_<static_cast<ValueType>(Is)>::type...>;
+};
+
+using ValueVariantType =
+    typename ValueVariantType_<std::make_index_sequence<VGC_ENUM_COUNT(ValueType)>>::type;
 
 static_assert(std::is_copy_constructible_v<ValueVariantType>);
 static_assert(std::is_copy_assignable_v<ValueVariantType>);
@@ -173,7 +200,7 @@ public:
     /// Constructs an empty value, that is, whose ValueType is None.
     ///
     constexpr Value()
-        : type_(ValueType::None) {
+        : var_(NoneValue{}) {
     }
 
     /// Returns a const reference to an empty value. This is useful for error
@@ -189,84 +216,73 @@ public:
     /// Constructs a `Value` holding a `std::string`.
     ///
     Value(std::string_view string)
-        : type_(ValueType::String)
-        , var_(std::string(string)) {
+        : var_(std::string(string)) {
     }
 
     /// Constructs a `Value` holding a `std::string`.
     ///
     Value(std::string&& string)
-        : type_(ValueType::String)
-        , var_(std::move(string)) {
+        : var_(std::move(string)) {
     }
 
     /// Constructs a `Value` holding a `std::string`.
     ///
     Value(core::StringId stringId)
-        : type_(ValueType::StringId)
-        , var_(stringId) {
+        : var_(stringId) {
     }
 
     /// Constructs a `Value` holding an `Int`.
     ///
     Value(Int value)
-        : type_(ValueType::Int)
-        , var_(value) {
+        : var_(value) {
     }
 
     /// Constructs a `Value` holding an array of `Int`.
     ///
     Value(core::Array<Int> intArray)
-        : type_(ValueType::IntArray)
-        , var_(detail::makeCowDataPtr(std::move(intArray))) {
+        : var_(detail::makeCowDataPtr(std::move(intArray))) {
     }
 
     /// Constructs a `Value` holding a `double`.
     ///
     Value(double value)
-        : type_(ValueType::Double)
-        , var_(value) {
+        : var_(value) {
     }
 
     /// Constructs a `Value` holding an array of `double`.
     ///
     Value(core::Array<double> doubleArray)
-        : type_(ValueType::DoubleArray)
-        , var_(detail::makeCowDataPtr(std::move(doubleArray))) {
+        : var_(detail::makeCowDataPtr(std::move(doubleArray))) {
     }
 
     /// Constructs a `Value` holding a `Color`.
     ///
     Value(core::Color color)
-        : type_(ValueType::Color)
-        , var_(std::move(color)) {
+        : var_(std::move(color)) {
     }
 
     /// Constructs a `Value` holding an array of `Color`.
     ///
     Value(core::Array<core::Color> colorArray)
-        : type_(ValueType::ColorArray)
-        , var_(detail::makeCowDataPtr(std::move(colorArray))) {
+        : var_(detail::makeCowDataPtr(std::move(colorArray))) {
     }
 
     /// Constructs a `Value` holding a `Vec2d`.
     ///
     Value(geometry::Vec2d vec2d)
-        : type_(ValueType::Vec2d)
-        , var_(vec2d) {
+        : var_(vec2d) {
     }
 
     /// Constructs a `Value` holding an array of `Vec2d`.
     ///
     Value(core::Array<geometry::Vec2d> vec2dArray)
-        : type_(ValueType::Vec2dArray)
-        , var_(detail::makeCowDataPtr(std::move(vec2dArray))) {
+        : var_(detail::makeCowDataPtr(std::move(vec2dArray))) {
     }
 
     /// Returns the ValueType of this Value.
     ///
     ValueType type() const {
-        return type_;
+        return static_cast<ValueType>(var_.index());
     }
 
     /// Returns whether this `Value` is Valid, that is, whether type() is not
@@ -334,7 +350,6 @@ public:
     /// Sets this `Value` to the given string `s`.
     ///
     void set(std::string s) {
-        type_ = ValueType::String;
         var_ = std::move(s);
     }
 
@@ -348,7 +363,6 @@ public:
     /// Sets this `Value` to the given string `s`.
     ///
     void set(core::StringId s) {
-        type_ = ValueType::StringId;
         var_ = std::move(s);
     }
 
@@ -362,7 +376,6 @@ public:
     /// Sets this `Value` to the given integer `value`.
     ///
     void set(Int value) {
-        type_ = ValueType::Int;
         var_ = value;
     }
 
@@ -376,7 +389,6 @@ public:
     /// Sets this `Value` to the given `intArray`.
     ///
     void set(core::Array<Int> intArray) {
-        type_ = ValueType::IntArray;
         var_ = detail::makeCowDataPtr(std::move(intArray));
     }
 
@@ -390,7 +402,6 @@ public:
     /// Sets this `Value` to the given double `value`.
     ///
     void set(double value) {
-        type_ = ValueType::Double;
         var_ = value;
     }
 
@@ -404,7 +415,6 @@ public:
     /// Sets this `Value` to the given `doubleArray`.
     ///
     void set(core::Array<double> doubleArray) {
-        type_ = ValueType::DoubleArray;
         var_ = detail::makeCowDataPtr(std::move(doubleArray));
     }
 
@@ -418,7 +428,6 @@ public:
     /// Sets this `Value` to the given `color`.
     ///
     void set(const core::Color& color) {
-        type_ = ValueType::Color;
         var_ = color;
     }
 
@@ -432,7 +441,6 @@ public:
     /// Sets this `Value` to the given `colorArray`.
     ///
     void set(core::Array<core::Color> colorArray) {
-        type_ = ValueType::ColorArray;
         var_ = detail::makeCowDataPtr(std::move(colorArray));
     }
 
@@ -446,7 +454,6 @@ public:
     /// Sets this `Value` to the given `vec2d`.
     ///
     void set(const geometry::Vec2d& vec2d) {
-        type_ = ValueType::Vec2d;
         var_ = vec2d;
     }
 
@@ -460,47 +467,29 @@ public:
     /// Sets this `Value` to the given `vec2dArray`.
     ///
     void set(core::Array<geometry::Vec2d> vec2dArray) {
-        type_ = ValueType::Vec2dArray;
         var_ = detail::makeCowDataPtr(std::move(vec2dArray));
     }
 
-    template<typename OStream>
-    void writeTo(OStream& out) const {
-        switch (type_) {
-        case ValueType::None:
-            write(out, "None");
-            break;
-        case ValueType::Invalid:
-            write(out, "Invalid");
-            break;
-        default:
-            std::visit(
-                [&](auto&& arg) {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, std::monostate>) {
-                        write(out, "None");
-                    }
-                    else if constexpr (detail::isCowDataPtr<T>) {
-                        write(out, *arg);
-                    }
-                    else {
-                        write(out, arg);
-                    }
-                },
-                var_);
-            break;
-        }
+    template<class Visitor>
+    constexpr decltype(auto) visit(Visitor&& visitor) const {
+        return std::visit(
+            [&](auto&& arg) {
+                using ArgType = decltype(arg);
+                if constexpr (detail::isCowDataPtr<std::decay_t<ArgType>>) {
+                    return visitor(*std::forward<ArgType>(arg));
+                }
+                else {
+                    return visitor(std::forward<ArgType>(arg));
+                }
+            },
+            var_);
     }
 
 private:
-    /// For the different valueless ValueType.
-    ///
-    explicit constexpr Value(ValueType type)
-        : type_(type)
-        , var_() {
+    explicit constexpr Value(InvalidValue x)
+        : var_(x) {
     }
 
-    ValueType type_ = ValueType::Invalid;
     detail::ValueVariantType var_;
 };
 
@@ -508,7 +497,18 @@ private:
 ///
 template<typename OStream>
 void write(OStream& out, const Value& v) {
-    v.writeTo(out);
+    v.visit([&](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, NoneValue>) {
+            write(out, "None");
+        }
+        else if constexpr (std::is_same_v<T, InvalidValue>) {
+            write(out, "Invalid");
+        }
+        else {
+            write(out, arg);
+        }
+    });
 }
 
 /// Converts the given string into a Value. Raises vgc::dom::VgcSyntaxError if
@@ -518,5 +518,41 @@ VGC_DOM_API
 Value parseValue(const std::string& s, ValueType t);
 
 } // namespace vgc::dom
+
+template<>
+struct fmt::formatter<vgc::dom::NoneValue> : fmt::formatter<std::string_view> {
+    template<typename FormatContext>
+    auto format(const vgc::dom::NoneValue&, FormatContext& ctx) {
+        return fmt::formatter<std::string_view>::format("None", ctx);
+    }
+};
+
+template<>
+struct fmt::formatter<vgc::dom::InvalidValue> : fmt::formatter<std::string_view> {
+    template<typename FormatContext>
+    auto format(const vgc::dom::InvalidValue&, FormatContext& ctx) {
+
+        return fmt::formatter<std::string_view>::format("Invalid", ctx);
+    }
+};
+
+template<>
+struct fmt::formatter<vgc::dom::Value> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}') {
+            throw format_error("invalid format");
+        }
+        return it;
+    }
+    template<typename FormatContext>
+    auto format(const vgc::dom::Value& v, FormatContext& ctx)
+        -> decltype(ctx.out()) {
+
+        return v.visit([&](auto&& arg) {
+            return fmt::format_to(ctx.out(), "{}", std::forward<decltype(arg)>(arg));
+        });
+    }
+};
 
 #endif // VGC_DOM_VALUE_H

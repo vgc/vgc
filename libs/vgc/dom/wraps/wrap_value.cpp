@@ -15,6 +15,8 @@
 // limitations under the License.
 
 #include <vgc/core/wraps/common.h>
+
+#include <vgc/core/format.h>
 #include <vgc/dom/value.h>
 
 using This = vgc::dom::Value;
@@ -46,11 +48,17 @@ void wrap_value(py::module& m) {
         .def(py::init<vgc::core::Array<vgc::core::Color>>())
         .def(py::init<vgc::geometry::Vec2d>())
         .def(py::init<vgc::core::Array<vgc::geometry::Vec2d>>())
+
+        .def_property_readonly_static("none", [](py::object) { return This::none(); })
+        .def_property_readonly_static(
+            "invalid", [](py::object) { return This::invalid(); })
+
         .def_property_readonly("type", &This::type)
         .def("isValid", &This::isValid)
         .def("clear", &This::clear)
         .def("getItemWrapped", &This::getItemWrapped)
         .def_property_readonly("arrayLength", &This::arrayLength)
+
         .def("getString", &This::getString)
         .def("set", py::overload_cast<std::string>(&This::set))
         .def("getStringId", &This::getStringId)
@@ -58,27 +66,46 @@ void wrap_value(py::module& m) {
         .def("getInt", &This::getInt)
         .def("set", py::overload_cast<vgc::Int>(&This::set))
         .def("getIntArray", &This::getIntArray)
-        .def("set", py::overload_cast<vgc::core::Array<vgc::Int>>(&This::set))
+        .def("set", py::overload_cast<vgc::core::IntArray>(&This::set))
         .def("getDouble", &This::getDouble)
         .def("set", py::overload_cast<double>(&This::set))
         .def("getDoubleArray", &This::getDoubleArray)
-        .def("set", py::overload_cast<vgc::core::Array<double>>(&This::set))
+        .def("set", py::overload_cast<vgc::core::DoubleArray>(&This::set))
         .def("getColor", &This::getColor)
         .def("set", py::overload_cast<const vgc::core::Color&>(&This::set))
         .def("getColorArray", &This::getColorArray)
-        .def("set", py::overload_cast<vgc::core::Array<vgc::core::Color>>(&This::set))
+        .def("set", py::overload_cast<vgc::core::ColorArray>(&This::set))
         .def("getVec2d", &This::getVec2d)
         .def("set", py::overload_cast<const vgc::geometry::Vec2d&>(&This::set))
         .def("getVec2dArray", &This::getVec2dArray)
-        .def("set", py::overload_cast<vgc::core::Array<vgc::geometry::Vec2d>>(&This::set))
-        .def("__str__", [](const This& self) -> std::string {
-            fmt::memory_buffer mbuf;
-            mbuf.append(std::string_view("<Value: "));
-            std::string s;
-            vgc::core::StringWriter sw(s);
-            self.writeTo(sw);
-            mbuf.append(s);
-            mbuf.push_back('>');
-            return std::string(mbuf.begin(), mbuf.size());
-        });
+        .def("set", py::overload_cast<vgc::geometry::Vec2dArray>(&This::set))
+
+        .def(
+            "__str__",
+            [](const This& self) -> std::string {
+                fmt::memory_buffer mbuf;
+                fmt::format_to(std::back_inserter(mbuf), "{}", self);
+                return std::string(mbuf.begin(), mbuf.size());
+            })
+
+        .def(
+            "__repr__",
+            [](const This& self) -> std::string {
+                return self.visit([&](auto&& arg) -> std::string {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, vgc::dom::NoneValue>) {
+                        return "vgc.dom.Value.none";
+                    }
+                    else if constexpr (std::is_same_v<T, vgc::dom::InvalidValue>) {
+                        return "vgc.dom.Value.invalid";
+                    }
+                    else {
+                        py::object obj = py::cast(&arg);
+                        std::string r = py::cast<std::string>(obj.attr("__repr__")());
+                        return vgc::core::format("vgc.dom.Value({})", r);
+                    }
+                });
+            })
+
+        ;
 }

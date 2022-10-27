@@ -36,19 +36,18 @@ VGC_DEFINE_ENUM(
 
 const Value& Value::none() {
     // trusty leaky singleton
-    static const Value* v = new Value(ValueType::None);
+    static const Value* v = new Value();
     return *v;
 }
 
 const Value& Value::invalid() {
     // trusty leaky singleton
-    static const Value* v = new Value(ValueType::Invalid);
+    static const Value* v = new Value(InvalidValue{});
     return *v;
 }
 
 void Value::clear() {
-    type_ = ValueType::None;
-    var_ = std::monostate{};
+    var_ = NoneValue{};
 }
 
 namespace {
