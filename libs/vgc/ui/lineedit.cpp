@@ -18,7 +18,6 @@
 
 #include <QClipboard>
 #include <QGuiApplication>
-#include <QKeyEvent>
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
@@ -282,39 +281,39 @@ bool LineEdit::onFocusOut(FocusReason reason) {
     return true;
 }
 
-bool LineEdit::onKeyPress(QKeyEvent* event) {
+bool LineEdit::onKeyPress(KeyEvent* event) {
 
     using Op = graphics::RichTextMoveOperation;
 
-    const int key = event->key();
-    const bool ctrl = event->modifiers().testFlag(Qt::ControlModifier);
-    const bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
+    const Key key = event->key();
+    const bool ctrl = event->modifierKeys().has(ModifierKey::Ctrl);
+    const bool shift = event->modifierKeys().has(ModifierKey::Shift);
 
     bool handled = true;
     bool needsRepaint = true;
     bool isMoveOperation = false;
 
-    if (key == Qt::Key_Enter || key == Qt::Key_Return) {
+    if (key == Key::Enter || key == Key::Return) {
         needsRepaint = true;
         editingFinished().emit();
     }
-    if (key == Qt::Key_Delete || key == Qt::Key_Backspace) {
-        if (key == Qt::Key_Delete) {
+    if (key == Key::Delete || key == Key::Backspace) {
+        if (key == Key::Delete) {
             richText_->deleteFromCursor(ctrl ? Op::NextWord : Op::NextCharacter);
         }
         else { // backspace
             richText_->deleteFromCursor(ctrl ? Op::PreviousWord : Op::PreviousCharacter);
         }
     }
-    else if (key == Qt::Key_Home) {
+    else if (key == Key::Home) {
         richText_->moveCursor(ctrl ? Op::StartOfText : Op::StartOfLine, shift);
         isMoveOperation = true;
     }
-    else if (key == Qt::Key_End) {
+    else if (key == Key::End) {
         richText_->moveCursor(ctrl ? Op::EndOfText : Op::EndOfLine, shift);
         isMoveOperation = true;
     }
-    else if (key == Qt::Key_Left) {
+    else if (key == Key::Left) {
         if (richText_->hasSelection() && !shift) {
             richText_->moveCursor(Op::LeftOfSelection);
         }
@@ -323,7 +322,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
         }
         isMoveOperation = true;
     }
-    else if (key == Qt::Key_Right) {
+    else if (key == Key::Right) {
         if (richText_->hasSelection() && !shift) {
             richText_->moveCursor(Op::RightOfSelection);
         }
@@ -332,7 +331,7 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
         }
         isMoveOperation = true;
     }
-    else if (ctrl && key == Qt::Key_X) {
+    else if (ctrl && key == Key::X) {
         if (richText_->hasSelection()) {
             copyToClipboard_(richText_->selectedTextView());
             richText_->deleteSelectedText();
@@ -341,29 +340,29 @@ bool LineEdit::onKeyPress(QKeyEvent* event) {
             needsRepaint = false;
         }
     }
-    else if (ctrl && key == Qt::Key_C) {
+    else if (ctrl && key == Key::C) {
         if (richText_->hasSelection()) {
             copyToClipboard_(richText_->selectedTextView());
         }
         needsRepaint = false;
     }
-    else if (ctrl && key == Qt::Key_V) {
+    else if (ctrl && key == Key::V) {
         QClipboard* clipboard = QGuiApplication::clipboard();
         std::string t = clipboard->text().toStdString();
         richText_->insertText(t);
     }
-    else if (ctrl && key == Qt::Key_A) {
+    else if (ctrl && key == Key::A) {
         richText_->selectAll();
     }
-    else if (key == Qt::Key_Escape) {
+    else if (key == Key::Escape) {
         clearFocus(FocusReason::Other);
         handled = true;
     }
-    else if (key == Qt::Key_Tab) {
+    else if (key == Key::Tab) {
         handled = false;
     }
     else if (!ctrl) {
-        std::string t = event->text().toStdString();
+        const std::string& t = event->text();
         bool isControlCharacter = (t.size() == 1) && (t[0] >= 0) && (t[0] < 32);
         if (!t.empty() && !isControlCharacter) {
             richText_->insertText(t);

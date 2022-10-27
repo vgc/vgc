@@ -297,13 +297,14 @@ void Window::focusOutEvent(QFocusEvent* event) {
 
 namespace {
 
-std::pair<Widget*, QKeyEvent*> prepareKeyboardEvent(Widget* root, QKeyEvent* event) {
+std::pair<Widget*, KeyEventPtr> prepareKeyboardEvent(Widget* root, QKeyEvent* event) {
+    KeyEventPtr vgcEvent = fromQt(event);
     Widget* keyboardCaptor = root->keyboardCaptor();
     if (keyboardCaptor) {
-        return {keyboardCaptor, event};
+        return {keyboardCaptor, vgcEvent};
     }
     else {
-        return {root, event};
+        return {root, vgcEvent};
     }
 }
 
@@ -311,12 +312,12 @@ std::pair<Widget*, QKeyEvent*> prepareKeyboardEvent(Widget* root, QKeyEvent* eve
 
 void Window::keyPressEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyPress(vgcEvent));
+    event->setAccepted(receiver->keyPress(vgcEvent.get()));
 }
 
 void Window::keyReleaseEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyRelease(vgcEvent));
+    event->setAccepted(receiver->keyRelease(vgcEvent.get()));
 }
 
 void Window::inputMethodEvent(QInputMethodEvent* event) {

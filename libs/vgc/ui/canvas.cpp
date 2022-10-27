@@ -18,7 +18,6 @@
 
 #include <QBitmap>
 #include <QCursor>
-#include <QKeyEvent>
 #include <QPainter>
 
 #include <vgc/core/array.h>
@@ -164,17 +163,17 @@ void Canvas::stopLoggingUnder(core::PerformanceLog* parent) {
     drawTask_.stopLoggingUnder(renderLog.get());
 }
 
-bool Canvas::onKeyPress(QKeyEvent* event) {
+bool Canvas::onKeyPress(KeyEvent* event) {
     switch (event->key()) {
-    case Qt::Key_T:
+    case Key::T:
         polygonMode_ = polygonMode_ ? 0 : 1;
         requestRepaint();
         break;
-    case Qt::Key_I:
+    case Key::I:
         requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 4;
         requestRepaint();
         break;
-    case Qt::Key_P:
+    case Key::P:
         showControlPoints_ = !showControlPoints_;
         requestRepaint();
         break;

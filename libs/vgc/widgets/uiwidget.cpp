@@ -187,14 +187,15 @@ void UiWidget::focusOutEvent(QFocusEvent* event) {
 
 namespace {
 
-std::pair<ui::Widget*, QKeyEvent*>
+std::pair<ui::Widget*, ui::KeyEventPtr>
 prepareKeyboardEvent(ui::Widget* root, QKeyEvent* event) {
+    ui::KeyEventPtr vgcEvent = ui::fromQt(event);
     ui::Widget* keyboardCaptor = root->keyboardCaptor();
     if (keyboardCaptor) {
-        return {keyboardCaptor, event};
+        return {keyboardCaptor, vgcEvent};
     }
     else {
-        return {root, event};
+        return {root, vgcEvent};
     }
 }
 
@@ -202,12 +203,12 @@ prepareKeyboardEvent(ui::Widget* root, QKeyEvent* event) {
 
 void UiWidget::keyPressEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyPress(vgcEvent));
+    event->setAccepted(receiver->keyPress(vgcEvent.get()));
 }
 
 void UiWidget::keyReleaseEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyRelease(vgcEvent));
+    event->setAccepted(receiver->keyRelease(vgcEvent.get()));
 }
 
 QVariant UiWidget::inputMethodQuery(Qt::InputMethodQuery) const {

@@ -122,7 +122,7 @@ public:
 
 protected:
     // Reimplementation of Widget virtual methods
-    bool onKeyPress(QKeyEvent* event) override;
+    bool onKeyPress(KeyEvent* event) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;

@@ -37,11 +37,13 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/api.h>
 
+class QKeyEvent;
 class QMouseEvent;
 class QTabletEvent;
 
 namespace vgc::ui {
 
+VGC_DECLARE_OBJECT(KeyEvent);
 VGC_DECLARE_OBJECT(MouseEvent);
 
 /// Converts the given UTF-8 encoded std::string \p s into a QString.
@@ -93,6 +95,11 @@ MouseEventPtr fromQt(QMouseEvent* event);
 ///
 VGC_UI_API
 MouseEventPtr fromQt(QTabletEvent* event);
+
+/// Converts the given QKeyEvent into a vgc::ui::KeyEvent.
+///
+VGC_UI_API
+KeyEventPtr fromQt(QKeyEvent* event);
 
 /// Converts the given geometry::Mat4f into a QMatrix4x4.
 ///

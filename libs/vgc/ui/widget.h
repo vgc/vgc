@@ -36,10 +36,9 @@
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
+#include <vgc/ui/keyevent.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/shortcut.h>
-
-class QKeyEvent;
 
 namespace vgc::ui {
 
@@ -1110,25 +1109,25 @@ public:
     ///
     /// It can only be called on the root widget.
     ///
-    bool keyPress(QKeyEvent* event);
+    bool keyPress(KeyEvent* event);
 
     /// Propagates a key release event through the widget hierarchy.
     ///
     /// It can only be called on the root widget.
     ///
-    bool keyRelease(QKeyEvent* event);
+    bool keyRelease(KeyEvent* event);
 
     // TODO: preKeyPress, preKeyRelease (see preMousePress)
 
     /// Override this function if you wish to handle key press events. You must
     /// return true if the event was handled, false otherwise.
     ///
-    virtual bool onKeyPress(QKeyEvent* event);
+    virtual bool onKeyPress(KeyEvent* event);
 
     /// Override this function if you wish to handle key release events. You must
     /// return true if the event was handled, false otherwise.
     ///
-    virtual bool onKeyRelease(QKeyEvent* event);
+    virtual bool onKeyRelease(KeyEvent* event);
 
     /// Returns the list of actions of this widget.
     ///
@@ -1361,7 +1360,7 @@ private:
     Widget* focus_ = nullptr;
     Widget* keyboardCaptor_ = nullptr; // TODO: move to future class WidgetTree
 
-    void keyEvent_(QKeyEvent* event, bool isPress);
+    void keyEvent_(KeyEvent* event, bool isPress);
 
     // Engine
     graphics::Engine* lastPaintEngine_ = nullptr;

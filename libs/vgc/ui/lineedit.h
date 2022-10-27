@@ -80,7 +80,7 @@ public:
     bool onMouseLeave() override;
     bool onFocusIn(FocusReason reason) override;
     bool onFocusOut(FocusReason reason) override;
-    bool onKeyPress(QKeyEvent* event) override;
+    bool onKeyPress(KeyEvent* event) override;
 
     /// This signal is emitted whenever the Enter or Return key is pressed or
     /// the line edit loses focus.

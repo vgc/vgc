@@ -1295,7 +1295,7 @@ bool Widget::onFocusOut(FocusReason) {
     return false;
 }
 
-bool Widget::keyPress(QKeyEvent* event) {
+bool Widget::keyPress(KeyEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "keyPress() can only be called on a root widget.");
         return false;
@@ -1307,7 +1307,7 @@ bool Widget::keyPress(QKeyEvent* event) {
     return handled;
 }
 
-bool Widget::keyRelease(QKeyEvent* event) {
+bool Widget::keyRelease(KeyEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "keyRelease() can only be called on a root widget.");
         return false;
@@ -1319,17 +1319,17 @@ bool Widget::keyRelease(QKeyEvent* event) {
     return handled;
 }
 
-bool Widget::onKeyPress(QKeyEvent*) {
+bool Widget::onKeyPress(KeyEvent*) {
     return false;
 }
 
-bool Widget::onKeyRelease(QKeyEvent*) {
+bool Widget::onKeyRelease(KeyEvent*) {
     return false;
 }
 
-void Widget::keyEvent_(QKeyEvent* event, bool isKeyPress) {
+void Widget::keyEvent_(KeyEvent* event, bool isKeyPress) {
 
-    // TODO after changing QKeyEvent to KeyEvent: handle stopPropagation.
+    // TODO handle stopPropagation.
 
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
