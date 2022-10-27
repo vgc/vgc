@@ -113,7 +113,8 @@ void wrap_2darray(py::module& m, const std::string& valueTypeName) {
     std::string thisTypeName = valueTypeName + "Array";
     py::class_<This> c(m, thisTypeName.c_str());
     std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
-    vgc::core::wraps::defineArrayCommonMethods(c, vgc::core::format("{}.{}", moduleFullName, thisTypeName));
+    vgc::core::wraps::defineArrayCommonMethods(
+        c, vgc::core::format("{}.{}", moduleFullName, thisTypeName));
     c.def(py::init([valueTypeName](py::sequence s) {
         This res;
         for (auto it : s) {
