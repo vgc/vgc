@@ -303,7 +303,7 @@ public:
     /// wrapped. This returns an empty value if `type() != ValueType::Array..`.
     ///
     Value getItemWrapped(Int index) {
-        return visit([&](auto&& arg) -> Value {
+        return visit([&, index = index](auto&& arg) -> Value {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (core::isArray<T>) {
                 return Value(arg.getWrapped(index));
@@ -460,7 +460,8 @@ public:
     }
 
     template<class Visitor>
-    constexpr decltype(auto) visit(Visitor&& visitor) const {
+    constexpr decltype(std::invoke(std::declval<Visitor>(), std::declval<NoneValue>()))
+    visit(Visitor&& visitor) const {
         return std::visit(
             [&](auto&& arg) {
                 using ArgType = decltype(arg);
