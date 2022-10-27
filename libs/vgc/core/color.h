@@ -313,6 +313,14 @@ private:
     float data_[4];
 };
 
+/// Overloads `setZero(T& x)`.
+///
+/// \sa `vgc::core::zero<T>()`.
+///
+inline void setZero(Color& c) {
+    c = Color(0, 0, 0, 0);
+}
+
 /// Alias for `vgc::core::Array<vgc::core::Color>`.
 ///
 using ColorArray = Array<Color>;
