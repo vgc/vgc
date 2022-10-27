@@ -116,7 +116,6 @@ void defineArrayCommonMethods(py::class_<This>& c, std::string fullName) {
 
     c.def("prepend", py::overload_cast<const T&>(&This::prepend));
     c.def("append", py::overload_cast<const T&>(&This::append));
-
     c.def("insert", [](This& a, vgc::Int i, const T& x) {
         vgc::Int j = wrapArrayIndex(a, i);
         return a.insert(j, x);
