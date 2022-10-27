@@ -2831,7 +2831,7 @@ template<typename T>
 struct isArray_ : std::false_type {};
 
 template<typename T>
-struct isArray_<::vgc::core::Array<T>> : std::true_type {};
+struct isArray_<Array<T>> : std::true_type {};
 
 } // namespace detail
 
