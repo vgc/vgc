@@ -460,7 +460,8 @@ public:
     }
 
     template<typename Visitor>
-    constexpr decltype(std::invoke(std::declval<Visitor>(), std::declval<NoneValue>()))
+    /*constexpr*/ // clang errors with "inline function is not defined".
+    decltype(std::invoke(std::declval<Visitor>(), std::declval<NoneValue>()))
     visit(Visitor&& visitor) const {
         return std::visit(
             [&](auto&& arg) {
