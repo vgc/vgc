@@ -151,26 +151,26 @@ using CowArrayPtr = CowDataPtr<core::Array<T>>;
 template<ValueType valueType>
 struct ValueTypeType_ {};
 
-#define VGC_DECL_VALUETYPE_TYPE_(enumerator, Type)                                       \
+#define VGC_DOM_VALUETYPE_TYPE_(enumerator, Type)                                        \
     template<>                                                                           \
     struct ValueTypeType_<ValueType::enumerator> {                                       \
         using type = Type;                                                               \
     };
 // clang-format off
-VGC_DECL_VALUETYPE_TYPE_(None,          NoneValue)
-VGC_DECL_VALUETYPE_TYPE_(Invalid,       InvalidValue)
-VGC_DECL_VALUETYPE_TYPE_(String,        std::string)
-VGC_DECL_VALUETYPE_TYPE_(StringId,      core::StringId)
-VGC_DECL_VALUETYPE_TYPE_(Int,           Int)
-VGC_DECL_VALUETYPE_TYPE_(IntArray,      CowArrayPtr<Int>)
-VGC_DECL_VALUETYPE_TYPE_(Double,        double)
-VGC_DECL_VALUETYPE_TYPE_(DoubleArray,   CowArrayPtr<double>)
-VGC_DECL_VALUETYPE_TYPE_(Color,         core::Color)
-VGC_DECL_VALUETYPE_TYPE_(ColorArray,    CowArrayPtr<core::Color>)
-VGC_DECL_VALUETYPE_TYPE_(Vec2d,         geometry::Vec2d)
-VGC_DECL_VALUETYPE_TYPE_(Vec2dArray,    CowArrayPtr<geometry::Vec2d>)
+VGC_DOM_VALUETYPE_TYPE_(None,          NoneValue)
+VGC_DOM_VALUETYPE_TYPE_(Invalid,       InvalidValue)
+VGC_DOM_VALUETYPE_TYPE_(String,        std::string)
+VGC_DOM_VALUETYPE_TYPE_(StringId,      core::StringId)
+VGC_DOM_VALUETYPE_TYPE_(Int,           Int)
+VGC_DOM_VALUETYPE_TYPE_(IntArray,      CowArrayPtr<Int>)
+VGC_DOM_VALUETYPE_TYPE_(Double,        double)
+VGC_DOM_VALUETYPE_TYPE_(DoubleArray,   CowArrayPtr<double>)
+VGC_DOM_VALUETYPE_TYPE_(Color,         core::Color)
+VGC_DOM_VALUETYPE_TYPE_(ColorArray,    CowArrayPtr<core::Color>)
+VGC_DOM_VALUETYPE_TYPE_(Vec2d,         geometry::Vec2d)
+VGC_DOM_VALUETYPE_TYPE_(Vec2dArray,    CowArrayPtr<geometry::Vec2d>)
 // clang-format on
-#undef VGC_DECL_VALUETYPE_TYPE_
+#undef VGC_DOM_VALUETYPE_TYPE_
 
 template<typename Seq>
 struct ValueVariantType_;
