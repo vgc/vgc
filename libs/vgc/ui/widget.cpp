@@ -1375,8 +1375,26 @@ void Widget::keyEvent_(KeyEvent* event, bool isKeyPress) {
         }
     }
 
+    // Trigger action if it has a matching shortcut
+    if (!event->handled_ && isKeyPress) {
+        for (Action* action : actions()) {
+            if (action->shortcut().modifiers() == event->modifierKeys()
+                && action->shortcut().key() == event->key()) {
+
+                event->handled_ = true;
+                action->trigger();
+                if (!isAlive()) {
+                    return;
+                }
+                else {
+                    break;
+                }
+            }
+        }
+    }
+
+    // User-defined bubble phase handler
     if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
-        // User-defined bubble phase handler.
         event->handled_ |= isKeyPress ? onKeyPress(event) : onKeyRelease(event);
         if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
