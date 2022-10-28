@@ -21,36 +21,34 @@
 
 namespace vgc::ui {
 
-Action::Action() {
-}
+Action::Action(
+    std::string_view text,
+    const Shortcut& shortcut,
+    ShortcutContext shortcutContext)
 
-Action::Action(const Shortcut& shortcut)
-    : shortcut_(shortcut) {
-}
-
-Action::Action(const std::string_view& text)
-    : text_(text) {
-}
-
-Action::Action(const std::string_view& text, const Shortcut& shortcut)
     : text_(text)
-    , shortcut_(shortcut) {
+    , shortcut_(shortcut)
+    , shortcutContext_(shortcutContext) {
 }
 
 ActionPtr Action::create() {
     return ActionPtr(new Action());
 }
 
-ActionPtr Action::create(const Shortcut& shortcut) {
-    return ActionPtr(new Action(shortcut));
+ActionPtr Action::create(const Shortcut& shortcut, ShortcutContext shortcutContext) {
+    return ActionPtr(new Action("", shortcut, shortcutContext));
 }
 
-ActionPtr Action::create(const std::string_view& text) {
+ActionPtr Action::create(std::string_view text) {
     return ActionPtr(new Action(text));
 }
 
-ActionPtr Action::create(const std::string_view& text, const Shortcut& shortcut) {
-    return ActionPtr(new Action(text, shortcut));
+ActionPtr Action::create(
+    std::string_view text,
+    const Shortcut& shortcut,
+    ShortcutContext shortcutContext) {
+
+    return ActionPtr(new Action(text, shortcut, shortcutContext));
 }
 
 void Action::setText(std::string_view text) {

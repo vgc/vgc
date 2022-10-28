@@ -40,10 +40,10 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    Action();
-    explicit Action(const Shortcut& shortcut);
-    explicit Action(const std::string_view& text);
-    Action(const std::string_view& text, const Shortcut& shortcut);
+    explicit Action(
+        std::string_view text = "",
+        const Shortcut& shortcut = Shortcut(),
+        ShortcutContext shortcutContext = ShortcutContext::Widget);
 
 public:
     /// Creates an action.
@@ -52,19 +52,26 @@ public:
 
     /// Creates an action with the given shortcut.
     ///
-    static ActionPtr create(const Shortcut& shortcut);
+    static ActionPtr create(
+        const Shortcut& shortcut,
+        ShortcutContext shortcutContext = ShortcutContext::Widget);
 
     /// Creates an action with the given text.
     ///
-    static ActionPtr create(const std::string_view& text);
+    static ActionPtr create(std::string_view text);
 
     /// Creates an action with the given text and shortcut.
     ///
-    static ActionPtr create(const std::string_view& text, const Shortcut& shortcut);
+    static ActionPtr create(
+        std::string_view text,
+        const Shortcut& shortcut,
+        ShortcutContext shortcutContext = ShortcutContext::Widget);
 
     // ----------------------- Action Properties -------------------------------
 
     /// Returns the descriptive text for this action.
+    ///
+    /// \sa `setText()`
     ///
     std::string_view text() const {
         return text_;
@@ -72,10 +79,14 @@ public:
 
     /// Sets the descriptive text for this action.
     ///
+    /// \sa `text()`
+    ///
     void setText(std::string_view text);
 
     /// Returns the shortcut associated with this action. This can be an empty
     /// shortcut if this action has no associated shortcut.
+    ///
+    /// \sa `setShortcut()`
     ///
     const Shortcut& shortcut() const {
         return shortcut_;
@@ -83,7 +94,29 @@ public:
 
     /// Sets the shortcut associated with this action.
     ///
+    /// \sa `shortcut()`
+    ///
     void setShortcut(const Shortcut& shortcut);
+
+    /// Returns the shortcut context of this action.
+    ///
+    /// This describes whether the `shortuct()` is active application-wide, or
+    /// only when the action is in the active window, or only when the action
+    /// is owned by a widget that has the keyboard focus.
+    ///
+    /// By default, the shortcut context is `ShortcutContext::Widget`.
+    ///
+    /// \sa `setShortcutContext()`
+    ///
+    ShortcutContext shortcutContext() const {
+        return shortcutContext_;
+    }
+
+    /// Sets the shortcut context associated with this action.
+    ///
+    /// \sa `shortcutContext()`
+    ///
+    void setShortcutContext(ShortcutContext shortcutContext);
 
     /// Returns the `CheckMode` of the action.
     ///
@@ -147,7 +180,7 @@ public:
     /// via `ActionGroup::removeAction(this)`, then adding it to its new group
     /// via `ActionGroup::addAction(this)`.
     ///
-    ///\sa `group()`, `groupChanged()`, `ActionGroup::addAction()`,
+    /// \sa `group()`, `groupChanged()`, `ActionGroup::addAction()`,
     /// `ActionGroup::removeAction()`.
     ///
     void setGroup(ActionGroup* group);
@@ -285,6 +318,7 @@ private:
     std::string text_;
     Shortcut shortcut_;
     ui::ActionGroup* group_ = nullptr;
+    ShortcutContext shortcutContext_ = ShortcutContext::Widget;
     bool isEnabled_ = true;
     bool isMenu_ = false;
     CheckMode checkMode_ = CheckMode::Uncheckable;

@@ -24,6 +24,29 @@
 
 namespace vgc::ui {
 
+/// \enum vgc::ui::ShortcutContext
+/// \brief Describes in what context a shortcut is active.
+///
+enum class ShortcutContext : UInt8 {
+
+    /// The shortuct is active application-wide.
+    ///
+    Application,
+
+    /// The shortcut is active if the action is owned by a widget inside the
+    /// active window.
+    ///
+    Window,
+
+    /// The shortcut is active if the action is owned by a widget which has the
+    /// keyboard focus.
+    ///
+    Widget
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(ShortcutContext)
+
 /// \class vgc::ui::Shortcut
 /// \brief Represents a combination of keys that can trigger an action.
 ///
@@ -99,7 +122,7 @@ namespace detail {
 
 std::string toString(const Shortcut& shortcut);
 
-}
+} // namespace detail
 
 } // namespace vgc::ui
 
