@@ -16,6 +16,14 @@
 
 #include <vgc/ui/shortcut.h>
 
+namespace vgc::ui {
+
+VGC_DEFINE_ENUM(
+    ShortcutContext,
+    (Application, "Application"),
+    (Window, "Window"),
+    (Widget, "Widget"))
+
 namespace {
 
 void appendString(std::string& res, std::string& separator, std::string_view str) {
@@ -26,7 +34,7 @@ void appendString(std::string& res, std::string& separator, std::string_view str
 
 } // namespace
 
-namespace vgc::ui::detail {
+namespace detail {
 
 std::string toString(const Shortcut& shortcut) {
     Key key = shortcut.key();
@@ -53,4 +61,6 @@ std::string toString(const Shortcut& shortcut) {
     return res;
 }
 
-} // namespace vgc::ui::detail
+} // namespace detail
+
+} // namespace vgc::ui
