@@ -208,22 +208,19 @@ public:
         return tagName_;
     }
 
-    /// Returns the name of this element for UI display.
-    /// If it is empty, the id of this element is used instead.
+    /// Returns the custom name of this element.
     ///
     core::StringId name() const {
         return name_;
     }
 
-    /// Sets the name of this element for UI display.
-    /// If it is empty, the id of this element is used instead.
+    /// Sets the custom name of this element.
     ///
     void setName(core::StringId name) {
         setAttribute(strings::name, name);
     }
 
-    /// Sets the name of this element for UI display.
-    /// If it is empty, the id of this element is used instead.
+    /// Sets the custom name of this element.
     ///
     void setName(std::string_view name) {
         setName(core::StringId(name));
