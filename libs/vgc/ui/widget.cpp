@@ -1303,8 +1303,7 @@ bool Widget::keyPress(KeyEvent* event) {
     WidgetPtr thisPtr = this;
     bool isKeyPress = true;
     keyEvent_(event, isKeyPress);
-    bool handled = true; // = event->isHandled();
-    return handled;
+    return event->isHandled();
 }
 
 bool Widget::keyRelease(KeyEvent* event) {
@@ -1315,8 +1314,7 @@ bool Widget::keyRelease(KeyEvent* event) {
     WidgetPtr thisPtr = this;
     bool isKeyPress = false;
     keyEvent_(event, isKeyPress);
-    bool handled = true; // = event->isHandled();
-    return handled;
+    return event->isHandled();
 }
 
 void Widget::preKeyPress(KeyEvent*) {
