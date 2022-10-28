@@ -21,8 +21,8 @@
 #include <vgc/dom/api.h>
 #include <vgc/dom/attribute.h>
 #include <vgc/dom/node.h>
-#include <vgc/dom/value.h>
 #include <vgc/dom/strings.h>
+#include <vgc/dom/value.h>
 
 namespace vgc::dom {
 
@@ -351,7 +351,11 @@ public:
         return NamedElementRange(firstChildElement(tagName), nullptr, tagName);
     }
 
-    VGC_SIGNAL(attributeChanged, (core::StringId, name), (const Value&, oldValue), (const Value&, newValue))
+    VGC_SIGNAL(
+        attributeChanged,
+        (core::StringId, name),
+        (const Value&, oldValue),
+        (const Value&, newValue))
 
 private:
     // Operations
@@ -417,7 +421,10 @@ private:
         return static_cast<Element*>(node);
     }
 
-    void onAttributeChanged_(core::StringId name, const Value& oldValue, const Value& newValue);
+    void onAttributeChanged_(
+        core::StringId name,
+        const Value& oldValue,
+        const Value& newValue);
 };
 
 inline NamedElementIterator& NamedElementIterator::operator++() {

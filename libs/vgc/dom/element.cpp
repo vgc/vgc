@@ -20,8 +20,8 @@
 #include <vgc/dom/document.h>
 #include <vgc/dom/logcategories.h>
 #include <vgc/dom/operation.h>
-#include <vgc/dom/strings.h>
 #include <vgc/dom/schema.h>
+#include <vgc/dom/strings.h>
 
 namespace vgc::dom {
 
@@ -126,7 +126,10 @@ const AuthoredAttribute* Element::findAuthoredAttribute_(core::StringId name) co
     return const_cast<Element*>(this)->findAuthoredAttribute_(name);
 }
 
-void Element::onAttributeChanged_(core::StringId name, const Value& oldValue, const Value& newValue) {
+void Element::onAttributeChanged_(
+    core::StringId name,
+    const Value& oldValue,
+    const Value& newValue) {
     if (name == strings::name) {
         name_ = newValue.hasValue() ? newValue.getStringId() : core::StringId();
     }
