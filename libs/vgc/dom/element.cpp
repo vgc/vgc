@@ -130,6 +130,7 @@ void Element::onAttributeChanged_(
     core::StringId name,
     const Value& oldValue,
     const Value& newValue) {
+
     if (name == strings::name) {
         name_ = newValue.hasValue() ? newValue.getStringId() : core::StringId();
     }
