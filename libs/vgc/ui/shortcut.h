@@ -135,4 +135,14 @@ struct fmt::formatter<vgc::ui::Shortcut> : fmt::formatter<std::string_view> {
     }
 };
 
+template<>
+struct std::hash<vgc::ui::Shortcut> {
+    std::size_t operator()(const vgc::ui::Shortcut& s) const noexcept {
+        vgc::UInt64 x = s.modifiers().toUnderlying();
+        x <<= 32;
+        x += vgc::core::toUnderlying(s.key());
+        return std::hash<vgc::UInt64>()(x);
+    }
+};
+
 #endif // VGC_UI_SHORTCUT_H

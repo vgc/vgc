@@ -60,8 +60,11 @@ Window::Window(const WidgetPtr& widget)
     widget_->keyboardCaptureStarted().connect(onKeyboardCaptureStartedSlot_());
     widget_->keyboardCaptureStopped().connect(onKeyboardCaptureStoppedSlot_());
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
+    widget_->widgetAddedToTree().connect(onWidgetAddedToTreeSlot_());
+    widget_->widgetRemovedFromTree().connect(onWidgetRemovedFromTreeSlot_());
 
     initEngine_();
+    addShortcuts_(widget_.get());
 
     // Handle dead keys and complex input methods.
     //
@@ -312,7 +315,25 @@ std::pair<Widget*, KeyEventPtr> prepareKeyboardEvent(Widget* root, QKeyEvent* ev
 
 void Window::keyPressEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyPress(vgcEvent.get()));
+    bool isHandled = receiver->keyPress(vgcEvent.get());
+
+    // Handle window-wide shortcuts
+    if (!isHandled) {
+        Key key = vgcEvent->key();
+        if (key != Key::None) {
+            Shortcut shortcut(vgcEvent->modifierKeys(), key);
+            auto it = shortcutMap_.find(shortcut);
+            if (it != shortcutMap_.end()) {
+
+                // Found matching shortcut => trigger action
+                Action* action = it->second;
+                isHandled = true;
+                action->trigger();
+            }
+        }
+    }
+
+    event->setAccepted(isHandled);
 }
 
 void Window::keyReleaseEvent(QKeyEvent* event) {
@@ -852,6 +873,78 @@ void Window::initEngine_() {
     });
 }
 
+namespace {
+
+bool isWindowShorctut_(Action* action) {
+
+    // For now, we store both application-wide and window-wide shortcuts in the
+    // Window's shortcut map. Later, we may want to store application-wide
+    // shortcuts elsewhere.
+    //
+    return action->shortcutContext() == ShortcutContext::Application
+           || action->shortcutContext() == ShortcutContext::Window;
+}
+
+} // namespace
+
+void Window::addShortcuts_(Widget* widget) {
+    for (Action* action : widget->actions()) {
+        addShorctut_(action);
+    }
+    for (Widget* child : widget->children()) {
+        addShortcuts_(child);
+    }
+}
+
+void Window::removeShortcuts_(Widget* widget) {
+    for (Action* action : widget->actions()) {
+        removeShortcut_(action);
+    }
+    for (Widget* child : widget->children()) {
+        removeShortcuts_(child);
+    }
+}
+
+void Window::addShorctut_(Action* action) {
+    if (!isWindowShorctut_(action)) {
+        return;
+    }
+    Shortcut shortcut = action->shortcut();
+    if (shortcut.key() == Key::None) {
+        return;
+    }
+    auto [it, inserted] = shortcutMap_.insert({shortcut, action});
+    if (!inserted) {
+        Action* otherAction = it->second;
+        VGC_WARNING(
+            LogVgcUi,
+            "Shortcut [{}] for action \"{}\" ignored, "
+            "as it conflicts with action \"{}\".",
+            shortcut,
+            action->text(),
+            otherAction->text());
+    }
+    else {
+        action->aboutToBeDestroyed().connect(onActionAboutToBeDestroyedSlot_());
+    }
+}
+
+void Window::removeShortcut_(Action* action) {
+    if (!isWindowShorctut_(action)) {
+        return;
+    }
+    Shortcut shortcut = action->shortcut();
+    if (shortcut.key() == Key::None) {
+        return;
+    }
+    auto it = shortcutMap_.find(shortcut);
+    if (it != shortcutMap_.end()) {
+        Action* otherAction = it->second;
+        if (otherAction == action) {
+            shortcutMap_.erase(it);
+        }
+    }
+}
 void Window::onActiveChanged_() {
     bool active = isActive();
     widget_->setTreeActive(active, FocusReason::Window);
@@ -877,6 +970,21 @@ void Window::onKeyboardCaptureStarted_() {
 
 void Window::onKeyboardCaptureStopped_() {
     setKeyboardGrabEnabled(false);
+}
+
+void Window::onWidgetAddedToTree_(Widget* widget) {
+    addShortcuts_(widget);
+}
+
+void Window::onWidgetRemovedFromTree_(Widget* widget) {
+    if (!widget->hasReachedStage(core::ObjectStage::AboutToBeDestroyed)) {
+        removeShortcuts_(widget);
+    }
+}
+
+void Window::onActionAboutToBeDestroyed_(Object* obj) {
+    Action* action = static_cast<Action*>(obj);
+    removeShortcut_(action);
 }
 
 } // namespace vgc::ui

@@ -178,6 +178,7 @@ private:
 
 private:
     WidgetPtr widget_;
+    std::unordered_map<Shortcut, Action*> shortcutMap_;
 
     Int width_ = 0;
     Int height_ = 0;
@@ -207,18 +208,29 @@ private:
 private:
     void initEngine_();
 
+    void addShortcuts_(Widget* widget);
+    void removeShortcuts_(Widget* widget);
+    void addShorctut_(Action* action);
+    void removeShortcut_(Action* action);
+
     void onActiveChanged_();
     void onRepaintRequested_();
     void onMouseCaptureStarted_();
     void onMouseCaptureStopped_();
     void onKeyboardCaptureStarted_();
     void onKeyboardCaptureStopped_();
+    void onWidgetAddedToTree_(Widget* widget);
+    void onWidgetRemovedFromTree_(Widget* widget);
+    void onActionAboutToBeDestroyed_(Object* object);
 
     VGC_SLOT(onRepaintRequestedSlot_, onRepaintRequested_);
     VGC_SLOT(onMouseCaptureStartedSlot_, onMouseCaptureStarted_);
     VGC_SLOT(onMouseCaptureStoppedSlot_, onMouseCaptureStopped_);
     VGC_SLOT(onKeyboardCaptureStartedSlot_, onKeyboardCaptureStarted_);
     VGC_SLOT(onKeyboardCaptureStoppedSlot_, onKeyboardCaptureStopped_);
+    VGC_SLOT(onWidgetAddedToTreeSlot_, onWidgetAddedToTree_);
+    VGC_SLOT(onWidgetRemovedFromTreeSlot_, onWidgetRemovedFromTree_);
+    VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
 };
 
 } // namespace vgc::ui
