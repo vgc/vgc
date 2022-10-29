@@ -91,18 +91,41 @@ bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false) {
 } // namespace
 
 void Widget::addChild(Widget* child) {
-    checkCanReparent_(this, child);
-    children_->append(child);
+    insertChild(nullptr, child);
 }
 
 void Widget::insertChild(Widget* position, Widget* child) {
+
+    // Check whether reparenting is possible
     checkCanReparent_(this, child);
+
+    // Inform onWidgetRemoved_() and onWidgetAdded_() whether the widget is
+    // reparented within the same tree, so that they can be optimized
+    Widget* rootBeforeReparent = child->root();
+    Widget* rootAfterReparent = root();
+    if (rootBeforeReparent == rootAfterReparent) {
+        child->isReparentingWithinSameTree_ = true;
+    }
+
+    // Perform the reparenting
     children_->insert(position, child);
+
+    // Restore data members
+    child->isReparentingWithinSameTree_ = false;
 }
 
 void Widget::insertChild(Int i, Widget* child) {
-    checkCanReparent_(this, child);
-    children_->insert(i, child);
+    if (i < 0 || i > numChildren()) {
+        throw core::IndexError(core::format(
+            "Cannot insert child widget at index {} (numChildren() == {}).",
+            i,
+            numChildren()));
+    }
+    Widget* nextSibling = firstChild();
+    for (; i > 0; --i) {
+        nextSibling = nextSibling->nextSibling();
+    }
+    insertChild(nextSibling, child);
 }
 
 bool Widget::canReparent(Widget* newParent) {
@@ -111,8 +134,7 @@ bool Widget::canReparent(Widget* newParent) {
 }
 
 void Widget::reparent(Widget* newParent) {
-    checkCanReparent_(newParent, this);
-    newParent->children_->append(this);
+    newParent->addChild(this);
 }
 
 namespace {
@@ -142,29 +164,47 @@ bool checkCanReplace_(Widget* oldWidget, Widget* newWidget, bool simulate = fals
 
 } // namespace
 
-bool Widget::canReplace(Widget* oldWidget) {
+bool Widget::canReplace(Widget* replacedWidget) {
     const bool simulate = true;
-    return checkCanReplace_(oldWidget, this, simulate);
+    return checkCanReplace_(replacedWidget, this, simulate);
 }
 
-void Widget::replace(Widget* oldWidget) {
-    checkCanReplace_(oldWidget, this);
-    if (this == oldWidget) {
+void Widget::replace(Widget* replacedWidget) {
+    checkCanReplace_(replacedWidget, this);
+    if (this == replacedWidget) {
         // nothing to do
         return;
     }
-    // Note: this Widget might be a descendant of oldWidget, so we need
-    // remove it from parent before destroying the old Widget.
-    Widget* parent = oldWidget->parent();
-    Widget* nextSibling = oldWidget->nextSibling();
+    Widget* parent = replacedWidget->parent();
+    Widget* nextSibling = replacedWidget->nextSibling();
+
+    // Inform onWidgetRemoved_() and onWidgetAdded_() whether the widget is
+    // reparented within the same tree, so that they can be optimized
+    Widget* rootBeforeReplace = root();
+    Widget* rootAfterReplace = replacedWidget->root();
+    if (rootBeforeReplace == rootAfterReplace) {
+        isReparentingWithinSameTree_ = true;
+    }
+
+    // Remove `this` from its current parent. We need to do this before
+    // destroying replacedWidget, because `this` might be a descendant of
+    // replacedWidget.
     core::ObjectPtr self = removeObjectFromParent_();
-    oldWidget->destroyObject_();
+
+    // Destroy replacedWidget. We need to do this before inserting `this` at
+    // its new location, in case the new parent supports at most one child.
+    replacedWidget->destroyObject_();
+
+    // Insert at new location
     if (parent) {
         parent->children_->insert(nextSibling, this);
     }
     else {
         // nothing to do
     }
+
+    // Restore data members
+    isReparentingWithinSameTree_ = false;
 }
 
 Widget* Widget::root() const {
@@ -1534,11 +1574,17 @@ void Widget::onWidgetAdded_(Widget* widget, bool wasOnlyReordered) {
     if (widget->isVisible()) {
         widget->resendPendingRequests_();
     }
+    if (!widget->isReparentingWithinSameTree_) {
+        root()->widgetAddedToTree().emit(widget);
+    }
 }
 
 void Widget::onWidgetRemoved_(Widget* widget) {
     removeChildStylableObject(widget);
     onWidgetRemoved(widget);
+    if (!widget->isReparentingWithinSameTree_) {
+        root()->widgetRemovedFromTree().emit(widget);
+    }
 }
 
 void Widget::resendPendingRequests_() {
