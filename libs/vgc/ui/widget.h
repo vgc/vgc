@@ -223,8 +223,8 @@ public:
         return WidgetListView(children_);
     }
 
-    /// Creates a new widget of type \p WidgetClass constructed with
-    /// the given arguments \p args, and add it as a child of this widget.
+    /// Creates a new widget of type `WidgetClass` constructed with
+    /// the given arguments `args`, and add it as a child of this widget.
     /// Returns a pointer to the created widget.
     ///
     template<typename WidgetClass, typename... Args>
@@ -233,6 +233,12 @@ public:
             WidgetClass::create(std::forward<Args>(args)...);
         addChild(child.get());
         return child.get();
+    }
+
+    /// Returns the number of child widgets of this widget.
+    ///
+    Int numChildren() const {
+        return children().length();
     }
 
     /// Adds a child to this widget.
@@ -247,40 +253,41 @@ public:
     ///
     void insertChild(Int i, Widget* widget);
 
-    /// Returns whether this Widget can be reparented with the given \p newParent.
-    /// See reparent() for details.
+    /// Returns whether this Widget can be reparented with the given `newParent`.
+    /// See `reparent()` for details.
     ///
     bool canReparent(Widget* newParent);
 
-    /// Moves this Widget from its current position in the widget tree to the
-    /// last child of the given \p newParent. If \p newParent is already the
-    /// current parent of this widget, then this Widget is simply moved last
-    /// without changing its parent. If \p newParent is nullptr, then the
+    /// Moves this widget from its current position in the widget tree to the
+    /// last child of the given `newParent`. If `newParent` is already the
+    /// current parent of this widget, then this widget is simply moved last
+    /// without changing its parent. If `newParent` is `nullptr`, then the
     /// widget becomes a root widget.
     ///
-    /// A ChildCycleError exception is raised if \p newParent is this Widget
+    /// A `ChildCycleError` exception is raised if `newParent` is this widget
     /// itself or one of its descendant.
     ///
     void reparent(Widget* newParent);
 
-    /// Returns whether \p oldWidget can be replaced by this Widget. See replace()
+    /// Returns whether `replacedWidget` can be replaced by this widget. See `replace()`
     /// for details.
     ///
     bool canReplace(Widget* oldWidget);
 
-    /// Replaces the given \p oldWidget with this Widget. This destroys \p oldWidget
-    /// and all its descendants, except this Widget and all its descendants. Does
-    /// nothing if \p oldWidget is this Widget itself.
+    /// Replaces the given `replacedWidget` with this widget. This destroys
+    /// `replacedWidget` and all its descendants, except this widget and all
+    /// its descendants. Does nothing if `replacedWidget` is this widget
+    /// itself.
     ///
-    /// A NullError exception is raised if \p oldWidget is null.
+    /// A `NullError` exception is raised if `oldWidget` is `nullptr`.
     ///
-    /// A ChildCycleError exception is raised if \p oldWidget is a (strict)
-    /// descendant this Widget
+    /// A `ChildCycleError` exception is raised if `replacedWidget` is a
+    /// (strict) descendant this widget.
     ///
-    void replace(Widget* oldWidget);
+    void replace(Widget* replacedWidget);
 
-    /// Returns whether this widget is a descendant of the given \p other widget.
-    /// Returns true if this widget is equal to the \p other widget.
+    /// Returns whether this widget is a descendant of the given `other` widget.
+    /// Returns true if this widget is equal to the `other` widget.
     ///
     bool isDescendant(const Widget* other) const {
         return isDescendantObject(other);
@@ -300,6 +307,16 @@ public:
     bool isRoot() const {
         return !parent();
     }
+
+    /// This signal is emitted from the root widget whenever a widget is
+    /// added to this widget tree.
+    ///
+    VGC_SIGNAL(widgetAddedToTree, (Widget*, widget))
+
+    /// This signal is emitted from the root widget whenever a widget is
+    /// removed from this widget tree.
+    ///
+    VGC_SIGNAL(widgetRemovedFromTree, (Widget*, widget))
 
     /// Returns the furthest ancestor OverlayArea widget of this widget, if it exists.
     /// Otherwise returns nullptr.
@@ -1278,6 +1295,8 @@ protected:
 private:
     WidgetList* children_ = nullptr;
     ActionList* actions_ = nullptr;
+
+    bool isReparentingWithinSameTree_ = false;
 
     void onWidgetAdded_(Widget* widget, bool wasOnlyReordered);
     void onWidgetRemoved_(Widget* widget);
