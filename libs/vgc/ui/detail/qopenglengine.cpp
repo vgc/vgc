@@ -744,6 +744,12 @@ QglEngine::QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx)
         format_.setStencilBufferSize(8);
         format_.setSamples(createInfo.windowSwapChainFormat().numSamples());
         format_.setSwapInterval(0);
+        if (createInfo.windowSwapChainFormat().pixelFormat() == PixelFormat::RGBA_8_UNORM_SRGB) {
+            format_.setColorSpace(QSurfaceFormat::sRGBColorSpace);
+        }
+        else {
+            format_.setColorSpace(QSurfaceFormat::DefaultColorSpace);
+        }
 
         // XXX use buffer count
         format_.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
