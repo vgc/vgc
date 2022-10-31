@@ -16,6 +16,8 @@
 
 #include <vgc/ui/shortcut.h>
 
+#include <vgc/core/os.h>
+
 namespace vgc::ui {
 
 VGC_DEFINE_ENUM(
@@ -29,7 +31,11 @@ namespace {
 void appendString(std::string& res, std::string& separator, std::string_view str) {
     res += separator;
     res += str;
+#ifndef VGC_CORE_OS_MACOS
     separator = "+";
+#else
+    separator = " ";
+#endif
 }
 
 } // namespace
@@ -44,7 +50,10 @@ std::string toString(const Shortcut& shortcut) {
     ModifierKeys modifiers = shortcut.modifiers();
     std::string res;
     std::string separator = "";
-    // Note: we want the order Ctrl + Alt + Shift (different than the enum order)
+    // Note:
+    // - on Windows, we want the order Ctrl + Alt + Shift + Meta
+    // - on macOS, on Windows, we want the order Control + Alt + Shift + Command
+#ifndef VGC_CORE_OS_MACOS
     if (modifiers.has(ModifierKey::Ctrl)) {
         appendString(res, separator, "Ctrl");
     }
@@ -57,6 +66,27 @@ std::string toString(const Shortcut& shortcut) {
     if (modifiers.has(ModifierKey::Meta)) {
         appendString(res, separator, "Meta");
     }
+#else
+    // Note: the font we currently use don't have the Apple modifiers characters,
+    // and we don't have a system for character substitution when not found in a
+    // given font, so we don't use these special characters.
+    if (modifiers.has(ModifierKey::Meta)) {
+        appendString(res, separator, "Ctrl");
+        //appendString(res, separator, "⌃"); // U+2303
+    }
+    if (modifiers.has(ModifierKey::Alt)) {
+        appendString(res, separator, "Alt");
+        //appendString(res, separator, "⌥"); // U+2325
+    }
+    if (modifiers.has(ModifierKey::Shift)) {
+        appendString(res, separator, "Shift");
+        //appendString(res, separator, "⇧"); // U+21E7
+    }
+    if (modifiers.has(ModifierKey::Ctrl)) {
+        appendString(res, separator, "Cmd");
+        //appendString(res, separator, "⌘"); // U+2318
+    }
+#endif
     appendString(res, separator, core::Enum::prettyName(key));
     return res;
 }
