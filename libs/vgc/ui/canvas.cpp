@@ -135,7 +135,7 @@ SelectionList Canvas::getSelectableItemsAt(const geometry::Vec2f& /*position*/) 
 
 void Canvas::setDocument(dom::Document* document) {
 
-    // cleanup
+    clearGraphics_();
 
     if (documentChangedConnectionHandle_) {
         document_->disconnect(documentChangedConnectionHandle_);
@@ -146,6 +146,12 @@ void Canvas::setDocument(dom::Document* document) {
         documentChangedConnectionHandle_ = document_->changed().connect(
             [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
         document_->emitPendingDiff();
+
+        // Note: the above is a quick hack to initialize the resources after
+        // doing "new document" or "open document", but it wouldn't work if we
+        // have two canvases.
+        //
+        // TODO: implement initialization from new document without using pending diff.
     }
 
     requestRepaint();
