@@ -16,7 +16,6 @@
 
 #include <vgc/graphics/font.h>
 
-#include <filesystem>
 #include <mutex>
 
 #include <ft2build.h>
@@ -26,6 +25,7 @@
 #include <hb-ft.h>
 #include <hb.h>
 
+#include <vgc/core/io.h>
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/graphics/exceptions.h>
@@ -457,7 +457,7 @@ std::string getDefaultFontPath() {
 
 #ifdef VGC_CORE_OS_MACOS
     std::string appleFont = "/Library/Fonts/SF-Pro-Text-Regular.otf";
-    if (std::filesystem::exists(appleFont)) {
+    if (core::fileExists(appleFont)) {
         fontPath = appleFont;
     }
 #endif
