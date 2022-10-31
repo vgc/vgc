@@ -87,7 +87,7 @@ constexpr bool qopenglExperiment = false;
 
 #define VGC_APP_API // nothing
 
-VGC_DECLARE_LOG_CATEGORY(VGC_APP_API, LogVgcApp, Debug)
+VGC_DECLARE_LOG_CATEGORY(LogVgcApp, Debug)
 VGC_DEFINE_LOG_CATEGORY(LogVgcApp, "vgc.app")
 
 core::StringId user_("user");

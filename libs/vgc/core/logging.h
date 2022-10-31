@@ -213,10 +213,10 @@ private:
 /// is meant to be exported and used in other DLLs:
 ///
 /// ```cpp
-/// VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogCore, Debug)
+/// VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogVgcCore, Debug)
 ///
 /// // in a *.cpp file
-/// VGC_DEFINE_LOG_CATEGORY(MyCat, "my.cat")
+/// VGC_DEFINE_LOG_CATEGORY(LogVgcCore, "vgc.core")
 /// ```
 ///
 ///
