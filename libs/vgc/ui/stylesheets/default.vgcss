@@ -1,3 +1,20 @@
+.root {
+    pixel-hinting: normal;
+
+    /* With SourceSansPro @ 14dp, both cap-height and num-height are equal to 9dp.
+     * So we ensure that font-ascent - 9dp == font-descent so that number and capital
+     * letters are perfectly centered in the rectangle of selection.
+     */
+    font-size: 14dp;
+    font-ascent: 12dp;
+    font-descent: 3dp;
+
+    caret-color: rgb(221, 221, 221);
+    text-color: rgb(221, 221, 221);
+    text-selection-color: rgb(221, 221, 221);
+    text-selection-background-color: rgb(11, 82, 172);
+}
+
 .PanelArea > .Flex,
 .PanelArea > .Flex > .Flex,
 .root.Flex,
@@ -53,20 +70,6 @@
 .Plot2d
 .Menu,
 .MenuButton {
-    pixel-hinting: normal;
-
-    /* With SourceSansPro @ 14dp, both cap-height and num-height are equal to 9dp.
-     * So we ensure that font-ascent - 9dp == font-descent so that number and capital
-     * letters are perfectly centered in the rectangle of selection.
-     */
-    font-size: 14dp;
-    font-ascent: 12dp;
-    font-descent: 3dp;
-
-    caret-color: rgb(221, 221, 221);
-    text-color: rgb(221, 221, 221);
-    text-selection-color: rgb(221, 221, 221);
-    text-selection-background-color: rgb(11, 82, 172);
 }
 
 .Button,

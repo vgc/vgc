@@ -26,6 +26,7 @@
 #include <QTimer>
 
 #include <vgc/core/io.h>
+#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/core/random.h>
@@ -355,7 +356,11 @@ private:
                       "    padding-right: 0dp; "
                       "    padding-bottom: 0dp; "
                       "    padding-left: 0dp; }";
+#ifdef VGC_CORE_OS_MACOS
+        styleSheet += ".root { font-size: 13dp; }";
+#endif
         overlay_->setStyleSheet(styleSheet);
+        overlay_->addStyleClass(ui::strings::root);
     }
 
     ui::Action* actionNew_;

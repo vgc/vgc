@@ -67,24 +67,17 @@ std::string toString(const Shortcut& shortcut) {
         appendString(res, separator, "Meta");
     }
 #else
-    // Note: the font we currently use don't have the Apple modifiers characters,
-    // and we don't have a system for character substitution when not found in a
-    // given font, so we don't use these special characters.
     if (modifiers.has(ModifierKey::Meta)) {
-        appendString(res, separator, "Ctrl");
-        //appendString(res, separator, "⌃"); // U+2303
+        appendString(res, separator, "⌃"); // U+2303 Control / Ctrl
     }
     if (modifiers.has(ModifierKey::Alt)) {
-        appendString(res, separator, "Alt");
-        //appendString(res, separator, "⌥"); // U+2325
+        appendString(res, separator, "⌥"); // U+2325 Option / Alt
     }
     if (modifiers.has(ModifierKey::Shift)) {
-        appendString(res, separator, "Shift");
-        //appendString(res, separator, "⇧"); // U+21E7
+        appendString(res, separator, "⇧"); // U+21E7 Shift
     }
     if (modifiers.has(ModifierKey::Ctrl)) {
-        appendString(res, separator, "Cmd");
-        //appendString(res, separator, "⌘"); // U+2318
+        appendString(res, separator, "⌘"); // U+2318 Command / Cmd
     }
 #endif
     appendString(res, separator, core::Enum::prettyName(key));
