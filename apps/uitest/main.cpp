@@ -53,6 +53,7 @@
 #include <vgc/widgets/stylesheets.h>
 
 namespace core = vgc::core;
+namespace dom = vgc::dom;
 namespace geometry = vgc::geometry;
 namespace ui = vgc::ui;
 
@@ -76,334 +77,386 @@ void runtimePatchQt() {
         VirtualProtect(target, sizeof(patch), oldProt, &oldProt);
     }
 }
+constexpr bool qopenglExperiment = true;
+#else
+constexpr bool qopenglExperiment = false;
 #endif
 
-// Set runtime paths from vgc.conf, an optional configuration file to be
-// placed in the same folder as the executable.
-//
-// If vgc.conf exists, then the specified paths can be either absolute or
-// relative to the directory where vgc.conf lives (that is, relative to the
-// application dir path).
-//
-// If vgc.conf does not exist, or BasePath isn't specified, then BasePath
-// is assumed to be ".." (that is, one directory above the application dir
-// path).
-//
-// If vgc.conf does not exist, or PythonHome isn't specified, then
-// PythonHome is assumed to be equal to BasePath.
-//
-// Note: in the future, we would probably want this to be handled directly
-// by vgc::core, for example via a function core::init(argc, argv).
-// For now, we keep it here for the convenience of being able to use Qt's
-// applicationDirPath(), QDir, and QSettings. We don't want vgc::core to
-// depend on Qt.
-//
-void setBasePath() {
-    QString binPath = QCoreApplication::applicationDirPath();
-    QDir binDir(binPath);
-    binDir.makeAbsolute();
-    binDir.setPath(binDir.canonicalPath()); // resolve symlinks
-    QDir baseDir = binDir;
-    baseDir.cdUp();
-    std::string basePath = ui::fromQt(baseDir.path());
-    if (binDir.exists("vgc.conf")) {
-        QSettings conf(binDir.filePath("vgc.conf"), QSettings::IniFormat);
-        if (conf.contains("BasePath")) {
-            QString v = conf.value("BasePath").toString();
-            if (!v.isEmpty()) {
-                v = QDir::cleanPath(binDir.filePath(v));
-                basePath = ui::fromQt(v);
+VGC_DECLARE_OBJECT(Application);
+
+class Application : public vgc::core::Object {
+    VGC_OBJECT(Application, vgc::core::Object)
+
+public:
+    static ApplicationPtr create(int argc, char* argv[]) {
+        preInit_();
+        return ApplicationPtr(new Application(argc, argv));
+    }
+
+    int exec() {
+        return application_.exec();
+    }
+
+protected:
+    Application(int argc, char* argv[])
+        : application_(argc, argv) {
+
+        setBasePath_();
+        setWindowIcon_();
+        createDocument_();
+        createWidgets_();
+        createWindow_();
+    }
+
+private:
+    QGuiApplication application_;
+    dom::DocumentPtr document_;
+    ui::OverlayAreaPtr overlay_;
+    ui::Column* mainLayout_;
+    ui::WindowPtr window_;
+
+    static void setAttribute(Qt::ApplicationAttribute attribute, bool on = true) {
+        QGuiApplication::setAttribute(attribute, on);
+    }
+
+    // Initializations that must happen before creating the QGuiApplication.
+    //
+    static void preInit_() {
+        if (qopenglExperiment) {
+            setAttribute(Qt::AA_ShareOpenGLContexts);
+        }
+        setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
+        setAttribute(Qt::AA_DisableHighDpiScaling, true);
+    }
+
+    // Set runtime paths from vgc.conf, an optional configuration file to be
+    // placed in the same folder as the executable.
+    //
+    // If vgc.conf exists, then the specified paths can be either absolute or
+    // relative to the directory where vgc.conf lives (that is, relative to the
+    // application dir path).
+    //
+    // If vgc.conf does not exist, or BasePath isn't specified, then BasePath
+    // is assumed to be ".." (that is, one directory above the application dir
+    // path).
+    //
+    // If vgc.conf does not exist, or PythonHome isn't specified, then
+    // PythonHome is assumed to be equal to BasePath.
+    //
+    // Note: in the future, we would probably want this to be handled directly
+    // by vgc::core, for example via a function core::init(argc, argv).
+    // For now, we keep it here for the convenience of being able to use Qt's
+    // applicationDirPath(), QDir, and QSettings. We don't want vgc::core to
+    // depend on Qt.
+    //
+    void setBasePath_() {
+        QString binPath = QCoreApplication::applicationDirPath();
+        QDir binDir(binPath);
+        binDir.makeAbsolute();
+        binDir.setPath(binDir.canonicalPath()); // resolve symlinks
+        QDir baseDir = binDir;
+        baseDir.cdUp();
+        std::string basePath = ui::fromQt(baseDir.path());
+        if (binDir.exists("vgc.conf")) {
+            QSettings conf(binDir.filePath("vgc.conf"), QSettings::IniFormat);
+            if (conf.contains("BasePath")) {
+                QString v = conf.value("BasePath").toString();
+                if (!v.isEmpty()) {
+                    v = QDir::cleanPath(binDir.filePath(v));
+                    basePath = ui::fromQt(v);
+                }
+            }
+        }
+        core::setBasePath(basePath);
+    }
+
+    void setWindowIcon_() {
+        std::string iconPath = core::resourcePath("apps/illustration/icons/512.png");
+        application_.setWindowIcon(QIcon(ui::toQt(iconPath)));
+    }
+
+    void createDocument_() {
+        document_ = vgc::dom::Document::create();
+        vgc::dom::Element::create(document_.get(), "vgc");
+        document_->enableHistory(vgc::dom::strings::New_Document);
+    }
+
+    void createWidgets_() {
+
+        createOverlayAndMainLayout_();
+        createMenu_(mainLayout_);
+
+        // Create panel areas
+        ui::PanelArea* mainArea = ui::PanelArea::createHorizontalSplit(mainLayout_);
+        ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
+        ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
+        ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
+        ui::PanelArea* middleTopArea = ui::PanelArea::createTabs(middleArea);
+        ui::PanelArea* middleBottomArea = ui::PanelArea::createTabs(middleArea);
+        ui::PanelArea* rightTopArea = ui::PanelArea::createTabs(rightArea);
+        ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
+
+        // Create panels
+        // XXX actually create Panel instances as children of Tabs areas
+        ui::Column* leftAreaWidget = leftArea->createChild<ui::Column>();
+        ui::Column* middleTopAreaWidget = middleTopArea->createChild<ui::Column>();
+        ui::Column* middleBottomAreaWidget = middleBottomArea->createChild<ui::Column>();
+        ui::Column* rightTopAreaWidget = rightTopArea->createChild<ui::Column>();
+        ui::Column* rightBottomAreaWidget = rightBottomArea->createChild<ui::Column>();
+
+        // Create widgets inside panels
+        ui::ColorPalette* palette = createColorPalette_(leftAreaWidget);
+        createGrid_(middleBottomAreaWidget);
+        createPlot2d_(rightTopAreaWidget);
+        createClickMePopups_(rightBottomAreaWidget);
+        createLineEdits_(rightBottomAreaWidget);
+        createImageBox_(rightBottomAreaWidget);
+
+        // Create canvas
+        ui::Canvas* canvas = createCanvas_(middleTopAreaWidget, document_.get());
+
+        // Connections
+        palette->colorSelected().connect(
+            [=]() { canvas->setCurrentColor(palette->selectedColor()); });
+    }
+
+    void createOverlayAndMainLayout_() {
+        overlay_ = ui::OverlayArea::create();
+        mainLayout_ = overlay_->createChild<ui::Column>();
+        overlay_->setAreaWidget(mainLayout_);
+        mainLayout_->addStyleClass(core::StringId("main-layout"));
+        std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
+        std::string styleSheet = core::readFile(path);
+        styleSheet += ".main-layout { "
+                      "    row-gap: 0dp; "
+                      "    padding-top: 0dp; "
+                      "    padding-right: 0dp; "
+                      "    padding-bottom: 0dp; "
+                      "    padding-left: 0dp; }";
+        overlay_->setStyleSheet(styleSheet);
+    }
+
+    void createMenu_(ui::Widget* parent) {
+
+        using ui::Action;
+        using ui::Key;
+        using ui::Menu;
+        using ui::ModifierKey;
+        using ui::Shortcut;
+        using ui::ShortcutContext;
+
+        Menu* menu = parent->createChild<Menu>("Menu");
+        menu->setDirection(ui::FlexDirection::Row);
+        menu->addStyleClass(
+            core::StringId("horizontal")); // TODO: move to Flex and/or Menu.
+        menu->setShortcutTrackEnabled(false);
+
+        Menu* fileMenu = menu->createSubMenu("File");
+        Menu* editMenu = menu->createSubMenu("Edit");
+        Menu* testMenu = menu->createSubMenu("Test");
+        menu->setPopupEnabled(false);
+
+        Action* saveAction = parent->createAction(
+            "Save", Shortcut(ModifierKey::Ctrl, Key::S), ShortcutContext::Window);
+        saveAction->triggered().connect([]() { VGC_DEBUG_TMP("Save trigerred"); });
+
+        fileMenu->addItem(
+            parent->createAction("New", Shortcut(ModifierKey::Ctrl, Key::N)));
+        fileMenu->addItem(
+            parent->createAction("Open", Shortcut(ModifierKey::Ctrl, Key::O)));
+        fileMenu->addItem(saveAction);
+        fileMenu->addItem(parent->createAction(
+            "Save As...", Shortcut(ModifierKey::Ctrl | ModifierKey::Shift, Key::S)));
+        fileMenu->addItem(parent->createAction(
+            "Quit", Shortcut(ModifierKey::Ctrl, Key::Q))); // TODO: Alt+F4 on Windows
+
+        editMenu->addItem(
+            parent->createAction("Undo", Shortcut(ModifierKey::Ctrl, Key::Z)));
+        editMenu->addItem(parent->createAction(
+            "Redo", Shortcut(ModifierKey::Ctrl | ModifierKey::Shift, Key::Z)));
+
+        Menu* menu1 = testMenu->createSubMenu("Menu 1");
+        Menu* menu2 = testMenu->createSubMenu("Menu 2");
+        Menu* menu3 = testMenu->createSubMenu("Menu 3");
+
+        menu1->addItem(parent->createAction("Action #1.1", Shortcut({}, Key::G)));
+        menu1->addItem(
+            parent->createAction("Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
+        menu1->addItem(parent->createAction("Action #1.3"));
+        menu1->addItem(parent->createAction("Action #1.4"));
+        menu1->addItem(parent->createAction("Action #1.5"));
+        menu1->addItem(parent->createAction("Action #1.6"));
+        menu1->addItem(parent->createAction("Action #1.7"));
+        Menu* menu1b = menu1->createSubMenu("Menu 1.8");
+
+        menu1b->addItem(parent->createAction("Action #1.8.1"));
+        menu1b->addItem(parent->createAction("Action #1.8.2"));
+        menu1b->addItem(parent->createAction("Action #1.8.3"));
+        menu1b->addItem(parent->createAction("Action #1.8.4"));
+        menu1b->addItem(parent->createAction("Action #1.8.5"));
+        menu1b->addItem(parent->createAction("Action #1.8.6"));
+        menu1b->addItem(parent->createAction("Action #1.8.7"));
+
+        menu2->addItem(parent->createAction("Action #2.1", Shortcut({}, Key::F)));
+        menu2->addItem(
+            parent->createAction("Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
+
+        menu3->addItem(parent->createAction("Action #3.1"));
+
+        // stretch at the right-side of the Flex
+        // TODO: implement AlignLeft in Flex to achieve the same without the extra child
+        menu->createChild<ui::Widget>();
+    }
+
+    ui::ColorPalette* createColorPalette_(ui::Widget* parent) {
+        ui::ColorPalette* palette = parent->createChild<ui::ColorPalette>();
+        palette->setStyleSheet(".ColorPalette { vertical-stretch: 0; }");
+        parent->createChild<ui::Widget>(); // vertical-stretch: 1
+        return palette;
+    }
+
+    ui::Canvas* createCanvas_(ui::Widget* parent, vgc::dom::Document* document) {
+        return parent->createChild<ui::Canvas>(document);
+    }
+
+    void createGrid_(ui::Widget* parent) {
+        ui::Grid* gridTest = parent->createChild<ui::Grid>();
+        gridTest->setStyleSheet(".Grid { column-gap: 30dp; row-gap: 10dp; }");
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                ui::LineEditPtr le = ui::LineEdit::create();
+                std::string sheet(
+                    ".LineEdit { text-color: rgb(50, 232, 211); preferred-width: ");
+                sheet += core::toString(1 + j);
+                sheet += "00dp; horizontal-stretch: ";
+                sheet += core::toString(j + 1);
+                sheet += "; vertical-stretch: 0; }";
+                le->setStyleSheet(sheet);
+                le->setText("test");
+                gridTest->setWidgetAt(le.get(), i, j);
+            }
+        }
+        gridTest->widgetAt(0, 0)->setStyleSheet(
+            ".LineEdit { text-color: rgb(255, 255, 50); vertical-stretch: 0; "
+            "preferred-width: 127dp; padding-left: 30dp; margin-left: 80dp; "
+            "horizontal-stretch: 0; horizontal-shrink: 1; }");
+        gridTest->widgetAt(0, 1)->setStyleSheet(
+            ".LineEdit { text-color: rgb(40, 255, 150); vertical-stretch: 0; "
+            "preferred-width: 128dp; horizontal-stretch: 20; }");
+        gridTest->widgetAt(1, 0)->setStyleSheet(
+            ".LineEdit { text-color: rgb(40, 255, 150); vertical-stretch: 0; "
+            "preferred-width: 127dp; horizontal-shrink: 1;}");
+        gridTest->widgetAt(1, 1)->setStyleSheet(
+            ".LineEdit { text-color: rgb(255, 255, 50); vertical-stretch: 0; "
+            "preferred-width: 128dp; padding-left: 30dp; horizontal-stretch: 0; }");
+        gridTest->widgetAt(0, 2)->setStyleSheet(
+            ".LineEdit { text-color: rgb(255, 100, 80); vertical-stretch: 0; "
+            "preferred-width: 231dp; horizontal-stretch: 2; }");
+        gridTest->requestGeometryUpdate();
+    }
+
+    void createPlot2d_(ui::Widget* parent) {
+        ui::Plot2d* plot2d = parent->createChild<ui::Plot2d>();
+        plot2d->setNumYs(16);
+        // clang-format off
+        plot2d->appendDataPoint( 0.0f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  4.f,  5.f, 11.f,  4.f,  4.f,  5.f, 11.f,  4.f);
+        plot2d->appendDataPoint( 1.0f,  5.f,  7.f,  2.f,  5.f,  5.f,  7.f,  2.f,  5.f,  7.f,  7.f,  8.f,  7.f,  7.f,  7.f,  8.f,  7.f);
+        plot2d->appendDataPoint( 4.0f, 10.f,  1.f,  4.f, 10.f, 10.f,  1.f,  4.f, 10.f,  9.f,  8.f,  2.f,  9.f,  9.f,  8.f,  2.f,  9.f);
+        plot2d->appendDataPoint( 5.0f,  5.f,  4.f,  6.f,  5.f,  5.f,  4.f,  6.f,  5.f,  5.f,  6.f,  4.f,  5.f,  5.f,  6.f,  4.f,  5.f);
+        plot2d->appendDataPoint(10.0f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f);
+        plot2d->appendDataPoint(11.0f,  4.f,  5.f, 11.f,  4.f,  4.f,  5.f, 11.f,  4.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f);
+        plot2d->appendDataPoint(12.0f,  7.f,  7.f,  8.f,  7.f,  7.f,  7.f,  8.f,  7.f,  5.f,  7.f,  2.f,  5.f,  5.f,  7.f,  2.f,  5.f);
+        plot2d->appendDataPoint(13.0f,  9.f,  8.f,  2.f,  9.f,  9.f,  8.f,  2.f,  9.f, 10.f,  1.f,  4.f, 10.f, 10.f,  1.f,  4.f, 10.f);
+        plot2d->appendDataPoint(20.0f,  5.f,  6.f,  4.f,  5.f,  5.f,  6.f,  4.f,  5.f,  5.f,  4.f,  6.f,  5.f,  5.f,  4.f,  6.f,  5.f);
+        plot2d->appendDataPoint(21.0f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f);
+        // clang-format on
+    }
+
+    void createClickMePopups_(ui::Widget* parent) {
+
+        // Get overlay area
+        ui::OverlayArea* overlayArea = parent->topmostOverlayArea();
+
+        // Create the popup. We can't see it at the beginning because its size is (0, 0).
+        ui::Label* label = overlayArea->createOverlayWidget<ui::Label>(
+            ui::OverlayResizePolicy::None, "you clicked here!");
+        label->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
+                             "background-color-on-hover: rgb(20, 130, 130); }");
+
+        // Create a grid of "click me" buttons, whose actions are to set the popup geometry.
+        ui::Grid* grid = parent->createChild<ui::Grid>();
+        grid->setStyleSheet(".Grid { column-gap: 10dp; row-gap: 10dp; }");
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                ui::Action* action = parent->createAction("click me");
+                ui::ButtonPtr button = ui::Button::create(action);
+                grid->setWidgetAt(button.get(), i, j);
+                action->triggered().connect([=](ui::Widget* from) {
+                    geometry::Vec2f p =
+                        from->mapTo(overlayArea, geometry::Vec2f(0.f, 0.f));
+                    label->updateGeometry(p, geometry::Vec2f(120.f, 25.f));
+                });
             }
         }
     }
-    core::setBasePath(basePath);
-}
 
-void createMenu(ui::Widget* parent) {
+    void createLineEdits_(ui::Widget* parent) {
 
-    using ui::Key;
-    using ui::Menu;
-    using ui::ModifierKey;
-    using ui::Shortcut;
+        std::string lipsum =
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+            "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim "
+            "ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
+            "aliquip ex ea commodo consequat. Duis aute irure dolor in "
+            "reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla "
+            "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in "
+            "culpa qui officia deserunt mollit anim id est laborum.";
 
-    Menu* menu = parent->createChild<Menu>("Menu");
-    menu->setDirection(ui::FlexDirection::Row);
-    menu->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex and/or Menu.
-    menu->setShortcutTrackEnabled(false);
+        const vgc::UInt32 seed1 = 109283;
+        const vgc::UInt32 seed2 = 981427;
+        size_t lipsumSize = lipsum.size();
+        vgc::UInt32 lipsumSize32 = static_cast<vgc::UInt32>(lipsumSize);
+        core::PseudoRandomUniform<size_t> randomBegin(0, lipsumSize32, seed1);
+        core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
 
-    Menu* fileMenu = menu->createSubMenu("File");
-    Menu* editMenu = menu->createSubMenu("Edit");
-    Menu* testMenu = menu->createSubMenu("Test");
-    menu->setPopupEnabled(false);
-
-    fileMenu->addItem(parent->createAction("New", Shortcut(ModifierKey::Ctrl, Key::N)));
-    fileMenu->addItem(parent->createAction("Open", Shortcut(ModifierKey::Ctrl, Key::O)));
-    fileMenu->addItem(parent->createAction("Save", Shortcut(ModifierKey::Ctrl, Key::S)));
-    fileMenu->addItem(parent->createAction(
-        "Save As...", Shortcut(ModifierKey::Ctrl | ModifierKey::Shift, Key::S)));
-    fileMenu->addItem(parent->createAction(
-        "Quit", Shortcut(ModifierKey::Ctrl, Key::Q))); // TODO: Alt+F4 on Windows
-
-    editMenu->addItem(parent->createAction("Undo", Shortcut(ModifierKey::Ctrl, Key::Z)));
-    editMenu->addItem(parent->createAction(
-        "Redo", Shortcut(ModifierKey::Ctrl | ModifierKey::Shift, Key::Z)));
-
-    Menu* menu1 = testMenu->createSubMenu("Menu 1");
-    Menu* menu2 = testMenu->createSubMenu("Menu 2");
-    Menu* menu3 = testMenu->createSubMenu("Menu 3");
-
-    menu1->addItem(parent->createAction("Action #1.1", Shortcut({}, Key::G)));
-    menu1->addItem(
-        parent->createAction("Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
-    menu1->addItem(parent->createAction("Action #1.3"));
-    menu1->addItem(parent->createAction("Action #1.4"));
-    menu1->addItem(parent->createAction("Action #1.5"));
-    menu1->addItem(parent->createAction("Action #1.6"));
-    menu1->addItem(parent->createAction("Action #1.7"));
-    Menu* menu1b = menu1->createSubMenu("Menu 1.8");
-
-    menu1b->addItem(parent->createAction("Action #1.8.1"));
-    menu1b->addItem(parent->createAction("Action #1.8.2"));
-    menu1b->addItem(parent->createAction("Action #1.8.3"));
-    menu1b->addItem(parent->createAction("Action #1.8.4"));
-    menu1b->addItem(parent->createAction("Action #1.8.5"));
-    menu1b->addItem(parent->createAction("Action #1.8.6"));
-    menu1b->addItem(parent->createAction("Action #1.8.7"));
-
-    menu2->addItem(parent->createAction("Action #2.1", Shortcut({}, Key::F)));
-    menu2->addItem(
-        parent->createAction("Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
-
-    menu3->addItem(parent->createAction("Action #3.1"));
-
-    // stretch at the right-side of the Flex
-    // TODO: implement AlignLeft in Flex to achieve the same without the extra child
-    menu->createChild<ui::Widget>();
-}
-
-ui::ColorPalette* createColorPalette(ui::Widget* parent) {
-    ui::ColorPalette* palette = parent->createChild<ui::ColorPalette>();
-    palette->setStyleSheet(".ColorPalette { vertical-stretch: 0; }");
-    parent->createChild<ui::Widget>(); // vertical-stretch: 1
-    return palette;
-}
-
-vgc::dom::DocumentPtr createDocument() {
-    vgc::dom::DocumentPtr document = vgc::dom::Document::create();
-    vgc::dom::Element::create(document.get(), "vgc");
-    document->enableHistory(vgc::dom::strings::New_Document);
-    return document;
-}
-
-ui::Canvas* createCanvas(ui::Widget* parent, vgc::dom::Document* document) {
-    return parent->createChild<ui::Canvas>(document);
-}
-
-void createGrid(ui::Widget* parent) {
-    ui::Grid* gridTest = parent->createChild<ui::Grid>();
-    gridTest->setStyleSheet(".Grid { column-gap: 30dp; row-gap: 10dp; }");
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            ui::LineEditPtr le = ui::LineEdit::create();
-            std::string sheet(
-                ".LineEdit { text-color: rgb(50, 232, 211); preferred-width: ");
-            sheet += core::toString(1 + j);
-            sheet += "00dp; horizontal-stretch: ";
-            sheet += core::toString(j + 1);
-            sheet += "; vertical-stretch: 0; }";
-            le->setStyleSheet(sheet);
-            le->setText("test");
-            gridTest->setWidgetAt(le.get(), i, j);
+        int numRows = 3;
+        int numColumns = 5;
+        for (int i = 0; i < numRows; ++i) {
+            ui::Row* row = parent->createChild<ui::Row>();
+            row->addStyleClass(core::StringId("inner"));
+            // Change style of first row
+            if (i == 0) {
+                row->setStyleSheet(".LineEdit { text-color: rgb(50, 232, 211); }");
+            }
+            for (int j = 0; j < numColumns; ++j) {
+                ui::LineEdit* lineEdit = row->createChild<ui::LineEdit>();
+                size_t begin = randomBegin();
+                size_t count = randomCount();
+                begin = core::clamp(begin, 0, lipsumSize);
+                size_t end = begin + count;
+                end = core::clamp(end, 0, lipsumSize);
+                count = end - begin;
+                lineEdit->setText(std::string_view(lipsum).substr(begin, count));
+            }
         }
     }
-    gridTest->widgetAt(0, 0)->setStyleSheet(
-        ".LineEdit { text-color: rgb(255, 255, 50); vertical-stretch: 0; "
-        "preferred-width: 127dp; padding-left: 30dp; margin-left: 80dp; "
-        "horizontal-stretch: 0; horizontal-shrink: 1; }");
-    gridTest->widgetAt(0, 1)->setStyleSheet(
-        ".LineEdit { text-color: rgb(40, 255, 150); vertical-stretch: 0; "
-        "preferred-width: 128dp; horizontal-stretch: 20; }");
-    gridTest->widgetAt(1, 0)->setStyleSheet(
-        ".LineEdit { text-color: rgb(40, 255, 150); vertical-stretch: 0; "
-        "preferred-width: 127dp; horizontal-shrink: 1;}");
-    gridTest->widgetAt(1, 1)->setStyleSheet(
-        ".LineEdit { text-color: rgb(255, 255, 50); vertical-stretch: 0; "
-        "preferred-width: 128dp; padding-left: 30dp; horizontal-stretch: 0; }");
-    gridTest->widgetAt(0, 2)->setStyleSheet(
-        ".LineEdit { text-color: rgb(255, 100, 80); vertical-stretch: 0; "
-        "preferred-width: 231dp; horizontal-stretch: 2; }");
-    gridTest->requestGeometryUpdate();
-}
 
-void createPlot2d(ui::Widget* parent) {
-    ui::Plot2d* plot2d = parent->createChild<ui::Plot2d>();
-    plot2d->setNumYs(16);
-    // clang-format off
-    plot2d->appendDataPoint( 0.0f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  4.f,  5.f, 11.f,  4.f,  4.f,  5.f, 11.f,  4.f);
-    plot2d->appendDataPoint( 1.0f,  5.f,  7.f,  2.f,  5.f,  5.f,  7.f,  2.f,  5.f,  7.f,  7.f,  8.f,  7.f,  7.f,  7.f,  8.f,  7.f);
-    plot2d->appendDataPoint( 4.0f, 10.f,  1.f,  4.f, 10.f, 10.f,  1.f,  4.f, 10.f,  9.f,  8.f,  2.f,  9.f,  9.f,  8.f,  2.f,  9.f);
-    plot2d->appendDataPoint( 5.0f,  5.f,  4.f,  6.f,  5.f,  5.f,  4.f,  6.f,  5.f,  5.f,  6.f,  4.f,  5.f,  5.f,  6.f,  4.f,  5.f);
-    plot2d->appendDataPoint(10.0f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f);
-    plot2d->appendDataPoint(11.0f,  4.f,  5.f, 11.f,  4.f,  4.f,  5.f, 11.f,  4.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f);
-    plot2d->appendDataPoint(12.0f,  7.f,  7.f,  8.f,  7.f,  7.f,  7.f,  8.f,  7.f,  5.f,  7.f,  2.f,  5.f,  5.f,  7.f,  2.f,  5.f);
-    plot2d->appendDataPoint(13.0f,  9.f,  8.f,  2.f,  9.f,  9.f,  8.f,  2.f,  9.f, 10.f,  1.f,  4.f, 10.f, 10.f,  1.f,  4.f, 10.f);
-    plot2d->appendDataPoint(20.0f,  5.f,  6.f,  4.f,  5.f,  5.f,  6.f,  4.f,  5.f,  5.f,  4.f,  6.f,  5.f,  5.f,  4.f,  6.f,  5.f);
-    plot2d->appendDataPoint(21.0f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f);
-    // clang-format on
-}
-
-void createClickMePopups(ui::Widget* parent) {
-
-    // Get overlay area
-    ui::OverlayArea* overlayArea = parent->topmostOverlayArea();
-
-    // Create the popup. We can't see it at the beginning because its size is (0, 0).
-    ui::Label* label = overlayArea->createOverlayWidget<ui::Label>(
-        ui::OverlayResizePolicy::None, "you clicked here!");
-    label->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
-                         "background-color-on-hover: rgb(20, 130, 130); }");
-
-    // Create a grid of "click me" buttons, whose actions are to set the popup geometry.
-    ui::Grid* grid = parent->createChild<ui::Grid>();
-    grid->setStyleSheet(".Grid { column-gap: 10dp; row-gap: 10dp; }");
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            ui::Action* action = parent->createAction("click me");
-            ui::ButtonPtr button = ui::Button::create(action);
-            grid->setWidgetAt(button.get(), i, j);
-            action->triggered().connect([=](ui::Widget* from) {
-                geometry::Vec2f p = from->mapTo(overlayArea, geometry::Vec2f(0.f, 0.f));
-                label->updateGeometry(p, geometry::Vec2f(120.f, 25.f));
-            });
-        }
+    void createImageBox_(ui::Widget* parent) {
+        std::string imagePath = core::resourcePath("apps/illustration/icons/512.png");
+        parent->createChild<ui::ImageBox>(imagePath);
     }
-}
 
-void createLineEdits(ui::Widget* parent) {
-
-    std::string lipsum =
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
-        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim "
-        "ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
-        "aliquip ex ea commodo consequat. Duis aute irure dolor in "
-        "reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla "
-        "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in "
-        "culpa qui officia deserunt mollit anim id est laborum.";
-
-    const vgc::UInt32 seed1 = 109283;
-    const vgc::UInt32 seed2 = 981427;
-    size_t lipsumSize = lipsum.size();
-    vgc::UInt32 lipsumSize32 = static_cast<vgc::UInt32>(lipsumSize);
-    core::PseudoRandomUniform<size_t> randomBegin(0, lipsumSize32, seed1);
-    core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
-
-    int numRows = 3;
-    int numColumns = 5;
-    for (int i = 0; i < numRows; ++i) {
-        ui::Row* row = parent->createChild<ui::Row>();
-        row->addStyleClass(core::StringId("inner"));
-        // Change style of first row
-        if (i == 0) {
-            row->setStyleSheet(".LineEdit { text-color: rgb(50, 232, 211); }");
-        }
-        for (int j = 0; j < numColumns; ++j) {
-            ui::LineEdit* lineEdit = row->createChild<ui::LineEdit>();
-            size_t begin = randomBegin();
-            size_t count = randomCount();
-            begin = core::clamp(begin, 0, lipsumSize);
-            size_t end = begin + count;
-            end = core::clamp(end, 0, lipsumSize);
-            count = end - begin;
-            lineEdit->setText(std::string_view(lipsum).substr(begin, count));
-        }
+    void createWindow_() {
+        window_ = ui::Window::create(overlay_);
+        window_->setTitle("VGC UI Test");
+        window_->resize(QSize(1100, 800));
+        window_->setVisible(true);
+        application_.installEventFilter(window_.get());
     }
-}
+};
 
 } // namespace
 
 int main(int argc, char* argv[]) {
-
-    using vgc::Int;
-    using vgc::UInt32;
-
-#ifdef VGC_QOPENGL_EXPERIMENT
-    QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-#endif
-    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
-
-    // Various initializations
-    QGuiApplication::setAttribute(Qt::AA_DisableHighDpiScaling, true);
-    QGuiApplication application(argc, argv);
-    setBasePath();
-
-    // Set window icon
-    std::string iconPath = core::resourcePath("apps/illustration/icons/512.png");
-    application.setWindowIcon(QIcon(ui::toQt(iconPath)));
-
-    // Create overlay area and main layout
-    ui::OverlayAreaPtr overlay = ui::OverlayArea::create();
-    ui::Column* mainLayout = overlay->createChild<ui::Column>();
-    overlay->setAreaWidget(mainLayout);
-    mainLayout->addStyleClass(core::StringId("main-layout"));
-
-    std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
-    std::string styleSheet = core::readFile(path);
-    styleSheet += ".main-layout { "
-                  "    row-gap: 0dp; "
-                  "    padding-top: 0dp; "
-                  "    padding-right: 0dp; "
-                  "    padding-bottom: 0dp; "
-                  "    padding-left: 0dp; }";
-    overlay->setStyleSheet(styleSheet);
-
-    // Create menubar
-    createMenu(mainLayout);
-
-    // Create panel areas
-    ui::PanelArea* mainArea = ui::PanelArea::createHorizontalSplit(mainLayout);
-    ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
-    ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
-    ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
-    ui::PanelArea* middleTopArea = ui::PanelArea::createTabs(middleArea);
-    ui::PanelArea* middleBottomArea = ui::PanelArea::createTabs(middleArea);
-    ui::PanelArea* rightTopArea = ui::PanelArea::createTabs(rightArea);
-    ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
-
-    // Create panels
-    // XXX actually create Panel instances as children of Tabs areas
-    ui::Column* leftAreaWidget = leftArea->createChild<ui::Column>();
-    ui::Column* middleTopAreaWidget = middleTopArea->createChild<ui::Column>();
-    ui::Column* middleBottomAreaWidget = middleBottomArea->createChild<ui::Column>();
-    ui::Column* rightTopAreaWidget = rightTopArea->createChild<ui::Column>();
-    ui::Column* rightBottomAreaWidget = rightBottomArea->createChild<ui::Column>();
-
-    // Create widgets
-    ui::ColorPalette* palette = createColorPalette(leftAreaWidget);
-    createGrid(middleBottomAreaWidget);
-    createPlot2d(rightTopAreaWidget);
-    createClickMePopups(rightBottomAreaWidget);
-    createLineEdits(rightBottomAreaWidget);
-    rightBottomAreaWidget->createChild<ui::ImageBox>(iconPath);
-
-    // Create canvas
-    vgc::dom::DocumentPtr document = createDocument();
-    ui::Canvas* canvas = createCanvas(middleTopAreaWidget, document.get());
-
-    // Connections
-    palette->colorSelected().connect(
-        [=]() { canvas->setCurrentColor(palette->selectedColor()); });
-
-    // XXX we need this until styles get better auto-update behavior
-    overlay->addStyleClass(core::StringId("force-update-style"));
-
-    // Create window
-    ui::WindowPtr wnd = ui::Window::create(overlay);
-    wnd->setTitle("VGC UI Test");
-    wnd->resize(QSize(1100, 800));
-    wnd->setVisible(true);
-
-    application.installEventFilter(wnd.get());
-
-    // Start event loop
-    return application.exec();
+    ApplicationPtr application = Application::create(argc, argv);
+    return application->exec();
 }
