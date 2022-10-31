@@ -133,7 +133,7 @@ public:
     }
 
 private:
-    PixelFormat pixelFormat_ = PixelFormat::RGBA_8_UNORM;
+    PixelFormat pixelFormat_ = PixelFormat::RGBA_8_UNORM_SRGB;
     Int numSamples_ = 1;
     Int numBuffers_ = 2;
     FlagsType flags_ = 0;
