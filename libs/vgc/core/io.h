@@ -22,13 +22,18 @@
 
 namespace vgc::core {
 
-/// Returns as a std::string the content of the file given by its \p filePath.
+/// Returns as an `std::string` the content of the file at the given `filePath`.
 ///
 /// Exceptions:
-/// - Raises FileError if the file cannot be read for any reason.
+/// - Raises `FileError` if the file cannot be read for any reason.
 ///
 VGC_CORE_API
 std::string readFile(const std::string& filePath);
+
+/// Returns whether the file at the given `filePath` exists.
+///
+VGC_CORE_API
+bool fileExists(const std::string& filePath);
 
 } // namespace vgc::core
 

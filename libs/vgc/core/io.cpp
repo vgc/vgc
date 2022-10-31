@@ -89,4 +89,9 @@ std::string readFile(const std::string& filePath) {
     }
 }
 
+bool fileExists(const std::string& filePath) {
+    std::ifstream in(filePath);
+    return in.good();
+}
+
 } // namespace vgc::core

@@ -25,6 +25,8 @@
 #include <hb-ft.h>
 #include <hb.h>
 
+#include <vgc/core/io.h>
+#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/graphics/exceptions.h>
 #include <vgc/graphics/logcategories.h>
@@ -448,9 +450,23 @@ void FontLibrary::onDestroyed() {
 
 namespace {
 
-FontLibraryPtr createGlobalFontLibrary() {
+std::string getDefaultFontPath() {
+
     std::string fontPath =
         core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
+
+#ifdef VGC_CORE_OS_MACOS
+    std::string appleFont = "/Library/Fonts/SF-Pro-Text-Regular.otf";
+    if (core::fileExists(appleFont)) {
+        fontPath = appleFont;
+    }
+#endif
+
+    return fontPath;
+}
+
+FontLibraryPtr createGlobalFontLibrary() {
+    std::string fontPath = getDefaultFontPath();
     graphics::FontLibraryPtr fontLibrary = graphics::FontLibrary::create();
     graphics::Font* font = fontLibrary->addFont(fontPath); // XXX can this be nullptr?
     fontLibrary->setDefaultFont(font);
