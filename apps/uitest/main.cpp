@@ -61,8 +61,6 @@ namespace py = pybind11;
 
 namespace {
 
-VGC_DECLARE_OBJECT(Application);
-
 #ifdef VGC_QOPENGL_EXPERIMENT
 // test fix for white artefacts during Windows window resizing.
 // https://bugreports.qt.io/browse/QTBUG-89688
@@ -83,6 +81,8 @@ constexpr bool qopenglExperiment = true;
 #else
 constexpr bool qopenglExperiment = false;
 #endif
+
+VGC_DECLARE_OBJECT(Application);
 
 class Application : public vgc::core::Object {
     VGC_OBJECT(Application, vgc::core::Object)
