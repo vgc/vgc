@@ -38,7 +38,7 @@ class VGC_DOM_API AttributeSpec {
 public:
     /// Creates a built-in attribute.
     ///
-    AttributeSpec(const std::string& name, const Value& defaultValue)
+    AttributeSpec(std::string_view name, const Value& defaultValue)
         : name_(core::StringId(name))
         , defaultValue_(defaultValue) {
     }
@@ -67,25 +67,40 @@ private:
 };
 
 /// \class vgc::dom::ElementSpec
-/// \brief Specifies all built-in attributes for a given Element type.
+/// \brief Specifies all built-in attributes for a given `Element` type.
 ///
-/// This immutable class is essentially a dictionary of AttributeSpec,
-/// specifying the name, type, and default value of all built-in attributes of
-/// a given Element type.
+/// This immutable class is essentially a dictionary of `AttributeSpec`,
+/// specifying the name, type, and default value of all built-in attributes
+/// of a given `Element` type.
 ///
-/// This is one of the building blocks that define a Schema.
+/// This is one of the building blocks that define a `Schema`.
 ///
 class ElementSpec {
 public:
     /// Creates an `ElementSpec` for the given Element `tagName`, with the given
     /// built-in `attributes`.
     ///
-    ElementSpec(const std::string& tagName, const std::vector<AttributeSpec>& attributes);
+    ElementSpec(std::string_view tagName, const std::vector<AttributeSpec>& attributes);
+
+    /// Creates an `ElementSpec` for the given Element `tagName`, with the given
+    /// built-in `attributes` and `defaultIdPrefix`.
+    ///
+    ElementSpec(
+        std::string_view tagName,
+        std::string_view defaultIdPrefix,
+        const std::vector<AttributeSpec>& attributes);
 
     /// Returns the tag name of the `Element` specified by this `ElementSpec`.
     ///
     core::StringId tagName() const {
         return tagName_;
+    }
+
+    /// Returns the default prefix for generated identifiers of the `Element`
+    /// specified by this `ElementSpec`.
+    ///
+    core::StringId defaultIdPrefix() const {
+        return defaultIdPrefix_;
     }
 
     /// Finds the `AttributeSpec` for the given attribute `attrName`. Returns
@@ -94,7 +109,7 @@ public:
     ///
     const AttributeSpec* findAttributeSpec(core::StringId attrName) const;
     /// \overload
-    const AttributeSpec* findAttributeSpec(const std::string& attrName) const {
+    const AttributeSpec* findAttributeSpec(std::string_view attrName) const {
         return findAttributeSpec(core::StringId(attrName));
     }
 
@@ -104,7 +119,7 @@ public:
     ///
     const Value& defaultValue(core::StringId attrName) const;
     /// \overload
-    const Value& defaultValue(const std::string& attrName) const {
+    const Value& defaultValue(std::string_view attrName) const {
         return defaultValue(core::StringId(attrName));
     }
 
@@ -114,12 +129,13 @@ public:
     ///
     ValueType valueType(core::StringId attrName) const;
     /// \overload
-    ValueType valueType(const std::string& attrName) const {
+    ValueType valueType(std::string_view attrName) const {
         return valueType(core::StringId(attrName));
     }
 
 private:
     core::StringId tagName_;
+    core::StringId defaultIdPrefix_;
     std::map<core::StringId, AttributeSpec> attributes_;
 };
 
@@ -160,16 +176,25 @@ private:
 ///
 class Schema {
 public:
-    /// Creates a Schema with the given \p element specifications.
+    /// Creates a `Schema` with the given `elements` specifications range.
     ///
-    Schema(const std::vector<ElementSpec>& elements);
+    template<typename Range>
+    Schema(const Range& elements) {
+        for (const ElementSpec& element : elements) {
+            elements_.emplace(element.tagName(), element);
+        }
+    }
+
+    /// Creates a `Schema` with the given `elements` specifications.
+    ///
+    Schema(std::initializer_list<ElementSpec> elements);
 
     /// Finds the `ElementSpec` for the given element `tagName`.
     /// Returns `nullptr` if the given `tagName` is not defined in the Schema.
     ///
     const ElementSpec* findElementSpec(core::StringId tagName) const;
     /// \overload
-    const ElementSpec* findElementSpec(const std::string& tagName) const {
+    const ElementSpec* findElementSpec(std::string_view tagName) const {
         return findElementSpec(core::StringId(tagName));
     }
 

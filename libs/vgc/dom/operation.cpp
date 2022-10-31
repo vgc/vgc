@@ -108,6 +108,7 @@ void SetAttributeOperation::do_() {
         element_->authoredAttributes_.emplaceLast(name_, newValue_);
     }
     document->onChangeAttribute_(element_, name_);
+    element_->onAttributeChanged_(name_, oldValue_, newValue_);
 }
 
 void SetAttributeOperation::undo_() {
@@ -119,6 +120,7 @@ void SetAttributeOperation::undo_() {
         element_->authoredAttributes_[index_].setValue(oldValue_);
     }
     document->onChangeAttribute_(element_, name_);
+    element_->onAttributeChanged_(name_, newValue_, oldValue_);
 }
 
 void SetAttributeOperation::redo_() {
@@ -130,23 +132,27 @@ void SetAttributeOperation::redo_() {
         element_->authoredAttributes_[index_].setValue(newValue_);
     }
     document->onChangeAttribute_(element_, name_);
+    element_->onAttributeChanged_(name_, oldValue_, newValue_);
 }
 
 void RemoveAuthoredAttributeOperation::do_() {
     oldValue_ = element_->authoredAttributes_[index_].value();
     redo_();
+    element_->onAttributeChanged_(name_, oldValue_, Value());
 }
 
 void RemoveAuthoredAttributeOperation::undo_() {
     Document* document = element_->document();
     element_->authoredAttributes_.emplace(index_, name_, oldValue_);
     document->onChangeAttribute_(element_, name_);
+    element_->onAttributeChanged_(name_, Value(), oldValue_);
 }
 
 void RemoveAuthoredAttributeOperation::redo_() {
     Document* document = element_->document();
     element_->authoredAttributes_.removeAt(index_);
     document->onChangeAttribute_(element_, name_);
+    element_->onAttributeChanged_(name_, oldValue_, Value());
 }
 
 namespace {

@@ -119,6 +119,8 @@ protected:
     ///
     Node(Document* document, NodeType nodeType);
 
+    void onDestroyed() override;
+
 public:
     /// Returns the owner Document of this Node. This is always guaranteed to
     /// be a non-null valid Document.

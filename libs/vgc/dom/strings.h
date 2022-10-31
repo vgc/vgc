@@ -22,6 +22,9 @@
 
 namespace vgc::dom::strings {
 
+VGC_DOM_API extern const core::StringId name;
+VGC_DOM_API extern const core::StringId id;
+
 VGC_DOM_API extern const core::StringId New_Document;
 VGC_DOM_API extern const core::StringId Open_Document;
 

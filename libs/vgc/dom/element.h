@@ -21,6 +21,7 @@
 #include <vgc/dom/api.h>
 #include <vgc/dom/attribute.h>
 #include <vgc/dom/node.h>
+#include <vgc/dom/strings.h>
 #include <vgc/dom/value.h>
 
 namespace vgc::dom {
@@ -152,6 +153,8 @@ protected:
     ///
     Element(Document* document, core::StringId tagName);
 
+    void onDestroyed() override;
+
 public:
     /// Creates an `Element` with the given `tagName` as the root element of the
     /// given `parent` `Document`. Returns a valid non-null `Element`.
@@ -161,7 +164,7 @@ public:
     ///
     static Element* create(Document* parent, core::StringId tagName);
     /// \overload
-    static Element* create(Document* parent, const std::string& tagName) {
+    static Element* create(Document* parent, std::string_view tagName) {
         return create(parent, core::StringId(tagName));
     }
 
@@ -170,7 +173,7 @@ public:
     ///
     static Element* create(Element* parent, core::StringId tagName);
     /// \overload
-    static Element* create(Element* parent, const std::string& tagName) {
+    static Element* create(Element* parent, std::string_view tagName) {
         return create(parent, core::StringId(tagName));
     }
 
@@ -205,14 +208,53 @@ public:
         return tagName_;
     }
 
+    /// Returns the custom name of this element.
+    ///
+    core::StringId name() const {
+        return name_;
+    }
+
+    /// Sets the custom name of this element.
+    ///
+    void setName(core::StringId name) {
+        setAttribute(strings::name, name);
+    }
+
+    /// Sets the custom name of this element.
+    ///
+    void setName(std::string_view name) {
+        setName(core::StringId(name));
+    }
+
+    /// Returns the unique identifier of this element if it has one.
+    /// It is only unique document-wise and is not guaranteed to
+    /// remain the same when transferring an element to another
+    /// document.
+    ///
+    core::StringId id() const {
+        return uniqueId_;
+    }
+
+    /// Returns or creates the unique identifier of this element.
+    /// It is only unique document-wise and is not guaranteed to
+    /// remain the same when transferring an element to another
+    /// document.
+    ///
+    core::StringId getOrCreateId() const;
+
     /// Returns the authored attributes of this element.
     ///
     const core::Array<AuthoredAttribute>& authoredAttributes() const {
         return authoredAttributes_;
     }
 
+    /// Gets the authored value of the given attribute.
+    /// Returns an invalid value if the attribute does not exist.
+    ///
+    const Value& getAuthoredAttribute(core::StringId name) const;
+
     /// Gets the value of the given attribute. Emits a warning and returns an
-    /// invalid value if the attribute does not exist.
+    /// invalid value if the attribute neither is authored nor has a default value.
     ///
     const Value& getAttribute(core::StringId name) const;
 
@@ -306,6 +348,12 @@ public:
         return NamedElementRange(firstChildElement(tagName), nullptr, tagName);
     }
 
+    VGC_SIGNAL(
+        attributeChanged,
+        (core::StringId, name),
+        (const Value&, oldValue),
+        (const Value&, newValue))
+
 private:
     // Operations
     friend class CreateElementOperation;
@@ -315,7 +363,11 @@ private:
     // Tag name of this element.
     core::StringId tagName_;
 
+    // Name of this element. (cache)
     core::StringId name_;
+
+    // Unique identifier of this element. (cache)
+    core::StringId uniqueId_;
 
     // Helper method for create(). Assumes that a new Element can indeed be
     // appended to parent.
@@ -348,10 +400,10 @@ private:
         return static_cast<Element*>(node);
     }
 
-    Element* findElementNext_(Node* node, core::StringId name) const {
+    Element* findElementNext_(Node* node, core::StringId tagName) const {
         while (node
                && (node->nodeType() != NodeType::Element
-                   || static_cast<Element*>(node)->tagName() != name)) {
+                   || static_cast<Element*>(node)->tagName() != tagName)) {
             node = node->nextSibling();
         }
         return static_cast<Element*>(node);
@@ -365,6 +417,11 @@ private:
         }
         return static_cast<Element*>(node);
     }
+
+    void onAttributeChanged_(
+        core::StringId name,
+        const Value& oldValue,
+        const Value& newValue);
 };
 
 inline NamedElementIterator& NamedElementIterator::operator++() {

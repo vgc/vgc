@@ -18,6 +18,9 @@
 
 namespace vgc::dom::strings {
 
+const core::StringId name("name");
+const core::StringId id("id");
+
 const core::StringId New_Document("New Document");
 const core::StringId Open_Document("Open Document");
 

@@ -39,6 +39,11 @@ Node::Node(Document* document, NodeType nodeType)
     , nodeType_(nodeType) {
 }
 
+void Node::onDestroyed() {
+    document_ = nullptr;
+    SuperClass::onDestroyed();
+}
+
 void Node::remove() {
     core::History::do_<RemoveNodeOperation>(document()->history(), this);
 }

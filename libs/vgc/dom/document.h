@@ -342,6 +342,8 @@ public:
         const std::string& filePath,
         const XmlFormattingStyle& style = XmlFormattingStyle()) const;
 
+    Element* elementById(core::StringId id) const;
+
     void enableHistory(core::StringId entrypointName);
 
     core::History* history() const {
@@ -365,6 +367,10 @@ private:
     void generateXmlDeclaration_();
     std::string xmlDeclaration_;
 
+    // Utilities
+    friend Element; // XXX <- create accessors ?
+    std::unordered_map<core::StringId, Element*> elementByIdMap_;
+
     // Operations
     friend class CreateElementOperation;
     friend class RemoveNodeOperation;
@@ -382,7 +388,7 @@ private:
 
     void onHistoryHeadChanged_();
 
-    void onCreateNode_(Node* element);
+    void onCreateNode_(Node* node);
     void onRemoveNode_(Node* node);
     void onMoveNode_(Node* node, const NodeRelatives& savedRelatives);
     void onChangeAttribute_(Element* element, core::StringId name);
