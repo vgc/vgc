@@ -744,7 +744,8 @@ QglEngine::QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx)
         format_.setStencilBufferSize(8);
         format_.setSamples(createInfo.windowSwapChainFormat().numSamples());
         format_.setSwapInterval(0);
-        if (createInfo.windowSwapChainFormat().pixelFormat() == PixelFormat::RGBA_8_UNORM_SRGB) {
+        PixelFormat pixelFormat = createInfo.windowSwapChainFormat().pixelFormat();
+        if (pixelFormat == PixelFormat::RGBA_8_UNORM_SRGB) {
             format_.setColorSpace(QSurfaceFormat::sRGBColorSpace);
         }
         else {
