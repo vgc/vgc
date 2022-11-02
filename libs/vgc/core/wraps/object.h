@@ -118,10 +118,10 @@ public:
     template<typename R = void, typename... Args>
     ObjClass& def_create() {
         if constexpr (std::is_same_v<R, void>) {
-            def(py::init(&TObj::create));
+            Base::def(py::init(&TObj::create));
         }
         else {
-            def(py::init(static_cast<R (*)(Args...)>(&TObj::create)));
+            Base::def(py::init(static_cast<R (*)(Args...)>(&TObj::create)));
         }
         return *this;
     }
@@ -165,7 +165,7 @@ protected:
                 return sref; // pybind will find the object in registered_instances
             },
             py::keep_alive<0, 1>());
-        def_property_readonly(name, fget, extra...);
+        Base::def_property_readonly(name, fget, extra...);
     }
 
     template<typename TSlotRef, typename... Extra>
@@ -182,7 +182,7 @@ protected:
                 return sref; // pybind will find the object in registered_instances
             },
             py::keep_alive<0, 1>());
-        def_property_readonly(name, fget, extra...);
+        Base::def_property_readonly(name, fget, extra...);
     }
 };
 
