@@ -24,7 +24,8 @@ using vgc::core::Array;
 using vgc::core::IndexError;
 using vgc::core::LengthError;
 using vgc::core::NegativeIntegerError;
-using vgc::core::NoInit;
+
+inline constexpr vgc::core::NoInit noInit = vgc::core::noInit;
 
 #define EXPECT_LENGTH(a, n)                                                              \
     {                                                                                    \
