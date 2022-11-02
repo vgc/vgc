@@ -1081,13 +1081,14 @@ IntType ifloor(FloatType x) {
 /// vgc::geometry::Vec2d v;                          // (0, 0)
 /// vgc::geometry::Vec2d v();                        // (0, 0)
 /// vgc::geometry::Vec2d v{};                        // (0, 0)
-/// vgc::geometry::Vec2d v(vgc::core::NoInit{});     // (?, ?)
+/// vgc::geometry::Vec2d v(vgc::core::noInit);       // (?, ?)
 ///
 /// vgc::core::Array<int> a(3);                      // [0, 0, 0]
-/// vgc::core::Array<int> a(3, vgc::core::NoInit{}); // [?, ?, ?]
+/// vgc::core::Array<int> a(3, vgc::core::noInit);   // [?, ?, ?]
 /// ```
 ///
 struct VGC_CORE_API NoInit {};
+inline constexpr NoInit noInit = {};
 
 /// Small epsilon value under which two doubles are considered
 /// indistinguishable.

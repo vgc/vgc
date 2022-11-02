@@ -358,13 +358,13 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
 
 struct IterativeSamplingSample {
     IterativeSamplingSample()
-        : pos(core::NoInit{})
-        , normal(core::NoInit{})
-        , tangent(core::NoInit{})
-        , rightPoint(core::NoInit{})
-        , leftPoint(core::NoInit{})
-        , rightPointNormal(core::NoInit{})
-        , leftPointNormal(core::NoInit{}) {
+        : pos(core::noInit)
+        , normal(core::noInit)
+        , tangent(core::noInit)
+        , rightPoint(core::noInit)
+        , leftPoint(core::noInit)
+        , rightPointNormal(core::noInit)
+        , leftPointNormal(core::noInit) {
     }
 
     Vec2d pos;

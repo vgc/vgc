@@ -48,9 +48,9 @@ public:
     ///
     Triangle2x(core::NoInit)
         : data_{
-            Vec2x(core::NoInit{}),
-            Vec2x(core::NoInit{}),
-            Vec2x(core::NoInit{})} {
+            Vec2x(core::noInit),
+            Vec2x(core::noInit),
+            Vec2x(core::noInit)} {
     }
 
     /// Creates a `Triangle2x` initialized to [(0, 0), (0, 0), (0, 0)].

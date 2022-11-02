@@ -24,7 +24,8 @@ using vgc::core::Array;
 using vgc::core::IndexError;
 using vgc::core::LengthError;
 using vgc::core::NegativeIntegerError;
-using vgc::core::NoInit;
+
+inline constexpr vgc::core::NoInit noInit = vgc::core::noInit;
 
 #define EXPECT_LENGTH(a, n)                                                              \
     {                                                                                    \
@@ -149,7 +150,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a(10, NoInit{});
+        Array<int> a(10, noInit);
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -166,7 +167,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a(Int(10), NoInit{});
+        Array<int> a(Int(10), noInit);
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -183,7 +184,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a(size_t(10), NoInit{});
+        Array<int> a(size_t(10), noInit);
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -200,7 +201,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a{10, NoInit{}};
+        Array<int> a{10, noInit};
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -223,7 +224,7 @@ TEST(TestArray, Construct) {
     }
 
     EXPECT_THROW(Array<int>(-1), NegativeIntegerError);
-    EXPECT_THROW(Array<int>(-1, NoInit{}), NegativeIntegerError);
+    EXPECT_THROW(Array<int>(-1, noInit), NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, 42), NegativeIntegerError);
     EXPECT_THROW(Array<int>(vgc::core::tmax<size_t>, 42), LengthError);
     struct Tag {};
