@@ -85,7 +85,6 @@ template<typename ValueType>
 void defineSharedConstCommonMethods(Class<core::SharedConst<ValueType>>& c) {
 
     using T = core::SharedConst<ValueType>;
-    using rvp = py::return_value_policy;
 
     detail::wrapSharedConstImplicitCast<ValueType>();
 
