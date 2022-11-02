@@ -48,9 +48,9 @@ public:
     ///
     Triangle2f(core::NoInit)
         : data_{
-            Vec2f(core::NoInit{}),
-            Vec2f(core::NoInit{}),
-            Vec2f(core::NoInit{})} {
+            Vec2f(core::noInit),
+            Vec2f(core::noInit),
+            Vec2f(core::noInit)} {
     }
 
     /// Creates a `Triangle2f` initialized to [(0, 0), (0, 0), (0, 0)].

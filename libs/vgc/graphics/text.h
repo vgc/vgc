@@ -303,7 +303,7 @@ public:
         , advance_(advance)
         , position_(position)
         , bytePosition_(bytePosition)
-        , boundingBox_(core::NoInit{}) {
+        , boundingBox_(core::noInit) {
 
         // Convert bounding box from SizedGlyph coords to ShapedText coords
         geometry::Rect2f bbox = sizedGlyph->boundingBox();

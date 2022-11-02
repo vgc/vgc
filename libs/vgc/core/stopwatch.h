@@ -43,7 +43,7 @@ public:
     /// otherwise the result of elapsed() is undefined.
     ///
     ///  ```cpp
-    /// vgc::core::Stopwatch t(vgc::core::NoInit{});
+    /// vgc::core::Stopwatch t(vgc::core::noInit);
     /// t.start();
     /// doSomething();
     /// std::cout << "elpased time: " << t.elapsed() << "s\n";

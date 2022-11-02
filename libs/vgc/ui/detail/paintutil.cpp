@@ -437,7 +437,7 @@ void insertRect(
     float* p = &a.getUnchecked(oldLength);
     float x0 = *p;
     float y0 = *(p + 1);
-    geometry::Triangle2f triangle(core::NoInit{});
+    geometry::Triangle2f triangle(core::noInit);
     triangle.setA(x0, y0);
     p = &a.getUnchecked(newLength) - 2;
     for (Int i = numTriangles - 1; i >= 0; --i) {
@@ -580,7 +580,7 @@ void insertRect(
         float gf = static_cast<float>(fillColor[1]);
         float bf = static_cast<float>(fillColor[2]);
         Int fanBeginIndex = samplesBeginIndex;
-        geometry::Triangle2f triangle(core::NoInit{});
+        geometry::Triangle2f triangle(core::noInit);
         triangle.setA(inX0, inY0);
         p = &a.getUnchecked(samplesEndIndex) - 4;
         for (Int i = numTrianglesInFan - 1; i >= 0; --i) {

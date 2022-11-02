@@ -149,7 +149,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a(10, NoInit{});
+        Array<int> a(10, noInit);
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -166,7 +166,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a(Int(10), NoInit{});
+        Array<int> a(Int(10), noInit);
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -183,7 +183,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a(size_t(10), NoInit{});
+        Array<int> a(size_t(10), noInit);
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -200,7 +200,7 @@ TEST(TestArray, Construct) {
     }
 
     {
-        Array<int> a{10, NoInit{}};
+        Array<int> a{10, noInit};
         EXPECT_LENGTH(a, 10);
     }
     {
@@ -223,7 +223,7 @@ TEST(TestArray, Construct) {
     }
 
     EXPECT_THROW(Array<int>(-1), NegativeIntegerError);
-    EXPECT_THROW(Array<int>(-1, NoInit{}), NegativeIntegerError);
+    EXPECT_THROW(Array<int>(-1, noInit), NegativeIntegerError);
     EXPECT_THROW(Array<int>(-1, 42), NegativeIntegerError);
     EXPECT_THROW(Array<int>(vgc::core::tmax<size_t>, 42), LengthError);
     struct Tag {};

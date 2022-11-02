@@ -33,8 +33,8 @@ public:
     CurveSample() = default;
 
     CurveSample(core::NoInit)
-        : position_(core::NoInit{})
-        , normal_(core::NoInit{})
+        : position_(core::noInit)
+        , normal_(core::noInit)
         , radius_(0) {
     }
 

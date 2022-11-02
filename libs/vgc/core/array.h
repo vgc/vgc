@@ -339,18 +339,18 @@ public:
     /// Throws `LengthError` if `length` is greater than maxLength().
     ///
     /// ```
-    /// vgc::core::Array<double> a(3, vgc::core::NoInit{});
+    /// vgc::core::Array<double> a(3, vgc::core::noInit);
     /// a.length();      // => 3
     /// std::cout << a;  // => [?, ?, ?]
     ///
-    /// vgc::core::Array<vgc::core::Vec2d> b(3, vgc::core::NoInit{});
+    /// vgc::core::Array<vgc::core::Vec2d> b(3, vgc::core::noInit);
     /// a.length();      // => 3
     /// std::cout << a;  // => [(?, ?), (?, ?), (?, ?)]
     /// ```
     ///
     Array(Int length, NoInit) {
         checkLengthForInit_(length);
-        init_(length, NoInit{});
+        init_(length, noInit);
     }
 
     /// Creates an `Array` of given `length` with all values initialized to
@@ -662,7 +662,7 @@ public:
     ///
     void resizeNoInit(Int count) {
         checkPositiveForInit_(count);
-        resize_(count, NoInit{});
+        resize_(count, noInit);
     }
 
     /// Resizes this Array so that it contains `count` elements instead of its
@@ -2456,7 +2456,7 @@ private:
             // Method 1, potentially dangerous:
             //    std::advance(unwrapIterator(first), n)
             // Method 2, safer: (but does the compiler really optimize?)
-            return std::uninitialized_fill_n(unwrapIterator(first), n, NoInit{});
+            return std::uninitialized_fill_n(unwrapIterator(first), n, noInit);
         }
         else {
             return std::uninitialized_default_construct_n(unwrapIterator(first), n);
