@@ -14,20 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/dom/xmlformattingstyle.h>
 
-using vgc::dom::XmlFormattingStyle;
-using vgc::dom::XmlIndentStyle;
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 void wrap_xmlformattingstyle(py::module& m) {
+
+    using This = vgc::dom::XmlFormattingStyle;
+
+    using XmlIndentStyle = vgc::dom::XmlIndentStyle;
     py::enum_<XmlIndentStyle>(m, "XmlIndentStyle")
         .value("Spaces", XmlIndentStyle::Spaces)
         .value("Tabs", XmlIndentStyle::Tabs);
 
-    py::class_<XmlFormattingStyle>(m, "XmlFormattingStyle")
+    vgc::core::wraps::Class<This>(m, "XmlFormattingStyle")
         .def(py::init<>())
-        .def_readwrite("indentStyle", &XmlFormattingStyle::indentStyle)
-        .def_readwrite("indentSize", &XmlFormattingStyle::indentSize)
-        .def_readwrite("attributeIndentSize", &XmlFormattingStyle::attributeIndentSize);
+        .def_readwrite("indentStyle", &This::indentStyle)
+        .def_readwrite("indentSize", &This::indentSize)
+        .def_readwrite("attributeIndentSize", &This::attributeIndentSize);
 }

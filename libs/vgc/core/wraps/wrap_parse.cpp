@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/parse.h>
+
 #include <vgc/core/wraps/common.h>
 
 void wrap_parse(py::module& /*m*/) {

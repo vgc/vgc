@@ -15,19 +15,20 @@
 // limitations under the License.
 
 #include <vgc/core/object.h>
+
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/object.h>
 
 void wrap_object(py::module& m) {
+
     using This = vgc::core::Object;
-    using Holder = vgc::core::ObjectPtr;
 
     auto getattribute =
         py::module::import("builtins").attr("object").attr("__getattribute__");
 
     vgc::core::wraps::wrapObjectCommon<This>(m, "Object");
 
-    py::class_<This, Holder>(m, "Object")
+    vgc::core::wraps::ObjClass<This>(m, "Object")
         .def("isAlive", &This::isAlive)
         .def("refCount", &This::refCount)
         .def(

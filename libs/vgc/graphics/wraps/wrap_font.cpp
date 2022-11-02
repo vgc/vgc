@@ -14,9 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
 #include <vgc/graphics/font.h>
+
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
 
 namespace vgc::graphics {
 
@@ -32,7 +34,7 @@ void wrapFontHinting(py::module& m) {
 
 void wrapSizedFontParams(py::module& m) {
     using This = SizedFontParams;
-    py::class_<This>(m, "SizedFontParams")
+    vgc::core::wraps::Class<This>(m, "SizedFontParams")
         .def(py::init<Int, Int, FontHinting>())
         .def(py::init<Int, FontHinting>())
         .def(
@@ -59,9 +61,7 @@ void wrapSizedFontParams(py::module& m) {
 
 void wrapFontLibrary(py::module& m) {
     using This = FontLibrary;
-    using Holder = FontLibraryPtr;
-    using Parent = core::Object;
-    py::class_<This, Holder, Parent>(m, "FontLibrary")
+    vgc::core::wraps::ObjClass<This>(m, "FontLibrary")
         .def(py::init([]() { return This::create(); }))
         .def("addFont", &This::addFont, "filename"_a, "index"_a = 0)
         .def_property("defaultFont", &This::defaultFont, &This::setDefaultFont);
@@ -69,9 +69,7 @@ void wrapFontLibrary(py::module& m) {
 
 void wrapFont(py::module& m) {
     using This = Font;
-    using Holder = FontPtr;
-    using Parent = core::Object;
-    py::class_<This, Holder, Parent>(m, "Font")
+    vgc::core::wraps::ObjClass<This>(m, "Font")
         .def_property_readonly("library", &This::library)
         .def_property_readonly("index", &This::index)
         .def("getSizedFont", &This::getSizedFont)
@@ -82,9 +80,7 @@ void wrapFont(py::module& m) {
 
 void wrapGlyph(py::module& m) {
     using This = Glyph;
-    using Holder = GlyphPtr;
-    using Parent = core::Object;
-    py::class_<This, Holder, Parent>(m, "Glyph")
+    vgc::core::wraps::ObjClass<This>(m, "Glyph")
         .def_property_readonly("font", &This::font)
         .def_property_readonly("index", &This::index)
         .def_property_readonly("name", &This::name);
@@ -92,9 +88,7 @@ void wrapGlyph(py::module& m) {
 
 void wrapSizedFont(py::module& m) {
     using This = SizedFont;
-    using Holder = SizedFontPtr;
-    using Parent = core::Object;
-    py::class_<This, Holder, Parent>(m, "SizedFont")
+    vgc::core::wraps::ObjClass<This>(m, "SizedFont")
         .def_property_readonly("font", &This::font)
         .def_property_readonly("params", &This::params)
         .def_property_readonly("ascent", &This::ascent)
@@ -106,14 +100,13 @@ void wrapSizedFont(py::module& m) {
 }
 
 void wrapSizedGlyph(py::module& m) {
+
+    using This = SizedGlyph;
     using core::FloatArray;
     using geometry::Mat3f;
     using geometry::Vec2f;
 
-    using This = SizedGlyph;
-    using Holder = SizedGlyphPtr;
-    using Parent = core::Object;
-    py::class_<This, Holder, Parent>(m, "SizedGlyph")
+    vgc::core::wraps::ObjClass<This>(m, "SizedGlyph")
         .def_property_readonly("sizedFont", &This::sizedFont)
         .def_property_readonly("glyph", &This::glyph)
         .def_property_readonly("index", &This::index)

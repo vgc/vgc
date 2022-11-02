@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/exceptions.h>
+
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/exceptions.h>
 

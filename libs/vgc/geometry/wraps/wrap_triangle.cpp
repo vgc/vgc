@@ -14,10 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
 #include <vgc/geometry/triangle2d.h>
 #include <vgc/geometry/triangle2f.h>
+
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 #include <vgc/geometry/wraps/vec.h>
 
 namespace {
@@ -60,20 +61,19 @@ void wrap_triangle(py::module& m, const std::string& name) {
     // Fix https://github.com/pybind/pybind11/issues/1893
     auto self2 = py::self;
 
-    using TTriangle2 = Triangle2<T>;
-    using TVec2 = Vec2<T>;
+    using This = Triangle2<T>;
+    using Vec2x = Vec2<T>;
 
-    py::class_<TTriangle2>(m, name.c_str())
+    vgc::core::wraps::Class<This>(m, name.c_str())
 
         .def(py::init<>())
-        .def(py::init<TVec2, TVec2, TVec2>())
-        .def(py::init<TTriangle2>())
-        .def(py::init(
-            [](const std::string& s) { return vgc::core::parse<TTriangle2>(s); }))
+        .def(py::init<Vec2x, Vec2x, Vec2x>())
+        .def(py::init<This>())
+        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }))
 
         .def(
             "__getitem__",
-            [](const TTriangle2& t, int i) {
+            [](const This& t, int i) {
                 if (i < 0 || i >= 3) {
                     throw py::index_error();
                 }
@@ -82,23 +82,20 @@ void wrap_triangle(py::module& m, const std::string& name) {
 
         .def(
             "__setitem__",
-            [](TTriangle2& t, int i, const TVec2& v) {
+            [](This& t, int i, const Vec2x& v) {
                 if (i < 0 || i >= 3) {
                     throw py::index_error();
                 }
                 t[i] = v;
             })
 
-        .def_property(
-            "a", &TTriangle2::a, py::overload_cast<const TVec2&>(&TTriangle2::setA))
-        .def_property(
-            "b", &TTriangle2::b, py::overload_cast<const TVec2&>(&TTriangle2::setB))
-        .def_property(
-            "c", &TTriangle2::c, py::overload_cast<const TVec2&>(&TTriangle2::setC))
+        .def_property("a", &This::a, py::overload_cast<const Vec2x&>(&This::setA))
+        .def_property("b", &This::b, py::overload_cast<const Vec2x&>(&This::setB))
+        .def_property("c", &This::c, py::overload_cast<const Vec2x&>(&This::setC))
 
-        .def("setA", py::overload_cast<T, T>(&TTriangle2::setA))
-        .def("setB", py::overload_cast<T, T>(&TTriangle2::setB))
-        .def("setC", py::overload_cast<T, T>(&TTriangle2::setC))
+        .def("setA", py::overload_cast<T, T>(&This::setA))
+        .def("setB", py::overload_cast<T, T>(&This::setB))
+        .def("setC", py::overload_cast<T, T>(&This::setC))
 
         .def(py::self += py::self)
         .def(py::self + py::self)
@@ -114,7 +111,7 @@ void wrap_triangle(py::module& m, const std::string& name) {
         .def(py::self == py::self)
         .def(py::self != py::self)
 
-        .def("__repr__", [](const TTriangle2& t) { return vgc::core::toString(t); });
+        .def("__repr__", [](const This& t) { return vgc::core::toString(t); });
 }
 
 } // namespace

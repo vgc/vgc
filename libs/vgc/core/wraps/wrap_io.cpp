@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/io.h>
+
 #include <vgc/core/wraps/common.h>
 
 void wrap_io(py::module& m) {

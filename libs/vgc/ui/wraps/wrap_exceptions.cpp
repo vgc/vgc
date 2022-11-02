@@ -14,9 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/ui/exceptions.h>
+
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/exceptions.h>
-#include <vgc/ui/exceptions.h>
 
 void wrap_exceptions(py::module& m) {
 

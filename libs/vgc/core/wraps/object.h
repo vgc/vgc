@@ -21,6 +21,8 @@
 #include <type_traits>
 
 #include <vgc/core/object.h>
+
+#include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/signal.h>
 
@@ -70,113 +72,126 @@ void wrapObjectCommon(py::module& m, const std::string& className) {
         .def("__len__", &ListView::length);
 }
 
-#define OBJCLASS_WRAP_PYCLASS_METHOD(name)                                               \
-    template<typename... Args>                                                           \
-    ObjClass& name(Args&&... args) {                                                     \
-        PyClass::name(std::forward<Args>(args)...);                                      \
-        return *this;                                                                    \
-    }
+template<typename TObj, typename... Options>
+class ObjClass;
 
-template<typename ObjT, typename... Options>
-class ObjClass
-    : py::class_<ObjT, core::ObjPtr<ObjT>, typename ObjT::SuperClass, Options...> {
+/// Specialize this to define the visible superclass in python.
+///
+template<typename T>
+struct ObjClassSuperClass {
+    using type = typename T::SuperClass;
+};
+
+namespace detail {
+
+template<typename TObjClass>
+struct ObjClassDeclarator_;
+
+template<typename TObj, typename... Options>
+struct ObjClassDeclarator_<ObjClass<TObj, Options...>> {
+    using ObjClassType = ObjClass<TObj, Options...>;
+    using type = ClassDeclarator<
+        ObjClassType,
+        TObj,
+        ObjPtr<TObj>,
+        typename ObjClassSuperClass<TObj>::type,
+        Options...>;
+};
+
+template<typename... Options>
+struct ObjClassDeclarator_<ObjClass<Object, Options...>> {
+    using ObjClassType = ObjClass<Object, Options...>;
+    using type = ClassDeclarator<ObjClassType, Object, ObjectPtr, Options...>;
+};
+
+template<typename TObjClass>
+using ObjClassDeclarator = typename ObjClassDeclarator_<TObjClass>::type;
+
+} // namespace detail
+
+template<typename TObj, typename... Options>
+class ObjClass : public detail::ObjClassDeclarator<ObjClass<TObj, Options...>> {
+
+    using Base = detail::ObjClassDeclarator<ObjClass<TObj, Options...>>;
+
 public:
-    using Holder = core::ObjPtr<ObjT>;
-    using Parent = typename ObjT::SuperClass;
-    using PyClass = py::class_<ObjT, Holder, Parent, Options...>;
-
     template<typename... Extra>
     ObjClass(py::handle scope, const char* name, const Extra&... extra)
-        : PyClass(scope, name, py::dynamic_attr(), extra...) {
+        : Base(scope, name, py::dynamic_attr(), extra...) {
     }
 
-    static_assert(isObject<ObjT>);
-
-    OBJCLASS_WRAP_PYCLASS_METHOD(def)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_static)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_cast)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_buffer)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_readwrite)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_readonly)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_readwrite_static)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_readonly_static)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_readonly)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_readonly_static)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_property)
-    OBJCLASS_WRAP_PYCLASS_METHOD(def_property_static)
+    static_assert(isObject<TObj>);
 
     template<typename R = void, typename... Args>
     ObjClass& def_create() {
         if constexpr (std::is_same_v<R, void>) {
-            def(py::init(&ObjT::create));
+            Base::def(py::init(&TObj::create));
         }
         else {
-            def(py::init(static_cast<R (*)(Args...)>(&ObjT::create)));
+            Base::def(py::init(static_cast<R (*)(Args...)>(&TObj::create)));
         }
         return *this;
     }
 
     // XXX prevent signatures with references to python immutables (int..)
     template<
-        typename SignalT,
+        typename TSignal,
         typename... Extra,
-        VGC_REQUIRES(core::detail::isSignal<SignalT>)>
-    ObjClass& def_signal(const char* name, SignalT signal, const Extra&... extra) {
+        VGC_REQUIRES(core::detail::isSignal<TSignal>)>
+    ObjClass& def_signal(const char* name, TSignal signal, const Extra&... extra) {
         static_assert(
-            std::is_invocable_v<SignalT, const ObjT*>,
+            std::is_invocable_v<TSignal, const TObj*>,
             "Signal must be accessible in the class being pybound.");
         defSignal(name, signal, extra...);
         return *this;
     }
 
     // XXX prevent signatures with references to python immutables (int..)
-    template<typename SlotT, typename... Extra, VGC_REQUIRES(core::detail::isSlot<SlotT>)>
-    ObjClass& def_slot(const char* name, SlotT slot, const Extra&... extra) {
+    template<typename TSlot, typename... Extra, VGC_REQUIRES(core::detail::isSlot<TSlot>)>
+    ObjClass& def_slot(const char* name, TSlot slot, const Extra&... extra) {
         static_assert(
-            std::is_invocable_v<SlotT, ObjT*>,
+            std::is_invocable_v<TSlot, TObj*>,
             "Slot must be accessible in the class being pybound.");
         defSlot(name, slot, extra...);
         return *this;
     }
 
 protected:
-    template<typename SignalRefT, typename... Extra>
+    template<typename TSignalRef, typename... Extra>
     void
-    defSignal(const char* name, SignalRefT (ObjT::*mfn)() const, const Extra&... extra) {
+    defSignal(const char* name, TSignalRef (TObj::*mfn)() const, const Extra&... extra) {
         std::string sname(name);
         py::cpp_function fget(
             [=](py::object self) -> PyCppSignalRef* {
-                ObjT* this_ = self.cast<ObjT*>();
+                TObj* this_ = self.cast<TObj*>();
                 PyCppSignalRef* sref =
-                    new PyCppSignalRefImpl<SignalRefT>((this_->*mfn)());
+                    new PyCppSignalRefImpl<TSignalRef>((this_->*mfn)());
                 py::object pysref =
                     py::cast(sref, py::return_value_policy::take_ownership);
                 self.attr("__dict__")[sname.c_str()] = pysref; // caching
                 return sref; // pybind will find the object in registered_instances
             },
             py::keep_alive<0, 1>());
-        PyClass::def_property_readonly(name, fget, extra...);
+        Base::def_property_readonly(name, fget, extra...);
     }
 
-    template<typename SlotRefT, typename... Extra>
-    void defSlot(const char* name, SlotRefT (ObjT::*mfn)(), const Extra&... extra) {
+    template<typename TSlotRef, typename... Extra>
+    void defSlot(const char* name, TSlotRef (TObj::*mfn)(), const Extra&... extra) {
         std::string sname(name);
         py::cpp_function fget(
             [=](py::object self) -> PyCppSlotRef* {
-                ObjT* this_ = self.cast<ObjT*>();
+                TObj* this_ = self.cast<TObj*>();
                 PyCppSlotRef* sref =
-                    new PyCppSlotRefImpl<typename SlotRefT::SlotMethod>((this_->*mfn)());
+                    new PyCppSlotRefImpl<typename TSlotRef::SlotMethod>((this_->*mfn)());
                 py::object pysref =
                     py::cast(sref, py::return_value_policy::take_ownership);
                 self.attr("__dict__")[sname.c_str()] = pysref; // caching
                 return sref; // pybind will find the object in registered_instances
             },
             py::keep_alive<0, 1>());
-        PyClass::def_property_readonly(name, fget, extra...);
+        Base::def_property_readonly(name, fget, extra...);
     }
 };
-
-#undef OBJCLASS_WRAP_PYCLASS_METHOD
 
 } // namespace vgc::core::wraps
 

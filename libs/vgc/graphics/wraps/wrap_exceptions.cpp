@@ -14,9 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/graphics/exceptions.h>
+
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/exceptions.h>
-#include <vgc/graphics/exceptions.h>
 
 namespace vgc::graphics {
 

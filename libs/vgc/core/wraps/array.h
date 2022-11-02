@@ -17,10 +17,13 @@
 #ifndef VGC_CORE_WRAPS_ARRAY_H
 #define VGC_CORE_WRAPS_ARRAY_H
 
-#include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
+#include <utility>
 
+#include <vgc/core/array.h>
 #include <vgc/core/format.h>
+
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 namespace vgc::core::wraps {
 
@@ -76,19 +79,19 @@ vgc::Int wrapArrayIndex(This& a, vgc::Int i) {
     }
 }
 
-// Defines most methods required to wrap a given Array type.
+// Defines most methods required to wrap a given Array<T> type.
 //
-template<typename This>
-void defineArrayCommonMethods(py::class_<This>& c, std::string fullName) {
+template<typename T>
+void defineArrayCommonMethods(Class<core::Array<T>>& c, std::string fullName) {
+    using This = core::Array<T>;
     using It = typename This::iterator;
-    using T = typename This::value_type;
     using rvp = py::return_value_policy;
 
     c.def(py::init<>());
+    c.def(py::init<const This&>());
     c.def(py::init<Int>());
     c.def(py::init<Int, const T&>());
     c.def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }));
-    c.def(py::init<const This&>());
 
     c.def("__getitem__", [](const This& a, Int i) {
         vgc::Int j = wrapArrayIndex(a, i);
@@ -100,7 +103,7 @@ void defineArrayCommonMethods(py::class_<This>& c, std::string fullName) {
         a.getUnchecked(j) = value;
     });
 
-    c.def("__len__", &This::size);
+    c.def("__len__", &This::length);
 
     c.def(
         "__iter__",
@@ -130,8 +133,8 @@ void defineArrayCommonMethods(py::class_<This>& c, std::string fullName) {
     c.def(py::self == py::self);
     c.def(py::self != py::self);
     c.def(py::self < py::self);
-    c.def(py::self <= py::self);
     c.def(py::self > py::self);
+    c.def(py::self <= py::self);
     c.def(py::self >= py::self);
 
     c.def("__str__", [](const This& a) { return toString(a); });
@@ -143,15 +146,17 @@ void defineArrayCommonMethods(py::class_<This>& c, std::string fullName) {
     });
 }
 
-template<typename This>
-void wrap_1darray(py::module& m, const std::string& valueTypeName) {
-    using T = typename This::value_type;
-    std::string thisTypeName = valueTypeName + "Array";
-    py::class_<This> c(m, thisTypeName.c_str());
+template<typename T>
+void wrap_array(py::module& m, const std::string& valueTypeName) {
+    using This = core::Array<T>;
+
     std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
+
+    std::string arrayTypeName = valueTypeName + "Array";
+    Class<This> c1(m, arrayTypeName.c_str());
     vgc::core::wraps::defineArrayCommonMethods(
-        c, vgc::core::format("{}.{}", moduleFullName, thisTypeName));
-    c.def(py::init([](py::sequence s) {
+        c1, vgc::core::format("{}.{}", moduleFullName, arrayTypeName));
+    c1.def(py::init([](py::sequence s) {
         This res;
         for (auto x : s) {
             res.append(x.cast<T>());

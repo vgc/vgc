@@ -14,15 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
-#include <vgc/core/wraps/object.h>
-
 #include <string>
 
 #include <vgc/core/format.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/strings.h>
+
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
 
 using This = vgc::dom::Element;
 using Parent = vgc::dom::Node;

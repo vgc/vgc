@@ -14,19 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
-#include <vgc/core/wraps/object.h>
 #include <vgc/ui/widget.h>
 
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
+
 using This = vgc::ui::Widget;
-using Holder = vgc::ui::WidgetPtr;
-using Parent = vgc::core::Object;
+
+template<>
+struct vgc::core::wraps::ObjClassSuperClass<This> {
+    using type = vgc::core::Object;
+};
 
 void wrap_widget(py::module& m) {
-
     vgc::core::wraps::wrapObjectCommon<This>(m, "Widget");
-
-    py::class_<This, Holder, Parent>(m, "Widget").def(py::init([]() {
-        return This::create();
-    }));
+    vgc::core::wraps::ObjClass<This> c(m, "Widget");
+    c.def(py::init([]() { return This::create(); }));
 }

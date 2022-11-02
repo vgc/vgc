@@ -14,10 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
 #include <vgc/geometry/range1d.h>
 #include <vgc/geometry/range1f.h>
+
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 namespace {
 
@@ -40,52 +41,49 @@ using Range1 = typename Range1_<T>::type;
 template<typename T>
 void wrap_range(py::module& m, const std::string& name, T relTol) {
 
-    using TRange1 = Range1<T>;
+    using This = Range1<T>;
 
-    py::class_<TRange1>(m, name.c_str())
+    vgc::core::wraps::Class<This>(m, name.c_str())
 
         .def(py::init<>())
-        .def(py::init<TRange1>())
+        .def(py::init<This>())
         .def(py::init<T, T>())
-        .def(py::init([](const std::string& s) { return vgc::core::parse<TRange1>(s); }))
+        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }))
         .def(
             py::init([](T position, T size) {
-                return TRange1::fromPositionSize(position, size);
+                return This::fromPositionSize(position, size);
             }),
             "position"_a,
             "size"_a)
 
         .def_property_readonly_static(
-            "empty", [](py::object) -> TRange1 { return TRange1::empty; })
-        .def("isEmpty", &TRange1::isEmpty)
-        .def("normalize", &TRange1::normalize)
-        .def("normalized", &TRange1::normalized)
+            "empty", [](py::object) -> This { return This::empty; })
+        .def("isEmpty", &This::isEmpty)
+        .def("normalize", &This::normalize)
+        .def("normalized", &This::normalized)
 
-        .def_property("position", &TRange1::position, &TRange1::setPosition)
-        .def_property("size", &TRange1::size, &TRange1::setSize)
-        .def_property("pMin", &TRange1::pMin, &TRange1::setPMin)
-        .def_property("pMax", &TRange1::pMax, &TRange1::setPMax)
+        .def_property("position", &This::position, &This::setPosition)
+        .def_property("size", &This::size, &This::setSize)
+        .def_property("pMin", &This::pMin, &This::setPMin)
+        .def_property("pMax", &This::pMax, &This::setPMax)
 
-        .def("isClose", &TRange1::isClose, "other"_a, "relTol"_a = relTol, "absTol"_a = 0)
-        .def("isNear", &TRange1::isNear, "other"_a, "absTol"_a)
+        .def("isClose", &This::isClose, "other"_a, "relTol"_a = relTol, "absTol"_a = 0)
+        .def("isNear", &This::isNear, "other"_a, "absTol"_a)
 
         .def(py::self == py::self)
         .def(py::self != py::self)
 
-        .def(
-            "unitedWith",
-            py::overload_cast<const TRange1&>(&TRange1::unitedWith, py::const_))
-        .def("unitedWith", py::overload_cast<T>(&TRange1::unitedWith, py::const_))
-        .def("uniteWith", py::overload_cast<const TRange1&>(&TRange1::uniteWith))
-        .def("uniteWith", py::overload_cast<T>(&TRange1::uniteWith))
-        .def("intersectedWith", &TRange1::intersectedWith)
-        .def("intersectWith", &TRange1::intersectWith)
-        .def("intersects", &TRange1::intersects)
-        .def(
-            "contains", py::overload_cast<const TRange1&>(&TRange1::contains, py::const_))
-        .def("contains", py::overload_cast<T>(&TRange1::contains, py::const_))
+        .def("unitedWith", py::overload_cast<const This&>(&This::unitedWith, py::const_))
+        .def("unitedWith", py::overload_cast<T>(&This::unitedWith, py::const_))
+        .def("uniteWith", py::overload_cast<const This&>(&This::uniteWith))
+        .def("uniteWith", py::overload_cast<T>(&This::uniteWith))
+        .def("intersectedWith", &This::intersectedWith)
+        .def("intersectWith", &This::intersectWith)
+        .def("intersects", &This::intersects)
+        .def("contains", py::overload_cast<const This&>(&This::contains, py::const_))
+        .def("contains", py::overload_cast<T>(&This::contains, py::const_))
 
-        .def("__repr__", [](const TRange1& m) { return vgc::core::toString(m); });
+        .def("__repr__", [](const This& m) { return vgc::core::toString(m); });
 }
 
 } // namespace

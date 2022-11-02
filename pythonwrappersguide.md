@@ -100,11 +100,11 @@ may seem confusing or even error-prone. But in fact, it makes sense and follows
 the philosophy of each language: Python programmers won't be surprised by the
 Python behavior, and C++ programmers won't be surprised by the C++ behavior.
 
-Such behavior is obtained by wrapping `Vec2d` using `py::class_<Vec2d>` with no
-template options:
+Such behavior is obtained by wrapping `Vec2d` using
+`vgc::core::wraps::Class<Vec2d>` with no template options:
 
 ```
-py::class_<Vec2d>(m, "Vec2d")
+vgc::core::wraps::Class<Vec2d>(m, "Vec2d")
     .def(py::init<>())
     // ...
 ;
@@ -147,17 +147,18 @@ pointer semantics should derive (directly or indirectly) from
 namespace vgc {
 namespace mylib {
 
-VGC_CORE_DECLARE_PTRS(Node);
+VGC_DECLARE_OBJECT(Node);
 
-class VGC_MYLIB_API Node: public core::Object // or any class inheriting Object
+class VGC_MYLIB_API Node
+ : public core::Object // or any class inheriting Object
 {
 public:
-    VGC_CORE_OBJECT(Node)
+    VGC_CORE_OBJECT(Node, core::Object)
 
     Node* otherNode() { return otherNode_.get(); }
 
 private:
-    NodeSharedPtr otherNode_;
+    NodePtr otherNode_;
 };
 
 } // namespace mylib
@@ -168,10 +169,8 @@ And they should be wrapped like so:
 
 ```
 using This = vgc::mylib::Node;
-using Holder = vgc::mylib::NodeSharedPtr
-using Parent = vgc::core::Object; // or any class inheriting Object
 
-py::class_<This, Holder, Parent>(m, "Node")
+vgc::core::wraps::ObjClass<This>(m, "Node")
     .def(py::init<>())
     .def_property_readonly("otherNode", &This::otherNode, py::return_value_policy::reference)
     // ...
@@ -192,7 +191,7 @@ necessary.
 ## Parent Class
 
 The parent class of any given class can be specified as a [template parameter of
-py::class_](
+vgc::core::wraps::Class](
 http://pybind11.readthedocs.io/en/stable/classes.html#inheritance-and-automatic-upcasting).
 However, for this to work, this requires pybind11 to already know about the
 parent class. Therefore, in `module.cpp`, the python wrappers of parent classes
@@ -213,14 +212,14 @@ class Bar {
 You would typically wrap it in `wrap_bar.cpp` as such:
 
 ```
-py::class_<Bar>("Bar")
+vgc::core::wraps::Class<Bar>("Bar")
     .def("bar", &Bar::bar, "foo"_a = Foo())
 ```
 
 However, as per the
 [pybind11 documentation](http://pybind11.readthedocs.io/en/stable/advanced/functions.html#default-arguments-revisited),
 this requires pybind11 to already know about `Foo` via a prior instantiation of
-`py::class_<Foo>`, or an exception will be thrown when importing the Python
+`vgc::core::wraps::Class<Foo>`, or an exception will be thrown when importing the Python
 module.
 
 In other words, it is important to wrap `Foo` before `Bar` in your module definition:

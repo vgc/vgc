@@ -14,9 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/dom/exceptions.h>
+
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/exceptions.h>
-#include <vgc/dom/exceptions.h>
 
 void wrap_exceptions(py::module& m) {
     py::module core = py::module::import("vgc.core");
