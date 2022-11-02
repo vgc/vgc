@@ -588,7 +588,7 @@ private:
     }
 
     template<typename T>
-    const void emplace_(T&& value) {
+    void emplace_(T&& value) {
         using Type = ValueCompatibleType<std::decay_t<T>>;
         static_assert(isValidValueType<Type>);
         var_.emplace<Type>(std::forward<T>(value));
