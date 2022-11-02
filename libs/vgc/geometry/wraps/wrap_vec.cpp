@@ -17,11 +17,11 @@
 #include <vgc/core/format.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
-#include <vgc/geometry/wraps/vec.h>
 
 #include <vgc/core/wraps/array.h>
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
+#include <vgc/geometry/wraps/vec.h>
 
 namespace {
 
