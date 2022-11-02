@@ -150,7 +150,6 @@ template<typename ValueType>
 void wrap_array(py::module& m, const std::string& valueTypeName) {
     using T = ValueType;
     using ArrayType = core::Array<ValueType>;
-    using rvp = py::return_value_policy;
 
     std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
 
