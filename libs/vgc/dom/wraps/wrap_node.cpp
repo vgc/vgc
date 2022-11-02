@@ -46,5 +46,7 @@ void wrap_node(py::module& m) {
         .def("reparent", &This::reparent)
         .def("canReplace", &This::canReplace)
         .def("replace", &This::replace)
-        .def("isDescendant", &This::isDescendant);
+        .def("isDescendant", &This::isDescendant)
+        .def("elementFromPath", &This::elementFromPath)
+        .def("valueFromPath", &This::valueFromPath);
 }

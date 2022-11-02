@@ -4,6 +4,7 @@ vgc_wrap_library(dom
     wrap_element.cpp
     wrap_exceptions.cpp
     wrap_node.cpp
+    wrap_path.cpp
     wrap_value.cpp
     wrap_xmlformattingstyle.cpp
 )

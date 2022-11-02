@@ -14,6 +14,7 @@ vgc_add_library(dom
         logcategories.h
         node.h
         operation.h
+        path.h
         schema.h
         strings.h
         value.h
@@ -28,6 +29,7 @@ vgc_add_library(dom
         logcategories.cpp
         node.cpp
         operation.cpp
+        path.cpp
         schema.cpp
         strings.cpp
         value.cpp

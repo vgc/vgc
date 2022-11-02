@@ -18,18 +18,25 @@
 
 import unittest
 
-from vgc.core import NotAliveError
+from vgc.core import NotAliveError, StringId
 
 from vgc.dom import (
     ChildCycleError,
     Document,
     Element,
+    Path,
+    Value,
     Node,
     NodeType,
     ReplaceDocumentError,
     SecondRootElementError,
     WrongChildTypeError,
     WrongDocumentError
+)
+
+from vgc.geometry import (
+    Vec2d,
+    Vec2dArray,
 )
 
 def getChildNames(node):
@@ -436,6 +443,19 @@ class TestNode(unittest.TestCase):
         for n in [n212]:
             self.assertFalse(n.isDescendant(n211))
             self.assertFalse(n211.isDescendant(n))
+
+    def testPathAccess(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n1id = n1.getOrCreateId()
+        n2 = Element(n1, "path")
+        n2.name = "n2Name"
+        self.assertEqual(doc.elementFromPath(Path(f"#{n1id}/n2Name")), n2)
+        self.assertEqual(doc.elementFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), n2)
+        a = Vec2dArray(((1.5, 2.5), (3.2, 4.2)))
+        n2.setAttribute(StringId("positions"), Value(a))
+        self.assertEqual(doc.valueFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), Vec2d(3.2, 4.2))
 
 if __name__ == '__main__':
     unittest.main()

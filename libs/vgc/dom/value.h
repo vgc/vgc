@@ -30,6 +30,7 @@
 #include <vgc/core/sharedconst.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/path.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::dom {
@@ -107,6 +108,8 @@ enum class ValueType {
     ColorArray,
     Vec2d,
     Vec2dArray,
+    Path,
+    PathArray,
     VGC_ENUM_ENDMAX
 };
 VGC_DOM_API
@@ -147,6 +150,8 @@ VGC_DOM_VALUETYPE_TYPE_(Color,         core::Color)
 VGC_DOM_VALUETYPE_TYPE_(ColorArray,    core::SharedConstColorArray)
 VGC_DOM_VALUETYPE_TYPE_(Vec2d,         geometry::Vec2d)
 VGC_DOM_VALUETYPE_TYPE_(Vec2dArray,    geometry::SharedConstVec2dArray)
+VGC_DOM_VALUETYPE_TYPE_(Path,          dom::Path)
+VGC_DOM_VALUETYPE_TYPE_(PathArray,     dom::SharedConstPathArray)
 // clang-format on
 #undef VGC_DOM_VALUETYPE_TYPE_
 
@@ -300,6 +305,25 @@ public:
         : var_(vec2dArray) {
     }
 
+    /// Constructs a `Value` holding a `dom::Path`.
+    ///
+    Value(dom::Path path)
+        : var_(path) {
+    }
+
+    /// Constructs a `Value` holding a shared const array of `dom::Path`.
+    ///
+    Value(dom::PathArray pathArray)
+        : var_(std::in_place_type<dom::SharedConstPathArray>,
+               std::move(pathArray)) {
+    }
+
+    /// Constructs a `Value` holding a shared const array of `dom::Path`.
+    ///
+    Value(const dom::SharedConstPathArray& pathArray)
+        : var_(pathArray) {
+    }
+
     /// Returns the ValueType of this Value.
     ///
     ValueType type() const {
@@ -395,7 +419,7 @@ public:
         var_ = value;
     }
 
-    /// Returns the `core::IntArray` held by this `Value`.
+    /// Returns the `core::SharedConstIntArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::IntArray`.
     ///
     const core::SharedConstIntArray& getIntArray() const {
@@ -427,7 +451,7 @@ public:
         var_ = value;
     }
 
-    /// Returns the `core::DoubleArray` held by this `Value`.
+    /// Returns the `core::SharedConstDoubleArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::DoubleArray`.
     ///
     const core::SharedConstDoubleArray& getDoubleArray() const {
@@ -459,7 +483,7 @@ public:
         var_ = color;
     }
 
-    /// Returns the `core::ColorArray` held by this `Value`.
+    /// Returns the `core::SharedConstColorArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::ColorArray`.
     ///
     const core::SharedConstColorArray& getColorArray() const {
@@ -491,7 +515,7 @@ public:
         var_ = vec2d;
     }
 
-    /// Returns the `geometry::Vec2dArray` held by this `Value`.
+    /// Returns the `geometry::SharedConstVec2dArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::Vec2dArray`.
     ///
     const geometry::SharedConstVec2dArray& getVec2dArray() const {
@@ -508,6 +532,38 @@ public:
     ///
     void set(const geometry::SharedConstVec2dArray& vec2dArray) {
         emplace_(vec2dArray);
+    }
+
+    /// Returns the `dom::Path` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::Path`.
+    ///
+    const dom::Path& getPath() const {
+        return std::get<dom::Path>(var_);
+    }
+
+    /// Sets this `Value` to the given `path`.
+    ///
+    void set(dom::Path path) {
+        var_ = std::move(path);
+    }
+
+    /// Returns the `dom::SharedConstPathArray` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::PathArray`.
+    ///
+    const dom::SharedConstPathArray& getPathArray() const {
+        return std::get<dom::SharedConstPathArray>(var_);
+    }
+
+    /// Sets this `Value` to the given `pathArray`.
+    ///
+    void set(dom::PathArray pathArray) {
+        emplace_(std::move(pathArray));
+    }
+
+    /// Sets this `Value` to the given shared const `pathArray`.
+    ///
+    void set(const dom::SharedConstPathArray& pathArray) {
+        emplace_(pathArray);
     }
 
     template<typename Visitor>
