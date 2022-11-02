@@ -16,10 +16,10 @@
 
 #include <vgc/geometry/triangle2d.h>
 #include <vgc/geometry/triangle2f.h>
-#include <vgc/geometry/wraps/vec.h>
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
+#include <vgc/geometry/wraps/vec.h>
 
 namespace {
 
