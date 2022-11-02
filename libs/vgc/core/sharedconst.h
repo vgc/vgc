@@ -188,10 +188,14 @@ template<typename T>
 struct IsSharedConst<SharedConst<T>> : std::true_type {};
 
 template<typename T>
-struct RemoveSharedConst_ { using type = T; };
+struct RemoveSharedConst_ {
+    using type = T;
+};
 
 template<typename T>
-struct RemoveSharedConst_<SharedConst<T>> { using type = T; };
+struct RemoveSharedConst_<SharedConst<T>> {
+    using type = T;
+};
 
 } // namespace detail
 

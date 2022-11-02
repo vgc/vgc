@@ -288,7 +288,9 @@ public:
     /// Constructs a `Value` holding a shared const array of `Vec2d`.
     ///
     Value(geometry::Vec2dArray vec2dArray)
-        : var_(std::in_place_type<geometry::SharedConstVec2dArray>, std::move(vec2dArray)) {
+        : var_(
+            std::in_place_type<geometry::SharedConstVec2dArray>,
+            std::move(vec2dArray)) {
     }
 
     /// Constructs a `Value` holding a shared const array of `Vec2d`.

@@ -163,8 +163,8 @@ void defineSharedConstArrayCommonMethods(
 
     c.def(py::init<const ArrayType&>());
     c.def(py::init<Int, const T&>());
-    c.def(
-        py::init([](const std::string& s) { return This(vgc::core::parse<ArrayType>(s)); }));
+    c.def(py::init(
+        [](const std::string& s) { return This(vgc::core::parse<ArrayType>(s)); }));
 
     c.def("__getitem__", [](const This& a, Int i) {
         vgc::Int j = wrapArrayIndex(a.get(), i);
