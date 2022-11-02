@@ -14,10 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/core/array.h>
+
 #include <vgc/core/wraps/array.h>
+#include <vgc/core/wraps/common.h>
 
 void wrap_arrays(py::module& m) {
-    vgc::core::wraps::wrap_1darray<vgc::core::DoubleArray>(m, "Double");
-    vgc::core::wraps::wrap_1darray<vgc::core::FloatArray>(m, "Float");
-    vgc::core::wraps::wrap_1darray<vgc::core::IntArray>(m, "Int");
+    vgc::core::wraps::wrap_array<double>(m, "Double");
+    vgc::core::wraps::wrap_array<float>(m, "Float");
+    vgc::core::wraps::wrap_array<vgc::Int>(m, "Int");
 }

@@ -23,6 +23,7 @@
 
 #include <vgc/core/detail/signal.h>
 #include <vgc/core/object.h>
+
 #include <vgc/core/wraps/common.h>
 
 namespace vgc::core::wraps {

@@ -2828,17 +2828,17 @@ void readTo(Array<T>& a, IStream& in) {
 namespace detail {
 
 template<typename T>
-struct isArray_ : std::false_type {};
+struct IsArray : std::false_type {};
 
 template<typename T>
-struct isArray_<Array<T>> : std::true_type {};
+struct IsArray<Array<T>> : std::true_type {};
 
 } // namespace detail
 
 /// Checks whether the type `T` is a specialization of core::Array.
 ///
 template<typename T>
-inline constexpr bool isArray = detail::isArray_<T>::value;
+inline constexpr bool isArray = detail::IsArray<T>::value;
 
 /// Alias for `vgc::core::Array<vgc::Int>`.
 ///

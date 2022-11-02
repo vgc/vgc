@@ -14,26 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
-#include <vgc/core/wraps/object.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/node.h>
 
-using This = vgc::dom::Node;
-using Holder = vgc::dom::NodePtr;
-using Parent = vgc::core::Object;
-
-using vgc::dom::Node;
-using vgc::dom::NodeType;
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
 
 void wrap_node(py::module& m) {
+
+    using This = vgc::dom::Node;
+
+    using NodeType = vgc::dom::NodeType;
     py::enum_<NodeType>(m, "NodeType")
         .value("Element", NodeType::Element)
         .value("Document", NodeType::Document);
 
     vgc::core::wraps::wrapObjectCommon<This>(m, "Node");
 
-    py::class_<This, Holder, Parent>(m, "Node")
+    vgc::core::wraps::ObjClass<This>(m, "Node")
         // Note: Node has no public constructor
         .def_property_readonly("document", &This::document)
         .def_property_readonly("nodeType", &This::nodeType)

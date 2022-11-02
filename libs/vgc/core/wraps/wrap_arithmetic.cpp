@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/arithmetic.h>
+
 #include <vgc/core/wraps/common.h>
 
 void wrap_arithmetic(py::module& m) {

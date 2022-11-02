@@ -15,10 +15,13 @@
 // limitations under the License.
 
 #include <vgc/core/format.h>
-#include <vgc/core/wraps/array.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/wraps/vec.h>
+
+#include <vgc/core/wraps/array.h>
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 namespace {
 
@@ -41,7 +44,7 @@ void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol) {
     // Fix https://github.com/pybind/pybind11/issues/1893
     auto self2 = py::self;
 
-    py::class_<This>(m, thisTypeName.c_str())
+    vgc::core::wraps::Class<This>(m, thisTypeName.c_str())
 
         .def(py::init<>())
         .def(py::init<T, T>())
@@ -111,7 +114,7 @@ void wrap_2darray(py::module& m, const std::string& valueTypeName) {
     using T = typename This::value_type; // Example: Vec2d
     using U = typename T::ScalarType;    // Example: double
     std::string thisTypeName = valueTypeName + "Array";
-    py::class_<This> c(m, thisTypeName.c_str());
+    vgc::core::wraps::Class<This> c(m, thisTypeName.c_str());
     std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
     vgc::core::wraps::defineArrayCommonMethods(
         c, vgc::core::format("{}.{}", moduleFullName, thisTypeName));

@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/format.h>
+
 #include <vgc/core/wraps/common.h>
 
 void wrap_format(py::module& m) {

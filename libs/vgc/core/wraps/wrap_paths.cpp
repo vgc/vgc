@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/core/paths.h>
+
 #include <vgc/core/wraps/common.h>
 
 void wrap_paths(py::module& m) {

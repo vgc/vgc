@@ -14,17 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/vec2d.h>
 
-using vgc::geometry::Curve;
-using vgc::geometry::Vec2d;
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 void wrap_curve(py::module& m) {
 
-    py::class_<Curve>(m, "Curve")
+    using This = vgc::geometry::Curve;
+    using Vec2d = vgc::geometry::Vec2d;
 
+    vgc::core::wraps::Class<This>(m, "Curve")
         .def(py::init<>())
 
         // Note: there's a more readable syntax to disambiguate function
@@ -33,12 +34,12 @@ void wrap_curve(py::module& m) {
 
         .def(
             "addControlPoint",
-            py::overload_cast<double, double, double>(&Curve::addControlPoint))
+            py::overload_cast<double, double, double>(&This::addControlPoint))
         .def(
             "addControlPoint",
-            py::overload_cast<const Vec2d&, double>(&Curve::addControlPoint))
+            py::overload_cast<const Vec2d&, double>(&This::addControlPoint))
 
-        .def("__repr__", [](const Curve& c) {
+        .def("__repr__", [](const This& c) {
             return "<Curve containing "                          //
                    + std::to_string(c.positionData().size() / 2) //
                    + " control points>";

@@ -14,46 +14,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/operators.h>
+#include <vgc/core/color.h>
+
 #include <vgc/core/wraps/array.h>
 #include <vgc/core/wraps/common.h>
 
-#include <vgc/core/color.h>
-
-namespace py = pybind11;
-using This = vgc::core::Color;
-using vgc::core::Color;
-
 void wrap_color(py::module& m) {
+
+    using This = vgc::core::Color;
+
     auto self2 = py::self; // Fix https://github.com/pybind/pybind11/issues/1893
 
-    py::class_<Color>(m, "Color")
-
-        .def(py::init([]() { return Color(); }))
+    vgc::core::wraps::Class<This>(m, "Color")
+        .def(py::init([]() { return This(); }))
         .def(py::init<float, float, float>())
         .def(py::init<float, float, float, float>())
         .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }))
-        .def(py::init<Color>())
+        .def(py::init<This>())
 
         .def(
             "__getitem__",
-            [](const Color& v, int i) {
+            [](const This& v, int i) {
                 if (i < 0 || i >= 4)
                     throw py::index_error();
                 return v[i];
             })
         .def(
             "__setitem__",
-            [](Color& v, int i, float x) {
+            [](This& v, int i, float x) {
                 if (i < 0 || i >= 4)
                     throw py::index_error();
                 v[i] = x;
             })
 
-        .def_property("r", &Color::r, &Color::setR)
-        .def_property("g", &Color::g, &Color::setG)
-        .def_property("b", &Color::b, &Color::setB)
-        .def_property("a", &Color::a, &Color::setA)
+        .def_property("r", &This::r, &This::setR)
+        .def_property("g", &This::g, &This::setG)
+        .def_property("b", &This::b, &This::setB)
+        .def_property("a", &This::a, &This::setA)
 
         .def(py::self += py::self)
         .def(py::self + py::self)
@@ -71,9 +68,9 @@ void wrap_color(py::module& m) {
         .def(py::self > py::self)
         .def(py::self >= py::self)
 
-        .def("__repr__", [](const Color& c) { return vgc::core::toString(c); })
+        .def("__repr__", [](const This& c) { return vgc::core::toString(c); })
 
         ;
 
-    vgc::core::wraps::wrap_1darray<vgc::core::ColorArray>(m, "Color");
+    vgc::core::wraps::wrap_array<vgc::core::Color>(m, "Color");
 }

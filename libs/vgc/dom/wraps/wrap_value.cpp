@@ -14,18 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
-
 #include <vgc/core/format.h>
 #include <vgc/dom/value.h>
 
-using This = vgc::dom::Value;
-
-using vgc::dom::ValueType;
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 template<typename T>
-void defineValueComparisonMethods(py::class_<This>& c) {
+void defineValueComparisonMethods(vgc::core::wraps::Class<vgc::dom::Value>& c) {
     c.def(py::self == T());
     c.def(T() == py::self);
     c.def(py::self != T());
@@ -33,6 +29,10 @@ void defineValueComparisonMethods(py::class_<This>& c) {
 }
 
 void wrap_value(py::module& m) {
+
+    using This = vgc::dom::Value;
+
+    using ValueType = vgc::dom::ValueType;
     py::enum_<ValueType>(m, "ValueType")
         .value("None", ValueType::None)
         .value("Invalid", ValueType::Invalid)
@@ -46,7 +46,7 @@ void wrap_value(py::module& m) {
         .value("Vec2d", ValueType::Vec2d)
         .value("Vec2dArray", ValueType::Vec2dArray);
 
-    py::class_<This> c(m, "Value");
+    vgc::core::wraps::Class<This> c(m, "Value");
     c.def(py::init<>())
         .def(py::init<std::string>())
         .def(py::init<vgc::Int>())
@@ -98,16 +98,16 @@ void wrap_value(py::module& m) {
 
         .def(
             "__str__",
-            [](const This& self) -> std::string {
+            [](const This& a) -> std::string {
                 fmt::memory_buffer mbuf;
-                fmt::format_to(std::back_inserter(mbuf), "{}", self);
+                fmt::format_to(std::back_inserter(mbuf), "{}", a);
                 return std::string(mbuf.begin(), mbuf.size());
             })
 
         .def(
             "__repr__",
-            [](const This& self) -> std::string {
-                return self.visit([&](auto&& arg) -> std::string {
+            [](const This& a) -> std::string {
+                return a.visit([&](auto&& arg) -> std::string {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, vgc::dom::NoneValue>) {
                         return "vgc.dom.Value.none";

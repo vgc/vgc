@@ -14,9 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
-
 #include <vgc/geometry/mat.h>
 #include <vgc/geometry/mat2d.h>
 #include <vgc/geometry/mat2f.h>
@@ -30,6 +27,9 @@
 #include <vgc/geometry/vec3f.h>
 #include <vgc/geometry/vec4d.h>
 #include <vgc/geometry/vec4f.h>
+
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 using vgc::geometry::Mat;
 using vgc::geometry::Vec;
@@ -92,7 +92,7 @@ void wrap_mat(py::module& m, const std::string& name) {
     using TRow = MatRowView<dimension, T>;
 
     // Wrap RowView class
-    py::class_<TRow>(m, (name + "RowView").c_str())
+    vgc::core::wraps::Class<TRow>(m, (name + "RowView").c_str())
         .def(
             "__getitem__",
             [](const TRow& row, vgc::Int j) {
@@ -108,7 +108,7 @@ void wrap_mat(py::module& m, const std::string& name) {
             row[j] = x;
         });
 
-    py::class_<TMat> cmat(m, name.c_str());
+    vgc::core::wraps::Class<TMat> cmat(m, name.c_str());
 
     // Default constructor, copy constructor, and diagonal matrix constructor.
     cmat.def(py::init<>())     //

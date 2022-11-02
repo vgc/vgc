@@ -14,19 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <pybind11/operators.h>
-#include <vgc/core/wraps/common.h>
-
 #include <string_view>
 
 #include <vgc/core/stringid.h>
 
-namespace py = pybind11;
-using vgc::core::StringId;
-using This = StringId;
+#include <vgc/core/wraps/class.h>
+#include <vgc/core/wraps/common.h>
 
 void wrap_stringid(py::module& m) {
-    py::class_<This>(m, "StringId")
+    using This = vgc::core::StringId;
+    vgc::core::wraps::Class<This>(m, "StringId")
         .def(py::init<>())
         .def(py::init<std::string_view>())
         .def(py::self < py::self)
@@ -36,9 +33,9 @@ void wrap_stringid(py::module& m) {
         .def(std::string_view() == py::self)
         .def(py::self != std::string_view())
         .def(std::string_view() != py::self)
-        .def("__str__", &StringId::string)
-        .def("__repr__", [](const This& self) -> std::string {
-            py::str s = py::cast(self.string());
+        .def("__str__", &This::string)
+        .def("__repr__", [](const This& a) -> std::string {
+            py::str s = py::cast(a.string());
             std::string r = py::cast<std::string>(s.attr("__repr__")());
             return vgc::core::format("vgc.core.StringId({})", r);
         });

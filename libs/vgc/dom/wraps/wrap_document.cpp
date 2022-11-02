@@ -14,18 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/wraps/common.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 
-using This = vgc::dom::Document;
-using Holder = vgc::dom::DocumentPtr;
-using Parent = vgc::dom::Node;
-
-using vgc::dom::XmlFormattingStyle;
+#include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/object.h>
 
 void wrap_document(py::module& m) {
-    py::class_<This, Holder, Parent>(m, "Document")
+    using This = vgc::dom::Document;
+    using XmlFormattingStyle = vgc::dom::XmlFormattingStyle;
+    vgc::core::wraps::ObjClass<This>(m, "Document")
         .def(py::init([]() { return This::create(); }))
         .def_static("open", &This::open)
         .def_property_readonly("rootElement", &This::rootElement)
