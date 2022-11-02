@@ -35,9 +35,6 @@ void wrapSharedConstImplicitCast() {
     using SharedConstType = SharedConst<ValueType>;
     using SharedConstTypeCaster = py::detail::make_caster<SharedConstType>;
     using OutputCaster = py::detail::make_caster<const ValueType>;
-    using OutputReference = const ValueType&;
-    using OutputCasterCastOpType =
-        typename OutputCaster::template cast_op_type<OutputReference>;
 
     struct scopedFlag {
         bool& flag;
