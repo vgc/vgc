@@ -325,6 +325,10 @@ inline void setZero(Color& c) {
 ///
 using ColorArray = Array<Color>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::core::Color>`.
+///
+using SharedConstColorArray = SharedConstArray<Color>;
+
 /// Writes the given Color to the output stream.
 ///
 /// The written string is a valid CSS Color Module Level 3, see:

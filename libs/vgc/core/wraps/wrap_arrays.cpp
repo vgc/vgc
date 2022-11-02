@@ -24,3 +24,26 @@ void wrap_arrays(py::module& m) {
     vgc::core::wraps::wrap_array<float>(m, "Float");
     vgc::core::wraps::wrap_array<vgc::Int>(m, "Int");
 }
+
+namespace vgc::core::wraps::detail {
+
+uintptr_t intArrayByCopyDataAddress(IntArray array) {
+    return reinterpret_cast<uintptr_t>(array.data());
+}
+
+uintptr_t intArrayDataAddress(const IntArray& array) {
+    return reinterpret_cast<uintptr_t>(array.data());
+}
+
+uintptr_t sharedConstIntArrayDataAddress(const SharedConstIntArray& array) {
+    return reinterpret_cast<uintptr_t>(array.get().data());
+}
+
+} // namespace vgc::core::wraps::detail
+
+void wrap_arrays_detail(py::module& m) {
+    namespace detail = vgc::core::wraps::detail;
+    m.def("intArrayByCopyDataAddress", &detail::intArrayByCopyDataAddress);
+    m.def("intArrayDataAddress", &detail::intArrayDataAddress);
+    m.def("sharedConstIntArrayDataAddress", detail::sharedConstIntArrayDataAddress);
+}

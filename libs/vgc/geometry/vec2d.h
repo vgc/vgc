@@ -657,6 +657,10 @@ inline Vec2d Vec2d::normalized(bool* isNormalizable, double epsilon_) const {
 ///
 using Vec2dArray = core::Array<Vec2d>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Vec2d>`.
+///
+using SharedConstVec2dArray = core::SharedConstArray<Vec2d>;
+
 /// Allows to iterate over a range of `Vec2d` stored in a memory buffer of
 /// doubles, where consecutive `Vec2d` elements are separated by a given stride.
 ///

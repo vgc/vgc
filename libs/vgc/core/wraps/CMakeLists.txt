@@ -4,6 +4,7 @@ vgc_wrap_library(core
     common.h
     exceptions.h
     object.h
+    sharedconst.h
     signal.h
 
     module.cpp

@@ -34,6 +34,7 @@ vgc_add_library(core
         profile.h
         python.h
         random.h
+        sharedconst.h
         stopwatch.h
         stringid.h
         templateutil.h

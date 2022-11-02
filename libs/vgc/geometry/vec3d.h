@@ -443,6 +443,10 @@ inline Vec3d Vec3d::normalized(bool* isNormalizable, double epsilon_) const {
 ///
 using Vec3dArray = core::Array<Vec3d>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Vec3d>`.
+///
+using SharedConstVec3dArray = core::SharedConstArray<Vec3d>;
+
 /// Allows to iterate over a range of `Vec3d` stored in a memory buffer of
 /// doubles, where consecutive `Vec3d` elements are separated by a given stride.
 ///

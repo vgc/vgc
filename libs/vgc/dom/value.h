@@ -27,6 +27,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/enum.h>
 #include <vgc/core/format.h>
+#include <vgc/core/sharedconst.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
 #include <vgc/geometry/vec2d.h>
@@ -116,67 +117,22 @@ struct InvalidValue : std::monostate {};
 
 namespace detail {
 
-template<typename T>
-using CowDataPtr = std::shared_ptr<const T>;
-
-static_assert(std::is_copy_constructible_v<CowDataPtr<char>>);
-static_assert(std::is_copy_assignable_v<CowDataPtr<char>>);
-
-template<typename T>
-struct CowDataPtrTraits;
-
-template<typename T>
-struct CowDataPtrTraits<CowDataPtr<T>> {
-    using elementType = T;
-};
-
-template<typename T>
-struct RemoveCowDataPtr_ {
-    using type = T;
-};
-
-template<typename T>
-struct RemoveCowDataPtr_<CowDataPtr<T>> {
-    using type = T;
-};
-
-template<typename T>
-using RemoveCowDataPtr = typename RemoveCowDataPtr_<T>::type;
-
-template<typename T>
-struct isCowDataPtr_ : std::false_type {};
-
-template<typename T>
-struct isCowDataPtr_<CowDataPtr<T>> : std::true_type {};
-
-template<typename T>
-inline constexpr bool isCowDataPtr = isCowDataPtr_<T>::value;
-
-template<typename T>
-CowDataPtr<std::remove_reference_t<T>> makeCowDataPtr(T&& x) {
-    return std::make_shared<const std::remove_reference_t<T>>(std::forward<T>(x));
-}
-
-template<typename T>
-using CowArrayPtr = CowDataPtr<core::Array<T>>;
-
 template<ValueType valueType>
-struct ValueTypeTraits_ {};
+struct ValueTypeTraits {};
 
 template<typename T>
-struct ValueTypeTraitsFromPublicType_ {};
+struct ValueTypeTraitsFromType {};
 
-#define VGC_DOM_VALUETYPE_TYPE_(enumerator, InternalType_)                               \
+#define VGC_DOM_VALUETYPE_TYPE_(enumerator, Type_)                                       \
     template<>                                                                           \
-    struct ValueTypeTraits_<ValueType::enumerator> {                                     \
-        using type = RemoveCowDataPtr<InternalType_>;                                    \
-        using InternalType = InternalType_;                                              \
+    struct ValueTypeTraits<ValueType::enumerator> {                                      \
+        using Type = Type_;                                                              \
     };                                                                                   \
     template<>                                                                           \
-    struct ValueTypeTraitsFromPublicType_<RemoveCowDataPtr<InternalType_>> {             \
+    struct ValueTypeTraitsFromType<Type_> {                                              \
         static constexpr ValueType value = ValueType::enumerator;                        \
         static constexpr size_t index = core::toUnderlying(value);                       \
-        using InternalType = InternalType_;                                              \
+        using Type = Type_;                                                              \
     };
 // clang-format off
 VGC_DOM_VALUETYPE_TYPE_(None,          NoneValue)
@@ -184,13 +140,13 @@ VGC_DOM_VALUETYPE_TYPE_(Invalid,       InvalidValue)
 VGC_DOM_VALUETYPE_TYPE_(String,        std::string)
 VGC_DOM_VALUETYPE_TYPE_(StringId,      core::StringId)
 VGC_DOM_VALUETYPE_TYPE_(Int,           Int)
-VGC_DOM_VALUETYPE_TYPE_(IntArray,      CowArrayPtr<Int>)
+VGC_DOM_VALUETYPE_TYPE_(IntArray,      core::SharedConstIntArray)
 VGC_DOM_VALUETYPE_TYPE_(Double,        double)
-VGC_DOM_VALUETYPE_TYPE_(DoubleArray,   CowArrayPtr<double>)
+VGC_DOM_VALUETYPE_TYPE_(DoubleArray,   core::SharedConstDoubleArray)
 VGC_DOM_VALUETYPE_TYPE_(Color,         core::Color)
-VGC_DOM_VALUETYPE_TYPE_(ColorArray,    CowArrayPtr<core::Color>)
+VGC_DOM_VALUETYPE_TYPE_(ColorArray,    core::SharedConstColorArray)
 VGC_DOM_VALUETYPE_TYPE_(Vec2d,         geometry::Vec2d)
-VGC_DOM_VALUETYPE_TYPE_(Vec2dArray,    CowArrayPtr<geometry::Vec2d>)
+VGC_DOM_VALUETYPE_TYPE_(Vec2dArray,    geometry::SharedConstVec2dArray)
 // clang-format on
 #undef VGC_DOM_VALUETYPE_TYPE_
 
@@ -199,22 +155,36 @@ struct ValueVariant_;
 
 template<size_t... Is>
 struct ValueVariant_<std::index_sequence<Is...>> {
-    using type = std::variant<
-        typename ValueTypeTraits_<static_cast<ValueType>(Is)>::InternalType...>;
+    using Type =
+        std::variant<typename ValueTypeTraits<static_cast<ValueType>(Is)>::Type...>;
 };
 
 using ValueVariant =
-    typename ValueVariant_<std::make_index_sequence<VGC_ENUM_COUNT(ValueType)>>::type;
+    typename ValueVariant_<std::make_index_sequence<VGC_ENUM_COUNT(ValueType)>>::Type;
 
 static_assert(std::is_copy_constructible_v<ValueVariant>);
 static_assert(std::is_copy_assignable_v<ValueVariant>);
 static_assert(std::is_move_constructible_v<ValueVariant>);
 static_assert(std::is_move_assignable_v<ValueVariant>);
 
+template<typename T, typename SFINAE = void>
+struct IsValidValueType : std::false_type {};
+
 template<typename T>
-using ValueInternalType = typename ValueTypeTraitsFromPublicType_<T>::InternalType;
+struct IsValidValueType<T, core::MakeVoid<typename ValueTypeTraitsFromType<T>::Type>>
+    : std::true_type {};
+
+template<typename T>
+inline constexpr bool isValidValueType = IsValidValueType<T>::value;
 
 } // namespace detail
+
+template<typename T>
+inline constexpr bool isValidValueType = detail::isValidValueType<T>;
+
+template<typename T>
+using ValueCompatibleType =
+    std::conditional_t<isValidValueType<core::SharedConst<T>>, core::SharedConst<T>, T>;
 
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
@@ -261,10 +231,16 @@ public:
         : var_(value) {
     }
 
-    /// Constructs a `Value` holding an array of `Int`.
+    /// Constructs a `Value` holding a shared const array of `Int`.
     ///
     Value(core::IntArray intArray)
-        : var_(detail::makeCowDataPtr(std::move(intArray))) {
+        : var_(std::in_place_type<core::SharedConstIntArray>, std::move(intArray)) {
+    }
+
+    /// Constructs a `Value` holding a shared const array of `Int`.
+    ///
+    Value(const core::SharedConstIntArray& intArray)
+        : var_(intArray) {
     }
 
     /// Constructs a `Value` holding a `double`.
@@ -273,10 +249,16 @@ public:
         : var_(value) {
     }
 
-    /// Constructs a `Value` holding an array of `double`.
+    /// Constructs a `Value` holding a shared const array of `double`.
     ///
     Value(core::DoubleArray doubleArray)
-        : var_(detail::makeCowDataPtr(std::move(doubleArray))) {
+        : var_(std::in_place_type<core::SharedConstDoubleArray>, std::move(doubleArray)) {
+    }
+
+    /// Constructs a `Value` holding a shared const array of `double`.
+    ///
+    Value(const core::SharedConstDoubleArray& doubleArray)
+        : var_(doubleArray) {
     }
 
     /// Constructs a `Value` holding a `Color`.
@@ -285,10 +267,16 @@ public:
         : var_(std::move(color)) {
     }
 
-    /// Constructs a `Value` holding an array of `Color`.
+    /// Constructs a `Value` holding a shared const array of `Color`.
     ///
     Value(core::ColorArray colorArray)
-        : var_(detail::makeCowDataPtr(std::move(colorArray))) {
+        : var_(std::in_place_type<core::SharedConstColorArray>, std::move(colorArray)) {
+    }
+
+    /// Constructs a `Value` holding a shared const array of `Color`.
+    ///
+    Value(const core::SharedConstColorArray& colorArray)
+        : var_(colorArray) {
     }
 
     /// Constructs a `Value` holding a `Vec2d`.
@@ -297,10 +285,16 @@ public:
         : var_(vec2d) {
     }
 
-    /// Constructs a `Value` holding an array of `Vec2d`.
+    /// Constructs a `Value` holding a shared const array of `Vec2d`.
     ///
     Value(geometry::Vec2dArray vec2dArray)
-        : var_(detail::makeCowDataPtr(std::move(vec2dArray))) {
+        : var_(std::in_place_type<geometry::SharedConstVec2dArray>, std::move(vec2dArray)) {
+    }
+
+    /// Constructs a `Value` holding a shared const array of `Vec2d`.
+    ///
+    Value(const geometry::SharedConstVec2dArray& vec2dArray)
+        : var_(vec2dArray) {
     }
 
     /// Returns the ValueType of this Value.
@@ -330,9 +324,11 @@ public:
     ///
     Value getItemWrapped(Int index) {
         return visit([&, index = index](auto&& arg) -> Value {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (core::isArray<T>) {
-                return Value(arg.getWrapped(index));
+            using Type = std::decay_t<decltype(arg)>;
+            using UnsharedType = core::RemoveSharedConst<Type>;
+            if constexpr (core::isArray<UnsharedType>) {
+                const UnsharedType& x = arg;
+                return Value(x.getWrapped(index));
             }
             else {
                 return Value();
@@ -345,9 +341,11 @@ public:
     ///
     Int arrayLength() {
         return visit([&](auto&& arg) -> Int {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (core::isArray<T>) {
-                return arg.length();
+            using Type = std::decay_t<decltype(arg)>;
+            using UnsharedType = core::RemoveSharedConst<Type>;
+            if constexpr (core::isArray<UnsharedType>) {
+                const UnsharedType& x = arg;
+                return x.length();
             }
             else {
                 return 0;
@@ -397,14 +395,20 @@ public:
     /// Returns the `core::IntArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::IntArray`.
     ///
-    const core::IntArray& getIntArray() const {
-        return *std::get<detail::CowArrayPtr<Int>>(var_);
+    const core::SharedConstIntArray& getIntArray() const {
+        return std::get<core::SharedConstIntArray>(var_);
     }
 
     /// Sets this `Value` to the given `intArray`.
     ///
     void set(core::IntArray intArray) {
-        var_ = detail::makeCowDataPtr(std::move(intArray));
+        emplace_(std::move(intArray));
+    }
+
+    /// Sets this `Value` to the given shared const `intArray`.
+    ///
+    void set(const core::SharedConstIntArray& intArray) {
+        emplace_(intArray);
     }
 
     /// Returns the double held by this `Value`.
@@ -423,14 +427,20 @@ public:
     /// Returns the `core::DoubleArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::DoubleArray`.
     ///
-    const core::DoubleArray& getDoubleArray() const {
-        return *std::get<detail::CowArrayPtr<double>>(var_);
+    const core::SharedConstDoubleArray& getDoubleArray() const {
+        return std::get<core::SharedConstDoubleArray>(var_);
     }
 
     /// Sets this `Value` to the given `doubleArray`.
     ///
     void set(core::DoubleArray doubleArray) {
-        var_ = detail::makeCowDataPtr(std::move(doubleArray));
+        emplace_(std::move(doubleArray));
+    }
+
+    /// Sets this `Value` to the given shared const `doubleArray`.
+    ///
+    void set(const core::SharedConstDoubleArray& doubleArray) {
+        emplace_(doubleArray);
     }
 
     /// Returns the `core::Color` held by this `Value`.
@@ -449,14 +459,20 @@ public:
     /// Returns the `core::ColorArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::ColorArray`.
     ///
-    const core::ColorArray& getColorArray() const {
-        return *std::get<detail::CowArrayPtr<core::Color>>(var_);
+    const core::SharedConstColorArray& getColorArray() const {
+        return std::get<core::SharedConstColorArray>(var_);
     }
 
     /// Sets this `Value` to the given `colorArray`.
     ///
     void set(core::ColorArray colorArray) {
-        var_ = detail::makeCowDataPtr(std::move(colorArray));
+        emplace_(std::move(colorArray));
+    }
+
+    /// Sets this `Value` to the given shared const `colorArray`.
+    ///
+    void set(const core::SharedConstColorArray& colorArray) {
+        emplace_(colorArray);
     }
 
     /// Returns the `geometry::Vec2d` held by this `Value`.
@@ -475,80 +491,93 @@ public:
     /// Returns the `geometry::Vec2dArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::Vec2dArray`.
     ///
-    const geometry::Vec2dArray& getVec2dArray() const {
-        return *std::get<detail::CowArrayPtr<geometry::Vec2d>>(var_);
+    const geometry::SharedConstVec2dArray& getVec2dArray() const {
+        return std::get<geometry::SharedConstVec2dArray>(var_);
     }
 
     /// Sets this `Value` to the given `vec2dArray`.
     ///
     void set(geometry::Vec2dArray vec2dArray) {
-        var_ = detail::makeCowDataPtr(std::move(vec2dArray));
+        emplace_(std::move(vec2dArray));
+    }
+
+    /// Sets this `Value` to the given shared const `vec2dArray`.
+    ///
+    void set(const geometry::SharedConstVec2dArray& vec2dArray) {
+        emplace_(vec2dArray);
     }
 
     template<typename Visitor>
     /*constexpr*/ // clang errors with "inline function is not defined".
     decltype(std::invoke(std::declval<Visitor>(), std::declval<NoneValue>()))
     visit(Visitor&& visitor) const {
-        return std::visit(
-            [&](auto&& arg) {
-                using ArgType = decltype(arg);
-                if constexpr (detail::isCowDataPtr<std::decay_t<ArgType>>) {
-                    return visitor(*std::forward<ArgType>(arg));
-                }
-                else {
-                    return visitor(std::forward<ArgType>(arg));
-                }
-            },
-            var_);
+        return std::visit(std::forward<Visitor>(visitor), var_);
     }
 
-    constexpr bool operator==(const Value& other) const noexcept {
-        return var_ == other.var_;
+    /// Note: For a held value of type `SharedConst<U>`, both `has<SharedConst<U>>()`
+    /// and `has<U>()` return true.
+    ///
+    template<typename T>
+    constexpr bool has() const {
+        using Type = ValueCompatibleType<std::decay_t<T>>;
+        static_assert(isValidValueType<Type>);
+        return var_.index() == detail::ValueTypeTraitsFromType<Type>::index;
     }
 
-    constexpr bool operator!=(const Value& other) const noexcept {
-        return var_ != other.var_;
+    /// Note: For a held value of type `SharedConst<U>`, both `get<SharedConst<U>>()`
+    /// and `get<U>()` are defined and return `const T&`.
+    ///
+    template<typename T>
+    const T& get() const {
+        using Type = ValueCompatibleType<std::decay_t<T>>;
+        static_assert(isValidValueType<Type>);
+        return std::get<Type>(var_);
     }
 
-    constexpr bool operator<(const Value& other) const noexcept {
-        return var_ < other.var_;
+    friend constexpr bool operator==(const Value& a, const Value& b) noexcept {
+        return a.var_ == b.var_;
     }
 
-    //constexpr bool operator>(const Value& other) const noexcept {
-    //    return var_ > other.var_;
+    friend constexpr bool operator!=(const Value& a, const Value& b) noexcept {
+        return a.var_ != b.var_;
+    }
+
+    friend constexpr bool operator<(const Value& a, const Value& b) noexcept {
+        return a.var_ < b.var_;
+    }
+
+    //friend constexpr bool operator>(const Value& a, const Value& b) noexcept {
+    //    return a.var_ > b.var_;
+    //}
+    //
+    //friend constexpr bool operator<=(const Value& a, const Value& b) noexcept {
+    //    return a.var_ <= b.var_;
+    //}
+    //
+    //friend constexpr bool operator>=(const Value& a, const Value& b) noexcept {
+    //    return a.var_ >= b.var_;
     //}
 
-    //constexpr bool operator<=(const Value& other) const noexcept {
-    //    return var_ <= other.var_;
-    //}
-
-    //constexpr bool operator>=(const Value& other) const noexcept {
-    //    return var_ >= other.var_;
-    //}
-
-    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    template<typename T>
     friend constexpr bool operator==(const Value& a, const T& b) noexcept {
-        return a.has<T>() && a.getInternal_<detail::ValueInternalType<T>>() == b;
+        using Type = ValueCompatibleType<std::decay_t<T>>;
+        return a.has<Type>() && a.get<Type>() == b;
     }
 
-    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    template<typename T>
     friend constexpr bool operator==(const T& a, const Value& b) noexcept {
-        return b.has<T>() && a == b.getInternal_<detail::ValueInternalType<T>>();
+        using Type = ValueCompatibleType<std::decay_t<T>>;
+        return b.has<Type>() && a == b.get<Type>();
     }
 
-    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    template<typename T>
     friend constexpr bool operator!=(const Value& a, const T& b) noexcept {
         return !(a == b);
     }
 
-    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
+    template<typename T>
     friend constexpr bool operator!=(const T& a, const Value& b) noexcept {
         return !(a == b);
-    }
-
-    template<typename T, VGC_REQUIRES_VALID(detail::ValueInternalType<T>)>
-    constexpr bool has() const {
-        return var_.index() == detail::ValueTypeTraitsFromPublicType_<T>::index;
     }
 
 private:
@@ -557,13 +586,10 @@ private:
     }
 
     template<typename T>
-    const detail::RemoveCowDataPtr<T>& getInternal_() const {
-        if constexpr (detail::isCowDataPtr<T>) {
-            return *std::get<T>(var_);
-        }
-        else {
-            return std::get<T>(var_);
-        }
+    const void emplace_(T&& value) {
+        using Type = ValueCompatibleType<std::decay_t<T>>;
+        static_assert(isValidValueType<Type>);
+        var_.emplace<Type>(std::forward<T>(value));
     }
 
     detail::ValueVariant var_;
