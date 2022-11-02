@@ -19,8 +19,14 @@
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/object.h>
 
+using This = vgc::ui::Widget;
+
+template<>
+struct vgc::core::wraps::ObjClassSuperClass<This> {
+    using type = vgc::core::Object;
+};
+
 void wrap_widget(py::module& m) {
-    using This = vgc::ui::Widget;
     vgc::core::wraps::wrapObjectCommon<This>(m, "Widget");
     vgc::core::wraps::ObjClass<This> c(m, "Widget");
     c.def(py::init([]() { return This::create(); }));

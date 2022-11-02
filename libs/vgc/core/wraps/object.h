@@ -75,6 +75,13 @@ void wrapObjectCommon(py::module& m, const std::string& className) {
 template<typename TObj, typename... Options>
 class ObjClass;
 
+/// Specialize this to define the visible superclass in python.
+///
+template<typename T>
+struct ObjClassSuperClass {
+    using type = typename T::SuperClass;
+};
+
 namespace detail {
 
 template<typename TObjClass>
@@ -87,7 +94,7 @@ struct ObjClassDeclarator_<ObjClass<TObj, Options...>> {
         ObjClassType,
         TObj,
         ObjPtr<TObj>,
-        typename TObj::SuperClass,
+        typename ObjClassSuperClass<TObj>::type,
         Options...>;
 };
 
