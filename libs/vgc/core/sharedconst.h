@@ -26,19 +26,22 @@
 
 namespace vgc::core {
 
-namespace detail {
-
 template<typename T>
-class SharedConstBase {
-protected:
-    SharedConstBase() = delete;
-    ~SharedConstBase() = default;
-
+class SharedConst {
 public:
+    // SharedConst<T> is specialized at least for core::Array but not in this header.
+    // It could be instanciated with an incomplete type for which the specialization
+    // may exist but is not known at the time of instanciation.
+    // To prevent this, we specialize SharedConst<T> in the same header where T is defined.
+    // Also, the following static assert ensures T is complete at the time of
+    // instantiation of SharedConst<T>.
+    //
+    static_assert(std::is_destructible_v<T>);
+
     using Type = T;
 
     template<typename... Args>
-    explicit SharedConstBase(Args&&... args)
+    explicit SharedConst(Args&&... args)
         : value_(std::make_shared<const T>(std::forward<Args>(args)...)) {
     }
 
@@ -52,29 +55,14 @@ public:
         return *value_;
     }
 
+    /// Returns a mutable copy of the shared value.
+    ///
     T editableCopy() const {
         return T(get());
     }
 
 private:
     std::shared_ptr<const T> value_;
-};
-
-} // namespace detail
-
-template<typename T>
-class SharedConst : public detail::SharedConstBase<T> {
-public:
-    // SharedConst<T> is specialized at least for core::Array but not in this header.
-    // It could be instanciated with an incomplete type for which the specialization
-    // may exist but is not known at the time of instanciation.
-    // To prevent this, we specialize SharedConst<T> in the same header where T is defined.
-    // Also, the following static assert ensures T is complete at the time of
-    // instantiation of SharedConst<T>.
-    //
-    static_assert(std::is_destructible_v<T>);
-
-    using detail::SharedConstBase<T>::SharedConstBase;
 };
 
 static_assert(std::is_copy_constructible_v<SharedConst<char>>);
