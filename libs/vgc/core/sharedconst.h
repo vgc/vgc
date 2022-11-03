@@ -35,7 +35,7 @@ protected:
     ~SharedConstBase() = default;
 
 public:
-    using ValueType = T;
+    using Type = T;
 
     template<typename... Args>
     explicit SharedConstBase(Args&&... args)
