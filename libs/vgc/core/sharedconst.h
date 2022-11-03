@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_SHAREDPTR_H
-#define VGC_CORE_SHAREDPTR_H
+#ifndef VGC_CORE_SHAREDCONST_H
+#define VGC_CORE_SHAREDCONST_H
 
 #include <memory>
 #include <type_traits>
@@ -25,15 +25,6 @@
 #include <vgc/core/templateutil.h>
 
 namespace vgc::core {
-
-//template<typename T, typename U, typename SFINEA>
-//struct are_equality_comparable : std::false_type {};
-//template<typename T, typename U>
-//struct are_equality_comparable<
-//    T,
-//    U,
-//    MakeVoid<decltype(std::declval<const T&>() == std::declval<const U&>())>>
-//    : std::true_type {};
 
 namespace detail {
 
@@ -223,4 +214,4 @@ struct fmt::formatter<vgc::core::SharedConst<T>> : fmt::formatter<T> {
     }
 };
 
-#endif // VGC_CORE_SHAREDPTR_H
+#endif // VGC_CORE_SHAREDCONST_H
