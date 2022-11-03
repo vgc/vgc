@@ -159,7 +159,8 @@ void hashCombine(std::size_t& res, const T& v) {
 }
 
 template<typename... Ts>
-std::enable_if_t<(sizeof...(Ts) > 1), void> hashCombine(std::size_t& res, const Ts&... values) {
+std::enable_if_t<(sizeof...(Ts) > 1), void>
+hashCombine(std::size_t& res, const Ts&... values) {
     (hashCombine(res, values), ...);
 }
 

@@ -19,9 +19,9 @@
 #include <array>
 #include <charconv>
 
+#include <vgc/dom/element.h>
 #include <vgc/dom/logcategories.h>
 #include <vgc/dom/strings.h>
-#include <vgc/dom/element.h>
 
 namespace vgc::dom {
 
@@ -128,8 +128,7 @@ Path::Path(std::string_view path) {
             segments_.clear();
             return;
         }
-        segments_.emplaceLast(
-            core::StringId(path.substr(i, j - i)), PathSegmentType::Id);
+        segments_.emplaceLast(core::StringId(path.substr(i, j - i)), PathSegmentType::Id);
         i = j;
     }
     else if (firstChar == '.') {
@@ -198,7 +197,10 @@ Path::Path(std::string_view path) {
             }
 
             segments_.emplaceLast(
-                core::StringId(attrName), PathSegmentType::Attribute, PathSegmentFlag::Indexed, index);
+                core::StringId(attrName),
+                PathSegmentType::Attribute,
+                PathSegmentFlag::Indexed,
+                index);
             i = j + 1;
         }
         else {

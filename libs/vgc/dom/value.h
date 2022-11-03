@@ -314,8 +314,7 @@ public:
     /// Constructs a `Value` holding a shared const array of `dom::Path`.
     ///
     Value(dom::PathArray pathArray)
-        : var_(std::in_place_type<dom::SharedConstPathArray>,
-               std::move(pathArray)) {
+        : var_(std::in_place_type<dom::SharedConstPathArray>, std::move(pathArray)) {
     }
 
     /// Constructs a `Value` holding a shared const array of `dom::Path`.

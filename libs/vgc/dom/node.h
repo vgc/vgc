@@ -296,7 +296,7 @@ public:
     }
 
     /// Returns the `Element` that the given `path` refers to.
-    /// 
+    ///
     /// If the path refers to an attribute, this returns the element that owns
     /// the attribute.
     /// If the path is empty, invalid, or does refer to an element that does not
@@ -305,7 +305,7 @@ public:
     Element* elementFromPath(const Path& path) const;
 
     /// Returns the `Value` of the attribute that the given `path` refers to.
-    /// 
+    ///
     /// If the path is empty, invalid, does not refer to an attribute, or one of
     /// its segment cannot not be resolved, this returns `nullptr`.
     ///
