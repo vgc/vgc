@@ -184,7 +184,8 @@ using ValueMakeSharedConstIfValid =
 } // namespace detail
 
 template<typename T>
-inline constexpr bool isCompatibleValueType = detail::isValidValueType<detail::ValueMakeSharedConstIfValid<T>>;
+inline constexpr bool isCompatibleValueType =
+    detail::isValidValueType<detail::ValueMakeSharedConstIfValid<T>>;
 
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
