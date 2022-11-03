@@ -188,8 +188,13 @@ Path::Path(std::string_view path) {
             }
 
             Int index = 0;
-            auto result = std::from_chars(&path[i], &path[j], index);
-            if (result.ec == std::errc::invalid_argument) {
+            try {
+                // XXX temp patch, core::parse currently allows leading and trailing whitespaces.
+                if (core::isWhitespace(path[i]) || core::isWhitespace(path[j - 1])) {
+                    throw core::RuntimeError("");
+                }
+                index = core::parse<Int>(path, i, j-i);
+            } catch (core::RuntimeError&) {
                 VGC_ERROR(LogVgcDom, "Invalid index format in path \"{}\".", path);
                 segments_.clear();
                 return;

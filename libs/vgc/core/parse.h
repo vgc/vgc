@@ -811,13 +811,13 @@ T read(IStream& in) {
 ///
 class StringReader {
 public:
-    using string_type = std::string;
+    using string_type = std::string_view;
     using size_type = string_type::size_type;
 
     /// Constructs a StringReader operating on the given string.
     /// The string must outlive this StringReader.
     ///
-    StringReader(const std::string& s)
+    StringReader(std::string_view s)
         : s_(s)
         , it_(s.begin())
         , fail_(false) {
@@ -863,8 +863,8 @@ public:
     }
 
 private:
-    const std::string& s_;
-    std::string::const_iterator it_;
+    std::string_view s_;
+    std::string_view::const_iterator it_;
     bool fail_;
 };
 
@@ -911,14 +911,34 @@ inline StringReader& operator>>(StringReader& in, T& x) {
 ///
 /// \sa read(), StringReader::operator<<()
 ///
+// XXX needs better api to forbid leading+trailing whitespaces
+//
 template<typename T>
-T parse(const std::string& s) {
+T parse(std::string_view s) {
     T res;
     StringReader in(s);
     readTo(res, in);
     skipWhitespaceCharacters(in);
     skipExpectedEof(in);
     return res;
+}
+
+/// \overload
+///
+// XXX needs better api to forbid leading+trailing whitespaces
+//
+template<typename T>
+T parse(const char* begin, const char* end) {
+    return parse<T>(std::string_view(begin, end - begin));
+}
+
+/// \overload
+///
+// XXX needs better api to forbid leading+trailing whitespaces
+//
+template<typename T>
+T parse(std::string_view s, Int off, Int count) {
+    return parse<T>(s.substr(off, count));
 }
 
 } // namespace vgc::core
