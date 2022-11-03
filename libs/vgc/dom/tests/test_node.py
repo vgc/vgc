@@ -454,7 +454,7 @@ class TestNode(unittest.TestCase):
         self.assertEqual(doc.elementFromPath(Path(f"#{n1id}/n2Name")), n2)
         self.assertEqual(doc.elementFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), n2)
         a = Vec2dArray(((1.5, 2.5), (3.2, 4.2)))
-        n2.setAttribute(StringId("positions"), Value(a))
+        n2.setAttribute(StringId("positions"), a)
         self.assertEqual(doc.valueFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), Vec2d(3.2, 4.2))
 
 if __name__ == '__main__':

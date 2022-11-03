@@ -110,7 +110,7 @@ public:
     }
 
     size_t hash() const noexcept {
-        size_t res = 'PSEG';
+        size_t res = 1347634503; // 'PSEG'
         core::hashCombine(res, name_, flags_);
         if (flags_.has(PathSegmentFlag::Indexed)) {
             core::hashCombine(res, arrayIndex_);
@@ -174,7 +174,7 @@ public:
     }
 
     size_t hash() const noexcept {
-        size_t res = 'PATH';
+        size_t res = 1346458696; // 'PATH'
         for (const PathSegment& seg : segments_) {
             core::hashCombine(res, seg.hash());
         }
