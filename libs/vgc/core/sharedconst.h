@@ -52,12 +52,12 @@ public:
         return *value_;
     }
 
-    ValueType editableCopy() const {
-        return ValueType(get());
+    T editableCopy() const {
+        return T(get());
     }
 
 private:
-    std::shared_ptr<const ValueType> value_;
+    std::shared_ptr<const T> value_;
 };
 
 } // namespace detail
