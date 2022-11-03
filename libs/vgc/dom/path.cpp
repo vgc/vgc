@@ -17,7 +17,6 @@
 #include <vgc/dom/path.h>
 
 #include <array>
-#include <charconv>
 
 #include <vgc/dom/element.h>
 #include <vgc/dom/logcategories.h>
