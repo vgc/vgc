@@ -177,14 +177,14 @@ struct IsValidValueType<T, core::MakeVoid<typename ValueTypeTraitsFromType<T>::T
 template<typename T>
 inline constexpr bool isValidValueType = IsValidValueType<T>::value;
 
+template<typename T>
+using ValueMakeSharedConstIfValid =
+    std::conditional_t<isValidValueType<core::SharedConst<T>>, core::SharedConst<T>, T>;
+
 } // namespace detail
 
 template<typename T>
-inline constexpr bool isValidValueType = detail::isValidValueType<T>;
-
-template<typename T>
-using ValueCompatibleType =
-    std::conditional_t<isValidValueType<core::SharedConst<T>>, core::SharedConst<T>, T>;
+inline constexpr bool isCompatibleValueType = detail::isValidValueType<detail::ValueMakeSharedConstIfValid<T>>;
 
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
@@ -521,8 +521,8 @@ public:
     ///
     template<typename T>
     constexpr bool has() const {
-        using Type = ValueCompatibleType<std::decay_t<T>>;
-        static_assert(isValidValueType<Type>);
+        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
+        static_assert(detail::isValidValueType<Type>);
         return var_.index() == detail::ValueTypeTraitsFromType<Type>::index;
     }
 
@@ -531,8 +531,8 @@ public:
     ///
     template<typename T>
     const T& get() const {
-        using Type = ValueCompatibleType<std::decay_t<T>>;
-        static_assert(isValidValueType<Type>);
+        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
+        static_assert(detail::isValidValueType<Type>);
         return std::get<Type>(var_);
     }
 
@@ -562,13 +562,13 @@ public:
 
     template<typename T>
     friend constexpr bool operator==(const Value& a, const T& b) noexcept {
-        using Type = ValueCompatibleType<std::decay_t<T>>;
+        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
         return a.has<Type>() && a.get<Type>() == b;
     }
 
     template<typename T>
     friend constexpr bool operator==(const T& a, const Value& b) noexcept {
-        using Type = ValueCompatibleType<std::decay_t<T>>;
+        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
         return b.has<Type>() && a == b.get<Type>();
     }
 
@@ -589,8 +589,8 @@ private:
 
     template<typename T>
     void emplace_(T&& value) {
-        using Type = ValueCompatibleType<std::decay_t<T>>;
-        static_assert(isValidValueType<Type>);
+        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
+        static_assert(detail::isValidValueType<Type>);
         var_.emplace<Type>(std::forward<T>(value));
     }
 
