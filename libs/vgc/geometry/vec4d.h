@@ -465,6 +465,10 @@ inline Vec4d Vec4d::normalized(bool* isNormalizable, double epsilon_) const {
 ///
 using Vec4dArray = core::Array<Vec4d>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Vec4d>`.
+///
+using SharedConstVec4dArray = core::SharedConstArray<Vec4d>;
+
 /// Allows to iterate over a range of `Vec4d` stored in a memory buffer of
 /// doubles, where consecutive `Vec4d` elements are separated by a given stride.
 ///

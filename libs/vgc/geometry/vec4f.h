@@ -465,6 +465,10 @@ inline Vec4f Vec4f::normalized(bool* isNormalizable, float epsilon_) const {
 ///
 using Vec4fArray = core::Array<Vec4f>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Vec4f>`.
+///
+using SharedConstVec4fArray = core::SharedConstArray<Vec4f>;
+
 /// Allows to iterate over a range of `Vec4f` stored in a memory buffer of
 /// floats, where consecutive `Vec4f` elements are separated by a given stride.
 ///

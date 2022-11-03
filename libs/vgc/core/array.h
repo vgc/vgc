@@ -31,6 +31,7 @@
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
+#include <vgc/core/sharedconst.h>
 
 #include <vgc/core/detail/containerutil.h>
 #include <vgc/core/templateutil.h>
@@ -2840,17 +2841,34 @@ struct IsArray<Array<T>> : std::true_type {};
 template<typename T>
 inline constexpr bool isArray = detail::IsArray<T>::value;
 
+/// Alias template for `vgc::core::SharedConst<vgc::core::Array<T>>`.
+///
+template<typename T>
+using SharedConstArray = SharedConst<Array<T>>;
+
 /// Alias for `vgc::core::Array<vgc::Int>`.
 ///
 using IntArray = Array<Int>;
+
+/// Alias for `vgc::core::SharedConstArray<vgc::Int>`.
+///
+using SharedConstIntArray = SharedConstArray<Int>;
 
 /// Alias for `vgc::core::Array<float>`.
 ///
 using FloatArray = Array<float>;
 
+/// Alias for `vgc::core::SharedConstArray<float>`.
+///
+using SharedConstFloatArray = SharedConstArray<float>;
+
 /// Alias for `vgc::core::Array<double>`.
 ///
 using DoubleArray = Array<double>;
+
+/// Alias for `vgc::core::SharedConstArray<double>`.
+///
+using SharedConstDoubleArray = SharedConstArray<double>;
 
 } // namespace vgc::core
 

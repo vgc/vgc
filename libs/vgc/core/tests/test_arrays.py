@@ -22,7 +22,14 @@ from vgc.core import (
     IndexError,
     DoubleArray,
     FloatArray,
-    IntArray
+    IntArray,
+    SharedConstIntArray
+)
+
+from vgc.core.detail import (
+    intArrayByCopyDataAddress,
+    intArrayDataAddress,
+    sharedConstIntArrayDataAddress
 )
 
 def get1DArrayClasses():
@@ -206,6 +213,19 @@ class Test1DArrays(unittest.TestCase):
     def testFormat(self):
         a = DoubleArray("[3.5, 42, 1]")
         self.assertEqual(str(a), "[3.5, 42, 1]")
+
+    def testSharedConst(self):
+        a = IntArray([3, 1, 2])
+        b = SharedConstIntArray(a)
+        self.assertEqual(a, b)
+        # Check that that a.data() != b.data()
+        self.assertNotEqual(intArrayDataAddress(a), sharedConstIntArrayDataAddress(b))
+        # Check that no copy is made when calling foo(const IntArray&) with a sharedConstIntArrayDataAddress
+        self.assertEqual(intArrayDataAddress(b), sharedConstIntArrayDataAddress(b))
+        # Check that a copy is made when calling foo(IntArray) with a IntArray
+        self.assertNotEqual(intArrayDataAddress(a), intArrayByCopyDataAddress(a))
+        # Check that a copy is made when calling foo(IntArray) with a SharedConstArray
+        self.assertNotEqual(intArrayDataAddress(b), intArrayByCopyDataAddress(b))
 
 if __name__ == '__main__':
     unittest.main()

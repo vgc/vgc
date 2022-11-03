@@ -75,18 +75,27 @@ void wrap_value(py::module& m) {
         .def("getInt", &This::getInt)
         .def("set", py::overload_cast<vgc::Int>(&This::set))
         .def("getIntArray", &This::getIntArray)
+        .def("set", py::overload_cast<const vgc::core::SharedConstIntArray&>(&This::set))
         .def("set", py::overload_cast<vgc::core::IntArray>(&This::set))
         .def("getDouble", &This::getDouble)
         .def("set", py::overload_cast<double>(&This::set))
         .def("getDoubleArray", &This::getDoubleArray)
+        .def(
+            "set",
+            py::overload_cast<const vgc::core::SharedConstDoubleArray&>(&This::set))
         .def("set", py::overload_cast<vgc::core::DoubleArray>(&This::set))
         .def("getColor", &This::getColor)
         .def("set", py::overload_cast<const vgc::core::Color&>(&This::set))
         .def("getColorArray", &This::getColorArray)
+        .def(
+            "set", py::overload_cast<const vgc::core::SharedConstColorArray&>(&This::set))
         .def("set", py::overload_cast<vgc::core::ColorArray>(&This::set))
         .def("getVec2d", &This::getVec2d)
         .def("set", py::overload_cast<const vgc::geometry::Vec2d&>(&This::set))
         .def("getVec2dArray", &This::getVec2dArray)
+        .def(
+            "set",
+            py::overload_cast<const vgc::geometry::SharedConstVec2dArray&>(&This::set))
         .def("set", py::overload_cast<vgc::geometry::Vec2dArray>(&This::set))
 
         .def(py::self == py::self)

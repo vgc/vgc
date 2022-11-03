@@ -443,6 +443,10 @@ inline Vec3f Vec3f::normalized(bool* isNormalizable, float epsilon_) const {
 ///
 using Vec3fArray = core::Array<Vec3f>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Vec3f>`.
+///
+using SharedConstVec3fArray = core::SharedConstArray<Vec3f>;
+
 /// Allows to iterate over a range of `Vec3f` stored in a memory buffer of
 /// floats, where consecutive `Vec3f` elements are separated by a given stride.
 ///

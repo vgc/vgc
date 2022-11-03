@@ -24,6 +24,7 @@
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
+#include <vgc/core/wraps/sharedconst.h>
 
 namespace vgc::core::wraps {
 
@@ -146,9 +147,80 @@ void defineArrayCommonMethods(Class<core::Array<T>>& c, std::string fullName) {
     });
 }
 
+// Defines most methods required to wrap a given SharedConstArray<T> type.
+//
+template<typename T>
+void defineSharedConstArrayCommonMethods(
+    Class<core::SharedConstArray<T>>& c,
+    std::string fullName) {
+
+    using ArrayType = core::Array<T>;
+    using It = typename ArrayType::const_iterator;
+    using This = core::SharedConstArray<T>;
+    using rvp = py::return_value_policy;
+
+    defineSharedConstCommonMethods(c);
+
+    c.def(py::init<const ArrayType&>());
+    c.def(py::init<Int, const T&>());
+    c.def(py::init(
+        [](const std::string& s) { return This(vgc::core::parse<ArrayType>(s)); }));
+
+    c.def("__getitem__", [](const This& a, Int i) {
+        vgc::Int j = wrapArrayIndex(a.get(), i);
+        return a.get().getUnchecked(j);
+    });
+
+    c.def("__len__", [](const This& a) { return a.get().length(); });
+
+    c.def(
+        "__iter__",
+        [](const This& a) {
+            return py::make_iterator<rvp::reference_internal, It, It, const T&>(
+                a.get().begin(), a.get().end());
+        },
+        py::keep_alive<0, 1>());
+
+    c.def("__contains__", [](const This& a, const T& value) {
+        return a.get().contains(value);
+    });
+
+    c.def("index", [](const This& a, const T& v) { return a.get().index(v); });
+
+    c.def(py::self == py::self);
+    c.def(py::self != py::self);
+    c.def(py::self < py::self);
+    c.def(py::self > py::self);
+    c.def(py::self <= py::self);
+    c.def(py::self >= py::self);
+
+    ArrayType array = {};
+    c.def(py::self == array);
+    c.def(array == py::self);
+    c.def(py::self != array);
+    c.def(array != py::self);
+    c.def(py::self < array);
+    c.def(array < py::self);
+    c.def(py::self > array);
+    c.def(array > py::self);
+    c.def(py::self <= array);
+    c.def(array <= py::self);
+    c.def(py::self >= array);
+    c.def(array >= py::self);
+
+    c.def("__str__", [](const This& a) { return toString(a.get()); });
+
+    c.def("__repr__", [fullName = fullName](const This& a) {
+        py::object pyStr = py::cast(toString(a.get()));
+        std::string pyStrRepr = py::cast<std::string>(pyStr.attr("__repr__")());
+        return vgc::core::format("{}({})", fullName, pyStrRepr);
+    });
+}
+
 template<typename T>
 void wrap_array(py::module& m, const std::string& valueTypeName) {
     using This = core::Array<T>;
+    using SharedConstThis = core::SharedConstArray<T>;
 
     std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
 
@@ -163,6 +235,11 @@ void wrap_array(py::module& m, const std::string& valueTypeName) {
         }
         return res;
     }));
+
+    std::string sharedConstArrayTypeName = std::string("SharedConst") + arrayTypeName;
+    Class<SharedConstThis> c2(m, sharedConstArrayTypeName.c_str());
+    vgc::core::wraps::defineSharedConstArrayCommonMethods(
+        c2, vgc::core::format("{}.{}", moduleFullName, sharedConstArrayTypeName));
 }
 
 } // namespace vgc::core::wraps
