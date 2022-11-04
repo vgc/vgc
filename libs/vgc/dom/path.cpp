@@ -44,40 +44,6 @@ PathSegment::PathSegment(
 
 namespace {
 
-bool appendElementReversePath(core::Array<PathSegment>& segments, Element* element) {
-    while (element) {
-        Element* parentElement = Element::cast(element->parent());
-        if (!parentElement) {
-            // root element
-            break;
-        }
-        const Value& v = element->getAuthoredAttribute(nameAttrName);
-        if (v.type() == ValueType::String) {
-            segments.emplaceLast(core::StringId(v.getString()));
-        }
-        else {
-            VGC_ERROR(
-                LogVgcDom,
-                "Failed to create dom::Path with element <{}> as segment since it has no "
-                "attribute \"name\" and thus cannot be uniquely identified.",
-                element->tagName());
-            return false;
-            //
-            // possible fallback with tagName[index]:
-            //
-            //    Element* e = parentElement->firstChildElement();
-            //    Int i = 0;
-            //    while (e && e != element) {
-            //        e = e->nextSiblingElement();
-            //        ++i;
-            //    }
-            //    segments.append(core::StringId(std::to_string(i)));
-        }
-        element = parentElement;
-    }
-    return true;
-}
-
 bool isReservedChar(char c) {
     constexpr std::string_view reserved = "/.#[]";
     return reserved.find(c) != std::string::npos;
@@ -193,8 +159,9 @@ Path::Path(std::string_view path) {
                 if (core::isWhitespace(path[i]) || core::isWhitespace(path[j - 1])) {
                     throw core::RuntimeError("");
                 }
-                index = core::parse<Int>(path, i, j-i);
-            } catch (core::RuntimeError&) {
+                index = core::parse<Int>(path, i, j - i);
+            }
+            catch (core::RuntimeError&) {
                 VGC_ERROR(LogVgcDom, "Invalid index format in path \"{}\".", path);
                 segments_.clear();
                 return;
