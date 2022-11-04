@@ -257,7 +257,7 @@ void readTo(Path& v, IStream& in) {
         bool allowed = true;
         // appends '#' first
         while (allowed) {
-            s.append(c);
+            s.push_back(c);
             c = core::readCharacter(in);
             allowed = isValidIdChar(c);
         }
