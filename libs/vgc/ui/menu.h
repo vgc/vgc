@@ -93,47 +93,82 @@ protected:
     /// This is an implementation details. Please use
     /// Menu::create(title) instead.
     ///
-    Menu(const std::string& title);
+    Menu(std::string_view title);
 
 public:
-    /// Creates a Menu.
+    /// Creates a `Menu`.
     ///
     static MenuPtr create();
 
-    /// Creates a Menu with the given title.
+    /// Creates a `Menu` with the given title.
     ///
-    static MenuPtr create(const std::string& title = "");
+    static MenuPtr create(std::string_view = "");
 
+    /// Returns the action corresponding to this menu. This is an action that,
+    /// when trigerred, opens the menu.
+    ///
     Action* menuAction() const {
         return action_;
     }
 
-    void setTitle(const std::string& title);
+    /// Returns the title of this menu. This title is for example visible in
+    /// the parent menu when this menu is a submenu of another menu.
+    ///
+    ///  This is equivalent to `menuAction()->text()`.
+    ///
+    std::string_view title() const {
+        return action_->text();
+    }
 
+    /// Set the title of this menu.
+    ///
+    void setTitle(std::string_view title);
+
+    /// Adds a separator item to this menu. This can be used to create visual
+    /// grouping inside the menu.
+    ///
     void addSeparator();
 
+    /// Adds an action item to this menu.
+    ///
     void addItem(Action* action);
 
-    /// Appends the given `menu` to the menu items.
+    /// Adds a menu item to this menu.
     ///
-    /// `menu` is not reparented.
+    /// Note that the given `menu` does not become a child widget of this `menu`.
     ///
     void addItem(Menu* menu);
 
-    /// Creates a child `Menu` with the given `title` and appends it to the menu items.
+    /// Creates a new `Menu` with the given `title`, set it as child widget of
+    /// this menu, and add it as a menu item to this menu.
     ///
-    Menu* createSubMenu(const std::string& title);
+    Menu* createSubMenu(std::string_view title);
 
+    /// Returns the list of `MenuItem` in this menu.
+    ///
+    const core::Array<MenuItem>& items() const {
+        return items_;
+    }
+
+    /// Returns whether this menu is open. A menu is considered open either
+    /// when it is open as popup (see `isOpenAsPopup()`), or when it is not
+    /// open as popup but visible anyway, as any regular widget can be (see
+    /// `isVisible()`).
+    ///
     bool isOpen() const {
         return isPopupEnabled_ ? isOpenAsPopup_ : isVisible();
     }
 
+    /// Returns whether this menu is open as a popup.
+    ///
     bool isOpenAsPopup() const {
         return isOpenAsPopup_;
     }
 
-    /// Opens the menu either in-place with `show()` if `isPopupEnabled()`
-    /// is false or as a popup in a popup-layer under the top-most overlay of `from`.
+    /// Opens the menu either in-place with `show()` if `isPopupEnabled()` is
+    /// false or as a popup in a popup-layer under the top-most overlay of
+    /// `from`.
+    ///
     /// Returns true on success, false otherwise.
     ///
     /// If `from` is null, the top-most overlay of the menu itself is used.
@@ -146,13 +181,22 @@ public:
     ///
     bool open(Widget* from);
 
+    /// Closes this menu. This is the reverse operation of `open()`.
+    ///
     bool close();
+
+    /// If this menu has an open submenu, then closes this submenu.
+    ///
     bool closeSubMenu();
 
+    /// Returns whether this menu can be open as a popup.
+    ///
     bool isPopupEnabled() const {
         return isPopupEnabled_;
     }
 
+    /// Sets whether this menu can be open as a popup.
+    ///
     void setPopupEnabled(bool enabled);
 
     // temporary, will be a style prop

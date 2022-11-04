@@ -28,7 +28,7 @@
 
 namespace vgc::ui {
 
-QString toQt(const std::string& s) {
+QString toQt(std::string_view s) {
     int size = vgc::core::int_cast<int>(s.size());
     return QString::fromUtf8(s.data(), size);
 }
@@ -69,6 +69,23 @@ geometry::Vec2d fromQtd(const QPointF& v) {
 
 geometry::Vec2f fromQtf(const QPointF& v) {
     return geometry::Vec2f(static_cast<float>(v.x()), static_cast<float>(v.y()));
+}
+
+Qt::KeyboardModifiers toQt(const ui::ModifierKeys& modifierKeys) {
+    Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+    if (modifierKeys.has(ui::ModifierKey::Shift)) {
+        modifiers.setFlag(Qt::ShiftModifier);
+    }
+    if (modifierKeys.has(ui::ModifierKey::Ctrl)) {
+        modifiers.setFlag(Qt::ControlModifier);
+    }
+    if (modifierKeys.has(ui::ModifierKey::Alt)) {
+        modifiers.setFlag(Qt::AltModifier);
+    }
+    if (modifierKeys.has(ui::ModifierKey::Meta)) {
+        modifiers.setFlag(Qt::MetaModifier);
+    }
+    return modifiers;
 }
 
 ModifierKeys fromQt(const Qt::KeyboardModifiers& modifiers) {

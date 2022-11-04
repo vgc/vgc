@@ -36,6 +36,7 @@
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/modifierkey.h>
 
 class QKeyEvent;
 class QMouseEvent;
@@ -46,10 +47,10 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(KeyEvent);
 VGC_DECLARE_OBJECT(MouseEvent);
 
-/// Converts the given UTF-8 encoded std::string \p s into a QString.
+/// Converts the given UTF-8 encoded std::string_view `s` into a QString.
 ///
 VGC_UI_API
-QString toQt(const std::string& s);
+QString toQt(std::string_view s);
 
 /// Converts the given QString \p s into a UTF-8 encoded std::string.
 ///
@@ -85,6 +86,16 @@ geometry::Vec2d fromQtd(const QPointF& v);
 ///
 VGC_UI_API
 geometry::Vec2f fromQtf(const QPointF& v);
+
+/// Converts the given `ui::ModifierKeys` to Qt modifier keys.
+///
+VGC_UI_API
+Qt::KeyboardModifiers toQt(const ui::ModifierKeys& modifiers);
+
+/// Converts the given Qt modifier keys to `ui::ModifierKeys`.
+///
+VGC_UI_API
+ui::ModifierKeys fromQt(const Qt::KeyboardModifiers& modifiers);
 
 /// Converts the given QMouseEvent into a vgc::ui::MouseEvent.
 ///
