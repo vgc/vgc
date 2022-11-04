@@ -18,11 +18,13 @@
 #define VGC_DOM_PATH_H
 
 #include <string>
+#include <string_view>
 
 #include <vgc/core/algorithm.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/format.h>
 #include <vgc/core/object.h>
+#include <vgc/core/parse.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
 
@@ -237,16 +239,34 @@ using PathArray = core::Array<Path>;
 ///
 using SharedConstPathArray = core::SharedConstArray<Path>;
 
+constexpr bool isValidIdChar(char c) {
+    constexpr std::string_view specials = "_-";
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+           || specials.find(c) != std::string::npos;
+}
+
 /// Reads a `Path` from the input stream, and stores it in the given output
 /// parameter `v`. Leading whitespaces are allowed. Raises `ParseError` if the
 /// stream does not start with a `Path`.
 ///
 template<typename IStream>
 void readTo(Path& v, IStream& in) {
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, '@');
-    skipExpectedCharacter(in, '\'');
-    std::string s = readStringUntilExpectedCharacter(in, '\'');
+    char c = core::readExpectedCharacter(in, {'#', '@'});
+    if (c == '#') {
+        std::string s;
+        bool allowed = true;
+        // appends '#' first
+        while (allowed) {
+            s.append(c);
+            c = core::readCharacter(in);
+            allowed = isValidIdChar(c);
+        }
+        v = Path(s);
+        return;
+    }
+    // else '@'
+    core::skipExpectedCharacter(in, '\'');
+    std::string s = core::readStringUntilExpectedCharacter(in, '\'');
     v = Path(s);
 }
 
