@@ -178,7 +178,7 @@ public:
         return !isAbsolute();
     }
 
-    bool beginsWithId() const noexcept {
+    bool isIdBased() const noexcept {
         return !segments_.isEmpty() && segments_.begin()->type() == PathSegmentType::Id;
     }
 

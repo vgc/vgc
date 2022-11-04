@@ -70,7 +70,7 @@ void wrap_value(py::module& m) {
         .def("isValid", &This::isValid)
         .def("clear", &This::clear)
         .def("getItemWrapped", &This::getItemWrapped)
-        .def_property_readonly("arrayLength", &This::arrayLength)
+        .def("arrayLength", &This::arrayLength)
 
         .def("getString", &This::getString)
         .def("set", py::overload_cast<std::string>(&This::set))

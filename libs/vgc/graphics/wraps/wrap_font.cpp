@@ -113,11 +113,11 @@ void wrapSizedGlyph(py::module& m) {
         .def_property_readonly("name", &This::name)
         .def_property_readonly("outline", &This::outline)
         .def_property_readonly("boundingBox", &This::boundingBox)
-        .def_property_readonly(
+        .def(
             "fill", py::overload_cast<FloatArray&, const Mat3f&>(&This::fill, py::const_))
-        .def_property_readonly(
+        .def(
             "fill", py::overload_cast<FloatArray&, const Vec2f&>(&This::fill, py::const_))
-        .def_property_readonly("fillYMirrored", &This::fillYMirrored);
+        .def("fillYMirrored", &This::fillYMirrored);
 }
 
 } // namespace
