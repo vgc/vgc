@@ -20,11 +20,11 @@
 #include <QApplication>
 #include <QDir>
 #include <QFileDialog>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
-#include <QMenuBar>
 
 #include <vgc/core/io.h>
 #include <vgc/core/os.h>
@@ -639,7 +639,8 @@ private:
 
         menuBar_ = parent->createChild<Menu>("Menu");
         menuBar_->setDirection(ui::FlexDirection::Row);
-        menuBar_->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex or Menu.
+        menuBar_->addStyleClass(
+            core::StringId("horizontal")); // TODO: move to Flex or Menu.
         menuBar_->setShortcutTrackEnabled(false);
 
         Menu* fileMenu = menuBar_->createSubMenu("File");
@@ -708,9 +709,8 @@ private:
                 Qt::Key key = static_cast<Qt::Key>(shortcut.key());
                 Qt::KeyboardModifiers modifiers = toQt(shortcut.modifiers());
                 qAction->setShortcut(modifiers | key);
-                QObject::connect(qAction, &QAction::triggered, [action]() {
-                    action->trigger();
-                });
+                QObject::connect(
+                    qAction, &QAction::triggered, [action]() { action->trigger(); });
             }
         }
     }
