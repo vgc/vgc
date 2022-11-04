@@ -21,8 +21,12 @@
 #include <vgc/core/object.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/exceptions.h>
+#include <vgc/dom/value.h>
 
 namespace vgc::dom {
+
+VGC_DECLARE_OBJECT(Element);
+class Path;
 
 /// \enum vgc::dom::NodeType
 /// \brief Specifies the type of a Node.
@@ -290,6 +294,23 @@ public:
     bool isDescendant(const Node* other) const {
         return isDescendantObject(other);
     }
+
+    /// Returns the `Element` that the given `path` refers to.
+    ///
+    /// If the path refers to an attribute, this returns the element that owns
+    /// the attribute.
+    /// If the path is empty, invalid, or does refer to an element that does not
+    /// exist, this returns `nullptr`.
+    ///
+    Element* elementFromPath(const Path& path) const;
+
+    /// Returns the `Value` of the attribute that the given `path` refers to.
+    ///
+    /// If the path is empty, invalid, does not refer to an attribute, or one of
+    /// its segment cannot not be resolved, this returns `nullptr`.
+    ///
+    // XXX Later, consider returning a ValuePtr or ValueRef.
+    Value valueFromPath(const Path& path) const;
 
 private:
     // Operations

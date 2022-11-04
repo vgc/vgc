@@ -173,4 +173,53 @@ void Node::replace(Node* oldNode) {
     parent->insertChildObject_(nextSibling, this);
 }
 
+Element* Node::elementFromPath(const Path& path) const {
+    Element* res = Element::cast(const_cast<Node*>(this));
+    for (const PathSegment& seg : path.segments()) {
+        switch (seg.type()) {
+        case PathSegmentType::Root:
+            res = res ? nullptr : document()->rootElement();
+            break;
+        case PathSegmentType::Id:
+            res = res ? nullptr : document()->elementById(seg.name());
+            break;
+        case PathSegmentType::Element:
+            if (res) {
+                Element* e = res->firstChildElement();
+                while (e) {
+                    if (e->name() == seg.name()) {
+                        break;
+                    }
+                    e = e->nextSiblingElement();
+                }
+                res = e;
+            }
+            break;
+        case PathSegmentType::Attribute:
+            return res;
+        }
+        if (!res) {
+            // error
+            break;
+        }
+    }
+    return res;
+}
+
+Value Node::valueFromPath(const Path& path) const {
+    // XXX could check path is valid..
+    if (path.isAttributePath()) {
+        Element* e = elementFromPath(path);
+        if (e) {
+            const PathSegment& seg = path.segments().last();
+            Value v = e->getAttribute(seg.name());
+            if (v.isValid() && seg.isIndexed()) {
+                v = v.getItemWrapped(seg.arrayIndex());
+            }
+            return v;
+        }
+    }
+    return Value();
+}
+
 } // namespace vgc::dom

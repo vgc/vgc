@@ -3,5 +3,6 @@ vgc_test_library(dom
         test_document.py
         test_element.py
         test_node.py
+        test_path.py
         test_xmlformattingstyle.py
 )

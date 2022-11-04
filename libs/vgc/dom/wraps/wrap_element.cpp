@@ -132,7 +132,7 @@ void wrap_element(py::module& m) {
             &Element::name,
             static_cast<void (This::*)(std::string_view)>(&Element::setName))
         .def_property_readonly("id", &Element::id)
-        .def_property_readonly("getOrCreateId", &Element::getOrCreateId)
+        .def("getOrCreateId", &Element::getOrCreateId)
         .def("getAttribute", &Element::getAttribute)
         .def("setAttribute", &Element::setAttribute)
         .def("clearAttribute", &Element::clearAttribute)
