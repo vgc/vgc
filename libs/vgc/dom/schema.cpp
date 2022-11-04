@@ -106,8 +106,7 @@ const Schema& schema() {
         }},
         { "vertex", "v", {
             {"color", core::colors::black},
-            {"position", geometry::Vec2dArray()},
-            {"width", core::DoubleArray()},
+            {"position", geometry::Vec2d()},
         }},
         { "edge", "e", {
             {"color", core::colors::black},
