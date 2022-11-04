@@ -35,7 +35,7 @@ void wrap_path(py::module& m) {
         .def("toString", &This::toString)
         .def("isAbsolute", &This::isAbsolute)
         .def("isRelative", &This::isRelative)
-        .def("beginsWithAnId", &This::beginsWithAnId)
+        .def("isIdBased", &This::isIdBased)
         .def("isElementPath", &This::isElementPath)
         .def("isAttributePath", &This::isAttributePath)
         .def("getElementPath", &This::getElementPath)
