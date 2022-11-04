@@ -57,7 +57,7 @@ MenuItem::MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept
     , menu_(menu) {
 }
 
-Menu::Menu(const std::string& title)
+Menu::Menu(std::string_view title)
     : Flex(FlexDirection::Column, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Menu);
@@ -70,11 +70,11 @@ MenuPtr Menu::create() {
     return MenuPtr(new Menu(""));
 }
 
-MenuPtr Menu::create(const std::string& text) {
+MenuPtr Menu::create(std::string_view text) {
     return MenuPtr(new Menu(text));
 }
 
-void Menu::setTitle(const std::string& title) {
+void Menu::setTitle(std::string_view title) {
     action_->setText(title);
     notifyChanged(false);
 }
@@ -99,7 +99,7 @@ void Menu::addItem(Menu* menu) {
     notifyChanged(true);
 }
 
-Menu* Menu::createSubMenu(const std::string& title) {
+Menu* Menu::createSubMenu(std::string_view title) {
     Menu* menu = createChild<Menu>(title);
     menu->hide();
     addItem(menu);

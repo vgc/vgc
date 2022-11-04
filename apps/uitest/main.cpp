@@ -24,6 +24,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QMenuBar>
 
 #include <vgc/core/io.h>
 #include <vgc/core/os.h>
@@ -309,7 +310,7 @@ private:
 
         createOverlayAndMainLayout_();
         createActions_(overlay_.get());
-        createMenu_(mainLayout_);
+        createMenus_(mainLayout_);
 
         // Create panel areas
         ui::PanelArea* mainArea = ui::PanelArea::createHorizontalSplit(mainLayout_);
@@ -626,7 +627,8 @@ private:
         actionRedo_->triggered().connect(onActionRedoSlot_());
     }
 
-    void createMenu_(ui::Widget* parent) {
+    ui::Menu* menuBar_ = nullptr;
+    void createMenus_(ui::Widget* parent) {
 
         using ui::Action;
         using ui::Key;
@@ -635,15 +637,15 @@ private:
         using ui::Shortcut;
         using ui::ShortcutContext;
 
-        Menu* menu = parent->createChild<Menu>("Menu");
-        menu->setDirection(ui::FlexDirection::Row);
-        menu->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex or Menu.
-        menu->setShortcutTrackEnabled(false);
+        menuBar_ = parent->createChild<Menu>("Menu");
+        menuBar_->setDirection(ui::FlexDirection::Row);
+        menuBar_->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex or Menu.
+        menuBar_->setShortcutTrackEnabled(false);
 
-        Menu* fileMenu = menu->createSubMenu("File");
-        Menu* editMenu = menu->createSubMenu("Edit");
-        Menu* testMenu = menu->createSubMenu("Test");
-        menu->setPopupEnabled(false);
+        Menu* fileMenu = menuBar_->createSubMenu("File");
+        Menu* editMenu = menuBar_->createSubMenu("Edit");
+        Menu* testMenu = menuBar_->createSubMenu("Test");
+        menuBar_->setPopupEnabled(false);
 
         fileMenu->addItem(actionNew_);
         fileMenu->addItem(actionOpen_);
@@ -684,8 +686,65 @@ private:
 
         // stretch at the right-side of the Flex
         // TODO: implement AlignLeft in Flex to achieve the same without the extra child
-        menu->createChild<ui::Widget>();
+        menuBar_->createChild<ui::Widget>();
+
+#ifndef VGC_CORE_OS_WINDOWS
+        convertToNativeMenuBar_();
+#endif
     }
+
+#ifndef VGC_CORE_OS_WINDOWS
+    void populateNativeMenu_(ui::Menu* menu, QMenu* qMenu) {
+        for (const ui::MenuItem& item : menu->items()) {
+            if (item.isMenu()) {
+                ui::Menu* subMenu = item.menu();
+                QMenu* qSubMenu = qMenu->addMenu(ui::toQt(subMenu->title()));
+                populateNativeMenu_(subMenu, qSubMenu);
+            }
+            else if (item.isAction()) {
+                ui::ActionPtr action = item.action();
+                QAction* qAction = qMenu->addAction(ui::toQt(action->text()));
+                ui::Shortcut shortcut = action->shortcut();
+                Qt::Key key = static_cast<Qt::Key>(shortcut.key());
+                Qt::KeyboardModifiers modifiers = toQt(shortcut.modifiers());
+                qAction->setShortcut(modifiers | key);
+                QObject::connect(qAction, &QAction::triggered, [action]() {
+                    action->trigger();
+                });
+            }
+        }
+    }
+
+    void populateNativeMenuBar_(ui::Menu* menu, QMenuBar* qMenu) {
+        for (const ui::MenuItem& item : menu->items()) {
+            if (item.isMenu()) {
+                ui::Menu* subMenu = item.menu();
+                QMenu* qSubMenu = qMenu->addMenu(ui::toQt(subMenu->title()));
+                populateNativeMenu_(subMenu, qSubMenu);
+            }
+        }
+    }
+
+    void convertToNativeMenuBar_() {
+
+        // Check whether we need a native menubar. Typically, this is always
+        // false on Windows, always true on macOS, and on Linux, it depends on
+        // the desktop environment. It would be nice to be able to check this
+        // without instanciating a QMenuBar, but it doesn't seem possible.
+        //
+        QMenuBar* qMenuBar = new QMenuBar();
+        if (!qMenuBar->isNativeMenuBar()) {
+            delete qMenuBar;
+            return;
+        }
+
+        menuBar_->hide();
+        populateNativeMenuBar_(menuBar_, qMenuBar);
+
+        // TODO: listen to changes in the in-app menu bar and update the native
+        // menu bar when changed.
+    }
+#endif
 
     void createColorPalette_(ui::Widget* parent) {
         palette_ = parent->createChild<ui::ColorPalette>();
