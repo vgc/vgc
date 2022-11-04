@@ -77,7 +77,6 @@ bool isReservedChar(char c) {
 }
 
 size_t findReservedCharOrEnd(std::string_view path, size_t start) {
-    constexpr std::string_view reserved = "/.#[]";
     const size_t n = path.size();
     size_t i = start;
     while (i < n && !isReservedChar(path[i])) {
