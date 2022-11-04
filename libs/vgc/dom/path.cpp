@@ -42,6 +42,33 @@ PathSegment::PathSegment(
     , arrayIndex_(arrayIndex) {
 }
 
+bool PathSegment::operator==(const PathSegment& other) const noexcept {
+    if (name_ != other.name_ || type_ != other.type_ || flags_ != other.flags_) {
+        return false;
+    }
+    if (flags_.has(PathSegmentFlag::Indexed) && arrayIndex_ != other.arrayIndex_) {
+        return false;
+    }
+    return true;
+}
+
+bool PathSegment::operator<(const PathSegment& other) const noexcept {
+    if (type_ != other.type_) {
+        return core::toUnderlying(type_) < core::toUnderlying(other.type_);
+    }
+    int c = name_.compare(other.name());
+    if (c != 0) {
+        return c < 0;
+    }
+    if (flags_.has(PathSegmentFlag::Indexed) && arrayIndex_ != other.arrayIndex_) {
+        return arrayIndex_ < other.arrayIndex_;
+    }
+    if (flags_ != other.flags_) {
+        return flags_.toUnderlying() < other.flags_.toUnderlying();
+    }
+    return false;
+}
+
 namespace {
 
 bool isReservedChar(char c) {
