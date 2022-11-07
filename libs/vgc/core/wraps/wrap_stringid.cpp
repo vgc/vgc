@@ -26,6 +26,7 @@ void wrap_stringid(py::module& m) {
     vgc::core::wraps::Class<This>(m, "StringId")
         .def(py::init<>())
         .def(py::init<std::string_view>())
+        .def("isEmpty", &This::isEmpty)
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def(py::self < py::self)
