@@ -175,6 +175,7 @@ void Button::connectNewAction_() {
         action_->aboutToBeDestroyed().connect(onActionAboutToBeDestroyedSlot_());
         action_->propertiesChanged().connect(onActionPropertiesChangedSlot_());
         action_->checkStateChanged().connect(onActionCheckStateChangedSlot_());
+        action_->enabledChanged().connect(onActionEnabledChangedSlot_());
     }
 }
 
@@ -183,6 +184,7 @@ void Button::disconnectOldAction_() {
         action_->aboutToBeDestroyed().disconnect(onActionAboutToBeDestroyedSlot_());
         action_->propertiesChanged().disconnect(onActionPropertiesChangedSlot_());
         action_->checkStateChanged().disconnect(onActionCheckStateChangedSlot_());
+        action_->enabledChanged().connect(onActionEnabledChangedSlot_());
     }
 }
 
@@ -209,6 +211,17 @@ void Button::updateWidgetsBasedOnAction_() {
     }
     replaceStyleClass(checkableStyleClass_, newCheckableStyleClass);
     checkableStyleClass_ = newCheckableStyleClass;
+
+    // Update `enabled`/`disabled` style class
+    core::StringId newEnabledStyleClass;
+    if (isActionEnabled()) {
+        newEnabledStyleClass = strings::enabled;
+    }
+    else {
+        newEnabledStyleClass = strings::disabled;
+    }
+    replaceStyleClass(enabledStyleClass_, newEnabledStyleClass);
+    enabledStyleClass_ = newEnabledStyleClass;
 }
 
 void Button::onActionAboutToBeDestroyed_() {
@@ -223,6 +236,11 @@ void Button::onActionPropertiesChanged_() {
 }
 
 void Button::onActionCheckStateChanged_() {
+    updateWidgetsBasedOnAction_();
+    actionChanged().emit(action_);
+}
+
+void Button::onActionEnabledChanged_() {
     updateWidgetsBasedOnAction_();
     actionChanged().emit(action_);
 }

@@ -69,6 +69,7 @@ const core::StringId indeterminate("indeterminate");
 const core::StringId hovered("hovered");
 const core::StringId pressed("pressed");
 const core::StringId active("active");
+const core::StringId enabled("enabled");
 const core::StringId disabled("disabled");
 
 } // namespace vgc::ui::strings

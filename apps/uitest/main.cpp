@@ -292,10 +292,9 @@ private:
 
     VGC_SLOT(updateUndoRedoActionStateSlot_, updateUndoRedoActionState_)
     void updateUndoRedoActionState_() {
-        if (document_ && document_->history()) {
-            // XXX TODO: implementation enabled/disabled actions
-            //actionUndo_->setEnabled(document_->history()->canUndo());
-            //actionRedo_->setEnabled(document_->history()->canRedo());
+        if (actionUndo_ && actionRedo_ && document_ && document_->history()) {
+            actionUndo_->setEnabled(document_->history()->canUndo());
+            actionRedo_->setEnabled(document_->history()->canRedo());
         }
     }
 
@@ -304,6 +303,7 @@ private:
         vgc::dom::Element::create(document_.get(), "vgc");
         document_->enableHistory(vgc::dom::strings::New_Document);
         document_->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
+        updateUndoRedoActionState_();
     }
 
     void createWidgets_() {
@@ -364,7 +364,7 @@ private:
         overlay_->addStyleClass(ui::strings::root);
     }
 
-    ui::Action* actionNew_;
+    ui::Action* actionNew_ = nullptr;
     VGC_SLOT(onActionNewSlot_, onActionNew_)
     void onActionNew_() {
 
@@ -379,9 +379,9 @@ private:
             vgc::dom::Element::create(tmp.get(), "vgc");
             tmp->enableHistory(vgc::dom::strings::New_Document);
             document_->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
-            updateUndoRedoActionState_();
             canvas_->setDocument(tmp.get());
             document_ = tmp;
+            updateUndoRedoActionState_();
         }
         catch (const dom::FileError& e) {
             // TODO: have our own message box instead of using QtWidgets
@@ -390,7 +390,7 @@ private:
     }
 
     QString filename_;
-    ui::Action* actionOpen_;
+    ui::Action* actionOpen_ = nullptr;
     VGC_SLOT(onActionOpenSlot_, onActionOpen_)
     void onActionOpen_() {
         // Get which directory the dialog should display first
@@ -459,13 +459,13 @@ private:
             core::Array<core::Color> colors = getColorPalette_(doc.get());
             doc->enableHistory(vgc::dom::strings::Open_Document);
             doc->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
-            updateUndoRedoActionState_();
 
             // Set viewer document (must happen before old document is destroyed)
             canvas_->setDocument(doc.get());
 
             // Destroy old document and set new document as current
             document_ = doc;
+            updateUndoRedoActionState_();
 
             // Load color palette
             loadColorPalette_(palette_, colors);
@@ -475,7 +475,7 @@ private:
         }
     }
 
-    ui::Action* actionSave_;
+    ui::Action* actionSave_ = nullptr;
     VGC_SLOT(onActionSaveSlot_, onActionSave_)
     void onActionSave_() {
         if (filename_.isEmpty()) {
@@ -486,7 +486,7 @@ private:
         }
     }
 
-    ui::Action* actionSaveAs_;
+    ui::Action* actionSaveAs_ = nullptr;
     VGC_SLOT(onActionSaveAsSlot_, onActionSaveAs_)
     void onActionSaveAs_() {
         doSaveAs_();
@@ -568,7 +568,7 @@ private:
         }
     }
 
-    ui::Action* actionQuit_;
+    ui::Action* actionQuit_ = nullptr;
     VGC_SLOT(onActionQuitSlot_, onActionQuit_);
     void onActionQuit_() {
         if (window_) {
@@ -576,7 +576,7 @@ private:
         }
     }
 
-    ui::Action* actionUndo_;
+    ui::Action* actionUndo_ = nullptr;
     VGC_SLOT(onActionUndoSlot_, onActionUndo_);
     void onActionUndo_() {
         if (document_ && document_->history()) {
@@ -584,7 +584,7 @@ private:
         }
     }
 
-    ui::Action* actionRedo_;
+    ui::Action* actionRedo_ = nullptr;
     VGC_SLOT(onActionRedoSlot_, onActionRedo_);
     void onActionRedo_() {
         if (document_ && document_->history()) {
@@ -625,6 +625,8 @@ private:
 
         actionRedo_ = createAction("Redo", Shortcut(ctrl | shift, Key::Z));
         actionRedo_->triggered().connect(onActionRedoSlot_());
+
+        updateUndoRedoActionState_();
     }
 
     ui::Menu* menuBar_ = nullptr;

@@ -264,6 +264,7 @@ private:
     core::StringId checkStateStyleClass_;
     core::StringId checkableStyleClass_;
     core::StringId checkModeStyleClass_;
+    core::StringId enabledStyleClass_;
 
     // Behavior
     void connectNewAction_();
@@ -272,10 +273,12 @@ private:
     void onActionAboutToBeDestroyed_();
     void onActionPropertiesChanged_();
     void onActionCheckStateChanged_();
+    void onActionEnabledChanged_();
 
     VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
     VGC_SLOT(onActionPropertiesChangedSlot_, onActionPropertiesChanged_);
     VGC_SLOT(onActionCheckStateChangedSlot_, onActionCheckStateChanged_);
+    VGC_SLOT(onActionEnabledChangedSlot_, onActionEnabledChanged_);
 };
 
 } // namespace vgc::ui

@@ -220,10 +220,10 @@ void MainWindow::new_() {
         tmp->enableHistory(vgc::dom::strings::New_Document);
         headChangedConnectionHandle_ = tmp->history()->headChanged().connect(
             [this]() { updateUndoRedoActionState_(); });
-        updateUndoRedoActionState_();
 
         viewer_->setDocument(tmp.get());
         document_ = tmp;
+        updateUndoRedoActionState_();
     }
     catch (const dom::FileError& e) {
         QMessageBox::critical(this, "Error Creating New File", e.what());
@@ -348,13 +348,13 @@ void MainWindow::open_() {
         doc->enableHistory(vgc::dom::strings::Open_Document);
         headChangedConnectionHandle_ = doc->history()->headChanged().connect(
             [this]() { updateUndoRedoActionState_(); });
-        updateUndoRedoActionState_();
 
         // Set viewer document (must happen before old document is destroyed)
         viewer_->setDocument(doc.get());
 
         // Destroy old document and set new document as current
         document_ = doc;
+        updateUndoRedoActionState_();
 
         // Load color palette
         loadColorPalette_(toolbar_, colors);
