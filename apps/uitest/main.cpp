@@ -630,6 +630,7 @@ private:
     }
 
     ui::Menu* menuBar_ = nullptr;
+    ui::Menu* testMenu_ = nullptr;
     void createMenus_(ui::Widget* parent) {
 
         using ui::Action;
@@ -647,7 +648,7 @@ private:
 
         Menu* fileMenu = menuBar_->createSubMenu("File");
         Menu* editMenu = menuBar_->createSubMenu("Edit");
-        Menu* testMenu = menuBar_->createSubMenu("Test");
+        testMenu_ = menuBar_->createSubMenu("Test");
         menuBar_->setPopupEnabled(false);
 
         fileMenu->addItem(actionNew_);
@@ -659,9 +660,26 @@ private:
         editMenu->addItem(actionUndo_);
         editMenu->addItem(actionRedo_);
 
-        Menu* menu1 = testMenu->createSubMenu("Menu 1");
-        Menu* menu2 = testMenu->createSubMenu("Menu 2");
-        Menu* menu3 = testMenu->createSubMenu("Menu 3");
+        Action* actionCreateAction = parent->createAction(
+            "Create action in Test menu", Shortcut(ModifierKey::Ctrl, Key::A));
+        actionCreateAction->triggered().connect([this]() {
+            Action* action = this->testMenu_->createAction("Hello");
+            this->testMenu_->addItem(action);
+        });
+
+        Action* actionCreateMenu = parent->createAction(
+            "Create menu in menubar", Shortcut(ModifierKey::Ctrl, Key::M));
+        actionCreateMenu->triggered().connect([this]() {
+            Menu* menu = this->menuBar_->createSubMenu("Test 2");
+            Action* action = menu->createAction("Hello");
+            menu->addItem(action);
+        });
+
+        testMenu_->addItem(actionCreateAction);
+        testMenu_->addItem(actionCreateMenu);
+        Menu* menu1 = testMenu_->createSubMenu("Menu 1");
+        Menu* menu2 = testMenu_->createSubMenu("Menu 2");
+        Menu* menu3 = testMenu_->createSubMenu("Menu 3");
 
         menu1->addItem(parent->createAction("Action #1.1", Shortcut({}, Key::G)));
         menu1->addItem(
@@ -697,7 +715,63 @@ private:
     }
 
 #ifndef VGC_CORE_OS_WINDOWS
+
+    QMenuBar* qMenuBar_ = nullptr;
+    std::unordered_map<ui::Menu*, QMenu*> qMenuMap_;
+    std::unordered_map<QMenu*, ui::Menu*> qMenuMapInv_;
+    std::unordered_map<ui::Action*, QAction*> qActionMap_;
+    std::unordered_map<QAction*, ui::Action*> qActionMapInv_;
+
+    VGC_SLOT(onMenuChangedSlot_, onMenuChanged_);
+    void onMenuChanged_() {
+        core::Object* obj = emitter();
+        ui::Menu* menu = dynamic_cast<ui::Menu*>(obj);
+        if (!menu) {
+            return;
+        }
+        if (menu == menuBar_) {
+            qMenuBar_->clear();
+            doPopulateNativeMenuBar_(menu, qMenuBar_);
+            return;
+        }
+        auto it = qMenuMap_.find(menu);
+        if (it != qMenuMap_.end()) {
+            QMenu* qMenu = it->second;
+            qMenu->clear();
+            doPopulateNativeMenu_(menu, qMenu);
+            return;
+        }
+    }
+
+    VGC_SLOT(onActionChangedSlot_, onActionChanged_);
+    void onActionChanged_() {
+        core::Object* obj = emitter();
+        ui::Action* action = dynamic_cast<ui::Action*>(obj);
+        if (!action) {
+            return;
+        }
+        auto it = qActionMap_.find(action);
+        if (it != qActionMap_.end()) {
+            QAction* qAction = it->second;
+            updateNativeAction_(action, qAction);
+        }
+    }
+
     void populateNativeMenu_(ui::Menu* menu, QMenu* qMenu) {
+        qMenuMap_[menu] = qMenu;
+        qMenuMapInv_[qMenu] = menu;
+        QObject::connect(qMenu, &QObject::destroyed, [this](QObject* obj) {
+            auto it = this->qMenuMapInv_.find(dynamic_cast<QMenu*>(obj));
+            if (it != this->qMenuMapInv_.end()) {
+                this->qMenuMap_.erase(it->second);
+                this->qMenuMapInv_.erase(it);
+            }
+        });
+        menu->changed().connect(onMenuChangedSlot_());
+        doPopulateNativeMenu_(menu, qMenu);
+    }
+
+    void doPopulateNativeMenu_(ui::Menu* menu, QMenu* qMenu) {
         for (const ui::MenuItem& item : menu->items()) {
             if (item.isMenu()) {
                 ui::Menu* subMenu = item.menu();
@@ -707,17 +781,41 @@ private:
             else if (item.isAction()) {
                 ui::ActionPtr action = item.action();
                 QAction* qAction = qMenu->addAction(ui::toQt(action->text()));
-                ui::Shortcut shortcut = action->shortcut();
-                Qt::Key key = static_cast<Qt::Key>(shortcut.key());
-                Qt::KeyboardModifiers modifiers = toQt(shortcut.modifiers());
-                qAction->setShortcut(modifiers | key);
+                qActionMap_[action.get()] = qAction;
+                qActionMapInv_[qAction] = action.get();
+                QObject::connect(qAction, &QObject::destroyed, [this](QObject* obj) {
+                    auto it = this->qActionMapInv_.find(dynamic_cast<QAction*>(obj));
+                    if (it != this->qActionMapInv_.end()) {
+                        this->qActionMap_.erase(it->second);
+                        this->qActionMapInv_.erase(it);
+                    }
+                });
+                action->propertiesChanged().connect(onActionChangedSlot_());
+                action->enabledChanged().connect(onActionChangedSlot_());
+                action->checkStateChanged().connect(onActionChangedSlot_());
+                updateNativeAction_(action.get(), qAction);
                 QObject::connect(
                     qAction, &QAction::triggered, [action]() { action->trigger(); });
             }
         }
     }
 
+    void updateNativeAction_(ui::Action* action, QAction* qAction) {
+        ui::Shortcut shortcut = action->shortcut();
+        Qt::Key key = static_cast<Qt::Key>(shortcut.key());
+        Qt::KeyboardModifiers modifiers = toQt(shortcut.modifiers());
+        qAction->setText(ui::toQt(action->text()));
+        qAction->setShortcut(modifiers | key);
+        qAction->setEnabled(action->isEnabled());
+        // TODO: update check state and check mode
+    }
+
     void populateNativeMenuBar_(ui::Menu* menu, QMenuBar* qMenu) {
+        menu->changed().connect(onMenuChangedSlot_());
+        doPopulateNativeMenuBar_(menu, qMenu);
+    }
+
+    void doPopulateNativeMenuBar_(ui::Menu* menu, QMenuBar* qMenu) {
         for (const ui::MenuItem& item : menu->items()) {
             if (item.isMenu()) {
                 ui::Menu* subMenu = item.menu();
@@ -734,17 +832,15 @@ private:
         // the desktop environment. It would be nice to be able to check this
         // without instanciating a QMenuBar, but it doesn't seem possible.
         //
-        QMenuBar* qMenuBar = new QMenuBar();
-        if (!qMenuBar->isNativeMenuBar()) {
-            delete qMenuBar;
+        qMenuBar_ = new QMenuBar();
+        if (!qMenuBar_->isNativeMenuBar()) {
+            delete qMenuBar_;
+            qMenuBar_ = nullptr;
             return;
         }
 
         menuBar_->hide();
-        populateNativeMenuBar_(menuBar_, qMenuBar);
-
-        // TODO: listen to changes in the in-app menu bar and update the native
-        // menu bar when changed.
+        populateNativeMenuBar_(menuBar_, qMenuBar_);
     }
 #endif
 
