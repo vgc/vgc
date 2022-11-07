@@ -144,6 +144,13 @@ public:
         return string();
     }
 
+    /// Returns whether the string represented by this `StringId` is the empty
+    /// string.
+    ///
+    constexpr bool isEmpty() const noexcept {
+        return stringPtr_ == nullptr;
+    }
+
     /// Returns whether the two `StringId` are equal. This is equivalent to
     /// whether their underlying strings are equals.
     ///

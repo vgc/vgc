@@ -30,6 +30,12 @@ class TestStringId(unittest.TestCase):
         sid = StringId("stringId")
         self.assertEqual(str(sid), "stringId")
 
+    def testIsEmpty(self):
+        sid1 = StringId("")
+        sid2 = StringId("test")
+        self.assertTrue(sid1.isEmpty())
+        self.assertFalse(sid2.isEmpty())
+
     def testComparisonOperators(self):
         sid0a = StringId("stringId0")
         sid0b = StringId("stringId0")
