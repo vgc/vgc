@@ -40,6 +40,17 @@ public:
 
     using Type = T;
 
+    SharedConst(const SharedConst&) = default;
+    SharedConst(SharedConst&&) = default;
+    SharedConst& operator=(const SharedConst&) = default;
+    SharedConst& operator=(SharedConst&&) = default;
+
+    /// Implicit conversion from an rvalue references of type `T&&`.
+    ///
+    SharedConst(T&& movedValue)
+        : value_(std::make_shared<const T>(std::move(movedValue)) {
+    }
+
     template<typename... Args>
     explicit SharedConst(Args&&... args)
         : value_(std::make_shared<const T>(std::forward<Args>(args)...)) {
