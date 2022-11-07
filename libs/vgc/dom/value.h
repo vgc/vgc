@@ -425,12 +425,6 @@ public:
         return std::get<core::SharedConstIntArray>(var_);
     }
 
-    /// Sets this `Value` to the given `intArray`.
-    ///
-    void set(core::IntArray intArray) {
-        emplace_(std::move(intArray));
-    }
-
     /// Sets this `Value` to the given shared const `intArray`.
     ///
     void set(const core::SharedConstIntArray& intArray) {
@@ -455,12 +449,6 @@ public:
     ///
     const core::SharedConstDoubleArray& getDoubleArray() const {
         return std::get<core::SharedConstDoubleArray>(var_);
-    }
-
-    /// Sets this `Value` to the given `doubleArray`.
-    ///
-    void set(core::DoubleArray doubleArray) {
-        emplace_(std::move(doubleArray));
     }
 
     /// Sets this `Value` to the given shared const `doubleArray`.
@@ -489,12 +477,6 @@ public:
         return std::get<core::SharedConstColorArray>(var_);
     }
 
-    /// Sets this `Value` to the given `colorArray`.
-    ///
-    void set(core::ColorArray colorArray) {
-        emplace_(std::move(colorArray));
-    }
-
     /// Sets this `Value` to the given shared const `colorArray`.
     ///
     void set(const core::SharedConstColorArray& colorArray) {
@@ -521,12 +503,6 @@ public:
         return std::get<geometry::SharedConstVec2dArray>(var_);
     }
 
-    /// Sets this `Value` to the given `vec2dArray`.
-    ///
-    void set(geometry::Vec2dArray vec2dArray) {
-        emplace_(std::move(vec2dArray));
-    }
-
     /// Sets this `Value` to the given shared const `vec2dArray`.
     ///
     void set(const geometry::SharedConstVec2dArray& vec2dArray) {
@@ -551,12 +527,6 @@ public:
     ///
     const dom::SharedConstPathArray& getPathArray() const {
         return std::get<dom::SharedConstPathArray>(var_);
-    }
-
-    /// Sets this `Value` to the given `pathArray`.
-    ///
-    void set(dom::PathArray pathArray) {
-        emplace_(std::move(pathArray));
     }
 
     /// Sets this `Value` to the given shared const `pathArray`.

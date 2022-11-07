@@ -88,6 +88,8 @@ void defineSharedConstCommonMethods(Class<core::SharedConst<ValueType>>& c) {
 
     detail::wrapSharedConstImplicitCast<ValueType>();
 
+    py::implicitly_convertible<ValueType, T>();
+
     if constexpr (std::is_copy_constructible_v<ValueType>) {
         c.def(py::init<const T&>());
         c.def("editableCopy", [](const T& a) -> std::unique_ptr<ValueType> {
