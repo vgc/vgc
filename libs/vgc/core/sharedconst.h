@@ -48,7 +48,7 @@ public:
     /// Implicit conversion from an rvalue references of type `T&&`.
     ///
     SharedConst(T&& movedValue)
-        : value_(std::make_shared<const T>(std::move(movedValue)) {
+        : value_(std::make_shared<const T>(std::move(movedValue))) {
     }
 
     template<typename... Args>
