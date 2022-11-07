@@ -174,6 +174,11 @@
     background-color: rgb(11, 82, 172);
 }
 
+.MenuButton.disabled {
+    text-color: rgb(135, 135, 135);
+    background-color: rgba(0, 0, 0, 0);
+}
+
 .MenuButton > .Text {
     text-horizontal-align: left;
 }

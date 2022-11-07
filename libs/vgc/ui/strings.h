@@ -64,6 +64,7 @@ VGC_UI_API extern const core::StringId indeterminate;
 VGC_UI_API extern const core::StringId hovered;
 VGC_UI_API extern const core::StringId pressed;
 VGC_UI_API extern const core::StringId active;
+VGC_UI_API extern const core::StringId enabled;
 VGC_UI_API extern const core::StringId disabled;
 
 } // namespace vgc::ui::strings
