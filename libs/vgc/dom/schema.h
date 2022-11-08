@@ -19,6 +19,7 @@
 
 #include <map>
 #include <vgc/core/stringid.h>
+#include <vgc/core/templateutil.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/value.h>
 
@@ -38,7 +39,8 @@ class VGC_DOM_API AttributeSpec {
 public:
     /// Creates a built-in attribute.
     ///
-    AttributeSpec(std::string_view name, const Value& defaultValue)
+    template<typename T, VGC_REQUIRES(dom::isCompatibleValueType<T>)>
+    AttributeSpec(std::string_view name, const T& defaultValue)
         : name_(core::StringId(name))
         , defaultValue_(defaultValue) {
     }

@@ -52,15 +52,20 @@ void wrap_value(py::module& m) {
     c.def(py::init<>())
         .def(py::init<std::string>())
         .def(py::init<vgc::Int>())
-        .def(py::init<vgc::core::Array<vgc::Int>>())
+        .def(py::init<vgc::core::IntArray>())
+        .def(py::init<vgc::core::SharedConstIntArray>())
         .def(py::init<double>())
-        .def(py::init<vgc::core::Array<double>>())
+        .def(py::init<vgc::core::DoubleArray>())
+        .def(py::init<vgc::core::SharedConstDoubleArray>())
         .def(py::init<vgc::core::Color>())
-        .def(py::init<vgc::core::Array<vgc::core::Color>>())
+        .def(py::init<vgc::core::ColorArray>())
+        .def(py::init<vgc::core::SharedConstColorArray>())
         .def(py::init<vgc::geometry::Vec2d>())
-        .def(py::init<vgc::core::Array<vgc::geometry::Vec2d>>())
+        .def(py::init<vgc::geometry::Vec2dArray>())
+        .def(py::init<vgc::geometry::SharedConstVec2dArray>())
         .def(py::init<vgc::dom::Path>())
         .def(py::init<vgc::dom::PathArray>())
+        .def(py::init<vgc::dom::SharedConstPathArray>())
 
         .def_property_readonly_static("none", [](py::object) { return This::none(); })
         .def_property_readonly_static(
@@ -76,35 +81,30 @@ void wrap_value(py::module& m) {
         .def("set", py::overload_cast<std::string>(&This::set))
         .def("getStringId", &This::getStringId)
         .def("set", py::overload_cast<vgc::core::StringId>(&This::set))
+
         .def("getInt", &This::getInt)
         .def("set", py::overload_cast<vgc::Int>(&This::set))
         .def("getIntArray", &This::getIntArray)
-        .def("set", py::overload_cast<const vgc::core::SharedConstIntArray&>(&This::set))
-        .def("set", py::overload_cast<vgc::core::IntArray>(&This::set))
+        .def("set", py::overload_cast<vgc::core::SharedConstIntArray>(&This::set))
+
         .def("getDouble", &This::getDouble)
         .def("set", py::overload_cast<double>(&This::set))
         .def("getDoubleArray", &This::getDoubleArray)
-        .def(
-            "set",
-            py::overload_cast<const vgc::core::SharedConstDoubleArray&>(&This::set))
-        .def("set", py::overload_cast<vgc::core::DoubleArray>(&This::set))
+        .def("set", py::overload_cast<vgc::core::SharedConstDoubleArray>(&This::set))
+
         .def("getColor", &This::getColor)
         .def("set", py::overload_cast<const vgc::core::Color&>(&This::set))
         .def("getColorArray", &This::getColorArray)
-        .def(
-            "set", py::overload_cast<const vgc::core::SharedConstColorArray&>(&This::set))
-        .def("set", py::overload_cast<vgc::core::ColorArray>(&This::set))
+        .def("set", py::overload_cast<vgc::core::SharedConstColorArray>(&This::set))
+
         .def("getVec2d", &This::getVec2d)
         .def("set", py::overload_cast<const vgc::geometry::Vec2d&>(&This::set))
         .def("getVec2dArray", &This::getVec2dArray)
-        .def(
-            "set",
-            py::overload_cast<const vgc::geometry::SharedConstVec2dArray&>(&This::set))
-        .def("set", py::overload_cast<vgc::geometry::Vec2dArray>(&This::set))
+        .def("set", py::overload_cast<vgc::geometry::SharedConstVec2dArray>(&This::set))
+
         .def("getPath", &This::getPath)
         .def("set", py::overload_cast<vgc::dom::Path>(&This::set))
         .def("getPathArray", &This::getPathArray)
-        .def("set", py::overload_cast<vgc::dom::PathArray>(&This::set))
 
         .def(py::self == py::self)
         .def(py::self != py::self)
@@ -146,12 +146,19 @@ void wrap_value(py::module& m) {
     defineValueComparisonMethods<vgc::core::StringId>(c);
     defineValueComparisonMethods<vgc::Int>(c);
     defineValueComparisonMethods<vgc::core::IntArray>(c);
+    defineValueComparisonMethods<vgc::core::SharedConstIntArray>(c);
     defineValueComparisonMethods<double>(c);
     defineValueComparisonMethods<vgc::core::DoubleArray>(c);
+    defineValueComparisonMethods<vgc::core::SharedConstDoubleArray>(c);
     defineValueComparisonMethods<vgc::core::Color>(c);
     defineValueComparisonMethods<vgc::core::ColorArray>(c);
+    defineValueComparisonMethods<vgc::core::SharedConstColorArray>(c);
     defineValueComparisonMethods<vgc::geometry::Vec2d>(c);
     defineValueComparisonMethods<vgc::geometry::Vec2dArray>(c);
+    defineValueComparisonMethods<vgc::geometry::SharedConstVec2dArray>(c);
+    defineValueComparisonMethods<vgc::dom::Path>(c);
+    defineValueComparisonMethods<vgc::dom::PathArray>(c);
+    defineValueComparisonMethods<vgc::dom::SharedConstPathArray>(c);
 
     py::implicitly_convertible<std::string, vgc::dom::Value>();
     py::implicitly_convertible<vgc::core::StringId, vgc::dom::Value>();
@@ -167,4 +174,7 @@ void wrap_value(py::module& m) {
     py::implicitly_convertible<vgc::geometry::Vec2d, vgc::dom::Value>();
     py::implicitly_convertible<vgc::geometry::Vec2dArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::geometry::SharedConstVec2dArray, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::dom::Path, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::dom::PathArray, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::dom::SharedConstPathArray, vgc::dom::Value>();
 }

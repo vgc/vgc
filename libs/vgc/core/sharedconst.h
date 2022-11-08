@@ -40,6 +40,25 @@ public:
 
     using Type = T;
 
+    SharedConst(const SharedConst&) noexcept = default;
+    SharedConst(SharedConst&&) noexcept = default;
+    SharedConst& operator=(const SharedConst&) noexcept = default;
+    SharedConst& operator=(SharedConst&&) noexcept = default;
+
+    /// Converting constructor from `T`.
+    ///
+    template<typename U, VGC_REQUIRES(std::is_same_v<U, std::decay_t<T>>)>
+    SharedConst(U&& value)
+        : value_(std::make_shared<const T>(std::forward<U>(value))) {
+    }
+
+    /// Converting assignment from `T`.
+    ///
+    template<typename U, VGC_REQUIRES(std::is_same_v<U, std::decay_t<T>>)>
+    SharedConst& operator=(U&& value) {
+        value_ = std::make_shared<const T>(std::forward<U>(value));
+    }
+
     template<typename... Args>
     explicit SharedConst(Args&&... args)
         : value_(std::make_shared<const T>(std::forward<Args>(args)...)) {

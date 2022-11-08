@@ -217,15 +217,22 @@ class Test1DArrays(unittest.TestCase):
     def testSharedConst(self):
         a = IntArray([3, 1, 2])
         b = SharedConstIntArray(a)
+        c = SharedConstIntArray(b)
         self.assertEqual(a, b)
+        self.assertEqual(b, c)
+        self.assertEqual(a, c)
         # Check that that a.data() != b.data()
         self.assertNotEqual(intArrayDataAddress(a), sharedConstIntArrayDataAddress(b))
+        # Check that that b.data() == c.data()
+        self.assertEqual(sharedConstIntArrayDataAddress(b), sharedConstIntArrayDataAddress(c))
         # Check that no copy is made when calling foo(const IntArray&) with a sharedConstIntArrayDataAddress
         self.assertEqual(intArrayDataAddress(b), sharedConstIntArrayDataAddress(b))
         # Check that a copy is made when calling foo(IntArray) with a IntArray
         self.assertNotEqual(intArrayDataAddress(a), intArrayByCopyDataAddress(a))
         # Check that a copy is made when calling foo(IntArray) with a SharedConstArray
         self.assertNotEqual(intArrayDataAddress(b), intArrayByCopyDataAddress(b))
+
+
 
 if __name__ == '__main__':
     unittest.main()
