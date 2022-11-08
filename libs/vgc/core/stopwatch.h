@@ -107,7 +107,6 @@ private:
     using Time_ = Clock_::time_point;
 
     Time_ t_;
-    bool started_;
 };
 
 } // namespace vgc::core
