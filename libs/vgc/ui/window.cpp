@@ -239,8 +239,9 @@ void Window::tabletEvent(QTabletEvent* event) {
 // To filter those spurious events out we use an additional timer.
 //
 bool Window::isTabletInUse_() const {
-    return pressedTabletButtons_ || tabletInProximity_
-           || timeSinceLastTableEvent_.elapsed() < 1.0;
+    return pressedTabletButtons_ //
+           || tabletInProximity_ //
+           || timeSinceLastTableEvent_.elapsed() < tabletIdleDuration_;
 }
 
 bool Window::mouseMoveEvent_(Widget* receiver, MouseEvent* event) {

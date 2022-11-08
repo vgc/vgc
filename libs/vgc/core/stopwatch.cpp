@@ -22,8 +22,17 @@ Stopwatch::Stopwatch() {
     start();
 }
 
+Stopwatch::Stopwatch(double offset) {
+    start(offset);
+}
+
 void Stopwatch::start() {
     t_ = Clock_::now();
+}
+
+void Stopwatch::start(double offset) {
+    std::chrono::duration<double> d(offset);
+    t_ = Clock_::now() + std::chrono::duration_cast<Clock_::duration>(d);
 }
 
 double Stopwatch::restart() {

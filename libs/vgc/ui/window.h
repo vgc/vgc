@@ -195,7 +195,13 @@ private:
 
     MouseButtons pressedMouseButtons_;
     MouseButtons pressedTabletButtons_;
-    core::Stopwatch timeSinceLastTableEvent_ = {};
+
+    // The tablet is considered "in use" if a tablet button is pressed, or the
+    // pen tablet is in proximity of the tablet, or the time since the last
+    // tablet event is less than tabletIdleDuration.
+    //
+    static constexpr double tabletIdleDuration_ = 1; // in seconds
+    core::Stopwatch timeSinceLastTableEvent_ = {-tabletIdleDuration_};
     bool tabletInProximity_ = false;
 
     bool activeSizemove_ = false;
