@@ -146,25 +146,35 @@ void wrap_value(py::module& m) {
     defineValueComparisonMethods<vgc::core::StringId>(c);
     defineValueComparisonMethods<vgc::Int>(c);
     defineValueComparisonMethods<vgc::core::IntArray>(c);
+    defineValueComparisonMethods<vgc::core::SharedConstIntArray>(c);
     defineValueComparisonMethods<double>(c);
     defineValueComparisonMethods<vgc::core::DoubleArray>(c);
+    defineValueComparisonMethods<vgc::core::SharedConstDoubleArray>(c);
     defineValueComparisonMethods<vgc::core::Color>(c);
     defineValueComparisonMethods<vgc::core::ColorArray>(c);
+    defineValueComparisonMethods<vgc::core::SharedConstColorArray>(c);
     defineValueComparisonMethods<vgc::geometry::Vec2d>(c);
     defineValueComparisonMethods<vgc::geometry::Vec2dArray>(c);
+    defineValueComparisonMethods<vgc::geometry::SharedConstVec2dArray>(c);
     defineValueComparisonMethods<vgc::dom::Path>(c);
     defineValueComparisonMethods<vgc::dom::PathArray>(c);
+    defineValueComparisonMethods<vgc::dom::SharedConstPathArray>(c);
 
     py::implicitly_convertible<std::string, vgc::dom::Value>();
     py::implicitly_convertible<vgc::core::StringId, vgc::dom::Value>();
     py::implicitly_convertible<vgc::Int, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::core::IntArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::core::SharedConstIntArray, vgc::dom::Value>();
     py::implicitly_convertible<double, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::core::DoubleArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::core::SharedConstDoubleArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::core::Color, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::core::ColorArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::core::SharedConstColorArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::geometry::Vec2d, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::geometry::Vec2dArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::geometry::SharedConstVec2dArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::dom::Path, vgc::dom::Value>();
+    py::implicitly_convertible<vgc::dom::PathArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::dom::SharedConstPathArray, vgc::dom::Value>();
 }

@@ -24,7 +24,7 @@ from vgc.dom import Document, Element, Path
 
 ATTR_a = StringId("a")
 
-class TestElement(unittest.TestCase):
+class TestPath(unittest.TestCase):
 
     def testConstructor(self):
         p = Path()
