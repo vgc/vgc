@@ -737,7 +737,6 @@ void clearNonStickyNonChildFocus_(Widget* parent, Widget* child) {
 } // namespace
 
 void Widget::mousePress_(MouseEvent* event) {
-
     const geometry::Vec2f eventPos = event->position();
     const bool otherWasPressed = !pressedButtons_.isEmpty();
 

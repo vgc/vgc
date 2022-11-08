@@ -38,6 +38,17 @@ public:
     ///
     Stopwatch();
 
+    /// Creates a Stopwatch whose start time is the current time offseted by
+    /// the given `offset` in seconds.
+    ///
+    /// ```cpp
+    /// vgc::core::Stopwatch t(-1);        // Start the timer "1 second ago"
+    /// doSomething();                     // Task taking 2 seconds
+    /// std::cout << t.elapsed() << "s\n"; // Output: "3s"
+    /// ```
+    ///
+    Stopwatch(double offset);
+
     /// Creates a Stopwatch without initializing it. If you use this
     /// constructor, you must manually call start before calling elapsed(),
     /// otherwise the result of elapsed() is undefined.
@@ -55,6 +66,11 @@ public:
     /// Starts this Stopwatch.
     ///
     void start();
+
+    /// Simulates starting this Stopwatch at the current time offseted by the
+    /// given `offset`, in seconds.
+    ///
+    void start(double offset);
 
     /// Restarts this Stopwatch and returns the elapsed time, in seconds, since
     /// this Stopwatch was created or last (re)started.
@@ -91,6 +107,7 @@ private:
     using Time_ = Clock_::time_point;
 
     Time_ t_;
+    bool started_;
 };
 
 } // namespace vgc::core
