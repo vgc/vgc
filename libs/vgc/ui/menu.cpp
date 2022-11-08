@@ -281,13 +281,18 @@ void Menu::notifyChanged(bool geometryChanged) {
 }
 
 void Menu::removeItem(Widget* widget) {
+    bool changed_ = false;
     for (auto it = items_.begin(); it != items_.end(); ++it) {
         const MenuItem& item = *it;
         if (item.widget() == widget) {
+            changed_ = true;
             preItemRemoved_(item);
             items_.erase(it);
             break;
         }
+    }
+    if (changed_) {
+        changed().emit();
     }
 }
 
