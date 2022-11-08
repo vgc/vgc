@@ -245,8 +245,8 @@ public:
 
     /// Constructs a `Value` holding a shared const array of `Int`.
     ///
-    Value(const core::SharedConstIntArray& intArray)
-        : var_(intArray) {
+    Value(core::SharedConstIntArray intArray)
+        : var_(std::move(intArray)) {
     }
 
     /// Constructs a `Value` holding a `double`.
@@ -263,8 +263,8 @@ public:
 
     /// Constructs a `Value` holding a shared const array of `double`.
     ///
-    Value(const core::SharedConstDoubleArray& doubleArray)
-        : var_(doubleArray) {
+    Value(core::SharedConstDoubleArray doubleArray)
+        : var_(std::move(doubleArray)) {
     }
 
     /// Constructs a `Value` holding a `Color`.
@@ -281,8 +281,8 @@ public:
 
     /// Constructs a `Value` holding a shared const array of `Color`.
     ///
-    Value(const core::SharedConstColorArray& colorArray)
-        : var_(colorArray) {
+    Value(core::SharedConstColorArray colorArray)
+        : var_(std::move(colorArray)) {
     }
 
     /// Constructs a `Value` holding a `Vec2d`.
@@ -301,8 +301,8 @@ public:
 
     /// Constructs a `Value` holding a shared const array of `Vec2d`.
     ///
-    Value(const geometry::SharedConstVec2dArray& vec2dArray)
-        : var_(vec2dArray) {
+    Value(geometry::SharedConstVec2dArray vec2dArray)
+        : var_(std::move(vec2dArray)) {
     }
 
     /// Constructs a `Value` holding a `dom::Path`.
@@ -319,8 +319,8 @@ public:
 
     /// Constructs a `Value` holding a shared const array of `dom::Path`.
     ///
-    Value(const dom::SharedConstPathArray& pathArray)
-        : var_(pathArray) {
+    Value(dom::SharedConstPathArray pathArray)
+        : var_(std::move(pathArray)) {
     }
 
     /// Returns the ValueType of this Value.
@@ -427,8 +427,8 @@ public:
 
     /// Sets this `Value` to the given shared const `intArray`.
     ///
-    void set(const core::SharedConstIntArray& intArray) {
-        emplace_(intArray);
+    void set(core::SharedConstIntArray intArray) {
+        emplace_(std::move(intArray));
     }
 
     /// Returns the double held by this `Value`.
@@ -453,8 +453,8 @@ public:
 
     /// Sets this `Value` to the given shared const `doubleArray`.
     ///
-    void set(const core::SharedConstDoubleArray& doubleArray) {
-        emplace_(doubleArray);
+    void set(core::SharedConstDoubleArray doubleArray) {
+        emplace_(std::move(doubleArray));
     }
 
     /// Returns the `core::Color` held by this `Value`.
@@ -479,8 +479,8 @@ public:
 
     /// Sets this `Value` to the given shared const `colorArray`.
     ///
-    void set(const core::SharedConstColorArray& colorArray) {
-        emplace_(colorArray);
+    void set(core::SharedConstColorArray colorArray) {
+        emplace_(std::move(colorArray));
     }
 
     /// Returns the `geometry::Vec2d` held by this `Value`.
@@ -505,8 +505,8 @@ public:
 
     /// Sets this `Value` to the given shared const `vec2dArray`.
     ///
-    void set(const geometry::SharedConstVec2dArray& vec2dArray) {
-        emplace_(vec2dArray);
+    void set(geometry::SharedConstVec2dArray vec2dArray) {
+        emplace_(std::move(vec2dArray));
     }
 
     /// Returns the `dom::Path` held by this `Value`.
@@ -531,8 +531,8 @@ public:
 
     /// Sets this `Value` to the given shared const `pathArray`.
     ///
-    void set(const dom::SharedConstPathArray& pathArray) {
-        emplace_(pathArray);
+    void set(dom::SharedConstPathArray pathArray) {
+        emplace_(std::move(pathArray));
     }
 
     template<typename Visitor>
