@@ -45,14 +45,14 @@ public:
     SharedConst& operator=(const SharedConst&) noexcept = default;
     SharedConst& operator=(SharedConst&&) noexcept = default;
 
-    /// Implicit conversion constructors from `T`.
+    /// Converting constructor from `T`.
     ///
     template<typename U, VGC_REQUIRES(std::is_same_v<U, std::decay_t<T>>)>
     SharedConst(U&& value)
         : value_(std::make_shared<const T>(std::forward<U>(value))) {
     }
 
-    /// Implicit conversion assignments from `T`.
+    /// Converting assignment from `T`.
     ///
     template<typename U, VGC_REQUIRES(std::is_same_v<U, std::decay_t<T>>)>
     SharedConst& operator=(U&& value) {
