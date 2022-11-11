@@ -23,6 +23,7 @@
 namespace vgc::ui::strings {
 
 VGC_UI_API extern const core::StringId Button;
+VGC_UI_API extern const core::StringId Canvas;
 VGC_UI_API extern const core::StringId ColorListView;
 VGC_UI_API extern const core::StringId ColorListViewItem;
 VGC_UI_API extern const core::StringId ColorPalette;

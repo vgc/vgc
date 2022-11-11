@@ -92,6 +92,7 @@ constexpr bool qopenglExperiment = false;
 VGC_DECLARE_LOG_CATEGORY(LogVgcApp, Debug)
 VGC_DEFINE_LOG_CATEGORY(LogVgcApp, "vgc.app")
 
+core::StringId with_padding("with-padding");
 core::StringId user_("user");
 core::StringId colorpalette_("colorpalette");
 core::StringId colorpaletteitem_("colorpaletteitem");
@@ -323,21 +324,20 @@ private:
         ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
 
         // Create panels
-        // XXX actually create Panel instances as children of Tabs areas
-        ui::Column* leftAreaWidget = leftArea->createChild<ui::Column>();
-        ui::Column* middleTopAreaWidget = middleTopArea->createChild<ui::Column>();
-        ui::Column* middleBottomAreaWidget = middleBottomArea->createChild<ui::Column>();
-        ui::Column* rightTopAreaWidget = rightTopArea->createChild<ui::Column>();
-        ui::Column* rightBottomAreaWidget = rightBottomArea->createChild<ui::Column>();
+        Panel* leftPanel = createPanelWithPadding_(leftArea);
+        Panel* middleTopPanel = createPanel_(middleTopArea);
+        Panel* middleBottomPanel = createPanelWithPadding_(middleBottomArea);
+        Panel* rightTopPanel = createPanelWithPadding_(rightTopArea);
+        Panel* rightBottomPanel = createPanelWithPadding_(rightBottomArea);
 
         // Create widgets inside panels
-        createColorPalette_(leftAreaWidget);
-        createGrid_(middleBottomAreaWidget);
-        createPlot2d_(rightTopAreaWidget);
-        createClickMePopups_(rightBottomAreaWidget);
-        createLineEdits_(rightBottomAreaWidget);
-        createImageBox_(rightBottomAreaWidget);
-        createCanvas_(middleTopAreaWidget, document_.get());
+        createColorPalette_(leftPanel);
+        createGrid_(middleBottomPanel);
+        createPlot2d_(rightTopPanel);
+        createClickMePopups_(rightBottomPanel);
+        createLineEdits_(rightBottomPanel);
+        createImageBox_(rightBottomPanel);
+        createCanvas_(middleTopPanel, document_.get());
 
         // Connections
         palette_->colorSelected().connect(
@@ -362,6 +362,20 @@ private:
 #endif
         overlay_->setStyleSheet(styleSheet);
         overlay_->addStyleClass(ui::strings::root);
+    }
+
+    // XXX actually create ui::Panel instances as children of Tabs areas
+    using Panel = ui::Column;
+    Panel* createPanel_(ui::PanelArea* panelArea) {
+        Panel* panel = panelArea->createChild<Panel>();
+        panel->addStyleClass(ui::strings::Panel);
+        return panel;
+    }
+
+    Panel* createPanelWithPadding_(ui::PanelArea* panelArea) {
+        Panel* panel = createPanel_(panelArea);
+        panel->addStyleClass(with_padding);
+        return panel;
     }
 
     ui::Action* actionNew_ = nullptr;
