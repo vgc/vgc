@@ -1096,6 +1096,11 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
         float dhue = 360.0f / hSteps;
         float hue = isContinuous_ ? selectedHue_ : selectedHueIndex_ * dhue;
 
+        // Radius of Saturation-Lightness cursor in continuous mode
+        using namespace style::literals;
+        const style::Length slCursorRadius_ = 5.0_dp;
+        float slCursorRadius = slCursorRadius_.toPx(styleMetrics());
+
         // draw saturation/lightness selector
         if (m.borderWidth > 0) {
             detail::insertRect(a, borderColor, m.saturationLightnessRect);
@@ -1137,7 +1142,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 }
             }
         }
-        // Draw highlighted color in steps mode
+        // Draw highlighted color
         if (isContinuous_) {
             if (hoveredLightness_ != -1) {
                 float hmargins = m.borderWidth;
@@ -1145,7 +1150,6 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 geometry::Rect2f rect =
                     m.saturationLightnessRect - Margins(vmargins, hmargins);
 
-                float radius = 5;
                 geometry::Vec2f center(
                     rect.xMin() + hoveredLightness_ * rect.width(),
                     rect.yMin() + hoveredSaturation_ * rect.height());
@@ -1154,7 +1158,8 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 core::Color hoveredColor =
                     core::Color::hsl(selectedHue_, hoveredSaturation_, hoveredLightness_);
                 core::Color highlightColor = computeHighlightColor(hoveredColor);
-                insertCircleBorder_(a, highlightColor, center, radius, circleBorderWidth);
+                insertCircleBorder_(
+                    a, highlightColor, center, slCursorRadius, circleBorderWidth);
             }
         }
         else {
@@ -1199,12 +1204,12 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
             }
             geometry::Rect2f rect =
                 m.saturationLightnessRect - Margins(vmargins, hmargins);
-            float radius = 5;
+
             geometry::Vec2f center(
                 rect.xMin() + selectedLightness_ * rect.width(),
                 rect.yMin() + selectedSaturation_ * rect.height());
 
-            insertSLCursorCircle_(a, selectedColor_, center, radius);
+            insertSLCursorCircle_(a, selectedColor_, center, slCursorRadius);
         }
         else {
             Int i = selectedLightnessIndex_;
