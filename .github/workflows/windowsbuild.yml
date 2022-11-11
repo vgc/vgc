@@ -110,7 +110,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{env.VCPKG_ROOT}}
-        key: cache-vcpkg-VCPKG_VERSION=${{env.VCPKG_VERSION}}-MSVC_VERSION=${{env.MSVC_VERSION}}-MANIFEST_FILE_HASH=${{hashFiles('vcpkg.json')}}
+        key: vcpkg=${{env.VCPKG_VERSION}}-msvc=${{env.MSVC_VERSION}}-json=${{hashFiles('vcpkg.json')}}
 
     - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
       name: Clone and bootstrap vcpkg
