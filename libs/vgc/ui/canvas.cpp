@@ -125,6 +125,8 @@ Canvas::Canvas(dom::Document* document)
         documentChangedConnectionHandle_ = document_->changed().connect(
             [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
     }
+
+    addStyleClass(strings::Canvas);
 }
 
 SelectionList Canvas::getSelectableItemsAt(const geometry::Vec2f& /*position*/) {

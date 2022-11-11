@@ -22,6 +22,7 @@ namespace vgc::ui::strings {
 // -------
 
 const core::StringId Button("Button");
+const core::StringId Canvas("Canvas");
 const core::StringId ColorListView("ColorListView");
 const core::StringId ColorListViewItem("ColorListViewItem");
 const core::StringId ColorPalette("ColorPalette");
