@@ -226,9 +226,9 @@ private:
     dom::DocumentPtr document_;
     core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
     ui::OverlayAreaPtr overlay_;
-    ui::Column* mainLayout_;
-    ui::ColorPalette* palette_;
-    ui::Canvas* canvas_;
+    ui::Column* mainLayout_ = nullptr;
+    ui::ColorPalette* palette_ = nullptr;
+    ui::Canvas* canvas_ = nullptr;
     ui::WindowPtr window_;
 
     static void setAttribute(Qt::ApplicationAttribute attribute, bool on = true) {
@@ -338,10 +338,6 @@ private:
         createLineEdits_(rightBottomPanel);
         createImageBox_(rightBottomPanel);
         createCanvas_(middleTopPanel, document_.get());
-
-        // Connections
-        palette_->colorSelected().connect(
-            [=]() { canvas_->setCurrentColor(palette_->selectedColor()); });
     }
 
     void createOverlayAndMainLayout_() {
@@ -864,8 +860,19 @@ private:
         parent->createChild<ui::Widget>(); // vertical-stretch: 1
     }
 
+    void onColorChanged_() {
+        if (canvas_ && palette_) {
+            canvas_->setCurrentColor(palette_->selectedColor());
+        }
+    }
+    VGC_SLOT(onColorChangedSlot_, onColorChanged_)
+
     void createCanvas_(ui::Widget* parent, vgc::dom::Document* document) {
         canvas_ = parent->createChild<ui::Canvas>(document);
+        onColorChanged_();
+        if (palette_) {
+            palette_->colorSelected().connect(onColorChangedSlot_());
+        }
     }
 
     void createGrid_(ui::Widget* parent) {
