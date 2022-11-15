@@ -43,6 +43,10 @@ const core::StringId Widget("Widget");
 // Properties
 // ----------
 
+const core::StringId min_width("min-width");
+const core::StringId min_height("min-height");
+const core::StringId max_width("max-width");
+const core::StringId max_height("max-height");
 const core::StringId preferred_width("preferred-width");
 const core::StringId preferred_height("preferred-height");
 const core::StringId column_gap("column-gap");

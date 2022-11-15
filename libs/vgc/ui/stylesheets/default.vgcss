@@ -23,6 +23,18 @@
     column-gap: 10dp;
 }
 
+.PanelArea {
+    min-width: 30dp;
+    min-height: 30dp;
+    horizontal-stretch: 1;
+    vertical-stretch: 1;
+}
+
+.PanelArea.left-sidebar {
+    min-width: 150dp;
+    horizontal-stretch: 0;
+}
+
 .Panel.with-padding,
 .root.Flex {
     padding-top: 10dp;
