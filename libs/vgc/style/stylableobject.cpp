@@ -17,6 +17,7 @@
 #include <vgc/style/stylableobject.h>
 
 #include <vgc/style/logcategories.h>
+#include <vgc/style/types.h>
 
 namespace vgc::style {
 
@@ -85,7 +86,33 @@ void StylableObject::replaceStyleClass(core::StringId oldClass, core::StringId n
 }
 
 StyleValue StylableObject::style(core::StringId property) const {
-    return getStyleComputedValue_(property);
+
+    StyleValue res = getStyleComputedValue_(property);
+
+    using namespace literals;
+    constexpr bool compactMode = false;
+    [[maybe_unused]] std::string_view p(property.string());
+
+    if (compactMode
+        && (p.substr(0, 8) == "padding-" || p.substr(p.size() - 4) == "-gap")) {
+
+        LengthOrPercentage lp = res.to<LengthOrPercentage>();
+        float newLengthInDp = 3.0f;
+        if (lp.isLength()) {
+            Length length(lp.value(), lp.unit());
+            float lengthInPx = length.toPx(styleMetrics());
+            float lengthInDp = lengthInPx / styleMetrics().scaleFactor();
+            newLengthInDp = std::min(newLengthInDp, lengthInDp);
+        }
+        else {
+            if (lp.value() == 0) {
+                newLengthInDp = 0;
+            }
+        }
+        res = StyleValue::custom(LengthOrPercentage(newLengthInDp, LengthUnit::Dp));
+    }
+
+    return res;
 }
 
 void StylableObject::appendChildStylableObject(StylableObject* child) {
