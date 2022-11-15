@@ -187,7 +187,6 @@ private:
     CursorChanger cursorChanger_;
     Int hoveredSplitHandle_ = -1; // invariant: -1 or [1..n-1]
     Int draggedSplitHandle_ = -1; // invariant: -1 or [1..n-1]
-    float dragStartMainSize_;
     float dragStartMousePosition_;
     float dragStartSplitSizeBefore_;
     float dragStartSplitSizeAfter_;
