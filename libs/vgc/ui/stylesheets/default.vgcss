@@ -23,7 +23,8 @@
     column-gap: 10dp;
 }
 
-.Panel.with-padding {
+.Panel.with-padding,
+.root.Flex {
     padding-top: 10dp;
     padding-right: 10dp;
     padding-bottom: 10dp;
