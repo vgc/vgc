@@ -185,6 +185,13 @@ public:
         , isPercentage_(true) {
     }
 
+    /// Converts the given `Length` to a `LengthOrPercentage`.
+    ///
+    LengthOrPercentage(const Length& length)
+        : value_(length.value())
+        , unit_(length.unit()) {
+    }
+
     /// Returns the numerical value of the length or percentage.
     ///
     double value() const {
@@ -273,6 +280,14 @@ public:
         , isAuto_(false) {
     }
 
+    /// Converts the given `Length` to a `LengthOrAuto`.
+    ///
+    LengthOrAuto(const Length& length)
+        : value_(length.value())
+        , unit_(length.unit())
+        , isAuto_(false) {
+    }
+
     /// Returns whether this `LengthOrAuto` is `auto`.
     ///
     bool isAuto() const {
@@ -350,6 +365,14 @@ public:
     LengthOrPercentageOrAuto(double value, LengthUnit unit)
         : value_(value)
         , unit_(unit)
+        , type_(Type_::Length) {
+    }
+
+    /// Converts the given `Length` to a `LengthOrPercentageOrAuto`.
+    ///
+    LengthOrPercentageOrAuto(const Length& length)
+        : value_(length.value())
+        , unit_(length.unit())
         , type_(Type_::Length) {
     }
 
