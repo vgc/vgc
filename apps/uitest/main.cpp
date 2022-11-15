@@ -92,6 +92,7 @@ constexpr bool qopenglExperiment = false;
 VGC_DECLARE_LOG_CATEGORY(LogVgcApp, Debug)
 VGC_DEFINE_LOG_CATEGORY(LogVgcApp, "vgc.app")
 
+core::StringId left_sidebar("left-sidebar");
 core::StringId with_padding("with-padding");
 core::StringId user_("user");
 core::StringId colorpalette_("colorpalette");
@@ -316,6 +317,7 @@ private:
         // Create panel areas
         ui::PanelArea* mainArea = ui::PanelArea::createHorizontalSplit(mainLayout_);
         ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
+        leftArea->addStyleClass(left_sidebar);
         ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
         ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
         ui::PanelArea* middleTopArea = ui::PanelArea::createTabs(middleArea);

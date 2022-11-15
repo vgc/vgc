@@ -1494,16 +1494,22 @@ void Widget::populateStyleSpecTable(style::SpecTable* table) {
     graphics::RichTextSpan::populateStyleSpecTable(table);
 
     using namespace strings;
+    using namespace style::literals;
     using style::LengthOrPercentage;
     using style::LengthOrPercentageOrAuto;
 
     auto auto_lpa = StyleValue::custom(LengthOrPercentageOrAuto());
     auto zero_lp =  StyleValue::custom(LengthOrPercentage());
+    auto huge_lp =  StyleValue::custom(LengthOrPercentage(1e30_dp));
     auto one_n =    StyleValue::number(1.0f);
 
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
-    table->insert(preferred_height,   auto_lpa, false, &LengthOrPercentageOrAuto::parse);
+    table->insert(min_width,          zero_lp,  false, &LengthOrPercentage::parse);
+    table->insert(min_height,         zero_lp,  false, &LengthOrPercentage::parse);
+    table->insert(max_width,          huge_lp,  false, &LengthOrPercentage::parse);
+    table->insert(max_height,         huge_lp,  false, &LengthOrPercentage::parse);
     table->insert(preferred_width,    auto_lpa, false, &LengthOrPercentageOrAuto::parse);
+    table->insert(preferred_height,   auto_lpa, false, &LengthOrPercentageOrAuto::parse);
     table->insert(column_gap,         zero_lp,  false, &LengthOrPercentage::parse);
     table->insert(row_gap,            zero_lp,  false, &LengthOrPercentage::parse);
     table->insert(grid_auto_columns,  auto_lpa, false, &LengthOrPercentageOrAuto::parse);
@@ -1541,6 +1547,8 @@ void Widget::onStyleChanged() {
 
     requestGeometryUpdate();
     requestRepaint();
+
+    SuperClass::onStyleChanged();
 }
 
 void Widget::onWidgetAdded_(Widget* widget, bool wasOnlyReordered) {

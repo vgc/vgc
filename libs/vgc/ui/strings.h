@@ -41,6 +41,10 @@ VGC_UI_API extern const core::StringId PanelArea;
 VGC_UI_API extern const core::StringId Plot2d;
 VGC_UI_API extern const core::StringId Widget;
 
+VGC_UI_API extern const core::StringId min_width;
+VGC_UI_API extern const core::StringId min_height;
+VGC_UI_API extern const core::StringId max_width;
+VGC_UI_API extern const core::StringId max_height;
 VGC_UI_API extern const core::StringId preferred_width;
 VGC_UI_API extern const core::StringId preferred_height;
 VGC_UI_API extern const core::StringId column_gap;

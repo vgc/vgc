@@ -38,6 +38,265 @@ PanelAreaPtr PanelArea::create(PanelAreaType type) {
 
 namespace {
 
+// Fetches minSize and maxSize from style, and enforce the following inequalities:
+//
+//     0 <= minSize <= preferredSize <= maxSize
+//
+void updateMinMaxSizes(
+    detail::PanelAreaSplitDataArray& splitData,
+    Int mainDir,
+    float mainSize,
+    const style::Metrics& styleMetrics) {
+
+    float scaleFactorInv = 1.0f / styleMetrics.scaleFactor();
+    core::StringId minSizeClass = strings::min_width;
+    core::StringId maxSizeClass = strings::max_width;
+    if (mainDir) {
+        minSizeClass = strings::min_height;
+        maxSizeClass = strings::max_height;
+    }
+
+    for (detail::PanelAreaSplitData& data : splitData) {
+        using style::LengthOrPercentage;
+        data.minSizeStyle = data.childArea->style(minSizeClass).to<LengthOrPercentage>();
+        data.maxSizeStyle = data.childArea->style(maxSizeClass).to<LengthOrPercentage>();
+        data.minSize = data.minSizeStyle.toPx(styleMetrics, mainSize);
+        data.maxSize = data.maxSizeStyle.toPx(styleMetrics, mainSize);
+        data.maxSize = std::abs(data.maxSize);
+        data.minSize = core::clamp(data.minSize, 0, data.maxSize);
+        data.minSizeInDp = data.minSize * scaleFactorInv;
+        data.maxSizeInDp = data.maxSize * scaleFactorInv;
+        data.preferredSizeInDp =
+            core::clamp(data.preferredSizeInDp, data.minSizeInDp, data.maxSizeInDp);
+    }
+}
+
+void updateStretch(detail::PanelAreaSplitDataArray& splitData, Int mainDir) {
+
+    core::StringId stretchClass = strings::horizontal_stretch;
+    if (mainDir) {
+        stretchClass = strings::vertical_stretch;
+    }
+
+    // Update all stretch factors and compute their total.
+    //
+    float totalStretch = 0;
+    for (detail::PanelAreaSplitData& data : splitData) {
+        data.stretch = std::abs(data.childArea->style(stretchClass).toFloat());
+        totalStretch += data.stretch;
+    }
+
+    // If all stretch factors are equal to zero, it should behave as if all
+    // stretch factors are in fact equal to one.
+    //
+    if (totalStretch < 1e-6f) {
+        for (detail::PanelAreaSplitData& data : splitData) {
+            data.stretch = 1.0;
+        }
+    }
+}
+
+float computeTotalPreferredSizeInDp(const detail::PanelAreaSplitDataArray& splitData) {
+    float res = 0;
+    for (const detail::PanelAreaSplitData& data : splitData) {
+        res += data.preferredSizeInDp;
+    }
+    return res;
+}
+
+void normalStretch(
+    detail::PanelAreaSplitDataArray& splitData,
+    detail::PanelAreaResizeArray& resizeArray,
+    float remainingExtraSizeInDp,
+    float scaleFactor) {
+
+    // Initialize resizeArray
+    float remainingTotalStretch = 0;
+    resizeArray.clear();
+    for (detail::PanelAreaSplitData& data : splitData) {
+        float stretch = data.stretch;
+        float normalizedSlack = 0;
+        if (stretch > 0) {
+            float slack = data.maxSizeInDp - data.preferredSizeInDp;
+            normalizedSlack = slack / stretch;
+        }
+        resizeArray.append({&data, stretch, normalizedSlack});
+        remainingTotalStretch += stretch;
+    }
+
+    // Sort resizeArray by increasing pair(isFlexible, normalizedSlack), that
+    // is, non-flexible areas first, then flexible areas, sorted by increasing
+    // normalizedSlack.
+    //
+    std::sort(resizeArray.begin(), resizeArray.end());
+
+    // Distribute extra size.
+    //
+    for (detail::PanelAreaResizeData& resizeData : resizeArray) {
+        detail::PanelAreaSplitData& data = *resizeData.splitData;
+        float stretch = resizeData.stretch;
+        if (stretch > 0) {
+            // Stretchable area: we give it its preferred size + some extra size
+            float maxExtraSizeInDp = data.maxSizeInDp - data.preferredSizeInDp;
+            float extraSizeInDp =
+                (remainingExtraSizeInDp / remainingTotalStretch) * stretch;
+            extraSizeInDp = std::min(extraSizeInDp, maxExtraSizeInDp);
+            remainingExtraSizeInDp -= extraSizeInDp;
+            remainingTotalStretch -= stretch;
+            data.size = (data.preferredSizeInDp + extraSizeInDp) * scaleFactor;
+        }
+        else {
+            // Non-stretchable area: we give it its preferred size
+            data.size = data.preferredSizeInDp * scaleFactor;
+        }
+    }
+}
+
+void emergencyStretch(
+    detail::PanelAreaSplitDataArray& splitData,
+    float mainSizeInDp,
+    float totalMaxSizeInDp,
+    float scaleFactor) {
+
+    // Compute total stretch. We know it's > 0 (see updateStretch()).
+    float totalStretch = 0;
+    for (detail::PanelAreaSplitData& data : splitData) {
+        totalStretch += data.stretch;
+    }
+    float totalStretchInv = 1.0f / totalStretch;
+
+    // Distribute extra size
+    float extraSizeInDp = mainSizeInDp - totalMaxSizeInDp;
+    for (detail::PanelAreaSplitData& data : splitData) {
+        float maxSizeInDp =
+            (data.stretch > 0) ? data.maxSizeInDp : data.preferredSizeInDp;
+        data.size =
+            scaleFactor * (maxSizeInDp + extraSizeInDp * data.stretch * totalStretchInv);
+    }
+}
+
+void stretchChildren(
+    detail::PanelAreaSplitDataArray& splitData,
+    detail::PanelAreaResizeArray& resizeArray,
+    float mainSizeInDp,
+    float remainingExtraSizeInDp,
+    float scaleFactor) {
+
+    float totalMaxSizeInDp = 0;
+    for (detail::PanelAreaSplitData& data : splitData) {
+        float maxSizeInDp =
+            (data.stretch > 0) ? data.maxSizeInDp : data.preferredSizeInDp;
+        totalMaxSizeInDp += maxSizeInDp;
+    }
+    if (mainSizeInDp < totalMaxSizeInDp) {
+        normalStretch(splitData, resizeArray, remainingExtraSizeInDp, scaleFactor);
+    }
+    else {
+        emergencyStretch(splitData, mainSizeInDp, totalMaxSizeInDp, scaleFactor);
+    }
+}
+
+void normalShrink(
+    detail::PanelAreaSplitDataArray& splitData,
+    detail::PanelAreaResizeArray& resizeArray,
+    float remainingExtraSizeInDp,
+    float scaleFactor) {
+
+    // Initialize resizeArray
+    resizeArray.clear();
+    float remainingTotalStretch = 0;
+    for (detail::PanelAreaSplitData& data : splitData) {
+
+        // In shrink mode, we want all child areas with equal stretch
+        // factor to reach their min size at the same time. So we multiply
+        // the "authored stretch" by the slack, which gives:
+        //
+        //     stretch         = slack * authoredStretch
+        //
+        //     normalizedSlack = slack / stretch
+        //                     = slack / (slack * authoredStretch)
+        //                     = 1 / authoredStretch
+        //
+        float slack = data.preferredSizeInDp - data.minSizeInDp;
+        float stretch = slack * data.stretch;
+        float normalizedSlack = 0;
+        if (data.stretch > 0) {
+            normalizedSlack = 1.0 / data.stretch;
+        }
+        resizeArray.append({&data, stretch, normalizedSlack});
+        remainingTotalStretch += stretch;
+    }
+
+    // Sort resizeArray by increasing pair(isFlexible, normalizedSlack), that
+    // is, non-flexible areas first, then flexible areas, sorted by increasing
+    // normalizedSlack.
+    //
+    std::sort(resizeArray.begin(), resizeArray.end());
+
+    // Distribute extra size.
+    //
+    for (detail::PanelAreaResizeData& resizeData : resizeArray) {
+        detail::PanelAreaSplitData& data = *resizeData.splitData;
+        float stretch = resizeData.stretch;
+        if (stretch > 0) {
+            // Stretchable area: we give it its preferred size + some extra size
+            float minExtraSizeInDp = data.minSizeInDp - data.preferredSizeInDp;
+            float extraSizeInDp =
+                (remainingExtraSizeInDp / remainingTotalStretch) * stretch;
+            extraSizeInDp = std::max(extraSizeInDp, minExtraSizeInDp);
+            remainingExtraSizeInDp -= extraSizeInDp;
+            remainingTotalStretch -= stretch;
+            data.size = (data.preferredSizeInDp + extraSizeInDp) * scaleFactor;
+        }
+        else {
+            // Non-stretchable area: we give it its preferred size
+            data.size = data.preferredSizeInDp * scaleFactor;
+        }
+    }
+}
+
+void emergencyShrink(
+    detail::PanelAreaSplitDataArray& splitData,
+    float mainSizeInDp,
+    float totalMinSizeInDp,
+    float scaleFactor) {
+
+    if (totalMinSizeInDp > 0) {
+        float k = scaleFactor * mainSizeInDp / totalMinSizeInDp;
+        for (detail::PanelAreaSplitData& data : splitData) {
+            data.size = k * data.minSizeInDp;
+        }
+    }
+    else {
+        for (detail::PanelAreaSplitData& data : splitData) {
+            data.size = 0;
+        }
+    }
+}
+
+void shrinkChildren(
+    detail::PanelAreaSplitDataArray& splitData,
+    detail::PanelAreaResizeArray& resizeArray,
+    float mainSizeInDp,
+    float remainingExtraSizeInDp,
+    float scaleFactor) {
+
+    float totalMinSizeInDp = 0;
+    for (detail::PanelAreaSplitData& data : splitData) {
+        totalMinSizeInDp += data.minSizeInDp;
+    }
+    if (totalMinSizeInDp < mainSizeInDp) {
+        normalShrink(splitData, resizeArray, remainingExtraSizeInDp, scaleFactor);
+    }
+    else {
+        emergencyShrink(splitData, mainSizeInDp, totalMinSizeInDp, scaleFactor);
+    }
+}
+
+float hinted(float x, bool hinting) {
+    return hinting ? std::round(x) : x;
+}
+
 // Returns the average of all sizes satisfying size >= 0.
 // Returns fallback if no sizes satisfy size >= 0.
 //
@@ -59,18 +318,6 @@ float computeAveragePositiveSizes(
     else {
         return fallback;
     }
-}
-
-float computeTotalSize(const detail::PanelAreaSplitDataArray& splitData) {
-    float totalSize = 0;
-    for (const detail::PanelAreaSplitData& data : splitData) {
-        totalSize += data.size;
-    }
-    return totalSize;
-}
-
-float hinted(float x, bool hinting) {
-    return hinting ? std::round(x) : x;
 }
 
 } // namespace
@@ -145,12 +392,17 @@ void PanelArea::onResize() {
 
 void PanelArea::updateChildrenGeometry() {
 
-    // For now, this is the most minimal implementation possible. It does not
-    // take into account whether child area are visible or collapsed, and there
-    // is no padding, gap or border between children.
+    // TODO: supports isVisible, isCollapsed, and padding/gap/border
+
+    // The algorithm for updating PanelArea sizes is similar to Flex, except
+    // that "preferred-size" doesn't come from the stylesheet, but from the
+    // user manually dragging a splitter.
+
+    // Useful: https://drafts.csswg.org/css3-tables-algorithms/Overview.src.htm
 
     namespace gs = graphics::strings;
 
+    // Handle Tabs case
     if (type() == PanelAreaType::Tabs) {
         // For now, we assume there is only one tab, and we simply draw the widget
         // as the full size.
@@ -158,60 +410,77 @@ void PanelArea::updateChildrenGeometry() {
         if (child) {
             child->updateGeometry(rect());
         }
+        return;
+    }
+
+    // Handle emtpy Split case
+    if (splitData_.isEmpty()) {
+        return;
+    }
+
+    // Get general metrics, and handle negative mainDir case
+    float scaleFactorInv = 1.0f / styleMetrics().scaleFactor();
+    bool hinting = (style(gs::pixel_hinting) == gs::normal);
+    Int mainDir = (type() == PanelAreaType::HorizontalSplit) ? 0 : 1;
+    Int crossDir = 1 - mainDir;
+    float mainSize = size()[mainDir];
+    float mainSizeInDp = mainSize * scaleFactorInv;
+    float crossSize = size()[crossDir];
+    if (mainSize <= 0) {
+        geometry::Vec2f childPosition(0, 0);
+        geometry::Vec2f childSize;
+        childSize[mainDir] = 0;
+        childSize[crossDir] = crossSize;
+        for (const SplitData& data : splitData_) {
+            data.childArea->updateGeometry(childPosition, childSize);
+        }
+        return;
+    }
+
+    // Update min/max/stretch style values
+    updateMinMaxSizes(splitData_, mainDir, mainSize, styleMetrics());
+    updateStretch(splitData_, mainDir);
+
+    // Compute how much extra dp should be distributed compared to previous sizes
+    float totalPreferredSizeInDp = computeTotalPreferredSizeInDp(splitData_);
+    float extraSizeInDp = mainSizeInDp - totalPreferredSizeInDp;
+
+    // Distribute extra dp
+    float scaleFactor = styleMetrics().scaleFactor();
+    if (extraSizeInDp > 0) {
+        stretchChildren(
+            splitData_, resizeArray_, mainSizeInDp, extraSizeInDp, scaleFactor);
     }
     else {
-        if (splitData_.isEmpty()) {
-            return;
-        }
+        shrinkChildren(
+            splitData_, resizeArray_, mainSizeInDp, extraSizeInDp, scaleFactor);
+    }
 
-        bool hinting = (style(gs::pixel_hinting) == gs::normal);
-        Int mainDir = (type() == PanelAreaType::HorizontalSplit) ? 0 : 1;
-        Int crossDir = 1 - mainDir;
-        float mainSize = size()[mainDir];
-        float crossSize = size()[crossDir];
-        geometry::Vec2f childPosition;
-        geometry::Vec2f childSize;
-        childSize[crossDir] = crossSize;
+    // Update positions based on sizes
+    float position = 0;
+    for (SplitData& data : splitData_) {
+        data.position = position;
+        position += data.size;
+    }
 
-        if (mainSize > 0) {
+    // Compute hinting
+    // Note: we may want to use the smart hinting algo from detail/layoututil.h
+    for (SplitData& data : splitData_) {
+        float p1 = data.position;
+        float p2 = data.position + data.size;
+        data.hPosition = hinted(p1, hinting);
+        data.hSize = hinted(p2, hinting) - data.hPosition;
+    }
 
-            // Update sizes such that total size equals this panel area's size
-            float totalSize = computeTotalSize(splitData_);
-            float ratio = mainSize / totalSize;
-            for (SplitData& data : splitData_) {
-                data.size *= ratio;
-            }
-
-            // Update positions based on sizes
-            float position = 0;
-            for (SplitData& data : splitData_) {
-                data.position = position;
-                position += data.size;
-            }
-
-            // Compute hinting
-            // Note: we may want to use the smart hinting algo from detail/layoututil.h,
-            // which is based on sizes, and thus perform this step before updating
-            // the positions based on sizes.
-            for (SplitData& data : splitData_) {
-                float p1 = data.position;
-                float p2 = data.position + data.size;
-                data.hPosition = hinted(p1, hinting);
-                data.hSize = hinted(p2, hinting) - data.hPosition;
-            }
-
-            // Update children geometry
-            for (SplitData& data : splitData_) {
-                childSize[mainDir] = data.hSize;
-                childPosition[mainDir] = data.hPosition;
-                data.childArea->updateGeometry(childPosition, childSize);
-            }
-        }
-        else {
-            for (const SplitData& data : splitData_) {
-                data.childArea->updateGeometry(childPosition, childSize);
-            }
-        }
+    // Update children geometry
+    geometry::Vec2f childSize;
+    geometry::Vec2f childPosition;
+    childSize[crossDir] = crossSize;
+    childPosition[crossDir] = 0;
+    for (SplitData& data : splitData_) {
+        childSize[mainDir] = data.hSize;
+        childPosition[mainDir] = data.hPosition;
+        data.childArea->updateGeometry(childPosition, childSize);
     }
 }
 
@@ -235,7 +504,7 @@ void PanelArea::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         Int crossDir = 1 - mainDir;
         float crossSize = size()[crossDir];
 
-        float handlePos = splitData_[hoveredSplitHandle_].position;
+        float handlePos = splitData_[hoveredSplitHandle_].hPosition;
         geometry::Vec2f handleRectPos;
         geometry::Vec2f handleRectSize;
         handleRectPos[mainDir] = handlePos - handleRectHalfSize;
@@ -356,12 +625,18 @@ void PanelArea::onChildrenChanged_() {
     }
 }
 
+// Post-condition: returns either -1 (no handle) or a value in [1..n-1]
+// The value "0" makes no sense as it would correspond to a handle located
+// on the left of the first split area: there is no handle there.
 Int PanelArea::computeHoveredSplitHandle_(const geometry::Vec2f& position) const {
     if (isSplit()) {
-        const float handleHoverHalfSize = 5.0f;
+        using namespace style::literals;
+        const style::Length handleHoverHalfSize_ = 5.0_dp;
+        const float handleHoverHalfSize = handleHoverHalfSize_.toPx(styleMetrics());
+
         Int mainDir = (type() == PanelAreaType::HorizontalSplit) ? 0 : 1;
         float pos = position[mainDir];
-        for (Int i = 0; i < splitData_.length(); ++i) {
+        for (Int i = 1; i < splitData_.length(); ++i) {
             const SplitData& data = splitData_[i];
             if (data.isInteractive
                 && std::abs(pos - data.position) < handleHoverHalfSize) {
@@ -393,48 +668,51 @@ void PanelArea::setHoveredSplitHandle_(Int hoveredSplitHandle) {
     }
 }
 
+// Pre-condition: draggedSplitHandle_ in [1..n-1]
 void PanelArea::startDragging_(const geometry::Vec2f& position) {
+
     Int mainDir = (type() == PanelAreaType::HorizontalSplit) ? 0 : 1;
     dragStartMousePosition_ = position[mainDir];
-    dragStartSplitPosition_ = splitData_[draggedSplitHandle_].position;
-    dragStartSplitSizeAfter_ = splitData_[draggedSplitHandle_].size;
-    dragStartSplitSizeBefore_ = 0;
-    if (draggedSplitHandle_ > 0) {
-        dragStartSplitSizeBefore_ = splitData_[draggedSplitHandle_ - 1].size;
-    }
-    else {
-        dragStartSplitSizeBefore_ = 0;
-    }
+
+    const SplitData& splitDataBefore = splitData_[draggedSplitHandle_ - 1];
+    const SplitData& splitDataAfter = splitData_[draggedSplitHandle_];
+    dragStartSplitSizeBefore_ = splitDataBefore.size;
+    dragStartSplitSizeAfter_ = splitDataAfter.size;
 }
 
 void PanelArea::continueDragging_(const geometry::Vec2f& position) {
 
-    const float minSplitSize = 50;
+    // Get raw deltaPosition (before applying min/max constraints)
     Int mainDir = (type() == PanelAreaType::HorizontalSplit) ? 0 : 1;
     float mousePosition = position[mainDir];
     float deltaPosition = mousePosition - dragStartMousePosition_;
 
-    // Compute new size of split area after the split
-    float newSplitSizeAfter = dragStartSplitSizeAfter_ - deltaPosition;
-    if (newSplitSizeAfter < minSplitSize) {
-        newSplitSizeAfter = minSplitSize;
-        deltaPosition = dragStartSplitSizeAfter_ - newSplitSizeAfter;
-    }
+    // Get min/max constraints of child areas before and after the splitter
+    SplitData& splitDataBefore = splitData_[draggedSplitHandle_ - 1];
+    SplitData& splitDataAfter = splitData_[draggedSplitHandle_];
+    float minSizeBefore = splitDataBefore.minSize;
+    float maxSizeBefore = splitDataBefore.maxSize;
+    float minSizeAfter = splitDataAfter.minSize;
+    float maxSizeAfter = splitDataAfter.maxSize;
 
-    // Compute new size of split area before the split
+    // Apply constraints of the child area after the split
+    float newSplitSizeAfter = dragStartSplitSizeAfter_ - deltaPosition;
+    newSplitSizeAfter = core::clamp(newSplitSizeAfter, minSizeAfter, maxSizeAfter);
+    deltaPosition = dragStartSplitSizeAfter_ - newSplitSizeAfter;
+
+    // Apply constraints of the child area before the split
     float newSplitSizeBefore = dragStartSplitSizeBefore_ + deltaPosition;
-    if (newSplitSizeBefore < minSplitSize) {
-        newSplitSizeBefore = minSplitSize;
-        deltaPosition = newSplitSizeBefore - dragStartSplitSizeBefore_;
-        newSplitSizeAfter = dragStartSplitSizeAfter_ - deltaPosition;
-    }
+    newSplitSizeBefore = core::clamp(newSplitSizeBefore, minSizeBefore, maxSizeBefore);
+    deltaPosition = newSplitSizeBefore - dragStartSplitSizeBefore_;
+    newSplitSizeAfter = dragStartSplitSizeAfter_ - deltaPosition;
 
     // Update splitData_
-    float newSplitPosition = dragStartSplitPosition_ + deltaPosition;
-    splitData_[draggedSplitHandle_].position = newSplitPosition;
-    splitData_[draggedSplitHandle_].size = newSplitSizeAfter;
-    if (draggedSplitHandle_ > 0) {
-        splitData_[draggedSplitHandle_ - 1].size = newSplitSizeBefore;
+    splitDataBefore.size = newSplitSizeBefore;
+    splitDataAfter.size = newSplitSizeAfter;
+    splitDataAfter.position = splitDataBefore.position + newSplitSizeBefore;
+    float scaleFactor = styleMetrics().scaleFactor();
+    for (SplitData& data : splitData_) {
+        data.preferredSizeInDp = data.size / scaleFactor;
     }
 
     requestGeometryUpdate();

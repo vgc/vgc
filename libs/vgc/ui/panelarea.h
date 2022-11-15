@@ -44,21 +44,70 @@ struct PanelAreaSplitData {
     }
 
     PanelArea* childArea;
-    float position;
-    float size;
+    bool isInteractive = true;
 
-    // hinted values
+    // Style values
+    float stretch;
+    style::LengthOrPercentage minSizeStyle;
+    style::LengthOrPercentage maxSizeStyle;
+    float minSize; // in px
+    float maxSize; // in px
+    float minSizeInDp;
+    float maxSizeInDp;
+
+    // Current size and preferred size. The preferred size is the size that the
+    // child area had when the user last dragged a splitter.
+    //
+    // When the user drags a splitter, we perform all computation based on
+    // current sizes, and update the preferred size accordingly.
+    //
+    // When the size of the window (or parent area) changes, we perform all
+    // computation based on preferred sizes, and update the current sizes
+    // accordingly.
+    //
+    // Note that we need to store the preferred size in dp to properly support
+    // dragging the window between monitors with different dpi scaling.
+    //
+    float preferredSizeInDp;
+    float position; // current position in px
+    float size;     // current size in px
+
+    // hinted values (in px)
     float hPosition;
     float hSize;
 
-    bool isInteractive = true;
-
-    //
-    // todo: gap/padding, isInteractive, lastVisibleSize,
+    // todo: isCollapsible, gap/padding, lastVisibleSize,
     //       animatedPosition, animatedSize...
 };
 
 using PanelAreaSplitDataArray = core::Array<PanelAreaSplitData>;
+
+// Structure used to order child areas by "normalized slack", that is, how much
+// total extra space is required before the child area's size reaches its max
+// (or min) size. This order makes it possible to resolved all min/max
+// constraints in one pass, since child areas reaching their min/max size
+// faster are processed first.
+//
+struct PanelAreaResizeData {
+
+    // Which child area this is referring to
+    PanelAreaSplitData* splitData;
+
+    // In stretch mode: stretch = data.stretch
+    // In shrink mode:  stretch = (data.preferredSize - data.minSize) * data.stretch
+    float stretch;
+
+    // In stretch mode: normalizedSlack = (data.maxSize - data.preferredSize) / data.stretch
+    // In shrink mode:  normalizedSlack = 1.0 / data.stretch
+    // (as a special case, in both modes, if data.stretch == 0 then normalizedSlack = 0)
+    float normalizedSlack;
+
+    friend bool operator<(const PanelAreaResizeData& a, const PanelAreaResizeData& b) {
+        return a.normalizedSlack < b.normalizedSlack;
+    }
+};
+
+using PanelAreaResizeArray = core::Array<PanelAreaResizeData>;
 
 } // namespace detail
 
@@ -136,12 +185,16 @@ private:
 
     graphics::GeometryViewPtr triangles_;
     CursorChanger cursorChanger_;
-    Int hoveredSplitHandle_ = -1;
-    Int draggedSplitHandle_ = -1;
+    Int hoveredSplitHandle_ = -1; // invariant: -1 or [1..n-1]
+    Int draggedSplitHandle_ = -1; // invariant: -1 or [1..n-1]
+    float dragStartMainSize_;
     float dragStartMousePosition_;
-    float dragStartSplitPosition_;
-    float dragStartSplitSizeAfter_;
     float dragStartSplitSizeBefore_;
+    float dragStartSplitSizeAfter_;
+
+    // Orders the child areas by "normalized slack". This could be a local
+    // variable, but we make it a data member to avoid dynamic allocations.
+    detail::PanelAreaResizeArray resizeArray_;
 
     bool isUpdatingSplitData_ = false;
     void onChildrenChanged_();
