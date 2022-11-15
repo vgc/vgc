@@ -284,7 +284,8 @@ public:
     ///
     LengthOrAuto(const Length& length)
         : value_(length.value())
-        , unit_(length.unit()) {
+        , unit_(length.unit())
+        , isAuto_(false) {
     }
 
     /// Returns whether this `LengthOrAuto` is `auto`.
