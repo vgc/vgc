@@ -221,7 +221,7 @@ void normalShrink(
         float stretch = slack * data.stretch;
         float normalizedSlack = 0;
         if (data.stretch > 0) {
-            normalizedSlack = 1.0 / data.stretch;
+            normalizedSlack = 1.0f / data.stretch;
         }
         resizeArray.append({&data, stretch, normalizedSlack});
         remainingTotalStretch += stretch;
