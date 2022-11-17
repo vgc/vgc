@@ -110,7 +110,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{env.VCPKG_ROOT}}
-        key: vcpkg=${{env.VCPKG_VERSION}}-msvc=${{env.MSVC_VERSION}}-json=${{hashFiles('vcpkg.json')}}
+        key: vcpkg-2-=${{env.VCPKG_VERSION}}-msvc=${{env.MSVC_VERSION}}-json=${{hashFiles('vcpkg.json')}}
 
     - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
       name: Clone and bootstrap vcpkg
@@ -124,17 +124,21 @@ jobs:
 
     # This step is optional since it would be done by CMake anyway, but it's nice to have it as
     # a separate step in order to keep its timing and/or failure separate from CMake Configure
-    - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
-      name: Install vcpkg packages
+    # - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
+    - name: Install vcpkg packages
       working-directory: ${{env.VCPKG_ROOT}}
       shell: cmd
       run: |
-        .\vcpkg.exe --vcpkg-root="%VCPKG_ROOT%" --triplet=x64-windows install
+        dir /s /b /o:gn
+        .\vcpkg.exe --vcpkg-root="%VCPKG_ROOT%" --triplet=x64-windows --x-abi-tools-use-exact-versions install
 
     - name: List vcpkg installed packaged
       working-directory: ${{env.VCPKG_ROOT}}
+      shell: cmd
       run: |
-        ./vcpkg.exe --vcpkg-root="$VCPKG_ROOT" list
+        dir /s /b /o:gn
+        ./vcpkg.exe --vcpkg-root="%VCPKG_ROOT%" list
+        dir /s /b /o:gn
 
     - name: Setup Developer Command Prompt for VS
       uses: ilammy/msvc-dev-cmd@v1
