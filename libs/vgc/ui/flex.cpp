@@ -56,6 +56,10 @@ void Flex::onWidgetRemoved(Widget*) {
 
 namespace {
 
+float hinted(float x, bool hinting) {
+    return hinting ? std::round(x) : x;
+}
+
 float getLeftRightMargins(const Widget* widget) {
     // TODO: handle percentages
     using namespace style::strings;
@@ -88,17 +92,19 @@ float getTopBottomPadding(const Widget* widget) {
            + detail::getLengthOrPercentageInPx(widget, padding_bottom, refLength);
 }
 
-float getGap(bool isRow, const Widget* widget) {
+float getGap(bool isRow, const Widget* widget, bool hinting) {
     // - row-gap means the gap between rows, so should be used by Column.
     // - column-gap means the gap between columns, so should be used by Row.
     // TODO: handle percentages
     float refLength = 0;
+    float res;
     if (isRow) {
-        return detail::getLengthOrPercentageInPx(widget, strings::column_gap, refLength);
+        res = detail::getLengthOrPercentageInPx(widget, strings::column_gap, refLength);
     }
     else {
-        return detail::getLengthOrPercentageInPx(widget, strings::row_gap, refLength);
+        res = detail::getLengthOrPercentageInPx(widget, strings::row_gap, refLength);
     }
+    return hinted(res, hinting);
 }
 
 } // namespace
@@ -123,7 +129,9 @@ float Flex::preferredWidthForHeight(float height) const {
             width += childPreferredWidth + childLeftRightMargins;
         }
         if (numVisibleChildren > 0) {
-            float gap = getGap(isRow_, this);
+            namespace gs = graphics::strings;
+            bool hinting = (style(gs::pixel_hinting) == gs::normal);
+            float gap = getGap(isRow_, this, hinting);
             width += (numVisibleChildren - 1) * gap;
         }
     }
@@ -170,7 +178,9 @@ float Flex::preferredHeightForWidth(float width) const {
             height += childPreferredHeight + childTopBottomMargins;
         }
         if (numVisibleChildren > 0) {
-            float gap = getGap(isRow_, this);
+            namespace gs = graphics::strings;
+            bool hinting = (style(gs::pixel_hinting) == gs::normal);
+            float gap = getGap(isRow_, this, hinting);
             height += (numVisibleChildren - 1) * gap;
         }
     }
@@ -235,7 +245,9 @@ geometry::Vec2f Flex::computePreferredSize() const {
                 }
             }
             if (numVisibleChildren > 0) {
-                float gap = getGap(isRow(), this);
+                namespace gs = graphics::strings;
+                bool hinting = (style(gs::pixel_hinting) == gs::normal);
+                float gap = getGap(isRow(), this, hinting);
                 float totalGap = (numVisibleChildren - 1) * gap;
                 if (isRow()) {
                     width += totalGap;
@@ -356,10 +368,6 @@ float computeTotalStretch(
     return totalStretch;
 }
 
-float hinted(float x, bool hinting) {
-    return hinting ? std::round(x) : x;
-}
-
 void stretchChild(
     bool isRow,
     float freeSpace,
@@ -447,7 +455,7 @@ void Flex::updateChildrenGeometry() {
         float paddingB = getLengthOrPercentageInPx(this, ss::padding_bottom, height());
         float mainSize = isRow_ ? width() : height();
         float crossSize = isRow_ ? height() : width();
-        float gap = getGap(isRow_, this);
+        float gap = getGap(isRow_, this, hinting);
         float preferredMainSize = isRow_ ? preferredWidthForHeight(crossSize)
                                          : preferredHeightForWidth(crossSize);
         float mainPaddingBefore = isRow_ ? paddingL : paddingT;

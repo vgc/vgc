@@ -413,8 +413,14 @@ bool Window::updateScreenScaleRatio_() {
     //
     // devicePixelRatio     2           1           1
     //
+    // Note: on Kubuntu 22.04 (X11) at 100%, with Qt 5.15, the function
+    // screen()->logicalDotsPerInch() returns 96.26847 instead of exactly 96
+    // (at 125%, it returns exaxtly 120). So we round it in order to have a
+    // screenScaleRatio of exactly 1.0.
+    //
     if (screen()) {
         logicalDotsPerInch_ = static_cast<float>(screen()->logicalDotsPerInch());
+        logicalDotsPerInch_ = std::round(logicalDotsPerInch_);
     }
     devicePixelRatio_ = static_cast<float>(devicePixelRatio());
 
