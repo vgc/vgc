@@ -145,7 +145,7 @@ jobs:
         mkdir build
         cd build
         cmake --version
-        cmake .. -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" -DWiX="$WIX" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
+        cmake .. -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_INSTALL_OPTIONS=--x-abi-tools-use-exact-versions -DVCPKG_DISABLE_COMPILER_TRACKING=ON -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" -DWiX="$WIX" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
 
     - name: Build
       working-directory: ${{github.workspace}}/build
