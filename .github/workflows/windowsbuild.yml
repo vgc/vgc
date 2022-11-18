@@ -129,16 +129,13 @@ jobs:
       working-directory: ${{env.VCPKG_ROOT}}
       shell: cmd
       run: |
-        dir /s /b /o:gn
         .\vcpkg.exe --vcpkg-root="%VCPKG_ROOT%" --triplet=x64-windows --x-abi-tools-use-exact-versions install
 
     - name: List vcpkg installed packaged
       working-directory: ${{env.VCPKG_ROOT}}
       shell: cmd
       run: |
-        dir /s /b /o:gn
         ./vcpkg.exe --vcpkg-root="%VCPKG_ROOT%" list
-        dir /s /b /o:gn
 
     - name: Setup Developer Command Prompt for VS
       uses: ilammy/msvc-dev-cmd@v1
