@@ -8,6 +8,9 @@ env:
   QT_VERSION: 5.15.2
   PYTHON_VERSION: 3.7
   VCPKG_VERSION: 2022.10.19
+  VCPKG_INSTALL_OPTIONS: --x-abi-tools-use-exact-versions
+  VCPKG_BUILD_TYPE: release
+  VCPKG_DISABLE_COMPILER_TRACKING: ON
 
 defaults:
   run:
@@ -99,54 +102,72 @@ jobs:
     # For documentation on binary caching, see:
     #    https://github.com/microsoft/vcpkg/blob/master/docs/users/binarycaching.md
     #
-    - name: Setup vckpg environment variables
+    - name: Configure vckpg
       run: |
-        echo "VCPKG_ROOT_PARENT=$(echo "${{github.workspace}}")" >> $GITHUB_ENV
-        echo "VCPKG_ROOT=$(echo "${{github.workspace}}/vcpkg")" >> $GITHUB_ENV
-        echo "VCPKG_DEFAULT_BINARY_CACHE=$(echo "${{github.workspace}}/vcpkg/archives")" >> $GITHUB_ENV
+        echo "VCPKG_ROOT_PARENT=${{github.workspace}}" >> $GITHUB_ENV
+        echo "VCPKG_ROOT=${{github.workspace}}/vcpkg" >> $GITHUB_ENV
+        echo "VCPKG_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+        echo "VCPKG_OVERLAY_TRIPLETS=${{github.workspace}}/vcpkg/custom-triplets" >> $GITHUB_ENV
+        echo "VCPKG_DEFAULT_TRIPLET=vgc-x64-windows" >> $GITHUB_ENV
+        echo "VCPKG_DEFAULT_BINARY_CACHE=${{github.workspace}}/vcpkg/archives" >> $GITHUB_ENV
 
     - name: Cache vcpkg
       id: cache-vcpkg
       uses: actions/cache@v3
       with:
         path: ${{env.VCPKG_ROOT}}
-        key: vcpkg-2-=${{env.VCPKG_VERSION}}-msvc=${{env.MSVC_VERSION}}-json=${{hashFiles('vcpkg.json')}}
+        key: vcpkg=${{env.VCPKG_VERSION}}-msvc=${{env.MSVC_VERSION}}-json=${{hashFiles('vcpkg.json')}}
 
     - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
-      name: Clone and bootstrap vcpkg
+      name: Bootstrap vcpkg and install packages
       working-directory: ${{env.VCPKG_ROOT_PARENT}}
-      shell: cmd
       run: |
-        git clone --depth=1 --branch "%VCPKG_VERSION%" https://github.com/microsoft/vcpkg.git
+        git clone --depth=1 --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git
         cd vcpkg
         mkdir archives
-        .\bootstrap-vcpkg.bat
-
-    # This step is optional since it would be done by CMake anyway, but it's nice to have it as
-    # a separate step in order to keep its timing and/or failure separate from CMake Configure
-    # - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
-    - name: Install vcpkg packages
-      working-directory: ${{env.VCPKG_ROOT}}
-      shell: cmd
-      run: |
-        .\vcpkg.exe --vcpkg-root="%VCPKG_ROOT%" --triplet=x64-windows --x-abi-tools-use-exact-versions install
-
-    - name: List vcpkg installed packaged
-      working-directory: ${{env.VCPKG_ROOT}}
-      shell: cmd
-      run: |
-        ./vcpkg.exe --vcpkg-root="%VCPKG_ROOT%" list
+        mkdir "$VCPKG_OVERLAY_TRIPLETS"
+        TRIPLET_FILE="$VCPKG_OVERLAY_TRIPLETS/$VCPKG_DEFAULT_TRIPLET.cmake"
+        cp triplets/x64-windows.cmake "$TRIPLET_FILE"
+        echo "set(VCPKG_BUILD_TYPE $VCPKG_BUILD_TYPE)" >> "$TRIPLET_FILE"
+        echo "set(VCPKG_DISABLE_COMPILER_TRACKING $VCPKG_DISABLE_COMPILER_TRACKING)" >> "$TRIPLET_FILE"
+        cmd.exe /c bootstrap-vcpkg.bat
+        vcpkg.exe \
+          --vcpkg-root="$VCPKG_ROOT" \
+          --overlay-triplets="$VCPKG_OVERLAY_TRIPLETS" \
+          --triplet="$VCPKG_DEFAULT_TRIPLET" \
+          $VCPKG_INSTALL_OPTIONS \
+          install
 
     - name: Setup Developer Command Prompt for VS
       uses: ilammy/msvc-dev-cmd@v1
 
+    # For documentation on what vcpkg options can be given to CMake, see:
+    #    https://vcpkg.io/en/docs/users/buildsystems/cmake-integration.html
+    #
+    # Examples:
+    #  - -DVCPKG_INSTALL_OPTIONS="--debug;--binarysource=clear"
+    #  - -DVCPKG_INSTALLED_DIR="$VCPKG_ROOT/installed"
+    #  - -DVCPKG_MANIFEST_MODE=OFF
+    #
     - name: Configure
       working-directory: ${{github.workspace}}
       run: |
         mkdir build
         cd build
         cmake --version
-        cmake .. -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_INSTALL_OPTIONS=--x-abi-tools-use-exact-versions -DVCPKG_DISABLE_COMPILER_TRACKING=ON -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" -DWiX="$WIX" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_TOOLCHAIN_FILE" \
+          -DVCPKG_OVERLAY_TRIPLETS="$VCPKG_OVERLAY_TRIPLETS" \
+          -DVCPKG_TARGET_TRIPLET="$VCPKG_DEFAULT_TRIPLET" \
+          -DVCPKG_INSTALL_OPTIONS="$VCPKG_INSTALL_OPTIONS" \
+          -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" \
+          -DPython_ROOT_DIR="$pythonLocation" \
+          -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" \
+          -DWiX="$WIX" \
+          -DVGC_PEDANTIC=ON \
+          -DVGC_WERROR=ON
 
     - name: Build
       working-directory: ${{github.workspace}}/build
@@ -162,4 +183,3 @@ jobs:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
         VGC_CODESIGN_URL: ${{secrets.VGC_CODESIGN_URL}}
       run: cmake --build . --target deploy
-
