@@ -74,21 +74,13 @@
     vertical-stretch: 0;
 }
 
-.Flex,
-.Grid,
-.Button,
-.Label,
-.LineEdit,
-.Plot2d
-.Menu,
-.MenuButton {
-}
-
 .Button,
 .Label,
 .LineEdit {
     preferred-width: auto;
     preferred-height: 21dp;
+    vertical-shrink: 0;
+    vertical-stretch: 0;
     text-vertical-align: middle;
     text-horizontal-align: center;
 }
@@ -222,6 +214,8 @@
 }
 
 .ColorPaletteSelector {
+    /* We want to use its preferred height for width */
+    vertical-shrink: 0;
     vertical-stretch: 0;
 }
 
