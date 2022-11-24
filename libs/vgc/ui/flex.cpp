@@ -294,216 +294,441 @@ geometry::Vec2f Flex::computePreferredSize() const {
 
 namespace {
 
-// Returns the preferred mainSize (margin excluded) of a child, assuming its
-// crossSize (margin included) is paddedCrossSize.
-//
-float getChildPreferredMainSize(bool isRow, float paddedCrossSize, Widget* child) {
-    if (isRow) {
-        float childCrossMargins = getTopBottomMargins(child);
-        float childCrossSize = (std::max)(0.0f, paddedCrossSize - childCrossMargins);
-        return child->preferredWidthForHeight(childCrossSize);
+detail::FlexData computeData(Flex* flex) {
+
+    namespace gs = graphics::strings;
+    namespace ss = style::strings;
+    using detail::getLengthOrPercentageInPx;
+
+    detail::FlexData res;
+    res.flex = flex;
+    res.hinting = (flex->style(gs::pixel_hinting) == gs::normal);
+    res.isRow = flex->isRow();
+    res.isReverse = flex->isReverse();
+    res.mainDir = 0;
+    res.crossDir = 1;
+    res.gap = getGap(res.isRow, flex, res.hinting);
+    res.size = flex->size();
+
+    geometry::Rect2f contentRect = flex->contentRect();
+    res.contentMainPosition = contentRect.x();
+    res.contentCrossPosition = contentRect.y();
+    res.contentMainSize = contentRect.width();
+    res.contentCrossSize = contentRect.height();
+
+    if (!res.isRow) {
+        std::swap(res.contentMainPosition, res.contentCrossPosition);
+        std::swap(res.contentMainSize, res.contentCrossSize);
+        std::swap(res.mainDir, res.crossDir);
     }
-    else {
-        float childCrossMargins = getLeftRightMargins(child);
-        float childCrossSize = (std::max)(0.0f, paddedCrossSize - childCrossMargins);
-        return child->preferredHeightForWidth(childCrossSize);
-    }
+
+    return res;
 }
 
-// If freeSpace >= 0, returns the stretch factor of this child, otherwise
-// returned its scaled shrink factor. Note that we always ensure that stretch
-// values and multipliers are positive, so that if totalStretch == 0, then we
-// know for sure that childStretch == 0 for all children.
-//
-// Note: for performance, we may want to cache this computation beforehand in a
-// member variable of the child widgets. But it is yet unclear whether this is
-// worth it. Note that we already cache the preferredSize(), which requires
-// recursion, and if not cached would likely be by far the most time-consuming
-// part of getChildStretch().
-//
-float getChildStretch(
-    bool isRow,
-    float paddedCrossSize,
-    float freeSpace,
-    Widget* child,
-    float childStretchBonus) {
-
-    float childAuthoredStretch = 0;
-    float childStretchMultiplier = 1;
-    if (freeSpace >= 0) {
-        childAuthoredStretch =
-            isRow ? child->horizontalStretch() : child->verticalStretch();
-        childStretchMultiplier = 1;
-    }
-    else {
-        // In the case of shrinking, we need to multiply the shrink factor with
-        // the preferred size. This ensures that (assuming all items have the
-        // same authored shrink factor) large items shrink faster than small
-        // items, so that they reach a zero-size at the same time. This is the
-        // same behavior as CSS.
-        childAuthoredStretch =
-            isRow ? child->horizontalShrink() : child->verticalShrink();
-        childStretchMultiplier = getChildPreferredMainSize(isRow, paddedCrossSize, child);
-    }
-    childAuthoredStretch = (std::max)(childAuthoredStretch, 0.0f);
-    childStretchMultiplier = (std::max)(childStretchMultiplier, 0.0f);
-    return (childAuthoredStretch + childStretchBonus) * childStretchMultiplier;
-}
-
-float computeTotalStretch(
-    bool isRow,
-    float paddedCrossSize,
-    float freeSpace,
-    Widget* parent,
-    float childStretchBonus) {
-
-    float totalStretch = 0;
-    for (Widget* child : parent->children()) {
-        if (child->visibility() == Visibility::Invisible) {
-            continue;
-        }
-        totalStretch +=
-            getChildStretch(isRow, paddedCrossSize, freeSpace, child, childStretchBonus);
-    }
-    return totalStretch;
-}
-
-void stretchChild(
-    bool isRow,
-    float freeSpace,
-    float crossSize,
-    float extraSpacePerStretch,
-    Widget* child,
-    float childStretchBonus,
-    float& childMainPosition,
-    float parentCrossPaddingBefore,
-    float parentCrossPaddingAfter,
-    float gap,
-    bool hinting) {
+detail::FlexChildData computeChildData(const detail::FlexData& data, Widget* child) {
 
     namespace ss = style::strings;
     using detail::getLengthOrPercentageInPx;
 
+    const bool isRow = data.isRow;
+    const geometry::Vec2f parentSize = data.size;
+
+    detail::FlexChildData res;
+
+    res.child = child;
+
+    res.minSize = {
+        getLengthOrPercentageInPx(child, strings::min_width, parentSize[0]),
+        getLengthOrPercentageInPx(child, strings::min_height, parentSize[1])};
+
+    res.maxSize = {
+        getLengthOrPercentageInPx(child, strings::max_width, parentSize[0]),
+        getLengthOrPercentageInPx(child, strings::max_height, parentSize[1])};
+
+    res.maxSize[0] = std::abs(res.maxSize[0]);
+    res.maxSize[1] = std::abs(res.maxSize[1]);
+
+    res.minSize[0] = core::clamp(res.minSize[0], 0, res.maxSize[0]);
+    res.minSize[1] = core::clamp(res.minSize[1], 0, res.maxSize[1]);
+
     // TODO: handle percentages
     float refLength = 0;
-    float marginLeft = getLengthOrPercentageInPx(child, ss::margin_left, refLength);
-    float marginRight = getLengthOrPercentageInPx(child, ss::margin_right, refLength);
-    float marginTop = getLengthOrPercentageInPx(child, ss::margin_top, refLength);
-    float marginBottom = getLengthOrPercentageInPx(child, ss::margin_bottom, refLength);
-    float childMainMarginBefore = isRow ? marginLeft : marginTop;
-    float childMainMarginAfter = isRow ? marginRight : marginBottom;
-    float childCrossMarginBefore = isRow ? marginTop : marginLeft;
-    float childCrossMarginAfter = isRow ? marginBottom : marginRight;
-    float childCrossMargins = childCrossMarginBefore + childCrossMarginAfter;
-
-    float parentCrossPadding = parentCrossPaddingBefore + parentCrossPaddingAfter;
-    float paddedCrossSize = crossSize - parentCrossPadding;
-    float childCrossSize = paddedCrossSize - childCrossMargins;
-
-    float childPreferredMainSize =
-        getChildPreferredMainSize(isRow, paddedCrossSize, child);
-
-    float childStretch =
-        getChildStretch(isRow, paddedCrossSize, freeSpace, child, childStretchBonus);
-
-    float childMainSize = childPreferredMainSize + extraSpacePerStretch * childStretch;
-    float childCrossPosition = parentCrossPaddingBefore + childCrossMarginBefore;
-    childMainPosition += childMainMarginBefore;
-    float hChildMainPosition = hinted(childMainPosition, hinting);
-    float hChildCrossPosition = hinted(childCrossPosition, hinting);
-    float hChildMainSize =
-        hinted(childMainPosition + childMainSize, hinting) - hChildMainPosition;
-    float hChildCrossSize =
-        hinted(childCrossPosition + childCrossSize, hinting) - hChildCrossPosition;
+    res.mainMargins = {
+        getLengthOrPercentageInPx(child, ss::margin_left, refLength),
+        getLengthOrPercentageInPx(child, ss::margin_right, refLength)};
+    res.crossMargins = {
+        getLengthOrPercentageInPx(child, ss::margin_top, refLength),
+        getLengthOrPercentageInPx(child, ss::margin_bottom, refLength)};
 
     if (isRow) {
-        child->updateGeometry(
-            hChildMainPosition, hChildCrossPosition, hChildMainSize, hChildCrossSize);
+        res.shrink = child->horizontalShrink();
+        res.stretch = child->horizontalStretch();
+        res.mainMinSize = res.minSize[0];
+        res.mainMaxSize = res.maxSize[0];
+
+        float childCrossMargins = res.crossMargins[0] + res.crossMargins[1];
+        float childCrossSize =
+            (std::max)(0.0f, data.contentCrossSize - childCrossMargins);
+        res.mainPreferredSize = child->preferredWidthForHeight(childCrossSize);
     }
     else {
-        child->updateGeometry(
-            hChildCrossPosition, hChildMainPosition, hChildCrossSize, hChildMainSize);
+        res.shrink = child->verticalShrink();
+        res.stretch = child->verticalStretch();
+        res.mainMinSize = res.minSize[1];
+        res.mainMaxSize = res.maxSize[1];
+
+        std::swap(res.mainMargins, res.crossMargins);
+
+        float childCrossMargins = res.crossMargins[0] + res.crossMargins[1];
+        float childCrossSize =
+            (std::max)(0.0f, data.contentCrossSize - childCrossMargins);
+        res.mainPreferredSize = child->preferredHeightForWidth(childCrossSize);
     }
 
-    childMainPosition += childMainSize + childMainMarginAfter + gap;
+    return res;
+}
+
+void updateChildData(
+    const detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData) {
+
+    // Update most child data
+    childData.clear();
+    for (Widget* child : data.flex->children()) {
+        if (child->visibility() == Visibility::Invisible) {
+            continue;
+        }
+        childData.append(computeChildData(data, child));
+    }
+
+    // Nothing more to do if empty
+    if (childData.isEmpty()) {
+        return;
+    }
+
+    // If all shrink/stretch factors are equal to zero, they should behave as
+    // if they are all equal to one.
+    float eps = 1e-6f;
+    float totalShrink = 0;
+    float totalStretch = 0;
+    for (const detail::FlexChildData& d : childData) {
+        totalShrink += d.shrink;
+        totalStretch += d.stretch;
+    }
+    if (totalStretch < eps) {
+        for (detail::FlexChildData& d : childData) {
+            d.stretch = 1.0f;
+        }
+    }
+    if (totalShrink < eps) {
+        for (detail::FlexChildData& d : childData) {
+            d.shrink = 1.0f;
+        }
+    }
+
+    // For non-stretchable or non-shrinkable child widgets, update their
+    // effective min/max size based on their preferred size
+    for (detail::FlexChildData& d : childData) {
+        if (d.shrink <= 0) {
+            d.mainMinSize = (std::max)(d.mainMinSize, d.mainPreferredSize);
+        }
+        if (d.stretch <= 0) {
+            d.mainMaxSize = (std::min)(d.mainMaxSize, d.mainPreferredSize);
+        }
+    }
+}
+
+// Computes the main size available for child widgets of a Flex, that is, the
+// main size of the Flex subtracted by:
+// - the Flex's border
+// - the Flex's padding
+// - the Flex's gaps between its children
+// - the fixed margins of the Flex's children
+//
+// Note that margins of children expressed in percentages are not yet
+// implemented. When implemented, they will still not be subtracted here, but
+// instead integrated within the "weight" of the FlexChildSlack. For more
+// information, see Grid that already implements this.
+//
+// Precondition: childData.size() >= 1.
+//
+float computeAvailableSize(
+    detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData) {
+
+    float gaps = static_cast<float>(childData.length() - 1) * data.gap;
+    float margins = 0;
+    for (detail::FlexChildData& d : childData) {
+        margins += d.mainMargins[0] + d.mainMargins[1];
+    }
+    return (std::max)(data.contentMainSize - gaps - margins, 0.0f);
+}
+
+void normalStretch(
+    detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData,
+    core::Array<detail::FlexChildSlack>& childSlacks) {
+
+    // Initialize slacks
+    float remainingTotalStretch = 0;
+    childSlacks.clear();
+    for (detail::FlexChildData& d : childData) {
+        float stretch = d.stretch;
+        float normalizedSlack = 0;
+        if (stretch > 0) {
+            float slack = d.mainMaxSize - d.mainPreferredSize;
+            normalizedSlack = slack / stretch;
+        }
+        childSlacks.append({&d, stretch, normalizedSlack});
+        remainingTotalStretch += stretch;
+    }
+
+    // Sort resizeArray by increasing pair(isFlexible, normalizedSlack), that
+    // is, non-flexible areas first, then flexible areas, sorted by increasing
+    // normalizedSlack.
+    //
+    std::sort(childSlacks.begin(), childSlacks.end());
+
+    // Distribute extra size.
+    //
+    float remainingExtraSize = data.extraSize;
+    for (detail::FlexChildSlack& childSlack : childSlacks) {
+        detail::FlexChildData& d = *childSlack.flexChildData;
+        float stretch = childSlack.weight;
+        if (stretch > 0) {
+            // Stretchable widget: we give it its preferred size + some extra size
+            float maxExtraSize = d.mainMaxSize - d.mainPreferredSize;
+            float extraSize = (remainingExtraSize / remainingTotalStretch) * stretch;
+            extraSize = (std::min)(extraSize, maxExtraSize);
+            remainingExtraSize -= extraSize;
+            remainingTotalStretch -= stretch;
+            d.mainSize = d.mainPreferredSize + extraSize;
+        }
+        else {
+            // Non-stretchable widget: we give it its preferred size
+            d.mainSize = d.mainPreferredSize;
+        }
+    }
+}
+
+void emergencyStretch(
+    detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData) {
+
+    // Compute total stretch. We know it's > 0 (see updateChildData()).
+    float totalStretch = 0;
+    for (detail::FlexChildData& d : childData) {
+        totalStretch += d.stretch;
+    }
+    float totalStretchInv = 1.0f / totalStretch;
+
+    // Distribute extra size
+    float extraSize = data.availableSize - data.totalMaxSize;
+    for (detail::FlexChildData& d : childData) {
+        float maxSize = (d.stretch > 0) ? d.mainMaxSize : d.mainPreferredSize;
+        d.mainSize = maxSize + extraSize * d.stretch * totalStretchInv;
+    }
+}
+
+void stretchChildren(
+    detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData,
+    core::Array<detail::FlexChildSlack>& childSlacks) {
+
+    data.totalMaxSize = 0;
+    for (detail::FlexChildData& d : childData) {
+        float maxSize = (d.stretch > 0) ? d.mainMaxSize : d.mainPreferredSize;
+        data.totalMaxSize += maxSize;
+    }
+    if (data.availableSize < data.totalMaxSize) {
+        normalStretch(data, childData, childSlacks);
+    }
+    else {
+        emergencyStretch(data, childData);
+    }
+}
+
+void normalShrink(
+    detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData,
+    core::Array<detail::FlexChildSlack>& childSlacks) {
+
+    // Initialize slacks
+    float remainingTotalShrink = 0;
+    childSlacks.clear();
+    for (detail::FlexChildData& d : childData) {
+        // In shrink mode, we want all child areas with equal shrink
+        // factor to reach their min size at the same time. So we multiply
+        // the "authored shrink" by the slack, which gives:
+        //
+        //     shrink          = slack * authoredShrink
+        //
+        //     normalizedSlack = slack / shrink
+        //                     = slack / (slack * authoredShrink)
+        //                     = 1 / authoredShrink
+        //
+        float slack = d.mainPreferredSize - d.mainMinSize;
+        float shrink = slack * d.shrink;
+        float normalizedSlack = 0;
+        if (d.shrink > 0) {
+            normalizedSlack = 1.0f / d.shrink;
+        }
+        childSlacks.append({&d, shrink, normalizedSlack});
+        remainingTotalShrink += shrink;
+    }
+
+    // Sort resizeArray by increasing pair(isFlexible, normalizedSlack), that
+    // is, non-flexible areas first, then flexible areas, sorted by increasing
+    // normalizedSlack.
+    //
+    std::sort(childSlacks.begin(), childSlacks.end());
+
+    // Distribute extra size.
+    //
+    float remainingExtraSize = data.extraSize;
+    for (detail::FlexChildSlack& childSlack : childSlacks) {
+        detail::FlexChildData& d = *childSlack.flexChildData;
+        float shrink = childSlack.weight;
+        if (shrink > 0) {
+            // Stretchable widget: we give it its preferred size + some extra size
+            float minExtraSize = d.mainMinSize - d.mainPreferredSize;
+            float extraSize = (remainingExtraSize / remainingTotalShrink) * shrink;
+            extraSize = (std::max)(extraSize, minExtraSize);
+            remainingExtraSize -= extraSize;
+            remainingTotalShrink -= shrink;
+            d.mainSize = d.mainPreferredSize + extraSize;
+        }
+        else {
+            // Non-stretchable widget: we give it its preferred size
+            d.mainSize = d.mainPreferredSize;
+        }
+    }
+}
+
+void emergencyShrink(
+    detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData) {
+
+    if (data.totalMinSize > 0) {
+        float k = data.availableSize / data.totalMinSize;
+        for (detail::FlexChildData& d : childData) {
+            d.mainSize = k * d.mainMinSize;
+        }
+    }
+    else {
+        for (detail::FlexChildData& d : childData) {
+            d.mainSize = 0;
+        }
+    }
+}
+
+void shrinkChildren(
+    detail::FlexData& data,
+    core::Array<detail::FlexChildData>& childData,
+    core::Array<detail::FlexChildSlack>& childSlacks) {
+
+    data.totalMinSize = 0;
+    for (detail::FlexChildData& d : childData) {
+        data.totalMinSize += d.mainMinSize;
+    }
+    if (data.totalMinSize < data.availableSize) {
+        normalShrink(data, childData, childSlacks);
+    }
+    else {
+        emergencyShrink(data, childData);
+    }
 }
 
 } // namespace
 
 void Flex::updateChildrenGeometry() {
 
+    // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
+    // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
+
     namespace gs = graphics::strings;
     namespace ss = style::strings;
     using detail::getLengthOrPercentageInPx;
 
-    // Note: we loosely follow the algorithm and terminology from CSS Flexbox:
-    // https://www.w3.org/TR/css-flexbox-1/#layout-algorithm
-    bool hasVisibleChild = false;
-    for (Widget* child : children()) {
-        if (child->visibility() != Visibility::Invisible) {
-            hasVisibleChild = true;
-            break;
+    // Compute / update input metrics about this Flex and its children.
+    // Fast return if no visible child.
+    //
+    // TODO: Keep those in cache and only update them on styleChanged() / childrenChanged(), etc.
+    //
+    detail::FlexData data = computeData(this);
+    updateChildData(data, childData_);
+    if (childData_.isEmpty()) {
+        return;
+    }
+
+    // Main layout algorithm: compute children main sizes.
+    //
+    if (data.contentMainSize <= 0) {
+        // Fast computation of d.mainSize when the content size of the Flex is zero.
+        for (detail::FlexChildData& d : childData_) {
+            d.mainSize = 0;
         }
     }
-    if (hasVisibleChild) {
-        bool isRow_ = isRow();
-        bool isReverse_ = isReverse();
-        bool hinting = (style(gs::pixel_hinting) == gs::normal);
-        float paddingL = getLengthOrPercentageInPx(this, ss::padding_left, width());
-        float paddingR = getLengthOrPercentageInPx(this, ss::padding_right, width());
-        float paddingT = getLengthOrPercentageInPx(this, ss::padding_top, height());
-        float paddingB = getLengthOrPercentageInPx(this, ss::padding_bottom, height());
-        float mainSize = isRow_ ? width() : height();
-        float crossSize = isRow_ ? height() : width();
-        float gap = getGap(isRow_, this, hinting);
-        float preferredMainSize = isRow_ ? preferredWidthForHeight(crossSize)
-                                         : preferredHeightForWidth(crossSize);
-        float mainPaddingBefore = isRow_ ? paddingL : paddingT;
-        float crossPaddingBefore = isRow_ ? paddingT : paddingL;
-        float crossPaddingAfter = isRow_ ? paddingB : paddingR;
-        float paddedCrossSize = crossSize - crossPaddingBefore - crossPaddingAfter;
-        float freeSpace = mainSize - preferredMainSize;
-        float eps = 1e-6f;
-        // TODO: have a loop to resolve constraint violations, as per 9.7.4:
-        // https://www.w3.org/TR/css-flexbox-1/#resolve-flexible-length
-        // Indeed, although we currently don't have explicit min/max constraints,
-        // we still have an implicit min-size = 0 constraint. The algorithm
-        // below don't properly handle this constraint: if the size of one of
-        // the items is shrinked to a negative size, then it is clamped to zero,
-        // but the lost space due to clamping isn't redistributed to other items,
-        // causing an overflow.
-        float childStretchBonus = 0;
-        float totalStretch = computeTotalStretch(
-            isRow_, paddedCrossSize, freeSpace, this, childStretchBonus);
-        if (totalStretch < eps) {
-            // For now, we stretch evenly as if all childStretch were equal to
-            // one. Later, we should instead insert empty space between the items,
-            // based on alignment properties, see:
-            // https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Box_Alignment
-            childStretchBonus = 1;
-            totalStretch = computeTotalStretch(
-                isRow_, paddedCrossSize, freeSpace, this, childStretchBonus);
+    else {
+        // Compute how much extra size should be distributed
+        float totalPreferredSize = 0;
+        for (const detail::FlexChildData& childData : childData_) {
+            totalPreferredSize += childData.mainPreferredSize;
         }
-        float extraSpacePerStretch = freeSpace / totalStretch;
-        float childMainPosition = mainPaddingBefore;
-        Widget* child = isReverse_ ? lastChild() : firstChild();
-        while (child) {
-            if (child->visibility() != Visibility::Invisible) {
-                stretchChild(
-                    isRow_,
-                    freeSpace,
-                    crossSize,
-                    extraSpacePerStretch,
-                    child,
-                    childStretchBonus,
-                    childMainPosition,
-                    crossPaddingBefore,
-                    crossPaddingAfter,
-                    gap,
-                    hinting);
-            }
-            child = isReverse_ ? child->previousSibling() : child->nextSibling();
+        data.availableSize = computeAvailableSize(data, childData_);
+        data.extraSize = data.availableSize - totalPreferredSize;
+
+        // Distribute extra size
+        if (data.extraSize > 0) {
+            stretchChildren(data, childData_, childSlacks_);
         }
+        else {
+            shrinkChildren(data, childData_, childSlacks_);
+        }
+    }
+
+    // Compute children 2D sizes
+    for (detail::FlexChildData& d : childData_) {
+        const float crossMargins = d.crossMargins[0] + d.crossMargins[1];
+        d.size[data.mainDir] = d.mainSize;
+        d.size[data.crossDir] = data.contentCrossSize - crossMargins;
+    }
+
+    // Compute children 2D position
+    if (data.isReverse) {
+        float mainPosition = data.contentMainPosition + data.contentMainSize;
+        for (detail::FlexChildData& d : childData_) {
+            mainPosition -= d.mainSize + d.mainMargins[1];
+            d.position[data.mainDir] = mainPosition;
+            d.position[data.crossDir] = data.contentCrossPosition + d.crossMargins[0];
+            mainPosition -= d.mainMargins[0] + data.gap;
+        }
+    }
+    else {
+        float mainPosition = data.contentMainPosition;
+        for (detail::FlexChildData& d : childData_) {
+            mainPosition += d.mainMargins[0];
+            d.position[data.mainDir] = mainPosition;
+            d.position[data.crossDir] = data.contentCrossPosition + d.crossMargins[0];
+            mainPosition += d.mainSize + d.mainMargins[1] + data.gap;
+        }
+    }
+
+    // Compute hinting
+    // Note: we may want to use the smart hinting algo from detail/layoututil.h
+    bool hinting = data.hinting;
+    for (detail::FlexChildData& d : childData_) {
+        geometry::Vec2f p1 = d.position;
+        geometry::Vec2f p2 = d.position + d.size;
+        geometry::Vec2f hp1 = {hinted(p1[0], hinting), hinted(p1[1], hinting)};
+        geometry::Vec2f hp2 = {hinted(p2[0], hinting), hinted(p2[1], hinting)};
+        d.hPosition = hp1;
+        d.hSize = hp2 - hp1;
+    }
+
+    // Update children geometry
+    for (detail::FlexChildData& d : childData_) {
+        d.child->updateGeometry(d.hPosition, d.hSize);
     }
 }
 
