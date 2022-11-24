@@ -36,7 +36,7 @@ void applySizeOverrides(geometry::Vec2f& size, const geometry::Vec2f& overrides)
 }
 
 float allocSize(float requested, float& remaining) {
-    float ret = std::min(requested, remaining);
+    float ret = (std::min)(requested, remaining);
     remaining -= ret;
     return ret;
 }
@@ -112,7 +112,7 @@ public:
 
     void addTrack(const geometry::Vec2f& size) {
         calc_.addTo(mainDir_, size[mainDir_]);
-        maxCrossDir_ = std::max(maxCrossDir_, size[crossDir_]);
+        maxCrossDir_ = (std::max)(maxCrossDir_, size[crossDir_]);
         ++numTracks_;
     }
 
