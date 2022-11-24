@@ -19,7 +19,98 @@
 
 #include <vgc/ui/widget.h>
 
+#include <vgc/geometry/vec2f.h>
+
 namespace vgc::ui {
+
+VGC_DECLARE_OBJECT(Flex);
+
+namespace detail {
+
+// Stores data about a given Flex.
+//
+struct FlexData {
+
+    // Data that does not depends on children metrics.
+    // All of these are always computed.
+    //
+    Flex* flex;
+    bool hinting;
+    bool isRow;
+    bool isReverse;
+    Int mainDir;
+    Int crossDir;
+    float gap;
+    geometry::Vec2f size;
+    float contentMainPosition;
+    float contentCrossPosition;
+    float contentMainSize;
+    float contentCrossSize;
+
+    // Data that depends on children metrics.
+    // Some of these are only computed in some modes (e.g., shrink vs stretch).
+    //
+    float totalPreferredSize; // Sum of preferred size of child widgets
+    float totalMinSize;       // Sum of min sizes of child widgets
+    float totalMaxSize;       // Sum of max size of child widgets
+    float availableSize;      // Size available for child widgets after removing
+                              // Flex's border, padding, gaps, and children fixed margins
+    float extraSize;          // Difference between availableSize and totalPreferredSize
+};
+
+// Stores data about a given child widget of a Flex.
+//
+struct FlexChildData {
+
+    Widget* child;
+
+    // Input
+    float shrink;
+    float stretch;
+    float mainPreferredSize;
+    float mainMinSize;
+    float mainMaxSize;
+    geometry::Vec2f minSize;
+    geometry::Vec2f maxSize;
+    geometry::Vec2f mainMargins;
+    geometry::Vec2f crossMargins;
+
+    // Output
+    float mainSize;
+    geometry::Vec2f position;
+    geometry::Vec2f size;
+
+    // Hinted output
+    geometry::Vec2f hPosition;
+    geometry::Vec2f hSize;
+};
+
+// Structure used to order child widgets by "normalized slack", that is, how
+// much total extra space is required before the child area's size reaches its
+// max (or min) size. This order makes it possible to resolved all min/max
+// constraints in one pass, since child widgets reaching their min/max size
+// faster are processed first.
+//
+struct FlexChildSlack {
+
+    // Which child this is referring to
+    FlexChildData* flexChildData;
+
+    // In stretch mode: weight = data.stretch
+    // In shrink mode:  weight = (data.preferredSize - data.minSize) * data.shrink
+    float weight;
+
+    // In stretch mode: normalizedSlack = (data.maxSize - data.preferredSize) / data.stretch
+    // In shrink mode:  normalizedSlack = 1.0 / data.shrink
+    // (as a special case, if data.stretch/shrink == 0 then normalizedSlack = 0)
+    float normalizedSlack;
+
+    friend bool operator<(const FlexChildSlack& a, const FlexChildSlack& b) {
+        return a.normalizedSlack < b.normalizedSlack;
+    };
+};
+
+} // namespace detail
 
 /// \enum vgc::ui::FlexDirection
 /// \brief The direction of a flex layout
@@ -45,8 +136,6 @@ enum class FlexWrap {
 
 // TODO: FlexJustifyContent, FlexAlignItems, FlexAlignContent
 // Great resource: https://css-tricks.com/snippets/css/a-guide-to-flexbox/
-
-VGC_DECLARE_OBJECT(Flex);
 
 /// \class vgc::ui::Flex
 /// \brief Arrange a sequence of widgets in rows and/or columns.
@@ -139,6 +228,8 @@ protected:
 private:
     FlexDirection direction_;
     FlexWrap wrap_;
+    core::Array<detail::FlexChildData> childData_;    // visible children only
+    core::Array<detail::FlexChildSlack> childSlacks_; // visible children only
 };
 
 } // namespace vgc::ui
