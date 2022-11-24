@@ -2141,6 +2141,12 @@ float ColorPaletteSelector::preferredWidthForHeight(float) const {
 
 float ColorPaletteSelector::preferredHeightForWidth(float width) const {
     Metrics m = computeMetricsFromWidth_(width);
+    if (m.height < 0) {
+        VGC_WARNING(
+            LogVgcUi,
+            "Computed preferredHeightForWidth ({}) of ColorPaletteSelector is negative.",
+            m.height);
+    }
     return m.height;
 }
 
@@ -2724,6 +2730,13 @@ float ColorListView::preferredWidthForHeight(float /* height */) const {
 
 float ColorListView::preferredHeightForWidth(float width) const {
     Metrics m = computeMetricsFromWidth_(width);
+    if (m.height < 0) {
+        VGC_WARNING(
+            LogVgcUi,
+            "Computed preferredHeightForWidth ({}) of ColorListView is negative.",
+            m.height);
+        m.height = 0;
+    }
     return m.height;
 }
 

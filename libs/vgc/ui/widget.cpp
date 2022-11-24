@@ -285,14 +285,13 @@ geometry::Rect2f Widget::contentRect() const {
     namespace ss = style::strings;
     using detail::getLengthInPx;
     using detail::getLengthOrPercentageInPx;
-    float h = height();
-    float w = width();
+    geometry::Vec2f s = size();
     Margins border(getLengthInPx(this, ss::border_width));
     Margins padding(
-        getLengthOrPercentageInPx(this, ss::padding_top, h),
-        getLengthOrPercentageInPx(this, ss::padding_right, w),
-        getLengthOrPercentageInPx(this, ss::padding_bottom, h),
-        getLengthOrPercentageInPx(this, ss::padding_left, w));
+        getLengthOrPercentageInPx(this, ss::padding_top, s[1]),
+        getLengthOrPercentageInPx(this, ss::padding_right, s[0]),
+        getLengthOrPercentageInPx(this, ss::padding_bottom, s[1]),
+        getLengthOrPercentageInPx(this, ss::padding_left, s[0]));
     geometry::Rect2f res = rect() - border - padding;
     if (res.xMin() > res.xMax()) {
         float x = 0.5f * (res.xMin() + res.xMax());
@@ -353,11 +352,11 @@ style::LengthOrPercentageOrAuto Widget::preferredWidth() const {
 }
 
 float Widget::horizontalStretch() const {
-    return style(strings::horizontal_stretch).toFloat();
+    return std::abs(style(strings::horizontal_stretch).toFloat());
 }
 
 float Widget::horizontalShrink() const {
-    return style(strings::horizontal_shrink).toFloat();
+    return std::abs(style(strings::horizontal_shrink).toFloat());
 }
 
 style::LengthOrPercentageOrAuto Widget::preferredHeight() const {

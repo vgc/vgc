@@ -37,6 +37,7 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
 #include <vgc/ui/keyevent.h>
+#include <vgc/ui/logcategories.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/shortcut.h>
 
@@ -462,11 +463,11 @@ public:
     ///
     style::LengthOrPercentageOrAuto preferredWidth() const;
 
-    /// Returns the width stretch factor of this widget.
+    /// Returns the width stretch factor of this widget. This value is never negative.
     ///
     float horizontalStretch() const;
 
-    /// Returns the width shrink factor of this widget.
+    /// Returns the width shrink factor of this widget. This value is never negative.
     ///
     float horizontalShrink() const;
 
@@ -1319,6 +1320,16 @@ private:
     void updatePreferredSize_() const {
         if (!isPreferredSizeComputed_) {
             preferredSize_ = computePreferredSize();
+            float w = preferredSize_[0];
+            float h = preferredSize_[1];
+            if (w < 0) {
+                VGC_WARNING(LogVgcUi, "Computed preferred width ({}) is negative", w);
+                preferredSize_[0] = 0;
+            }
+            if (h < 0) {
+                VGC_WARNING(LogVgcUi, "Computed preferred height ({}) is negative", h);
+                preferredSize_[1] = 0;
+            }
             isPreferredSizeComputed_ = true;
         }
     }
