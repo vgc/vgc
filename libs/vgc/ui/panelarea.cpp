@@ -91,7 +91,7 @@ void updateStretch(detail::PanelAreaSplitDataArray& splitData, Int mainDir) {
     //
     if (totalStretch < 1e-6f) {
         for (detail::PanelAreaSplitData& data : splitData) {
-            data.stretch = 1.0;
+            data.stretch = 1.0f;
         }
     }
 }
@@ -140,7 +140,7 @@ void normalStretch(
             float maxExtraSizeInDp = data.maxSizeInDp - data.preferredSizeInDp;
             float extraSizeInDp =
                 (remainingExtraSizeInDp / remainingTotalStretch) * stretch;
-            extraSizeInDp = std::min(extraSizeInDp, maxExtraSizeInDp);
+            extraSizeInDp = (std::min)(extraSizeInDp, maxExtraSizeInDp);
             remainingExtraSizeInDp -= extraSizeInDp;
             remainingTotalStretch -= stretch;
             data.size = (data.preferredSizeInDp + extraSizeInDp) * scaleFactor;
@@ -243,7 +243,7 @@ void normalShrink(
             float minExtraSizeInDp = data.minSizeInDp - data.preferredSizeInDp;
             float extraSizeInDp =
                 (remainingExtraSizeInDp / remainingTotalStretch) * stretch;
-            extraSizeInDp = std::max(extraSizeInDp, minExtraSizeInDp);
+            extraSizeInDp = (std::max)(extraSizeInDp, minExtraSizeInDp);
             remainingExtraSizeInDp -= extraSizeInDp;
             remainingTotalStretch -= stretch;
             data.size = (data.preferredSizeInDp + extraSizeInDp) * scaleFactor;

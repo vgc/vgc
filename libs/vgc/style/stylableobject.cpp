@@ -99,7 +99,7 @@ StyleValue StylableObject::style(core::StringId property) const {
                 Length length(lp.value(), lp.unit());
                 float lengthInPx = length.toPx(styleMetrics());
                 float lengthInDp = lengthInPx / styleMetrics().scaleFactor();
-                newLengthInDp = std::min(newLengthInDp, lengthInDp);
+                newLengthInDp = (std::min)(newLengthInDp, lengthInDp);
             }
             else {
                 if (lp.value() == 0) {
