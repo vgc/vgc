@@ -244,6 +244,14 @@ public:
     ///
     StyleValue style(core::StringId property) const;
 
+    /// Returns the computed value of a given style property of this `StylableObject`
+    /// as a value of type `T`.
+    ///
+    template<typename T>
+    T style(core::StringId property) const {
+        return style(property).to<T>();
+    }
+
     /// Returns the style metrics of this stylable object.
     ///
     const Metrics& styleMetrics() const {

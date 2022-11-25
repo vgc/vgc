@@ -209,6 +209,10 @@
     vertical-stretch: 0;
 }
 
+.ColorPalette {
+    main-alignment: center;
+}
+
 .ColorPaletteSelector {
     row-gap: 10dp;
 }
@@ -238,8 +242,7 @@
 }
 
 .ColorListView {
-    preferred-width: auto;
-    preferred-height: 34dp;
+    vertical-shrink: 0;
     vertical-stretch: 0;
 }
 

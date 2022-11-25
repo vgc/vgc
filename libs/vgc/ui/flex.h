@@ -14,14 +14,57 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_FLEXLAYOUT_H
-#define VGC_UI_FLEXLAYOUT_H
+#ifndef VGC_UI_FLEX_H
+#define VGC_UI_FLEX_H
 
+#include <vgc/core/enum.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/ui/widget.h>
 
-#include <vgc/geometry/vec2f.h>
-
 namespace vgc::ui {
+
+/// \enum vgc::ui::FlexDirection
+/// \brief The direction of a flex layout
+///
+enum class FlexDirection {
+    Row = 0,
+    RowReverse = 1,
+    Column = 2,
+    ColumnReverse = 3
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(FlexDirection)
+
+/// \enum vgc::ui::MainAlignment
+/// \brief How to align the children of a Flex along the main axis.
+///
+enum class MainAlignment {
+    Start,
+    End,
+    Center,
+    SpaceBetween,
+    SpaceAround,
+    SpaceEvenly
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(MainAlignment)
+
+/// \enum vgc::ui::FlexWrap
+/// \brief How to wrap widgets in a Flex
+///
+/// For now, only NoWrap is supported. Wrap and WrapReverse will
+/// be added in the future.
+///
+enum class FlexWrap {
+    NoWrap //,
+    //Wrap,
+    //WrapReverse
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(FlexWrap)
 
 VGC_DECLARE_OBJECT(Flex);
 
@@ -38,6 +81,7 @@ struct FlexData {
     bool hinting;
     bool isRow;
     bool isReverse;
+    MainAlignment mainAlignment;
     Int mainDir;
     Int crossDir;
     float gap;
@@ -50,12 +94,15 @@ struct FlexData {
     // Data that depends on children metrics.
     // Some of these are only computed in some modes (e.g., shrink vs stretch).
     //
+    float totalShrink;        // Sum of shrink of child widgets
+    float totalStretch;       // Sum of shrink of child widgets
     float totalPreferredSize; // Sum of preferred size of child widgets
     float totalMinSize;       // Sum of min sizes of child widgets
     float totalMaxSize;       // Sum of max size of child widgets
     float availableSize;      // Size available for child widgets after removing
                               // Flex's border, padding, gaps, and children fixed margins
     float extraSize;          // Difference between availableSize and totalPreferredSize
+    float extraSizeAfterStretch; // Extra size still remaining after stretching children
 };
 
 // Stores data about a given child widget of a Flex.
@@ -111,31 +158,6 @@ struct FlexChildSlack {
 };
 
 } // namespace detail
-
-/// \enum vgc::ui::FlexDirection
-/// \brief The direction of a flex layout
-///
-enum class FlexDirection {
-    Row = 0,
-    RowReverse = 1,
-    Column = 2,
-    ColumnReverse = 3
-};
-
-/// \enum vgc::ui::FlexWrap
-/// \brief How to wrap widgets in a Flex
-///
-/// For now, only NoWrap is supported. Wrap and WrapReverse will
-/// be added in the future.
-///
-enum class FlexWrap {
-    NoWrap //,
-    //Wrap,
-    //WrapReverse
-};
-
-// TODO: FlexJustifyContent, FlexAlignItems, FlexAlignContent
-// Great resource: https://css-tricks.com/snippets/css/a-guide-to-flexbox/
 
 /// \class vgc::ui::Flex
 /// \brief Arrange a sequence of widgets in rows and/or columns.
@@ -219,6 +241,12 @@ public:
     float preferredWidthForHeight(float height) const override;
     float preferredHeightForWidth(float width) const override;
 
+    // Implementation of StylableObject interface
+    static void populateStyleSpecTable(style::SpecTable* table);
+    void populateStyleSpecTableVirtual(style::SpecTable* table) override {
+        populateStyleSpecTable(table);
+    }
+
 protected:
     void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onWidgetRemoved(Widget* child) override;
@@ -234,4 +262,4 @@ private:
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_FLEXLAYOUT_H
+#endif // VGC_UI_FLEX_H

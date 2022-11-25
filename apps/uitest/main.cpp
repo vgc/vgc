@@ -858,8 +858,8 @@ private:
 
     void createColorPalette_(ui::Widget* parent) {
         palette_ = parent->createChild<ui::ColorPalette>();
-        palette_->setStyleSheet(".ColorPalette { vertical-stretch: 0; }");
-        parent->createChild<ui::Widget>(); // vertical-stretch: 1
+        //palette_->setStyleSheet(".ColorPalette { vertical-stretch: 0; }");
+        //parent->createChild<ui::Widget>(); // vertical-stretch: 1
     }
 
     void onColorChanged_() {
