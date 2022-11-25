@@ -8,9 +8,9 @@ env:
   QT_VERSION: 5.15.2
   PYTHON_VERSION: 3.7
   VCPKG_VERSION: 2022.10.19
-  VCPKG_INSTALL_OPTIONS: --x-abi-tools-use-exact-versions
+  VCPKG_INSTALL_OPTIONS: --binarysource=clear
   VCPKG_BUILD_TYPE: release
-  VCPKG_DISABLE_COMPILER_TRACKING: ON
+  VCPKG_PACKAGES: freetype;harfbuzz
 
 defaults:
   run:
@@ -96,47 +96,50 @@ jobs:
         echo "Done."
         echo "Qt5Location=$pwd/$dirname" >> ${env:GITHUB_ENV}
 
-    # We need VCPKG_DEFAULT_BINARY_CACHE otherwise it would use:
-    #     C:\Users\runneradmin\AppData\Local\vcpkg\archives\
-    #
-    # For documentation on binary caching, see:
-    #    https://github.com/microsoft/vcpkg/blob/master/docs/users/binarycaching.md
-    #
     - name: Configure vckpg
+      working-directory: ${{github.workspace}}
       run: |
-        echo "VCPKG_ROOT_PARENT=${{github.workspace}}" >> $GITHUB_ENV
-        echo "VCPKG_ROOT=${{github.workspace}}/vcpkg" >> $GITHUB_ENV
-        echo "VCPKG_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
-        echo "VCPKG_OVERLAY_TRIPLETS=${{github.workspace}}/vcpkg/custom-triplets" >> $GITHUB_ENV
-        echo "VCPKG_DEFAULT_TRIPLET=vgc-x64-windows" >> $GITHUB_ENV
-        echo "VCPKG_DEFAULT_BINARY_CACHE=${{github.workspace}}/vcpkg/archives" >> $GITHUB_ENV
+        cd ..
+        PARENT="$(cmd //c cd)" # Current folder in 'D:\...' format (pwd would do '/d/...')
+        echo "VCPKG_ROOT_PARENT=$PARENT" >> $GITHUB_ENV
+        echo "VCPKG_ROOT=$PARENT/vcpkg" >> $GITHUB_ENV
+        echo "VCPKG_TOOLCHAIN_FILE=$PARENT/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+        echo "VCPKG_OVERLAY_TRIPLETS=$PARENT/vcpkg/custom-triplets" >> $GITHUB_ENV
+        echo "VCPKG_DEFAULT_TRIPLET=x64-windows-rel" >> $GITHUB_ENV
 
     - name: Cache vcpkg
       id: cache-vcpkg
       uses: actions/cache@v3
       with:
         path: ${{env.VCPKG_ROOT}}
-        key: vcpkg=${{env.VCPKG_VERSION}}-msvc=${{env.MSVC_VERSION}}-json=${{hashFiles('vcpkg.json')}}
+        key: vcpkg=${{env.VCPKG_VERSION}} triplet=${{env.VCPKG_DEFAULT_TRIPLET}} msvc=${{env.MSVC_VERSION}} packages=${{env.VCPKG_PACKAGES}}
 
     - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
       name: Bootstrap vcpkg and install packages
       working-directory: ${{env.VCPKG_ROOT_PARENT}}
       run: |
+        # Download vcpkg
         git clone --depth=1 --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git
+
+        # Bootstrap
+        cmd.exe /c bootstrap-vcpkg.bat
+
+        # Create custom triplet that only compile binaries with the given VCPKG_BUILD_TYPE
         cd vcpkg
-        mkdir archives
         mkdir "$VCPKG_OVERLAY_TRIPLETS"
         TRIPLET_FILE="$VCPKG_OVERLAY_TRIPLETS/$VCPKG_DEFAULT_TRIPLET.cmake"
         cp triplets/x64-windows.cmake "$TRIPLET_FILE"
         echo "set(VCPKG_BUILD_TYPE $VCPKG_BUILD_TYPE)" >> "$TRIPLET_FILE"
-        echo "set(VCPKG_DISABLE_COMPILER_TRACKING $VCPKG_DISABLE_COMPILER_TRACKING)" >> "$TRIPLET_FILE"
-        cmd.exe /c bootstrap-vcpkg.bat
-        vcpkg.exe \
+
+        # Install packages
+        # Note: "IFS" = Input Field Separators. Makes it possible to interpret ';' as argument separator.
+        #       We surround the command by parenthesese so that IFS is only redefined in a subshell.
+        (IFS=';'; vcpkg.exe \
           --vcpkg-root="$VCPKG_ROOT" \
           --overlay-triplets="$VCPKG_OVERLAY_TRIPLETS" \
           --triplet="$VCPKG_DEFAULT_TRIPLET" \
           $VCPKG_INSTALL_OPTIONS \
-          install
+          install $VCPKG_PACKAGES)
 
     - name: Setup Developer Command Prompt for VS
       uses: ilammy/msvc-dev-cmd@v1
@@ -159,9 +162,8 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_TOOLCHAIN_FILE" \
-          -DVCPKG_OVERLAY_TRIPLETS="$VCPKG_OVERLAY_TRIPLETS" \
           -DVCPKG_TARGET_TRIPLET="$VCPKG_DEFAULT_TRIPLET" \
-          -DVCPKG_INSTALL_OPTIONS="$VCPKG_INSTALL_OPTIONS" \
+          -DVCPKG_MANIFEST_MODE=OFF \
           -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" \
           -DPython_ROOT_DIR="$pythonLocation" \
           -DQt5_DIR="$Qt5Location/lib/cmake/Qt5" \
