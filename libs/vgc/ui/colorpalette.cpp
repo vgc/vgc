@@ -2791,7 +2791,7 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     m.itemHeight = hint(m.itemWidth, m.hinting);
     m.numRows = (numColors() + m.numColumns - 1) / m.numColumns;
     m.width = width;
-    m.height = (m.numRows - 1) * (m.itemHeight + m.gap) + m.itemHeight;
+    m.height = m.numRows * (m.itemPreferredWidth + m.gap) - m.gap;
     return m;
 }
 

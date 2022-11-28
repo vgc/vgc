@@ -17,12 +17,34 @@
 #include <vgc/ui/flex.h>
 
 #include <vgc/graphics/strings.h>
+#include <vgc/style/parse.h>
 #include <vgc/style/strings.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
 
 namespace vgc::ui {
+
+VGC_DEFINE_ENUM(
+    FlexDirection,
+    (Row, "row"),
+    (RowReverse, "row-reverse"),
+    (Column, "column"),
+    (ColumnReverse, "column-reverse"))
+
+VGC_DEFINE_ENUM(
+    MainAlignment,
+    (Start, "start"),
+    (End, "end"),
+    (Center, "center"),
+    (SpaceBetween, "space-between"),
+    (SpaceAround, "space-around"),
+    (SpaceEvenly, "space-evenly"),
+    (ForceStretch, "force-stretch"))
+
+VGC_DEFINE_ENUM( //
+    FlexWrap,
+    (NoWrap, "nowrap"))
 
 Flex::Flex(FlexDirection direction, FlexWrap wrap)
     : Widget()
@@ -44,6 +66,68 @@ void Flex::setDirection(FlexDirection direction) {
 void Flex::setWrap(FlexWrap wrap) {
     wrap_ = wrap;
     requestGeometryUpdate();
+}
+
+namespace {
+
+using style::StyleTokenIterator;
+using style::StyleTokenType;
+using style::StyleValue;
+
+StyleValue parseMainAlignment(StyleTokenIterator begin, StyleTokenIterator end_) {
+
+    using namespace strings;
+
+    StyleValue res = StyleValue::invalid();
+
+    // There must be exactly one token
+    if (end_ != begin + 1) {
+        return res;
+    }
+    StyleTokenType t = begin->type;
+
+    // The token should be an identifier
+    if (t != StyleTokenType::Identifier) {
+        return res;
+    }
+    const std::string& s = begin->codePointsValue;
+
+    // Converts the identifier to StyleValue storing a MainAlignment enum value.
+    if (s == start) {
+        res = StyleValue::custom(MainAlignment::Start);
+    }
+    else if (s == end) {
+        res = StyleValue::custom(MainAlignment::End);
+    }
+    else if (s == center) {
+        res = StyleValue::custom(MainAlignment::Center);
+    }
+    else if (s == space_between) {
+        res = StyleValue::custom(MainAlignment::SpaceBetween);
+    }
+    else if (s == space_around) {
+        res = StyleValue::custom(MainAlignment::SpaceAround);
+    }
+    else if (s == space_evenly) {
+        res = StyleValue::custom(MainAlignment::SpaceEvenly);
+    }
+    else if (s == force_stretch) {
+        res = StyleValue::custom(MainAlignment::ForceStretch);
+    }
+
+    return res;
+}
+
+} // namespace
+
+void Flex::populateStyleSpecTable(style::SpecTable* table) {
+    if (!table->setRegistered(staticClassName())) {
+        return;
+    }
+    using namespace strings;
+    auto start_ma = StyleValue::custom(MainAlignment::Start);
+    table->insert(main_alignment, start_ma, false, &parseMainAlignment);
+    SuperClass::populateStyleSpecTable(table);
 }
 
 void Flex::onWidgetAdded(Widget*, bool) {
@@ -110,81 +194,102 @@ float getGap(bool isRow, const Widget* widget, bool hinting) {
 } // namespace
 
 float Flex::preferredWidthForHeight(float height) const {
-    bool isRow_ = isRow();
+    style::LengthOrPercentageOrAuto w = preferredWidth();
     float width = 0.0f;
-    if (isRow_) {
-        float flexTopBottomPadding = getTopBottomPadding(this);
-        float flexPaddedHeight = height - flexTopBottomPadding;
-        Int numVisibleChildren = 0;
-        for (Widget* child : children()) {
-            if (child->visibility() == Visibility::Invisible) {
-                continue;
+    if (w.isAuto()) {
+        bool isRow_ = isRow();
+        if (isRow_) {
+            float flexTopBottomPadding = getTopBottomPadding(this);
+            float flexPaddedHeight = height - flexTopBottomPadding;
+            Int numVisibleChildren = 0;
+            for (Widget* child : children()) {
+                if (child->visibility() == Visibility::Invisible) {
+                    continue;
+                }
+                ++numVisibleChildren;
+                float childLeftRightMargins = getLeftRightMargins(child);
+                float childTopBottomMargins = getTopBottomMargins(child);
+                float childHeight =
+                    (std::max)(0.0f, flexPaddedHeight - childTopBottomMargins);
+                float childPreferredWidth = child->preferredWidthForHeight(childHeight);
+                width += childPreferredWidth + childLeftRightMargins;
             }
-            ++numVisibleChildren;
-            float childLeftRightMargins = getLeftRightMargins(child);
-            float childTopBottomMargins = getTopBottomMargins(child);
-            float childHeight =
-                (std::max)(0.0f, flexPaddedHeight - childTopBottomMargins);
-            float childPreferredWidth = child->preferredWidthForHeight(childHeight);
-            width += childPreferredWidth + childLeftRightMargins;
+            if (numVisibleChildren > 0) {
+                namespace gs = graphics::strings;
+                bool hinting = (style(gs::pixel_hinting) == gs::normal);
+                float gap = getGap(isRow_, this, hinting);
+                width += (numVisibleChildren - 1) * gap;
+            }
         }
-        if (numVisibleChildren > 0) {
-            namespace gs = graphics::strings;
-            bool hinting = (style(gs::pixel_hinting) == gs::normal);
-            float gap = getGap(isRow_, this, hinting);
-            width += (numVisibleChildren - 1) * gap;
+        else {
+            for (Widget* child : children()) {
+                if (child->visibility() == Visibility::Invisible) {
+                    continue;
+                }
+                float childLeftRightMargins = getLeftRightMargins(child);
+                float childPreferredWidth = child->preferredSize().x();
+                width = (std::max)(width, childPreferredWidth + childLeftRightMargins);
+            }
         }
+        width += getLeftRightPadding(this);
     }
     else {
-        for (Widget* child : children()) {
-            if (child->visibility() == Visibility::Invisible) {
-                continue;
-            }
-            float childLeftRightMargins = getLeftRightMargins(child);
-            float childPreferredWidth = child->preferredSize().x();
-            width = (std::max)(width, childPreferredWidth + childLeftRightMargins);
-        }
+        // fixed width
+        // TODO: support percentages
+        float refLength = 0.0f;
+        float valueIfAuto = 0.0f;
+        width = w.toPx(styleMetrics(), refLength, valueIfAuto);
     }
-    width += getLeftRightPadding(this);
     return width;
 }
 
 float Flex::preferredHeightForWidth(float width) const {
-    bool isRow_ = isRow();
+    style::LengthOrPercentageOrAuto h = preferredHeight();
     float height = 0.0f;
-    if (isRow_) {
-        for (Widget* child : children()) {
-            if (child->visibility() == Visibility::Invisible) {
-                continue;
+    if (h.isAuto()) {
+        bool isRow_ = isRow();
+        if (isRow_) {
+            for (Widget* child : children()) {
+                if (child->visibility() == Visibility::Invisible) {
+                    continue;
+                }
+                float childTopBottomMargins = getTopBottomMargins(child);
+                float childPreferredHeight = child->preferredSize().y();
+                height = (std::max)(height, childPreferredHeight + childTopBottomMargins);
             }
-            float childTopBottomMargins = getTopBottomMargins(child);
-            float childPreferredHeight = child->preferredSize().y();
-            height = (std::max)(height, childPreferredHeight + childTopBottomMargins);
         }
+        else {
+            float flexLeftRightPadding = getLeftRightPadding(this);
+            float flexPaddedWidth = width - flexLeftRightPadding;
+            Int numVisibleChildren = 0;
+            for (Widget* child : children()) {
+                if (child->visibility() == Visibility::Invisible) {
+                    continue;
+                }
+                ++numVisibleChildren;
+                float childLeftRightMargins = getLeftRightMargins(child);
+                float childTopBottomMargins = getTopBottomMargins(child);
+                float childWidth =
+                    (std::max)(0.0f, flexPaddedWidth - childLeftRightMargins);
+                float childPreferredHeight = child->preferredHeightForWidth(childWidth);
+                height += childPreferredHeight + childTopBottomMargins;
+            }
+            if (numVisibleChildren > 0) {
+                namespace gs = graphics::strings;
+                bool hinting = (style(gs::pixel_hinting) == gs::normal);
+                float gap = getGap(isRow_, this, hinting);
+                height += (numVisibleChildren - 1) * gap;
+            }
+        }
+        height += getTopBottomPadding(this);
     }
     else {
-        float flexLeftRightPadding = getLeftRightPadding(this);
-        float flexPaddedWidth = width - flexLeftRightPadding;
-        Int numVisibleChildren = 0;
-        for (Widget* child : children()) {
-            if (child->visibility() == Visibility::Invisible) {
-                continue;
-            }
-            ++numVisibleChildren;
-            float childLeftRightMargins = getLeftRightMargins(child);
-            float childTopBottomMargins = getTopBottomMargins(child);
-            float childWidth = (std::max)(0.0f, flexPaddedWidth - childLeftRightMargins);
-            float childPreferredHeight = child->preferredHeightForWidth(childWidth);
-            height += childPreferredHeight + childTopBottomMargins;
-        }
-        if (numVisibleChildren > 0) {
-            namespace gs = graphics::strings;
-            bool hinting = (style(gs::pixel_hinting) == gs::normal);
-            float gap = getGap(isRow_, this, hinting);
-            height += (numVisibleChildren - 1) * gap;
-        }
+        // fixed height
+        // TODO: support percentages
+        float refLength = 0.0f;
+        float valueIfAuto = 0.0f;
+        height = h.toPx(styleMetrics(), refLength, valueIfAuto);
     }
-    height += getTopBottomPadding(this);
     return height;
 }
 
@@ -305,6 +410,7 @@ detail::FlexData computeData(Flex* flex) {
     res.hinting = (flex->style(gs::pixel_hinting) == gs::normal);
     res.isRow = flex->isRow();
     res.isReverse = flex->isReverse();
+    res.mainAlignment = flex->style<MainAlignment>(strings::main_alignment);
     res.mainDir = 0;
     res.crossDir = 1;
     res.gap = getGap(res.isRow, flex, res.hinting);
@@ -385,11 +491,21 @@ detail::FlexChildData computeChildData(const detail::FlexData& data, Widget* chi
         res.mainPreferredSize = child->preferredHeightForWidth(childCrossSize);
     }
 
+    // For non-stretchable or non-shrinkable child widgets, update their
+    // effective min/max size based on their preferred size
+    //
+    if (res.shrink <= 0) {
+        res.mainMinSize = (std::max)(res.mainMinSize, res.mainPreferredSize);
+    }
+    if (res.stretch <= 0) {
+        res.mainMaxSize = (std::min)(res.mainMaxSize, res.mainPreferredSize);
+    }
+
     return res;
 }
 
 void updateChildData(
-    const detail::FlexData& data,
+    detail::FlexData& data,
     core::Array<detail::FlexChildData>& childData) {
 
     // Update most child data
@@ -406,35 +522,23 @@ void updateChildData(
         return;
     }
 
-    // If all shrink/stretch factors are equal to zero, they should behave as
+    // If all shrink factors are equal to zero, they should behave as
     // if they are all equal to one.
-    float eps = 1e-6f;
-    float totalShrink = 0;
-    float totalStretch = 0;
+    //
+    // XXX Maybe we should only do this if the widget has some 'force-shrink'
+    //     style, similar to 'force-stretch'.
+    //
+    data.totalShrink = 0;
+    data.totalStretch = 0;
     for (const detail::FlexChildData& d : childData) {
-        totalShrink += d.shrink;
-        totalStretch += d.stretch;
+        data.totalShrink += d.shrink;
+        data.totalStretch += d.stretch;
     }
-    if (totalStretch < eps) {
-        for (detail::FlexChildData& d : childData) {
-            d.stretch = 1.0f;
-        }
-    }
-    if (totalShrink < eps) {
+    if (data.totalShrink <= 0) {
         for (detail::FlexChildData& d : childData) {
             d.shrink = 1.0f;
         }
-    }
-
-    // For non-stretchable or non-shrinkable child widgets, update their
-    // effective min/max size based on their preferred size
-    for (detail::FlexChildData& d : childData) {
-        if (d.shrink <= 0) {
-            d.mainMinSize = (std::max)(d.mainMinSize, d.mainPreferredSize);
-        }
-        if (d.stretch <= 0) {
-            d.mainMaxSize = (std::min)(d.mainMaxSize, d.mainPreferredSize);
-        }
+        data.totalShrink = childData.length();
     }
 }
 
@@ -509,24 +613,29 @@ void normalStretch(
             d.mainSize = d.mainPreferredSize;
         }
     }
+    data.extraSizeAfterStretch = remainingExtraSize;
 }
 
 void emergencyStretch(
     detail::FlexData& data,
     core::Array<detail::FlexChildData>& childData) {
 
-    // Compute total stretch. We know it's > 0 (see updateChildData()).
-    float totalStretch = 0;
-    for (detail::FlexChildData& d : childData) {
-        totalStretch += d.stretch;
-    }
-    float totalStretchInv = 1.0f / totalStretch;
-
-    // Distribute extra size
     float extraSize = data.availableSize - data.totalMaxSize;
-    for (detail::FlexChildData& d : childData) {
-        float maxSize = (d.stretch > 0) ? d.mainMaxSize : d.mainPreferredSize;
-        d.mainSize = maxSize + extraSize * d.stretch * totalStretchInv;
+
+    if (data.mainAlignment == MainAlignment::ForceStretch) {
+        // Stretch every child past their max size
+        float extraSizePerChild = extraSize / childData.length();
+        for (detail::FlexChildData& d : childData) {
+            d.mainSize = d.mainMaxSize + extraSizePerChild;
+        }
+        data.extraSizeAfterStretch = 0;
+    }
+    else {
+        // Give every child its max size
+        for (detail::FlexChildData& d : childData) {
+            d.mainSize = d.mainMaxSize;
+        }
+        data.extraSizeAfterStretch = extraSize;
     }
 }
 
@@ -537,10 +646,9 @@ void stretchChildren(
 
     data.totalMaxSize = 0;
     for (detail::FlexChildData& d : childData) {
-        float maxSize = (d.stretch > 0) ? d.mainMaxSize : d.mainPreferredSize;
-        data.totalMaxSize += maxSize;
+        data.totalMaxSize += d.mainMaxSize;
     }
-    if (data.availableSize < data.totalMaxSize) {
+    if (data.availableSize < data.totalMaxSize && data.totalStretch > 0) {
         normalStretch(data, childData, childSlacks);
     }
     else {
@@ -637,6 +745,7 @@ void shrinkChildren(
     else {
         emergencyShrink(data, childData);
     }
+    data.extraSizeAfterStretch = 0;
 }
 
 } // namespace
@@ -671,12 +780,12 @@ void Flex::updateChildrenGeometry() {
     }
     else {
         // Compute how much extra size should be distributed
-        float totalPreferredSize = 0;
+        data.totalPreferredSize = 0;
         for (const detail::FlexChildData& childData : childData_) {
-            totalPreferredSize += childData.mainPreferredSize;
+            data.totalPreferredSize += childData.mainPreferredSize;
         }
         data.availableSize = computeAvailableSize(data, childData_);
-        data.extraSize = data.availableSize - totalPreferredSize;
+        data.extraSize = data.availableSize - data.totalPreferredSize;
 
         // Distribute extra size
         if (data.extraSize > 0) {
@@ -695,22 +804,46 @@ void Flex::updateChildrenGeometry() {
     }
 
     // Compute children 2D position
+    float mainAlignmentStartSpace = 0;
+    float mainAlignBetweenSpace = 0;
+    if (data.mainAlignment == MainAlignment::End) {
+        mainAlignmentStartSpace = data.extraSizeAfterStretch;
+    }
+    else if (data.mainAlignment == MainAlignment::Center) {
+        mainAlignmentStartSpace = 0.5f * data.extraSizeAfterStretch;
+    }
+    else if (data.mainAlignment == MainAlignment::SpaceBetween) {
+        if (childData_.length() > 1) {
+            mainAlignBetweenSpace =
+                data.extraSizeAfterStretch / (childData_.length() - 1);
+        }
+    }
+    else if (data.mainAlignment == MainAlignment::SpaceAround) {
+        mainAlignBetweenSpace = data.extraSizeAfterStretch / childData_.length();
+        mainAlignmentStartSpace = 0.5f * mainAlignBetweenSpace;
+    }
+    else if (data.mainAlignment == MainAlignment::SpaceEvenly) {
+        mainAlignBetweenSpace = data.extraSizeAfterStretch / (childData_.length() + 1);
+        mainAlignmentStartSpace = mainAlignBetweenSpace;
+    }
     if (data.isReverse) {
-        float mainPosition = data.contentMainPosition + data.contentMainSize;
+        float mainPosition =
+            data.contentMainPosition + data.contentMainSize - mainAlignmentStartSpace;
         for (detail::FlexChildData& d : childData_) {
             mainPosition -= d.mainSize + d.mainMargins[1];
             d.position[data.mainDir] = mainPosition;
             d.position[data.crossDir] = data.contentCrossPosition + d.crossMargins[0];
-            mainPosition -= d.mainMargins[0] + data.gap;
+            mainPosition -= d.mainMargins[0] + data.gap + mainAlignBetweenSpace;
         }
     }
     else {
-        float mainPosition = data.contentMainPosition;
+        float mainPosition = data.contentMainPosition + mainAlignmentStartSpace;
         for (detail::FlexChildData& d : childData_) {
             mainPosition += d.mainMargins[0];
             d.position[data.mainDir] = mainPosition;
             d.position[data.crossDir] = data.contentCrossPosition + d.crossMargins[0];
-            mainPosition += d.mainSize + d.mainMargins[1] + data.gap;
+            mainPosition +=
+                d.mainSize + d.mainMargins[1] + data.gap + mainAlignBetweenSpace;
         }
     }
 

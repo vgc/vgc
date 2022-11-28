@@ -43,6 +43,7 @@ const core::StringId Widget("Widget");
 // Properties
 // ----------
 
+// Widget
 const core::StringId min_width("min-width");
 const core::StringId min_height("min-height");
 const core::StringId max_width("max-width");
@@ -57,6 +58,16 @@ const core::StringId horizontal_stretch("horizontal-stretch");
 const core::StringId horizontal_shrink("horizontal-shrink");
 const core::StringId vertical_stretch("vertical-stretch");
 const core::StringId vertical_shrink("vertical-shrink");
+
+// Flex
+const core::StringId main_alignment("main-alignment");
+const core::StringId start("start");
+const core::StringId end("end");
+const core::StringId center("center");
+const core::StringId space_between("space-between");
+const core::StringId space_around("space-around");
+const core::StringId space_evenly("space-evenly");
+const core::StringId force_stretch("force-stretch");
 
 // Style classes / pseudo-classes
 // ------------------------------

@@ -56,6 +56,15 @@ VGC_UI_API extern const core::StringId horizontal_shrink;
 VGC_UI_API extern const core::StringId vertical_stretch;
 VGC_UI_API extern const core::StringId vertical_shrink;
 
+VGC_UI_API extern const core::StringId main_alignment;
+VGC_UI_API extern const core::StringId start;
+VGC_UI_API extern const core::StringId end;
+VGC_UI_API extern const core::StringId center;
+VGC_UI_API extern const core::StringId space_between;
+VGC_UI_API extern const core::StringId space_around;
+VGC_UI_API extern const core::StringId space_evenly;
+VGC_UI_API extern const core::StringId force_stretch;
+
 VGC_UI_API extern const core::StringId root;
 
 VGC_UI_API extern const core::StringId uncheckable;
