@@ -63,6 +63,7 @@ VGC_UI_API extern const core::StringId center;
 VGC_UI_API extern const core::StringId space_between;
 VGC_UI_API extern const core::StringId space_around;
 VGC_UI_API extern const core::StringId space_evenly;
+VGC_UI_API extern const core::StringId force_stretch;
 
 VGC_UI_API extern const core::StringId root;
 

@@ -67,6 +67,7 @@ const core::StringId center("center");
 const core::StringId space_between("space-between");
 const core::StringId space_around("space-around");
 const core::StringId space_evenly("space-evenly");
+const core::StringId force_stretch("force-stretch");
 
 // Style classes / pseudo-classes
 // ------------------------------

@@ -85,6 +85,13 @@
     text-horizontal-align: center;
 }
 
+.Button > .Label {
+    horizontal-shrink: 1;
+    horizontal-stretch: 1;
+    vertical-shrink: 1;
+    vertical-stretch: 1;
+}
+
 .MenuButton {
     preferred-height: 25dp;
 }
@@ -210,7 +217,7 @@
 }
 
 .ColorPalette {
-    main-alignment: center;
+    main-alignment: end;
 }
 
 .ColorPaletteSelector {

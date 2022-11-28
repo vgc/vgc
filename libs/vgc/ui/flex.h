@@ -39,13 +39,50 @@ VGC_DECLARE_ENUM(FlexDirection)
 /// \enum vgc::ui::MainAlignment
 /// \brief How to align the children of a Flex along the main axis.
 ///
+/// This enum class stores as an enum the value of the `main-alignment` style
+/// property.
+///
+/// The `main-alignment` style property is used to specify how to distribute
+/// any extra space along the main axis of a `Flex`, after all the stretchable
+/// child widgets have reached their maximum size:
+///
+/// - `start`: the widgets are packed at the start of the main axis, with no
+///    extra space between them.
+///
+/// - `end`: the widgets are packed at the end of the main axis, with no extra
+///    space between them.
+///
+/// - `center`: the widgets are packed centered on the middle of the main axis,
+///    with no extra space between them.
+///
+/// - `space-between`: the extra space is equally distributed between the
+///    widgets, with no space before the first widget or after the last widget.
+///    If there is only widget in the `Flex`, this is equivalent to `start`.
+///
+/// - `space-around`: the extra space is equally distributed on both sides of
+///    widgets. This means that the space before the first widget and after the
+///    last widget is half the space between the widgets.
+///
+/// - `space-evenly`: the extra space is equally distributed not only between
+///    the widgets, but also before the first widget and after the last widget.
+///    This means that the space before the first widget and after the last
+///    widget is equal to the space between the widgets.
+///
+/// - `force-stretch`: forces stretchable widgets to be larger than their
+///    maximum size, and non-stretchable widgets to be larger than their
+///    preferred size, effectiveley ensuring that there is no extra space to
+///    distribute between the widgets.
+///
+/// The default value is `start`.
+///
 enum class MainAlignment {
     Start,
     End,
     Center,
     SpaceBetween,
     SpaceAround,
-    SpaceEvenly
+    SpaceEvenly,
+    ForceStretch
 };
 
 VGC_UI_API

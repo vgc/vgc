@@ -27,23 +27,24 @@ namespace vgc::ui {
 
 VGC_DEFINE_ENUM(
     FlexDirection,
-    (Row, "Row"),
-    (RowReverse, "RowReverse"),
-    (Column, "Column"),
-    (ColumnReverse, "ColumnReverse"))
+    (Row, "row"),
+    (RowReverse, "row-reverse"),
+    (Column, "column"),
+    (ColumnReverse, "column-reverse"))
 
 VGC_DEFINE_ENUM(
     MainAlignment,
-    (Start, "Start"),
-    (End, "End"),
-    (Center, "Center"),
-    (SpaceBetween, "SpaceBetween"),
-    (SpaceAround, "SpaceAround"),
-    (SpaceEvenly, "SpaceEvenly"))
+    (Start, "start"),
+    (End, "end"),
+    (Center, "center"),
+    (SpaceBetween, "space-between"),
+    (SpaceAround, "space-around"),
+    (SpaceEvenly, "space-evenly"),
+    (ForceStretch, "force-stretch"))
 
 VGC_DEFINE_ENUM( //
     FlexWrap,
-    (NoWrap, "NoWrap"))
+    (NoWrap, "nowrap"))
 
 Flex::Flex(FlexDirection direction, FlexWrap wrap)
     : Widget()
@@ -109,6 +110,9 @@ StyleValue parseMainAlignment(StyleTokenIterator begin, StyleTokenIterator end_)
     }
     else if (s == space_evenly) {
         res = StyleValue::custom(MainAlignment::SpaceEvenly);
+    }
+    else if (s == force_stretch) {
+        res = StyleValue::custom(MainAlignment::ForceStretch);
     }
 
     return res;
@@ -487,6 +491,16 @@ detail::FlexChildData computeChildData(const detail::FlexData& data, Widget* chi
         res.mainPreferredSize = child->preferredHeightForWidth(childCrossSize);
     }
 
+    // For non-stretchable or non-shrinkable child widgets, update their
+    // effective min/max size based on their preferred size
+    //
+    if (res.shrink <= 0) {
+        res.mainMinSize = (std::max)(res.mainMinSize, res.mainPreferredSize);
+    }
+    if (res.stretch <= 0) {
+        res.mainMaxSize = (std::min)(res.mainMaxSize, res.mainPreferredSize);
+    }
+
     return res;
 }
 
@@ -508,37 +522,23 @@ void updateChildData(
         return;
     }
 
-    // If all shrink/stretch factors are equal to zero, they should behave as
+    // If all shrink factors are equal to zero, they should behave as
     // if they are all equal to one.
-    float eps = 1e-6f;
+    //
+    // XXX Maybe we should only do this if the widget has some 'force-shrink'
+    //     style, similar to 'force-stretch'.
+    //
     data.totalShrink = 0;
     data.totalStretch = 0;
     for (const detail::FlexChildData& d : childData) {
         data.totalShrink += d.shrink;
         data.totalStretch += d.stretch;
     }
-    /*
-    if (data.totalStretch < eps) {
-        for (detail::FlexChildData& d : childData) {
-            d.stretch = 1.0f;
-        }
-    }
-    */
-    if (data.totalShrink < eps) {
+    if (data.totalShrink <= 0) {
         for (detail::FlexChildData& d : childData) {
             d.shrink = 1.0f;
         }
-    }
-
-    // For non-stretchable or non-shrinkable child widgets, update their
-    // effective min/max size based on their preferred size
-    for (detail::FlexChildData& d : childData) {
-        if (d.shrink <= 0) {
-            d.mainMinSize = (std::max)(d.mainMinSize, d.mainPreferredSize);
-        }
-        if (d.stretch <= 0) {
-            d.mainMaxSize = (std::min)(d.mainMaxSize, d.mainPreferredSize);
-        }
+        data.totalShrink = childData.length();
     }
 }
 
@@ -620,28 +620,23 @@ void emergencyStretch(
     detail::FlexData& data,
     core::Array<detail::FlexChildData>& childData) {
 
-    /*
-    // Compute total stretch. We know it's > 0 (see updateChildData()).
-    float totalStretch = 0;
-    for (detail::FlexChildData& d : childData) {
-        totalStretch += d.stretch;
-    }
-    float totalStretchInv = 1.0f / totalStretch;
-
-    // Distribute extra size
     float extraSize = data.availableSize - data.totalMaxSize;
-    for (detail::FlexChildData& d : childData) {
-        float maxSize = (d.stretch > 0) ? d.mainMaxSize : d.mainPreferredSize;
-        d.mainSize = maxSize + extraSize * d.stretch * totalStretchInv;
-    }
-*/
 
-    // Give every child its max size
-    for (detail::FlexChildData& d : childData) {
-        d.mainSize = d.mainMaxSize;
+    if (data.mainAlignment == MainAlignment::ForceStretch) {
+        // Stretch every child past their max size
+        float extraSizePerChild = extraSize / childData.length();
+        for (detail::FlexChildData& d : childData) {
+            d.mainSize = d.mainMaxSize + extraSizePerChild;
+        }
+        data.extraSizeAfterStretch = 0;
     }
-
-    data.extraSizeAfterStretch = data.availableSize - data.totalMaxSize;
+    else {
+        // Give every child its max size
+        for (detail::FlexChildData& d : childData) {
+            d.mainSize = d.mainMaxSize;
+        }
+        data.extraSizeAfterStretch = extraSize;
+    }
 }
 
 void stretchChildren(
@@ -651,10 +646,9 @@ void stretchChildren(
 
     data.totalMaxSize = 0;
     for (detail::FlexChildData& d : childData) {
-        float maxSize = (d.stretch > 0) ? d.mainMaxSize : d.mainPreferredSize;
-        data.totalMaxSize += maxSize;
+        data.totalMaxSize += d.mainMaxSize;
     }
-    if (data.availableSize < data.totalMaxSize) {
+    if (data.availableSize < data.totalMaxSize && data.totalStretch > 0) {
         normalStretch(data, childData, childSlacks);
     }
     else {
@@ -765,21 +759,6 @@ void Flex::updateChildrenGeometry() {
     namespace ss = style::strings;
     using detail::getLengthOrPercentageInPx;
 
-    if (hasStyleClass(core::StringId("Menu"))) {
-        VGC_DEBUG_TMP("menu->updateChildrenGeometry() - size = {}", size());
-        if (size().x() == 154) {
-            VGC_DEBUG_TMP("file menu");
-        }
-    }
-
-    if (hasStyleClass(core::StringId("ColorPalette"))) {
-        VGC_DEBUG_TMP("ColorPalette  updateChildrenGeometry", size());
-    }
-
-    if (hasStyleClass(core::StringId("MenuButton"))) {
-        VGC_DEBUG_TMP("menu->updateChildrenGeometry() - size = {}", size());
-    }
-
     // Compute / update input metrics about this Flex and its children.
     // Fast return if no visible child.
     //
@@ -801,12 +780,12 @@ void Flex::updateChildrenGeometry() {
     }
     else {
         // Compute how much extra size should be distributed
-        float totalPreferredSize = 0;
+        data.totalPreferredSize = 0;
         for (const detail::FlexChildData& childData : childData_) {
-            totalPreferredSize += childData.mainPreferredSize;
+            data.totalPreferredSize += childData.mainPreferredSize;
         }
         data.availableSize = computeAvailableSize(data, childData_);
-        data.extraSize = data.availableSize - totalPreferredSize;
+        data.extraSize = data.availableSize - data.totalPreferredSize;
 
         // Distribute extra size
         if (data.extraSize > 0) {
@@ -825,29 +804,46 @@ void Flex::updateChildrenGeometry() {
     }
 
     // Compute children 2D position
+    float mainAlignmentStartSpace = 0;
+    float mainAlignBetweenSpace = 0;
+    if (data.mainAlignment == MainAlignment::End) {
+        mainAlignmentStartSpace = data.extraSizeAfterStretch;
+    }
+    else if (data.mainAlignment == MainAlignment::Center) {
+        mainAlignmentStartSpace = 0.5f * data.extraSizeAfterStretch;
+    }
+    else if (data.mainAlignment == MainAlignment::SpaceBetween) {
+        if (childData_.length() > 1) {
+            mainAlignBetweenSpace =
+                data.extraSizeAfterStretch / (childData_.length() - 1);
+        }
+    }
+    else if (data.mainAlignment == MainAlignment::SpaceAround) {
+        mainAlignBetweenSpace = data.extraSizeAfterStretch / childData_.length();
+        mainAlignmentStartSpace = 0.5f * mainAlignBetweenSpace;
+    }
+    else if (data.mainAlignment == MainAlignment::SpaceEvenly) {
+        mainAlignBetweenSpace = data.extraSizeAfterStretch / (childData_.length() + 1);
+        mainAlignmentStartSpace = mainAlignBetweenSpace;
+    }
     if (data.isReverse) {
-        float mainPosition = data.contentMainPosition + data.contentMainSize;
+        float mainPosition =
+            data.contentMainPosition + data.contentMainSize - mainAlignmentStartSpace;
         for (detail::FlexChildData& d : childData_) {
             mainPosition -= d.mainSize + d.mainMargins[1];
             d.position[data.mainDir] = mainPosition;
             d.position[data.crossDir] = data.contentCrossPosition + d.crossMargins[0];
-            mainPosition -= d.mainMargins[0] + data.gap;
+            mainPosition -= d.mainMargins[0] + data.gap + mainAlignBetweenSpace;
         }
     }
     else {
-        float mainPositionOffset = 0; // MainAlignment::Start
-        if (data.mainAlignment == MainAlignment::End) {
-            mainPositionOffset = data.extraSizeAfterStretch;
-        }
-        else if (data.mainAlignment == MainAlignment::Center) {
-            mainPositionOffset = hinted(0.5f * data.extraSizeAfterStretch, data.hinting);
-        }
-        float mainPosition = data.contentMainPosition + mainPositionOffset;
+        float mainPosition = data.contentMainPosition + mainAlignmentStartSpace;
         for (detail::FlexChildData& d : childData_) {
             mainPosition += d.mainMargins[0];
             d.position[data.mainDir] = mainPosition;
             d.position[data.crossDir] = data.contentCrossPosition + d.crossMargins[0];
-            mainPosition += d.mainSize + d.mainMargins[1] + data.gap;
+            mainPosition +=
+                d.mainSize + d.mainMargins[1] + data.gap + mainAlignBetweenSpace;
         }
     }
 
