@@ -548,7 +548,7 @@ public:
             throwRangeNotInRange_(offset, offset + count);
         }
 
-        const Int subspanExtent =
+        constexpr Int subspanExtent =
             (count != dynamicExtent
                  ? count
                  : (extent == dynamicExtent ? dynamicExtent : extent - offset));
