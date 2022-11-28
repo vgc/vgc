@@ -1090,6 +1090,15 @@ IntType ifloor(FloatType x) {
 struct VGC_CORE_API NoInit {};
 inline constexpr NoInit noInit = {};
 
+/// \struct vgc::core::UncheckedInit
+/// \brief Tag to select a function overload that doesn't perform checks.
+///
+/// `UncheckedInit` is a tag-like structure used to select a function overload
+/// (typically, a constructor) that doesn't perform checks.
+///
+struct VGC_CORE_API UncheckedInit {};
+static constexpr UncheckedInit uncheckedInit = {};
+
 /// Small epsilon value under which two doubles are considered
 /// indistinguishable.
 ///

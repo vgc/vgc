@@ -35,6 +35,7 @@ vgc_add_library(core
         python.h
         random.h
         sharedconst.h
+        span.h
         stopwatch.h
         stringid.h
         templateutil.h
