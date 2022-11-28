@@ -44,7 +44,10 @@
 
 #if defined(VGC_CORE_COMPILER_CLANG) || defined(VGC_CORE_COMPILER_GCC)
 #    define VGC_FORCE_INLINE inline __attribute__((always_inline))
+// clang-format off
+// clang format bug: "_Pragma(#x)" -> "_Pragma(#    x)"
 #    define VGC_DO_PRAGMA_(x) _Pragma(#x)
+// clang-format on
 #    define VGC_WARNING_PUSH VGC_DO_PRAGMA_(GCC diagnostic push)
 #    define VGC_WARNING_POP VGC_DO_PRAGMA_(GCC diagnostic pop)
 #    define VGC_WARNING_GCC_DISABLE_(option)                                             \
