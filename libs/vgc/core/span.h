@@ -520,16 +520,29 @@ public:
 
         const Int len = length();
         if constexpr (extent != dynamicExtent) {
-            static_assert(
-                offset + count <= extent,
-                "'offset + count' exceeds 'extent' in Span::subspan<offset, count>()");
+            if constexpr (count != dynamicExtent) {
+                // span<T, n>::subspan<T, n>
+                static_assert(
+                    offset + count <= extent,
+                    "'offset + count' exceeds 'extent' in Span::subspan<offset, "
+                    "count>()");
+            }
+            else {
+                // span<T, n>::subspan<T, dynamicExtent>
+                static_assert(
+                    offset <= extent,
+                    "'offset' exceeds 'extent' in Span::subspan<offset, "
+                    "dynamicExtent>()");
+            }
         }
         else if constexpr (count != dynamicExtent) {
+            // span<T, dynamicExtent>::subspan<T, n>
             if (count > len - offset) {
                 throwRangeNotInRange_(offset, offset + count);
             }
         }
         else if (offset > len) {
+            // span<T, dynamicExtent>::subspan<T, dynamicExtent>
             throwRangeNotInRange_(offset, offset + count);
         }
 
@@ -619,7 +632,8 @@ public:
         if (count != dynamicExtent) {
             if (count < 0) {
                 throw NegativeIntegerError(format(
-                    "Subspan::subspan({}, {}): 'count' cannot be negative if not equal "
+                    "Subspan::subspan({}, {}): 'count' cannot be negative if not "
+                    "equal "
                     "to 'dynamicExtent'.",
                     offset,
                     count));
