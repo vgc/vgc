@@ -70,7 +70,8 @@ struct SpanPair<T, dynamicExtent> {
 /// \class vgc::core::Span
 /// \brief Object referring to a contiguous sequence of elements.
 ///
-/// It is a simpler version of std::span until we compile with C++20.
+/// It is similar to std::span but uses `Int` instead of `size_t`, implements checks
+/// in constructors, and has utility methods (search, find, etc...).
 ///
 template<typename T, Int extent_ = dynamicExtent>
 class Span {
@@ -143,7 +144,7 @@ public:
         checkLengthForInit_(length);
     }
 
-    /// Creates a `Span` that is a view over the range [first, end).
+    /// Creates a `Span` that is a view over the range [first, last).
     ///
     /// Throws `LogicError` if `std::distance(first, last) != extent` for static extents.
     ///
