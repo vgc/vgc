@@ -44,10 +44,25 @@
 
 #if defined(VGC_CORE_COMPILER_CLANG) || defined(VGC_CORE_COMPILER_GCC)
 #    define VGC_FORCE_INLINE inline __attribute__((always_inline))
+#    define VGC_DO_PRAGMA_(x) _Pragma(#x)
+#    define VGC_WARNING_PUSH VGC_DO_PRAGMA_(GCC diagnostic push)
+#    define VGC_WARNING_POP VGC_DO_PRAGMA_(GCC diagnostic pop)
+#    define VGC_WARNING_GCC_DISABLE_(option)                                             \
+        VGC_DO_PRAGMA_(GCC diagnostic ignored #option)
+#    define VGC_WARNING_GCC_DISABLE(wname) VGC_WARNING_GCC_DISABLE_(-W##wname)
+#    define VGC_WARNING_MSVC_DISABLE(codes)
 #elif defined(VGC_CORE_COMPILER_MSVC)
 #    define VGC_FORCE_INLINE inline __forceinline
+#    define VGC_WARNING_PUSH __pragma(warning(push))
+#    define VGC_WARNING_POP __pragma(warning(pop))
+#    define VGC_WARNING_GCC_DISABLE(wname)
+#    define VGC_WARNING_MSVC_DISABLE(codes) __pragma(warning(disable : codes))
 #else
 #    define VGC_FORCE_INLINE inline
+#    define VGC_WARNING_PUSH
+#    define VGC_WARNING_POP
+#    define VGC_WARNING_GCC_DISABLE(wname)
+#    define VGC_WARNING_MSVC_DISABLE(codes)
 #endif
 
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(nodiscard) >= 201907L

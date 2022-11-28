@@ -44,6 +44,8 @@ public:
     using ScalarType = float;
     static constexpr Int dimension = 2;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Triangle2x`.
     ///
     Triangle2x(core::NoInit)
@@ -52,6 +54,7 @@ public:
             Vec2x(core::noInit),
             Vec2x(core::noInit)} {
     }
+    VGC_WARNING_POP
 
     /// Creates a `Triangle2x` initialized to [(0, 0), (0, 0), (0, 0)].
     ///

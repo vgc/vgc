@@ -50,10 +50,13 @@ public:
     using ScalarType = double;
     static constexpr Int dimension = 2;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Vec2d`.
     ///
     Vec2d(core::NoInit) {
     }
+    VGC_WARNING_POP
 
     /// Creates a `Vec2d` initialized to (0, 0).
     ///

@@ -44,6 +44,8 @@ public:
     using ScalarType = double;
     static constexpr Int dimension = 2;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Triangle2d`.
     ///
     Triangle2d(core::NoInit)
@@ -52,6 +54,7 @@ public:
             Vec2d(core::noInit),
             Vec2d(core::noInit)} {
     }
+    VGC_WARNING_POP
 
     /// Creates a `Triangle2d` initialized to [(0, 0), (0, 0), (0, 0)].
     ///

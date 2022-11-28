@@ -35,10 +35,13 @@ namespace vgc::core {
 ///
 class VGC_CORE_API Color {
 public:
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized Color.
     ///
     Color(core::NoInit) {
     }
+    VGC_WARNING_POP
 
     /// Creates a Color initialized to black.
     ///

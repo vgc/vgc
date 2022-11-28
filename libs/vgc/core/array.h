@@ -32,9 +32,9 @@
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
 #include <vgc/core/sharedconst.h>
+#include <vgc/core/templateutil.h>
 
 #include <vgc/core/detail/containerutil.h>
-#include <vgc/core/templateutil.h>
 
 namespace vgc::core {
 
@@ -725,7 +725,7 @@ public:
         shrinkToFit_();
     }
 
-    /// Returns a mutable reference to the element at index `i`.
+    /// Returns a reference to the element at index `i`.
     ///
     /// Throws `IndexError` if this `Array` is empty or if `i` does not belong
     /// to [`0`, `length() - 1`].
@@ -763,7 +763,7 @@ public:
         // Note: No need for int_cast (bounds already checked)
     }
 
-    /// Returns a mutable reference to the element at index `i`, without
+    /// Returns a reference to the element at index `i`, without
     /// bounds checking.
     ///
     /// The behavior is undefined if this `Array` is empty or if `i` does not
@@ -795,7 +795,7 @@ public:
         return data_[static_cast<size_type>(i)];
     }
 
-    /// Returns a mutable reference to the element at index `i`, with
+    /// Returns a reference to the element at index `i`, with
     /// wrapping behavior.
     ///
     /// Throws `IndexError` if this `Array` is empty.
@@ -839,7 +839,7 @@ public:
         return data_[static_cast<size_type>(wrap_(i))];
     }
 
-    /// Returns a mutable reference to the first element in this `Array`.
+    /// Returns a reference to the first element in this `Array`.
     ///
     /// Throws `IndexError` if this `Array` is empty.
     ///
@@ -876,7 +876,7 @@ public:
         return *begin();
     }
 
-    /// Returns a mutable reference to the last element in this `Array`.
+    /// Returns a reference to the last element in this `Array`.
     ///
     /// Throws `IndexError` if this `Array` is empty.
     ///
@@ -913,7 +913,7 @@ public:
         return *(end() - 1);
     }
 
-    /// Returns a mutable pointer to the underlying data.
+    /// Returns a pointer to the underlying data.
     ///
     /// You can use `data()` together with `length()` or `size()` to pass the
     /// content of this `Array` to an API expecting a C-style array.
@@ -2474,30 +2474,26 @@ private:
     }
 
     // Checks whether index/iterator i is valid and dereferenceable:
-    //     0 <= i < size()
+    //     0 <= i < length()
     //
     template<typename IntType>
     void throwNotInRange_(IntType i) const {
         throw IndexError(
             "Array index " + toString(i) + " out of range "
             + (isEmpty() ? "(the array is empty)"
-                         : ("[0, " + toString(size() - 1) + "] " + "(array length is "
-                            + toString(size()) + ").")));
+                         : ("[0, " + toString(length() - 1) + "] " + "(array length is "
+                            + toString(length()) + ").")));
     }
-    void checkInRange_(size_type i) const {
-        // Note: we compare as an unsigned int with size(), rather than as a
-        // signed int with length(), because we are currently using std::vector
-        // as a backend, thus size() is cached while length() isn't, thus
-        // comparing with size() should be faster (one less comparison).
-        if (i >= size()) {
+    void checkInRange_(Int i) const {
+        if (i < 0 || i >= length()) {
             throwNotInRange_(i);
         }
     }
-    void checkInRange_(Int i) const {
+    void checkInRange_(size_type i) const {
         try {
-            checkInRange_(int_cast<size_type>(i));
+            checkInRange_(int_cast<Int>(i));
         }
-        catch (NegativeIntegerError&) {
+        catch (IntegerOverflowError&) {
             throwNotInRange_(i);
         }
     }
@@ -2734,7 +2730,7 @@ private:
 ///
 template<typename T>
 bool operator==(const Array<T>& a1, const Array<T>& a2) {
-    return a1.size() == a2.size() && std::equal(a1.begin(), a1.end(), a2.begin());
+    return a1.length() == a2.length() && std::equal(a1.begin(), a1.end(), a2.begin());
 }
 
 /// Returns whether the arrays `a1` and `a2` are different, that is, whether

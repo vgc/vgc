@@ -57,10 +57,13 @@ public:
     using ScalarType = float;
     static constexpr Int dimension = 4;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Mat4x`.
     ///
     Mat4x(core::NoInit) {
     }
+    VGC_WARNING_POP
 
     /// Creates a `Mat4x` initialized to the null matrix `Mat3x(0)`.
     ///
