@@ -99,8 +99,7 @@ jobs:
     - name: Configure vckpg
       working-directory: ${{github.workspace}}
       run: |
-        cd ..
-        PARENT="$(cmd //c cd)" # Current folder in 'D:\...' format (pwd would do '/d/...')
+        PARENT="${{github.workspace}}"
         echo "VCPKG_ROOT_PARENT=$PARENT" >> $GITHUB_ENV
         echo "VCPKG_ROOT=$PARENT/vcpkg" >> $GITHUB_ENV
         echo "VCPKG_TOOLCHAIN_FILE=$PARENT/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
@@ -112,20 +111,23 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{env.VCPKG_ROOT}}
-        key: vcpkg=${{env.VCPKG_VERSION}} triplet=${{env.VCPKG_DEFAULT_TRIPLET}} msvc=${{env.MSVC_VERSION}} packages=${{env.VCPKG_PACKAGES}}
+        key: v2 vcpkg=${{env.VCPKG_VERSION}} triplet=${{env.VCPKG_DEFAULT_TRIPLET}} msvc=${{env.MSVC_VERSION}} packages=${{env.VCPKG_PACKAGES}}
 
     - if: ${{ steps.cache-vcpkg.outputs.cache-hit != 'true' }}
       name: Bootstrap vcpkg and install packages
       working-directory: ${{env.VCPKG_ROOT_PARENT}}
       run: |
+        # Delete manifest file, otherwise, we cannot manually install packages
+        rm "${{github.workspace}}/vcpkg.json"
+
         # Download vcpkg
         git clone --depth=1 --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git
 
         # Bootstrap
+        cd vcpkg
         cmd.exe /c bootstrap-vcpkg.bat
 
         # Create custom triplet that only compile binaries with the given VCPKG_BUILD_TYPE
-        cd vcpkg
         mkdir "$VCPKG_OVERLAY_TRIPLETS"
         TRIPLET_FILE="$VCPKG_OVERLAY_TRIPLETS/$VCPKG_DEFAULT_TRIPLET.cmake"
         cp triplets/x64-windows.cmake "$TRIPLET_FILE"
@@ -133,8 +135,8 @@ jobs:
 
         # Install packages
         # Note: "IFS" = Input Field Separators. Makes it possible to interpret ';' as argument separator.
-        #       We surround the command by parenthesese so that IFS is only redefined in a subshell.
-        (IFS=';'; vcpkg.exe \
+        #       We surround the command by parentheses so that IFS is only redefined in a subshell.
+        (IFS=';'; ./vcpkg.exe \
           --vcpkg-root="$VCPKG_ROOT" \
           --overlay-triplets="$VCPKG_OVERLAY_TRIPLETS" \
           --triplet="$VCPKG_DEFAULT_TRIPLET" \
@@ -185,3 +187,4 @@ jobs:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
         VGC_CODESIGN_URL: ${{secrets.VGC_CODESIGN_URL}}
       run: cmake --build . --target deploy
+
