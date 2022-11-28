@@ -872,7 +872,7 @@ inline constexpr bool isSpan = detail::IsSpan<T>::value;
 
 } // namespace vgc::core
 
-template<typename T, Int extent>
+template<typename T, vgc::Int extent>
 struct fmt::formatter<vgc::core::Span<T, extent>> : fmt::formatter<T> {
     template<typename FormatContext>
     auto format(const vgc::core::Span<T, extent>& x, FormatContext& ctx)
