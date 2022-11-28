@@ -65,10 +65,13 @@ public:
     using ScalarType = float;
     static constexpr Int dimension = 1;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Range1x`.
     ///
     Range1x(core::NoInit) {
     }
+    VGC_WARNING_POP
 
     /// Creates a zero-initialized `Range1x`.
     ///

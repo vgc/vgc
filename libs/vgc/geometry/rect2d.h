@@ -74,10 +74,13 @@ public:
     using ScalarType = double;
     static constexpr Int dimension = 2;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Rect2d`.
     ///
     Rect2d(core::NoInit) {
     }
+    VGC_WARNING_POP
 
     /// Creates a zero-initialized `Rect2d`.
     ///

@@ -49,9 +49,12 @@ public:
     using ScalarType = float;
     static constexpr Int dimension = 4;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Vec4f`.
     ///
     Vec4f(core::NoInit) {}
+    VGC_WARNING_POP
 
     /// Creates a `Vec4f` initialized to (0, 0, 0, 0).
     ///

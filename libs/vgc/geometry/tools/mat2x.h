@@ -48,10 +48,13 @@ public:
     using ScalarType = float;
     static constexpr Int dimension = 2;
 
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Mat2x`.
     ///
     Mat2x(core::NoInit) {
     }
+    VGC_WARNING_POP
 
     /// Creates a `Mat2x` initialized to the null matrix `Mat2x(0)`.
     ///
