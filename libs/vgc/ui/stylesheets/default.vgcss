@@ -216,10 +216,6 @@
     vertical-stretch: 0;
 }
 
-.ColorPalette {
-    main-alignment: end;
-}
-
 .ColorPaletteSelector {
     row-gap: 10dp;
 }
