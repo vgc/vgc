@@ -432,6 +432,8 @@ public:
         return pair_.length;
     }
 
+    /// Returns the size in bytes of the contiguous sequence of elements in memory.
+    ///
     constexpr Int sizeInBytes() const noexcept {
         return length() * sizeof(element_type);
     }

@@ -521,8 +521,14 @@ public:
 
     /// Returns the number of elements in this `Array`.
     ///
-    Int length() const {
+    Int length() const noexcept {
         return length_;
+    }
+
+    /// Returns the size in bytes of the contiguous sequence of elements in memory.
+    ///
+    Int sizeInBytes() const noexcept {
+        return length() * sizeof(value_type);
     }
 
     /// Returns whether this `Array` is empty.
