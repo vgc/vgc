@@ -12,6 +12,7 @@ jobs:
 
       - name: Run clang-format
         run: |
+          clang-format --version
           cd libs
           find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
           cd ../apps
