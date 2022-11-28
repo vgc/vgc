@@ -690,12 +690,13 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
 void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     namespace gs = graphics::strings;
+    using PP = graphics::PipelineParameter;
 
     updateCurveGraphics_(engine);
 
     drawTask_.start();
 
-    auto modifiedParameters = graphics::PipelineParameter::RasterizerState;
+    auto modifiedParameters = PP::RasterizerState | PP::ScissorRect;
     engine->pushPipelineParameters(modifiedParameters);
 
     engine->setProgram(graphics::BuiltinProgram::Simple);
