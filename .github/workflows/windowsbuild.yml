@@ -187,3 +187,4 @@ jobs:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
         VGC_CODESIGN_URL: ${{secrets.VGC_CODESIGN_URL}}
       run: cmake --build . --target deploy
+
