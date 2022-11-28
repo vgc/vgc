@@ -812,7 +812,7 @@ private:
 
 /// Writes the given `Span<T>` to the output stream.
 ///
-template<typename OStream, typename T, size_t extent>
+template<typename OStream, typename T, Int extent>
 void write(OStream& out, const Span<T, extent>& a) {
     if (a.isEmpty()) {
         write(out, "[]");
@@ -836,7 +836,7 @@ void write(OStream& out, const Span<T, extent>& a) {
 /// Throws `RangeError` if one of the values in the array is outside of the
 /// representable range of its type.
 ///
-template<typename IStream, typename T, size_t extent>
+template<typename IStream, typename T, Int extent>
 void readTo(Span<T, extent>& a, IStream& in) {
     a.clear();
     skipWhitespaceCharacters(in);
@@ -860,7 +860,7 @@ namespace detail {
 template<typename T>
 struct IsSpan : std::false_type {};
 
-template<typename T, size_t extent>
+template<typename T, Int extent>
 struct IsSpan<Span<T, extent>> : std::true_type {};
 
 } // namespace detail
@@ -872,7 +872,7 @@ inline constexpr bool isSpan = detail::IsSpan<T>::value;
 
 } // namespace vgc::core
 
-template<typename T, size_t extent>
+template<typename T, Int extent>
 struct fmt::formatter<vgc::core::Span<T, extent>> : fmt::formatter<T> {
     template<typename FormatContext>
     auto format(const vgc::core::Span<T, extent>& x, FormatContext& ctx)
