@@ -133,7 +133,7 @@ jobs:
 
         # Install packages
         # Note: "IFS" = Input Field Separators. Makes it possible to interpret ';' as argument separator.
-        #       We surround the command by parenthesese so that IFS is only redefined in a subshell.
+        #       We surround the command by parentheses so that IFS is only redefined in a subshell.
         (IFS=';'; vcpkg.exe \
           --vcpkg-root="$VCPKG_ROOT" \
           --overlay-triplets="$VCPKG_OVERLAY_TRIPLETS" \
