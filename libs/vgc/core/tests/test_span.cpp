@@ -163,16 +163,8 @@ TEST(TestSpan, Construct) {
             EXPECT_LENGTH(s, 4);
             EXPECT_EQ(s[0], 10);
         }
-        VGC_DEBUG_TMP("000");
-        try {
-            EXPECT_THROW((Span<const int, 3>(a_)), LogicError);
-        }
-        catch (std::exception& e) {
-            VGC_DEBUG_TMP(e.what());
-        }
-        VGC_DEBUG_TMP("aaa");
+        EXPECT_THROW((Span<const int, 3>(a_)), LogicError);
     }
-    VGC_DEBUG_TMP("bbb");
 }
 
 TEST(TestSpan, Copy) {
