@@ -2784,24 +2784,27 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
 
     // Hinted final size
     //
-    // Note: we tried stretch/shrink the preferred item width/height, keeping each
-    // item as a square, but it looked weird when resizing the toolbar, as it causes
-    // the item size to flicker (increase -> decrease -> increase -> ...). The
-    // flickering of the height was especially bad. So for now, we don't shrink/stretch
-    // the item. An alternative possibility might be to try just stretching the width
-    // (not keeping the items as square), instead of stretching the gap. Or perhaps
-    // keep the item left-aligned. Ideally, it would be nice if it could be handled
-    // with a Flex with wrapping behavior.
+    // Note: we tried stretching/shrinking the item's preferred width/height,
+    // keeping each item as a square, but it didn't look good when resizing the
+    // toolbar, as it causes the item size to increase/decrease/increase/etc
+    // even when only increasing the toolbar size. The flickering of the height
+    // was especially bad. So for now, we don't shrink/stretch the items.
+    // Alternatively, we could try just stretching the width (i.e., items
+    // wouldn't be square anymore) instead of stretching the gap. Or perhaps
+    // keep the items left-aligned. Ideally, it'd be nice if this was
+    // controllable via the stylesheet, and perhaps directly handled via a Flex
+    // with wrapping behavior.
     //
     m.itemWidth = hint(m.itemPreferredWidth, m.hinting);
     m.itemHeight = hint(m.itemPreferredHeight, m.hinting);
 
     // Get row and column gaps.
     //
-    // For now, when row-gap or column-gap is expressed in percentage, we
-    // interpret it to mean a percentage of the main-axis size of the widget,
-    // for both row-gap and column-gap. this makes is easier to keep both
-    // row-gap and column-gap the same value even when expressed in percentage.
+    // For now, when row-gap and/or column-gap is expressed as a percentage, we
+    // interpret it to mean a percentage of the size of the main-axis of the
+    // widget, for both row-gap and column-gap. This makes is easier to have
+    // both row-gap and column-gap the same size even when expressed as a
+    // percentage.
     //
     // This is different than CSS, where a row-gap percentage is always relative to
     // the height (if the element has a fixed height), or resolves to zero if the
@@ -2809,10 +2812,10 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     //
     // https://github.com/w3c/csswg-drafts/issues/5081
     //
-    // It's unclear whether our behavior or CSS is best, ideally, it'd be nice to
-    // be able to specify in the stylesheet whether row-gap or column-gap percentages
-    // should refer to the size of the main-axis, the cross-axis, or their respective
-    // dimension, e.g.:
+    // It's unclear whether our behavior or CSS is best. Ideally, it'd be nice
+    // to be able to specify in the stylesheet whether row-gap or column-gap
+    // percentages should refer to the size of the main-axis, the cross-axis,
+    // or their respective dimension, e.g.:
     //
     // gap-percentage-relative-to: main-axis | cross-axis | respective-axes
     //
