@@ -247,11 +247,13 @@
 .ColorListView {
     vertical-shrink: 0;
     vertical-stretch: 0;
+    row-gap: 4dp;
+    column-gap: 4dp;
 }
 
 .ColorListViewItem {
-    preferred-width: 22dp;
-    preferred-height: auto;
+    preferred-width: 18dp;
+    preferred-height: 18dp;
     border-top-left-radius: 5dp;
     border-top-right-radius: 5dp;
     border-bottom-right-radius: 5dp;

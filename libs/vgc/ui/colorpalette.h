@@ -501,9 +501,11 @@ protected:
 private:
     struct Metrics {
         float itemPreferredWidth;
+        float itemPreferredHeight;
         Int numColumns;
         Int numRows;
-        float gap;
+        float rowGap;
+        float columnGap;
         float itemWidth;
         float itemHeight;
         float width;
