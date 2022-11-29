@@ -2579,8 +2579,8 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
                 const core::Color& color = colorAt(i);
                 Int row = i / m.numColumns;
                 Int column = i - m.numColumns * row;
-                float x1 = column * (m.itemWidth + m.gap);
-                float y1 = row * (m.itemHeight + m.gap);
+                float x1 = column * (m.itemWidth + m.columnGap);
+                float y1 = row * (m.itemHeight + m.rowGap);
                 float x2 = hint(x1 + m.itemWidth, m.hinting);
                 float y2 = hint(y1 + m.itemHeight, m.hinting);
                 x1 = hint(x1, m.hinting);
@@ -2665,8 +2665,8 @@ bool ColorListView::onMouseMove(MouseEvent* event) {
     const Metrics& m = metrics_;
 
     // Find color slot under mouse
-    Int column = computeTrackIndex(event->x(), m.itemWidth, m.gap, m.numColumns);
-    Int row = computeTrackIndex(event->y(), m.itemHeight, m.gap, m.numRows);
+    Int column = computeTrackIndex(event->x(), m.itemWidth, m.columnGap, m.numColumns);
+    Int row = computeTrackIndex(event->y(), m.itemHeight, m.rowGap, m.numRows);
 
     Int newHoveredColorIndex = -1;
     if (column >= 0 && row >= 0) {
@@ -2774,24 +2774,84 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     namespace gs = graphics::strings;
     using namespace style::literals;
 
-    const style::Length gap = 4.0_dp;
-
-    // Note: in order to fill the available width while being "justified", we
-    // need to stretch either the gap between the items, or the items
-    // themselves. For now, we decide to stretch the items. In the
-    // future, we may want to make it configurable in the stylesheet.
-
     Metrics m;
+
     m.hinting = (style(gs::pixel_hinting) == gs::normal);
+
+    // Item preferred size
     m.itemPreferredWidth = getItemLengthInPx(item_.get(), strings::preferred_width);
-    m.numColumns = static_cast<Int>(std::round(width / m.itemPreferredWidth));
-    m.numColumns = (std::max)(Int(1), m.numColumns);
-    m.gap = gap.toPx(styleMetrics());
-    m.itemWidth = (width - (m.numColumns - 1) * m.gap) / m.numColumns;
-    m.itemHeight = hint(m.itemWidth, m.hinting);
+    m.itemPreferredHeight = getItemLengthInPx(item_.get(), strings::preferred_height);
+
+    // Hinted final size
+    //
+    // Note: we tried stretching/shrinking the item's preferred width/height,
+    // keeping each item as a square, but it didn't look good when resizing the
+    // toolbar, as it causes the item size to increase/decrease/increase/etc
+    // even when only increasing the toolbar size. The flickering of the height
+    // was especially bad. So for now, we don't shrink/stretch the items.
+    // Alternatively, we could try just stretching the width (i.e., items
+    // wouldn't be square anymore) instead of stretching the gap. Or perhaps
+    // keep the items left-aligned. Ideally, it'd be nice if this was
+    // controllable via the stylesheet, and perhaps directly handled via a Flex
+    // with wrapping behavior.
+    //
+    m.itemWidth = hint(m.itemPreferredWidth, m.hinting);
+    m.itemHeight = hint(m.itemPreferredHeight, m.hinting);
+
+    // Get row and column gaps.
+    //
+    // For now, when row-gap and/or column-gap is expressed as a percentage, we
+    // interpret it to mean a percentage of the size of the main-axis of the
+    // widget, for both row-gap and column-gap. This makes is easier to have
+    // both row-gap and column-gap the same size even when expressed as a
+    // percentage.
+    //
+    // This is different than CSS, where a row-gap percentage is always relative to
+    // the height (if the element has a fixed height), or resolves to zero if the
+    // element has an `auto` height. See this discussion:
+    //
+    // https://github.com/w3c/csswg-drafts/issues/5081
+    //
+    // It's unclear whether our behavior or CSS is best. Ideally, it'd be nice
+    // to be able to specify in the stylesheet whether row-gap or column-gap
+    // percentages should refer to the size of the main-axis, the cross-axis,
+    // or their respective dimension, e.g.:
+    //
+    // gap-percentage-relative-to: main-axis | cross-axis | respective-axes
+    //
+    float refLength = width;
+    m.rowGap =
+        detail::getLengthOrPercentageInPx(this, strings::row_gap, refLength, m.hinting);
+    m.columnGap = detail::getLengthOrPercentageInPx(
+        this, strings::column_gap, refLength, m.hinting);
+
+    // Compute number of rows/columns, and update the column-gap accordingly,
+    // as if styled with `.Flex { main-alignment: space-between; }`, but only
+    // if there are at least 2 rows and 2 columns.
+    //
+    if (width < 2 * m.itemWidth + m.columnGap) {
+        // one column
+        m.numColumns = 1;
+    }
+    else {
+        // two or more columns
+        m.numColumns = static_cast<Int>(
+            std::floor((width + m.columnGap) / (m.itemWidth + m.columnGap)));
+    }
     m.numRows = (numColors() + m.numColumns - 1) / m.numColumns;
+    if (m.numRows > 1 && m.numColumns > 1) {
+        m.columnGap = (width - m.numColumns * m.itemWidth) / (m.numColumns - 1);
+    }
+
+    // Compute width/height of widget
     m.width = width;
-    m.height = m.numRows * (m.itemPreferredWidth + m.gap) - m.gap;
+    if (m.numRows <= 0) {
+        m.height = 0;
+    }
+    else {
+        m.height = m.numRows * (m.itemHeight + m.rowGap) - m.rowGap;
+    }
+
     return m;
 }
 
