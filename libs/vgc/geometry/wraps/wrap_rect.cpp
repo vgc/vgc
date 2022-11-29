@@ -100,6 +100,7 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
         .def_property_readonly_static(
             "empty", [](py::object) -> This { return This::empty; })
         .def("isEmpty", &This::isEmpty)
+        .def("isDegenerate", &This::isDegenerate)
         .def("normalize", &This::normalize)
         .def("normalized", &This::normalized)
 

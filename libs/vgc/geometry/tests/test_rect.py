@@ -133,6 +133,42 @@ class TestRect(unittest.TestCase):
             self.assertFalse(Rect2(position=(1, 2), size=(-1, 2)).normalized().isEmpty())
             self.assertFalse(Rect2(position=(1, 2), size=(1, -2)).normalized().isEmpty())
             self.assertFalse(Rect2(position=(1, 2), size=(-1, -2)).normalized().isEmpty())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, -1)).isEmpty())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, 0)).isEmpty())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, 1)).isEmpty())
+            self.assertTrue(Rect2(position=(1, 2), size=(0, -1)).isEmpty())
+            self.assertFalse(Rect2(position=(1, 2), size=(0, 0)).isEmpty())
+            self.assertFalse(Rect2(position=(1, 2), size=(0, 1)).isEmpty())
+            self.assertTrue(Rect2(position=(1, 2), size=(1, -1)).isEmpty())
+            self.assertFalse(Rect2(position=(1, 2), size=(1, 0)).isEmpty())
+            self.assertFalse(Rect2(position=(1, 2), size=(1, 1)).isEmpty())
+
+    def testDegenerate(self):
+        for Rect2 in Rect2Types:
+            r = Rect2.empty
+            self.assertTrue(r.isDegenerate())
+            self.assertTrue(Rect2.empty.isDegenerate())
+            self.assertTrue(Rect2().isDegenerate())
+            self.assertFalse(Rect2(1, 2, 3, 4).isDegenerate())
+            self.assertTrue(Rect2(3, 4, 1, 2).isDegenerate())
+            self.assertFalse(Rect2(3, 4, 1, 2).normalized().isDegenerate())
+            self.assertFalse(Rect2(position=(1, 2), size=(1, 2)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, 2)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(1, -2)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, -2)).isDegenerate())
+            self.assertFalse(Rect2(position=(1, 2), size=(1, 2)).normalized().isDegenerate())
+            self.assertFalse(Rect2(position=(1, 2), size=(-1, 2)).normalized().isDegenerate())
+            self.assertFalse(Rect2(position=(1, 2), size=(1, -2)).normalized().isDegenerate())
+            self.assertFalse(Rect2(position=(1, 2), size=(-1, -2)).normalized().isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, -1)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, 0)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(-1, 1)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(0, -1)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(0, 0)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(0, 1)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(1, -1)).isDegenerate())
+            self.assertTrue(Rect2(position=(1, 2), size=(1, 0)).isDegenerate())
+            self.assertFalse(Rect2(position=(1, 2), size=(1, 1)).isDegenerate())
 
     def testNormalize(self):
         for Rect2 in Rect2Types:

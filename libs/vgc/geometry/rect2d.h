@@ -207,8 +207,25 @@ public:
     /// Equivalently, a rectangle is considered empty if and only if
     /// `xMin() > xMax()` or `yMin() > yMax()`.
     ///
+    /// \sa `isDegenerate()`
+    ///
     constexpr bool isEmpty() const {
         return pMin_[0] > pMax_[0] || pMin_[1] > pMax_[1];
+    }
+
+    /// Returns whether the rectangle is degenerate, that is, whether it is
+    /// either empty, or reduced to a point, or reduced to a line segment.
+    ///
+    /// More precisely, a rectangle is considered degenerate if and only if
+    /// `width() <= 0` or `height() <= 0`.
+    ///
+    /// Equivalently, a rectangle is considered degenerate if and only if
+    /// `xMin() >= xMax()` or `yMin() >= yMax()`.
+    ///
+    /// \sa `isEmpty()`
+    ///
+    constexpr bool isDegenerate() const {
+        return pMin_[0] >= pMax_[0] || pMin_[1] >= pMax_[1];
     }
 
     /// Normalizes in-place the rectangle, that is, makes it non-empty by
