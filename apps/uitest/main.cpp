@@ -717,10 +717,6 @@ private:
 
         menu3->addItem(parent->createAction("Action #3.1"));
 
-        // stretch at the right-side of the Flex
-        // TODO: implement AlignLeft in Flex to achieve the same without the extra child
-        menuBar_->createChild<ui::Widget>();
-
 #ifndef VGC_CORE_OS_WINDOWS
         convertToNativeMenuBar_();
 #endif
