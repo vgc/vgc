@@ -528,10 +528,41 @@ public:
         return radius_[1];
     }
 
+    /// Returns the horizontal radius of this border radius as a reference.
+    ///
+    float& horizontalRadius() {
+        return radius_[0];
+    }
+
+    /// Returns the vertical radius of this border radius as a reference.
+    ///
+    float& verticalRadius() {
+        return radius_[1];
+    }
+
+    /// Sets the horizontal radius of this border radius.
+    ///
+    void setHorizontalRadius(float horizontalRadius) {
+        radius_[0] = horizontalRadius;
+    }
+
+    /// Sets the vertical radius of this border radius.
+    ///
+    void setVerticalRadius(float verticalRadius) {
+        radius_[1] = verticalRadius;
+    }
+
     /// Returns the horizontal radius if `index` is `0`, and the vertical radius
     /// if `index` is `1`.
     ///
     float operator[](Int index) const {
+        return radius_[static_cast<size_t>(index)];
+    }
+
+    /// Returns, as a reference, the horizontal radius if `index` is `0`, and
+    /// the vertical radius if `index` is `1`.
+    ///
+    float& operator[](Int index) {
         return radius_[static_cast<size_t>(index)];
     }
 
@@ -716,9 +747,33 @@ public:
         return radiuses_[2];
     }
 
-    /// Return thes bottom left border radius.
+    /// Returns the bottom left border radius.
     ///
     const BorderRadiusInPx& bottomLeft() const {
+        return radiuses_[3];
+    }
+
+    /// Returns the top left border radius as a reference.
+    ///
+    BorderRadiusInPx& topLeft() {
+        return radiuses_[0];
+    }
+
+    /// Returns the top right border radius as a reference.
+    ///
+    BorderRadiusInPx& topRight() {
+        return radiuses_[1];
+    }
+
+    /// Returns the bottom right border radius as a reference.
+    ///
+    BorderRadiusInPx& bottomRight() {
+        return radiuses_[2];
+    }
+
+    /// Returns the bottom left border radius as a reference.
+    ///
+    BorderRadiusInPx& bottomLeft() {
         return radiuses_[3];
     }
 
@@ -757,6 +812,25 @@ public:
         return radiuses_[static_cast<size_t>(index)];
     }
 
+    /// Returns a BorderRadiusInPx where each radius is non-negative, each
+    /// horizontal radius does not exceed the given `width`, each vertical
+    /// radius does not exceed the given `height`, and such that for each
+    /// rectangle side, the sum of the two corresponding radii does not exceed
+    /// the length of the rectangle side.
+    ///
+    /// The given `width` and `height` are assumed to be non-negative.
+    ///
+    BorderRadiusesInPx clamped(float width, float height) const {
+        BorderRadiusesInPx res = *this;
+        constexpr Int Horizontal = 0;
+        constexpr Int Vertical = 1;
+        clamp_(res.topLeft()[Horizontal], res.topRight()[Horizontal], width);
+        clamp_(res.bottomLeft()[Horizontal], res.bottomRight()[Horizontal], width);
+        clamp_(res.topLeft()[Vertical], res.bottomLeft()[Vertical], height);
+        clamp_(res.topRight()[Vertical], res.bottomRight()[Vertical], height);
+        return res;
+    }
+
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
     BorderRadiusesInPx offsetted(float horizontal, float vertical) const {
@@ -791,6 +865,17 @@ public:
 
 private:
     std::array<BorderRadiusInPx, 4> radiuses_;
+
+    static void clamp_(float& x1, float& x2, float sumMax) {
+        x1 = core::clamp(x1, 0.0f, sumMax);
+        x2 = core::clamp(x2, 0.0f, sumMax);
+        float overflow = (x1 + x2) - sumMax;
+        if (overflow > 0) {
+            float halfOverflow = 0.5f * overflow;
+            x1 -= halfOverflow;
+            x2 -= halfOverflow;
+        }
+    }
 };
 
 /// \class vgc::style::BorderRadiuses
@@ -884,7 +969,7 @@ public:
         return bottomRight_;
     }
 
-    /// Return thes bottom left border radius.
+    /// Returns the bottom left border radius.
     ///
     const BorderRadius& bottomLeft() const {
         return bottomLeft_;
