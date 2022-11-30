@@ -142,7 +142,8 @@ LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end
     else if (begin->type() == StyleTokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
-            return StyleValue::custom(LengthOrPercentageOrAuto(begin->floatValue(), unit));
+            return StyleValue::custom(
+                LengthOrPercentageOrAuto(begin->floatValue(), unit));
         }
         else {
             return StyleValue::invalid();

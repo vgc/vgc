@@ -46,7 +46,7 @@ StyleValue parseLength(StyleTokenIterator begin, StyleTokenIterator end) {
     }
     else if (
         begin->type() == StyleTokenType::Dimension //
-        && begin->stringValue() == "dp"               //
+        && begin->stringValue() == "dp"            //
         && begin + 1 == end) {
 
         return StyleValue::number(begin->floatValue());
