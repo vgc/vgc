@@ -40,7 +40,7 @@ VGC_DEFINE_ENUM(
     (DescendantCombinator, "Descendant Combinator"),
     (ChildCombinator, "Child Combinator"))
 
-namespace {
+namespace detail {
 
 // Stores the unparsed string of the value as well its tokenized version.
 //
@@ -53,7 +53,7 @@ class UnparsedValue {
             return "";
         }
         else {
-            return std::string(begin->begin, (end - 1)->end);
+            return std::string(begin->begin(), (end - 1)->end());
         }
     }
 
@@ -118,27 +118,27 @@ private:
     //
     void remapPointers_() {
         if (!tokens_.isEmpty()) {
-            const char* oldBegin = tokens_.begin()->begin;
+            const char* oldBegin = tokens_.begin()->begin();
             const char* newBegin = rawString_.data();
             std::ptrdiff_t offset = newBegin - oldBegin;
             if (offset != 0) {
                 for (StyleToken& token : tokens_) {
-                    token.begin += offset;
-                    token.end += offset;
+                    token.begin_ += offset;
+                    token.end_ += offset;
                 }
             }
         }
     }
 };
 
-} // namespace
+} // namespace detail
 
 StyleValue StyleValue::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
-    return StyleValue(StyleValueType::Unparsed, UnparsedValue(begin, end));
+    return StyleValue(StyleValueType::Unparsed, detail::UnparsedValue(begin, end));
 }
 
 void StyleValue::parse_(const StylePropertySpec* spec) {
-    const UnparsedValue* v = std::any_cast<UnparsedValue>(&value_);
+    const detail::UnparsedValue* v = std::any_cast<detail::UnparsedValue>(&value_);
     StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
     StyleValue parsed = parser(v->tokens().begin(), v->tokens().end());
     if (parsed.type() == StyleValueType::Invalid) {
@@ -156,9 +156,9 @@ void StyleValue::parse_(const StylePropertySpec* spec) {
 
 StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
     if (end == begin + 1) {
-        StyleTokenType t = begin->type;
+        StyleTokenType t = begin->type();
         if (t == StyleTokenType::Identifier) {
-            return StyleValue::identifier(begin->codePointsValue);
+            return StyleValue::identifier(begin->stringValue());
         }
     }
     return StyleValue::invalid();
@@ -215,7 +215,7 @@ private:
             if (it == end) {
                 break;
             }
-            else if (it->type == StyleTokenType::Whitespace) {
+            else if (it->type() == StyleTokenType::Whitespace) {
                 ++it;
             }
             // Uncomment to support CDO/CDC
@@ -232,7 +232,7 @@ private:
             //         }
             //     }
             // }
-            else if (it->type == StyleTokenType::AtKeyword) {
+            else if (it->type() == StyleTokenType::AtKeyword) {
                 // TODO: append a StyleAtRule to the result
                 consumeAtRule_(it, end);
             }
@@ -256,11 +256,11 @@ private:
                 // Parse Error: return the partially consumed AtRule
                 break;
             }
-            else if (it->type == StyleTokenType::Semicolon) {
+            else if (it->type() == StyleTokenType::Semicolon) {
                 ++it;
                 break;
             }
-            else if (it->type == StyleTokenType::LeftCurlyBracket) {
+            else if (it->type() == StyleTokenType::LeftCurlyBracket) {
                 consumeSimpleBlock_(it, end);
                 // TODO: assign the simple block to the AtRule's block
                 break;
@@ -301,7 +301,7 @@ private:
                 // Parse Error: return nothing
                 return StyleRuleSetPtr();
             }
-            else if (it->type == StyleTokenType::LeftCurlyBracket) {
+            else if (it->type() == StyleTokenType::LeftCurlyBracket) {
                 StyleTokenIterator preludeEnd = it;
                 ++it;
 
@@ -365,24 +365,24 @@ private:
                     break;
                 }
             }
-            else if (it->type == StyleTokenType::Whitespace) {
+            else if (it->type() == StyleTokenType::Whitespace) {
                 ++it;
             }
-            else if (it->type == StyleTokenType::Semicolon) {
+            else if (it->type() == StyleTokenType::Semicolon) {
                 ++it;
             }
-            else if (it->type == StyleTokenType::AtKeyword) {
+            else if (it->type() == StyleTokenType::AtKeyword) {
                 consumeAtRule_(it, end);
                 // Note: for now, the at rule is simply skipped and
                 // not appended to the list of declarations.
             }
-            else if (it->type == StyleTokenType::Identifier) {
+            else if (it->type() == StyleTokenType::Identifier) {
                 StyleTokenIterator declarationBegin = it;
                 while (true) {
-                    if (it == end                                //
-                        || it->type == StyleTokenType::Semicolon //
-                        || (expectRightCurlyBracket              //
-                            && it->type == StyleTokenType::RightCurlyBracket)) {
+                    if (it == end                                  //
+                        || it->type() == StyleTokenType::Semicolon //
+                        || (expectRightCurlyBracket                //
+                            && it->type() == StyleTokenType::RightCurlyBracket)) {
 
                         break;
                     }
@@ -399,16 +399,16 @@ private:
             }
             else if (
                 expectRightCurlyBracket
-                && it->type == StyleTokenType::RightCurlyBracket) {
+                && it->type() == StyleTokenType::RightCurlyBracket) {
                 ++it;
                 break;
             }
             else {
                 // Parse error: throw away component values until semicolon or eof
                 while (true) {
-                    if (it == end || it->type == StyleTokenType::Semicolon
+                    if (it == end || it->type() == StyleTokenType::Semicolon
                         || (expectRightCurlyBracket
-                            && it->type == StyleTokenType::RightCurlyBracket)) {
+                            && it->type() == StyleTokenType::RightCurlyBracket)) {
 
                         break;
                     }
@@ -428,17 +428,17 @@ private:
     consumeDeclaration_(StyleTokenIterator& it, StyleTokenIterator end) {
 
         StyleDeclarationPtr declaration = StyleDeclaration::create();
-        declaration->property_ = core::StringId(it->codePointsValue);
+        declaration->property_ = core::StringId(it->stringValue());
         declaration->value_ = StyleValue::invalid();
         ++it;
 
         // Consume whitespaces
-        while (it != end && it->type == StyleTokenType::Whitespace) {
+        while (it != end && it->type() == StyleTokenType::Whitespace) {
             ++it;
         }
 
         // Ensure first non-whitespace token is a Colon
-        if (it == end || it->type != StyleTokenType::Colon) {
+        if (it == end || it->type() != StyleTokenType::Colon) {
             // Parse error: return nothing
             return StyleDeclarationPtr();
         }
@@ -447,7 +447,7 @@ private:
         }
 
         // Consume whitespaces
-        while (it != end && it->type == StyleTokenType::Whitespace) {
+        while (it != end && it->type() == StyleTokenType::Whitespace) {
             ++it;
         }
 
@@ -462,7 +462,7 @@ private:
         // TODO: also remove "!important" from value and set it as flag, see (5) in:
         //       https://www.w3.org/TR/css-syntax-3/#consume-declaration
         while (valueEnd != valueBegin
-               && (valueEnd - 1)->type == StyleTokenType::Whitespace) {
+               && (valueEnd - 1)->type() == StyleTokenType::Whitespace) {
             --valueEnd;
         }
 
@@ -479,14 +479,14 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-component-value
     // Assumes that `it` is not end
     void consumeComponentValue_(StyleTokenIterator& it, StyleTokenIterator end) {
-        if (it->type == StyleTokenType::LeftParenthesis
-            || it->type == StyleTokenType::LeftCurlyBracket
-            || it->type == StyleTokenType::LeftSquareBracket) {
+        if (it->type() == StyleTokenType::LeftParenthesis
+            || it->type() == StyleTokenType::LeftCurlyBracket
+            || it->type() == StyleTokenType::LeftSquareBracket) {
 
             consumeSimpleBlock_(it, end);
             // TODO: return it
         }
-        else if (it->type == StyleTokenType::Function) {
+        else if (it->type() == StyleTokenType::Function) {
             consumeFunction_(it, end);
             // TODO: return it
         }
@@ -499,7 +499,7 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-simple-block
     // Assumes that the `it` token is a left parenthesis or left curly/square bracket.
     void consumeSimpleBlock_(StyleTokenIterator& it, StyleTokenIterator end) {
-        StyleTokenType startToken = it->type;
+        StyleTokenType startToken = it->type();
         StyleTokenType endToken;
         if (startToken == StyleTokenType::LeftParenthesis) {
             endToken = StyleTokenType::RightParenthesis;
@@ -516,7 +516,7 @@ private:
                 // Parse error: return the block
                 break;
             }
-            else if (it->type == endToken) {
+            else if (it->type() == endToken) {
                 ++it;
                 break;
             }
@@ -538,7 +538,7 @@ private:
                 // Parse error: return the function
                 break;
             }
-            else if (it->type == StyleTokenType::RightParenthesis) {
+            else if (it->type() == StyleTokenType::RightParenthesis) {
                 ++it;
                 break;
             }
@@ -557,7 +557,7 @@ private:
         core::Array<StyleSelectorPtr> res;
         while (true) {
             StyleTokenIterator selectorBegin = it;
-            while (it != end && it->type != StyleTokenType::Comma) {
+            while (it != end && it->type() != StyleTokenType::Comma) {
                 ++it;
             }
             StyleSelectorPtr selector = consumeSelector_(selectorBegin, it);
@@ -583,10 +583,10 @@ private:
     StyleSelectorPtr consumeSelector_(StyleTokenIterator& it, StyleTokenIterator end) {
         core::Array<StyleSelectorItem> selectorItems;
         // Trim whitespaces at both ends
-        while (it != end && it->type == StyleTokenType::Whitespace) {
+        while (it != end && it->type() == StyleTokenType::Whitespace) {
             ++it;
         }
-        while (it != end && (end - 1)->type == StyleTokenType::Whitespace) {
+        while (it != end && (end - 1)->type() == StyleTokenType::Whitespace) {
             --end;
         }
         if (it == end) {
@@ -614,32 +614,31 @@ private:
         if (it == end) {
             return false;
         }
-        if (it->type == StyleTokenType::Delimiter && it->codePointsValue == ".") {
+        if (it->type() == StyleTokenType::Delimiter && it->stringValue() == ".") {
             ++it;
-            if (it == end || it->type != StyleTokenType::Identifier) {
+            if (it == end || it->type() != StyleTokenType::Identifier) {
                 return false;
             }
             items.emplaceLast(
-                StyleSelectorItemType::ClassSelector,
-                core::StringId(it->codePointsValue));
+                StyleSelectorItemType::ClassSelector, core::StringId(it->stringValue()));
             ++it;
             return true;
         }
-        else if (it->type == StyleTokenType::Whitespace) {
-            while (it->type == StyleTokenType::Whitespace) {
+        else if (it->type() == StyleTokenType::Whitespace) {
+            while (it->type() == StyleTokenType::Whitespace) {
                 ++it;
                 if (it == end) {
                     return false;
                 }
             }
-            if (it->type == StyleTokenType::Delimiter && it->codePointsValue == ">") {
+            if (it->type() == StyleTokenType::Delimiter && it->stringValue() == ">") {
                 items.emplaceLast(StyleSelectorItemType::ChildCombinator);
                 ++it;
             }
             else {
                 items.emplaceLast(StyleSelectorItemType::DescendantCombinator);
             }
-            while (it != end && it->type == StyleTokenType::Whitespace) {
+            while (it != end && it->type() == StyleTokenType::Whitespace) {
                 ++it;
             }
             return true;

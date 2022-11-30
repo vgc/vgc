@@ -102,7 +102,7 @@ void write(OStream& out, StyleTokenType type) {
 /// string that can be interpreted as a valid identifier (for example,
 /// `#main-content`), or if instead it is unrestricted, that is, it cannot be
 /// interpreted as an identifier (for example, because it starts with a digit,
-/// like in the hex color `#ff0000`).
+/// like in the hex color `#00ff00`).
 ///
 enum class StyleTokenHashFlag : Int8 {
     Identifier,
@@ -135,60 +135,138 @@ union StyleTokenNumericValue {
     double floatingPoint;
 };
 
+namespace detail {
+
+class TokenStream;
+class UnparsedValue;
+
+} // namespace detail
+
 /// \class vgc::style::StyleToken
 /// \brief One element of the output of tokenizing a style string.
 ///
 /// See: https://www.w3.org/TR/css-syntax-3/#tokenization
 ///
-/// Note: This API should be considered beta and is subject to change. In
-/// particular, all its member variables are currently public: these may become
-/// private in the future. Also, `begin` and `end` are currently pointers to
-/// characters within an external string. This is a bit unsafe and we might
-/// choose a safer design in the future to better manage the lifetime of this
-/// external string, and possibly use std::string_view or a similar structure.
-///
-struct StyleToken {
-    const char* begin;
-    const char* end;
-    std::string codePointsValue;
-    StyleTokenNumericValue numericValue;
-    StyleTokenType type;
-
-    void setHashFlag(StyleTokenHashFlag value) {
-        flag = static_cast<Int8>(value);
+class StyleToken {
+public:
+    /// Returns the `StyleTokenType` of this token.
+    ///
+    StyleTokenType type() const {
+        return type_;
     }
 
-    void setNumericFlag(StyleTokenNumericFlag value) {
-        flag = static_cast<Int8>(value);
+    /// Returns an iterator to the beginning of this token in the string it was
+    /// parsed from.
+    ///
+    /// This iterator is guaranteed to be valid during the execution of a
+    /// `StyleValue` parsing function, but you shouldn't store a copy of this
+    /// iterator as it can be invalidated afterwards.
+    ///
+    const char* begin() const {
+        return begin_;
     }
 
+    /// Returns an iterator to the end of this token in the string it was
+    /// parsed from.
+    ///
+    /// This iterator is guaranteed to be valid during the execution of
+    /// a `StyleValue` parsing function, but you shouldn't store a copy of this
+    /// iterator as it can be invalidated afterwards.
+    ///
+    const char* end() const {
+        return end_;
+    }
+
+    /// If this token is of type `Hash`, this method returns whether the string
+    /// after the hashtag can be interpreted as an identifier (e.g.,
+    /// `#main-content`), or if it is a more generic string that cannot be
+    /// interpred as an identifier (e.g., if it starts with a digit, such as in
+    /// the hex color `#00ff00`).
+    ///
     StyleTokenHashFlag hashFlag() const {
-        return static_cast<StyleTokenHashFlag>(flag);
+        return static_cast<StyleTokenHashFlag>(flag_);
     }
 
+    /// If this token is of type `Number`, `Percentage`, or `Dimension`, this
+    /// metohod returns whether the parsed value was an integer of a floating
+    /// point.
+    ///
     StyleTokenNumericFlag numericFlag() const {
-        return static_cast<StyleTokenNumericFlag>(flag);
+        return static_cast<StyleTokenNumericFlag>(flag_);
     }
+
+    /// Returns the string value of this token.
+    ///
+    /// Note that the string returned by this method is not the same as the
+    /// range of character `[begin(), end())`, as it only include the most
+    /// relevant information. For example:
+    ///
+    /// - for tokens of type `Dimension`: it only includes the unit
+    /// - for tokens of type `Hash`, it does not include the hashtag characters
+    /// - for tokens of type `Function`, it does not include the opening parenthesis
+    ///
+    std::string_view stringValue() const {
+        return stringValue_;
+    }
+
+    /// Returns the numeric value of this token as a float. Assumes the type of
+    /// this token is either `Number`, `Percentage`, or `Dimension`.
+    ///
+    /// If the `numericFlag()` of this token is `Integer`, the numeric
+    /// value is converted to the nearest representable `float`.
+    ///
+    float floatValue() const {
+        return numericFlag() == StyleTokenNumericFlag::Integer
+                   ? static_cast<float>(numericValue_.integer)
+                   : static_cast<float>(numericValue_.floatingPoint);
+    }
+
+    /// Returns the numeric value of this token as an integer. Assumes the type of
+    /// this token is either `Number`, `Percentage`, or `Dimension`.
+    ///
+    /// If the `numericFlag()` of this token is `FloatingPoint`, the numeric
+    /// value is rounded to the nearest representable integer.
+    ///
+    Int64 intValue() const {
+        return numericFlag() == StyleTokenNumericFlag::Integer
+                   ? numericValue_.integer
+                   : static_cast<Int64>(std::round(numericValue_.floatingPoint));
+    }
+
+private:
+    friend detail::TokenStream;
+    friend detail::UnparsedValue;
+
+    // Pointer to the original stylesheet string, or to a copy of a subset of
+    // this string (see detail::UnparsedValue).
+    //
+    // XXX How to be sure that the underlying string is kept alive?
+    // Should we use a better design, e.g., having all token store
+    // a shared_ptr to the original string?
+    //
+    const char* begin_;
+    const char* end_;
+
+    std::string stringValue_; // XXX Use string_view?
+    StyleTokenNumericValue numericValue_;
+    StyleTokenType type_;
+    Int8 flag_;
 
     // Initializes a dummy token starting and ending at s.
     // All other fields are uninitialized.
     StyleToken(const char* s)
-        : begin(s)
-        , end(s)
-        , type(StyleTokenType::Delimiter) {
+        : begin_(s)
+        , end_(s)
+        , type_(StyleTokenType::Delimiter) {
     }
 
-    /// Returns the numericValue of this token as a float. Assumes the type of
-    /// this token is either Number, Percentage, or Dimension.
-    ///
-    float toFloat() const {
-        return numericFlag() == StyleTokenNumericFlag::Integer
-                   ? static_cast<float>(numericValue.integer)
-                   : static_cast<float>(numericValue.floatingPoint);
+    void setHashFlag_(StyleTokenHashFlag value) {
+        flag_ = static_cast<Int8>(value);
     }
 
-private:
-    Int8 flag;
+    void setNumericFlag_(StyleTokenNumericFlag value) {
+        flag_ = static_cast<Int8>(value);
+    }
 };
 
 /// Writes the given StyleToken to the output stream.
@@ -196,8 +274,8 @@ private:
 template<typename OStream>
 void write(OStream& out, const StyleToken& token) {
     using core::write;
-    write(out, token.type);
-    switch (token.type) {
+    write(out, token.type());
+    switch (token.type()) {
     case StyleTokenType::Identifier:
     case StyleTokenType::Function:
     case StyleTokenType::AtKeyword:
@@ -205,7 +283,7 @@ void write(OStream& out, const StyleToken& token) {
     case StyleTokenType::Url:
     case StyleTokenType::Delimiter:
         write(out, "(\"");
-        write(out, token.codePointsValue);
+        write(out, token.stringValue());
         write(out, "\")");
         break;
     case StyleTokenType::Hash:
@@ -216,7 +294,7 @@ void write(OStream& out, const StyleToken& token) {
         else {
             write(out, "(Unrestricted, \"");
         }
-        write(out, token.codePointsValue);
+        write(out, token.stringValue());
         write(out, "\")");
         break;
     case StyleTokenType::Number:
@@ -225,15 +303,15 @@ void write(OStream& out, const StyleToken& token) {
         write(out, "(");
         if (token.numericFlag() == StyleTokenNumericFlag::FloatingPoint) {
             write(out, "Integer, ");
-            write(out, token.numericValue.integer);
+            write(out, token.intValue());
         }
         else {
             write(out, "FloatingPoint, ");
-            write(out, token.numericValue.floatingPoint);
+            write(out, token.toDouble());
         }
-        if (token.type == StyleTokenType::Dimension) {
+        if (token.type() == StyleTokenType::Dimension) {
             write(out, ", \"");
-            write(out, token.codePointsValue);
+            write(out, token.stringValue());
             write(out, "\"");
         }
         write(out, ")");
