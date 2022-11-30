@@ -115,71 +115,6 @@ void insertRect(
 void insertRect(
     core::FloatArray& a,
     const core::Color& c,
-    float x1, float y1, float x2, float y2,
-    float borderRadius) {
-
-    float r = static_cast<float>(c[0]);
-    float g = static_cast<float>(c[1]);
-    float b = static_cast<float>(c[2]);
-    float maxBorderRadius = 0.5f * (std::min)(std::abs(x2 - x1), std::abs(y2 - y1));
-    borderRadius = core::clamp(borderRadius, 0.0f, maxBorderRadius);
-    Int32 numCornerTriangles = core::ifloor<Int32>(borderRadius);
-    if (numCornerTriangles < 1) {
-        a.extend({
-            x1, y1, r, g, b,
-            x2, y1, r, g, b,
-            x1, y2, r, g, b,
-            x2, y1, r, g, b,
-            x2, y2, r, g, b,
-            x1, y2, r, g, b});
-    }
-    else {
-        float x1_ = x1 + borderRadius;
-        float x2_ = x2 - borderRadius;
-        float y1_ = y1 + borderRadius;
-        float y2_ = y2 - borderRadius;
-        // center rectangle
-        insertRect(a, r, g, b, x1_, y1_, x2_, y2_);
-        // side rectangles
-        insertRect(a, r, g, b, x1_, y1, x2_, y1_);
-        insertRect(a, r, g, b, x2_, y1_, x2, y2_);
-        insertRect(a, r, g, b, x1_, y2_, x2_, y2);
-        insertRect(a, r, g, b, x1, y1_, x1_, y2_);
-        // rounded corners
-        float rcost_ = borderRadius;
-        float rsint_ = 0;
-        float pi = static_cast<float>(core::pi);
-        float dt = (0.5f * pi) / numCornerTriangles;
-        for (Int32 i = 1; i <= numCornerTriangles; ++i) {
-            float t = i * dt;
-            float rcost = borderRadius * std::cos(t);
-            float rsint = borderRadius * std::sin(t);
-            insertTriangle(a, r, g, b, x1_, y1_, x1_ - rcost_, y1_ - rsint_, x1_ - rcost, y1_ - rsint);
-            insertTriangle(a, r, g, b, x2_, y1_, x2_ + rsint_, y1_ - rcost_, x2_ + rsint, y1_ - rcost);
-            insertTriangle(a, r, g, b, x2_, y2_, x2_ + rcost_, y2_ + rsint_, x2_ + rcost, y2_ + rsint);
-            insertTriangle(a, r, g, b, x1_, y2_, x1_ - rsint_, y2_ + rcost_, x1_ - rsint, y2_ + rcost);
-            rcost_ = rcost;
-            rsint_ = rsint;
-        }
-    }
-}
-
-void insertRect(
-    core::FloatArray& a,
-    const core::Color& color,
-    const geometry::Rect2f& rect,
-    float borderRadius) {
-
-    insertRect(
-        a,
-        color,
-        rect.xMin(), rect.yMin(), rect.xMax(), rect.yMax(),
-        borderRadius);
-}
-
-void insertRect(
-    core::FloatArray& a,
-    const core::Color& c,
     float x1, float y1, float x2, float y2) {
 
     float r = static_cast<float>(c[0]);
@@ -406,7 +341,7 @@ void insertRect(
     const style::BorderRadiuses& radiuses_,
     float pixelSize) {
 
-    if (rect.isEmpty()) {
+    if (rect.isDegenerate()) {
         return;
     }
 
@@ -416,6 +351,9 @@ void insertRect(
 
     style::BorderRadiusesInPx radiuses =
         radiuses_.toPx(styleMetrics, rect.width(), rect.height());
+
+    // Clamp radii
+    radiuses = radiuses.clamped(rect.width(), rect.height());
 
     float r = static_cast<float>(color[0]);
     float g = static_cast<float>(color[1]);
@@ -476,12 +414,12 @@ void insertRect(
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx& outerRadiuses,
+    const style::BorderRadiusesInPx& outerRadiuses_,
     const style::BorderRadiusesInPx& refRadiuses,
     float borderWidth,
     float pixelSize) {
 
-    if (outerRect.isEmpty()) {
+    if (outerRect.isDegenerate()) {
         return;
     }
     bool hasFill = fillColor.a() > 0;
@@ -505,7 +443,11 @@ void insertRect(
     }
     ui::Margins borderWidths(outerRect, innerRect);
 
-    // Compute inner radiuses in px
+    // Clamp outer radii
+    style::BorderRadiusesInPx outerRadiuses =
+        outerRadiuses_.clamped(outerRect.width(), outerRect.height());
+
+    // Compute inner radii
     style::BorderRadiusesInPx innerRadiuses = outerRadiuses.offsetted(
         -borderWidths.top(),
         -borderWidths.right(),

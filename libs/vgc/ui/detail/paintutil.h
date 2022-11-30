@@ -72,18 +72,6 @@ void insertRect(
 void insertRect(
     core::FloatArray& a,
     const core::Color& color,
-    float x1, float y1, float x2, float y2,
-    float borderRadius);
-
-void insertRect(
-    core::FloatArray& a,
-    const core::Color& color,
-    const geometry::Rect2f& rect,
-    float borderRadius);
-
-void insertRect(
-    core::FloatArray& a,
-    const core::Color& color,
     float x1, float y1, float x2, float y2);
 
 // clang-format on
