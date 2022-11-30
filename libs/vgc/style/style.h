@@ -124,7 +124,7 @@ public:
 
     /// Creates a StyleValue of type Identifier
     ///
-    static StyleValue identifier(const std::string& string) {
+    static StyleValue identifier(std::string_view string) {
         return identifier(core::StringId(string));
     }
 

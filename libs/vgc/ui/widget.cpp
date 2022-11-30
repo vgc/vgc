@@ -1472,8 +1472,8 @@ StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin == end) {
         return StyleValue::invalid();
     }
-    else if (begin->type == StyleTokenType::Number && begin + 1 == end) {
-        return StyleValue::number(begin->toFloat());
+    else if (begin->type() == StyleTokenType::Number && begin + 1 == end) {
+        return StyleValue::number(begin->floatValue());
     }
     else {
         return StyleValue::invalid();

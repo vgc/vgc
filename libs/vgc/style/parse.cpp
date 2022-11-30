@@ -20,12 +20,14 @@
 namespace vgc::style {
 
 StyleValue parseColor(StyleTokenIterator begin, StyleTokenIterator end) {
-    if (end == begin + 1 && begin->type == StyleTokenType::Identifier
-        && begin->codePointsValue == "inherit") {
+    if (end == begin + 1 && begin->type() == StyleTokenType::Identifier
+        && begin->stringValue() == "inherit") {
         return StyleValue::inherit();
     }
     try {
-        std::string str(begin->begin, (end - 1)->end);
+        const char* b = begin->begin();
+        const char* e = (end - 1)->end();
+        std::string_view str(b, std::distance(b, e));
         core::Color color = core::parse<core::Color>(str);
         return StyleValue::custom(color);
     }
@@ -43,11 +45,11 @@ StyleValue parseLength(StyleTokenIterator begin, StyleTokenIterator end) {
         return StyleValue::invalid();
     }
     else if (
-        begin->type == StyleTokenType::Dimension //
-        && begin->codePointsValue == "dp"        //
+        begin->type() == StyleTokenType::Dimension //
+        && begin->stringValue() == "dp"            //
         && begin + 1 == end) {
 
-        return StyleValue::number(begin->toFloat());
+        return StyleValue::number(begin->floatValue());
     }
     else {
         return StyleValue::invalid();
@@ -60,11 +62,11 @@ StyleValue parseIdentifierAmong(
     std::initializer_list<core::StringId> list) {
 
     if (end == begin + 1) {
-        StyleTokenType t = begin->type;
+        StyleTokenType t = begin->type();
         if (t == StyleTokenType::Identifier) {
             for (core::StringId id : list) {
-                if (id == begin->codePointsValue) {
-                    return StyleValue::identifier(begin->codePointsValue);
+                if (id == begin->stringValue()) {
+                    return StyleValue::identifier(begin->stringValue());
                 }
             }
         }

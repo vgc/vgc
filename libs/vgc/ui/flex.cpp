@@ -84,13 +84,13 @@ StyleValue parseMainAlignment(StyleTokenIterator begin, StyleTokenIterator end_)
     if (end_ != begin + 1) {
         return res;
     }
-    StyleTokenType t = begin->type;
+    StyleTokenType t = begin->type();
 
     // The token should be an identifier
     if (t != StyleTokenType::Identifier) {
         return res;
     }
-    const std::string& s = begin->codePointsValue;
+    std::string_view s = begin->stringValue();
 
     // Converts the identifier to StyleValue storing a MainAlignment enum value.
     if (s == start) {
