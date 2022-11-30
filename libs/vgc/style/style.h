@@ -136,7 +136,7 @@ public:
 
     /// Creates a StyleValue of type Number
     ///
-    static StyleValue number(double x) {
+    static StyleValue number(float x) {
         return StyleValue(StyleValueType::Number, x);
     }
 
@@ -175,14 +175,7 @@ public:
     /// if the type isn't Number.
     ///
     float toFloat() const {
-        return static_cast<float>(std::any_cast<double>(value_));
-    }
-
-    /// Returns the StyleValue as a `double`. The behavior is undefined
-    /// if the type isn't Number.
-    ///
-    double toDouble() const {
-        return std::any_cast<double>(value_);
+        return std::any_cast<float>(value_);
     }
 
     /// Returns the StyleValue as an `std::string`.

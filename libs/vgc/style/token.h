@@ -187,15 +187,6 @@ struct StyleToken {
                    : static_cast<float>(numericValue.floatingPoint);
     }
 
-    /// Returns the numericValue of this token as a double. Assumes the type of
-    /// this token is either Number, Percentage, or Dimension.
-    ///
-    double toDouble() const {
-        return numericFlag() == StyleTokenNumericFlag::Integer
-                   ? static_cast<double>(numericValue.integer)
-                   : static_cast<double>(numericValue.floatingPoint);
-    }
-
 private:
     Int8 flag;
 };
