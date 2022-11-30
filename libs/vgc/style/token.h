@@ -307,7 +307,7 @@ void write(OStream& out, const StyleToken& token) {
         }
         else {
             write(out, "FloatingPoint, ");
-            write(out, token.toDouble());
+            write(out, token.floatValue());
         }
         if (token.type() == StyleTokenType::Dimension) {
             write(out, ", \"");
