@@ -294,6 +294,23 @@ TEST(TestArithmetic, Typedefs) {
 #endif
 }
 
+TEST(TestArithmetic, Clamp) {
+    EXPECT_EQ(core::clamp(0, 1, 3), 1);
+    EXPECT_EQ(core::clamp(2, 1, 3), 2);
+    EXPECT_EQ(core::clamp(4, 1, 3), 3);
+    EXPECT_EQ(core::clamp(0.0, 1, 3), 1.0);
+    EXPECT_EQ(core::clamp(2.0, 1, 3), 2.0);
+    EXPECT_EQ(core::clamp(4.0, 1, 3), 3.0);
+
+    constexpr int x = core::clamp(4, 1, 3);
+    EXPECT_EQ(x, 3);
+
+    // Note: the following does not compile, because core::clamp(5, 2, 1)
+    // emits a warning and thus is not constexpr:
+    //
+    //   constexpr int y = core::clamp(5, 2, 1);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

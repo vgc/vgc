@@ -33,7 +33,7 @@ void LengthContributions::add(
     if (value.has<style::LengthOrPercentage>()) {
         style::LengthOrPercentage l = value.to<style::LengthOrPercentage>();
         if (l.isPercentage()) {
-            addRelative(l.valuef(), count);
+            addRelative(l.value(), count);
         }
         else {
             float dummyRefLength = 1.0f;

@@ -39,31 +39,27 @@ class VGC_STYLE_API Length {
 public:
     /// Constructs a length of `0dp`.
     ///
-    Length() {
+    constexpr Length()
+        : value_(0)
+        , unit_(LengthUnit::Dp) {
     }
 
     /// Constructs a length with the given value and unit.
     ///
-    Length(double value, LengthUnit unit)
+    constexpr Length(float value, LengthUnit unit)
         : value_(value)
         , unit_(unit) {
     }
 
     /// Returns the numerical value of the length.
     ///
-    double value() const {
+    constexpr float value() const {
         return value_;
-    }
-
-    /// Returns the numerical value of the length as a `float`.
-    ///
-    float valuef() const {
-        return static_cast<float>(value_);
     }
 
     /// Returns the unit of the length.
     ///
-    LengthUnit unit() const {
+    constexpr LengthUnit unit() const {
         return unit_;
     }
 
@@ -80,25 +76,29 @@ public:
 
     /// Returns whether the two given `Length` are equal.
     ///
-    friend bool operator==(const Length& l1, const Length& l2) {
+    friend constexpr bool operator==(const Length& l1, const Length& l2) {
         return l1.unit_ == l2.unit_ && l1.value_ == l2.value_;
     }
 
     /// Returns whether the two given `Length` are different.
     ///
-    friend bool operator!=(const Length& l1, const Length& l2) {
+    friend constexpr bool operator!=(const Length& l1, const Length& l2) {
         return !(l1 == l2);
     }
 
 private:
-    double value_ = 0;
-    LengthUnit unit_ = LengthUnit::Dp;
+    float value_;
+    LengthUnit unit_;
 };
 
 namespace literals {
 
-inline Length operator"" _dp(long double x) {
-    return Length(static_cast<double>(x), LengthUnit::Dp);
+inline constexpr Length operator"" _dp(long double x) {
+    return Length(static_cast<float>(x), LengthUnit::Dp);
+}
+
+inline constexpr Length operator"" _dp(unsigned long long int x) {
+    return Length(static_cast<float>(x), LengthUnit::Dp);
 }
 
 } // namespace literals
@@ -110,32 +110,27 @@ class VGC_STYLE_API Percentage {
 public:
     /// Constructs a percentage of `0%`.
     ///
-    Percentage() {
+    constexpr Percentage()
+        : value_(0) {
     }
 
     /// Constructs a percentage with the given value.
     ///
-    Percentage(double value)
+    constexpr Percentage(float value)
         : value_(value) {
     }
 
     /// Returns the numerical value of the percentage.
     ///
-    double value() const {
+    constexpr float value() const {
         return value_;
-    }
-
-    /// Returns the numerical value of the percentage as a `float`.
-    ///
-    float valuef() const {
-        return static_cast<float>(value_);
     }
 
     /// Returns the `Percentage` converted to physical pixels, by multiplying
     /// the percentage with the given reference length.
     ///
-    float toPx(float refLength) const {
-        return valuef() * refLength * 0.01f;
+    constexpr float toPx(float refLength) const {
+        return value() * refLength * 0.01f;
     }
 
     /// Parses the given range of `StyleToken`s as a `Percentage`.
@@ -147,18 +142,18 @@ public:
 
     /// Returns whether the two given `Percentage` are equal.
     ///
-    friend bool operator==(const Percentage& p1, const Percentage& p2) {
+    friend constexpr bool operator==(const Percentage& p1, const Percentage& p2) {
         return p1.value_ == p2.value_;
     }
 
     /// Returns whether the two given `Percentage` are different.
     ///
-    friend bool operator!=(const Percentage& p1, const Percentage& p2) {
+    friend constexpr bool operator!=(const Percentage& p1, const Percentage& p2) {
         return !(p1 == p2);
     }
 
 private:
-    double value_ = 0;
+    float value_ = 0;
 };
 
 /// \class vgc::style::LengthOrPercentage
@@ -168,57 +163,65 @@ class VGC_STYLE_API LengthOrPercentage {
 public:
     /// Constructs a length of `0dp`.
     ///
-    LengthOrPercentage() {
+    constexpr LengthOrPercentage()
+        : value_(0)
+        , unit_(LengthUnit::Dp)
+        , isPercentage_(false) {
     }
 
     /// Constructs a length with the given value and unit.
     ///
-    LengthOrPercentage(double value, LengthUnit unit)
+    constexpr LengthOrPercentage(float value, LengthUnit unit)
         : value_(value)
-        , unit_(unit) {
+        , unit_(unit)
+        , isPercentage_(false) {
     }
 
     /// Constructs a percentage with the given value.
     ///
-    LengthOrPercentage(double value)
+    constexpr LengthOrPercentage(float value)
         : value_(value)
+        , unit_(LengthUnit::Dp) // unused
         , isPercentage_(true) {
     }
 
     /// Converts the given `Length` to a `LengthOrPercentage`.
     ///
-    LengthOrPercentage(const Length& length)
+    constexpr LengthOrPercentage(const Length& length)
         : value_(length.value())
-        , unit_(length.unit()) {
+        , unit_(length.unit())
+        , isPercentage_(false) {
+    }
+
+    /// Converts the given `Percentage` to a `LengthOrPercentage`.
+    ///
+    constexpr LengthOrPercentage(const Percentage& percentage)
+        : value_(percentage.value())
+        , unit_(LengthUnit::Dp)
+        , isPercentage_(true) {
     }
 
     /// Returns the numerical value of the length or percentage.
     ///
-    double value() const {
+    constexpr float value() const {
         return value_;
-    }
-
-    /// Returns the numerical value of the length or percentage as a `float`.
-    ///
-    float valuef() const {
-        return static_cast<float>(value_);
     }
 
     /// Returns the unit of the length.
     ///
-    LengthUnit unit() const {
+    constexpr LengthUnit unit() const {
         return unit_;
     }
 
     /// Returns whether this is a percentage.
     ///
-    bool isPercentage() const {
+    constexpr bool isPercentage() const {
         return isPercentage_;
     }
 
     /// Returns whether this is a length.
     ///
-    bool isLength() const {
+    constexpr bool isLength() const {
         return !isPercentage_;
     }
 
@@ -243,7 +246,8 @@ public:
 
     /// Returns whether the two given `LengthOrPercentage` are equal.
     ///
-    friend bool operator==(const LengthOrPercentage& v1, const LengthOrPercentage& v2) {
+    friend constexpr bool
+    operator==(const LengthOrPercentage& v1, const LengthOrPercentage& v2) {
         return v1.isPercentage_ == v2.isPercentage_                //
                && (v1.isPercentage_ ? v1.unit_ == v2.unit_ : true) //
                && v1.value_ == v2.value_;
@@ -251,12 +255,13 @@ public:
 
     /// Returns whether the two given `LengthOrPercentage` are different.
     ///
-    friend bool operator!=(const LengthOrPercentage& v1, const LengthOrPercentage& v2) {
+    friend constexpr bool
+    operator!=(const LengthOrPercentage& v1, const LengthOrPercentage& v2) {
         return !(v1 == v2);
     }
 
 private:
-    double value_ = 0;
+    float value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
     bool isPercentage_ = false;
 };
@@ -268,13 +273,16 @@ class VGC_STYLE_API LengthOrAuto {
 public:
     /// Constructs a `LengthOrAuto` initialized to `auto`.
     ///
-    LengthOrAuto() {
+    constexpr LengthOrAuto()
+        : value_(0)
+        , unit_(LengthUnit::Dp)
+        , isAuto_(true) {
     }
 
     /// Constructs a `LengthOrAuto` initialized to a length with the given value
     /// and unit.
     ///
-    LengthOrAuto(double value, LengthUnit unit)
+    constexpr LengthOrAuto(float value, LengthUnit unit)
         : value_(value)
         , unit_(unit)
         , isAuto_(false) {
@@ -282,7 +290,7 @@ public:
 
     /// Converts the given `Length` to a `LengthOrAuto`.
     ///
-    LengthOrAuto(const Length& length)
+    constexpr LengthOrAuto(const Length& length)
         : value_(length.value())
         , unit_(length.unit())
         , isAuto_(false) {
@@ -290,28 +298,21 @@ public:
 
     /// Returns whether this `LengthOrAuto` is `auto`.
     ///
-    bool isAuto() const {
+    constexpr bool isAuto() const {
         return isAuto_;
     }
 
     /// Returns the numerical value of the length. This function assumes that
     /// `isAuto()` returns false.
     ///
-    double value() const {
+    constexpr float value() const {
         return value_;
-    }
-
-    /// Returns the numerical value of the length as a `float`. This function
-    /// assumes that `isAuto()` returns false.
-    ///
-    float valuef() const {
-        return static_cast<float>(value_);
     }
 
     /// Returns the unit of the length. This function assumes that
     /// `isAuto()` returns false.
     ///
-    LengthUnit unit() const {
+    constexpr LengthUnit unit() const {
         return unit_;
     }
 
@@ -335,7 +336,7 @@ public:
 
     /// Returns whether the two given `LengthOrAuto` are equal.
     ///
-    friend bool operator==(const LengthOrAuto& v1, const LengthOrAuto& v2) {
+    friend constexpr bool operator==(const LengthOrAuto& v1, const LengthOrAuto& v2) {
         return v1.isAuto_ == v2.isAuto_
                && (v1.isAuto_
                        ? true
@@ -344,14 +345,14 @@ public:
 
     /// Returns whether the two given `LengthOrAuto` are different.
     ///
-    friend bool operator!=(const LengthOrAuto& v1, const LengthOrAuto& v2) {
+    friend constexpr bool operator!=(const LengthOrAuto& v1, const LengthOrAuto& v2) {
         return !(v1 == v2);
     }
 
 private:
-    double value_ = 0;
-    LengthUnit unit_ = LengthUnit::Dp;
-    bool isAuto_ = true;
+    float value_;
+    LengthUnit unit_;
+    bool isAuto_;
 };
 
 /// \class vgc::style::LengthOrPercentageOrAuto
@@ -362,7 +363,7 @@ public:
     /// Constructs a `LengthOrPercentageOrAuto` initialized to a length with
     /// the given value and unit.
     ///
-    LengthOrPercentageOrAuto(double value, LengthUnit unit)
+    constexpr LengthOrPercentageOrAuto(float value, LengthUnit unit)
         : value_(value)
         , unit_(unit)
         , type_(Type_::Length) {
@@ -370,7 +371,7 @@ public:
 
     /// Converts the given `Length` to a `LengthOrPercentageOrAuto`.
     ///
-    LengthOrPercentageOrAuto(const Length& length)
+    constexpr LengthOrPercentageOrAuto(const Length& length)
         : value_(length.value())
         , unit_(length.unit())
         , type_(Type_::Length) {
@@ -379,53 +380,46 @@ public:
     /// Constructs a `LengthOrPercentageOrAuto` initialized to a percentage
     /// with the given value.
     ///
-    LengthOrPercentageOrAuto(double value)
+    constexpr LengthOrPercentageOrAuto(float value)
         : value_(value)
         , type_(Type_::Percentage) {
     }
 
     /// Constructs a `LengthOrPercentageOrAuto` initialized to `auto`.
     ///
-    LengthOrPercentageOrAuto()
+    constexpr LengthOrPercentageOrAuto()
         : type_(Type_::Auto) {
     }
 
     /// Returns whether this `LengthOrPercentageOrAuto` is a length.
     ///
-    bool isLength() const {
+    constexpr bool isLength() const {
         return type_ == Type_::Length;
     }
 
     /// Returns whether this `LengthOrPercentageOrAuto` is a percentage.
     ///
-    bool isPercentage() const {
+    constexpr bool isPercentage() const {
         return type_ == Type_::Percentage;
     }
 
     /// Returns whether this `LengthOrPercentageOrAuto` is `auto`.
     ///
-    bool isAuto() const {
+    constexpr bool isAuto() const {
         return type_ == Type_::Auto;
     }
 
     /// Returns the numerical value of the length or percentage. This function
     /// assumes that `isAuto()` returns false.
     ///
-    double value() const {
+    constexpr float value() const {
         return value_;
-    }
-
-    /// Returns the numerical value of the length or percentage as a `float`.
-    /// This function assumes that `isAuto()` returns false.
-    ///
-    float valuef() const {
-        return static_cast<float>(value_);
     }
 
     /// Returns the unit of the length. This function assumes that
     /// `isLength()` returns true.
     ///
-    LengthUnit unit() const {
+    constexpr LengthUnit unit() const {
         return unit_;
     }
 
@@ -459,7 +453,7 @@ public:
 
     /// Returns whether the two given `LengthOrAuto` are equal.
     ///
-    friend bool
+    friend constexpr bool
     operator==(const LengthOrPercentageOrAuto& v1, const LengthOrPercentageOrAuto& v2) {
         switch (v1.type_) {
         case Type_::Length:
@@ -475,7 +469,7 @@ public:
 
     /// Returns whether the two given `LengthOrPercentageOrAuto` are different.
     ///
-    friend bool
+    friend constexpr bool
     operator!=(const LengthOrPercentageOrAuto& v1, const LengthOrPercentageOrAuto& v2) {
         return !(v1 == v2);
     }
@@ -487,7 +481,7 @@ private:
         Auto
     };
 
-    double value_ = 0;
+    float value_ = 0;
     LengthUnit unit_ = LengthUnit::Dp;
     Type_ type_ = Type_::Auto;
 };
@@ -499,76 +493,77 @@ class BorderRadiusInPx {
 public:
     /// Constructs a `BorderRadiusInPx` with both values set to `0dp`.
     ///
-    BorderRadiusInPx() {
+    constexpr BorderRadiusInPx()
+        : radius_{0, 0} {
     }
 
     /// Constructs a `BorderRadiusInPx` with both horizontal and vertical
     /// radius values set to the given `radius`.
     ///
-    BorderRadiusInPx(float radius)
+    constexpr BorderRadiusInPx(float radius)
         : radius_{radius, radius} {
     }
 
     /// Constructs a `BorderRadiusInPx` with the two given horizontal and vertical
     /// radius values.
     ///
-    BorderRadiusInPx(float horizontalRadius, float verticalRadius)
+    constexpr BorderRadiusInPx(float horizontalRadius, float verticalRadius)
         : radius_{horizontalRadius, verticalRadius} {
     }
 
     /// Returns the horizontal radius of this border radius.
     ///
-    float horizontalRadius() const {
+    constexpr float horizontalRadius() const {
         return radius_[0];
     }
 
     /// Returns the vertical radius of this border radius.
     ///
-    float verticalRadius() const {
+    constexpr float verticalRadius() const {
         return radius_[1];
     }
 
     /// Returns the horizontal radius of this border radius as a reference.
     ///
-    float& horizontalRadius() {
+    constexpr float& horizontalRadius() {
         return radius_[0];
     }
 
     /// Returns the vertical radius of this border radius as a reference.
     ///
-    float& verticalRadius() {
+    constexpr float& verticalRadius() {
         return radius_[1];
     }
 
     /// Sets the horizontal radius of this border radius.
     ///
-    void setHorizontalRadius(float horizontalRadius) {
+    constexpr void setHorizontalRadius(float horizontalRadius) {
         radius_[0] = horizontalRadius;
     }
 
     /// Sets the vertical radius of this border radius.
     ///
-    void setVerticalRadius(float verticalRadius) {
+    constexpr void setVerticalRadius(float verticalRadius) {
         radius_[1] = verticalRadius;
     }
 
     /// Returns the horizontal radius if `index` is `0`, and the vertical radius
     /// if `index` is `1`.
     ///
-    float operator[](Int index) const {
+    constexpr float operator[](Int index) const {
         return radius_[static_cast<size_t>(index)];
     }
 
     /// Returns, as a reference, the horizontal radius if `index` is `0`, and
     /// the vertical radius if `index` is `1`.
     ///
-    float& operator[](Int index) {
+    constexpr float& operator[](Int index) {
         return radius_[static_cast<size_t>(index)];
     }
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    BorderRadiusInPx offsetted(float horizontal, float vertical) const {
+    constexpr BorderRadiusInPx offsetted(float horizontal, float vertical) const {
         return BorderRadiusInPx(
             (std::max)(0.0f, radius_[0] + horizontal),
             (std::max)(0.0f, radius_[1] + vertical));
@@ -576,13 +571,17 @@ public:
 
     /// Returns whether the two given `BorderRadiusInPx` are equal.
     ///
-    friend bool operator==(const BorderRadiusInPx& v1, const BorderRadiusInPx& v2) {
-        return v1.radius_ == v2.radius_;
+    friend constexpr bool
+    operator==(const BorderRadiusInPx& v1, const BorderRadiusInPx& v2) {
+        // Note: std::array<T>::operator==() is not constexpr in C++17 (it is
+        // in C++20), so we do it manually.
+        return v1.radius_[0] == v2.radius_[0] && v1.radius_[1] == v2.radius_[1];
     }
 
     /// Returns whether the two given `BorderRadiusInPx` are different.
     ///
-    friend bool operator!=(const BorderRadiusInPx& v1, const BorderRadiusInPx& v2) {
+    friend constexpr bool
+    operator!=(const BorderRadiusInPx& v1, const BorderRadiusInPx& v2) {
         return !(v1 == v2);
     }
 
@@ -597,13 +596,15 @@ class VGC_STYLE_API BorderRadius {
 public:
     /// Constructs a `BorderRadius` with both values set to `0dp`.
     ///
-    BorderRadius() {
+    constexpr BorderRadius()
+        : horizontalRadius_(0, LengthUnit::Dp)
+        , verticalRadius_(0, LengthUnit::Dp) {
     }
 
     /// Constructs a `BorderRadius` with both values set to the given
     /// `LengthOrPercentage`
     ///
-    BorderRadius(const LengthOrPercentage& value)
+    constexpr BorderRadius(const LengthOrPercentage& value)
         : horizontalRadius_(value)
         , verticalRadius_(value) {
     }
@@ -611,7 +612,7 @@ public:
     /// Constructs a `BorderRadius` with the two given horizontal and vertical
     /// `LengthOrPercentage` radius values.
     ///
-    BorderRadius(
+    constexpr BorderRadius(
         const LengthOrPercentage& horizontalRadius,
         const LengthOrPercentage& verticalRadius)
 
@@ -621,13 +622,13 @@ public:
 
     /// Returns the horizontal radius of this border radius.
     ///
-    LengthOrPercentage horizontalRadius() const {
+    constexpr LengthOrPercentage horizontalRadius() const {
         return horizontalRadius_;
     }
 
     /// Returns the vertical radius of this border radius.
     ///
-    LengthOrPercentage verticalRadius() const {
+    constexpr LengthOrPercentage verticalRadius() const {
         return verticalRadius_;
     }
 
@@ -658,14 +659,14 @@ public:
 
     /// Returns whether the two given `BorderRadius` are equal.
     ///
-    friend bool operator==(const BorderRadius& v1, const BorderRadius& v2) {
+    friend constexpr bool operator==(const BorderRadius& v1, const BorderRadius& v2) {
         return v1.horizontalRadius_ == v2.horizontalRadius_
                && v1.verticalRadius_ == v2.verticalRadius_;
     }
 
     /// Returns whether the two given `BorderRadius` are different.
     ///
-    friend bool operator!=(const BorderRadius& v1, const BorderRadius& v2) {
+    friend constexpr bool operator!=(const BorderRadius& v1, const BorderRadius& v2) {
         return !(v1 == v2);
     }
 
@@ -679,10 +680,16 @@ private:
 ///
 class BorderRadiusesInPx {
 public:
+    /// Constructs a `BorderRadiusesInPx` with all radiuses set to `0dp`.
+    ///
+    constexpr BorderRadiusesInPx()
+        : radiuses_{} {
+    }
+
     /// Constructs a `BorderRadiusesInPx` with all radiuses set to the given
     /// `BorderRadiusesInPx`.
     ///
-    BorderRadiusesInPx(const BorderRadiusInPx& radius)
+    constexpr BorderRadiusesInPx(const BorderRadiusInPx& radius)
         : radiuses_{radius, radius, radius, radius} {
     }
 
@@ -690,7 +697,7 @@ public:
     /// radiuses set to `topLeftAndBottomRight`, and the top-right and
     /// bottom-left radiuses set to `topRightAndBottomLeft`.
     ///
-    BorderRadiusesInPx(
+    constexpr BorderRadiusesInPx(
         const BorderRadiusInPx& topLeftAndBottomRight,
         const BorderRadiusInPx& topRightAndBottomLeft)
 
@@ -706,7 +713,7 @@ public:
     /// `topRightAndBottomLeft`, and the bottom-right radius set to
     /// `bottomRight`.
     ///
-    BorderRadiusesInPx(
+    constexpr BorderRadiusesInPx(
         const BorderRadiusInPx& topLeft,
         const BorderRadiusInPx& topRightAndBottomLeft,
         const BorderRadiusInPx& bottomRight)
@@ -720,7 +727,7 @@ public:
 
     /// Constructs a `BorderRadiuses` with the four given `BorderRadius`.
     ///
-    BorderRadiusesInPx(
+    constexpr BorderRadiusesInPx(
         const BorderRadiusInPx& topLeft,
         const BorderRadiusInPx& topRight,
         const BorderRadiusInPx& bottomRight,
@@ -731,73 +738,73 @@ public:
 
     /// Returns the top left border radius.
     ///
-    const BorderRadiusInPx& topLeft() const {
+    constexpr const BorderRadiusInPx& topLeft() const {
         return radiuses_[0];
     }
 
     /// Returns the top right border radius.
     ///
-    const BorderRadiusInPx& topRight() const {
+    constexpr const BorderRadiusInPx& topRight() const {
         return radiuses_[1];
     }
 
     /// Returns the bottom right border radius.
     ///
-    const BorderRadiusInPx& bottomRight() const {
+    constexpr const BorderRadiusInPx& bottomRight() const {
         return radiuses_[2];
     }
 
     /// Returns the bottom left border radius.
     ///
-    const BorderRadiusInPx& bottomLeft() const {
+    constexpr const BorderRadiusInPx& bottomLeft() const {
         return radiuses_[3];
     }
 
     /// Returns the top left border radius as a reference.
     ///
-    BorderRadiusInPx& topLeft() {
+    constexpr BorderRadiusInPx& topLeft() {
         return radiuses_[0];
     }
 
     /// Returns the top right border radius as a reference.
     ///
-    BorderRadiusInPx& topRight() {
+    constexpr BorderRadiusInPx& topRight() {
         return radiuses_[1];
     }
 
     /// Returns the bottom right border radius as a reference.
     ///
-    BorderRadiusInPx& bottomRight() {
+    constexpr BorderRadiusInPx& bottomRight() {
         return radiuses_[2];
     }
 
     /// Returns the bottom left border radius as a reference.
     ///
-    BorderRadiusInPx& bottomLeft() {
+    constexpr BorderRadiusInPx& bottomLeft() {
         return radiuses_[3];
     }
 
     /// Sets the top left border radius.
     ///
-    void setTopLeft(const BorderRadiusInPx& topLeft) {
+    constexpr void setTopLeft(const BorderRadiusInPx& topLeft) {
         radiuses_[0] = topLeft;
     }
 
     /// Sets the top right border radius.
     ///
-    void setTopRight(const BorderRadiusInPx& topRight) {
+    constexpr void setTopRight(const BorderRadiusInPx& topRight) {
         radiuses_[1] = topRight;
     }
 
     /// Sets the bottom right border radius.
     ///
-    void setBottomRight(const BorderRadiusInPx& bottomRight) {
+    constexpr void setBottomRight(const BorderRadiusInPx& bottomRight) {
         radiuses_[2] = bottomRight;
     }
 
     /// Sets the bottom left border radius.
     ///
-    void setBottomLeft(const BorderRadiusInPx& bottomLeft) {
+    constexpr void setBottomLeft(const BorderRadiusInPx& bottomLeft) {
         radiuses_[3] = bottomLeft;
     }
 
@@ -808,7 +815,7 @@ public:
     /// - If `index` is `2`, returns the bottom-right radius.
     /// - If `index` is `3`, returns the bottom-left radius.
     ///
-    const BorderRadiusInPx& operator[](Int index) const {
+    constexpr const BorderRadiusInPx& operator[](Int index) const {
         return radiuses_[static_cast<size_t>(index)];
     }
 
@@ -820,7 +827,7 @@ public:
     ///
     /// The given `width` and `height` are assumed to be non-negative.
     ///
-    BorderRadiusesInPx clamped(float width, float height) const {
+    constexpr BorderRadiusesInPx clamped(float width, float height) const {
         BorderRadiusesInPx res = *this;
         constexpr Int Horizontal = 0;
         constexpr Int Vertical = 1;
@@ -833,7 +840,7 @@ public:
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    BorderRadiusesInPx offsetted(float horizontal, float vertical) const {
+    constexpr BorderRadiusesInPx offsetted(float horizontal, float vertical) const {
         return BorderRadiusesInPx(
             radiuses_[0].offsetted(horizontal, vertical),
             radiuses_[1].offsetted(horizontal, vertical),
@@ -843,7 +850,8 @@ public:
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    BorderRadiusesInPx offsetted(float top, float right, float bottom, float left) const {
+    constexpr BorderRadiusesInPx
+    offsetted(float top, float right, float bottom, float left) const {
         return BorderRadiusesInPx(
             topLeft().offsetted(left, top),
             topRight().offsetted(right, top),
@@ -853,20 +861,27 @@ public:
 
     /// Returns whether the two given `BorderRadiusesInPx` are equal.
     ///
-    friend bool operator==(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
-        return v1.radiuses_ == v2.radiuses_;
+    friend constexpr bool
+    operator==(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
+        // Note: std::array<T>::operator==() is not constexpr in C++17
+        // (it is in C++20), so we do it manually.
+        return v1.radiuses_[0] == v2.radiuses_[0]    //
+               && v1.radiuses_[1] == v2.radiuses_[1] //
+               && v1.radiuses_[2] == v2.radiuses_[2] //
+               && v1.radiuses_[3] == v2.radiuses_[3];
     }
 
     /// Returns whether the two given `BorderRadiusesInPx` are different.
     ///
-    friend bool operator!=(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
+    friend constexpr bool
+    operator!=(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
         return !(v1 == v2);
     }
 
 private:
     std::array<BorderRadiusInPx, 4> radiuses_;
 
-    static void clamp_(float& x1, float& x2, float sumMax) {
+    static constexpr void clamp_(float& x1, float& x2, float sumMax) {
         x1 = core::clamp(x1, 0.0f, sumMax);
         x2 = core::clamp(x2, 0.0f, sumMax);
         float overflow = (x1 + x2) - sumMax;
@@ -885,7 +900,7 @@ class VGC_STYLE_API BorderRadiuses {
 public:
     /// Constructs a `BorderRadiuses` with all radiuses set to (0dp, 0dp).
     ///
-    BorderRadiuses()
+    constexpr BorderRadiuses()
         : topLeft_()
         , topRight_()
         , bottomRight_()
@@ -895,7 +910,7 @@ public:
     /// Constructs a `BorderRadiuses` with all radiuses set to the given
     /// `BorderRadius`.
     ///
-    BorderRadiuses(const BorderRadius& radius)
+    constexpr BorderRadiuses(const BorderRadius& radius)
         : topLeft_(radius)
         , topRight_(radius)
         , bottomRight_(radius)
@@ -906,7 +921,7 @@ public:
     /// radiuses set to `topLeftAndBottomRight`, and the top-right and
     /// bottom-left radiuses set to `topRightAndBottomLeft`.
     ///
-    BorderRadiuses(
+    constexpr BorderRadiuses(
         const BorderRadius& topLeftAndBottomRight,
         const BorderRadius& topRightAndBottomLeft)
 
@@ -921,7 +936,7 @@ public:
     /// `topRightAndBottomLeft`, and the bottom-right radius set to
     /// `bottomRight`.
     ///
-    BorderRadiuses(
+    constexpr BorderRadiuses(
         const BorderRadius& topLeft,
         const BorderRadius& topRightAndBottomLeft,
         const BorderRadius& bottomRight)
@@ -934,7 +949,7 @@ public:
 
     /// Constructs a `BorderRadiuses` with the four given `BorderRadius`.
     ///
-    BorderRadiuses(
+    constexpr BorderRadiuses(
         const BorderRadius& topLeft,
         const BorderRadius& topRight,
         const BorderRadius& bottomRight,
@@ -953,49 +968,49 @@ public:
 
     /// Returns the top left border radius.
     ///
-    const BorderRadius& topLeft() const {
+    constexpr const BorderRadius& topLeft() const {
         return topLeft_;
     }
 
     /// Returns the top right border radius.
     ///
-    const BorderRadius& topRight() const {
+    constexpr const BorderRadius& topRight() const {
         return topRight_;
     }
 
     /// Returns the bottom right border radius.
     ///
-    const BorderRadius& bottomRight() const {
+    constexpr const BorderRadius& bottomRight() const {
         return bottomRight_;
     }
 
     /// Returns the bottom left border radius.
     ///
-    const BorderRadius& bottomLeft() const {
+    constexpr const BorderRadius& bottomLeft() const {
         return bottomLeft_;
     }
 
     /// Sets the top left border radius.
     ///
-    void setTopLeft(const BorderRadius& topLeft) {
+    constexpr void setTopLeft(const BorderRadius& topLeft) {
         topLeft_ = topLeft;
     }
 
     /// Sets the top right border radius.
     ///
-    void setTopRight(const BorderRadius& topRight) {
+    constexpr void setTopRight(const BorderRadius& topRight) {
         topRight_ = topRight;
     }
 
     /// Sets the bottom right border radius.
     ///
-    void setBottomRight(const BorderRadius& bottomRight) {
+    constexpr void setBottomRight(const BorderRadius& bottomRight) {
         bottomRight_ = bottomRight;
     }
 
     /// Sets the bottom left border radius.
     ///
-    void setBottomLeft(const BorderRadius& bottomLeft) {
+    constexpr void setBottomLeft(const BorderRadius& bottomLeft) {
         bottomLeft_ = bottomLeft;
     }
 
@@ -1019,7 +1034,7 @@ public:
 
     /// Returns whether the two given `BorderRadiuses` are equal.
     ///
-    friend bool operator==(const BorderRadiuses& v1, const BorderRadiuses& v2) {
+    friend constexpr bool operator==(const BorderRadiuses& v1, const BorderRadiuses& v2) {
         return v1.topLeft_ == v2.topLeft_            //
                && v1.topRight_ == v2.topRight_       //
                && v1.bottomRight_ == v2.bottomRight_ //
@@ -1028,7 +1043,7 @@ public:
 
     /// Returns whether the two given `BorderRadiuses` are different.
     ///
-    friend bool operator!=(const BorderRadiuses& v1, const BorderRadiuses& v2) {
+    friend constexpr bool operator!=(const BorderRadiuses& v1, const BorderRadiuses& v2) {
         return !(v1 == v2);
     }
 
