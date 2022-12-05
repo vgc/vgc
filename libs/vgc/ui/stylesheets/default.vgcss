@@ -28,6 +28,9 @@
     min-height: 30dp;
     horizontal-stretch: 1;
     vertical-stretch: 1;
+    handle-size: 12dp;
+    handle-hovered-size: 2dp;
+    handle-hovered-color: rgb(110, 114, 118);
 }
 
 .PanelArea.left-sidebar {

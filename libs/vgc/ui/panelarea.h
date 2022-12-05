@@ -157,7 +157,16 @@ public:
         return static_cast<UInt8>(type()) < 2;
     }
 
+    // Implementation of StylableObject interface
+    static void populateStyleSpecTable(style::SpecTable* table);
+    void populateStyleSpecTableVirtual(style::SpecTable* table) override {
+        populateStyleSpecTable(table);
+    }
+
 protected:
+    // Reimplementation of StylableObject virtual methods.
+    void onStyleChanged() override;
+
     // Reimplementation of Widget protected virtual methods
     // XXX Some of these are currently public in Widget, but we should
     //     probably make them protected for consistency
@@ -190,6 +199,11 @@ private:
     float dragStartMousePosition_;
     float dragStartSplitSizeBefore_;
     float dragStartSplitSizeAfter_;
+
+    // Style
+    float halfHandleSize_ = 0.0f;
+    float halfHandleHoveredSize_ = 0.0f;
+    core::Color handleHoveredColor_;
 
     // Orders the child areas by "normalized slack". This could be a local
     // variable, but we make it a data member to avoid dynamic allocations.

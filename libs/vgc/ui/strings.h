@@ -65,6 +65,10 @@ VGC_UI_API extern const core::StringId space_around;
 VGC_UI_API extern const core::StringId space_evenly;
 VGC_UI_API extern const core::StringId force_stretch;
 
+VGC_UI_API extern const core::StringId handle_size;
+VGC_UI_API extern const core::StringId handle_hovered_size;
+VGC_UI_API extern const core::StringId handle_hovered_color;
+
 VGC_UI_API extern const core::StringId root;
 
 VGC_UI_API extern const core::StringId uncheckable;
