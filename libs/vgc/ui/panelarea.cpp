@@ -16,7 +16,9 @@
 
 #include <vgc/ui/panelarea.h>
 
+#include <vgc/core/colors.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/style/parse.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/strings.h>
@@ -322,6 +324,43 @@ float computeAveragePositiveSizes(
 
 } // namespace
 
+void PanelArea::populateStyleSpecTable(style::SpecTable* table) {
+
+    if (!table->setRegistered(staticClassName())) {
+        return;
+    }
+
+    using namespace strings;
+    using namespace style::literals;
+    using style::Length;
+    using style::StyleValue;
+
+    auto ten_l = StyleValue::custom(Length(10_dp));
+    auto zero_l = StyleValue::custom(Length(0_dp));
+    auto transp = StyleValue::custom(core::colors::transparent);
+
+    table->insert(handle_size, ten_l, false, &Length::parse);
+    table->insert(handle_hovered_size, zero_l, false, &Length::parse);
+    table->insert(handle_hovered_color, transp, false, &style::parseColor);
+
+    SuperClass::populateStyleSpecTable(table);
+}
+
+void PanelArea::onStyleChanged() {
+
+    using namespace strings;
+    using style::Length;
+
+    halfHandleSize_ = 0.5f * detail::getLengthInPx(this, handle_size);
+    halfHandleHoveredSize_ = 0.5f * detail::getLengthInPx(this, handle_hovered_size);
+    handleHoveredColor_ = detail::getColor(this, handle_hovered_color);
+
+    requestGeometryUpdate();
+    requestRepaint();
+
+    SuperClass::onStyleChanged();
+}
+
 void PanelArea::onWidgetAdded(Widget*, bool) {
     onChildrenChanged_();
 }
@@ -498,8 +537,6 @@ void PanelArea::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     if (hoveredSplitHandle_ != -1) {
         core::FloatArray a;
 
-        core::Color handleHoveredColor(1, 0, 0);
-        const float handleRectHalfSize = 1.0f;
         Int mainDir = (type() == PanelAreaType::HorizontalSplit) ? 0 : 1;
         Int crossDir = 1 - mainDir;
         float crossSize = size()[crossDir];
@@ -507,13 +544,13 @@ void PanelArea::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         float handlePos = splitData_[hoveredSplitHandle_].hPosition;
         geometry::Vec2f handleRectPos;
         geometry::Vec2f handleRectSize;
-        handleRectPos[mainDir] = handlePos - handleRectHalfSize;
-        handleRectSize[mainDir] = 2 * handleRectHalfSize;
+        handleRectPos[mainDir] = handlePos - halfHandleHoveredSize_;
+        handleRectSize[mainDir] = 2 * halfHandleHoveredSize_;
         handleRectSize[crossDir] = crossSize;
 
         geometry::Rect2f handleRect =
             geometry::Rect2f::fromPositionSize(handleRectPos, handleRectSize);
-        detail::insertRect(a, handleHoveredColor, handleRect);
+        detail::insertRect(a, handleHoveredColor_, handleRect);
 
         engine->updateVertexBufferData(triangles_, std::move(a));
         engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -630,16 +667,11 @@ void PanelArea::onChildrenChanged_() {
 // on the left of the first split area: there is no handle there.
 Int PanelArea::computeHoveredSplitHandle_(const geometry::Vec2f& position) const {
     if (isSplit()) {
-        using namespace style::literals;
-        const style::Length handleHoverHalfSize_ = 5.0_dp;
-        const float handleHoverHalfSize = handleHoverHalfSize_.toPx(styleMetrics());
-
         Int mainDir = (type() == PanelAreaType::HorizontalSplit) ? 0 : 1;
         float pos = position[mainDir];
         for (Int i = 1; i < splitData_.length(); ++i) {
             const SplitData& data = splitData_[i];
-            if (data.isInteractive
-                && std::abs(pos - data.position) < handleHoverHalfSize) {
+            if (data.isInteractive && std::abs(pos - data.position) < halfHandleSize_) {
                 return i;
             }
         }

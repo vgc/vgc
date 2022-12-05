@@ -69,6 +69,11 @@ const core::StringId space_around("space-around");
 const core::StringId space_evenly("space-evenly");
 const core::StringId force_stretch("force-stretch");
 
+// PanelAlrea
+const core::StringId handle_size("handle-size");
+const core::StringId handle_hovered_size("handle-hovered-size");
+const core::StringId handle_hovered_color("handle-hovered-color");
+
 // Style classes / pseudo-classes
 // ------------------------------
 
