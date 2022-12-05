@@ -249,7 +249,7 @@ public:
     friend constexpr bool
     operator==(const LengthOrPercentage& v1, const LengthOrPercentage& v2) {
         return v1.isPercentage_ == v2.isPercentage_                //
-               && (v1.isPercentage_ ? v1.unit_ == v2.unit_ : true) //
+               && (v1.isPercentage_ ? true : v1.unit_ == v2.unit_) //
                && v1.value_ == v2.value_;
     }
 
