@@ -590,9 +590,12 @@ void PanelArea::onChildrenChanged_() {
 
     // Give a new size to new elements
     float averageSize = computeAveragePositiveSizes(splitData_);
+    float scaleFactor = styleMetrics().scaleFactor();
+    float invScaleFactor = 1.0f / scaleFactor;
     for (SplitData& data : splitData_) {
         if (data.size < 0) {
             data.size = averageSize;
+            data.preferredSizeInDp = data.size * invScaleFactor;
         }
     }
 
@@ -711,8 +714,9 @@ void PanelArea::continueDragging_(const geometry::Vec2f& position) {
     splitDataAfter.size = newSplitSizeAfter;
     splitDataAfter.position = splitDataBefore.position + newSplitSizeBefore;
     float scaleFactor = styleMetrics().scaleFactor();
+    float invScaleFactor = 1.0f / scaleFactor;
     for (SplitData& data : splitData_) {
-        data.preferredSizeInDp = data.size / scaleFactor;
+        data.preferredSizeInDp = data.size * invScaleFactor;
     }
 
     requestGeometryUpdate();
