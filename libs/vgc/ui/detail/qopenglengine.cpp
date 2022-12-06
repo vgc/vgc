@@ -959,6 +959,9 @@ QglEngine::constructRasterizerState_(const RasterizerStateCreateInfo& createInfo
 
 void QglEngine::onWindowResize_(SwapChain* aSwapChain, UInt32 /*width*/, UInt32 height) {
 
+    // Store the height in order to be able to convert from OpenGL coordinates
+    // (origin is bottom-left) to Engine coordinate (origin is top-left).
+    //
     QglSwapChain* swapChain = static_cast<QglSwapChain*>(aSwapChain);
     swapChain->height_ = static_cast<GLsizei>(height);
 }
@@ -1511,6 +1514,11 @@ void QglEngine::setSwapChain_(const SwapChainPtr& aSwapChain) {
         updateViewportAndScissorRect_(scHeight_);
     }
     ctx_->makeCurrent(surface_);
+    api_->glEnable(GL_SCISSOR_TEST); // scissor test always enabled in graphics::Engine
+
+    // XXX temporary: see comment in preBeginFrame_
+    api_->glDisable(GL_DEPTH_TEST);
+    api_->glDisable(GL_STENCIL_TEST);
 }
 
 void QglEngine::setFramebuffer_(const FramebufferPtr& aFramebuffer) {
@@ -1623,7 +1631,6 @@ void QglEngine::setRasterizerState_(const RasterizerStatePtr& aState) {
         GLenum cullModeGL = newState->cullModeGL_;
         bool isFrontCounterClockwise = newState->isFrontCounterClockwise();
         bool isDepthClippingEnabled = newState->isDepthClippingEnabled();
-        bool isScissoringEnabled = newState->isScissoringEnabled();
         bool isMultisamplingEnabled = newState->isMultisamplingEnabled();
         bool isLineAntialiasingEnabled = newState->isLineAntialiasingEnabled();
 
@@ -1652,10 +1659,6 @@ void QglEngine::setRasterizerState_(const RasterizerStatePtr& aState) {
 
         if (!oldState || isDepthClippingEnabled != oldState->isDepthClippingEnabled()) {
             setEnabled_(GL_DEPTH_CLAMP, isDepthClippingEnabled);
-        }
-
-        if (!oldState || isScissoringEnabled != oldState->isScissoringEnabled()) {
-            setEnabled_(GL_SCISSOR_TEST, isScissoringEnabled);
         }
 
         if (!oldState || isMultisamplingEnabled != oldState->isMultisamplingEnabled()) {
@@ -1870,19 +1873,49 @@ UInt64 QglEngine::present_(
     return 0;
 }
 
-void QglEngine::setStateDirty_() {
+void QglEngine::preBeginFrame_(SwapChain* aSwapChain, FrameKind kind) {
+
+    if (kind != graphics::FrameKind::QWidget || !aSwapChain) {
+        return;
+    }
+    QglSwapChain* swapChain = static_cast<QglSwapChain*>(aSwapChain);
+
+    // Reset various states
+    //
     boundFramebuffer_ = badGLuint;
     boundBlendState_.reset();
     currentBlendConstantFactors_.reset();
     boundRasterizerState_.reset();
     currentImageViews_.fill(nullptr);
     currentSamplerStates_.fill(nullptr);
-    // XXX temporary
-    api_->glDisable(GL_DEPTH_TEST);
-    api_->glDisable(GL_STENCIL_TEST);
+
+    // Update viewport rect from values already set in OpenGL.
+    //
+    // We need this when using QglEngine in combination with QOpenGLWidget,
+    // because in this situation Qt calls glViewport for us, so client code
+    // (e.g., in UiWidget) never explicitly calls engine->setViewport().
+    //
+    // This ensures that we have correct values in viewportRect_, which is
+    // important since functions like setScissorRect_ rely on it.
+    //
+    // Note: in theory, we're not supposed to be able to call glGetIntegerv()
+    // here because preBeginFrame_() is called in the user thread, not the
+    // render thread. In practice, it's ok since we have `kind == QWidget`, in
+    // which case there is no multithreading.
+    //
+    GLint rect[4];
+    api_->glGetIntegerv(GL_VIEWPORT, rect);
+    viewportRect_.x = rect[0];
+    viewportRect_.y = swapChain->height_ - (rect[1] + rect[3]);
+    viewportRect_.w = rect[2];
+    viewportRect_.h = rect[3];
+
+    // XXX depth and stencil are currently disabled in setSwapChain_
+    // TODO: set proper depth/stencil states (not yet implemented in Engine)
 }
 
 void QglEngine::updateViewportAndScissorRect_(GLsizei scHeight) {
+
     if (scHeight != rtHeight_) {
         rtHeight_ = scHeight;
         api_->glViewport(
@@ -1890,6 +1923,7 @@ void QglEngine::updateViewportAndScissorRect_(GLsizei scHeight) {
             rtHeight_ - (viewportRect_.y + viewportRect_.h),
             viewportRect_.w,
             viewportRect_.h);
+
         api_->glScissor(
             scissorRect_.x,
             rtHeight_ - (scissorRect_.y + scissorRect_.h),

@@ -598,6 +598,7 @@ void Window::paint(bool sync) {
     engine_->setRasterizerState(rasterizerState_);
     engine_->setBlendState(blendState_, geometry::Vec4f());
     engine_->setViewport(0, 0, width_, height_);
+    engine_->setScissorRect(rect());
     engine_->clear(clearColor_);
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);

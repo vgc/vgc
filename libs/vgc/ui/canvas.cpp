@@ -677,8 +677,6 @@ geometry::Vec2f Canvas::computePreferredSize() const {
 
 void Canvas::onPaintCreate(graphics::Engine* engine) {
     graphics::RasterizerStateCreateInfo createInfo = {};
-    bgFillRS_ = engine->createRasterizerState(createInfo);
-    createInfo.setScissoringEnabled(true);
     fillRS_ = engine->createRasterizerState(createInfo);
     createInfo.setFillMode(graphics::FillMode::Wireframe);
     wireframeRS_ = engine->createRasterizerState(createInfo);
@@ -701,7 +699,13 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     engine->setProgram(graphics::BuiltinProgram::Simple);
 
-    engine->setRasterizerState(bgFillRS_);
+    // Draw background as a (triangle strip) quad
+    //
+    // XXX TODO: The scissor rect should be set directly by widget/window
+    //
+    geometry::Rect2f absRect = mapTo(root(), rect());
+    engine->setScissorRect(absRect);
+    engine->setRasterizerState(fillRS_);
     if (reload_) {
         reload_ = false;
         core::FloatArray a;
@@ -714,10 +718,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         });
         engine->updateVertexBufferData(bgGeometry_, std::move(a));
     }
-    engine->draw(bgGeometry_, -1, 0);
+    engine->draw(bgGeometry_);
 
-    geometry::Rect2f absRect = mapTo(root(), rect());
-    engine->setScissorRect(absRect);
     engine->setRasterizerState((polygonMode_ == 1) ? wireframeRS_ : fillRS_);
 
     geometry::Mat4f vm = engine->viewMatrix();
@@ -765,7 +767,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
 void Canvas::onPaintDestroy(graphics::Engine*) {
     bgGeometry_.reset();
-    bgFillRS_.reset();
     for (CurveGraphics& r : curveGraphics_) {
         destroyCurveGraphics_(r);
     }

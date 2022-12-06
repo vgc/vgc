@@ -65,14 +65,6 @@ public:
         isDepthClippingEnabled_ = enabled;
     }
 
-    bool isScissoringEnabled() const {
-        return isScissoringEnabled_;
-    }
-
-    void setScissoringEnabled(bool enabled) {
-        isScissoringEnabled_ = enabled;
-    }
-
     bool isMultisamplingEnabled() const {
         return isMultisamplingEnabled_;
     }
@@ -97,7 +89,6 @@ private:
     //float depthBiasClamp_;
     //float slopeScaledDepthBias_;
     bool isDepthClippingEnabled_ = false;
-    bool isScissoringEnabled_ = false;
     bool isMultisamplingEnabled_ = true;
     bool isLineAntialiasingEnabled_ = true;
 };
@@ -127,10 +118,6 @@ public:
 
     bool isDepthClippingEnabled() const {
         return info_.isDepthClippingEnabled();
-    }
-
-    bool isScissoringEnabled() const {
-        return info_.isScissoringEnabled();
     }
 
     bool isMultisamplingEnabled() const {

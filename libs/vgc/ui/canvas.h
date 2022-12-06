@@ -215,7 +215,6 @@ private:
     std::list<CurveGraphics> removedCurveGraphics_;
     std::map<dom::Element*, CurveGraphicsIterator> curveGraphicsMap_;
     graphics::GeometryViewPtr bgGeometry_;
-    graphics::RasterizerStatePtr bgFillRS_;
 
     struct unwrapped_less {
         template<typename It>

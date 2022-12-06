@@ -467,6 +467,8 @@ protected:
 
     virtual void onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) = 0;
 
+    virtual void preBeginFrame_(SwapChain* swapChain, FrameKind kind);
+
     virtual bool shouldPresentWaitFromSyncedUserThread_() {
         return false;
     }
@@ -523,8 +525,6 @@ protected:
 
     virtual UInt64
     present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) = 0;
-
-    virtual void setStateDirty_(){};
 
 protected:
     detail::ResourceRegistry* resourceRegistry_ = nullptr;
