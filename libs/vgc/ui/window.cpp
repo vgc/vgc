@@ -811,6 +811,39 @@ void Window::initEngine_() {
     engineCreateInfo.setMultithreadingEnabled(true);
 
 #if defined(VGC_CORE_OS_WINDOWS) && TRUE
+
+    // Set WindowSwapChainFormat to RGBA_8_UNORM, that is, linear RGB.
+    //
+    // This is a counter-intuitive hack made necessary by our current pipeline:
+    // - We write sRGB values to the vertex buffer
+    // - Our vertex shaders and pixel shaders process the colors as sRGB
+    // - The pixel shader outputs an sRGB color
+    // - We want the framebuffer to store an sRGB color
+    //
+    // The problem is that Direct3D *assumes* that the shaders are processing
+    // and outputting linear RGB colors. So if we set WindowSwapChainFormat to
+    // RGBA_8_UNORM_SRGB (which makes more sense intuitively, since we want the
+    // final color to be stored as SRGB), it would apply a linear-to-sRGB
+    // conversion between the output of the pixel shader and what is stored in
+    // the framebuffer, producing in our case an incorrect color (the gamma
+    // correction is applied twice).
+    //
+    // By using RGBA_8_UNORM instead, Direct3D assumes that the pixel shader is
+    // in linear RGB, but since we ask it to store it as linear RGB in the
+    // framebuffer, Direct3D does not perform any conversion, and store the
+    // values as is (that is, in practice in our case, sRGB values are stored,
+    // but Direct3D thinks it is linear).
+    //
+    // Later, these values are *interepreted* as sRGB anyway by Windows.
+    //
+    // TODO: A proper fix would to send linear RGB as input to our shaders, and
+    // process everything in our shaders in linear RGB. We could then set
+    // WindowSwapChainFormat to RGBA_8_UNORM_SRGB, which would convert those to
+    // sRGB to store them in the framebuffer, which are then interpreted by
+    // Windows as sRGB.
+    //
+    windowSwapChainFormat.setPixelFormat(graphics::WindowPixelFormat::RGBA_8_UNORM);
+
     // RasterSurface looks ok since Qt seems to not automatically create a backing store.
     setSurfaceType(QWindow::RasterSurface);
     QWindow::create();
