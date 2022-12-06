@@ -347,6 +347,13 @@ void Widget::updateGeometry() {
     }
 }
 
+void Widget::setClippingEnabled(bool isClippingEnabled) {
+    if (isClippingEnabled_ != isClippingEnabled) {
+        isClippingEnabled_ = isClippingEnabled;
+        requestRepaint();
+    }
+}
+
 style::LengthOrPercentageOrAuto Widget::preferredWidth() const {
     return style(strings::preferred_width).to<style::LengthOrPercentageOrAuto>();
 }
@@ -459,7 +466,20 @@ void Widget::paint(graphics::Engine* engine, PaintOptions options) {
         updateGeometry();
     }
     isRepaintRequested_ = false;
-    onPaintDraw(engine, options);
+
+    if (isClippingEnabled()) {
+        geometry::Rect2f scissorRect = mapTo(root(), rect()); // XXX or contentRect?
+        scissorRect.setSize(scissorRect.size());
+        scissorRect.intersectWith(engine->scissorRect());
+        if (!scissorRect.isDegenerate()) {
+            engine->pushScissorRect(scissorRect);
+            onPaintDraw(engine, options);
+            engine->popScissorRect();
+        }
+    }
+    else {
+        onPaintDraw(engine, options);
+    }
 }
 
 void Widget::onPaintCreate(graphics::Engine* engine) {

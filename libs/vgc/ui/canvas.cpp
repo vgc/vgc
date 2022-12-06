@@ -121,6 +121,8 @@ Canvas::Canvas(dom::Document* document)
     // policy is NoFocus).
     setFocusPolicy(FocusPolicy::Click);
 
+    setClippingEnabled(true);
+
     if (document_) {
         documentChangedConnectionHandle_ = document_->changed().connect(
             [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
@@ -688,23 +690,18 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
 void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     namespace gs = graphics::strings;
-    using PP = graphics::PipelineParameter;
 
     updateCurveGraphics_(engine);
 
     drawTask_.start();
 
-    auto modifiedParameters = PP::RasterizerState | PP::ScissorRect;
+    auto modifiedParameters = graphics::PipelineParameter::RasterizerState;
     engine->pushPipelineParameters(modifiedParameters);
 
     engine->setProgram(graphics::BuiltinProgram::Simple);
 
     // Draw background as a (triangle strip) quad
     //
-    // XXX TODO: The scissor rect should be set directly by widget/window
-    //
-    geometry::Rect2f absRect = mapTo(root(), rect());
-    engine->setScissorRect(absRect);
     engine->setRasterizerState(fillRS_);
     if (reload_) {
         reload_ = false;

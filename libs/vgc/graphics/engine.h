@@ -304,6 +304,10 @@ public:
     void pushRasterizerState(const RasterizerStatePtr& state);
     void popRasterizerState();
 
+    const geometry::Rect2f& scissorRect() const {
+        return scissorRectStack_.top();
+    }
+
     void setScissorRect(const geometry::Rect2f& rect);
     void pushScissorRect(const geometry::Rect2f& rect);
     void popScissorRect();
