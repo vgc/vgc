@@ -459,6 +459,32 @@ public:
         return size_[1];
     }
 
+    /// Returns whether the content of this widget is automatically clipped
+    /// to the rect() of the widget, or if instead the content is allowed
+    /// to overflow outside the rect().
+    ///
+    /// By default, isClippingEnabled() is false, that is, it is the
+    /// responsability of widgets not to draw outside of their rect().
+    ///
+    /// \sa `setClippingEnabled()`, `rect()`, `contentRect()`.
+    ///
+    // XXX use contentRect() instead?
+    //
+    bool isClippingEnabled() const {
+        return isClippingEnabled_;
+    }
+
+    /// Sets whether the content of this widget is automatically clipped
+    /// to the rect() of the widget.
+    ///
+    /// by default, isClippingEnabled() is false, so it can be useful to call
+    /// `setClippingEnabled(true)` in the constructor of widget subclasses that
+    /// want their content automatically clipped, for example, `Canvas`.
+    ///
+    /// \sa `isClippingEnabled()`
+    ///
+    void setClippingEnabled(bool isClippingEnabled);
+
     /// Returns the preferred width of this widget.
     ///
     style::LengthOrPercentageOrAuto preferredWidth() const;
@@ -1308,6 +1334,7 @@ private:
     mutable bool isGeometryUpdateRequested_ = false;
     bool isGeometryUpdateOngoing_ = false;
     bool isRepaintRequested_ = false;
+    bool isClippingEnabled_ = false;
     geometry::Vec2f position_ = {};
     geometry::Vec2f size_ = {};
     geometry::Vec2f lastResizeEventSize_ = {};
