@@ -45,27 +45,46 @@ VGC_DECLARE_OBJECT(Window);
 /// \class vgc::ui::Window
 /// \brief A window able to contain a vgc::ui::widget.
 ///
+/// Note: for now, `vgc::ui::Window` inherits from `QWindow`, but we may change
+/// this in the future, so clients of `vgc::ui::Window` should avoid calling
+/// methods inherited from `QWindow`.
+///
 class VGC_UI_API Window : public core::Object, public QWindow {
     VGC_OBJECT(Window, core::Object)
 
 protected:
-    /// Constructs a Window containing the given vgc::ui::Widget.
+    /// Constructs a `Window` containing the given `Widget`.
     ///
     Window(const WidgetPtr& widget);
 
-    /// Destructs the Window.
+    /// Destructs the `Window`.
     ///
     void onDestroyed() override;
 
 public:
+    /// Creates a `Window` containing the given `Widget`.
+    ///
     static WindowPtr create(const WidgetPtr& widget);
 
-    /// Returns the contained vgc::ui::Widget
+    /// Returns the contained `Widget`
     ///
     Widget* widget() {
         return widget_.get();
     }
 
+    /// Returns the geometry of this `Window` as a rectangle.
+    ///
+    // TODO: we want this to be equivalent to `Rect2f::fromPositionSize(0, 0,
+    // size())` (see comment in Widget::rect()), but currently `Window::size()`
+    // is a QSize instead of a Vec2f like in Widget.
+    //
+    geometry::Rect2f rect() const {
+        return geometry::Rect2f::fromPositionSize(
+            0, 0, static_cast<float>(width_), static_cast<float>(height_));
+    }
+
+    ///
+    /// Returns
     // ===================== Handle mouse/tablet input ========================
 
 protected:

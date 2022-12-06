@@ -1698,7 +1698,7 @@ void D3d11Engine::initRasterizerState_(RasterizerState* state) {
     //desc.DepthBiasClamp;
     //desc.SlopeScaledDepthBias;
     desc.DepthClipEnable = state->isDepthClippingEnabled();
-    desc.ScissorEnable = state->isScissoringEnabled();
+    desc.ScissorEnable = true; // scissor test always enabled in graphics::Engine
     desc.MultisampleEnable = state->isMultisamplingEnabled();
     desc.AntialiasedLineEnable = state->isLineAntialiasingEnabled();
     device_->CreateRasterizerState(
