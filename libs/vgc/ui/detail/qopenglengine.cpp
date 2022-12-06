@@ -957,7 +957,11 @@ QglEngine::constructRasterizerState_(const RasterizerStateCreateInfo& createInfo
     return RasterizerStatePtr(state.release());
 }
 
-void QglEngine::onWindowResize_(SwapChain* aSwapChain, UInt32 width, UInt32 height) {
+void QglEngine::onWindowResize_(SwapChain* aSwapChain, UInt32 /*width*/, UInt32 height) {
+
+    // Store the height in order to be able to convert from OpenGL coordinates
+    // (origin is bottom-left) to Engine coordinate (origin is top-left).
+    //
     QglSwapChain* swapChain = static_cast<QglSwapChain*>(aSwapChain);
     swapChain->height_ = static_cast<GLsizei>(height);
 }
@@ -1511,10 +1515,8 @@ void QglEngine::setSwapChain_(const SwapChainPtr& aSwapChain) {
     }
     ctx_->makeCurrent(surface_);
     api_->glEnable(GL_SCISSOR_TEST); // scissor test always enabled in graphics::Engine
-    // XXX api_->glScissor(0, 0, 10000, 10000);
 
-    // XXX temporary
-    // See comment in setStateDirty_
+    // XXX temporary: see comment in preBeginFrame_
     api_->glDisable(GL_DEPTH_TEST);
     api_->glDisable(GL_STENCIL_TEST);
 }
@@ -1673,7 +1675,6 @@ void QglEngine::setRasterizerState_(const RasterizerStatePtr& aState) {
 }
 
 void QglEngine::setScissorRect_(const geometry::Rect2f& rect) {
-
     scissorRect_ = {};
     scissorRect_.x = static_cast<GLint>(std::round(rect.xMin()));
     scissorRect_.y = static_cast<GLint>(std::round(rect.yMin()));
@@ -1681,7 +1682,6 @@ void QglEngine::setScissorRect_(const geometry::Rect2f& rect) {
     GLint y2 = static_cast<GLint>(std::round(rect.yMax()));
     scissorRect_.w = x2 - scissorRect_.x;
     scissorRect_.h = y2 - scissorRect_.y;
-
     api_->glScissor(
         scissorRect_.x,
         rtHeight_ - (scissorRect_.y + scissorRect_.h),
@@ -1873,7 +1873,12 @@ UInt64 QglEngine::present_(
     return 0;
 }
 
-void QglEngine::setStateDirty_() {
+void QglEngine::preBeginFrame_(SwapChain* aSwapChain, FrameKind kind) {
+
+    if (kind != graphics::FrameKind::QWidget || !aSwapChain) {
+        return;
+    }
+    QglSwapChain* swapChain = static_cast<QglSwapChain*>(aSwapChain);
 
     // Reset various states
     //
@@ -1884,34 +1889,26 @@ void QglEngine::setStateDirty_() {
     currentImageViews_.fill(nullptr);
     currentSamplerStates_.fill(nullptr);
 
-    // Update viewport rect from values given to OpenGL.
+    // Update viewport rect from values already set in OpenGL.
     //
     // We need this when using QglEngine in combination with QOpenGLWidget,
     // because in this situation Qt calls glViewport for us, so client code
     // (e.g., in UiWidget) never explicitly calls engine->setViewport().
     //
     // This ensures that we have correct values in viewportRect_, which is
-    // important since function like setScissorRect_ rely on it.
+    // important since functions like setScissorRect_ rely on it.
     //
-    // Note: in theory, we're not supposed to be able to call OpenGL function
-    // here (glGetIntegerv), because this function is meant to be called in
-    // user thread and not in the render thread. In practice, it is ok since
-    // setStateDirty_ is only called on beginFrame(swapChain, kind) when kind
-    // == QWidget, and in this case there is no multithreading.
+    // Note: in theory, we're not supposed to be able to call glGetIntegerv()
+    // here because preBeginFrame_() is called in the user thread, not the
+    // render thread. In practice, it's ok since we have `kind == QWidget`, in
+    // which case there is no multithreading.
     //
     GLint rect[4];
     api_->glGetIntegerv(GL_VIEWPORT, rect);
     viewportRect_.x = rect[0];
-    viewportRect_.y = rect[1]; //rtHeight_ - (rect[1] + rect[3]);
+    viewportRect_.y = swapChain->height_ - (rect[1] + rect[3]);
     viewportRect_.w = rect[2];
     viewportRect_.h = rect[3];
-    VGC_DEBUG_TMP(
-        "QglEngine::setStateDirty_() with rtHeight = {}, GL_VIEWPORT = ({}, {}, {}, {})",
-        rtHeight_,
-        rect[0],
-        rect[1],
-        rect[2],
-        rect[3]);
 
     // XXX depth and stencil are currently disabled in setSwapChain_
     // TODO: set proper depth/stencil states (not yet implemented in Engine)

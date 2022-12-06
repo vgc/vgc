@@ -335,38 +335,31 @@ void UiWidget::resizeGL(int w, int h) {
     // Set new widget geometry
     widget()->updateGeometry(0, 0, static_cast<float>(w), static_cast<float>(h));
 
-    // Note: paintGL will automatically be called after this
+    // Simulate a window resize
     if (engine_) {
         engine_->onWindowResize(swapChain_, width(), height());
     }
+
+    // Note: paintGL will automatically be called after this
 }
 
 void UiWidget::paintGL() {
+
+    // Note: setViewport() and present() is already done by Qt
+
     if (!engine_) {
         throw core::LogicError("engine_ is null.");
     }
 
-    // setViewport & present is done by Qt
-
-    //engine_->onWindowResize(swapChain_, width(), height());
     engine_->beginFrame(swapChain_, graphics::FrameKind::QWidget);
-
     engine_->setRasterizerState(rasterizerState_);
     engine_->setBlendState(blendState_, geometry::Vec4f());
-
-    // XXX split to beginFrame() and qopenglengine-only beginInlineFrame
-
-    //engine_->clear(core::Color(0.f, 0.f, 0.f));
-
-    // Note: clear calls syncState_, and since it's the first time it is
-    // called, all parameters are dirty, so setScissorRect_() is called
-    // with the top of the scissorRectStackto
-    // engine->
+    // Note: engine_->setViewport(...) would normally be here
+    engine_->setScissorRect(widget()->rect());
     engine_->clear(core::Color(0.251f, 0.259f, 0.267f));
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
-    engine_->setScissorRect(widget()->rect());
     widget_->paint(engine_.get());
     isRepaintRequested_ = false;
     engine_->endFrame();

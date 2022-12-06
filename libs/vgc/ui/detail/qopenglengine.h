@@ -135,6 +135,8 @@ protected:
 
     void onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
 
+    void preBeginFrame_(SwapChain* swapChain, FrameKind kind) override;
+
     //--  RENDER THREAD implementation functions --
 
     void initContext_() override;
@@ -185,8 +187,6 @@ protected:
 
     UInt64
     present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) override;
-
-    void setStateDirty_() override;
 
     void updateViewportAndScissorRect_(GLsizei rtHeight);
 

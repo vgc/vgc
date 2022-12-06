@@ -762,11 +762,13 @@ bool Engine::beginFrame(const SwapChainPtr& swapChain, FrameKind kind) {
     frameStartTime_ = std::chrono::steady_clock::now();
     dirtyBuiltinConstantBuffer_ = true;
     if (kind == FrameKind::QWidget) {
+        // XXX Maybe we'd want to move this to preBeginFrame_, but we do not
+        // have access to dirtyPipelineParameters_ there.
         dirtyPipelineParameters_ |= PipelineParameter::All;
         dirtyPipelineParameters_.unset(PipelineParameter::Framebuffer);
         dirtyPipelineParameters_.unset(PipelineParameter::Viewport);
-        setStateDirty_();
     }
+    preBeginFrame_(swapChain.get(), kind);
 
     // XXX check every stack has size one !
 
@@ -882,6 +884,9 @@ void Engine::clear(const core::Color& color) {
     syncState_();
     queueLambdaCommandWithParameters_<core::Color>(
         "clear", [](Engine* engine, const core::Color& c) { engine->clear_(c); }, color);
+}
+
+void Engine::preBeginFrame_(SwapChain*, FrameKind) {
 }
 
 void Engine::init_() {

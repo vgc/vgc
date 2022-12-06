@@ -65,10 +65,6 @@ public:
         isDepthClippingEnabled_ = enabled;
     }
 
-    bool isScissoringEnabled() const {
-        return true;
-    }
-
     bool isMultisamplingEnabled() const {
         return isMultisamplingEnabled_;
     }
