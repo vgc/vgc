@@ -794,7 +794,7 @@ void emergencyShrink(
     // maybe something like:
     //
     // flex-clip: always                         always enable clipping (i.e., even on stretch)
-    //          | on-overflow-and-forced-shrink  enable clipping on forced shrinking overflow and
+    //          | on-overflow-and-forced-shrink  enable clipping on forced shrink and overflow
     //          | on-overflow                    enable clipping only on actual overflow
     //          | never                          never enable clipping (i.e., even on overflow)
     //
