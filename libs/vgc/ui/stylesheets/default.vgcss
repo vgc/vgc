@@ -280,12 +280,7 @@
     vertical-stretch: 10;
 }
 
-.Plot2d-label-right-aligned {
-    text-horizontal-align: center;
-    text-vertical-align: middle;
-}
-
-.Plot2d-label-center-aligned {
+.Plot2d > .vertical-axis-label {
     text-horizontal-align: center;
     text-vertical-align: middle;
 }
