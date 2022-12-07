@@ -85,14 +85,19 @@ Plot2d::Plot2d(Int numYs, Int maxXs)
     , data_((1 + numYs) * maxXs)
     , yLabels_(numYs)
     , maxXs_(maxXs) {
+
+    setClippingEnabled(true);
+
     addStyleClass(strings::Plot2d);
+
     maxYText_ = graphics::RichText::create();
     minYText_ = graphics::RichText::create();
+
     appendChildStylableObject(maxYText_.get());
     appendChildStylableObject(minYText_.get());
-    // temporary, we have to force update the cache atm
-    maxYText_->addStyleClass(core::StringId("Plot2d-label-right-aligned"));
-    minYText_->addStyleClass(core::StringId("Plot2d-label-right-aligned"));
+
+    maxYText_->addStyleClass(core::StringId("vertical-axis-label"));
+    minYText_->addStyleClass(core::StringId("vertical-axis-label"));
 }
 
 Plot2dPtr Plot2d::create(Int numYs, Int maxXs) {
