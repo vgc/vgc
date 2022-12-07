@@ -565,7 +565,7 @@ float computeAvailableSize(
     for (detail::FlexChildData& d : childData) {
         margins += d.mainMargins[0] + d.mainMargins[1];
     }
-    return (std::max)(data.contentMainSize - gaps - margins, 0.0f);
+    return data.contentMainSize - gaps - margins;
 }
 
 void normalStretch(
@@ -654,6 +654,8 @@ void stretchChildren(
     else {
         emergencyStretch(data, childData);
     }
+    data.extraSizeAfterShrink = 0;
+    data.flex->setClippingEnabled(false);
 }
 
 void normalShrink(
@@ -711,23 +713,96 @@ void normalShrink(
             d.mainSize = d.mainPreferredSize;
         }
     }
+    data.extraSizeAfterShrink = 0;
+    data.flex->setClippingEnabled(false);
 }
 
 void emergencyShrink(
     detail::FlexData& data,
     core::Array<detail::FlexChildData>& childData) {
 
-    if (data.totalMinSize > 0) {
-        float k = data.availableSize / data.totalMinSize;
-        for (detail::FlexChildData& d : childData) {
-            d.mainSize = k * d.mainMinSize;
+    [[maybe_unused]] bool overflow;
+
+    if (data.mainAlignment == MainAlignment::ForceStretch) {
+
+        // Shrink every child past (or equal to) their min size.
+        //
+        // If availableSize < 0, this means that the sum of gaps and margins is
+        // larger than the Flex content size. In this case, we clamp all
+        // children size to zero (rather than a negative size), which causes
+        // overflow.
+        //
+        // If availableSize == 0, we also set all children size to zero, but
+        // there is technically no overflow.
+        //
+        // If availableSize > 0, this is the normal case where we shrink
+        // the children past their min size, without overflow.
+        //
+        if (data.availableSize <= 0) { // [2]
+            overflow = (data.availableSize < 0);
+            for (detail::FlexChildData& d : childData) {
+                d.mainSize = 0;
+            }
         }
+        else {
+            overflow = false;
+            float k = data.availableSize / data.totalMinSize;
+            for (detail::FlexChildData& d : childData) {
+                d.mainSize = k * d.mainMinSize;
+            }
+            // Note: data.totalMinSize >= data.availableSize (see shrinkChildren() [1])
+            //                         >  0                  (see [2])
+        }
+        data.extraSizeAfterShrink = 0;
     }
     else {
+        // Give every child its min size.
+        //
+        overflow = true;
         for (detail::FlexChildData& d : childData) {
-            d.mainSize = 0;
+            d.mainSize = d.mainMinSize;
         }
+        data.extraSizeAfterShrink = data.totalMinSize - data.availableSize;
     }
+
+    // Note on clipping during emergency shrink:
+    //
+    // We have the choice to enable clipping either:
+    // 1. unconditionally as soon as we enter this function
+    // 2. only when a child rect() overflows outside the Flex contentRect()
+    //
+    // In theory, option 2 seems preferrable: there is no reason
+    // to clip if all the child rects are within the Flex contentRect.
+    //
+    // However, in practice:
+    //
+    // - When MainAlignment is not ForceStretch, both are equivalent anyway,
+    //   as there is always overflow as soon as we enter this function.
+    //
+    // - When MainAlignment is ForceStretch, overflow only starts when all
+    //   child rects become zero, in which case it is (in theory) pointless to
+    //   clip as there is nothing to draw. In practice, it useful to clip both
+    //   when the rect is zero and when the rect is non-zero, because in both
+    //   cases, the child's rect is still smaller than its minSize, and therefore
+    //   it is likely that the child might draw outside its rect, which looks
+    //   like a bug (a bug of the child, but hard to blame the child when we
+    //   didn't respect its advertised minSize). In these cases, it often looks
+    //   even worse to start clipping once the child rects become zero, as it
+    //   introduces a discontinuity.
+    //
+    // In the future, we may want to make this configurable in the stylesheet,
+    // maybe something like:
+    //
+    // flex-clip: always                         always enable clipping (i.e., even on stretch)
+    //          | on-overflow-and-forced-shrink  enable clipping on forced shrink and overflow
+    //          | on-overflow                    enable clipping only on actual overflow
+    //          | never                          never enable clipping (i.e., even on overflow)
+    //
+    // For now, we simply keep a bool here to be able to test the two modes
+    // "on-overflow-and-forced-shrink" and "on-overflow".
+    //
+    constexpr bool clipOnOverflowAndForcedShrink = true;
+    data.flex->setClippingEnabled(clipOnOverflowAndForcedShrink || overflow);
 }
 
 void shrinkChildren(
@@ -739,7 +814,7 @@ void shrinkChildren(
     for (detail::FlexChildData& d : childData) {
         data.totalMinSize += d.mainMinSize;
     }
-    if (data.totalMinSize < data.availableSize) {
+    if (data.totalMinSize < data.availableSize) { // [1] see emergencyShrink()
         normalShrink(data, childData, childSlacks);
     }
     else {
@@ -767,33 +842,24 @@ void Flex::updateChildrenGeometry() {
     detail::FlexData data = computeData(this);
     updateChildData(data, childData_);
     if (childData_.isEmpty()) {
+        setClippingEnabled(false);
         return;
     }
 
-    // Main layout algorithm: compute children main sizes.
-    //
-    if (data.contentMainSize <= 0) {
-        // Fast computation of d.mainSize when the content size of the Flex is zero.
-        for (detail::FlexChildData& d : childData_) {
-            d.mainSize = 0;
-        }
+    // Compute how much extra size should be distributed in the main axis
+    data.totalPreferredSize = 0;
+    for (const detail::FlexChildData& childData : childData_) {
+        data.totalPreferredSize += childData.mainPreferredSize;
+    }
+    data.availableSize = computeAvailableSize(data, childData_);
+    data.extraSize = data.availableSize - data.totalPreferredSize;
+
+    // Distribute extra size in the main axis
+    if (data.extraSize > 0) {
+        stretchChildren(data, childData_, childSlacks_);
     }
     else {
-        // Compute how much extra size should be distributed
-        data.totalPreferredSize = 0;
-        for (const detail::FlexChildData& childData : childData_) {
-            data.totalPreferredSize += childData.mainPreferredSize;
-        }
-        data.availableSize = computeAvailableSize(data, childData_);
-        data.extraSize = data.availableSize - data.totalPreferredSize;
-
-        // Distribute extra size
-        if (data.extraSize > 0) {
-            stretchChildren(data, childData_, childSlacks_);
-        }
-        else {
-            shrinkChildren(data, childData_, childSlacks_);
-        }
+        shrinkChildren(data, childData_, childSlacks_);
     }
 
     // Compute children 2D sizes
@@ -807,10 +873,11 @@ void Flex::updateChildrenGeometry() {
     float mainAlignmentStartSpace = 0;
     float mainAlignBetweenSpace = 0;
     if (data.mainAlignment == MainAlignment::End) {
-        mainAlignmentStartSpace = data.extraSizeAfterStretch;
+        mainAlignmentStartSpace = data.extraSizeAfterStretch - data.extraSizeAfterShrink;
     }
     else if (data.mainAlignment == MainAlignment::Center) {
-        mainAlignmentStartSpace = 0.5f * data.extraSizeAfterStretch;
+        mainAlignmentStartSpace =
+            0.5f * (data.extraSizeAfterStretch - data.extraSizeAfterShrink);
     }
     else if (data.mainAlignment == MainAlignment::SpaceBetween) {
         if (childData_.length() > 1) {

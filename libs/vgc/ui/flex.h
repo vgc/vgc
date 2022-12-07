@@ -140,6 +140,7 @@ struct FlexData {
                               // Flex's border, padding, gaps, and children fixed margins
     float extraSize;          // Difference between availableSize and totalPreferredSize
     float extraSizeAfterStretch; // Extra size still remaining after stretching children
+    float extraSizeAfterShrink;  // Extra size still remaining after shrinking children
 };
 
 // Stores data about a given child widget of a Flex.
