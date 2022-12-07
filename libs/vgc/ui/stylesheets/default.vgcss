@@ -292,3 +292,8 @@
     text-horizontal-align: center;
     text-vertical-align: middle;
 }
+
+.ColorPalette {
+    main-alignment: center;
+    main-spacing: force-stretch;
+}

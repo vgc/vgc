@@ -60,6 +60,9 @@ VGC_UI_API extern const core::StringId main_alignment;
 VGC_UI_API extern const core::StringId start;
 VGC_UI_API extern const core::StringId end;
 VGC_UI_API extern const core::StringId center;
+
+VGC_UI_API extern const core::StringId main_spacing;
+VGC_UI_API extern const core::StringId packed;
 VGC_UI_API extern const core::StringId space_between;
 VGC_UI_API extern const core::StringId space_around;
 VGC_UI_API extern const core::StringId space_evenly;
