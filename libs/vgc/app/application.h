@@ -83,6 +83,7 @@ private:
     // (from Qt Gui) since for now, we use QFileDialog and QMessageBox, which
     // are QWidgets and require an instance of QApplication.
     //
+    int argc_; // we need to copy it because QApplication needs a reference.
     QApplication application_;
 };
 

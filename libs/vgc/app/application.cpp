@@ -111,7 +111,8 @@ PreInitializer::PreInitializer() {
 
 Application::Application(int argc, char* argv[])
     : preInitializer_()
-    , application_(argc, argv) {
+    , argc_(argc)
+    , application_(argc_, argv) {
 
     setBasePath();
 }
