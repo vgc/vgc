@@ -45,11 +45,11 @@ VGC_DECLARE_ENUM(FlexDirection)
 /// The `main-alignment` style property is used to specify how to align packed widgets
 /// or overflowing widgets (see `main-spacing` property) along the main axis of a `Flex`.
 ///
-/// - `start`: the widgets are aligned with the start of the main axis
+/// - `start`: The widgets are aligned with the start of the main axis.
 ///
-/// - `end`: the widgets are aligned with the end of the main axis
+/// - `end`: The widgets are aligned with the end of the main axis.
 ///
-/// - `center`: the widgets are centered on the middle of the main axis
+/// - `center`: The widgets are centered on the middle of the main axis.
 ///
 /// The default value is `start`.
 ///
@@ -76,20 +76,20 @@ VGC_DECLARE_ENUM(MainAlignment)
 /// the stretchable child widgets have reached their maximum size (or the
 /// shrinkable widgets have reached their minimum size):
 ///
-/// - `packed`: the widgets are packed along the main axis, with no extra space
+/// - `packed`: The widgets are packed along the main axis, with no extra space
 ///    between them. The widgets are aligned according to the `main-alignment`
 ///    style property. If there is missing space, the overflowing widgets are
 ///    clipped.
 ///
-/// - `space-between`: the extra space is equally distributed between the
+/// - `space-between`: The extra space is equally distributed between the
 ///    widgets, with no space before the first widget or after the last widget.
 ///    If there is only widget in the `Flex`, this is equivalent to `packed`.
 ///
-/// - `space-around`: the extra space is equally distributed on both sides of
+/// - `space-around`: The extra space is equally distributed on both sides of
 ///    widgets. This means that the space before the first widget and after the
 ///    last widget is half the space between the widgets.
 ///
-/// - `space-evenly`: the extra space is equally distributed not only between
+/// - `space-evenly`: The extra space is equally distributed not only between
 ///    the widgets, but also before the first widget and after the last widget.
 ///    This means that the space before the first widget and after the last
 ///    widget is equal to the space between the widgets.
@@ -99,7 +99,7 @@ VGC_DECLARE_ENUM(MainAlignment)
 ///    to be larger than their preferred size, effectiveley ensuring that there is
 ///    no extra space between the widgets. If there is missing space, then it
 ///    forces shrinkable widgets to be smaller than their minimum size, and
-///    non-stretchable widgets to be smaller than their preferred size
+///    non-stretchable widgets to be smaller than their preferred size.
 ///
 /// The default value is `packed`.
 ///

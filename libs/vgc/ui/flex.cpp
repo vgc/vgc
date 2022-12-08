@@ -755,6 +755,7 @@ void emergencyShrink(
     core::Array<detail::FlexChildData>& childData) {
 
     [[maybe_unused]] bool overflow;
+    float totalGivenSize;
 
     if (data.mainSpacing == MainSpacing::ForceStretch) {
 
@@ -776,17 +777,19 @@ void emergencyShrink(
             for (detail::FlexChildData& d : childData) {
                 d.mainSize = 0;
             }
+            totalGivenSize = 0;
         }
         else {
+            // Note: we know that `data.totalMinSize > 0`, since:
+            // [1] data.totalMinSize  >= data.availableSize (see shrinkChildren())
+            // [2] data.availableSize > 0
             overflow = false;
             float k = data.availableSize / data.totalMinSize;
             for (detail::FlexChildData& d : childData) {
                 d.mainSize = k * d.mainMinSize;
             }
-            // Note: data.totalMinSize >= data.availableSize (see shrinkChildren() [1])
-            //                         >  0                  (see [2])
+            totalGivenSize = data.availableSize;
         }
-        data.extraSizeAfterShrink = 0; // XXX This should not be zero in case of overflow
     }
     else {
         // Give every child its min size.
@@ -795,8 +798,9 @@ void emergencyShrink(
         for (detail::FlexChildData& d : childData) {
             d.mainSize = d.mainMinSize;
         }
-        data.extraSizeAfterShrink = data.totalMinSize - data.availableSize;
+        totalGivenSize = data.totalMinSize;
     }
+    data.extraSizeAfterShrink = totalGivenSize - data.availableSize;
 
     // Note on clipping during emergency shrink:
     //
@@ -931,10 +935,6 @@ void Flex::updateChildrenGeometry() {
         data.extraSizeAfterStretch  //
         - data.extraSizeAfterShrink //
         - mainAlignBetweenSpace * (childData_.length() - 1);
-    if (className() == "ColorPalette") {
-        VGC_DEBUG_TMP_EXPR(remainingExtraSpace);
-    }
-    // XXX TODO: fix remainingExtraSpace is currently 0 when force-stretch in emergency shrink.
     float mainAlignmentStartSpace = 0;
     switch (data.mainAlignment) {
     case MainAlignment::Start:
@@ -948,46 +948,6 @@ void Flex::updateChildrenGeometry() {
         mainAlignmentStartSpace = 0.5f * remainingExtraSpace;
         break;
     }
-    /*
-    float mainAlignmentStartSpace = 0;
-    if (data.mainSpacing == MainSpacing::Packed) {
-        if (data.mainAlignment == MainAlignment::End) {
-            mainAlignmentStartSpace =
-                data.extraSizeAfterStretch - data.extraSizeAfterShrink;
-        }
-        else if (data.mainAlignment == MainAlignment::Center) {
-            mainAlignmentStartSpace =
-                0.5f * (data.extraSizeAfterStretch - data.extraSizeAfterShrink);
-        }
-    }
-    else if (data.mainSpacing == MainSpacing::SpaceBetween) {
-        if (childData_.length() > 1) {
-            mainAlignBetweenSpace =
-                data.extraSizeAfterStretch / (childData_.length() - 1);
-        }
-        else if (data.mainAlignment == MainAlignment::End) {
-            mainAlignmentStartSpace =
-                data.extraSizeAfterStretch - data.extraSizeAfterShrink;
-        }
-        else if (data.mainAlignment == MainAlignment::Center) {
-            mainAlignmentStartSpace =
-                0.5f * (data.extraSizeAfterStretch - data.extraSizeAfterShrink);
-        }
-    }
-    else if (data.mainSpacing == MainSpacing::SpaceAround) {
-        mainAlignBetweenSpace = data.extraSizeAfterStretch / childData_.length();
-        mainAlignmentStartSpace = 0.5f * mainAlignBetweenSpace;
-        // TODO: what if main-aligment is `end` or `center`?
-    }
-    else if (data.mainSpacing == MainSpacing::SpaceEvenly) {
-        mainAlignBetweenSpace = data.extraSizeAfterStretch / (childData_.length() + 1);
-        mainAlignmentStartSpace = mainAlignBetweenSpace;
-        // TODO: what if main-aligment is `end` or `center`?
-    }
-    else if (data.mainSpacing == MainSpacing::ForceStretch) {
-        // TODO: what if main-aligment is `end` or `center`?
-    }
-*/
     if (data.isReverse) {
         float mainPosition =
             data.contentMainPosition + data.contentMainSize - mainAlignmentStartSpace;
@@ -1000,9 +960,6 @@ void Flex::updateChildrenGeometry() {
     }
     else {
         float mainPosition = data.contentMainPosition + mainAlignmentStartSpace;
-        if (className() == "ColorPalette") {
-            VGC_DEBUG_TMP_EXPR(mainPosition);
-        }
         for (detail::FlexChildData& d : childData_) {
             mainPosition += d.mainMargins[0];
             d.position[data.mainDir] = mainPosition;
