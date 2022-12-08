@@ -64,6 +64,9 @@ const core::StringId main_alignment("main-alignment");
 const core::StringId start("start");
 const core::StringId end("end");
 const core::StringId center("center");
+
+const core::StringId main_spacing("main-spacing");
+const core::StringId packed("packed");
 const core::StringId space_between("space-between");
 const core::StringId space_around("space-around");
 const core::StringId space_evenly("space-evenly");

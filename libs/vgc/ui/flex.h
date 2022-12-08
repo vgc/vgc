@@ -42,43 +42,71 @@ VGC_DECLARE_ENUM(FlexDirection)
 /// This enum class stores as an enum the value of the `main-alignment` style
 /// property.
 ///
-/// The `main-alignment` style property is used to specify how to distribute
-/// any extra space along the main axis of a `Flex`, after all the stretchable
-/// child widgets have reached their maximum size:
+/// The `main-alignment` style property is used to specify how to align packed widgets
+/// or overflowing widgets (see `main-spacing` property) along the main axis of a `Flex`.
 ///
-/// - `start`: the widgets are packed at the start of the main axis, with no
-///    extra space between them.
+/// - `start`: The widgets are aligned with the start of the main axis.
 ///
-/// - `end`: the widgets are packed at the end of the main axis, with no extra
-///    space between them.
+/// - `end`: The widgets are aligned with the end of the main axis.
 ///
-/// - `center`: the widgets are packed centered on the middle of the main axis,
-///    with no extra space between them.
-///
-/// - `space-between`: the extra space is equally distributed between the
-///    widgets, with no space before the first widget or after the last widget.
-///    If there is only widget in the `Flex`, this is equivalent to `start`.
-///
-/// - `space-around`: the extra space is equally distributed on both sides of
-///    widgets. This means that the space before the first widget and after the
-///    last widget is half the space between the widgets.
-///
-/// - `space-evenly`: the extra space is equally distributed not only between
-///    the widgets, but also before the first widget and after the last widget.
-///    This means that the space before the first widget and after the last
-///    widget is equal to the space between the widgets.
-///
-/// - `force-stretch`: forces stretchable widgets to be larger than their
-///    maximum size, and non-stretchable widgets to be larger than their
-///    preferred size, effectiveley ensuring that there is no extra space to
-///    distribute between the widgets.
+/// - `center`: The widgets are centered on the middle of the main axis.
 ///
 /// The default value is `start`.
+///
+/// \sa `MainSpacing`
 ///
 enum class MainAlignment {
     Start,
     End,
-    Center,
+    Center
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(MainAlignment)
+
+/// \enum vgc::ui::MainSpacing
+/// \brief How to distribute extra space between the children of a Flex
+///        along the main axis.
+///
+/// This enum class stores as an enum the value of the `main-spacing` style
+/// property.
+///
+/// The `main-spacing` style property is used to specify how to distribute any
+/// extra space (or missing space) along the main axis of a `Flex`, after all
+/// the stretchable child widgets have reached their maximum size (or the
+/// shrinkable widgets have reached their minimum size):
+///
+/// - `packed`: The widgets are packed along the main axis, with no extra space
+///    between them. The widgets are aligned according to the `main-alignment`
+///    style property. If there is missing space, the overflowing widgets are
+///    clipped.
+///
+/// - `space-between`: The extra space is equally distributed between the
+///    widgets, with no space before the first widget or after the last widget.
+///    If there is only widget in the `Flex`, this is equivalent to `packed`.
+///
+/// - `space-around`: The extra space is equally distributed on both sides of
+///    widgets. This means that the space before the first widget and after the
+///    last widget is half the space between the widgets.
+///
+/// - `space-evenly`: The extra space is equally distributed not only between
+///    the widgets, but also before the first widget and after the last widget.
+///    This means that the space before the first widget and after the last
+///    widget is equal to the space between the widgets.
+///
+/// - `force-stretch`: If there is extra space, then it forces stretchable
+///    widgets to be larger than their maximum size, and non-stretchable widgets
+///    to be larger than their preferred size, effectiveley ensuring that there is
+///    no extra space between the widgets. If there is missing space, then it
+///    forces shrinkable widgets to be smaller than their minimum size, and
+///    non-stretchable widgets to be smaller than their preferred size.
+///
+/// The default value is `packed`.
+///
+/// \sa `MainAlignment`
+///
+enum class MainSpacing {
+    Packed,
     SpaceBetween,
     SpaceAround,
     SpaceEvenly,
@@ -119,6 +147,7 @@ struct FlexData {
     bool isRow;
     bool isReverse;
     MainAlignment mainAlignment;
+    MainSpacing mainSpacing;
     Int mainDir;
     Int crossDir;
     float gap;

@@ -32,11 +32,15 @@ VGC_DEFINE_ENUM(
     (Column, "column"),
     (ColumnReverse, "column-reverse"))
 
-VGC_DEFINE_ENUM(
+VGC_DEFINE_ENUM( //
     MainAlignment,
     (Start, "start"),
     (End, "end"),
-    (Center, "center"),
+    (Center, "center"))
+
+VGC_DEFINE_ENUM(
+    MainSpacing,
+    (Packed, "packed"),
     (SpaceBetween, "space-between"),
     (SpaceAround, "space-around"),
     (SpaceEvenly, "space-evenly"),
@@ -102,17 +106,43 @@ StyleValue parseMainAlignment(StyleTokenIterator begin, StyleTokenIterator end_)
     else if (s == center) {
         res = StyleValue::custom(MainAlignment::Center);
     }
+
+    return res;
+}
+
+StyleValue parseMainSpacing(StyleTokenIterator begin, StyleTokenIterator end_) {
+
+    using namespace strings;
+
+    StyleValue res = StyleValue::invalid();
+
+    // There must be exactly one token
+    if (end_ != begin + 1) {
+        return res;
+    }
+    StyleTokenType t = begin->type();
+
+    // The token should be an identifier
+    if (t != StyleTokenType::Identifier) {
+        return res;
+    }
+    std::string_view s = begin->stringValue();
+
+    // Converts the identifier to StyleValue storing a MainAlignment enum value.
+    if (s == packed) {
+        res = StyleValue::custom(MainSpacing::Packed);
+    }
     else if (s == space_between) {
-        res = StyleValue::custom(MainAlignment::SpaceBetween);
+        res = StyleValue::custom(MainSpacing::SpaceBetween);
     }
     else if (s == space_around) {
-        res = StyleValue::custom(MainAlignment::SpaceAround);
+        res = StyleValue::custom(MainSpacing::SpaceAround);
     }
     else if (s == space_evenly) {
-        res = StyleValue::custom(MainAlignment::SpaceEvenly);
+        res = StyleValue::custom(MainSpacing::SpaceEvenly);
     }
     else if (s == force_stretch) {
-        res = StyleValue::custom(MainAlignment::ForceStretch);
+        res = StyleValue::custom(MainSpacing::ForceStretch);
     }
 
     return res;
@@ -126,7 +156,9 @@ void Flex::populateStyleSpecTable(style::SpecTable* table) {
     }
     using namespace strings;
     auto start_ma = StyleValue::custom(MainAlignment::Start);
+    auto packed_ms = StyleValue::custom(MainSpacing::Packed);
     table->insert(main_alignment, start_ma, false, &parseMainAlignment);
+    table->insert(main_spacing, packed_ms, false, &parseMainSpacing);
     SuperClass::populateStyleSpecTable(table);
 }
 
@@ -411,6 +443,7 @@ detail::FlexData computeData(Flex* flex) {
     res.isRow = flex->isRow();
     res.isReverse = flex->isReverse();
     res.mainAlignment = flex->style<MainAlignment>(strings::main_alignment);
+    res.mainSpacing = flex->style<MainSpacing>(strings::main_spacing);
     res.mainDir = 0;
     res.crossDir = 1;
     res.gap = getGap(res.isRow, flex, res.hinting);
@@ -622,7 +655,7 @@ void emergencyStretch(
 
     float extraSize = data.availableSize - data.totalMaxSize;
 
-    if (data.mainAlignment == MainAlignment::ForceStretch) {
+    if (data.mainSpacing == MainSpacing::ForceStretch) {
         // Stretch every child past their max size
         float extraSizePerChild = extraSize / childData.length();
         for (detail::FlexChildData& d : childData) {
@@ -722,8 +755,9 @@ void emergencyShrink(
     core::Array<detail::FlexChildData>& childData) {
 
     [[maybe_unused]] bool overflow;
+    float totalGivenSize;
 
-    if (data.mainAlignment == MainAlignment::ForceStretch) {
+    if (data.mainSpacing == MainSpacing::ForceStretch) {
 
         // Shrink every child past (or equal to) their min size.
         //
@@ -743,17 +777,19 @@ void emergencyShrink(
             for (detail::FlexChildData& d : childData) {
                 d.mainSize = 0;
             }
+            totalGivenSize = 0;
         }
         else {
+            // Note: we know that `data.totalMinSize > 0`, since:
+            // [1] data.totalMinSize  >= data.availableSize (see shrinkChildren())
+            // [2] data.availableSize > 0
             overflow = false;
             float k = data.availableSize / data.totalMinSize;
             for (detail::FlexChildData& d : childData) {
                 d.mainSize = k * d.mainMinSize;
             }
-            // Note: data.totalMinSize >= data.availableSize (see shrinkChildren() [1])
-            //                         >  0                  (see [2])
+            totalGivenSize = data.availableSize;
         }
-        data.extraSizeAfterShrink = 0;
     }
     else {
         // Give every child its min size.
@@ -762,8 +798,9 @@ void emergencyShrink(
         for (detail::FlexChildData& d : childData) {
             d.mainSize = d.mainMinSize;
         }
-        data.extraSizeAfterShrink = data.totalMinSize - data.availableSize;
+        totalGivenSize = data.totalMinSize;
     }
+    data.extraSizeAfterShrink = totalGivenSize - data.availableSize;
 
     // Note on clipping during emergency shrink:
     //
@@ -870,28 +907,46 @@ void Flex::updateChildrenGeometry() {
     }
 
     // Compute children 2D position
-    float mainAlignmentStartSpace = 0;
     float mainAlignBetweenSpace = 0;
-    if (data.mainAlignment == MainAlignment::End) {
-        mainAlignmentStartSpace = data.extraSizeAfterStretch - data.extraSizeAfterShrink;
-    }
-    else if (data.mainAlignment == MainAlignment::Center) {
-        mainAlignmentStartSpace =
-            0.5f * (data.extraSizeAfterStretch - data.extraSizeAfterShrink);
-    }
-    else if (data.mainAlignment == MainAlignment::SpaceBetween) {
-        if (childData_.length() > 1) {
-            mainAlignBetweenSpace =
-                data.extraSizeAfterStretch / (childData_.length() - 1);
-        }
-    }
-    else if (data.mainAlignment == MainAlignment::SpaceAround) {
+    float mainAlignOffsetSpace = 0;
+    switch (data.mainSpacing) {
+    case MainSpacing::Packed:
+    case MainSpacing::ForceStretch:
+        mainAlignBetweenSpace = 0;
+        mainAlignOffsetSpace = 0;
+        break;
+    case MainSpacing::SpaceBetween:
+        mainAlignBetweenSpace =
+            (childData_.length() > 1)
+                ? data.extraSizeAfterStretch / (childData_.length() - 1)
+                : 0;
+        mainAlignOffsetSpace = 0;
+        break;
+    case MainSpacing::SpaceAround:
         mainAlignBetweenSpace = data.extraSizeAfterStretch / childData_.length();
-        mainAlignmentStartSpace = 0.5f * mainAlignBetweenSpace;
-    }
-    else if (data.mainAlignment == MainAlignment::SpaceEvenly) {
+        mainAlignOffsetSpace = 0.5f * mainAlignBetweenSpace;
+        break;
+    case MainSpacing::SpaceEvenly:
         mainAlignBetweenSpace = data.extraSizeAfterStretch / (childData_.length() + 1);
-        mainAlignmentStartSpace = mainAlignBetweenSpace;
+        mainAlignOffsetSpace = mainAlignBetweenSpace;
+        break;
+    }
+    float remainingExtraSpace =     //
+        data.extraSizeAfterStretch  //
+        - data.extraSizeAfterShrink //
+        - mainAlignBetweenSpace * (childData_.length() - 1);
+    float mainAlignmentStartSpace = 0;
+    switch (data.mainAlignment) {
+    case MainAlignment::Start:
+        mainAlignmentStartSpace = mainAlignOffsetSpace;
+        break;
+    case MainAlignment::End:
+        mainAlignmentStartSpace = remainingExtraSpace - mainAlignOffsetSpace;
+
+        break;
+    case MainAlignment::Center:
+        mainAlignmentStartSpace = 0.5f * remainingExtraSpace;
+        break;
     }
     if (data.isReverse) {
         float mainPosition =

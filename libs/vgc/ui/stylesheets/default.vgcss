@@ -223,8 +223,10 @@
     row-gap: 10dp;
 
     /* Prevent clipping of selected color border */
-    margin-left: 2dp;
+    margin-top: 2dp;
     margin-right: 2dp;
+    margin-bottom: 2dp;
+    margin-left: 2dp;
 }
 
 .ColorPaletteSelector {
@@ -258,8 +260,10 @@
     column-gap: 4dp;
 
     /* Prevent clipping of selected color border */
-    margin-left: 2dp;
+    margin-top: 2dp;
     margin-right: 2dp;
+    margin-bottom: 2dp;
+    margin-left: 2dp;
 }
 
 .ColorListViewItem {
