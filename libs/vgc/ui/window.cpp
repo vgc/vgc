@@ -73,6 +73,11 @@ Window::Window(const WidgetPtr& widget)
     // what Qt::WA_InputMethodEnabled is used for.
     //
     QGuiApplication::inputMethod()->update(Qt::ImEnabled);
+
+    // Sets this Window as an application-wide filter to listen to events not
+    // redirected to Window by default (e.g., TabletProximity).
+    //
+    QGuiApplication::instance()->installEventFilter(this);
 }
 
 void Window::onDestroyed() {

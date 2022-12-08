@@ -17,18 +17,15 @@
 #include <string>
 #include <string_view>
 
-#include <QApplication>
-#include <QDir>
 #include <QFileDialog>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
 
+#include <vgc/app/application.h>
 #include <vgc/core/io.h>
 #include <vgc/core/os.h>
-#include <vgc/core/paths.h>
 #include <vgc/core/python.h>
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
@@ -65,29 +62,6 @@ namespace ui = vgc::ui;
 namespace py = pybind11;
 
 namespace {
-
-#ifdef VGC_QOPENGL_EXPERIMENT
-// test fix for white artefacts during Windows window resizing.
-// https://bugreports.qt.io/browse/QTBUG-89688
-// indicated commit does not seem to be enough to fix the bug
-void runtimePatchQt() {
-    auto hMod = LoadLibraryA("platforms/qwindowsd.dll");
-    if (hMod) {
-        char* base = reinterpret_cast<char*>(hMod);
-        char* target = base + 0x0001BA61;
-        DWORD oldProt{};
-        char patch[] = {'\x90', '\x90'};
-        VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &oldProt);
-        memcpy(target, patch, sizeof(patch));
-        VirtualProtect(target, sizeof(patch), oldProt, &oldProt);
-    }
-}
-constexpr bool qopenglExperiment = true;
-#else
-constexpr bool qopenglExperiment = false;
-#endif
-
-#define VGC_APP_API // nothing
 
 VGC_DECLARE_LOG_CATEGORY(LogVgcApp, Debug)
 VGC_DEFINE_LOG_CATEGORY(LogVgcApp, "vgc.app")
@@ -191,39 +165,27 @@ private:
     dom::Document* doc_;
 };
 
-VGC_DECLARE_OBJECT(Application);
+VGC_DECLARE_OBJECT(MyApplication);
 
-class Application : public vgc::core::Object {
-    VGC_OBJECT(Application, vgc::core::Object)
+class MyApplication : public vgc::app::Application {
+    VGC_OBJECT(MyApplication, vgc::app::Application)
 
 public:
-    static ApplicationPtr create(int argc, char* argv[]) {
-        preInit_();
-        return ApplicationPtr(new Application(argc, argv));
-    }
-
-    int exec() {
-        return application_.exec();
+    static MyApplicationPtr create(int argc, char* argv[]) {
+        return MyApplicationPtr(new MyApplication(argc, argv));
     }
 
 protected:
-    Application(int argc, char* argv[])
-        : application_(argc, argv) {
+    MyApplication(int argc, char* argv[])
+        : vgc::app::Application(argc, argv) {
 
-        setBasePath_();
-        setWindowIcon_();
+        setWindowIconFromResource("apps/illustration/icons/512.png");
         createDocument_();
         createWidgets_();
-        createWindow_();
+        //createWindow_();
     }
 
 private:
-    // Note: we use QApplication (from Qt Widgets) rather than QGuiApplication
-    // (from Qt Gui) since for now, we use QFileDialog and QMessageBox, which
-    // are QWidgets and require an instance of QApplication.
-    //
-    QApplication application_;
-
     dom::DocumentPtr document_;
     core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
     ui::OverlayAreaPtr overlay_;
@@ -231,66 +193,6 @@ private:
     ui::ColorPalette* palette_ = nullptr;
     ui::Canvas* canvas_ = nullptr;
     ui::WindowPtr window_;
-
-    static void setAttribute(Qt::ApplicationAttribute attribute, bool on = true) {
-        QGuiApplication::setAttribute(attribute, on);
-    }
-
-    // Initializations that must happen before creating the QGuiApplication.
-    //
-    static void preInit_() {
-        if (qopenglExperiment) {
-            setAttribute(Qt::AA_ShareOpenGLContexts);
-        }
-        setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
-        setAttribute(Qt::AA_DisableHighDpiScaling, true);
-    }
-
-    // Set runtime paths from vgc.conf, an optional configuration file to be
-    // placed in the same folder as the executable.
-    //
-    // If vgc.conf exists, then the specified paths can be either absolute or
-    // relative to the directory where vgc.conf lives (that is, relative to the
-    // application dir path).
-    //
-    // If vgc.conf does not exist, or BasePath isn't specified, then BasePath
-    // is assumed to be ".." (that is, one directory above the application dir
-    // path).
-    //
-    // If vgc.conf does not exist, or PythonHome isn't specified, then
-    // PythonHome is assumed to be equal to BasePath.
-    //
-    // Note: in the future, we would probably want this to be handled directly
-    // by vgc::core, for example via a function core::init(argc, argv).
-    // For now, we keep it here for the convenience of being able to use Qt's
-    // applicationDirPath(), QDir, and QSettings. We don't want vgc::core to
-    // depend on Qt.
-    //
-    void setBasePath_() {
-        QString binPath = QCoreApplication::applicationDirPath();
-        QDir binDir(binPath);
-        binDir.makeAbsolute();
-        binDir.setPath(binDir.canonicalPath()); // resolve symlinks
-        QDir baseDir = binDir;
-        baseDir.cdUp();
-        std::string basePath = ui::fromQt(baseDir.path());
-        if (binDir.exists("vgc.conf")) {
-            QSettings conf(binDir.filePath("vgc.conf"), QSettings::IniFormat);
-            if (conf.contains("BasePath")) {
-                QString v = conf.value("BasePath").toString();
-                if (!v.isEmpty()) {
-                    v = QDir::cleanPath(binDir.filePath(v));
-                    basePath = ui::fromQt(v);
-                }
-            }
-        }
-        core::setBasePath(basePath);
-    }
-
-    void setWindowIcon_() {
-        std::string iconPath = core::resourcePath("apps/illustration/icons/512.png");
-        application_.setWindowIcon(QIcon(ui::toQt(iconPath)));
-    }
 
     VGC_SLOT(updateUndoRedoActionStateSlot_, updateUndoRedoActionState_)
     void updateUndoRedoActionState_() {
@@ -1002,13 +904,12 @@ private:
         window_->setTitle("VGC UI Test");
         window_->resize(QSize(1100, 800));
         window_->setVisible(true);
-        application_.installEventFilter(window_.get());
     }
 };
 
 } // namespace
 
 int main(int argc, char* argv[]) {
-    ApplicationPtr application = Application::create(argc, argv);
+    MyApplicationPtr application = MyApplication::create(argc, argv);
     return application->exec();
 }

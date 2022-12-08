@@ -24,21 +24,61 @@
 
 namespace vgc::app {
 
+namespace detail {
+
+struct PreInitializer {
+    PreInitializer();
+};
+
+} // namespace detail
+
 VGC_DECLARE_OBJECT(Application);
 
 /// \class vgc::app::Application
 /// \brief Represents an instance of a VGC application
 ///
-class Application : public vgc::core::Object {
+class VGC_APP_API Application : public vgc::core::Object {
     VGC_OBJECT(Application, vgc::core::Object)
-
-public:
-    static ApplicationPtr create(int argc, char* argv[]);
 
 protected:
     Application(int argc, char* argv[]);
 
+public:
+    /// Creates the application. Note that you must never create more than one
+    /// application in a given process.
+    ///
+    static ApplicationPtr create(int argc, char* argv[]);
+
+    /// Starts execution of the application.
+    ///
+    int exec();
+
+    /// Set the default window icons for all windows in this application.
+    ///
+    /// ```cpp
+    /// setWindowIcon(vgc::core::resourcePath("apps/illustration/icons/512.png")
+    /// ```
+    ///
+    void setWindowIcon(std::string_view iconPath);
+
+    /// This is equivalent to:
+    ///
+    /// ```cpp
+    /// setWindowIcon(vgc::core::resourcePath(rpath));
+    /// ```
+    ///
+    /// Example:
+    ///
+    /// ```cpp
+    /// setWindowIconFromResource("apps/illustration/icons/512.png");
+    /// ```
+    ///
+    void setWindowIconFromResource(std::string_view rpath);
+
 private:
+    // Performs pre-initialization. Must be located before QApplication.
+    detail::PreInitializer preInitializer_;
+
     // Note: we use QApplication (from Qt Widgets) rather than QGuiApplication
     // (from Qt Gui) since for now, we use QFileDialog and QMessageBox, which
     // are QWidgets and require an instance of QApplication.

@@ -16,14 +16,120 @@
 
 #include <vgc/app/application.h>
 
+#include <QDir>
+#include <QIcon>
+#include <QSettings>
+
+#include <vgc/core/paths.h>
+#include <vgc/ui/qtutil.h>
+
 namespace vgc::app {
+
+namespace {
+
+#ifdef VGC_QOPENGL_EXPERIMENT
+// test fix for white artefacts during Windows window resizing.
+// https://bugreports.qt.io/browse/QTBUG-89688
+// indicated commit does not seem to be enough to fix the bug
+void runtimePatchQt() {
+    auto hMod = LoadLibraryA("platforms/qwindowsd.dll");
+    if (hMod) {
+        char* base = reinterpret_cast<char*>(hMod);
+        char* target = base + 0x0001BA61;
+        DWORD oldProt{};
+        char patch[] = {'\x90', '\x90'};
+        VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &oldProt);
+        memcpy(target, patch, sizeof(patch));
+        VirtualProtect(target, sizeof(patch), oldProt, &oldProt);
+    }
+}
+constexpr bool qopenglExperiment = true;
+#else
+constexpr bool qopenglExperiment = false;
+#endif
+
+static void setAttribute(Qt::ApplicationAttribute attribute, bool on = true) {
+    QGuiApplication::setAttribute(attribute, on);
+}
+
+// Set runtime paths from vgc.conf, an optional configuration file to be
+// placed in the same folder as the executable.
+//
+// If vgc.conf exists, then the specified paths can be either absolute or
+// relative to the directory where vgc.conf lives (that is, relative to the
+// application dir path).
+//
+// If vgc.conf does not exist, or BasePath isn't specified, then BasePath
+// is assumed to be ".." (that is, one directory above the application dir
+// path).
+//
+// If vgc.conf does not exist, or PythonHome isn't specified, then
+// PythonHome is assumed to be equal to BasePath.
+//
+// Note: in the future, we would probably want this to be handled directly
+// by vgc::core, for example via a function core::init(argc, argv).
+// For now, we keep it here for the convenience of being able to use Qt's
+// applicationDirPath(), QDir, and QSettings. We don't want vgc::core to
+// depend on Qt.
+//
+void setBasePath() {
+    QString binPath = QCoreApplication::applicationDirPath();
+    QDir binDir(binPath);
+    binDir.makeAbsolute();
+    binDir.setPath(binDir.canonicalPath()); // resolve symlinks
+    QDir baseDir = binDir;
+    baseDir.cdUp();
+    std::string basePath = ui::fromQt(baseDir.path());
+    if (binDir.exists("vgc.conf")) {
+        QSettings conf(binDir.filePath("vgc.conf"), QSettings::IniFormat);
+        if (conf.contains("BasePath")) {
+            QString v = conf.value("BasePath").toString();
+            if (!v.isEmpty()) {
+                v = QDir::cleanPath(binDir.filePath(v));
+                basePath = ui::fromQt(v);
+            }
+        }
+    }
+    core::setBasePath(basePath);
+}
+
+} // namespace
+
+namespace detail {
+
+// Initializations that must happen before creating the QGuiApplication.
+//
+PreInitializer::PreInitializer() {
+    if (qopenglExperiment) {
+        setAttribute(Qt::AA_ShareOpenGLContexts);
+    }
+    setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
+    setAttribute(Qt::AA_DisableHighDpiScaling, true);
+}
+
+}; // namespace detail
+
+Application::Application(int argc, char* argv[])
+    : preInitializer_()
+    , application_(argc, argv) {
+
+    setBasePath();
+}
 
 ApplicationPtr Application::create(int argc, char* argv[]) {
     return ApplicationPtr(new Application(argc, argv));
 }
 
-Application::Application(int argc, char* argv[])
-    : application_(argc, argv) {
+int Application::exec() {
+    return application_.exec();
+}
+
+void Application::setWindowIcon(std::string_view iconPath) {
+    application_.setWindowIcon(QIcon(ui::toQt(iconPath)));
+}
+
+void Application::setWindowIconFromResource(std::string_view rpath) {
+    setWindowIcon(core::resourcePath(rpath));
 }
 
 } // namespace vgc::app
