@@ -182,7 +182,7 @@ protected:
         setWindowIconFromResource("apps/illustration/icons/512.png");
         createDocument_();
         createWidgets_();
-        //createWindow_();
+        createWindow_();
     }
 
 private:

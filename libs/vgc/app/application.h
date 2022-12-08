@@ -26,7 +26,7 @@ namespace vgc::app {
 
 namespace detail {
 
-struct PreInitializer {
+struct VGC_APP_API PreInitializer {
     PreInitializer();
 };
 
