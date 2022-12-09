@@ -26,14 +26,12 @@ namespace vgc::app {
 
 MainWidget::MainWidget()
     : ui::OverlayArea()
-    , overlay_(this) {
+    , overlayArea_(this) {
 
     // Note: in the future, we may want to make overlay_ a child of MainWidget
     // instead, which is why we keep it as a data member.
 
-    mainLayout_ = overlay_->createChild<ui::Column>();
-    overlay_->setAreaWidget(mainLayout_);
-    mainLayout_->addStyleClass(core::StringId("main-layout"));
+    // Setup overlay area
     std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
     std::string styleSheet = core::readFile(path);
     styleSheet += ".main-layout { "
@@ -45,8 +43,22 @@ MainWidget::MainWidget()
 #ifdef VGC_CORE_OS_MACOS
     styleSheet += ".root { font-size: 13dp; }";
 #endif
-    overlay_->setStyleSheet(styleSheet);
-    overlay_->addStyleClass(ui::strings::root);
+    overlayArea_->setStyleSheet(styleSheet);
+    overlayArea_->addStyleClass(ui::strings::root);
+
+    // Create main layout
+    ui::Column* mainLayout = overlayArea_->createChild<ui::Column>();
+    mainLayout->addStyleClass(core::StringId("main-layout"));
+    overlayArea_->setAreaWidget(mainLayout);
+
+    // Create menu bar
+    menuBar_ = mainLayout->createChild<ui::Menu>("Menu");
+    menuBar_->setDirection(ui::FlexDirection::Row);
+    menuBar_->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex or Menu.
+    menuBar_->setShortcutTrackEnabled(false);
+
+    // Create panel area
+    panelArea_ = ui::PanelArea::createTabs(mainLayout);
 }
 
 MainWidgetPtr MainWidget::create() {

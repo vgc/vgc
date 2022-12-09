@@ -21,6 +21,7 @@
 #include <vgc/ui/column.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/overlayarea.h>
+#include <vgc/ui/panelarea.h>
 
 namespace vgc::app {
 
@@ -51,10 +52,36 @@ public:
     ///
     static MainWidgetPtr create();
 
+    /// Returns the overlay area of this `MainWidget`.
+    ///
+    ui::OverlayArea* overlayArea() const {
+        return overlayArea_;
+    }
+
+    /// Returns the menu bar of this `MainWidget`.
+    ///
+    ui::Menu* menuBar() const {
+        return menuBar_;
+    }
+
+    /// Returns the top-level panel area of this `MainWidget`.
+    ///
+    /// By default, this panel area is of type `Tabs` and has no children.
+    /// You can either:
+    ///
+    /// - add `Panel` children to the panel area, or
+    ///
+    /// - change the type of the panel area to `HorizontalSplit` or
+    /// `VerticalSplit`, then add `PanelArea` children to the panel area.
+    ///
+    ui::PanelArea* panelArea() const {
+        return panelArea_;
+    }
+
 private:
-    ui::OverlayArea* overlay_ = nullptr;
-    ui::Column* mainLayout_ = nullptr;
+    ui::OverlayArea* overlayArea_ = nullptr;
     ui::Menu* menuBar_ = nullptr;
+    ui::PanelArea* panelArea_ = nullptr;
 };
 
 } // namespace vgc::app

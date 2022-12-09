@@ -20,6 +20,7 @@
 #include <QApplication>
 
 #include <vgc/app/api.h>
+#include <vgc/app/mainwidget.h>
 #include <vgc/ui/window.h>
 
 namespace vgc::app {
@@ -28,6 +29,9 @@ VGC_DECLARE_OBJECT(MainWindow);
 
 /// \class vgc::app::MainWindow
 /// \brief A window with built-in common widgets such as a menu bar and panel area.
+///
+/// The class `MainWindow` is a subclass of `Window` that contains
+/// a `MainWidget`.
 ///
 class VGC_APP_API MainWindow : public ui::Window {
     VGC_OBJECT(MainWindow, ui::Window)
@@ -39,6 +43,12 @@ public:
     /// Creates a `MainWindow`.
     ///
     static MainWindowPtr create();
+
+    /// Returns the `MainWidget` owned by this `MainWindow`.
+    ///
+    MainWidget* mainWidget() {
+        return static_cast<MainWidget*>(widget());
+    }
 
 private:
 };

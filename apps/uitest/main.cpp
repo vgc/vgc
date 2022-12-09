@@ -24,6 +24,7 @@
 #include <QTimer>
 
 #include <vgc/app/application.h>
+#include <vgc/app/mainwindow.h>
 #include <vgc/core/io.h>
 #include <vgc/core/os.h>
 #include <vgc/core/python.h>
@@ -54,6 +55,7 @@
 #include <vgc/widgets/openglviewer.h>
 #include <vgc/widgets/stylesheets.h>
 
+namespace app = vgc::app;
 namespace core = vgc::core;
 namespace dom = vgc::dom;
 namespace geometry = vgc::geometry;
@@ -180,19 +182,17 @@ protected:
         : vgc::app::Application(argc, argv) {
 
         setWindowIconFromResource("apps/illustration/icons/512.png");
+        window_ = app::MainWindow::create();
         createDocument_();
         createWidgets_();
-        createWindow_();
     }
 
 private:
+    app::MainWindowPtr window_;
     dom::DocumentPtr document_;
     core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
-    ui::OverlayAreaPtr overlay_;
-    ui::Column* mainLayout_ = nullptr;
     ui::ColorPalette* palette_ = nullptr;
     ui::Canvas* canvas_ = nullptr;
-    ui::WindowPtr window_;
 
     VGC_SLOT(updateUndoRedoActionStateSlot_, updateUndoRedoActionState_)
     void updateUndoRedoActionState_() {
@@ -212,12 +212,12 @@ private:
 
     void createWidgets_() {
 
-        createOverlayAndMainLayout_();
-        createActions_(overlay_.get());
-        createMenus_(mainLayout_);
+        createActions_(window_->mainWidget());
+        createMenus_(window_->mainWidget());
 
         // Create panel areas
-        ui::PanelArea* mainArea = ui::PanelArea::createHorizontalSplit(mainLayout_);
+        ui::PanelArea* mainArea = window_->mainWidget()->panelArea();
+        mainArea->setType(ui::PanelAreaType::HorizontalSplit);
         ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
         leftArea->addStyleClass(left_sidebar);
         ui::PanelArea* middleArea = ui::PanelArea::createVerticalSplit(mainArea);
@@ -242,26 +242,6 @@ private:
         createLineEdits_(rightBottomPanel);
         createImageBox_(rightBottomPanel);
         createCanvas_(middleTopPanel, document_.get());
-    }
-
-    void createOverlayAndMainLayout_() {
-        overlay_ = ui::OverlayArea::create();
-        mainLayout_ = overlay_->createChild<ui::Column>();
-        overlay_->setAreaWidget(mainLayout_);
-        mainLayout_->addStyleClass(core::StringId("main-layout"));
-        std::string path = core::resourcePath("ui/stylesheets/default.vgcss");
-        std::string styleSheet = core::readFile(path);
-        styleSheet += ".main-layout { "
-                      "    row-gap: 0dp; "
-                      "    padding-top: 0dp; "
-                      "    padding-right: 0dp; "
-                      "    padding-bottom: 0dp; "
-                      "    padding-left: 0dp; }";
-#ifdef VGC_CORE_OS_MACOS
-        styleSheet += ".root { font-size: 13dp; }";
-#endif
-        overlay_->setStyleSheet(styleSheet);
-        overlay_->addStyleClass(ui::strings::root);
     }
 
     // XXX actually create ui::Panel instances as children of Tabs areas
@@ -543,9 +523,10 @@ private:
         updateUndoRedoActionState_();
     }
 
-    ui::Menu* menuBar_ = nullptr;
     ui::Menu* testMenu_ = nullptr;
     void createMenus_(ui::Widget* parent) {
+        // XXX we need `parent` for owning the created actions
+        // TODO: we shouldn't create actions here, refactoring needed
 
         using ui::Action;
         using ui::Key;
@@ -554,16 +535,12 @@ private:
         using ui::Shortcut;
         using ui::ShortcutContext;
 
-        menuBar_ = parent->createChild<Menu>("Menu");
-        menuBar_->setDirection(ui::FlexDirection::Row);
-        menuBar_->addStyleClass(
-            core::StringId("horizontal")); // TODO: move to Flex or Menu.
-        menuBar_->setShortcutTrackEnabled(false);
+        ui::Menu* menuBar = window_->mainWidget()->menuBar();
 
-        Menu* fileMenu = menuBar_->createSubMenu("File");
-        Menu* editMenu = menuBar_->createSubMenu("Edit");
-        testMenu_ = menuBar_->createSubMenu("Test");
-        menuBar_->setPopupEnabled(false);
+        Menu* fileMenu = menuBar->createSubMenu("File");
+        Menu* editMenu = menuBar->createSubMenu("Edit");
+        testMenu_ = menuBar->createSubMenu("Test");
+        menuBar->setPopupEnabled(false);
 
         fileMenu->addItem(actionNew_);
         fileMenu->addItem(actionOpen_);
@@ -584,7 +561,7 @@ private:
         Action* actionCreateMenu = parent->createAction(
             "Create menu in menubar", Shortcut(ModifierKey::Ctrl, Key::M));
         actionCreateMenu->triggered().connect([this]() {
-            Menu* menu = this->menuBar_->createSubMenu("Test 2");
+            Menu* menu = this->window_->mainWidget()->menuBar()->createSubMenu("Test 2");
             Action* action = menu->createAction("Hello");
             menu->addItem(action);
         });
@@ -636,10 +613,11 @@ private:
     void onMenuChanged_() {
         core::Object* obj = emitter();
         ui::Menu* menu = dynamic_cast<ui::Menu*>(obj);
+        ui::Menu* menuBar = window_->mainWidget()->menuBar();
         if (!menu) {
             return;
         }
-        if (menu == menuBar_) {
+        if (menu == menuBar) {
             qMenuBar_->clear();
             doPopulateNativeMenuBar_(menu, qMenuBar_);
             return;
@@ -749,8 +727,9 @@ private:
             return;
         }
 
-        menuBar_->hide();
-        populateNativeMenuBar_(menuBar_, qMenuBar_);
+        ui::Menu* menuBar = window_->mainWidget()->menuBar();
+        menuBar->hide();
+        populateNativeMenuBar_(menuBar, qMenuBar_);
     }
 #endif
 
@@ -897,13 +876,6 @@ private:
     void createImageBox_(ui::Widget* parent) {
         std::string imagePath = core::resourcePath("apps/illustration/icons/512.png");
         parent->createChild<ui::ImageBox>(imagePath);
-    }
-
-    void createWindow_() {
-        window_ = ui::Window::create(overlay_);
-        window_->setTitle("VGC UI Test");
-        window_->resize(QSize(1100, 800));
-        window_->setVisible(true);
     }
 };
 
