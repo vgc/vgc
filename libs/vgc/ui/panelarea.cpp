@@ -27,6 +27,12 @@
 
 namespace vgc::ui {
 
+VGC_DEFINE_ENUM(
+    PanelAreaType,
+    (HorizontalSplit, "HorizontalSplit"),
+    (VerticalSplit, "VerticalSplit"),
+    (Tabs, "Tabs"))
+
 PanelArea::PanelArea(PanelAreaType type)
     : Widget()
     , type_(type) {
@@ -36,6 +42,25 @@ PanelArea::PanelArea(PanelAreaType type)
 
 PanelAreaPtr PanelArea::create(PanelAreaType type) {
     return PanelAreaPtr(new PanelArea(type));
+}
+
+void PanelArea::setType(PanelAreaType type) {
+    if (isSplit_(type_) != isSplit_(type) && numChildren() > 0) {
+        VGC_WARNING(
+            LogVgcUi,
+            "Changing the type of {} from {} to {}. This is only possible for panel "
+            "areas without children, so all current children ({}) are destroyed.",
+            ptr(this),
+            type_,
+            type,
+            numChildren());
+        while (lastChild()) {
+            lastChild()->destroy();
+        }
+    }
+    type_ = type;
+    requestGeometryUpdate();
+    requestRepaint();
 }
 
 namespace {
