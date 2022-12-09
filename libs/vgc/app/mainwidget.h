@@ -18,6 +18,7 @@
 #define VGC_APP_MAINWIDGET_H
 
 #include <vgc/app/api.h>
+#include <vgc/app/nativemenubar.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/overlayarea.h>
@@ -82,6 +83,15 @@ private:
     ui::OverlayArea* overlayArea_ = nullptr;
     ui::Menu* menuBar_ = nullptr;
     ui::PanelArea* panelArea_ = nullptr;
+
+    // Manage the native menu bar.
+    //
+    // Note: we may want to move this to Application instead, so that there is
+    // always one NativeMenuBar, but we could have function such that
+    // Application::setNativeMenuBar(Menu* bar) to change which `Menu` is used
+    // to populate the native menu bar.
+    //
+    NativeMenuBarPtr nativeMenuBar_;
 };
 
 } // namespace vgc::app

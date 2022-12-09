@@ -10,10 +10,12 @@ vgc_add_library(app
         logcategories.h
         mainwindow.h
         mainwidget.h
+        nativemenubar.h
 
     CPP_FILES
         application.cpp
         logcategories.cpp
         mainwidget.cpp
         mainwindow.cpp
+        nativemenubar.cpp
 )
