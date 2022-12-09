@@ -37,20 +37,18 @@ class VGC_APP_API MainWindow : public ui::Window {
     VGC_OBJECT(MainWindow, ui::Window)
 
 protected:
-    MainWindow();
+    MainWindow(std::string_view title);
 
 public:
     /// Creates a `MainWindow`.
     ///
-    static MainWindowPtr create();
+    static MainWindowPtr create(std::string_view title);
 
     /// Returns the `MainWidget` owned by this `MainWindow`.
     ///
     MainWidget* mainWidget() {
         return static_cast<MainWidget*>(widget());
     }
-
-private:
 };
 
 } // namespace vgc::app
