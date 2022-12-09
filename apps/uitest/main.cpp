@@ -21,13 +21,12 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStandardPaths>
-#include <QTimer>
 
 #include <vgc/app/application.h>
+#include <vgc/app/logcategories.h>
 #include <vgc/app/mainwindow.h>
-#include <vgc/core/io.h>
 #include <vgc/core/os.h>
-#include <vgc/core/python.h>
+#include <vgc/core/paths.h>
 #include <vgc/core/random.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/strings.h>
@@ -41,7 +40,6 @@
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/menu.h>
-#include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
@@ -49,11 +47,6 @@
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
 #include <vgc/ui/shortcut.h>
-#include <vgc/ui/window.h>
-#include <vgc/widgets/font.h>
-#include <vgc/widgets/mainwindow.h>
-#include <vgc/widgets/openglviewer.h>
-#include <vgc/widgets/stylesheets.h>
 
 namespace app = vgc::app;
 namespace core = vgc::core;
@@ -61,12 +54,12 @@ namespace dom = vgc::dom;
 namespace geometry = vgc::geometry;
 namespace ui = vgc::ui;
 
-namespace py = pybind11;
+using vgc::Int;
+using vgc::UInt32;
+
+using app::LogVgcApp;
 
 namespace {
-
-VGC_DECLARE_LOG_CATEGORY(LogVgcApp, Debug)
-VGC_DEFINE_LOG_CATEGORY(LogVgcApp, "vgc.app")
 
 core::StringId left_sidebar("left-sidebar");
 core::StringId with_padding("with-padding");
@@ -149,7 +142,7 @@ public:
         dom::Element* root = doc->rootElement();
         dom::Element* user = dom::Element::create(root, user_);
         dom::Element* colorpalette = dom::Element::create(user, colorpalette_);
-        for (vgc::Int i = 0; i < listView->numColors(); ++i) {
+        for (Int i = 0; i < listView->numColors(); ++i) {
             const core::Color& color = listView->colorAt(i);
             dom::Element* item = dom::Element::create(colorpalette, colorpaletteitem_);
             item->setAttribute(color_, color);
@@ -169,8 +162,8 @@ private:
 
 VGC_DECLARE_OBJECT(Application);
 
-class Application : public vgc::app::Application {
-    VGC_OBJECT(Application, vgc::app::Application)
+class Application : public app::Application {
+    VGC_OBJECT(Application, app::Application)
 
 public:
     static ApplicationPtr create(int argc, char* argv[]) {
@@ -179,7 +172,7 @@ public:
 
 protected:
     Application(int argc, char* argv[])
-        : vgc::app::Application(argc, argv) {
+        : app::Application(argc, argv) {
 
         setWindowIconFromResource("apps/illustration/icons/512.png");
         window_ = app::MainWindow::create("VGC UI Test");
@@ -203,9 +196,9 @@ private:
     }
 
     void createDocument_() {
-        document_ = vgc::dom::Document::create();
-        vgc::dom::Element::create(document_.get(), "vgc");
-        document_->enableHistory(vgc::dom::strings::New_Document);
+        document_ = dom::Document::create();
+        dom::Element::create(document_.get(), "vgc");
+        document_->enableHistory(dom::strings::New_Document);
         document_->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
         updateUndoRedoActionState_();
     }
@@ -269,9 +262,9 @@ private:
         }
 
         try {
-            dom::DocumentPtr tmp = vgc::dom::Document::create();
-            vgc::dom::Element::create(tmp.get(), "vgc");
-            tmp->enableHistory(vgc::dom::strings::New_Document);
+            dom::DocumentPtr tmp = dom::Document::create();
+            dom::Element::create(tmp.get(), "vgc");
+            tmp->enableHistory(dom::strings::New_Document);
             document_->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
             canvas_->setDocument(tmp.get());
             document_ = tmp;
@@ -351,7 +344,7 @@ private:
             // the DOM before enabling history
             dom::DocumentPtr doc = dom::Document::open(ui::fromQt(filename_));
             core::Array<core::Color> colors = getColorPalette_(doc.get());
-            doc->enableHistory(vgc::dom::strings::Open_Document);
+            doc->enableHistory(dom::strings::Open_Document);
             doc->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
 
             // Set viewer document (must happen before old document is destroyed)
@@ -742,7 +735,7 @@ private:
     }
     VGC_SLOT(onColorChangedSlot_, onColorChanged_)
 
-    void createCanvas_(ui::Widget* parent, vgc::dom::Document* document) {
+    void createCanvas_(ui::Widget* parent, dom::Document* document) {
         canvas_ = parent->createChild<ui::Canvas>(document);
         onColorChanged_();
         if (palette_) {
@@ -842,10 +835,10 @@ private:
             "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in "
             "culpa qui officia deserunt mollit anim id est laborum.";
 
-        const vgc::UInt32 seed1 = 109283;
-        const vgc::UInt32 seed2 = 981427;
+        const UInt32 seed1 = 109283;
+        const UInt32 seed2 = 981427;
         size_t lipsumSize = lipsum.size();
-        vgc::UInt32 lipsumSize32 = static_cast<vgc::UInt32>(lipsumSize);
+        UInt32 lipsumSize32 = static_cast<UInt32>(lipsumSize);
         core::PseudoRandomUniform<size_t> randomBegin(0, lipsumSize32, seed1);
         core::PseudoRandomUniform<size_t> randomCount(0, 100, seed2);
 

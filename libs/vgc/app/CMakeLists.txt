@@ -7,11 +7,13 @@ vgc_add_library(app
 
     HEADER_FILES
         application.h
+        logcategories.h
         mainwindow.h
         mainwidget.h
 
     CPP_FILES
         application.cpp
+        logcategories.cpp
         mainwidget.cpp
         mainwindow.cpp
 )

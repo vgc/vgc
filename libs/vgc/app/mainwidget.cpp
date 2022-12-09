@@ -16,8 +16,8 @@
 
 #include <vgc/app/mainwidget.h>
 
-#include <vgc/core/compiler.h>
 #include <vgc/core/io.h>
+#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/widget.h>
