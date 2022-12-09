@@ -51,11 +51,28 @@ public:
     ///
     static OverlayAreaPtr create();
 
-    void setAreaWidget(Widget* w);
-    void addOverlayWidget(
-        Widget* w,
-        OverlayResizePolicy resizePolicy = OverlayResizePolicy::None);
+    /// Returns the area widget of this overlay area. This is the only child of
+    /// the the overlay area that is not actually an overlay, but instead is
+    /// the widget that fills the space of the overlay area, below all
+    /// overlays.
+    ///
+    /// \sa `setAreaWidget()`, `createAreaWidget()`
+    ///
+    Widget* areaWidget() const {
+        return areaWidget_;
+    }
 
+    /// Sets the given widget as the area widget of this overlay area.
+    ///
+    /// \sa `areaWidget()`, `createAreaWidget()`
+    ///
+    void setAreaWidget(Widget* widget);
+
+    /// Creates a new widget of the given `WidgetClass`, and sets it
+    /// as the area widget of this overlay area.
+    ///
+    /// \sa `areaWidget()`, `setAreaWidget()`
+    ///
     template<typename WidgetClass, typename... Args>
     WidgetClass* createAreaWidget(Args&&... args) {
         core::ObjPtr<WidgetClass> child =
@@ -64,12 +81,24 @@ public:
         return child.get();
     }
 
+    /// Adds the given widget as an overlay to this overlay area.
+    ///
+    /// \sa `createOverlayWidget()`.
+    ///
+    void addOverlayWidget(
+        Widget* widget,
+        OverlayResizePolicy resizePolicy = OverlayResizePolicy::None);
+
+    /// Creates a new widget of the given `WidgetClass`, and adds it as an
+    /// overlay to this overlay area.
+    ///
+    /// \sa `addOverlayWidget()`.
+    ///
     template<typename WidgetClass, typename... Args>
     WidgetClass* createOverlayWidget(OverlayResizePolicy resizePolicy, Args&&... args) {
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
         addOverlayWidget(child.get(), resizePolicy);
-
         return child.get();
     }
 
