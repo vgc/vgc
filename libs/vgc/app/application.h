@@ -37,8 +37,8 @@ VGC_DECLARE_OBJECT(Application);
 /// \class vgc::app::Application
 /// \brief Represents an instance of a VGC application
 ///
-class VGC_APP_API Application : public vgc::core::Object {
-    VGC_OBJECT(Application, vgc::core::Object)
+class VGC_APP_API Application : public core::Object {
+    VGC_OBJECT(Application, core::Object)
 
 protected:
     Application(int argc, char* argv[]);

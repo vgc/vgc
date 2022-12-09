@@ -165,18 +165,18 @@ private:
     dom::Document* doc_;
 };
 
-VGC_DECLARE_OBJECT(MyApplication);
+VGC_DECLARE_OBJECT(Application);
 
-class MyApplication : public vgc::app::Application {
-    VGC_OBJECT(MyApplication, vgc::app::Application)
+class Application : public vgc::app::Application {
+    VGC_OBJECT(Application, vgc::app::Application)
 
 public:
-    static MyApplicationPtr create(int argc, char* argv[]) {
-        return MyApplicationPtr(new MyApplication(argc, argv));
+    static ApplicationPtr create(int argc, char* argv[]) {
+        return ApplicationPtr(new Application(argc, argv));
     }
 
 protected:
-    MyApplication(int argc, char* argv[])
+    Application(int argc, char* argv[])
         : vgc::app::Application(argc, argv) {
 
         setWindowIconFromResource("apps/illustration/icons/512.png");
@@ -910,6 +910,6 @@ private:
 } // namespace
 
 int main(int argc, char* argv[]) {
-    MyApplicationPtr application = MyApplication::create(argc, argv);
+    ApplicationPtr application = Application::create(argc, argv);
     return application->exec();
 }
