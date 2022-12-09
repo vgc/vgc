@@ -18,50 +18,74 @@
 
 #include <cstdlib> // getenv
 
+// Note: we may want to use generic code to concatenate filepath, e.g.:
+//
+//       core/fileutils.h::concatenateFilePath()
+//
+// Or abstract this further with a core::Dir class similar to QDir.
+//
+// Or simply use std::filesystem::path, but GCC v7 doesn't have it even
+// in C++17 mode. We have to wait until we require GCC v8+, see:
+//
+// https://stackoverflow.com/questions/45867379/why-does-gcc-not-seem-to-have-the-filesystem-standard-library
+//
+
 namespace vgc::core {
 
 namespace {
 
 std::string basePath_;
+std::string pythonPath_;
+std::string resourcesPath_;
 
-} // end namespace
-
-void setBasePath(const std::string& path) {
-    basePath_ = path;
+void initOtherPaths() {
+    pythonPath_ = basePath_ + "/python";
+    resourcesPath_ = basePath_ + "/resources";
 }
 
-std::string basePath() {
+void ensurePathsAreInitialized() {
     if (basePath_.length() == 0) {
         char* path = std::getenv("VGCBASEPATH");
-        if (path) {
+        if (path && *path != '\0') {
             basePath_ = path;
         }
         else {
             basePath_ = ".";
         }
+        initOtherPaths();
     }
+}
+
+} // end namespace
+
+void setBasePath(std::string_view path) {
+    basePath_ = path;
+    initOtherPaths();
+}
+
+std::string basePath() {
+    ensurePathsAreInitialized();
     return basePath_;
 }
 
 std::string pythonPath() {
-    // XXX use generic code to concatenate filepath, e.g.:
-    //       core/fileutils.h::concatenateFilePath()
-    //     or abstract this further with a core::Dir class similar to QDir.
-    return basePath() + "/python";
+    ensurePathsAreInitialized();
+    return pythonPath_;
 }
 
 std::string resourcesPath() {
-    // XXX use generic code to concatenate filepath, e.g.:
-    //       core/fileutils.h::concatenateFilePath()
-    //     or abstract this further with a core::Dir class similar to QDir.
-    return basePath() + "/resources";
+    ensurePathsAreInitialized();
+    return resourcesPath_;
 }
 
-std::string resourcePath(const std::string& name) {
-    // XXX use generic code to concatenate filepath, e.g.:
-    //       core/fileutils.h::concatenateFilePath()
-    //     or abstract this further with a core::Dir class similar to QDir.
-    return resourcesPath() + "/" + name;
+std::string resourcePath(std::string_view name) {
+    ensurePathsAreInitialized();
+    std::string res;
+    res.reserve(resourcesPath_.length() + name.length() + 1);
+    res += resourcesPath_;
+    res += '/';
+    res += name;
+    return res;
 }
 
 } // namespace vgc::core
