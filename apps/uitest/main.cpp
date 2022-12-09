@@ -182,7 +182,7 @@ protected:
         : vgc::app::Application(argc, argv) {
 
         setWindowIconFromResource("apps/illustration/icons/512.png");
-        window_ = app::MainWindow::create();
+        window_ = app::MainWindow::create("VGC UI Test");
         createDocument_();
         createWidgets_();
     }
@@ -525,8 +525,6 @@ private:
 
     ui::Menu* testMenu_ = nullptr;
     void createMenus_(ui::Widget* parent) {
-        // XXX we need `parent` for owning the created actions
-        // TODO: we shouldn't create actions here, refactoring needed
 
         using ui::Action;
         using ui::Key;

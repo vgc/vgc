@@ -18,20 +18,21 @@
 
 #include <vgc/app/mainwidget.h>
 #include <vgc/ui/overlayarea.h>
+#include <vgc/ui/qtutil.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::app {
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(std::string_view title)
     : ui::Window(MainWidget::create()) {
 
-    setTitle("VGC UI Test"); // XXX temporary
+    setTitle(ui::toQt(title));
     resize(QSize(1100, 800));
     setVisible(true);
 }
 
-MainWindowPtr MainWindow::create() {
-    return MainWindowPtr(new MainWindow());
+MainWindowPtr MainWindow::create(std::string_view title) {
+    return MainWindowPtr(new MainWindow(title));
 }
 
 } // namespace vgc::app
