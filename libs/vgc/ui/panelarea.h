@@ -31,6 +31,9 @@ enum class PanelAreaType : UInt8 {
     Tabs = 2
 };
 
+VGC_UI_API
+VGC_DECLARE_ENUM(PanelAreaType)
+
 VGC_DECLARE_OBJECT(PanelArea);
 
 namespace detail {
@@ -150,11 +153,20 @@ public:
         return type_;
     }
 
+    /// Changes the type of this `PanelArea`.
+    ///
+    /// If the type is changed from `Tabs` to `VerticalSplit` or
+    /// `HorizontalSplit` (or the other way around), and this `PanelArea`
+    /// already have some children, then a warning is emitted and all children
+    /// are destroyed before the type is changed.
+    ///
+    void setType(PanelAreaType type);
+
     /// Returns whether the `type()` of this `PanelArea` is `HorizontalSplit` or
     /// `VerticalSplit`.
     ///
     bool isSplit() const {
-        return static_cast<UInt8>(type()) < 2;
+        return isSplit_(type_);
     }
 
     // Implementation of StylableObject interface
@@ -190,6 +202,10 @@ private:
     using SplitDataArray = detail::PanelAreaSplitDataArray;
 
     PanelAreaType type_;
+    static bool isSplit_(PanelAreaType type) {
+        return static_cast<UInt8>(type) < 2;
+    }
+
     SplitDataArray splitData_; // size = num child widgets
 
     graphics::GeometryViewPtr triangles_;
