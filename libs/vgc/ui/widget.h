@@ -45,7 +45,6 @@ namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(OverlayArea);
-VGC_DECLARE_OBJECT(UiWidgetEngine);
 VGC_DECLARE_OBJECT(Widget);
 
 // clang-format off
