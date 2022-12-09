@@ -52,9 +52,8 @@ public:
     static OverlayAreaPtr create();
 
     /// Returns the area widget of this overlay area. This is the only child of
-    /// the the overlay area that is not actually an overlay, but instead is
-    /// the widget that fills the space of the overlay area, below all
-    /// overlays.
+    /// the overlay area that is not actually an overlay, but instead is the
+    /// widget that fills the space of the overlay area, below all overlays.
     ///
     /// \sa `setAreaWidget()`, `createAreaWidget()`
     ///
