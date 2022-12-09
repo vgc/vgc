@@ -44,7 +44,7 @@ namespace vgc::core {
 /// \sa basePath()
 ///
 VGC_CORE_API
-void setBasePath(const std::string& path);
+void setBasePath(std::string_view path);
 
 /// Returns the absolute path of the base directory of this VGC installation.
 ///
@@ -79,7 +79,7 @@ std::string resourcesPath();
 /// \endcode
 ///
 VGC_CORE_API
-std::string resourcePath(const std::string& name);
+std::string resourcePath(std::string_view name);
 
 } // namespace vgc::core
 
