@@ -31,23 +31,23 @@ OverlayAreaPtr OverlayArea::create() {
     return OverlayAreaPtr(new OverlayArea());
 }
 
-void OverlayArea::setAreaWidget(Widget* w) {
-    if (w != areaWidget_) {
+void OverlayArea::setAreaWidget(Widget* widget) {
+    if (widget != areaWidget_) {
         if (areaWidget_) {
-            areaWidget_->replace(w);
+            areaWidget_->replace(widget);
         }
-        areaWidget_ = w;
+        areaWidget_ = widget;
     }
     insertChild(firstChild(), areaWidget_);
 }
 
-void OverlayArea::addOverlayWidget(Widget* w, OverlayResizePolicy resizePolicy) {
-    addChild(w);
-    overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == w; });
-    overlays_.emplaceLast(w, resizePolicy);
+void OverlayArea::addOverlayWidget(Widget* widget, OverlayResizePolicy resizePolicy) {
+    addChild(widget);
+    overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == widget; });
+    overlays_.emplaceLast(widget, resizePolicy);
     switch (resizePolicy) {
     case OverlayResizePolicy::Stretch: {
-        w->updateGeometry(rect());
+        widget->updateGeometry(rect());
         break;
     }
     case OverlayResizePolicy::None:
