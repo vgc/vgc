@@ -101,7 +101,7 @@ void Window::leaveEvent(QEvent* event) {
 
 namespace {
 
-Widget* prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window) {
+void prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window) {
 
     // Apply device pixel ratio
     geometry::Vec2f position = event->position();
@@ -113,10 +113,6 @@ Widget* prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window)
     if (mouseCaptor) {
         position = root->mapTo(mouseCaptor, position);
         event->setPosition(position);
-        return mouseCaptor;
-    }
-    else {
-        return root;
     }
 }
 
@@ -127,8 +123,8 @@ void Window::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     MouseEventPtr vgcEvent = fromQt(event);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
-    event->setAccepted(mouseMoveEvent_(receiver, vgcEvent.get()));
+    prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
+    event->setAccepted(mouseMoveEvent_(vgcEvent.get()));
 }
 
 void Window::mousePressEvent(QMouseEvent* event) {
@@ -145,8 +141,8 @@ void Window::mousePressEvent(QMouseEvent* event) {
         return;
     }
     pressedMouseButtons_.set(button);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
-    event->setAccepted(mousePressEvent_(receiver, vgcEvent.get()));
+    prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
+    event->setAccepted(mousePressEvent_(vgcEvent.get()));
 }
 
 void Window::mouseReleaseEvent(QMouseEvent* event) {
@@ -158,16 +154,16 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
         return;
     }
     pressedMouseButtons_.unset(button);
-    Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
-    event->setAccepted(mouseReleaseEvent_(receiver, vgcEvent.get()));
+    prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
+    event->setAccepted(mouseReleaseEvent_(vgcEvent.get()));
 }
 
 void Window::tabletEvent(QTabletEvent* event) {
     switch (event->type()) {
     case QEvent::TabletMove: {
         MouseEventPtr vgcEvent = fromQt(event);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
-        mouseMoveEvent_(receiver, vgcEvent.get());
+        prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
+        mouseMoveEvent_(vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
         timeSinceLastTableEvent_.restart();
@@ -187,8 +183,8 @@ void Window::tabletEvent(QTabletEvent* event) {
             break;
         }
         pressedTabletButtons_.set(button);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
-        mousePressEvent_(receiver, vgcEvent.get());
+        prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
+        mousePressEvent_(vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
         timeSinceLastTableEvent_.restart();
@@ -203,8 +199,8 @@ void Window::tabletEvent(QTabletEvent* event) {
             return;
         }
         pressedTabletButtons_.unset(button);
-        Widget* receiver = prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
-        mouseReleaseEvent_(receiver, vgcEvent.get());
+        prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
+        mouseReleaseEvent_(vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
         event->setAccepted(true);
         timeSinceLastTableEvent_.restart();
@@ -249,8 +245,10 @@ bool Window::isTabletInUse_() const {
            || timeSinceLastTableEvent_.elapsed() < tabletIdleDuration_;
 }
 
-bool Window::mouseMoveEvent_(Widget* receiver, MouseEvent* event) {
-    if (!widget_->isHovered()) {
+bool Window::mouseMoveEvent_(MouseEvent* event) {
+    bool isHandled = false;
+    Widget* mouseCaptor = widget_->mouseCaptor();
+    if (!mouseCaptor && !widget_->isHovered()) {
         if (widget_->geometry().contains(event->position())) {
             widget_->setHovered(true);
             entered_ = true;
@@ -259,39 +257,37 @@ bool Window::mouseMoveEvent_(Widget* receiver, MouseEvent* event) {
             return false;
         }
     }
-    bool handled = false;
-    if (!receiver->isRoot()) {
-        // mouse captor
-        handled = receiver->onMouseMove(event);
+    if (mouseCaptor) {
+        isHandled = mouseCaptor->onMouseMove(event);
     }
     else {
-        handled = receiver->mouseMove(event);
+        isHandled = widget_->mouseMove(event);
     }
-    return handled;
+    return isHandled;
 }
 
-bool Window::mousePressEvent_(Widget* receiver, MouseEvent* event) {
-    bool handled = false;
-    if (!receiver->isRoot()) {
-        // mouse captor
-        handled = receiver->onMousePress(event);
+bool Window::mousePressEvent_(MouseEvent* event) {
+    bool isHandled = false;
+    Widget* mouseCaptor = widget_->mouseCaptor();
+    if (mouseCaptor) {
+        isHandled = mouseCaptor->onMousePress(event);
     }
     else {
-        handled = receiver->mousePress(event);
+        isHandled = widget_->mousePress(event);
     }
-    return handled;
+    return isHandled;
 }
 
-bool Window::mouseReleaseEvent_(Widget* receiver, MouseEvent* event) {
-    bool handled = false;
-    if (!receiver->isRoot()) {
-        // mouse captor
-        handled = receiver->onMouseRelease(event);
+bool Window::mouseReleaseEvent_(MouseEvent* event) {
+    bool isHandled = false;
+    Widget* mouseCaptor = widget_->mouseCaptor();
+    if (mouseCaptor) {
+        isHandled = mouseCaptor->onMouseRelease(event);
     }
     else {
-        handled = receiver->mouseRelease(event);
+        isHandled = widget_->mouseRelease(event);
     }
-    return handled;
+    return isHandled;
 }
 
 void Window::focusInEvent(QFocusEvent* event) {
@@ -304,30 +300,16 @@ void Window::focusOutEvent(QFocusEvent* event) {
     widget_->setTreeActive(false, reason);
 }
 
-namespace {
-
-std::pair<Widget*, KeyEventPtr> prepareKeyboardEvent(Widget* root, QKeyEvent* event) {
-    KeyEventPtr vgcEvent = fromQt(event);
-    Widget* keyboardCaptor = root->keyboardCaptor();
-    if (keyboardCaptor) {
-        return {keyboardCaptor, vgcEvent};
-    }
-    else {
-        return {root, vgcEvent};
-    }
-}
-
-} // namespace
-
 void Window::keyPressEvent(QKeyEvent* event) {
-    auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
+
+    KeyEventPtr vgcEvent = fromQt(event);
+    Widget* keyboardCaptor = widget_->keyboardCaptor();
     bool isHandled = false;
-    if (!receiver->isRoot()) {
-        // keyboard captor
-        isHandled = receiver->onKeyPress(vgcEvent.get());
+    if (keyboardCaptor) {
+        isHandled = keyboardCaptor->onKeyPress(vgcEvent.get());
     }
     else {
-        isHandled = receiver->keyPress(vgcEvent.get());
+        isHandled = widget_->keyPress(vgcEvent.get());
     }
 
     // Handle window-wide shortcuts
@@ -350,14 +332,14 @@ void Window::keyPressEvent(QKeyEvent* event) {
 }
 
 void Window::keyReleaseEvent(QKeyEvent* event) {
-    auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
+    KeyEventPtr vgcEvent = fromQt(event);
+    Widget* keyboardCaptor = widget_->keyboardCaptor();
     bool isHandled = false;
-    if (!receiver->isRoot()) {
-        // keyboard captor
-        isHandled = receiver->onKeyRelease(vgcEvent.get());
+    if (keyboardCaptor) {
+        isHandled = keyboardCaptor->onKeyRelease(vgcEvent.get());
     }
     else {
-        isHandled = receiver->keyRelease(vgcEvent.get());
+        isHandled = widget_->keyRelease(vgcEvent.get());
     }
     event->setAccepted(isHandled);
 }
