@@ -321,7 +321,14 @@ std::pair<Widget*, KeyEventPtr> prepareKeyboardEvent(Widget* root, QKeyEvent* ev
 
 void Window::keyPressEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    bool isHandled = receiver->keyPress(vgcEvent.get());
+    bool isHandled = false;
+    if (!receiver->isRoot()) {
+        // keyboard captor
+        isHandled = receiver->onKeyPress(vgcEvent.get());
+    }
+    else {
+        isHandled = receiver->keyPress(vgcEvent.get());
+    }
 
     // Handle window-wide shortcuts
     if (!isHandled) {
@@ -344,7 +351,15 @@ void Window::keyPressEvent(QKeyEvent* event) {
 
 void Window::keyReleaseEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyRelease(vgcEvent.get()));
+    bool isHandled = false;
+    if (!receiver->isRoot()) {
+        // keyboard captor
+        isHandled = receiver->onKeyRelease(vgcEvent.get());
+    }
+    else {
+        isHandled = receiver->keyRelease(vgcEvent.get());
+    }
+    event->setAccepted(isHandled);
 }
 
 void Window::inputMethodEvent(QInputMethodEvent* event) {

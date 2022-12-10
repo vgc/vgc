@@ -203,12 +203,28 @@ prepareKeyboardEvent(ui::Widget* root, QKeyEvent* event) {
 
 void UiWidget::keyPressEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyPress(vgcEvent.get()));
+    bool isHandled = false;
+    if (!receiver->isRoot()) {
+        // keyboard captor
+        isHandled = receiver->onKeyPress(vgcEvent.get());
+    }
+    else {
+        isHandled = receiver->keyPress(vgcEvent.get());
+    }
+    event->setAccepted(isHandled);
 }
 
 void UiWidget::keyReleaseEvent(QKeyEvent* event) {
     auto [receiver, vgcEvent] = prepareKeyboardEvent(widget_.get(), event);
-    event->setAccepted(receiver->keyRelease(vgcEvent.get()));
+    bool isHandled = false;
+    if (!receiver->isRoot()) {
+        // keyboard captor
+        isHandled = receiver->onKeyRelease(vgcEvent.get());
+    }
+    else {
+        isHandled = receiver->keyRelease(vgcEvent.get());
+    }
+    event->setAccepted(isHandled);
 }
 
 QVariant UiWidget::inputMethodQuery(Qt::InputMethodQuery) const {
