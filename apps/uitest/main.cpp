@@ -14,9 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string>
-#include <string_view>
-
 #include <vgc/app/canvasapplication.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/random.h>

@@ -16,35 +16,14 @@
 
 #include <vgc/app/canvasapplication.h>
 
-#include <string>
-#include <string_view>
-
 #include <QFileDialog>
-#include <QMenuBar>
 #include <QMessageBox>
 #include <QStandardPaths>
 
 #include <vgc/app/logcategories.h>
-#include <vgc/app/mainwindow.h>
-#include <vgc/core/os.h>
-#include <vgc/core/paths.h>
-#include <vgc/dom/document.h>
 #include <vgc/dom/strings.h>
-#include <vgc/ui/action.h>
-#include <vgc/ui/button.h>
-#include <vgc/ui/canvas.h>
-#include <vgc/ui/colorpalette.h>
-#include <vgc/ui/column.h>
-#include <vgc/ui/label.h>
-#include <vgc/ui/lineedit.h>
-#include <vgc/ui/menu.h>
-#include <vgc/ui/panel.h>
-#include <vgc/ui/panelarea.h>
 #include <vgc/ui/qtutil.h>
-#include <vgc/ui/row.h>
 #include <vgc/ui/shortcut.h>
-
-// TODO remove unnecessary includes above, some come from uitest
 
 namespace vgc::app {
 

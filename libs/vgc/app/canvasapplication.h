@@ -26,6 +26,10 @@
 #include <vgc/ui/action.h>
 #include <vgc/ui/canvas.h>
 #include <vgc/ui/colorpalette.h>
+#include <vgc/ui/column.h>
+#include <vgc/ui/menu.h>
+#include <vgc/ui/panel.h>
+#include <vgc/ui/panelarea.h>
 
 namespace vgc::app {
 
