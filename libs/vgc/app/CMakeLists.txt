@@ -7,6 +7,7 @@ vgc_add_library(app
 
     HEADER_FILES
         application.h
+        canvasapplication.h
         logcategories.h
         mainwindow.h
         mainwidget.h
@@ -14,6 +15,7 @@ vgc_add_library(app
 
     CPP_FILES
         application.cpp
+        canvasapplication.cpp
         logcategories.cpp
         mainwidget.cpp
         mainwindow.cpp
