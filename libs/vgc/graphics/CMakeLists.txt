@@ -58,18 +58,20 @@ vgc_add_library(graphics
 
     RESOURCE_FILES
         fonts/SourceSansPro/LICENSE.md
-        fonts/SourceSansPro/TTF/SourceSansPro-Black.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-BlackIt.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-Bold.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-BoldIt.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-ExtraLight.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-ExtraLightIt.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-It.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-Light.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-LightIt.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-Semibold.ttf
-        fonts/SourceSansPro/TTF/SourceSansPro-SemiboldIt.ttf
+        fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf # Kept for test_font.py
+        fonts/Roboto/LICENSE.txt
+        fonts/Roboto/Roboto-BlackItalic.ttf
+        fonts/Roboto/Roboto-Black.ttf
+        fonts/Roboto/Roboto-BoldItalic.ttf
+        fonts/Roboto/Roboto-Bold.ttf
+        fonts/Roboto/Roboto-Italic.ttf
+        fonts/Roboto/Roboto-LightItalic.ttf
+        fonts/Roboto/Roboto-Light.ttf
+        fonts/Roboto/Roboto-MediumItalic.ttf
+        fonts/Roboto/Roboto-Medium.ttf
+        fonts/Roboto/Roboto-Regular.ttf
+        fonts/Roboto/Roboto-ThinItalic.ttf
+        fonts/Roboto/Roboto-Thin.ttf
         shaders/d3d11/screen_space_displacement.v.hlsl
         shaders/d3d11/simple.f.hlsl
         shaders/d3d11/simple.v.hlsl

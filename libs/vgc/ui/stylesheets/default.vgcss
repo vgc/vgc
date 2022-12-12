@@ -1,17 +1,14 @@
 .root {
     pixel-hinting: normal;
 
-    /* With SourceSansPro @ 14dp, both cap-height and num-height are equal to 9dp.
-     * So we ensure that font-ascent - 9dp == font-descent so that number and capital
-     * letters are perfectly centered in the rectangle of selection.
-     */
-    font-size: 14dp;
-    font-ascent: 12dp;
+    /* Ensure that numbers and capital letters are centered in rectangle of selection. */
+    font-size: 11dp;
+    font-ascent: 11dp;
     font-descent: 3dp;
 
-    caret-color: rgb(221, 221, 221);
-    text-color: rgb(221, 221, 221);
-    text-selection-color: rgb(221, 221, 221);
+    caret-color: rgb(241, 241, 241);
+    text-color: rgb(241, 241, 241);
+    text-selection-color: rgb(241, 241, 241);
     text-selection-background-color: rgb(11, 82, 172);
 }
 
@@ -19,8 +16,8 @@
 .PanelArea > .Flex > .Flex,
 .root.Flex,
 .root.Flex > .Flex {
-    row-gap: 10dp;
-    column-gap: 10dp;
+    row-gap: 8dp;
+    column-gap: 8dp;
 }
 
 .PanelArea {
@@ -40,10 +37,10 @@
 
 .Panel.with-padding,
 .root.Flex {
-    padding-top: 10dp;
-    padding-right: 10dp;
-    padding-bottom: 10dp;
-    padding-left: 10dp;
+    padding-top: 8dp;
+    padding-right: 8dp;
+    padding-bottom: 8dp;
+    padding-left: 8dp;
 }
 
 .Menu {
@@ -81,7 +78,7 @@
 .Label,
 .LineEdit {
     preferred-width: auto;
-    preferred-height: 21dp;
+    preferred-height: 18dp;
     vertical-shrink: 0;
     vertical-stretch: 0;
     text-vertical-align: middle;
@@ -96,6 +93,10 @@
 }
 
 .MenuButton {
+    preferred-height: 23dp;
+}
+
+.main-menu-bar > .MenuButton {
     preferred-height: 25dp;
 }
 
@@ -147,7 +148,7 @@
 
 .Button {
     background-color: rgb(90, 94, 98);
-    text-color: rgb(230, 230, 230);
+    text-color: rgb(245, 245, 245);
 }
 
 .Button.hovered {
@@ -172,11 +173,18 @@
 
 .Menu {
     background-color: rgb(49, 51, 53);
+    font-size: 12dp;
+    font-ascent: 12dp;
+    font-descent: 3dp;
+}
+
+.Menu.main-menu-bar {
+    background-color: rgb(55, 57, 59);
 }
 
 .MenuButton {
-    column-gap: 10dp;
-    background-color: rgb(49, 51, 53);
+    column-gap: 20dp;
+    background-color: rgba(0, 0, 0, 0);
     /* background-color drawn by .Menu */
 }
 
@@ -188,9 +196,17 @@
     background-color: rgb(11, 82, 172);
 }
 
+.MenuButton > .Shortcut {
+    text-color: rgb(165, 165, 165);
+}
+
 .MenuButton.disabled {
-    text-color: rgb(135, 135, 135);
+    text-color: rgb(125, 125, 125);
     background-color: rgba(0, 0, 0, 0);
+}
+
+.MenuButton.disabled > .Shortcut {
+    text-color: rgb(105, 105, 105);
 }
 
 .MenuButton > .Text {
@@ -212,7 +228,7 @@
     border-top-right-radius: 3dp;
     border-bottom-right-radius: 3dp;
     border-bottom-left-radius: 3dp;
-    preferred-height: 21dp;
+    preferred-height: 18dp;
     horizontal-shrink: 1;
     horizontal-stretch: 1;
     vertical-shrink: 0;
@@ -220,7 +236,7 @@
 }
 
 .ColorPaletteSelector {
-    row-gap: 10dp;
+    row-gap: 8dp;
 
     /* Prevent clipping of selected color border */
     margin-top: 2dp;
@@ -236,6 +252,7 @@
 }
 
 .ColorPalette .field-row > .field-label {
+    padding-left: 3dp;
     preferred-width: 34dp;
     horizontal-stretch: 0;
     text-horizontal-align: left;

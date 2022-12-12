@@ -55,6 +55,7 @@ MainWidget::MainWidget()
     menuBar_ = mainLayout->createChild<ui::Menu>("Menu");
     menuBar_->setDirection(ui::FlexDirection::Row);
     menuBar_->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex or Menu.
+    menuBar_->addStyleClass(core::StringId("main-menu-bar"));
     menuBar_->setShortcutTrackEnabled(false);
     nativeMenuBar_ = NativeMenuBar::create(menuBar_);
 

@@ -33,6 +33,13 @@
 
 namespace vgc::graphics {
 
+VGC_DEFINE_ENUM(
+    FontHinting,
+    (None, "None"),
+    (Native, "Native"),
+    (AutoLight, "AutoLight"),
+    (AutoNormal, "AutoNormal"));
+
 namespace {
 
 // clang-format off
@@ -452,8 +459,7 @@ namespace {
 
 std::string getDefaultFontPath() {
 
-    std::string fontPath =
-        core::resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf");
+    std::string fontPath = core::resourcePath("graphics/fonts/Roboto/Roboto-Regular.ttf");
 
 #ifdef VGC_CORE_OS_MACOS
     std::string appleFont = "/Library/Fonts/SF-Pro-Text-Regular.otf";
