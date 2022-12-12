@@ -1,6 +1,6 @@
 vgc_add_app(illustration
     VGC_DEPENDENCIES
-        widgets
+        app
 
     CPP_FILES
         main.cpp
