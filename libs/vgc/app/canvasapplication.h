@@ -65,12 +65,21 @@ class VGC_APP_API CanvasApplication : public Application {
     VGC_OBJECT(CanvasApplication, Application)
 
 protected:
-    CanvasApplication(int argc, char* argv[]);
+    CanvasApplication(int argc, char* argv[], std::string_view applicationName);
 
 public:
     /// Creates the `CanvasApplication`.
     ///
-    static CanvasApplicationPtr create(int argc, char* argv[]);
+    static CanvasApplicationPtr create(
+        int argc,
+        char* argv[],
+        std::string_view applicationName = "Canvas Application");
+
+    /// Returns the name of the application.
+    ///
+    std::string_view applicationName() const {
+        return applicationName_;
+    }
 
     /// Returns the `MainWindow` of this application.
     ///
@@ -97,6 +106,7 @@ public:
     }
 
 private:
+    std::string applicationName_;
     MainWindowPtr window_;
     dom::DocumentPtr document_;
     core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;

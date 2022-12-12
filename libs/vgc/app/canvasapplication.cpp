@@ -146,18 +146,21 @@ Panel* createPanelWithPadding(ui::PanelArea* panelArea) {
 
 } // namespace detail
 
-CanvasApplication::CanvasApplication(int argc, char* argv[])
+CanvasApplication::CanvasApplication(
+    int argc,
+    char* argv[],
+    std::string_view applicationName)
+
     : Application(argc, argv) {
 
-    // XXX TODO Those strings shouldn't be built-in
-    setWindowIconFromResource("apps/illustration/icons/512.png");
-    window_ = app::MainWindow::create("VGC UI Test");
+    window_ = app::MainWindow::create(applicationName);
     createDocument_();
     createWidgets_();
 }
 
-CanvasApplicationPtr CanvasApplication::create(int argc, char* argv[]) {
-    return CanvasApplicationPtr(new CanvasApplication(argc, argv));
+CanvasApplicationPtr
+CanvasApplication::create(int argc, char* argv[], std::string_view applicationName) {
+    return CanvasApplicationPtr(new CanvasApplication(argc, argv, applicationName));
 }
 
 void CanvasApplication::createDocument_() {

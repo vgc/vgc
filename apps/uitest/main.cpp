@@ -45,8 +45,9 @@ public:
 
 protected:
     UiTestApplication(int argc, char* argv[])
-        : app::CanvasApplication(argc, argv) {
+        : app::CanvasApplication(argc, argv, "VGC UI Test") {
 
+        setWindowIconFromResource("apps/illustration/icons/512.png");
         createTestActionsAndMenus_();
         createTestWidgets_();
     }
