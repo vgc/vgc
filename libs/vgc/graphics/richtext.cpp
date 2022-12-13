@@ -643,7 +643,7 @@ void RichText::onStyleChanged() {
 #ifdef VGC_CORE_OS_MACOS
         FontHinting hinting = FontHinting::AutoLight;
 #else
-        FontHinting hinting = FontHinting::Native
+        FontHinting hinting = FontHinting::Native;
 #endif
         SizedFont* sizedFont = getDefaultSizedFont_(newPpem, hinting);
         shapedText_.setSizedFont(sizedFont);
