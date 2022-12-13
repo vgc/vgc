@@ -165,6 +165,8 @@ public:
         hb_glyph_position_t* glyphPositions = hb_buffer_get_glyph_positions(buf, &n);
 
         // Convert to ShapedGlyph elements
+        FontHinting hinting = sizedFont_->params().hinting();
+        const bool perCharacterHint = hinting == FontHinting::AutoNormal;
         glyphs.clear();
         advance = geometry::Vec2f(0, 0);
         for (unsigned int i = 0; i < n; ++i) {
@@ -175,6 +177,12 @@ public:
             geometry::Vec2f glyphOffset = detail::f266ToVec2f(pos.x_offset, pos.y_offset);
             geometry::Vec2f glyphAdvance =
                 detail::f266ToVec2f(pos.x_advance, pos.y_advance);
+            if (perCharacterHint) {
+                glyphAdvance[0] = std::round(glyphAdvance[0]);
+                glyphAdvance[1] = std::round(glyphAdvance[1]);
+                glyphOffset[0] = std::round(glyphOffset[0]);
+                glyphOffset[1] = std::round(glyphOffset[1]);
+            }
             geometry::Vec2f glyphPosition = advance + glyphOffset;
             if (glyph) {
                 glyphs.append(ShapedGlyph(

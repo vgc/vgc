@@ -40,11 +40,11 @@ MainWidget::MainWidget()
                   "    padding-right: 0dp; "
                   "    padding-bottom: 0dp; "
                   "    padding-left: 0dp; }";
-#ifdef VGC_CORE_OS_MACOS
-    styleSheet += ".root { font-size: 13dp; }";
-#endif
     overlayArea_->setStyleSheet(styleSheet);
     overlayArea_->addStyleClass(ui::strings::root);
+#ifdef VGC_CORE_OS_MACOS
+    overlayArea_->addStyleClass(ui::strings::macos);
+#endif
 
     // Create main layout
     ui::Column* mainLayout = overlayArea_->createChild<ui::Column>();
@@ -55,6 +55,7 @@ MainWidget::MainWidget()
     menuBar_ = mainLayout->createChild<ui::Menu>("Menu");
     menuBar_->setDirection(ui::FlexDirection::Row);
     menuBar_->addStyleClass(core::StringId("horizontal")); // TODO: move to Flex or Menu.
+    menuBar_->addStyleClass(core::StringId("main-menu-bar"));
     menuBar_->setShortcutTrackEnabled(false);
     nativeMenuBar_ = NativeMenuBar::create(menuBar_);
 

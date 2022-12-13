@@ -640,7 +640,12 @@ void RichText::onStyleChanged() {
     if (newPpem != oldPpem) {
 
         // Reshape with new font
-        SizedFont* sizedFont = getDefaultSizedFont_(newPpem, FontHinting::Native);
+#ifdef VGC_CORE_OS_MACOS
+        FontHinting hinting = FontHinting::AutoLight;
+#else
+        FontHinting hinting = FontHinting::Native;
+#endif
+        SizedFont* sizedFont = getDefaultSizedFont_(newPpem, hinting);
         shapedText_.setSizedFont(sizedFont);
 
         // Update cursor position

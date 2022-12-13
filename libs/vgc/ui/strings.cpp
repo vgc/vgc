@@ -81,6 +81,7 @@ const core::StringId handle_hovered_color("handle-hovered-color");
 // ------------------------------
 
 const core::StringId root("root");
+const core::StringId macos("macos");
 
 const core::StringId uncheckable("uncheckable");
 const core::StringId checkable("checkable");

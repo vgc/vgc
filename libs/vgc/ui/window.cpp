@@ -422,7 +422,9 @@ bool Window::updateScreenScaleRatio_() {
     //
     if (screen()) {
         logicalDotsPerInch_ = static_cast<float>(screen()->logicalDotsPerInch());
-        logicalDotsPerInch_ = std::round(logicalDotsPerInch_);
+        if (std::abs(logicalDotsPerInch_ - detail::baseLogicalDpi) < 5) {
+            logicalDotsPerInch_ = detail::baseLogicalDpi;
+        }
     }
     devicePixelRatio_ = static_cast<float>(devicePixelRatio());
 

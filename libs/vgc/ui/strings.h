@@ -73,6 +73,7 @@ VGC_UI_API extern const core::StringId handle_hovered_size;
 VGC_UI_API extern const core::StringId handle_hovered_color;
 
 VGC_UI_API extern const core::StringId root;
+VGC_UI_API extern const core::StringId macos;
 
 VGC_UI_API extern const core::StringId uncheckable;
 VGC_UI_API extern const core::StringId checkable;

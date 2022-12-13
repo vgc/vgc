@@ -21,6 +21,7 @@
 #include <unordered_map>
 
 #include <vgc/core/array.h>
+#include <vgc/core/enum.h>
 #include <vgc/core/innercore.h>
 #include <vgc/geometry/curves2d.h>
 #include <vgc/geometry/mat3f.h>
@@ -54,6 +55,9 @@ enum class FontHinting {
     AutoLight,
     AutoNormal
 };
+
+VGC_GRAPHICS_API
+VGC_DECLARE_ENUM(FontHinting);
 
 /// \class vgc::graphics::SizedFontParams
 /// \brief The size and hinting parameters defining a `SizedFont`.
@@ -350,6 +354,9 @@ public:
     /// they do not correspond to any code point. If you need to access such
     /// glyphs, you must instead use getGlyphFromIndex() directly.
     ///
+    // XXX TODO: Fix this function, it only works for some fonts, depending if
+    // the charmap is Unicode or not.
+    //
     Glyph* getGlyphFromCodePoint(Int codePoint);
 
     /// Returns the glyph at the given glyph index. This uses an internal
@@ -364,6 +371,9 @@ public:
     /// Returns the glyph index corresponding to the given Unicode code point,
     /// or 0 if this font doesn't have a glyph for this code point.
     ///
+    // XXX TODO: Fix this function, it only works for some fonts, depending if
+    // the charmap is Unicode or not.
+    //
     Int getGlyphIndexFromCodePoint(Int codePoint);
 
 protected:
@@ -428,7 +438,7 @@ private:
 /// For example, "Source Sans Pro, bold, 12pt @ 72dpi".
 ///
 /// Note that a given typeface, even with a given style (example:
-/// "SourceSansPro-Bold.otf"), may still use different glyphs based on the
+/// "Roboto-Bold.ttf"), may still use different glyphs based on the
 /// size. For example, smaller point size (8pt) may have less details than
 /// higher point sizes (36pt), and different hinting should be applied based on
 /// the size. This is why we use separate SizedFont objects to represent the
