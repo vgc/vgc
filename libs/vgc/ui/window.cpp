@@ -53,7 +53,7 @@ class WindowDebug;
 template<>
 class WindowDebug<false> {
 public:
-    WindowDebug(Int& indent, const core::Stopwatch& stopwatch) {
+    WindowDebug(Int&, const core::Stopwatch&) {
     }
 };
 
@@ -575,7 +575,7 @@ void Window::updateViewportSize_() {
     }
 }
 
-void Window::exposeEvent(QExposeEvent* event) {
+void Window::exposeEvent(QExposeEvent*) {
     if (isExposed()) {
         if (activeSizemove_) {
             // On Windows, Expose events happen on both WM_PAINT and WM_ERASEBKGND
@@ -773,9 +773,7 @@ bool Window::nativeEvent(
             Int unscaledHeight = static_cast<Int>(HIWORD(msg->lParam));
 
             // Compute and set new scale ratio and scaled size
-
-            bool b =
-                updateScreenScaleRatioAndWindowSize1_(unscaledWidth_, unscaledHeight_);
+            bool b = updateScreenScaleRatioAndWindowSize1_(unscaledWidth, unscaledHeight);
             VGC_WINDOW_DEBUG("WM_SIZE({}, {})", width_, height_);
             updateScreenScaleRatioAndWindowSize2_(b);
 
