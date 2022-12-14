@@ -37,9 +37,6 @@ namespace vgc::ui {
 
 namespace {
 
-template<bool debug>
-struct WindowDebug;
-
 std::string debugTime(const core::Stopwatch& stopwatch) {
     std::string res;
     Int64 us = stopwatch.elapsedMicroseconds();
@@ -49,6 +46,9 @@ std::string debugTime(const core::Stopwatch& stopwatch) {
     ms = ms - 1000 * s;
     return core::format("{:>3}s {:0>3}ms {:0>3}us", s, ms, us);
 }
+
+template<bool debug>
+struct WindowDebug;
 
 template<>
 struct WindowDebug<false> {
