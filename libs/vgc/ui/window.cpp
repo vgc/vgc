@@ -48,20 +48,18 @@ std::string debugTime(const core::Stopwatch& stopwatch) {
 }
 
 template<bool debug>
-struct WindowDebug;
+class WindowDebug;
 
 template<>
-struct WindowDebug<false> {
+class WindowDebug<false> {
+public:
     WindowDebug(Int& indent, const core::Stopwatch& stopwatch) {
     }
 };
 
 template<>
-struct WindowDebug<true> {
-
-    Int& indent_;
-    const core::Stopwatch& stopwatch_;
-
+class WindowDebug<true> {
+public:
     WindowDebug(Int& indent, const core::Stopwatch& stopwatch)
         : indent_(indent)
         , stopwatch_(stopwatch) {
@@ -74,6 +72,10 @@ struct WindowDebug<true> {
         VGC_DEBUG(
             LogVgcUi, "[Window] {} {:>{}} END ", debugTime(stopwatch_), "", indent_ * 2);
     }
+
+private:
+    Int& indent_;
+    const core::Stopwatch& stopwatch_;
 };
 
 } // namespace
