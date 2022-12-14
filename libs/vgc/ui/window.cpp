@@ -107,7 +107,7 @@ private:
 
 namespace vgc::ui {
 
-static constexpr bool debugEvents = true;
+static constexpr bool debugEvents = false;
 
 //#define VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
 
@@ -885,7 +885,12 @@ void Window::initEngine_() {
         engineCreateInfo.windowSwapChainFormat();
     windowSwapChainFormat.setNumBuffers(2);
     windowSwapChainFormat.setNumSamples(8);
+
+#if defined(VGC_CORE_OS_MACOS)
+    engineCreateInfo.setMultithreadingEnabled(false);
+#else
     engineCreateInfo.setMultithreadingEnabled(true);
+#endif
 
 #if defined(VGC_CORE_OS_WINDOWS) && TRUE
 
