@@ -153,7 +153,14 @@ protected:
 
 private:
     bool updateScreenScaleRatio_();
-    void updateScreenScaleRatioAndWindowSize_(Int unscaledWidth, Int unscaledHeight);
+
+    // This function is split in two parts for easier debugging:
+    // - The first updates the data members, which can then be used for printing info
+    // - The second repaints the widget based on the return value of the first
+    [[nodiscard]] bool
+    updateScreenScaleRatioAndWindowSize1_(Int unscaledWidth, Int unscaledHeight);
+    void updateScreenScaleRatioAndWindowSize2_(bool shouldRepaint);
+
     void updateViewportSize_();
 
 protected:
@@ -256,6 +263,9 @@ private:
     VGC_SLOT(onWidgetAddedToTreeSlot_, onWidgetAddedToTree_);
     VGC_SLOT(onWidgetRemovedFromTreeSlot_, onWidgetRemovedFromTree_);
     VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
+
+    Int debugIndent_ = 0;
+    core::Stopwatch debugStopwatch_;
 };
 
 } // namespace vgc::ui
