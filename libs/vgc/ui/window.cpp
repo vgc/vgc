@@ -878,7 +878,7 @@ LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 
 void Window::initEngine_() {
 
-    graphics::SwapChainCreateInfo swapChainCreatInfo = {};
+    graphics::SwapChainCreateInfo swapChainCreateInfo = {};
 
     graphics::EngineCreateInfo engineCreateInfo = {};
     graphics::WindowSwapChainFormat& windowSwapChainFormat =
@@ -928,7 +928,7 @@ void Window::initEngine_() {
 
     HWND hwnd = (HWND)QWindow::winId();
     hwnd_ = hwnd;
-    swapChainCreatInfo.setWindowNativeHandle(
+    swapChainCreateInfo.setWindowNativeHandle(
         hwnd, graphics::WindowNativeHandleType::Win32);
 
     //WNDCLASSEXW wc = { sizeof(WNDCLASSEXW), CS_CLASSDC, Window::WndProc, 0L, 20 * sizeof(LONG_PTR), ::GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"Win32 Window", NULL };
@@ -958,11 +958,11 @@ void Window::initEngine_() {
     //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
 #else
     engine_ = detail::QglEngine::create(engineCreateInfo);
-    swapChainCreatInfo.setWindowNativeHandle(
+    swapChainCreateInfo.setWindowNativeHandle(
         static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
 #endif
 
-    swapChain_ = engine_->createSwapChain(swapChainCreatInfo);
+    swapChain_ = engine_->createSwapChain(swapChainCreateInfo);
 
     {
         graphics::RasterizerStateCreateInfo createInfo = {};
