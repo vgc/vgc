@@ -35,7 +35,79 @@
 
 namespace vgc::ui {
 
-static constexpr bool debugEvents = false;
+namespace {
+
+std::string debugTime(const core::Stopwatch& stopwatch) {
+    std::string res;
+    Int64 us = stopwatch.elapsedMicroseconds();
+    Int64 ms = us / 1000;
+    us = us - 1000 * ms;
+    Int64 s = ms / 1000;
+    ms = ms - 1000 * s;
+    return core::format("{:>3}s {:0>3}ms {:0>3}us", s, ms, us);
+}
+
+template<bool debug>
+class WindowDebug;
+
+template<>
+class WindowDebug<false> {
+public:
+    WindowDebug(Int&, const core::Stopwatch&) {
+    }
+};
+
+template<>
+class WindowDebug<true> {
+public:
+    WindowDebug(Int& indent, const core::Stopwatch& stopwatch)
+        : indent_(indent)
+        , stopwatch_(stopwatch) {
+
+        ++indent_;
+    }
+
+    ~WindowDebug() {
+        --indent_;
+        VGC_DEBUG(
+            LogVgcUi, "[Window] {} {:>{}} END ", debugTime(stopwatch_), "", indent_ * 2);
+    }
+
+private:
+    Int& indent_;
+    const core::Stopwatch& stopwatch_;
+};
+
+} // namespace
+
+} // namespace vgc::ui
+
+#define VGC_WINDOW_DEBUG(fmt, ...)                                                       \
+    if (debugEvents) {                                                                   \
+        VGC_DEBUG(                                                                       \
+            LogVgcUi,                                                                    \
+            "[Window] {} {:>{}} BEGIN " fmt,                                             \
+            debugTime(debugStopwatch_),                                                  \
+            "",                                                                          \
+            debugIndent_ * 2,                                                            \
+            __VA_ARGS__);                                                                \
+    }                                                                                    \
+    WindowDebug<debugEvents> debug_(debugIndent_, debugStopwatch_)
+
+#define VGC_WINDOW_DEBUG_NOARGS(fmt)                                                     \
+    if (debugEvents) {                                                                   \
+        VGC_DEBUG(                                                                       \
+            LogVgcUi,                                                                    \
+            "[Window] {} {:>{}} BEGIN " fmt,                                             \
+            debugTime(debugStopwatch_),                                                  \
+            "",                                                                          \
+            debugIndent_ * 2);                                                           \
+    }                                                                                    \
+    WindowDebug<debugEvents> debug_(debugIndent_, debugStopwatch_)
+
+namespace vgc::ui {
+
+static constexpr bool debugEvents = true;
 
 //#define VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
 
@@ -445,7 +517,9 @@ bool Window::updateScreenScaleRatio_() {
     }
 }
 
-void Window::updateScreenScaleRatioAndWindowSize_(Int unscaledWidth, Int unscaledHeight) {
+bool Window::updateScreenScaleRatioAndWindowSize1_(
+    Int unscaledWidth,
+    Int unscaledHeight) {
 
     // Update screen scale ratio
     bool screenScaleRatioChanged = updateScreenScaleRatio_();
@@ -464,7 +538,12 @@ void Window::updateScreenScaleRatioAndWindowSize_(Int unscaledWidth, Int unscale
     // when activeSizemove_ is true, update requests are ignored, so we have to
     // call paint() explicitly for a repaint to actually happen.
     //
-    if (screenScaleRatioChanged && activeSizemove_) {
+    return screenScaleRatioChanged && activeSizemove_;
+}
+
+void Window::updateScreenScaleRatioAndWindowSize2_(bool shouldRepaint) {
+    if (shouldRepaint) {
+        VGC_WINDOW_DEBUG_NOARGS("Note: repainting because screenScaleRatio changed");
         paint(true);
     }
 }
@@ -473,6 +552,8 @@ void Window::updateViewportSize_() {
 
     float w = static_cast<float>(width_);
     float h = static_cast<float>(height_);
+
+    VGC_WINDOW_DEBUG("updateViewportSize_({}, {})", width_, height_);
 
     // Update projection matrix
     geometry::Camera2d c;
@@ -499,12 +580,14 @@ void Window::exposeEvent(QExposeEvent*) {
         if (activeSizemove_) {
             // On Windows, Expose events happen on both WM_PAINT and WM_ERASEBKGND
             // but in the case of a resize we already redraw properly.
+            VGC_WINDOW_DEBUG(
+                "exposeEvent(({}, {}), activeSizemove={})",
+                width_,
+                height_,
+                activeSizemove_);
             requestUpdate();
         }
         else {
-            if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, "paint from exposeEvent");
-            }
             // On macOS, moving a window between monitors with different devicePixelRatios
             // calls exposeEvent() but doesn't call resize(). So we need to fake a resize
             // here if the size in px of the window change, even though the "QWindow size"
@@ -514,7 +597,14 @@ void Window::exposeEvent(QExposeEvent*) {
             Int oldScaledHeight = height_;
             Int unscaledWidth_ = width();
             Int unscaledHeight_ = height();
-            updateScreenScaleRatioAndWindowSize_(unscaledWidth_, unscaledHeight_);
+            bool b =
+                updateScreenScaleRatioAndWindowSize1_(unscaledWidth_, unscaledHeight_);
+            VGC_WINDOW_DEBUG(
+                "exposeEvent(({}, {}), activeSizemove={})",
+                width_,
+                height_,
+                activeSizemove_);
+            updateScreenScaleRatioAndWindowSize2_(b);
             if (oldScaledWidth != width_ || oldScaledHeight != height_) {
                 updateViewportSize_();
             }
@@ -535,17 +625,9 @@ void Window::resizeEvent(QResizeEvent* event) {
     Int unscaledHeight = size.height();
 
     // Compute and set new scale ratio and scaled size
-    updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
-
-    if (debugEvents) {
-        VGC_DEBUG(
-            LogVgcUi,
-            "resizeEvent({:04d}, {:04d}) -> ({}, {})",
-            unscaledWidth,
-            unscaledHeight,
-            width_,
-            height_);
-    }
+    bool b = updateScreenScaleRatioAndWindowSize1_(unscaledWidth, unscaledHeight);
+    VGC_WINDOW_DEBUG("resizeEvent({}, {})", width_, height_);
+    updateScreenScaleRatioAndWindowSize2_(b);
 
 #if defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
     // Wait until WM_SIZE native event to actually set new window size
@@ -560,9 +642,11 @@ void Window::resizeEvent(QResizeEvent* event) {
 
 void Window::updateRequestEvent(QEvent*) {
     if (!activeSizemove_) {
-        if (debugEvents) {
-            VGC_DEBUG(LogVgcUi, "paint from UpdateRequest");
-        }
+        VGC_WINDOW_DEBUG(
+            "updateRequestEvent({}, {}) deferredResize={}",
+            width_,
+            height_,
+            deferredResize_);
 #if !defined(VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX)
         if (deferredResize_) {
             deferredResize_ = false;
@@ -574,9 +658,8 @@ void Window::updateRequestEvent(QEvent*) {
 }
 
 void Window::paint(bool sync) {
-    if (debugEvents) {
-        VGC_DEBUG(LogVgcUi, "paint({})", sync);
-    }
+
+    VGC_WINDOW_DEBUG("paint(({}, {}), sync={})", width_, height_, sync);
 
     if (!isExposed()) {
         return;
@@ -690,17 +773,9 @@ bool Window::nativeEvent(
             Int unscaledHeight = static_cast<Int>(HIWORD(msg->lParam));
 
             // Compute and set new scale ratio and scaled size
-            updateScreenScaleRatioAndWindowSize_(unscaledWidth, unscaledHeight);
-
-            if (debugEvents) {
-                VGC_DEBUG(
-                    LogVgcUi,
-                    "WM_SIZE({:04d}, {:04d}) -> ({}, {})",
-                    unscaledWidth,
-                    unscaledHeight,
-                    width_,
-                    height_);
-            }
+            bool b = updateScreenScaleRatioAndWindowSize1_(unscaledWidth, unscaledHeight);
+            VGC_WINDOW_DEBUG("WM_SIZE({}, {})", width_, height_);
+            updateScreenScaleRatioAndWindowSize2_(b);
 
             updateViewportSize_();
             paint(true);
@@ -708,23 +783,23 @@ bool Window::nativeEvent(
             return false;
         }
         /*case WM_MOVING: {
-            VGC_DEBUG(LogVgcUi, "WM_MOVING");
+            VGC_WINDOW_DEBUG_NOARGS("WM_MOVING");
             return false;
         }
         case WM_MOVE: {
-            VGC_DEBUG(LogVgcUi, "WM_MOVE");
+            VGC_WINDOW_DEBUG_NOARGS("WM_MOVE");
             return false;
         }
         case WM_WINDOWPOSCHANGING: {
-            VGC_DEBUG(LogVgcUi, "WM_WINDOWPOSCHANGING");
+            VGC_WINDOW_DEBUG_NOARGS("WM_WINDOWPOSCHANGING");
             return false;
         }
         case WM_WINDOWPOSCHANGED: {
-            VGC_DEBUG(LogVgcUi, "WM_WINDOWPOSCHANGED");
+            VGC_WINDOW_DEBUG_NOARGS("WM_WINDOWPOSCHANGED");
             return false;
         }
         case WM_GETMINMAXINFO: {
-            VGC_DEBUG(LogVgcUi, "WM_GETMINMAXINFO");
+            VGC_WINDOW_DEBUG_NOARGS("WM_GETMINMAXINFO");
             return false;
         }*/
         case WM_ENTERSIZEMOVE: {
@@ -740,9 +815,7 @@ bool Window::nativeEvent(
         }
         case WM_ERASEBKGND: {
             static int i = 0;
-            if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, "WM_ERASEBKGND {}", ++i);
-            }
+            VGC_WINDOW_DEBUG("WM_ERASEBKGND {}", ++i);
             //if (activeSizemove_) {
             //    paint(true);
             //}
@@ -757,7 +830,7 @@ bool Window::nativeEvent(
         case WM_PAINT: {
             static int i = 0;
             if (debugEvents) {
-                VGC_DEBUG(LogVgcUi, "WM_PAINT {}", ++i);
+                VGC_WINDOW_DEBUG("WM_PAINT {}", ++i);
             }
             if (activeSizemove_) {
                 paint(true);
@@ -805,7 +878,7 @@ LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 
 void Window::initEngine_() {
 
-    graphics::SwapChainCreateInfo swapChainCreatInfo = {};
+    graphics::SwapChainCreateInfo swapChainCreateInfo = {};
 
     graphics::EngineCreateInfo engineCreateInfo = {};
     graphics::WindowSwapChainFormat& windowSwapChainFormat =
@@ -855,7 +928,7 @@ void Window::initEngine_() {
 
     HWND hwnd = (HWND)QWindow::winId();
     hwnd_ = hwnd;
-    swapChainCreatInfo.setWindowNativeHandle(
+    swapChainCreateInfo.setWindowNativeHandle(
         hwnd, graphics::WindowNativeHandleType::Win32);
 
     //WNDCLASSEXW wc = { sizeof(WNDCLASSEXW), CS_CLASSDC, Window::WndProc, 0L, 20 * sizeof(LONG_PTR), ::GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"Win32 Window", NULL };
@@ -885,11 +958,11 @@ void Window::initEngine_() {
     //VGC_INFO(LogVgcUi, "Window class name: {}", classNameA);
 #else
     engine_ = detail::QglEngine::create(engineCreateInfo);
-    swapChainCreatInfo.setWindowNativeHandle(
+    swapChainCreateInfo.setWindowNativeHandle(
         static_cast<QWindow*>(this), graphics::WindowNativeHandleType::QOpenGLWindow);
 #endif
 
-    swapChain_ = engine_->createSwapChain(swapChainCreatInfo);
+    swapChain_ = engine_->createSwapChain(swapChainCreateInfo);
 
     {
         graphics::RasterizerStateCreateInfo createInfo = {};
