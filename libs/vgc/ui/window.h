@@ -234,6 +234,7 @@ private:
     bool deferredResize_ = false;
     bool updateDeferred_ = false;
     bool entered_ = false;
+    bool isLeaveDeferred_ = false;
 
     // ============== Other helper methods ================
 

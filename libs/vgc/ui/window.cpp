@@ -163,12 +163,28 @@ WindowPtr Window::create(const WidgetPtr& widget) {
 
 void Window::enterEvent(QEvent* event) {
     entered_ = true;
-    event->setAccepted(widget_->setHovered(true));
+    if (isLeaveDeferred_) {
+        isLeaveDeferred_ = false;
+    }
+    else {
+        if (widget_ && !widget_->mouseCaptor()) {
+            event->setAccepted(widget_->setHovered(true));
+        }
+    }
 }
 
 void Window::leaveEvent(QEvent* event) {
     entered_ = false;
-    event->setAccepted(widget_->setHovered(false));
+    bool hasMouseCaptor = widget_ && widget_->mouseCaptor();
+    if (pressedMouseButtons_ == MouseButton::None && !hasMouseCaptor) {
+        if (widget_) { // no need to check for !hasMouseCaptor: already done
+            event->setAccepted(widget_->setHovered(false));
+        }
+    }
+    else {
+        isLeaveDeferred_ = true;
+        event->setAccepted(true);
+    }
 }
 
 namespace {
@@ -228,6 +244,12 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
     pressedMouseButtons_.unset(button);
     prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mouseReleaseEvent_(vgcEvent.get()));
+    if (isLeaveDeferred_ && pressedMouseButtons_ == MouseButton::None) {
+        isLeaveDeferred_ = false;
+        if (widget_ && !widget_->mouseCaptor()) {
+            event->setAccepted(widget_->setHovered(false));
+        }
+    }
 }
 
 void Window::tabletEvent(QTabletEvent* event) {
