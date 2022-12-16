@@ -207,7 +207,7 @@ protected:
         std::tuple<ArgRefs...>* /*sig*/)
 
         : PyAbstractSlotRef(obj, id, sizeof...(ArgRefs))
-        , parameters_({std::type_index(typeid(ArgRefs))...})
+        , parameters_({typeId<ArgRefs>()...})
         , unboundPySlotFn_(unboundPySlotFn) {
     }
 
@@ -228,7 +228,7 @@ public:
 
 private:
     // XXX change to span, and hold a static array in the cpp ref.
-    std::vector<std::type_index> parameters_;
+    std::vector<TypeId> parameters_;
     // Unbound slot py-method.
     py::function unboundPySlotFn_;
 };

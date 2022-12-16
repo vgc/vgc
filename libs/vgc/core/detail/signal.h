@@ -19,12 +19,12 @@
 
 #include <any>
 #include <array>
-#include <functional>
-#include <memory>
+#include <functional> // function
+#include <memory>     // addressof
+#include <new>        // launder
 #include <tuple>
 #include <type_traits>
-#include <typeindex>
-#include <utility>
+#include <utility> // move, forward, pair
 #include <variant>
 
 #include <vgc/core/api.h>
@@ -32,6 +32,7 @@
 #include <vgc/core/assert.h>
 #include <vgc/core/preprocessor.h>
 #include <vgc/core/templateutil.h>
+#include <vgc/core/typeid.h>
 
 /// \brief Implements a signal-slot notification mechanism.
 ///
@@ -155,7 +156,7 @@ using SignalId = FunctionId;
 // Dynamically generates a unique identifier.
 // Used by slots and signals.
 VGC_CORE_API FunctionId genFunctionId();
-VGC_CORE_API FunctionId genFunctionId(std::type_index ti);
+VGC_CORE_API FunctionId genFunctionId(TypeId ti);
 
 VGC_CORE_API Object* currentEmitter();
 
@@ -205,7 +206,7 @@ template<typename Tag>
 class FunctionIdSingleton {
 public:
     static FunctionId get() {
-        static FunctionId s = genFunctionId(std::type_index(typeid(Tag)));
+        static FunctionId s = genFunctionId(typeId<Tag>());
         return s;
     }
 
@@ -326,7 +327,7 @@ public:
         }
 
 #ifdef VGC_DEBUG_BUILD
-        ret.t_ = typeid(TypeSig<SignalArgRef>);
+        ret.t_ = typeId<TypeSig<SignalArgRef>>();
 #endif
         return ret;
     }
@@ -336,8 +337,10 @@ public:
         static_assert(isSignalArgRef<SignalArgRef>);
 
 #ifdef VGC_DEBUG_BUILD
-        if (t_ != typeid(TypeSig<SignalArgRef>)) {
-            throw LogicError("Bad cast of AnySignalArgRef.");
+        TypeId t = typeId<TypeSig<SignalArgRef>>();
+        if (t_ != t) {
+            throw LogicError(core::format(
+                "Bad cast of AnySignalArgRef: Expected \"{}\", got \"{}\"", t_, t));
         }
 #endif
         Pointer<SignalArgRef> p = {};
@@ -362,7 +365,7 @@ protected:
 private:
     mutable std::aligned_storage_t<storageSize, storageSize> v_ = {};
 #ifdef VGC_DEBUG_BUILD
-    std::type_index t_ = typeid(void);
+    TypeId t_ = typeId<void>();
 #endif
 };
 
@@ -1210,6 +1213,8 @@ private:
 /// };
 /// ```
 ///
+// clang-format off
+// clang format bug: `SlotRefBase(object) {}` bin-packed since Clang 15.0
 #define VGC_SIGNAL(...) VGC_PP_EXPAND(VGC_SIGNAL_X_(__VA_ARGS__, ~))
 #define VGC_SIGNAL_X_(name_, ...)                                                        \
     auto name_() const {                                                                 \
@@ -1229,6 +1234,7 @@ private:
         };                                                                               \
         return SignalRef(this);                                                          \
     }
+// clang-format on
 
 namespace vgc::core::detail {
 
@@ -1242,6 +1248,8 @@ inline constexpr bool isSignal = IsSignal<T>::value;
 
 } // namespace vgc::core::detail
 
+// clang-format off
+// clang format bug: `SlotRefBase(object, m) {}` bin-packed since Clang 15.0
 #define VGC_SLOT_ALIAS_(name_, funcName_)                                                \
     auto name_() {                                                                       \
         struct Tag {};                                                                   \
@@ -1258,6 +1266,7 @@ inline constexpr bool isSignal = IsSignal<T>::value;
         };                                                                               \
         return SlotRef(this, &MyClass::funcName_);                                       \
     }
+// clang-format on
 
 #define VGC_SLOT_DEFAULT_ALIAS_(name_) VGC_PP_EXPAND(VGC_SLOT_ALIAS_(name_##Slot, name_))
 

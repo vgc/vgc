@@ -10,6 +10,7 @@ vgc_test_library(core
         test_preprocessor.cpp
         test_signal.cpp
         test_span.cpp
+        test_typeid.cpp
         test_zero.cpp
 
     PYTHON_TESTS

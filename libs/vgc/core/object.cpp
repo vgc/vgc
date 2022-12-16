@@ -68,7 +68,7 @@ void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix) {
     out += prefix;
     out += core::toAddressString(obj);
     out += " ";
-    out += typeid(*obj).name();
+    out += obj->className();
     if (obj->isAlive()) {
         out += " [";
         out += core::toString(obj->refCount());
