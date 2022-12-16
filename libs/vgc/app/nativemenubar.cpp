@@ -74,14 +74,14 @@ void NativeMenuBar::onMenuChanged_() {
         return;
     }
     if (menu == menuBar) {
-        qMenuBar_->clear();
+        qMenuBar_->clear(); // XXX cleanup maps and disconnect before doing this?
         doPopulateNativeMenuBar_(menu, qMenuBar_);
         return;
     }
     auto it = qMenuMap_.find(menu);
     if (it != qMenuMap_.end()) {
         QMenu* qMenu = it->second;
-        qMenu->clear();
+        qMenu->clear(); // XXX cleanup maps and connections before doing this?
         doPopulateNativeMenu_(menu, qMenu);
         return;
     }
@@ -101,20 +101,29 @@ void NativeMenuBar::onActionChanged_() {
 }
 
 void NativeMenuBar::populateNativeMenu_(ui::Menu* menu, QMenu* qMenu) {
+    bool alreadyConnected = qMenuMap_.find(menu) != qMenuMap_.end();
     qMenuMap_[menu] = qMenu;
     qMenuMapInv_[qMenu] = menu;
+    if (!alreadyConnected) {
+        menu->changed().connect(onMenuChangedSlot_());
+    }
     QObject::connect(qMenu, &QObject::destroyed, [this](QObject* obj) {
         auto it = this->qMenuMapInv_.find(dynamic_cast<QMenu*>(obj));
         if (it != this->qMenuMapInv_.end()) {
+            it->second->disconnect(this);
             this->qMenuMap_.erase(it->second);
             this->qMenuMapInv_.erase(it);
         }
     });
-    menu->changed().connect(onMenuChangedSlot_());
     doPopulateNativeMenu_(menu, qMenu);
 }
 
 void NativeMenuBar::doPopulateNativeMenu_(ui::Menu* menu, QMenu* qMenu) {
+    // Note: we know that if we're here, the qMenu is empty: we either just
+    // created it or cleared it.
+    if (!qMenu->isEmpty()) {
+        throw vgc::core::LogicError("Attempting to populate a non-empty QMenu.");
+    }
     for (const ui::MenuItem& item : menu->items()) {
         if (item.isMenu()) {
             ui::Menu* subMenu = item.menu();
@@ -124,19 +133,23 @@ void NativeMenuBar::doPopulateNativeMenu_(ui::Menu* menu, QMenu* qMenu) {
         else if (item.isAction()) {
             ui::ActionPtr action = item.action();
             QAction* qAction = qMenu->addAction(ui::toQt(action->text()));
+            bool alreadyConnected = qActionMap_.find(action.get()) != qActionMap_.end();
             qActionMap_[action.get()] = qAction;
             qActionMapInv_[qAction] = action.get();
+            if (!alreadyConnected) {
+                action->propertiesChanged().connect(onActionChangedSlot_());
+                action->enabledChanged().connect(onActionChangedSlot_());
+                action->checkStateChanged().connect(onActionChangedSlot_());
+                updateNativeAction_(action.get(), qAction);
+            }
             QObject::connect(qAction, &QObject::destroyed, [this](QObject* obj) {
                 auto it = this->qActionMapInv_.find(dynamic_cast<QAction*>(obj));
                 if (it != this->qActionMapInv_.end()) {
+                    it->second->disconnect(this);
                     this->qActionMap_.erase(it->second);
                     this->qActionMapInv_.erase(it);
                 }
             });
-            action->propertiesChanged().connect(onActionChangedSlot_());
-            action->enabledChanged().connect(onActionChangedSlot_());
-            action->checkStateChanged().connect(onActionChangedSlot_());
-            updateNativeAction_(action.get(), qAction);
             QObject::connect(
                 qAction, &QAction::triggered, [action]() { action->trigger(); });
         }
