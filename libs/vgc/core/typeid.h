@@ -31,7 +31,7 @@ class TypeId;
 
 namespace detail {
 
-class TypeInfo {
+class VGC_CORE_API TypeInfo {
 public:
     TypeInfo(const std::type_info& info)
         : id_(info.name()) {
@@ -63,11 +63,25 @@ private:
 /// \class vgc::core::TypeIndex
 /// \brief Similar to std::type_index but works across shared library boundaries.
 ///
-/// \sa `TypeInfo`
+/// This is the return type of the function `vgc::core::typeId<T>()`. This type
+/// has a very small footprint (one pointer), and is very fast to copy, assign,
+/// and compare.
 ///
-class TypeId {
+/// Comparison between `TypeId` makes it possible to query whether two types
+/// are the same, which is guaranteed to work even across shared library
+/// boundary (unlike `std::type_index`, which for example breaks across shared
+/// library boundary on some versions of Clang).
+///
+/// Note that `TypeId` implements `operator<`, and specializes `std::hash`,
+/// which makes it possible to insert in maps, sets, as well as their unordered
+/// versions.
+///
+/// You can use `TypeId::name()` to query the name (possibly mangled) of the
+/// type.
+///
+class VGC_CORE_API TypeId {
 public:
-    /// Returns the name of the type (possible mangled) as a string_view.
+    /// Returns the name of the type (possibly mangled).
     ///
     std::string_view name() {
         return info_->name();
@@ -104,11 +118,15 @@ private:
     detail::TypeInfo* info_;
 };
 
-/// Returns the `TypeId` for the given type.
+/// Returns the `TypeId` of the given type.
 ///
 /// ```
 /// TypeId id = typeId<int>();
 /// ```
+///
+/// Using this function is preferrable over the C++ built-in function
+/// `typeid()`, which does not guarantee type uniqueness across shared library
+/// boundaries, under some platforms and/or compilers.
 ///
 template<typename T>
 TypeId typeId() {
@@ -124,7 +142,7 @@ TypeId typeId() {
 
 namespace detail {
 
-// For testing TypeId comparisons accross DLLs
+// For testing TypeId comparisons accross DLLs. See tests/test_typeid.cpp.
 
 class VGC_CORE_API TypeIdTestClass {};
 
