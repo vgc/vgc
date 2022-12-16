@@ -39,6 +39,7 @@ vgc_add_library(core
         stopwatch.h
         stringid.h
         templateutil.h
+        typeid.h
 
         detail/containerutil.h
         detail/signal.h
@@ -61,6 +62,7 @@ vgc_add_library(core
         random.cpp
         stopwatch.cpp
         stringid.cpp
+        typeid.cpp
 
         detail/signal.cpp
 

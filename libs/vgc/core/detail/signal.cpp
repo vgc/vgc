@@ -29,7 +29,7 @@ ConnectionHandle ConnectionHandle::generate() {
 namespace {
 
 FunctionId lastId = 0;
-std::unordered_map<std::type_index, FunctionId> typesMap;
+std::unordered_map<TypeId, FunctionId> typesMap;
 thread_local Object* emitter = nullptr;
 
 } // namespace
@@ -39,7 +39,7 @@ FunctionId genFunctionId() {
     return ++lastId;
 }
 
-FunctionId genFunctionId(std::type_index ti) {
+FunctionId genFunctionId(TypeId ti) {
     // XXX make this thread-safe ?
     FunctionId& id = typesMap[ti];
     if (id == 0) {
