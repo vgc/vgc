@@ -608,18 +608,20 @@ public:
         : owner_(owner) {
     }
 
-#ifdef VGC_DEBUG_BUILD
     ~SignalHub() noexcept {
-        VGC_CORE_ASSERT(
-            listenedObjectInfos_.empty()
-            && "A SignalHub is being destroyed but is still subscribed to some Object "
-               "signals. Object destruction should call disconnectSlots() explicitly.");
-        VGC_CORE_ASSERT(
-            (numOutboundConnections_() == 0)
-            && "A SignalHub is being destroyed but is still connected to some Object "
-               "slots. Object destruction should call disconnectSignals() explicitly.");
+        if (listenedObjectInfos_.length() > 0) {
+            VGC_ERROR(
+                LogVgcCore,
+                "A SignalHub is being destroyed but is still subscribed to some Object "
+                "signals. Object destruction should call disconnectSlots() explicitly.");
+        }
+        if (numOutboundConnections_() != 0) {
+            VGC_ERROR(
+                LogVgcCore,
+                "A SignalHub is being destroyed but is still connected to some Object "
+                "slots. Object destruction should call disconnectSignals() explicitly.");
+        }
     }
-#endif
 
     // Defined in object.h
     static constexpr SignalHub& access(const Object* o);
@@ -634,63 +636,34 @@ public:
     }
 
     // Must be called after sender `onDestroyed()` call.
-    static void disconnectSignals(const Object* sender) {
-        auto& hub = access(sender);
-        // We sort connections by receiver so that we can fully disconnect each
-        // only once without a seen set.
-        struct {
-            bool operator()(const Connection_& a, const Connection_& b) const {
-                if (std::holds_alternative<ObjectSlotId>(a.to)) {
-                    if (std::holds_alternative<ObjectSlotId>(b.to)) {
-                        return std::get<ObjectSlotId>(a.to).first
-                               < std::get<ObjectSlotId>(b.to).first;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        } ByReceiver;
-        std::sort(hub.connections_.begin(), hub.connections_.end(), ByReceiver);
+    VGC_CORE_API
+    static void disconnectSignals(const Object* sender);
 
-        // Now let's reset the info about this object which is stored in receiver objects.
-        Object* prevDisconnectedReceiver = nullptr;
-        for (const auto& c : hub.connections_) {
-            if (!c.pendingRemoval && std::holds_alternative<ObjectSlotId>(c.to)) {
-                const auto& osid = std::get<ObjectSlotId>(c.to);
-                if (osid.first != prevDisconnectedReceiver) {
-                    prevDisconnectedReceiver = osid.first;
-                    auto& info = access(osid.first).getListenedObjectInfoRef_(sender);
-                    info.numInboundConnections = 0;
-                }
-            }
-        }
-        hub.connections_.clear();
-    }
-
+    VGC_CORE_API
     static ConnectionHandle connect(
         const Object* sender,
         SignalId from,
         SignalTransmitter&& transmitter,
-        const SlotId& to) {
-
-        auto& hub = access(sender);
-        auto handle = ConnectionHandle::generate();
-
-        if (std::holds_alternative<ObjectSlotId>(to)) {
-            // Increment numInboundConnections in the receiver's info about sender.
-            const auto& bsid = std::get<ObjectSlotId>(to);
-            auto& info = access(bsid.first).findOrCreateListenedObjectInfo_(sender);
-            info.numInboundConnections++;
-        }
-
-        hub.connections_.emplaceLast(std::move(transmitter), handle, from, to);
-        return handle;
-    }
+        const SlotId& to);
 
     static Int numOutboundConnections(const Object* sender) {
         auto& hub = access(sender);
         return hub.numOutboundConnections_();
     }
+
+    static Int numOutboundConnectionsTo(const Object* sender, const Object* receiver) {
+        auto& hub = access(sender);
+        return hub.numOutboundConnectionsTo_(receiver);
+    }
+
+    static Int numInboundConnectionsFrom(const Object* receiver, const Object* sender) {
+        auto& hub = access(receiver);
+        ListenedObjectInfo_* info = hub.getListenedObjectInfo_(sender);
+        return info ? info->numInboundConnections : 0;
+    }
+
+    VGC_CORE_API
+    static void debugInboundConnections(const Object* receiver);
 
     static bool disconnect(const Object* sender, ConnectionHandle handle) {
         return disconnectIf_(
@@ -775,51 +748,15 @@ public:
     }
 
 protected:
-    Int numOutboundConnections_() {
-        if (pendingRemovals_) {
-            Int count = 0;
-            for (auto& c : connections_) {
-                if (c.pendingRemoval == false) {
-                    ++count;
-                }
-            }
-            return count;
-        }
-        return connections_.length();
-    }
+    VGC_CORE_API Int numOutboundConnections_();
+
+    VGC_CORE_API Int numOutboundConnectionsTo_(const Object* object);
 
     // Used when receiver is about to be destroyed.
     //
+    VGC_CORE_API
     static Int
-    disconnectListenedObject_(const Object* receiver, ListenedObjectInfo_& info) {
-        if (info.numInboundConnections <= 0) {
-            return 0;
-        }
-
-        const Object* sender = info.object;
-        auto& hub = access(sender);
-        Int count = 0;
-        for (auto& c : hub.connections_) {
-            bool shouldRemove = std::holds_alternative<ObjectSlotId>(c.to)
-                                && std::get<ObjectSlotId>(c.to).first == receiver;
-            if (shouldRemove && !c.pendingRemoval) {
-                c.pendingRemoval = true;
-                ++count;
-            }
-        }
-        if (count > 0) {
-            hub.pendingRemovals_ = true;
-        }
-
-#ifdef VGC_DEBUG_BUILD
-        if (count != info.numInboundConnections) {
-            throw LogicError("Erased connections count != info.numInboundConnections.");
-        }
-#endif
-
-        info.numInboundConnections = 0;
-        return count;
-    }
+    disconnectListenedObject_(const Object* receiver, ListenedObjectInfo_& info);
 
     ListenedObjectInfo_* getListenedObjectInfo_(const Object* object) {
         for (ListenedObjectInfo_& x : listenedObjectInfos_) {
@@ -838,20 +775,8 @@ protected:
         return *info;
     }
 
-    ListenedObjectInfo_& findOrCreateListenedObjectInfo_(const Object* object) {
-        for (ListenedObjectInfo_& x : listenedObjectInfos_) {
-            if (x.object == object) {
-                return x;
-            }
-            if (x.numInboundConnections == 0) {
-                x.object = object;
-                return x;
-            }
-        }
-        auto& info = listenedObjectInfos_.emplaceLast();
-        info.object = object;
-        return info;
-    }
+    VGC_CORE_API ListenedObjectInfo_&
+    findOrCreateListenedObjectInfo_(const Object* object);
 
     bool canEmit_() const {
         return !connections_.isEmpty();
@@ -1226,8 +1151,7 @@ private:
                                           "().emit()?")) SignalRef : public SignalRefT { \
         public:                                                                          \
             SignalRef(const MyClass* object)                                             \
-                : SignalRefT(object) {                                                   \
-            }                                                                            \
+                : SignalRefT(object) {}                                                  \
             void emit(VGC_PARAMS_X_(__VA_ARGS__)) const {                                \
                 this->emitFwd_(VGC_PARAMS_NAME_X_(__VA_ARGS__));                         \
             }                                                                            \
@@ -1261,8 +1185,7 @@ inline constexpr bool isSignal = IsSignal<T>::value;
             SlotRef : public SlotRefBase {                                               \
         public:                                                                          \
             SlotRef(const MyClass* object, SlotMethod m)                                 \
-                : SlotRefBase(object, m) {                                               \
-            }                                                                            \
+                : SlotRefBase(object, m) {}                                              \
         };                                                                               \
         return SlotRef(this, &MyClass::funcName_);                                       \
     }
