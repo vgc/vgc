@@ -206,6 +206,30 @@ TEST(TestSignal, CrossModuleSignals) {
     EXPECT_EQ(o2->slotNoargsCallCount, 1);
 }
 
+TEST(TestSignal, RegressionTest1) {
+    // There was a bug where `findOrCreateListenedObjectInfo_()` was returning
+    // a new info entry even if one already existed for the given object.
+    // The `numInboundConnections` became wrong and the second entry was introducing
+    // a dangling pointer in the clean-up phase.
+    auto sender1 = SignalTestObject::create();
+    auto sender2 = SignalTestObject::create();
+    auto receiver = SignalTestObject::create();
+
+    sender1->signalInt().connect(receiver->slotInt());
+    sender2->signalInt().connect(receiver->slotInt());
+    sender1->disconnect();
+    // listenedObjectInfos_[0] has numInboundConnections == 0.
+    // It should not  be used as a free info entry if an other entry
+    // refers to the desired object.
+    sender2->signalInt().connect(receiver->slotInt());
+
+    ASSERT_EQ(
+        vgc::core::detail::SignalHub::numOutboundConnectionsTo(
+            sender2.get(), receiver.get()),
+        vgc::core::detail::SignalHub::numInboundConnectionsFrom(
+            receiver.get(), sender2.get()));
+}
+
 int main(int argc, char** argv) {
     // Mess up with ID generation for CrossModuleSignals test.
     // The idea is to check whether a call to  basically attempt to get
