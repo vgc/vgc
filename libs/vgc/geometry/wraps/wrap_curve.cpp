@@ -23,7 +23,7 @@
 void wrap_curve(py::module& m) {
 
     using This = vgc::geometry::Curve;
-    using Vec2d = vgc::geometry::Vec2d;
+    //using Vec2d = vgc::geometry::Vec2d;
 
     vgc::core::wraps::Class<This>(m, "Curve")
         .def(py::init<>())

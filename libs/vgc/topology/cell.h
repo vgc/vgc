@@ -326,8 +326,6 @@ private:
 template<typename Derived, typename Parent>
 void TreeChildBase<Derived, Parent>::unlink() {
 
-    using ChildBase = TreeChildBase<Derived, Parent>;
-
     Parent* const oldParent = parent_;
     Derived* const oldPrevious = previous_;
     Derived* const oldNext = next_;
