@@ -41,7 +41,7 @@ struct StrokeGraphics {
     graphics::BufferPtr meshIndices;
 };
 
-class EdgeGraphics {
+struct EdgeGraphics {
     // Center line & Control points
     CurveGraphics curveGraphics_;
     graphics::GeometryViewPtr pointsGeometry_;
