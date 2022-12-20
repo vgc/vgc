@@ -17,8 +17,7 @@
 #ifndef VGC_GEOMETRY_BEZIER_H
 #define VGC_GEOMETRY_BEZIER_H
 
-#include <array>
-
+#include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 
 namespace vgc::geometry {
@@ -47,18 +46,38 @@ public:
     static constexpr size_t degree = degree_;
     static constexpr size_t size = detail::deCasteljauTreeSize<degree>;
 
-    void compute(const std::array<T, degree + 1>& controlPoints, Scalar u) {
-        Scalar oneMinusU = Scalar(1) - u;
+    // example with degree == 3
+    // -----------------------------
+    // controlPoints  P0  P1  P2  P3
+    // level 1          Q0  Q1  Q2
+    // level 2            R0  R1
+    // level 3              S0
+    //
+    // values are stored as [Q0, Q1, Q2, R0, R1, S0]
+    //
+
+    void compute(core::Span<const T, degree + 1> controlPoints, const Scalar u) {
+        //const Scalar oneMinusU = Scalar(1) - u;
         for (size_t i = 0; i < degree; ++i) {
-            values_[i] = oneMinusU * controlPoints[i] + u * controlPoints[i + 1];
+            //values_[i] = oneMinusU * controlPoints[i] + u * controlPoints[i + 1];
+            values_[i] = controlPoints[i] + u * (controlPoints[i + 1] - controlPoints[i]);
         }
-        if constexpr (degree > 1) {
-            computeRec<2>(u, oneMinusU);
+        if constexpr (degree >= 2) {
+            computeRec<2>(u/*, oneMinusU*/);
+        }
+    }
+
+    void computeMiddle(core::Span<const T, degree + 1> controlPoints) {
+        for (size_t i = 0; i < degree; ++i) {
+            values_[i] = 0.5 * (controlPoints[i] + controlPoints[i + 1]);
+        }
+        if constexpr (degree >= 2) {
+            computeMiddleRec<2>();
         }
     }
 
     template<VGC_REQUIRES(degree >= 1)>
-    const T& position() {
+    const T& value() {
         return values_[size - 1];
     }
 
@@ -68,25 +87,60 @@ public:
         return Scalar(degree) * (values_[i + 1] - values_[i]);
     }
 
+    template<
+        size_t level,
+        VGC_REQUIRES(level >= 1 && (level <= degree + 1) && degree >= 1)>
+    const T& firstValueOfLevel() {
+        return values_[levelOffset_<level>];
+    }
+
+    template<
+        size_t level,
+        VGC_REQUIRES(level >= 1 && (level <= degree + 1) && degree >= 1)>
+    const T& lastValueOfLevel() {
+        return values_[levelOffset_<level> + levelSize_<level> - 1];
+    }
+
 private:
     // Tree starts at level 1.
-    template<size_t level, VGC_REQUIRES(level > 0)>
-    static constexpr size_t levelSize_ = degree - (level - 1);
+    template<size_t level, VGC_REQUIRES(level >= 1 && (level <= degree + 1))>
+    static constexpr size_t levelSize_ = (degree + 1) - level;
 
     // Tree starts at level 1.
-    template<size_t level, VGC_REQUIRES(level > 0)>
+    template<size_t level, VGC_REQUIRES(level >= 1 && (level <= degree + 1))>
     static constexpr size_t levelOffset_ =
         (size - static_cast<size_t>(detail::iotaSeries<1, levelSize_<level>>));
 
-    template<size_t level, VGC_REQUIRES(level > 1 && level <= degree)>
-    void computeRec(Scalar u, Scalar oneMinusU) {
+    template<
+        size_t level,
+        size_t maxLevel = degree,
+        VGC_REQUIRES(level >= 2 && level <= degree && maxLevel <= degree)>
+    void computeRec(const Scalar u/*, const Scalar oneMinusU*/) {
         constexpr size_t a = levelOffset_<level - 1>;
         constexpr size_t b = levelOffset_<level>;
         for (size_t i = 0; i < levelSize_<level>; ++i) {
-            values_[b + i] = oneMinusU * values_[a + i] + u * values_[a + i + 1];
+            // for middle values, instead of doing `(1 - u)*v` we could reuse `u*v` and do `1 - u*v`.
+            // it is even simpler for u = 0.5
+            //values_[b + i] = oneMinusU * values_[a + i] + u * values_[a + i + 1];
+            values_[b + i] = values_[a + i] + u * (values_[a + i + 1] - values_[a + i]);
         }
-        if constexpr (level < degree) {
-            computeRec<level + 1>(u, oneMinusU);
+        if constexpr (level < maxLevel) {
+            computeRec<level + 1>(u/*, oneMinusU*/);
+        }
+    }
+
+    template<
+        size_t level,
+        size_t maxLevel = degree,
+        VGC_REQUIRES(level >= 2 && level <= degree && maxLevel <= degree)>
+    void computeMiddleRec() {
+        constexpr size_t a = levelOffset_<level - 1>;
+        constexpr size_t b = levelOffset_<level>;
+        for (size_t i = 0; i < levelSize_<level>; ++i) {
+            values_[b + i] = 0.5 * (values_[a + i] + values_[a + i + 1]);
+        }
+        if constexpr (level < maxLevel) {
+            computeMiddleRec<level + 1>();
         }
     }
 
@@ -112,29 +166,16 @@ T cubicBezier(
     const T& p0, const T& p1, const T& p2, const T& p3,
     Scalar u) {
 
-    Scalar v  = 1 - u;
+    Scalar v = 1 - u;
     Scalar u2 = u * u;
     Scalar v2 = v * v;
     Scalar u3 = u2 * u;
     Scalar v3 = v2 * v;
 
-    return       v3      * p0
-           + 3 * v2 * u  * p1
-           + 3 * v  * u2 * p2
-           +          u3 * p3;
-}
-
-/// Overload of `cubicBezier` expecting a pointer to a contiguous sequence
-/// of 4 control points.
-///
-template <typename T, typename Scalar>
-T cubicBezierCasteljau(
-    const std::array<T, 4>& controlPoints,
-    Scalar u) {
-
-    DeCasteljauTree<T, Scalar, 3> tree = {};
-    tree.compute(controlPoints, u);
-    return tree.position();
+    return       v3 * p0
+        + 3 * v2 * u * p1
+        + 3 * v * u2 * p2
+        + u3 * p3;
 }
 
 /// Returns the (non-normalized) derivative at coordinate \p u of the cubic
@@ -148,13 +189,13 @@ T cubicBezierDer(
     const T& p0, const T& p1, const T& p2, const T& p3,
     Scalar u) {
 
-    Scalar v  = 1 - u;
+    Scalar v = 1 - u;
     Scalar u2 = u * u;
     Scalar v2 = v * v;
 
-    return   3 * v2      * (p1 - p0)
-           + 6 * v  * u  * (p2 - p1)
-           + 3      * u2 * (p3 - p2);
+    return   3 * v2 * (p1 - p0)
+        + 6 * v * u * (p2 - p1)
+        + 3 * u2 * (p3 - p2);
 }
 
 /// Overload of `cubicBezierDer` expecting a pointer to a contiguous sequence
@@ -188,39 +229,86 @@ void cubicBezierPosAndDer(
     T& pos,
     T& der) {
 
-    Scalar v  = 1 - u;
+    Scalar v = 1 - u;
     Scalar u2 = u * u;
     Scalar v2 = v * v;
     Scalar u3 = u2 * u;
     Scalar v3 = v2 * v;
 
-    pos =        v3      * p0
-           + 3 * v2 * u  * p1
-           + 3 * v  * u2 * p2
-           +          u3 * p3;
+    pos = v3 * p0
+        + 3 * v2 * u * p1
+        + 3 * v * u2 * p2
+        + u3 * p3;
 
-    der =    3 * v2      * (p1 - p0)
-           + 6 * v  * u  * (p2 - p1)
-           + 3      * u2 * (p3 - p2);
+    der = 3 * v2 * (p1 - p0)
+        + 6 * v * u * (p2 - p1)
+        + 3 * u2 * (p3 - p2);
 }
 
-/// Overload of `cubicBezierPosAndDer` expecting a pointer to a contiguous sequence
-/// of 4 control points and uses Casteljau's algorithm.
-///
-template <typename T, typename Scalar>
-void cubicBezierPosAndDerCasteljau(
-    const std::array<T, 4>& controlPoints,
+// clang-format on
+
+template<size_t n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
+T bezierDerivativeBezier(
+    core::Span<const T, n> controlPoints,
+    core::Span<T, n - 1>& derControlPoints) {
+
+    for (Int i = 0; i < n - 1; ++i) {
+        derControlPoints[i] = (n - 1) * (controlPoints[i + 1] - controlPoints[i]);
+    }
+}
+
+template<size_t n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
+T bezierPosCasteljau(core::Span<const T, n> controlPoints, Scalar u) {
+    DeCasteljauTree<T, Scalar, n - 1> tree = {};
+    tree.compute(controlPoints, u);
+    return tree.value();
+}
+
+template<size_t n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
+void bezierPosAndDerCasteljau(
+    core::Span<const T, n> controlPoints,
     Scalar u,
     core::TypeIdentity<T>& pos,
     core::TypeIdentity<T>& der) {
 
-    DeCasteljauTree<T, Scalar, 3> tree = {};
+    DeCasteljauTree<T, Scalar, n - 1> tree = {};
     tree.compute(controlPoints, u);
-    pos = tree.position();
+    pos = tree.value();
     der = tree.derivative();
 }
 
-// clang-format on
+template<typename T, typename Scalar>
+T cubicBezierPosCasteljau(core::Span<const T, 4> controlPoints, Scalar u) {
+    return bezierPosCasteljau(controlPoints, u);
+}
+
+template<typename T, typename Scalar>
+T quadraticBezierPosCasteljau(core::Span<const T, 3> controlPoints, Scalar u) {
+    return bezierPosCasteljau(controlPoints, u);
+}
+
+/// Variant of `cubicBezierPosAndDer` expecting a pointer to a contiguous sequence
+/// of 4 control points and using Casteljau's algorithm.
+///
+template<typename T, typename Scalar>
+void cubicBezierPosAndDerCasteljau(
+    core::Span<const T, 4> controlPoints,
+    Scalar u,
+    core::TypeIdentity<T>& pos,
+    core::TypeIdentity<T>& der) {
+
+    bezierPosAndDerCasteljau(controlPoints, u, pos, der);
+}
+
+template<typename T, typename Scalar>
+void quadraticBezierPosAndDerCasteljau(
+    core::Span<const T, 3> controlPoints,
+    Scalar u,
+    core::TypeIdentity<T>& pos,
+    core::TypeIdentity<T>& der) {
+
+    bezierPosAndDerCasteljau(controlPoints, u, pos, der);
+}
 
 } // namespace vgc::geometry
 

@@ -17,10 +17,12 @@
 #ifndef VGC_DOM_ELEMENT_H
 #define VGC_DOM_ELEMENT_H
 
+#include <vgc/core/id.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/attribute.h>
 #include <vgc/dom/node.h>
+#include <vgc/dom/path.h>
 #include <vgc/dom/strings.h>
 #include <vgc/dom/value.h>
 
@@ -232,7 +234,11 @@ public:
     /// document.
     ///
     core::StringId id() const {
-        return uniqueId_;
+        return id_;
+    }
+
+    core::Id internalId() const {
+        return internalId_;
     }
 
     /// Returns or creates the unique identifier of this element.
@@ -242,21 +248,34 @@ public:
     ///
     core::StringId getOrCreateId() const;
 
+    Path getPathFromId() const {
+        return Path::fromId(getOrCreateId());
+    }
+
     /// Returns the authored attributes of this element.
     ///
     const core::Array<AuthoredAttribute>& authoredAttributes() const {
         return authoredAttributes_;
     }
 
-    /// Gets the authored value of the given attribute.
+    /// Gets the authored value of the attribute named `name`.
     /// Returns an invalid value if the attribute does not exist.
     ///
     const Value& getAuthoredAttribute(core::StringId name) const;
 
-    /// Gets the value of the given attribute. Emits a warning and returns an
+    /// Gets the value of the attribute named `name`. Emits a warning and returns an
     /// invalid value if the attribute neither is authored nor has a default value.
     ///
     const Value& getAttribute(core::StringId name) const;
+
+    /// Gets the element referred to by the path attribute named `name`.
+    /// Emits a warning and returns `nullptr` the path cannot be resolved, or `tagNameFilter` is not
+    /// empty and does not match the element tag name.
+    /// Returns nullptr if the attribute is optional and not set.
+    /// Throws if the attribute is not a path according to schema.
+    ///
+    Element*
+    getRefAttribute(core::StringId name, core::StringId tagNameFilter = {}) const;
 
     /// Sets the value of the given attribute.
     ///
@@ -265,6 +284,16 @@ public:
     /// Clears the authored value of the given attribute.
     ///
     void clearAttribute(core::StringId name);
+
+    /// Returns the parent `Element` of this `Element`.
+    /// Returns nullptr if the parent of this `Element` is not an `Element`.
+    ///
+    /// \sa lastChildElement(), previousSiblingElement(), and nextSiblingElement().
+    ///
+    Element* parentElement() const {
+        Node* const p = parent();
+        return (p->nodeType() == NodeType::Element) ? static_cast<Element*>(p) : nullptr;
+    }
 
     /// Returns the first child `Element` of this `Element`.
     /// Returns nullptr if this `Element` has no child `Element`.
@@ -367,7 +396,10 @@ private:
     core::StringId name_;
 
     // Unique identifier of this element. (cache)
-    core::StringId uniqueId_;
+    core::StringId id_;
+
+    // Unique internal Id of this element.
+    core::Id internalId_;
 
     // Helper method for create(). Assumes that a new Element can indeed be
     // appended to parent.

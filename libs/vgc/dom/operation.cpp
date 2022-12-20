@@ -41,13 +41,16 @@ void CreateElementOperation::undo_() {
     Document* document = element_->document();
     element_->removeObjectFromParent_();
     document->onRemoveNode_(element_.get());
+    document->versionId_ = undoneDocumentVersionId();
     keepAlive_ = true;
 }
 
 void CreateElementOperation::redo_() {
     Document* document = element_->document();
+    setUndoneDocumentVersionId(document->versionId_);
     element_->insertObjectToParent_(parent_, nextSibling_);
     document->onCreateNode_(element_.get());
+    document->versionId_ = doneDocumentVersionId();
     keepAlive_ = false;
 }
 
@@ -64,19 +67,23 @@ void RemoveNodeOperation::undo_() {
     Document* document = node_->document();
     node_->insertObjectToParent_(savedRelatives_.parent(), savedRelatives_.nextSibling());
     document->onCreateNode_(node_.get());
+    document->versionId_ = undoneDocumentVersionId();
     keepAlive_ = false;
 }
 
 void RemoveNodeOperation::redo_() {
     Document* document = node_->document();
+    setUndoneDocumentVersionId(document->versionId_);
     node_->removeObjectFromParent_();
     document->onRemoveNode_(node_.get());
+    document->versionId_ = doneDocumentVersionId();
     keepAlive_ = true;
 }
 
 void MoveNodeOperation::do_() {
     oldRelatives_ = NodeRelatives(node_);
     redo_();
+    // add previous sibling to new relatives
     newRelatives_ = NodeRelatives(node_);
 }
 
@@ -84,12 +91,15 @@ void MoveNodeOperation::undo_() {
     Document* document = node_->document();
     node_->insertObjectToParent_(oldRelatives_.parent(), oldRelatives_.nextSibling());
     document->onMoveNode_(node_, newRelatives_);
+    document->versionId_ = undoneDocumentVersionId();
 }
 
 void MoveNodeOperation::redo_() {
     Document* document = node_->document();
+    setUndoneDocumentVersionId(document->versionId_);
     node_->insertObjectToParent_(newRelatives_.parent(), newRelatives_.nextSibling());
     document->onMoveNode_(node_, oldRelatives_);
+    document->versionId_ = doneDocumentVersionId();
 }
 
 void SetAttributeOperation::do_() {
@@ -109,6 +119,7 @@ void SetAttributeOperation::do_() {
     }
     document->onChangeAttribute_(element_, name_);
     element_->onAttributeChanged_(name_, oldValue_, newValue_);
+    document->versionId_ = doneDocumentVersionId();
 }
 
 void SetAttributeOperation::undo_() {
@@ -121,10 +132,12 @@ void SetAttributeOperation::undo_() {
     }
     document->onChangeAttribute_(element_, name_);
     element_->onAttributeChanged_(name_, newValue_, oldValue_);
+    document->versionId_ = undoneDocumentVersionId();
 }
 
 void SetAttributeOperation::redo_() {
     Document* document = element_->document();
+    setUndoneDocumentVersionId(document->versionId_);
     if (isNew_) {
         element_->authoredAttributes_.emplaceLast(name_, newValue_);
     }
@@ -133,12 +146,12 @@ void SetAttributeOperation::redo_() {
     }
     document->onChangeAttribute_(element_, name_);
     element_->onAttributeChanged_(name_, oldValue_, newValue_);
+    document->versionId_ = doneDocumentVersionId();
 }
 
 void RemoveAuthoredAttributeOperation::do_() {
     oldValue_ = element_->authoredAttributes_[index_].value();
     redo_();
-    element_->onAttributeChanged_(name_, oldValue_, Value());
 }
 
 void RemoveAuthoredAttributeOperation::undo_() {
@@ -146,13 +159,16 @@ void RemoveAuthoredAttributeOperation::undo_() {
     element_->authoredAttributes_.emplace(index_, name_, oldValue_);
     document->onChangeAttribute_(element_, name_);
     element_->onAttributeChanged_(name_, Value(), oldValue_);
+    document->versionId_ = undoneDocumentVersionId();
 }
 
 void RemoveAuthoredAttributeOperation::redo_() {
     Document* document = element_->document();
+    setUndoneDocumentVersionId(document->versionId_);
     element_->authoredAttributes_.removeAt(index_);
     document->onChangeAttribute_(element_, name_);
     element_->onAttributeChanged_(name_, oldValue_, Value());
+    document->versionId_ = doneDocumentVersionId();
 }
 
 namespace {

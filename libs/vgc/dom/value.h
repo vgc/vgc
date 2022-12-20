@@ -176,7 +176,7 @@ template<typename T, typename SFINAE = void>
 struct IsValidValueType : std::false_type {};
 
 template<typename T>
-struct IsValidValueType<T, core::MakeVoid<typename ValueTypeTraitsFromType<T>::Type>>
+struct IsValidValueType<T, core::RequiresValid<typename ValueTypeTraitsFromType<T>::Type>>
     : std::true_type {};
 
 template<typename T>
@@ -203,8 +203,8 @@ public:
         : var_(NoneValue{}) {
     }
 
-    /// Returns a const reference to an empty value. This is useful for error
-    /// handling in methods that must return a `Value` by const reference.
+    /// Returns a const reference to an empty value. This is useful for isntance
+    /// for optional values or to simply express non-initialized or null.
     ///
     static const Value& none();
 
@@ -339,6 +339,10 @@ public:
 
     bool hasValue() const {
         return type() > ValueType::Invalid;
+    }
+
+    bool isNone() const {
+        return type() == ValueType::None;
     }
 
     /// Stops holding any Value. This makes this `Value` empty.

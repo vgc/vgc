@@ -29,6 +29,7 @@ namespace app = vgc::app;
 namespace core = vgc::core;
 namespace geometry = vgc::geometry;
 namespace ui = vgc::ui;
+namespace workspace = vgc::workspace;
 
 using vgc::Int;
 using vgc::UInt32;

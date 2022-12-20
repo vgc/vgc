@@ -22,6 +22,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -30,18 +31,23 @@ class Curve;
 
 class CurveSample {
 public:
-    CurveSample() = default;
-
-    CurveSample(core::NoInit)
-        : position_(core::noInit)
-        , normal_(core::noInit)
-        , radius_(0) {
+    constexpr CurveSample() noexcept
+        : s_(0) {
     }
 
-    CurveSample(Vec2d position, Vec2d normal, double radius)
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    CurveSample(core::NoInit) noexcept
+        : position_(core::noInit)
+        , normal_(core::noInit) {
+    }
+    VGC_WARNING_POP
+
+    constexpr CurveSample(Vec2d position, Vec2d normal, double halfwidth = 0.5) noexcept
         : position_(position)
         , normal_(normal)
-        , radius_(radius) {
+        , width_(halfwidth, halfwidth)
+        , s_(0) {
     }
 
     const Vec2d& position() const {
@@ -68,12 +74,17 @@ public:
         normal_ = normal;
     }
 
-    double radius() const {
-        return radius_;
+    double rightHalfwidth() const {
+        return width_[0];
     }
 
-    void setRadius(double radius) {
-        radius_ = radius;
+    double leftHalfwidth() const {
+        return width_[1];
+    }
+
+    void setWidth(double rightHalfwidth, double leftHalfwidth) {
+        width_[0] = rightHalfwidth;
+        width_[1] = leftHalfwidth;
     }
 
     // ┌─── x
@@ -82,7 +93,7 @@ public:
     // y  ↓ right
     //
     Vec2d rightPoint() const {
-        return position_ + normal_ * radius_;
+        return position_ + normal_ * width_[0];
     }
 
     // ┌─── x
@@ -91,15 +102,35 @@ public:
     // y  ↓ right
     //
     Vec2d leftPoint() const {
-        return position_ - normal_ * radius_;
+        return position_ - normal_ * width_[1];
+    }
+
+    double s() const {
+        return s_;
+    }
+
+    void setS(double s) {
+        s_ = s;
     }
 
 private:
     Vec2d position_;
     Vec2d normal_;
-    double radius_;
+    Vec2d width_;
+    double s_; // total arclength from start point
 };
 
+/// Alias for `vgc::core::Array<vgc::geometry::CurveSample>`.
+///
+using CurveSampleArray = core::Array<CurveSample>;
+
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::CurveSample>`.
+///
+using SharedConstCurveSampleArray = core::SharedConstArray<CurveSample>;
+
+/// \class vgc::geometry::CurveSamplingParameters
+/// \brief Parameters for the sampling.
+///
 class CurveSamplingParameters {
 public:
     CurveSamplingParameters() = default;
@@ -139,9 +170,22 @@ public:
     }
 
 private:
-    double maxAngle_ = 0.05;
+    double maxAngle_ = 0.05; // 2PI / 0.05 ~= 125.66
     Int minIntraSegmentSamples_ = 1;
     Int maxIntraSegmentSamples_ = 64;
+};
+
+/// \class vgc::geometry::WidthProfile
+/// \brief A widths profile to apply on curves.
+///
+class WidthProfile {
+public:
+    WidthProfile() = default;
+
+    // XXX todo
+
+private:
+    core::Array<Vec2d> values_;
 };
 
 /// \class vgc::geometry::Curve
@@ -238,14 +282,20 @@ public:
 
     /// Returns the number of control points of the curve.
     ///
-    Int numControlPoints() const {
-        return positionData_.length();
+    Int numPoints() const {
+        return positionData_.get().length();
     }
 
     /// Returns the position data of the curve.
     ///
     const Vec2dArray& positionData() const {
         return positionData_;
+    }
+
+    /// Sets the position data of the curve.
+    ///
+    void setPositionData(const SharedConstVec2dArray& positionData) {
+        positionData_ = positionData;
     }
 
     /// Returns the AttributeVariability of the width attribute.
@@ -259,35 +309,18 @@ public:
     const core::DoubleArray& widthData() const {
         return widthData_;
     }
+    
+    /// Sets the width data of the curve.
+    ///
+    void setWidthData(const core::SharedConstDoubleArray& widthData) {
+        widthData_ = widthData;
+        onWidthDataChanged_();
+    }
 
     /// Returns the width of the curve. If width is varying, then returns
     /// the average width;
     ///
     double width() const;
-
-    /// Convenient function to add a sample to the curve. This overload is
-    /// intended to be used when widthVariability() == Constant.
-    ///
-    /// If widthVariability() == PerControlPoint, then the width of this sample
-    /// is set to be the same as the width of the previous sample (or 1.0 if
-    /// there is no previous sample).
-    ///
-    void addControlPoint(double x, double y);
-
-    /// \overload addControlPoint(double x, double y)
-    ///
-    void addControlPoint(const Vec2d& position);
-
-    /// Convenient function to add a sample to the curve. This overload is
-    /// intended to be used when widthVariability() == PerControlPoint.
-    ///
-    /// If widthVariability() == Constant, then the provided \p width is ignored.
-    ///
-    void addControlPoint(double x, double y, double width);
-
-    /// \overload addControlPoint(double x, double y, double width)
-    ///
-    void addControlPoint(const Vec2d& position, double width);
 
     /// Computes and returns a triangulation of this curve as a triangle strip
     /// [ p0, p1, ..., p_{2n}, p_{2n+1} ]. The even indices are on the "left"
@@ -403,14 +436,18 @@ public:
 private:
     // Representation of the centerline of the curve
     Type type_;
-    Vec2dArray positionData_;
+    SharedConstVec2dArray positionData_;
 
     // Representation of the width of the curve
     AttributeVariability widthVariability_;
-    core::DoubleArray widthData_;
+    core::SharedConstDoubleArray widthData_;
+    double averageWidth_ = 0;
+    double maxWidth_ = 0;
 
     // Color of the curve
     core::Color color_;
+
+    void onWidthDataChanged_();
 };
 
 } // namespace vgc::geometry

@@ -97,15 +97,15 @@ public:
         return *this;
     }
 
-    friend inline constexpr Flags operator|(Flags a, Flags b) noexcept {
+    friend constexpr Flags operator|(Flags a, Flags b) noexcept {
         return Flags(static_cast<Enum>(a.toUnderlying() | b.toUnderlying()));
     }
 
-    friend inline constexpr Flags operator&(Flags a, Flags b) noexcept {
+    friend constexpr Flags operator&(Flags a, Flags b) noexcept {
         return Flags(static_cast<Enum>(a.toUnderlying() & b.toUnderlying()));
     }
 
-    friend inline constexpr Flags operator^(Flags a, Flags b) noexcept {
+    friend constexpr Flags operator^(Flags a, Flags b) noexcept {
         return Flags(static_cast<Enum>(a.toUnderlying() ^ b.toUnderlying()));
     }
 
@@ -128,11 +128,11 @@ public:
         return *this;
     }
 
-    friend inline constexpr bool operator==(Flags a, Flags b) noexcept {
+    friend constexpr bool operator==(Flags a, Flags b) noexcept {
         return a.toUnderlying() == b.toUnderlying();
     }
 
-    friend inline constexpr bool operator!=(Flags a, Flags b) noexcept {
+    friend constexpr bool operator!=(Flags a, Flags b) noexcept {
         return a.toUnderlying() != b.toUnderlying();
     }
 

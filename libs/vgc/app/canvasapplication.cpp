@@ -103,8 +103,11 @@ public:
         // by modifying the DOM.
         //
         static core::StringId Add_to_Palette("Add to Palette");
-        doc->history()->createUndoGroup(Add_to_Palette);
-        isUndoOpened_ = true;
+        core::History* history = doc->history();
+        if (history) {
+            history->createUndoGroup(Add_to_Palette);
+            isUndoOpened_ = true;
+        }
 
         // TODO: reuse existing colorpalette element instead of creating new one.
         dom::Element* root = doc->rootElement();
@@ -119,7 +122,10 @@ public:
 
     ~ColorPaletteSaver() {
         if (isUndoOpened_) {
-            doc_->history()->abort();
+            core::History* history = doc_->history();
+            if (history) {
+                history->abort();
+            }
         }
     }
 
@@ -154,7 +160,7 @@ CanvasApplication::CanvasApplication(
     : Application(argc, argv) {
 
     window_ = app::MainWindow::create(applicationName);
-    createDocument_();
+    openDocument_("");
     createWidgets_();
 }
 
@@ -163,11 +169,59 @@ CanvasApplication::create(int argc, char* argv[], std::string_view applicationNa
     return CanvasApplicationPtr(new CanvasApplication(argc, argv, applicationName));
 }
 
-void CanvasApplication::createDocument_() {
-    document_ = dom::Document::create();
-    dom::Element::create(document_.get(), "vgc");
-    document_->enableHistory(dom::strings::New_Document);
-    document_->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
+void CanvasApplication::openDocument_(QString filename) {
+
+    // clear previous workspace
+    if (workspace_) {
+        workspace_->sync();
+        if (document_->versionId() != lastSavedDocumentVersionId) {
+            // XXX "do you wanna save ?"
+        }
+        core::History* history = workspace_->history();
+        if (history) {
+            history->disconnect(this);
+        }
+        canvas_->setWorkspace(nullptr);
+    }
+
+    // clear document info
+    filename_.clear();
+    document_ = nullptr;
+
+    core::Array<core::Color> colors = {};
+    dom::DocumentPtr newDocument = {};
+    if (filename.isEmpty()) {
+        try {
+            newDocument = dom::Document::create();
+            dom::Element::create(newDocument.get(), "vgc");
+        }
+        catch (const dom::FileError& e) {
+            // TODO: have our own message box instead of using QtWidgets
+            QMessageBox::critical(nullptr, "Error Creating New File", e.what());
+        }
+    }
+    else {
+        try {
+            newDocument = dom::Document::open(ui::fromQt(filename));
+            colors = getColorPalette_(newDocument.get());
+        }
+        catch (const dom::FileError& e) {
+            // TODO: have our own message box instead of using QtWidgets
+            QMessageBox::critical(nullptr, "Error Opening File", e.what());
+        }
+    }
+
+    loadColorPalette_(palette_, colors);
+    workspace_ = workspace::Workspace::create(newDocument);
+    document_ = newDocument.get();
+    filename_ = filename;
+
+    if (canvas_) {
+        canvas_->setWorkspace(workspace_.get());
+    }
+
+    core::History* history = document_->enableHistory(dom::strings::New_Document);
+    history->headChanged().connect(updateUndoRedoActionStateSlot_());
     updateUndoRedoActionState_();
 }
 
@@ -193,7 +247,7 @@ void CanvasApplication::createWidgets_() {
 
     // Create widgets inside panels
     createColorPalette_(leftPanel);
-    createCanvas_(middlePanel, document_.get());
+    createCanvas_(middlePanel, workspace_.get());
 }
 
 void CanvasApplication::createActions_(ui::Widget* parent) {
@@ -263,26 +317,14 @@ void CanvasApplication::onActionNew_() {
     // - Save => this saves to the previous file (effectively erasing its content,
     //           with no possibility to undo and save again
 
-    if (document_ && document_->history()) {
-        document_->history()->disconnect(this);
-    }
-
-    try {
-        dom::DocumentPtr tmp = dom::Document::create();
-        dom::Element::create(tmp.get(), "vgc");
-        tmp->enableHistory(dom::strings::New_Document);
-        document_->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
-        canvas_->setDocument(tmp.get());
-        document_ = tmp;
-        updateUndoRedoActionState_();
-    }
-    catch (const dom::FileError& e) {
-        // TODO: have our own message box instead of using QtWidgets
-        QMessageBox::critical(nullptr, "Error Creating New File", e.what());
-    }
+    openDocument_("");
 }
 
 void CanvasApplication::onActionOpen_() {
+    doOpen_();
+}
+
+void CanvasApplication::doOpen_() {
     // Get which directory the dialog should display first
     QString dir = filename_.isEmpty()
                       ? QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
@@ -318,8 +360,7 @@ void CanvasApplication::onActionOpen_() {
             QString selectedFile = selectedFiles.first();
             if (!selectedFile.isEmpty()) {
                 // Open
-                filename_ = selectedFile;
-                doOpen_();
+                openDocument_(selectedFile);
             }
             else {
                 VGC_WARNING(LogVgcApp, "Empty file path selected; file not opened.");
@@ -332,36 +373,6 @@ void CanvasApplication::onActionOpen_() {
     else {
         // User willfully cancelled the operation
         // => nothing to do, not even a warning.
-    }
-}
-
-void CanvasApplication::doOpen_() {
-    // XXX TODO ask save current document
-
-    if (document_ && document_->history()) {
-        document_->history()->disconnect(this);
-    }
-
-    try {
-        // Open document from file, get its color palette, and remove it from
-        // the DOM before enabling history
-        dom::DocumentPtr doc = dom::Document::open(ui::fromQt(filename_));
-        core::Array<core::Color> colors = getColorPalette_(doc.get());
-        doc->enableHistory(dom::strings::Open_Document);
-        doc->history()->headChanged().connect(updateUndoRedoActionStateSlot_());
-
-        // Set viewer document (must happen before old document is destroyed)
-        canvas_->setDocument(doc.get());
-
-        // Destroy old document and set new document as current
-        document_ = doc;
-        updateUndoRedoActionState_();
-
-        // Load color palette
-        loadColorPalette_(palette_, colors);
-    }
-    catch (const dom::FileError& e) {
-        QMessageBox::critical(nullptr, "Error Opening File", e.what());
     }
 }
 
@@ -446,7 +457,7 @@ void CanvasApplication::doSaveAs_() {
 
 void CanvasApplication::doSave_() {
     try {
-        ColorPaletteSaver saver(palette_, document_.get());
+        ColorPaletteSaver saver(palette_, document_);
         document_->save(ui::fromQt(filename_));
     }
     catch (const dom::FileError& e) {
@@ -461,21 +472,30 @@ void CanvasApplication::onActionQuit_() {
 }
 
 void CanvasApplication::onActionUndo_() {
-    if (document_ && document_->history()) {
-        document_->history()->undo();
+    if (workspace_) {
+        core::History* history = workspace_->history();
+        if (history) {
+            history->undo();
+        }
     }
 }
 
 void CanvasApplication::onActionRedo_() {
-    if (document_ && document_->history()) {
-        document_->history()->redo();
+    if (workspace_) {
+        core::History* history = workspace_->history();
+        if (history) {
+            history->redo();
+        }
     }
 }
 
 void CanvasApplication::updateUndoRedoActionState_() {
-    if (actionUndo_ && actionRedo_ && document_ && document_->history()) {
-        actionUndo_->setEnabled(document_->history()->canUndo());
-        actionRedo_->setEnabled(document_->history()->canRedo());
+    core::History* history = workspace_ ? workspace_->history() : nullptr;
+    if (actionUndo_) {
+        actionUndo_->setEnabled(history ? history->canUndo() : false);
+    }
+    if (actionRedo_) {
+        actionRedo_->setEnabled(history ? history->canRedo() : false);
     }
 }
 
@@ -489,8 +509,11 @@ void CanvasApplication::onColorChanged_() {
     }
 }
 
-void CanvasApplication::createCanvas_(ui::Widget* parent, dom::Document* document) {
-    canvas_ = parent->createChild<ui::Canvas>(document);
+void CanvasApplication::createCanvas_(
+    ui::Widget* parent,
+    workspace::Workspace* workspace) {
+
+    canvas_ = parent->createChild<ui::Canvas>(workspace);
     onColorChanged_();
     if (palette_) {
         palette_->colorSelected().connect(onColorChangedSlot_());

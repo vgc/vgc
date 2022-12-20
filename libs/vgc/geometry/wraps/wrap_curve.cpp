@@ -32,12 +32,12 @@ void wrap_curve(py::module& m) {
         // overloads if we use C++14. See:
         // http://pybind11.readthedocs.io/en/latest/classes.html#overloaded-methods
 
-        .def(
+        /*.def(
             "addControlPoint",
             py::overload_cast<double, double, double>(&This::addControlPoint))
         .def(
             "addControlPoint",
-            py::overload_cast<const Vec2d&, double>(&This::addControlPoint))
+            py::overload_cast<const Vec2d&, double>(&This::addControlPoint))*/
 
         .def("__repr__", [](const This& c) {
             return "<Curve containing "                          //

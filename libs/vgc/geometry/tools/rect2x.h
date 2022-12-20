@@ -78,7 +78,7 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Rect2x`.
     ///
-    Rect2x(core::NoInit) {
+    Rect2x(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
@@ -86,7 +86,7 @@ public:
     ///
     /// This is equivalent to `Rect2x(0, 0, 0, 0)`.
     ///
-    constexpr Rect2x()
+    constexpr Rect2x() noexcept
         : pMin_()
         , pMax_() {
     }
@@ -102,7 +102,7 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this constructor.
     ///
-    constexpr Rect2x(const Vec2x& pMin, const Vec2x& pMax)
+    constexpr Rect2x(const Vec2x& pMin, const Vec2x& pMax) noexcept
         : pMin_(pMin)
         , pMax_(pMax) {
     }
@@ -119,7 +119,7 @@ public:
     /// You can ensure that the rectangle isn't empty by calling `normalize()`
     /// after this constructor.
     ///
-    constexpr Rect2x(float xMin, float yMin, float xMax, float yMax)
+    constexpr Rect2x(float xMin, float yMin, float xMax, float yMax) noexcept
         : pMin_(xMin, yMin)
         , pMax_(xMax, yMax) {
     }
@@ -135,7 +135,7 @@ public:
     /// after this function.
     ///
     static constexpr Rect2x fromPositionSize(
-        const Vec2x& position, const Vec2x& size) {
+        const Vec2x& position, const Vec2x& size) noexcept {
 
         return Rect2x(position, position + size);
     }
@@ -151,7 +151,7 @@ public:
     /// after this function.
     ///
     static constexpr Rect2x fromPositionSize(
-        const Vec2x& position, float width, float height) {
+        const Vec2x& position, float width, float height) noexcept {
 
         return Rect2x(position, position + Vec2x(width, height));
     }
@@ -167,7 +167,7 @@ public:
     /// after this function.
     ///
     static constexpr Rect2x fromPositionSize(
-        float x, float y, const Vec2x& size) {
+        float x, float y, const Vec2x& size) noexcept {
 
         return Rect2x(x, y, x + size[0], y + size[1]);
     }
@@ -184,7 +184,7 @@ public:
     /// after this function.
     ///
     static constexpr Rect2x fromPositionSize(
-        float x, float y, float width, float height) {
+        float x, float y, float width, float height) noexcept {
 
         return Rect2x(x, y, x + width, y + height);
     }

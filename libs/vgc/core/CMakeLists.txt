@@ -8,6 +8,7 @@ vgc_add_library(core
 
     HEADER_FILES
         algorithm.h
+        animtime.h
         api.h
         arithmetic.h
         array.h
@@ -21,6 +22,7 @@ vgc_add_library(core
         flags.h
         format.h
         history.h
+        id.h
         innercore.h
         io.h
         logcategories.h
@@ -46,10 +48,12 @@ vgc_add_library(core
 
     CPP_FILES
         algorithm.cpp
+        animtime.cpp
         color.cpp
         exceptions.cpp
         format.cpp
         history.cpp
+        id.cpp
         io.cpp
         logcategories.cpp
         logging.cpp

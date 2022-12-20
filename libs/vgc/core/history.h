@@ -72,7 +72,7 @@ protected:
     friend UndoGroup;
     friend History;
 
-    Operation() = default;
+    Operation() noexcept = default;
 
 public:
     virtual ~Operation() = default;
@@ -140,6 +140,10 @@ public:
 
     Int numOperations() const {
         return operations_.size();
+    }
+
+    UndoGroup* openAncestor() const {
+        return openAncestor_;
     }
 
     UndoGroup* parent() const {

@@ -23,13 +23,12 @@
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/core/performancelog.h>
-#include <vgc/dom/document.h>
-#include <vgc/dom/element.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
+#include <vgc/workspace/workspace.h>
 
 namespace vgc::ui {
 
@@ -84,17 +83,17 @@ protected:
     /// This is an implementation details. Please use
     /// Canvas::create() instead.
     ///
-    Canvas(dom::Document* document);
+    Canvas(workspace::Workspace* workspace);
 
 public:
     /// Creates a Canvas.
     ///
-    static CanvasPtr create(dom::Document* document);
+    static CanvasPtr create(workspace::Workspace* workspace);
 
-    /// Returns the observed document.
+    /// Returns the observed document workspace.
     ///
-    dom::Document* document() const {
-        return document_;
+    workspace::Workspace* workspace() const {
+        return workspace_;
     }
 
     // XXX temporary. Will be deferred to separate class.
@@ -104,9 +103,9 @@ public:
 
     SelectionList getSelectableItemsAt(const geometry::Vec2f& position);
 
-    /// Sets the observed document.
+    /// Sets the observed document workspace.
     ///
-    void setDocument(dom::Document* document);
+    void setWorkspace(workspace::Workspace* workspace);
 
     /// Creates and manages new performance logs as children of the given \p
     /// parent.
@@ -137,6 +136,9 @@ protected:
     void onPaintDestroy(graphics::Engine* engine) override;
     //
 
+    VGC_SLOT(onWorkspaceChanged, onWorkspaceChanged_)
+    VGC_SLOT(onDocumentChanged, onDocumentChanged_)
+
 private:
     // Flags
     bool reload_ = true;
@@ -148,10 +150,9 @@ private:
     geometry::Camera2d camera_;
 
     // Scene
-    dom::Document* document_;
-    core::UndoGroup* drawCurveUndoGroup_ = nullptr;
-    core::ConnectionHandle documentChangedConnectionHandle_;
+    workspace::Workspace* workspace_;
 
+    void onWorkspaceChanged_();
     void onDocumentChanged_(const dom::Diff& diff);
 
     // Moving camera
@@ -161,6 +162,13 @@ private:
     bool isZooming_ = false;
     geometry::Vec2d mousePosAtPress_ = {};
     geometry::Camera2d cameraAtPress_;
+
+    // Curve draw
+    core::UndoGroup* drawCurveUndoGroup_ = nullptr;
+    dom::Element* endVertex_ = nullptr;
+    dom::Element* edge_ = nullptr;
+    geometry::Vec2dArray points_;
+    core::DoubleArray widths_;
 
     // Graphics resources
 
@@ -174,21 +182,8 @@ private:
     //   -> components that have no 1-to-1 relationship with an
     //      element should be recognizable as such.
 
-    struct Component {};
-
-    // VertexComponent
-    // EdgeComponent
-    // CellComponent
-
-    struct ComponentGeometry {
-        dom::Element* element;
-        core::Array<Component> components;
-    };
-
-    // Component (drawn and selectable..)
-
-    struct CurveGraphics {
-        explicit CurveGraphics(dom::Element* element)
+    struct EdgeGraphics {
+        explicit EdgeGraphics(dom::Element* element)
             : element(element) {
         }
 
@@ -209,11 +204,11 @@ private:
         dom::Element* element;
     };
 
-    using CurveGraphicsIterator = std::list<CurveGraphics>::iterator;
+    using EdgeGraphicsIterator = std::list<EdgeGraphics>::iterator;
 
-    std::list<CurveGraphics> curveGraphics_; // in draw order
-    std::list<CurveGraphics> removedCurveGraphics_;
-    std::map<dom::Element*, CurveGraphicsIterator> curveGraphicsMap_;
+    std::list<EdgeGraphics> edgeGraphics_; // in draw order
+    std::list<EdgeGraphics> removedEdgeGraphics_;
+    std::map<dom::Element*, EdgeGraphicsIterator> edgeGraphicsMap_;
     graphics::GeometryViewPtr bgGeometry_;
 
     struct unwrapped_less {
@@ -223,14 +218,14 @@ private:
         }
     };
 
-    std::set<CurveGraphicsIterator, unwrapped_less> toUpdate_;
+    std::set<EdgeGraphicsIterator, unwrapped_less> toUpdate_;
     //bool needsSort_ = false;
 
     void clearGraphics_();
-    void updateCurveGraphics_(graphics::Engine* engine);
-    CurveGraphicsIterator appendCurveGraphics_(dom::Element* element);
-    void updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r);
-    static void destroyCurveGraphics_(CurveGraphics& r);
+    void updateEdgeGraphics_(graphics::Engine* engine);
+    EdgeGraphicsIterator getOrCreateEdgeGraphics_(dom::Element* element);
+    void updateEdgeGraphics_(graphics::Engine* engine, EdgeGraphics& r);
+    static void destroyEdgeGraphics_(EdgeGraphics& r);
 
     // Make sure to disallow concurrent usage of the mouse and the tablet to
     // avoid conflicts. This also acts as a work around the following Qt bugs:
@@ -275,8 +270,8 @@ private:
     // is an example of how responsibilities could be separated:
     //
     // Widget: Creates an OpenGL context, receive graphical user input.
-    // Renderer: Renders the document to the given OpenGL context.
-    // Controller: Modifies the document based on user input (could be in the
+    // Renderer: Renders the workspace to the given OpenGL context.
+    // Controller: Modifies the workspace based on user input (could be in the
     // form of "Action" instances).
     //
     void startCurve_(const geometry::Vec2d& p, double width = 1.0);

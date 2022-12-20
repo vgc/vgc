@@ -78,8 +78,26 @@ void History::setMaxLevels(Int n) {
 }
 
 bool History::abort() {
-    if (head_->isOpen()) {
+    bool aborted = false;
+    // abort current open groups chain
+    while (head_->isOpen()) {
         undoOne_(true);
+        aborted = true;
+    }
+    // if we are still in an open group, abort it
+    if (head_->isPartOfAnOpenGroup()) {
+        // abort closed groups first
+        while (!head_->isOpen()) {
+            undoOne_(true);
+        }
+        // abort open group and chained open groups
+        while (head_->isOpen()) {
+            undoOne_(true);
+        }
+        aborted = true;
+    }
+    if (aborted) {
+        headChanged().emit(head_);
         return true;
     }
     return false;
@@ -89,6 +107,7 @@ bool History::undo() {
     if (head_ != root_) {
         do {
             undoOne_();
+            // also undo direct ancestors if open
         } while (head_->isOpen());
         headChanged().emit(head_);
         return true;
@@ -266,6 +285,10 @@ void History::prune_() {
     // keeps the main branch intact, only able to destroy redos from the oldest branches.
     while (numNodes_ > maxNodes) {
         UndoGroup* p = root_;
+        if (!p) {
+            VGC_ERROR(LogVgcCore, "History root is null but (numNodes_ > 0).");
+            break;
+        }
         while (UndoGroup* n = p->firstChild()) {
             p = n;
         }

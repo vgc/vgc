@@ -53,19 +53,19 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Vec4x`.
     ///
-    Vec4x(core::NoInit) {}
+    Vec4x(core::NoInit) noexcept {}
     VGC_WARNING_POP
 
     /// Creates a `Vec4x` initialized to (0, 0, 0, 0).
     ///
-    constexpr Vec4x()
+    constexpr Vec4x() noexcept
         : data_{0, 0, 0, 0} {
     }
 
 
     /// Creates a `Vec4x` initialized with the given `x`, `y`, `z`, `w` coordinates.
     ///
-    constexpr Vec4x(float x, float y, float z, float w)
+    constexpr Vec4x(float x, float y, float z, float w) noexcept
         : data_{x, y, z, w} {
     }
 
@@ -82,7 +82,7 @@ public:
             isVec<TVec4>
          && TVec4::dimension == 4
          && !std::is_same_v<TVec4, Vec4x>)>
-    explicit constexpr Vec4x(const TVec4& other)
+    explicit constexpr Vec4x(const TVec4& other) noexcept
         : data_{static_cast<float>(other[0]),
                 static_cast<float>(other[1]),
                 static_cast<float>(other[2]),

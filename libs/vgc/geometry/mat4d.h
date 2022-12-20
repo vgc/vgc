@@ -61,13 +61,13 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Mat4d`.
     ///
-    Mat4d(core::NoInit) {
+    Mat4d(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
     /// Creates a `Mat4d` initialized to the null matrix `Mat3d(0)`.
     ///
-    constexpr Mat4d()
+    constexpr Mat4d() noexcept
         : Mat4d(0) {
     }
 
@@ -77,7 +77,7 @@ public:
         double m11, double m12, double m13, double m14,
         double m21, double m22, double m23, double m24,
         double m31, double m32, double m33, double m34,
-        double m41, double m42, double m43, double m44)
+        double m41, double m42, double m43, double m44) noexcept
 
         : data_{{m11, m21, m31, m41},
                 {m12, m22, m32, m42},
@@ -89,7 +89,7 @@ public:
     /// value. As specific cases, the null matrix is Mat4d(0), and the identity
     /// matrix is Mat4d(1).
     ///
-    explicit constexpr Mat4d(double d)
+    explicit constexpr Mat4d(double d) noexcept
         : data_{{d, 0, 0, 0},
                 {0, d, 0, 0},
                 {0, 0, d, 0},
@@ -104,7 +104,7 @@ public:
             isMat<TMat4>
          && TMat4::dimension == 4
          && !std::is_same_v<TMat4, Mat4d>)>
-    explicit constexpr Mat4d(const TMat4& other)
+    explicit constexpr Mat4d(const TMat4& other) noexcept
         : data_{{static_cast<double>(other(0, 0)),
                  static_cast<double>(other(1, 0)),
                  static_cast<double>(other(2, 0)),

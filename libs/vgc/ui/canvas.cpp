@@ -49,8 +49,8 @@ void SelectionListHistory::setSelection(SelectionList&& list) {
     selectionChanged().emit();
 }
 
-CanvasPtr Canvas::create(dom::Document* document) {
-    return CanvasPtr(new Canvas(document));
+CanvasPtr Canvas::create(workspace::Workspace* workspace) {
+    return CanvasPtr(new Canvas(workspace));
 }
 
 namespace {
@@ -104,9 +104,9 @@ QCursor crossCursor() {
 
 } // namespace
 
-Canvas::Canvas(dom::Document* document)
+Canvas::Canvas(workspace::Workspace* workspace)
     : Widget()
-    , document_(document)
+    , workspace_(workspace)
     , mousePressed_(false)
     , tabletPressed_(false)
     , polygonMode_(0)
@@ -123,9 +123,11 @@ Canvas::Canvas(dom::Document* document)
 
     setClippingEnabled(true);
 
-    if (document_) {
-        documentChangedConnectionHandle_ = document_->changed().connect(
-            [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
+    if (workspace_) {
+        workspace_->changed().connect(onWorkspaceChanged());
+        // XXX to remove
+        workspace_->document()->emitPendingDiff();
+        workspace_->document()->changed().connect(onDocumentChanged());
     }
 
     addStyleClass(strings::Canvas);
@@ -137,25 +139,41 @@ SelectionList Canvas::getSelectableItemsAt(const geometry::Vec2f& /*position*/) 
     return l;
 }
 
-void Canvas::setDocument(dom::Document* document) {
+void Canvas::setWorkspace(workspace::Workspace* workspace) {
 
     clearGraphics_();
 
-    if (documentChangedConnectionHandle_) {
-        document_->disconnect(documentChangedConnectionHandle_);
+    if (workspace_) {
+        workspace_->disconnect(this);
+        // XXX to remove
+        workspace_->document()->disconnect(this);
     }
 
-    document_ = document;
-    if (document_) {
-        documentChangedConnectionHandle_ = document_->changed().connect(
-            [this](const dom::Diff& diff) { this->onDocumentChanged_(diff); });
-        document_->emitPendingDiff();
+    workspace_ = workspace;
+    if (workspace_) {
+        workspace_->changed().connect(onWorkspaceChanged());
+        // XXX to remove
+        workspace_->document()->changed().connect(onDocumentChanged());
 
-        // Note: the above is a quick hack to initialize the resources after
-        // doing "new document" or "open document", but it wouldn't work if we
-        // have two canvases.
-        //
-        // TODO: implement initialization from new document without using pending diff.
+        namespace ss = dom::strings;
+
+        auto isEdge = [](dom::Element* e) {
+            core::StringId tagName = e->tagName();
+            return tagName == PATH || tagName == ss::edge;
+        };
+
+        dom::Element* root = workspace_->document()->rootElement();
+
+        for (dom::Node* node : root->children()) {
+            dom::Element* e = dom::Element::cast(node);
+            if (!(e && isEdge(e))) {
+                continue;
+            }
+            if (e->parent() == root) {
+                auto graphicsIt = getOrCreateEdgeGraphics_(e);
+                toUpdate_.insert(graphicsIt);
+            }
+        }
     }
 
     requestRepaint();
@@ -196,52 +214,70 @@ bool Canvas::onKeyPress(KeyEvent* event) {
     // not handled here, including modifiers.
 }
 
+void Canvas::onWorkspaceChanged_() {
+    //
+}
+
 void Canvas::onDocumentChanged_(const dom::Diff& diff) {
+
+    namespace ss = dom::strings;
+
+    //VGC_DEBUG_TMP("onDocumentChanged_");
+
+    auto isEdge = [](dom::Element* e) {
+        core::StringId tagName = e->tagName();
+        return tagName == PATH || tagName == ss::edge;
+    };
+
     for (dom::Node* node : diff.removedNodes()) {
         dom::Element* e = dom::Element::cast(node);
-        if (!(e && e->tagName() == PATH)) {
+        if (!(e && isEdge(e))) {
             continue;
         }
-        auto it = curveGraphicsMap_.find(e);
-        if (it != curveGraphicsMap_.end()) {
-            removedCurveGraphics_.splice(
-                removedCurveGraphics_.begin(), curveGraphics_, it->second);
-            curveGraphicsMap_.erase(it);
+        auto it = edgeGraphicsMap_.find(e);
+        if (it != edgeGraphicsMap_.end()) {
+            removedEdgeGraphics_.splice(
+                removedEdgeGraphics_.begin(), edgeGraphics_, it->second);
+            edgeGraphicsMap_.erase(it);
         }
     }
 
     bool needsSort = false;
 
-    dom::Element* root = document_->rootElement();
-    for (dom::Node* node : diff.reparentedNodes()) {
-        dom::Element* e = dom::Element::cast(node);
-        if (!(e && e->tagName() == PATH)) {
-            continue;
-        }
-        if (e->parent() == root) {
-            needsSort = true;
-            auto it = appendCurveGraphics_(e);
-            toUpdate_.insert(it);
-        }
-        else {
-            auto it = curveGraphicsMap_.find(e);
-            if (it != curveGraphicsMap_.end()) {
-                removedCurveGraphics_.splice(
-                    removedCurveGraphics_.begin(), curveGraphics_, it->second);
-                curveGraphicsMap_.erase(it);
-            }
-        }
-    }
+    dom::Element* root = workspace_->document()->rootElement();
 
     for (dom::Node* node : diff.createdNodes()) {
         dom::Element* e = dom::Element::cast(node);
-        if (!(e && e->tagName() == PATH)) {
+        if (!(e && isEdge(e))) {
             continue;
         }
         if (e->parent() == root) {
             needsSort = true;
-            auto it = appendCurveGraphics_(e);
-            toUpdate_.insert(it);
+            auto graphicsIt = getOrCreateEdgeGraphics_(e);
+            toUpdate_.insert(graphicsIt);
+        }
+    }
+
+    for (dom::Node* node : diff.reparentedNodes()) {
+        dom::Element* e = dom::Element::cast(node);
+        if (!(e && isEdge(e))) {
+            continue;
+        }
+        auto it = edgeGraphicsMap_.find(e);
+        if (it != edgeGraphicsMap_.end()) {
+            if (e->parent() != root) {
+                removedEdgeGraphics_.splice(
+                    removedEdgeGraphics_.begin(), edgeGraphics_, it->second);
+                edgeGraphicsMap_.erase(it);
+            }
+            else {
+                needsSort = true;
+            }
+        }
+        else if (e->parent() == root) {
+            needsSort = true;
+            auto graphicsIt = getOrCreateEdgeGraphics_(e);
+            toUpdate_.insert(graphicsIt);
         }
     }
 
@@ -255,18 +291,25 @@ void Canvas::onDocumentChanged_(const dom::Diff& diff) {
     }
 
     if (needsSort) {
-        auto insert = curveGraphics_.begin();
+        auto insertIt = edgeGraphics_.begin();
         for (dom::Node* node : root->children()) {
             dom::Element* e = dom::Element::cast(node);
-            if (!(e && e->tagName() == PATH)) {
+            if (!(e && isEdge(e))) {
                 continue;
             }
-            auto it = curveGraphicsMap_[e]; // works unless there is a bug
-            if (insert == it) {
-                ++insert;
+            auto it = edgeGraphicsMap_.find(e);
+            if (it != edgeGraphicsMap_.end()) {
+                EdgeGraphicsIterator graphicsIt = it->second;
+                if (insertIt == graphicsIt) {
+                    ++insertIt;
+                }
+                else {
+                    edgeGraphics_.splice(insertIt, edgeGraphics_, graphicsIt);
+                    insertIt = graphicsIt;
+                }
             }
             else {
-                curveGraphics_.splice(insert, curveGraphics_, it);
+                //VGC_DEBUG_TMP("pb");
             }
         }
     }
@@ -274,7 +317,7 @@ void Canvas::onDocumentChanged_(const dom::Diff& diff) {
     // XXX it's possible that update is done twice if the element is both modified and reparented..
 
     const auto& modifiedElements = diff.modifiedElements();
-    for (CurveGraphicsIterator it = curveGraphics_.begin(); it != curveGraphics_.end();
+    for (EdgeGraphicsIterator it = edgeGraphics_.begin(); it != edgeGraphics_.end();
          ++it) {
 
         auto it2 = modifiedElements.find(it->element);
@@ -288,27 +331,27 @@ void Canvas::onDocumentChanged_(const dom::Diff& diff) {
 }
 
 void Canvas::clearGraphics_() {
-    for (CurveGraphics& r : curveGraphics_) {
-        destroyCurveGraphics_(r);
+    for (EdgeGraphics& r : edgeGraphics_) {
+        destroyEdgeGraphics_(r);
     }
-    curveGraphics_.clear();
-    curveGraphicsMap_.clear();
+    edgeGraphics_.clear();
+    edgeGraphicsMap_.clear();
 }
 
-void Canvas::updateCurveGraphics_(graphics::Engine* engine) {
+void Canvas::updateEdgeGraphics_(graphics::Engine* engine) {
     updateTask_.start();
 
-    removedCurveGraphics_.clear();
+    removedEdgeGraphics_.clear();
     bool tesselationModeChanged = requestedTesselationMode_ != currentTesselationMode_;
     if (tesselationModeChanged) {
         currentTesselationMode_ = requestedTesselationMode_;
-        for (CurveGraphics& r : curveGraphics_) {
-            updateCurveGraphics_(engine, r);
+        for (EdgeGraphics& r : edgeGraphics_) {
+            updateEdgeGraphics_(engine, r);
         }
     }
     else {
         for (auto it : toUpdate_) {
-            updateCurveGraphics_(engine, *it);
+            updateEdgeGraphics_(engine, *it);
         }
     }
     toUpdate_.clear();
@@ -316,13 +359,18 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine) {
     updateTask_.stop();
 }
 
-Canvas::CurveGraphicsIterator Canvas::appendCurveGraphics_(dom::Element* element) {
-    auto it = curveGraphics_.emplace(curveGraphics_.end(), CurveGraphics(element));
-    curveGraphicsMap_.emplace(element, it);
-    return it;
+Canvas::EdgeGraphicsIterator Canvas::getOrCreateEdgeGraphics_(dom::Element* element) {
+    auto it = edgeGraphicsMap_.find(element);
+    if (it == edgeGraphicsMap_.end()) {
+        auto newEdgeGraphicsIterator =
+            edgeGraphics_.emplace(edgeGraphics_.end(), EdgeGraphics(element));
+        edgeGraphicsMap_.emplace(element, newEdgeGraphicsIterator);
+        return newEdgeGraphicsIterator;
+    }
+    return it->second;
 }
 
-void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
+void Canvas::updateEdgeGraphics_(graphics::Engine* engine, EdgeGraphics& r) {
     using namespace graphics;
     if (!r.inited_) {
         // XXX use indexing when triangulate() implements indices.
@@ -339,20 +387,20 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
     }
 
     dom::Element* path = r.element;
-    geometry::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
-    core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
+    geometry::SharedConstVec2dArray positions =
+        path->getAttribute(POSITIONS).getVec2dArray();
+    core::SharedConstDoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
     core::Color color = path->getAttribute(COLOR).getColor();
 
     // Convert the dom::Path to a geometry::Curve
     // XXX move this logic to dom::Path
 
-    VGC_CORE_ASSERT(positions.size() == widths.size());
-    Int nControlPoints = positions.length();
+    VGC_CORE_ASSERT(positions.get().size() == widths.get().size());
+    //Int nPoints = positions.get().length();
     geometry::Curve curve;
     curve.setColor(color);
-    for (Int j = 0; j < nControlPoints; ++j) {
-        curve.addControlPoint(positions[j], widths[j]);
-    }
+    curve.setPositionData(positions);
+    curve.setWidthData(widths);
 
     geometry::Vec2fArray strokeVertices;
     core::Array<geometry::Vec4f> pointVertices;
@@ -445,7 +493,7 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
         r.pointsGeometry_->vertexBuffer(1), std::move(pointInstData));
 }
 
-void Canvas::destroyCurveGraphics_(CurveGraphics& r) {
+void Canvas::destroyEdgeGraphics_(EdgeGraphics& r) {
     r.strokeGeometry_.reset();
     r.pointsGeometry_.reset();
     r.dispLineGeometry_.reset();
@@ -453,13 +501,16 @@ void Canvas::destroyCurveGraphics_(CurveGraphics& r) {
 }
 
 void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
-    if (!document_) {
+    if (!workspace_ || !workspace_->document()) {
         return;
     }
 
+    namespace ss = dom::strings;
+
     // XXX CLEAN
     static core::StringId Draw_Curve("Draw Curve");
-    drawCurveUndoGroup_ = document_->history()->createUndoGroup(Draw_Curve);
+    core::History* history = workspace_->history();
+    drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
 
     drawCurveUndoGroup_->undone().connect([this](core::UndoGroup*, bool /*isAbort*/) {
         // isAbort should be true since we have no sub-group
@@ -467,44 +518,46 @@ void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
         drawCurveUndoGroup_ = nullptr;
     });
 
-    dom::Element* root = document_->rootElement();
-    dom::Element* path = dom::Element::create(root, PATH);
+    workspace::Element* wVgc = workspace_->vgcElement();
+    dom::Element* dVgc = wVgc->domElement();
 
-    path->setAttribute(POSITIONS, geometry::Vec2dArray());
-    path->setAttribute(WIDTHS, core::DoubleArray());
-    path->setAttribute(COLOR, currentColor_);
+    dom::Element* v0 = dom::Element::create(dVgc, ss::vertex);
+    dom::Element* v1 = dom::Element::create(dVgc, ss::vertex);
+    dom::Element* edge = dom::Element::create(dVgc, ss::edge);
+
+    v0->setAttribute(ss::position, p);
+    v1->setAttribute(ss::position, p);
+
+    edge->setAttribute(ss::positions, geometry::Vec2dArray());
+    edge->setAttribute(ss::widths, core::DoubleArray());
+    edge->setAttribute(ss::color, currentColor_);
+    edge->setAttribute(ss::startvertex, v0->getPathFromId());
+    edge->setAttribute(ss::endvertex, v1->getPathFromId());
+
+    endVertex_ = v1;
+    edge_ = edge;
 
     continueCurve_(p, width);
 }
 
 void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
-    if (!document_) {
+    if (!workspace_ || !workspace_->document()) {
         return;
     }
 
-    // XXX CLEAN
-    dom::Element* root = document_->rootElement();
-    dom::Element* path = root->lastChildElement();
+    namespace ss = dom::strings;
 
-    if (path) {
-        // Should I make this more efficient? If so, we have a few choices:
-        // duplicate the API of arrays within value and provide fine-grain
-        // "changed" signals. And/or allow to pass a lambda that modifies the
-        // underlying value. The dom::Value will call the lambda to mutate the
-        // value, then emit a generic changed signal. I could also let clients
-        // freely mutate the value and trusteing them in sending a changed
-        // signal themselves.
+    if (edge_) {
+        points_.append(p);
+        widths_.append(width);
 
-        geometry::Vec2dArray positions = path->getAttribute(POSITIONS).getVec2dArray();
-        core::DoubleArray widths = path->getAttribute(WIDTHS).getDoubleArray();
+        endVertex_->setAttribute(ss::position, p);
 
-        positions.append(p);
-        widths.append(width);
+        edge_->setAttribute(ss::positions, points_);
+        edge_->setAttribute(ss::widths, widths_);
 
-        path->setAttribute(POSITIONS, std::move(positions));
-        path->setAttribute(WIDTHS, std::move(widths));
-
-        document()->emitPendingDiff();
+        //VGC_DEBUG_TMP("workspace_->sync()");
+        workspace_->sync();
     }
 }
 
@@ -646,6 +699,10 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
         drawCurveUndoGroup_->close();
         drawCurveUndoGroup_ = nullptr;
     }
+    endVertex_ = nullptr;
+    edge_ = nullptr;
+    points_.clear();
+    widths_.clear();
 
     mousePressed_ = false;
 
@@ -691,7 +748,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     namespace gs = graphics::strings;
 
-    updateCurveGraphics_(engine);
+    updateEdgeGraphics_(engine);
 
     drawTask_.start();
 
@@ -742,7 +799,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     // Draw triangles
 
-    for (CurveGraphics& r : curveGraphics_) {
+    for (EdgeGraphics& r : edgeGraphics_) {
         engine->draw(r.strokeGeometry_, -1, 0);
     }
 
@@ -750,7 +807,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     // Draw control points
     if (showControlPoints_) {
-        for (CurveGraphics& r : curveGraphics_) {
+        for (EdgeGraphics& r : edgeGraphics_) {
             engine->draw(r.dispLineGeometry_, -1, 0);
             engine->draw(r.pointsGeometry_, -1, r.numPoints);
         }
@@ -764,8 +821,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
 void Canvas::onPaintDestroy(graphics::Engine*) {
     bgGeometry_.reset();
-    for (CurveGraphics& r : curveGraphics_) {
-        destroyCurveGraphics_(r);
+    for (EdgeGraphics& r : edgeGraphics_) {
+        destroyEdgeGraphics_(r);
     }
     fillRS_.reset();
     wireframeRS_.reset();

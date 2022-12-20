@@ -36,7 +36,8 @@ Document::Document()
     , hasXmlStandalone_(true)
     , xmlVersion_("1.0")
     , xmlEncoding_("UTF-8")
-    , xmlStandalone_(false) {
+    , xmlStandalone_(false)
+    , versionId_(core::genId()) {
 
     generateXmlDeclaration_();
 }
@@ -818,11 +819,20 @@ Element* Document::elementById(core::StringId id) const {
     return nullptr;
 }
 
-void Document::enableHistory(core::StringId entrypointName) {
+Element* Document::elementByInternalId(core::Id id) const {
+    auto it = elementByInternalIdMap_.find(id);
+    if (it != elementByInternalIdMap_.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
+core::History* Document::enableHistory(core::StringId entrypointName) {
     if (!history_) {
         history_ = core::History::create(entrypointName);
         history_->headChanged().connect(onHistoryHeadChanged());
     }
+    return history_.get();
 }
 
 bool Document::emitPendingDiff() {

@@ -69,7 +69,7 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Range1d`.
     ///
-    Range1d(core::NoInit) {
+    Range1d(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
@@ -77,7 +77,7 @@ public:
     ///
     /// This is equivalent to `Range1d(0, 0)`.
     ///
-    constexpr Range1d()
+    constexpr Range1d() noexcept
         : pMin_()
         , pMax_() {
     }
@@ -91,7 +91,7 @@ public:
     /// You can ensure that the range isn't empty by calling `normalize()`
     /// after this constructor.
     ///
-    constexpr Range1d(double pMin, double pMax)
+    constexpr Range1d(double pMin, double pMax) noexcept
         : pMin_(pMin)
         , pMax_(pMax) {
     }

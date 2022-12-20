@@ -21,6 +21,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include <vgc/core/id.h>
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
@@ -344,16 +345,23 @@ public:
 
     Element* elementById(core::StringId id) const;
 
-    void enableHistory(core::StringId entrypointName);
+    Element* elementByInternalId(core::Id id) const;
+
+    core::History* enableHistory(core::StringId entrypointName);
 
     core::History* history() const {
         return history_.get();
+    }
+
+    core::Id versionId() const {
+        return versionId_;
     }
 
     bool emitPendingDiff();
 
     VGC_SIGNAL(changed, (const Diff&, diff))
 
+protected:
     VGC_SLOT(onHistoryHeadChanged, onHistoryHeadChanged_)
 
 private:
@@ -370,6 +378,7 @@ private:
     // Utilities
     friend Element; // XXX <- create accessors ?
     std::unordered_map<core::StringId, Element*> elementByIdMap_;
+    std::unordered_map<core::Id, Element*> elementByInternalIdMap_;
 
     // Operations
     friend class CreateElementOperation;
@@ -382,6 +391,7 @@ private:
     //friend class Element;
 
     core::HistoryPtr history_;
+    core::Id versionId_;
     Diff pendingDiff_;
     core::Array<NodePtr> pendingDiffKeepAllocPointers_;
     std::unordered_map<Node*, NodeRelatives> previousRelativesMap_;

@@ -48,7 +48,7 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Triangle2f`.
     ///
-    Triangle2f(core::NoInit)
+    Triangle2f(core::NoInit) noexcept
         : data_{
             Vec2f(core::noInit),
             Vec2f(core::noInit),
@@ -58,14 +58,14 @@ public:
 
     /// Creates a `Triangle2f` initialized to [(0, 0), (0, 0), (0, 0)].
     ///
-    constexpr Triangle2f()
+    constexpr Triangle2f() noexcept
         : data_{Vec2f(), Vec2f(), Vec2f()} {
     }
 
 
     /// Creates a `Triangle2f` initialized with the given points.
     ///
-    constexpr Triangle2f(const Vec2f& a, const Vec2f& b, const Vec2f& c)
+    constexpr Triangle2f(const Vec2f& a, const Vec2f& b, const Vec2f& c) noexcept
         : data_{a, b, c} {
     }
 
