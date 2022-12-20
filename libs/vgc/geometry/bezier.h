@@ -247,7 +247,7 @@ void cubicBezierPosAndDer(
 
 // clang-format on
 
-template<size_t n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
+template<Int n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
 T bezierDerivativeBezier(
     core::Span<const T, n> controlPoints,
     core::Span<T, n - 1>& derControlPoints) {
@@ -257,21 +257,21 @@ T bezierDerivativeBezier(
     }
 }
 
-template<size_t n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
+template<Int n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
 T bezierPosCasteljau(core::Span<const T, n> controlPoints, Scalar u) {
-    DeCasteljauTree<T, Scalar, n - 1> tree = {};
+    DeCasteljauTree<T, Scalar, static_cast<size_t>(n - 1)> tree = {};
     tree.compute(controlPoints, u);
     return tree.value();
 }
 
-template<size_t n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
+template<Int n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
 void bezierPosAndDerCasteljau(
     core::Span<const T, n> controlPoints,
     Scalar u,
     core::TypeIdentity<T>& pos,
     core::TypeIdentity<T>& der) {
 
-    DeCasteljauTree<T, Scalar, n - 1> tree = {};
+    DeCasteljauTree<T, Scalar, static_cast<size_t>(n - 1)> tree = {};
     tree.compute(controlPoints, u);
     pos = tree.value();
     der = tree.derivative();
