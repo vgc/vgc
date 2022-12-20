@@ -89,7 +89,7 @@ private:
     Int64 dataVersion_ = 0;
 
     std::unique_ptr<KeyEdgeGeometry> geometry_ = {};
-    bool isClosed_ = false;
+    //bool isClosed_ = false;
 };
 
 } // namespace vgc::topology
