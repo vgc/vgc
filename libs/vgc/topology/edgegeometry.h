@@ -131,7 +131,6 @@ VGC_DEFINE_FLAGS(
     KeyEdgeInterpolatedPointsGeometryFlags,
     KeyEdgeInterpolatedPointsGeometryFlag)
 
-
 // XXX deprecated for new design 2022-12-07
 class VGC_TOPOLOGY_API KeyEdgeInterpolatedPointsGeometry {
 private:

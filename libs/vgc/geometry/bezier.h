@@ -63,7 +63,7 @@ public:
             values_[i] = controlPoints[i] + u * (controlPoints[i + 1] - controlPoints[i]);
         }
         if constexpr (degree >= 2) {
-            computeRec<2>(u/*, oneMinusU*/);
+            computeRec<2>(u /*, oneMinusU*/);
         }
     }
 
@@ -115,7 +115,7 @@ private:
         size_t level,
         size_t maxLevel = degree,
         VGC_REQUIRES(level >= 2 && level <= degree && maxLevel <= degree)>
-    void computeRec(const Scalar u/*, const Scalar oneMinusU*/) {
+    void computeRec(const Scalar u /*, const Scalar oneMinusU*/) {
         constexpr size_t a = levelOffset_<level - 1>;
         constexpr size_t b = levelOffset_<level>;
         for (size_t i = 0; i < levelSize_<level>; ++i) {
@@ -125,7 +125,7 @@ private:
             values_[b + i] = values_[a + i] + u * (values_[a + i + 1] - values_[a + i]);
         }
         if constexpr (level < maxLevel) {
-            computeRec<level + 1>(u/*, oneMinusU*/);
+            computeRec<level + 1>(u /*, oneMinusU*/);
         }
     }
 

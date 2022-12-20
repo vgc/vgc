@@ -629,7 +629,6 @@ void Curve::sampleRange(
     }
 }
 
-
 void Curve::onWidthDataChanged_() {
     // todo, compute max and average
 }

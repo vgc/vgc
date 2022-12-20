@@ -309,7 +309,7 @@ public:
     const core::DoubleArray& widthData() const {
         return widthData_;
     }
-    
+
     /// Sets the width data of the curve.
     ///
     void setWidthData(const core::SharedConstDoubleArray& widthData) {
