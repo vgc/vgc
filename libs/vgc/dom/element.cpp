@@ -68,10 +68,10 @@ Element* Element::create(Element* parent, core::StringId tagName) {
 core::StringId Element::getOrCreateId() const {
     if (id_ == core::StringId()) {
         // create a new id !
-        const ElementSpec* es = schema().findElementSpec(tagName_);
+        const ElementSpec* elementSpec = schema().findElementSpec(tagName_);
         core::StringId prefix = tagName_;
-        if (es && es->defaultIdPrefix() != core::StringId()) {
-            prefix = es->defaultIdPrefix();
+        if (elementSpec && elementSpec->defaultIdPrefix() != core::StringId()) {
+            prefix = elementSpec->defaultIdPrefix();
         }
         auto& elementByIdMap = document()->elementByIdMap_;
         for (Int i = 0; i < core::IntMax; ++i) {
@@ -99,11 +99,10 @@ const Value& Element::getAttribute(core::StringId name) const {
         return authored->value();
     }
     else {
-        const ElementSpec* es = schema().findElementSpec(tagName_);
-        const AttributeSpec* as = es->findAttributeSpec(name);
-
-        if (as) {
-            return as->defaultValue();
+        const ElementSpec* elementSpec = schema().findElementSpec(tagName_);
+        const AttributeSpec* attributeSpec = elementSpec->findAttributeSpec(name);
+        if (attributeSpec) {
+            return attributeSpec->defaultValue();
         }
         else {
             VGC_WARNING(
@@ -119,8 +118,9 @@ const Value& Element::getAttribute(core::StringId name) const {
 /// Returns nullptr if the attribute is optional and not set.
 /// Throws if the attribute is not a path according to schema.
 */
-Element*
-Element::getElementFromPathAttribute(core::StringId name, core::StringId tagNameFilter) const {
+Element* Element::getElementFromPathAttribute(
+    core::StringId name,
+    core::StringId tagNameFilter) const {
 
     const dom::Value& value = getAttribute(name);
 
