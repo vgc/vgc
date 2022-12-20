@@ -549,6 +549,21 @@ private:
     void updateTransformFromRoot_();
 };
 
+template<typename T>
+class VacCellProxy;
+
+/// Checks whether the type `T` is a Cell type.
+///
+template<typename T>
+inline constexpr bool isCell = std::
+    disjunction_v<std::is_base_of<VacCell, T>, core::IsTemplateBaseOf<VacCellProxy, T>>;
+
+template<typename To, typename From, VGC_REQUIRES((isCell<To> && isCell<From>))>
+constexpr To* static_cell_cast(From* p);
+
+template<typename To, typename From, VGC_REQUIRES((isCell<To> && isCell<From>))>
+constexpr To* dynamic_cell_cast(From* p);
+
 #define VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(ToType) to##ToType##Unchecked
 #define VGC_TOPOLOGY_SAFE_CAST_METHOD_NAME(ToType) to##ToType
 
@@ -972,12 +987,6 @@ class VGC_TOPOLOGY_API VertexUsage {
     // def depends on how we'll represent keyface boundaries
 };
 
-/// Checks whether the type `T` is a Cell type.
-///
-template<typename T>
-inline constexpr bool isCell = std::
-    disjunction_v<std::is_base_of<VacCell, T>, core::IsTemplateBaseOf<VacCellProxy, T>>;
-
 namespace detail {
 
 struct DummySpatialCell : VacCell {};
@@ -1042,12 +1051,12 @@ constexpr VacCell* VacCellProxy<T>::cell() {
 }
 
 // Note: with C++20, ADL will work with explicitly instanciated template functions.
-template<typename To, typename From, VGC_REQUIRES((isCell<To> && isCell<From>))>
+template<typename To, typename From, VGC_FORWARDED_REQUIRES((isCell<To> && isCell<From>))>
 constexpr To* static_cell_cast(From* p) {
 
     // Check const to non-const
     if constexpr (std::is_const_v<From> && !std::is_const_v<To>) {
-        static_assert(false, "Invalid static_cell_cast from const to non-const.")
+        static_assert(false, "Invalid static_cell_cast from const to non-const.");
     }
 
     // Check To and From are complete
@@ -1116,12 +1125,12 @@ constexpr To* static_cell_cast(From* p) {
 }
 
 // Note: with C++20, ADL will work with explicitly instanciated template functions.
-template<typename To, typename From, VGC_REQUIRES((isCell<To> && isCell<From>))>
+template<typename To, typename From, VGC_FORWARDED_REQUIRES((isCell<To> && isCell<From>))>
 constexpr To* dynamic_cell_cast(From* p) {
 
     // Check const to non-const
     if constexpr (std::is_const_v<From> && !std::is_const_v<To>) {
-        static_assert(false, "Invalid dynamic_cell_cast from const to non-const.")
+        static_assert(false, "Invalid dynamic_cell_cast from const to non-const.");
     }
 
     // Check To and From are complete

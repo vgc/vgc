@@ -220,6 +220,7 @@ using Requires = std::enable_if_t<B>;
 /// ```
 ///
 #define VGC_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int> = 0
+#define VGC_FORWARDED_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int>
 
 /// Defines SFINAE-based requirements for function template overloads.
 ///
