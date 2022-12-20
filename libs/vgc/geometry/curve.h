@@ -442,7 +442,7 @@ private:
     AttributeVariability widthVariability_;
     core::SharedConstDoubleArray widthData_;
     double averageWidth_ = 0;
-    double maxWidth_ = 0;
+    //double maxWidth_ = 0;
 
     // Color of the curve
     core::Color color_;
