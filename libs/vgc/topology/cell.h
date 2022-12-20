@@ -1041,8 +1041,9 @@ struct CellTraits<
     : detail::CellSpatialTraits<T>, detail::CellTemporalTraits<T> {
 
     static constexpr bool hasSpatioTemporalType = true;
-    static constexpr VacCellType cellType =
-        detail::vacCellTypeCombine(spatialType, temporalType);
+    static constexpr VacCellType cellType = detail::vacCellTypeCombine(
+        detail::CellSpatialTraits<T>::spatialType,
+        detail::CellTemporalTraits<T>::temporalType);
 };
 
 template<typename T>
