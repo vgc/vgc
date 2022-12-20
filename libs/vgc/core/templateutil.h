@@ -62,6 +62,18 @@ struct MakeInt_ {
 
 } // namespace detail
 
+template<typename... Ts>
+using DependentTrue = std::true_type;
+
+template<typename T>
+inline constexpr bool dependentTrue = DependentTrue<T>::value;
+
+template<typename... Ts>
+using DependentFalse = std::false_type;
+
+template<typename T>
+inline constexpr bool dependentFalse = DependentFalse<T>::value;
+
 /// Same as `std::void_t` without the bugs in some versions of Clang.
 ///
 template<typename... Ts>

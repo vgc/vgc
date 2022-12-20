@@ -1057,7 +1057,8 @@ constexpr To* static_cell_cast(From* p) {
 
     // Check const to non-const
     if constexpr (std::is_const_v<From> && !std::is_const_v<To>) {
-        static_assert(false, "Invalid static_cell_cast from const to non-const.");
+        static_assert(
+            dependentFalse<To>, "Invalid static_cell_cast from const to non-const.");
     }
 
     // Check To and From are complete
@@ -1121,7 +1122,8 @@ constexpr To* static_cell_cast(From* p) {
             static_cast<typename ToTraits::TemporalAny*>(const_cast<NcFrom*>(p))));
     }
     else {
-        static_assert(false, "Logic error in static_cell_cast: case not handled.");
+        static_assert(
+            dependentFalse<To>, "Logic error in static_cell_cast: case not handled.");
     }
 }
 
@@ -1131,7 +1133,8 @@ constexpr To* dynamic_cell_cast(From* p) {
 
     // Check const to non-const
     if constexpr (std::is_const_v<From> && !std::is_const_v<To>) {
-        static_assert(false, "Invalid dynamic_cell_cast from const to non-const.");
+        static_assert(
+            dependentFalse<To>, "Invalid dynamic_cell_cast from const to non-const.");
     }
 
     // Check To and From are complete
@@ -1225,7 +1228,8 @@ constexpr To* dynamic_cell_cast(From* p) {
             static_cast<typename FromTraits::TemporalAny*>(const_cast<NcFrom*>(p)));
     }
     else {
-        static_assert(false, "Logic error in dynamic_cell_cast: case not handled.");
+        static_assert(
+            dependentFalse<To>, "Logic error in dynamic_cell_cast: case not handled.");
     }
 }
 
