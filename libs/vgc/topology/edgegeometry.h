@@ -63,11 +63,13 @@ public:
     //}
 
 private:
+    /*
     UInt8 Lod_ = 0;
     Int16 maxSamples_ = core::tmax<Int16>;
     double maxAngularError_ = 7.0;
     double pixelSize_ = 1.0;
     geometry::Mat3d viewMatrix_ = geometry::Mat3d::identity;
+    */
     // mode, uniform s, uniform u -> overload
 };
 
