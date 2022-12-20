@@ -379,7 +379,6 @@ public:
     /// range reduced to just the time.
     ///
     constexpr AnimTimeRange unitedWith(const AnimTime& time) const {
-        AnimTimeRange ret;
         return AnimTimeRange((std::min)(tMin_, time), (std::max)(tMax_, time));
     }
 
