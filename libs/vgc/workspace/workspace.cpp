@@ -352,12 +352,13 @@ struct VacElementLists {
 
 } // namespace detail
 
-Element* Workspace::getRefAttribute(
+Element* Workspace::getElementFromPathAttribute(
     dom::Element* domElement,
-    core::StringId name,
+    core::StringId attrName,
     core::StringId tagNameFilter) const {
 
-    dom::Element* domTargetElement = domElement->getRefAttribute(name, tagNameFilter);
+    dom::Element* domTargetElement =
+        domElement->getElementFromPathAttribute(attrName, tagNameFilter);
     if (!domTargetElement) {
         return nullptr;
     }
@@ -413,8 +414,8 @@ void Workspace::rebuildVacFromTree_() {
     for (Element* e : ce.keyEdges) {
         dom::Element* const domElem = e->domElement();
 
-        Element* ev0 = getRefAttribute(domElem, ss::startvertex, ss::vertex);
-        Element* ev1 = getRefAttribute(domElem, ss::endvertex, ss::vertex);
+        Element* ev0 = getElementFromPathAttribute(domElem, ss::startvertex, ss::vertex);
+        Element* ev1 = getElementFromPathAttribute(domElem, ss::endvertex, ss::vertex);
         if (!ev0) {
             ev0 = ev1;
         }

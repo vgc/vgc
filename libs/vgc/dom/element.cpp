@@ -120,7 +120,7 @@ const Value& Element::getAttribute(core::StringId name) const {
 /// Throws if the attribute is not a path according to schema.
 */
 Element*
-Element::getRefAttribute(core::StringId name, core::StringId tagNameFilter) const {
+Element::getElementFromPathAttribute(core::StringId name, core::StringId tagNameFilter) const {
 
     const dom::Value& value = getAttribute(name);
 

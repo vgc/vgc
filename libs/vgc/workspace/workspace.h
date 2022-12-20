@@ -108,9 +108,9 @@ private:
 
     Element* createElement(dom::Element* domElement, Element* parent);
 
-    Element* getRefAttribute(
+    Element* getElementFromPathAttribute(
         dom::Element* domElement,
-        core::StringId name,
+        core::StringId attrName,
         core::StringId tagNameFilter = {}) const;
 
     dom::DocumentPtr document_;

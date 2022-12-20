@@ -274,8 +274,9 @@ public:
     /// Returns nullptr if the attribute is optional and not set.
     /// Throws if the attribute is not a path according to schema.
     ///
-    Element*
-    getRefAttribute(core::StringId name, core::StringId tagNameFilter = {}) const;
+    Element* getElementFromPathAttribute(
+        core::StringId name,
+        core::StringId tagNameFilter = {}) const;
 
     /// Sets the value of the given attribute.
     ///
