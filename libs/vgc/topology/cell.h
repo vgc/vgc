@@ -1048,7 +1048,7 @@ struct CellTraits<
 
 template<typename T>
 constexpr VacCell* VacCellProxy<T>::cell() {
-    return static_cast<VacCell*>(static_cast<CellTraits<T>::TemporalAny*>(this));
+    return static_cast<VacCell*>(static_cast<typename CellTraits<T>::TemporalAny*>(this));
 }
 
 // Note: with C++20, ADL will work with explicitly instanciated template functions.
