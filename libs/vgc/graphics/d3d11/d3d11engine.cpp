@@ -30,6 +30,7 @@
 #pragma comment(lib, "d3dcompiler")
 #pragma comment(lib, "d3d11")
 
+#include <vgc/core/compiler.h>
 #include <vgc/core/exceptions.h>
 
 // clang-format on
@@ -680,13 +681,26 @@ D3d11Engine::D3d11Engine(const EngineCreateInfo& createInfo)
 
     // XXX add success checks (S_OK)
 
+    // Setup creation flags.
+    // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_create_device_flag
+    //
+    // Note 1: To use D3D11_CREATE_DEVICE_DEBUG, end users must have
+    // D3D11*SDKLayers.dll installed; otherwise, device creation fails.
+    //
+    // Note 2: We could use D3D11_CREATE_DEVICE_SINGLETHREADED
+    // if we defer creation of buffers and swapchain.
+    //
+    UINT creationFlags = 0;
+#    ifdef VGC_DEBUG_BUILD
+    creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#    endif
+
     const D3D_FEATURE_LEVEL featureLevels[1] = {D3D_FEATURE_LEVEL_11_0};
     D3D11CreateDevice(
         NULL,
         D3D_DRIVER_TYPE_HARDWARE,
         NULL,
-        D3D11_CREATE_DEVICE_DEBUG | 0, // could use D3D11_CREATE_DEVICE_SINGLETHREADED
-                                       // if we defer creation of buffers and swapchain.
+        creationFlags,
         featureLevels,
         1,
         D3D11_SDK_VERSION,
