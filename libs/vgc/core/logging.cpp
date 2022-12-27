@@ -19,6 +19,7 @@
 #include <iostream>
 
 #ifdef VGC_CORE_OS_WINDOWS
+#    define WIN32_LEAN_AND_MEAN
 #    include <Windows.h>
 #endif
 
@@ -64,8 +65,13 @@ void printLogMessageToStderr(fmt::memory_buffer& message) {
     message.push_back('\n');
     message.push_back('\0');
 #ifdef VGC_CORE_OS_WINDOWS
-    OutputDebugStringA(message.data());
-    std::fflush(stderr);
+    if (GetConsoleWindow() == NULL) {
+        OutputDebugStringA(message.data());
+    }
+    else {
+        std::fputs(message.data(), stderr);
+        std::fflush(stderr);
+    }
 #else
     std::fputs(message.data(), stderr);
     std::fflush(stderr);

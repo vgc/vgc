@@ -16,9 +16,16 @@
 
 #include <vgc/app/application.h>
 
+#include <string_view>
+
 #include <QDir>
 #include <QIcon>
 #include <QSettings>
+
+#ifdef VGC_CORE_OS_WINDOWS
+#    define WIN32_LEAN_AND_MEAN
+#    include <Windows.h>
+#endif
 
 #include <vgc/core/paths.h>
 #include <vgc/ui/qtutil.h>
@@ -115,6 +122,21 @@ Application::Application(int argc, char* argv[])
     , application_(argc_, argv) {
 
     setBasePath();
+
+#ifdef VGC_CORE_OS_WINDOWS
+    for (int i = 0; i < argc_; ++i) {
+        std::string_view arg = argv[i];
+        if (arg == "--console") {
+            AllocConsole();
+            // disable ctrl+c shortcut
+            SetConsoleCtrlHandler(nullptr, true);
+            FILE* stream = {};
+            freopen_s(&stream, "CONOUT$", "w", stdout);
+            freopen_s(&stream, "CONOUT$", "w", stderr);
+            break;
+        }
+    }
+#endif
 }
 
 ApplicationPtr Application::create(int argc, char* argv[]) {
