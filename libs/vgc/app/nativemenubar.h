@@ -23,7 +23,7 @@
 #include <vgc/ui/menu.h>
 
 #ifdef VGC_CORE_OS_WINDOWS
-#    define VGC_APP_MAY_HAVE_NATIVE_MENUBAR 0
+#    define VGC_APP_MAY_HAVE_NATIVE_MENU_BAR 0
 #else
 #    define VGC_APP_MAY_HAVE_NATIVE_MENU_BAR 1
 #endif
