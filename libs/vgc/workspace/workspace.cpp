@@ -428,7 +428,7 @@ void Workspace::rebuildVacFromTree_() {
             topology::KeyVertex* v0 =
                 ev0->vacNode()->toCellUnchecked()->toKeyVertexUnchecked();
             topology::KeyVertex* v1 =
-                ev0->vacNode()->toCellUnchecked()->toKeyVertexUnchecked();
+                ev1->vacNode()->toCellUnchecked()->toKeyVertexUnchecked();
             ke = topology::ops::createKeyEdge(
                 domElem->internalId(),
                 e->parent()->vacNode()->toGroupUnchecked(),
