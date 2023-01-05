@@ -155,11 +155,11 @@ void Canvas::setWorkspace(workspace::Workspace* workspace) {
         // XXX to remove
         workspace_->document()->changed().connect(onDocumentChanged());
 
-        namespace ss = dom::strings;
+        namespace ds = dom::strings;
 
         auto isEdge = [](dom::Element* e) {
             core::StringId tagName = e->tagName();
-            return tagName == PATH || tagName == ss::edge;
+            return tagName == PATH || tagName == ds::edge;
         };
 
         dom::Element* root = workspace_->document()->rootElement();
@@ -220,13 +220,11 @@ void Canvas::onWorkspaceChanged_() {
 
 void Canvas::onDocumentChanged_(const dom::Diff& diff) {
 
-    namespace ss = dom::strings;
-
-    //VGC_DEBUG_TMP("onDocumentChanged_");
+    namespace ds = dom::strings;
 
     auto isEdge = [](dom::Element* e) {
         core::StringId tagName = e->tagName();
-        return tagName == PATH || tagName == ss::edge;
+        return tagName == PATH || tagName == ds::edge;
     };
 
     for (dom::Node* node : diff.removedNodes()) {
@@ -309,7 +307,7 @@ void Canvas::onDocumentChanged_(const dom::Diff& diff) {
                 }
             }
             else {
-                //VGC_DEBUG_TMP("pb");
+                //
             }
         }
     }
@@ -505,7 +503,7 @@ void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
         return;
     }
 
-    namespace ss = dom::strings;
+    namespace ds = dom::strings;
 
     // XXX CLEAN
     static core::StringId Draw_Curve("Draw Curve");
@@ -521,18 +519,18 @@ void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
     workspace::Element* wVgc = workspace_->vgcElement();
     dom::Element* dVgc = wVgc->domElement();
 
-    dom::Element* v0 = dom::Element::create(dVgc, ss::vertex);
-    dom::Element* v1 = dom::Element::create(dVgc, ss::vertex);
-    dom::Element* edge = dom::Element::create(dVgc, ss::edge);
+    dom::Element* v0 = dom::Element::create(dVgc, ds::vertex);
+    dom::Element* v1 = dom::Element::create(dVgc, ds::vertex);
+    dom::Element* edge = dom::Element::create(dVgc, ds::edge);
 
-    v0->setAttribute(ss::position, p);
-    v1->setAttribute(ss::position, p);
+    v0->setAttribute(ds::position, p);
+    v1->setAttribute(ds::position, p);
 
-    edge->setAttribute(ss::positions, geometry::Vec2dArray());
-    edge->setAttribute(ss::widths, core::DoubleArray());
-    edge->setAttribute(ss::color, currentColor_);
-    edge->setAttribute(ss::startvertex, v0->getPathFromId());
-    edge->setAttribute(ss::endvertex, v1->getPathFromId());
+    edge->setAttribute(ds::positions, geometry::Vec2dArray());
+    edge->setAttribute(ds::widths, core::DoubleArray());
+    edge->setAttribute(ds::color, currentColor_);
+    edge->setAttribute(ds::startvertex, v0->getPathFromId());
+    edge->setAttribute(ds::endvertex, v1->getPathFromId());
 
     endVertex_ = v1;
     edge_ = edge;
@@ -545,18 +543,17 @@ void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
         return;
     }
 
-    namespace ss = dom::strings;
+    namespace ds = dom::strings;
 
     if (edge_) {
         points_.append(p);
         widths_.append(width);
 
-        endVertex_->setAttribute(ss::position, p);
+        endVertex_->setAttribute(ds::position, p);
 
-        edge_->setAttribute(ss::positions, points_);
-        edge_->setAttribute(ss::widths, widths_);
+        edge_->setAttribute(ds::positions, points_);
+        edge_->setAttribute(ds::widths, widths_);
 
-        //VGC_DEBUG_TMP("workspace_->sync()");
         workspace_->sync();
     }
 }

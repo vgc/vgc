@@ -203,7 +203,7 @@ public:
         : var_(NoneValue{}) {
     }
 
-    /// Returns a const reference to an empty value. This is useful for isntance
+    /// Returns a const reference to an empty value. This is useful for instance
     /// for optional values or to simply express non-initialized or null.
     ///
     static const Value& none();

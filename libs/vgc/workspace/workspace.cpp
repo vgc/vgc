@@ -85,7 +85,7 @@ void Workspace::onDocumentDiff_(const dom::Diff& /*diff*/) {
     rebuildVacFromTree_();
     return;
 
-    //namespace ss = dom::strings;
+    //namespace ds = dom::strings;
 
     // first create everything new
     // processing order:
@@ -306,7 +306,7 @@ dom::Element* rebuildTreeFromDomIter(Element* it, Element*& parent) {
 
 void Workspace::rebuildTreeFromDom_() {
 
-    namespace ss = dom::strings;
+    namespace ds = dom::strings;
 
     // flush dom diff
     isDomBeingUpdated_ = true;
@@ -322,7 +322,7 @@ void Workspace::rebuildTreeFromDom_() {
     }
 
     dom::Element* domVgcElement = document_->rootElement();
-    if (!domVgcElement || domVgcElement->tagName() != ss::vgc) {
+    if (!domVgcElement || domVgcElement->tagName() != ds::vgc) {
         return;
     }
     vgcElement_ = createElement(domVgcElement, nullptr);
@@ -369,7 +369,7 @@ Element* Workspace::getElementFromPathAttribute(
 
 void Workspace::rebuildVacFromTree_() {
 
-    namespace ss = dom::strings;
+    namespace ds = dom::strings;
 
     if (!document_ || !vac_ || !vgcElement_) {
         return;
@@ -407,15 +407,15 @@ void Workspace::rebuildVacFromTree_() {
             domElem->internalId(), e->parent()->vacNode()->toGroupUnchecked());
         e->vacNode_ = kv;
 
-        const auto& position = domElem->getAttribute(ss::position).getVec2d();
+        const auto& position = domElem->getAttribute(ds::position).getVec2d();
         topology::ops::setKeyVertexPosition(kv, position);
     }
 
     for (Element* e : ce.keyEdges) {
         dom::Element* const domElem = e->domElement();
 
-        Element* ev0 = getElementFromPathAttribute(domElem, ss::startvertex, ss::vertex);
-        Element* ev1 = getElementFromPathAttribute(domElem, ss::endvertex, ss::vertex);
+        Element* ev0 = getElementFromPathAttribute(domElem, ds::startvertex, ds::vertex);
+        Element* ev1 = getElementFromPathAttribute(domElem, ds::endvertex, ds::vertex);
         if (!ev0) {
             ev0 = ev1;
         }
@@ -441,9 +441,9 @@ void Workspace::rebuildVacFromTree_() {
         }
         e->vacNode_ = ke;
 
-        const auto& points = domElem->getAttribute(ss::positions).getVec2dArray();
+        const auto& points = domElem->getAttribute(ds::positions).getVec2dArray();
         topology::ops::setKeyEdgeCurvePoints(ke, points);
-        const auto& widths = domElem->getAttribute(ss::widths).getDoubleArray();
+        const auto& widths = domElem->getAttribute(ds::widths).getDoubleArray();
         topology::ops::setKeyEdgeCurveWidths(ke, widths);
     }
 
@@ -473,11 +473,6 @@ void Workspace::rebuildVacFromTree_() {
         iterDfsPreOrder(e, depth, vgcElement_);
     }
 
-    // debug print
-    //visitDfsPreOrder(vgcElement_, [](Element* e, Int depth) {
-    //    VGC_DEBUG_TMP("{:>{}}<{} id=\"{}\">", "", depth * 2, e->tagName(), e->id());
-    //});
-
     lastSyncedDomVersionId_ = document_->versionId();
     lastSyncedVacVersion_ = vac_->version();
 }
@@ -486,7 +481,7 @@ void Workspace::fillVacElementListsUsingTagName(
     Element* root,
     detail::VacElementLists& ce) const {
 
-    namespace ss = dom::strings;
+    namespace ds = dom::strings;
 
     Element* e = root->firstChild();
     Int depth = 1;
@@ -495,13 +490,13 @@ void Workspace::fillVacElementListsUsingTagName(
         bool skipChildren = true;
 
         core::StringId tagName = e->domElement_->tagName();
-        if (tagName == ss::vertex) {
+        if (tagName == ds::vertex) {
             ce.keyVertices.append(e);
         }
-        else if (tagName == ss::edge) {
+        else if (tagName == ds::edge) {
             ce.keyEdges.append(e);
         }
-        else if (tagName == ss::layer) {
+        else if (tagName == ds::layer) {
             ce.groups.append(e);
             skipChildren = false;
         }
