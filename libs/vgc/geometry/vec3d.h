@@ -54,20 +54,20 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Vec3d`.
     ///
-    Vec3d(core::NoInit) {
+    Vec3d(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
     /// Creates a `Vec3d` initialized to (0, 0, 0).
     ///
-    constexpr Vec3d()
+    constexpr Vec3d() noexcept
         : data_{0, 0, 0} {
     }
 
 
     /// Creates a `Vec3d` initialized with the given `x`, `y`, and `z` coordinates.
     ///
-    constexpr Vec3d(double x, double y, double z)
+    constexpr Vec3d(double x, double y, double z) noexcept
         : data_{x, y, z} {
     }
 
@@ -79,7 +79,7 @@ public:
             isVec<TVec3>
          && TVec3::dimension == 3
          && !std::is_same_v<TVec3, Vec3d>)>
-    explicit constexpr Vec3d(const TVec3& other)
+    explicit constexpr Vec3d(const TVec3& other) noexcept
         : data_{static_cast<double>(other[0]),
                 static_cast<double>(other[1]),
                 static_cast<double>(other[2])} {

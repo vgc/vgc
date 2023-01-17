@@ -61,13 +61,13 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Mat4f`.
     ///
-    Mat4f(core::NoInit) {
+    Mat4f(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
     /// Creates a `Mat4f` initialized to the null matrix `Mat3f(0)`.
     ///
-    constexpr Mat4f()
+    constexpr Mat4f() noexcept
         : Mat4f(0) {
     }
 
@@ -77,7 +77,7 @@ public:
         float m11, float m12, float m13, float m14,
         float m21, float m22, float m23, float m24,
         float m31, float m32, float m33, float m34,
-        float m41, float m42, float m43, float m44)
+        float m41, float m42, float m43, float m44) noexcept
 
         : data_{{m11, m21, m31, m41},
                 {m12, m22, m32, m42},
@@ -89,7 +89,7 @@ public:
     /// value. As specific cases, the null matrix is Mat4f(0), and the identity
     /// matrix is Mat4f(1).
     ///
-    explicit constexpr Mat4f(float d)
+    explicit constexpr Mat4f(float d) noexcept
         : data_{{d, 0, 0, 0},
                 {0, d, 0, 0},
                 {0, 0, d, 0},
@@ -104,7 +104,7 @@ public:
             isMat<TMat4>
          && TMat4::dimension == 4
          && !std::is_same_v<TMat4, Mat4f>)>
-    explicit constexpr Mat4f(const TMat4& other)
+    explicit constexpr Mat4f(const TMat4& other) noexcept
         : data_{{static_cast<float>(other(0, 0)),
                  static_cast<float>(other(1, 0)),
                  static_cast<float>(other(2, 0)),

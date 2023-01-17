@@ -48,7 +48,7 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Triangle2d`.
     ///
-    Triangle2d(core::NoInit)
+    Triangle2d(core::NoInit) noexcept
         : data_{
             Vec2d(core::noInit),
             Vec2d(core::noInit),
@@ -58,14 +58,14 @@ public:
 
     /// Creates a `Triangle2d` initialized to [(0, 0), (0, 0), (0, 0)].
     ///
-    constexpr Triangle2d()
+    constexpr Triangle2d() noexcept
         : data_{Vec2d(), Vec2d(), Vec2d()} {
     }
 
 
     /// Creates a `Triangle2d` initialized with the given points.
     ///
-    constexpr Triangle2d(const Vec2d& a, const Vec2d& b, const Vec2d& c)
+    constexpr Triangle2d(const Vec2d& a, const Vec2d& b, const Vec2d& c) noexcept
         : data_{a, b, c} {
     }
 

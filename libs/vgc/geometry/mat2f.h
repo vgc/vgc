@@ -52,13 +52,13 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Mat2f`.
     ///
-    Mat2f(core::NoInit) {
+    Mat2f(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
     /// Creates a `Mat2f` initialized to the null matrix `Mat2f(0)`.
     ///
-    constexpr Mat2f()
+    constexpr Mat2f() noexcept
         : Mat2f(0) {
     }
 
@@ -66,7 +66,7 @@ public:
     ///
     constexpr Mat2f(
         float m11, float m12,
-        float m21, float m22)
+        float m21, float m22) noexcept
 
         : data_{{m11, m21},
                 {m12, m22}} {
@@ -76,7 +76,7 @@ public:
     /// value. As specific cases, the null matrix is Mat2f(0), and the identity
     /// matrix is Mat2f(1).
     ///
-    explicit constexpr Mat2f(float d)
+    explicit constexpr Mat2f(float d) noexcept
         : data_{{d, 0},
                 {0, d}} {
     }
@@ -89,7 +89,7 @@ public:
             isMat<TMat2>
          && TMat2::dimension == 2
          && !std::is_same_v<TMat2, Mat2f>)>
-    explicit constexpr Mat2f(const TMat2& other)
+    explicit constexpr Mat2f(const TMat2& other) noexcept
         : data_{{static_cast<float>(other(0, 0)),
                  static_cast<float>(other(1, 0))},
                 {static_cast<float>(other(0, 1)),

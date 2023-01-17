@@ -58,13 +58,13 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Mat3d`.
     ///
-    Mat3d(core::NoInit) {
+    Mat3d(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
     /// Creates a `Mat3d` initialized to the null matrix `Mat3d(0)`.
     ///
-    constexpr Mat3d()
+    constexpr Mat3d() noexcept
         : Mat3d(0) {
     }
 
@@ -73,7 +73,7 @@ public:
     constexpr Mat3d(
         double m11, double m12, double m13,
         double m21, double m22, double m23,
-        double m31, double m32, double m33)
+        double m31, double m32, double m33) noexcept
 
         : data_{{m11, m21, m31},
                 {m12, m22, m32},
@@ -84,7 +84,7 @@ public:
     /// value. As specific cases, the null matrix is Mat3d(0), and the identity
     /// matrix is Mat3d(1).
     ///
-    explicit constexpr Mat3d(double d)
+    explicit constexpr Mat3d(double d) noexcept
         : data_{{d, 0, 0},
                 {0, d, 0},
                 {0, 0, d}} {
@@ -98,7 +98,7 @@ public:
             isMat<TMat3>
          && TMat3::dimension == 3
          && !std::is_same_v<TMat3, Mat3d>)>
-    explicit constexpr Mat3d(const TMat3& other)
+    explicit constexpr Mat3d(const TMat3& other) noexcept
         : data_{{static_cast<double>(other(0, 0)),
                  static_cast<double>(other(1, 0)),
                  static_cast<double>(other(2, 0))},

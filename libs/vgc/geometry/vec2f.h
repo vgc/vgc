@@ -54,20 +54,20 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized `Vec2f`.
     ///
-    Vec2f(core::NoInit) {
+    Vec2f(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
     /// Creates a `Vec2f` initialized to (0, 0).
     ///
-    constexpr Vec2f()
+    constexpr Vec2f() noexcept
         : data_{0, 0} {
     }
 
 
     /// Creates a `Vec2f` initialized with the given `x` and `y` coordinates.
     ///
-    constexpr Vec2f(float x, float y)
+    constexpr Vec2f(float x, float y) noexcept
         : data_{x, y} {
     }
 
@@ -84,7 +84,7 @@ public:
             isVec<TVec2>
          && TVec2::dimension == 2
          && !std::is_same_v<TVec2, Vec2f>)>
-    explicit constexpr Vec2f(const TVec2& other)
+    explicit constexpr Vec2f(const TVec2& other) noexcept
         : data_{static_cast<float>(other[0]),
                 static_cast<float>(other[1])} {
     }
