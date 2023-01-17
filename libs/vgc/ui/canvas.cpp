@@ -743,7 +743,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     // Draw triangles
 
     for (CurveGraphics& r : curveGraphics_) {
-        engine->draw(r.strokeGeometry_, -1, 0);
+        engine->draw(r.strokeGeometry_);
     }
 
     engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
@@ -751,8 +751,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     // Draw control points
     if (showControlPoints_) {
         for (CurveGraphics& r : curveGraphics_) {
-            engine->draw(r.dispLineGeometry_, -1, 0);
-            engine->draw(r.pointsGeometry_, -1, r.numPoints);
+            engine->draw(r.dispLineGeometry_);
+            engine->drawInstanced(r.pointsGeometry_, -1, r.numPoints);
         }
     }
 
