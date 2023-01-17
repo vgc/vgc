@@ -25,6 +25,7 @@ VGC_DEFINE_ENUM(
     (None, "None"),
     (Invalid, "Invalid"),
     (String, "String"),
+    (StringId, "StringId"),
     (Int, "Int"),
     (IntArray, "IntArray"),
     (Double, "Double"),
@@ -32,7 +33,10 @@ VGC_DEFINE_ENUM(
     (Color, "Color"),
     (ColorArray, "ColorArray"),
     (Vec2d, "Vec2d"),
-    (Vec2dArray, "Vec2dArray"))
+    (Vec2dArray, "Vec2dArray"),
+    (Path, "Path"),
+    (NoneOrPath, "Path"),
+    (PathArray, "PathArray"))
 
 const Value& Value::none() {
     // trusty leaky singleton
@@ -91,9 +95,11 @@ Value parseValue(const std::string& s, ValueType t) {
         case ValueType::Vec2dArray:
             return Value(core::parse<geometry::Vec2dArray>(s));
         case ValueType::Path:
-            return Value(core::parse<dom::Path>(s));
+            return Value(core::parse<Path>(s));
+        case ValueType::NoneOrPath:
+            return Value(core::parse<NoneOr<Path>>(s));
         case ValueType::PathArray:
-            return Value(core::parse<dom::PathArray>(s));
+            return Value(core::parse<PathArray>(s));
         case ValueType::End_:
             return Value::invalid();
         }

@@ -174,16 +174,19 @@ void Node::replace(Node* oldNode) {
 }
 
 Element* Node::elementFromPath(const Path& path) const {
-    Element* res = Element::cast(const_cast<Node*>(this));
+    Element* res = nullptr;
     for (const PathSegment& seg : path.segments()) {
         switch (seg.type()) {
         case PathSegmentType::Root:
-            res = res ? nullptr : document()->rootElement();
+            res = document()->rootElement();
             break;
         case PathSegmentType::Id:
-            res = res ? nullptr : document()->elementById(seg.name());
+            res = document()->elementById(seg.name());
             break;
         case PathSegmentType::Element:
+            if (!res) {
+                res = Element::cast(const_cast<Node*>(this));
+            }
             if (res) {
                 Element* e = res->firstChildElement();
                 while (e) {
@@ -196,6 +199,9 @@ Element* Node::elementFromPath(const Path& path) const {
             }
             break;
         case PathSegmentType::Attribute:
+            if (!res) {
+                res = Element::cast(const_cast<Node*>(this));
+            }
             return res;
         }
         if (!res) {

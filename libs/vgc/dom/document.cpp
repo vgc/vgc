@@ -36,7 +36,8 @@ Document::Document()
     , hasXmlStandalone_(true)
     , xmlVersion_("1.0")
     , xmlEncoding_("UTF-8")
-    , xmlStandalone_(false) {
+    , xmlStandalone_(false)
+    , versionId_(core::genId()) {
 
     generateXmlDeclaration_();
 }
@@ -818,10 +819,26 @@ Element* Document::elementById(core::StringId id) const {
     return nullptr;
 }
 
-void Document::enableHistory(core::StringId entrypointName) {
+Element* Document::elementByInternalId(core::Id id) const {
+    auto it = elementByInternalIdMap_.find(id);
+    if (it != elementByInternalIdMap_.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
+core::History* Document::enableHistory(core::StringId entrypointName) {
     if (!history_) {
         history_ = core::History::create(entrypointName);
         history_->headChanged().connect(onHistoryHeadChanged());
+    }
+    return history_.get();
+}
+
+void Document::disableHistory() {
+    if (history_) {
+        history_->disconnect(this);
+        history_ = nullptr;
     }
 }
 
@@ -837,6 +854,7 @@ bool Document::emitPendingDiff() {
         NodeRelatives newRelatives(node);
         if (oldRelatives.parent_ != newRelatives.parent_) {
             pendingDiff_.reparentedNodes_.insert(node);
+            //pendingDiff_.childrenReorderedNodes_.insert(newRelatives.parent_);
         }
         else if (
             oldRelatives.nextSibling_ != newRelatives.nextSibling_
@@ -885,8 +903,16 @@ void Document::onCreateNode_(Node* node) {
 }
 
 void Document::onRemoveNode_(Node* node) {
-    pendingDiff_.removedNodes_.emplaceLast(node);
-    pendingDiffKeepAllocPointers_.emplaceLast(node);
+    if (!pendingDiff_.createdNodes_.removeOne(node)) {
+        pendingDiff_.removedNodes_.emplaceLast(node);
+        pendingDiffKeepAllocPointers_.emplaceLast(node);
+    }
+    else {
+        previousRelativesMap_.erase(node);
+        pendingDiff_.modifiedElements_.erase(static_cast<Element*>(node));
+        pendingDiff_.reparentedNodes_.erase(node);
+        pendingDiff_.childrenReorderedNodes_.erase(node);
+    }
 }
 
 void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives) {

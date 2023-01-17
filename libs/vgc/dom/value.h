@@ -18,6 +18,7 @@
 #define VGC_DOM_VALUE_H
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -109,6 +110,7 @@ enum class ValueType {
     Vec2d,
     Vec2dArray,
     Path,
+    NoneOrPath,
     PathArray,
     VGC_ENUM_ENDMAX
 };
@@ -117,6 +119,52 @@ VGC_DECLARE_ENUM(ValueType)
 
 struct NoneValue : std::monostate {};
 struct InvalidValue : std::monostate {};
+
+/// \class vgc::dom::NoneOr
+/// \brief Used to extend a type to support "none".
+///
+template<typename T>
+class NoneOr : public std::optional<T> {
+private:
+    using Base = std::optional<T>;
+
+public:
+    using Base::Base;
+
+    template<typename U = T>
+    explicit constexpr NoneOr(U&& value)
+        : Base(std::forward<U>(value)) {
+    }
+
+    using A = NoneOr;
+
+    template<typename U>
+    NoneOr& operator=(U&& x) {
+        Base::operator=(std::forward<U>(x));
+        return *this;
+    }
+
+    template<class U>
+    friend constexpr bool operator==(const NoneOr<U>& lhs, const NoneOr<U>& rhs) {
+        return operator==(
+            static_cast<const std::optional<U>&>(lhs),
+            static_cast<const std::optional<U>&>(rhs));
+    }
+
+    template<class U>
+    friend constexpr bool operator!=(const NoneOr<U>& lhs, const NoneOr<U>& rhs) {
+        return operator!=(
+            static_cast<const std::optional<U>&>(lhs),
+            static_cast<const std::optional<U>&>(rhs));
+    }
+
+    template<class U>
+    friend constexpr bool operator<(const NoneOr<U>& lhs, const NoneOr<U>& rhs) {
+        return operator<(
+            static_cast<const std::optional<U>&>(lhs),
+            static_cast<const std::optional<U>&>(rhs));
+    }
+};
 
 namespace detail {
 
@@ -150,8 +198,9 @@ VGC_DOM_VALUETYPE_TYPE_(Color,         core::Color)
 VGC_DOM_VALUETYPE_TYPE_(ColorArray,    core::SharedConstColorArray)
 VGC_DOM_VALUETYPE_TYPE_(Vec2d,         geometry::Vec2d)
 VGC_DOM_VALUETYPE_TYPE_(Vec2dArray,    geometry::SharedConstVec2dArray)
-VGC_DOM_VALUETYPE_TYPE_(Path,          dom::Path)
-VGC_DOM_VALUETYPE_TYPE_(PathArray,     dom::SharedConstPathArray)
+VGC_DOM_VALUETYPE_TYPE_(Path,          Path)
+VGC_DOM_VALUETYPE_TYPE_(NoneOrPath,    NoneOr<Path>)
+VGC_DOM_VALUETYPE_TYPE_(PathArray,     SharedConstPathArray)
 // clang-format on
 #undef VGC_DOM_VALUETYPE_TYPE_
 
@@ -176,7 +225,7 @@ template<typename T, typename SFINAE = void>
 struct IsValidValueType : std::false_type {};
 
 template<typename T>
-struct IsValidValueType<T, core::MakeVoid<typename ValueTypeTraitsFromType<T>::Type>>
+struct IsValidValueType<T, core::RequiresValid<typename ValueTypeTraitsFromType<T>::Type>>
     : std::true_type {};
 
 template<typename T>
@@ -203,8 +252,8 @@ public:
         : var_(NoneValue{}) {
     }
 
-    /// Returns a const reference to an empty value. This is useful for error
-    /// handling in methods that must return a `Value` by const reference.
+    /// Returns a const reference to an empty value. This is useful for instance
+    /// for optional values or to simply express non-initialized or null.
     ///
     static const Value& none();
 
@@ -311,6 +360,12 @@ public:
         : var_(path) {
     }
 
+    /// Constructs a `Value` holding a `dom::NoneOr<dom::Path>`.
+    ///
+    Value(dom::NoneOr<dom::Path> noneOrPath)
+        : var_(std::move(noneOrPath)) {
+    }
+
     /// Constructs a `Value` holding a shared const array of `dom::Path`.
     ///
     Value(dom::PathArray pathArray)
@@ -339,6 +394,10 @@ public:
 
     bool hasValue() const {
         return type() > ValueType::Invalid;
+    }
+
+    bool isNone() const {
+        return type() == ValueType::None;
     }
 
     /// Stops holding any Value. This makes this `Value` empty.
@@ -522,6 +581,19 @@ public:
         var_ = std::move(path);
     }
 
+    /// Returns the `dom::NoneOr<dom::Path>` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::NoneOrPath`.
+    ///
+    const dom::NoneOr<dom::Path>& getNoneOrPath() const {
+        return std::get<dom::NoneOr<dom::Path>>(var_);
+    }
+
+    /// Sets this `Value` to the given `path`.
+    ///
+    void set(dom::NoneOr<dom::Path> noneOrPath) {
+        var_ = std::move(noneOrPath);
+    }
+
     /// Returns the `dom::SharedConstPathArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::PathArray`.
     ///
@@ -647,7 +719,61 @@ void write(OStream& out, const Value& v) {
 VGC_DOM_API
 Value parseValue(const std::string& s, ValueType t);
 
+template<typename OStream, typename T>
+void write(OStream& out, const NoneOr<T>& v) {
+    fmt::memory_buffer b;
+    if (v.has_value()) {
+        write(out, v.value());
+    }
+    else {
+        write(out, "none");
+    }
+}
+
+template<typename IStream, typename T>
+void readTo(NoneOr<T>& v, IStream& in) {
+    // check for "none"
+    char c;
+    if (in.get(c) && c == 'n') {
+        if (in.get(c) && c == 'o') {
+            if (in.get(c) && c == 'n') {
+                if (in.get(c) && c == 'e') {
+                    if (in.get(c)) {
+                        if (core::isWhitespace(c)) {
+                            v.reset();
+                            return;
+                        }
+                        in.unget();
+                    }
+                    else {
+                        v.reset();
+                        return;
+                    }
+                    in.unget();
+                }
+                in.unget();
+            }
+            in.unget();
+        }
+        in.unget();
+    }
+    readTo(v.emplace(), in);
+}
+
 } // namespace vgc::dom
+
+template<typename T>
+struct fmt::formatter<vgc::dom::NoneOr<T>> : fmt::formatter<T> {
+    template<typename FormatContext>
+    auto format(const vgc::dom::NoneOr<T>& v, FormatContext& ctx) -> decltype(ctx.out()) {
+        if (v.has_value()) {
+            return fmt::formatter<T>::format(v.value(), ctx);
+        }
+        else {
+            return fmt::format_to(ctx.out(), "none");
+        }
+    }
+};
 
 template<>
 struct fmt::formatter<vgc::dom::NoneValue> : fmt::formatter<std::string_view> {
