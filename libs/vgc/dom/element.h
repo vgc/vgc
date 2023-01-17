@@ -292,7 +292,8 @@ public:
     ///
     Element* parentElement() const {
         Node* const p = parent();
-        return (p && p->nodeType() == NodeType::Element) ? static_cast<Element*>(p) : nullptr;
+        return (p && p->nodeType() == NodeType::Element) ? static_cast<Element*>(p)
+                                                         : nullptr;
     }
 
     /// Returns the first child `Element` of this `Element`.

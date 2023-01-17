@@ -131,6 +131,11 @@ private:
 public:
     using Base::Base;
 
+    template<typename U = T>
+    explicit constexpr NoneOr(U&& value)
+        : Base(std::forward<U>(value)) {
+    }
+
     using A = NoneOr;
 
     template<typename U>
