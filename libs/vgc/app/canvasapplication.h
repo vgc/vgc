@@ -30,6 +30,7 @@
 #include <vgc/ui/menu.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
+#include <vgc/workspace/workspace.h>
 
 namespace vgc::app {
 
@@ -105,24 +106,33 @@ public:
         return mainWidget()->panelArea();
     }
 
+    /// Returns the active document.
+    ///
+    dom::Document* activeDocument() const {
+        return document_;
+    }
+
 private:
     std::string applicationName_;
     MainWindowPtr window_;
-    dom::DocumentPtr document_;
+    dom::Document* document_;
+    core::Id lastSavedDocumentVersionId = {};
+    QString filename_;
+    workspace::WorkspacePtr workspace_;
     core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
     ui::ColorPalette* palette_ = nullptr;
     ui::Canvas* canvas_ = nullptr;
 
-    void createDocument_();
     void createWidgets_();
     void createActions_(ui::Widget* parent);
     void createMenus_();
+
+    void openDocument_(QString filename);
 
     ui::Action* actionNew_ = nullptr;
     VGC_SLOT(onActionNewSlot_, onActionNew_)
     void onActionNew_();
 
-    QString filename_;
     ui::Action* actionOpen_ = nullptr;
     VGC_SLOT(onActionOpenSlot_, onActionOpen_)
     void onActionOpen_();
@@ -157,7 +167,7 @@ private:
     void onColorChanged_();
     VGC_SLOT(onColorChangedSlot_, onColorChanged_)
 
-    void createCanvas_(ui::Widget* parent, dom::Document* document);
+    void createCanvas_(ui::Widget* parent, workspace::Workspace* workspace);
 };
 
 } // namespace vgc::app

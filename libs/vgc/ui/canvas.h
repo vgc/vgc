@@ -23,13 +23,12 @@
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/core/performancelog.h>
-#include <vgc/dom/document.h>
-#include <vgc/dom/element.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
+#include <vgc/workspace/workspace.h>
 
 namespace vgc::ui {
 
@@ -84,17 +83,17 @@ protected:
     /// This is an implementation details. Please use
     /// Canvas::create() instead.
     ///
-    Canvas(dom::Document* document);
+    Canvas(workspace::Workspace* workspace);
 
 public:
     /// Creates a Canvas.
     ///
-    static CanvasPtr create(dom::Document* document);
+    static CanvasPtr create(workspace::Workspace* workspace);
 
-    /// Returns the observed document.
+    /// Returns the observed document workspace.
     ///
-    dom::Document* document() const {
-        return document_;
+    workspace::Workspace* workspace() const {
+        return workspace_;
     }
 
     // XXX temporary. Will be deferred to separate class.
@@ -104,9 +103,9 @@ public:
 
     SelectionList getSelectableItemsAt(const geometry::Vec2f& position);
 
-    /// Sets the observed document.
+    /// Sets the observed document workspace.
     ///
-    void setDocument(dom::Document* document);
+    void setWorkspace(workspace::Workspace* workspace);
 
     /// Creates and manages new performance logs as children of the given \p
     /// parent.
@@ -137,7 +136,10 @@ protected:
     void onPaintDestroy(graphics::Engine* engine) override;
     //
 
-private:
+    VGC_SLOT(onWorkspaceChanged, onWorkspaceChanged_)
+    VGC_SLOT(onDocumentChanged, onDocumentChanged_)
+
+protected:
     // Flags
     bool reload_ = true;
 
@@ -148,10 +150,9 @@ private:
     geometry::Camera2d camera_;
 
     // Scene
-    dom::Document* document_;
-    core::UndoGroup* drawCurveUndoGroup_ = nullptr;
-    core::ConnectionHandle documentChangedConnectionHandle_;
+    workspace::Workspace* workspace_;
 
+    void onWorkspaceChanged_();
     void onDocumentChanged_(const dom::Diff& diff);
 
     // Moving camera
@@ -162,8 +163,14 @@ private:
     geometry::Vec2d mousePosAtPress_ = {};
     geometry::Camera2d cameraAtPress_;
 
-    // Graphics resources
+    // Curve draw
+    core::UndoGroup* drawCurveUndoGroup_ = nullptr;
+    dom::Element* endVertex_ = nullptr;
+    dom::Element* edge_ = nullptr;
+    geometry::Vec2dArray points_;
+    core::DoubleArray widths_;
 
+    // Graphics resources
     // VgcGraph
     //   -> hit tests (tesselation as needed)
     //   -> render 2d (tesselation as needed)
@@ -174,63 +181,7 @@ private:
     //   -> components that have no 1-to-1 relationship with an
     //      element should be recognizable as such.
 
-    struct Component {};
-
-    // VertexComponent
-    // EdgeComponent
-    // CellComponent
-
-    struct ComponentGeometry {
-        dom::Element* element;
-        core::Array<Component> components;
-    };
-
-    // Component (drawn and selectable..)
-
-    struct CurveGraphics {
-        explicit CurveGraphics(dom::Element* element)
-            : element(element) {
-        }
-
-        // Stroke
-        graphics::GeometryViewPtr strokeGeometry_;
-
-        // Fill
-        //graphics::GeometryViewPtr fillGeometry_;
-
-        // Control Points
-        graphics::GeometryViewPtr pointsGeometry_;
-        Int numPoints = 0;
-
-        // Line
-        graphics::GeometryViewPtr dispLineGeometry_;
-
-        bool inited_ = false;
-        dom::Element* element;
-    };
-
-    using CurveGraphicsIterator = std::list<CurveGraphics>::iterator;
-
-    std::list<CurveGraphics> curveGraphics_; // in draw order
-    std::list<CurveGraphics> removedCurveGraphics_;
-    std::map<dom::Element*, CurveGraphicsIterator> curveGraphicsMap_;
     graphics::GeometryViewPtr bgGeometry_;
-
-    struct unwrapped_less {
-        template<typename It>
-        bool operator()(const It& lh, const It& rh) const {
-            return &*lh < &*rh;
-        }
-    };
-
-    std::set<CurveGraphicsIterator, unwrapped_less> toUpdate_;
-    //bool needsSort_ = false;
-
-    void clearGraphics_();
-    void updateCurveGraphics_(graphics::Engine* engine);
-    CurveGraphicsIterator appendCurveGraphics_(dom::Element* element);
-    void updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r);
-    static void destroyCurveGraphics_(CurveGraphics& r);
 
     // Make sure to disallow concurrent usage of the mouse and the tablet to
     // avoid conflicts. This also acts as a work around the following Qt bugs:
@@ -247,36 +198,36 @@ private:
     // 2. We ignore mouseReleaseEvent() if the value of event->button() is
     //    different from its value in mousePressEvent().
     //
-    bool mousePressed_; // whether there's been a mouse press event
+    bool mousePressed_ = false; // whether there's been a mouse press event
     // with no matching mouse release event.
-    bool tabletPressed_; // whether there's been a tablet press event
+    bool tabletPressed_ = false; // whether there's been a tablet press event
     // with no matching tablet release event.
-    MouseButton mouseButtonAtPress_; // value of event->button at press
+    MouseButton mouseButtonAtPress_ =
+        ui::MouseButton::None; // value of event->button at press
 
     // Polygon mode. This is selected with the n/t/f keys.
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
-    int polygonMode_; // 0: fill; 1: lines (i.e., not exactly like OpenGL)
+    int polygonMode_ = 0; // 0: fill; 1: lines (i.e., not exactly like OpenGL)
     graphics::RasterizerStatePtr fillRS_;
     graphics::RasterizerStatePtr wireframeRS_;
 
     // Show control points. This is toggled with the "p" key.
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
-    bool showControlPoints_;
+    bool showControlPoints_ = false;
 
     // Tesselation mode. This is selected with the i/u/a keys.
     // XXX This is a temporary quick method to switch between
     // tesselation modes. A more engineered method will come later.
-    int requestedTesselationMode_; // 0: none; 1: uniform; 2: adaptive
-    int currentTesselationMode_;
+    int requestedTesselationMode_ = 2; // 0: none; 1: uniform; 2: adaptive
 
     // XXX This is a temporary test, will be deferred to separate classes. Here
     // is an example of how responsibilities could be separated:
     //
     // Widget: Creates an OpenGL context, receive graphical user input.
-    // Renderer: Renders the document to the given OpenGL context.
-    // Controller: Modifies the document based on user input (could be in the
+    // Renderer: Renders the workspace to the given OpenGL context.
+    // Controller: Modifies the workspace based on user input (could be in the
     // form of "Action" instances).
     //
     void startCurve_(const geometry::Vec2d& p, double width = 1.0);

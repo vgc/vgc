@@ -1,10 +1,12 @@
 vgc_add_library(ui
     THIRD_DEPENDENCIES
         ${VGC_QT_GUI}
+        ${VGC_QT_OPENGL}
 
     VGC_DEPENDENCIES
         graphics
         dom
+        workspace
 
     HEADER_FILES
         action.h
