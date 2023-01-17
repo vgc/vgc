@@ -262,28 +262,6 @@ public:
     ///
     static const Value& invalid();
 
-    /// Constructs a `Value` holding a `T` if the optional has a value or
-    /// a `NoneValue` otherwise.
-    ///
-    //template<typename T>
-    //Value(const std::optional<T>& valueOrNone)
-    //    : var_(NoneValue{}) {
-    //
-    //    if (valueOrNone.has_value()) {
-    //        var_ = valueOrNone.value();
-    //    }
-    //}
-
-    /// \overload
-    //template<typename T>
-    //Value(std::optional<T>&& valueOrNone)
-    //    : var_(NoneValue{}) {
-    //
-    //    if (valueOrNone.has_value()) {
-    //        var_ = std::move(valueOrNone).value();
-    //    }
-    //}
-
     /// Constructs a `Value` holding a `std::string`.
     ///
     Value(std::string_view string)
