@@ -115,17 +115,15 @@ private:
         size_t level,
         size_t maxLevel = degree,
         VGC_REQUIRES(level >= 2 && level <= degree && maxLevel <= degree)>
-    void computeRec(const Scalar u /*, const Scalar oneMinusU*/) {
+    void computeRec(const Scalar u) {
         constexpr size_t a = levelOffset_<level - 1>;
         constexpr size_t b = levelOffset_<level>;
         for (size_t i = 0; i < levelSize_<level>; ++i) {
-            // for middle values, instead of doing `(1 - u)*v` we could reuse `u*v` and do `1 - u*v`.
-            // it is even simpler for u = 0.5
-            //values_[b + i] = oneMinusU * values_[a + i] + u * values_[a + i + 1];
+            // note: only uses 1 multiplication
             values_[b + i] = values_[a + i] + u * (values_[a + i + 1] - values_[a + i]);
         }
         if constexpr (level < maxLevel) {
-            computeRec<level + 1>(u /*, oneMinusU*/);
+            computeRec<level + 1>(u);
         }
     }
 
