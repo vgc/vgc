@@ -347,7 +347,6 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
     // XXX move this logic to dom::Path
 
     VGC_CORE_ASSERT(positions.size() == widths.size());
-    Int nControlPoints = positions.length();
     geometry::Curve curve;
     curve.setColor(color);
     curve.setPositionData(&positions);
