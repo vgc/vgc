@@ -39,13 +39,13 @@ public:
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     /// Creates an uninitialized Color.
     ///
-    Color(core::NoInit) {
+    Color(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
     /// Creates a Color initialized to black.
     ///
-    Color()
+    constexpr Color() noexcept
         : data_{0.0f, 0.0f, 0.0f, 1.0f} {
     }
 
@@ -65,13 +65,13 @@ public:
     /// Creates a Color initialized with the given r, g, b in [0, 1]. The alpha
     /// channel is set to 1.0.
     ///
-    Color(float r, float g, float b)
+    constexpr Color(float r, float g, float b) noexcept
         : data_{r, g, b, 1.0f} {
     }
 
     /// Creates a Color initialized with the given r, g, b, a in [0, 1].
     ///
-    Color(float r, float g, float b, float a)
+    constexpr Color(float r, float g, float b, float a) noexcept
         : data_{r, g, b, a} {
     }
 

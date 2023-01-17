@@ -62,6 +62,18 @@ struct MakeInt_ {
 
 } // namespace detail
 
+template<typename... Ts>
+using DependentTrue = std::true_type;
+
+template<typename T>
+inline constexpr bool dependentTrue = DependentTrue<T>::value;
+
+template<typename... Ts>
+using DependentFalse = std::false_type;
+
+template<typename T>
+inline constexpr bool dependentFalse = DependentFalse<T>::value;
+
 /// Same as `std::void_t` without the bugs in some versions of Clang.
 ///
 template<typename... Ts>
@@ -220,16 +232,17 @@ using Requires = std::enable_if_t<B>;
 /// ```
 ///
 #define VGC_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int> = 0
+#define VGC_FORWARDED_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int>
 
-  /// Defines SFINAE-based requirements for function template overloads.
-  ///
-  /// ```cpp
-  /// template<typename T, VGC_REQUIRES_VALID(T::iterator, T::value_type)>
-  /// void foo(T x) {
-  ///     // function overload only defined for types with iterators
-  /// }
-  /// ```
-  ///
+/// Defines SFINAE-based requirements for function template overloads.
+///
+/// ```cpp
+/// template<typename T, VGC_REQUIRES_VALID(T::iterator, T::value_type)>
+/// void foo(T x) {
+///     // function overload only defined for types with iterators
+/// }
+/// ```
+///
 #define VGC_REQUIRES_VALID(...) ::vgc::core::MakeInt<__VA_ARGS__> = 0
 
 /// If any of the given template arguments are ill-formed, then `RequiresValid<...>`
@@ -306,6 +319,38 @@ struct IsAmong : std::disjunction<std::is_same<T, Us>...> {};
 ///
 template<typename T, typename... Us>
 inline constexpr bool isAmong = IsAmong<T, Us...>::value;
+
+namespace detail {
+
+template<typename T>
+auto testIsComplete_(int) -> std::bool_constant<sizeof(T) == sizeof(T)>;
+template<typename T>
+auto testIsComplete_(...) -> std::false_type;
+template<typename T, typename Tag>
+struct IsComplete_ : decltype(testIsComplete_<T>(0)) {};
+
+} // namespace detail
+
+/// Statically asserts that the given `type` is complete. If it is not complete,
+/// a compile-time error is issued with `message` as diagnostic message.
+///
+/// ```cpp
+/// struct A;
+/// //VGC_ASSERT_TYPE_IS_COMPLETE(A, "A must be complete"); // assert fails
+/// struct A {};
+/// //VGC_ASSERT_TYPE_IS_COMPLETE(A, "A must be complete"); // assert still fails
+/// struct B {};
+/// VGC_ASSERT_TYPE_IS_COMPLETE(B, "B must be complete"); // assert passes
+/// ```
+///
+/// \sa `VGC_ASSERT_TYPE_IS_COMPLETE()`
+///
+#define VGC_ASSERT_TYPE_IS_COMPLETE(type, message)                                       \
+    do {                                                                                 \
+        struct Tag;                                                                      \
+        static_assert(::vgc::core::detail::IsComplete_<type, Tag>::value, message);      \
+    } while (0)
+    
 
 namespace detail {
 

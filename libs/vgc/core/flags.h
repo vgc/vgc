@@ -33,6 +33,16 @@ public:
         : v_(v) {
     }
 
+    constexpr Flags(std::initializer_list<Enum> values) noexcept
+        : v_() {
+
+        UnderlyingType x = {};
+        for (const Enum& value : values) {
+            x |= ::vgc::core::toUnderlying(value);
+        }
+        v_ = static_cast<Enum>(x);
+    }
+
     constexpr UnderlyingType toUnderlying() const noexcept {
         return ::vgc::core::toUnderlying(v_);
     }
@@ -97,15 +107,15 @@ public:
         return *this;
     }
 
-    friend inline constexpr Flags operator|(Flags a, Flags b) noexcept {
+    friend constexpr Flags operator|(Flags a, Flags b) noexcept {
         return Flags(static_cast<Enum>(a.toUnderlying() | b.toUnderlying()));
     }
 
-    friend inline constexpr Flags operator&(Flags a, Flags b) noexcept {
+    friend constexpr Flags operator&(Flags a, Flags b) noexcept {
         return Flags(static_cast<Enum>(a.toUnderlying() & b.toUnderlying()));
     }
 
-    friend inline constexpr Flags operator^(Flags a, Flags b) noexcept {
+    friend constexpr Flags operator^(Flags a, Flags b) noexcept {
         return Flags(static_cast<Enum>(a.toUnderlying() ^ b.toUnderlying()));
     }
 
@@ -128,11 +138,11 @@ public:
         return *this;
     }
 
-    friend inline constexpr bool operator==(Flags a, Flags b) noexcept {
+    friend constexpr bool operator==(Flags a, Flags b) noexcept {
         return a.toUnderlying() == b.toUnderlying();
     }
 
-    friend inline constexpr bool operator!=(Flags a, Flags b) noexcept {
+    friend constexpr bool operator!=(Flags a, Flags b) noexcept {
         return a.toUnderlying() != b.toUnderlying();
     }
 

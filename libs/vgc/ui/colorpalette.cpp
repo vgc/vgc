@@ -1744,8 +1744,6 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
     //   half-disk      rectangle        half-disk
     //
 
-    const core::Color borderColor(255, 255, 255); // temp
-
     const Metrics& m = metrics_;
     const geometry::Rect2f& rect = m.hueRect;
     float height = rect.height();
