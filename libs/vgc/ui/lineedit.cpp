@@ -116,7 +116,7 @@ void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(triangles_, -1, 0);
+    engine->draw(triangles_);
 }
 
 void LineEdit::onPaintDestroy(graphics::Engine* engine) {

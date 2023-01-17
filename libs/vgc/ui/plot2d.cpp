@@ -370,12 +370,12 @@ void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     }
 
     engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(plotGeom_, -1, 0);
+    engine->draw(plotGeom_);
     if (areLeftLabelsVisible_) {
-        engine->draw(plotTextGeom_, -1, 0);
+        engine->draw(plotTextGeom_);
     }
-    engine->draw(hintBgGeom_, -1, 0);
-    engine->draw(hintTextGeom_, -1, 0);
+    engine->draw(hintBgGeom_);
+    engine->draw(hintTextGeom_);
 }
 
 void Plot2d::onPaintDestroy(graphics::Engine* engine) {

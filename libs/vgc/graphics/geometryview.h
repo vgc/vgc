@@ -235,6 +235,12 @@ public:
         return info_.vertexBuffers()[0]->lengthInBytes() / elementSize;
     }
 
+    Int numInstances() const {
+        Int elementSize = info_.strides()[1];
+        return elementSize > 0 ? info_.vertexBuffers()[1]->lengthInBytes() / elementSize
+                               : 0;
+    }
+
 protected:
     void releaseSubResources_() override {
         for (BufferPtr& vb : info_.vertexBuffers_) {

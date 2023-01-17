@@ -859,24 +859,43 @@ void Engine::onWindowResize(const SwapChainPtr& swapChain, Int width, Int height
         swapChain.get(), core::int_cast<UInt32>(width), core::int_cast<UInt32>(height));
 }
 
-void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices, Int numInstances) {
+void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices) {
     if (!checkResourceIsValid_(geometryView)) {
         return;
     }
     if (numIndices == 0) {
         return;
     }
-    if (numInstances < 0) {
-        VGC_WARNING(
-            LogVgcGraphics, "Negative numInstances ({}), skipping draw.", numInstances);
+    syncState_();
+    Int n = (numIndices >= 0) ? numIndices : geometryView->numVertices();
+    UInt un = core::int_cast<UInt>(n);
+
+    queueLambdaCommandWithParameters_<GeometryView*>(
+        "draw",
+        [=](Engine* engine, GeometryView* gv) { engine->draw_(gv, un, 0); },
+        geometryView.get());
+}
+
+void Engine::drawInstanced(
+    const GeometryViewPtr& geometryView,
+    Int numIndices,
+    Int numInstances) {
+
+    if (!checkResourceIsValid_(geometryView)) {
+        return;
+    }
+    if (numIndices == 0) {
         return;
     }
     syncState_();
     Int n = (numIndices >= 0) ? numIndices : geometryView->numVertices();
     UInt un = core::int_cast<UInt>(n);
+    Int k = (numInstances >= 0) ? numInstances : geometryView->numInstances();
+    UInt uk = core::int_cast<UInt>(k);
+
     queueLambdaCommandWithParameters_<GeometryView*>(
         "draw",
-        [=](Engine* engine, GeometryView* gv) { engine->draw_(gv, un, numInstances); },
+        [=](Engine* engine, GeometryView* gv) { engine->draw_(gv, un, uk); },
         geometryView.get());
 }
 
