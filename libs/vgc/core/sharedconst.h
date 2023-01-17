@@ -74,6 +74,12 @@ public:
         return *value_;
     }
 
+    /// Returns the underlying shared pointer.
+    ///
+    const std::shared_ptr<const T>& getShared() const noexcept {
+        return value_;
+    }
+
     /// Returns a mutable copy of the shared value.
     ///
     T editableCopy() const {

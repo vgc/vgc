@@ -1628,7 +1628,7 @@ public:
     }
 
     /// Removes the first element that compares equal to `value`, shifting all
-    /// subsequent elements one index to the left.
+    /// subsequent elements one index to the left. Returns whether a removal happens.
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {5, 12, 11, 12};
@@ -1637,11 +1637,13 @@ public:
     ///
     /// \sa removeAll(), removeIf().
     ///
-    void removeOne(const T& value) {
+    bool removeOne(const T& value) {
         auto it = std::find(begin(), end(), value);
         if (it != end()) {
             erase_(unwrapIterator(it));
+            return true;
         }
+        return false;
     }
 
     /// Removes all elements that compares equal to `value`, shifting all
