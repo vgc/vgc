@@ -388,7 +388,7 @@ struct IterativeSamplingSample {
         u = u_;
         cubicBezierPosAndDerCasteljau<Vec2d>(controlPoints, u_, pos, tangent);
         if (!isWidthUniform) {
-            cubicBezierPosAndDerCasteljau(radii, u, radius, radiusDer);
+            cubicBezierPosAndDerCasteljau<double>(radii, u, radius, radiusDer);
         }
         else {
             radius = radii[0];

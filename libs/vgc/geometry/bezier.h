@@ -234,7 +234,7 @@ void cubicBezierPosAndDer(
     Scalar u3 = u2 * u;
     Scalar v3 = v2 * v;
 
-    pos =     v3      * p0
+    pos =     v3        * p0
           + 3 * v2 * u  * p1
           + 3 * v  * u2 * p2
           +          u3 * p3;
