@@ -217,7 +217,7 @@ public:
     friend void write(OStream& out, const Path& path) {
         fmt::memory_buffer b;
         path.writeTo_(b);
-        write(out, b.begin(), static_cast<std::streamsize>(b.size()));
+        write(out, std::string_view(b.begin(), static_cast<std::streamsize>(b.size())));
     }
 
 private:
@@ -239,9 +239,15 @@ using PathArray = core::Array<Path>;
 ///
 using SharedConstPathArray = core::SharedConstArray<Path>;
 
-constexpr bool isValidIdChar(char c) {
+constexpr bool isValidIdFirstChar(char c) {
     constexpr std::string_view specials = "_-";
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+           || specials.find(c) != std::string::npos;
+}
+
+constexpr bool isValidIdChar(char c) {
+    constexpr std::string_view specials = "_-";
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9')
            || specials.find(c) != std::string::npos;
 }
 
@@ -254,12 +260,12 @@ void readTo(Path& v, IStream& in) {
     char c = core::readExpectedCharacter(in, {'#', '@'});
     if (c == '#') {
         std::string s;
-        bool allowed = true;
         // appends '#' first
+        s.push_back(c);
+        bool allowed = in.get(c) && isValidIdFirstChar(c);
         while (allowed) {
             s.push_back(c);
-            c = core::readCharacter(in);
-            allowed = isValidIdChar(c);
+            allowed = in.get(c) && isValidIdChar(c);
         }
         v = Path(s);
         return;

@@ -18,12 +18,20 @@
 #define VGC_DOM_SCHEMA_H
 
 #include <map>
+#include <optional>
+
 #include <vgc/core/stringid.h>
 #include <vgc/core/templateutil.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/value.h>
 
 namespace vgc::dom {
+
+/// \class vgc::dom::Optional
+/// \brief Used to define an optional attribute.
+///
+template<typename T>
+class Optional {};
 
 /// \class vgc::dom::AttributeSpec
 /// \brief Specifies the name and default value of a built-in attribute.
@@ -42,7 +50,21 @@ public:
     template<typename T, VGC_REQUIRES(dom::isCompatibleValueType<T>)>
     AttributeSpec(std::string_view name, const T& defaultValue)
         : name_(core::StringId(name))
-        , defaultValue_(defaultValue) {
+        , defaultValue_(defaultValue)
+        , valueType_(ValueType::Invalid) {
+
+        valueType_ = defaultValue_.type();
+    }
+
+    /// Creates a built-in attribute.
+    ///
+    template<typename T, VGC_REQUIRES(dom::isCompatibleValueType<T>)>
+    AttributeSpec(std::string_view name, const Optional<T>& /*optionalValue*/)
+        : name_(core::StringId(name))
+        , defaultValue_(Value::none())
+        , valueType_(ValueType::Invalid) {
+
+        valueType_ = Value(T()).type();
     }
 
     /// Returns the name of this built-in attribute.
@@ -60,12 +82,13 @@ public:
     /// Returns the ValueType of this built-in attribute.
     ///
     ValueType valueType() const {
-        return defaultValue_.type();
+        return valueType_;
     }
 
 private:
     core::StringId name_;
     Value defaultValue_;
+    ValueType valueType_;
 };
 
 /// \class vgc::dom::ElementSpec

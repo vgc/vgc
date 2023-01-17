@@ -27,23 +27,27 @@ namespace vgc::dom {
 
 Element::Element(Document* document, core::StringId tagName)
     : Node(document, NodeType::Element)
-    , tagName_(tagName) {
+    , tagName_(tagName)
+    , internalId_(core::genId()) {
+
+    document->elementByInternalIdMap_[internalId_] = this;
 }
 
 void Element::onDestroyed() {
-    if (uniqueId_ != core::StringId()) {
-        document()->elementByIdMap_.erase(uniqueId_);
-        uniqueId_ = core::StringId();
+    Document* doc = document();
+    if (id_ != core::StringId()) {
+        doc->elementByIdMap_.erase(id_);
+        id_ = core::StringId();
     }
+    doc->elementByInternalIdMap_.erase(internalId_);
     SuperClass::onDestroyed();
 }
 
 /* static */
 Element* Element::create_(Node* parent, core::StringId tagName) {
-    Document* document = parent->document();
-    Element* e = new Element(document, tagName);
-    core::History::do_<CreateElementOperation>(
-        parent->document()->history(), e, parent, nullptr);
+    Document* doc = parent->document();
+    Element* e = new Element(doc, tagName);
+    core::History::do_<CreateElementOperation>(doc->history(), e, parent, nullptr);
     return e;
 }
 
@@ -62,24 +66,25 @@ Element* Element::create(Element* parent, core::StringId tagName) {
 }
 
 core::StringId Element::getOrCreateId() const {
-    if (uniqueId_ == core::StringId()) {
+    if (id_ == core::StringId()) {
         // create a new id !
-        const ElementSpec* es = schema().findElementSpec(tagName_);
+        const ElementSpec* elementSpec = schema().findElementSpec(tagName_);
         core::StringId prefix = tagName_;
-        if (es && es->defaultIdPrefix() != core::StringId()) {
-            prefix = es->defaultIdPrefix();
+        if (elementSpec && elementSpec->defaultIdPrefix() != core::StringId()) {
+            prefix = elementSpec->defaultIdPrefix();
         }
         auto& elementByIdMap = document()->elementByIdMap_;
         for (Int i = 0; i < core::IntMax; ++i) {
             core::StringId id = core::StringId(core::format("{}{}", prefix, i));
             if (elementByIdMap.find(id) == elementByIdMap.end()) {
                 Element* ncThis = const_cast<Element*>(this);
+                // This also registers id to the elementByIdMap.
                 ncThis->setAttribute(strings::id, id);
                 break;
             }
         }
     }
-    return uniqueId_;
+    return id_;
 }
 
 const Value& Element::getAuthoredAttribute(core::StringId name) const {
@@ -93,16 +98,66 @@ const Value& Element::getAttribute(core::StringId name) const {
     if (const AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         return authored->value();
     }
-    /*
-     * TODO: find default value from schema.
-    else if (const AttributeSpec* builtIn = findBuiltInAttribute_(name)) {
-        return builtIn->defaultValue();
-    }
-    */
     else {
-        VGC_WARNING(LogVgcDom, "Attribute is neither authored nor have a default value.");
-        return Value::invalid();
+        const ElementSpec* elementSpec = schema().findElementSpec(tagName_);
+        const AttributeSpec* attributeSpec = elementSpec->findAttributeSpec(name);
+
+        if (attributeSpec) {
+            return attributeSpec->defaultValue();
+        }
+        else {
+            VGC_WARNING(
+                LogVgcDom, "Attribute is neither authored nor have a default value.");
+            return Value::invalid();
+        }
     }
+}
+
+std::optional<Element*> Element::getElementFromPathAttribute(
+    core::StringId name,
+    core::StringId tagNameFilter) const {
+
+    const dom::Value& value = getAttribute(name);
+    const dom::Path* pathPtr = nullptr;
+
+    if (value.type() == dom::ValueType::NoneOrPath) {
+        const dom::NoneOr<dom::Path>& noneOrPath = value.getNoneOrPath();
+        if (!noneOrPath.has_value()) {
+            return std::nullopt;
+        }
+        pathPtr = &noneOrPath.value();
+    }
+    else {
+        // cast as path and throws if it is not one
+        pathPtr = &value.getPath();
+    }
+
+    // resolve path (relative to this element if the path is relative
+    dom::Element* element = elementFromPath(*pathPtr);
+
+    if (!element) {
+        VGC_WARNING(
+            LogVgcDom,
+            "Path in attribute `{}` of element `{}` could not be resolved ({}).",
+            name,
+            tagName(),
+            *pathPtr);
+        return nullptr;
+    }
+
+    if (!tagNameFilter.isEmpty() && element->tagName() != tagNameFilter) {
+        VGC_WARNING(
+            LogVgcDom,
+            "Path in attribute `{}` of element `{}` resolved to an element `{}` but `{}` "
+            "was expected.",
+            name,
+            tagName(),
+            element->tagName(),
+            tagNameFilter);
+        return nullptr;
+    }
+
+    return element;
 }
 
 void Element::setAttribute(core::StringId name, const Value& value) {
@@ -136,13 +191,13 @@ void Element::onAttributeChanged_(
     }
     else if (name == strings::id) {
         auto& elementByIdMap = document()->elementByIdMap_;
-        if (uniqueId_ != core::StringId()) {
-            elementByIdMap.erase(uniqueId_);
-            uniqueId_ = core::StringId();
+        if (id_ != core::StringId()) {
+            elementByIdMap.erase(id_);
+            id_ = core::StringId();
         }
         if (newValue.hasValue()) {
-            uniqueId_ = newValue.getStringId();
-            elementByIdMap[uniqueId_] = this;
+            id_ = newValue.getStringId();
+            elementByIdMap[id_] = this;
         }
     }
     attributeChanged().emit(name, oldValue, newValue);
