@@ -347,12 +347,10 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
     // XXX move this logic to dom::Path
 
     VGC_CORE_ASSERT(positions.size() == widths.size());
-    Int nControlPoints = positions.length();
     geometry::Curve curve;
     curve.setColor(color);
-    for (Int j = 0; j < nControlPoints; ++j) {
-        curve.addControlPoint(positions[j], widths[j]);
-    }
+    curve.setPositionData(&positions);
+    curve.setWidthData(&widths);
 
     geometry::Vec2fArray strokeVertices;
     core::Array<geometry::Vec4f> pointVertices;
@@ -422,7 +420,7 @@ void Canvas::updateCurveGraphics_(graphics::Engine* engine, CurveGraphics& r) {
         {0, 0,  pointHalfSize,  pointHalfSize} });
     // clang-format on
 
-    const geometry::Vec2dArray& d = curve.positionData();
+    const geometry::Vec2dArray& d = *curve.positionData();
     Int numPoints = core::int_cast<GLsizei>(d.length());
     const float dl = 1.f / numPoints;
     for (Int j = 0; j < numPoints; ++j) {

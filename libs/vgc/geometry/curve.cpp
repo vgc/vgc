@@ -73,59 +73,60 @@ void computeSample(
 
 Curve::Curve(Type type)
     : type_(type)
-    , positionData_()
     , widthVariability_(AttributeVariability::PerControlPoint)
-    , widthData_()
     , color_(core::colors::black) {
 }
 
 Curve::Curve(double constantWidth, Type type)
     : type_(type)
-    , positionData_()
     , widthVariability_(AttributeVariability::Constant)
-    , widthData_(1, constantWidth) // = vector containing a single element
+    , widthConstant_(constantWidth)
     , color_(core::colors::black) {
 }
 
 double Curve::width() const {
-    return core::average(widthData_);
+    return averageWidth_;
 }
 
-void Curve::addControlPoint(double x, double y) {
-
-    // Set position
-    positionData_.emplaceLast(x, y);
-
-    // Set width
-    if (widthVariability() == AttributeVariability::PerControlPoint) {
-        double width = 1.0;
-        if (widthData_.size() > 0) {
-            width = widthData_.last();
-        }
-        widthData_.append(width);
-    }
-}
-
-void Curve::addControlPoint(const Vec2d& position) {
-    addControlPoint(position.x(), position.y());
-}
-
-void Curve::addControlPoint(double x, double y, double width) {
-
-    // Set position
-    positionData_.emplaceLast(x, y);
-
-    // Set width
-    if (widthVariability() == AttributeVariability::PerControlPoint) {
-        widthData_.append(width);
-    }
-}
-
-void Curve::addControlPoint(const Vec2d& position, double width) {
-    addControlPoint(position.x(), position.y(), width);
-}
+//void Curve::addControlPoint(double x, double y) {
+//
+//    // Set position
+//    positionData_.emplaceLast(x, y);
+//
+//    // Set width
+//    if (widthVariability() == AttributeVariability::PerControlPoint) {
+//        double width = 1.0;
+//        if (widthData_.size() > 0) {
+//            width = widthData_.last();
+//        }
+//        widthData_.append(width);
+//    }
+//}
+//
+//void Curve::addControlPoint(const Vec2d& position) {
+//    addControlPoint(position.x(), position.y());
+//}
+//
+//void Curve::addControlPoint(double x, double y, double width) {
+//
+//    // Set position
+//    positionData_.emplaceLast(x, y);
+//
+//    // Set width
+//    if (widthVariability() == AttributeVariability::PerControlPoint) {
+//        widthData_.append(width);
+//    }
+//}
+//
+//void Curve::addControlPoint(const Vec2d& position, double width) {
+//    addControlPoint(position.x(), position.y(), width);
+//}
 
 Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const {
+
+    if (!positionData_) {
+        return {};
+    }
 
     // Result of this computation.
     // Final size = 2 * nSamples
@@ -155,11 +156,13 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     double cosMaxAngle = std::cos(maxAngle);
 
     // Early return if not enough segments
-    Int numCPs = numControlPoints();
+    Int numCPs = numPoints();
     Int numSegments = numCPs - 1;
     if (numSegments < 1) {
         return res;
     }
+
+    const Vec2dArray& positionData = *positionData_;
 
     // Iterate over all segments
     for (Int idx = 0; idx < numSegments; ++idx) {
@@ -172,7 +175,7 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
 
         // Get positions of Catmull-Rom control points
         std::array<Vec2d, 4> points = {
-            positionData_[i0], positionData_[i1], positionData_[i2], positionData_[i3]};
+            positionData[i0], positionData[i1], positionData[i2], positionData[i3]};
 
         // Convert positions from Catmull-Rom to Bézier
         Vec2d q0, q1, q2, q3;
@@ -188,15 +191,19 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
         // that width computation is a performance bottleneck.
         double w0, w1, w2, w3;
         if (widthVariability() == AttributeVariability::PerControlPoint) {
-            double v0 = widthData()[i0];
-            double v1 = widthData()[i1];
-            double v2 = widthData()[i2];
-            double v3 = widthData()[i3];
+            if (!widthData_) {
+                return {};
+            }
+            const core::DoubleArray& widthData = *widthData_;
+            double v0 = widthData[i0];
+            double v1 = widthData[i1];
+            double v2 = widthData[i2];
+            double v3 = widthData[i3];
             uniformCatmullRomToBezier(v0, v1, v2, v3, w0, w1, w2, w3);
         }
         else // if (widthVariability() == AttributeVariability::Constant)
         {
-            w0 = widthData()[0];
+            w0 = widthConstant_;
             w1 = w0;
             w2 = w0;
             w3 = w0;
@@ -356,8 +363,14 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     return res;
 }
 
+// ---------------------------------------------------------------------------------------
+// Simple adaptive sampling in model space. Adapts to the curve widths in the same pass.
+// To be deprecated in favor of the multi-view sampling further below.
+
 struct IterativeSamplingSample {
-    IterativeSamplingSample()
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    IterativeSamplingSample() noexcept
         : pos(core::noInit)
         , normal(core::noInit)
         , tangent(core::noInit)
@@ -366,6 +379,7 @@ struct IterativeSamplingSample {
         , rightPointNormal(core::noInit)
         , leftPointNormal(core::noInit) {
     }
+    VGC_WARNING_POP
 
     Vec2d pos;
     Vec2d normal;
@@ -483,28 +497,28 @@ bool sampleIter_(
 
     const Int idx = data.segmentIndex;
 
-    // Get indices of Catmull-Rom control points for current segment.
-    const Int numCPs = curve->numControlPoints();
+    // Get indices of interpolated points for current segment.
+    const Int numPts = curve->numPoints();
     Int i0 = (std::max)(idx - 1, Int(0));
     Int i1 = idx;
     Int i2 = idx + 1;
-    Int i3 = (std::min)(idx + 2, numCPs - 1);
+    Int i3 = (std::min)(idx + 2, numPts - 1);
 
     // Return now if idx is not a valid segment index.
-    if (i1 < 0 || i2 >= numCPs) {
+    if (i1 < 0 || i2 >= numPts) {
         return false;
     }
 
-    // Get positions of Catmull-Rom control points.
-    const Vec2dArray& positionData = curve->positionData();
+    // Get positions of interpolated points.
+    const Vec2dArray& positionData = *curve->positionData();
     std::array<Vec2d, 4> cps = {
         positionData[i0], positionData[i1], positionData[i2], positionData[i3]};
 
-    // Convert positions from Catmull-Rom to Bézier.
+    // Convert points to Bézier.
     uniformCatmullRomToBezierCappedInPlace(cps.data());
 
     // Convert widths from Catmull-Rom to Bézier if not uniform.
-    const core::DoubleArray& widthData = curve->widthData();
+    const core::DoubleArray& widthData = *curve->widthData();
     std::array<double, 4> radii = {
         widthData[i0] * 0.5,
         widthData[i1] * 0.5,
@@ -513,6 +527,7 @@ bool sampleIter_(
     const bool isWidthUniform =
         (curve->widthVariability() == Curve::AttributeVariability::Constant);
     if (!isWidthUniform) {
+        // XXX use something that does not overshoot
         uniformCatmullRomToBezierInPlace(radii.data());
     }
 
@@ -596,7 +611,7 @@ void Curve::sampleRange(
     Int start,
     Int end) const {
 
-    Int numSegs = (std::max)(Int(0), numControlPoints() - 1);
+    Int numSegs = (std::max)(Int(0), numPoints() - 1);
     if (start < 0) {
         start = (std::max)(Int(0), numSegs - start);
     }
@@ -617,6 +632,10 @@ void Curve::sampleRange(
     for (Int i = start; i < end; ++i) {
         sampleIter_(this, parameters, data, outAppend);
     }
+}
+
+void Curve::onWidthDataChanged_() {
+    // todo, compute max and average
 }
 
 } // namespace vgc::geometry
