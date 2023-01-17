@@ -414,7 +414,10 @@ public:
     void updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data);
 
     void draw(const GeometryViewPtr& geometry, Int numIndices = -1);
-    void drawInstanced(const GeometryViewPtr& geometry, Int numIndices = -1, Int numInstances = -1);
+    void drawInstanced(
+        const GeometryViewPtr& geometry,
+        Int numIndices = -1,
+        Int numInstances = -1);
 
     //void createTextAtlasResource();
 
