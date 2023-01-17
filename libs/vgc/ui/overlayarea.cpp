@@ -42,9 +42,17 @@ void OverlayArea::setAreaWidget(Widget* widget) {
 }
 
 void OverlayArea::addOverlayWidget(Widget* widget, OverlayResizePolicy resizePolicy) {
+
+    // move widget from area to overlay
+    if (widget == areaWidget_) {
+        areaWidget_ = nullptr;
+    }
+
+    // append in both lists
     addChild(widget);
     overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == widget; });
     overlays_.emplaceLast(widget, resizePolicy);
+
     switch (resizePolicy) {
     case OverlayResizePolicy::Stretch: {
         widget->updateGeometry(rect());
@@ -54,6 +62,7 @@ void OverlayArea::addOverlayWidget(Widget* widget, OverlayResizePolicy resizePol
     default:
         break;
     }
+
     requestRepaint();
 }
 
@@ -64,8 +73,9 @@ void OverlayArea::onResize() {
 void OverlayArea::onWidgetAdded(Widget* w, bool /*wasOnlyReordered*/) {
     // If area is no longer first, move to first.
     if (areaWidget_ && areaWidget_->previousSibling()) {
-        insertChild(firstChild(), w);
+        insertChild(firstChild(), areaWidget_);
     }
+
     if (w == areaWidget_) {
         requestGeometryUpdate();
     }
