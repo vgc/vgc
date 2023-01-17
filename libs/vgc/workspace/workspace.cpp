@@ -141,8 +141,8 @@ template<
     typename TreeLinksGetter = topology::detail::TreeLinksGetter<Node>>
 void visitDfs(
     Node* root,
-    std::function<bool(core::TypeIdentity<Node>*, Int)> preOrderFn,
-    std::function<void(core::TypeIdentity<Node>*, Int)> postOrderFn) {
+    const std::function<bool(core::TypeIdentity<Node>*, Int)>& preOrderFn,
+    const std::function<void(core::TypeIdentity<Node>*, Int)>& postOrderFn) {
 
     Int depth = 0;
     Node* node = root;
@@ -184,15 +184,15 @@ void visitDfs(
 
 } // namespace
 
-void Workspace::visitDfsPreOrder(std::function<void(Element*, Int)> preOrderFn) {
-    workspace::visitDfsPreOrder<Element>(vgcElement(), std::move(preOrderFn));
+void Workspace::visitDepthFirstPreOrder(
+    const std::function<void(Element*, Int)>& preOrderFn) {
+    workspace::visitDfsPreOrder<Element>(vgcElement(), preOrderFn);
 }
 
-void Workspace::visitDfs(
-    std::function<bool(Element*, Int)> preOrderFn,
-    std::function<void(Element*, Int)> postOrderFn) {
-    workspace::visitDfs<Element>(
-        vgcElement(), std::move(preOrderFn), std::move(postOrderFn));
+void Workspace::visitDepthFirst(
+    const std::function<bool(Element*, Int)>& preOrderFn,
+    const std::function<void(Element*, Int)>& postOrderFn) {
+    workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
 }
 
 Workspace::Workspace(dom::DocumentPtr document)
@@ -339,6 +339,30 @@ void Workspace::onVacDiff_(const topology::VacDiff& diff) {
     updateTreeAndDomFromVac_(diff);
 }
 
+void Workspace::removeElement(core::Id id) {
+    auto it = elements_.find(id);
+    if (it != elements_.end()) {
+        Element* element = it->second.get();
+        if (vgcElement_ == element) {
+            vgcElement_ = nullptr;
+        }
+        if (element->hasError()) {
+            elementsWithError_.removeOne(element);
+        }
+        if (element->hasPendingUpdate()) {
+            elementsToUpdateFromDom_.removeOne(element);
+        }
+        elements_.erase(it);
+    }
+}
+
+void Workspace::clearElements() {
+    elements_.clear();
+    vgcElement_ = nullptr;
+    elementsWithError_.clear();
+    elementsToUpdateFromDom_.clear();
+}
+
 Element* Workspace::createAppendElement_(dom::Element* domElement, Element* parent) {
     if (!domElement) {
         return nullptr;
@@ -382,31 +406,24 @@ bool Workspace::updateElementFromDom(Element* element) {
         VGC_ERROR(LogVgcWorkspace, "Cyclic update dependency detected.");
         return false;
     }
-    // if not already up-to-date
-    if (!element->isInSyncWithDom_
-        || element->error_ == ElementError::UnresolvedDependency) {
-
+    if (element->hasPendingUpdate_) {
         element->isBeingUpdated_ = true;
-        const ElementError result = element->updateFromDom_(this);
+        const ElementStatus oldStatus = element->status_;
+        const ElementStatus newStatus = element->updateFromDom_(this);
 
-        if (result != element->error_) {
-            if (element->error_ == ElementError::UnresolvedDependency) {
-                elementsWithDependencyErrors_.removeOne(element);
-            }
-            switch (result) {
-            case ElementError::UnresolvedDependency:
-                elementsWithDependencyErrors_.emplaceLast(element);
-                break;
-            case ElementError::InvalidAttribute:
-            case ElementError::None:
-                elementsOutOfSync_.removeOne(element);
-                break;
+        if (!newStatus) {
+            if (oldStatus == ElementStatus::Ok) {
+                elementsWithError_.emplaceLast(element);
             }
         }
+        else if (!oldStatus) {
+            elementsWithError_.removeOne(element);
+        }
 
-        element->error_ = result;
+        element->status_ = newStatus;
         element->isBeingUpdated_ = false;
-        element->isInSyncWithDom_ = true;
+        element->hasPendingUpdate_ = false;
+        elementsToUpdateFromDom_.removeOne(element);
     }
     return true;
 }
@@ -417,7 +434,7 @@ void Workspace::onVacNodeAboutToBeRemoved_(topology::VacNode* node) {
         Element* element = it->second.get();
         if (element->isVacElement()) {
             static_cast<VacElement*>(element)->vacNode_ = nullptr;
-            elementsOutOfSync_.emplaceLast(element);
+            elementsToUpdateFromDom_.emplaceLast(element);
         }
     }
 }
@@ -486,8 +503,7 @@ void Workspace::rebuildTreeFromDom_() {
     namespace ds = dom::strings;
 
     // reset tree
-    elements_.clear();
-    vgcElement_ = nullptr;
+    clearElements();
 
     // reset vac
     {
@@ -552,24 +568,6 @@ void Workspace::rebuildVacFromTree_() {
     lastSyncedVacVersion_ = -1;
 
     vgcElement_->vacNode_ = vac_->rootGroup();
-
-    // all workspace elements vac node pointers should be null
-    // thanks to `onVacNodeAboutToBeRemoved`
-
-    //detail::VacElementLists ce;
-    //fillVacElementListsUsingTagName_(vgcElement_, ce);
-    //
-    //for (Element* e : ce.groups) {
-    //    e->updateFromDom();
-    //}
-    //
-    //for (Element* e : ce.keyVertices) {
-    //    e->updateFromDom();
-    //}
-    //
-    //for (Element* e : ce.keyEdges) {
-    //    e->updateFromDom();
-    //}
 
     Element* root = vgcElement_;
     Element* element = root->firstChild();
@@ -705,8 +703,8 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         }
         // will be reordered afterwards
         Element* element = createAppendElement_(domElement, parent);
-        element->isInSyncWithDom_ = false;
-        elementsOutOfSync_.emplaceLast(element);
+        element->hasPendingUpdate_ = true;
+        elementsToUpdateFromDom_.emplaceLast(element);
         parentsToOrderSync.insert(parent);
     }
 
@@ -765,14 +763,15 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         }
     }
     else {
+        core::Array<Element*> toUpdate = elementsToUpdateFromDom_;
         for (const auto& it : diff.modifiedElements()) {
             Element* element = find(it.first);
-            if (element) {
-                element->isInSyncWithDom_ = false;
-                elementsOutOfSync_.emplaceLast(element);
+            if (element && !element->hasPendingUpdate_) {
+                element->hasPendingUpdate_ = true;
+                toUpdate.emplaceLast(element);
             }
         }
-        for (Element* element : elementsOutOfSync_) {
+        for (Element* element : toUpdate) {
             updateElementFromDom(element);
         }
     }
@@ -797,7 +796,7 @@ void Workspace::updateTreeAndDomFromVac_(const topology::VacDiff& /*diff*/) {
 }
 
 void Workspace::debugPrintTree_() {
-    visitDfsPreOrder([](Element* e, Int depth) {
+    visitDepthFirstPreOrder([](Element* e, Int depth) {
         VGC_DEBUG_TMP("{:>{}}<{} id=\"{}\">", "", depth * 2, e->tagName(), e->id());
     });
 }

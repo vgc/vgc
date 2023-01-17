@@ -34,7 +34,7 @@ geometry::Rect2d KeyEdge::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d::empty;
 }
 
-ElementError KeyEdge::updateFromDom_(Workspace* workspace) {
+ElementStatus KeyEdge::updateFromDom_(Workspace* workspace) {
     namespace ds = dom::strings;
     dom::Element* const domElement = this->domElement();
 
@@ -59,17 +59,17 @@ ElementError KeyEdge::updateFromDom_(Workspace* workspace) {
 
     if (ve0opt.has_value() != ve1opt.has_value()) {
         removeVacNode();
-        return ElementError::InvalidAttribute;
+        return ElementStatus::InvalidAttribute;
     }
 
     if (ve0opt.has_value() && !ve0) {
         removeVacNode();
-        return ElementError::UnresolvedDependency;
+        return ElementStatus::UnresolvedDependency;
     }
 
     if (ve1opt.has_value() && !ve1) {
         removeVacNode();
-        return ElementError::UnresolvedDependency;
+        return ElementStatus::UnresolvedDependency;
     }
 
     topology::KeyVertex* kv0 = nullptr;
@@ -85,7 +85,7 @@ ElementError KeyEdge::updateFromDom_(Workspace* workspace) {
         }
         if (ve0->hasError() || !kv0) {
             removeVacNode();
-            return ElementError::ErrorInDependency;
+            return ElementStatus::ErrorInDependency;
         }
     }
     if (ve1) {
@@ -96,7 +96,7 @@ ElementError KeyEdge::updateFromDom_(Workspace* workspace) {
         }
         if (ve1->hasError() || !kv0) {
             removeVacNode();
-            return ElementError::ErrorInDependency;
+            return ElementStatus::ErrorInDependency;
         }
     }
     if (parentElement) {
@@ -110,7 +110,7 @@ ElementError KeyEdge::updateFromDom_(Workspace* workspace) {
 
     if (!parentGroup) {
         removeVacNode();
-        return ElementError::ErrorInParent;
+        return ElementStatus::ErrorInParent;
     }
 
     topology::KeyEdge* ke = nullptr;
@@ -130,14 +130,13 @@ ElementError KeyEdge::updateFromDom_(Workspace* workspace) {
         }
     }
     else {
+        const core::Id id = domElement->internalId();
         if (kv0 && kv1) {
-            ke = topology::ops::createKeyEdge(
-                domElement->internalId(), parentGroup, kv0, kv1);
+            ke = topology::ops::createKeyEdge(id, parentGroup, kv0, kv1);
         }
         else {
             // XXX warning if kv0 || kv1 ?
-            ke =
-                topology::ops::createKeyClosedEdge(domElement->internalId(), parentGroup);
+            ke = topology::ops::createKeyClosedEdge(id, parentGroup);
         }
         vacNode_ = ke;
     }
@@ -159,10 +158,10 @@ ElementError KeyEdge::updateFromDom_(Workspace* workspace) {
         //     maybe we could add two init functions to workspace::Element
         //     one for intrinsic data, one for dependent data.
 
-        return ElementError::None;
+        return ElementStatus::Ok;
     }
 
-    return ElementError::InvalidAttribute;
+    return ElementStatus::InvalidAttribute;
 }
 
 void KeyEdge::preparePaint_(core::AnimTime /*t*/, PaintOptions /*flags*/) {
@@ -187,7 +186,7 @@ void KeyEdge::paint_(graphics::Engine* engine, core::AnimTime /*t*/, PaintOption
     // XXX todo: reuse geometry objects, create buffers separately (attributes waiting in EdgeGraphics).
 
     if (flags.hasAny(strokeOptions)
-        || !flags.has(PaintOption::Outline) && !cachedGraphics_.strokeGeometry_) {
+        || (!flags.has(PaintOption::Outline) && !cachedGraphics_.strokeGeometry_)) {
         cachedGraphics_.strokeGeometry_ =
             engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
 

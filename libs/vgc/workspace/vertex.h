@@ -66,7 +66,7 @@ public:
     geometry::Rect2d boundingBox(core::AnimTime t) const override;
 
 protected:
-    ElementError updateFromDom_(Workspace* workspace) override;
+    ElementStatus updateFromDom_(Workspace* workspace) override;
 
     void paint_(
         graphics::Engine* engine,
@@ -96,7 +96,7 @@ public:
     geometry::Rect2d boundingBox(core::AnimTime t) const override;
 
 protected:
-    ElementError updateFromDom_(Workspace* workspace) override;
+    ElementStatus updateFromDom_(Workspace* workspace) override;
     void preparePaint_(core::AnimTime t, PaintOptions flags) override;
 
     void paint_(

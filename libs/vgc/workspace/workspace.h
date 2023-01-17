@@ -95,10 +95,10 @@ public:
         core::StringId attrName,
         core::StringId tagNameFilter = {}) const;
 
-    void visitDfsPreOrder(std::function<void(Element*, Int)> preOrderFn);
-    void visitDfs(
-        std::function<bool(Element*, Int)> preOrderFn,
-        std::function<void(Element*, Int)> postOrderFn);
+    void visitDepthFirstPreOrder(const std::function<void(Element*, Int)>& preOrderFn);
+    void visitDepthFirst(
+        const std::function<bool(Element*, Int)>& preOrderFn,
+        const std::function<void(Element*, Int)>& postOrderFn);
 
     VGC_SIGNAL(changed);
 
@@ -110,12 +110,15 @@ protected:
     virtual void onDocumentDiff_(const dom::Diff& diff);
     virtual void onVacDiff_(const topology::VacDiff& diff);
 
+    void removeElement(core::Id id);
+    void clearElements();
+
 private:
     static std::unordered_map<core::StringId, ElementCreator>& elementCreators();
 
     std::unordered_map<core::Id, std::unique_ptr<Element>> elements_;
-    core::Array<Element*> elementsWithDependencyErrors_;
-    core::Array<Element*> elementsOutOfSync_;
+    core::Array<Element*> elementsWithError_;
+    core::Array<Element*> elementsToUpdateFromDom_;
 
     VacElement* vgcElement_;
 

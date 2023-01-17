@@ -73,8 +73,8 @@ void Element::onDependencyChanged_(Element* /*dependency*/) {
 void Element::onDependencyBeingDestroyed_(Element* /*dependency*/) {
 }
 
-ElementError Element::updateFromDom_(Workspace* /*workspace*/) {
-    return ElementError::None;
+ElementStatus Element::updateFromDom_(Workspace* /*workspace*/) {
+    return ElementStatus::Ok;
 }
 
 void Element::preparePaint_(core::AnimTime /*t*/, PaintOptions /*flags*/) {

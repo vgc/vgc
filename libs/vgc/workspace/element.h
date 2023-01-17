@@ -87,16 +87,16 @@ enum class ElementFlag : UInt16 {
 };
 VGC_DEFINE_FLAGS(ElementFlags, ElementFlag)
 
-enum class ElementError : UInt8 {
-    None,
+enum class ElementStatus : Int8 {
+    Ok,
     InvalidAttribute,
     UnresolvedDependency,
     ErrorInDependency,
     ErrorInParent,
 };
 
-constexpr bool operator!(const ElementError& error) noexcept {
-    return error == ElementError::None;
+constexpr bool operator!(const ElementStatus& status) noexcept {
+    return status != ElementStatus::Ok;
 }
 
 class Workspace;
@@ -144,16 +144,16 @@ public:
         return flags_;
     }
 
-    ElementError error() const {
-        return error_;
+    ElementStatus status() const {
+        return status_;
     }
 
     bool hasError() const {
-        return error_ != ElementError::None;
+        return !status_;
     }
 
-    bool isInSyncWithDom() const {
-        return isInSyncWithDom_;
+    bool hasPendingUpdate() const {
+        return hasPendingUpdate_;
     }
 
     const Workspace* workspace() const {
@@ -219,7 +219,7 @@ public:
     virtual geometry::Rect2d boundingBox(core::AnimTime t = {}) const;
 
 protected:
-    virtual ElementError updateFromDom_(Workspace* workspace);
+    virtual ElementStatus updateFromDom_(Workspace* workspace);
 
     void addDependency(Element* dependency);
     void replaceDependency(Element* oldDependency, Element* newDependency);
@@ -247,13 +247,13 @@ private:
 
     // this pointer is not safe to use when tree is not synced with dom
     dom::Element* domElement_;
-    bool isInSyncWithDom_ = false;
 
     ElementFlags flags_;
     bool isVacElement_ = false;
 
+    bool hasPendingUpdate_ = true;
     bool isBeingUpdated_ = false;
-    ElementError error_ = {};
+    ElementStatus status_ = ElementStatus::Ok;
 
     core::Array<Element*> dependencies_;
     core::Array<Element*> dependents_;

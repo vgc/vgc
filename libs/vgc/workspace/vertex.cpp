@@ -36,7 +36,7 @@ geometry::Rect2d KeyVertex::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d(pos, pos);
 }
 
-ElementError KeyVertex::updateFromDom_(Workspace* /*workspace*/) {
+ElementStatus KeyVertex::updateFromDom_(Workspace* /*workspace*/) {
     namespace ds = dom::strings;
     dom::Element* const domElement = this->domElement();
 
@@ -55,7 +55,7 @@ ElementError KeyVertex::updateFromDom_(Workspace* /*workspace*/) {
 
     notifyChanges();
 
-    return ElementError::None;
+    return ElementStatus::Ok;
 }
 
 void KeyVertex::paint_(
@@ -110,8 +110,8 @@ geometry::Rect2d InbetweenVertex::boundingBox(core::AnimTime t) const {
     return geometry::Rect2d(pos, pos);
 }
 
-ElementError InbetweenVertex::updateFromDom_(Workspace* /*workspace*/) {
-    return ElementError::None;
+ElementStatus InbetweenVertex::updateFromDom_(Workspace* /*workspace*/) {
+    return ElementStatus::Ok;
 }
 
 void InbetweenVertex::preparePaint_(core::AnimTime /*t*/, PaintOptions /*flags*/) {

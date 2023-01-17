@@ -479,7 +479,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     //  - use transforms
     //  - setup target for layers (painting a layer means using its result)
     bool paintOutline = showControlPoints_;
-    workspace_->visitDfs(
+    workspace_->visitDepthFirst(
         [=](workspace::Element* /*e*/, Int /*depth*/) {
             // we always visit children for now
             return true;
