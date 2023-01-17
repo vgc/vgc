@@ -1232,7 +1232,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(triangles_, -1, 0);
+    engine->draw(triangles_);
 }
 
 namespace {
@@ -2394,7 +2394,7 @@ void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(triangles_, -1, 0);
+    engine->draw(triangles_);
 }
 
 void ColorPreview::onPaintDestroy(graphics::Engine* engine) {
@@ -2630,7 +2630,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(triangles_, -1, 0);
+    engine->draw(triangles_);
 }
 
 void ColorListView::onPaintDestroy(graphics::Engine* engine) {

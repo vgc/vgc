@@ -20,7 +20,6 @@
 
 // clang-format off
 
-#include <algorithm>
 #include <array>
 #include <chrono>
 #include <filesystem>

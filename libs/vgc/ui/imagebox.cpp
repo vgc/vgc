@@ -123,7 +123,7 @@ void ImageBox::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     engine->pushProgram(graphics::BuiltinProgram::SimpleTextured);
     engine->setStageImageViews(&imageView_, 0, 1, graphics::ShaderStage::Pixel);
     engine->setStageSamplers(&samplerState_, 0, 1, graphics::ShaderStage::Pixel);
-    engine->draw(quad_, -1, 0);
+    engine->draw(quad_);
     engine->popProgram();
 }
 
