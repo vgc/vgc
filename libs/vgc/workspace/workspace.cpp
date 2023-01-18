@@ -758,6 +758,10 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
 
     // update everything (paths may have changed.. etc)
     if (needsFullUpdate) {
+        // flag all elements with error for update
+        for (Element* element : elementsWithError_) {
+            element->hasPendingUpdate_ = true;
+        }
         Element* root = vgcElement_;
         Element* element = root;
         Int depth = 0;
