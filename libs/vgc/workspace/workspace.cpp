@@ -339,7 +339,11 @@ void Workspace::onVacDiff_(const topology::VacDiff& diff) {
     updateTreeAndDomFromVac_(diff);
 }
 
-void Workspace::removeElement(core::Id id) {
+void Workspace::removeElement_(Element* element) {
+    removeElement_(element->id());
+}
+
+void Workspace::removeElement_(core::Id id) {
     auto it = elements_.find(id);
     if (it != elements_.end()) {
         Element* element = it->second.get();
@@ -356,7 +360,7 @@ void Workspace::removeElement(core::Id id) {
     }
 }
 
-void Workspace::clearElements() {
+void Workspace::clearElements_() {
     elements_.clear();
     vgcElement_ = nullptr;
     elementsWithError_.clear();
@@ -503,7 +507,7 @@ void Workspace::rebuildTreeFromDom_() {
     namespace ds = dom::strings;
 
     // reset tree
-    clearElements();
+    clearElements_();
 
     // reset vac
     {
@@ -681,7 +685,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
                 parent->appendChild(child);
             }
             element->unlink();
-            elements_.erase(domElement->internalId());
+            removeElement_(element);
         }
     }
 
@@ -771,6 +775,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
                 toUpdate.emplaceLast(element);
             }
         }
+        // should not remove elements during this loop
         for (Element* element : toUpdate) {
             updateElementFromDom(element);
         }

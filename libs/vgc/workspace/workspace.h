@@ -110,17 +110,17 @@ protected:
     virtual void onDocumentDiff_(const dom::Diff& diff);
     virtual void onVacDiff_(const topology::VacDiff& diff);
 
-    void removeElement(core::Id id);
-    void clearElements();
-
 private:
     static std::unordered_map<core::StringId, ElementCreator>& elementCreators();
 
+    VacElement* vgcElement_;
     std::unordered_map<core::Id, std::unique_ptr<Element>> elements_;
     core::Array<Element*> elementsWithError_;
     core::Array<Element*> elementsToUpdateFromDom_;
 
-    VacElement* vgcElement_;
+    void removeElement_(Element* element);
+    void removeElement_(core::Id id);
+    void clearElements_();
 
     Element* createAppendElement_(dom::Element* domElement, Element* parent);
 
