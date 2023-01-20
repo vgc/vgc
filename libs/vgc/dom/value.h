@@ -743,7 +743,7 @@ void readTo(NoneOr<T>& v, IStream& in) {
             break;
         }
     }
-    if (peek == std::string_view("none")) {
+    if (peek == "none") {
         char c = 0;
         if (in.get(c)) {
             ++numGot;
