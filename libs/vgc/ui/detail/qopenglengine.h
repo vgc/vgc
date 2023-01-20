@@ -216,6 +216,7 @@ private:
     std::optional<geometry::Vec4f> currentBlendConstantFactors_;
     RasterizerStatePtr boundRasterizerState_;
     ProgramPtr boundProgram_;
+    GLenum lastIndexFormat_ = GL_NONE;
 
     static constexpr UInt32 numTextureUnits = maxSamplersPerStage * numShaderStages;
     static_assert(maxSamplersPerStage == maxImageViewsPerStage);

@@ -97,10 +97,12 @@ FramebufferPtr Engine::createFramebuffer(const ImageViewPtr& colorImageView) {
     // XXX should check bind flags compatibility here
 
     FramebufferPtr framebuffer = constructFramebuffer_(colorImageView);
-    queueLambdaCommandWithParameters_<Framebuffer*>(
+    queueLambdaCommandWithParameters_<FramebufferPtr>(
         "initFramebuffer",
-        [](Engine* engine, Framebuffer* p) { engine->initFramebuffer_(p); },
-        framebuffer.get());
+        [](Engine* engine, const FramebufferPtr& p) {
+            engine->initFramebuffer_(p.get());
+        },
+        framebuffer);
     return framebuffer;
 }
 
@@ -121,15 +123,15 @@ Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInByte
     buffer->lengthInBytes_ = initialLengthInBytes;
 
     struct CommandParameters {
-        Buffer* buffer;
+        BufferPtr buffer;
         Int initialLengthInBytes;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initBufferZeroed",
         [](Engine* engine, const CommandParameters& p) {
-            engine->initBuffer_(p.buffer, nullptr, p.initialLengthInBytes);
+            engine->initBuffer_(p.buffer.get(), nullptr, p.initialLengthInBytes);
         },
-        buffer.get(),
+        buffer,
         initialLengthInBytes);
     return buffer;
 }
@@ -224,14 +226,14 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo) {
 
     // queue init
     struct CommandParameters {
-        Image* image;
+        ImagePtr image;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initImage",
         [](Engine* engine, const CommandParameters& p) {
-            engine->initImage_(p.image, nullptr, 0);
+            engine->initImage_(p.image.get(), nullptr, 0);
         },
-        image.get());
+        image);
     return image;
 }
 
@@ -255,16 +257,16 @@ Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initial
 
     // queue init
     struct CommandParameters {
-        Image* image;
+        ImagePtr image;
         core::Array<char> initialData;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initImage",
         [](Engine* engine, const CommandParameters& p) {
             Span<const char> m0 = {p.initialData.data(), p.initialData.length()};
-            engine->initImage_(p.image, &m0, 1);
+            engine->initImage_(p.image.get(), &m0, 1);
         },
-        image.get(),
+        image,
         std::move(initialData));
     return image;
 }
@@ -277,10 +279,10 @@ Engine::createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& i
     sanitize_(sanitizedCreateInfo);
 
     ImageViewPtr imageView = constructImageView_(sanitizedCreateInfo, image);
-    queueLambdaCommandWithParameters_<ImageView*>(
+    queueLambdaCommandWithParameters_<ImageViewPtr>(
         "initImageView",
-        [](Engine* engine, ImageView* p) { engine->initImageView_(p); },
-        imageView.get());
+        [](Engine* engine, const ImageViewPtr& p) { engine->initImageView_(p.get()); },
+        imageView);
     return imageView;
 }
 
@@ -295,10 +297,10 @@ ImageViewPtr Engine::createImageView(
 
     ImageViewPtr imageView = constructImageView_(
         sanitizedCreateInfo, buffer, format, core::int_cast<UInt32>(numElements));
-    queueLambdaCommandWithParameters_<ImageView*>(
+    queueLambdaCommandWithParameters_<ImageViewPtr>(
         "initBufferImageView",
-        [](Engine* engine, ImageView* p) { engine->initImageView_(p); },
-        imageView.get());
+        [](Engine* engine, const ImageViewPtr& p) { engine->initImageView_(p.get()); },
+        imageView);
     return imageView;
 }
 
@@ -338,10 +340,12 @@ SamplerStatePtr Engine::createSamplerState(const SamplerStateCreateInfo& createI
     sanitize_(sanitizedCreateInfo);
 
     SamplerStatePtr samplerState = constructSamplerState_(sanitizedCreateInfo);
-    queueLambdaCommandWithParameters_<SamplerState*>(
+    queueLambdaCommandWithParameters_<SamplerStatePtr>(
         "initSamplerState",
-        [](Engine* engine, SamplerState* p) { engine->initSamplerState_(p); },
-        samplerState.get());
+        [](Engine* engine, const SamplerStatePtr& p) {
+            engine->initSamplerState_(p.get());
+        },
+        samplerState);
     return samplerState;
 }
 
@@ -351,10 +355,12 @@ GeometryViewPtr Engine::createGeometryView(const GeometryViewCreateInfo& createI
     sanitize_(sanitizedCreateInfo);
 
     GeometryViewPtr geometryView = constructGeometryView_(sanitizedCreateInfo);
-    queueLambdaCommandWithParameters_<GeometryView*>(
+    queueLambdaCommandWithParameters_<GeometryViewPtr>(
         "initGeometryView",
-        [](Engine* engine, GeometryView* p) { engine->initGeometryView_(p); },
-        geometryView.get());
+        [](Engine* engine, const GeometryViewPtr& p) {
+            engine->initGeometryView_(p.get());
+        },
+        geometryView);
     return geometryView;
 }
 
@@ -364,10 +370,10 @@ BlendStatePtr Engine::createBlendState(const BlendStateCreateInfo& createInfo) {
     sanitize_(sanitizedCreateInfo);
 
     BlendStatePtr blendState = constructBlendState_(sanitizedCreateInfo);
-    queueLambdaCommandWithParameters_<BlendState*>(
+    queueLambdaCommandWithParameters_<BlendStatePtr>(
         "initBlendState",
-        [](Engine* engine, BlendState* p) { engine->initBlendState_(p); },
-        blendState.get());
+        [](Engine* engine, const BlendStatePtr& p) { engine->initBlendState_(p.get()); },
+        blendState);
     return blendState;
 }
 
@@ -378,10 +384,12 @@ Engine::createRasterizerState(const RasterizerStateCreateInfo& createInfo) {
     sanitize_(sanitizedCreateInfo);
 
     RasterizerStatePtr rasterizerState = constructRasterizerState_(sanitizedCreateInfo);
-    queueLambdaCommandWithParameters_<RasterizerState*>(
+    queueLambdaCommandWithParameters_<RasterizerStatePtr>(
         "initRasterizerState",
-        [](Engine* engine, RasterizerState* p) { engine->initRasterizerState_(p); },
-        rasterizerState.get());
+        [](Engine* engine, const RasterizerStatePtr& p) {
+            engine->initRasterizerState_(p.get());
+        },
+        rasterizerState);
     return rasterizerState;
 }
 
@@ -818,21 +826,22 @@ void Engine::endFrame(Int syncInterval, PresentFlags flags) {
     }
     else {
         struct CommandParameters {
-            SwapChain* swapChain;
+            SwapChainPtr swapChain;
             UInt32 syncInterval;
             PresentFlags flags;
         };
         queueLambdaCommandWithParameters_<CommandParameters>(
             "present",
             [](Engine* engine, const CommandParameters& p) {
-                UInt64 timestamp = engine->present_(p.swapChain, p.syncInterval, p.flags);
+                UInt64 timestamp =
+                    engine->present_(p.swapChain.get(), p.syncInterval, p.flags);
                 --p.swapChain->numPendingPresents_;
 
                 if (engine->presentCallback_) {
                     engine->presentCallback_(timestamp);
                 }
             },
-            swapChain_.get(),
+            swapChain_,
             core::int_cast<UInt32>(syncInterval),
             flags);
 
@@ -867,13 +876,17 @@ void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices) {
         return;
     }
     syncState_();
-    Int n = (numIndices >= 0) ? numIndices : geometryView->numVertices();
+    Int n = (numIndices >= 0) ? numIndices : geometryView->numIndices();
     UInt un = core::int_cast<UInt>(n);
 
-    queueLambdaCommandWithParameters_<GeometryView*>(
-        "draw",
-        [=](Engine* engine, GeometryView* gv) { engine->draw_(gv, un, 0); },
-        geometryView.get());
+    if (un) {
+        queueLambdaCommandWithParameters_<GeometryViewPtr>(
+            "draw",
+            [=](Engine* engine, const GeometryViewPtr& gv) {
+                engine->draw_(gv.get(), un, 0);
+            },
+            geometryView);
+    }
 }
 
 void Engine::drawInstanced(
@@ -888,15 +901,19 @@ void Engine::drawInstanced(
         return;
     }
     syncState_();
-    Int n = (numIndices >= 0) ? numIndices : geometryView->numVertices();
+    Int n = (numIndices >= 0) ? numIndices : geometryView->numIndices();
     UInt un = core::int_cast<UInt>(n);
     Int k = (numInstances >= 0) ? numInstances : geometryView->numInstances();
     UInt uk = core::int_cast<UInt>(k);
 
-    queueLambdaCommandWithParameters_<GeometryView*>(
-        "draw",
-        [=](Engine* engine, GeometryView* gv) { engine->draw_(gv, un, uk); },
-        geometryView.get());
+    if (un) {
+        queueLambdaCommandWithParameters_<GeometryViewPtr>(
+            "draw",
+            [=](Engine* engine, const GeometryViewPtr& gv) {
+                engine->draw_(gv.get(), un, uk);
+            },
+            geometryView);
+    }
 }
 
 void Engine::clear(const core::Color& color) {
@@ -973,16 +990,16 @@ void Engine::syncState_() {
             static_cast<float>(vp.width()),
             static_cast<float>(vp.height()));
         struct CommandParameters {
-            Buffer* buffer;
+            BufferPtr buffer;
             detail::BuiltinConstants constants;
         };
         queueLambdaCommandWithParameters_<CommandParameters>(
             "updateBuiltinConstantBufferData",
             [](Engine* engine, const CommandParameters& p) {
                 engine->updateBufferData_(
-                    p.buffer, &p.constants, sizeof(detail::BuiltinConstants));
+                    p.buffer.get(), &p.constants, sizeof(detail::BuiltinConstants));
             },
-            builtinConstantsBuffer_.get(),
+            builtinConstantsBuffer_,
             constants);
         dirtyBuiltinConstantBuffer_ = false;
     }

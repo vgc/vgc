@@ -1514,7 +1514,8 @@ void QglEngine::setSwapChain_(const SwapChainPtr& aSwapChain) {
         updateViewportAndScissorRect_(scHeight_);
     }
     ctx_->makeCurrent(surface_);
-    api_->glEnable(GL_SCISSOR_TEST); // scissor test always enabled in graphics::Engine
+    api_->glEnable(GL_SCISSOR_TEST);      // always enabled in graphics::Engine
+    api_->glEnable(GL_PRIMITIVE_RESTART); // always enabled in graphics::Engine
 
     // XXX temporary: see comment in preBeginFrame_
     api_->glDisable(GL_DEPTH_TEST);
@@ -1827,22 +1828,37 @@ void QglEngine::draw_(GeometryView* aView, UInt numIndices, UInt numInstances) {
     }
 
     QglBuffer* indexBuffer = view->indexBuffer().get_static_cast<QglBuffer>();
-    GLenum indexFormat = (view->indexFormat() == IndexFormat::UInt16) ? GL_UNSIGNED_SHORT
-                                                                      : GL_UNSIGNED_INT;
 
-    if (numInstances == 0) {
-        if (indexBuffer) {
+    if (indexBuffer) {
+        GLenum indexFormat = (view->indexFormat() == IndexFormat::UInt16)
+                                 ? GL_UNSIGNED_SHORT
+                                 : GL_UNSIGNED_INT;
+
+        if (indexFormat != lastIndexFormat_) {
+            switch (indexFormat) {
+            case GL_UNSIGNED_SHORT:
+                api_->glPrimitiveRestartIndex(0xFFFFu);
+                break;
+            case GL_UNSIGNED_INT:
+            default:
+                api_->glPrimitiveRestartIndex(0xFFFFFFFFu);
+                break;
+            }
+            lastIndexFormat_ = indexFormat;
+        }
+
+        if (numInstances == 0) {
             api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
             api_->glDrawElements(view->drawMode_, nIdx, indexFormat, 0);
         }
         else {
-            api_->glDrawArrays(view->drawMode_, 0, nIdx);
+            api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
+            api_->glDrawElementsInstanced(view->drawMode_, nIdx, indexFormat, 0, nInst);
         }
     }
     else {
-        if (indexBuffer) {
-            api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
-            api_->glDrawElementsInstanced(view->drawMode_, nIdx, indexFormat, 0, nInst);
+        if (numInstances == 0) {
+            api_->glDrawArrays(view->drawMode_, 0, nIdx);
         }
         else {
             api_->glDrawArraysInstanced(view->drawMode_, 0, nIdx, nInst);
