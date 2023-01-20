@@ -125,7 +125,7 @@ private:
     PrimitiveType primitiveType_ = PrimitiveType::Point;
     BuiltinGeometryLayout builtinGeometryLayout_ = BuiltinGeometryLayout::NotBuiltin;
     BufferPtr indexBuffer_ = {};
-    IndexFormat indexFormat_ = {};
+    IndexFormat indexFormat_ = IndexFormat::None;
     VertexBufferArray vertexBuffers_ = {};
     VertexBufferStridesArray strides_ = {};
     VertexBufferOffsetsArray offsets_ = {};
@@ -230,15 +230,35 @@ public:
         return info_.offsets();
     }
 
+    Int numIndices() const {
+        IndexFormat format = indexFormat();
+        const BufferPtr& buffer = info_.indexBuffer();
+        if (format != IndexFormat::None && buffer) {
+            Int indexSize = (format == IndexFormat::UInt16) ? 2 : 4;
+            return buffer->lengthInBytes() / indexSize;
+        }
+        else {
+            return numVertices();
+        }
+    }
+
     Int numVertices() const {
+        const BufferPtr& buffer = info_.vertexBuffers()[0];
+        if (!buffer) {
+            return 0;
+        }
         Int elementSize = info_.strides()[0];
-        return info_.vertexBuffers()[0]->lengthInBytes() / elementSize;
+        return (elementSize > 0) ? buffer->lengthInBytes() / elementSize : 1;
+        // elementSize == 0 is a really special case of void vertex that enables
+        // shader invocation without input geometry.
     }
 
     Int numInstances() const {
-        Int elementSize = info_.strides()[1];
-        return elementSize > 0 ? info_.vertexBuffers()[1]->lengthInBytes() / elementSize
-                               : 0;
+        Int instanceElementSize = info_.strides()[1];
+        const BufferPtr& buffer = info_.vertexBuffers()[1];
+        return (instanceElementSize > 0 && buffer)
+                   ? buffer->lengthInBytes() / instanceElementSize
+                   : 0;
     }
 
 protected:

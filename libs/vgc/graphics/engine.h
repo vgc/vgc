@@ -899,16 +899,16 @@ Engine::createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialD
     buffer->lengthInBytes_ = initialData.length() * sizeof(T);
 
     struct CommandParameters {
-        Buffer* buffer;
+        BufferPtr buffer;
         core::Array<T> initialData;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initBuffer",
         [](Engine* engine, const CommandParameters& p) {
             engine->initBuffer_(
-                p.buffer, p.initialData.data(), p.initialData.length() * sizeof(T));
+                p.buffer.get(), p.initialData.data(), p.initialData.length() * sizeof(T));
         },
-        buffer.get(),
+        buffer,
         std::move(initialData));
     return buffer;
 }
@@ -942,16 +942,16 @@ inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> dat
     buf->lengthInBytes_ = data.length() * sizeof(T);
 
     struct CommandParameters {
-        Buffer* buffer;
+        BufferPtr buffer;
         core::Array<T> data;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "updateBufferData",
         [](Engine* engine, const CommandParameters& p) {
             engine->updateBufferData_(
-                p.buffer, p.data.data(), p.data.length() * sizeof(T));
+                p.buffer.get(), p.data.data(), p.data.length() * sizeof(T));
         },
-        buf,
+        buffer,
         std::move(data));
 }
 
