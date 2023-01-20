@@ -20,7 +20,7 @@
 
 namespace vgc::topology::ops {
 
-KeyEdge* createKeyEdge(
+KeyEdge* createKeyOpenEdge(
     core::Id id,
     VacGroup* parentGroup,
     KeyVertex* startVertex,
@@ -28,26 +28,37 @@ KeyEdge* createKeyEdge(
     VacNode* nextSibling,
     core::AnimTime t) {
 
+    if (!parentGroup) {
+        throw LogicError("createKeyOpenEdge: parentGroup is nullptr.");
+    }
+    if (!startVertex) {
+        throw LogicError("createKeyOpenEdge: startVertex is nullptr.");
+    }
+    if (!endVertex) {
+        throw LogicError("createKeyOpenEdge: endVertex is nullptr.");
+    }
+
     Vac* vac = parentGroup->vac();
 
     if (vac != startVertex->vac()) {
-        throw LogicError("createKeyEdge: given `parentGroup` and `startVertex` are not "
-                         "in the same `Vac`.");
+        throw LogicError(
+            "createKeyOpenEdge: given `parentGroup` and `startVertex` are not "
+            "in the same `Vac`.");
     }
     if (vac != endVertex->vac()) {
-        throw LogicError("createKeyEdge: given `parentGroup` and `endVertex` are not "
+        throw LogicError("createKeyOpenEdge: given `parentGroup` and `endVertex` are not "
                          "in the same `Vac`.");
     }
     if (t != startVertex->time()) {
         throw LogicError(
-            "createKeyEdge: given `startVertex` is not at the given time `t`.");
+            "createKeyOpenEdge: given `startVertex` is not at the given time `t`.");
     }
     if (t != endVertex->time()) {
         throw LogicError(
-            "createKeyEdge: given `endVertex` is not at the given time `t`.");
+            "createKeyOpenEdge: given `endVertex` is not at the given time `t`.");
     }
 
-    return detail::Operations::createKeyEdge(
+    return detail::Operations::createKeyOpenEdge(
         id, parentGroup, startVertex, endVertex, nextSibling, t);
 }
 

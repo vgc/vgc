@@ -8,7 +8,6 @@ vgc_add_library(topology
         dataobject.h
         edgegeometry.h
         exceptions.h
-        facemesh.h
         inbetweenedge.h
         inbetweenface.h
         inbetweenvertex.h

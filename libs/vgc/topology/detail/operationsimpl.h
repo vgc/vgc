@@ -28,6 +28,8 @@ class VGC_TOPOLOGY_API Operations {
     //using VacGroupChildrenConstIterator = decltype(VacGroup::children_)::const_iterator;
 
 public:
+    static VacGroup* createRootGroup(Vac* vac, core::Id id);
+
     /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     static VacGroup*
     createVacGroup(core::Id id, VacGroup* parentGroup, VacNode* nextSibling = nullptr);
@@ -43,7 +45,7 @@ public:
     /// Assumes `startVertex` is from the same `Vac` as `parentGroup`.
     /// Assumes `endVertex` is from the same `Vac` as `parentGroup`.
     ///
-    static KeyEdge* createKeyEdge(
+    static KeyEdge* createKeyOpenEdge(
         core::Id id,
         VacGroup* parentGroup,
         KeyVertex* startVertex,

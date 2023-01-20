@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/workspace/edge.h>
+
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {
@@ -132,7 +133,7 @@ ElementStatus KeyEdge::updateFromDom_(Workspace* workspace) {
     else {
         const core::Id id = domElement->internalId();
         if (kv0 && kv1) {
-            ke = topology::ops::createKeyEdge(id, parentGroup, kv0, kv1);
+            ke = topology::ops::createKeyOpenEdge(id, parentGroup, kv0, kv1);
         }
         else {
             // XXX warning if kv0 || kv1 ?

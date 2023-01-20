@@ -30,6 +30,7 @@
 #include <vgc/geometry/vec2d.h>
 #include <vgc/topology/api.h>
 #include <vgc/topology/edgegeometry.h>
+#include <vgc/topology/transform.h>
 
 namespace vgc::topology {
 
@@ -117,18 +118,6 @@ inline constexpr VacCellType vacCellTypeCombine(CellSpatialType st, CellTemporal
     return static_cast<VacCellType>(
         ((core::toUnderlying(tt) << 2) | core::toUnderlying(st)));
 }
-
-// Affine 2D transform for Vec2d.
-// XXX move to geometry
-class Transform2d {
-    geometry::Vec2d operator*(const geometry::Vec2d& v) const {
-        return rotationScale_ * v + translation_;
-    }
-
-private:
-    geometry::Vec2d translation_ = {};
-    geometry::Mat2d rotationScale_ = geometry::Mat2d::identity;
-};
 
 template<typename Derived, typename Child>
 class TreeParentBase;
@@ -254,26 +243,26 @@ protected:
         lastChild_ = nullptr;
     }
 
-    bool appendChild(Child* x) {
-        return insertChildUnchecked(nullptr, x);
+    bool appendChild(Child* child) {
+        return insertChildUnchecked(nullptr, child);
     }
 
     // assumes nextSibling is nullptr or a child of this
-    bool insertChildUnchecked(Child* nextSibling, Child* x) {
+    bool insertChildUnchecked(Child* nextSibling, Child* child) {
 
         Child* const newNext = nextSibling;
-        if (x == newNext) {
+        if (child == newNext) {
             return false;
         }
 
         Child* const newPrevious = newNext ? newNext->previous_ : lastChild_;
-        if (x == newPrevious) {
+        if (child == newPrevious) {
             return false;
         }
 
-        Parent* const oldParent = x->parent_;
-        Child* const oldPrevious = x->previous_;
-        Child* const oldNext = x->next_;
+        Parent* const oldParent = child->parent_;
+        Child* const oldPrevious = child->previous_;
+        Child* const oldNext = child->next_;
 
         if (oldPrevious) {
             oldPrevious->next_ = oldNext;
@@ -290,24 +279,24 @@ protected:
         }
 
         if (newPrevious) {
-            newPrevious->next_ = x;
+            newPrevious->next_ = child;
         }
         else {
-            firstChild_ = x;
+            firstChild_ = child;
         }
 
         if (newNext) {
-            newNext->previous_ = x;
+            newNext->previous_ = child;
         }
         else {
-            lastChild_ = x;
+            lastChild_ = child;
         }
 
-        x->previous_ = newPrevious;
-        x->next_ = newNext;
+        child->previous_ = newPrevious;
+        child->next_ = newNext;
 
         if (oldParent != this) {
-            x->parent_ = static_cast<Parent*>(this);
+            child->parent_ = static_cast<Parent*>(this);
             ++numChildren_;
             if (oldParent) {
                 --(oldParent->numChildren_);
@@ -380,8 +369,7 @@ struct GetTreeLinksGetter_<Node, core::RequiresValid<typename Node::TreeLinksGet
 };
 
 template<typename Derived>
-class TreeNodeBase : public topology::detail::TreeChildBase<Derived>,
-                     public topology::detail::TreeParentBase<Derived> {
+class TreeNodeBase : public TreeChildBase<Derived>, public TreeParentBase<Derived> {
 private:
     template<typename Node>
     friend struct DefaultTreeLinksGetter;
@@ -389,8 +377,6 @@ private:
 public:
     using TreeLinksGetter = DefaultTreeLinksGetter<Derived>;
 };
-
-//RequiresValid
 
 template<typename Node>
 using TreeLinksGetter = typename GetTreeLinksGetter_<Node>::type;
@@ -403,15 +389,17 @@ private:
 
     using TreeChildBase = detail::TreeChildBase<VacNode, VacGroup>;
 
+    static constexpr UInt8 notACell = static_cast<UInt8>(-1);
+
 protected:
     VacNode(core::Id id) noexcept
         : id_(id)
-        , cellType_(std::nullopt) {
+        , cellType_(notACell) {
     }
 
     VacNode(core::Id id, VacCellType cellType) noexcept
         : id_(id)
-        , cellType_(cellType) {
+        , cellType_(static_cast<UInt8>(cellType)) {
     }
 
 public:
@@ -439,7 +427,7 @@ public:
     inline Vac* vac() const;
 
     bool isCell() const {
-        return cellType_.has_value();
+        return cellType_ != notACell;
     }
 
     bool isGroup() const {
@@ -476,14 +464,14 @@ public:
 
 protected:
     VacCellType cellTypeUnchecked() const {
-        return *cellType_;
+        return static_cast<VacCellType>(cellType_);
     }
 
 private:
     friend Vac;
 
     core::Id id_ = -1;
-    const std::optional<VacCellType> cellType_;
+    const UInt8 cellType_;
     // used during removal operations
     bool isBeingDestroyed_ = false;
 };
@@ -500,6 +488,7 @@ public:
 
     ~VacGroup() override = default;
 
+protected:
     explicit VacGroup(Vac* vac, core::Id id) noexcept
         : VacNode(id)
         , vac_(vac) {
@@ -511,6 +500,7 @@ public:
         , vac_(vac) {
     }
 
+public:
     Vac* vac() const {
         return vac_;
     }
@@ -539,21 +529,21 @@ public:
         return TreeParentBase::end();
     }
 
-    const geometry::Mat3d& transform() const {
+    const Transform& transform() const {
         return transform_;
     }
 
-    const geometry::Mat3d& inverseTransform() const {
+    const Transform& inverseTransform() const {
         return inverseTransform_;
     }
 
-    const geometry::Mat3d& transformFromRoot() const {
+    const Transform& transformFromRoot() const {
         return transformFromRoot_;
     }
 
-    geometry::Mat3d computeInverseTransformTo(VacGroup* ancestor) const;
+    Transform computeInverseTransformTo(VacGroup* ancestor) const;
 
-    geometry::Mat3d computeInverseTransformToRoot() const {
+    Transform computeInverseTransformToRoot() const {
         return computeInverseTransformTo(nullptr);
     }
 
@@ -563,16 +553,16 @@ private:
 
     Vac* vac_ = nullptr;
 
-    geometry::Mat3d transform_;
+    Transform transform_;
     // to speed-up working with cells connected from different groups
-    geometry::Mat3d inverseTransform_;
-    geometry::Mat3d transformFromRoot_;
+    Transform inverseTransform_;
+    Transform transformFromRoot_;
 
     void onChildrenDestroyed() {
         TreeParentBase::resetChildrenNoUnlink();
     }
 
-    void setTransform_(const geometry::Mat3d& transform);
+    void setTransform_(const Transform& transform);
     void updateTransformFromRoot_();
 };
 
@@ -789,9 +779,10 @@ private:
     VacCell()
         : VacNode(-1, VacCellType::KeyVertex) {
 
-        throw core::RuntimeError(
-            "This constructor should not be called. It is only defined to be used "
-            "as unused default constructor in the context of virtual inheritance.");
+        throw core::LogicError(
+            "Calling vgc::topology::VacCell default constructor. "
+            "This constructor is reserved as unused default constructor in the context "
+            "of virtual inheritance.");
     }
 
 protected:
@@ -1121,6 +1112,15 @@ constexpr VacCell* VacCellProxy<T>::cell() {
 }
 
 // Note: with C++20, ADL will work with explicitly instanciated template functions.
+// In other words, in C++17, if you're not already in the topology namespace, you have to write:
+//     `topology::static_cell_cast<topology::KeyVertex>(cell)`
+//
+// In C++20, you can more simply write:
+//     `static_cell_cast<topology::KeyVertex>(cell)`
+//
+// As an alternative, you can always write:
+//     `cell->toKeyVertexUnchecked()`
+//
 template<typename To, typename From, VGC_FORWARDED_REQUIRES((isCell<To> && isCell<From>))>
 constexpr To* static_cell_cast(From* p) {
 

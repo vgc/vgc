@@ -18,7 +18,6 @@
 #define VGC_TOPOLOGY_DATAOBJECT_H
 
 #include <vgc/core/id.h>
-#include <vgc/geometry/vec2d.h>
 #include <vgc/topology/api.h>
 
 namespace vgc::topology {

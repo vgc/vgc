@@ -42,7 +42,7 @@ public:
 };
 
 /// \class vgc::topology::RuntimeError
-/// \brief Raised when there is a logic error detected in vgc::topology.
+/// \brief Raised when there is a runtime error detected in vgc::topology.
 ///
 /// This exception is raised whenever there is a runtime error detected in
 /// vgc::topology. This is the base class for all runtime error exception classes in

@@ -18,8 +18,8 @@
 
 namespace vgc::topology {
 
-geometry::Mat3d VacGroup::computeInverseTransformTo(VacGroup* ancestor) const {
-    geometry::Mat3d t = inverseTransform_;
+Transform VacGroup::computeInverseTransformTo(VacGroup* ancestor) const {
+    Transform t = inverseTransform_;
     VacGroup* g = parentGroup();
     while (g && g != ancestor) {
         t *= g->inverseTransform();
@@ -28,7 +28,7 @@ geometry::Mat3d VacGroup::computeInverseTransformTo(VacGroup* ancestor) const {
     return t;
 }
 
-void VacGroup::setTransform_(const geometry::Mat3d& transform) {
+void VacGroup::setTransform_(const Transform& transform) {
     transform_ = transform;
     // todo: handle non-invertible case.
     inverseTransform_ = transform_.inverted();

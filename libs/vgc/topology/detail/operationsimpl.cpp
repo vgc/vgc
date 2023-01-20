@@ -20,14 +20,18 @@
 
 namespace vgc::topology::detail {
 
-void checkIndexInRange(VacGroup* group, Int index) {
-    if (index < 0 || index > group->numChildren()) {
-        throw core::IndexError(core::format(
-            "Child index {} out of range for insertion in group (end index currently is "
-            "{}).",
-            index,
-            group->numChildren()));
+VacGroup* Operations::createRootGroup(Vac* vac, core::Id id) {
+
+    VacGroup* p = new VacGroup(vac, id);
+    vac->nodes_[p->id_] = std::unique_ptr<VacGroup>(p);
+
+    // diff
+    vac->incrementVersion();
+    if (vac->diffEnabled_) {
+        vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
     }
+
+    return p;
 }
 
 VacGroup*
@@ -69,7 +73,7 @@ KeyVertex* Operations::createKeyVertex(
     return p;
 }
 
-KeyEdge* Operations::createKeyEdge(
+KeyEdge* Operations::createKeyOpenEdge(
     core::Id id,
     VacGroup* parentGroup,
     KeyVertex* startVertex,

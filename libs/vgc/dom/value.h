@@ -733,30 +733,36 @@ void write(OStream& out, const NoneOr<T>& v) {
 template<typename IStream, typename T>
 void readTo(NoneOr<T>& v, IStream& in) {
     // check for "none"
-    char c;
-    if (in.get(c) && c == 'n') {
-        if (in.get(c) && c == 'o') {
-            if (in.get(c) && c == 'n') {
-                if (in.get(c) && c == 'e') {
-                    if (in.get(c)) {
-                        if (core::isWhitespace(c)) {
-                            v.reset();
-                            return;
-                        }
-                        in.unget();
-                    }
-                    else {
-                        v.reset();
-                        return;
-                    }
-                    in.unget();
-                }
-                in.unget();
-            }
-            in.unget();
+    std::string peek = "\0\0\0\0";
+    Int numGot = 0;
+    for (size_t i = 0; i < peek.size(); ++i) {
+        if (in.get(peek[i])) {
+            ++numGot;
         }
+        else {
+            break;
+        }
+    }
+    if (peek == std::string_view("none")) {
+        char c = 0;
+        if (in.get(c)) {
+            ++numGot;
+            if (core::isWhitespace(c)) {
+                core::skipWhitespaceCharacters(in);
+                v.reset();
+                return;
+            }
+        }
+        else {
+            v.reset();
+            return;
+        }
+    }
+
+    for (Int i = 0; i < numGot; ++i) {
         in.unget();
     }
+
     readTo(v.emplace(), in);
 }
 

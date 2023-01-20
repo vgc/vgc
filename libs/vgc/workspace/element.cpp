@@ -14,9 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/workspace/element.h>
+
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
-#include <vgc/workspace/element.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {

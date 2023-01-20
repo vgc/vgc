@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/workspace/workspace.h>
+
 #include <functional>
 #include <memory>
 
@@ -24,7 +26,6 @@
 #include <vgc/workspace/layer.h>
 #include <vgc/workspace/logcategories.h>
 #include <vgc/workspace/vertex.h>
-#include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {
 
@@ -41,16 +42,25 @@ struct VacElementLists {
     core::Array<Element*> inbetweenFaces;
 };
 
-class ScopedRecursiveBoolGuard {
+// This is a helper to manage a shared boolean status flag.
+//
+// Sets the given shared boolean to true on construction and restores it to its previous
+// value on destruction.
+//
+// For instance if function A and B want to signal that they are being executed, you can
+// construct a ScopedTemporaryBoolSet with the same boolean in both scopes. Whenever this
+// boolean is true, it means that either A or B is in the callstack.
+//
+class ScopedTemporaryBoolSet {
 public:
-    ScopedRecursiveBoolGuard(bool& ref)
+    ScopedTemporaryBoolSet(bool& ref)
         : old_(ref)
         , ref_(ref) {
 
         ref_ = true;
     }
 
-    ~ScopedRecursiveBoolGuard() {
+    ~ScopedTemporaryBoolSet() {
         ref_ = old_;
     }
 
@@ -274,8 +284,8 @@ void Workspace::sync() {
 
 void Workspace::rebuildFromDom() {
     // disable update-on-diff
-    detail::ScopedRecursiveBoolGuard bgDom(isDomBeingUpdated_);
-    detail::ScopedRecursiveBoolGuard bgVac(isVacBeingUpdated_);
+    detail::ScopedTemporaryBoolSet bgDom(isDomBeingUpdated_);
+    detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
     // flush dom diffs
     document_->emitPendingDiff();
     // rebuild
@@ -511,7 +521,7 @@ void Workspace::rebuildTreeFromDom_() {
 
     // reset vac
     {
-        detail::ScopedRecursiveBoolGuard bgVac(isVacBeingUpdated_);
+        detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
         vac_->clear();
         vac_->emitPendingDiff();
         lastSyncedVacVersion_ = -1;
@@ -523,7 +533,7 @@ void Workspace::rebuildTreeFromDom_() {
 
     // flush dom diff
     {
-        detail::ScopedRecursiveBoolGuard bgDom(isDomBeingUpdated_);
+        detail::ScopedTemporaryBoolSet bgDom(isDomBeingUpdated_);
         document_->emitPendingDiff();
     }
 
@@ -564,13 +574,14 @@ void Workspace::rebuildVacFromTree_() {
 
     //namespace ds = dom::strings;
 
-    detail::ScopedRecursiveBoolGuard bgVac(isVacBeingUpdated_);
+    detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
 
     // reset vac
     vac_->clear();
     vac_->emitPendingDiff();
     lastSyncedVacVersion_ = -1;
 
+    vac_->resetRoot(vgcElement_->id());
     vgcElement_->vacNode_ = vac_->rootGroup();
 
     Element* root = vgcElement_;
@@ -595,22 +606,20 @@ void Workspace::updateVacHierarchyFromTree_() {
     Int depth = 0;
     while (e) {
         topology::VacNode* node = e->vacNode();
-        if (!node) {
-            continue;
-        }
-
-        if (node->isGroup()) {
-            VacElement* child = e->firstChildVacElement();
-            if (child) {
-                topology::VacGroup* g = static_cast<topology::VacGroup*>(node);
-                topology::ops::moveToGroup(child->vacNode(), g, g->firstChild());
+        if (node) {
+            if (node->isGroup()) {
+                VacElement* child = e->firstChildVacElement();
+                if (child) {
+                    topology::VacGroup* g = static_cast<topology::VacGroup*>(node);
+                    topology::ops::moveToGroup(child->vacNode(), g, g->firstChild());
+                }
             }
-        }
 
-        if (e->parent()) {
-            VacElement* next = e->nextVacElement();
-            topology::ops::moveToGroup(
-                node, node->parentGroup(), (next ? next->vacNode() : nullptr));
+            if (e->parent()) {
+                VacElement* next = e->nextVacElement();
+                topology::ops::moveToGroup(
+                    node, node->parentGroup(), (next ? next->vacNode() : nullptr));
+            }
         }
 
         iterDfsPreOrder(e, depth, root);
@@ -655,7 +664,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         return;
     }
 
-    detail::ScopedRecursiveBoolGuard bgVac(isVacBeingUpdated_);
+    detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
 
     VGC_ASSERT(vac_->version() == lastSyncedVacVersion_);
 
@@ -702,7 +711,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         Element* parent = find(domParentElement);
         if (!parent) {
             // XXX warn ? createdNodes should be in valid build order
-            //            and vgc element should already exist.
+            //            and <vgc> element should already exist.
             continue;
         }
         // will be reordered afterwards
@@ -798,7 +807,7 @@ void Workspace::updateTreeAndDomFromVac_(const topology::VacDiff& /*diff*/) {
         return;
     }
 
-    detail::ScopedRecursiveBoolGuard bgDom(isDomBeingUpdated_);
+    detail::ScopedTemporaryBoolSet bgDom(isDomBeingUpdated_);
 
     // todo later
     throw core::RuntimeError("not implemented");

@@ -18,7 +18,6 @@
 #define VGC_TOPOLOGY_KEYEDGE_H
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/core/flags.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/topology/api.h>

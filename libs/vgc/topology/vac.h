@@ -93,7 +93,7 @@ private:
 //};
 
 /// \class vgc::dom::Vac
-/// \brief Represents an VAC.
+/// \brief Represents a VAC.
 ///
 class VGC_TOPOLOGY_API Vac : public core::Object {
 private:
@@ -102,8 +102,8 @@ private:
     friend detail::Operations;
 
 protected:
-    Vac()
-        : root_(this) {
+    Vac() {
+        resetRoot(core::genId());
     }
 
     void onDestroyed() override;
@@ -113,37 +113,24 @@ public:
 
     void clear();
 
+    VacGroup* resetRoot(core::Id id);
+
     VacGroup* rootGroup() const {
-        return const_cast<VacGroup*>(&root_);
+        return root_;
     }
 
-    VacNode* find(core::Id id) const {
-        auto it = nodes_.find(id);
-        return it != nodes_.end() ? it->second.get() : nullptr;
-    }
+    VacNode* find(core::Id id) const;
 
-    VacCell* findCell(core::Id id) const {
-        VacNode* n = find(id);
-        return (n && n->isCell()) ? static_cast<VacCell*>(n) : nullptr;
-    }
+    VacCell* findCell(core::Id id) const;
 
-    VacGroup* findGroup(core::Id id) const {
-        VacNode* n = find(id);
-        return (n && n->isGroup()) ? static_cast<VacGroup*>(n) : nullptr;
-    }
+    VacGroup* findGroup(core::Id id) const;
 
-    bool containsNode(core::Id id) const {
-        return nodes_.find(id) != nodes_.end();
-    }
+    bool containsNode(core::Id id) const;
 
     // An increasing version seems enough, we don't need it to match document version.
 
     Int64 version() const {
         return version_;
-    }
-
-    void incrementVersion() {
-        ++version_;
     }
 
     const VacDiff& pendingDiff() {
@@ -156,6 +143,10 @@ public:
     VGC_SIGNAL(changed, (const VacDiff&, diff))
 
 protected:
+    void incrementVersion() {
+        ++version_;
+    }
+
     // insert/rem ops ?
 
     // graphics...
@@ -165,7 +156,8 @@ protected:
 private:
     Int64 version_ = 0;
     std::unordered_map<core::Id, std::unique_ptr<VacNode>> nodes_;
-    VacGroup root_;
+    // TODO: maybe store the root in the map.
+    VacGroup* root_;
     VacDiff diff_ = {};
     bool diffEnabled_ = false;
 };

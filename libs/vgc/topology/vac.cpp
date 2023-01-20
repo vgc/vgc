@@ -16,6 +16,8 @@
 
 #include <vgc/topology/vac.h>
 
+#include <vgc/topology/detail/operationsimpl.h>
+
 namespace vgc::topology {
 
 void Vac::onDestroyed() {
@@ -30,12 +32,33 @@ void Vac::clear() {
         onNodeAboutToBeRemoved().emit(it.second.get());
     }
     nodes_.clear();
-    root_.onChildrenDestroyed();
-    root_.transform_ = geometry::Mat3d::identity;
-    root_.inverseTransform_ = geometry::Mat3d::identity;
-    root_.transformFromRoot_ = geometry::Mat3d::identity;
-    diff_.reset();
+    root_ = nullptr;
     ++version_;
+}
+
+VacGroup* Vac::resetRoot(core::Id id) {
+    clear();
+    root_ = detail::Operations::createRootGroup(this, id);
+    return root_;
+}
+
+VacNode* Vac::find(core::Id id) const {
+    auto it = nodes_.find(id);
+    return it != nodes_.end() ? it->second.get() : nullptr;
+}
+
+VacCell* Vac::findCell(core::Id id) const {
+    VacNode* n = find(id);
+    return (n && n->isCell()) ? static_cast<VacCell*>(n) : nullptr;
+}
+
+VacGroup* Vac::findGroup(core::Id id) const {
+    VacNode* n = find(id);
+    return (n && n->isGroup()) ? static_cast<VacGroup*>(n) : nullptr;
+}
+
+bool Vac::containsNode(core::Id id) const {
+    return find(id) != nullptr;
 }
 
 bool Vac::emitPendingDiff() {

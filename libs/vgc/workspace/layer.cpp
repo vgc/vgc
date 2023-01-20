@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/workspace/layer.h>
+
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {

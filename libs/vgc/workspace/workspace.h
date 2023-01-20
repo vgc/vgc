@@ -43,6 +43,8 @@ struct VacElementLists;
 /// \class vgc::workspace::Workspace
 /// \brief Represents a workspace to manage, manipulate and visit a vector graphics scene.
 ///
+/// This implementation is still preliminary and the API may change significantly.
+///
 class VGC_WORKSPACE_API Workspace : public core::Object {
 private:
     VGC_OBJECT(Workspace, core::Object)
@@ -113,6 +115,7 @@ protected:
 private:
     static std::unordered_map<core::StringId, ElementCreator>& elementCreators();
 
+    // This is the <vgc> element (the root).
     VacElement* vgcElement_;
     std::unordered_map<core::Id, std::unique_ptr<Element>> elements_;
     core::Array<Element*> elementsWithError_;

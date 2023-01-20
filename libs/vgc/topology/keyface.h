@@ -17,7 +17,6 @@
 #ifndef VGC_TOPOLOGY_KEYFACE_H
 #define VGC_TOPOLOGY_KEYFACE_H
 
-#include <vgc/core/flags.h>
 #include <vgc/topology/api.h>
 #include <vgc/topology/cell.h>
 

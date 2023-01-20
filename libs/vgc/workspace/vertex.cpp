@@ -14,8 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/workspace/edge.h>
 #include <vgc/workspace/vertex.h>
+
+#include <vgc/workspace/edge.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {
