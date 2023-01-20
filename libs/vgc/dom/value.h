@@ -733,7 +733,7 @@ void write(OStream& out, const NoneOr<T>& v) {
 template<typename IStream, typename T>
 void readTo(NoneOr<T>& v, IStream& in) {
     // check for "none"
-    std::string peek = "\0\0\0\0";
+    std::string peek = "????";
     Int numGot = 0;
     for (size_t i = 0; i < peek.size(); ++i) {
         if (in.get(peek[i])) {
