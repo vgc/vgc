@@ -96,6 +96,10 @@ protected:
 
     void onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) override;
 
+    bool shouldPresentWaitFromSyncedUserThread_() override {
+        return true;
+    }
+
     //--  RENDER THREAD implementation functions --
 
     void initContext_() override;
