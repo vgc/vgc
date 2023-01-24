@@ -29,7 +29,7 @@
 
 namespace vgc::style {
 
-class StylePropertySpec;
+class PropertySpec;
 
 /// \enum vgc::style::ValueType
 /// \brief The type of a Value
@@ -218,7 +218,7 @@ private:
     std::any value_;
 
     friend class StylableObject;
-    void parse_(const StylePropertySpec* spec);
+    void parse_(const PropertySpec* spec);
 };
 
 namespace detail {

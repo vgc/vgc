@@ -520,7 +520,7 @@ void SpecTable::insert(
             attributeName);
         return;
     }
-    StylePropertySpec spec(attributeName, initialValue, isInherited, parser);
+    PropertySpec spec(attributeName, initialValue, isInherited, parser);
     map_.insert({attributeName, spec});
 }
 

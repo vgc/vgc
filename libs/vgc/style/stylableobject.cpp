@@ -311,7 +311,7 @@ const Value& StylableObject::getStyleComputedValue_(core::StringId property) con
 
     // If there is no cascaded value, try to see if we should inherit
     if (res->type() == ValueType::None) {
-        const StylePropertySpec* spec = styleSpecTable()->get(property);
+        const PropertySpec* spec = styleSpecTable()->get(property);
         if (spec) {
             if (spec->isInherited()) {
                 res = &inheritValue;
@@ -332,7 +332,7 @@ const Value& StylableObject::getStyleComputedValue_(core::StringId property) con
             res = &parent->getStyleComputedValue_(property);
         }
         else {
-            const StylePropertySpec* spec = styleSpecTable()->get(property);
+            const PropertySpec* spec = styleSpecTable()->get(property);
             if (spec) {
                 res = &spec->initialValue();
             }
