@@ -35,11 +35,11 @@ VGC_DECLARE_OBJECT(StylableObject);
 VGC_DECLARE_OBJECT(StyleSheet);
 VGC_DECLARE_OBJECT(StyleRuleSet);
 VGC_DECLARE_OBJECT(StyleSelector);
-VGC_DECLARE_OBJECT(StyleDeclaration);
+VGC_DECLARE_OBJECT(Declaration);
 
 using StyleRuleSetArray = core::Array<StyleRuleSet*>;
 using StyleSelectorArray = core::Array<StyleSelector*>;
-using StyleDeclarationArray = core::Array<StyleDeclaration*>;
+using DeclarationArray = core::Array<Declaration*>;
 
 /// \class vgc::style::StyleSheet
 /// \brief Parses and stores a VGC stylesheet.
@@ -81,13 +81,13 @@ public:
         return selectors_;
     }
 
-    const StyleDeclarationArray& declarations() const {
+    const DeclarationArray& declarations() const {
         return declarations_;
     }
 
 private:
     StyleSelectorArray selectors_;
-    StyleDeclarationArray declarations_;
+    DeclarationArray declarations_;
 
     friend class detail::Parser;
     StyleRuleSet();
@@ -191,12 +191,12 @@ private:
     static StyleSelectorPtr create(core::Array<StyleSelectorItem>&& items);
 };
 
-/// \class vgc::style::StyleDeclaration
+/// \class vgc::style::Declaration
 /// \brief One declaration of a rule set of a stylesheet.
 ///
-class VGC_STYLE_API StyleDeclaration : public core::Object {
+class VGC_STYLE_API Declaration : public core::Object {
 private:
-    VGC_OBJECT(StyleDeclaration, core::Object)
+    VGC_OBJECT(Declaration, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -224,8 +224,8 @@ private:
     Value value_;
 
     friend class detail::Parser;
-    StyleDeclaration();
-    static StyleDeclarationPtr create();
+    Declaration();
+    static DeclarationPtr create();
 };
 
 } // namespace vgc::style

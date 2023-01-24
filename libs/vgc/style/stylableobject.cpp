@@ -239,7 +239,7 @@ void StylableObject::updateStyle_() {
     //
     for (const auto& r : styleCache_.ruleSetArray) {
         StyleRuleSet* ruleSet = r.first;
-        for (StyleDeclaration* declaration : ruleSet->declarations()) {
+        for (Declaration* declaration : ruleSet->declarations()) {
             styleCache_.cascadedValues[declaration->property()] = &declaration->value();
         }
     }

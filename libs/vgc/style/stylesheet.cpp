@@ -178,9 +178,9 @@ private:
 
                 // Consume list of declarations
                 bool expectRightCurlyBracket = true;
-                core::Array<StyleDeclarationPtr> declarations =
+                core::Array<DeclarationPtr> declarations =
                     consumeDeclarationList_(it, end, expectRightCurlyBracket);
-                for (const StyleDeclarationPtr& declaration : declarations) {
+                for (const DeclarationPtr& declaration : declarations) {
                     rule->appendChildObject_(declaration.get());
                     rule->declarations_.append(declaration.get());
                 }
@@ -205,12 +205,12 @@ private:
     // declarations as a second pass. Instead, we do both in one pass, so we
     // need to handle the possibility of a closing RightCurlyBracket.
     //
-    core::Array<StyleDeclarationPtr> consumeDeclarationList_(
+    core::Array<DeclarationPtr> consumeDeclarationList_(
         TokenIterator& it,
         TokenIterator end,
         bool expectRightCurlyBracket) {
 
-        core::Array<StyleDeclarationPtr> res;
+        core::Array<DeclarationPtr> res;
         while (true) {
             if (it == end) {
                 if (expectRightCurlyBracket) {
@@ -248,7 +248,7 @@ private:
                     }
                 }
                 TokenIterator declarationEnd = it;
-                StyleDeclarationPtr declaration =
+                DeclarationPtr declaration =
                     consumeDeclaration_(declarationBegin, declarationEnd);
                 if (declaration) {
                     res.append(declaration);
@@ -281,10 +281,10 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-declaration
     // Assumes that the current token is the identifier.
     // May return a null pointer in case of parse errors.
-    StyleDeclarationPtr
+    DeclarationPtr
     consumeDeclaration_(TokenIterator& it, TokenIterator end) {
 
-        StyleDeclarationPtr declaration = StyleDeclaration::create();
+        DeclarationPtr declaration = Declaration::create();
         declaration->property_ = core::StringId(it->stringValue());
         declaration->value_ = Value::invalid();
         ++it;
@@ -297,7 +297,7 @@ private:
         // Ensure first non-whitespace token is a Colon
         if (it == end || it->type() != TokenType::Colon) {
             // Parse error: return nothing
-            return StyleDeclarationPtr();
+            return DeclarationPtr();
         }
         else {
             ++it;
@@ -699,12 +699,12 @@ StyleSelectorPtr StyleSelector::create(core::Array<StyleSelectorItem>&& items) {
     return StyleSelectorPtr(new StyleSelector(std::move(items)));
 }
 
-StyleDeclaration::StyleDeclaration()
+Declaration::Declaration()
     : Object() {
 }
 
-StyleDeclarationPtr StyleDeclaration::create() {
-    return StyleDeclarationPtr(new StyleDeclaration());
+DeclarationPtr Declaration::create() {
+    return DeclarationPtr(new Declaration());
 }
 
 } // namespace vgc::style
