@@ -17,9 +17,12 @@
 #include <vgc/graphics/richtext.h>
 
 #include <vgc/core/colors.h>
-#include <vgc/graphics/strings.h>
+
 #include <vgc/style/parse.h>
+#include <vgc/style/strings.h>
 #include <vgc/style/types.h>
+
+#include <vgc/graphics/strings.h>
 
 namespace vgc::graphics {
 

@@ -14,8 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/style/style.h>
-
 #include <vgc/core/wraps/common.h>
 
 void wrap_style(py::module& /*m*/) {

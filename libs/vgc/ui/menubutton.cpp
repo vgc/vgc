@@ -17,6 +17,7 @@
 #include <vgc/ui/menubutton.h>
 
 #include <vgc/graphics/strings.h>
+#include <vgc/style/strings.h>
 #include <vgc/ui/detail/paintutil.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/preferredsizecalculator.h>

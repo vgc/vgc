@@ -15,6 +15,9 @@
 // limitations under the License.
 
 #include <vgc/style/parse.h>
+
+#include <vgc/core/color.h>
+
 #include <vgc/style/strings.h>
 
 namespace vgc::style {

@@ -14,155 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/style/style.h>
+#include <vgc/style/stylesheet.h>
 
-#include <vgc/core/colors.h>
 #include <vgc/style/logcategories.h>
-#include <vgc/style/strings.h>
 #include <vgc/style/stylableobject.h>
 
 namespace vgc::style {
-
-VGC_DEFINE_ENUM(
-    StyleValueType,
-    (None, "None"),
-    (Unparsed, "Unparsed"),
-    (Invalid, "Invalid"),
-    (Inherit, "Inherit"),
-    (Identifier, "Identifier"),
-    (Number, "Number"),
-    (String, "String"),
-    (Custom, "Custom"))
-
-VGC_DEFINE_ENUM(
-    StyleSelectorItemType,
-    (ClassSelector, "Class Selector"),
-    (DescendantCombinator, "Descendant Combinator"),
-    (ChildCombinator, "Child Combinator"))
-
-namespace detail {
-
-// Stores the unparsed string of the value as well its tokenized version.
-//
-// Note that the tokens contain pointers to characters in the string, so these
-// pointers must be properly updated whenever the string is copied.
-//
-class UnparsedValue {
-    static std::string initRawString(StyleTokenIterator begin, StyleTokenIterator end) {
-        if (begin == end) {
-            return "";
-        }
-        else {
-            return std::string(begin->begin(), (end - 1)->end());
-        }
-    }
-
-public:
-    UnparsedValue(StyleTokenIterator begin, StyleTokenIterator end)
-        : rawString_(initRawString(begin, end))
-        , tokens_(begin, end) {
-
-        remapPointers_();
-    }
-
-    UnparsedValue(const UnparsedValue& other)
-        : rawString_(other.rawString_)
-        , tokens_(other.tokens_) {
-
-        remapPointers_();
-    }
-
-    UnparsedValue(UnparsedValue&& other)
-        : rawString_(std::move(other.rawString_))
-        , tokens_(std::move(other.tokens_)) {
-
-        remapPointers_();
-    }
-
-    UnparsedValue& operator=(const UnparsedValue& other) {
-        if (this != &other) {
-            rawString_ = other.rawString_;
-            tokens_ = other.tokens_;
-            remapPointers_();
-        }
-        return *this;
-    }
-
-    UnparsedValue& operator=(UnparsedValue&& other) {
-        if (this != &other) {
-            rawString_ = std::move(other.rawString_);
-            tokens_ = std::move(other.tokens_);
-            remapPointers_();
-        }
-        return *this;
-    }
-
-    const std::string& rawString() const {
-        return rawString_;
-    }
-
-    const StyleTokenArray& tokens() const {
-        return tokens_;
-    }
-
-private:
-    std::string rawString_;
-    StyleTokenArray tokens_;
-
-    // Ensures that the `const char*` pointers in `tokens_` points to the
-    // copied data in `rawString_`.
-    //
-    // Note that remapping is still needed even for the move constructor and
-    // move assignment operator, due to small-string optimization: a moved
-    // string may still have its data at a new location.
-    //
-    void remapPointers_() {
-        if (!tokens_.isEmpty()) {
-            const char* oldBegin = tokens_.begin()->begin();
-            const char* newBegin = rawString_.data();
-            std::ptrdiff_t offset = newBegin - oldBegin;
-            if (offset != 0) {
-                for (StyleToken& token : tokens_) {
-                    token.begin_ += offset;
-                    token.end_ += offset;
-                }
-            }
-        }
-    }
-};
-
-} // namespace detail
-
-StyleValue StyleValue::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
-    return StyleValue(StyleValueType::Unparsed, detail::UnparsedValue(begin, end));
-}
-
-void StyleValue::parse_(const StylePropertySpec* spec) {
-    const detail::UnparsedValue* v = std::any_cast<detail::UnparsedValue>(&value_);
-    StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
-    StyleValue parsed = parser(v->tokens().begin(), v->tokens().end());
-    if (parsed.type() == StyleValueType::Invalid) {
-        VGC_WARNING(
-            LogVgcStyle,
-            "Failed to parse attribute '{}' defined as '{}'.",
-            spec->name(),
-            v->rawString());
-        *this = StyleValue::none();
-    }
-    else {
-        *this = parsed;
-    }
-}
-
-StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
-    if (end == begin + 1) {
-        StyleTokenType t = begin->type();
-        if (t == StyleTokenType::Identifier) {
-            return StyleValue::identifier(begin->stringValue());
-        }
-    }
-    return StyleValue::invalid();
-}
 
 namespace detail {
 
@@ -691,6 +548,12 @@ StyleRuleSet::StyleRuleSet()
 StyleRuleSetPtr StyleRuleSet::create() {
     return StyleRuleSetPtr(new StyleRuleSet());
 }
+
+VGC_DEFINE_ENUM(
+    StyleSelectorItemType,
+    (ClassSelector, "Class Selector"),
+    (DescendantCombinator, "Descendant Combinator"),
+    (ChildCombinator, "Child Combinator"))
 
 namespace {
 
