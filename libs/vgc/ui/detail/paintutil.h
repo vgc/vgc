@@ -81,7 +81,7 @@ void insertRect(
     const style::Metrics& styleMetrics,
     const core::Color& color,
     const geometry::Rect2f& rect,
-    const style::BorderRadiuses& borderRadiuses,
+    const style::BorderRadii& borderRadii,
     float pixelSize = 1.0f);
 
 void insertRect(
@@ -90,11 +90,11 @@ void insertRect(
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiuses& outerRadiuses_,
+    const style::BorderRadii& outerRadii_,
     float borderWidth,
     float pixelSize = 1.0f);
 
-// refRadiuses is used to determine the number of samples.
+// refRadii is used to determine the number of samples.
 // this is useful if you want to add a border to an existing
 // rounded rectangle: you want to use the same number of samples
 // so that the quad strips match perfectly.
@@ -103,8 +103,8 @@ void insertRect(
     const core::Color& fillColor,
     const core::Color& borderColor,
     const geometry::Rect2f& outerRect,
-    const style::BorderRadiusesInPx& outerRadiuses_,
-    const style::BorderRadiusesInPx& refRadiuses_,
+    const style::BorderRadiiInPx& outerRadii_,
+    const style::BorderRadiiInPx& refRadii_,
     float borderWidth,
     float pixelSize = 1.0f);
 
