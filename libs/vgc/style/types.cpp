@@ -51,7 +51,7 @@ Value Length::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
-    else if (begin->type() == StyleTokenType::Dimension) {
+    else if (begin->type() == TokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
             return Value::custom(Length(begin->floatValue(), unit));
@@ -69,7 +69,7 @@ Value Percentage::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
-    else if (begin->type() == StyleTokenType::Percentage) {
+    else if (begin->type() == TokenType::Percentage) {
         return Value::custom(Percentage(begin->floatValue()));
     }
     else {
@@ -81,10 +81,10 @@ Value LengthOrPercentage::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
-    else if (begin->type() == StyleTokenType::Percentage) {
+    else if (begin->type() == TokenType::Percentage) {
         return Value::custom(LengthOrPercentage(begin->floatValue()));
     }
-    else if (begin->type() == StyleTokenType::Dimension) {
+    else if (begin->type() == TokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
             return Value::custom(LengthOrPercentage(begin->floatValue(), unit));
@@ -102,7 +102,7 @@ Value LengthOrAuto::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
-    else if (begin->type() == StyleTokenType::Identifier) {
+    else if (begin->type() == TokenType::Identifier) {
         if (begin->stringValue() == "auto") {
             return Value::custom(LengthOrAuto());
         }
@@ -110,7 +110,7 @@ Value LengthOrAuto::parse(TokenIterator begin, TokenIterator end) {
             return Value::invalid();
         }
     }
-    else if (begin->type() == StyleTokenType::Dimension) {
+    else if (begin->type() == TokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
             return Value::custom(LengthOrAuto(begin->floatValue(), unit));
@@ -128,10 +128,10 @@ Value LengthOrPercentageOrAuto::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
-    else if (begin->type() == StyleTokenType::Percentage) {
+    else if (begin->type() == TokenType::Percentage) {
         return Value::custom(LengthOrPercentageOrAuto(begin->floatValue()));
     }
-    else if (begin->type() == StyleTokenType::Identifier) {
+    else if (begin->type() == TokenType::Identifier) {
         if (begin->stringValue() == "auto") {
             return Value::custom(LengthOrPercentageOrAuto());
         }
@@ -139,7 +139,7 @@ Value LengthOrPercentageOrAuto::parse(TokenIterator begin, TokenIterator end) {
             return Value::invalid();
         }
     }
-    else if (begin->type() == StyleTokenType::Dimension) {
+    else if (begin->type() == TokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
             return Value::custom(LengthOrPercentageOrAuto(begin->floatValue(), unit));
@@ -170,7 +170,7 @@ Value BorderRadius::parse(TokenIterator begin, TokenIterator end) {
     else {
         // Middle tokens should all be whitespaces
         for (TokenIterator it = begin + 1; it != (end - 1); ++it) {
-            if (it->type() != StyleTokenType::Whitespace) {
+            if (it->type() != TokenType::Whitespace) {
                 return Value::invalid();
             }
         }

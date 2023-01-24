@@ -73,7 +73,7 @@ public:
     ///
     float toPx(const Metrics& metrics) const;
 
-    /// Parses the given range of `StyleToken`s as a `Length`.
+    /// Parses the given range of `Token`s as a `Length`.
     ///
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `Length`. Otherwise, return a `Value` holding a `Length`.
@@ -139,7 +139,7 @@ public:
         return value() * refLength * 0.01f;
     }
 
-    /// Parses the given range of `StyleToken`s as a `Percentage`.
+    /// Parses the given range of `Token`s as a `Percentage`.
     ///
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `Percentage`. Otherwise, return a `Value` holding a `Percentage`.
@@ -242,7 +242,7 @@ public:
                              : Length(value_, unit_).toPx(metrics);
     }
 
-    /// Parses the given range of `StyleToken`s as a `LengthOrPercentage`.
+    /// Parses the given range of `Token`s as a `LengthOrPercentage`.
     ///
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `LengthOrPercentage`. Otherwise, return a `Value` holding a
@@ -332,7 +332,7 @@ public:
         return isAuto_ ? valueIfAuto : Length(value_, unit_).toPx(metrics);
     }
 
-    /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
+    /// Parses the given range of `Token`s as a `LengthOrAuto`.
     ///
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `LengthOrAuto`. Otherwise, return a `Value` holding a
@@ -449,7 +449,7 @@ public:
         return valueIfAuto; // silence warning
     }
 
-    /// Parses the given range of `StyleToken`s as a `LengthOrPercentageOrAuto`.
+    /// Parses the given range of `Token`s as a `LengthOrPercentageOrAuto`.
     ///
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `LengthOrPercentageOrAuto`. Otherwise, return a `Value`
@@ -655,7 +655,7 @@ public:
             verticalRadius_.toPx(metrics, verticalRefLength));
     }
 
-    /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
+    /// Parses the given range of `Token`s as a `LengthOrAuto`.
     ///
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `LengthOrAuto`. Otherwise, return a `Value` holding a

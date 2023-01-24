@@ -39,8 +39,8 @@ void Value::parse_(const StylePropertySpec* spec) {
 
 Value parseStyleDefault(TokenIterator begin, TokenIterator end) {
     if (end == begin + 1) {
-        StyleTokenType t = begin->type();
-        if (t == StyleTokenType::Identifier) {
+        TokenType t = begin->type();
+        if (t == TokenType::Identifier) {
             return Value::identifier(begin->stringValue());
         }
     }

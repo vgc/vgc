@@ -97,7 +97,7 @@ void UnparsedValue::remapPointers_() {
         const char* newBegin = rawString_.data();
         std::ptrdiff_t offset = newBegin - oldBegin;
         if (offset != 0) {
-            for (StyleToken& token : tokens_) {
+            for (Token& token : tokens_) {
                 token.begin_ += offset;
                 token.end_ += offset;
             }

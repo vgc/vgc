@@ -1484,13 +1484,11 @@ void Widget::updateChildrenGeometry() {
 
 namespace {
 
-using style::StyleTokenType;
-
 style::Value parseStyleNumber(style::TokenIterator begin, style::TokenIterator end) {
     if (begin == end) {
         return style::Value::invalid();
     }
-    else if (begin->type() == StyleTokenType::Number && begin + 1 == end) {
+    else if (begin->type() == style::TokenType::Number && begin + 1 == end) {
         return style::Value::number(begin->floatValue());
     }
     else {

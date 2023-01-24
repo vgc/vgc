@@ -74,9 +74,6 @@ void Flex::setWrap(FlexWrap wrap) {
 
 namespace {
 
-using style::StyleTokenType;
-using style::Value;
-
 style::Value parseMainAlignment(style::TokenIterator begin, style::TokenIterator end_) {
 
     using namespace strings;
@@ -87,10 +84,10 @@ style::Value parseMainAlignment(style::TokenIterator begin, style::TokenIterator
     if (end_ != begin + 1) {
         return res;
     }
-    StyleTokenType t = begin->type();
+    style::TokenType t = begin->type();
 
     // The token should be an identifier
-    if (t != StyleTokenType::Identifier) {
+    if (t != style::TokenType::Identifier) {
         return res;
     }
     std::string_view s = begin->stringValue();
@@ -119,10 +116,10 @@ style::Value parseMainSpacing(style::TokenIterator begin, style::TokenIterator e
     if (end_ != begin + 1) {
         return res;
     }
-    StyleTokenType t = begin->type();
+    style::TokenType t = begin->type();
 
     // The token should be an identifier
-    if (t != StyleTokenType::Identifier) {
+    if (t != style::TokenType::Identifier) {
         return res;
     }
     std::string_view s = begin->stringValue();

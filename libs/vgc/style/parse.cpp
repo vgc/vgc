@@ -23,7 +23,7 @@
 namespace vgc::style {
 
 Value parseColor(TokenIterator begin, TokenIterator end) {
-    if (end == begin + 1 && begin->type() == StyleTokenType::Identifier
+    if (end == begin + 1 && begin->type() == TokenType::Identifier
         && begin->stringValue() == "inherit") {
         return Value::inherit();
     }
@@ -48,7 +48,7 @@ Value parseLength(TokenIterator begin, TokenIterator end) {
         return Value::invalid();
     }
     else if (
-        begin->type() == StyleTokenType::Dimension //
+        begin->type() == TokenType::Dimension //
         && begin->stringValue() == "dp"            //
         && begin + 1 == end) {
 
@@ -65,8 +65,8 @@ Value parseIdentifierAmong(
     std::initializer_list<core::StringId> list) {
 
     if (end == begin + 1) {
-        StyleTokenType t = begin->type();
-        if (t == StyleTokenType::Identifier) {
+        TokenType t = begin->type();
+        if (t == TokenType::Identifier) {
             for (core::StringId id : list) {
                 if (id == begin->stringValue()) {
                     return Value::identifier(begin->stringValue());

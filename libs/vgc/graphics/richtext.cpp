@@ -26,8 +26,6 @@
 
 namespace vgc::graphics {
 
-using style::StyleTokenType;
-
 RichTextSpan::RichTextSpan(RichTextSpan* parent)
     : StylableObject()
     , parent_(parent)
