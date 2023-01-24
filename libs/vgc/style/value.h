@@ -29,12 +29,12 @@
 
 namespace vgc::style {
 
-class StylePropertySpec;
+class PropertySpec;
 
-/// \enum vgc::style::StyleValueType
-/// \brief The type of a StyleValue
+/// \enum vgc::style::ValueType
+/// \brief The type of a Value
 ///
-enum class StyleValueType : Int8 {
+enum class ValueType : Int8 {
     None,       ///< There is no value at all
     Unparsed,   ///< The value hasn't been parsed yet
     Invalid,    ///< The value is invalid (e.g., parse error)
@@ -46,144 +46,144 @@ enum class StyleValueType : Int8 {
 };
 
 VGC_STYLE_API
-VGC_DECLARE_ENUM(StyleValueType)
+VGC_DECLARE_ENUM(ValueType)
 
-/// \enum vgc::style::StyleValue
+/// \enum vgc::style::Value
 /// \brief Stores the value of a style attribute.
 ///
-class VGC_STYLE_API StyleValue {
+class VGC_STYLE_API Value {
 private:
-    /// Creates a StyleValue of the given type
+    /// Creates a Value of the given type
     ///
-    StyleValue(StyleValueType type)
+    Value(ValueType type)
         : type_(type) {
     }
 
-    /// Creates a StyleValue of the given type and value
+    /// Creates a Value of the given type and value
     ///
     template<typename TValue>
-    StyleValue(StyleValueType type, TValue value)
+    Value(ValueType type, TValue value)
         : type_(type)
         , value_(value) {
     }
 
 public:
-    /// Creates a StyleValue of type None.
+    /// Creates a Value of type None.
     ///
-    StyleValue()
-        : StyleValue(StyleValueType::None) {
+    Value()
+        : Value(ValueType::None) {
     }
 
-    /// Creates a StyleValue of type None
+    /// Creates a Value of type None
     ///
-    static StyleValue none() {
-        return StyleValue(StyleValueType::None);
+    static Value none() {
+        return Value(ValueType::None);
     }
 
-    /// Creates a StyleValue of type Unparsed. This allows to defer parsing the
+    /// Creates a Value of type Unparsed. This allows to defer parsing the
     /// value until the `SpecTable` of the tree is properly populated.
     ///
-    static StyleValue unparsed(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value unparsed(TokenIterator begin, TokenIterator end);
 
-    /// Creates a StyleValue of type Invalid
+    /// Creates a Value of type Invalid
     ///
-    static StyleValue invalid() {
-        return StyleValue(StyleValueType::Invalid);
+    static Value invalid() {
+        return Value(ValueType::Invalid);
     }
 
-    /// Creates a StyleValue of type Inherit
+    /// Creates a Value of type Inherit
     ///
-    static StyleValue inherit() {
-        return StyleValue(StyleValueType::Inherit);
+    static Value inherit() {
+        return Value(ValueType::Inherit);
     }
 
-    /// Creates a StyleValue of type Identifier
+    /// Creates a Value of type Identifier
     ///
-    static StyleValue identifier(std::string_view string) {
+    static Value identifier(std::string_view string) {
         return identifier(core::StringId(string));
     }
 
-    /// Creates a StyleValue of type Identifier
+    /// Creates a Value of type Identifier
     ///
-    static StyleValue identifier(core::StringId stringId) {
-        return StyleValue(StyleValueType::Identifier, stringId);
+    static Value identifier(core::StringId stringId) {
+        return Value(ValueType::Identifier, stringId);
     }
 
-    /// Creates a StyleValue of type Number
+    /// Creates a Value of type Number
     ///
-    static StyleValue number(float x) {
-        return StyleValue(StyleValueType::Number, x);
+    static Value number(float x) {
+        return Value(ValueType::Number, x);
     }
 
-    /// Creates a StyleValue of type String
+    /// Creates a Value of type String
     ///
-    static StyleValue string(const std::string& str) {
+    static Value string(const std::string& str) {
         return string(core::StringId(str));
     }
 
-    /// Creates a StyleValue of type String
+    /// Creates a Value of type String
     ///
-    static StyleValue string(core::StringId stringId) {
-        return StyleValue(StyleValueType::String, stringId);
+    static Value string(core::StringId stringId) {
+        return Value(ValueType::String, stringId);
     }
 
-    /// Creates a StyleValue of type Custom
+    /// Creates a Value of type Custom
     ///
     template<typename TValue>
-    static StyleValue custom(const TValue& value) {
-        return StyleValue(StyleValueType::Custom, value);
+    static Value custom(const TValue& value) {
+        return Value(ValueType::Custom, value);
     }
 
-    /// Returns the type of the StyleValue
+    /// Returns the type of the Value
     ///
-    StyleValueType type() const {
+    ValueType type() const {
         return type_;
     }
 
     /// Returns whether the value is valid.
     ///
     bool isValid() const {
-        return type_ != StyleValueType::Invalid;
+        return type_ != ValueType::Invalid;
     }
 
-    /// Returns the StyleValue as a `float`. The behavior is undefined
+    /// Returns the Value as a `float`. The behavior is undefined
     /// if the type isn't Number.
     ///
     float toFloat() const {
         return std::any_cast<float>(value_);
     }
 
-    /// Returns the StyleValue as an `std::string`.
+    /// Returns the Value as an `std::string`.
     /// The behavior is undefined if the type isn't Identifier or String.
     ///
     const std::string& toString() const {
         return std::any_cast<core::StringId>(value_).string();
     }
 
-    /// Returns the StyleValue as a `vgc::core::StringId`.
+    /// Returns the Value as a `vgc::core::StringId`.
     /// The behavior is undefined if the type isn't Identifier or String.
     ///
     core::StringId toStringId() const {
         return std::any_cast<core::StringId>(value_);
     }
 
-    /// Returns whether this StyleValue is of type Identifier or String and
+    /// Returns whether this Value is of type Identifier or String and
     /// whose string value is equal the given string.
     ///
     bool operator==(const std::string& other) const {
-        return (type() == StyleValueType::Identifier || type() == StyleValueType::String)
+        return (type() == ValueType::Identifier || type() == ValueType::String)
                && std::any_cast<core::StringId>(value_) == other;
     }
 
-    /// Returns whether this StyleValue is of type Identifier or String and
+    /// Returns whether this Value is of type Identifier or String and
     /// whose string value is equal the given string.
     ///
     bool operator==(const core::StringId& other) const {
-        return (type() == StyleValueType::Identifier || type() == StyleValueType::String)
+        return (type() == ValueType::Identifier || type() == ValueType::String)
                && std::any_cast<core::StringId>(value_) == other;
     }
 
-    /// Returns whether this `StyleValue` stores a value of type `TValue`.
+    /// Returns whether this `Value` stores a value of type `TValue`.
     ///
     template<typename TValue>
     bool has() const {
@@ -214,11 +214,11 @@ public:
     }
 
 private:
-    StyleValueType type_;
+    ValueType type_;
     std::any value_;
 
     friend class StylableObject;
-    void parse_(const StylePropertySpec* spec);
+    void parse_(const PropertySpec* spec);
 };
 
 namespace detail {
@@ -227,7 +227,7 @@ namespace detail {
 //
 class UnparsedValue {
 public:
-    UnparsedValue(StyleTokenIterator begin, StyleTokenIterator end);
+    UnparsedValue(TokenIterator begin, TokenIterator end);
     UnparsedValue(const UnparsedValue& other);
     UnparsedValue(UnparsedValue&& other);
     UnparsedValue& operator=(const UnparsedValue& other);
@@ -237,18 +237,18 @@ public:
         return rawString_;
     }
 
-    const StyleTokenArray& tokens() const {
+    const TokenArray& tokens() const {
         return tokens_;
     }
 
 private:
     std::string rawString_;
-    StyleTokenArray tokens_;
+    TokenArray tokens_;
 
     // Note: tokens_ contains pointers to characters in the strings. These must
     // be properly updated whenever the string is copied. See remapPointers_().
 
-    static std::string initRawString(StyleTokenIterator begin, StyleTokenIterator end);
+    static std::string initRawString(TokenIterator begin, TokenIterator end);
     void remapPointers_();
 };
 

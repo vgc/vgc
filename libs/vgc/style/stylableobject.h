@@ -23,8 +23,8 @@
 
 #include <vgc/style/api.h>
 #include <vgc/style/metrics.h>
+#include <vgc/style/sheet.h>
 #include <vgc/style/spec.h>
-#include <vgc/style/stylesheet.h>
 
 namespace vgc::style {
 
@@ -120,20 +120,20 @@ private:
 
 namespace detail {
 
-using RuleSetArray = core::Array<std::pair<StyleRuleSet*, StyleSpecificity>>;
+using RuleSetArray = core::Array<std::pair<RuleSet*, Specificity>>;
 
 struct RuleSetSpan {
-    const StyleSheet* styleSheet;
+    const Sheet* styleSheet;
     Int begin;
     Int end;
 };
 
 using RuleSetSpans = core::Array<RuleSetSpan>;
 
-struct StyleCachedData {
+struct Cache {
 
-    // Buffer to compute and store which RuleSets from which StyleSheets
-    // matches a given StylableObject. The StyleSheets are stored in
+    // Buffer to compute and store which RuleSets from which Sheets
+    // matches a given StylableObject. The Sheets are stored in
     // ruleSetSpans from higher precedence to lower precedence, and
     // the RuleSets are stored in ruleSetArray from lower specificity
     // to higher specificity.
@@ -143,7 +143,7 @@ struct StyleCachedData {
     // Stores all cascaded values for a given StylableObject
     // TODO: share this data across all StylableObject that
     // have the same ruleSetArray and ruleSetSpans.
-    std::unordered_map<core::StringId, const StyleValue*> cascadedValues;
+    std::unordered_map<core::StringId, const Value*> cascadedValues;
 
     void clear() {
         ruleSetArray.clear();
@@ -178,7 +178,7 @@ public:
         return childStylableObjects_;
     }
 
-    /// Sets the `StyleSheet` of this `StylableObject`.
+    /// Sets the style sheet of this `StylableObject`.
     ///
     /// This style sheet affects both this object and all its descendants.
     ///
@@ -191,16 +191,16 @@ public:
     /// sheet is "scoped" (that is, it only applies to this objects and its
     /// descendants), while CSS does not support scoped style sheet.
     ///
-    void setStyleSheet(StyleSheetPtr styleSheet);
+    void setStyleSheet(SheetPtr styleSheet);
 
-    /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a
+    /// Overload of `setStyleSheet(SheetPtr)` that creates and sets a
     /// style sheet from the given string.
     ///
     void setStyleSheet(std::string_view string);
 
     /// Returns the style sheet of this `StylableObject`.
     ///
-    const StyleSheet* styleSheet() const {
+    const Sheet* styleSheet() const {
         return styleSheet_.get();
     }
 
@@ -243,7 +243,7 @@ public:
 
     /// Returns the computed value of a given style property of this `StylableObject`.
     ///
-    StyleValue style(core::StringId property) const;
+    Value style(core::StringId property) const;
 
     /// Returns the computed value of a given style property of this `StylableObject`
     /// as a value of type `T`.
@@ -297,7 +297,7 @@ public:
     ///     if (!table->setRegistered(staticClassName())) {
     ///         return;
     ///     }
-    ///     auto fortyTwo = StyleValue::custom(Length(12.0_dp));
+    ///     auto fortyTwo = Value::custom(Length(12.0_dp));
     ///     table->insert(StringId("fancy-length"), fortyTwo, false, &Length::parse);
     ///     SuperClass::populateStyleSpecTable(table);
     /// }
@@ -332,15 +332,15 @@ private:
     core::Array<StylableObject*> childStylableObjects_;
 
     // Style information
-    SpecTablePtr styleSpecTable_;             // "global" table shared between trees
-    StyleSheetPtr styleSheet_;                // rules for this object and descendants
-    ClassSet styleClasses_;                   // style classes of this object
-    detail::StyleCachedData styleCachedData_; // cache of cascaded values of this object
-    Metrics styleMetrics_;                    // how to convert `dp` (and others) to `px`
+    SpecTablePtr styleSpecTable_; // "global" table shared between trees
+    SheetPtr styleSheet_;         // rules for this object and descendants
+    ClassSet styleClasses_;       // style classes of this object
+    detail::Cache styleCache_;    // cache of cascaded values of this object
+    Metrics styleMetrics_;        // how to convert `dp` (and others) to `px`
 
     void updateStyle_();
-    const StyleValue* getStyleCascadedValue_(core::StringId property) const;
-    const StyleValue& getStyleComputedValue_(core::StringId property) const;
+    const Value* getStyleCascadedValue_(core::StringId property) const;
+    const Value& getStyleComputedValue_(core::StringId property) const;
 };
 
 } // namespace vgc::style

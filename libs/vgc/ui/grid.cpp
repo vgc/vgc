@@ -91,7 +91,7 @@ style::LengthOrPercentageOrAuto getPreferredSize(const Widget* w, core::StringId
 
 // UI coordinates are always in pixels
 // dpi-awareness means more pixels
-// we have to adjust the fixed values of the stylesheet to keep a similar aspect.
+// we have to adjust the fixed values of the style sheet to keep a similar aspect.
 // XXX we could directly scale in the style Lengths getter.
 
 float hintSpacing(float spacing) {
@@ -102,7 +102,7 @@ float hintSpacing(float spacing) {
 }
 
 float getSpacing(const Widget* w, core::StringId id, bool hint) {
-    style::StyleValue spacing = w->style(id);
+    style::Value spacing = w->style(id);
     const style::Metrics& metrics = w->styleMetrics();
     float value = 0.0f;
     if (spacing.has<style::Length>()) {

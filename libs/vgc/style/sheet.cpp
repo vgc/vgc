@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/style/stylesheet.h>
+#include <vgc/style/sheet.h>
 
 #include <vgc/style/logcategories.h>
 #include <vgc/style/stylableobject.h>
@@ -26,32 +26,32 @@ namespace detail {
 // https://www.w3.org/TR/css-syntax-3/#parsing
 //
 // Note: we use a class with static functions (rather than free functions) to
-// make it easier for the StyleSheet class (and other classes) to simply
+// make it easier for the Sheet class (and other classes) to simply
 // befriend this class, instead of befriending all the free functions.
 //
-class StyleParser {
+class Parser {
     bool topLevel_;
-    StyleParser(bool topLevel)
+    Parser(bool topLevel)
         : topLevel_(topLevel) {
     }
 
 public:
     // https://www.w3.org/TR/css-syntax-3/#parse-stylesheet
-    static StyleSheetPtr parseStyleSheet(std::string_view styleString) {
+    static SheetPtr parseSheet(std::string_view styleString) {
 
         // Tokenize
         std::string decoded = decodeStyleString(styleString);
-        StyleTokenArray tokens = tokenizeStyleString(decoded.data());
+        TokenArray tokens = tokenizeStyleString(decoded.data());
 
         // Parse
         bool topLevel = true;
-        StyleParser parser(topLevel);
-        StyleTokenIterator it = tokens.begin();
-        core::Array<StyleRuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
+        Parser parser(topLevel);
+        TokenIterator it = tokens.begin();
+        core::Array<RuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
 
-        // Create StyleSheet
-        StyleSheetPtr styleSheet = StyleSheet::create();
-        for (const StyleRuleSetPtr& rule : rules) {
+        // Create Sheet
+        SheetPtr styleSheet = Sheet::create();
+        for (const RuleSetPtr& rule : rules) {
             styleSheet->appendChildObject_(rule.get());
             styleSheet->ruleSets_.append(rule.get());
         }
@@ -64,37 +64,36 @@ public:
 private:
     // https://www.w3.org/TR/css-syntax-3/#consume-list-of-rules
     // Note: we use 'styleSheet != nullptr' as top-level flag
-    core::Array<StyleRuleSetPtr>
-    consumeRuleList_(StyleTokenIterator& it, StyleTokenIterator end) {
+    core::Array<RuleSetPtr> consumeRuleList_(TokenIterator& it, TokenIterator end) {
         std::ignore = topLevel_; // suppress warning
-        core::Array<StyleRuleSetPtr> res;
+        core::Array<RuleSetPtr> res;
         while (true) {
             if (it == end) {
                 break;
             }
-            else if (it->type() == StyleTokenType::Whitespace) {
+            else if (it->type() == TokenType::Whitespace) {
                 ++it;
             }
             // Uncomment to support CDO/CDC
-            // else if (it->type == StyleTokenType::CommentDelimiterOpen ||
-            //          it->type == StyleTokenType::CommentDelimiterClose) {
+            // else if (it->type == TokenType::CommentDelimiterOpen ||
+            //          it->type == TokenType::CommentDelimiterClose) {
             //     if (topLevel_) {
             //         ++it;
             //         continue;
             //     }
             //     else {
-            //         StyleRuleSetPtr rule = consumeQualifiedRule_(it, end);
+            //         RuleSetPtr rule = consumeQualifiedRule_(it, end);
             //         if (rule) {
             //             res.append(rule);
             //         }
             //     }
             // }
-            else if (it->type() == StyleTokenType::AtKeyword) {
+            else if (it->type() == TokenType::AtKeyword) {
                 // TODO: append a StyleAtRule to the result
                 consumeAtRule_(it, end);
             }
             else {
-                StyleRuleSetPtr rule = consumeQualifiedRule_(it, end);
+                RuleSetPtr rule = consumeQualifiedRule_(it, end);
                 if (rule) {
                     res.append(rule);
                 }
@@ -104,7 +103,7 @@ private:
     }
 
     // https://www.w3.org/TR/css-syntax-3/#consume-at-rule
-    void consumeAtRule_(StyleTokenIterator& it, StyleTokenIterator end) {
+    void consumeAtRule_(TokenIterator& it, TokenIterator end) {
         // For now, we just consume the rule without returning anything.
         // In the future, we'll return a StyleAtRule
         ++it; // skip At token
@@ -113,11 +112,11 @@ private:
                 // Parse Error: return the partially consumed AtRule
                 break;
             }
-            else if (it->type() == StyleTokenType::Semicolon) {
+            else if (it->type() == TokenType::Semicolon) {
                 ++it;
                 break;
             }
-            else if (it->type() == StyleTokenType::LeftCurlyBracket) {
+            else if (it->type() == TokenType::LeftCurlyBracket) {
                 consumeSimpleBlock_(it, end);
                 // TODO: assign the simple block to the AtRule's block
                 break;
@@ -134,43 +133,42 @@ private:
     //
     // Assumes `it != end`.
     //
-    // Note: this function returns a null StyleRuleSetPtr when the spec says to
+    // Note: this function returns a null RuleSetPtr when the spec says to
     // "return nothing".
     //
     // Note: https://www.w3.org/TR/css-syntax-3/#style-rules
     //
-    //   « Qualified rules at the top-level of a CSS stylesheet are style
+    //   « Qualified rules at the top-level of a CSS style sheet are style
     //     rules. Qualified rules in other contexts may or may not be style
     //     rules, as defined by the context. »
     //
     // Since in this implementation, all calls to consumeQualifiedRule_() are
-    // made at the top-level of the stylesheet, we treat all qualified rules as
-    // style rules, and directly create and populate a StyleRuleSet. If we ever
+    // made at the top-level of the style sheet, we treat all qualified rules as
+    // style rules, and directly create and populate a RuleSet. If we ever
     // come across a use case were a qualifed rule should not be a style rule,
     // then we'll have to make this implementation more generic.
     //
-    StyleRuleSetPtr
-    consumeQualifiedRule_(StyleTokenIterator& it, StyleTokenIterator end) {
-        StyleRuleSetPtr rule = StyleRuleSet::create();
-        StyleTokenIterator preludeBegin = it;
+    RuleSetPtr consumeQualifiedRule_(TokenIterator& it, TokenIterator end) {
+        RuleSetPtr rule = RuleSet::create();
+        TokenIterator preludeBegin = it;
         while (true) {
             if (it == end) {
                 // Parse Error: return nothing
-                return StyleRuleSetPtr();
+                return RuleSetPtr();
             }
-            else if (it->type() == StyleTokenType::LeftCurlyBracket) {
-                StyleTokenIterator preludeEnd = it;
+            else if (it->type() == TokenType::LeftCurlyBracket) {
+                TokenIterator preludeEnd = it;
                 ++it;
 
                 // Parse the prelude as a selector group
-                core::Array<StyleSelectorPtr> selectors =
+                core::Array<SelectorPtr> selectors =
                     consumeSelectorGroup_(preludeBegin, preludeEnd);
                 if (selectors.isEmpty()) {
                     // Parse error
-                    return StyleRuleSetPtr();
+                    return RuleSetPtr();
                 }
                 else {
-                    for (const StyleSelectorPtr& selector : selectors) {
+                    for (const SelectorPtr& selector : selectors) {
                         rule->appendChildObject_(selector.get());
                         rule->selectors_.append(selector.get());
                     }
@@ -178,9 +176,9 @@ private:
 
                 // Consume list of declarations
                 bool expectRightCurlyBracket = true;
-                core::Array<StyleDeclarationPtr> declarations =
+                core::Array<DeclarationPtr> declarations =
                     consumeDeclarationList_(it, end, expectRightCurlyBracket);
-                for (const StyleDeclarationPtr& declaration : declarations) {
+                for (const DeclarationPtr& declaration : declarations) {
                     rule->appendChildObject_(declaration.get());
                     rule->declarations_.append(declaration.get());
                 }
@@ -205,12 +203,12 @@ private:
     // declarations as a second pass. Instead, we do both in one pass, so we
     // need to handle the possibility of a closing RightCurlyBracket.
     //
-    core::Array<StyleDeclarationPtr> consumeDeclarationList_(
-        StyleTokenIterator& it,
-        StyleTokenIterator end,
+    core::Array<DeclarationPtr> consumeDeclarationList_(
+        TokenIterator& it,
+        TokenIterator end,
         bool expectRightCurlyBracket) {
 
-        core::Array<StyleDeclarationPtr> res;
+        core::Array<DeclarationPtr> res;
         while (true) {
             if (it == end) {
                 if (expectRightCurlyBracket) {
@@ -222,24 +220,24 @@ private:
                     break;
                 }
             }
-            else if (it->type() == StyleTokenType::Whitespace) {
+            else if (it->type() == TokenType::Whitespace) {
                 ++it;
             }
-            else if (it->type() == StyleTokenType::Semicolon) {
+            else if (it->type() == TokenType::Semicolon) {
                 ++it;
             }
-            else if (it->type() == StyleTokenType::AtKeyword) {
+            else if (it->type() == TokenType::AtKeyword) {
                 consumeAtRule_(it, end);
                 // Note: for now, the at rule is simply skipped and
                 // not appended to the list of declarations.
             }
-            else if (it->type() == StyleTokenType::Identifier) {
-                StyleTokenIterator declarationBegin = it;
+            else if (it->type() == TokenType::Identifier) {
+                TokenIterator declarationBegin = it;
                 while (true) {
-                    if (it == end                                  //
-                        || it->type() == StyleTokenType::Semicolon //
-                        || (expectRightCurlyBracket                //
-                            && it->type() == StyleTokenType::RightCurlyBracket)) {
+                    if (it == end                             //
+                        || it->type() == TokenType::Semicolon //
+                        || (expectRightCurlyBracket           //
+                            && it->type() == TokenType::RightCurlyBracket)) {
 
                         break;
                     }
@@ -247,25 +245,24 @@ private:
                         consumeComponentValue_(it, end);
                     }
                 }
-                StyleTokenIterator declarationEnd = it;
-                StyleDeclarationPtr declaration =
+                TokenIterator declarationEnd = it;
+                DeclarationPtr declaration =
                     consumeDeclaration_(declarationBegin, declarationEnd);
                 if (declaration) {
                     res.append(declaration);
                 }
             }
             else if (
-                expectRightCurlyBracket
-                && it->type() == StyleTokenType::RightCurlyBracket) {
+                expectRightCurlyBracket && it->type() == TokenType::RightCurlyBracket) {
                 ++it;
                 break;
             }
             else {
                 // Parse error: throw away component values until semicolon or eof
                 while (true) {
-                    if (it == end || it->type() == StyleTokenType::Semicolon
+                    if (it == end || it->type() == TokenType::Semicolon
                         || (expectRightCurlyBracket
-                            && it->type() == StyleTokenType::RightCurlyBracket)) {
+                            && it->type() == TokenType::RightCurlyBracket)) {
 
                         break;
                     }
@@ -281,45 +278,44 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-declaration
     // Assumes that the current token is the identifier.
     // May return a null pointer in case of parse errors.
-    StyleDeclarationPtr
-    consumeDeclaration_(StyleTokenIterator& it, StyleTokenIterator end) {
+    DeclarationPtr consumeDeclaration_(TokenIterator& it, TokenIterator end) {
 
-        StyleDeclarationPtr declaration = StyleDeclaration::create();
+        DeclarationPtr declaration = Declaration::create();
         declaration->property_ = core::StringId(it->stringValue());
-        declaration->value_ = StyleValue::invalid();
+        declaration->value_ = Value::invalid();
         ++it;
 
         // Consume whitespaces
-        while (it != end && it->type() == StyleTokenType::Whitespace) {
+        while (it != end && it->type() == TokenType::Whitespace) {
             ++it;
         }
 
         // Ensure first non-whitespace token is a Colon
-        if (it == end || it->type() != StyleTokenType::Colon) {
+        if (it == end || it->type() != TokenType::Colon) {
             // Parse error: return nothing
-            return StyleDeclarationPtr();
+            return DeclarationPtr();
         }
         else {
             ++it;
         }
 
         // Consume whitespaces
-        while (it != end && it->type() == StyleTokenType::Whitespace) {
+        while (it != end && it->type() == TokenType::Whitespace) {
             ++it;
         }
 
         // Consume value components
-        StyleTokenIterator valueBegin = it;
+        TokenIterator valueBegin = it;
         while (it != end) {
             consumeComponentValue_(it, end);
         }
-        StyleTokenIterator valueEnd = it;
+        TokenIterator valueEnd = it;
 
         // Remove trailing whitespaces from value
         // TODO: also remove "!important" from value and set it as flag, see (5) in:
         //       https://www.w3.org/TR/css-syntax-3/#consume-declaration
         while (valueEnd != valueBegin
-               && (valueEnd - 1)->type() == StyleTokenType::Whitespace) {
+               && (valueEnd - 1)->type() == TokenType::Whitespace) {
             --valueEnd;
         }
 
@@ -328,22 +324,22 @@ private:
         //
         // XXX We might still want to check here for global keywords like 'inherit'/etc.
         //
-        declaration->value_ = StyleValue::unparsed(valueBegin, valueEnd);
+        declaration->value_ = Value::unparsed(valueBegin, valueEnd);
 
         return declaration;
     }
 
     // https://www.w3.org/TR/css-syntax-3/#consume-component-value
     // Assumes that `it` is not end
-    void consumeComponentValue_(StyleTokenIterator& it, StyleTokenIterator end) {
-        if (it->type() == StyleTokenType::LeftParenthesis
-            || it->type() == StyleTokenType::LeftCurlyBracket
-            || it->type() == StyleTokenType::LeftSquareBracket) {
+    void consumeComponentValue_(TokenIterator& it, TokenIterator end) {
+        if (it->type() == TokenType::LeftParenthesis
+            || it->type() == TokenType::LeftCurlyBracket
+            || it->type() == TokenType::LeftSquareBracket) {
 
             consumeSimpleBlock_(it, end);
             // TODO: return it
         }
-        else if (it->type() == StyleTokenType::Function) {
+        else if (it->type() == TokenType::Function) {
             consumeFunction_(it, end);
             // TODO: return it
         }
@@ -355,17 +351,17 @@ private:
 
     // https://www.w3.org/TR/css-syntax-3/#consume-simple-block
     // Assumes that the `it` token is a left parenthesis or left curly/square bracket.
-    void consumeSimpleBlock_(StyleTokenIterator& it, StyleTokenIterator end) {
-        StyleTokenType startToken = it->type();
-        StyleTokenType endToken;
-        if (startToken == StyleTokenType::LeftParenthesis) {
-            endToken = StyleTokenType::RightParenthesis;
+    void consumeSimpleBlock_(TokenIterator& it, TokenIterator end) {
+        TokenType startToken = it->type();
+        TokenType endToken;
+        if (startToken == TokenType::LeftParenthesis) {
+            endToken = TokenType::RightParenthesis;
         }
-        else if (startToken == StyleTokenType::LeftCurlyBracket) {
-            endToken = StyleTokenType::RightCurlyBracket;
+        else if (startToken == TokenType::LeftCurlyBracket) {
+            endToken = TokenType::RightCurlyBracket;
         }
         else { // startToken == TokenType::LeftSquareBracket
-            endToken = StyleTokenType::RightSquareBracket;
+            endToken = TokenType::RightSquareBracket;
         }
         ++it;
         while (true) {
@@ -387,7 +383,7 @@ private:
 
     // https://www.w3.org/TR/css-syntax-3/#consume-function
     // assumes `it` is a function token
-    void consumeFunction_(StyleTokenIterator& it, StyleTokenIterator end) {
+    void consumeFunction_(TokenIterator& it, TokenIterator end) {
         // TODO: create function object, and set its name to it->codePoints
         ++it;
         while (true) {
@@ -395,7 +391,7 @@ private:
                 // Parse error: return the function
                 break;
             }
-            else if (it->type() == StyleTokenType::RightParenthesis) {
+            else if (it->type() == TokenType::RightParenthesis) {
                 ++it;
                 break;
             }
@@ -409,21 +405,20 @@ private:
 
     // https://www.w3.org/TR/selectors-3/#grouping
     // Returns an empty array if any of the selectors in the group is invalid.
-    core::Array<StyleSelectorPtr>
-    consumeSelectorGroup_(StyleTokenIterator& it, StyleTokenIterator end) {
-        core::Array<StyleSelectorPtr> res;
+    core::Array<SelectorPtr> consumeSelectorGroup_(TokenIterator& it, TokenIterator end) {
+        core::Array<SelectorPtr> res;
         while (true) {
-            StyleTokenIterator selectorBegin = it;
-            while (it != end && it->type() != StyleTokenType::Comma) {
+            TokenIterator selectorBegin = it;
+            while (it != end && it->type() != TokenType::Comma) {
                 ++it;
             }
-            StyleSelectorPtr selector = consumeSelector_(selectorBegin, it);
+            SelectorPtr selector = consumeSelector_(selectorBegin, it);
             if (selector) {
                 res.append(selector);
             }
             else {
                 // Syntax error
-                return core::Array<StyleSelectorPtr>();
+                return core::Array<SelectorPtr>();
             }
             if (it == end) {
                 break;
@@ -437,65 +432,65 @@ private:
 
     // https://www.w3.org/TR/selectors-3/#selector-syntax
     // Returns null if the selector is invalid.
-    StyleSelectorPtr consumeSelector_(StyleTokenIterator& it, StyleTokenIterator end) {
-        core::Array<StyleSelectorItem> selectorItems;
+    SelectorPtr consumeSelector_(TokenIterator& it, TokenIterator end) {
+        core::Array<SelectorItem> selectorItems;
         // Trim whitespaces at both ends
-        while (it != end && it->type() == StyleTokenType::Whitespace) {
+        while (it != end && it->type() == TokenType::Whitespace) {
             ++it;
         }
-        while (it != end && (end - 1)->type() == StyleTokenType::Whitespace) {
+        while (it != end && (end - 1)->type() == TokenType::Whitespace) {
             --end;
         }
         if (it == end) {
             // Parse error
-            return StyleSelectorPtr();
+            return SelectorPtr();
         }
         // Consume items
         while (it != end) {
             bool ok = consumeSelectorItem_(selectorItems, it, end);
             if (!ok) {
                 // Parse error
-                return StyleSelectorPtr();
+                return SelectorPtr();
             }
         }
-        return StyleSelector::create(std::move(selectorItems));
+        return Selector::create(std::move(selectorItems));
     }
 
     // Consumes one item and appends it to the given array. Returns false in
     // case of parse errors, in which case the item is not appended.
     bool consumeSelectorItem_(
-        core::Array<StyleSelectorItem>& items,
-        StyleTokenIterator& it,
-        StyleTokenIterator end) {
+        core::Array<SelectorItem>& items,
+        TokenIterator& it,
+        TokenIterator end) {
 
         if (it == end) {
             return false;
         }
-        if (it->type() == StyleTokenType::Delimiter && it->stringValue() == ".") {
+        if (it->type() == TokenType::Delimiter && it->stringValue() == ".") {
             ++it;
-            if (it == end || it->type() != StyleTokenType::Identifier) {
+            if (it == end || it->type() != TokenType::Identifier) {
                 return false;
             }
             items.emplaceLast(
-                StyleSelectorItemType::ClassSelector, core::StringId(it->stringValue()));
+                SelectorItemType::ClassSelector, core::StringId(it->stringValue()));
             ++it;
             return true;
         }
-        else if (it->type() == StyleTokenType::Whitespace) {
-            while (it->type() == StyleTokenType::Whitespace) {
+        else if (it->type() == TokenType::Whitespace) {
+            while (it->type() == TokenType::Whitespace) {
                 ++it;
                 if (it == end) {
                     return false;
                 }
             }
-            if (it->type() == StyleTokenType::Delimiter && it->stringValue() == ">") {
-                items.emplaceLast(StyleSelectorItemType::ChildCombinator);
+            if (it->type() == TokenType::Delimiter && it->stringValue() == ">") {
+                items.emplaceLast(SelectorItemType::ChildCombinator);
                 ++it;
             }
             else {
-                items.emplaceLast(StyleSelectorItemType::DescendantCombinator);
+                items.emplaceLast(SelectorItemType::DescendantCombinator);
             }
-            while (it != end && it->type() == StyleTokenType::Whitespace) {
+            while (it != end && it->type() == TokenType::Whitespace) {
                 ++it;
             }
             return true;
@@ -508,9 +503,9 @@ private:
 
 void SpecTable::insert(
     core::StringId attributeName,
-    const StyleValue& initialValue,
+    const Value& initialValue,
     bool isInherited,
-    StylePropertyParser parser) {
+    PropertyParser parser) {
 
     if (get(attributeName)) {
         VGC_WARNING(
@@ -520,7 +515,7 @@ void SpecTable::insert(
             attributeName);
         return;
     }
-    StylePropertySpec spec(attributeName, initialValue, isInherited, parser);
+    PropertySpec spec(attributeName, initialValue, isInherited, parser);
     map_.insert({attributeName, spec});
 }
 
@@ -529,35 +524,35 @@ bool SpecTable::setRegistered(core::StringId className) {
     return res.second;
 }
 
-StyleSheet::StyleSheet()
+Sheet::Sheet()
     : Object() {
 }
 
-StyleSheetPtr StyleSheet::create() {
-    return StyleSheetPtr(new StyleSheet());
+SheetPtr Sheet::create() {
+    return SheetPtr(new Sheet());
 }
 
-StyleSheetPtr StyleSheet::create(std::string_view s) {
-    return detail::StyleParser::parseStyleSheet(s);
+SheetPtr Sheet::create(std::string_view s) {
+    return detail::Parser::parseSheet(s);
 }
 
-StyleRuleSet::StyleRuleSet()
+RuleSet::RuleSet()
     : Object() {
 }
 
-StyleRuleSetPtr StyleRuleSet::create() {
-    return StyleRuleSetPtr(new StyleRuleSet());
+RuleSetPtr RuleSet::create() {
+    return RuleSetPtr(new RuleSet());
 }
 
 VGC_DEFINE_ENUM(
-    StyleSelectorItemType,
+    SelectorItemType,
     (ClassSelector, "Class Selector"),
     (DescendantCombinator, "Descendant Combinator"),
     (ChildCombinator, "Child Combinator"))
 
 namespace {
 
-using StyleSelectorItemIterator = core::Array<StyleSelectorItem>::iterator;
+using SelectorItemIterator = core::Array<SelectorItem>::iterator;
 
 // Returns whether the given StylableObject matches the given
 // selector group. A selector group is a sublist of items between
@@ -565,14 +560,14 @@ using StyleSelectorItemIterator = core::Array<StyleSelectorItem>::iterator;
 //
 bool matchesGroup_(
     StylableObject* node,
-    StyleSelectorItemIterator begin,
-    StyleSelectorItemIterator end) {
+    SelectorItemIterator begin,
+    SelectorItemIterator end) {
 
     // For now, we only support a sequence of class selectors, that is,
     // something like ".class1.class2.class3". No pseudo-classes, etc... so the
     // implementation is super easy : the node simply has to have all classes.
     //
-    for (StyleSelectorItemIterator it = begin; it < end; ++it) {
+    for (SelectorItemIterator it = begin; it < end; ++it) {
         if (!node->hasStyleClass(it->name())) {
             return false;
         }
@@ -582,10 +577,10 @@ bool matchesGroup_(
 
 } // namespace
 
-bool StyleSelector::matches(StylableObject* node) {
+bool Selector::matches(StylableObject* node) {
 
     // TODO: Should we pre-validate the selector during parsing (thus, never
-    // create an invalid StyleSelector), and in this function, raise a
+    // create an invalid Selector), and in this function, raise a
     // LogicError instead of returning false when the selector isn't valid?
     // Should the whole ruleset be discarded if any of its selectors is
     // invalid?
@@ -595,8 +590,8 @@ bool StyleSelector::matches(StylableObject* node) {
 
     // Check that the selector item array isn't empty.
     //
-    StyleSelectorItemIterator begin = items_.begin();
-    StyleSelectorItemIterator end = items_.end();
+    SelectorItemIterator begin = items_.begin();
+    SelectorItemIterator end = items_.end();
     if (begin == end) {
         // Invalid selector: items is empty
         return false;
@@ -605,8 +600,8 @@ bool StyleSelector::matches(StylableObject* node) {
     // We process the array of items by splitting it into "groups" separated by
     // a combinator, and iterating from the last group down to the first group.
     //
-    StyleSelectorItemIterator groupBegin = end;
-    StyleSelectorItemIterator groupEnd = end;
+    SelectorItemIterator groupBegin = end;
+    SelectorItemIterator groupEnd = end;
 
     // Find right-most group
     while (groupBegin != begin && !(groupBegin - 1)->isCombinator()) {
@@ -634,7 +629,7 @@ bool StyleSelector::matches(StylableObject* node) {
 
             // Get combinator type
             --groupBegin;
-            StyleSelectorItemType combinatorType = groupBegin->type();
+            SelectorItemType combinatorType = groupBegin->type();
 
             // Get previous group
             groupEnd = groupBegin;
@@ -648,7 +643,7 @@ bool StyleSelector::matches(StylableObject* node) {
             }
 
             // Apply combinator
-            if (combinatorType == StyleSelectorItemType::ChildCombinator) {
+            if (combinatorType == SelectorItemType::ChildCombinator) {
                 if (matchesGroup_(parent, groupBegin, groupEnd)) {
                     currentNode = parent;
                 }
@@ -656,7 +651,7 @@ bool StyleSelector::matches(StylableObject* node) {
                     return false;
                 }
             }
-            else if (combinatorType == StyleSelectorItemType::DescendantCombinator) {
+            else if (combinatorType == SelectorItemType::DescendantCombinator) {
                 while (parent && !matchesGroup_(parent, groupBegin, groupEnd)) {
                     parent = parent->parentStylableObject();
                 }
@@ -669,7 +664,7 @@ bool StyleSelector::matches(StylableObject* node) {
             }
             else {
                 std::string message = core::format(
-                    "StyleSelectorItemType {} was supposed to be a combinator but isn't.",
+                    "SelectorItemType {} was supposed to be a combinator but isn't.",
                     combinatorType);
                 throw core::LogicError(message);
             }
@@ -682,29 +677,29 @@ bool StyleSelector::matches(StylableObject* node) {
     }
 }
 
-StyleSelector::StyleSelector(core::Array<StyleSelectorItem>&& items)
+Selector::Selector(core::Array<SelectorItem>&& items)
     : Object()
     , items_(std::move(items))
     , specificity_(0) {
 
     // Compute specificity
-    for (StyleSelectorItem& item : items_) {
-        if (item.type() == StyleSelectorItemType::ClassSelector) {
+    for (SelectorItem& item : items_) {
+        if (item.type() == SelectorItemType::ClassSelector) {
             ++specificity_;
         }
     }
 }
 
-StyleSelectorPtr StyleSelector::create(core::Array<StyleSelectorItem>&& items) {
-    return StyleSelectorPtr(new StyleSelector(std::move(items)));
+SelectorPtr Selector::create(core::Array<SelectorItem>&& items) {
+    return SelectorPtr(new Selector(std::move(items)));
 }
 
-StyleDeclaration::StyleDeclaration()
+Declaration::Declaration()
     : Object() {
 }
 
-StyleDeclarationPtr StyleDeclaration::create() {
-    return StyleDeclarationPtr(new StyleDeclaration());
+DeclarationPtr Declaration::create() {
+    return DeclarationPtr(new Declaration());
 }
 
 } // namespace vgc::style

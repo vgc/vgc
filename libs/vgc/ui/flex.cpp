@@ -74,75 +74,71 @@ void Flex::setWrap(FlexWrap wrap) {
 
 namespace {
 
-using style::StyleTokenIterator;
-using style::StyleTokenType;
-using style::StyleValue;
-
-StyleValue parseMainAlignment(StyleTokenIterator begin, StyleTokenIterator end_) {
+style::Value parseMainAlignment(style::TokenIterator begin, style::TokenIterator end_) {
 
     using namespace strings;
 
-    StyleValue res = StyleValue::invalid();
+    style::Value res = style::Value::invalid();
 
     // There must be exactly one token
     if (end_ != begin + 1) {
         return res;
     }
-    StyleTokenType t = begin->type();
+    style::TokenType t = begin->type();
 
     // The token should be an identifier
-    if (t != StyleTokenType::Identifier) {
+    if (t != style::TokenType::Identifier) {
         return res;
     }
     std::string_view s = begin->stringValue();
 
-    // Converts the identifier to StyleValue storing a MainAlignment enum value.
+    // Converts the identifier to style::Value storing a MainAlignment enum value.
     if (s == start) {
-        res = StyleValue::custom(MainAlignment::Start);
+        res = style::Value::custom(MainAlignment::Start);
     }
     else if (s == end) {
-        res = StyleValue::custom(MainAlignment::End);
+        res = style::Value::custom(MainAlignment::End);
     }
     else if (s == center) {
-        res = StyleValue::custom(MainAlignment::Center);
+        res = style::Value::custom(MainAlignment::Center);
     }
 
     return res;
 }
 
-StyleValue parseMainSpacing(StyleTokenIterator begin, StyleTokenIterator end_) {
+style::Value parseMainSpacing(style::TokenIterator begin, style::TokenIterator end_) {
 
     using namespace strings;
 
-    StyleValue res = StyleValue::invalid();
+    style::Value res = style::Value::invalid();
 
     // There must be exactly one token
     if (end_ != begin + 1) {
         return res;
     }
-    StyleTokenType t = begin->type();
+    style::TokenType t = begin->type();
 
     // The token should be an identifier
-    if (t != StyleTokenType::Identifier) {
+    if (t != style::TokenType::Identifier) {
         return res;
     }
     std::string_view s = begin->stringValue();
 
-    // Converts the identifier to StyleValue storing a MainAlignment enum value.
+    // Converts the identifier to style::Value storing a MainAlignment enum value.
     if (s == packed) {
-        res = StyleValue::custom(MainSpacing::Packed);
+        res = style::Value::custom(MainSpacing::Packed);
     }
     else if (s == space_between) {
-        res = StyleValue::custom(MainSpacing::SpaceBetween);
+        res = style::Value::custom(MainSpacing::SpaceBetween);
     }
     else if (s == space_around) {
-        res = StyleValue::custom(MainSpacing::SpaceAround);
+        res = style::Value::custom(MainSpacing::SpaceAround);
     }
     else if (s == space_evenly) {
-        res = StyleValue::custom(MainSpacing::SpaceEvenly);
+        res = style::Value::custom(MainSpacing::SpaceEvenly);
     }
     else if (s == force_stretch) {
-        res = StyleValue::custom(MainSpacing::ForceStretch);
+        res = style::Value::custom(MainSpacing::ForceStretch);
     }
 
     return res;
@@ -155,8 +151,8 @@ void Flex::populateStyleSpecTable(style::SpecTable* table) {
         return;
     }
     using namespace strings;
-    auto start_ma = StyleValue::custom(MainAlignment::Start);
-    auto packed_ms = StyleValue::custom(MainSpacing::Packed);
+    auto start_ma = style::Value::custom(MainAlignment::Start);
+    auto packed_ms = style::Value::custom(MainSpacing::Packed);
     table->insert(main_alignment, start_ma, false, &parseMainAlignment);
     table->insert(main_spacing, packed_ms, false, &parseMainSpacing);
     SuperClass::populateStyleSpecTable(table);
@@ -827,7 +823,7 @@ void emergencyShrink(
     //   even worse to start clipping once the child rects become zero, as it
     //   introduces a discontinuity.
     //
-    // In the future, we may want to make this configurable in the stylesheet,
+    // In the future, we may want to make this configurable in the style sheet,
     // maybe something like:
     //
     // flex-clip: always                         always enable clipping (i.e., even on stretch)

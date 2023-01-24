@@ -34,9 +34,7 @@ public:
     LengthContributions() = default;
 
     void
-    add(const style::Metrics& metrics,
-        const style::StyleValue& value,
-        float count = 1.0f);
+    add(const style::Metrics& metrics, const style::Value& value, float count = 1.0f);
 
     void addAbsolute(
         const style::Metrics& metrics,
@@ -278,7 +276,7 @@ public:
     ///
     void addWidth(
         const style::Metrics& metrics,
-        const style::StyleValue& value,
+        const style::Value& value,
         float count = 1.0f) {
 
         widthContributions_.add(metrics, value, count);
@@ -307,7 +305,7 @@ public:
     ///
     void addHeight(
         const style::Metrics& metrics,
-        const style::StyleValue& value,
+        const style::Value& value,
         float count = 1.0f) {
 
         heightContributions_.add(metrics, value, count);
@@ -337,7 +335,7 @@ public:
     void addTo(
         Int i,
         const style::Metrics& metrics,
-        const style::StyleValue& value,
+        const style::Value& value,
         float count = 1.0f) {
 
         if (i == 0) {

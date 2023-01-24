@@ -358,11 +358,10 @@ void PanelArea::populateStyleSpecTable(style::SpecTable* table) {
     using namespace strings;
     using namespace style::literals;
     using style::Length;
-    using style::StyleValue;
 
-    auto ten_l = StyleValue::custom(Length(10_dp));
-    auto zero_l = StyleValue::custom(Length(0_dp));
-    auto transp = StyleValue::custom(core::colors::transparent);
+    auto ten_l = style::Value::custom(Length(10_dp));
+    auto zero_l = style::Value::custom(Length(0_dp));
+    auto transp = style::Value::custom(core::colors::transparent);
 
     table->insert(handle_size, ten_l, false, &Length::parse);
     table->insert(handle_hovered_size, zero_l, false, &Length::parse);
@@ -459,7 +458,7 @@ void PanelArea::updateChildrenGeometry() {
     // TODO: supports isVisible, isCollapsed, and padding/gap/border
 
     // The algorithm for updating PanelArea sizes is similar to Flex, except
-    // that "preferred-size" doesn't come from the stylesheet, but from the
+    // that "preferred-size" doesn't come from the style sheet, but from the
     // user manually dragging a splitter.
 
     // Useful: https://drafts.csswg.org/css3-tables-algorithms/Overview.src.htm

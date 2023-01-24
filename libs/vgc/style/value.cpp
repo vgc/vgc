@@ -19,7 +19,7 @@
 namespace vgc::style {
 
 VGC_DEFINE_ENUM(
-    StyleValueType,
+    ValueType,
     (None, "None"),
     (Unparsed, "Unparsed"),
     (Invalid, "Invalid"),
@@ -29,13 +29,13 @@ VGC_DEFINE_ENUM(
     (String, "String"),
     (Custom, "Custom"))
 
-StyleValue StyleValue::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
-    return StyleValue(StyleValueType::Unparsed, detail::UnparsedValue(begin, end));
+Value Value::unparsed(TokenIterator begin, TokenIterator end) {
+    return Value(ValueType::Unparsed, detail::UnparsedValue(begin, end));
 }
 
 namespace detail {
 
-UnparsedValue::UnparsedValue(StyleTokenIterator begin, StyleTokenIterator end)
+UnparsedValue::UnparsedValue(TokenIterator begin, TokenIterator end)
     : rawString_(initRawString(begin, end))
     , tokens_(begin, end) {
 
@@ -74,8 +74,7 @@ UnparsedValue& UnparsedValue::operator=(UnparsedValue&& other) {
     return *this;
 }
 
-std::string
-UnparsedValue::initRawString(StyleTokenIterator begin, StyleTokenIterator end) {
+std::string UnparsedValue::initRawString(TokenIterator begin, TokenIterator end) {
     if (begin == end) {
         return "";
     }
@@ -97,7 +96,7 @@ void UnparsedValue::remapPointers_() {
         const char* newBegin = rawString_.data();
         std::ptrdiff_t offset = newBegin - oldBegin;
         if (offset != 0) {
-            for (StyleToken& token : tokens_) {
+            for (Token& token : tokens_) {
                 token.begin_ += offset;
                 token.end_ += offset;
             }

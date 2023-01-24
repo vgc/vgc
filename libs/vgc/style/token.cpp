@@ -21,7 +21,7 @@
 
 namespace vgc::style {
 
-const char* toStringLiteral(StyleTokenType type) {
+const char* toStringLiteral(TokenType type) {
     using StringLiteral = const char*;
     static constexpr StringLiteral s[] = {
         "EndOfFile",
@@ -197,7 +197,7 @@ public:
 
     // Consumes and returns the next token. The behavior is undefined if the
     // previous token was 'Eof'.
-    StyleToken get() {
+    Token get() {
         if (hasNext_) {
             hasNext_ = false;
         }
@@ -218,14 +218,14 @@ public:
 private:
     // https://www.w3.org/TR/css-syntax-3/#current-input-code-point
     // https://www.w3.org/TR/css-syntax-3/#next-input-code-point
-    const char* c1p_;  // pointer to first byte of current input code point
-    char c1_;          // == *c1p_
-    char c2_;          // == *token_.end_
-    char c3_;          // == *(token_.end_+1)    (or eof if c2_ is eof)
-    char c4_;          // == *(token_.end_+2)    (or eof if c3_ is eof)
-    StyleToken token_; // Last consumed token or currently being consumed token
-                       // token_.end_: pointer to first byte of next input code point
-    bool hasNext_;     // Whether the next token is already computed
+    const char* c1p_; // pointer to first byte of current input code point
+    char c1_;         // == *c1p_
+    char c2_;         // == *token_.end_
+    char c3_;         // == *(token_.end_+1)    (or eof if c2_ is eof)
+    char c4_;         // == *(token_.end_+2)    (or eof if c3_ is eof)
+    Token token_;     // Last consumed token or currently being consumed token
+                      // token_.end_: pointer to first byte of next input code point
+    bool hasNext_;    // Whether the next token is already computed
 
     // Consumes the next input code point. This advances token_.end_ by one
     // UTF-8 encoded code point, and sets c1_ and c1_ accordingly.
@@ -314,7 +314,7 @@ private:
         consumeInput_();
         switch (c1_) {
         case eof:
-            token_.type_ = StyleTokenType::EndOfFile;
+            token_.type_ = TokenType::EndOfFile;
             break;
         case ' ':
         case '\t':
@@ -327,23 +327,23 @@ private:
             break;
         case '#':
             if (isNameCodePoint_(c2_) || startsValidEscape_(c2_, c3_)) {
-                token_.type_ = StyleTokenType::Hash;
-                token_.setHashFlag_(StyleTokenHashFlag::Unrestricted);
+                token_.type_ = TokenType::Hash;
+                token_.setHashFlag_(TokenHashFlag::Unrestricted);
                 if (startsIdentifier_(c2_, c3_, c4_)) {
-                    token_.setHashFlag_(StyleTokenHashFlag::Identifier);
+                    token_.setHashFlag_(TokenHashFlag::Identifier);
                 }
                 consumeName_();
             }
             else {
-                token_.type_ = StyleTokenType::Delimiter;
+                token_.type_ = TokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
         case '(':
-            token_.type_ = StyleTokenType::LeftParenthesis;
+            token_.type_ = TokenType::LeftParenthesis;
             break;
         case ')':
-            token_.type_ = StyleTokenType::RightParenthesis;
+            token_.type_ = TokenType::RightParenthesis;
             break;
         case '+':
             if (startsNumber_(c1_, c2_, c3_)) {
@@ -351,12 +351,12 @@ private:
                 consumeNumericToken_();
             }
             else {
-                token_.type_ = StyleTokenType::Delimiter;
+                token_.type_ = TokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
         case ',':
-            token_.type_ = StyleTokenType::Comma;
+            token_.type_ = TokenType::Comma;
             break;
         case '-':
             if (startsNumber_(c1_, c2_, c3_)) {
@@ -367,14 +367,14 @@ private:
             // else if (areNextCodePointsEqualTo_("->")) {
             //     consumeInput_();
             //     consumeInput_();
-            //     token_.type = StyleTokenType::CommentDelimiterClose;
+            //     token_.type = TokenType::CommentDelimiterClose;
             // }
             else if (startsIdentifier_(c1_, c2_, c3_)) {
                 reconsumeInput_();
                 consumeIdentifierLikeToken_();
             }
             else {
-                token_.type_ = StyleTokenType::Delimiter;
+                token_.type_ = TokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -384,15 +384,15 @@ private:
                 consumeNumericToken_();
             }
             else {
-                token_.type_ = StyleTokenType::Delimiter;
+                token_.type_ = TokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
         case ':':
-            token_.type_ = StyleTokenType::Colon;
+            token_.type_ = TokenType::Colon;
             break;
         case ';':
-            token_.type_ = StyleTokenType::Semicolon;
+            token_.type_ = TokenType::Semicolon;
             break;
         // Uncomment if you wish to support CDO/CDC tokens
         // case '<':
@@ -400,34 +400,34 @@ private:
         //         consumeInput_();
         //         consumeInput_();
         //         consumeInput_();
-        //         token_.type = StyleTokenType::CommentDelimiterOpen;
+        //         token_.type = TokenType::CommentDelimiterOpen;
         //     }
         //     else {
-        //         token_.type = StyleTokenType::Delimiter;
+        //         token_.type = TokenType::Delimiter;
         //         appendCurrentCodePointToTokenValue_();
         //     }
         //     break;
         case '@':
             if (startsIdentifier_(c2_, c3_, c4_)) {
-                token_.type_ = StyleTokenType::AtKeyword;
+                token_.type_ = TokenType::AtKeyword;
                 consumeName_();
             }
             else {
-                token_.type_ = StyleTokenType::Delimiter;
+                token_.type_ = TokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
         case '[':
-            token_.type_ = StyleTokenType::LeftSquareBracket;
+            token_.type_ = TokenType::LeftSquareBracket;
             break;
         case ']':
-            token_.type_ = StyleTokenType::RightSquareBracket;
+            token_.type_ = TokenType::RightSquareBracket;
             break;
         case '{':
-            token_.type_ = StyleTokenType::LeftCurlyBracket;
+            token_.type_ = TokenType::LeftCurlyBracket;
             break;
         case '}':
-            token_.type_ = StyleTokenType::RightCurlyBracket;
+            token_.type_ = TokenType::RightCurlyBracket;
             break;
         case '\\':
             if (startsValidEscape_(c1_, c2_)) {
@@ -436,7 +436,7 @@ private:
             }
             else {
                 // Parse error!
-                token_.type_ = StyleTokenType::Delimiter;
+                token_.type_ = TokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -450,7 +450,7 @@ private:
                 consumeIdentifierLikeToken_();
             }
             else {
-                token_.type_ = StyleTokenType::Delimiter;
+                token_.type_ = TokenType::Delimiter;
                 appendCurrentCodePointToTokenValue_();
             }
             break;
@@ -494,7 +494,7 @@ private:
     }
 
     void consumeWhitespace_() {
-        token_.type_ = StyleTokenType::Whitespace;
+        token_.type_ = TokenType::Whitespace;
         while (isWhitespace_(c2_)) {
             consumeInput_();
         }
@@ -502,7 +502,7 @@ private:
 
     // https://www.w3.org/TR/css-syntax-3/#consume-a-string-token
     void consumeStringToken_() {
-        token_.type_ = StyleTokenType::String;
+        token_.type_ = TokenType::String;
         const char endingCodePoint = c1_;
         while (true) {
             consumeInput_();
@@ -513,14 +513,14 @@ private:
                 // Parse error. CSS3 spec says "return the <string-token>".
                 // But for VGCSS, we reconsume the EOF and return a BadString.
                 reconsumeInput_();
-                token_.type_ = StyleTokenType::BadString;
+                token_.type_ = TokenType::BadString;
                 return;
             }
             else if (c1_ == '\n') {
                 // Parse error. CSS3 spec says "Reconsume the current input
                 // code point, create a <bad-string-token>, and return it".
                 reconsumeInput_();
-                token_.type_ = StyleTokenType::BadString;
+                token_.type_ = TokenType::BadString;
                 return;
             }
             else if (c1_ == '\\') {
@@ -670,15 +670,15 @@ private:
         char c3 = (c2_ == eof) ? eof : *(token_.end_ + 1);
         char c4 = (c3 == eof) ? eof : *(token_.end_ + 2);
         if (startsIdentifier_(c2_, c3, c4)) {
-            token_.type_ = StyleTokenType::Dimension;
+            token_.type_ = TokenType::Dimension;
             consumeName_(); // write the unit to token_.codePointsValue
         }
         else if (c2_ == '%') {
             consumeInput_();
-            token_.type_ = StyleTokenType::Percentage;
+            token_.type_ = TokenType::Percentage;
         }
         else {
-            token_.type_ = StyleTokenType::Number;
+            token_.type_ = TokenType::Number;
         }
     }
 
@@ -687,7 +687,7 @@ private:
     // Note that we use token_.codePointsValue as a buffer to store the
     // repr of the number. It is assume to be initially empty.
     void consumeNumber_() {
-        token_.setNumericFlag_(StyleTokenNumericFlag::Integer);
+        token_.setNumericFlag_(TokenNumericFlag::Integer);
         if (c2_ == '+' || c2_ == '-') {
             token_.stringValue_ += c2_;
             consumeInput_();
@@ -698,7 +698,7 @@ private:
         }
         char c3 = (c2_ == eof) ? eof : *(token_.end_ + 1);
         if (c2_ == '.' && isDigit_(c3)) {
-            token_.setNumericFlag_(StyleTokenNumericFlag::FloatingPoint);
+            token_.setNumericFlag_(TokenNumericFlag::FloatingPoint);
             token_.stringValue_ += c2_;
             token_.stringValue_ += c3;
             consumeInput_();
@@ -711,7 +711,7 @@ private:
         if (c2_ == 'e' || c2_ == 'E') {
             c3 = (c2_ == eof) ? eof : *(token_.end_ + 1);
             if (isDigit_(c3)) {
-                token_.setNumericFlag_(StyleTokenNumericFlag::FloatingPoint);
+                token_.setNumericFlag_(TokenNumericFlag::FloatingPoint);
                 token_.stringValue_ += c2_;
                 token_.stringValue_ += c3;
                 consumeInput_();
@@ -720,7 +720,7 @@ private:
             else if ((c3 == '+' || c3 == '-')) {
                 char c4 = (c3 == eof) ? eof : *(token_.end_ + 2);
                 if (isDigit_(c4)) {
-                    token_.setNumericFlag_(StyleTokenNumericFlag::FloatingPoint);
+                    token_.setNumericFlag_(TokenNumericFlag::FloatingPoint);
                     token_.stringValue_ += c2_;
                     token_.stringValue_ += c3;
                     token_.stringValue_ += c4;
@@ -735,7 +735,7 @@ private:
             }
         }
         core::StringReader sr(token_.stringValue_);
-        if (token_.numericFlag() == StyleTokenNumericFlag::FloatingPoint) {
+        if (token_.numericFlag() == TokenNumericFlag::FloatingPoint) {
             core::readTo(token_.numericValue_.floatingPoint, sr);
         }
         else {
@@ -773,7 +773,7 @@ private:
                 || c2_ == '\'' //
                 || (isWhitespace_(c2_) && (c3_ == '\"' || c3_ == '\''))) {
 
-                token_.type_ = StyleTokenType::Function;
+                token_.type_ = TokenType::Function;
             }
             else {
                 token_.stringValue_.clear();
@@ -782,10 +782,10 @@ private:
         }
         else if (c2_ == '(') {
             consumeInput_();
-            token_.type_ = StyleTokenType::Function;
+            token_.type_ = TokenType::Function;
         }
         else {
-            token_.type_ = StyleTokenType::Identifier;
+            token_.type_ = TokenType::Identifier;
         }
     }
 
@@ -810,7 +810,7 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-a-url-token
     // The returned url is appended directly to token_.codePointsValue
     void consumeUrlToken_() {
-        token_.type_ = StyleTokenType::Url;
+        token_.type_ = TokenType::Url;
         while (isWhitespace_(c2_)) {
             consumeInput_();
         }
@@ -862,7 +862,7 @@ private:
 
     // https://www.w3.org/TR/css-syntax-3/#consume-the-remnants-of-a-bad-url
     void consumeBadUrlRemnants_() {
-        token_.type_ = StyleTokenType::BadUrl;
+        token_.type_ = TokenType::BadUrl;
         while (true) {
             consumeInput_();
             if (c1_ == ')' || c1_ == eof) {
@@ -961,12 +961,12 @@ std::string decodeStyleString(std::string_view s) {
     return res;
 }
 
-StyleTokenArray tokenizeStyleString(const char* s) {
-    StyleTokenArray res;
+TokenArray tokenizeStyleString(const char* s) {
+    TokenArray res;
     detail::TokenStream stream(s);
     while (true) {
-        StyleToken t = stream.get();
-        if (t.type() == StyleTokenType::EndOfFile) {
+        Token t = stream.get();
+        if (t.type() == TokenType::EndOfFile) {
             break;
         }
         else {

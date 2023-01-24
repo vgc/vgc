@@ -31,29 +31,28 @@ namespace vgc::style {
 
 namespace detail {
 
-class StyleParser;
+class Parser;
 
 } // namespace detail
 
-/// \typedef vgc::style::StylePropertyParser
+/// \typedef vgc::style::PropertyParser
 /// \brief The type of a function that takes as input a token range
-///        and outputs a StyleValue.
+///        and outputs a Value.
 ///
-using StylePropertyParser =
-    StyleValue (*)(StyleTokenIterator begin, StyleTokenIterator end);
+using PropertyParser = Value (*)(TokenIterator begin, TokenIterator end);
 
 /// This is the default function used for parsing properties when no
-/// StylePropertySpec exists for the given property.
+/// PropertySpec exists for the given property.
 ///
 /// If the property value is made of a single Identifier token, then
-/// it returns a StyleValue of type `Identifier`.
+/// it returns a Value of type `Identifier`.
 ///
 /// TODO: other simple cases, such as Number, Dimension, String, etc.
 ///
 VGC_STYLE_API
-StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
+Value parseStyleDefault(TokenIterator begin, TokenIterator end);
 
-/// \class vgc::style::StylePropertySpec
+/// \class vgc::style::PropertySpec
 /// \brief Specifies the name, initial value, and inheritability of a given
 ///        style property.
 ///
@@ -61,15 +60,15 @@ StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
 ///
 /// https://www.w3.org/TR/CSS2/propidx.html
 ///
-class VGC_STYLE_API StylePropertySpec {
+class VGC_STYLE_API PropertySpec {
 public:
-    /// Creates a StylePropertySpec.
+    /// Creates a PropertySpec.
     ///
-    StylePropertySpec(
+    PropertySpec(
         core::StringId name,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser)
+        PropertyParser parser)
 
         : name_(name)
         , initialValue_(initialValue)
@@ -77,13 +76,13 @@ public:
         , parser_(parser) {
     }
 
-    /// Creates a StylePropertySpec.
+    /// Creates a PropertySpec.
     ///
-    StylePropertySpec(
+    PropertySpec(
         const char* name,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser)
+        PropertyParser parser)
 
         : name_(name)
         , initialValue_(initialValue)
@@ -99,7 +98,7 @@ public:
 
     /// Returns the initial value of this property.
     ///
-    const StyleValue& initialValue() const {
+    const Value& initialValue() const {
         return initialValue_;
     }
 
@@ -109,19 +108,19 @@ public:
         return isInherited_;
     }
 
-    StylePropertyParser parser() const {
+    PropertyParser parser() const {
         return parser_;
     }
 
 private:
     core::StringId name_;
-    StyleValue initialValue_;
+    Value initialValue_;
     bool isInherited_;
-    StylePropertyParser parser_;
+    PropertyParser parser_;
 };
 
 /// \class vgc::style::SpecTable
-/// \brief Stores a table of multiple StylePropertySpec.
+/// \brief Stores a table of multiple PropertySpec.
 ///
 class VGC_STYLE_API SpecTable : public std::enable_shared_from_this<SpecTable> {
 
@@ -131,33 +130,33 @@ public:
     SpecTable() {
     }
 
-    /// Inserts a `StylePropertySpec` with the given values to this table.
+    /// Inserts a `PropertySpec` with the given values to this table.
     ///
     /// Emits a warning and does not perform the insertion if there is already
     /// a spec for the given `attributeName`.
     ///
     void insert(
         core::StringId attributeName,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser);
+        PropertyParser parser);
 
     /// \overload
     void insert(
         std::string_view attributeName,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser) {
+        PropertyParser parser) {
 
         insert(core::StringId(attributeName), initialValue, isInherited, parser);
     }
 
-    /// Returns the `StylePropertySpec` associated with the given `attributeName`.
+    /// Returns the `PropertySpec` associated with the given `attributeName`.
     ///
     /// Returns `nullptr` if the table does not contain a spec for the given
     /// `attributeName`.
     ///
-    const StylePropertySpec* get(core::StringId attributeName) const {
+    const PropertySpec* get(core::StringId attributeName) const {
         auto search = map_.find(attributeName);
         if (search == map_.end()) {
             return nullptr;
@@ -182,7 +181,7 @@ public:
 
 private:
     std::unordered_set<core::StringId> registeredClassNames_;
-    std::unordered_map<core::StringId, StylePropertySpec> map_;
+    std::unordered_map<core::StringId, PropertySpec> map_;
 };
 
 using SpecTablePtr = std::shared_ptr<SpecTable>;

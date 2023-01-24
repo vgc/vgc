@@ -22,59 +22,59 @@
 
 namespace vgc::style {
 
-StyleValue parseColor(StyleTokenIterator begin, StyleTokenIterator end) {
-    if (end == begin + 1 && begin->type() == StyleTokenType::Identifier
+Value parseColor(TokenIterator begin, TokenIterator end) {
+    if (end == begin + 1 && begin->type() == TokenType::Identifier
         && begin->stringValue() == "inherit") {
-        return StyleValue::inherit();
+        return Value::inherit();
     }
     try {
         const char* b = begin->begin();
         const char* e = (end - 1)->end();
         std::string_view str(b, std::distance(b, e));
         core::Color color = core::parse<core::Color>(str);
-        return StyleValue::custom(color);
+        return Value::custom(color);
     }
     catch (const core::ParseError&) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     catch (const core::RangeError&) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue parseLength(StyleTokenIterator begin, StyleTokenIterator end) {
+Value parseLength(TokenIterator begin, TokenIterator end) {
     // For now, we only support a unique Dimension token with a "dp" unit
     if (begin == end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (
-        begin->type() == StyleTokenType::Dimension //
-        && begin->stringValue() == "dp"            //
+        begin->type() == TokenType::Dimension //
+        && begin->stringValue() == "dp"       //
         && begin + 1 == end) {
 
-        return StyleValue::number(begin->floatValue());
+        return Value::number(begin->floatValue());
     }
     else {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue parseIdentifierAmong(
-    StyleTokenIterator begin,
-    StyleTokenIterator end,
+Value parseIdentifierAmong(
+    TokenIterator begin,
+    TokenIterator end,
     std::initializer_list<core::StringId> list) {
 
     if (end == begin + 1) {
-        StyleTokenType t = begin->type();
-        if (t == StyleTokenType::Identifier) {
+        TokenType t = begin->type();
+        if (t == TokenType::Identifier) {
             for (core::StringId id : list) {
                 if (id == begin->stringValue()) {
-                    return StyleValue::identifier(begin->stringValue());
+                    return Value::identifier(begin->stringValue());
                 }
             }
         }
     }
-    return StyleValue::invalid();
+    return Value::invalid();
 }
 
 } // namespace vgc::style

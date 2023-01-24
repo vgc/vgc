@@ -535,7 +535,7 @@ void insertRect(
 
 core::Color getColor(const style::StylableObject* obj, core::StringId property) {
     core::Color res;
-    style::StyleValue value = obj->style(property);
+    style::Value value = obj->style(property);
     if (value.has<core::Color>()) {
         res = value.to<core::Color>();
     }
@@ -543,7 +543,7 @@ core::Color getColor(const style::StylableObject* obj, core::StringId property) 
 }
 
 style::Length getLength(const style::StylableObject* obj, core::StringId property) {
-    style::StyleValue value = obj->style(property);
+    style::Value value = obj->style(property);
     if (value.has<style::Length>()) {
         return value.to<style::Length>();
     }
@@ -559,7 +559,7 @@ style::Length getLength(const style::StylableObject* obj, core::StringId propert
 
 style::LengthOrPercentage
 getLengthOrPercentage(const style::StylableObject* obj, core::StringId property) {
-    style::StyleValue value = obj->style(property);
+    style::Value value = obj->style(property);
     if (value.has<style::LengthOrPercentage>()) {
         return value.to<style::LengthOrPercentage>();
     }

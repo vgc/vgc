@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_STYLE_STYLESHEET_H
-#define VGC_STYLE_STYLESHEET_H
+#ifndef VGC_STYLE_SHEET_H
+#define VGC_STYLE_SHEET_H
 
 #include <vgc/core/array.h>
 #include <vgc/core/object.h>
@@ -27,77 +27,77 @@ namespace vgc::style {
 
 namespace detail {
 
-class StyleParser;
+class Parser;
 
 } // namespace detail
 
 VGC_DECLARE_OBJECT(StylableObject);
-VGC_DECLARE_OBJECT(StyleSheet);
-VGC_DECLARE_OBJECT(StyleRuleSet);
-VGC_DECLARE_OBJECT(StyleSelector);
-VGC_DECLARE_OBJECT(StyleDeclaration);
+VGC_DECLARE_OBJECT(Sheet);
+VGC_DECLARE_OBJECT(RuleSet);
+VGC_DECLARE_OBJECT(Selector);
+VGC_DECLARE_OBJECT(Declaration);
 
-using StyleRuleSetArray = core::Array<StyleRuleSet*>;
-using StyleSelectorArray = core::Array<StyleSelector*>;
-using StyleDeclarationArray = core::Array<StyleDeclaration*>;
+using RuleSetArray = core::Array<RuleSet*>;
+using SelectorArray = core::Array<Selector*>;
+using DeclarationArray = core::Array<Declaration*>;
 
-/// \class vgc::style::StyleSheet
-/// \brief Parses and stores a VGC stylesheet.
+/// \class vgc::style::Sheet
+/// \brief Parses and stores a VGC style sheet.
 ///
-class VGC_STYLE_API StyleSheet : public core::Object {
+class VGC_STYLE_API Sheet : public core::Object {
 private:
-    VGC_OBJECT(StyleSheet, core::Object)
+    VGC_OBJECT(Sheet, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
-    /// Creates a stylesheet from the given specs and string.
+    /// Creates a style sheet from the given specs and string.
     ///
-    static StyleSheetPtr create(std::string_view s);
+    static SheetPtr create(std::string_view s);
 
-    /// Returns all the rule sets of this stylesheet.
+    /// Returns all the rule sets of this style sheet.
     ///
-    const StyleRuleSetArray& ruleSets() const {
+    const RuleSetArray& ruleSets() const {
         return ruleSets_;
     }
 
 private:
-    StyleRuleSetArray ruleSets_;
+    RuleSetArray ruleSets_;
 
-    friend class detail::StyleParser;
-    StyleSheet();
-    static StyleSheetPtr create();
+    friend class detail::Parser;
+    Sheet();
+    static SheetPtr create();
 };
 
-/// \class vgc::style::StyleRuleSet
-/// \brief One rule set of a stylesheet.
+/// \class vgc::style::RuleSet
+/// \brief One rule set of a style sheet.
 ///
-class VGC_STYLE_API StyleRuleSet : public core::Object {
+class VGC_STYLE_API RuleSet : public core::Object {
 private:
-    VGC_OBJECT(StyleRuleSet, core::Object)
+    VGC_OBJECT(RuleSet, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
-    const StyleSelectorArray& selectors() const {
+    const SelectorArray& selectors() const {
         return selectors_;
     }
 
-    const StyleDeclarationArray& declarations() const {
+    const DeclarationArray& declarations() const {
         return declarations_;
     }
 
 private:
-    StyleSelectorArray selectors_;
-    StyleDeclarationArray declarations_;
+    SelectorArray selectors_;
+    DeclarationArray declarations_;
 
-    friend class detail::StyleParser;
-    StyleRuleSet();
-    static StyleRuleSetPtr create();
+    friend class detail::Parser;
+    RuleSet();
+    static RuleSetPtr create();
 };
 
-/// \enum vgc::style::StyleSelectorItemType
-/// \brief The type of a StyleSelectorItem
+/// \enum vgc::style::SelectorItemType
+/// \brief The type of a SelectorItem
 ///
-enum class StyleSelectorItemType : Int8 {
+enum class SelectorItemType : Int8 {
     // Non-combinator items don't have the 0x10 bit set
     ClassSelector = 0x01,
 
@@ -107,10 +107,10 @@ enum class StyleSelectorItemType : Int8 {
 };
 
 VGC_STYLE_API
-VGC_DECLARE_ENUM(StyleSelectorItemType)
+VGC_DECLARE_ENUM(SelectorItemType)
 
-/// \class vgc::style::StyleSelectorItem
-/// \brief One item of a StyleSelector.
+/// \class vgc::style::SelectorItem
+/// \brief One item of a Selector.
 ///
 /// A style selector consists of a sequence of "items", such as class selectors and combinators.
 ///
@@ -120,29 +120,29 @@ VGC_DECLARE_ENUM(StyleSelectorItemType)
 ///
 /// https://www.w3.org/TR/selectors-3/#selector-syntax
 ///
-class VGC_STYLE_API StyleSelectorItem {
+class VGC_STYLE_API SelectorItem {
 public:
-    /// Creates a StyleSelectorItem of the given type and an empty name.
+    /// Creates a SelectorItem of the given type and an empty name.
     ///
-    StyleSelectorItem(StyleSelectorItemType type)
+    SelectorItem(SelectorItemType type)
         : type_(type)
         , name_() {
     }
 
-    /// Creates a StyleSelectorItem of the given type and given name.
+    /// Creates a SelectorItem of the given type and given name.
     ///
-    StyleSelectorItem(StyleSelectorItemType type, core::StringId name)
+    SelectorItem(SelectorItemType type, core::StringId name)
         : type_(type)
         , name_(name) {
     }
 
-    /// Returns the type of this StyleSelectorItem.
+    /// Returns the type of this SelectorItem.
     ///
-    StyleSelectorItemType type() const {
+    SelectorItemType type() const {
         return type_;
     }
 
-    /// Returns the name of this StyleSelectorItem. What this names represents
+    /// Returns the name of this SelectorItem. What this names represents
     /// depends on the type of this item. In the case of a ClassSelector, this
     /// represent the class name.
     ///
@@ -157,18 +157,18 @@ public:
     }
 
 private:
-    StyleSelectorItemType type_;
+    SelectorItemType type_;
     core::StringId name_;
 };
 
-using StyleSpecificity = UInt64;
+using Specificity = UInt64;
 
-/// \class vgc::style::StyleSelector
-/// \brief One selector of a rule set of a stylesheet.
+/// \class vgc::style::Selector
+/// \brief One selector of a rule set of a style sheet.
 ///
-class VGC_STYLE_API StyleSelector : public core::Object {
+class VGC_STYLE_API Selector : public core::Object {
 private:
-    VGC_OBJECT(StyleSelector, core::Object)
+    VGC_OBJECT(Selector, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -178,25 +178,25 @@ public:
 
     /// Returns the specificy of the selector.
     ///
-    StyleSpecificity specificity() const {
+    Specificity specificity() const {
         return specificity_;
     }
 
 private:
-    core::Array<StyleSelectorItem> items_;
-    StyleSpecificity specificity_;
+    core::Array<SelectorItem> items_;
+    Specificity specificity_;
 
-    friend class detail::StyleParser;
-    StyleSelector(core::Array<StyleSelectorItem>&& items);
-    static StyleSelectorPtr create(core::Array<StyleSelectorItem>&& items);
+    friend class detail::Parser;
+    Selector(core::Array<SelectorItem>&& items);
+    static SelectorPtr create(core::Array<SelectorItem>&& items);
 };
 
-/// \class vgc::style::StyleDeclaration
-/// \brief One declaration of a rule set of a stylesheet.
+/// \class vgc::style::Declaration
+/// \brief One declaration of a rule set of a style sheet.
 ///
-class VGC_STYLE_API StyleDeclaration : public core::Object {
+class VGC_STYLE_API Declaration : public core::Object {
 private:
-    VGC_OBJECT(StyleDeclaration, core::Object)
+    VGC_OBJECT(Declaration, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -214,20 +214,20 @@ public:
 
     /// Returns the value of this declaration.
     ///
-    const StyleValue& value() {
+    const Value& value() {
         return value_;
     }
 
 private:
     core::StringId property_;
     std::string text_;
-    StyleValue value_;
+    Value value_;
 
-    friend class detail::StyleParser;
-    StyleDeclaration();
-    static StyleDeclarationPtr create();
+    friend class detail::Parser;
+    Declaration();
+    static DeclarationPtr create();
 };
 
 } // namespace vgc::style
 
-#endif // VGC_STYLE_STYLESHEET_H
+#endif // VGC_STYLE_SHEET_H

@@ -27,7 +27,7 @@ namespace detail {
 
 void LengthContributions::add(
     const style::Metrics& metrics,
-    const style::StyleValue& value,
+    const style::Value& value,
     float count) {
 
     if (value.has<style::LengthOrPercentage>()) {
