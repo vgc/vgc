@@ -215,7 +215,7 @@ void StylableObject::updateStyle_() {
     for (auto& it = itBegin; it < itEnd; ++it) {
         const StyleSheet* styleSheet = it->styleSheet;
         it->begin = styleCache_.ruleSetArray.length();
-        for (StyleRuleSet* rule : styleSheet->ruleSets()) {
+        for (RuleSet* rule : styleSheet->ruleSets()) {
             bool matches = false;
             StyleSpecificity maxSpecificity{}; // zero-init
             for (Selector* selector : rule->selectors()) {
@@ -238,7 +238,7 @@ void StylableObject::updateStyle_() {
     // Compute cascaded values.
     //
     for (const auto& r : styleCache_.ruleSetArray) {
-        StyleRuleSet* ruleSet = r.first;
+        RuleSet* ruleSet = r.first;
         for (Declaration* declaration : ruleSet->declarations()) {
             styleCache_.cascadedValues[declaration->property()] = &declaration->value();
         }

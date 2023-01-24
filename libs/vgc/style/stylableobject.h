@@ -120,7 +120,7 @@ private:
 
 namespace detail {
 
-using RuleSetArray = core::Array<std::pair<StyleRuleSet*, StyleSpecificity>>;
+using RuleSetArray = core::Array<std::pair<RuleSet*, StyleSpecificity>>;
 
 struct RuleSetSpan {
     const StyleSheet* styleSheet;

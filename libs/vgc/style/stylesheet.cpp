@@ -47,11 +47,11 @@ public:
         bool topLevel = true;
         Parser parser(topLevel);
         TokenIterator it = tokens.begin();
-        core::Array<StyleRuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
+        core::Array<RuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
 
         // Create StyleSheet
         StyleSheetPtr styleSheet = StyleSheet::create();
-        for (const StyleRuleSetPtr& rule : rules) {
+        for (const RuleSetPtr& rule : rules) {
             styleSheet->appendChildObject_(rule.get());
             styleSheet->ruleSets_.append(rule.get());
         }
@@ -64,10 +64,10 @@ public:
 private:
     // https://www.w3.org/TR/css-syntax-3/#consume-list-of-rules
     // Note: we use 'styleSheet != nullptr' as top-level flag
-    core::Array<StyleRuleSetPtr>
+    core::Array<RuleSetPtr>
     consumeRuleList_(TokenIterator& it, TokenIterator end) {
         std::ignore = topLevel_; // suppress warning
-        core::Array<StyleRuleSetPtr> res;
+        core::Array<RuleSetPtr> res;
         while (true) {
             if (it == end) {
                 break;
@@ -83,7 +83,7 @@ private:
             //         continue;
             //     }
             //     else {
-            //         StyleRuleSetPtr rule = consumeQualifiedRule_(it, end);
+            //         RuleSetPtr rule = consumeQualifiedRule_(it, end);
             //         if (rule) {
             //             res.append(rule);
             //         }
@@ -94,7 +94,7 @@ private:
                 consumeAtRule_(it, end);
             }
             else {
-                StyleRuleSetPtr rule = consumeQualifiedRule_(it, end);
+                RuleSetPtr rule = consumeQualifiedRule_(it, end);
                 if (rule) {
                     res.append(rule);
                 }
@@ -134,7 +134,7 @@ private:
     //
     // Assumes `it != end`.
     //
-    // Note: this function returns a null StyleRuleSetPtr when the spec says to
+    // Note: this function returns a null RuleSetPtr when the spec says to
     // "return nothing".
     //
     // Note: https://www.w3.org/TR/css-syntax-3/#style-rules
@@ -145,18 +145,18 @@ private:
     //
     // Since in this implementation, all calls to consumeQualifiedRule_() are
     // made at the top-level of the stylesheet, we treat all qualified rules as
-    // style rules, and directly create and populate a StyleRuleSet. If we ever
+    // style rules, and directly create and populate a RuleSet. If we ever
     // come across a use case were a qualifed rule should not be a style rule,
     // then we'll have to make this implementation more generic.
     //
-    StyleRuleSetPtr
+    RuleSetPtr
     consumeQualifiedRule_(TokenIterator& it, TokenIterator end) {
-        StyleRuleSetPtr rule = StyleRuleSet::create();
+        RuleSetPtr rule = RuleSet::create();
         TokenIterator preludeBegin = it;
         while (true) {
             if (it == end) {
                 // Parse Error: return nothing
-                return StyleRuleSetPtr();
+                return RuleSetPtr();
             }
             else if (it->type() == TokenType::LeftCurlyBracket) {
                 TokenIterator preludeEnd = it;
@@ -167,7 +167,7 @@ private:
                     consumeSelectorGroup_(preludeBegin, preludeEnd);
                 if (selectors.isEmpty()) {
                     // Parse error
-                    return StyleRuleSetPtr();
+                    return RuleSetPtr();
                 }
                 else {
                     for (const SelectorPtr& selector : selectors) {
@@ -541,12 +541,12 @@ StyleSheetPtr StyleSheet::create(std::string_view s) {
     return detail::Parser::parseStyleSheet(s);
 }
 
-StyleRuleSet::StyleRuleSet()
+RuleSet::RuleSet()
     : Object() {
 }
 
-StyleRuleSetPtr StyleRuleSet::create() {
-    return StyleRuleSetPtr(new StyleRuleSet());
+RuleSetPtr RuleSet::create() {
+    return RuleSetPtr(new RuleSet());
 }
 
 VGC_DEFINE_ENUM(

@@ -33,11 +33,11 @@ class Parser;
 
 VGC_DECLARE_OBJECT(StylableObject);
 VGC_DECLARE_OBJECT(StyleSheet);
-VGC_DECLARE_OBJECT(StyleRuleSet);
+VGC_DECLARE_OBJECT(RuleSet);
 VGC_DECLARE_OBJECT(Selector);
 VGC_DECLARE_OBJECT(Declaration);
 
-using StyleRuleSetArray = core::Array<StyleRuleSet*>;
+using RuleSetArray = core::Array<RuleSet*>;
 using SelectorArray = core::Array<Selector*>;
 using DeclarationArray = core::Array<Declaration*>;
 
@@ -56,24 +56,24 @@ public:
 
     /// Returns all the rule sets of this stylesheet.
     ///
-    const StyleRuleSetArray& ruleSets() const {
+    const RuleSetArray& ruleSets() const {
         return ruleSets_;
     }
 
 private:
-    StyleRuleSetArray ruleSets_;
+    RuleSetArray ruleSets_;
 
     friend class detail::Parser;
     StyleSheet();
     static StyleSheetPtr create();
 };
 
-/// \class vgc::style::StyleRuleSet
+/// \class vgc::style::RuleSet
 /// \brief One rule set of a stylesheet.
 ///
-class VGC_STYLE_API StyleRuleSet : public core::Object {
+class VGC_STYLE_API RuleSet : public core::Object {
 private:
-    VGC_OBJECT(StyleRuleSet, core::Object)
+    VGC_OBJECT(RuleSet, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -90,8 +90,8 @@ private:
     DeclarationArray declarations_;
 
     friend class detail::Parser;
-    StyleRuleSet();
-    static StyleRuleSetPtr create();
+    RuleSet();
+    static RuleSetPtr create();
 };
 
 /// \enum vgc::style::SelectorItemType
