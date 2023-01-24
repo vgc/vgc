@@ -24,7 +24,7 @@ void StyleValue::parse_(const StylePropertySpec* spec) {
     const detail::UnparsedValue* v = std::any_cast<detail::UnparsedValue>(&value_);
     StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
     StyleValue parsed = parser(v->tokens().begin(), v->tokens().end());
-    if (parsed.type() == StyleValueType::Invalid) {
+    if (parsed.type() == ValueType::Invalid) {
         VGC_WARNING(
             LogVgcStyle,
             "Failed to parse attribute '{}' defined as '{}'.",

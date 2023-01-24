@@ -268,7 +268,7 @@ void StylableObject::updateStyle_() {
 // default values.
 //
 // If there is no declared value for the given property, then
-// a value of type StyleValueType::None is returned.
+// a value of type ValueType::None is returned.
 //
 const StyleValue* StylableObject::getStyleCascadedValue_(core::StringId property) const {
 
@@ -289,8 +289,8 @@ const StyleValue* StylableObject::getStyleCascadedValue_(core::StringId property
 // https://www.w3.org/TR/css-cascade-4/#computed
 //
 // This resolves StylableObject inheritance and default values. In other words,
-// the returned StyleValue is never of type StyleValueType::Inherit.
-// However, the type could be StyleValueType::None if there is no known
+// the returned StyleValue is never of type ValueType::Inherit.
+// However, the type could be ValueType::None if there is no known
 // default value for the given property (this can be the case for custom
 // properties which are missing from the stylesheet).
 //
@@ -304,13 +304,13 @@ const StyleValue& StylableObject::getStyleComputedValue_(core::StringId property
     const StyleValue* res = getStyleCascadedValue_(property);
 
     // Parse the value if not yet parsed, becomes `None` if parsing fails
-    if (res->type() == StyleValueType::Unparsed) {
+    if (res->type() == ValueType::Unparsed) {
         StyleValue* mutableValue = const_cast<StyleValue*>(res);
         mutableValue->parse_(styleSpecTable()->get(property));
     }
 
     // If there is no cascaded value, try to see if we should inherit
-    if (res->type() == StyleValueType::None) {
+    if (res->type() == ValueType::None) {
         const StylePropertySpec* spec = styleSpecTable()->get(property);
         if (spec) {
             if (spec->isInherited()) {
@@ -326,7 +326,7 @@ const StyleValue& StylableObject::getStyleComputedValue_(core::StringId property
     }
 
     // Get value from ancestors if inherited
-    if (res->type() == StyleValueType::Inherit) {
+    if (res->type() == ValueType::Inherit) {
         StylableObject* parent = parentStylableObject();
         if (parent) {
             res = &parent->getStyleComputedValue_(property);

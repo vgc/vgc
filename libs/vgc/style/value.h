@@ -31,10 +31,10 @@ namespace vgc::style {
 
 class StylePropertySpec;
 
-/// \enum vgc::style::StyleValueType
+/// \enum vgc::style::ValueType
 /// \brief The type of a StyleValue
 ///
-enum class StyleValueType : Int8 {
+enum class ValueType : Int8 {
     None,       ///< There is no value at all
     Unparsed,   ///< The value hasn't been parsed yet
     Invalid,    ///< The value is invalid (e.g., parse error)
@@ -46,7 +46,7 @@ enum class StyleValueType : Int8 {
 };
 
 VGC_STYLE_API
-VGC_DECLARE_ENUM(StyleValueType)
+VGC_DECLARE_ENUM(ValueType)
 
 /// \enum vgc::style::StyleValue
 /// \brief Stores the value of a style attribute.
@@ -55,14 +55,14 @@ class VGC_STYLE_API StyleValue {
 private:
     /// Creates a StyleValue of the given type
     ///
-    StyleValue(StyleValueType type)
+    StyleValue(ValueType type)
         : type_(type) {
     }
 
     /// Creates a StyleValue of the given type and value
     ///
     template<typename TValue>
-    StyleValue(StyleValueType type, TValue value)
+    StyleValue(ValueType type, TValue value)
         : type_(type)
         , value_(value) {
     }
@@ -71,13 +71,13 @@ public:
     /// Creates a StyleValue of type None.
     ///
     StyleValue()
-        : StyleValue(StyleValueType::None) {
+        : StyleValue(ValueType::None) {
     }
 
     /// Creates a StyleValue of type None
     ///
     static StyleValue none() {
-        return StyleValue(StyleValueType::None);
+        return StyleValue(ValueType::None);
     }
 
     /// Creates a StyleValue of type Unparsed. This allows to defer parsing the
@@ -88,13 +88,13 @@ public:
     /// Creates a StyleValue of type Invalid
     ///
     static StyleValue invalid() {
-        return StyleValue(StyleValueType::Invalid);
+        return StyleValue(ValueType::Invalid);
     }
 
     /// Creates a StyleValue of type Inherit
     ///
     static StyleValue inherit() {
-        return StyleValue(StyleValueType::Inherit);
+        return StyleValue(ValueType::Inherit);
     }
 
     /// Creates a StyleValue of type Identifier
@@ -106,13 +106,13 @@ public:
     /// Creates a StyleValue of type Identifier
     ///
     static StyleValue identifier(core::StringId stringId) {
-        return StyleValue(StyleValueType::Identifier, stringId);
+        return StyleValue(ValueType::Identifier, stringId);
     }
 
     /// Creates a StyleValue of type Number
     ///
     static StyleValue number(float x) {
-        return StyleValue(StyleValueType::Number, x);
+        return StyleValue(ValueType::Number, x);
     }
 
     /// Creates a StyleValue of type String
@@ -124,26 +124,26 @@ public:
     /// Creates a StyleValue of type String
     ///
     static StyleValue string(core::StringId stringId) {
-        return StyleValue(StyleValueType::String, stringId);
+        return StyleValue(ValueType::String, stringId);
     }
 
     /// Creates a StyleValue of type Custom
     ///
     template<typename TValue>
     static StyleValue custom(const TValue& value) {
-        return StyleValue(StyleValueType::Custom, value);
+        return StyleValue(ValueType::Custom, value);
     }
 
     /// Returns the type of the StyleValue
     ///
-    StyleValueType type() const {
+    ValueType type() const {
         return type_;
     }
 
     /// Returns whether the value is valid.
     ///
     bool isValid() const {
-        return type_ != StyleValueType::Invalid;
+        return type_ != ValueType::Invalid;
     }
 
     /// Returns the StyleValue as a `float`. The behavior is undefined
@@ -171,7 +171,7 @@ public:
     /// whose string value is equal the given string.
     ///
     bool operator==(const std::string& other) const {
-        return (type() == StyleValueType::Identifier || type() == StyleValueType::String)
+        return (type() == ValueType::Identifier || type() == ValueType::String)
                && std::any_cast<core::StringId>(value_) == other;
     }
 
@@ -179,7 +179,7 @@ public:
     /// whose string value is equal the given string.
     ///
     bool operator==(const core::StringId& other) const {
-        return (type() == StyleValueType::Identifier || type() == StyleValueType::String)
+        return (type() == ValueType::Identifier || type() == ValueType::String)
                && std::any_cast<core::StringId>(value_) == other;
     }
 
@@ -214,7 +214,7 @@ public:
     }
 
 private:
-    StyleValueType type_;
+    ValueType type_;
     std::any value_;
 
     friend class StylableObject;

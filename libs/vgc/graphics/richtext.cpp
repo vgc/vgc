@@ -29,7 +29,6 @@ namespace vgc::graphics {
 using style::StyleTokenIterator;
 using style::StyleTokenType;
 using style::StyleValue;
-using style::StyleValueType;
 
 RichTextSpan::RichTextSpan(RichTextSpan* parent)
     : StylableObject()
@@ -268,7 +267,7 @@ TextProperties getTextProperties(const RichTextSpan* span) {
     style::StyleValue vAlign = span->style(strings::text_vertical_align);
     TextProperties properties; // default = (Left, Top)
 
-    if (hAlign.type() == StyleValueType::Identifier) {
+    if (hAlign.type() == style::ValueType::Identifier) {
         core::StringId s = hAlign.toStringId();
         if (s == strings::left) {
             properties.setHorizontalAlign(TextHorizontalAlign::Left);
@@ -281,7 +280,7 @@ TextProperties getTextProperties(const RichTextSpan* span) {
         }
     }
 
-    if (vAlign.type() == StyleValueType::Identifier) {
+    if (vAlign.type() == style::ValueType::Identifier) {
         core::StringId s = vAlign.toStringId();
         if (s == strings::top) {
             properties.setVerticalAlign(TextVerticalAlign::Top);

@@ -19,7 +19,7 @@
 namespace vgc::style {
 
 VGC_DEFINE_ENUM(
-    StyleValueType,
+    ValueType,
     (None, "None"),
     (Unparsed, "Unparsed"),
     (Invalid, "Invalid"),
@@ -30,7 +30,7 @@ VGC_DEFINE_ENUM(
     (Custom, "Custom"))
 
 StyleValue StyleValue::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
-    return StyleValue(StyleValueType::Unparsed, detail::UnparsedValue(begin, end));
+    return StyleValue(ValueType::Unparsed, detail::UnparsedValue(begin, end));
 }
 
 namespace detail {

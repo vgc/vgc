@@ -1487,7 +1487,6 @@ namespace {
 using style::StyleTokenIterator;
 using style::StyleTokenType;
 using style::StyleValue;
-using style::StyleValueType;
 
 StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin == end) {
