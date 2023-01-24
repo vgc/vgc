@@ -26,15 +26,15 @@
 namespace vgc::style {
 
 VGC_STYLE_API
-Value parseColor(StyleTokenIterator begin, StyleTokenIterator end);
+Value parseColor(TokenIterator begin, TokenIterator end);
 
 VGC_STYLE_API
-Value parseLength(StyleTokenIterator begin, StyleTokenIterator end);
+Value parseLength(TokenIterator begin, TokenIterator end);
 
 VGC_STYLE_API
 Value parseIdentifierAmong(
-    StyleTokenIterator begin,
-    StyleTokenIterator end,
+    TokenIterator begin,
+    TokenIterator end,
     std::initializer_list<core::StringId> list);
 
 } // namespace vgc::style

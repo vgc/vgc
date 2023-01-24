@@ -26,7 +26,6 @@
 
 namespace vgc::graphics {
 
-using style::StyleTokenIterator;
 using style::StyleTokenType;
 
 RichTextSpan::RichTextSpan(RichTextSpan* parent)
@@ -49,17 +48,19 @@ RichTextSpan* RichTextSpan::createChild() {
 
 namespace {
 
-style::Value parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end) {
+style::Value parsePixelHinting(style::TokenIterator begin, style::TokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {off, normal});
 }
 
-style::Value parseTextHorizontalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
+style::Value
+parseTextHorizontalAlign(style::TokenIterator begin, style::TokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {left, center, right});
 }
 
-style::Value parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
+style::Value
+parseTextVerticalAlign(style::TokenIterator begin, style::TokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {top, middle, bottom});
 }

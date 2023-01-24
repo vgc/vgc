@@ -83,7 +83,7 @@ public:
     /// Creates a Value of type Unparsed. This allows to defer parsing the
     /// value until the `SpecTable` of the tree is properly populated.
     ///
-    static Value unparsed(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value unparsed(TokenIterator begin, TokenIterator end);
 
     /// Creates a Value of type Invalid
     ///
@@ -227,7 +227,7 @@ namespace detail {
 //
 class UnparsedValue {
 public:
-    UnparsedValue(StyleTokenIterator begin, StyleTokenIterator end);
+    UnparsedValue(TokenIterator begin, TokenIterator end);
     UnparsedValue(const UnparsedValue& other);
     UnparsedValue(UnparsedValue&& other);
     UnparsedValue& operator=(const UnparsedValue& other);
@@ -248,7 +248,7 @@ private:
     // Note: tokens_ contains pointers to characters in the strings. These must
     // be properly updated whenever the string is copied. See remapPointers_().
 
-    static std::string initRawString(StyleTokenIterator begin, StyleTokenIterator end);
+    static std::string initRawString(TokenIterator begin, TokenIterator end);
     void remapPointers_();
 };
 

@@ -328,12 +328,12 @@ void write(OStream& out, const StyleToken& token) {
 ///
 using StyleTokenArray = core::Array<StyleToken>;
 
-/// \typedef vgc::style::StyleTokenIterator
+/// \typedef vgc::style::TokenIterator
 /// \brief Iterating over a StyleTokenArray
 ///
 /// \sa StyleTokenArray, StyleToken
 ///
-using StyleTokenIterator = core::Array<StyleToken>::const_iterator;
+using TokenIterator = core::Array<StyleToken>::const_iterator;
 
 // Decodes the input style string. This is a pre-processing step that must be
 // run before calling tokenizeStyleString(). It cleans up any invalid

@@ -39,7 +39,7 @@ class StyleParser;
 /// \brief The type of a function that takes as input a token range
 ///        and outputs a Value.
 ///
-using StylePropertyParser = Value (*)(StyleTokenIterator begin, StyleTokenIterator end);
+using StylePropertyParser = Value (*)(TokenIterator begin, TokenIterator end);
 
 /// This is the default function used for parsing properties when no
 /// StylePropertySpec exists for the given property.
@@ -50,7 +50,7 @@ using StylePropertyParser = Value (*)(StyleTokenIterator begin, StyleTokenIterat
 /// TODO: other simple cases, such as Number, Dimension, String, etc.
 ///
 VGC_STYLE_API
-Value parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
+Value parseStyleDefault(TokenIterator begin, TokenIterator end);
 
 /// \class vgc::style::StylePropertySpec
 /// \brief Specifies the name, initial value, and inheritability of a given

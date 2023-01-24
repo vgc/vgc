@@ -29,13 +29,13 @@ VGC_DEFINE_ENUM(
     (String, "String"),
     (Custom, "Custom"))
 
-Value Value::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
+Value Value::unparsed(TokenIterator begin, TokenIterator end) {
     return Value(ValueType::Unparsed, detail::UnparsedValue(begin, end));
 }
 
 namespace detail {
 
-UnparsedValue::UnparsedValue(StyleTokenIterator begin, StyleTokenIterator end)
+UnparsedValue::UnparsedValue(TokenIterator begin, TokenIterator end)
     : rawString_(initRawString(begin, end))
     , tokens_(begin, end) {
 
@@ -75,7 +75,7 @@ UnparsedValue& UnparsedValue::operator=(UnparsedValue&& other) {
 }
 
 std::string
-UnparsedValue::initRawString(StyleTokenIterator begin, StyleTokenIterator end) {
+UnparsedValue::initRawString(TokenIterator begin, TokenIterator end) {
     if (begin == end) {
         return "";
     }

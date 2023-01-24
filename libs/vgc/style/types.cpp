@@ -47,7 +47,7 @@ float Length::toPx(const Metrics& metrics) const {
     return convertToPx(value(), unit(), metrics.scaleFactor());
 }
 
-Value Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value Length::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
@@ -65,7 +65,7 @@ Value Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
-Value Percentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value Percentage::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
@@ -77,7 +77,7 @@ Value Percentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
-Value LengthOrPercentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value LengthOrPercentage::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
@@ -98,7 +98,7 @@ Value LengthOrPercentage::parse(StyleTokenIterator begin, StyleTokenIterator end
     }
 }
 
-Value LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value LengthOrAuto::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
@@ -124,7 +124,7 @@ Value LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
-Value LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value LengthOrPercentageOrAuto::parse(TokenIterator begin, TokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
@@ -153,7 +153,7 @@ Value LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterat
     }
 }
 
-Value BorderRadius::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value BorderRadius::parse(TokenIterator begin, TokenIterator end) {
     if (begin == end) {
         return Value::invalid();
     }
@@ -169,7 +169,7 @@ Value BorderRadius::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     }
     else {
         // Middle tokens should all be whitespaces
-        for (StyleTokenIterator it = begin + 1; it != (end - 1); ++it) {
+        for (TokenIterator it = begin + 1; it != (end - 1); ++it) {
             if (it->type() != StyleTokenType::Whitespace) {
                 return Value::invalid();
             }

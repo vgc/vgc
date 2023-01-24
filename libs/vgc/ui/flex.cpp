@@ -74,11 +74,10 @@ void Flex::setWrap(FlexWrap wrap) {
 
 namespace {
 
-using style::StyleTokenIterator;
 using style::StyleTokenType;
 using style::Value;
 
-style::Value parseMainAlignment(StyleTokenIterator begin, StyleTokenIterator end_) {
+style::Value parseMainAlignment(style::TokenIterator begin, style::TokenIterator end_) {
 
     using namespace strings;
 
@@ -110,7 +109,7 @@ style::Value parseMainAlignment(StyleTokenIterator begin, StyleTokenIterator end
     return res;
 }
 
-style::Value parseMainSpacing(StyleTokenIterator begin, StyleTokenIterator end_) {
+style::Value parseMainSpacing(style::TokenIterator begin, style::TokenIterator end_) {
 
     using namespace strings;
 

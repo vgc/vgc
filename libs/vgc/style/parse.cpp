@@ -22,7 +22,7 @@
 
 namespace vgc::style {
 
-Value parseColor(StyleTokenIterator begin, StyleTokenIterator end) {
+Value parseColor(TokenIterator begin, TokenIterator end) {
     if (end == begin + 1 && begin->type() == StyleTokenType::Identifier
         && begin->stringValue() == "inherit") {
         return Value::inherit();
@@ -42,7 +42,7 @@ Value parseColor(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
-Value parseLength(StyleTokenIterator begin, StyleTokenIterator end) {
+Value parseLength(TokenIterator begin, TokenIterator end) {
     // For now, we only support a unique Dimension token with a "dp" unit
     if (begin == end) {
         return Value::invalid();
@@ -60,8 +60,8 @@ Value parseLength(StyleTokenIterator begin, StyleTokenIterator end) {
 }
 
 Value parseIdentifierAmong(
-    StyleTokenIterator begin,
-    StyleTokenIterator end,
+    TokenIterator begin,
+    TokenIterator end,
     std::initializer_list<core::StringId> list) {
 
     if (end == begin + 1) {

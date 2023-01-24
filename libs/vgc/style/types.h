@@ -78,7 +78,7 @@ public:
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `Length`. Otherwise, return a `Value` holding a `Length`.
     ///
-    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(TokenIterator begin, TokenIterator end);
 
     /// Returns whether the two given `Length` are equal.
     ///
@@ -144,7 +144,7 @@ public:
     /// Returns `Value::invalid()` if the given tokens do not represent a
     /// valid `Percentage`. Otherwise, return a `Value` holding a `Percentage`.
     ///
-    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(TokenIterator begin, TokenIterator end);
 
     /// Returns whether the two given `Percentage` are equal.
     ///
@@ -248,7 +248,7 @@ public:
     /// valid `LengthOrPercentage`. Otherwise, return a `Value` holding a
     /// `LengthOrPercentage`.
     ///
-    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(TokenIterator begin, TokenIterator end);
 
     /// Returns whether the two given `LengthOrPercentage` are equal.
     ///
@@ -338,7 +338,7 @@ public:
     /// valid `LengthOrAuto`. Otherwise, return a `Value` holding a
     /// `LengthOrAuto`.
     ///
-    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(TokenIterator begin, TokenIterator end);
 
     /// Returns whether the two given `LengthOrAuto` are equal.
     ///
@@ -455,7 +455,7 @@ public:
     /// valid `LengthOrPercentageOrAuto`. Otherwise, return a `Value`
     /// holding a `LengthOrPercentageOrAuto`.
     ///
-    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(TokenIterator begin, TokenIterator end);
 
     /// Returns whether the two given `LengthOrAuto` are equal.
     ///
@@ -661,7 +661,7 @@ public:
     /// valid `LengthOrAuto`. Otherwise, return a `Value` holding a
     /// `LengthOrAuto`.
     ///
-    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(TokenIterator begin, TokenIterator end);
 
     /// Returns whether the two given `BorderRadius` are equal.
     ///
