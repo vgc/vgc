@@ -169,7 +169,7 @@ void StylableObject::updateStyle_() {
     // id/styles/type).
 
     // Clear previous data
-    styleCachedData_.clear();
+    styleCache_.clear();
 
     StylableObject* parent = parentStylableObject();
 
@@ -199,7 +199,7 @@ void StylableObject::updateStyle_() {
 
         const StyleSheet* styleSheet = node->styleSheet();
         if (styleSheet) {
-            styleCachedData_.ruleSetSpans.append({styleSheet, 0, 0});
+            styleCache_.ruleSetSpans.append({styleSheet, 0, 0});
         }
     }
 
@@ -210,11 +210,11 @@ void StylableObject::updateStyle_() {
     // specificity to higher specificity, preserving order in case of equal
     // specificity.
     //
-    auto itBegin = styleCachedData_.ruleSetSpans.rbegin();
-    auto itEnd = styleCachedData_.ruleSetSpans.rend();
+    auto itBegin = styleCache_.ruleSetSpans.rbegin();
+    auto itEnd = styleCache_.ruleSetSpans.rend();
     for (auto& it = itBegin; it < itEnd; ++it) {
         const StyleSheet* styleSheet = it->styleSheet;
-        it->begin = styleCachedData_.ruleSetArray.length();
+        it->begin = styleCache_.ruleSetArray.length();
         for (StyleRuleSet* rule : styleSheet->ruleSets()) {
             bool matches = false;
             StyleSpecificity maxSpecificity{}; // zero-init
@@ -225,23 +225,22 @@ void StylableObject::updateStyle_() {
                 }
             }
             if (matches) {
-                styleCachedData_.ruleSetArray.append({rule, maxSpecificity});
+                styleCache_.ruleSetArray.append({rule, maxSpecificity});
             }
         }
-        it->end = styleCachedData_.ruleSetArray.length();
+        it->end = styleCache_.ruleSetArray.length();
         std::stable_sort(
-            styleCachedData_.ruleSetArray.begin() + it->begin,
-            styleCachedData_.ruleSetArray.begin() + it->end,
+            styleCache_.ruleSetArray.begin() + it->begin,
+            styleCache_.ruleSetArray.begin() + it->end,
             [](const auto& p1, const auto& p2) { return p1.second < p2.second; });
     }
 
     // Compute cascaded values.
     //
-    for (const auto& r : styleCachedData_.ruleSetArray) {
+    for (const auto& r : styleCache_.ruleSetArray) {
         StyleRuleSet* ruleSet = r.first;
         for (StyleDeclaration* declaration : ruleSet->declarations()) {
-            styleCachedData_.cascadedValues[declaration->property()] =
-                &declaration->value();
+            styleCache_.cascadedValues[declaration->property()] = &declaration->value();
         }
     }
 
@@ -275,8 +274,8 @@ const Value* StylableObject::getStyleCascadedValue_(core::StringId property) con
     // Defines a `None` value that we can return as const pointer
     static Value noneValue = Value::none();
 
-    auto search = styleCachedData_.cascadedValues.find(property);
-    if (search != styleCachedData_.cascadedValues.end()) {
+    auto search = styleCache_.cascadedValues.find(property);
+    if (search != styleCache_.cascadedValues.end()) {
         return search->second;
     }
     else {

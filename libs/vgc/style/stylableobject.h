@@ -130,7 +130,7 @@ struct RuleSetSpan {
 
 using RuleSetSpans = core::Array<RuleSetSpan>;
 
-struct StyleCachedData {
+struct Cache {
 
     // Buffer to compute and store which RuleSets from which StyleSheets
     // matches a given StylableObject. The StyleSheets are stored in
@@ -332,11 +332,11 @@ private:
     core::Array<StylableObject*> childStylableObjects_;
 
     // Style information
-    SpecTablePtr styleSpecTable_;             // "global" table shared between trees
-    StyleSheetPtr styleSheet_;                // rules for this object and descendants
-    ClassSet styleClasses_;                   // style classes of this object
-    detail::StyleCachedData styleCachedData_; // cache of cascaded values of this object
-    Metrics styleMetrics_;                    // how to convert `dp` (and others) to `px`
+    SpecTablePtr styleSpecTable_; // "global" table shared between trees
+    StyleSheetPtr styleSheet_;    // rules for this object and descendants
+    ClassSet styleClasses_;       // style classes of this object
+    detail::Cache styleCache_;    // cache of cascaded values of this object
+    Metrics styleMetrics_;        // how to convert `dp` (and others) to `px`
 
     void updateStyle_();
     const Value* getStyleCascadedValue_(core::StringId property) const;
