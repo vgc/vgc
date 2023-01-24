@@ -510,7 +510,7 @@ void SpecTable::insert(
     core::StringId attributeName,
     const Value& initialValue,
     bool isInherited,
-    StylePropertyParser parser) {
+    PropertyParser parser) {
 
     if (get(attributeName)) {
         VGC_WARNING(

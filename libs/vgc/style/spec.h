@@ -35,11 +35,11 @@ class StyleParser;
 
 } // namespace detail
 
-/// \typedef vgc::style::StylePropertyParser
+/// \typedef vgc::style::PropertyParser
 /// \brief The type of a function that takes as input a token range
 ///        and outputs a Value.
 ///
-using StylePropertyParser = Value (*)(TokenIterator begin, TokenIterator end);
+using PropertyParser = Value (*)(TokenIterator begin, TokenIterator end);
 
 /// This is the default function used for parsing properties when no
 /// PropertySpec exists for the given property.
@@ -68,7 +68,7 @@ public:
         core::StringId name,
         const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser)
+        PropertyParser parser)
 
         : name_(name)
         , initialValue_(initialValue)
@@ -82,7 +82,7 @@ public:
         const char* name,
         const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser)
+        PropertyParser parser)
 
         : name_(name)
         , initialValue_(initialValue)
@@ -108,7 +108,7 @@ public:
         return isInherited_;
     }
 
-    StylePropertyParser parser() const {
+    PropertyParser parser() const {
         return parser_;
     }
 
@@ -116,7 +116,7 @@ private:
     core::StringId name_;
     Value initialValue_;
     bool isInherited_;
-    StylePropertyParser parser_;
+    PropertyParser parser_;
 };
 
 /// \class vgc::style::SpecTable
@@ -139,14 +139,14 @@ public:
         core::StringId attributeName,
         const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser);
+        PropertyParser parser);
 
     /// \overload
     void insert(
         std::string_view attributeName,
         const Value& initialValue,
         bool isInherited,
-        StylePropertyParser parser) {
+        PropertyParser parser) {
 
         insert(core::StringId(attributeName), initialValue, isInherited, parser);
     }

@@ -22,7 +22,7 @@ namespace vgc::style {
 
 void Value::parse_(const PropertySpec* spec) {
     const detail::UnparsedValue* v = std::any_cast<detail::UnparsedValue>(&value_);
-    StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
+    PropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
     Value parsed = parser(v->tokens().begin(), v->tokens().end());
     if (parsed.type() == ValueType::Invalid) {
         VGC_WARNING(
