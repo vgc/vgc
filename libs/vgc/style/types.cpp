@@ -188,8 +188,8 @@ StyleValue BorderRadius::parse(StyleTokenIterator begin, StyleTokenIterator end)
     }
 }
 
-BorderRadiuses::BorderRadiuses(const StylableObject* obj)
-    : BorderRadiuses(
+BorderRadii::BorderRadii(const StylableObject* obj)
+    : BorderRadii(
         obj->style(strings::border_top_left_radius).to<BorderRadius>(),
         obj->style(strings::border_top_right_radius).to<BorderRadius>(),
         obj->style(strings::border_bottom_right_radius).to<BorderRadius>(),

@@ -1177,7 +1177,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 core::Color highlightColor = computeHighlightColor(hoveredColor);
 
                 geometry::Rect2f rect(x1, y1, x2, y2);
-                style::BorderRadiuses radius(style::BorderRadius(0));
+                style::BorderRadii radius(style::BorderRadius(0));
                 float borderWidth = 1;
 
                 detail::insertRect(
@@ -2388,9 +2388,9 @@ void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         float borderWidth = detail::getLengthInPx(this, ss::border_width);
         core::Color borderColor =
             computeHighlightColor(color_, HighlightStyle::DarkenOnly);
-        style::BorderRadiuses radiuses = style::BorderRadiuses(this);
+        style::BorderRadii radii = style::BorderRadii(this);
         detail::insertRect(
-            a, styleMetrics(), color_, borderColor, rect(), radiuses, borderWidth);
+            a, styleMetrics(), color_, borderColor, rect(), radii, borderWidth);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -2569,7 +2569,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
 
             float borderWidth = detail::getLengthInPx(item_.get(), ss::border_width);
             //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
-            style::BorderRadiuses radiuses = style::BorderRadiuses(item_.get());
+            style::BorderRadii radii = style::BorderRadii(item_.get());
 
             geometry::Vec2f itemSize(m.itemWidth, m.itemHeight);
 
@@ -2587,28 +2587,26 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
 
                 if (i == selectedColorIndex_) {
 
-                    style::BorderRadiusesInPx refRadiuses = radiuses.toPx(
-                        styleMetrics(), itemRect.width(), itemRect.height());
+                    style::BorderRadiiInPx refRadii =
+                        radii.toPx(styleMetrics(), itemRect.width(), itemRect.height());
 
                     // XXX should offset be in dp rather than px?
                     geometry::Rect2f itemRect1 = itemRect + ui::Margins(1);
-                    style::BorderRadiusesInPx radiuses1 =
-                        refRadiuses.offsetted(1, 1, 1, 1);
+                    style::BorderRadiiInPx radii1 = refRadii.offsetted(1, 1, 1, 1);
 
                     geometry::Rect2f itemRect2 = itemRect + ui::Margins(2);
-                    style::BorderRadiusesInPx radiuses2 =
-                        refRadiuses.offsetted(2, 2, 2, 2);
+                    style::BorderRadiiInPx radii2 = refRadii.offsetted(2, 2, 2, 2);
 
                     detail::insertRect(
-                        a, color, cursorInnerColor, itemRect1, radiuses1, refRadiuses, 1);
+                        a, color, cursorInnerColor, itemRect1, radii1, refRadii, 1);
 
                     detail::insertRect(
                         a,
                         core::colors::transparent,
                         cursorOuterColor,
                         itemRect2,
-                        radiuses2,
-                        refRadiuses,
+                        radii2,
+                        refRadii,
                         1);
                 }
                 else {
@@ -2622,7 +2620,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
                         color,
                         highlightColor,
                         itemRect,
-                        radiuses,
+                        radii,
                         borderWidth);
                 }
             }

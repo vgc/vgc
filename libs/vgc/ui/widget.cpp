@@ -502,8 +502,7 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         if (backgroundChanged_) {
             backgroundChanged_ = false;
             core::FloatArray a;
-            detail::insertRect(
-                a, styleMetrics(), backgroundColor_, rect(), borderRadiuses_);
+            detail::insertRect(a, styleMetrics(), backgroundColor_, rect(), borderRadii_);
             engine->updateVertexBufferData(triangles_, std::move(a));
         }
         engine->setProgram(graphics::BuiltinProgram::Simple);
@@ -1555,12 +1554,12 @@ void Widget::onChildRemoved(Object* child) {
 void Widget::onStyleChanged() {
 
     core::Color oldBackgroundColor = backgroundColor_;
-    style::BorderRadiuses oldBorderRadiuses = borderRadiuses_;
+    style::BorderRadii oldBorderRadii = borderRadii_;
 
     backgroundColor_ = detail::getColor(this, graphics::strings::background_color);
-    borderRadiuses_ = style::BorderRadiuses(this);
+    borderRadii_ = style::BorderRadii(this);
 
-    if (oldBackgroundColor != backgroundColor_ || oldBorderRadiuses != borderRadiuses_) {
+    if (oldBackgroundColor != backgroundColor_ || oldBorderRadii != borderRadii_) {
         backgroundChanged_ = true;
     }
 

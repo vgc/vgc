@@ -1373,7 +1373,7 @@ private:
     // Background
     graphics::GeometryViewPtr triangles_;
     core::Color backgroundColor_;
-    style::BorderRadiuses borderRadiuses_;
+    style::BorderRadii borderRadii_;
     bool backgroundChanged_ = true;
     // TODO: border width/style
 

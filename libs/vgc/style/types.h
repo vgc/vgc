@@ -675,137 +675,137 @@ private:
     LengthOrPercentage verticalRadius_;
 };
 
-/// \class vgc::style::BorderRadiusesInPx
-/// \brief The border radiuses for the four corners in physical pixels
+/// \class vgc::style::BorderRadiiInPx
+/// \brief The border radii for the four corners in physical pixels
 ///
-class BorderRadiusesInPx {
+class BorderRadiiInPx {
 public:
-    /// Constructs a `BorderRadiusesInPx` with all radiuses set to `0dp`.
+    /// Constructs a `BorderRadiiInPx` with all radii set to `0dp`.
     ///
-    constexpr BorderRadiusesInPx()
-        : radiuses_{} {
+    constexpr BorderRadiiInPx()
+        : radii_{} {
     }
 
-    /// Constructs a `BorderRadiusesInPx` with all radiuses set to the given
-    /// `BorderRadiusesInPx`.
+    /// Constructs a `BorderRadiiInPx` with all radii set to the given
+    /// `BorderRadiiInPx`.
     ///
-    constexpr BorderRadiusesInPx(const BorderRadiusInPx& radius)
-        : radiuses_{radius, radius, radius, radius} {
+    constexpr BorderRadiiInPx(const BorderRadiusInPx& radius)
+        : radii_{radius, radius, radius, radius} {
     }
 
-    /// Constructs a `BorderRadiuses` with the top-left and bottom-right
-    /// radiuses set to `topLeftAndBottomRight`, and the top-right and
-    /// bottom-left radiuses set to `topRightAndBottomLeft`.
+    /// Constructs a `BorderRadii` with the top-left and bottom-right
+    /// radii set to `topLeftAndBottomRight`, and the top-right and
+    /// bottom-left radii set to `topRightAndBottomLeft`.
     ///
-    constexpr BorderRadiusesInPx(
+    constexpr BorderRadiiInPx(
         const BorderRadiusInPx& topLeftAndBottomRight,
         const BorderRadiusInPx& topRightAndBottomLeft)
 
-        : radiuses_{
+        : radii_{
             topLeftAndBottomRight,
             topRightAndBottomLeft,
             topLeftAndBottomRight,
             topRightAndBottomLeft} {
     }
 
-    /// Constructs a `BorderRadiuses` with the top-left radius set to
-    /// `topLeft`, the top-right and bottom-left radiuses set to
+    /// Constructs a `BorderRadii` with the top-left radius set to
+    /// `topLeft`, the top-right and bottom-left radii set to
     /// `topRightAndBottomLeft`, and the bottom-right radius set to
     /// `bottomRight`.
     ///
-    constexpr BorderRadiusesInPx(
+    constexpr BorderRadiiInPx(
         const BorderRadiusInPx& topLeft,
         const BorderRadiusInPx& topRightAndBottomLeft,
         const BorderRadiusInPx& bottomRight)
 
-        : radiuses_{
+        : radii_{
             topLeft, //
             topRightAndBottomLeft,
             bottomRight,
             topRightAndBottomLeft} {
     }
 
-    /// Constructs a `BorderRadiuses` with the four given `BorderRadius`.
+    /// Constructs a `BorderRadii` with the four given `BorderRadius`.
     ///
-    constexpr BorderRadiusesInPx(
+    constexpr BorderRadiiInPx(
         const BorderRadiusInPx& topLeft,
         const BorderRadiusInPx& topRight,
         const BorderRadiusInPx& bottomRight,
         const BorderRadiusInPx& bottomLeft)
 
-        : radiuses_{topLeft, topRight, bottomRight, bottomLeft} {
+        : radii_{topLeft, topRight, bottomRight, bottomLeft} {
     }
 
     /// Returns the top left border radius.
     ///
     constexpr const BorderRadiusInPx& topLeft() const {
-        return radiuses_[0];
+        return radii_[0];
     }
 
     /// Returns the top right border radius.
     ///
     constexpr const BorderRadiusInPx& topRight() const {
-        return radiuses_[1];
+        return radii_[1];
     }
 
     /// Returns the bottom right border radius.
     ///
     constexpr const BorderRadiusInPx& bottomRight() const {
-        return radiuses_[2];
+        return radii_[2];
     }
 
     /// Returns the bottom left border radius.
     ///
     constexpr const BorderRadiusInPx& bottomLeft() const {
-        return radiuses_[3];
+        return radii_[3];
     }
 
     /// Returns the top left border radius as a reference.
     ///
     constexpr BorderRadiusInPx& topLeft() {
-        return radiuses_[0];
+        return radii_[0];
     }
 
     /// Returns the top right border radius as a reference.
     ///
     constexpr BorderRadiusInPx& topRight() {
-        return radiuses_[1];
+        return radii_[1];
     }
 
     /// Returns the bottom right border radius as a reference.
     ///
     constexpr BorderRadiusInPx& bottomRight() {
-        return radiuses_[2];
+        return radii_[2];
     }
 
     /// Returns the bottom left border radius as a reference.
     ///
     constexpr BorderRadiusInPx& bottomLeft() {
-        return radiuses_[3];
+        return radii_[3];
     }
 
     /// Sets the top left border radius.
     ///
     constexpr void setTopLeft(const BorderRadiusInPx& topLeft) {
-        radiuses_[0] = topLeft;
+        radii_[0] = topLeft;
     }
 
     /// Sets the top right border radius.
     ///
     constexpr void setTopRight(const BorderRadiusInPx& topRight) {
-        radiuses_[1] = topRight;
+        radii_[1] = topRight;
     }
 
     /// Sets the bottom right border radius.
     ///
     constexpr void setBottomRight(const BorderRadiusInPx& bottomRight) {
-        radiuses_[2] = bottomRight;
+        radii_[2] = bottomRight;
     }
 
     /// Sets the bottom left border radius.
     ///
     constexpr void setBottomLeft(const BorderRadiusInPx& bottomLeft) {
-        radiuses_[3] = bottomLeft;
+        radii_[3] = bottomLeft;
     }
 
     /// Returns one of the four border radius:
@@ -816,7 +816,7 @@ public:
     /// - If `index` is `3`, returns the bottom-left radius.
     ///
     constexpr const BorderRadiusInPx& operator[](Int index) const {
-        return radiuses_[static_cast<size_t>(index)];
+        return radii_[static_cast<size_t>(index)];
     }
 
     /// Returns a BorderRadiusInPx where each radius is non-negative, each
@@ -827,8 +827,8 @@ public:
     ///
     /// The given `width` and `height` are assumed to be non-negative.
     ///
-    constexpr BorderRadiusesInPx clamped(float width, float height) const {
-        BorderRadiusesInPx res = *this;
+    constexpr BorderRadiiInPx clamped(float width, float height) const {
+        BorderRadiiInPx res = *this;
         constexpr Int Horizontal = 0;
         constexpr Int Vertical = 1;
         clamp_(res.topLeft()[Horizontal], res.topRight()[Horizontal], width);
@@ -840,46 +840,46 @@ public:
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    constexpr BorderRadiusesInPx offsetted(float horizontal, float vertical) const {
-        return BorderRadiusesInPx(
-            radiuses_[0].offsetted(horizontal, vertical),
-            radiuses_[1].offsetted(horizontal, vertical),
-            radiuses_[2].offsetted(horizontal, vertical),
-            radiuses_[3].offsetted(horizontal, vertical));
+    constexpr BorderRadiiInPx offsetted(float horizontal, float vertical) const {
+        return BorderRadiiInPx(
+            radii_[0].offsetted(horizontal, vertical),
+            radii_[1].offsetted(horizontal, vertical),
+            radii_[2].offsetted(horizontal, vertical),
+            radii_[3].offsetted(horizontal, vertical));
     }
 
     /// Returns a BorderRadiusInPx with the given offset applied.
     ///
-    constexpr BorderRadiusesInPx
+    constexpr BorderRadiiInPx
     offsetted(float top, float right, float bottom, float left) const {
-        return BorderRadiusesInPx(
+        return BorderRadiiInPx(
             topLeft().offsetted(left, top),
             topRight().offsetted(right, top),
             bottomRight().offsetted(right, bottom),
             bottomLeft().offsetted(left, bottom));
     }
 
-    /// Returns whether the two given `BorderRadiusesInPx` are equal.
+    /// Returns whether the two given `BorderRadiiInPx` are equal.
     ///
     friend constexpr bool
-    operator==(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
+    operator==(const BorderRadiiInPx& v1, const BorderRadiiInPx& v2) {
         // Note: std::array<T>::operator==() is not constexpr in C++17
         // (it is in C++20), so we do it manually.
-        return v1.radiuses_[0] == v2.radiuses_[0]    //
-               && v1.radiuses_[1] == v2.radiuses_[1] //
-               && v1.radiuses_[2] == v2.radiuses_[2] //
-               && v1.radiuses_[3] == v2.radiuses_[3];
+        return v1.radii_[0] == v2.radii_[0]    //
+               && v1.radii_[1] == v2.radii_[1] //
+               && v1.radii_[2] == v2.radii_[2] //
+               && v1.radii_[3] == v2.radii_[3];
     }
 
-    /// Returns whether the two given `BorderRadiusesInPx` are different.
+    /// Returns whether the two given `BorderRadiiInPx` are different.
     ///
     friend constexpr bool
-    operator!=(const BorderRadiusesInPx& v1, const BorderRadiusesInPx& v2) {
+    operator!=(const BorderRadiiInPx& v1, const BorderRadiiInPx& v2) {
         return !(v1 == v2);
     }
 
 private:
-    std::array<BorderRadiusInPx, 4> radiuses_;
+    std::array<BorderRadiusInPx, 4> radii_;
 
     static constexpr void clamp_(float& x1, float& x2, float sumMax) {
         x1 = core::clamp(x1, 0.0f, sumMax);
@@ -893,35 +893,35 @@ private:
     }
 };
 
-/// \class vgc::style::BorderRadiuses
-/// \brief The border radiuses for the four corners
+/// \class vgc::style::BorderRadii
+/// \brief The border radii for the four corners
 ///
-class VGC_STYLE_API BorderRadiuses {
+class VGC_STYLE_API BorderRadii {
 public:
-    /// Constructs a `BorderRadiuses` with all radiuses set to (0dp, 0dp).
+    /// Constructs a `BorderRadii` with all radii set to (0dp, 0dp).
     ///
-    constexpr BorderRadiuses()
+    constexpr BorderRadii()
         : topLeft_()
         , topRight_()
         , bottomRight_()
         , bottomLeft_() {
     }
 
-    /// Constructs a `BorderRadiuses` with all radiuses set to the given
+    /// Constructs a `BorderRadii` with all radii set to the given
     /// `BorderRadius`.
     ///
-    constexpr BorderRadiuses(const BorderRadius& radius)
+    constexpr BorderRadii(const BorderRadius& radius)
         : topLeft_(radius)
         , topRight_(radius)
         , bottomRight_(radius)
         , bottomLeft_(radius) {
     }
 
-    /// Constructs a `BorderRadiuses` with the top-left and bottom-right
-    /// radiuses set to `topLeftAndBottomRight`, and the top-right and
-    /// bottom-left radiuses set to `topRightAndBottomLeft`.
+    /// Constructs a `BorderRadii` with the top-left and bottom-right
+    /// radii set to `topLeftAndBottomRight`, and the top-right and
+    /// bottom-left radii set to `topRightAndBottomLeft`.
     ///
-    constexpr BorderRadiuses(
+    constexpr BorderRadii(
         const BorderRadius& topLeftAndBottomRight,
         const BorderRadius& topRightAndBottomLeft)
 
@@ -931,12 +931,12 @@ public:
         , bottomLeft_(topRightAndBottomLeft) {
     }
 
-    /// Constructs a `BorderRadiuses` with the top-left radius set to
-    /// `topLeft`, the top-right and bottom-left radiuses set to
+    /// Constructs a `BorderRadii` with the top-left radius set to
+    /// `topLeft`, the top-right and bottom-left radii set to
     /// `topRightAndBottomLeft`, and the bottom-right radius set to
     /// `bottomRight`.
     ///
-    constexpr BorderRadiuses(
+    constexpr BorderRadii(
         const BorderRadius& topLeft,
         const BorderRadius& topRightAndBottomLeft,
         const BorderRadius& bottomRight)
@@ -947,9 +947,9 @@ public:
         , bottomLeft_(topRightAndBottomLeft) {
     }
 
-    /// Constructs a `BorderRadiuses` with the four given `BorderRadius`.
+    /// Constructs a `BorderRadii` with the four given `BorderRadius`.
     ///
-    constexpr BorderRadiuses(
+    constexpr BorderRadii(
         const BorderRadius& topLeft,
         const BorderRadius& topRight,
         const BorderRadius& bottomRight,
@@ -961,10 +961,10 @@ public:
         , bottomLeft_(bottomLeft) {
     }
 
-    /// Constructs a `BorderRadiuses` from the `border-radius` style properties
+    /// Constructs a `BorderRadii` from the `border-radius` style properties
     /// of the given `StylableObject`.
     ///
-    BorderRadiuses(const StylableObject* obj);
+    BorderRadii(const StylableObject* obj);
 
     /// Returns the top left border radius.
     ///
@@ -1018,32 +1018,32 @@ public:
     ///
     /// The given `metrics` is used to convert non-percentage units to `px`,
     /// and the given `horizontalRefLength` (resp. `verticalRefLength`) is used
-    /// to convert horizontal radiuses (resp. vertical radiuses) when it is
+    /// to convert horizontal radii (resp. vertical radii) when it is
     /// specified as a percentage.
     ///
-    BorderRadiusesInPx toPx(
+    BorderRadiiInPx toPx(
         const Metrics& metrics,
         float horizontalRefLength,
         float verticalRefLength) const {
-        return BorderRadiusesInPx(
+        return BorderRadiiInPx(
             topLeft_.toPx(metrics, horizontalRefLength, verticalRefLength),
             topRight_.toPx(metrics, horizontalRefLength, verticalRefLength),
             bottomRight_.toPx(metrics, horizontalRefLength, verticalRefLength),
             bottomLeft_.toPx(metrics, horizontalRefLength, verticalRefLength));
     }
 
-    /// Returns whether the two given `BorderRadiuses` are equal.
+    /// Returns whether the two given `BorderRadii` are equal.
     ///
-    friend constexpr bool operator==(const BorderRadiuses& v1, const BorderRadiuses& v2) {
+    friend constexpr bool operator==(const BorderRadii& v1, const BorderRadii& v2) {
         return v1.topLeft_ == v2.topLeft_            //
                && v1.topRight_ == v2.topRight_       //
                && v1.bottomRight_ == v2.bottomRight_ //
                && v1.bottomLeft_ == v2.bottomLeft_;
     }
 
-    /// Returns whether the two given `BorderRadiuses` are different.
+    /// Returns whether the two given `BorderRadii` are different.
     ///
-    friend constexpr bool operator!=(const BorderRadiuses& v1, const BorderRadiuses& v2) {
+    friend constexpr bool operator!=(const BorderRadii& v1, const BorderRadii& v2) {
         return !(v1 == v2);
     }
 
