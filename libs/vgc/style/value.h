@@ -237,13 +237,13 @@ public:
         return rawString_;
     }
 
-    const StyleTokenArray& tokens() const {
+    const TokenArray& tokens() const {
         return tokens_;
     }
 
 private:
     std::string rawString_;
-    StyleTokenArray tokens_;
+    TokenArray tokens_;
 
     // Note: tokens_ contains pointers to characters in the strings. These must
     // be properly updated whenever the string is copied. See remapPointers_().

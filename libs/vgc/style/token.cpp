@@ -961,8 +961,8 @@ std::string decodeStyleString(std::string_view s) {
     return res;
 }
 
-StyleTokenArray tokenizeStyleString(const char* s) {
-    StyleTokenArray res;
+TokenArray tokenizeStyleString(const char* s) {
+    TokenArray res;
     detail::TokenStream stream(s);
     while (true) {
         StyleToken t = stream.get();

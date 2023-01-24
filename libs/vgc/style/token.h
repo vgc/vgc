@@ -321,17 +321,17 @@ void write(OStream& out, const StyleToken& token) {
     }
 }
 
-/// \typedef vgc::style::StyleTokenArray
+/// \typedef vgc::style::TokenArray
 /// \brief The output of tokenizing a style stream.
 ///
 /// \sa StyleToken
 ///
-using StyleTokenArray = core::Array<StyleToken>;
+using TokenArray = core::Array<StyleToken>;
 
 /// \typedef vgc::style::TokenIterator
-/// \brief Iterating over a StyleTokenArray
+/// \brief Iterating over a TokenArray
 ///
-/// \sa StyleTokenArray, StyleToken
+/// \sa TokenArray, StyleToken
 ///
 using TokenIterator = core::Array<StyleToken>::const_iterator;
 
@@ -354,7 +354,7 @@ using TokenIterator = core::Array<StyleToken>::const_iterator;
 // - As mandated by CSS, we replace U+0000 NULL with U+FFFD REPLACEMENT CHARACTER.
 // - We append a final U+0000 NULL which we use as EOF, making tokenizing easier.
 //
-/// \sa StyleTokenArray, StyleToken,
+/// \sa TokenArray, StyleToken,
 ///
 std::string decodeStyleString(std::string_view s);
 
@@ -363,9 +363,9 @@ std::string decodeStyleString(std::string_view s);
 /// to characters in the string. The given null-terminated string is assumed to
 /// be already "decoded" using decodeStyleString().
 ///
-/// \sa StyleTokenArray, StyleToken
+/// \sa TokenArray, StyleToken
 ///
-StyleTokenArray tokenizeStyleString(const char* s);
+TokenArray tokenizeStyleString(const char* s);
 
 } // namespace vgc::style
 

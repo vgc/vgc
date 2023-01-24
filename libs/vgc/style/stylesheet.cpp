@@ -41,7 +41,7 @@ public:
 
         // Tokenize
         std::string decoded = decodeStyleString(styleString);
-        StyleTokenArray tokens = tokenizeStyleString(decoded.data());
+        TokenArray tokens = tokenizeStyleString(decoded.data());
 
         // Parse
         bool topLevel = true;
