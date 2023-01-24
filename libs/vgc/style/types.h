@@ -17,6 +17,8 @@
 #ifndef VGC_STYLE_TYPES_H
 #define VGC_STYLE_TYPES_H
 
+#include <array>
+
 #include <vgc/core/arithmetic.h>
 
 #include <vgc/geometry/vec2f.h>
