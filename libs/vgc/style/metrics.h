@@ -27,7 +27,7 @@ namespace vgc::style {
 /// \enum vgc::style::Metrics
 /// \brief The metrics required to convert between style units
 ///
-struct Metrics {
+class VGC_STYLE_API Metrics {
 public:
     /// Creates a `Metrics` with a scale factor of 1.
     ///
