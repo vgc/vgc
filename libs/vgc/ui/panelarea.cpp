@@ -458,7 +458,7 @@ void PanelArea::updateChildrenGeometry() {
     // TODO: supports isVisible, isCollapsed, and padding/gap/border
 
     // The algorithm for updating PanelArea sizes is similar to Flex, except
-    // that "preferred-size" doesn't come from the stylesheet, but from the
+    // that "preferred-size" doesn't come from the style sheet, but from the
     // user manually dragging a splitter.
 
     // Useful: https://drafts.csswg.org/css3-tables-algorithms/Overview.src.htm

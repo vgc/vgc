@@ -35,13 +35,13 @@ StylableObjectPtr StylableObject::create() {
     return StylableObjectPtr(new StylableObject);
 }
 
-void StylableObject::setStyleSheet(StyleSheetPtr styleSheet) {
+void StylableObject::setStyleSheet(SheetPtr styleSheet) {
     styleSheet_ = styleSheet;
     updateStyle_();
 }
 
 void StylableObject::setStyleSheet(std::string_view string) {
-    setStyleSheet(StyleSheet::create(string));
+    setStyleSheet(Sheet::create(string));
 }
 
 void StylableObject::addStyleClass(core::StringId class_) {
@@ -162,10 +162,10 @@ void StylableObject::updateStyle_() {
     // precompute all "cascaded values". Note that "computed values" are
     // computed on the fly based on "cascaded values".
     //
-    // We currently iterate over all rule sets of all stylesheets to find which
+    // We currently iterate over all rule sets of all style sheets to find which
     // rule sets are matching. In the future, we may want to do some
-    // precomputation per stylesheet to make this faster (e.g., the stylesheets
-    // could return a list of candidate rule sets based on a given node's
+    // precomputation per style sheet to make this faster (e.g., the style
+    // sheets could return a list of candidate rule sets based on a given node's
     // id/styles/type).
 
     // Clear previous data
@@ -192,28 +192,28 @@ void StylableObject::updateStyle_() {
         // Note: don't call setStyleMetrics() to avoid recursion
     }
 
-    // Get all non-null stylesheets from this node to the root nodes
+    // Get all non-null style sheets from this node to the root nodes
     for (StylableObject* node = this; //
          node != nullptr;             //
          node = node->parentStylableObject()) {
 
-        const StyleSheet* styleSheet = node->styleSheet();
+        const Sheet* styleSheet = node->styleSheet();
         if (styleSheet) {
             styleCache_.ruleSetSpans.append({styleSheet, 0, 0});
         }
     }
 
-    // Iterate over all stylesheets from the root node to this node, that is,
+    // Iterate over all style sheets from the root node to this node, that is,
     // from lower precedence to higher precedence.
     //
-    // Then, for each stylesheet, we insert all matching rule sets from lower
+    // Then, for each style sheet, we insert all matching rule sets from lower
     // specificity to higher specificity, preserving order in case of equal
     // specificity.
     //
     auto itBegin = styleCache_.ruleSetSpans.rbegin();
     auto itEnd = styleCache_.ruleSetSpans.rend();
     for (auto& it = itBegin; it < itEnd; ++it) {
-        const StyleSheet* styleSheet = it->styleSheet;
+        const Sheet* styleSheet = it->styleSheet;
         it->begin = styleCache_.ruleSetArray.length();
         for (RuleSet* rule : styleSheet->ruleSets()) {
             bool matches = false;
@@ -258,9 +258,9 @@ void StylableObject::updateStyle_() {
 //
 // https://www.w3.org/TR/css-cascade-4/#cascaded
 //
-// This takes into account stylesheet precedence (nested stylesheets have
+// This takes into account style sheet precedence (nested style sheets have
 // higher precedence, as if it was a stronger CSS layer), as well as selector
-// specificity, and finally order of appearance in a given stylesheet.
+// specificity, and finally order of appearance in a given style sheet.
 //
 // This does NOT take into account StylableObject inheritance (i.e., properties
 // set of the parent StylableObject are ignored) and does not take into account
@@ -291,7 +291,7 @@ const Value* StylableObject::getStyleCascadedValue_(core::StringId property) con
 // the returned Value is never of type ValueType::Inherit.
 // However, the type could be ValueType::None if there is no known
 // default value for the given property (this can be the case for custom
-// properties which are missing from the stylesheet).
+// properties which are missing from the style sheet).
 //
 const Value& StylableObject::getStyleComputedValue_(core::StringId property) const {
 

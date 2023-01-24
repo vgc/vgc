@@ -2788,7 +2788,7 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     // Alternatively, we could try just stretching the width (i.e., items
     // wouldn't be square anymore) instead of stretching the gap. Or perhaps
     // keep the items left-aligned. Ideally, it'd be nice if this was
-    // controllable via the stylesheet, and perhaps directly handled via a Flex
+    // controllable via the style sheet, and perhaps directly handled via a Flex
     // with wrapping behavior.
     //
     m.itemWidth = hint(m.itemPreferredWidth, m.hinting);
@@ -2809,7 +2809,7 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     // https://github.com/w3c/csswg-drafts/issues/5081
     //
     // It's unclear whether our behavior or CSS is best. Ideally, it'd be nice
-    // to be able to specify in the stylesheet whether row-gap or column-gap
+    // to be able to specify in the style sheet whether row-gap or column-gap
     // percentages should refer to the size of the main-axis, the cross-axis,
     // or their respective dimension, e.g.:
     //

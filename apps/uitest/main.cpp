@@ -158,16 +158,16 @@ private:
         gridTest->setStyleSheet(".Grid { column-gap: 30dp; row-gap: 10dp; }");
         for (int i = 0; i < 2; ++i) {
             for (int j = 0; j < 3; ++j) {
-                ui::LineEditPtr le = ui::LineEdit::create();
-                std::string sheet(
+                ui::LineEditPtr lineEdit = ui::LineEdit::create();
+                std::string styleSheet(
                     ".LineEdit { text-color: rgb(50, 232, 211); preferred-width: ");
-                sheet += core::toString(1 + j);
-                sheet += "00dp; horizontal-stretch: ";
-                sheet += core::toString(j + 1);
-                sheet += "; vertical-stretch: 0; }";
-                le->setStyleSheet(sheet);
-                le->setText("test");
-                gridTest->setWidgetAt(le.get(), i, j);
+                styleSheet += core::toString(1 + j);
+                styleSheet += "00dp; horizontal-stretch: ";
+                styleSheet += core::toString(j + 1);
+                styleSheet += "; vertical-stretch: 0; }";
+                lineEdit->setStyleSheet(styleSheet);
+                lineEdit->setText("test");
+                gridTest->setWidgetAt(lineEdit.get(), i, j);
             }
         }
         gridTest->widgetAt(0, 0)->setStyleSheet(

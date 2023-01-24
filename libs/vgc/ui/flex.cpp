@@ -823,7 +823,7 @@ void emergencyShrink(
     //   even worse to start clipping once the child rects become zero, as it
     //   introduces a discontinuity.
     //
-    // In the future, we may want to make this configurable in the stylesheet,
+    // In the future, we may want to make this configurable in the style sheet,
     // maybe something like:
     //
     // flex-clip: always                         always enable clipping (i.e., even on stretch)

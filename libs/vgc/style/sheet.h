@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_STYLE_STYLESHEET_H
-#define VGC_STYLE_STYLESHEET_H
+#ifndef VGC_STYLE_SHEET_H
+#define VGC_STYLE_SHEET_H
 
 #include <vgc/core/array.h>
 #include <vgc/core/object.h>
@@ -32,7 +32,7 @@ class Parser;
 } // namespace detail
 
 VGC_DECLARE_OBJECT(StylableObject);
-VGC_DECLARE_OBJECT(StyleSheet);
+VGC_DECLARE_OBJECT(Sheet);
 VGC_DECLARE_OBJECT(RuleSet);
 VGC_DECLARE_OBJECT(Selector);
 VGC_DECLARE_OBJECT(Declaration);
@@ -41,20 +41,20 @@ using RuleSetArray = core::Array<RuleSet*>;
 using SelectorArray = core::Array<Selector*>;
 using DeclarationArray = core::Array<Declaration*>;
 
-/// \class vgc::style::StyleSheet
-/// \brief Parses and stores a VGC stylesheet.
+/// \class vgc::style::Sheet
+/// \brief Parses and stores a VGC style sheet.
 ///
-class VGC_STYLE_API StyleSheet : public core::Object {
+class VGC_STYLE_API Sheet : public core::Object {
 private:
-    VGC_OBJECT(StyleSheet, core::Object)
+    VGC_OBJECT(Sheet, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
-    /// Creates a stylesheet from the given specs and string.
+    /// Creates a style sheet from the given specs and string.
     ///
-    static StyleSheetPtr create(std::string_view s);
+    static SheetPtr create(std::string_view s);
 
-    /// Returns all the rule sets of this stylesheet.
+    /// Returns all the rule sets of this style sheet.
     ///
     const RuleSetArray& ruleSets() const {
         return ruleSets_;
@@ -64,12 +64,12 @@ private:
     RuleSetArray ruleSets_;
 
     friend class detail::Parser;
-    StyleSheet();
-    static StyleSheetPtr create();
+    Sheet();
+    static SheetPtr create();
 };
 
 /// \class vgc::style::RuleSet
-/// \brief One rule set of a stylesheet.
+/// \brief One rule set of a style sheet.
 ///
 class VGC_STYLE_API RuleSet : public core::Object {
 private:
@@ -164,7 +164,7 @@ private:
 using Specificity = UInt64;
 
 /// \class vgc::style::Selector
-/// \brief One selector of a rule set of a stylesheet.
+/// \brief One selector of a rule set of a style sheet.
 ///
 class VGC_STYLE_API Selector : public core::Object {
 private:
@@ -192,7 +192,7 @@ private:
 };
 
 /// \class vgc::style::Declaration
-/// \brief One declaration of a rule set of a stylesheet.
+/// \brief One declaration of a rule set of a style sheet.
 ///
 class VGC_STYLE_API Declaration : public core::Object {
 private:
@@ -230,4 +230,4 @@ private:
 
 } // namespace vgc::style
 
-#endif // VGC_STYLE_STYLESHEET_H
+#endif // VGC_STYLE_SHEET_H

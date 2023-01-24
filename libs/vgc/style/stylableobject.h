@@ -23,8 +23,8 @@
 
 #include <vgc/style/api.h>
 #include <vgc/style/metrics.h>
+#include <vgc/style/sheet.h>
 #include <vgc/style/spec.h>
-#include <vgc/style/stylesheet.h>
 
 namespace vgc::style {
 
@@ -123,7 +123,7 @@ namespace detail {
 using RuleSetArray = core::Array<std::pair<RuleSet*, Specificity>>;
 
 struct RuleSetSpan {
-    const StyleSheet* styleSheet;
+    const Sheet* styleSheet;
     Int begin;
     Int end;
 };
@@ -132,8 +132,8 @@ using RuleSetSpans = core::Array<RuleSetSpan>;
 
 struct Cache {
 
-    // Buffer to compute and store which RuleSets from which StyleSheets
-    // matches a given StylableObject. The StyleSheets are stored in
+    // Buffer to compute and store which RuleSets from which Sheets
+    // matches a given StylableObject. The Sheets are stored in
     // ruleSetSpans from higher precedence to lower precedence, and
     // the RuleSets are stored in ruleSetArray from lower specificity
     // to higher specificity.
@@ -178,7 +178,7 @@ public:
         return childStylableObjects_;
     }
 
-    /// Sets the `StyleSheet` of this `StylableObject`.
+    /// Sets the style sheet of this `StylableObject`.
     ///
     /// This style sheet affects both this object and all its descendants.
     ///
@@ -191,16 +191,16 @@ public:
     /// sheet is "scoped" (that is, it only applies to this objects and its
     /// descendants), while CSS does not support scoped style sheet.
     ///
-    void setStyleSheet(StyleSheetPtr styleSheet);
+    void setStyleSheet(SheetPtr styleSheet);
 
-    /// Overload of `setStyleSheet(StyleSheetPtr)` that creates and sets a
+    /// Overload of `setStyleSheet(SheetPtr)` that creates and sets a
     /// style sheet from the given string.
     ///
     void setStyleSheet(std::string_view string);
 
     /// Returns the style sheet of this `StylableObject`.
     ///
-    const StyleSheet* styleSheet() const {
+    const Sheet* styleSheet() const {
         return styleSheet_.get();
     }
 
@@ -333,7 +333,7 @@ private:
 
     // Style information
     SpecTablePtr styleSpecTable_; // "global" table shared between trees
-    StyleSheetPtr styleSheet_;    // rules for this object and descendants
+    SheetPtr styleSheet_;         // rules for this object and descendants
     ClassSet styleClasses_;       // style classes of this object
     detail::Cache styleCache_;    // cache of cascaded values of this object
     Metrics styleMetrics_;        // how to convert `dp` (and others) to `px`

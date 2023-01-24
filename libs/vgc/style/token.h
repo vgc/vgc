@@ -50,7 +50,7 @@ namespace vgc::style {
 ///
 /// (See section 14.5 of https://www.w3.org/TR/REC-html40/present/styles.html)
 ///
-/// In VGC stylesheets, we made the choice to disallow this, so `<!--` and
+/// In VGC style sheets, we made the choice to disallow this, so `<!--` and
 /// `-->` are tokenized following the other rules, therefore `<`, `!`, and `>`
 /// are tokenized as separate delimiters, and `--` is tokenized as an
 /// identifier.
@@ -237,7 +237,7 @@ private:
     friend detail::TokenStream;
     friend detail::UnparsedValue;
 
-    // Pointer to the original stylesheet string, or to a copy of a subset of
+    // Pointer to the original style sheet string, or to a copy of a subset of
     // this string (see detail::UnparsedValue).
     //
     // XXX How to be sure that the underlying string is kept alive?

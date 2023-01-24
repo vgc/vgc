@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/style/stylesheet.h>
+#include <vgc/style/sheet.h>
 
 #include <vgc/style/logcategories.h>
 #include <vgc/style/stylableobject.h>
@@ -26,7 +26,7 @@ namespace detail {
 // https://www.w3.org/TR/css-syntax-3/#parsing
 //
 // Note: we use a class with static functions (rather than free functions) to
-// make it easier for the StyleSheet class (and other classes) to simply
+// make it easier for the Sheet class (and other classes) to simply
 // befriend this class, instead of befriending all the free functions.
 //
 class Parser {
@@ -37,7 +37,7 @@ class Parser {
 
 public:
     // https://www.w3.org/TR/css-syntax-3/#parse-stylesheet
-    static StyleSheetPtr parseStyleSheet(std::string_view styleString) {
+    static SheetPtr parseSheet(std::string_view styleString) {
 
         // Tokenize
         std::string decoded = decodeStyleString(styleString);
@@ -49,8 +49,8 @@ public:
         TokenIterator it = tokens.begin();
         core::Array<RuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
 
-        // Create StyleSheet
-        StyleSheetPtr styleSheet = StyleSheet::create();
+        // Create Sheet
+        SheetPtr styleSheet = Sheet::create();
         for (const RuleSetPtr& rule : rules) {
             styleSheet->appendChildObject_(rule.get());
             styleSheet->ruleSets_.append(rule.get());
@@ -64,8 +64,7 @@ public:
 private:
     // https://www.w3.org/TR/css-syntax-3/#consume-list-of-rules
     // Note: we use 'styleSheet != nullptr' as top-level flag
-    core::Array<RuleSetPtr>
-    consumeRuleList_(TokenIterator& it, TokenIterator end) {
+    core::Array<RuleSetPtr> consumeRuleList_(TokenIterator& it, TokenIterator end) {
         std::ignore = topLevel_; // suppress warning
         core::Array<RuleSetPtr> res;
         while (true) {
@@ -139,18 +138,17 @@ private:
     //
     // Note: https://www.w3.org/TR/css-syntax-3/#style-rules
     //
-    //   « Qualified rules at the top-level of a CSS stylesheet are style
+    //   « Qualified rules at the top-level of a CSS style sheet are style
     //     rules. Qualified rules in other contexts may or may not be style
     //     rules, as defined by the context. »
     //
     // Since in this implementation, all calls to consumeQualifiedRule_() are
-    // made at the top-level of the stylesheet, we treat all qualified rules as
+    // made at the top-level of the style sheet, we treat all qualified rules as
     // style rules, and directly create and populate a RuleSet. If we ever
     // come across a use case were a qualifed rule should not be a style rule,
     // then we'll have to make this implementation more generic.
     //
-    RuleSetPtr
-    consumeQualifiedRule_(TokenIterator& it, TokenIterator end) {
+    RuleSetPtr consumeQualifiedRule_(TokenIterator& it, TokenIterator end) {
         RuleSetPtr rule = RuleSet::create();
         TokenIterator preludeBegin = it;
         while (true) {
@@ -236,9 +234,9 @@ private:
             else if (it->type() == TokenType::Identifier) {
                 TokenIterator declarationBegin = it;
                 while (true) {
-                    if (it == end                                  //
+                    if (it == end                             //
                         || it->type() == TokenType::Semicolon //
-                        || (expectRightCurlyBracket                //
+                        || (expectRightCurlyBracket           //
                             && it->type() == TokenType::RightCurlyBracket)) {
 
                         break;
@@ -255,8 +253,7 @@ private:
                 }
             }
             else if (
-                expectRightCurlyBracket
-                && it->type() == TokenType::RightCurlyBracket) {
+                expectRightCurlyBracket && it->type() == TokenType::RightCurlyBracket) {
                 ++it;
                 break;
             }
@@ -281,8 +278,7 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-declaration
     // Assumes that the current token is the identifier.
     // May return a null pointer in case of parse errors.
-    DeclarationPtr
-    consumeDeclaration_(TokenIterator& it, TokenIterator end) {
+    DeclarationPtr consumeDeclaration_(TokenIterator& it, TokenIterator end) {
 
         DeclarationPtr declaration = Declaration::create();
         declaration->property_ = core::StringId(it->stringValue());
@@ -409,8 +405,7 @@ private:
 
     // https://www.w3.org/TR/selectors-3/#grouping
     // Returns an empty array if any of the selectors in the group is invalid.
-    core::Array<SelectorPtr>
-    consumeSelectorGroup_(TokenIterator& it, TokenIterator end) {
+    core::Array<SelectorPtr> consumeSelectorGroup_(TokenIterator& it, TokenIterator end) {
         core::Array<SelectorPtr> res;
         while (true) {
             TokenIterator selectorBegin = it;
@@ -529,16 +524,16 @@ bool SpecTable::setRegistered(core::StringId className) {
     return res.second;
 }
 
-StyleSheet::StyleSheet()
+Sheet::Sheet()
     : Object() {
 }
 
-StyleSheetPtr StyleSheet::create() {
-    return StyleSheetPtr(new StyleSheet());
+SheetPtr Sheet::create() {
+    return SheetPtr(new Sheet());
 }
 
-StyleSheetPtr StyleSheet::create(std::string_view s) {
-    return detail::Parser::parseStyleSheet(s);
+SheetPtr Sheet::create(std::string_view s) {
+    return detail::Parser::parseSheet(s);
 }
 
 RuleSet::RuleSet()

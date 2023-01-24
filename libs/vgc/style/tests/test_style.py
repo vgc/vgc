@@ -18,7 +18,7 @@
 
 import unittest
 
-class TestStyleSheet(unittest.TestCase):
+class TestSheet(unittest.TestCase):
 
     def testConstructor(self):
         pass
