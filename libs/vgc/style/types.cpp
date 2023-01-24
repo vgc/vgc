@@ -124,8 +124,7 @@ Value LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     }
 }
 
-Value
-LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
         return Value::invalid();
     }
@@ -143,8 +142,7 @@ LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end
     else if (begin->type() == StyleTokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
-            return Value::custom(
-                LengthOrPercentageOrAuto(begin->floatValue(), unit));
+            return Value::custom(LengthOrPercentageOrAuto(begin->floatValue(), unit));
         }
         else {
             return Value::invalid();

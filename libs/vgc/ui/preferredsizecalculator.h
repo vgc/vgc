@@ -34,9 +34,7 @@ public:
     LengthContributions() = default;
 
     void
-    add(const style::Metrics& metrics,
-        const style::Value& value,
-        float count = 1.0f);
+    add(const style::Metrics& metrics, const style::Value& value, float count = 1.0f);
 
     void addAbsolute(
         const style::Metrics& metrics,

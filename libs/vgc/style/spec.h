@@ -39,8 +39,7 @@ class StyleParser;
 /// \brief The type of a function that takes as input a token range
 ///        and outputs a Value.
 ///
-using StylePropertyParser =
-    Value (*)(StyleTokenIterator begin, StyleTokenIterator end);
+using StylePropertyParser = Value (*)(StyleTokenIterator begin, StyleTokenIterator end);
 
 /// This is the default function used for parsing properties when no
 /// StylePropertySpec exists for the given property.
