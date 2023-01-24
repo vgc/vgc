@@ -34,11 +34,11 @@ class Parser;
 VGC_DECLARE_OBJECT(StylableObject);
 VGC_DECLARE_OBJECT(StyleSheet);
 VGC_DECLARE_OBJECT(StyleRuleSet);
-VGC_DECLARE_OBJECT(StyleSelector);
+VGC_DECLARE_OBJECT(Selector);
 VGC_DECLARE_OBJECT(Declaration);
 
 using StyleRuleSetArray = core::Array<StyleRuleSet*>;
-using StyleSelectorArray = core::Array<StyleSelector*>;
+using SelectorArray = core::Array<Selector*>;
 using DeclarationArray = core::Array<Declaration*>;
 
 /// \class vgc::style::StyleSheet
@@ -77,7 +77,7 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
-    const StyleSelectorArray& selectors() const {
+    const SelectorArray& selectors() const {
         return selectors_;
     }
 
@@ -86,7 +86,7 @@ public:
     }
 
 private:
-    StyleSelectorArray selectors_;
+    SelectorArray selectors_;
     DeclarationArray declarations_;
 
     friend class detail::Parser;
@@ -94,10 +94,10 @@ private:
     static StyleRuleSetPtr create();
 };
 
-/// \enum vgc::style::StyleSelectorItemType
-/// \brief The type of a StyleSelectorItem
+/// \enum vgc::style::SelectorItemType
+/// \brief The type of a SelectorItem
 ///
-enum class StyleSelectorItemType : Int8 {
+enum class SelectorItemType : Int8 {
     // Non-combinator items don't have the 0x10 bit set
     ClassSelector = 0x01,
 
@@ -107,10 +107,10 @@ enum class StyleSelectorItemType : Int8 {
 };
 
 VGC_STYLE_API
-VGC_DECLARE_ENUM(StyleSelectorItemType)
+VGC_DECLARE_ENUM(SelectorItemType)
 
-/// \class vgc::style::StyleSelectorItem
-/// \brief One item of a StyleSelector.
+/// \class vgc::style::SelectorItem
+/// \brief One item of a Selector.
 ///
 /// A style selector consists of a sequence of "items", such as class selectors and combinators.
 ///
@@ -120,29 +120,29 @@ VGC_DECLARE_ENUM(StyleSelectorItemType)
 ///
 /// https://www.w3.org/TR/selectors-3/#selector-syntax
 ///
-class VGC_STYLE_API StyleSelectorItem {
+class VGC_STYLE_API SelectorItem {
 public:
-    /// Creates a StyleSelectorItem of the given type and an empty name.
+    /// Creates a SelectorItem of the given type and an empty name.
     ///
-    StyleSelectorItem(StyleSelectorItemType type)
+    SelectorItem(SelectorItemType type)
         : type_(type)
         , name_() {
     }
 
-    /// Creates a StyleSelectorItem of the given type and given name.
+    /// Creates a SelectorItem of the given type and given name.
     ///
-    StyleSelectorItem(StyleSelectorItemType type, core::StringId name)
+    SelectorItem(SelectorItemType type, core::StringId name)
         : type_(type)
         , name_(name) {
     }
 
-    /// Returns the type of this StyleSelectorItem.
+    /// Returns the type of this SelectorItem.
     ///
-    StyleSelectorItemType type() const {
+    SelectorItemType type() const {
         return type_;
     }
 
-    /// Returns the name of this StyleSelectorItem. What this names represents
+    /// Returns the name of this SelectorItem. What this names represents
     /// depends on the type of this item. In the case of a ClassSelector, this
     /// represent the class name.
     ///
@@ -157,18 +157,18 @@ public:
     }
 
 private:
-    StyleSelectorItemType type_;
+    SelectorItemType type_;
     core::StringId name_;
 };
 
 using StyleSpecificity = UInt64;
 
-/// \class vgc::style::StyleSelector
+/// \class vgc::style::Selector
 /// \brief One selector of a rule set of a stylesheet.
 ///
-class VGC_STYLE_API StyleSelector : public core::Object {
+class VGC_STYLE_API Selector : public core::Object {
 private:
-    VGC_OBJECT(StyleSelector, core::Object)
+    VGC_OBJECT(Selector, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
@@ -183,12 +183,12 @@ public:
     }
 
 private:
-    core::Array<StyleSelectorItem> items_;
+    core::Array<SelectorItem> items_;
     StyleSpecificity specificity_;
 
     friend class detail::Parser;
-    StyleSelector(core::Array<StyleSelectorItem>&& items);
-    static StyleSelectorPtr create(core::Array<StyleSelectorItem>&& items);
+    Selector(core::Array<SelectorItem>&& items);
+    static SelectorPtr create(core::Array<SelectorItem>&& items);
 };
 
 /// \class vgc::style::Declaration

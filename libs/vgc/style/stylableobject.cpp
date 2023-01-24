@@ -218,7 +218,7 @@ void StylableObject::updateStyle_() {
         for (StyleRuleSet* rule : styleSheet->ruleSets()) {
             bool matches = false;
             StyleSpecificity maxSpecificity{}; // zero-init
-            for (StyleSelector* selector : rule->selectors()) {
+            for (Selector* selector : rule->selectors()) {
                 if (selector->matches(this)) {
                     matches = true;
                     maxSpecificity = (std::max)(maxSpecificity, selector->specificity());
