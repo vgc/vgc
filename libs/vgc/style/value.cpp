@@ -74,8 +74,7 @@ UnparsedValue& UnparsedValue::operator=(UnparsedValue&& other) {
     return *this;
 }
 
-std::string
-UnparsedValue::initRawString(TokenIterator begin, TokenIterator end) {
+std::string UnparsedValue::initRawString(TokenIterator begin, TokenIterator end) {
     if (begin == end) {
         return "";
     }

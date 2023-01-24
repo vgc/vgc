@@ -218,14 +218,14 @@ public:
 private:
     // https://www.w3.org/TR/css-syntax-3/#current-input-code-point
     // https://www.w3.org/TR/css-syntax-3/#next-input-code-point
-    const char* c1p_;  // pointer to first byte of current input code point
-    char c1_;          // == *c1p_
-    char c2_;          // == *token_.end_
-    char c3_;          // == *(token_.end_+1)    (or eof if c2_ is eof)
-    char c4_;          // == *(token_.end_+2)    (or eof if c3_ is eof)
-    Token token_; // Last consumed token or currently being consumed token
-                       // token_.end_: pointer to first byte of next input code point
-    bool hasNext_;     // Whether the next token is already computed
+    const char* c1p_; // pointer to first byte of current input code point
+    char c1_;         // == *c1p_
+    char c2_;         // == *token_.end_
+    char c3_;         // == *(token_.end_+1)    (or eof if c2_ is eof)
+    char c4_;         // == *(token_.end_+2)    (or eof if c3_ is eof)
+    Token token_;     // Last consumed token or currently being consumed token
+                      // token_.end_: pointer to first byte of next input code point
+    bool hasNext_;    // Whether the next token is already computed
 
     // Consumes the next input code point. This advances token_.end_ by one
     // UTF-8 encoded code point, and sets c1_ and c1_ accordingly.
