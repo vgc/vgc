@@ -21,7 +21,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/range1f.h>
 #include <vgc/geometry/vec2f.h>
-#include <vgc/style/style.h>
+#include <vgc/style/types.h>
 #include <vgc/ui/margins.h>
 #include <vgc/ui/widget.h>
 

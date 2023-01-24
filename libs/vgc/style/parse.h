@@ -18,8 +18,10 @@
 #define VGC_STYLE_PARSE_H
 
 #include <vgc/core/stringid.h>
+
 #include <vgc/style/api.h>
-#include <vgc/style/style.h>
+#include <vgc/style/token.h>
+#include <vgc/style/value.h>
 
 namespace vgc::style {
 

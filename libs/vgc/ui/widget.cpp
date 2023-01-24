@@ -20,6 +20,8 @@
 #include <vgc/core/io.h>
 #include <vgc/core/paths.h>
 
+#include <vgc/style/strings.h>
+
 #include <vgc/graphics/richtext.h>
 #include <vgc/graphics/strings.h>
 

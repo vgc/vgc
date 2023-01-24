@@ -23,7 +23,8 @@
 
 #include <vgc/style/api.h>
 #include <vgc/style/metrics.h>
-#include <vgc/style/style.h>
+#include <vgc/style/spec.h>
+#include <vgc/style/stylesheet.h>
 
 namespace vgc::style {
 

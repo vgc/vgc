@@ -18,12 +18,16 @@
 #define VGC_STYLE_TYPES_H
 
 #include <vgc/core/arithmetic.h>
+
 #include <vgc/geometry/vec2f.h>
+
 #include <vgc/style/api.h>
 #include <vgc/style/metrics.h>
-#include <vgc/style/style.h>
+#include <vgc/style/value.h>
 
 namespace vgc::style {
+
+class StylableObject;
 
 /// \enum vgc::style::LengthUnit
 /// \brief The unit of a length style property.

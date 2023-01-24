@@ -16,6 +16,7 @@
 
 #include <vgc/style/types.h>
 
+#include <vgc/style/strings.h>
 #include <vgc/style/stylableobject.h>
 
 namespace vgc::style {

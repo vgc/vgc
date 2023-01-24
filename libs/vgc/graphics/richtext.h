@@ -17,10 +17,9 @@
 #ifndef VGC_GRAPHICS_RICHTEXT_H
 #define VGC_GRAPHICS_RICHTEXT_H
 
-#include <vgc/style/stylableobject.h>
-#include <vgc/style/style.h>
-
 #include <vgc/geometry/rect2f.h>
+
+#include <vgc/style/stylableobject.h>
 
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/engine.h>
