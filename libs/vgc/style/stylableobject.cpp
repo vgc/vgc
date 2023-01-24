@@ -217,7 +217,7 @@ void StylableObject::updateStyle_() {
         it->begin = styleCache_.ruleSetArray.length();
         for (RuleSet* rule : styleSheet->ruleSets()) {
             bool matches = false;
-            StyleSpecificity maxSpecificity{}; // zero-init
+            Specificity maxSpecificity = 0;
             for (Selector* selector : rule->selectors()) {
                 if (selector->matches(this)) {
                     matches = true;

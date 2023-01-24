@@ -161,7 +161,7 @@ private:
     core::StringId name_;
 };
 
-using StyleSpecificity = UInt64;
+using Specificity = UInt64;
 
 /// \class vgc::style::Selector
 /// \brief One selector of a rule set of a stylesheet.
@@ -178,13 +178,13 @@ public:
 
     /// Returns the specificy of the selector.
     ///
-    StyleSpecificity specificity() const {
+    Specificity specificity() const {
         return specificity_;
     }
 
 private:
     core::Array<SelectorItem> items_;
-    StyleSpecificity specificity_;
+    Specificity specificity_;
 
     friend class detail::Parser;
     Selector(core::Array<SelectorItem>&& items);
