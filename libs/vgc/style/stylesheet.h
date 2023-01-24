@@ -27,7 +27,7 @@ namespace vgc::style {
 
 namespace detail {
 
-class StyleParser;
+class Parser;
 
 } // namespace detail
 
@@ -63,7 +63,7 @@ public:
 private:
     StyleRuleSetArray ruleSets_;
 
-    friend class detail::StyleParser;
+    friend class detail::Parser;
     StyleSheet();
     static StyleSheetPtr create();
 };
@@ -89,7 +89,7 @@ private:
     StyleSelectorArray selectors_;
     StyleDeclarationArray declarations_;
 
-    friend class detail::StyleParser;
+    friend class detail::Parser;
     StyleRuleSet();
     static StyleRuleSetPtr create();
 };
@@ -186,7 +186,7 @@ private:
     core::Array<StyleSelectorItem> items_;
     StyleSpecificity specificity_;
 
-    friend class detail::StyleParser;
+    friend class detail::Parser;
     StyleSelector(core::Array<StyleSelectorItem>&& items);
     static StyleSelectorPtr create(core::Array<StyleSelectorItem>&& items);
 };
@@ -223,7 +223,7 @@ private:
     std::string text_;
     Value value_;
 
-    friend class detail::StyleParser;
+    friend class detail::Parser;
     StyleDeclaration();
     static StyleDeclarationPtr create();
 };

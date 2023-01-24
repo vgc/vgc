@@ -31,7 +31,7 @@ namespace vgc::style {
 
 namespace detail {
 
-class StyleParser;
+class Parser;
 
 } // namespace detail
 

@@ -29,9 +29,9 @@ namespace detail {
 // make it easier for the StyleSheet class (and other classes) to simply
 // befriend this class, instead of befriending all the free functions.
 //
-class StyleParser {
+class Parser {
     bool topLevel_;
-    StyleParser(bool topLevel)
+    Parser(bool topLevel)
         : topLevel_(topLevel) {
     }
 
@@ -45,7 +45,7 @@ public:
 
         // Parse
         bool topLevel = true;
-        StyleParser parser(topLevel);
+        Parser parser(topLevel);
         TokenIterator it = tokens.begin();
         core::Array<StyleRuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
 
@@ -538,7 +538,7 @@ StyleSheetPtr StyleSheet::create() {
 }
 
 StyleSheetPtr StyleSheet::create(std::string_view s) {
-    return detail::StyleParser::parseStyleSheet(s);
+    return detail::Parser::parseStyleSheet(s);
 }
 
 StyleRuleSet::StyleRuleSet()
