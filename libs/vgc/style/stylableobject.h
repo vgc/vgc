@@ -143,7 +143,7 @@ struct StyleCachedData {
     // Stores all cascaded values for a given StylableObject
     // TODO: share this data across all StylableObject that
     // have the same ruleSetArray and ruleSetSpans.
-    std::unordered_map<core::StringId, const StyleValue*> cascadedValues;
+    std::unordered_map<core::StringId, const Value*> cascadedValues;
 
     void clear() {
         ruleSetArray.clear();
@@ -243,7 +243,7 @@ public:
 
     /// Returns the computed value of a given style property of this `StylableObject`.
     ///
-    StyleValue style(core::StringId property) const;
+    Value style(core::StringId property) const;
 
     /// Returns the computed value of a given style property of this `StylableObject`
     /// as a value of type `T`.
@@ -297,7 +297,7 @@ public:
     ///     if (!table->setRegistered(staticClassName())) {
     ///         return;
     ///     }
-    ///     auto fortyTwo = StyleValue::custom(Length(12.0_dp));
+    ///     auto fortyTwo = Value::custom(Length(12.0_dp));
     ///     table->insert(StringId("fancy-length"), fortyTwo, false, &Length::parse);
     ///     SuperClass::populateStyleSpecTable(table);
     /// }
@@ -339,8 +339,8 @@ private:
     Metrics styleMetrics_;                    // how to convert `dp` (and others) to `px`
 
     void updateStyle_();
-    const StyleValue* getStyleCascadedValue_(core::StringId property) const;
-    const StyleValue& getStyleComputedValue_(core::StringId property) const;
+    const Value* getStyleCascadedValue_(core::StringId property) const;
+    const Value& getStyleComputedValue_(core::StringId property) const;
 };
 
 } // namespace vgc::style

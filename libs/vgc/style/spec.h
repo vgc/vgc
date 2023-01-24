@@ -37,21 +37,21 @@ class StyleParser;
 
 /// \typedef vgc::style::StylePropertyParser
 /// \brief The type of a function that takes as input a token range
-///        and outputs a StyleValue.
+///        and outputs a Value.
 ///
 using StylePropertyParser =
-    StyleValue (*)(StyleTokenIterator begin, StyleTokenIterator end);
+    Value (*)(StyleTokenIterator begin, StyleTokenIterator end);
 
 /// This is the default function used for parsing properties when no
 /// StylePropertySpec exists for the given property.
 ///
 /// If the property value is made of a single Identifier token, then
-/// it returns a StyleValue of type `Identifier`.
+/// it returns a Value of type `Identifier`.
 ///
 /// TODO: other simple cases, such as Number, Dimension, String, etc.
 ///
 VGC_STYLE_API
-StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
+Value parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end);
 
 /// \class vgc::style::StylePropertySpec
 /// \brief Specifies the name, initial value, and inheritability of a given
@@ -67,7 +67,7 @@ public:
     ///
     StylePropertySpec(
         core::StringId name,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
         StylePropertyParser parser)
 
@@ -81,7 +81,7 @@ public:
     ///
     StylePropertySpec(
         const char* name,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
         StylePropertyParser parser)
 
@@ -99,7 +99,7 @@ public:
 
     /// Returns the initial value of this property.
     ///
-    const StyleValue& initialValue() const {
+    const Value& initialValue() const {
         return initialValue_;
     }
 
@@ -115,7 +115,7 @@ public:
 
 private:
     core::StringId name_;
-    StyleValue initialValue_;
+    Value initialValue_;
     bool isInherited_;
     StylePropertyParser parser_;
 };
@@ -138,14 +138,14 @@ public:
     ///
     void insert(
         core::StringId attributeName,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
         StylePropertyParser parser);
 
     /// \overload
     void insert(
         std::string_view attributeName,
-        const StyleValue& initialValue,
+        const Value& initialValue,
         bool isInherited,
         StylePropertyParser parser) {
 

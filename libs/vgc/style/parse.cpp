@@ -22,44 +22,44 @@
 
 namespace vgc::style {
 
-StyleValue parseColor(StyleTokenIterator begin, StyleTokenIterator end) {
+Value parseColor(StyleTokenIterator begin, StyleTokenIterator end) {
     if (end == begin + 1 && begin->type() == StyleTokenType::Identifier
         && begin->stringValue() == "inherit") {
-        return StyleValue::inherit();
+        return Value::inherit();
     }
     try {
         const char* b = begin->begin();
         const char* e = (end - 1)->end();
         std::string_view str(b, std::distance(b, e));
         core::Color color = core::parse<core::Color>(str);
-        return StyleValue::custom(color);
+        return Value::custom(color);
     }
     catch (const core::ParseError&) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     catch (const core::RangeError&) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue parseLength(StyleTokenIterator begin, StyleTokenIterator end) {
+Value parseLength(StyleTokenIterator begin, StyleTokenIterator end) {
     // For now, we only support a unique Dimension token with a "dp" unit
     if (begin == end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (
         begin->type() == StyleTokenType::Dimension //
         && begin->stringValue() == "dp"            //
         && begin + 1 == end) {
 
-        return StyleValue::number(begin->floatValue());
+        return Value::number(begin->floatValue());
     }
     else {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue parseIdentifierAmong(
+Value parseIdentifierAmong(
     StyleTokenIterator begin,
     StyleTokenIterator end,
     std::initializer_list<core::StringId> list) {
@@ -69,12 +69,12 @@ StyleValue parseIdentifierAmong(
         if (t == StyleTokenType::Identifier) {
             for (core::StringId id : list) {
                 if (id == begin->stringValue()) {
-                    return StyleValue::identifier(begin->stringValue());
+                    return Value::identifier(begin->stringValue());
                 }
             }
         }
     }
-    return StyleValue::invalid();
+    return Value::invalid();
 }
 
 } // namespace vgc::style

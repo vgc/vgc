@@ -20,31 +20,31 @@
 
 namespace vgc::style {
 
-void StyleValue::parse_(const StylePropertySpec* spec) {
+void Value::parse_(const StylePropertySpec* spec) {
     const detail::UnparsedValue* v = std::any_cast<detail::UnparsedValue>(&value_);
     StylePropertyParser parser = spec ? spec->parser() : &parseStyleDefault;
-    StyleValue parsed = parser(v->tokens().begin(), v->tokens().end());
+    Value parsed = parser(v->tokens().begin(), v->tokens().end());
     if (parsed.type() == ValueType::Invalid) {
         VGC_WARNING(
             LogVgcStyle,
             "Failed to parse attribute '{}' defined as '{}'.",
             spec->name(),
             v->rawString());
-        *this = StyleValue::none();
+        *this = Value::none();
     }
     else {
         *this = parsed;
     }
 }
 
-StyleValue parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
+Value parseStyleDefault(StyleTokenIterator begin, StyleTokenIterator end) {
     if (end == begin + 1) {
         StyleTokenType t = begin->type();
         if (t == StyleTokenType::Identifier) {
-            return StyleValue::identifier(begin->stringValue());
+            return Value::identifier(begin->stringValue());
         }
     }
-    return StyleValue::invalid();
+    return Value::invalid();
 }
 
 } // namespace vgc::style

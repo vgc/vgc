@@ -75,10 +75,10 @@ public:
 
     /// Parses the given range of `StyleToken`s as a `Length`.
     ///
-    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
-    /// valid `Length`. Otherwise, return a `StyleValue` holding a `Length`.
+    /// Returns `Value::invalid()` if the given tokens do not represent a
+    /// valid `Length`. Otherwise, return a `Value` holding a `Length`.
     ///
-    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
 
     /// Returns whether the two given `Length` are equal.
     ///
@@ -141,10 +141,10 @@ public:
 
     /// Parses the given range of `StyleToken`s as a `Percentage`.
     ///
-    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
-    /// valid `Percentage`. Otherwise, return a `StyleValue` holding a `Percentage`.
+    /// Returns `Value::invalid()` if the given tokens do not represent a
+    /// valid `Percentage`. Otherwise, return a `Value` holding a `Percentage`.
     ///
-    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
 
     /// Returns whether the two given `Percentage` are equal.
     ///
@@ -244,11 +244,11 @@ public:
 
     /// Parses the given range of `StyleToken`s as a `LengthOrPercentage`.
     ///
-    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
-    /// valid `LengthOrPercentage`. Otherwise, return a `StyleValue` holding a
+    /// Returns `Value::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrPercentage`. Otherwise, return a `Value` holding a
     /// `LengthOrPercentage`.
     ///
-    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
 
     /// Returns whether the two given `LengthOrPercentage` are equal.
     ///
@@ -334,11 +334,11 @@ public:
 
     /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
     ///
-    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
-    /// valid `LengthOrAuto`. Otherwise, return a `StyleValue` holding a
+    /// Returns `Value::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrAuto`. Otherwise, return a `Value` holding a
     /// `LengthOrAuto`.
     ///
-    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
 
     /// Returns whether the two given `LengthOrAuto` are equal.
     ///
@@ -451,11 +451,11 @@ public:
 
     /// Parses the given range of `StyleToken`s as a `LengthOrPercentageOrAuto`.
     ///
-    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
-    /// valid `LengthOrPercentageOrAuto`. Otherwise, return a `StyleValue`
+    /// Returns `Value::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrPercentageOrAuto`. Otherwise, return a `Value`
     /// holding a `LengthOrPercentageOrAuto`.
     ///
-    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
 
     /// Returns whether the two given `LengthOrAuto` are equal.
     ///
@@ -657,11 +657,11 @@ public:
 
     /// Parses the given range of `StyleToken`s as a `LengthOrAuto`.
     ///
-    /// Returns `StyleValue::invalid()` if the given tokens do not represent a
-    /// valid `LengthOrAuto`. Otherwise, return a `StyleValue` holding a
+    /// Returns `Value::invalid()` if the given tokens do not represent a
+    /// valid `LengthOrAuto`. Otherwise, return a `Value` holding a
     /// `LengthOrAuto`.
     ///
-    static StyleValue parse(StyleTokenIterator begin, StyleTokenIterator end);
+    static Value parse(StyleTokenIterator begin, StyleTokenIterator end);
 
     /// Returns whether the two given `BorderRadius` are equal.
     ///

@@ -47,144 +47,144 @@ float Length::toPx(const Metrics& metrics) const {
     return convertToPx(value(), unit(), metrics.scaleFactor());
 }
 
-StyleValue Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value Length::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (begin->type() == StyleTokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
-            return StyleValue::custom(Length(begin->floatValue(), unit));
+            return Value::custom(Length(begin->floatValue(), unit));
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
     else {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue Percentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value Percentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (begin->type() == StyleTokenType::Percentage) {
-        return StyleValue::custom(Percentage(begin->floatValue()));
+        return Value::custom(Percentage(begin->floatValue()));
     }
     else {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue LengthOrPercentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value LengthOrPercentage::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (begin->type() == StyleTokenType::Percentage) {
-        return StyleValue::custom(LengthOrPercentage(begin->floatValue()));
+        return Value::custom(LengthOrPercentage(begin->floatValue()));
     }
     else if (begin->type() == StyleTokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
-            return StyleValue::custom(LengthOrPercentage(begin->floatValue(), unit));
+            return Value::custom(LengthOrPercentage(begin->floatValue(), unit));
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
     else {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value LengthOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (begin->type() == StyleTokenType::Identifier) {
         if (begin->stringValue() == "auto") {
-            return StyleValue::custom(LengthOrAuto());
+            return Value::custom(LengthOrAuto());
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
     else if (begin->type() == StyleTokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
-            return StyleValue::custom(LengthOrAuto(begin->floatValue(), unit));
+            return Value::custom(LengthOrAuto(begin->floatValue(), unit));
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
     else {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue
+Value
 LengthOrPercentageOrAuto::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin + 1 != end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (begin->type() == StyleTokenType::Percentage) {
-        return StyleValue::custom(LengthOrPercentageOrAuto(begin->floatValue()));
+        return Value::custom(LengthOrPercentageOrAuto(begin->floatValue()));
     }
     else if (begin->type() == StyleTokenType::Identifier) {
         if (begin->stringValue() == "auto") {
-            return StyleValue::custom(LengthOrPercentageOrAuto());
+            return Value::custom(LengthOrPercentageOrAuto());
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
     else if (begin->type() == StyleTokenType::Dimension) {
         LengthUnit unit;
         if (isValidLengthUnit(begin->stringValue(), unit)) {
-            return StyleValue::custom(
+            return Value::custom(
                 LengthOrPercentageOrAuto(begin->floatValue(), unit));
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
     else {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
 }
 
-StyleValue BorderRadius::parse(StyleTokenIterator begin, StyleTokenIterator end) {
+Value BorderRadius::parse(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin == end) {
-        return StyleValue::invalid();
+        return Value::invalid();
     }
     else if (begin + 1 == end) {
-        StyleValue v = LengthOrPercentage::parse(begin, end);
+        Value v = LengthOrPercentage::parse(begin, end);
         if (v.isValid()) {
             LengthOrPercentage lp = v.to<LengthOrPercentage>();
-            return StyleValue::custom(BorderRadius(lp));
+            return Value::custom(BorderRadius(lp));
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
     else {
         // Middle tokens should all be whitespaces
         for (StyleTokenIterator it = begin + 1; it != (end - 1); ++it) {
             if (it->type() != StyleTokenType::Whitespace) {
-                return StyleValue::invalid();
+                return Value::invalid();
             }
         }
-        StyleValue v1 = LengthOrPercentage::parse(begin, begin + 1);
-        StyleValue v2 = LengthOrPercentage::parse(end - 1, end);
+        Value v1 = LengthOrPercentage::parse(begin, begin + 1);
+        Value v2 = LengthOrPercentage::parse(end - 1, end);
         if (v1.isValid() && v2.isValid()) {
             LengthOrPercentage lp1 = v1.to<LengthOrPercentage>();
             LengthOrPercentage lp2 = v2.to<LengthOrPercentage>();
-            return StyleValue::custom(BorderRadius(lp1, lp2));
+            return Value::custom(BorderRadius(lp1, lp2));
         }
         else {
-            return StyleValue::invalid();
+            return Value::invalid();
         }
     }
 }

@@ -286,7 +286,7 @@ private:
 
         StyleDeclarationPtr declaration = StyleDeclaration::create();
         declaration->property_ = core::StringId(it->stringValue());
-        declaration->value_ = StyleValue::invalid();
+        declaration->value_ = Value::invalid();
         ++it;
 
         // Consume whitespaces
@@ -328,7 +328,7 @@ private:
         //
         // XXX We might still want to check here for global keywords like 'inherit'/etc.
         //
-        declaration->value_ = StyleValue::unparsed(valueBegin, valueEnd);
+        declaration->value_ = Value::unparsed(valueBegin, valueEnd);
 
         return declaration;
     }
@@ -508,7 +508,7 @@ private:
 
 void SpecTable::insert(
     core::StringId attributeName,
-    const StyleValue& initialValue,
+    const Value& initialValue,
     bool isInherited,
     StylePropertyParser parser) {
 

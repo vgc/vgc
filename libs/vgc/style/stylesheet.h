@@ -214,14 +214,14 @@ public:
 
     /// Returns the value of this declaration.
     ///
-    const StyleValue& value() {
+    const Value& value() {
         return value_;
     }
 
 private:
     core::StringId property_;
     std::string text_;
-    StyleValue value_;
+    Value value_;
 
     friend class detail::StyleParser;
     StyleDeclaration();

@@ -28,7 +28,6 @@ namespace vgc::graphics {
 
 using style::StyleTokenIterator;
 using style::StyleTokenType;
-using style::StyleValue;
 
 RichTextSpan::RichTextSpan(RichTextSpan* parent)
     : StylableObject()
@@ -50,17 +49,17 @@ RichTextSpan* RichTextSpan::createChild() {
 
 namespace {
 
-StyleValue parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end) {
+style::Value parsePixelHinting(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {off, normal});
 }
 
-StyleValue parseTextHorizontalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
+style::Value parseTextHorizontalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {left, center, right});
 }
 
-StyleValue parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
+style::Value parseTextVerticalAlign(StyleTokenIterator begin, StyleTokenIterator end) {
     using namespace strings;
     return parseIdentifierAmong(begin, end, {top, middle, bottom});
 }
@@ -86,20 +85,20 @@ void RichTextSpan::populateStyleSpecTable(style::SpecTable* table) {
 
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
 
-    auto black    = StyleValue::custom(core::colors::black);
-    auto white    = StyleValue::custom(core::colors::white);
-    auto blue     = StyleValue::custom(core::Color(0.20f, 0.56f, 1.0f));
-    auto transp   = StyleValue::custom(core::colors::transparent);
+    auto black    = style::Value::custom(core::colors::black);
+    auto white    = style::Value::custom(core::colors::white);
+    auto blue     = style::Value::custom(core::Color(0.20f, 0.56f, 1.0f));
+    auto transp   = style::Value::custom(core::colors::transparent);
 
-    auto zero_l   = StyleValue::custom(Length());
-    auto zero_lp  = StyleValue::custom(LengthOrPercentage());
-    auto zero_br  = StyleValue::custom(BorderRadius());
-    auto auto_la  = StyleValue::custom(LengthOrAuto());
-    auto twelve_l = StyleValue::custom(Length(12.0_dp));
+    auto zero_l   = style::Value::custom(Length());
+    auto zero_lp  = style::Value::custom(LengthOrPercentage());
+    auto zero_br  = style::Value::custom(BorderRadius());
+    auto auto_la  = style::Value::custom(LengthOrAuto());
+    auto twelve_l = style::Value::custom(Length(12.0_dp));
 
-    auto normal_i = StyleValue::identifier(normal);
-    auto left_i   = StyleValue::identifier(left);
-    auto top_i    = StyleValue::identifier(top);
+    auto normal_i = style::Value::identifier(normal);
+    auto left_i   = style::Value::identifier(left);
+    auto top_i    = style::Value::identifier(top);
 
     table->insert(background_color,           transp,  false, &style::parseColor);
     table->insert(margin_top,                 zero_lp, false, &LengthOrPercentage::parse);
@@ -250,7 +249,7 @@ float getLengthOrAutoInPx(
 
 core::Color getColor(const RichTextSpan* span, core::StringId property) {
     core::Color res;
-    style::StyleValue value = span->style(property);
+    style::Value value = span->style(property);
     if (value.has<core::Color>()) {
         res = value.to<core::Color>();
     }
@@ -263,8 +262,8 @@ bool getHinting(const RichTextSpan* span, core::StringId property) {
 
 TextProperties getTextProperties(const RichTextSpan* span) {
 
-    style::StyleValue hAlign = span->style(strings::text_horizontal_align);
-    style::StyleValue vAlign = span->style(strings::text_vertical_align);
+    style::Value hAlign = span->style(strings::text_horizontal_align);
+    style::Value vAlign = span->style(strings::text_vertical_align);
     TextProperties properties; // default = (Left, Top)
 
     if (hAlign.type() == style::ValueType::Identifier) {

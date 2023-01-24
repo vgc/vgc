@@ -29,8 +29,8 @@ VGC_DEFINE_ENUM(
     (String, "String"),
     (Custom, "Custom"))
 
-StyleValue StyleValue::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
-    return StyleValue(ValueType::Unparsed, detail::UnparsedValue(begin, end));
+Value Value::unparsed(StyleTokenIterator begin, StyleTokenIterator end) {
+    return Value(ValueType::Unparsed, detail::UnparsedValue(begin, end));
 }
 
 namespace detail {

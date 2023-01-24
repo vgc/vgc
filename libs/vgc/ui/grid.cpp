@@ -102,7 +102,7 @@ float hintSpacing(float spacing) {
 }
 
 float getSpacing(const Widget* w, core::StringId id, bool hint) {
-    style::StyleValue spacing = w->style(id);
+    style::Value spacing = w->style(id);
     const style::Metrics& metrics = w->styleMetrics();
     float value = 0.0f;
     if (spacing.has<style::Length>()) {

@@ -85,9 +85,9 @@ void StylableObject::replaceStyleClass(core::StringId oldClass, core::StringId n
     }
 }
 
-StyleValue StylableObject::style(core::StringId property) const {
+Value StylableObject::style(core::StringId property) const {
 
-    StyleValue res = getStyleComputedValue_(property);
+    Value res = getStyleComputedValue_(property);
 
     constexpr bool compactMode = false;
     if constexpr (compactMode) {
@@ -106,7 +106,7 @@ StyleValue StylableObject::style(core::StringId property) const {
                     newLengthInDp = 0;
                 }
             }
-            res = StyleValue::custom(LengthOrPercentage(newLengthInDp, LengthUnit::Dp));
+            res = Value::custom(LengthOrPercentage(newLengthInDp, LengthUnit::Dp));
         }
     }
 
@@ -270,10 +270,10 @@ void StylableObject::updateStyle_() {
 // If there is no declared value for the given property, then
 // a value of type ValueType::None is returned.
 //
-const StyleValue* StylableObject::getStyleCascadedValue_(core::StringId property) const {
+const Value* StylableObject::getStyleCascadedValue_(core::StringId property) const {
 
     // Defines a `None` value that we can return as const pointer
-    static StyleValue noneValue = StyleValue::none();
+    static Value noneValue = Value::none();
 
     auto search = styleCachedData_.cascadedValues.find(property);
     if (search != styleCachedData_.cascadedValues.end()) {
@@ -289,23 +289,23 @@ const StyleValue* StylableObject::getStyleCascadedValue_(core::StringId property
 // https://www.w3.org/TR/css-cascade-4/#computed
 //
 // This resolves StylableObject inheritance and default values. In other words,
-// the returned StyleValue is never of type ValueType::Inherit.
+// the returned Value is never of type ValueType::Inherit.
 // However, the type could be ValueType::None if there is no known
 // default value for the given property (this can be the case for custom
 // properties which are missing from the stylesheet).
 //
-const StyleValue& StylableObject::getStyleComputedValue_(core::StringId property) const {
+const Value& StylableObject::getStyleComputedValue_(core::StringId property) const {
 
     // Defines values that we can return as const ref
-    static StyleValue noneValue = StyleValue::none();
-    static StyleValue inheritValue = StyleValue::inherit();
+    static Value noneValue = Value::none();
+    static Value inheritValue = Value::inherit();
 
     // Get the cascaded value
-    const StyleValue* res = getStyleCascadedValue_(property);
+    const Value* res = getStyleCascadedValue_(property);
 
     // Parse the value if not yet parsed, becomes `None` if parsing fails
     if (res->type() == ValueType::Unparsed) {
-        StyleValue* mutableValue = const_cast<StyleValue*>(res);
+        Value* mutableValue = const_cast<Value*>(res);
         mutableValue->parse_(styleSpecTable()->get(property));
     }
 

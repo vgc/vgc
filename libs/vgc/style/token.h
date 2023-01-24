@@ -159,7 +159,7 @@ public:
     /// parsed from.
     ///
     /// This iterator is guaranteed to be valid during the execution of a
-    /// `StyleValue` parsing function, but you shouldn't store a copy of this
+    /// `Value` parsing function, but you shouldn't store a copy of this
     /// iterator as it can be invalidated afterwards.
     ///
     const char* begin() const {
@@ -170,7 +170,7 @@ public:
     /// parsed from.
     ///
     /// This iterator is guaranteed to be valid during the execution of
-    /// a `StyleValue` parsing function, but you shouldn't store a copy of this
+    /// a `Value` parsing function, but you shouldn't store a copy of this
     /// iterator as it can be invalidated afterwards.
     ///
     const char* end() const {

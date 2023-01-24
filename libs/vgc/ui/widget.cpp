@@ -1486,17 +1486,16 @@ namespace {
 
 using style::StyleTokenIterator;
 using style::StyleTokenType;
-using style::StyleValue;
 
-StyleValue parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
+style::Value parseStyleNumber(StyleTokenIterator begin, StyleTokenIterator end) {
     if (begin == end) {
-        return StyleValue::invalid();
+        return style::Value::invalid();
     }
     else if (begin->type() == StyleTokenType::Number && begin + 1 == end) {
-        return StyleValue::number(begin->floatValue());
+        return style::Value::number(begin->floatValue());
     }
     else {
-        return StyleValue::invalid();
+        return style::Value::invalid();
     }
 }
 
@@ -1517,10 +1516,10 @@ void Widget::populateStyleSpecTable(style::SpecTable* table) {
     using style::LengthOrPercentage;
     using style::LengthOrPercentageOrAuto;
 
-    auto auto_lpa = StyleValue::custom(LengthOrPercentageOrAuto());
-    auto zero_lp =  StyleValue::custom(LengthOrPercentage());
-    auto huge_lp =  StyleValue::custom(LengthOrPercentage(1e30_dp));
-    auto one_n =    StyleValue::number(1.0f);
+    auto auto_lpa = style::Value::custom(LengthOrPercentageOrAuto());
+    auto zero_lp =  style::Value::custom(LengthOrPercentage());
+    auto huge_lp =  style::Value::custom(LengthOrPercentage(1e30_dp));
+    auto one_n =    style::Value::number(1.0f);
 
     // Reference: https://www.w3.org/TR/CSS21/propidx.html
     table->insert(min_width,          zero_lp,  false, &LengthOrPercentage::parse);
