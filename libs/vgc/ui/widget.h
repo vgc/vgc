@@ -30,7 +30,6 @@
 #include <vgc/geometry/rect2f.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/engine.h>
-#include <vgc/graphics/idgenerator.h>
 #include <vgc/style/stylableobject.h>
 #include <vgc/style/types.h>
 #include <vgc/ui/action.h>
