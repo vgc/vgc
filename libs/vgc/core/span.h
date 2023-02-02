@@ -45,7 +45,7 @@ namespace detail {
 template<typename T, Int extent>
 struct SpanPair {
     constexpr SpanPair() noexcept = default;
-    constexpr explicit SpanPair(T* ptr_, Int) noexcept
+    constexpr SpanPair(T* ptr_, Int) noexcept
         : ptr(ptr_) {
     }
 
@@ -56,7 +56,7 @@ struct SpanPair {
 template<typename T>
 struct SpanPair<T, dynamicExtent> {
     constexpr SpanPair() noexcept = default;
-    constexpr explicit SpanPair(T* ptr_, Int length_) noexcept
+    constexpr SpanPair(T* ptr_, Int length_) noexcept
         : ptr(ptr_)
         , length(length_) {
     }
