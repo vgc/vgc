@@ -928,6 +928,13 @@ TEST(TestArray, RemoveOne) {
     EXPECT_EQ(a, c);
 }
 
+TEST(TestArray, RemoveOneIf) {
+    Array<int> a = {8, 10, 42, 12, 7, 15};
+    Array<int> b = {8, 10, 12, 7, 15};
+    a.removeOneIf([](int a) { return a > 10; });
+    EXPECT_EQ(a, b);
+}
+
 TEST(TestArray, RemoveAll) {
     Array<int> a = {8, 10, 12, 42, 12, 15};
     Array<int> b = {8, 10, 42, 15};
