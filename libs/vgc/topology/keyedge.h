@@ -23,10 +23,11 @@
 #include <vgc/topology/api.h>
 #include <vgc/topology/cell.h>
 #include <vgc/topology/edgegeometry.h>
+#include <vgc/topology/keyvertex.h>
 
 namespace vgc::topology {
 
-class VGC_TOPOLOGY_API KeyEdge : public SpatioTemporalCell<EdgeCell, KeyCell> {
+class VGC_TOPOLOGY_API KeyEdge final : public SpatioTemporalCell<EdgeCell, KeyCell> {
 private:
     friend detail::Operations;
 
@@ -74,6 +75,14 @@ public:
     // XXX temporary, we should use geometry_.
     Int64 dataVersion() const {
         return dataVersion_;
+    }
+
+    bool isStartVertex(VertexCell* v) const override {
+        return v == startVertex_;
+    }
+
+    bool isEndVertex(VertexCell* v) const override {
+        return v == endVertex_;
     }
 
 private:

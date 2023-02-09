@@ -22,7 +22,7 @@
 
 namespace vgc::topology {
 
-class VGC_TOPOLOGY_API InbetweenVertex
+class VGC_TOPOLOGY_API InbetweenVertex final
     : public SpatioTemporalCell<VertexCell, InbetweenCell> {
 
 private:

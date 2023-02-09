@@ -25,6 +25,7 @@
 #include <vgc/core/object.h>
 #include <vgc/topology/api.h>
 #include <vgc/topology/cell.h>
+#include <vgc/topology/exceptions.h>
 #include <vgc/topology/inbetweenedge.h>
 #include <vgc/topology/inbetweenface.h>
 #include <vgc/topology/inbetweenvertex.h>
@@ -147,7 +148,11 @@ protected:
         ++version_;
     }
 
-    // insert/rem ops ?
+    void insertNode(core::Id id, std::unique_ptr<VacNode>&& node) {
+        if (!nodes_.try_emplace(id, std::move(node)).second) {
+            throw IdCollisionError("Id collision error.");
+        }
+    }
 
     // graphics...
 
@@ -163,5 +168,39 @@ private:
 };
 
 } // namespace vgc::topology
+
+namespace vgc::vacomplex {
+
+using Complex = topology::Vac;
+
+using Cell = topology::VacCell;
+using Group = topology::VacGroup;
+using Node = topology::VacNode;
+
+using CellType = topology::VacCellType;
+using topology::CellSpatialType;
+using topology::CellTemporalType;
+
+using NodeDiffFlag = topology::VacNodeDiffFlag;
+using Diff = topology::VacDiff;
+
+using topology::EdgeCell;
+using topology::FaceCell;
+using topology::VertexCell;
+
+using topology::KeyCell;
+using topology::KeyEdge;
+using topology::KeyFace;
+using topology::KeyVertex;
+
+using topology::InbetweenCell;
+using topology::InbetweenEdge;
+using topology::InbetweenFace;
+using topology::InbetweenVertex;
+
+using topology::EdgeGeometry;
+using topology::FaceGeometry;
+
+} // namespace vgc::vacomplex
 
 #endif // VGC_TOPOLOGY_VAC_H
