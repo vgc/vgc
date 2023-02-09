@@ -266,18 +266,17 @@ void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
     points_.append(p);
     widths_.append(width);
 
-        endVertex_->setAttribute(ds::position, p);
+    endVertex_->setAttribute(ds::position, p);
 
-        edge_->setAttribute(ds::positions, points_);
-        edge_->setAttribute(ds::widths, widths_);
+    edge_->setAttribute(ds::positions, points_);
+    edge_->setAttribute(ds::widths, widths_);
 
-        workspace_->sync();
+    workspace_->sync();
 
-        workspace::Element* edgeElement = workspace_->find(edge_);
-        auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-        if (edgeCell) {
-            edgeCell->setTesselationMode(0);
-        }
+    workspace::Element* edgeElement = workspace_->find(edge_);
+    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+    if (edgeCell) {
+        edgeCell->setTesselationMode(0);
     }
 }
 
