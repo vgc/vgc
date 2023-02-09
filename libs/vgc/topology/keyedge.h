@@ -78,11 +78,11 @@ public:
     }
 
     bool isStartVertex(VertexCell* v) const override {
-        return v == startVertex_->toVertexCellUnchecked();
+        return v == startVertex_;
     }
 
     bool isEndVertex(VertexCell* v) const override {
-        return v == endVertex_->toVertexCellUnchecked();
+        return v == endVertex_;
     }
 
 private:
