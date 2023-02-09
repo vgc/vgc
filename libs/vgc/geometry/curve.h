@@ -21,6 +21,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
+#include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/vec2d.h>
@@ -189,33 +190,17 @@ private:
 };
 
 /// \class vgc::geometry::Curve
-/// \brief Represents a 2D curve with variable width.
+/// \brief A helper class to sample a 2D curve given external (non-owned) data.
 ///
-/// This class is the preferred class to represent 2D curves in VGC
-/// applications. Currently, only Catmull-Rom curves are supported, but more
-/// curve types are expected in future versions.
+/// This class can be used to sample a 2D curve given external (non-owned) data.
 ///
-/// Example 1: curve with constant width
+/// Note that this class does not own the data provided, for example via the
+/// `setPositions(positions)` and `setWidths(widths)` function. It is the
+/// responsability of the programmer to ensure that the data referred to by the
+/// given `Span` outlives the `Curve`.
 ///
-/// \code
-/// double width = 3;
-/// Curve c(width);
-/// c.addControlPoint(0, 0);
-/// c.addControlPoint(100, 100);
-/// c.addControlPoint(100, 200);
-/// \endcode
-///
-/// Example 2: curve with varying width
-///
-/// \code
-/// Curve c;
-/// c.addControlPoint(0, 0, 3);
-/// c.addControlPoint(100, 100, 4);
-/// c.addControlPoint(100, 200, 5);
-/// \endcode
-///
-/// In order to render the curve, you can call triangulate(), then render
-/// the triangles using OpenGL.
+/// Currently, only Catmull-Rom curves are supported, but more curve types are
+/// expected in future versions.
 ///
 class VGC_GEOMETRY_API Curve {
 public:
@@ -283,19 +268,22 @@ public:
     /// Returns the number of control points of the curve.
     ///
     Int numPoints() const {
-        return positionData_ ? positionData_->length() : 0;
+        return positions_.length();
     }
 
     /// Returns the position data of the curve.
     ///
-    const Vec2dArray* positionData() const {
-        return positionData_;
+    core::ConstSpan<Vec2d> positions() const {
+        return positions_;
     }
 
     /// Sets the position data of the curve.
     ///
-    void setPositionData(const Vec2dArray* positionData) {
-        positionData_ = positionData;
+    /// Note that this `Curve` does not make a copy of the data. It is your
+    /// responsibility to ensure that the data outlives this `Curve`.
+    ///
+    void setPositions(core::ConstSpan<Vec2d> positions) {
+        positions_ = positions;
     }
 
     /// Returns the AttributeVariability of the width attribute.
@@ -306,15 +294,18 @@ public:
 
     /// Returns the width data of the curve.
     ///
-    const core::DoubleArray* widthData() const {
-        return widthData_;
+    core::ConstSpan<double> widths() const {
+        return widths_;
     }
 
     /// Sets the width data of the curve.
     ///
-    void setWidthData(const core::DoubleArray* widthData) {
-        widthData_ = widthData;
-        onWidthDataChanged_();
+    /// Note that this `Curve` does not make a copy of the data. It is your
+    /// responsibility to ensure that the data outlives this `Curve`.
+    ///
+    void setWidths(core::ConstSpan<double> widths) {
+        widths_ = widths;
+        onWidthsChanged_();
     }
 
     /// Returns the width of the curve. If width is varying, then returns
@@ -436,11 +427,11 @@ public:
 private:
     // Representation of the centerline of the curve
     Type type_;
-    const Vec2dArray* positionData_ = nullptr;
+    core::Span<const Vec2d> positions_ = {};
 
     // Representation of the width of the curve
     AttributeVariability widthVariability_;
-    const core::DoubleArray* widthData_ = nullptr;
+    core::Span<const double> widths_ = {};
     double widthConstant_ = 0;
     double averageWidth_ = 0;
     //double maxWidth_ = 0;
@@ -448,7 +439,7 @@ private:
     // Color of the curve
     core::Color color_;
 
-    void onWidthDataChanged_();
+    void onWidthsChanged_();
 };
 
 } // namespace vgc::geometry

@@ -329,8 +329,8 @@ void KeyEdge::updateGeometry_() {
     geometry_.edgeTesselationMode_ = edgeTesselationModeRequested_;
 
     geometry::Curve curve;
-    curve.setPositionData(&ke->points());
-    curve.setWidthData(&ke->widths());
+    curve.setPositions(ke->points());
+    curve.setWidths(ke->widths());
 
     double maxAngle = 0.05;
     int minQuads = 1;
@@ -354,8 +354,7 @@ void KeyEdge::updateGeometry_() {
         geometry_.triangulation_ = curve.triangulate(maxAngle, 1, 64);
     }
 
-    const geometry::Vec2dArray& d = *curve.positionData();
-    for (const geometry::Vec2d& p : d) {
+    for (const geometry::Vec2d& p : curve.positions()) {
         geometry_.cps_.emplaceLast(geometry::Vec2f(p));
     }
 
