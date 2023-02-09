@@ -166,6 +166,7 @@ void Canvas::stopLoggingUnder(core::PerformanceLog* parent) {
 }
 
 bool Canvas::onKeyPress(KeyEvent* event) {
+
     switch (event->key()) {
     case Key::T:
         polygonMode_ = polygonMode_ ? 0 : 1;
@@ -199,6 +200,7 @@ void Canvas::onDocumentChanged_(const dom::Diff& /*diff*/) {
 }
 
 void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
+
     if (!workspace_ || !workspace_->document()) {
         return;
     }
@@ -246,6 +248,7 @@ void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
 }
 
 void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
+
     if (!workspace_ || !workspace_->document()) {
         return;
     }
@@ -263,23 +266,25 @@ void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
     points_.append(p);
     widths_.append(width);
 
-    endVertex_->setAttribute(ds::position, p);
+        endVertex_->setAttribute(ds::position, p);
 
-    edge_->setAttribute(ds::positions, points_);
-    edge_->setAttribute(ds::widths, widths_);
+        edge_->setAttribute(ds::positions, points_);
+        edge_->setAttribute(ds::widths, widths_);
 
-    workspace_->sync();
+        workspace_->sync();
 
-    workspace::Element* edgeElement = workspace_->find(edge_);
-    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-    if (edgeCell) {
-        edgeCell->setTesselationMode(0);
+        workspace::Element* edgeElement = workspace_->find(edge_);
+        auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+        if (edgeCell) {
+            edgeCell->setTesselationMode(0);
+        }
     }
 }
 
 // Reimplementation of Widget virtual methods
 
 bool Canvas::onMouseMove(MouseEvent* event) {
+
     if (!mousePressed_) {
         return false;
     }
@@ -357,6 +362,7 @@ bool Canvas::onMouseMove(MouseEvent* event) {
 }
 
 bool Canvas::onMousePress(MouseEvent* event) {
+
     if (mousePressed_ || tabletPressed_) {
         return true;
     }
@@ -408,6 +414,7 @@ bool Canvas::onMousePress(MouseEvent* event) {
 }
 
 bool Canvas::onMouseRelease(MouseEvent* event) {
+
     if (!mousePressed_ || mouseButtonAtPress_ != event->button()) {
         return false;
     }
