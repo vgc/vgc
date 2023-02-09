@@ -88,43 +88,9 @@ double Curve::width() const {
     return averageWidth_;
 }
 
-//void Curve::addControlPoint(double x, double y) {
-//
-//    // Set position
-//    positionData_.emplaceLast(x, y);
-//
-//    // Set width
-//    if (widthVariability() == AttributeVariability::PerControlPoint) {
-//        double width = 1.0;
-//        if (widthData_.size() > 0) {
-//            width = widthData_.last();
-//        }
-//        widthData_.append(width);
-//    }
-//}
-//
-//void Curve::addControlPoint(const Vec2d& position) {
-//    addControlPoint(position.x(), position.y());
-//}
-//
-//void Curve::addControlPoint(double x, double y, double width) {
-//
-//    // Set position
-//    positionData_.emplaceLast(x, y);
-//
-//    // Set width
-//    if (widthVariability() == AttributeVariability::PerControlPoint) {
-//        widthData_.append(width);
-//    }
-//}
-//
-//void Curve::addControlPoint(const Vec2d& position, double width) {
-//    addControlPoint(position.x(), position.y(), width);
-//}
-
 Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const {
 
-    if (!positionData_) {
+    if (positions_.isEmpty()) {
         return {};
     }
 
@@ -162,7 +128,12 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
         return res;
     }
 
-    const Vec2dArray& positionData = *positionData_;
+    const Vec2d* positions = positions_.data();
+
+    bool varyingWidth = widthVariability() == AttributeVariability::PerControlPoint;
+    if (varyingWidth && widths_.length() < numCPs) {
+        return {};
+    }
 
     // Iterate over all segments
     for (Int idx = 0; idx < numSegments; ++idx) {
@@ -175,7 +146,7 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
 
         // Get positions of Catmull-Rom control points
         std::array<Vec2d, 4> points = {
-            positionData[i0], positionData[i1], positionData[i2], positionData[i3]};
+            positions[i0], positions[i1], positions[i2], positions[i3]};
 
         // Convert positions from Catmull-Rom to Bézier
         Vec2d q0, q1, q2, q3;
@@ -190,15 +161,12 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
         // simplicity over performance here, over the assumption that it's unlikely
         // that width computation is a performance bottleneck.
         double w0, w1, w2, w3;
-        if (widthVariability() == AttributeVariability::PerControlPoint) {
-            if (!widthData_) {
-                return {};
-            }
-            const core::DoubleArray& widthData = *widthData_;
-            double v0 = widthData[i0];
-            double v1 = widthData[i1];
-            double v2 = widthData[i2];
-            double v3 = widthData[i3];
+        if (varyingWidth) {
+            const double* widths = widths_.data();
+            double v0 = widths[i0];
+            double v1 = widths[i1];
+            double v2 = widths[i2];
+            double v3 = widths[i3];
             uniformCatmullRomToBezier(v0, v1, v2, v3, w0, w1, w2, w3);
         }
         else // if (widthVariability() == AttributeVariability::Constant)
@@ -510,23 +478,20 @@ bool sampleIter_(
     }
 
     // Get positions of interpolated points.
-    const Vec2dArray& positionData = *curve->positionData();
+    const Vec2d* positions = curve->positions().data();
     std::array<Vec2d, 4> cps = {
-        positionData[i0], positionData[i1], positionData[i2], positionData[i3]};
+        positions[i0], positions[i1], positions[i2], positions[i3]};
 
     // Convert points to Bézier.
     uniformCatmullRomToBezierCappedInPlace(cps.data());
 
     // Convert widths from Catmull-Rom to Bézier if not uniform.
-    const core::DoubleArray& widthData = *curve->widthData();
-    std::array<double, 4> radii = {
-        widthData[i0] * 0.5,
-        widthData[i1] * 0.5,
-        widthData[i2] * 0.5,
-        widthData[i3] * 0.5};
+    std::array<double, 4> radii = {};
     const bool isWidthUniform =
         (curve->widthVariability() == Curve::AttributeVariability::Constant);
     if (!isWidthUniform) {
+        const double* widths = curve->widths().data();
+        radii = {widths[i0] * 0.5, widths[i1] * 0.5, widths[i2] * 0.5, widths[i3] * 0.5};
         // XXX use something that does not overshoot
         uniformCatmullRomToBezierInPlace(radii.data());
     }
@@ -634,7 +599,7 @@ void Curve::sampleRange(
     }
 }
 
-void Curve::onWidthDataChanged_() {
+void Curve::onWidthsChanged_() {
     // todo, compute max and average
 }
 
