@@ -34,6 +34,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/innercore.h>
+#include <vgc/core/span.h>
 #include <vgc/core/templateutil.h>
 #include <vgc/geometry/mat4f.h>
 #include <vgc/geometry/rect2f.h>
@@ -72,29 +73,6 @@ struct BuiltinConstants {
 };
 
 } // namespace detail
-
-// temporary impl
-template<typename T>
-struct Span {
-    T* data() const {
-        return data_;
-    }
-
-    Int length() const {
-        return length_;
-    }
-
-    T* begin() const {
-        return data_;
-    }
-
-    T* end() const {
-        return data_ + length_;
-    }
-
-    T* data_;
-    Int length_;
-};
 
 class VGC_GRAPHICS_API WindowSwapChainFormat {
 public:
@@ -413,11 +391,18 @@ public:
     template<typename T>
     void updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data);
 
-    void draw(const GeometryViewPtr& geometry, Int numIndices = -1);
+    void draw(
+        const GeometryViewPtr& geometry,
+        Int numIndices = -1,
+        Int startIndex = 0,
+        Int baseVertex = 0);
+
     void drawInstanced(
         const GeometryViewPtr& geometry,
         Int numIndices = -1,
-        Int numInstances = -1);
+        Int numInstances = -1,
+        Int startIndex = 0,
+        Int baseVertex = 0);
 
     //void createTextAtlasResource();
 
@@ -488,8 +473,10 @@ protected:
 
     virtual void initFramebuffer_(Framebuffer* framebuffer) = 0;
     virtual void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) = 0;
-    virtual void
-    initImage_(Image* image, const Span<const char>* mipLevelDataSpans, Int count) = 0;
+    virtual void initImage_(
+        Image* image,
+        const core::Span<const char>* mipLevelDataSpans,
+        Int count) = 0;
     virtual void initImageView_(ImageView* view) = 0;
     virtual void initSamplerState_(SamplerState* state) = 0;
     virtual void initGeometryView_(GeometryView* view) = 0;
@@ -528,7 +515,13 @@ protected:
 
     virtual void generateMips_(const ImageViewPtr& imageView) = 0;
 
-    virtual void draw_(GeometryView* view, UInt numPrimitives, UInt numInstances) = 0;
+    virtual void draw_(
+        GeometryView* view,
+        UInt numIndices,
+        UInt numInstances,
+        UInt startIndex,
+        Int baseVertex) = 0;
+
     virtual void clear_(const core::Color& color) = 0;
 
     virtual UInt64
@@ -545,9 +538,6 @@ protected:
     ProgramPtr simpleProgram_;
     ProgramPtr simpleTexturedProgram_;
     ProgramPtr sreenSpaceDisplacementProgram_;
-
-    BlendStatePtr defaultBlendState_;
-    RasterizerStatePtr defaultRasterizerState_;
 
     // -- builtin batching early impl --
 
@@ -790,6 +780,8 @@ private:
 
     // returns false if translation was cancelled by a stop request.
     void waitCommandListTranslationFinished_(Int commandListId = 0);
+
+    bool hasSubmittedCommandListPendingForTranslation_();
 
     // -- helpers --
 

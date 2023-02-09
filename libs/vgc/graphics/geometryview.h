@@ -233,13 +233,11 @@ public:
     Int numIndices() const {
         IndexFormat format = indexFormat();
         const BufferPtr& buffer = info_.indexBuffer();
-        if (format != IndexFormat::None && buffer) {
-            Int indexSize = (format == IndexFormat::UInt16) ? 2 : 4;
-            return buffer->lengthInBytes() / indexSize;
+        if (!buffer || format == IndexFormat::None) {
+            return 0;
         }
-        else {
-            return numVertices();
-        }
+        Int indexSize = (format == IndexFormat::UInt16) ? 2 : 4;
+        return buffer->lengthInBytes() / indexSize;
     }
 
     Int numVertices() const {
