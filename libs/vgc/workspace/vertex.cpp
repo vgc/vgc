@@ -169,7 +169,6 @@ void VacVertexCell::computePos(detail::VacVertexCellFrameData& data) {
     }
 
     data.isComputing_ = true;
-    VGC_DEBUG_TMP("VacVertexCell({})->computeJoin_", (void*)this);
 
     data.pos_ = v->position(data.time());
 
@@ -185,7 +184,6 @@ void VacVertexCell::computeJoin(detail::VacVertexCellFrameData& data) {
     computePos(data);
 
     data.isComputing_ = true;
-    VGC_DEBUG_TMP("VacVertexCell({})->computeJoin_", (void*)this);
 
     for (const detail::VacJoinHalfedge& he : joinHalfedges_) {
         data.halfedgesData_.emplaceLast(he);
@@ -221,7 +219,6 @@ void VacVertexCell::computeJoin(detail::VacVertexCellFrameData& data) {
     }
 
     const Int numHalfedges = data.halfedgesData_.length();
-    VGC_DEBUG_TMP("numHalfedges:{}", numHalfedges);
     if (numHalfedges == 0) {
         // nothing to do
     }
@@ -229,7 +226,6 @@ void VacVertexCell::computeJoin(detail::VacVertexCellFrameData& data) {
         // cap, todo
         //const detail::VacJoinHalfedgeFrameData& halfedgeData = data.halfedgesData_[0];
         //Int basePatchIndex = halfedgeData.halfedge().isReverse() ? 2 : 0;
-        //VGC_DEBUG_TMP("basePatchIndex:{}", basePatchIndex);
         //VacEdgeCellFrameData* edgeData = halfedgeData.edgeData_;
         //if (edgeData) {
         //    Int numSamples = edgeData->samples_.length();

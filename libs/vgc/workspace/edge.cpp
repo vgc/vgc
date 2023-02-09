@@ -436,7 +436,6 @@ void VacKeyEdge::computeStandaloneGeometry(VacEdgeCellFrameData& data) {
     }
 
     data.isComputing_ = true;
-    VGC_DEBUG_TMP("VacKeyEdge({})->computeStandaloneGeometry_", (void*)this);
 
     // TODO: compute vertices pos and snap
 
@@ -493,7 +492,6 @@ void VacKeyEdge::computeGeometry(VacEdgeCellFrameData& data) {
     computeStandaloneGeometry(data);
 
     data.isComputing_ = true;
-    VGC_DEBUG_TMP("VacKeyEdge({})->computeGeometry_", (void*)this);
 
     // XXX shouldn't do it for draft -> add quality enum for current cached geometry
     VacKeyVertex* v0 = verticesInfo_[0].element;
