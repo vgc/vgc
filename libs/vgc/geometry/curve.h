@@ -190,11 +190,17 @@ private:
 };
 
 /// \class vgc::geometry::Curve
-/// \brief Represents a 2D curve with variable width.
+/// \brief A helper class to sample a 2D curve given external (non-owned) data.
 ///
-/// This class is the preferred class to sample 2D curves in VGC
-/// applications. Currently, only Catmull-Rom curves are supported, but more
-/// curve types are expected in future versions.
+/// This class can be used to sample a 2D curve given external (non-owned) data.
+///
+/// Note that this class does not own the data provided, for example via the
+/// `setPositions(positions)` and `setWidths(widths)` function. It is the
+/// responsability of the programmer to ensure that the data referred to by the
+/// given `Span` outlives the `Curve`.
+///
+/// Currently, only Catmull-Rom curves are supported, but more curve types are
+/// expected in future versions.
 ///
 class VGC_GEOMETRY_API Curve {
 public:
@@ -273,6 +279,9 @@ public:
 
     /// Sets the position data of the curve.
     ///
+    /// Note that this `Curve` does not make a copy of the data. It is your
+    /// responsibility to ensure that the data outlives this `Curve`.
+    ///
     void setPositions(core::ConstSpan<Vec2d> positions) {
         positions_ = positions;
     }
@@ -290,6 +299,9 @@ public:
     }
 
     /// Sets the width data of the curve.
+    ///
+    /// Note that this `Curve` does not make a copy of the data. It is your
+    /// responsibility to ensure that the data outlives this `Curve`.
     ///
     void setWidths(core::ConstSpan<double> widths) {
         widths_ = widths;
