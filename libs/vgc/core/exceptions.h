@@ -118,7 +118,8 @@
 #if defined(VGC_CORE_COMPILER_CLANG)
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR virtual void anchor();
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)                                         \
-        void T::anchor() {}
+        void T::anchor() {                                                               \
+        }
 #else
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)

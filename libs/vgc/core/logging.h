@@ -188,10 +188,13 @@ private:
         static ClassName* instance_;                                                     \
         ClassName(const ::vgc::core::StringId& name)                                     \
             : ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels>( \
-                name) {}                                                                 \
+                name) {                                                                  \
+        }                                                                                \
                                                                                          \
     public:                                                                              \
-        static ClassName* instance() { return instance_; }                               \
+        static ClassName* instance() {                                                   \
+            return instance_;                                                            \
+        }                                                                                \
     };
 
 /// Declares a log category of type `ClassName` whose enabled levels can be can
