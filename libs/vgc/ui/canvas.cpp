@@ -524,6 +524,9 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
             }
         });
 
+    // Draw temporary tip of curve between mouse event position and actual current cursor
+    // position to reduce visual lag.
+    //
     if (isSketching_) {
 
         Window* w = window();
