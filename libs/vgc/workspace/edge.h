@@ -239,7 +239,7 @@ protected:
     void computeStandaloneGeometry(VacEdgeCellFrameData& data) override;
     void computeGeometry(VacEdgeCellFrameData& data) override;
 
-    void onInputGeometryChanged();
+    void onInputGeometryChanged() override;
 
     void clearStartJoinData() override;
     void clearEndJoinData() override;
