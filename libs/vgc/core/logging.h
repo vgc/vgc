@@ -73,7 +73,7 @@ log(const StringId& categoryName,
 
     fmt::memory_buffer message;
     appendPreambleToLogMessage(message, categoryName, level);
-    formatTo(std::back_inserter(message), fmt, args...);
+    formatTo(std::back_inserter(message), fmt, std::forward<T>(args)...);
     printLogMessageToStderr(message);
 }
 
