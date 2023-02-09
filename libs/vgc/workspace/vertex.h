@@ -52,6 +52,10 @@ public:
         return isReverse_;
     }
 
+    constexpr Int group() const {
+        return group_;
+    }
+
     struct GrouplessEqualTo {
         constexpr bool
         operator()(const VacJoinHalfedge& lhs, const VacJoinHalfedge& rhs) const {
@@ -61,7 +65,7 @@ public:
 
 private:
     VacEdgeCell* edgeCell_;
-    //Int32 group_;
+    Int32 group_;
     bool isReverse_;
 };
 
