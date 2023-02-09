@@ -269,9 +269,7 @@ public:
 
     /// Copy-constructs from `other`.
     ///
-    constexpr Span(const Span& other) noexcept
-        : pair_(other.pair_) {
-    }
+    constexpr Span(const Span& other) noexcept = default;
 
     /// Copy-assigns from `other`.
     ///
@@ -827,6 +825,23 @@ private:
     }
 };
 
+// deduction guides
+template<typename T, size_t n>
+Span(std::array<T, n>&) -> Span<T, n>;
+template<typename T, size_t n>
+Span(const std::array<T, n>&) -> Span<const T, n>;
+template<typename T>
+Span(core::Array<T>&) -> Span<T, dynamicExtent>;
+template<typename T>
+Span(const core::Array<T>&) -> Span<const T, dynamicExtent>;
+template<typename T, typename IntType, VGC_REQUIRES(std::is_arithmetic_v<IntType>)>
+Span(T*, IntType) -> Span<T, dynamicExtent>;
+template<typename T>
+Span(T*, T*) -> Span<T, dynamicExtent>;
+
+template<typename T, Int extent_ = dynamicExtent>
+using ConstSpan = Span<const T, extent_>;
+
 /// Writes the given `Span<T>` to the output stream.
 ///
 template<typename OStream, typename T, Int extent>
@@ -890,7 +905,9 @@ inline constexpr bool isSpan = detail::IsSpan<T>::value;
 } // namespace vgc::core
 
 template<typename T, vgc::Int extent>
-struct fmt::formatter<vgc::core::Span<T, extent>> : fmt::formatter<T> {
+struct fmt::formatter<vgc::core::Span<T, extent>>
+    : fmt::formatter<vgc::core::RemoveCVRef<T>> {
+
     template<typename FormatContext>
     auto format(const vgc::core::Span<T, extent>& x, FormatContext& ctx)
         -> decltype(ctx.out()) {
@@ -907,7 +924,7 @@ struct fmt::formatter<vgc::core::Span<T, extent>> : fmt::formatter<T> {
             while (it != last) {
                 out = vgc::core::copyStringTo(out, ", ");
                 ctx.advance_to(out);
-                out = fmt::formatter<T>::format(*++it, ctx);
+                out = fmt::formatter<vgc::core::RemoveCVRef<T>>::format(*++it, ctx);
             }
             *out++ = ']';
         }
