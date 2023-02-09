@@ -55,6 +55,8 @@ std::string generateThreadName() {
     return ss.str();
 }
 
+Clock::time_point startTime = Clock::now();
+
 struct ProfilerGlobals {
     Array<ProfilerEntry> entries;
     std::string threadName;
@@ -161,8 +163,6 @@ ScopeProfiler::~ScopeProfiler() {
 
     Array<ProfilerEntry>& entries = g.entries;
 
-    static Clock::time_point start = Clock::now();
-
     entries.emplaceLast(Clock::now(), name_, correspondingIndex_);
     entries[correspondingIndex_].correspondingIndex = entries.length() - 1;
 
@@ -176,7 +176,7 @@ ScopeProfiler::~ScopeProfiler() {
         }
         else {
             out.append("Start time:");
-            printDuration(out, entries[0].timestamp - start);
+            printDuration(out, entries[0].timestamp - startTime);
             out.append("\n");
             printDurations(out, entries);
         }
