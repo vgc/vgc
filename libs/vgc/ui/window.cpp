@@ -750,6 +750,7 @@ void Window::paint(bool sync) {
 bool Window::event(QEvent* event) {
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(4063) // invalid switch value (custom event types)
+    VGC_WARNING_GCC_DISABLE(switch)
     switch (event->type()) {
     case QEvent::InputMethodQuery:
         inputMethodQueryEvent(static_cast<QInputMethodQueryEvent*>(event));
