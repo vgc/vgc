@@ -304,7 +304,7 @@ public:
 
 protected:
     vacomplex::Cell* vacCellUnchecked() const {
-        return vacNode_->toCellUnchecked();
+        return vacNode_ ? vacNode_->toCellUnchecked() : nullptr;
     }
 
     void removeVacNode();

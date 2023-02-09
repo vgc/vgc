@@ -28,10 +28,19 @@ geometry::Rect2d Layer::boundingBox(core::AnimTime /*t*/) const {
 ElementStatus Layer::updateFromDom_(Workspace* /*workspace*/) {
     dom::Element* const domElement = this->domElement();
 
-    topology::VacGroup* g = vacNode()->toCellUnchecked()->toGroupUnchecked();
+    vacomplex::Node* node = vacNode();
+    topology::VacGroup* g = node ? node->toCellUnchecked()->toGroupUnchecked() : nullptr;
     if (!g) {
+        VacElement* parentElement = parentVacElement();
+        if (!parentElement) {
+            return ElementStatus::ErrorInParent;
+        }
+        vacomplex::Node* parentNode = parentElement->vacNode();
+        if (!parentNode) {
+            return ElementStatus::ErrorInParent;
+        }
         g = topology::ops::createVacGroup(
-            domElement->internalId(), parentVacElement()->vacNode()->toGroupUnchecked());
+            domElement->internalId(), parentNode->toGroupUnchecked());
         setVacNode(g);
     }
 

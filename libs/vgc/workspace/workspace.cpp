@@ -643,7 +643,12 @@ void Workspace::updateVacHierarchyFromTree_() {
 //    Element* ev0 = getElementFromPathAttribute(domElem, ds::startvertex, ds::vertex);
 //    Element* ev1 = getElementFromPathAttribute(domElem, ds::endvertex, ds::vertex);
 //
-//    topology::KeyEdge* kv = node->toCellUnchecked()->toKeyEdgeUnchecked();
+//    vacomplex::Node* node = vacNode();
+//    topology::KeyEdge* kv = node ? node->toCellUnchecked()->toKeyEdgeUnchecked() : nullptr;
+//    if (!kv) {
+//        return false;
+//    }
+//
 //    if (ev0) {
 //        if (ev0->vacNode() != kv->startVertex()) {
 //            return true;

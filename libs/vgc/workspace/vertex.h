@@ -155,7 +155,8 @@ protected:
 
 public:
     vacomplex::VertexCell* vacVertexCellNode() const {
-        return vacCellUnchecked()->toVertexCellUnchecked();
+        vacomplex::Cell* cell = vacCellUnchecked();
+        return cell ? cell->toVertexCellUnchecked() : nullptr;
     }
 
     void computeJoin(core::AnimTime t);
@@ -198,8 +199,9 @@ public:
         : VacVertexCell(workspace, domElement) {
     }
 
-    topology::KeyVertex* vacKeyVertexNode() const {
-        return vacCellUnchecked()->toKeyVertexUnchecked();
+    vacomplex::KeyVertex* vacKeyVertexNode() const {
+        vacomplex::Cell* cell = vacCellUnchecked();
+        return cell ? cell->toKeyVertexUnchecked() : nullptr;
     }
 
     geometry::Rect2d boundingBox(core::AnimTime t) const override;
@@ -220,7 +222,8 @@ public:
     }
 
     vacomplex::InbetweenVertex* vacInbetweenVertexNode() const {
-        return vacCellUnchecked()->toInbetweenVertexUnchecked();
+        vacomplex::Cell* cell = vacCellUnchecked();
+        return cell ? cell->toInbetweenVertexUnchecked() : nullptr;
     }
 
     geometry::Rect2d boundingBox(core::AnimTime t) const override;

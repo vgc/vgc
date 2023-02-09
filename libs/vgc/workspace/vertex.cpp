@@ -265,8 +265,16 @@ ElementStatus VacKeyVertex::updateFromDom_(Workspace* /*workspace*/) {
 
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (!kv) {
+        VacElement* parentElement = parentVacElement();
+        if (!parentElement) {
+            return ElementStatus::ErrorInParent;
+        }
+        vacomplex::Node* parentNode = parentElement->vacNode();
+        if (!parentNode) {
+            return ElementStatus::ErrorInParent;
+        }
         kv = topology::ops::createKeyVertex(
-            domElement->internalId(), parentVacElement()->vacNode()->toGroupUnchecked());
+            domElement->internalId(), parentNode->toGroupUnchecked());
         setVacNode(kv);
     }
 
@@ -336,7 +344,7 @@ void VacVertexCell::onInputGeometryChanged() {
     clearJoinHalfedgesJoinData();
 }
 
-void VacVertexCell::onJoinEdgeGeometryChanged_(VacEdgeCell* edge) {
+void VacVertexCell::onJoinEdgeGeometryChanged_(VacEdgeCell* /*edge*/) {
     for (auto& entry : frameDataEntries_) {
         entry.clearJoinData();
     }

@@ -172,8 +172,9 @@ protected:
     }
 
 public:
-    topology::EdgeCell* vacEdgeCellNode() const {
-        return vacCellUnchecked()->toEdgeCellUnchecked();
+    vacomplex::EdgeCell* vacEdgeCellNode() const {
+        vacomplex::Cell* cell = vacCellUnchecked();
+        return cell ? cell->toEdgeCellUnchecked() : nullptr;
     }
 
     const VacEdgeCellFrameData* computeStandaloneGeometryAt(core::AnimTime t);
@@ -205,8 +206,9 @@ public:
         : VacEdgeCell(workspace, domElement) {
     }
 
-    topology::KeyEdge* vacKeyEdgeNode() const {
-        return vacCellUnchecked()->toKeyEdgeUnchecked();
+    vacomplex::KeyEdge* vacKeyEdgeNode() const {
+        vacomplex::Cell* cell = vacCellUnchecked();
+        return cell ? cell->toKeyEdgeUnchecked() : nullptr;
     }
 
     void setTesselationMode(int mode) {
