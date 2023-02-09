@@ -44,15 +44,15 @@ public:
         , isReverse_(isReverse) {
     }
 
-    constexpr VacEdgeCell* edgeCell() const {
+    VacEdgeCell* edgeCell() const {
         return edgeCell_;
     }
 
-    constexpr bool isReverse() const {
+    bool isReverse() const {
         return isReverse_;
     }
 
-    constexpr Int group() const {
+    Int group() const {
         return group_;
     }
 
@@ -81,11 +81,11 @@ public:
         return halfedge_;
     }
 
-    constexpr double angle() const {
+    double angle() const {
         return angle_;
     }
 
-    constexpr double angleToNext() const {
+    double angleToNext() const {
         return angleToNext_;
     }
 
@@ -113,8 +113,8 @@ public:
         return isJoinComputed_;
     }
 
-    const geometry::Vec2d& pos() const {
-        return pos_;
+    const geometry::Vec2d& position() const {
+        return position_;
     }
 
     bool hasJoinData() const {
@@ -133,7 +133,7 @@ public:
 
 private:
     core::AnimTime time_;
-    geometry::Vec2d pos_ = core::noInit;
+    geometry::Vec2d position_ = core::noInit;
     mutable graphics::GeometryViewPtr debugLinesRenderGeometry_;
     mutable graphics::GeometryViewPtr debugQuadRenderGeometry_;
     // join data
@@ -172,7 +172,7 @@ protected:
         PaintOptions flags = PaintOption::None) const override;
 
     detail::VacVertexCellFrameData* frameData(core::AnimTime t) const;
-    void computePos(detail::VacVertexCellFrameData& data);
+    void computePosition(detail::VacVertexCellFrameData& data);
     void computeJoin(detail::VacVertexCellFrameData& data);
 
     void rebuildJoinHalfedgesArray() const;

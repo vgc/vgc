@@ -31,7 +31,7 @@ void VacVertexCellFrameData::debugPaint(graphics::Engine* engine) {
     if (!debugQuadRenderGeometry_) {
         debugQuadRenderGeometry_ = engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYRGB, IndexFormat::UInt16);
-        geometry::Vec2f p(pos_);
+        geometry::Vec2f p(position_);
         core::FloatArray vertices({
             p.x() - 5, p.y() - 5, 0, 0, 0, //
             p.x() - 5, p.y() + 5, 0, 0, 0, //
@@ -58,7 +58,7 @@ void VacVertexCellFrameData::debugPaint(graphics::Engine* engine) {
         core::Array<UInt16> lineIndices;
 
         for (const VacJoinHalfedgeFrameData& s : halfedgesData_) {
-            geometry::Vec2f p(pos_);
+            geometry::Vec2f p(position_);
             double angle0 = s.angle();
             double angle1 = s.angle() + s.angleToNext();
             double midAngle = angle0 + angle1;
@@ -123,7 +123,7 @@ geometry::Rect2d VacKeyVertex::boundingBox(core::AnimTime /*t*/) const {
 void VacVertexCell::computeJoin(core::AnimTime t) {
     detail::VacVertexCellFrameData* c = frameData(t);
     if (c) {
-        computePos(*c);
+        computePosition(*c);
         computeJoin(*c);
     }
 }
@@ -134,7 +134,7 @@ void VacVertexCell::paint_(graphics::Engine* engine, core::AnimTime t, PaintOpti
     if (flags.has(PaintOption::Outline)) {
         detail::VacVertexCellFrameData* fd = frameData(t);
         if (fd) {
-            //const_cast<VacVertexCell*>(this)->computePos_(*fd);
+            //const_cast<VacVertexCell*>(this)->computePosition_(*fd);
             const_cast<VacVertexCell*>(this)->computeJoin(*fd);
             fd->debugPaint(engine);
         }
@@ -159,7 +159,7 @@ detail::VacVertexCellFrameData* VacVertexCell::frameData(core::AnimTime t) const
     return nullptr;
 }
 
-void VacVertexCell::computePos(detail::VacVertexCellFrameData& data) {
+void VacVertexCell::computePosition(detail::VacVertexCellFrameData& data) {
     if (data.isPosComputed_ || data.isComputing_) {
         return;
     }
@@ -170,7 +170,7 @@ void VacVertexCell::computePos(detail::VacVertexCellFrameData& data) {
 
     data.isComputing_ = true;
 
-    data.pos_ = v->position(data.time());
+    data.position_ = v->position(data.time());
 
     data.isPosComputed_ = true;
     data.isComputing_ = false;
@@ -181,7 +181,7 @@ void VacVertexCell::computeJoin(detail::VacVertexCellFrameData& data) {
         return;
     }
 
-    computePos(data);
+    computePosition(data);
 
     data.isComputing_ = true;
 
@@ -207,7 +207,8 @@ void VacVertexCell::computeJoin(detail::VacVertexCellFrameData& data) {
             samples[heData.halfedge().isReverse() ? samples.size() - 2 : 1];
 
         // XXX add xAxisAngle to Vec class
-        geometry::Vec2d outgoingTangent = (sample.position() - data.pos()).normalized();
+        geometry::Vec2d outgoingTangent =
+            (sample.position() - data.position()).normalized();
         double angle = geometry::Vec2d(1.f, 0).angle(outgoingTangent);
         if (angle < 0) {
             angle += core::pi * 2;
