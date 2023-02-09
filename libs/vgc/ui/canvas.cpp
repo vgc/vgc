@@ -30,6 +30,7 @@
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/strings.h>
+#include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -171,7 +172,7 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         requestRepaint();
         break;
     case Key::I:
-        requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 4;
+        requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 3;
         requestRepaint();
         break;
     case Key::P:
@@ -235,6 +236,12 @@ void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
     edge_ = edge;
 
     continueCurve_(p, width);
+
+    minimalLatencyStrokePoints_[0] = p;
+    minimalLatencyStrokeWidths_[0] = width * 0.5;
+    minimalLatencyStrokePoints_[1] = p;
+    minimalLatencyStrokeWidths_[1] = width * 0.5;
+    minimalLatencyStrokeReload_ = true;
 }
 
 void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
@@ -244,17 +251,23 @@ void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
 
     namespace ds = dom::strings;
 
-    if (edge_) {
-        points_.append(p);
-        widths_.append(width);
-
-        endVertex_->setAttribute(ds::position, p);
-
-        edge_->setAttribute(ds::positions, points_);
-        edge_->setAttribute(ds::widths, widths_);
-
-        workspace_->sync();
+    if (!edge_) {
+        return;
     }
+
+    if (!points_.isEmpty() && points_.last() == p) {
+        return;
+    }
+
+    points_.append(p);
+    widths_.append(width);
+
+    endVertex_->setAttribute(ds::position, p);
+
+    edge_->setAttribute(ds::positions, points_);
+    edge_->setAttribute(ds::widths, widths_);
+
+    workspace_->sync();
 }
 
 // Reimplementation of Widget virtual methods
@@ -277,7 +290,13 @@ bool Canvas::onMouseMove(MouseEvent* event) {
         geometry::Vec2d viewCoords = mousePos;
         geometry::Vec2d worldCoords =
             camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
-        continueCurve_(worldCoords, width_(event));
+        double width = width_(event);
+        continueCurve_(worldCoords, width);
+        minimalLatencyStrokePoints_[0] = minimalLatencyStrokePoints_[1];
+        minimalLatencyStrokeWidths_[0] = minimalLatencyStrokeWidths_[1];
+        minimalLatencyStrokePoints_[1] = worldCoords;
+        minimalLatencyStrokeWidths_[1] = width;
+        minimalLatencyStrokeReload_ = true;
         return true;
     }
     else if (isPanning_) {
@@ -431,25 +450,28 @@ geometry::Vec2f Canvas::computePreferredSize() const {
 }
 
 void Canvas::onPaintCreate(graphics::Engine* engine) {
-    graphics::RasterizerStateCreateInfo createInfo = {};
+    using namespace graphics;
+    RasterizerStateCreateInfo createInfo = {};
     fillRS_ = engine->createRasterizerState(createInfo);
-    createInfo.setFillMode(graphics::FillMode::Wireframe);
+    createInfo.setFillMode(FillMode::Wireframe);
     wireframeRS_ = engine->createRasterizerState(createInfo);
-    bgGeometry_ =
-        engine->createDynamicTriangleStripView(graphics::BuiltinGeometryLayout::XYRGB);
+    bgGeometry_ = engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYRGB);
+    minimalLatencyStrokeGeometry_ =
+        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
     reload_ = true;
 }
 
 void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
+    using namespace graphics;
     namespace gs = graphics::strings;
 
     drawTask_.start();
 
-    auto modifiedParameters = graphics::PipelineParameter::RasterizerState;
+    auto modifiedParameters = PipelineParameter::RasterizerState;
     engine->pushPipelineParameters(modifiedParameters);
 
-    engine->setProgram(graphics::BuiltinProgram::Simple);
+    engine->setProgram(BuiltinProgram::Simple);
 
     // Draw background as a (triangle strip) quad
     //
@@ -501,6 +523,65 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                 e->paint(engine, {}, workspace::PaintOption::Outline);
             }
         });
+
+    // Draw temporary tip of curve between mouse event position and actual current cursor
+    // position to reduce visual lag.
+    //
+    if (isSketching_) {
+
+        Window* w = window();
+        bool cursorMoved = false;
+        if (w) {
+            geometry::Vec2f pos(w->mapFromGlobal(globalCursorPosition()));
+            geometry::Vec2d posd(root()->mapTo(this, pos));
+            pos = geometry::Vec2f(
+                camera_.viewMatrix().inverted().transformPointAffine(posd));
+            if (lastImmediateCursorPos_ != pos) {
+                lastImmediateCursorPos_ = pos;
+                cursorMoved = true;
+                minimalLatencyStrokePoints_[2] = geometry::Vec2d(pos);
+                minimalLatencyStrokeWidths_[2] = minimalLatencyStrokeWidths_[1] * 0.5;
+            }
+        }
+
+        if (cursorMoved || minimalLatencyStrokeReload_) {
+
+            //core::Color color(1.f, 0.f, 0.f, 1.f);
+            core::Color color = currentColor_;
+            geometry::Vec2fArray strokeVertices;
+
+            geometry::Curve curve;
+            curve.setPositions(minimalLatencyStrokePoints_);
+            curve.setWidths(minimalLatencyStrokeWidths_);
+
+            geometry::CurveSamplingParameters samplingParams = {};
+            samplingParams.setMaxAngle(0.05);
+            samplingParams.setMinIntraSegmentSamples(10);
+            samplingParams.setMaxIntraSegmentSamples(20);
+            geometry::CurveSampleArray csa;
+            curve.sampleRange(samplingParams, csa, 1);
+
+            for (const geometry::CurveSample& s : csa) {
+                geometry::Vec2d p0 = s.leftPoint();
+                strokeVertices.emplaceLast(geometry::Vec2f(p0));
+                geometry::Vec2d p1 = s.rightPoint();
+                strokeVertices.emplaceLast(geometry::Vec2f(p1));
+            }
+
+            engine->updateBufferData(
+                minimalLatencyStrokeGeometry_->vertexBuffer(0), //
+                std::move(strokeVertices));
+
+            engine->updateBufferData(
+                minimalLatencyStrokeGeometry_->vertexBuffer(1), //
+                core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
+
+            minimalLatencyStrokeReload_ = false;
+        }
+
+        engine->setProgram(graphics::BuiltinProgram::Simple);
+        engine->draw(minimalLatencyStrokeGeometry_);
+    }
 
     engine->popViewMatrix();
     engine->popPipelineParameters(modifiedParameters);
