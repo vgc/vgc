@@ -523,6 +523,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                 e->paint(engine, {}, workspace::PaintOption::Outline);
             }
         });
+
     if (isSketching_) {
 
         Window* w = window();
