@@ -83,6 +83,8 @@ public:
             0, 0, static_cast<float>(width_), static_cast<float>(height_));
     }
 
+    geometry::Vec2f mapFromGlobal(const geometry::Vec2f& globalPosition) const;
+
     ///
     /// Returns
     // ===================== Handle mouse/tablet input ========================
