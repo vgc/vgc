@@ -160,7 +160,7 @@ detail::VacVertexCellFrameData* VacVertexCell::frameData(core::AnimTime t) const
 }
 
 void VacVertexCell::computePosition(detail::VacVertexCellFrameData& data) {
-    if (data.isPosComputed_ || data.isComputing_) {
+    if (data.isPositionComputed_ || data.isComputing_) {
         return;
     }
     vacomplex::VertexCell* v = vacVertexCellNode();
@@ -172,7 +172,7 @@ void VacVertexCell::computePosition(detail::VacVertexCellFrameData& data) {
 
     data.position_ = v->position(data.time());
 
-    data.isPosComputed_ = true;
+    data.isPositionComputed_ = true;
     data.isComputing_ = false;
 }
 

@@ -140,7 +140,7 @@ private:
     core::Array<detail::VacJoinHalfedgeFrameData> halfedgesData_;
     bool isComputing_ = false;
     bool isJoinComputed_ = false;
-    bool isPosComputed_ = false;
+    bool isPositionComputed_ = false;
 };
 
 } // namespace detail
