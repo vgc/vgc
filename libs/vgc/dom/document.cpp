@@ -285,7 +285,7 @@ private:
         if (!elementSpec_) {
             throw VgcSyntaxError(
                 "Unknown element name '" + tagName_
-                + "'. Excepted an element name defined in the VGC schema.");
+                + "'. Expected an element name defined in the VGC schema.");
         }
 
         if (currentNode_->nodeType() == NodeType::Document) {
@@ -600,7 +600,7 @@ private:
             if (!spec) {
                 throw VgcSyntaxError(
                     "Unknown attribute '" + attributeName_ + "' for element '" + tagName_
-                    + "'. Excepted an attribute name defined in the VGC schema.");
+                    + "'. Expected an attribute name defined in the VGC schema.");
             }
             valueType = spec->valueType();
         }

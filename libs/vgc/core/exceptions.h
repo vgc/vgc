@@ -57,7 +57,7 @@
 // This is why we use the macro VGC_FOO_API_EXCEPTION: it enables conditional
 // export of the class based on the given compiler/platform.
 //
-// Note that using GCC on Linux, it seems that exceptions work as excepted
+// Note that using GCC on Linux, it seems that exceptions work as expected
 // without warnings regardless of exporting the class or not.
 //
 
@@ -118,8 +118,7 @@
 #if defined(VGC_CORE_COMPILER_CLANG)
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR virtual void anchor();
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)                                         \
-        void T::anchor() {                                                               \
-        }
+        void T::anchor() {}
 #else
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)
