@@ -729,7 +729,6 @@ void Window::paint(bool sync) {
         widget_->paint(engine_.get());
     }
 
-
 #if defined(VGC_QOPENGL_EXPERIMENT)
     static int frameIdx = 0;
     auto fmt = format();
