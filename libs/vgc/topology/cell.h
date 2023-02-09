@@ -611,15 +611,21 @@ constexpr To* dynamic_cell_cast(From* p);
     constexpr const To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() const = delete;
 
 #define VGC_TOPOLOGY_DEFINE_CELL_UPCAST_METHOD(To)                                       \
-    To* VGC_TOPOLOGY_SAFE_CAST_METHOD_NAME(To)() { return static_cell_cast<To>(this); }  \
+    template<typename To_ = To, VGC_REQUIRES(std::is_same_v<To_, To>)>                   \
+    To* VGC_TOPOLOGY_SAFE_CAST_METHOD_NAME(To)() {                                       \
+        return static_cell_cast<To_>(this);                                              \
+    }                                                                                    \
+    template<typename To_ = To, VGC_REQUIRES(std::is_same_v<To_, To>)>                   \
     const To* VGC_TOPOLOGY_SAFE_CAST_METHOD_NAME(To)() const {                           \
-        return static_cell_cast<const To>(this);                                         \
+        return static_cell_cast<const To_>(this);                                        \
     }                                                                                    \
+    template<typename To_ = To, VGC_REQUIRES(std::is_same_v<To_, To>)>                   \
     To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() {                                     \
-        return static_cell_cast<To>(this);                                               \
+        return static_cell_cast<To_>(this);                                              \
     }                                                                                    \
+    template<typename To_ = To, VGC_REQUIRES(std::is_same_v<To_, To>)>                   \
     const To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() const {                         \
-        return static_cell_cast<const To>(this);                                         \
+        return static_cell_cast<const To_>(this);                                        \
     }
 
 #define VGC_TOPOLOGY_SPATIAL_NAME_ALTERNATIVE_Vertex_1 Edge
