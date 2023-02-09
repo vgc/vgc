@@ -1651,7 +1651,7 @@ public:
     ///
     /// ```cpp
     /// vgc::core::Array<double> a = {5, 12, 11, 12, 14};
-    /// a.removeIf([](double v) { return v > 11; });
+    /// a.removeOneIf([](double v) { return v > 11; });
     /// // => [5, 11, 12, 14]
     /// ```
     ///
